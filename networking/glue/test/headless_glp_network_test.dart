@@ -43,7 +43,6 @@ void main() {
   Future<GrassrootsIdentity> identityFromSeed(Uint8List seed) async =>
       GrassrootsIdentity.create(
         keyPair: await Ed25519().newKeyPairFromSeed(seed),
-        nickname: 'agent',
       );
 
   Uint8List seedOf(int fill) => Uint8List.fromList(List.filled(32, fill));

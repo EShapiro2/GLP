@@ -43,12 +43,11 @@ void main() {
     final personIdentity = await GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(
           Uint8List.fromList(await person.seed())),
-      nickname: 'phone',
     );
 
     // The mirroring service agent.
     final serviceNet = HeadlessGrassrootsNetwork(
-      identity: await GrassrootsIdentity.generate(nickname: 'gpw-mirror'),
+      identity: await GrassrootsIdentity.generate(),
       rendezvousServers: const [],
       sodium: sodium!,
     );
@@ -115,7 +114,7 @@ void main() {
 
     // A stranger cannot complete a session, so nothing reaches the writer.
     final stranger = HeadlessGrassrootsNetwork(
-        identity: await GrassrootsIdentity.generate(nickname: 'stranger'),
+        identity: await GrassrootsIdentity.generate(),
         rendezvousServers: const [],
         sodium: sodium!);
     addTearDown(() => stranger.dispose());

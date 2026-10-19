@@ -60,10 +60,7 @@ Future<void> main(List<String> argv) async {
   }
 
   final sodium = await initHeadlessSodium();
-  final identity = await loadOrCreateIdentity(
-    args['identity'] as String,
-    nickname: 'service',
-  );
+  final identity = await loadOrCreateIdentity(args['identity'] as String);
   print('Service identity: ${_hex(identity.publicKey)}');
 
   final knownPeersFile = args['known-peers-file'] as String?;

@@ -85,7 +85,6 @@ void main() {
   }) async {
     final identity = GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPair(),
-      nickname: 'places',
     );
     return GrassrootsNetwork(
       identity: await identity,

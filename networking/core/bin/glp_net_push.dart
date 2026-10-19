@@ -6,7 +6,7 @@
 ///
 /// Usage:
 ///   glp_net_push --peer <service-pubkey-hex> --address <ip:port> \
-///     --message 'payload' [--identity pusher-identity.json] [--wait-ack]
+///     --message 'payload' [--identity pusher-identity.json] [--timeout 15]
 library;
 
 import 'dart:async';
@@ -49,10 +49,7 @@ Future<void> main(List<String> argv) async {
   }
 
   final sodium = await initHeadlessSodium();
-  final identity = await loadOrCreateIdentity(
-    args['identity'] as String,
-    nickname: 'pusher',
-  );
+  final identity = await loadOrCreateIdentity(args['identity'] as String);
   print('Pusher identity: ${_hex(identity.publicKey)}');
 
   final network = HeadlessGrassrootsNetwork(

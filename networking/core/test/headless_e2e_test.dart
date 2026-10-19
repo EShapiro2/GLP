@@ -28,11 +28,10 @@ void main() {
     }
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async {
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async {
     final seed = Uint8List.fromList(List.filled(32, fill));
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(seed),
-      nickname: name,
     );
   }
 
@@ -43,17 +42,17 @@ void main() {
       return;
     }
     final service = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(0x22, 'service'),
+      identity: await identityFromSeed(0x22),
       rendezvousServers: const [],
       sodium: sodium!,
     );
     final pusher = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(0x11, 'pusher'),
+      identity: await identityFromSeed(0x11),
       rendezvousServers: const [],
       sodium: sodium!,
     );
     final stranger = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(0x33, 'stranger'),
+      identity: await identityFromSeed(0x33),
       rendezvousServers: const [],
       sodium: sodium!,
     );
@@ -140,12 +139,12 @@ void main() {
       return;
     }
     final service = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(0x44, 'registering-service'),
+      identity: await identityFromSeed(0x44),
       rendezvousServers: const [],
       sodium: sodium!,
     );
     final caller = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(0x55, 'caller'),
+      identity: await identityFromSeed(0x55),
       rendezvousServers: const [],
       sodium: sodium!,
     );

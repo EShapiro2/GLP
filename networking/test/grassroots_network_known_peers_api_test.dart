@@ -40,10 +40,9 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identity(String nickname) async {
+  Future<GrassrootsIdentity> identity() async {
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPair(),
-      nickname: nickname,
     );
   }
 
@@ -52,8 +51,8 @@ void main() {
 
   test('putKnownPeer adds the key to the recognition set, idempotently',
       () async {
-    final self = await identity('Self');
-    final peer = await identity('Peer');
+    final self = await identity();
+    final peer = await identity();
     final peerHex = hexOf(peer.publicKey);
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(
@@ -80,8 +79,8 @@ void main() {
   });
 
   test('putPeerAddress supplies the key along with the address', () async {
-    final self = await identity('Self');
-    final peer = await identity('Peer');
+    final self = await identity();
+    final peer = await identity();
     final peerHex = hexOf(peer.publicKey);
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(
@@ -108,8 +107,8 @@ void main() {
 
   test('putPeerAddress rejects an unparseable address and supplies nothing',
       () async {
-    final self = await identity('Self');
-    final peer = await identity('Peer');
+    final self = await identity();
+    final peer = await identity();
     final peerHex = hexOf(peer.publicKey);
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(
@@ -131,8 +130,8 @@ void main() {
 
   test('removeKnownPeer drops recognition and the recorded address',
       () async {
-    final self = await identity('Self');
-    final peer = await identity('Peer');
+    final self = await identity();
+    final peer = await identity();
     final peerHex = hexOf(peer.publicKey);
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(

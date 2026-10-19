@@ -59,13 +59,11 @@ void main() {
     final aliceKeyPair = await algorithm.newKeyPair();
     aliceIdentity = await GrassrootsIdentity.create(
       keyPair: aliceKeyPair,
-      nickname: 'Alice',
     );
 
     final bobKeyPair = await algorithm.newKeyPair();
     bobIdentity = await GrassrootsIdentity.create(
       keyPair: bobKeyPair,
-      nickname: 'Bob',
     );
 
     aliceStore = Store<AppState>(appReducer, initialState: const AppState());

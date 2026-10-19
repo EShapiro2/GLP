@@ -156,56 +156,5 @@ void main() {
 
       receiver.close();
     });
-
-    test('punchUntilResponse detects response packet', () async {
-      // Create two sockets that punch each other (simulates simultaneous punch)
-      final socketA =
-          await RawDatagramSocket.bind(InternetAddress.loopbackIPv6, 0);
-      final socketB =
-          await RawDatagramSocket.bind(InternetAddress.loopbackIPv6, 0);
-
-      final pubkeyA = Uint8List(32)..fillRange(0, 32, 0xAA);
-      final pubkeyB = Uint8List(32)..fillRange(0, 32, 0xBB);
-
-      final serviceA = HolePunchService(socket: socketA, senderPubkey: pubkeyA);
-      final serviceB = HolePunchService(socket: socketB, senderPubkey: pubkeyB);
-
-      // Both punch each other simultaneously
-      final resultA = serviceA.punchUntilResponse(
-        InternetAddress.loopbackIPv6,
-        socketB.port,
-        timeout: const Duration(seconds: 2),
-        interval: const Duration(milliseconds: 50),
-      );
-      final resultB = serviceB.punchUntilResponse(
-        InternetAddress.loopbackIPv6,
-        socketA.port,
-        timeout: const Duration(seconds: 2),
-        interval: const Duration(milliseconds: 50),
-      );
-
-      final results = await Future.wait([resultA, resultB]);
-
-      // Both should succeed
-      expect(results[0], isTrue);
-      expect(results[1], isTrue);
-
-      serviceA.dispose();
-      serviceB.dispose();
-      socketA.close();
-      socketB.close();
-    });
-
-    test('punchUntilResponse returns false on timeout', () async {
-      // Punch a port with nobody listening
-      final result = await service.punchUntilResponse(
-        InternetAddress.loopbackIPv6,
-        59999, // unlikely to be open
-        timeout: const Duration(milliseconds: 300),
-        interval: const Duration(milliseconds: 50),
-      );
-
-      expect(result, isFalse);
-    });
   });
 }

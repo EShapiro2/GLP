@@ -347,7 +347,6 @@ class PeerState {
             udpAttestation: null,
             udpUnderlay: null,
           ),
-        PeerTransport.webrtc => this,
       };
 
   PeerState _withSessionAttestations({

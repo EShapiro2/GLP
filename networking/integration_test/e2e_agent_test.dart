@@ -121,11 +121,10 @@ class Agent {
 
   /// [rendezvous]: whether the agent is instantiated with the anchor as its
   /// rendezvous server (GNA §Instantiation) --- A and B are, C is not.
-  static Future<Agent> spawn(String nickname, {bool rendezvous = false}) async {
+  static Future<Agent> spawn({bool rendezvous = false}) async {
     final sodium = await SodiumSumoInit.init();
     final identity = await GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPair(),
-      nickname: nickname,
     );
     final store = Store<AppState>(
       appReducer,
@@ -221,7 +220,7 @@ bool isBigPayload(Uint8List p, int length) {
 // ===== Roles =====
 
 Future<void> runA() async {
-  final agent = await Agent.spawn('A', rendezvous: true);
+  final agent = await Agent.spawn(rendezvous: true);
   final myHex = hexOf(agent.identity.publicKey);
   await bbPut('pk_A', myHex);
 
@@ -301,7 +300,7 @@ Future<void> runA() async {
 }
 
 Future<void> runB() async {
-  final agent = await Agent.spawn('B', rendezvous: true);
+  final agent = await Agent.spawn(rendezvous: true);
   final myHex = hexOf(agent.identity.publicKey);
   // Dialing needs our local address candidates — wait for address discovery
   // first.
@@ -349,7 +348,7 @@ Future<void> runB() async {
 }
 
 Future<void> runC() async {
-  final agent = await Agent.spawn('C');
+  final agent = await Agent.spawn();
   final myHex = hexOf(agent.identity.publicKey);
   final aHex = await bbWait('pk_A');
   final aAddr = await bbWait('a_addr');
@@ -372,7 +371,7 @@ Future<void> runC() async {
 }
 
 Future<void> runA2() async {
-  final agent = await Agent.spawn('A2');
+  final agent = await Agent.spawn();
   final myHex = hexOf(agent.identity.publicKey);
   await bbPut('p2_pk_A', myHex);
   final bHex = await bbWait('p2_pk_B');
@@ -407,7 +406,7 @@ Future<void> runA2() async {
 }
 
 Future<void> runB2() async {
-  final agent = await Agent.spawn('B2');
+  final agent = await Agent.spawn();
   final myHex = hexOf(agent.identity.publicKey);
   final aHex = await bbWait('p2_pk_A');
   // Make A2 known so its inbound contact is expected GLP-supplied traffic —

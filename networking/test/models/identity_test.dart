@@ -13,10 +13,7 @@ void main() {
     setUp(() async {
       final algorithm = Ed25519();
       final keyPair = await algorithm.newKeyPair();
-      identity = await GrassrootsIdentity.create(
-        keyPair: keyPair,
-        nickname: 'Alice',
-      );
+      identity = await GrassrootsIdentity.create(keyPair: keyPair);
     });
 
     group('create()', () {
@@ -34,22 +31,16 @@ void main() {
         expect(pubkeyFromPrivate, equals(identity.publicKey));
       });
 
-      test('stores nickname', () {
-        expect(identity.nickname, equals('Alice'));
-      });
-
       test('stores keyPair', () {
         expect(identity.keyPair, isNotNull);
       });
 
-      test('works with different nicknames', () async {
+      test('two key pairs are two identities (GNA §2.1: the public key is '
+          'the identity)', () async {
         final algorithm = Ed25519();
         final keyPair = await algorithm.newKeyPair();
-        final id = await GrassrootsIdentity.create(
-          keyPair: keyPair,
-          nickname: 'Bob',
-        );
-        expect(id.nickname, equals('Bob'));
+        final id = await GrassrootsIdentity.create(keyPair: keyPair);
+        expect(id.publicKey, isNot(equals(identity.publicKey)));
       });
     });
 
@@ -154,10 +145,7 @@ void main() {
       test('different identities produce different UUIDs', () async {
         final algorithm = Ed25519();
         final keyPair2 = await algorithm.newKeyPair();
-        final identity2 = await GrassrootsIdentity.create(
-          keyPair: keyPair2,
-          nickname: 'Bob',
-        );
+        final identity2 = await GrassrootsIdentity.create(keyPair: keyPair2);
         expect(
             identity.bleServiceUuid, isNot(equals(identity2.bleServiceUuid)));
       });
@@ -204,10 +192,20 @@ void main() {
         expect(restored.privateKey, equals(identity.privateKey));
       });
 
-      test('serializes and deserializes preserving nickname', () {
-        final json = identity.toJson();
-        final restored = GrassrootsIdentity.fromMap(json);
-        expect(restored.nickname, equals(identity.nickname));
+      test('serializes the key pair and nothing else (GNA §2.1)', () {
+        expect(identity.toJson().keys,
+            unorderedEquals(['publicKey', 'privateKey']));
+      });
+
+      test('fromMap refuses a map carrying any other entry, a nickname among '
+          'them: no tolerance for an older form', () {
+        final json = {...identity.toJson(), 'nickname': 'Alice'};
+        expect(() => GrassrootsIdentity.fromMap(json), throwsFormatException);
+      });
+
+      test('fromMap refuses a map lacking the private key', () {
+        final json = identity.toJson()..remove('privateKey');
+        expect(() => GrassrootsIdentity.fromMap(json), throwsFormatException);
       });
 
       test('fromMap restores a working GrassrootsIdentity with valid keyPair',
@@ -237,18 +235,16 @@ void main() {
     });
 
     group('toString()', () {
-      test('returns GrassrootsIdentity(nickname)', () {
-        expect(identity.toString(), equals('GrassrootsIdentity(Alice)'));
+      test('returns GrassrootsIdentity(short fingerprint)', () {
+        expect(identity.toString(),
+            equals('GrassrootsIdentity(${identity.shortFingerprint})'));
       });
 
-      test('reflects the current nickname', () async {
+      test('names the key pair, so two identities print apart', () async {
         final algorithm = Ed25519();
         final keyPair = await algorithm.newKeyPair();
-        final id = await GrassrootsIdentity.create(
-          keyPair: keyPair,
-          nickname: 'Charlie',
-        );
-        expect(id.toString(), equals('GrassrootsIdentity(Charlie)'));
+        final id = await GrassrootsIdentity.create(keyPair: keyPair);
+        expect(id.toString(), isNot(equals(identity.toString())));
       });
     });
   });
