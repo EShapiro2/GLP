@@ -27,9 +27,11 @@ SAtoms ::= [] ; [SAtom | SAtoms].
 Guard ::= guarded ; unguarded.
 RoleSpec ::= rs(Guard, SAtoms, SAtoms, SAtoms, SAtoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
-Schema ::= schema(Constant, Vars, RoleSpecs) ; lschema(Constant, Vars, RoleSpecs, Listing).
+Schema ::= schema(Constant, Vars, RoleSpecs) ; lschema(Constant, Vars, RoleSpecs, Listings).
 Listing ::= listing(Integer, Integer, Constant, Vars).
+Listings ::= [] ; [Listing | Listings].
 PeerLists ::= [] ; [Peers | PeerLists].
+ListTuples ::= [] ; [PeerLists | ListTuples].
 Schemas ::= [] ; [Schema | Schemas].
 Preds ::= [] ; [Constant | Preds].
 CName ::= community(Peer) ; dot(CName, Speech).
@@ -699,7 +701,7 @@ opened2([B | Bs], Nm, Rs, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(Rs?), 
 
 procedure opened3(YesNo?, Constant?, Binding?, Peer?, GAtoms?, Stream(Class)).
 opened3(no, _, _, _, _, []).
-opened3(yes, Nm, B, Id, Sh, [C?]) :- ground(Nm?), ground(B?) | listed_people(Nm?, B?, Sh?, L), listed_binding(Nm?, B?, L?, B1), class_of(Nm?, B1?, Id?, C).
+opened3(yes, Nm, B, Id, Sh, [C?]) :- ground(Nm?), ground(B?) | listed_people(Nm?, B?, Sh?, Ls), listed_binding(Nm?, B?, Ls?, B1), class_of(Nm?, B1?, Id?, C).
 
 procedure first_spec(RoleSpecs?, RoleSpec).
 first_spec([R | _], R?).
@@ -1030,11 +1032,15 @@ precedes(_, _, no) :- otherwise | true.
 
 procedure guarding_parts(Parts?, Peer?, Classes).
 guarding_parts([], _, []).
-guarding_parts([pt(T, G, _) | Ps], Id, R?) :- ground(Id?) | mem(Id?, G?, B), guarding_parts(Ps?, Id?, R1), keep_class(B?, T?, R1?, R).
+guarding_parts([pt(T, G, Op) | Ps], Id, R?) :- ground(Id?) | mem(Id?, G?, B1), no_opener(Op?, B2), and(B1?, B2?, B), guarding_parts(Ps?, Id?, R1), keep_class(B?, T?, R1?, R).
+
+procedure no_opener(Opener?, YesNo).
+no_opener(opener(_), no).
+no_opener(guarded_part, yes).
 
 procedure opening_parts(Parts?, Peer?, Classes).
 opening_parts([], _, []).
-opening_parts([pt(T, _, Op) | Ps], Id, R?) :- ground(Id?) | is_opener(Op?, Id?, B), opening_parts(Ps?, Id?, R1), keep_class(B?, T?, R1?, R).
+opening_parts([pt(T, G, Op) | Ps], Id, R?) :- ground(Id?) | is_opener(Op?, Id?, B1), some_peer(G?, B2), neg(B2?, B3), and(B1?, B3?, B), opening_parts(Ps?, Id?, R1), keep_class(B?, T?, R1?, R).
 
 procedure is_opener(Opener?, Peer?, YesNo).
 is_opener(opener(P), Id, B?) :- same(P?, Id?, B).
@@ -1345,11 +1351,15 @@ persons_of([I | Is], B, [P? | Ps?]) :- ground(B?) | role_person(I?, B?, P), pers
 procedure mates_of(Schemas?, Deltas?, Mates).
 mates_of([], _, []).
 mates_of([schema(Nm, _, Rs) | Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Ps?) | deltas_peers(Ps?, Q), rs_len(Rs?, K), assigns(K?, Q?, As), mates_assigns(As?, Nm?, Rs?, Ps?, M1), mates_of(Ss?, Ps?, M2), app(M1?, M2?, M).
-mates_of([lschema(Nm, _, Rs, Lst) | Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Lst?), ground(Ps?) | deltas_peers(Ps?, Q), rs_len(Rs?, K), assigns(K?, Q?, As0), on_base(As0?, Lst?, As), deltas_peers(Ps?, Q1), sort_peers(Q1?, Q2), subsets(Q2?, Ls), listed_mates(Ls?, As?, Nm?, Rs?, Lst?, Ps?, M1), mates_of(Ss?, Ps?, M2), app(M1?, M2?, M).
+mates_of([lschema(Nm, _, Rs, Lsts) | Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Lsts?), ground(Ps?) | deltas_peers(Ps?, Q), rs_len(Rs?, K), assigns(K?, Q?, As0), on_base(As0?, Lsts?, As), deltas_peers(Ps?, Q1), sort_peers(Q1?, Q2), subsets(Q2?, Ls), tuples(Lsts?, Ls?, Ts), listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M1), mates_of(Ss?, Ps?, M2), app(M1?, M2?, M).
 
-procedure on_base(Bindings?, Listing?, Bindings).
+procedure on_base(Bindings?, Listings?, Bindings).
 on_base([], _, []).
-on_base([B | Bs], listing(I, Bi, Rho, As), R?) :- ground(B?), integer(I?), integer(Bi?) | role_person(I?, B?, P), role_person(Bi?, B?, Q), same(P?, Q?, E), on_base(Bs?, listing(I?, Bi?, Rho?, As?), R1), keep_binding(E?, B?, R1?, R).
+on_base([B | Bs], Lsts, R?) :- ground(B?), ground(Lsts?) | on_bases(Lsts?, B?, E), on_base(Bs?, Lsts?, R1), keep_binding(E?, B?, R1?, R).
+
+procedure on_bases(Listings?, Binding?, YesNo).
+on_bases([], _, yes).
+on_bases([listing(I, Bi, _, _) | Lsts], B, E?) :- ground(B?) | role_person(I?, B?, P), role_person(Bi?, B?, Q), same(P?, Q?, E1), on_bases(Lsts?, B?, E2), and(E1?, E2?, E).
 
 procedure keep_binding(YesNo?, Binding?, Bindings?, Bindings).
 keep_binding(yes, B, R, [B? | R?]).
@@ -1363,9 +1373,21 @@ procedure with_first(PeerLists?, Peer?, PeerLists).
 with_first([], _, []).
 with_first([L | Ls], P, [[P? | L?] | R?]) :- ground(P?) | with_first(Ls?, P?, R).
 
-procedure listed_mates(PeerLists?, Bindings?, Constant?, RoleSpecs?, Listing?, Deltas?, Mates).
+procedure tuples(Listings?, PeerLists?, ListTuples).
+tuples([], _, [[]]).
+tuples([_ | Lsts], Ls, R?) :- ground(Ls?) | tuples(Lsts?, Ls?, R1), prepend_each(Ls?, R1?, R).
+
+procedure prepend_each(PeerLists?, ListTuples?, ListTuples).
+prepend_each([], _, []).
+prepend_each([L | Ls], Ts, R?) :- ground(L?), ground(Ts?) | with_head(Ts?, L?, R1), prepend_each(Ls?, Ts?, R2), app(R1?, R2?, R).
+
+procedure with_head(ListTuples?, Peers?, ListTuples).
+with_head([], _, []).
+with_head([T | Ts], L, [[L? | T?] | R?]) :- ground(L?) | with_head(Ts?, L?, R).
+
+procedure listed_mates(ListTuples?, Bindings?, Constant?, RoleSpecs?, Listings?, Deltas?, Mates).
 listed_mates([], _, _, _, _, _, []).
-listed_mates([L | Ls], As, Nm, Rs, Lst, Ps, M?) :- ground(L?), ground(As?), ground(Nm?), ground(Rs?), ground(Lst?), ground(Ps?) | rs_len(Rs?, K), K1 := (K? + 1), copy_binds(L?, K1?, Cs), extend_all(As?, Cs?, Bs), spec_for(Rs?, Lst?, L?, Rs1), mates_assigns(Bs?, Nm?, Rs1?, Ps?, M1), listed_mates(Ls?, As?, Nm?, Rs?, Lst?, Ps?, M2), app(M1?, M2?, M).
+listed_mates([T | Ts], As, Nm, Rs, Lsts, Ps, M?) :- ground(T?), ground(As?), ground(Nm?), ground(Rs?), ground(Lsts?), ground(Ps?) | rs_len(Rs?, K), K1 := (K? + 1), tuple_binds(Lsts?, T?, K1?, Cs), extend_all(As?, Cs?, Bs), spec_for(Rs?, Lsts?, T?, Rs1), mates_assigns(Bs?, Nm?, Rs1?, Ps?, M1), listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M2), app(M1?, M2?, M).
 
 procedure extend_all(Bindings?, Binding?, Bindings).
 extend_all([], _, []).
@@ -1438,7 +1460,7 @@ parts_of([M | Ms], All, Q, Id, Seen, Pts?) :- ground(M?), ground(Q?), ground(See
 
 procedure parts_of1(YesNo?, Mate?, Mates?, Mates?, Peers?, Peer?, Mates?, Parts).
 parts_of1(yes, _, Ms, All, Q, Id, Seen, Pts?) :- parts_of(Ms?, All?, Q?, Id?, Seen?, Pts).
-parts_of1(no, mate(N, B, G, F), Ms, All, Q, Id, Seen, [pt(T?, G?, Op?) | Pts?]) :- ground(N?), ground(B?), ground(G?), ground(F?), ground(All?), ground(Q?), ground(Id?) | class_of(N?, B?, Id?, T), part_firsts(All?, mate(N?, B?, G?, F?), Q?, Fs), part_opener(G?, Fs?, Op), parts_of(Ms?, All?, Q?, Id?, [mate(N?, B?, G?, F?) | Seen?], Pts).
+parts_of1(no, mate(N, B, G, F), Ms, All, Q, Id, Seen, [pt(T?, G?, Op?) | Pts?]) :- ground(N?), ground(B?), ground(G?), ground(F?), ground(All?), ground(Q?), ground(Id?) | class_of(N?, B?, Id?, T), part_firsts(All?, mate(N?, B?, G?, F?), Q?, Fs), part_gfirsts(All?, mate(N?, B?, G?, F?), Q?, G?, Fo), part_opener(G?, Fs?, Fo?, Op), parts_of(Ms?, All?, Q?, Id?, [mate(N?, B?, G?, F?) | Seen?], Pts).
 
 procedure part_seen(Mates?, Mate?, Peers?, YesNo).
 part_seen([], _, _, no).
@@ -1452,9 +1474,25 @@ procedure part_firsts(Mates?, Mate?, Peers?, Peers).
 part_firsts([], _, _, []).
 part_firsts([mate(N, B, G, F) | Ms], M, Q, Fs?) :- ground(F?), ground(M?), ground(Q?) | same_mpart(Q?, mate(N?, B?, G?, F?), M?, S), part_firsts(Ms?, M?, Q?, Fs1), keep_peer(S?, F?, Fs1?, Fs).
 
-procedure part_opener(Peers?, Peers?, Opener).
-part_opener([], Fs, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Op).
-part_opener([_ | _], _, guarded_part).
+procedure part_gfirsts(Mates?, Mate?, Peers?, Peers?, Peers).
+part_gfirsts([], _, _, _, []).
+part_gfirsts([mate(N, B, G1, F) | Ms], M, Q, G, Fs?) :- ground(N?), ground(F?), ground(M?), ground(Q?), ground(G?) | same_mpart(Q?, mate(N?, B?, G1?, F?), M?, S), opens_guarded(N?, O), mem(F?, G?, InG), neg(InG?, NotG), and(S?, O?, S1), and(S1?, NotG?, K), part_gfirsts(Ms?, M?, Q?, G?, Fs1), keep_peer(K?, F?, Fs1?, Fs).
+
+procedure opens_guarded(Constant?, YesNo).
+opens_guarded(Nm, B?) :- schema_entry(Nm?, E), opens_guarded1(E?, B).
+
+procedure opens_guarded1(Schema?, YesNo).
+opens_guarded1(schema(_, _, _), no).
+opens_guarded1(lschema(_, _, _, []), no).
+opens_guarded1(lschema(_, _, Rs, [listing(_, Bi, _, _) | _]), B?) :- ground(Rs?), integer(Bi?) | nth_spec(Rs?, Bi?, R), spec_unguarded(R?, B).
+
+procedure spec_unguarded(RoleSpec?, YesNo).
+spec_unguarded(rs(unguarded, _, _, _, _), yes).
+spec_unguarded(rs(guarded, _, _, _, _), no).
+
+procedure part_opener(Peers?, Peers?, Peers?, Opener).
+part_opener([], Fs, _, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Op).
+part_opener([_ | _], _, Fo, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Op).
 
 procedure least_opener(Peers?, Opener).
 least_opener([P | _], opener(P?)).
@@ -1588,15 +1626,6 @@ procedure cimg_sgn(Found?, Peer?, Var?, CVal).
 cimg_sgn(found(s(S)), P, _, cmp_val(s(speech(S?, P?)))).
 cimg_sgn(_, _, V, cmp_free(V?)) :- otherwise | true.
 
-procedure schema_spec(Constant?, RoleSpecs).
-schema_spec(Nm, Rs?) :- contract_schemas(Ss), find_schema(Ss?, Nm?, Rs).
-
-procedure find_schema(Schemas?, Constant?, RoleSpecs).
-find_schema([], _, []).
-find_schema([schema(M, _, Rs) | _], Nm, Rs?) :- (M? =?= Nm?) | true.
-find_schema([lschema(M, _, Rs, _) | _], Nm, Rs?) :- (M? =?= Nm?) | true.
-find_schema([_ | Ss], Nm, Rs?) :- otherwise | find_schema(Ss?, Nm?, Rs).
-
 procedure schema_entry(Constant?, Schema).
 schema_entry(Nm, E?) :- contract_schemas(Ss), find_entry(Ss?, Nm?, E).
 
@@ -1611,10 +1640,23 @@ bound_spec(Nm, B, Rs?) :- schema_entry(Nm?, E), bound_spec1(E?, B?, Rs).
 
 procedure bound_spec1(Schema?, Binding?, RoleSpecs).
 bound_spec1(schema(_, _, Rs), _, Rs?).
-bound_spec1(lschema(_, _, Rs, Lst), B, Rs1?) :- ground(Rs?), ground(B?) | rs_len(Rs?, K), copy_people(B?, K?, Ps), spec_for(Rs?, Lst?, Ps?, Rs1).
+bound_spec1(lschema(_, _, Rs, Lsts), B, Rs1?) :- ground(Rs?), ground(B?), ground(Lsts?) | lists_of(Lsts?, B?, Ls), spec_for(Rs?, Lsts?, Ls?, Rs1).
 
-procedure spec_for(RoleSpecs?, Listing?, Peers?, RoleSpecs).
-spec_for(Rs, listing(I, _, _, _), Ps, Rs1?) :- ground(Rs?), integer(I?) | nth_spec(Rs?, I?, R), blank_at(Rs?, I?, 1, Rs0), spec_copies(Ps?, R?, Cs), app(Rs0?, Cs?, Rs1).
+procedure lists_of(Listings?, Binding?, PeerLists).
+lists_of([], _, []).
+lists_of([listing(I, _, _, _) | Lsts], B, [L? | Ls?]) :- ground(B?) | copies_of(B?, I?, L), lists_of(Lsts?, B?, Ls).
+
+procedure spec_for(RoleSpecs?, Listings?, PeerLists?, RoleSpecs).
+spec_for(Rs, Lsts, Ls, Rs1?) :- ground(Rs?), ground(Lsts?) | blank_listed(Lsts?, Rs?, Rs0), listed_copies(Lsts?, Ls?, Rs?, Cs), app(Rs0?, Cs?, Rs1).
+
+procedure blank_listed(Listings?, RoleSpecs?, RoleSpecs).
+blank_listed([], Rs, Rs?).
+blank_listed([listing(I, _, _, _) | Lsts], Rs, Rs2?) :- blank_at(Rs?, I?, 1, Rs1), blank_listed(Lsts?, Rs1?, Rs2).
+
+procedure listed_copies(Listings?, PeerLists?, RoleSpecs?, RoleSpecs).
+listed_copies([], _, _, []).
+listed_copies([listing(I, _, _, _) | Lsts], [L | Ls], Rs, Cs?) :- ground(Rs?) | nth_spec(Rs?, I?, R), spec_copies(L?, R?, C1), listed_copies(Lsts?, Ls?, Rs?, C2), app(C1?, C2?, Cs).
+listed_copies([_ | _], [], _, []).
 
 procedure blank_at(RoleSpecs?, Integer?, Integer?, RoleSpecs).
 blank_at([], _, _, []).
@@ -1628,31 +1670,55 @@ procedure spec_copies(Peers?, RoleSpec?, RoleSpecs).
 spec_copies([], _, []).
 spec_copies([_ | Ps], R, [R? | Rs?]) :- ground(R?) | spec_copies(Ps?, R?, Rs).
 
-procedure copy_people(Binding?, Integer?, Peers).
-copy_people([], _, []).
-copy_people([b(role(J), p(Q)) | Bs], K, [Q? | Ps?]) :- (J? > K?) | copy_people(Bs?, K?, Ps).
-copy_people([_ | Bs], K, Ps?) :- otherwise | copy_people(Bs?, K?, Ps).
+procedure copies_of(Binding?, Integer?, List(Peer)).
+copies_of(B, I, L?) :- ground(B?), integer(I?) | NI := (0 - I?), neg_people(B?, NI?, Ps0), sort_peers(Ps0?, Ps1), dedup(Ps1?, L).
 
-procedure copies_of(Constant?, Binding?, List(Peer)).
-copies_of(Nm, B, L?) :- ground(B?) | schema_spec(Nm?, Rs), rs_len(Rs?, K), copy_people(B?, K?, Ps0), sort_peers(Ps0?, Ps1), dedup(Ps1?, L).
+procedure neg_people(Binding?, Integer?, Peers).
+neg_people([], _, []).
+neg_people([b(role(J), p(Q)) | Bs], NI, [Q? | Ps?]) :- (J? =:= NI?) | neg_people(Bs?, NI?, Ps).
+neg_people([_ | Bs], NI, Ps?) :- otherwise | neg_people(Bs?, NI?, Ps).
 
-procedure listed_binding(Constant?, Binding?, List(Peer)?, Binding).
-listed_binding(Nm, B0, L, B?) :- schema_entry(Nm?, E), listed_binding1(E?, B0?, L?, B).
+procedure listed_binding(Constant?, Binding?, PeerLists?, Binding).
+listed_binding(Nm, B0, Ls, B?) :- schema_entry(Nm?, E), listed_binding1(E?, B0?, Ls?, B).
 
-procedure listed_binding1(Schema?, Binding?, List(Peer)?, Binding).
+procedure listed_binding1(Schema?, Binding?, PeerLists?, Binding).
 listed_binding1(schema(_, _, _), B0, _, B0?).
-listed_binding1(lschema(_, _, Rs, listing(I, Bi, _, _)), B0, L, B?) :- ground(Rs?), ground(B0?), ground(L?) | rs_len(Rs?, K), role_person(Bi?, B0?, P), sort_peers(L?, Ps1), dedup(Ps1?, Ps), K1 := (K? + 1), copy_binds(Ps?, K1?, Cs), app(B0?, [b(role(I?), p(P?)) | Cs?], B).
+listed_binding1(lschema(_, _, Rs, Lsts), B0, Ls, B?) :- ground(Rs?), ground(B0?), ground(Lsts?) | rs_len(Rs?, K), base_binds(Lsts?, B0?, Bb), sorted_lists(Ls?, Ls1), K1 := (K? + 1), tuple_binds(Lsts?, Ls1?, K1?, Cs), app(Bb?, Cs?, Bc), app(B0?, Bc?, B).
 
-procedure copy_binds(Peers?, Integer?, Binding).
-copy_binds([], _, []).
-copy_binds([Q | Qs], J, [b(role(J?), p(Q?)) | Bs?]) :- integer(J?) | J1 := (J? + 1), copy_binds(Qs?, J1?, Bs).
+procedure base_binds(Listings?, Binding?, Binding).
+base_binds([], _, []).
+base_binds([listing(I, Bi, _, _) | Lsts], B0, [b(role(I?), p(P?)) | Bs?]) :- ground(B0?) | role_person(Bi?, B0?, P), base_binds(Lsts?, B0?, Bs).
 
-procedure listed_people(Constant?, Binding?, GAtoms?, List(Peer)).
-listed_people(Nm, B0, S, L?) :- schema_entry(Nm?, E), listed_people1(E?, B0?, S?, L).
+procedure sorted_lists(PeerLists?, PeerLists).
+sorted_lists([], []).
+sorted_lists([L | Ls], [L1? | Ls1?]) :- sort_peers(L?, L0), dedup(L0?, L1), sorted_lists(Ls?, Ls1).
 
-procedure listed_people1(Schema?, Binding?, GAtoms?, List(Peer)).
+procedure tuple_binds(Listings?, PeerLists?, Integer?, Binding).
+tuple_binds([], _, _, []).
+tuple_binds([listing(I, _, _, _) | Lsts], [L | Ls], J, Bs?) :- ground(L?), integer(I?) | copy_binds(L?, J?, Cs, J1), NI := (0 - I?), neg_binds(L?, NI?, Ns), tuple_binds(Lsts?, Ls?, J1?, Bs1), app(Ns?, Bs1?, Bs2), app(Cs?, Bs2?, Bs).
+tuple_binds([_ | _], [], _, []).
+
+procedure copy_binds(Peers?, Integer?, Binding, Integer).
+copy_binds([], J, [], J?).
+copy_binds([Q | Qs], J, [b(role(J?), p(Q?)) | Bs?], J2?) :- integer(J?) | J1 := (J? + 1), copy_binds(Qs?, J1?, Bs, J2).
+
+procedure neg_binds(Peers?, Integer?, Binding).
+neg_binds([], _, []).
+neg_binds([Q | Qs], NI, [b(role(NI?), p(Q?)) | Bs?]) :- integer(NI?) | neg_binds(Qs?, NI?, Bs).
+
+procedure listed_people(Constant?, Binding?, GAtoms?, PeerLists).
+listed_people(Nm, B0, S, Ls?) :- schema_entry(Nm?, E), listed_people1(E?, B0?, S?, Ls).
+
+procedure listed_people1(Schema?, Binding?, GAtoms?, PeerLists).
 listed_people1(schema(_, _, _), _, _, []).
-listed_people1(lschema(_, _, _, listing(_, _, Rho, As)), B0, S, L?) :- ground(As?), ground(B0?), ground(S?) | img_args(As?, B0?, Vs), listing_in(S?, Rho?, Vs?, Ps0), sort_peers(Ps0?, Ps1), dedup(Ps1?, L).
+listed_people1(lschema(_, _, _, Lsts), B0, S, Ls?) :- lists_at(Lsts?, B0?, S?, Ls).
+
+procedure lists_at(Listings?, Binding?, GAtoms?, PeerLists).
+lists_at([], _, _, []).
+lists_at([listing(_, _, Rho, As) | Lsts], B0, S, [L? | Ls?]) :- ground(B0?), ground(S?) | list_at(Rho?, As?, B0?, S?, L), lists_at(Lsts?, B0?, S?, Ls).
+
+procedure list_at(Constant?, Vars?, Binding?, GAtoms?, List(Peer)).
+list_at(Rho, As, B0, S, L?) :- ground(As?), ground(B0?), ground(S?) | img_args(As?, B0?, Vs), listing_in(S?, Rho?, Vs?, Ps0), sort_peers(Ps0?, Ps1), dedup(Ps1?, L).
 
 procedure listing_in(GAtoms?, Constant?, Vals?, Peers).
 listing_in([], _, _, []).
@@ -1660,25 +1726,33 @@ listing_in([g(F, [p(Q) | Xs]) | Gs], Rho, Vs, Ps?) :- ground(F?), ground(Xs?), g
 listing_in([_ | Gs], Rho, Vs, Ps?) :- otherwise | listing_in(Gs?, Rho?, Vs?, Ps).
 
 procedure listed_class(Constant?, Binding?, GAtoms?, Class).
-listed_class(Nm, B0, S, C?) :- ground(Nm?), ground(B0?) | listed_people(Nm?, B0?, S?, L), listed_binding(Nm?, B0?, L?, B), role_person(1, B0?, D), class_of(Nm?, B?, D?, C).
+listed_class(Nm, B0, S, C?) :- ground(Nm?), ground(B0?) | listed_people(Nm?, B0?, S?, Ls), listed_binding(Nm?, B0?, Ls?, B), role_person(1, B0?, D), class_of(Nm?, B?, D?, C).
 
 procedure listing_ok(Constant?, Binding?, Peer?, GAtoms?, YesNo).
 listing_ok(Nm, B, Id, S, Ok?) :- schema_entry(Nm?, E), listing_ok1(E?, B?, Id?, S?, Ok).
 
 procedure listing_ok1(Schema?, Binding?, Peer?, GAtoms?, YesNo).
 listing_ok1(schema(_, _, _), _, _, _, yes).
-listing_ok1(lschema(Nm, _, _, listing(_, Bi, _, _)), B, Id, S, Ok?) :- ground(Nm?), ground(B?), ground(Id?) | role_person(Bi?, B?, P), same(P?, Id?, Base), listing_ok2(Base?, Nm?, B?, S?, Ok).
+listing_ok1(lschema(_, _, _, Lsts), B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
 
-procedure listing_ok2(YesNo?, Constant?, Binding?, GAtoms?, YesNo).
-listing_ok2(no, _, _, _, yes).
-listing_ok2(yes, Nm, B, S, Ok?) :- ground(Nm?), ground(B?) | copies_of(Nm?, B?, L), listed_people(Nm?, B?, S?, L1), same(L?, L1?, Ok).
+procedure listings_ok(Listings?, Binding?, Peer?, GAtoms?, YesNo).
+listings_ok([], _, _, _, yes).
+listings_ok([listing(I, Bi, Rho, As) | Lsts], B, Id, S, Ok?) :- ground(B?), ground(Id?), ground(S?) | role_person(Bi?, B?, P), same(P?, Id?, Base), listing_one(Base?, I?, Rho?, As?, B?, S?, Ok1), listings_ok1(Ok1?, Lsts?, B?, Id?, S?, Ok).
+
+procedure listing_one(YesNo?, Integer?, Constant?, Vars?, Binding?, GAtoms?, YesNo).
+listing_one(no, _, _, _, _, _, yes).
+listing_one(yes, I, Rho, As, B, S, Ok?) :- ground(B?) | copies_of(B?, I?, L), list_at(Rho?, As?, B?, S?, L1), same(L?, L1?, Ok).
+
+procedure listings_ok1(YesNo?, Listings?, Binding?, Peer?, GAtoms?, YesNo).
+listings_ok1(no, _, _, _, _, no).
+listings_ok1(yes, Lsts, B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
 
 procedure rule_spec_ok(Constant?, Binding?, YesNo).
 rule_spec_ok(Nm, B, Ok?) :- schema_entry(Nm?, E), rule_spec(E?, Rs0), rule_ok(Rs0?, B?, Ok).
 
 procedure rule_spec(Schema?, RoleSpecs).
 rule_spec(schema(_, _, Rs), Rs?).
-rule_spec(lschema(_, _, Rs, listing(I, _, _, _)), Rs0?) :- ground(Rs?), integer(I?) | blank_at(Rs?, I?, 1, Rs0).
+rule_spec(lschema(_, _, Rs, Lsts), Rs0?) :- blank_listed(Lsts?, Rs?, Rs0).
 
 procedure term_spec(Class?, Constant, RoleSpecs, Binding).
 term_spec(C, Nm?, Rs?, B?) :- ground(C?) | binding_of(C?, Nm0, B0), term_spec1(Nm0?, B0?, Nm, Rs, B).
