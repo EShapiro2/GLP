@@ -16,10 +16,10 @@
 % the set, and the first set with a guardianship for each mark, an
 % introductory act unobstructed but for it and the relay acts of every pair
 % is the answer.  The leaving marks of the contract (def:leaving) are taken
-% for each set, with the guardianships for it; clause 1 of
-% def:unobstructed-marks, and the clauses of def:unobstructed-marks and
-% def:relay on the atoms an act forbids, admit them besides, and the answer
-% names them.
+% for each set and each choice of a guardianship for each of its marks, with
+% the guardianships chosen; clause 1 of def:unobstructed-marks, and the
+% clauses of def:unobstructed-marks and def:relay on the atoms an act
+% forbids, admit them besides, and the answer names them.
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_act_bindings(Schema?, Substs).
@@ -500,8 +500,10 @@ guardianships_for(C, M, R?) :- ground(C?), ground(M?) |
 % ---------------------------------------------------------------------------
 % For a set M of marks of C with a guardianship for every mark in M: a mark
 % of C not in M meeting the three clauses.  Clause 3 names "an atom g(sigma)
-% of a guardianship", and g ranges over the g of every guardianship for M in
-% C (def:guardianship), not only those an introduction with wards chooses.
+% of the guardianship of a mark in M": the g of the one guardianship
+% (m, iota, g, w) taken for each mark m in M, as Lemma "Wards and guardians"
+% reads it, and the verdict names those guardianships.  So the leaving marks
+% are taken with the guardianships chosen, one per mark.
 
 % Clause 1, first part: every guarding role of every schema forbids the mark.
 procedure role_guard_forbids(Ans?, Atoms?, Constant?, Ans).
@@ -640,13 +642,36 @@ leaving_marks(C, Marks, M, Gs, R?) :-
     g_preds(Gs?, Gp),
     leaving_marks2(Marks?, C?, M?, Gp?, R).
 
-% leaving_for(C, M, Ls): the leaving marks of C for M, for inspection; M is
-% to have a guardianship for each of its marks, as def:leaving supposes.
-exported procedure leaving_for(Contract?, Preds?, Preds).
-leaving_for(C, M, R?) :- ground(C?), ground(M?) |
-    guardianships_for(C?, M?, Gs),
+% leaving_for(C, M, Ls): for inspection, for each choice of a guardianship
+% for each mark of M (def:guardianship), in the order the search tries
+% them, leaving(Gs, L): Gs the guardianships chosen and L the leaving marks
+% of C for M with them; none where a mark of M has no guardianship, which
+% def:leaving supposes.
+procedure leaving_combos(GuardLists?, Contract?, Preds?, Preds?, Leavings).
+leaving_combos([], _, _, _, []).
+leaving_combos([Gs|Cbs], C, Marks, M, [leaving(Gs?, L?)|R?]) :-
+    ground(Gs?), ground(Cbs?), ground(C?), ground(Marks?), ground(M?) |
+    leaving_marks(C?, Marks?, M?, Gs?, L),
+    leaving_combos(Cbs?, C?, Marks?, M?, R).
+
+procedure leaving_for1(Ans?, Contract?, Preds?, Leavings).
+leaving_for1(no, _, _, []).
+leaving_for1(yes, C, M, R?) :- ground(C?), ground(M?) |
     preds_of_arity(C?, 0, Marks),
-    leaving_marks(C?, Marks?, M?, Gs?, R).
+    preds_of_arity(C?, 1, Unary),
+    leaving_for2(Marks?, Unary?, C?, M?, R).
+
+procedure leaving_for2(Preds?, Preds?, Contract?, Preds?, Leavings).
+leaving_for2(Marks, Unary, C, M, R?) :-
+    ground(Marks?), ground(Unary?), ground(C?), ground(M?) |
+    cands_lists(C?, Marks?, Unary?, M?, M?, Ls),
+    combos(Ls?, Cbs),
+    leaving_combos(Cbs?, C?, Marks?, M?, R).
+
+exported procedure leaving_for(Contract?, Preds?, Leavings).
+leaving_for(C, M, R?) :- ground(C?), ground(M?) |
+    one_mark_added(C?, M?, A),
+    leaving_for1(A?, C?, M?, R).
 
 % ---------------------------------------------------------------------------
 % Unobstructed but for marks (def:unobstructed-marks)
@@ -1480,16 +1505,20 @@ combos([L|Ls], R?) :- ground(L?), ground(Ls?) |
 procedure try_combos1(Wards?, GuardLists?, Contract?, Preds?, Preds?, Preds?, Wards).
 try_combos1(introduction_with_wards(Nm, M, Gs, Rs, Lv), _, _, _, _, _,
             introduction_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
-try_combos1(no_introduction_with_wards, Cbs, C, Rf, M, Lv, W?) :-
-    ground(Cbs?), ground(C?), ground(Rf?), ground(M?), ground(Lv?) |
-    try_combos(Cbs?, C?, Rf?, M?, Lv?, W).
+try_combos1(no_introduction_with_wards, Cbs, C, Rf, M, Marks, W?) :-
+    ground(Cbs?), ground(C?), ground(Rf?), ground(M?), ground(Marks?) |
+    try_combos(Cbs?, C?, Rf?, M?, Marks?, W).
 
+% Each choice Gs of a guardianship per mark is tried with the leaving marks
+% of C for M taken with it (def:leaving, clause 3), Marks being the marks of
+% C.
 procedure try_combos(GuardLists?, Contract?, Preds?, Preds?, Preds?, Wards).
 try_combos([], _, _, _, _, no_introduction_with_wards).
-try_combos([Gs|Cbs], C, Rf, M, Lv, W?) :-
-    ground(Gs?), ground(Cbs?), ground(C?), ground(Rf?), ground(M?), ground(Lv?) |
+try_combos([Gs|Cbs], C, Rf, M, Marks, W?) :-
+    ground(Gs?), ground(Cbs?), ground(C?), ground(Rf?), ground(M?), ground(Marks?) |
+    leaving_marks(C?, Marks?, M?, Gs?, Lv),
     try_intros(C?, C?, Rf?, M?, Lv?, Gs?, W1),
-    try_combos1(W1?, Cbs?, C?, Rf?, M?, Lv?, W).
+    try_combos1(W1?, Cbs?, C?, Rf?, M?, Marks?, W).
 
 % --- over the sets of marks ----------------------------------------------
 
@@ -1502,20 +1531,12 @@ try_set1(yes, M, Ms, C, Rf, Marks, Unary, W?) :-
     cands_lists(C?, Marks?, Unary?, M?, M?, Ls),
     try_set3(Ls?, M?, Ms?, C?, Rf?, Marks?, Unary?, W).
 
-% The guardianships for M are those of the lists of candidates together; the
-% leaving marks are taken for M with them (def:leaving).
-procedure gl_flat(GuardLists?, Guardianships).
-gl_flat([], []).
-gl_flat([L|Ls], R?) :- gl_flat(Ls?, R1), gs_app(L?, R1?, R).
-
 procedure try_set3(GuardLists?, Preds?, PredSets?, Contract?, Preds?, Preds?, Preds?, Wards).
 try_set3(Ls, M, Ms, C, Rf, Marks, Unary, W?) :-
     ground(Ls?), ground(M?), ground(Ms?), ground(C?), ground(Rf?), ground(Marks?),
     ground(Unary?) |
-    gl_flat(Ls?, Gs),
-    leaving_marks(C?, Marks?, M?, Gs?, Lv),
     combos(Ls?, Cbs),
-    try_combos(Cbs?, C?, Rf?, M?, Lv?, W1),
+    try_combos(Cbs?, C?, Rf?, M?, Marks?, W1),
     try_set2(W1?, Ms?, C?, Rf?, Marks?, Unary?, W).
 
 procedure try_set2(Wards?, PredSets?, Contract?, Preds?, Preds?, Preds?, Wards).

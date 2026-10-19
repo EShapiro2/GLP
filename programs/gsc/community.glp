@@ -10,6 +10,11 @@
 % rooted are given as a set.  Openness and closure are proved of a contract in
 % the paper and are not conditions on the text; nothing here decides or claims
 % them.
+%
+% Clauses 3 and 4 of definition:sg-agent-named (Appendix D.4) are decided
+% here too: traceable provenance with each atom psi required at an agent
+% role (traceable_agent), and volition with a guarding agent role in every
+% connected component (volition_faults_agent).
 % ---------------------------------------------------------------------------
 
 % ---------------------------------------------------------------------------
@@ -364,59 +369,88 @@ prov_roles([RS|Rs], I, Pd, Cx, R?) :-
     prov_plus(P?, Pd?, RB?, Cx?, A),
     prov_roles1(A?, Rs?, I?, Pd?, Cx?, R).
 
-procedure prov_pred1(Ans?, Constant?, Contract?, Preds?, Ans).
-prov_pred1(no, _, _, _, no).
-prov_pred1(yes, Pd, Ss, E, R?) :- ground(Pd?), ground(Ss?), ground(E?) |
-    prov_pred(Pd?, Ss?, E?, R).
+% The roles whose required atoms are the psi of the definition: every role,
+% or, for clause 3 of definition:sg-agent-named (Ag = yes), the agent roles.
+procedure party_roles(RoleSpecs?, RoleSpecs).
+party_roles([], []).
+party_roles([rs(G, P, M, K, N)|Rs], [rs(G?, P?, M?, K?, N?)|R?]) :- party_roles(Rs?, R).
+party_roles([crs(_, _, _, _, _, _)|Rs], R?) :- party_roles(Rs?, R).
 
-procedure prov_pred(Constant?, Contract?, Preds?, Ans).
-prov_pred(_, [], _, yes).
-prov_pred(Pd, [S|Ss], E, R?) :-
-    ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
+procedure witness_roles(Ans?, RoleSpecs?, RoleSpecs).
+witness_roles(no, Rs, Rs?).
+witness_roles(yes, Rs, R?) :- ground(Rs?) | party_roles(Rs?, R).
+
+procedure prov_pred1(Ans?, Constant?, Contract?, Preds?, Ans?, Ans).
+prov_pred1(no, _, _, _, _, no).
+prov_pred1(yes, Pd, Ss, E, Ag, R?) :- ground(Pd?), ground(Ss?), ground(E?), ground(Ag?) |
+    prov_pred(Pd?, Ss?, E?, Ag?, R).
+
+procedure prov_pred(Constant?, Contract?, Preds?, Ans?, Ans).
+prov_pred(_, [], _, _, yes).
+prov_pred(Pd, [S|Ss], E, Ag, R?) :-
+    ground(S?), ground(Ss?), ground(Pd?), ground(E?), ground(Ag?) |
     sch_roles(S?, Rs),
-    prov_pred_roles(Rs?, Pd?, Ss?, E?, R).
+    prov_pred_w(Rs?, Pd?, Ss?, E?, Ag?, R).
 
-procedure prov_pred_roles(RoleSpecs?, Constant?, Contract?, Preds?, Ans).
-prov_pred_roles(Rs, Pd, Ss, E, R?) :- ground(Rs?), ground(Pd?), ground(Ss?), ground(E?) |
+procedure prov_pred_w(RoleSpecs?, Constant?, Contract?, Preds?, Ans?, Ans).
+prov_pred_w(Rs, Pd, Ss, E, Ag, R?) :-
+    ground(Rs?), ground(Pd?), ground(Ss?), ground(E?), ground(Ag?) |
+    witness_roles(Ag?, Rs?, Ws),
+    prov_pred_roles(Rs?, Ws?, Pd?, Ss?, E?, Ag?, R).
+
+% Ws are the roles whose required atoms of Phi_E are the psi: they carry the
+% bases and the speech-act variables a traced argument may be among.
+procedure prov_pred_roles(RoleSpecs?, RoleSpecs?, Constant?, Contract?, Preds?, Ans?, Ans).
+prov_pred_roles(Rs, Ws, Pd, Ss, E, Ag, R?) :-
+    ground(Rs?), ground(Ws?), ground(Pd?), ground(Ss?), ground(E?), ground(Ag?) |
     role_bases(Rs?, 1, RBs),
-    req_bases(Rs?, E?, [], QBs),
-    req_phi_svars(Rs?, E?, QSV),
+    req_bases(Ws?, E?, [], QBs),
+    req_phi_svars(Ws?, E?, QSV),
     req_svars(Rs?, SV),
     prov_roles(Rs?, 1, Pd?, pctx(RBs?, QBs?, QSV?, SV?), A),
-    prov_pred1(A?, Pd?, Ss?, E?, R).
+    prov_pred1(A?, Pd?, Ss?, E?, Ag?, R).
 
-procedure tp_filter1(Ans?, Constant?, Preds?, Contract?, Preds?, Preds).
-tp_filter1(yes, P, Ps, C, E, [P?|R?]) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
-    tp_filter(Ps?, C?, E?, R).
-tp_filter1(no, _, Ps, C, E, R?) :- ground(Ps?), ground(C?), ground(E?) |
-    tp_filter(Ps?, C?, E?, R).
+procedure tp_filter1(Ans?, Constant?, Preds?, Contract?, Preds?, Ans?, Preds).
+tp_filter1(yes, P, Ps, C, E, Ag, [P?|R?]) :-
+    ground(P?), ground(Ps?), ground(C?), ground(E?), ground(Ag?) |
+    tp_filter(Ps?, C?, E?, Ag?, R).
+tp_filter1(no, _, Ps, C, E, Ag, R?) :- ground(Ps?), ground(C?), ground(E?), ground(Ag?) |
+    tp_filter(Ps?, C?, E?, Ag?, R).
 
-procedure tp_filter(Preds?, Contract?, Preds?, Preds).
-tp_filter([], _, _, []).
-tp_filter([P|Ps], C, E, R?) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
-    prov_pred(P?, C?, E?, A),
-    tp_filter1(A?, P?, Ps?, C?, E?, R).
+procedure tp_filter(Preds?, Contract?, Preds?, Ans?, Preds).
+tp_filter([], _, _, _, []).
+tp_filter([P|Ps], C, E, Ag, R?) :-
+    ground(P?), ground(Ps?), ground(C?), ground(E?), ground(Ag?) |
+    prov_pred(P?, C?, E?, Ag?, A),
+    tp_filter1(A?, P?, Ps?, C?, E?, Ag?, R).
 
-procedure tp_loop2(Integer?, Integer?, Preds?, Contract?, Preds).
-tp_loop2(L1, L2, E1, _, E1?) :- L1? =:= L2? | true.
-tp_loop2(_, _, E1, C, R?) :- otherwise, ground(E1?), ground(C?) |
-    tp_loop(C?, E1?, R).
+procedure tp_loop2(Integer?, Integer?, Preds?, Contract?, Ans?, Preds).
+tp_loop2(L1, L2, E1, _, _, E1?) :- L1? =:= L2? | true.
+tp_loop2(_, _, E1, C, Ag, R?) :- otherwise, ground(E1?), ground(C?), ground(Ag?) |
+    tp_loop(C?, E1?, Ag?, R).
 
-procedure tp_loop1(Preds?, Preds?, Contract?, Preds).
-tp_loop1(E1, E, C, R?) :- ground(E1?), ground(E?), ground(C?) |
+procedure tp_loop1(Preds?, Preds?, Contract?, Ans?, Preds).
+tp_loop1(E1, E, C, Ag, R?) :- ground(E1?), ground(E?), ground(C?), ground(Ag?) |
     preds_len(E1?, L1),
     preds_len(E?, L2),
-    tp_loop2(L1?, L2?, E1?, C?, R).
+    tp_loop2(L1?, L2?, E1?, C?, Ag?, R).
 
-procedure tp_loop(Contract?, Preds?, Preds).
-tp_loop(C, E, R?) :- ground(C?), ground(E?) |
-    tp_filter(E?, C?, E?, E1),
-    tp_loop1(E1?, E?, C?, R).
+procedure tp_loop(Contract?, Preds?, Ans?, Preds).
+tp_loop(C, E, Ag, R?) :- ground(C?), ground(E?), ground(Ag?) |
+    tp_filter(E?, C?, E?, Ag?, E1),
+    tp_loop1(E1?, E?, C?, Ag?, R).
 
 exported procedure traceable(Contract?, Preds).
 traceable(C, E?) :- ground(C?) |
     all_preds(C?, P0),
-    tp_loop(C?, P0?, E).
+    tp_loop(C?, P0?, no, E).
+
+% Clause 3 of definition:sg-agent-named: the largest set of predicates having
+% traceable provenance with each atom psi required at an agent role.
+exported procedure traceable_agent(Contract?, Preds).
+traceable_agent(C, E?) :- ground(C?) |
+    all_preds(C?, P0),
+    tp_loop(C?, P0?, yes, E).
 
 % ---------------------------------------------------------------------------
 % Volition (definition:volition)
@@ -540,69 +574,88 @@ first_missing(J, K, Reached, R?) :-
     ints_member(Reached?, J?, M),
     first_missing1(M?, J?, K?, Reached?, R).
 
-% Is a guarding role among those reached?
-procedure guarded_in1(Ans?, Ints?, RoleSpecs?, Ans).
-guarded_in1(yes, _, _, yes).
-guarded_in1(no, Is, Rs, R?) :- ground(Is?), ground(Rs?) | guarded_in(Is?, Rs?, R).
+% Does a role count as guarding a component?  Every guarding role, or, for
+% clause 4 of definition:sg-agent-named (Ga = yes), a guarding agent role.
+procedure counts_guarding(Ans?, RoleSpec?, Ans).
+counts_guarding(no, RS, R?) :- ground(RS?) | is_guarding(RS?, R).
+counts_guarding(yes, RS, R?) :- ground(RS?) |
+    is_guarding(RS?, G),
+    is_party_role(RS?, P),
+    both_yes(G?, P?, R).
 
-procedure guarded_in(Ints?, RoleSpecs?, Ans).
-guarded_in([], _, no).
-guarded_in([I|Is], Rs, R?) :- integer(I?), ground(Is?), ground(Rs?) |
+% Is a guarding role among those reached?
+procedure guarded_in1(Ans?, Ints?, RoleSpecs?, Ans?, Ans).
+guarded_in1(yes, _, _, _, yes).
+guarded_in1(no, Is, Rs, Ga, R?) :- ground(Is?), ground(Rs?), ground(Ga?) |
+    guarded_in(Is?, Rs?, Ga?, R).
+
+procedure guarded_in(Ints?, RoleSpecs?, Ans?, Ans).
+guarded_in([], _, _, no).
+guarded_in([I|Is], Rs, Ga, R?) :- integer(I?), ground(Is?), ground(Rs?), ground(Ga?) |
     nth_rs(Rs?, I?, RS),
-    is_guarding(RS?, A),
-    guarded_in1(A?, Is?, Rs?, R).
+    counts_guarding(Ga?, RS?, A),
+    guarded_in1(A?, Is?, Rs?, Ga?, R).
 
 % The first role whose connected component holds no guarding role.
-procedure first_unguarded1(Ans?, Integer?, Integer?, RoleSpecs?, Preds?, Missing).
-first_unguarded1(yes, J, K, Rs, E, R?) :-
-    integer(J?), integer(K?), ground(Rs?), ground(E?) |
+procedure first_unguarded1(Ans?, Integer?, Integer?, RoleSpecs?, Preds?, Ans?, Missing).
+first_unguarded1(yes, J, K, Rs, E, Ga, R?) :-
+    integer(J?), integer(K?), ground(Rs?), ground(E?), ground(Ga?) |
     J1 := J? + 1,
-    first_unguarded(J1?, K?, Rs?, E?, R).
-first_unguarded1(no, J, _, _, _, missing(J?)).
+    first_unguarded(J1?, K?, Rs?, E?, Ga?, R).
+first_unguarded1(no, J, _, _, _, _, missing(J?)).
 
-procedure first_unguarded(Integer?, Integer?, RoleSpecs?, Preds?, Missing).
-first_unguarded(J, K, _, _, all_reached) :- J? > K? | true.
-first_unguarded(J, K, Rs, E, R?) :-
-    J? =< K?, integer(J?), integer(K?), ground(Rs?), ground(E?) |
+procedure first_unguarded(Integer?, Integer?, RoleSpecs?, Preds?, Ans?, Missing).
+first_unguarded(J, K, _, _, _, all_reached) :- J? > K? | true.
+first_unguarded(J, K, Rs, E, Ga, R?) :-
+    J? =< K?, integer(J?), integer(K?), ground(Rs?), ground(E?), ground(Ga?) |
     reached_from(J?, K?, Rs?, E?, Reached),
-    guarded_in(Reached?, Rs?, A),
-    first_unguarded1(A?, J?, K?, Rs?, E?, R).
+    guarded_in(Reached?, Rs?, Ga?, A),
+    first_unguarded1(A?, J?, K?, Rs?, E?, Ga?, R).
 
 procedure cv3(Missing?, Constant?, Integer?, Faults).
 cv3(all_reached, _, _, []).
 cv3(missing(_), Nm, J, [volition(Nm?, 1, J?)]).
 
-procedure cv2(Missing?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
-cv2(all_reached, _, _, _, _, []).
-cv2(missing(J), K, Nm, Rs, E, R?) :-
-    integer(J?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
-    first_unguarded(1, K?, Rs?, E?, U),
+procedure cv2(Missing?, Integer?, Constant?, RoleSpecs?, Preds?, Ans?, Faults).
+cv2(all_reached, _, _, _, _, _, []).
+cv2(missing(J), K, Nm, Rs, E, Ga, R?) :-
+    integer(J?), integer(K?), ground(Nm?), ground(Rs?), ground(E?), ground(Ga?) |
+    first_unguarded(1, K?, Rs?, E?, Ga?, U),
     cv3(U?, Nm?, J?, R).
 
-procedure cv1(Integer?, Constant?, RoleSpecs?, Preds?, Faults).
-cv1(K, _, _, _, []) :- K? < 2 | true.
-cv1(K, Nm, Rs, E, R?) :- K? >= 2, integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+procedure cv1(Integer?, Constant?, RoleSpecs?, Preds?, Ans?, Faults).
+cv1(K, _, _, _, _, []) :- K? < 2 | true.
+cv1(K, Nm, Rs, E, Ga, R?) :-
+    K? >= 2, integer(K?), ground(Nm?), ground(Rs?), ground(E?), ground(Ga?) |
     reached_from(1, K?, Rs?, E?, Reached),
     first_missing(1, K?, Reached?, M),
-    cv2(M?, K?, Nm?, Rs?, E?, R).
+    cv2(M?, K?, Nm?, Rs?, E?, Ga?, R).
 
-procedure schema_volition(Schema?, Preds?, Faults).
-schema_volition(Sc, E, R?) :- ground(Sc?), ground(E?) |
+procedure schema_volition(Schema?, Preds?, Ans?, Faults).
+schema_volition(Sc, E, Ga, R?) :- ground(Sc?), ground(E?), ground(Ga?) |
     sch_name(Sc?, Nm),
     sch_roles(Sc?, Rs),
-    volition_roles(Nm?, Rs?, E?, R).
+    volition_roles(Nm?, Rs?, E?, Ga?, R).
 
-procedure volition_roles(Constant?, RoleSpecs?, Preds?, Faults).
-volition_roles(Nm, Rs, E, R?) :- ground(Nm?), ground(Rs?), ground(E?) |
+procedure volition_roles(Constant?, RoleSpecs?, Preds?, Ans?, Faults).
+volition_roles(Nm, Rs, E, Ga, R?) :- ground(Nm?), ground(Rs?), ground(E?), ground(Ga?) |
     roles_len(Rs?, K),
-    cv1(K?, Nm?, Rs?, E?, R).
+    cv1(K?, Nm?, Rs?, E?, Ga?, R).
+
+procedure volition_on(Contract?, Preds?, Ans?, Faults).
+volition_on([], _, _, []).
+volition_on([S|Ss], E, Ga, R?) :- ground(S?), ground(Ss?), ground(E?), ground(Ga?) |
+    schema_volition(S?, E?, Ga?, F1),
+    volition_on(Ss?, E?, Ga?, F2),
+    faults_app(F1?, F2?, R).
 
 exported procedure volition_faults(Contract?, Preds?, Faults).
-volition_faults([], _, []).
-volition_faults([S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(E?) |
-    schema_volition(S?, E?, F1),
-    volition_faults(Ss?, E?, F2),
-    faults_app(F1?, F2?, R).
+volition_faults(C, E, R?) :- ground(C?), ground(E?) | volition_on(C?, E?, no, R).
+
+% Clause 4 of definition:sg-agent-named: a connected role graph or a guarding
+% agent role in every connected component of it.
+exported procedure volition_faults_agent(Contract?, Preds?, Faults).
+volition_faults_agent(C, E, R?) :- ground(C?), ground(E?) | volition_on(C?, E?, yes, R).
 
 % ---------------------------------------------------------------------------
 % Cohesion (definition:cohesive)
