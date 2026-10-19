@@ -1,0 +1,63 @@
+%% ---------------------------------------------------------------------------
+%% programs/apps/gsnp --- the app of GSNP, the grassroots social network with provenance (GSC's contract, programs/gsc/GSNP.md and GSNP.glp; Coordination Appendix C), which extends GSN, as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its act schemas: the canonical CVA platform vGLP's compiler prints from them, platform.vglp (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), compiled to GLP by the canonical compilation when the directory loads (vGLP, Section 6.3, "The canonical compilation").  It is the host of GSN's app, ../gsn, on GSNP's platform: the same entry miniapp/4 (miniapp.glp, the same file as ../gsg's and ../gsn's), its scripted person (person.glp) and the play that activates it by run/3, three executions over two conversations, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gsnp.glpw is what the super-app installs; the plays of the super-app hosting it on three smartphones are ../gsnp_boot.glp.
+%%
+%% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module, as every hand-written module importing a compiled procedure restates them today.  The compiled module's own definitions shadow these within it, and the two must agree.
+%% ---------------------------------------------------------------------------
+
+Peer      ::= Key.
+Speech    ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+Class     ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+            ; sign(Peer, Speech) ; forward(Peer, Peer, Speech)
+            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+            ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
+            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
+            ; deliver(Peer, Peer, Speech, Speech).
+Proposal  ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+            ; sign(Peer, Speech) ; forward(Peer, Peer, Speech)
+            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+            ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
+            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech).
+Request   ::= propose(Proposal) ; known(Peer).
+YesNo     ::= yes ; no.
+Decision  ::= commit ; abort.
+Attempt   ::= attempt(Peer, Integer, Integer, Class).
+Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+            ; yield(Attempt).
+Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net       ::= msg(Peer, Content).
+Txn       ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
+            ; tally(Attempt) ; commit(Attempt) ; yield(Attempt)
+            ; wound(Attempt, Attempt) ; outcome(Attempt)
+            ; introduce_peers(Peer, Peer) ; discover(Peer).
+Output    ::= Txn.
+Approval  ::= approval(Attempt, YesNo?).
+Menu      ::= menu(Key, List(Key), Request?).
+Question  ::= menu_w(Menu) ; approval_w(Approval).
+Drawn     ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)    ::= ask(Constant, Q).
+
+%% What the mini-app's scripted person reports, its screen (person.glp): each transaction the thread shows, once; the agent's own key and the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
+Asked     ::= Class ; Attempt.
+Seen      ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo).
+
+%% The network of the platform over the conversations (miniapp.glp), as in ../gsg/self.glp and ../gsn/self.glp.
+NetEvent  ::= opened(Key, RootChannel(Net)) ; sent(Net).
+Route     ::= route(Key, Stream(Net)?).
+Routes    ::= [] ; [Route | Routes].
+Sending   ::= went ; held(Net).
+
+%% The mini-app's entry, the instance of the root's entry template miniapp/4 (programs/self.glp) at the mini-app's two types, Drawn and Net.
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
+miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+
+%% The scripted person, the instance of the root's second template miniapp_person/4 at Drawn and at Seen.
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+
+%% The play with no super-app (plays.glp).
+imported procedure plays#play_provenance(Stream(Seen), Stream(Seen), Stream(Seen)).
+exported procedure play_provenance(Stream(Seen), Stream(Seen), Stream(Seen)).
+play_provenance(A?, B?, C?) :- plays # play_provenance(A, B, C).
