@@ -10,24 +10,14 @@
 %% gave(K, A) where the person answers an approval question, and the network's log of the
 %% cargoes it carries.
 %%
-%% play_gnudge: alice proposes befriending bob, bob is asked and answers yes,
-%%   and it commits.  The class of nudge(bob, alice) is then unguarded, with
-%%   the unguarded schema-binding nudge(bob, alice) and the guarded g(alice,
-%%   bob), and its opener is bob, the least person in the first role of its
-%%   unguarded schema-bindings (vGLP 2026-10-12 08:26 UTC, Q-B), though alice
-%%   precedes him: bob's machine proposes it as an own transaction, the attempt asking
-%%   nobody and alice's machine voting on its start.  alice opens the class of
-%%   nudge(alice, bob) likewise, both at once, and as in the play of nudge bob,
-%%   holding his own attempt prepared, wounds it in favour of alice's, and
-%%   both nudges commit in turn, his retried at the wounded rank (vGLP
-%%   49cd9f7, wound-wait).
+%% play_gnudge: alice proposes befriending bob, bob is asked and answers yes, and it commits.  The class of nudge(bob, alice) then has two parts, each schema-binding determining a part with the people in its marked roles as its guard set (vGLP 099f876, Section 5.4, "Act schemas as local specifications"): nudge(bob, alice)'s, unguarded, and g(alice, bob)'s, guarded by alice, which the request type proposes.  The opener of the unguarded part is bob, the least person in the first role of its schema-bindings, though alice precedes him: bob's machine proposes it as an own transaction, the attempt asking nobody and alice's machine voting on its start.  alice opens the unguarded part of nudge(alice, bob) likewise, both at once, and as in the play of nudge bob, holding his own attempt prepared, wounds it in favour of alice's, and both nudges commit in turn, his retried at the wounded rank (vGLP 49cd9f7, wound-wait).
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
 Class    ::= befriend(Peer, Peer) ; nudge(Peer, Peer) ; g(Peer, Peer).
-Proposal ::= befriend(Peer, Peer).
+Proposal ::= befriend(Peer, Peer) ; g(Peer, Peer).
 Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.

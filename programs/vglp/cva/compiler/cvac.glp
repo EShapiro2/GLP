@@ -3,29 +3,9 @@
 %% Definition "Canonical CVA Platform"; Section 5.4, "The compilation" and the
 %% paragraph "Act schemas"; self.glp says more).
 %%
-%% A contract is compiled when programs/gsc finds it syntactically
-%% grassroots, grassroots with wards, or finds no fault in it but its
-%% introductory acts, so with traceable provenance and volition
-%% (verdict_lines below), every role a party role, and when it is a local and
-%% effective specification with simple guards, by the paragraph on act schemas
-%% and by the paragraph after Definition "Volition-Guarded Specification" on
-%% guard sets and simple guards, which local.glp decides.  Otherwise it prints the lines saying why and nothing else.  A
-%% signed term sgn(y, i) in an added atom is the speech act bound to y, signed
-%% by the person in role i (vGLP, Section 5.4, "Act schemas as local
-%% specifications"; GSC, Definition "Act schema"): local.glp decides the
-%% contract over it and the printed text, text.glp, computes it.
+%% A contract is compiled when programs/gsc finds it syntactically grassroots, grassroots with wards, or finds no fault in it but its introductory acts, so with traceable provenance and volition (verdict_lines below), every role a party role, so that it is a local specification (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "Such a contract is a local specification"), and when it is effective, by the same paragraph, which local.glp decides.  Otherwise it prints the lines saying why and nothing else.  A signed term sgn(y, i) in an added atom is the speech act bound to y, signed by the person in role i (vGLP, Section 5.4, "Act schemas as local specifications"; GSC, Definition "Act schema"): local.glp decides the contract over it and the printed text, text.glp, computes it.
 %%
-%% The module is what is printed from the contract, here, and the text every
-%% contract shares, text.glp.  What is printed from the contract is the type
-%% Class, one alternative per schema, the schema's name applied to the people in
-%% its roles, then its party variables, then its speech-act variables, in
-%% programs/gsc's order, a term of it naming a schema-binding and so its part
-%% and its class (vGLP c0bea08, Section 5.4, "Act schemas as local
-%% specifications": "the parts of a class are the sets of transactions its
-%% schema-bindings determine"); the request type, Request, with the alternative
-%% propose([t]_j) for each part [t]_j of a guarded class, a term of Proposal,
-%% the alternatives of the schemas whose terms name parts of guarded classes,
-%% and the alternative known(Peer) (Section 5.4, "The compilation"); the
+%% The module is what is printed from the contract, here, and the text every contract shares, text.glp.  What is printed from the contract is the type Class, one alternative per schema, the schema's name applied to the people in its roles, then its party variables, then its speech-act variables, in programs/gsc's order, a term of it naming a schema-binding and so its part and its class (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"); the request type, Request, with the alternative propose([t]_j) for each guarded part [t]_j, a term of Proposal, the alternatives of the schemas whose terms name guarded parts, and the alternative known(Peer) (Section 5.4, "The compilation"); the
 %% contract itself, as the term programs/gsc reads, from which the shared text
 %% computes the classes and their parts; its reflexive predicates; and per
 %% schema a clause taking a term of Class to the binding it names, binding_of,
@@ -103,20 +83,7 @@ decl_reflexive([], []).
 decl_reflexive([_|_], []).
 decl_reflexive(reflexive(Rf, _), Rf?).
 
-%% vGLP, Section 5.4, the paragraph on act schemas, asks of a contract that it
-%% be a local and effective specification with simple guards, and nothing of
-%% its being grassroots; its schemas compile to transactions by the
-%% realisation, which CSSN (Appendix B.4) takes for a contract with traceable
-%% provenance that satisfies volition by the definition GSC gives for a
-%% syntactically grassroots one.  So a contract is compiled where GSC's
-%% checker certifies it syntactically grassroots, or grassroots with wards
-%% (GSC, Appendix F: its introductory act unobstructed but for the marks, with
-%% their guardianships and relay acts; vGLP #14, 2026-10-18 12:24 UTC, A), or
-%% finds no fault in it but its introductory acts (vGLP 2026-10-16 13:53 UTC,
-%% C, as Code #9 gives it: "the compiler takes a contract with traceable
-%% provenance and volition"); a contract with community roles has no
-%% canonical platform here, its roles' extents being no participants of a
-%% binding.
+%% vGLP, Section 5.4, the paragraph on act schemas, asks of a contract that it be a local and effective specification, and nothing of its being grassroots; its schemas compile to transactions by the realisation, which CSSN (Appendix B.4) takes for a contract with traceable provenance that satisfies volition by the definition GSC gives for a syntactically grassroots one.  So a contract is compiled where GSC's checker certifies it syntactically grassroots, or grassroots with wards (GSC, Appendix F: its introductory act unobstructed but for the marks, with their guardianships and relay acts; vGLP #14, 2026-10-18 12:24 UTC, A), or finds no fault in it but its introductory acts (vGLP 2026-10-16 13:53 UTC, C, as Code #9 gives it: "the compiler takes a contract with traceable provenance and volition"); a contract with community roles has no canonical platform here, its roles' extents being no participants of a binding.
 procedure verdict_lines(Verdict?, Constant?, Stream(_)).
 verdict_lines(syntactically_grassroots, _, []).
 verdict_lines(grassroots_with_wards(_, _, _, _), _, []).
@@ -138,6 +105,10 @@ realisable([volition(_, _, _)|_], no).
 realisable([cohesion(_, _, _)|_], no).
 realisable([reflexive(_, _, _)|_], no).
 realisable([signed(_, _, _, _)|_], no).
+%% A fault of a schema's form comes in a verdict malformed(Faults), which verdict_lines refuses whole; these clauses cover the type.
+realisable([added_and_deleted(_, _, _)|_], no).
+realisable([changes_nothing(_, _)|_], no).
+realisable([no_role_changes(_)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
@@ -250,11 +221,7 @@ var_types([nterm(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
 %% the type.
 var_types([sgn(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 
-%% The request type: Proposal ::= the alternatives of the schemas whose terms
-%% name parts of guarded classes (local.glp, proposable), separated by ;, and
-%% Request ::= propose(Proposal) ; known(Peer); where there are none, Request
-%% ::= known(Peer) alone, and the shared text's lines guarded_only(L), its
-%% clauses on the request propose([t]_j), are not printed.
+%% The request type: Proposal ::= the alternatives of the schemas whose terms name guarded parts (local.glp, proposable), separated by ;, and Request ::= propose(Proposal) ; known(Peer); where there are none, Request ::= known(Peer) alone, and the shared text's lines guarded_only(L), its clauses on the request propose([t]_j), are not printed.
 procedure request_parts(Contract?, Preds?, Lines?, Stream(_), Stream(_)).
 request_parts(C, Ps, Fx, Lr?, Fx1?) :- ground(C?), ground(Ps?) |
     proposal_alts(C?, Ps?, As),
@@ -284,8 +251,7 @@ alts_rest([A|As], Tl, [';', A?|L?]) :- alts_rest(As?, Tl?, L).
 procedure any_name(Preds?, YesNo).
 any_name([], no).
 any_name([_|_], yes).
-%% The shared text's lines, a line guarded_only(L) printed as L where the
-%% contract has a guarded class and left out where it has none.
+%% The shared text's lines, a line guarded_only(L) printed as L where the contract has a guarded part and left out where it has none.
 procedure shared_lines(Lines?, YesNo?, Stream(_)).
 shared_lines([], _, []).
 shared_lines([guarded_only(L)|Ls], yes, [L?|Ls1?]) :- shared_lines(Ls?, yes, Ls1).

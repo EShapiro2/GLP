@@ -13,11 +13,7 @@
 %%   applied at once; alice proposes swapping hers for bob's, bob is asked and
 %%   answers yes, and it commits; alice then pays bob his coin back, guarded by
 %%   her alone, and bob's machine votes yes.
-%% play_redeem: swapped as above, alice proposes the swap back,
-%%   swap(alice, bob, alice, bob), a class that redeem(alice, bob, alice) also
-%%   determines, so its guard sets are the minimal {alice} and {bob} (vGLP,
-%%   Definition "Volition-Guarded Specification, Participants, Guard Sets,
-%%   Simple Guards"): the attempt asks nobody and bob's machine votes yes.
+%% play_redeem: swapped as above, alice requests the swap back, swap(alice, bob, alice, bob), whose class redeem(alice, bob, alice) and redeem(bob, alice, bob) also determine, each schema-binding a part with the people in its marked roles as its guard set (vGLP 099f876, Section 5.4, "Act schemas as local specifications"): the swaps' part, guarded by alice and bob, and the two redeems', guarded by alice and by bob.  Of the guarded parts she guards and is ready for, the swaps' and her redeem's, neither proposed before, she proposes the one her request names, the swaps', attempt 3, which asks bob, its other guard (Definition "Attempt"); he answers yes and it commits.  She swaps again, attempt 4, and requests the swap back again: she now proposes her redeem's part, the one she has proposed less recently (Section 5.4, "The compilation"), attempt 5, redeem(alice, bob, alice), which asks nobody, and bob's machine votes yes.
 %% play_busy: bob having minted twice, swapped as above and alice minted
 %%   again, alice proposes a swap and bob, asked, leaves his approval question open, alice
 %%   holding her attempt prepared; bob proposes paying alice her coin back, and
@@ -79,9 +75,15 @@ play_redeem(LA?, LB?, N?) :-
           req(known(bob)), wait(discover(bob)),
           own([A2, A3], propose(swap(A2?, bob, bob, A3?))),
           wait(commit(attempt(alice, 2, 2, swap(alice, bob, bob, alice)))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, bob)))],
+          own([A4, A5], propose(swap(A4?, bob, A5?, bob))),
+          wait(commit(attempt(alice, 3, 3, swap(alice, bob, alice, bob)))),
+          own([A6, A7], propose(swap(A6?, bob, bob, A7?))),
+          wait(commit(attempt(alice, 4, 4, swap(alice, bob, bob, alice)))),
+          own([A8, A9], propose(swap(A8?, bob, A9?, bob)))],
          [own([B1], propose(mint(B1?))), wait(propose(attempt(bob, 1, 1, mint(bob)))),
           req(known(alice)), wait(discover(alice)),
+          approval(swap(alice, bob, bob, alice), yes),
+          approval(swap(alice, bob, alice, bob), yes),
           approval(swap(alice, bob, bob, alice), yes)],
          LA, LB, N).
 

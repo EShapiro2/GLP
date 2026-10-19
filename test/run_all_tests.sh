@@ -3442,17 +3442,17 @@ echo ""
 # canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2,
 # Definition "Canonical CVA Platform", two-phase commit coordinated by the
 # initiating agent, and Section 5.4, "The compilation" and the paragraph on
-# act schemas, a class the union of its parts, vGLP c0bea08; vGLP's Task C, reworked to the five
+# act schemas, a class the union of its parts, each with the people in the marked roles of its schema-bindings as its guard set, vGLP 099f876; vGLP's Task C, reworked to the five
 # handlers of vGLP 8d56915 and the answers of 158ec9b; Answer recording the
 # person's answer and Vote voting on it, vGLP c3b2191; wound-wait,
 # Commit and Yield, attempts numbered and ranked, vGLP 49cd9f7; no clock and
 # no tick, the agent taking its own transactions when it starts and after each
 # trigger, one at a time until none holds, vGLP efe7bbc).  GSC's social graph
 # and currency (their owners', programs/gsc/GSG.glp and
-# programs/currencies/coins/GC.glp) and vGLP's nudge, introduce, gnudge, childsafe, link, friends and waves
-# and parts (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
-# what the compiler prints; the contracts it refuses, not local, without
-# simple guards or not effective; and the plays of each platform, two agents
+# programs/currencies/coins/GC.glp) and vGLP's nudge, introduce, gnudge, childsafe, link, friends, waves,
+# parts and opens (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
+# what the compiler prints; the contracts it refuses, not effective, and those it
+# compiles whatever their guards; and the plays of each platform, two agents
 # or three with scripted persons paced on their threads, each run on the
 # committed module through the canonical compilation until it suspends, each
 # agent having taken its own transactions until none holds and no trigger
@@ -3468,7 +3468,7 @@ CVA="$GLP_DIR/programs/vglp/cva"
 # Guarded: set -e would end the run without totals on a red compile.sh.
 cva_print=$(bash "$CVA/compile.sh" --check 2>&1 || true)
 check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: the currency's platform, its classes guarded by their minimal guard sets, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: the currency's platform, each part guarded by the people its schema-binding marks, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's nudge, certified by GSC's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's introduce, certified by GSC's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's gnudge, certified by GSC's check/2, compiled to the platform it prints" "gnudge/platform.vglp: as printed" "$cva_print"
@@ -3477,6 +3477,7 @@ check "CVA compiler: vGLP's link, certified by GSC's check/2, compiled to the pl
 check "CVA compiler: vGLP's friends, its introduction predicate friend, compiled to the platform it prints" "friends/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's waves, two classes of the same participants and atoms, compiled to the platform it prints" "waves/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's parts, a class of two parts, compiled to the platform it prints" "parts/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's opens, a class of two unguarded parts with different openers, compiled to the platform it prints" "opens/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3506,14 +3507,16 @@ compile(sym, [schema(unf, [rs(guarded, [], [atom(f, [role(2)])], [], []), rs(ung
 compile(asym, [schema(unf, [rs(guarded, [], [atom(f, [role(2)])], [], [atom(r, [])]), rs(unguarded, [], [atom(f, [role(1)])], [], [])])], syntactically_grassroots).
 compile(sgnread, [schema(d, [rs(unguarded, [atom(done, [svar(y), role(2)])], [], [atom(posted, [svar(y)]), atom(listed, [role(2)])], [atom(done, [svar(y), role(2)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots).
 compile(sgnread_not, [schema(d, [rs(unguarded, [atom(done, [svar(y), role(2)])], [], [atom(listed, [role(2)])], [atom(done, [svar(y), role(2)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots).
+compile(inert, [schema(s, [rs(guarded, [atom(x, [])], [], [], []), rs(unguarded, [], [], [], [])])], malformed([changes_nothing(s, 2)])).
 :quit
 HEREDOC
 2>&1)
-# Of the three locality conditions only one stays (vGLP c0bea08, Section 5.4,
-# "Act schemas as local specifications"): "the schema-bindings determining any
-# two transactions of one class mark the same sets of people"; the first two,
-# the same deleted and added atoms at each participant and the same required
-# and forbidden atoms at all but one, go, a class being the union of parts.
+# None of the locality conditions stays (vGLP 099f876, Section 5.4, "Act
+# schemas as local specifications": each schema-binding determines a part of
+# its class, with the people in its marked roles as its guard set, and "Such a
+# contract is a local specification"; vGLP #15, Code_inbox.md, 2026-10-19
+# 10:50 UTC, item 2): a class is the union of its parts, and neither equal
+# marked sets nor simple guards are asked.
 check "CVA compiler: two schemas of one class requiring different atoms at both participants, marking the same people, compiled: the class has two parts" "%% the canonical CVA platform of the contract(two_reqs)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(two_reqs)" "$cva_refuse"
 # Effective (vGLP c0bea08, Section 5.4): every variable of a schema that occurs
@@ -3532,42 +3535,45 @@ check "CVA compiler: ... the schema named" "%% the schema(d)" "$cva_refuse"
 check "CVA compiler: a contract without traceable provenance is not compiled" "%% not compiled(gossip)" "$cva_refuse"
 check "CVA compiler: a contract whose one fault is that it has no unobstructed introductory act, traceable provenance and volition met, compiled (vGLP, Section 5.4, asks locality and effectiveness alone; CSSN, Appendix B.4)" "%% the canonical CVA platform of the contract(nointro)" "$cva_refuse"
 check "CVA compiler: a contract with community roles is not compiled" "%% not compiled(federated)" "$cva_refuse"
+# A verdict malformed, of a schema's form (GSC, Definition "Act schema", as programs/gsc/self.glp writes its faults), is refused whole, its faults of the compiler's Verdict type.
+check "CVA compiler: a contract malformed, a role that is not guarding changing nothing, is not compiled" "%% not compiled(inert)" "$cva_refuse"
+check "CVA compiler: ... the verdict named" "%% it is malformed; check_named in programs/gsc gives the faults." "$cva_refuse"
 check "CVA compiler: requirements differing at one participant only, compiled" "%% the canonical CVA platform of the contract(one_req)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(one_req)" "$cva_refuse"
-check "CVA compiler: a class with two minimal guard sets not both of one person, refused as without simple guards" "%% not compiled(two_gsets)" "$cva_refuse"
-check "CVA compiler: ... the schema-bindings of the two guard sets named" "%% and the schema-binding(s2(person(0), person(1), person(2)))" "$cva_refuse"
+check "CVA compiler: a class whose parts are guarded by two sets not both of one person, compiled, simple guards not asked (vGLP 099f876)" "%% the canonical CVA platform of the contract(two_gsets)" "$cva_refuse"
+check_not "CVA compiler: ... and no fault on its guards" "%% not compiled(two_gsets)\|does not have simple guards" "$cva_refuse"
 check "CVA compiler: an unguarded class whose schema-bindings require different atoms at one participant, compiled, the old condition of equal requirements in an unguarded class gone" "%% the canonical CVA platform of the contract(unguarded_reqs)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(unguarded_reqs)" "$cva_refuse"
-# Act schemas as local specifications (vGLP c0bea08, Section 5.4): an atom of
+# Act schemas as local specifications (vGLP 099f876, Section 5.4): an atom of
 # a reflexive predicate naming the participant holds there and requires
 # nothing; a schema-binding whose two roles at one person require and forbid
-# one atom there determines nothing and is of no class; and the condition, read
-# per transaction: for two transactions of a class, the sets of people the
-# schema-bindings determining each mark, all of them together, are the same
-# (the sentence's "sets", and its example, unfriend guarded by either party;
-# compiler/local.glp's header).  The fixtures *_marks mark different people at
-# their two schemas, so that the domains decide the condition.
+# one atom there determines nothing and is of no class; and each schema-binding
+# determines a part with the people in its marked roles as its guard set, so a
+# class whose schema-bindings mark different people is compiled, each part
+# with its own guard set.  The fixtures *_marks mark different people at their
+# two schemas, which the condition of equal marked sets refused where a
+# transaction of the class was determined by one alone, and which compile now.
 check "CVA compiler: requirements differing at both participants only by the reflexive atom naming each, compiled" "%% the canonical CVA platform of the contract(refl_own)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(refl_own)" "$cva_refuse"
 check "CVA compiler: ... the same, f not declared reflexive, marking the same people, compiled" "%% the canonical CVA platform of the contract(refl_not)" "$cva_refuse"
 check "CVA compiler: ... the two schemas marking different people, the reflexive atoms naming each holding there, every transaction of the class determined by both, compiled (refl_own_marks)" "%% the canonical CVA platform of the contract(refl_own_marks)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(refl_own_marks)" "$cva_refuse"
-check "CVA compiler: ... the same, f not declared reflexive, a transaction determined by one alone, refused (refl_not_marks)" "%% not compiled(refl_not_marks)" "$cva_refuse"
+check "CVA compiler: ... the same, f not declared reflexive, a transaction determined by one alone, compiled, its parts guarded apart (refl_not_marks)" "%% the canonical CVA platform of the contract(refl_not_marks)" "$cva_refuse"
 check "CVA compiler: a schema-binding of two roles at one person requiring and forbidding one atom there is of no class, so the contract is local" "%% the canonical CVA platform of the contract(contra)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(contra)" "$cva_refuse"
 check "CVA compiler: ... its two roles at one person satisfiable there, the schema-binding of the class, marking the same people, compiled (contra_live)" "%% the canonical CVA platform of the contract(contra_live)" "$cva_refuse"
 check "CVA compiler: ... marking different people, the schema-binding of no class: compiled (contra_marks)" "%% the canonical CVA platform of the contract(contra_marks)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(contra_marks)" "$cva_refuse"
-check "CVA compiler: ... marking different people, the schema-binding of the class, refused (contra_live_marks)" "%% not compiled(contra_live_marks)" "$cva_refuse"
-check "CVA compiler: ... it named" "%% and the schema-binding(s2(person(0), person(1), person(0)))" "$cva_refuse"
-check "CVA compiler: two schema-bindings of one class marking different people, a transaction determined by one alone, refused by the condition" "%% not compiled(marks)" "$cva_refuse"
-check "CVA compiler: ... the condition named" "%% its condition): the schema-bindings determining two transactions of one class mark" "$cva_refuse"
+check "CVA compiler: ... marking different people, the schema-binding of the class, compiled, its part guarded apart (contra_live_marks)" "%% the canonical CVA platform of the contract(contra_live_marks)" "$cva_refuse"
+check_not "CVA compiler: ... no schema-binding named against it" "%% and the schema-binding(s2(person(0), person(1), person(0)))" "$cva_refuse"
+check "CVA compiler: two schema-bindings of one class marking different people, a transaction determined by one alone, compiled, a part each with its own guard set" "%% the canonical CVA platform of the contract(marks)" "$cva_refuse"
+check_not "CVA compiler: ... the condition of equal marked sets gone" "its condition): the schema-bindings determining two transactions of one class mark" "$cva_refuse"
 check "CVA compiler: ... marking different people and requiring the same atoms, compiled" "%% the canonical CVA platform of the contract(marks_same)" "$cva_refuse"
 check "CVA compiler: a class of four schema-bindings, two marking p and two marking q, some requiring an atom the others do not, each transaction determined by one marking p and one marking q, compiled (cover)" "%% the canonical CVA platform of the contract(cover)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(cover)" "$cva_refuse"
 check "CVA compiler: unfriending, one class guarded by either party, compiled (sym)" "%% the canonical CVA platform of the contract(sym)" "$cva_refuse"
-check "CVA compiler: unfriending whose first role forbids an atom, a transaction determined by the binding of one party first alone, refused (asym)" "%% not compiled(asym)" "$cva_refuse"
-check "CVA compiler: ... the two schema-bindings named" "%% the schema-binding(unf(person(0), person(1)))" "$cva_refuse"
+check "CVA compiler: unfriending whose first role forbids an atom, a transaction determined by the binding of one party first alone, compiled, two parts guarded by one party each (asym)" "%% the canonical CVA platform of the contract(asym)" "$cva_refuse"
+check_not "CVA compiler: ... no schema-binding named against it" "%% the schema-binding(unf(person(0), person(1)))" "$cva_refuse"
 
 # The classes are the contract's equivalence, generated by relating two
 # transactions when one schema-binding determines both (vGLP 9c819f5, Section
@@ -3577,7 +3583,7 @@ check "CVA compiler: ... the two schema-bindings named" "%% the schema-binding(u
 # the closure.  Eleven fixtures of the compiler's own: clash2 (two classes),
 # chain3 (a third binding joins them, all marking the same people, compiled),
 # clash2_marks and chain3_marks (the same, the two marking different people:
-# two classes, compiled, and one, refused by the condition, the class joined),
+# two classes, and one, its parts guarded apart, both compiled),
 # wards (a verdict grassroots with wards compiles, A), signed (a signed term in
 # an added atom, the speech act bound to y signed by the person in role i,
 # compiles, B), deadfree (a schema requiring and forbidding an atom of a
@@ -3585,8 +3591,8 @@ check "CVA compiler: ... the two schema-bindings named" "%% the schema-binding(u
 # (CSSN's child role and adult role at one person, two classes),
 # sibling_noclash (the adult role not forbidding child, one class, all marking
 # the same people, compiled), and sibling_marks and sibling_noclash_marks (the
-# same, the parent of the adult role not marked: two classes, compiled, and
-# one, refused by the condition).
+# same, the parent of the adult role not marked: two classes, and one, its
+# parts guarded apart, both compiled).
 cva_classes=$("$REPL_RUN" <<HEREDOC
 $CVA/compiler/
 :limit 100000000
@@ -3607,7 +3613,7 @@ HEREDOC
 check "CVA compiler: two schema-bindings of the same participants and atoms, one requiring an atom the other forbids, are two classes (clash2)" "%% the canonical CVA platform of the contract(clash2)" "$cva_classes"
 check "CVA compiler: a third schema-binding linking them joins one class, all marking the same people, compiled (chain3)" "%% the canonical CVA platform of the contract(chain3)" "$cva_classes"
 check "CVA compiler: ... the two marking different people, two classes, compiled (clash2_marks)" "%% the canonical CVA platform of the contract(clash2_marks)" "$cva_classes"
-check "CVA compiler: ... and the third joining them, one class, refused by the condition (chain3_marks)" "%% not compiled(chain3_marks)" "$cva_classes"
+check "CVA compiler: ... and the third joining them, one class, its parts guarded apart, compiled (chain3_marks)" "%% the canonical CVA platform of the contract(chain3_marks)" "$cva_classes"
 check "CVA compiler: a contract grassroots with wards is compiled (wards)" "%% the canonical CVA platform of the contract(wards)" "$cva_classes"
 check "CVA compiler: a signed term in an added atom, the speech act bound to y signed by the person in role i, compiles (signed)" "%% the canonical CVA platform of the contract(signed)" "$cva_classes"
 check "CVA compiler: a schema requiring and forbidding an atom of a variable of no deleted or added atom, refused as not effective (deadfree)" "%% not compiled(deadfree)" "$cva_classes"
@@ -3615,7 +3621,7 @@ check "CVA compiler: ... the schema and the variable named" "%% the schema and t
 check "CVA compiler: CSSN's sibling case, a child role and an adult role at one person, two classes (sibling)" "%% the canonical CVA platform of the contract(sibling)" "$cva_classes"
 check "CVA compiler: the adult role not forbidding child, one class, all marking the same people, compiled (sibling_noclash)" "%% the canonical CVA platform of the contract(sibling_noclash)" "$cva_classes"
 check "CVA compiler: the parent of the adult role not marked, two classes, compiled (sibling_marks)" "%% the canonical CVA platform of the contract(sibling_marks)" "$cva_classes"
-check "CVA compiler: ... and the adult role not forbidding child, one class, refused by the condition (sibling_noclash_marks)" "%% not compiled(sibling_noclash_marks)" "$cva_classes"
+check "CVA compiler: ... and the adult role not forbidding child, one class, its parts guarded apart, compiled (sibling_noclash_marks)" "%% the canonical CVA platform of the contract(sibling_noclash_marks)" "$cva_classes"
 
 
 # The compiled agent is no longer volitional: it asks for requests by request
@@ -3651,20 +3657,23 @@ check "CVA plays: a proposal naming the agent is granted once the person has wri
 check "CVA plays: ... each hole the agent's own key" "^fill(Me, \[Me?|Ks\]) :- ground(Me?) | fill(Me?, Ks?)\.$" "$cva_person"
 check "CVA plays: alice establishes her identity by the key her request question shows" "pair(\[look, own(\[A1\], propose(establish(A1?)))" "$(cat "$CVA/social_graph/self.glp")"
 
-# The request type has the alternative propose([t]) for each guarded class [t]
-# and the alternative known(Q) (vGLP, Section 5.4, the compilation): Proposal,
-# the alternatives of the schemas some binding of which is of a guarded class
-# (compiler/local.glp, proposable).  nudge's nudge is unguarded, and gnudge's g
-# is guarded but one class with nudge, so unguarded too: neither is proposed.
-# A contract with no guarded class has the request type known(Peer) alone, and
-# no clause on the request propose([t]).
+# The request type has the alternative propose([t]_j) for each guarded part
+# [t]_j and the alternative known(Q) (vGLP 099f876, Section 5.4, the
+# compilation): Proposal, the alternatives of the schemas marking a role some
+# binding of which determines a transaction (compiler/local.glp, proposable).
+# nudge's nudge is unguarded and not proposed; gnudge's g is a guarded part of
+# a class whose other part, nudge's, is unguarded, and is proposed (vGLP #15,
+# Code_inbox.md, 2026-10-19 10:50 UTC, item 4).  A contract with no guarded
+# part has the request type known(Peer) alone, and no clause on the request
+# propose([t]_j).
 cva_proposal() { # cva_proposal <platform.vglp>: the alternatives of Proposal, one line
     awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$1"
 }
 check "CVA request type: the social graph's, propose(Proposal) and known(Peer)" "^Request ::= propose(Proposal) ; known(Peer)\.$" "$(cat "$CVA/social_graph/platform.vglp")"
 check "CVA request type: the social graph proposes establish, befriend and unfriend" "^establish(Peer) befriend(Peer, Peer) unfriend(Peer, Peer) $" "$(cva_proposal "$CVA/social_graph/platform.vglp")"
 check "CVA request type: nudge proposes befriend, not the unguarded nudge" "^befriend(Peer, Peer) $" "$(cva_proposal "$CVA/nudge/platform.vglp")"
-check "CVA request type: gnudge proposes befriend, not nudge and not g, guarded but one class with nudge" "^befriend(Peer, Peer) $" "$(cva_proposal "$CVA/gnudge/platform.vglp")"
+check "CVA request type: gnudge proposes befriend and g, a guarded part of one class with the unguarded part of nudge, and not nudge" "^befriend(Peer, Peer) g(Peer, Peer) $" "$(cva_proposal "$CVA/gnudge/platform.vglp")"
+check "CVA request type: opens proposes befriend, mark and rmark, and not the unguarded u1 and u2" "^befriend(Peer, Peer) mark(Peer, Peer) rmark(Peer, Peer) $" "$(cva_proposal "$CVA/opens/platform.vglp")"
 cva_ung=$("$REPL_RUN" <<HEREDOC
 $CVA/compiler/
 :limit 100000000
@@ -3752,16 +3761,26 @@ check "CVA pay and swap: ... and the swap commits" "sent(alice, bob, outcome(att
 check "CVA pay and swap: alice pays bob, guarded by her alone, and bob's machine votes yes, unasked, and it commits" "sent(alice, bob, start(attempt(alice, 3, 3, pay(alice, bob)))), sent(bob, alice, vote(attempt(alice, 3, 3, pay(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, 3, pay(alice, bob)), commit))" "$cva_cur_payswap"
 check "CVA pay and swap: bob takes the pay's start and its outcome" "B = \[.*start(attempt(alice, 3, 3, pay(alice, bob))), outcome(attempt(alice, 3, 3, pay(alice, bob)))" "$cva_cur_payswap"
 
+# An attempt's guard set is its part's (vGLP 099f876, Definition "Attempt";
+# vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 5): the swap back's class
+# has the swaps' part, guarded by alice and bob, and the redeems' parts, guarded
+# by alice and by bob.  Requesting the swap back, alice proposes the part her
+# request names, the swaps', which asks bob; requesting it again after a
+# second swap, she proposes her redeem's part, the guarded part of the class
+# she guards and is ready for and has proposed less recently (Section 5.4,
+# "The compilation"), which asks nobody.
 cva_cur_redeem=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
-:limit 600000
+:limit 1500000
 play_redeem(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA redeem: the swap back, a class redeem also determines, guarded by alice alone: bob's machine votes, unasked" "B = \[.*start(attempt(alice, 3, 3, swap(alice, bob, alice, bob))), outcome(attempt(alice, 3, 3, swap(alice, bob, alice, bob)))" "$cva_cur_redeem"
-check "CVA redeem: ... yes, and it commits" "sent(bob, alice, vote(attempt(alice, 3, 3, swap(alice, bob, alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, 3, swap(alice, bob, alice, bob)), commit))" "$cva_cur_redeem"
-check_not "CVA redeem: bob answers nothing for the swap back" "answer(attempt(alice, 3, 3, swap" "$cva_cur_redeem"
+check "CVA redeem: the swap back, alice proposing the swaps' part her request names, guarded by alice and bob: bob is asked and answers yes" "B = \[.*start(attempt(alice, 3, 3, swap(alice, bob, alice, bob))), gave(swap(alice, bob, alice, bob), yes), answer(attempt(alice, 3, 3, swap(alice, bob, alice, bob))), vote(attempt(alice, 3, 3, swap(alice, bob, alice, bob))), outcome(attempt(alice, 3, 3, swap(alice, bob, alice, bob)))" "$cva_cur_redeem"
+check "CVA redeem: ... it commits" "sent(bob, alice, vote(attempt(alice, 3, 3, swap(alice, bob, alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, 3, swap(alice, bob, alice, bob)), commit))" "$cva_cur_redeem"
+check "CVA redeem: after a second swap, attempt 4, alice requests the swap back again and proposes her redeem's part, proposed less recently, attempt 5" "A = \[.*commit(attempt(alice, 4, 4, swap(alice, bob, bob, alice))), propose(attempt(alice, 5, 5, redeem(alice, bob, alice))), tally(attempt(alice, 5, 5, redeem(alice, bob, alice))), commit(attempt(alice, 5, 5, redeem(alice, bob, alice))) | " "$cva_cur_redeem"
+check "CVA redeem: ... guarded by alice alone: bob's machine votes yes, unasked, and it commits" "B = \[.*start(attempt(alice, 5, 5, redeem(alice, bob, alice))), outcome(attempt(alice, 5, 5, redeem(alice, bob, alice))) | " "$cva_cur_redeem"
+check_not "CVA redeem: bob answers nothing for the redeem" "answer(attempt(alice, 5, 5, redeem" "$cva_cur_redeem"
 
 cva_cur_busy=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
@@ -3858,12 +3877,13 @@ check "CVA introduce: ... and carol" "sent(alice, carol, outcome(attempt(alice, 
 
 # vGLP's contract gnudge (programs/vglp/cva/contracts.glp): nudge with a
 # second schema g, nudge(a, b) and g(b?, a) determining the same transactions,
-# g guarded at its first role.  The opener of an unguarded class is the least
-# person in the first role of its unguarded schema-bindings (vGLP's 2026-10-12
-# 08:26 UTC, Q-B, Udi approved): alice preceding bob, bob opens the class of
-# nudge(bob, alice), which the least person in the first role of all its
-# schema-bindings, g(alice, bob)'s alice, would leave unopened, alice's own
-# transactions holding only the classes of the unguarded schemas with her in
+# g guarded at its first role, so that the class of nudge(a, b) has two parts,
+# nudge(a, b)'s, unguarded, and g(b, a)'s, guarded by b (vGLP 099f876, Section
+# 5.4).  The opener of an unguarded part is the least person in the first role
+# of its schema-bindings: alice preceding bob, bob opens the part of
+# nudge(bob, alice), which the least person in the first role of all the
+# class's schema-bindings, g(alice, bob)'s alice, would leave unopened, alice's
+# own transactions holding only the parts of the unguarded schemas with her in
 # their first role.
 cva_gnudge_load=$("$REPL_RUN" <<HEREDOC
 $CVA/gnudge/
@@ -3881,14 +3901,14 @@ play_gnudge(A, B, N).
 HEREDOC
 2>&1)
 check "CVA gnudge: alice and bob befriended, committed at both" "sent(alice, bob, outcome(attempt(alice, 1, 1, befriend(alice, bob)), commit))" "$cva_gnudge"
-check "CVA gnudge: bob, the least person in the first role of the unguarded schema-bindings of nudge(bob, alice), opens it, an own transaction, once befriended, though alice precedes him" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))).*propose(attempt(bob, 2, 2, nudge(bob, alice)))" "$cva_gnudge"
+check "CVA gnudge: bob, the least person in the first role of the schema-bindings of the unguarded part of nudge(bob, alice), opens it, an own transaction, once befriended, though alice precedes him" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))).*propose(attempt(bob, 2, 2, nudge(bob, alice)))" "$cva_gnudge"
 check "CVA gnudge: ... its start told to alice, whose machine votes on it, no person asked" "sent(alice, bob, vote(attempt(bob, 3, 2, nudge(bob, alice)), " "$cva_gnudge"
-check_not "CVA gnudge: alice, preceding bob, proposes nothing of the class of nudge(bob, alice)" "propose(attempt(alice, [0-9]*, [0-9]*, nudge(bob, alice)))\|propose(attempt(alice, [0-9]*, [0-9]*, g(" "$cva_gnudge"
+check_not "CVA gnudge: alice, preceding bob, proposes nothing of the class of nudge(bob, alice), her person requesting none" "propose(attempt(alice, [0-9]*, [0-9]*, nudge(bob, alice)))\|propose(attempt(alice, [0-9]*, [0-9]*, g(" "$cva_gnudge"
 check_not "CVA gnudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, [0-9]*, nudge\|answer(attempt([a-z]*, [0-9]*, [0-9]*, g(" "$cva_gnudge"
 check "CVA gnudge: bob wounds his own attempt in favour of alice's and only then takes her start" "B = \[.*propose(attempt(bob, 2, 2, nudge(bob, alice))), wound(attempt(alice, 2, 2, nudge(alice, bob)), attempt(bob, 2, 2, nudge(bob, alice))), start(attempt(alice, 2, 2, nudge(alice, bob)))" "$cva_gnudge"
 check_not "CVA gnudge: no vote no for contention" "vote(attempt([a-z]*, [0-9]*, [0-9]*, nudge([a-z]*, [a-z]*)), no)" "$cva_gnudge"
 check "CVA gnudge: alice's nudge committed at both" "sent(alice, bob, outcome(attempt(alice, 2, 2, nudge(alice, bob)), commit))" "$cva_gnudge"
-check "CVA gnudge: bob's nudge, the class he opens, retried at the wounded rank, committed at both" "sent(bob, alice, outcome(attempt(bob, 3, 2, nudge(bob, alice)), commit))" "$cva_gnudge"
+check "CVA gnudge: bob's nudge, the part he opens, retried at the wounded rank, committed at both" "sent(bob, alice, outcome(attempt(bob, 3, 2, nudge(bob, alice)), commit))" "$cva_gnudge"
 check_not "CVA gnudge: nothing aborted for ever: no third attempt at either nudge" "attempt(alice, 3, [0-9]*, nudge\|attempt(bob, 4, [0-9]*, nudge" "$cva_gnudge"
 
 # vGLP's contract childsafe (programs/vglp/cva/contracts.glp): befriend, enrol
@@ -4034,13 +4054,34 @@ check "CVA parts: bob, holding no coin, votes no on pat's part, his precondition
 check "CVA parts: ... and no on attempt 6, pat's" "sent(bob, alice, vote(attempt(alice, 6, 6, pat(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 6, 6, pat(alice, bob)), abort)) | " "$cva_parts"
 check_not "CVA parts: bob asked nothing for the class, guarded by alice" "answer(attempt([a-z]*, [0-9]*, [0-9]*, \(tap\|pat\)" "$cva_parts"
 
+# The opener per unguarded part (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "The opener of an unguarded part is the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it"; vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3, answering Code #10's fault of 10:16 UTC).  vGLP's contract opens (programs/vglp/cva/contracts.glp): u1(alice, bob) and u2(bob, alice), one class of two unguarded parts, opened by alice and by bob.  bob, holding w(alice) after marking alice, opens u2(bob, alice)'s part, which holds, and proposes it as an own transaction; alice, holding no r(bob), proposes nothing of the class.  An opener taken over the class would be alice, whose agent finds the class only through u1's first role, requiring r(bob), and nobody would open it.
+cva_opens_load=$("$REPL_RUN" <<HEREDOC
+$CVA/opens/
+:quit
+HEREDOC
+2>&1)
+check "CVA opens: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/opens" "$cva_opens_load"
+check_not "CVA opens: no type errors" "Type checking failed" "$cva_opens_load"
+
+cva_opens=$("$REPL_RUN" <<HEREDOC
+$CVA/opens/
+:limit 1500000
+play_opens(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA opens: bob marks alice, attempt 2, and then opens the part of u2(bob, alice), an own transaction, attempt 3, which commits" "B = \[.*propose(attempt(bob, 2, 2, mark(bob, alice))), tally(attempt(bob, 2, 2, mark(bob, alice))), commit(attempt(bob, 2, 2, mark(bob, alice))), propose(attempt(bob, 3, 3, u2(bob, alice))), tally(attempt(bob, 3, 3, u2(bob, alice))), commit(attempt(bob, 3, 3, u2(bob, alice))) | " "$cva_opens"
+check "CVA opens: alice's machine votes yes on its start, unasked, and takes the outcome" "sent(bob, alice, start(attempt(bob, 3, 3, u2(bob, alice)))), sent(alice, bob, vote(attempt(bob, 3, 3, u2(bob, alice)), yes)), sent(bob, alice, outcome(attempt(bob, 3, 3, u2(bob, alice)), commit)) | " "$cva_opens"
+check_not "CVA opens: alice, preceding bob, proposes nothing of the class, the part she opens not holding" "propose(attempt(alice, [0-9]*, [0-9]*, \(u1\|u2\)" "$cva_opens"
+check_not "CVA opens: no person answers for the unguarded parts" "answer(attempt([a-z]*, [0-9]*, [0-9]*, \(u1\|u2\)" "$cva_opens"
+
 # No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes
 # its own transactions "when it starts and after each trigger, one at a time
 # until none holds"; Udi's approval of 2026-10-18, reported by Code #10): each
 # play's run suspends once every agent has taken its own transactions until
 # none holds and no trigger is left to read, where until vGLP efe7bbc it ran to
 # the REPL's :limit, each agent's clock ticking without end.
-for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts; do
+for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens; do
     check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
     check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
 done

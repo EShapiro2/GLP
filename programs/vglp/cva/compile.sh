@@ -13,7 +13,7 @@
 # (Currencies', programs/currencies/coins/GC.glp, the checker's gc; Section
 # 3.4), each the one copy in its owner's file (claude.md "Sessions", the
 # cascade rule; Coordination Appendix C), and nudge, introduce, gnudge,
-# childsafe, link, friends, waves and parts, vGLP's, which contracts.glp beside the compiler
+# childsafe, link, friends, waves, parts and opens, vGLP's, which contracts.glp beside the compiler
 # holds, with the introduction predicate each names, introduction_named/2, or
 # none (GSC's two name none).  A contract is checked before it is compiled
 # (GSC, Section 5), so a REPL session on each owner's file and one on
@@ -33,7 +33,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 THEIRS="gsg gc"
-OURS="nudge introduce gnudge childsafe link friends waves parts"
+OURS="nudge introduce gnudge childsafe link friends waves parts opens"
 CONTRACTS="$THEIRS $OURS"
 
 contract_file() { # contract_file <contract> ; the file that holds it, its owner's
