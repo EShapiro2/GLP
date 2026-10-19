@@ -128,16 +128,22 @@ String _q(String s) => "'$s'";
 const _friends = 'speech(utterance(friends), alice)';
 const _hikers = 'speech(utterance(hikers), bob)';
 
+/// A member atom of the group [name] led by [leader]: its community name,
+/// `<leader>.name`, one argument (programs/apps/gsn/platform.vglp, `Atom`
+/// and `CName`).
+String _member(String leader, String name) =>
+    'member(dot(community($leader), $name))';
+
 /// Alice's GSN state: her identity; Bob and Carol her friends; a message
 /// from Bob; the group friends, which she leads, Bob listed in it, Bob's
 /// message delivered in it; and the group hikers, which Bob leads, his
 /// message delivered in it.
 final _gsnState = '[identity, friend(bob), friend(carol), '
     'received(${_sp('Lunch at noon?', 'bob')}, bob), '
-    'member(alice, $_friends), listed(alice, $_friends), '
+    '${_member('alice', _friends)}, listed(alice, $_friends), '
     'listed(bob, $_friends), '
     'received_in(${_sp('See you all on Sunday', 'bob')}, alice, $_friends), '
-    'member(bob, $_hikers), '
+    '${_member('bob', _hikers)}, '
     'received_in(${_sp('Trail at nine', 'bob')}, bob, $_hikers)]';
 
 // --- The phone ------------------------------------------------------------------
@@ -395,13 +401,32 @@ void main() {
       expect(s!.identity, isTrue);
       expect(s.received(const GAtom('bob')).map((x) => SpeechAct.of(x)!.text),
           ['Lunch at noon?']);
-      final gs = s.groups;
+      final gs = s.groups(me: const GAtom('alice'));
       expect(gs.map((g) => g.title), ['friends', 'hikers']);
+      expect(formatTerm(gs[0].leader), 'alice');
       expect(gs[0].members.map(formatTerm), ['alice', 'bob']);
       expect(gs[0].messages.map((x) => SpeechAct.of(x)!.text),
           ['See you all on Sunday']);
       expect(gs[1].members, isEmpty);
       expect(formatTerm(gs[1].leader), 'bob');
+      expect(gs[1].messages.map((x) => SpeechAct.of(x)!.text),
+          ['Trail at nine']);
+      // The members are drawn only in a group the person leads, the
+      // leader's state listing them; where the person is not known, in none.
+      expect(s.groups().map((g) => g.members), [isEmpty, isEmpty]);
+      expect(s.inGroup, isTrue);
+    });
+
+    test('a member\'s state: the group, its leader and the message delivered '
+        'in it, and no member', () {
+      final (_, s) = SocialState.read(fixtureTerm('[${_v('[identity, '
+          'friend(alice), ${_member('alice', _friends)}, '
+          "received_in(${_sp('Hi all', 'bob')}, alice, $_friends)]")}]'));
+      final g = s!.groups(me: const GAtom('bob')).single;
+      expect(g.title, 'friends');
+      expect(formatTerm(g.leader), 'alice');
+      expect(g.members, isEmpty);
+      expect(g.messages.map((x) => SpeechAct.of(x)!.text), ['Hi all']);
     });
   });
 
@@ -740,7 +765,7 @@ void main() {
       await p.views([
         _v(
             '[identity, friend(bob), item($flood), item($road), '
-            'member(alice, $_friends), listed(alice, $_friends)]',
+            '${_member('alice', _friends)}, listed(alice, $_friends)]',
             '[bob]')
       ]);
       await p.menu(1, _gsnpProposals, known: '[bob]');
@@ -984,25 +1009,31 @@ void main() {
       expect(SocialNotice.of(fixtureTerm('view([], [])')), isNull);
     });
 
-    test('the last view is read past the notices written after it, and the '
-        'notices kept in the order written', () {
+    test('the last view is read past the notices written after it; those '
+        'notices are drawn, and every notice is kept in the order written',
+        () {
       final (ok, s) = SocialState.read(fixtureTerm('[view([identity], [bob]), '
           'refused(befriend(alice, bob), bob), view([identity], [bob, carol]), '
           'yielded(befriend(alice, carol)), pending([2, 2, 2, 2, 1])]'));
       expect(ok, isTrue);
       expect(s!.known.map(formatTerm), ['bob', 'carol']);
+      // "a widget that draws the last view written and the notices written
+      // after it" (vGLP f5f1644, Section 5.4, "The compilation").
       expect(s.notices.map((n) => formatTerm(n.part)),
+          ['befriend(alice, carol)']);
+      expect(s.notices.map((n) => n.by == null), [true]);
+      expect(s.written.map((n) => formatTerm(n.part)),
           ['befriend(alice, bob)', 'befriend(alice, carol)']);
-      expect(s.notices.map((n) => n.by == null), [false, true]);
     });
 
     _phoneTest(
         'a notice is one line at the top of the tab it concerns, the latest '
         'first: a befriend in Friends, a join in Groups', (tester) async {
       final p = await _Phone.open(tester, 'gsnp');
+      final state = _v('[identity, friend(carol), ${_member('alice', _friends)}, '
+          'listed(alice, $_friends)]', '[bob, carol]');
       await p.views([
-        _v('[identity, friend(carol), member(alice, $_friends), '
-            'listed(alice, $_friends)]', '[bob, carol]'),
+        state,
         'refused(befriend(alice, bob), bob)',
       ]);
       await p.menu(1, _gsnpProposals, known: '[bob, carol]');
@@ -1014,14 +1045,13 @@ void main() {
       expect(p.key(1, 'befriend:bob'), findsOneWidget);
       p.plain();
       await p.shoot('notice-bob-declined.png');
-      await p.views([
-        _v('[identity, friend(carol), member(alice, $_friends), '
-            'listed(alice, $_friends)]', '[bob, carol]'),
+      final notices = [
         'refused(befriend(alice, bob), bob)',
         'refused(join(alice, carol, $_friends), carol)',
         "refused(message(alice, carol, speech(utterance('Hi'), alice)), "
             'carol)',
-      ]);
+      ];
+      await p.views([state, ...notices]);
       final friends = p.texts();
       expect(
           friends.indexOf('Your message to Carol was not delivered.'),
@@ -1038,6 +1068,14 @@ void main() {
           findsOneWidget);
       expect(find.text('Bob declined your friendship.'), findsNothing);
       p.plain();
+      // A notice is drawn until the next view is written (vGLP f5f1644).
+      await p.views([state, ...notices, state]);
+      expect(find.text('Carol declined to join the group friends.'),
+          findsNothing);
+      await p.tab(ScreenTab.friends);
+      expect(find.text('Bob declined your friendship.'), findsNothing);
+      expect(find.text('Your message to Carol was not delivered.'),
+          findsNothing);
     });
 
     _phoneTest(
@@ -1051,6 +1089,13 @@ void main() {
       expect(find.text('Your request to befriend Bob did not go through.'),
           findsOneWidget);
       expect(find.byType(ElevatedButton), findsNothing);
+      await p.views([
+        _v('[identity]', '[bob]'),
+        'yielded(befriend(alice, bob))',
+        _v('[identity]', '[bob, carol]'),
+      ]);
+      expect(find.text('Your request to befriend Bob did not go through.'),
+          findsNothing);
     });
   });
 }

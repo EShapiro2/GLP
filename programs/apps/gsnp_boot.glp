@@ -1,36 +1,38 @@
-%% gsnp_boot.glp --- the app of GSNP, the grassroots social network with provenance, on three smartphones (GSG paper, Sections 2 and 6, "The Grassroots Super-App" and "Mini-Apps on the Prototype"), as gsn_boot.glp runs GSN's app on two: under the boot harness, one isolate per person, each with its own key pair, running the social graph of programs/social/graph/core as its super-app and hosting GSNP's mini-app (programs/apps/gsnp).  The program is graph/core, named as :boot's second argument, and this file is loaded on top of it, calling its exported agent/4 (IGLP, Implementation Notes, "The scope a boot source is checked in"); the super-app is not edited:
+%% gsnp_boot.glp --- the app of GSNP, the grassroots social network with provenance, on five smartphones (GSG paper, Sections 2 and 6, "The Grassroots Super-App" and "Mini-Apps on the Prototype"), as gsn_boot.glp runs GSN's app on two: under the boot harness, one isolate per person, each with its own key pair, running the social graph of programs/social/graph/core as its super-app and hosting GSNP's mini-app (programs/apps/gsnp).  The program is graph/core, named as :boot's second argument, and this file is loaded on top of it, calling its exported agent/4 (IGLP, Implementation Notes, "The scope a boot source is checked in"); the super-app is not edited:
 %%   :artefact programs/apps/gsnp programs/social/graph/core
 %%   :boot programs/apps/gsnp_boot.glp programs/social/graph/core
 %%
-%% Each person trusts the compiler's key, reads the certified artefact gsnp.glpw from graph/core with load_file/2 and installs it, with one end of a person channel.  alice connects to bob, and once they are connected bob connects to carol; each pair befriends in the super-app's social graph across the isolates; alice invites bob to the mini-app and bob invites carol, each invitee consents, and each handshake opens a root channel between the two executions, so that bob's execution has two conversations.  Over them the mini-app runs GSNP's contract, as play_provenance of programs/apps/gsnp runs it: each establishes their identity (GSG:1); alice and bob become friends; alice signs the item 'Flood on Main Street' and sends it to bob in a message; bob and carol become friends; and bob forwards the item to carol, who holds it signed by alice and then by bob.  The other end of each person channel is the mini-app's own scripted person (programs/apps/gsnp/person.glp), activated from the module value under its role; its screen goes to the person, one line each, and so does what the super-app told the person of the friendships in its own social graph, sg(...).
+%% The persons are those of the play of GAI's GSNP figure, dan, eve, carol, bob and fay (plays.glp of programs/apps/gsnp).  Each trusts the compiler's key, reads the certified artefact gsnp.glpw from graph/core with load_file/2 and installs it, with one end of a person channel.  dan connects to eve; once connected, eve connects to carol, carol to bob and bob to fay; each pair befriends in the super-app's social graph across the isolates; once connected to the next, each invites them to the mini-app, and the invitee, having consented in advance, joins it, each handshake opening a root channel between the two executions.  Over those four conversations the mini-app runs GSNP's contract, as play_provenance of programs/apps/gsnp runs it: each establishes their identity (GSG:1); dan and eve, eve and carol, carol and bob, and bob and fay become friends; dan signs the item 'Flood on Main Street' and sends it to eve in a message; eve forwards it to carol, and carol to bob, who holds it signed by dan, then by eve, then by carol.  The other end of each person channel is the mini-app's own scripted person (programs/apps/gsnp/person.glp), activated from the module value under its role; its screen goes to the person, one line each, and so does what the super-app told the person of the friendships in its own social graph, sg(...).
 %%
 %% The boot settles, as gsn_boot.glp's does: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers").  Section APPS of the suite runs this file and holds each person's lines, in order.
 
 procedure boot.
 boot :-
-    gsnp_phone(alice, _)@alice,
+    gsnp_phone(dan, _)@dan,
+    gsnp_phone(eve, _)@eve,
+    gsnp_phone(carol, _)@carol,
     gsnp_phone(bob, _)@bob,
-    gsnp_phone(carol, _)@carol.
+    gsnp_phone(fay, _)@fay.
 
-%% One smartphone: the super-app's agent on the isolate's network, the mini-app read from its artefact beside the program and installed, and the person's acts by role.
+%% One smartphone: the super-app's agent on the isolate's network, the mini-app read from its artefact beside the program and installed, and the person's acts, given the person before them in the chain, who invites them, and the person after them, whom they connect to and invite, each one or none.
 procedure gsnp_phone(Key?, NetInStream?).
-gsnp_phone(alice, NetIn) :-
-    agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+gsnp_phone(dan, NetIn) :-
+    agent(dan, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
     load_file("gsnp.glpw", C),
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
-    alice_gsnp(C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, alice, alice, PersonEnd?, Screen),
+    gsnp_acts(dan, none, one(eve), C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, dan, dan, PersonEnd?, Screen),
     send_to_user(Screen?).
-gsnp_phone(bob, NetIn) :-
-    agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+gsnp_phone(eve, NetIn) :-
+    agent(eve, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
     load_file("gsnp.glpw", C),
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
-    bob_gsnp(C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, bob, bob, PersonEnd?, Screen),
+    gsnp_acts(eve, one(dan), one(carol), C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, eve, eve, PersonEnd?, Screen),
     send_to_user(Screen?).
 gsnp_phone(carol, NetIn) :-
     agent(carol, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -38,68 +40,70 @@ gsnp_phone(carol, NetIn) :-
     load_file("gsnp.glpw", C),
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
-    carol_gsnp(C?, CK?, CSig?, AppEnd?, Out?, In),
+    gsnp_acts(carol, one(eve), one(bob), C?, CK?, CSig?, AppEnd?, Out?, In),
     miniapp_person_run(C?, carol, carol, PersonEnd?, Screen),
     send_to_user(Screen?).
+gsnp_phone(bob, NetIn) :-
+    agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gsnp.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gsnp_acts(bob, one(carol), one(fay), C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, bob, bob, PersonEnd?, Screen),
+    send_to_user(Screen?).
+gsnp_phone(fay, NetIn) :-
+    agent(fay, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gsnp.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gsnp_acts(fay, one(bob), none, C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, fay, fay, PersonEnd?, Screen),
+    send_to_user(Screen?).
 
-%% alice's acts on her super-app: trust the compiler's key, install the mini-app with her end of its person channel, connect to bob, and once connected invite him to the mini-app.
-procedure alice_gsnp(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
-alice_gsnp(C, CK, CSig, AppEnd, Outs,
-           [msg(person, alice, trust(CK?)),
-            msg(person, alice, install(gsnp, C?, CSig?, AppEnd?)),
-            msg(person, alice, connect(bob)) | Cmds?]) :-
-    alice_gsnp_run(Outs?, Cmds).
+%% The person before or after another in the chain: none, or one, by key.
+Link ::= none ; one(Key).
 
-procedure alice_gsnp_run(AgentToUserStream?, UserInStream).
-alice_gsnp_run([msg(agent, person, connected(bob)) | Outs],
-               [msg(person, alice, invite(gsnp, bob)) | Cmds?]) :-
-    send_to_user([sg(connected(bob))]),
-    alice_gsnp_run(Outs?, Cmds).
-alice_gsnp_run([_ | Outs], Cmds?) :- otherwise | alice_gsnp_run(Outs?, Cmds).
-alice_gsnp_run([], []).
+%% The person's first acts on their super-app: trust the compiler's key and install the mini-app with their end of its person channel; then the first of the chain connects to the next, and every other consents in advance to the invitation of the one before them.
+procedure gsnp_acts(Key?, Link?, Link?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
+gsnp_acts(Me, none, one(Q), C, CK, CSig, AppEnd, Outs,
+          [msg(person, Me?, trust(CK?)),
+           msg(person, Me?, install(gsnp, C?, CSig?, AppEnd?)),
+           msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Me?), ground(Q?) |
+    gsnp_run(Me?, none, one(Q?), Outs?, Cmds).
+gsnp_acts(Me, one(P), Next, C, CK, CSig, AppEnd, Outs,
+          [msg(person, Me?, trust(CK?)),
+           msg(person, Me?, install(gsnp, C?, CSig?, AppEnd?)),
+           msg(person, Me?, accept_invite(gsnp, P?)) | Cmds?]) :-
+    ground(Me?), ground(P?) |
+    gsnp_run(Me?, one(P?), Next?, Outs?, Cmds).
 
-%% bob's acts on his: trust the compiler's key, install the mini-app with his end of its person channel, consent in advance to alice's invitation to it, consent to alice's request to connect, once connected to alice connect to carol, and once connected to carol invite her to the mini-app.
-procedure bob_gsnp(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
-bob_gsnp(C, CK, CSig, AppEnd, Outs,
-         [msg(person, bob, trust(CK?)),
-          msg(person, bob, install(gsnp, C?, CSig?, AppEnd?)),
-          msg(person, bob, accept_invite(gsnp, alice)) | Cmds?]) :-
-    bob_gsnp_run(Outs?, Cmds).
-
-procedure bob_gsnp_run(AgentToUserStream?, UserInStream).
-bob_gsnp_run([msg(agent, person, befriend(alice, P)) | Outs],
-             [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
-    send_to_user([sg(befriend(alice))]),
-    bob_gsnp_run(Outs?, Cmds).
-bob_gsnp_run([msg(agent, person, connected(alice)) | Outs],
-             [msg(person, bob, connect(carol)) | Cmds?]) :-
-    send_to_user([sg(connected(alice))]),
-    bob_gsnp_run(Outs?, Cmds).
-bob_gsnp_run([msg(agent, person, connected(carol)) | Outs],
-             [msg(person, bob, invite(gsnp, carol)) | Cmds?]) :-
-    send_to_user([sg(connected(carol))]),
-    bob_gsnp_run(Outs?, Cmds).
-bob_gsnp_run([_ | Outs], Cmds?) :- otherwise | bob_gsnp_run(Outs?, Cmds).
-bob_gsnp_run([], []).
-
-%% carol's acts on hers: trust the compiler's key, install the mini-app with her end of its person channel, consent in advance to bob's invitation to it, and consent to bob's request to connect.
-procedure carol_gsnp(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
-carol_gsnp(C, CK, CSig, AppEnd, Outs,
-           [msg(person, carol, trust(CK?)),
-            msg(person, carol, install(gsnp, C?, CSig?, AppEnd?)),
-            msg(person, carol, accept_invite(gsnp, bob)) | Cmds?]) :-
-    carol_gsnp_run(Outs?, Cmds).
-
-procedure carol_gsnp_run(AgentToUserStream?, UserInStream).
-carol_gsnp_run([msg(agent, person, befriend(bob, P)) | Outs],
-               [msg(person, carol, decision(yes, bob, P?)) | Cmds?]) :-
-    send_to_user([sg(befriend(bob))]),
-    carol_gsnp_run(Outs?, Cmds).
-carol_gsnp_run([msg(agent, person, connected(bob)) | Outs], Cmds?) :-
-    send_to_user([sg(connected(bob))]),
-    carol_gsnp_run(Outs?, Cmds).
-carol_gsnp_run([_ | Outs], Cmds?) :- otherwise | carol_gsnp_run(Outs?, Cmds).
-carol_gsnp_run([], []).
+%% The person's acts on what their super-app tells them: consent to the request to connect of the one before them; once connected to the one before them, connect to the one after; and once connected to the one after, invite them to the mini-app.
+procedure gsnp_run(Key?, Link?, Link?, AgentToUserStream?, UserInStream).
+gsnp_run(Me, one(P), Next, [msg(agent, person, befriend(P1, X)) | Outs],
+         [msg(person, Me?, decision(yes, P1?, X?)) | Cmds?]) :-
+    ground(Me?), ground(P?), P1? =?= P? |
+    send_to_user([sg(befriend(P1?))]),
+    gsnp_run(Me?, one(P?), Next?, Outs?, Cmds).
+gsnp_run(Me, one(P), one(Q), [msg(agent, person, connected(P1)) | Outs],
+         [msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Me?), ground(P?), ground(Q?), P1? =?= P? |
+    send_to_user([sg(connected(P1?))]),
+    gsnp_run(Me?, one(P?), one(Q?), Outs?, Cmds).
+gsnp_run(Me, one(P), none, [msg(agent, person, connected(P1)) | Outs], Cmds?) :-
+    ground(P?), P1? =?= P? |
+    send_to_user([sg(connected(P1?))]),
+    gsnp_run(Me?, one(P?), none, Outs?, Cmds).
+gsnp_run(Me, Prev, one(Q), [msg(agent, person, connected(Q1)) | Outs],
+         [msg(person, Me?, invite(gsnp, Q?)) | Cmds?]) :-
+    ground(Me?), ground(Q?), Q1? =?= Q? |
+    send_to_user([sg(connected(Q1?))]),
+    gsnp_run(Me?, Prev?, one(Q?), Outs?, Cmds).
+gsnp_run(Me, Prev, Next, [_ | Outs], Cmds?) :-
+    otherwise | gsnp_run(Me?, Prev?, Next?, Outs?, Cmds).
+gsnp_run(_, _, _, [], []).
 
 %% The creator's certification, signed here over the mini-app's source identity, the contract's sixteen act schemas, establish, befriend, unfriend, sign, message, forward, create, join, leave, close, drop, post_own, post, post_forward, deliver and deliver_own (programs/gsc/GSNP.glp), and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
 procedure certified(Content?, String, String).
