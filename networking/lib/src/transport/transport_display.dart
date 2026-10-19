@@ -10,8 +10,6 @@ extension PeerTransportIcon on PeerTransport {
       case PeerTransport.bleDirect:
         return const Icon(Icons.bluetooth_connected,
             size: 16, color: Colors.blue);
-      case PeerTransport.webrtc:
-        return const Icon(Icons.public, size: 16, color: Colors.blue);
       case PeerTransport.udp:
         return const Icon(Icons.public, size: 16, color: Colors.green);
     }

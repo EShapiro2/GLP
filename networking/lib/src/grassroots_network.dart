@@ -945,7 +945,6 @@ class GrassrootsNetwork {
       switch (carrier) {
         PeerTransport.bleDirect => Underlay.pan,
         PeerTransport.udp => _udpUnderlayOf(pk),
-        PeerTransport.webrtc => null,
       };
 
   /// The underlay of [pk]'s UDP session ([_ipUnderlayFor] of its address), or
@@ -2710,8 +2709,6 @@ class GrassrootsNetwork {
       case PeerTransport.bleDirect:
         store.dispatch(PeerBleAuthenticatedAction(pubkey));
         break;
-      case PeerTransport.webrtc:
-        break;
     }
     // The handshake is followed by the mutual attestation exchange, and
     // neither peer is reported reachable until it succeeds (spec §Session
@@ -2741,9 +2738,7 @@ class GrassrootsNetwork {
     final sender = switch (transport) {
       PeerTransport.udp => _udpMessageSender,
       PeerTransport.bleDirect => _bleMessageSender,
-      PeerTransport.webrtc => null,
     };
-    if (sender == null) return;
     final hash = _noiseSessions.handshakeHashFor(transport, pubkey);
     if (hash == null) return;
     final key = _handshakePairKey(transport, pubkey);
@@ -2814,9 +2809,7 @@ class GrassrootsNetwork {
     final sender = switch (transport) {
       PeerTransport.udp => _udpMessageSender,
       PeerTransport.bleDirect => _bleMessageSender,
-      PeerTransport.webrtc => null,
     };
-    if (sender == null) return;
     final handshakeHash = _noiseSessions.handshakeHashFor(transport, pubkey);
     if (handshakeHash == null) {
       debugPrint('[attest] No handshake hash for '
@@ -2988,8 +2981,6 @@ class GrassrootsNetwork {
         unawaited(_udpService?.disconnectFromPeer(_pubkeyToHex(pubkey)));
       case PeerTransport.bleDirect:
         store.dispatch(PeerBleDisconnectedAction(pubkey));
-      case PeerTransport.webrtc:
-        break;
     }
   }
 
@@ -3662,7 +3653,6 @@ class GrassrootsNetwork {
         PeerTransport.udp => _ipUnderlayOfConnection(udpPeerId) == Underlay.lan
             ? ProximityUnderlay.lan
             : null,
-        PeerTransport.webrtc => null,
       };
       if (discoveredOn != null &&
           !_isRendezvousPubkeyHex(pubkeyHex) &&
