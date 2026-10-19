@@ -1,0 +1,58 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract counter
+%% (../contracts.glp, contract_named(counter, C): befriend, begin and an unguarded count, a counter, always open to an agent whose person has begun counting), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform").  It runs two agents, alice and bob, their persons scripted and paced on their screens (../self.glp), and gives each person's log, the views with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries.
+%%
+%% play_counter: alice begins counting, and her agent then takes count(alice), an own transaction of an unguarded part she opens, on every own trigger it reads, without end, each attempt asking nobody and committing at its Commit, each adding a tick to her state.  "The agent goal takes its own transactions one at a time, one on each own trigger it reads.  It writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions" (vGLP 6c8c663, Section 5.4, "The compilation").  So, counting, her agent reads her request to know bob and his hello, and bob's start of befriend(bob, alice); she is asked on it and answers yes, her agent votes yes, and it commits at both; and her agent counts on.  The run does not suspend: it is stopped at the REPL's :limit, its logs' tails unbound.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= befriend(Peer, Peer) ; begin(Peer) ; count(Peer).
+Proposal ::= befriend(Peer, Peer) ; begin(Peer).
+Request  ::= propose(Proposal) ; known(Peer).
+YesNo    ::= yes ; no.
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+           ; yield(Attempt).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Atom     ::= friend(Peer) ; counting ; tick.
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Approval ::= approval(Attempt, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_counter(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_counter(LA?, LB?, N?) :-
+    pair([own([A1], propose(begin(A1?))), wait(holds(tick)),
+          req(known(bob)), wait(known(bob)),
+          approval(befriend(bob, alice), yes),
+          wait(holds(friend(bob)))],
+         [req(known(alice)), wait(known(alice)),
+          own([B1], propose(befriend(B1?, alice))),
+          wait(holds(friend(alice)))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).

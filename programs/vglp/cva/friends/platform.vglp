@@ -110,7 +110,7 @@ name_class(cheer(V1), _, cheer(V1?))
 .
 
 %% ===========================================================================
-%% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages and the answers of its responders.  A request question is a goal of a volitional procedure whose question, Menu, shows the agent's own key and the persons it knows and takes one request (vGLP 321127a, Section 5.4); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(S, K), the machine state S of its app state and the persons K it knows, when it starts and whenever either changes, and the person's screen shows the last view written (vGLP b7e3517, Section 5.4, "The compilation"); and, when an attempt its person proposed closes without committing, a notice, refused(Part, Q), Q the participant whose vote no closed it, or yielded(Part), where it yielded to an attempt with priority over it (vGLP c44769f, Section 5.4, "The compilation").
+%% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, Menu, shows the agent's own key and the persons it knows and takes one request (vGLP 321127a, Section 5.4); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(S, K), the machine state S of its app state and the persons K it knows, when it starts and whenever either changes, and the person's screen shows the last view written (vGLP b7e3517, Section 5.4, "The compilation"); and, when an attempt its person proposed closes without committing, a notice, refused(Part, Q), Q the participant whose vote no closed it, or yielded(Part), where it yielded to an attempt with priority over it (vGLP c44769f, Section 5.4, "The compilation").
 %% ===========================================================================
 
 %% An attempt (i, k, pi, [t]_j) (vGLP 099f876, Definition "Attempt"): its initiator, its number, its rank and its part, named by a term of Class, a schema-binding of the part, of the attempt's class (Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"), the part's guard set the people in the schema-binding's marked roles.  The cargoes (Definition "Cargo, App State, Question, Free, Ready") are its start, a vote on it, its outcome and a yield of it; a message carries its sender and a cargo, a hello, an ihello, or an introduction, intro(P, Q), P's cargo intro(Q) (Definitions "CVA Platform" and "Introduction Rule, Introduce Peers").
@@ -237,17 +237,18 @@ Blocker   ::= blk(Attempt) ; noblk.
 FoundNet  ::= found(Net) ; nonefound.
 Last      ::= last(Attempt) ; nolast.
 Known     ::= allknown ; unknown(Peer).
-Then      ::= after ; done.
+Then      ::= write_own ; own_unread ; no_own.
 ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
-%% When it starts, its view is written on the output: the machine state of the initial app state, the empty multiset, and no person known.
+%% When it starts, its view is written on the output: the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
 agent(Id, NetIn, Out?, [view([], [])|Thr?]) :- ground(Id?) |
     request(Id?, [], Rq),
     tag_net(NetIn?, Nt),
     merge(Rq?, Nt?, M1),
-    merge(M1?, Ans?, In),
-    agent_goal([own], In?, Ans, Thr, Out, [],
+    merge(M1?, Ans?, M2),
+    merge(M2?, [own|Ow?], In),
+    agent_goal([], In?, yes, Ans, Thr, Out, Ow, [],
         st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [])).
 
 %% A request question: the agent's own key, its identifier, the persons the
@@ -287,89 +288,92 @@ await(At, no, _, [answered(At?, no)]).
 await(_, _, close, []).
 
 %% ===========================================================================
-%% The agent goal: one clause per kind of trigger, which computes the
-%% conditions of the schemas the trigger puts up and calls the dispatch.  It
-%% reads first what it has put up itself, the recheck of the starts it holds
-%% waiting and own, on which it takes its own transactions, put up when it
-%% starts, after each trigger it reads from its input stream and after each
-%% own transaction it takes, so that it takes them one at a time until none
-%% holds; and then its input stream.
+%% The agent goal: one clause per kind of trigger, which computes the conditions of the schemas the trigger puts up and calls the dispatch.  It reads first the recheck of the starts it holds waiting, which a dispatch puts up, and then its input stream, the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers.  It holds the writer of its stream of own triggers, Ow, and whether an own trigger it has written is still unread, U.  It takes its own transactions one at a time, one on each own trigger it reads; it writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions and writes none once none holds (vGLP 6c8c663, Section 5.4, "The compilation").
 %% ===========================================================================
 
-procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger),
-    Stream(Output), Stream(Net), OpenApprovals?, St?).
-agent_goal([T|Ls], In, Ans?, Thr?, Out?, Approvals, St) :-
-    step(T?, done, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
-agent_goal([], [T|In], Ans?, Thr?, Out?, Approvals, St) :-
-    step(T?, after, [], In?, Ans, Thr, Out, Approvals?, St?).
-agent_goal([], [], [], [], [], _, _).
+procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+agent_goal([T|Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    then_local(U?, Th),
+    step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+agent_goal([], [T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    then_read(U?, Th),
+    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, St?).
+agent_goal([], [], _, [], [], [], [], _, _).
+
+%% After a recheck, read from the agent goal's own list, an own trigger is unread exactly when one was before it (own_unread, no_own); after another trigger, read from the input stream, an own trigger is written unless one is unread (write_own, own_unread).  An own trigger is read from the input stream, and its clause, step(own, ...), takes no Then: dispatch_own writes the next own trigger after an own transaction taken, and none where none holds.
+procedure then_local(YesNo?, Then).
+then_local(yes, own_unread).
+then_local(no, no_own).
+procedure then_read(YesNo?, Then).
+then_read(yes, own_unread).
+then_read(no, write_own).
 
 procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?,
-    Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?).
-step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(N?), ground(St?) |
     st_app(St?, Ap0),
     ask_next(St?, Ans, Ans1?),
     st_ms(St?, S),
     name_class(N?, S?, C),
     propose_cond(C?, St?, Cd, St1),
-    dispatch_propose(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Approvals?, St1?).
-step(req(known(Q)), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    dispatch_propose(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St1?).
+step(req(known(Q)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(Q?), ground(St?) |
     st_app(St?, Ap0),
     ask_next(St?, Ans, Ans1?),
     known_cond(Q?, St?, Cd),
-    dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Approvals?, St?).
-step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St?).
+step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(P?), ground(St?) |
     st_app(St?, Ap0),
     hello_cond(P?, St?, Cd),
-    dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
-step(net(msg(_, ihello(P))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+step(net(msg(_, ihello(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(P?), ground(St?) |
     st_app(St?, Ap0),
     ihello_cond(P?, St?, Cd),
-    dispatch_ihello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
-step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    dispatch_ihello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(Q?), ground(St?) |
     st_app(St?, Ap0),
     intro_cond(Q?, St?, Cd),
-    dispatch_intro(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
-step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    dispatch_intro(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(To?), ground(F?), ground(X?), ground(St?) |
     st_app(St?, Ap0),
     message_cond(X?, St?, Cd, St1),
     dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?,
-        In?, Ans, Thr, Out, Approvals?, St1?).
-step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+        In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?), ground(YN?), ground(St?) |
     st_app(St?, Ap0),
     close_approval(At?, Approvals?, Approvals1),
     answer_cond(At?, St?, Cd, St1),
     dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out,
-        Approvals1?, St1?).
-step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :- ground(St?) |
+        Ow, Approvals1?, St1?).
+step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :- ground(St?) |
     st_pends(St?, Pd),
     recheck_find(Pd?, St?, F),
-    recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
-step(own, _, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    take_own(Ls?, In?, Ans, Thr, Out, Approvals?, St?).
+    recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
-%% After a dispatch: where the machine state has changed, the new view is written on the output (vGLP b7e3517, Section 5.4, "The compilation": "where the machine state changes, it writes the new view on the output"); where the app state has changed, the approval questions whose question the new app state no longer holds pending are closed; where it has, or the dispatch consumed a start (Kick), the starts held waiting are put up again, by a recheck; and after a trigger read from the input stream, or an own transaction taken (Then after), the agent goal takes its own transactions.
+%% After a dispatch: where the machine state has changed, the new view is written on the output (vGLP b7e3517, Section 5.4, "The compilation": "where the machine state changes, it writes the new view on the output"); where the app state has changed, the approval questions whose question the new app state no longer holds pending are closed; where it has, or the dispatch consumed a start (Kick), the starts held waiting are put up again, by a recheck; and the agent goal writes an own trigger on its stream of own triggers after another trigger read from the input stream, unless an own trigger it has written is still unread, and after an own transaction taken (Then write_own), and none after an own trigger on which none holds (no_own) or while one is unread (own_unread), so that at most one own trigger it has written is unread (vGLP 6c8c663, Section 5.4, "The compilation").
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?,
-    Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?).
-next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(Ap0?), ground(St?) |
     app_changed(Ap0?, St?, Ca1),
     app_changed(Ap0?, St?, Ca2),
     or(Ca2?, Kick?, Re),
     close_falsified(Ca1?, Approvals?, St?, Approvals1),
     repend(Re?, St?, Ag, St1),
-    own_after(Th?, Ow),
+    own_after(Th?, Ow, Ow1?, U),
     app(Ag?, Ls?, L1),
-    app(L1?, Ow?, L2),
     show_state(Ap0?, St?, Thr, Thr1?),
-    agent_goal(L2?, In?, Ans, Thr1, Out, Approvals1?, St1?).
+    agent_goal(L1?, In?, U?, Ans, Thr1, Out, Ow1, Approvals1?, St1?).
 
 %% The view after the dispatch, written where the machine state differs, as a multiset, from that before it.
 procedure show_state(App?, St?, Stream(Output), Stream(Output)?).
@@ -451,9 +455,11 @@ app_changed(Ap0, St, C?) :- ground(Ap0?), ground(St?) |
     same(Ap0?, Ap1?, Sm),
     neg(Sm?, C).
 
-procedure own_after(Then?, Stream(Trigger)).
-own_after(after, [own]).
-own_after(done, []).
+%% own_after(Then?, Ow, Ow1?, U): an own trigger written on Ow, or none, Ow1 the rest of the stream of own triggers, and U whether an own trigger written is unread after it.
+procedure own_after(Then?, Stream(Trigger), Stream(Trigger)?, YesNo).
+own_after(write_own, [own|Ow1?], Ow1, yes).
+own_after(own_unread, Ow1?, Ow1, yes).
+own_after(no_own, Ow1?, Ow1, no).
 
 %% repend(Again?, St?, Ag, St1): a recheck of the starts held waiting, where
 %% there are any and the dispatch changed the app state or consumed a start.
@@ -551,15 +557,15 @@ named_first(_, _, no) :- otherwise | true.
 
 procedure dispatch_propose(PCond?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
-    OpenApprovals?, St?).
-dispatch_propose(pgo(I, P), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_propose(pgo(I, P), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(I?), ground(P?), ground(St?) |
     propose_effect(I?, P?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?).
-dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
+dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
 %% --- Discover: the hellos ---------------------------------------------------
 %% A peer is known once hello has been sent to it and received from it.  On the request known(Q) the agent sends Q hello, unless Q is itself or it sent one already; an arriving hello is recorded; and where a peer becomes known the agent writes the new view on the output.
@@ -574,16 +580,16 @@ known_cond(Q, St, R?) :- ground(Q?), ground(St?) |
 
 procedure dispatch_known(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
-    OpenApprovals?, St?).
+    Stream(Trigger), OpenApprovals?, St?).
 dispatch_known(yes, Q, Th, Ap0, Ls, In, Ans?, Thr?, [msg(Q?, hello(Id?))|Out?],
-        Approvals, St) :-
+        Ow?, Approvals, St) :-
     ground(Q?), ground(St?) |
     st_id(St?, Id),
     add_sent(Q?, St?, St1),
     show_known(Q?, St?, St1?, Thr, Thr1?, St2),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Approvals?, St2?).
-dispatch_known(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?).
+dispatch_known(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
 %% An arriving hello, recorded unless recorded already.
 procedure hello_cond(Peer?, St?, YesNo).
@@ -594,14 +600,14 @@ hello_cond(P, St, R?) :- ground(St?) |
 
 procedure dispatch_hello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
-    OpenApprovals?, St?).
-dispatch_hello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_hello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(P?), ground(St?) |
     add_recd(P?, St?, St1),
     show_known(P?, St?, St1?, Thr, Thr1?, St2),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Approvals?, St2?).
-dispatch_hello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?).
+dispatch_hello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
 %% --- Introduce: the ihellos --------------------------------------------------
 %% On reading an introduction intro(Q) the agent sends Q ihello, unless Q is itself or known or it has sent one; an arriving ihello is recorded; and where a peer becomes known by the two the agent writes the new view on the output (Section 5.4).
@@ -618,16 +624,16 @@ intro_cond(Q, St, R?) :- ground(Q?), ground(St?) |
 
 procedure dispatch_intro(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
-    OpenApprovals?, St?).
+    Stream(Trigger), OpenApprovals?, St?).
 dispatch_intro(yes, Q, Th, Ap0, Ls, In, Ans?, Thr?, [msg(Q?, ihello(Id?))|Out?],
-        Approvals, St) :-
+        Ow?, Approvals, St) :-
     ground(Q?), ground(St?) |
     st_id(St?, Id),
     add_isent(Q?, St?, St1),
     show_known(Q?, St?, St1?, Thr, Thr1?, St2),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Approvals?, St2?).
-dispatch_intro(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?).
+dispatch_intro(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
 procedure ihello_cond(Peer?, St?, YesNo).
 ihello_cond(P, St, R?) :- ground(St?) |
@@ -637,14 +643,14 @@ ihello_cond(P, St, R?) :- ground(St?) |
 
 procedure dispatch_ihello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
-    OpenApprovals?, St?).
-dispatch_ihello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_ihello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(P?), ground(St?) |
     add_irecd(P?, St?, St1),
     show_known(P?, St?, St1?, Thr, Thr1?, St2),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Approvals?, St2?).
-dispatch_ihello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?).
+dispatch_ihello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
 %% --- Start, Tally, Yield and Outcome, on the arriving message ---------------
 %% One schema to a cargo, none needing a peer known: the initiator's hello
@@ -825,52 +831,52 @@ held_takeable1(cls(I), A, St, T?) :- ground(A?), ground(St?) |
     neg(W?, NW),
     or(Cl?, NW?, T).
 procedure recheck1(FoundNet?, Then?, Stream(Trigger)?, Stream(Trigger)?,
-    Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?).
-recheck1(found(M), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    step(net(M?), Th?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
-recheck1(nonefound, Th, Ls, In, Ans?, Thr?, Out?, Approvals, St) :- ground(St?) |
+    Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+recheck1(found(M), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    step(net(M?), Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+recheck1(nonefound, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :- ground(St?) |
     st_app(St?, Ap0),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
 procedure dispatch_message(MCond?, Net?, Peer?, Cargo?, Then?, App?,
     Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger),
-    Stream(Output), Stream(Net), OpenApprovals?, St?).
-dispatch_message(noparticipant, _, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
-dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals,
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+dispatch_message(noparticipant, _, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals,
         St) :-
     add_pend_once(deferred(M?), St?, St1),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
 dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?,
-        Thr?, Out?, Approvals, St) :-
+        Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?) |
     drop_pend(deferred(M?), St?, St0),
     start_effect(I?, At?, St0?, Ss, Cr, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
     spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?),
-    next(Th?, yes, Ap0?, Ls?, In?, Ans1, Thr, Out1, Approvals1?, St2?).
+    next(Th?, yes, Ap0?, Ls?, In?, Ans1, Thr, Out1, Ow, Approvals1?, St2?).
 dispatch_message(mgo(I), _, F, vote(At, Y), Th, Ap0, Ls, In, Ans?,
-        Thr?, Out?, Approvals, St) :-
+        Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?), ground(F?), ground(Ap0?) |
     tally_effect(I?, At?, F?, Y?, St?, Ss, St1),
     noticed(refused_by(F?), At?, Ap0?, St1?, Thr, Thr1?, St1n),
     send_all(Ss?, St1n?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Approvals?, St2?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?).
 dispatch_message(mgo(I), _, _, yield(At), Th, Ap0, Ls, In, Ans?,
-        Thr?, Out?, Approvals, St) :-
+        Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?), ground(Ap0?) |
     yield_effect(I?, At?, St?, Ss, St1),
     noticed(yielded_by, At?, Ap0?, St1?, Thr, Thr1?, St1n),
     send_all(Ss?, St1n?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Approvals?, St2?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?).
 dispatch_message(mgo(I), _, _, outcome(At, Z), Th, Ap0, Ls, In, Ans?,
-        Thr?, Out?, Approvals, St) :-
+        Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?) |
     outcome_effect(I?, At?, Z?, St?, St1),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
 
 %% Start raises the approval question, whose answers join the agent goal's input.
 procedure spawn(ApprovalRes?, OpenApprovals?, OpenApprovals, Stream(Trigger),
@@ -905,13 +911,13 @@ unanswered(At, R, B?) :- ground(At?), ground(R?) |
 
 procedure dispatch_answer(Cond?, YesNo?, Attempt?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
-    OpenApprovals?, St?).
-dispatch_answer(go(_), YN, At, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_answer(go(_), YN, At, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?) |
     answer_effect(YN?, At?, St?, St1),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?).
-dispatch_answer(drop, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+dispatch_answer(drop, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
 %% An approval question is closed by binding its close signal, which also forgets it.
 procedure close_approval(Attempt?, OpenApprovals?, OpenApprovals).
@@ -939,13 +945,13 @@ close_one(yes, At, Cl?, Cs, R, [oc(At?, Cl)|Cs1?]) :- close_approvals(Cs?, R?, C
 
 %% --- The own transactions: Propose of the unguarded parts, Vote, Commit, ---
 %% --- Wound, Introduce peers ------------------------------------------------
-%% On own the agent goal puts up the Propose of each unguarded part the agent opens, where its machine state is in the part's domain, each part an opening class of its own (vGLP 099f876, Definition "Equivalence of the Canonical Platform"; Section 5.4, "The compilation"), the Vote on each answered question pending at it, the Commit of each attempt it initiated with a yes of every other participant recorded, the Wound of each start it holds waiting, or question answered yes, blocked by an attempt over which it has priority, and the Introduce peers of each pair the introduction rule gives it at its machine state (Definition "Introduction Rule, Introduce Peers"); it takes, among those whose condition holds, one of the class that has waited longest, ties broken in a fixed order: the opening classes in the order they are opened, then the Votes, the Commits, the Wounds and the introductions, each in the order of the record, of the starts held or of identifiers; counts it, and puts up own again; and where none holds, takes nothing and waits on its next trigger.
+%% On own the agent goal puts up the Propose of each unguarded part the agent opens, where its machine state is in the part's domain, each part an opening class of its own (vGLP 099f876, Definition "Equivalence of the Canonical Platform"; Section 5.4, "The compilation"), the Vote on each answered question pending at it, the Commit of each attempt it initiated with a yes of every other participant recorded, the Wound of each start it holds waiting, or question answered yes, blocked by an attempt over which it has priority, and the Introduce peers of each pair the introduction rule gives it at its machine state (Definition "Introduction Rule, Introduce Peers"); it takes, among those whose condition holds, one of the class that has waited longest, ties broken in a fixed order: the opening classes in the order they are opened, then the Votes, the Commits, the Wounds and the introductions, each in the order of the record, of the starts held or of identifiers; counts it, and writes an own trigger on its stream of own triggers; and where none holds, takes nothing and writes none (vGLP 6c8c663, Section 5.4, "The compilation").
 procedure take_own(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger),
-    Stream(Output), Stream(Net), OpenApprovals?, St?).
-take_own(Ls, In, Ans?, Thr?, Out?, Approvals, St) :- ground(St?) |
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+take_own(Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :- ground(St?) |
     st_app(St?, Ap0),
     own_cond(St?, Ch, St1),
-    dispatch_own(Ch?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?).
+    dispatch_own(Ch?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
 
 procedure own_cond(St?, Choice, St).
 own_cond(St, Ch?, St2?) :- ground(St?) |
@@ -1221,41 +1227,40 @@ dead_key(wd(_, B), R, D?) :- ground(B?), ground(R?) |
     or(Cl?, Yd?, D).
 dead_key(ip(Q, R1), R, D?) :- mem(introduced(Q?, R1?), R?, D).
 
-%% The own transaction chosen, taken, and own put up again (after); none, the
-%% agent goal waits on its next trigger (done).
+%% The own transaction chosen, taken, and an own trigger written (write_own); none, and no own trigger written (no_own).
 procedure dispatch_own(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?,
-    Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?).
-dispatch_own(none, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    next(done, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
-dispatch_own(take(op(_), prop(I, P)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
-    dispatch_propose(pgo(I?, P?), after, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
-dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+dispatch_own(none, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+dispatch_own(take(op(_), prop(I, P)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    dispatch_propose(pgo(I?, P?), write_own, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?), ground(I?) |
     vote_effect(I?, At?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(after, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?).
-dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
+dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?), ground(I?) |
     commit_effect(I?, At?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(after, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?).
-dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :-
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
+dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(B?), ground(I?), ground(Ap0?) |
     wound_effect(I?, B?, St?, Ss, St1),
     noticed(yielded_by, B?, Ap0?, St1?, Thr, Thr1?, St1n),
     send_all(Ss?, St1n?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(after, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Approvals?, St2?).
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?).
 dispatch_own(take(ip(Q, R), pair), Ap0, Ls, In, Ans?, Thr?,
-        [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?))|Out?], Approvals, St) :-
+        [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?))|Out?], Ow?, Approvals, St) :-
     ground(Q?), ground(R?), ground(St?) |
     st_id(St?, Id),
     introduce_effect(Q?, R?, St?, St1),
-    next(after, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?).
-dispatch_own(take(_, _), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St) :- otherwise |
-    next(done, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?).
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+dispatch_own(take(_, _), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :- otherwise |
+    next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
 %% The classes of the unguarded parts the agent opens at its state: each unguarded schema at the bindings that send its first role to the agent and meet that role's requirements, its other variables named by the agent; each class of them joins the classes met, and op_cands puts up the Propose of each of its unguarded parts the agent opens.  Every unguarded part the agent opens and is ready for is found so: the agent is in the first role of one of the part's schema-bindings, whose first role's requirements its state then holds, and the contract being effective, they name every other role and every variable of the schema-binding's deleted and added atoms (vGLP 099f876, Section 5.4, "Act schemas as local specifications").
 procedure opening(St?, Infos, St).

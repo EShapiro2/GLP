@@ -148,6 +148,15 @@
 %%                         at a[listed(*, n)]   -member(a, n)
 %%
 %% A schema-binding of close determines a part for each list L of the people of its listed role, the persons q with listed(q, n) in the state of the person in a, and the base person requires that it list exactly the people of L (ibid.).  Its request name is close(a, n), and the base agent, on its person's request, completes L from its listed atoms.  The base, a, is close's only guarding role, as Section 5.4 asks of a schema with a listed role.  groups/self.glp plays it.
+%%
+%% counter is befriend with a counter, an unguarded class always open to its agent once its person has begun counting, so that a contract compiled here has an agent that takes an own transaction on every own trigger it reads, without end, and still reads its other triggers between them: "The agent goal takes its own transactions one at a time, one on each own trigger it reads.  It writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions" (vGLP 6c8c663, Section 5.4, "The compilation"; vGLP #15 Cowork to Code, 2026-10-19 14:20 UTC).  The contract language has no integers and no arithmetic, an argument of an atom being a role, a variable or a name term, so a counter is not written n(k) to n(k+1); a state is a multiset, holding a count of each atom of arity zero, as friends' greeted, so count adds one tick:
+%%
+%%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
+%%                       at q  not friend(p), +friend(p)
+%%   begin(a?)        :  at a  not counting, +counting
+%%   count(a)         :  at a  counting, +tick
+%%
+%% count is guarded at no role and has one role and no variable, so the atoms its role requires need name no other role and no variable, and the contract is effective; its schema-binding at a determines an unguarded part opened by a, in the domain of a's function wherever a holds counting, which no act deletes.  begin, guarded by a, lets the play choose whose agent counts.  counter/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it.
@@ -184,6 +193,7 @@ contract_named(waves, C?) :- waves(C).
 contract_named(parts, C?) :- parts(C).
 contract_named(opens, C?) :- opens(C).
 contract_named(groups, C?) :- groups(C).
+contract_named(counter, C?) :- counter(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -200,6 +210,7 @@ introduction_named(waves, no_introduction).
 introduction_named(parts, no_introduction).
 introduction_named(opens, no_introduction).
 introduction_named(groups, no_introduction).
+introduction_named(counter, no_introduction).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -330,3 +341,12 @@ groups([schema(befriend, [],
           [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []),
            crs(listed(1, listed, [svar(n)]), unguarded,
                [], [atom(member, [role(1), svar(n)])], [], [])])]).
+
+procedure counter(Contract).
+counter([schema(befriend, [],
+           [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+            rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+         schema(begin, [],
+           [rs(guarded, [atom(counting, [])], [], [], [atom(counting, [])])]),
+         schema(count, [],
+           [rs(unguarded, [atom(tick, [])], [], [atom(counting, [])], [])])]).

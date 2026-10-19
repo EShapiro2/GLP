@@ -3453,11 +3453,10 @@ echo ""
 # handlers of vGLP 8d56915 and the answers of 158ec9b; Answer recording the
 # person's answer and Vote voting on it, vGLP c3b2191; wound-wait,
 # Commit and Yield, attempts numbered and ranked, vGLP 49cd9f7; no clock and
-# no tick, the agent taking its own transactions when it starts and after each
-# trigger, one at a time until none holds, vGLP efe7bbc).  GSC's social graph
+# no tick, vGLP efe7bbc; the agent taking its own transactions one at a time, one on each own trigger it reads, which it writes on a stream of its own merged fairly with its other triggers, when it starts, after each other trigger it reads unless one it wrote is still unread, and after each own transaction it takes, vGLP 6c8c663).  GSC's social graph
 # and currency (their owners', programs/gsc/GSG.glp and
 # programs/currencies/coins/GC.glp) and vGLP's nudge, introduce, gnudge, childsafe, link, friends, waves,
-# parts, opens and groups (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
+# parts, opens, groups and counter (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not effective, and those it
 # compiles whatever their guards; and the plays of each platform, two agents
 # or three with scripted persons paced on their screens, each run on the
@@ -3482,6 +3481,7 @@ check "CVA compiler: vGLP's waves, two classes of the same participants and atom
 check "CVA compiler: vGLP's parts, a class of two parts, compiled to the platform it prints" "parts/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's opens, a class of two unguarded parts with different openers, compiled to the platform it prints" "opens/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's groups, close taking the listed role a[listed(*, n)], certified by GSC's check/2, compiled to the platform it prints (vGLP f5f1644)" "groups/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's counter, an unguarded count always open to its agent once begun, certified by GSC's check/2, compiled to the platform it prints (vGLP 6c8c663)" "counter/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -4177,12 +4177,40 @@ check "CVA groups: ... and carol's" "C = \[.*view(\[member(alice, speech(utteran
 check_not "CVA groups: bob's request to close alice's group, his agent listing no one, is dropped: no attempt of his" "attempt(bob, " "$cva_groups"
 check_not "CVA groups: no person asked for close" "gave(attempt([a-z]*, [0-9]*, [0-9]*, close\|gave(close" "$cva_groups"
 
-# No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes
-# its own transactions "when it starts and after each trigger, one at a time
-# until none holds"; Udi's approval of 2026-10-18, reported by Code #10): each
-# play's run suspends once every agent has taken its own transactions until
-# none holds and no trigger is left to read, where until vGLP efe7bbc it ran to
-# the REPL's :limit, each agent's clock ticking without end.
+# Own triggers through the fair merge (vGLP 6c8c663, Section 5.4, "The compilation": "The agent goal takes its own transactions one at a time, one on each own trigger it reads.  It writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions and writes none once none holds"; the agent goal reads "the fair merge (Example ex:merge) of the answers to its request questions, the messages arriving on the network, the answers to its approval questions and its own triggers"; vGLP #15 Cowork to Code, 2026-10-19 14:20 UTC, Blocking: yes).  The agent writes own on a stream of its own, merged with the rest of its input, and not on the list of the triggers it puts up itself, which holds the recheck alone.
+for c in social_graph counter; do
+    cva_agent=$(cat "$CVA/$c/platform.vglp")
+    check "CVA own triggers, $c: the agent's input is the fair merge of its request answers, the network, its approval answers and its own triggers, one written when it starts" "^    merge(M2?, \[own|Ow?\], In),$" "$cva_agent"
+    check "CVA own triggers, $c: ... the agent goal holding the writer of its stream of own triggers and whether one it wrote is unread" "^    agent_goal(\[\], In?, yes, Ans, Thr, Out, Ow, \[\],$" "$cva_agent"
+    check "CVA own triggers, $c: an own trigger written after an own transaction taken, or another trigger read with none unread" "^own_after(write_own, \[own|Ow1?\], Ow1, yes)\.$" "$cva_agent"
+    check "CVA own triggers, $c: ... none after another trigger while one is unread" "^then_read(yes, own_unread)\.$" "$cva_agent"
+    check "CVA own triggers, $c: ... and none after an own trigger on which none holds" "^    next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?)\.$" "$cva_agent"
+    check_not "CVA own triggers, $c: no own put on the agent goal's own list, read before its input" "agent_goal(\[own\]\|own_after(after, \[own\])" "$cva_agent"
+done
+# vGLP's contract counter (programs/vglp/cva/contracts.glp): befriend, begin(a?) and count(a), unguarded, adding a tick at a once a holds counting, so that alice's agent, counting, takes an own transaction on every own trigger it reads, without end.  It still reads its input between them: alice's request to know bob, bob's hello and bob's start of befriend(bob, alice), on which she is asked and answers yes, and the befriending commits at both while she counts on.  On the agent goal of main at ab4818e7, which took its own transactions in a loop before reading its input again, the same play leaves alice counting with no person known, bob's screen at its first view, and nothing on the network.
+cva_counter_load=$("$REPL_RUN" <<HEREDOC
+$CVA/counter/
+:quit
+HEREDOC
+2>&1)
+check "CVA counter: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/counter" "$cva_counter_load"
+check_not "CVA counter: no type errors" "Type checking failed" "$cva_counter_load"
+cva_counter=$("$REPL_RUN" <<HEREDOC
+$CVA/counter/
+:limit 600000
+play_counter(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA counter: alice begins counting, and her agent counts, an own transaction on each own trigger, before any person is known" "A = \[view(\[\], \[\]), view(\[counting\], \[\]), view(\[tick, counting\], \[\]), view(\[tick, tick, counting\], \[\])" "$cva_counter"
+check "CVA counter: counting, her agent reads her request to know bob and his hello: bob known" "view(\[\(tick, \)*counting\], \[bob\])" "$cva_counter"
+check "CVA counter: ... she is asked on bob's befriend and answers yes, friend(bob) is added, and her agent counts on after it" "gave(befriend(bob, alice), yes), \(view(\[\(tick, \)*counting\], \[bob\]), \)*view(\[friend(bob), \(tick, \)*counting\], \[bob\]), view(\[tick, friend(bob), \(tick, \)*counting\], \[bob\]), view(\[tick, tick, friend(bob), \(tick, \)*counting\], \[bob\])" "$cva_counter"
+check "CVA counter: bob's screen: alice known, and alice his friend once his attempt commits" "B = \[view(\[\], \[\]), view(\[\], \[alice\]), view(\[friend(alice)\], \[alice\]) |" "$cva_counter"
+check "CVA counter: bob's start to alice, her agent's vote yes and the commit, her counting asking nobody" "N = \[sent(bob, alice, start(attempt(bob, 1, 1, befriend(bob, alice)))), sent(alice, bob, vote(attempt(bob, 1, 1, befriend(bob, alice)), yes)), sent(bob, alice, outcome(attempt(bob, 1, 1, befriend(bob, alice)), commit)) |" "$cva_counter"
+check "CVA counter: the run does not suspend: alice's agent counts without end, stopped at the REPL's :limit" "capped" "$cva_counter"
+check_not "CVA counter: no person asked for count" "gave(attempt([a-z]*, [0-9]*, [0-9]*, count\|gave(count" "$cva_counter"
+
+# No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes its own transactions "one at a time, each on an own trigger that the agent writes on a stream merged fairly with its other triggers, when it starts, after another trigger and after each own transaction it takes, until none holds", vGLP 6c8c663; Udi's approval of 2026-10-18, reported by Code #10): each play's run but the counter's suspends once every agent has taken its own transactions until none holds and no trigger is left to read, where until vGLP efe7bbc it ran to the REPL's :limit, each agent's clock ticking without end.
 for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens cva_groups; do
     check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
     check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
