@@ -78,9 +78,13 @@ List<File> _vglpSources(Directory dir) {
 /// declaration, a definition or a clause --- beginning with `*`, bare or
 /// `*(...)`, before the clause it guards.  Read off the tokens, since the
 /// parser does not read every old source (CSSN's two, with guard negation,
-/// which is not GLP syntax).
+/// which is not GLP syntax), its widget declarations set aside first, GLP's
+/// lexer having no token =::= (programs/apps/gsg/self.vglp and
+/// programs/apps/gsn/self.vglp, `Approval =::= approval_sentence.`).
 bool _holdsVolitionGuard(String text) {
-  final tokens = Lexer(text).tokenize();
+  final stripped =
+      text.contains('=::=') ? extractWidgetDeclarations(text).stripped : text;
+  final tokens = Lexer(stripped).tokenize();
   var depth = 0;
   var start = true;
   for (final t in tokens) {
