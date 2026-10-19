@@ -158,7 +158,7 @@ gsnp_schemas([
        rs(unguarded, [atom(item, [sgn(y, 1)])], [],
                      [atom(identity, []), atom(member, [role(1), svar(n)])], [])])]).
 
-%% The eleven schemas for children, realising Wards with CSSN:1 to CSSN:3.
+%% The thirteen schemas for children, realising Wards with CSSN:1 to CSSN:3.
 procedure children_schemas(Contract).
 children_schemas([
 %% CSSN:1, Parents, with Wards:1.
