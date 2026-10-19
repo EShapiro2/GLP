@@ -940,29 +940,45 @@ void main() {
           ['draw(alice, text, input([]))', 'withdraw(req(1))']);
     });
 
+    // "It is drawn with the default widget of its type beside its name, from
+    // which it reads the type's constructors" (vGLP 92e6d3b, Section 6.2, the
+    // paragraph after Proposition "Default Widgets"; Section 6.3, the type
+    // Widget: "for a declared widget, the term named(W, D) of the name W its
+    // declaration gives and the default widget D of its type").
     testWidgets(
-        'a declared widget is the Dart widget the family names; one the family '
-        'lacks is drawn as such and takes no input', (tester) async {
-      r.handle(fixtureTerm('draw(1, stars, input([]))'));
-      r.handle(fixtureTerm('draw(2, gauge, input([]))'));
+        'a declared widget, named(W, D), is the Dart widget the family names '
+        'W, handed D with the view; one the family lacks is drawn by D, its '
+        'name in a small note, and takes D\'s input', (tester) async {
+      r.handle(fixtureTerm('draw(1, named(stars, buttons([1, 5])), input([]))'));
+      r.handle(fixtureTerm('draw(2, named(gauge, buttons([low, high])), '
+          'input([]))'));
+      final handed = <String>[];
       final family = ConstructFamily(named: {
-        'stars': (context, c, view, at, grant) => TextButton(
-            onPressed: () => grant(questionAt(view)!, const GInt(5)),
-            child: const Text('five stars')),
+        'stars': (context, c, dflt, view, at, grant) {
+          handed.add(formatTerm(dflt));
+          return TextButton(
+              onPressed: () => grant(questionAt(view)!, const GInt(5)),
+              child: const Text('five stars'));
+        },
       });
       await tester.pumpWidget(MaterialApp(
           home: AgentSurface(agentId: 'bob', runtime: r, family: family)));
       expect(find.byKey(nodeKey(1, 'stars', [])), findsOneWidget);
+      expect(handed.toSet(), {'buttons([1, 5])'});
       await tester.tap(find.text('five stars'));
       expect(sent, ['input(1, [], 5)']);
-      expect(find.byKey(nodeKey(2, 'undrawable', [])), findsOneWidget);
-      expect(find.text('No widget gauge in this construct family'),
-          findsOneWidget);
+      // gauge, lacked: drawn by its default, a row of buttons, under a small
+      // note naming it, and its buttons grant as the default widget's do.
+      expect(find.byKey(nodeKey(2, 'named', [])), findsOneWidget);
       expect(
           find.descendant(
-              of: find.byKey(constructKey(2)),
-              matching: find.byType(ElevatedButton)),
-          findsNothing);
+              of: find.byKey(nodeKey(2, 'note', [])),
+              matching: find.text('gauge')),
+          findsOneWidget);
+      expect(find.byKey(nodeKey(2, 'buttons', [])), findsOneWidget);
+      expect(find.text('No widget', findRichText: true), findsNothing);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'high'));
+      expect(sent, ['input(1, [], 5)', 'input(2, [], high)']);
     });
 
     // vGLP #6 Cowork, 2026-10-11 12:55 UTC, Task B, from Definition "Widget
@@ -973,6 +989,43 @@ void main() {
         of: find.byKey(nodeKey(id, kind, at)), matching: find.byType(TextField));
     Finder inside(int id, Finder f) =>
         find.descendant(of: find.byKey(constructKey(id)), matching: f);
+
+    testWidgets(
+        'a value the program writes drawn by a declared widget the family '
+        'lacks: by D, its default, its name noted; pending, by D\'s '
+        'placeholder', (tester) async {
+      const d = "form(said, [field('Peer', shown)])";
+      r.handle(fixtureTerm('draw(0, thread(named(said_line, $d)), '
+          'output([said(alice), said(bob), pending([2, 2, 1])]))'));
+      await surface(tester);
+      // Each element written is drawn by D under its own note.
+      expect(inside(0, find.text('said_line')), findsNWidgets(2));
+      expect(find.byKey(nodeKey(0, 'note', [1])), findsOneWidget);
+      expect(find.byKey(nodeKey(0, 'note', [2, 1])), findsOneWidget);
+      expect(inside(0, find.text('alice')), findsOneWidget);
+      expect(inside(0, find.text('bob')), findsOneWidget);
+      expect(find.byKey(nodeKey(0, 'form', [1])), findsOneWidget);
+      expect(inside(0, find.text('said …')), findsOneWidget);
+      expect(find.text('No widget', findRichText: true), findsNothing);
+    });
+
+    testWidgets(
+        'a declared widget in a form the person writes: its field edited by '
+        'D, its name noted, and the form granted as by D', (tester) async {
+      r.handle(fixtureTerm("draw(4, form(rate, [field('Integer', "
+          "named(stars, number))]), input([]))"));
+      await surface(tester);
+      expect(
+          find.descendant(
+              of: find.byKey(nodeKey(4, 'note', [1])),
+              matching: find.text('stars')),
+          findsOneWidget);
+      await tester.enterText(field(4, 'number', [1]), '3');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(4, [])));
+      await tester.pump();
+      expect(sent, ['input(4, [], rate(3))']);
+    });
 
     testWidgets(
         'a list the person writes: the widget of its element, kept open, and '

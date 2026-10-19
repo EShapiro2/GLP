@@ -576,8 +576,11 @@ void main() {
     final a = bob.approval;
     expect(formatTerm(a.view),
         'approval(attempt(alice, 2, 2, befriend(alice, bob)), input([2]))');
-    expect(a.widget,
-        isA<GAtom>().having((w) => w.name, 'name', approvalSentenceName));
+    // named(approval_sentence, D), D the default widget of Approval (vGLP
+    // 92e6d3b, the construct process in the appendix of proofs).
+    expect(namedWidget(a.widget)?.$1, approvalSentenceName);
+    expect(formatTerm(namedWidget(a.widget)!.$2),
+        startsWith('form(approval, [field(\'Attempt\', form(attempt, '));
     await run.top(bob);
     expect(run.on(bob, find.text('alice asks to befriend you.')),
         findsOneWidget);
