@@ -7,6 +7,8 @@
 %% identity (CSSN #5's fix, approved by Udi, 2026-10-18).  Each schema is in GSC's notation above its term,
 %% at each role in turn: what the role requires, what it forbids (not), what
 %% it adds (+) and what it deletes (-); a role marked ? is a guarding role.
+%% A schema's second argument lists its variables in the order of its head
+%% (GSC, Definition Act schema; Udi, 2026-10-19, to GSC #4).
 %%
 %% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
 %% and is named by its index, role(1) the schema's first role.
@@ -26,7 +28,7 @@ RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
-Schema    ::= schema(Constant, RoleSpecs) ; cschema(Constant, Reaches, RoleSpecs).
+Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
@@ -37,19 +39,19 @@ contract_named(gsg,
 %% GSG:1, Identity.
 %%   establish(p?) :
 %%       at p:  +identity
-   [schema(establish,
+   [schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
 %% GSG:2, Friendship.
 %%   befriend(p?, q?) :
 %%       at p:  identity, not friend(q), +friend(q)
 %%       at q:  identity, not friend(p), +friend(p)
-    schema(befriend,
+    schema(befriend, [],
        [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])]),
         rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])])]),
 %% GSG:3, Ending a friendship.
 %%   unfriend(p?, q) :
 %%       at p:  identity, -friend(q)
 %%       at q:  identity, -friend(p)
-    schema(unfriend,
+    schema(unfriend, [],
        [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
         rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])])]).
