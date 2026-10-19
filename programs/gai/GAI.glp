@@ -29,6 +29,8 @@
 %% speech-act variable, svar, and sgn(x, p) is x signed over by the party in
 %% role p (GSC, Section 3.1).  A role is
 %% rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i).
+%% A schema's second argument lists its variables in the order of its head
+%% (GSC, Definition Act schema; Udi, 2026-10-19, to GSC #4).
 %%
 %%   establish(p?)      :  not retired, +identity
 %%   befriend(p?, q?)   :  identity, not agent, not retired, not friend(q), +friend(q)
@@ -73,13 +75,14 @@ Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+            ; listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
-Schema    ::= schema(Constant, RoleSpecs) ; cschema(Constant, Reaches, RoleSpecs).
+Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
@@ -89,12 +92,12 @@ procedure contract_named(Constant?, Declared).
 contract_named(gai,
 %%   establish(p?) :
 %%       at p:  not retired, +identity
-   [schema(establish,
+   [schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])]),
 %%   befriend(p?, q?) :
 %%       at p:  identity, not agent, not retired, not friend(q), +friend(q)
 %%       at q:  identity, not agent, not retired, not friend(p), +friend(p)
-    schema(befriend,
+    schema(befriend, [],
        [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])],
                     [atom(agent, []), atom(retired, []), atom(friend, [role(2)])]),
         rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
@@ -102,7 +105,7 @@ contract_named(gai,
 %%   unfriend_p(p?, q) :
 %%       at p:  identity, not retired, not principal(q), not principal_of(q), -friend(q)
 %%       at q:  identity, -friend(p)
-    schema(unfriend_p,
+    schema(unfriend_p, [],
        [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])],
                     [atom(retired, []), atom(principal, [role(2)]),
                      atom(principal_of, [role(2)])]),
@@ -110,7 +113,7 @@ contract_named(gai,
 %%   unfriend_q(p, q?) :
 %%       at p:  identity, -friend(q)
 %%       at q:  identity, not retired, not principal(p), not principal_of(p), -friend(p)
-    schema(unfriend_q,
+    schema(unfriend_q, [],
        [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []),
         rs(guarded, [], [atom(friend, [role(1)])], [atom(identity, [])],
                     [atom(retired, []), atom(principal, [role(1)]),
@@ -118,7 +121,7 @@ contract_named(gai,
 %%   enter(p?, r?) :
 %%       at p:  identity, not agent, not retired, +principal_of(r), +friend(r)
 %%       at r:  not identity, not retired, +identity, +agent, +principal(p), +friend(p)
-    schema(enter,
+    schema(enter, [],
        [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)])], [],
                     [atom(identity, [])], [atom(agent, []), atom(retired, [])]),
         rs(guarded, [atom(identity, []), atom(agent, []), atom(principal, [role(1)]),
@@ -128,7 +131,7 @@ contract_named(gai,
 %%       at r:  identity, agent, principal(p), not retired, not friend(q), +friend(q)
 %%       at q:  identity, not agent, not retired, not friend(r), +friend(r), +agent_of(r, p)
 %%       at p:  identity, principal_of(r), not retired
-    schema(agent_befriend,
+    schema(agent_befriend, [],
        [rs(guarded, [atom(friend, [role(2)])], [],
                     [atom(identity, []), atom(agent, []), atom(principal, [role(3)])],
                     [atom(retired, []), atom(friend, [role(2)])]),
@@ -142,7 +145,7 @@ contract_named(gai,
 %%       at s:  identity, agent, principal(q), not retired, not friend(r), +friend(r), +agent_of(r, p)
 %%       at p:  identity, principal_of(r), not retired
 %%       at q:  identity, principal_of(s), not retired
-    schema(agents_befriend,
+    schema(agents_befriend, [],
        [rs(guarded, [atom(friend, [role(2)]), atom(agent_of, [role(2), role(4)])], [],
                     [atom(identity, []), atom(agent, []), atom(principal, [role(3)])],
                     [atom(retired, []), atom(friend, [role(2)])]),
@@ -157,7 +160,7 @@ contract_named(gai,
 %%       at r:  identity, principal(p), not principal(q), -friend(q)
 %%       at q:  identity, -friend(r)
 %%       at p:  identity, principal_of(r), not retired
-    schema(agent_unfriend,
+    schema(agent_unfriend, [],
        [rs(unguarded, [], [atom(friend, [role(2)])],
                       [atom(identity, []), atom(principal, [role(3)])],
                       [atom(principal, [role(2)])]),
@@ -167,7 +170,7 @@ contract_named(gai,
 %%   retire(p?, r) :
 %%       at p:  identity, principal_of(r), not retired, +retired_of(r), -friend(r)
 %%       at r:  identity, agent, principal(p), not retired, +retired, -friend(p)
-    schema(retire,
+    schema(retire, [],
        [rs(guarded, [atom(retired_of, [role(2)])], [atom(friend, [role(2)])],
                     [atom(identity, []), atom(principal_of, [role(2)])], [atom(retired, [])]),
         rs(unguarded, [atom(retired, [])], [atom(friend, [role(1)])],
@@ -175,13 +178,13 @@ contract_named(gai,
                       [atom(retired, [])])]),
 %%   sign(p? ; x) :
 %%       at p:  identity, not retired, +item(x)
-    schema(sign,
+    schema(sign, [svar(x)],
        [rs(guarded, [atom(item, [svar(x)])], [],
                     [atom(identity, [])], [atom(retired, [])])]),
 %%   forward(p?, q ; x) :
 %%       at p:  identity, item(x), not retired
 %%       at q:  identity, friend(p), +item(sgn(x, p))
-    schema(forward,
+    schema(forward, [svar(x)],
        [rs(guarded, [], [],
                     [atom(identity, []), atom(item, [svar(x)])],
                     [atom(retired, [])]),
