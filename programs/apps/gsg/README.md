@@ -15,7 +15,7 @@ GSG:1 is the schema `establish`, guarded by the person, which adds `identity` at
 ## The cascade
 
 1. The act schemas, `programs/gsc/GSG.glp`; the checker's verdict `syntactically_grassroots` (`cascade/GSG/verdict.txt`).
-2. The canonical CVA platform of the schemas (vGLP, Section 3.2, Definition "Canonical CVA Platform"), compiled into vGLP (Section 5.4, Definition "Compilation of the Canonical Platform"): `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GSG.glp.  `bash programs/apps/compile.sh --check` re-prints it and compares; `bash programs/apps/compile.sh` writes it.
+2. The canonical CVA platform of the schemas (vGLP, Section 3.2, Definition "Canonical CVA Platform"), compiled into vGLP (Section 5.4, "The compilation"): `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GSG.glp.  `bash programs/apps/compile.sh --check` re-prints it and compares; `bash programs/apps/compile.sh` writes it.
 3. GLP: the canonical compilation (vGLP, Section 6.3) compiles `platform.vglp` when the directory loads.
 4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/4`, which the super-app activates by `run/3`.
 

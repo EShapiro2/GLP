@@ -1,32 +1,35 @@
 %% cvac.glp --- compile(Name, Contract, Verdict): the canonical CVA platform of
 %% an act-schema contract, printed as a .vglp module (vGLP, Section 3.2,
-%% Definition "Canonical CVA Platform"; Section 5.4, Definition "Compilation of
-%% the Canonical Platform" and the paragraph "Act schemas"; self.glp says more).
+%% Definition "Canonical CVA Platform"; Section 5.4, "The compilation" and the
+%% paragraph "Act schemas"; self.glp says more).
 %%
 %% A contract is compiled when programs/gsc finds it syntactically
 %% grassroots, grassroots with wards, or finds no fault in it but its
 %% introductory acts, so with traceable provenance and volition
 %% (verdict_lines below), every role a party role, and when it is a local and
 %% effective specification with simple guards, by the paragraph on act schemas
-%% and the sentence after it and by Definition "Volition-Guarded
-%% Specification, Participants, Guard Sets, Simple Guards", which local.glp
-%% decides.  Otherwise it prints the lines saying why and nothing else.  A
+%% and by the paragraph after Definition "Volition-Guarded Specification" on
+%% guard sets and simple guards, which local.glp decides.  Otherwise it prints the lines saying why and nothing else.  A
 %% signed term sgn(y, i) in an added atom is the speech act bound to y, signed
 %% by the person in role i (vGLP, Section 5.4, "Act schemas as local
 %% specifications"; GSC, Definition "Act schema"): local.glp decides the
 %% contract over it and the printed text, text.glp, computes it.
 %%
-%% The module is the contract's own part, printed here, and the text every
-%% contract shares, text.glp.  The contract's part is the type Class, one
-%% alternative per schema, the schema's name applied to the people in its roles,
-%% then its party variables, then its speech-act variables, in programs/gsc's
-%% order; the request type, Request, with the alternative propose([t]) for each
-%% guarded class [t], a term of Proposal, the alternatives of the schemas whose
-%% terms name guarded classes, and the alternative known(Peer) (vGLP, Section
-%% 5.4, the compilation); the contract itself, as the term programs/gsc reads, from which the
-%% shared text computes the classes; its reflexive predicates; and per schema a
-%% clause taking a term of Class to the binding it names, binding_of, and one
-%% taking a binding back to the term, class_of.  GLP has no string
+%% The module is what is printed from the contract, here, and the text every
+%% contract shares, text.glp.  What is printed from the contract is the type
+%% Class, one alternative per schema, the schema's name applied to the people in
+%% its roles, then its party variables, then its speech-act variables, in
+%% programs/gsc's order, a term of it naming a schema-binding and so its part
+%% and its class (vGLP c0bea08, Section 5.4, "Act schemas as local
+%% specifications": "the parts of a class are the sets of transactions its
+%% schema-bindings determine"); the request type, Request, with the alternative
+%% propose([t]_j) for each part [t]_j of a guarded class, a term of Proposal,
+%% the alternatives of the schemas whose terms name parts of guarded classes,
+%% and the alternative known(Peer) (Section 5.4, "The compilation"); the
+%% contract itself, as the term programs/gsc reads, from which the shared text
+%% computes the classes and their parts; its reflexive predicates; and per
+%% schema a clause taking a term of Class to the binding it names, binding_of,
+%% and one taking a binding back to the term, class_of.  GLP has no string
 %% concatenation, so a line naming the contract or a schema is printed as a
 %% term, the printer writing a term on a line of its own, as
 %% programs/sglp/transform.glp prints a clause's head; a source variable is a
@@ -214,8 +217,8 @@ module_lines(Nm, C, Rf, E, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(
          '%% term form programs/gsc reads (GSC, Sections 3 and 5): the canonical CVA',
          '%% platform of the contract (vGLP, Section 3.2, Definition "Canonical CVA',
          '%% Platform"), two-phase commit coordinated by the initiating agent, compiled',
-         '%% into vGLP by Definition "Compilation of the Canonical Platform" (Section',
-         '%% 5.4).  Edit the contract or the compiler and run',
+         '%% into vGLP by its compilation (Section 5.4, "The compilation").  Edit the',
+         '%% contract or the compiler and run',
          '%% programs/vglp/cva/compile.sh, not this file.',
          H?,
          '',
@@ -248,10 +251,10 @@ var_types([nterm(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
 var_types([sgn(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 
 %% The request type: Proposal ::= the alternatives of the schemas whose terms
-%% name guarded classes (local.glp, proposable), separated by ;, and Request
-%% ::= propose(Proposal) ; known(Peer); where there are none, Request ::=
-%% known(Peer) alone, and the shared text's lines guarded_only(L), its clauses
-%% on the request propose([t]), are not printed.
+%% name parts of guarded classes (local.glp, proposable), separated by ;, and
+%% Request ::= propose(Proposal) ; known(Peer); where there are none, Request
+%% ::= known(Peer) alone, and the shared text's lines guarded_only(L), its
+%% clauses on the request propose([t]_j), are not printed.
 procedure request_parts(Contract?, Preds?, Lines?, Stream(_), Stream(_)).
 request_parts(C, Ps, Fx, Lr?, Fx1?) :- ground(C?), ground(Ps?) |
     proposal_alts(C?, Ps?, As),

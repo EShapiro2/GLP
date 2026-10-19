@@ -24,8 +24,7 @@
 %% unguarded and its opener the person in its first role (Section 5.4, the
 %% paragraph on act schemas), whose machine proposes it as an own transaction, the attempt
 %% asking nobody and the other participant voting by its machine (Section 5.4,
-%% Definition "Compilation of the Canonical Platform"; Definition "Canonical
-%% CVA Platform", Propose and Start).  nudge/self.glp plays it.
+%% "The compilation"; Definitions "Proposing" and "Starting and Wounding").  nudge/self.glp plays it.
 %%
 %% introduce is befriend with a three-party act, by which a person introduces
 %% two of its friends to each other, so that a contract compiled here has a
@@ -132,6 +131,18 @@
 %%                       at q  not friend(p), +waved_at(p)
 %%
 %% wave requires friend(q) at p and hail forbids it, so no transaction is determined by both: a friend waves guarded by themselves, and a stranger hails guarded by both.  waves/self.glp plays it.
+%%
+%% parts is befriend with a class of two parts, so that a contract compiled here has a class whose parts have different domains: "every class [t] is the union of sets of its members, its parts", and "the parts of a class are the sets of transactions its schema-bindings determine" (vGLP c0bea08, Definition "Local Specification, Part, Opener" and Section 5.4, "Act schemas as local specifications"):
+%%
+%%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
+%%                       at q  not friend(p), +friend(p)
+%%   mint(p?)         :  at p  +coin
+%%   tap(p?, q)       :  at p  friend(q), +tapped(q)
+%%                       at q  friend(p), +tapped_by(p)
+%%   pat(p?, q)       :  at p  friend(q), coin, +tapped(q)
+%%                       at q  friend(p), coin, +tapped_by(p)
+%%
+%% tap and pat delete and add the same atoms, neither forbids an atom the other requires, and both mark p, so they are one class, guarded by p, of two parts: tap's, and pat's, which requires a coin at both.  The request propose([t]_j) names the class by a part, and the agent proposes, among the parts of [t] it is ready for, the one it has proposed least recently; each participant checks its precondition in the attempt's part (Section 5.4, "The compilation"; Definition "Proposing", Start).  parts/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it.
@@ -163,6 +174,7 @@ contract_named(childsafe, C?) :- childsafe(C).
 contract_named(link, C?) :- link(C).
 contract_named(friends, reflexive([friend], C?)) :- friends(C).
 contract_named(waves, C?) :- waves(C).
+contract_named(parts, C?) :- parts(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -176,6 +188,7 @@ introduction_named(childsafe, no_introduction).
 introduction_named(link, no_introduction).
 introduction_named(friends, introduction(friend)).
 introduction_named(waves, no_introduction).
+introduction_named(parts, no_introduction).
 
 procedure nudge(Contract).
 nudge([schema(befriend,
@@ -259,3 +272,16 @@ waves([schema(befriend,
        schema(hail,
          [rs(guarded, [atom(waved, [role(2)])], [], [], [atom(friend, [role(2)])]),
           rs(guarded, [atom(waved_at, [role(1)])], [], [], [atom(friend, [role(1)])])])]).
+
+procedure parts(Contract).
+parts([schema(befriend,
+         [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+          rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+       schema(mint,
+         [rs(guarded, [atom(coin, [])], [], [], [])]),
+       schema(tap,
+         [rs(guarded, [atom(tapped, [role(2)])], [], [atom(friend, [role(2)])], []),
+          rs(unguarded, [atom(tapped_by, [role(1)])], [], [atom(friend, [role(1)])], [])]),
+       schema(pat,
+         [rs(guarded, [atom(tapped, [role(2)])], [], [atom(friend, [role(2)]), atom(coin, [])], []),
+          rs(unguarded, [atom(tapped_by, [role(1)])], [], [atom(friend, [role(1)]), atom(coin, [])], [])])]).

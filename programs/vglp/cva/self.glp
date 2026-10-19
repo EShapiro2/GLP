@@ -4,7 +4,7 @@
 %% beside GSC's two, their owners' (contracts.glp), the platforms it prints
 %% (social_graph/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
 %% introduce/platform.vglp, gnudge/platform.vglp, childsafe/platform.vglp,
-%% link/platform.vglp, friends/platform.vglp, waves/platform.vglp, each beside its plays) and what the plays of all of them share, here: a
+%% link/platform.vglp, friends/platform.vglp, waves/platform.vglp, parts/platform.vglp, each beside its plays) and what the plays of all of them share, here: a
 %% scripted person and a network between two agents, three or four.
 %%
 %% A play runs the agents of a compiled platform, each the agent of the module
@@ -129,7 +129,7 @@ note(intro(F, Q), To, [intro(F?, To?, Q?)|Log1?], Log1).
 note(cargo(F, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 
 %% The program's output to its person, the thread, on its end of the person
-%% channel (vGLP, Definition "Canonical Compilation": the program's output to
+%% channel (vGLP, "The canonical compilation": the program's output to
 %% its person, of the reserved type Output, drawn as construct 0).
 procedure(X) to_person(Channel(Stream(_), Stream(X))?, Stream(X)?).
 to_person(ch(_, O?), O).

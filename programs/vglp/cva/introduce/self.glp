@@ -14,8 +14,7 @@
 %%   set and asked, each on an approval question.  bob answers no, so alice tallies his no
 %%   and aborts, and tells the outcome to both; carol's question is no longer
 %%   pending once her Outcome closes the attempt, so her approval question is closed by the
-%%   program (vGLP, Section 5.4, Definition "Compilation of the Canonical
-%%   Platform"), and
+%%   program (vGLP, Section 5.4, "The compilation"), and
 %%   the yes she gives it after takes no Answer.  alice proposes it again, both
 %%   answer yes, and it commits at all three.
 %%
