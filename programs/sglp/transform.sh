@@ -7,8 +7,8 @@
 #   bash programs/sglp/transform.sh            print into the programs' directories
 #   bash programs/sglp/transform.sh <dir>      print into <dir>/social_graph/, <dir>/coins/,
 #                                              <dir>/tests/reader/, <dir>/tests/delivery/,
-#                                              <dir>/tests/receipt/, <dir>/tests/panel/ and
-#                                              <dir>/tests/numbers/
+#                                              <dir>/tests/receipt/, <dir>/tests/panel/,
+#                                              <dir>/tests/numbers/ and <dir>/tests/steps/
 #   bash programs/sglp/transform.sh --check    print into a scratch directory and compare
 #   bash programs/sglp/transform.sh --source <src> [--check]
 #                                              print <src>/profiles.glp and <src>/population.glp
@@ -16,22 +16,23 @@
 #                                              outside programs/sglp, or with --check compare
 #
 # In one REPL session it loads programs/sglp and calls transform(P, Part) for
-# P social_graph, coins, reader, delivery, receipt, panel and numbers and Part profiles
+# P social_graph, coins, reader, delivery, receipt, panel, numbers and steps and Part profiles
 # and population, and writes what each prints between its lines "%% transform
 # begin" and "%% transform end" to its directory's Part.glp:
 # social_graph/profiles.glp and social_graph/population.glp, from
 # social_graph/graph_sglp.glp; coins/profiles.glp and coins/population.glp,
 # from coins/coins_sglp.glp; and the run tests' (xi) to (xiv), tests/reader/
 # from rating_sglp.glp, tests/delivery/ from chat_sglp.glp, tests/receipt/ from
-# receipt_sglp.glp, tests/panel/ from show_sglp.glp and tests/numbers/ from
-# total_sglp.glp (sGLP's task of 2026-10-14 09:46 UTC, item 3), the run tests' programs
+# receipt_sglp.glp, tests/panel/ from show_sglp.glp, tests/numbers/ from
+# total_sglp.glp (sGLP's task of 2026-10-14 09:46 UTC, item 3) and tests/steps/ from
+# steps_sglp.glp (sGLP's task of 2026-10-18 20:52 UTC, item 1), the run tests' programs
 # holding no call of the transformation (sGLP's tasks 6 and 8 of 2026-10-10
 # 07:59 and 09:33 UTC).  The program it loads includes the printed files,
 # which the harnesses call, so they are printed by the program that holds
 # them, the files it prints being those it loaded where the sources are
 # unchanged; --check says whether they are.
 #
-# Prints one line per file.  Exits 0 if all fourteen were printed, with no fault
+# Prints one line per file.  Exits 0 if all sixteen were printed, with no fault
 # of the checks (a line "%% not transformed: ..."), and, with --check, each is
 # byte for byte the file in place; 1 otherwise, the faults or the differing
 # files named; 2 on a bad argument.
@@ -112,9 +113,9 @@ else
         OUT="$1"
     fi
     BASE="$HERE"
-    mkdir -p "$OUT/social_graph" "$OUT/coins" "$OUT/tests/reader" "$OUT/tests/delivery" "$OUT/tests/receipt" "$OUT/tests/panel" "$OUT/tests/numbers" || exit 2
+    mkdir -p "$OUT/social_graph" "$OUT/coins" "$OUT/tests/reader" "$OUT/tests/delivery" "$OUT/tests/receipt" "$OUT/tests/panel" "$OUT/tests/numbers" "$OUT/tests/steps" || exit 2
 
-    PARTS="social_graph/profiles social_graph/population coins/profiles coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population tests/receipt/profiles tests/receipt/population tests/panel/profiles tests/panel/population tests/numbers/profiles tests/numbers/population"
+    PARTS="social_graph/profiles social_graph/population coins/profiles coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population tests/receipt/profiles tests/receipt/population tests/panel/profiles tests/panel/population tests/numbers/profiles tests/numbers/population tests/steps/profiles tests/steps/population"
     {
         echo ':limit 1000000000000000'
         echo "$HERE"

@@ -8,7 +8,8 @@
 %% module lifts its exported procedures and the types their signatures carry
 %% (TGLP modules.tex, "The -expose directive"), so each type here is carried
 %% by a procedure exported here: Span by span/2, Slot by fill/2, SglpTerms by
-%% terms_length/2.
+%% terms_length/2.  show_whole/4 and whole_frame/5 are the printed relays' (transform.glp,
+%% "The question shown whole").
 
 %% The horizon of a run declaration, `until <number> <unit>`: the unit singular
 %% or plural (Appendix B).
@@ -40,6 +41,54 @@ Slot(X) ::= slot(X?).
 %% step a rated goal that writes an answer takes.
 exported procedure(X) fill(Slot(X)?, X?).
 fill(slot(X?), X).
+
+%% The question shown whole (sGLP's paper, Section 3, Definition "Relay" (ii),
+%% at e8367a3; Appendix B, the person process: "a list the program writes
+%% inside a question is shown whole, once its last cell is written").  Where
+%% the term the program writes at a place of a question holds a position left
+%% open --- a list or a stream --- the relay builds the copy, B, and its
+%% skeleton, S, the term with each position the person writes marked
+%% '$h'(C, J), and the list of the slots, Fs, in which each answer of the
+%% question receives the skeleton (transform.glp, "The question shown whole").
+%% show_whole(B?, S?, Fs?, Y): once B has no reader, the copy complete, and S is
+%% ground, Y is assigned B, the copy shown at one place, and each slot of Fs
+%% is filled with S.
+exported procedure(X) show_whole(X?, _?, Stream(Slot(_))?, X).
+show_whole(B, S, Fs, Y?) :- no_readers(B?), ground(S?) | Y = B?, show_slots(Fs?, S?).
+
+%% show_slots(Fs?, S?): each slot of Fs filled with the skeleton S.
+procedure show_slots(Stream(Slot(_))?, _?).
+show_slots([], _).
+show_slots([F|Fs], S) :- ground(S?) | fill(F?, S?), show_slots(Fs?, S?).
+
+%% whole_frame(S?, C?, J?, V?, E): E is the skeleton S with the mark '$h'(C, J) of a
+%% position the person writes replaced by its answer V, as the log shows it,
+%% and every other mark by '_': the entry of an answer to a question shown
+%% whole, the question as the person was shown it, the answer in place and
+%% the positions still open anonymous (Section 3, Definition "Log").
+exported procedure whole_frame(_?, Integer?, Integer?, _?, _).
+whole_frame('$h'(C1, J1), C, J, V, V?) :- C1? =:= C?, J1? =:= J? | true.
+whole_frame('$h'(C1, _), C, _, _, '_') :- C1? =\= C? | true.
+whole_frame('$h'(C1, J1), C, J, _, '_') :- C1? =:= C?, J1? =\= J? | true.
+whole_frame([], _, _, _, []).
+whole_frame([H|T], C, J, V, [H1?|T1?]) :- otherwise, integer(C?), integer(J?), ground(V?) |
+    whole_frame(H?, C?, J?, V?, H1), whole_frame(T?, C?, J?, V?, T1).
+whole_frame(S, C, J, V, E?) :- otherwise, compound(S?), integer(C?), integer(J?), ground(V?) |
+    L ..= S?, whole_frame_parts(L?, C?, J?, V?, E).
+whole_frame(S, _, _, _, S?) :- otherwise, constant(S?) | true.
+
+%% whole_frame_parts(L?, C?, J?, V?, E): E is the term of the functor and the
+%% arguments L, each argument's marks replaced as whole_frame/5 replaces them;
+%% the empty list, which ..= gives no compound term, has a clause, as the type
+%% checker requires of every list of the type.
+procedure whole_frame_parts(SglpTerms?, Integer?, Integer?, _?, _).
+whole_frame_parts([], _, _, _, []).
+whole_frame_parts([F|As], C, J, V, E?) :- integer(C?), integer(J?), ground(V?) |
+    whole_frame_list(As?, C?, J?, V?, Es), E =.. [F?|Es?].
+procedure whole_frame_list(SglpTerms?, Integer?, Integer?, _?, SglpTerms).
+whole_frame_list([], _, _, _, []).
+whole_frame_list([A|As], C, J, V, [E?|Es?]) :- integer(C?), integer(J?), ground(V?) |
+    whole_frame(A?, C?, J?, V?, E), whole_frame_list(As?, C?, J?, V?, Es).
 
 %% The term form of an sGLP program (README.md, "The term form"): a list of
 %% terms, one per declaration and clause, in GLP-Spec's term syntax; its

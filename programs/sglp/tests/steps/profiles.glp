@@ -1,0 +1,84 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(steps, profiles)
+
+%% person(stepper)
+%% binds(Ready, get_ready)
+exported procedure
+get_ready
+(
+Ready
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+get_ready(ready(R?), _, Mon)
+:-
+stream_append(rated('/'(1, day), Tok), Mon?, _)
+,
+say(Tok?, slot(R))
+.
+procedure
+say
+(
+Token?
+,
+Slot(YesNo)
+?
+)
+.
+say(stop, _)
+.
+say(go, slot(yes))
+.
+%% binds(Panel, judge_fast)
+exported procedure
+judge_fast
+(
+Panel
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+judge_fast(panel(Cs), _, Mon)
+:-
+judge_cards(Cs?, Mon?)
+.
+procedure
+judge_cards
+(
+List(Card)
+?
+,
+MutualRef?
+)
+.
+judge_cards([card(_, A?) | Cs], Mon)
+:-
+stream_append(rated('/'(3600, hour), Tok), Mon?, _)
+,
+verdict(Tok?, slot(A))
+,
+judge_cards(Cs?, Mon?)
+.
+judge_cards([], _)
+.
+procedure
+verdict
+(
+Token?
+,
+Slot(YesNo)
+?
+)
+.
+verdict(stop, _)
+.
+verdict(go, slot(yes))
+.
