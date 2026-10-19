@@ -799,6 +799,14 @@ void main() {
     expect(formatTerm(a.view), startsWith('approval(attempt(alf, '));
     expect(formatTerm(a.view),
         endsWith(', agent_befriend(alf, bob, alice, $attestation)), input([2]))'));
+    // Bob is not Alf's principal: the question names Alf's principal and its developer, the first signer of its attestation (GAI #5 Cowork, Code_inbox.md, 2026-10-19 20:36 UTC, (c) and item 5).
+    expect(run.textsOf(bob, a), [
+      'Alf, an AI agent of Alice, asks to befriend you.',
+      'Developer: Acme',
+      'Befriend Alf?',
+      'Yes',
+      'No'
+    ]);
     await run.answer(bob, 'Yes');
     expect(bob.questions('approval'), isEmpty);
 
@@ -807,7 +815,14 @@ void main() {
         containsAll(['friend(alf)', 'agent_of(alf, alice, $attestation)', 'item($summary)']));
     expect(run.scriptedAtoms('alf'), containsAll(['item($summary)', 'authored($summary)']));
 
-    // (a) Bob's chat with Alf: he taps Alf's row; the item "Today's summary of the news", "Author: Alf, an AI agent of Alice", and Forward under it; under them the field Message and Send, as in GSNP's chat, GAI offering message.
+    // Alf's row in Bob's Friends tab names its developer (GAI #5 Cowork, Code_inbox.md, 2026-10-19 20:36 UTC, item 5).
+    expect(
+        find.descendant(
+            of: run.control(bob, 'person:alf'),
+            matching: find.text('Developer: Acme')),
+        findsOneWidget);
+
+    // (a) Bob's chat with Alf: he taps Alf's row; the item "Today's summary of the news", "Author: Alf, an AI agent of Alice", "Developer: Acme" (GAI:2, "Every act of the AI agent names its principal and its developer"), and Forward under it; under them the field Message and Send, as in GSNP's chat, GAI offering message.
     await run.tap(bob, run.name(bob, 'person:alf', 'Alf'));
     expect(run.control(bob, 'chat:alf'), findsOneWidget);
     await run.top(bob);
@@ -822,6 +837,7 @@ void main() {
         [
           "Today's summary of the news",
           'Author: Alf, an AI agent of Alice',
+          'Developer: Acme',
           'Forward'
         ]);
     expect(run.texts(bob).where((t) => t.startsWith('via')), isEmpty);

@@ -1,6 +1,6 @@
 /// The screen of tabs of the grassroots app's construct family: the layout of the constructs of the apps of GSC's contracts, "one screen with tabs, Friends and, in GSN, Groups too, drawn from the person's state; the questions are drawn inside the tab they concern" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC).  "A question's type fixes a construct's semantic content --- what it shows, what it takes, and the answer each submission forms --- and nothing of its layout" (vGLP, Remark "Construct Families"), so the tabs are the family's layout, and no construct's content changes with them.
 ///
-/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  The tabs are Friends and, where the request type offers `create(Me, N)`, the person is in a group, or a notice of a class of a group is written, Groups; once drawn, Groups stays.  Each tab holds, in order:
+/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  The tabs are Friends; where the request type offers `create(Me, N)`, the person is in a group, or a notice of a class of a group is written, Groups; and, in GAI's app, where the request type offers `enter(Me, R, X)` or the person is the principal of an AI agent, AI agents (GAI's paper, Figure "The GAI app": "her AI agents tab", Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (a)); once drawn, Groups and AI agents stay.  Each tab holds, in order:
 ///
 ///   1. the approval questions it concerns, at its top, each drawn by its widget: an approval of a class of a group ([groupClasses]) in Groups, and every other in Friends;
 ///   2. in Friends, every other question that is neither an approval question nor the request question, by its widget;
@@ -19,7 +19,7 @@ import 'named_widgets.dart';
 import 'term.dart';
 
 /// A tab of the screen.
-enum ScreenTab { friends, groups }
+enum ScreenTab { friends, groups, agents }
 
 /// A message held for a later request question: the item the person signed, the friend it is for, the request question that took the sign, [askedOn], and the count of notices written when it was held, [notices], those before the last view among them ([SocialState.written]).
 class HeldMessage {
@@ -143,6 +143,9 @@ class _TabScreenState extends State<TabScreen> {
   /// Whether Groups has been drawn: once drawn, it stays.
   bool _groups = false;
 
+  /// Whether AI agents has been drawn: once drawn, it stays.
+  bool _agents = false;
+
   /// The person's own key, as the last request question drawn showed it.
   GTerm? _me;
 
@@ -215,6 +218,9 @@ class _TabScreenState extends State<TabScreen> {
         (state?.inGroup ?? false) ||
         (state?.notices.any((n) => n.concernsGroup) ?? false) ||
         approvals.any(_concernsGroup);
+    _agents = _agents ||
+        (offers?.has('enter', 3) ?? false) ||
+        (state?.aiAgents.isNotEmpty ?? false);
     // A message whose sign closed without committing, its notice written
     // after the message was held, is held no longer.
     if (state != null) {
@@ -225,7 +231,11 @@ class _TabScreenState extends State<TabScreen> {
                 formatTerm(xs[1]) == formatTerm(h.item);
           }));
     }
-    final tabs = [ScreenTab.friends, if (_groups) ScreenTab.groups];
+    final tabs = [
+      ScreenTab.friends,
+      if (_groups) ScreenTab.groups,
+      if (_agents) ScreenTab.agents,
+    ];
     ScreenTab tabOf(OpenConstruct a) =>
         _groups && _concernsGroup(a) ? ScreenTab.groups : ScreenTab.friends;
     final byState = c0 != null && _declared(c0) == lastStateName;
@@ -273,7 +283,11 @@ class _TabScreenState extends State<TabScreen> {
           isLabelVisible: n > 0,
           label: Text('$n'),
           offset: const Offset(14, -6),
-          child: Text(t == ScreenTab.friends ? 'Friends' : 'Groups'),
+          child: Text(switch (t) {
+            ScreenTab.friends => 'Friends',
+            ScreenTab.groups => 'Groups',
+            ScreenTab.agents => 'AI agents',
+          }),
         ),
       );
     }
