@@ -15,16 +15,7 @@
 %%   nudge(p, q)      :  friend(q), not nudged(q),    friend(p), +nudged_by(p)
 %%                       +nudged(q)
 %%
-%% nudge is guarded at neither role, its role graph joined by the friend atom
-%% its first role requires, so it meets volition; its first role requires
-%% friend(q), naming the other role and the variable of every atom it deletes
-%% and adds, and its schema-bindings of one class require and forbid the same
-%% atoms at every participant, so the contract is effective (vGLP, Section 5.4,
-%% the sentence after the paragraph on act schemas).  Its class at a binding is
-%% unguarded and its opener the person in its first role (Section 5.4, the
-%% paragraph on act schemas), whose machine proposes it as an own transaction, the attempt
-%% asking nobody and the other participant voting by its machine (Section 5.4,
-%% "The compilation"; Definitions "Proposing" and "Starting and Wounding").  nudge/self.glp plays it.
+%% nudge is guarded at neither role, its role graph joined by the friend atom its first role requires, so it meets volition; its first role requires friend(q), naming the other role and every variable of the atoms it deletes and adds, so the contract is effective (vGLP 099f876, Section 5.4, "Act schemas as local specifications").  Its schema-binding at a binding determines an unguarded part, its opener the person in its first role (ibid.), whose machine proposes it as an own transaction, the attempt asking nobody and the other participant voting by its machine (Section 5.4, "The compilation"; Definitions "Proposing" and "Starting and Wounding").  nudge/self.glp plays it.
 %%
 %% introduce is befriend with a three-party act, by which a person introduces
 %% two of its friends to each other, so that a contract compiled here has a
@@ -37,15 +28,9 @@
 %%                             at q  not friend(r), +friend(r)
 %%                             at r  not friend(q), +friend(q)
 %%
-%% introduce is guarded at every role, so its
-%% one guard set is its three participants; the friend atoms its first role
-%% requires join its role graph.  introduce/self.glp plays it among three
-%% agents.
+%% introduce is guarded at every role, so the guard set of each of its parts is its three participants; the friend atoms its first role requires join its role graph.  introduce/self.glp plays it among three agents.
 %%
-%% gnudge is nudge with a second schema g determining the same transactions,
-%% nudge(a, b) and g(b?, a), g guarded at its first role, so that an unguarded
-%% class has a guarded schema-binding whose first role is another person (vGLP
-%% 2026-10-12 08:26 UTC, Q-B):
+%% gnudge is nudge with a second schema g determining the same transactions, nudge(a, b) and g(b?, a), g guarded at its first role, so that a class with an unguarded part has a guarded part whose first role is another person (vGLP 2026-10-12 08:26 UTC, Q-B; vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 4):
 %%
 %%   befriend(p?, q?) :  not friend(q), +friend(q)    not friend(p), +friend(p)
 %%   nudge(p, q)      :  friend(q), not nudged(q),    friend(p), +nudged_by(p)
@@ -53,15 +38,7 @@
 %%   g(q?, p)         :  friend(p), +nudged_by(p)     friend(q), not nudged(q),
 %%                                                    +nudged(q)
 %%
-%% The class of nudge(a, b) is unguarded, the empty set its one minimal guard
-%% set, and its schema-bindings nudge(a, b) and g(b, a) require and forbid the
-%% same atoms at each participant, so the contract is effective.  Its opener is
-%% the least person in the first role of its unguarded schema-bindings, a alone
-%% (Q-B), and not the least of a and b, which the person in g's first role
-%% would make b where b precedes a: b's agent, which finds among its own
-%% transactions the classes of the unguarded schemas with b in their first
-%% role, would never find the class,
-%% and no agent would open it.  gnudge/self.glp plays it.
+%% The schema-bindings nudge(a, b) and g(b, a) require and forbid the same atoms at each participant and mark different people, so the class of nudge(a, b) has two parts: nudge(a, b)'s, unguarded, and g(b, a)'s, guarded by b, which the request type proposes (vGLP 099f876, Section 5.4, "Act schemas as local specifications" and "The compilation").  The opener of the unguarded part is the least person in the first role of its schema-bindings, a, and not the least of a and b, which the person in g's first role would make b where b precedes a: b's agent, which finds among its own transactions the unguarded parts of the unguarded schemas with b in their first role, would never find it, and no agent would open it.  gnudge/self.glp plays it.
 %%
 %% childsafe is a child-safe-like contract (vGLP, Appendix A, "An Example:
 %% Child-Safe Befriending"), so that a contract compiled here has a class of
@@ -121,7 +98,7 @@
 %%
 %% friends/self.glp plays it.
 %%
-%% waves is befriend with two schemas that delete and add the same atoms at the same participants and are of two classes, so that a contract compiled here has two classes of the same participants and atoms, each with its own guard sets and domains (vGLP 9c819f5, Section 5.4, "Act schemas as local specifications": "The classes are those of the contract's equivalence, generated by relating two transactions when one schema-binding determines both"; vGLP #14, Code_inbox.md, 2026-10-18 13:35 UTC):
+%% waves is befriend with two schemas that delete and add the same atoms at the same participants and are of two classes, so that a contract compiled here has two classes of the same participants and atoms, each with its own parts, guard sets and domains (vGLP 9c819f5, Section 5.4, "Act schemas as local specifications": "The classes are those of the contract's equivalence, generated by relating two transactions when one schema-binding determines both"; vGLP #14, Code_inbox.md, 2026-10-18 13:35 UTC):
 %%
 %%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
 %%                       at q  not friend(p), +friend(p)
@@ -132,7 +109,7 @@
 %%
 %% wave requires friend(q) at p and hail forbids it, so no transaction is determined by both: a friend waves guarded by themselves, and a stranger hails guarded by both.  waves/self.glp plays it.
 %%
-%% parts is befriend with a class of two parts, so that a contract compiled here has a class whose parts have different domains: "every class [t] is the union of sets of its members, its parts", and "the parts of a class are the sets of transactions its schema-bindings determine" (vGLP c0bea08, Definition "Local Specification, Part, Opener" and Section 5.4, "Act schemas as local specifications"):
+%% parts is befriend with a class of two parts, so that a contract compiled here has a class whose parts have different domains: "every class [t] is the union of sets of its members, its parts", and "each schema-binding determines a part [t]_j of its class" (vGLP 099f876, Definition "Local Specification, Part, Guard Set, Opener" and Section 5.4, "Act schemas as local specifications"):
 %%
 %%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
 %%                       at q  not friend(p), +friend(p)
@@ -142,7 +119,22 @@
 %%   pat(p?, q)       :  at p  friend(q), coin, +tapped(q)
 %%                       at q  friend(p), coin, +tapped_by(p)
 %%
-%% tap and pat delete and add the same atoms, neither forbids an atom the other requires, and both mark p, so they are one class, guarded by p, of two parts: tap's, and pat's, which requires a coin at both.  The request propose([t]_j) names the class by a part, and the agent proposes, among the parts of [t] it is ready for, the one it has proposed least recently; each participant checks its precondition in the attempt's part (Section 5.4, "The compilation"; Definition "Proposing", Start).  parts/self.glp plays it.
+%% tap and pat delete and add the same atoms and neither forbids an atom the other requires, so they are one class, of two parts, each guarded by p, the person its schema-binding marks: tap's, and pat's, which requires a coin at both.  The request propose([t]_j) names the class by a guarded part, and the agent proposes, among the guarded parts of [t] it guards and is ready for, the one it has proposed least recently; each participant checks its precondition in the attempt's part (Section 5.4, "The compilation"; Definition "Proposing", Start).  parts/self.glp plays it.
+%%
+%% opens is befriend with two unguarded schemas u1 and u2 that determine the same transactions, u1(a, b) and u2(b, a), so that a contract compiled here has a class of two unguarded parts with different openers: "The opener of an unguarded part is the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it" (vGLP 099f876, Section 5.4, "Act schemas as local specifications"; vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3, answering the fault Code #10 reported at 10:16 UTC):
+%%
+%%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
+%%                       at q  not friend(p), +friend(p)
+%%   mark(p?, q)      :  at p  friend(q), not w(q), +w(q)
+%%                       at q  friend(p), +marked_by(p)
+%%   rmark(p?, q)     :  at p  friend(q), not r(q), +r(q)
+%%                       at q  friend(p), +rmarked_by(p)
+%%   u1(p, q)         :  at p  r(q), not x(q), +x(q)
+%%                       at q  w(p), +y(p)
+%%   u2(p, q)         :  at p  w(q), not y(q), +y(q)
+%%                       at q  +x(p)
+%%
+%% u1(a, b) and u2(b, a) delete and add the same atoms and neither forbids an atom the other requires, so they are one class, of two unguarded parts: u1(a, b)'s, opened by a, and u2(b, a)'s, opened by b.  Each unguarded schema's first role requires an atom naming the other role, so the contract is effective.  Where bob, after alice in the order of identifiers, holds w(alice) and alice holds no r(bob), the part of u2(bob, alice) holds and the part of u1(alice, bob) does not: bob opens u2(bob, alice)'s part, which his agent finds through u2's first role, requiring w(alice) at him.  An opener taken over the class would be alice, the least person in the first role of its schema-bindings, whose agent finds the class only through u1's first role, requiring r(bob) at her, and nobody would open it.  opens/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it.
@@ -175,6 +167,7 @@ contract_named(link, C?) :- link(C).
 contract_named(friends, reflexive([friend], C?)) :- friends(C).
 contract_named(waves, C?) :- waves(C).
 contract_named(parts, C?) :- parts(C).
+contract_named(opens, C?) :- opens(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -189,6 +182,7 @@ introduction_named(link, no_introduction).
 introduction_named(friends, introduction(friend)).
 introduction_named(waves, no_introduction).
 introduction_named(parts, no_introduction).
+introduction_named(opens, no_introduction).
 
 procedure nudge(Contract).
 nudge([schema(befriend,
@@ -285,3 +279,20 @@ parts([schema(befriend,
        schema(pat,
          [rs(guarded, [atom(tapped, [role(2)])], [], [atom(friend, [role(2)]), atom(coin, [])], []),
           rs(unguarded, [atom(tapped_by, [role(1)])], [], [atom(friend, [role(1)]), atom(coin, [])], [])])]).
+
+procedure opens(Contract).
+opens([schema(befriend,
+         [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+          rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+       schema(mark,
+         [rs(guarded, [atom(w, [role(2)])], [], [atom(friend, [role(2)])], [atom(w, [role(2)])]),
+          rs(unguarded, [atom(marked_by, [role(1)])], [], [atom(friend, [role(1)])], [])]),
+       schema(rmark,
+         [rs(guarded, [atom(r, [role(2)])], [], [atom(friend, [role(2)])], [atom(r, [role(2)])]),
+          rs(unguarded, [atom(rmarked_by, [role(1)])], [], [atom(friend, [role(1)])], [])]),
+       schema(u1,
+         [rs(unguarded, [atom(x, [role(2)])], [], [atom(r, [role(2)])], [atom(x, [role(2)])]),
+          rs(unguarded, [atom(y, [role(1)])], [], [atom(w, [role(1)])], [])]),
+       schema(u2,
+         [rs(unguarded, [atom(y, [role(2)])], [], [atom(w, [role(2)])], [atom(y, [role(2)])]),
+          rs(unguarded, [atom(x, [role(1)])], [], [], [])])]).

@@ -2,19 +2,7 @@
 %% The compiler from an act-schema contract to its canonical CVA platform in
 %% vGLP.
 %%
-%% vGLP (/Grassroots/vGLP, c0bea08), Section 3.2, sections/cva-2pc.tex:
-%% Definitions "Volition-Guarded Specification", with the paragraph after it on
-%% guard sets and simple guards, "Local Specification, Part, Opener",
-%% "Attempt", "Cargo, App State, Question, Free, Ready", "Priority, Waiting,
-%% Blocked, Clear", "Proposing" to "Deciding" and "Canonical CVA Platform",
-%% two-phase commit coordinated by the initiating agent; Section 5.4,
-%% sections/cva-implementation.tex, Definition "Effective Local
-%% Specification", "The compilation" and the paragraph "Act schemas as local
-%% specifications", which says when a contract of act schemas is a local
-%% specification and when it is effective.  GSC (/Grassroots/GSC), Sections 3 and 5:
-%% Definitions "Act schema", "Binding", "Compilation" and "Realisation of a
-%% contract", and Appendix F, "Introduction with wards".  The papers are the
-%% specification; each module names the definitions it decides.
+%% vGLP (/Grassroots/vGLP, 099f876), Section 3.2, sections/cva-2pc.tex: Definitions "Volition-Guarded Specification", "Local Specification, Part, Guard Set, Opener", "Attempt", "Cargo, App State, Question, Free, Ready", "Priority, Waiting, Blocked, Clear", "Proposing" to "Deciding" and "Canonical CVA Platform", two-phase commit coordinated by the initiating agent; Section 5.4, sections/cva-implementation.tex, Definition "Effective Local Specification", "The compilation" and the paragraph "Act schemas as local specifications", which says that a contract of act schemas is a local specification, each schema-binding determining a part with the people in its marked roles as its guard set, and when it is effective.  GSC (/Grassroots/GSC), Sections 3 and 5: Definitions "Act schema", "Binding", "Compilation" and "Realisation of a contract", and Appendix F, "Introduction with wards".  The papers are the specification; each module names the definitions it decides.
 %%
 %% compile(Name, Contract, Verdict) takes a contract in the term form
 %% programs/gsc reads, and the verdict its checker gives it, and prints the
@@ -61,21 +49,19 @@ Cause     ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive.
 %% in no atom a role requires (not_required); or the contract has community
 %% roles, whose schemas admit no signed term (community).
 SgnCause  ::= not_added ; not_guarding ; not_required ; community.
+%% What GSC's Definition "Act schema" requires of the form of a schema, and a schema formed otherwise violates, in a verdict malformed(Faults): an atom both added and deleted at a role (added_and_deleted), a role that is not guarding and adds and deletes nothing (changes_nothing), and no role adding or deleting an atom (no_role_changes), as programs/gsc/self.glp writes them.
 Fault     ::= no_introductory_act
             ; obstructed(Constant, Integer, Atom, Cause)
             ; untraceable(Preds)
             ; volition(Constant, Integer, Integer)
             ; cohesion(Constant, Integer, Atom)
             ; reflexive(Constant, Integer, Atom)
-            ; signed(Constant, Integer, Atom, SgnCause).
+            ; signed(Constant, Integer, Atom, SgnCause)
+            ; added_and_deleted(Constant, Integer, Atom)
+            ; changes_nothing(Constant, Integer)
+            ; no_role_changes(Constant).
 Faults    ::= [] ; [Fault | Faults].
-%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is
-%% the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a
-%% relay act (Definition "Relay") is a ward role, ward(Role, Mark,
-%% GuardianRole), or a free role, free(Role); a relay act is named with its two
-%% parties.  grassroots_with_wards names the introductory act unobstructed but
-%% for the marks, the set of marks, the guardianship of each and the relay acts
-%% found.
+%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Party     ::= ward(Integer, Constant, Integer) ; free(Integer).
@@ -83,7 +69,7 @@ Parties   ::= [] ; [Party | Parties].
 Relay     ::= relay(Constant, Party, Party).
 Relays    ::= [] ; [Relay | Relays].
 Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
-            ; grassroots_with_wards(Constant, Preds, Guardianships, Relays)
+            ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
             ; conditions_met ; conditions_failed(Faults) ; malformed(Faults).
 
 %% A contract's introduction predicate, where it names one (vGLP, Section 5.4,
