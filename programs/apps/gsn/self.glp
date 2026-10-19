@@ -26,18 +26,15 @@ Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
             ; yield(Attempt).
 Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Txn       ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
-            ; tally(Attempt) ; commit(Attempt) ; yield(Attempt)
-            ; wound(Attempt, Attempt) ; outcome(Attempt)
-            ; introduce_peers(Peer, Peer) ; discover(Peer).
-Output    ::= Txn.
+Atom      ::= identity ; friend(Peer) ; received(Speech, Peer) ; member(Peer, Speech) ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech) ; received_in(Speech, Peer, Speech).
+Output    ::= view(List(Atom), List(Key)).
 Approval  ::= approval(Attempt, YesNo?).
 Menu      ::= menu(Key, List(Key), Request?).
 Question  ::= menu_w(Menu) ; approval_w(Approval).
 Drawn     ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)    ::= ask(Constant, Q).
 
-%% What the mini-app's scripted person reports, its screen (person.glp): each transaction the thread shows, once; the agent's own key and the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
+%% What the mini-app's scripted person reports, its screen (person.glp): each view the program writes, once, the machine state and the persons the agent knows (vGLP b7e3517, Section 5.4, "The compilation"); the agent's own key and the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
 Asked     ::= Class ; Attempt.
 Seen      ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo).
 

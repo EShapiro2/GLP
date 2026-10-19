@@ -6,7 +6,7 @@
 %% introduction rule (vGLP, Section 3.2, Definition "Introduction Rule,
 %% Introduce Peers"; Section 5.4, the paragraph on act schemas).  It runs
 %% three agents, alice, bob and carol, their persons scripted and paced on
-%% their threads (../self.glp), and gives each person's log, the thread with
+%% their screens (../self.glp), and gives each person's log, the views with
 %% gave(K, A) where the person answers an approval question, and the
 %% network's log of the cargoes it carries.
 %%
@@ -39,10 +39,8 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
            ; yield(Attempt).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
-           ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
-           ; introduce_peers(Peer, Peer) ; discover(Peer).
-Output   ::= Txn.
+Atom     ::= friend(Peer) ; greeted ; greeting ; cheered.
+Output   ::= view(List(Atom), List(Key)).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -58,26 +56,26 @@ exported procedure play_friends(Stream(_), Stream(_), Stream(_),
     Stream(Sent(Cargo))).
 play_friends(LA?, LB?, LC?, N?) :-
     trio([req(known(bob)), req(known(carol)),
-          wait(discover(bob)), wait(discover(carol)),
+          wait(known(bob)), wait(known(carol)),
           own([A1], propose(befriend(A1?, bob))),
-          wait(commit(attempt(alice, 1, 1, befriend(alice, bob)))),
+          wait(holds(friend(bob))),
           own([A2], propose(befriend(A2?, carol))),
-          wait(commit(attempt(alice, 2, 2, befriend(alice, carol)))),
+          wait(holds(friend(carol))),
           own([A3, A4], propose(greet(A3?, A4?))),
-          wait(propose(attempt(alice, 3, 3, greet(alice, alice)))),
+          wait(has(greeted, 1)),
           own([A5, A6], propose(greet(A5?, A6?))),
-          wait(propose(attempt(alice, 4, 4, greet(alice, alice)))),
+          wait(has(greeted, 2)),
           own([A7], propose(cheer(A7?))),
-          wait(propose(attempt(alice, 5, 5, cheer(alice)))),
+          wait(has(cheered, 1)),
           own([A8], propose(cheer(A8?))),
-          wait(propose(attempt(alice, 6, 6, cheer(alice)))),
+          wait(has(cheered, 2)),
           own([A9], propose(cheer(A9?))),
           own([A10], propose(greet(A10?, bob)))],
-         [req(known(alice)), wait(discover(alice)),
+         [req(known(alice)), wait(known(alice)),
           approval(befriend(alice, bob), yes),
-          wait(discover(carol)),
+          wait(known(carol)),
           own([B1], propose(befriend(B1?, carol))), look],
-         [req(known(alice)), wait(discover(alice)),
+         [req(known(alice)), wait(known(alice)),
           approval(befriend(alice, carol), yes),
           approval(befriend(bob, carol), yes)],
          LA, LB, LC, N).

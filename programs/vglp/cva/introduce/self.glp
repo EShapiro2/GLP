@@ -5,8 +5,8 @@
 %% which programs/vglp/cva/compile.sh prints from it: two-phase commit
 %% coordinated by the initiating agent (vGLP, Section 3.2, Definition
 %% "Canonical CVA Platform").  It runs three agents, alice, bob and carol,
-%% their persons scripted and paced on their threads (../self.glp), and gives
-%% each person's log, the thread with gave(K, A) where the person answers a
+%% their persons scripted and paced on their screens (../self.glp), and gives
+%% each person's log, the views with gave(K, A) where the person answers a
 %% approval question, and the network's log of the cargoes it carries.
 %%
 %% play_introduce: alice befriends bob and carol, each asked and answering
@@ -15,8 +15,7 @@
 %%   and aborts, and tells the outcome to both; carol's question is no longer
 %%   pending once her Outcome closes the attempt, so her approval question is closed by the
 %%   program (vGLP, Section 5.4, "The compilation"), and
-%%   the yes she gives it after takes no Answer.  alice proposes it again, both
-%%   answer yes, and it commits at all three.
+%%   the yes she gives it, once she is asked on the next attempt, reaches no goal.  alice, seeing nothing of the abort on her screen, requests the introduction again on each request question until her screen shows bob and carol introduced (../self.glp, again(R, C)): those read while her attempt holds her lock are dropped, the next is proposed, attempt 4, both answer yes, and it commits at all three; one she made before she saw the commit, read after it, is proposed, attempt 5, and the machines of bob and carol, friends by then, vote no.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -32,10 +31,8 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
            ; yield(Attempt).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
-           ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
-           ; introduce_peers(Peer, Peer) ; discover(Peer).
-Output   ::= Txn.
+Atom     ::= friend(Peer) ; introduced(Peer, Peer).
+Output   ::= view(List(Atom), List(Key)).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -51,21 +48,20 @@ exported procedure play_introduce(Stream(_), Stream(_), Stream(_),
     Stream(Sent(Cargo))).
 play_introduce(LA?, LB?, LC?, N?) :-
     trio([req(known(bob)), req(known(carol)),
-          wait(discover(bob)), wait(discover(carol)),
+          wait(known(bob)), wait(known(carol)),
           own([A1], propose(befriend(A1?, bob))),
-          wait(commit(attempt(alice, 1, 1, befriend(alice, bob)))),
+          wait(holds(friend(bob))),
           own([A2], propose(befriend(A2?, carol))),
-          wait(commit(attempt(alice, 2, 2, befriend(alice, carol)))),
+          wait(holds(friend(carol))),
           own([A3], propose(introduce(A3?, bob, carol))),
-          wait(tally(attempt(alice, 3, 3, introduce(alice, bob, carol)))),
-          own([A4], propose(introduce(A4?, bob, carol)))],
-         [req(known(alice)), wait(discover(alice)),
+          again(propose(introduce(alice, bob, carol)), holds(introduced(bob, carol)))],
+         [req(known(alice)), wait(known(alice)),
           approval(befriend(alice, bob), yes),
           approval(attempt(alice, 3, 3, introduce(alice, bob, carol)), no),
           approval(attempt(alice, 4, 4, introduce(alice, bob, carol)), yes)],
-         [req(known(alice)), wait(discover(alice)),
+         [req(known(alice)), wait(known(alice)),
           approval(befriend(alice, carol), yes),
-          wait(outcome(attempt(alice, 3, 3, introduce(alice, bob, carol)))),
+          wait(asked(attempt(alice, 4, 4, introduce(alice, bob, carol)))),
           approval(attempt(alice, 3, 3, introduce(alice, bob, carol)), yes),
           approval(attempt(alice, 4, 4, introduce(alice, bob, carol)), yes)],
          LA, LB, LC, N).

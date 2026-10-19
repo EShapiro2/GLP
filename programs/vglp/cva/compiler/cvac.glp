@@ -161,6 +161,7 @@ module_lines(Nm, C, Rf, E, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(
     local # proposable(C?, Rf?, Ps),
     text # fixed_text(Fx),
     request_parts(C?, Ps?, Fx?, Lr, Fx1),
+    atom_parts(C?, La),
     T1 =.. [contract_schemas, C?],
     T2 =.. [reflexive_preds, Rf?],
     T3 =.. [introduction_preds, E?],
@@ -170,7 +171,8 @@ module_lines(Nm, C, Rf, E, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(
     lapp(L2?, ['',
         'procedure class_of(Constant?, Binding?, Peer?, Class).'|L3x?], L2x),
     lapp(L1?, Lr1?, L1x),
-    lapp(Lr?, ['',
+    lapp(Lr?, La1?, Lr1),
+    lapp(La?, ['',
         'procedure contract_schemas(Schemas).',
         T1?,
         '.',
@@ -183,7 +185,7 @@ module_lines(Nm, C, Rf, E, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(
         T3?,
         '.',
         '',
-        'procedure binding_of(Class?, Constant, Binding).'|L2x?], Lr1),
+        'procedure binding_of(Class?, Constant, Binding).'|L2x?], La1),
     lapp(['%% Printed by programs/vglp/cva/compiler from the contract named below, in the',
          '%% term form programs/gsc reads (GSC, Sections 3 and 5): the canonical CVA',
          '%% platform of the contract (vGLP, Section 3.2, Definition "Canonical CVA',
@@ -257,6 +259,86 @@ shared_lines([], _, []).
 shared_lines([guarded_only(L)|Ls], yes, [L?|Ls1?]) :- shared_lines(Ls?, yes, Ls1).
 shared_lines([guarded_only(_)|Ls], no, Ls1?) :- shared_lines(Ls?, no, Ls1).
 shared_lines([L|Ls], G, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, Ls1).
+
+%% The type of the machine states, List(Atom), in the type of the views, Output ::= view(List(Atom), List(Key)) in the shared text (vGLP b7e3517, Section 5.4, "The compilation": "the compilation defines Output as the type of the views", a view being view(s, K), "the machine state s of its app state and the persons K it knows"): a machine state is a multiset of the contract's atoms, written as a list, and Atom is the union of the contract's predicates at their argument types: an argument is of the type Peer, a person, where the schemas write a role, a party variable or a name term, and of the type Speech, a speech act, where they write a speech-act variable or a signed term; Atom has one alternative for each predicate and argument types the schemas write it with, in order of first occurrence.  The agent holds an atom as g(Name, Vals), each value p(Peer) or s(Speech), and writes it on the output as the contract writes it: atom_of(g(friend, [p(V1)]), shown(friend(V1?))), one clause per alternative.
+Kind  ::= peer ; speech.
+Kinds ::= [] ; [Kind | Kinds].
+Sig   ::= sig(Constant, Kinds).
+Sigs  ::= [] ; [Sig | Sigs].
+procedure atom_parts(Contract?, Stream(_)).
+atom_parts(C, ['', '%% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(List(Atom), List(Key)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP b7e3517, Section 5.4, "The compilation").', 'Atom ::='|L?]) :- ground(C?) |
+    contract_atoms(C?, As),
+    atom_sigs(As?, Gs0),
+    dedup(Gs0?, Gs),
+    atom_parts1(Gs?, L).
+procedure atom_parts1(Sigs?, Stream(_)).
+atom_parts1(Gs, L?) :- ground(Gs?) |
+    atom_alts(Gs?, La),
+    atom_of_lines(Gs?, Lo),
+    lapp(La?, ['', 'procedure atom_of(GAtom?, Shown).'|Lo?], L).
+procedure contract_atoms(Contract?, Atoms).
+contract_atoms([], []).
+contract_atoms([schema(_, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
+contract_atoms([cschema(_, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
+procedure rs_atoms(RoleSpecs?, Atoms).
+rs_atoms([], []).
+rs_atoms([R|Rs], As?) :- ground(R?) |
+    rs_lists(R?, P, M, K, N),
+    rs_atoms(Rs?, A5),
+    app(N?, A5?, A4),
+    app(K?, A4?, A3),
+    app(M?, A3?, A2),
+    app(P?, A2?, As).
+procedure atom_sigs(Atoms?, Sigs).
+atom_sigs([], []).
+atom_sigs([atom(F, Xs)|As], [sig(F?, Ks?)|Gs?]) :- arg_kinds(Xs?, Ks), atom_sigs(As?, Gs).
+procedure arg_kinds(Args?, Kinds).
+arg_kinds([], []).
+arg_kinds([role(_)|Xs], [peer|Ks?]) :- arg_kinds(Xs?, Ks).
+arg_kinds([pvar(_)|Xs], [peer|Ks?]) :- arg_kinds(Xs?, Ks).
+arg_kinds([nterm(_)|Xs], [peer|Ks?]) :- arg_kinds(Xs?, Ks).
+arg_kinds([svar(_)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
+arg_kinds([sgn(_, _)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
+%% Atom ::= the alternatives, separated by ;, each the predicate applied to its argument types, a predicate of no argument a constant.
+procedure atom_alts(Sigs?, Stream(_)).
+atom_alts([], ['.']).
+atom_alts([G|Gs], [A?|L?]) :- ground(G?) |
+    sig_alt(G?, A),
+    atom_alts1(Gs?, L).
+procedure atom_alts1(Sigs?, Stream(_)).
+atom_alts1([], ['.']).
+atom_alts1([G|Gs], [';'|L?]) :- atom_alts([G?|Gs?], L).
+procedure sig_alt(Sig?, _).
+sig_alt(sig(F, []), F?).
+sig_alt(sig(F, [K|Ks]), A?) :- ground(F?), ground(K?), ground(Ks?) |
+    kind_types([K?|Ks?], Ts),
+    A =.. [F?|Ts?].
+procedure kind_types(Kinds?, Stream(_)).
+kind_types([], []).
+kind_types([peer|Ks], ['Peer'|Ts?]) :- kind_types(Ks?, Ts).
+kind_types([speech|Ks], ['Speech'|Ts?]) :- kind_types(Ks?, Ts).
+%% atom_of(g(f, [p(V1), s(V2)]), shown(f(V1?, V2?))), one clause per alternative of Atom, and a last clause on any other atom, which covers the type GAtom and is never reached: the agent holds only atoms the contract's schemas add.
+procedure atom_of_lines(Sigs?, Stream(_)).
+atom_of_lines([], ['atom_of(_, unshown) :- otherwise | true.']).
+atom_of_lines([sig(F, [])|Gs], [T?, '.'|L?]) :- ground(F?) |
+    T =.. [atom_of, g(F?, []), shown(F?)],
+    atom_of_lines(Gs?, L).
+atom_of_lines([sig(F, [K|Ks])|Gs], [T?, '.'|L?]) :- ground(F?), ground(K?), ground(Ks?) |
+    kind_vals([K?|Ks?], 1, Ws, Qs),
+    Out =.. [F?|Qs?],
+    T =.. [atom_of, g(F?, Ws?), shown(Out?)],
+    atom_of_lines(Gs?, L).
+procedure kind_vals(Kinds?, Integer?, Stream(_), Stream(_)).
+kind_vals([], _, [], []).
+kind_vals([K|Ks], I, [W?|Ws?], [Q?|Qs?]) :- ground(K?), integer(I?) |
+    vname(I?, F),
+    name_of(F?, N, Q),
+    kind_val(K?, N?, W),
+    I1 := I? + 1,
+    kind_vals(Ks?, I1?, Ws, Qs).
+procedure kind_val(Kind?, Constant?, _).
+kind_val(peer, N, p(N?)).
+kind_val(speech, N, s(N?)).
 
 %% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]).
 procedure binding_lines(Contract?, Stream(_)).

@@ -9,18 +9,13 @@
 %%
 %% A play runs the agents of a compiled platform, each the agent of the module
 %% with its ask stream and its dispatcher on that stream, on its person
-%% channel and on the program's output, the agent's thread (to_person/2), as
+%% channel and on the program's output, the agent's views (to_person/2), as
 %% whatever spawns an agent's initial goal does (vGLP, Definition "Canonical
 %% Compilation"), its person scripted, and their networks joined by route/6,
 %% route3/8 or route4/10.  The person reads what its dispatcher draws (vGLP,
 %% the construct process, draw(Id, W, V) and withdraw(Id); a grant input(Id,
 %% P, R)): the agent's request questions, each showing the agent's own key and
-%% the persons it knows and taking one request (vGLP 321127a, Section 5.4); the thread, the
-%% program's output, construct 0, drawn element by element, which it logs;
-%% and the approval questions Start raises.  The plays pace the persons on
-%% the thread, on which the agent goal writes each app transaction it takes,
-%% its schema applied to its attempt, and discover(Q) once it knows Q (vGLP
-%% 56d898f, Section 5.4).
+%% the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, on which the agent goal writes its view, view(S, K), the machine state S of its app state, the contract's atoms, and the persons K it knows, when it starts and whenever either changes, drawn element by element, which it logs (vGLP b7e3517, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written, and the plays pace the persons on what their screens show: the last view, the request question open and the approval questions drawn.
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
 %% request question open, once one is drawn; own(Ks, R) grants R likewise,
@@ -32,15 +27,12 @@
 %% own key"), and a script, one clause, holds a hole for each place its
 %% request names the agent, GLP's variables being single-reader; look logs
 %% menu(K, Ks), K the agent's own key and Ks the persons the request question
-%% open shows, once one is drawn; wait(T) waits until the transaction T is on the
-%% thread; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an
-%% attempt of the class K, once it is drawn.  Its log is the thread, each
-%% transaction once, with gave(K, A) where it answers an approval question.  It reads what
+%% open shows, once one is drawn; wait(C) waits until the person's screen shows C; again(R, C) grants the request R on each request question drawn until the screen shows C, as a person does who sees nothing come of a request and makes it again; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view written shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  Its log is the output, each view once, with menu(K, Ks) where it looks and gave(K, A) where it answers an approval question.  It reads what
 %% the dispatcher sends it as any term and its script as terms of any form, the
 %% steps holding the platform's requests, transactions, attempts and classes
 %% (docs/typed-glp-manual.md, 18.3, the play of programs/tests/vglp/fragments
 %% likewise).  The network logs each cargo it carries, sent(From, To, Cargo),
-%% so a play shows what the thread does not name, the votes and the outcomes.
+%% so a play shows what the views do not, the starts, the votes and the outcomes.
 %% The person channel never closes, so a run does not end: once each agent
 %% has taken its own transactions until none holds and no trigger is left to
 %% read, the run suspends, the logs' tails unbound (vGLP, Section 5.4,
@@ -52,7 +44,7 @@ Peer       ::= Key.
 Carried(X) ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, X).
 Msg(X)     ::= msg(Peer, Carried(X)).
 Sent(X)    ::= sent(Peer, Peer, X) ; intro(Peer, Peer, Peer).
-Step(T)    ::= req(T) ; own(Holes, T) ; look ; wait(_) ; approval(_, T).
+Step(T)    ::= req(T) ; own(Holes, T) ; look ; wait(_) ; again(T, _) ; approval(_, T).
 Holes      ::= [] ; [Peer? | Holes].
 Steps(T)   ::= [] ; [Step(T) | Steps(T)].
 Sess       ::= nosess ; sess(Integer, Path, Peer, List(Peer)).
@@ -128,9 +120,7 @@ note(ihello(_), _, Log1?, Log1).
 note(intro(F, Q), To, [intro(F?, To?, Q?)|Log1?], Log1).
 note(cargo(F, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 
-%% The program's output to its person, the thread, on its end of the person
-%% channel (vGLP, "The canonical compilation": the program's output to
-%% its person, of the reserved type Output, drawn as construct 0).
+%% The program's output to its person, the views, on its end of the person channel (vGLP, "The canonical compilation": the program's output to its person, of the reserved type Output, drawn as construct 0).
 procedure(X) to_person(Channel(Stream(_), Stream(X))?, Stream(X)?).
 to_person(ch(_, O?), O).
 
@@ -178,9 +168,14 @@ advance(ps(sess(Id, P, Me, Ks), T, Cs, [look|Ss]), Gs?, Gs1, St1?, [menu(Me?, Ks
     ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
     advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [look|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [look|Ss?]), Log1?, Log1).
-advance(ps(Se, T, Cs, [wait(X)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(T?), ground(X?) |
-    among(X?, T?, B),
+advance(ps(Se, T, Cs, [wait(X)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Se?), ground(T?), ground(Cs?), ground(X?) |
+    shows(X?, Se?, T?, Cs?, B),
     waited(B?, ps(Se?, T?, Cs?, [wait(X?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, [again(R, X)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Se?), ground(T?), ground(Cs?), ground(X?) |
+    shows(X?, Se?, T?, Cs?, B),
+    again1(B?, ps(Se?, T?, Cs?, [again(R?, X?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, [approval(K, A)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(Cs?), ground(K?) |
     find_approval(K?, Cs?, F),
     approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
@@ -201,6 +196,66 @@ procedure(T) waited(YN?, PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_),
 waited(y, ps(Se, T, Cs, [_|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 waited(n, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% again(R, C): where the screen shows C, the next step; otherwise R granted on the request question open, the step kept, and, with no request question open, the step kept until one is drawn.
+procedure(T) again1(YN?, PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_),
+    Stream(_)?).
+again1(y, ps(Se, T, Cs, [_|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+again1(n, ps(sess(Id, P, _, _), T, Cs, [again(R, X)|Ss]), [input(Id?, P?, R?)|Gs1?], Gs1,
+       ps(nosess, T?, Cs?, [again(R?, X?)|Ss?]), Log1?, Log1) :-
+    ground(Id?), ground(P?), ground(R?) | true.
+again1(n, ps(nosess, T, Cs, Ss), Gs1?, Gs1, ps(nosess, T?, Cs?, Ss?), Log1?, Log1).
+
+%% What the person's screen shows (the step wait(C) and again(R, C)): the last view written, the approval questions drawn and not answered, and whether a request question is drawn and not answered.
+procedure shows(_?, Sess?, Stream(_)?, Seens?, YN).
+shows(known(Q), _, T, _, B?) :- ground(Q?), ground(T?) |
+    last_of(T?, L),
+    known_in(Q?, L?, B).
+shows(holds(A), _, T, _, B?) :- ground(A?), ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, 1, B).
+shows(lacks(A), _, T, _, B?) :- ground(A?), ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, 1, B1),
+    flip(B1?, B).
+shows(has(A, K), _, T, _, B?) :- ground(A?), integer(K?), ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, K?, B).
+shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
+    find_approval(K?, Cs?, F),
+    found_yn(F?, B).
+shows(asking, sess(_, _, _, _), _, _, y).
+shows(asking, nosess, _, _, n).
+shows(_, _, _, _, n) :- otherwise | true.
+
+%% The last view written, or none.
+procedure last_of(Stream(_)?, _).
+last_of([], none).
+last_of([X], X?).
+last_of([_, Y|Ys], L?) :- last_of([Y?|Ys?], L).
+procedure known_in(_?, _?, YN).
+known_in(Q, view(_, Ks), B?) :- among(Q?, Ks?, B).
+known_in(_, none, n).
+procedure count_in(_?, _?, Integer).
+count_in(A, view(S, _), N?) :- count(A?, S?, N).
+count_in(_, none, 0).
+procedure count(_?, Stream(_)?, Integer).
+count(_, [], 0).
+count(X, [Y|Ys], N?) :- X? =?= Y? | count(X?, Ys?, M), N := M? + 1.
+count(X, [_|Ys], N?) :- otherwise | count(X?, Ys?, N).
+procedure at_least(Integer?, Integer?, YN).
+at_least(N, K, y) :- N? >= K? | true.
+at_least(N, K, n) :- N? < K? | true.
+procedure flip(YN?, YN).
+flip(y, n).
+flip(n, y).
+procedure found_yn(ApprovalAt?, YN).
+found_yn(approval_at(_, _, _), y).
+found_yn(noapproval, n).
 
 procedure(T) approved(ApprovalAt?, PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T),
     Stream(_), Stream(_)?).
@@ -237,16 +292,13 @@ among(_, [], n).
 among(X, [Y|_], y) :- X? =?= Y? | true.
 among(X, [_|Ys], B?) :- otherwise | among(X?, Ys?, B).
 
-%% The thread's written elements as a list: construct 0 is drawn element by
-%% element as it arrives, its unwritten tail not drawn (vGLP 56d898f, "The
-%% construct process"), so each transaction is logged once it is written, in
-%% the thread's order.
+%% The output's written elements as a list: construct 0 is drawn element by element as it arrives, its unwritten tail not drawn (vGLP 56d898f, "The construct process"), so each view is logged once it is written, in the output's order.
 procedure list_of(_?, Stream(_)).
 list_of([pending(_)|_], []).
 list_of([X|Xs], [X?|Ys?]) :- otherwise | list_of(Xs?, Ys).
 list_of(_, []) :- otherwise | true.
 
-%% Log the transactions of the thread not logged before.
+%% Log the views of the output not logged before.
 procedure log_new(Stream(_)?, Stream(_)?, Stream(_), Stream(_)?).
 log_new([_|Os], [_|Ns], Log?, Log1) :- log_new(Os?, Ns?, Log, Log1?).
 log_new([], Ns, Log?, Log1) :- put(Ns?, Log, Log1?).

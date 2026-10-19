@@ -1,5 +1,5 @@
 %% ---------------------------------------------------------------------------
-%% The play of the canonical CVA platform of vGLP's contract opens (../contracts.glp, contract_named(opens, C)), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform").  It runs two agents, alice and bob, alice preceding bob in the order of identifiers, their persons scripted and paced on their threads (../self.glp), and gives each person's log, the thread with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries.
+%% The play of the canonical CVA platform of vGLP's contract opens (../contracts.glp, contract_named(opens, C)), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform").  It runs two agents, alice and bob, alice preceding bob in the order of identifiers, their persons scripted and paced on their screens (../self.glp), and gives each person's log, the views with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries.
 %%
 %% u1(alice, bob) and u2(bob, alice) are one class of two unguarded parts, u1(alice, bob)'s opened by alice and u2(bob, alice)'s by bob, each part's opener "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it" (vGLP 099f876, Section 5.4, "Act schemas as local specifications"; vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
 %%
@@ -18,10 +18,8 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
            ; yield(Attempt).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
-           ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
-           ; introduce_peers(Peer, Peer) ; discover(Peer).
-Output   ::= Txn.
+Atom     ::= friend(Peer) ; w(Peer) ; marked_by(Peer) ; r(Peer) ; rmarked_by(Peer) ; x(Peer) ; y(Peer).
+Output   ::= view(List(Atom), List(Key)).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -35,11 +33,11 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_opens(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_opens(LA?, LB?, N?) :-
-    pair([req(known(bob)), wait(discover(bob)),
+    pair([req(known(bob)), wait(known(bob)),
           own([A1], propose(befriend(A1?, bob)))],
-         [req(known(alice)), wait(discover(alice)),
+         [req(known(alice)), wait(known(alice)),
           approval(befriend(alice, bob), yes),
-          wait(outcome(attempt(alice, 1, 1, befriend(alice, bob)))),
+          wait(holds(friend(alice))),
           own([B1], propose(mark(B1?, alice)))],
          LA, LB, N).
 

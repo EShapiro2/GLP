@@ -4,8 +4,8 @@
 %% sign written coin), platform.vglp, which programs/vglp/cva/compile.sh prints
 %% from it: two-phase commit coordinated by the initiating agent (vGLP, Section
 %% 3.2, Definition "Canonical CVA Platform").  Each runs two agents, alice and
-%% bob, their persons scripted and paced on their threads (../self.glp), and
-%% gives each person's log, the thread with gave(K, A) where the person answers
+%% bob, their persons scripted and paced on their screens (../self.glp), and
+%% gives each person's log, the views with gave(K, A) where the person answers
 %% an approval question, and the network's log of the cargoes it carries.  swap(P, Q, V, U):
 %% P gives a coin of U and takes one of V, Q the converse.
 %%
@@ -42,10 +42,8 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
            ; yield(Attempt).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
-           ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
-           ; introduce_peers(Peer, Peer) ; discover(Peer).
-Output   ::= Txn.
+Atom     ::= coin(Peer).
+Output   ::= view(List(Atom), List(Key)).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -59,29 +57,29 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_pay_swap(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_pay_swap(LA?, LB?, N?) :-
-    pair([own([A1], propose(mint(A1?))), wait(propose(attempt(alice, 1, 1, mint(alice)))),
-          req(known(bob)), wait(discover(bob)),
+    pair([own([A1], propose(mint(A1?))), wait(holds(coin(alice))),
+          req(known(bob)), wait(known(bob)),
           own([A2, A3], propose(swap(A2?, bob, bob, A3?))),
-          wait(commit(attempt(alice, 2, 2, swap(alice, bob, bob, alice)))),
+          wait(holds(coin(bob))),
           own([A4], propose(pay(A4?, bob)))],
-         [own([B1], propose(mint(B1?))), wait(propose(attempt(bob, 1, 1, mint(bob)))),
-          req(known(alice)), wait(discover(alice)),
+         [own([B1], propose(mint(B1?))), wait(holds(coin(bob))),
+          req(known(alice)), wait(known(alice)),
           approval(swap(alice, bob, bob, alice), yes)],
          LA, LB, N).
 
 exported procedure play_redeem(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_redeem(LA?, LB?, N?) :-
-    pair([own([A1], propose(mint(A1?))), wait(propose(attempt(alice, 1, 1, mint(alice)))),
-          req(known(bob)), wait(discover(bob)),
+    pair([own([A1], propose(mint(A1?))), wait(holds(coin(alice))),
+          req(known(bob)), wait(known(bob)),
           own([A2, A3], propose(swap(A2?, bob, bob, A3?))),
-          wait(commit(attempt(alice, 2, 2, swap(alice, bob, bob, alice)))),
+          wait(holds(coin(bob))),
           own([A4, A5], propose(swap(A4?, bob, A5?, bob))),
-          wait(commit(attempt(alice, 3, 3, swap(alice, bob, alice, bob)))),
+          wait(holds(coin(alice))),
           own([A6, A7], propose(swap(A6?, bob, bob, A7?))),
-          wait(commit(attempt(alice, 4, 4, swap(alice, bob, bob, alice)))),
+          wait(holds(coin(bob))),
           own([A8, A9], propose(swap(A8?, bob, A9?, bob)))],
-         [own([B1], propose(mint(B1?))), wait(propose(attempt(bob, 1, 1, mint(bob)))),
-          req(known(alice)), wait(discover(alice)),
+         [own([B1], propose(mint(B1?))), wait(holds(coin(bob))),
+          req(known(alice)), wait(known(alice)),
           approval(swap(alice, bob, bob, alice), yes),
           approval(swap(alice, bob, alice, bob), yes),
           approval(swap(alice, bob, bob, alice), yes)],
@@ -89,26 +87,26 @@ play_redeem(LA?, LB?, N?) :-
 
 exported procedure play_busy(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_busy(LA?, LB?, N?) :-
-    pair([own([A1], propose(mint(A1?))), wait(propose(attempt(alice, 1, 1, mint(alice)))),
-          req(known(bob)), wait(discover(bob)),
+    pair([own([A1], propose(mint(A1?))), wait(holds(coin(alice))),
+          req(known(bob)), wait(known(bob)),
           own([A2, A3], propose(swap(A2?, bob, bob, A3?))),
-          wait(commit(attempt(alice, 2, 2, swap(alice, bob, bob, alice)))),
-          own([A4], propose(mint(A4?))), wait(propose(attempt(alice, 3, 3, mint(alice)))),
+          wait(holds(coin(bob))),
+          own([A4], propose(mint(A4?))), wait(holds(coin(alice))),
           own([A5, A6], propose(swap(A5?, bob, bob, A6?)))],
-         [own([B1], propose(mint(B1?))), wait(propose(attempt(bob, 1, 1, mint(bob)))),
-          own([B2], propose(mint(B2?))), wait(propose(attempt(bob, 2, 2, mint(bob)))),
-          req(known(alice)), wait(discover(alice)),
+         [own([B1], propose(mint(B1?))), wait(has(coin(bob), 1)),
+          own([B2], propose(mint(B2?))), wait(has(coin(bob), 2)),
+          req(known(alice)), wait(known(alice)),
           approval(swap(alice, bob, bob, alice), yes),
-          wait(start(attempt(alice, 4, 4, swap(alice, bob, bob, alice)))),
+          wait(asked(attempt(alice, 4, 4, swap(alice, bob, bob, alice)))),
           own([B3], propose(pay(B3?, alice))),
-          wait(propose(attempt(bob, 5, 5, pay(bob, alice)))),
+          wait(asking),
           approval(attempt(alice, 4, 4, swap(alice, bob, bob, alice)), no)],
          LA, LB, N).
 
 exported procedure play_declined(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_declined(LA?, LB?, N?) :-
-    pair([own([A1], propose(mint(A1?))), wait(propose(attempt(alice, 1, 1, mint(alice)))),
-          req(known(bob)), wait(discover(bob)),
+    pair([own([A1], propose(mint(A1?))), wait(holds(coin(alice))),
+          req(known(bob)), wait(known(bob)),
           own([A2, A3], propose(swap(A2?, bob, carol, A3?)))],
          [req(known(alice))],
          LA, LB, N).
