@@ -26,8 +26,9 @@
 # speech-act term of Sections 3.1 to 3.3, on GSNP and on contracts refused
 # for a signed term where def:schema forbids it; then
 # contracts with wards, Appendix F, on a fixture of children and parents, on
-# one of children and AI agents, on each broken in one place per clause, and
-# on CSSN's and GAI's contracts.  A contract is its owner's and the checker
+# one of children and AI agents, on each broken in one place per clause, on
+# one with a leaving mark and on it broken in one place per clause of
+# def:leaving, and on CSSN's and GAI's contracts.  A contract is its owner's and the checker
 # reads its term (contracts.glp, the header): a fixture that changes one is a
 # variant, given by name and the owner's term.  Exits non-zero if any check
 # fails.
@@ -146,7 +147,7 @@ check "the federation's contract, GFWC, is read from programs/federation/GFWC.gl
       "[schema(form, [rs(guarded, [atom(seat, [nterm(own(1))])]" "$FED"
 GAI=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
 check "GAI's contract is read from programs/gai/GAI.glp" \
-      "[schema(establish, [rs(guarded, [atom(identity, [])], [], [], [])])" "$GAI"
+      "[schema(establish, [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])])" "$GAI"
 
 # The two worked contracts, GSNP certified in Section 7.1 and the currency
 # in Appendix B.4.  One goal per run, so that each verdict is read off its own
@@ -364,29 +365,54 @@ expanded child_leave_2_s  s '\Bob'           "$child_leave_2_body"
 expanded child_leave_2_p  p '\mathit{Carol}' "$child_leave_2_body"
 expanded child_leave_2_q  q '\mathit{Dave}'  "$child_leave_2_body"
 
-# CSSN's contract, programs/cssn/CSSN.glp (CSSN, Appendix B.2): its
-# predicates have traceable provenance and it satisfies volition, and it has
-# no unobstructed introductory act (CSSN, Proposition "Provenance and
-# volition"), so it is not syntactically grassroots.  It has an introduction
-# with wards (GSC, Appendix F, def:introduction-wards): the mark child, with
-# the guardianship (child, identity, parent, parenting) of def:guardianship;
-# befriend, unobstructed but for {child} (def:unobstructed-marks);
-# child_adult_befriend, the relay act of a ward role of child and a free role,
-# and child_befriend, that of two ward roles of child (def:relay).  So it is
-# grassroots with wards (thm:grassroots-wards), and it is compiled, its
-# realisation being taken by def:realisation (Appendix F, after
-# def:introduction-wards).
-out=$(run "check($CSSN, V).")
-check "CSSN's contract is grassroots with wards" \
-      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))])" \
+# CSSN's contract, programs/cssn/CSSN.glp (CSSN, Appendix B.2; GLP
+# 745440fb, its comment 2bc2be91): its predicates have traceable provenance
+# and it satisfies volition, and it has no unobstructed introductory act
+# (CSSN, Proposition "Provenance and volition"), so it is not syntactically
+# grassroots.  It has an introduction with wards (GSC, Appendix F,
+# def:introduction-wards), checked by hand against GSC 429cfc8:
+# - the mark child, with the guardianship (child, identity, parent,
+#   parenting) of def:guardianship: no schema deletes identity; enter and
+#   enter_2, the schemas adding child, add identity and forbid it there; child
+#   and parent atoms are added, and deleted (of_age, of_age_2,
+#   parent_unfriend, parent_unfriend_2), as many times at every role; the
+#   parent roles of enter and enter_2 require identity, forbid child and add
+#   parenting of the child, and parent and parenting atoms are deleted in
+#   pairs;
+# - retired, a leaving mark for {child} (def:leaving): every guarding role of
+#   the twenty-five schemas forbids it and none deletes it (clause 1);
+#   parent_unfriend, the one schema adding it, deletes child at that role, so
+#   requires a mark in M there (clause 2); enter and enter_2, the schemas
+#   adding parent, forbid it at the parents' roles (clause 3);
+# - befriend, unobstructed but for {child} (def:unobstructed-marks): identity
+#   is added by establish, of arity one, guarded, requiring nothing and
+#   forbidding nothing but retired, a leaving mark (clause 1); befriend
+#   forbids child, a mark in M, retired, a leaving mark, and the friend atom
+#   it adds (clause 2); every schema adds and deletes friend atoms in pairs
+#   (clause 3);
+# - child_adult_befriend, the relay act of a ward role of child and a free
+#   role, and child_befriend, that of two ward roles of child, friend being
+#   reflexive for the friend atom each parent requires of the other
+#   (def:relay); each forbids nothing but child, retired and the friend atom
+#   naming the other related role.
+# So it is grassroots with wards and its verdict names the leaving mark
+# retired: the protocol realising it is volitionally grassroots
+# (thm:grassroots-wards), and, having a leaving mark, not claimed grassroots
+# (Appendix F, its last paragraph).  It is compiled, its realisation being
+# taken by def:realisation (Appendix F, after def:introduction-wards).
+out=$(run "check($CSSN, V)." "leaving($CSSN, [child], L).")
+check "CSSN's contract is grassroots with wards, retired its leaving mark" \
+      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [retired])" \
       "$out"
+check "CSSN's leaving marks for {child} are [retired]" "L = [retired]" "$out"
 check_not "CSSN's predicates have traceable provenance" "untraceable(" "$out"
 check_not "CSSN's contract satisfies volition" "volition(" "$out"
 check_not "CSSN's contract is not malformed" "malformed(" "$out"
-# One display per schema (def:compile): CSSN.glp's twenty-three, GSNP's twelve
-# and eleven for children (CSSN, GLP 87405524).
+# One display per schema (def:compile): CSSN.glp's twenty-five at 745440fb,
+# GSNP's twelve and thirteen for children (CSSN.glp's comment above
+# children_schemas, 2bc2be91).
 out=$(run "compile_contract(cssn, $CSSN).")
-check_eq "and it compiles to twenty-three displays" "23" \
+check_eq "and it compiles to twenty-five displays" "25" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
 # --- reflexive predicates (the paragraph after def:binding) ----------------
@@ -894,12 +920,15 @@ check "and the verdict is the second conjunct alone" \
 # syntactically grassroots, and grassroots with wards (def:introduction-wards,
 # thm:grassroots-wards) through befriend, the mark child, the guardianship
 # (child, identity, parent, parenting), child_adult_befriend and
-# child_befriend.  wards_of gives what the search found, whatever the
-# verdict, and guardianships the guardianships for a set of marks.
-wd_found="introduction_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))])"
+# child_befriend; and it has no leaving mark (def:leaving): no mark of it
+# other than child is forbidden at every guarding role (clause 1).  wards_of
+# gives what the search found,
+# whatever the verdict, and guardianships the guardianships for a set of
+# marks.
+wd_found="introduction_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [])"
 out=$(run 'check_named(wd, V).' 'wards_of(wd, W).' 'contract_named(wd, C), guardianships(C?, [child], G).')
-check "wd is grassroots with wards" \
-      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))])" \
+check "wd is grassroots with wards, with no leaving mark" \
+      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [])" \
       "$out"
 check "wards_of gives its introduction with wards" "W = $wd_found" "$out"
 check "guardianships gives child's" \
@@ -950,7 +979,7 @@ no_wards wd_relay_unguarded   "the adult's role does not guard, so the two are n
 # agent with agent -- in the order of the set.
 out=$(run 'check_named(wd2, V).')
 check "wd2 is grassroots with wards for the two marks child and agent" \
-      "V = grassroots_with_wards(befriend, [child, agent], [guardianship(child, identity, parent, parenting), guardianship(agent, identity, principal, principal_of)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4)), relay(child_agent_befriend, ward(1, child, 3), ward(2, agent, 4)), relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))])" \
+      "V = grassroots_with_wards(befriend, [child, agent], [guardianship(child, identity, parent, parenting), guardianship(agent, identity, principal, principal_of)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4)), relay(child_agent_befriend, ward(1, child, 3), ward(2, agent, 4)), relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])" \
       "$out"
 
 # wd_two_marks adds a schema adding child and agent at one role: no
@@ -967,19 +996,71 @@ check "and child alone keeps one" \
 check "and there is no introduction with wards" \
       "W = no_introduction_with_wards" "$out"
 
-# GAI's contract, programs/gai/GAI.glp: agent has the guardianship
-# (agent, identity, principal, principal_of) and befriend is unobstructed but
-# for {agent}, and agent_befriend forbids retired at the agent's role, a mark
-# not in M, which clause 3 of def:relay does not allow: the contract is
-# outside Appendix F (its last paragraph), and its verdict is Section 3's.
-out=$(run "check($GAI, V)." "wards($GAI, W)." "guardianships($GAI, [agent], G).")
+# def:leaving, on wd_leaving: wd with retired forbidden at every guarding
+# role and retire(p?, r) ending the guardianship of p over r and adding
+# retired at r, where child is required.  retired is a leaving mark for
+# {child}: forbidden at every guarding role and deleted by none (clause 1),
+# added only by retire, at a role requiring child (clause 2), and forbidden by
+# enter, the one schema adding parent, at the parent's role (clause 3).
+# befriend forbids it, which clause 2 of def:unobstructed-marks admits of a
+# leaving mark; establish forbids it, which clause 1 admits; and the relay
+# acts forbid it, which clause 3 of def:relay admits.  So wd_leaving is
+# grassroots with wards and the verdict names retired.
+wl_found="introduction_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [retired])"
+out=$(run 'check_named(wd_leaving, V).' 'wards_of(wd_leaving, W).' 'leaving_of(wd_leaving, [child], L).')
+check "wd_leaving is grassroots with wards, retired its leaving mark" \
+      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [retired])" \
+      "$out"
+check "wards_of names retired with its introduction with wards" "W = $wl_found" "$out"
+check "leaving_of gives retired for {child}" "L = [retired]" "$out"
+out=$(run 'compile_named(wd_leaving).')
+check_eq "and it is compiled, to nine displays" "9" \
+         "$(printf '%s' "$out" | grep -c 'begin{align')"
+
+# def:leaving, one fixture per clause: each leaves retired no leaving mark,
+# child keeping its guardianship, so befriend forbids an atom that is neither
+# a mark in M, nor a leaving mark, nor the atom it adds
+# (def:unobstructed-marks, clause 2), and there is no introduction with wards.
+no_leaving() { # no_leaving <fixture> <what it breaks>
+  out=$(run "leaving_of($1, [child], L)." "wards_of($1, W)." "check_named($1, V)." \
+            "contract_named($1, C), guardianships(C?, [child], G).")
+  check "$1: $2, so retired is not a leaving mark" "L = []" "$out"
+  check "$1: child keeps its guardianship" "G = [guardianship(child, identity, parent, parenting)]" "$out"
+  check "$1: and there is no introduction with wards" "W = no_introduction_with_wards" "$out"
+  check "$1: and the verdict is Section 3's" "V = not_grassroots([obstructed(enter, 1, atom(identity, []), unobtainable)," "$out"
+}
+no_leaving wd_leave_unforbidden "retire's guarding role does not forbid retired (clause 1)"
+no_leaving wd_leave_deleted     "revive deletes retired (clause 1)"
+no_leaving wd_leave_unmarked    "quit adds retired at a role requiring no mark in M (clause 2)"
+no_leaving wd_leave_guardian    "adopt adds parent(p) at r and does not forbid retired at p (clause 3)"
+
+# GAI's contract, programs/gai/GAI.glp at e6e13efe, checked by hand against
+# GSC 429cfc8: agent has the guardianship (agent, identity, principal,
+# principal_of) of def:guardianship, enter adding agent, identity and
+# principal(p) at the agent, who had no identity, and principal_of(r) at p,
+# who forbids agent, and no schema deleting principal or principal_of;
+# retired is a leaving mark for {agent} (def:leaving): every guarding role
+# forbids it and none deletes it (clause 1), retire, the one schema adding
+# it, requires agent at that role (clause 2), and enter, the one schema
+# adding principal, forbids it at p (clause 3); befriend is unobstructed but
+# for {agent}, establish adding identity and forbidding nothing but retired,
+# befriend forbidding agent, retired and the friend atom it adds, and every
+# schema adding and deleting friend atoms in pairs (def:unobstructed-marks);
+# agent_befriend is the relay act of a ward role of agent and a free role,
+# and agents_befriend that of two ward roles of agent, each forbidding
+# nothing but agent, retired and the friend atom naming the other related
+# role (def:relay).  So it is grassroots with wards (def:introduction-wards,
+# thm:grassroots-wards), the verdict naming retired, as GAI expected
+# (GAI #3 to Code, Code_inbox 2026-10-19 10:45 UTC).
+out=$(run "check($GAI, V)." "wards($GAI, W)." "guardianships($GAI, [agent], G)." "leaving($GAI, [agent], L).")
 check "GAI's agent has a guardianship" \
       "G = [guardianship(agent, identity, principal, principal_of)]" "$out"
-check "GAI's agent_befriend forbids retired, so there is no relay act and no introduction with wards" \
-      "W = no_introduction_with_wards" "$out"
-check "and GAI's verdict is Section 3's" \
-      "V = not_grassroots([obstructed(befriend, 1, atom(agent, []), blocked_by(enter, 2, atom(agent, []))), obstructed(befriend, 2, atom(agent, []), blocked_by(enter, 2, atom(agent, [])))])" \
+check "GAI's leaving marks for {agent} are [retired]" "L = [retired]" "$out"
+check "GAI's contract is grassroots with wards, retired its leaving mark" \
+      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of)], [relay(agent_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [retired])" \
       "$out"
+check_not "GAI's predicates have traceable provenance" "untraceable(" "$out"
+check_not "GAI's contract satisfies volition" "volition(" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

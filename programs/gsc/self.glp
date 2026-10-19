@@ -114,14 +114,15 @@ Faults  ::= [] ; [Fault | Faults].
 % (def:introduction-wards) names the introductory act unobstructed but for
 % the marks, the set of marks, the guardianship of each and the relay acts
 % found: for each mark one with a free role, and for each pair of marks, in
-% the order of the set, one with a ward role of each.
+% the order of the set, one with a ward role of each; and the leaving marks
+% of the contract (def:leaving), in the order of its marks.
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Party  ::= ward(Integer, Constant, Integer) ; free(Integer).
 Parties ::= [] ; [Party | Parties].
 Relay  ::= relay(Constant, Party, Party).
 Relays ::= [] ; [Relay | Relays].
-Wards  ::= introduction_with_wards(Constant, Preds, Guardianships, Relays)
+Wards  ::= introduction_with_wards(Constant, Preds, Guardianships, Relays, Preds)
          ; no_introduction_with_wards.
 
 % What the search of wards.glp carries: the sets of marks it tries, the
@@ -137,7 +138,7 @@ Kind ::= free_party ; ward_party(Constant).
 IntroE ::= intro(Constant, Constant) ; no_intro.
 
 Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
-          ; grassroots_with_wards(Constant, Preds, Guardianships, Relays)
+          ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
           ; conditions_met ; conditions_failed(Faults)
           ; malformed(Faults).
 
@@ -963,7 +964,8 @@ exported procedure rooted_variant(Constant?, Contract?, Preds).
 rooted_variant(Nm, B, E?) :- check # rooted_variant(Nm?, B?, E).
 
 % The introduction with wards of Appendix F, for inspection: what the search
-% found, or that there is none; and the guardianships for a set of marks.
+% found, or that there is none; the guardianships for a set of marks; and
+% the leaving marks for it.
 imported procedure check#wards_of(Constant?, Wards).
 exported procedure wards_of(Constant?, Wards).
 wards_of(Nm, W?) :- check # wards_of(Nm?, W).
@@ -979,6 +981,16 @@ wards_variant(Nm, B, W?) :- check # wards_variant(Nm?, B?, W).
 imported procedure check#guardianships(Declared?, Preds?, Guardianships).
 exported procedure guardianships(Declared?, Preds?, Guardianships).
 guardianships(D, M, G?) :- check # guardianships(D?, M?, G).
+
+% The leaving marks of a contract for a set of marks (def:leaving), of a
+% contract given as a term and of a fixture by name.
+imported procedure check#leaving(Declared?, Preds?, Preds).
+exported procedure leaving(Declared?, Preds?, Preds).
+leaving(D, M, L?) :- check # leaving(D?, M?, L).
+
+imported procedure check#leaving_of(Constant?, Preds?, Preds).
+exported procedure leaving_of(Constant?, Preds?, Preds).
+leaving_of(Nm, M, L?) :- check # leaving_of(Nm?, M?, L).
 
 imported procedure contracts#contract(Constant?, Declared).
 exported procedure contract_named(Constant?, Declared).
