@@ -3635,11 +3635,7 @@ check "CVA compiler: ... and the adult role not forbidding child, one class, its
 # menu(Key, List(Key), Request?), shows the agent's own key and the persons it
 # knows, asked when the agent starts and again when the agent goal reads each
 # answer (vGLP 321127a, Section 5.4; vGLP #14's task of 2026-10-18 21:22 UTC;
-# vGLP ca78e11; vGLP 2026-10-16 13:53 UTC, C.1); and its agent goal writes the
-# thread on the program's output to its person, Output, construct 0 (vGLP
-# 56d898f, Section 5.4; vGLP 2026-10-16 12:17 UTC, item 3): the plays'
-# persons read the thread from construct 0's draws, draw(0, W, output(T)),
-# and from nowhere else.
+# vGLP ca78e11; vGLP 2026-10-16 13:53 UTC, C.1); and its agent goal writes on the program's output to its person, Output, construct 0, the machine state of its app state, when it starts and after each transaction that changes it: "the compilation defines Output as the type of the machine states, and declares for the type Stream(Output) of the output a widget that draws the last state written" (vGLP 99c7dc8, Section 5.4, "The compilation"; vGLP #15, Code_inbox.md, 2026-10-19 10:55 UTC).  A machine state is a list of the contract's atoms, Output ::= List(Atom), Atom the union of the contract's predicates at their argument types, which the compiler prints from the contract, so that no Stream or List is under the List (Definition "Volitional Procedure, Interactive Type"); the agent writes no transaction names, no outcome(At) and no discover(Q).  The plays' persons read the output from construct 0's draws, draw(0, W, output(T)), and from nowhere else.
 for c in social_graph currency; do
     cva_agent=$(cat "$CVA/$c/platform.vglp")
     check "CVA $c: the agent is an ordinary procedure, no longer volitional" "^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output))\.$" "$cva_agent"
@@ -3648,7 +3644,11 @@ for c in social_graph currency; do
     check "CVA $c: ... the key the agent's own identifier, when the agent starts" "^    request(Id?, \[\], Rq),$" "$cva_agent"
     check "CVA $c: ... and on reading each answer" "^    request(Id?, Ks?, R),$" "$cva_agent"
     check_not "CVA $c: no stream of requests as the agent's question" "(Stream(Request)?)\*agent" "$cva_agent"
-    check "CVA $c: the thread is the program's output to its person, Output" "^Output    ::= Txn\.$" "$cva_agent"
+    check "CVA $c: the program's output to its person is of the type of the machine states, a list of the contract's atoms" "^Output    ::= List(Atom)\.$" "$cva_agent"
+    check "CVA $c: ... drawn by the widget last_state, which draws the last state written" "^Stream(Output) =::= last_state\.$" "$cva_agent"
+    check "CVA $c: ... the empty machine state written when the agent starts" "^agent(Id, NetIn, Out?, \[\[\]|Thr?\]) :- ground(Id?) |$" "$cva_agent"
+    check "CVA $c: ... and each new one, where the machine state changes, its atoms as the contract writes them" "^show_new(no, S, \[A?|Thr1?\], Thr1) :- atoms_of(S?, A)\.$" "$cva_agent"
+    check_not "CVA $c: ... no transaction names, no outcome(At) and no discover(Q) on the output" "^Txn \|discover_q\|\[discover(\|\[outcome(At" "$cva_agent"
     check_not "CVA $c: no session question" "Session" "$cva_agent"
 done
 cva_person=$(cat "$CVA/self.glp")
@@ -3990,6 +3990,15 @@ cva_friends_text=$(cat "$CVA/friends/platform.vglp")
 check "CVA friends: the contract's introduction predicate printed with its platform" "^introduction_preds(\[friend\])$" "$cva_friends_text"
 cva_sg_text=$(cat "$CVA/social_graph/platform.vglp")
 check "CVA social graph: a contract naming no introduction predicate has none" "^introduction_preds(\[\])$" "$cva_sg_text"
+# The type of the machine states, printed from the contract: Atom, one alternative per predicate at its argument types, a person Peer for a role and a speech act Speech for a speech-act variable or a signed term, and atom_of, which writes the atom the agent holds, g(Name, Vals), as the contract writes it (vGLP 99c7dc8, Section 5.4, "The compilation").
+cva_atom() { # cva_atom <platform.vglp>: the alternatives of Atom, one line
+    awk '/^Atom ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$1"
+}
+check "CVA machine states: the social graph's atoms, identity and friend(Peer)" "^identity friend(Peer) $" "$(cva_atom "$CVA/social_graph/platform.vglp")"
+check "CVA machine states: ... friend(bob) written as the contract writes it" "^atom_of(g(friend, \[p(V1)\]), shown(friend(V1?)))$" "$cva_sg_text"
+check "CVA machine states: the currency's atom, coin(Peer)" "^coin(Peer) $" "$(cva_atom "$CVA/currency/platform.vglp")"
+check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place" "^identity friend(Peer) received(Speech, Peer) member(Peer, Speech) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) received_in(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
+check "CVA machine states: GSNP's, a signed term a speech act" "^identity friend(Peer) item(Speech) member(Peer, Speech) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
 
 cva_friends_load=$("$REPL_RUN" <<HEREDOC
 $CVA/friends/

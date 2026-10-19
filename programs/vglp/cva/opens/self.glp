@@ -18,13 +18,8 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
            ; yield(Attempt).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Speech   ::= speech(Utterance, Peer).
-Utterance ::= utterance(String) ; Speech.
-Val      ::= p(Peer) ; s(Speech).
-Vals     ::= [] ; [Val | Vals].
-GAtom    ::= g(Constant, Vals).
-GAtoms   ::= [] ; [GAtom | GAtoms].
-Output   ::= GAtoms.
+Atom     ::= friend(Peer) ; w(Peer) ; marked_by(Peer) ; r(Peer) ; rmarked_by(Peer) ; x(Peer) ; y(Peer).
+Output   ::= List(Atom).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
