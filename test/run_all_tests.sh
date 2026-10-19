@@ -3457,7 +3457,7 @@ echo ""
 # trigger, one at a time until none holds, vGLP efe7bbc).  GSC's social graph
 # and currency (their owners', programs/gsc/GSG.glp and
 # programs/currencies/coins/GC.glp) and vGLP's nudge, introduce, gnudge, childsafe, link, friends, waves,
-# parts and opens (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
+# parts, opens and groups (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not effective, and those it
 # compiles whatever their guards; and the plays of each platform, two agents
 # or three with scripted persons paced on their screens, each run on the
@@ -3481,6 +3481,7 @@ check "CVA compiler: vGLP's friends, its introduction predicate friend, compiled
 check "CVA compiler: vGLP's waves, two classes of the same participants and atoms, compiled to the platform it prints" "waves/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's parts, a class of two parts, compiled to the platform it prints" "parts/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's opens, a class of two unguarded parts with different openers, compiled to the platform it prints" "opens/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's groups, close taking the listed role a[listed(*, n)], certified by GSC's check/2, compiled to the platform it prints (vGLP f5f1644)" "groups/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3512,8 +3513,14 @@ compile(sgnread, [schema(d, [svar(y)], [rs(unguarded, [atom(done, [svar(y), role
 compile(sgnread_not, [schema(d, [svar(y)], [rs(unguarded, [atom(done, [svar(y), role(2)])], [], [atom(listed, [role(2)])], [atom(done, [svar(y), role(2)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots).
 compile(inert, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(unguarded, [], [], [], [])])], malformed([changes_nothing(s, 2)])).
 compile(headless, [], malformed([not_in_head(s, svar(x))])).
-compile(seated_named, [], syntactically_grassroots_with_seated_roles).
-compile(wards_named, [], syntactically_grassroots_with_wards(enter, [m], [guardianship(m, i, g, w)], [relay(r, ward(1, m, 2), free(2))], [])).
+compile(listed_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(wards_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_wards(enter, [m], [guardianship(m, i, g, w)], [relay(r, ward(1, m, 2), free(2))], [])).
+compile(listed_two, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(1, invited, [svar(n)]), unguarded, [], [atom(guest, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(seated_role, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(seated(ext(own(1), n), member), unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(name_term, [schema(cr, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [], [atom(member, [nterm(ext(own(1), n))])])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(reached, [cschema(cl, [svar(n)], [reach(own(1), friend, own(2))], [rs(guarded, [atom(closed, [svar(n)])], [], [], []), rs(unguarded, [atom(seen, [svar(n)])], [], [], [])])], conditions_met).
+compile(listed_guard, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(listed_second, [schema(cl, [svar(n)], [rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
 compile(order, [schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(member, [role(2), svar(n)])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(2), svar(n)])], [atom(posted, [svar(x), svar(n)])])])], syntactically_grassroots).
 :quit
 HEREDOC
@@ -3546,9 +3553,21 @@ check "CVA compiler: a contract with community roles is not compiled" "%% not co
 check "CVA compiler: a contract malformed, a role that is not guarding changing nothing, is not compiled" "%% not compiled(inert)" "$cva_refuse"
 check "CVA compiler: ... the verdict named" "%% it is malformed; check_named in programs/gsc gives the faults." "$cva_refuse"
 check "CVA compiler: a contract malformed, a variable not in its schema's head (GSC 0228e79), is not compiled, the fault of the compiler's Verdict type" "%% not compiled(headless)" "$cva_refuse"
-# The verdicts on an agent-named contract with community roles (programs/gsc/self.glp): of the compiler's Verdict type, and refused, its roles' extents no participants of a binding.
-check "CVA compiler: the verdict syntactically_grassroots_with_seated_roles taken, the contract refused for its community roles" "%% not compiled(seated_named)" "$cva_refuse"
-check "CVA compiler: the verdict syntactically_grassroots_with_wards taken, the contract refused for its community roles" "%% not compiled(wards_named)" "$cva_refuse"
+# The verdicts on an agent-named contract with community roles (programs/gsc/self.glp at GLP 96908b2d), of the compiler's Verdict type; its listed roles taken and its seated and constituent roles refused (vGLP f5f1644, Section 5.4, "Act schemas as local specifications"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 1).
+check "CVA compiler: the verdict syntactically_grassroots_with_seated_and_listed_roles, a schema of a listed role, compiled" "%% the canonical CVA platform of the contract(listed_named)" "$cva_refuse"
+check "CVA compiler: the verdict syntactically_grassroots_with_wards, a schema of a listed role, compiled" "%% the canonical CVA platform of the contract(wards_named)" "$cva_refuse"
+check "CVA compiler: a schema of two listed roles, refused" "%% it has a schema with more than one listed role, which this compiler does not take." "$cva_refuse"
+check "CVA compiler: ... not compiled" "%% not compiled(listed_two)" "$cva_refuse"
+check "CVA compiler: a seated role, refused" "%% it has seated or constituent roles, which vGLP Section 5.4 does not take: it takes listed roles (vGLP f5f1644)." "$cva_refuse"
+check "CVA compiler: ... not compiled" "%% not compiled(seated_role)" "$cva_refuse"
+# A name term has no value at a schema-binding of Section 5.4, which binds roles to people and other variables to people and to speech acts (vGLP f5f1644); the question is with vGLP, and the compiler refuses a contract with one until it is answered (Code #11, 2026-10-19).
+check "CVA compiler: a name term in an atom, refused" "%% it has name terms, which vGLP Section 5.4 does not take: a schema-binding binds roles to people and other variables to people and to speech acts." "$cva_refuse"
+check "CVA compiler: ... not compiled" "%% not compiled(name_term)" "$cva_refuse"
+check "CVA compiler: reach conditions, refused" "%% it has reach conditions, which vGLP Section 5.4 does not take." "$cva_refuse"
+# "a schema with a listed role has the base of that role as its only guarding role or, if it has none, as its first role" (vGLP f5f1644, Section 5.4, "Act schemas as local specifications"; vGLP #15, item 3), as CSSN's child_close, guarded by the parent and listing at the child, does not.
+check "CVA compiler: a schema with a listed role guarded by a role other than its base, refused as not effective" "%% listed role whose base is not its only guarding role, or, with no guarding role, its first role:" "$cva_refuse"
+check "CVA compiler: ... not compiled" "%% not compiled(listed_guard)" "$cva_refuse"
+check "CVA compiler: an unguarded schema with a listed role whose base is not its first role, refused as not effective" "%% not compiled(listed_second)" "$cva_refuse"
 # A class's arguments are its schema's roles and then its variables in the order of its head (GSC 0228e79, Definition "Act schema"; vGLP #15 Cowork to Code, 2026-10-19 13:34 UTC, item 2): post(p?, a ; x, n), whose first atom names n before x, is post(p, a, x, n).
 check "CVA compiler: a class's arguments in the order of the head, post(p?, a ; x, n) as post(V1, V2, V3, V4), x the third" "^binding_of(post(V1, V2, V3, V4), post, \[b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?)), b(svar(n), s(V4?))\])$" "$cva_refuse"
 check "CVA compiler: requirements differing at one participant only, compiled" "%% the canonical CVA platform of the contract(one_req)" "$cva_refuse"
@@ -4125,13 +4144,42 @@ check "CVA opens: alice's machine votes yes on its start, unasked, and takes the
 check_not "CVA opens: alice, preceding bob, proposes nothing of the class, the part she opens not holding" "start(attempt(alice, [0-9]*, [0-9]*, \(u1\|u2\)" "$cva_opens"
 check_not "CVA opens: no person answers for the unguarded parts" "gave(attempt([a-z]*, [0-9]*, [0-9]*, \(u1\|u2\)\|gave(\(u1\|u2\)" "$cva_opens"
 
+# Listed roles (vGLP f5f1644, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles: the set of transactions it determines with L in those roles, with f^[t]_j_p defined at d_p iff ... for p the person in the base of a listed role, p lists in d_p exactly the people of that role in L ... its request name is the schema-binding"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC).  vGLP's contract groups (programs/vglp/cva/contracts.glp): close(a?, a[listed(*, n)] ; n), its part's term carrying the list of the people of its listed role, its request name not.
+cva_groups_text=$(cat "$CVA/groups/platform.vglp")
+check "CVA groups: the class term of close carries the list of the people of its listed role" "^close(Peer, List(Peer), Speech)$" "$cva_groups_text"
+check "CVA groups: ... its request name, the schema-binding, its head with no extent, does not" "^befriend(Peer, Peer) create(Peer, Speech) join(Peer, Peer, Speech) close(Peer, Speech) $" "$(cva_proposal "$CVA/groups/platform.vglp")"
+check "CVA groups: the binding of a class term of close, its listed role's place and a role for each of its people (listed_binding)" "^listed_binding(close, \[b(role(1), p(V1?)), b(svar(n), s(V3?))\], V2?, B)$" "$cva_groups_text"
+check "CVA groups: the request name completed with the people the agent lists (listed_class)" "^listed_class(close, \[b(role(1), p(V1?)), b(svar(n), s(V3?))\], St?, C)$" "$cva_groups_text"
+check "CVA groups: the base person lists exactly the people of the listed role" "^    listing_ok(Nm?, Bn?, Id?, S?, B2),$" "$cva_groups_text"
+cva_groups_load=$("$REPL_RUN" <<HEREDOC
+$CVA/groups/
+:quit
+HEREDOC
+2>&1)
+check "CVA groups: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/groups" "$cva_groups_load"
+check_not "CVA groups: no type errors" "Type checking failed" "$cva_groups_load"
+cva_groups=$("$REPL_RUN" <<HEREDOC
+$CVA/groups/
+:limit 3000000
+play_groups(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA groups: alice requests close(alice, n), and her agent proposes close(alice, [alice, bob, carol], n), the people she lists, its start told to bob and carol" "sent(alice, bob, start(attempt(alice, 6, 6, close(alice, \[alice, bob, carol\], speech(utterance(friends), alice))))), sent(alice, carol, start(attempt(alice, 6, 6, close(alice, \[alice, bob, carol\], speech(utterance(friends), alice)))))" "$cva_groups"
+check "CVA groups: ... bob's and carol's machines vote yes, unasked, and it commits at both" "sent(alice, bob, outcome(attempt(alice, 6, 6, close(alice, \[alice, bob, carol\], speech(utterance(friends), alice))), commit)), sent(alice, carol, outcome(attempt(alice, 6, 6, close(alice, \[alice, bob, carol\], speech(utterance(friends), alice))), commit))" "$cva_groups"
+check "CVA groups: alice's screen: the group closed, her membership and her listing of herself ended" "A = \[.*view(\[closed(speech(utterance(friends), alice)), listed(carol, speech(utterance(friends), alice)), listed(bob, speech(utterance(friends), alice)), friend(carol), friend(bob)\], \[bob, carol\]) |" "$cva_groups"
+check "CVA groups: bob's membership ended in the one act" "B = \[.*view(\[member(alice, speech(utterance(friends), alice)), friend(alice)\], \[alice\]), view(\[friend(alice)\], \[alice\]) |" "$cva_groups"
+check "CVA groups: ... and carol's" "C = \[.*view(\[member(alice, speech(utterance(friends), alice)), friend(alice)\], \[alice\]), view(\[friend(alice)\], \[alice\]) |" "$cva_groups"
+check_not "CVA groups: bob's request to close alice's group, his agent listing no one, is dropped: no attempt of his" "attempt(bob, " "$cva_groups"
+check_not "CVA groups: no person asked for close" "gave(attempt([a-z]*, [0-9]*, [0-9]*, close\|gave(close" "$cva_groups"
+
 # No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes
 # its own transactions "when it starts and after each trigger, one at a time
 # until none holds"; Udi's approval of 2026-10-18, reported by Code #10): each
 # play's run suspends once every agent has taken its own transactions until
 # none holds and no trigger is left to read, where until vGLP efe7bbc it ran to
 # the REPL's :limit, each agent's clock ticking without end.
-for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens; do
+for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens cva_groups; do
     check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
     check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
 done

@@ -135,6 +135,19 @@
 %%                       at q  +x(p)
 %%
 %% u1(a, b) and u2(b, a) delete and add the same atoms and neither forbids an atom the other requires, so they are one class, of two unguarded parts: u1(a, b)'s, opened by a, and u2(b, a)'s, opened by b.  Each unguarded schema's first role requires an atom naming the other role, so the contract is effective.  Where bob, after alice in the order of identifiers, holds w(alice) and alice holds no r(bob), the part of u2(bob, alice) holds and the part of u1(alice, bob) does not: bob opens u2(bob, alice)'s part, which his agent finds through u2's first role, requiring w(alice) at him.  An opener taken over the class would be alice, the least person in the first role of its schema-bindings, whose agent finds the class only through u1's first role, requiring r(bob) at her, and nobody would open it.  opens/self.glp plays it.
+%% groups is befriend with a group whose closing is one act of its leader and of every member the leader lists, GSC's listed role a[listed(*, n)] (GSC 8064cfb, Appendix D, Definition "Role"), so that a contract compiled here has a listed role (vGLP f5f1644, Section 5.4, "Act schemas as local specifications"); a group is named by its leader and n, a speech act, with no name term:
+%%
+%%   befriend(p?, q?)   :  at p  not friend(q), +friend(q)
+%%                         at q  not friend(p), +friend(p)
+%%   create(a? ; n)     :  at a  not member(a, n), not closed(n), +member(a, n),
+%%                               +listed(a, n)
+%%   join(a?, q? ; n)   :  at a  member(a, n), friend(q), +listed(q, n)
+%%                         at q  friend(a), not member(a, n), +member(a, n)
+%%   close(a?, a[listed(*, n)] ; n) :
+%%                         at a                 -listed(a, n), +closed(n)
+%%                         at a[listed(*, n)]   -member(a, n)
+%%
+%% A schema-binding of close determines a part for each list L of the people of its listed role, the persons q with listed(q, n) in the state of the person in a, and the base person requires that it list exactly the people of L (ibid.).  Its request name is close(a, n), and the base agent, on its person's request, completes L from its listed atoms.  The base, a, is close's only guarding role, as Section 5.4 asks of a schema with a listed role.  groups/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it.
@@ -145,7 +158,8 @@ Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+            ; listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
@@ -169,6 +183,7 @@ contract_named(friends, reflexive([friend], C?)) :- friends(C).
 contract_named(waves, C?) :- waves(C).
 contract_named(parts, C?) :- parts(C).
 contract_named(opens, C?) :- opens(C).
+contract_named(groups, C?) :- groups(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -184,6 +199,7 @@ introduction_named(friends, introduction(friend)).
 introduction_named(waves, no_introduction).
 introduction_named(parts, no_introduction).
 introduction_named(opens, no_introduction).
+introduction_named(groups, no_introduction).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -297,3 +313,20 @@ opens([schema(befriend, [],
        schema(u2, [],
          [rs(unguarded, [atom(y, [role(2)])], [], [atom(w, [role(2)])], [atom(y, [role(2)])]),
           rs(unguarded, [atom(x, [role(1)])], [], [], [])])]).
+
+procedure groups(Contract).
+groups([schema(befriend, [],
+          [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+           rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+        schema(create, [svar(n)],
+          [rs(guarded, [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [], [],
+                       [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]),
+        schema(join, [svar(n)],
+          [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
+                       [atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], []),
+           rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])],
+                       [atom(member, [role(1), svar(n)])])]),
+        cschema(close, [svar(n)], [],
+          [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []),
+           crs(listed(1, listed, [svar(n)]), unguarded,
+               [], [atom(member, [role(1), svar(n)])], [], [])])]).

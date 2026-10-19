@@ -1,6 +1,6 @@
 %% local.glp --- whether a contract of act schemas is a local and effective specification (vGLP 099f876, Section 5.4, the paragraph "Act schemas as local specifications"; Section 3.2, Definition "Local Specification, Part, Guard Set, Opener"), and, where it is not, the lines saying why; and the schemas whose terms name guarded parts, which the request type proposes.
 %%
-%% Local: each schema-binding "determines a part [t]_j of its class: the set of transactions it determines, ... and with the people in its marked roles as its guard set.  Such a contract is a local specification" (ibid.).  So a contract whose roles are all party roles is a local specification with no condition on its guards (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 2), and nothing here decides locality; cvac.glp refuses a contract with community roles.
+%% Local: each schema-binding "determines a part [t]_j of its class: the set of transactions it determines, ... and with the people in its marked roles as its guard set.  Such a contract is a local specification" (ibid.).  So a contract whose roles are party roles and listed roles is a local specification with no condition on its guards (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 2; vGLP f5f1644, the same paragraph: "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"), and nothing here decides locality; cvac.glp refuses a contract with seated or constituent roles, reach conditions or name terms.  A schema with a listed role is effective where its base is its only guarding role or, with none, its first role (listed_lines).
 %%
 %% Effective: "The contract is effective (Definition "Effective Local Specification") where, moreover, every variable of a schema that occurs in an atom it requires or forbids also occurs in an atom it deletes or adds, a variable inside a signed term included, so that a class has finitely many parts, and the atoms each unguarded schema requires at its first role name every other role and every variable of its deleted and added atoms" (ibid.).  A variable here is a party variable or a speech-act variable, the sentence naming roles and variables apart, "every other role and every variable", and a role being bound to one of the finitely many participants (vGLP #15, ibid., answer (2)); a signed term sgn(y, i) in a deleted or added atom holds the variable y and names role i (GSC, Section 3: "An atom names what is among its arguments or is the signer of one"), so y is a variable of the atom.  Otherwise the contract is refused, the schema named.
 %%
@@ -45,9 +45,11 @@ effective_lines([schema(Nm, _, Rs)|Ss], L?) :- ground(Nm?), ground(Rs?) |
     free_lines(Nm?, Rs?, L0),
     guarded_any(Rs?, G),
     effective_one(G?, Nm?, Rs?, L1),
+    listed_lines(Nm?, Rs?, L3),
     effective_lines(Ss?, L2),
     lapp(L1?, L2?, L12),
-    lapp(L0?, L12?, L).
+    lapp(L3?, L12?, L312),
+    lapp(L0?, L312?, L).
 effective_lines([cschema(_, _, _, _)|Ss], L?) :- effective_lines(Ss?, L).
 procedure guarded_any(RoleSpecs?, YesNo).
 guarded_any([], no).
@@ -73,15 +75,18 @@ free_lines1([V|_], Nm, ['%% it is not effective (vGLP, Section 5.4, the paragrap
         '%% the schema occurs in an atom it requires or forbids and in no atom it deletes or adds:',
         T?]) :-
     ground(Nm?), ground(V?) | T =.. ['%% the schema and the variable', Nm?, V?].
+%% The arguments of the atoms a schema requires or forbids, the listing atoms rho(q, u_2, ..., u_r) the base person of a listed role requires among them (vGLP f5f1644, Section 5.4, the paragraph on act schemas: "for p the person in the base of a listed role, p lists in d_p exactly the people of that role in L").
 procedure kept_forbidden_args(RoleSpecs?, Args).
 kept_forbidden_args([], []).
 kept_forbidden_args([R|Rs], As?) :- ground(R?) |
     rs_lists(R?, _, _, K, N),
     atoms_args(K?, A1),
     atoms_args(N?, A2),
+    kind_args(R?, A0),
     kept_forbidden_args(Rs?, A3),
     app(A2?, A3?, A23),
-    app(A1?, A23?, As).
+    app(A0?, A23?, A03),
+    app(A1?, A03?, As).
 %% The party and speech-act variables among the arguments.
 procedure variables_of(Args?, Args).
 variables_of([], []).
@@ -109,10 +114,14 @@ first_absent1(yes, _, As, Ch, F?) :- first_absent(As?, Ch?, F).
 procedure effective_one(YesNo?, Constant?, RoleSpecs?, Stream(_)).
 effective_one(yes, _, _, []).
 effective_one(no, Nm, Rs, L?) :- ground(Rs?), ground(Nm?) |
-    first_required_args(Rs?, Fa0),
+    first_required_args(Rs?, Fa1),
+    first_listing_args(Rs?, Fl),
+    app(Fa1?, Fl?, Fa0),
     flat_args(Fa0?, Fa),
     rs_count(Rs?, K),
-    role_args(2, K?, Others),
+    role_args(2, K?, Others0),
+    listed_at(Rs?, 1, Li),
+    drop_role_at(Others0?, Li?, Others),
     changed_args(Rs?, Ch0),
     flat_args(Ch0?, Ch),
     drop_role_one(Ch?, Ch1),
@@ -125,6 +134,51 @@ effective_one1(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragrap
         '%% schema whose first role requires no atom naming some other role, or some variable of',
         '%% an atom it deletes or adds:', T?]) :-
     ground(Nm?) | T =.. ['%% the schema', Nm?].
+%% The arguments of the listing atoms the first role requires where it is the base of a listed role; the listed role's people are those its base person lists, so its own place is no other role its first role must name (vGLP f5f1644, Section 5.4, the paragraph on act schemas: "a schema with a listed role has the base of that role as its only guarding role or, if it has none, as its first role, so that the agent that proposes it reads the people of the role from its own state").
+procedure first_listing_args(RoleSpecs?, Args).
+first_listing_args(Rs, As?) :- ground(Rs?) |
+    listed_parts(Rs?, B, _, As0),
+    first_listing1(B?, As0?, As).
+procedure first_listing1(Integer?, Args?, Args).
+first_listing1(B, As, As?) :- B? =:= 1 | true.
+first_listing1(_, _, []) :- otherwise | true.
+procedure drop_role_at(Args?, Integer?, Args).
+drop_role_at([], _, []).
+drop_role_at([role(J)|As], Li, R?) :- J? =:= Li? | drop_role_at(As?, Li?, R).
+drop_role_at([A|As], Li, [A?|R?]) :- otherwise | drop_role_at(As?, Li?, R).
+
+%% A schema with a listed role has the base of that role as its only guarding role or, if it has no guarding role, as its first role (vGLP f5f1644, Section 5.4, the paragraph on act schemas); otherwise the contract is not effective, the schema named.
+procedure listed_lines(Constant?, RoleSpecs?, Stream(_)).
+listed_lines(Nm, Rs, L?) :- ground(Nm?), ground(Rs?) |
+    listed_at(Rs?, 1, Li),
+    listed_parts(Rs?, Bi, _, _),
+    guard_indices(Rs?, 1, Gs),
+    listed_ok(Li?, Bi?, Gs?, Ok),
+    listed_lines1(Ok?, Nm?, L).
+procedure guard_indices(RoleSpecs?, Integer?, Ints).
+guard_indices([], _, []).
+guard_indices([R|Rs], I, Gs?) :- ground(R?), integer(I?) |
+    rs_guarded(R?, G),
+    I1 := I? + 1,
+    guard_indices(Rs?, I1?, Gs1),
+    keep_index(G?, I?, Gs1?, Gs).
+procedure keep_index(YesNo?, Integer?, Ints?, Ints).
+keep_index(yes, I, Gs, [I?|Gs?]).
+keep_index(no, _, Gs, Gs?).
+procedure listed_ok(Integer?, Integer?, Ints?, YesNo).
+listed_ok(Li, _, _, yes) :- Li? =:= 0 | true.
+listed_ok(Li, Bi, [], B?) :- Li? > 0 | int_is(Bi?, 1, B).
+listed_ok(Li, Bi, [G], B?) :- Li? > 0 | int_is(G?, Bi?, B).
+listed_ok(Li, _, [_, _|_], no) :- Li? > 0 | true.
+procedure int_is(Integer?, Integer?, YesNo).
+int_is(A, B, yes) :- A? =:= B? | true.
+int_is(_, _, no) :- otherwise | true.
+procedure listed_lines1(YesNo?, Constant?, Stream(_)).
+listed_lines1(yes, _, []).
+listed_lines1(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a',
+        '%% listed role whose base is not its only guarding role, or, with no guarding role, its first role:', T?]) :-
+    ground(Nm?) | T =.. ['%% the schema', Nm?].
+
 procedure first_required_args(RoleSpecs?, Args).
 first_required_args([], []).
 first_required_args([R|_], As?) :- ground(R?) |
