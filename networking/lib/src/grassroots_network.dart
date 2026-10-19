@@ -58,7 +58,7 @@ class GrassrootsNetworkConfig {
   ///   the `_ble.send()` call returns success, but the bytes never leave the
   ///   radio. Without a watchdog the message would sit in `MessageStatus.sent`
   ///   forever.
-  /// - **UDP loss.** UDX doesn't surface per-packet delivery; an ACK is the
+  /// - **UDP loss.** The socket acknowledges no datagram; an ACK is the
   ///   only confirmation a message reached the recipient.
   ///
   /// Set high enough to tolerate slow links but low enough that the UI
@@ -498,7 +498,8 @@ class GrassrootsNetwork {
   /// Per-peer, per-transport Noise XX sessions for payload encryption.
   late final NoiseSessionManager _noiseSessions;
 
-  /// Deduplicate in-flight UDX connection attempts across all callers.
+  /// Deduplicate in-flight UDP path setups (punch and association) across all
+  /// callers.
   final Map<String, Future<bool>> _udpConnectInFlight = {};
 
   /// Deduplicate proactive auto-UDP workflows kicked off by repeated ANNOUNCEs.
@@ -507,7 +508,7 @@ class GrassrootsNetwork {
   final Map<String, DateTime> _autoUdpRetryAfter = {};
 
   /// Back off briefly after a failed proactive UDP attempt so repeated BLE
-  /// ANNOUNCEs don't start a fresh UDX handshake every few seconds.
+  /// ANNOUNCEs don't start a fresh UDP dial every few seconds.
   static const _autoUdpRetryBackoff = Duration(seconds: 15);
 
   /// FIFO outbound message queues keyed by recipient public-key hex.
@@ -533,7 +534,6 @@ class GrassrootsNetwork {
   final Map<String, String> _lastRendezvousSuppressionLogKey = {};
 
   static const _rendezvousNetworkUnreachableBackoff = Duration(seconds: 15);
-  static const _rendezvousHandshakeTimeoutBackoff = Duration(seconds: 20);
 
   // ===== Public callbacks =====
 
@@ -1284,8 +1284,6 @@ class GrassrootsNetwork {
     switch (failureKind) {
       case UdpConnectFailureKind.networkUnreachable:
         return _rendezvousNetworkUnreachableBackoff;
-      case UdpConnectFailureKind.handshakeTimeout:
-        return _rendezvousHandshakeTimeoutBackoff;
       case UdpConnectFailureKind.other:
       case null:
         return null;
@@ -1296,8 +1294,6 @@ class GrassrootsNetwork {
     switch (failureKind) {
       case UdpConnectFailureKind.networkUnreachable:
         return 'no usable UDP route';
-      case UdpConnectFailureKind.handshakeTimeout:
-        return 'UDX handshake timed out';
       case UdpConnectFailureKind.other:
       case null:
         return 'connect failed';
@@ -1533,7 +1529,7 @@ class GrassrootsNetwork {
   /// Handle network connectivity changes (WiFi ↔ cellular, etc.).
   ///
   /// When the network changes, our UDP socket is bound to the old interface
-  /// and all UDX connections are dead. We need to:
+  /// and every UDP path, with the session on it, is dead. We need to:
   /// 1. Tear down the old UDP service (dead socket, dead connections)
   /// 2. Re-initialize with a new socket on the new interface
   /// 3. Re-discover public address (new IP from new network)
@@ -2341,7 +2337,7 @@ class GrassrootsNetwork {
   //   - **Stale link.** The remote turns BLE off; Android keeps the central
   //     GATT connection "open" until link-supervision times out (~20–30 s).
   //     Writes during that window queue at the OS layer and silently die.
-  //   - **UDP loss.** UDX doesn't surface per-packet delivery.
+  //   - **UDP loss.** The socket acknowledges no datagram.
   //
   // For every successful send we register the messageId+payload in
   // `_ackPendingMessages` along with a watchdog timer. The recipient's ACK
@@ -3188,8 +3184,9 @@ class GrassrootsNetwork {
 
   /// Send data to a peer via UDP, connecting first if needed.
   ///
-  /// UdpTransportService requires an active UDX connection before sending.
-  /// This method handles the connect → ANNOUNCE → send flow transparently.
+  /// UdpTransportService sends only on an associated path: where none stands,
+  /// this method associates one first, punching toward an address behind
+  /// NAT, and then sends.
   Future<bool> _sendViaUdp(
     String pubkeyHex,
     String udpAddress,
@@ -3884,8 +3881,9 @@ class GrassrootsNetwork {
       _enqueueRx('udp:$peerId', () async {
         try {
           final packet = GrassrootsPacket.deserialize(data);
-          // Observed source address: the UDX remote, if known. Used by the
-          // signaling matcher to learn cold-call senders' public addresses.
+          // Observed source address: the path's remote address, if known.
+          // Used by the signaling matcher to learn cold-call senders' public
+          // addresses.
           final remote = _udpService?.getRemoteAddress(peerId);
           await _messageRouter.processPacket(
             packet,
@@ -4031,9 +4029,9 @@ class GrassrootsNetwork {
   ///      poisoned them while we were backgrounded (Android in particular
   ///      EPERMs background sends and leaves the socket FD in a permanently
   ///      broken state — fixable only by close + bind).
-  ///   2. Re-sync configured rendezvous servers (existing UDX sessions may
-  ///      be talking to a stale CID, or the rebind in step 1 just dropped
-  ///      every session).
+  ///   2. Re-sync configured rendezvous servers (an existing path may be
+  ///      bound to a NAT mapping that lapsed in the background, or the rebind
+  ///      in step 1 just dropped every path).
   Future<void> onAppResumed() async {
     debugPrint('[lifecycle] App resumed — probing sockets, re-syncing RVs');
     if (_udpService != null && _udpAvailable) {
