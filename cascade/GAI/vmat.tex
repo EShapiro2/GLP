@@ -433,14 +433,34 @@ friend
 (
 \Alice
 )
+,
+\mathit{
+attestation
+}
+(
+\mathrm{sgn}(
+x
+,
+\Alice
+)
+)
 \}
 ,\\
 &
 \text{provided } 
+\{
 \mathit{
 identity
 }
- \in c_
+,
+\mathit{
+item
+}
+(
+x
+)
+\}
+ \subseteq c_
 {
 \Alice
 }
@@ -533,6 +553,8 @@ agent_of
 \Alice
 ,
 \mathit{Carol}
+,
+y
 )
 \}
 , \qquad 
@@ -562,6 +584,13 @@ principal
 }
 (
 \mathit{Carol}
+)
+,
+\mathit{
+attestation
+}
+(
+y
 )
 \}
  \subseteq c_
@@ -683,6 +712,8 @@ agent_of
 \Bob
 ,
 \mathit{Dave}
+,
+z
 )
 \}
 , \qquad 
@@ -711,6 +742,8 @@ agent_of
 \Alice
 ,
 \mathit{Carol}
+,
+y
 )
 \}
 , \qquad 
@@ -751,6 +784,13 @@ principal
 (
 \mathit{Carol}
 )
+,
+\mathit{
+attestation
+}
+(
+y
+)
 \}
  \subseteq c_
 {
@@ -771,6 +811,13 @@ principal
 }
 (
 \mathit{Dave}
+)
+,
+\mathit{
+attestation
+}
+(
+z
 )
 \}
  \subseteq c_
@@ -1173,6 +1220,13 @@ item
 (
 x
 )
+,
+\mathit{
+authored
+}
+(
+x
+)
 \}
 ,\\
 &
@@ -1183,6 +1237,91 @@ identity
  \in c_
 {
 \Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+message
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+x
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+authored
+}
+(
+x
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+{
+\Bob
 }
 ,\\
 &
@@ -1276,13 +1415,23 @@ friend
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+authored
+}
+(
+x
+)
+,
 \mathit{
 retired
 }
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
