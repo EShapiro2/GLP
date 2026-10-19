@@ -44,12 +44,12 @@ Peers ::= [] ; [Peer | Peers].
 PeerSets ::= [] ; [Peers | PeerSets].
 Nets ::= [] ; [Net | Nets].
 Ints ::= [] ; [Integer | Ints].
-Part ::= part(Peer, GAtoms, GAtoms).
-Parts ::= [] ; [Part | Parts].
+Delta ::= delta(Peer, GAtoms, GAtoms).
+Deltas ::= [] ; [Delta | Deltas].
 Mate ::= mate(Constant, Binding, Peers, Peer).
 Mates ::= [] ; [Mate | Mates].
 Opener ::= opener(Peer) ; guarded_class.
-Info ::= ci(Class, Parts, Peers, PeerSets, Opener, Mates).
+Info ::= ci(Class, Deltas, Peers, PeerSets, Opener, Mates).
 Infos ::= [] ; [Info | Infos].
 ClassRes ::= cls(Info) ; nocls.
 CVal ::= cmp_val(Val) ; cmp_free(Var).
@@ -66,12 +66,12 @@ WKey ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt) ; ip(Peer,
 Wait ::= w(WKey, Integer).
 Waits ::= [] ; [Wait | Waits].
 WFound ::= at(Integer) ; unseen.
-St ::= st(Peer, App, Integer, Peers, Peers, Peers, Peers, Waits, Infos, Pends).
+St ::= st(Peer, App, Integer, Peers, Peers, Peers, Peers, Waits, Infos, Pends, Classes).
 OpenApproval ::= oc(Attempt, Close?).
 OpenApprovals ::= [] ; [OpenApproval | OpenApprovals].
 Send ::= to(Peer, Cargo).
 Sends ::= [] ; [Send | Sends].
-Subj ::= sub(Info) ; pair.
+Subj ::= sub(Info) ; pair ; prop(Info, Class).
 Cand ::= cand(WKey, Subj).
 Cands ::= [] ; [Cand | Cands].
 Choice ::= take(WKey, Subj) ; none.
@@ -79,7 +79,13 @@ Pair ::= pr(Peer, Peer).
 Pairs ::= [] ; [Pair | Pairs].
 PKey ::= key(WKey) ; nokey.
 Cond ::= go(Info) ; drop.
-MCond ::= mgo(Info) ; mdefer ; nopart.
+PCond ::= pgo(Info, Class) ; pdrop.
+Named ::= named(Class) ; unnamed.
+Classes ::= [] ; [Class | Classes].
+Aged ::= aged(Integer, YesNo, Class).
+Ageds ::= [] ; [Aged | Ageds].
+Pick ::= picked(Aged) ; nopick.
+MCond ::= mgo(Info) ; mdefer ; noparticipant.
 Blocker ::= blk(Attempt) ; noblk.
 FoundNet ::= found(Net) ; nonefound.
 Last ::= last(Attempt) ; nolast.
@@ -111,7 +117,7 @@ class_of(pay, B, D, pay(V1?, V2?)) :- ground(B?), ground(D?) | val_peer(role(1),
 class_of(redeem, B, D, redeem(V1?, V2?, V3?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar(r), B?, D?, V3).
 
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
-agent(Id, NetIn, Out?, Thr?, D?) :- ground(Id?) | request(Id?, [], Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, In), agent_goal([own], In?, Ans, Thr, Out, [], st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], []), D2), merge(D1?, D2?, D).
+agent(Id, NetIn, Out?, Thr?, D?) :- ground(Id?) | request(Id?, [], Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, In), agent_goal([own], In?, Ans, Thr, Out, [], st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], []), D2), merge(D1?, D2?, D).
 
 procedure request(Key?, List(Key)?, Stream(Trigger), Stream(Ask(Question))).
 request(S1, S2, S3?, [ask('Menu', menu_w(X?)) | D?]) :- request1(S1?, S2?, S3, X, D).
@@ -147,7 +153,7 @@ agent_goal([], [T | In], Ans?, Thr?, Out?, Approvals, St, D?) :- step(T?, after,
 agent_goal([], [], [], [], [], _, _, []).
 
 procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Txn), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-step(req(propose(C)), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(C?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), propose_cond(C?, St?, Cd, St1), dispatch_propose(Cd?, C?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Approvals?, St1?, D2), merge(D1?, D2?, D).
+step(req(propose(C)), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(C?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), propose_cond(C?, St?, Cd, St1), dispatch_propose(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Approvals?, St1?, D2), merge(D1?, D2?, D).
 step(req(known(Q)), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(Q?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), known_cond(Q?, St?, Cd), dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Approvals?, St?, D2), merge(D1?, D2?, D).
 step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), hello_cond(P?, St?, Cd), dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
 step(net(msg(_, ihello(P))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), ihello_cond(P?, St?, Cd), dispatch_ihello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
@@ -175,20 +181,64 @@ procedure pend_triggers(Pends?, Stream(Trigger)).
 pend_triggers([], []).
 pend_triggers([_ | _], [recheck]).
 
-procedure propose_cond(Class?, St?, Cond, St).
-propose_cond(C, St, Cd?, St2?) :- ground(C?), ground(St?) | st_class(C?, St?, R, St1), propose_cond1(R?, St1?, Cd, St2).
+procedure propose_cond(Class?, St?, PCond, St).
+propose_cond(C, St, Cd?, St2?) :- ground(C?), ground(St?) | st_class(C?, St?, R, St1), propose_cond1(R?, C?, St1?, Cd, St2).
 
-procedure propose_cond1(ClassRes?, St?, Cond, St).
-propose_cond1(nocls, St, drop, St?).
-propose_cond1(cls(I), St, Cd?, St?) :- ground(I?), ground(St?) | unguarded_i(I?, Ug), neg(Ug?, Gd), guard_of_i(I?, St?, IsG), and(Gd?, IsG?, B), initiate_cond(B?, I?, St?, Cd).
+procedure propose_cond1(ClassRes?, Class?, St?, PCond, St).
+propose_cond1(nocls, _, St, pdrop, St?).
+propose_cond1(cls(I), C, St, Cd?, St?) :- ground(I?), ground(C?), ground(St?) | unguarded_i(I?, Ug), neg(Ug?, Gd), guard_of_i(I?, St?, IsG), and(Gd?, IsG?, B), initiate_cond(B?, I?, named(C?), St?, Cd).
 
-procedure initiate_cond(YesNo?, Info?, St?, Cond).
-initiate_cond(no, _, _, drop).
-initiate_cond(yes, I, St, Cd?) :- ground(I?), ground(St?) | ready_i(I?, St?, Rd), no_prior_start(St?, Np), others_known(I?, St?, K), known_ok(K?, Kn), and(Rd?, Np?, B1), and(B1?, Kn?, B), go_or_drop(B?, I?, Cd).
+procedure initiate_cond(YesNo?, Info?, Named?, St?, PCond).
+initiate_cond(no, _, _, _, pdrop).
+initiate_cond(yes, I, N, St, Cd?) :- ground(I?), ground(N?), ground(St?) | free_i(I?, St?, Fr), no_prior_start(St?, Np), others_known(I?, St?, K), known_ok(K?, Kn), and(Fr?, Np?, B1), and(B1?, Kn?, B), initiate_part(B?, I?, N?, St?, Cd).
 
-procedure dispatch_propose(Cond?, Class?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Txn), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_propose(go(I), C, Th, Ap0, Ls, In, Ans?, [propose(At?) | Thr?], Out?, Approvals, St, D?) :- ground(I?), ground(C?), ground(St?) | propose_effect(I?, C?, St?, At, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?, D).
-dispatch_propose(drop, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure initiate_part(YesNo?, Info?, Named?, St?, PCond).
+initiate_part(no, _, _, _, pdrop).
+initiate_part(yes, I, N, St, Cd?) :- ground(I?), ground(N?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), app_state(Ap?, S), st_props(St?, Pr), class_parts(I?, Id?, Ps), ready_parts(Ps?, Id?, S?, Rs), aged_parts(Rs?, I?, N?, Pr?, As), pick_part(As?, nopick, F), part_cond(F?, I?, N?, Cd).
+
+procedure part_cond(Pick?, Info?, Named?, PCond).
+part_cond(nopick, _, _, pdrop).
+part_cond(picked(aged(_, yes, _)), I, named(C), pgo(I?, C?)).
+part_cond(picked(aged(_, yes, P)), I, unnamed, pgo(I?, P?)).
+part_cond(picked(aged(_, no, P)), I, _, pgo(I?, P?)).
+
+procedure aged_parts(Classes?, Info?, Named?, Classes?, Ageds).
+aged_parts([], _, _, _, []).
+aged_parts([P | Ps], I, N, Pr, [aged(A?, Nd?, P?) | As?]) :- ground(P?), ground(I?), ground(N?), ground(Pr?) | part_age(Pr?, I?, P?, 1, A), named_part(N?, I?, P?, Nd), aged_parts(Ps?, I?, N?, Pr?, As).
+
+procedure part_age(Classes?, Info?, Class?, Integer?, Integer).
+part_age([], _, _, _, 0).
+part_age([E | Es], I, P, K, A?) :- ground(E?), ground(I?), ground(P?), integer(K?) | term_part(E?, I?, P?, Sm), part_age1(Sm?, Es?, I?, P?, K?, A).
+
+procedure part_age1(YesNo?, Classes?, Info?, Class?, Integer?, Integer).
+part_age1(yes, _, _, _, K, K?).
+part_age1(no, Es, I, P, K, A?) :- K1 := (K? + 1), part_age(Es?, I?, P?, K1?, A).
+
+procedure named_part(Named?, Info?, Class?, YesNo).
+named_part(unnamed, _, _, no).
+named_part(named(C), I, P, B?) :- same_part(I?, C?, P?, B).
+
+procedure pick_part(Ageds?, Pick?, Pick).
+pick_part([], F, F?).
+pick_part([X | Xs], nopick, F?) :- pick_part(Xs?, picked(X?), F).
+pick_part([X | Xs], picked(Y), F?) :- ground(X?), ground(Y?) | before(X?, Y?, B), pick_part1(B?, X?, Y?, Xs?, F).
+
+procedure pick_part1(YesNo?, Aged?, Aged?, Ageds?, Pick).
+pick_part1(yes, X, _, Xs, F?) :- pick_part(Xs?, picked(X?), F).
+pick_part1(no, _, Y, Xs, F?) :- pick_part(Xs?, picked(Y?), F).
+
+procedure before(Aged?, Aged?, YesNo).
+before(aged(A1, _, _), aged(A2, _, _), yes) :- (A1? < A2?) | true.
+before(aged(A1, _, _), aged(A2, _, _), no) :- (A1? > A2?) | true.
+before(aged(A1, N1, _), aged(A2, N2, _), B?) :- (A1? =:= A2?) | named_first(N1?, N2?, B).
+
+procedure named_first(YesNo?, YesNo?, YesNo).
+named_first(yes, no, yes).
+named_first(_, _, no) :- otherwise | true.
+
+procedure dispatch_propose(PCond?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Txn), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_propose(pgo(I, P), Th, Ap0, Ls, In, Ans?, [propose(At?) | Thr?], Out?, Approvals, St, D?) :- ground(I?), ground(P?), ground(St?) | propose_effect(I?, P?, St?, At, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?, D).
+dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
 
 procedure known_cond(Peer?, St?, YesNo).
 known_cond(Q, St, R?) :- ground(Q?), ground(St?) | st_id(St?, Id), st_sent(St?, Se), same(Q?, Id?, S1), mem(Q?, Se?, S2), or(S1?, S2?, S), neg(S?, R).
@@ -232,7 +282,7 @@ procedure message_cond(Cargo?, St?, MCond, St).
 message_cond(X, St, Cd?, St1?) :- ground(X?), ground(St?) | cargo_class(X?, C), st_class(C?, St?, R, St0), message_cond1(R?, X?, St0?, Cd, St1).
 
 procedure message_cond1(ClassRes?, Cargo?, St?, MCond, St).
-message_cond1(nocls, _, St, nopart, St?).
+message_cond1(nocls, _, St, noparticipant, St?).
 message_cond1(cls(I), start(At), St, Cd?, St?) :- ground(I?), ground(At?), ground(St?) | st_app(St?, Ap), app_recs(Ap?, R), mem(closed(At?), R?, Cl), start_cond(Cl?, I?, At?, St?, Cd).
 message_cond1(cls(I), vote(_, _), St, mgo(I?), St?).
 message_cond1(cls(I), yield(_), St, mgo(I?), St?).
@@ -343,7 +393,7 @@ recheck1(found(M), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- step(net(
 recheck1(nonefound, Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(St?) | st_app(St?, Ap0), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
 
 procedure dispatch_message(MCond?, Net?, Peer?, Cargo?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Txn), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_message(nopart, _, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+dispatch_message(noparticipant, _, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
 dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- add_pend_once(deferred(M?), St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?, D).
 dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?, [start(At?) | Thr?], Out?, Approvals, St, D?) :- ground(At?) | drop_pend(deferred(M?), St?, St0), start_effect(I?, At?, St0?, Ss, Cr, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?, D1), next(Th?, yes, Ap0?, Ls?, In?, Ans1, Thr, Out1, Approvals1?, St2?, D2), merge(D1?, D2?, D).
 dispatch_message(mgo(I), _, F, vote(At, Y), Th, Ap0, Ls, In, Ans?, [tally(At?) | Thr?], Out?, Approvals, St, D?) :- ground(At?) | tally_effect(I?, At?, F?, Y?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?, D).
@@ -403,11 +453,11 @@ count_own(take(K, S), St, take(K?, S?), St1?) :- advance(St?, St1).
 
 procedure op_cands(Infos?, St?, Cands).
 op_cands([], _, []).
-op_cands([I | Is], St, Cs?) :- ground(I?), ground(St?) | unguarded_i(I?, Ug), opener_i(I?, St?, Op), and(Ug?, Op?, B), initiate_cond(B?, I?, St?, Cd), op_cands(Is?, St?, Cs1), keep_cand(Cd?, Cs1?, Cs).
+op_cands([I | Is], St, Cs?) :- ground(I?), ground(St?) | unguarded_i(I?, Ug), opener_i(I?, St?, Op), and(Ug?, Op?, B), initiate_cond(B?, I?, unnamed, St?, Cd), op_cands(Is?, St?, Cs1), keep_cand(Cd?, Cs1?, Cs).
 
-procedure keep_cand(Cond?, Cands?, Cands).
-keep_cand(go(I), Cs, [cand(op(C?), sub(I?)) | Cs?]) :- ground(I?) | info_name(I?, C).
-keep_cand(drop, Cs, Cs?).
+procedure keep_cand(PCond?, Cands?, Cands).
+keep_cand(pgo(I, P), Cs, [cand(op(C?), prop(I?, P?)) | Cs?]) :- ground(I?) | info_name(I?, C).
+keep_cand(pdrop, Cs, Cs?).
 
 procedure vote_cands0(Recs?, St?, Cands, St).
 vote_cands0(R, St, Cs?, St1?) :- ground(R?) | vote_cands(R?, R?, St?, [], Cs, St1).
@@ -520,7 +570,7 @@ dead_key(ip(Q, R1), R, D?) :- mem(introduced(Q?, R1?), R?, D).
 
 procedure dispatch_own(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Txn), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
 dispatch_own(none, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(done, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-dispatch_own(take(op(_), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(I?), ground(St?) | initiate_cond(yes, I?, St?, Cd), info_name(I?, C), dispatch_propose(Cd?, C?, after, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+dispatch_own(take(op(_), prop(I, P)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- dispatch_propose(pgo(I?, P?), after, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
 dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, [vote(At?) | Thr?], Out?, Approvals, St, D?) :- ground(At?), ground(I?) | vote_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(after, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?, D).
 dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, [commit(At?) | Thr?], Out?, Approvals, St, D?) :- ground(At?), ground(I?) | commit_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(after, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?, D).
 dispatch_own(take(wd(A, B), sub(I)), Ap0, Ls, In, Ans?, [wound(A?, B?) | Thr?], Out?, Approvals, St, D?) :- ground(A?), ground(B?), ground(I?) | wound_effect(I?, B?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(after, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?, D).
@@ -610,10 +660,10 @@ set_wait(K, D, [w(K1, _) | Ws], [w(K1?, D?) | Ws?]) :- (K? =?= K1?) | true.
 set_wait(K, D, [X | Ws], [X? | Ws1?]) :- otherwise | set_wait(K?, D?, Ws?, Ws1).
 
 procedure propose_effect(Info?, Class?, St?, Attempt, Sends, St).
-propose_effect(I, C, St, At?, Ss?, St1?) :- ground(I?), ground(C?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), st_app(St?, Ap0), app_count(Ap0?, K), K1 := (K? + 1), st_app(St?, Ap2), app_recs(Ap2?, R), rank_of(I?, Id?, R?, K1?, Pi), propose_app(I?, attempt(Id?, K1?, Pi?, C?), Ap?, At, Ss, Ap1), set_app(St?, Ap1?, St1).
+propose_effect(I, P, St, At?, Ss?, St2?) :- ground(I?), ground(P?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), st_app(St?, Ap0), app_count(Ap0?, K), K1 := (K? + 1), st_app(St?, Ap2), app_recs(Ap2?, R), rank_of(I?, P?, Id?, R?, K1?, Pi), propose_app(I?, attempt(Id?, K1?, Pi?, P?), Ap?, At, Ss, Ap1), set_app(St?, Ap1?, St1), note_part(I?, P?, St1?, St2).
 
-procedure rank_of(Info?, Peer?, Recs?, Integer?, Integer).
-rank_of(I, Id, R, K1, Pi?) :- ground(R?), integer(K1?) | last_own(R?, I?, Id?, nolast, L), rank_of1(L?, R?, K1?, Pi).
+procedure rank_of(Info?, Class?, Peer?, Recs?, Integer?, Integer).
+rank_of(I, P, Id, R, K1, Pi?) :- ground(R?), integer(K1?) | last_own(R?, I?, P?, Id?, nolast, L), rank_of1(L?, R?, K1?, Pi).
 
 procedure rank_of1(Last?, Recs?, Integer?, Integer).
 rank_of1(nolast, _, K1, K1?).
@@ -623,10 +673,10 @@ procedure rank_of2(YesNo?, Integer?, Integer?, Integer).
 rank_of2(yes, P, _, P?).
 rank_of2(no, _, K1, K1?).
 
-procedure last_own(Recs?, Info?, Peer?, Last?, Last).
-last_own([], _, _, L, L?).
-last_own([voted(A, yes) | Rs], I, Id, L, L1?) :- ground(A?), ground(I?), ground(Id?) | attempt_id(A?, P), same(P?, Id?, Own), of_class(A?, I?, Cl), and(Own?, Cl?, B), later(B?, A?, L?, L0), last_own(Rs?, I?, Id?, L0?, L1).
-last_own([_ | Rs], I, Id, L, L1?) :- otherwise | last_own(Rs?, I?, Id?, L?, L1).
+procedure last_own(Recs?, Info?, Class?, Peer?, Last?, Last).
+last_own([], _, _, _, L, L?).
+last_own([voted(A, yes) | Rs], I, P, Id, L, L1?) :- ground(A?), ground(I?), ground(P?), ground(Id?) | attempt_id(A?, Q), same(Q?, Id?, Own), attempt_class(A?, C), term_part(C?, I?, P?, Pt), and(Own?, Pt?, B), later(B?, A?, L?, L0), last_own(Rs?, I?, P?, Id?, L0?, L1).
+last_own([_ | Rs], I, P, Id, L, L1?) :- otherwise | last_own(Rs?, I?, P?, Id?, L?, L1).
 
 procedure later(YesNo?, Attempt?, Last?, Last).
 later(no, _, L, L?).
@@ -636,6 +686,17 @@ later(yes, A, last(B), L?) :- ground(A?), ground(B?) | attempt_k(A?, KA), attemp
 procedure later1(Integer?, Integer?, Attempt?, Attempt?, Last).
 later1(KA, KB, A, _, last(A?)) :- (KA? > KB?) | true.
 later1(KA, KB, _, B, last(B?)) :- (KA? =< KB?) | true.
+
+procedure note_part(Info?, Class?, St?, St).
+note_part(I, P, St, St1?) :- ground(I?), ground(P?), ground(St?) | st_props(St?, Pr), drop_part(Pr?, I?, P?, Pr1), app(Pr1?, [P?], Pr2), set_props(St?, Pr2?, St1).
+
+procedure drop_part(Classes?, Info?, Class?, Classes).
+drop_part([], _, _, []).
+drop_part([E | Es], I, P, R?) :- ground(E?), ground(I?), ground(P?) | term_part(E?, I?, P?, Sm), drop_part1(Sm?, E?, Es?, I?, P?, R).
+
+procedure drop_part1(YesNo?, Class?, Classes?, Info?, Class?, Classes).
+drop_part1(yes, _, Es, I, P, R?) :- drop_part(Es?, I?, P?, R).
+drop_part1(no, E, Es, I, P, [E? | R?]) :- drop_part(Es?, I?, P?, R).
 
 procedure propose_app(Info?, Attempt?, App?, Attempt, Sends, App).
 propose_app(I, At, Ap, At?, Ss?, Ap1?) :- ground(I?), ground(At?) | attempt_id(At?, Id), info_q(I?, Q), only_me(Q?, Id?, One), propose_app1(One?, I?, At?, Ap?, Ss, Ap1).
@@ -672,7 +733,7 @@ max_int(A, B, B?) :- (A? < B?) | true.
 
 procedure start_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, App).
 start_app1(yes, _, _, _, Ap, [], noapproval, Ap?).
-start_app1(no, I, At, Id, Ap, Ss?, Cr?, Ap1?) :- ground(I?), ground(At?), ground(Id?), ground(Ap?) | app_state(Ap?, S), dom_ok(I?, Id?, S?, Rd), asked_by(I?, At?, Id?, Ak), start_app2(Rd?, Ak?, At?, Ap?, Ss, Cr, Ap1).
+start_app1(no, I, At, Id, Ap, Ss?, Cr?, Ap1?) :- ground(I?), ground(At?), ground(Id?), ground(Ap?) | app_state(Ap?, S), attempt_class(At?, C), part_dom(C?, Id?, S?, Rd), asked_by(I?, At?, Id?, Ak), start_app2(Rd?, Ak?, At?, Ap?, Ss, Cr, Ap1).
 
 procedure start_app2(YesNo?, YesNo?, Attempt?, App?, Sends, ApprovalRes, App).
 start_app2(no, _, At, Ap, Ss?, noapproval, Ap1?) :- vote_app(At?, no, Ap?, Ss, Ap1).
@@ -703,11 +764,11 @@ procedure vote_effect(Info?, Attempt?, St?, Sends, St).
 vote_effect(I, At, St, Ss?, St1?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), vote_app0(I?, At?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
 
 procedure vote_app0(Info?, Attempt?, Peer?, App?, Sends, App).
-vote_app0(I, At, Id, Ap, Ss?, Ap1?) :- ground(At?), ground(Ap?) | app_recs(Ap?, R), answer_of(At?, R?, YN), vote_yes(YN?, I?, Id?, Ap?, Y), vote_app(At?, Y?, Ap?, Ss, Ap1).
+vote_app0(_, At, Id, Ap, Ss?, Ap1?) :- ground(At?), ground(Ap?) | app_recs(Ap?, R), answer_of(At?, R?, YN), vote_yes(YN?, At?, Id?, Ap?, Y), vote_app(At?, Y?, Ap?, Ss, Ap1).
 
-procedure vote_yes(YesNo?, Info?, Peer?, App?, YesNo).
+procedure vote_yes(YesNo?, Attempt?, Peer?, App?, YesNo).
 vote_yes(no, _, _, _, no).
-vote_yes(yes, I, Id, app(S, _, _, _), Y?) :- dom_ok(I?, Id?, S?, Y).
+vote_yes(yes, At, Id, app(S, _, _, _), Y?) :- attempt_class(At?, C), part_dom(C?, Id?, S?, Y).
 
 procedure tally_effect(Info?, Attempt?, Peer?, YesNo?, St?, Sends, St).
 tally_effect(I, At, F, Y, St, Ss?, St1?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), tally_app(I?, At?, F?, Y?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
@@ -789,12 +850,6 @@ procedure put_all(Nets?, Stream(Net), Stream(Net)?).
 put_all([], Out?, Out).
 put_all([M | Ms], [M? | Out?], Cont) :- put_all(Ms?, Out, Cont?).
 
-procedure ready_i(Info?, St?, YesNo).
-ready_i(I, St, B?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), ready_app(I?, Id?, Ap?, B).
-
-procedure ready_app(Info?, Peer?, App?, YesNo).
-ready_app(I, Id, app(S, _, L, R), B?) :- ground(I?), ground(R?) | unlocked(L?, B1), no_question(I?, R?, R?, B2), dom_ok(I?, Id?, S?, B3), and(B1?, B2?, B12), and(B12?, B3?, B).
-
 procedure unlocked(Lock?, YesNo).
 unlocked(unlocked, yes).
 unlocked(held(_), no).
@@ -827,9 +882,12 @@ answer_of(At, [answered(A, Y) | _], Y?) :- (At? =?= A?) | true.
 answer_of(At, [_ | Rs], Y?) :- otherwise | answer_of(At?, Rs?, Y).
 
 procedure of_class(Attempt?, Info?, YesNo).
-of_class(attempt(_, _, _, C), ci(_, Ps, Q, _, _, Ms), B?) :- ground(C?) | binding_of(C?, Nm, Bn), schema_spec(Nm?, Rs), of_class1(Rs?, Bn?, Ps?, Q?, Ms?, B).
+of_class(attempt(_, _, _, C), I, B?) :- term_of_class(C?, I?, B).
 
-procedure of_class1(RoleSpecs?, Binding?, Parts?, Peers?, Mates?, YesNo).
+procedure term_of_class(Class?, Info?, YesNo).
+term_of_class(C, ci(_, Ps, Q, _, _, Ms), B?) :- ground(C?) | binding_of(C?, Nm, Bn), schema_spec(Nm?, Rs), of_class1(Rs?, Bn?, Ps?, Q?, Ms?, B).
+
+procedure of_class1(RoleSpecs?, Binding?, Deltas?, Peers?, Mates?, YesNo).
 of_class1(Rs, Bn, Ps, Q, Ms, B?) :- ground(Rs?), ground(Bn?) | sig_of(Rs?, Bn?, Ps1), in_class(Rs?, Bn?, Ps1?, Ps?, Q?, Ms?, B).
 
 procedure others_known(Info?, St?, Known).
@@ -913,20 +971,57 @@ procedure all_in1(YesNo?, Peers?, Peers?, YesNo).
 all_in1(no, _, _, no).
 all_in1(yes, Ps, Q, B?) :- all_in(Ps?, Q?, B).
 
-procedure dom_ok(Info?, Peer?, GAtoms?, YesNo).
-dom_ok(ci(_, _, _, _, _, Ms), Id, S, B?) :- ground(Id?), ground(S?) | reflexive_preds(Rf), hat(Rf?, Id?, S?, Sh), mates_dom(Ms?, Id?, Sh?, B).
+procedure part_dom(Class?, Peer?, GAtoms?, YesNo).
+part_dom(P, Id, S, B?) :- ground(P?), ground(Id?), ground(S?) | binding_of(P?, Nm, Bn), schema_spec(Nm?, Rs), reflexive_preds(Rf), hat(Rf?, Id?, S?, Sh), mate_dom(Rs?, Bn?, Id?, Sh?, B).
 
 procedure hat(Preds?, Peer?, GAtoms?, GAtoms).
 hat([], _, S, S?).
 hat([P | Ps], Id, S, [g(P?, [p(Id?)]) | R?]) :- ground(Id?) | hat(Ps?, Id?, S?, R).
 
-procedure mates_dom(Mates?, Peer?, GAtoms?, YesNo).
-mates_dom([], _, _, no).
-mates_dom([mate(Nm, B, _, _) | Ms], Id, Sh, R?) :- ground(Id?), ground(Sh?) | schema_spec(Nm?, Rs), mate_dom(Rs?, B?, Id?, Sh?, R1), mates_dom1(R1?, Ms?, Id?, Sh?, R).
+procedure class_parts(Info?, Peer?, Classes).
+class_parts(ci(C, Ps, Q, G, Op, Ms), Id, R?) :- ground(Ms?), ground(Id?) | mate_terms(Ms?, Id?, Ts), dedup_parts(Ts?, ci(C?, Ps?, Q?, G?, Op?, Ms?), R).
 
-procedure mates_dom1(YesNo?, Mates?, Peer?, GAtoms?, YesNo).
-mates_dom1(yes, _, _, _, yes).
-mates_dom1(no, Ms, Id, Sh, R?) :- mates_dom(Ms?, Id?, Sh?, R).
+procedure mate_terms(Mates?, Peer?, Classes).
+mate_terms([], _, []).
+mate_terms([mate(Nm, B, _, _) | Ms], Id, [T? | Ts?]) :- ground(Id?) | class_of(Nm?, B?, Id?, T), mate_terms(Ms?, Id?, Ts).
+
+procedure dedup_parts(Classes?, Info?, Classes).
+dedup_parts([], _, []).
+dedup_parts([T | Ts], I, [T? | R?]) :- ground(T?), ground(I?) | drop_same(Ts?, I?, T?, Ts1), dedup_parts(Ts1?, I?, R).
+
+procedure drop_same(Classes?, Info?, Class?, Classes).
+drop_same([], _, _, []).
+drop_same([E | Es], I, T, R?) :- ground(E?), ground(I?), ground(T?) | same_part(I?, E?, T?, Sm), drop_same1(Sm?, E?, Es?, I?, T?, R).
+
+procedure drop_same1(YesNo?, Class?, Classes?, Info?, Class?, Classes).
+drop_same1(yes, _, Es, I, T, R?) :- drop_same(Es?, I?, T?, R).
+drop_same1(no, E, Es, I, T, [E? | R?]) :- drop_same(Es?, I?, T?, R).
+
+procedure ready_parts(Classes?, Peer?, GAtoms?, Classes).
+ready_parts([], _, _, []).
+ready_parts([P | Ps], Id, S, R?) :- ground(P?), ground(Id?), ground(S?) | part_dom(P?, Id?, S?, B), ready_parts(Ps?, Id?, S?, R1), keep_class(B?, P?, R1?, R).
+
+procedure keep_class(YesNo?, Class?, Classes?, Classes).
+keep_class(yes, P, R, [P? | R?]).
+keep_class(no, _, R, R?).
+
+procedure same_part(Info?, Class?, Class?, YesNo).
+same_part(I, C1, C2, B?) :- ground(I?), ground(C1?), ground(C2?) | info_q(I?, Q), binding_of(C1?, N1, B1), binding_of(C2?, N2, B2), schema_spec(N1?, Rs1), schema_spec(N2?, Rs2), reflexive_preds(Rf), same_doms(Q?, Rs1?, B1?, Rs2?, B2?, Rf?, B).
+
+procedure same_doms(Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+same_doms([], _, _, _, _, _, yes).
+same_doms([P | Ps], Rs1, B1, Rs2, B2, Rf, B?) :- ground(P?), ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?) | reqs_at(Rs1?, B1?, P?, Rf?, R1), reqs_at(Rs2?, B2?, P?, Rf?, R2), forbs_at(Rs1?, B1?, P?, F1), forbs_at(Rs2?, B2?, P?, F2), dedup(F1?, F1s), dedup(F2?, F2s), ms_eq(R1?, R2?, E1), ms_eq(F1s?, F2s?, E2), and(E1?, E2?, E), same_doms1(E?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, B).
+
+procedure same_doms1(YesNo?, Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+same_doms1(no, _, _, _, _, _, _, no).
+same_doms1(yes, Ps, Rs1, B1, Rs2, B2, Rf, B?) :- same_doms(Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, B).
+
+procedure term_part(Class?, Info?, Class?, YesNo).
+term_part(E, I, P, B?) :- ground(E?), ground(I?), ground(P?) | term_of_class(E?, I?, In), term_part1(In?, E?, I?, P?, B).
+
+procedure term_part1(YesNo?, Class?, Info?, Class?, YesNo).
+term_part1(no, _, _, _, no).
+term_part1(yes, E, I, P, B?) :- same_part(I?, E?, P?, B).
 
 procedure mate_dom(RoleSpecs?, Binding?, Peer?, GAtoms?, YesNo).
 mate_dom(Rs, B, Id, Sh, R?) :- ground(Rs?), ground(B?), ground(Id?), ground(Sh?) | specs_at(Rs?, 1, B?, Id?, RsP), mate_dom1(RsP?, B?, Sh?, R).
@@ -967,15 +1062,15 @@ forb_ok1(no, _, _, _, no).
 forb_ok1(yes, As, B, Sh, R?) :- forb_ok(As?, B?, Sh?, R).
 
 procedure apply_info(Info?, Peer?, GAtoms?, GAtoms).
-apply_info(ci(_, Ps, _, _, _, _), Id, S, S1?) :- ground(Id?) | part_at(Ps?, Id?, D, A), ms_diff(S?, D?, S0), app(A?, S0?, S1).
+apply_info(ci(_, Ps, _, _, _, _), Id, S, S1?) :- ground(Id?) | delta_at(Ps?, Id?, D, A), ms_diff(S?, D?, S0), app(A?, S0?, S1).
 
-procedure part_at(Parts?, Peer?, GAtoms, GAtoms).
-part_at([], _, [], []).
-part_at([part(P, D, A) | _], Id, D?, A?) :- (P? =?= Id?) | true.
-part_at([_ | Ps], Id, D?, A?) :- otherwise | part_at(Ps?, Id?, D, A).
+procedure delta_at(Deltas?, Peer?, GAtoms, GAtoms).
+delta_at([], _, [], []).
+delta_at([delta(P, D, A) | _], Id, D?, A?) :- (P? =?= Id?) | true.
+delta_at([_ | Ps], Id, D?, A?) :- otherwise | delta_at(Ps?, Id?, D, A).
 
 procedure st_class(Class?, St?, ClassRes, St).
-st_class(C, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd), R?, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca1?, Pd?)) :- ground(Id?) | class_info(C?, Id?, Ca?, R, Ca1).
+st_class(C, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), R?, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca1?, Pd?, Pr?)) :- ground(Id?) | class_info(C?, Id?, Ca?, R, Ca1).
 
 procedure class_info(Class?, Peer?, Infos?, ClassRes, Infos).
 class_info(C, Id, Ca, R?, Ca1?) :- ground(C?) | binding_of(C?, Nm, B), class_info1(Nm?, B?, C?, Id?, Ca?, R, Ca1).
@@ -990,36 +1085,36 @@ procedure class_info3(YesNo?, RoleSpecs?, Binding?, Class?, Peer?, Infos?, Class
 class_info3(no, _, _, _, _, Ca, nocls, Ca?).
 class_info3(yes, Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Rs?), ground(B?) | sig_of(Rs?, B?, Ps), class_info4(Ps?, Rs?, B?, C?, Id?, Ca?, R, Ca1).
 
-procedure class_info4(Parts?, RoleSpecs?, Binding?, Class?, Peer?, Infos?, ClassRes, Infos).
-class_info4(Ps, Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Ps?), ground(Id?), ground(Rs?), ground(B?) | parts_valid(Ps?, V1), parts_peers(Ps?, Q), mem(Id?, Q?, V2), parts_peers(Ps?, Q1), reflexive_preds(Rf), live_at(Q1?, Rs?, B?, Rf?, V3), and(V1?, V2?, V12), and(V12?, V3?, V), class_info5(V?, Ps?, Rs?, B?, C?, Ca?, R, Ca1).
+procedure class_info4(Deltas?, RoleSpecs?, Binding?, Class?, Peer?, Infos?, ClassRes, Infos).
+class_info4(Ps, Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Ps?), ground(Id?), ground(Rs?), ground(B?) | deltas_valid(Ps?, V1), deltas_peers(Ps?, Q), mem(Id?, Q?, V2), deltas_peers(Ps?, Q1), reflexive_preds(Rf), live_at(Q1?, Rs?, B?, Rf?, V3), and(V1?, V2?, V12), and(V12?, V3?, V), class_info5(V?, Ps?, Rs?, B?, C?, Ca?, R, Ca1).
 
-procedure class_info5(YesNo?, Parts?, RoleSpecs?, Binding?, Class?, Infos?, ClassRes, Infos).
+procedure class_info5(YesNo?, Deltas?, RoleSpecs?, Binding?, Class?, Infos?, ClassRes, Infos).
 class_info5(no, _, _, _, _, Ca, nocls, Ca?).
 class_info5(yes, Ps, Rs, B, C, Ca, R?, Ca1?) :- ground(Ps?), ground(Ca?) | cache_find(Rs?, B?, Ps?, Ca?, F), class_info6(F?, Ps?, C?, Ca?, R, Ca1).
 
-procedure class_info6(ClassRes?, Parts?, Class?, Infos?, ClassRes, Infos).
+procedure class_info6(ClassRes?, Deltas?, Class?, Infos?, ClassRes, Infos).
 class_info6(cls(I), _, _, Ca, cls(I?), Ca?).
 class_info6(nocls, Ps, C, Ca, R?, Ca1?) :- new_info(C?, Ps?, I), add_info(I?, Ca?, R, Ca1).
 
 procedure add_info(Info?, Infos?, ClassRes, Infos).
 add_info(I, Ca, cls(I?), Ca1?) :- ground(I?) | app(Ca?, [I?], Ca1).
 
-procedure cache_find(RoleSpecs?, Binding?, Parts?, Infos?, ClassRes).
+procedure cache_find(RoleSpecs?, Binding?, Deltas?, Infos?, ClassRes).
 cache_find(_, _, _, [], nocls).
 cache_find(Rs, B, Ps, [ci(C, Ps1, Q, G, Op, Ms) | Is], R?) :- ground(Rs?), ground(B?), ground(Ps?), ground(Ps1?), ground(Q?), ground(Ms?) | in_class(Rs?, B?, Ps?, Ps1?, Q?, Ms?, E), cache_find1(E?, ci(C?, Ps1?, Q?, G?, Op?, Ms?), Rs?, B?, Ps?, Is?, R).
 
-procedure cache_find1(YesNo?, Info?, RoleSpecs?, Binding?, Parts?, Infos?, ClassRes).
+procedure cache_find1(YesNo?, Info?, RoleSpecs?, Binding?, Deltas?, Infos?, ClassRes).
 cache_find1(yes, I, _, _, _, _, cls(I?)).
 cache_find1(no, _, Rs, B, Ps, Is, R?) :- cache_find(Rs?, B?, Ps?, Is?, R).
 
-procedure new_info(Class?, Parts?, Info).
-new_info(C, Ps, I?) :- ground(Ps?) | contract_schemas(Ss), reflexive_preds(Rf), mates_of(Ss?, Ps?, Ms0), dedup_mates(Ms0?, Ms1), parts_peers(Ps?, Q), new_info0(C?, Ps?, Ms1?, Q?, Rf?, I).
+procedure new_info(Class?, Deltas?, Info).
+new_info(C, Ps, I?) :- ground(Ps?) | contract_schemas(Ss), reflexive_preds(Rf), mates_of(Ss?, Ps?, Ms0), dedup_mates(Ms0?, Ms1), deltas_peers(Ps?, Q), new_info0(C?, Ps?, Ms1?, Q?, Rf?, I).
 
-procedure new_info0(Class?, Parts?, Mates?, Peers?, Preds?, Info).
+procedure new_info0(Class?, Deltas?, Mates?, Peers?, Preds?, Info).
 new_info0(C, Ps, Ms1, Q, Rf, I?) :- ground(C?), ground(Q?), ground(Rf?) | live_mates(Ms1?, Q?, Rf?, Ms2), binding_of(C?, Nm, B), class_mates(Nm?, B?, Ms2?, Q?, Rf?, Ms), new_info1(C?, Ps?, Ms?, I).
 
-procedure new_info1(Class?, Parts?, Mates?, Info).
-new_info1(C, Ps, Ms, ci(C?, Ps?, Q?, G?, Op?, Ms?)) :- ground(Ps?), ground(Ms?) | parts_peers(Ps?, Q), mates_gsets(Ms?, G), mates_opener(Ms?, Op).
+procedure new_info1(Class?, Deltas?, Mates?, Info).
+new_info1(C, Ps, Ms, ci(C?, Ps?, Q?, G?, Op?, Ms?)) :- ground(Ps?), ground(Ms?) | deltas_peers(Ps?, Q), mates_gsets(Ms?, G), mates_opener(Ms?, Op).
 
 procedure info_name(Info?, Class).
 info_name(ci(C, _, _, _, _, _), C?).
@@ -1030,16 +1125,16 @@ info_q(ci(_, _, Q, _, _, _), Q?).
 procedure info_gsets(Info?, PeerSets).
 info_gsets(ci(_, _, _, G, _, _), G?).
 
-procedure sig_of(RoleSpecs?, Binding?, Parts).
-sig_of(Rs, B, Ps?) :- ground(Rs?), ground(B?) | role_persons(Rs?, 1, B?, Ws), dedup(Ws?, Q), parts_for(Q?, Rs?, B?, Ps).
+procedure sig_of(RoleSpecs?, Binding?, Deltas).
+sig_of(Rs, B, Ps?) :- ground(Rs?), ground(B?) | role_persons(Rs?, 1, B?, Ws), dedup(Ws?, Q), deltas_for(Q?, Rs?, B?, Ps).
 
 procedure role_persons(RoleSpecs?, Integer?, Binding?, Peers).
 role_persons([], _, _, []).
 role_persons([_ | Rs], I, B, [P? | Ps?]) :- integer(I?), ground(B?) | role_person(I?, B?, P), I1 := (I? + 1), role_persons(Rs?, I1?, B?, Ps).
 
-procedure parts_for(Peers?, RoleSpecs?, Binding?, Parts).
-parts_for([], _, _, []).
-parts_for([P | Ps], Rs, B, [part(P?, D?, A?) | Xs?]) :- ground(P?), ground(Rs?), ground(B?) | specs_at(Rs?, 1, B?, P?, RsP), joins(RsP?, B?, D, A), parts_for(Ps?, Rs?, B?, Xs).
+procedure deltas_for(Peers?, RoleSpecs?, Binding?, Deltas).
+deltas_for([], _, _, []).
+deltas_for([P | Ps], Rs, B, [delta(P?, D?, A?) | Xs?]) :- ground(P?), ground(Rs?), ground(B?) | specs_at(Rs?, 1, B?, P?, RsP), joins(RsP?, B?, D, A), deltas_for(Ps?, Rs?, B?, Xs).
 
 procedure joins(RoleSpecs?, Binding?, GAtoms, GAtoms).
 joins(RsP, B, D?, A?) :- ground(RsP?), ground(B?) | dels_join(RsP?, B?, [], D), adds_join(RsP?, B?, [], A).
@@ -1060,41 +1155,41 @@ procedure keep_spec(Peer?, Peer?, RoleSpec?, RoleSpecs?, RoleSpecs).
 keep_spec(Q, P, R, Rest, [R? | Rest?]) :- (Q? =?= P?) | true.
 keep_spec(_, _, _, Rest, Rest?) :- otherwise | true.
 
-procedure parts_valid(Parts?, YesNo).
-parts_valid([], yes).
-parts_valid([part(_, D, A) | Ps], B?) :- ground(A?) | ms_meets(D?, A?, M), neg(M?, B1), parts_valid1(B1?, Ps?, B).
+procedure deltas_valid(Deltas?, YesNo).
+deltas_valid([], yes).
+deltas_valid([delta(_, D, A) | Ps], B?) :- ground(A?) | ms_meets(D?, A?, M), neg(M?, B1), deltas_valid1(B1?, Ps?, B).
 
-procedure parts_valid1(YesNo?, Parts?, YesNo).
-parts_valid1(no, _, no).
-parts_valid1(yes, Ps, B?) :- parts_valid(Ps?, B).
+procedure deltas_valid1(YesNo?, Deltas?, YesNo).
+deltas_valid1(no, _, no).
+deltas_valid1(yes, Ps, B?) :- deltas_valid(Ps?, B).
 
-procedure parts_peers(Parts?, Peers).
-parts_peers([], []).
-parts_peers([part(P, _, _) | Ps], [P? | Qs?]) :- parts_peers(Ps?, Qs).
+procedure deltas_peers(Deltas?, Peers).
+deltas_peers([], []).
+deltas_peers([delta(P, _, _) | Ps], [P? | Qs?]) :- deltas_peers(Ps?, Qs).
 
-procedure parts_eq(Parts?, Parts?, YesNo).
-parts_eq(A, B, E?) :- ground(A?), ground(B?) | len_parts(A?, La), len_parts(B?, Lb), same_int(La?, Lb?, E1), parts_in(A?, B?, E2), and(E1?, E2?, E).
+procedure deltas_eq(Deltas?, Deltas?, YesNo).
+deltas_eq(A, B, E?) :- ground(A?), ground(B?) | len_deltas(A?, La), len_deltas(B?, Lb), same_int(La?, Lb?, E1), deltas_in(A?, B?, E2), and(E1?, E2?, E).
 
-procedure len_parts(Parts?, Integer).
-len_parts([], 0).
-len_parts([_ | Ps], N?) :- len_parts(Ps?, M), N := (M? + 1).
+procedure len_deltas(Deltas?, Integer).
+len_deltas([], 0).
+len_deltas([_ | Ps], N?) :- len_deltas(Ps?, M), N := (M? + 1).
 
-procedure parts_in(Parts?, Parts?, YesNo).
-parts_in([], _, yes).
-parts_in([X | Xs], B, E?) :- ground(B?) | part_in(X?, B?, E1), parts_in1(E1?, Xs?, B?, E).
+procedure deltas_in(Deltas?, Deltas?, YesNo).
+deltas_in([], _, yes).
+deltas_in([X | Xs], B, E?) :- ground(B?) | delta_in(X?, B?, E1), deltas_in1(E1?, Xs?, B?, E).
 
-procedure parts_in1(YesNo?, Parts?, Parts?, YesNo).
-parts_in1(no, _, _, no).
-parts_in1(yes, Xs, B, E?) :- parts_in(Xs?, B?, E).
+procedure deltas_in1(YesNo?, Deltas?, Deltas?, YesNo).
+deltas_in1(no, _, _, no).
+deltas_in1(yes, Xs, B, E?) :- deltas_in(Xs?, B?, E).
 
-procedure part_in(Part?, Parts?, YesNo).
-part_in(_, [], no).
-part_in(part(P, D, A), [part(Q, D1, A1) | Ps], E?) :- (P? =?= Q?), ground(D?), ground(A?) | ms_eq(D?, D1?, E1), ms_eq(A?, A1?, E2), and(E1?, E2?, E3), part_in1(E3?, part(P?, D?, A?), Ps?, E).
-part_in(X, [_ | Ps], E?) :- otherwise | part_in(X?, Ps?, E).
+procedure delta_in(Delta?, Deltas?, YesNo).
+delta_in(_, [], no).
+delta_in(delta(P, D, A), [delta(Q, D1, A1) | Ps], E?) :- (P? =?= Q?), ground(D?), ground(A?) | ms_eq(D?, D1?, E1), ms_eq(A?, A1?, E2), and(E1?, E2?, E3), delta_in1(E3?, delta(P?, D?, A?), Ps?, E).
+delta_in(X, [_ | Ps], E?) :- otherwise | delta_in(X?, Ps?, E).
 
-procedure part_in1(YesNo?, Part?, Parts?, YesNo).
-part_in1(yes, _, _, yes).
-part_in1(no, X, Ps, E?) :- part_in(X?, Ps?, E).
+procedure delta_in1(YesNo?, Delta?, Deltas?, YesNo).
+delta_in1(yes, _, _, yes).
+delta_in1(no, X, Ps, E?) :- delta_in(X?, Ps?, E).
 
 procedure rule_ok(RoleSpecs?, Binding?, YesNo).
 rule_ok(Rs, B, R?) :- ground(Rs?) | rs_len(Rs?, K), pairs_ok(1, K?, Rs?, B?, R).
@@ -1175,9 +1270,9 @@ procedure persons_of(Ints?, Binding?, Peers).
 persons_of([], _, []).
 persons_of([I | Is], B, [P? | Ps?]) :- ground(B?) | role_person(I?, B?, P), persons_of(Is?, B?, Ps).
 
-procedure mates_of(Schemas?, Parts?, Mates).
+procedure mates_of(Schemas?, Deltas?, Mates).
 mates_of([], _, []).
-mates_of([schema(Nm, Rs) | Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Ps?) | parts_peers(Ps?, Q), rs_len(Rs?, K), assigns(K?, Q?, As), mates_assigns(As?, Nm?, Rs?, Ps?, M1), mates_of(Ss?, Ps?, M2), app(M1?, M2?, M).
+mates_of([schema(Nm, Rs) | Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Ps?) | deltas_peers(Ps?, Q), rs_len(Rs?, K), assigns(K?, Q?, As), mates_assigns(As?, Nm?, Rs?, Ps?, M1), mates_of(Ss?, Ps?, M2), app(M1?, M2?, M).
 
 procedure assigns(Integer?, Peers?, Bindings).
 assigns(K, Q, R?) :- assigns1(1, K?, Q?, [[]], R).
@@ -1194,32 +1289,32 @@ procedure extend_one(Peers?, Integer?, Binding?, Bindings).
 extend_one([], _, _, []).
 extend_one([P | Ps], I, B, [[b(role(I?), p(P?)) | B?] | R?]) :- ground(B?), integer(I?) | extend_one(Ps?, I?, B?, R).
 
-procedure mates_assigns(Bindings?, Constant?, RoleSpecs?, Parts?, Mates).
+procedure mates_assigns(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_assigns([], _, _, _, []).
-mates_assigns([B | Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) | parts_peers(Ps?, Q), role_persons(Rs?, 1, B?, Ws), all_in(Q?, Ws?, Onto), rule_ok(Rs?, B?, Ok), and(Onto?, Ok?, Go), mates_assign(Go?, B?, Nm?, Rs?, Ps?, M1), mates_assigns(Bs?, Nm?, Rs?, Ps?, M2), app(M1?, M2?, M).
+mates_assigns([B | Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) | deltas_peers(Ps?, Q), role_persons(Rs?, 1, B?, Ws), all_in(Q?, Ws?, Onto), rule_ok(Rs?, B?, Ok), and(Onto?, Ok?, Go), mates_assign(Go?, B?, Nm?, Rs?, Ps?, M1), mates_assigns(Bs?, Nm?, Rs?, Ps?, M2), app(M1?, M2?, M).
 
-procedure mates_assign(YesNo?, Binding?, Constant?, RoleSpecs?, Parts?, Mates).
+procedure mates_assign(YesNo?, Binding?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_assign(no, _, _, _, _, []).
-mates_assign(yes, B, Nm, Rs, Ps, M?) :- ground(Rs?), ground(Ps?) | match_parts(Ps?, Rs?, [B?], Bs), mates_check(Bs?, Nm?, Rs?, Ps?, M).
+mates_assign(yes, B, Nm, Rs, Ps, M?) :- ground(Rs?), ground(Ps?) | match_deltas(Ps?, Rs?, [B?], Bs), mates_check(Bs?, Nm?, Rs?, Ps?, M).
 
-procedure match_parts(Parts?, RoleSpecs?, Bindings?, Bindings).
-match_parts([], _, Bs, Bs?).
-match_parts([part(P, D, A) | Ps], Rs, Bs, R?) :- ground(P?), ground(D?), ground(A?), ground(Rs?) | match_part(Bs?, P?, D?, A?, Rs?, Bs1), match_parts(Ps?, Rs?, Bs1?, R).
+procedure match_deltas(Deltas?, RoleSpecs?, Bindings?, Bindings).
+match_deltas([], _, Bs, Bs?).
+match_deltas([delta(P, D, A) | Ps], Rs, Bs, R?) :- ground(P?), ground(D?), ground(A?), ground(Rs?) | match_delta(Bs?, P?, D?, A?, Rs?, Bs1), match_deltas(Ps?, Rs?, Bs1?, R).
 
-procedure match_part(Bindings?, Peer?, GAtoms?, GAtoms?, RoleSpecs?, Bindings).
-match_part([], _, _, _, _, []).
-match_part([B | Bs], P, D, A, Rs, R?) :- ground(B?), ground(P?), ground(D?), ground(A?), ground(Rs?) | specs_at(Rs?, 1, B?, P?, RsP), match_part1(RsP?, B?, D?, A?, B2), match_part(Bs?, P?, D?, A?, Rs?, R2), app(B2?, R2?, R).
+procedure match_delta(Bindings?, Peer?, GAtoms?, GAtoms?, RoleSpecs?, Bindings).
+match_delta([], _, _, _, _, []).
+match_delta([B | Bs], P, D, A, Rs, R?) :- ground(B?), ground(P?), ground(D?), ground(A?), ground(Rs?) | specs_at(Rs?, 1, B?, P?, RsP), match_delta1(RsP?, B?, D?, A?, B2), match_delta(Bs?, P?, D?, A?, Rs?, R2), app(B2?, R2?, R).
 
-procedure match_part1(RoleSpecs?, Binding?, GAtoms?, GAtoms?, Bindings).
-match_part1(RsP, B, D, A, R?) :- ground(RsP?), ground(A?) | dels_of(RsP?, Dp), adds_of(RsP?, Ap), match_all(Dp?, D?, B?, B1), match_all_each(B1?, Ap?, A?, R).
+procedure match_delta1(RoleSpecs?, Binding?, GAtoms?, GAtoms?, Bindings).
+match_delta1(RsP, B, D, A, R?) :- ground(RsP?), ground(A?) | dels_of(RsP?, Dp), adds_of(RsP?, Ap), match_all(Dp?, D?, B?, B1), match_all_each(B1?, Ap?, A?, R).
 
 procedure dels_of(RoleSpecs?, SAtoms).
 dels_of([], []).
 dels_of([R | Rs], A?) :- rs_del(R?, A1), dels_of(Rs?, A2), app(A1?, A2?, A).
 
-procedure mates_check(Bindings?, Constant?, RoleSpecs?, Parts?, Mates).
+procedure mates_check(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_check([], _, _, _, []).
-mates_check([B | Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) | sig_of(Rs?, B?, Ps1), parts_eq(Ps?, Ps1?, E1), admissible(Rs?, B?, E2), and(E1?, E2?, E), mate_of(E?, B?, Nm?, Rs?, M1), mates_check(Bs?, Nm?, Rs?, Ps?, M2), app(M1?, M2?, M).
+mates_check([B | Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) | sig_of(Rs?, B?, Ps1), deltas_eq(Ps?, Ps1?, E1), admissible(Rs?, B?, E2), and(E1?, E2?, E), mate_of(E?, B?, Nm?, Rs?, M1), mates_check(Bs?, Nm?, Rs?, Ps?, M2), app(M1?, M2?, M).
 
 procedure mate_of(YesNo?, Binding?, Constant?, RoleSpecs?, Mates).
 mate_of(no, _, _, _, []).
@@ -1276,8 +1371,8 @@ unguarded_firsts([], []).
 unguarded_firsts([mate(_, _, [], F) | Ms], [F? | Fs?]) :- unguarded_firsts(Ms?, Fs).
 unguarded_firsts([mate(_, _, [_ | _], _) | Ms], Fs?) :- unguarded_firsts(Ms?, Fs).
 
-procedure in_class(RoleSpecs?, Binding?, Parts?, Parts?, Peers?, Mates?, YesNo).
-in_class(Rs, B, Ps, Ps1, Q, Ms, R?) :- parts_eq(Ps?, Ps1?, E), in_class1(E?, Rs?, B?, Q?, Ms?, R).
+procedure in_class(RoleSpecs?, Binding?, Deltas?, Deltas?, Peers?, Mates?, YesNo).
+in_class(Rs, B, Ps, Ps1, Q, Ms, R?) :- deltas_eq(Ps?, Ps1?, E), in_class1(E?, Rs?, B?, Q?, Ms?, R).
 
 procedure in_class1(YesNo?, RoleSpecs?, Binding?, Peers?, Mates?, YesNo).
 in_class1(no, _, _, _, _, no).
@@ -1538,19 +1633,19 @@ val_speech1(found(p(_)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 
 procedure st_id(St?, Peer).
-st_id(st(Id, _, _, _, _, _, _, _, _, _), Id?).
+st_id(st(Id, _, _, _, _, _, _, _, _, _, _), Id?).
 
 procedure st_app(St?, App).
-st_app(st(_, Ap, _, _, _, _, _, _, _, _), Ap?).
+st_app(st(_, Ap, _, _, _, _, _, _, _, _, _), Ap?).
 
 procedure st_count(St?, Integer).
-st_count(st(_, _, D, _, _, _, _, _, _, _), D?).
+st_count(st(_, _, D, _, _, _, _, _, _, _, _), D?).
 
 procedure st_sent(St?, Peers).
-st_sent(st(_, _, _, Se, _, _, _, _, _, _), Se?).
+st_sent(st(_, _, _, Se, _, _, _, _, _, _, _), Se?).
 
 procedure st_recd(St?, Peers).
-st_recd(st(_, _, _, _, Rc, _, _, _, _, _), Rc?).
+st_recd(st(_, _, _, _, Rc, _, _, _, _, _, _), Rc?).
 
 procedure st_known(St?, List(Key)).
 st_known(St, Ks?) :- ground(St?) | st_sent(St?, Se), st_isent(St?, ISe), app(Se?, ISe?, Ps), known_sorted(Ps?, St?, Ks).
@@ -1567,50 +1662,56 @@ keep_peer(yes, P, Ks, [P? | Ks?]).
 keep_peer(no, _, Ks, Ks?).
 
 procedure st_isent(St?, Peers).
-st_isent(st(_, _, _, _, _, ISe, _, _, _, _), ISe?).
+st_isent(st(_, _, _, _, _, ISe, _, _, _, _, _), ISe?).
 
 procedure st_irecd(St?, Peers).
-st_irecd(st(_, _, _, _, _, _, IRc, _, _, _), IRc?).
+st_irecd(st(_, _, _, _, _, _, IRc, _, _, _, _), IRc?).
 
 procedure st_waits(St?, Waits).
-st_waits(st(_, _, _, _, _, _, _, W, _, _), W?).
+st_waits(st(_, _, _, _, _, _, _, W, _, _, _), W?).
 
 procedure st_pends(St?, Pends).
-st_pends(st(_, _, _, _, _, _, _, _, _, Pd), Pd?).
+st_pends(st(_, _, _, _, _, _, _, _, _, Pd, _), Pd?).
 
 procedure set_app(St?, App?, St).
-set_app(st(Id, _, D, Se, Rc, ISe, IRc, W, Ca, Pd), Ap, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?)).
+set_app(st(Id, _, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), Ap, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
 
 procedure set_waits(St?, Waits?, St).
-set_waits(st(Id, Ap, D, Se, Rc, ISe, IRc, _, Ca, Pd), W, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?)).
+set_waits(st(Id, Ap, D, Se, Rc, ISe, IRc, _, Ca, Pd, Pr), W, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+
+procedure st_props(St?, Classes).
+st_props(st(_, _, _, _, _, _, _, _, _, _, Pr), Pr?).
+
+procedure set_props(St?, Classes?, St).
+set_props(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, _), Pr, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
 
 procedure set_pends(St?, Pends?, St).
-set_pends(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, _), Pd, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?)).
+set_pends(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, _, Pr), Pd, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
 
 procedure add_pend_once(Pend?, St?, St).
-add_pend_once(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd), st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?)) :- ground(X?), ground(Pd?) | mem(X?, Pd?, In), add_pend1(In?, X?, Pd?, Pd1).
+add_pend_once(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?)) :- ground(X?), ground(Pd?) | mem(X?, Pd?, In), add_pend1(In?, X?, Pd?, Pd1).
 
 procedure add_pend1(YesNo?, Pend?, Pends?, Pends).
 add_pend1(yes, _, Pd, Pd?).
 add_pend1(no, X, Pd, Pd1?) :- app(Pd?, [X?], Pd1).
 
 procedure drop_pend(Pend?, St?, St).
-drop_pend(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd), st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?)) :- remove_all(X?, Pd?, Pd1).
+drop_pend(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?)) :- remove_all(X?, Pd?, Pd1).
 
 procedure add_sent(Peer?, St?, St).
-add_sent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd), st(Id?, Ap?, D?, [Q? | Se?], Rc?, ISe?, IRc?, W?, Ca?, Pd?)).
+add_sent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, [Q? | Se?], Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
 
 procedure add_isent(Peer?, St?, St).
-add_isent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd), st(Id?, Ap?, D?, Se?, Rc?, [Q? | ISe?], IRc?, W?, Ca?, Pd?)).
+add_isent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, Rc?, [Q? | ISe?], IRc?, W?, Ca?, Pd?, Pr?)).
 
 procedure add_irecd(Peer?, St?, St).
-add_irecd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd), st(Id?, Ap?, D?, Se?, Rc?, ISe?, [P? | IRc?], W?, Ca?, Pd?)).
+add_irecd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, Rc?, ISe?, [P? | IRc?], W?, Ca?, Pd?, Pr?)).
 
 procedure add_recd(Peer?, St?, St).
-add_recd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd), st(Id?, Ap?, D?, Se?, [P? | Rc?], ISe?, IRc?, W?, Ca?, Pd?)).
+add_recd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, [P? | Rc?], ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
 
 procedure advance(St?, St).
-advance(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd), st(Id?, Ap?, D1?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?)) :- D1 := (D? + 1).
+advance(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D1?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)) :- D1 := (D? + 1).
 
 procedure app_recs(App?, Recs).
 app_recs(app(_, _, _, R), R?).
