@@ -1,0 +1,62 @@
+%% Test (xvii)'s sGLP source, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form").  Its surface form:
+%%
+%%   person stepper.
+%%   Ready =::= get_ready.
+%%   procedure get_ready(Ready?, Integer?).
+%%   get_ready(ready(R?), _) :- say(slot(R)) @ 1/day.
+%%   procedure say(Slot(YesNo)?).
+%%   say(slot(yes)).
+%%   Panel =::= judge_fast.
+%%   procedure judge_fast(Panel?, Integer?).
+%%   judge_fast(panel(Cs), _) :- judge_cards(Cs?).
+%%   procedure judge_cards(List(Card)?).
+%%   judge_cards([card(_, A?) | Cs]) :- verdict(slot(A)) @ 3600/hour, judge_cards(Cs?).
+%%   judge_cards([]).
+%%   procedure verdict(Slot(YesNo)?).
+%%   verdict(slot(yes)).
+%%
+%%   run 1 agents [stepping ~ (stepper : 1.0)] until 1 week seed 20260927.
+%%
+%% Ready and Panel are in writer mode (steps.vglp), so their person procedures
+%% are declared with their duals, Ready? and Panel? (Section 3, Definition
+%% "Dual, Person Procedure, Person Declaration"): the person says they are
+%% ready about a day after asked, and answers each card shown yes about a
+%% second after shown.  Shown a card at a time, the first card would be
+%% answered seconds after the start, a day before the readiness; shown whole,
+%% it is answered only after the readiness, once the second card is written.
+%%
+%% transform.sh prints from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface (steps.vglp; List, the root's) and its
+  %% compiled program's predicates (steps.glp).
+  [type('YesNo', [yes, no]),
+   type('Card', [card('Integer', dual('YesNo'))]),
+   type('Panel', [panel('List'('Card'))]),
+   type('Ready', [ready(dual('YesNo'))]),
+   type('List'('X'), [[], ['X' | 'List'('X')]]),
+   volitional('Ready', '\'Ready\'', ready_w, ready('YesNo')),
+   volitional('Panel', '\'Panel\'', panel_w, show(dual('List'('Card')))),
+   compiled(ready, 2), compiled(ready1, 3), compiled(show, 2), compiled(show1, 3),
+   compiled(steps, 2), compiled(second, 4)],
+
+  %% The profile and the run declaration.
+  [person(stepper),
+   binds('Ready', get_ready),
+   decl(get_ready(dual('Ready'), dual('Integer'))),
+   clause(get_ready(ready(var('R?')), var('_')), [], [rated(say(slot(var('R'))), rate(1, day))]),
+   decl(say(dual('Slot'('YesNo')))),
+   clause(say(slot(yes)), [], []),
+   binds('Panel', judge_fast),
+   decl(judge_fast(dual('Panel'), dual('Integer'))),
+   clause(judge_fast(panel(var('Cs')), var('_')), [], [judge_cards(var('Cs?'))]),
+   decl(judge_cards(dual('List'('Card')))),
+   clause(judge_cards([card(var('_'), var('A?')) | var('Cs')]), [],
+          [rated(verdict(slot(var('A'))), rate(3600, hour)), judge_cards(var('Cs?'))]),
+   clause(judge_cards([]), [], []),
+   decl(verdict(dual('Slot'('YesNo')))),
+   clause(verdict(slot(yes)), [], []),
+
+   run(1, [mix(stepping, [share(stepper, 1.0)])], 1, week, 20260927)]).

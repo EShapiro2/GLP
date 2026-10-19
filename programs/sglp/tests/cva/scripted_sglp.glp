@@ -1,0 +1,63 @@
+%% The sGLP source of the test of the harness of every canonical CVA platform
+%% (programs/sglp/cva/; sGLP's task of 2026-10-18 20:50 UTC, the gate: "a test
+%% of the harness on a canonical platform with scripted profiles of your own in
+%% tests/"), in the term form the transformation reads (programs/sglp/README.md,
+%% "The term form"), the profiles over the canonical platform's questions and
+%% nothing of its interface, which is the platform's as the cascade emits it
+%% (programs/sglp/cva/interface.sh).  It is written for the canonical platform
+%% of the social graph, GSG, and two agents, keyed p1 and p2 (cva/run.sh).  Its
+%% surface form:
+%%
+%%   person scripted.
+%%   Menu =::= script_menu.
+%%   procedure script_menu(Menu?, Integer?).
+%%   script_menu(menu(p1, [], R?), _) :- say(slot(R), known(p2)) @ 1/hour.
+%%   script_menu(menu(p2, [], R?), _) :- say(slot(R), known(p1)) @ 1/hour.
+%%   script_menu(menu(Me, [Q | _], R?), S) :-
+%%       random(S?, 2, K, _), act(K?, Me?, Q?, slot(R)) @ 1/hour.
+%%   procedure say(Slot(Request)?, Request?).
+%%   say(slot(V?), V).
+%%   procedure act(Integer?, Key?, Key?, Slot(Request)?).
+%%   act(1, Me, _, slot(propose(establish(Me?)))).
+%%   act(2, Me, Q, slot(propose(befriend(Me?, Q?)))).
+%%
+%%   person agreeable.
+%%   Approval =::= agree.
+%%   procedure agree(Approval?, Integer?).
+%%   agree(approval(_, A?), _) :- say_yes(slot(A)) @ 1/hour.
+%%   procedure say_yes(Slot(YesNo)?).
+%%   say_yes(slot(yes)).
+%%
+%%   run 2 agents [menus ~ (scripted : 1.0), approvals ~ (agreeable : 1.0)]
+%%       until 1 day seed 20260927.
+%%
+%% A request question shows the agent's own key and the persons it knows
+%% (vGLP, Section 5.4, "The compilation"); the scripted person, knowing nobody,
+%% asks to meet the other agent, whose key it is given, and, knowing someone,
+%% proposes establishing its identity or befriending the first person it knows,
+%% by a draw; the agreeable person approves every attempt it is asked about.
+
+exported procedure source(SglpTerms).
+source([
+   person(scripted),
+   binds('Menu', script_menu),
+   decl(script_menu(dual('Menu'), dual('Integer'))),
+   clause(script_menu(menu(p1, [], var('R?')), var('_')), [], [rated(say(slot(var('R')), known(p2)), rate(1, hour))]),
+   clause(script_menu(menu(p2, [], var('R?')), var('_')), [], [rated(say(slot(var('R')), known(p1)), rate(1, hour))]),
+   clause(script_menu(menu(var('Me'), [var('Q') | var('_')], var('R?')), var('S')), [],
+          [random(var('S?'), 2, var('K'), var('_')),
+           rated(act(var('K?'), var('Me?'), var('Q?'), slot(var('R'))), rate(1, hour))]),
+   decl(say(dual('Slot'('Request')), dual('Request'))),
+   clause(say(slot(var('V?')), var('V')), [], []),
+   decl(act(dual('Integer'), dual('Key'), dual('Key'), dual('Slot'('Request')))),
+   clause(act(1, var('Me'), var('_'), slot(propose(establish(var('Me?'))))), [], []),
+   clause(act(2, var('Me'), var('Q'), slot(propose(befriend(var('Me?'), var('Q?'))))), [], []),
+
+   person(agreeable),
+   binds('Approval', agree),
+   decl(agree(dual('Approval'), dual('Integer'))),
+   clause(agree(approval(var('_'), var('A?')), var('_')), [], [rated(say_yes(slot(var('A'))), rate(1, hour))]),
+   decl(say_yes(dual('Slot'('YesNo')))),
+   clause(say_yes(slot(yes)), [], []),
+
+   run(2, [mix(menus, [share(scripted, 1.0)]), mix(approvals, [share(agreeable, 1.0)])], 1, day, 20260927)]).

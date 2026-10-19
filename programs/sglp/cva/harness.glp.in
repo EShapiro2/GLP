@@ -1,0 +1,142 @@
+%% The harness of every canonical CVA platform under sGLP (sGLP's task of
+%% 2026-10-18 20:50 UTC, item 2; sGLP's paper: Section 3, Definitions "Person
+%% Process" and "Simulation Program"; Section 4, "The run"; Appendix B): the
+%% machine's setup, written once, for the canonical platform of any contract,
+%% its module platform.glp beside it, and the printed population of any sGLP
+%% source over that platform's questions, population.glp beside it.  The whole
+%% population is in one machine, as the guard when_idle requires (Section 4,
+%% "The guard").  Its goals:
+%%
+%%   at each agent a of 1..N, keyed by the a-th of Ks: its initial goal as
+%%   vGLP's compilation of the canonical platform states it, agent/5 of the
+%%   platform's module with its key, its input stream from the network, its
+%%   output stream to the network, the program's output to its person, which
+%%   no goal of the simulation reads, the dispatcher's place being the person
+%%   process's (Definition "Simulation Program"), and its ask stream (vGLP,
+%%   Section 5.4, "The compilation"); and its person process on that ask
+%%   stream, with its stochastic person and its seed, population.glp's
+%%   stochastic_agent/5;
+%%   at no agent, the network --- the root's mwm/2 merging the agents' output
+%%   streams, and a balanced tree of deliver/4 goals handing each message
+%%   msg(Q, C) to the input stream of the agent keyed Q, as the examples'
+%%   networks do, a message to a key of no agent of the run delivered to none
+%%   (GLP-Spec, the transaction Cold-call, which moves a message to the agent
+%%   it names) --- the monitor, with the run's seed and the horizon in seconds,
+%%   and the log's sink.
+%%
+%% The keys are the run script's: Key is String, which GLP makes of no number,
+%% so run.sh writes them, agent a's the letter p and a's number, zero-padded to
+%% the width of N, so that the keys of agents 1..N are in the order of their
+%% numbers both ways, which the tree's comparisons, @<, take.  The draws are
+%% the examples' (Appendix B): the monitor draws from the run's seed; the
+%% population's draws are from a second generator, started at the first value
+%% drawn from the run's seed and cut into blocks of 4096 draws, agent a's the
+%% a-th, from which population.glp draws its profiles and its person process's
+%% seed.
+
+imported procedure population#stochastic_agent(Integer?, Integer?, MutualRef?,
+                                               MutualRef?, Stream(Ask(Question))?).
+imported procedure population#stochastic_profiles(Integer?, _).
+
+%% run(Ks?, C?, U?, Seed?): the agents keyed Ks until C Us from Seed.
+exported procedure run(Stream(Key)?, Number?, Span?, Integer?).
+run(Ks, C, U, Seed) :- ground(Ks?), number(C?), integer(Seed?) |
+    span(U?, Secs),
+    H := C? * Secs?,
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, Entries),
+    send_to_user(Entries?),
+    monitor(Requests?, Seed?, H?, Log?),
+    random(Seed?, 2147483646, Base, _),
+    keys_length(Ks?, 0, N),
+    tree(1, N?, Ks?, Net?, Ins, []),
+    mwm(Merges?, Net),
+    agents(1, Ks?, Base?, Ins?, Merges, Mon?, Log?).
+
+%% agents(A?, Ks?, Block?, Ins?, Merges, Mon?, Log?): agents A.. keyed Ks,
+%% Block the start of A's block, Ins their input streams in order, Merges
+%% their output streams for mwm/2.
+procedure agents(Integer?, Stream(Key)?, Integer?, Stream(Stream(Net))?,
+                 MwmInput(Net), MutualRef?, MutualRef?).
+agents(A, [K|Ks], B, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :- integer(A?), integer(B?) |
+    agent(K?, In?, Out, _, Asks),
+    population # stochastic_agent(A?, B?, Mon?, Log?, Asks?),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    agents(A1?, Ks?, B2?, Ins?, Ms, Mon?, Log?).
+agents(_, [], _, [], [], _, _).
+
+%% draw(Ks?, Seed?, D): D the list of agent(A, P), each agent's stochastic
+%% person P, A of 1..N in order, drawn from its block as agents/7 draws it,
+%% without the run.
+exported procedure draw(Stream(Key)?, Integer?, Stream(_)).
+draw(Ks, Seed, D?) :- integer(Seed?) |
+    random(Seed?, 2147483646, Base, _),
+    draws(1, Ks?, Base?, D).
+procedure draws(Integer?, Stream(Key)?, Integer?, Stream(_)).
+draws(A, [_|Ks], B, [agent(A?, P?)|D?]) :- integer(A?), integer(B?) |
+    population # stochastic_profiles(B?, P),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    draws(A1?, Ks?, B2?, D).
+draws(_, [], _, []).
+
+%% skip(J?, S?, S1): S1 is the seed J draws after S, by J draws of random/4,
+%% each reduced before the next is spawned, as the examples' harnesses draw a
+%% block (Appendix B).
+procedure skip(Integer?, Integer?, Integer).
+skip(0, S, S?).
+skip(J, S, S1?) :-
+    J? > 0, integer(S?) |
+    random(S?, 1, _, S2),
+    J1 := J? - 1,
+    skip(J1?, S2?, S1).
+
+%% keys_length(Ks?, A?, N): N is A plus the number of keys in Ks.
+procedure keys_length(Stream(Key)?, Integer?, Integer).
+keys_length([], A, A?).
+keys_length([_|Ks], A, N?) :- A1 := A? + 1, keys_length(Ks?, A1?, N).
+
+%% nth_key(I?, Ks?, K): K is the I-th of Ks.
+procedure nth_key(Integer?, Stream(Key)?, Key).
+nth_key(1, [K|_], K?).
+nth_key(I, [_|Ks], K?) :- I? > 1 | I1 := I? - 1, nth_key(I1?, Ks?, K).
+nth_key(_, [], none).
+
+%% The network.  tree(Lo?, Hi?, Ks?, Ms?, Ins, Rest?): a balanced tree of
+%% deliver/4 goals over agents Lo..Hi, Ks the keys of all the agents, routing
+%% the messages Ms, Ins being the input streams of agents Lo..Hi in order,
+%% followed by Rest.
+procedure tree(Integer?, Integer?, Stream(Key)?, Stream(Net)?,
+               Stream(Stream(Net)), Stream(Stream(Net))?).
+tree(Lo, Hi, Ks, Ms, [In?|Rest?], Rest) :-
+    Lo? =:= Hi?, ground(Ks?) |
+    nth_key(Lo?, Ks?, K),
+    leaf(Ms?, K?, In).
+tree(Lo, Hi, Ks, Ms, Ins?, Rest) :-
+    Lo? < Hi?, ground(Ks?) |
+    Mid := (Lo? + Hi?) // 2,
+    Mid1 := Mid? + 1,
+    nth_key(Mid?, Ks?, MK),
+    deliver(Ms?, MK?, L, R),
+    tree(Lo?, Mid?, Ks?, L?, Ins, Ins1?),
+    tree(Mid1?, Hi?, Ks?, R?, Ins1, Rest?).
+
+%% deliver(Ms?, Mid?, Ls, Hs) sends each message of Ms addressed to a key
+%% that is Mid or precedes it to Ls, and each other to Hs.
+procedure deliver(Stream(Net)?, Key?, Stream(Net), Stream(Net)).
+deliver([msg(To, C)|Ms], Mid, [msg(To?, C?)|Ls?], Hs?) :-
+    To? =?= Mid? | deliver(Ms?, Mid?, Ls, Hs).
+deliver([msg(To, C)|Ms], Mid, [msg(To?, C?)|Ls?], Hs?) :-
+    To? @< Mid? | deliver(Ms?, Mid?, Ls, Hs).
+deliver([msg(To, C)|Ms], Mid, Ls?, [msg(To?, C?)|Hs?]) :-
+    Mid? @< To? | deliver(Ms?, Mid?, Ls, Hs).
+deliver([], _, [], []).
+
+%% leaf(Ms?, K?, In): the messages of Ms addressed to the agent keyed K, its
+%% input stream In; one addressed to another key, of no agent of the run, is
+%% dropped.
+procedure leaf(Stream(Net)?, Key?, Stream(Net)).
+leaf([msg(To, C)|Ms], K, [msg(To?, C?)|In?]) :- To? =?= K? | leaf(Ms?, K?, In).
+leaf([msg(To, _)|Ms], K, In?) :- To? =?\= K? | leaf(Ms?, K?, In).
+leaf([], _, []).
