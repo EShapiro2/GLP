@@ -6,7 +6,7 @@
 ///
 /// Usage:
 ///   glp_net_push --peer <service-pubkey-hex> --address <ip:port> \
-///     --message 'payload' [--identity pusher-identity.json] [--wait-ack]
+///     --message 'payload' [--identity pusher-identity.json] [--timeout 15]
 library;
 
 import 'dart:async';
