@@ -1231,6 +1231,50 @@ void main() {
     });
 
     _phoneTest(
+        'Alice after retiring Alf: Alf\'s row offers no Befriend, befriend '
+        'forbidding agent at both parties, while Carol\'s, a person, does',
+        (tester) async {
+      final p = await _Phone.open(tester, 'gai');
+      await p.views([
+        _v('[retired_of(alf), principal_of(alf), item($code), '
+            'authored($code), friend(bob), identity]', '[alf, bob, carol]')
+      ]);
+      await p.menu(1, _gaiProposals, known: '[alf, bob, carol]');
+      expect(p.key(1, 'person:alf'), findsOneWidget);
+      expect(p.key(1, 'befriend:alf'), findsNothing);
+      expect(p.key(1, 'unfriend:alf'), findsNothing);
+      expect(
+          find.descendant(
+              of: p.key(1, 'person:alf'), matching: find.byType(ElevatedButton)),
+          findsNothing);
+      expect(p.key(1, 'befriend:carol'), findsOneWidget);
+      expect(p.key(1, 'unfriend:bob'), findsOneWidget);
+      p.plain();
+    });
+
+    _phoneTest(
+        'Bob after ending his friendship with Alf: Alf\'s row, Alf recorded as '
+        'Alice\'s AI agent, offers no Befriend and still names its developer, '
+        'while Carol\'s, a person, offers Befriend', (tester) async {
+      final p = await _Phone.open(tester, 'gai', me: 'bob');
+      await p.views([
+        _v('[friend(alice), item($summary), agent_of(alf, alice, '
+            '$attestation), identity]', '[alf, alice, carol]')
+      ]);
+      await p.menu(1, _gaiProposals, known: '[alf, alice, carol]');
+      expect(p.key(1, 'person:alf'), findsOneWidget);
+      expect(p.key(1, 'befriend:alf'), findsNothing);
+      expect(p.key(1, 'unfriend:alf'), findsNothing);
+      expect(
+          find.descendant(
+              of: p.key(1, 'person:alf'), matching: find.text('Developer: Acme')),
+          findsOneWidget);
+      expect(p.key(1, 'befriend:carol'), findsOneWidget);
+      expect(p.key(1, 'unfriend:alice'), findsOneWidget);
+      p.plain();
+    });
+
+    _phoneTest(
         'no code held, no Create; an AI agent has no Create; and with no '
         'request question open, last_state lists the AI agents', (tester) async {
       final p = await _Phone.open(tester, 'gai', me: 'bob');
