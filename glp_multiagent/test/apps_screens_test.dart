@@ -15,12 +15,16 @@
 /// `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP
 /// with Persons, Grant"): the host hands each person's bridge every term of
 /// `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant
-/// the bridge returns, `input(Id, P, R)`.  The bridge draws each construct as
-/// the default widget of its interactive type (vGLP, Section 6.2, Definition
-/// "Default Widget"), and every act of the two persons is a tap, a keystroke
-/// or a submission on those widgets: the acts the scripted persons of the
-/// plays take (`person.glp`).  No term is hand-fed to the bridge or to the
-/// program.
+/// the bridge returns, `input(Id, P, R)`.  The bridge draws each construct by
+/// the widget of its interactive type: the approval question by the widget
+/// the app's declaration names, `Approval =::= approval_sentence.`
+/// (`programs/apps/<app>/self.vglp`; vGLP, Section 6.2, Definition "Widget
+/// Declaration"), a sentence and the buttons Yes and No
+/// (`lib/ui_runtime/named_widgets.dart`), and every other construct by the
+/// default widget of its type (Definition "Default Widget").  Every act of
+/// the two persons is a tap, a keystroke or a submission on those widgets:
+/// the acts the scripted persons of the plays take (`person.glp`).  No term
+/// is hand-fed to the bridge or to the program.
 ///
 /// Each screen is the person's phone, 390 by 844 logical pixels, rendered by
 /// the widget itself (RepaintBoundary.toImage) at a device pixel ratio of 3,
@@ -49,6 +53,7 @@ import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
+import 'package:glp_multiagent/ui_runtime/named_widgets.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
@@ -125,8 +130,8 @@ class _Person {
   /// persons it knows and the request it asks for (vGLP 321127a, Section 5.4).
   OpenConstruct get request => _one('menu');
 
-  /// The open approval question: the form `approval`, the attempt and the
-  /// person's yes or no.
+  /// The open approval question, `approval(Attempt, input([2]))`: drawn by
+  /// approval_sentence, the attempt as a sentence and the buttons Yes and No.
   OpenConstruct get approval => _one('approval');
 
   List<OpenConstruct> questions(String functor) => [
@@ -439,7 +444,7 @@ class _Run {
     await type(alice, c, 'peer', [3, 1, 1], alice.key);
     await type(alice, c, 'peer', [3, 1, 2], 'bob');
     await submit(alice, c, [3]);
-    await press(bob, bob.approval, 'yes');
+    await press(bob, bob.approval, 'Yes');
     expect(alice.thread, [
       'propose(attempt(alice, 1, 1, establish(alice)))',
       'discover(bob)',
@@ -565,18 +570,22 @@ void main() {
     await run.top(alice);
     await run.shoot(alice, 'gsg-04-alice-menu-bob.png');
 
-    // 5. Bob is asked: his approval question, the attempt shown and the
-    // buttons yes and no.
+    // 5. Bob is asked: his approval question, drawn by approval_sentence,
+    // "alice asks to befriend you.", and the buttons Yes and No.
     expect(bob.thread.last, 'start(attempt(alice, 2, 2, befriend(alice, bob)))');
     final a = bob.approval;
     expect(formatTerm(a.view),
         'approval(attempt(alice, 2, 2, befriend(alice, bob)), input([2]))');
+    expect(a.widget,
+        isA<GAtom>().having((w) => w.name, 'name', approvalSentenceName));
     await run.top(bob);
+    expect(run.on(bob, find.text('alice asks to befriend you.')),
+        findsOneWidget);
     await run.shoot(bob, 'gsg-05-bob-approval.png');
 
-    // 6. He taps yes: the question is withdrawn, and his thread shows his
-    // answer, his vote and the outcome.
-    await run.press(bob, a, 'yes');
+    // 6. He taps Yes, granting yes: the question is withdrawn, and his
+    // thread shows his answer, his vote and the outcome.
+    await run.press(bob, a, 'Yes');
     expect(bob.questions('approval'), isEmpty);
     expect(bob.thread.sublist(bob.thread.length - 3), [
       'answer(attempt(alice, 2, 2, befriend(alice, bob)))',
@@ -700,18 +709,25 @@ void main() {
     await run.submit(alice, q, [3]);
     expect(alice.thread.last, 'propose(attempt(alice, 5, 5, $join))');
 
-    // 6. Bob's approval question: the attempt, the group's name opened, and
-    // the buttons yes and no.
+    // 6. Bob's approval question, drawn by approval_sentence: "alice asks to
+    // join you.", the group's name, friends, by alice, and the buttons Yes
+    // and No.
     final a = bob.approval;
     expect(formatTerm(a.view), 'approval(attempt(alice, 5, 5, $join), input([2]))');
-    await run.open(bob, a, [1, 4, 3]);
-    await run.open(bob, a, [1, 4, 3, 1]);
-    await run.show(bob, run.node(bob, a, 'form', []));
+    await run.show(bob, run.on(bob, find.byKey(constructKey(a.id))));
+    expect(run.on(bob, find.text('alice asks to join you.')), findsOneWidget);
+    expect(
+        run.on(
+            bob,
+            find.descendant(
+                of: find.byKey(constructKey(a.id)),
+                matching: find.text('friends'))),
+        findsOneWidget);
     await run.shoot(bob, 'gsn-06-bob-join.png');
 
-    // 7. He taps yes: his answer, his vote and the outcome, the group's
+    // 7. He taps Yes: his answer, his vote and the outcome, the group's
     // name opened.
-    await run.press(bob, a, 'yes');
+    await run.press(bob, a, 'Yes');
     expect(bob.questions('approval'), isEmpty);
     expect(bob.thread.sublist(bob.thread.length - 3), [
       'answer(attempt(alice, 5, 5, $join))',
