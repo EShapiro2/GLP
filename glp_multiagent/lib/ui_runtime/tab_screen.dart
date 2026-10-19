@@ -8,7 +8,7 @@
 ///
 /// Where the request question is open, construct 0 is not drawn a second time: `social_menu` is drawn with the last value drawn on construct 0 ("A declared widget is drawn also with the last value drawn on construct 0, and is drawn again when that value changes, so that a request form can show the state the program last wrote to its person", vGLP e924f73, Section 6.2) and draws that view in the tab, with the request's controls in it, so what construct 0 shows is on the screen.  A construct 0 not drawn by `last_state` is drawn in Friends, by its widget, where no request question is open.
 ///
-/// The screen holds the chat open in Friends, opened by tapping a friend and closed by its back arrow, across the request questions the agent asks one after another, so that a chat stays open as its messages are sent.  It holds also, across them, the message of each Send in GSNP's chat, proposed on a later request question than the sign that precedes it, and the friend each item the person authored was sent to, in whose chat it is drawn (named_widgets.dart, `_chat`).
+/// The screen holds the chat open in Friends, opened by tapping a friend and closed by its back arrow, across the request questions the agent asks one after another, so that a chat stays open as its messages are sent.  It holds the person's own key, which each request question shows (vGLP, Section 5.4, "The compilation": the request question "shows the agent's own key and the persons it knows"), so that construct 0, drawn by `last_state` where no request question is open, draws a group the person leads with its members, as `social_menu` does.  It holds also, across them, the message of each Send in GSNP's chat, proposed on a later request question than the sign that precedes it, and the friend each item the person authored was sent to, in whose chat it is drawn (named_widgets.dart, `_chat`).
 library;
 
 import 'package:flutter/material.dart';
@@ -21,7 +21,7 @@ import 'term.dart';
 /// A tab of the screen.
 enum ScreenTab { friends, groups }
 
-/// A message held for a later request question: the item the person signed, the friend it is for, the request question that took the sign, [askedOn], and the count of notices written when it was held, [notices].
+/// A message held for a later request question: the item the person signed, the friend it is for, the request question that took the sign, [askedOn], and the count of notices written when it was held, [notices], those before the last view among them ([SocialState.written]).
 class HeldMessage {
   final GTerm item, friend;
   final int askedOn, notices;
@@ -34,6 +34,9 @@ class TabPlace extends InheritedWidget {
 
   /// The friend whose chat is open in Friends; null where none is.
   final GTerm? chat;
+
+  /// The person's own key, as the last request question drawn showed it; null where none has been drawn.
+  final GTerm? me;
 
   /// Open the chat with a friend, or, given null, close it.
   final void Function(GTerm? friend) openChat;
@@ -58,6 +61,7 @@ class TabPlace extends InheritedWidget {
     super.key,
     required this.tab,
     required this.chat,
+    this.me,
     required this.openChat,
     this.held = const [],
     required this.hold,
@@ -75,6 +79,7 @@ class TabPlace extends InheritedWidget {
   bool updateShouldNotify(TabPlace old) =>
       old.tab != tab ||
       old.version != version ||
+      (old.me == null) != (me == null) ||
       (old.chat == null) != (chat == null) ||
       (chat != null && formatTerm(old.chat!) != formatTerm(chat!));
 }
@@ -138,6 +143,9 @@ class _TabScreenState extends State<TabScreen> {
   /// Whether Groups has been drawn: once drawn, it stays.
   bool _groups = false;
 
+  /// The person's own key, as the last request question drawn showed it.
+  GTerm? _me;
+
   /// The messages held for a later request question ([TabPlace.hold]).
   final List<HeldMessage> _held = [];
 
@@ -193,18 +201,24 @@ class _TabScreenState extends State<TabScreen> {
     }
     final output = c0?.view;
     final (_, state) = SocialState.read(output);
+    if (request != null) {
+      final (f, xs) = ctorArgs(request.view);
+      if (f == 'menu' && xs.length == 3 && pendingAt(xs[0]) == null) {
+        _me = xs[0];
+      }
+    }
     final offers = request == null
         ? null
         : RequestOffers.of(namedWidget(request.widget)!.$2);
     _groups = _groups ||
         (offers?.has('create', 2) ?? false) ||
-        (state?.groups.isNotEmpty ?? false) ||
+        (state?.inGroup ?? false) ||
         (state?.notices.any((n) => n.concernsGroup) ?? false) ||
         approvals.any(_concernsGroup);
     // A message whose sign closed without committing, its notice written
     // after the message was held, is held no longer.
     if (state != null) {
-      _held.removeWhere((h) => state.notices.skip(h.notices).any((n) {
+      _held.removeWhere((h) => state.written.skip(h.notices).any((n) {
             final (f, xs) = ctorArgs(n.part);
             return f == 'sign' &&
                 xs.length == 2 &&
@@ -228,6 +242,7 @@ class _TabScreenState extends State<TabScreen> {
     Widget tab(ScreenTab t) => TabPlace(
           tab: t,
           chat: t == ScreenTab.friends ? _chat : null,
+          me: _me,
           openChat: (f) => setState(() => _chat = f),
           held: List.unmodifiable(_held),
           hold: _hold,

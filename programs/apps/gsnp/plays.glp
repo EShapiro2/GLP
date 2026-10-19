@@ -1,15 +1,19 @@
-%% plays.glp --- the GSNP mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for three executions, with the two ends of each of two root channels handed to them as their conversations, alice's and bob's and bob's and carol's, the play standing in for the social graph, as ../gsn/plays.glp does for two.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.  The super-app hosting the mini-app on smartphones is ../gsnp_boot.glp.
+%% plays.glp --- the GSNP mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for five executions, with the two ends of each of four root channels handed to them as their conversations, dan's and eve's, eve's and carol's, carol's and bob's, and bob's and fay's, the play standing in for the social graph, as ../gsn/plays.glp does for two.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.  The super-app hosting the mini-app on smartphones is ../gsnp_boot.glp.
 
 imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
-%% play_provenance(A, B, C): alice, bob and carol, a conversation between alice's and bob's executions and one between bob's and carol's.  Each establishes their identity (GSG:1, Identity); alice and bob ask to know each other, and alice offers bob friendship and he answers yes (GSG:2, Friendship); alice signs the item 'Flood on Main Street' (GSNP:1, Authorship) and sends it to bob in a message, who holds it as she signed it (GSN:1, Message); bob then asks to know carol, who asked to know him, and offers her friendship, and she answers yes; and bob forwards the item to carol (GSNP:2, Forwarding), who holds it signed by alice and then by bob.
-exported procedure play_provenance(Stream(Seen), Stream(Seen), Stream(Seen)).
-play_provenance(A?, B?, C?) :-
+%% play_provenance(D, E, C, B, F): the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), dan, eve, carol, bob and fay, with a conversation between the executions of each two of them who become friends.  Each establishes their identity (GSG:1, Identity); dan and eve, eve and carol, carol and bob, and bob and fay each ask to know each other, and the first of each two offers the second friendship, who answers yes (GSG:2, Friendship); dan signs the item 'Flood on Main Street' (GSNP:1, Authorship) and sends it to eve in a message, who holds it as he signed it (GSN:1, Message); eve forwards it to carol, and carol forwards it to bob (GSNP:2, Forwarding), who holds it signed by dan, then by eve, then by carol.
+exported procedure play_provenance(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_provenance(D?, E?, C?, B?, F?) :-
     self_module(M),
     find_type(miniapp/4, T),
-    run(miniapp(alice, ch(GA?, DA), ch([conversation(bob, ch(BA?, AB))], _), []), T?, M?),
-    person # miniapp_person(alice, alice, ch(DA?, GA), A),
-    run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA)), conversation(carol, ch(CB?, BC))], _), []), T?, M?),
-    person # miniapp_person(bob, bob, ch(DB?, GB), B),
-    run(miniapp(carol, ch(GC?, DC), ch([conversation(bob, ch(BC?, CB))], _), []), T?, M?),
-    person # miniapp_person(carol, carol, ch(DC?, GC), C).
+    run(miniapp(dan, ch(GD?, WD), ch([conversation(eve, ch(ED?, DE))], _), []), T?, M?),
+    person # miniapp_person(dan, dan, ch(WD?, GD), D),
+    run(miniapp(eve, ch(GE?, WE), ch([conversation(dan, ch(DE?, ED)), conversation(carol, ch(CE?, EC))], _), []), T?, M?),
+    person # miniapp_person(eve, eve, ch(WE?, GE), E),
+    run(miniapp(carol, ch(GC?, WC), ch([conversation(eve, ch(EC?, CE)), conversation(bob, ch(BC?, CB))], _), []), T?, M?),
+    person # miniapp_person(carol, carol, ch(WC?, GC), C),
+    run(miniapp(bob, ch(GB?, WB), ch([conversation(carol, ch(CB?, BC)), conversation(fay, ch(FB?, BF))], _), []), T?, M?),
+    person # miniapp_person(bob, bob, ch(WB?, GB), B),
+    run(miniapp(fay, ch(GF?, WF), ch([conversation(bob, ch(BF?, FB))], _), []), T?, M?),
+    person # miniapp_person(fay, fay, ch(WF?, GF), F).
