@@ -157,6 +157,20 @@
 %%   count(a)         :  at a  counting, +tick
 %%
 %% count is guarded at no role and has one role and no variable, so the atoms its role requires need name no other role and no variable, and the contract is effective; its schema-binding at a determines an unguarded part opened by a, in the domain of a's function wherever a holds counting, which no act deletes.  begin, guarded by a, lets the play choose whose agent counts.  counter/self.glp plays it.
+%%
+%% merges is befriend with groups, a leader merging two of their groups in one act of the leader and of every member the leader lists in either, so that a contract compiled here has a schema with two listed roles of one base, a[listed(*, n1)] and a[listed(*, n2)] (vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC); a group is named by its leader and a speech act, and its leader does not list themself:
+%%
+%%   befriend(p?, q?)   :  at p  not friend(q), +friend(q)
+%%                         at q  not friend(p), +friend(p)
+%%   create(a? ; n)     :  at a  not leads(n), +leads(n)
+%%   join(a?, q? ; n)   :  at a  leads(n), friend(q), +listed(q, n)
+%%                         at q  friend(a), not member(a, n), +member(a, n)
+%%   merge(a?, a[listed(*, n1)], a[listed(*, n2)] ; n1, n2) :
+%%                         at a                  leads(n1), -leads(n2), +merged(n2, n1)
+%%                         at a[listed(*, n1)]   member(a, n1), +merged(n2, n1)
+%%                         at a[listed(*, n2)]   -member(a, n2), +member(a, n1)
+%%
+%% The members of n2 become members of n1, the members of n1 record the merger, and the leader leads n2 no more.  A schema-binding of merge determines a part for each pair of lists, of the people of each listed role, the persons q with listed(q, n1), and with listed(q, n2), in the state of the person in a, and the base person requires that it list exactly the people of each (ibid.).  Its request name is merge(a, n1, n2), and the base agent, on its person's request, completes both lists from its listed atoms.  The base of both listed roles, a, is merge's only guarding role, as Section 5.4 asks.  merges/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it.
@@ -194,6 +208,7 @@ contract_named(parts, C?) :- parts(C).
 contract_named(opens, C?) :- opens(C).
 contract_named(groups, C?) :- groups(C).
 contract_named(counter, C?) :- counter(C).
+contract_named(merges, C?) :- merges(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -211,6 +226,7 @@ introduction_named(parts, no_introduction).
 introduction_named(opens, no_introduction).
 introduction_named(groups, no_introduction).
 introduction_named(counter, no_introduction).
+introduction_named(merges, no_introduction).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -350,3 +366,22 @@ counter([schema(befriend, [],
            [rs(guarded, [atom(counting, [])], [], [], [atom(counting, [])])]),
          schema(count, [],
            [rs(unguarded, [atom(tick, [])], [], [atom(counting, [])], [])])]).
+
+procedure merges(Contract).
+merges([schema(befriend, [],
+          [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+           rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+        schema(create, [svar(n)],
+          [rs(guarded, [atom(leads, [svar(n)])], [], [], [atom(leads, [svar(n)])])]),
+        schema(join, [svar(n)],
+          [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
+                       [atom(leads, [svar(n)]), atom(friend, [role(2)])], []),
+           rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])],
+                       [atom(member, [role(1), svar(n)])])]),
+        schema(merge, [svar(n1), svar(n2)],
+          [rs(guarded, [atom(merged, [svar(n2), svar(n1)])], [atom(leads, [svar(n2)])],
+                       [atom(leads, [svar(n1)])], []),
+           crs(listed(1, listed, [svar(n1)]), unguarded,
+               [atom(merged, [svar(n2), svar(n1)])], [], [atom(member, [role(1), svar(n1)])], []),
+           crs(listed(1, listed, [svar(n2)]), unguarded,
+               [atom(member, [role(1), svar(n1)])], [atom(member, [role(1), svar(n2)])], [], [])])]).

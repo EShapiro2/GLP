@@ -1,0 +1,82 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract merges (../contracts.glp, contract_named(merges, C): befriend and groups, a leader merging two of their groups in one act of the leader and of every member the leader lists in either, merge(a?, a[listed(*, n1)], a[listed(*, n2)] ; n1, n2), two listed roles of one base, GSC 8064cfb, Appendix D), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform"), and a schema-binding of merge determining a part for each pair of lists of the people of its two listed roles, the base person listing exactly them (vGLP c649c0d, Section 5.4, "Act schemas as local specifications"; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC).  It runs three agents, alice, bob and carol, their persons scripted and paced on their screens (../self.glp), and gives each person's log, the views with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries.
+%%
+%% play_merges: alice befriends bob and carol, each asked and answering yes.  She creates two groups, n1, speech(utterance(one), alice), and n2, speech(utterance(two), alice), adds bob to n1 and carol to n2, each asked and answering yes, and requests merge(alice, n1, n2), the request name of merge (vGLP, Section 5.4, "The compilation": propose(N), N a request name): her agent completes both lists from the people she lists, merge(alice, [bob], [carol], n1, n2), and proposes it; bob's and carol's machines vote yes, unasked, the listed roles marking no one, and it commits at all three: carol a member of n1 and no more of n2, bob and alice recording the merger, alice leading n2 no more.
+%%
+%% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Speech   ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+Class    ::= befriend(Peer, Peer) ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+           ; merge(Peer, List(Peer), List(Peer), Speech, Speech).
+Proposal ::= befriend(Peer, Peer) ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+           ; merge(Peer, Speech, Speech).
+Request  ::= propose(Proposal) ; known(Peer).
+YesNo    ::= yes ; no.
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+           ; yield(Attempt).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Atom     ::= friend(Peer) ; leads(Speech) ; listed(Peer, Speech) ; member(Peer, Speech)
+           ; merged(Speech, Speech).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Approval ::= approval(Attempt, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_merges(Stream(_), Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_merges(LA?, LB?, LC?, N?) :-
+    trio([req(known(bob)), req(known(carol)),
+          wait(known(bob)), wait(known(carol)),
+          own([A1], propose(befriend(A1?, bob))),
+          wait(holds(friend(bob))),
+          own([A2], propose(befriend(A2?, carol))),
+          wait(holds(friend(carol))),
+          own([A3, A4], propose(create(A3?, speech(utterance(one), A4?)))),
+          wait(holds(leads(speech(utterance(one), alice)))),
+          own([A5, A6], propose(create(A5?, speech(utterance(two), A6?)))),
+          wait(holds(leads(speech(utterance(two), alice)))),
+          own([A7, A8], propose(join(A7?, bob, speech(utterance(one), A8?)))),
+          wait(holds(listed(bob, speech(utterance(one), alice)))),
+          own([A9, A10], propose(join(A9?, carol, speech(utterance(two), A10?)))),
+          wait(holds(listed(carol, speech(utterance(two), alice)))),
+          own([A11, A12, A13], propose(merge(A11?, speech(utterance(one), A12?),
+                                             speech(utterance(two), A13?))))],
+         [req(known(alice)), wait(known(alice)),
+          approval(befriend(alice, bob), yes),
+          approval(join(alice, bob, speech(utterance(one), alice)), yes)],
+         [req(known(alice)), wait(known(alice)),
+          approval(befriend(alice, carol), yes),
+          approval(join(alice, carol, speech(utterance(two), alice)), yes)],
+         LA, LB, LC, N).
+
+%% alice, bob and carol, each with its dispatcher and scripted person, their
+%% networks joined.
+procedure trio(Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    merge(OutA?, OutB?, Net1),
+    merge(Net1?, OutC?, Net),
+    route3(Net?, alice, InA, bob, InB, carol, InC, N).
