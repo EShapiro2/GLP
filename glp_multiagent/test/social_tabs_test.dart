@@ -1132,7 +1132,7 @@ void main() {
   // the other party, and the developer read from the attestation, y of
   // agent_of(r, p, y), its first signer.
   group('GAI', () {
-    const code = "speech(speech(utterance('The code of Alf'), acme), alice)";
+    const code = "speech(speech(utterance('The code of Alf'), acme_ltd), alice)";
     const attestation = 'speech($code, alice)';
     final summary = _sp('Summary of the news', 'alf');
     const aliceState = '[principal_of(alf), friend(alf), item($code), '
@@ -1147,15 +1147,15 @@ void main() {
         ];
 
     _phoneTest(
-        '(a) Alice\'s AI agents tab: Create an AI agent, Name, "Code signed by '
-        'Acme", "You attest that Alf runs it." and Create, proposing '
-        'enter(alice, alf, k); then Alf listed with Retire, proposing '
-        'retire(alice, alf); once retired, "Retired"', (tester) async {
+        '(a) Alice\'s AI agents tab: Create an AI agent, Name and the code, '
+        '"Code signed by Acme Ltd", "You attest that Alf runs it." and Create, '
+        'proposing sign(alice, k) and, once her view holds item(k), '
+        'enter(alice, alf, k); what she typed stays; then Alf listed with '
+        'Retire, proposing retire(alice, alf); once retired, "Retired"',
+        (tester) async {
+      final k = formatTerm(fixtureTerm(code));
       final p = await _Phone.open(tester, 'gai');
-      await p.views([
-        _v('[item($code), authored($code), friend(bob), identity]',
-            '[alf, bob]')
-      ]);
+      await p.views([_v('[friend(bob), identity]', '[alf, bob]')]);
       await p.menu(1, _gaiProposals, known: '[alf, bob]');
       expect(find.byKey(tabKey(ScreenTab.friends)), findsOneWidget);
       expect(find.byKey(tabKey(ScreenTab.groups)), findsNothing);
@@ -1163,42 +1163,70 @@ void main() {
       expect(find.text('AI agents'), findsOneWidget);
       await p.tab(ScreenTab.agents);
       expect(find.text('Create an AI agent'), findsOneWidget);
-      expect(find.text('Code signed by Acme'), findsOneWidget);
+      expect(find.text('Code signed by its developer'), findsOneWidget);
       expect(find.text('You attest that the AI agent runs it.'), findsOneWidget);
-      expect(tester.widget<ElevatedButton>(p.key(1, 'create-agent')).onPressed,
-          isNull);
+      Future<void> createEnabled(int id, bool enabled) async => expect(
+          tester.widget<ElevatedButton>(p.key(id, 'create-agent')).onPressed !=
+              null,
+          enabled);
+      await createEnabled(1, false);
       await p.type(p.key(1, 'agent-name'), 'alf');
       expect(find.text('You attest that Alf runs it.'), findsOneWidget);
+      await createEnabled(1, false);
+      await p.type(p.key(1, 'agent-code'), 'The code of Alf');
+      await p.type(p.key(1, 'agent-developer'), 'acme_ltd');
+      expect(find.text('Code signed by Acme Ltd'), findsOneWidget);
+      await createEnabled(1, true);
       p.plain();
       await p.tap(p.key(1, 'create-agent'));
-      expect(p.grants,
-          ['input(1, [3], propose(enter(alice, alf, ${formatTerm(fixtureTerm(code))})))']);
-      // Once enter commits, Alice is Alf's principal: Alf listed, with Retire.
+      expect(p.grants, ['input(1, [3], propose(sign(alice, $k)))']);
+      // The sign commits: her view holds item(k); on the next request
+      // question the creation is proposed, and only then.
       await p.draw('withdraw(1)');
-      await p.views([_v(aliceState, '[alf, bob]')]);
+      await p.views([
+        _v('[friend(bob), identity]', '[alf, bob]'),
+        _v('[item($code), authored($code), friend(bob), identity]',
+            '[alf, bob]'),
+      ]);
+      expect(p.grants, hasLength(1));
       await p.menu(2, _gaiProposals, known: '[alf, bob]');
+      expect(p.grants, [
+        'input(1, [3], propose(sign(alice, $k)))',
+        'input(2, [3], propose(enter(alice, alf, $k)))',
+      ]);
+      // Once enter commits, Alice is Alf's principal: Alf listed, with
+      // Retire; the form keeps what she typed, and Create is disabled, Alf
+      // being her AI agent.
+      await p.draw('withdraw(2)');
+      await p.views([_v(aliceState, '[alf, bob]')]);
+      await p.menu(3, _gaiProposals, known: '[alf, bob]');
       await p.tab(ScreenTab.agents);
+      expect(find.text('You attest that Alf runs it.'), findsOneWidget);
+      expect(find.text('Code signed by Acme Ltd'), findsOneWidget);
+      await createEnabled(3, false);
       expect(
           find.descendant(
-              of: p.key(2, 'agent:alf'),
+              of: p.key(3, 'agent:alf'),
               matching: find.widgetWithText(OutlinedButton, 'Retire')),
           findsOneWidget);
-      expect(p.texts(), containsAllInOrder(['Create an AI agent', 'Alf', 'Retire']));
+      expect(p.texts(),
+          containsAllInOrder(['Create an AI agent', 'Create', 'Alf', 'Retire']));
+      expect(p.grants, hasLength(2));
       p.plain();
-      await p.tap(p.key(2, 'retire:alf'));
-      expect(p.grants.last, 'input(2, [3], propose(retire(alice, alf)))');
+      await p.tap(p.key(3, 'retire:alf'));
+      expect(p.grants.last, 'input(3, [3], propose(retire(alice, alf)))');
       // Once retired, Alf is listed as retired, with no Retire.
-      await p.draw('withdraw(2)');
+      await p.draw('withdraw(3)');
       await p.views([
         _v('[retired_of(alf), principal_of(alf), item($code), '
             'authored($code), friend(bob), identity]', '[alf, bob]')
       ]);
-      await p.menu(3, _gaiProposals, known: '[alf, bob]');
+      await p.menu(4, _gaiProposals, known: '[alf, bob]');
       await p.tab(ScreenTab.agents);
       expect(
-          find.descendant(of: p.key(3, 'agent:alf'), matching: find.text('Retired')),
+          find.descendant(of: p.key(4, 'agent:alf'), matching: find.text('Retired')),
           findsOneWidget);
-      expect(p.key(3, 'retire:alf'), findsNothing);
+      expect(p.key(4, 'retire:alf'), findsNothing);
     });
 
     _phoneTest(
@@ -1267,7 +1295,7 @@ void main() {
       expect(p.key(1, 'unfriend:alf'), findsNothing);
       expect(
           find.descendant(
-              of: p.key(1, 'person:alf'), matching: find.text('Developer: Acme')),
+              of: p.key(1, 'person:alf'), matching: find.text('Developer: Acme Ltd')),
           findsOneWidget);
       expect(p.key(1, 'befriend:carol'), findsOneWidget);
       expect(p.key(1, 'unfriend:alice'), findsOneWidget);
@@ -1275,13 +1303,14 @@ void main() {
     });
 
     _phoneTest(
-        'no code held, no Create; an AI agent has no Create; and with no '
-        'request question open, last_state lists the AI agents', (tester) async {
+        'a person without an AI agent has the form; an AI agent has no Create; '
+        'and with no request question open, last_state lists the AI agents, '
+        'with no form and no Retire', (tester) async {
       final p = await _Phone.open(tester, 'gai', me: 'bob');
       await p.views([_v('[friend(alice), identity]', '[alf, alice]')]);
       await p.menu(1, _gaiProposals, known: '[alf, alice]');
       await p.tab(ScreenTab.agents);
-      expect(find.text('Create an AI agent'), findsNothing);
+      expect(find.text('Create an AI agent'), findsOneWidget);
       await p.draw('withdraw(1)');
       await p.views([
         _v('[agent, principal(alice), item($code), authored($code), '
@@ -1294,6 +1323,7 @@ void main() {
       await p.views([_v(aliceState, '[alf, bob]')]);
       await p.tab(ScreenTab.agents);
       expect(p.key(0, 'agent:alf'), findsOneWidget);
+      expect(find.text('Create an AI agent'), findsNothing);
       expect(find.text('Retire'), findsNothing);
     });
 
@@ -1315,8 +1345,8 @@ void main() {
 
     _phoneTest(
         '(c) Bob asked to befriend Alf: "Alf, an AI agent of Alice, asks to '
-        'befriend you.", "Developer: Acme", "Befriend Alf?", Yes and No; then '
-        'Alf\'s row and its item, each with "Developer: Acme"', (tester) async {
+        'befriend you.", "Developer: Acme Ltd", "Befriend Alf?", Yes and No; then '
+        'Alf\'s row and its item, each with "Developer: Acme Ltd"', (tester) async {
       final p = await _Phone.open(tester, 'gai', me: 'bob');
       await p.views([_v('[friend(alice), identity]', '[alf, alice]')]);
       await p.menu(1, _gaiProposals, known: '[alf, alice]');
@@ -1325,7 +1355,7 @@ void main() {
       await p.top();
       expect(textsOf(tester, 5), [
         'Alf, an AI agent of Alice, asks to befriend you.',
-        'Developer: Acme',
+        'Developer: Acme Ltd',
         'Befriend Alf?',
         'Yes',
         'No',
@@ -1355,7 +1385,7 @@ void main() {
             of: p.key(2, 'person:alf'), matching: find.byType(Text))))
           t.data,
       ];
-      expect(row, containsAllInOrder(['Alf', 'Developer: Acme']));
+      expect(row, containsAllInOrder(['Alf', 'Developer: Acme Ltd']));
       p.plain();
       await p.tap(p.key(2, 'person:alf'));
       expect(p.key(2, 'chat:alf'), findsOneWidget);
@@ -1369,7 +1399,7 @@ void main() {
           [
             'Summary of the news',
             'Author: Alf, an AI agent of Alice',
-            'Developer: Acme',
+            'Developer: Acme Ltd',
             'Forward',
           ]);
       p.plain();

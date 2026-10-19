@@ -8,7 +8,7 @@
 ///
 /// Where the request question is open, construct 0 is not drawn a second time: `social_menu` is drawn with the last value drawn on construct 0 ("A declared widget is drawn also with the last value drawn on construct 0, and is drawn again when that value changes, so that a request form can show the state the program last wrote to its person", vGLP e924f73, Section 6.2) and draws that view in the tab, with the request's controls in it, so what construct 0 shows is on the screen.  A construct 0 not drawn by `last_state` is drawn in Friends, by its widget, where no request question is open.
 ///
-/// The screen holds the chat open in Friends, opened by tapping a friend and closed by its back arrow, across the request questions the agent asks one after another, so that a chat stays open as its messages are sent.  It holds the person's own key, which each request question shows (vGLP, Section 5.4, "The compilation": the request question "shows the agent's own key and the persons it knows"), so that construct 0, drawn by `last_state` where no request question is open, draws a group the person leads with its members, as `social_menu` does.  It holds also, across them, the message of each Send in GSNP's chat, proposed on a later request question than the sign that precedes it, and the friend each item the person authored was sent to, in whose chat it is drawn (named_widgets.dart, `_chat`).
+/// The screen holds the chat open in Friends, opened by tapping a friend and closed by its back arrow, across the request questions the agent asks one after another, so that a chat stays open as its messages are sent.  It holds the person's own key, which each request question shows (vGLP, Section 5.4, "The compilation": the request question "shows the agent's own key and the persons it knows"), so that construct 0, drawn by `last_state` where no request question is open, draws a group the person leads with its members, as `social_menu` does.  It holds also, across them, the message of each Send in GSNP's chat, proposed on a later request question than the sign that precedes it, and the friend each item the person authored was sent to, in whose chat it is drawn (named_widgets.dart, `_chat`); in GAI's app, the creation of each AI agent, its enter proposed on a later request question than the sign of its code, and what the person typed into the form Create an AI agent (named_widgets.dart, `_create`).
 library;
 
 import 'package:flutter/material.dart';
@@ -26,6 +26,13 @@ class HeldMessage {
   final GTerm item, friend;
   final int askedOn, notices;
   const HeldMessage(this.item, this.friend, this.askedOn, this.notices);
+}
+
+/// An AI agent's creation held for a later request question: the code the person signed, [item], the key of the AI agent, [agent], the request question that took the sign, [askedOn], and the count of notices written when it was held, [notices] (named_widgets.dart, `_create`).
+class HeldEnter {
+  final GTerm item, agent;
+  final int askedOn, notices;
+  const HeldEnter(this.item, this.agent, this.askedOn, this.notices);
 }
 
 /// The tab a widget is drawn in, the chat open in Friends, and the messages the screen holds.
@@ -54,6 +61,19 @@ class TabPlace extends InheritedWidget {
   /// The friend the person sent, or is to send, the item [item] they authored; null where it was not sent from a chat on this screen.
   final GTerm? Function(GTerm item) destination;
 
+  /// The creations of AI agents held, in the order held.
+  final List<HeldEnter> heldEnters;
+
+  /// Hold the creation of the AI agent [agent] with the code [item], its sign proposed on the request question [askedOn] when [notices] notices were written.
+  final void Function(GTerm item, GTerm agent, int askedOn, int notices)?
+      holdEnter;
+
+  /// Take the creation with the code [item] off the held; false where it is not held, so that it is proposed once.
+  final bool Function(GTerm item)? releaseEnter;
+
+  /// The text of the screen's field [key], held across the request questions the agent asks one after another, so that what the person typed stays.
+  final TextEditingController Function(String key)? field;
+
   /// The count of changes to the held and the sent, so that a change is drawn.
   final int version;
 
@@ -67,6 +87,10 @@ class TabPlace extends InheritedWidget {
     required this.hold,
     required this.release,
     required this.destination,
+    this.heldEnters = const [],
+    this.holdEnter,
+    this.releaseEnter,
+    this.field,
     this.version = 0,
     required super.child,
   });
@@ -155,14 +179,48 @@ class _TabScreenState extends State<TabScreen> {
   /// The friend each item the person authored was sent to, by the item's term as written.
   final Map<String, GTerm> _sent = {};
 
-  /// The count of changes to [_held] and [_sent].
+  /// The creations of AI agents held for a later request question ([TabPlace.holdEnter]).
+  final List<HeldEnter> _heldEnters = [];
+
+  /// The screen's fields, by key ([TabPlace.field]).
+  final Map<String, TextEditingController> _fields = {};
+
+  /// The count of changes to [_held], [_sent] and [_heldEnters].
   int _version = 0;
+
+  @override
+  void dispose() {
+    for (final c in _fields.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  TextEditingController _field(String key) =>
+      _fields.putIfAbsent(key, TextEditingController.new);
 
   void _hold(GTerm item, GTerm friend, int askedOn, int notices) =>
       setState(() {
         _held.add(HeldMessage(item, friend, askedOn, notices));
         _version++;
       });
+
+  void _holdEnter(GTerm item, GTerm agent, int askedOn, int notices) =>
+      setState(() {
+        _heldEnters.add(HeldEnter(item, agent, askedOn, notices));
+        _version++;
+      });
+
+  bool _releaseEnter(GTerm item) {
+    final k = formatTerm(item);
+    final i = _heldEnters.indexWhere((h) => formatTerm(h.item) == k);
+    if (i < 0) return false;
+    setState(() {
+      _heldEnters.removeAt(i);
+      _version++;
+    });
+    return true;
+  }
 
   bool _release(GTerm item) {
     final k = formatTerm(item);
@@ -221,15 +279,18 @@ class _TabScreenState extends State<TabScreen> {
     _agents = _agents ||
         (offers?.has('enter', 3) ?? false) ||
         (state?.aiAgents.isNotEmpty ?? false);
-    // A message whose sign closed without committing, its notice written
-    // after the message was held, is held no longer.
+    // A message or a creation whose sign closed without committing, its
+    // notice written after it was held, is held no longer.
     if (state != null) {
-      _held.removeWhere((h) => state.written.skip(h.notices).any((n) {
+      bool signClosed(GTerm item, int notices) =>
+          state.written.skip(notices).any((n) {
             final (f, xs) = ctorArgs(n.part);
             return f == 'sign' &&
                 xs.length == 2 &&
-                formatTerm(xs[1]) == formatTerm(h.item);
-          }));
+                formatTerm(xs[1]) == formatTerm(item);
+          });
+      _held.removeWhere((h) => signClosed(h.item, h.notices));
+      _heldEnters.removeWhere((h) => signClosed(h.item, h.notices));
     }
     final tabs = [
       ScreenTab.friends,
@@ -258,6 +319,10 @@ class _TabScreenState extends State<TabScreen> {
           hold: _hold,
           release: _release,
           destination: _destination,
+          heldEnters: List.unmodifiable(_heldEnters),
+          holdEnter: _holdEnter,
+          releaseEnter: _releaseEnter,
+          field: _field,
           version: _version,
           child: ListView(
             key: ValueKey('tab-view:${t.name}'),

@@ -2,7 +2,7 @@
 ///
 /// A named widget is drawn over its construct's view, as the draw `draw(Id, named(W, D), V)` carries it, and takes the person's input through the grant of the question the view marks `input(P)` (bridge.dart).  The draw carries the name `W`, the default widget `D` of the type, and the view `V`: "It is drawn with the default widget of its type beside its name, from which it reads the type's constructors" (vGLP 92e6d3b, Section 6.2, the paragraph after Proposition "Default Widgets"; Section 6.3, the type `Widget`).  The construct family hands it `D` with the view, and the last value drawn on construct 0: "A declared widget is drawn also with the last value drawn on construct 0, and is drawn again when that value changes, so that a request form can show the state the program last wrote to its person" (vGLP e924f73, Section 6.2, the paragraph after Proposition "Default Widgets"; construct_family.dart, `_named`).  It grants the raw input the default widget of the type grants, so that the construct process forms the same answers from it (Definition "Construct Process").
 ///
-/// Three named widgets are here.  [lastState] and [socialMenu], below, draw the apps of GSC's contracts in their tabs, GSNP's items and the notices of attempts that close without committing among them.  The first is [approvalSentence], over the approval question of every canonical CVA platform vGLP's compiler prints (programs/vglp/cva/compiler; vGLP, Section 5.4, "The compilation"): `Approval ::= approval(Attempt, YesNo?)`, `Attempt ::= attempt(Peer, Integer, Integer, Class)`, `YesNo ::= yes ; no`, each class an act schema applied to its arguments, each argument a `Peer` or a `Speech`, `Speech ::= speech(Utterance, Peer)`, `Utterance ::= utterance(String) ; Speech`.  It reads the class off the view and draws one sentence for it and two buttons labelled for it, in the words of GAI's task for the apps of GSC's contracts (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, item 3, its sentences as corrected at 11:35 UTC): `befriend(A, Me)`, "Alice asks to be your friend.", Accept and Decline; `join(A, Me, n)`, "Alice asks you to join the group friends.", Join and Decline; and, in GAI's app, `agent_befriend(R, Q, P, Y)`, in the words of GAI's task for its figure (Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (b) and (c)), at the principal "Alf asks to befriend Bob." and "Approve?", and at the other party "Alf, an AI agent of Alice, asks to befriend you.", "Developer: Acme" and "Befriend Alf?", with Yes and No.  A class the task gives no words for is drawn by a sentence built from its schema and its persons, each speech act of the class under it, and the buttons Yes and No.  A person is shown by name, their key with its first letter capitalised (the same task, its preamble).
+/// Three named widgets are here.  [lastState] and [socialMenu], below, draw the apps of GSC's contracts in their tabs, GSNP's items and the notices of attempts that close without committing among them.  The first is [approvalSentence], over the approval question of every canonical CVA platform vGLP's compiler prints (programs/vglp/cva/compiler; vGLP, Section 5.4, "The compilation"): `Approval ::= approval(Attempt, YesNo?)`, `Attempt ::= attempt(Peer, Integer, Integer, Class)`, `YesNo ::= yes ; no`, each class an act schema applied to its arguments, each argument a `Peer` or a `Speech`, `Speech ::= speech(Utterance, Peer)`, `Utterance ::= utterance(String) ; Speech`.  It reads the class off the view and draws one sentence for it and two buttons labelled for it, in the words of GAI's task for the apps of GSC's contracts (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, item 3, its sentences as corrected at 11:35 UTC): `befriend(A, Me)`, "Alice asks to be your friend.", Accept and Decline; `join(A, Me, n)`, "Alice asks you to join the group friends.", Join and Decline; and, in GAI's app, `agent_befriend(R, Q, P, Y)`, in the words of GAI's task for its figure (Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (b) and (c)), at the principal "Alf asks to befriend Bob." and "Approve?", and at the other party "Alf, an AI agent of Alice, asks to befriend you.", "Developer: Acme" and "Befriend Alf?", with Yes and No.  A class the task gives no words for is drawn by a sentence built from its schema and its persons, each speech act of the class under it, and the buttons Yes and No.  A person is shown by name, their key with its underscores as spaces and each word capitalised (the same task, its preamble, which capitalised the first letter; GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 1: "The developer's key is acme_ltd, drawn \"Acme Ltd\"").
 library;
 
 import 'package:flutter/material.dart';
@@ -22,11 +22,11 @@ ValueKey<String> answerKey(int id, String c, List<int> at) =>
 /// The key of the sentence of construct [id].
 ValueKey<String> sentenceKey(int id) => ValueKey('$id:sentence');
 
-/// A person shown by name: their key with its first letter capitalised, `alice` as Alice.
-String personName(GTerm p) {
-  final s = displayText(p);
-  return s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
-}
+/// A person shown by name: their key, its underscores as spaces and each word capitalised, `alice` as Alice and `acme_ltd` as Acme Ltd (GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 1).
+String personName(GTerm p) => [
+      for (final w in displayText(p).split('_'))
+        if (w.isNotEmpty) '${w[0].toUpperCase()}${w.substring(1)}'
+    ].join(' ');
 
 /// The wording of an approval question, read off its view `approval(attempt(I, N, K, C), Q)`: the sentence, the speech acts of the class drawn under it, and the labels of the buttons granting `yes` and `no`.
 class ApprovalWording {
@@ -407,14 +407,8 @@ class SocialState {
   bool hasRetired(GTerm r) =>
       _args('retired_of', 1).any((x) => _same(x[0], r));
 
-  /// The codes the person [me] may create an AI agent with: each item they authored that is a speech act of another signed over by them, as the code its developer signed is once the person signs it (`sign(p? ; x)` adds `item(x)` and `authored(x)` at `p`; `enter(p?, r? ; x)` requires `item(x)` at `p`, programs/gai/GAI.glp), in the order of the state.
-  List<GTerm> codes(GTerm me) => [
-        for (final x in items)
-          if (isAuthored(x))
-            if (SpeechAct.of(x) case final a?
-                when a.signers.length > 1 && !_same(a.signers.first, me))
-              x
-      ];
+  /// Whether the person holds the item [x], `item(x)`.
+  bool holdsItem(GTerm x) => items.any((i) => _same(i, x));
 
   /// The group a member atom holds, `member(dot(community(A), N))`: its leader `A` and its name `N`; null where the atom holds another community name.
   static (GTerm, GTerm)? _group(GTerm c) {
@@ -679,7 +673,7 @@ Widget lastState(
 
 /// `social_menu`: the request question of a canonical platform of GSC's contracts, `Menu ::= menu(Key, List(Key), Request?)`, drawn with the last view on construct 0, the machine state and the persons known, in the tab it is drawn in, as GAI's task words it (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, items 1 and 2).  In the Friends tab: the person's own name at the top; before their identity is established, the button Join, proposing `establish(Me)`; after it, the persons known, one row each, a friend with the button End friendship, proposing `unfriend(Me, Q)`, and any other with Befriend, proposing `befriend(Me, Q)`; at the bottom the field Add a person by key with Add, answering `known(Q)`.  Where the request type offers `message(Me, Q, X)`, tapping a friend opens the chat with them, its messages and a text field with Send, proposing `message(Me, Q, x)`, x the speech act of the text typed signed by the person.  Where it offers `create(Me, N)`, the Groups tab: the field New group with Create, proposing `create(Me, n)`; each group the person is in, its name, its leader and its messages, and, in a group they lead, its members; in a group the person leads, Add member, a picker of their friends not in it, proposing `join(Me, Q, n)`, and Close group, proposing `close(Me, n)`; in any group, a text field with Send, proposing `post_own(Me, x, n)` where they lead it and `post(Me, A, x, n)` otherwise; and in a group they do not lead, Leave group, proposing `leave(A, Me, n)`.  Each control is drawn where the request type offers its request, read off `D` ([RequestOffers]), and while the question is open; each grants `propose(P)` or `known(Q)` at the question's position, `[3]`, as the default widget of the request type grants it, so the construct process forms the same answers from it.  No term, functor, type name or Submit button is drawn.  The persons known, and who is a friend, are read off the last view, which the agent writes whenever either changes (vGLP b7e3517), and not off the request question, which shows the persons known when it was asked.  Where construct 0 holds no stream of views, it is drawn as such, named, and takes no input.
 ///
-/// In GSNP (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, items 1 to 3): an item the person holds is drawn in the chat with the friend it came from, its last signer, its text, "Author: Dan" and, where it was forwarded, "via Eve, via Carol"; under one the person did not author, Forward, which opens a picker of their friends and, once one is picked, the warranty question of GSNP:2 with Yes, proposing `forward(Me, Q, x)`, and No; the chat's Send signs the text, proposing `sign(Me, x)`, and holds `message(Me, Q, x)` for the next request question, proposed once the view holds `authored(x)` ([_SocialTabState._chat]).  An item the person authored is drawn in the chat it was sent from, and an item from a person who is not a friend, or authored and sent from no chat on this screen, under Messages at the bottom of the Friends tab.  In GAI's app (programs/apps/gai), whose request type offers `sign(Me, X)`, `message(Me, Q, X)` and `forward(Me, Q, X)` as GSNP's does, an item is drawn as in GSNP, and an author the person holds recorded as an AI agent, `agent_of(r, p, y)`, is named with its principal, "Author: Alf, an AI agent of Alice" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, its last paragraph), with its developer under it, "Developer: Acme", as in its row in Friends; and, where the request type offers `enter(Me, R, X)`, the AI agents tab: the form Create an AI agent, proposing `enter(Me, r, k)`, and the person's AI agents, each with Retire, proposing `retire(Me, R)` (GAI #5 Cowork, 2026-10-19 20:36 UTC, (a) and item 5; [_SocialTabState._agents]).  A post carries an item, which the person signs before posting it (GSNP:1; `post_own(a? ; x, n)` requires `item(x)` at `a`, programs/gsc/GSNP.glp), so the text typed in a group forms no post: where the request type offers `sign(Me, X)`, no text field and Send are drawn in a group.  The notices are drawn as `last_state` draws them.
+/// In GSNP (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, items 1 to 3): an item the person holds is drawn in the chat with the friend it came from, its last signer, its text, "Author: Dan" and, where it was forwarded, "via Eve, via Carol"; under one the person did not author, Forward, which opens a picker of their friends and, once one is picked, the warranty question of GSNP:2 with Yes, proposing `forward(Me, Q, x)`, and No; the chat's Send signs the text, proposing `sign(Me, x)`, and holds `message(Me, Q, x)` for the next request question, proposed once the view holds `authored(x)` ([_SocialTabState._chat]).  An item the person authored is drawn in the chat it was sent from, and an item from a person who is not a friend, or authored and sent from no chat on this screen, under Messages at the bottom of the Friends tab.  In GAI's app (programs/apps/gai), whose request type offers `sign(Me, X)`, `message(Me, Q, X)` and `forward(Me, Q, X)` as GSNP's does, an item is drawn as in GSNP, and an author the person holds recorded as an AI agent, `agent_of(r, p, y)`, is named with its principal, "Author: Alf, an AI agent of Alice" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, its last paragraph), with its developer under it, "Developer: Acme", as in its row in Friends; and, where the request type offers `enter(Me, R, X)`, the AI agents tab: the form Create an AI agent, taking the name and the code and proposing `sign(Me, k)` and then `enter(Me, r, k)`, and the person's AI agents, each with Retire, proposing `retire(Me, R)` (GAI #5 Cowork, 2026-10-19 20:36 UTC, (a) and item 5; [_SocialTabState._agents]).  A post carries an item, which the person signs before posting it (GSNP:1; `post_own(a? ; x, n)` requires `item(x)` at `a`, programs/gsc/GSNP.glp), so the text typed in a group forms no post: where the request type offers `sign(Me, X)`, no text field and Send are drawn in a group.  The notices are drawn as `last_state` draws them.
 Widget socialMenu(
     BuildContext context,
     OpenConstruct construct,
@@ -796,7 +790,7 @@ class _SocialTabState extends State<SocialTab> {
     };
   }
 
-  /// The second request of a Send in GSNP's chat: once the item the person signed is in the view as authored, `authored(x)`, the message that carries it, `message(Me, Q, x)`, proposed on the open request question, a later one than the question that took the sign ([TabPlace.hold]).  It is proposed after the frame, once, by whichever tab draws the open question first.
+  /// The second request of a Send in GSNP's chat: once the item the person signed is in the view as authored, `authored(x)`, the message that carries it, `message(Me, Q, x)`, proposed on the open request question, a later one than the question that took the sign ([TabPlace.hold]).  Likewise the second request of Create in GAI's AI agents tab: once the view holds the code the person signed, `item(k)`, the creation of the AI agent, `enter(Me, r, k)` ([TabPlace.holdEnter]; GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 2: "Create proposes sign(Me, k) and then, once her view holds item(k), enter(Me, r, k)").  Each is proposed after the frame, once, by whichever tab draws the open question first, and one on each request question.
   void _sendHeld(SocialState s) {
     final ask = _ask;
     final place = widget.place;
@@ -807,6 +801,15 @@ class _SocialTabState extends State<SocialTab> {
         if (!mounted || !place.release(h.item)) return;
         ask.propose(GStruct('message', [ask.me, h.friend, h.item]));
       });
+      return;
+    }
+    for (final h in place.heldEnters) {
+      if (h.askedOn == _id || !s.holdsItem(h.item)) continue;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !(place.releaseEnter?.call(h.item) ?? false)) return;
+        ask.propose(GStruct('enter', [ask.me, h.agent, h.item]));
+      });
+      return;
     }
   }
 
@@ -1171,17 +1174,18 @@ class _SocialTabState extends State<SocialTab> {
 
   // --- The AI agents tab -----------------------------------------------------
 
-  /// The code chosen in the form Create an AI agent, by its term as written; null for the first the person holds.
-  String? _code;
+  /// The text of the form's field [k]: the screen's, held across the request questions the agent asks one after another ([TabPlace.field]), or this tab's outside a screen of tabs.
+  TextEditingController _form(String k) => widget.place?.field?.call(k) ?? _text(k);
 
-  /// Whether the form Create an AI agent is drawn: the request question is open and offers `enter(Me, R, X)`, the person's identity is established, they are no AI agent (`enter(p?, r? ; x)` forbids `agent` at `p`, programs/gai/GAI.glp), and they hold a code ([SocialState.codes]).
+  /// Whether the form Create an AI agent is drawn: the request question is open and offers `sign(Me, X)` and `enter(Me, R, X)`, the person's identity is established, they are no AI agent (`enter(p?, r? ; x)` forbids `agent` at `p`, programs/gai/GAI.glp), and the screen of tabs holds the creation for its second request ([TabPlace.holdEnter]).
   bool _creates(SocialState s) {
     final ask = _ask;
     return ask != null &&
+        ask.can('sign', 2) &&
         ask.can('enter', 3) &&
         s.identity &&
         !s.isAgent &&
-        s.codes(ask.me).isNotEmpty;
+        widget.place?.holdEnter != null;
   }
 
   /// The AI agents tab of GAI's app (GAI's paper, Figure "The GAI app", its first screen; Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (a)): the form Create an AI agent, where it is drawn ([_create]), and the person's AI agents, `principal_of(R)`, each with Retire ([_aiAgent]).
@@ -1190,20 +1194,31 @@ class _SocialTabState extends State<SocialTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (ask != null && _creates(s)) _create(context, ask, s.codes(ask.me)),
+        if (ask != null && _creates(s)) _create(context, ask, s),
         for (final r in s.aiAgents) _aiAgent(context, s, r),
       ],
     );
   }
 
-  /// The form Create an AI agent: the field Name, the key of the AI agent, which the person chooses ("A person may act to create a ward ... and establish the ward's identity by choosing the ward's key pair", Wards:1); "Code signed by Acme", the code the person holds and its developer, its first signer ([SocialState.codes]), a chip for each where they hold more than one; "You attest that Alf runs it." ("A person who creates an AI agent attests that it runs code signed by its developer", GAI:1); and Create, proposing `enter(Me, r, k)`, `r` the key typed and `k` the code (`enter(p?, r? ; x)`, programs/gai/GAI.glp), granted at the question's position as the default widget of the request type grants it.
-  Widget _create(BuildContext context, SocialAsk ask, List<GTerm> codes) {
-    final chosen = codes.firstWhere((k) => formatTerm(k) == _code,
-        orElse: () => codes.first);
-    final name = _typed('agent-name');
-    final valid = _identifier.hasMatch(name) && name != formatTerm(ask.me);
-    String developer(GTerm k) =>
-        personName(SpeechAct.of(k)!.signers.first);
+  /// The form Create an AI agent, which takes the AI agent's name and its code (GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 2: "The form takes Name and the code"): the field Name, the key of the AI agent, which the person chooses ("A person may act to create a ward ... and establish the ward's identity by choosing the ward's key pair", Wards:1); the code, its text and the key of its developer, the fields of the default widget of Speech, a text field and a peer field, forming the code signed by its developer, `speech(utterance(C), D)`; under them "Code signed by Acme Ltd" and "You attest that Alf runs it." ("A person who creates an AI agent attests that it runs code signed by its developer", GAI:1); and Create.  Create proposes `sign(Me, k)`, `k` the code signed over by the person (`sign(p? ; x)` adds `item(x)` at `p`), and holds `enter(Me, r, k)` for a later request question, proposed once the view holds `item(k)` (`enter(p?, r? ; x)` requires it at `p`, programs/gai/GAI.glp; [_sendHeld]).  Create is enabled once the three are typed, the name is not the person's own key nor one of their AI agents, and no creation of it is held.  What the person typed stays across the request questions.
+  Widget _create(BuildContext context, SocialAsk ask, SocialState s) {
+    final place = widget.place!;
+    final name = _form('agent-name').text.trim();
+    final code = _form('agent-code').text.trim();
+    final dev = _form('agent-developer').text.trim();
+    final named = _identifier.hasMatch(name) && name != formatTerm(ask.me);
+    final developed = _identifier.hasMatch(dev);
+    final valid = named &&
+        developed &&
+        code.isNotEmpty &&
+        !s.isPrincipalOf(GAtom(name)) &&
+        !place.heldEnters.any((h) => formatTerm(h.agent) == name);
+    Widget field(String k, String label) => TextField(
+          key: socialKey(_id, k),
+          controller: _form(k),
+          decoration: InputDecoration(labelText: label, isDense: true),
+          onChanged: (_) => setState(() {}),
+        );
     return Container(
       key: socialKey(_id, 'create-agent-form'),
       width: double.infinity,
@@ -1221,42 +1236,34 @@ class _SocialTabState extends State<SocialTab> {
                   .textTheme
                   .titleMedium
                   ?.copyWith(fontWeight: FontWeight.bold)),
-          TextField(
-            key: socialKey(_id, 'agent-name'),
-            controller: _text('agent-name'),
-            decoration: const InputDecoration(labelText: 'Name', isDense: true),
-            onChanged: (_) => setState(() {}),
-          ),
+          field('agent-name', 'Name'),
+          field('agent-code', 'Code'),
+          field('agent-developer', 'Developer'),
           const SizedBox(height: 10),
-          if (codes.length == 1)
-            Text('Code signed by ${developer(chosen)}',
-                key: socialKey(_id, 'code:${formatTerm(chosen)}'))
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final k in codes)
-                  ChoiceChip(
-                    key: socialKey(_id, 'code:${formatTerm(k)}'),
-                    label: Text('Code signed by ${developer(k)}'),
-                    selected: formatTerm(k) == formatTerm(chosen),
-                    onSelected: (_) =>
-                        setState(() => _code = formatTerm(k)),
-                  ),
-              ],
-            ),
+          Text(
+              'Code signed by '
+              '${developed ? personName(GAtom(dev)) : 'its developer'}',
+              key: socialKey(_id, 'code-signed')),
           const SizedBox(height: 4),
           Text(
               'You attest that '
-              '${valid ? personName(GAtom(name)) : 'the AI agent'} runs it.',
+              '${named ? personName(GAtom(name)) : 'the AI agent'} runs it.',
               key: socialKey(_id, 'attest')),
           const SizedBox(height: 10),
           ElevatedButton(
             key: socialKey(_id, 'create-agent'),
             onPressed: valid
-                ? () => ask
-                    .propose(GStruct('enter', [ask.me, GAtom(name), chosen]))
+                ? () {
+                    final k = GStruct('speech', [
+                      GStruct('speech', [
+                        GStruct('utterance', [GString(code)]),
+                        GAtom(dev),
+                      ]),
+                      ask.me,
+                    ]);
+                    place.holdEnter!(k, GAtom(name), _id, s.written.length);
+                    ask.propose(GStruct('sign', [ask.me, k]));
+                  }
                 : null,
             child: const Text('Create'),
           ),
