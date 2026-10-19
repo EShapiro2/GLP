@@ -1,36 +1,9 @@
 %% ---------------------------------------------------------------------------
-%% GAI.glp --- GAI, Accountable AI Agents, GAI's contract (Coordination
-%% Appendix C; to_all 2026-10-18 19:23 UTC), its clauses in GAI.md beside this
-%% file, extending Wards (programs/gsc/Wards.md), with GSG (GSG.md, GSG.glp)
-%% and GSNP's signing and forwarding (GSNP.md) beneath it, in the term form
-%% programs/gsc reads (its README, "Writing a contract").  The term is the
-%% contract for friendship: GSG's schemas with identity required, the wards
-%% core's for an AI agent and its principal, GAI's retire, the one act ending the
-%% friendship of the two (Wards:3 and Wards:4, GLP 1d91684e; GAI:4), and GSNP's sign and
-%% forward with identity required and retired forbidden at the acting role,
-%% the sender adding nothing, as in GSNP.glp (GLP e0be1bc2).
-%% establish realises a person choosing their key pair (GSG:1); GAI:1, GAI:3
-%% and the principal knowing the developer (GAI:2) describe no act.  A ward's
-%% membership of a group (Wards:2 with GSN:3) is not in this term.
+%% GAI.glp --- GAI, Accountable AI Agents, GAI's contract (Coordination Appendix C; to_all 2026-10-18 19:23 UTC), its clauses in GAI.md beside this file, extending Wards (programs/gsc/Wards.md), with GSG (GSG.md, GSG.glp) and GSNP's signing, messaging and forwarding (GSNP.md, GSNP.glp) beneath it, in the term form programs/gsc reads (its README, "Writing a contract").  The term is the contract for friendship: GSG's schemas with identity required; the wards core's for an AI agent and its principal; GAI's retire, the one act ending the friendship of the two (Wards:3 and Wards:4, GLP 1d91684e; GAI:4); and GSNP's sign, message and forward as GSNP.glp has them, with retired forbidden at the acting role.
+%% establish realises a person choosing their key pair (GSG:1).  enter realises GAI:1: the principal p holds x, the code signed by its developer, as an item, and adds at the AI agent the attestation sgn(x, p), x signed over by p.  agent_befriend and agents_befriend realise GAI:2: the AI agent presents its attestation, and each friend records the AI agent, its principal and the attestation as agent_of(r, p, y).  GAI:3 describes no act.  A ward's membership of a group (Wards:2 with GSN:3) is not in this term.
 %%
-%% Eleven schemas over nine predicates.  unfriend carries no ? and stands for one
-%% schema per role, guarded at that role, unfriend_p and unfriend_q, as CSSN
-%% writes it.  Every role requires identity, except the role of establish,
-%% which adds it, requires nothing and forbids nothing but retired (GSC,
-%% def:unobstructed-marks, clause 1), and the AI agent's role of enter, which forbids it and adds it.
-%% retired is a leaving mark (GSC, def:leaving): every guarding role forbids it,
-%% no schema deletes it, and retire, which adds it, requires agent there.  The
-%% guardianship is (agent, identity, principal, principal_of) (def:guardianship),
-%% befriend the introductory act, unobstructed but for agent, and agent_befriend
-%% and agents_befriend the relay acts (def:introduction-wards).  The principal's
-%% roles in agent_befriend, agents_befriend and agent_unfriend change nothing.
-%% A role is its index in the schema, in the order of the schema's parameters; p and q are
-%% persons, r and s AI agents, every role a party role; x, an item, is a
-%% speech-act variable, svar, and sgn(x, p) is x signed over by the party in
-%% role p (GSC, Section 3.1).  A role is
-%% rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i).
-%% A schema's second argument lists its variables in the order of its head
-%% (GSC, Definition Act schema; Udi, 2026-10-19, to GSC #4).
+%% Twelve schemas over eleven predicates.  unfriend carries no ? and stands for one schema per role, guarded at that role, unfriend_p and unfriend_q, as CSSN writes it.  Every role requires identity, except the role of establish, which adds it, requires nothing and forbids nothing but retired (GSC, def:unobstructed-marks, clause 1), and the AI agent's role of enter, which forbids it and adds it.  retired is a leaving mark (GSC, def:leaving): every guarding role forbids it, no schema deletes it, and retire, which adds it, requires agent there.  The guardianship is (agent, identity, principal, principal_of) (def:guardianship), befriend the introductory act, unobstructed but for agent, and agent_befriend and agents_befriend the relay acts (def:introduction-wards); each requires at an AI agent's role its attestation, an atom of a predicate h of clause 2 of def:relay (GSC 410a440): enter, the one schema adding agent, adds an attestation there, and no schema deletes one.  The principal's roles in agent_befriend, agents_befriend and agent_unfriend change nothing.
+%% A role is its index in the schema, in the order of the schema's parameters; p and q are persons, r and s AI agents, every role a party role; x, y and z are speech-act variables, svar, and sgn(x, p) is x signed over by the party in role p (GSC, Section 3.1).  A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i).  A schema's second argument lists its variables in the order of its head (GSC, Definition Act schema; Udi, 2026-10-19, to GSC #4).
 %%
 %%   establish(p?)      :  not retired, +identity
 %%   befriend(p?, q?)   :  identity, not agent, not retired, not friend(q), +friend(q)
@@ -39,15 +12,15 @@
 %%                         identity, -friend(p)
 %%   unfriend_q(p, q?)  :  identity, -friend(q)
 %%                         identity, not retired, not principal(p), not principal_of(p), -friend(p)
-%%   enter(p?, r?)      :  identity, not agent, not retired, +principal_of(r), +friend(r)
-%%                         not identity, not retired, +identity, +agent, +principal(p), +friend(p)
-%%   agent_befriend(r?, q?, p?) :
-%%                         identity, agent, principal(p), not retired, not friend(q), +friend(q)
-%%                         identity, not agent, not retired, not friend(r), +friend(r), +agent_of(r, p)
+%%   enter(p?, r? ; x)  :  identity, item(x), not agent, not retired, +principal_of(r), +friend(r)
+%%                         not identity, not retired, +identity, +agent, +principal(p), +friend(p), +attestation(sgn(x, p))
+%%   agent_befriend(r?, q?, p? ; y) :
+%%                         identity, agent, principal(p), attestation(y), not retired, not friend(q), +friend(q)
+%%                         identity, not agent, not retired, not friend(r), +friend(r), +agent_of(r, p, y)
 %%                         identity, principal_of(r), not retired
-%%   agents_befriend(r?, s?, p?, q?) :
-%%                         identity, agent, principal(p), not retired, not friend(s), +friend(s), +agent_of(s, q)
-%%                         identity, agent, principal(q), not retired, not friend(r), +friend(r), +agent_of(r, p)
+%%   agents_befriend(r?, s?, p?, q? ; y, z) :
+%%                         identity, agent, principal(p), attestation(y), not retired, not friend(s), +friend(s), +agent_of(s, q, z)
+%%                         identity, agent, principal(q), attestation(z), not retired, not friend(r), +friend(r), +agent_of(r, p, y)
 %%                         identity, principal_of(r), not retired
 %%                         identity, principal_of(s), not retired
 %%   agent_unfriend(r, q, p?) :
@@ -56,14 +29,13 @@
 %%                         identity, principal_of(r), not retired
 %%   retire(p?, r)      :  identity, principal_of(r), not retired, +retired_of(r), -friend(r)
 %%                         identity, agent, principal(p), not retired, +retired, -friend(p)
-%%   sign(p?; x)        :  identity, not retired, +item(x)
-%%   forward(p?, q; x)  :  identity, item(x), not retired
+%%   sign(p? ; x)       :  identity, not retired, +item(x), +authored(x)
+%%   message(p?, q ; x) :  identity, authored(x), not retired
+%%                         identity, friend(p), +item(x)
+%%   forward(p?, q ; x) :  identity, item(x), not authored(x), not retired
 %%                         identity, friend(p), +item(sgn(x, p))
 %%
-%% The ? on an AI agent's role (r in enter, agent_befriend and agents_befriend,
-%% s in agents_befriend) is taken by the AI agent's program, in enter as the
-%% program the principal set up, and after it under the principal's will,
-%% given once, on creating it (GAI's paper, Section 3.1).
+%% The ? on an AI agent's role (r in enter, agent_befriend and agents_befriend, s in agents_befriend) is taken by the AI agent's program, in enter as the program the principal set up, and after it under the principal's will, given once, on creating it (GAI's paper, Section 3.1).
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it.
@@ -118,39 +90,42 @@ contract_named(gai,
         rs(guarded, [], [atom(friend, [role(1)])], [atom(identity, [])],
                     [atom(retired, []), atom(principal, [role(1)]),
                      atom(principal_of, [role(1)])])]),
-%%   enter(p?, r?) :
-%%       at p:  identity, not agent, not retired, +principal_of(r), +friend(r)
-%%       at r:  not identity, not retired, +identity, +agent, +principal(p), +friend(p)
-    schema(enter, [],
+%%   enter(p?, r? ; x) :
+%%       at p:  identity, item(x), not agent, not retired, +principal_of(r), +friend(r)
+%%       at r:  not identity, not retired, +identity, +agent, +principal(p), +friend(p), +attestation(sgn(x, p))
+    schema(enter, [svar(x)],
        [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)])], [],
-                    [atom(identity, [])], [atom(agent, []), atom(retired, [])]),
+                    [atom(identity, []), atom(item, [svar(x)])], [atom(agent, []), atom(retired, [])]),
         rs(guarded, [atom(identity, []), atom(agent, []), atom(principal, [role(1)]),
-                     atom(friend, [role(1)])], [],
+                     atom(friend, [role(1)]), atom(attestation, [sgn(x, 1)])], [],
                     [], [atom(identity, []), atom(retired, [])])]),
-%%   agent_befriend(r?, q?, p?) :
-%%       at r:  identity, agent, principal(p), not retired, not friend(q), +friend(q)
-%%       at q:  identity, not agent, not retired, not friend(r), +friend(r), +agent_of(r, p)
+%%   agent_befriend(r?, q?, p? ; y) :
+%%       at r:  identity, agent, principal(p), attestation(y), not retired, not friend(q), +friend(q)
+%%       at q:  identity, not agent, not retired, not friend(r), +friend(r), +agent_of(r, p, y)
 %%       at p:  identity, principal_of(r), not retired
-    schema(agent_befriend, [],
+    schema(agent_befriend, [svar(y)],
        [rs(guarded, [atom(friend, [role(2)])], [],
-                    [atom(identity, []), atom(agent, []), atom(principal, [role(3)])],
+                    [atom(identity, []), atom(agent, []), atom(principal, [role(3)]),
+                     atom(attestation, [svar(y)])],
                     [atom(retired, []), atom(friend, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)]), atom(agent_of, [role(1), role(3)])], [],
+        rs(guarded, [atom(friend, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [],
                     [atom(identity, [])],
                     [atom(agent, []), atom(retired, []), atom(friend, [role(1)])]),
         rs(guarded, [], [],
                     [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])])]),
-%%   agents_befriend(r?, s?, p?, q?) :
-%%       at r:  identity, agent, principal(p), not retired, not friend(s), +friend(s), +agent_of(s, q)
-%%       at s:  identity, agent, principal(q), not retired, not friend(r), +friend(r), +agent_of(r, p)
+%%   agents_befriend(r?, s?, p?, q? ; y, z) :
+%%       at r:  identity, agent, principal(p), attestation(y), not retired, not friend(s), +friend(s), +agent_of(s, q, z)
+%%       at s:  identity, agent, principal(q), attestation(z), not retired, not friend(r), +friend(r), +agent_of(r, p, y)
 %%       at p:  identity, principal_of(r), not retired
 %%       at q:  identity, principal_of(s), not retired
-    schema(agents_befriend, [],
-       [rs(guarded, [atom(friend, [role(2)]), atom(agent_of, [role(2), role(4)])], [],
-                    [atom(identity, []), atom(agent, []), atom(principal, [role(3)])],
+    schema(agents_befriend, [svar(y), svar(z)],
+       [rs(guarded, [atom(friend, [role(2)]), atom(agent_of, [role(2), role(4), svar(z)])], [],
+                    [atom(identity, []), atom(agent, []), atom(principal, [role(3)]),
+                     atom(attestation, [svar(y)])],
                     [atom(retired, []), atom(friend, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)]), atom(agent_of, [role(1), role(3)])], [],
-                    [atom(identity, []), atom(agent, []), atom(principal, [role(4)])],
+        rs(guarded, [atom(friend, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [],
+                    [atom(identity, []), atom(agent, []), atom(principal, [role(4)]),
+                     atom(attestation, [svar(z)])],
                     [atom(retired, []), atom(friend, [role(1)])]),
         rs(guarded, [], [],
                     [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])]),
@@ -177,16 +152,25 @@ contract_named(gai,
                       [atom(identity, []), atom(agent, []), atom(principal, [role(1)])],
                       [atom(retired, [])])]),
 %%   sign(p? ; x) :
-%%       at p:  identity, not retired, +item(x)
+%%       at p:  identity, not retired, +item(x), +authored(x)
     schema(sign, [svar(x)],
-       [rs(guarded, [atom(item, [svar(x)])], [],
+       [rs(guarded, [atom(item, [svar(x)]), atom(authored, [svar(x)])], [],
                     [atom(identity, [])], [atom(retired, [])])]),
+%%   message(p?, q ; x) :
+%%       at p:  identity, authored(x), not retired
+%%       at q:  identity, friend(p), +item(x)
+    schema(message, [svar(x)],
+       [rs(guarded,   [], [],
+                      [atom(identity, []), atom(authored, [svar(x)])],
+                      [atom(retired, [])]),
+        rs(unguarded, [atom(item, [svar(x)])], [],
+                      [atom(identity, []), atom(friend, [role(1)])], [])]),
 %%   forward(p?, q ; x) :
-%%       at p:  identity, item(x), not retired
+%%       at p:  identity, item(x), not authored(x), not retired
 %%       at q:  identity, friend(p), +item(sgn(x, p))
     schema(forward, [svar(x)],
        [rs(guarded, [], [],
                     [atom(identity, []), atom(item, [svar(x)])],
-                    [atom(retired, [])]),
+                    [atom(authored, [svar(x)]), atom(retired, [])]),
         rs(unguarded, [atom(item, [sgn(x, 1)])], [],
                       [atom(identity, []), atom(friend, [role(1)])], [])])]).

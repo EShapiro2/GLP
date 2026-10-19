@@ -346,34 +346,54 @@ bool procInspectsParameter(List<ast.Clause> clauses, ProcDecl paramTemplate,
   return false;
 }
 
+/// Whether [term], at a position of type [type], places a functor or constant
+/// at a parameter position ([procInspectsParameter]).
+///
+/// A list is walked along its spine in a loop and its elements by recursive
+/// calls, so the depth used is the nesting of the term's elements and not the
+/// length of a list (TGLP well-typing.tex, Definition "Well-Typed Clause",
+/// puts no bound on a term's size).
 bool _termInspectsParamAt(ast.Term term, TypeExpr type, Set<String> params,
     Map<String, TypeDef> templates) {
-  // Bare parameter position: a non-variable term inspects the parameter.
-  if (type is TypeRef && type.typeArgs.isEmpty && params.contains(type.name)) {
-    return !(term is ast.VarTerm || term is ast.UnderscoreTerm);
-  }
-  // A variable covers anything and descends nowhere.
-  if (term is ast.VarTerm || term is ast.UnderscoreTerm) return false;
-  // Parameterised/named type: descend by matching the term's constructor to a
-  // template alternative, substituting the type arguments.
-  if (type is TypeRef) {
-    final template = templates[type.name];
-    if (template == null) return false; // monomorphic/primitive: no parameter reachable
-    if (template.typeParams.length != type.typeArgs.length) return false;
-    final subst = <String, TypeExpr>{
-      for (var i = 0; i < template.typeParams.length; i++)
-        template.typeParams[i]: type.typeArgs[i],
-    };
-    for (final alt in template.alternatives) {
-      final pairs = _matchAltToTerm(alt, term, subst);
-      if (pairs != null) {
-        return pairs
-            .any((p) => _termInspectsParamAt(p.$1, p.$2, params, templates));
-      }
+  next:
+  while (true) {
+    // Bare parameter position: a non-variable term inspects the parameter.
+    if (type is TypeRef && type.typeArgs.isEmpty && params.contains(type.name)) {
+      return !(term is ast.VarTerm || term is ast.UnderscoreTerm);
     }
-    return false; // no alternative matches the term's constructor — not a parameter inspection
+    // A variable covers anything and descends nowhere.
+    if (term is ast.VarTerm || term is ast.UnderscoreTerm) return false;
+    // Parameterised/named type: descend by matching the term's constructor to a
+    // template alternative, substituting the type arguments.
+    if (type is TypeRef) {
+      final template = templates[type.name];
+      if (template == null) return false; // monomorphic/primitive: no parameter reachable
+      if (template.typeParams.length != type.typeArgs.length) return false;
+      final subst = <String, TypeExpr>{
+        for (var i = 0; i < template.typeParams.length; i++)
+          template.typeParams[i]: type.typeArgs[i],
+      };
+      for (final alt in template.alternatives) {
+        final pairs = _matchAltToTerm(alt, term, subst);
+        if (pairs != null) {
+          if (alt is ListConsAlt) {
+            // A list cell: its element, then the rest of the list, a step
+            // further along its spine.
+            final (head, headType) = pairs[0];
+            if (_termInspectsParamAt(head, headType, params, templates)) {
+              return true;
+            }
+            (term, type) = pairs[1];
+            continue next;
+          }
+          return pairs
+              .any((p) => _termInspectsParamAt(p.$1, p.$2, params, templates));
+        }
+      }
+      return false; // no alternative matches the term's constructor — not a parameter inspection
+    }
+    return false;
   }
-  return false;
 }
 
 /// If [alt] structurally matches [term]'s top constructor, return the (subterm,

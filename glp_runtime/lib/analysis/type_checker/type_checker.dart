@@ -111,6 +111,23 @@ class CoverageError {
       '$procedure argument $argIndex: uncovered alternative "$uncoveredLabel" at path: $path';
 }
 
+/// A visit of a state, at its path and structural path, or an error, still to
+/// come in [TypeChecker._checkStateCoverage].
+class _CoverageItem {
+  final CoverageError? error;
+  final DFAState? state;
+  final String pathPrefix;
+  final List<int> structPath;
+
+  _CoverageItem.visit(DFAState this.state, this.pathPrefix, this.structPath)
+      : error = null;
+
+  _CoverageItem.error(CoverageError this.error)
+      : state = null,
+        pathPrefix = '',
+        structPath = const [];
+}
+
 // =============================================================================
 // Main Type Checker
 // =============================================================================
@@ -479,10 +496,20 @@ class TypeChecker {
     return errors;
   }
 
-  /// Recursively check coverage at a DFA state, tracking structural path
+  /// Check coverage at a DFA state and the states below it, tracking
+  /// structural path
   ///
   /// structPath: list of argument indices taken from root (e.g., [1, 2] means
   /// "arg 1 of root, then arg 2 of that substructure")
+  ///
+  /// The states are visited with a stack of the visits and errors still to
+  /// come, in the order of the recursive walk this replaces: each state's
+  /// alternatives in turn, an accepted one checked in full before the next
+  /// alternative, so [visited] grows and the errors are recorded in that order.
+  /// A clause head whose input argument is a list descends a state for each
+  /// cell, and a list of some 5000 elements overflowed the stack in the
+  /// recursion: TGLP well-typing.tex, Definition "Well-Typed Clause", puts no
+  /// bound on a term's size.
   List<CoverageError> _checkStateCoverage(
     DFAState state,
     List<ast.Clause> clauses,
@@ -494,6 +521,38 @@ class TypeChecker {
     List<int> structPath = const [],
   }) {
     final errors = <CoverageError>[];
+    // The visits and errors still to come, the next at the end.
+    final pending = <_CoverageItem>[
+      _CoverageItem.visit(state, pathPrefix, structPath),
+    ];
+    while (pending.isNotEmpty) {
+      final item = pending.removeLast();
+      final error = item.error;
+      if (error != null) {
+        errors.add(error);
+        continue;
+      }
+      pending.addAll(_coverageStep(item.state!, clauses, argIndex,
+              item.pathPrefix, visited, automaton, decl, item.structPath)
+          .reversed);
+    }
+    return errors;
+  }
+
+  /// One state of [_checkStateCoverage]: what comes of it, in order --- a
+  /// visit of each alternative some clause accepts and an error for each that
+  /// none does --- or nothing, where the state needs no coverage here.
+  List<_CoverageItem> _coverageStep(
+    DFAState state,
+    List<ast.Clause> clauses,
+    int argIndex,
+    String pathPrefix,
+    Set<String> visited,
+    Automaton automaton,
+    ProcDecl decl,
+    List<int> structPath,
+  ) {
+    final items = <_CoverageItem>[];
 
     // Prevent infinite recursion on cyclic types. Key on (state, structPath):
     // a type may be reached at several structural positions (e.g. a list head
@@ -504,7 +563,7 @@ class TypeChecker {
     // a clause variable covers the position (finite clause terms bound depth).
     final visitKey = '${state.name}@$structPath';
     if (visited.contains(visitKey)) {
-      return errors;
+      return items;
     }
     visited.add(visitKey);
 
@@ -512,18 +571,18 @@ class TypeChecker {
     // They're covered by variables matching the appropriate mode
     // Primitive states are _ or _?
     if (state.baseName == '_') {
-      return errors;
+      return items;
     }
 
     // Final states also don't need further coverage
     if (state.isFinal) {
-      return errors;
+      return items;
     }
 
     // Check if any clause has a VARIABLE at this path position
     // If so, the variable covers ALL alternatives - no need to check further
     if (_anyClauseHasVariableAtPath(clauses, argIndex, structPath)) {
-      return errors;  // Variable covers everything
+      return items;  // Variable covers everything
     }
 
     // Enumerate this state's alternatives from the automaton that OWNS it.
@@ -557,36 +616,26 @@ class TypeChecker {
 
       // Check if some clause accepts this transition at the current path
       if (_clauseAcceptsLabelAtPath(clauses, argIndex, structPath, label)) {
-        // Recursively check the target state with extended path
+        // Check the target state with extended path
         final newPath = '$pathPrefix → $label';
         // Extract arg index from symbol like "f(2,1)" or "\(2,1)" or "[|](2,1)"
         final argIdxFromLabel = _extractArgIndex(label);
         final newStructPath = argIdxFromLabel != null
             ? [...structPath, argIdxFromLabel]
             : structPath;
-        final nestedErrors = _checkStateCoverage(
-          targetState,
-          clauses,
-          argIndex,
-          newPath,
-          visited,
-          automaton,
-          decl,
-          structPath: newStructPath,
-        );
-        errors.addAll(nestedErrors);
+        items.add(_CoverageItem.visit(targetState, newPath, newStructPath));
       } else {
         // No clause covers this alternative
-        errors.add(CoverageError(
+        items.add(_CoverageItem.error(CoverageError(
           procedure: decl.name,
           argIndex: argIndex,
           uncoveredLabel: label,
           path: '$pathPrefix → $label',
-        ));
+        )));
       }
     }
 
-    return errors;
+    return items;
   }
 
   /// Check if any clause has a variable at the given structural path

@@ -183,17 +183,13 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
   final variableTypes = <String, VariableTypeInfo>{};
   final repeats = <String, List<VariableTypeInfo>>{};
 
-  // Step 1: Extract and check all paths
-  final termPaths = paths(term);
-
-  for (final path in termPaths) {
-    final result = checkPathAgainstAutomaton(path, automaton, dfa);
-
+  // Step 1: Check all paths
+  forEachCheckedPath(term, automaton, dfa, (leaf, result, path) {
     if (!result.isConsistent) {
-      errors.add(InconsistentPathError(path, result.reason ?? 'Unknown'));
+      errors.add(InconsistentPathError(path(), result.reason ?? 'Unknown'));
     } else if (result.variableAssignment != null) {
       // Record variable type
-      final varKey = _variableKey(path.leaf);
+      final varKey = _variableKey(leaf);
 
       if (variableTypes.containsKey(varKey)) {
         // The same variable again: typed by its own position, and paired as
@@ -203,7 +199,7 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
         variableTypes[varKey] = result.variableAssignment!;
       }
     }
-  }
+  });
 
   // Step 2: Check variable pair duality, every occurrence of the writer
   // against every occurrence of the reader.
@@ -331,6 +327,154 @@ PathCheckResult checkPathAgainstAutomaton(
   // Check leaf consistency
   return atOpen(path.length - 1) ??
       _checkLeafConsistencyForPath(path.leaf, state, dfa);
+}
+
+/// Each path of [term] with the result [checkPathAgainstAutomaton] gives for
+/// it, in the order [paths] gives the paths, computed in one walk of [term]
+/// and with no set of paths built.
+///
+/// [visit] is called once for each path with the path's leaf step, its
+/// result, and a function that gives the path ([ModedPath.ending]), whose
+/// steps are listed only when they are asked for.
+///
+/// A path's result depends only on its steps, and two paths have the same
+/// steps up to the vertex where they part (Definition "Consistent Paths" is
+/// read step by step along the path), so the automaton is followed once along
+/// each edge of [term], the state at a vertex shared by the paths through it.
+/// Listing the steps of every path costs the sum of the paths' lengths, which
+/// is quadratic in the length of a list: a clause whose argument was a list
+/// of some 3100 elements overflowed the stack in the recursive walk that
+/// listed them, and its paths had some five million steps between them.
+/// TGLP well-typing.tex, Definition "Well-Typed Clause", puts no bound on a
+/// term's size.
+///
+/// [term] is walked with a stack of its subterms, in constant stack depth.
+void forEachCheckedPath(
+  ModedTerm term,
+  Automaton automaton,
+  ProgramDFA dfa,
+  void Function(PathStep leaf, PathCheckResult result, ModedPath Function() path)
+      visit, {
+  Set<String> open = const {},
+}) {
+  // Each vertex still to visit: its subterm, its step with the steps before
+  // it, the state and automaton the path has reached there, and the result of
+  // every path through it where an earlier step settled it.
+  final pending = <(ModedTerm, PathLink, DFAState, Automaton, PathCheckResult?)>[
+    (term, PathLink(pathStepOf(term, 0), null), automaton.startState,
+        automaton, null),
+  ];
+  while (pending.isNotEmpty) {
+    final (node, link, state, currentAutomaton, settled) = pending.removeLast();
+    final step = link.step;
+
+    if (node is! ModedCompound) {
+      // The path ends here: its leaf ([checkPathAgainstAutomaton], the leaf
+      // check, at an open parameter or against the state reached).
+      visit(
+          step,
+          settled ??
+              _atOpenParameter(state, step, isLeaf: true, open: open) ??
+              _checkLeafConsistencyForPath(step, state, dfa),
+          () => ModedPath.ending(link));
+      continue;
+    }
+
+    // A compound: each argument a step further on every path through it, the
+    // first visited first.
+    final settledHere =
+        settled ?? _atOpenParameter(state, step, isLeaf: false, open: open);
+    for (int i = node.arity - 1; i >= 0; i--) {
+      final child = node.args[i];
+      final childLink = PathLink(pathStepOf(child, i + 1), link);
+      if (settledHere != null) {
+        pending.add((child, childLink, state, currentAutomaton, settledHere));
+        continue;
+      }
+      final (nextState, nextAutomaton, result) =
+          _stepAlong(step, childLink.step, state, currentAutomaton, dfa);
+      pending.add(
+          (child, childLink, nextState ?? state, nextAutomaton, result));
+    }
+  }
+}
+
+/// [checkPathAgainstAutomaton]'s result at an open parameter: at the state
+/// [state] of a vertex whose step is [step], the result of every path through
+/// it, or null where [state] is not one of the [open] parameters.  At the leaf
+/// a variable is typed by the parameter.
+PathCheckResult? _atOpenParameter(DFAState state, PathStep step,
+    {required bool isLeaf, required Set<String> open}) {
+  if (open.isEmpty || !open.contains(state.baseName)) return null;
+  if (isLeaf && step.isVariable) {
+    return PathCheckResult.consistent(VariableTypeInfo(
+      typeState: state,
+      mode: step.isReader ? Mode.consume : Mode.produce,
+      isReader: step.isReader,
+    ));
+  }
+  return PathCheckResult.consistent();
+}
+
+/// One step of [checkPathAgainstAutomaton]'s traversal, from the vertex of
+/// [step] at [state] in [currentAutomaton] to its argument of [nextStep]: the
+/// state and automaton reached there, or, where the step settles the result of
+/// every path through that argument, that result.
+(DFAState?, Automaton, PathCheckResult?) _stepAlong(
+  PathStep step,
+  PathStep nextStep,
+  DFAState state,
+  Automaton currentAutomaton,
+  ProgramDFA dfa,
+) {
+  // Build transition label from path step
+  final label = _buildTransitionLabel(step, nextStep);
+
+  // Try to follow transition
+  final nextState = currentAutomaton.transition(state, label);
+
+  if (nextState == null) {
+    // Case 3 (Type path shorter - wildcard in type), as in
+    // [checkPathAgainstAutomaton].
+    if (state.isWildcard) {
+      final structuralModeAtWildcard = nextStep.mode;
+      final expectedMode = state.isDual ? Mode.consume : Mode.produce;
+
+      if (structuralModeAtWildcard == expectedMode) {
+        return (null, currentAutomaton, PathCheckResult.consistent());
+      }
+
+      return (
+        null,
+        currentAutomaton,
+        PathCheckResult.inconsistent(
+            'Mode mismatch at wildcard ${state.name}: expected ${expectedMode == Mode.consume ? "↓" : "↑"}, got ${structuralModeAtWildcard == Mode.consume ? "↓" : "↑"}')
+      );
+    }
+
+    return (
+      null,
+      currentAutomaton,
+      PathCheckResult.inconsistent(
+          'No transition for $label from state ${state.name}')
+    );
+  }
+
+  // Fix 4.1: Switch automata at type boundaries
+  if (nextState.isUserDefinedType && nextState.baseName != state.baseName) {
+    try {
+      return (nextState, dfa.getAutomaton(nextState.name), null);
+    } catch (e) {
+      return (
+        null,
+        currentAutomaton,
+        PathCheckResult.inconsistent(
+            'Cannot get automaton for type ${nextState.name}')
+      );
+    }
+  }
+
+  return (nextState, currentAutomaton, null);
 }
 
 // =============================================================================

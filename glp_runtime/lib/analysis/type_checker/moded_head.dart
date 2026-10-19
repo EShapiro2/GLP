@@ -151,7 +151,43 @@ ModedTerm _buildIOModedTerm(ast.Goal term, ProcDecl decl, Mode parentMode, TypeE
 /// FIX: When expectedType is a wildcard (_ or _?), we don't recurse with
 /// type-driven mode computation. Instead, all subterms inherit the wildcard's
 /// mode uniformly. This implements Definition 5.5 (wildcard positions).
+///
+/// A list is walked along its spine in a loop, each element built by a
+/// recursive call, so the depth used is the nesting of the term's elements and
+/// not the length of a list: TGLP well-typing.tex, Definition "Well-Typed
+/// Clause", puts no bound on a term's size, and a clause whose argument was a
+/// list of some 3100 elements overflowed the stack here.  The cells are built
+/// in the order the recursion built them, each element before the rest of the
+/// list, so the fresh names of anonymous variables are the same.
 ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, TypeEnvironment? typeEnv) {
+  // The cells of the list [term] begins, each with its mode and its element.
+  final cells = <(Mode, ModedTerm)>[];
+  while (expectedType != null &&
+      expectedType is! PrimitiveModeAlt &&
+      term is ast.ListTerm &&
+      !term.isNil) {
+    // Non-empty list [H|T] - get embedded modes for head and tail
+    final listModes = _getListSubtermModes(mode, expectedType, typeEnv);
+    final (headMode, headType) = listModes.$1;
+    final (tailMode, tailType) = listModes.$2;
+    cells.add(
+        (mode, _buildModedSubterm(term.head!, headMode, headType, typeEnv)));
+    term = term.tail!;
+    mode = tailMode;
+    expectedType = tailType;
+  }
+  var built = _buildModedNonCell(term, mode, expectedType, typeEnv);
+  for (var i = cells.length - 1; i >= 0; i--) {
+    final (cellMode, head) = cells[i];
+    built = ModedCompound.listCons(cellMode, head, built);
+  }
+  return built;
+}
+
+/// [_buildModedSubterm] of a term that is not a list cell it walks: a
+/// variable, a structure, the empty list, a constant, an anonymous variable,
+/// or any term at a wildcard or unknown type.
+ModedTerm _buildModedNonCell(ast.Term term, Mode mode, TypeExpr? expectedType, TypeEnvironment? typeEnv) {
   // FIX: When type is wildcard (_ or _?) OR unknown (null), don't use type-driven mode computation.
   // Wildcards accept any term at this position - all subterms inherit the same mode.
   // Unknown types (null) occur when we can't resolve the type definition.
@@ -178,18 +214,8 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, T
   }
 
   if (term is ast.ListTerm) {
-    if (term.isNil) {
-      // Empty list []
-      return ModedConstant.nil(mode);
-    }
-    // Non-empty list [H|T] - get embedded modes for head and tail
-    final listModes = _getListSubtermModes(mode, expectedType, typeEnv);
-    final (headMode, headType) = listModes.$1;
-    final (tailMode, tailType) = listModes.$2;
-
-    final head = _buildModedSubterm(term.head!, headMode, headType, typeEnv);
-    final tail = _buildModedSubterm(term.tail!, tailMode, tailType, typeEnv);
-    return ModedCompound.listCons(mode, head, tail);
+    // Empty list [] (a non-empty list is a cell [_buildModedSubterm] walks)
+    return ModedConstant.nil(mode);
   }
 
   if (term is ast.ConstTerm) {
@@ -417,7 +443,25 @@ TypeExpr _dualType(TypeExpr expr) {
 /// This implements Definition 5.5: when the type path ends at a wildcard,
 /// the term at that position is accepted without examining its internal structure
 /// against any type definition.
+///
+/// A list is walked along its spine in a loop, each element by a recursive
+/// call, in the order the recursion took them ([_buildModedSubterm]).
 ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
+  final heads = <ModedTerm>[];
+  while (term is ast.ListTerm && !term.isNil) {
+    // Build list structure - all children inherit the same mode
+    heads.add(_buildOpaqueModedTerm(term.head!, mode));
+    term = term.tail!;
+  }
+  var built = _buildOpaqueNonCell(term, mode);
+  for (var i = heads.length - 1; i >= 0; i--) {
+    built = ModedCompound.listCons(mode, heads[i], built);
+  }
+  return built;
+}
+
+/// [_buildOpaqueModedTerm] of a term that is not a list cell.
+ModedTerm _buildOpaqueNonCell(ast.Term term, Mode mode) {
   if (term is ast.VarTerm) {
     return _modedVariable(term, mode);
   }
@@ -435,13 +479,8 @@ ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
   }
 
   if (term is ast.ListTerm) {
-    if (term.isNil) {
-      return ModedConstant.nil(mode);
-    }
-    // Build list structure - all children inherit the same mode
-    final head = _buildOpaqueModedTerm(term.head!, mode);
-    final tail = _buildOpaqueModedTerm(term.tail!, mode);
-    return ModedCompound.listCons(mode, head, tail);
+    // The empty list (a non-empty one is a cell [_buildOpaqueModedTerm] walks)
+    return ModedConstant.nil(mode);
   }
 
   if (term is ast.StructTerm) {
@@ -461,7 +500,28 @@ ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
 /// This reflects the semantic inversion of head variables:
 /// - Head writers become readers in the moded head (bound BY the goal)
 /// - Head readers become writers in the moded head (will be bound BY the body)
+///
+/// A list is walked along its spine in a loop and its elements by recursive
+/// calls ([_buildModedSubterm]).
 ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
+  final cells = <ModedCompound>[];
+  final heads = <ModedTerm>[];
+  while (term is ModedCompound && term.isListCons) {
+    cells.add(term);
+    heads.add(_ensureVariablesMatchModes(term.args[0]));
+    term = term.args[1];
+  }
+  var adjusted = _ensureNonCellMatchesModes(term);
+  for (var i = cells.length - 1; i >= 0; i--) {
+    final cell = cells[i];
+    adjusted = ModedCompound(
+        cell.mode, cell.functor, cell.arity, [heads[i], adjusted]);
+  }
+  return adjusted;
+}
+
+/// [_ensureVariablesMatchModes] of a term that is not a list cell.
+ModedTerm _ensureNonCellMatchesModes(ModedTerm term) {
   if (term is ModedCompound) {
     final adjustedArgs = term.args.map(_ensureVariablesMatchModes).toList();
     return ModedCompound(term.mode, term.functor, term.arity, adjustedArgs);

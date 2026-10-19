@@ -1,0 +1,15 @@
+%% plays.glp --- the GAI mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for three executions, alice's, alf's and bob's, with the two ends of each of three root channels handed to them as their conversations, alice's and alf's, alf's and bob's, and bob's and alice's, the play standing in for the social graph, as ../gsnp/plays.glp does for five.  The persons are scripted (person.glp), each under its role, alf's script the AI agent's program, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.  The super-app hosting the mini-app on smartphones is ../gai_boot.glp.
+
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+
+%% play_agents(A, R, B): the example of GAI's paper (Section 3.2, and Table "The components that change in the example"), alice and bob, persons, and alf, alice's AI agent, with a conversation between the executions of each two of them.  Each person establishes their identity (GSG:1, Identity); alice enters her AI agent alf, which answers yes, and becomes its principal and its friend (Wards:1, Guardianship; GAI:2, Principal); alf proposes to befriend bob, and bob and alice, its principal, are asked and answer yes (Wards:2, Relations), bob recording that alf is alice's AI agent; alf signs the item 'Today\'s summary of the news' (GSNP:1, Authorship) and forwards it to bob (GSNP:2, Forwarding), who holds it signed by alf, then signed again by alf, nobody asked; bob offers alice friendship and she answers yes (GSG:2, Friendship); and alice retires alf (GAI:4, Retiring), which ends her friendship with it and its guardianship, alf asked nothing (Wards:3 and Wards:4).
+exported procedure play_agents(Stream(Seen), Stream(Seen), Stream(Seen)).
+play_agents(A?, R?, B?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, WA), ch([conversation(alf, ch(RA?, AR)), conversation(bob, ch(BA?, AB))], _), []), T?, M?),
+    person # miniapp_person(alice, alice, ch(WA?, GA), A),
+    run(miniapp(alf, ch(GR?, WR), ch([conversation(alice, ch(AR?, RA)), conversation(bob, ch(BR?, RB))], _), []), T?, M?),
+    person # miniapp_person(alf, alf, ch(WR?, GR), R),
+    run(miniapp(bob, ch(GB?, WB), ch([conversation(alf, ch(RB?, BR)), conversation(alice, ch(AB?, BA))], _), []), T?, M?),
+    person # miniapp_person(bob, bob, ch(WB?, GB), B).

@@ -227,9 +227,22 @@ abstract class ModedTermVisitor<T> {
 ///
 /// The leaf is either a constant or a variable.
 class ModedPath {
-  final List<PathStep> steps;
+  List<PathStep>? _steps;
+  final PathLink? _last;
 
-  ModedPath(this.steps);
+  ModedPath(List<PathStep> steps)
+      : _steps = steps,
+        _last = null;
+
+  /// The path whose last step is [last], its steps listed when first asked
+  /// for: a walk of a term makes one of these for a path in constant time,
+  /// where listing the steps of every path costs the sum of their lengths,
+  /// quadratic in the length of a list ([forEachCheckedPath],
+  /// well_typed_term.dart).
+  ModedPath.ending(PathLink last) : _last = last;
+
+  /// The steps from the root to the leaf.
+  List<PathStep> get steps => _steps ??= _last!.steps();
 
   /// The root step (first step in path)
   PathStep get root => steps.first;
@@ -257,6 +270,29 @@ class ModedPath {
 
   @override
   int get hashCode => Object.hashAll(steps);
+}
+
+/// A step of a path and the steps before it, shared by every path through
+/// the step's vertex.
+class PathLink {
+  final PathStep step;
+  final PathLink? parent;
+
+  /// The number of steps from the root to this one.
+  final int length;
+
+  PathLink(this.step, this.parent) : length = (parent?.length ?? 0) + 1;
+
+  /// The steps from the root to this one, listed by a loop up the parents.
+  List<PathStep> steps() {
+    final out = List<PathStep>.filled(length, step, growable: true);
+    PathLink? link = this;
+    for (var i = length - 1; i >= 0; i--) {
+      out[i] = link!.step;
+      link = link.parent;
+    }
+    return out;
+  }
 }
 
 /// A single step in a moded path.
@@ -463,44 +499,47 @@ class _DualVisitor implements ModedTermVisitor<ModedTerm> {
 ///
 /// Returns the set of all paths from root to leaves.
 /// Each path is a sequence of PathSteps.
+///
+/// The term is walked with a stack of its subterms, so a term of any size is
+/// walked in constant stack depth: TGLP well-typing.tex, Definition
+/// "Well-Typed Clause", puts no bound on a term's size.  The paths are added
+/// depth first and left to right, the order of the recursive walk this
+/// replaces.  The checker walks a term's paths with [forEachCheckedPath]
+/// (well_typed_term.dart), which builds no set.
 Set<ModedPath> paths(ModedTerm t) {
   final result = <ModedPath>{};
-
-  // Create root step
-  final rootStep = PathStep(
-    symbol: _symbolOf(t),
-    argIndex: 0,
-    mode: t.mode,
-    isVariable: t is ModedVariable,
-    isReader: t is ModedVariable ? t.isReader : false,
-    value: t is ModedConstant ? t.value : null,
-  );
-
-  _extractPaths(t, [rootStep], result);
+  // The steps from the root to the subterm being visited.
+  final prefix = <PathStep>[];
+  // Each subterm still to visit, with its step and its depth.
+  final pending = <(ModedTerm, PathStep, int)>[(t, pathStepOf(t, 0), 0)];
+  while (pending.isNotEmpty) {
+    final (term, step, depth) = pending.removeLast();
+    prefix.length = depth;
+    prefix.add(step);
+    if (term is ModedCompound) {
+      // Compound: each argument, the first visited first
+      for (int i = term.arity - 1; i >= 0; i--) {
+        final child = term.args[i];
+        pending.add((child, pathStepOf(child, i + 1), depth + 1)); // 1-based
+      }
+    } else {
+      // Leaf (constant or variable): add path to result
+      result.add(ModedPath(List.of(prefix)));
+    }
+  }
   return result;
 }
 
-/// Recursively extract paths from a moded term
-void _extractPaths(ModedTerm t, List<PathStep> prefix, Set<ModedPath> result) {
-  if (t is ModedCompound) {
-    // Compound: recurse into each argument
-    for (int i = 0; i < t.arity; i++) {
-      final child = t.args[i];
-      final childStep = PathStep(
-        symbol: _symbolOf(child),
-        argIndex: i + 1, // 1-based
-        mode: child.mode,
-        isVariable: child is ModedVariable,
-        isReader: child is ModedVariable ? child.isReader : false,
-        value: child is ModedConstant ? child.value : null,
-      );
-      _extractPaths(child, [...prefix, childStep], result);
-    }
-  } else {
-    // Leaf (constant or variable): add path to result
-    result.add(ModedPath(prefix));
-  }
-}
+/// The step of a path at [t], the [argIndex]th argument of its parent (0 at
+/// the root).
+PathStep pathStepOf(ModedTerm t, int argIndex) => PathStep(
+      symbol: _symbolOf(t),
+      argIndex: argIndex,
+      mode: t.mode,
+      isVariable: t is ModedVariable,
+      isReader: t is ModedVariable ? t.isReader : false,
+      value: t is ModedConstant ? t.value : null,
+    );
 
 /// Get the symbol representation of a moded term
 String _symbolOf(ModedTerm t) {
