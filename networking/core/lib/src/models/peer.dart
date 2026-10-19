@@ -43,8 +43,7 @@ extension PeerTransportDisplay on PeerTransport {
   }
 
   /// Convert from TransportType
-  static PeerTransport fromTransportType(TransportType type,
-      {bool isMesh = false}) {
+  static PeerTransport fromTransportType(TransportType type) {
     switch (type) {
       case TransportType.ble:
         return PeerTransport.bleDirect;

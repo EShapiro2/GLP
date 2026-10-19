@@ -7,7 +7,6 @@ PeersState peersReducer(PeersState state, dynamic action) {
   // ===== BLE Discovery Actions =====
 
   if (action is BleDeviceDiscoveredAction) {
-    // TODO: why is nickname here? it comes in the announce
     final existing = state.discoveredBlePeers[action.deviceId];
     final now = DateTime.now();
 
@@ -345,7 +344,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
           : PeerConnectionState.disconnected;
       // Preserve UDP address — it's the last known location and needed
       // for reconnection. Never clear peer addresses.
-      // Clear hasLiveUdpConnection — transport-level disconnect means no live stream.
+      // Clear hasLiveUdpConnection — with the UDP path gone, no session is live.
       final updated = PeerState(
         publicKey: existing.publicKey,
         connectionState: newConnectionState,
@@ -396,12 +395,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
   }
 
   if (action is StalePeersRemovedAction) {
-    // Memory pressure: forget unprotected peers we haven't heard from within
-    // [staleThreshold]. We do NOT mutate `connectionState` here — that field
-    // is exclusively driven by plugin events (BLE) and UDX events (UDP), so
-    // that both sides of a connection see the same transitions. Known peers
-    // (GLP-supplied keys, passed as [protectedPubkeyHexes]) are kept
-    // regardless so we can reconnect to them later.
+    // Memory pressure: forget unprotected peers we haven't heard from within [staleThreshold]. We do NOT mutate `connectionState` here — that field is exclusively driven by plugin events (BLE) and UDP transport events (UDP), so that both sides of a connection see the same transitions. Known peers (GLP-supplied keys, passed as [protectedPubkeyHexes]) are kept regardless so we can reconnect to them later.
     final now = DateTime.now();
     final newMap = Map<String, PeerState>.from(state.peers);
     final staleKeys = <String>[];

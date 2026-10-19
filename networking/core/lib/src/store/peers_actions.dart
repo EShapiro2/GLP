@@ -134,8 +134,7 @@ class PeerBleDisconnectedAction extends PeerAction {
   PeerBleDisconnectedAction(this.publicKey, {this.role});
 }
 
-/// A UDX connection to a peer was established or closed.
-/// Updates [PeerState.hasLiveUdpConnection].
+/// A peer's Noise XX session over UDP was established or torn down. Updates [PeerState.hasLiveUdpConnection].
 class PeerUdpConnectionChangedAction extends PeerAction {
   final String pubkeyHex;
   final bool connected;
@@ -181,8 +180,7 @@ class PeerAttestedAction extends PeerAction {
 
 /// A verified UDP packet was received from a peer.
 ///
-/// Updates UDP-specific freshness so stale UDX sessions can be aged out even
-/// when the peer is still nearby over BLE.
+/// Updates UDP-specific freshness so a silent UDP session can be aged out even when the peer is still nearby over BLE.
 class PeerUdpSeenAction extends PeerAction {
   final Uint8List publicKey;
 

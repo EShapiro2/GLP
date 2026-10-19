@@ -12,15 +12,17 @@
 /// ```dart
 /// import 'package:grassroots_networking/grassroots_networking.dart';
 /// 
-/// // Create identity (provided by GSG layer)
-/// final identity = GrassrootsIdentity(
-///   publicKey: myPubKey,
-///   privateKey: myPrivKey,
-///   nickname: 'Alice',
-/// );
+/// // The agent's key pair, generated once and persisted above the layer (spec §Identity)
+/// final identity = await GrassrootsIdentity.generate();
 /// 
 /// // Create GrassrootsNetwork instance
-/// final grassroots = GrassrootsNetwork(identity: identity);
+/// final grassroots = GrassrootsNetwork(
+///   identity: identity,
+///   underlays: {Underlay.pan, Underlay.lan, Underlay.wan},
+///   rendezvousServers: [RendezvousServer('203.0.113.7:9514', serverKey)],
+///   store: store,
+///   sodium: sodium,
+/// );
 /// 
 /// // Set up callbacks
 /// grassroots.onMessageReceived = (sender, payload, messageId, underlay) {
@@ -33,6 +35,7 @@
 /// 
 /// // Initialize and start
 /// await grassroots.initialize();
+/// await grassroots.start();
 /// 
 /// // Send messages
 /// await grassroots.send(recipientPubkey, gsgBlockData);
@@ -45,22 +48,9 @@
 /// 
 /// - `GrassrootsNetwork` - Main API class for GSG integration
 /// - `GrassrootsIdentity` - Ed25519 identity provided by GSG
-/// - `Peer` - Represents a connected peer
-/// - `MeshRouter` - Handles routing, relay, and fragmentation
-/// - `BleManager` - Manages BLE Central and Peripheral roles
-/// - `TransportService` - Abstract interface for transport implementations
-/// 
-/// ## Protocol Compatibility
-/// 
-/// This implementation follows the Grassroots protocol specification for
-/// BLE mesh networking, ensuring compatibility with other Grassroots clients.
-/// 
-/// ## Transport Abstraction
-/// 
-/// The transport layer is abstracted via the `TransportService` interface,
-/// allowing multiple transport implementations:
-/// - `BleTransportService` - Bluetooth Low Energy mesh (default)
-/// - Future: WebRTC transport (STUN/TURN/TURNS)
+/// - `PeerState` - A peer's state in the Redux store
+/// - `MessageRouter` - Routes incoming packets from every carrier to their handlers
+/// - `TransportService` - Abstract interface of the carriers: `BleTransportService` for the PAN, `UdpTransportService` for the LAN and the WAN
 library grassroots_networking;
 
 // Main API

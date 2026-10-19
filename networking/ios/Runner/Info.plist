@@ -29,11 +29,11 @@
 	<key>GrassrootsAppIdentifierPrefix</key>
 	<string>$(AppIdentifierPrefix)</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>This app needs Bluetooth to communicate with nearby devices in the mesh network</string>
+	<string>Find devices running Grassroots within Bluetooth range and communicate with them directly, with no network and no server.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>This app needs Bluetooth to advertise and accept connections from nearby devices</string>
+	<string>Let devices running Grassroots within Bluetooth range find this device and connect to it, with no network and no server.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>This app needs local network access for peer-to-peer communication</string>
+	<string>Find devices running Grassroots on your local network and communicate with them directly, with no server.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_grassroots._udp</string>
@@ -41,9 +41,9 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Recognise the places you declare, so this app can tell when you enter or leave one. Your location is used on this device only and is never sent anywhere; while-in-use only, never in the background.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Take photos to send to peers in your mesh</string>
+	<string>Take photos to send to peers</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Pick photos to send to peers in your mesh</string>
+	<string>Pick photos to send to peers</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -183,8 +183,7 @@ class PeerState {
   /// Used to detect stale BLE IDs (peer left BLE range but still on UDP).
   final DateTime? lastBleSeen;
 
-  /// When the last verified UDP packet was received from this peer.
-  /// Used to age out stale UDX sessions independently of BLE freshness.
+  /// When the last verified UDP packet was received from this peer. Used to age out silent UDP sessions independently of BLE freshness.
   final DateTime? lastUdpSeen;
 
   /// The peer's dial-book address (ip:port format), supplied by GLP via
@@ -201,11 +200,7 @@ class PeerState {
   /// any prior observation was for a different network path.
   final DateTime? lastDirectReachAt;
 
-  /// Whether there is an authenticated UDP path to this peer — a live UDX
-  /// connection whose Noise XX session has completed. Set true when the Noise
-  /// handshake authenticates (not on the bare UDX connect), false when the
-  /// stream closes. Unlike [udpAddress] (preserved for reconnection), this
-  /// reflects the actual authenticated-connection state right now.
+  /// Whether there is an authenticated UDP path to this peer — a UDP path whose Noise XX session has completed. Set true when the Noise handshake authenticates, false when the session is torn down. Unlike [udpAddress] (preserved for reconnection), this reflects the actual authenticated-connection state right now.
   final bool hasLiveUdpConnection;
 
   /// Whether there is an authenticated BLE path to this peer — a live BLE link
@@ -296,10 +291,7 @@ class PeerState {
   /// predicate and the basis for [isReachable]'s public surface,
   /// `GrassrootsNetwork.isPeerReachable`.
   ///
-  /// Reachability requires a completed Noise session — spec
-  /// `docs/GLP_Networking_API/sections/ip.tex` §IP Connection: connected fires
-  /// once the stream is "established and authenticated". A raw BLE/UDX link
-  /// without a session does not count as reachable.
+  /// Reachability requires a session that is authenticated and attested (spec §Session Establishment: "A peer becomes reachable over an underlay when its session on that underlay is established, authenticated, and attested."). A BLE link or a UDP path without such a session does not count as reachable.
   bool get isReachable => reachableUnderlays.isNotEmpty;
 
   /// The underlays over which this peer is reachable *right now* — one entry

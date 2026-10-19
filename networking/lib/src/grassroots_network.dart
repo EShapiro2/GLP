@@ -233,11 +233,8 @@ Set<String> computeStaleBlePeerPubkeys({
 ///
 /// Usage:
 /// ```dart
-/// final identity = GrassrootsIdentity(
-///   publicKey: myPubKey,
-///   privateKey: myPrivKey,
-///   nickname: 'Alice',
-/// );
+/// // The agent's key pair, generated once and persisted above the layer (spec §Identity)
+/// final identity = await GrassrootsIdentity.generate();
 ///
 /// final grassroots = GrassrootsNetwork(
 ///   identity: identity,
