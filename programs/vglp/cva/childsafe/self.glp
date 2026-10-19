@@ -15,7 +15,15 @@
 %%   approval question; bob then befriends alice, who is asked.  alice and dave each
 %%   request the other known, the Discover the initiator needs before it
 %%   proposes; alice proposes cbefriend(carol, dave, alice, bob), carol, dave
-%%   and bob are asked and answer yes, and it commits at all four.
+%%   and bob are asked and answer yes, and it commits at all four.  Only
+%%   alice, of its four guards, knows every participant: carol knows alice
+%%   alone, and bob and dave each other and alice.  alice's Commit introduces
+%%   every two of bob, carol and dave to each other, once per pair, and each
+%%   comes to know the others by the ihellos they exchange, bob and dave
+%%   knowing each other already (vGLP e2bc4f4, Definition "Deciding", Commit;
+%%   Definition "Holds, For, Connected, Unobstructed, Steady": one of its
+%%   guards "knows every other participant").  The enrolments and the
+%%   befriending, binary, introduce no one.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
