@@ -11,13 +11,13 @@
 % An agent-named contract (Appendix D.4, definition:sg-agent-named) is put to
 % the same definitions, with clause 1 of definition:sg-agent-named: the
 % introductory act has agent roles and no name term, and so has each schema
-% of arity one of clause 1 of def:unobstructed.  A seated role adds at the
-% agents of its extent, which no binding names, so clause 2 of
+% of arity one of clause 1 of def:unobstructed.  A seated or a listed role
+% adds at the agents of its extent, which no binding names, so clause 2 of
 % def:unobstructed is asked of the agent roles of a schema, and clause 2 of
-% definition:sg-agent-named of its seated roles: none adds an atom of a
-% predicate the introductory act forbids at a role.  For a contract of
-% Section 3 these restrictions ask nothing, its roles being agent roles and
-% its schemas carrying no name term.
+% definition:sg-agent-named of its seated and listed roles: none adds an
+% atom of a predicate the introductory act forbids at a role (GSC 8064cfb).
+% For a contract of Section 3 these restrictions ask nothing, its roles
+% being agent roles and its schemas carrying no name term.
 % ---------------------------------------------------------------------------
 
 % --- the introductions of person(0) and person(1) --------------------------
@@ -225,9 +225,10 @@ role_blocks1(clear, Rs, J, Sc, Cx, G, P, R?) :-
     role_blocks(Rs?, J1?, Sc?, Cx?, G?, P?, R).
 role_blocks1(blocked(Nm, Jx, Psi), _, _, _, _, _, _, blocked(Nm?, Jx?, Psi?)).
 
-% A seated role adds at the agents of its extent, not at a person a binding
-% sends it to, and clause 2 of definition:sg-agent-named asks of it what
-% this clause asks of an agent role (seated_faults, below): it is passed by.
+% A seated or a listed role adds at the agents of its extent, not at a person
+% a binding sends it to, and clause 2 of definition:sg-agent-named asks of it
+% what this clause asks of an agent role (seated_faults, below): it is passed
+% by.
 procedure role_blocks(RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
 role_blocks([], _, _, _, _, _, clear).
 role_blocks([RS|Rs], J, Sc, Cx, G, P, R?) :-
@@ -354,24 +355,32 @@ unob_roles([RS|Rs], I, Nm, B, C, Fb, Rf, R?) :-
     faults_app(F1?, F2?, R).
 
 % --- clause 2 of definition:sg-agent-named ---------------------------------
-% No seated role of a schema of C adds an atom of a predicate that the
-% introductory act forbids at a role.  Each atom A the act Nm forbids at its
-% role I, and each atom a seated role J of a schema Nm2 adds of A's
-% predicate, is a fault obstructed(Nm, I, A, seated(Nm2, J, Added)).  A
-% contract of Section 3 has no seated role and no such fault.
+% No seated or listed role of a schema of C adds an atom of a predicate that
+% the introductory act forbids at a role (GSC 8064cfb).  Each atom A the act
+% Nm forbids at its role I, and each atom a seated role J of a schema Nm2
+% adds of A's predicate, is a fault obstructed(Nm, I, A, seated(Nm2, J,
+% Added)), and each one a listed role J adds a fault obstructed(Nm, I, A,
+% listed_role(Nm2, J, Added)).  A contract of Section 3 has no seated or
+% listed role and no such fault.
 
-procedure sh_atoms(Atoms?, Constant?, Constant?, Integer?, Atom?, Constant?, Integer?,
+% The cause, by the kind of the role: yes for a listed role.
+procedure sh_cause(Ans?, Constant?, Integer?, Atom?, Cause).
+sh_cause(no, Nm2, J, X, seated(Nm2?, J?, X?)).
+sh_cause(yes, Nm2, J, X, listed_role(Nm2?, J?, X?)).
+
+procedure sh_atoms(Atoms?, Constant?, Ans?, Constant?, Integer?, Atom?, Constant?, Integer?,
                    Faults?, Faults).
-sh_atoms([], _, _, _, _, _, _, T, T?).
-sh_atoms([atom(Q, Bs)|Xs], P, Nm2, J, A, Nm, I,
-         T, [obstructed(Nm?, I?, A?, seated(Nm2?, J?, atom(Q?, Bs?)))|R?]) :-
-    Q? =?= P?, ground(Bs?), ground(Xs?), ground(Nm2?), integer(J?), ground(A?),
+sh_atoms([], _, _, _, _, _, _, _, T, T?).
+sh_atoms([atom(Q, Bs)|Xs], P, L, Nm2, J, A, Nm, I,
+         T, [obstructed(Nm?, I?, A?, Cs?)|R?]) :-
+    Q? =?= P?, ground(Bs?), ground(Xs?), ground(L?), ground(Nm2?), integer(J?), ground(A?),
     ground(Nm?), integer(I?), ground(T?) |
-    sh_atoms(Xs?, P?, Nm2?, J?, A?, Nm?, I?, T?, R).
-sh_atoms([atom(_, _)|Xs], P, Nm2, J, A, Nm, I, T, R?) :-
-    otherwise, ground(Xs?), ground(P?), ground(Nm2?), integer(J?), ground(A?),
+    sh_cause(L?, Nm2?, J?, atom(Q?, Bs?), Cs),
+    sh_atoms(Xs?, P?, L?, Nm2?, J?, A?, Nm?, I?, T?, R).
+sh_atoms([atom(_, _)|Xs], P, L, Nm2, J, A, Nm, I, T, R?) :-
+    otherwise, ground(Xs?), ground(P?), ground(L?), ground(Nm2?), integer(J?), ground(A?),
     ground(Nm?), integer(I?), ground(T?) |
-    sh_atoms(Xs?, P?, Nm2?, J?, A?, Nm?, I?, T?, R).
+    sh_atoms(Xs?, P?, L?, Nm2?, J?, A?, Nm?, I?, T?, R).
 
 procedure sh_role(Ans?, RoleSpec?, Constant?, Constant?, Integer?, Atom?, Constant?, Integer?,
                   Faults?, Faults).
@@ -380,7 +389,8 @@ sh_role(no, RS, P, Nm2, J, A, Nm, I, T, R?) :-
     ground(RS?), ground(P?), ground(Nm2?), integer(J?), ground(A?), ground(Nm?),
     integer(I?), ground(T?) |
     rs_add(RS?, Add),
-    sh_atoms(Add?, P?, Nm2?, J?, A?, Nm?, I?, T?, R).
+    rs_listed(RS?, L),
+    sh_atoms(Add?, P?, L?, Nm2?, J?, A?, Nm?, I?, T?, R).
 
 procedure sh_roles(RoleSpecs?, Integer?, Constant?, Constant?, Atom?, Constant?, Integer?,
                    Faults?, Faults).

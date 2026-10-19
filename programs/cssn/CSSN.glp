@@ -11,9 +11,11 @@
 %% children, which realise Wards (CSSN, Appendix B.2; the tables in Appendix
 %% C.2, sections/artefact-schemas.tex).  Written by CSSN #5 Cowork, 2026-10-18;
 %% GSNP's schemas brought to GLP 88cb0c45 by CSSN #6 Cowork, 2026-10-19: a group is
-%% the community name <a>.n, and close and child_close take the seated role
-%% (<a>.n)^member, every member of the group (GSC, Appendices D.4 and F); a
-%% schema's second argument lists its variables in the order of its head.
+%% the community name <a>.n, and a schema's second argument lists its variables
+%% in the order of its head; close and child_close take the listed role
+%% a[listed(*, n)], every member the leader lists, as GSNP.glp's close does at
+%% GLP 542ec8ca (GSC, Appendices D.4 and F, at GSC 8064cfb), by CSSN #7 Cowork,
+%% 2026-10-19.
 %%
 %% Twenty-nine schemas over fifteen predicates; friend is reflexive.  Every
 %% role requires identity, except the role of establish, which adds it, and
@@ -39,7 +41,8 @@ Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+            ; listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
@@ -142,16 +145,16 @@ gsnp_schemas([
     schema(leave, [svar(n)],
       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
        rs(guarded,   [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [atom(retired, [])])]),
-%%   close(a?, (<a>.n)^member ; n) :
+%%   close(a?, a[listed(*, n)] ; n) :
 %%       at a:  identity, +closed(n), -listed(a, n)
-%%       at (<a>.n)^member:  identity, -member(<a>.n)
-%%   The seated role is every member of the group, the leader among them, so
-%%   closing a group ends every membership in one act (GSNP.glp at GLP 88cb0c45;
-%%   GSC, Appendix D.4).
+%%       at a[listed(*, n)]:  identity, -member(<a>.n)
+%%   The listed role is every member the leader lists, the leader among them,
+%%   so closing a group ends every membership in one act (GSNP.glp at GLP
+%%   542ec8ca; GSC, Appendix D.4).
     cschema(close, [svar(n)], [],
       [rs(guarded, [atom(closed, [svar(n)])],
                    [atom(listed, [role(1), svar(n)])], [atom(identity, [])], [atom(retired, [])]),
-       crs(seated(ext(own(1), n), member), unguarded,
+       crs(listed(1, listed, [svar(n)]), unguarded,
            [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
 %%   drop(a, q ; n) :
 %%       at a:  identity, not friend(q), -listed(q, n)
@@ -373,16 +376,17 @@ children_schemas([
                      [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]),
-%%   child_close(r, p?, (<r>.n)^member ; n) :
+%%   child_close(r, p?, r[listed(*, n)] ; n) :
 %%       at r:  identity, child, parent(p), +closed(n), -listed(r, n)
 %%       at p:  identity, not child, parenting(r)
-%%       at (<r>.n)^member:  identity, -member(<r>.n)
-%%   The seated role is every member of the group, the child among them.
+%%       at r[listed(*, n)]:  identity, -member(<r>.n)
+%%   The listed role is every member the child leader lists, the child among
+%%   them, as in close (GSC #4 to CSSN, 2026-10-19 14:14 UTC).
     cschema(child_close, [svar(n)], [],
       [rs(unguarded, [atom(closed, [svar(n)])],
                      [atom(listed, [role(1), svar(n)])],
                      [atom(identity, []), atom(child, []), atom(parent, [role(2)])], []),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]),
-       crs(seated(ext(own(1), n), member), unguarded,
+       crs(listed(1, listed, [svar(n)]), unguarded,
            [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])])]).

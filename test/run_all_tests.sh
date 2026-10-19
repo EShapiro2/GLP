@@ -2387,7 +2387,8 @@ check_not "CSSN program no type errors" "Type checking failed" "$k_load"
 # The contract's act schemas (CSSN Appendix B.2), programs/cssn/CSSN.glp,
 # in the term form programs/gsc reads, each schema listing its variables in
 # its head (GSC 0228e79): GSC's verdict on it --- an agent-named contract,
-# its groups closed by the seated role of their members (GSC, Appendix D.4),
+# its groups closed by the listed role of the members the leader lists
+# (CSSN.glp at 4cb1ec11; GSC 8064cfb, Appendix D.4),
 # with traceable provenance and volition, and an introduction with wards in
 # place of an unobstructed introductory act: the verdict syntactically
 # grassroots with wards (GSC, Appendix F, def:sg-wards, at GSC 503db66),
