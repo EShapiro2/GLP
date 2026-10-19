@@ -105,7 +105,7 @@ name_class(unfriend(V1, V2), _, unfriend(V1?, V2?))
 %% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, Menu, shows the agent's own key and the persons it knows and takes one request (vGLP 321127a, Section 5.4); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(S, K), the machine state S of its app state and the persons K it knows, when it starts and whenever either changes, and the person's screen shows the last view written (vGLP b7e3517, Section 5.4, "The compilation"); and, when an attempt its person proposed closes without committing, a notice, refused(Part, Q), Q the participant whose vote no closed it, or yielded(Part), where it yielded to an attempt with priority over it (vGLP c44769f, Section 5.4, "The compilation").
 %% ===========================================================================
 
-%% An attempt (i, k, pi, [t]_j) (vGLP 099f876, Definition "Attempt"): its initiator, its number, its rank and its part, named by a term of Class, a schema-binding of the part, of the attempt's class (Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"), the part's guard set the people in the schema-binding's marked roles.  The cargoes (Definition "Cargo, App State, Question, Free, Ready") are its start, a vote on it, its outcome and a yield of it; a message carries its sender and a cargo, a hello, an ihello, or an introduction, intro(P, Q), P's cargo intro(Q) (Definitions "CVA Platform" and "Introduction Rule, Introduce Peers").
+%% An attempt (i, k, pi, [t]_j) (vGLP 099f876, Definition "Attempt"): its initiator, its number, its rank and its part, named by a term of Class, a schema-binding of the part, of the attempt's class (Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"), the part's guard set the people in the schema-binding's marked roles.  The cargoes (Definition "Cargo, App State, Question, Free, Ready") are its start, a vote on it, its outcome and a yield of it; a message carries its sender and a cargo, a hello, an ihello, or an introduction, intro(P, Q), P's cargo intro(Q), which Commit and Introduce peers send (Definitions "CVA Platform", "Deciding" and "Introduction Rule, Introduce Peers").
 Peer      ::= Key.
 %% A speech act is an utterance or a speech act, signed by a person (GSC,
 %% Section 3): "A speech act forwarded with its provenance is signed again at
@@ -1236,10 +1236,11 @@ dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals
     next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
 dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?), ground(I?) |
-    commit_effect(I?, At?, St?, Ss, St1),
+    commit_effect(I?, At?, St?, Ss, Is, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
+    put_all(Is?, Out1, Out2?),
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out2, Ow, Approvals?, St2?).
 dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(B?), ground(I?), ground(Ap0?) |
     wound_effect(I?, B?, St?, Ss, St1),
@@ -1598,13 +1599,36 @@ tally_app1(no, _, At, F, yes, _, app(S, K, L, R), [],
 
 %% Commit, an own transaction, of an attempt the agent initiated with a yes of every
 %% other participant recorded: the effect applied, the lock released, the
-%% attempt closed and commit told.
-procedure commit_effect(Info?, Attempt?, St?, Sends, St).
-commit_effect(I, At, St, Ss?, St1?) :- ground(I?), ground(At?), ground(St?) |
+%% attempt closed and commit told; and the other participants of the attempt introduced to each other, once per pair (vGLP e2bc4f4, Definition "Deciding", Commit: "for every two participants q != r of alpha other than p for which p has not recorded introduced(q, r), p adds message(p, q, intro(r)) and message(p, r, intro(q)) to o_p and records introduced(q, r)"): for each pair {Q, R}, Q preceding R, introduced(Q, R) not recorded, intro(R) sent to Q and intro(Q) to R, each carrying its sender, msg(Q, intro(P, R)), after the outcome, and introduced(Q, R) recorded, the record Introduce peers keeps (commit_pairs, commit_intros).  The participants of a binary transaction other than its initiator are one, so its Commit introduces no one.
+procedure commit_effect(Info?, Attempt?, St?, Sends, Nets, St).
+commit_effect(I, At, St, Ss?, Ms?, St1?) :- ground(I?), ground(At?), ground(St?) |
     st_id(St?, Id),
     st_app(St?, Ap),
     commit_app(I?, At?, Id?, Ap?, Ss, Ap1),
-    set_app(St?, Ap1?, St1).
+    commit_pairs(I?, Id?, Ps),
+    commit_intros(Ps?, Id?, Ap1?, Ms, Ap2),
+    set_app(St?, Ap2?, St1).
+%% The pairs of the participants of the attempt other than the agent, those of its class (Definition "Attempt"), each pr(Q, R), Q preceding R in the order of identifiers, as Introduce peers forms its pairs (intro_cands).
+procedure commit_pairs(Info?, Peer?, Pairs).
+commit_pairs(I, Id, Ps?) :- ground(I?) |
+    info_q(I?, Q),
+    remove_all(Id?, Q?, Q1),
+    dedup(Q1?, Q2),
+    sort_peers(Q2?, Q3),
+    pairs_of(Q3?, Ps).
+%% Each pair not recorded introduced: intro(R) to Q and intro(Q) to R, and introduced(Q, R) recorded (introduce_app).
+procedure commit_intros(Pairs?, Peer?, App?, Nets, App).
+commit_intros([], _, Ap, [], Ap?).
+commit_intros([pr(Q, R)|Ps], Id, Ap, Ms?, Ap2?) :- ground(Q?), ground(R?), ground(Ap?) |
+    app_recs(Ap?, Rc),
+    mem(introduced(Q?, R?), Rc?, Done),
+    commit_intro(Done?, Q?, R?, Id?, Ap?, Ms, Ms1?, Ap1),
+    commit_intros(Ps?, Id?, Ap1?, Ms1, Ap2).
+procedure commit_intro(YesNo?, Peer?, Peer?, Peer?, App?, Nets, Nets?, App).
+commit_intro(yes, _, _, _, Ap, Ms?, Ms, Ap?).
+commit_intro(no, Q, R, Id, Ap, [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?))|Ms?], Ms, Ap1?) :-
+    ground(Q?), ground(R?), ground(Id?) |
+    introduce_app(Q?, R?, Ap?, Ap1).
 procedure commit_app(Info?, Attempt?, Peer?, App?, Sends, App).
 commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, [closed(At?)|R?])) :-
     ground(I?), ground(At?), ground(Id?) |
