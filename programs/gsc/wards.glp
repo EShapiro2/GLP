@@ -1037,12 +1037,7 @@ guard_adds_ok(rk_ward(_, _), _, _, _, _, yes).
 guard_adds_ok(rk_free, _, _, _, _, yes).
 guard_adds_ok(rk_other, _, _, _, _, yes).
 
-% Clause 2: an atom required at a role.  It is an atom of a reflexive
-% predicate naming the role; or the one atom of a schema of arity one as in
-% clause 1 of def:unobstructed-marks; or, at a ward role, its m or g(sigma);
-% or, at the guardian role sigma of a ward role rho, w(rho); or, at a
-% guardian role or a free role, e(kappa) for another guardian role or free
-% role kappa, e reflexive where both are guardian roles.
+% Clause 2: an atom required at a role.  It is an atom of a reflexive predicate naming the role; or the one atom of a schema of arity one as in clause 1 of def:unobstructed-marks; or, at a ward role, its m or g(sigma); or, at a ward role of m, an atom of a predicate h whose arguments are speech-act variables of the schema occurring in no other atom it requires, where every schema of C that adds m at a role adds an atom of h there and no schema of C deletes an atom of h (GSC 410a440); or, at the guardian role sigma of a ward role rho, w(rho); or, at a guardian role or a free role, e(kappa) for another guardian role or free role kappa, e reflexive where both are guardian roles.
 
 procedure req_ward_ok(RK?, Atom?, Guardianships?, Ans).
 req_ward_ok(rk_ward(Mk, S), Phi, Gs, R?) :- ground(Mk?), integer(S?), ground(Phi?), ground(Gs?) |
@@ -1113,9 +1108,121 @@ req_e_ok(atom(Q, As), X, KX, E, Rf, RKs, R?) :-
     req_e_ok1(As?, X?, KX?, E?, Rf?, RKs?, R).
 req_e_ok(atom(_, _), _, _, _, _, _, no) :- otherwise | true.
 
-procedure req_atom_ok(Atom?, Integer?, RK?, Contract?, Preds?, Preds?, Constant?, Guardianships?,
-                      RKs?, Party?, Party?, Ans).
-req_atom_ok(Phi, X, KX, C, Rf, Lv, E, Gs, RKs, P1, P2, R?) :-
+% The atom of h, at a ward role of Mk: its arguments speech-act variables of the schema, each occurring in no other atom the schema requires, Req being every atom it requires at every role; every schema of C that adds Mk at a role adds an atom of h there, and no schema of C deletes an atom of h.  An atom of h is one of its predicate with as many arguments.
+procedure all_svars(Args?, Ans).
+all_svars([], yes).
+all_svars([svar(_)|As], R?) :- ground(As?) | all_svars(As?, R).
+all_svars([_|_], no) :- otherwise | true.
+
+procedure add_if(Ans?, Integer?, Integer).
+add_if(yes, M, N?) :- integer(M?) | N := M? + 1.
+add_if(no, M, M?).
+
+% atoms_with_svar(Phis, Y, N): N atoms of Phis have the speech-act variable Y among their arguments, in a signed term or a name term too.
+procedure atoms_with_svar(Atoms?, Arg?, Integer).
+atoms_with_svar([], _, 0).
+atoms_with_svar([atom(_, As)|Xs], Y, N?) :- ground(As?), ground(Xs?), ground(Y?) |
+    filter_svars(As?, SV),
+    args_member(SV?, Y?, A),
+    atoms_with_svar(Xs?, Y?, M),
+    add_if(A?, M?, N).
+
+procedure svars_once(Args?, Atoms?, Ans).
+svars_once([], _, yes).
+svars_once([svar(Y)|As], Req, R?) :- ground(Y?), ground(As?), ground(Req?) |
+    atoms_with_svar(Req?, svar(Y?), N),
+    eq_ints(N?, 1, A1),
+    svars_once(As?, Req?, A2),
+    both_yes(A1?, A2?, R).
+svars_once([_|_], _, no) :- otherwise | true.
+
+% has_pred_atom(Phis, H, N, R): Phis holds an atom of H with N arguments.
+procedure has_pred_atom1(Ans?, Atoms?, Constant?, Integer?, Ans).
+has_pred_atom1(yes, _, _, _, yes).
+has_pred_atom1(no, Xs, H, N, R?) :- ground(Xs?), ground(H?), integer(N?) |
+    has_pred_atom(Xs?, H?, N?, R).
+
+procedure has_pred_atom(Atoms?, Constant?, Integer?, Ans).
+has_pred_atom([], _, _, no).
+has_pred_atom([atom(Q, As)|Xs], H, N, R?) :-
+    Q? =?= H?, ground(As?), ground(Xs?), integer(N?) |
+    args_len(As?, L),
+    eq_ints(L?, N?, A),
+    has_pred_atom1(A?, Xs?, H?, N?, R).
+has_pred_atom([atom(_, _)|Xs], H, N, R?) :- otherwise, ground(Xs?), ground(H?), integer(N?) |
+    has_pred_atom(Xs?, H?, N?, R).
+
+% Every schema of C that adds Mk at a role adds an atom of H there.
+procedure role_h_with_mark(Ans?, Atoms?, Constant?, Integer?, Ans).
+role_h_with_mark(no, _, _, _, yes).
+role_h_with_mark(yes, P, H, N, R?) :- ground(P?), ground(H?), integer(N?) |
+    has_pred_atom(P?, H?, N?, R).
+
+procedure role_h_with_mark0(Atoms?, Constant?, Constant?, Integer?, Ans).
+role_h_with_mark0(P, Mk, H, N, R?) :- ground(P?), ground(Mk?), ground(H?), integer(N?) |
+    atoms_member(P?, atom(Mk?, []), A),
+    role_h_with_mark(A?, P?, H?, N?, R).
+
+procedure roles_h_with_mark(RoleSpecs?, Constant?, Constant?, Integer?, Ans).
+roles_h_with_mark([], _, _, _, yes).
+roles_h_with_mark([RS|Rs], Mk, H, N, R?) :-
+    ground(RS?), ground(Rs?), ground(Mk?), ground(H?), integer(N?) |
+    rs_add(RS?, P),
+    role_h_with_mark0(P?, Mk?, H?, N?, A1),
+    roles_h_with_mark(Rs?, Mk?, H?, N?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure h_with_mark(Contract?, Constant?, Constant?, Integer?, Ans).
+h_with_mark([], _, _, _, yes).
+h_with_mark([S|Ss], Mk, H, N, R?) :-
+    ground(S?), ground(Ss?), ground(Mk?), ground(H?), integer(N?) |
+    sch_roles(S?, Rs),
+    roles_h_with_mark(Rs?, Mk?, H?, N?, A1),
+    h_with_mark(Ss?, Mk?, H?, N?, A2),
+    both_yes(A1?, A2?, R).
+
+% No schema of C deletes an atom of H.
+procedure roles_h_kept(RoleSpecs?, Constant?, Integer?, Ans).
+roles_h_kept([], _, _, yes).
+roles_h_kept([RS|Rs], H, N, R?) :- ground(RS?), ground(Rs?), ground(H?), integer(N?) |
+    rs_del(RS?, M),
+    has_pred_atom(M?, H?, N?, A),
+    flip(A?, A1),
+    roles_h_kept(Rs?, H?, N?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure h_kept(Contract?, Constant?, Integer?, Ans).
+h_kept([], _, _, yes).
+h_kept([S|Ss], H, N, R?) :- ground(S?), ground(Ss?), ground(H?), integer(N?) |
+    sch_roles(S?, Rs),
+    roles_h_kept(Rs?, H?, N?, A1),
+    h_kept(Ss?, H?, N?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure req_h_ok1(Ans?, Constant?, Constant?, Args?, Atoms?, Contract?, Ans).
+req_h_ok1(no, _, _, _, _, _, no).
+req_h_ok1(yes, Mk, H, As, Req, C, R?) :-
+    ground(Mk?), ground(H?), ground(As?), ground(Req?), ground(C?) |
+    svars_once(As?, Req?, A1),
+    args_len(As?, N),
+    h_with_mark(C?, Mk?, H?, N?, A2),
+    h_kept(C?, H?, N?, A3),
+    both_yes(A1?, A2?, A12),
+    both_yes(A12?, A3?, R).
+
+procedure req_h_ok(RK?, Atom?, Atoms?, Contract?, Ans).
+req_h_ok(rk_ward(Mk, _), atom(H, As), Req, C, R?) :-
+    ground(Mk?), ground(H?), ground(As?), ground(Req?), ground(C?) |
+    all_svars(As?, A),
+    req_h_ok1(A?, Mk?, H?, As?, Req?, C?, R).
+req_h_ok(rk_free, _, _, _, no).
+req_h_ok(rk_guard, _, _, _, no).
+req_h_ok(rk_other, _, _, _, no).
+
+% Every alternative of clause 2 but the atom of h.
+procedure req_atom_other(Atom?, Integer?, RK?, Contract?, Preds?, Preds?, Constant?,
+                         Guardianships?, RKs?, Party?, Party?, Ans).
+req_atom_other(Phi, X, KX, C, Rf, Lv, E, Gs, RKs, P1, P2, R?) :-
     ground(Phi?), integer(X?), ground(KX?), ground(C?), ground(Rf?), ground(Lv?), ground(E?),
     ground(Gs?), ground(RKs?), ground(P1?), ground(P2?) |
     own_reflexive(Phi?, X?, Rf?, A1),
@@ -1128,15 +1235,32 @@ req_atom_ok(Phi, X, KX, C, Rf, Lv, E, Gs, RKs, P1, P2, R?) :-
     or_yes(A12?, A34?, A1234),
     or_yes(A1234?, A5?, R).
 
+procedure req_atom_ok(Atom?, Integer?, RK?, Contract?, Preds?, Preds?, Constant?, Guardianships?,
+                      RKs?, Party?, Party?, Atoms?, Ans).
+req_atom_ok(Phi, X, KX, C, Rf, Lv, E, Gs, RKs, P1, P2, Req, R?) :-
+    ground(Phi?), integer(X?), ground(KX?), ground(C?), ground(Rf?), ground(Lv?), ground(E?),
+    ground(Gs?), ground(RKs?), ground(P1?), ground(P2?), ground(Req?) |
+    req_atom_other(Phi?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, A1),
+    req_h_ok(KX?, Phi?, Req?, C?, A2),
+    or_yes(A1?, A2?, R).
+
 procedure req_atoms_ok(Atoms?, Integer?, RK?, Contract?, Preds?, Preds?, Constant?, Guardianships?,
-                       RKs?, Party?, Party?, Ans).
-req_atoms_ok([], _, _, _, _, _, _, _, _, _, _, yes).
-req_atoms_ok([Phi|Phis], X, KX, C, Rf, Lv, E, Gs, RKs, P1, P2, R?) :-
+                       RKs?, Party?, Party?, Atoms?, Ans).
+req_atoms_ok([], _, _, _, _, _, _, _, _, _, _, _, yes).
+req_atoms_ok([Phi|Phis], X, KX, C, Rf, Lv, E, Gs, RKs, P1, P2, Req, R?) :-
     ground(Phi?), ground(Phis?), integer(X?), ground(KX?), ground(C?), ground(Rf?), ground(Lv?),
-    ground(E?), ground(Gs?), ground(RKs?), ground(P1?), ground(P2?) |
-    req_atom_ok(Phi?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, A1),
-    req_atoms_ok(Phis?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, A2),
+    ground(E?), ground(Gs?), ground(RKs?), ground(P1?), ground(P2?), ground(Req?) |
+    req_atom_ok(Phi?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Req?, A1),
+    req_atoms_ok(Phis?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Req?, A2),
     both_yes(A1?, A2?, R).
+
+% The atoms a schema requires at its roles, in role order.
+procedure roles_req(RoleSpecs?, Atoms).
+roles_req([], []).
+roles_req([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
+    rs_req(RS?, Q),
+    roles_req(Rs?, T),
+    atoms_app(Q?, T?, R).
 
 % Clause 3: every atom the schema forbids at a role is a mark in M, a leaving
 % mark of C, or, at a party, the atom of e naming the other party.
@@ -1176,26 +1300,26 @@ forb_atoms_ok([Phi|Phis], X, KX, M, Lv, E, P1, P2, R?) :-
 % --- the three clauses at every role --------------------------------------
 
 procedure relay_roles(RoleSpecs?, Integer?, Integer?, RKs?, Contract?, Preds?, Preds?, Preds?,
-                      Constant?, Guardianships?, Party?, Party?, Ans).
-relay_roles([], _, _, _, _, _, _, _, _, _, _, _, yes).
-relay_roles([RS|Rs], X, K, RKs, C, Rf, M, Lv, E, Gs, P1, P2, R?) :-
+                      Constant?, Guardianships?, Party?, Party?, Atoms?, Ans).
+relay_roles([], _, _, _, _, _, _, _, _, _, _, _, _, yes).
+relay_roles([RS|Rs], X, K, RKs, C, Rf, M, Lv, E, Gs, P1, P2, All, R?) :-
     ground(RS?), ground(Rs?), integer(X?), integer(K?), ground(RKs?), ground(C?), ground(Rf?),
-    ground(M?), ground(Lv?), ground(E?), ground(Gs?), ground(P1?), ground(P2?) |
+    ground(M?), ground(Lv?), ground(E?), ground(Gs?), ground(P1?), ground(P2?), ground(All?) |
     nth_rk(RKs?, X?, KX),
-    relay_role(RS?, X?, K?, KX?, RKs?, C?, Rf?, M?, Lv?, E?, Gs?, P1?, P2?, A123),
+    relay_role(RS?, X?, K?, KX?, RKs?, C?, Rf?, M?, Lv?, E?, Gs?, P1?, P2?, All?, A123),
     X1 := X? + 1,
-    relay_roles(Rs?, X1?, K?, RKs?, C?, Rf?, M?, Lv?, E?, Gs?, P1?, P2?, A4),
+    relay_roles(Rs?, X1?, K?, RKs?, C?, Rf?, M?, Lv?, E?, Gs?, P1?, P2?, All?, A4),
     both_yes(A123?, A4?, R).
 
-% One role, of kind KX.
+% One role, of kind KX; All is every atom the schema requires.
 procedure relay_role(RoleSpec?, Integer?, Integer?, RK?, RKs?, Contract?, Preds?, Preds?, Preds?,
-                     Constant?, Guardianships?, Party?, Party?, Ans).
-relay_role(RS, X, K, KX, RKs, C, Rf, M, Lv, E, Gs, P1, P2, R?) :-
+                     Constant?, Guardianships?, Party?, Party?, Atoms?, Ans).
+relay_role(RS, X, K, KX, RKs, C, Rf, M, Lv, E, Gs, P1, P2, All, R?) :-
     ground(RS?), integer(X?), integer(K?), ground(KX?), ground(RKs?), ground(C?), ground(Rf?),
-    ground(M?), ground(Lv?), ground(E?), ground(Gs?), ground(P1?), ground(P2?) |
+    ground(M?), ground(Lv?), ground(E?), ground(Gs?), ground(P1?), ground(P2?), ground(All?) |
     guard_adds_ok(KX?, RS?, X?, RKs?, K?, A1),
     rs_req(RS?, Req),
-    req_atoms_ok(Req?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, A2),
+    req_atoms_ok(Req?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, All?, A2),
     rs_forb(RS?, N),
     forb_atoms_ok(N?, X?, KX?, M?, Lv?, E?, P1?, P2?, A3),
     both_yes(A1?, A2?, A12),
@@ -1268,7 +1392,8 @@ relay_with3(RKs, Rs, K, C, Rf, M, Lv, Gs, E, P1, P2, R?) :-
     ground(RKs?), ground(Rs?), integer(K?), ground(C?), ground(Rf?), ground(M?), ground(Lv?),
     ground(Gs?), ground(E?), ground(P1?), ground(P2?) |
     no_other(RKs?, A1),
-    relay_roles(Rs?, 1, K?, RKs?, C?, Rf?, M?, Lv?, E?, Gs?, P1?, P2?, A2),
+    roles_req(Rs?, All),
+    relay_roles(Rs?, 1, K?, RKs?, C?, Rf?, M?, Lv?, E?, Gs?, P1?, P2?, All?, A2),
     both_yes(A1?, A2?, R).
 
 procedure ints_app(Ints?, Ints?, Ints).
@@ -1702,3 +1827,110 @@ wards(C, Rf, W?) :- ground(C?), ground(Rf?) |
     preds_of_arity(C?, 0, Marks),
     preds_of_arity(C?, 1, Unary),
     wards1(Marks?, Unary?, C?, Rf?, W).
+
+% ---------------------------------------------------------------------------
+% The atoms of h (def:relay, clause 2; GSC 410a440)
+% ---------------------------------------------------------------------------
+% For the introduction with wards found, every atom a relay act of it requires at a ward role that clause 2 of def:relay admits as an atom of a predicate h and as nothing else, h(Schema, Role, H), in the order of the relay acts and of their roles; none where there is no introduction with wards.
+
+procedure schema_named1(Constant?, Constant?, Schema?, Contract?, FoundS).
+schema_named1(N, Nm, S, _, found(S?)) :- N? =?= Nm? | true.
+schema_named1(_, Nm, _, Ss, R?) :- otherwise, ground(Nm?), ground(Ss?) | schema_named(Ss?, Nm?, R).
+
+procedure schema_named(Contract?, Constant?, FoundS).
+schema_named([], _, not_found).
+schema_named([S|Ss], Nm, R?) :- ground(S?), ground(Ss?), ground(Nm?) |
+    sch_name(S?, N),
+    schema_named1(N?, Nm?, S?, Ss?, R).
+
+% The predicate e of the introductory act, the one atom it adds at each role.
+procedure first_pred(Preds?, Constant).
+first_pred([P|_], P?).
+first_pred([], none).
+
+procedure intro_e2(RoleSpecs?, Constant).
+intro_e2([RS1, RS2], E?) :- ground(RS1?), ground(RS2?) |
+    rs_add(RS1?, P1),
+    rs_add(RS2?, P2),
+    one_atom_e(P1?, P2?, Es),
+    first_pred(Es?, E).
+intro_e2(Rs, none) :- otherwise, ground(Rs?) | true.
+
+procedure intro_e1(FoundS?, Constant).
+intro_e1(found(S), E?) :- ground(S?) | sch_roles(S?, Rs), intro_e2(Rs?, E).
+intro_e1(not_found, none).
+
+procedure hs_app(RelayHs?, RelayHs?, RelayHs).
+hs_app([], T, T?).
+hs_app([X|Xs], T, [X?|R?]) :- hs_app(Xs?, T?, R).
+
+procedure atom_h(Ans?, Constant?, Integer?, Atom?, RelayHs).
+atom_h(yes, Sn, X, atom(H, _), [h(Sn?, X?, H?)]).
+atom_h(no, _, _, _, []).
+
+procedure atoms_h(Atoms?, Integer?, RK?, Constant?, Contract?, Preds?, Preds?, Constant?,
+                  Guardianships?, RKs?, Party?, Party?, Atoms?, RelayHs).
+atoms_h([], _, _, _, _, _, _, _, _, _, _, _, _, []).
+atoms_h([Phi|Phis], X, KX, Sn, C, Rf, Lv, E, Gs, RKs, P1, P2, All, R?) :-
+    ground(Phi?), ground(Phis?), integer(X?), ground(KX?), ground(Sn?), ground(C?), ground(Rf?),
+    ground(Lv?), ground(E?), ground(Gs?), ground(RKs?), ground(P1?), ground(P2?), ground(All?) |
+    req_atom_other(Phi?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, A1),
+    req_h_ok(KX?, Phi?, All?, C?, A2),
+    flip(A1?, N1),
+    both_yes(N1?, A2?, A),
+    atom_h(A?, Sn?, X?, Phi?, H1),
+    atoms_h(Phis?, X?, KX?, Sn?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, All?, H2),
+    hs_app(H1?, H2?, R).
+
+procedure roles_h(RoleSpecs?, Integer?, Constant?, RKs?, Contract?, Preds?, Preds?, Constant?,
+                  Guardianships?, Party?, Party?, Atoms?, RelayHs).
+roles_h([], _, _, _, _, _, _, _, _, _, _, _, []).
+roles_h([RS|Rs], X, Sn, RKs, C, Rf, Lv, E, Gs, P1, P2, All, R?) :-
+    ground(RS?), ground(Rs?), integer(X?), ground(Sn?), ground(RKs?), ground(C?), ground(Rf?),
+    ground(Lv?), ground(E?), ground(Gs?), ground(P1?), ground(P2?), ground(All?) |
+    nth_rk(RKs?, X?, KX),
+    rs_req(RS?, Req),
+    atoms_h(Req?, X?, KX?, Sn?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, All?, H1),
+    X1 := X? + 1,
+    roles_h(Rs?, X1?, Sn?, RKs?, C?, Rf?, Lv?, E?, Gs?, P1?, P2?, All?, H2),
+    hs_app(H1?, H2?, R).
+
+procedure relay_h_in(FoundS?, Constant?, Party?, Party?, Contract?, Preds?, Preds?, Constant?,
+                     Guardianships?, RelayHs).
+relay_h_in(not_found, _, _, _, _, _, _, _, _, []).
+relay_h_in(found(Sc), Sn, P1, P2, C, Rf, Lv, E, Gs, R?) :-
+    ground(Sc?), ground(Sn?), ground(P1?), ground(P2?), ground(C?), ground(Rf?), ground(Lv?),
+    ground(E?), ground(Gs?) |
+    sch_roles(Sc?, Rs),
+    relay_h_in1(Rs?, Sn?, P1?, P2?, C?, Rf?, Lv?, E?, Gs?, R).
+
+procedure relay_h_in1(RoleSpecs?, Constant?, Party?, Party?, Contract?, Preds?, Preds?, Constant?,
+                      Guardianships?, RelayHs).
+relay_h_in1(Rs, Sn, P1, P2, C, Rf, Lv, E, Gs, R?) :-
+    ground(Rs?), ground(Sn?), ground(P1?), ground(P2?), ground(C?), ground(Rf?), ground(Lv?),
+    ground(E?), ground(Gs?) |
+    roles_len(Rs?, K),
+    party_sigma(P1?, S1),
+    party_sigma(P2?, S2),
+    ints_app(S1?, S2?, Sigmas),
+    role_kinds(1, K?, P1?, P2?, Sigmas?, RKs),
+    roles_req(Rs?, All),
+    roles_h(Rs?, 1, Sn?, RKs?, C?, Rf?, Lv?, E?, Gs?, P1?, P2?, All?, R).
+
+procedure relays_h(Relays?, Contract?, Preds?, Preds?, Constant?, Guardianships?, RelayHs).
+relays_h([], _, _, _, _, _, []).
+relays_h([relay(Sn, P1, P2)|Xs], C, Rf, Lv, E, Gs, R?) :-
+    ground(Sn?), ground(P1?), ground(P2?), ground(Xs?), ground(C?), ground(Rf?), ground(Lv?),
+    ground(E?), ground(Gs?) |
+    schema_named(C?, Sn?, F),
+    relay_h_in(F?, Sn?, P1?, P2?, C?, Rf?, Lv?, E?, Gs?, H1),
+    relays_h(Xs?, C?, Rf?, Lv?, E?, Gs?, H2),
+    hs_app(H1?, H2?, R).
+
+exported procedure relay_h_for(Contract?, Preds?, Wards?, RelayHs).
+relay_h_for(_, _, no_introduction_with_wards, []).
+relay_h_for(C, Rf, introduction_with_wards(Nm, _, Gs, Rs, Lv), R?) :-
+    ground(C?), ground(Rf?), ground(Nm?), ground(Gs?), ground(Rs?), ground(Lv?) |
+    schema_named(C?, Nm?, F),
+    intro_e1(F?, E),
+    relays_h(Rs?, C?, Rf?, Lv?, E?, Gs?, R).
