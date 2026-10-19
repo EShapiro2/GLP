@@ -3638,8 +3638,12 @@ class GrassrootsNetwork {
       // reconnection toward known peers is driven by the heartbeat tick over
       // the dial book, not by announce contents.
 
+      // A configured rendezvous server too: the layer holds a session with it
+      // as with any peer, and it is reachable only once that session is
+      // established, authenticated and attested (spec §Session
+      // Establishment), unattested by design.
       final announcedPeer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
-      if (announcedPeer != null && !_isRendezvousPubkeyHex(pubkeyHex)) {
+      if (announcedPeer != null) {
         unawaited(_startNoiseHandshakeForPeer(
           transport: transport,
           peer: announcedPeer,
@@ -4004,17 +4008,6 @@ class GrassrootsNetwork {
           PeerUdpConnectionChangedAction(
             pubkeyHex: event.peerId,
             connected: false,
-          ),
-        );
-      } else if (_isRendezvousPubkeyHex(event.peerId)) {
-        // The rendezvous server runs no Noise handshake, so its raw UDX
-        // connection is its reachability (gate exemption). Real peers become
-        // reachable only once their Noise session authenticates — see
-        // [_onNoiseSessionEstablished].
-        store.dispatch(
-          PeerUdpConnectionChangedAction(
-            pubkeyHex: event.peerId,
-            connected: true,
           ),
         );
       }
