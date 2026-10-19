@@ -46,11 +46,13 @@ RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 
 % A reach condition Sigma !~>_Rho Sigma' (definition:schema); a schema
-% carrying a finite set of them is written cschema.
+% carrying a finite set of them is written cschema.  A schema's second
+% argument is its variables, pvar(X) and svar(Y), in the order of its head
+% (def:schema and Appendix D's Definition Act schema at GSC 0228e79).
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
-Schema    ::= schema(Constant, RoleSpecs)
-            ; cschema(Constant, Reaches, RoleSpecs).
+Schema    ::= schema(Constant, Args, RoleSpecs)
+            ; cschema(Constant, Args, Reaches, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 
 % A contract may declare predicates of arity one reflexive (the paragraph
@@ -82,18 +84,27 @@ Ctx ::= ctx(Val, Integer).
 Ans   ::= yes ; no.
 Ints  ::= [] ; [Integer | Ints].
 Preds ::= [] ; [Constant | Preds].
-Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive.
-% What def:schema requires of a signed term, and the atom carrying one
-% violates: it occurs in an atom not marked + (not_added), or its speech-act
-% variable occurs in no atom its role requires (not_required); or the
-% contract has community roles, whose schemas (Appendix D, Definition Act
-% schema) admit no signed term (community).
-SgnCause ::= not_added ; not_required ; community.
+% seated(Schema, Role, Atom) is clause 2 of definition:sg-agent-named
+% (Appendix D.4): the seated role Role of Schema adds Atom, of a predicate
+% the introductory act forbids at a role.
+Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
+        ; seated(Constant, Integer, Atom).
+% What def:schema, and Appendix D's Definition Act schema, require of a
+% signed term, and the atom carrying one violates: it occurs in an atom not
+% marked + (not_added), its speech-act variable occurs in no atom its role
+% requires (not_required), or its role is not an agent role
+% (not_agent_role), Appendix D admitting sgn(y, pi) for pi an agent role.
+SgnCause ::= not_added ; not_required ; not_agent_role.
 % What def:schema requires of the form of a schema, and a schema formed
 % otherwise violates: an atom both added and deleted at a role
 % (added_and_deleted), a role that is not guarding and adds and deletes
 % nothing (changes_nothing), and no role adding or deleting an atom
-% (no_role_changes).
+% (no_role_changes).  What def:schema requires of a schema's head, its
+% variables x_1, ..., x_m distinct agent and speech-act variables and its
+% atoms over its roles, those variables and its signed terms: an entry of
+% the head that is not a variable (head_not_variable), an entry listed twice
+% (head_repeated), and a variable of the schema not in its head
+% (not_in_head).
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
         ; untraceable(Preds)
@@ -103,7 +114,10 @@ Fault ::= no_introductory_act
         ; signed(Constant, Integer, Atom, SgnCause)
         ; added_and_deleted(Constant, Integer, Atom)
         ; changes_nothing(Constant, Integer)
-        ; no_role_changes(Constant).
+        ; no_role_changes(Constant)
+        ; head_not_variable(Constant, Arg)
+        ; head_repeated(Constant, Arg)
+        ; not_in_head(Constant, Arg).
 Faults  ::= [] ; [Fault | Faults].
 
 % --- What an introduction with wards is made of (Appendix F) ---------------
@@ -124,6 +138,11 @@ Relay  ::= relay(Constant, Party, Party).
 Relays ::= [] ; [Relay | Relays].
 Wards  ::= introduction_with_wards(Constant, Preds, Guardianships, Relays, Preds)
          ; no_introduction_with_wards.
+% The leaving marks of a contract for a set M of marks (def:leaving) depend
+% on the guardianship of each mark in M: leaving(Gs, Ls) holds the
+% guardianships taken, one per mark, and the leaving marks for them.
+Leaving  ::= leaving(Guardianships, Preds).
+Leavings ::= [] ; [Leaving | Leavings].
 
 % What the search of wards.glp carries: the sets of marks it tries, the
 % guardianship candidates of each mark of a set, the kind of each role of a
@@ -137,7 +156,17 @@ RKs  ::= [] ; [RK | RKs].
 Kind ::= free_party ; ward_party(Constant).
 IntroE ::= intro(Constant, Constant) ; no_intro.
 
+% syntactically_grassroots_with_seated_roles is the verdict on an
+% agent-named contract with community roles that is syntactically
+% grassroots by definition:sg-agent-named, the contract of Theorem
+% "Grassroots realisation with seated roles" (Appendix D.4), and
+% syntactically_grassroots_with_wards the verdict on one that is
+% syntactically grassroots with wards by def:sg-wards, the contract of
+% Theorem "Grassroots realisation with wards and seated roles" (Appendix F),
+% naming what grassroots_with_wards names.
 Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
+          ; syntactically_grassroots_with_seated_roles
+          ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
           ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
           ; conditions_met ; conditions_failed(Faults)
           ; malformed(Faults).
@@ -792,16 +821,21 @@ refl_keep([A|Xs], I, Rf, W, R?) :-
 % seated or constituent.  The accessors below read either.
 
 procedure sch_name(Schema?, Constant).
-sch_name(schema(Nm, _), Nm?).
-sch_name(cschema(Nm, _, _), Nm?).
+sch_name(schema(Nm, _, _), Nm?).
+sch_name(cschema(Nm, _, _, _), Nm?).
+
+% The variables of a schema, in the order of its head.
+procedure sch_vars(Schema?, Args).
+sch_vars(schema(_, Vs, _), Vs?).
+sch_vars(cschema(_, Vs, _, _), Vs?).
 
 procedure sch_roles(Schema?, RoleSpecs).
-sch_roles(schema(_, Rs), Rs?).
-sch_roles(cschema(_, _, Rs), Rs?).
+sch_roles(schema(_, _, Rs), Rs?).
+sch_roles(cschema(_, _, _, Rs), Rs?).
 
 procedure sch_reaches(Schema?, Reaches).
-sch_reaches(schema(_, _), []).
-sch_reaches(cschema(_, Th, _), Th?).
+sch_reaches(schema(_, _, _), []).
+sch_reaches(cschema(_, _, Th, _), Th?).
 
 procedure rs_guard(RoleSpec?, Guard).
 rs_guard(rs(G, _, _, _, _), G?).
@@ -857,9 +891,9 @@ arg_base(role(I), b_role(I?)).
 arg_base(pvar(X), b_pvar(X?)).
 arg_base(svar(X), b_svar(X?)).
 arg_base(nterm(S), B?) :- ground(S?) | nt_base(S?, B).
-% A signed term has no base in Appendix D, whose schemas admit none: a
-% contract with community roles carrying one is refused (check.glp) before
-% any base is taken, and the clause covers the alternative with its role's.
+% A signed term sgn(y, pi) counts as the two arguments y and pi
+% (definition:provenance): this is the base of pi, an agent role, and
+% filter_svars gives y.
 arg_base(sgn(_, J), b_role(J?)).
 
 procedure role_base(RoleSpec?, Integer?, Base).
@@ -886,10 +920,76 @@ rs_role_pred(crs(seated(_, P), _, _, _, _, _), [P?]).
 rs_role_pred(crs(constituent(_, P), _, _, _, _, _), [P?]).
 
 % ---------------------------------------------------------------------------
+% The name terms of a schema (definition:term)
+% ---------------------------------------------------------------------------
+% Those among the arguments of its atoms, those of its seated and constituent
+% roles, and those of its reach conditions, in that order.
+
+procedure nts_of_args(Args?, NameTerms?, NameTerms).
+nts_of_args([], T, T?).
+nts_of_args([nterm(S)|As], T, [S?|R?]) :- ground(S?), ground(As?), ground(T?) |
+    nts_of_args(As?, T?, R).
+nts_of_args([A|As], T, R?) :- otherwise, ground(A?), ground(As?), ground(T?) |
+    nts_of_args(As?, T?, R).
+
+procedure nts_of_reaches(Reaches?, NameTerms?, NameTerms).
+nts_of_reaches([], T, T?).
+nts_of_reaches([reach(S, _, S2)|Xs], T, [S?, S2?|R?]) :-
+    ground(S?), ground(S2?), ground(Xs?), ground(T?) |
+    nts_of_reaches(Xs?, T?, R).
+
+procedure nts_of_roles(RoleSpecs?, NameTerms?, NameTerms).
+nts_of_roles([], T, T?).
+nts_of_roles([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    rs_nterm(RS?, N),
+    nts_of_roles(Rs?, T?, R1),
+    nterms_app(N?, R1?, R).
+
+procedure sch_nts(Schema?, NameTerms).
+sch_nts(Sc, R?) :- ground(Sc?) |
+    sch_roles(Sc?, Rs),
+    sch_reaches(Sc?, Th),
+    schema_args(Sc?, As),
+    nts_of_roles(Rs?, [], N1),
+    nts_of_reaches(Th?, N1?, N2),
+    nts_of_args(As?, N2?, R).
+
+% The agent and speech-act variables occurring in a schema: in its atoms,
+% within their name terms and signed terms, in the name terms of its seated
+% and constituent roles, and in its reach conditions.
+procedure nts_args(NameTerms?, Args).
+nts_args([], []).
+nts_args([S|Ss], [nterm(S?)|R?]) :- nts_args(Ss?, R).
+
+procedure sch_occ_vars1(Args?, Args).
+sch_occ_vars1(All, R?) :- ground(All?) |
+    filter_pvars(All?, Ps),
+    filter_svars(All?, Ss),
+    args_app(Ps?, Ss?, PS),
+    args_dedup(PS?, R).
+
+procedure sch_occ_vars(Schema?, Args).
+sch_occ_vars(Sc, R?) :- ground(Sc?) |
+    schema_args(Sc?, As),
+    sch_reaches(Sc?, Th),
+    sch_roles(Sc?, Rs),
+    nts_of_roles(Rs?, [], N1),
+    nts_of_reaches(Th?, N1?, Ns),
+    nts_args(Ns?, NAs),
+    args_app(As?, NAs?, All),
+    sch_occ_vars1(All?, R).
+
+procedure nts_empty(NameTerms?, Ans).
+nts_empty([], yes).
+nts_empty([_|_], no).
+
+% ---------------------------------------------------------------------------
 % Which language a contract is written in
 % ---------------------------------------------------------------------------
-% A contract all of whose roles are party roles and none of whose schemas
-% carries reach conditions is a contract of Section 3 and is decided as before.
+% A contract all of whose roles are party roles, none of whose schemas
+% carries reach conditions and none of whose atoms carries a name term is a
+% contract of Section 3, whose def:schema admits no name term, and is decided
+% as one; any other is written in the language of Appendix D.
 
 procedure roles_community1(Ans?, RoleSpecs?, Ans).
 roles_community1(yes, _, yes).
@@ -903,8 +1003,13 @@ roles_community([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
     roles_community1(A?, Rs?, R).
 
 procedure sch_community(Schema?, Ans).
-sch_community(schema(_, Rs), R?) :- ground(Rs?) | roles_community(Rs?, R).
-sch_community(cschema(_, _, _), yes).
+sch_community(schema(Nm, Vs, Rs), R?) :- ground(Nm?), ground(Vs?), ground(Rs?) |
+    roles_community(Rs?, A1),
+    sch_nts(schema(Nm?, Vs?, Rs?), Ns),
+    nts_empty(Ns?, A2),
+    flip(A2?, A3),
+    or_yes(A1?, A3?, R).
+sch_community(cschema(_, _, _, _), yes).
 
 procedure has_community1(Ans?, Contract?, Ans).
 has_community1(yes, _, yes).
@@ -915,6 +1020,73 @@ has_community([], no).
 has_community([S|Ss], R?) :- ground(S?), ground(Ss?) |
     sch_community(S?, A),
     has_community1(A?, Ss?, R).
+
+% ---------------------------------------------------------------------------
+% Agent-named (Appendix D.4, definition:agent-named)
+% ---------------------------------------------------------------------------
+% Every role of every schema is an agent role or a seated role, and every
+% name term of every schema has an agent role of that schema as its base.
+
+procedure role_agent_or_seated(RoleSpec?, Ans).
+role_agent_or_seated(rs(_, _, _, _, _), yes).
+role_agent_or_seated(crs(seated(_, _), _, _, _, _, _), yes).
+role_agent_or_seated(crs(constituent(_, _), _, _, _, _, _), no).
+
+procedure roles_agent_or_seated1(Ans?, RoleSpecs?, Ans).
+roles_agent_or_seated1(no, _, no).
+roles_agent_or_seated1(yes, Rs, R?) :- ground(Rs?) | roles_agent_or_seated(Rs?, R).
+
+procedure roles_agent_or_seated(RoleSpecs?, Ans).
+roles_agent_or_seated([], yes).
+roles_agent_or_seated([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
+    role_agent_or_seated(RS?, A),
+    roles_agent_or_seated1(A?, Rs?, R).
+
+% The base B is an agent role of the schema whose roles are Rs.
+procedure base_agent_role1(Integer?, Integer?, RoleSpecs?, Ans).
+base_agent_role1(I, K, Rs, R?) :- I? >= 1, I? =< K?, ground(Rs?) |
+    nth_rs(Rs?, I?, RS),
+    is_party_role(RS?, R).
+base_agent_role1(_, _, _, no) :- otherwise | true.
+
+procedure base_agent_role(Base?, RoleSpecs?, Ans).
+base_agent_role(b_role(I), Rs, R?) :- integer(I?), ground(Rs?) |
+    roles_len(Rs?, K),
+    base_agent_role1(I?, K?, Rs?, R).
+base_agent_role(B, _, no) :- otherwise, ground(B?) | true.
+
+procedure nts_agent_based1(Ans?, NameTerms?, RoleSpecs?, Ans).
+nts_agent_based1(no, _, _, no).
+nts_agent_based1(yes, Ns, Rs, R?) :- ground(Ns?), ground(Rs?) | nts_agent_based(Ns?, Rs?, R).
+
+procedure nts_agent_based(NameTerms?, RoleSpecs?, Ans).
+nts_agent_based([], _, yes).
+nts_agent_based([S|Ns], Rs, R?) :- ground(S?), ground(Ns?), ground(Rs?) |
+    nt_base(S?, B),
+    base_agent_role(B?, Rs?, A),
+    nts_agent_based1(A?, Ns?, Rs?, R).
+
+procedure sch_agent_named1(RoleSpecs?, NameTerms?, Ans).
+sch_agent_named1(Rs, Ns, R?) :- ground(Rs?), ground(Ns?) |
+    roles_agent_or_seated(Rs?, A1),
+    nts_agent_based(Ns?, Rs?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure sch_agent_named(Schema?, Ans).
+sch_agent_named(Sc, R?) :- ground(Sc?) |
+    sch_roles(Sc?, Rs),
+    sch_nts(Sc?, Ns),
+    sch_agent_named1(Rs?, Ns?, R).
+
+procedure agent_named1(Ans?, Contract?, Ans).
+agent_named1(no, _, no).
+agent_named1(yes, Ss, R?) :- ground(Ss?) | agent_named(Ss?, R).
+
+procedure agent_named(Contract?, Ans).
+agent_named([], yes).
+agent_named([S|Ss], R?) :- ground(S?), ground(Ss?) |
+    sch_agent_named(S?, A),
+    agent_named1(A?, Ss?, R).
 
 % ---------------------------------------------------------------------------
 % Entry points
@@ -965,7 +1137,7 @@ rooted_variant(Nm, B, E?) :- check # rooted_variant(Nm?, B?, E).
 
 % The introduction with wards of Appendix F, for inspection: what the search
 % found, or that there is none; the guardianships for a set of marks; and
-% the leaving marks for it.
+% the leaving marks for it, with each choice of a guardianship per mark.
 imported procedure check#wards_of(Constant?, Wards).
 exported procedure wards_of(Constant?, Wards).
 wards_of(Nm, W?) :- check # wards_of(Nm?, W).
@@ -982,14 +1154,15 @@ imported procedure check#guardianships(Declared?, Preds?, Guardianships).
 exported procedure guardianships(Declared?, Preds?, Guardianships).
 guardianships(D, M, G?) :- check # guardianships(D?, M?, G).
 
-% The leaving marks of a contract for a set of marks (def:leaving), of a
-% contract given as a term and of a fixture by name.
-imported procedure check#leaving(Declared?, Preds?, Preds).
-exported procedure leaving(Declared?, Preds?, Preds).
+% The leaving marks of a contract for a set of marks (def:leaving), for each
+% choice of a guardianship of each mark, of a contract given as a term and
+% of a fixture by name.
+imported procedure check#leaving(Declared?, Preds?, Leavings).
+exported procedure leaving(Declared?, Preds?, Leavings).
 leaving(D, M, L?) :- check # leaving(D?, M?, L).
 
-imported procedure check#leaving_of(Constant?, Preds?, Preds).
-exported procedure leaving_of(Constant?, Preds?, Preds).
+imported procedure check#leaving_of(Constant?, Preds?, Leavings).
+exported procedure leaving_of(Constant?, Preds?, Leavings).
 leaving_of(Nm, M, L?) :- check # leaving_of(Nm?, M?, L).
 
 imported procedure contracts#contract(Constant?, Declared).

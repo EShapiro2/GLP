@@ -2385,18 +2385,21 @@ check "CSSN program loads" "Loaded program" "$k_load"
 check_not "CSSN program no type errors" "Type checking failed" "$k_load"
 
 # The contract's act schemas (CSSN Appendix B.2), programs/cssn/CSSN.glp,
-# in the term form programs/gsc reads: GSC's verdict on it --- traceable
-# provenance and volition, and, since GSC's Appendix F (2f8338d2), an
-# introduction with wards in place of an unobstructed introductory act: the
-# verdict grassroots with wards, befriend the act, child the mark, parent and
-# parenting its guardianship, child_adult_befriend and child_befriend the
-# relay acts, and retired the leaving mark (GSC, Appendix F, at GSC 429cfc8:
-# def:guardianship, def:leaving, def:unobstructed-marks, def:relay,
-# def:introduction-wards; programs/gsc/test_gsc.sh, which checks it by hand).
+# in the term form programs/gsc reads, each schema listing its variables in
+# its head (GSC 0228e79): GSC's verdict on it --- an agent-named contract,
+# its groups closed by the seated role of their members (GSC, Appendix D.4),
+# with traceable provenance and volition, and an introduction with wards in
+# place of an unobstructed introductory act: the verdict syntactically
+# grassroots with wards (GSC, Appendix F, def:sg-wards, at GSC 503db66),
+# befriend the act, child the mark, parent and parenting its guardianship,
+# child_adult_befriend and child_befriend the relay acts, and retired the
+# leaving mark (def:guardianship, def:leaving, def:unobstructed-marks,
+# def:relay, def:introduction-wards; programs/gsc/test_gsc.sh, which checks
+# it by hand).
 echo "--- CSSN contract, GSC's verdict ---"
 k_contract=$(bash "$CSSN_V2/compile.sh" "$(mktemp -d)" 2>&1 || true)
 check "CSSN contract: GSC gives a verdict" "verdict: " "$k_contract"
-check "CSSN contract: grassroots with wards, befriend the act, child the mark and retired the leaving mark" "verdict: grassroots_with_wards(befriend, \[child\], \[guardianship(child, identity, parent, parenting)\], \[relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))\], \[retired\])" "$k_contract"
+check "CSSN contract: syntactically grassroots with wards, befriend the act, child the mark and retired the leaving mark" "verdict: syntactically_grassroots_with_wards(befriend, \[child\], \[guardianship(child, identity, parent, parenting)\], \[relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))\], \[retired\])" "$k_contract"
 check_not "CSSN contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
 check_not "CSSN contract: it satisfies volition" "volition(" "$k_contract"
 check_not "CSSN contract: it is not malformed" "malformed(" "$k_contract"

@@ -7,6 +7,17 @@
 % over it are finite: person(0) and person(1) take the two roles, each party
 % variable takes one of the two, and each speech-act variable a speech act of
 % its own.  intro_bindings enumerates them and keeps the introductions.
+%
+% An agent-named contract (Appendix D.4, definition:sg-agent-named) is put to
+% the same definitions, with clause 1 of definition:sg-agent-named: the
+% introductory act has agent roles and no name term, and so has each schema
+% of arity one of clause 1 of def:unobstructed.  A seated role adds at the
+% agents of its extent, which no binding names, so clause 2 of
+% def:unobstructed is asked of the agent roles of a schema, and clause 2 of
+% definition:sg-agent-named of its seated roles: none adds an atom of a
+% predicate the introductory act forbids at a role.  For a contract of
+% Section 3 these restrictions ask nothing, its roles being agent roles and
+% its schemas carrying no name term.
 % ---------------------------------------------------------------------------
 
 % --- the introductions of person(0) and person(1) --------------------------
@@ -64,13 +75,18 @@ atoms_name([A|As], B, V, R?) :- ground(A?), ground(As?), ground(B?), ground(V?) 
     gatom_has(G?, V?, H),
     atoms_name1(H?, As?, B?, V?, R).
 
-procedure is_intro(Schema?, Subst?, Ans).
-is_intro(schema(_, [rs(_, P1, _, _, _), rs(_, P2, _, _, _)]), B, R?) :-
+procedure is_intro_roles(RoleSpecs?, Subst?, Ans).
+is_intro_roles([rs(_, P1, _, _, _), rs(_, P2, _, _, _)], B, R?) :-
     ground(P1?), ground(P2?), ground(B?) |
     atoms_name(P1?, B?, person(1), A1),
     atoms_name(P2?, B?, person(0), A2),
     both_yes(A1?, A2?, R).
-is_intro(Sc, _, no) :- otherwise, ground(Sc?) | true.
+is_intro_roles(Rs, _, no) :- otherwise, ground(Rs?) | true.
+
+procedure is_intro(Schema?, Subst?, Ans).
+is_intro(Sc, B, R?) :- ground(Sc?), ground(B?) |
+    sch_roles(Sc?, Rs),
+    is_intro_roles(Rs?, B?, R).
 
 procedure intro_keep(Ans?, Subst?, Substs?, Subst?, Schema?, Substs).
 intro_keep(yes, B, PAs, SB, Sc, [B?|R?]) :-
@@ -101,9 +117,19 @@ intro_bindings(Sc, R?) :- ground(Sc?) |
     pvar_assignments(PV?, PAs),
     intro_filter(PAs?, SB?, Sc?, R).
 
+% Arity two, both roles agent roles and guarded (def:introduction), and no
+% name term (definition:sg-agent-named, clause 1).
+procedure two_guarded(RoleSpecs?, Ans).
+two_guarded([rs(guarded, _, _, _, _), rs(guarded, _, _, _, _)], yes).
+two_guarded(Rs, no) :- otherwise, ground(Rs?) | true.
+
 procedure is_two_guarded(Schema?, Ans).
-is_two_guarded(schema(_, [rs(guarded, _, _, _, _), rs(guarded, _, _, _, _)]), yes).
-is_two_guarded(Sc, no) :- otherwise, ground(Sc?) | true.
+is_two_guarded(Sc, R?) :- ground(Sc?) |
+    sch_roles(Sc?, Rs),
+    two_guarded(Rs?, A1),
+    sch_nts(Sc?, Ns),
+    nts_empty(Ns?, A2),
+    both_yes(A1?, A2?, R).
 
 procedure iab1(Ans?, Schema?, Substs).
 iab1(no, _, []).
@@ -119,13 +145,20 @@ intro_act_bindings(Sc, R?) :- ground(Sc?) |
 % --- clause 1 of def:unobstructed -----------------------------------------
 % The atom is added by a schema of arity one, guarded in its role and
 % requiring and forbidding nothing, at the binding sending its role to the
-% person in question.
+% person in question; its role is an agent role and it has no name term
+% (definition:sg-agent-named, clause 1).
 
-procedure unary_supplies(Schema?, GAtom?, Val?, Ans).
-unary_supplies(schema(_, [rs(guarded, P, [], [], [])]), G, V, R?) :-
+procedure unary_supplies1(RoleSpecs?, NameTerms?, GAtom?, Val?, Ans).
+unary_supplies1([rs(guarded, P, [], [], [])], [], G, V, R?) :-
     ground(P?), ground(G?), ground(V?) |
     some_match(P?, G?, [rs(guarded, P?, [], [], [])], [bind(role(1), V?)], R).
-unary_supplies(Sc, _, _, no) :- otherwise, ground(Sc?) | true.
+unary_supplies1(Rs, _, _, _, no) :- otherwise, ground(Rs?) | true.
+
+procedure unary_supplies(Schema?, GAtom?, Val?, Ans).
+unary_supplies(Sc, G, V, R?) :- ground(Sc?), ground(G?), ground(V?) |
+    sch_roles(Sc?, Rs),
+    sch_nts(Sc?, Ns),
+    unary_supplies1(Rs?, Ns?, G?, V?, R).
 
 procedure obtainable1(Ans?, Contract?, GAtom?, Val?, Ans).
 obtainable1(yes, _, _, _, yes).
@@ -159,7 +192,9 @@ psi_block1(yes, _, Ps, Plus, J, Sc, Cx, G, P, R?) :-
     ground(Ps?), ground(Plus?), integer(J?), ground(Sc?), ground(Cx?),
     ground(G?), ground(P?) |
     plus_blocks(Ps?, Plus?, J?, Sc?, Cx?, G?, P?, R).
-psi_block1(no, Psi, _, _, J, schema(Nm, _), _, _, _, blocked(Nm?, J?, Psi?)).
+psi_block1(no, Psi, _, _, J, Sc, _, _, _, blocked(Nm?, J?, Psi?)) :-
+    ground(Psi?), integer(J?), ground(Sc?) |
+    sch_name(Sc?, Nm).
 
 procedure psi_block(MatchRes?, Atom?, Atoms?, Atoms?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
 psi_block(nomatch, _, Ps, Plus, J, Sc, Cx, G, P, R?) :-
@@ -190,13 +225,26 @@ role_blocks1(clear, Rs, J, Sc, Cx, G, P, R?) :-
     role_blocks(Rs?, J1?, Sc?, Cx?, G?, P?, R).
 role_blocks1(blocked(Nm, Jx, Psi), _, _, _, _, _, _, blocked(Nm?, Jx?, Psi?)).
 
+% A seated role adds at the agents of its extent, not at a person a binding
+% sends it to, and clause 2 of definition:sg-agent-named asks of it what
+% this clause asks of an agent role (seated_faults, below): it is passed by.
 procedure role_blocks(RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
 role_blocks([], _, _, _, _, _, clear).
 role_blocks([RS|Rs], J, Sc, Cx, G, P, R?) :-
     ground(RS?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
     ground(G?), ground(P?) |
+    is_party_role(RS?, A),
+    role_blocks2(A?, RS?, Rs?, J?, Sc?, Cx?, G?, P?, R).
+
+procedure role_blocks2(Ans?, RoleSpec?, RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
+role_blocks2(yes, RS, Rs, J, Sc, Cx, G, P, R?) :-
+    ground(RS?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
+    ground(G?), ground(P?) |
     rs_add(RS?, Plus),
     role_blocks_plus(Plus?, Rs?, J?, Sc?, Cx?, G?, P?, R).
+role_blocks2(no, _, Rs, J, Sc, Cx, G, P, R?) :-
+    ground(Rs?), integer(J?), ground(Sc?), ground(Cx?), ground(G?), ground(P?) |
+    role_blocks1(clear, Rs?, J?, Sc?, Cx?, G?, P?, R).
 
 procedure role_blocks_plus(Atoms?, RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
 role_blocks_plus(Plus, Rs, J, Sc, Cx, G, P, R?) :-
@@ -305,15 +353,88 @@ unob_roles([RS|Rs], I, Nm, B, C, Fb, Rf, R?) :-
     unob_roles(Rs?, I1?, Nm?, B?, C?, Fb?, Rf?, F2),
     faults_app(F1?, F2?, R).
 
+% --- clause 2 of definition:sg-agent-named ---------------------------------
+% No seated role of a schema of C adds an atom of a predicate that the
+% introductory act forbids at a role.  Each atom A the act Nm forbids at its
+% role I, and each atom a seated role J of a schema Nm2 adds of A's
+% predicate, is a fault obstructed(Nm, I, A, seated(Nm2, J, Added)).  A
+% contract of Section 3 has no seated role and no such fault.
+
+procedure sh_atoms(Atoms?, Constant?, Constant?, Integer?, Atom?, Constant?, Integer?,
+                   Faults?, Faults).
+sh_atoms([], _, _, _, _, _, _, T, T?).
+sh_atoms([atom(Q, Bs)|Xs], P, Nm2, J, A, Nm, I,
+         T, [obstructed(Nm?, I?, A?, seated(Nm2?, J?, atom(Q?, Bs?)))|R?]) :-
+    Q? =?= P?, ground(Bs?), ground(Xs?), ground(Nm2?), integer(J?), ground(A?),
+    ground(Nm?), integer(I?), ground(T?) |
+    sh_atoms(Xs?, P?, Nm2?, J?, A?, Nm?, I?, T?, R).
+sh_atoms([atom(_, _)|Xs], P, Nm2, J, A, Nm, I, T, R?) :-
+    otherwise, ground(Xs?), ground(P?), ground(Nm2?), integer(J?), ground(A?),
+    ground(Nm?), integer(I?), ground(T?) |
+    sh_atoms(Xs?, P?, Nm2?, J?, A?, Nm?, I?, T?, R).
+
+procedure sh_role(Ans?, RoleSpec?, Constant?, Constant?, Integer?, Atom?, Constant?, Integer?,
+                  Faults?, Faults).
+sh_role(yes, _, _, _, _, _, _, _, T, T?).
+sh_role(no, RS, P, Nm2, J, A, Nm, I, T, R?) :-
+    ground(RS?), ground(P?), ground(Nm2?), integer(J?), ground(A?), ground(Nm?),
+    integer(I?), ground(T?) |
+    rs_add(RS?, Add),
+    sh_atoms(Add?, P?, Nm2?, J?, A?, Nm?, I?, T?, R).
+
+procedure sh_roles(RoleSpecs?, Integer?, Constant?, Constant?, Atom?, Constant?, Integer?,
+                   Faults?, Faults).
+sh_roles([], _, _, _, _, _, _, T, T?).
+sh_roles([RS|Rs], J, P, Nm2, A, Nm, I, T, R?) :-
+    ground(RS?), ground(Rs?), integer(J?), ground(P?), ground(Nm2?), ground(A?),
+    ground(Nm?), integer(I?), ground(T?) |
+    is_party_role(RS?, Pa),
+    J1 := J? + 1,
+    sh_roles(Rs?, J1?, P?, Nm2?, A?, Nm?, I?, T?, R1),
+    sh_role(Pa?, RS?, P?, Nm2?, J?, A?, Nm?, I?, R1?, R).
+
+procedure sh_schemas(Contract?, Constant?, Atom?, Constant?, Integer?, Faults?, Faults).
+sh_schemas([], _, _, _, _, T, T?).
+sh_schemas([S|Ss], P, A, Nm, I, T, R?) :-
+    ground(S?), ground(Ss?), ground(P?), ground(A?), ground(Nm?), integer(I?), ground(T?) |
+    sch_name(S?, Nm2),
+    sch_roles(S?, Rs),
+    sh_schemas(Ss?, P?, A?, Nm?, I?, T?, R1),
+    sh_roles(Rs?, 1, P?, Nm2?, A?, Nm?, I?, R1?, R).
+
+procedure sh_forb(Atoms?, Contract?, Constant?, Integer?, Faults?, Faults).
+sh_forb([], _, _, _, T, T?).
+sh_forb([atom(P, As)|Xs], C, Nm, I, T, R?) :-
+    ground(P?), ground(As?), ground(Xs?), ground(C?), ground(Nm?), integer(I?), ground(T?) |
+    sh_forb(Xs?, C?, Nm?, I?, T?, R1),
+    sh_schemas(C?, P?, atom(P?, As?), Nm?, I?, R1?, R).
+
+procedure seated_faults(RoleSpecs?, Integer?, Constant?, Contract?, Faults).
+seated_faults([], _, _, _, []).
+seated_faults([RS|Rs], I, Nm, C, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(Nm?), ground(C?) |
+    rs_forb(RS?, N),
+    I1 := I? + 1,
+    seated_faults(Rs?, I1?, Nm?, C?, R1),
+    sh_forb(N?, C?, Nm?, I?, R1?, R).
+
 % unobstructed(Sc, B, C, Rf, Faults): the faults of def:unobstructed at the
-% introduction B, Rf being the predicates the contract declares reflexive;
-% empty when it satisfies the three clauses at every role.
+% introduction B, Rf being the predicates the contract declares reflexive,
+% then those of clause 2 of definition:sg-agent-named; empty when it
+% satisfies the clauses at every role.
 procedure unobstructed(Schema?, Subst?, Contract?, Preds?, Faults).
 unobstructed(Sc, B, C, Rf, R?) :- ground(Sc?), ground(B?), ground(C?), ground(Rf?) |
     sch_name(Sc?, Nm),
     sch_roles(Sc?, Rs),
     fresh_base(Sc?, N),
-    unob_roles(Rs?, 1, Nm?, B?, C?, N?, Rf?, R).
+    unobstructed1(Rs?, Nm?, B?, C?, N?, Rf?, R).
+
+procedure unobstructed1(RoleSpecs?, Constant?, Subst?, Contract?, Integer?, Preds?, Faults).
+unobstructed1(Rs, Nm, B, C, N, Rf, R?) :-
+    ground(Rs?), ground(Nm?), ground(B?), ground(C?), integer(N?), ground(Rf?) |
+    unob_roles(Rs?, 1, Nm?, B?, C?, N?, Rf?, F1),
+    seated_faults(Rs?, 1, Nm?, C?, F2),
+    faults_app(F1?, F2?, R).
 
 % --- def:syntactically-grassroots, first half ------------------------------
 % Some schema is an introductory act unobstructed at some introduction.  The
