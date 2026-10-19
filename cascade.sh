@@ -28,7 +28,7 @@
 #   gfwc        GFWC  GFWC        programs/federation       ---
 #   gai         GAI   GAI         programs/gai              ---
 #
-# The steps, and the six artefacts written to cascade/<NAME>/ at the
+# The steps, and the seven artefacts written to cascade/<NAME>/ at the
 # repository root --- outside programs/, since every .glp and .vglp under a
 # program's directory is a module of that program to the linker and to :emit,
 # and a record is not a program:
@@ -44,7 +44,14 @@
 #      compile/4 prints it (vGLP, Section 5.4, Definition "Compilation of the
 #      Canonical Platform"), or its lines saying why it is not compiled.
 #   5. platform.glp: the platform compiled to GLP by the canonical compilation,
-#      as the REPL's :emit writes it (vGLP, Definition "Canonical Compilation").
+#      as the REPL's :emit writes it (vGLP, Definition "Canonical Compilation");
+#      and interface.glp beside it, the platform's interface in sGLP's term
+#      form, its types and volitional declarations as platform.vglp has them
+#      and compiled(P, N) of each procedure of platform.glp, as
+#      programs/sglp/cva/interface.sh prints them, the interface an owner's
+#      simulation of the platform under sGLP is transformed against
+#      (programs/sglp/transform.sh --interface; sGLP's task of 2026-10-18
+#      20:50 UTC, item 1).
 #   6. run.log: the run of the platform with vGLP's scripted persons, the plays
 #      vGLP keeps for it, each play's logs as the REPL prints
 #      them; the plays run the platform.vglp committed there, which the run
@@ -186,6 +193,14 @@ if [ "$COMPILED" = 1 ]; then
     if [ -f "$EMIT/platform.glp" ]; then
         cp "$EMIT/platform.glp" "$OUT/platform.glp"
         say "platform.glp: $(wc -l < "$OUT/platform.glp" | tr -d ' ') lines"
+        if bash "$GLP_DIR/programs/sglp/cva/interface.sh" "$OUT/platform.vglp" "$OUT/platform.glp" "$FILE" \
+                > "$OUT/interface.glp" 2> "$WORK/iface.err"; then
+            say "interface.glp: $(grep -c '^  ' "$OUT/interface.glp") items"
+        else
+            say "the platform's interface in sGLP's term form was not printed"
+            head -5 "$WORK/iface.err"
+            exit 1
+        fi
     else
         say "the canonical compilation wrote no platform.glp"
         grep -E '(Error|error|✗|skipped|failed)' "$WORK/e.out" | head -10
@@ -256,6 +271,7 @@ fi
     if [ "$COMPILED" = 1 ]; then
         echo "| \`platform.vglp\` | the canonical CVA platform, as printed |"
         echo "| \`platform.glp\` | the platform compiled to GLP, as emitted |"
+        echo "| \`interface.glp\` | the platform's interface in sGLP's term form, as programs/sglp/cva/interface.sh prints it |"
         if [ "$RUN" = 1 ]; then
             echo "| \`run.log\` | the plays' logs: $(printf '%s\n' "$GOALS" | sed -e 's/(.*//' | tr '\n' ' ')|"
         else
@@ -274,7 +290,7 @@ fi
 # --check: each artefact in place is what the tools print now.
 if [ "$MODE" = "--check" ]; then
     [ -d "$REC" ] || { say "no record in cascade/$FILE"; exit 1; }
-    for f in "$FILE.md" "$FILE.glp" verdict.txt vmat.tex platform.vglp platform.glp run.log; do
+    for f in "$FILE.md" "$FILE.glp" verdict.txt vmat.tex platform.vglp platform.glp interface.glp run.log; do
         if [ -f "$OUT/$f" ] || [ -f "$REC/$f" ]; then
             if [ -f "$OUT/$f" ] && [ -f "$REC/$f" ] && cmp -s "$OUT/$f" "$REC/$f"; then
                 echo "$f: as printed"

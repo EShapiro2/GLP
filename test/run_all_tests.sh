@@ -6869,7 +6869,8 @@ if _section CAS; then
 # A run of the cascade on a contract is recorded in cascade/<NAME>/, at the
 # repository root, NAME the contract's name (Appendix C), as one tagged commit (claude.md "Code"; Coordination 5.7): the contract's two
 # files with the checker's verdict, the VMAT form, the canonical platform as
-# .vglp and as .glp, and its run with vGLP's scripted persons, with a manifest.
+# .vglp and as .glp, the platform's interface in sGLP's term form, and its run
+# with vGLP's scripted persons, with a manifest.
 # This section re-runs cascade.sh --check on every recorded contract and holds
 # the committed artefacts to what the tools print now; a contract with no
 # record is not run.
@@ -6881,7 +6882,7 @@ for cas_c in gsg gsn gsnp gc cssn gfwc gai; do
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
-    for cas_f in "$cas_n.md" "$cas_n.glp" verdict.txt vmat.tex platform.vglp platform.glp run.log; do
+    for cas_f in "$cas_n.md" "$cas_n.glp" verdict.txt vmat.tex platform.vglp platform.glp interface.glp run.log; do
         [ -f "$GLP_DIR/$cas_o/$cas_f" ] || continue
         check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
     done
@@ -6944,6 +6945,24 @@ HEREDOC
 check "sglp outside: the program loads" "Loaded program" "$sglp_out_run"
 check "sglp outside: the person answers each poll, logged with the monitor's clock" "entry(14916.00387843316, 1, Poll, poll(2, yes))" "$sglp_out_run"
 check "sglp outside: the program reads the five answers" "As = \[yes, yes, yes, yes, yes\]" "$sglp_out_run"
+
+# The simulations of canonical CVA platforms under sGLP, each a record of its
+# own in simulation/<NAME>/<date>/ (claude.md, "Code"; sGLP's task of
+# 2026-10-18 20:50 UTC, item 4): programs/sglp/cva/record.sh --check re-runs
+# the transformation on the record's sGLP source, holding its printed modules
+# to the record's, and each run's first simulated day with its seed, holding
+# its log to the record's up to that time.  With no record, nothing is run.
+for sim_m in "$GLP_DIR"/simulation/*/*/manifest.md; do
+    [ -f "$sim_m" ] || continue
+    sim_r=$(dirname "$sim_m"); sim_n=${sim_r#$GLP_DIR/}
+    sim_out=$(bash "$GLP_DIR/programs/sglp/cva/record.sh" --check "$sim_r" 2>&1; echo "exit $?")
+    check "$sim_n: profiles.glp as printed" "^profiles.glp: as printed$" "$sim_out"
+    check "$sim_n: population.glp as printed" "^population.glp: as printed$" "$sim_out"
+    for sim_s in $(sed -n 's/^- seeds: //p' "$sim_m" | tr ',' ' '); do
+        check "$sim_n: seed $sim_s's first day as recorded" "^$sim_s.log: first day as recorded" "$sim_out"
+    done
+    check "$sim_n: record.sh --check exits 0" "^exit 0$" "$sim_out"
+done
 
 echo ""
 

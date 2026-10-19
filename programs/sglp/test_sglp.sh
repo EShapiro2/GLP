@@ -196,6 +196,21 @@
 #       card about a second after shown; the log the readiness first, then
 #       both cards, each in the panel as shown whole, the program reading the
 #       three answers.
+# (xviii) the harness of every canonical CVA platform (programs/sglp/cva/;
+#       sGLP's task of 2026-10-18 20:50 UTC), on the canonical platform of the
+#       social graph as programs/vglp/cva/compile.sh prints it
+#       (programs/vglp/cva/social_graph/platform.vglp), compiled to GLP by the
+#       REPL's :emit, with the scripted profiles of tests/cva/scripted_sglp.glp:
+#       the platform's interface printed in sGLP's term form (cva/interface.sh),
+#       its types, its volitional declarations, Menu's and Approval's, and its
+#       compiled predicates; the profiles transformed against it
+#       (transform.sh --interface); two agents for a day (cva/run.sh), two runs
+#       from seed 20260927 writing one log and seed 1 another, each menu showing
+#       its agent's own key and the people it knows, the scripted person asking
+#       to meet the other, then proposing, and an attempt to befriend approved
+#       at the other; the population's draw beside the log; and a simulation
+#       record in a scratch root (cva/record.sh), its check passing on it and
+#       failing on its log or its printed population changed.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -898,6 +913,103 @@ awk '
     }' "$WORK/steps.lines"
 check "the log: the readiness, then the first card, shown with the second only once it was written, after the readiness, then the second, each in the panel as shown whole; the program reads the three answers; the clock last" $?
 grep '^entry(\|^clock(\|^As = ' "$WORK/steps.lines" | sed 's/^/        /'
+
+echo "--- (xviii) the harness of every canonical CVA platform"
+# The canonical platform of the social graph, as programs/vglp/cva/compile.sh
+# prints it, compiled to GLP by :emit in a scratch directory under
+# programs/tests, a container with no self.glp, as cascade.sh compiles it.
+CVA="$WORK/cva"; mkdir -p "$CVA/printed"
+EMITD="$GLP_DIR/programs/tests/sglp_cva_emit_$$"
+rm -rf "$EMITD"; mkdir -p "$EMITD"
+cp "$GLP_DIR/programs/vglp/cva/social_graph/platform.vglp" "$EMITD/platform.vglp"
+repl "$WORK/cva_emit.out" ":emit $EMITD"
+cp "$EMITD/platform.vglp" "$CVA/platform.vglp"; cp "$EMITD/platform.glp" "$CVA/platform.glp" 2>/dev/null
+rm -rf "$EMITD"
+[ -s "$CVA/platform.glp" ] && grep -q '^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question)))\.$' "$CVA/platform.glp"
+check "the canonical platform of the social graph compiled to GLP, its agent/5 the compilation's, with its ask stream" $?
+bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" GSG > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
+st=$?
+[ "$st" -eq 0 ] &&
+    grep -q "^  type('Menu', \[menu('Key', 'List'('Key'), dual('Request'))\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('Approval', \[approval('Attempt', dual('YesNo'))\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('Key', \['String'\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('List'('X'), \[\[\], \['X' | 'List'('X')\]\]),$" "$CVA/interface.glp" &&
+    grep -q "^  volitional('Menu', '\\\\'Menu\\\\'', menu_w, request(dual('Key'), dual('List'('Key')), 'Stream'('Trigger'))),$" "$CVA/interface.glp" &&
+    grep -q "^  volitional('Approval', '\\\\'Approval\\\\'', approval_w, respond(" "$CVA/interface.glp" &&
+    grep -q "^  compiled(agent, 5),$" "$CVA/interface.glp" && grep -q "^  compiled(request1, 5),$" "$CVA/interface.glp" &&
+    [ "$(grep -c '^  type(' "$CVA/interface.glp")" -ge "$(grep -cE '^[A-Z][A-Za-z0-9_]* *::=' "$CVA/platform.vglp")" ]
+check "the platform's interface in sGLP's term form: its types, Menu and Approval among them, and the root's it names, Key and List, its volitional declarations with the constants and functors of their asks, and its compiled predicates" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_iface.err"
+bash "$HERE/transform.sh" --interface "$CVA/interface.glp" --source "$HERE/tests/cva/scripted_sglp.glp" --out "$CVA/printed" > "$WORK/cva_tx.out" 2>&1
+st=$?
+tr '\n' ' ' < "$CVA/printed/population.glp" > "$WORK/cva_pop.flat"
+[ "$st" -eq 0 ] && ! grep -q '^%% not transformed' "$CVA/printed/population.glp" "$CVA/printed/profiles.glp" &&
+    grep -q "relay_1(A, Type, menu(X1, X2, X3?), menu(X1?, X2?, Y3), Mon, Log) :- ground(X1?) , ground(X2?) | answer_1(" "$WORK/cva_pop.flat" &&
+    grep -q "stochastic_agent(A, B, Mon, Log, Asks) :- stochastic_person(B?, P, S) , random(S?, 2147483646, Seed, _) , person(A?, P?, Mon?, Seed?, Log?, Asks?) \." "$WORK/cva_pop.flat" &&
+    grep -q "run_declaration(2, 1, day, 20260927) \." "$WORK/cva_pop.flat"
+check "the scripted profiles transformed against the platform's interface (transform.sh --interface): the relay of Menu, the run's entries of one arity" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_tx.out"
+for r in a b s1; do
+    seed=20260927; [ "$r" = s1 ] && seed=1
+    bash "$HERE/cva/run.sh" "$CVA/platform.glp" "$CVA/printed" 2 '1 day' "$seed" "$WORK/cva_$r.log" > "$WORK/cva_$r.out" 2>&1
+    st=$?
+    check "two agents of the canonical platform, one day, seed $seed ($r): the run ends with no error" $st
+    [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_$r.out"
+done
+[ -s "$WORK/cva_a.log" ] && cmp -s "$WORK/cva_a.log" "$WORK/cva_b.log" && ! cmp -s "$WORK/cva_a.log" "$WORK/cva_s1.log"
+check "two runs from seed 20260927 write one log and seed 1 another" $?
+awk -F'\t' '
+    NF == 4 {
+        n++; t = $1 + 0; if (t < last || t > 86400) bad++; last = t
+        if ($2 != 1 && $2 != 2) { bad++; next }
+        me = "p" $2; other = ($2 == 1) ? "p2" : "p1"
+        if ($3 == "Menu") {
+            if (index($4, "menu(" me ", [") != 1) bad++
+            if (!seen[$2]++) { if ($4 != "menu(" me ", [], known(" other "))") bad++ }
+            if (index($4, "propose(befriend(" me ", " other "))")) bef++
+            if (index($4, "propose(establish(" me "))")) est++
+        } else if ($3 == "Approval") {
+            if ($4 ~ /^approval\(attempt\(p[12], [0-9]+, [0-9]+, befriend\(p[12], p[12]\)\), yes\)$/ && index($4, "attempt(" other ", ")) app++
+            else bad++
+        } else bad++
+    }
+    NF == 1 { c = $1 + 0; clocked = 1 }
+    END { exit !(n > 0 && seen[1] && seen[2] && bef > 0 && est > 0 && app > 0 && clocked && c == last && !bad) }' "$WORK/cva_a.log"
+check "the log: each menu showing its agent's own key and the people it knows, the first answered by asking to meet the other, proposals to establish and to befriend, an attempt of the other's approved yes, in the order of time; the clock last" $?
+printf 'draw scripted 2 agreeable 2\nagent 1 scripted agreeable\nagent 2 scripted agreeable\n' | cmp -s - "$WORK/cva_a.draw"
+check "the population's draw beside the log: its counts, then agents 1 and 2 with their profiles" $?
+grep -E '^(draw|wall-clock)' "$WORK/cva_a.out" | sed 's/^/        /'
+head -6 "$WORK/cva_a.log" | sed 's/^/        /'
+# A simulation record, in a scratch root, from the scratch platform's
+# directory in place of a cascade tag, and its check.
+mkdir -p "$WORK/sim"
+bash "$HERE/cva/record.sh" GSG "$HERE/tests/cva/scripted_sglp.glp" --cascade "$CVA" --seeds 20260927,1 --root "$WORK/sim" > "$WORK/cva_rec.out" 2>&1
+st=$?
+REC=$(ls -d "$WORK"/sim/GSG/* 2>/dev/null | head -1)
+all_there() { local d=$1; shift; for f in "$@"; do [ -s "$d/$f" ] || return 1; done; }
+[ "$st" -eq 0 ] && [ -n "$REC" ] &&
+    all_there "$REC" scripted_sglp.glp profiles.glp population.glp 20260927.log 20260927.draw 1.log 1.draw manifest.md &&
+    cmp -s "$REC/20260927.log" "$WORK/cva_a.log" && cmp -s "$REC/1.log" "$WORK/cva_s1.log" &&
+    cmp -s "$REC/scripted_sglp.glp" "$HERE/tests/cva/scripted_sglp.glp" &&
+    grep -q '^- name: GSG$' "$REC/manifest.md" && grep -q '^- seeds: 20260927,1$' "$REC/manifest.md" &&
+    grep -q '^- agents: 2$' "$REC/manifest.md" && grep -q '^- until: 1 day$' "$REC/manifest.md" &&
+    grep -q '^- programs/sglp commit: ' "$REC/manifest.md" && grep -q '^- cascade commit: directory$' "$REC/manifest.md"
+check "a simulation record (cva/record.sh): the sGLP source as it stood, the printed modules, each seed's log and draw, the runs' logs, and the manifest naming the cascade, the commits and the seeds" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_rec.out"
+bash "$HERE/cva/record.sh" --check "$REC" > "$WORK/cva_chk.out" 2>&1
+st=$?
+[ "$st" -eq 0 ] && grep -q '^profiles.glp: as printed$' "$WORK/cva_chk.out" && grep -q '^population.glp: as printed$' "$WORK/cva_chk.out" &&
+    grep -q '^20260927.log: first day as recorded' "$WORK/cva_chk.out" && grep -q '^1.log: first day as recorded' "$WORK/cva_chk.out"
+check "the record's check (record.sh --check): its printed modules as printed and each seed's first day as recorded" $?
+sed 's/^/        /' "$WORK/cva_chk.out"
+cp -R "$REC" "$WORK/sim_bad"
+awk -F'\t' 'NF == 4 && !done { $4 = $4 " "; done = 1 } { print }' OFS='\t' "$REC/1.log" > "$WORK/sim_bad/1.log"
+echo '%% changed' >> "$WORK/sim_bad/population.glp"
+bash "$HERE/cva/record.sh" --check "$WORK/sim_bad" > "$WORK/cva_bad.out" 2>&1
+st=$?
+[ "$st" -ne 0 ] && grep -q '^1.log: first day NOT as recorded$' "$WORK/cva_bad.out" &&
+    grep -q '^population.glp: NOT as printed$' "$WORK/cva_bad.out" && grep -q '^20260927.log: first day as recorded' "$WORK/cva_bad.out"
+check "the check fails on a record whose log or printed population was changed, naming each" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

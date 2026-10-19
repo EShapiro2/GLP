@@ -91,7 +91,10 @@ transform(Prog, _) :- otherwise, ground(Prog?) |
     C =.. ['%% not transformed: no sGLP source of', Prog?],
     send_to_user(['%% transform begin', C?, '%% transform end']).
 
-%% transform_terms(V?, S?, Part?): the same for a source given as its terms.
+%% transform_terms(V?, S?, Part?): the same for a source given as its terms;
+%% Part cva_population prints the population with the run's entries of one
+%% arity that the harness of every canonical CVA platform calls
+%% (programs/sglp/cva/; cva_entries/3).
 exported procedure transform_terms(SglpTerms?, SglpTerms?, Constant?).
 transform_terms(V, S, Part) :- part(given, Part?, V?, S?).
 
@@ -110,6 +113,8 @@ part_lines([], Part, _, S, Ls?) :- Part? =?= profiles, ground(S?) |
     profiles(S?, ['%% transform end'], Ls).
 part_lines([], Part, V, S, Ls?) :- Part? =?= population, ground(V?), ground(S?) |
     population(V?, S?, ['%% transform end'], Ls).
+part_lines([], Part, V, S, Ls?) :- Part? =?= cva_population, ground(V?), ground(S?) |
+    cva_entries(S?, ['%% transform end'], Tl), population(V?, S?, Tl?, Ls).
 part_lines([], Part, _, _, [C?, '%% transform end']) :- otherwise, ground(Part?) |
     C =.. ['%% not transformed: no part', Part?].
 part_lines([E|Es], _, _, _, [E?|Ls?]) :- append(Es?, ['%% transform end'], Ls).
@@ -2231,6 +2236,43 @@ pp_run2(Ts, NT, Tn, Bn, Kn, Pn, N, C, U, Seed, Ds, Tl,
     clause(SH?, [], SB?, L5?, L4),
     dim_procs(Ds?, Tl?, L5).
 
+%% cva_entries(S?, Tail?, Ls): the entries of fixed_entries/7 from the run
+%% declaration of S, its agents, horizon, seed and thresholds, which the part
+%% cva_population prints after the population (part_lines/5).
+procedure cva_entries(Terms?, Terms?, Terms).
+cva_entries(S, Tl, Ls?) :- ground(S?) | runs(S?, Rs), cva_entries1(Rs?, Tl?, Ls).
+procedure cva_entries1(Terms?, Terms?, Terms).
+cva_entries1([run(N, Mixes, C, U, Seed)], Tl, Ls?) :- ground(Mixes?) |
+    dims(Mixes?, 1, Ds), all_thresholds(Ds?, Ts), fixed_entries(N?, C?, U?, Seed?, Ts?, Tl?, Ls).
+cva_entries1(Rs, Tl, Tl?) :- otherwise, ground(Rs?) | true.
+
+%% fixed_entries(N?, C?, U?, Seed?, Ts?, Tail?, Ls): the run's entries of one
+%% arity whatever the population, for the harness of every canonical CVA
+%% platform, which takes the printed population of any source
+%% (programs/sglp/cva/; sGLP's task of 2026-10-18 20:50 UTC, item 2):
+%% run_declaration/4, the run declaration's agents, horizon and seed;
+%% stochastic_agent(A, B, Mon, Log, Asks), agent A's stochastic person drawn
+%% from the start B of its block with the declaration's thresholds, its person
+%% process's seed drawn from the seed the profiles leave, and its person
+%% process on the ask stream Asks, as the examples' harnesses draw and spawn
+%% them (Appendix B, "Seeds"); and stochastic_profiles(B, P), the stochastic
+%% person P drawn from B, for the population's draw.
+procedure fixed_entries(_?, _?, _?, _?, Terms?, Terms?, Terms).
+fixed_entries(N, C, U, Seed, Ts, Tl, ['', '%% The run\'s entries of one arity, for the harness of every canonical CVA platform (programs/sglp/cva/).'|Ls?]) :-
+    ground(Ts?) |
+    compose(run_declaration, [N?, C?, U?, Seed?], RH),
+    append([var('B?')|Ts?], [var('P'), var('S')], SA1), compose(stochastic_person, SA1?, SG1),
+    append([var('B?')|Ts?], [var('P'), var('_')], SA2), compose(stochastic_person, SA2?, SG2),
+    decl(['exported procedure'], run_declaration, ['Integer', 'Number', 'Span', 'Integer'], L1?, Ls),
+    clause(RH?, [], [], L2?, L1),
+    decl(['exported procedure'], stochastic_agent,
+         [dual('Integer'), dual('Integer'), dual('MutualRef'), dual('MutualRef'), dual('Stream'('Ask'))], L3?, L2),
+    clause(stochastic_agent(var('A'), var('B'), var('Mon'), var('Log'), var('Asks')), [],
+           [SG1?, random(var('S?'), 2147483646, var('Seed'), var('_')),
+            person(var('A?'), var('P?'), var('Mon?'), var('Seed?'), var('Log?'), var('Asks?'))], L4?, L3),
+    decl(['exported procedure'], stochastic_profiles, [dual('Integer'), '_'], L5?, L4),
+    clause(stochastic_profiles(var('B'), var('P?')), [], [SG2?], Tl?, L5).
+
 procedure all_thresholds(Terms?, Terms).
 all_thresholds([], []).
 all_thresholds([dim(_, _, _, Ts, _)|Ds], As?) :- all_thresholds(Ds?, As1), append(Ts?, As1?, As).
@@ -2385,7 +2427,8 @@ check_mixes1(ND, ND1, NT, R, Ds, [E?]) :-
 procedure reserved(Terms?, Ans).
 reserved(Ds, A?) :- ground(Ds?) |
     answer_names(ANs), present_names(PNs), append(ANs?, PNs?, Ns),
-    append([person, stochastic_person, declaration, random, true, show_whole, whole_frame], Ns?, R),
+    append([person, stochastic_person, declaration, random, true, show_whole, whole_frame,
+            run_declaration, stochastic_agent, stochastic_profiles], Ns?, R),
     any_member(Ds?, R?, A).
 procedure mix_names(Terms?, Terms).
 mix_names([], []).

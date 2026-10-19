@@ -14,6 +14,11 @@
 #                                              print <src>/profiles.glp and <src>/population.glp
 #                                              from the sGLP source in <src>, a directory
 #                                              outside programs/sglp, or with --check compare
+#   bash programs/sglp/transform.sh --interface <iface> --source <file> --out <dir> [--check]
+#                                              print <dir>/profiles.glp and <dir>/population.glp
+#                                              from an owner's sGLP source <file> over a
+#                                              canonical CVA platform and the platform's
+#                                              interface <iface>, or with --check compare
 #
 # In one REPL session it loads programs/sglp and calls transform(P, Part) for
 # P social_graph, coins, reader, delivery, receipt, panel, numbers and steps and Part profiles
@@ -48,6 +53,23 @@
 # parts to <src>, or with --check compares them with those in <src>.  The
 # printed modules call the monitor and name sglp.glp's Span and Slot, which the
 # root programs/self.glp exposes, as it exposes sglp.glp's span/2 to the harness.
+#
+# With --interface <iface> --source <file> --out <dir> it transforms an owner's
+# sGLP source over a canonical CVA platform (sGLP's task of 2026-10-18 20:50
+# UTC, item 1; claude.md, "Code", the simulation of a platform under sGLP):
+# <file>, the owner's <NAME>_sglp.glp, holds the declaration exported procedure
+# source(SglpTerms) and the unit clause source(S), S the sGLP program in the
+# term form and nothing of the platform's interface, which is <iface>, the
+# interface the cascade prints beside the platform's .vglp
+# (programs/sglp/cva/interface.sh), holding the declaration exported procedure
+# interface(SglpTerms) and the unit clause interface(V); in one REPL session it
+# calls transform_terms(V, S, Part) for Part profiles and cva_population, the
+# population with the run's entries of one arity that the harness of every
+# canonical platform calls (programs/sglp/cva/), and writes the two parts to
+# <dir> as profiles.glp and population.glp, or with --check compares them with
+# those in <dir>.
+# The parts are written to <dir> and not beside the source, since a .glp in an
+# owner's directory is a module of the owner's program.
 
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -55,12 +77,50 @@ GLP_DIR="$(cd "$HERE/../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 
 usage() {
-    echo "usage: transform.sh [<dir> | --check | --source <src> [--check]]" >&2
+    echo "usage: transform.sh [<dir> | --check | --source <src> [--check] | --interface <iface> --source <file> --out <dir> [--check]]" >&2
     exit 2
 }
 CHECK=0
 SRC=
-if [ $# -ge 1 ] && [ "$1" = "--source" ]; then
+IFACE=
+# term_of <file> <name> <arity>: the arguments of the one unit clause
+# <name>(...) of <file>, its comments dropped and its whitespace one space,
+# quoted atoms and strings kept as written, where what is left is its
+# declaration exported procedure <name>(SglpTerms, ...) and the clause.
+term_of() {
+    TERM_NAME="$2" TERM_ARITY="$3" perl -0777 -ne '
+        my ($name, $n) = ($ENV{TERM_NAME}, $ENV{TERM_ARITY});
+        my $q = qr/\x27(?:[^\x27\\]|\\.)*\x27|"(?:[^"\\]|\\.)*"/;
+        s/($q)|%[^\n]*|(\s+)/defined $1 ? $1 : defined $2 ? " " : ""/ge;
+        my $ts = join("\\s*,\\s*", ("SglpTerms") x $n);
+        s/^\s*(?:exported\s+)?procedure\s+$name\s*\(\s*$ts\s*\)\s*\.//;
+        print $1 if /^\s*$name\s*\((.*)\)\s*\.\s*$/s;
+    ' "$1"
+}
+if [ $# -ge 1 ] && [ "$1" = "--interface" ]; then
+    { { [ $# -eq 6 ] || { [ $# -eq 7 ] && [ "$7" = "--check" ]; }; } &&
+      [ "$3" = "--source" ] && [ "$5" = "--out" ]; } || usage
+    [ -f "$2" ] || { echo "transform.sh: no interface $2" >&2; exit 2; }
+    [ -f "$4" ] || { echo "transform.sh: no sGLP source $4" >&2; exit 2; }
+    [ -d "$6" ] || { echo "transform.sh: no directory $6" >&2; exit 2; }
+    IFACE="$2"; SRCF="$4"; DEST="$(cd "$6" && pwd)"
+    [ $# -eq 7 ] && CHECK=1
+fi
+if [ -n "$IFACE" ]; then
+    V=$(term_of "$IFACE" interface 1)
+    S=$(term_of "$SRCF" source 1)
+    if [ -z "$V" ]; then
+        echo "transform.sh: $IFACE is not the declaration and the clause interface(V)" >&2
+        exit 2
+    fi
+    if [ -z "$S" ]; then
+        echo "transform.sh: $SRCF is not the declaration and the clause source(S)" >&2
+        exit 2
+    fi
+fi
+if [ -n "$IFACE" ]; then
+    :
+elif [ $# -ge 1 ] && [ "$1" = "--source" ]; then
     { [ $# -eq 2 ] || { [ $# -eq 3 ] && [ "$3" = "--check" ]; }; } || usage
     [ -d "$2" ] || { echo "transform.sh: no directory $2" >&2; exit 2; }
     SRC="$(cd "$2" && pwd)"
@@ -71,7 +131,19 @@ fi
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
-if [ -n "$SRC" ]; then
+if [ -n "$IFACE" ]; then
+    if [ "$CHECK" = 1 ]; then OUT="$WORK/out"; else OUT="$DEST"; fi
+    BASE="$DEST"
+    mkdir -p "$OUT" || exit 2
+    PARTS="profiles population"
+    {
+        echo ':limit 1000000000000000'
+        echo "$HERE"
+        echo "transform_terms($V, $S, profiles)."
+        echo "transform_terms($V, $S, cva_population)."
+        echo ':quit'
+    } > "$WORK/input"
+elif [ -n "$SRC" ]; then
     # The source: <src>'s one *_sglp.glp, its comments dropped and its
     # whitespace one space, quoted atoms and strings kept as written; what is
     # left must be the declaration and the clause source(V, S), whose arguments

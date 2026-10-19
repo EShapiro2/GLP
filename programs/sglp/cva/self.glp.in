@@ -1,0 +1,30 @@
+%% A run of a canonical CVA platform under sGLP: the directory programs/sglp/cva/run.sh
+%% assembles for one run, under programs/tests/, its scope the root's.  This
+%% file and harness.glp are programs/sglp/cva/self.glp.in and harness.glp.in,
+%% the harness of every canonical CVA platform (sGLP's task of 2026-10-18 20:50
+%% UTC, item 2); platform.glp is the platform's canonical compilation, the one
+%% its cascade record holds (vGLP, Section 5.4 and Definition "Canonical
+%% Compilation"); and profiles.glp and population.glp are printed by
+%% programs/sglp/transform.sh --interface from the owner's sGLP source over the
+%% platform's interface.  The harness files are kept as .in files, a .glp of a
+%% program's directory being a module of that program (TGLP, modules.tex,
+%% Compilation, first step), which in programs/sglp/cva/ would call a platform
+%% module and a population module that are not there.
+%%
+%% The platform's module is exposed: its exported procedures, agent/5 among
+%% them, and the types their signatures carry are lifted into this directory's
+%% scope (TGLP, modules.tex, "The -expose directive"), so that the harness,
+%% written once for every canonical platform, names the platform's types, Net
+%% and Question among them, without restating them.
+-expose(platform).
+
+%% run(Ks?, C?, U?, Seed?): the run of the agents keyed Ks until C Us from
+%% Seed (harness.glp).
+imported procedure harness#run(Stream(Key)?, Number?, Span?, Integer?).
+exported procedure run(Stream(Key)?, Number?, Span?, Integer?).
+run(Ks, C, U, Seed) :- harness # run(Ks?, C?, U?, Seed?).
+
+%% draw(Ks?, Seed?, D): the population's draw of that run, without it.
+imported procedure harness#draw(Stream(Key)?, Integer?, Stream(_)).
+exported procedure draw(Stream(Key)?, Integer?, Stream(_)).
+draw(Ks, Seed, D?) :- harness # draw(Ks?, Seed?, D).
