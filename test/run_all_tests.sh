@@ -3580,11 +3580,12 @@ check_not "CVA compiler: ... no schema-binding named against it" "%% the schema-
 # 5.4; vGLP #14's task of 2026-10-18 12:24 UTC, C): two schema-bindings of the
 # same participants and the same deleted and added atoms are linked when no
 # atom one requires at a participant the other forbids there, and a class is
-# the closure.  Eleven fixtures of the compiler's own: clash2 (two classes),
+# the closure.  Twelve fixtures of the compiler's own: clash2 (two classes),
 # chain3 (a third binding joins them, all marking the same people, compiled),
 # clash2_marks and chain3_marks (the same, the two marking different people:
 # two classes, and one, its parts guarded apart, both compiled),
-# wards (a verdict grassroots with wards compiles, A), signed (a signed term in
+# wards and wards_leaving (a verdict grassroots with wards compiles, A, with
+# no leaving mark and with one, GSC's Appendix F), signed (a signed term in
 # an added atom, the speech act bound to y signed by the person in role i,
 # compiles, B), deadfree (a schema requiring and forbidding an atom of a
 # variable of no deleted or added atom, not effective, vGLP c0bea08), sibling
@@ -3598,7 +3599,8 @@ $CVA/compiler/
 :limit 100000000
 compile(clash2, [schema(s1, [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [rs(guarded, [atom(z, [])], [], [], [atom(a, [])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
 compile(chain3, [schema(s1, [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [rs(guarded, [atom(z, [])], [], [], [atom(a, [])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])]), schema(s3, [rs(guarded, [atom(z, [])], [], [], []), rs(guarded, [atom(w, [])], [], [], [])])], syntactically_grassroots).
-compile(wards, [schema(s1, [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w)], [relay(r, ward(1, m, 2), free(2))])).
+compile(wards, [schema(s1, [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w)], [relay(r, ward(1, m, 2), free(2))], [])).
+compile(wards_leaving, [schema(s1, [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w)], [relay(r, ward(1, m, 2), free(2))], [retired])).
 compile(signed, [schema(fwd, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])], syntactically_grassroots).
 compile(deadfree, [schema(s1, [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [rs(guarded, [atom(z, [])], [], [atom(q, [pvar(x)])], [atom(q, [pvar(x)])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
 compile(sibling, reflexive([friend], [schema(csib, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(parenting, [role(2)])], [atom(child, [])])]), schema(cab, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, [])])])]), syntactically_grassroots).
@@ -3615,6 +3617,7 @@ check "CVA compiler: a third schema-binding linking them joins one class, all ma
 check "CVA compiler: ... the two marking different people, two classes, compiled (clash2_marks)" "%% the canonical CVA platform of the contract(clash2_marks)" "$cva_classes"
 check "CVA compiler: ... and the third joining them, one class, its parts guarded apart, compiled (chain3_marks)" "%% the canonical CVA platform of the contract(chain3_marks)" "$cva_classes"
 check "CVA compiler: a contract grassroots with wards is compiled (wards)" "%% the canonical CVA platform of the contract(wards)" "$cva_classes"
+check "CVA compiler: ... and one with a leaving mark, the verdict's fifth argument (GSC, Appendix F, Definition \"Leaving mark\"), compiled (wards_leaving)" "%% the canonical CVA platform of the contract(wards_leaving)" "$cva_classes"
 check "CVA compiler: a signed term in an added atom, the speech act bound to y signed by the person in role i, compiles (signed)" "%% the canonical CVA platform of the contract(signed)" "$cva_classes"
 check "CVA compiler: a schema requiring and forbidding an atom of a variable of no deleted or added atom, refused as not effective (deadfree)" "%% not compiled(deadfree)" "$cva_classes"
 check "CVA compiler: ... the schema and the variable named" "%% the schema and the variable(s2, pvar(x))" "$cva_classes"

@@ -61,13 +61,7 @@ Fault     ::= no_introductory_act
             ; changes_nothing(Constant, Integer)
             ; no_role_changes(Constant).
 Faults    ::= [] ; [Fault | Faults].
-%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is
-%% the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a
-%% relay act (Definition "Relay") is a ward role, ward(Role, Mark,
-%% GuardianRole), or a free role, free(Role); a relay act is named with its two
-%% parties.  grassroots_with_wards names the introductory act unobstructed but
-%% for the marks, the set of marks, the guardianship of each and the relay acts
-%% found.
+%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Party     ::= ward(Integer, Constant, Integer) ; free(Integer).
@@ -75,7 +69,7 @@ Parties   ::= [] ; [Party | Parties].
 Relay     ::= relay(Constant, Party, Party).
 Relays    ::= [] ; [Relay | Relays].
 Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
-            ; grassroots_with_wards(Constant, Preds, Guardianships, Relays)
+            ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
             ; conditions_met ; conditions_failed(Faults) ; malformed(Faults).
 
 %% A contract's introduction predicate, where it names one (vGLP, Section 5.4,
