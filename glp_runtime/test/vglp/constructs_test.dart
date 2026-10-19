@@ -2120,8 +2120,16 @@ procedure (YesNo?)*ask(Integer?).
       expect(w.stripped, isNot(contains('=::=')));
     });
 
+    // "It is drawn with the default widget of its type beside its name, from
+    // which it reads the type's constructors" (vGLP 92e6d3b, Section 6.2, the
+    // paragraph after Proposition "Default Widgets"); "for a declared widget,
+    // the term named(W, D) of the name W its declaration gives and the
+    // default widget D of its type" (Section 6.3); the construct process
+    // draws "named(W', D) where a declaration names it W', D the default
+    // widget of T" (the appendix of proofs).
     test('name the widget of a question of their moded type, in its mode, '
-        'at the interactive type and below it', () {
+        'at the interactive type and below it, each drawn as named(W, D), D '
+        'the default widget of the type', () {
       final c = compile('''
 Peer ::= Constant.
 YesNo ::= yes ; no.
@@ -2134,9 +2142,42 @@ procedure (Pair)*both(YesNo, YesNo).
 (pair(A, B))*both(A?, B?).
 Pair ::= pair(YesNo?, YesNo?).
 ''');
-      expect(c.widgets['Card'], 'inbox_card');
+      const toggle = 'named(toggle, buttons([yes, no]))';
+      expect(c.widgets['Card'],
+          "named(inbox_card, form(card, [field('Peer', shown), "
+          "field('YesNo', $toggle)]))");
       expect(c.widgets['Pair'],
-          "form(pair, [field('YesNo', toggle), field('YesNo', toggle)])");
+          "form(pair, [field('YesNo', $toggle), field('YesNo', $toggle)])");
+      // The construct process draws the same term.
+      expect(
+          c.source,
+          contains("run_card_w(Id?, named(inbox_card, form(card, "
+              "[field('Peer', shown), field('YesNo', $toggle)])), "));
+    });
+
+    test('where none names it, the default widget is drawn as before', () {
+      final c = compile('''
+YesNo ::= yes ; no.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+''');
+      expect(c.widgets['YesNo?'], 'buttons([yes, no])');
+      expect(c.source, isNot(contains('named(')));
+    });
+
+    test('a declared recursive type: named(W, rec(T, D)), each occurrence of '
+        'it within named(W, ref(T)), every widget of the type named', () {
+      final c = compile('''
+Tree ::= leaf ; node(Tree, Tree).
+Tree? =::= tree_editor.
+procedure (Tree?)*plant(Tree).
+(T)*plant(T?).
+''');
+      const inner = "named(tree_editor, ref('Tree'))";
+      expect(
+          c.widgets['Tree?'],
+          "named(tree_editor, rec('Tree', menu([button(leaf), form(node, "
+          "[field('Tree', $inner), field('Tree', $inner)])])))");
     });
 
     test('a declaration for the other mode does not apply', () {
@@ -2156,7 +2197,7 @@ YesNo? =::= 'Big buttons'.
 procedure (YesNo?)*ask(Integer?).
 (yes)*ask(_).
 ''');
-      expect(c.widgets['YesNo?'], "'Big buttons'");
+      expect(c.widgets['YesNo?'], "named('Big buttons', buttons([yes, no]))");
     });
 
     test('a double-quoted string names the same widget as the quoted name', () {
@@ -2168,8 +2209,8 @@ YesNo? =::= $w.
 procedure (YesNo?)*ask(Integer?).
 (yes)*ask(_).
 ''').widgets['YesNo?']!;
-      expect(widget('"Big buttons"'), "'Big buttons'");
-      expect(widget('"toggle"'), 'toggle');
+      expect(widget('"Big buttons"'), "named('Big buttons', buttons([yes, no]))");
+      expect(widget('"toggle"'), 'named(toggle, buttons([yes, no]))');
       expect(widget('"toggle"'), widget("'toggle'"));
     });
 
@@ -2264,6 +2305,35 @@ Output ::= said(Peer) ; heard(Peer, Integer) ; ok.
 Output ::= String.
 ''');
       expect(c.widgets['Output'], 'thread');
+    });
+
+    // "A value the program writes to its person outside a question is drawn
+    // likewise, by the widget of its declared type" (Definition "Default
+    // Widget"); "the compiled program draws that output, construct 0, by the
+    // widget of its type Stream(Output), by default a thread whose elements
+    // are drawn by the widget of Output" (vGLP 99c7dc8, canonical-
+    // compilation.tex); a declared one drawn as named(W, D) (vGLP 92e6d3b).
+    test('a declared Output: each element drawn by named(W, D), D the default '
+        'widget of Output', () {
+      final c = compile('''$card
+Output ::= said(Peer) ; ok.
+Output =::= said_line.
+''');
+      const d = "menu([form(said, [field('Peer', shown)]), shown])";
+      expect(c.widgets['Output'], 'thread(named(said_line, $d))');
+      expect(c.source,
+          contains('output(thread(named(said_line, $d)), MOut?, ODs)'));
+    });
+
+    test('a declared Stream(Output): construct 0 drawn by named(W, D), D the '
+        'thread of the elements', () {
+      final c = compile('''$card
+Output ::= said(Peer) ; ok.
+Stream(Output) =::= last_state.
+''');
+      const d = "thread(menu([form(said, [field('Peer', shown)]), shown]))";
+      expect(c.widgets['Output'], 'named(last_state, $d)');
+      expect(c.source, contains('output(named(last_state, $d), MOut?, ODs)'));
     });
 
     test('an Output with a position the person writes is refused, naming it',

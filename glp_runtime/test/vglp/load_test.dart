@@ -483,7 +483,7 @@ YesNo? =::= toggle.
           onSkip: skipped.add);
       expect(written.map((w) => w.split('/').last), ['asker.glp']);
       expect(skipped, isEmpty);
-      expect(emitted('asker'), contains('run_yesNo_r(Id?, toggle, [input([])], Done?, Ds)'));
+      expect(emitted('asker'), contains('run_yesNo_r(Id?, named(toggle, buttons([yes, no])), [input([])], Done?, Ds)'));
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       expect(modules.any((m) => m.filePath.endsWith('self.vglp')), isFalse);
@@ -496,7 +496,7 @@ YesNo? =::= toggle.
       write('asker.vglp', 'YesNo? =::= lamp.\n$asker');
       emitVglpSources(fixture.path,
           rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
-      expect(emitted('asker'), contains('run_yesNo_r(Id?, lamp, [input([])], Done?, Ds)'));
+      expect(emitted('asker'), contains('run_yesNo_r(Id?, named(lamp, buttons([yes, no])), [input([])], Done?, Ds)'));
     });
 
     test('a nested directory\'s self.vglp overrides its ancestor\'s, and holds '
@@ -516,8 +516,8 @@ pong(b).
       // so each functor is prefixed with the name of the module that defines
       // its type (vGLP at c9a928d, sections/parts/canonical-compilation.tex;
       // vGLP's task of 2026-10-16 11:25 UTC, item 3).
-      expect(emitted('sub/inner'), contains('run_inner_yesNo_r(Id?, dial, [input([])], Done?, Ds)'));
-      expect(emitted('asker'), contains('run_asker_yesNo_r(Id?, toggle, [input([])], Done?, Ds)'));
+      expect(emitted('sub/inner'), contains('run_inner_yesNo_r(Id?, named(dial, buttons([yes, no])), [input([])], Done?, Ds)'));
+      expect(emitted('asker'), contains('run_asker_yesNo_r(Id?, named(toggle, buttons([yes, no])), [input([])], Done?, Ds)'));
     });
 
     test('each question is drawn with the widget declarations in scope where '
@@ -537,10 +537,10 @@ pong(b).
           rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
       // inner's question in asker's module is drawn by inner's dial, and
       // asker's in inner's module by asker's toggle.
-      expect(emitted('asker'), contains('run_inner_yesNo_r(Id?, dial, [input([])], Done?, Ds)'));
-      expect(emitted('sub/inner'), contains('run_asker_yesNo_r(Id?, toggle, [input([])], Done?, Ds)'));
-      expect(emitted('asker'), isNot(contains('run_inner_yesNo_r(Id?, toggle')));
-      expect(emitted('sub/inner'), isNot(contains('run_asker_yesNo_r(Id?, dial')));
+      expect(emitted('asker'), contains('run_inner_yesNo_r(Id?, named(dial, buttons([yes, no])), [input([])], Done?, Ds)'));
+      expect(emitted('sub/inner'), contains('run_asker_yesNo_r(Id?, named(toggle, buttons([yes, no])), [input([])], Done?, Ds)'));
+      expect(emitted('asker'), isNot(contains('run_inner_yesNo_r(Id?, named(toggle')));
+      expect(emitted('sub/inner'), isNot(contains('run_asker_yesNo_r(Id?, named(dial')));
     });
 
     test('the root\'s self.vglp holds for every program, a directory with no '

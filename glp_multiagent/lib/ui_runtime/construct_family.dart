@@ -65,12 +65,20 @@
 ///     finitely many acts; at the root of a question, or as the element of
 ///     a stream or a list, `rec(T, W)` is drawn at once as `W`.
 ///
-/// A widget a declaration names (`T =::= W`) is a constant naming a Dart
-/// widget: "In the grassroots app, W names a Dart widget: the construct
-/// family draws it, and its type fixes the terms it forms" (Definition
-/// "Widget Declaration") --- [ConstructFamily.named], the grassroots app's
-/// in `named_widgets.dart`.  A widget the family does not have is drawn as
-/// such, named, and takes no input: nothing stands in for it.
+/// A widget a declaration names (`T =::= W`) is drawn as `named(W, D)`, `W`
+/// a constant naming a Dart widget and `D` the default widget of `T`: "It is
+/// drawn with the default widget of its type beside its name, from which it
+/// reads the type's constructors ... In the grassroots app, W names a Dart
+/// widget: the construct family draws it, and its type fixes the terms it
+/// forms" (vGLP 92e6d3b, Section 6.2, the paragraph after Proposition
+/// "Default Widgets"; Section 6.3, the type `Widget`).  The family looks `W`
+/// up in [ConstructFamily.named], the grassroots app's in
+/// `named_widgets.dart`, and hands it `D` with the view.  A `W` the family
+/// lacks is drawn by `D`, the default widget of its type, with `W` named in
+/// a small note above it; so is a declared widget in the editor of a form
+/// the person writes, where a named widget draws no field.  An unknown
+/// widget other than these is drawn as such, named, and takes no input:
+/// nothing stands in for it.
 ///
 /// The person's input is returned raw: a button grants its constant, a text
 /// field a `String`, a number field an `Integer` or a `Real` as typed, a date
@@ -89,10 +97,12 @@ import 'bridge.dart';
 import 'named_widgets.dart';
 import 'term.dart';
 
-/// A widget a declaration names: drawn over the construct's view at position
-/// [at], its input granted through [grant] at the question's path.
+/// A widget a declaration names, `named(W, D)`: drawn over the construct's
+/// view at position [at], with [dflt], `D`, the default widget of its type,
+/// from which it reads the type's constructors, its input granted through
+/// [grant] at the question's path.
 typedef NamedWidgetBuilder = Widget Function(BuildContext context,
-    OpenConstruct construct, GTerm view, List<int> at,
+    OpenConstruct construct, GTerm dflt, GTerm view, List<int> at,
     void Function(GTerm path, GTerm raw) grant);
 
 /// A construct family: the default widgets, drawn below, and the named
@@ -232,6 +242,10 @@ class _ConstructViewState extends State<ConstructView> {
   /// program writes the position.
   Widget _pending(GTerm w, GList p) {
     final at = [for (final i in p.items) (i as GInt).value];
+    // A declared widget's placeholder is its type's: the default widget D
+    // of named(W, D) names the form.
+    final named = namedWidget(w);
+    if (named != null) w = named.$2;
     final (kind0, ws0) = ctorArgs(w);
     final (kind, ws) =
         kind0 == recCtor && ws0.length == 2 ? ctorArgs(ws0[1]) : (kind0, ws0);
@@ -253,6 +267,8 @@ class _ConstructViewState extends State<ConstructView> {
     w = w1;
     final (kind, ws) = ctorArgs(w);
     switch (kind) {
+      case namedCtor when ws.length == 2:
+        return _named(w, v, at, (d) => _shown(d, v, at, recs1));
       case 'shown' when ws.isEmpty:
         return _keyed('shown', at, Text(displayText(v)));
       case 'thread' when ws.isEmpty:
@@ -385,8 +401,6 @@ class _ConstructViewState extends State<ConstructView> {
           when ws.length == 1:
         return _keyed('shown', at, Text(displayText(v)));
     }
-    final named = _named(w, v, at);
-    if (named != null) return named;
     return _undrawable(w, at);
   }
 
@@ -439,6 +453,9 @@ class _ConstructViewState extends State<ConstructView> {
     w = w1;
     final (kind, ws) = ctorArgs(w);
     switch (kind) {
+      case namedCtor when ws.length == 2:
+        return _named(
+            w, questionView(p), at, (d) => _question(d, p, at, recs1));
       case 'button' when ws.length == 1:
         return _keyed('button', at, _button(ws[0], () => widget.grant(p, ws[0])));
       case 'buttons' when ws.length == 1 && ws[0] is GList:
@@ -491,8 +508,6 @@ class _ConstructViewState extends State<ConstructView> {
       case 'menu' when ws.length == 1 && ws[0] is GList:
         return _submitting(w, p, at, keepOpen: false, recs: recs1);
     }
-    final named = _named(w, questionView(p), at);
-    if (named != null) return named;
     return _undrawable(w, at);
   }
 
@@ -536,6 +551,18 @@ class _ConstructViewState extends State<ConstructView> {
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
+      case namedCtor when ws.length == 2:
+        // A declared widget inside a form the person writes: a named widget
+        // draws a question or a value, and no field of a form, so the field
+        // is edited by D, the default widget of its type, its name noted.
+        final (name, d) = namedWidget(w)!;
+        return _keyed(
+            'named',
+            at,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [_note(name, at), _editor(d, at, label, recs1)],
+            ));
       case 'text' || 'number' || 'peer' when ws.isEmpty:
         return _keyed(
             kind,
@@ -656,6 +683,8 @@ class _ConstructViewState extends State<ConstructView> {
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
+      case namedCtor when ws.length == 2:
+        return _value(namedWidget(w)!.$2, at, recs1);
       case 'text' when ws.isEmpty:
         return GString(_text(k).text);
       case 'number' when ws.isEmpty:
@@ -753,15 +782,32 @@ class _ConstructViewState extends State<ConstructView> {
         ),
       ]));
 
-  /// A widget a declaration names, where the family has it.
-  Widget? _named(GTerm w, GTerm v, List<int> at) {
-    if (w is! GAtom) return null;
-    final b = widget.family.named[w.name];
-    if (b == null) return null;
-    return KeyedSubtree(
-        key: nodeKey(_id, w.name, at),
-        child: b(context, widget.construct, v, at, widget.grant));
+  /// A declared widget, `named(W, D)`, over the view [v] at [at]: the
+  /// family's widget `W`, handed `D`, the default widget of its type, with
+  /// the view; where the family lacks `W`, [byDefault] draws it by `D`, with
+  /// `W` named in a small note above it.
+  Widget _named(GTerm w, GTerm v, List<int> at,
+      Widget Function(GTerm d) byDefault) {
+    final (name, d) = namedWidget(w)!;
+    final b = widget.family.named[name];
+    if (b != null) {
+      return KeyedSubtree(
+          key: nodeKey(_id, name, at),
+          child: b(context, widget.construct, d, v, at, widget.grant));
+    }
+    return _keyed(
+        'named',
+        at,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [_note(name, at), byDefault(d)],
+        ));
   }
+
+  /// The small note naming a declared widget [name] at [at] drawn by the
+  /// default widget of its type.
+  Widget _note(String name, List<int> at) => _keyed('note', at,
+      Text(name, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)));
 
   /// A widget this family does not have: named, and taking no input.
   Widget _undrawable(GTerm w, List<int> at) => _keyed(

@@ -46,7 +46,9 @@
 //     type and binds it, a stream type taking one element per grant, an
 //     input box;
 //   - the views are drawn as they change, draw(Id, W, f(V)), W the widget of
-//     T and f the functor of its ask, so that every drawn value is of the
+//     T --- its default D, or named(W', D) where a declaration names it W'
+//     (vGLP 92e6d3b, the construct process in the appendix of proofs) ---
+//     and f the functor of its ask, so that every drawn value is of the
 //     program's T, the type of its person channel: the union of the values
 //     drawn, each under its ask's functor, construct 0's under output, and of
 //     the grants' raw inputs, the types of its questions (vGLP, Definition
@@ -842,10 +844,11 @@ class _Generator {
 
   /// The widget the program's output is drawn by: a thread whose elements
   /// are drawn by the widget of Output, `thread(W)`, or `thread` where W is
-  /// `shown`.  Output is a value the program writes, refused where it is not
-  /// an interactive type (_checkInteractive), and refused, naming it,
-  /// where the person writes a position of it: the output is "outside a
-  /// question" (vGLP, 2026-10-13 19:25 UTC, item 4).
+  /// `shown`; `named(W', D)`, D that thread, where a declaration names the
+  /// widget W' of Stream(Output).  Output is a value the program writes,
+  /// refused where it is not an interactive type (_checkInteractive), and
+  /// refused, naming it, where the person writes a position of it: the
+  /// output is "outside a question" (vGLP, 2026-10-13 19:25 UTC, item 4).
   String _outputWidget(TypeDef output) {
     final t = TypeRef(outputTypeName, output.line, output.column);
     final it = InteractiveType(t, false, 'output', const [], output.line,
@@ -862,7 +865,19 @@ class _Generator {
           output.line, output.column, phase: 'analyzer');
     }
     final w = _widget(root, {});
-    return w == 'shown' ? 'thread' : 'thread($w)';
+    // The widget of Stream(Output), by default a thread of the elements, each
+    // drawn by the widget of Output; named(W, D) where a declaration in scope
+    // names it W, D that thread (vGLP 92e6d3b, Section 6.3; vGLP 99c7dc8,
+    // sections/parts/canonical-compilation.tex: "the compiled program draws
+    // that output, construct 0, by the widget of its type Stream(Output), by
+    // default a thread whose elements are drawn by the widget of Output";
+    // Definition "Default Widget": "A value the program writes to its person
+    // outside a question is drawn likewise, by the widget of its declared
+    // type").  The program writes it, so the declaration is of the moded type
+    // Stream(Output), with no `?`.
+    final d = w == 'shown' ? 'thread' : 'thread($w)';
+    final named = declared['Stream($outputTypeName)'];
+    return named == null ? d : 'named(${constantSource(named)}, $d)';
   }
 
   /// The widget of interactive type [t], whose root is [root]: the one in
@@ -2149,28 +2164,44 @@ class _Generator {
 
   // --- widgets --------------------------------------------------------------------
 
-  /// The widget of node [n]: the one a declaration in scope names for its
-  /// moded type, else its default (Definition "Widget Declaration, Default
-  /// Widget"), as the term vGLP's Q3 names (2026-10-01 23:55 UTC, E).
+  /// The widget of node [n]: its default D (Definition "Widget Declaration,
+  /// Default Widget"), as the term vGLP's Q3 names (2026-10-01 23:55 UTC, E);
+  /// and where a declaration in scope names a widget W for its moded type,
+  /// `named(W, D)`, the declared name with the default widget of the type,
+  /// from which the named widget reads the type's constructors (vGLP
+  /// 92e6d3b, Section 6.2, the paragraph after Proposition "Default
+  /// Widgets": "It is drawn with the default widget of its type beside its
+  /// name, from which it reads the type's constructors"; Section 6.3: "for a
+  /// declared widget, the term named(W, D) of the name W its declaration
+  /// gives and the default widget D of its type"; the construct process in
+  /// the appendix of proofs: "named(W', D) where a declaration names it W',
+  /// D the default widget of T").  So at every position, the question's
+  /// root, a field, an element, and the program's output alike.
   ///
   /// A recursive type's widget is finite by a reference back to itself
-  /// (RECURSIVE TYPES above): met again within its own widget, [n] is
-  /// `ref(T)`, T its type's name, and the widget of a recursive type is
-  /// `rec(T, W)`, binding T to its widget W around every `ref(T)` in it; so
-  /// a form's field of a recursive type is told by its widget, "drawn when
-  /// the person opens it" (Definition "Default Widget").
+  /// (RECURSIVE TYPES above): met again within its own widget, [n]'s
+  /// default is `ref(T)`, T its type's name, and the default widget of a
+  /// recursive type is `rec(T, W)`, binding T to its widget W around every
+  /// `ref(T)` in it; so a form's field of a recursive type is told by its
+  /// widget, "drawn when the person opens it" (Definition "Default Widget").
+  /// A declared recursive type is `named(W, rec(T, ...))`, each occurrence
+  /// of it within `named(W, ref(T))`, every widget of the type named.
   String _widget(_Node n, Set<String> visiting) {
-    final d = declared[n.moded];
-    if (d != null) return constantSource(d);
     final name = constantSource(n.typeKey);
-    if (visiting.contains(n.key)) return 'ref($name)';
-    visiting.add(n.key);
-    try {
-      final w = _defaultWidget(n, visiting);
-      return _recursive(n) ? 'rec($name, $w)' : w;
-    } finally {
-      visiting.remove(n.key);
+    final String d;
+    if (visiting.contains(n.key)) {
+      d = 'ref($name)';
+    } else {
+      visiting.add(n.key);
+      try {
+        final w = _defaultWidget(n, visiting);
+        d = _recursive(n) ? 'rec($name, $w)' : w;
+      } finally {
+        visiting.remove(n.key);
+      }
     }
+    final named = declared[n.moded];
+    return named == null ? d : 'named(${constantSource(named)}, $d)';
   }
 
   String _defaultWidget(_Node n, Set<String> visiting) {

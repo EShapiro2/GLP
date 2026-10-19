@@ -5,11 +5,14 @@
 /// its type fixes the terms it forms").
 ///
 /// A named widget is drawn over its construct's view, as the draw
-/// `draw(Id, W, V)` carries it, and takes the person's input through the
-/// grant of the question the view marks `input(P)` (bridge.dart).  The draw
-/// carries the name `W` and the view `V`, and nothing of the type beyond
-/// what the view holds, so a named widget is written for its type: it reads
-/// the view by that type's constructors and grants the raw input the default
+/// `draw(Id, named(W, D), V)` carries it, and takes the person's input
+/// through the grant of the question the view marks `input(P)` (bridge.dart).
+/// The draw carries the name `W`, the default widget `D` of the type, and the
+/// view `V`: "It is drawn with the default widget of its type beside its
+/// name, from which it reads the type's constructors" (vGLP 92e6d3b, Section
+/// 6.2, the paragraph after Proposition "Default Widgets"; Section 6.3, the
+/// type `Widget`).  The construct family hands it `D` with the view
+/// (construct_family.dart, `_named`).  It grants the raw input the default
 /// widget of the type grants, so that the construct process forms the same
 /// answers from it (Definition "Construct Process").
 ///
@@ -139,11 +142,19 @@ class SpeechAct {
 /// of the class under it, its text and its signers, the attempt's number and
 /// rank in small print, "Approve?", and two buttons, Yes and No, granting
 /// `yes` and `no` at the question's position, `[2]`, as the default widget
-/// of `YesNo?`, `buttons([yes, no])`, grants them.  A view that is not an
-/// approval question of that type is drawn as such, named, and takes no
-/// input: nothing stands in for it.
-Widget approvalSentence(BuildContext context, OpenConstruct construct,
-    GTerm view, List<int> at, void Function(GTerm path, GTerm raw) grant) {
+/// of `YesNo?`, `buttons([yes, no])`, grants them.  It is drawn by
+/// `named(approval_sentence, D)`, `D` the default widget of `Approval`,
+/// whose constructors it reads off the view, the type being one for every
+/// canonical CVA platform.  A view that is not an approval question of that
+/// type is drawn as such, named, and takes no input: nothing stands in for
+/// it.
+Widget approvalSentence(
+    BuildContext context,
+    OpenConstruct construct,
+    GTerm dflt,
+    GTerm view,
+    List<int> at,
+    void Function(GTerm path, GTerm raw) grant) {
   final (f, args) = ctorArgs(view);
   if (f != 'approval' || args.length != 2) {
     return _cannotDraw(approvalSentenceName, view);

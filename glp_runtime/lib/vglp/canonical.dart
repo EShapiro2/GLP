@@ -109,6 +109,9 @@
 // 08:16 UTC, item 7: "Widget declarations are scoped as type declarations
 // are: a declaration at the root holds for every program, one in a module
 // holds in that module, and a local declaration overrides a global one").
+// A declared widget is drawn as named(W, D), D the default widget of its
+// type, from which W reads the type's constructors (vGLP 92e6d3b, Sections
+// 6.2 and 6.3; constructs.dart, _widget).
 
 import '../compiler/ast.dart';
 import '../compiler/error.dart';

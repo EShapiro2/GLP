@@ -13,7 +13,9 @@
 /// (`programs/vglp/dispatcher.glp`):
 ///
 ///   - `draw(Id, W, f(V))`: draw construct `Id` with the widget `W` names in
-///     the construct family in use, over the view `V`, under the functor `f`
+///     the construct family in use --- a default widget, or `named(W', D)`
+///     where a declaration names it `W'`, `D` the default widget of its type
+///     ([namedCtor]) --- over the view `V`, under the functor `f`
 ///     of its ask, construct 0's under `output`, each position the
 ///     person writes marked `input(P)`, `P` its path, and each widget
 ///     position the program has not yet written whole marked `pending(P)`,
@@ -82,10 +84,31 @@ const GTerm listEnd = GList([GAtom('end')]);
 const String recCtor = 'rec';
 const String refCtor = 'ref';
 
-/// Whether [w] is the widget of a recursive type, `rec(T, W)` or `ref(T)`:
-/// a field of a form drawn by it is drawn when the person opens it.
+/// The widget of a declared widget, `named(W, D)`: the name `W` the
+/// widget declaration `T =::= W` gives and the default widget `D` of `T`,
+/// "drawn with the default widget of its type beside its name, from which it
+/// reads the type's constructors" (vGLP 92e6d3b, Section 6.2, the paragraph
+/// after Proposition "Default Widgets"; Section 6.3: "for a declared widget,
+/// the term named(W, D) of the name W its declaration gives and the default
+/// widget D of its type").  The compiler emits it wherever a declaration in
+/// scope names the widget of a position's moded type
+/// (`glp_runtime/lib/vglp/constructs.dart`, `_widget`).
+const String namedCtor = 'named';
+
+/// The name `W` and the default widget `D` of [w], where it is
+/// `named(W, D)`; null for any other widget.
+(String, GTerm)? namedWidget(GTerm w) {
+  final (k, ws) = ctorArgs(w);
+  if (k != namedCtor || ws.length != 2) return null;
+  return (_recName(ws[0]), ws[1]);
+}
+
+/// Whether [w] is the widget of a recursive type, `rec(T, W)` or `ref(T)`,
+/// or a declared widget of one, `named(W, D)` with `D` either: a field of a
+/// form drawn by it is drawn when the person opens it.
 bool recursiveWidget(GTerm w) {
   final (k, ws) = ctorArgs(w);
+  if (k == namedCtor && ws.length == 2) return recursiveWidget(ws[1]);
   return (k == recCtor && ws.length == 2) || (k == refCtor && ws.length == 1);
 }
 
@@ -115,8 +138,8 @@ bool recursiveWidget(GTerm w) {
   return null;
 }
 
-/// The name `T` of `rec(T, W)` and `ref(T)`, the constant the compiler
-/// writes the type's name as.
+/// The name `T` of `rec(T, W)` and `ref(T)`, and `W` of `named(W, D)`, the
+/// constant the compiler writes the name as.
 String _recName(GTerm t) => switch (t) {
       GAtom(:final name) => name,
       GString(:final value) => value,

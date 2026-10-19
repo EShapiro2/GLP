@@ -3,9 +3,12 @@
 // `T =::= W` names (vGLP, Definition "Widget Declaration": "In the grassroots
 // app, W names a Dart widget: the construct family draws it, and its type
 // fixes the terms it forms").  Each is drawn over a view as the bridge holds
-// it, from a draw `draw(Id, W, f(V))`, and each of its buttons grants what
-// the default widget of the type grants for the same view, so that the
-// construct process forms the same answers from it.
+// it, from a draw `draw(Id, named(W, D), f(V))`, D the default widget of the
+// type, "drawn with the default widget of its type beside its name, from
+// which it reads the type's constructors" (vGLP 92e6d3b, Sections 6.2 and
+// 6.3), and each of its buttons grants what the default widget of the type
+// grants for the same view, so that the construct process forms the same
+// answers from it.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
@@ -43,6 +46,13 @@ const _gsnJoin =
 
 const _gsnMessage =
     "form(message, [field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
+
+/// The widget of a question of `Approval` where the declaration
+/// `Approval =::= approval_sentence.` holds, over the classes [classes]:
+/// `named(approval_sentence, D)`, D the default widget of `Approval` (vGLP
+/// 92e6d3b, the construct process in the appendix of proofs).
+String _named(List<String> classes) =>
+    'named($approvalSentenceName, ${_defaultApproval(classes)})';
 
 /// One construct on a screen of its own, drawn by the standard family from
 /// the draw `draw(1, W, approval_w(V))`, its grants as the bridge returns
@@ -88,7 +98,7 @@ class _Screen {
     await draw(defaultWidget, view);
     await tap(find.widgetWithText(ElevatedButton, label));
     final byDefault = grants.removeLast();
-    await draw(approvalSentenceName, view);
+    await draw('named($approvalSentenceName, $defaultWidget)', view);
     await tap(find.byKey(answerKey(1, c, [2])));
     final byName = grants.removeLast();
     return (byDefault, byName);
@@ -106,7 +116,7 @@ void main() {
     final s = _Screen(tester);
     const view =
         'approval(attempt(alice, 2, 2, befriend(alice, bob)), input([2]))';
-    await s.draw(approvalSentenceName, view);
+    await s.draw(_named(_gsgClasses), view);
     expect(find.byKey(nodeKey(1, approvalSentenceName, [])), findsOneWidget);
     expect(find.text('alice asks to befriend you.'), findsOneWidget);
     expect(find.text('attempt 2, rank 2'), findsOneWidget);
@@ -138,7 +148,7 @@ void main() {
     final s = _Screen(tester);
     const view = 'approval(attempt(alice, 5, 5, join(alice, bob, '
         'speech(utterance(friends), alice))), input([2]))';
-    await s.draw(approvalSentenceName, view);
+    await s.draw(_named([..._gsgClasses, _gsnJoin]), view);
     expect(find.text('alice asks to join you.'), findsOneWidget);
     expect(find.text('friends'), findsOneWidget);
     expect(find.text('by alice'), findsOneWidget);
@@ -158,7 +168,7 @@ void main() {
     const view = 'approval(attempt(dan, 1, 1, message(dan, bob, '
         'speech(speech(speech(utterance(flood), dan), eve), bob))), '
         'input([2]))';
-    await s.draw(approvalSentenceName, view);
+    await s.draw(_named([_gsnMessage]), view);
     expect(find.text('dan asks to message you.'), findsOneWidget);
     expect(find.text('flood'), findsOneWidget);
     expect(find.text('by dan, via eve, via you'), findsOneWidget);
@@ -171,7 +181,7 @@ void main() {
       'a class naming two persons besides its initiator: each named, none '
       'you, the view not naming the agent asked', (tester) async {
     final s = _Screen(tester);
-    await s.draw(approvalSentenceName,
+    await s.draw(_named(_gsgClasses),
         'approval(attempt(alf, 3, 1, befriend(alf, bob, alice)), input([2]))');
     expect(find.text('alf asks to befriend bob, alice.'), findsOneWidget);
     expect(find.textContaining('you'), findsNothing);
@@ -181,7 +191,7 @@ void main() {
       'a schema with an underscore reads as two words, and the initiator '
       'named in the class only once', (tester) async {
     final s = _Screen(tester);
-    await s.draw(approvalSentenceName,
+    await s.draw(_named(_gsgClasses),
         'approval(attempt(bob, 4, 4, post_own(bob, alice)), input([2]))');
     expect(find.text('bob asks to post own you.'), findsOneWidget);
   });
@@ -190,12 +200,12 @@ void main() {
       'a view that is no approval question of a canonical platform: named, '
       'and taking no input', (tester) async {
     final s = _Screen(tester);
-    await s.draw(approvalSentenceName, 'menu(alice, [], input([3]))');
+    await s.draw(_named(_gsgClasses), 'menu(alice, [], input([3]))');
     expect(
         find.text('approval_sentence cannot draw menu(alice, [], input([3]))'),
         findsOneWidget);
     expect(find.byType(ElevatedButton), findsNothing);
-    await s.draw(approvalSentenceName, 'approval(nothing, input([2]))');
+    await s.draw(_named(_gsgClasses), 'approval(nothing, input([2]))');
     expect(find.byType(ElevatedButton), findsNothing);
     expect(s.grants, isEmpty);
   });
