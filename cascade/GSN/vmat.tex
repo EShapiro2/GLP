@@ -274,25 +274,23 @@ create
 \begin{align*}
 &
 c'_
-{
-\Alice
-}
+p
  := 
 c_
-{
-\Alice
-}
+p
  \uplus 
 \{
 \mathit{
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
-,
+,\ 
 \mathit{
 listed
 }
@@ -302,6 +300,11 @@ listed
 n
 )
 \}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
 ,\\
 &
 \text{provided } 
@@ -309,9 +312,12 @@ n
 identity
 }
  \in c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
+)
+)
 ,\\
 &
 \text{provided } 
@@ -320,11 +326,13 @@ identity
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
-,
+,\ 
 \mathit{
 closed
 }
@@ -333,15 +341,41 @@ n
 )
 \}
  \cap c_
-{
-\Alice
-}
+p
  = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
 ,\\
 &
-\text{guarded by } \{
+\text{provided } 
+\langle
 \Alice
-\}
+\rangle
+\cdot
+n
+ \text{ is an argument of no atom of } c
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
 \end{align*}
 \iffalse
 join
@@ -349,14 +383,10 @@ join
 \begin{align*}
 &
 c'_
-{
-\Alice
-}
+p
  := 
 c_
-{
-\Alice
-}
+p
  \uplus 
 \{
 \mathit{
@@ -368,27 +398,36 @@ listed
 n
 )
 \}
-, \qquad 
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
 c'_
-{
-\Bob
-}
+p
  := 
 c_
-{
-\Bob
-}
+p
  \uplus 
 \{
 \mathit{
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
 \}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
 ,\\
 &
 \text{provided } 
@@ -396,16 +435,18 @@ n
 \mathit{
 identity
 }
-,
+,\ 
 \mathit{
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
-,
+,\ 
 \mathit{
 friend
 }
@@ -414,15 +455,20 @@ friend
 )
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
- \text{ and } 
+)
+)
+,\\
+&
+\text{provided } 
 \{
 \mathit{
 identity
 }
-,
+,\ 
 \mathit{
 friend
 }
@@ -431,9 +477,12 @@ friend
 )
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Bob
-}
+)
+)
 ,\\
 &
 \text{provided } 
@@ -441,21 +490,67 @@ friend
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
  \notin c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Bob
-}
+)
+)
 ,\\
 &
-\text{guarded by } \{
+\text{guarded by } 
+G_{
+1
+}
+\cup 
+G_{
+2
+}
+,\ 
+G_{
+1
+}
+ \subseteq 
+\mathrm{ext}_c(
 \Alice
-,
+)
+ \text{ with } |
+G_{
+1
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+ \text{ and } 
+G_{
+2
+}
+ \subseteq 
+\mathrm{ext}_c(
 \Bob
-\}
+)
+ \text{ with } |
+G_{
+2
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\Bob
+)
+|
 \end{align*}
 \iffalse
 leave
@@ -463,14 +558,10 @@ leave
 \begin{align*}
 &
 c'_
-{
-\Alice
-}
+p
  := 
 c_
-{
-\Alice
-}
+p
  \setminus 
 \{
 \mathit{
@@ -482,27 +573,36 @@ listed
 n
 )
 \}
-, \qquad 
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
 c'_
-{
-\Bob
-}
+p
  := 
 c_
-{
-\Bob
-}
+p
  \setminus 
 \{
 \mathit{
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
 \}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
 ,\\
 &
 \text{provided } 
@@ -510,7 +610,7 @@ n
 \mathit{
 identity
 }
-,
+,\ 
 \mathit{
 listed
 }
@@ -521,33 +621,57 @@ n
 )
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
- \text{ and } 
+)
+)
+,\\
+&
+\text{provided } 
 \{
 \mathit{
 identity
 }
-,
+,\ 
 \mathit{
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Bob
-}
+)
+)
 ,\\
 &
-\text{guarded by } \{
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
 \Bob
-\}
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Bob
+)
+|
 \end{align*}
 \iffalse
 close
@@ -555,25 +679,12 @@ close
 \begin{align*}
 &
 c'_
-{
-\Alice
-}
+p
  := 
 (c_
-{
-\Alice
-}
+p
  \setminus 
 \{
-\mathit{
-member
-}
-(
-\Alice
-,
-n
-)
-,
 \mathit{
 listed
 }
@@ -592,6 +703,46 @@ closed
 n
 )
 \}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+n
+)
+]
+)
+)
 ,\\
 &
 \text{provided } 
@@ -599,16 +750,7 @@ n
 \mathit{
 identity
 }
-,
-\mathit{
-member
-}
-(
-\Alice
-,
-n
-)
-,
+,\ 
 \mathit{
 listed
 }
@@ -619,14 +761,188 @@ n
 )
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
+)
+)
 ,\\
 &
-\text{guarded by } \{
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
 \Alice
+\rangle
+\cdot
+n
+)
 \}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+n
+)
+]
+)
+)
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+\end{align*}
+\iffalse
+drop
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \notin c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{guarded by } \emptyset
 \end{align*}
 \iffalse
 post_own
@@ -634,14 +950,10 @@ post_own
 \begin{align*}
 &
 c'_
-{
-\Alice
-}
+p
  := 
 c_
-{
-\Alice
-}
+p
  \uplus 
 \{
 \mathit{
@@ -653,6 +965,11 @@ x
 n
 )
 \}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
 ,\\
 &
 \text{provided } 
@@ -660,20 +977,25 @@ n
 \mathit{
 identity
 }
-,
+,\ 
 \mathit{
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
+)
+)
 ,\\
 &
 \text{provided } 
@@ -686,14 +1008,31 @@ x
 n
 )
  \notin c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
+)
+)
 ,\\
 &
-\text{guarded by } \{
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
 \Alice
-\}
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
 \end{align*}
 \iffalse
 post
@@ -701,24 +1040,22 @@ post
 \begin{align*}
 &
 c'_
-{
-\Alice
-}
+p
  := 
 c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
-, \qquad 
+)
+)
+,\\
+&
 c'_
-{
-\Bob
-}
+p
  := 
 c_
-{
-\Bob
-}
+p
  \uplus 
 \{
 \mathit{
@@ -730,6 +1067,11 @@ x
 n
 )
 \}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
 ,\\
 &
 \text{provided } 
@@ -737,35 +1079,44 @@ n
 \mathit{
 identity
 }
-,
+,\ 
 \mathit{
 member
 }
 (
+\langle
 \Bob
-,
+\rangle
+\cdot
 n
 )
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
- \text{ and } 
+)
+)
+,\\
+&
+\text{provided } 
 \{
 \mathit{
 identity
 }
-,
+,\ 
 \mathit{
 member
 }
 (
+\langle
 \Bob
-,
+\rangle
+\cdot
 n
 )
-,
+,\ 
 \mathit{
 listed
 }
@@ -774,11 +1125,21 @@ listed
 ,
 n
 )
+,\ 
+\mathit{
+friend
+}
+(
+\Alice
+)
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Bob
-}
+)
+)
 ,\\
 &
 \text{provided } 
@@ -791,14 +1152,31 @@ x
 n
 )
  \notin c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Bob
-}
+)
+)
 ,\\
 &
-\text{guarded by } \{
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
 \Alice
-\}
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
 \end{align*}
 \iffalse
 deliver
@@ -806,14 +1184,10 @@ deliver
 \begin{align*}
 &
 c'_
-{
-\Alice
-}
+p
  := 
 c_
-{
-\Alice
-}
+p
  \uplus 
 \{
 \mathit{
@@ -827,16 +1201,18 @@ x
 n
 )
 \}
-, \qquad 
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
 c'_
-{
-\Bob
-}
+p
  := 
 c_
-{
-\Bob
-}
+p
  \uplus 
 \{
 \mathit{
@@ -850,6 +1226,11 @@ x
 n
 )
 \}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
 ,\\
 &
 \text{provided } 
@@ -857,16 +1238,18 @@ n
 \mathit{
 identity
 }
-,
+,\ 
 \mathit{
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
-,
+,\ 
 \mathit{
 posted
 }
@@ -875,7 +1258,7 @@ x
 ,
 n
 )
-,
+,\ 
 \mathit{
 listed
 }
@@ -884,30 +1267,47 @@ listed
 ,
 n
 )
+,\ 
+\mathit{
+friend
+}
+(
+\Bob
+)
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
- \text{ and } 
+)
+)
+,\\
+&
+\text{provided } 
 \{
 \mathit{
 identity
 }
-,
+,\ 
 \mathit{
 member
 }
 (
+\langle
 \Alice
-,
+\rangle
+\cdot
 n
 )
 \}
  \subseteq c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Bob
-}
+)
+)
 ,\\
 &
 \text{provided } 
@@ -922,9 +1322,12 @@ x
 n
 )
  \notin c_
-{
+p
+&& (p \in 
+\mathrm{ext}_c(
 \Alice
-}
+)
+)
 ,\\
 &
 \text{guarded by } \emptyset
