@@ -1202,6 +1202,35 @@ void main() {
     });
 
     _phoneTest(
+        'Alice\'s own AI agent: in Friends, Alf\'s row offers no End '
+        'friendship, unfriend_p forbidding principal_of(alf) at her, while '
+        'Bob\'s does; in AI agents, Alf\'s row has Retire', (tester) async {
+      final p = await _Phone.open(tester, 'gai');
+      await p.views([_v(aliceState, '[alf, bob]')]);
+      await p.menu(1, _gaiProposals, known: '[alf, bob]');
+      expect(p.key(1, 'person:alf'), findsOneWidget);
+      expect(p.key(1, 'unfriend:alf'), findsNothing);
+      expect(
+          find.descendant(
+              of: p.key(1, 'person:alf'),
+              matching: find.text('End friendship')),
+          findsNothing);
+      expect(p.key(1, 'befriend:alf'), findsNothing);
+      expect(
+          find.descendant(
+              of: p.key(1, 'person:bob'),
+              matching: find.widgetWithText(OutlinedButton, 'End friendship')),
+          findsOneWidget);
+      await p.tab(ScreenTab.agents);
+      expect(
+          find.descendant(
+              of: p.key(1, 'agent:alf'),
+              matching: find.widgetWithText(OutlinedButton, 'Retire')),
+          findsOneWidget);
+      p.plain();
+    });
+
+    _phoneTest(
         'no code held, no Create; an AI agent has no Create; and with no '
         'request question open, last_state lists the AI agents', (tester) async {
       final p = await _Phone.open(tester, 'gai', me: 'bob');
