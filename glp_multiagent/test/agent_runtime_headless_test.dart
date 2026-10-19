@@ -74,7 +74,6 @@ void main() {
       GrassrootsIdentity.create(
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
-        nickname: 'agent',
       );
 
   /// The key pair the host holds for the person: the layer's own.
