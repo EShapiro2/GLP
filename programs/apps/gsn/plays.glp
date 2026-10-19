@@ -2,7 +2,7 @@
 
 imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
-%% play_network(A, B): alice and bob, one conversation between their two executions.  Each establishes their identity (GSG:1, Identity) and asks to know the other; alice offers bob friendship and he answers yes (GSG:2, Friendship); alice sends him a message (GSN:1, Message); she creates a group, friends, and is its leader and first member (GSN:2, Group); she adds bob to it, and he answers yes (GSN:3, Joining); bob sends the group a message, which goes to alice, the leader, who delivers it to every member (GSN:5, Group message); and bob leaves the group (GSN:4, Leaving).
+%% play_network(A, B): alice and bob, one conversation between their two executions.  Each establishes their identity (GSG:1, Identity) and asks to know the other; alice offers bob friendship and he answers yes (GSG:2, Friendship); alice creates a group, friends, and is its leader and first member (GSN:2, Group); she adds bob to it, and he answers yes (GSN:3, Joining); she sends him the message 'Hi Bob' (GSN:1, Message); bob sends the group the message 'Hi all', which goes to alice, the leader, who delivers it to every member (GSN:5, Group message); and bob leaves the group (GSN:4, Leaving).  These are the acts of the screens of GSN's app (screens/), there with the message first, and with leaving after them; here alice sends the message last, since nothing on her screen shows a message committed.
 exported procedure play_network(Stream(Seen), Stream(Seen)).
 play_network(A?, B?) :-
     self_module(M),
