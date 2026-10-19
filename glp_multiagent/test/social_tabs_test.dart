@@ -10,7 +10,12 @@
 // compilation"); "A declared widget is drawn also with the last value drawn
 // on construct 0, and is drawn again when that value changes, so that a
 // request form can show the state the program last wrote to its person"
-// (vGLP e924f73, Section 6.2).
+// (vGLP e924f73, Section 6.2).  GSNP's items, Forward with its warranty
+// question, and Send signing the text before it sends it (GAI #3 Cowork,
+// 2026-10-19 13:31 UTC, items 1 to 3), and the notices of attempts that close
+// without committing, "refused([t]_j, q) ... or yielded([t]_j)", drawn by "a
+// widget that draws the last view written and the notices" (vGLP c44769f,
+// Section 5.4, "The compilation").
 //
 // Each screen is a phone, 390 by 844 logical pixels, the person's agent
 // surface over a bridge handed the draws a compiled app writes, in the form
@@ -71,10 +76,12 @@ const _gsnProposals = [
   "form(post, [$_p, $_p, $_s, $_s])",
 ];
 
-/// GSNP's: GSG's, sign and forward, and GSN's groups.
+/// GSNP's, as programs/apps/gsnp/platform.vglp prints its Proposal: GSG's,
+/// sign, message and forward, and GSN's groups with post_forward.
 const _gsnpProposals = [
   ..._gsgProposals,
   "form(sign, [$_p, $_s])",
+  "form(message, [$_p, $_p, $_s])",
   "form(forward, [$_p, $_p, $_s])",
   "form(create, [$_p, $_s])",
   "form(join, [$_p, $_p, $_s])",
@@ -82,6 +89,7 @@ const _gsnpProposals = [
   "form(close, [$_p, $_s])",
   "form(post_own, [$_p, $_s, $_s])",
   "form(post, [$_p, $_p, $_s, $_s])",
+  "form(post_forward, [$_p, $_p, $_s, $_s])",
 ];
 
 /// The default widget of `Menu ::= menu(Key, List(Key), Request?)` over the
@@ -161,15 +169,16 @@ Future<void> _loadFonts() async {
 }
 
 /// One person's phone: their bridge, handed the draws, and the grants it
-/// returns.
+/// returns.  The person is [me], Alice unless named.
 class _Phone {
   final WidgetTester tester;
   final String app;
+  final String me;
   final List<String> grants = [];
   final GlobalKey shot = GlobalKey();
   late final UiRuntime r;
 
-  _Phone(this.tester, this.app) {
+  _Phone(this.tester, this.app, this.me) {
     r = UiRuntime(
       manifest: Manifest(
         title: app,
@@ -180,7 +189,8 @@ class _Phone {
     );
   }
 
-  static Future<_Phone> open(WidgetTester tester, String app) async {
+  static Future<_Phone> open(WidgetTester tester, String app,
+      {String me = 'alice'}) async {
     await _loadFonts();
     // Shadows drawn as shadows, not as the test's solid outlines; restored
     // at the end of the test's body by [_phoneTest].
@@ -188,7 +198,7 @@ class _Phone {
     tester.view.physicalSize = _phone;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    final p = _Phone(tester, app);
+    final p = _Phone(tester, app, me);
     await tester.pumpWidget(MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -204,7 +214,7 @@ class _Phone {
         key: p.shot,
         child: MediaQuery(
           data: const MediaQueryData(size: _phone, devicePixelRatio: _ratio),
-          child: AgentSurface(agentId: 'alice', runtime: p.r, muteNotices: true),
+          child: AgentSurface(agentId: me, runtime: p.r, muteNotices: true),
         ),
       ),
     ));
@@ -221,11 +231,11 @@ class _Phone {
   Future<void> views(List<String> views) =>
       draw('draw(0, $_lastStateW, output([${views.join(', ')}]))');
 
-  /// Draw the request question [id] of Alice, showing [known] as the
+  /// Draw the request question [id] of the person, showing [known] as the
   /// persons known when it was asked, whose type offers the proposals [ps].
   Future<void> menu(int id, List<String> ps, {String known = '[]'}) => draw(
       'draw($id, named(social_menu, ${_menuD(ps)}), '
-      'menu_w(menu(alice, $known, input([3]))))');
+      'menu_w(menu($me, $known, input([3]))))');
 
   Finder key(int id, String what) => find.byKey(socialKey(id, what));
 
@@ -720,29 +730,327 @@ void main() {
 
   group('GSNP', () {
     _phoneTest(
-        'Friends as GSG\'s, its items under Messages, and in a group no text '
-        'and Send, a post carrying an item the person signed', (tester) async {
+        'Friends as GSG\'s; an item from a friend in the chat with them, '
+        'with its author and who forwarded it; one from a person who is not '
+        'a friend under Messages; and in a group no text and Send, a post '
+        'carrying an item the person signed', (tester) async {
       final p = await _Phone.open(tester, 'gsnp');
+      final flood = 'speech(${_sp('Flood on Main Street', 'dan')}, bob)';
+      final road = _sp('Road closed', 'dan');
       await p.views([
         _v(
-            '[identity, friend(bob), '
-            'item(speech(${_sp('Flood on Main Street', 'dan')}, bob)), '
+            '[identity, friend(bob), item($flood), item($road), '
             'member(alice, $_friends), listed(alice, $_friends)]',
             '[bob]')
       ]);
       await p.menu(1, _gsnpProposals, known: '[bob]');
       expect(p.key(1, 'unfriend:bob'), findsOneWidget);
+      // Dan is not a friend: his item is under Messages.
       expect(p.key(1, 'items'), findsOneWidget);
-      expect(find.text('Flood on Main Street'), findsOneWidget);
-      expect(find.text('Dan, via Bob'), findsOneWidget);
-      // No chat: GSNP has no message(Me, Q, X).
+      expect(find.text('Road closed'), findsOneWidget);
+      Finder inItem(String x, Finder f) => find.descendant(
+          of: p.key(1, 'item:${formatTerm(fixtureTerm(x))}'), matching: f);
+      // Bob's item is not under Messages; his row shows it as the last of
+      // the chat with him.
+      expect(p.key(1, 'item:${formatTerm(fixtureTerm(flood))}'), findsNothing);
+      expect(
+          find.descendant(
+              of: p.key(1, 'person:bob'),
+              matching: find.text('Flood on Main Street')),
+          findsOneWidget);
+      expect(inItem(road, find.text('Author: Dan')), findsOneWidget);
+      expect(inItem(road, find.textContaining('via')), findsNothing);
+      // Bob's item is in the chat with Bob, the friend it came from.
       await p.tap(p.key(1, 'person:bob'));
-      expect(p.key(1, 'chat:bob'), findsNothing);
+      expect(p.key(1, 'chat:bob'), findsOneWidget);
+      expect(inItem(flood, find.text('Flood on Main Street')), findsOneWidget);
+      expect(inItem(flood, find.text('Author: Dan')), findsOneWidget);
+      expect(inItem(flood, find.text('via Bob')), findsOneWidget);
+      expect(find.text('Road closed'), findsNothing);
+      p.plain();
+      await p.tap(p.key(1, 'back'));
       await p.tab(ScreenTab.groups);
       final f = groupKey(const GAtom('alice'), fixtureTerm(_friends));
       expect(p.key(1, 'group:$f'), findsOneWidget);
       expect(p.key(1, 'post-field:$f'), findsNothing);
       expect(p.key(1, 'close:$f'), findsOneWidget);
+    });
+
+    // The play of GAI's GSNP figure (GAI #3 Cowork, 2026-10-19 13:31 UTC,
+    // item 4): Dan writes "Flood on Main Street" and sends it to Eve, Eve
+    // forwards it to Carol, and Carol forwards it to Bob; Bob's friends are
+    // Carol and Fay.
+    final bobFlood = 'speech(speech(${_sp('Flood on Main Street', 'dan')}, '
+        'eve), carol)';
+    final bobState = '[identity, friend(carol), friend(fay), '
+        'item($bobFlood)]';
+    Future<_Phone> bobInChat(WidgetTester tester) async {
+      final p = await _Phone.open(tester, 'gsnp', me: 'bob');
+      await p.views([_v(bobState, '[carol, fay]')]);
+      await p.menu(1, _gsnpProposals, known: '[carol, fay]');
+      await p.tap(p.key(1, 'person:carol'));
+      return p;
+    }
+
+    _phoneTest(
+        '(a) Bob\'s chat with Carol: "Flood on Main Street", "Author: Dan", '
+        '"via Eve, via Carol", and Forward under it', (tester) async {
+      final p = await bobInChat(tester);
+      final k = formatTerm(fixtureTerm(bobFlood));
+      expect(p.key(1, 'chat:carol'), findsOneWidget);
+      final item = p.key(1, 'item:$k');
+      expect(
+          find.descendant(of: item, matching: find.byType(Text))
+              .evaluate()
+              .map((e) => (e.widget as Text).data)
+              .toList(),
+          ['Flood on Main Street', 'Author: Dan', 'via Eve, via Carol',
+           'Forward']);
+      expect(p.key(1, 'forward:$k'), findsOneWidget);
+      expect(p.key(1, 'send:carol'), findsOneWidget);
+      p.plain();
+      await p.shoot('gsnp-a-bob-chat.png');
+    });
+
+    _phoneTest(
+        '(b) Forward opens a picker of Bob\'s friends; picking Fay asks '
+        '"Forward to Fay?  You warrant that you know Carol personally.", '
+        'No closing it and Yes proposing forward(bob, fay, x)',
+        (tester) async {
+      final p = await bobInChat(tester);
+      final k = formatTerm(fixtureTerm(bobFlood));
+      await p.tap(p.key(1, 'forward:$k'));
+      expect(p.key(1, 'forward-picker:$k'), findsOneWidget);
+      expect(p.key(1, 'forward-to:$k:carol'), findsOneWidget);
+      expect(p.key(1, 'forward-to:$k:fay'), findsOneWidget);
+      // Forward again closes the picker.
+      await p.tap(p.key(1, 'forward:$k'));
+      expect(p.key(1, 'forward-picker:$k'), findsNothing);
+      await p.tap(p.key(1, 'forward:$k'));
+      await p.tap(p.key(1, 'forward-to:$k:fay'));
+      expect(p.key(1, 'forward-picker:$k'), findsNothing);
+      final w = p.key(1, 'warranty:$k');
+      expect(
+          find.descendant(of: w, matching: find.byType(Text))
+              .evaluate()
+              .map((e) => (e.widget as Text).data)
+              .toList(),
+          ['Forward to Fay?', 'You warrant that you know Carol personally.',
+           'Yes', 'No']);
+      p.plain();
+      await p.shoot('gsnp-b-bob-forward.png');
+      await p.tap(p.key(1, 'forward-no:$k'));
+      expect(w, findsNothing);
+      expect(p.grants, isEmpty);
+      await p.tap(p.key(1, 'forward:$k'));
+      await p.tap(p.key(1, 'forward-to:$k:fay'));
+      await p.tap(p.key(1, 'forward-yes:$k'));
+      expect(w, findsNothing);
+      expect(p.grants,
+          ['input(1, [3], propose(forward(bob, fay, $bobFlood)))']);
+    });
+
+    _phoneTest(
+        'Send in a chat signs the text, sign(bob, x), and proposes '
+        'message(bob, carol, x) on the next request question once the view '
+        'holds authored(x); the item drawn in the chat, with no Forward',
+        (tester) async {
+      final p = await bobInChat(tester);
+      final x = _sp('Water rising on Elm', 'bob');
+      final kx = formatTerm(fixtureTerm(x));
+      await p.type(p.key(1, 'chat-field:carol'), 'Water rising on Elm');
+      await p.tap(p.key(1, 'send:carol'));
+      expect(p.grants, ['input(1, [3], propose(sign(bob, $x)))']);
+      // The sign commits: the view holds item(x) and authored(x).  The
+      // question that took the sign takes no second request.
+      await p.views([
+        _v(bobState, '[carol, fay]'),
+        _v('[item($x), authored($x), ${bobState.substring(1)}', '[carol, fay]'),
+      ]);
+      expect(p.grants, hasLength(1));
+      // The next request question: the message, proposed on it, once.
+      await p.draw('withdraw(1)');
+      await p.menu(2, _gsnpProposals, known: '[carol, fay]');
+      await p.views([
+        _v(bobState, '[carol, fay]'),
+        _v('[item($x), authored($x), ${bobState.substring(1)}', '[carol, fay]'),
+      ]);
+      expect(p.grants, [
+        'input(1, [3], propose(sign(bob, $x)))',
+        'input(2, [3], propose(message(bob, carol, $x)))',
+      ]);
+      // The chat stays open; the item Bob authored is in it, his name its
+      // author, and no Forward under it.
+      expect(p.key(2, 'chat:carol'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: p.key(2, 'item:$kx'), matching: find.text('Author: Bob')),
+          findsOneWidget);
+      expect(p.key(2, 'forward:$kx'), findsNothing);
+      expect(p.key(2, 'forward:${formatTerm(fixtureTerm(bobFlood))}'),
+          findsOneWidget);
+      await p.draw('withdraw(2)');
+      await p.menu(3, _gsnpProposals, known: '[carol, fay]');
+      expect(p.grants, hasLength(2));
+      // Out of the chat, the item is not under Messages.
+      await p.tap(p.key(3, 'back'));
+      expect(p.key(3, 'items'), findsNothing);
+    });
+
+    _phoneTest(
+        'a message held for a sign that did not go through is dropped, so '
+        'the same text sent again goes once', (tester) async {
+      final p = await bobInChat(tester);
+      final x = _sp('Water rising on Elm', 'bob');
+      final authored =
+          _v('[item($x), authored($x), ${bobState.substring(1)}', '[carol, fay]');
+      Future<void> send() async {
+        await p.type(p.key(p.grants.length + 1, 'chat-field:carol'),
+            'Water rising on Elm');
+        await p.tap(p.key(p.grants.length + 1, 'send:carol'));
+      }
+
+      await send();
+      await p.draw('withdraw(1)');
+      await p.views([_v(bobState, '[carol, fay]'), 'yielded(sign(bob, $x))']);
+      await p.menu(2, _gsnpProposals, known: '[carol, fay]');
+      expect(p.grants, ['input(1, [3], propose(sign(bob, $x)))']);
+      // Sent again: the second sign commits, and one message goes.
+      await send();
+      await p.draw('withdraw(2)');
+      await p.views([
+        _v(bobState, '[carol, fay]'),
+        'yielded(sign(bob, $x))',
+        authored,
+      ]);
+      await p.menu(3, _gsnpProposals, known: '[carol, fay]');
+      await p.draw('withdraw(3)');
+      await p.menu(4, _gsnpProposals, known: '[carol, fay]');
+      expect(p.grants, [
+        'input(1, [3], propose(sign(bob, $x)))',
+        'input(2, [3], propose(sign(bob, $x)))',
+        'input(3, [3], propose(message(bob, carol, $x)))',
+      ]);
+    });
+  });
+
+  group('notices', () {
+    const flood = "speech(utterance('Flood on Main Street'), dan)";
+    test('each notice in plain words, and the tab it concerns', () {
+      String say(String n, [String? me = 'alice']) =>
+          SocialNotice.of(fixtureTerm(n))!
+              .sentence(me == null ? null : GAtom(me));
+      expect(say('refused(befriend(alice, bob), bob)'),
+          'Bob declined your friendship.');
+      expect(say('yielded(befriend(alice, bob))'),
+          'Your request to befriend Bob did not go through.');
+      expect(say('refused(join(alice, bob, $_friends), bob)'),
+          'Bob declined to join the group friends.');
+      expect(say('yielded(join(alice, bob, $_friends))'),
+          'Your invitation to Bob to join the group friends did not go '
+          'through.');
+      expect(
+          say("refused(message(alice, carol, speech(utterance('Hi'), "
+              'alice)), carol)'),
+          'Your message to Carol was not delivered.');
+      expect(say("yielded(message(alice, carol, speech(utterance('Hi'), "
+              'alice)))'),
+          'Your message to Carol was not delivered.');
+      expect(say('refused(forward(bob, fay, $flood), fay)', 'bob'),
+          '"Flood on Main Street" was not forwarded to Fay.');
+      expect(say('yielded(forward(bob, fay, $flood))', 'bob'),
+          '"Flood on Main Street" was not forwarded to Fay.');
+      // A plain default for every other class.
+      expect(say('refused(unfriend(alice, bob), bob)'),
+          'Bob said no to your request to unfriend Bob.');
+      expect(say('yielded(close(alice, $_friends))'),
+          'Your request to close the group friends did not go through.');
+      expect(say('yielded(leave(bob, alice, $_friends))'),
+          'Your request to leave the group friends did not go through.');
+      expect(say('yielded(post(alice, bob, $flood, $_friends))'),
+          'Your request to post Bob in the group friends did not go '
+          'through.');
+      expect(say('yielded(establish(alice))', null),
+          'Your request to establish did not go through.');
+      expect(
+          SocialNotice.of(fixtureTerm('refused(join(alice, bob, $_friends), '
+                  'bob)'))!
+              .concernsGroup,
+          isTrue);
+      expect(
+          SocialNotice.of(fixtureTerm('refused(befriend(alice, bob), bob)'))!
+              .concernsGroup,
+          isFalse);
+      expect(SocialNotice.of(fixtureTerm('view([], [])')), isNull);
+    });
+
+    test('the last view is read past the notices written after it, and the '
+        'notices kept in the order written', () {
+      final (ok, s) = SocialState.read(fixtureTerm('[view([identity], [bob]), '
+          'refused(befriend(alice, bob), bob), view([identity], [bob, carol]), '
+          'yielded(befriend(alice, carol)), pending([2, 2, 2, 2, 1])]'));
+      expect(ok, isTrue);
+      expect(s!.known.map(formatTerm), ['bob', 'carol']);
+      expect(s.notices.map((n) => formatTerm(n.part)),
+          ['befriend(alice, bob)', 'befriend(alice, carol)']);
+      expect(s.notices.map((n) => n.by == null), [false, true]);
+    });
+
+    _phoneTest(
+        'a notice is one line at the top of the tab it concerns, the latest '
+        'first: a befriend in Friends, a join in Groups', (tester) async {
+      final p = await _Phone.open(tester, 'gsnp');
+      await p.views([
+        _v('[identity, friend(carol), member(alice, $_friends), '
+            'listed(alice, $_friends)]', '[bob, carol]'),
+        'refused(befriend(alice, bob), bob)',
+      ]);
+      await p.menu(1, _gsnpProposals, known: '[bob, carol]');
+      expect(find.text('Bob declined your friendship.'), findsOneWidget);
+      expect(
+          tester.getTopLeft(find.text('Bob declined your friendship.')).dy,
+          lessThan(tester.getTopLeft(p.key(1, 'person:bob')).dy));
+      // The person may befriend Bob again.
+      expect(p.key(1, 'befriend:bob'), findsOneWidget);
+      p.plain();
+      await p.shoot('notice-bob-declined.png');
+      await p.views([
+        _v('[identity, friend(carol), member(alice, $_friends), '
+            'listed(alice, $_friends)]', '[bob, carol]'),
+        'refused(befriend(alice, bob), bob)',
+        'refused(join(alice, carol, $_friends), carol)',
+        "refused(message(alice, carol, speech(utterance('Hi'), alice)), "
+            'carol)',
+      ]);
+      final friends = p.texts();
+      expect(
+          friends.indexOf('Your message to Carol was not delivered.'),
+          lessThan(friends.indexOf('Bob declined your friendship.')));
+      expect(find.text('Carol declined to join the group friends.'),
+          findsNothing);
+      // In the chat with Carol, the notices of Friends at its top.
+      await p.tap(p.key(1, 'person:carol'));
+      expect(find.text('Your message to Carol was not delivered.'),
+          findsOneWidget);
+      await p.tap(p.key(1, 'back'));
+      await p.tab(ScreenTab.groups);
+      expect(find.text('Carol declined to join the group friends.'),
+          findsOneWidget);
+      expect(find.text('Bob declined your friendship.'), findsNothing);
+      p.plain();
+    });
+
+    _phoneTest(
+        'with no request question open, last_state draws the notices',
+        (tester) async {
+      final p = await _Phone.open(tester, 'gsg');
+      await p.views([
+        _v('[identity]', '[bob]'),
+        'yielded(befriend(alice, bob))',
+      ]);
+      expect(find.text('Your request to befriend Bob did not go through.'),
+          findsOneWidget);
+      expect(find.byType(ElevatedButton), findsNothing);
     });
   });
 }
