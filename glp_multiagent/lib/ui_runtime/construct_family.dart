@@ -66,10 +66,11 @@
 ///     a stream or a list, `rec(T, W)` is drawn at once as `W`.
 ///
 /// A widget a declaration names (`T =::= W`) is a constant naming a Dart
-/// widget: "In the grassroots app, W names a Dart widget, a small
-/// illustrative mapping" --- [ConstructFamily.named].  A widget the family
-/// does not have is drawn as such, named, and takes no input: nothing stands
-/// in for it.
+/// widget: "In the grassroots app, W names a Dart widget: the construct
+/// family draws it, and its type fixes the terms it forms" (Definition
+/// "Widget Declaration") --- [ConstructFamily.named], the grassroots app's
+/// in `named_widgets.dart`.  A widget the family does not have is drawn as
+/// such, named, and takes no input: nothing stands in for it.
 ///
 /// The person's input is returned raw: a button grants its constant, a text
 /// field a `String`, a number field an `Integer` or a `Real` as typed, a date
@@ -85,6 +86,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'bridge.dart';
+import 'named_widgets.dart';
 import 'term.dart';
 
 /// A widget a declaration names: drawn over the construct's view at position
@@ -101,8 +103,11 @@ class ConstructFamily {
 
   const ConstructFamily({this.named = const {}});
 
-  /// The grassroots app's family: the default widgets, and no named one.
-  static const ConstructFamily standard = ConstructFamily();
+  /// The grassroots app's family: the default widgets, and the named
+  /// widget `approval_sentence`, the approval question of a canonical CVA
+  /// platform as a sentence and the buttons Yes and No (named_widgets.dart).
+  static const ConstructFamily standard = ConstructFamily(
+      named: {approvalSentenceName: approvalSentence});
 }
 
 /// The key of construct [id] on screen.
