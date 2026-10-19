@@ -97,7 +97,7 @@ Blocker ::= blk(Attempt) ; noblk.
 FoundNet ::= found(Net) ; nonefound.
 Last ::= last(Attempt) ; nolast.
 Known ::= allknown ; unknown(Peer).
-Then ::= after ; done.
+Then ::= write_own ; own_unread ; no_own.
 ApprovalRes ::= approval_for(Attempt) ; noapproval.
 NoticeOf ::= refused_by(Peer) ; yielded_by.
 
@@ -164,7 +164,7 @@ name_class(sign(V1, V2), _, sign(V1?, V2?)).
 name_class(forward(V1, V2, V3), _, forward(V1?, V2?, V3?)).
 
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
-agent(Id, NetIn, Out?, [view([], []) | Thr?], D?) :- ground(Id?) | request(Id?, [], Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, In), agent_goal([own], In?, Ans, Thr, Out, [], st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], []), D2), merge(D1?, D2?, D).
+agent(Id, NetIn, Out?, [view([], []) | Thr?], D?) :- ground(Id?) | request(Id?, [], Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, M2), merge(M2?, [own | Ow?], In), agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], []), D2), merge(D1?, D2?, D).
 
 procedure request(Key?, List(Key)?, Stream(Trigger), Stream(Ask(Question))).
 request(S1, S2, S3?, [ask('Menu', menu_w(X?)) | D?]) :- request1(S1?, S2?, S3, X, D).
@@ -194,24 +194,32 @@ await(At, yes, _, [answered(At?, yes)]).
 await(At, no, _, [answered(At?, no)]).
 await(_, _, close, []).
 
-procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-agent_goal([T | Ls], In, Ans?, Thr?, Out?, Approvals, St, D?) :- step(T?, done, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-agent_goal([], [T | In], Ans?, Thr?, Out?, Approvals, St, D?) :- step(T?, after, [], In?, Ans, Thr, Out, Approvals?, St?, D).
-agent_goal([], [], [], [], [], _, _, []).
+procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+agent_goal([T | Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- then_local(U?, Th), step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+agent_goal([], [T | In], U, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- then_read(U?, Th), step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+agent_goal([], [], _, [], [], [], [], _, _, []).
 
-procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(N?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), st_ms(St?, S), name_class(N?, S?, C), propose_cond(C?, St?, Cd, St1), dispatch_propose(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Approvals?, St1?, D2), merge(D1?, D2?, D).
-step(req(known(Q)), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(Q?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), known_cond(Q?, St?, Cd), dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Approvals?, St?, D2), merge(D1?, D2?, D).
-step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), hello_cond(P?, St?, Cd), dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-step(net(msg(_, ihello(P))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), ihello_cond(P?, St?, Cd), dispatch_ihello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(Q?), ground(St?) | st_app(St?, Ap0), intro_cond(Q?, St?, Cd), dispatch_intro(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(To?), ground(F?), ground(X?), ground(St?) | st_app(St?, Ap0), message_cond(X?, St?, Cd, St1), dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?, D).
-step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(At?), ground(YN?), ground(St?) | st_app(St?, Ap0), close_approval(At?, Approvals?, Approvals1), answer_cond(At?, St?, Cd, St1), dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals1?, St1?, D).
-step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(St?) | st_pends(St?, Pd), recheck_find(Pd?, St?, F), recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-step(own, _, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- take_own(Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure then_local(YesNo?, Then).
+then_local(yes, own_unread).
+then_local(no, no_own).
 
-procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(Ap0?), ground(St?) | app_changed(Ap0?, St?, Ca1), app_changed(Ap0?, St?, Ca2), or(Ca2?, Kick?, Re), close_falsified(Ca1?, Approvals?, St?, Approvals1), repend(Re?, St?, Ag, St1), own_after(Th?, Ow), app(Ag?, Ls?, L1), app(L1?, Ow?, L2), show_state(Ap0?, St?, Thr, Thr1?), agent_goal(L2?, In?, Ans, Thr1, Out, Approvals1?, St1?, D).
+procedure then_read(YesNo?, Then).
+then_read(yes, own_unread).
+then_read(no, write_own).
+
+procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(N?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), st_ms(St?, S), name_class(N?, S?, C), propose_cond(C?, St?, Cd, St1), dispatch_propose(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St1?, D2), merge(D1?, D2?, D).
+step(req(known(Q)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(Q?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), known_cond(Q?, St?, Cd), dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St?, D2), merge(D1?, D2?, D).
+step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), hello_cond(P?, St?, Cd), dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+step(net(msg(_, ihello(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), ihello_cond(P?, St?, Cd), dispatch_ihello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(Q?), ground(St?) | st_app(St?, Ap0), intro_cond(Q?, St?, Cd), dispatch_intro(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(To?), ground(F?), ground(X?), ground(St?) | st_app(St?, Ap0), message_cond(X?, St?, Cd, St1), dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
+step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(YN?), ground(St?) | st_app(St?, Ap0), close_approval(At?, Approvals?, Approvals1), answer_cond(At?, St?, Cd, St1), dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals1?, St1?, D).
+step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(St?) | st_pends(St?, Pd), recheck_find(Pd?, St?, F), recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+
+procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(Ap0?), ground(St?) | app_changed(Ap0?, St?, Ca1), app_changed(Ap0?, St?, Ca2), or(Ca2?, Kick?, Re), close_falsified(Ca1?, Approvals?, St?, Approvals1), repend(Re?, St?, Ag, St1), own_after(Th?, Ow, Ow1?, U), app(Ag?, Ls?, L1), show_state(Ap0?, St?, Thr, Thr1?), agent_goal(L1?, In?, U?, Ans, Thr1, Out, Ow1, Approvals1?, St1?, D).
 
 procedure show_state(App?, St?, Stream(Output), Stream(Output)?).
 show_state(Ap0, St, Thr?, Thr1) :- ground(Ap0?), ground(St?) | app_ms(Ap0?, S0), st_ms(St?, S1), ms_eq(S0?, S1?, Sm), neg(Sm?, Ch), show_view(Ch?, St?, Thr, Thr1?).
@@ -261,9 +269,10 @@ some_peer([_ | _], yes).
 procedure app_changed(App?, St?, YesNo).
 app_changed(Ap0, St, C?) :- ground(Ap0?), ground(St?) | st_app(St?, Ap1), same(Ap0?, Ap1?, Sm), neg(Sm?, C).
 
-procedure own_after(Then?, Stream(Trigger)).
-own_after(after, [own]).
-own_after(done, []).
+procedure own_after(Then?, Stream(Trigger), Stream(Trigger)?, YesNo).
+own_after(write_own, [own | Ow1?], Ow1, yes).
+own_after(own_unread, Ow1?, Ow1, yes).
+own_after(no_own, Ow1?, Ow1, no).
 
 procedure repend(YesNo?, St?, Stream(Trigger), St).
 repend(no, St, [], St?).
@@ -328,37 +337,37 @@ procedure named_first(YesNo?, YesNo?, YesNo).
 named_first(yes, no, yes).
 named_first(_, _, no) :- otherwise | true.
 
-procedure dispatch_propose(PCond?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_propose(pgo(I, P), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(I?), ground(P?), ground(St?) | propose_effect(I?, P?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?, D).
-dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure dispatch_propose(PCond?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_propose(pgo(I, P), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(I?), ground(P?), ground(St?) | propose_effect(I?, P?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
+dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure known_cond(Peer?, St?, YesNo).
 known_cond(Q, St, R?) :- ground(Q?), ground(St?) | st_id(St?, Id), st_sent(St?, Se), same(Q?, Id?, S1), mem(Q?, Se?, S2), or(S1?, S2?, S), neg(S?, R).
 
-procedure dispatch_known(YesNo?, Peer?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_known(yes, Q, Th, Ap0, Ls, In, Ans?, Thr?, [msg(Q?, hello(Id?)) | Out?], Approvals, St, D?) :- ground(Q?), ground(St?) | st_id(St?, Id), add_sent(Q?, St?, St1), show_known(Q?, St?, St1?, Thr, Thr1?, St2), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Approvals?, St2?, D).
-dispatch_known(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure dispatch_known(YesNo?, Peer?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_known(yes, Q, Th, Ap0, Ls, In, Ans?, Thr?, [msg(Q?, hello(Id?)) | Out?], Ow?, Approvals, St, D?) :- ground(Q?), ground(St?) | st_id(St?, Id), add_sent(Q?, St?, St1), show_known(Q?, St?, St1?, Thr, Thr1?, St2), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?, D).
+dispatch_known(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure hello_cond(Peer?, St?, YesNo).
 hello_cond(P, St, R?) :- ground(St?) | st_recd(St?, Rc), mem(P?, Rc?, B), neg(B?, R).
 
-procedure dispatch_hello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_hello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(P?), ground(St?) | add_recd(P?, St?, St1), show_known(P?, St?, St1?, Thr, Thr1?, St2), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Approvals?, St2?, D).
-dispatch_hello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure dispatch_hello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_hello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(P?), ground(St?) | add_recd(P?, St?, St1), show_known(P?, St?, St1?, Thr, Thr1?, St2), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?, D).
+dispatch_hello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure intro_cond(Peer?, St?, YesNo).
 intro_cond(Q, St, R?) :- ground(Q?), ground(St?) | st_id(St?, Id), st_isent(St?, ISe), same(Q?, Id?, S1), mem(Q?, ISe?, S2), known_st(Q?, St?, S3), or(S1?, S2?, S12), or(S12?, S3?, S), neg(S?, R).
 
-procedure dispatch_intro(YesNo?, Peer?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_intro(yes, Q, Th, Ap0, Ls, In, Ans?, Thr?, [msg(Q?, ihello(Id?)) | Out?], Approvals, St, D?) :- ground(Q?), ground(St?) | st_id(St?, Id), add_isent(Q?, St?, St1), show_known(Q?, St?, St1?, Thr, Thr1?, St2), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Approvals?, St2?, D).
-dispatch_intro(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure dispatch_intro(YesNo?, Peer?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_intro(yes, Q, Th, Ap0, Ls, In, Ans?, Thr?, [msg(Q?, ihello(Id?)) | Out?], Ow?, Approvals, St, D?) :- ground(Q?), ground(St?) | st_id(St?, Id), add_isent(Q?, St?, St1), show_known(Q?, St?, St1?, Thr, Thr1?, St2), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?, D).
+dispatch_intro(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure ihello_cond(Peer?, St?, YesNo).
 ihello_cond(P, St, R?) :- ground(St?) | st_irecd(St?, Rc), mem(P?, Rc?, B), neg(B?, R).
 
-procedure dispatch_ihello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_ihello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(P?), ground(St?) | add_irecd(P?, St?, St1), show_known(P?, St?, St1?, Thr, Thr1?, St2), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Approvals?, St2?, D).
-dispatch_ihello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure dispatch_ihello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_ihello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(P?), ground(St?) | add_irecd(P?, St?, St1), show_known(P?, St?, St1?, Thr, Thr1?, St2), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?, D).
+dispatch_ihello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure message_cond(Cargo?, St?, MCond, St).
 message_cond(X, St, Cd?, St1?) :- ground(X?), ground(St?) | cargo_class(X?, C), st_class(C?, St?, R, St0), message_cond1(R?, X?, St0?, Cd, St1).
@@ -470,17 +479,17 @@ procedure held_takeable1(ClassRes?, Attempt?, St?, YesNo).
 held_takeable1(nocls, _, _, no).
 held_takeable1(cls(I), A, St, T?) :- ground(A?), ground(St?) | st_app(St?, Ap), app_recs(Ap?, R), mem(closed(A?), R?, Cl), start_waits(I?, A?, St?, W), neg(W?, NW), or(Cl?, NW?, T).
 
-procedure recheck1(FoundNet?, Then?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-recheck1(found(M), Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- step(net(M?), Th?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-recheck1(nonefound, Th, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(St?) | st_app(St?, Ap0), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure recheck1(FoundNet?, Then?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+recheck1(found(M), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- step(net(M?), Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+recheck1(nonefound, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(St?) | st_app(St?, Ap0), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
-procedure dispatch_message(MCond?, Net?, Peer?, Cargo?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_message(noparticipant, _, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- add_pend_once(deferred(M?), St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?, D).
-dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(At?) | drop_pend(deferred(M?), St?, St0), start_effect(I?, At?, St0?, Ss, Cr, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?, D1), next(Th?, yes, Ap0?, Ls?, In?, Ans1, Thr, Out1, Approvals1?, St2?, D2), merge(D1?, D2?, D).
-dispatch_message(mgo(I), _, F, vote(At, Y), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(At?), ground(F?), ground(Ap0?) | tally_effect(I?, At?, F?, Y?, St?, Ss, St1), noticed(refused_by(F?), At?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Approvals?, St2?, D).
-dispatch_message(mgo(I), _, _, yield(At), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(At?), ground(Ap0?) | yield_effect(I?, At?, St?, Ss, St1), noticed(yielded_by, At?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Approvals?, St2?, D).
-dispatch_message(mgo(I), _, _, outcome(At, Z), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(At?) | outcome_effect(I?, At?, Z?, St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?, D).
+procedure dispatch_message(MCond?, Net?, Peer?, Cargo?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_message(noparticipant, _, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- add_pend_once(deferred(M?), St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
+dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?) | drop_pend(deferred(M?), St?, St0), start_effect(I?, At?, St0?, Ss, Cr, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?, D1), next(Th?, yes, Ap0?, Ls?, In?, Ans1, Thr, Out1, Ow, Approvals1?, St2?, D2), merge(D1?, D2?, D).
+dispatch_message(mgo(I), _, F, vote(At, Y), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(F?), ground(Ap0?) | tally_effect(I?, At?, F?, Y?, St?, Ss, St1), noticed(refused_by(F?), At?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?, D).
+dispatch_message(mgo(I), _, _, yield(At), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(Ap0?) | yield_effect(I?, At?, St?, Ss, St1), noticed(yielded_by, At?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?, D).
+dispatch_message(mgo(I), _, _, outcome(At, Z), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?) | outcome_effect(I?, At?, Z?, St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
 
 procedure spawn(ApprovalRes?, OpenApprovals?, OpenApprovals, Stream(Trigger), Stream(Trigger)?, Stream(Ask(Question))).
 spawn(noapproval, Cs, Cs?, Ans?, Ans, []).
@@ -496,9 +505,9 @@ answer_cond1(cls(I), At, St, Cd?, St?) :- ground(I?), ground(At?), ground(St?) |
 procedure unanswered(Attempt?, Recs?, YesNo).
 unanswered(At, R, B?) :- ground(At?), ground(R?) | pending_rec(At?, R?, P), has_answer(At?, R?, H), neg(H?, Un), and(P?, Un?, B).
 
-procedure dispatch_answer(Cond?, YesNo?, Attempt?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_answer(go(_), YN, At, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(At?) | answer_effect(YN?, At?, St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?, D).
-dispatch_answer(drop, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure dispatch_answer(Cond?, YesNo?, Attempt?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_answer(go(_), YN, At, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?) | answer_effect(YN?, At?, St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
+dispatch_answer(drop, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure close_approval(Attempt?, OpenApprovals?, OpenApprovals).
 close_approval(_, [], []).
@@ -517,8 +526,8 @@ procedure close_one(YesNo?, Attempt?, Close, OpenApprovals?, Recs?, OpenApproval
 close_one(no, _, close, Cs, R, Cs1?) :- close_approvals(Cs?, R?, Cs1).
 close_one(yes, At, Cl?, Cs, R, [oc(At?, Cl) | Cs1?]) :- close_approvals(Cs?, R?, Cs1).
 
-procedure take_own(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-take_own(Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(St?) | st_app(St?, Ap0), own_cond(St?, Ch, St1), dispatch_own(Ch?, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?, D).
+procedure take_own(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+take_own(Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(St?) | st_app(St?, Ap0), own_cond(St?, Ch, St1), dispatch_own(Ch?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
 
 procedure own_cond(St?, Choice, St).
 own_cond(St, Ch?, St2?) :- ground(St?) | opening(St?, Is, St1), own_cond1(Is?, St1?, Ch, St2).
@@ -654,14 +663,14 @@ dead_key(cm(A), R, D?) :- mem(closed(A?), R?, D).
 dead_key(wd(_, B), R, D?) :- ground(B?), ground(R?) | mem(closed(B?), R?, Cl), mem(yielded(B?), R?, Yd), or(Cl?, Yd?, D).
 dead_key(ip(Q, R1), R, D?) :- mem(introduced(Q?, R1?), R?, D).
 
-procedure dispatch_own(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_own(none, Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- next(done, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-dispatch_own(take(op(_), prop(I, P)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- dispatch_propose(pgo(I?, P?), after, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
-dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(At?), ground(I?) | vote_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(after, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?, D).
-dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(At?), ground(I?) | commit_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(after, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Approvals?, St2?, D).
-dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- ground(B?), ground(I?), ground(Ap0?) | wound_effect(I?, B?, St?, Ss, St1), noticed(yielded_by, B?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(after, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Approvals?, St2?, D).
-dispatch_own(take(ip(Q, R), pair), Ap0, Ls, In, Ans?, Thr?, [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?)) | Out?], Approvals, St, D?) :- ground(Q?), ground(R?), ground(St?) | st_id(St?, Id), introduce_effect(Q?, R?, St?, St1), next(after, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St1?, D).
-dispatch_own(take(_, _), Ap0, Ls, In, Ans?, Thr?, Out?, Approvals, St, D?) :- otherwise | next(done, no, Ap0?, Ls?, In?, Ans, Thr, Out, Approvals?, St?, D).
+procedure dispatch_own(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_own(none, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+dispatch_own(take(op(_), prop(I, P)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- dispatch_propose(pgo(I?, P?), write_own, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(I?) | vote_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
+dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(I?) | commit_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
+dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(B?), ground(I?), ground(Ap0?) | wound_effect(I?, B?, St?, Ss, St1), noticed(yielded_by, B?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?, D).
+dispatch_own(take(ip(Q, R), pair), Ap0, Ls, In, Ans?, Thr?, [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?)) | Out?], Ow?, Approvals, St, D?) :- ground(Q?), ground(R?), ground(St?) | st_id(St?, Id), introduce_effect(Q?, R?, St?, St1), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
+dispatch_own(take(_, _), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- otherwise | next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure opening(St?, Infos, St).
 opening(St, Is?, St1?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), app_state(Ap?, S), contract_schemas(Ss), reflexive_preds(Rf), opening1(Ss?, Rf?, Id?, S?, St?, Is, St1).

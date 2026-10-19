@@ -2,8 +2,8 @@
 
 - Contract: `GAI` (`gai` to the checker), its owner's two files `programs/gai/GAI.md` and `programs/gai/GAI.glp`, copied here as they stood.
 - The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `ab00c9c1`, for the paper's own record.
-- The tools: this repository at `e3648adb` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-10-19 15:30 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `654015b4` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-10-19 15:55 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
