@@ -165,6 +165,8 @@ check "the currency's contract, GC, is read from programs/currencies/coins/GC.gl
 CSSN=$(term "$GLP_DIR/programs/cssn/CSSN.glp" cssn)
 check "CSSN's contract is read from programs/cssn/CSSN.glp" \
       "reflexive([friend], [schema(establish, []," "$CSSN"
+check "and its close takes the listed role of the members the leader lists" \
+      "crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [nterm(ext(own(1), n))])]" "$CSSN"
 FED=$(term "$GLP_DIR/programs/federation/GFWC.glp" gfwc)
 check "the federation's contract, GFWC, is read from programs/federation/GFWC.glp" \
       "[schema(form, [], [rs(guarded, [atom(seat, [nterm(own(1))])]" "$FED"
@@ -405,18 +407,17 @@ expanded child_leave_2_s  s '\Bob'           "$child_leave_2_body"
 expanded child_leave_2_p  p '\mathit{Carol}' "$child_leave_2_body"
 expanded child_leave_2_q  q '\mathit{Dave}'  "$child_leave_2_body"
 
-# CSSN's contract, programs/cssn/CSSN.glp (CSSN, Appendix B.2): its groups
-# are named <a>.n, and close and child_close take the seated role
-# (<a>.n)^member at 2b560fa5 and the listed role a[listed(*, n)] at
-# 4cb1ec11, every name term based on the agent role a, so it is agent-named
-# (GSC, Appendix D.4, either way).  Its predicates have traceable provenance,
+# CSSN's contract, programs/cssn/CSSN.glp at 4cb1ec11 (CSSN, Appendix B.2):
+# its groups are named <a>.n, and close and child_close take the listed role
+# a[listed(*, n)], every member the leader lists, every name term based on
+# the agent role a, so it is agent-named (GSC 8064cfb, Appendix D.4).  Its predicates have traceable provenance,
 # each traced through an agent role, and it meets clause 4 of
 # definition:sg-agent-named, and it has no unobstructed introductory act, so
 # it is not syntactically grassroots by definition:sg-agent-named.  It has
 # an introduction with wards (GSC, Appendix F, def:introduction-wards),
 # checked by hand against GSC 429cfc8, and is syntactically grassroots with
 # wards (def:sg-wards, GSC 503db66): befriend, its relay acts and establish
-# have agent roles and no name term (clause 1); the community roles of close
+# have agent roles and no name term (clause 1); the listed roles of close
 # and child_close delete member(<a>.n) and add nothing, member being no mark,
 # leaving mark, friend, parent or parenting atom (clause 2); and it meets
 # clauses 3 and 4 of definition:sg-agent-named (clause 3).  The introduction
@@ -462,7 +463,7 @@ check_not "CSSN's predicates have traceable provenance" "untraceable(" "$out"
 check_not "CSSN's contract satisfies volition" "volition(" "$out"
 check_not "CSSN's contract is not malformed" "malformed(" "$out"
 # One display per schema (Section 5.1, "A contract compiles schema by
-# schema"): CSSN.glp's twenty-nine at 2b560fa5, GSNP's sixteen and thirteen
+# schema"): CSSN.glp's twenty-nine at 4cb1ec11, GSNP's sixteen and thirteen
 # for children.
 out=$(run "compile_contract(cssn, $CSSN).")
 check_eq "and it compiles to twenty-nine displays" "29" \
