@@ -320,23 +320,37 @@ class CodeGenerator {
         // Nil is atomic constant - same for HEAD and BODY modes
         ctx.emit(bc.UnifyConstant(rt.nil));
       } else {
-        // Non-empty list: use Push/UnifyStructure/Pop pattern
-        if (inHead) {
-          final saveReg = ctx.allocateTemp();
-          ctx.emit(bc.Push(saveReg));
-          ctx.emit(bc.UnifyStructure('.', 2));
-          if (term.head != null) _generateStructureElement(term.head!, varTable, ctx, inHead: true);
-          if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: true);
-          ctx.emit(bc.Pop(saveReg));
-          // FCP AM: After Pop, must place nested structure at S and increment
-          ctx.emit(bc.UnifyVariable(saveReg, isReader: false));
-        } else {
-          // WRITE mode (BODY): building nested structure within argument structure
-          final tempReg = ctx.allocateTemp();
-          ctx.emit(bc.PutStructure('.', 2, tempReg));
-          if (term.head != null) _generateStructureElement(term.head!, varTable, ctx, inHead: inHead);
-          if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: inHead);
-          ctx.emit(bc.UnifyVariable(tempReg, isReader: false));
+        // Non-empty list: use Push/UnifyStructure/Pop pattern.  The list is
+        // walked along its spine in a loop, each element by a recursive call,
+        // and the instructions that close each cell follow the end of the
+        // list, innermost first: the code the recursion on the tail emitted,
+        // in a depth that is the nesting of the term's elements and not the
+        // length of a list (TGLP well-typing.tex, Definition "Well-Typed
+        // Clause", puts no bound on a term's size).
+        final cellRegs = <int>[];
+        Term? t = term;
+        while (t is ListTerm && !t.isNil) {
+          final reg = ctx.allocateTemp();
+          if (inHead) {
+            ctx.emit(bc.Push(reg));
+            ctx.emit(bc.UnifyStructure('.', 2));
+          } else {
+            // WRITE mode (BODY): building nested structure within argument structure
+            ctx.emit(bc.PutStructure('.', 2, reg));
+          }
+          cellRegs.add(reg);
+          if (t.head != null) _generateStructureElement(t.head!, varTable, ctx, inHead: inHead);
+          t = t.tail;
+        }
+        if (t != null) _generateStructureElement(t, varTable, ctx, inHead: inHead);
+        for (final reg in cellRegs.reversed) {
+          if (inHead) {
+            ctx.emit(bc.Pop(reg));
+            // FCP AM: After Pop, must place nested structure at S and increment
+            ctx.emit(bc.UnifyVariable(reg, isReader: false));
+          } else {
+            ctx.emit(bc.UnifyVariable(reg, isReader: false));
+          }
         }
       }
 
@@ -653,29 +667,30 @@ class CodeGenerator {
   }
 
   // Helper for building list tails in BODY phase
-  // List tails can be: another list (recurse), a variable, or nil
+  // List tails can be: another list (the next cell), a variable, or nil.
+  // The cells are walked along the list's spine in a loop, each element by a
+  // recursive call, so the depth used is the nesting of the term's elements
+  // and not the length of a list.
   void _generateListTailInBody(Term term, VariableTable varTable, CodeGenContext ctx) {
-    if (term is ListTerm) {
-      if (term.isNil) {
-        // Tail is nil: emit constant
-        ctx.emit(bc.SetConstant(rt.nil));
-      } else {
-        // Tail is another list: build nested cons cell
-        ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
+    Term? t = term;
+    while (t is ListTerm && !t.isNil) {
+      // Tail is another list: build nested cons cell
+      ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
 
-        // Process head of nested list
-        if (term.head != null) {
-          _generateStructureElementInBody(term.head!, varTable, ctx);
-        }
-
-        // Recurse for tail
-        if (term.tail != null) {
-          _generateListTailInBody(term.tail!, varTable, ctx);
-        }
+      // Process head of nested list
+      if (t.head != null) {
+        _generateStructureElementInBody(t.head!, varTable, ctx);
       }
-    } else {
+
+      // The next cell, or the end of the list
+      t = t.tail;
+    }
+    if (t is ListTerm) {
+      // Tail is nil: emit constant
+      ctx.emit(bc.SetConstant(rt.nil));
+    } else if (t != null) {
       // Tail is a variable or other term - use standard handling
-      _generateStructureElementInBody(term, varTable, ctx);
+      _generateStructureElementInBody(t, varTable, ctx);
     }
   }
 

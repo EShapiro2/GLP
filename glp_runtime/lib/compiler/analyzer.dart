@@ -693,21 +693,26 @@ class Analyzer {
 
   /// Extract all reader variables from a term and mark them as grounded.
   /// Used for arithmetic comparison guards where arguments may be complex expressions.
+  ///
+  /// A list is walked along its spine in a loop and its elements by recursive
+  /// calls, so the depth used is the nesting of the term's elements and not the
+  /// length of a list (TGLP well-typing.tex, Definition "Well-Typed Clause",
+  /// puts no bound on a term's size).
   void _extractAndMarkGroundedVars(Term term, VariableTable varTable) {
-    if (term is VarTerm) {
+    Term? t = term;
+    while (t is ListTerm) {
+      if (t.head != null) {
+        _extractAndMarkGroundedVars(t.head!, varTable);
+      }
+      t = t.tail;
+    }
+    if (t is VarTerm) {
       // Mark the variable grounded: X and X? may occur more than once.
-      varTable.markGrounded(term.name, byReader: term.isReader);
-    } else if (term is StructTerm) {
+      varTable.markGrounded(t.name, byReader: t.isReader);
+    } else if (t is StructTerm) {
       // Recurse into structure arguments (e.g., X? + 1 has args [X?, 1])
-      for (final arg in term.args) {
+      for (final arg in t.args) {
         _extractAndMarkGroundedVars(arg, varTable);
-      }
-    } else if (term is ListTerm) {
-      if (term.head != null) {
-        _extractAndMarkGroundedVars(term.head!, varTable);
-      }
-      if (term.tail != null) {
-        _extractAndMarkGroundedVars(term.tail!, varTable);
       }
     }
     // ConstTerm and UnderscoreTerm have no variables to extract
@@ -717,31 +722,34 @@ class Analyzer {
   /// [inHeadOrBody]: true if analyzing head or body (counts for SRSW),
   ///                 false if analyzing guards (does not count for SRSW)
   /// [inHead]: true if analyzing the clause head
+  ///
+  /// A list is walked along its spine in a loop and its elements by recursive
+  /// calls, in the order the recursion took them, so the depth used is the
+  /// nesting of the term's elements and not the length of a list.
   void _analyzeTerm(Term term, VariableTable varTable,
       {bool inHeadOrBody = true, bool inHead = false}) {
-    if (term is VarTerm) {
+    Term? t = term;
+    while (t is ListTerm) {
+      if (t.head != null) {
+        _analyzeTerm(t.head!, varTable,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
+      }
+      t = t.tail;
+    }
+    if (t is VarTerm) {
       // Skip anonymous variables (names starting with '_') - exempt from SRSW
       // Each occurrence denotes a fresh writer with no paired reader
-      if (term.name.startsWith('_')) return;
+      if (t.name.startsWith('_')) return;
 
-      if (term.isReader) {
-        varTable.recordReaderOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
+      if (t.isReader) {
+        varTable.recordReaderOccurrence(t.name, t, inHeadOrBody: inHeadOrBody);
       } else {
-        varTable.recordWriterOccurrence(term.name, term,
+        varTable.recordWriterOccurrence(t.name, t,
             inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
-    } else if (term is StructTerm) {
-      for (final arg in term.args) {
+    } else if (t is StructTerm) {
+      for (final arg in t.args) {
         _analyzeTerm(arg, varTable, inHeadOrBody: inHeadOrBody, inHead: inHead);
-      }
-    } else if (term is ListTerm) {
-      if (term.head != null) {
-        _analyzeTerm(term.head!, varTable,
-            inHeadOrBody: inHeadOrBody, inHead: inHead);
-      }
-      if (term.tail != null) {
-        _analyzeTerm(term.tail!, varTable,
-            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     }
     // A ConstTerm reached here is in argument position, and therefore data.
@@ -1033,21 +1041,48 @@ class PartialEvaluator {
   }
 
   /// Collect all variable names in a term
+  ///
+  /// A list is walked along its spine in a loop and its elements by recursive
+  /// calls, so the depth used is the nesting of the term's elements and not the
+  /// length of a list (TGLP well-typing.tex, Definition "Well-Typed Clause",
+  /// puts no bound on a term's size).
   void _collectVarNames(Term term, Set<String> names) {
-    if (term is VarTerm) {
-      names.add(term.name);
-    } else if (term is StructTerm) {
-      for (final arg in term.args) {
+    Term? t = term;
+    while (t is ListTerm) {
+      if (t.head != null) _collectVarNames(t.head!, names);
+      t = t.tail;
+    }
+    if (t is VarTerm) {
+      names.add(t.name);
+    } else if (t is StructTerm) {
+      for (final arg in t.args) {
         _collectVarNames(arg, names);
       }
-    } else if (term is ListTerm) {
-      if (term.head != null) _collectVarNames(term.head!, names);
-      if (term.tail != null) _collectVarNames(term.tail!, names);
     }
   }
 
   /// Apply variable renaming to a term recursively
+  ///
+  /// A list is walked along its spine in a loop and its elements by recursive
+  /// calls, so the depth used is the nesting of the term's elements and not the
+  /// length of a list (TGLP well-typing.tex, Definition "Well-Typed Clause",
+  /// puts no bound on a term's size).
   Term _applyRenaming(Term term, Map<String, String> renaming) {
+    if (term is ListTerm) {
+      final cells = <ListTerm>[];
+      final heads = <Term?>[];
+      Term? t = term;
+      while (t is ListTerm) {
+        cells.add(t);
+        heads.add(t.head != null ? _applyRenaming(t.head!, renaming) : null);
+        t = t.tail;
+      }
+      Term? renamed = t != null ? _applyRenaming(t, renaming) : null;
+      for (var i = cells.length - 1; i >= 0; i--) {
+        renamed = ListTerm(heads[i], renamed, cells[i].line, cells[i].column);
+      }
+      return renamed!;
+    }
     if (term is VarTerm) {
       if (term.name == '_') {
         // Underscore stays as underscore
@@ -1061,13 +1096,6 @@ class PartialEvaluator {
       return StructTerm(
         term.functor,
         term.args.map((a) => _applyRenaming(a, renaming)).toList(),
-        term.line,
-        term.column,
-      );
-    } else if (term is ListTerm) {
-      return ListTerm(
-        term.head != null ? _applyRenaming(term.head!, renaming) : null,
-        term.tail != null ? _applyRenaming(term.tail!, renaming) : null,
         term.line,
         term.column,
       );
@@ -1137,6 +1165,24 @@ class PartialEvaluator {
     Map<String, Term> subst,
     Set<String> suspSet
   ) {
+    // Two non-empty lists, matched along their spines in a loop and their
+    // elements by recursive calls, as the list case below matches them: so
+    // the depth used is the nesting of the terms' elements and not the length
+    // of a list (TGLP well-typing.tex, Definition "Well-Typed Clause", puts no
+    // bound on a term's size).
+    while (callArg is ListTerm &&
+        unitArg is ListTerm &&
+        !callArg.isNil &&
+        !unitArg.isNil) {
+      if (callArg.head != null && unitArg.head != null) {
+        final headResult = _unifyTerms(callArg.head!, unitArg.head!, subst, suspSet);
+        if (headResult != null) return headResult;
+      }
+      if (callArg.tail == null || unitArg.tail == null) return null;
+      callArg = callArg.tail!;
+      unitArg = unitArg.tail!;
+    }
+
     // Handle underscore on either side - always succeeds, no binding
     if (_isAnonymous(callArg) || _isAnonymous(unitArg)) {
       // Except a writer against a writer: an anonymous variable is a writer
@@ -1258,7 +1304,8 @@ class PartialEvaluator {
         if (callArg.isNil != unitArg.isNil) {
           return UnifyFail('List structure mismatch: nil vs non-nil');
         }
-        // Both non-nil - recurse on head and tail
+        // Both non-nil - recurse on head and tail (the loop at the top of
+        // this function matches two non-empty lists before this case)
         if (callArg.head != null && unitArg.head != null) {
           final headResult = _unifyTerms(callArg.head!, unitArg.head!, subst, suspSet);
           if (headResult != null) return headResult;
@@ -1331,7 +1378,29 @@ class PartialEvaluator {
   }
 
   /// Resolve a term by following variable chains
+  ///
+  /// A list is walked along its spine in a loop and its elements by recursive
+  /// calls, each given a copy of [visited] as the recursion gave it, so the
+  /// depth used is the nesting of the term's elements and not the length of a
+  /// list (TGLP well-typing.tex, Definition "Well-Typed Clause", puts no bound
+  /// on a term's size).
   Term _resolveTerm(Term term, Map<String, Term> subst, Set<String> visited) {
+    if (term is ListTerm && !term.isNil) {
+      final cells = <ListTerm>[];
+      final heads = <Term?>[];
+      Term? t = term;
+      while (t is ListTerm && !t.isNil) {
+        cells.add(t);
+        heads.add(
+            t.head != null ? _resolveTerm(t.head!, subst, {...visited}) : null);
+        t = t.tail;
+      }
+      Term? resolved = t != null ? _resolveTerm(t, subst, {...visited}) : null;
+      for (var i = cells.length - 1; i >= 0; i--) {
+        resolved = ListTerm(heads[i], resolved, cells[i].line, cells[i].column);
+      }
+      return resolved!;
+    }
     if (term is VarTerm) {
       if (visited.contains(term.name)) {
         // Cycle - return as is
@@ -1356,20 +1425,31 @@ class PartialEvaluator {
         term.column,
       );
     }
-    if (term is ListTerm) {
-      if (term.isNil) return term;
-      return ListTerm(
-        term.head != null ? _resolveTerm(term.head!, subst, {...visited}) : null,
-        term.tail != null ? _resolveTerm(term.tail!, subst, {...visited}) : null,
-        term.line,
-        term.column,
-      );
-    }
-    return term; // Constants, underscores, etc.
+    return term; // Constants, underscores, the empty list, etc.
   }
 
   /// Apply substitution to a term
+  ///
+  /// A list is walked along its spine in a loop and its elements by recursive
+  /// calls, so the depth used is the nesting of the term's elements and not the
+  /// length of a list (TGLP well-typing.tex, Definition "Well-Typed Clause",
+  /// puts no bound on a term's size).
   Term _applySubstitution(Term term, Map<String, Term> subst) {
+    if (term is ListTerm && !term.isNil) {
+      final cells = <ListTerm>[];
+      final heads = <Term?>[];
+      Term? t = term;
+      while (t is ListTerm && !t.isNil) {
+        cells.add(t);
+        heads.add(t.head != null ? _applySubstitution(t.head!, subst) : null);
+        t = t.tail;
+      }
+      Term? applied = t != null ? _applySubstitution(t, subst) : null;
+      for (var i = cells.length - 1; i >= 0; i--) {
+        applied = ListTerm(heads[i], applied, cells[i].line, cells[i].column);
+      }
+      return applied!;
+    }
     if (term is VarTerm) {
       if (term.name == '_') return term; // underscore unchanged
       final varName = term.name;
@@ -1387,15 +1467,6 @@ class PartialEvaluator {
       return StructTerm(
         term.functor,
         term.args.map((a) => _applySubstitution(a, subst)).toList(),
-        term.line,
-        term.column,
-      );
-    }
-    if (term is ListTerm) {
-      if (term.isNil) return term;
-      return ListTerm(
-        term.head != null ? _applySubstitution(term.head!, subst) : null,
-        term.tail != null ? _applySubstitution(term.tail!, subst) : null,
         term.line,
         term.column,
       );

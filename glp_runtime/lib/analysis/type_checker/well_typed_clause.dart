@@ -2017,18 +2017,15 @@ WellTypedResult _checkModedTermPerArg(
       continue;
     }
 
-    // Extract paths from this argument and check against automaton
+    // Check the paths of this argument against automaton
     final argTerm = modedTerm.args[i];
-    final argPaths = paths(argTerm);
 
-    for (final path in argPaths) {
-      final result =
-          checkPathAgainstAutomaton(path, argAutomaton, dfa, open: open);
-
+    forEachCheckedPath(argTerm, argAutomaton, dfa, open: open,
+        (leaf, result, path) {
       if (!result.isConsistent) {
-        errors.add(InconsistentPathError(path, result.reason ?? 'Unknown'));
+        errors.add(InconsistentPathError(path(), result.reason ?? 'Unknown'));
       } else if (result.variableAssignment != null) {
-        final varKey = path.leaf.symbol;
+        final varKey = leaf.symbol;
         if (variableTypes.containsKey(varKey)) {
           // The same variable again: typed by its own position (TGLP
           // well-typing.tex, Definition "Type Assignment"), and paired as
@@ -2044,7 +2041,7 @@ WellTypedResult _checkModedTermPerArg(
           variableTypes[varKey] = result.variableAssignment!;
         }
       }
-    }
+    });
   }
 
   // Check duality within this term, every occurrence of a writer against
@@ -2615,12 +2612,15 @@ String? _noInstantiationReason(
         } on StateError {
           continue;
         }
-        for (final path in paths(moded.args[i])) {
-          final r = checkPathAgainstAutomaton(path, automaton, openDfa,
-              open: openNames);
-          if (r.isConsistent) continue;
+        // The first path, in the order of [paths], that is inconsistent.
+        PathCheckResult? first;
+        forEachCheckedPath(moded.args[i], automaton, openDfa, open: openNames,
+            (_, r, _) {
+          if (first == null && !r.isConsistent) first = r;
+        });
+        if (first != null) {
           return 'argument ${i + 1}, ${call.args[i]}, has no well-typing at '
-              'any expansion of ${template.argTypes[i]}: ${r.reason}';
+              'any expansion of ${template.argTypes[i]}: ${first!.reason}';
         }
       }
     }
@@ -2986,16 +2986,24 @@ bool _reachesParam(DFAState state, _Probe probe) {
 }
 
 /// The variable keys of [term]: `X` for a writer, `X?` for a reader.
+///
+/// A list is walked along its spine in a loop and its elements by recursive
+/// calls, in the order the recursion took them, so the depth used is the
+/// nesting of the term's elements and not the length of a list (TGLP
+/// well-typing.tex, Definition "Well-Typed Clause", puts no bound on a term's
+/// size).
 Iterable<String> _termVarKeys(ast.Term term) sync* {
-  if (term is ast.VarTerm) {
-    yield '${term.name}${term.isReader ? '?' : ''}';
-  } else if (term is ast.StructTerm) {
-    for (final a in term.args) {
+  ast.Term? t = term;
+  while (t is ast.ListTerm) {
+    if (t.head != null) yield* _termVarKeys(t.head!);
+    t = t.tail;
+  }
+  if (t is ast.VarTerm) {
+    yield '${t.name}${t.isReader ? '?' : ''}';
+  } else if (t is ast.StructTerm) {
+    for (final a in t.args) {
       yield* _termVarKeys(a);
     }
-  } else if (term is ast.ListTerm) {
-    if (term.head != null) yield* _termVarKeys(term.head!);
-    if (term.tail != null) yield* _termVarKeys(term.tail!);
   }
 }
 
@@ -3003,43 +3011,54 @@ Iterable<String> _termVarKeys(ast.Term term) sync* {
 /// occurrence at a position a parameter reaches, by its key, with the probe
 /// state of that position --- null for a variable inside a term that stands at
 /// a parameter itself, which supplies nothing.
+///
+/// A list is walked along its spine in a loop and its elements by recursive
+/// calls ([_termVarKeys]).
 Map<String, DFAState?> _sitesOf(ast.Goal goal, _Probe probe) {
   final out = <String, DFAState?>{};
   void walk(ast.Term term, DFAState state) {
-    if (!_reachesParam(state, probe)) return;
-    if (term is ast.VarTerm) {
-      out.putIfAbsent('${term.name}${term.isReader ? '?' : ''}', () => state);
-      return;
-    }
-    if (probe.paramOf.containsKey(state.baseName)) {
-      for (final k in _termVarKeys(term)) {
-        out.putIfAbsent(k, () => null);
+    while (true) {
+      if (!_reachesParam(state, probe)) return;
+      if (term is ast.VarTerm) {
+        out.putIfAbsent('${term.name}${term.isReader ? '?' : ''}', () => state);
+        return;
+      }
+      if (probe.paramOf.containsKey(state.baseName)) {
+        for (final k in _termVarKeys(term)) {
+          out.putIfAbsent(k, () => null);
+        }
+        return;
+      }
+      final automaton = probe.dfa.automata[state.name];
+      if (automaton == null) return;
+      // A term the type's own transitions do not take, where the type inlines
+      // a parameter as a bare alternative, stands within that parameter's
+      // instance: its variables supply nothing, as at the parameter itself.
+      if (probe.inlinedAt(state).isNotEmpty &&
+          !_takenByOwnTransitions(term, automaton, state)) {
+        for (final k in _termVarKeys(term)) {
+          out.putIfAbsent(k, () => null);
+        }
+        return;
+      }
+      if (term is ast.StructTerm) {
+        for (var i = 0; i < term.args.length; i++) {
+          final next =
+              _stepTo(automaton, state, term.functor, term.args.length, i + 1);
+          if (next != null) walk(term.args[i], next);
+        }
+      } else if (term is ast.ListTerm && !term.isNil) {
+        final h = _stepTo(automaton, state, '[|]', 2, 1);
+        final t = _stepTo(automaton, state, '[|]', 2, 2);
+        if (h != null && term.head != null) walk(term.head!, h);
+        if (t != null && term.tail != null) {
+          // The rest of the list, a step further along its spine.
+          term = term.tail!;
+          state = t;
+          continue;
+        }
       }
       return;
-    }
-    final automaton = probe.dfa.automata[state.name];
-    if (automaton == null) return;
-    // A term the type's own transitions do not take, where the type inlines
-    // a parameter as a bare alternative, stands within that parameter's
-    // instance: its variables supply nothing, as at the parameter itself.
-    if (probe.inlinedAt(state).isNotEmpty &&
-        !_takenByOwnTransitions(term, automaton, state)) {
-      for (final k in _termVarKeys(term)) {
-        out.putIfAbsent(k, () => null);
-      }
-      return;
-    }
-    if (term is ast.StructTerm) {
-      for (var i = 0; i < term.args.length; i++) {
-        final next =
-            _stepTo(automaton, state, term.functor, term.args.length, i + 1);
-        if (next != null) walk(term.args[i], next);
-      }
-    } else if (term is ast.ListTerm && !term.isNil) {
-      final h = _stepTo(automaton, state, '[|]', 2, 1);
-      final t = _stepTo(automaton, state, '[|]', 2, 2);
-      if (h != null && term.head != null) walk(term.head!, h);
-      if (t != null && term.tail != null) walk(term.tail!, t);
     }
   }
 
