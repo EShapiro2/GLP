@@ -150,6 +150,59 @@ KNOWN_RED_CHECKS=(
     "SG child-safe platform on two smartphones: bob is connected to alice"
     "SG child-safe platform on two smartphones: alice's message reaches bob"
     "SG two mini-apps at once: no failed play"
+# Currencies' programs/currencies/coins/GC.glp and GFWC's programs/federation/GFWC.glp
+# are in GSC's old term form, schema(Name, Roles), which the checker no longer
+# reads (GSC 0228e79: schema(Name, Vars, Roles)); both owners are dormant (Udi,
+# 2026-10-19).  Each entry comes off when its owner writes its contract in the
+# new form, GC's in the same commit as GC's record is re-made (Code #11, 2026-10-19).
+    "GSC: a contract that fails the conditions of Appendix D is not compiled"
+    "GSC: a contract with community roles is compiled"
+    "GSC: a join with no guarding role fails volition"
+    "GSC: a note nothing traces: seat and child keep traceable provenance"
+    "GSC: a seat atom in a child the role requires fails cohesion alone"
+    "GSC: a seat atom of no role of the schema fails cohesion, and seat traceable provenance"
+    "GSC: a seated role adding and deleting nothing is admitted in Appendix D"
+    "GSC: an atom added and deleted at a seated role is refused"
+    "GSC: and it compiles with the proviso on the state of the seated role that changes nothing"
+    "GSC: and seat and child keep traceable provenance"
+    "GSC: and seat is not rooted, which is no condition"
+    "GSC: and the contract fails traceable provenance, naming note"
+    "GSC: and the three conditions on the text are still met"
+    "GSC: currency is syntactically grassroots"
+    "GSC: federate compiles to the worked box of Appendix D"
+    "GSC: form forbids the seat it adds"
+    "GSC: form ranges over the extent of its party role"
+    "GSC: form's guard is a part of that extent larger than 0 of it"
+    "GSC: join prints a proviso line per role"
+    "GSC: join prints an assignment line per role"
+    "GSC: join prints its reach condition"
+    "GSC: join's guard is the union of two parts"
+    "GSC: leave_1 is guarded by a supermajority of the parent's assembly"
+    "GSC: leave_2 is guarded by a supermajority of the child's assembly"
+    "GSC: seat and child have traceable provenance"
+    "GSC: seat is rooted"
+    "GSC: the coin has traceable provenance"
+    "GSC: the community named without its decision: seat is not rooted"
+    "GSC: the currency compiles to four displays"
+    "GSC: the currency's contract, GC, is read from programs/currencies/coins/GC.glp"
+    "GSC: the federation compiles to five displays"
+    "GSC: the federation contract meets the conditions of Appendix D"
+    "GSC: the federation's contract, GFWC, is read from programs/federation/GFWC.glp"
+    "GSC: the swap compiles to the display of Appendix B.3"
+    "CVA compiler: the currency's platform, each part guarded by the people its schema-binding marks, is what the compiler prints"
+    "CVA compiler: no contract refused or missing"
+    "CVA currency: the program's output to its person is of the type of the views, a machine state, a list of the contract's atoms, and the persons the agent knows, and the notices (vGLP c44769f)"
+    "CVA currency: a notice where Tally closes an attempt the person proposed on a vote no, refused(Part, Q)"
+    "CVA currency: ... and where Yield or the agent's own Wound closes it, yielded(Part)"
+    "CVA currency: ... only for the agent's own attempt of a guarded part, closed by the dispatch"
+    "cascade gc: GC.md is what the tools print"
+    "cascade gc: GC.glp is what the tools print"
+    "cascade gc: verdict.txt is what the tools print"
+    "cascade gc: vmat.tex is what the tools print"
+    "cascade gc: platform.vglp is what the tools print"
+    "cascade gc: platform.glp is what the tools print"
+    "cascade gc: run.log is what the tools print"
+    "cascade gc: cascade.sh --check exits 0"
 )
 KR_CHECKS=0
 
@@ -6883,13 +6936,25 @@ if [ -z "$GSC_SUMMARY" ]; then
 else
     GSC_PASSED=$(printf '%s' "$GSC_SUMMARY" | awk '{print $2}')
     GSC_FAILED=$(printf '%s' "$GSC_SUMMARY" | awk '{print $4}')
-    PASS=$((PASS + GSC_PASSED))
-    FAIL=$((FAIL + GSC_FAILED))
-    if [ "$GSC_FAILED" -eq 0 ]; then
-        echo "  PASS: All $GSC_PASSED gsc checks passed"
-    else
-        printf '%s\n' "$GSC_RESULT" | grep -E '^  FAIL|^        ' | sed 's/^/  /'
-        echo "  FAIL: $GSC_FAILED of $((GSC_PASSED + GSC_FAILED)) gsc checks failed"
+    # Each of the script's checks is reported under its own name, "GSC: <name>",
+    # through _check_pass and _check_fail, so that a check another project must
+    # fix can stand in KNOWN_RED_CHECKS with its owner (Code #11, 2026-10-19).
+    # A failing check's detail lines are printed after it unless it is known red.
+    GSC_SEEN_P=0; GSC_SEEN_F=0; GSC_SHOW=no
+    while IFS= read -r gsc_line; do
+        case "$gsc_line" in
+            "  PASS  "*) GSC_SHOW=no; GSC_SEEN_P=$((GSC_SEEN_P + 1)); _check_pass "GSC: ${gsc_line#  PASS  }" ;;
+            "  FAIL  "*) GSC_SEEN_F=$((GSC_SEEN_F + 1))
+                         if _known_red_check "GSC: ${gsc_line#  FAIL  }"; then GSC_SHOW=no; else GSC_SHOW=yes; fi
+                         _check_fail "GSC: ${gsc_line#  FAIL  }" "programs/gsc/test_gsc.sh" ;;
+            "        "*) [ "$GSC_SHOW" = yes ] && printf '  %s\n' "$gsc_line" ;;
+            *) GSC_SHOW=no ;;
+        esac
+    done < <(printf '%s\n' "$GSC_RESULT")
+    # The lines counted must be the script's own totals, or a check went uncounted.
+    if [ "$GSC_SEEN_P" -ne "$GSC_PASSED" ] || [ "$GSC_SEEN_F" -ne "$GSC_FAILED" ]; then
+        echo "  FAIL: programs/gsc/test_gsc.sh reports $GSC_PASSED passed and $GSC_FAILED failed, but $GSC_SEEN_P PASS and $GSC_SEEN_F FAIL lines were read"
+        FAIL=$((FAIL + 1))
     fi
 fi
 
