@@ -16,8 +16,8 @@
 %% and is named by its index, role(1) the schema's first role; x, content, and
 %% n, a group's name, are speech-act variables, svar.  A group is named by its
 %% leader, the role a, and n: its community name <a>.n (GSC, Appendix D),
-%% and close takes the seated role (<a>.n)^member, every member of the group
-%% (GSC, Appendix D.4).  The groups follow CSSN's (programs/cssn/CSSN.glp),
+%% and close takes the listed role a[listed(*, n)], every member the leader
+%% lists (GSC, Appendix D.4).  The groups follow CSSN's (programs/cssn/CSSN.glp),
 %% without children and without items.
 %% ---------------------------------------------------------------------------
 
@@ -29,7 +29,8 @@ Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+            ; listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
@@ -93,16 +94,17 @@ contract_named(gsn,
     schema(leave, [svar(n)],
        [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
         rs(guarded,   [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-%%   close(a?, (<a>.n)^member ; n) :
+%%   close(a?, a[listed(*, n)] ; n) :
 %%       at a:  identity, +closed(n), -listed(a, n)
-%%       at (<a>.n)^member:  identity, -member(<a>.n)
-%%   The seated role is every member of the group, the leader among them, so
-%%   closing a group ends every membership in one act (Udi, 2026-10-19, to
-%%   GSC #4, on CSSN #6's request of 13:12 UTC; GSC, Appendix D.4).
+%%       at a[listed(*, n)]:  identity, -member(<a>.n)
+%%   The listed role is every member the leader lists, the leader among them,
+%%   so closing a group ends every membership in one act (Udi, 2026-10-19, to
+%%   GSC #4, on CSSN #6's request of 13:12 UTC and vGLP #15's question of
+%%   14:02 UTC; GSC, Appendix D.4).
     cschema(close, [svar(n)], [],
        [rs(guarded, [atom(closed, [svar(n)])],
                     [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []),
-        crs(seated(ext(own(1), n), member), unguarded,
+        crs(listed(1, listed, [svar(n)]), unguarded,
             [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
 %%   Ending the friendship of a member and the leader ends the membership
 %%   (CSSN #6's request, approved by Udi, 2026-10-19); no role guards drop.

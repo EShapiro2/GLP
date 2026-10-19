@@ -23,8 +23,8 @@
 %% 2026-10-19, to GSC #4).  A post and a delivery require that the member be
 %% the leader's friend, and drop ends the membership of a member who is not
 %% (CSSN #6's request, approved by Udi, 2026-10-19).  A group is named by its
-%% community name <a>.n (GSC, Appendix D), and close takes the seated role
-%% (<a>.n)^member, every member of the group (GSC, Appendix D.4).
+%% community name <a>.n (GSC, Appendix D), and close takes the listed role
+%% a[listed(*, n)], every member the leader lists (GSC, Appendix D.4).
 %% ---------------------------------------------------------------------------
 
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
@@ -35,7 +35,8 @@ Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+            ; listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
@@ -115,16 +116,17 @@ contract_named(gsnp,
     schema(leave, [svar(n)],
        [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
         rs(guarded,   [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-%%   close(a?, (<a>.n)^member ; n) :
+%%   close(a?, a[listed(*, n)] ; n) :
 %%       at a:  identity, +closed(n), -listed(a, n)
-%%       at (<a>.n)^member:  identity, -member(<a>.n)
-%%   The seated role is every member of the group, the leader among them, so
-%%   closing a group ends every membership in one act (Udi, 2026-10-19, to
-%%   GSC #4, on CSSN #6's request of 13:12 UTC; GSC, Appendix D.4).
+%%       at a[listed(*, n)]:  identity, -member(<a>.n)
+%%   The listed role is every member the leader lists, the leader among them,
+%%   so closing a group ends every membership in one act (Udi, 2026-10-19, to
+%%   GSC #4, on CSSN #6's request of 13:12 UTC and vGLP #15's question of
+%%   14:02 UTC; GSC, Appendix D.4).
     cschema(close, [svar(n)], [],
        [rs(guarded, [atom(closed, [svar(n)])],
                     [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []),
-        crs(seated(ext(own(1), n), member), unguarded,
+        crs(listed(1, listed, [svar(n)]), unguarded,
             [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
 %%   drop(a, q ; n) :
 %%       at a:  identity, not friend(q), -listed(q, n)
