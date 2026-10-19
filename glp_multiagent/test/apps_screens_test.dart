@@ -4,13 +4,15 @@
 ///
 /// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The app declares `Menu =::= social_menu.` and `Approval =::= approval_sentence.` (`programs/apps/<app>/self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  Every act of a person at a phone is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest; a scripted agent's acts are its scripted person's, as in the app's plays.  No term is hand-fed to the bridge or to the program.
 ///
-/// Each screen is the person's phone, 390 by 844 logical pixels, rendered by the widget itself (RepaintBoundary.toImage) at a device pixel ratio of 3, in the light theme.  The test font draws every glyph as a box, so the screens are set in Roboto, the Material font, with MaterialIcons, both loaded from the Flutter SDK's own copies (`bin/cache/artifacts/material_fonts`).  The PNG files are written only when the test runs with `--update-goldens`:
+/// The screens are set in Roboto, the Material font, with MaterialIcons, both loaded from the Flutter SDK's own copies (`bin/cache/artifacts/material_fonts`), in the light theme.  The scenario runs on two kinds of phone ([Screens]):
 ///
-///     flutter test --update-goldens test/apps_screens_test.dart
+/// - Here, under `flutter test`: the persons' phones side by side in the test's view, each 390 by 844 logical pixels, rendered by the widget itself (RepaintBoundary.toImage) at a device pixel ratio of 3.  It takes every act and checks every screen, and writes nothing into the tree.
+/// - On the iOS Simulator, an iPhone 16e, 390 by 844 points at 3 pixels a point: `integration_test/apps_screens_test.dart` plays this scenario with this file's [appsScreens], one person's phone on the screen at a time, and at each screen asks the host to take the simulator's screenshot, which the host frames as the phone and writes to `programs/apps/<app>/screens/` (`tool/sim_screens.sh`, `tool/sim_shot.py`).  Those are the PNG files of GAI's figures.  From `glp_multiagent/`:
 ///
-/// Without it the test takes every act and checks every screen, and writes nothing into the tree.
+///     bash tool/sim_screens.sh
 library;
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -43,9 +45,28 @@ const double _ratio = 3;
 /// The gap around each phone in the test's view.
 const double _gap = 8;
 
-/// Roboto and MaterialIcons, from the Flutter SDK's copies.
+/// The phones the scenario plays on, and the `programs/` tree it loads.
+class Screens {
+  /// The checkout's `programs/`.
+  final String programs;
+
+  /// The host's service that takes the simulator's screenshot, `http://127.0.0.1:<port>` (`tool/sim_shot.py`); null when the phones are drawn side by side in the test's own view.
+  final Uri? shots;
+
+  /// The phones side by side in the test's view (`flutter test`).
+  const Screens.flat(this.programs) : shots = null;
+
+  /// One phone at a time on the iOS Simulator's screen, each screen taken by the host ([shots]).
+  const Screens.simulator(this.programs, Uri this.shots);
+
+  bool get simulator => shots != null;
+}
+
+/// Roboto and MaterialIcons, from the Flutter SDK's copies: on the simulator the SDK the host passes (`--dart-define=FLUTTER_ROOT=...`, `tool/sim_screens.sh`), its app reading the Mac's filesystem.
 Future<void> _loadFonts() async {
+  const defined = String.fromEnvironment('FLUTTER_ROOT');
   final roots = [
+    if (defined.isNotEmpty) defined,
     if (Platform.environment['FLUTTER_ROOT'] case final String r) r,
     '/opt/homebrew/share/flutter',
   ];
@@ -161,6 +182,7 @@ class _Person {
 /// The persons of a run, each running the app's mini-app on their own phone, a conversation between each two of a pair: by default a chain, a conversation between each two next to each other in it: Alice and Bob, over one conversation; or Dan, Eve, Carol, Bob and Fay, over four.  An agent of the run may be scripted, its acts taken by the app's scripted person (`programs/apps/<app>/person.glp`) under its role and not by taps: in GAI's app Alf, Alice's AI agent, whose program takes its acts (GAI's paper, Section 3.1: "after that the AI agent acts on its own").  A scripted agent has no phone.
 class _Run {
   final WidgetTester tester;
+  final Screens screens;
   final String app;
   final GlpEngine engine;
   final PostedGoal play;
@@ -169,7 +191,11 @@ class _Run {
   /// The screen each scripted agent's person reports, by name: the stream of what it saw (`Seen`, `programs/apps/<app>/self.glp`).
   final Map<String, HeapCell> seen;
 
-  _Run._(this.tester, this.app, this.engine, this.play, this.persons,
+  /// On the simulator, the person whose phone is on the screen: every phone is built, one over another, and this one is drawn on top and takes the taps.
+  late _Person _front = persons.first;
+
+  _Run._(this.tester, this.screens, this.app, this.engine, this.play,
+      this.persons,
       [this.seen = const {}]);
 
   _Person get alice => persons[0];
@@ -178,20 +204,22 @@ class _Run {
   /// The person [name] of the run.
   _Person person(String name) => persons.singleWhere((p) => p.name == name);
 
-  static Future<_Run> start(WidgetTester tester, String app,
+  static Future<_Run> start(WidgetTester tester, Screens screens, String app,
       {List<String> chain = const ['alice', 'bob'],
       List<(String, String)>? pairs,
       Set<String> scripted = const {}}) async {
     await _loadFonts();
     final phones = [for (final p in chain) if (!scripted.contains(p)) p];
-    // Shadows drawn as shadows, not as the test's solid outlines; restored by [finish].
-    debugDisableShadows = false;
-    tester.view.physicalSize = Size(phones.length * (_phone.width + 2 * _gap),
-        _phone.height + 2 * _gap);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
+    if (!screens.simulator) {
+      // Shadows drawn as shadows, not as the test's solid outlines; restored by [finish].  The simulator's binding draws them already.
+      debugDisableShadows = false;
+      tester.view.physicalSize = Size(
+          phones.length * (_phone.width + 2 * _gap), _phone.height + 2 * _gap);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+    }
 
-    final programs = programsDir();
+    final programs = screens.programs;
     final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp');
     expect(engine.loadProgram('$programs/apps/$app'), isTrue,
         reason: 'programs/apps/$app does not load');
@@ -217,7 +245,7 @@ class _Run {
       for (var i = 0; i < chain.length; i++)
         if (!scripted.contains(chain[i])) 'G$i'
     ]);
-    final run = _Run._(tester, app, engine, play, [
+    final run = _Run._(tester, screens, app, engine, play, [
       for (var i = 0; i < chain.length; i++)
         if (!scripted.contains(chain[i]))
           _Person(chain[i], app, play.inputs['G$i']!, play.variables['D$i']!),
@@ -297,7 +325,7 @@ class _Run {
     await tester.pumpAndSettle();
   }
 
-  /// The phones side by side, each the person's agent surface on a screen of its own.
+  /// The phones: side by side, each the person's agent surface on a screen of its own; on the simulator, each the person's agent surface on the whole screen, one over another, the person [_front] on top.
   Widget _phones() => MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -309,7 +337,36 @@ class _Run {
                 style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white))),
-        home: ColoredBox(
+        home: screens.simulator ? _screen() : _side(),
+      );
+
+  /// On the simulator: every phone on the whole screen, [_front] last and so on top.
+  Widget _screen() => Stack(
+        fit: StackFit.expand,
+        children: [
+          for (final p in [
+            for (final q in persons)
+              if (q != _front) q,
+            _front
+          ])
+            RepaintBoundary(
+              key: p.shot,
+              child: AgentSurface(
+                  agentId: p.name, runtime: p.ui, muteNotices: true),
+            ),
+        ],
+      );
+
+  /// On the simulator, [p]'s phone brought to the screen, its state kept, before [p] acts or is shot.
+  Future<void> show(_Person p) async {
+    if (!screens.simulator || _front == p) return;
+    _front = p;
+    await tester.pumpWidget(_phones());
+    await tester.pumpAndSettle();
+  }
+
+  /// The phones side by side in the test's view.
+  Widget _side() => ColoredBox(
           color: const Color(0xFF2B2B33),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,8 +389,7 @@ class _Run {
                 ),
             ],
           ),
-        ),
-      );
+        );
 
   // === The persons' acts on their tabs ======================================
 
@@ -370,6 +426,7 @@ class _Run {
 
   /// [p]'s open tab scrolled until [f] is built, the list building only what is near the screen.
   Future<void> reveal(_Person p, Finder f) async {
+    await show(p);
     if (f.evaluate().isNotEmpty) return;
     await tester.scrollUntilVisible(f, 120,
         scrollable:
@@ -445,6 +502,7 @@ class _Run {
 
   /// [p]'s open tab scrolled to its top.
   Future<void> top(_Person p) async {
+    await show(p);
     FocusManager.instance.primaryFocus?.unfocus();
     final s = tester.state<ScrollableState>(
         find.descendant(of: _list(p), matching: find.byType(Scrollable)).first);
@@ -452,10 +510,12 @@ class _Run {
     await tester.pumpAndSettle();
   }
 
-  /// [p]'s phone as it stands, written to [file] in the app's screens.
+  /// [p]'s phone as it stands, the screen [file] of the app's screens: on the simulator taken by the host, which writes it to `programs/apps/<app>/screens/[file]`; here rendered, and written nowhere.
   Future<void> shoot(_Person p, String file) async {
+    await show(p);
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
+    if (screens.simulator) return _take(file);
     final boundary =
         p.shot.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     final png = await tester.runAsync(() async {
@@ -465,13 +525,34 @@ class _Run {
       return data!.buffer.asUint8List();
     });
     expect(png, isNotNull);
-    if (autoUpdateGoldenFiles) {
-      final dir = Directory('${programsDir()}/apps/$app/screens')
-        ..createSync(recursive: true);
-      File('${dir.path}/$file').writeAsBytesSync(png!);
-      // ignore: avoid_print
-      print('wrote programs/apps/$app/screens/$file');
+  }
+
+  /// The simulator's screen taken by the host as [file] of the app's screens, once the keyboard a field raised has left it.
+  Future<void> _take(String file) async {
+    for (var i = 0; i < 50 && tester.view.viewInsets.bottom > 0; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pumpAndSettle();
     }
+    expect(tester.view.viewInsets.bottom, 0,
+        reason: 'the keyboard is still on the screen');
+    final (status, body) = (await tester.runAsync(() async {
+      final client = HttpClient();
+      try {
+        final request = await client.getUrl(screens.shots!.replace(
+            path: '/shot', queryParameters: {'app': app, 'file': file}));
+        final response = await request.close();
+        return (
+          response.statusCode,
+          await response.transform(utf8.decoder).join()
+        );
+      } finally {
+        client.close();
+      }
+    }))!;
+    expect(status, HttpStatus.ok, reason: body);
+    // ignore: avoid_print
+    print(body);
   }
 
   /// [p] and [q] establish their identities (GSG:1) and ask to know each other, each on their Friends tab: Join, then the other's key and Add.
@@ -511,15 +592,21 @@ class _Run {
   }
 
   /// The test's painting settings restored, as the test framework requires.
-  void finish() => debugDisableShadows = true;
+  void finish() {
+    if (!screens.simulator) debugDisableShadows = true;
+  }
 }
 
-void main() {
+/// The scenario on the phones side by side in the test's view, reading the checkout's `programs/`.
+void main() => appsScreens(Screens.flat(programsDir()));
+
+/// The scenario, the four apps' screens in their figures' order, on [screens]: here, and on the simulator (`integration_test/apps_screens_test.dart`).
+void appsScreens(Screens screens) {
   testWidgets(
       'GSG\'s app on two phones: Bob asked to be Alice\'s friend; Alice\'s '
       'Friends with Bob her friend; and after Bob ends the friendship',
       (tester) async {
-    final run = await _Run.start(tester, 'gsg');
+    final run = await _Run.start(tester, screens, 'gsg');
     final alice = run.alice;
     final bob = run.bob;
 
@@ -580,7 +667,7 @@ void main() {
       'GSN\'s app on two phones: Bob\'s chat with Alice\'s message, Bob '
       'asked to join the group friends, and his view of the group with his '
       'message delivered in it', (tester) async {
-    final run = await _Run.start(tester, 'gsn');
+    final run = await _Run.start(tester, screens, 'gsn');
     final alice = run.alice;
     final bob = run.bob;
     // The group friends, led by Alice: its name, a speech act of hers, and its community name, <alice>.friends, which a member atom holds, one argument (programs/apps/gsn/platform.vglp, Atom and CName).
@@ -684,7 +771,7 @@ void main() {
       'GSNP\'s app on five phones, the play of GAI\'s GSNP figure: Bob\'s '
       'chat with Carol, the item with its author and who forwarded it, and '
       'Forward; and the warranty question once he picks Fay', (tester) async {
-    final run = await _Run.start(tester, 'gsnp',
+    final run = await _Run.start(tester, screens, 'gsnp',
         chain: const ['dan', 'eve', 'carol', 'bob', 'fay']);
     final dan = run.person('dan');
     final eve = run.person('eve');
@@ -775,7 +862,7 @@ void main() {
       'befriending Bob; and Bob\'s chat with Alf, its item naming its '
       'principal and its developer', (tester) async {
     // Alice and Bob, persons, and Alf, Alice's AI agent, a conversation between each two (GAI's paper, Section 3.2, the example and Table "The components that change in the example"), on GAI's contract (programs/gai/GAI.glp).  The test plays Table 2 exactly, acting for Alice and Bob at their phones (GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 3); Alf is scripted (programs/apps/gai/person.glp), its script the AI agent's program, which takes its acts: once entered, it proposes to befriend Bob with its attestation, and once his friend it signs the item "Today's summary of the news" (GSNP:1) and sends it to him by message (GSN:1).  The code of Alf is 'The code of Alf' signed by its developer acme_ltd, drawn Acme Ltd (the same, item 1).
-    final run = await _Run.start(tester, 'gai',
+    final run = await _Run.start(tester, screens, 'gai',
         chain: const ['alice', 'alf', 'bob'],
         pairs: const [('alice', 'alf'), ('alf', 'bob'), ('bob', 'alice')],
         scripted: const {'alf'});
