@@ -73,7 +73,14 @@
 /// forms" (vGLP 92e6d3b, Section 6.2, the paragraph after Proposition
 /// "Default Widgets"; Section 6.3, the type `Widget`).  The family looks `W`
 /// up in [ConstructFamily.named], the grassroots app's in
-/// `named_widgets.dart`, and hands it `D` with the view.  A `W` the family
+/// `named_widgets.dart`, and hands it `D` with the view, and with the last
+/// value drawn on construct 0, the view of construct 0's latest draw: "A
+/// declared widget is drawn also with the last value drawn on construct 0,
+/// and is drawn again when that value changes, so that a request form can
+/// show the state the program last wrote to its person" (vGLP e924f73,
+/// Section 6.2, the paragraph after Proposition "Default Widgets").  It is
+/// drawn again whenever construct 0 is, the screen being drawn again on every
+/// draw the bridge reads (agent_surface.dart).  A `W` the family
 /// lacks is drawn by `D`, the default widget of its type, with `W` named in
 /// a small note above it; so is a declared widget in the editor of a form
 /// the person writes, where a named widget draws no field.  An unknown
@@ -95,27 +102,53 @@ import 'package:flutter/material.dart';
 
 import 'bridge.dart';
 import 'named_widgets.dart';
+import 'tab_screen.dart';
 import 'term.dart';
 
 /// A widget a declaration names, `named(W, D)`: drawn over the construct's
 /// view at position [at], with [dflt], `D`, the default widget of its type,
-/// from which it reads the type's constructors, its input granted through
-/// [grant] at the question's path.
-typedef NamedWidgetBuilder = Widget Function(BuildContext context,
-    OpenConstruct construct, GTerm dflt, GTerm view, List<int> at,
-    void Function(GTerm path, GTerm raw) grant);
+/// from which it reads the type's constructors, and with [output], the last
+/// value drawn on construct 0, the view of its latest draw, or null where
+/// construct 0 has not been drawn; its input granted through [grant] at the
+/// question's path.
+typedef NamedWidgetBuilder = Widget Function(
+    BuildContext context,
+    OpenConstruct construct,
+    GTerm dflt,
+    GTerm view,
+    List<int> at,
+    void Function(GTerm path, GTerm raw) grant,
+    GTerm? output);
 
-/// A construct family: the default widgets, drawn below, and the named
-/// widgets a declaration may choose among.
+/// The layout of the open constructs of a screen, where a family has one for
+/// them, and null where it draws them as a list: "A question's type fixes a
+/// construct's semantic content ... and nothing of its layout" (vGLP, Remark
+/// "Construct Families").  [grant] grants the person's raw input at the
+/// question at a path of construct `Id`.
+typedef ScreenLayout = Widget? Function(
+    List<OpenConstruct> constructs,
+    ConstructFamily family,
+    void Function(int id, GTerm path, GTerm raw) grant);
+
+/// A construct family: the default widgets, drawn below, the named widgets a
+/// declaration may choose among, and the layout of a screen's constructs.
 class ConstructFamily {
   /// The Dart widget each declared widget name names.
   final Map<String, NamedWidgetBuilder> named;
 
-  const ConstructFamily({this.named = const {}});
+  /// The screen's layout of its constructs, where the family has one for
+  /// them; null, or a null layout, draws them as a list, the questions first
+  /// and construct 0 under them (agent_surface.dart).
+  final ScreenLayout? screen;
 
-  /// The grassroots app's family: the default widgets, and the named widget `approval_sentence`, the approval question of a canonical CVA platform as one sentence for the attempt's class and two buttons labelled for it (named_widgets.dart).
-  static const ConstructFamily standard = ConstructFamily(
-      named: {approvalSentenceName: approvalSentence});
+  const ConstructFamily({this.named = const {}, this.screen});
+
+  /// The grassroots app's family: the default widgets; the named widgets `approval_sentence`, the approval question of a canonical CVA platform as one sentence for the attempt's class and two buttons labelled for it, `last_state`, the last state a canonical platform's agent wrote, and `social_menu`, the request question of the apps of GSC's contracts drawn in their tabs (named_widgets.dart); and the screen of tabs, Friends and Groups, where a construct is drawn by `last_state` or `social_menu` (tab_screen.dart).
+  static const ConstructFamily standard = ConstructFamily(named: {
+    approvalSentenceName: approvalSentence,
+    lastStateName: lastState,
+    socialMenuName: socialMenu,
+  }, screen: tabbedScreen);
 }
 
 /// The key of construct [id] on screen.
@@ -159,11 +192,22 @@ class ConstructView extends StatefulWidget {
   /// The person's raw input at the question at a path of the construct.
   final void Function(GTerm path, GTerm raw) grant;
 
+  /// The last value drawn on construct 0, the view of its latest draw, with
+  /// which a declared widget is drawn; null where construct 0 has not been
+  /// drawn.
+  final GTerm? output;
+
+  /// Whether the construct is drawn on a card of its own; a layout that
+  /// draws it as the body of a tab draws it without one (tab_screen.dart).
+  final bool card;
+
   const ConstructView({
     super.key,
     required this.construct,
     required this.grant,
     this.family = ConstructFamily.standard,
+    this.output,
+    this.card = true,
   });
 
   @override
@@ -201,6 +245,12 @@ class _ConstructViewState extends State<ConstructView> {
   @override
   Widget build(BuildContext context) {
     final c = widget.construct;
+    if (!widget.card) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: _node(c.widget, c.view, const []),
+      );
+    }
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       elevation: 1,
@@ -782,8 +832,9 @@ class _ConstructViewState extends State<ConstructView> {
 
   /// A declared widget, `named(W, D)`, over the view [v] at [at]: the
   /// family's widget `W`, handed `D`, the default widget of its type, with
-  /// the view; where the family lacks `W`, [byDefault] draws it by `D`, with
-  /// `W` named in a small note above it.
+  /// the view and the last value drawn on construct 0; where the family lacks
+  /// `W`, [byDefault] draws it by `D`, with `W` named in a small note above
+  /// it.
   Widget _named(GTerm w, GTerm v, List<int> at,
       Widget Function(GTerm d) byDefault) {
     final (name, d) = namedWidget(w)!;
@@ -791,7 +842,8 @@ class _ConstructViewState extends State<ConstructView> {
     if (b != null) {
       return KeyedSubtree(
           key: nodeKey(_id, name, at),
-          child: b(context, widget.construct, d, v, at, widget.grant));
+          child: b(context, widget.construct, d, v, at, widget.grant,
+              widget.output));
     }
     return _keyed(
         'named',
