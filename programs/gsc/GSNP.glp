@@ -108,8 +108,8 @@ contract_named(gsnp,
         rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [],
                     [atom(identity, []), atom(friend, [role(1)])],
                     [atom(member, [nterm(ext(own(1), n))])])]),
-%% GSN:4, Leaving: a member leaves; the leader leaving ends the group; ending
-%% the friendship of a member and the leader ends the membership.
+%% GSN:4, Leaving: a member leaves; the leader leaving ends the group; a
+%% member who is not a friend of the leader is removed.
 %%   leave(a, q? ; n) :
 %%       at a:  identity, -listed(q, n)
 %%       at q:  identity, -member(<a>.n)

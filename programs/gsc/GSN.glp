@@ -106,7 +106,7 @@ contract_named(gsn,
                     [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []),
         crs(listed(1, listed, [svar(n)]), unguarded,
             [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-%%   Ending the friendship of a member and the leader ends the membership
+%%   A member of a group who is not a friend of its leader is removed from it
 %%   (CSSN #6's request, approved by Udi, 2026-10-19); no role guards drop.
 %%   drop(a, q ; n) :
 %%       at a:  identity, not friend(q), -listed(q, n)
