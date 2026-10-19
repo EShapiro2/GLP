@@ -55,8 +55,9 @@ all_preds(C, R?) :- ground(C?) |
     atoms_preds(As?, [], P),
     preds_dedup(P?, R).
 
-% The role predicates of C: the predicate of every seated and constituent role
-% of every schema (definition:cohesive).
+% The role predicates of C: the predicate of every seated, constituent and
+% listed role of every schema (definition:cohesive; definition:role at GSC
+% 8064cfb).
 procedure roles_role_preds(RoleSpecs?, Preds?, Preds).
 roles_role_preds([], T, T?).
 roles_role_preds([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |

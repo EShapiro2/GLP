@@ -14,21 +14,23 @@
 % (Appendix D, after its Definition Volition), so the third conjunct is decided
 % by community.glp's volition_faults, as Appendix D's volition is.
 %
-% A contract written in the language of Appendix D -- with a seated or a
-% constituent role, a reach condition or a name term -- that is agent-named
-% (Appendix D.4, definition:agent-named) is decided by the four clauses of
+% A contract written in the language of Appendix D -- with a seated, a
+% constituent or a listed role, a reach condition or a name term -- that is
+% agent-named (Appendix D.4, definition:agent-named: every role an agent, a
+% seated or a listed role, GSC 8064cfb) is decided by the four clauses of
 % definition:sg-agent-named: an unobstructed introductory act with agent
 % roles and no name term, the schemas of arity one of clause 1 of
-% def:unobstructed having an agent role and no name term; no seated role
-% adding an atom of a predicate the introductory act forbids at a role;
-% traceable provenance of the set of predicates occurring in it, each atom
-% psi required at an agent role; and a connected role graph or a guarding
-% agent role in every connected component of it.  The faults of the four are
-% reported together, in that order, the first two as the first conjunct of
-% def:syntactically-grassroots is; a contract meeting them is
-% syntactically_grassroots_with_seated_roles, and the protocol realising it
-% is volitionally grassroots (Theorem "Grassroots realisation with seated
-% roles").  When its first two clauses fail and the other two hold, Appendix
+% def:unobstructed having an agent role and no name term; no seated or
+% listed role adding an atom of a predicate the introductory act forbids at
+% a role; traceable provenance of the set of predicates occurring in it,
+% each atom psi required at an agent role; and a connected role graph or a
+% guarding agent role in every connected component of it.  The faults of the
+% four are reported together, in that order, the first two as the first
+% conjunct of def:syntactically-grassroots is; a contract meeting them is
+% syntactically_grassroots_with_seated_and_listed_roles, and the protocol
+% realising it is volitionally grassroots (Theorem "Grassroots realisation
+% with seated and listed roles").  When its first two clauses fail and the
+% other two hold, Appendix
 % F is tried: an agent-named contract with an introduction with wards that
 % meets def:sg-wards (GSC 503db66) is
 % syntactically_grassroots_with_wards(Act, Marks, Guardianships, Relays,
@@ -161,15 +163,15 @@ check_appendix(C, V?) :- ground(C?) |
 % with wards, and the protocol realising it is volitionally grassroots
 % (Theorem "Grassroots realisation with wards and seated roles", GSC
 % 503db66); clause 1 of def:sg-wards, on the introductory act, the relay
-% acts and the schemas of arity one, and its clause 2, on the seated roles,
-% are asked in wards.glp's search, its clause 3 here.
+% acts and the schemas of arity one, and its clause 2, on the seated and
+% listed roles, are asked in wards.glp's search, its clause 3 here.
 procedure seated_wards1(Wards?, Faults?, Verdict).
 seated_wards1(introduction_with_wards(Nm, M, Gs, Rs, Lv), _,
               syntactically_grassroots_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
 seated_wards1(no_introduction_with_wards, F, not_grassroots(F?)).
 
 procedure seated_verdict1(Faults?, Faults?, Contract?, Preds?, Verdict).
-seated_verdict1([], [], _, _, syntactically_grassroots_with_seated_roles).
+seated_verdict1([], [], _, _, syntactically_grassroots_with_seated_and_listed_roles).
 seated_verdict1([], [F|Fs], _, _, not_grassroots([F?|Fs?])).
 seated_verdict1([F|Fs], [], C, Rf, V?) :-
     ground(F?), ground(Fs?), ground(C?), ground(Rf?) |
@@ -459,6 +461,52 @@ sgn_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     sgn_schemas(Ss?, F2),
     faults_app(F1?, F2?, R).
 
+% --- a listed role (Appendix D, Definition Role, GSC 8064cfb) --------------
+% A listed role pi[rho(*, u_2, ..., u_r)] is of an agent role pi of its
+% schema; listed(I, Rho, Args) whose role I is not an agent role of the
+% schema is a fault listed_base(Schema, Role), Role the listed role.  Its
+% arguments u_2, ..., u_r are arguments of the schema, and a signed term
+% occurs only in an atom marked + (Definition Act schema), so a signed term
+% among them is a fault listed_signed(Schema, Role).
+
+procedure listed_base_fault(Ans?, Constant?, Integer?, Faults?, Faults).
+listed_base_fault(yes, _, _, T, T?).
+listed_base_fault(no, Nm, J, T, [listed_base(Nm?, J?)|T?]).
+
+procedure listed_signed_fault(Args?, Constant?, Integer?, Faults?, Faults).
+listed_signed_fault([], _, _, T, T?).
+listed_signed_fault([_|_], Nm, J, T, [listed_signed(Nm?, J?)|T?]).
+
+procedure listed_role_faults(RoleSpec?, Integer?, RoleSpecs?, Constant?, Faults?, Faults).
+listed_role_faults(crs(listed(I, _, As), _, _, _, _, _), J, Rs, Nm, T, R?) :-
+    integer(I?), ground(As?), integer(J?), ground(Rs?), ground(Nm?), ground(T?) |
+    base_agent_role(b_role(I?), Rs?, A),
+    args_sgns(As?, Ss),
+    listed_signed_fault(Ss?, Nm?, J?, T?, R1),
+    listed_base_fault(A?, Nm?, J?, R1?, R).
+listed_role_faults(RS, _, _, _, T, T?) :- otherwise, ground(RS?) | true.
+
+procedure listed_roles(RoleSpecs?, Integer?, RoleSpecs?, Constant?, Faults).
+listed_roles([], _, _, _, []).
+listed_roles([RS|Rs], J, All, Nm, R?) :-
+    ground(RS?), ground(Rs?), integer(J?), ground(All?), ground(Nm?) |
+    J1 := J? + 1,
+    listed_roles(Rs?, J1?, All?, Nm?, R1),
+    listed_role_faults(RS?, J?, All?, Nm?, R1?, R).
+
+procedure listed_schema1(RoleSpecs?, Constant?, Faults).
+listed_schema1(Rs, Nm, R?) :- ground(Rs?), ground(Nm?) |
+    listed_roles(Rs?, 1, Rs?, Nm?, R).
+
+procedure listed_schemas(Contract?, Faults).
+listed_schemas([], []).
+listed_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
+    sch_name(S?, Nm),
+    sch_roles(S?, Rs),
+    listed_schema1(Rs?, Nm?, F1),
+    listed_schemas(Ss?, F2),
+    faults_app(F1?, F2?, R).
+
 % --- the head of a schema (def:schema; Appendix D, Definition Act schema) ---
 % A schema lists its variables x_1, ..., x_m in its head, distinct agent and
 % speech-act variables, and its atoms are over its roles, those variables
@@ -517,7 +565,9 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     faults_app(F1?, F2?, R).
 
 % A malformed contract is refused; a contract that is not is decided by
-% Section 3 or by Appendix D, according to its roles.
+% Section 3 or by Appendix D, according to its roles.  The faults are given
+% in the order: the head, the listed roles, the form of a schema, the
+% reflexive predicates, the signed terms.
 procedure check_formed(Faults?, Ans?, Contract?, Preds?, Verdict).
 check_formed([], A, C, Rf, V?) :- ground(A?), ground(C?), ground(Rf?) |
     check1(A?, C?, Rf?, V).
@@ -530,8 +580,10 @@ check_decl(C, Rf, V?) :- ground(C?), ground(Rf?) |
     refl_schemas(C?, Rf?, M1),
     sgn_schemas(C?, M2),
     head_schemas(C?, MH),
+    listed_schemas(C?, ML),
     faults_app(M1?, M2?, M12),
-    faults_app(MH?, M0?, MH0),
+    faults_app(ML?, M0?, ML0),
+    faults_app(MH?, ML0?, MH0),
     faults_app(MH0?, M12?, M),
     check_formed(M?, A?, C?, Rf?, V).
 
