@@ -10,6 +10,6 @@ flutter test --update-goldens test/apps_screens_test.dart
 
 | File | What it shows |
 |---|---|
-| `gai-a-bob-chat-alf.png` | Bob's chat with Alf, Alice's AI agent: the item "Today's summary of the news" with "Author: Alf, an AI agent of Alice" and "via Alf", and Forward under it. |
+| `gai-a-bob-chat-alf.png` | Bob's chat with Alf, Alice's AI agent: the item "Today's summary of the news" with "Author: Alf, an AI agent of Alice", Forward under it, and the field Message with Send. |
 
-Alf sends the item to Bob by forwarding it, GAI's contract having no message, and a forward signs the item again (`forward(p?, q ; x)` adds `item(sgn(x, p))` at `q`, `programs/gai/GAI.glp`), so Bob holds it signed by Alf and signed again by Alf, and the item is drawn, as GSNP's are, with "via Alf".
+Alf sends the item to Bob by message (`message(p?, q ; x)` adds `item(x)` at `q`, `programs/gai/GAI.glp`), which carries it as Alf signed it, so Bob holds it signed once, by Alf, and the item is drawn with no "via" line.  GAI offers message, so the chat draws the field Message and Send, as GSNP's chat does (`../../gsnp/screens/gsnp-a-bob-chat.png`).
