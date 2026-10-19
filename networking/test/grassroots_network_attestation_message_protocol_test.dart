@@ -131,11 +131,10 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async =>
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async =>
       GrassrootsIdentity.create(
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
-        nickname: name,
       );
 
   Future<GrassrootsNetwork> startNode(
@@ -194,8 +193,8 @@ void main() {
     final calleeAttestation =
         _LargeAttestation(offers: calleeOffers, identity: callerIdentity);
 
-    final callerId = await identityFromSeed(0x91, 'caller');
-    final calleeId = await identityFromSeed(0x92, 'callee');
+    final callerId = await identityFromSeed(0x91);
+    final calleeId = await identityFromSeed(0x92);
     final caller = await startNode(callerId, callerAttestation);
     final callee = await startNode(calleeId, calleeAttestation);
     addTearDown(() async {
@@ -237,8 +236,8 @@ void main() {
       identity: callerIdentity,
     );
 
-    final callerId = await identityFromSeed(0x93, 'caller');
-    final calleeId = await identityFromSeed(0x94, 'callee');
+    final callerId = await identityFromSeed(0x93);
+    final calleeId = await identityFromSeed(0x94);
     final caller = await startNode(callerId, callerAttestation);
     final callee = await startNode(calleeId, calleeAttestation);
     final calleeAddress = await listeningAddress(callee);
@@ -291,8 +290,8 @@ void main() {
       identity: callerIdentity,
     );
 
-    final callerId = await identityFromSeed(0x95, 'caller');
-    final calleeId = await identityFromSeed(0x96, 'callee');
+    final callerId = await identityFromSeed(0x95);
+    final calleeId = await identityFromSeed(0x96);
     final caller = await startNode(callerId, callerAttestation);
     final callee = await startNode(calleeId, calleeAttestation);
     final calleeAddress = await listeningAddress(callee);

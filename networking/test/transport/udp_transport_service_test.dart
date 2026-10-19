@@ -18,9 +18,9 @@ import '../helpers/sodium_test_bootstrap.dart';
 /// The IP carrier of the shared message transport (spec §Message Transport,
 /// §IP Connection): datagrams, no stream, no UDX. This exercises the socket
 /// lifecycle, path association, and one-datagram-per-packet send/receive.
-Future<GrassrootsIdentity> _createTestIdentity(String nickname) async {
+Future<GrassrootsIdentity> _createTestIdentity() async {
   final keyPair = await Ed25519().newKeyPair();
-  return GrassrootsIdentity.create(keyPair: keyPair, nickname: nickname);
+  return GrassrootsIdentity.create(keyPair: keyPair);
 }
 
 Store<AppState> _createTestStore() =>
@@ -48,7 +48,7 @@ void main() {
     late ProtocolHandler protocolHandler;
 
     setUp(() async {
-      identity = await _createTestIdentity('TestPeer');
+      identity = await _createTestIdentity();
       store = _createTestStore();
       protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
     });
@@ -168,7 +168,7 @@ void main() {
       test('one framed packet rides one datagram, end to end', () async {
         final a = build();
         final b = UdpTransportService(
-          identity: await _createTestIdentity('Peer B'),
+          identity: await _createTestIdentity(),
           store: _createTestStore(),
           protocolHandler: protocolHandler,
         );

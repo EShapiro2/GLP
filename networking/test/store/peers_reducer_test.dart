@@ -1074,7 +1074,7 @@ void main() {
     test('does NOT mutate connectionState or BLE IDs of protected peers', () {
       // Strict-projection contract: timer-driven reducers may not flip
       // connectionState or clear BLE device IDs. Those are exclusively
-      // driven by plugin events (BLE) and UDX events (UDP). The stale
+      // driven by plugin events (BLE) and UDP path events (UDP). The stale
       // reducer's only job is bounding memory by removing unprotected
       // peers we haven't heard from; known peers (GLP-supplied keys) are
       // passed as the protected set.
@@ -1131,9 +1131,10 @@ void main() {
 
     test('removes stale unprotected peers regardless of connectionState', () {
       // The reducer doesn't gate on connectionState — that field is
-      // plugin-/UDX-driven, not timer-driven. Unprotected stale peers are
-      // removed for memory pressure whether they read as connected or
-      // disconnected at the moment the timer fires.
+      // driven by BLE plugin and UDP path events, not by a timer.
+      // Unprotected stale peers are removed for memory pressure whether
+      // they read as connected or disconnected at the moment the timer
+      // fires.
       final pubkey = _testPubkey(1);
       final hex = _pubkeyHex(pubkey);
       final now = DateTime.now();

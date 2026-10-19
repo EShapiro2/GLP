@@ -3913,6 +3913,7 @@ check_not "CVA nudge: no vote no for contention" "vote(attempt([a-z]*, [0-9]*, [
 check "CVA nudge: alice's nudge committed at both" "sent(alice, bob, outcome(attempt(alice, 2, 2, nudge(alice, bob)), commit))" "$cva_nudge"
 check "CVA nudge: bob retries, his attempt keeping the wounded one's rank 2, and it commits at both" "sent(bob, alice, outcome(attempt(bob, 3, 2, nudge(bob, alice)), commit))" "$cva_nudge"
 check_not "CVA nudge: nothing aborted for ever: no third attempt at either nudge" "attempt(alice, 3, [0-9]*, nudge\|attempt(bob, 4, [0-9]*, nudge" "$cva_nudge"
+check_not "CVA nudge: befriend and nudge, binary, introduce no one at their commits (vGLP e2bc4f4, Definition \"Deciding\", Commit)" "intro(" "$cva_nudge"
 
 # vGLP's contract introduce (programs/vglp/cva/contracts.glp): befriend and a
 # three-party introduce, guarded at every role (vGLP's 2026-10-11 22:59 UTC,
@@ -3943,6 +3944,17 @@ check "CVA introduce: ... alice's screen: the notice refused(introduce(alice, bo
 check "CVA introduce: ... and tells bob commit" "sent(alice, bob, outcome(attempt(alice, 4, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
 check "CVA introduce: ... and carol" "sent(alice, carol, outcome(attempt(alice, 4, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
 check_not "CVA introduce: no later attempt of hers" "attempt(alice, [5-9], [0-9]*, introduce(alice, bob, carol))" "$cva_intro"
+# Commit introduces the other participants of its attempt to each other, once
+# per pair (vGLP e2bc4f4, Definition "Deciding", Commit): only alice, of the
+# three guards, knows every participant (Definition "Holds, For, Connected,
+# Unobstructed, Steady": "one of its guards, knows every other participant"),
+# and her Commit introduces bob and carol, who come to know each other by the
+# ihellos they exchange.
+check "CVA introduce: ... alice's Commit introduces bob and carol to each other, after the outcomes: intro(carol) to bob and intro(bob) to carol" "sent(alice, carol, outcome(attempt(alice, 4, 4, introduce(alice, bob, carol)), commit)), intro(alice, bob, carol), intro(alice, carol, bob) |" "$cva_intro"
+check "CVA introduce: ... bob, who knew alice alone, comes to know carol" "B = \[.*view(\[friend(carol), friend(alice)\], \[alice\]), view(\[friend(carol), friend(alice)\], \[alice, carol\]) |" "$cva_intro"
+check "CVA introduce: ... and carol, who knew alice alone, bob" "C = \[.*view(\[friend(bob), friend(alice)\], \[alice\]), view(\[friend(bob), friend(alice)\], \[alice, bob\]) |" "$cva_intro"
+check_not "CVA introduce: the befriendings, binary, introduce no one: no introduction before attempt 4 commits" "intro([a-z]*, [a-z]*, [a-z]*).*outcome(attempt(alice, 4, 4" "$cva_intro"
+check_not "CVA introduce: ... and the pair is introduced once: no third introduction" "intro([a-z]*, [a-z]*, [a-z]*).*intro([a-z]*, [a-z]*, [a-z]*).*intro([a-z]*, [a-z]*, [a-z]*)" "$cva_intro"
 
 # vGLP's contract gnudge (programs/vglp/cva/contracts.glp): nudge with a
 # second schema g, nudge(a, b) and g(b?, a) determining the same transactions,
@@ -4004,11 +4016,23 @@ HEREDOC
 check "CVA childsafe: alice, knowing carol and bob, comes to know dave by her request and his, proposes cbefriend, attempt 3, and sees it approved" "A = \[.*view(\[friend(bob), child(carol)\], \[bob, carol\]), view(\[friend(bob), child(carol)\], \[bob, carol, dave\]), view(\[approved(carol, dave), friend(bob), child(carol)\], \[bob, carol, dave\]) |" "$cva_cs"
 check "CVA childsafe: ... its start told to carol" "sent(alice, carol, start(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob))))" "$cva_cs"
 check "CVA childsafe: dave, knowing bob, comes to know alice, and is asked" "D = \[view(\[\], \[\]), view(\[\], \[bob\]), .*view(\[parent(bob)\], \[alice, bob\]), gave(cbefriend(carol, dave, alice, bob), yes)" "$cva_cs"
-check_not "CVA childsafe: no seek and no introduction" "seek(\|refer(\|intro(" "$cva_cs"
+check_not "CVA childsafe: no seek and no refer" "seek(\|refer(" "$cva_cs"
 check "CVA childsafe: the three yeses, carol's, dave's and bob's" "sent(carol, alice, vote(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), yes)), sent(dave, alice, vote(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), yes)), sent(bob, alice, vote(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), yes))" "$cva_cs"
 check "CVA childsafe: ... and it commits at carol" "sent(alice, carol, outcome(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), commit))" "$cva_cs"
 check "CVA childsafe: ... at dave" "sent(alice, dave, outcome(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), commit))" "$cva_cs"
 check "CVA childsafe: ... and at bob" "sent(alice, bob, outcome(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), commit))" "$cva_cs"
+# Commit introduces the other participants of its attempt to each other, once
+# per pair (vGLP e2bc4f4, Definition "Deciding", Commit): only alice, of the
+# four guards, knows every participant (Definition "Holds, For, Connected,
+# Unobstructed, Steady"), carol knowing alice alone, and the attempt commits;
+# alice's Commit introduces every two of bob, carol and dave, bob and dave
+# knowing each other already, and each comes to know the others (CSSN's
+# child_befriend(carol, dave, alice, bob), CSSN to vGLP, 2026-10-19 11:21 UTC).
+check "CVA childsafe: alice's Commit introduces every two of bob, carol and dave to each other, once per pair, after the outcomes" "sent(alice, bob, outcome(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), commit)), intro(alice, bob, carol), intro(alice, carol, bob), intro(alice, bob, dave), intro(alice, dave, bob), intro(alice, carol, dave), intro(alice, dave, carol) |" "$cva_cs"
+check_not "CVA childsafe: the enrolments and the befriending, binary, introduce no one: no introduction before cbefriend commits" "intro([a-z]*, [a-z]*, [a-z]*).*outcome(attempt(alice, 3, 3, cbefriend" "$cva_cs"
+check "CVA childsafe: carol, who knew alice alone, comes to know bob and dave" "C = \[.*view(\[friend(dave), parent(alice)\], \[alice\]), .*view(\[friend(dave), parent(alice)\], \[alice, bob, dave\]) |" "$cva_cs"
+check "CVA childsafe: ... dave comes to know carol" "D = \[.*view(\[friend(carol), parent(bob)\], \[alice, bob\]), view(\[friend(carol), parent(bob)\], \[alice, bob, carol\]) |" "$cva_cs"
+check "CVA childsafe: ... and bob carol" "B = \[.*view(\[approved(dave, carol), friend(alice), child(dave)\], \[alice, dave\]), view(\[approved(dave, carol), friend(alice), child(dave)\], \[alice, carol, dave\]) |" "$cva_cs"
 
 # vGLP's contract link (programs/vglp/cva/contracts.glp): befriend and a
 # three-party link guarded at its initiator alone (vGLP 2026-10-13 17:53 UTC,
@@ -4185,8 +4209,9 @@ HEREDOC
 check "CVA groups: alice requests close(alice, n), and her agent proposes close(alice, [alice, bob, carol], n), the people she lists, its start told to bob and carol" "sent(alice, bob, start(attempt(alice, 6, 6, close(alice, \[alice, bob, carol\], speech(utterance(friends), alice))))), sent(alice, carol, start(attempt(alice, 6, 6, close(alice, \[alice, bob, carol\], speech(utterance(friends), alice)))))" "$cva_groups"
 check "CVA groups: ... bob's and carol's machines vote yes, unasked, and it commits at both" "sent(alice, bob, outcome(attempt(alice, 6, 6, close(alice, \[alice, bob, carol\], speech(utterance(friends), alice))), commit)), sent(alice, carol, outcome(attempt(alice, 6, 6, close(alice, \[alice, bob, carol\], speech(utterance(friends), alice))), commit))" "$cva_groups"
 check "CVA groups: alice's screen: the group closed, her membership and her listing of herself ended" "A = \[.*view(\[closed(speech(utterance(friends), alice)), listed(carol, speech(utterance(friends), alice)), listed(bob, speech(utterance(friends), alice)), friend(carol), friend(bob)\], \[bob, carol\]) |" "$cva_groups"
-check "CVA groups: bob's membership ended in the one act" "B = \[.*view(\[member(alice, speech(utterance(friends), alice)), friend(alice)\], \[alice\]), view(\[friend(alice)\], \[alice\]) |" "$cva_groups"
-check "CVA groups: ... and carol's" "C = \[.*view(\[member(alice, speech(utterance(friends), alice)), friend(alice)\], \[alice\]), view(\[friend(alice)\], \[alice\]) |" "$cva_groups"
+check "CVA groups: bob's membership ended in the one act, and bob, introduced to carol by alice's Commit, comes to know her (vGLP e2bc4f4, Definition \"Deciding\", Commit)" "B = \[.*view(\[member(alice, speech(utterance(friends), alice)), friend(alice)\], \[alice\]), view(\[friend(alice)\], \[alice\]), view(\[friend(alice)\], \[alice, carol\]) |" "$cva_groups"
+check "CVA groups: ... and carol's, who comes to know bob" "C = \[.*view(\[member(alice, speech(utterance(friends), alice)), friend(alice)\], \[alice\]), view(\[friend(alice)\], \[alice\]), view(\[friend(alice)\], \[alice, bob\]) |" "$cva_groups"
+check "CVA groups: ... alice's Commit of the close introduces bob and carol to each other, after the outcomes" "sent(alice, carol, outcome(attempt(alice, 6, 6, close(alice, \[alice, bob, carol\], speech(utterance(friends), alice))), commit)), intro(alice, bob, carol), intro(alice, carol, bob)" "$cva_groups"
 check_not "CVA groups: bob's request to close alice's group, his agent listing no one, is dropped: no attempt of his" "attempt(bob, " "$cva_groups"
 check_not "CVA groups: no person asked for close" "gave(attempt([a-z]*, [0-9]*, [0-9]*, close\|gave(close" "$cva_groups"
 
@@ -4216,8 +4241,9 @@ HEREDOC
 check "CVA merges: alice requests merge(alice, n1, n2), and her agent proposes merge(alice, [bob], [carol], n1, n2), the people she lists in each, its start told to bob and carol" "sent(alice, bob, start(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))))), sent(alice, carol, start(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice)))))" "$cva_merges"
 check "CVA merges: ... bob's and carol's machines vote yes, unasked, and it commits at both" "sent(bob, alice, vote(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))), yes)), sent(carol, alice, vote(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))), yes)), sent(alice, bob, outcome(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))), commit)), sent(alice, carol, outcome(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))), commit))" "$cva_merges"
 check "CVA merges: alice's screen: the merger recorded, n2 led no more" "A = \[.*view(\[merged(speech(utterance(two), alice), speech(utterance(one), alice)), listed(carol, speech(utterance(two), alice)), listed(bob, speech(utterance(one), alice)), leads(speech(utterance(one), alice)), friend(carol), friend(bob)\], \[bob, carol\]) |" "$cva_merges"
-check "CVA merges: bob, a member of n1, records the merger" "B = \[.*view(\[member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]), view(\[merged(speech(utterance(two), alice), speech(utterance(one), alice)), member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]) |" "$cva_merges"
-check "CVA merges: carol, a member of n2, becomes a member of n1 in the one act" "C = \[.*view(\[member(alice, speech(utterance(two), alice)), friend(alice)\], \[alice\]), view(\[member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]) |" "$cva_merges"
+check "CVA merges: bob, a member of n1, records the merger, and, introduced to carol by alice's Commit, comes to know her (vGLP e2bc4f4, Definition \"Deciding\", Commit)" "B = \[.*view(\[member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]), view(\[merged(speech(utterance(two), alice), speech(utterance(one), alice)), member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]), view(\[merged(speech(utterance(two), alice), speech(utterance(one), alice)), member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice, carol\]) |" "$cva_merges"
+check "CVA merges: carol, a member of n2, becomes a member of n1 in the one act, and comes to know bob" "C = \[.*view(\[member(alice, speech(utterance(two), alice)), friend(alice)\], \[alice\]), view(\[member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]), view(\[member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice, bob\]) |" "$cva_merges"
+check "CVA merges: ... alice's Commit of the merger introduces bob and carol to each other, after the outcomes" "sent(alice, carol, outcome(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))), commit)), intro(alice, bob, carol), intro(alice, carol, bob)" "$cva_merges"
 check_not "CVA merges: no person asked for merge" "gave(attempt([a-z]*, [0-9]*, [0-9]*, merge\|gave(merge" "$cva_merges"
 
 # GSC's social network, GSN (programs/gsc/GSN.glp, the checker's gsn), compiled and run with scripted persons (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, item 5; vGLP a890465, Section 7): four agents; create, join with its approval question, a message, a member's post and the leader's deliveries of it, leave, the drop of a member who is no longer the leader's friend, and close by the leader taking the listed role a[listed(*, n)] of every member the leader lists (social_network/self.glp).

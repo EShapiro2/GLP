@@ -59,13 +59,11 @@ void main() {
       final keyPair = await algorithm.newKeyPair();
       identity = await GrassrootsIdentity.create(
         keyPair: keyPair,
-        nickname: 'TestUser',
       );
 
       final otherKeyPair = await algorithm.newKeyPair();
       otherIdentity = await GrassrootsIdentity.create(
         keyPair: otherKeyPair,
-        nickname: 'OtherPeer',
       );
 
       store = Store<AppState>(
@@ -550,8 +548,9 @@ void main() {
 
     group('processPacket - delivery at least once', () {
       // GNA, 2026-10-11, Task B: the duplicate filter is gone. "A re-send
-      // after a lost acknowledgment ... may deliver a message twice, which
-      // madGLP tolerates" (spec §Message Protocol).
+      // after a lost acknowledgment, possibly over another underlay, may
+      // deliver a message multiple times, and madGLP dedupes repeated
+      // deliveries" (spec §Message Protocol).
       test('a re-sent MESSAGE is delivered every time it arrives', () async {
         stubSession();
 

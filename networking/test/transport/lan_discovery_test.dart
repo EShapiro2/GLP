@@ -20,7 +20,6 @@ void main() {
     final keyPair = await Ed25519().newKeyPair();
     identity = await GrassrootsIdentity.create(
       keyPair: keyPair,
-      nickname: 'Alice',
     );
   });
 
@@ -82,7 +81,6 @@ void main() {
     test('different identities produce different tokens', () async {
       final other = await GrassrootsIdentity.create(
         keyPair: await Ed25519().newKeyPair(),
-        nickname: 'Bob',
       );
       expect(
         GrassrootsIdentity.deriveLanTokenForSlot(identity.publicKey, 9),
@@ -135,7 +133,6 @@ void main() {
     setUp(() async {
       other = await GrassrootsIdentity.create(
         keyPair: await Ed25519().newKeyPair(),
-        nickname: 'Bob',
       );
     });
 

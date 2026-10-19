@@ -231,7 +231,6 @@ Future<void> _push(_Opts o) async {
   final sodium = await initHeadlessSodium();
   final identity = await GrassrootsIdentity.create(
     keyPair: await Ed25519().newKeyPairFromSeed(seed),
-    nickname: 'gpw-push',
   );
   final network = HeadlessGrassrootsNetwork(
     identity: identity,

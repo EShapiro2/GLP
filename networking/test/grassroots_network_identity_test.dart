@@ -40,10 +40,9 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identity(String nickname) async {
+  Future<GrassrootsIdentity> identity() async {
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPair(),
-      nickname: nickname,
     );
   }
 
@@ -51,7 +50,7 @@ void main() {
       localNetworkFromPrefixes([localPrefixOf(InternetAddress(address))]);
 
   test('networkIdentity reports the held fingerprint', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(
       identity: self,
@@ -69,7 +68,7 @@ void main() {
   });
 
   test('networkIdentity is null when attached to no local network', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(
       identity: self,
@@ -86,7 +85,7 @@ void main() {
   });
 
   test('the fingerprint is independent of the public address', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(
       identity: self,
@@ -113,7 +112,7 @@ void main() {
   });
 
   test('the layer reads the attached local network at construction', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(
       identity: self,
@@ -134,7 +133,7 @@ void main() {
   });
 
   test('a public-address change does not fire onNetworkChanged', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(
       identity: self,
@@ -160,7 +159,7 @@ void main() {
   });
 
   test('onNetworkChanged fires with the old and new fingerprint', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final store = Store<AppState>(appReducer, initialState: const AppState());
     final network = GrassrootsNetwork(
       identity: self,

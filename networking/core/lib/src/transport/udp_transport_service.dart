@@ -15,7 +15,6 @@ import '../store/store.dart';
 /// Classification of an outbound connect refusal.
 enum UdpConnectFailureKind {
   networkUnreachable,
-  handshakeTimeout,
   other,
 }
 

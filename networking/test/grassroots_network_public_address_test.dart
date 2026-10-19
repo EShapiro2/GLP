@@ -54,11 +54,10 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async {
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async {
     final seed = Uint8List.fromList(List.filled(32, fill));
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(seed),
-      nickname: name,
     );
   }
 
@@ -103,7 +102,7 @@ void main() {
       'as it stands (GNA, 2026-10-11, Task C)', () async {
     final reports = <(String?, String?)>[];
     final node = await startNode(
-      await identityFromSeed(0x7b, 'node'),
+      await identityFromSeed(0x7b),
       onConnectivityStatusChanged: (oldAddress, newAddress) =>
           reports.add((oldAddress, newAddress)),
     );
@@ -114,7 +113,7 @@ void main() {
   });
 
   test('no public address until a rendezvous server reflects one', () async {
-    final node = await startNode(await identityFromSeed(0x71, 'node'));
+    final node = await startNode(await identityFromSeed(0x71));
     addTearDown(node.dispose);
 
     // Give any would-be discovery the whole window it used to take.
@@ -130,7 +129,7 @@ void main() {
 
   test('the local candidates are the agent\'s own interface addresses',
       () async {
-    final node = await startNode(await identityFromSeed(0x72, 'node'));
+    final node = await startNode(await identityFromSeed(0x72));
     addTearDown(node.dispose);
 
     final candidates = await localCandidates(node);
@@ -148,8 +147,8 @@ void main() {
   });
 
   test('two peers connect with neither holding a public address', () async {
-    final callerId = await identityFromSeed(0x73, 'caller');
-    final calleeId = await identityFromSeed(0x74, 'callee');
+    final callerId = await identityFromSeed(0x73);
+    final calleeId = await identityFromSeed(0x74);
 
     final caller = await startNode(callerId);
     final callee = await startNode(calleeId);
@@ -195,7 +194,7 @@ void main() {
     final port = probe.port;
     probe.close();
     final server = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(fill, 'rendezvous'),
+      identity: await identityFromSeed(fill),
       rendezvousServers: const [],
       serverAddress:
           ServerAddress(listenPort: port, publicAddress: '127.0.0.1:$port'),
@@ -214,7 +213,7 @@ void main() {
     final server = await rendezvousServer(0x75);
     final reports = <(String?, String?)>[];
     final node = await startNode(
-      await identityFromSeed(0x76, 'node'),
+      await identityFromSeed(0x76),
       onConnectivityStatusChanged: (oldAddress, newAddress) =>
           reports.add((oldAddress, newAddress)),
       rendezvousServers: [
@@ -240,8 +239,8 @@ void main() {
   test(
       'signaling from a peer that is no configured rendezvous server is '
       'dropped: a reflected address from it is not the agent\'s', () async {
-    final peerId = await identityFromSeed(0x77, 'peer');
-    final nodeId = await identityFromSeed(0x78, 'node');
+    final peerId = await identityFromSeed(0x77);
+    final nodeId = await identityFromSeed(0x78);
     final node = await startNode(nodeId);
     addTearDown(node.dispose);
     await node.start();

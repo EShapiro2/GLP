@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'dart:typed_data';
@@ -12,7 +11,7 @@ import '../platform/compat.dart';
 /// The magic bytes identify this as a Grassroots punch packet so receivers
 /// can distinguish it from the layer's packets and other UDP traffic.
 ///
-/// Punch packets serve one purpose: to create a NAT mapping. The receiver doesn't need to process them — the act of sending opens our NAT. But if no [UdpTransportService] reads the receiver's socket yet, it can read them to detect that the hole is open.
+/// Punch packets serve one purpose: to create a NAT mapping. The receiver doesn't need to process them — the act of sending opens our NAT.
 class PunchPacket {
   /// Magic bytes: "GRPU" (Grassroots Punch UDP)
   static const List<int> magic = [0x47, 0x52, 0x50, 0x55];
@@ -71,12 +70,8 @@ class PunchPacket {
 /// 4. Once both NATs have mappings, packets can flow in both directions.
 /// 5. Once the path is open, the peers establish their Noise XX session over it.
 ///
-/// ## Two modes
-///
-/// - [punch]: Fire-and-forget. Sends packets for a fixed duration. Simple but
-///   requires both peers to punch simultaneously and hope for overlap.
-///
-/// - [punchUntilResponse]: Sends packets and listens for incoming punch packets from the target. Returns true when a response is detected. More reliable but requires that no [UdpTransportService] reads the socket (so we can read raw packets).
+/// [punch] is fire-and-forget: it sends packets for a fixed duration, and
+/// both peers punch at once so that their bursts overlap.
 ///
 /// ## Design for extensibility
 ///
@@ -85,7 +80,7 @@ class PunchPacket {
 /// added as a subclass or strategy without changing the interface.
 class HolePunchService {
 
-  /// The raw UDP socket used for sending (and optionally receiving) punch packets.
+  /// The raw UDP socket punch packets are sent from.
   final RawDatagramSocket socket;
 
   /// Our public key, included in punch packets so the peer can identify us.
@@ -104,9 +99,9 @@ class HolePunchService {
     _punchBytes = PunchPacket.create(senderPubkey).serialize();
   }
 
-  /// Send punch packets for a fixed duration.
-  ///
-  /// This is the simple fire-and-forget mode. Use when a [UdpTransportService] reads the socket (so we can't read raw packets).
+  /// Send punch packets for a fixed duration, fire-and-forget: the socket is
+  /// the one a [UdpTransportService] reads, which drops punch packets on
+  /// arrival.
   ///
   /// The caller should attempt [UdpTransportService.connectToPeer] after
   /// this completes.
@@ -128,73 +123,6 @@ class HolePunchService {
     }
 
     debugPrint('Punch complete: sent $sent packets to ${targetIp.address}:$targetPort');
-  }
-
-  /// Send punch packets and wait for a response from the target.
-  ///
-  /// Returns true if a punch packet was received from the target before timeout.
-  /// Returns false if the timeout expired without a response.
-  ///
-  /// **Important:** This mode requires that no [UdpTransportService] reads the socket, since the service takes over socket reads. Use [punch] instead on a socket a [UdpTransportService] reads.
-  Future<bool> punchUntilResponse(
-    InternetAddress targetIp,
-    int targetPort, {
-    Duration timeout = const Duration(seconds: 5),
-    Duration interval = const Duration(milliseconds: 200),
-  }) async {
-    debugPrint('Punching ${targetIp.address}:$targetPort (waiting for response, '
-        'timeout: ${timeout.inMilliseconds}ms)');
-
-    final completer = Completer<bool>();
-    var sent = 0;
-
-    // Listen for incoming punch packets from the target
-    final sub = socket.listen((event) {
-      if (event == RawSocketEvent.read && !completer.isCompleted) {
-        final dg = socket.receive();
-        if (dg == null) return;
-
-        // Check if it's a punch packet from the target
-        final parsed = PunchPacket.tryParse(dg.data);
-        if (parsed != null) {
-          debugPrint('Received punch response from '
-              '${dg.address.address}:${dg.port}');
-          if (!completer.isCompleted) {
-            completer.complete(true);
-          }
-        }
-      }
-    });
-
-    // Send punch packets at intervals
-    final sendTimer = Timer.periodic(interval, (_) {
-      if (!_disposed && !completer.isCompleted) {
-        socket.send(_punchBytes, targetIp, targetPort);
-        sent++;
-      }
-    });
-
-    // Also send one immediately
-    socket.send(_punchBytes, targetIp, targetPort);
-    sent++;
-
-    // Timeout
-    final timeoutTimer = Timer(timeout, () {
-      if (!completer.isCompleted) {
-        debugPrint('Punch timed out after sending $sent packets');
-        completer.complete(false);
-      }
-    });
-
-    final result = await completer.future;
-
-    sendTimer.cancel();
-    timeoutTimer.cancel();
-    await sub.cancel();
-
-    debugPrint('Punch result: ${result ? 'SUCCESS' : 'TIMEOUT'} '
-        '(sent $sent packets)');
-    return result;
   }
 
   /// Cancel any in-progress punch operations.

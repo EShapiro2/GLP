@@ -57,10 +57,6 @@ const int _requestedAndroidMtu = 247;
 ///   prefix and connects to them.
 /// - **Direct delivery only**. No relaying, no store-and-forward.
 class BleTransportService extends TransportService {
-  /// Local device name for advertising (informational; iOS ignores it,
-  /// Android does not include it in the advertise packet either).
-  final String? localName;
-
   /// Our identity
   final GrassrootsIdentity identity;
 
@@ -189,7 +185,6 @@ class BleTransportService extends TransportService {
   BleTransportService({
     required this.identity,
     required this.store,
-    this.localName,
     this.firstMoverFallback = const Duration(seconds: 5),
     this.scanSilenceRestart = const Duration(seconds: 30),
     ble.GrassrootsBluetooth? grassrootsBluetooth,
@@ -318,12 +313,11 @@ class BleTransportService extends TransportService {
             // The stable data plane: beacon rotation never rebuilds the GATT
             // service or drops live peripheral links.
             gattServiceUuid: _grassrootsGattServiceUuid,
-            localName: localName,
             bondless: true,
           );
           _advertisedSlot = slot;
           anyStarted = true;
-          _armSlotRotation(localName);
+          _armSlotRotation();
         } catch (e) {
           debugPrint('Failed to start advertising: $e');
         }
@@ -439,7 +433,7 @@ class BleTransportService extends TransportService {
   /// current-slot beacon. The GATT service UUID and characteristic stay fixed,
   /// so the plugin refreshes only the advertisement — live peripheral links
   /// survive the rotation (validated on Android + iOS hardware).
-  void _armSlotRotation(String? localName) {
+  void _armSlotRotation() {
     _slotRotationTimer?.cancel();
     _slotRotationTimer =
         Timer.periodic(_slotRotationCheckInterval, (_) async {
@@ -457,7 +451,6 @@ class BleTransportService extends TransportService {
           serviceUuid: beacon,
           characteristicUuid: _grassrootsCharacteristicUuid,
           gattServiceUuid: _grassrootsGattServiceUuid,
-          localName: localName,
           bondless: true,
         );
         _advertisedSlot = slot;

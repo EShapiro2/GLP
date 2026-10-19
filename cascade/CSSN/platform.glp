@@ -726,7 +726,7 @@ procedure dispatch_own(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream
 dispatch_own(none, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 dispatch_own(take(op(_), prop(I, P)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- dispatch_propose(pgo(I?, P?), write_own, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(I?) | vote_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
-dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(I?) | commit_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
+dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(I?) | commit_effect(I?, At?, St?, Ss, Is, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), put_all(Is?, Out1, Out2?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out2, Ow, Approvals?, St2?, D).
 dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(B?), ground(I?), ground(Ap0?) | wound_effect(I?, B?, St?, Ss, St1), noticed(yielded_by, B?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?, D).
 dispatch_own(take(ip(Q, R), pair), Ap0, Ls, In, Ans?, Thr?, [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?)) | Out?], Ow?, Approvals, St, D?) :- ground(Q?), ground(R?), ground(St?) | st_id(St?, Id), introduce_effect(Q?, R?, St?, St1), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
 dispatch_own(take(_, _), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- otherwise | next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
@@ -925,8 +925,19 @@ tally_app1(yes, _, _, _, _, _, Ap, [], Ap?).
 tally_app1(no, I, At, F, no, Id, app(S, K, _, R), Ss?, app(S?, K?, unlocked, [closed(At?), got(At?, F?, no) | R?])) :- ground(At?), ground(I?) | info_q(I?, Q), tell(Q?, Id?, outcome(At?, abort), Ss).
 tally_app1(no, _, At, F, yes, _, app(S, K, L, R), [], app(S?, K?, L?, [got(At?, F?, yes) | R?])).
 
-procedure commit_effect(Info?, Attempt?, St?, Sends, St).
-commit_effect(I, At, St, Ss?, St1?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), commit_app(I?, At?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
+procedure commit_effect(Info?, Attempt?, St?, Sends, Nets, St).
+commit_effect(I, At, St, Ss?, Ms?, St1?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), commit_app(I?, At?, Id?, Ap?, Ss, Ap1), commit_pairs(I?, Id?, Ps), commit_intros(Ps?, Id?, Ap1?, Ms, Ap2), set_app(St?, Ap2?, St1).
+
+procedure commit_pairs(Info?, Peer?, Pairs).
+commit_pairs(I, Id, Ps?) :- ground(I?) | info_q(I?, Q), remove_all(Id?, Q?, Q1), dedup(Q1?, Q2), sort_peers(Q2?, Q3), pairs_of(Q3?, Ps).
+
+procedure commit_intros(Pairs?, Peer?, App?, Nets, App).
+commit_intros([], _, Ap, [], Ap?).
+commit_intros([pr(Q, R) | Ps], Id, Ap, Ms?, Ap2?) :- ground(Q?), ground(R?), ground(Ap?) | app_recs(Ap?, Rc), mem(introduced(Q?, R?), Rc?, Done), commit_intro(Done?, Q?, R?, Id?, Ap?, Ms, Ms1?, Ap1), commit_intros(Ps?, Id?, Ap1?, Ms1, Ap2).
+
+procedure commit_intro(YesNo?, Peer?, Peer?, Peer?, App?, Nets, Nets?, App).
+commit_intro(yes, _, _, _, Ap, Ms?, Ms, Ap?).
+commit_intro(no, Q, R, Id, Ap, [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?)) | Ms?], Ms, Ap1?) :- ground(Q?), ground(R?), ground(Id?) | introduce_app(Q?, R?, Ap?, Ap1).
 
 procedure commit_app(Info?, Attempt?, Peer?, App?, Sends, App).
 commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, [closed(At?) | R?])) :- ground(I?), ground(At?), ground(Id?) | apply_info(I?, Id?, S?, S1), info_q(I?, Q), tell(Q?, Id?, outcome(At?, commit), Ss).

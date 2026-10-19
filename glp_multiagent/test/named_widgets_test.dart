@@ -47,6 +47,28 @@ const _gsnJoin =
 const _gsnMessage =
     "form(message, [field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
 
+/// GAI's agent_befriend, `agent_befriend(r?, q?, p? ; y)` (programs/gai/GAI.glp),
+/// as programs/apps/gai/platform.vglp prints its Class.
+const _gaiAgentBefriend = "form(agent_befriend, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
+
+/// The code of Alf, 'The code of Alf' signed by acme, its developer, signed
+/// by Alice; and Alf's attestation, the code signed over by Alice at enter
+/// (programs/apps/gai/person.glp).
+const _code = "speech(speech(utterance('The code of Alf'), acme), alice)";
+const _attestation = 'speech($_code, alice)';
+
+/// Alf, Alice's AI agent, asks to befriend Bob with its attestation.
+const _agentBefriendView = 'approval(attempt(alf, 3, 3, agent_befriend(alf, '
+    'bob, alice, $_attestation)), input([2]))';
+
+/// The last view Alice's agent wrote: she is Alf's principal and its friend.
+const _aliceOutput = '[view([principal_of(alf), friend(alf), item($_code), '
+    'authored($_code), friend(bob), identity], [alf, bob])]';
+
+/// The last view Bob's agent wrote: he knows Alf and Alice, Alice his friend.
+const _bobOutput = '[view([friend(alice), identity], [alf, alice])]';
+
 /// The widget of a question of `Approval` where the declaration
 /// `Approval =::= approval_sentence.` holds, over the classes [classes]:
 /// `named(approval_sentence, D)`, D the default widget of `Approval` (vGLP
@@ -65,7 +87,11 @@ class _Screen {
 
   _Screen(this.tester);
 
-  Future<OpenConstruct> draw(String widget, String view) async {
+  /// Draw construct 1, with [output], where given, as the last value drawn
+  /// on construct 0, the views the agent wrote, with which a declared widget
+  /// is drawn (vGLP e924f73, Section 6.2).
+  Future<OpenConstruct> draw(String widget, String view,
+      {String? output}) async {
     expect(
         bridge.read(fixtureTerm('draw(1, $widget, approval_w($view))')), isTrue);
     final c = bridge.construct(1)!;
@@ -76,6 +102,7 @@ class _Screen {
             key: UniqueKey(),
             construct: c,
             family: ConstructFamily.standard,
+            output: output == null ? null : fixtureTerm(output),
             grant: (p, r) => bridge.grant(c.id, p, r),
           ),
         ),
@@ -101,11 +128,13 @@ class _Screen {
 
   /// The grant of the button [label] of the default widget over [view], and that of the button [named] of approval_sentence over it.
   Future<(String, String)> both(
-      String defaultWidget, String view, String label, String named) async {
+      String defaultWidget, String view, String label, String named,
+      {String? output}) async {
     await draw(defaultWidget, view);
     await tap(find.widgetWithText(ElevatedButton, label));
     final byDefault = grants.removeLast();
-    await draw('named($approvalSentenceName, $defaultWidget)', view);
+    await draw('named($approvalSentenceName, $defaultWidget)', view,
+        output: output);
     await tap(find.widgetWithText(ElevatedButton, named));
     final byName = grants.removeLast();
     return (byDefault, byName);
@@ -234,6 +263,113 @@ void main() {
         'approval(attempt(alice, 2, 2, befriend(alice, bob)), no)');
     expect(s.texts(), ['Alice asks to be your friend.', 'Decline']);
     expect(find.byType(ElevatedButton), findsNothing);
+  });
+
+  testWidgets(
+      'agent_befriend(R, Q, P, Y) at the principal, whose view holds '
+      'principal_of(R): "Alf asks to befriend Bob.", "Approve?", Yes and No, '
+      'and nothing else; Yes grants yes and No grants no at [2], as the '
+      'default widget does', (tester) async {
+    final s = _Screen(tester);
+    await s.draw(_named([_gaiAgentBefriend]), _agentBefriendView,
+        output: _aliceOutput);
+    expect(s.texts(), ['Alf asks to befriend Bob.', 'Approve?', 'Yes', 'No']);
+    expect(find.byType(ElevatedButton), findsNWidgets(2));
+    final def = _defaultApproval([_gaiAgentBefriend]);
+    final (dYes, nYes) = await s.both(def, _agentBefriendView, 'yes', 'Yes',
+        output: _aliceOutput);
+    expect(dYes, 'input(1, [2], yes)');
+    expect(nYes, dYes);
+    final (dNo, nNo) = await s.both(def, _agentBefriendView, 'no', 'No',
+        output: _aliceOutput);
+    expect(dNo, 'input(1, [2], no)');
+    expect(nNo, dNo);
+  });
+
+  testWidgets(
+      'agent_befriend(R, Q, P, Y) at the other party: "Alf, an AI agent of '
+      'Alice, asks to befriend you.", "Developer: Acme", the first signer of '
+      'the attestation, "Befriend Alf?", Yes and No, and nothing else',
+      (tester) async {
+    final s = _Screen(tester);
+    await s.draw(_named([_gaiAgentBefriend]), _agentBefriendView,
+        output: _bobOutput);
+    expect(s.texts(), [
+      'Alf, an AI agent of Alice, asks to befriend you.',
+      'Developer: Acme',
+      'Befriend Alf?',
+      'Yes',
+      'No',
+    ]);
+    final (d, n) = await s.both(_defaultApproval([_gaiAgentBefriend]),
+        _agentBefriendView, 'yes', 'Yes',
+        output: _bobOutput);
+    expect(d, 'input(1, [2], yes)');
+    expect(n, d);
+  });
+
+  testWidgets(
+      'agent_befriend answered: the sentence, its lines and question, and the '
+      'label of the button granting the answer, and no button',
+      (tester) async {
+    final s = _Screen(tester);
+    await s.draw(
+        _named([_gaiAgentBefriend]),
+        'approval(attempt(alf, 3, 3, agent_befriend(alf, bob, alice, '
+        '$_attestation)), yes)',
+        output: _bobOutput);
+    expect(s.texts(), [
+      'Alf, an AI agent of Alice, asks to befriend you.',
+      'Developer: Acme',
+      'Befriend Alf?',
+      'Yes',
+    ]);
+    expect(find.byType(ElevatedButton), findsNothing);
+  });
+
+  testWidgets(
+      'agent_befriend with no view drawn, whom it is asked not told: the '
+      'sentence built from the class, its speech act under it, and Yes and No',
+      (tester) async {
+    final s = _Screen(tester);
+    await s.draw(_named([_gaiAgentBefriend]), _agentBefriendView);
+    expect(s.texts(), [
+      'Alf asks to agent befriend Bob, Alice.',
+      'The code of Alf',
+      'by Acme, via Alice, via Alice',
+      'Yes',
+      'No',
+    ]);
+  });
+
+  test('the developer an attestation names is its first signer', () {
+    expect(
+        formatTerm(SocialState.developerIn(fixtureTerm(_attestation))!), 'acme');
+    expect(SocialState.developerIn(const GAtom('alice')), isNull);
+    final (_, s) = SocialState.read(fixtureTerm(
+        '[view([agent_of(alf, alice, $_attestation), friend(alf)], [alf])]'));
+    expect(formatTerm(s!.developerOf(const GAtom('alf'))!), 'acme');
+    expect(s.developerOf(const GAtom('alice')), isNull);
+    expect(formatTerm(s.attestationOf(const GAtom('alf'))!),
+        formatTerm(fixtureTerm(_attestation)));
+  });
+
+  test('a principal\'s AI agents, those retired, and the codes they hold', () {
+    final (_, s) = SocialState.read(fixtureTerm('[view([retired_of(alf), '
+        'principal_of(alf), principal_of(ada), item($_code), '
+        "authored($_code), item(speech(utterance('Hi'), alice)), "
+        "authored(speech(utterance('Hi'), alice)), "
+        "item(speech(speech(utterance('Flood'), dan), eve)), identity], [])]"));
+    expect(s!.aiAgents.map(formatTerm), ['alf', 'ada']);
+    expect(s.isPrincipalOf(const GAtom('ada')), isTrue);
+    expect(s.isPrincipalOf(const GAtom('bob')), isFalse);
+    expect(s.hasRetired(const GAtom('alf')), isTrue);
+    expect(s.hasRetired(const GAtom('ada')), isFalse);
+    expect(s.isAgent, isFalse);
+    // Only an item she authored that another signed first is a code: not her
+    // own text, nor an item forwarded to her.
+    expect(s.codes(const GAtom('alice')).map(formatTerm),
+        [formatTerm(fixtureTerm(_code))]);
   });
 
   testWidgets(

@@ -15,7 +15,7 @@
 %%   and aborts, and tells the outcome to both; carol's question is no longer
 %%   pending once her Outcome closes the attempt, so her approval question is closed by the
 %%   program (vGLP, Section 5.4, "The compilation"), and
-%%   the yes she gives it, once she is asked on the next attempt, reaches no goal.  alice's agent, tallying bob's no, writes the notice refused(introduce(alice, bob, carol), bob) (vGLP c44769f, Section 5.4, "The compilation"); alice, seeing it on her screen, requests the introduction again, attempt 4, both answer yes, and it commits at all three.
+%%   the yes she gives it, once she is asked on the next attempt, reaches no goal.  alice's agent, tallying bob's no, writes the notice refused(introduce(alice, bob, carol), bob) (vGLP c44769f, Section 5.4, "The compilation"); alice, seeing it on her screen, requests the introduction again, attempt 4, both answer yes, and it commits at all three.  Only alice, of its three guards, knows every participant: bob and carol each know alice alone.  alice's Commit introduces them to each other, intro(carol) to bob and intro(bob) to carol, and records introduced(bob, carol); each sends the other ihello, and each comes to know the other (vGLP e2bc4f4, Definition "Deciding", Commit: "for every two participants q != r of alpha other than p for which p has not recorded introduced(q, r), p adds message(p, q, intro(r)) and message(p, r, intro(q)) to o_p and records introduced(q, r)"; Definition "Holds, For, Connected, Unobstructed, Steady": one of its guards "knows every other participant").  The befriendings, binary, introduce no one.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.

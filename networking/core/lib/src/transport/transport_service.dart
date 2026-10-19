@@ -6,9 +6,6 @@ enum TransportType {
   /// Bluetooth Low Energy direct P2P transport
   ble,
 
-  /// WebRTC-based P2P transport (STUN/TURN/TURNS)
-  webrtc,
-
   /// UDP datagram transport, for the LAN and the WAN
   udp,
 }
@@ -89,7 +86,7 @@ class TransportConnectionEvent {
 ///
 /// This interface defines the contract that all transport implementations
 /// must fulfill, allowing the application layer to switch between
-/// different transport protocols (BLE, WebRTC, etc.) seamlessly.
+/// different transport protocols (BLE, UDP) seamlessly.
 ///
 /// ## Implementation Requirements
 ///

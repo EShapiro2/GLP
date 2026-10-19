@@ -57,6 +57,11 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 procedure contract_named(Constant?, Declared).
 contract_named(cssn, reflexive([friend], C?)) :- cssn_schemas(C).
 
+%% introduction_named(cssn, I): the contract's introduction predicate, friend, by which an agent introduces to each other every two of its friends (CSSN, Section 5.1, "The program"; Appendix C.4; vGLP, Section 5.4, the paragraph on act schemas), in the form of programs/vglp/cva/contracts.glp.  Added by CSSN #8 Cowork, 2026-10-19, on Code #12's finding that the compiler printed introduction_preds([]).
+Intro ::= no_introduction ; introduction(Constant).
+procedure introduction_named(Constant?, Intro).
+introduction_named(cssn, introduction(friend)).
+
 procedure cssn_schemas(Contract).
 cssn_schemas(C?) :-
     gsnp_schemas(C1),

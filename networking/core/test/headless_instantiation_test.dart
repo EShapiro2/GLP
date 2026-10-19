@@ -29,11 +29,10 @@ void main() {
     }
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async {
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async {
     final seed = Uint8List.fromList(List.filled(32, fill));
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(seed),
-      nickname: name,
     );
   }
 
@@ -53,7 +52,7 @@ void main() {
       }
       final port = await freePort();
       final layer = HeadlessGrassrootsNetwork(
-        identity: await identityFromSeed(0x81, 'server'),
+        identity: await identityFromSeed(0x81),
         rendezvousServers: const [],
         serverAddress:
             ServerAddress(listenPort: port, publicAddress: '203.0.113.9:$port'),
@@ -71,7 +70,7 @@ void main() {
         return;
       }
       final layer = HeadlessGrassrootsNetwork(
-        identity: await identityFromSeed(0x82, 'client'),
+        identity: await identityFromSeed(0x82),
         rendezvousServers: const [],
         sodium: sodium!,
       );
@@ -130,7 +129,7 @@ void main() {
       }
       final port = await freePort();
       final server = HeadlessGrassrootsNetwork(
-        identity: await identityFromSeed(0x85, 'rendezvous'),
+        identity: await identityFromSeed(0x85),
         rendezvousServers: const [],
         serverAddress:
             ServerAddress(listenPort: port, publicAddress: '203.0.113.9:$port'),
@@ -139,7 +138,7 @@ void main() {
       );
       addTearDown(server.dispose);
       final stranger = HeadlessGrassrootsNetwork(
-        identity: await identityFromSeed(0x86, 'stranger'),
+        identity: await identityFromSeed(0x86),
         rendezvousServers: const [],
         sodium: sodium!,
       );
@@ -165,7 +164,7 @@ void main() {
       }
       final port = await freePort();
       final server = HeadlessGrassrootsNetwork(
-        identity: await identityFromSeed(0x87, 'unmarked'),
+        identity: await identityFromSeed(0x87),
         rendezvousServers: const [],
         serverAddress:
             ServerAddress(listenPort: port, publicAddress: '203.0.113.9:$port'),
@@ -173,7 +172,7 @@ void main() {
       );
       addTearDown(server.dispose);
       final stranger = HeadlessGrassrootsNetwork(
-        identity: await identityFromSeed(0x88, 'stranger'),
+        identity: await identityFromSeed(0x88),
         rendezvousServers: const [],
         sodium: sodium!,
       );
@@ -193,7 +192,7 @@ void main() {
         markTestSkipped(sodiumUnavailable!);
         return;
       }
-      final identity = await identityFromSeed(0x89, 'rendezvous');
+      final identity = await identityFromSeed(0x89);
       expect(
           () => HeadlessGrassrootsNetwork(
                 identity: identity,
@@ -213,8 +212,8 @@ void main() {
       markTestSkipped(sodiumUnavailable!);
       return;
     }
-    final serverId = await identityFromSeed(0x83, 'rendezvous');
-    final agentId = await identityFromSeed(0x84, 'agent');
+    final serverId = await identityFromSeed(0x83);
+    final agentId = await identityFromSeed(0x84);
     // A rendezvous server passes an empty list, and is marked one (GNA §2.2),
     // so it answers the agent's key though no one supplied it (GNA §2.7).
     final port = await freePort();
@@ -270,7 +269,7 @@ void main() {
       markTestSkipped(sodiumUnavailable!);
       return;
     }
-    final serverId = await identityFromSeed(0x85, 'rendezvous');
+    final serverId = await identityFromSeed(0x85);
     final port = await freePort();
     final server = HeadlessGrassrootsNetwork(
       identity: serverId,
@@ -284,7 +283,7 @@ void main() {
     expect(await server.start(), isTrue);
 
     final agent = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(0x86, 'agent'),
+      identity: await identityFromSeed(0x86),
       rendezvousServers: [
         RendezvousServer('127.0.0.1:${server.boundPort}', serverId.publicKey),
       ],

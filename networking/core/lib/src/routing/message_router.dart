@@ -28,11 +28,13 @@ import '../platform/compat.dart';
 ///
 /// Delivery is at least once (spec §Message Protocol: "A re-send after a lost
 /// acknowledgment, possibly over another underlay, may deliver a message
-/// twice, which madGLP tolerates"; §Networking Assumptions: "possibly more
-/// than once"): a message is delivered every time it is reassembled, and
-/// acknowledged every time. There is no duplicate filter (GNA, 2026-10-11,
-/// Task B): the Bloom filter that was one took a fresh message for a
-/// duplicate about 1% of the time near its capacity, and dropped it.
+/// multiple times, and madGLP dedupes repeated deliveries"; §Networking
+/// Assumptions: "Every message passed to send() is eventually delivered to
+/// the recipient at least once"): a message is delivered every time it is
+/// reassembled, and acknowledged every time. There is no duplicate filter
+/// (GNA, 2026-10-11, Task B): the Bloom filter that was one took a fresh
+/// message for a duplicate about 1% of the time near its capacity, and
+/// dropped it.
 class MessageRouter {
   final Store<AppState> store;
   final ProtocolHandler protocolHandler;

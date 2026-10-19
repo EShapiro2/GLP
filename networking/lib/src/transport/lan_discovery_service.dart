@@ -21,9 +21,9 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 /// advertisement carries no key and no other identifying payload.
 ///
 /// This service owns advertising, browsing, and slot rotation. Recognition
-/// (matching browsed tokens against known peers' keys) and contact (UDX +
-/// ANNOUNCE + Noise with the recognized key as the expected static) live in
-/// the coordinator, reached through [onInstanceResolved].
+/// (matching browsed tokens against known peers' keys) and contact (a UDP
+/// path, ANNOUNCE, and Noise with the recognized key as the expected static)
+/// live in the coordinator, reached through [onInstanceResolved].
 class LanDiscoveryService {
   LanDiscoveryService({required this.identity});
 

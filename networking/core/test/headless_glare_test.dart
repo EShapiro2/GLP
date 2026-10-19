@@ -36,11 +36,10 @@ void main() {
     }
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async {
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async {
     final seed = Uint8List.fromList(List.filled(32, fill));
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(seed),
-      nickname: name,
     );
   }
 
@@ -49,8 +48,8 @@ void main() {
     required int acceptorSeed,
     required bool dialerKeySmaller,
   }) async {
-    final dialerId = await identityFromSeed(dialerSeed, 'dialer');
-    final acceptorId = await identityFromSeed(acceptorSeed, 'acceptor');
+    final dialerId = await identityFromSeed(dialerSeed);
+    final acceptorId = await identityFromSeed(acceptorSeed);
     expect(
       _hex(dialerId.publicKey).compareTo(_hex(acceptorId.publicKey)) < 0,
       dialerKeySmaller,
