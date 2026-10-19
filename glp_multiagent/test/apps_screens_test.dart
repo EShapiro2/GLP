@@ -770,7 +770,8 @@ void appsScreens(Screens screens) {
   testWidgets(
       'GSNP\'s app on five phones, the play of GAI\'s GSNP figure: Bob\'s '
       'chat with Carol, the item with its author and who forwarded it, and '
-      'Forward; and the warranty question once he picks Fay', (tester) async {
+      'Forward; the warranty question once he picks Fay; and Fay\'s chat '
+      'with Bob once he forwards it', (tester) async {
     final run = await _Run.start(tester, screens, 'gsnp',
         chain: const ['dan', 'eve', 'carol', 'bob', 'fay']);
     final dan = run.person('dan');
@@ -852,6 +853,33 @@ void appsScreens(Screens screens) {
     expect(fay.atoms, isNot(contains('item(speech($fromCarol, bob))')));
     run.plain(bob);
     await run.shoot(bob, 'gsnp-b-bob-forward.png');
+
+    // Bob taps Yes, which proposes forward(bob, fay, x) (GSNP:2, Forwarding): Fay holds the item signed again by Bob.  Nobody is asked.
+    await run.tap(bob, run.groupControl(bob, 'forward-yes:'));
+    const fromBob = 'speech($fromCarol, bob)';
+    expect(fay.atoms, contains('item($fromBob)'));
+    expect(fay.questions('approval'), isEmpty);
+
+    // (c) Fay's chat with Bob (GAI #5 Cowork, Code_inbox.md, 2026-10-19 22:29 UTC): she taps his row; the item "Flood on Main Street", "Author: Dan" and "via Eve, via Carol, via Bob", and Forward under it.
+    await run.tap(fay, run.name(fay, 'person:bob', 'Bob'));
+    expect(run.control(fay, 'chat:bob'), findsOneWidget);
+    await run.top(fay);
+    final forwarded = run.groupControl(fay, 'item:');
+    expect(forwarded, findsOneWidget);
+    expect(
+        [
+          for (final t in run.tester.widgetList<Text>(
+              find.descendant(of: forwarded, matching: find.byType(Text))))
+            t.data,
+        ],
+        [
+          'Flood on Main Street',
+          'Author: Dan',
+          'via Eve, via Carol, via Bob',
+          'Forward'
+        ]);
+    run.plain(fay);
+    await run.shoot(fay, 'gsnp-c-fay-chat.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 
