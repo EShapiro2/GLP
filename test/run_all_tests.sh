@@ -4183,7 +4183,8 @@ check_not "CVA groups: bob's request to close alice's group, his agent listing n
 check_not "CVA groups: no person asked for close" "gave(attempt([a-z]*, [0-9]*, [0-9]*, close\|gave(close" "$cva_groups"
 
 # Several listed roles of one base (vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles ... for p the person in the base of a listed role, p lists in d_p exactly the people of that role in L", and "the listed roles of a schema have one base"; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC: "the base agent filling in each from its own listed atoms; the part's term carries the people of each, in the order of the roles").  vGLP's contract merges (programs/vglp/cva/contracts.glp): merge(a?, a[listed(*, n1)], a[listed(*, n2)] ; n1, n2).
-cva_merges_text=$(cat "$CVA/merges/platform.vglp")
+# Guarded: set -e would end the run without totals where the platform is not printed.
+cva_merges_text=$(cat "$CVA/merges/platform.vglp" 2>&1 || true)
 check "CVA merges: the class term of merge carries the people of each listed role, in the order of the roles" "^merge(Peer, List(Peer), List(Peer), Speech, Speech)$" "$cva_merges_text"
 check "CVA merges: ... its request name, the schema-binding, does not" "^befriend(Peer, Peer) create(Peer, Speech) join(Peer, Peer, Speech) merge(Peer, Speech, Speech) $" "$(cva_proposal "$CVA/merges/platform.vglp")"
 check "CVA merges: the binding of a class term of merge, from the lists of the people of its two listed roles (listed_binding)" "^listed_binding(merge, \[b(role(1), p(V1?)), b(svar(n1), s(V4?)), b(svar(n2), s(V5?))\], \[V2?, V3?\], B)$" "$cva_merges_text"
