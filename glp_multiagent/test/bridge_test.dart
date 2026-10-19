@@ -954,7 +954,7 @@ void main() {
           'input([]))'));
       final handed = <String>[];
       final family = ConstructFamily(named: {
-        'stars': (context, c, dflt, view, at, grant) {
+        'stars': (context, c, dflt, view, at, grant, output) {
           handed.add(formatTerm(dflt));
           return TextButton(
               onPressed: () => grant(questionAt(view)!, const GInt(5)),
@@ -979,6 +979,35 @@ void main() {
       expect(find.text('No widget', findRichText: true), findsNothing);
       await tester.tap(find.widgetWithText(ElevatedButton, 'high'));
       expect(sent, ['input(1, [], 5)', 'input(2, [], high)']);
+    });
+
+    // "A declared widget is drawn also with the last value drawn on
+    // construct 0, and is drawn again when that value changes, so that a
+    // request form can show the state the program last wrote to its person"
+    // (vGLP e924f73, Section 6.2).
+    testWidgets(
+        'a declared widget is drawn with the last value drawn on construct 0, '
+        'and drawn again with each value drawn on it', (tester) async {
+      final handed = <String>[];
+      final family = ConstructFamily(named: {
+        'stars': (context, c, dflt, view, at, grant, output) {
+          handed.add(output == null ? 'none' : formatTerm(output));
+          return Text('stars over ${output == null ? 'none' : formatTerm(output)}');
+        },
+      });
+      r.handle(fixtureTerm('draw(1, named(stars, buttons([1, 5])), input([]))'));
+      await tester.pumpWidget(MaterialApp(
+          home: AgentSurface(agentId: 'bob', runtime: r, family: family)));
+      expect(handed.last, 'none');
+      r.handle(fixtureTerm('draw(0, thread, output([said(alice)]))'));
+      await tester.pump();
+      expect(handed.last, '[said(alice)]');
+      expect(find.text('stars over [said(alice)]'), findsOneWidget);
+      r.handle(fixtureTerm(
+          'draw(0, thread, output([said(alice), said(bob)]))'));
+      await tester.pump();
+      expect(handed.last, '[said(alice), said(bob)]');
+      expect(find.text('stars over [said(alice), said(bob)]'), findsOneWidget);
     });
 
     // vGLP #6 Cowork, 2026-10-11 12:55 UTC, Task B, from Definition "Widget

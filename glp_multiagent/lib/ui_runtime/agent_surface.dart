@@ -257,6 +257,21 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   Widget _screenPanel(Panel p) {
     final cards = _r.inbox.where((c) => c.panel.id == p.id).toList();
+    // The last value drawn on construct 0, with which every declared widget
+    // is drawn (construct_family.dart, [NamedWidgetBuilder]); this panel is
+    // drawn again on every draw the bridge reads, construct 0's included, so
+    // a declared widget is drawn again with each value drawn on construct 0.
+    final output = _r.bridge.construct(0)?.view;
+    // The family's layout of the constructs, where it has one for them: the
+    // grassroots app's tabs (tab_screen.dart).  A compiled program's panel
+    // holds no cards and no views beside its constructs.
+    if (cards.isEmpty && p.views.isEmpty) {
+      final laid = widget.family.screen?.call(
+          _r.bridge.constructs.toList(),
+          widget.family,
+          (id, path, raw) => _r.bridge.grant(id, path, raw));
+      if (laid != null) return laid;
+    }
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
@@ -274,6 +289,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
             key: constructKey(c.id),
             construct: c,
             family: widget.family,
+            output: output,
             grant: (path, raw) => _r.bridge.grant(c.id, path, raw),
           ),
         for (final c in cards) _clauseCard(c),
