@@ -149,6 +149,9 @@ Relay  ::= relay(Constant, Party, Party).
 Relays ::= [] ; [Relay | Relays].
 Wards  ::= introduction_with_wards(Constant, Preds, Guardianships, Relays, Preds)
          ; no_introduction_with_wards.
+% h(Schema, Role, H): the relay act Schema requires at its ward role Role an atom of the predicate H that clause 2 of def:relay admits as an atom of h and as nothing else (GSC 410a440).
+RelayH  ::= h(Constant, Integer, Constant).
+RelayHs ::= [] ; [RelayH | RelayHs].
 % The leaving marks of a contract for a set M of marks (def:leaving) depend
 % on the guardianship of each mark in M: leaving(Gs, Ls) holds the
 % guardianships taken, one per mark, and the leaving marks for them.
@@ -1204,6 +1207,11 @@ wards_variant(Nm, B, W?) :- check # wards_variant(Nm?, B?, W).
 imported procedure check#guardianships(Declared?, Preds?, Guardianships).
 exported procedure guardianships(Declared?, Preds?, Guardianships).
 guardianships(D, M, G?) :- check # guardianships(D?, M?, G).
+
+% The atoms the relay acts of the introduction with wards require at their ward roles as atoms of h, by clause 2 of def:relay and by none of its other alternatives (GSC 410a440), of a contract given as a term.
+imported procedure check#relay_h(Declared?, RelayHs).
+exported procedure relay_h(Declared?, RelayHs).
+relay_h(D, H?) :- check # relay_h(D?, H).
 
 % The leaving marks of a contract for a set of marks (def:leaving), for each
 % choice of a guardianship of each mark, of a contract given as a term and

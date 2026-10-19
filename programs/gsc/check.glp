@@ -92,6 +92,7 @@ imported procedure community#rooted(Contract?, Preds).
 imported procedure wards#wards(Contract?, Preds?, Wards).
 imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
 imported procedure wards#leaving_for(Contract?, Preds?, Leavings).
+imported procedure wards#relay_h_for(Contract?, Preds?, Wards?, RelayHs).
 imported procedure contracts#contract(Constant?, Declared).
 imported procedure contracts#variant(Constant?, Contract?, Declared).
 
@@ -675,6 +676,18 @@ exported procedure wards_variant(Constant?, Contract?, Wards).
 wards_variant(Nm, B, W?) :- ground(Nm?), ground(B?) |
     contracts # variant(Nm?, B?, D),
     wards(D?, W).
+
+% The atoms the relay acts of the introduction with wards require at their ward roles as atoms of a predicate h, admitted by that alternative of clause 2 of def:relay and by no other (GSC 410a440), each h(Schema, Role, H), for inspection: [] where there is no introduction with wards.
+procedure relay_h1(Contract?, Preds?, RelayHs).
+relay_h1(C, Rf, H?) :- ground(C?), ground(Rf?) |
+    wards_in(C?, Rf?, W),
+    wards # relay_h_for(C?, Rf?, W?, H).
+
+exported procedure relay_h(Declared?, RelayHs).
+relay_h(D, H?) :- ground(D?) |
+    decl_schemas(D?, C),
+    decl_reflexive(D?, Rf),
+    relay_h1(C?, Rf?, H).
 
 % The guardianships for a set of marks M (def:guardianship), every one of
 % each mark, for inspection.
