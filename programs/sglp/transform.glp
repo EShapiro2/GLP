@@ -55,6 +55,7 @@ imported procedure tests#delivery_source(SglpTerms, SglpTerms).
 imported procedure tests#receipt_source(SglpTerms, SglpTerms).
 imported procedure tests#panel_source(SglpTerms, SglpTerms).
 imported procedure tests#numbers_source(SglpTerms, SglpTerms).
+imported procedure tests#steps_source(SglpTerms, SglpTerms).
 
 Terms ::= [] ; [_ | Terms].
 Sets  ::= [] ; [Terms | Sets].
@@ -66,8 +67,8 @@ Ans   ::= yes ; no.
 
 %% transform(Program?, Part?): print Part, profiles or population, of the
 %% translation of Program, social_graph, coins or the run tests' reader,
-%% delivery, receipt, panel and numbers (tests/reader, tests/delivery,
-%% tests/receipt, tests/panel, tests/numbers), between the lines %% transform begin and %% transform end,
+%% delivery, receipt, panel, numbers and steps (tests/reader, tests/delivery,
+%% tests/receipt, tests/panel, tests/numbers, tests/steps), between the lines %% transform begin and %% transform end,
 %% which transform.sh drops.
 exported procedure transform(Constant?, Constant?).
 transform(Prog, Part) :- Prog? =?= social_graph |
@@ -84,11 +85,16 @@ transform(Prog, Part) :- Prog? =?= panel |
     tests # panel_source(V, S), part(panel, Part?, V?, S?).
 transform(Prog, Part) :- Prog? =?= numbers |
     tests # numbers_source(V, S), part(numbers, Part?, V?, S?).
+transform(Prog, Part) :- Prog? =?= steps |
+    tests # steps_source(V, S), part(steps, Part?, V?, S?).
 transform(Prog, _) :- otherwise, ground(Prog?) |
     C =.. ['%% not transformed: no sGLP source of', Prog?],
     send_to_user(['%% transform begin', C?, '%% transform end']).
 
-%% transform_terms(V?, S?, Part?): the same for a source given as its terms.
+%% transform_terms(V?, S?, Part?): the same for a source given as its terms;
+%% Part cva_population prints the population with the run's entries of one
+%% arity that the harness of every canonical CVA platform calls
+%% (programs/sglp/cva/; cva_entries/3).
 exported procedure transform_terms(SglpTerms?, SglpTerms?, Constant?).
 transform_terms(V, S, Part) :- part(given, Part?, V?, S?).
 
@@ -107,6 +113,8 @@ part_lines([], Part, _, S, Ls?) :- Part? =?= profiles, ground(S?) |
     profiles(S?, ['%% transform end'], Ls).
 part_lines([], Part, V, S, Ls?) :- Part? =?= population, ground(V?), ground(S?) |
     population(V?, S?, ['%% transform end'], Ls).
+part_lines([], Part, V, S, Ls?) :- Part? =?= cva_population, ground(V?), ground(S?) |
+    cva_entries(S?, ['%% transform end'], Tl), population(V?, S?, Tl?, Ls).
 part_lines([], Part, _, _, [C?, '%% transform end']) :- otherwise, ground(Part?) |
     C =.. ['%% not transformed: no part', Part?].
 part_lines([E|Es], _, _, _, [E?|Ls?]) :- append(Es?, ['%% transform end'], Ls).
@@ -279,7 +287,7 @@ procedure dual_text(_?, _).
 dual_text(T, D?) :- ground(T?) |
     lookup(T?, [o('Integer', 'Integer?'), o('Number', 'Number?'), o('Real', 'Real?'),
                 o('String', 'String?'), o('Constant', 'Constant?'), o('Module', 'Module?'),
-                o('MutualRef', 'MutualRef?'), o('Token', 'Token?')], D1),
+                o('MutualRef', 'MutualRef?'), o('Token', 'Token?'), o('_', '_?')], D1),
     dual_found(D1?, T?, D).
 procedure dual_found(_?, _?, _).
 dual_found(D1, T, none) :- D1? =?= T? | true.
@@ -522,6 +530,29 @@ present_names([present_1, present_2, present_3, present_4, present_5, present_6,
                present_7, present_8, present_9, present_10, present_11, present_12,
                present_13, present_14, present_15, present_16, present_17, present_18,
                present_19, present_20]).
+
+%% The names a clause of the build of a question shown whole takes: the slot of
+%% each position the person writes, F; and of each position left open, its
+%% skeleton, S, the slots its build writes, G, and the count it leaves, N.  A
+%% form holds at most fifteen of each, its positions taking two of z_names
+%% each.
+procedure f_names(Terms).
+f_names([n('F1', 'F1?'), n('F2', 'F2?'), n('F3', 'F3?'), n('F4', 'F4?'), n('F5', 'F5?'),
+         n('F6', 'F6?'), n('F7', 'F7?'), n('F8', 'F8?'), n('F9', 'F9?'), n('F10', 'F10?'),
+         n('F11', 'F11?'), n('F12', 'F12?'), n('F13', 'F13?'), n('F14', 'F14?'), n('F15', 'F15?')]).
+procedure s_names(Terms).
+s_names([n('S1', 'S1?'), n('S2', 'S2?'), n('S3', 'S3?'), n('S4', 'S4?'), n('S5', 'S5?'),
+         n('S6', 'S6?'), n('S7', 'S7?'), n('S8', 'S8?'), n('S9', 'S9?'), n('S10', 'S10?'),
+         n('S11', 'S11?'), n('S12', 'S12?'), n('S13', 'S13?'), n('S14', 'S14?'), n('S15', 'S15?')]).
+procedure g_names(Terms).
+g_names([n('G1', 'G1?'), n('G2', 'G2?'), n('G3', 'G3?'), n('G4', 'G4?'), n('G5', 'G5?'),
+         n('G6', 'G6?'), n('G7', 'G7?'), n('G8', 'G8?'), n('G9', 'G9?'), n('G10', 'G10?'),
+         n('G11', 'G11?'), n('G12', 'G12?'), n('G13', 'G13?'), n('G14', 'G14?'), n('G15', 'G15?')]).
+procedure n_names(Terms).
+n_names([n('N1', 'N1?'), n('N2', 'N2?'), n('N3', 'N3?'), n('N4', 'N4?'), n('N5', 'N5?'),
+         n('N6', 'N6?'), n('N7', 'N7?'), n('N8', 'N8?'), n('N9', 'N9?'), n('N10', 'N10?'),
+         n('N11', 'N11?'), n('N12', 'N12?'), n('N13', 'N13?'), n('N14', 'N14?'), n('N15', 'N15?'),
+         n('N16', 'N16?')]).
 
 
 %% var_names(Vs?, Ns): Ns are the texts of the variables var(X) of the terms Vs.
@@ -835,10 +866,11 @@ args_undefined([T|Ts], Tys, Seen, Us?) :- ground(T?), ground(Tys?), ground(Seen?
 %% whole; one whose type holds one is taken alternative by alternative; and
 %% one whose type is one being taken already, a stream's tail, is left open,
 %% the reader of a fresh writer in the term written and the goal of its own
-%% procedure on it, the next answer or the next part of the question shown
-%% (vGLP: "an answer of type Stream(T) is given one element at a time, each
-%% element leaving the person the writer of the stream's tail as a new
-%% question").  A position the other side writes is a fresh pair: in an
+%% procedure on it: in an answer, the next answer (vGLP: "an answer of type
+%% Stream(T) is given one element at a time, each element leaving the person
+%% the writer of the stream's tail as a new question"); in a question shown,
+%% the build of the rest, the question being shown whole once its term has no
+%% reader (below, "The question shown whole").  A position the other side writes is a fresh pair: in an
 %% answer, the program's, the person goal's writer at it is bound to a reader
 %% in the copy's pattern, so that the person process holds the writer, and the
 %% program is handed a fresh writer, whose reader the person process keeps and
@@ -935,10 +967,17 @@ leaf_log(present, T, R, '$leaf'(R?, T?)).
 %% answer and a present in a question shown.
 procedure cut_variant(_?, _?, _?, _?, _?, _?, Terms?, Terms).
 cut_variant(Sd, T, CW, CR, ZW, ZR, Ns, [v(var(CW?), var(ZR?), [], B?, [g(K?, T?, var(CR?), var(ZW?))], Ns?)]) :-
-    blank(B), cut_kind(Sd?, K).
+    ground(Sd?), ground(ZW?) | cut_log(Sd?, ZW?, B), cut_kind(Sd?, K).
 procedure cut_kind(_?, _).
 cut_kind(answer, hp).
 cut_kind(present, pp).
+%% cut_log(Sd?, ZW?, L): the log of a position left open: '_' in an answer; in
+%% a question shown, '$cut'(ZW), ZW the copy's writer there, which the
+%% skeleton of the question shown whole replaces by the skeleton of what the
+%% build of the position writes (build_clause/5).
+procedure cut_log(_?, _?, _).
+cut_log(answer, _, B?) :- blank(B).
+cut_log(present, ZW, '$cut'(ZW?)).
 %% alts_variants(As?, Sd?, T?, Tys?, Path?, Ns?, Vs): the forms of the
 %% alternatives As of the type T.
 procedure alts_variants(Terms?, _?, _?, Terms?, Terms?, Terms?, Terms).
@@ -1122,19 +1161,31 @@ plan(Its, Tys, Pl?) :- ground(Its?), ground(Tys?) |
     roots(Its?, Tys?, 1, Rs, K, Ps0), plan1(Rs?, K?, Ps0?, Tys?, Pl).
 procedure plan1(Terms?, Integer?, Terms?, Terms?, _).
 plan1(Rs, K, Ps0, Tys, plan(Rs?, Ps?)) :- ground(Rs?) |
-    root_items(Rs?, Is), rd_needs(Rs?, Found0), plan2(Is?, Found0?, K?, Ps0?, Tys?, Ps).
-procedure plan2(Terms?, Terms?, Integer?, Terms?, Terms?, Terms).
-plan2(Is, Found0, K, Ps0, Tys, Ps?) :- ground(Found0?) |
-    closure(Is?, [], Found0?, Tys?, Found), name_needs(Found?, Found0?, K?, 1, Ps1), append(Ps0?, Ps1?, Ps).
+    root_items(Rs?, Is), rd_needs(Rs?, Found0), rd_needs(Rs?, Found00), ww_needs(Rs?, WN),
+    append(Found00?, WN?, Found1), plan2(Is?, Found0?, Found1?, K?, Ps0?, Tys?, Ps).
+procedure plan2(Terms?, Terms?, Terms?, Integer?, Terms?, Terms?, Terms).
+plan2(Is, Found0, Found1, K, Ps0, Tys, Ps?) :- ground(Found0?), ground(Found1?) |
+    closure(Is?, [], Found1?, Tys?, Found), name_needs(Found?, Found0?, K?, 1, Ps1), append(Ps0?, Ps1?, Ps).
 procedure roots(Terms?, Terms?, Integer?, Terms, Integer, Terms).
 roots([], _, K, [], K?, []).
-roots([it(T, output, Af)|Its], Tys, K, [wr(T?, Af?, Was?)|Rs?], K2?, Ps?) :-
+roots([it(T, output, Af)|Its], Tys, K, [R?|Rs?], K2?, Ps?) :-
     ground(T?), ground(Tys?), integer(K?) |
-    flat_alts(T?, Tys?, [], As), w_alts(As?, T?, Tys?, K?, Was, K1, Ps1),
+    flat_alts(T?, Tys?, [], As), w_root0(As?, T?, Af?, Tys?, K?, R, K1, Ps1),
     roots(Its?, Tys?, K1?, Rs, K2, Ps2), append(Ps1?, Ps2?, Ps).
 roots([it(T, input, Af)|Its], Tys, K, [R?|Rs?], K2?, [P?|Ps?]) :- integer(K?) |
     answer_name(K?, Nm), rd_root(T?, Af?, Nm?, R, P),
     K1 := K? + 1, roots(Its?, Tys?, K1?, Rs, K2, Ps).
+procedure w_root0(Terms?, _?, _?, Terms?, Integer?, _, Integer, Terms).
+w_root0(As, T, Af, Tys, K, R?, K1?, Ps?) :- ground(As?), ground(T?), ground(Tys?) |
+    relay_whole(As?, T?, Tys?, W), w_root(W?, As?, T?, Af?, Tys?, K?, R, K1, Ps).
+%% w_root(W?, As?, T?, Af?, Tys?, K?, R, K1, Ps): the root of the interactive
+%% type T in writer mode, of alternatives As: ww(T, Af) where its question is
+%% shown whole (W yes), its relay building the copy and showing it once
+%% complete, the procedures it calls named in the closure (relay_whole/4);
+%% and otherwise wr(T, Af, Was), its alternatives as w_alts/7 takes them.
+procedure w_root(Ans?, Terms?, _?, _?, Terms?, Integer?, _, Integer, Terms).
+w_root(no, As, T, Af, Tys, K, wr(T?, Af?, Was?), K1?, Ps?) :- ground(T?) | w_alts(As?, T?, Tys?, K?, Was, K1, Ps).
+w_root(yes, _, T, Af, _, K, ww(T?, Af?), K?, []).
 procedure rd_root(_?, _?, _?, _, _).
 rd_root(T, Af, Nm, rd(T?, Af?, Nm?), hp(T?, Nm?)) :- ground(T?), ground(Nm?) | true.
 %% w_alts(As?, T?, Tys?, K?, Was, K1, Ps): the alternatives As of T in writer
@@ -1177,6 +1228,7 @@ procedure root_items(Terms?, Terms).
 root_items([], []).
 root_items([wr(T, _, Was)|Rs], Is?) :- ground(T?) | wa_items(Was?, T?, I1), root_items(Rs?, I2), append(I1?, I2?, Is).
 root_items([rd(T, _, _)|Rs], [a(T?)|Is?]) :- root_items(Rs?, Is).
+root_items([ww(T, _)|Rs], [rr(T?)|Is?]) :- root_items(Rs?, Is).
 procedure wa_items(Terms?, _?, Terms).
 wa_items([], _, []).
 wa_items([wa(A, Hs)|Was], T, Is?) :- ground(A?), ground(T?) |
@@ -1191,6 +1243,13 @@ procedure rd_needs(Terms?, Terms).
 rd_needs([], []).
 rd_needs([rd(T, _, _)|Rs], [n(hp, T?)|Ns?]) :- rd_needs(Rs?, Ns).
 rd_needs([wr(_, _, _)|Rs], Ns?) :- rd_needs(Rs?, Ns).
+rd_needs([ww(_, _)|Rs], Ns?) :- rd_needs(Rs?, Ns).
+%% ww_needs(Rs?, Ns): n(rw, T) for each interactive type T whose question is
+%% shown whole, the build of its question, named in the closure.
+procedure ww_needs(Terms?, Terms).
+ww_needs([], []).
+ww_needs([ww(T, _)|Rs], [n(rw, T?)|Ns?]) :- ww_needs(Rs?, Ns).
+ww_needs([R|Rs], Ns?) :- otherwise, ground(R?) | ww_needs(Rs?, Ns).
 
 %% closure(Todo?, Done?, Found?, Tys?, Out): Out is Found with the needs of the
 %% items Todo, and of the items those need in turn, added in the order found,
@@ -1205,7 +1264,7 @@ closure([I|Todo], Done, Found, Tys, Out?) :- ground(I?), ground(Done?) |
 procedure closure1(Ans?, _?, Terms?, Terms?, Terms?, Terms?, Terms).
 closure1(yes, _, Todo, Done, Found, Tys, Out?) :- closure(Todo?, Done?, Found?, Tys?, Out).
 closure1(no, I, Todo, Done, Found, Tys, Out?) :- ground(I?), ground(Tys?) |
-    item_forms(I?, Tys?, Vs), variants_needs(Vs?, Ns0), dedup(Ns0?, Ns),
+    item_needs(I?, Tys?, Ns0), dedup(Ns0?, Ns),
     closure2(Ns?, I?, Todo?, Done?, Found?, Tys?, Out).
 procedure closure2(Terms?, _?, Terms?, Terms?, Terms?, Terms?, Terms).
 closure2(Ns, I, Todo, Done, Found, Tys, Out?) :- ground(Ns?) |
@@ -1223,10 +1282,80 @@ need_items([], []).
 need_items([n(pp, T)|Ns], [p(T?)|Is?]) :- need_items(Ns?, Is).
 need_items([n(hp, T)|Ns], [a(T?)|Is?]) :- need_items(Ns?, Is).
 need_items([n(fa, f(_, _, T))|Ns], [a(T?)|Is?]) :- need_items(Ns?, Is).
+need_items([n(pw, T)|Ns], [w(T?)|Is?]) :- need_items(Ns?, Is).
+need_items([n(fw, T)|Ns], [f(T?)|Is?]) :- need_items(Ns?, Is).
+need_items([n(rw, _)|Ns], Is?) :- need_items(Ns?, Is).
 procedure item_forms(_?, Terms?, Terms).
 item_forms(a(T), Tys, Vs?) :- z_names(Zs), expand(answer, T?, Tys?, [], none, Zs?, Vs).
 item_forms(p(T), Tys, Vs?) :- z_names(Zs), expand(present, T?, Tys?, [], none, Zs?, Vs).
 item_forms(r(T, A), Tys, Vs?) :- root_forms(A?, T?, Tys?, Vs).
+item_forms(w(T), Tys, Vs?) :- z_names(Zs), expand(present, T?, Tys?, [], none, Zs?, Vs).
+item_forms(f(T), Tys, Vs?) :- z_names(Zs), expand(answer, T?, Tys?, [], none, Zs?, Vs).
+item_forms(rr(T), Tys, Vs?) :- ground(T?), ground(Tys?) | flat_alts(T?, Tys?, [], As), rr_forms(As?, T?, Tys?, Vs).
+%% item_needs(I?, Tys?, Ns): the procedures the item I needs.  The present of a
+%% type whose question is shown whole, p(T) with a position left open, needs
+%% the build of T; the build of a type in a question shown whole, w(T), and the
+%% build of a question shown whole, rr(T), need the build of each position
+%% left open and the answer of each position the person writes, its log the
+%% question shown whole (whole_needs/2); every other item the procedures its
+%% forms spawn (variants_needs/2).
+procedure item_needs(_?, Terms?, Terms).
+item_needs(p(T), Tys, Ns?) :- ground(T?) | item_forms(p(T?), Tys?, Vs), p_needs(Vs?, T?, Ns).
+item_needs(w(T), Tys, Ns?) :- item_forms(w(T?), Tys?, Vs), whole_needs(Vs?, Ns).
+item_needs(rr(T), Tys, Ns?) :- item_forms(rr(T?), Tys?, Vs), whole_needs(Vs?, Ns).
+item_needs(I, Tys, Ns?) :- otherwise, ground(I?) | item_forms(I?, Tys?, Vs), variants_needs(Vs?, Ns).
+procedure p_needs(Terms?, _?, Terms).
+p_needs(Vs, T, Ns?) :- ground(Vs?) | has_cut(Vs?, W), p_needs1(W?, T?, Vs?, Ns).
+procedure p_needs1(Ans?, _?, Terms?, Terms).
+p_needs1(yes, T, _, [n(pw, T?)]).
+p_needs1(no, _, Vs, Ns?) :- variants_needs(Vs?, Ns).
+%% whole_needs(Vs?, Ns): in a question shown whole, the procedures the goals
+%% of the forms Vs spawn: n(pw, T) for a position of type T left open, built
+%% by the build of T, and n(fw, T) for a position of type T the person writes,
+%% answered by the answer of T, logged in the question shown whole.
+procedure whole_needs(Terms?, Terms).
+whole_needs([], []).
+whole_needs([v(_, _, _, _, Ks, _)|Vs], Ns?) :- whole_goal_needs(Ks?, N1), whole_needs(Vs?, N2), append(N1?, N2?, Ns).
+procedure whole_goal_needs(Terms?, Terms).
+whole_goal_needs([], []).
+whole_goal_needs([g(_, T, _, _)|Ks], [n(pw, T?)|Ns?]) :- whole_goal_needs(Ks?, Ns).
+whole_goal_needs([h(T, _, _, _)|Ks], [n(fw, T?)|Ns?]) :- whole_goal_needs(Ks?, Ns).
+%% rr_forms(As?, T?, Tys?, Vs): the forms of the question of the interactive
+%% type T in writer mode, of alternatives As, as the build of a question shown
+%% whole takes it: each compound alternative's forms (root_forms/4), each
+%% constant alternative itself, and each primitive one ground.
+procedure rr_forms(Terms?, _?, Terms?, Terms).
+rr_forms([], _, _, []).
+rr_forms([A|As], T, Tys, Vs?) :- ground(A?), ground(T?), ground(Tys?) |
+    rr_form(A?, T?, Tys?, V1), rr_forms(As?, T?, Tys?, V2), append(V1?, V2?, Vs).
+procedure rr_form(_?, _?, Terms?, Terms).
+rr_form('$prim'(G), T, _, Vs?) :- ground(G?) | leaf_variant(present, T?, 'X1', 'X1?', G?, [], Vs).
+rr_form(A, T, Tys, Vs?) :- otherwise, compound(A?) | root_forms(A?, T?, Tys?, Vs).
+rr_form(A, _, _, [v(A?, A?, [], A?, [], [])]) :- otherwise, constant(A?) | true.
+%% has_cut(Vs?, A): A is yes where a form of Vs leaves a position open, a
+%% goal g(pp, T, In, Out) of the present of T among its goals: the question is
+%% then shown whole, once the term the program writes has no reader (Section
+%% 3, Definition "Relay" (ii), at sGLP e8367a3; Appendix B).
+procedure has_cut(Terms?, Ans).
+has_cut([], no).
+has_cut([v(_, _, _, _, Ks, _)|Vs], A?) :- ground(Ks?) | ks_cut(Ks?, A1), has_cut1(A1?, Vs?, A).
+procedure has_cut1(Ans?, Terms?, Ans).
+has_cut1(yes, _, yes).
+has_cut1(no, Vs, A?) :- has_cut(Vs?, A).
+procedure ks_cut(Terms?, Ans).
+ks_cut([], no).
+ks_cut([g(pp, _, _, _)|_], yes).
+ks_cut([K|Ks], A?) :- otherwise, ground(K?) | ks_cut(Ks?, A).
+%% relay_whole(As?, T?, Tys?, W): W is yes where a form of an alternative of
+%% As of the interactive type T in writer mode leaves a position open, so that
+%% the question is shown whole.
+procedure relay_whole(Terms?, _?, Terms?, Ans).
+relay_whole([], _, _, no).
+relay_whole([A|As], T, Tys, W?) :- ground(A?), ground(T?), ground(Tys?) |
+    rr_form(A?, T?, Tys?, Vs), has_cut(Vs?, W1), relay_whole1(W1?, As?, T?, Tys?, W).
+procedure relay_whole1(Ans?, Terms?, _?, Terms?, Ans).
+relay_whole1(yes, _, _, _, yes).
+relay_whole1(no, As, T, Tys, W?) :- relay_whole(As?, T?, Tys?, W).
 
 %% name_needs(Found?, Found0?, K?, J?, Ps): Ps the procedures of the needs
 %% Found not in Found0, in order, the answer procedures named from the K-th of
@@ -1244,6 +1373,12 @@ name_need(no, n(hp, T), Ns, F0, K, J, [hp(T?, Nm?)|Ps?]) :- integer(K?) |
     answer_name(K?, Nm), K1 := K? + 1, name_needs(Ns?, F0?, K1?, J?, Ps).
 name_need(no, n(fa, F), Ns, F0, K, J, [fa(F?, Nm?)|Ps?]) :- integer(K?) |
     answer_name(K?, Nm), K1 := K? + 1, name_needs(Ns?, F0?, K1?, J?, Ps).
+name_need(no, n(fw, T), Ns, F0, K, J, [fw(T?, Nm?)|Ps?]) :- integer(K?) |
+    answer_name(K?, Nm), K1 := K? + 1, name_needs(Ns?, F0?, K1?, J?, Ps).
+name_need(no, n(pw, T), Ns, F0, K, J, [pw(T?, Nm?)|Ps?]) :- integer(J?) |
+    present_name(J?, Nm), J1 := J? + 1, name_needs(Ns?, F0?, K?, J1?, Ps).
+name_need(no, n(rw, T), Ns, F0, K, J, [rw(T?, Nm?)|Ps?]) :- integer(J?) |
+    present_name(J?, Nm), J1 := J? + 1, name_needs(Ns?, F0?, K?, J1?, Ps).
 
 %% proc_name(K?, T?, Ps?, Nm): Nm is the name of the procedure of kind K, hp
 %% or pp of the type T, or fa of f(L, Key, T).
@@ -1254,6 +1389,9 @@ procedure proc_key(_?, _, _, _).
 proc_key(hp(T, Nm), hp, T?, Nm?).
 proc_key(fa(F, Nm), fa, F?, Nm?).
 proc_key(pp(T, Nm), pp, T?, Nm?).
+proc_key(pw(T, Nm), pw, T?, Nm?).
+proc_key(rw(T, Nm), rw, T?, Nm?).
+proc_key(fw(T, Nm), fw, T?, Nm?).
 proc_key(wp(_, _, _, Nm), wp, none, Nm?).
 procedure proc_name1(_?, _?, _?, _?, _?, Terms?, _).
 proc_name1(K1, T1, Nm1, K, T, _, Nm1?) :- K1? =?= K?, T1? =?= T? | true.
@@ -1415,6 +1553,7 @@ root_index1(T1, T, _, Rs, I, R1?, K?) :- T1? =?\= T?, integer(I?) | I1 := I? + 1
 procedure root_type(_?, _).
 root_type(wr(T, _, _), T?).
 root_type(rd(T, _, _), T?).
+root_type(ww(T, _), T?).
 procedure dim_of(_?, Terms?, Integer).
 dim_of(_, [], 0).
 dim_of(Q, [dim(J, _, Qs, _, _)|Ds], K?) :- ground(Q?) | member(Q?, Qs?, A), dim_of1(A?, J?, Q?, Ds?, K).
@@ -1432,6 +1571,9 @@ person_clause(wr(_, Af, _), QT, RN, Q, J, ND, P, Tl, Ls?) :- integer(ND?) |
 person_clause(rd(_, Af, _), QT, RN, Q, J, ND, P, Tl, Ls?) :- integer(ND?) |
     d_names(Dn0), take(ND?, Dn0?, Dn),
     pclause(Af?, var('E?'), var('Y'), var('E'), var('Y?'), QT?, RN?, Dn?, Q?, J?, P?, Tl?, Ls).
+person_clause(ww(_, Af), QT, RN, Q, J, ND, P, Tl, Ls?) :- integer(ND?) |
+    d_names(Dn0), take(ND?, Dn0?, Dn),
+    pclause(Af?, var('E'), var('Y?'), var('E?'), var('Y'), QT?, RN?, Dn?, Q?, J?, P?, Tl?, Ls).
 person_clause(none, _, _, _, _, _, _, Tl, Tl?).
 procedure pclause(_?, _?, _?, _?, _?, _?, _?, Terms?, _?, Integer?, _?, Terms?, Terms).
 pclause(Af, HE, PY, RE, RY, QT, RN, Dn, Q, J, P, Tl, Ls?) :- ground(QT?), ground(P?), ground(RN?) |
@@ -1470,6 +1612,16 @@ relay_proc(rd(T, _, Nm), RN, _, _, Tl, Ls?) :- ground(T?), ground(RN?) |
     AG =.. [Nm?, var('A?'), var('Type?'), var('Y?'), var('X'), var('Mon?'), var('Log?')],
     H =.. [RN?, var('A'), var('Type'), var('X?'), var('Y'), var('Mon'), var('Log')],
     clause(H?, [], [AG?], Tl?, L1).
+%% A question shown whole: the relay's one clause takes the question once the
+%% term the program writes has no reader, each reader in it replaced by its
+%% value, repeatedly (the guard no_readers), builds the copy and its skeleton
+%% by the build of the question, rw, and shows the copy once it is complete
+%% (Section 3, Definition "Relay" (ii), at sGLP e8367a3; Appendix B: "a list the
+%% program writes inside a question is shown whole, once its last cell is
+%% written"; whole_top/4).
+relay_proc(ww(T, _), RN, Ps, _, Tl, Ls?) :- ground(T?), ground(RN?), ground(Ps?) |
+    decl(['procedure'], RN?, [dual('Integer'), dual('Constant'), dual(T?), T?, dual('MutualRef'), dual('MutualRef')], L1?, Ls),
+    proc_name(rw, T?, Ps?, BN), whole_top(RN?, BN?, Tl?, L1).
 procedure relay_name(Integer?, _).
 relay_name(K, Nm?) :- relay_names(RNs), nth_or_none(K?, RNs?, Nm).
 procedure relay_names(Terms).
@@ -1633,6 +1785,9 @@ pp_procs([P|Ps], All, Tys, Tl, ['', C?|Ls?]) :- ground(P?), ground(All?), ground
     pp_procs(Ps?, All?, Tys?, Tl?, Ls2), proc_comment(P?, C), pp_proc(P?, All?, Tys?, Ls2?, Ls).
 procedure proc_comment(_?, _).
 proc_comment(pp(_, _), '%% The question shown, each position the person writes answered as a question of its own (Section 4, "The person process").').
+proc_comment(pw(_, _), '%% The build of a question shown whole: the copy, its skeleton for the log, and the answer of each position the person writes (Section 3, Definition "Relay").').
+proc_comment(rw(_, _), '%% The build of a question shown whole: the copy, its skeleton for the log, and the answer of each position the person writes (Section 3, Definition "Relay").').
+proc_comment(fw(_, _), '%% The answer to a question shown whole, handed over and logged in it (Section 4, "The person process" and "The log").').
 proc_comment(fa(_, _), '%% The answer to a question shown, handed over and logged in it (Section 4, "The person process" and "The log").').
 proc_comment(P, '%% The answer, handed over and logged (Section 4, "The person process" and "The log").') :-
     otherwise, ground(P?) | true.
@@ -1650,7 +1805,28 @@ pp_proc(pp(T, Nm), All, Tys, Tl, Ls?) :- ground(T?), ground(Nm?), ground(All?), 
     decl(['procedure'], Nm?, [dual('Integer'), dual('Constant'), dual(T?), T?,
                               dual('MutualRef'), dual('MutualRef')], Ls1?, Ls),
     z_names(Zs), expand(present, T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs),
-    present_clauses(Vs?, Nm?, All?, Tl?, Ls1).
+    pp_body(Vs?, T?, Nm?, All?, Tl?, Ls1).
+pp_proc(pw(T, Nm), All, Tys, Tl, Ls?) :- ground(T?), ground(Nm?), ground(All?), ground(Tys?) |
+    build_decl(Nm?, T?, Ls1?, Ls),
+    z_names(Zs), expand(present, T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs),
+    build_clauses(Vs?, Nm?, All?, Tl?, Ls1).
+pp_proc(rw(T, Nm), All, Tys, Tl, Ls?) :- ground(T?), ground(Nm?), ground(All?), ground(Tys?) |
+    build_decl(Nm?, T?, Ls1?, Ls),
+    item_forms(rr(T?), Tys?, Vs), build_clauses(Vs?, Nm?, All?, Tl?, Ls1).
+pp_proc(fw(T, Nm), All, Tys, Tl, Ls?) :- ground(T?), ground(Nm?), ground(All?), ground(Tys?) |
+    decl(['procedure'], Nm?, [dual('Integer'), dual('Constant'), dual('Integer'), dual('Integer'), dual('_'),
+                              dual(T?), T?, dual('MutualRef'), dual('MutualRef')], Ls1?, Ls),
+    z_names(Zs), expand(answer, T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs),
+    fw_clauses(Vs?, Nm?, All?, Tl?, Ls1).
+%% pp_body(Vs?, T?, Nm?, All?, Tail?, Ls): the clauses of the present Nm of T,
+%% of the forms Vs: a clause per form where no form leaves a position open;
+%% and where one does, one clause, which shows the term the program writes
+%% whole, built by the build of T (whole_top/4).
+procedure pp_body(Terms?, _?, _?, Terms?, Terms?, Terms).
+pp_body(Vs, T, Nm, All, Tl, Ls?) :- ground(Vs?) | has_cut(Vs?, W), pp_body1(W?, Vs?, T?, Nm?, All?, Tl?, Ls).
+procedure pp_body1(Ans?, Terms?, _?, _?, Terms?, Terms?, Terms).
+pp_body1(no, Vs, _, Nm, All, Tl, Ls?) :- present_clauses(Vs?, Nm?, All?, Tl?, Ls).
+pp_body1(yes, _, T, Nm, All, Tl, Ls?) :- proc_name(pw, T?, All?, BN), whole_top(Nm?, BN?, Tl?, Ls).
 procedure pp_wp(_?, Terms?, Integer?, _?, Terms?, Terms?, Terms?, Terms).
 pp_wp(F, As, K, Nm, All, Tys, Tl, Ls?) :- ground(As?), ground(Nm?), integer(K?) |
     length(As?, NA), x_names(Xs0), y_names(Ys0), take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys),
@@ -1718,6 +1894,197 @@ v_names([n('V1', 'V1?'), n('V2', 'V2?'), n('V3', 'V3?'), n('V4', 'V4?'),
          n('V29', 'V29?'), n('V30', 'V30?'), n('V31', 'V31?'), n('V32', 'V32?'),
          n('V33', 'V33?'), n('V34', 'V34?'), n('V35', 'V35?'), n('V36', 'V36?'),
          n('V37', 'V37?'), n('V38', 'V38?'), n('V39', 'V39?'), n('V40', 'V40?')]).
+%% The question shown whole (Section 3, Definition "Relay" (ii), at sGLP
+%% e8367a3: the relay assigns the copy at the place of a reader of the
+%% program's output only once its term, each reader in it replaced by its
+%% value, repeatedly, has no reader, and then with that term, each writer in it
+%% replaced by a fresh writer, at one place in a reduction and at none in a
+%% reduction that answers; Appendix B: "a list the program writes inside a
+%% question is shown whole, once its last cell is written").  Where the term
+%% the program writes at a place holds a position left open --- a list or a
+%% stream, or a type being taken already on the way to it --- the relay or the
+%% present of the place takes it once it has no reader, the guard no_readers,
+%% builds the copy, B, by the build of its type, rw or pw, a clause per form,
+%% each position left open built by the build of its type and each position
+%% the person writes a fresh writer, answered by the answer of its type, fw;
+%% and the build writes the skeleton of the question shown, S, the term the
+%% program writes with each position the person writes marked '$h'(C, J), C
+%% the count the build of the form was given and J the position's place among
+%% the form's positions the person writes, so that the marks are distinct, and
+%% the list of the slots in which each answer of the question receives the
+%% skeleton, Fs.  show_whole/4 of sglp.glp then assigns the copy B once it is
+%% complete, at one place, and fills each slot with S, and each answer logs
+%% the question shown whole with its answer in place of its mark and '_' at
+%% every other (whole_frame/5 of sglp.glp; Definition "Log").
+%%
+%% whole_top(Nm?, BN?, Tail?, Ls): the clause of the relay or the present Nm,
+%% its build BN.
+procedure whole_top(_?, _?, Terms?, Terms).
+whole_top(Nm, BN, Tl, Ls?) :- ground(Nm?), ground(BN?) |
+    compose(Nm?, [var('A'), var('Type'), var('X'), var('Y?'), var('Mon'), var('Log')], H),
+    compose(BN?, [var('A?'), var('Type?'), var('X?'), var('B'), var('S'), 1, var('_'), var('Fs'), [],
+                  var('Mon?'), var('Log?')], G),
+    clause(H?, [no_readers(var('X?'))], [G?, show_whole(var('B?'), var('S?'), var('Fs?'), var('Y'))], Tl?, Ls).
+%% build_decl(Nm?, T?, Tail?, Ls): the declaration of the build Nm of the type
+%% T: the agent, the type for the log, the term the program writes, the copy,
+%% the skeleton, the count given and the count left, the slots and their tail,
+%% the monitor's reference and the log's.
+procedure build_decl(_?, _?, Terms?, Terms).
+build_decl(Nm, T, Tl, Ls?) :- ground(T?) |
+    decl(['procedure'], Nm?, [dual('Integer'), dual('Constant'), dual(T?), T?, '_', dual('Integer'), 'Integer',
+                              'Stream'('Slot'('_')), dual('Stream'('Slot'('_'))), dual('MutualRef'), dual('MutualRef')],
+         Tl?, Ls).
+%% build_clauses(Vs?, Nm?, All?, Tail?, Ls): a clause of the build Nm per form
+%% of Vs.
+procedure build_clauses(Terms?, _?, Terms?, Terms?, Terms).
+build_clauses([], _, _, Tl, Tl?).
+build_clauses([V|Vs], Nm, All, Tl, Ls?) :- ground(V?), ground(Nm?), ground(All?) |
+    build_clauses(Vs?, Nm?, All?, Tl?, Ls1), build_clause(V?, Nm?, All?, Ls1?, Ls).
+%% build_clause(V?, Nm?, All?, Tail?, Ls): the clause of the build Nm of the
+%% form v(C, X, Gs, L, Ks, _): the term the program writes C, the copy X, the
+%% skeleton L with each position the person writes marked and each position
+%% left open its build's skeleton; the guards Gs, and integer(C0) where the
+%% count is used more than once; the count C0 given, the form's positions the
+%% person writes numbered 0, 1, ... from it, the count past them,
+%% N1 := C0 + NH, given to the first position left open and the count each
+%% leaves given to the next, the last left; the slots, one per position the
+%% person writes and then those of each position left open, before Fs0; and
+%% the goals: the answer of each position the person writes and the build of
+%% each position left open.
+procedure build_clause(_?, _?, Terms?, Terms?, Terms).
+build_clause(v(C, X, Gs, L, Ks, _), Nm, All, Tl, Ls?) :- ground(Ks?) |
+    holes_of(Ks?, Hs), cuts_of(Ks?, Cs),
+    build_clause1(Hs?, Cs?, C?, X?, Gs?, L?, Nm?, All?, Tl?, Ls).
+procedure build_clause1(Terms?, Terms?, _?, _?, Terms?, _?, _?, Terms?, Terms?, Terms).
+build_clause1(Hs, Cs, C, X, Gs, L, Nm, All, Tl, Ls?) :- ground(Hs?), ground(Cs?) |
+    length(Hs?, NH), length(Cs?, NC), s_names(Sn1), s_names(Sn2),
+    hole_marks(Hs?, 0, HM), cut_marks(Cs?, Sn1?, CM), append(HM?, CM?, Map), skel(L?, Map?, S),
+    build_clause2(NH?, NC?, Sn2?, Hs?, Cs?, S?, C?, X?, Gs?, Nm?, All?, Tl?, Ls).
+procedure build_clause2(Integer?, Integer?, Terms?, Terms?, Terms?, _?, _?, _?, Terms?, _?, Terms?, Terms?, Terms).
+build_clause2(NH, NC, Sn, Hs, Cs, S, C, X, Gs, Nm, All, Tl, Ls?) :- integer(NH?), integer(NC?) |
+    f_names(Fn0), take(NH?, Fn0?, Fn), g_names(Gn0), take(NC?, Gn0?, Gn), n_names(Nn0),
+    count_start(NH?, Nn0?, CG, Cur0, Nn), count_guard(NH?, Gs?, Gs1),
+    build_clause3(Fn?, Gn?, CG?, Cur0?, Nn?, Sn?, Hs?, Cs?, S?, C?, X?, Gs1?, Nm?, All?, Tl?, Ls).
+procedure build_clause3(Terms?, Terms?, Terms?, _?, Terms?, Terms?, Terms?, Terms?, _?, _?, _?, Terms?, _?, Terms?, Terms?, Terms).
+build_clause3(Fn, Gn, CG, Cur0, Nn, Sn, Hs, Cs, S, C, X, Gs, Nm, All, Tl, Ls?) :-
+    ground(Fn?), ground(Gn?), ground(All?) |
+    hole_goals_w(Hs?, 0, Fn?, All?, HG),
+    cut_goals_w(Cs?, Cur0?, Nn?, Sn?, Gn?, All?, CutG, COut),
+    slot_terms(Fn?, Gn?, FsOut),
+    append(CG?, HG?, B1), append(B1?, CutG?, Body),
+    build_clause4(Body?, Nm?, C?, X?, S?, COut?, FsOut?, Gs?, Tl?, Ls).
+procedure build_clause4(Terms?, _?, _?, _?, _?, _?, _?, Terms?, Terms?, Terms).
+build_clause4(Body, Nm, C, X, S, COut, FsOut, Gs, Tl, Ls?) :- ground(Body?) |
+    build_head(Body?, Nm?, C?, X?, S?, COut?, FsOut?, H),
+    clause(H?, Gs?, Body?, Tl?, Ls).
+%% holes_of(Ks?, Hs), cuts_of(Ks?, Cs): the goals of the positions the person
+%% writes, h(T, Key, In, Out), and of the positions left open, g(pp, T, In,
+%% Out), in order.
+procedure holes_of(Terms?, Terms).
+holes_of([], []).
+holes_of([h(T, K, I, O)|Ks], [h(T?, K?, I?, O?)|Hs?]) :- holes_of(Ks?, Hs).
+holes_of([K|Ks], Hs?) :- otherwise, ground(K?) | holes_of(Ks?, Hs).
+procedure cuts_of(Terms?, Terms).
+cuts_of([], []).
+cuts_of([g(pp, T, I, O)|Ks], [g(pp, T?, I?, O?)|Cs?]) :- cuts_of(Ks?, Cs).
+cuts_of([K|Ks], Cs?) :- otherwise, ground(K?) | cuts_of(Ks?, Cs).
+%% hole_marks(Hs?, J?, Map): o(Key, '$h'(C0?, J)) for each position the person
+%% writes, J its place among them; cut_marks(Cs?, Sn?, Map): o(Key, S?) for
+%% each position left open, Key the copy's writer there and S the skeleton
+%% its build writes.
+procedure hole_marks(Terms?, Integer?, Terms).
+hole_marks([], _, []).
+hole_marks([h(_, K, _, _)|Hs], J, [o(K?, '\'$h\''(var('C0?'), J?))|Ms?]) :- integer(J?) |
+    J1 := J? + 1, hole_marks(Hs?, J1?, Ms).
+procedure cut_marks(Terms?, Terms?, Terms).
+cut_marks([], _, []).
+cut_marks([g(_, _, _, var(K))|Cs], [n(_, R)|Sn], [o(K?, var(R?))|Ms?]) :- cut_marks(Cs?, Sn?, Ms).
+cut_marks([_|_], [], []).
+%% skel(L?, Map?, S): the skeleton of the log L of a form shown whole: each
+%% position the program writes its reader, each position the person writes,
+%% '$hole'(Key), and each position left open, '$cut'(Key), the term Map gives
+%% Key.
+procedure skel(_?, Terms?, _).
+skel('$leaf'(R, _), _, var(R?)).
+skel('$hole'(K), Map, M?) :- ground(K?), ground(Map?) | lookup(K?, Map?, M).
+skel('$cut'(K), Map, M?) :- ground(K?), ground(Map?) | lookup(K?, Map?, M).
+skel([], _, []).
+skel([H|T], Map, [H1?|T1?]) :- ground(Map?) | skel(H?, Map?, H1), skel(T?, Map?, T1).
+skel(T, Map, S?) :- otherwise, compound(T?), ground(T?), ground(Map?) |
+    parts(T?, F, As), skel_list(As?, Map?, Ss), compose(F?, Ss?, S).
+skel(T, _, T?) :- otherwise, constant(T?) | true.
+procedure skel_list(Terms?, Terms?, Terms).
+skel_list([], _, []).
+skel_list([A|As], Map, [S?|Ss?]) :- ground(Map?) | skel(A?, Map?, S), skel_list(As?, Map?, Ss).
+%% count_start(NH?, Nn?, Gs, Cur, Nn1): with NH positions the person writes,
+%% the count past them, Cur: the count given, C0, where NH is 0; and
+%% otherwise the first name of Nn, assigned C0 + NH by the goal Gs; Nn1 the
+%% names left.
+procedure count_start(Integer?, Terms?, Terms, _, Terms).
+count_start(0, Nn, [], n('C0', 'C0?'), Nn?).
+count_start(NH, [n(W, R)|Nn], [':='(var(W?), '+'(var('C0?'), NH?))], n(W?, R?), Nn?) :-
+    integer(NH?), NH? > 0, ground(W?), ground(R?) | true.
+%% hole_goals_w(Hs?, J?, Fn?, All?, Gs): the answer of each position the
+%% person writes, J its place, its slot's reader, the copy's reader and the
+%% program's writer there.
+procedure hole_goals_w(Terms?, Integer?, Terms?, Terms?, Terms).
+hole_goals_w([], _, _, _, []).
+hole_goals_w([h(T, _, I, O)|Hs], J, [n(_, FR)|Fn], All, [G?|Gs?]) :- ground(All?), integer(J?) |
+    proc_name(fw, T?, All?, Nm),
+    compose(Nm?, [var('A?'), var('Type?'), var('C0?'), J?, var(FR?), I?, O?, var('Mon?'), var('Log?')], G),
+    J1 := J? + 1, hole_goals_w(Hs?, J1?, Fn?, All?, Gs).
+hole_goals_w([_|_], _, [], _, []).
+%% cut_goals_w(Cs?, Cur?, Nn?, Sn?, Gn?, All?, Gs, COut): the build of each
+%% position left open, given the count Cur and leaving the next, writing its
+%% skeleton and its slots before those of the next, the last before Fs0;
+%% COut the count the last leaves, Cur where there is none.
+procedure cut_goals_w(Terms?, _?, Terms?, Terms?, Terms?, Terms?, Terms, _).
+cut_goals_w([], n(_, CR), _, _, _, _, [], var(CR?)).
+cut_goals_w([g(_, T, I, O)|Cs], n(_, CR), [n(NW, NR)|Nn], [n(SW, _)|Sn], [n(GW, _)|Gn], All, [G?|Gs?], COut?) :-
+    ground(All?), ground(Gn?), ground(NW?) |
+    proc_name(pw, T?, All?, Nm), next_slots(Gn?, Tl),
+    compose(Nm?, [var('A?'), var('Type?'), I?, O?, var(SW?), var(CR?), var(NW?), var(GW?), Tl?, var('Mon?'), var('Log?')], G),
+    cut_goals_w(Cs?, n(NW?, NR?), Nn?, Sn?, Gn?, All?, Gs, COut).
+procedure next_slots(Terms?, _).
+next_slots([], var('Fs0?')).
+next_slots([n(_, R)|_], var(R?)).
+%% slot_terms(Fn?, Gn?, T): the slots the clause writes: slot(F) for each
+%% position the person writes, then those of the first position left open, or
+%% Fs0.
+procedure slot_terms(Terms?, Terms?, _).
+slot_terms([], Gn, T?) :- next_slots(Gn?, T).
+slot_terms([n(FW, _)|Fn], Gn, [slot(var(FW?))|T?]) :- slot_terms(Fn?, Gn?, T).
+%% count_guard(NH?, Gs?, Gs1): the guards, and integer(C0?) where the count
+%% given is used more than once, by the positions the person writes.
+procedure count_guard(Integer?, Terms?, Terms).
+count_guard(0, Gs, Gs?).
+count_guard(NH, Gs, Gs1?) :- integer(NH?), NH? > 0 | append(Gs?, [integer(var('C0?'))], Gs1).
+%% build_head(Body?, Nm?, C?, X?, S?, COut?, FsOut?, H): the head; the agent,
+%% the type and the references _ where the clause spawns no goal.
+procedure build_head(Terms?, _?, _?, _?, _?, _?, _?, _).
+build_head([], Nm, C, X, S, COut, FsOut, H?) :-
+    compose(Nm?, [var('_'), var('_'), C?, X?, S?, var('C0'), COut?, FsOut?, var('Fs0'), var('_'), var('_')], H).
+build_head([_|_], Nm, C, X, S, COut, FsOut, H?) :-
+    compose(Nm?, [var('A'), var('Type'), C?, X?, S?, var('C0'), COut?, FsOut?, var('Fs0'), var('Mon'), var('Log')], H).
+%% fw_clauses(Vs?, Nm?, All?, Tail?, Ls): the answer Nm of a position of a
+%% question shown whole, a clause per form v(C, X, Gs, L, Ks, _) of the
+%% answer: the count C and place J of the position's mark and the slot F of
+%% the skeleton, then the copy's pattern and the program's term; once the
+%% positions the person writes are ground and the skeleton is given, it hands
+%% the program the answer, asks the clock and logs the question shown whole
+%% with the answer, L, in place of its mark and '_' at every other, whole_frame/5 of
+%% sglp.glp, and spawns the goals Ks.
+procedure fw_clauses(Terms?, _?, Terms?, Terms?, Terms).
+fw_clauses([], _, _, Tl, Tl?).
+fw_clauses([v(C, X, Gs, L, Ks, _)|Vs], Nm, All, Tl, Ls?) :- ground(Nm?), ground(All?), ground(Gs?) |
+    fw_clauses(Vs?, Nm?, All?, Tl?, Ls1),
+    compose(Nm?, [var('A'), var('Type'), var('C'), var('J'), var('F'), C?, X?, var('Mon'), var('Log')], H),
+    append(Gs?, [ground(var('F?'))], Gs1),
+    ks_goals(Ks?, none, All?, KGs),
+    clause(H?, Gs1?, [stream_append(time(var('Time')), var('Mon?'), var('_')),
+                      whole_frame(var('F?'), var('C?'), var('J?'), L?, var('E')),
+                      stream_append(entry(var('Time?'), var('A?'), var('Type?'), var('E?')), var('Log?'), var('_'))|KGs?],
+           Ls1?, Ls).
 procedure present_clauses(Terms?, _?, Terms?, Terms?, Terms).
 present_clauses([], _, _, Tl, Tl?).
 present_clauses([v(C, X, Gs, L, Ks, _)|Vs], Nm, All, Tl, Ls?) :- ground(Nm?), ground(All?) |
@@ -1868,6 +2235,43 @@ pp_run2(Ts, NT, Tn, Bn, Kn, Pn, N, C, U, Seed, Ds, Tl,
     decl(['exported procedure'], stochastic_person, [dual('Integer')|STs?], L4?, L3),
     clause(SH?, [], SB?, L5?, L4),
     dim_procs(Ds?, Tl?, L5).
+
+%% cva_entries(S?, Tail?, Ls): the entries of fixed_entries/7 from the run
+%% declaration of S, its agents, horizon, seed and thresholds, which the part
+%% cva_population prints after the population (part_lines/5).
+procedure cva_entries(Terms?, Terms?, Terms).
+cva_entries(S, Tl, Ls?) :- ground(S?) | runs(S?, Rs), cva_entries1(Rs?, Tl?, Ls).
+procedure cva_entries1(Terms?, Terms?, Terms).
+cva_entries1([run(N, Mixes, C, U, Seed)], Tl, Ls?) :- ground(Mixes?) |
+    dims(Mixes?, 1, Ds), all_thresholds(Ds?, Ts), fixed_entries(N?, C?, U?, Seed?, Ts?, Tl?, Ls).
+cva_entries1(Rs, Tl, Tl?) :- otherwise, ground(Rs?) | true.
+
+%% fixed_entries(N?, C?, U?, Seed?, Ts?, Tail?, Ls): the run's entries of one
+%% arity whatever the population, for the harness of every canonical CVA
+%% platform, which takes the printed population of any source
+%% (programs/sglp/cva/; sGLP's task of 2026-10-18 20:50 UTC, item 2):
+%% run_declaration/4, the run declaration's agents, horizon and seed;
+%% stochastic_agent(A, B, Mon, Log, Asks), agent A's stochastic person drawn
+%% from the start B of its block with the declaration's thresholds, its person
+%% process's seed drawn from the seed the profiles leave, and its person
+%% process on the ask stream Asks, as the examples' harnesses draw and spawn
+%% them (Appendix B, "Seeds"); and stochastic_profiles(B, P), the stochastic
+%% person P drawn from B, for the population's draw.
+procedure fixed_entries(_?, _?, _?, _?, Terms?, Terms?, Terms).
+fixed_entries(N, C, U, Seed, Ts, Tl, ['', '%% The run\'s entries of one arity, for the harness of every canonical CVA platform (programs/sglp/cva/).'|Ls?]) :-
+    ground(Ts?) |
+    compose(run_declaration, [N?, C?, U?, Seed?], RH),
+    append([var('B?')|Ts?], [var('P'), var('S')], SA1), compose(stochastic_person, SA1?, SG1),
+    append([var('B?')|Ts?], [var('P'), var('_')], SA2), compose(stochastic_person, SA2?, SG2),
+    decl(['exported procedure'], run_declaration, ['Integer', 'Number', 'Span', 'Integer'], L1?, Ls),
+    clause(RH?, [], [], L2?, L1),
+    decl(['exported procedure'], stochastic_agent,
+         [dual('Integer'), dual('Integer'), dual('MutualRef'), dual('MutualRef'), dual('Stream'('Ask'))], L3?, L2),
+    clause(stochastic_agent(var('A'), var('B'), var('Mon'), var('Log'), var('Asks')), [],
+           [SG1?, random(var('S?'), 2147483646, var('Seed'), var('_')),
+            person(var('A?'), var('P?'), var('Mon?'), var('Seed?'), var('Log?'), var('Asks?'))], L4?, L3),
+    decl(['exported procedure'], stochastic_profiles, [dual('Integer'), '_'], L5?, L4),
+    clause(stochastic_profiles(var('B'), var('P?')), [], [SG2?], Tl?, L5).
 
 procedure all_thresholds(Terms?, Terms).
 all_thresholds([], []).
@@ -2023,7 +2427,8 @@ check_mixes1(ND, ND1, NT, R, Ds, [E?]) :-
 procedure reserved(Terms?, Ans).
 reserved(Ds, A?) :- ground(Ds?) |
     answer_names(ANs), present_names(PNs), append(ANs?, PNs?, Ns),
-    append([person, stochastic_person, declaration, random, true], Ns?, R),
+    append([person, stochastic_person, declaration, random, true, show_whole, whole_frame,
+            run_declaration, stochastic_agent, stochastic_profiles], Ns?, R),
     any_member(Ds?, R?, A).
 procedure mix_names(Terms?, Terms).
 mix_names([], []).
@@ -2182,6 +2587,9 @@ proc_named(wp(_, _, _, none), _, no).
 proc_named(hp(_, none), _, no).
 proc_named(fa(_, none), _, no).
 proc_named(pp(_, none), _, no).
+proc_named(pw(_, none), _, no).
+proc_named(rw(_, none), _, no).
+proc_named(fw(_, none), _, no).
 proc_named(wp(_, A, K, Nm), Tys, Ok?) :- otherwise, ground(A?), ground(Nm?), ground(Tys?), integer(K?) |
     alt_args(A?, As), wp_named(As?, K?, Tys?, Ok).
 proc_named(hp(T, Nm), Tys, Ok?) :- otherwise, ground(T?), ground(Nm?), ground(Tys?) |
@@ -2190,6 +2598,12 @@ proc_named(fa(f(_, _, T), Nm), Tys, Ok?) :- otherwise, ground(T?), ground(Nm?), 
     z_names(Zs), expand(answer, T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs), variants_named(Vs?, Ok).
 proc_named(pp(T, Nm), Tys, Ok?) :- otherwise, ground(T?), ground(Nm?), ground(Tys?) |
     z_names(Zs), expand(present, T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs), variants_named(Vs?, Ok).
+proc_named(pw(T, Nm), Tys, Ok?) :- otherwise, ground(T?), ground(Nm?), ground(Tys?) |
+    z_names(Zs), expand(present, T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs), variants_named(Vs?, Ok).
+proc_named(rw(T, Nm), Tys, Ok?) :- otherwise, ground(T?), ground(Nm?), ground(Tys?) |
+    item_forms(rr(T?), Tys?, Vs), variants_named(Vs?, Ok).
+proc_named(fw(T, Nm), Tys, Ok?) :- otherwise, ground(T?), ground(Nm?), ground(Tys?) |
+    z_names(Zs), expand(answer, T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs), variants_named(Vs?, Ok).
 procedure wp_named(Terms?, Integer?, Terms?, Ans).
 wp_named(As, K, Tys, Ok?) :- ground(As?) |
     length(As?, NA), x_names(Xs0), y_names(Ys0), take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys),
@@ -2201,6 +2615,7 @@ roots_named([], _, yes).
 roots_named([wr(T, _, Was)|Rs], Tys, A?) :- ground(T?), ground(Tys?) |
     was_named(Was?, T?, Tys?, A1), roots_named1(A1?, Rs?, Tys?, A).
 roots_named([rd(_, _, _)|Rs], Tys, A?) :- roots_named(Rs?, Tys?, A).
+roots_named([ww(_, _)|Rs], Tys, A?) :- roots_named(Rs?, Tys?, A).
 procedure roots_named1(Ans?, Terms?, Terms?, Ans).
 roots_named1(yes, Rs, Tys, A?) :- roots_named(Rs?, Tys?, A).
 roots_named1(no, _, _, no).

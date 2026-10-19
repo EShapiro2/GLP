@@ -1,8 +1,8 @@
-/// The screens of GSC's three apps, GSG's, GSN's and GSNP's (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), each person's phone as the bridge draws it, written to PNG files for GAI's paper (`programs/apps/<app>/screens/`).
+/// The screens of GSC's three apps, GSG's, GSN's and GSNP's (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), and of GAI's (`programs/apps/gai`), each person's phone as the bridge draws it, written to PNG files for GAI's paper (`programs/apps/<app>/screens/`).
 ///
-/// Each app's directory is a certified program: the canonical CVA platform of its contract, `platform.vglp`, compiled to GLP when the directory loads (vGLP, Section 6.3), and the mini-app's entry `miniapp/4` (`miniapp.glp`), which runs the platform's agent with the person's key and its dispatcher on the agent's asks.  The engine loads the directory and posts the entry for alice and bob over one conversation, as the plays of each directory do (`plays.glp`); for GSNP's app for dan, eve, carol, bob and fay, over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay, the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4).  Each person's channel is `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"): the host hands each person's bridge every term of `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant the bridge returns, `input(Id, P, R)`.
+/// Each app's directory is a certified program: the canonical CVA platform of its contract, `platform.vglp`, compiled to GLP when the directory loads (vGLP, Section 6.3), and the mini-app's entry `miniapp/4` (`miniapp.glp`), which runs the platform's agent with the person's key and its dispatcher on the agent's asks.  The engine loads the directory and posts the entry for alice and bob over one conversation, as the plays of each directory do (`plays.glp`); for GSNP's app for dan, eve, carol, bob and fay, over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay, the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4); and for GAI's app for alice, alf and bob, over three conversations, alice's with alf, alf's with bob and bob's with alice, the agents of the example of GAI's paper (Section 3.2), alice and alf scripted by the app's person (`programs/apps/gai/person.glp`), alf's script the AI agent's program.  Each person's channel is `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"): the host hands each person's bridge every term of `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant the bridge returns, `input(Id, P, R)`.
 ///
-/// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The app declares `Menu =::= social_menu.` and `Approval =::= approval_sentence.` (`programs/apps/<app>/self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  Every act of a person is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest.  No term is hand-fed to the bridge or to the program.
+/// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The app declares `Menu =::= social_menu.` and `Approval =::= approval_sentence.` (`programs/apps/<app>/self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  Every act of a person at a phone is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest; a scripted agent's acts are its scripted person's, as in the app's plays.  No term is hand-fed to the bridge or to the program.
 ///
 /// Each screen is the person's phone, 390 by 844 logical pixels, rendered by the widget itself (RepaintBoundary.toImage) at a device pixel ratio of 3, in the light theme.  The test font draws every glyph as a box, so the screens are set in Roboto, the Material font, with MaterialIcons, both loaded from the Flutter SDK's own copies (`bin/cache/artifacts/material_fonts`).  The PNG files are written only when the test runs with `--update-goldens`:
 ///
@@ -100,6 +100,10 @@ const List<String> _notShown = [
   'listed',
   'item(',
   'view(',
+  'agent_of',
+  'principal',
+  'retired',
+  'enter(',
 ];
 
 /// One person at their phone: their bridge, the writer of their grants, and the stream of draws their mini-app writes.
@@ -154,7 +158,7 @@ class _Person {
   List<String> get known => [for (final k in state.known) formatTerm(k)];
 }
 
-/// The persons of a run, each running the app's mini-app on their own phone, in a chain, a conversation between each two next to each other: Alice and Bob, over one conversation; or Dan, Eve, Carol, Bob and Fay, over four.
+/// The persons of a run, each running the app's mini-app on their own phone, a conversation between each two of a pair: by default a chain, a conversation between each two next to each other in it: Alice and Bob, over one conversation; or Dan, Eve, Carol, Bob and Fay, over four.  An agent of the run may be scripted, its acts taken by the app's scripted person (`programs/apps/<app>/person.glp`) under its role and not by taps: in GAI's app Alice and Alf, Alice's AI agent, whose program takes its acts (GAI's paper, Section 3.1: "after that the AI agent acts on its own").  A scripted agent has no phone.
 class _Run {
   final WidgetTester tester;
   final String app;
@@ -162,7 +166,11 @@ class _Run {
   final PostedGoal play;
   final List<_Person> persons;
 
-  _Run._(this.tester, this.app, this.engine, this.play, this.persons);
+  /// The screen each scripted agent's person reports, by name: the stream of what it saw (`Seen`, `programs/apps/<app>/self.glp`).
+  final Map<String, HeapCell> seen;
+
+  _Run._(this.tester, this.app, this.engine, this.play, this.persons,
+      [this.seen = const {}]);
 
   _Person get alice => persons[0];
   _Person get bob => persons[1];
@@ -171,11 +179,14 @@ class _Run {
   _Person person(String name) => persons.singleWhere((p) => p.name == name);
 
   static Future<_Run> start(WidgetTester tester, String app,
-      {List<String> chain = const ['alice', 'bob']}) async {
+      {List<String> chain = const ['alice', 'bob'],
+      List<(String, String)>? pairs,
+      Set<String> scripted = const {}}) async {
     await _loadFonts();
+    final phones = [for (final p in chain) if (!scripted.contains(p)) p];
     // Shadows drawn as shadows, not as the test's solid outlines; restored by [finish].
     debugDisableShadows = false;
-    tester.view.physicalSize = Size(chain.length * (_phone.width + 2 * _gap),
+    tester.view.physicalSize = Size(phones.length * (_phone.width + 2 * _gap),
         _phone.height + 2 * _gap);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -184,27 +195,51 @@ class _Run {
     final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp');
     expect(engine.loadProgram('$programs/apps/$app'), isTrue,
         reason: 'programs/apps/$app does not load');
-    // The entry once for each person, as the plays activate it (plays.glp), with a conversation between the executions of each two persons next to each other in the chain, the ends of one root channel, C_p_q written by p and read by q; each person's grants, G<i>, the caller's to write, and each person's draws, D<i>, read off their stream.
+    // The entry once for each agent, as the plays activate it (plays.glp), with a conversation between the executions of each two agents of a pair, the ends of one root channel, C_p_q written by p and read by q; each agent's grants, G<i>, and its draws, D<i>: a person's grants the caller's to write and their draws read off their stream, and a scripted agent's both its scripted person's, which reports its screen on S<i>.
+    final links = pairs ??
+        [for (var i = 0; i + 1 < chain.length; i++) (chain[i], chain[i + 1])];
     String conversation(String p, String q) =>
         'conversation($q, ch(C_${q}_$p?, C_${p}_$q))';
     final goals = [
-      for (var i = 0; i < chain.length; i++)
+      for (var i = 0; i < chain.length; i++) ...[
         'miniapp(${chain[i]}, ch(G$i?, D$i), ch([${[
-          if (i > 0) conversation(chain[i], chain[i - 1]),
-          if (i + 1 < chain.length) conversation(chain[i], chain[i + 1]),
+          for (final (a, b) in links)
+            if (a == chain[i])
+              conversation(a, b)
+            else if (b == chain[i])
+              conversation(b, a),
         ].join(', ')}], U$i), [])',
+        if (scripted.contains(chain[i]))
+          'miniapp_person(${chain[i]}, ${chain[i]}, ch(D$i?, G$i), S$i)',
+      ],
     ];
-    final play = engine.postGoal(goals.join(', '),
-        inputs: [for (var i = 0; i < chain.length; i++) 'G$i']);
+    final play = engine.postGoal(goals.join(', '), inputs: [
+      for (var i = 0; i < chain.length; i++)
+        if (!scripted.contains(chain[i])) 'G$i'
+    ]);
     final run = _Run._(tester, app, engine, play, [
       for (var i = 0; i < chain.length; i++)
-        _Person(chain[i], app, play.inputs['G$i']!, play.variables['D$i']!),
-    ]);
+        if (!scripted.contains(chain[i]))
+          _Person(chain[i], app, play.inputs['G$i']!, play.variables['D$i']!),
+    ], {
+      for (var i = 0; i < chain.length; i++)
+        if (scripted.contains(chain[i])) chain[i]: play.variables['S$i']!,
+    });
     run._drain();
     run._feed();
     await tester.pumpWidget(run._phones());
     await tester.pumpAndSettle();
     return run;
+  }
+
+  /// The last view the scripted agent [name]'s person reports, `view(S, K)`: its atoms, each as its term.
+  List<String> scriptedAtoms(String name) {
+    final views = [
+      for (final t in _drawn(seen[name]!))
+        if (ctorArgs(t) case ('view', [GList(:final items), _])) items
+    ];
+    expect(views, isNotEmpty, reason: '$name: no view reported');
+    return [for (final a in views.last) formatTerm(a)];
   }
 
   /// The run reduced until quiescent, as each event of an agent is (IGLP, Implementation Notes; vGLP, Section 5.4, "Triggers": the agent takes its own transactions until none holds).
@@ -730,6 +765,76 @@ void main() {
     expect(fay.atoms, isNot(contains('item(speech($fromCarol, bob))')));
     run.plain(bob);
     await run.shoot(bob, 'gsnp-b-bob-forward.png');
+    run.finish();
+  }, timeout: const Timeout(Duration(minutes: 20)));
+
+  testWidgets(
+      'GAI\'s app, the example of GAI\'s paper: Bob\'s chat with Alf, Alice\'s '
+      'AI agent, holding the item Alf wrote, its author named with its '
+      'principal', (tester) async {
+    // Alice and Bob, persons, and Alf, Alice's AI agent, a conversation between each two (GAI's paper, Section 3.2, the example and Table "The components that change in the example").  Bob is at his phone; Alice and Alf are scripted (programs/apps/gai/person.glp), Alf's script the AI agent's program, which takes its acts: Alice establishes her identity and enters Alf, which answers yes (Wards:1, GAI:2), answers yes as its principal to Alf befriending Bob (Wards:2), answers yes to Bob's offer of friendship (GSG:2), and then retires Alf (GAI:4); Alf, once entered, proposes to befriend Bob, and once his friend signs the item "Today's summary of the news" (GSNP:1) and forwards it to him (GSNP:2).
+    final run = await _Run.start(tester, 'gai',
+        chain: const ['alice', 'alf', 'bob'],
+        pairs: const [('alice', 'alf'), ('alf', 'bob'), ('bob', 'alice')],
+        scripted: const {'alice', 'alf'});
+    final bob = run.person('bob');
+
+    // One tab, Friends: GAI offers no group.
+    expect(run.on(bob, find.byKey(tabKey(ScreenTab.friends))), findsOneWidget);
+    expect(run.on(bob, find.byKey(tabKey(ScreenTab.groups))), findsNothing);
+    // Alice has entered Alf: she is its principal and its friend.
+    expect(run.scriptedAtoms('alice'),
+        containsAll(['identity', 'principal_of(alf)', 'friend(alf)']));
+    expect(run.scriptedAtoms('alf'),
+        containsAll(['identity', 'agent', 'principal(alice)', 'friend(alice)']));
+
+    // Bob joins (GSG:1) and adds Alf and Alice by key.  Once Bob and Alf know each other, Alf proposes to befriend him with Alice its principal (agent_befriend(r?, q?, p?), programs/gai/GAI.glp), and Bob is asked.
+    await run.join(bob);
+    await run.add(bob, 'alf');
+    await run.add(bob, 'alice');
+    final a = bob.approval;
+    expect(formatTerm(a.view), startsWith('approval(attempt(alf, '));
+    expect(formatTerm(a.view),
+        endsWith(', agent_befriend(alf, bob, alice)), input([2]))'));
+    await run.answer(bob, 'Yes');
+    expect(bob.questions('approval'), isEmpty);
+
+    // Bob's friend Alf, recorded as Alice's AI agent (GAI:2), and the item Alf signed and forwarded to him, signed by Alf and signed again by Alf (forward(p?, q ; x) adds item(sgn(x, p)) at q).  Nobody was asked for the sign or the forward.
+    const summary = r"speech(utterance('Today\'s summary of the news'), alf)";
+    expect(bob.atoms,
+        containsAll(['friend(alf)', 'agent_of(alf, alice)', 'item(speech($summary, alf))']));
+    expect(run.scriptedAtoms('alf'), contains('item($summary)'));
+
+    // (a) Bob's chat with Alf: he taps Alf's row; the item "Today's summary of the news", "Author: Alf, an AI agent of Alice", "via Alf", Alf having forwarded it, and Forward under it.
+    await run.tap(bob, run.name(bob, 'person:alf', 'Alf'));
+    expect(run.control(bob, 'chat:alf'), findsOneWidget);
+    await run.top(bob);
+    final item = run.groupControl(bob, 'item:');
+    expect(item, findsOneWidget);
+    expect(
+        [
+          for (final t in run.tester.widgetList<Text>(
+              find.descendant(of: item, matching: find.byType(Text))))
+            t.data,
+        ],
+        [
+          "Today's summary of the news",
+          'Author: Alf, an AI agent of Alice',
+          'via Alf',
+          'Forward'
+        ]);
+    expect(run.texts(bob).where((t) => t.startsWith('Message')), isEmpty);
+    run.plain(bob);
+    await run.shoot(bob, 'gai-a-bob-chat-alf.png');
+    await run.tap(bob, run.control(bob, 'back'));
+
+    // Bob offers Alice friendship: Befriend on her row; Alice, scripted, answers yes (GSG:2); once they are friends she retires Alf (GAI:4), which ends her friendship with it, Alf asked nothing.  Bob's friendship with Alf and the item stay, as in the paper's table after Retire.
+    await run.tap(bob, run.control(bob, 'befriend:alice'));
+    expect(bob.atoms, containsAll(['friend(alice)', 'friend(alf)', 'agent_of(alf, alice)']));
+    expect(run.scriptedAtoms('alice'),
+        unorderedEquals(['retired_of(alf)', 'friend(bob)', 'principal_of(alf)', 'identity']));
+    expect(run.scriptedAtoms('alf'),
+        unorderedEquals(['retired', 'item($summary)', 'friend(bob)', 'identity', 'agent', 'principal(alice)']));
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 }

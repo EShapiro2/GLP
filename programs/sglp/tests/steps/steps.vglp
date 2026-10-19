@@ -1,0 +1,33 @@
+%% Test (xvii)'s vGLP program (sGLP's task of 2026-10-18 20:52 UTC, item 1):
+%% a list the program writes inside a question in two steps, shown to the
+%% person once, whole, once its last cell is written (sGLP's paper at e8367a3,
+%% Section 3, Definition "Relay" (ii); Appendix B, the person process).  The
+%% program puts a panel of cards, Panel ::= panel(List(Card)), Card ::=
+%% card(Integer, YesNo?), its first card written at once and its second only
+%% once the person has answered a question of another type, Ready ::=
+%% ready(YesNo?).  Its canonical compilation (vGLP, Definition "Canonical
+%% Compilation") is steps.glp, by hand; the program loader skips a .vglp beside
+%% a .glp of its name, so this source is not loaded.
+
+YesNo ::= yes ; no.
+Card  ::= card(Integer, YesNo?).
+Panel ::= panel(List(Card)).
+Ready ::= ready(YesNo?).
+
+%% The person's readiness.
+procedure (Ready)*ready(YesNo).
+(ready(R))*ready(R?).
+
+%% A panel of the cards Cs.
+procedure (Panel)*show(List(Card)?).
+(panel(Cs?))*show(Cs).
+
+%% steps(As): the readiness asked and a panel shown, its first card written at
+%% once and its second once the readiness is answered; As the readiness and the
+%% two cards' answers, in that order.
+exported procedure steps(Stream(YesNo)).
+steps([R?, A1?, A2?]) :- ready(R1), show([card(1, A1) | Cs?]), second(R1?, R, Cs, A2).
+
+%% second(R1?, R, Cs, A): once R1 is answered, R is R1 and Cs the last card.
+procedure second(YesNo?, YesNo, List(Card), YesNo).
+second(R1, R1?, [card(2, A)], A?) :- ground(R1?) | true.

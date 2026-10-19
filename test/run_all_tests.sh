@@ -21,7 +21,7 @@
 #   O - Currencies Multi-Isolate Tests (dart test, one isolate per agent)
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
 #   GF - Grassroots federation records, transactions and platform (GFWC)
-#   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GSG's, GSN's and GSNP's
+#   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GSG's, GSN's, GSNP's and GAI's
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -6177,7 +6177,7 @@ fi  # Section SG
 
 if _section APPS; then
 # =============================================================================
-# Section APPS: the apps of the contracts (programs/apps), each a mini-app of the Grassroots Super-App compiled down the cascade from its contract's act schemas: the canonical CVA platform vGLP's compiler prints from them, compiled to GLP when the directory loads, under the root's entry template miniapp/4. GSG's app, programs/apps/gsg: its platform held to what the compiler prints from programs/gsc/GSG.glp (programs/apps/compile.sh --check); the program certified by :artefact; its router, which carries the platform's network over the conversations the social graph hands the mini-app, holding a message until the conversation with its recipient opens (play_held); and two executions over one conversation, each person first establishing their identity (GSG:1, Identity, establish(p?), GSC e03c56e0), alice offering bob friendship, bob asked and answering yes, and then bob ending it (play_friends), GSN's app, programs/apps/gsn, the same host on GSN's platform (play_network), and GSNP's app, programs/apps/gsnp, the same host on GSNP's platform, five executions over four conversations, the play of GAI's GSNP figure (play_provenance), each person's screen, the views the agent writes with the person's looks and answers, held exactly, an unbound tail written _: the run suspends, each agent having taken its own transactions until none holds and no trigger being left (vGLP, Section 5.4, "Triggers").  And the super-app hosting each app on smartphones, programs/apps/gsg_boot.glp and gsn_boot.glp on two and gsnp_boot.glp on five, under :boot: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes, "On each event the agent binds what the event delivers, reduces until quiescent"), the platform's agent quiesces, and the boot settles, each person's lines held exactly, in order; on five, each person's super-app lines and mini-app screen each held exactly, in order, the two not being ordered against each other across the isolates.
+# Section APPS: the apps of the contracts (programs/apps), each a mini-app of the Grassroots Super-App compiled down the cascade from its contract's act schemas: the canonical CVA platform vGLP's compiler prints from them, compiled to GLP when the directory loads, under the root's entry template miniapp/4. GSG's app, programs/apps/gsg: its platform held to what the compiler prints from programs/gsc/GSG.glp (programs/apps/compile.sh --check); the program certified by :artefact; its router, which carries the platform's network over the conversations the social graph hands the mini-app, holding a message until the conversation with its recipient opens (play_held); and two executions over one conversation, each person first establishing their identity (GSG:1, Identity, establish(p?), GSC e03c56e0), alice offering bob friendship, bob asked and answering yes, and then bob ending it (play_friends), GSN's app, programs/apps/gsn, the same host on GSN's platform (play_network), and GSNP's app, programs/apps/gsnp, the same host on GSNP's platform, five executions over four conversations, the play of GAI's GSNP figure (play_provenance), and GAI's app, programs/apps/gai, the same host on GAI's platform, three executions over three conversations, the example of GAI's paper, alice, bob and alf, alice's AI agent (play_agents), each person's screen, the views the agent writes with the person's looks and answers, held exactly, an unbound tail written _: the run suspends, each agent having taken its own transactions until none holds and no trigger being left (vGLP, Section 5.4, "Triggers").  And the super-app hosting each app on smartphones, programs/apps/gsg_boot.glp and gsn_boot.glp on two, gsnp_boot.glp on five and gai_boot.glp on three, under :boot: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes, "On each event the agent binds what the event delivers, reduces until quiescent"), the platform's agent quiesces, and the boot settles, each person's lines held exactly, in order; on five and on three, each person's super-app lines and mini-app screen each held exactly, in order, the two not being ordered against each other across the isolates.
 # =============================================================================
 echo "=== Section APPS: the apps (programs/apps) ==="
 echo ""
@@ -6298,6 +6298,47 @@ check_not "APPS gsnp: no error" "Error" "$apps_gsnp"
 check "APPS gsnp provenance: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsnp"
 check_not "APPS gsnp provenance: ... and is not stopped at the limit" "capped" "$apps_gsnp"
 
+# GAI's app, programs/apps/gai: the same host on GAI's platform, its wrapper the same file as GSG's; the example of GAI's paper (Section 3.2, and Table "The components that change in the example"), three executions over three conversations, alice's with alf, alf's with bob and bob's with alice (play_agents): alice and bob establish their identities (GSG:1); alice enters her AI agent alf, which answers yes, and she is its principal and its friend (Wards:1, GAI:2; enter(p?, r?), programs/gai/GAI.glp); alf proposes to befriend bob, and bob and alice, its principal, are asked and answer yes (Wards:2; agent_befriend(r?, q?, p?)), bob recording agent_of(alf, alice); alf signs the item 'Today's summary of the news' (GSNP:1) and forwards it to bob (GSNP:2), nobody asked, bob holding it signed by alf and signed again by alf; bob offers alice friendship and she answers yes (GSG:2); and alice retires alf (GAI:4; retire(p?, r)), which ends their friendship, alf asked nothing and holding retired.  The final states are those of the paper's table after Retire: alice's friend bob and her retired AI agent alf; bob's friends alice and alf, his record that alf is alice's AI agent, and the item; alf retired, its friend bob, and the item.
+check "APPS gai: platform.vglp is what vGLP's compiler prints from GAI.glp" "^gai/platform.vglp: as printed$" "$apps_print"
+if cmp -s "$GLP_DIR/programs/apps/gai/platform.vglp" "$GLP_DIR/cascade/GAI/platform.vglp"; then
+    _check_pass "APPS gai: platform.vglp is the platform of the recorded run of the cascade on GAI"
+else
+    _check_fail "APPS gai: platform.vglp is the platform of the recorded run of the cascade on GAI" "programs/apps/gai/platform.vglp differs from cascade/GAI/platform.vglp"
+fi
+# The request type proposes the guarded classes: every schema of GAI marks a role.
+apps_gai_proposal=$(awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$GLP_DIR/programs/apps/gai/platform.vglp")
+check "APPS gai: the request type proposes the eleven classes, every schema marking a role" "^establish(Peer) befriend(Peer, Peer) unfriend_p(Peer, Peer) unfriend_q(Peer, Peer) enter(Peer, Peer) agent_befriend(Peer, Peer, Peer) agents_befriend(Peer, Peer, Peer, Peer) agent_unfriend(Peer, Peer, Peer) retire(Peer, Peer) sign(Peer, Speech) forward(Peer, Peer, Speech) $" "$apps_gai_proposal"
+check "APPS gai: the view writes the record of an AI agent and its principal, agent_of(r, p)" "^atom_of(g(agent_of, \[p(V1), p(V2)\]), shown(agent_of(V1?, V2?)))$" "$(cat "$GLP_DIR/programs/apps/gai/platform.vglp")"
+check "APPS gai: the types written again hold GAI's atoms" "^Atom      ::= identity ; retired ; friend(Peer) ; agent ; principal(Peer) ; principal_of(Peer) ; agent_of(Peer, Peer) ; retired_of(Peer) ; item(Speech)\.$" "$(cat "$GLP_DIR/programs/apps/gai/self.glp")"
+if cmp -s "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$GLP_DIR/programs/apps/gai/miniapp.glp"; then
+    _check_pass "APPS gai: miniapp.glp is the same file as GSG's app's"
+else
+    _check_fail "APPS gai: miniapp.glp is the same file as GSG's app's" "programs/apps/gai/miniapp.glp differs from programs/apps/gsg/miniapp.glp"
+fi
+APPS_ART=$(mktemp -d)
+apps_gai=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gai $APPS_ART
+$GLP_DIR/programs/apps/gai
+:limit 6000000
+play_agents(A, R, B).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$APPS_ART"
+check "APPS gai: the mini-app's artefact is certified" "gai.glpw --- certified under" "$apps_gai"
+check "APPS gai loads" "Loaded program: .*programs/apps/gai$" "$apps_gai"
+apps_line "APPS gai agents: alice's screen" "A = [view([], []), view([identity], []), view([identity], [alf]), view([identity], [alf, bob]), view([principal_of(alf), friend(alf), identity], [alf, bob]), gave(agent_befriend(alf, bob, alice), yes), gave(befriend(bob, alice), yes), view([friend(bob), principal_of(alf), friend(alf), identity], [alf, bob]), view([retired_of(alf), friend(bob), principal_of(alf), identity], [alf, bob]) | _]" "$apps_gai"
+apps_line "APPS gai agents: alf's screen" "R = [view([], []), view([], [alice]), gave(enter(alice, alf), yes), view([identity, agent, principal(alice), friend(alice)], [alice]), view([identity, agent, principal(alice), friend(alice)], [alice, bob]), view([friend(bob), identity, agent, principal(alice), friend(alice)], [alice, bob]), view([item(speech(utterance('Today\'s summary of the news'), alf)), friend(bob), identity, agent, principal(alice), friend(alice)], [alice, bob]), view([retired, item(speech(utterance('Today\'s summary of the news'), alf)), friend(bob), identity, agent, principal(alice)], [alice, bob]) | _]" "$apps_gai"
+apps_line "APPS gai agents: bob's screen" "B = [view([], []), view([identity], []), view([identity], [alice]), view([identity], [alf, alice]), gave(agent_befriend(alf, bob, alice), yes), view([friend(alf), agent_of(alf, alice), identity], [alf, alice]), view([item(speech(speech(utterance('Today\'s summary of the news'), alf), alf)), friend(alf), agent_of(alf, alice), identity], [alf, alice]), view([friend(alice), item(speech(speech(utterance('Today\'s summary of the news'), alf), alf)), friend(alf), agent_of(alf, alice), identity], [alf, alice]) | _]" "$apps_gai"
+check "APPS gai: alice enters her AI agent alf by the key her request question shows" "own(\[A2\], propose(enter(A2?, alf)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alf, its program, proposes to befriend bob with alice its principal" "own(\[R1\], propose(agent_befriend(R1?, bob, alice)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alf forwards to bob the item it signed" "own(\[R4\], propose(forward(R4?, bob, speech(utterance('Today.'s summary of the news'), alf))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alice retires alf by the key her request question shows" "own(\[A3\], propose(retire(A3?, alf)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check_not "APPS gai: no failed play" "→ failed" "$apps_gai"
+check_not "APPS gai: no error" "Error" "$apps_gai"
+check "APPS gai agents: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gai"
+check_not "APPS gai agents: ... and is not stopped at the limit" "capped" "$apps_gai"
+
 # Each app on two smartphones: the super-app of programs/social/graph/core on two isolates, each person with its own key pair, hosting the app from its certified artefact, gsg.glpw or gsn.glpw, which :artefact writes beside the super-app and load_file/2 reads there (programs/apps/gsg_boot.glp, gsn_boot.glp).  The two persons' lines interleave as the isolates run; each person's lines, their prefix stripped, are held exactly, in order: what the super-app told the person, sg(...), and the mini-app's screen, the steps of play_friends and play_network.
 apps_person() { # apps_person <person> <output>: the person's lines in order, as a list
     echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 { s = s (n++ ? ", " : "") substr($0, length(p) + 1) } END { print "[" s "]" }'
@@ -6359,6 +6400,24 @@ apps_same "APPS gsnp on five smartphones: bob's super-app lines" "[sg(befriend(c
 apps_same "APPS gsnp on five smartphones: bob's screen" "[view([], []), view([identity], []), view([identity], [carol]), view([identity], [carol, fay]), gave(befriend(carol, bob), yes), view([friend(carol), identity], [carol, fay]), view([item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), identity], [carol, fay]), view([friend(fay), item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), identity], [carol, fay])]" "$(apps_person_screen bob "$apps_gsnp_boot")"
 apps_same "APPS gsnp on five smartphones: fay's super-app lines" "[sg(befriend(bob)), sg(connected(bob))]" "$(apps_person_sg fay "$apps_gsnp_boot")"
 apps_same "APPS gsnp on five smartphones: fay's screen" "[view([], []), view([identity], []), view([identity], [bob]), gave(befriend(bob, fay), yes), view([friend(bob), identity], [bob])]" "$(apps_person_screen fay "$apps_gsnp_boot")"
+
+# GAI's app on three smartphones (programs/apps/gai_boot.glp), alf, alice's AI agent, on a smartphone of its own: alice connects to alf, and once connected alf connects to bob and bob to alice; each pair befriends in the super-app's social graph; once connected to the next, each invites them to gai; and the steps of play_agents run over the three conversations.  Each agent's super-app lines, sg(...), and their mini-app screen are each held exactly, in order.
+apps_gai_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gai $APPS_CORE
+:boot $GLP_DIR/programs/apps/gai_boot.glp $APPS_CORE
+:quit
+HEREDOC
+2>&1)
+rm -f "$APPS_CORE/gai.glpw"
+check "APPS gai on three smartphones: the mini-app's artefact is certified" "gai.glpw --- certified under" "$apps_gai_boot"
+check "APPS gai on three smartphones: the boot settles" "Boot settled: 3 agents (alice, alf, bob)" "$apps_gai_boot"
+check_not "APPS gai on three smartphones: no event stopped at the cap" "did not quiesce" "$apps_gai_boot"
+apps_same "APPS gai on three smartphones: alice's super-app lines" "[sg(connected(alf)), sg(befriend(bob)), sg(connected(bob))]" "$(apps_person_sg alice "$apps_gai_boot")"
+apps_same "APPS gai on three smartphones: alice's screen" "[view([], []), view([identity], []), view([identity], [alf]), view([identity], [alf, bob]), view([principal_of(alf), friend(alf), identity], [alf, bob]), gave(agent_befriend(alf, bob, alice), yes), gave(befriend(bob, alice), yes), view([friend(bob), principal_of(alf), friend(alf), identity], [alf, bob]), view([retired_of(alf), friend(bob), principal_of(alf), identity], [alf, bob])]" "$(apps_person_screen alice "$apps_gai_boot")"
+apps_same "APPS gai on three smartphones: alf's super-app lines" "[sg(befriend(alice)), sg(connected(alice)), sg(connected(bob))]" "$(apps_person_sg alf "$apps_gai_boot")"
+apps_same "APPS gai on three smartphones: alf's screen" "[view([], []), view([], [alice]), gave(enter(alice, alf), yes), view([identity, agent, principal(alice), friend(alice)], [alice]), view([identity, agent, principal(alice), friend(alice)], [alice, bob]), view([friend(bob), identity, agent, principal(alice), friend(alice)], [alice, bob]), view([item(speech(utterance(Today's summary of the news), alf)), friend(bob), identity, agent, principal(alice), friend(alice)], [alice, bob]), view([retired, item(speech(utterance(Today's summary of the news), alf)), friend(bob), identity, agent, principal(alice)], [alice, bob])]" "$(apps_person_screen alf "$apps_gai_boot")"
+apps_same "APPS gai on three smartphones: bob's super-app lines" "[sg(befriend(alf)), sg(connected(alf)), sg(connected(alice))]" "$(apps_person_sg bob "$apps_gai_boot")"
+apps_same "APPS gai on three smartphones: bob's screen" "[view([], []), view([identity], []), view([identity], [alice]), view([identity], [alf, alice]), gave(agent_befriend(alf, bob, alice), yes), view([friend(alf), agent_of(alf, alice), identity], [alf, alice]), view([item(speech(speech(utterance(Today's summary of the news), alf), alf)), friend(alf), agent_of(alf, alice), identity], [alf, alice]), view([friend(alice), item(speech(speech(utterance(Today's summary of the news), alf), alf)), friend(alf), agent_of(alf, alice), identity], [alf, alice])]" "$(apps_person_screen bob "$apps_gai_boot")"
 
 echo ""
 
@@ -6969,7 +7028,8 @@ if _section CAS; then
 # A run of the cascade on a contract is recorded in cascade/<NAME>/, at the
 # repository root, NAME the contract's name (Appendix C), as one tagged commit (claude.md "Code"; Coordination 5.7): the contract's two
 # files with the checker's verdict, the VMAT form, the canonical platform as
-# .vglp and as .glp, and its run with vGLP's scripted persons, with a manifest.
+# .vglp and as .glp, the platform's interface in sGLP's term form, and its run
+# with vGLP's scripted persons, with a manifest.
 # This section re-runs cascade.sh --check on every recorded contract and holds
 # the committed artefacts to what the tools print now; a contract with no
 # record is not run.
@@ -6981,7 +7041,7 @@ for cas_c in gsg gsn gsnp gc cssn gfwc gai; do
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
-    for cas_f in "$cas_n.md" "$cas_n.glp" verdict.txt vmat.tex platform.vglp platform.glp run.log; do
+    for cas_f in "$cas_n.md" "$cas_n.glp" verdict.txt vmat.tex platform.vglp platform.glp interface.glp run.log; do
         [ -f "$GLP_DIR/$cas_o/$cas_f" ] || continue
         check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
     done
@@ -7044,6 +7104,24 @@ HEREDOC
 check "sglp outside: the program loads" "Loaded program" "$sglp_out_run"
 check "sglp outside: the person answers each poll, logged with the monitor's clock" "entry(14916.00387843316, 1, Poll, poll(2, yes))" "$sglp_out_run"
 check "sglp outside: the program reads the five answers" "As = \[yes, yes, yes, yes, yes\]" "$sglp_out_run"
+
+# The simulations of canonical CVA platforms under sGLP, each a record of its
+# own in simulation/<NAME>/<date>/ (claude.md, "Code"; sGLP's task of
+# 2026-10-18 20:50 UTC, item 4): programs/sglp/cva/record.sh --check re-runs
+# the transformation on the record's sGLP source, holding its printed modules
+# to the record's, and each run's first simulated day with its seed, holding
+# its log to the record's up to that time.  With no record, nothing is run.
+for sim_m in "$GLP_DIR"/simulation/*/*/manifest.md; do
+    [ -f "$sim_m" ] || continue
+    sim_r=$(dirname "$sim_m"); sim_n=${sim_r#$GLP_DIR/}
+    sim_out=$(bash "$GLP_DIR/programs/sglp/cva/record.sh" --check "$sim_r" 2>&1; echo "exit $?")
+    check "$sim_n: profiles.glp as printed" "^profiles.glp: as printed$" "$sim_out"
+    check "$sim_n: population.glp as printed" "^population.glp: as printed$" "$sim_out"
+    for sim_s in $(sed -n 's/^- seeds: //p' "$sim_m" | tr ',' ' '); do
+        check "$sim_n: seed $sim_s's first day as recorded" "^$sim_s.log: first day as recorded" "$sim_out"
+    done
+    check "$sim_n: record.sh --check exits 0" "^exit 0$" "$sim_out"
+done
 
 echo ""
 

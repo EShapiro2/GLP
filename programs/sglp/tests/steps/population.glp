@@ -1,0 +1,326 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(steps, population)
+
+%% The run declaration of the source:
+%% (run(1, [mix(stepping, [share(stepper, 1.0)])], 1, week, 20260927))
+
+Profiles
+::=
+profiles(Dimension1)
+.
+Dimension1
+::=
+stepper
+.
+Ask ::= ask(Constant, Question).
+Question
+::=
+ready_w(Ready)
+;
+panel_w(Panel)
+.
+
+%% The person procedures, in the profiles module.
+imported procedure
+profiles
+#
+get_ready
+(
+Ready
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+imported procedure
+profiles
+#
+judge_fast
+(
+Panel
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+
+%% The person process (sGLP's paper, Section 4, "The person process").
+exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
+person(A, profiles(stepper), Mon, Seed, Log, [ask('Ready', ready_w(E)) | As])
+:-
+random(Seed?, 2147483646, K, S)
+,
+profiles
+#
+get_ready(Y?, K?, Mon?)
+,
+relay_1(A?, 'Ready', E?, Y, Mon?, Log?)
+,
+person(A?, profiles(stepper), Mon?, S?, Log?, As?)
+.
+person(A, profiles(stepper), Mon, Seed, Log, [ask('Panel', panel_w(E)) | As])
+:-
+random(Seed?, 2147483646, K, S)
+,
+profiles
+#
+judge_fast(Y?, K?, Mon?)
+,
+relay_2(A?, 'Panel', E?, Y, Mon?, Log?)
+,
+person(A?, profiles(stepper), Mon?, S?, Log?, As?)
+.
+person(_, _, _, _, _, []).
+
+%% The relay of an interactive type (Definition "Copy, Relay").
+procedure
+relay_1
+(
+Integer?
+,
+Constant?
+,
+Ready
+?
+,
+Ready
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+relay_1(A, Type, ready(X1?), ready(Y1), Mon, Log)
+:-
+answer_1(A?, Type?, Y1?, X1, Mon?, Log?)
+.
+
+%% The relay of an interactive type (Definition "Copy, Relay").
+procedure
+relay_2
+(
+Integer?
+,
+Constant?
+,
+Panel
+?
+,
+Panel
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+relay_2(A, Type, X, Y?, Mon, Log)
+:-
+no_readers(X?)
+|
+present_1(A?, Type?, X?, B, S, 1, _, Fs, [], Mon?, Log?)
+,
+show_whole(B?, S?, Fs?, Y)
+.
+
+%% The answer, handed over and logged (Section 4, "The person process" and "The log").
+procedure
+answer_1
+(
+Integer?
+,
+Constant?
+,
+YesNo
+?
+,
+YesNo
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+answer_1(A, Type, Y1, Y1?, Mon, Log)
+:-
+ground(Y1?)
+|
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, ready(Y1?)), Log?, _)
+.
+
+%% The build of a question shown whole: the copy, its skeleton for the log, and the answer of each position the person writes (Section 3, Definition "Relay").
+procedure
+present_1
+(
+Integer?
+,
+Constant?
+,
+Panel
+?
+,
+Panel
+,
+_
+,
+Integer?
+,
+Integer
+,
+Stream(Slot(_))
+,
+Stream(Slot(_))
+?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+present_1(_, _, panel([]), panel([]), panel([]), C0, C0?, Fs0?, Fs0, _, _)
+.
+present_1(A, Type, panel([card(Z1, Z2?) | Z4]), panel([card(Z1?, Z3) | Z5?]), panel([card(Z1?, '$h'(C0?, 0)) | S1?]), C0, N2?, [slot(F1) | G1?], Fs0, Mon, Log)
+:-
+ground(Z1?)
+,
+integer(C0?)
+|
+':='(N1, '+'(C0?, 1))
+,
+answer_2(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?)
+,
+present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?)
+.
+
+%% The answer to a question shown whole, handed over and logged in it (Section 4, "The person process" and "The log").
+procedure
+answer_2
+(
+Integer?
+,
+Constant?
+,
+Integer?
+,
+Integer?
+,
+_?
+,
+YesNo
+?
+,
+YesNo
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+answer_2(A, Type, C, J, F, Y, Y?, Mon, Log)
+:-
+ground(Y?)
+,
+ground(F?)
+|
+stream_append(time(Time), Mon?, _)
+,
+whole_frame(F?, C?, J?, Y?, E)
+,
+stream_append(entry(Time?, A?, Type?, E?), Log?, _)
+.
+
+%% The build of a question shown whole: the copy, its skeleton for the log, and the answer of each position the person writes (Section 3, Definition "Relay").
+procedure
+present_2
+(
+Integer?
+,
+Constant?
+,
+List(Card)
+?
+,
+List(Card)
+,
+_
+,
+Integer?
+,
+Integer
+,
+Stream(Slot(_))
+,
+Stream(Slot(_))
+?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+present_2(_, _, [], [], [], C0, C0?, Fs0?, Fs0, _, _)
+.
+present_2(A, Type, [card(Z1, Z2?) | Z4], [card(Z1?, Z3) | Z5?], [card(Z1?, '$h'(C0?, 0)) | S1?], C0, N2?, [slot(F1) | G1?], Fs0, Mon, Log)
+:-
+ground(Z1?)
+,
+integer(C0?)
+|
+':='(N1, '+'(C0?, 1))
+,
+answer_2(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?)
+,
+present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?)
+.
+
+%% The run declaration: its agents, horizon, seed and thresholds.
+exported procedure
+declaration
+(
+Integer
+,
+Number
+,
+Span
+,
+Integer
+)
+.
+declaration(1, 1, week, 20260927)
+.
+
+%% An agent's stochastic person, drawn from its block (Appendix B).
+exported procedure
+stochastic_person
+(
+Integer?
+,
+Profiles
+,
+Integer
+)
+.
+stochastic_person(B, profiles(P1?), S?)
+:-
+random(B?, 100, K1, S)
+,
+stepping(K1?, P1)
+.
+
+%% The draw of the dimension(stepping)
+procedure
+stepping
+(
+Integer?
+,
+Dimension1
+)
+.
+stepping(_, stepper)
+.

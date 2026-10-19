@@ -1,0 +1,37 @@
+%% The run of test (xvii), by hand, as the panel's harness (sGLP's paper,
+%% Section 4, "The run"; Appendix B): the run declaration of steps_sglp.glp,
+%% one agent, its initial goal steps/2 of steps.glp, and its person process
+%% (population.glp, person/6), with its stochastic person and its seed, reading
+%% steps/2's ask stream in the dispatcher's place (Section 3, Definition
+%% "Simulation Program"); the monitor, with the run's seed and the horizon in
+%% seconds; and the log's sink, the root's send_to_user/1, which prints each
+%% entry, ground, on its own line, and the monitor's clock last.  The program
+%% holds no call of the transformation, which printed population.glp before
+%% the run (transform.sh).
+
+imported procedure steps#steps(Stream(YesNo), Stream(Ask)).
+imported procedure population#declaration(Integer, Number, Span, Integer).
+imported procedure population#stochastic_person(Integer?, Profiles, Integer).
+imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
+                                     MutualRef?, Stream(Ask)?).
+
+%% run(As): the run declaration's run, As the answers the program read.
+exported procedure run(Stream(YesNo)).
+run(As?) :-
+    population # declaration(N, C, U, Seed),
+    run(N?, C?, U?, Seed?, As).
+
+%% run(N?, C?, U?, Seed?, As): the run of one agent until C Us from Seed.
+procedure run(Integer?, Number?, Span?, Integer?, Stream(YesNo)).
+run(1, C, U, Seed, As?) :-
+    number(C?), integer(Seed?) |
+    span(U?, Secs),
+    H := C? * Secs?,
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, Entries),
+    send_to_user(Entries?),
+    monitor(Requests?, Seed?, H?, Log?),
+    random(Seed?, 2147483646, Base, _),
+    population # stochastic_person(Base?, P, S),
+    steps # steps(As, Asks),
+    population # person(1, P?, Mon?, S?, Log?, Asks?).

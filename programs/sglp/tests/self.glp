@@ -3,7 +3,8 @@
 %% modules from (transform.glp, transform.sh), a call M # p reaching only a
 %% child directory or module file of the caller's directory (TGLP, modules.tex,
 %% Compilation): tests/reader's, test (xi), tests/delivery's, test (xii),
-%% tests/receipt's, test (xiii), and tests/panel's, test (xiv).
+%% tests/receipt's, test (xiii), tests/panel's, test (xiv), tests/numbers', test
+%% (xv), and tests/steps', test (xvii).
 %% The run tests' programs hold no call of the transformation.
 
 imported procedure reader#source(SglpTerms, SglpTerms).
@@ -11,6 +12,7 @@ imported procedure delivery#source(SglpTerms, SglpTerms).
 imported procedure receipt#source(SglpTerms, SglpTerms).
 imported procedure panel#source(SglpTerms, SglpTerms).
 imported procedure numbers#source(SglpTerms, SglpTerms).
+imported procedure steps#source(SglpTerms, SglpTerms).
 
 exported procedure reader_source(SglpTerms, SglpTerms).
 reader_source(V?, S?) :- reader # source(V, S).
@@ -26,3 +28,6 @@ panel_source(V?, S?) :- panel # source(V, S).
 
 exported procedure numbers_source(SglpTerms, SglpTerms).
 numbers_source(V?, S?) :- numbers # source(V, S).
+
+exported procedure steps_source(SglpTerms, SglpTerms).
+steps_source(V?, S?) :- steps # source(V, S).

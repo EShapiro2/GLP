@@ -136,10 +136,13 @@
 #       in either direction and at every depth, crosses the person process");
 #       a writer-mode type Panel ::= panel(List(Card)), Card ::= card(Integer,
 #       YesNo?), with positions the person writes inside an argument the
-#       program writes, shown once the positions the program writes are
-#       ground, the cards an element at a time, each card's answer a question
-#       of its own, logged in the question as shown (sGLP's Q1 of 09:33 UTC,
-#       where task 6 refused it); a rated goal's procedure given a stop clause
+#       program writes, shown whole once the term the program writes has no
+#       reader, the list of cards built and shown once its last cell is
+#       written, each card's answer a question of its own, logged in the panel
+#       as shown whole (sGLP's Q1 of 09:33 UTC, where task 6 refused it; sGLP's
+#       task of 2026-10-18 20:52 UTC, item 1, at sGLP e8367a3, Section 3,
+#       Definition "Relay" (ii), where the cards were shown an element at a
+#       time); a rated goal's procedure given a stop clause
 #       dropping its arguments, and a rated goal whose procedure has an output
 #       argument refused (Section 4, "The transformation"; sGLP's task of
 #       2026-10-14 09:54 UTC, item 2, where the single-answer check of task 6,
@@ -167,7 +170,7 @@
 #       writes (tests/panel; sGLP's Q1 of 2026-10-10 09:33 UTC): Panel ::=
 #       panel(List(Card)), Card ::= card(Integer, YesNo?), in writer mode, a panel
 #       of three cards; the log each card's answer as a question of its own,
-#       the program reading them.
+#       in the panel as shown whole, the program reading them.
 # (xv)  a run with a stream the person writes whose element type holds no
 #       position the program writes (tests/numbers; sGLP's task of 2026-10-14
 #       09:46 UTC, items 2 and 3): Stream(Integer)? in reader mode, the person
@@ -184,6 +187,30 @@
 #       the agent's next menu answer --- shows b and each friend b had before
 #       the yes, a friend's friends coming to know each other, some of them
 #       met only so.
+# (xvii) a list the program writes inside a question in two steps, shown once,
+#       whole (tests/steps; sGLP's task of 2026-10-18 20:52 UTC, item 1, at sGLP
+#       e8367a3, Section 3, Definition "Relay" (ii), and Appendix B, the person
+#       process): the panel's first card written at once and its second once
+#       the person has answered a question of another type, Ready ::=
+#       ready(YesNo?), which the person answers about a day after asked, each
+#       card about a second after shown; the log the readiness first, then
+#       both cards, each in the panel as shown whole, the program reading the
+#       three answers.
+# (xviii) the harness of every canonical CVA platform (programs/sglp/cva/;
+#       sGLP's task of 2026-10-18 20:50 UTC), on the canonical platform of the
+#       social graph as programs/vglp/cva/compile.sh prints it
+#       (programs/vglp/cva/social_graph/platform.vglp), compiled to GLP by the
+#       REPL's :emit, with the scripted profiles of tests/cva/scripted_sglp.glp:
+#       the platform's interface printed in sGLP's term form (cva/interface.sh),
+#       its types, its volitional declarations, Menu's and Approval's, and its
+#       compiled predicates; the profiles transformed against it
+#       (transform.sh --interface); two agents for a day (cva/run.sh), two runs
+#       from seed 20260927 writing one log and seed 1 another, each menu showing
+#       its agent's own key and the people it knows, the scripted person asking
+#       to meet the other, then proposing, and an attempt to befriend approved
+#       at the other; the population's draw beside the log; and a simulation
+#       record in a scratch root (cva/record.sh), its check passing on it and
+#       failing on its log or its printed population changed.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -617,18 +644,21 @@ done
         grep -q " :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, post(X1?, line(Z1?, '_'))), Log?, _) , present_1(A?, Type?, Z3?, Z2, Mon?, Log?) \. " &&
     grep -A 5 '^present_1(_, _, Y, Y?, _, _)$' "$WORK/txmoded.1" | tr '\n' ' ' | grep -q ' :- ground(Y?) | true \. '
 check "in writer mode an answer holding a position the program writes is handed over once the positions the person writes are ground, a fresh writer there, and the program's term shown to the person goal by the present procedure of its type" $?
-# Q1: the Panel is shown once the positions the program writes are ground,
-# the cards an element at a time, each card's YesNo? answered as a question
-# of its own and logged in the panel or the cards as shown.
+# Q1: the Panel is shown whole once the term the program writes has no reader
+# (sGLP's task of 2026-10-18 20:52 UTC, item 1): the relay's one clause, its
+# build of the panel and of the list of cards, each card's YesNo? answered as a
+# question of its own and logged in the panel as shown whole.
 tr '\n' ' ' < "$WORK/txmoded.2" > "$WORK/txmoded.2.flat"
 ! grep -q '^%% not transformed' "$WORK/txmoded.2" &&
     grep -q "person(A, profiles(p), Mon, Seed, Log, \[ask('Panel', panel_w(E)) | As\]) :- random(Seed?, 2147483646, K, S) , profiles # p_panel(Y?, K?, Mon?) , relay_1(A?, 'Panel', E?, Y, Mon?, Log?) , person(A?, profiles(p), Mon?, S?, Log?, As?) \. " "$WORK/txmoded.2.flat" &&
-    grep -q 'relay_1(_, _, panel(\[\]), panel(\[\]), _, _) \. ' "$WORK/txmoded.2.flat" &&
-    grep -q "relay_1(A, Type, panel(\[card(Z1, Z2?) | Z4\]), panel(\[card(Z1?, Z3) | Z5?\]), Mon, Log) :- ground(Z1?) | answer_1(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?) , present_1(A?, Type?, Z4?, Z5, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
-    grep -q "answer_1 ( Integer? , Constant? , Integer? , YesNo ? , YesNo , MutualRef? , MutualRef? ) \. answer_1(A, Type, V1, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, panel(\[card(V1?, Y?) | '_'\])), Log?, _) \. " "$WORK/txmoded.2.flat" &&
-    grep -q "present_1 ( Integer? , Constant? , List(Card) ? , List(Card) , MutualRef? , MutualRef? ) \. present_1(_, _, \[\], \[\], _, _) \. present_1(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], Mon, Log) :- ground(Z1?) | answer_2(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?) , present_1(A?, Type?, Z4?, Z5, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
-    grep -q "answer_2(A, Type, V1, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[card(V1?, Y?) | '_'\]), Log?, _) \. " "$WORK/txmoded.2.flat"
-check "a writer-mode type with positions the person writes inside an argument the program writes is translated: shown once the positions the program writes are ground, the cards an element at a time by the present procedure of List(Card), each card's answer a question of its own, logged in the question as shown" $?
+    grep -q "relay_1(A, Type, X, Y?, Mon, Log) :- no_readers(X?) | present_1(A?, Type?, X?, B, S, 1, _, Fs, \[\], Mon?, Log?) , show_whole(B?, S?, Fs?, Y) \. " "$WORK/txmoded.2.flat" &&
+    [ "$(grep -c '^relay_1(A, Type, ' "$WORK/txmoded.2")" -eq 1 ] && ! grep -q '^relay_1(_, ' "$WORK/txmoded.2" &&
+    grep -q "present_1(_, _, panel(\[\]), panel(\[\]), panel(\[\]), C0, C0?, Fs0?, Fs0, _, _) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "present_1(A, Type, panel(\[card(Z1, Z2?) | Z4\]), panel(\[card(Z1?, Z3) | Z5?\]), panel(\[card(Z1?, '[$]h'(C0?, 0)) | S1?\]), C0, N2?, \[slot(F1) | G1?\], Fs0, Mon, Log) :- ground(Z1?) , integer(C0?) | ':='(N1, '+'(C0?, 1)) , answer_1(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?) , present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "answer_1 ( Integer? , Constant? , Integer? , Integer? , _? , YesNo ? , YesNo , MutualRef? , MutualRef? ) \. answer_1(A, Type, C, J, F, Y, Y?, Mon, Log) :- ground(Y?) , ground(F?) | stream_append(time(Time), Mon?, _) , whole_frame(F?, C?, J?, Y?, E) , stream_append(entry(Time?, A?, Type?, E?), Log?, _) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "present_2 ( Integer? , Constant? , List(Card) ? , List(Card) , _ , Integer? , Integer , Stream(Slot(_)) , Stream(Slot(_)) ? , MutualRef? , MutualRef? ) \. present_2(_, _, \[\], \[\], \[\], C0, C0?, Fs0?, Fs0, _, _) \. present_2(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], \[card(Z1?, '[$]h'(C0?, 0)) | S1?\], C0, N2?, \[slot(F1) | G1?\], Fs0, Mon, Log) :- ground(Z1?) , integer(C0?) | ':='(N1, '+'(C0?, 1)) , answer_1(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?) , present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
+    ! grep -q '^present_3\|^answer_2' "$WORK/txmoded.2"
+check "a writer-mode type with positions the person writes inside an argument the program writes is translated: shown whole once the term the program writes has no reader, the panel and its list of cards built and shown once complete, each card's answer a question of its own, logged in the panel as shown whole" $?
 grep -q '^%% not transformed: a rated goal of a procedure with an output argument(key(give, 2))$' "$WORK/txmoded.3" &&
     [ "$(grep -c '^%% not transformed' "$WORK/txmoded.3")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.3"
 check "a rated goal whose procedure has an output argument is refused, nothing printed" $?
@@ -738,10 +768,11 @@ echo "--- (xiv) a run with positions the person writes inside an argument the pr
 # writer mode (sGLP's Q1 of 2026-10-10 09:33 UTC; Section 4, "The person
 # process": the person process "shows the person goal the question once the
 # positions the program writes are ground, the positions the person writes
-# inside them left open, each answered as a question of its own"): a panel of
-# three cards, the person answering each; the log one line per card, the first
-# card's answer in the panel as shown and the others' in the cards as shown,
-# an element at a time; the program reading the three answers.
+# inside them left open, each answered as a question of its own"; Section 3,
+# Definition "Relay" (ii), at sGLP e8367a3): a panel of three cards, the person
+# answering each; the log one line per card, each card's answer in the panel
+# as shown whole, '_' at the other cards' answers; the program reading the
+# three answers.
 repl "$WORK/panel.out" ':limit 1000000000000' "$HERE/tests/panel" 'panel_run(3, As).'
 sed 's/^\(GLP> \)*//' "$WORK/panel.out" > "$WORK/panel.lines"
 grep -q '^✓ Loaded program' "$WORK/panel.out"
@@ -749,10 +780,13 @@ check "tests/panel loads, its population printed before the run" $?
 awk '
     /^entry\(/ {
         n++; t = substr($0, 7, index($0, ",") - 7) + 0; if (t < last) bad++; last = t
-        if ($0 ~ /^entry\([0-9.]+, 1, Panel, panel\(\[card\(1, (yes|no)\) \| _\]\)\)$/) k = 1
-        else if ($0 ~ /^entry\([0-9.]+, 1, Panel, \[card\([23], (yes|no)\) \| _\]\)$/) k = substr($0, index($0, "[card(") + 6, 1) + 0
-        else { bad++; next }
-        match($0, /card\([0-9], (yes|no)\)/); v[k] = substr($0, RSTART + 8, RLENGTH - 9); got[k]++
+        if ($0 !~ /^entry\([0-9.]+, 1, Panel, panel\(\[card\(1, [a-z_]+\), card\(2, [a-z_]+\), card\(3, [a-z_]+\)\]\)\)$/) { bad++; next }
+        k = 0
+        for (i = 1; i <= 3; i++) {
+            p = "card\\(" i ", (yes|no)\\)"
+            if (match($0, p)) { if (k) bad++; k = i; v[i] = substr($0, RSTART + 8, RLENGTH - 9) }
+        }
+        if (!k) bad++; else got[k]++
     }
     /^As = \[/ { s = $0; sub(/^As = \[/, "", s); sub(/\]$/, "", s); m = split(s, as, ", ") }
     /^clock\(/ { c = substr($0, 7, length($0) - 7) + 0; seen = 1 }
@@ -760,7 +794,7 @@ awk '
         for (i = 1; i <= 3; i++) if (got[i] != 1 || v[i] != as[i]) bad++
         exit !(n == 3 && m == 3 && seen && c == last && !bad)
     }' "$WORK/panel.lines"
-check "the log: each card answered as a question of its own, card 1 in the panel as shown and cards 2 and 3 in the cards as shown, in the order of time; the program reads the three answers logged; the clock last" $?
+check "the log: each card answered as a question of its own, in the panel as shown whole, the other cards' answers _, in the order of time; the program reads the three answers logged; the clock last" $?
 grep '^entry(\|^clock(\|^As = ' "$WORK/panel.lines" | sed 's/^/        /'
 
 echo "--- (xv) a run with a stream the person writes, its element type holding no position the program writes"
@@ -846,6 +880,136 @@ awk -F'\t' -v n=100 '
         exit !(checked > 0 && miss == 0 && met > 0 && bad == 0 && shrink == 0)
     }' "$WORK/a.log"
 check "each menu shows the people its agent knows, in increasing order and by sex, two and two at the start, never fewer later; a menu asked after a yes shows the friend and the friend's friends, some met only so (Section 5)" $?
+
+echo "--- (xvii) a list the program writes in two steps, shown once, whole"
+# tests/steps: the panel's first card written at once and its second once the
+# person has answered Ready, which the profile does about a day after asked,
+# each card about a second after shown (sGLP's task of 2026-10-18 20:52 UTC,
+# item 1): the printed relays, Ready's flat and the Panel's whole; and the run,
+# the readiness answered first and each card after it, in the panel as shown
+# whole, the program reading the three answers.  Shown a card at a time, the
+# first card would be answered seconds after the start and a day before the
+# readiness, in the panel as [card(1, yes) | _].
+D="$HERE/tests/steps/population.glp"
+tr '\n' ' ' < "$D" > "$WORK/steps.flat"
+grep -q "relay_1(A, Type, ready(X1?), ready(Y1), Mon, Log) :- answer_1(A?, Type?, Y1?, X1, Mon?, Log?) \." "$WORK/steps.flat" &&
+    grep -q "relay_2(A, Type, X, Y?, Mon, Log) :- no_readers(X?) | present_1(A?, Type?, X?, B, S, 1, _, Fs, \[\], Mon?, Log?) , show_whole(B?, S?, Fs?, Y) \." "$WORK/steps.flat" &&
+    grep -q "answer_2(A, Type, C, J, F, Y, Y?, Mon, Log) :- ground(Y?) , ground(F?) | stream_append(time(Time), Mon?, _) , whole_frame(F?, C?, J?, Y?, E) , stream_append(entry(Time?, A?, Type?, E?), Log?, _) \." "$WORK/steps.flat"
+check "the printed relays: Ready's shown at once, the Panel's shown whole once the term the program writes has no reader, each card's answer logged in the panel as shown whole" $?
+repl "$WORK/steps.out" ':limit 1000000000000' "$HERE/tests/steps" 'steps_run(As).'
+sed 's/^\(GLP> \)*//' "$WORK/steps.out" > "$WORK/steps.lines"
+grep -q '^✓ Loaded program' "$WORK/steps.out"
+check "tests/steps loads, its population printed before the run" $?
+awk '
+    /^entry\(/ { e[++n] = $0; t[n] = substr($0, 7, index($0, ",") - 7) + 0 }
+    /^As = \[yes, yes, yes\]$/ { as = 1 }
+    /^clock\(/ { c = substr($0, 7, length($0) - 7) + 0; seen = 1 }
+    END {
+        if (e[1] !~ /^entry\([0-9.]+, 1, Ready, ready\(yes\)\)$/) bad++
+        if (e[2] !~ /^entry\([0-9.]+, 1, Panel, panel\(\[card\(1, yes\), card\(2, _\)\]\)\)$/) bad++
+        if (e[3] !~ /^entry\([0-9.]+, 1, Panel, panel\(\[card\(1, _\), card\(2, yes\)\]\)\)$/) bad++
+        if (!(t[1] > 3600 && t[1] <= t[2] && t[2] <= t[3] && t[3] - t[1] < 3600)) bad++
+        exit !(n == 3 && as && seen && c == t[3] && !bad)
+    }' "$WORK/steps.lines"
+check "the log: the readiness, then the first card, shown with the second only once it was written, after the readiness, then the second, each in the panel as shown whole; the program reads the three answers; the clock last" $?
+grep '^entry(\|^clock(\|^As = ' "$WORK/steps.lines" | sed 's/^/        /'
+
+echo "--- (xviii) the harness of every canonical CVA platform"
+# The canonical platform of the social graph, as programs/vglp/cva/compile.sh
+# prints it, compiled to GLP by :emit in a scratch directory under
+# programs/tests, a container with no self.glp, as cascade.sh compiles it.
+CVA="$WORK/cva"; mkdir -p "$CVA/printed"
+EMITD="$GLP_DIR/programs/tests/sglp_cva_emit_$$"
+rm -rf "$EMITD"; mkdir -p "$EMITD"
+cp "$GLP_DIR/programs/vglp/cva/social_graph/platform.vglp" "$EMITD/platform.vglp"
+repl "$WORK/cva_emit.out" ":emit $EMITD"
+cp "$EMITD/platform.vglp" "$CVA/platform.vglp"; cp "$EMITD/platform.glp" "$CVA/platform.glp" 2>/dev/null
+rm -rf "$EMITD"
+[ -s "$CVA/platform.glp" ] && grep -q '^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question)))\.$' "$CVA/platform.glp"
+check "the canonical platform of the social graph compiled to GLP, its agent/5 the compilation's, with its ask stream" $?
+bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" GSG > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
+st=$?
+[ "$st" -eq 0 ] &&
+    grep -q "^  type('Menu', \[menu('Key', 'List'('Key'), dual('Request'))\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('Approval', \[approval('Attempt', dual('YesNo'))\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('Key', \['String'\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('List'('X'), \[\[\], \['X' | 'List'('X')\]\]),$" "$CVA/interface.glp" &&
+    grep -q "^  volitional('Menu', '\\\\'Menu\\\\'', menu_w, request(dual('Key'), dual('List'('Key')), 'Stream'('Trigger'))),$" "$CVA/interface.glp" &&
+    grep -q "^  volitional('Approval', '\\\\'Approval\\\\'', approval_w, respond(" "$CVA/interface.glp" &&
+    grep -q "^  compiled(agent, 5),$" "$CVA/interface.glp" && grep -q "^  compiled(request1, 5),$" "$CVA/interface.glp" &&
+    [ "$(grep -c '^  type(' "$CVA/interface.glp")" -ge "$(grep -cE '^[A-Z][A-Za-z0-9_]* *::=' "$CVA/platform.vglp")" ]
+check "the platform's interface in sGLP's term form: its types, Menu and Approval among them, and the root's it names, Key and List, its volitional declarations with the constants and functors of their asks, and its compiled predicates" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_iface.err"
+bash "$HERE/transform.sh" --interface "$CVA/interface.glp" --source "$HERE/tests/cva/scripted_sglp.glp" --out "$CVA/printed" > "$WORK/cva_tx.out" 2>&1
+st=$?
+tr '\n' ' ' < "$CVA/printed/population.glp" > "$WORK/cva_pop.flat"
+[ "$st" -eq 0 ] && ! grep -q '^%% not transformed' "$CVA/printed/population.glp" "$CVA/printed/profiles.glp" &&
+    grep -q "relay_1(A, Type, menu(X1, X2, X3?), menu(X1?, X2?, Y3), Mon, Log) :- ground(X1?) , ground(X2?) | answer_1(" "$WORK/cva_pop.flat" &&
+    grep -q "stochastic_agent(A, B, Mon, Log, Asks) :- stochastic_person(B?, P, S) , random(S?, 2147483646, Seed, _) , person(A?, P?, Mon?, Seed?, Log?, Asks?) \." "$WORK/cva_pop.flat" &&
+    grep -q "run_declaration(2, 1, day, 20260927) \." "$WORK/cva_pop.flat"
+check "the scripted profiles transformed against the platform's interface (transform.sh --interface): the relay of Menu, the run's entries of one arity" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_tx.out"
+for r in a b s1; do
+    seed=20260927; [ "$r" = s1 ] && seed=1
+    bash "$HERE/cva/run.sh" "$CVA/platform.glp" "$CVA/printed" 2 '1 day' "$seed" "$WORK/cva_$r.log" > "$WORK/cva_$r.out" 2>&1
+    st=$?
+    check "two agents of the canonical platform, one day, seed $seed ($r): the run ends with no error" $st
+    [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_$r.out"
+done
+[ -s "$WORK/cva_a.log" ] && cmp -s "$WORK/cva_a.log" "$WORK/cva_b.log" && ! cmp -s "$WORK/cva_a.log" "$WORK/cva_s1.log"
+check "two runs from seed 20260927 write one log and seed 1 another" $?
+awk -F'\t' '
+    NF == 4 {
+        n++; t = $1 + 0; if (t < last || t > 86400) bad++; last = t
+        if ($2 != 1 && $2 != 2) { bad++; next }
+        me = "p" $2; other = ($2 == 1) ? "p2" : "p1"
+        if ($3 == "Menu") {
+            if (index($4, "menu(" me ", [") != 1) bad++
+            if (!seen[$2]++) { if ($4 != "menu(" me ", [], known(" other "))") bad++ }
+            if (index($4, "propose(befriend(" me ", " other "))")) bef++
+            if (index($4, "propose(establish(" me "))")) est++
+        } else if ($3 == "Approval") {
+            if ($4 ~ /^approval\(attempt\(p[12], [0-9]+, [0-9]+, befriend\(p[12], p[12]\)\), yes\)$/ && index($4, "attempt(" other ", ")) app++
+            else bad++
+        } else bad++
+    }
+    NF == 1 { c = $1 + 0; clocked = 1 }
+    END { exit !(n > 0 && seen[1] && seen[2] && bef > 0 && est > 0 && app > 0 && clocked && c == last && !bad) }' "$WORK/cva_a.log"
+check "the log: each menu showing its agent's own key and the people it knows, the first answered by asking to meet the other, proposals to establish and to befriend, an attempt of the other's approved yes, in the order of time; the clock last" $?
+printf 'draw scripted 2 agreeable 2\nagent 1 scripted agreeable\nagent 2 scripted agreeable\n' | cmp -s - "$WORK/cva_a.draw"
+check "the population's draw beside the log: its counts, then agents 1 and 2 with their profiles" $?
+grep -E '^(draw|wall-clock)' "$WORK/cva_a.out" | sed 's/^/        /'
+head -6 "$WORK/cva_a.log" | sed 's/^/        /'
+# A simulation record, in a scratch root, from the scratch platform's
+# directory in place of a cascade tag, and its check.
+mkdir -p "$WORK/sim"
+bash "$HERE/cva/record.sh" GSG "$HERE/tests/cva/scripted_sglp.glp" --cascade "$CVA" --seeds 20260927,1 --root "$WORK/sim" > "$WORK/cva_rec.out" 2>&1
+st=$?
+REC=$(ls -d "$WORK"/sim/GSG/* 2>/dev/null | head -1)
+all_there() { local d=$1; shift; for f in "$@"; do [ -s "$d/$f" ] || return 1; done; }
+[ "$st" -eq 0 ] && [ -n "$REC" ] &&
+    all_there "$REC" scripted_sglp.glp profiles.glp population.glp 20260927.log 20260927.draw 1.log 1.draw manifest.md &&
+    cmp -s "$REC/20260927.log" "$WORK/cva_a.log" && cmp -s "$REC/1.log" "$WORK/cva_s1.log" &&
+    cmp -s "$REC/scripted_sglp.glp" "$HERE/tests/cva/scripted_sglp.glp" &&
+    grep -q '^- name: GSG$' "$REC/manifest.md" && grep -q '^- seeds: 20260927,1$' "$REC/manifest.md" &&
+    grep -q '^- agents: 2$' "$REC/manifest.md" && grep -q '^- until: 1 day$' "$REC/manifest.md" &&
+    grep -q '^- programs/sglp commit: ' "$REC/manifest.md" && grep -q '^- cascade commit: directory$' "$REC/manifest.md"
+check "a simulation record (cva/record.sh): the sGLP source as it stood, the printed modules, each seed's log and draw, the runs' logs, and the manifest naming the cascade, the commits and the seeds" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_rec.out"
+bash "$HERE/cva/record.sh" --check "$REC" > "$WORK/cva_chk.out" 2>&1
+st=$?
+[ "$st" -eq 0 ] && grep -q '^profiles.glp: as printed$' "$WORK/cva_chk.out" && grep -q '^population.glp: as printed$' "$WORK/cva_chk.out" &&
+    grep -q '^20260927.log: first day as recorded' "$WORK/cva_chk.out" && grep -q '^1.log: first day as recorded' "$WORK/cva_chk.out"
+check "the record's check (record.sh --check): its printed modules as printed and each seed's first day as recorded" $?
+sed 's/^/        /' "$WORK/cva_chk.out"
+cp -R "$REC" "$WORK/sim_bad"
+awk -F'\t' 'NF == 4 && !done { $4 = $4 " "; done = 1 } { print }' OFS='\t' "$REC/1.log" > "$WORK/sim_bad/1.log"
+echo '%% changed' >> "$WORK/sim_bad/population.glp"
+bash "$HERE/cva/record.sh" --check "$WORK/sim_bad" > "$WORK/cva_bad.out" 2>&1
+st=$?
+[ "$st" -ne 0 ] && grep -q '^1.log: first day NOT as recorded$' "$WORK/cva_bad.out" &&
+    grep -q '^population.glp: NOT as printed$' "$WORK/cva_bad.out" && grep -q '^20260927.log: first day as recorded' "$WORK/cva_bad.out"
+check "the check fails on a record whose log or printed population was changed, naming each" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

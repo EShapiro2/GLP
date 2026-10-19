@@ -1,0 +1,31 @@
+%% Test (xvii)'s compiled program, written by hand: the canonical compilation
+%% of steps.vglp by vGLP's Definition "Canonical Compilation", as the panel's
+%% show.glp is of show.vglp.  ready, show and steps reach a question and have
+%% one more argument, last, their ask stream; second reaches none and is as the
+%% source has it.  Each asking clause keeps its procedure's name and the guarded
+%% clause takes the name with 1 appended; Ready and Panel are in writer mode,
+%% so X and X? are exchanged, the ask carrying the reader X? and the program
+%% writing X; steps calls two procedures that reach a question, whose ask
+%% streams D1 and D2 are merged into its own.  The types are the directory's
+%% (self.glp).
+
+%% (ready(R))*ready(R?): the asking clause and the guarded clause.
+procedure ready(YesNo, Stream(Ask)).
+ready(R?, [ask('Ready', ready_w(X?))|D?]) :- ready1(R, X, D).
+procedure ready1(YesNo, Ready, Stream(Ask)).
+ready1(R?, ready(R), []).
+
+%% (panel(Cs?))*show(Cs): the asking clause and the guarded clause.
+procedure show(List(Card)?, Stream(Ask)).
+show(Cs, [ask('Panel', panel_w(X?))|D?]) :- show1(Cs?, X, D).
+procedure show1(List(Card)?, Panel, Stream(Ask)).
+show1(Cs, panel(Cs?), []).
+
+%% steps(As): the readiness and the panel, their ask streams merged.
+exported procedure steps(Stream(YesNo), Stream(Ask)).
+steps([R?, A1?, A2?], D?) :-
+    ready(R1, D1), show([card(1, A1) | Cs?], D2), second(R1?, R, Cs, A2), merge(D1?, D2?, D).
+
+%% second(R1?, R, Cs, A): once R1 is answered, R is R1 and Cs the last card.
+procedure second(YesNo?, YesNo, List(Card), YesNo).
+second(R1, R1?, [card(2, A)], A?) :- ground(R1?) | true.
