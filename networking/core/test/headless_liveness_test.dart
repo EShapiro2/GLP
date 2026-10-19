@@ -39,7 +39,6 @@ void main() {
       identity: await GrassrootsIdentity.create(
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
-        nickname: 'node',
       ),
       rendezvousServers: const [],
       sodium: sodium!,

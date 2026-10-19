@@ -59,13 +59,11 @@ void main() {
       final keyPair = await algorithm.newKeyPair();
       identity = await GrassrootsIdentity.create(
         keyPair: keyPair,
-        nickname: 'TestUser',
       );
 
       final otherKeyPair = await algorithm.newKeyPair();
       otherIdentity = await GrassrootsIdentity.create(
         keyPair: otherKeyPair,
-        nickname: 'OtherPeer',
       );
 
       store = Store<AppState>(

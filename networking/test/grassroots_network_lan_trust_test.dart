@@ -51,11 +51,10 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async {
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async {
     final seed = Uint8List.fromList(List.filled(32, fill));
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(seed),
-      nickname: name,
     );
   }
 
@@ -126,8 +125,8 @@ void main() {
     required ColdCallTrustLevel lanLevel,
     required LocalNetwork receiverLocalNetwork,
   }) async {
-    final callerId = await identityFromSeed(0x61, 'caller');
-    final receiverId = await identityFromSeed(0x62, 'receiver');
+    final callerId = await identityFromSeed(0x61);
+    final receiverId = await identityFromSeed(0x62);
 
     final (caller, _) = await startNode(callerId);
     final (receiver, receiverStore) = await startNode(receiverId);
@@ -211,9 +210,9 @@ void main() {
       'given by putKnownPeer is answered (GNA §2.5, §2.7)', () async {
     // A layer running the WAN alone: no level governs its IP contact, so the
     // known-peer set alone decides.
-    final strangerId = await identityFromSeed(0x65, 'wan-stranger');
-    final knownId = await identityFromSeed(0x66, 'wan-known');
-    final receiverId = await identityFromSeed(0x67, 'wan-receiver');
+    final strangerId = await identityFromSeed(0x65);
+    final knownId = await identityFromSeed(0x66);
+    final receiverId = await identityFromSeed(0x67);
 
     final (stranger, _) = await startNode(strangerId);
     final (known, _) = await startNode(knownId);
@@ -256,8 +255,8 @@ void main() {
   test('the BLE level does not open the IP path', () async {
     // The two levels are independent, and the medium of discovery is the key:
     // opening BLE says nothing about contact arriving over IP.
-    final callerId = await identityFromSeed(0x63, 'ble-caller');
-    final receiverId = await identityFromSeed(0x64, 'ble-receiver');
+    final callerId = await identityFromSeed(0x63);
+    final receiverId = await identityFromSeed(0x64);
 
     final (caller, _) = await startNode(callerId);
     final (receiver, receiverStore) = await startNode(receiverId);
@@ -314,8 +313,8 @@ void main() {
     Set<Underlay> receiverUnderlays = const {Underlay.lan, Underlay.wan},
     bool expectDelivery = true,
   }) async {
-    final callerId = await identityFromSeed(seed, 'known-caller');
-    final receiverId = await identityFromSeed(seed + 1, 'known-receiver');
+    final callerId = await identityFromSeed(seed);
+    final receiverId = await identityFromSeed(seed + 1);
     final callerHex = hexOf(callerId.publicKey);
 
     final (caller, _) = await startNode(callerId);

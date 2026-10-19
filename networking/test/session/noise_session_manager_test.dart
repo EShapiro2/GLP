@@ -18,10 +18,9 @@ void main() {
     sodium = await initTestSodium();
   });
 
-  Future<GrassrootsIdentity> identity(String nickname) async {
+  Future<GrassrootsIdentity> identity() async {
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPair(),
-      nickname: nickname,
     );
   }
 
@@ -34,8 +33,8 @@ void main() {
 
   test('establishes independent BLE and UDP sessions for the same peer',
       () async {
-    final alice = await identity('Alice');
-    final bob = await identity('Bob');
+    final alice = await identity();
+    final bob = await identity();
     final aliceSessions = NoiseSessionManager(identity: alice, sodium: sodium);
     final bobSessions = NoiseSessionManager(identity: bob, sodium: sodium);
 
@@ -130,9 +129,9 @@ void main() {
   test(
       'aborts the handshake when the delivered static key does not match the '
       'claimed identity (impersonation)', () async {
-    final alice = await identity('Alice');
-    final bob = await identity('Bob');
-    final mallory = await identity('Mallory');
+    final alice = await identity();
+    final bob = await identity();
+    final mallory = await identity();
 
     final aliceSessions = NoiseSessionManager(identity: alice, sodium: sodium);
     final mallorySessions =

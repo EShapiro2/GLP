@@ -30,11 +30,10 @@ void main() {
     }
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async =>
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async =>
       GrassrootsIdentity.create(
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
-        nickname: name,
       );
 
   Future<HeadlessGrassrootsNetwork> node(
@@ -45,7 +44,7 @@ void main() {
     bool start = true,
   }) async {
     final layer = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(fill, 'node'),
+      identity: await identityFromSeed(fill),
       rendezvousServers: rendezvousServers,
       serverAddress: serverAddress,
       rendezvousServer: rendezvousServer,
@@ -108,7 +107,7 @@ void main() {
     if (sodiumUnavailable != null) return;
     final a = await node(0xa3);
     final b = await node(0xa4);
-    final stranger = await identityFromSeed(0xa5, 'stranger');
+    final stranger = await identityFromSeed(0xa5);
     await connect(a, b);
 
     expect(a.peerUnderlays(b.identity.publicKey), [Underlay.wan]);

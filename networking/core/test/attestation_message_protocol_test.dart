@@ -267,11 +267,10 @@ void main() {
     }
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async =>
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async =>
       GrassrootsIdentity.create(
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
-        nickname: name,
       );
 
   Future<(HeadlessGrassrootsNetwork, HeadlessGrassrootsNetwork)> pair(
@@ -280,13 +279,13 @@ void main() {
     int seed,
   ) async {
     final service = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(seed, 'service'),
+      identity: await identityFromSeed(seed),
       rendezvousServers: const [],
       sodium: sodium!,
       attestation: serviceAttestation,
     );
     final caller = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(seed + 1, 'caller'),
+      identity: await identityFromSeed(seed + 1),
       rendezvousServers: const [],
       sodium: sodium!,
       attestation: callerAttestation,
@@ -694,8 +693,8 @@ void main() {
         markTestSkipped(sodiumUnavailable!);
         return;
       }
-      final senderId = await identityFromSeed(0x79, 'sender');
-      final receiverId = await identityFromSeed(0x7a, 'receiver');
+      final senderId = await identityFromSeed(0x79);
+      final receiverId = await identityFromSeed(0x7a);
       final router = MessageRouter(
         store: Store<AppState>(
           appReducer,

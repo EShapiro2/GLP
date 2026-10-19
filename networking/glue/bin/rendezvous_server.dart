@@ -30,11 +30,11 @@
 ///     --program <GLP>/programs/examples/rendezvous/rv_agent.glp \
 ///     --root-self <GLP>/programs/self.glp
 ///
-/// `--identity` is the key pair, a JSON file `{"seed": <hex>, "nickname":
-/// <string>}` created with a fresh seed on first run; `--graph` is the social
-/// graph's source identity, the Hash `signature/2` reports for a signature
-/// made under the social graph, which the agent admits a reconnection
-/// attestation under and no other (rv_agent.glp, "Capability verification").
+/// `--identity` is the key pair, a JSON file `{"seed": <hex>}` created with a
+/// fresh seed on first run; `--graph` is the social graph's source identity,
+/// the Hash `signature/2` reports for a signature made under the social
+/// graph, which the agent admits a reconnection attestation under and no
+/// other (rv_agent.glp, "Capability verification").
 ///
 /// Prints `READY <port> <key-hex>` once listening, then `OUT <term>` for each
 /// element the agent sends its person and `CONNECTED <key-hex>` and
@@ -93,8 +93,7 @@ Future<void> main(List<String> argv) async {
   }
 
   final sodium = await initHeadlessSodium();
-  final identity = await loadOrCreateIdentity(args['identity'] as String,
-      nickname: 'rendezvous');
+  final identity = await loadOrCreateIdentity(args['identity'] as String);
   final layer = HeadlessGrassrootsNetwork(
     identity: identity,
     // A rendezvous server holds no session with another: "the servers do

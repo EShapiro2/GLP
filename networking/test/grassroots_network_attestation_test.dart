@@ -100,11 +100,10 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async {
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async {
     final seed = Uint8List.fromList(List.filled(32, fill));
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(seed),
-      nickname: name,
     );
   }
 
@@ -151,8 +150,8 @@ void main() {
 
   test('a peer whose platform provides none is reachable and unattested',
       () async {
-    final callerId = await identityFromSeed(0x81, 'caller');
-    final calleeId = await identityFromSeed(0x82, 'callee');
+    final callerId = await identityFromSeed(0x81);
+    final calleeId = await identityFromSeed(0x82);
     final caller = await startNode(callerId);
     final callee = await startNode(calleeId);
     addTearDown(() async {
@@ -205,8 +204,8 @@ void main() {
       )),
     );
 
-    final callerId = await identityFromSeed(0x83, 'caller');
-    final calleeId = await identityFromSeed(0x84, 'callee');
+    final callerId = await identityFromSeed(0x83);
+    final calleeId = await identityFromSeed(0x84);
     final caller = await startNode(callerId, attestation: callerAttestation);
     final callee = await startNode(calleeId, attestation: calleeAttestation);
     addTearDown(() async {
@@ -271,8 +270,8 @@ void main() {
       verdictFor: (offered) => const UnattestedPlatform('none offered'),
     );
 
-    final callerId = await identityFromSeed(0x85, 'caller');
-    final calleeId = await identityFromSeed(0x86, 'callee');
+    final callerId = await identityFromSeed(0x85);
+    final calleeId = await identityFromSeed(0x86);
     final caller = await startNode(callerId, attestation: callerAttestation);
     final callee = await startNode(calleeId, attestation: calleeAttestation);
     addTearDown(() async {

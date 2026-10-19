@@ -82,10 +82,9 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identity(String nickname) async =>
+  Future<GrassrootsIdentity> identity() async =>
       GrassrootsIdentity.create(
         keyPair: await Ed25519().newKeyPair(),
-        nickname: nickname,
       );
 
   Future<GrassrootsNetwork> layerFor(GrassrootsIdentity self,
@@ -100,10 +99,10 @@ void main() {
       );
 
   test('identity, known peers, addresses, trust, reachability', () async {
-    final self = await identity('self');
+    final self = await identity();
     final layer = await layerFor(self);
     final network = GrassrootsGlpNetwork(layer);
-    final peer = glp.PubKey.fromList((await identity('peer')).publicKey);
+    final peer = glp.PubKey.fromList((await identity()).publicKey);
 
     expect(network.getIdentity(), glp.PubKey.fromList(self.publicKey));
 
@@ -131,7 +130,7 @@ void main() {
   });
 
   test('sign and verify are the layer\'s', () async {
-    final self = await identity('self');
+    final self = await identity();
     final layer = await layerFor(self);
     final network = GrassrootsGlpNetwork(layer);
     final message = Uint8List.fromList('attest(alice, bob)'.codeUnits);
@@ -140,7 +139,7 @@ void main() {
     expect(signature, layer.sign(message));
     expect(network.verify(network.getIdentity(), message, signature), isTrue);
     expect(
-        network.verify(glp.PubKey.fromList((await identity('other')).publicKey),
+        network.verify(glp.PubKey.fromList((await identity()).publicKey),
             message, signature),
         isFalse);
 
@@ -148,9 +147,9 @@ void main() {
   });
 
   test('callbacks carry what the layer reports, in GNA\'s order', () async {
-    final layer = await layerFor(await identity('self'));
+    final layer = await layerFor(await identity());
     final network = GrassrootsGlpNetwork(layer);
-    final peer = glp.PubKey.fromList((await identity('peer')).publicKey);
+    final peer = glp.PubKey.fromList((await identity()).publicKey);
     final events = <String>[];
     const attested = IosApplicationIdentity('TEAM.app.grassroots');
     Object? identitySeen;
@@ -199,7 +198,7 @@ void main() {
 
   test('places: declared, crossed, reported, removed', () async {
     final backend = _FakeGeofenceBackend();
-    final layer = await layerFor(await identity('self'), backend: backend);
+    final layer = await layerFor(await identity(), backend: backend);
     final network = GrassrootsGlpNetwork(layer);
     final events = <(String, glp.PlaceEvent)>[];
     network.onPlaceEvent = (place, event) => events.add((place, event));
@@ -217,9 +216,9 @@ void main() {
   test(
       'getPeers and observedPeerAddress pass straight through (GNA, '
       '2026-10-11, Task C; until then they threw UnsupportedError)', () async {
-    final layer = await layerFor(await identity('self'));
+    final layer = await layerFor(await identity());
     final network = GrassrootsGlpNetwork(layer);
-    final peer = glp.PubKey.fromList((await identity('peer')).publicKey);
+    final peer = glp.PubKey.fromList((await identity()).publicKey);
 
     // Nothing is nearby and nothing is connected: the layer's answers.
     expect(network.getPeers(), isEmpty);

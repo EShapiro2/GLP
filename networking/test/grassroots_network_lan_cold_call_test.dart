@@ -46,11 +46,10 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async {
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async {
     final seed = Uint8List.fromList(List.filled(32, fill));
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(seed),
-      nickname: name,
     );
   }
 
@@ -89,7 +88,7 @@ void main() {
 
   test('Open contacts an unmatched LAN instance, keyed by its address',
       () async {
-    final network = await startNode(await identityFromSeed(0x71, 'self'));
+    final network = await startNode(await identityFromSeed(0x71));
     await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
 
     const address = '127.0.0.1:45071';
@@ -110,7 +109,7 @@ void main() {
   });
 
   test('Closed ignores an unmatched LAN instance', () async {
-    final network = await startNode(await identityFromSeed(0x72, 'self'));
+    final network = await startNode(await identityFromSeed(0x72));
     await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.closed);
 
     const address = '127.0.0.1:45072';
@@ -124,7 +123,7 @@ void main() {
 
   test('a second resolution of the same instance does not dial twice',
       () async {
-    final network = await startNode(await identityFromSeed(0x73, 'self'));
+    final network = await startNode(await identityFromSeed(0x73));
     await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
 
     const address = '127.0.0.1:45073';
@@ -141,7 +140,7 @@ void main() {
   });
 
   test('an unusable address is not dialed', () async {
-    final network = await startNode(await identityFromSeed(0x74, 'self'));
+    final network = await startNode(await identityFromSeed(0x74));
     await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
 
     network.debugResolveLanInstance(unmatchedToken, 'not-an-address');

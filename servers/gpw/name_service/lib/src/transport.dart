@@ -49,8 +49,7 @@ class PushService {
     String? knownPeersPath,
   }) async {
     final sodium = await initHeadlessSodium();
-    final identity =
-        await loadOrCreateIdentity(identityPath, nickname: 'gpw-mirror');
+    final identity = await loadOrCreateIdentity(identityPath);
     final network = HeadlessGrassrootsNetwork(
       identity: identity,
       sodium: sodium,

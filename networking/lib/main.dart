@@ -13,6 +13,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'dart:async';
 import 'chat_screen.dart';
 import 'chat_models.dart';
+import 'display_name_store.dart';
 import 'network_preferences.dart';
 import 'settings_screen.dart';
 
@@ -59,7 +60,6 @@ Future<GrassrootsIdentity> _initIdentity() async {
     debugPrint('Identity found in secure storage.');
     debugPrint('Private Key Bytes (Seed): ${existing.privateKey.length} bytes');
     debugPrint('Public Key Bytes: ${existing.publicKey.length} bytes');
-    debugPrint('Nickname: ${existing.nickname}');
     return existing;
   }
 
@@ -68,7 +68,6 @@ Future<GrassrootsIdentity> _initIdentity() async {
   await IdentityStore.putIdentity(identity);
   debugPrint('Private Key Bytes (Seed): ${identity.privateKey.length} bytes');
   debugPrint('Public Key Bytes: ${identity.publicKey.length} bytes');
-  debugPrint('Nickname: ${identity.nickname}');
   return identity;
 }
 
@@ -303,6 +302,11 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   GrassrootsIdentity? _identity;
   GrassrootsNetwork? _grassroots;
 
+  /// This app's display name for the device, its own and not the layer's
+  /// ([DisplayNameStore]).
+  String? _displayName;
+  final DisplayNameStore _displayNameStore = DisplayNameStore();
+
   /// The underlays and rendezvous servers the layer is instantiated with;
   /// a change rebuilds the layer ([_applyPreferences]).
   NetworkPreferences _preferences = NetworkPreferences.defaults;
@@ -456,6 +460,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   Future<void> _initialize() async {
     try {
       final identity = await _initIdentity();
+      final displayName = await _displayNameStore.load(identity);
       _preferences = await _preferencesStore.load();
 
       final grassroots = _buildLayer(identity);
@@ -463,27 +468,9 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       // Friend presence is handled at the transport layer; no app-layer
       // callback needed for UDP initialization.
 
-      // grassroots.onPeerConnected = (peer) {
-      //   print('Peer connected: ${peer.displayName}');
-      //   // PeerStore already has the peer - just track nickname changes
-      // };
-
-      // grassroots.onPeerUpdated = (peer) {
-      //   print('Peer updated: ${peer.displayName}');
-
-      //   // Check if nickname changed - use peerStore to get the previous state
-      //   // Note: Since peerStore already updated, we track changes via the _nicknameChanges map
-      //   // The peer object passed here is from peerStore, so we can't compare old/new directly
-      //   // This callback is mainly for nickname change animations
-      // };
-
-      // grassroots.onPeerDisconnected = (peer) {
-      //   print('Peer disconnected: ${peer.displayName}');
-      //   // PeerStore already updated - UI will refresh via _onPeersChanged
-      // };
-
       setState(() {
         _identity = identity;
+        _displayName = displayName;
         _grassroots = grassroots;
       });
 
@@ -1437,7 +1424,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         onTap: () {
           // Live peer wins; otherwise synthesize a stub from the friendship so
           // the chat opens for offline friends. ChatScreen + grassroots.send
-          // only need the pubkey + nickname; if no transport is live, the send
+          // only need the pubkey; if no transport is live, the send
           // path queues messages until a connection resumes.
           final peer = chat.peer ?? _stubPeerFromChatPreview(chat);
           if (peer != null) {
@@ -1978,7 +1965,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (peer != null) ...[
-                Text('Nickname: ${peer.displayName}'),
+                Text('Peer: ${peer.displayName}'),
                 Text('Status: ${peer.connectionState.name}'),
                 if (peer.rssi != null) Text('Signal: ${peer.rssi} dBm'),
                 if (peer.lastSeen != null)
@@ -2039,8 +2026,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
               radius: 50,
               backgroundColor: Colors.blueGrey,
               child: Text(
-                _identity?.nickname.isNotEmpty == true
-                    ? _identity!.nickname[0].toUpperCase()
+                _displayName?.isNotEmpty == true
+                    ? _displayName![0].toUpperCase()
                     : '?',
                 style: const TextStyle(fontSize: 40, color: Colors.white),
               ),
@@ -2048,21 +2035,21 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
           ),
           const SizedBox(height: 16),
 
-          // Nickname with edit button
+          // Display name with edit button
           Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _identity?.nickname ?? 'Loading...',
+                  _displayName ?? 'Loading...',
                   style: const TextStyle(
                       fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.edit, size: 20),
-                  onPressed: _showEditNicknameDialog,
-                  tooltip: 'Edit nickname',
+                  onPressed: _showEditDisplayNameDialog,
+                  tooltip: 'Edit name',
                 ),
               ],
             ),
@@ -2313,19 +2300,19 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     );
   }
 
-  void _showEditNicknameDialog() {
-    if (_identity == null) return;
+  void _showEditDisplayNameDialog() {
+    if (_displayName == null) return;
 
-    final controller = TextEditingController(text: _identity!.nickname);
+    final controller = TextEditingController(text: _displayName);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Nickname'),
+        title: const Text('Edit Name'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
-            hintText: 'Enter new nickname',
+            hintText: 'Enter new name',
             border: OutlineInputBorder(),
           ),
           autofocus: true,
@@ -2338,10 +2325,10 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
           ),
           ElevatedButton(
             onPressed: () async {
-              final newNickname = controller.text.trim();
-              if (newNickname.isNotEmpty && _grassroots != null) {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty) {
                 Navigator.pop(context);
-                await _updateNickname(newNickname);
+                await _updateDisplayName(newName);
               }
             },
             child: const Text('Save'),
@@ -2351,20 +2338,15 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     );
   }
 
-  Future<void> _updateNickname(String newNickname) async {
-    if (_identity == null) return;
-
-    // Nickname is a local label only — it never travels on the wire
-    // (ANNOUNCE is key + version + signature; nicknames are GLP-level).
-    _identity!.nickname = newNickname;
-
-    // Persist to secure storage
-    await IdentityStore.putIdentity(_identity!);
-
-    setState(() {});
+  Future<void> _updateDisplayName(String newName) async {
+    // The name is this app's label only: it never travels on the wire, and
+    // the layer's identity is the key pair alone (GNA §2.1).
+    await _displayNameStore.save(newName);
+    if (!mounted) return;
+    setState(() => _displayName = newName);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Nickname updated!')),
+      const SnackBar(content: Text('Name updated!')),
     );
   }
 
@@ -2411,6 +2393,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     setState(() {
       _grassroots = null;
       _identity = null;
+      _displayName = null;
     });
     await oldGrassroots?.dispose();
 
@@ -2421,12 +2404,18 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     // stored identity that doesn't match anything in memory.
     await IdentityStore.putIdentity(newIdentity);
 
+    // The old name went with the old key pair; the new one starts with its
+    // default.
+    await _displayNameStore.clear();
+    final newDisplayName = DisplayNameStore.defaultFor(newIdentity);
+
     // Rebuild the transport with the new identity (mirrors _initialize).
     final newGrassroots = _buildLayer(newIdentity);
 
     if (!mounted) return;
     setState(() {
       _identity = newIdentity;
+      _displayName = newDisplayName;
       _grassroots = newGrassroots;
     });
 
@@ -2447,7 +2436,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('New identity: ${newIdentity.nickname} '
+        content: Text('New identity: $newDisplayName '
             '(${newIdentity.shortFingerprint})'),
       ),
     );

@@ -43,7 +43,6 @@ Future<void> main(List<String> args) async {
   final sodium = await initHeadlessSodium();
   final identity = await GrassrootsIdentity.create(
     keyPair: await Ed25519().newKeyPairFromSeed(seed),
-    nickname: 'agent',
   );
   final layer = HeadlessGrassrootsNetwork(
     identity: identity,

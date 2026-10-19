@@ -42,9 +42,6 @@ class GrassrootsNetworkConfig {
   /// Scan duration (null for continuous)
   final Duration? scanDuration;
 
-  /// Local name for BLE advertising
-  final String? localName;
-
   /// Interval for sending periodic ANNOUNCE packets
   final Duration announceInterval;
 
@@ -73,7 +70,6 @@ class GrassrootsNetworkConfig {
     this.autoConnect = true,
     this.autoStart = true,
     this.scanDuration,
-    this.localName,
     this.announceInterval = const Duration(seconds: 10),
     this.scanInterval = const Duration(seconds: 10),
     this.ackTimeout = const Duration(seconds: 5),
@@ -1040,10 +1036,11 @@ class GrassrootsNetwork {
       }
 
       // Create BLE transport service (manages BLE manager + router)
+      // The advertisement carries the recognition token and no name (GNA
+      // §3.1): the identity is the key pair (§2.1).
       _bleService = BleTransportService(
         identity: identity,
         store: store,
-        localName: config.localName ?? identity.nickname,
       );
 
       // Wire up callbacks BEFORE initialize — the connectionStream is a

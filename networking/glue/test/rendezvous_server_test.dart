@@ -157,7 +157,6 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
       GrassrootsIdentity.create(
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
-        nickname: 'friend',
       );
 
   /// The server, a process of its own, and two friends, each a madGLP agent
@@ -170,13 +169,10 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     probe.close();
     final rvSeed = Uint8List.fromList(List.filled(32, rvFill));
     final rvIdentityFile = File('${dir.path}/rv-$rvFill.json')
-      ..writeAsStringSync(
-          jsonEncode({'seed': _hex(rvSeed), 'nickname': 'rendezvous'}));
-    final rvKey = glp.PubKey.fromList(
-        (await GrassrootsIdentity.create(
-                keyPair: await Ed25519().newKeyPairFromSeed(rvSeed),
-                nickname: 'rendezvous'))
-            .publicKey);
+      ..writeAsStringSync(jsonEncode({'seed': _hex(rvSeed)}));
+    final rvKey = glp.PubKey.fromList((await GrassrootsIdentity.create(
+            keyPair: await Ed25519().newKeyPairFromSeed(rvSeed)))
+        .publicKey);
     final rvServer = RendezvousServer('127.0.0.1:$rvPort', rvKey.bytes);
 
     // The two friends, each a madGLP agent over its own headless layer

@@ -50,11 +50,10 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async {
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async {
     final seed = Uint8List.fromList(List.filled(32, fill));
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(seed),
-      nickname: name,
     );
   }
 
@@ -105,8 +104,8 @@ void main() {
     required int recipientSeed,
     required bool senderKeySmaller,
   }) async {
-    final senderId = await identityFromSeed(senderSeed, 'sender');
-    final recipientId = await identityFromSeed(recipientSeed, 'recipient');
+    final senderId = await identityFromSeed(senderSeed);
+    final recipientId = await identityFromSeed(recipientSeed);
     expect(
       hexOf(senderId.publicKey).compareTo(hexOf(recipientId.publicKey)) < 0,
       senderKeySmaller,

@@ -93,10 +93,10 @@ class _RecordingHostApi implements GrassrootsBluetoothLayerHostApi {
   }
 }
 
-Future<GrassrootsIdentity> _makeIdentity(String nickname) async {
+Future<GrassrootsIdentity> _makeIdentity() async {
   final algorithm = Ed25519();
   final keyPair = await algorithm.newKeyPair();
-  return GrassrootsIdentity.create(keyPair: keyPair, nickname: nickname);
+  return GrassrootsIdentity.create(keyPair: keyPair);
 }
 
 /// The first-mover tie-break compares PUBLIC KEYS when the advertised beacon
@@ -122,9 +122,9 @@ String _pubkeyHex(GrassrootsIdentity id) =>
 /// An identity that sorts LOW in both tie-break spaces — deterministic
 /// initiator whether the peer is identified (pubkey rule) or unknown
 /// (current-slot-UUID fallback against the fixed literal peer UUIDs).
-Future<GrassrootsIdentity> _makeLowIdentity(String nickname) async {
+Future<GrassrootsIdentity> _makeLowIdentity() async {
   while (true) {
-    final id = await _makeIdentity(nickname);
+    final id = await _makeIdentity();
     if (id.bleServiceUuid.compareTo(_serviceUuidThreshold) < 0 &&
         _pubkeyHex(id).compareTo(_pubkeyHexThreshold) < 0) {
       return id;
@@ -134,9 +134,9 @@ Future<GrassrootsIdentity> _makeLowIdentity(String nickname) async {
 
 /// An identity that sorts HIGH in both tie-break spaces — the non-initiator
 /// (waiter), which holds off the first-mover dial.
-Future<GrassrootsIdentity> _makeHighIdentity(String nickname) async {
+Future<GrassrootsIdentity> _makeHighIdentity() async {
   while (true) {
-    final id = await _makeIdentity(nickname);
+    final id = await _makeIdentity();
     if (id.bleServiceUuid.compareTo(_serviceUuidThreshold) >= 0 &&
         _pubkeyHex(id).compareTo(_pubkeyHexThreshold) >= 0) {
       return id;
@@ -166,7 +166,7 @@ void main() {
         // Low service UUID → this transport is the deterministic first-mover,
         // so the existing "advertisement → dial" expectations hold against the
         // fixed (higher-sorting) peer UUIDs below.
-        identity: await _makeLowIdentity('Tester'),
+        identity: await _makeLowIdentity(),
         store: store,
         grassrootsBluetooth: ble,
       );
@@ -587,7 +587,7 @@ void main() {
       // The advertisement's service UUID must derive from the peer's real
       // pubkey, because the identified-peer guard recomputes it from the
       // PeerState to recognise the same logical peer across MAC rotation.
-      final peerIdentity = await _makeIdentity('Rotator');
+      final peerIdentity = await _makeIdentity();
       final serviceUuid = peerIdentity.bleServiceUuid;
 
       // Establish a ready central path on the old MAC.
@@ -652,7 +652,7 @@ void main() {
       const advertisingMac = 'DUAL_ADV';
       const connectionMac = 'DUAL_CONN';
 
-      final peerIdentity = await _makeIdentity('DualRole');
+      final peerIdentity = await _makeIdentity();
       final serviceUuid = peerIdentity.bleServiceUuid;
 
       // Inbound peripheral leg is ready and identified — but we hold NO central
@@ -746,7 +746,7 @@ void main() {
       const advertisingMac = 'AA:BB:CC:DD:EE:01';
       const connectionMac = '99:88:77:66:55:02';
 
-      final peerIdentity = await _makeIdentity('Remote');
+      final peerIdentity = await _makeIdentity();
       final serviceUuid = peerIdentity.bleServiceUuid;
 
       // Scanner sees the peer advertising at advertisingMac.
@@ -864,7 +864,7 @@ void main() {
       // Reset transport state so initialize works again
       // (no easy way to reset Redux from outside).
       transport = BleTransportService(
-        identity: await _makeIdentity('Tester2'),
+        identity: await _makeIdentity(),
         store: store,
         grassrootsBluetooth: ble,
       );
@@ -931,7 +931,7 @@ void main() {
       // High service UUID so our (low) Tester identity is the initiator and
       // actually dials the friend — isolating the closed-trust gate from the
       // first-mover gate.
-      final friend = await _makeHighIdentity('Friend');
+      final friend = await _makeHighIdentity();
       store.dispatch(KnownPeerPutAction(
         friend.publicKey
             .map((b) => b.toRadixString(16).padLeft(2, '0'))
@@ -963,7 +963,7 @@ void main() {
       final store = Store<AppState>(appReducer, initialState: AppState.initial);
       store.dispatch(SetColdCallTrustLevelAction(ProximityUnderlay.pan, ColdCallTrustLevel.open));
       final transport = BleTransportService(
-        identity: await _makeIdentity('Sym'),
+        identity: await _makeIdentity(),
         store: store,
         grassrootsBluetooth: ble,
       );
@@ -1024,7 +1024,7 @@ void main() {
 
     test('the initiator (lower service UUID) dials on discovery', () async {
       final (hostApi, callbacks, _, _) =
-          await build(await _makeLowIdentity('Initiator'));
+          await build(await _makeLowIdentity());
 
       callbacks.pushAdvertisement(BleAdvertisement(
         remoteId: 'PEER',
@@ -1043,7 +1043,7 @@ void main() {
         'the non-initiator (higher service UUID) holds off the first-mover dial',
         () async {
       final (hostApi, callbacks, store, _) =
-          await build(await _makeHighIdentity('Waiter'));
+          await build(await _makeHighIdentity());
 
       callbacks.pushAdvertisement(BleAdvertisement(
         remoteId: 'PEER',
@@ -1065,9 +1065,9 @@ void main() {
     test(
         'the non-initiator opens its reverse leg once the inbound peripheral '
         'leg is up', () async {
-      final peer = await _makeLowIdentity('Peer'); // lower → the initiator
+      final peer = await _makeLowIdentity(); // lower → the initiator
       final (hostApi, callbacks, store, transport) =
-          await build(await _makeHighIdentity('Waiter'));
+          await build(await _makeHighIdentity());
 
       const advertisingMac = 'AA:BB:CC:DD:EE:01';
       const connectionMac = '99:88:77:66:55:02';
@@ -1116,7 +1116,7 @@ void main() {
         'connects', () async {
       // Zero fallback: any re-sighting after the first is already "elapsed".
       final (hostApi, callbacks, _, _) = await build(
-        await _makeHighIdentity('Waiter'),
+        await _makeHighIdentity(),
         firstMoverFallback: Duration.zero,
       );
 
@@ -1147,7 +1147,7 @@ void main() {
         'central-only mode dials even as the non-initiator (gate is auto-only)',
         () async {
       final (hostApi, callbacks, store, _) =
-          await build(await _makeHighIdentity('CentralOnly'));
+          await build(await _makeHighIdentity());
       store.dispatch(SetBleRoleModeAction(BleRoleMode.centralOnly));
 
       callbacks.pushAdvertisement(BleAdvertisement(
@@ -1202,7 +1202,7 @@ void main() {
         'Android yields the first dial to an iOS-marked advertisement even '
         'as the deterministic initiator', () async {
       final (hostApi, callbacks, store, _) =
-          await build(await _makeLowIdentity('AndroidInitiator'));
+          await build(await _makeLowIdentity());
 
       callbacks.pushAdvertisement(BleAdvertisement(
         remoteId: 'IPHONE',
@@ -1227,9 +1227,9 @@ void main() {
     test(
         'Android opens the reverse leg to an iOS peer once the inbound '
         'peripheral leg is identified', () async {
-      final iosPeer = await _makeIdentity('iPhone');
+      final iosPeer = await _makeIdentity();
       final (hostApi, callbacks, store, _) =
-          await build(await _makeHighIdentity('AndroidWaiter'));
+          await build(await _makeHighIdentity());
 
       // The iPhone dials us before we ever saw it advertise (its first
       // link), and ANNOUNCE identifies it. The announce-driven reverse dial
@@ -1273,7 +1273,7 @@ void main() {
         'Android falls back to dialing an iOS-marked peer that never '
         'connects', () async {
       final (hostApi, callbacks, _, _) = await build(
-        await _makeLowIdentity('AndroidFallback'),
+        await _makeLowIdentity(),
         firstMoverFallback: Duration.zero,
       );
 
@@ -1307,7 +1307,7 @@ void main() {
         'iOS dials a non-marked (non-iOS) peer on sight, even as the '
         'tiebreaker non-initiator', () async {
       final (hostApi, callbacks, _, _) = await build(
-        await _makeHighIdentity('iosWaiterByUuid'),
+        await _makeHighIdentity(),
         platform: TargetPlatform.iOS,
       );
 
@@ -1328,9 +1328,9 @@ void main() {
         'iOS never dials an identity it holds an inbound peripheral leg '
         'from, and aborts the in-flight doomed dial on identification',
         () async {
-      final androidPeer = await _makeIdentity('Pixel');
+      final androidPeer = await _makeIdentity();
       final (hostApi, callbacks, store, transport) = await build(
-        await _makeIdentity('iPhone'),
+        await _makeIdentity(),
         platform: TargetPlatform.iOS,
       );
 
@@ -1405,7 +1405,7 @@ void main() {
     test('iOS↔iOS pairs use the deterministic tiebreaker', () async {
       // Waiter: higher UUID sees a marked (iOS) lower-UUID peer → holds off.
       final (hostApiHigh, callbacksHigh, _, _) = await build(
-        await _makeHighIdentity('iosHigh'),
+        await _makeHighIdentity(),
         platform: TargetPlatform.iOS,
       );
       callbacksHigh.pushAdvertisement(BleAdvertisement(
@@ -1422,7 +1422,7 @@ void main() {
 
       // Initiator: lower UUID sees a marked higher-UUID iOS peer → dials.
       final (hostApiLow, callbacksLow, _, _) = await build(
-        await _makeLowIdentity('iosLow'),
+        await _makeLowIdentity(),
         platform: TargetPlatform.iOS,
       );
       callbacksLow.pushAdvertisement(BleAdvertisement(
@@ -1443,9 +1443,9 @@ void main() {
         'inbound peripheral leg is identified (dual-role mandate)', () async {
       // Peer below the threshold, us above: we are deterministically the
       // tiebreaker waiter, so the only dial in this test is the reverse leg.
-      final iosPeer = await _makeLowIdentity('OtherIphone');
+      final iosPeer = await _makeLowIdentity();
       final (hostApi, callbacks, store, transport) = await build(
-        await _makeHighIdentity('iosWaiter'),
+        await _makeHighIdentity(),
         platform: TargetPlatform.iOS,
       );
 
@@ -1497,9 +1497,9 @@ void main() {
         () async {
       // Peer above the threshold, us below: we are deterministically the
       // tiebreaker initiator and dial on sight.
-      final iosPeer = await _makeHighIdentity('OtherIphone');
+      final iosPeer = await _makeHighIdentity();
       final (hostApi, callbacks, store, transport) = await build(
-        await _makeLowIdentity('iosInitiator'),
+        await _makeLowIdentity(),
         platform: TargetPlatform.iOS,
       );
 
@@ -1555,7 +1555,7 @@ void main() {
         'the iOS marker is sticky: a later unmarked advertisement (background '
         'dropout) still yields', () async {
       final (hostApi, callbacks, _, _) =
-          await build(await _makeLowIdentity('AndroidInitiator'));
+          await build(await _makeLowIdentity());
 
       // Foregrounded iPhone: marker present → yield.
       callbacks.pushAdvertisement(BleAdvertisement(
@@ -1588,9 +1588,9 @@ void main() {
         'wrong-order mixed pair reforms: a fresh iOS marker drops our '
         'central-only leg so the pair can rebuild in the right order',
         () async {
-      final iosPeer = await _makeIdentity('iPhone');
+      final iosPeer = await _makeIdentity();
       final (hostApi, callbacks, store, _) =
-          await build(await _makeIdentity('Android'));
+          await build(await _makeIdentity());
 
       // Wrong-order formation: WE dialed the iPhone first (marker was
       // invisible — backgrounded iOS). Central leg live, no inbound leg.
@@ -1657,9 +1657,9 @@ void main() {
     test(
         'a dual-role mixed pair does NOT reform on marker sightings',
         () async {
-      final iosPeer = await _makeIdentity('iPhone');
+      final iosPeer = await _makeIdentity();
       final (hostApi, callbacks, store, _) =
-          await build(await _makeIdentity('Android'));
+          await build(await _makeIdentity());
 
       // Right-order pair fully formed: inbound iOS leg + our reverse leg.
       callbacks.pushPath(BlePath(
@@ -1720,7 +1720,7 @@ void main() {
       // default trust level is closed.
       store.dispatch(SetColdCallTrustLevelAction(ProximityUnderlay.pan, ColdCallTrustLevel.open));
       transport = BleTransportService(
-        identity: await _makeIdentity('Watchdog'),
+        identity: await _makeIdentity(),
         store: store,
         grassrootsBluetooth: ble,
       );

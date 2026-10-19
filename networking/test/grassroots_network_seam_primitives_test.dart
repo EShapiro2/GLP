@@ -41,10 +41,9 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identity(String nickname) async {
+  Future<GrassrootsIdentity> identity() async {
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPair(),
-      nickname: nickname,
     );
   }
 
@@ -60,7 +59,7 @@ void main() {
 
   test('sign produces a signature verify accepts under the signer key',
       () async {
-    final self = await identity('Self');
+    final self = await identity();
     final network = networkFor(self);
 
     final signature = network.sign(message);
@@ -74,8 +73,8 @@ void main() {
   });
 
   test('verify rejects a signature by another key', () async {
-    final self = await identity('Self');
-    final other = await identity('Other');
+    final self = await identity();
+    final other = await identity();
     final network = networkFor(self);
 
     final signature = network.sign(message);
@@ -87,7 +86,7 @@ void main() {
   });
 
   test('verify rejects a signature over a different message', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final network = networkFor(self);
 
     final signature = network.sign(message);
@@ -101,7 +100,7 @@ void main() {
 
   test('verify returns false on malformed input rather than throwing',
       () async {
-    final self = await identity('Self');
+    final self = await identity();
     final network = networkFor(self);
 
     // A signature of the wrong length, and a key of the wrong length: both
@@ -125,7 +124,7 @@ void main() {
   });
 
   test('sign and verify are synchronous — no Future is returned', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final network = networkFor(self);
 
     // The seam declares both synchronous; a Future here would break it.
@@ -138,7 +137,7 @@ void main() {
   });
 
   test('punchUdp rejects an unparseable address', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final network = networkFor(self);
 
     expect(() => network.punchUdp('not-an-address'), throwsArgumentError);
@@ -149,7 +148,7 @@ void main() {
   });
 
   test('punchUdp accepts a well-formed address and returns at once', () async {
-    final self = await identity('Self');
+    final self = await identity();
     final network = networkFor(self);
 
     // No UDP transport is started here, so there is no hole-punch service for

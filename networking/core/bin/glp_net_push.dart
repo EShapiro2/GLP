@@ -49,10 +49,7 @@ Future<void> main(List<String> argv) async {
   }
 
   final sodium = await initHeadlessSodium();
-  final identity = await loadOrCreateIdentity(
-    args['identity'] as String,
-    nickname: 'pusher',
-  );
+  final identity = await loadOrCreateIdentity(args['identity'] as String);
   print('Pusher identity: ${_hex(identity.publicKey)}');
 
   final network = HeadlessGrassrootsNetwork(

@@ -27,7 +27,6 @@ void main() {
       final keyPair = await algorithm.newKeyPair();
       testIdentity = await GrassrootsIdentity.create(
         keyPair: keyPair,
-        nickname: 'TestUser',
       );
       handler = ProtocolHandler(identity: testIdentity, sodium: sodium);
     });
@@ -51,17 +50,18 @@ void main() {
         expect(version, equals(ProtocolHandler.protocolVersion));
       });
 
-      test('carries no nickname regardless of the identity nickname', () async {
+      test(
+          'is the same fixed-length record for any identity: the identity is '
+          'the key pair and carries nothing else to include', () async {
         final algorithm = Ed25519();
         final keyPair = await algorithm.newKeyPair();
-        final namedIdentity = await GrassrootsIdentity.create(
+        final anyIdentity = await GrassrootsIdentity.create(
           keyPair: keyPair,
-          nickname: 'Zoë 🌱🚀 名字',
         );
-        final namedHandler =
-            ProtocolHandler(identity: namedIdentity, sodium: sodium);
+        final anyHandler =
+            ProtocolHandler(identity: anyIdentity, sodium: sodium);
 
-        final payload = namedHandler.createAnnouncePayload();
+        final payload = anyHandler.createAnnouncePayload();
         expect(payload.length, equals(announcePayloadLength));
       });
     });
@@ -124,7 +124,6 @@ void main() {
         final otherKeyPair = await Ed25519().newKeyPair();
         final otherIdentity = await GrassrootsIdentity.create(
           keyPair: otherKeyPair,
-          nickname: 'Other',
         );
         final otherHandler =
             ProtocolHandler(identity: otherIdentity, sodium: sodium);
@@ -273,7 +272,6 @@ void main() {
         final otherKeyPair = await Ed25519().newKeyPair();
         final otherIdentity = await GrassrootsIdentity.create(
           keyPair: otherKeyPair,
-          nickname: 'Other',
         );
         final otherHandler =
             ProtocolHandler(identity: otherIdentity, sodium: sodium);
@@ -303,7 +301,6 @@ void main() {
         final reEncodedIdentity = GrassrootsIdentity.fromMap({
           'publicKey': decoded.publicKey,
           'privateKey': testIdentity.privateKey,
-          'nickname': 'TestUser',
         });
         final reEncodedHandler =
             ProtocolHandler(identity: reEncodedIdentity, sodium: sodium);

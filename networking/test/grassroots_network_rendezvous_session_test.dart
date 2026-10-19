@@ -50,11 +50,10 @@ void main() {
     );
   });
 
-  Future<GrassrootsIdentity> identityFromSeed(int fill, String name) async {
+  Future<GrassrootsIdentity> identityFromSeed(int fill) async {
     final seed = Uint8List.fromList(List.filled(32, fill));
     return GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(seed),
-      nickname: name,
     );
   }
 
@@ -104,7 +103,7 @@ void main() {
     final port = probe.port;
     probe.close();
     final server = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(0x91, 'rendezvous'),
+      identity: await identityFromSeed(0x91),
       rendezvousServers: const [],
       serverAddress:
           ServerAddress(listenPort: port, publicAddress: '127.0.0.1:$port'),
@@ -115,7 +114,7 @@ void main() {
     expect(await server.start(), isTrue);
     final serverPk = server.identity.publicKey;
 
-    final nodeId = await identityFromSeed(0x92, 'node');
+    final nodeId = await identityFromSeed(0x92);
     final connects = <(Underlay, ApplicationIdentity?)>[];
     final serverConnects = Completer<void>();
     final node = await startNode(
@@ -159,7 +158,7 @@ void main() {
     // A server that answers the node's ANNOUNCE with its own, signed by the
     // configured key, and answers nothing else: the handshake the node
     // starts with it never completes.
-    final silentId = await identityFromSeed(0x93, 'silent');
+    final silentId = await identityFromSeed(0x93);
     final silentAnnounce = GrassrootsPacket(
       type: PacketType.announce,
       payload: ProtocolHandler(identity: silentId, sodium: sodium)
@@ -190,7 +189,7 @@ void main() {
     // authenticated UDP session with the server.
     var everLive = false;
     final node = await startNode(
-      await identityFromSeed(0x94, 'node'),
+      await identityFromSeed(0x94),
       RendezvousServer('127.0.0.1:${socket.port}', silentPk),
       onPeerConnected: (pk, underlay, identity) {
         if (hex(pk) == hex(silentPk)) connects.add(underlay);

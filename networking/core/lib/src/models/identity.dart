@@ -4,11 +4,13 @@ import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 import 'package:cryptography/dart.dart' show DartSha256;
 
-/// Identity provided by GSG layer to Grassroots transport.
+/// The agent's identity: its Ed25519 key pair, and nothing else (GNA §2.1:
+/// "Each agent has an Ed25519 key pair.  The 32-byte public key is the
+/// agent's globally unique identity").  It carries no name: a display name
+/// an application wants is the application's own, outside the layer.
 ///
-/// GSG is responsible for:
-/// - Generating and persisting the Ed25519 keypair
-/// - Passing it to Grassroots at initialization
+/// The key pair "is generated and persisted above the networking layer and
+/// is supplied to the layer's constructor when it is instantiated" (§2.1).
 ///
 /// Grassroots uses this for:
 /// - Deriving the rotating BLE service UUID (Grassroots prefix + first 8 bytes
@@ -25,13 +27,9 @@ class GrassrootsIdentity {
 
   final SimpleKeyPair keyPair;
 
-  /// Optional human-readable nickname for ANNOUNCE (mutable)
-  String nickname;
-
   // Private constructor - use create() factory method instead
   GrassrootsIdentity._internal({
     required this.keyPair,
-    required this.nickname,
     required this.publicKey,
     required this.privateKey,
   });
@@ -39,7 +37,6 @@ class GrassrootsIdentity {
   /// Create identity from a keypair (use this instead of constructor)
   static Future<GrassrootsIdentity> create({
     required SimpleKeyPair keyPair,
-    required String nickname,
   }) async {
     final pk = await keyPair.extractPublicKey();
     final publicKey = Uint8List.fromList(pk.bytes);
@@ -58,7 +55,6 @@ class GrassrootsIdentity {
       keyPair: keyPair,
       publicKey: publicKey,
       privateKey: privateKey,
-      nickname: nickname,
     );
   }
 
@@ -68,15 +64,9 @@ class GrassrootsIdentity {
   /// supplied to the layer's constructor when it is instantiated" (spec
   /// §Identity); the API has no call that installs one. Generation lives
   /// here, and an app persists the result itself (the demo app's
-  /// `IdentityStore`). The app calls this once on first launch. When [nickname] is omitted a
-  /// placeholder is derived from the public key.
-  static Future<GrassrootsIdentity> generate({String? nickname}) async {
-    final keyPair = await Ed25519().newKeyPair();
-    final pk = await keyPair.extractPublicKey();
-    final resolvedNickname = nickname ??
-        'User_${pk.bytes.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
-    return create(keyPair: keyPair, nickname: resolvedNickname);
-  }
+  /// `IdentityStore`). The app calls this once on first launch.
+  static Future<GrassrootsIdentity> generate() async =>
+      create(keyPair: await Ed25519().newKeyPair());
 
   /// Static 8-byte prefix identifying Grassroots devices on BLE.
   /// First 8 bytes of SHA-256("grassroots").
@@ -207,9 +197,19 @@ class GrassrootsIdentity {
   }
 
   @override
-  String toString() => 'GrassrootsIdentity($nickname)';
+  String toString() => 'GrassrootsIdentity($shortFingerprint)';
 
+  /// The entries of [toJson]: the key pair, and nothing else.
+  static const Set<String> _mapKeys = {'publicKey', 'privateKey'};
+
+  /// Restore an identity from [toJson]'s map.  The map carries the key pair
+  /// and nothing else; one carrying any other entry, or lacking one, is not
+  /// an identity and is refused (`networking/CLAUDE.md`, no legacy code).
   static GrassrootsIdentity fromMap(Map<String, dynamic> map) {
+    if (map.length != _mapKeys.length || !map.keys.every(_mapKeys.contains)) {
+      throw FormatException(
+          'an identity is {publicKey, privateKey}; got ${map.keys.toList()}');
+    }
     final pk = Uint8List.fromList(List<int>.from(map['publicKey']));
     final privatek = Uint8List.fromList(List<int>.from(map['privateKey']));
     final keyPair = SimpleKeyPairData(
@@ -222,7 +222,6 @@ class GrassrootsIdentity {
       keyPair: keyPair,
       publicKey: pk,
       privateKey: privatek,
-      nickname: map['nickname'],
     );
   }
 
@@ -230,7 +229,6 @@ class GrassrootsIdentity {
     return {
       'publicKey': publicKey,
       'privateKey': privateKey,
-      'nickname': nickname,
     };
   }
 }
