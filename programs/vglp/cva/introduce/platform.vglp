@@ -118,8 +118,10 @@ Trigger   ::= req(Request) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own
 %% term of an added atom: "a signed term sgn(y, i) in an added atom is the
 %% speech act bound to y, signed by the person in role i" (vGLP, Section
 %% 5.4, "Act schemas as local specifications"; GSC, Definition "Act schema").
+%% A name term <u>.y_1...y_n, nterm(N): N is own(I), <pi_I>, or own_var(X), <x>, followed by ext(N, Y) for each y; "a name term <u>.y_1...y_n is the community name of the person bound to u followed by the speech acts bound to y_1, ..., y_n, as <a>.n names the group n led by a" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications"; GSC, Appendix D).
 Var       ::= role(Integer) ; pvar(Constant) ; svar(Constant)
-            ; sgn(Constant, Integer).
+            ; sgn(Constant, Integer) ; nterm(NTerm).
+NTerm     ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant).
 Vars      ::= [] ; [Var | Vars].
 SAtom     ::= atom(Constant, Vars).
 SAtoms    ::= [] ; [SAtom | SAtoms].
@@ -137,7 +139,10 @@ Preds     ::= [] ; [Constant | Preds].
 %% A machine state is a multiset of ground atoms, a list; an atom's arguments
 %% are people and speech acts.  A binding sends roles and party variables to
 %% people and speech-act variables to speech acts.
-Val       ::= p(Peer) ; s(Speech).
+%% The value of a name term is a community name, c(N): community(P) the community name of the person P, dot(N, S) the community name N followed by the speech act S, as dot(community(a), n) names the group n led by a.
+CName     ::= community(Peer) ; dot(CName, Speech).
+Val       ::= p(Peer) ; s(Speech) ; c(CName).
+NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
 GAtom     ::= g(Constant, Vals).
 GAtoms    ::= [] ; [GAtom | GAtoms].
@@ -2219,14 +2224,15 @@ role_names(rs(_, A, D, _, _), J, R?) :- integer(J?) |
     names_role(A?, J?, R1),
     names_role(D?, J?, R2),
     or(R1?, R2?, R).
-%% An atom names a role among its arguments or the role of a signed term
+%% An atom names a role among its arguments, the base of a name term among them, or the role of a signed term
 %% among them (GSC, Section 3: "An atom names what is among its arguments or
 %% is the signer of one: ... in a schema a role or a variable, the role of a
 %% signed term included").
 procedure names_role(SAtoms?, Integer?, YesNo).
 names_role([], _, no).
 names_role([atom(_, Vs)|As], J, R?) :- integer(J?), ground(Vs?) |
-    mem(role(J?), Vs?, R1),
+    flat_names(Vs?, Fs),
+    mem(role(J?), Fs?, R1),
     sgn_names(Vs?, J?, R2),
     or(R1?, R2?, R12),
     names_role1(R12?, As?, J?, R).
@@ -2265,6 +2271,8 @@ adm_var(svar(X), Rq, B, Gp, R?) :- ground(X?), ground(B?) |
     adm_var1(InReq?, F?, Gp?, R).
 adm_var(role(_), _, _, _, yes).
 adm_var(pvar(_), _, _, _, yes).
+%% The variables of a name term are taken apart (atoms_vars); the clause covers the type.
+adm_var(nterm(_), _, _, _, yes).
 %% A signed term's speech-act variable occurs in an atom some role requires
 %% (GSC, Definition "Act schema"), so it asks nothing of the binding.
 adm_var(sgn(_, _), _, _, _, yes).
@@ -2272,13 +2280,14 @@ procedure adm_var1(YesNo?, Found?, Peers?, YesNo).
 adm_var1(yes, _, _, yes).
 adm_var1(no, found(s(speech(_, P))), Gp, R?) :- mem(P?, Gp?, R).
 adm_var1(no, found(p(_)), _, no).
+adm_var1(no, found(c(_)), _, no).
 adm_var1(no, free, _, no).
 procedure adds_of(RoleSpecs?, SAtoms).
 adds_of([], []).
 adds_of([R|Rs], A?) :- rs_add(R?, A1), adds_of(Rs?, A2), app(A1?, A2?, A).
 procedure atoms_vars(SAtoms?, Vars).
 atoms_vars([], []).
-atoms_vars([atom(_, Vs)|As], R?) :- atoms_vars(As?, R1), app(Vs?, R1?, R).
+atoms_vars([atom(_, Vs)|As], R?) :- flat_names(Vs?, Ws), atoms_vars(As?, R1), app(Ws?, R1?, R).
 procedure guard_roles(RoleSpecs?, Integer?, Ints).
 guard_roles([], _, []).
 guard_roles([rs(guarded, _, _, _, _)|Rs], I, [I?|Is?]) :- integer(I?) |
@@ -2656,6 +2665,11 @@ cimg_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
     role_person(I?, B?, P),
     cimg_sgn(F?, P?, sgn(Y?, I?), X),
     cimg_args(Vs?, B?, Xs).
+cimg_args([nterm(N)|Vs], B, [X?|Xs?]) :- ground(B?), ground(N?) |
+    nt_vars(N?, Ws),
+    vars_bound(Ws?, B?, Bd),
+    cimg_name(Bd?, N?, B?, X),
+    cimg_args(Vs?, B?, Xs).
 cimg_args([V|Vs], B, [X?|Xs?]) :- otherwise, ground(B?), ground(V?) |
     lookup(V?, B?, F),
     cimg_val(F?, V?, X),
@@ -2663,6 +2677,9 @@ cimg_args([V|Vs], B, [X?|Xs?]) :- otherwise, ground(B?), ground(V?) |
 procedure cimg_val(Found?, Var?, CVal).
 cimg_val(found(X), _, cmp_val(X?)).
 cimg_val(free, V, cmp_free(V?)).
+procedure cimg_name(YesNo?, NTerm?, Binding?, CVal).
+cimg_name(yes, N, B, cmp_val(c(C?))) :- nt_img(N?, B?, C).
+cimg_name(no, N, _, cmp_free(nterm(N?))).
 procedure cimg_sgn(Found?, Peer?, Var?, CVal).
 cimg_sgn(found(s(S)), P, _, cmp_val(s(speech(S?, P?)))).
 cimg_sgn(_, _, V, cmp_free(V?)) :- otherwise | true.
@@ -2816,6 +2833,7 @@ role_person(I, B, P?) :- lookup(role(I?), B?, F), found_peer(F?, P).
 procedure found_peer(Found?, Peer).
 found_peer(found(p(P)), P?).
 found_peer(found(s(_)), unbound).
+found_peer(found(c(_)), unbound).
 found_peer(free, unbound).
 procedure lookup(Var?, Binding?, Found).
 lookup(_, [], free).
@@ -2835,10 +2853,30 @@ img_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
     role_person(I?, B?, P),
     img_sgn(F?, P?, X),
     img_args(Vs?, B?, Xs).
+img_args([nterm(N)|Vs], B, [c(C?)|Xs?]) :- ground(B?), ground(N?) |
+    nt_img(N?, B?, C),
+    img_args(Vs?, B?, Xs).
 img_args([V|Vs], B, [X?|Xs?]) :- otherwise, ground(B?) |
     lookup(V?, B?, F),
     img_val(F?, X),
     img_args(Vs?, B?, Xs).
+%% The community name a name term denotes at a binding (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
+procedure nt_img(NTerm?, Binding?, CName).
+nt_img(own(I), B, community(P?)) :- role_person(I?, B?, P).
+nt_img(own_var(X), B, community(P?)) :- val_peer(pvar(X?), B?, unbound, P).
+nt_img(ext(N, Y), B, dot(C?, S?)) :- ground(B?) |
+    nt_img(N?, B?, C),
+    val_speech(svar(Y?), B?, unbound, S).
+%% The variables of a name term: its base, a role or an agent variable, and its speech-act variables; "a variable inside a name term counts" for effectiveness, as one inside a signed term does (vGLP c649c0d, Section 5.4).
+procedure nt_vars(NTerm?, Vars).
+nt_vars(own(I), [role(I?)]).
+nt_vars(own_var(X), [pvar(X?)]).
+nt_vars(ext(N, Y), Vs?) :- nt_vars(N?, Vs0), app(Vs0?, [svar(Y?)], Vs).
+%% The arguments with each name term taken as its variables.
+procedure flat_names(Vars?, Vars).
+flat_names([], []).
+flat_names([nterm(N)|Vs], R?) :- nt_vars(N?, Ws), flat_names(Vs?, R1), app(Ws?, R1?, R).
+flat_names([V|Vs], [V?|R?]) :- otherwise | flat_names(Vs?, R).
 procedure img_val(Found?, Val).
 img_val(found(X), X?).
 img_val(free, p(unbound)).
@@ -2855,7 +2893,11 @@ procedure atom_bound(SAtom?, Binding?, YesNo).
 atom_bound(atom(_, Vs), B, R?) :- vars_bound(Vs?, B?, R).
 procedure vars_bound(Vars?, Binding?, YesNo).
 vars_bound([], _, yes).
-vars_bound([V|Vs], B, R?) :- ground(B?) |
+vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
+    nt_vars(N?, Ws),
+    app(Ws?, Vs?, Vs1),
+    vars_bound(Vs1?, B?, R).
+vars_bound([V|Vs], B, R?) :- otherwise, ground(B?) |
     lookup(V?, B?, F),
     vars_bound1(F?, Vs?, B?, R).
 procedure vars_bound1(Found?, Vars?, Binding?, YesNo).
@@ -2896,14 +2938,34 @@ match_args([_|_], [], _, nomatch).
 match_args([sgn(Y, I)|Vs], [X|Xs], B, R?) :- ground(Y?), ground(I?), ground(X?), ground(B?) |
     sgn_parts(X?, Ps),
     match_sgn(Ps?, Y?, I?, Vs?, Xs?, B?, R).
+%% A name term matches a community name of its form, its base its person and each speech-act variable its speech act.
+match_args([nterm(N)|Vs], [X|Xs], B, R?) :- ground(N?), ground(X?), ground(B?) |
+    name_parts(N?, X?, Ps),
+    match_name(Ps?, Vs?, Xs?, B?, R).
 match_args([V|Vs], [X|Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B?) |
     lookup(V?, B?, F),
     kind_ok(V?, X?, K),
     match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
+procedure name_parts(NTerm?, Val?, NameParts).
+name_parts(N, c(C), Ps?) :- nt_parts(N?, C?, Ps).
+name_parts(_, p(_), noparts).
+name_parts(_, s(_), noparts).
+procedure nt_parts(NTerm?, CName?, NameParts).
+nt_parts(own(I), community(P), parts([role(I?)], [p(P?)])).
+nt_parts(own_var(X), community(P), parts([pvar(X?)], [p(P?)])).
+nt_parts(ext(N, Y), dot(C, S), Ps?) :- nt_parts(N?, C?, Ps0), nt_more(Ps0?, Y?, S?, Ps).
+nt_parts(_, _, noparts) :- otherwise | true.
+procedure nt_more(NameParts?, Constant?, Speech?, NameParts).
+nt_more(parts(Vs, Xs), Y, S, parts(Vs1?, Xs1?)) :- app(Vs?, [svar(Y?)], Vs1), app(Xs?, [s(S?)], Xs1).
+nt_more(noparts, _, _, noparts).
+procedure match_name(NameParts?, Vars?, Vals?, Binding?, Match).
+match_name(parts(Ws, Ys), Vs, Xs, B, R?) :- app(Ws?, Vs?, Vs1), app(Ys?, Xs?, Xs1), match_args(Vs1?, Xs1?, B?, R).
+match_name(noparts, _, _, _, nomatch).
 procedure sgn_parts(Val?, SgnParts).
 sgn_parts(s(speech(speech(U, Q), P)), signed(s(speech(U?, Q?)), P?)).
 sgn_parts(s(speech(utterance(_), _)), unsigned).
 sgn_parts(p(_), unsigned).
+sgn_parts(c(_), unsigned).
 procedure match_sgn(SgnParts?, Constant?, Integer?, Vars?, Vals?, Binding?, Match).
 match_sgn(signed(S, P), Y, I, Vs, Xs, B, R?) :-
     match_args([svar(Y?), role(I?)|Vs?], [S?, p(P?)|Xs?], B?, R).
@@ -2923,6 +2985,12 @@ kind_ok(svar(_), s(_), yes).
 %% A signed term is matched by its parts (match_sgn); the clauses cover the type.
 kind_ok(sgn(_, _), p(_), no).
 kind_ok(sgn(_, _), s(_), no).
+%% A name term is matched by its parts (match_name), and a community name matches no variable; the clauses cover the type.
+kind_ok(sgn(_, _), c(_), no).
+kind_ok(nterm(_), _, no).
+kind_ok(role(_), c(_), no).
+kind_ok(pvar(_), c(_), no).
+kind_ok(svar(_), c(_), no).
 
 %% The value a binding gives a variable, the agent's own name for one it
 %% leaves free.
@@ -2931,12 +2999,14 @@ val_peer(V, B, D, P?) :- lookup(V?, B?, F), val_peer1(F?, D?, P).
 procedure val_peer1(Found?, Peer?, Peer).
 val_peer1(found(p(P)), _, P?).
 val_peer1(found(s(_)), D, D?).
+val_peer1(found(c(_)), D, D?).
 val_peer1(free, D, D?).
 procedure val_speech(Var?, Binding?, Peer?, Speech).
 val_speech(V, B, D, S?) :- lookup(V?, B?, F), val_speech1(F?, D?, S).
 procedure val_speech1(Found?, Peer?, Speech).
 val_speech1(found(s(S)), _, S?).
 val_speech1(found(p(_)), D, speech(utterance(none), D?)).
+val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 
 %% ===========================================================================

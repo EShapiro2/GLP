@@ -1,16 +1,16 @@
-%% person.glp --- the GSN mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsn_boot.glp); the plays of this directory call it beside the entry (plays.glp).  It is GSG's app's person (../gsg/person.glp), with one step more and GSN's scripts.
+%% person.glp --- the GSN mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsn_boot.glp); the plays of this directory call it beside the entry (plays.glp).  It is GSG's app's person (../gsg/person.glp) with GSN's scripts.
 %%
-%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written.  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; again(R, C) grants R on each request question drawn until the screen shows C, as a person does who sees nothing come of a request and makes it again; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an attempt its person proposed closes without committing, refused(P, Q) and yielded(P) (vGLP c44769f); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q) and yielded(P) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
 %%
 %% The roles, by which the super-app's plays choose a script; the group is named friends by alice, its leader, and each content is a speech act of its author:
 %%   alice  establishes her identity (GSG:1); asks to know bob; once she knows him, offers him friendship; once they are friends, creates the group; once she sees herself its member, adds bob to it; once she sees him listed, sends him the message 'Hi Bob', her last request, since nothing on her screen shows a message committed, and her agent drops a request made while the message is open.
 %%   bob    establishes his identity; asks to know alice; once he knows her, answers yes to her offer of friendship; answers yes to her adding him to the group; once he sees her message, sent after he joined, sends the group the message 'Hi all'; once he sees it delivered to him, leaves the group.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
-Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; again(Request, Cond)
-        ; approval(Asked, YesNo).
-Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer) ; asked(Asked) ; asking.
-Last  ::= last(Output) ; nolast.
+Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
+Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
+        ; refused(Class, Key) ; yielded(Class) ; asked(Asked) ; asking.
+Last  ::= last(List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
 Holes ::= [] ; [Key? | Holes].
 Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
@@ -30,7 +30,7 @@ script(alice, [own([A1], propose(establish(A1?))), req(known(bob)), wait(known(b
                own([A2], propose(befriend(A2?, bob))),
                wait(holds(friend(bob))),
                own([A3, A4], propose(create(A3?, speech(utterance(friends), A4?)))),
-               wait(holds(member(alice, speech(utterance(friends), alice)))),
+               wait(holds(member(dot(community(alice), speech(utterance(friends), alice))))),
                own([A5, A6], propose(join(A5?, bob, speech(utterance(friends), A6?)))),
                wait(holds(listed(bob, speech(utterance(friends), alice)))),
                own([A7, A8], propose(message(A7?, bob, speech(utterance('Hi Bob'), A8?))))]).
@@ -38,7 +38,7 @@ script(bob, [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(a
              approval(befriend(alice, bob), yes),
              approval(join(alice, bob, speech(utterance(friends), alice)), yes),
              wait(holds(received(speech(utterance('Hi Bob'), alice), alice))),
-             own([B2, B3], propose(post(B2?, alice, speech(utterance(friends), alice), speech(utterance('Hi all'), B3?)))),
+             own([B2, B3], propose(post(B2?, alice, speech(utterance('Hi all'), B3?), speech(utterance(friends), alice)))),
              wait(holds(received_in(speech(utterance('Hi all'), bob), alice, speech(utterance(friends), alice)))),
              own([B4], propose(leave(alice, B4?, speech(utterance(friends), alice))))]).
 script(_, []) :- otherwise | true.
@@ -85,10 +85,6 @@ advance(ps(Se, T, Cs, [wait(X) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     ground(Se?), ground(T?), ground(Cs?), ground(X?) |
     shows(X?, Se?, T?, Cs?, B),
     waited(B?, ps(Se?, T?, Cs?, [wait(X?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
-advance(ps(Se, T, Cs, [again(R, X) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
-    ground(Se?), ground(T?), ground(Cs?), ground(X?) |
-    shows(X?, Se?, T?, Cs?, B),
-    again1(B?, ps(Se?, T?, Cs?, [again(R?, X?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, [approval(K, A) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     ground(Cs?), ground(K?) |
     find_approval(K?, Cs?, F),
@@ -109,16 +105,7 @@ waited(y, ps(Se, T, Cs, [_ | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 waited(n, St, Gs1?, Gs1, St?, Log1?, Log1).
 
-%% again(R, C): where the screen shows C, the next step; otherwise R granted on the request question open, the step kept, and, with no request question open, the step kept until one is drawn.
-procedure again1(YN?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
-again1(y, ps(Se, T, Cs, [_ | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
-    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
-again1(n, ps(sess(Id, P, _, _), T, Cs, [again(R, X) | Ss]), [input(Id?, P?, R?) | Gs1?], Gs1,
-       ps(nosess, T?, Cs?, [again(R?, X?) | Ss?]), Log1?, Log1) :-
-    ground(Id?), ground(P?), ground(R?) | true.
-again1(n, ps(nosess, T, Cs, Ss), Gs1?, Gs1, ps(nosess, T?, Cs?, Ss?), Log1?, Log1).
-
-%% What the person's screen shows (the steps wait(C) and again(R, C)): the last view written, the approval questions drawn and not answered, and whether a request question is drawn and not answered.
+%% What the person's screen shows (the step wait(C)): the last view written and the notices written after it, the approval questions drawn and not answered, and whether a request question is drawn and not answered.
 procedure shows(Cond?, Sess?, List(Output)?, Shows?, YN).
 shows(known(Q), _, T, _, B?) :- ground(T?) |
     last_of(T?, L),
@@ -136,20 +123,40 @@ shows(has(A, K), _, T, _, B?) :- ground(T?) |
     last_of(T?, L),
     count_in(A?, L?, N),
     at_least(N?, K?, B).
+shows(refused(P, Q), _, T, _, B?) :- ground(P?), ground(Q?), ground(T?) |
+    notices_of(T?, Ns),
+    among_output(refused(P?, Q?), Ns?, B).
+shows(yielded(P), _, T, _, B?) :- ground(P?), ground(T?) |
+    notices_of(T?, Ns),
+    among_output(yielded(P?), Ns?, B).
 shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
     find_approval(K?, Cs?, F),
     found_yn(F?, B).
 shows(asking, sess(_, _, _, _), _, _, y).
 shows(asking, nosess, _, _, n).
 
-%% The last view written, or none.
+%% The last view written, or none: the output holds the views and the notices.
 procedure last_of(List(Output)?, Last).
-last_of([], nolast).
-last_of([X], last(X?)).
-last_of([_, Y | Ys], L?) :- last_of([Y? | Ys?], L).
+last_of(T, L?) :- last_view(T?, nolast, L).
+procedure last_view(List(Output)?, Last?, Last).
+last_view([], L, L?).
+last_view([view(S, K) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
+
+%% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
+procedure notices_of(List(Output)?, List(Output)).
+notices_of(T, Ns?) :- notices_after(T?, [], Ns).
+procedure notices_after(List(Output)?, List(Output)?, List(Output)).
+notices_after([], Ns, Ns?).
+notices_after([view(_, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
+procedure among_output(Output?, List(Output)?, YN).
+among_output(_, [], n).
+among_output(X, [Y | _], y) :- X? =?= Y? | true.
+among_output(X, [_ | Ys], B?) :- otherwise | among_output(X?, Ys?, B).
 
 procedure known_in(Key?, Last?, YN).
-known_in(Q, last(view(_, Ks)), B?) :- among_key(Q?, Ks?, B).
+known_in(Q, last(_, Ks), B?) :- among_key(Q?, Ks?, B).
 known_in(_, nolast, n).
 
 procedure among_key(Key?, List(Key)?, YN).
@@ -158,7 +165,7 @@ among_key(X, [Y | _], y) :- X? =?= Y? | true.
 among_key(X, [_ | Ys], B?) :- otherwise | among_key(X?, Ys?, B).
 
 procedure count_in(Atom?, Last?, Integer).
-count_in(A, last(view(S, _)), N?) :- count(A?, S?, N).
+count_in(A, last(S, _), N?) :- count(A?, S?, N).
 count_in(_, nolast, 0).
 
 procedure count(Atom?, List(Atom)?, Integer).
@@ -209,7 +216,7 @@ drop_shown(_, [], []).
 drop_shown(Id, [shown(J, _, _) | Cs], Cs?) :- Id? =:= J? | true.
 drop_shown(Id, [S | Cs], [S? | Cs1?]) :- otherwise | drop_shown(Id?, Cs?, Cs1).
 
-%% The views not reported before: the output is drawn whole each time it grows, so those past the old one's length are new.
+%% The views and the notices not reported before: the output is drawn whole each time it grows, so those past the old one's length are new.
 procedure log_new(List(Output)?, List(Output)?, Stream(Seen), Stream(Seen)?).
 log_new([_ | Os], [_ | Ns], Log?, Log1) :- log_new(Os?, Ns?, Log, Log1?).
 log_new([], Ns, Log?, Log1) :- put(Ns?, Log, Log1?).

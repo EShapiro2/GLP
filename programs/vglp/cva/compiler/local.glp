@@ -2,7 +2,7 @@
 %%
 %% Local: each schema-binding "determines a part [t]_j of its class: the set of transactions it determines, ... and with the people in its marked roles as its guard set.  Such a contract is a local specification" (ibid.).  So a contract whose roles are party roles and listed roles is a local specification with no condition on its guards (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 2; vGLP f5f1644, the same paragraph: "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"), and nothing here decides locality; cvac.glp refuses a contract with seated or constituent roles, reach conditions or name terms.  A schema with a listed role is effective where its base is its only guarding role or, with none, its first role (listed_lines).
 %%
-%% Effective: "The contract is effective (Definition "Effective Local Specification") where, moreover, every variable of a schema that occurs in an atom it requires or forbids also occurs in an atom it deletes or adds, a variable inside a signed term included, so that a class has finitely many parts, and the atoms each unguarded schema requires at its first role name every other role and every variable of its deleted and added atoms" (ibid.).  A variable here is a party variable or a speech-act variable, the sentence naming roles and variables apart, "every other role and every variable", and a role being bound to one of the finitely many participants (vGLP #15, ibid., answer (2)); a signed term sgn(y, i) in a deleted or added atom holds the variable y and names role i (GSC, Section 3: "An atom names what is among its arguments or is the signer of one"), so y is a variable of the atom.  Otherwise the contract is refused, the schema named.
+%% Effective: "The contract is effective (Definition "Effective Local Specification") where, moreover, every variable of a schema that occurs in an atom it requires or forbids also occurs in an atom it deletes or adds, a variable inside a signed term or a name term included, so that a class has finitely many parts, and the atoms each unguarded schema requires at its first role name every other role and every variable of its deleted and added atoms" (ibid.).  A variable here is a party variable or a speech-act variable, the sentence naming roles and variables apart, "every other role and every variable", and a role being bound to one of the finitely many participants (vGLP #15, ibid., answer (2)); a signed term sgn(y, i) in a deleted or added atom holds the variable y and names role i (GSC, Section 3: "An atom names what is among its arguments or is the signer of one"), so y is a variable of the atom.  Otherwise the contract is refused, the schema named.
 %%
 %% The request type has "the alternative propose([t]_j) for each guarded part [t]_j" (vGLP 099f876, Section 5.4, "The compilation"), so cvac.glp prints in it the alternatives of the schemas whose terms name guarded parts (proposable): a schema marking a role, some binding of which determines a transaction, a part whose guard set is the people in its marked roles, never empty.  A schema marking no role names unguarded parts only; one marking a role names guarded parts, as gnudge's g, whose part is guarded though its class holds the unguarded part of nudge (vGLP #15, ibid., item 4).
 %%
@@ -13,7 +13,8 @@
 %% signed by a person").
 Utt      ::= utt(Integer) ; Sp.
 Sp       ::= sp(Utt, Integer).
-Val      ::= person(Integer) ; Sp ; free_var(Arg).
+%% The community name a name term denotes, cn(V) of the person V, and cdot(N, S), the community name N followed by the speech act S (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
+Val      ::= person(Integer) ; Sp ; free_var(Arg) ; cn(Val) ; cdot(Val, Val).
 Vals     ::= [] ; [Val | Vals].
 Bnd      ::= bnd(Arg, Val).
 Binding  ::= [] ; [Bnd | Binding].
@@ -100,7 +101,14 @@ variables_of([sgn(_, _)|As], R?) :- variables_of(As?, R).
 procedure flat_args(Args?, Args).
 flat_args([], []).
 flat_args([sgn(Y, I)|As], [svar(Y?), role(I?)|R?]) :- flat_args(As?, R).
+flat_args([nterm(N)|As], R?) :- nt_flat(N?, Ws), flat_args(As?, R1), app(Ws?, R1?, R).
 flat_args([A|As], [A?|R?]) :- otherwise | flat_args(As?, R).
+%% The variables of a name term, its base, a role or an agent variable, and its speech-act variables: "a variable inside a signed term or a name term included" (vGLP c649c0d, Section 5.4, the paragraph on act schemas), and its base named by it.
+procedure nt_flat(NameTerm?, Args).
+nt_flat(own(I), [role(I?)]).
+nt_flat(own_var(X), [pvar(X?)]).
+nt_flat(nvar(_), []).
+nt_flat(ext(N, Y), R?) :- nt_flat(N?, R1), app(R1?, [svar(Y?)], R).
 %% The first argument of the first list absent from the second; none, [].
 procedure first_absent(Args?, Args?, Args).
 first_absent([], _, []).
@@ -373,6 +381,9 @@ people_count([], 0).
 people_count([bnd(_, person(I))|Bs], N?) :- people_count(Bs?, M), max1(I?, M?, N).
 people_count([bnd(_, sp(_, _))|Bs], N?) :- people_count(Bs?, N).
 people_count([bnd(_, free_var(_))|Bs], N?) :- people_count(Bs?, N).
+%% A binding binds no variable to a community name, a name term being imaged from its parts (nt_val); the clauses cover the type.
+people_count([bnd(_, cn(_))|Bs], N?) :- people_count(Bs?, N).
+people_count([bnd(_, cdot(_, _))|Bs], N?) :- people_count(Bs?, N).
 procedure max1(Integer?, Integer?, Integer).
 max1(I, M, N?) :- I? >= M? | N := I? + 1.
 max1(I, M, M?) :- I? < M? | true.
@@ -442,6 +453,8 @@ person_index(found(person(P)), P?).
 person_index(found(sp(_, _)), -1).
 person_index(found(free_var(_)), -1).
 person_index(unbound, -1).
+person_index(found(cn(_)), -1).
+person_index(found(cdot(_, _)), -1).
 procedure deltas_for(Ints?, RoleSpecs?, Binding?, Deltas).
 deltas_for([], _, _, []).
 deltas_for([P|Ps], Rs, B, [delta(P?, D?, A?)|Xs?]) :- ground(Rs?), ground(B?) |
@@ -536,7 +549,8 @@ role_names(R, J, B?) :- ground(R?), integer(J?) |
 procedure names_role(Atoms?, Integer?, YesNo).
 names_role([], _, no).
 names_role([atom(_, As)|Xs], J, B?) :- integer(J?), ground(As?) |
-    mem(role(J?), As?, B1),
+    flat_args(As?, Fs),
+    mem(role(J?), Fs?, B1),
     sgn_names(As?, J?, B2),
     or(B1?, B2?, B12),
     names_role1(B12?, Xs?, J?, B).
@@ -587,6 +601,8 @@ adm_var1(yes, _, _, yes).
 adm_var1(no, found(sp(_, S)), Gp, R?) :- mem(S?, Gp?, R).
 adm_var1(no, found(person(_)), _, no).
 adm_var1(no, found(free_var(_)), _, no).
+adm_var1(no, found(cn(_)), _, no).
+adm_var1(no, found(cdot(_, _)), _, no).
 adm_var1(no, unbound, _, no).
 procedure added_atoms(RoleSpecs?, Atoms).
 added_atoms([], []).
@@ -627,10 +643,22 @@ img_args([sgn(Y, I)|As], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
     role_person(I?, B?, P),
     img_sgn(F?, P?, sgn(Y?, I?), X),
     img_args(As?, B?, Xs).
+img_args([nterm(N)|As], B, [X?|Xs?]) :- ground(B?), ground(N?) |
+    nt_val(N?, B?, X),
+    img_args(As?, B?, Xs).
 img_args([A|As], B, [X?|Xs?]) :- otherwise, ground(B?), ground(A?) |
     lookup(A?, B?, F),
     val_or_free(F?, A?, X),
     img_args(As?, B?, Xs).
+%% The community name a name term denotes at a binding; a name variable, which the compiler refuses with seated roles (cvac.glp, role_lines), stands for itself.
+procedure nt_val(NameTerm?, Binding?, Val).
+nt_val(own(I), B, cn(V?)) :- lookup(role(I?), B?, F), val_or_free(F?, role(I?), V).
+nt_val(own_var(X), B, cn(V?)) :- lookup(pvar(X?), B?, F), val_or_free(F?, pvar(X?), V).
+nt_val(nvar(Z), _, free_var(nterm(nvar(Z?)))).
+nt_val(ext(N, Y), B, cdot(C?, V?)) :- ground(B?) |
+    nt_val(N?, B?, C),
+    lookup(svar(Y?), B?, F),
+    val_or_free(F?, svar(Y?), V).
 %% The image of a signed term sgn(y, i): the speech act bound to y, signed by the person in role i (GSC, Definition "Binding": beta(sgn(y, pi)) := (beta(y), beta(pi))).  Every binding taken here sends y to a speech act (canon_bindings), so the second clause covers the type and is never reached.
 procedure img_sgn(Found?, Integer?, Arg?, Val).
 img_sgn(found(sp(U, S)), P, _, sp(sp(U?, S?), P?)).

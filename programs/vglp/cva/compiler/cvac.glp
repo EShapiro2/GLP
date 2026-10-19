@@ -3,7 +3,7 @@
 %% Definition "Canonical CVA Platform"; Section 5.4, "The compilation" and the
 %% paragraph "Act schemas"; self.glp says more).
 %%
-%% A contract is compiled when programs/gsc finds it syntactically grassroots, grassroots with wards, syntactically grassroots with seated and listed roles or with wards, or finds no fault in it but its introductory acts, so with traceable provenance and volition (verdict_lines below), every role a party role or a listed role, and no name term (role_lines), so that it is a local specification (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "Such a contract is a local specification"), and when it is effective, by the same paragraph, which local.glp decides.  Otherwise it prints the lines saying why and nothing else.  A signed term sgn(y, i) in an added atom is the speech act bound to y, signed by the person in role i (vGLP, Section 5.4, "Act schemas as local specifications"; GSC, Definition "Act schema"): local.glp decides the contract over it and the printed text, text.glp, computes it.
+%% A contract is compiled when programs/gsc finds it syntactically grassroots, grassroots with wards, syntactically grassroots with seated and listed roles or with wards, or finds no fault in it but its introductory acts, so with traceable provenance and volition (verdict_lines below), every role a party role or a listed role, and no name variable (role_lines), so that it is a local specification (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "Such a contract is a local specification"), and when it is effective, by the same paragraph, which local.glp decides.  Otherwise it prints the lines saying why and nothing else.  A signed term sgn(y, i) in an added atom is the speech act bound to y, signed by the person in role i (vGLP, Section 5.4, "Act schemas as local specifications"; GSC, Definition "Act schema"): local.glp decides the contract over it and the printed text, text.glp, computes it.
 %%
 %% The module is what is printed from the contract, here, and the text every contract shares, text.glp.  What is printed from the contract is the type Class, one alternative per schema, the schema's name applied to the people in its roles and then the values of its variables, in the order of its head, tau(pi_1, ..., pi_k ; x_1, ..., x_m), as GSC's term form gives it (GSC 0228e79, Definition "Act schema"; vGLP #15 Cowork to Code, 2026-10-19 13:34 UTC, item 2), a term of it naming a schema-binding and so its part and its class (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"); the request type, Request, with the alternative propose([t]_j) for each guarded part [t]_j, a term of Proposal, the alternatives of the schemas whose terms name guarded parts, and the alternative known(Peer) (Section 5.4, "The compilation"); the
 %% contract itself, as the term programs/gsc reads, from which the shared text
@@ -123,7 +123,7 @@ realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 
-%% What vGLP Section 5.4 takes of GSC's community roles (vGLP f5f1644, "Act schemas as local specifications": "A listed role pi[rho(*, u_2, ..., u_r)], pi a party role, its base, has as its people at a schema-binding the persons q with rho(q, u_2, ..., u_r), so bound, in the state of the person in pi"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 1: "The compiler takes GSC's listed roles (Appendix D, 8064cfb), not seated or constituent roles, which it still refuses").  A contract is refused where a schema has a seated or a constituent role, or reach conditions, which are of community names; where a schema has more than one listed role, which the canonical platform printed here does not carry, its schema-bindings naming the people of one listed role each; and where an atom or a listed role has a name term among its arguments: Section 5.4 binds a schema's roles to people and its other variables to people and to speech acts, and gives a name term no value at a schema-binding, a question Code put to vGLP on 2026-10-19 (Code #11).  A cschema with no reach conditions is a schema (plain_contract).
+%% What vGLP Section 5.4 takes of GSC's community roles (vGLP f5f1644, "Act schemas as local specifications": "A listed role pi[rho(*, u_2, ..., u_r)], pi a party role, its base, has as its people at a schema-binding the persons q with rho(q, u_2, ..., u_r), so bound, in the state of the person in pi"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 1: "The compiler takes GSC's listed roles (Appendix D, 8064cfb), not seated or constituent roles, which it still refuses").  A contract is refused where a schema has a seated or a constituent role, or reach conditions, which are of community names; where a schema has more than one listed role, which the canonical platform printed here does not carry, its schema-bindings naming the people of one listed role each; and where a name term is built on a name variable, which a seated role would need (vGLP #15 Cowork to Code, 2026-10-19 14:49 UTC).  A name term <u>.y_1...y_n built on a role or an agent variable is taken: it is "the community name of the person bound to u followed by the speech acts bound to y_1, ..., y_n" (vGLP c649c0d, Section 5.4), an atom holding one written in the view with the community name one argument, of the type CName the shared text defines.  A cschema with no reach conditions is a schema (plain_contract).
 Flags ::= f(YesNo, YesNo, YesNo, YesNo).
 procedure role_lines(Contract?, Constant?, Stream(_)).
 role_lines(C, Nm, L?) :- ground(C?), ground(Nm?) |
@@ -147,7 +147,7 @@ schema_flags(R, Rs, f(R0, S0, M0, N0), f(R1?, S1?, M1?, N1?)) :- ground(Rs?) |
     two_or_more(K?, M),
     or(M0?, M?, M1),
     spec_args(Rs?, As),
-    nterm_in(As?, N),
+    nvar_in(As?, N),
     or(N0?, N?, N1).
 procedure some_reach(Reaches?, YesNo).
 some_reach([], no).
@@ -183,16 +183,25 @@ spec_args([R|Rs], As?) :- ground(R?) |
     app(A3?, A46?, A36),
     app(A2?, A36?, A26),
     app(A1?, A26?, As).
-procedure nterm_in(Args?, YesNo).
-nterm_in([], no).
-nterm_in([nterm(_)|_], yes).
-nterm_in([_|As], B?) :- otherwise | nterm_in(As?, B).
+%% A name term built on a name variable, which a seated role would need: "Name variables, which a seated role would need, stay out with seated roles" (vGLP #15 Cowork to Code, 2026-10-19 14:49 UTC).
+procedure nvar_in(Args?, YesNo).
+nvar_in([], no).
+nvar_in([nterm(T)|As], B?) :- nt_nvar(T?, B1), nvar_in1(B1?, As?, B).
+nvar_in([_|As], B?) :- otherwise | nvar_in(As?, B).
+procedure nvar_in1(YesNo?, Args?, YesNo).
+nvar_in1(yes, _, yes).
+nvar_in1(no, As, B?) :- nvar_in(As?, B).
+procedure nt_nvar(NameTerm?, YesNo).
+nt_nvar(own(_), no).
+nt_nvar(own_var(_), no).
+nt_nvar(nvar(_), yes).
+nt_nvar(ext(T, _), B?) :- nt_nvar(T?, B).
 procedure flag_lines(Flags?, Constant?, Stream(_)).
 flag_lines(f(R, S, M, N), Nm, L?) :- ground(Nm?) |
     flag_line(R?, '%% it has reach conditions, which vGLP Section 5.4 does not take.', L1),
     flag_line(S?, '%% it has seated or constituent roles, which vGLP Section 5.4 does not take: it takes listed roles (vGLP f5f1644).', L2),
     flag_line(M?, '%% it has a schema with more than one listed role, which this compiler does not take.', L3),
-    flag_line(N?, '%% it has name terms, which vGLP Section 5.4 does not take: a schema-binding binds roles to people and other variables to people and to speech acts.', L4),
+    flag_line(N?, '%% it has name variables, which vGLP Section 5.4 does not take, as it does not take seated roles.', L4),
     lapp(L1?, L2?, L12),
     lapp(L3?, L4?, L34),
     lapp(L12?, L34?, L0),
@@ -364,7 +373,7 @@ shared_lines([guarded_only(_)|Ls], no, Ls1?) :- shared_lines(Ls?, no, Ls1).
 shared_lines([L|Ls], G, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, Ls1).
 
 %% The type of the machine states, List(Atom), in the type of the views, Output ::= view(List(Atom), List(Key)) in the shared text (vGLP b7e3517, Section 5.4, "The compilation": "the compilation defines Output as the type of the views", a view being view(s, K), "the machine state s of its app state and the persons K it knows"): a machine state is a multiset of the contract's atoms, written as a list, and Atom is the union of the contract's predicates at their argument types: an argument is of the type Peer, a person, where the schemas write a role, a party variable or a name term, and of the type Speech, a speech act, where they write a speech-act variable or a signed term; Atom has one alternative for each predicate and argument types the schemas write it with, in order of first occurrence.  The agent holds an atom as g(Name, Vals), each value p(Peer) or s(Speech), and writes it on the output as the contract writes it: atom_of(g(friend, [p(V1)]), shown(friend(V1?))), one clause per alternative.
-Kind  ::= peer ; speech.
+Kind  ::= peer ; speech ; name.
 Kinds ::= [] ; [Kind | Kinds].
 Sig   ::= sig(Constant, Kinds).
 Sigs  ::= [] ; [Sig | Sigs].
@@ -399,7 +408,7 @@ procedure arg_kinds(Args?, Kinds).
 arg_kinds([], []).
 arg_kinds([role(_)|Xs], [peer|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([pvar(_)|Xs], [peer|Ks?]) :- arg_kinds(Xs?, Ks).
-arg_kinds([nterm(_)|Xs], [peer|Ks?]) :- arg_kinds(Xs?, Ks).
+arg_kinds([nterm(_)|Xs], [name|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([svar(_)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([sgn(_, _)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
 %% Atom ::= the alternatives, separated by ;, each the predicate applied to its argument types, a predicate of no argument a constant.
@@ -420,6 +429,7 @@ procedure kind_types(Kinds?, Stream(_)).
 kind_types([], []).
 kind_types([peer|Ks], ['Peer'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([speech|Ks], ['Speech'|Ts?]) :- kind_types(Ks?, Ts).
+kind_types([name|Ks], ['CName'|Ts?]) :- kind_types(Ks?, Ts).
 %% atom_of(g(f, [p(V1), s(V2)]), shown(f(V1?, V2?))), one clause per alternative of Atom, and a last clause on any other atom, which covers the type GAtom and is never reached: the agent holds only atoms the contract's schemas add.
 procedure atom_of_lines(Sigs?, Stream(_)).
 atom_of_lines([], ['atom_of(_, unshown) :- otherwise | true.']).
@@ -441,6 +451,7 @@ kind_vals([K|Ks], I, [W?|Ws?], [Q?|Qs?]) :- ground(K?), integer(I?) |
     kind_vals(Ks?, I1?, Ws, Qs).
 procedure kind_val(Kind?, Constant?, _).
 kind_val(peer, N, p(N?)).
+kind_val(name, N, c(N?)).
 kind_val(speech, N, s(N?)).
 
 %% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]).
