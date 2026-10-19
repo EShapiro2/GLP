@@ -8,16 +8,18 @@ Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
 Class     ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; sign(Peer, Speech) ; forward(Peer, Peer, Speech)
+            ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
+            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+            ; leave(Peer, Peer, Speech) ; close(Peer, Speech) ; drop(Peer, Peer, Speech)
+            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
+            ; post_forward(Peer, Peer, Speech, Speech)
+            ; deliver(Peer, Peer, Speech, Speech) ; deliver_own(Peer, Peer, Speech, Speech).
+Proposal  ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+            ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
-            ; deliver(Peer, Peer, Speech, Speech).
-Proposal  ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; sign(Peer, Speech) ; forward(Peer, Peer, Speech)
-            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
-            ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
-            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech).
+            ; post_forward(Peer, Peer, Speech, Speech).
 Request   ::= propose(Proposal) ; known(Peer).
 YesNo     ::= yes ; no.
 Decision  ::= commit ; abort.
@@ -26,7 +28,7 @@ Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
             ; yield(Attempt).
 Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Atom      ::= identity ; friend(Peer) ; item(Speech) ; member(Peer, Speech) ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech).
+Atom      ::= identity ; friend(Peer) ; item(Speech) ; authored(Speech) ; member(Peer, Speech) ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech).
 Output    ::= view(List(Atom), List(Key)).
 Approval  ::= approval(Attempt, YesNo?).
 Menu      ::= menu(Key, List(Key), Request?).

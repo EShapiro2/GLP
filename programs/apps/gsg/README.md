@@ -7,10 +7,10 @@ The app of GSG, the grassroots social graph, as a mini-app of the Grassroots Sup
 GSG is GSC's contract (Coordination Appendix C; GSC owns every contract that other contracts extend); its clauses are `programs/gsc/GSG.md`, as GAI's paper has them, and its act schemas `programs/gsc/GSG.glp`:
 
 1. *Identity.*  A person may act to establish their identity by choosing their own key pair.  They identify themselves with the public key, sign their acts with the private key, and are accountable for every act signed with it.
-2. *Friendship.*  Two persons who are not friends may jointly decide to become friends by an act of both, after which they are friends.
+2. *Friendship.*  Two persons who know each other personally and are not friends may jointly decide to become friends by an act of both, after which they are friends.
 3. *Ending a friendship.*  A person may end their friendship with another person by their own act, and then the friendship ends.
 
-GSG:1 is the schema `establish`, guarded by the person, which adds `identity` at them, and every role of the other two schemas requires `identity`.  In the app the key pair is the one the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/4`, and which the platform's agent takes as its `Peer`: every act the agent takes names its person by that key.  The person establishes their identity by their first request, `propose(establish(P))`, `P` their key, which every request question shows (vGLP, Section 5.4: the request question "shows the agent's own key"), a class of one participant, taken at once.  GSG:2 is the schema `befriend`, guarded by both, and GSG:3 the schema `unfriend`, guarded by either friend.
+GSG:1 is the schema `establish`, guarded by the person, which adds `identity` at them, and every role of the other two schemas requires `identity`.  In the app the key pair is the one the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/4`, and which the platform's agent takes as its `Peer`: every act the agent takes names its person by that key.  The person establishes their identity by their first request, `propose(establish(P))`, `P` their key, which every request question shows (vGLP, Section 5.4: the request question "shows the agent's own key"), a class of one participant, taken at once.  GSG:2 is the schema `befriend`, guarded by both, and GSG:3 the schema `unfriend`, guarded by either friend; that the two know each other personally describes no act.
 
 ## The cascade
 
@@ -28,16 +28,17 @@ GSG:1 is the schema `establish`, guarded by the person, which adds `identity` at
 | `person.glp` | `miniapp_person/4`: the scripted person, by role, `alice` or `bob` |
 | `plays.glp` | `play_friends/2` and `play_held/3`, the mini-app with no super-app |
 | `self.glp` | the platform's types written again, and the exports |
-| `self.vglp` | the app's widget declaration, `Approval =::= approval_sentence.` |
+| `self.vglp` | the app's widget declarations, `Approval =::= approval_sentence.` and `Menu =::= social_menu.` |
 | `../gsg_boot.glp` | the super-app hosting the app on two smartphones, under `:boot` |
 | `../compile.sh` | the check that each app's `platform.vglp` is what the compiler prints |
+| `screens/` | the screens of GAI's figure of the app, and their README |
 
 ## How the mini-app runs
 
 The super-app grants the mini-app the person's key, the person channel, the channel to the social graph and a calendar (GSG paper, Section 2, "What the super-app grants a mini-app").
 
 - The agent runs with the person's key as its `Peer`.
-- Its dispatcher draws the agent's questions on the person channel: the request questions and the approval questions.  The agent's thread, the program's output to the person, is drawn as construct `0`.
+- Its dispatcher draws the agent's questions on the person channel: the request questions and the approval questions.  The program's output to the person is drawn as construct `0`: the agent writes there its view, `view(S, K)`, its machine state and the persons it knows, when it starts and whenever either changes (vGLP, Section 5.4, "The compilation").
 - Its network is the conversations the social graph hands the mini-app at each invitation, one per friend.  Each message `msg(Q, C)` the agent sends goes on the conversation with `Q`; each message arriving on a conversation joins the agent's input.  A message to a participant with whom no conversation is open yet is held, and goes on the conversation, in order, once the social graph opens it.
 - The calendar is not read: the platform has no clock.  The agent takes its own transactions when it starts and after each trigger, one at a time until none holds (vGLP, Section 5.4, "Triggers").
 
@@ -49,11 +50,11 @@ From `glp_runtime/`:
 printf '../programs/apps/gsg\nplay_held(In, ToBob, ToCarol).\n:limit 600000\nplay_friends(A, B).\n:quit\n' | bin/glpc
 ```
 
-`play_friends` runs two executions over one conversation, the play handing each its end of the root channel as the social graph does.  Each person establishes their identity; Alice asks to know Bob and offers him friendship; Bob is asked and answers yes; then Bob ends the friendship, and nobody is asked.  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens, held exactly by the suite's Section APPS:
+`play_friends` runs two executions over one conversation, the play handing each its end of the root channel as the social graph does.  Each person establishes their identity; Alice asks to know Bob and offers him friendship; Bob is asked and answers yes; then Bob ends the friendship, and nobody is asked.  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens are the views their agents write, with the persons a request question shows where the script looks (`menu(K, Ks)`) and each answer the person gives (`gave(C, A)`), held exactly by the suite's Section APPS:
 
 ```
-A = [menu(alice, []), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), menu(alice, [bob]), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), start(attempt(bob, 3, 3, unfriend(bob, alice))), outcome(attempt(bob, 3, 3, unfriend(bob, alice))) | _]
-B = [propose(attempt(bob, 1, 1, establish(bob))), discover(alice), start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 2, 2, befriend(alice, bob))), vote(attempt(alice, 2, 2, befriend(alice, bob))), outcome(attempt(alice, 2, 2, befriend(alice, bob))), propose(attempt(bob, 3, 3, unfriend(bob, alice))), tally(attempt(bob, 3, 3, unfriend(bob, alice))), commit(attempt(bob, 3, 3, unfriend(bob, alice))) | _]
+A = [view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), menu(alice, [bob]), view([friend(bob), identity], [bob]), view([identity], [bob]) | _]
+B = [view([], []), view([identity], []), view([identity], [alice]), gave(befriend(alice, bob), yes), view([friend(alice), identity], [alice]), view([identity], [alice]) | _]
 ```
 
 `play_held` runs the router on a hello sent to Bob and one to Carol before any conversation is open, then Bob's conversation, a start to Bob, and Carol's conversation: each hello goes on its recipient's conversation once it opens.
@@ -67,14 +68,9 @@ G=$(cd .. && pwd); printf ':artefact %s/programs/apps/gsg %s/programs/social/gra
 Two isolates, each the super-app of `programs/social/graph/core` with its own key pair.  Each person trusts the compiler's key and installs `gsg.glpw`; Alice connects to Bob and they become friends in the super-app's social graph; Alice invites Bob to the mini-app and Bob accepts; the handshake opens their conversation; then the steps of `play_friends` run over it.  The boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent ... there is no clock and no polling"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers"), so each event reduces to quiescence and the boot settles.  The two persons' lines interleave as the isolates run; each person's, in order, held exactly by the suite's Section APPS:
 
 ```
-[alice] sg(connected(bob)), menu(alice, []), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), menu(alice, [bob]),
-        propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(...), commit(...), start(attempt(bob, 3, 3, unfriend(bob, alice))), outcome(...)
-[bob]   sg(befriend(alice)), sg(connected(alice)), propose(attempt(bob, 1, 1, establish(bob))), discover(alice),
-        start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(...), vote(...), outcome(...),
-        propose(attempt(bob, 3, 3, unfriend(bob, alice))), tally(...), commit(...)
+[alice] sg(connected(bob)), view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), menu(alice, [bob]), view([friend(bob), identity], [bob]), view([identity], [bob])
+[bob]   sg(befriend(alice)), sg(connected(alice)), view([], []), view([identity], []), view([identity], [alice]), gave(befriend(alice, bob), yes), view([friend(alice), identity], [alice]), view([identity], [alice])
 ```
-
-A `(...)` names the attempt named in full before it; the suite holds the lines whole.
 
 ### In the Flutter super-app
 
@@ -84,21 +80,11 @@ Once Bob's acts are there, Alice installs the app as she installs any: on the Ap
 
 ## The screens
 
-What each person sees, step by step, as the bridge draws the constructs of the platform's two questions, and the thread: the approval question by `approval_sentence`, the widget the app's declaration in `self.vglp` names (vGLP, Section 6.2, Definition "Widget Declaration"), one sentence for the attempt's class and two buttons labelled for it (`glp_multiagent/lib/ui_runtime/named_widgets.dart`), and the request question and the thread by the default widgets (Definition "Default Widget").
+What each person sees, as the construct family draws the app (`glp_multiagent/lib/ui_runtime/named_widgets.dart` and `tab_screen.dart`): one screen with one tab, Friends, drawn from the last view the agent wrote, under the header with the app's name and the person's initial.  The request question is drawn by `social_menu`, the widget the app's declaration `Menu =::= social_menu.` names (vGLP, Section 6.2, Definition "Widget Declaration"), with the last value drawn on construct 0 (Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"): the person's own name; before their identity is established, Join, proposing `establish(Me)`; after it, the persons known, a friend with End friendship, proposing `unfriend(Me, Q)`, and any other with Befriend, proposing `befriend(Me, Q)`; and the field Add a person by key, with Add, answering `known(Q)`.  The approval question is drawn by `approval_sentence` at the top of the tab, "Alice asks to be your friend.", with Accept and Decline, granting `yes` and `no`.  No term, functor, type name, attempt number or Submit button is shown (GAI's task, Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC).
 
-The super-app, first: Alice and Bob each install the app; Alice connects to Bob, Bob is asked on his super-app's card and consents, and they are friends in the super-app's social graph; Alice invites Bob to `gsg`, and the conversation between their two executions opens.
+`glp_multiagent/test/apps_screens_test.dart` runs the app for Alice and Bob over one conversation and takes each person's acts by tapping and typing on the tab's controls: each taps Join and adds the other by key; Alice taps Befriend on Bob's row; Bob is asked and taps Accept; Bob taps End friendship on Alice's row, and Alice is not asked.  `screens/README.md` names the three screens it renders, those of GAI's figure.
 
-Then the app:
-
-1. **Alice's request question.**  A form headed `menu`, with three fields.  The first, `Key`, shows her agent's own key, `alice`, and is not edited.  The second, `List(Key)`, shows the persons her agent knows: none.  The third, `Request`, is a menu of two forms: `propose`, whose one field `Proposal`, the classes a person proposes, is a menu of `establish(Peer)`, with one peer field, and `befriend(Peer, Peer)` and `unfriend(Peer, Peer)`, each with two peer fields; and `known`, with one peer field, `Peer`.  She chooses `propose`, then `establish`, types her key, `alice`, as the question shows it, and submits; her thread shows `propose(attempt(alice, 1, 1, establish(alice)))`, the attempt's initiator, its number, its rank and its class, taken at once, Alice its one participant.  On her next request question, still showing none, she chooses `known`, types `bob` and submits.  Her next request question is drawn at once, showing none: it is asked when the agent reads her request, before Bob is known.
-2. **Bob's request question**, the same form.  He establishes his identity likewise, his thread showing `propose(attempt(bob, 1, 1, establish(bob)))`; then he chooses `known`, types `alice` and submits.
-3. **The threads.**  Each agent sends the other a hello on their conversation; once each has sent and received one, Alice's thread shows `discover(bob)` and Bob's `discover(alice)`.
-4. **Alice offers friendship.**  On her open request question she chooses `propose`, then `befriend`, and types her key, `alice`, and `bob`.  Her next request question shows `bob`.  Her thread shows `propose(attempt(alice, 2, 2, befriend(alice, bob)))`, her second attempt.
-5. **Bob is asked.**  His thread shows `start(attempt(alice, 2, 2, befriend(alice, bob)))`, and his approval question is drawn: "Alice asks to be your friend.", and two buttons, Accept and Decline, granting `yes` and `no`.  He taps Accept; the question is withdrawn, and his thread shows `answer(...)` and then `vote(...)`.
-6. **They are friends.**  Alice's thread shows `tally(...)` and `commit(...)`; Bob's shows `outcome(...)`.
-7. **Bob ends the friendship.**  On his request question he chooses `propose`, then `unfriend`, and types his key, `bob`, and `alice`.  His thread shows `propose(attempt(bob, 3, 3, unfriend(bob, alice)))`, `tally(...)` and `commit(...)`.  Alice is not asked: her thread shows `start(attempt(bob, 3, 3, unfriend(bob, alice)))` and `outcome(...)`.
-
-Had Bob tapped Decline in step 5, the else-branch of his answer is taken: his thread shows `answer(...)`, `vote(...)` and `outcome(...)`, his vote no, and Alice's shows `tally(...)` and no commit, the attempt aborted at both (vGLP's `play_refused`, `programs/vglp/cva/social_graph`, shows the same on GSN's platform).
+Had Bob tapped Decline, the else-branch of his answer is taken: his vote is no, the attempt aborts at both, and neither view changes (vGLP's `play_refused`, `programs/vglp/cva/social_graph`, shows the same on GSN's platform).
 
 ## GSN's app
 
@@ -108,4 +94,4 @@ The host carries a message only to a participant with whom the social graph has 
 
 ## The types written again
 
-`self.glp` writes again the types of `platform.vglp` that the imported declarations of `platform#agent` and `platform#dispatch` carry: `Peer`, `Class`, `Proposal`, `Request`, `YesNo`, `Decision`, `Attempt`, `Cargo`, `Content`, `Net`, `Txn` and `Output`, `Approval` and `Menu`; and the types the canonical compilation forms for them, `Question`, `Drawn` and `Ask(Q)`.  vGLP's Section 6.3 has the compilation write these into each module that imports a compiled procedure; once the compiler does, these copies go.
+`self.glp` writes again the types of `platform.vglp` that the imported declarations of `platform#agent` and `platform#dispatch` carry: `Peer`, `Class`, `Proposal`, `Request`, `YesNo`, `Decision`, `Attempt`, `Cargo`, `Content`, `Net`, `Atom` and `Output`, `Approval` and `Menu`; and the types the canonical compilation forms for them, `Question`, `Drawn` and `Ask(Q)`.  vGLP's Section 6.3 has the compilation write these into each module that imports a compiled procedure; once the compiler does, these copies go.
