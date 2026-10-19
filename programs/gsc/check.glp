@@ -28,7 +28,12 @@
 % def:syntactically-grassroots is; a contract meeting them is
 % syntactically_grassroots_with_seated_roles, and the protocol realising it
 % is volitionally grassroots (Theorem "Grassroots realisation with seated
-% roles").
+% roles").  When its first two clauses fail and the other two hold, Appendix
+% F is tried: an agent-named contract with an introduction with wards that
+% meets def:sg-wards (GSC 503db66) is
+% syntactically_grassroots_with_wards(Act, Marks, Guardianships, Relays,
+% Leaving), and the protocol realising it is volitionally grassroots
+% (Theorem "Grassroots realisation with wards and seated roles").
 %
 % Any other contract with community roles is a contract of Appendix D, and is decided
 % by the three conditions on the text stated there: traceable provenance of
@@ -150,9 +155,30 @@ check_appendix(C, V?) :- ground(C?) |
 % Clause 4's role graph is that of definition:volition, over the predicates
 % of traceable provenance of definition:provenance, E.  Clauses 1 and 2 are
 % unobstructed.glp's, at each introductory act in turn.
-procedure seated_verdict1(Faults?, Verdict).
-seated_verdict1([], syntactically_grassroots_with_seated_roles).
-seated_verdict1([F|Fs], not_grassroots([F?|Fs?])).
+% Clauses 1 and 2 failing and clauses 3 and 4 holding, Appendix F is tried,
+% as for a contract of Section 3: an agent-named contract with an
+% introduction with wards meeting def:sg-wards is syntactically grassroots
+% with wards, and the protocol realising it is volitionally grassroots
+% (Theorem "Grassroots realisation with wards and seated roles", GSC
+% 503db66); clause 1 of def:sg-wards, on the introductory act, the relay
+% acts and the schemas of arity one, and its clause 2, on the seated roles,
+% are asked in wards.glp's search, its clause 3 here.
+procedure seated_wards1(Wards?, Faults?, Verdict).
+seated_wards1(introduction_with_wards(Nm, M, Gs, Rs, Lv), _,
+              syntactically_grassroots_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
+seated_wards1(no_introduction_with_wards, F, not_grassroots(F?)).
+
+procedure seated_verdict1(Faults?, Faults?, Contract?, Preds?, Verdict).
+seated_verdict1([], [], _, _, syntactically_grassroots_with_seated_roles).
+seated_verdict1([], [F|Fs], _, _, not_grassroots([F?|Fs?])).
+seated_verdict1([F|Fs], [], C, Rf, V?) :-
+    ground(F?), ground(Fs?), ground(C?), ground(Rf?) |
+    wards # wards(C?, Rf?, W),
+    seated_wards1(W?, [F?|Fs?], V).
+seated_verdict1([F|Fs], [G|Gs], _, _, V?) :-
+    ground(F?), ground(Fs?), ground(G?), ground(Gs?) |
+    faults_app([F?|Fs?], [G?|Gs?], FF),
+    verdict(FF?, V).
 
 procedure seated_verdict(Contract?, Preds?, Preds?, Preds?, Verdict).
 seated_verdict(C, Rf, E3, E, V?) :- ground(C?), ground(Rf?), ground(E3?), ground(E?) |
@@ -162,8 +188,7 @@ seated_verdict(C, Rf, E3, E, V?) :- ground(C?), ground(Rf?), ground(E3?), ground
     unobstructed # intro_result(C?, Rf?, F12),
     community # volition_faults_agent(C?, E?, F4),
     faults_app(FT?, F4?, F34),
-    faults_app(F12?, F34?, F),
-    seated_verdict1(F?, V).
+    seated_verdict1(F12?, F34?, C?, Rf?, V).
 
 procedure check_seated(Contract?, Preds?, Verdict).
 check_seated(C, Rf, V?) :- ground(C?), ground(Rf?) |
@@ -434,6 +459,63 @@ sgn_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     sgn_schemas(Ss?, F2),
     faults_app(F1?, F2?, R).
 
+% --- the head of a schema (def:schema; Appendix D, Definition Act schema) ---
+% A schema lists its variables x_1, ..., x_m in its head, distinct agent and
+% speech-act variables, and its atoms are over its roles, those variables
+% and its signed terms (GSC 0228e79).  Each entry of the head that is not a
+% variable is a fault head_not_variable(Schema, Entry), each entry listed
+% before a fault head_repeated(Schema, Entry), and each variable occurring
+% in the schema and not in its head a fault not_in_head(Schema, Var).
+
+procedure head_entry_fault(Arg?, Constant?, Faults?, Faults).
+head_entry_fault(pvar(_), _, T, T?).
+head_entry_fault(svar(_), _, T, T?).
+head_entry_fault(A, Nm, T, [head_not_variable(Nm?, A?)|T?]) :-
+    otherwise, ground(A?), ground(Nm?), ground(T?) | true.
+
+procedure head_rep_fault(Ans?, Arg?, Constant?, Faults?, Faults).
+head_rep_fault(yes, A, Nm, T, [head_repeated(Nm?, A?)|T?]).
+head_rep_fault(no, _, _, T, T?).
+
+procedure head_entries(Args?, Args?, Constant?, Faults).
+head_entries([], _, _, []).
+head_entries([A|As], Seen, Nm, R?) :- ground(A?), ground(As?), ground(Seen?), ground(Nm?) |
+    args_member(Seen?, A?, Rep),
+    head_entries(As?, [A?|Seen?], Nm?, R1),
+    head_rep_fault(Rep?, A?, Nm?, R1?, R2),
+    head_entry_fault(A?, Nm?, R2?, R).
+
+procedure unlisted_fault(Ans?, Arg?, Constant?, Faults?, Faults).
+unlisted_fault(yes, _, _, T, T?).
+unlisted_fault(no, V, Nm, T, [not_in_head(Nm?, V?)|T?]).
+
+procedure unlisted_faults(Args?, Args?, Constant?, Faults).
+unlisted_faults([], _, _, []).
+unlisted_faults([V|Vs], H, Nm, R?) :- ground(V?), ground(Vs?), ground(H?), ground(Nm?) |
+    args_member(H?, V?, In),
+    unlisted_faults(Vs?, H?, Nm?, R1),
+    unlisted_fault(In?, V?, Nm?, R1?, R).
+
+procedure head_schema1(Constant?, Args?, Args?, Faults).
+head_schema1(Nm, H, Os, R?) :- ground(Nm?), ground(H?), ground(Os?) |
+    head_entries(H?, [], Nm?, F1),
+    unlisted_faults(Os?, H?, Nm?, F2),
+    faults_app(F1?, F2?, R).
+
+procedure head_schema(Schema?, Faults).
+head_schema(S, R?) :- ground(S?) |
+    sch_name(S?, Nm),
+    sch_vars(S?, H),
+    sch_occ_vars(S?, Os),
+    head_schema1(Nm?, H?, Os?, R).
+
+procedure head_schemas(Contract?, Faults).
+head_schemas([], []).
+head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
+    head_schema(S?, F1),
+    head_schemas(Ss?, F2),
+    faults_app(F1?, F2?, R).
+
 % A malformed contract is refused; a contract that is not is decided by
 % Section 3 or by Appendix D, according to its roles.
 procedure check_formed(Faults?, Ans?, Contract?, Preds?, Verdict).
@@ -447,8 +529,10 @@ check_decl(C, Rf, V?) :- ground(C?), ground(Rf?) |
     form_schemas(C?, A?, M0),
     refl_schemas(C?, Rf?, M1),
     sgn_schemas(C?, M2),
+    head_schemas(C?, MH),
     faults_app(M1?, M2?, M12),
-    faults_app(M0?, M12?, M),
+    faults_app(MH?, M0?, MH0),
+    faults_app(MH0?, M12?, M),
     check_formed(M?, A?, C?, Rf?, V).
 
 exported procedure check(Declared?, Verdict).
@@ -506,11 +590,18 @@ traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |
 
 % The introduction with wards of Appendix F, for inspection, searched for
 % whatever the verdict: what it found, or no_introduction_with_wards.  A
-% contract with community roles has none, Appendix F being written over the
-% schemas of Section 3.
+% contract with community roles that is not agent-named has none, Appendix F
+% being written over the schemas of Section 3 and def:sg-wards over those of
+% an agent-named contract.
+procedure wards2(Ans?, Contract?, Preds?, Wards).
+wards2(yes, C, Rf, W?) :- ground(C?), ground(Rf?) | wards # wards(C?, Rf?, W).
+wards2(no, _, _, no_introduction_with_wards).
+
 procedure wards1(Ans?, Contract?, Preds?, Wards).
 wards1(no, C, Rf, W?) :- ground(C?), ground(Rf?) | wards # wards(C?, Rf?, W).
-wards1(yes, _, _, no_introduction_with_wards).
+wards1(yes, C, Rf, W?) :- ground(C?), ground(Rf?) |
+    agent_named(C?, A),
+    wards2(A?, C?, Rf?, W).
 
 procedure wards_in(Contract?, Preds?, Wards).
 wards_in(C, Rf, W?) :- ground(C?), ground(Rf?) |

@@ -150,11 +150,19 @@ latex_role_term(rs(_, _, _, _, _), I, T, R?) :- integer(I?), ground(T?) |
 latex_role_term(crs(seated(S, Mu), _, _, _, _, _), _, T, R?) :-
     ground(S?), ground(Mu?), ground(T?) |
     latex_pred(Mu?, ['}'|T?], R1),
-    latex_nt(S?, ['^{'|R1?], R).
+    latex_nt_sup(S?, ['^{'|R1?], R).
 latex_role_term(crs(constituent(S, Rho), _, _, _, _, _), _, T, R?) :-
     ground(S?), ground(Rho?), ground(T?) |
     latex_pred(Rho?, ['\\ast}'|T?], R1),
-    latex_nt(S?, ['^{'|R1?], R).
+    latex_nt_sup(S?, ['^{'|R1?], R).
+
+% The name term under a superscript: sigma.y in parentheses, as the paper
+% writes the seated role of close, (<Alice>.n)^{member} (GSC, Appendix D.4
+% and Section 3.3).
+procedure latex_nt_sup(NameTerm?, Chunks?, Chunks).
+latex_nt_sup(ext(S, Y), T, ['('|R?]) :- ground(S?), ground(Y?), ground(T?) |
+    latex_nt(ext(S?, Y?), [')'|T?], R).
+latex_nt_sup(S, T, R?) :- otherwise, ground(S?), ground(T?) | latex_nt(S?, T?, R).
 
 procedure latex_ext(RoleSpec?, Integer?, Chunks?, Chunks).
 latex_ext(RS, I, T, ['\\mathrm{ext}_c('|R?]) :-
@@ -757,6 +765,18 @@ malformed_lines([no_role_changes(S)|Fs], T,
                 [S?, 'adds and deletes nothing at any role;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+malformed_lines([head_not_variable(S, _)|Fs], T,
+                [S?, 'lists in its head an entry that is not a variable;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([head_repeated(S, _)|Fs], T,
+                [S?, 'lists a variable twice in its head;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([not_in_head(S, _)|Fs], T,
+                [S?, 'has a variable its head does not list;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 
@@ -771,6 +791,9 @@ compile_on(syntactically_grassroots, _, C) :- ground(C?) |
     send_to_user(L?).
 compile_on(grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C?) |
     latex_contract(no, C?, [], L),
+    send_to_user(L?).
+compile_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C?) |
+    latex_contract(yes, C?, [], L),
     send_to_user(L?).
 compile_on(syntactically_grassroots_with_seated_roles, _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
@@ -812,6 +835,10 @@ compile_s_on(syntactically_grassroots, _, Sn, C) :- ground(Sn?), ground(C?) |
 compile_s_on(grassroots_with_wards(_, _, _, _, _), _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, no, Sn?).
+compile_s_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, Sn, C) :-
+    ground(Sn?), ground(C?) |
+    find_schema(C?, Sn?, S),
+    emit_schema(S?, yes, Sn?).
 compile_s_on(syntactically_grassroots_with_seated_roles, _, Sn, C) :-
     ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
