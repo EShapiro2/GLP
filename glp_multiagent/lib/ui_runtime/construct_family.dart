@@ -113,9 +113,7 @@ class ConstructFamily {
 
   const ConstructFamily({this.named = const {}});
 
-  /// The grassroots app's family: the default widgets, and the named
-  /// widget `approval_sentence`, the approval question of a canonical CVA
-  /// platform as a sentence and the buttons Yes and No (named_widgets.dart).
+  /// The grassroots app's family: the default widgets, and the named widget `approval_sentence`, the approval question of a canonical CVA platform as one sentence for the attempt's class and two buttons labelled for it (named_widgets.dart).
   static const ConstructFamily standard = ConstructFamily(
       named: {approvalSentenceName: approvalSentence});
 }

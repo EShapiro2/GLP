@@ -91,15 +91,22 @@ class _Screen {
     await tester.pumpAndSettle();
   }
 
-  /// The grant of the button [label] of the default widget over [view], and
-  /// that of the button granting [c] of approval_sentence over it.
+  /// The texts approval_sentence draws for construct 1, in order.
+  List<String> texts() => [
+        for (final t in tester.widgetList<Text>(find.descendant(
+            of: find.byKey(nodeKey(1, approvalSentenceName, [])),
+            matching: find.byType(Text))))
+          t.data ?? '',
+      ];
+
+  /// The grant of the button [label] of the default widget over [view], and that of the button [named] of approval_sentence over it.
   Future<(String, String)> both(
-      String defaultWidget, String view, String label, String c) async {
+      String defaultWidget, String view, String label, String named) async {
     await draw(defaultWidget, view);
     await tap(find.widgetWithText(ElevatedButton, label));
     final byDefault = grants.removeLast();
     await draw('named($approvalSentenceName, $defaultWidget)', view);
-    await tap(find.byKey(answerKey(1, c, [2])));
+    await tap(find.widgetWithText(ElevatedButton, named));
     final byName = grants.removeLast();
     return (byDefault, byName);
   }
@@ -111,69 +118,92 @@ void main() {
   });
 
   testWidgets(
-      'approval_sentence over a friendship asked of bob: the sentence, '
-      '"Approve?", and Yes and No', (tester) async {
+      'befriend(A, Me): the sentence "Alice asks to be your friend." and the '
+      'buttons Accept and Decline, and nothing else', (tester) async {
     final s = _Screen(tester);
     const view =
         'approval(attempt(alice, 2, 2, befriend(alice, bob)), input([2]))';
     await s.draw(_named(_gsgClasses), view);
-    expect(find.byKey(nodeKey(1, approvalSentenceName, [])), findsOneWidget);
-    expect(find.text('alice asks to befriend you.'), findsOneWidget);
-    expect(find.text('attempt 2, rank 2'), findsOneWidget);
-    expect(find.text('Approve?'), findsOneWidget);
-    expect(find.widgetWithText(ElevatedButton, 'Yes'), findsOneWidget);
-    expect(find.widgetWithText(ElevatedButton, 'No'), findsOneWidget);
-    expect(find.textContaining('cannot draw'), findsNothing);
+    expect(s.texts(), ['Alice asks to be your friend.', 'Accept', 'Decline']);
+    expect(find.byKey(sentenceKey(1)), findsOneWidget);
+    expect(find.byKey(answerKey(1, 'yes', [2])), findsOneWidget);
+    expect(find.byKey(answerKey(1, 'no', [2])), findsOneWidget);
+    expect(find.byType(ElevatedButton), findsNWidgets(2));
   });
 
   testWidgets(
-      'approval_sentence grants yes and no at [2], as the default widget of '
-      'Approval does over the same view', (tester) async {
+      'befriend(A, Me): Accept grants yes and Decline grants no at [2], as '
+      'the default widget of Approval does over the same view', (tester) async {
     final s = _Screen(tester);
     const view =
         'approval(attempt(alice, 2, 2, befriend(alice, bob)), input([2]))';
     final def = _defaultApproval(_gsgClasses);
-    final (dYes, nYes) = await s.both(def, view, 'yes', 'yes');
+    final (dYes, nYes) = await s.both(def, view, 'yes', 'Accept');
     expect(dYes, 'input(1, [2], yes)');
     expect(nYes, dYes);
-    final (dNo, nNo) = await s.both(def, view, 'no', 'no');
+    final (dNo, nNo) = await s.both(def, view, 'no', 'Decline');
     expect(dNo, 'input(1, [2], no)');
     expect(nNo, dNo);
   });
 
   testWidgets(
-      'approval_sentence over joining a group: the group\'s name, a speech '
-      'act, under the sentence with its signer, and the same grants as the '
-      'default widget', (tester) async {
+      'join(A, Me, n): the sentence "Alice asks you to join the group '
+      'friends.", the group named by its name, and the buttons Join and '
+      'Decline, and nothing else', (tester) async {
     final s = _Screen(tester);
     const view = 'approval(attempt(alice, 5, 5, join(alice, bob, '
         'speech(utterance(friends), alice))), input([2]))';
     await s.draw(_named([..._gsgClasses, _gsnJoin]), view);
-    expect(find.text('alice asks to join you.'), findsOneWidget);
-    expect(find.text('friends'), findsOneWidget);
-    expect(find.text('by alice'), findsOneWidget);
-    expect(find.text('attempt 5, rank 5'), findsOneWidget);
+    expect(s.texts(),
+        ['Alice asks you to join the group friends.', 'Join', 'Decline']);
+    expect(find.byType(ElevatedButton), findsNWidgets(2));
+  });
+
+  testWidgets(
+      'join(A, Me, n): Join grants yes and Decline grants no at [2], as the '
+      'default widget of Approval does over the same view', (tester) async {
+    final s = _Screen(tester);
+    const view = 'approval(attempt(alice, 5, 5, join(alice, bob, '
+        'speech(utterance(friends), alice))), input([2]))';
     final def = _defaultApproval([..._gsgClasses, _gsnJoin]);
-    final (dYes, nYes) = await s.both(def, view, 'yes', 'yes');
+    final (dYes, nYes) = await s.both(def, view, 'yes', 'Join');
     expect(dYes, 'input(1, [2], yes)');
     expect(nYes, dYes);
-    final (dNo, nNo) = await s.both(def, view, 'no', 'no');
+    final (dNo, nNo) = await s.both(def, view, 'no', 'Decline');
+    expect(dNo, 'input(1, [2], no)');
     expect(nNo, dNo);
   });
 
   testWidgets(
-      'a speech act signed again: its text, by its first signer, via each '
-      'who signed it after; the person asked named you in it', (tester) async {
+      'a join initiated by the person it adds is not join(A, Me, n): a '
+      'sentence built from the class, its speech act under it, and Yes and '
+      'No', (tester) async {
+    final s = _Screen(tester);
+    const view = 'approval(attempt(bob, 6, 6, join(alice, bob, '
+        'speech(utterance(friends), alice))), input([2]))';
+    await s.draw(_named([..._gsgClasses, _gsnJoin]), view);
+    expect(s.texts(),
+        ['Bob asks to join you.', 'friends', 'by you', 'Yes', 'No']);
+  });
+
+  testWidgets(
+      'a class GAI\'s task does not word: a sentence built from it, each '
+      'speech act by its text, by its first signer, via each who signed it '
+      'after, the person asked named you, and Yes and No', (tester) async {
     final s = _Screen(tester);
     const view = 'approval(attempt(dan, 1, 1, message(dan, bob, '
         'speech(speech(speech(utterance(flood), dan), eve), bob))), '
         'input([2]))';
     await s.draw(_named([_gsnMessage]), view);
-    expect(find.text('dan asks to message you.'), findsOneWidget);
-    expect(find.text('flood'), findsOneWidget);
-    expect(find.text('by dan, via eve, via you'), findsOneWidget);
+    expect(s.texts(), [
+      'Dan asks to message you.',
+      'flood',
+      'by Dan, via Eve, via you',
+      'Yes',
+      'No',
+    ]);
     final (d, n) = await s.both(
-        _defaultApproval([_gsnMessage]), view, 'yes', 'yes');
+        _defaultApproval([_gsnMessage]), view, 'yes', 'Yes');
     expect(n, d);
   });
 
@@ -183,7 +213,7 @@ void main() {
     final s = _Screen(tester);
     await s.draw(_named(_gsgClasses),
         'approval(attempt(alf, 3, 1, befriend(alf, bob, alice)), input([2]))');
-    expect(find.text('alf asks to befriend bob, alice.'), findsOneWidget);
+    expect(find.text('Alf asks to befriend Bob, Alice.'), findsOneWidget);
     expect(find.textContaining('you'), findsNothing);
   });
 
@@ -193,7 +223,17 @@ void main() {
     final s = _Screen(tester);
     await s.draw(_named(_gsgClasses),
         'approval(attempt(bob, 4, 4, post_own(bob, alice)), input([2]))');
-    expect(find.text('bob asks to post own you.'), findsOneWidget);
+    expect(find.text('Bob asks to post own you.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'the question answered: the sentence and the label of the button '
+      'granting the answer, and no button', (tester) async {
+    final s = _Screen(tester);
+    await s.draw(_named(_gsgClasses),
+        'approval(attempt(alice, 2, 2, befriend(alice, bob)), no)');
+    expect(s.texts(), ['Alice asks to be your friend.', 'Decline']);
+    expect(find.byType(ElevatedButton), findsNothing);
   });
 
   testWidgets(

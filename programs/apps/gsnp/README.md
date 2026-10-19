@@ -58,13 +58,13 @@ As GSN's app's on two (`../gsn/README.md`, "On two smartphones"), on three isola
 
 ## The screens
 
-What each person sees, as the bridge draws it today: the approval question by `approval_sentence`, the widget the app's declaration in `self.vglp` names (vGLP, Section 6.2, Definition "Widget Declaration"), a sentence and the buttons Yes and No (`glp_multiagent/lib/ui_runtime/named_widgets.dart`), and the request question and the thread by the default widgets (Definition "Default Widget"), both of which vGLP is changing.  `screens/README.md` names each file.
+What each person sees, as the bridge draws it today: the approval question by `approval_sentence`, the widget the app's declaration in `self.vglp` names (vGLP, Section 6.2, Definition "Widget Declaration"), one sentence for the attempt's class and two buttons labelled for it (`glp_multiagent/lib/ui_runtime/named_widgets.dart`), and the request question and the thread by the default widgets (Definition "Default Widget"), both of which vGLP is changing.  `screens/README.md` names each file.
 
 The request question is a form headed `menu`, as on GSN's app.  Under `propose`, the field `Proposal` is a menu of eleven forms, one per schema that marks a role, `sign` and `forward` among them; `deliver` is not among them, nobody guarding it.  A `Speech` field is a form headed `speech`, drawn closed until the person opens it, with a field `Utterance`, a menu of `utterance`, a text field, and `speech`, a speech act signed again, and a peer field, `Peer`, the person who signs it.  To forward an item they hold, a person writes it whole into the form `forward`: the text, its author's signature, and the signature of each agent that forwarded it to them.
 
 1. **Signing an item** (GSNP:1).  Alice proposes `sign`, `alice`, and the speech act `utterance` `Flood on Main Street`, signed `alice`, a class of one participant, taken at once.
 2. **Forwarding it** (GSN:1 and GSNP:2).  Alice proposes `forward`, `alice`, `bob`, and the item.  Bob is not asked: his machine checks that Alice is his friend and votes.  His thread shows the attempt in `start` and `outcome`, and so shows him the item.
-3. **A friendship** (GSG:2).  Bob proposes `befriend`, `bob`, `carol`.  Carol's approval question shows "bob asks to befriend you.", with the buttons Yes and No; she taps Yes.
+3. **A friendship** (GSG:2).  Bob proposes `befriend`, `bob`, `carol`.  Carol's approval question shows "Bob asks to be your friend.", with the buttons Accept and Decline; she taps Accept.
 4. **Forwarding it again.**  Bob proposes `forward`, `bob`, `carol`, and the item he holds: the speech act `speech`, whose utterance is the speech act `utterance` `Flood on Main Street` signed `alice`, signed `alice`.  Carol is not asked.  Her thread shows the attempt in `start` and `outcome`, the item opened down to its text: signed by Alice, again by Alice, and forwarded by Bob.
 
 ## The types written again

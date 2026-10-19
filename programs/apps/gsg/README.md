@@ -84,7 +84,7 @@ Once Bob's acts are there, Alice installs the app as she installs any: on the Ap
 
 ## The screens
 
-What each person sees, step by step, as the bridge draws the constructs of the platform's two questions, and the thread: the approval question by `approval_sentence`, the widget the app's declaration in `self.vglp` names (vGLP, Section 6.2, Definition "Widget Declaration"), a sentence and the buttons Yes and No (`glp_multiagent/lib/ui_runtime/named_widgets.dart`), and the request question and the thread by the default widgets (Definition "Default Widget").
+What each person sees, step by step, as the bridge draws the constructs of the platform's two questions, and the thread: the approval question by `approval_sentence`, the widget the app's declaration in `self.vglp` names (vGLP, Section 6.2, Definition "Widget Declaration"), one sentence for the attempt's class and two buttons labelled for it (`glp_multiagent/lib/ui_runtime/named_widgets.dart`), and the request question and the thread by the default widgets (Definition "Default Widget").
 
 The super-app, first: Alice and Bob each install the app; Alice connects to Bob, Bob is asked on his super-app's card and consents, and they are friends in the super-app's social graph; Alice invites Bob to `gsg`, and the conversation between their two executions opens.
 
@@ -94,11 +94,11 @@ Then the app:
 2. **Bob's request question**, the same form.  He establishes his identity likewise, his thread showing `propose(attempt(bob, 1, 1, establish(bob)))`; then he chooses `known`, types `alice` and submits.
 3. **The threads.**  Each agent sends the other a hello on their conversation; once each has sent and received one, Alice's thread shows `discover(bob)` and Bob's `discover(alice)`.
 4. **Alice offers friendship.**  On her open request question she chooses `propose`, then `befriend`, and types her key, `alice`, and `bob`.  Her next request question shows `bob`.  Her thread shows `propose(attempt(alice, 2, 2, befriend(alice, bob)))`, her second attempt.
-5. **Bob is asked.**  His thread shows `start(attempt(alice, 2, 2, befriend(alice, bob)))`, and his approval question is drawn: "alice asks to befriend you.", the attempt's number and rank, `attempt 2, rank 2`, "Approve?", and two buttons, Yes and No, granting `yes` and `no`.  He taps Yes; the question is withdrawn, and his thread shows `answer(...)` and then `vote(...)`.
+5. **Bob is asked.**  His thread shows `start(attempt(alice, 2, 2, befriend(alice, bob)))`, and his approval question is drawn: "Alice asks to be your friend.", and two buttons, Accept and Decline, granting `yes` and `no`.  He taps Accept; the question is withdrawn, and his thread shows `answer(...)` and then `vote(...)`.
 6. **They are friends.**  Alice's thread shows `tally(...)` and `commit(...)`; Bob's shows `outcome(...)`.
 7. **Bob ends the friendship.**  On his request question he chooses `propose`, then `unfriend`, and types his key, `bob`, and `alice`.  His thread shows `propose(attempt(bob, 3, 3, unfriend(bob, alice)))`, `tally(...)` and `commit(...)`.  Alice is not asked: her thread shows `start(attempt(bob, 3, 3, unfriend(bob, alice)))` and `outcome(...)`.
 
-Had Bob tapped No in step 5, the else-branch of his answer is taken: his thread shows `answer(...)`, `vote(...)` and `outcome(...)`, his vote no, and Alice's shows `tally(...)` and no commit, the attempt aborted at both (vGLP's `play_refused`, `programs/vglp/cva/social_graph`, shows the same on GSN's platform).
+Had Bob tapped Decline in step 5, the else-branch of his answer is taken: his thread shows `answer(...)`, `vote(...)` and `outcome(...)`, his vote no, and Alice's shows `tally(...)` and no commit, the attempt aborted at both (vGLP's `play_refused`, `programs/vglp/cva/social_graph`, shows the same on GSN's platform).
 
 ## GSN's app
 
