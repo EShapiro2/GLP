@@ -15,11 +15,9 @@ const int announcePayloadLength = 98;
 class ProtocolHandler {
   final GrassrootsIdentity identity;
   final Sodium _sodium;
-  /// Version 3: the shared message transport (spec §Message Transport) —
-  /// UDX streams removed, session-encrypted fragments ride UDP datagrams
-  /// with per-fragment ACK; self-contained fragment format; self-ordering
-  /// handshake. Mixed versions are refused at ANNOUNCE.
   /// The protocol version carried in ANNOUNCE; a mismatch is refused there.
+  ///
+  /// 3 since 2026-07-12, for the Message Protocol (spec §Message Protocol): self-contained, session-encrypted fragments over UDP datagrams and GATT writes, acknowledged per fragment, and the self-ordering handshake.
   ///
   /// 4 since 2026-08-02, for the attestation exchange of §Session
   /// Establishment. It bumps rather than rides version 3 because it changes

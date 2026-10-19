@@ -97,8 +97,6 @@ Future<void> main(List<String> argv) async {
   } finally {
     await network.dispose();
   }
-  // The UDX layer can hold the event loop open after disposal; a one-shot
-  // CLI terminates explicitly.
   exit(exitCode);
 }
 

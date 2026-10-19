@@ -9,7 +9,7 @@ enum TransportType {
   /// WebRTC-based P2P transport (STUN/TURN/TURNS)
   webrtc,
 
-  /// UDP-based transport (grassroots_dart_udx)
+  /// UDP datagram transport, for the LAN and the WAN
   udp,
 }
 

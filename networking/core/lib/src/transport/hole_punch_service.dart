@@ -12,10 +12,7 @@ import '../platform/compat.dart';
 /// The magic bytes identify this as a Grassroots punch packet so receivers
 /// can distinguish it from the layer's packets and other UDP traffic.
 ///
-/// Punch packets serve one purpose: to create a NAT mapping. The receiver
-/// doesn't need to process them — the act of sending opens our NAT.
-/// But if the receiver's multiplexer hasn't started yet, it can read them
-/// to detect that the hole is open.
+/// Punch packets serve one purpose: to create a NAT mapping. The receiver doesn't need to process them — the act of sending opens our NAT. But if no [UdpTransportService] reads the receiver's socket yet, it can read them to detect that the hole is open.
 class PunchPacket {
   /// Magic bytes: "GRPU" (Grassroots Punch UDP)
   static const List<int> magic = [0x47, 0x52, 0x50, 0x55];
@@ -72,16 +69,14 @@ class PunchPacket {
 /// 2. Each outgoing packet creates an outbound NAT mapping on Alice's router.
 /// 3. Bob simultaneously sends punch packets to Alice's public ip:port.
 /// 4. Once both NATs have mappings, packets can flow in both directions.
-/// 5. After punching, a UDX connection can be established through the open path.
+/// 5. Once the path is open, the peers establish their Noise XX session over it.
 ///
 /// ## Two modes
 ///
 /// - [punch]: Fire-and-forget. Sends packets for a fixed duration. Simple but
 ///   requires both peers to punch simultaneously and hope for overlap.
 ///
-/// - [punchUntilResponse]: Sends packets and listens for incoming punch packets
-///   from the target. Returns true when a response is detected. More reliable
-///   but requires the multiplexer to NOT be running (so we can read raw packets).
+/// - [punchUntilResponse]: Sends packets and listens for incoming punch packets from the target. Returns true when a response is detected. More reliable but requires that no [UdpTransportService] reads the socket (so we can read raw packets).
 ///
 /// ## Design for extensibility
 ///
@@ -111,8 +106,7 @@ class HolePunchService {
 
   /// Send punch packets for a fixed duration.
   ///
-  /// This is the simple fire-and-forget mode. Use when the UDX multiplexer
-  /// is already running (so we can't read raw packets).
+  /// This is the simple fire-and-forget mode. Use when a [UdpTransportService] reads the socket (so we can't read raw packets).
   ///
   /// The caller should attempt [UdpTransportService.connectToPeer] after
   /// this completes.
@@ -141,9 +135,7 @@ class HolePunchService {
   /// Returns true if a punch packet was received from the target before timeout.
   /// Returns false if the timeout expired without a response.
   ///
-  /// **Important:** This mode requires the UDX multiplexer to NOT be running,
-  /// since the multiplexer takes over socket reads. Use [punch] instead if
-  /// the multiplexer is already active.
+  /// **Important:** This mode requires that no [UdpTransportService] reads the socket, since the service takes over socket reads. Use [punch] instead on a socket a [UdpTransportService] reads.
   Future<bool> punchUntilResponse(
     InternetAddress targetIp,
     int targetPort, {
