@@ -3456,7 +3456,7 @@ echo ""
 # no tick, vGLP efe7bbc; the agent taking its own transactions one at a time, one on each own trigger it reads, which it writes on a stream of its own merged fairly with its other triggers, when it starts, after each other trigger it reads unless one it wrote is still unread, and after each own transaction it takes, vGLP 6c8c663).  GSC's social graph
 # and currency (their owners', programs/gsc/GSG.glp and
 # programs/currencies/coins/GC.glp) and vGLP's nudge, introduce, gnudge, childsafe, link, friends, waves,
-# parts, opens, groups and counter (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
+# parts, opens, groups, counter and merges (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not effective, and those it
 # compiles whatever their guards; and the plays of each platform, two agents
 # or three with scripted persons paced on their screens, each run on the
@@ -3482,6 +3482,7 @@ check "CVA compiler: vGLP's parts, a class of two parts, compiled to the platfor
 check "CVA compiler: vGLP's opens, a class of two unguarded parts with different openers, compiled to the platform it prints" "opens/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's groups, close taking the listed role a[listed(*, n)], certified by GSC's check/2, compiled to the platform it prints (vGLP f5f1644)" "groups/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's counter, an unguarded count always open to its agent once begun, certified by GSC's check/2, compiled to the platform it prints (vGLP 6c8c663)" "counter/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's merges, merge taking two listed roles of one base, certified by GSC's check/2, compiled to the platform it prints (vGLP c649c0d)" "merges/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3516,6 +3517,7 @@ compile(headless, [], malformed([not_in_head(s, svar(x))])).
 compile(listed_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
 compile(wards_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_wards(enter, [m], [guardianship(m, i, g, w)], [relay(r, ward(1, m, 2), free(2))], [])).
 compile(listed_two, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(1, invited, [svar(n)]), unguarded, [], [atom(guest, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(listed_bases, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(friend, [role(2)])], []), rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(2, invited, [svar(n)]), unguarded, [], [atom(guest, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
 compile(seated_role, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(seated(ext(own(1), n), member), unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
 compile(name_term, [schema(cr, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(led, [svar(n)])], [], [], [atom(member, [nterm(ext(own(1), n))])])])], syntactically_grassroots_with_seated_and_listed_roles).
 compile(name_var, [schema(cr, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(nvar(z), n))]), atom(led, [svar(n)])], [], [], [])])], conditions_met).
@@ -3557,8 +3559,11 @@ check "CVA compiler: a contract malformed, a variable not in its schema's head (
 # The verdicts on an agent-named contract with community roles (programs/gsc/self.glp at GLP 96908b2d), of the compiler's Verdict type; its listed roles taken and its seated and constituent roles refused (vGLP f5f1644, Section 5.4, "Act schemas as local specifications"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 1).
 check "CVA compiler: the verdict syntactically_grassroots_with_seated_and_listed_roles, a schema of a listed role, compiled" "%% the canonical CVA platform of the contract(listed_named)" "$cva_refuse"
 check "CVA compiler: the verdict syntactically_grassroots_with_wards, a schema of a listed role, compiled" "%% the canonical CVA platform of the contract(wards_named)" "$cva_refuse"
-check "CVA compiler: a schema of two listed roles, refused" "%% it has a schema with more than one listed role, which this compiler does not take." "$cva_refuse"
-check "CVA compiler: ... not compiled" "%% not compiled(listed_two)" "$cva_refuse"
+# Several listed roles of one base (vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles", and "the listed roles of a schema have one base"; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC: "refuse as not effective a schema whose listed roles have different bases").
+check "CVA compiler: a schema of two listed roles of one base, its only guarding role, compiled" "%% the canonical CVA platform of the contract(listed_two)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(listed_two)\|more than one listed role" "$cva_refuse"
+check "CVA compiler: a schema whose two listed roles have different bases, refused as not effective" "%% listed roles have different bases:" "$cva_refuse"
+check "CVA compiler: ... not compiled" "%% not compiled(listed_bases)" "$cva_refuse"
 check "CVA compiler: a seated role, refused" "%% it has seated or constituent roles, which vGLP Section 5.4 does not take: it takes listed roles (vGLP f5f1644)." "$cva_refuse"
 check "CVA compiler: ... not compiled" "%% not compiled(seated_role)" "$cva_refuse"
 # "a name term <u>.y_1...y_n is the community name of the person bound to u followed by the speech acts bound to y_1, ..., y_n" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications"); a name variable, which a seated role would need, stays out with seated roles (vGLP #15 Cowork to Code, 2026-10-19 14:49 UTC).
@@ -4152,7 +4157,7 @@ check_not "CVA opens: no person answers for the unguarded parts" "gave(attempt([
 cva_groups_text=$(cat "$CVA/groups/platform.vglp")
 check "CVA groups: the class term of close carries the list of the people of its listed role" "^close(Peer, List(Peer), Speech)$" "$cva_groups_text"
 check "CVA groups: ... its request name, the schema-binding, its head with no extent, does not" "^befriend(Peer, Peer) create(Peer, Speech) join(Peer, Peer, Speech) close(Peer, Speech) $" "$(cva_proposal "$CVA/groups/platform.vglp")"
-check "CVA groups: the binding of a class term of close, its listed role's place and a role for each of its people (listed_binding)" "^listed_binding(close, \[b(role(1), p(V1?)), b(svar(n), s(V3?))\], V2?, B)$" "$cva_groups_text"
+check "CVA groups: the binding of a class term of close, its listed role's place and a role for each of its people (listed_binding)" "^listed_binding(close, \[b(role(1), p(V1?)), b(svar(n), s(V3?))\], \[V2?\], B)$" "$cva_groups_text"
 check "CVA groups: the request name completed with the people the agent lists (listed_class)" "^listed_class(close, \[b(role(1), p(V1?)), b(svar(n), s(V3?))\], St?, C)$" "$cva_groups_text"
 check "CVA groups: the base person lists exactly the people of the listed role" "^    listing_ok(Nm?, Bn?, Id?, S?, B2),$" "$cva_groups_text"
 cva_groups_load=$("$REPL_RUN" <<HEREDOC
@@ -4176,6 +4181,35 @@ check "CVA groups: bob's membership ended in the one act" "B = \[.*view(\[member
 check "CVA groups: ... and carol's" "C = \[.*view(\[member(alice, speech(utterance(friends), alice)), friend(alice)\], \[alice\]), view(\[friend(alice)\], \[alice\]) |" "$cva_groups"
 check_not "CVA groups: bob's request to close alice's group, his agent listing no one, is dropped: no attempt of his" "attempt(bob, " "$cva_groups"
 check_not "CVA groups: no person asked for close" "gave(attempt([a-z]*, [0-9]*, [0-9]*, close\|gave(close" "$cva_groups"
+
+# Several listed roles of one base (vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles ... for p the person in the base of a listed role, p lists in d_p exactly the people of that role in L", and "the listed roles of a schema have one base"; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC: "the base agent filling in each from its own listed atoms; the part's term carries the people of each, in the order of the roles").  vGLP's contract merges (programs/vglp/cva/contracts.glp): merge(a?, a[listed(*, n1)], a[listed(*, n2)] ; n1, n2).
+cva_merges_text=$(cat "$CVA/merges/platform.vglp")
+check "CVA merges: the class term of merge carries the people of each listed role, in the order of the roles" "^merge(Peer, List(Peer), List(Peer), Speech, Speech)$" "$cva_merges_text"
+check "CVA merges: ... its request name, the schema-binding, does not" "^befriend(Peer, Peer) create(Peer, Speech) join(Peer, Peer, Speech) merge(Peer, Speech, Speech) $" "$(cva_proposal "$CVA/merges/platform.vglp")"
+check "CVA merges: the binding of a class term of merge, from the lists of the people of its two listed roles (listed_binding)" "^listed_binding(merge, \[b(role(1), p(V1?)), b(svar(n1), s(V4?)), b(svar(n2), s(V5?))\], \[V2?, V3?\], B)$" "$cva_merges_text"
+check "CVA merges: ... and the people of each listed role from a schema-binding, the first's (copies_of)" "^copies_of(B?, 2, V2)$" "$cva_merges_text"
+check "CVA merges: ... and the second's" "^copies_of(B?, 3, V3)$" "$cva_merges_text"
+check "CVA merges: the request name completed with the people the agent lists in each (listed_class)" "^listed_class(merge, \[b(role(1), p(V1?)), b(svar(n1), s(V4?)), b(svar(n2), s(V5?))\], St?, C)$" "$cva_merges_text"
+cva_merges_load=$("$REPL_RUN" <<HEREDOC
+$CVA/merges/
+:quit
+HEREDOC
+2>&1)
+check "CVA merges: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/merges" "$cva_merges_load"
+check_not "CVA merges: no type errors" "Type checking failed" "$cva_merges_load"
+cva_merges=$("$REPL_RUN" <<HEREDOC
+$CVA/merges/
+:limit 3000000
+play_merges(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA merges: alice requests merge(alice, n1, n2), and her agent proposes merge(alice, [bob], [carol], n1, n2), the people she lists in each, its start told to bob and carol" "sent(alice, bob, start(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))))), sent(alice, carol, start(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice)))))" "$cva_merges"
+check "CVA merges: ... bob's and carol's machines vote yes, unasked, and it commits at both" "sent(bob, alice, vote(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))), yes)), sent(carol, alice, vote(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))), yes)), sent(alice, bob, outcome(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))), commit)), sent(alice, carol, outcome(attempt(alice, 7, 7, merge(alice, \[bob\], \[carol\], speech(utterance(one), alice), speech(utterance(two), alice))), commit))" "$cva_merges"
+check "CVA merges: alice's screen: the merger recorded, n2 led no more" "A = \[.*view(\[merged(speech(utterance(two), alice), speech(utterance(one), alice)), listed(carol, speech(utterance(two), alice)), listed(bob, speech(utterance(one), alice)), leads(speech(utterance(one), alice)), friend(carol), friend(bob)\], \[bob, carol\]) |" "$cva_merges"
+check "CVA merges: bob, a member of n1, records the merger" "B = \[.*view(\[member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]), view(\[merged(speech(utterance(two), alice), speech(utterance(one), alice)), member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]) |" "$cva_merges"
+check "CVA merges: carol, a member of n2, becomes a member of n1 in the one act" "C = \[.*view(\[member(alice, speech(utterance(two), alice)), friend(alice)\], \[alice\]), view(\[member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]) |" "$cva_merges"
+check_not "CVA merges: no person asked for merge" "gave(attempt([a-z]*, [0-9]*, [0-9]*, merge\|gave(merge" "$cva_merges"
 
 # Own triggers through the fair merge (vGLP 6c8c663, Section 5.4, "The compilation": "The agent goal takes its own transactions one at a time, one on each own trigger it reads.  It writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions and writes none once none holds"; the agent goal reads "the fair merge (Example ex:merge) of the answers to its request questions, the messages arriving on the network, the answers to its approval questions and its own triggers"; vGLP #15 Cowork to Code, 2026-10-19 14:20 UTC, Blocking: yes).  The agent writes own on a stream of its own, merged with the rest of its input, and not on the list of the triggers it puts up itself, which holds the recheck alone.
 for c in social_graph counter; do
