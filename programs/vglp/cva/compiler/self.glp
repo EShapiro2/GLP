@@ -28,28 +28,33 @@ Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+%% listed(I, Rho, Args) is the listed role pi_I[rho(*, u_2, ..., u_r)] of the agent role pi_I, its base, Args its arguments u_2, ..., u_r (GSC 8064cfb, Appendix D, Definition "Role"; programs/gsc/self.glp at GLP 96908b2d).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+            ; listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
-Schema    ::= schema(Constant, RoleSpecs) ; cschema(Constant, Reaches, RoleSpecs).
+%% A schema's second argument is its variables, pvar(X) and svar(Y), in the order of its head, tau(pi_1, ..., pi_k ; x_1, ..., x_m) (GSC 0228e79, Definition "Act schema"; programs/gsc/README.md, "Writing a contract"; Udi, 2026-10-19, to GSC #4).
+Schema    ::= schema(Constant, Args, RoleSpecs)
+            ; cschema(Constant, Args, Reaches, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
 %% Its checker's verdict, as programs/gsc/self.glp writes it (GSC, Section 3,
-%% Definition "Syntactically grassroots"; Appendix F, Definition "Introduction
-%% with wards").
-Cause     ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive.
-%% What GSC's Definition "Act schema" requires of a signed term, and the atom
-%% carrying one violates: it occurs in an atom not marked + (not_added), its
-%% role is not a guarding role (not_guarding), its speech-act variable occurs
-%% in no atom a role requires (not_required); or the contract has community
-%% roles, whose schemas admit no signed term (community).
-SgnCause  ::= not_added ; not_guarding ; not_required ; community.
-%% What GSC's Definition "Act schema" requires of the form of a schema, and a schema formed otherwise violates, in a verdict malformed(Faults): an atom both added and deleted at a role (added_and_deleted), a role that is not guarding and adds and deletes nothing (changes_nothing), and no role adding or deleting an atom (no_role_changes), as programs/gsc/self.glp writes them.
+%% Definition "Syntactically grassroots"; Appendix D.4, Definition
+%% "Syntactically grassroots, agent-named"; Appendix F, Definitions
+%% "Introduction with wards" and "Syntactically grassroots with wards").
+%% seated(Schema, Role, Atom) and listed_role(Schema, Role, Atom) are clause 2
+%% of the agent-named definition: the seated or listed role adds an atom of a
+%% predicate the introductory act forbids.
+Cause     ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
+            ; seated(Constant, Integer, Atom) ; listed_role(Constant, Integer, Atom).
+%% What GSC's Definition "Act schema", and Appendix D's, require of a signed term, and the atom carrying one violates: it occurs in an atom not marked + (not_added), its speech-act variable occurs in no atom its role requires (not_required), or its role is not an agent role (not_agent_role).
+SgnCause  ::= not_added ; not_required ; not_agent_role.
+%% What GSC's Definition "Act schema" requires of the form of a schema, and a schema formed otherwise violates, in a verdict malformed(Faults): an atom both added and deleted at a role (added_and_deleted), a role that is not guarding and adds and deletes nothing (changes_nothing), no role adding or deleting an atom (no_role_changes), an entry of the head that is not a variable (head_not_variable), an entry listed twice (head_repeated), and a variable of the schema not in its head (not_in_head), and, of a listed role, a base that is not an agent role (listed_base) or a signed term among its arguments (listed_signed), as programs/gsc/self.glp writes them.
 Fault     ::= no_introductory_act
             ; obstructed(Constant, Integer, Atom, Cause)
             ; untraceable(Preds)
@@ -59,9 +64,14 @@ Fault     ::= no_introductory_act
             ; signed(Constant, Integer, Atom, SgnCause)
             ; added_and_deleted(Constant, Integer, Atom)
             ; changes_nothing(Constant, Integer)
-            ; no_role_changes(Constant).
+            ; no_role_changes(Constant)
+            ; head_not_variable(Constant, Arg)
+            ; head_repeated(Constant, Arg)
+            ; not_in_head(Constant, Arg)
+            ; listed_base(Constant, Integer)
+            ; listed_signed(Constant, Integer).
 Faults    ::= [] ; [Fault | Faults].
-%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).
+%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_seated_and_listed_roles and syntactically_grassroots_with_wards, of the same arguments, are the verdicts on an agent-named contract with community roles (GSC 8064cfb, Appendix D.4, Theorem "Grassroots realisation with seated and listed roles", and Appendix F; programs/gsc/self.glp at GLP 96908b2d).
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Party     ::= ward(Integer, Constant, Integer) ; free(Integer).
@@ -69,6 +79,8 @@ Parties   ::= [] ; [Party | Parties].
 Relay     ::= relay(Constant, Party, Party).
 Relays    ::= [] ; [Relay | Relays].
 Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
+            ; syntactically_grassroots_with_seated_and_listed_roles
+            ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
             ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
             ; conditions_met ; conditions_failed(Faults) ; malformed(Faults).
 
@@ -102,62 +114,36 @@ rs_guarded(crs(_, guarded, _, _, _, _), yes).
 rs_guarded(crs(_, guarded_at(_), _, _, _, _), yes).
 rs_guarded(crs(_, unguarded, _, _, _, _), no).
 
-%% The variables of a schema in the order programs/gsc gives them
-%% (self.glp, schema_vars): its roles, then its party variables and then its
-%% speech-act variables, each in order of first occurrence, the atoms of each
-%% role read as +(i), -(i), =(i), not(i).
-procedure schema_vars(RoleSpecs?, Args).
-schema_vars(Rs, Vs?) :- ground(Rs?) |
+%% The variables of a schema in the order of its head, tau(pi_1, ..., pi_k ; x_1, ..., x_m): its roles, role(1) to role(K), then the variables its head lists, Hd, in that order (GSC 0228e79, Definition "Act schema"; vGLP #15 Cowork to Code, 2026-10-19 13:34 UTC, item 2: the compiler takes the order of a class's arguments "from the schema's head as GSC's term form gives it").  GSC's checker refuses a schema whose head is not its variables, malformed(Faults), and the compiler compiles no contract so refused.
+procedure schema_vars(RoleSpecs?, Args?, Args).
+schema_vars(Rs, Hd, Vs?) :- ground(Rs?), ground(Hd?) |
     rs_count(Rs?, K),
     role_args(1, K?, Ro),
-    rs_args(Rs?, As),
-    schema_vars1(Ro?, As?, Vs).
-procedure schema_vars1(Args?, Args?, Args).
-schema_vars1(Ro, As, Vs?) :- ground(As?) |
-    pvars_of(As?, Pv0),
-    dedup(Pv0?, Pv),
-    svars_of(As?, Sv0),
-    dedup(Sv0?, Sv),
-    app(Pv?, Sv?, PS),
-    app(Ro?, PS?, Vs).
+    app(Ro?, Hd?, Vs).
 procedure rs_count(RoleSpecs?, Integer).
 rs_count([], 0).
 rs_count([_|Rs], N?) :- rs_count(Rs?, M), N := M? + 1.
 procedure role_args(Integer?, Integer?, Args).
 role_args(I, K, []) :- I? > K? | true.
 role_args(I, K, [role(I?)|R?]) :- I? =< K? | I1 := I? + 1, role_args(I1?, K?, R).
-procedure rs_args(RoleSpecs?, Args).
-rs_args([], []).
-rs_args([R|Rs], As?) :- ground(R?) |
-    rs_lists(R?, P, M, K, N),
-    atoms_args(P?, A1),
-    atoms_args(M?, A2),
-    atoms_args(K?, A3),
-    atoms_args(N?, A4),
-    rs_args(Rs?, A5),
-    app(A4?, A5?, A45),
-    app(A3?, A45?, A35),
-    app(A2?, A35?, A25),
-    app(A1?, A25?, As).
 procedure atoms_args(Atoms?, Args).
 atoms_args([], []).
 atoms_args([atom(_, As)|Xs], R?) :- atoms_args(Xs?, R1), app(As?, R1?, R).
-procedure pvars_of(Args?, Args).
-pvars_of([], []).
-pvars_of([pvar(X)|As], [pvar(X?)|R?]) :- pvars_of(As?, R).
-pvars_of([role(_)|As], R?) :- pvars_of(As?, R).
-pvars_of([svar(_)|As], R?) :- pvars_of(As?, R).
-pvars_of([nterm(_)|As], R?) :- pvars_of(As?, R).
-pvars_of([sgn(_, _)|As], R?) :- pvars_of(As?, R).
-%% A signed term's speech-act variable occurs in an atom some role requires
-%% (GSC, Definition "Act schema"), where it is collected.
-procedure svars_of(Args?, Args).
-svars_of([], []).
-svars_of([svar(X)|As], [svar(X?)|R?]) :- svars_of(As?, R).
-svars_of([role(_)|As], R?) :- svars_of(As?, R).
-svars_of([pvar(_)|As], R?) :- svars_of(As?, R).
-svars_of([nterm(_)|As], R?) :- svars_of(As?, R).
-svars_of([sgn(_, _)|As], R?) :- svars_of(As?, R).
+
+%% A schema's listed role (GSC 8064cfb, Appendix D, Definition "Role"; vGLP f5f1644, Section 5.4, "Act schemas as local specifications"): its index, from 1, and 0 where it has none (listed_at); its base, the index of its agent role, its predicate rho and its arguments u_2, ..., u_r (listed_parts); and the arguments of a role that are no arguments of its atoms, a listed role's (kind_args).  The compiler takes a schema of one listed role at most (cvac.glp, role_lines).
+procedure listed_at(RoleSpecs?, Integer?, Integer).
+listed_at([], _, 0).
+listed_at([crs(listed(_, _, _), _, _, _, _, _)|_], I, I?).
+listed_at([_|Rs], I, J?) :- otherwise, integer(I?) | I1 := I? + 1, listed_at(Rs?, I1?, J).
+procedure listed_parts(RoleSpecs?, Integer, Constant, Args).
+listed_parts([], 0, none, []).
+listed_parts([crs(listed(B, Rho, As), _, _, _, _, _)|_], B?, Rho?, As?).
+listed_parts([_|Rs], B?, Rho?, As?) :- otherwise | listed_parts(Rs?, B, Rho, As).
+procedure kind_args(RoleSpec?, Args).
+kind_args(rs(_, _, _, _, _), []).
+kind_args(crs(listed(_, _, As), _, _, _, _, _), As?).
+kind_args(crs(seated(_, _), _, _, _, _, _), []).
+kind_args(crs(constituent(_, _), _, _, _, _, _), []).
 
 procedure and(YesNo?, YesNo?, YesNo).
 and(yes, B, B?).

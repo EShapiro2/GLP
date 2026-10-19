@@ -19,7 +19,7 @@
 %% alice's attempt has priority, its rank the smaller, so dave's machine
 %% wounds bob's: it sends bob yield, and bob, not every yes recorded, aborts
 %% his attempt, wounded.  dave's lock released, alice's start is taken, and
-%% her attempt commits.  bob, seeing nothing of his abort on his screen, requests his link again on each request question until his screen shows it (../self.glp, again(R, C)): the request proposed after the abort is his retried attempt, keeping the rank of the wounded one, and it commits once alice's has; one he made before he saw the commit, read after it, is proposed and commits too.
+%% her attempt commits.  bob's agent, yielding, writes the notice yielded(link(bob, carol, dave)) (vGLP c44769f, Section 5.4, "The compilation"); bob, seeing it on his screen, requests his link again: his retried attempt, keeping the rank of the wounded one, and it commits once alice's has.
 %%
 %% The network holds three starts, each until a message is delivered: alice's
 %% start to carol until carol's befriending of bob commits, so that carol is
@@ -41,7 +41,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; linked(Peer, Peer) ; via(Peer, Peer).
-Output   ::= view(List(Atom), List(Key)).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -68,7 +68,8 @@ play_deadlock(LA?, LB?, LC?, LD?, N?) :-
              wait(holds(friend(carol))),
              wait(holds(friend(dave))),
              own([B1], propose(link(B1?, carol, dave))),
-             again(propose(link(bob, carol, dave)), holds(linked(carol, dave)))],
+             wait(yielded(link(bob, carol, dave))),
+             own([B2], propose(link(B2?, carol, dave)))],
             [req(known(alice)), req(known(bob)), wait(known(alice)),
              own([C1], propose(befriend(C1?, alice))),
              wait(holds(friend(alice))),

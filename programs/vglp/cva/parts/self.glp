@@ -3,7 +3,7 @@
 %%
 %% tap(alice, bob) and pat(alice, bob) are one class of two parts, pat's requiring a coin at alice and at bob (vGLP c0bea08, Definition "Local Specification, Part, Opener"; Section 5.4, "Act schemas as local specifications").  "The request propose([t]_j) names the class by a part, and the agent proposes, among the parts of [t] it is ready for, the one it has proposed least recently, keeping the parts it has proposed in the order it last proposed them" (Section 5.4, "The compilation"); an attempt names its part, and each participant checks its precondition in that part (Definition "Proposing", Start).
 %%
-%% play_parts: alice and bob come to know each other and befriend, attempt 1.  alice, holding no coin, requests pat(alice, bob): she is ready for tap's part alone, and proposes it, attempt 2, which commits.  She mints a coin, attempt 3, a class of one participant applied at its Propose.  She requests tap(alice, bob): ready for both parts, she proposes pat's, which she has not proposed, attempt 4; bob, holding no coin, is outside the domain of his effect in pat's part, though inside it in tap's, and his machine votes no, unasked, and the attempt aborts.  Seeing nothing of the abort on her screen, she requests tap(alice, bob) again on each request question until her screen shows two taps (../self.glp, again(R, C)), and proposes tap's part, proposed less recently than pat's, attempt 5, which commits; and she requests pat(alice, bob) and proposes pat's part, now the less recent, attempt 6, which aborts as attempt 4 did.
+%% play_parts: alice and bob come to know each other and befriend, attempt 1.  alice, holding no coin, requests pat(alice, bob): she is ready for tap's part alone, and proposes it, attempt 2, which commits.  She mints a coin, attempt 3, a class of one participant applied at its Propose.  She requests tap(alice, bob): ready for both parts, she proposes pat's, which she has not proposed, attempt 4; bob, holding no coin, is outside the domain of his effect in pat's part, though inside it in tap's, and his machine votes no, unasked, and the attempt aborts.  Her agent, tallying his no, writes the notice refused(pat(alice, bob), bob), the attempt naming its part (vGLP c44769f, Section 5.4, "The compilation"); seeing it on her screen, she requests tap(alice, bob) again and proposes tap's part, proposed less recently than pat's, attempt 5, which commits; and, once her screen shows two taps, she requests pat(alice, bob) and proposes pat's part, now the less recent, attempt 6, which aborts as attempt 4 did, its notice written again.
 %%
 %% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
@@ -19,7 +19,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; coin ; tapped(Peer) ; tapped_by(Peer).
-Output   ::= view(List(Atom), List(Key)).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -41,7 +41,9 @@ play_parts(LA?, LB?, N?) :-
           own([A3], propose(mint(A3?))),
           wait(holds(coin)),
           own([A4], propose(tap(A4?, bob))),
-          again(propose(tap(alice, bob)), has(tapped(bob), 2)),
+          wait(refused(pat(alice, bob), bob)),
+          own([A5], propose(tap(A5?, bob))),
+          wait(has(tapped(bob), 2)),
           own([A6], propose(pat(A6?, bob)))],
          [req(known(alice)), wait(known(alice)),
           approval(befriend(alice, bob), yes)],

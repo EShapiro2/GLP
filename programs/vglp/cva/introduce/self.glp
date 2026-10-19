@@ -15,7 +15,7 @@
 %%   and aborts, and tells the outcome to both; carol's question is no longer
 %%   pending once her Outcome closes the attempt, so her approval question is closed by the
 %%   program (vGLP, Section 5.4, "The compilation"), and
-%%   the yes she gives it, once she is asked on the next attempt, reaches no goal.  alice, seeing nothing of the abort on her screen, requests the introduction again on each request question until her screen shows bob and carol introduced (../self.glp, again(R, C)): those read while her attempt holds her lock are dropped, the next is proposed, attempt 4, both answer yes, and it commits at all three; one she made before she saw the commit, read after it, is proposed, attempt 5, and the machines of bob and carol, friends by then, vote no.
+%%   the yes she gives it, once she is asked on the next attempt, reaches no goal.  alice's agent, tallying bob's no, writes the notice refused(introduce(alice, bob, carol), bob) (vGLP c44769f, Section 5.4, "The compilation"); alice, seeing it on her screen, requests the introduction again, attempt 4, both answer yes, and it commits at all three.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -32,7 +32,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; introduced(Peer, Peer).
-Output   ::= view(List(Atom), List(Key)).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -54,7 +54,8 @@ play_introduce(LA?, LB?, LC?, N?) :-
           own([A2], propose(befriend(A2?, carol))),
           wait(holds(friend(carol))),
           own([A3], propose(introduce(A3?, bob, carol))),
-          again(propose(introduce(alice, bob, carol)), holds(introduced(bob, carol)))],
+          wait(refused(introduce(alice, bob, carol), bob)),
+          own([A4], propose(introduce(A4?, bob, carol)))],
          [req(known(alice)), wait(known(alice)),
           approval(befriend(alice, bob), yes),
           approval(attempt(alice, 3, 3, introduce(alice, bob, carol)), no),
