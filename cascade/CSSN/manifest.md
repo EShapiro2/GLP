@@ -2,8 +2,8 @@
 
 - Contract: `CSSN` (`cssn` to the checker), its owner's two files `programs/cssn/CSSN.md` and `programs/cssn/CSSN.glp`, copied here as they stood.
 - The paper: `git@github.com:EShapiro2/SGLP.git` at `bc2d14f2`, for the paper's own record.
-- The tools: this repository at `b91f6b58` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-10-19 18:01 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `ee48dff2` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-10-19 20:29 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
