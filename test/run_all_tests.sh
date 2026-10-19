@@ -150,6 +150,23 @@ KNOWN_RED_CHECKS=(
     "SG child-safe platform on two smartphones: bob is connected to alice"
     "SG child-safe platform on two smartphones: alice's message reaches bob"
     "SG two mini-apps at once: no failed play"
+# The super-app's checks of CSSN's hand-written program, programs/cssn as it
+# stood (its artefact refused a certificate, given as text) and its childsafe/
+# (its artefact certified; the two mini-apps at once and on two smartphones),
+# which CSSN's compiled platform replaced and deleted (CSSN #5, Code_inbox
+# 2026-10-18 21:52 UTC).  GSG's to port; GSG is dormant (Udi, 2026-10-19:
+# "mark GSG's checks of CSSN's deleted hand-written program known red, owner
+# GSG, as for the dormant Currencies and GFWC").  Each entry comes off with
+# GSG's port.
+    "SG super-app: cssn's artefact is refused a certificate"
+    "SG super-app: load_file gives cssn's artefact as text"
+    "SG super-app: the super-app installs no text"
+    "SG super-app: the child-safe platform's artefact is certified"
+    "SG two mini-apps at once: alice's swap settles"
+    "SG two mini-apps at once: bob's swap settles"
+    "SG two mini-apps on two smartphones: the currency's conversation opens"
+    "SG two mini-apps on two smartphones: alice's swap settles"
+    "SG two mini-apps on two smartphones: bob's swap settles"
 # Currencies' programs/currencies/coins/GC.glp and GFWC's programs/federation/GFWC.glp
 # are in GSC's old term form, schema(Name, Roles), which the checker no longer
 # reads (GSC 0228e79: schema(Name, Vars, Roles)); both owners are dormant (Udi,
