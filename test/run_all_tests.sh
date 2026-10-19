@@ -2457,6 +2457,9 @@ check "CSSN contract: syntactically grassroots with wards, befriend the act, chi
 check_not "CSSN contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
 check_not "CSSN contract: it satisfies volition" "volition(" "$k_contract"
 check_not "CSSN contract: it is not malformed" "malformed(" "$k_contract"
+# The canonical CVA platform of the contract (vGLP a890465, Section 5.4, "Act schemas as local specifications": "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role"): child_close(r, p?, r[listed(*, n)] ; n), its listed role based at r, its first role, which does not guard, compiles, r the opener of the part p guards (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, items 1 and 5).
+check "CSSN contract: compiled to its canonical CVA platform, child_close's listed role based at its first role, the child, not a guarding role" "platform.vglp: [0-9]* lines" "$k_contract"
+check_not "CSSN contract: ... and not refused" "compiler: not compiled\|compiler: printed no module" "$k_contract"
 
 # One play: its log, tagged(Party, M), M a screen message or did(Step).
 k_play() {
@@ -3523,6 +3526,7 @@ CVA="$GLP_DIR/programs/vglp/cva"
 # Guarded: set -e would end the run without totals on a red compile.sh.
 cva_print=$(bash "$CVA/compile.sh" --check 2>&1 || true)
 check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: the social network's platform, GSC's GSN, close taking the listed role a[listed(*, n)], is what the compiler prints" "social_network/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: the currency's platform, each part guarded by the people its schema-binding marks, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's nudge, certified by GSC's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's introduce, certified by GSC's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
@@ -3576,6 +3580,8 @@ compile(name_term, [schema(cr, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(
 compile(name_var, [schema(cr, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(nvar(z), n))]), atom(led, [svar(n)])], [], [], [])])], conditions_met).
 compile(reached, [cschema(cl, [svar(n)], [reach(own(1), friend, own(2))], [rs(guarded, [atom(closed, [svar(n)])], [], [], []), rs(unguarded, [atom(seen, [svar(n)])], [], [], [])])], conditions_met).
 compile(listed_guard, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(listed_guard_second, [schema(cl, [svar(n)], [rs(guarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(listed_two_guards, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
 compile(listed_second, [schema(cl, [svar(n)], [rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
 compile(order, [schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(member, [role(2), svar(n)])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(2), svar(n)])], [atom(posted, [svar(x), svar(n)])])])], syntactically_grassroots).
 :quit
@@ -3626,10 +3632,19 @@ check "CVA compiler: a name term built on a name variable, refused" "%% it has n
 check "CVA compiler: ... not compiled" "%% not compiled(name_var)" "$cva_refuse"
 check_not "CVA compiler: no contract refused for a name term built on a role" "it has name terms" "$cva_refuse"
 check "CVA compiler: reach conditions, refused" "%% it has reach conditions, which vGLP Section 5.4 does not take." "$cva_refuse"
-# "a schema with a listed role has the base of that role as its only guarding role or, if it has none, as its first role" (vGLP f5f1644, Section 5.4, "Act schemas as local specifications"; vGLP #15, item 3), as CSSN's child_close, guarded by the parent and listing at the child, does not.
-check "CVA compiler: a schema with a listed role guarded by a role other than its base, refused as not effective" "%% listed role whose base is not its only guarding role, or, with no guarding role, its first role:" "$cva_refuse"
-check "CVA compiler: ... not compiled" "%% not compiled(listed_guard)" "$cva_refuse"
-check "CVA compiler: an unguarded schema with a listed role whose base is not its first role, refused as not effective" "%% not compiled(listed_second)" "$cva_refuse"
+# "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role" (vGLP a890465, Section 5.4, "Act schemas as local specifications"; vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, item 1: "child_close(r, p?, r[listed(*, n)] ; n) is such a schema: r opens it, p guards it"): listed_guard is child_close's form, its base the first role and not guarding, guarded by the second, and is compiled; a base that is not guarding and not the first role, guarded or not, and a base that guards with another guarding role, are refused.
+check "CVA compiler: a schema whose listed role's base is its first role and not a guarding role, guarded by another role, as CSSN's child_close, compiled (listed_guard)" "%% the canonical CVA platform of the contract(listed_guard)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(listed_guard)" "$cva_refuse"
+check "CVA compiler: a schema whose listed role's base is neither its only guarding role nor its first role, refused as not effective" "%% listed role whose base is neither its only guarding role nor, not a guarding role, its first role:" "$cva_refuse"
+check "CVA compiler: ... guarded by its first role, not compiled (listed_guard_second)" "%% not compiled(listed_guard_second)" "$cva_refuse"
+check "CVA compiler: ... unguarded, not compiled (listed_second)" "%% not compiled(listed_second)" "$cva_refuse"
+check "CVA compiler: a schema whose listed role's base guards with another guarding role, not compiled (listed_two_guards)" "%% not compiled(listed_two_guards)" "$cva_refuse"
+# "The opener of an unguarded part is the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it, and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part" (vGLP a890465, Section 5.4, "Act schemas as local specifications"), and "A part with an opener is proposed by its opener, and a guarded part with none by one of its guards" (Section 3.2, "The protocol"): the shared text gives such a part its opener, and a guard proposes only a guarded part with no opener.
+cva_groups_text=$(cat "$CVA/groups/platform.vglp" 2>&1 || true)
+check "CVA openers: a guarded part opened by the person in the first role of its schema-bindings of a schema whose listed roles' base does not guard, not a guard of the part" "^    part_gfirsts(All?, mate(N?, B?, G?, F?), Q?, G?, Fo),$" "$cva_groups_text"
+check "CVA openers: ... the schema's base its first role, read off the schema" "^opens_guarded1(lschema(_, _, Rs, \[listing(_, Bi, _, _)|_\]), B?) :- ground(Rs?), integer(Bi?) |$" "$cva_groups_text"
+check "CVA openers: a guard proposes only a guarded part with no opener" "^    no_opener(Op?, B2),$" "$cva_groups_text"
+check "CVA openers: ... and an opener proposes as its own transaction only an unguarded part" "^opening_parts(\[pt(T, G, Op)|Ps\], Id, R?) :- ground(Id?) |$" "$cva_groups_text"
 # A class's arguments are its schema's roles and then its variables in the order of its head (GSC 0228e79, Definition "Act schema"; vGLP #15 Cowork to Code, 2026-10-19 13:34 UTC, item 2): post(p?, a ; x, n), whose first atom names n before x, is post(p, a, x, n).
 check "CVA compiler: a class's arguments in the order of the head, post(p?, a ; x, n) as post(V1, V2, V3, V4), x the third" "^binding_of(post(V1, V2, V3, V4), post, \[b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?)), b(svar(n), s(V4?))\])$" "$cva_refuse"
 check "CVA compiler: requirements differing at one participant only, compiled" "%% the canonical CVA platform of the contract(one_req)" "$cva_refuse"
@@ -4265,6 +4280,43 @@ check "CVA merges: bob, a member of n1, records the merger" "B = \[.*view(\[memb
 check "CVA merges: carol, a member of n2, becomes a member of n1 in the one act" "C = \[.*view(\[member(alice, speech(utterance(two), alice)), friend(alice)\], \[alice\]), view(\[member(alice, speech(utterance(one), alice)), friend(alice)\], \[alice\]) |" "$cva_merges"
 check_not "CVA merges: no person asked for merge" "gave(attempt([a-z]*, [0-9]*, [0-9]*, merge\|gave(merge" "$cva_merges"
 
+# GSC's social network, GSN (programs/gsc/GSN.glp, the checker's gsn), compiled and run with scripted persons (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, item 5; vGLP a890465, Section 7): four agents; create, join with its approval question, a message, a member's post and the leader's deliveries of it, leave, the drop of a member who is no longer the leader's friend, and close by the leader taking the listed role a[listed(*, n)] of every member the leader lists (social_network/self.glp).
+cva_net_load=$("$REPL_RUN" <<HEREDOC
+$CVA/social_network/
+:quit
+HEREDOC
+2>&1)
+check "CVA social network: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/social_network" "$cva_net_load"
+check_not "CVA social network: no type errors" "Type checking failed" "$cva_net_load"
+cva_network=$("$REPL_RUN" <<HEREDOC
+$CVA/social_network/
+:limit 6000000
+play_network(A, B, C, D, N).
+:quit
+HEREDOC
+2>&1)
+CVA_NET_N="speech(utterance(club), alice)"
+CVA_NET_X="speech(utterance(hi), bob)"
+check "CVA social network: alice creates the group, its first member, listing herself (GSN:2)" "A = \[.*view(\[member(dot(community(alice), $CVA_NET_N)), listed(alice, $CVA_NET_N), friend(dave), friend(carol), friend(bob), identity\], \[bob, carol, dave\])" "$cva_network"
+check "CVA social network: alice adds bob, who is asked on his approval question and answers yes (GSN:3)" "B = \[.*gave(join(alice, bob, $CVA_NET_N), yes), view(\[member(dot(community(alice), $CVA_NET_N)), friend(alice), identity\], \[alice\])" "$cva_network"
+check "CVA social network: ... and carol and dave likewise" "sent(alice, carol, start(attempt(alice, 7, 7, join(alice, carol, $CVA_NET_N)))), sent(carol, alice, vote(attempt(alice, 7, 7, join(alice, carol, $CVA_NET_N)), yes)), sent(alice, carol, outcome(attempt(alice, 7, 7, join(alice, carol, $CVA_NET_N)), commit)), sent(alice, dave, start(attempt(alice, 8, 8, join(alice, dave, $CVA_NET_N)))), sent(dave, alice, vote(attempt(alice, 8, 8, join(alice, dave, $CVA_NET_N)), yes)), sent(alice, dave, outcome(attempt(alice, 8, 8, join(alice, dave, $CVA_NET_N)), commit))" "$cva_network"
+check "CVA social network: alice's message to bob, bob's machine voting yes unasked (GSN:1)" "sent(alice, bob, start(attempt(alice, 9, 9, message(alice, bob, speech(utterance(post), alice))))), sent(bob, alice, vote(attempt(alice, 9, 9, message(alice, bob, speech(utterance(post), alice))), yes)), sent(alice, bob, outcome(attempt(alice, 9, 9, message(alice, bob, speech(utterance(post), alice))), commit))" "$cva_network"
+check "CVA social network: bob's post to the group, alice's machine voting yes unasked (GSN:5)" "sent(bob, alice, start(attempt(bob, 10, 10, post(bob, alice, $CVA_NET_X, $CVA_NET_N)))), sent(alice, bob, vote(attempt(bob, 10, 10, post(bob, alice, $CVA_NET_X, $CVA_NET_N)), yes)), sent(bob, alice, outcome(attempt(bob, 10, 10, post(bob, alice, $CVA_NET_X, $CVA_NET_N)), commit))" "$cva_network"
+check "CVA social network: alice's machine delivers it to dave, an unguarded class it opens" "sent(alice, dave, start(attempt(alice, 11, 11, deliver(alice, dave, $CVA_NET_X, $CVA_NET_N)))), sent(dave, alice, vote(attempt(alice, 11, 11, deliver(alice, dave, $CVA_NET_X, $CVA_NET_N)), yes)), sent(alice, dave, outcome(attempt(alice, 11, 11, deliver(alice, dave, $CVA_NET_X, $CVA_NET_N)), commit))" "$cva_network"
+check "CVA social network: ... to carol" "sent(alice, carol, outcome(attempt(alice, 12, 12, deliver(alice, carol, $CVA_NET_X, $CVA_NET_N)), commit))" "$cva_network"
+check "CVA social network: ... and to bob" "sent(alice, bob, outcome(attempt(alice, 13, 13, deliver(alice, bob, $CVA_NET_X, $CVA_NET_N)), commit))" "$cva_network"
+check "CVA social network: each member holds it, received in the group from alice: bob" "B = \[.*view(\[received_in($CVA_NET_X, alice, $CVA_NET_N), received(speech(utterance(post), alice), alice), member(dot(community(alice), $CVA_NET_N)), friend(alice), identity\], \[alice\])" "$cva_network"
+check "CVA social network: ... carol" "C = \[.*view(\[received_in($CVA_NET_X, alice, $CVA_NET_N), member(dot(community(alice), $CVA_NET_N)), friend(alice), identity\], \[alice\])" "$cva_network"
+check "CVA social network: ... and dave" "D = \[.*view(\[received_in($CVA_NET_X, alice, $CVA_NET_N), member(dot(community(alice), $CVA_NET_N)), friend(alice), identity\], \[alice\])" "$cva_network"
+check "CVA social network: carol leaves, alice's machine voting yes (GSN:4)" "sent(carol, alice, start(attempt(carol, 13, 13, leave(alice, carol, $CVA_NET_N)))), .*sent(alice, carol, vote(attempt(carol, 13, 13, leave(alice, carol, $CVA_NET_N)), yes)), sent(carol, alice, outcome(attempt(carol, 13, 13, leave(alice, carol, $CVA_NET_N)), commit))" "$cva_network"
+check "CVA social network: ... and is a member no more" "C = \[.*view(\[received_in($CVA_NET_X, alice, $CVA_NET_N), friend(alice), identity\], \[alice\]) |" "$cva_network"
+check "CVA social network: bob ends his friendship with alice, and alice's machine drops him, a member who is not the leader's friend, bob's machine voting yes (GSN:4)" "sent(bob, alice, outcome(attempt(bob, 14, 14, unfriend(bob, alice)), commit)), sent(alice, bob, start(attempt(alice, 15, 15, drop(alice, bob, $CVA_NET_N)))), sent(bob, alice, vote(attempt(alice, 15, 15, drop(alice, bob, $CVA_NET_N)), yes)), sent(alice, bob, outcome(attempt(alice, 15, 15, drop(alice, bob, $CVA_NET_N)), commit))" "$cva_network"
+check "CVA social network: ... bob a member no more" "B = \[.*view(\[received_in($CVA_NET_X, alice, $CVA_NET_N), received(speech(utterance(post), alice), alice), identity\], \[alice\]) |" "$cva_network"
+check "CVA social network: alice closes the group, her agent completing the list from the people she lists, close(alice, [alice, dave], n), and dave's machine votes yes unasked (GSN:4)" "sent(alice, dave, start(attempt(alice, 16, 16, close(alice, \[alice, dave\], $CVA_NET_N)))), sent(dave, alice, vote(attempt(alice, 16, 16, close(alice, \[alice, dave\], $CVA_NET_N)), yes)), sent(alice, dave, outcome(attempt(alice, 16, 16, close(alice, \[alice, dave\], $CVA_NET_N)), commit)) |" "$cva_network"
+check "CVA social network: ... the group closed at alice, her membership ended" "A = \[.*view(\[closed($CVA_NET_N), delivered($CVA_NET_X, bob, $CVA_NET_N), delivered($CVA_NET_X, carol, $CVA_NET_N), delivered($CVA_NET_X, dave, $CVA_NET_N), posted($CVA_NET_X, $CVA_NET_N), listed(dave, $CVA_NET_N), friend(dave), friend(carol), identity\], \[bob, carol, dave\]) |" "$cva_network"
+check "CVA social network: ... and dave's membership ended in the same act" "D = \[.*view(\[received_in($CVA_NET_X, alice, $CVA_NET_N), friend(alice), identity\], \[alice\]) |" "$cva_network"
+check_not "CVA social network: no person asked for post, deliver, leave, drop or close but its guard" "gave(attempt([a-z]*, [0-9]*, [0-9]*, \(deliver\|drop\|close\|post\|leave\)\|gave(\(deliver\|drop\|close\|post\|leave\)" "$cva_network"
+
 # Own triggers through the fair merge (vGLP 6c8c663, Section 5.4, "The compilation": "The agent goal takes its own transactions one at a time, one on each own trigger it reads.  It writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions and writes none once none holds"; the agent goal reads "the fair merge (Example ex:merge) of the answers to its request questions, the messages arriving on the network, the answers to its approval questions and its own triggers"; vGLP #15 Cowork to Code, 2026-10-19 14:20 UTC, Blocking: yes).  The agent writes own on a stream of its own, merged with the rest of its input, and not on the list of the triggers it puts up itself, which holds the recheck alone.
 for c in social_graph counter; do
     cva_agent=$(cat "$CVA/$c/platform.vglp")
@@ -4299,7 +4351,7 @@ check "CVA counter: the run does not suspend: alice's agent counts without end, 
 check_not "CVA counter: no person asked for count" "gave(attempt([a-z]*, [0-9]*, [0-9]*, count\|gave(count" "$cva_counter"
 
 # No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes its own transactions "one at a time, each on an own trigger that the agent writes on a stream merged fairly with its other triggers, when it starts, after another trigger and after each own transaction it takes, until none holds", vGLP 6c8c663; Udi's approval of 2026-10-18, reported by Code #10): each play's run but the counter's suspends once every agent has taken its own transactions until none holds and no trigger is left to read, where until vGLP efe7bbc it ran to the REPL's :limit, each agent's clock ticking without end.
-for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens cva_groups; do
+for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens cva_groups cva_merges cva_network; do
     check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
     check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
 done

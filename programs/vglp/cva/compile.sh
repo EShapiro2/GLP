@@ -1,21 +1,22 @@
 #!/bin/bash
 # The compiler from an act-schema contract to its canonical CVA platform in
 # vGLP (programs/vglp/cva/compiler; vGLP, Section 3.2, the paragraph on act
-# schemas, and Section 5.4, "The compilation"), run on the social graph's and the currency's contracts, read
+# schemas, and Section 5.4, "The compilation"), run on the social graph's, the social network's and the currency's contracts, read
 # from their owners' files, and on vGLP's own, contracts.glp, through the REPL.
 #
 #   bash programs/vglp/cva/compile.sh            print into programs/vglp/cva/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh <dir>      print into <dir>/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh --check    print into a scratch directory and compare
 #
-# for <contract> social_graph and currency, the directories of GSG (GSC's,
-# programs/gsc/GSG.glp, the checker's gsg, the social graph) and GC
+# for <contract> social_graph, social_network and currency, the directories of GSG (GSC's,
+# programs/gsc/GSG.glp, the checker's gsg, the social graph), GSN (GSC's,
+# programs/gsc/GSN.glp, the checker's gsn, the social network) and GC
 # (Currencies', programs/currencies/coins/GC.glp, the checker's gc; Section
 # 3.4), each the one copy in its owner's file (claude.md "Sessions", the
 # cascade rule; Coordination Appendix C), and nudge, introduce, gnudge,
 # childsafe, link, friends, waves, parts, opens, groups, counter and merges, vGLP's, which contracts.glp beside the compiler
 # holds, with the introduction predicate each names, introduction_named/2, or
-# none (GSC's two name none).  A contract is checked before it is compiled
+# none (GSC's three name none).  A contract is checked before it is compiled
 # (GSC, Section 5): for each contract, a REPL session on its owner's file, or
 # on contracts.glp, prints it, contract_named/2; one on programs/gsc prints the
 # checker's verdict on it, check/2; and one on the compiler calls
@@ -33,13 +34,14 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-THEIRS="gsg gc"
+THEIRS="gsg gsn gc"
 OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter merges"
 CONTRACTS="$THEIRS $OURS"
 
 contract_file() { # contract_file <contract> ; the file that holds it, its owner's
     case "$1" in
         gsg) echo "$GLP_DIR/programs/gsc/GSG.glp" ;;
+        gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
         gc)  echo "$GLP_DIR/programs/currencies/coins/GC.glp" ;;
         *)   echo "$HERE/contracts.glp" ;;
     esac
@@ -47,6 +49,7 @@ contract_file() { # contract_file <contract> ; the file that holds it, its owner
 dir_of() { # dir_of <contract> ; the directory of its platform and plays here
     case "$1" in
         gsg) echo social_graph ;;
+        gsn) echo social_network ;;
         gc)  echo currency ;;
         *)   echo "$1" ;;
     esac

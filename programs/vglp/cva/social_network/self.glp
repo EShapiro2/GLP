@@ -1,0 +1,111 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of GSC's social network (GSC's, programs/gsc/GSN.glp, the checker's gsn, the network without provenance), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform"), a group named by its leader's community name and n, member(<a>.n), and close taking the listed role a[listed(*, n)], every member the leader lists (vGLP a890465, Section 5.4, "Act schemas as local specifications").  It runs four agents, alice, bob, carol and dave, their persons scripted and paced on their screens (../self.glp), and gives each person's log, the views with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, item 5).
+%%
+%% play_network: each person establishes their identity (GSG:1), every other role requiring it, and alice befriends bob, carol and dave, each asked and answering yes.  alice creates the group n, speech(utterance(club), alice), and is its first member and lists herself (GSN:2).  She adds bob, carol and dave to it, each asked on his or her approval question and answering yes (GSN:3, join(a?, q? ; n)), and then sends bob a message, speech(utterance(post), alice), message(p?, q ; x), bob's machine voting yes unasked (GSN:1).  bob, a member, having received it, posts x, speech(utterance(hi), bob), to the group: post(p?, a ; x, n), alice's machine voting yes unasked, records posted(x, n) at alice; and alice's machine delivers it to every member it lists who is its friend, deliver(a, q ; x, n), an unguarded class it opens, the member's machine voting yes unasked, so bob, carol and dave each hold received_in(x, alice, n) (GSN:5).  carol, having received it, leaves the group, leave(a, q? ; n), alice's machine voting yes (GSN:4).  bob, having received it, ends his friendship with alice, unfriend(bob, alice), alice's machine voting yes; bob, a member who is no longer a friend of its leader, is then removed, drop(a, q ; n), an unguarded class alice's machine opens and bob's votes on (GSN:4).  alice, once her machine has delivered x to dave and carol and bob are listed no more, closes the group, close(a?, a[listed(*, n)] ; n): her agent completes the list from the people she lists, close(alice, [alice, dave], n), dave's machine votes yes unasked, and it commits at both, ending every membership in one act (GSN:4).
+%%
+%% A request is taken or dropped when it is read (vGLP a890465, Section 5.4, "Triggers"; "The compilation": the dispatch "drops the answer where none can be taken"), and Propose takes the agent free and clear (Section 3.2, Definition "Proposing"), so a person here makes a request only once what it waits on shows that their agent's attempts before it have closed: alice adds her members one at a time, and bob posts once alice's message, sent after the last of them joins, shows that she is done.
+%%
+%% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Speech   ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+Class    ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+           ; message(Peer, Peer, Speech) ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+           ; leave(Peer, Peer, Speech) ; close(Peer, List(Peer), Speech) ; drop(Peer, Peer, Speech)
+           ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
+           ; deliver(Peer, Peer, Speech, Speech).
+Proposal ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+           ; message(Peer, Peer, Speech) ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+           ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
+           ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech).
+Request  ::= propose(Proposal) ; known(Peer).
+YesNo    ::= yes ; no.
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+           ; yield(Attempt).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+CName    ::= community(Peer) ; dot(CName, Speech).
+Atom     ::= identity ; friend(Peer) ; received(Speech, Peer) ; member(CName)
+           ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech)
+           ; delivered(Speech, Peer, Speech) ; received_in(Speech, Peer, Speech).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Approval ::= approval(Attempt, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_network(Stream(_), Stream(_), Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_network(LA?, LB?, LC?, LD?, N?) :-
+    quartet([own([A1], propose(establish(A1?))),
+             req(known(bob)), req(known(carol)), req(known(dave)),
+             wait(known(bob)), wait(known(carol)), wait(known(dave)),
+             own([A2], propose(befriend(A2?, bob))),
+             wait(holds(friend(bob))),
+             own([A3], propose(befriend(A3?, carol))),
+             wait(holds(friend(carol))),
+             own([A4], propose(befriend(A4?, dave))),
+             wait(holds(friend(dave))),
+             own([A5, A6], propose(create(A5?, speech(utterance(club), A6?)))),
+             wait(holds(member(dot(community(alice), speech(utterance(club), alice))))),
+             own([A7, A8], propose(join(A7?, bob, speech(utterance(club), A8?)))),
+             wait(holds(listed(bob, speech(utterance(club), alice)))),
+             own([A9, A10], propose(join(A9?, carol, speech(utterance(club), A10?)))),
+             wait(holds(listed(carol, speech(utterance(club), alice)))),
+             own([A11, A12], propose(join(A11?, dave, speech(utterance(club), A12?)))),
+             wait(holds(listed(dave, speech(utterance(club), alice)))),
+             own([A13, A14], propose(message(A13?, bob, speech(utterance(post), A14?)))),
+             wait(holds(delivered(speech(utterance(hi), bob), dave, speech(utterance(club), alice)))),
+             wait(lacks(listed(carol, speech(utterance(club), alice)))),
+             wait(lacks(listed(bob, speech(utterance(club), alice)))),
+             own([A15, A16], propose(close(A15?, speech(utterance(club), A16?))))],
+            [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(alice)),
+             approval(befriend(alice, bob), yes),
+             approval(join(alice, bob, speech(utterance(club), alice)), yes),
+             wait(holds(received(speech(utterance(post), alice), alice))),
+             own([B2, B3], propose(post(B2?, alice, speech(utterance(hi), B3?), speech(utterance(club), alice)))),
+             wait(holds(received_in(speech(utterance(hi), bob), alice, speech(utterance(club), alice)))),
+             own([B4], propose(unfriend(B4?, alice)))],
+            [own([C1], propose(establish(C1?))), req(known(alice)), wait(known(alice)),
+             approval(befriend(alice, carol), yes),
+             approval(join(alice, carol, speech(utterance(club), alice)), yes),
+             wait(holds(received_in(speech(utterance(hi), bob), alice, speech(utterance(club), alice)))),
+             own([C2], propose(leave(alice, C2?, speech(utterance(club), alice))))],
+            [own([D1], propose(establish(D1?))), req(known(alice)), wait(known(alice)),
+             approval(befriend(alice, dave), yes),
+             approval(join(alice, dave, speech(utterance(club), alice)), yes)],
+            LA, LB, LC, LD, N).
+
+%% alice, bob, carol and dave, each with its dispatcher and scripted person,
+%% their networks joined.
+procedure quartet(Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_),
+    Stream(_), Stream(_), Stream(Sent(Cargo))).
+quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    platform # agent(dave, InD?, OutD, TD, AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), MD),
+    to_person(MD?, TD?),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    merge(OutA?, OutB?, Net1),
+    merge(OutC?, OutD?, Net2),
+    merge(Net1?, Net2?, Net),
+    route4(Net?, alice, InA, bob, InB, carol, InC, dave, InD, N).

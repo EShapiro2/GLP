@@ -1,6 +1,6 @@
 %% local.glp --- whether a contract of act schemas is a local and effective specification (vGLP 099f876, Section 5.4, the paragraph "Act schemas as local specifications"; Section 3.2, Definition "Local Specification, Part, Guard Set, Opener"), and, where it is not, the lines saying why; and the schemas whose terms name guarded parts, which the request type proposes.
 %%
-%% Local: each schema-binding "determines a part [t]_j of its class: the set of transactions it determines, ... and with the people in its marked roles as its guard set.  Such a contract is a local specification" (ibid.).  So a contract whose roles are party roles and listed roles is a local specification with no condition on its guards (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 2; vGLP f5f1644, the same paragraph: "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"), and nothing here decides locality; cvac.glp refuses a contract with seated or constituent roles, reach conditions or name variables.  A schema with listed roles is effective where they have one base, which is its only guarding role or, with none, its first role (listed_lines).
+%% Local: each schema-binding "determines a part [t]_j of its class: the set of transactions it determines, ... and with the people in its marked roles as its guard set.  Such a contract is a local specification" (ibid.).  So a contract whose roles are party roles and listed roles is a local specification with no condition on its guards (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 2; vGLP f5f1644, the same paragraph: "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"), and nothing here decides locality; cvac.glp refuses a contract with seated or constituent roles, reach conditions or name variables.  A schema with listed roles is effective where they have one base, which is its only guarding role or, not a guarding role, its first role (listed_lines).  A schema with a listed role whose base is not a guarding role determines guarded parts that the person in its base opens, and "the contract is a local specification where every other guarded part of the class that a guard of such a part guards is determined likewise, with the same opener" (vGLP a890465, ibid.): nothing here decides that condition, a gap reported to Code #11 on 2026-10-19.
 %%
 %% Effective: "The contract is effective (Definition "Effective Local Specification") where, moreover, every variable of a schema that occurs in an atom it requires or forbids also occurs in an atom it deletes or adds, a variable inside a signed term or a name term included, so that a class has finitely many parts, and the atoms each unguarded schema requires at its first role name every other role and every variable of its deleted and added atoms" (ibid.).  A variable here is a party variable or a speech-act variable, the sentence naming roles and variables apart, "every other role and every variable", and a role being bound to one of the finitely many participants (vGLP #15, ibid., answer (2)); a signed term sgn(y, i) in a deleted or added atom holds the variable y and names role i (GSC, Section 3: "An atom names what is among its arguments or is the signer of one"), so y is a variable of the atom.  Otherwise the contract is refused, the schema named.
 %%
@@ -166,7 +166,7 @@ procedure keep_role(YesNo?, Integer?, Args?, Args).
 keep_role(yes, _, R, R?).
 keep_role(no, J, R, [role(J?)|R?]).
 
-%% "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role" (vGLP c649c0d, Section 5.4, the paragraph on act schemas; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC: "refuse as not effective a schema whose listed roles have different bases"): the listed roles of a schema have one base, and the compiler takes it where it is the schema's only guarding role or, the schema having no guarding role, its first role; otherwise the contract is not effective, the schema named.
+%% "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role, so that the agent that proposes a part the schema determines, its guard or its opener, reads the people of those roles from its own state" (vGLP a890465, Section 5.4, the paragraph on act schemas; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC: "refuse as not effective a schema whose listed roles have different bases", and 15:57 UTC, item 1): the listed roles of a schema have one base, and the compiler takes it where it is the schema's only guarding role, or where it is not a guarding role and is the schema's first role, whatever its guarding roles, as CSSN's child_close(r, p?, r[listed(*, n)] ; n), whose base r opens the part p guards; otherwise the contract is not effective, the schema named.
 procedure listed_lines(Constant?, RoleSpecs?, Stream(_)).
 listed_lines(Nm, Rs, L?) :- ground(Nm?), ground(Rs?) |
     listed_bases(Rs?, Bs0),
@@ -189,17 +189,23 @@ guard_indices([R|Rs], I, Gs?) :- ground(R?), integer(I?) |
 procedure keep_index(YesNo?, Integer?, Ints?, Ints).
 keep_index(yes, I, Gs, [I?|Gs?]).
 keep_index(no, _, Gs, Gs?).
+%% listed_ok(B, Gs, Ok): the base B, of the guarding roles Gs, is the schema's only guarding role, or is not a guarding role and is its first role.
 procedure listed_ok(Integer?, Ints?, YesNo).
-listed_ok(B, [], R?) :- int_is(B?, 1, R).
-listed_ok(B, [G], R?) :- int_is(G?, B?, R).
-listed_ok(_, [_, _|_], no).
+listed_ok(B, Gs, R?) :- integer(B?), ground(Gs?) |
+    mem(B?, Gs?, In),
+    listed_ok1(In?, B?, Gs?, R).
+procedure listed_ok1(YesNo?, Integer?, Ints?, YesNo).
+listed_ok1(yes, _, [_], yes).
+listed_ok1(yes, _, [_, _|_], no).
+listed_ok1(yes, _, [], no).
+listed_ok1(no, B, _, R?) :- int_is(B?, 1, R).
 procedure int_is(Integer?, Integer?, YesNo).
 int_is(A, B, yes) :- A? =:= B? | true.
 int_is(_, _, no) :- otherwise | true.
 procedure listed_lines2(YesNo?, Constant?, Stream(_)).
 listed_lines2(yes, _, []).
 listed_lines2(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a',
-        '%% listed role whose base is not its only guarding role, or, with no guarding role, its first role:', T?]) :-
+        '%% listed role whose base is neither its only guarding role nor, not a guarding role, its first role:', T?]) :-
     ground(Nm?) | T =.. ['%% the schema', Nm?].
 
 procedure first_required_args(RoleSpecs?, Args).
