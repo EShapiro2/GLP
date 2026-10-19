@@ -95,6 +95,14 @@ contract_named(gsn,
        [rs(guarded, [atom(closed, [svar(n)])],
                     [atom(member, [role(1), svar(n)]),
                      atom(listed, [role(1), svar(n)])], [atom(identity, [])], [])]),
+%%   Ending the friendship of a member and the leader ends the membership
+%%   (CSSN #6's request, approved by Udi, 2026-10-19); no role guards drop.
+%%   drop(a, q ; n) :
+%%       at a:  identity, not friend(q), -listed(q, n)
+%%       at q:  identity, -member(a, n)
+    schema(drop,
+       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]),
+        rs(unguarded, [], [atom(member, [role(1), svar(n)])], [atom(identity, [])], [])]),
 %% GSN:5, Group message: the leader's own, a member's sent to the leader, and
 %% the leader delivering it to every member.
 %%   post_own(a? ; x, n) :
@@ -105,22 +113,22 @@ contract_named(gsn,
                     [atom(posted, [svar(x), svar(n)])])]),
 %%   post(p?, a ; x, n) :
 %%       at p:  identity, member(a, n)
-%%       at a:  identity, member(a, n), listed(p, n), not posted(x, n), +posted(x, n)
+%%       at a:  identity, member(a, n), listed(p, n), friend(p), not posted(x, n), +posted(x, n)
     schema(post,
        [rs(guarded,   [], [],
                       [atom(identity, []), atom(member, [role(2), svar(n)])], []),
         rs(unguarded, [atom(posted, [svar(x), svar(n)])], [],
                       [atom(identity, []), atom(member, [role(2), svar(n)]),
-                       atom(listed, [role(1), svar(n)])],
+                       atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])],
                       [atom(posted, [svar(x), svar(n)])])]),
 %%   deliver(a, q ; x, n) :
-%%       at a:  identity, member(a, n), posted(x, n), listed(q, n), not delivered(x, q, n), +delivered(x, q, n)
+%%       at a:  identity, member(a, n), posted(x, n), listed(q, n), friend(q), not delivered(x, q, n), +delivered(x, q, n)
 %%       at q:  identity, member(a, n), +received_in(x, a, n)
     schema(deliver,
        [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [],
                       [atom(identity, []), atom(member, [role(1), svar(n)]),
                        atom(posted, [svar(x), svar(n)]),
-                       atom(listed, [role(2), svar(n)])],
+                       atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])],
                       [atom(delivered, [svar(x), role(2), svar(n)])]),
         rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [],
                       [atom(identity, []), atom(member, [role(1), svar(n)])], [])])]).
