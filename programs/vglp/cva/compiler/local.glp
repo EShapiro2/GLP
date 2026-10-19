@@ -6,7 +6,7 @@
 %%
 %% The request type has "the alternative propose([t]_j) for each guarded part [t]_j" (vGLP 099f876, Section 5.4, "The compilation"), so cvac.glp prints in it the alternatives of the schemas whose terms name guarded parts (proposable): a schema marking a role, some binding of which determines a transaction, a part whose guard set is the people in its marked roles, never empty.  A schema marking no role names unguarded parts only; one marking a role names guarded parts, as gnudge's g, whose part is guarded though its class holds the unguarded part of nudge (vGLP #15, ibid., item 4).
 %%
-%% The schemas name no person (GSC, Proposition "Anonymity"), so the bindings of a schema are taken up to renaming: its roles and party variables sent to people person(0), person(1), ... in order of first use, every partition of them a binding; its speech-act variables to speech acts sp(U, S), S the signer, one of those people or one person more, whom no other variable names, and U an utterance, utt(N), in order of first use --- "a speech act being an utterance or a speech act, signed; a signed term sgn(y, i) in an added atom is the speech act bound to y, signed by the person in role i" (vGLP 099f876, Section 5.4, "Act schemas as local specifications"; GSC 63b301f, Section 3, Definitions "Act schema" and "Binding", beta(sgn(y, pi)) := (beta(y), beta(pi))), so the image of sgn(y, i) under a binding is sp(beta(y), beta(i)), a speech act whose utterance is a speech act.  Such a binding determines a transaction where it is one (GSC, Definition "Binding"), its added and deleted atoms are disjoint at each participant (GSC, Definition "Compilation"), and at each participant no atom is both required and forbidden and no atom of a reflexive predicate naming the participant is forbidden: a state is a multiset; two roles bound to one person act together there; and a predicate of arity one the contract declares reflexive holds at every person of that person, so an atom of it naming the participant is no requirement there, and one forbidden there leaves the schema-binding determining no transaction (vGLP, Section 5.4, the paragraph on act schemas).
+%% The schemas name no person (GSC, Proposition "Anonymity"), so the bindings of a schema are taken up to renaming: its roles and party variables sent to people person(0), person(1), ... in the order of its head, every partition of them a binding; its speech-act variables to speech acts sp(U, S), S the signer, one of those people or one person more, whom no other variable names, and U an utterance, utt(N), in the order of its head --- "a speech act being an utterance or a speech act, signed; a signed term sgn(y, i) in an added atom is the speech act bound to y, signed by the person in role i" (vGLP 099f876, Section 5.4, "Act schemas as local specifications"; GSC 63b301f, Section 3, Definitions "Act schema" and "Binding", beta(sgn(y, pi)) := (beta(y), beta(pi))), so the image of sgn(y, i) under a binding is sp(beta(y), beta(i)), a speech act whose utterance is a speech act.  Such a binding determines a transaction where it is one (GSC, Definition "Binding"), its added and deleted atoms are disjoint at each participant (GSC, Definition "Compilation"), and at each participant no atom is both required and forbidden and no atom of a reflexive predicate naming the participant is forbidden: a state is a multiset; two roles bound to one person act together there; and a predicate of arity one the contract declares reflexive holds at every person of that person, so an atom of it naming the participant is no requirement there, and one forbidden there leaves the schema-binding determining no transaction (vGLP, Section 5.4, the paragraph on act schemas).
 
 %% A speech act sp(U, S): its utterance U, utt(N) or a speech act, and its
 %% signer S (GSC, Section 3: "A speech act is an utterance or a speech act,
@@ -41,14 +41,14 @@ val_or_free(unbound, V, free_var(V?)).
 %% its deleted and added atoms (effective_one).
 procedure effective_lines(Contract?, Stream(_)).
 effective_lines([], []).
-effective_lines([schema(Nm, Rs)|Ss], L?) :- ground(Nm?), ground(Rs?) |
+effective_lines([schema(Nm, _, Rs)|Ss], L?) :- ground(Nm?), ground(Rs?) |
     free_lines(Nm?, Rs?, L0),
     guarded_any(Rs?, G),
     effective_one(G?, Nm?, Rs?, L1),
     effective_lines(Ss?, L2),
     lapp(L1?, L2?, L12),
     lapp(L0?, L12?, L).
-effective_lines([cschema(_, _, _)|Ss], L?) :- effective_lines(Ss?, L).
+effective_lines([cschema(_, _, _, _)|Ss], L?) :- effective_lines(Ss?, L).
 procedure guarded_any(RoleSpecs?, YesNo).
 guarded_any([], no).
 guarded_any([R|Rs], B?) :- rs_guarded(R?, B1), guarded_any1(B1?, Rs?, B).
@@ -158,16 +158,16 @@ exported procedure proposable(Contract?, Preds?, Preds).
 proposable(C, Rf, Ns?) :- ground(Rf?) | proposable1(C?, Rf?, Ns).
 procedure proposable1(Contract?, Preds?, Preds).
 proposable1([], _, []).
-proposable1([schema(Nm, Rs)|Ss], Rf, Ns?) :- ground(Nm?), ground(Rs?), ground(Rf?) |
+proposable1([schema(Nm, Hd, Rs)|Ss], Rf, Ns?) :- ground(Nm?), ground(Hd?), ground(Rs?), ground(Rf?) |
     guarded_any(Rs?, G),
-    proposable_schema(G?, Rs?, Rf?, P),
+    proposable_schema(G?, Rs?, Hd?, Rf?, P),
     proposable1(Ss?, Rf?, Ns1),
     keep_name(P?, Nm?, Ns1?, Ns).
-proposable1([cschema(_, _, _)|Ss], Rf, Ns?) :- proposable1(Ss?, Rf?, Ns).
-procedure proposable_schema(YesNo?, RoleSpecs?, Preds?, YesNo).
-proposable_schema(no, _, _, no).
-proposable_schema(yes, Rs, Rf, P?) :- ground(Rs?) |
-    canon_bindings(Rs?, Bs),
+proposable1([cschema(_, _, _, _)|Ss], Rf, Ns?) :- proposable1(Ss?, Rf?, Ns).
+procedure proposable_schema(YesNo?, RoleSpecs?, Args?, Preds?, YesNo).
+proposable_schema(no, _, _, _, no).
+proposable_schema(yes, Rs, Hd, Rf, P?) :- ground(Rs?), ground(Hd?) |
+    canon_bindings(Rs?, Hd?, Bs),
     some_live(Bs?, Rs?, Rf?, P).
 procedure some_live(Bindings?, RoleSpecs?, Preds?, YesNo).
 some_live([], _, _, no).
@@ -258,9 +258,10 @@ forbs_cat([R|Rs], B, F?) :- ground(R?), ground(B?) |
     app(G?, F1?, F).
 
 %% --- The bindings of a schema, up to renaming ------------------------------
-procedure canon_bindings(RoleSpecs?, Bindings).
-canon_bindings(Rs, Bs?) :- ground(Rs?) |
-    schema_vars(Rs?, Vs),
+%% The bindings of a schema of roles Rs and head Hd, its variables in the order of its head (self.glp, schema_vars).
+procedure canon_bindings(RoleSpecs?, Args?, Bindings).
+canon_bindings(Rs, Hd, Bs?) :- ground(Rs?), ground(Hd?) |
+    schema_vars(Rs?, Hd?, Vs),
     canon_bindings1(Rs?, Vs?, Bs).
 procedure canon_bindings1(RoleSpecs?, Args?, Bindings).
 canon_bindings1(Rs, Vs, Bs?) :- ground(Rs?), ground(Vs?) |

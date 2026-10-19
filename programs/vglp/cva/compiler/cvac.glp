@@ -5,7 +5,7 @@
 %%
 %% A contract is compiled when programs/gsc finds it syntactically grassroots, grassroots with wards, or finds no fault in it but its introductory acts, so with traceable provenance and volition (verdict_lines below), every role a party role, so that it is a local specification (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "Such a contract is a local specification"), and when it is effective, by the same paragraph, which local.glp decides.  Otherwise it prints the lines saying why and nothing else.  A signed term sgn(y, i) in an added atom is the speech act bound to y, signed by the person in role i (vGLP, Section 5.4, "Act schemas as local specifications"; GSC, Definition "Act schema"): local.glp decides the contract over it and the printed text, text.glp, computes it.
 %%
-%% The module is what is printed from the contract, here, and the text every contract shares, text.glp.  What is printed from the contract is the type Class, one alternative per schema, the schema's name applied to the people in its roles, then its party variables, then its speech-act variables, in programs/gsc's order, a term of it naming a schema-binding and so its part and its class (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"); the request type, Request, with the alternative propose([t]_j) for each guarded part [t]_j, a term of Proposal, the alternatives of the schemas whose terms name guarded parts, and the alternative known(Peer) (Section 5.4, "The compilation"); the
+%% The module is what is printed from the contract, here, and the text every contract shares, text.glp.  What is printed from the contract is the type Class, one alternative per schema, the schema's name applied to the people in its roles and then the values of its variables, in the order of its head, tau(pi_1, ..., pi_k ; x_1, ..., x_m), as GSC's term form gives it (GSC 0228e79, Definition "Act schema"; vGLP #15 Cowork to Code, 2026-10-19 13:34 UTC, item 2), a term of it naming a schema-binding and so its part and its class (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"); the request type, Request, with the alternative propose([t]_j) for each guarded part [t]_j, a term of Proposal, the alternatives of the schemas whose terms name guarded parts, and the alternative known(Peer) (Section 5.4, "The compilation"); the
 %% contract itself, as the term programs/gsc reads, from which the shared text
 %% computes the classes and their parts; its reflexive predicates; and per
 %% schema a clause taking a term of Class to the binding it names, binding_of,
@@ -94,6 +94,11 @@ verdict_lines(malformed(_), Nm, [H?, '%% it is malformed; check_named in program
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 verdict_lines(conditions_met, Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
+%% The verdicts on an agent-named contract with community roles (GSC, Appendix D.4 and Appendix F): its roles' extents are no participants of a binding, as for conditions_met.
+verdict_lines(syntactically_grassroots_with_seated_roles, Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
+    ground(Nm?) | H =.. ['%% not compiled', Nm?].
+verdict_lines(syntactically_grassroots_with_wards(_, _, _, _, _), Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
+    ground(Nm?) | H =.. ['%% not compiled', Nm?].
 verdict_lines(conditions_failed(_), Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 procedure realisable(Faults?, YesNo).
@@ -109,6 +114,9 @@ realisable([signed(_, _, _, _)|_], no).
 realisable([added_and_deleted(_, _, _)|_], no).
 realisable([changes_nothing(_, _)|_], no).
 realisable([no_role_changes(_)|_], no).
+realisable([head_not_variable(_, _)|_], no).
+realisable([head_repeated(_, _)|_], no).
+realisable([not_in_head(_, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
@@ -124,8 +132,8 @@ community_lines1(yes, Nm, [H?, '%% it has community roles, which the canonical p
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 procedure has_community(Contract?, YesNo).
 has_community([], no).
-has_community([schema(_, Rs)|Ss], B?) :- roles_community(Rs?, B1), has_community1(B1?, Ss?, B).
-has_community([cschema(_, _, _)|_], yes).
+has_community([schema(_, _, Rs)|Ss], B?) :- roles_community(Rs?, B1), has_community1(B1?, Ss?, B).
+has_community([cschema(_, _, _, _)|_], yes).
 procedure has_community1(YesNo?, Contract?, YesNo).
 has_community1(yes, _, yes).
 has_community1(no, Ss, B?) :- has_community(Ss?, B).
@@ -138,12 +146,12 @@ roles_community([crs(_, _, _, _, _, _)|_], yes).
 %% as many names as vname/3 has.
 procedure names_lines(Contract?, Constant?, Stream(_)).
 names_lines([], _, []).
-names_lines([schema(S, Rs)|Ss], Nm, L?) :- ground(S?), ground(Rs?), ground(Nm?) |
-    schema_vars(Rs?, Vs),
+names_lines([schema(S, Hd, Rs)|Ss], Nm, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Nm?) |
+    schema_vars(Rs?, Hd?, Vs),
     count_args(Vs?, N),
     vname(N?, F),
     names_lines1(F?, S?, Ss?, Nm?, L).
-names_lines([cschema(_, _, _)|Ss], Nm, L?) :- names_lines(Ss?, Nm?, L).
+names_lines([cschema(_, _, _, _)|Ss], Nm, L?) :- names_lines(Ss?, Nm?, L).
 procedure names_lines1(Found?, Constant?, Contract?, Constant?, Stream(_)).
 names_lines1(named(_, _), _, Ss, Nm, L?) :- names_lines(Ss?, Nm?, L).
 names_lines1(unnamed, S, _, Nm, [H?, H2?]) :- ground(Nm?), ground(S?) |
@@ -204,12 +212,12 @@ module_lines(Nm, C, Rf, E, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(
 %% Class ::= the schemas' alternatives, separated by ;.
 procedure class_lines(Contract?, Stream(_)).
 class_lines([], ['.']).
-class_lines([schema(S, Rs)|Ss], [A?|L?]) :- ground(S?), ground(Rs?) |
-    schema_vars(Rs?, Vs),
+class_lines([schema(S, Hd, Rs)|Ss], [A?|L?]) :- ground(S?), ground(Hd?), ground(Rs?) |
+    schema_vars(Rs?, Hd?, Vs),
     var_types(Vs?, Ts),
     A =.. [S?|Ts?],
     class_lines1(Ss?, L).
-class_lines([cschema(_, _, _)|Ss], L?) :- class_lines(Ss?, L).
+class_lines([cschema(_, _, _, _)|Ss], L?) :- class_lines(Ss?, L).
 procedure class_lines1(Contract?, Stream(_)).
 class_lines1([], ['.']).
 class_lines1([S|Ss], [';'|L?]) :- class_lines([S?|Ss?], L).
@@ -232,14 +240,14 @@ request_parts(C, Ps, Fx, Lr?, Fx1?) :- ground(C?), ground(Ps?) |
     shared_lines(Fx?, G?, Fx1).
 procedure proposal_alts(Contract?, Preds?, Stream(_)).
 proposal_alts([], _, []).
-proposal_alts([schema(S, Rs)|Ss], Ps, As?) :- ground(S?), ground(Rs?), ground(Ps?) |
+proposal_alts([schema(S, Hd, Rs)|Ss], Ps, As?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Ps?) |
     mem(S?, Ps?, In),
-    schema_vars(Rs?, Vs),
+    schema_vars(Rs?, Hd?, Vs),
     var_types(Vs?, Ts),
     A =.. [S?|Ts?],
     proposal_alts(Ss?, Ps?, As1),
     keep_alt(In?, A?, As1?, As).
-proposal_alts([cschema(_, _, _)|Ss], Ps, As?) :- proposal_alts(Ss?, Ps?, As).
+proposal_alts([cschema(_, _, _, _)|Ss], Ps, As?) :- proposal_alts(Ss?, Ps?, As).
 procedure keep_alt(YesNo?, _?, Stream(_)?, Stream(_)).
 keep_alt(yes, A, As, [A?|As?]).
 keep_alt(no, _, As, As?).
@@ -278,8 +286,8 @@ atom_parts1(Gs, L?) :- ground(Gs?) |
     lapp(La?, ['', 'procedure atom_of(GAtom?, Shown).'|Lo?], L).
 procedure contract_atoms(Contract?, Atoms).
 contract_atoms([], []).
-contract_atoms([schema(_, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
-contract_atoms([cschema(_, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
+contract_atoms([schema(_, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
+contract_atoms([cschema(_, _, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
 procedure rs_atoms(RoleSpecs?, Atoms).
 rs_atoms([], []).
 rs_atoms([R|Rs], As?) :- ground(R?) |
@@ -343,11 +351,11 @@ kind_val(speech, N, s(N?)).
 %% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]).
 procedure binding_lines(Contract?, Stream(_)).
 binding_lines([], []).
-binding_lines([schema(S, Rs)|Ss], [T?, '.'|L?]) :- ground(Rs?) |
-    schema_vars(Rs?, Vs),
+binding_lines([schema(S, Hd, Rs)|Ss], [T?, '.'|L?]) :- ground(Hd?), ground(Rs?) |
+    schema_vars(Rs?, Hd?, Vs),
     binding_line(S?, Vs?, T),
     binding_lines(Ss?, L).
-binding_lines([cschema(_, _, _)|Ss], L?) :- binding_lines(Ss?, L).
+binding_lines([cschema(_, _, _, _)|Ss], L?) :- binding_lines(Ss?, L).
 procedure binding_line(Constant?, Args?, _).
 binding_line(S, Vs, T?) :- ground(S?), ground(Vs?) |
     var_names(Vs?, 1, Ns, _),
@@ -382,13 +390,13 @@ name_of(unnamed, unnamed, unnamed).
 %%     val_peer(Var1, B?, D?, V1), ... .
 procedure class_of_lines(Contract?, Stream(_)).
 class_of_lines([], []).
-class_of_lines([schema(S, Rs)|Ss], [T?, ':-', 'ground(B?)', ',', 'ground(D?)', '|'|L?]) :-
-    ground(Rs?) |
-    schema_vars(Rs?, Vs),
+class_of_lines([schema(S, Hd, Rs)|Ss], [T?, ':-', 'ground(B?)', ',', 'ground(D?)', '|'|L?]) :-
+    ground(Hd?), ground(Rs?) |
+    schema_vars(Rs?, Hd?, Vs),
     class_of_line(S?, Vs?, T, L1),
     class_of_lines(Ss?, L2),
     lapp(L1?, L2?, L).
-class_of_lines([cschema(_, _, _)|Ss], L?) :- class_of_lines(Ss?, L).
+class_of_lines([cschema(_, _, _, _)|Ss], L?) :- class_of_lines(Ss?, L).
 procedure class_of_line(Constant?, Args?, _, Stream(_)).
 class_of_line(S, Vs, T?, L1?) :- ground(S?), ground(Vs?) |
     var_names(Vs?, 1, _, Qs),
