@@ -1,0 +1,4542 @@
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+parent
+}
+(
+\Bob
+)
+,
+\mathit{
+parenting
+}
+(
+\Bob
+)
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+sign
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+x
+)
+,
+\mathit{
+authored
+}
+(
+x
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+message
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+x
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+authored
+}
+(
+x
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+forward
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+\mathrm{sgn}(
+x
+,
+\Alice
+)
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+item
+}
+(
+x
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+authored
+}
+(
+x
+)
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+create
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+closed
+}
+(
+n
+)
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\langle
+\Alice
+\rangle
+\cdot
+n
+ \text{ is an argument of no atom of } c
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+\end{align*}
+\iffalse
+join
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{guarded by } 
+G_{
+1
+}
+\cup 
+G_{
+2
+}
+,\ 
+G_{
+1
+}
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G_{
+1
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+ \text{ and } 
+G_{
+2
+}
+ \subseteq 
+\mathrm{ext}_c(
+\Bob
+)
+ \text{ with } |
+G_{
+2
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\Bob
+)
+|
+\end{align*}
+\iffalse
+leave
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\Bob
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Bob
+)
+|
+\end{align*}
+\iffalse
+close
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+(c_
+p
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+\}
+) \uplus 
+\{
+\mathit{
+closed
+}
+(
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+n
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+n
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+\end{align*}
+\iffalse
+drop
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \notin c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+post_own
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+posted
+}
+(
+x
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+item
+}
+(
+x
+)
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+posted
+}
+(
+x
+,
+n
+)
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+\end{align*}
+\iffalse
+post
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+posted
+}
+(
+x
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+authored
+}
+(
+x
+)
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Bob
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Bob
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+,\ 
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+\end{align*}
+\iffalse
+post_forward
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+posted
+}
+(
+\mathrm{sgn}(
+x
+,
+\Alice
+)
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+item
+}
+(
+x
+)
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Bob
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Bob
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+,\ 
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+authored
+}
+(
+x
+)
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+\end{align*}
+\iffalse
+deliver
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+delivered
+}
+(
+y
+,
+\Bob
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+\mathrm{sgn}(
+y
+,
+\Alice
+)
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+posted
+}
+(
+y
+,
+n
+)
+,\ 
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+,\ 
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+authored
+}
+(
+y
+)
+,\ 
+\mathit{
+delivered
+}
+(
+y
+,
+\Bob
+,
+n
+)
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+deliver_own
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+delivered
+}
+(
+y
+,
+\Bob
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+y
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+posted
+}
+(
+y
+,
+n
+)
+,\ 
+\mathit{
+authored
+}
+(
+y
+)
+,\ 
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+,\ 
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+delivered
+}
+(
+y
+,
+\Bob
+,
+n
+)
+ \notin c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+enter
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+parenting
+}
+(
+\Bob
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+enter_2
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+parenting
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+coparent
+}
+(
+\Bob
+)
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+parenting
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+coparent
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+parent
+}
+(
+\Bob
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+coparented
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\mathit{Carol}
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+of_age
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+child
+}
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+child
+}
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+coparented
+}
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+of_age_2
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+parenting
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+coparent
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+parenting
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+coparent
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \setminus 
+\{
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+parent
+}
+(
+\Bob
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+coparented
+}
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+coparent
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+coparent
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+parent
+}
+(
+\Bob
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+coparented
+}
+\}
+ \subseteq c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+child_befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+, \qquad 
+c'_
+{
+\mathit{Dave}
+}
+ := 
+c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+parent
+}
+(
+\mathit{Carol}
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+parent
+}
+(
+\mathit{Dave}
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\mathit{Dave}
+)
+\}
+ \subseteq c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Bob
+)
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
+\}
+ \subseteq c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\mathit{Carol}
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\mathit{Dave}
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+,
+\mathit{Dave}
+\}
+\end{align*}
+\iffalse
+child_adult_befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+parent
+}
+(
+\mathit{Carol}
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\mathit{Carol}
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+child_unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+parent
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+parenting
+}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\mathit{Carol}
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+parent_unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+child
+}
+\}
+) \uplus 
+\{
+\mathit{
+retired
+}
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+child
+}
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+coparented
+}
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+parent_unfriend_2
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+parenting
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+coparent
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+coparent
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+coparented
+}
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+parenting
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+coparent
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+coparent
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+coparented
+}
+\}
+ \subseteq c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+child_join
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+child
+}
+,\ 
+\mathit{
+parent
+}
+(
+\mathit{Carol}
+)
+,\ 
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+)
+,\\
+&
+\text{guarded by } 
+G_{
+1
+}
+\cup 
+G_{
+2
+}
+\cup 
+G_{
+3
+}
+,\ 
+G_{
+1
+}
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G_{
+1
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+ \text{ and } 
+G_{
+2
+}
+ \subseteq 
+\mathrm{ext}_c(
+\Bob
+)
+ \text{ with } |
+G_{
+2
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\Bob
+)
+|
+ \text{ and } 
+G_{
+3
+}
+ \subseteq 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+ \text{ with } |
+G_{
+3
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+|
+\end{align*}
+\iffalse
+child_join_2
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \uplus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Dave}
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+child
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+friend
+}
+(
+\Bob
+)
+,\ 
+\mathit{
+parent
+}
+(
+\mathit{Carol}
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+child
+}
+,\ 
+\mathit{
+parent
+}
+(
+\mathit{Dave}
+)
+,\ 
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+parenting
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Dave}
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Dave}
+)
+)
+,\\
+&
+\text{guarded by } 
+G_{
+1
+}
+\cup 
+G_{
+2
+}
+\cup 
+G_{
+3
+}
+\cup 
+G_{
+4
+}
+,\ 
+G_{
+1
+}
+ \subseteq 
+\mathrm{ext}_c(
+\Alice
+)
+ \text{ with } |
+G_{
+1
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\Alice
+)
+|
+ \text{ and } 
+G_{
+2
+}
+ \subseteq 
+\mathrm{ext}_c(
+\Bob
+)
+ \text{ with } |
+G_{
+2
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\Bob
+)
+|
+ \text{ and } 
+G_{
+3
+}
+ \subseteq 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+ \text{ with } |
+G_{
+3
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+|
+ \text{ and } 
+G_{
+4
+}
+ \subseteq 
+\mathrm{ext}_c(
+\mathit{Dave}
+)
+ \text{ with } |
+G_{
+4
+}
+| > 
+0
+|
+\mathrm{ext}_c(
+\mathit{Dave}
+)
+|
+\end{align*}
+\iffalse
+child_leave
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+child
+}
+,\ 
+\mathit{
+parent
+}
+(
+\mathit{Carol}
+)
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+)
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\mathit{Carol}
+)
+|
+\end{align*}
+\iffalse
+child_close
+\fi
+\begin{align*}
+&
+c'_
+p
+ := 
+(c_
+p
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+\}
+) \uplus 
+\{
+\mathit{
+closed
+}
+(
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+c'_
+p
+ := 
+c_
+p
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+n
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+child
+}
+,\ 
+\mathit{
+parent
+}
+(
+\Bob
+)
+,\ 
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+parenting
+}
+(
+\Alice
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,\ 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+ \subseteq c_
+p
+&& (p \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+n
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,\ 
+\mathit{
+retired
+}
+\}
+ \cap c_
+p
+ = \emptyset
+&& (p \in 
+\mathrm{ext}_c(
+\Bob
+)
+)
+,\\
+&
+\text{guarded by } 
+G
+,\ 
+G
+ \subseteq 
+\mathrm{ext}_c(
+\Bob
+)
+ \text{ with } |
+G
+| > 
+0
+|
+\mathrm{ext}_c(
+\Bob
+)
+|
+\end{align*}

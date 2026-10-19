@@ -1,0 +1,3877 @@
+%% Printed by programs/vglp/cva/compiler from the contract named below, in the
+%% term form programs/gsc reads (GSC, Sections 3 and 5, Appendix D): the canonical CVA
+%% platform of the contract (vGLP, Section 3.2, Definition "Canonical CVA
+%% Platform"), two-phase commit coordinated by the initiating agent, compiled
+%% into vGLP by its compilation (Section 5.4, "The compilation").  Edit the
+%% contract or the compiler and run
+%% programs/vglp/cva/compile.sh, not this file.
+%% the canonical CVA platform of the contract(cssn)
+
+%% ===========================================================================
+%% The contract
+%% ===========================================================================
+
+Class ::=
+establish(Peer)
+;
+befriend(Peer, Peer)
+;
+unfriend(Peer, Peer)
+;
+sign(Peer, Speech)
+;
+message(Peer, Peer, Speech)
+;
+forward(Peer, Peer, Speech)
+;
+create(Peer, Speech)
+;
+join(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
+;
+close(Peer, List(Peer), Speech)
+;
+drop(Peer, Peer, Speech)
+;
+post_own(Peer, Speech, Speech)
+;
+post(Peer, Peer, Speech, Speech)
+;
+post_forward(Peer, Peer, Speech, Speech)
+;
+deliver(Peer, Peer, Speech, Speech)
+;
+deliver_own(Peer, Peer, Speech, Speech)
+;
+enter(Peer, Peer)
+;
+enter_2(Peer, Peer, Peer)
+;
+of_age(Peer, Peer)
+;
+of_age_2(Peer, Peer, Peer)
+;
+child_befriend(Peer, Peer, Peer, Peer)
+;
+child_adult_befriend(Peer, Peer, Peer)
+;
+child_unfriend(Peer, Peer, Peer)
+;
+parent_unfriend(Peer, Peer)
+;
+parent_unfriend_2(Peer, Peer, Peer)
+;
+child_join(Peer, Peer, Peer, Speech)
+;
+child_join_2(Peer, Peer, Peer, Peer, Speech)
+;
+child_leave(Peer, Peer, Peer, Speech)
+;
+child_close(Peer, Peer, List(Peer), Speech)
+.
+
+Proposal ::=
+establish(Peer)
+;
+befriend(Peer, Peer)
+;
+unfriend(Peer, Peer)
+;
+sign(Peer, Speech)
+;
+message(Peer, Peer, Speech)
+;
+forward(Peer, Peer, Speech)
+;
+create(Peer, Speech)
+;
+join(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
+;
+close(Peer, Speech)
+;
+post_own(Peer, Speech, Speech)
+;
+post(Peer, Peer, Speech, Speech)
+;
+post_forward(Peer, Peer, Speech, Speech)
+;
+enter(Peer, Peer)
+;
+enter_2(Peer, Peer, Peer)
+;
+of_age(Peer, Peer)
+;
+of_age_2(Peer, Peer, Peer)
+;
+child_befriend(Peer, Peer, Peer, Peer)
+;
+child_adult_befriend(Peer, Peer, Peer)
+;
+child_unfriend(Peer, Peer, Peer)
+;
+parent_unfriend(Peer, Peer)
+;
+parent_unfriend_2(Peer, Peer, Peer)
+;
+child_join(Peer, Peer, Peer, Speech)
+;
+child_join_2(Peer, Peer, Peer, Peer, Speech)
+;
+child_leave(Peer, Peer, Peer, Speech)
+;
+child_close(Peer, Peer, Speech)
+.
+
+Request ::= propose(Proposal) ; known(Peer).
+
+%% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(List(Atom), List(Key)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP b7e3517, Section 5.4, "The compilation").
+Atom ::=
+identity
+;
+retired
+;
+friend(Peer)
+;
+child
+;
+parent(Peer)
+;
+parenting(Peer)
+;
+item(Speech)
+;
+authored(Speech)
+;
+member(CName)
+;
+listed(Peer, Speech)
+;
+closed(Speech)
+;
+posted(Speech, Speech)
+;
+delivered(Speech, Peer, Speech)
+;
+coparent(Peer)
+;
+coparented
+.
+
+procedure atom_of(GAtom?, Shown).
+atom_of(g(identity, []), shown(identity))
+.
+atom_of(g(retired, []), shown(retired))
+.
+atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
+.
+atom_of(g(child, []), shown(child))
+.
+atom_of(g(parent, [p(V1)]), shown(parent(V1?)))
+.
+atom_of(g(parenting, [p(V1)]), shown(parenting(V1?)))
+.
+atom_of(g(item, [s(V1)]), shown(item(V1?)))
+.
+atom_of(g(authored, [s(V1)]), shown(authored(V1?)))
+.
+atom_of(g(member, [c(V1)]), shown(member(V1?)))
+.
+atom_of(g(listed, [p(V1), s(V2)]), shown(listed(V1?, V2?)))
+.
+atom_of(g(closed, [s(V1)]), shown(closed(V1?)))
+.
+atom_of(g(posted, [s(V1), s(V2)]), shown(posted(V1?, V2?)))
+.
+atom_of(g(delivered, [s(V1), p(V2), s(V3)]), shown(delivered(V1?, V2?, V3?)))
+.
+atom_of(g(coparent, [p(V1)]), shown(coparent(V1?)))
+.
+atom_of(g(coparented, []), shown(coparented))
+.
+atom_of(_, unshown) :- otherwise | true.
+
+procedure contract_schemas(Schemas).
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(parent, [role(2)]), atom(parenting, [role(2)]), atom(retired, [])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, [svar(x)], [rs(guarded, [atom(item, [svar(x)]), atom(authored, [svar(x)])], [], [atom(identity, [])], [atom(retired, [])])]), schema(message, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)])], [atom(retired, [])]), rs(unguarded, [atom(item, [svar(x)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(forward, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)])], [atom(authored, [svar(x)]), atom(retired, [])]), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)]), atom(retired, [])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(child, []), atom(member, [nterm(ext(own(1), n))]), atom(retired, [])])]), schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [atom(retired, [])])]), lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(2, 1, listed, [svar(n)])]), schema(drop, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), schema(post_own, [svar(x), svar(n)], [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(1), n))])], [atom(posted, [svar(x), svar(n)]), atom(retired, [])])]), schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], [atom(retired, [])]), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]), schema(post_forward, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], [atom(authored, [svar(x)]), atom(retired, [])]), rs(unguarded, [atom(posted, [sgn(x, 1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]), schema(deliver, [svar(y), svar(n)], [rs(unguarded, [atom(delivered, [svar(y), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(y), svar(n)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(authored, [svar(y)]), atom(delivered, [svar(y), role(2), svar(n)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]), schema(deliver_own, [svar(y), svar(n)], [rs(unguarded, [atom(delivered, [svar(y), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(y), svar(n)]), atom(authored, [svar(y)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(delivered, [svar(y), role(2), svar(n)])]), rs(unguarded, [atom(item, [svar(y)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]), schema(enter, [], [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []), atom(friend, [role(1)])], [], [], [atom(identity, []), atom(retired, [])])]), schema(enter_2, [], [rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(2)]), atom(friend, [role(3)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(1)]), atom(friend, [role(3)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(parent, [role(2)]), atom(child, []), atom(child, []), atom(coparented, []), atom(friend, [role(1)]), atom(friend, [role(2)])], [], [], [atom(identity, []), atom(retired, [])])]), schema(of_age, [], [rs(guarded, [], [atom(parenting, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])], [atom(identity, [])], [atom(coparented, [])])]), schema(of_age_2, [], [rs(guarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(parent, [role(1)]), atom(parent, [role(2)]), atom(child, []), atom(child, []), atom(coparented, [])], [atom(identity, [])], [])]), schema(child_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)])], [atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])], [atom(child, []), atom(retired, [])])]), schema(child_adult_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(parenting, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])])]), schema(parent_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(parenting, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [atom(retired, [])], [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, [])], [atom(identity, [])], [atom(coparented, [])])]), schema(parent_unfriend_2, [], [rs(guarded, [], [atom(friend, [role(3)]), atom(parenting, [role(3)]), atom(coparent, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(coparent, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, []), atom(coparented, [])], [atom(identity, [])], [])]), schema(child_join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)]), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_join_2, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(child, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)]), atom(parent, [role(3)])], [atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)]), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]), lschema(child_close, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, []), atom(child, []), atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(3, 1, listed, [svar(n)])])])
+.
+
+procedure reflexive_preds(Preds).
+reflexive_preds([friend])
+.
+
+procedure introduction_preds(Preds).
+introduction_preds([])
+.
+
+procedure binding_of(Class?, Constant, Binding).
+binding_of(establish(V1), establish, [b(role(1), p(V1?))])
+.
+binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
+binding_of(unfriend(V1, V2), unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
+binding_of(sign(V1, V2), sign, [b(role(1), p(V1?)), b(svar(x), s(V2?))])
+.
+binding_of(message(V1, V2, V3), message, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?))])
+.
+binding_of(forward(V1, V2, V3), forward, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?))])
+.
+binding_of(create(V1, V2), create, [b(role(1), p(V1?)), b(svar(n), s(V2?))])
+.
+binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(n), s(V3?))])
+.
+binding_of(leave(V1, V2, V3), leave, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(n), s(V3?))])
+.
+binding_of(close(V1, V2, V3), close, B?)
+:-
+listed_binding(close, [b(role(1), p(V1?)), b(svar(n), s(V3?))], [V2?], B)
+.
+binding_of(drop(V1, V2, V3), drop, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(n), s(V3?))])
+.
+binding_of(post_own(V1, V2, V3), post_own, [b(role(1), p(V1?)), b(svar(x), s(V2?)), b(svar(n), s(V3?))])
+.
+binding_of(post(V1, V2, V3, V4), post, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?)), b(svar(n), s(V4?))])
+.
+binding_of(post_forward(V1, V2, V3, V4), post_forward, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?)), b(svar(n), s(V4?))])
+.
+binding_of(deliver(V1, V2, V3, V4), deliver, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(y), s(V3?)), b(svar(n), s(V4?))])
+.
+binding_of(deliver_own(V1, V2, V3, V4), deliver_own, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(y), s(V3?)), b(svar(n), s(V4?))])
+.
+binding_of(enter(V1, V2), enter, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
+binding_of(enter_2(V1, V2, V3), enter_2, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+.
+binding_of(of_age(V1, V2), of_age, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
+binding_of(of_age_2(V1, V2, V3), of_age_2, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+.
+binding_of(child_befriend(V1, V2, V3, V4), child_befriend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(role(4), p(V4?))])
+.
+binding_of(child_adult_befriend(V1, V2, V3), child_adult_befriend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+.
+binding_of(child_unfriend(V1, V2, V3), child_unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+.
+binding_of(parent_unfriend(V1, V2), parent_unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
+binding_of(parent_unfriend_2(V1, V2, V3), parent_unfriend_2, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+.
+binding_of(child_join(V1, V2, V3, V4), child_join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(svar(n), s(V4?))])
+.
+binding_of(child_join_2(V1, V2, V3, V4, V5), child_join_2, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(role(4), p(V4?)), b(svar(n), s(V5?))])
+.
+binding_of(child_leave(V1, V2, V3, V4), child_leave, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(svar(n), s(V4?))])
+.
+binding_of(child_close(V1, V2, V3, V4), child_close, B?)
+:-
+listed_binding(child_close, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(n), s(V4?))], [V3?], B)
+.
+
+procedure class_of(Constant?, Binding?, Peer?, Class).
+class_of(establish, B, D, establish(V1?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+.
+class_of(befriend, B, D, befriend(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(unfriend, B, D, unfriend(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(sign, B, D, sign(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar(x), B?, D?, V2)
+.
+class_of(message, B, D, message(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(x), B?, D?, V3)
+.
+class_of(forward, B, D, forward(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(x), B?, D?, V3)
+.
+class_of(create, B, D, create(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar(n), B?, D?, V2)
+.
+class_of(join, B, D, join(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(n), B?, D?, V3)
+.
+class_of(leave, B, D, leave(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(n), B?, D?, V3)
+.
+class_of(close, B, D, close(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+copies_of(B?, 2, V2)
+,
+val_speech(svar(n), B?, D?, V3)
+.
+class_of(drop, B, D, drop(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(n), B?, D?, V3)
+.
+class_of(post_own, B, D, post_own(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar(x), B?, D?, V2)
+,
+val_speech(svar(n), B?, D?, V3)
+.
+class_of(post, B, D, post(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(x), B?, D?, V3)
+,
+val_speech(svar(n), B?, D?, V4)
+.
+class_of(post_forward, B, D, post_forward(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(x), B?, D?, V3)
+,
+val_speech(svar(n), B?, D?, V4)
+.
+class_of(deliver, B, D, deliver(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(y), B?, D?, V3)
+,
+val_speech(svar(n), B?, D?, V4)
+.
+class_of(deliver_own, B, D, deliver_own(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(y), B?, D?, V3)
+,
+val_speech(svar(n), B?, D?, V4)
+.
+class_of(enter, B, D, enter(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(enter_2, B, D, enter_2(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+.
+class_of(of_age, B, D, of_age(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(of_age_2, B, D, of_age_2(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+.
+class_of(child_befriend, B, D, child_befriend(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+,
+val_peer(role(4), B?, D?, V4)
+.
+class_of(child_adult_befriend, B, D, child_adult_befriend(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+.
+class_of(child_unfriend, B, D, child_unfriend(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+.
+class_of(parent_unfriend, B, D, parent_unfriend(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(parent_unfriend_2, B, D, parent_unfriend_2(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+.
+class_of(child_join, B, D, child_join(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+,
+val_speech(svar(n), B?, D?, V4)
+.
+class_of(child_join_2, B, D, child_join_2(V1?, V2?, V3?, V4?, V5?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+,
+val_peer(role(4), B?, D?, V4)
+,
+val_speech(svar(n), B?, D?, V5)
+.
+class_of(child_leave, B, D, child_leave(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+,
+val_speech(svar(n), B?, D?, V4)
+.
+class_of(child_close, B, D, child_close(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+copies_of(B?, 3, V3)
+,
+val_speech(svar(n), B?, D?, V4)
+.
+
+procedure name_class(Proposal?, GAtoms?, Class).
+name_class(establish(V1), _, establish(V1?))
+.
+name_class(befriend(V1, V2), _, befriend(V1?, V2?))
+.
+name_class(unfriend(V1, V2), _, unfriend(V1?, V2?))
+.
+name_class(sign(V1, V2), _, sign(V1?, V2?))
+.
+name_class(message(V1, V2, V3), _, message(V1?, V2?, V3?))
+.
+name_class(forward(V1, V2, V3), _, forward(V1?, V2?, V3?))
+.
+name_class(create(V1, V2), _, create(V1?, V2?))
+.
+name_class(join(V1, V2, V3), _, join(V1?, V2?, V3?))
+.
+name_class(leave(V1, V2, V3), _, leave(V1?, V2?, V3?))
+.
+name_class(close(V1, V3), St, C?)
+:-
+listed_class(close, [b(role(1), p(V1?)), b(svar(n), s(V3?))], St?, C)
+.
+name_class(post_own(V1, V2, V3), _, post_own(V1?, V2?, V3?))
+.
+name_class(post(V1, V2, V3, V4), _, post(V1?, V2?, V3?, V4?))
+.
+name_class(post_forward(V1, V2, V3, V4), _, post_forward(V1?, V2?, V3?, V4?))
+.
+name_class(enter(V1, V2), _, enter(V1?, V2?))
+.
+name_class(enter_2(V1, V2, V3), _, enter_2(V1?, V2?, V3?))
+.
+name_class(of_age(V1, V2), _, of_age(V1?, V2?))
+.
+name_class(of_age_2(V1, V2, V3), _, of_age_2(V1?, V2?, V3?))
+.
+name_class(child_befriend(V1, V2, V3, V4), _, child_befriend(V1?, V2?, V3?, V4?))
+.
+name_class(child_adult_befriend(V1, V2, V3), _, child_adult_befriend(V1?, V2?, V3?))
+.
+name_class(child_unfriend(V1, V2, V3), _, child_unfriend(V1?, V2?, V3?))
+.
+name_class(parent_unfriend(V1, V2), _, parent_unfriend(V1?, V2?))
+.
+name_class(parent_unfriend_2(V1, V2, V3), _, parent_unfriend_2(V1?, V2?, V3?))
+.
+name_class(child_join(V1, V2, V3, V4), _, child_join(V1?, V2?, V3?, V4?))
+.
+name_class(child_join_2(V1, V2, V3, V4, V5), _, child_join_2(V1?, V2?, V3?, V4?, V5?))
+.
+name_class(child_leave(V1, V2, V3, V4), _, child_leave(V1?, V2?, V3?, V4?))
+.
+name_class(child_close(V1, V2, V4), St, C?)
+:-
+listed_class(child_close, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(n), s(V4?))], St?, C)
+.
+
+%% ===========================================================================
+%% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, Menu, shows the agent's own key and the persons it knows and takes one request (vGLP 321127a, Section 5.4); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(S, K), the machine state S of its app state and the persons K it knows, when it starts and whenever either changes, and the person's screen shows the last view written (vGLP b7e3517, Section 5.4, "The compilation"); and, when an attempt its person proposed closes without committing, a notice, refused(Part, Q), Q the participant whose vote no closed it, or yielded(Part), where it yielded to an attempt with priority over it (vGLP c44769f, Section 5.4, "The compilation").
+%% ===========================================================================
+
+%% An attempt (i, k, pi, [t]_j) (vGLP 099f876, Definition "Attempt"): its initiator, its number, its rank and its part, named by a term of Class, a schema-binding of the part, of the attempt's class (Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"), the part's guard set the people in the schema-binding's marked roles.  The cargoes (Definition "Cargo, App State, Question, Free, Ready") are its start, a vote on it, its outcome and a yield of it; a message carries its sender and a cargo, a hello, an ihello, or an introduction, intro(P, Q), P's cargo intro(Q) (Definitions "CVA Platform" and "Introduction Rule, Introduce Peers").
+Peer      ::= Key.
+%% A speech act is an utterance or a speech act, signed by a person (GSC,
+%% Section 3): "A speech act forwarded with its provenance is signed again at
+%% each forward, so its type is recursive, and a request to forward it carries
+%% it.  With no mode inversion, a recursive type is written whole by the
+%% program or whole by the person" (vGLP, Section 5.1, Definition "Volitional
+%% Procedure, Interactive Type" and the paragraph after it).
+Speech    ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+YesNo     ::= yes ; no.
+Decision  ::= commit ; abort.
+Attempt   ::= attempt(Peer, Integer, Integer, Class).
+Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+            ; yield(Attempt).
+Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net       ::= msg(Peer, Content).
+Approval  ::= approval(Attempt, YesNo?).
+Menu      ::= menu(Key, List(Key), Request?).
+Close     ::= close.
+Trigger   ::= req(Request) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
+
+%% The contract, as programs/gsc writes it: a schema's roles, each rs(Guard,
+%% Add, Del, Keep, Forb), a role named by its index; sgn(y, i) is the signed
+%% term of an added atom: "a signed term sgn(y, i) in an added atom is the
+%% speech act bound to y, signed by the person in role i" (vGLP, Section
+%% 5.4, "Act schemas as local specifications"; GSC, Definition "Act schema").
+%% A name term <u>.y_1...y_n, nterm(N): N is own(I), <pi_I>, or own_var(X), <x>, followed by ext(N, Y) for each y; "a name term <u>.y_1...y_n is the community name of the person bound to u followed by the speech acts bound to y_1, ..., y_n, as <a>.n names the group n led by a" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications"; GSC, Appendix D).
+Var       ::= role(Integer) ; pvar(Constant) ; svar(Constant)
+            ; sgn(Constant, Integer) ; nterm(NTerm).
+NTerm     ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant).
+Vars      ::= [] ; [Var | Vars].
+SAtom     ::= atom(Constant, Vars).
+SAtoms    ::= [] ; [SAtom | SAtoms].
+Guard     ::= guarded ; unguarded.
+RoleSpec  ::= rs(Guard, SAtoms, SAtoms, SAtoms, SAtoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+%% A schema's second argument is its variables, in the order of its head (GSC 0228e79, Definition "Act schema"; programs/gsc/README.md, "Writing a contract").
+Schema    ::= schema(Constant, Vars, RoleSpecs) ; lschema(Constant, Vars, RoleSpecs, Listings).
+%% A schema with listed roles pi[rho(*, u_2, ..., u_r)], lschema(Name, Vars, Roles, Listings): each listed role written as a party role of its atoms, and listing(I, Base, Rho, Args) in Listings, in the order of the roles, I its index, Base the index of its base, an agent role, Rho the predicate rho and Args its arguments u_2, ..., u_r; "A listed role ... has as its people at a schema-binding the persons q with rho(q, u_2, ..., u_r), so bound, in the state of the person in pi", and "the listed roles of a schema have one base" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").  A schema-binding of it with the lists L_1, ..., L_m of the people of its listed roles, in the order of the roles, is carried as a schema-binding of its roles, each listed role's place bound to the base person and its atoms at none; of one role more for each person of each list, of that listed role's atoms, the roles after its own, the people of L_1 first; and of an entry b(role(-I), p(Q)) for each person Q of the list of the listed role of index I, which names its people (bound_spec, listed_binding, copies_of): "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles: the set of transactions it determines with L in those roles" (ibid.).
+Listing   ::= listing(Integer, Integer, Constant, Vars).
+Listings  ::= [] ; [Listing | Listings].
+PeerLists ::= [] ; [Peers | PeerLists].
+ListTuples ::= [] ; [PeerLists | ListTuples].
+Schemas   ::= [] ; [Schema | Schemas].
+Preds     ::= [] ; [Constant | Preds].
+
+%% A machine state is a multiset of ground atoms, a list; an atom's arguments
+%% are people and speech acts.  A binding sends roles and party variables to
+%% people and speech-act variables to speech acts.
+%% The value of a name term is a community name, c(N): community(P) the community name of the person P, dot(N, S) the community name N followed by the speech act S, as dot(community(a), n) names the group n led by a.
+CName     ::= community(Peer) ; dot(CName, Speech).
+Val       ::= p(Peer) ; s(Speech) ; c(CName).
+NameParts ::= parts(Vars, Vals) ; noparts.
+Vals      ::= [] ; [Val | Vals].
+GAtom     ::= g(Constant, Vals).
+GAtoms    ::= [] ; [GAtom | GAtoms].
+%% The program's output to its person is of the type of the views, view(S, K): S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it, and K the persons the agent knows, in the order of identifiers, so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(P, Q) and yielded(P), P the term of the part of an attempt the person proposed and Q a participant: "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it" (vGLP f5f1644, Section 5.4, "The compilation"; Definition "Widget Declaration").
+Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Shown     ::= shown(Atom) ; unshown.
+Stream(Output) =::= last_state.
+Bind      ::= b(Var, Val).
+Binding   ::= [] ; [Bind | Binding].
+Bindings  ::= [] ; [Binding | Bindings].
+Found     ::= found(Val) ; free.
+Match     ::= match(Binding) ; nomatch.
+SgnParts  ::= signed(Val, Peer) ; unsigned.
+Peers     ::= [] ; [Peer | Peers].
+Nets      ::= [] ; [Net | Nets].
+Ints      ::= [] ; [Integer | Ints].
+
+%% A class, as the paper defines it: "The classes are those of the contract's equivalence, generated by relating two transactions when one schema-binding determines both" (vGLP 099f876, Section 5.4, "Act schemas as local specifications").  Two schema-bindings of the same participants and the same atoms deleted and added at each determine a common transaction, and are linked, when no atom one requires at a participant the other forbids there; a class is what a chain of links joins.  Each schema-binding determines a part of its class, the set of transactions it determines, with the people in its marked roles as its guard set (ibid.), and two schema-bindings determine one part where they require the same atoms, as multisets, and forbid the same atoms at every participant, and mark the same people (same_part; vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 1).  An entry for a class holds its participants and the atoms each deletes and adds, delta(P, D, A); its parts, each pt(T, GuardSet, Opener), named by the term T of the first of its schema-bindings in the order of the entry's, with its guard set and, for an unguarded part, its opener, opener(P), "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it" (ibid.); for a guarded part determined by a schema with a listed role whose base is not a guarding role, its opener likewise, opener(P), P the least person in the first role of those schema-bindings, that person not a guard of the part (vGLP a890465, ibid.: "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part"); and guarded_part for every other guarded part, which has no opener; and its schema-bindings, each mate(Schema, Binding, GuardSet, FirstPerson), every variable bound, the contract being effective (local.glp: every variable of an atom a schema requires or forbids is a variable of an atom it deletes or adds).  ci(C, Deltas, Participants, Parts, Mates), C the term that names it, the first the agent met.
+Delta     ::= delta(Peer, GAtoms, GAtoms).
+Deltas    ::= [] ; [Delta | Deltas].
+Mate      ::= mate(Constant, Binding, Peers, Peer).
+Mates     ::= [] ; [Mate | Mates].
+Opener    ::= opener(Peer) ; guarded_part.
+Part      ::= pt(Class, Peers, Opener).
+Parts     ::= [] ; [Part | Parts].
+Info      ::= ci(Class, Deltas, Peers, Parts, Mates).
+Infos     ::= [] ; [Info | Infos].
+ClassRes  ::= cls(Info) ; nocls.
+%% An atom of a schema-binding as it is compared, within the schema-binding and with another's: a variable the binding leaves free stands for itself, cmp_free(V), one person or speech act in every atom it occurs in and named by no other variable.
+CVal      ::= cmp_val(Val) ; cmp_free(Var).
+CVals     ::= [] ; [CVal | CVals].
+CAtom     ::= cmp_atom(Constant, CVals).
+CAtoms    ::= [] ; [CAtom | CAtoms].
+
+%% The app state (s, k, L, R): the machine state, the agent's number, the largest number of an attempt it has proposed or read, the lock, unlocked or the attempt it holds prepared, and the record.  The agent state: its identifier, the app state, the count of the own transactions it has taken, the peers hello has been sent to and received from, and ihello, the count at which each class of its own transactions it has met began to wait --- the opening class op([t]_j) of an unguarded part, named by the part's term, the Vote vt(At) and the Commit cm(At) on an attempt, the Wound wd(A, B) of A against B, and the Introduce peers ip(Q, R) of a pair, Q preceding R --- the classes met, the starts it holds waiting, deferred(M), and the parts it has proposed, each named by a term of Class, in the order it last proposed them, the least recent first (vGLP 099f876, Section 5.4, "The compilation"; Definition "Equivalence of the Canonical Platform": "the opening class on [t]_j of its opener").
+Lock      ::= unlocked ; held(Attempt).
+Rec       ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo)
+            ; got(Attempt, Peer, YesNo) ; closed(Attempt) ; wounded(Attempt)
+            ; yielded(Attempt) ; introduced(Peer, Peer).
+Recs      ::= [] ; [Rec | Recs].
+App       ::= app(GAtoms, Integer, Lock, Recs).
+Pend      ::= deferred(Net).
+Pends     ::= [] ; [Pend | Pends].
+WKey      ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt)
+            ; ip(Peer, Peer).
+Wait      ::= w(WKey, Integer).
+Waits     ::= [] ; [Wait | Waits].
+WFound    ::= at(Integer) ; unseen.
+St        ::= st(Peer, App, Integer, Peers, Peers, Peers, Peers, Waits, Infos, Pends, Classes).
+OpenApproval ::= oc(Attempt, Close?).
+OpenApprovals ::= [] ; [OpenApproval | OpenApprovals].
+Send      ::= to(Peer, Cargo).
+Sends     ::= [] ; [Send | Sends].
+Subj      ::= sub(Info) ; pair ; prop(Info, Class).
+Cand      ::= cand(WKey, Subj).
+Cands     ::= [] ; [Cand | Cands].
+Choice    ::= take(WKey, Subj) ; none.
+Pair      ::= pr(Peer, Peer).
+Pairs     ::= [] ; [Pair | Pairs].
+PKey      ::= key(WKey) ; nokey.
+Cond      ::= go(Info) ; drop.
+PCond     ::= pgo(Info, Class) ; pdrop.
+Named     ::= named(Class) ; unnamed.
+Classes   ::= [] ; [Class | Classes].
+Aged      ::= aged(Integer, YesNo, Class).
+Ageds     ::= [] ; [Aged | Ageds].
+Pick      ::= picked(Aged) ; nopick.
+MCond     ::= mgo(Info) ; mdefer ; noparticipant.
+Blocker   ::= blk(Attempt) ; noblk.
+FoundNet  ::= found(Net) ; nonefound.
+Last      ::= last(Attempt) ; nolast.
+Known     ::= allknown ; unknown(Peer).
+Then      ::= write_own ; own_unread ; no_own.
+ApprovalRes ::= approval_for(Attempt) ; noapproval.
+
+%% When it starts, its view is written on the output: the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
+agent(Id, NetIn, Out?, [view([], [])|Thr?]) :- ground(Id?) |
+    request(Id?, [], Rq),
+    tag_net(NetIn?, Nt),
+    merge(Rq?, Nt?, M1),
+    merge(M1?, Ans?, M2),
+    merge(M2?, [own|Ow?], In),
+    agent_goal([], In?, yes, Ans, Thr, Out, Ow, [],
+        st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [])).
+
+%% A request question: the agent's own key, its identifier, the persons the
+%% agent knows, in the order of identifiers, and the person's one request,
+%% put up once it is made.
+procedure (Menu)*request(Key?, List(Key)?, Stream(Trigger)).
+(menu(Id?, Ks?, R))*request(Id, Ks, Out?) :- ground(Id?), ground(Ks?) |
+    await_request(R?, Out).
+procedure await_request(Request?, Stream(Trigger)).
+await_request(propose(C), [req(propose(C?))]).
+await_request(known(Q), [req(known(Q?))]).
+
+%% The next request question, asked on reading the answer to the last, its
+%% answers joining the agent goal's input.
+procedure ask_next(St?, Stream(Trigger), Stream(Trigger)?).
+ask_next(St, Ans?, Ans1) :- ground(St?) |
+    st_id(St?, Id),
+    st_known(St?, Ks),
+    request(Id?, Ks?, R),
+    merge(R?, Ans1?, Ans).
+
+procedure tag_net(Stream(Net)?, Stream(Trigger)).
+tag_net([M|Ms], [net(M?)|Ts?]) :- tag_net(Ms?, Ts).
+tag_net([], []).
+
+%% A responder: the approval question Start raises shows the attempt and takes yes or no.
+%% The agent goal holds the writer of its close signal and closes it once the
+%% question is no longer pending, as when Outcome closes the attempt first; the
+%% responder then reduces without the answer, dropping the person's reader on
+%% it.
+procedure (Approval)*respond(Attempt?, Close?, Stream(Trigger)).
+(approval(At?, YN))*respond(At, Cl, Out?) :- ground(At?) |
+    await(At?, YN?, Cl?, Out).
+procedure await(Attempt?, YesNo?, Close?, Stream(Trigger)).
+await(At, yes, _, [answered(At?, yes)]).
+await(At, no, _, [answered(At?, no)]).
+await(_, _, close, []).
+
+%% ===========================================================================
+%% The agent goal: one clause per kind of trigger, which computes the conditions of the schemas the trigger puts up and calls the dispatch.  It reads first the recheck of the starts it holds waiting, which a dispatch puts up, and then its input stream, the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers.  It holds the writer of its stream of own triggers, Ow, and whether an own trigger it has written is still unread, U.  It takes its own transactions one at a time, one on each own trigger it reads; it writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions and writes none once none holds (vGLP 6c8c663, Section 5.4, "The compilation").
+%% ===========================================================================
+
+procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+agent_goal([T|Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    then_local(U?, Th),
+    step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+agent_goal([], [T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    then_read(U?, Th),
+    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, St?).
+agent_goal([], [], _, [], [], [], [], _, _).
+
+%% After a recheck, read from the agent goal's own list, an own trigger is unread exactly when one was before it (own_unread, no_own); after another trigger, read from the input stream, an own trigger is written unless one is unread (write_own, own_unread).  An own trigger is read from the input stream, and its clause, step(own, ...), takes no Then: dispatch_own writes the next own trigger after an own transaction taken, and none where none holds.
+procedure then_local(YesNo?, Then).
+then_local(yes, own_unread).
+then_local(no, no_own).
+procedure then_read(YesNo?, Then).
+then_read(yes, own_unread).
+then_read(no, write_own).
+
+procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?,
+    Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(N?), ground(St?) |
+    st_app(St?, Ap0),
+    ask_next(St?, Ans, Ans1?),
+    st_ms(St?, S),
+    name_class(N?, S?, C),
+    propose_cond(C?, St?, Cd, St1),
+    dispatch_propose(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St1?).
+step(req(known(Q)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(Q?), ground(St?) |
+    st_app(St?, Ap0),
+    ask_next(St?, Ans, Ans1?),
+    known_cond(Q?, St?, Cd),
+    dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St?).
+step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(P?), ground(St?) |
+    st_app(St?, Ap0),
+    hello_cond(P?, St?, Cd),
+    dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+step(net(msg(_, ihello(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(P?), ground(St?) |
+    st_app(St?, Ap0),
+    ihello_cond(P?, St?, Cd),
+    dispatch_ihello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(Q?), ground(St?) |
+    st_app(St?, Ap0),
+    intro_cond(Q?, St?, Cd),
+    dispatch_intro(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(To?), ground(F?), ground(X?), ground(St?) |
+    st_app(St?, Ap0),
+    message_cond(X?, St?, Cd, St1),
+    dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?,
+        In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(At?), ground(YN?), ground(St?) |
+    st_app(St?, Ap0),
+    close_approval(At?, Approvals?, Approvals1),
+    answer_cond(At?, St?, Cd, St1),
+    dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out,
+        Ow, Approvals1?, St1?).
+step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :- ground(St?) |
+    st_pends(St?, Pd),
+    recheck_find(Pd?, St?, F),
+    recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+%% After a dispatch: where the machine state has changed, the new view is written on the output (vGLP b7e3517, Section 5.4, "The compilation": "where the machine state changes, it writes the new view on the output"); where the app state has changed, the approval questions whose question the new app state no longer holds pending are closed; where it has, or the dispatch consumed a start (Kick), the starts held waiting are put up again, by a recheck; and the agent goal writes an own trigger on its stream of own triggers after another trigger read from the input stream, unless an own trigger it has written is still unread, and after an own transaction taken (Then write_own), and none after an own trigger on which none holds (no_own) or while one is unread (own_unread), so that at most one own trigger it has written is unread (vGLP 6c8c663, Section 5.4, "The compilation").
+procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?,
+    Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(Ap0?), ground(St?) |
+    app_changed(Ap0?, St?, Ca1),
+    app_changed(Ap0?, St?, Ca2),
+    or(Ca2?, Kick?, Re),
+    close_falsified(Ca1?, Approvals?, St?, Approvals1),
+    repend(Re?, St?, Ag, St1),
+    own_after(Th?, Ow, Ow1?, U),
+    app(Ag?, Ls?, L1),
+    show_state(Ap0?, St?, Thr, Thr1?),
+    agent_goal(L1?, In?, U?, Ans, Thr1, Out, Ow1, Approvals1?, St1?).
+
+%% The view after the dispatch, written where the machine state differs, as a multiset, from that before it.
+procedure show_state(App?, St?, Stream(Output), Stream(Output)?).
+show_state(Ap0, St, Thr?, Thr1) :- ground(Ap0?), ground(St?) |
+    app_ms(Ap0?, S0),
+    st_ms(St?, S1),
+    ms_eq(S0?, S1?, Sm),
+    neg(Sm?, Ch),
+    show_view(Ch?, St?, Thr, Thr1?).
+%% The view after a hello or an ihello is sent or recorded, written where the peer Q, not known before, is known now: on whichever of the two hellos, or of the two ihellos, comes second (vGLP b7e3517, Section 5.4, "The compilation": "when a peer becomes known, the agent goal writes the new view on the output").
+procedure show_known(Peer?, St?, St?, Stream(Output), Stream(Output)?, St).
+show_known(Q, St0, St, Thr?, Thr1, St?) :- ground(Q?), ground(St0?), ground(St?) |
+    known_st(Q?, St0?, B0),
+    known_st(Q?, St?, B1),
+    neg(B0?, N0),
+    and(N0?, B1?, B),
+    show_view(B?, St?, Thr, Thr1?).
+procedure show_view(YesNo?, St?, Stream(Output), Stream(Output)?).
+show_view(no, _, Thr1?, Thr1).
+show_view(yes, St, [V?|Thr1?], Thr1) :- view_of(St?, V).
+%% The view at the agent state: its machine state, the contract's atoms, and the persons it knows, in the order of identifiers.
+procedure view_of(St?, Output).
+view_of(St, view(A?, Ks?)) :- ground(St?) |
+    st_ms(St?, S),
+    atoms_of(S?, A),
+    st_known(St?, Ks).
+procedure app_ms(App?, GAtoms).
+app_ms(app(S, _, _, _), S?).
+procedure st_ms(St?, GAtoms).
+st_ms(st(_, app(S, _, _, _), _, _, _, _, _, _, _, _, _), S?).
+%% The machine state as the contract writes its atoms, each by atom_of, which the compiler prints from the contract and whose last clause, giving unshown for an atom of no alternative of Atom, covers the type and is never reached.
+procedure atoms_of(GAtoms?, List(Atom)).
+atoms_of([], []).
+atoms_of([G|Gs], As?) :- atom_of(G?, Sh), atoms_of(Gs?, As1), shown_cons(Sh?, As1?, As).
+procedure shown_cons(Shown?, List(Atom)?, List(Atom)).
+shown_cons(shown(A), As, [A?|As?]).
+shown_cons(unshown, As, As?).
+
+%% The notice, written on the output where the dispatch closed, without committing, an attempt the agent's person proposed (vGLP c44769f, Section 5.4, "The compilation": "when an attempt its person proposed closes without committing, a notice: refused([t]_j, q), q the participant whose vote no closed it, or yielded([t]_j), where it yielded to an attempt with priority over it").  Its person proposed it where it is the agent's own attempt of a guarded part, whose Propose the agent takes only on its person's request (Section 5.4, "Triggers"); an opener's attempt, of an unguarded part, gives no notice.  Tally closes an attempt on a vote no, refused_by(Q), Q the participant who cast it; Yield, on a yield, and the agent's own Wound of its attempt close it wounded, yielded_by.  The attempt is closed by the dispatch where closed(At) is in the record after it and not before, and the notice names its part by the attempt's term, refused(C, Q) or yielded(C).
+NoticeOf  ::= refused_by(Peer) ; yielded_by.
+procedure noticed(NoticeOf?, Attempt?, App?, St?, Stream(Output), Stream(Output)?, St).
+noticed(K, At, Ap0, St, Thr?, Thr1, St?) :- ground(K?), ground(At?), ground(Ap0?), ground(St?) |
+    closed_proposed(At?, Ap0?, St?, B),
+    attempt_class(At?, C),
+    notice_of(K?, C?, N),
+    put_notice(B?, N?, Thr, Thr1?).
+procedure notice_of(NoticeOf?, Class?, Output).
+notice_of(refused_by(Q), C, refused(C?, Q?)).
+notice_of(yielded_by, C, yielded(C?)).
+procedure put_notice(YesNo?, Output?, Stream(Output), Stream(Output)?).
+put_notice(yes, N, [N?|Thr1?], Thr1).
+put_notice(no, _, Thr1?, Thr1).
+%% Whether the dispatch, from the app state Ap0 to the agent state St, closed the attempt At, the agent its initiator and its part guarded, the people its schema-binding marks not none.
+procedure closed_proposed(Attempt?, App?, St?, YesNo).
+closed_proposed(At, Ap0, St, B?) :- ground(At?), ground(Ap0?), ground(St?) |
+    app_recs(Ap0?, R0),
+    mem(closed(At?), R0?, Cl0),
+    neg(Cl0?, Open0),
+    st_app(St?, Ap1),
+    app_recs(Ap1?, R1),
+    mem(closed(At?), R1?, Cl1),
+    st_id(St?, Id),
+    attempt_id(At?, P),
+    same(P?, Id?, Own),
+    attempt_class(At?, C),
+    binding_of(C?, Nm, Bn),
+    marked_people(Nm?, Bn?, G),
+    some_peer(G?, Gd),
+    and(Open0?, Cl1?, B1),
+    and(B1?, Own?, B2),
+    and(B2?, Gd?, B).
+procedure some_peer(Peers?, YesNo).
+some_peer([], no).
+some_peer([_|_], yes).
+
+procedure app_changed(App?, St?, YesNo).
+app_changed(Ap0, St, C?) :- ground(Ap0?), ground(St?) |
+    st_app(St?, Ap1),
+    same(Ap0?, Ap1?, Sm),
+    neg(Sm?, C).
+
+%% own_after(Then?, Ow, Ow1?, U): an own trigger written on Ow, or none, Ow1 the rest of the stream of own triggers, and U whether an own trigger written is unread after it.
+procedure own_after(Then?, Stream(Trigger), Stream(Trigger)?, YesNo).
+own_after(write_own, [own|Ow1?], Ow1, yes).
+own_after(own_unread, Ow1?, Ow1, yes).
+own_after(no_own, Ow1?, Ow1, no).
+
+%% repend(Again?, St?, Ag, St1): a recheck of the starts held waiting, where
+%% there are any and the dispatch changed the app state or consumed a start.
+procedure repend(YesNo?, St?, Stream(Trigger), St).
+repend(no, St, [], St?).
+repend(yes, St, Ag?, St?) :- ground(St?) |
+    st_pends(St?, Pd),
+    pend_triggers(Pd?, Ag).
+procedure pend_triggers(Pends?, Stream(Trigger)).
+pend_triggers([], []).
+pend_triggers([_|_], [recheck]).
+
+%% --- Propose of a part, on the request propose([t]_j) or by the opener ------
+%% On the request propose(N), N the request name of a guarded part, the class term of the part it names at the agent's state (name_class: for a schema with a listed role, with the people the agent lists), the agent proposes, among the guarded parts of its class it guards and is ready for, the one it has proposed least recently (vGLP f5f1644, Section 5.4, "Triggers" and "The compilation"): the guarded parts of the class whose guard set holds the agent (guarding_parts), and then the conditions of Propose (initiate_cond).  The request is dropped where they do not hold.
+procedure propose_cond(Class?, St?, PCond, St).
+propose_cond(C, St, Cd?, St2?) :- ground(C?), ground(St?) |
+    st_class(C?, St?, R, St1),
+    propose_cond1(R?, C?, St1?, Cd, St2).
+procedure propose_cond1(ClassRes?, Class?, St?, PCond, St).
+propose_cond1(nocls, _, St, pdrop, St?).
+propose_cond1(cls(I), C, St, Cd?, St?) :- ground(I?), ground(C?), ground(St?) |
+    st_id(St?, Id),
+    info_parts(I?, Pts),
+    guarding_parts(Pts?, Id?, Ps),
+    initiate_cond(Ps?, I?, named(C?), St?, Cd).
+
+%% initiate_cond(Ps?, I?, N?, St?, PCond): where the agent may initiate a part of Ps, parts of the class I, each named by its term, Propose (Definition "Proposing"): the agent free for the class, knowing every other participant and clear, and ready for a part of Ps, its state in the part's domain.  Of the parts of Ps it is ready for, the one it has proposed least recently (Section 5.4, "The compilation"): a part it has never proposed before one it has, and of parts proposed equally long ago, or never, the part the request names, N, and then the first in the order of the class's parts.  The attempt names the part by the request's term where the part is the request's, and otherwise by the part's term.  pdrop where Ps is empty or the agent is ready for no part of it.
+procedure initiate_cond(Classes?, Info?, Named?, St?, PCond).
+initiate_cond([], _, _, _, pdrop).
+initiate_cond([P|Ps], I, N, St, Cd?) :- ground(I?), ground(N?), ground(St?) |
+    free_i(I?, St?, Fr),
+    no_prior_start(St?, Np),
+    others_known(I?, St?, K),
+    known_ok(K?, Kn),
+    and(Fr?, Np?, B1),
+    and(B1?, Kn?, B),
+    initiate_part(B?, [P?|Ps?], I?, N?, St?, Cd).
+procedure initiate_part(YesNo?, Classes?, Info?, Named?, St?, PCond).
+initiate_part(no, _, _, _, _, pdrop).
+initiate_part(yes, Ps, I, N, St, Cd?) :- ground(I?), ground(N?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    app_state(Ap?, S),
+    st_props(St?, Pr),
+    ready_parts(Ps?, Id?, S?, Rs),
+    aged_parts(Rs?, I?, N?, Pr?, As),
+    pick_part(As?, nopick, F),
+    part_cond(F?, I?, N?, Cd).
+procedure part_cond(Pick?, Info?, Named?, PCond).
+part_cond(nopick, _, _, pdrop).
+part_cond(picked(aged(_, yes, _)), I, named(C), pgo(I?, C?)).
+part_cond(picked(aged(_, yes, P)), I, unnamed, pgo(I?, P?)).
+part_cond(picked(aged(_, no, P)), I, _, pgo(I?, P?)).
+
+%% Each part the agent is ready for, aged(A, Nd, P): A the place of the part
+%% among those the agent has proposed, in the order it last proposed them,
+%% from 1, and 0 for a part never proposed; Nd yes where the part is the one
+%% the request names.
+procedure aged_parts(Classes?, Info?, Named?, Classes?, Ageds).
+aged_parts([], _, _, _, []).
+aged_parts([P|Ps], I, N, Pr, [aged(A?, Nd?, P?)|As?]) :-
+    ground(P?), ground(I?), ground(N?), ground(Pr?) |
+    part_age(Pr?, I?, P?, 1, A),
+    named_part(N?, I?, P?, Nd),
+    aged_parts(Ps?, I?, N?, Pr?, As).
+procedure part_age(Classes?, Info?, Class?, Integer?, Integer).
+part_age([], _, _, _, 0).
+part_age([E|Es], I, P, K, A?) :- ground(E?), ground(I?), ground(P?), integer(K?) |
+    term_part(E?, I?, P?, Sm),
+    part_age1(Sm?, Es?, I?, P?, K?, A).
+procedure part_age1(YesNo?, Classes?, Info?, Class?, Integer?, Integer).
+part_age1(yes, _, _, _, K, K?).
+part_age1(no, Es, I, P, K, A?) :- K1 := K? + 1, part_age(Es?, I?, P?, K1?, A).
+procedure named_part(Named?, Info?, Class?, YesNo).
+named_part(unnamed, _, _, no).
+named_part(named(C), I, P, B?) :- same_part(I?, C?, P?, B).
+%% The part of least place, a part the request names first among those of
+%% one place, and the first in order of those.
+procedure pick_part(Ageds?, Pick?, Pick).
+pick_part([], F, F?).
+pick_part([X|Xs], nopick, F?) :- pick_part(Xs?, picked(X?), F).
+pick_part([X|Xs], picked(Y), F?) :- ground(X?), ground(Y?) |
+    before(X?, Y?, B),
+    pick_part1(B?, X?, Y?, Xs?, F).
+procedure pick_part1(YesNo?, Aged?, Aged?, Ageds?, Pick).
+pick_part1(yes, X, _, Xs, F?) :- pick_part(Xs?, picked(X?), F).
+pick_part1(no, _, Y, Xs, F?) :- pick_part(Xs?, picked(Y?), F).
+procedure before(Aged?, Aged?, YesNo).
+before(aged(A1, _, _), aged(A2, _, _), yes) :- A1? < A2? | true.
+before(aged(A1, _, _), aged(A2, _, _), no) :- A1? > A2? | true.
+before(aged(A1, N1, _), aged(A2, N2, _), B?) :- A1? =:= A2? | named_first(N1?, N2?, B).
+procedure named_first(YesNo?, YesNo?, YesNo).
+named_first(yes, no, yes).
+named_first(_, _, no) :- otherwise | true.
+
+procedure dispatch_propose(PCond?, Then?, App?, Stream(Trigger)?,
+    Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_propose(pgo(I, P), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(I?), ground(P?), ground(St?) |
+    propose_effect(I?, P?, St?, Ss, St1),
+    send_all(Ss?, St1?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
+dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+%% --- Discover: the hellos ---------------------------------------------------
+%% A peer is known once hello has been sent to it and received from it.  On the request known(Q) the agent sends Q hello, unless Q is itself or it sent one already; an arriving hello is recorded; and where a peer becomes known the agent writes the new view on the output.
+procedure known_cond(Peer?, St?, YesNo).
+known_cond(Q, St, R?) :- ground(Q?), ground(St?) |
+    st_id(St?, Id),
+    st_sent(St?, Se),
+    same(Q?, Id?, S1),
+    mem(Q?, Se?, S2),
+    or(S1?, S2?, S),
+    neg(S?, R).
+
+procedure dispatch_known(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
+    Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_known(yes, Q, Th, Ap0, Ls, In, Ans?, Thr?, [msg(Q?, hello(Id?))|Out?],
+        Ow?, Approvals, St) :-
+    ground(Q?), ground(St?) |
+    st_id(St?, Id),
+    add_sent(Q?, St?, St1),
+    show_known(Q?, St?, St1?, Thr, Thr1?, St2),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?).
+dispatch_known(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+%% An arriving hello, recorded unless recorded already.
+procedure hello_cond(Peer?, St?, YesNo).
+hello_cond(P, St, R?) :- ground(St?) |
+    st_recd(St?, Rc),
+    mem(P?, Rc?, B),
+    neg(B?, R).
+
+procedure dispatch_hello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
+    Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_hello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(P?), ground(St?) |
+    add_recd(P?, St?, St1),
+    show_known(P?, St?, St1?, Thr, Thr1?, St2),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?).
+dispatch_hello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+%% --- Introduce: the ihellos --------------------------------------------------
+%% On reading an introduction intro(Q) the agent sends Q ihello, unless Q is itself or known or it has sent one; an arriving ihello is recorded; and where a peer becomes known by the two the agent writes the new view on the output (Section 5.4).
+procedure intro_cond(Peer?, St?, YesNo).
+intro_cond(Q, St, R?) :- ground(Q?), ground(St?) |
+    st_id(St?, Id),
+    st_isent(St?, ISe),
+    same(Q?, Id?, S1),
+    mem(Q?, ISe?, S2),
+    known_st(Q?, St?, S3),
+    or(S1?, S2?, S12),
+    or(S12?, S3?, S),
+    neg(S?, R).
+
+procedure dispatch_intro(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
+    Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_intro(yes, Q, Th, Ap0, Ls, In, Ans?, Thr?, [msg(Q?, ihello(Id?))|Out?],
+        Ow?, Approvals, St) :-
+    ground(Q?), ground(St?) |
+    st_id(St?, Id),
+    add_isent(Q?, St?, St1),
+    show_known(Q?, St?, St1?, Thr, Thr1?, St2),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?).
+dispatch_intro(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+procedure ihello_cond(Peer?, St?, YesNo).
+ihello_cond(P, St, R?) :- ground(St?) |
+    st_irecd(St?, Rc),
+    mem(P?, Rc?, B),
+    neg(B?, R).
+
+procedure dispatch_ihello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
+    Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_ihello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(P?), ground(St?) |
+    add_irecd(P?, St?, St1),
+    show_known(P?, St?, St1?, Thr, Thr1?, St2),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, St2?).
+dispatch_ihello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+%% --- Start, Tally, Yield and Outcome, on the arriving message ---------------
+%% One schema to a cargo, none needing a peer known: the initiator's hello
+%% precedes its start on one stream, and an initiator knows every other
+%% participant from its Propose.  Start is taken where the
+%% start does not wait or its attempt is closed at the agent, and otherwise
+%% the agent holds it waiting (Definition "Priority, Waiting, Blocked,
+%% Clear"), putting it up again, by a
+%% recheck, after every dispatch that changes the app state or consumes a
+%% start.
+procedure message_cond(Cargo?, St?, MCond, St).
+message_cond(X, St, Cd?, St1?) :- ground(X?), ground(St?) |
+    cargo_class(X?, C),
+    st_class(C?, St?, R, St0),
+    message_cond1(R?, X?, St0?, Cd, St1).
+procedure message_cond1(ClassRes?, Cargo?, St?, MCond, St).
+%% A cargo reaches only a participant of its attempt, so its class is always
+%% one the agent takes part in; noparticipant, the other alternative of ClassRes,
+%% which the type requires covered, is never reached.
+message_cond1(nocls, _, St, noparticipant, St?).
+message_cond1(cls(I), start(At), St, Cd?, St?) :- ground(I?), ground(At?), ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    mem(closed(At?), R?, Cl),
+    start_cond(Cl?, I?, At?, St?, Cd).
+message_cond1(cls(I), vote(_, _), St, mgo(I?), St?).
+message_cond1(cls(I), yield(_), St, mgo(I?), St?).
+message_cond1(cls(I), outcome(_, _), St, mgo(I?), St?).
+procedure start_cond(YesNo?, Info?, Attempt?, St?, MCond).
+start_cond(yes, I, _, _, mgo(I?)).
+start_cond(no, I, At, St, Cd?) :- ground(I?) |
+    start_waits(I?, At?, St?, W),
+    defer_cond1(W?, I?, Cd).
+procedure defer_cond1(YesNo?, Info?, MCond).
+defer_cond1(yes, _, mdefer).
+defer_cond1(no, I, mgo(I?)).
+
+%% A start of A, of the class I, waits while a start of an attempt with
+%% priority over A is held, or a question with priority over A and answered
+%% yes is pending, or while the agent is not free for the class.
+procedure start_waits(Info?, Attempt?, St?, YesNo).
+start_waits(I, A, St, W?) :- ground(I?), ground(A?), ground(St?) |
+    st_pends(St?, Pd),
+    held_prior(Pd?, A?, W1),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    question_prior(R?, A?, W2),
+    free_i(I?, St?, Fr),
+    neg(Fr?, W3),
+    or(W1?, W2?, W12),
+    or(W12?, W3?, W).
+procedure held_prior(Pends?, Attempt?, YesNo).
+held_prior([], _, no).
+held_prior([deferred(msg(_, cargo(_, start(B))))|Ps], A, W?) :- ground(A?), ground(B?) |
+    same(A?, B?, Sm),
+    prio(B?, A?, Pr),
+    neg(Sm?, NSm),
+    and(NSm?, Pr?, W1),
+    held_prior1(W1?, Ps?, A?, W).
+held_prior([_|Ps], A, W?) :- otherwise | held_prior(Ps?, A?, W).
+procedure held_prior1(YesNo?, Pends?, Attempt?, YesNo).
+held_prior1(yes, _, _, yes).
+held_prior1(no, Ps, A, W?) :- held_prior(Ps?, A?, W).
+%% A question pending, answered yes, other than A and with priority over it.
+procedure question_prior(Recs?, Attempt?, YesNo).
+question_prior(R, A, W?) :- ground(R?) | question_prior1(R?, R?, A?, W).
+procedure question_prior1(Recs?, Recs?, Attempt?, YesNo).
+question_prior1([], _, _, no).
+question_prior1([answered(G, yes)|Rs], R, A, W?) :- ground(G?), ground(R?), ground(A?) |
+    pending_rec(G?, R?, P),
+    same(G?, A?, Sm),
+    neg(Sm?, NSm),
+    prio(G?, A?, Pr),
+    and(P?, NSm?, W0),
+    and(W0?, Pr?, W1),
+    question_prior2(W1?, Rs?, R?, A?, W).
+question_prior1([_|Rs], R, A, W?) :- otherwise | question_prior1(Rs?, R?, A?, W).
+procedure question_prior2(YesNo?, Recs?, Recs?, Attempt?, YesNo).
+question_prior2(yes, _, _, _, yes).
+question_prior2(no, Rs, R, A, W?) :- question_prior1(Rs?, R?, A?, W).
+%% A question pending and answered yes waits while one with priority over it
+%% and answered yes is pending, or while the lock is set.
+procedure question_waits(Attempt?, St?, YesNo).
+question_waits(A, St, W?) :- ground(St?) |
+    st_app(St?, Ap),
+    app_lock_recs(Ap?, L, R),
+    question_prior(R?, A?, W1),
+    unlocked(L?, U),
+    neg(U?, W2),
+    or(W1?, W2?, W).
+procedure app_lock_recs(App?, Lock, Recs).
+app_lock_recs(app(_, _, L, R), L?, R?).
+%% Free for the class: the lock unset and no question of the class pending.
+procedure free_i(Info?, St?, YesNo).
+free_i(I, St, B?) :- ground(St?) |
+    st_app(St?, Ap),
+    free_app(I?, Ap?, B).
+procedure free_app(Info?, App?, YesNo).
+free_app(I, app(_, _, L, R), B?) :- ground(R?) |
+    unlocked(L?, B1),
+    no_question(I?, R?, R?, B2),
+    and(B1?, B2?, B).
+%% What blocks a waiting start of the class I: the lock where set, and
+%% otherwise the question of I pending; and a question answered yes: the lock.
+procedure start_blocker(YesNo?, Info?, St?, Blocker).
+start_blocker(no, _, _, noblk).
+start_blocker(yes, I, St, Bk?) :- ground(St?) |
+    st_app(St?, Ap),
+    app_lock_recs(Ap?, L, R),
+    start_blocker1(L?, I?, R?, Bk).
+procedure start_blocker1(Lock?, Info?, Recs?, Blocker).
+start_blocker1(held(B), _, _, blk(B?)).
+start_blocker1(unlocked, I, R, Bk?) :- ground(R?) | class_question(R?, I?, R?, Bk).
+procedure class_question(Recs?, Info?, Recs?, Blocker).
+class_question([], _, _, noblk).
+class_question([asked(G)|Rs], I, R, Bk?) :- ground(G?), ground(I?), ground(R?) |
+    pending_rec(G?, R?, P),
+    of_class(G?, I?, Cl),
+    and(P?, Cl?, B),
+    class_question1(B?, G?, Rs?, I?, R?, Bk).
+class_question([_|Rs], I, R, Bk?) :- otherwise | class_question(Rs?, I?, R?, Bk).
+procedure class_question1(YesNo?, Attempt?, Recs?, Info?, Recs?, Blocker).
+class_question1(yes, G, _, _, _, blk(G?)).
+class_question1(no, _, Rs, I, R, Bk?) :- class_question(Rs?, I?, R?, Bk).
+procedure question_blocker(YesNo?, St?, Blocker).
+question_blocker(no, _, noblk).
+question_blocker(yes, St, Bk?) :- ground(St?) |
+    st_app(St?, Ap),
+    app_lock_recs(Ap?, L, _),
+    lock_blocker(L?, Bk).
+procedure lock_blocker(Lock?, Blocker).
+lock_blocker(held(B), blk(B?)).
+lock_blocker(unlocked, noblk).
+%% Priority: the smaller rank first, ties broken by the order of identifiers.
+procedure prio(Attempt?, Attempt?, YesNo).
+prio(A, B, P?) :- ground(A?), ground(B?) |
+    attempt_rank(A?, RA),
+    attempt_rank(B?, RB),
+    attempt_id(A?, IA),
+    attempt_id(B?, IB),
+    prio1(RA?, RB?, IA?, IB?, P).
+procedure prio1(Integer?, Integer?, Peer?, Peer?, YesNo).
+prio1(RA, RB, _, _, yes) :- RA? < RB? | true.
+prio1(RA, RB, _, _, no) :- RA? > RB? | true.
+prio1(RA, RB, IA, IB, P?) :- RA? =:= RB? | precedes(IA?, IB?, P).
+
+procedure cargo_class(Cargo?, Class).
+cargo_class(start(attempt(_, _, _, C)), C?).
+cargo_class(vote(attempt(_, _, _, C), _), C?).
+cargo_class(yield(attempt(_, _, _, C)), C?).
+cargo_class(outcome(attempt(_, _, _, C), _), C?).
+
+%% The recheck, after a dispatch that changes the app state or consumes a
+%% start: the first start held that does not wait, or whose attempt is
+%% closed, is put up, and taken; none, nothing.
+procedure recheck_find(Pends?, St?, FoundNet).
+recheck_find([], _, nonefound).
+recheck_find([deferred(M)|Ps], St, F?) :- ground(M?), ground(St?) |
+    held_takeable(M?, St?, T),
+    recheck_find1(T?, M?, Ps?, St?, F).
+recheck_find([_|Ps], St, F?) :- otherwise | recheck_find(Ps?, St?, F).
+procedure recheck_find1(YesNo?, Net?, Pends?, St?, FoundNet).
+recheck_find1(yes, M, _, _, found(M?)).
+recheck_find1(no, _, Ps, St, F?) :- recheck_find(Ps?, St?, F).
+procedure held_takeable(Net?, St?, YesNo).
+held_takeable(msg(_, cargo(_, start(A))), St, T?) :- ground(A?), ground(St?) |
+    attempt_class(A?, C),
+    st_class(C?, St?, Cr, _),
+    held_takeable1(Cr?, A?, St?, T).
+held_takeable(_, _, no) :- otherwise | true.
+procedure held_takeable1(ClassRes?, Attempt?, St?, YesNo).
+held_takeable1(nocls, _, _, no).
+held_takeable1(cls(I), A, St, T?) :- ground(A?), ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    mem(closed(A?), R?, Cl),
+    start_waits(I?, A?, St?, W),
+    neg(W?, NW),
+    or(Cl?, NW?, T).
+procedure recheck1(FoundNet?, Then?, Stream(Trigger)?, Stream(Trigger)?,
+    Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+recheck1(found(M), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    step(net(M?), Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+recheck1(nonefound, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :- ground(St?) |
+    st_app(St?, Ap0),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+procedure dispatch_message(MCond?, Net?, Peer?, Cargo?, Then?, App?,
+    Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+dispatch_message(noparticipant, _, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals,
+        St) :-
+    add_pend_once(deferred(M?), St?, St1),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?,
+        Thr?, Out?, Ow?, Approvals, St) :-
+    ground(At?) |
+    drop_pend(deferred(M?), St?, St0),
+    start_effect(I?, At?, St0?, Ss, Cr, St1),
+    send_all(Ss?, St1?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?),
+    next(Th?, yes, Ap0?, Ls?, In?, Ans1, Thr, Out1, Ow, Approvals1?, St2?).
+dispatch_message(mgo(I), _, F, vote(At, Y), Th, Ap0, Ls, In, Ans?,
+        Thr?, Out?, Ow?, Approvals, St) :-
+    ground(At?), ground(F?), ground(Ap0?) |
+    tally_effect(I?, At?, F?, Y?, St?, Ss, St1),
+    noticed(refused_by(F?), At?, Ap0?, St1?, Thr, Thr1?, St1n),
+    send_all(Ss?, St1n?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?).
+dispatch_message(mgo(I), _, _, yield(At), Th, Ap0, Ls, In, Ans?,
+        Thr?, Out?, Ow?, Approvals, St) :-
+    ground(At?), ground(Ap0?) |
+    yield_effect(I?, At?, St?, Ss, St1),
+    noticed(yielded_by, At?, Ap0?, St1?, Thr, Thr1?, St1n),
+    send_all(Ss?, St1n?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?).
+dispatch_message(mgo(I), _, _, outcome(At, Z), Th, Ap0, Ls, In, Ans?,
+        Thr?, Out?, Ow?, Approvals, St) :-
+    ground(At?) |
+    outcome_effect(I?, At?, Z?, St?, St1),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+
+%% Start raises the approval question, whose answers join the agent goal's input.
+procedure spawn(ApprovalRes?, OpenApprovals?, OpenApprovals, Stream(Trigger),
+    Stream(Trigger)?).
+spawn(noapproval, Cs, Cs?, Ans?, Ans).
+spawn(approval_for(At), Cs, [oc(At?, Cl)|Cs?], Ans?, Ans1) :- ground(At?) |
+    respond(At?, Cl?, R),
+    merge(R?, Ans1?, Ans).
+
+%% --- Answer, on the person's answer to the approval question Start raises ---------------
+%% Its condition: the attempt a question pending at the agent, and no answer
+%% to it recorded.  It sends nothing, so it needs no peer known.  It is taken
+%% where its condition holds, and the answer dropped otherwise.
+procedure answer_cond(Attempt?, St?, Cond, St).
+answer_cond(At, St, Cd?, St2?) :- ground(At?), ground(St?) |
+    attempt_class(At?, C),
+    st_class(C?, St?, R, St1),
+    answer_cond1(R?, At?, St1?, Cd, St2).
+procedure answer_cond1(ClassRes?, Attempt?, St?, Cond, St).
+answer_cond1(nocls, _, St, drop, St?).
+answer_cond1(cls(I), At, St, Cd?, St?) :- ground(I?), ground(At?), ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    unanswered(At?, R?, Ok),
+    go_or_drop(Ok?, I?, Cd).
+procedure unanswered(Attempt?, Recs?, YesNo).
+unanswered(At, R, B?) :- ground(At?), ground(R?) |
+    pending_rec(At?, R?, P),
+    has_answer(At?, R?, H),
+    neg(H?, Un),
+    and(P?, Un?, B).
+
+procedure dispatch_answer(Cond?, YesNo?, Attempt?, Then?, App?, Stream(Trigger)?,
+    Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_answer(go(_), YN, At, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(At?) |
+    answer_effect(YN?, At?, St?, St1),
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+dispatch_answer(drop, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+%% An approval question is closed by binding its close signal, which also forgets it.
+procedure close_approval(Attempt?, OpenApprovals?, OpenApprovals).
+close_approval(_, [], []).
+close_approval(At, [oc(B, close)|Cs], Cs?) :- At? =?= B? | true.
+close_approval(At, [oc(B, Cl?)|Cs], [oc(B?, Cl)|Cs1?]) :- otherwise |
+    close_approval(At?, Cs?, Cs1).
+
+%% The approval questions whose question is no longer pending, closed, where the app state
+%% has changed.
+procedure close_falsified(YesNo?, OpenApprovals?, St?, OpenApprovals).
+close_falsified(no, Cs, _, Cs?).
+close_falsified(yes, Cs, St, Cs1?) :- ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    close_approvals(Cs?, R?, Cs1).
+procedure close_approvals(OpenApprovals?, Recs?, OpenApprovals).
+close_approvals([], _, []).
+close_approvals([oc(At, Cl?)|Cs], R, Cs1?) :- ground(At?), ground(R?) |
+    pending_rec(At?, R?, P),
+    close_one(P?, At?, Cl, Cs?, R?, Cs1).
+procedure close_one(YesNo?, Attempt?, Close, OpenApprovals?, Recs?, OpenApprovals).
+close_one(no, _, close, Cs, R, Cs1?) :- close_approvals(Cs?, R?, Cs1).
+close_one(yes, At, Cl?, Cs, R, [oc(At?, Cl)|Cs1?]) :- close_approvals(Cs?, R?, Cs1).
+
+%% --- The own transactions: Propose of the unguarded parts, Vote, Commit, ---
+%% --- Wound, Introduce peers ------------------------------------------------
+%% On own the agent goal puts up the Propose of each unguarded part the agent opens, where its machine state is in the part's domain, each part an opening class of its own (vGLP 099f876, Definition "Equivalence of the Canonical Platform"; Section 5.4, "The compilation"), the Vote on each answered question pending at it, the Commit of each attempt it initiated with a yes of every other participant recorded, the Wound of each start it holds waiting, or question answered yes, blocked by an attempt over which it has priority, and the Introduce peers of each pair the introduction rule gives it at its machine state (Definition "Introduction Rule, Introduce Peers"); it takes, among those whose condition holds, one of the class that has waited longest, ties broken in a fixed order: the opening classes in the order they are opened, then the Votes, the Commits, the Wounds and the introductions, each in the order of the record, of the starts held or of identifiers; counts it, and writes an own trigger on its stream of own triggers; and where none holds, takes nothing and writes none (vGLP 6c8c663, Section 5.4, "The compilation").
+procedure take_own(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+take_own(Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :- ground(St?) |
+    st_app(St?, Ap0),
+    own_cond(St?, Ch, St1),
+    dispatch_own(Ch?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+
+procedure own_cond(St?, Choice, St).
+own_cond(St, Ch?, St2?) :- ground(St?) |
+    opening(St?, Is, St1),
+    own_cond1(Is?, St1?, Ch, St2).
+procedure own_cond1(Infos?, St?, Choice, St).
+own_cond1(Is, St, Ch?, St5?) :- ground(Is?), ground(St?) |
+    op_cands(Is?, St?, Cs1),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    vote_cands0(R?, St?, Cs2, St2),
+    commit_cands_st(St2?, Cs3, St3),
+    wound_cands0(St3?, Cs4, St4),
+    intro_cands(St?, Cs5),
+    app(Cs1?, Cs2?, C12),
+    app(C12?, Cs3?, C123),
+    app(C123?, Cs4?, C1234),
+    app(C1234?, Cs5?, Cs),
+    own_cond2(Cs?, St4?, Ch, St5).
+procedure own_cond2(Cands?, St?, Choice, St).
+own_cond2(Cs, St, Ch?, St2?) :- ground(St?) |
+    st_waits(St?, W),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    prune_waits(W?, R?, W0),
+    st_count(St?, D),
+    choose(Cs?, W0?, D?, Ch0, W1),
+    set_waits(St?, W1?, St1),
+    count_own(Ch0?, St1?, Ch, St2).
+%% The own transaction taken, counted.
+procedure count_own(Choice?, St?, Choice, St).
+count_own(none, St, none, St?).
+count_own(take(K, S), St, take(K?, S?), St1?) :- advance(St?, St1).
+
+%% Propose of an unguarded part, by its opener: each unguarded part of the class I that the agent opens (opening_parts), and for each the conditions of Propose as on a request (initiate_cond), no request naming it; each is its own opening class op(P), P the part's term.
+procedure op_cands(Infos?, St?, Cands).
+op_cands([], _, []).
+op_cands([I|Is], St, Cs?) :- ground(I?), ground(St?) |
+    st_id(St?, Id),
+    info_parts(I?, Pts),
+    opening_parts(Pts?, Id?, Ps),
+    part_cands(Ps?, I?, St?, Cs1),
+    op_cands(Is?, St?, Cs2),
+    app(Cs1?, Cs2?, Cs).
+procedure part_cands(Classes?, Info?, St?, Cands).
+part_cands([], _, _, []).
+part_cands([P|Ps], I, St, Cs?) :- ground(I?), ground(St?) |
+    initiate_cond([P?], I?, unnamed, St?, Cd),
+    part_cands(Ps?, I?, St?, Cs1),
+    keep_cand(Cd?, Cs1?, Cs).
+procedure keep_cand(PCond?, Cands?, Cands).
+keep_cand(pgo(I, P), Cs, [cand(op(P?), prop(I?, P?))|Cs?]) :- ground(P?) | true.
+keep_cand(pdrop, Cs, Cs?).
+
+%% Vote on an attempt: a question pending at the agent, its answer y recorded,
+%% its initiator, to whom Vote sends, known, and y no or the question not
+%% waiting.  The record is newest first, so the instances are gathered oldest
+%% answer first.
+procedure vote_cands0(Recs?, St?, Cands, St).
+vote_cands0(R, St, Cs?, St1?) :- ground(R?) | vote_cands(R?, R?, St?, [], Cs, St1).
+procedure vote_cands(Recs?, Recs?, St?, Cands?, Cands, St).
+vote_cands([], _, St, Cs, Cs?, St?).
+vote_cands([answered(At, Y)|Rs], R, St, Acc, Cs?, St2?) :-
+    ground(At?), ground(Y?), ground(R?), ground(St?) |
+    pending_rec(At?, R?, P),
+    attempt_id(At?, Q),
+    known_st(Q?, St?, Kn),
+    and(P?, Kn?, B1),
+    question_waits(At?, St?, Wt),
+    vote_free(Y?, Wt?, Fr),
+    and(B1?, Fr?, B),
+    attempt_class(At?, C),
+    st_class(C?, St?, Cr, St1),
+    vote_cand(B?, Cr?, vt(At?), Acc?, Acc1),
+    vote_cands(Rs?, R?, St1?, Acc1?, Cs, St2).
+vote_cands([_|Rs], R, St, Acc, Cs?, St1?) :- otherwise |
+    vote_cands(Rs?, R?, St?, Acc?, Cs, St1).
+procedure vote_free(YesNo?, YesNo?, YesNo).
+vote_free(no, _, yes).
+vote_free(yes, W, F?) :- neg(W?, F).
+procedure vote_cand(YesNo?, ClassRes?, WKey?, Cands?, Cands).
+vote_cand(yes, cls(I), K, Acc, [cand(K?, sub(I?))|Acc?]).
+vote_cand(yes, nocls, _, Acc, Acc?).
+vote_cand(no, _, _, Acc, Acc?).
+
+%% Commit of an attempt the agent initiated, not closed, with a yes of every
+%% other participant recorded.
+procedure commit_cands_st(St?, Cands, St).
+commit_cands_st(St, Cs?, St1?) :- ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    commit_cands0(R?, St?, Cs, St1).
+procedure commit_cands0(Recs?, St?, Cands, St).
+commit_cands0(R, St, Cs?, St1?) :- ground(R?) | commit_cands(R?, R?, St?, [], Cs, St1).
+procedure commit_cands(Recs?, Recs?, St?, Cands?, Cands, St).
+commit_cands([], _, St, Cs, Cs?, St?).
+commit_cands([voted(At, yes)|Rs], R, St, Acc, Cs?, St2?) :-
+    ground(At?), ground(R?), ground(St?) |
+    st_id(St?, Id),
+    attempt_id(At?, P),
+    same(P?, Id?, Own),
+    attempt_class(At?, C),
+    st_class(C?, St?, Cr, St1),
+    commit_cand(Own?, Cr?, At?, Id?, R?, Acc?, Acc1),
+    commit_cands(Rs?, R?, St1?, Acc1?, Cs, St2).
+commit_cands([_|Rs], R, St, Acc, Cs?, St1?) :- otherwise |
+    commit_cands(Rs?, R?, St?, Acc?, Cs, St1).
+procedure commit_cand(YesNo?, ClassRes?, Attempt?, Peer?, Recs?, Cands?, Cands).
+commit_cand(yes, cls(I), At, Id, R, Acc, Cs?) :- ground(I?), ground(At?), ground(R?) |
+    mem(closed(At?), R?, Cl),
+    neg(Cl?, Open),
+    all_yes(I?, At?, Id?, R?, All),
+    and(Open?, All?, B),
+    vote_cand(B?, cls(I?), cm(At?), Acc?, Cs).
+commit_cand(_, _, _, _, _, Acc, Acc?) :- otherwise | true.
+
+%% Wound: a start the agent holds waiting, or a question pending at it and
+%% answered yes, of an attempt A blocked by an attempt B over which A has
+%% priority, yielded(B) not recorded and, where the agent initiated B, a yes
+%% of every other participant of B not recorded.  The instance is wd(A, B),
+%% with the entry of B's class.
+procedure wound_cands0(St?, Cands, St).
+wound_cands0(St, Cs?, St3?) :- ground(St?) |
+    st_pends(St?, Pd),
+    wound_starts(Pd?, St?, [], Cs1, St1),
+    wound_cands1(Cs1?, St1?, Cs, St3).
+procedure wound_cands1(Cands?, St?, Cands, St).
+wound_cands1(Acc, St, Cs?, St1?) :- ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    wound_questions0(R?, St?, Acc?, Cs, St1).
+procedure wound_starts(Pends?, St?, Cands?, Cands, St).
+wound_starts([], St, Acc, Acc?, St?).
+wound_starts([deferred(msg(_, cargo(_, start(A))))|Ps], St, Acc, Cs?, St3?) :-
+    ground(A?), ground(St?) |
+    attempt_class(A?, C),
+    st_class(C?, St?, Cr, St1),
+    wound_start(Cr?, A?, St1?, Acc?, Acc1, St2),
+    wound_starts(Ps?, St2?, Acc1?, Cs, St3).
+wound_starts([_|Ps], St, Acc, Cs?, St1?) :- otherwise |
+    wound_starts(Ps?, St?, Acc?, Cs, St1).
+procedure wound_start(ClassRes?, Attempt?, St?, Cands?, Cands, St).
+wound_start(nocls, _, St, Acc, Acc?, St?).
+wound_start(cls(I), A, St, Acc, Cs?, St?) :- ground(I?), ground(A?), ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    mem(closed(A?), R?, Cl),
+    start_waits(I?, A?, St?, W),
+    neg(Cl?, Open),
+    and(Open?, W?, B),
+    start_blocker(B?, I?, St?, Bk),
+    wound_by(Bk?, A?, St?, Acc?, Cs).
+procedure wound_questions0(Recs?, St?, Cands?, Cands, St).
+wound_questions0(R, St, Acc, Cs?, St1?) :- ground(R?) |
+    wound_questions(R?, R?, St?, Acc?, Cs, St1).
+procedure wound_questions(Recs?, Recs?, St?, Cands?, Cands, St).
+wound_questions([], _, St, Acc, Acc?, St?).
+wound_questions([answered(A, yes)|Rs], R, St, Acc, Cs?, St1?) :-
+    ground(A?), ground(R?), ground(St?) |
+    pending_rec(A?, R?, P),
+    question_blocker(P?, St?, Bk),
+    wound_by(Bk?, A?, St?, Acc?, Acc1),
+    wound_questions(Rs?, R?, St?, Acc1?, Cs, St1).
+wound_questions([_|Rs], R, St, Acc, Cs?, St1?) :- otherwise |
+    wound_questions(Rs?, R?, St?, Acc?, Cs, St1).
+%% wound_by(Blocker?, A?, St?, Cands?, Cands): the instance wd(A, B) where A
+%% has priority over its blocker B and the rest of Wound's condition holds.
+procedure wound_by(Blocker?, Attempt?, St?, Cands?, Cands).
+wound_by(noblk, _, _, Acc, Acc?).
+wound_by(blk(B), A, St, Acc, Cs?) :- ground(B?), ground(A?), ground(St?) |
+    attempt_class(B?, C),
+    st_class(C?, St?, Cr, _),
+    wound_by_c(Cr?, A?, B?, St?, Acc?, Cs).
+procedure wound_by_c(ClassRes?, Attempt?, Attempt?, St?, Cands?, Cands).
+wound_by_c(nocls, _, _, _, Acc, Acc?).
+wound_by_c(cls(I), A, B, St, Acc, Cs?) :- ground(I?), ground(A?), ground(B?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    wound_rec(I?, A?, B?, Id?, R?, Ok),
+    vote_cand(Ok?, cls(I?), wd(A?, B?), Acc?, Cs).
+%% A over B, yielded(B) not recorded, and, where the agent initiated B, a yes
+%% of every other participant of B not recorded.
+procedure wound_rec(Info?, Attempt?, Attempt?, Peer?, Recs?, YesNo).
+wound_rec(I, A, B, Id, R, Ok?) :- ground(I?), ground(B?), ground(Id?), ground(R?) |
+    prio(A?, B?, Pr),
+    mem(yielded(B?), R?, Yd),
+    neg(Yd?, NYd),
+    attempt_id(B?, P),
+    same(P?, Id?, Own),
+    all_yes(I?, B?, Id?, R?, All),
+    wound_by2(Own?, All?, Ok1),
+    and(Pr?, NYd?, B1),
+    and(B1?, Ok1?, Ok).
+procedure wound_by2(YesNo?, YesNo?, YesNo).
+wound_by2(no, _, yes).
+wound_by2(yes, All, Ok?) :- neg(All?, Ok).
+
+%% Introduce peers {Q, R}, Q preceding R: the introduction rule gives the pair
+%% at the agent's machine state, the introduction predicates of the contract
+%% naming each of them there, both other than the agent; both known; and
+%% introduced(Q, R) not recorded.
+procedure intro_cands(St?, Cands).
+intro_cands(St, Cs?) :- ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    app_state(Ap?, S),
+    introduction_preds(E),
+    named_by(E?, S?, Id?, Ns0),
+    dedup(Ns0?, Ns1),
+    sort_peers(Ns1?, Ns),
+    pairs_of(Ns?, Ps),
+    intro_keep(Ps?, St?, Cs).
+procedure named_by(Preds?, GAtoms?, Peer?, Peers).
+named_by(_, [], _, []).
+named_by(E, [g(P, [p(Q)])|Gs], Id, Ns?) :- ground(E?), ground(Q?), ground(Id?) |
+    mem(P?, E?, In),
+    same(Q?, Id?, Me),
+    neg(Me?, NMe),
+    and(In?, NMe?, B),
+    named_by(E?, Gs?, Id?, N1),
+    keep_peer(B?, Q?, N1?, Ns).
+named_by(E, [_|Gs], Id, Ns?) :- otherwise | named_by(E?, Gs?, Id?, Ns).
+procedure pairs_of(Peers?, Pairs).
+pairs_of([], []).
+pairs_of([Q|Qs], Ps?) :- ground(Q?), ground(Qs?) |
+    pairs_with(Q?, Qs?, P1),
+    pairs_of(Qs?, P2),
+    app(P1?, P2?, Ps).
+procedure pairs_with(Peer?, Peers?, Pairs).
+pairs_with(_, [], []).
+pairs_with(Q, [R|Rs], [pr(Q?, R?)|Ps?]) :- ground(Q?) | pairs_with(Q?, Rs?, Ps).
+procedure intro_keep(Pairs?, St?, Cands).
+intro_keep([], _, []).
+intro_keep([pr(Q, R)|Ps], St, Cs?) :- ground(Q?), ground(R?), ground(St?) |
+    known_st(Q?, St?, K1),
+    known_st(R?, St?, K2),
+    st_app(St?, Ap),
+    app_recs(Ap?, Rc),
+    mem(introduced(Q?, R?), Rc?, Done),
+    neg(Done?, ND),
+    and(K1?, K2?, K12),
+    and(K12?, ND?, B),
+    intro_keep(Ps?, St?, C1),
+    keep_icand(B?, Q?, R?, C1?, Cs).
+procedure keep_icand(YesNo?, Peer?, Peer?, Cands?, Cands).
+keep_icand(yes, Q, R, Cs, [cand(ip(Q?, R?), pair)|Cs?]).
+keep_icand(no, _, _, Cs, Cs?).
+
+%% The waits whose instances never hold again are forgotten: a Vote once its
+%% attempt is voted on or closed, a Commit once its attempt is closed, a Wound
+%% once the attempt it would wound is closed or yielded, an Introduce peers
+%% once its pair is recorded introduced.
+procedure prune_waits(Waits?, Recs?, Waits).
+prune_waits([], _, []).
+prune_waits([w(K, T)|Ws], R, Ws1?) :- ground(K?), ground(R?) |
+    dead_key(K?, R?, Dd),
+    prune_waits(Ws?, R?, Rest),
+    prune_wait(Dd?, w(K?, T?), Rest?, Ws1).
+procedure prune_wait(YesNo?, Wait?, Waits?, Waits).
+prune_wait(no, X, Ws, [X?|Ws?]).
+prune_wait(yes, _, Ws, Ws?).
+procedure dead_key(WKey?, Recs?, YesNo).
+dead_key(op(_), _, no).
+dead_key(vt(A), R, D?) :- ground(A?), ground(R?) |
+    has_vote(A?, R?, V),
+    mem(closed(A?), R?, Cl),
+    or(V?, Cl?, D).
+dead_key(cm(A), R, D?) :- mem(closed(A?), R?, D).
+dead_key(wd(_, B), R, D?) :- ground(B?), ground(R?) |
+    mem(closed(B?), R?, Cl),
+    mem(yielded(B?), R?, Yd),
+    or(Cl?, Yd?, D).
+dead_key(ip(Q, R1), R, D?) :- mem(introduced(Q?, R1?), R?, D).
+
+%% The own transaction chosen, taken, and an own trigger written (write_own); none, and no own trigger written (no_own).
+procedure dispatch_own(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?,
+    Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+dispatch_own(none, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+dispatch_own(take(op(_), prop(I, P)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    dispatch_propose(pgo(I?, P?), write_own, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(At?), ground(I?) |
+    vote_effect(I?, At?, St?, Ss, St1),
+    send_all(Ss?, St1?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
+dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(At?), ground(I?) |
+    commit_effect(I?, At?, St?, Ss, St1),
+    send_all(Ss?, St1?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
+dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(B?), ground(I?), ground(Ap0?) |
+    wound_effect(I?, B?, St?, Ss, St1),
+    noticed(yielded_by, B?, Ap0?, St1?, Thr, Thr1?, St1n),
+    send_all(Ss?, St1n?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?).
+dispatch_own(take(ip(Q, R), pair), Ap0, Ls, In, Ans?, Thr?,
+        [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?))|Out?], Ow?, Approvals, St) :-
+    ground(Q?), ground(R?), ground(St?) |
+    st_id(St?, Id),
+    introduce_effect(Q?, R?, St?, St1),
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+dispatch_own(take(_, _), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :- otherwise |
+    next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+%% The classes of the unguarded parts the agent opens at its state: each unguarded schema at the bindings that send its first role to the agent and meet that role's requirements, its other variables named by the agent; each class of them joins the classes met, and op_cands puts up the Propose of each of its unguarded parts the agent opens.  Every unguarded part the agent opens and is ready for is found so: the agent is in the first role of one of the part's schema-bindings, whose first role's requirements its state then holds, and the contract being effective, they name every other role and every variable of the schema-binding's deleted and added atoms (vGLP 099f876, Section 5.4, "Act schemas as local specifications").
+procedure opening(St?, Infos, St).
+opening(St, Is?, St1?) :- ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    app_state(Ap?, S),
+    contract_schemas(Ss),
+    reflexive_preds(Rf),
+    opening1(Ss?, Rf?, Id?, S?, St?, Is, St1).
+procedure opening1(Schemas?, Preds?, Peer?, GAtoms?, St?, Infos, St).
+opening1(Ss, Rf, Id, S, St, Is?, St1?) :- ground(Id?), ground(S?) |
+    hat(Rf?, Id?, S?, Sh),
+    opened(Ss?, Id?, Sh?, Cs),
+    meet_all(Cs?, St?, [], Is0, St1),
+    dedup(Is0?, Is).
+procedure opened(Schemas?, Peer?, GAtoms?, Stream(Class)).
+opened([], _, _, []).
+opened([schema(Nm, _, Rs)|Ss], Id, Sh, Cs?) :- ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) |
+    guard_roles(Rs?, 1, Gs),
+    opened1(Gs?, Nm?, Rs?, Id?, Sh?, C1),
+    opened(Ss?, Id?, Sh?, C2),
+    app(C1?, C2?, Cs).
+%% An unguarded schema with listed roles has their one base as its first role (local.glp), so its opener lists the people of each (opened3).
+opened([lschema(Nm, _, Rs, _)|Ss], Id, Sh, Cs?) :- ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) |
+    guard_roles(Rs?, 1, Gs),
+    opened1(Gs?, Nm?, Rs?, Id?, Sh?, C1),
+    opened(Ss?, Id?, Sh?, C2),
+    app(C1?, C2?, Cs).
+procedure opened1(Ints?, Constant?, RoleSpecs?, Peer?, GAtoms?, Stream(Class)).
+opened1([_|_], _, _, _, _, []).
+opened1([], _, [], _, _, []).
+opened1([], Nm, [R|Rs], Id, Sh, Cs?) :- ground(R?), ground(Id?), ground(Sh?) |
+    rs_req(R?, Q),
+    match_all(Q?, Sh?, [b(role(1), p(Id?))], Bs),
+    opened2(Bs?, Nm?, [R?|Rs?], Id?, Sh?, Cs).
+procedure opened2(Bindings?, Constant?, RoleSpecs?, Peer?, GAtoms?, Stream(Class)).
+opened2([], _, _, _, _, []).
+opened2([B|Bs], Nm, Rs, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) |
+    first_spec(Rs?, R1),
+    cand_ok([R1?], B?, Sh?, Ok),
+    opened3(Ok?, Nm?, B?, Id?, Sh?, C1),
+    opened2(Bs?, Nm?, Rs?, Id?, Sh?, C2),
+    app(C1?, C2?, Cs).
+procedure opened3(YesNo?, Constant?, Binding?, Peer?, GAtoms?, Stream(Class)).
+opened3(no, _, _, _, _, []).
+opened3(yes, Nm, B, Id, Sh, [C?]) :- ground(Nm?), ground(B?) |
+    listed_people(Nm?, B?, Sh?, Ls),
+    listed_binding(Nm?, B?, Ls?, B1),
+    class_of(Nm?, B1?, Id?, C).
+procedure first_spec(RoleSpecs?, RoleSpec).
+first_spec([R|_], R?).
+first_spec([], rs(unguarded, [], [], [], [])).
+
+procedure meet_all(Stream(Class)?, St?, Infos?, Infos, St).
+meet_all([], St, Is, Is?, St?).
+meet_all([C|Cs], St, Is, Is2?, St2?) :- ground(C?), ground(St?) |
+    st_class(C?, St?, R, St1),
+    add_cls(R?, Is?, Is1),
+    meet_all(Cs?, St1?, Is1?, Is2, St2).
+procedure add_cls(ClassRes?, Infos?, Infos).
+add_cls(nocls, Is, Is?).
+add_cls(cls(I), Is, Is1?) :- app(Is?, [I?], Is1).
+
+%% --- Choosing the instance of the class that has waited longest -----------
+procedure choose(Cands?, Waits?, Integer?, Choice, Waits).
+choose(Cs, W, D, Ch?, W2?) :- ground(Cs?), ground(W?), integer(D?) |
+    ensure_waits(Cs?, W?, D?, W1),
+    choose1(Cs?, W1?, D?, Ch, W2).
+procedure choose1(Cands?, Waits?, Integer?, Choice, Waits).
+choose1(Cs, W1, D, Ch?, W2?) :- ground(W1?), integer(D?) |
+    pick(Cs?, W1?, Ch, Ky),
+    D1 := D? + 1,
+    retake(Ky?, W1?, D1?, W2).
+procedure ensure_waits(Cands?, Waits?, Integer?, Waits).
+ensure_waits([], W, _, W?).
+ensure_waits([cand(K, _)|Cs], W, D, W2?) :- ground(K?), ground(W?), integer(D?) |
+    wait_of(K?, W?, F),
+    ensure1(F?, K?, W?, D?, W1),
+    ensure_waits(Cs?, W1?, D?, W2).
+procedure ensure1(WFound?, WKey?, Waits?, Integer?, Waits).
+ensure1(at(_), _, W, _, W?).
+ensure1(unseen, K, W, D, [w(K?, D?)|W?]).
+procedure wait_of(WKey?, Waits?, WFound).
+wait_of(_, [], unseen).
+wait_of(K, [w(K1, T)|_], at(T?)) :- K? =?= K1? | true.
+wait_of(K, [_|Ws], F?) :- otherwise | wait_of(K?, Ws?, F).
+procedure pick(Cands?, Waits?, Choice, PKey).
+pick([], _, none, nokey).
+pick([cand(K, I)|Cs], W, Ch?, Ky?) :- ground(K?), ground(W?) |
+    began_at(K?, W?, T),
+    best(Cs?, W?, T?, K?, I?, Ch, Ky).
+procedure best(Cands?, Waits?, Integer?, WKey?, Subj?, Choice, PKey).
+best([], _, _, K, I, take(K?, I?), key(K?)) :- ground(K?) | true.
+best([cand(K2, I2)|Cs], W, T, K, I, Ch?, Ky?) :- ground(K2?), ground(W?) |
+    began_at(K2?, W?, T2),
+    best1(T2?, T?, K2?, I2?, K?, I?, Cs?, W?, Ch, Ky).
+procedure best1(Integer?, Integer?, WKey?, Subj?, WKey?, Subj?, Cands?, Waits?,
+    Choice, PKey).
+best1(T2, T, K2, I2, _, _, Cs, W, Ch?, Ky?) :- T2? < T? |
+    best(Cs?, W?, T2?, K2?, I2?, Ch, Ky).
+best1(T2, T, _, _, K, I, Cs, W, Ch?, Ky?) :- T2? >= T? |
+    best(Cs?, W?, T?, K?, I?, Ch, Ky).
+procedure began_at(WKey?, Waits?, Integer).
+began_at(K, W, T?) :- wait_of(K?, W?, F), began_of(F?, T).
+procedure began_of(WFound?, Integer).
+began_of(at(T), T?).
+began_of(unseen, 0).
+procedure retake(PKey?, Waits?, Integer?, Waits).
+retake(nokey, W, _, W?).
+retake(key(K), W, D, W1?) :- set_wait(K?, D?, W?, W1).
+procedure set_wait(WKey?, Integer?, Waits?, Waits).
+set_wait(K, D, [], [w(K?, D?)]).
+set_wait(K, D, [w(K1, _)|Ws], [w(K1?, D?)|Ws?]) :- K? =?= K1? | true.
+set_wait(K, D, [X|Ws], [X?|Ws1?]) :- otherwise | set_wait(K?, D?, Ws?, Ws1).
+
+%% ===========================================================================
+%% The app transactions' effects (Definition "Canonical CVA Platform")
+%% ===========================================================================
+
+%% Propose: the attempt's number one more than the agent's, its rank that of
+%% the agent's last attempt of the part where it recorded that one wounded,
+%% and its number otherwise (Definition "Proposing"); recorded voted yes;
+%% applied and closed at once where the agent is the class's only
+%% participant, and otherwise held prepared and its start told to every other
+%% participant; and the part noted last among the parts the agent has
+%% proposed.
+procedure propose_effect(Info?, Class?, St?, Sends, St).
+propose_effect(I, P, St, Ss?, St2?) :- ground(I?), ground(P?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    st_app(St?, Ap0),
+    app_count(Ap0?, K),
+    K1 := K? + 1,
+    st_app(St?, Ap2),
+    app_recs(Ap2?, R),
+    rank_of(I?, P?, Id?, R?, K1?, Pi),
+    propose_app(I?, attempt(Id?, K1?, Pi?, P?), Ap?, Ss, Ap1),
+    set_app(St?, Ap1?, St1),
+    note_part(I?, P?, St1?, St2).
+procedure rank_of(Info?, Class?, Peer?, Recs?, Integer?, Integer).
+rank_of(I, P, Id, R, K1, Pi?) :- ground(R?), integer(K1?) |
+    last_own(R?, I?, P?, Id?, nolast, L),
+    rank_of1(L?, R?, K1?, Pi).
+procedure rank_of1(Last?, Recs?, Integer?, Integer).
+rank_of1(nolast, _, K1, K1?).
+rank_of1(last(A), R, K1, Pi?) :- ground(A?), ground(R?) |
+    mem(wounded(A?), R?, W),
+    attempt_rank(A?, P),
+    rank_of2(W?, P?, K1?, Pi).
+procedure rank_of2(YesNo?, Integer?, Integer?, Integer).
+rank_of2(yes, P, _, P?).
+rank_of2(no, _, K1, K1?).
+%% The agent's last attempt of the part: the one of the largest number among
+%% those of the part it proposed, each recorded voted yes by its Propose.
+procedure last_own(Recs?, Info?, Class?, Peer?, Last?, Last).
+last_own([], _, _, _, L, L?).
+last_own([voted(A, yes)|Rs], I, P, Id, L, L1?) :- ground(A?), ground(I?), ground(P?), ground(Id?) |
+    attempt_id(A?, Q),
+    same(Q?, Id?, Own),
+    attempt_class(A?, C),
+    term_part(C?, I?, P?, Pt),
+    and(Own?, Pt?, B),
+    later(B?, A?, L?, L0),
+    last_own(Rs?, I?, P?, Id?, L0?, L1).
+last_own([_|Rs], I, P, Id, L, L1?) :- otherwise | last_own(Rs?, I?, P?, Id?, L?, L1).
+procedure later(YesNo?, Attempt?, Last?, Last).
+later(no, _, L, L?).
+later(yes, A, nolast, last(A?)).
+later(yes, A, last(B), L?) :- ground(A?), ground(B?) |
+    attempt_k(A?, KA),
+    attempt_k(B?, KB),
+    later1(KA?, KB?, A?, B?, L).
+procedure later1(Integer?, Integer?, Attempt?, Attempt?, Last).
+later1(KA, KB, A, _, last(A?)) :- KA? > KB? | true.
+later1(KA, KB, _, B, last(B?)) :- KA? =< KB? | true.
+%% The parts the agent has proposed, the part P put last and its earlier
+%% place dropped.
+procedure note_part(Info?, Class?, St?, St).
+note_part(I, P, St, St1?) :- ground(I?), ground(P?), ground(St?) |
+    st_props(St?, Pr),
+    drop_part(Pr?, I?, P?, Pr1),
+    app(Pr1?, [P?], Pr2),
+    set_props(St?, Pr2?, St1).
+procedure drop_part(Classes?, Info?, Class?, Classes).
+drop_part([], _, _, []).
+drop_part([E|Es], I, P, R?) :- ground(E?), ground(I?), ground(P?) |
+    term_part(E?, I?, P?, Sm),
+    drop_part1(Sm?, E?, Es?, I?, P?, R).
+procedure drop_part1(YesNo?, Class?, Classes?, Info?, Class?, Classes).
+drop_part1(yes, _, Es, I, P, R?) :- drop_part(Es?, I?, P?, R).
+drop_part1(no, E, Es, I, P, [E?|R?]) :- drop_part(Es?, I?, P?, R).
+procedure propose_app(Info?, Attempt?, App?, Sends, App).
+propose_app(I, At, Ap, Ss?, Ap1?) :- ground(I?), ground(At?) |
+    attempt_id(At?, Id),
+    info_q(I?, Q),
+    only_me(Q?, Id?, One),
+    propose_app1(One?, I?, At?, Ap?, Ss, Ap1).
+procedure propose_app1(YesNo?, Info?, Attempt?, App?, Sends, App).
+propose_app1(yes, I, At, app(S, _, L, R), [],
+        app(S1?, K?, L?, [closed(At?), voted(At?, yes)|R?])) :-
+    ground(At?) |
+    attempt_id(At?, Id),
+    attempt_k(At?, K),
+    apply_info(I?, Id?, S?, S1).
+propose_app1(no, I, At, app(S, _, _, R), Ss?,
+        app(S?, K?, held(At?), [voted(At?, yes)|R?])) :-
+    ground(At?), ground(I?) |
+    attempt_id(At?, Id),
+    attempt_k(At?, K),
+    info_q(I?, Q),
+    tell(Q?, Id?, start(At?), Ss).
+procedure only_me(Peers?, Peer?, YesNo).
+only_me([P], Id, yes) :- P? =?= Id? | true.
+only_me(_, _, no) :- otherwise | true.
+
+%% Tell: the cargo to every participant other than the agent.
+procedure tell(Peers?, Peer?, Cargo?, Sends).
+tell([], _, _, []).
+tell([Q|Qs], Id, X, Ss?) :- ground(Q?), ground(Id?), ground(X?) |
+    same(Q?, Id?, Me),
+    tell1(Me?, Q?, X?, Ss1?, Ss),
+    tell(Qs?, Id?, X?, Ss1).
+procedure tell1(YesNo?, Peer?, Cargo?, Sends?, Sends).
+tell1(yes, _, _, Ss, Ss?).
+tell1(no, Q, X, Ss, [to(Q?, X?)|Ss?]).
+
+%% Vote: record the vote, send it to the initiator, and on yes hold the
+%% attempt prepared.
+procedure vote_app(Attempt?, YesNo?, App?, Sends, App).
+vote_app(At, yes, app(S, K, _, R), [to(I?, vote(At?, yes))],
+        app(S?, K?, held(At?), [voted(At?, yes)|R?])) :-
+    ground(At?) |
+    attempt_id(At?, I).
+vote_app(At, no, app(S, K, L, R), [to(I?, vote(At?, no))],
+        app(S?, K?, L?, [voted(At?, no)|R?])) :-
+    ground(At?) |
+    attempt_id(At?, I).
+
+%% Start: nothing more where the attempt is closed; otherwise no where the
+%% agent's state is not in the domain of its effect in the attempt's part, and,
+%% where it is, the question recorded and the approval question raised where
+%% the agent is asked, and yes where it is not.
+procedure start_effect(Info?, Attempt?, St?, Sends, ApprovalRes, St).
+start_effect(I, At, St, Ss?, Cr?, St1?) :- ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    start_app(I?, At?, Id?, Ap?, Ss, Cr, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure start_app(Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, App).
+start_app(I, At, Id, app(S, K, L, R), Ss?, Cr?, Ap1?) :- ground(At?), ground(R?), integer(K?) |
+    attempt_k(At?, KA),
+    max_int(K?, KA?, K1),
+    mem(closed(At?), R?, Cl),
+    start_app1(Cl?, I?, At?, Id?, app(S?, K1?, L?, R?), Ss, Cr, Ap1).
+procedure max_int(Integer?, Integer?, Integer).
+max_int(A, B, A?) :- A? >= B? | true.
+max_int(A, B, B?) :- A? < B? | true.
+procedure start_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, App).
+start_app1(yes, _, _, _, Ap, [], noapproval, Ap?).
+start_app1(no, _, At, Id, Ap, Ss?, Cr?, Ap1?) :-
+    ground(At?), ground(Id?), ground(Ap?) |
+    app_state(Ap?, S),
+    attempt_class(At?, C),
+    part_dom(C?, Id?, S?, Rd),
+    asked_by(At?, Id?, Ak),
+    start_app2(Rd?, Ak?, At?, Ap?, Ss, Cr, Ap1).
+procedure start_app2(YesNo?, YesNo?, Attempt?, App?, Sends, ApprovalRes, App).
+start_app2(no, _, At, Ap, Ss?, noapproval, Ap1?) :- vote_app(At?, no, Ap?, Ss, Ap1).
+start_app2(yes, yes, At, app(S, K, L, R), [], approval_for(At?),
+        app(S?, K?, L?, [asked(At?)|R?])) :-
+    ground(At?) | true.
+start_app2(yes, no, At, Ap, Ss?, noapproval, Ap1?) :- vote_app(At?, yes, Ap?, Ss, Ap1).
+
+%% The agent is asked by an attempt where it is in the attempt's guard set, its part's, the people in the marked roles of the schema-binding its term names, and is not the initiator (vGLP 099f876, Definition "Attempt": its guard set G_alpha is G([t]_j), and the members of G_alpha other than its initiator are asked by it); an attempt of an unguarded part asks nobody.
+procedure asked_by(Attempt?, Peer?, YesNo).
+asked_by(At, Id, B?) :- ground(At?), ground(Id?) |
+    attempt_id(At?, P),
+    attempt_class(At?, C),
+    binding_of(C?, Nm, Bn),
+    marked_people(Nm?, Bn?, G),
+    mem(Id?, G?, In),
+    same(Id?, P?, Me),
+    neg(Me?, NotMe),
+    and(In?, NotMe?, B).
+
+%% Answer: the person's answer recorded, answered(At, yes) by its then-branch
+%% and answered(At, no) by its else-branch; it sends nothing and votes nothing.
+procedure answer_effect(YesNo?, Attempt?, St?, St).
+answer_effect(YN, At, St, St1?) :- ground(St?) |
+    st_app(St?, Ap),
+    answer_app(YN?, At?, Ap?, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure answer_app(YesNo?, Attempt?, App?, App).
+answer_app(YN, At, app(S, K, L, R), app(S?, K?, L?, [answered(At?, YN?)|R?])).
+
+%% Vote, an own transaction: yes where the answer is yes and the agent's state
+%% is in the domain of its effect in the attempt's part, and no otherwise; a
+%% yes is taken only where the question does not wait, so with nothing
+%% prepared.
+procedure vote_effect(Info?, Attempt?, St?, Sends, St).
+vote_effect(I, At, St, Ss?, St1?) :- ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    vote_app0(I?, At?, Id?, Ap?, Ss, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure vote_app0(Info?, Attempt?, Peer?, App?, Sends, App).
+vote_app0(_, At, Id, Ap, Ss?, Ap1?) :- ground(At?), ground(Ap?) |
+    app_recs(Ap?, R),
+    answer_of(At?, R?, YN),
+    vote_yes(YN?, At?, Id?, Ap?, Y),
+    vote_app(At?, Y?, Ap?, Ss, Ap1).
+procedure vote_yes(YesNo?, Attempt?, Peer?, App?, YesNo).
+vote_yes(no, _, _, _, no).
+vote_yes(yes, At, Id, app(S, _, _, _), Y?) :- attempt_class(At?, C), part_dom(C?, Id?, S?, Y).
+
+%% Tally: nothing more where the attempt is closed; otherwise the vote
+%% recorded, and on no the lock released, the attempt closed and abort told to
+%% every other participant.
+procedure tally_effect(Info?, Attempt?, Peer?, YesNo?, St?, Sends, St).
+tally_effect(I, At, F, Y, St, Ss?, St1?) :- ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    tally_app(I?, At?, F?, Y?, Id?, Ap?, Ss, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure tally_app(Info?, Attempt?, Peer?, YesNo?, Peer?, App?, Sends, App).
+tally_app(I, At, F, Y, Id, Ap, Ss?, Ap1?) :- ground(At?), ground(Ap?) |
+    app_recs(Ap?, R),
+    mem(closed(At?), R?, Cl),
+    tally_app1(Cl?, I?, At?, F?, Y?, Id?, Ap?, Ss, Ap1).
+procedure tally_app1(YesNo?, Info?, Attempt?, Peer?, YesNo?, Peer?, App?, Sends,
+    App).
+tally_app1(yes, _, _, _, _, _, Ap, [], Ap?).
+tally_app1(no, I, At, F, no, Id, app(S, K, _, R), Ss?,
+        app(S?, K?, unlocked, [closed(At?), got(At?, F?, no)|R?])) :-
+    ground(At?), ground(I?) |
+    info_q(I?, Q),
+    tell(Q?, Id?, outcome(At?, abort), Ss).
+tally_app1(no, _, At, F, yes, _, app(S, K, L, R), [],
+        app(S?, K?, L?, [got(At?, F?, yes)|R?])).
+
+%% Commit, an own transaction, of an attempt the agent initiated with a yes of every
+%% other participant recorded: the effect applied, the lock released, the
+%% attempt closed and commit told.
+procedure commit_effect(Info?, Attempt?, St?, Sends, St).
+commit_effect(I, At, St, Ss?, St1?) :- ground(I?), ground(At?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    commit_app(I?, At?, Id?, Ap?, Ss, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure commit_app(Info?, Attempt?, Peer?, App?, Sends, App).
+commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, [closed(At?)|R?])) :-
+    ground(I?), ground(At?), ground(Id?) |
+    apply_info(I?, Id?, S?, S1),
+    info_q(I?, Q),
+    tell(Q?, Id?, outcome(At?, commit), Ss).
+
+%% Yield, at the initiator, on yield(At): nothing more where the attempt is
+%% closed or a yes of every other participant is recorded; otherwise the lock
+%% released, the attempt closed and recorded wounded, and abort told.
+procedure yield_effect(Info?, Attempt?, St?, Sends, St).
+yield_effect(I, At, St, Ss?, St1?) :- ground(I?), ground(At?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    yield_app(I?, At?, Id?, Ap?, Ss, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure yield_app(Info?, Attempt?, Peer?, App?, Sends, App).
+yield_app(I, At, Id, Ap, Ss?, Ap1?) :- ground(I?), ground(At?), ground(Id?), ground(Ap?) |
+    app_recs(Ap?, R),
+    closed_or_all(I?, At?, Id?, R?, Done),
+    yield_app1(Done?, I?, At?, Id?, Ap?, Ss, Ap1).
+procedure closed_or_all(Info?, Attempt?, Peer?, Recs?, YesNo).
+closed_or_all(I, At, Id, R, Done?) :- ground(At?), ground(R?) |
+    mem(closed(At?), R?, Cl),
+    all_yes(I?, At?, Id?, R?, All),
+    or(Cl?, All?, Done).
+procedure yield_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, App).
+yield_app1(yes, _, _, _, Ap, [], Ap?).
+yield_app1(no, I, At, Id, Ap, Ss?, Ap1?) :- abort_own(I?, At?, Id?, Ap?, Ss, Ap1).
+%% The agent's own attempt aborted, wounded: the lock released, the attempt
+%% closed and recorded wounded, and abort told to every other participant.
+procedure abort_own(Info?, Attempt?, Peer?, App?, Sends, App).
+abort_own(I, At, Id, app(S, K, _, R), Ss?,
+        app(S?, K?, unlocked, [wounded(At?), closed(At?)|R?])) :-
+    ground(I?), ground(At?), ground(Id?) |
+    info_q(I?, Q),
+    tell(Q?, Id?, outcome(At?, abort), Ss).
+
+%% Wound of A against B, an own transaction: where the agent initiated B, B aborted,
+%% wounded; otherwise yield(B) sent to B's initiator and yielded(B) recorded.
+procedure wound_effect(Info?, Attempt?, St?, Sends, St).
+wound_effect(I, B, St, Ss?, St1?) :- ground(I?), ground(B?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    attempt_id(B?, P),
+    same(P?, Id?, Own),
+    wound_app(Own?, I?, B?, Id?, Ap?, Ss, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure wound_app(YesNo?, Info?, Attempt?, Peer?, App?, Sends, App).
+wound_app(yes, I, B, Id, Ap, Ss?, Ap1?) :- abort_own(I?, B?, Id?, Ap?, Ss, Ap1).
+wound_app(no, _, B, _, app(S, K, L, R), [to(J?, yield(B?))],
+        app(S?, K?, L?, [yielded(B?)|R?])) :-
+    ground(B?) |
+    attempt_id(B?, J).
+
+%% Introduce peers {Q, R}: intro(R) sent to Q and intro(Q) to R, each carrying
+%% its sender, msg(Q, intro(P, R)), by the dispatch, and introduced(Q, R)
+%% recorded.
+procedure introduce_effect(Peer?, Peer?, St?, St).
+introduce_effect(Q, R, St, St1?) :- ground(St?) |
+    st_app(St?, Ap),
+    introduce_app(Q?, R?, Ap?, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure introduce_app(Peer?, Peer?, App?, App).
+introduce_app(Q, R, app(S, K, L, Rc), app(S?, K?, L?, [introduced(Q?, R?)|Rc?])).
+
+procedure all_yes(Info?, Attempt?, Peer?, Recs?, YesNo).
+all_yes(I, At, Id, R, B?) :- ground(At?), ground(Id?), ground(R?) |
+    info_q(I?, Q),
+    all_yes1(Q?, At?, Id?, R?, B).
+procedure all_yes1(Peers?, Attempt?, Peer?, Recs?, YesNo).
+all_yes1([], _, _, _, yes).
+all_yes1([P|Ps], At, Id, R, B?) :- ground(P?), ground(At?), ground(Id?), ground(R?) |
+    same(P?, Id?, Me),
+    mem(got(At?, P?, yes), R?, G),
+    or(Me?, G?, Ok),
+    all_yes2(Ok?, Ps?, At?, Id?, R?, B).
+procedure all_yes2(YesNo?, Peers?, Attempt?, Peer?, Recs?, YesNo).
+all_yes2(no, _, _, _, _, no).
+all_yes2(yes, Ps, At, Id, R, B?) :- all_yes1(Ps?, At?, Id?, R?, B).
+
+%% Outcome: the effect applied on commit, the lock released where it holds the
+%% attempt, and the attempt closed.
+procedure outcome_effect(Info?, Attempt?, Decision?, St?, St).
+outcome_effect(I, At, Z, St, St1?) :- ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    outcome_app(I?, At?, Z?, Id?, Ap?, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure outcome_app(Info?, Attempt?, Decision?, Peer?, App?, App).
+outcome_app(I, At, commit, Id, app(S, K, L, R), app(S1?, K?, L1?, [closed(At?)|R?])) :-
+    ground(At?) |
+    apply_info(I?, Id?, S?, S1),
+    release(L?, At?, L1).
+outcome_app(_, At, abort, _, app(S, K, L, R), app(S?, K?, L1?, [closed(At?)|R?])) :-
+    ground(At?) |
+    release(L?, At?, L1).
+procedure release(Lock?, Attempt?, Lock).
+release(unlocked, _, unlocked).
+release(held(A), At, unlocked) :- A? =?= At? | true.
+release(held(A), _, held(A?)) :- otherwise | true.
+
+%% The messages a transaction sends, each carrying its sender; an agent sends
+%% a cargo to a recipient at most once, so a message needs no number.
+procedure send_all(Sends?, St?, Nets, St).
+send_all(Ss, St, Ms?, St?) :- ground(St?) |
+    st_id(St?, Id),
+    cargo_msgs(Ss?, Id?, Ms).
+procedure cargo_msgs(Sends?, Peer?, Nets).
+cargo_msgs([], _, []).
+cargo_msgs([to(T, X)|Ss], Id, [msg(T?, cargo(Id?, X?))|Ms?]) :- ground(Id?) |
+    cargo_msgs(Ss?, Id?, Ms).
+
+procedure put_all(Nets?, Stream(Net), Stream(Net)?).
+put_all([], Out?, Out).
+put_all([M|Ms], [M?|Out?], Cont) :- put_all(Ms?, Out, Cont?).
+
+%% ===========================================================================
+%% Conditions, over the app state (Definitions "Cargo, App State, Question,
+%% Free, Ready" and "Priority, Waiting, Blocked, Clear")
+%% ===========================================================================
+
+%% Ready for a part [t]_j of [t] (Definition "Cargo, App State, Question,
+%% Free, Ready"): free for [t], the lock unlocked and no question of [t]
+%% pending (free_i), and the state in the domain of the agent's effect in the
+%% part (ready_parts).
+procedure unlocked(Lock?, YesNo).
+unlocked(unlocked, yes).
+unlocked(held(_), no).
+
+%% No question of the class pending: no attempt of it recorded asked, with no
+%% vote on it and not closed.
+procedure no_question(Info?, Recs?, Recs?, YesNo).
+no_question(_, [], _, yes).
+no_question(I, [asked(At)|Rs], R, B?) :- ground(I?), ground(At?), ground(R?) |
+    pending_rec(At?, R?, P),
+    of_class(At?, I?, Cl),
+    and(P?, Cl?, Q),
+    no_question1(Q?, I?, Rs?, R?, B).
+no_question(I, [_|Rs], R, B?) :- otherwise | no_question(I?, Rs?, R?, B).
+procedure no_question1(YesNo?, Info?, Recs?, Recs?, YesNo).
+no_question1(yes, _, _, _, no).
+no_question1(no, I, Rs, R, B?) :- no_question(I?, Rs?, R?, B).
+
+%% A question pending: recorded asked, with no vote and not closed.
+procedure pending_rec(Attempt?, Recs?, YesNo).
+pending_rec(At, R, B?) :- ground(At?), ground(R?) |
+    mem(asked(At?), R?, B1),
+    has_vote(At?, R?, B2),
+    mem(closed(At?), R?, B3),
+    or(B2?, B3?, B23),
+    neg(B23?, B4),
+    and(B1?, B4?, B).
+procedure has_vote(Attempt?, Recs?, YesNo).
+has_vote(_, [], no).
+has_vote(At, [voted(A, _)|_], yes) :- At? =?= A? | true.
+has_vote(At, [_|Rs], B?) :- otherwise | has_vote(At?, Rs?, B).
+
+%% An answer recorded to an attempt, and which.
+procedure has_answer(Attempt?, Recs?, YesNo).
+has_answer(_, [], no).
+has_answer(At, [answered(A, _)|_], yes) :- At? =?= A? | true.
+has_answer(At, [_|Rs], B?) :- otherwise | has_answer(At?, Rs?, B).
+procedure answer_of(Attempt?, Recs?, YesNo).
+answer_of(_, [], no).
+answer_of(At, [answered(A, Y)|_], Y?) :- At? =?= A? | true.
+answer_of(At, [_|Rs], Y?) :- otherwise | answer_of(At?, Rs?, Y).
+
+%% Whether an attempt's class is the class of an entry: the schema-binding of its part has the entry's participants and the same atoms deleted and added at each, and is linked to one of the entry's schema-bindings (in_class).  Its term met st_class when the agent first read it, or is a schema-binding of an entry's class, so the schema-binding determines a transaction.
+procedure of_class(Attempt?, Info?, YesNo).
+of_class(attempt(_, _, _, C), I, B?) :- term_of_class(C?, I?, B).
+procedure term_of_class(Class?, Info?, YesNo).
+term_of_class(C, ci(_, Ps, Q, _, Ms), B?) :- ground(C?) |
+    term_spec(C?, _, Rs, Bn),
+    of_class1(Rs?, Bn?, Ps?, Q?, Ms?, B).
+procedure of_class1(RoleSpecs?, Binding?, Deltas?, Peers?, Mates?, YesNo).
+of_class1(Rs, Bn, Ps, Q, Ms, B?) :- ground(Rs?), ground(Bn?) |
+    sig_of(Rs?, Bn?, Ps1),
+    in_class(Rs?, Bn?, Ps1?, Ps?, Q?, Ms?, B).
+
+%% The participants other than the agent known, or the first that is not.
+procedure others_known(Info?, St?, Known).
+others_known(I, St, K?) :- ground(St?) |
+    info_q(I?, Q),
+    st_id(St?, Id),
+    first_unknown(Q?, Id?, St?, K).
+procedure first_unknown(Peers?, Peer?, St?, Known).
+first_unknown([], _, _, allknown).
+first_unknown([P|Ps], Id, St, K?) :- ground(P?), ground(Id?), ground(St?) |
+    same(P?, Id?, Me),
+    known_st(P?, St?, Kn),
+    or(Me?, Kn?, Ok),
+    first_unknown1(Ok?, P?, Ps?, Id?, St?, K).
+procedure first_unknown1(YesNo?, Peer?, Peers?, Peer?, St?, Known).
+first_unknown1(yes, _, Ps, Id, St, K?) :- first_unknown(Ps?, Id?, St?, K).
+first_unknown1(no, P, _, _, _, unknown(P?)).
+%% A peer is known when hello, or ihello, has been sent to it and received
+%% from it (Section 5.4); a condition's test that a peer is known is of these.
+procedure known_st(Peer?, St?, YesNo).
+known_st(P, St, B?) :- ground(P?), ground(St?) |
+    st_sent(St?, Se),
+    st_recd(St?, Rc),
+    st_isent(St?, ISe),
+    st_irecd(St?, IRc),
+    known_peer(P?, Se?, Rc?, B1),
+    known_peer(P?, ISe?, IRc?, B2),
+    or(B1?, B2?, B).
+procedure known_peer(Peer?, Peers?, Peers?, YesNo).
+known_peer(P, Se, Rc, B?) :- ground(P?) |
+    mem(P?, Se?, B1),
+    mem(P?, Rc?, B2),
+    and(B1?, B2?, B).
+procedure known_ok(Known?, YesNo).
+known_ok(allknown, yes).
+known_ok(unknown(_), no).
+procedure go_or_drop(YesNo?, Info?, Cond).
+go_or_drop(yes, I, go(I?)).
+go_or_drop(no, _, drop).
+
+%% Clear: no start held waiting and no question answered yes pending
+%% (Definition "Priority, Waiting, Blocked, Clear").  Propose requires it.
+procedure no_prior_start(St?, YesNo).
+no_prior_start(St, B?) :- ground(St?) |
+    st_pends(St?, Pd),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    any_answered_yes(R?, Q),
+    empty_pends(Pd?, E),
+    neg(Q?, NQ),
+    and(E?, NQ?, B).
+procedure empty_pends(Pends?, YesNo).
+empty_pends([], yes).
+empty_pends([_|_], no).
+procedure any_answered_yes(Recs?, YesNo).
+any_answered_yes(R, B?) :- ground(R?) | any_answered_yes1(R?, R?, B).
+procedure any_answered_yes1(Recs?, Recs?, YesNo).
+any_answered_yes1([], _, no).
+any_answered_yes1([answered(G, yes)|Rs], R, B?) :- ground(G?), ground(R?) |
+    pending_rec(G?, R?, P),
+    any_answered_yes2(P?, Rs?, R?, B).
+any_answered_yes1([_|Rs], R, B?) :- otherwise | any_answered_yes1(Rs?, R?, B).
+procedure any_answered_yes2(YesNo?, Recs?, Recs?, YesNo).
+any_answered_yes2(yes, _, _, yes).
+any_answered_yes2(no, Rs, R, B?) :- any_answered_yes1(Rs?, R?, B).
+procedure precedes(Peer?, Peer?, YesNo).
+precedes(P, Q, yes) :- P? @< Q? | true.
+precedes(_, _, no) :- otherwise | true.
+
+%% The guarded parts of a class with no opener whose guard set holds the agent, each named by its term; and the unguarded parts whose opener is the agent (vGLP a890465, Definition "Attempt": "The initiator is the opener o([t]_j) of [t]_j if [t]_j has one, and a guard of [t]_j if not"; Section 3.2, "The protocol": "A part with an opener is proposed by its opener, and a guarded part with none by one of its guards").  A guarded part with an opener its opener proposes on a guard's request (ibid.), which the agent does not take (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, items 2 to 4, not coded): no agent proposes it.
+procedure guarding_parts(Parts?, Peer?, Classes).
+guarding_parts([], _, []).
+guarding_parts([pt(T, G, Op)|Ps], Id, R?) :- ground(Id?) |
+    mem(Id?, G?, B1),
+    no_opener(Op?, B2),
+    and(B1?, B2?, B),
+    guarding_parts(Ps?, Id?, R1),
+    keep_class(B?, T?, R1?, R).
+procedure no_opener(Opener?, YesNo).
+no_opener(opener(_), no).
+no_opener(guarded_part, yes).
+procedure opening_parts(Parts?, Peer?, Classes).
+opening_parts([], _, []).
+opening_parts([pt(T, G, Op)|Ps], Id, R?) :- ground(Id?) |
+    is_opener(Op?, Id?, B1),
+    some_peer(G?, B2),
+    neg(B2?, B3),
+    and(B1?, B3?, B),
+    opening_parts(Ps?, Id?, R1),
+    keep_class(B?, T?, R1?, R).
+procedure is_opener(Opener?, Peer?, YesNo).
+is_opener(opener(P), Id, B?) :- same(P?, Id?, B).
+is_opener(guarded_part, _, no).
+procedure all_in(Peers?, Peers?, YesNo).
+all_in([], _, yes).
+all_in([P|Ps], Q, B?) :- ground(Q?) | mem(P?, Q?, B1), all_in1(B1?, Ps?, Q?, B).
+procedure all_in1(YesNo?, Peers?, Peers?, YesNo).
+all_in1(no, _, _, no).
+all_in1(yes, Ps, Q, B?) :- all_in(Ps?, Q?, B).
+%% For the part [t]_j of a schema-binding, f^[t]_j_p is defined at d_p iff
+%% the schema-binding has the atoms it requires at p in d_p, with the atoms of
+%% the reflexive predicates naming p, and those it forbids there not, and
+%% yields d_p less the deleted atoms plus the added ones, as multisets (vGLP
+%% c0bea08, Section 5.4, "Act schemas as local specifications").  The part
+%% named by the term P: whether the state S is in the domain of its effect at
+%% the agent.
+procedure part_dom(Class?, Peer?, GAtoms?, YesNo).
+part_dom(P, Id, S, B?) :- ground(P?), ground(Id?), ground(S?) |
+    term_spec(P?, Nm, Rs, Bn),
+    part_dom1(Nm?, Rs?, Bn?, Id?, S?, B).
+procedure part_dom1(Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, YesNo).
+part_dom1(Nm, Rs, Bn, Id, S, B?) :- ground(Bn?), ground(Id?), ground(S?) |
+    reflexive_preds(Rf),
+    hat(Rf?, Id?, S?, Sh),
+    mate_dom(Rs?, Bn?, Id?, Sh?, B1),
+    listing_ok(Nm?, Bn?, Id?, S?, B2),
+    and(B1?, B2?, B).
+procedure hat(Preds?, Peer?, GAtoms?, GAtoms).
+hat([], _, S, S?).
+hat([P|Ps], Id, S, [g(P?, [p(Id?)])|R?]) :- ground(Id?) | hat(Ps?, Id?, S?, R).
+%% The parts whose domain at the agent holds its state.
+procedure ready_parts(Classes?, Peer?, GAtoms?, Classes).
+ready_parts([], _, _, []).
+ready_parts([P|Ps], Id, S, R?) :- ground(P?), ground(Id?), ground(S?) |
+    part_dom(P?, Id?, S?, B),
+    ready_parts(Ps?, Id?, S?, R1),
+    keep_class(B?, P?, R1?, R).
+procedure keep_class(YesNo?, Class?, Classes?, Classes).
+keep_class(yes, P, R, [P?|R?]).
+keep_class(no, _, R, R?).
+%% Whether the schema-bindings two terms name, of the class of the entry I, determine one part: the same people marked, and the same atoms required, as multisets, and the same atoms forbidden, at every participant, the deleted and added atoms being the class's (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 1).
+procedure same_part(Info?, Class?, Class?, YesNo).
+same_part(I, C1, C2, B?) :- ground(I?), ground(C1?), ground(C2?) |
+    info_q(I?, Q),
+    binding_of(C1?, N1, B1),
+    binding_of(C2?, N2, B2),
+    same_part1(Q?, N1?, B1?, N2?, B2?, B).
+procedure same_part1(Peers?, Constant?, Binding?, Constant?, Binding?, YesNo).
+same_part1(Q, N1, B1, N2, B2, B?) :- ground(N1?), ground(B1?), ground(N2?), ground(B2?) |
+    marked_people(N1?, B1?, G1),
+    marked_people(N2?, B2?, G2),
+    same_bpart(Q?, N1?, B1?, G1?, N2?, B2?, G2?, B).
+%% The same, of two schema-bindings with the people they mark.
+procedure same_bpart(Peers?, Constant?, Binding?, Peers?, Constant?, Binding?, Peers?, YesNo).
+same_bpart(Q, N1, B1, G1, N2, B2, G2, B?) :- ground(B1?), ground(B2?) |
+    same(G1?, G2?, E1),
+    bound_spec(N1?, B1?, Rs1),
+    bound_spec(N2?, B2?, Rs2),
+    reflexive_preds(Rf),
+    same_doms(Q?, Rs1?, B1?, Rs2?, B2?, Rf?, E2),
+    and(E1?, E2?, B).
+%% The people in the marked roles of a schema-binding, a set, in the order of identifiers.
+procedure marked_people(Constant?, Binding?, Peers).
+marked_people(Nm, B, G?) :- ground(B?) |
+    bound_spec(Nm?, B?, Rs),
+    marked_of(Rs?, B?, G).
+procedure marked_of(RoleSpecs?, Binding?, Peers).
+marked_of(Rs, B, G?) :- ground(Rs?) |
+    guard_roles(Rs?, 1, Gi),
+    persons_of(Gi?, B?, Gp),
+    sort_peers(Gp?, Gs),
+    dedup(Gs?, G).
+procedure same_doms(Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+same_doms([], _, _, _, _, _, yes).
+same_doms([P|Ps], Rs1, B1, Rs2, B2, Rf, B?) :-
+    ground(P?), ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?) |
+    reqs_at(Rs1?, B1?, P?, Rf?, R1),
+    reqs_at(Rs2?, B2?, P?, Rf?, R2),
+    forbs_at(Rs1?, B1?, P?, F1),
+    forbs_at(Rs2?, B2?, P?, F2),
+    dedup(F1?, F1s),
+    dedup(F2?, F2s),
+    ms_eq(R1?, R2?, E1),
+    ms_eq(F1s?, F2s?, E2),
+    and(E1?, E2?, E),
+    same_doms1(E?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, B).
+procedure same_doms1(YesNo?, Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+same_doms1(no, _, _, _, _, _, _, no).
+same_doms1(yes, Ps, Rs1, B1, Rs2, B2, Rf, B?) :- same_doms(Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, B).
+%% Whether the term E names a part of the class of the entry I, the part P.
+procedure term_part(Class?, Info?, Class?, YesNo).
+term_part(E, I, P, B?) :- ground(E?), ground(I?), ground(P?) |
+    term_of_class(E?, I?, In),
+    term_part1(In?, E?, I?, P?, B).
+procedure term_part1(YesNo?, Class?, Info?, Class?, YesNo).
+term_part1(no, _, _, _, no).
+term_part1(yes, E, I, P, B?) :- same_part(I?, E?, P?, B).
+procedure mate_dom(RoleSpecs?, Binding?, Peer?, GAtoms?, YesNo).
+mate_dom(Rs, B, Id, Sh, R?) :- ground(Rs?), ground(B?), ground(Id?), ground(Sh?) |
+    specs_at(Rs?, 1, B?, Id?, RsP),
+    mate_dom1(RsP?, B?, Sh?, R).
+procedure mate_dom1(RoleSpecs?, Binding?, GAtoms?, YesNo).
+mate_dom1(RsP, B, Sh, R?) :- ground(RsP?), ground(Sh?) |
+    reqs_of(RsP?, Q),
+    match_all(Q?, Sh?, B?, Bs),
+    cands_ok(Bs?, RsP?, Sh?, R).
+procedure reqs_of(RoleSpecs?, SAtoms).
+reqs_of([], []).
+reqs_of([R|Rs], Q?) :- ground(R?) | rs_req(R?, Q1), reqs_of(Rs?, Q2), app(Q1?, Q2?, Q).
+procedure cands_ok(Bindings?, RoleSpecs?, GAtoms?, YesNo).
+cands_ok([], _, _, no).
+cands_ok([B|Bs], RsP, Sh, R?) :- ground(RsP?), ground(Sh?) |
+    cand_ok(RsP?, B?, Sh?, R1),
+    cands_ok1(R1?, Bs?, RsP?, Sh?, R).
+procedure cands_ok1(YesNo?, Bindings?, RoleSpecs?, GAtoms?, YesNo).
+cands_ok1(yes, _, _, _, yes).
+cands_ok1(no, Bs, RsP, Sh, R?) :- cands_ok(Bs?, RsP?, Sh?, R).
+%% Each role's required atoms, as a multiset, in the state, and no forbidden
+%% atom whose variables are all bound in it; one with a variable free is met
+%% by a binding sending it to a person or speech act the state does not name.
+procedure cand_ok(RoleSpecs?, Binding?, GAtoms?, YesNo).
+cand_ok([], _, _, yes).
+cand_ok([R|Rs], B, Sh, Out?) :- ground(R?), ground(B?), ground(Sh?) |
+    rs_req(R?, Q),
+    img_atoms(Q?, B?, G),
+    ms_sub(G?, Sh?, B1),
+    rs_forb(R?, F),
+    forb_ok(F?, B?, Sh?, B2),
+    and(B1?, B2?, B3),
+    cand_ok1(B3?, Rs?, B?, Sh?, Out).
+procedure cand_ok1(YesNo?, RoleSpecs?, Binding?, GAtoms?, YesNo).
+cand_ok1(no, _, _, _, no).
+cand_ok1(yes, Rs, B, Sh, Out?) :- cand_ok(Rs?, B?, Sh?, Out).
+procedure forb_ok(SAtoms?, Binding?, GAtoms?, YesNo).
+forb_ok([], _, _, yes).
+forb_ok([A|As], B, Sh, R?) :- ground(A?), ground(B?), ground(Sh?) |
+    atom_bound(A?, B?, Bd),
+    forb_one(Bd?, A?, B?, Sh?, R1),
+    forb_ok1(R1?, As?, B?, Sh?, R).
+procedure forb_one(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
+forb_one(no, _, _, _, yes).
+forb_one(yes, A, B, Sh, R?) :- ground(Sh?) |
+    img_atom(A?, B?, G),
+    mem(G?, Sh?, In),
+    neg(In?, R).
+procedure forb_ok1(YesNo?, SAtoms?, Binding?, GAtoms?, YesNo).
+forb_ok1(no, _, _, _, no).
+forb_ok1(yes, As, B, Sh, R?) :- forb_ok(As?, B?, Sh?, R).
+
+procedure apply_info(Info?, Peer?, GAtoms?, GAtoms).
+apply_info(ci(_, Ps, _, _, _), Id, S, S1?) :- ground(Id?) |
+    delta_at(Ps?, Id?, D, A),
+    ms_diff(S?, D?, S0),
+    app(A?, S0?, S1).
+procedure delta_at(Deltas?, Peer?, GAtoms, GAtoms).
+delta_at([], _, [], []).
+delta_at([delta(P, D, A)|_], Id, D?, A?) :- P? =?= Id? | true.
+delta_at([_|Ps], Id, D?, A?) :- otherwise | delta_at(Ps?, Id?, D, A).
+
+%% ===========================================================================
+%% Classes: from a term of the request type to the class it names
+%% ===========================================================================
+
+%% The class a term names, the agent's entry for it, met or new; nocls where the binding is not one (Definition "Binding": two roles share a person only if neither adds or deletes an atom naming the other; admissible), where it determines no transaction, its deleted and added atoms meeting at a participant (deltas_valid) or an atom required and forbidden there (live_at), or where the agent is no participant.  A schema-binding that determines no transaction relates no two transactions, so it is of no class (Section 5.4, the paragraph on act schemas).
+procedure st_class(Class?, St?, ClassRes, St).
+st_class(C, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), R?,
+        st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca1?, Pd?, Pr?)) :-
+    ground(Id?) |
+    class_info(C?, Id?, Ca?, R, Ca1).
+procedure class_info(Class?, Peer?, Infos?, ClassRes, Infos).
+class_info(C, Id, Ca, R?, Ca1?) :- ground(C?) |
+    binding_of(C?, Nm, B),
+    class_info1(Nm?, B?, C?, Id?, Ca?, R, Ca1).
+procedure class_info1(Constant?, Binding?, Class?, Peer?, Infos?, ClassRes, Infos).
+class_info1(Nm, B, C, Id, Ca, R?, Ca1?) :- ground(Nm?), ground(B?) |
+    bound_spec(Nm?, B?, Rs),
+    rule_spec_ok(Nm?, B?, V1),
+    class_info2(V1?, Rs?, B?, C?, Id?, Ca?, R, Ca1).
+procedure class_info2(YesNo?, RoleSpecs?, Binding?, Class?, Peer?, Infos?, ClassRes, Infos).
+class_info2(V1, Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Rs?), ground(B?) |
+    admissible(Rs?, B?, V2),
+    and(V1?, V2?, V),
+    class_info3(V?, Rs?, B?, C?, Id?, Ca?, R, Ca1).
+procedure class_info3(YesNo?, RoleSpecs?, Binding?, Class?, Peer?, Infos?, ClassRes, Infos).
+class_info3(no, _, _, _, _, Ca, nocls, Ca?).
+class_info3(yes, Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Rs?), ground(B?) |
+    sig_of(Rs?, B?, Ps),
+    class_info4(Ps?, Rs?, B?, C?, Id?, Ca?, R, Ca1).
+procedure class_info4(Deltas?, RoleSpecs?, Binding?, Class?, Peer?, Infos?, ClassRes, Infos).
+class_info4(Ps, Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Ps?), ground(Id?), ground(Rs?), ground(B?) |
+    deltas_valid(Ps?, V1),
+    deltas_peers(Ps?, Q),
+    mem(Id?, Q?, V2),
+    deltas_peers(Ps?, Q1),
+    reflexive_preds(Rf),
+    live_at(Q1?, Rs?, B?, Rf?, V3),
+    and(V1?, V2?, V12),
+    and(V12?, V3?, V),
+    class_info5(V?, Ps?, Rs?, B?, C?, Id?, Ca?, R, Ca1).
+procedure class_info5(YesNo?, Deltas?, RoleSpecs?, Binding?, Class?, Peer?, Infos?, ClassRes, Infos).
+class_info5(no, _, _, _, _, _, Ca, nocls, Ca?).
+class_info5(yes, Ps, Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Ps?), ground(Ca?) |
+    cache_find(Rs?, B?, Ps?, Ca?, F),
+    class_info6(F?, Ps?, C?, Id?, Ca?, R, Ca1).
+procedure class_info6(ClassRes?, Deltas?, Class?, Peer?, Infos?, ClassRes, Infos).
+class_info6(cls(I), _, _, _, Ca, cls(I?), Ca?).
+class_info6(nocls, Ps, C, Id, Ca, R?, Ca1?) :-
+    new_info(C?, Ps?, Id?, I),
+    add_info(I?, Ca?, R, Ca1).
+procedure add_info(Info?, Infos?, ClassRes, Infos).
+add_info(I, Ca, cls(I?), Ca1?) :- ground(I?) | app(Ca?, [I?], Ca1).
+
+%% The agent's entry for the class of a schema-binding of the participants and atoms Ps: the entry one of whose schema-bindings it is linked to (in_class), and nocls where none is.
+procedure cache_find(RoleSpecs?, Binding?, Deltas?, Infos?, ClassRes).
+cache_find(_, _, _, [], nocls).
+cache_find(Rs, B, Ps, [ci(C, Ps1, Q, Pts, Ms)|Is], R?) :-
+    ground(Rs?), ground(B?), ground(Ps?), ground(Ps1?), ground(Q?), ground(Ms?) |
+    in_class(Rs?, B?, Ps?, Ps1?, Q?, Ms?, E),
+    cache_find1(E?, ci(C?, Ps1?, Q?, Pts?, Ms?), Rs?, B?, Ps?, Is?, R).
+procedure cache_find1(YesNo?, Info?, RoleSpecs?, Binding?, Deltas?, Infos?, ClassRes).
+cache_find1(yes, I, _, _, _, _, cls(I?)).
+cache_find1(no, _, Rs, B, Ps, Is, R?) :- cache_find(Rs?, B?, Ps?, Is?, R).
+
+%% A new entry, for the class of the term C at the agent Id: the schema-bindings of the participants and atoms Ps that determine a transaction (mates_of, live_mates), and among them the class of C's schema-binding, those a chain of links joins to it (class_mates), with the parts they determine (info_parts_of).
+procedure new_info(Class?, Deltas?, Peer?, Info).
+new_info(C, Ps, Id, I?) :- ground(Ps?) |
+    contract_schemas(Ss),
+    reflexive_preds(Rf),
+    mates_of(Ss?, Ps?, Ms0),
+    dedup_mates(Ms0?, Ms1),
+    deltas_peers(Ps?, Q),
+    new_info0(C?, Ps?, Ms1?, Q?, Rf?, Id?, I).
+procedure new_info0(Class?, Deltas?, Mates?, Peers?, Preds?, Peer?, Info).
+new_info0(C, Ps, Ms1, Q, Rf, Id, I?) :- ground(C?), ground(Q?), ground(Rf?) |
+    live_mates(Ms1?, Q?, Rf?, Ms2),
+    binding_of(C?, Nm, B),
+    class_mates(Nm?, B?, Ms2?, Q?, Rf?, Ms),
+    new_info1(C?, Ps?, Ms?, Id?, I).
+procedure new_info1(Class?, Deltas?, Mates?, Peer?, Info).
+new_info1(C, Ps, Ms, Id, ci(C?, Ps?, Q?, Pts?, Ms?)) :- ground(Ps?), ground(Ms?) |
+    deltas_peers(Ps?, Q),
+    deltas_peers(Ps?, Q1),
+    info_parts_of(Ms?, Q1?, Id?, Pts).
+
+procedure info_q(Info?, Peers).
+info_q(ci(_, _, Q, _, _), Q?).
+procedure info_parts(Info?, Parts).
+info_parts(ci(_, _, _, Pts, _), Pts?).
+
+%% The participants of a class and the atoms each deletes and adds: the join
+%% of those of the roles sent to it (GSC, Definition "Compilation").
+procedure sig_of(RoleSpecs?, Binding?, Deltas).
+sig_of(Rs, B, Ps?) :- ground(Rs?), ground(B?) |
+    role_persons(Rs?, 1, B?, Ws),
+    dedup(Ws?, Q),
+    deltas_for(Q?, Rs?, B?, Ps).
+procedure role_persons(RoleSpecs?, Integer?, Binding?, Peers).
+role_persons([], _, _, []).
+role_persons([_|Rs], I, B, [P?|Ps?]) :- integer(I?), ground(B?) |
+    role_person(I?, B?, P),
+    I1 := I? + 1,
+    role_persons(Rs?, I1?, B?, Ps).
+procedure deltas_for(Peers?, RoleSpecs?, Binding?, Deltas).
+deltas_for([], _, _, []).
+deltas_for([P|Ps], Rs, B, [delta(P?, D?, A?)|Xs?]) :- ground(P?), ground(Rs?), ground(B?) |
+    specs_at(Rs?, 1, B?, P?, RsP),
+    joins(RsP?, B?, D, A),
+    deltas_for(Ps?, Rs?, B?, Xs).
+procedure joins(RoleSpecs?, Binding?, GAtoms, GAtoms).
+joins(RsP, B, D?, A?) :- ground(RsP?), ground(B?) |
+    dels_join(RsP?, B?, [], D),
+    adds_join(RsP?, B?, [], A).
+procedure dels_join(RoleSpecs?, Binding?, GAtoms?, GAtoms).
+dels_join([], _, Acc, Acc?).
+dels_join([R|Rs], B, Acc, Out?) :- ground(B?) |
+    rs_del(R?, D),
+    img_atoms(D?, B?, G),
+    ms_join(Acc?, G?, Acc1),
+    dels_join(Rs?, B?, Acc1?, Out).
+procedure adds_join(RoleSpecs?, Binding?, GAtoms?, GAtoms).
+adds_join([], _, Acc, Acc?).
+adds_join([R|Rs], B, Acc, Out?) :- ground(B?) |
+    rs_add(R?, A),
+    img_atoms(A?, B?, G),
+    ms_join(Acc?, G?, Acc1),
+    adds_join(Rs?, B?, Acc1?, Out).
+procedure specs_at(RoleSpecs?, Integer?, Binding?, Peer?, RoleSpecs).
+specs_at([], _, _, _, []).
+specs_at([R|Rs], I, B, P, Out?) :- integer(I?), ground(B?), ground(P?) |
+    role_person(I?, B?, Q),
+    I1 := I? + 1,
+    specs_at(Rs?, I1?, B?, P?, Rest),
+    keep_spec(Q?, P?, R?, Rest?, Out).
+procedure keep_spec(Peer?, Peer?, RoleSpec?, RoleSpecs?, RoleSpecs).
+keep_spec(Q, P, R, Rest, [R?|Rest?]) :- Q? =?= P? | true.
+keep_spec(_, _, _, Rest, Rest?) :- otherwise | true.
+procedure deltas_valid(Deltas?, YesNo).
+deltas_valid([], yes).
+deltas_valid([delta(_, D, A)|Ps], B?) :- ground(A?) |
+    ms_meets(D?, A?, M),
+    neg(M?, B1),
+    deltas_valid1(B1?, Ps?, B).
+procedure deltas_valid1(YesNo?, Deltas?, YesNo).
+deltas_valid1(no, _, no).
+deltas_valid1(yes, Ps, B?) :- deltas_valid(Ps?, B).
+procedure deltas_peers(Deltas?, Peers).
+deltas_peers([], []).
+deltas_peers([delta(P, _, _)|Ps], [P?|Qs?]) :- deltas_peers(Ps?, Qs).
+procedure deltas_eq(Deltas?, Deltas?, YesNo).
+deltas_eq(A, B, E?) :- ground(A?), ground(B?) |
+    len_deltas(A?, La),
+    len_deltas(B?, Lb),
+    same_int(La?, Lb?, E1),
+    deltas_in(A?, B?, E2),
+    and(E1?, E2?, E).
+procedure len_deltas(Deltas?, Integer).
+len_deltas([], 0).
+len_deltas([_|Ps], N?) :- len_deltas(Ps?, M), N := M? + 1.
+procedure deltas_in(Deltas?, Deltas?, YesNo).
+deltas_in([], _, yes).
+deltas_in([X|Xs], B, E?) :- ground(B?) |
+    delta_in(X?, B?, E1),
+    deltas_in1(E1?, Xs?, B?, E).
+procedure deltas_in1(YesNo?, Deltas?, Deltas?, YesNo).
+deltas_in1(no, _, _, no).
+deltas_in1(yes, Xs, B, E?) :- deltas_in(Xs?, B?, E).
+procedure delta_in(Delta?, Deltas?, YesNo).
+delta_in(_, [], no).
+delta_in(delta(P, D, A), [delta(Q, D1, A1)|Ps], E?) :- P? =?= Q?, ground(D?), ground(A?) |
+    ms_eq(D?, D1?, E1),
+    ms_eq(A?, A1?, E2),
+    and(E1?, E2?, E3),
+    delta_in1(E3?, delta(P?, D?, A?), Ps?, E).
+delta_in(X, [_|Ps], E?) :- otherwise | delta_in(X?, Ps?, E).
+procedure delta_in1(YesNo?, Delta?, Deltas?, YesNo).
+delta_in1(yes, _, _, yes).
+delta_in1(no, X, Ps, E?) :- delta_in(X?, Ps?, E).
+
+%% Definition "Binding": two roles sent to one person only if neither adds or
+%% deletes an atom naming the other.
+procedure rule_ok(RoleSpecs?, Binding?, YesNo).
+rule_ok(Rs, B, R?) :- ground(Rs?) |
+    rs_len(Rs?, K),
+    pairs_ok(1, K?, Rs?, B?, R).
+procedure pairs_ok(Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
+pairs_ok(I, K, _, _, yes) :- I? > K? | true.
+pairs_ok(I, K, Rs, B, R?) :- I? =< K?, ground(Rs?), ground(B?) |
+    J := I? + 1,
+    pair_row(I?, J?, K?, Rs?, B?, R1),
+    I1 := I? + 1,
+    pairs_ok1(R1?, I1?, K?, Rs?, B?, R).
+procedure pairs_ok1(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
+pairs_ok1(no, _, _, _, _, no).
+pairs_ok1(yes, I, K, Rs, B, R?) :- pairs_ok(I?, K?, Rs?, B?, R).
+procedure pair_row(Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
+pair_row(_, J, K, _, _, yes) :- J? > K? | true.
+pair_row(I, J, K, Rs, B, R?) :- J? =< K?, ground(Rs?), ground(B?) |
+    role_person(I?, B?, P),
+    role_person(J?, B?, Q),
+    nth_spec(Rs?, I?, RI),
+    nth_spec(Rs?, J?, RJ),
+    pair_ok(P?, Q?, RI?, RJ?, I?, J?, R1),
+    J1 := J? + 1,
+    pair_row1(R1?, I?, J1?, K?, Rs?, B?, R).
+procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
+pair_row1(no, _, _, _, _, _, no).
+pair_row1(yes, I, J, K, Rs, B, R?) :- pair_row(I?, J?, K?, Rs?, B?, R).
+procedure pair_ok(Peer?, Peer?, RoleSpec?, RoleSpec?, Integer?, Integer?, YesNo).
+pair_ok(P, Q, RI, RJ, I, J, R?) :- P? =?= Q? |
+    role_names(RI?, J?, A1),
+    role_names(RJ?, I?, A2),
+    or(A1?, A2?, A),
+    neg(A?, R).
+pair_ok(_, _, _, _, _, _, yes) :- otherwise | true.
+procedure role_names(RoleSpec?, Integer?, YesNo).
+role_names(rs(_, A, D, _, _), J, R?) :- integer(J?) |
+    names_role(A?, J?, R1),
+    names_role(D?, J?, R2),
+    or(R1?, R2?, R).
+%% An atom names a role among its arguments, the base of a name term among them, or the role of a signed term
+%% among them (GSC, Section 3: "An atom names what is among its arguments or
+%% is the signer of one: ... in a schema a role or a variable, the role of a
+%% signed term included").
+procedure names_role(SAtoms?, Integer?, YesNo).
+names_role([], _, no).
+names_role([atom(_, Vs)|As], J, R?) :- integer(J?), ground(Vs?) |
+    flat_names(Vs?, Fs),
+    mem(role(J?), Fs?, R1),
+    sgn_names(Vs?, J?, R2),
+    or(R1?, R2?, R12),
+    names_role1(R12?, As?, J?, R).
+procedure names_role1(YesNo?, SAtoms?, Integer?, YesNo).
+names_role1(yes, _, _, yes).
+names_role1(no, As, J, R?) :- names_role(As?, J?, R).
+procedure sgn_names(Vars?, Integer?, YesNo).
+sgn_names([], _, no).
+sgn_names([sgn(_, I)|_], J, yes) :- I? =:= J? | true.
+sgn_names([_|Vs], J, R?) :- otherwise | sgn_names(Vs?, J?, R).
+
+%% Definition "Binding", admissible: a speech-act variable in an atom added at
+%% a role and in no atom required at a role is sent to a speech act signed by
+%% the person in a guarding role.
+procedure admissible(RoleSpecs?, Binding?, YesNo).
+admissible(Rs, B, R?) :- ground(Rs?), ground(B?) |
+    adds_of(Rs?, Ad),
+    reqs_of(Rs?, Rq),
+    guard_roles(Rs?, 1, Gi),
+    persons_of(Gi?, B?, Gp),
+    atoms_vars(Ad?, Av),
+    adm_each(Av?, Rq?, B?, Gp?, R).
+procedure adm_each(Vars?, SAtoms?, Binding?, Peers?, YesNo).
+adm_each([], _, _, _, yes).
+adm_each([V|Vs], Rq, B, Gp, R?) :- ground(V?), ground(Rq?), ground(B?), ground(Gp?) |
+    adm_var(V?, Rq?, B?, Gp?, R1),
+    adm_each1(R1?, Vs?, Rq?, B?, Gp?, R).
+procedure adm_each1(YesNo?, Vars?, SAtoms?, Binding?, Peers?, YesNo).
+adm_each1(no, _, _, _, _, no).
+adm_each1(yes, Vs, Rq, B, Gp, R?) :- adm_each(Vs?, Rq?, B?, Gp?, R).
+procedure adm_var(Var?, SAtoms?, Binding?, Peers?, YesNo).
+adm_var(svar(X), Rq, B, Gp, R?) :- ground(X?), ground(B?) |
+    atoms_vars(Rq?, Qv),
+    mem(svar(X?), Qv?, InReq),
+    lookup(svar(X?), B?, F),
+    adm_var1(InReq?, F?, Gp?, R).
+adm_var(role(_), _, _, _, yes).
+adm_var(pvar(_), _, _, _, yes).
+%% The variables of a name term are taken apart (atoms_vars); the clause covers the type.
+adm_var(nterm(_), _, _, _, yes).
+%% A signed term's speech-act variable occurs in an atom some role requires
+%% (GSC, Definition "Act schema"), so it asks nothing of the binding.
+adm_var(sgn(_, _), _, _, _, yes).
+procedure adm_var1(YesNo?, Found?, Peers?, YesNo).
+adm_var1(yes, _, _, yes).
+adm_var1(no, found(s(speech(_, P))), Gp, R?) :- mem(P?, Gp?, R).
+adm_var1(no, found(p(_)), _, no).
+adm_var1(no, found(c(_)), _, no).
+adm_var1(no, free, _, no).
+procedure adds_of(RoleSpecs?, SAtoms).
+adds_of([], []).
+adds_of([R|Rs], A?) :- rs_add(R?, A1), adds_of(Rs?, A2), app(A1?, A2?, A).
+procedure atoms_vars(SAtoms?, Vars).
+atoms_vars([], []).
+atoms_vars([atom(_, Vs)|As], R?) :- flat_names(Vs?, Ws), atoms_vars(As?, R1), app(Ws?, R1?, R).
+procedure guard_roles(RoleSpecs?, Integer?, Ints).
+guard_roles([], _, []).
+guard_roles([rs(guarded, _, _, _, _)|Rs], I, [I?|Is?]) :- integer(I?) |
+    I1 := I? + 1,
+    guard_roles(Rs?, I1?, Is).
+guard_roles([rs(unguarded, _, _, _, _)|Rs], I, Is?) :- integer(I?) |
+    I1 := I? + 1,
+    guard_roles(Rs?, I1?, Is).
+procedure persons_of(Ints?, Binding?, Peers).
+persons_of([], _, []).
+persons_of([I|Is], B, [P?|Ps?]) :- ground(B?) |
+    role_person(I?, B?, P),
+    persons_of(Is?, B?, Ps).
+
+%% --- The schema-bindings of a class's participants and atoms: those of every
+%% --- schema whose roles, sent onto the participants, delete and add exactly
+%% --- the class's atoms; the class is those a chain of links joins (below) ---
+procedure mates_of(Schemas?, Deltas?, Mates).
+mates_of([], _, []).
+mates_of([schema(Nm, _, Rs)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Ps?) |
+    deltas_peers(Ps?, Q),
+    rs_len(Rs?, K),
+    assigns(K?, Q?, As),
+    mates_assigns(As?, Nm?, Rs?, Ps?, M1),
+    mates_of(Ss?, Ps?, M2),
+    app(M1?, M2?, M).
+%% A schema with listed roles: each assignment of its roles to the participants, each listed role's place sent to its base person, extended by each choice, for each listed role, of a list of participants as its people, a set, in the order of identifiers, its roles of that list (bound_spec, tuple_binds).
+mates_of([lschema(Nm, _, Rs, Lsts)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Lsts?), ground(Ps?) |
+    deltas_peers(Ps?, Q),
+    rs_len(Rs?, K),
+    assigns(K?, Q?, As0),
+    on_base(As0?, Lsts?, As),
+    deltas_peers(Ps?, Q1),
+    sort_peers(Q1?, Q2),
+    subsets(Q2?, Ls),
+    tuples(Lsts?, Ls?, Ts),
+    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M1),
+    mates_of(Ss?, Ps?, M2),
+    app(M1?, M2?, M).
+procedure on_base(Bindings?, Listings?, Bindings).
+on_base([], _, []).
+on_base([B|Bs], Lsts, R?) :- ground(B?), ground(Lsts?) |
+    on_bases(Lsts?, B?, E),
+    on_base(Bs?, Lsts?, R1),
+    keep_binding(E?, B?, R1?, R).
+%% Whether each listed role's place is sent to its base person.
+procedure on_bases(Listings?, Binding?, YesNo).
+on_bases([], _, yes).
+on_bases([listing(I, Bi, _, _)|Lsts], B, E?) :- ground(B?) |
+    role_person(I?, B?, P),
+    role_person(Bi?, B?, Q),
+    same(P?, Q?, E1),
+    on_bases(Lsts?, B?, E2),
+    and(E1?, E2?, E).
+procedure keep_binding(YesNo?, Binding?, Bindings?, Bindings).
+keep_binding(yes, B, R, [B?|R?]).
+keep_binding(no, _, R, R?).
+procedure subsets(Peers?, PeerLists).
+subsets([], [[]]).
+subsets([P|Ps], R?) :- ground(P?), ground(Ps?) |
+    subsets(Ps?, S1),
+    with_first(S1?, P?, S2),
+    subsets(Ps?, S3),
+    app(S2?, S3?, R).
+procedure with_first(PeerLists?, Peer?, PeerLists).
+with_first([], _, []).
+with_first([L|Ls], P, [[P?|L?]|R?]) :- ground(P?) | with_first(Ls?, P?, R).
+%% Each choice of one list of Ls for each listed role of Lsts, in the order of the roles.
+procedure tuples(Listings?, PeerLists?, ListTuples).
+tuples([], _, [[]]).
+tuples([_|Lsts], Ls, R?) :- ground(Ls?) |
+    tuples(Lsts?, Ls?, R1),
+    prepend_each(Ls?, R1?, R).
+procedure prepend_each(PeerLists?, ListTuples?, ListTuples).
+prepend_each([], _, []).
+prepend_each([L|Ls], Ts, R?) :- ground(L?), ground(Ts?) |
+    with_head(Ts?, L?, R1),
+    prepend_each(Ls?, Ts?, R2),
+    app(R1?, R2?, R).
+procedure with_head(ListTuples?, Peers?, ListTuples).
+with_head([], _, []).
+with_head([T|Ts], L, [[L?|T?]|R?]) :- ground(L?) | with_head(Ts?, L?, R).
+procedure listed_mates(ListTuples?, Bindings?, Constant?, RoleSpecs?, Listings?, Deltas?, Mates).
+listed_mates([], _, _, _, _, _, []).
+listed_mates([T|Ts], As, Nm, Rs, Lsts, Ps, M?) :-
+    ground(T?), ground(As?), ground(Nm?), ground(Rs?), ground(Lsts?), ground(Ps?) |
+    rs_len(Rs?, K),
+    K1 := K? + 1,
+    tuple_binds(Lsts?, T?, K1?, Cs),
+    extend_all(As?, Cs?, Bs),
+    spec_for(Rs?, Lsts?, T?, Rs1),
+    mates_assigns(Bs?, Nm?, Rs1?, Ps?, M1),
+    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M2),
+    app(M1?, M2?, M).
+procedure extend_all(Bindings?, Binding?, Bindings).
+extend_all([], _, []).
+extend_all([B|Bs], Cs, [B1?|R?]) :- ground(Cs?) | app(B?, Cs?, B1), extend_all(Bs?, Cs?, R).
+procedure assigns(Integer?, Peers?, Bindings).
+assigns(K, Q, R?) :- assigns1(1, K?, Q?, [[]], R).
+procedure assigns1(Integer?, Integer?, Peers?, Bindings?, Bindings).
+assigns1(I, K, _, Acc, Acc?) :- I? > K? | true.
+assigns1(I, K, Q, Acc, R?) :- I? =< K?, ground(Q?) |
+    extend_role(Acc?, I?, Q?, Acc1),
+    I1 := I? + 1,
+    assigns1(I1?, K?, Q?, Acc1?, R).
+procedure extend_role(Bindings?, Integer?, Peers?, Bindings).
+extend_role([], _, _, []).
+extend_role([B|Bs], I, Q, R?) :- ground(B?), integer(I?), ground(Q?) |
+    extend_one(Q?, I?, B?, R1),
+    extend_role(Bs?, I?, Q?, R2),
+    app(R1?, R2?, R).
+procedure extend_one(Peers?, Integer?, Binding?, Bindings).
+extend_one([], _, _, []).
+extend_one([P|Ps], I, B, [[b(role(I?), p(P?))|B?]|R?]) :- ground(B?), integer(I?) |
+    extend_one(Ps?, I?, B?, R).
+procedure mates_assigns(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
+mates_assigns([], _, _, _, []).
+mates_assigns([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
+    deltas_peers(Ps?, Q),
+    role_persons(Rs?, 1, B?, Ws),
+    all_in(Q?, Ws?, Onto),
+    rule_spec_ok(Nm?, B?, Ok),
+    and(Onto?, Ok?, Go),
+    mates_assign(Go?, B?, Nm?, Rs?, Ps?, M1),
+    mates_assigns(Bs?, Nm?, Rs?, Ps?, M2),
+    app(M1?, M2?, M).
+procedure mates_assign(YesNo?, Binding?, Constant?, RoleSpecs?, Deltas?, Mates).
+mates_assign(no, _, _, _, _, []).
+mates_assign(yes, B, Nm, Rs, Ps, M?) :- ground(Rs?), ground(Ps?) |
+    match_deltas(Ps?, Rs?, [B?], Bs),
+    mates_check(Bs?, Nm?, Rs?, Ps?, M).
+procedure match_deltas(Deltas?, RoleSpecs?, Bindings?, Bindings).
+match_deltas([], _, Bs, Bs?).
+match_deltas([delta(P, D, A)|Ps], Rs, Bs, R?) :- ground(P?), ground(D?), ground(A?), ground(Rs?) |
+    match_delta(Bs?, P?, D?, A?, Rs?, Bs1),
+    match_deltas(Ps?, Rs?, Bs1?, R).
+procedure match_delta(Bindings?, Peer?, GAtoms?, GAtoms?, RoleSpecs?, Bindings).
+match_delta([], _, _, _, _, []).
+match_delta([B|Bs], P, D, A, Rs, R?) :- ground(B?), ground(P?), ground(D?), ground(A?), ground(Rs?) |
+    specs_at(Rs?, 1, B?, P?, RsP),
+    match_delta1(RsP?, B?, D?, A?, B2),
+    match_delta(Bs?, P?, D?, A?, Rs?, R2),
+    app(B2?, R2?, R).
+procedure match_delta1(RoleSpecs?, Binding?, GAtoms?, GAtoms?, Bindings).
+match_delta1(RsP, B, D, A, R?) :- ground(RsP?), ground(A?) |
+    dels_of(RsP?, Dp),
+    adds_of(RsP?, Ap),
+    match_all(Dp?, D?, B?, B1),
+    match_all_each(B1?, Ap?, A?, R).
+procedure dels_of(RoleSpecs?, SAtoms).
+dels_of([], []).
+dels_of([R|Rs], A?) :- rs_del(R?, A1), dels_of(Rs?, A2), app(A1?, A2?, A).
+procedure mates_check(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
+mates_check([], _, _, _, []).
+mates_check([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
+    sig_of(Rs?, B?, Ps1),
+    deltas_eq(Ps?, Ps1?, E1),
+    admissible(Rs?, B?, E2),
+    and(E1?, E2?, E),
+    mate_of(E?, B?, Nm?, Rs?, M1),
+    mates_check(Bs?, Nm?, Rs?, Ps?, M2),
+    app(M1?, M2?, M).
+procedure mate_of(YesNo?, Binding?, Constant?, RoleSpecs?, Mates).
+mate_of(no, _, _, _, []).
+mate_of(yes, B, Nm, Rs, [mate(Nm?, B?, G?, F?)]) :- ground(B?), ground(Rs?) |
+    guard_roles(Rs?, 1, Gi),
+    persons_of(Gi?, B?, Gp),
+    sort_peers(Gp?, Gs),
+    dedup(Gs?, G),
+    role_person(1, B?, F).
+procedure dedup_mates(Mates?, Mates).
+dedup_mates([], []).
+dedup_mates([M|Ms], [M?|R?]) :- ground(M?) |
+    drop_mate(M?, Ms?, Ms1),
+    dedup_mates(Ms1?, R).
+procedure drop_mate(Mate?, Mates?, Mates).
+drop_mate(_, [], []).
+drop_mate(mate(N, B, G, F), [mate(N1, B1, G1, F1)|Ms], R?) :-
+    ground(N?), ground(B?), ground(G?), ground(F?), ground(N1?), ground(B1?) |
+    same(N?, N1?, E1),
+    ms_eq(B?, B1?, E2),
+    and(E1?, E2?, E),
+    drop_mate1(E?, mate(N?, B?, G?, F?), mate(N1?, B1?, G1?, F1?), Ms?, R).
+procedure drop_mate1(YesNo?, Mate?, Mate?, Mates?, Mates).
+drop_mate1(yes, M, _, Ms, R?) :- drop_mate(M?, Ms?, R).
+drop_mate1(no, M, M1, Ms, [M1?|R?]) :- drop_mate(M?, Ms?, R).
+%% The parts the schema-bindings Ms of a class determine, each pt(T, G, Op), in the order of Ms: named by the term T of the first of its schema-bindings, a schema-binding of the part of one before it naming no other part; its guard set G, the people in the marked roles of its schema-bindings; and, for an unguarded part, its opener, opener(P), P "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it"; for a guarded part determined by a schema with a listed role whose base is not a guarding role, opener(P), P the least of the people in the first role of those schema-bindings that is not a guard of the part, "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part" (vGLP a890465, Section 5.4, "Act schemas as local specifications"); and for every other guarded part guarded_part.  An opener per part is one the agent finds: an unguarded part has its opener in the first role of one of its schema-bindings, so the agent, which finds among its own transactions the classes of the unguarded schemas with it in their first role, finds every part it opens (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
+procedure info_parts_of(Mates?, Peers?, Peer?, Parts).
+info_parts_of(Ms, Q, Id, Pts?) :- ground(Ms?) | parts_of(Ms?, Ms?, Q?, Id?, [], Pts).
+%% parts_of(Ms, All, Q, Id, Seen, Pts): the parts of the schema-bindings Ms that are not the part of one of Seen, the openers taken over All.
+procedure parts_of(Mates?, Mates?, Peers?, Peer?, Mates?, Parts).
+parts_of([], _, _, _, _, []).
+parts_of([M|Ms], All, Q, Id, Seen, Pts?) :- ground(M?), ground(Q?), ground(Seen?) |
+    part_seen(Seen?, M?, Q?, Old),
+    parts_of1(Old?, M?, Ms?, All?, Q?, Id?, Seen?, Pts).
+procedure parts_of1(YesNo?, Mate?, Mates?, Mates?, Peers?, Peer?, Mates?, Parts).
+parts_of1(yes, _, Ms, All, Q, Id, Seen, Pts?) :- parts_of(Ms?, All?, Q?, Id?, Seen?, Pts).
+parts_of1(no, mate(N, B, G, F), Ms, All, Q, Id, Seen, [pt(T?, G?, Op?)|Pts?]) :-
+    ground(N?), ground(B?), ground(G?), ground(F?), ground(All?), ground(Q?), ground(Id?) |
+    class_of(N?, B?, Id?, T),
+    part_firsts(All?, mate(N?, B?, G?, F?), Q?, Fs),
+    part_gfirsts(All?, mate(N?, B?, G?, F?), Q?, G?, Fo),
+    part_opener(G?, Fs?, Fo?, Op),
+    parts_of(Ms?, All?, Q?, Id?, [mate(N?, B?, G?, F?)|Seen?], Pts).
+procedure part_seen(Mates?, Mate?, Peers?, YesNo).
+part_seen([], _, _, no).
+part_seen([S|Ss], M, Q, B?) :- ground(M?), ground(Q?) |
+    same_mpart(Q?, S?, M?, B1),
+    part_seen1(B1?, Ss?, M?, Q?, B).
+procedure part_seen1(YesNo?, Mates?, Mate?, Peers?, YesNo).
+part_seen1(yes, _, _, _, yes).
+part_seen1(no, Ss, M, Q, B?) :- part_seen(Ss?, M?, Q?, B).
+%% The people in the first role of the schema-bindings of All that determine the part of M.
+procedure part_firsts(Mates?, Mate?, Peers?, Peers).
+part_firsts([], _, _, []).
+part_firsts([mate(N, B, G, F)|Ms], M, Q, Fs?) :- ground(F?), ground(M?), ground(Q?) |
+    same_mpart(Q?, mate(N?, B?, G?, F?), M?, S),
+    part_firsts(Ms?, M?, Q?, Fs1),
+    keep_peer(S?, F?, Fs1?, Fs).
+%% The people in the first role of the schema-bindings of All that determine the part of M, of a schema with a listed role whose base is not a guarding role, and that are not guards of the part, G (vGLP a890465, Section 5.4, "Act schemas as local specifications").
+procedure part_gfirsts(Mates?, Mate?, Peers?, Peers?, Peers).
+part_gfirsts([], _, _, _, []).
+part_gfirsts([mate(N, B, G1, F)|Ms], M, Q, G, Fs?) :- ground(N?), ground(F?), ground(M?), ground(Q?), ground(G?) |
+    same_mpart(Q?, mate(N?, B?, G1?, F?), M?, S),
+    opens_guarded(N?, O),
+    mem(F?, G?, InG),
+    neg(InG?, NotG),
+    and(S?, O?, S1),
+    and(S1?, NotG?, K),
+    part_gfirsts(Ms?, M?, Q?, G?, Fs1),
+    keep_peer(K?, F?, Fs1?, Fs).
+%% Whether a schema is one with a listed role whose base is not a guarding role: its listed roles have one base (local.glp), its first role.
+procedure opens_guarded(Constant?, YesNo).
+opens_guarded(Nm, B?) :- schema_entry(Nm?, E), opens_guarded1(E?, B).
+procedure opens_guarded1(Schema?, YesNo).
+opens_guarded1(schema(_, _, _), no).
+opens_guarded1(lschema(_, _, _, []), no).
+opens_guarded1(lschema(_, _, Rs, [listing(_, Bi, _, _)|_]), B?) :- ground(Rs?), integer(Bi?) |
+    nth_spec(Rs?, Bi?, R),
+    spec_unguarded(R?, B).
+procedure spec_unguarded(RoleSpec?, YesNo).
+spec_unguarded(rs(unguarded, _, _, _, _), yes).
+spec_unguarded(rs(guarded, _, _, _, _), no).
+%% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo.
+procedure part_opener(Peers?, Peers?, Peers?, Opener).
+part_opener([], Fs, _, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Op).
+part_opener([_|_], _, Fo, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Op).
+%% A schema-binding is of its own part, so the people of an unguarded part are never none; a guarded part none of whose schema-bindings opens it has no opener, guarded_part.
+procedure least_opener(Peers?, Opener).
+least_opener([P|_], opener(P?)).
+least_opener([], guarded_part).
+%% Whether two schema-bindings of a class, each with the people it marks, determine one part.
+procedure same_mpart(Peers?, Mate?, Mate?, YesNo).
+same_mpart(Q, mate(N1, B1, G1, _), mate(N2, B2, G2, _), B?) :-
+    same_bpart(Q?, N1?, B1?, G1?, N2?, B2?, G2?, B).
+
+%% --- The class of a schema-binding: what a chain of links joins -----------
+%% "The classes are those of the contract's equivalence, generated by relating two transactions when one schema-binding determines both" (vGLP 099f876, Section 5.4, "Act schemas as local specifications").  A schema-binding determines a transaction where its deleted and added atoms are disjoint at each participant and, at each, no atom is both required and forbidden and no atom of a reflexive predicate naming the participant is forbidden (live_at).  Two such schema-bindings of the same participants and the same atoms deleted and added at each determine a common transaction, and are linked, where no atom one requires at a participant the other forbids there (linked).  The contract being effective, every variable of an atom a schema requires or forbids is a variable of an atom it deletes or adds (local.glp), so matching the deleted and added atoms binds every variable of a schema-binding, and a variable left free, cmp_free, is never met: the clauses on it cover the type.  The class of a schema-binding is the schema-bindings a chain of links joins to it (class_mates); one that determines a transaction is of the class of an entry exactly when it is linked to one of the entry's schema-bindings (in_class).  The entry's parts are taken over it, the domain of each part being that of its schema-binding (part_dom).
+
+%% in_class(Rs, B, Ps, Ps1, Q, Ms, R): whether the schema-binding of the role specifications Rs at the binding B, of the participants and atoms Ps, is of the class of an entry of the participants and atoms Ps1, the participants Q and the schema-bindings Ms.
+procedure in_class(RoleSpecs?, Binding?, Deltas?, Deltas?, Peers?, Mates?, YesNo).
+in_class(Rs, B, Ps, Ps1, Q, Ms, R?) :-
+    deltas_eq(Ps?, Ps1?, E),
+    in_class1(E?, Rs?, B?, Q?, Ms?, R).
+procedure in_class1(YesNo?, RoleSpecs?, Binding?, Peers?, Mates?, YesNo).
+in_class1(no, _, _, _, _, no).
+in_class1(yes, Rs, B, Q, Ms, R?) :-
+    reflexive_preds(Rf),
+    linked_any(Ms?, Rs?, B?, Q?, Rf?, R).
+procedure linked_any(Mates?, RoleSpecs?, Binding?, Peers?, Preds?, YesNo).
+linked_any([], _, _, _, _, no).
+linked_any([mate(N, B2, _, _)|Ms], Rs, B, Q, Rf, L?) :-
+    ground(Rs?), ground(B?), ground(B2?), ground(Q?), ground(Rf?) |
+    bound_spec(N?, B2?, Rs2),
+    linked(Q?, Rs?, B?, Rs2?, B2?, Rf?, L1),
+    linked_any1(L1?, Ms?, Rs?, B?, Q?, Rf?, L).
+procedure linked_any1(YesNo?, Mates?, RoleSpecs?, Binding?, Peers?, Preds?, YesNo).
+linked_any1(yes, _, _, _, _, _, yes).
+linked_any1(no, Ms, Rs, B, Q, Rf, L?) :- linked_any(Ms?, Rs?, B?, Q?, Rf?, L).
+
+%% class_mates(Nm, B, Ms, Q, Rf, Cls): the class of the schema-binding of the schema Nm at the binding B among the schema-bindings Ms of its participants Q and its atoms, those a chain of links joins to it, in the order of Ms.
+procedure class_mates(Constant?, Binding?, Mates?, Peers?, Preds?, Mates).
+class_mates(Nm, B, Ms, Q, Rf, Cls?) :- ground(Nm?), ground(B?), ground(Ms?) |
+    bound_spec(Nm?, B?, Rs),
+    mate_of(yes, B?, Nm?, Rs?, M0),
+    grow(M0?, Ms?, Q?, Rf?, [], In),
+    keep_mates(Ms?, In?, Cls).
+%% grow(Front, Rest, Q, Rf, Done, Out): Out is Done, Front and every schema-binding of Rest that a chain through those of Front reaches; one of Front is moved to Done once those of Rest linked to it have joined Front.
+procedure grow(Mates?, Mates?, Peers?, Preds?, Mates?, Mates).
+grow([], _, _, _, Done, Done?).
+grow([mate(N, B, G, F)|Fs], Rest, Q, Rf, Done, Out?) :-
+    ground(N?), ground(B?), ground(Rest?), ground(Q?), ground(Rf?) |
+    bound_spec(N?, B?, Rs),
+    split_linked(Rest?, Rs?, B?, Q?, Rf?, New, Keep),
+    app(Fs?, New?, Fs1),
+    grow(Fs1?, Keep?, Q?, Rf?, [mate(N?, B?, G?, F?)|Done?], Out).
+procedure split_linked(Mates?, RoleSpecs?, Binding?, Peers?, Preds?, Mates, Mates).
+split_linked([], _, _, _, _, [], []).
+split_linked([mate(N2, B2, G2, F2)|Ms], Rs, B, Q, Rf, New?, Keep?) :-
+    ground(N2?), ground(B2?), ground(Rs?), ground(B?), ground(Q?), ground(Rf?) |
+    bound_spec(N2?, B2?, Rs2),
+    linked(Q?, Rs?, B?, Rs2?, B2?, Rf?, L),
+    split_linked(Ms?, Rs?, B?, Q?, Rf?, New1, Keep1),
+    split_one(L?, mate(N2?, B2?, G2?, F2?), New1?, Keep1?, New, Keep).
+procedure split_one(YesNo?, Mate?, Mates?, Mates?, Mates, Mates).
+split_one(yes, M, New, Keep, [M?|New?], Keep?).
+split_one(no, M, New, Keep, New?, [M?|Keep?]).
+procedure keep_mates(Mates?, Mates?, Mates).
+keep_mates([], _, []).
+keep_mates([M|Ms], In, R?) :- ground(M?), ground(In?) |
+    mem(M?, In?, B),
+    keep_mates(Ms?, In?, R1),
+    keep_mate(B?, M?, R1?, R).
+procedure keep_mate(YesNo?, Mate?, Mates?, Mates).
+keep_mate(yes, M, R, [M?|R?]).
+keep_mate(no, _, R, R?).
+
+%% The schema-bindings Ms of the participants Q that determine a transaction.
+procedure live_mates(Mates?, Peers?, Preds?, Mates).
+live_mates([], _, _, []).
+live_mates([mate(N, B, G, F)|Ms], Q, Rf, R?) :- ground(N?), ground(B?), ground(Q?), ground(Rf?) |
+    bound_spec(N?, B?, Rs),
+    live_at(Q?, Rs?, B?, Rf?, L),
+    live_mates(Ms?, Q?, Rf?, R1),
+    keep_mate(L?, mate(N?, B?, G?, F?), R1?, R).
+
+%% live_at(Q, Rs, B, Rf, Ok): at each participant of Q, no atom both required and forbidden, and no atom of a reflexive predicate naming the participant forbidden.
+procedure live_at(Peers?, RoleSpecs?, Binding?, Preds?, YesNo).
+live_at([], _, _, _, yes).
+live_at([P|Ps], Rs, B, Rf, Ok?) :- ground(P?), ground(Rs?), ground(B?), ground(Rf?) |
+    reqs_at(Rs?, B?, P?, Rf?, R),
+    forbs_at(Rs?, B?, P?, F),
+    live_one(R?, F?, P?, Rf?, Ok1),
+    live_at1(Ok1?, Ps?, Rs?, B?, Rf?, Ok).
+procedure live_at1(YesNo?, Peers?, RoleSpecs?, Binding?, Preds?, YesNo).
+live_at1(no, _, _, _, _, no).
+live_at1(yes, Ps, Rs, B, Rf, Ok?) :- live_at(Ps?, Rs?, B?, Rf?, Ok).
+procedure live_one(CAtoms?, CAtoms?, Peer?, Preds?, YesNo).
+live_one(R, F, P, Rf, Ok?) :- ground(F?) |
+    ms_meets(R?, F?, M1),
+    own_reflexive_in(F?, P?, Rf?, M2),
+    or(M1?, M2?, M),
+    neg(M?, Ok).
+
+%% linked(Q, Rs1, B1, Rs2, B2, Rf, L): whether two schema-bindings of the participants Q, of the same atoms deleted and added at each, are linked: no atom one requires at a participant the other forbids there.
+procedure linked(Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+linked([], _, _, _, _, _, yes).
+linked([P|Ps], Rs1, B1, Rs2, B2, Rf, L?) :-
+    ground(P?), ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?) |
+    reqs_at(Rs1?, B1?, P?, Rf?, R1),
+    reqs_at(Rs2?, B2?, P?, Rf?, R2),
+    forbs_at(Rs1?, B1?, P?, F1),
+    forbs_at(Rs2?, B2?, P?, F2),
+    bound_cs(R1?, Rb1),
+    bound_cs(R2?, Rb2),
+    ms_meets(Rb1?, F2?, C1),
+    ms_meets(Rb2?, F1?, C2),
+    or(C1?, C2?, C),
+    linked1(C?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
+procedure linked1(YesNo?, Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+linked1(yes, _, _, _, _, _, _, no).
+linked1(no, Ps, Rs1, B1, Rs2, B2, Rf, L?) :- linked(Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
+
+%% The atoms the roles sent to P require, less those of a reflexive predicate naming P, which hold at every person of that person (Section 5.4, the paragraph on act schemas); and those they forbid.
+procedure reqs_at(RoleSpecs?, Binding?, Peer?, Preds?, CAtoms).
+reqs_at(Rs, B, P, Rf, R?) :- ground(B?), ground(P?) |
+    specs_at(Rs?, 1, B?, P?, RsP),
+    reqs_of(RsP?, Q),
+    cimg_atoms(Q?, B?, R0),
+    drop_own_reflexive(R0?, P?, Rf?, R).
+procedure forbs_at(RoleSpecs?, Binding?, Peer?, CAtoms).
+forbs_at(Rs, B, P, F?) :- ground(B?) |
+    specs_at(Rs?, 1, B?, P?, RsP),
+    forbs_of(RsP?, Fs),
+    cimg_atoms(Fs?, B?, F).
+procedure forbs_of(RoleSpecs?, SAtoms).
+forbs_of([], []).
+forbs_of([R|Rs], F?) :- rs_forb(R?, F1), forbs_of(Rs?, F2), app(F1?, F2?, F).
+procedure drop_own_reflexive(CAtoms?, Peer?, Preds?, CAtoms).
+drop_own_reflexive([], _, _, []).
+drop_own_reflexive([A|As], P, Rf, R?) :- ground(A?), ground(P?), ground(Rf?) |
+    own_atom(A?, P?, Rf?, Own),
+    drop_own_reflexive(As?, P?, Rf?, R1),
+    keep_c(Own?, A?, R1?, R).
+procedure own_reflexive_in(CAtoms?, Peer?, Preds?, YesNo).
+own_reflexive_in([], _, _, no).
+own_reflexive_in([A|As], P, Rf, B?) :- ground(P?), ground(Rf?) |
+    own_atom(A?, P?, Rf?, B1),
+    own_reflexive_in1(B1?, As?, P?, Rf?, B).
+procedure own_reflexive_in1(YesNo?, CAtoms?, Peer?, Preds?, YesNo).
+own_reflexive_in1(yes, _, _, _, yes).
+own_reflexive_in1(no, As, P, Rf, B?) :- own_reflexive_in(As?, P?, Rf?, B).
+%% An atom of a reflexive predicate naming P.
+procedure own_atom(CAtom?, Peer?, Preds?, YesNo).
+own_atom(cmp_atom(N, [cmp_val(p(Q))]), P, Rf, B?) :- Q? =?= P? | mem(N?, Rf?, B).
+own_atom(_, _, _, no) :- otherwise | true.
+procedure bound_cs(CAtoms?, CAtoms).
+bound_cs([], []).
+bound_cs([A|As], R?) :- ground(A?) |
+    has_free(A?, Fr),
+    bound_cs(As?, R1),
+    keep_c(Fr?, A?, R1?, R).
+procedure has_free(CAtom?, YesNo).
+has_free(cmp_atom(_, Xs), B?) :- has_free1(Xs?, B).
+procedure has_free1(CVals?, YesNo).
+has_free1([], no).
+has_free1([cmp_free(_)|_], yes).
+has_free1([cmp_val(_)|Xs], B?) :- has_free1(Xs?, B).
+%% keep_c(Drop?, A?, R?, R1): R with A in front, where A is not dropped.
+procedure keep_c(YesNo?, CAtom?, CAtoms?, CAtoms).
+keep_c(no, A, R, [A?|R?]).
+keep_c(yes, _, R, R?).
+
+%% The atoms of a schema-binding as compared (CAtom): a variable the binding leaves free stands for itself, cmp_free(V); a signed term sgn(y, i) for the speech act bound to y, signed by the person in role i (GSC, Definition "Binding").
+procedure cimg_atoms(SAtoms?, Binding?, CAtoms).
+cimg_atoms([], _, []).
+cimg_atoms([atom(P, Vs)|As], B, [cmp_atom(P?, Xs?)|Cs?]) :- ground(B?) |
+    cimg_args(Vs?, B?, Xs),
+    cimg_atoms(As?, B?, Cs).
+procedure cimg_args(Vars?, Binding?, CVals).
+cimg_args([], _, []).
+cimg_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
+    lookup(svar(Y?), B?, F),
+    role_person(I?, B?, P),
+    cimg_sgn(F?, P?, sgn(Y?, I?), X),
+    cimg_args(Vs?, B?, Xs).
+cimg_args([nterm(N)|Vs], B, [X?|Xs?]) :- ground(B?), ground(N?) |
+    nt_vars(N?, Ws),
+    vars_bound(Ws?, B?, Bd),
+    cimg_name(Bd?, N?, B?, X),
+    cimg_args(Vs?, B?, Xs).
+cimg_args([V|Vs], B, [X?|Xs?]) :- otherwise, ground(B?), ground(V?) |
+    lookup(V?, B?, F),
+    cimg_val(F?, V?, X),
+    cimg_args(Vs?, B?, Xs).
+procedure cimg_val(Found?, Var?, CVal).
+cimg_val(found(X), _, cmp_val(X?)).
+cimg_val(free, V, cmp_free(V?)).
+procedure cimg_name(YesNo?, NTerm?, Binding?, CVal).
+cimg_name(yes, N, B, cmp_val(c(C?))) :- nt_img(N?, B?, C).
+cimg_name(no, N, _, cmp_free(nterm(N?))).
+procedure cimg_sgn(Found?, Peer?, Var?, CVal).
+cimg_sgn(found(s(S)), P, _, cmp_val(s(speech(S?, P?)))).
+cimg_sgn(_, _, V, cmp_free(V?)) :- otherwise | true.
+
+%% ===========================================================================
+%% Atoms, bindings and matching
+%% ===========================================================================
+
+procedure schema_entry(Constant?, Schema).
+schema_entry(Nm, E?) :- contract_schemas(Ss), find_entry(Ss?, Nm?, E).
+procedure find_entry(Schemas?, Constant?, Schema).
+find_entry([], Nm, schema(Nm?, [], [])).
+find_entry([schema(M, Vs, Rs)|_], Nm, schema(M?, Vs?, Rs?)) :- M? =?= Nm? | true.
+find_entry([lschema(M, Vs, Rs, L)|_], Nm, lschema(M?, Vs?, Rs?, L?)) :- M? =?= Nm? | true.
+find_entry([_|Ss], Nm, E?) :- otherwise | find_entry(Ss?, Nm?, E).
+%% The roles of a schema-binding, each with its atoms: those of the schema, and, for a schema with listed roles, each listed role's place bound to the base person with no atom, and one role more for each person of the list of each listed role, of that listed role's atoms, the roles after its own, the lists in the order of the roles.
+procedure bound_spec(Constant?, Binding?, RoleSpecs).
+bound_spec(Nm, B, Rs?) :- schema_entry(Nm?, E), bound_spec1(E?, B?, Rs).
+procedure bound_spec1(Schema?, Binding?, RoleSpecs).
+bound_spec1(schema(_, _, Rs), _, Rs?).
+bound_spec1(lschema(_, _, Rs, Lsts), B, Rs1?) :- ground(Rs?), ground(B?), ground(Lsts?) |
+    lists_of(Lsts?, B?, Ls),
+    spec_for(Rs?, Lsts?, Ls?, Rs1).
+%% The lists of the people of a schema-binding's listed roles, in the order of the roles.
+procedure lists_of(Listings?, Binding?, PeerLists).
+lists_of([], _, []).
+lists_of([listing(I, _, _, _)|Lsts], B, [L?|Ls?]) :- ground(B?) |
+    copies_of(B?, I?, L),
+    lists_of(Lsts?, B?, Ls).
+%% The roles of the schema, each listed role's place blanked, and then, for each listed role in the order of the roles, a copy of it for each person of its list.
+procedure spec_for(RoleSpecs?, Listings?, PeerLists?, RoleSpecs).
+spec_for(Rs, Lsts, Ls, Rs1?) :- ground(Rs?), ground(Lsts?) |
+    blank_listed(Lsts?, Rs?, Rs0),
+    listed_copies(Lsts?, Ls?, Rs?, Cs),
+    app(Rs0?, Cs?, Rs1).
+procedure blank_listed(Listings?, RoleSpecs?, RoleSpecs).
+blank_listed([], Rs, Rs?).
+blank_listed([listing(I, _, _, _)|Lsts], Rs, Rs2?) :-
+    blank_at(Rs?, I?, 1, Rs1),
+    blank_listed(Lsts?, Rs1?, Rs2).
+procedure listed_copies(Listings?, PeerLists?, RoleSpecs?, RoleSpecs).
+listed_copies([], _, _, []).
+listed_copies([listing(I, _, _, _)|Lsts], [L|Ls], Rs, Cs?) :- ground(Rs?) |
+    nth_spec(Rs?, I?, R),
+    spec_copies(L?, R?, C1),
+    listed_copies(Lsts?, Ls?, Rs?, C2),
+    app(C1?, C2?, Cs).
+listed_copies([_|_], [], _, []).
+procedure blank_at(RoleSpecs?, Integer?, Integer?, RoleSpecs).
+blank_at([], _, _, []).
+blank_at([R|Rs], I, J, [X?|Xs?]) :- integer(I?), integer(J?) |
+    blank_one(I?, J?, R?, X),
+    J1 := J? + 1,
+    blank_at(Rs?, I?, J1?, Xs).
+procedure blank_one(Integer?, Integer?, RoleSpec?, RoleSpec).
+blank_one(I, J, _, rs(unguarded, [], [], [], [])) :- I? =:= J? | true.
+blank_one(_, _, R, R?) :- otherwise | true.
+procedure spec_copies(Peers?, RoleSpec?, RoleSpecs).
+spec_copies([], _, []).
+spec_copies([_|Ps], R, [R?|Rs?]) :- ground(R?) | spec_copies(Ps?, R?, Rs).
+%% The people of the listed role of index I at a schema-binding B, those B binds to role(-I), in the order of identifiers, its place in the class term (class_of).
+procedure copies_of(Binding?, Integer?, List(Peer)).
+copies_of(B, I, L?) :- ground(B?), integer(I?) |
+    NI := 0 - I?,
+    neg_people(B?, NI?, Ps0),
+    sort_peers(Ps0?, Ps1),
+    dedup(Ps1?, L).
+procedure neg_people(Binding?, Integer?, Peers).
+neg_people([], _, []).
+neg_people([b(role(J), p(Q))|Bs], NI, [Q?|Ps?]) :- J? =:= NI? | neg_people(Bs?, NI?, Ps).
+neg_people([_|Bs], NI, Ps?) :- otherwise | neg_people(Bs?, NI?, Ps).
+%% The binding of a class term of a schema with listed roles: the binding B0 of its other roles and its variables; each listed role's place bound to the base person; and, for the lists Ls of the people of the listed roles, in the order of the roles, a role after the schema's own for each person of each list, in the order of identifiers, and the entries naming the people of each listed role (tuple_binds).
+procedure listed_binding(Constant?, Binding?, PeerLists?, Binding).
+listed_binding(Nm, B0, Ls, B?) :- schema_entry(Nm?, E), listed_binding1(E?, B0?, Ls?, B).
+procedure listed_binding1(Schema?, Binding?, PeerLists?, Binding).
+listed_binding1(schema(_, _, _), B0, _, B0?).
+listed_binding1(lschema(_, _, Rs, Lsts), B0, Ls, B?) :- ground(Rs?), ground(B0?), ground(Lsts?) |
+    rs_len(Rs?, K),
+    base_binds(Lsts?, B0?, Bb),
+    sorted_lists(Ls?, Ls1),
+    K1 := K? + 1,
+    tuple_binds(Lsts?, Ls1?, K1?, Cs),
+    app(Bb?, Cs?, Bc),
+    app(B0?, Bc?, B).
+%% Each listed role's place bound to its base person.
+procedure base_binds(Listings?, Binding?, Binding).
+base_binds([], _, []).
+base_binds([listing(I, Bi, _, _)|Lsts], B0, [b(role(I?), p(P?))|Bs?]) :- ground(B0?) |
+    role_person(Bi?, B0?, P),
+    base_binds(Lsts?, B0?, Bs).
+procedure sorted_lists(PeerLists?, PeerLists).
+sorted_lists([], []).
+sorted_lists([L|Ls], [L1?|Ls1?]) :-
+    sort_peers(L?, L0),
+    dedup(L0?, L1),
+    sorted_lists(Ls?, Ls1).
+%% For the lists Ls of the people of the listed roles Lsts, in the order of the roles: the roles of index J, J+1, ..., one for each person of each list, the first list first, and the entries b(role(-I), p(Q)) naming the people Q of the listed role of index I.
+procedure tuple_binds(Listings?, PeerLists?, Integer?, Binding).
+tuple_binds([], _, _, []).
+tuple_binds([listing(I, _, _, _)|Lsts], [L|Ls], J, Bs?) :- ground(L?), integer(I?) |
+    copy_binds(L?, J?, Cs, J1),
+    NI := 0 - I?,
+    neg_binds(L?, NI?, Ns),
+    tuple_binds(Lsts?, Ls?, J1?, Bs1),
+    app(Ns?, Bs1?, Bs2),
+    app(Cs?, Bs2?, Bs).
+tuple_binds([_|_], [], _, []).
+procedure copy_binds(Peers?, Integer?, Binding, Integer).
+copy_binds([], J, [], J?).
+copy_binds([Q|Qs], J, [b(role(J?), p(Q?))|Bs?], J2?) :- integer(J?) | J1 := J? + 1, copy_binds(Qs?, J1?, Bs, J2).
+procedure neg_binds(Peers?, Integer?, Binding).
+neg_binds([], _, []).
+neg_binds([Q|Qs], NI, [b(role(NI?), p(Q?))|Bs?]) :- integer(NI?) | neg_binds(Qs?, NI?, Bs).
+%% The people of each listed role at the state S of its base person, in the order of the roles: the persons q with rho(q, u_2, ..., u_r) in S, u_2, ..., u_r as the binding B0 binds them, in the order of identifiers (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
+procedure listed_people(Constant?, Binding?, GAtoms?, PeerLists).
+listed_people(Nm, B0, S, Ls?) :- schema_entry(Nm?, E), listed_people1(E?, B0?, S?, Ls).
+procedure listed_people1(Schema?, Binding?, GAtoms?, PeerLists).
+listed_people1(schema(_, _, _), _, _, []).
+listed_people1(lschema(_, _, _, Lsts), B0, S, Ls?) :- lists_at(Lsts?, B0?, S?, Ls).
+procedure lists_at(Listings?, Binding?, GAtoms?, PeerLists).
+lists_at([], _, _, []).
+lists_at([listing(_, _, Rho, As)|Lsts], B0, S, [L?|Ls?]) :- ground(B0?), ground(S?) |
+    list_at(Rho?, As?, B0?, S?, L),
+    lists_at(Lsts?, B0?, S?, Ls).
+procedure list_at(Constant?, Vars?, Binding?, GAtoms?, List(Peer)).
+list_at(Rho, As, B0, S, L?) :- ground(As?), ground(B0?), ground(S?) |
+    img_args(As?, B0?, Vs),
+    listing_in(S?, Rho?, Vs?, Ps0),
+    sort_peers(Ps0?, Ps1),
+    dedup(Ps1?, L).
+procedure listing_in(GAtoms?, Constant?, Vals?, Peers).
+listing_in([], _, _, []).
+listing_in([g(F, [p(Q)|Xs])|Gs], Rho, Vs, Ps?) :- ground(F?), ground(Xs?), ground(Rho?), ground(Vs?) |
+    same(F?, Rho?, E1),
+    same(Xs?, Vs?, E2),
+    and(E1?, E2?, E),
+    listing_in(Gs?, Rho?, Vs?, Ps1),
+    keep_peer(E?, Q?, Ps1?, Ps).
+listing_in([_|Gs], Rho, Vs, Ps?) :- otherwise | listing_in(Gs?, Rho?, Vs?, Ps).
+%% The class term a request name of a schema with listed roles names at an agent of the state S: the binding B0 of the name, and the people its state lists at the place of each listed role, "so the base agent of close completes L from its listed atoms" (vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 2), "the base agent filling in each from its own listed atoms" (vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC).
+procedure listed_class(Constant?, Binding?, GAtoms?, Class).
+listed_class(Nm, B0, S, C?) :- ground(Nm?), ground(B0?) |
+    listed_people(Nm?, B0?, S?, Ls),
+    listed_binding(Nm?, B0?, Ls?, B),
+    role_person(1, B0?, D),
+    class_of(Nm?, B?, D?, C).
+%% For the person p in the base of each listed role, the domain of the effect asks besides the atoms that "p lists in d_p exactly the people of that role in L" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
+procedure listing_ok(Constant?, Binding?, Peer?, GAtoms?, YesNo).
+listing_ok(Nm, B, Id, S, Ok?) :- schema_entry(Nm?, E), listing_ok1(E?, B?, Id?, S?, Ok).
+procedure listing_ok1(Schema?, Binding?, Peer?, GAtoms?, YesNo).
+listing_ok1(schema(_, _, _), _, _, _, yes).
+listing_ok1(lschema(_, _, _, Lsts), B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
+procedure listings_ok(Listings?, Binding?, Peer?, GAtoms?, YesNo).
+listings_ok([], _, _, _, yes).
+listings_ok([listing(I, Bi, Rho, As)|Lsts], B, Id, S, Ok?) :- ground(B?), ground(Id?), ground(S?) |
+    role_person(Bi?, B?, P),
+    same(P?, Id?, Base),
+    listing_one(Base?, I?, Rho?, As?, B?, S?, Ok1),
+    listings_ok1(Ok1?, Lsts?, B?, Id?, S?, Ok).
+procedure listing_one(YesNo?, Integer?, Constant?, Vars?, Binding?, GAtoms?, YesNo).
+listing_one(no, _, _, _, _, _, yes).
+listing_one(yes, I, Rho, As, B, S, Ok?) :- ground(B?) |
+    copies_of(B?, I?, L),
+    list_at(Rho?, As?, B?, S?, L1),
+    same(L?, L1?, Ok).
+procedure listings_ok1(YesNo?, Listings?, Binding?, Peer?, GAtoms?, YesNo).
+listings_ok1(no, _, _, _, _, no).
+listings_ok1(yes, Lsts, B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
+%% The roles Definition "Binding" constrains (rule_ok): the schema's own, each listed role's place with no atom, a listed role's people being no roles a binding sends to people.
+procedure rule_spec_ok(Constant?, Binding?, YesNo).
+rule_spec_ok(Nm, B, Ok?) :- schema_entry(Nm?, E), rule_spec(E?, Rs0), rule_ok(Rs0?, B?, Ok).
+procedure rule_spec(Schema?, RoleSpecs).
+rule_spec(schema(_, _, Rs), Rs?).
+rule_spec(lschema(_, _, Rs, Lsts), Rs0?) :- blank_listed(Lsts?, Rs?, Rs0).
+%% A class term's schema, its roles with their atoms and its binding.
+procedure term_spec(Class?, Constant, RoleSpecs, Binding).
+term_spec(C, Nm?, Rs?, B?) :- ground(C?) |
+    binding_of(C?, Nm0, B0),
+    term_spec1(Nm0?, B0?, Nm, Rs, B).
+procedure term_spec1(Constant?, Binding?, Constant, RoleSpecs, Binding).
+term_spec1(Nm0, B0, Nm0?, Rs?, B0?) :- ground(Nm0?), ground(B0?) | bound_spec(Nm0?, B0?, Rs).
+procedure nth_spec(RoleSpecs?, Integer?, RoleSpec).
+nth_spec([], _, rs(unguarded, [], [], [], [])).
+nth_spec([R|_], I, R?) :- I? =:= 1 | true.
+nth_spec([_|Rs], I, R?) :- I? > 1 | I1 := I? - 1, nth_spec(Rs?, I1?, R).
+procedure rs_len(RoleSpecs?, Integer).
+rs_len([], 0).
+rs_len([_|Rs], N?) :- rs_len(Rs?, M), N := M? + 1.
+procedure rs_add(RoleSpec?, SAtoms).
+rs_add(rs(_, A, _, _, _), A?).
+procedure rs_del(RoleSpec?, SAtoms).
+rs_del(rs(_, _, D, _, _), D?).
+procedure rs_req(RoleSpec?, SAtoms).
+rs_req(rs(_, _, D, K, _), R?) :- app(K?, D?, R).
+procedure rs_forb(RoleSpec?, SAtoms).
+rs_forb(rs(_, _, _, _, F), F?).
+
+procedure role_person(Integer?, Binding?, Peer).
+role_person(I, B, P?) :- lookup(role(I?), B?, F), found_peer(F?, P).
+procedure found_peer(Found?, Peer).
+found_peer(found(p(P)), P?).
+found_peer(found(s(_)), unbound).
+found_peer(found(c(_)), unbound).
+found_peer(free, unbound).
+procedure lookup(Var?, Binding?, Found).
+lookup(_, [], free).
+lookup(V, [b(W, X)|_], found(X?)) :- V? =?= W? | true.
+lookup(V, [_|Bs], F?) :- otherwise | lookup(V?, Bs?, F).
+procedure img_atoms(SAtoms?, Binding?, GAtoms).
+img_atoms([], _, []).
+img_atoms([A|As], B, [G?|Gs?]) :- ground(B?) |
+    img_atom(A?, B?, G),
+    img_atoms(As?, B?, Gs).
+procedure img_atom(SAtom?, Binding?, GAtom).
+img_atom(atom(P, Vs), B, g(P?, Xs?)) :- img_args(Vs?, B?, Xs).
+procedure img_args(Vars?, Binding?, Vals).
+img_args([], _, []).
+img_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
+    lookup(svar(Y?), B?, F),
+    role_person(I?, B?, P),
+    img_sgn(F?, P?, X),
+    img_args(Vs?, B?, Xs).
+img_args([nterm(N)|Vs], B, [c(C?)|Xs?]) :- ground(B?), ground(N?) |
+    nt_img(N?, B?, C),
+    img_args(Vs?, B?, Xs).
+img_args([V|Vs], B, [X?|Xs?]) :- otherwise, ground(B?) |
+    lookup(V?, B?, F),
+    img_val(F?, X),
+    img_args(Vs?, B?, Xs).
+%% The community name a name term denotes at a binding (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
+procedure nt_img(NTerm?, Binding?, CName).
+nt_img(own(I), B, community(P?)) :- role_person(I?, B?, P).
+nt_img(own_var(X), B, community(P?)) :- val_peer(pvar(X?), B?, unbound, P).
+nt_img(ext(N, Y), B, dot(C?, S?)) :- ground(B?) |
+    nt_img(N?, B?, C),
+    val_speech(svar(Y?), B?, unbound, S).
+%% The variables of a name term: its base, a role or an agent variable, and its speech-act variables; "a variable inside a name term counts" for effectiveness, as one inside a signed term does (vGLP c649c0d, Section 5.4).
+procedure nt_vars(NTerm?, Vars).
+nt_vars(own(I), [role(I?)]).
+nt_vars(own_var(X), [pvar(X?)]).
+nt_vars(ext(N, Y), Vs?) :- nt_vars(N?, Vs0), app(Vs0?, [svar(Y?)], Vs).
+%% The arguments with each name term taken as its variables.
+procedure flat_names(Vars?, Vars).
+flat_names([], []).
+flat_names([nterm(N)|Vs], R?) :- nt_vars(N?, Ws), flat_names(Vs?, R1), app(Ws?, R1?, R).
+flat_names([V|Vs], [V?|R?]) :- otherwise | flat_names(Vs?, R).
+procedure img_val(Found?, Val).
+img_val(found(X), X?).
+img_val(free, p(unbound)).
+%% The image of a signed term sgn(y, i): the speech act bound to y, signed by
+%% the person in role i (GSC, Definition "Binding": beta(sgn(y, pi)) :=
+%% (beta(y), beta(pi))).  A signed term occurs only in an added atom (GSC,
+%% Definition "Act schema"), whose matching binds y to a speech act, so the
+%% second clause, a free variable's image as img_val gives it, covers the type
+%% and is never reached.
+procedure img_sgn(Found?, Peer?, Val).
+img_sgn(found(s(S)), P, s(speech(S?, P?))).
+img_sgn(_, _, p(unbound)) :- otherwise | true.
+procedure atom_bound(SAtom?, Binding?, YesNo).
+atom_bound(atom(_, Vs), B, R?) :- vars_bound(Vs?, B?, R).
+procedure vars_bound(Vars?, Binding?, YesNo).
+vars_bound([], _, yes).
+vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
+    nt_vars(N?, Ws),
+    app(Ws?, Vs?, Vs1),
+    vars_bound(Vs1?, B?, R).
+vars_bound([V|Vs], B, R?) :- otherwise, ground(B?) |
+    lookup(V?, B?, F),
+    vars_bound1(F?, Vs?, B?, R).
+procedure vars_bound1(Found?, Vars?, Binding?, YesNo).
+vars_bound1(free, _, _, no).
+vars_bound1(found(_), Vs, B, R?) :- vars_bound(Vs?, B?, R).
+
+%% The bindings extending B under which every atom of As is one of Gs.
+procedure match_all(SAtoms?, GAtoms?, Binding?, Bindings).
+match_all([], _, B, [B?]).
+match_all([A|As], Gs, B, R?) :- ground(Gs?) |
+    match_into(A?, Gs?, B?, Bs),
+    match_all_each(Bs?, As?, Gs?, R).
+procedure match_all_each(Bindings?, SAtoms?, GAtoms?, Bindings).
+match_all_each([], _, _, []).
+match_all_each([B|Bs], As, Gs, R?) :- ground(As?), ground(Gs?) |
+    match_all(As?, Gs?, B?, R1),
+    match_all_each(Bs?, As?, Gs?, R2),
+    app(R1?, R2?, R).
+procedure match_into(SAtom?, GAtoms?, Binding?, Bindings).
+match_into(_, [], _, []).
+match_into(A, [G|Gs], B, R?) :- ground(A?), ground(B?) |
+    match_atom(A?, G?, B?, M),
+    match_into1(M?, A?, Gs?, B?, R).
+procedure match_into1(Match?, SAtom?, GAtoms?, Binding?, Bindings).
+match_into1(match(B1), A, Gs, B, [B1?|R?]) :- match_into(A?, Gs?, B?, R).
+match_into1(nomatch, A, Gs, B, R?) :- match_into(A?, Gs?, B?, R).
+procedure match_atom(SAtom?, GAtom?, Binding?, Match).
+match_atom(atom(P, Vs), g(Q, Xs), B, R?) :- P? =?= Q? | match_args(Vs?, Xs?, B?, R).
+match_atom(_, _, _, nomatch) :- otherwise | true.
+procedure match_args(Vars?, Vals?, Binding?, Match).
+match_args([], [], B, match(B?)).
+match_args([], [_|_], _, nomatch).
+match_args([_|_], [], _, nomatch).
+%% A signed term sgn(y, i) matches a speech act whose utterance is a speech
+%% act, y matching that speech act and role i its signer (GSC, Definition
+%% "Binding": beta(sgn(y, pi)) := (beta(y), beta(pi))); an utterance signed
+%% once, or a person, it does not match.
+match_args([sgn(Y, I)|Vs], [X|Xs], B, R?) :- ground(Y?), ground(I?), ground(X?), ground(B?) |
+    sgn_parts(X?, Ps),
+    match_sgn(Ps?, Y?, I?, Vs?, Xs?, B?, R).
+%% A name term matches a community name of its form, its base its person and each speech-act variable its speech act.
+match_args([nterm(N)|Vs], [X|Xs], B, R?) :- ground(N?), ground(X?), ground(B?) |
+    name_parts(N?, X?, Ps),
+    match_name(Ps?, Vs?, Xs?, B?, R).
+match_args([V|Vs], [X|Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B?) |
+    lookup(V?, B?, F),
+    kind_ok(V?, X?, K),
+    match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
+procedure name_parts(NTerm?, Val?, NameParts).
+name_parts(N, c(C), Ps?) :- nt_parts(N?, C?, Ps).
+name_parts(_, p(_), noparts).
+name_parts(_, s(_), noparts).
+procedure nt_parts(NTerm?, CName?, NameParts).
+nt_parts(own(I), community(P), parts([role(I?)], [p(P?)])).
+nt_parts(own_var(X), community(P), parts([pvar(X?)], [p(P?)])).
+nt_parts(ext(N, Y), dot(C, S), Ps?) :- nt_parts(N?, C?, Ps0), nt_more(Ps0?, Y?, S?, Ps).
+nt_parts(_, _, noparts) :- otherwise | true.
+procedure nt_more(NameParts?, Constant?, Speech?, NameParts).
+nt_more(parts(Vs, Xs), Y, S, parts(Vs1?, Xs1?)) :- app(Vs?, [svar(Y?)], Vs1), app(Xs?, [s(S?)], Xs1).
+nt_more(noparts, _, _, noparts).
+procedure match_name(NameParts?, Vars?, Vals?, Binding?, Match).
+match_name(parts(Ws, Ys), Vs, Xs, B, R?) :- app(Ws?, Vs?, Vs1), app(Ys?, Xs?, Xs1), match_args(Vs1?, Xs1?, B?, R).
+match_name(noparts, _, _, _, nomatch).
+procedure sgn_parts(Val?, SgnParts).
+sgn_parts(s(speech(speech(U, Q), P)), signed(s(speech(U?, Q?)), P?)).
+sgn_parts(s(speech(utterance(_), _)), unsigned).
+sgn_parts(p(_), unsigned).
+sgn_parts(c(_), unsigned).
+procedure match_sgn(SgnParts?, Constant?, Integer?, Vars?, Vals?, Binding?, Match).
+match_sgn(signed(S, P), Y, I, Vs, Xs, B, R?) :-
+    match_args([svar(Y?), role(I?)|Vs?], [S?, p(P?)|Xs?], B?, R).
+match_sgn(unsigned, _, _, _, _, _, nomatch).
+procedure match_one(Found?, YesNo?, Var?, Val?, Vars?, Vals?, Binding?, Match).
+match_one(found(W), _, _, X, Vs, Xs, B, R?) :- W? =?= X? | match_args(Vs?, Xs?, B?, R).
+match_one(found(_), _, _, _, _, _, _, nomatch) :- otherwise | true.
+match_one(free, yes, V, X, Vs, Xs, B, R?) :- match_args(Vs?, Xs?, [b(V?, X?)|B?], R).
+match_one(free, no, _, _, _, _, _, nomatch).
+procedure kind_ok(Var?, Val?, YesNo).
+kind_ok(role(_), p(_), yes).
+kind_ok(role(_), s(_), no).
+kind_ok(pvar(_), p(_), yes).
+kind_ok(pvar(_), s(_), no).
+kind_ok(svar(_), p(_), no).
+kind_ok(svar(_), s(_), yes).
+%% A signed term is matched by its parts (match_sgn); the clauses cover the type.
+kind_ok(sgn(_, _), p(_), no).
+kind_ok(sgn(_, _), s(_), no).
+%% A name term is matched by its parts (match_name), and a community name matches no variable; the clauses cover the type.
+kind_ok(sgn(_, _), c(_), no).
+kind_ok(nterm(_), _, no).
+kind_ok(role(_), c(_), no).
+kind_ok(pvar(_), c(_), no).
+kind_ok(svar(_), c(_), no).
+
+%% The value a binding gives a variable, the agent's own name for one it
+%% leaves free.
+procedure val_peer(Var?, Binding?, Peer?, Peer).
+val_peer(V, B, D, P?) :- lookup(V?, B?, F), val_peer1(F?, D?, P).
+procedure val_peer1(Found?, Peer?, Peer).
+val_peer1(found(p(P)), _, P?).
+val_peer1(found(s(_)), D, D?).
+val_peer1(found(c(_)), D, D?).
+val_peer1(free, D, D?).
+procedure val_speech(Var?, Binding?, Peer?, Speech).
+val_speech(V, B, D, S?) :- lookup(V?, B?, F), val_speech1(F?, D?, S).
+procedure val_speech1(Found?, Peer?, Speech).
+val_speech1(found(s(S)), _, S?).
+val_speech1(found(p(_)), D, speech(utterance(none), D?)).
+val_speech1(found(c(_)), D, speech(utterance(none), D?)).
+val_speech1(free, D, speech(utterance(none), D?)).
+
+%% ===========================================================================
+%% The agent state's fields, booleans, lists and multisets
+%% ===========================================================================
+
+procedure st_id(St?, Peer).
+st_id(st(Id, _, _, _, _, _, _, _, _, _, _), Id?).
+procedure st_app(St?, App).
+st_app(st(_, Ap, _, _, _, _, _, _, _, _, _), Ap?).
+procedure st_count(St?, Integer).
+st_count(st(_, _, D, _, _, _, _, _, _, _, _), D?).
+procedure st_sent(St?, Peers).
+st_sent(st(_, _, _, Se, _, _, _, _, _, _, _), Se?).
+procedure st_recd(St?, Peers).
+st_recd(st(_, _, _, _, Rc, _, _, _, _, _, _), Rc?).
+%% The persons the agent knows, in the order of identifiers.
+procedure st_known(St?, List(Key)).
+st_known(St, Ks?) :- ground(St?) |
+    st_sent(St?, Se),
+    st_isent(St?, ISe),
+    app(Se?, ISe?, Ps),
+    known_sorted(Ps?, St?, Ks).
+procedure known_sorted(Peers?, St?, List(Key)).
+known_sorted(Ps, St, Ks?) :- ground(Ps?) |
+    dedup(Ps?, Ps1),
+    known_of(Ps1?, St?, K0),
+    sort_peers(K0?, Ks).
+procedure known_of(Peers?, St?, Peers).
+known_of([], _, []).
+known_of([P|Ps], St, Ks?) :- ground(P?), ground(St?) |
+    known_st(P?, St?, B),
+    known_of(Ps?, St?, K1),
+    keep_peer(B?, P?, K1?, Ks).
+procedure keep_peer(YesNo?, Peer?, Peers?, Peers).
+keep_peer(yes, P, Ks, [P?|Ks?]).
+keep_peer(no, _, Ks, Ks?).
+procedure st_isent(St?, Peers).
+st_isent(st(_, _, _, _, _, ISe, _, _, _, _, _), ISe?).
+procedure st_irecd(St?, Peers).
+st_irecd(st(_, _, _, _, _, _, IRc, _, _, _, _), IRc?).
+procedure st_waits(St?, Waits).
+st_waits(st(_, _, _, _, _, _, _, W, _, _, _), W?).
+procedure st_pends(St?, Pends).
+st_pends(st(_, _, _, _, _, _, _, _, _, Pd, _), Pd?).
+procedure set_app(St?, App?, St).
+set_app(st(Id, _, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), Ap, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+procedure set_waits(St?, Waits?, St).
+set_waits(st(Id, Ap, D, Se, Rc, ISe, IRc, _, Ca, Pd, Pr), W, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+procedure st_props(St?, Classes).
+st_props(st(_, _, _, _, _, _, _, _, _, _, Pr), Pr?).
+procedure set_props(St?, Classes?, St).
+set_props(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, _), Pr, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+procedure set_pends(St?, Pends?, St).
+set_pends(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, _, Pr), Pd, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+%% A start held waiting, once: added where not held already; and dropped.
+procedure add_pend_once(Pend?, St?, St).
+add_pend_once(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
+        st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?)) :-
+    ground(X?), ground(Pd?) |
+    mem(X?, Pd?, In),
+    add_pend1(In?, X?, Pd?, Pd1).
+procedure add_pend1(YesNo?, Pend?, Pends?, Pends).
+add_pend1(yes, _, Pd, Pd?).
+add_pend1(no, X, Pd, Pd1?) :- app(Pd?, [X?], Pd1).
+procedure drop_pend(Pend?, St?, St).
+drop_pend(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
+        st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?)) :-
+    remove_all(X?, Pd?, Pd1).
+procedure add_sent(Peer?, St?, St).
+add_sent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
+        st(Id?, Ap?, D?, [Q?|Se?], Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+procedure add_isent(Peer?, St?, St).
+add_isent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
+        st(Id?, Ap?, D?, Se?, Rc?, [Q?|ISe?], IRc?, W?, Ca?, Pd?, Pr?)).
+procedure add_irecd(Peer?, St?, St).
+add_irecd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
+        st(Id?, Ap?, D?, Se?, Rc?, ISe?, [P?|IRc?], W?, Ca?, Pd?, Pr?)).
+procedure add_recd(Peer?, St?, St).
+add_recd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
+        st(Id?, Ap?, D?, Se?, [P?|Rc?], ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+procedure advance(St?, St).
+advance(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D1?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)) :-
+    D1 := D? + 1.
+procedure app_recs(App?, Recs).
+app_recs(app(_, _, _, R), R?).
+procedure app_count(App?, Integer).
+app_count(app(_, K, _, _), K?).
+procedure app_state(App?, GAtoms).
+app_state(app(S, _, _, _), S?).
+procedure attempt_id(Attempt?, Peer).
+attempt_id(attempt(I, _, _, _), I?).
+procedure attempt_k(Attempt?, Integer).
+attempt_k(attempt(_, K, _, _), K?).
+procedure attempt_rank(Attempt?, Integer).
+attempt_rank(attempt(_, _, P, _), P?).
+procedure attempt_class(Attempt?, Class).
+attempt_class(attempt(_, _, _, C), C?).
+
+procedure and(YesNo?, YesNo?, YesNo).
+and(yes, B, B?).
+and(no, _, no).
+procedure or(YesNo?, YesNo?, YesNo).
+or(yes, _, yes).
+or(no, B, B?).
+procedure neg(YesNo?, YesNo).
+neg(yes, no).
+neg(no, yes).
+procedure(X) same(X?, X?, YesNo).
+same(P, Q, yes) :- P? =?= Q? | true.
+same(_, _, no) :- otherwise | true.
+procedure same_int(Integer?, Integer?, YesNo).
+same_int(M, N, yes) :- M? =:= N? | true.
+same_int(_, _, no) :- otherwise | true.
+
+procedure sort_peers(Peers?, Peers).
+sort_peers([], []).
+sort_peers([P|Ps], S?) :- sort_peers(Ps?, S1), insert_peer(P?, S1?, S).
+procedure insert_peer(Peer?, Peers?, Peers).
+insert_peer(P, [], [P?]).
+insert_peer(P, [Q|Qs], [P?, Q?|Qs?]) :- P? @< Q? | true.
+insert_peer(P, [Q|Qs], [Q?|R?]) :- otherwise | insert_peer(P?, Qs?, R).
+
+procedure(X) app(Stream(X)?, Stream(X)?, Stream(X)).
+app([], Ys, Ys?).
+app([X|Xs], Ys, [X?|Zs?]) :- app(Xs?, Ys?, Zs).
+procedure(X) mem(X?, Stream(X)?, YesNo).
+mem(_, [], no).
+mem(X, [Y|_], yes) :- X? =?= Y? | true.
+mem(X, [_|Ys], R?) :- otherwise | mem(X?, Ys?, R).
+procedure(X) dedup(Stream(X)?, Stream(X)).
+dedup([], []).
+dedup([X|Xs], [X?|Ys?]) :- ground(X?) | remove_all(X?, Xs?, Xs1), dedup(Xs1?, Ys).
+procedure(X) remove_all(X?, Stream(X)?, Stream(X)).
+remove_all(_, [], []).
+remove_all(X, [Y|Ys], Zs?) :- X? =?= Y? | remove_all(X?, Ys?, Zs).
+remove_all(X, [Y|Ys], [Y?|Zs?]) :- otherwise | remove_all(X?, Ys?, Zs).
+procedure(X) ms_remove(X?, Stream(X)?, YesNo, Stream(X)).
+ms_remove(_, [], no, []).
+ms_remove(X, [Y|Ys], yes, Ys?) :- X? =?= Y? | true.
+ms_remove(X, [Y|Ys], F?, [Y?|Zs?]) :- otherwise | ms_remove(X?, Ys?, F, Zs).
+procedure(X) ms_diff(Stream(X)?, Stream(X)?, Stream(X)).
+ms_diff(A, [], A?).
+ms_diff(A, [X|Xs], C?) :- ms_remove(X?, A?, _, A1), ms_diff(A1?, Xs?, C).
+procedure(X) ms_sub(Stream(X)?, Stream(X)?, YesNo).
+ms_sub([], _, yes).
+ms_sub([X|Xs], B, R?) :- ms_remove(X?, B?, F, B1), ms_sub1(F?, Xs?, B1?, R).
+procedure(X) ms_sub1(YesNo?, Stream(X)?, Stream(X)?, YesNo).
+ms_sub1(no, _, _, no).
+ms_sub1(yes, Xs, B, R?) :- ms_sub(Xs?, B?, R).
+procedure(X) ms_eq(Stream(X)?, Stream(X)?, YesNo).
+ms_eq(A, B, R?) :- ground(A?), ground(B?) |
+    ms_sub(A?, B?, R1),
+    ms_sub(B?, A?, R2),
+    and(R1?, R2?, R).
+procedure(X) ms_join(Stream(X)?, Stream(X)?, Stream(X)).
+ms_join(A, B, C?) :- ground(A?) | ms_diff(B?, A?, D), app(A?, D?, C).
+procedure(X) ms_meets(Stream(X)?, Stream(X)?, YesNo).
+ms_meets([], _, no).
+ms_meets([X|Xs], B, R?) :- ground(B?) | mem(X?, B?, R1), ms_meets1(R1?, Xs?, B?, R).
+procedure(X) ms_meets1(YesNo?, Stream(X)?, Stream(X)?, YesNo).
+ms_meets1(yes, _, _, yes).
+ms_meets1(no, Xs, B, R?) :- ms_meets(Xs?, B?, R).
