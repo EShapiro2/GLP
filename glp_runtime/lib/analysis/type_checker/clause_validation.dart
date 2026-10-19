@@ -43,26 +43,33 @@ void validateGuard(Term term) {
 }
 
 /// Walk [term], refusing every anonymous reader in it.
+///
+/// A list is walked along its spine in a loop and its elements by recursive
+/// calls, in the order the recursion took them, so the depth used is the
+/// nesting of the term's elements and not the length of a list (TGLP
+/// well-typing.tex, Definition "Well-Typed Clause", puts no bound on a term's
+/// size).
 void _checkAnonymousReader(Term term) {
-  if (_isAnonymousReader(term)) {
+  Term? t = term;
+  while (t is ListTerm) {
+    if (t.head != null) _checkAnonymousReader(t.head!);
+    t = t.tail;
+  }
+  if (t == null) return;
+
+  if (_isAnonymousReader(t)) {
     throw CompileError(
-      '${_spelling(term)} (anonymous reader) is not permitted in program clauses',
-      term.line,
-      term.column,
+      '${_spelling(t)} (anonymous reader) is not permitted in program clauses',
+      t.line,
+      t.column,
       phase: 'validation',
     );
   }
 
-  if (term is StructTerm) {
-    for (final arg in term.args) {
+  if (t is StructTerm) {
+    for (final arg in t.args) {
       _checkAnonymousReader(arg);
     }
-    return;
-  }
-
-  if (term is ListTerm) {
-    if (term.head != null) _checkAnonymousReader(term.head!);
-    if (term.tail != null) _checkAnonymousReader(term.tail!);
   }
 }
 

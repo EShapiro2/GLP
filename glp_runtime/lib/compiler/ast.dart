@@ -322,11 +322,28 @@ class ListTerm extends Term {
 
   bool get isNil => head == null && tail == null;
 
+  /// `[]`, `[H]` for a cell with no tail, and `[H|T]` otherwise.  The cells
+  /// are written along the list's spine in a loop and the elements by their
+  /// own [toString], so a list of any length is written in a depth that is
+  /// the nesting of its elements (TGLP well-typing.tex, Definition
+  /// "Well-Typed Clause", puts no bound on a term's size).
   @override
   String toString() {
-    if (isNil) return '[]';
-    if (tail == null) return '[$head]';
-    return '[$head|$tail]';
+    final out = StringBuffer();
+    var open = 0;
+    Term? t = this;
+    while (t is ListTerm && !t.isNil && t.tail != null) {
+      out.write('[${t.head}|');
+      open++;
+      t = t.tail;
+    }
+    if (t is ListTerm) {
+      out.write(t.isNil ? '[]' : '[${t.head}]');
+    } else {
+      out.write('$t');
+    }
+    out.write(']' * open);
+    return out.toString();
   }
 }
 
