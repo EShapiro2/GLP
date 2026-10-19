@@ -4,7 +4,7 @@
 %%
 %% The roles, by which the super-app's plays choose a script; the item is the speech act 'Flood on Main Street', signed by alice, its author (GSNP:1, Authorship), and each forward signs it again (GSNP:2, Forwarding):
 %%   alice  establishes her identity (GSG:1); asks to know bob; once she knows him, offers him friendship; once they are friends, signs the item; then forwards it to bob.
-%%   bob    establishes his identity; asks to know alice and carol; once he knows alice, answers yes to her offer of friendship; once they are friends and he knows carol, offers carol friendship; once they are friends and alice's forward has reached him, forwards the item he holds, signed by alice, to carol.
+%%   bob    establishes his identity; asks to know alice; once he knows her, answers yes to her offer of friendship; once her forward of the item has reached him, asks to know carol; once he knows her, offers her friendship; once they are friends, forwards the item he holds, signed by alice, to carol.
 %%   carol  establishes her identity; asks to know bob; once she knows him, answers yes to his offer of friendship.
 %% Any other role has no script: its person reports the thread and acts on nothing.
 
@@ -32,14 +32,12 @@ script(alice, [own([A1], propose(establish(A1?))), req(known(bob)), wait(discove
                own([A3, A4], propose(sign(A3?, speech(utterance('Flood on Main Street'), A4?)))),
                after(propose, sign(alice, speech(utterance('Flood on Main Street'), alice))),
                own([A5, A6], propose(forward(A5?, bob, speech(utterance('Flood on Main Street'), A6?))))]).
-script(bob, [own([B1], propose(establish(B1?))), req(known(alice)), req(known(carol)),
-             wait(discover(alice)),
+script(bob, [own([B1], propose(establish(B1?))), req(known(alice)), wait(discover(alice)),
              approval(befriend(alice, bob), yes),
-             after(outcome, befriend(alice, bob)),
-             wait(discover(carol)),
+             after(outcome, forward(alice, bob, speech(utterance('Flood on Main Street'), alice))),
+             req(known(carol)), wait(discover(carol)),
              own([B2], propose(befriend(B2?, carol))),
              after(commit, befriend(bob, carol)),
-             after(outcome, forward(alice, bob, speech(utterance('Flood on Main Street'), alice))),
              own([B3], propose(forward(B3?, carol, speech(speech(utterance('Flood on Main Street'), alice), alice))))]).
 script(carol, [own([C1], propose(establish(C1?))), req(known(bob)), wait(discover(bob)),
                approval(befriend(bob, carol), yes)]).

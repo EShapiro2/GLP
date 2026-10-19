@@ -2,7 +2,7 @@
 
 imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
-%% play_provenance(A, B, C): alice, bob and carol, a conversation between alice's and bob's executions and one between bob's and carol's.  Each establishes their identity (GSG:1, Identity) and asks to know the others they have a conversation with; alice offers bob friendship and he answers yes, and bob offers carol friendship and she answers yes (GSG:2, Friendship); alice signs the item 'Flood on Main Street' (GSNP:1, Authorship) and forwards it to bob, who holds it signed by her (GSN:1, Message, and GSNP:2, Forwarding); and bob forwards it to carol, who holds it signed by alice and then by bob.
+%% play_provenance(A, B, C): alice, bob and carol, a conversation between alice's and bob's executions and one between bob's and carol's.  Each establishes their identity (GSG:1, Identity); alice and bob ask to know each other, and alice offers bob friendship and he answers yes (GSG:2, Friendship); alice signs the item 'Flood on Main Street' (GSNP:1, Authorship) and forwards it to bob, who holds it signed by her (GSN:1, Message, and GSNP:2, Forwarding); bob then asks to know carol, who asked to know him, and offers her friendship, and she answers yes; and bob forwards the item to carol, who holds it signed by alice and then by bob.
 exported procedure play_provenance(Stream(Seen), Stream(Seen), Stream(Seen)).
 play_provenance(A?, B?, C?) :-
     self_module(M),
