@@ -1,18 +1,19 @@
 # A run of the cascade on GAI
 
 - Contract: `GAI` (`gai` to the checker), its owner's two files `programs/gai/GAI.md` and `programs/gai/GAI.glp`, copied here as they stood.
-- The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `94cbda0b`, for the paper's own record.
-- The tools: this repository at `489948ff` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-10-19 10:15 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `ab00c9c1`, for the paper's own record.
+- The tools: this repository at `e3648adb` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-10-19 15:30 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
 | `GAI.md` | the clauses |
 | `GAI.glp` | the act schemas, each in GSC's notation above its term |
-| `verdict.txt` | the checker's verdict: `not_grassroots([obstructed(befriend, 1, atom(agent, []), blocked_by(enter, 2, atom(agent, []))), obstructed(befriend, 2, atom(agent, []), blocked_by(enter, 2, atom(agent, [])))])` |
-| `vmat.tex` | the compiler to VMAT's refusal |
-| `platform.vglp` | the CVA compiler's refusal, and no platform.glp and no run |
+| `verdict.txt` | the checker's verdict: `grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of)], [relay(agent_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [retired])` |
+| `vmat.tex` | the VMAT form, 11 displays, one per schema |
+| `platform.vglp` | the canonical CVA platform, as printed |
+| `platform.glp` | the platform compiled to GLP, as emitted |
+| (no run) | vGLP keeps no plays for gai |
 
 What the tools refused or lacked:
-- VMAT: % not compiled:
-- platform: %% not compiled(gai)
+- run: vGLP keeps no plays for gai
