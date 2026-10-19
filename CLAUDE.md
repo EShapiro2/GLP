@@ -74,7 +74,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical), on `main` every 3-4 hours | `bash test/run_all_tests.sh` | 4384 passed, 0 failed, `KNOWN_RED_CHECKS` 11 (the super-app's hosting of CSSN's mini-app, GSG's to port; CSSN's own all green since its port) and `KNOWN_RED` Dart entries as listed --- at GLP `84fe5301`, 2026-10-17; Section Q keeps its raw output (`tmp/suite_q_dart.txt`, `suite_q_flutter.txt`) |
+| Full suite (canonical), on `main` every 3-4 hours | `bash test/run_all_tests.sh` | at GLP `1f9a642d`, 2026-10-19: 4911, 4863 passed, the 48 failures since made known red at `ec037ab6`, so `KNOWN_RED_CHECKS` 59 (the 11 of the super-app's hosting of CSSN's mini-app, GSG's to port; 48 from Currencies' GC.glp and GFWC's GFWC.glp in GSC's old term form, both owners dormant) and `KNOWN_RED` Dart entries as listed; the last run with nothing failed `84fe5301`, 2026-10-17, 4384 passed; Section Q keeps its raw output (`tmp/suite_q_dart.txt`, `suite_q_flutter.txt`) |
 | Fast tier, on `main` at every merge | `bash test/run_fast.sh <sections the merged branches touch>` | the sections `FAST_SECTIONS` names --- all but VG, SGLP and Q --- plus those given; totals line `FAST Total: ...`; 1415 passed, 0 failed, `KNOWN_RED_CHECKS` 92, in 156 s at `820226ae` |
 | Sections by name | `GLP_SECTIONS="VG N3" bash test/run_all_tests.sh` | the sections named; `Q` is `QD` (`dart test`, glp_runtime) and `QF` (asset step, `flutter test`, glp_multiagent); totals line `PARTIAL Total: ...` |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |

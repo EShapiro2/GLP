@@ -123,11 +123,11 @@ realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 
-%% What vGLP Section 5.4 takes of GSC's community roles (vGLP f5f1644, "Act schemas as local specifications": "A listed role pi[rho(*, u_2, ..., u_r)], pi a party role, its base, has as its people at a schema-binding the persons q with rho(q, u_2, ..., u_r), so bound, in the state of the person in pi"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 1: "The compiler takes GSC's listed roles (Appendix D, 8064cfb), not seated or constituent roles, which it still refuses").  A contract is refused where a schema has a seated or a constituent role, or reach conditions, which are of community names; where a schema has more than one listed role, which the canonical platform printed here does not carry, its schema-bindings naming the people of one listed role each; and where a name term is built on a name variable, which a seated role would need (vGLP #15 Cowork to Code, 2026-10-19 14:49 UTC).  A name term <u>.y_1...y_n built on a role or an agent variable is taken: it is "the community name of the person bound to u followed by the speech acts bound to y_1, ..., y_n" (vGLP c649c0d, Section 5.4), an atom holding one written in the view with the community name one argument, of the type CName the shared text defines.  A cschema with no reach conditions is a schema (plain_contract).
-Flags ::= f(YesNo, YesNo, YesNo, YesNo).
+%% What vGLP Section 5.4 takes of GSC's community roles (vGLP f5f1644, "Act schemas as local specifications": "A listed role pi[rho(*, u_2, ..., u_r)], pi a party role, its base, has as its people at a schema-binding the persons q with rho(q, u_2, ..., u_r), so bound, in the state of the person in pi"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 1: "The compiler takes GSC's listed roles (Appendix D, 8064cfb), not seated or constituent roles, which it still refuses").  A contract is refused where a schema has a seated or a constituent role, or reach conditions, which are of community names; and where a name term is built on a name variable, which a seated role would need (vGLP #15 Cowork to Code, 2026-10-19 14:49 UTC).  A name term <u>.y_1...y_n built on a role or an agent variable is taken: it is "the community name of the person bound to u followed by the speech acts bound to y_1, ..., y_n" (vGLP c649c0d, Section 5.4), an atom holding one written in the view with the community name one argument, of the type CName the shared text defines.  A cschema with no reach conditions is a schema (plain_contract).  A schema may have several listed roles: "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles" (vGLP c649c0d, Section 5.4; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC), and local.glp asks that they have one base.
+Flags ::= f(YesNo, YesNo, YesNo).
 procedure role_lines(Contract?, Constant?, Stream(_)).
 role_lines(C, Nm, L?) :- ground(C?), ground(Nm?) |
-    role_flags(C?, f(no, no, no, no), F),
+    role_flags(C?, f(no, no, no), F),
     flag_lines(F?, Nm?, L).
 procedure role_flags(Contract?, Flags?, Flags).
 role_flags([], F, F?).
@@ -139,13 +139,10 @@ role_flags([cschema(_, _, Rc, Rs)|Ss], F, F2?) :- ground(Rc?), ground(Rs?), grou
     schema_flags(R?, Rs?, F?, F1),
     role_flags(Ss?, F1?, F2).
 procedure schema_flags(YesNo?, RoleSpecs?, Flags?, Flags).
-schema_flags(R, Rs, f(R0, S0, M0, N0), f(R1?, S1?, M1?, N1?)) :- ground(Rs?) |
+schema_flags(R, Rs, f(R0, S0, N0), f(R1?, S1?, N1?)) :- ground(Rs?) |
     or(R0?, R?, R1),
     seated_any(Rs?, S),
     or(S0?, S?, S1),
-    listed_count(Rs?, 0, K),
-    two_or_more(K?, M),
-    or(M0?, M?, M1),
     spec_args(Rs?, As),
     nvar_in(As?, N),
     or(N0?, N?, N1).
@@ -158,15 +155,6 @@ seated_any([rs(_, _, _, _, _)|Rs], B?) :- seated_any(Rs?, B).
 seated_any([crs(seated(_, _), _, _, _, _, _)|_], yes).
 seated_any([crs(constituent(_, _), _, _, _, _, _)|_], yes).
 seated_any([crs(listed(_, _, _), _, _, _, _, _)|Rs], B?) :- seated_any(Rs?, B).
-procedure listed_count(RoleSpecs?, Integer?, Integer).
-listed_count([], N, N?).
-listed_count([crs(listed(_, _, _), _, _, _, _, _)|Rs], N, M?) :- N1 := N? + 1, listed_count(Rs?, N1?, M).
-listed_count([rs(_, _, _, _, _)|Rs], N, M?) :- listed_count(Rs?, N?, M).
-listed_count([crs(seated(_, _), _, _, _, _, _)|Rs], N, M?) :- listed_count(Rs?, N?, M).
-listed_count([crs(constituent(_, _), _, _, _, _, _)|Rs], N, M?) :- listed_count(Rs?, N?, M).
-procedure two_or_more(Integer?, YesNo).
-two_or_more(K, yes) :- K? > 1 | true.
-two_or_more(K, no) :- K? =< 1 | true.
 %% The arguments of a schema's atoms, at every role, and of its listed roles.
 procedure spec_args(RoleSpecs?, Args).
 spec_args([], []).
@@ -197,14 +185,12 @@ nt_nvar(own_var(_), no).
 nt_nvar(nvar(_), yes).
 nt_nvar(ext(T, _), B?) :- nt_nvar(T?, B).
 procedure flag_lines(Flags?, Constant?, Stream(_)).
-flag_lines(f(R, S, M, N), Nm, L?) :- ground(Nm?) |
+flag_lines(f(R, S, N), Nm, L?) :- ground(Nm?) |
     flag_line(R?, '%% it has reach conditions, which vGLP Section 5.4 does not take.', L1),
     flag_line(S?, '%% it has seated or constituent roles, which vGLP Section 5.4 does not take: it takes listed roles (vGLP f5f1644).', L2),
-    flag_line(M?, '%% it has a schema with more than one listed role, which this compiler does not take.', L3),
-    flag_line(N?, '%% it has name variables, which vGLP Section 5.4 does not take, as it does not take seated roles.', L4),
+    flag_line(N?, '%% it has name variables, which vGLP Section 5.4 does not take, as it does not take seated roles.', L3),
     lapp(L1?, L2?, L12),
-    lapp(L3?, L4?, L34),
-    lapp(L12?, L34?, L0),
+    lapp(L12?, L3?, L0),
     head_line(L0?, Nm?, L).
 procedure flag_line(YesNo?, Constant?, Stream(_)).
 flag_line(no, _, []).
@@ -299,30 +285,36 @@ procedure class_lines(Contract?, Stream(_)).
 class_lines([], ['.']).
 class_lines([schema(S, Hd, Rs)|Ss], [A?|L?]) :- ground(S?), ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vs),
-    listed_at(Rs?, 1, Li),
-    var_types_l(Vs?, Li?, Ts),
+    listed_ixs(Rs?, 1, Lis),
+    var_types_l(Vs?, Lis?, Ts),
     A =.. [S?|Ts?],
     class_lines1(Ss?, L).
 class_lines([cschema(_, _, _, _)|Ss], L?) :- class_lines(Ss?, L).
 procedure class_lines1(Contract?, Stream(_)).
 class_lines1([], ['.']).
 class_lines1([S|Ss], [';'|L?]) :- class_lines([S?|Ss?], L).
-%% The types of a class's arguments: at the place of a listed role, the list of its people (vGLP f5f1644, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"), List(Peer), the people in the order of identifiers.
-procedure var_types_l(Args?, Integer?, Stream(_)).
+%% The types of a class's arguments: at the place of each listed role, the list of its people (vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"), List(Peer), the people in the order of identifiers; the part's term carries the people of each, in the order of the roles (vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC).
+procedure var_types_l(Args?, Ints?, Stream(_)).
 var_types_l([], _, []).
-var_types_l([role(J)|Vs], Li, [T?|Ts?]) :- integer(Li?) | role_type(J?, Li?, T), var_types_l(Vs?, Li?, Ts).
-var_types_l([pvar(_)|Vs], Li, ['Peer'|Ts?]) :- var_types_l(Vs?, Li?, Ts).
-var_types_l([svar(_)|Vs], Li, ['Speech'|Ts?]) :- var_types_l(Vs?, Li?, Ts).
-var_types_l([nterm(_)|Vs], Li, ['Peer'|Ts?]) :- var_types_l(Vs?, Li?, Ts).
-var_types_l([sgn(_, _)|Vs], Li, Ts?) :- var_types_l(Vs?, Li?, Ts).
-procedure role_type(Integer?, Integer?, Constant).
-role_type(J, Li, 'List(Peer)') :- J? =:= Li? | true.
-role_type(_, _, 'Peer') :- otherwise | true.
-%% A class's arguments less the place of its listed role: the arguments of its request name (vGLP f5f1644, Section 5.4, "Act schemas as local specifications": "its request name is the schema-binding"; "The compilation": the request type has "the alternative propose(N) for the request name N of each guarded part"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 2: "the binding, its head with no extent, so no List").
-procedure drop_listed(Args?, Integer?, Args).
+var_types_l([role(J)|Vs], Lis, [T?|Ts?]) :- ground(Lis?) | mem(J?, Lis?, In), role_type(In?, T), var_types_l(Vs?, Lis?, Ts).
+var_types_l([pvar(_)|Vs], Lis, ['Peer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
+var_types_l([svar(_)|Vs], Lis, ['Speech'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
+var_types_l([nterm(_)|Vs], Lis, ['Peer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
+var_types_l([sgn(_, _)|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
+procedure role_type(YesNo?, Constant).
+role_type(yes, 'List(Peer)').
+role_type(no, 'Peer').
+%% A class's arguments less the places of its listed roles: the arguments of its request name (vGLP f5f1644, Section 5.4, "Act schemas as local specifications": "its request name is the schema-binding"; "The compilation": the request type has "the alternative propose(N) for the request name N of each guarded part"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 2: "the binding, its head with no extent, so no List").
+procedure drop_listed(Args?, Ints?, Args).
 drop_listed([], _, []).
-drop_listed([role(J)|Vs], Li, R?) :- J? =:= Li? | drop_listed(Vs?, Li?, R).
-drop_listed([V|Vs], Li, [V?|R?]) :- otherwise | drop_listed(Vs?, Li?, R).
+drop_listed([role(J)|Vs], Lis, R?) :- integer(J?), ground(Lis?) |
+    mem(J?, Lis?, In),
+    drop_listed(Vs?, Lis?, R1),
+    keep_arg(In?, role(J?), R1?, R).
+drop_listed([V|Vs], Lis, [V?|R?]) :- otherwise | drop_listed(Vs?, Lis?, R).
+procedure keep_arg(YesNo?, Arg?, Args?, Args).
+keep_arg(yes, _, R, R?).
+keep_arg(no, A, R, [A?|R?]).
 procedure var_types(Args?, Stream(_)).
 var_types([], []).
 var_types([role(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
@@ -345,8 +337,8 @@ proposal_alts([], _, []).
 proposal_alts([schema(S, Hd, Rs)|Ss], Ps, As?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Ps?) |
     mem(S?, Ps?, In),
     schema_vars(Rs?, Hd?, Vs0),
-    listed_at(Rs?, 1, Li),
-    drop_listed(Vs0?, Li?, Vs),
+    listed_ixs(Rs?, 1, Lis),
+    drop_listed(Vs0?, Lis?, Vs),
     var_types(Vs?, Ts),
     A =.. [S?|Ts?],
     proposal_alts(Ss?, Ps?, As1),
@@ -459,31 +451,38 @@ procedure binding_lines(Contract?, Stream(_)).
 binding_lines([], []).
 binding_lines([schema(S, Hd, Rs)|Ss], L?) :- ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vs),
-    listed_at(Rs?, 1, Li),
-    binding_line_l(Li?, S?, Vs?, L1),
+    listed_ixs(Rs?, 1, Lis),
+    binding_line_l(Lis?, S?, Vs?, L1),
     binding_lines(Ss?, L2),
     lapp(L1?, L2?, L).
 binding_lines([cschema(_, _, _, _)|Ss], L?) :- binding_lines(Ss?, L).
-%% binding_of(c(V1, ..., Vn), c, B): the binding a class term names; for a schema with a listed role at i, the binding of its other roles and its variables, and the listed role's people Vi, which the shared text sends onto the roles of the schema it carries for them (listed_binding).
-procedure binding_line_l(Integer?, Constant?, Args?, Stream(_)).
-binding_line_l(Li, S, Vs, [T?, '.']) :- Li? =:= 0 | binding_line(S?, Vs?, T).
-binding_line_l(Li, S, Vs, [T?, ':-', G?, '.']) :- Li? > 0, ground(S?), ground(Vs?) |
+%% binding_of(c(V1, ..., Vn), c, B): the binding a class term names; for a schema with listed roles at i_1, ..., i_m, the binding of its other roles and its variables, and the list [Vi_1, ..., Vi_m] of the people of each listed role, in the order of the roles, which the shared text sends onto the roles of the schema it carries for them (listed_binding).
+procedure binding_line_l(Ints?, Constant?, Args?, Stream(_)).
+binding_line_l([], S, Vs, [T?, '.']) :- binding_line(S?, Vs?, T).
+binding_line_l([I|Is], S, Vs, [T?, ':-', G?, '.']) :- integer(I?), ground(Is?), ground(S?), ground(Vs?) |
     var_names(Vs?, 1, Ns, _),
-    bind_terms_skip(Vs?, 1, Li?, Bs),
-    vname(Li?, F),
-    name_of(F?, _, Lq),
+    bind_terms_skip(Vs?, 1, [I?|Is?], Bs),
+    list_names([I?|Is?], Lqs),
     Hd =.. [S?|Ns?],
     T =.. [binding_of, Hd?, S?, 'B?'],
-    G =.. [listed_binding, S?, Bs?, Lq?, 'B'].
-procedure bind_terms_skip(Args?, Integer?, Integer?, Stream(_)).
+    G =.. [listed_binding, S?, Bs?, Lqs?, 'B'].
+%% The names, V_i?, of the places i of the listed roles, as a list.
+procedure list_names(Ints?, Stream(_)).
+list_names([], []).
+list_names([I|Is], [Q?|Qs?]) :- integer(I?) |
+    vname(I?, F),
+    name_of(F?, _, Q),
+    list_names(Is?, Qs).
+procedure bind_terms_skip(Args?, Integer?, Ints?, Stream(_)).
 bind_terms_skip([], _, _, []).
-bind_terms_skip([V|Vs], I, Li, Bs?) :- ground(V?), integer(I?), integer(Li?) |
+bind_terms_skip([V|Vs], I, Lis, Bs?) :- ground(V?), integer(I?), ground(Lis?) |
     I1 := I? + 1,
-    bind_terms_skip(Vs?, I1?, Li?, Bs1),
-    keep_bind(I?, Li?, V?, Bs1?, Bs).
-procedure keep_bind(Integer?, Integer?, Arg?, Stream(_)?, Stream(_)).
-keep_bind(I, Li, _, Bs, Bs?) :- I? =:= Li? | true.
-keep_bind(I, _, V, Bs, [b(V?, W?)|Bs?]) :- otherwise, ground(V?), integer(I?) |
+    bind_terms_skip(Vs?, I1?, Lis?, Bs1),
+    mem(I?, Lis?, In),
+    keep_bind(In?, I?, V?, Bs1?, Bs).
+procedure keep_bind(YesNo?, Integer?, Arg?, Stream(_)?, Stream(_)).
+keep_bind(yes, _, _, Bs, Bs?).
+keep_bind(no, I, V, Bs, [b(V?, W?)|Bs?]) :- ground(V?), integer(I?) |
     vname(I?, F),
     wrapped(V?, F?, W).
 procedure binding_line(Constant?, Args?, _).
@@ -523,32 +522,33 @@ class_of_lines([], []).
 class_of_lines([schema(S, Hd, Rs)|Ss], [T?, ':-', 'ground(B?)', ',', 'ground(D?)', '|'|L?]) :-
     ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vs),
-    listed_at(Rs?, 1, Li),
-    class_of_line(S?, Vs?, Li?, T, L1),
+    listed_ixs(Rs?, 1, Lis),
+    class_of_line(S?, Vs?, Lis?, T, L1),
     class_of_lines(Ss?, L2),
     lapp(L1?, L2?, L).
 class_of_lines([cschema(_, _, _, _)|Ss], L?) :- class_of_lines(Ss?, L).
-procedure class_of_line(Constant?, Args?, Integer?, _, Stream(_)).
-class_of_line(S, Vs, Li, T?, L1?) :- ground(S?), ground(Vs?) |
+procedure class_of_line(Constant?, Args?, Ints?, _, Stream(_)).
+class_of_line(S, Vs, Lis, T?, L1?) :- ground(S?), ground(Vs?) |
     var_names(Vs?, 1, _, Qs),
     Out =.. [S?|Qs?],
     T =.. [class_of, S?, 'B', 'D', Out?],
-    val_goals(Vs?, 1, S?, Li?, L1).
-%% The value of each argument of the class term; at the place of a listed role, the people of the roles the shared text carries for it, in the order of identifiers (copies_of).
-procedure val_goals(Args?, Integer?, Constant?, Integer?, Stream(_)).
+    val_goals(Vs?, 1, S?, Lis?, L1).
+%% The value of each argument of the class term; at the place i of a listed role, the people of the roles the shared text carries for it, in the order of identifiers (copies_of(B, i, Vi)).
+procedure val_goals(Args?, Integer?, Constant?, Ints?, Stream(_)).
 val_goals([], _, _, _, []).
-val_goals([V|Vs], I, S, Li, [G?|L?]) :- ground(V?), integer(I?), ground(S?), integer(Li?) |
+val_goals([V|Vs], I, S, Lis, [G?|L?]) :- ground(V?), integer(I?), ground(S?), ground(Lis?) |
     vname(I?, F),
     name_of(F?, N, _),
-    val_goal_l(I?, Li?, S?, V?, N?, G),
+    mem(I?, Lis?, In),
+    val_goal_l(In?, I?, V?, N?, G),
     I1 := I? + 1,
-    val_goals1(Vs?, I1?, S?, Li?, L).
-procedure val_goals1(Args?, Integer?, Constant?, Integer?, Stream(_)).
+    val_goals1(Vs?, I1?, S?, Lis?, L).
+procedure val_goals1(Args?, Integer?, Constant?, Ints?, Stream(_)).
 val_goals1([], _, _, _, ['.']).
-val_goals1([V|Vs], I, S, Li, [','|L?]) :- val_goals([V?|Vs?], I?, S?, Li?, L).
-procedure val_goal_l(Integer?, Integer?, Constant?, Arg?, Constant?, _).
-val_goal_l(I, Li, S, _, N, G?) :- I? =:= Li?, ground(S?), ground(N?) | G =.. [copies_of, S?, 'B?', N?].
-val_goal_l(_, _, _, V, N, G?) :- otherwise | val_goal(V?, N?, G).
+val_goals1([V|Vs], I, S, Lis, [','|L?]) :- val_goals([V?|Vs?], I?, S?, Lis?, L).
+procedure val_goal_l(YesNo?, Integer?, Arg?, Constant?, _).
+val_goal_l(yes, I, _, N, G?) :- integer(I?), ground(N?) | G =.. [copies_of, 'B?', I?, N?].
+val_goal_l(no, _, V, N, G?) :- val_goal(V?, N?, G).
 procedure val_goal(Arg?, Constant?, _).
 val_goal(svar(X), N, G?) :- ground(X?), ground(N?) | G =.. [val_speech, svar(X?), 'B?', 'D?', N?].
 val_goal(role(I), N, G?) :- ground(N?) | G =.. [val_peer, role(I?), 'B?', 'D?', N?].
@@ -591,25 +591,25 @@ vname(29, named('V29', 'V29?')).
 vname(30, named('V30', 'V30?')).
 vname(N, unnamed) :- otherwise, integer(N?) | true.
 
-%% The contract as the shared text reads it: a schema with a listed role, lschema(Name, Vars, Roles, listing(I, Base, Rho, Args)), its listed role at the index I written as a party role of its atoms, its base the agent role of index Base and its people the persons q with rho(q, Args) in the state of the person in the base (vGLP f5f1644, Section 5.4, "Act schemas as local specifications").
+%% The contract as the shared text reads it: a schema with listed roles, lschema(Name, Vars, Roles, Listings), each listed role written as a party role of its atoms and listing(I, Base, Rho, Args) in Listings, in the order of the roles: its index I, its base the agent role of index Base and its people the persons q with rho(q, Args) in the state of the person in the base (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
 procedure text_schemas(Contract?, Stream(_)).
 text_schemas([], []).
 text_schemas([schema(S, Hd, Rs)|Ss], [X?|Xs?]) :- ground(S?), ground(Hd?), ground(Rs?) |
-    listed_at(Rs?, 1, Li),
-    text_schema(Li?, S?, Hd?, Rs?, X),
+    listed_ixs(Rs?, 1, Lis),
+    text_schema(Lis?, S?, Hd?, Rs?, X),
     text_schemas(Ss?, Xs).
 text_schemas([cschema(_, _, _, _)|Ss], Xs?) :- text_schemas(Ss?, Xs).
-procedure text_schema(Integer?, Constant?, Args?, RoleSpecs?, _).
-text_schema(Li, S, Hd, Rs, schema(S?, Hd?, Rs?)) :- Li? =:= 0 | true.
-text_schema(Li, S, Hd, Rs, lschema(S?, Hd?, Rs1?, listing(Li?, B?, Rho?, As?))) :- Li? > 0, ground(Rs?) |
+procedure text_schema(Ints?, Constant?, Args?, RoleSpecs?, _).
+text_schema([], S, Hd, Rs, schema(S?, Hd?, Rs?)).
+text_schema([_|_], S, Hd, Rs, lschema(S?, Hd?, Rs1?, Ls?)) :- ground(Rs?) |
     plain_specs(Rs?, Rs1),
-    listed_parts(Rs?, B, Rho, As).
+    listed_all(Rs?, 1, Ls).
 procedure plain_specs(RoleSpecs?, RoleSpecs).
 plain_specs([], []).
 plain_specs([rs(G, A, D, K, F)|Rs], [rs(G?, A?, D?, K?, F?)|Ps?]) :- plain_specs(Rs?, Ps).
 plain_specs([crs(_, G, A, D, K, F)|Rs], [rs(G?, A?, D?, K?, F?)|Ps?]) :- plain_specs(Rs?, Ps).
 
-%% name_class(N, S, C): the class term of the part a request name N names at an agent of the machine state S (vGLP f5f1644, Section 5.4, "Triggers": on propose(N) the agent "proposes, among the guarded parts it guards and is ready for of the classes of the parts named N, the one it has proposed least recently"): N itself for a schema with no listed role, and for one with a listed role N with the people the state lists at the listed role's place, which the shared text finds (listed_class), so the base agent completes the list from its listed atoms (vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 2).  Printed for the schemas the request type proposes, and only where it has one.
+%% name_class(N, S, C): the class term of the part a request name N names at an agent of the machine state S (vGLP f5f1644, Section 5.4, "Triggers": on propose(N) the agent "proposes, among the guarded parts it guards and is ready for of the classes of the parts named N, the one it has proposed least recently"): N itself for a schema with no listed role, and for one with listed roles N with the people the state lists at the place of each, which the shared text finds (listed_class), so the base agent completes each list from its listed atoms (vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 2; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC: "the base agent filling in each from its own listed atoms").  Printed for the schemas the request type proposes, and only where it has one.
 procedure name_class_lines(Contract?, Preds?, Stream(_)).
 name_class_lines([], _, []).
 name_class_lines([schema(S, Hd, Rs)|Ss], Ps, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Ps?) |
@@ -622,30 +622,31 @@ procedure name_class_lines1(YesNo?, Constant?, Args?, RoleSpecs?, Stream(_)).
 name_class_lines1(no, _, _, _, []).
 name_class_lines1(yes, S, Hd, Rs, L?) :- ground(S?), ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vs),
-    listed_at(Rs?, 1, Li),
-    name_class_line(Li?, S?, Vs?, L).
-procedure name_class_line(Integer?, Constant?, Args?, Stream(_)).
-name_class_line(Li, S, Vs, [T?, '.']) :- Li? =:= 0, ground(S?), ground(Vs?) |
+    listed_ixs(Rs?, 1, Lis),
+    name_class_line(Lis?, S?, Vs?, L).
+procedure name_class_line(Ints?, Constant?, Args?, Stream(_)).
+name_class_line([], S, Vs, [T?, '.']) :- ground(S?), ground(Vs?) |
     var_names(Vs?, 1, Ns, Qs),
     In =.. [S?|Ns?],
     Out =.. [S?|Qs?],
     T =.. [name_class, In?, '_', Out?].
-name_class_line(Li, S, Vs, [T?, ':-', G?, '.']) :- Li? > 0, ground(S?), ground(Vs?) |
+name_class_line([I|Is], S, Vs, [T?, ':-', G?, '.']) :- integer(I?), ground(Is?), ground(S?), ground(Vs?) |
     var_names(Vs?, 1, Ns0, _),
-    drop_at(Ns0?, 1, Li?, Ns),
-    bind_terms_skip(Vs?, 1, Li?, Bs),
+    drop_at(Ns0?, 1, [I?|Is?], Ns),
+    bind_terms_skip(Vs?, 1, [I?|Is?], Bs),
     In =.. [S?|Ns?],
     T =.. [name_class, In?, 'St', 'C?'],
     G =.. [listed_class, S?, Bs?, 'St?', 'C'].
-procedure drop_at(Stream(_)?, Integer?, Integer?, Stream(_)).
+procedure drop_at(Stream(_)?, Integer?, Ints?, Stream(_)).
 drop_at([], _, _, []).
-drop_at([X|Xs], I, Li, R?) :- integer(I?), integer(Li?) |
+drop_at([X|Xs], I, Lis, R?) :- integer(I?), ground(Lis?) |
     I1 := I? + 1,
-    drop_at(Xs?, I1?, Li?, R1),
-    keep_at(I?, Li?, X?, R1?, R).
-procedure keep_at(Integer?, Integer?, _?, Stream(_)?, Stream(_)).
-keep_at(I, Li, _, R, R?) :- I? =:= Li? | true.
-keep_at(_, _, X, R, [X?|R?]) :- otherwise | true.
+    drop_at(Xs?, I1?, Lis?, R1),
+    mem(I?, Lis?, In),
+    keep_at(In?, X?, R1?, R).
+procedure keep_at(YesNo?, _?, Stream(_)?, Stream(_)).
+keep_at(yes, _, R, R?).
+keep_at(no, X, R, [X?|R?]).
 procedure name_class_decl(Stream(_)?, Stream(_)).
 name_class_decl([], []).
 name_class_decl([X|Xs], ['', 'procedure name_class(Proposal?, GAtoms?, Class).', X?|Xs?]).

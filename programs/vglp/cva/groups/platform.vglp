@@ -56,7 +56,7 @@ atom_of(g(closed, [s(V1)]), shown(closed(V1?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(create, [svar(n)], [rs(guarded, [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [], [], [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])], [atom(member, [role(1), svar(n)])])]), lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), rs(unguarded, [], [atom(member, [role(1), svar(n)])], [], [])], listing(2, 1, listed, [svar(n)]))])
+contract_schemas([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(create, [svar(n)], [rs(guarded, [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [], [], [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])], [atom(member, [role(1), svar(n)])])]), lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), rs(unguarded, [], [atom(member, [role(1), svar(n)])], [], [])], [listing(2, 1, listed, [svar(n)])])])
 .
 
 procedure reflexive_preds(Preds).
@@ -76,7 +76,7 @@ binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(sv
 .
 binding_of(close(V1, V2, V3), close, B?)
 :-
-listed_binding(close, [b(role(1), p(V1?)), b(svar(n), s(V3?))], V2?, B)
+listed_binding(close, [b(role(1), p(V1?)), b(svar(n), s(V3?))], [V2?], B)
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -120,7 +120,7 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 ,
-copies_of(close, B?, V2)
+copies_of(B?, 2, V2)
 ,
 val_speech(svar(n), B?, D?, V3)
 .
@@ -179,10 +179,12 @@ Guard     ::= guarded ; unguarded.
 RoleSpec  ::= rs(Guard, SAtoms, SAtoms, SAtoms, SAtoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 %% A schema's second argument is its variables, in the order of its head (GSC 0228e79, Definition "Act schema"; programs/gsc/README.md, "Writing a contract").
-Schema    ::= schema(Constant, Vars, RoleSpecs) ; lschema(Constant, Vars, RoleSpecs, Listing).
-%% A schema with a listed role pi[rho(*, u_2, ..., u_r)], lschema(Name, Vars, Roles, listing(I, Base, Rho, Args)), its listed role at the index I written as a party role of its atoms, Base the index of its base, an agent role, Rho the predicate rho and Args its arguments u_2, ..., u_r; "A listed role ... has as its people at a schema-binding the persons q with rho(q, u_2, ..., u_r), so bound, in the state of the person in pi" (vGLP f5f1644, Section 5.4, "Act schemas as local specifications").  A schema-binding of it with the list L of the people of the listed role is carried as a schema-binding of its roles, the listed role's place bound to the base person and its atoms at none, and of one role more for each person of L, of the listed role's atoms, the roles after its own (bound_spec, listed_binding): "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles: the set of transactions it determines with L in those roles" (ibid.).
+Schema    ::= schema(Constant, Vars, RoleSpecs) ; lschema(Constant, Vars, RoleSpecs, Listings).
+%% A schema with listed roles pi[rho(*, u_2, ..., u_r)], lschema(Name, Vars, Roles, Listings): each listed role written as a party role of its atoms, and listing(I, Base, Rho, Args) in Listings, in the order of the roles, I its index, Base the index of its base, an agent role, Rho the predicate rho and Args its arguments u_2, ..., u_r; "A listed role ... has as its people at a schema-binding the persons q with rho(q, u_2, ..., u_r), so bound, in the state of the person in pi", and "the listed roles of a schema have one base" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").  A schema-binding of it with the lists L_1, ..., L_m of the people of its listed roles, in the order of the roles, is carried as a schema-binding of its roles, each listed role's place bound to the base person and its atoms at none; of one role more for each person of each list, of that listed role's atoms, the roles after its own, the people of L_1 first; and of an entry b(role(-I), p(Q)) for each person Q of the list of the listed role of index I, which names its people (bound_spec, listed_binding, copies_of): "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles: the set of transactions it determines with L in those roles" (ibid.).
 Listing   ::= listing(Integer, Integer, Constant, Vars).
+Listings  ::= [] ; [Listing | Listings].
 PeerLists ::= [] ; [Peers | PeerLists].
+ListTuples ::= [] ; [PeerLists | ListTuples].
 Schemas   ::= [] ; [Schema | Schemas].
 Preds     ::= [] ; [Constant | Preds].
 
@@ -210,7 +212,7 @@ Peers     ::= [] ; [Peer | Peers].
 Nets      ::= [] ; [Net | Nets].
 Ints      ::= [] ; [Integer | Ints].
 
-%% A class, as the paper defines it: "The classes are those of the contract's equivalence, generated by relating two transactions when one schema-binding determines both" (vGLP 099f876, Section 5.4, "Act schemas as local specifications").  Two schema-bindings of the same participants and the same atoms deleted and added at each determine a common transaction, and are linked, when no atom one requires at a participant the other forbids there; a class is what a chain of links joins.  Each schema-binding determines a part of its class, the set of transactions it determines, with the people in its marked roles as its guard set (ibid.), and two schema-bindings determine one part where they require the same atoms, as multisets, and forbid the same atoms at every participant, and mark the same people (same_part; vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 1).  An entry for a class holds its participants and the atoms each deletes and adds, delta(P, D, A); its parts, each pt(T, GuardSet, Opener), named by the term T of the first of its schema-bindings in the order of the entry's, with its guard set and, for an unguarded part, its opener, "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it" (ibid.), and guarded_part for a guarded one; and its schema-bindings, each mate(Schema, Binding, GuardSet, FirstPerson), every variable bound, the contract being effective (local.glp: every variable of an atom a schema requires or forbids is a variable of an atom it deletes or adds).  ci(C, Deltas, Participants, Parts, Mates), C the term that names it, the first the agent met.
+%% A class, as the paper defines it: "The classes are those of the contract's equivalence, generated by relating two transactions when one schema-binding determines both" (vGLP 099f876, Section 5.4, "Act schemas as local specifications").  Two schema-bindings of the same participants and the same atoms deleted and added at each determine a common transaction, and are linked, when no atom one requires at a participant the other forbids there; a class is what a chain of links joins.  Each schema-binding determines a part of its class, the set of transactions it determines, with the people in its marked roles as its guard set (ibid.), and two schema-bindings determine one part where they require the same atoms, as multisets, and forbid the same atoms at every participant, and mark the same people (same_part; vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 1).  An entry for a class holds its participants and the atoms each deletes and adds, delta(P, D, A); its parts, each pt(T, GuardSet, Opener), named by the term T of the first of its schema-bindings in the order of the entry's, with its guard set and, for an unguarded part, its opener, opener(P), "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it" (ibid.); for a guarded part determined by a schema with a listed role whose base is not a guarding role, its opener likewise, opener(P), P the least person in the first role of those schema-bindings, that person not a guard of the part (vGLP a890465, ibid.: "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part"); and guarded_part for every other guarded part, which has no opener; and its schema-bindings, each mate(Schema, Binding, GuardSet, FirstPerson), every variable bound, the contract being effective (local.glp: every variable of an atom a schema requires or forbids is a variable of an atom it deletes or adds).  ci(C, Deltas, Participants, Parts, Mates), C the term that names it, the first the agent met.
 Delta     ::= delta(Peer, GAtoms, GAtoms).
 Deltas    ::= [] ; [Delta | Deltas].
 Mate      ::= mate(Constant, Binding, Peers, Peer).
@@ -1312,7 +1314,7 @@ opened([schema(Nm, _, Rs)|Ss], Id, Sh, Cs?) :- ground(Nm?), ground(Rs?), ground(
     opened1(Gs?, Nm?, Rs?, Id?, Sh?, C1),
     opened(Ss?, Id?, Sh?, C2),
     app(C1?, C2?, Cs).
-%% An unguarded schema with a listed role has its base as its first role (local.glp), so its opener lists the listed role's people (opened3).
+%% An unguarded schema with listed roles has their one base as its first role (local.glp), so its opener lists the people of each (opened3).
 opened([lschema(Nm, _, Rs, _)|Ss], Id, Sh, Cs?) :- ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) |
     guard_roles(Rs?, 1, Gs),
     opened1(Gs?, Nm?, Rs?, Id?, Sh?, C1),
@@ -1336,8 +1338,8 @@ opened2([B|Bs], Nm, Rs, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(Rs?), gr
 procedure opened3(YesNo?, Constant?, Binding?, Peer?, GAtoms?, Stream(Class)).
 opened3(no, _, _, _, _, []).
 opened3(yes, Nm, B, Id, Sh, [C?]) :- ground(Nm?), ground(B?) |
-    listed_people(Nm?, B?, Sh?, L),
-    listed_binding(Nm?, B?, L?, B1),
+    listed_people(Nm?, B?, Sh?, Ls),
+    listed_binding(Nm?, B?, Ls?, B1),
     class_of(Nm?, B1?, Id?, C).
 procedure first_spec(RoleSpecs?, RoleSpec).
 first_spec([R|_], R?).
@@ -1887,17 +1889,25 @@ procedure precedes(Peer?, Peer?, YesNo).
 precedes(P, Q, yes) :- P? @< Q? | true.
 precedes(_, _, no) :- otherwise | true.
 
-%% The guarded parts of a class whose guard set holds the agent, each named by its term; and the unguarded parts whose opener is the agent (vGLP 099f876, Definition "Attempt": the initiator of an attempt "is a guard of [t]_j if [t]_j is guarded, and its opener o([t]_j) if not").
+%% The guarded parts of a class with no opener whose guard set holds the agent, each named by its term; and the unguarded parts whose opener is the agent (vGLP a890465, Definition "Attempt": "The initiator is the opener o([t]_j) of [t]_j if [t]_j has one, and a guard of [t]_j if not"; Section 3.2, "The protocol": "A part with an opener is proposed by its opener, and a guarded part with none by one of its guards").  A guarded part with an opener its opener proposes on a guard's request (ibid.), which the agent does not take (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, items 2 to 4, not coded): no agent proposes it.
 procedure guarding_parts(Parts?, Peer?, Classes).
 guarding_parts([], _, []).
-guarding_parts([pt(T, G, _)|Ps], Id, R?) :- ground(Id?) |
-    mem(Id?, G?, B),
+guarding_parts([pt(T, G, Op)|Ps], Id, R?) :- ground(Id?) |
+    mem(Id?, G?, B1),
+    no_opener(Op?, B2),
+    and(B1?, B2?, B),
     guarding_parts(Ps?, Id?, R1),
     keep_class(B?, T?, R1?, R).
+procedure no_opener(Opener?, YesNo).
+no_opener(opener(_), no).
+no_opener(guarded_part, yes).
 procedure opening_parts(Parts?, Peer?, Classes).
 opening_parts([], _, []).
-opening_parts([pt(T, _, Op)|Ps], Id, R?) :- ground(Id?) |
-    is_opener(Op?, Id?, B),
+opening_parts([pt(T, G, Op)|Ps], Id, R?) :- ground(Id?) |
+    is_opener(Op?, Id?, B1),
+    some_peer(G?, B2),
+    neg(B2?, B3),
+    and(B1?, B3?, B),
     opening_parts(Ps?, Id?, R1),
     keep_class(B?, T?, R1?, R).
 procedure is_opener(Opener?, Peer?, YesNo).
@@ -2369,26 +2379,34 @@ mates_of([schema(Nm, _, Rs)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Ps?
     mates_assigns(As?, Nm?, Rs?, Ps?, M1),
     mates_of(Ss?, Ps?, M2),
     app(M1?, M2?, M).
-%% A schema with a listed role: each assignment of its roles to the participants, its listed role's place sent to its base person, extended by each list of participants as the listed role's people, a set, in the order of identifiers, its roles of that list (bound_spec).
-mates_of([lschema(Nm, _, Rs, Lst)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Lst?), ground(Ps?) |
+%% A schema with listed roles: each assignment of its roles to the participants, each listed role's place sent to its base person, extended by each choice, for each listed role, of a list of participants as its people, a set, in the order of identifiers, its roles of that list (bound_spec, tuple_binds).
+mates_of([lschema(Nm, _, Rs, Lsts)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Lsts?), ground(Ps?) |
     deltas_peers(Ps?, Q),
     rs_len(Rs?, K),
     assigns(K?, Q?, As0),
-    on_base(As0?, Lst?, As),
+    on_base(As0?, Lsts?, As),
     deltas_peers(Ps?, Q1),
     sort_peers(Q1?, Q2),
     subsets(Q2?, Ls),
-    listed_mates(Ls?, As?, Nm?, Rs?, Lst?, Ps?, M1),
+    tuples(Lsts?, Ls?, Ts),
+    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M1),
     mates_of(Ss?, Ps?, M2),
     app(M1?, M2?, M).
-procedure on_base(Bindings?, Listing?, Bindings).
+procedure on_base(Bindings?, Listings?, Bindings).
 on_base([], _, []).
-on_base([B|Bs], listing(I, Bi, Rho, As), R?) :- ground(B?), integer(I?), integer(Bi?) |
+on_base([B|Bs], Lsts, R?) :- ground(B?), ground(Lsts?) |
+    on_bases(Lsts?, B?, E),
+    on_base(Bs?, Lsts?, R1),
+    keep_binding(E?, B?, R1?, R).
+%% Whether each listed role's place is sent to its base person.
+procedure on_bases(Listings?, Binding?, YesNo).
+on_bases([], _, yes).
+on_bases([listing(I, Bi, _, _)|Lsts], B, E?) :- ground(B?) |
     role_person(I?, B?, P),
     role_person(Bi?, B?, Q),
-    same(P?, Q?, E),
-    on_base(Bs?, listing(I?, Bi?, Rho?, As?), R1),
-    keep_binding(E?, B?, R1?, R).
+    same(P?, Q?, E1),
+    on_bases(Lsts?, B?, E2),
+    and(E1?, E2?, E).
 procedure keep_binding(YesNo?, Binding?, Bindings?, Bindings).
 keep_binding(yes, B, R, [B?|R?]).
 keep_binding(no, _, R, R?).
@@ -2402,17 +2420,32 @@ subsets([P|Ps], R?) :- ground(P?), ground(Ps?) |
 procedure with_first(PeerLists?, Peer?, PeerLists).
 with_first([], _, []).
 with_first([L|Ls], P, [[P?|L?]|R?]) :- ground(P?) | with_first(Ls?, P?, R).
-procedure listed_mates(PeerLists?, Bindings?, Constant?, RoleSpecs?, Listing?, Deltas?, Mates).
+%% Each choice of one list of Ls for each listed role of Lsts, in the order of the roles.
+procedure tuples(Listings?, PeerLists?, ListTuples).
+tuples([], _, [[]]).
+tuples([_|Lsts], Ls, R?) :- ground(Ls?) |
+    tuples(Lsts?, Ls?, R1),
+    prepend_each(Ls?, R1?, R).
+procedure prepend_each(PeerLists?, ListTuples?, ListTuples).
+prepend_each([], _, []).
+prepend_each([L|Ls], Ts, R?) :- ground(L?), ground(Ts?) |
+    with_head(Ts?, L?, R1),
+    prepend_each(Ls?, Ts?, R2),
+    app(R1?, R2?, R).
+procedure with_head(ListTuples?, Peers?, ListTuples).
+with_head([], _, []).
+with_head([T|Ts], L, [[L?|T?]|R?]) :- ground(L?) | with_head(Ts?, L?, R).
+procedure listed_mates(ListTuples?, Bindings?, Constant?, RoleSpecs?, Listings?, Deltas?, Mates).
 listed_mates([], _, _, _, _, _, []).
-listed_mates([L|Ls], As, Nm, Rs, Lst, Ps, M?) :-
-    ground(L?), ground(As?), ground(Nm?), ground(Rs?), ground(Lst?), ground(Ps?) |
+listed_mates([T|Ts], As, Nm, Rs, Lsts, Ps, M?) :-
+    ground(T?), ground(As?), ground(Nm?), ground(Rs?), ground(Lsts?), ground(Ps?) |
     rs_len(Rs?, K),
     K1 := K? + 1,
-    copy_binds(L?, K1?, Cs),
+    tuple_binds(Lsts?, T?, K1?, Cs),
     extend_all(As?, Cs?, Bs),
-    spec_for(Rs?, Lst?, L?, Rs1),
+    spec_for(Rs?, Lsts?, T?, Rs1),
     mates_assigns(Bs?, Nm?, Rs1?, Ps?, M1),
-    listed_mates(Ls?, As?, Nm?, Rs?, Lst?, Ps?, M2),
+    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M2),
     app(M1?, M2?, M).
 procedure extend_all(Bindings?, Binding?, Bindings).
 extend_all([], _, []).
@@ -2506,7 +2539,7 @@ drop_mate(mate(N, B, G, F), [mate(N1, B1, G1, F1)|Ms], R?) :-
 procedure drop_mate1(YesNo?, Mate?, Mate?, Mates?, Mates).
 drop_mate1(yes, M, _, Ms, R?) :- drop_mate(M?, Ms?, R).
 drop_mate1(no, M, M1, Ms, [M1?|R?]) :- drop_mate(M?, Ms?, R).
-%% The parts the schema-bindings Ms of a class determine, each pt(T, G, Op), in the order of Ms: named by the term T of the first of its schema-bindings, a schema-binding of the part of one before it naming no other part; its guard set G, the people in the marked roles of its schema-bindings; and, for an unguarded part, its opener, opener(P), P "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it", and for a guarded part guarded_part (vGLP 099f876, Section 5.4, "Act schemas as local specifications").  An opener per part is one the agent finds: an unguarded part has its opener in the first role of one of its schema-bindings, so the agent, which finds among its own transactions the classes of the unguarded schemas with it in their first role, finds every part it opens (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
+%% The parts the schema-bindings Ms of a class determine, each pt(T, G, Op), in the order of Ms: named by the term T of the first of its schema-bindings, a schema-binding of the part of one before it naming no other part; its guard set G, the people in the marked roles of its schema-bindings; and, for an unguarded part, its opener, opener(P), P "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it"; for a guarded part determined by a schema with a listed role whose base is not a guarding role, opener(P), P the least of the people in the first role of those schema-bindings that is not a guard of the part, "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part" (vGLP a890465, Section 5.4, "Act schemas as local specifications"); and for every other guarded part guarded_part.  An opener per part is one the agent finds: an unguarded part has its opener in the first role of one of its schema-bindings, so the agent, which finds among its own transactions the classes of the unguarded schemas with it in their first role, finds every part it opens (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
 procedure info_parts_of(Mates?, Peers?, Peer?, Parts).
 info_parts_of(Ms, Q, Id, Pts?) :- ground(Ms?) | parts_of(Ms?, Ms?, Q?, Id?, [], Pts).
 %% parts_of(Ms, All, Q, Id, Seen, Pts): the parts of the schema-bindings Ms that are not the part of one of Seen, the openers taken over All.
@@ -2521,7 +2554,8 @@ parts_of1(no, mate(N, B, G, F), Ms, All, Q, Id, Seen, [pt(T?, G?, Op?)|Pts?]) :-
     ground(N?), ground(B?), ground(G?), ground(F?), ground(All?), ground(Q?), ground(Id?) |
     class_of(N?, B?, Id?, T),
     part_firsts(All?, mate(N?, B?, G?, F?), Q?, Fs),
-    part_opener(G?, Fs?, Op),
+    part_gfirsts(All?, mate(N?, B?, G?, F?), Q?, G?, Fo),
+    part_opener(G?, Fs?, Fo?, Op),
     parts_of(Ms?, All?, Q?, Id?, [mate(N?, B?, G?, F?)|Seen?], Pts).
 procedure part_seen(Mates?, Mate?, Peers?, YesNo).
 part_seen([], _, _, no).
@@ -2538,10 +2572,35 @@ part_firsts([mate(N, B, G, F)|Ms], M, Q, Fs?) :- ground(F?), ground(M?), ground(
     same_mpart(Q?, mate(N?, B?, G?, F?), M?, S),
     part_firsts(Ms?, M?, Q?, Fs1),
     keep_peer(S?, F?, Fs1?, Fs).
-procedure part_opener(Peers?, Peers?, Opener).
-part_opener([], Fs, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Op).
-part_opener([_|_], _, guarded_part).
-%% A schema-binding is of its own part, so the people of an unguarded part are never none; the second clause covers the type.
+%% The people in the first role of the schema-bindings of All that determine the part of M, of a schema with a listed role whose base is not a guarding role, and that are not guards of the part, G (vGLP a890465, Section 5.4, "Act schemas as local specifications").
+procedure part_gfirsts(Mates?, Mate?, Peers?, Peers?, Peers).
+part_gfirsts([], _, _, _, []).
+part_gfirsts([mate(N, B, G1, F)|Ms], M, Q, G, Fs?) :- ground(N?), ground(F?), ground(M?), ground(Q?), ground(G?) |
+    same_mpart(Q?, mate(N?, B?, G1?, F?), M?, S),
+    opens_guarded(N?, O),
+    mem(F?, G?, InG),
+    neg(InG?, NotG),
+    and(S?, O?, S1),
+    and(S1?, NotG?, K),
+    part_gfirsts(Ms?, M?, Q?, G?, Fs1),
+    keep_peer(K?, F?, Fs1?, Fs).
+%% Whether a schema is one with a listed role whose base is not a guarding role: its listed roles have one base (local.glp), its first role.
+procedure opens_guarded(Constant?, YesNo).
+opens_guarded(Nm, B?) :- schema_entry(Nm?, E), opens_guarded1(E?, B).
+procedure opens_guarded1(Schema?, YesNo).
+opens_guarded1(schema(_, _, _), no).
+opens_guarded1(lschema(_, _, _, []), no).
+opens_guarded1(lschema(_, _, Rs, [listing(_, Bi, _, _)|_]), B?) :- ground(Rs?), integer(Bi?) |
+    nth_spec(Rs?, Bi?, R),
+    spec_unguarded(R?, B).
+procedure spec_unguarded(RoleSpec?, YesNo).
+spec_unguarded(rs(unguarded, _, _, _, _), yes).
+spec_unguarded(rs(guarded, _, _, _, _), no).
+%% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo.
+procedure part_opener(Peers?, Peers?, Peers?, Opener).
+part_opener([], Fs, _, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Op).
+part_opener([_|_], _, Fo, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Op).
+%% A schema-binding is of its own part, so the people of an unguarded part are never none; a guarded part none of whose schema-bindings opens it has no opener, guarded_part.
 procedure least_opener(Peers?, Opener).
 least_opener([P|_], opener(P?)).
 least_opener([], guarded_part).
@@ -2743,13 +2802,6 @@ cimg_sgn(_, _, V, cmp_free(V?)) :- otherwise | true.
 %% Atoms, bindings and matching
 %% ===========================================================================
 
-procedure schema_spec(Constant?, RoleSpecs).
-schema_spec(Nm, Rs?) :- contract_schemas(Ss), find_schema(Ss?, Nm?, Rs).
-procedure find_schema(Schemas?, Constant?, RoleSpecs).
-find_schema([], _, []).
-find_schema([schema(M, _, Rs)|_], Nm, Rs?) :- M? =?= Nm? | true.
-find_schema([lschema(M, _, Rs, _)|_], Nm, Rs?) :- M? =?= Nm? | true.
-find_schema([_|Ss], Nm, Rs?) :- otherwise | find_schema(Ss?, Nm?, Rs).
 procedure schema_entry(Constant?, Schema).
 schema_entry(Nm, E?) :- contract_schemas(Ss), find_entry(Ss?, Nm?, E).
 procedure find_entry(Schemas?, Constant?, Schema).
@@ -2757,21 +2809,39 @@ find_entry([], Nm, schema(Nm?, [], [])).
 find_entry([schema(M, Vs, Rs)|_], Nm, schema(M?, Vs?, Rs?)) :- M? =?= Nm? | true.
 find_entry([lschema(M, Vs, Rs, L)|_], Nm, lschema(M?, Vs?, Rs?, L?)) :- M? =?= Nm? | true.
 find_entry([_|Ss], Nm, E?) :- otherwise | find_entry(Ss?, Nm?, E).
-%% The roles of a schema-binding, each with its atoms: those of the schema, and, for a schema with a listed role, its place bound to the base person with no atom and one role more for each person of the list, of the listed role's atoms, the roles after its own, in the order of the binding.
+%% The roles of a schema-binding, each with its atoms: those of the schema, and, for a schema with listed roles, each listed role's place bound to the base person with no atom, and one role more for each person of the list of each listed role, of that listed role's atoms, the roles after its own, the lists in the order of the roles.
 procedure bound_spec(Constant?, Binding?, RoleSpecs).
 bound_spec(Nm, B, Rs?) :- schema_entry(Nm?, E), bound_spec1(E?, B?, Rs).
 procedure bound_spec1(Schema?, Binding?, RoleSpecs).
 bound_spec1(schema(_, _, Rs), _, Rs?).
-bound_spec1(lschema(_, _, Rs, Lst), B, Rs1?) :- ground(Rs?), ground(B?) |
-    rs_len(Rs?, K),
-    copy_people(B?, K?, Ps),
-    spec_for(Rs?, Lst?, Ps?, Rs1).
-procedure spec_for(RoleSpecs?, Listing?, Peers?, RoleSpecs).
-spec_for(Rs, listing(I, _, _, _), Ps, Rs1?) :- ground(Rs?), integer(I?) |
-    nth_spec(Rs?, I?, R),
-    blank_at(Rs?, I?, 1, Rs0),
-    spec_copies(Ps?, R?, Cs),
+bound_spec1(lschema(_, _, Rs, Lsts), B, Rs1?) :- ground(Rs?), ground(B?), ground(Lsts?) |
+    lists_of(Lsts?, B?, Ls),
+    spec_for(Rs?, Lsts?, Ls?, Rs1).
+%% The lists of the people of a schema-binding's listed roles, in the order of the roles.
+procedure lists_of(Listings?, Binding?, PeerLists).
+lists_of([], _, []).
+lists_of([listing(I, _, _, _)|Lsts], B, [L?|Ls?]) :- ground(B?) |
+    copies_of(B?, I?, L),
+    lists_of(Lsts?, B?, Ls).
+%% The roles of the schema, each listed role's place blanked, and then, for each listed role in the order of the roles, a copy of it for each person of its list.
+procedure spec_for(RoleSpecs?, Listings?, PeerLists?, RoleSpecs).
+spec_for(Rs, Lsts, Ls, Rs1?) :- ground(Rs?), ground(Lsts?) |
+    blank_listed(Lsts?, Rs?, Rs0),
+    listed_copies(Lsts?, Ls?, Rs?, Cs),
     app(Rs0?, Cs?, Rs1).
+procedure blank_listed(Listings?, RoleSpecs?, RoleSpecs).
+blank_listed([], Rs, Rs?).
+blank_listed([listing(I, _, _, _)|Lsts], Rs, Rs2?) :-
+    blank_at(Rs?, I?, 1, Rs1),
+    blank_listed(Lsts?, Rs1?, Rs2).
+procedure listed_copies(Listings?, PeerLists?, RoleSpecs?, RoleSpecs).
+listed_copies([], _, _, []).
+listed_copies([listing(I, _, _, _)|Lsts], [L|Ls], Rs, Cs?) :- ground(Rs?) |
+    nth_spec(Rs?, I?, R),
+    spec_copies(L?, R?, C1),
+    listed_copies(Lsts?, Ls?, Rs?, C2),
+    app(C1?, C2?, Cs).
+listed_copies([_|_], [], _, []).
 procedure blank_at(RoleSpecs?, Integer?, Integer?, RoleSpecs).
 blank_at([], _, _, []).
 blank_at([R|Rs], I, J, [X?|Xs?]) :- integer(I?), integer(J?) |
@@ -2784,41 +2854,72 @@ blank_one(_, _, R, R?) :- otherwise | true.
 procedure spec_copies(Peers?, RoleSpec?, RoleSpecs).
 spec_copies([], _, []).
 spec_copies([_|Ps], R, [R?|Rs?]) :- ground(R?) | spec_copies(Ps?, R?, Rs).
-%% The people of the roles after the schema's own, a schema-binding's people of its listed role.
-procedure copy_people(Binding?, Integer?, Peers).
-copy_people([], _, []).
-copy_people([b(role(J), p(Q))|Bs], K, [Q?|Ps?]) :- J? > K? | copy_people(Bs?, K?, Ps).
-copy_people([_|Bs], K, Ps?) :- otherwise | copy_people(Bs?, K?, Ps).
-%% The list of the people of a schema-binding's listed role, in the order of identifiers, its place in the class term (class_of).
-procedure copies_of(Constant?, Binding?, List(Peer)).
-copies_of(Nm, B, L?) :- ground(B?) |
-    schema_spec(Nm?, Rs),
-    rs_len(Rs?, K),
-    copy_people(B?, K?, Ps0),
+%% The people of the listed role of index I at a schema-binding B, those B binds to role(-I), in the order of identifiers, its place in the class term (class_of).
+procedure copies_of(Binding?, Integer?, List(Peer)).
+copies_of(B, I, L?) :- ground(B?), integer(I?) |
+    NI := 0 - I?,
+    neg_people(B?, NI?, Ps0),
     sort_peers(Ps0?, Ps1),
     dedup(Ps1?, L).
-%% The binding of a class term of a schema with a listed role: the binding B0 of its other roles and its variables, the listed role's place bound to the base person, and a role after the schema's own for each person of the list L, in the order of identifiers.
-procedure listed_binding(Constant?, Binding?, List(Peer)?, Binding).
-listed_binding(Nm, B0, L, B?) :- schema_entry(Nm?, E), listed_binding1(E?, B0?, L?, B).
-procedure listed_binding1(Schema?, Binding?, List(Peer)?, Binding).
+procedure neg_people(Binding?, Integer?, Peers).
+neg_people([], _, []).
+neg_people([b(role(J), p(Q))|Bs], NI, [Q?|Ps?]) :- J? =:= NI? | neg_people(Bs?, NI?, Ps).
+neg_people([_|Bs], NI, Ps?) :- otherwise | neg_people(Bs?, NI?, Ps).
+%% The binding of a class term of a schema with listed roles: the binding B0 of its other roles and its variables; each listed role's place bound to the base person; and, for the lists Ls of the people of the listed roles, in the order of the roles, a role after the schema's own for each person of each list, in the order of identifiers, and the entries naming the people of each listed role (tuple_binds).
+procedure listed_binding(Constant?, Binding?, PeerLists?, Binding).
+listed_binding(Nm, B0, Ls, B?) :- schema_entry(Nm?, E), listed_binding1(E?, B0?, Ls?, B).
+procedure listed_binding1(Schema?, Binding?, PeerLists?, Binding).
 listed_binding1(schema(_, _, _), B0, _, B0?).
-listed_binding1(lschema(_, _, Rs, listing(I, Bi, _, _)), B0, L, B?) :- ground(Rs?), ground(B0?), ground(L?) |
+listed_binding1(lschema(_, _, Rs, Lsts), B0, Ls, B?) :- ground(Rs?), ground(B0?), ground(Lsts?) |
     rs_len(Rs?, K),
-    role_person(Bi?, B0?, P),
-    sort_peers(L?, Ps1),
-    dedup(Ps1?, Ps),
+    base_binds(Lsts?, B0?, Bb),
+    sorted_lists(Ls?, Ls1),
     K1 := K? + 1,
-    copy_binds(Ps?, K1?, Cs),
-    app(B0?, [b(role(I?), p(P?))|Cs?], B).
-procedure copy_binds(Peers?, Integer?, Binding).
-copy_binds([], _, []).
-copy_binds([Q|Qs], J, [b(role(J?), p(Q?))|Bs?]) :- integer(J?) | J1 := J? + 1, copy_binds(Qs?, J1?, Bs).
-%% The people of a listed role at the state S of its base person: the persons q with rho(q, u_2, ..., u_r) in S, u_2, ..., u_r as the binding B0 binds them, in the order of identifiers (vGLP f5f1644, Section 5.4, "Act schemas as local specifications").
-procedure listed_people(Constant?, Binding?, GAtoms?, List(Peer)).
-listed_people(Nm, B0, S, L?) :- schema_entry(Nm?, E), listed_people1(E?, B0?, S?, L).
-procedure listed_people1(Schema?, Binding?, GAtoms?, List(Peer)).
+    tuple_binds(Lsts?, Ls1?, K1?, Cs),
+    app(Bb?, Cs?, Bc),
+    app(B0?, Bc?, B).
+%% Each listed role's place bound to its base person.
+procedure base_binds(Listings?, Binding?, Binding).
+base_binds([], _, []).
+base_binds([listing(I, Bi, _, _)|Lsts], B0, [b(role(I?), p(P?))|Bs?]) :- ground(B0?) |
+    role_person(Bi?, B0?, P),
+    base_binds(Lsts?, B0?, Bs).
+procedure sorted_lists(PeerLists?, PeerLists).
+sorted_lists([], []).
+sorted_lists([L|Ls], [L1?|Ls1?]) :-
+    sort_peers(L?, L0),
+    dedup(L0?, L1),
+    sorted_lists(Ls?, Ls1).
+%% For the lists Ls of the people of the listed roles Lsts, in the order of the roles: the roles of index J, J+1, ..., one for each person of each list, the first list first, and the entries b(role(-I), p(Q)) naming the people Q of the listed role of index I.
+procedure tuple_binds(Listings?, PeerLists?, Integer?, Binding).
+tuple_binds([], _, _, []).
+tuple_binds([listing(I, _, _, _)|Lsts], [L|Ls], J, Bs?) :- ground(L?), integer(I?) |
+    copy_binds(L?, J?, Cs, J1),
+    NI := 0 - I?,
+    neg_binds(L?, NI?, Ns),
+    tuple_binds(Lsts?, Ls?, J1?, Bs1),
+    app(Ns?, Bs1?, Bs2),
+    app(Cs?, Bs2?, Bs).
+tuple_binds([_|_], [], _, []).
+procedure copy_binds(Peers?, Integer?, Binding, Integer).
+copy_binds([], J, [], J?).
+copy_binds([Q|Qs], J, [b(role(J?), p(Q?))|Bs?], J2?) :- integer(J?) | J1 := J? + 1, copy_binds(Qs?, J1?, Bs, J2).
+procedure neg_binds(Peers?, Integer?, Binding).
+neg_binds([], _, []).
+neg_binds([Q|Qs], NI, [b(role(NI?), p(Q?))|Bs?]) :- integer(NI?) | neg_binds(Qs?, NI?, Bs).
+%% The people of each listed role at the state S of its base person, in the order of the roles: the persons q with rho(q, u_2, ..., u_r) in S, u_2, ..., u_r as the binding B0 binds them, in the order of identifiers (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
+procedure listed_people(Constant?, Binding?, GAtoms?, PeerLists).
+listed_people(Nm, B0, S, Ls?) :- schema_entry(Nm?, E), listed_people1(E?, B0?, S?, Ls).
+procedure listed_people1(Schema?, Binding?, GAtoms?, PeerLists).
 listed_people1(schema(_, _, _), _, _, []).
-listed_people1(lschema(_, _, _, listing(_, _, Rho, As)), B0, S, L?) :- ground(As?), ground(B0?), ground(S?) |
+listed_people1(lschema(_, _, _, Lsts), B0, S, Ls?) :- lists_at(Lsts?, B0?, S?, Ls).
+procedure lists_at(Listings?, Binding?, GAtoms?, PeerLists).
+lists_at([], _, _, []).
+lists_at([listing(_, _, Rho, As)|Lsts], B0, S, [L?|Ls?]) :- ground(B0?), ground(S?) |
+    list_at(Rho?, As?, B0?, S?, L),
+    lists_at(Lsts?, B0?, S?, Ls).
+procedure list_at(Constant?, Vars?, Binding?, GAtoms?, List(Peer)).
+list_at(Rho, As, B0, S, L?) :- ground(As?), ground(B0?), ground(S?) |
     img_args(As?, B0?, Vs),
     listing_in(S?, Rho?, Vs?, Ps0),
     sort_peers(Ps0?, Ps1),
@@ -2832,34 +2933,41 @@ listing_in([g(F, [p(Q)|Xs])|Gs], Rho, Vs, Ps?) :- ground(F?), ground(Xs?), groun
     listing_in(Gs?, Rho?, Vs?, Ps1),
     keep_peer(E?, Q?, Ps1?, Ps).
 listing_in([_|Gs], Rho, Vs, Ps?) :- otherwise | listing_in(Gs?, Rho?, Vs?, Ps).
-%% The class term a request name of a schema with a listed role names at an agent of the state S: the binding B0 of the name, and the people its state lists at the listed role's place, "so the base agent of close completes L from its listed atoms" (vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 2).
+%% The class term a request name of a schema with listed roles names at an agent of the state S: the binding B0 of the name, and the people its state lists at the place of each listed role, "so the base agent of close completes L from its listed atoms" (vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 2), "the base agent filling in each from its own listed atoms" (vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC).
 procedure listed_class(Constant?, Binding?, GAtoms?, Class).
 listed_class(Nm, B0, S, C?) :- ground(Nm?), ground(B0?) |
-    listed_people(Nm?, B0?, S?, L),
-    listed_binding(Nm?, B0?, L?, B),
+    listed_people(Nm?, B0?, S?, Ls),
+    listed_binding(Nm?, B0?, Ls?, B),
     role_person(1, B0?, D),
     class_of(Nm?, B?, D?, C).
-%% For the base person p of a listed role, the domain of the effect asks besides the atoms that "p lists in d_p exactly the people of that role in L" (vGLP f5f1644, Section 5.4, "Act schemas as local specifications").
+%% For the person p in the base of each listed role, the domain of the effect asks besides the atoms that "p lists in d_p exactly the people of that role in L" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
 procedure listing_ok(Constant?, Binding?, Peer?, GAtoms?, YesNo).
 listing_ok(Nm, B, Id, S, Ok?) :- schema_entry(Nm?, E), listing_ok1(E?, B?, Id?, S?, Ok).
 procedure listing_ok1(Schema?, Binding?, Peer?, GAtoms?, YesNo).
 listing_ok1(schema(_, _, _), _, _, _, yes).
-listing_ok1(lschema(Nm, _, _, listing(_, Bi, _, _)), B, Id, S, Ok?) :- ground(Nm?), ground(B?), ground(Id?) |
+listing_ok1(lschema(_, _, _, Lsts), B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
+procedure listings_ok(Listings?, Binding?, Peer?, GAtoms?, YesNo).
+listings_ok([], _, _, _, yes).
+listings_ok([listing(I, Bi, Rho, As)|Lsts], B, Id, S, Ok?) :- ground(B?), ground(Id?), ground(S?) |
     role_person(Bi?, B?, P),
     same(P?, Id?, Base),
-    listing_ok2(Base?, Nm?, B?, S?, Ok).
-procedure listing_ok2(YesNo?, Constant?, Binding?, GAtoms?, YesNo).
-listing_ok2(no, _, _, _, yes).
-listing_ok2(yes, Nm, B, S, Ok?) :- ground(Nm?), ground(B?) |
-    copies_of(Nm?, B?, L),
-    listed_people(Nm?, B?, S?, L1),
+    listing_one(Base?, I?, Rho?, As?, B?, S?, Ok1),
+    listings_ok1(Ok1?, Lsts?, B?, Id?, S?, Ok).
+procedure listing_one(YesNo?, Integer?, Constant?, Vars?, Binding?, GAtoms?, YesNo).
+listing_one(no, _, _, _, _, _, yes).
+listing_one(yes, I, Rho, As, B, S, Ok?) :- ground(B?) |
+    copies_of(B?, I?, L),
+    list_at(Rho?, As?, B?, S?, L1),
     same(L?, L1?, Ok).
-%% The roles Definition "Binding" constrains (rule_ok): the schema's own, its listed role's place with no atom, a listed role's people being no roles a binding sends to people.
+procedure listings_ok1(YesNo?, Listings?, Binding?, Peer?, GAtoms?, YesNo).
+listings_ok1(no, _, _, _, _, no).
+listings_ok1(yes, Lsts, B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
+%% The roles Definition "Binding" constrains (rule_ok): the schema's own, each listed role's place with no atom, a listed role's people being no roles a binding sends to people.
 procedure rule_spec_ok(Constant?, Binding?, YesNo).
 rule_spec_ok(Nm, B, Ok?) :- schema_entry(Nm?, E), rule_spec(E?, Rs0), rule_ok(Rs0?, B?, Ok).
 procedure rule_spec(Schema?, RoleSpecs).
 rule_spec(schema(_, _, Rs), Rs?).
-rule_spec(lschema(_, _, Rs, listing(I, _, _, _)), Rs0?) :- ground(Rs?), integer(I?) | blank_at(Rs?, I?, 1, Rs0).
+rule_spec(lschema(_, _, Rs, Lsts), Rs0?) :- blank_listed(Lsts?, Rs?, Rs0).
 %% A class term's schema, its roles with their atoms and its binding.
 procedure term_spec(Class?, Constant, RoleSpecs, Binding).
 term_spec(C, Nm?, Rs?, B?) :- ground(C?) |

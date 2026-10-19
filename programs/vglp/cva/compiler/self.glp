@@ -130,15 +130,21 @@ procedure atoms_args(Atoms?, Args).
 atoms_args([], []).
 atoms_args([atom(_, As)|Xs], R?) :- atoms_args(Xs?, R1), app(As?, R1?, R).
 
-%% A schema's listed role (GSC 8064cfb, Appendix D, Definition "Role"; vGLP f5f1644, Section 5.4, "Act schemas as local specifications"): its index, from 1, and 0 where it has none (listed_at); its base, the index of its agent role, its predicate rho and its arguments u_2, ..., u_r (listed_parts); and the arguments of a role that are no arguments of its atoms, a listed role's (kind_args).  The compiler takes a schema of one listed role at most (cvac.glp, role_lines).
-procedure listed_at(RoleSpecs?, Integer?, Integer).
-listed_at([], _, 0).
-listed_at([crs(listed(_, _, _), _, _, _, _, _)|_], I, I?).
-listed_at([_|Rs], I, J?) :- otherwise, integer(I?) | I1 := I? + 1, listed_at(Rs?, I1?, J).
-procedure listed_parts(RoleSpecs?, Integer, Constant, Args).
-listed_parts([], 0, none, []).
-listed_parts([crs(listed(B, Rho, As), _, _, _, _, _)|_], B?, Rho?, As?).
-listed_parts([_|Rs], B?, Rho?, As?) :- otherwise | listed_parts(Rs?, B, Rho, As).
+%% A schema's listed roles (GSC 8064cfb, Appendix D, Definition "Role"; vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"): their indices, from 1, in the order of the roles (listed_ixs); each with its index, its base, the index of its agent role, its predicate rho and its arguments u_2, ..., u_r, listing(I, Base, Rho, Args), in the order of the roles (listed_all); their bases (listed_bases); and the arguments of a role that are no arguments of its atoms, a listed role's (kind_args).  "the listed roles of a schema have one base" (ibid.), which local.glp decides.
+Listing  ::= listing(Integer, Integer, Constant, Args).
+Listings ::= [] ; [Listing | Listings].
+procedure listed_ixs(RoleSpecs?, Integer?, Ints).
+listed_ixs([], _, []).
+listed_ixs([crs(listed(_, _, _), _, _, _, _, _)|Rs], I, [I?|Is?]) :- integer(I?) | I1 := I? + 1, listed_ixs(Rs?, I1?, Is).
+listed_ixs([_|Rs], I, Is?) :- otherwise, integer(I?) | I1 := I? + 1, listed_ixs(Rs?, I1?, Is).
+procedure listed_all(RoleSpecs?, Integer?, Listings).
+listed_all([], _, []).
+listed_all([crs(listed(B, Rho, As), _, _, _, _, _)|Rs], I, [listing(I?, B?, Rho?, As?)|Ls?]) :- integer(I?) | I1 := I? + 1, listed_all(Rs?, I1?, Ls).
+listed_all([_|Rs], I, Ls?) :- otherwise, integer(I?) | I1 := I? + 1, listed_all(Rs?, I1?, Ls).
+procedure listed_bases(RoleSpecs?, Ints).
+listed_bases([], []).
+listed_bases([crs(listed(B, _, _), _, _, _, _, _)|Rs], [B?|Bs?]) :- listed_bases(Rs?, Bs).
+listed_bases([_|Rs], Bs?) :- otherwise | listed_bases(Rs?, Bs).
 procedure kind_args(RoleSpec?, Args).
 kind_args(rs(_, _, _, _, _), []).
 kind_args(crs(listed(_, _, As), _, _, _, _, _), As?).
