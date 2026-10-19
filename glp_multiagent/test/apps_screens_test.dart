@@ -865,6 +865,9 @@ void main() {
                 find.text('Alf, an AI agent of Alice, asks to befriend you.')))
             .dy,
         lessThan(tester.getTopLeft(run.control(bob, 'name')).dy));
+    // While the question is open, Alf's row offers no Befriend: the question names Alf an AI agent, and befriend forbids agent at both parties (programs/gai/GAI.glp).
+    expect(run.control(bob, 'person:alf'), findsOneWidget);
+    expect(run.control(bob, 'befriend:alf'), findsNothing);
     run.plain(bob);
     await run.shoot(bob, 'gai-d-bob-asked.png');
     await run.answer(bob, 'Yes');

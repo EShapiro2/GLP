@@ -11,6 +11,7 @@
 /// The screen holds the chat open in Friends, opened by tapping a friend and closed by its back arrow, across the request questions the agent asks one after another, so that a chat stays open as its messages are sent.  It holds the person's own key, which each request question shows (vGLP, Section 5.4, "The compilation": the request question "shows the agent's own key and the persons it knows"), so that construct 0, drawn by `last_state` where no request question is open, draws a group the person leads with its members, as `social_menu` does.  It holds also, across them, the message of each Send in GSNP's chat, proposed on a later request question than the sign that precedes it, and the friend each item the person authored was sent to, in whose chat it is drawn (named_widgets.dart, `_chat`); in GAI's app, the creation of each AI agent, its enter proposed on a later request question than the sign of its code, and what the person typed into the form Create an AI agent (named_widgets.dart, `_create`).
 library;
 
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 
 import 'bridge.dart';
@@ -74,6 +75,9 @@ class TabPlace extends InheritedWidget {
   /// The text of the screen's field [key], held across the request questions the agent asks one after another, so that what the person typed stays.
   final TextEditingController Function(String key)? field;
 
+  /// The AI agents an open approval question names as AI agents, by their terms as written: `R` of `agent_befriend(R, Q, P, Y)`, and `R` and `S` of `agents_befriend(R, S, P, Q, Y, Z)` (programs/gai/GAI.glp), so that their rows offer no Befriend, `befriend` forbidding `agent` at both parties, before the person's view records them.
+  final Set<String> agentsAsked;
+
   /// The count of changes to the held and the sent, so that a change is drawn.
   final int version;
 
@@ -91,6 +95,7 @@ class TabPlace extends InheritedWidget {
     this.holdEnter,
     this.releaseEnter,
     this.field,
+    this.agentsAsked = const {},
     this.version = 0,
     required super.child,
   });
@@ -103,6 +108,7 @@ class TabPlace extends InheritedWidget {
   bool updateShouldNotify(TabPlace old) =>
       old.tab != tab ||
       old.version != version ||
+      !setEquals(old.agentsAsked, agentsAsked) ||
       (old.me == null) != (me == null) ||
       (old.chat == null) != (chat == null) ||
       (chat != null && formatTerm(old.chat!) != formatTerm(chat!));
@@ -126,6 +132,19 @@ bool _concernsGroup(OpenConstruct c) {
   final (af, xs) = ctorArgs(args[0]);
   if (af != 'attempt' || xs.length != 4) return false;
   return groupClasses.contains(ctorArgs(xs[3]).$1);
+}
+
+/// The AI agents the approval question [c] names as AI agents: `R` of `agent_befriend(R, Q, P, Y)`, and `R` and `S` of `agents_befriend(R, S, P, Q, Y, Z)`, each by its term as written.
+Iterable<String> _agentsNamed(OpenConstruct c) {
+  final (_, args) = ctorArgs(c.view);
+  final (af, xs) = ctorArgs(args[0]);
+  if (af != 'attempt' || xs.length != 4) return const [];
+  final (f, ys) = ctorArgs(xs[3]);
+  return switch ((f, ys.length)) {
+    ('agent_befriend', 4) => [formatTerm(ys[0])],
+    ('agents_befriend', 6) => [formatTerm(ys[0]), formatTerm(ys[1])],
+    _ => const [],
+  };
 }
 
 /// Whether the approval question [c] is open: its answer's position marked `input(P)`.
@@ -323,6 +342,10 @@ class _TabScreenState extends State<TabScreen> {
           holdEnter: _holdEnter,
           releaseEnter: _releaseEnter,
           field: _field,
+          agentsAsked: {
+            for (final a in approvals)
+              if (_open(a)) ..._agentsNamed(a)
+          },
           version: _version,
           child: ListView(
             key: ValueKey('tab-view:${t.name}'),

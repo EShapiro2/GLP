@@ -925,7 +925,7 @@ class _SocialTabState extends State<SocialTab> {
     );
   }
 
-  /// A person's row: their initial and name, under it, for an AI agent the person holds recorded, its developer, "Developer: Acme" ([SocialState.developerOf]; GAI #5 Cowork, Code_inbox.md, 2026-10-19 20:36 UTC, item 5: "in Alf's entry in Bob's Friends tab"), and, for the request question, the button that befriends them or ends the friendship; tapping a friend opens the chat with them where [onTap] is given.  End friendship proposes `unfriend(Me, Q)`, or, where the request type offers `unfriend_p(Me, Q)` in its place, that: in GAI `unfriend` "carries no ? and stands for one schema per role, guarded at that role, unfriend_p and unfriend_q" (programs/gai/GAI.glp), and the person ending the friendship takes the guarded first role, `unfriend_p(p?, q)`, whether or not the friend is an AI agent that is retired (Code_inbox.md, GAI #4 Cowork, 2026-10-19 16:57 UTC, item 4).  The row of the person's own AI agent, `principal_of(Q)`, offers no End friendship: `unfriend_p(p?, q)` forbids `principal_of(q)` at `p` (programs/gai/GAI.glp), and only Retire, in the AI agents tab, ends that friendship ("The friendship of a ward and their guardian is ended only by the guardian, and it then ends their guardianship", Wards:3; "A principal retires their AI agent by ending their friendship with it", GAI:4).  Nor does the row of an AI agent the person's view shows ([SocialState.isKnownAgent]) offer Befriend: `befriend(p?, q?)` forbids `agent` at both parties (programs/gai/GAI.glp).
+  /// A person's row: their initial and name, under it, for an AI agent the person holds recorded, its developer, "Developer: Acme" ([SocialState.developerOf]; GAI #5 Cowork, Code_inbox.md, 2026-10-19 20:36 UTC, item 5: "in Alf's entry in Bob's Friends tab"), and, for the request question, the button that befriends them or ends the friendship; tapping a friend opens the chat with them where [onTap] is given.  End friendship proposes `unfriend(Me, Q)`, or, where the request type offers `unfriend_p(Me, Q)` in its place, that: in GAI `unfriend` "carries no ? and stands for one schema per role, guarded at that role, unfriend_p and unfriend_q" (programs/gai/GAI.glp), and the person ending the friendship takes the guarded first role, `unfriend_p(p?, q)`, whether or not the friend is an AI agent that is retired (Code_inbox.md, GAI #4 Cowork, 2026-10-19 16:57 UTC, item 4).  The row of the person's own AI agent, `principal_of(Q)`, offers no End friendship: `unfriend_p(p?, q)` forbids `principal_of(q)` at `p` (programs/gai/GAI.glp), and only Retire, in the AI agents tab, ends that friendship ("The friendship of a ward and their guardian is ended only by the guardian, and it then ends their guardianship", Wards:3; "A principal retires their AI agent by ending their friendship with it", GAI:4).  Nor does the row of an AI agent the person's view shows ([SocialState.isKnownAgent]), or an open approval question names ([TabPlace.agentsAsked]), offer Befriend: `befriend(p?, q?)` forbids `agent` at both parties (programs/gai/GAI.glp), and `agent_befriend` names Alf as an AI agent of Alice before Bob's view records it.
   Widget _person(BuildContext context, SocialState s, GTerm q,
       {VoidCallback? onTap}) {
     final ask = _ask;
@@ -949,7 +949,8 @@ class _SocialTabState extends State<SocialTab> {
     } else if (ask != null &&
         !friend &&
         ask.can('befriend', 2) &&
-        !s.isKnownAgent(q)) {
+        !s.isKnownAgent(q) &&
+        !(widget.place?.agentsAsked.contains(k) ?? false)) {
       button = ElevatedButton(
         key: socialKey(_id, 'befriend:$k'),
         onPressed: () => ask.propose(GStruct('befriend', [ask.me, q])),

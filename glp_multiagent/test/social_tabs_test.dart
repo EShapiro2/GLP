@@ -1303,6 +1303,27 @@ void main() {
     });
 
     _phoneTest(
+        'Bob asked to befriend Alf: while the question, which names Alf an AI '
+        'agent of Alice, is open, Alf\'s row offers no Befriend, though his '
+        'view does not yet record Alf; Carol\'s does; once the question is '
+        'withdrawn, Alf\'s row offers it again', (tester) async {
+      final p = await _Phone.open(tester, 'gai', me: 'bob');
+      await p.views([_v('[friend(alice), identity]', '[alf, alice, carol]')]);
+      await p.menu(1, _gaiProposals, known: '[alf, alice, carol]');
+      expect(p.key(1, 'befriend:alf'), findsOneWidget);
+      await p.draw('draw(5, $_gaiApprovalW, approval_w(approval(attempt(alf, '
+          '3, 3, $agentBefriend), input([2]))))');
+      await p.top();
+      expect(p.key(1, 'person:alf'), findsOneWidget);
+      expect(p.key(1, 'befriend:alf'), findsNothing);
+      expect(p.key(1, 'befriend:carol'), findsOneWidget);
+      expect(p.key(1, 'unfriend:alice'), findsOneWidget);
+      p.plain();
+      await p.draw('withdraw(5)');
+      expect(p.key(1, 'befriend:alf'), findsOneWidget);
+    });
+
+    _phoneTest(
         'a person without an AI agent has the form; an AI agent has no Create; '
         'and with no request question open, last_state lists the AI agents, '
         'with no form and no Retire', (tester) async {
