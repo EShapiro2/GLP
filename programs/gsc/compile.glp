@@ -95,9 +95,10 @@ latex_atom(atom(P, [A|As]), T, R?) :-
     latex_pred(P?, ['('|R1?], R).
 
 % The atoms of a set are written apart by Sep, which the form of the display
-% supplies: a comma in the form of Section 5.1 and Appendix B.3, whose displays write no set of
-% two atoms, and a comma and a control space in the form of Appendix D, as its
-% display of close writes the two atoms close deletes.  latex_update and
+% supplies: a comma in the form of Section 5.1 and Appendix B.3, as Section
+% 5.1 writes the two atoms befriend requires at a role, and a comma and a
+% control space in the form of Appendix D, as its display of close writes the
+% two atoms close deletes.  latex_update and
 % req_conjs and forb_conjs supply the first, assign_lines and req_lines and
 % forb_lines the second.
 procedure latex_atoms(Atoms?, Constant?, Chunks?, Chunks).
@@ -206,7 +207,12 @@ latex_updates([RS, RS2|Rs], I, T, R?) :-
 % --- The proviso of one role (def:compile, definition:compile) -------------
 % =(i) u -(i) included in c_S and not(i) disjoint from it, one conjunct each
 % and left out when the multiset is empty; a singleton is written with \in and
-% \notin, as Section 5.1 and Appendix B.3 write it.  The layout is Udi's
+% \notin, as Section 5.1 and Appendix B.3 write it, and, in the form of
+% Section 5.1, required atoms that are distinct are listed before \in, as
+% Section 5.1 writes befriend's,
+% "\mathit{identity}, \mathit{knows}(\Bob) \in c_{\Alice}" (GSC 21c1b28); a
+% multiset of required atoms with an atom twice in it is written as
+% def:compile writes it, included in c_S.  The layout is Udi's
 % ruling (GSC #3 to Code, 2026-10-18 21:49 UTC; GSC aca046b, Definition
 % Compilation and Appendix D's, befriend's display in Section 5.1 and the
 % swap's in Appendix B.3): the required atoms on one proviso line and the
@@ -217,9 +223,40 @@ procedure req_conj(Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
 req_conj([], _, _, T, T?).
 req_conj([A], _, S, T, [C?|T?]) :- ground(A?), ground(S?), ground(T?) |
     latex_atom(A?, [' \\in c_'|S?], C).
-req_conj([A, B|As], Sep, S, T, [C?|T?]) :-
+req_conj([A, B|As], Sep, S, T, R?) :-
+    ground(A?), ground(B?), ground(As?), ground(Sep?), ground(S?), ground(T?) |
+    atoms_distinct([A?, B?|As?], D),
+    req_conj2(D?, [A?, B?|As?], Sep?, S?, T?, R).
+
+procedure req_conj2(Ans?, Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
+req_conj2(yes, As, Sep, S, T, [C?|T?]) :-
+    ground(As?), ground(Sep?), ground(S?), ground(T?) |
+    latex_atoms(As?, Sep?, [' \\in c_'|S?], C).
+req_conj2(no, As, Sep, S, T, [C?|T?]) :-
+    ground(As?), ground(Sep?), ground(S?), ground(T?) |
+    latex_set(As?, Sep?, [' \\subseteq c_'|S?], C).
+
+% The required atoms in the form of Appendix D, whose display writes no two
+% atoms required at a role: a singleton with \in, several included in c_p, as
+% definition:compile writes them.
+procedure req_conj_set(Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
+req_conj_set([], _, _, T, T?).
+req_conj_set([A], _, S, T, [C?|T?]) :- ground(A?), ground(S?), ground(T?) |
+    latex_atom(A?, [' \\in c_'|S?], C).
+req_conj_set([A, B|As], Sep, S, T, [C?|T?]) :-
     ground(A?), ground(B?), ground(As?), ground(Sep?), ground(S?), ground(T?) |
     latex_set([A?, B?|As?], Sep?, [' \\subseteq c_'|S?], C).
+
+% Whether no atom occurs twice among the atoms.
+procedure atoms_distinct(Atoms?, Ans).
+atoms_distinct([], yes).
+atoms_distinct([A|As], R?) :- ground(A?), ground(As?) |
+    atoms_member(As?, A?, M),
+    atoms_distinct1(M?, As?, R).
+
+procedure atoms_distinct1(Ans?, Atoms?, Ans).
+atoms_distinct1(yes, _, no).
+atoms_distinct1(no, As, R?) :- ground(As?) | atoms_distinct(As?, R).
 
 procedure forb_conj(Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
 forb_conj([], _, _, T, T?).
@@ -359,7 +396,7 @@ req_lines([], _, T, T?).
 req_lines([RS|Rs], I, T, R?) :-
     ground(RS?), ground(Rs?), integer(I?), ground(T?) |
     rs_req(RS?, Req),
-    req_conj(Req?, ',\\ ', ['p'], [], Cs),
+    req_conj_set(Req?, ',\\ ', ['p'], [], Cs),
     I1 := I? + 1,
     req_lines(Rs?, I1?, T?, R1),
     proviso_line(Cs?, RS?, I?, R1?, R).

@@ -197,6 +197,15 @@ Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
           ; conditions_met ; conditions_failed(Faults)
           ; malformed(Faults).
 
+% The introductory acts of a contract, for inspection (def:introduction,
+% def:unobstructed): intro_act(Schema, Status), each schema that is an
+% introductory act, Status unobstructed where some introduction of it meets
+% def:unobstructed, and obstructed(Faults) otherwise, the faults of its first
+% introduction.
+IntroStatus ::= unobstructed ; obstructed(Faults).
+IntroAct    ::= intro_act(Constant, IntroStatus).
+IntroActs   ::= [] ; [IntroAct | IntroActs].
+
 Block   ::= blocked(Constant, Integer, Atom) ; clear.
 Cand    ::= none ; some(Faults).
 Missing ::= missing(Integer) ; all_reached.
@@ -1103,6 +1112,16 @@ traceable_preds(D, E?) :- check # traceable_preds(D?, E).
 imported procedure check#traceable_variant(Constant?, Contract?, Preds).
 exported procedure traceable_variant(Constant?, Contract?, Preds).
 traceable_variant(Nm, B, E?) :- check # traceable_variant(Nm?, B?, E).
+
+% The introductory acts of a contract, for inspection (def:introduction,
+% def:unobstructed): each unobstructed, or obstructed with its faults.
+imported procedure check#intro_acts(Declared?, IntroActs).
+exported procedure intro_acts(Declared?, IntroActs).
+intro_acts(D, A?) :- check # intro_acts(D?, A).
+
+imported procedure check#intro_acts_variant(Constant?, Contract?, IntroActs).
+exported procedure intro_acts_variant(Constant?, Contract?, IntroActs).
+intro_acts_variant(Nm, B, A?) :- check # intro_acts_variant(Nm?, B?, A).
 
 % The introduction with wards (GAI, "Contracts with Wards"), for inspection:
 % what the search found, or that there is none; the guardianships for a set

@@ -4,7 +4,7 @@
 #
 #   bash programs/gsc/test_gsc.sh
 #
-# GSC's contracts GSG and GSN (programs/gsc/), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by definition:sg-agent-named (Appendix D.4), and GSNP, the social network with provenance, GAI's, carrying the signed term of GAI's extension of the language; the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp); CSSN's and GAI's contracts; each read from its owner's file, each schema listing its variables in its head (GSC 0228e79); and contracts of Section 3, over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, in the language of Appendix D, and a contract with a name term based on an agent variable, put to the two conditions on the text of Appendix D (Appendix D.3) and compiled by definition:compile; then the signed speech-act term, on GSNP and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then agent-named contracts with community roles (Appendix D.4), over GSNP, failing one clause of definition:sg-agent-named each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than Appendix D's Definition Role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Act schema, printed from a contract's term (notation.glp).  The federation extension of act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20); GFWC's contract is still read from its owner's file.  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
+# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its introductory act meet, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by definition:sg-agent-named (Appendix D.4), and GSNP, the social network with provenance, GAI's, carrying the signed term of GAI's extension of the language; the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp); CSSN's and GAI's contracts; each read from its owner's file, each schema listing its variables in its head (GSC 0228e79); and contracts of Section 3, over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, in the language of Appendix D, and a contract with a name term based on an agent variable, put to the two conditions on the text of Appendix D (Appendix D.3) and compiled by definition:compile; then the signed speech-act term, on GSNP and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then agent-named contracts with community roles (Appendix D.4), over GSNP, failing one clause of definition:sg-agent-named each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than Appendix D's Definition Role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Act schema, printed from a contract's term (notation.glp).  The federation extension of act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20); GFWC's contract is still read from its owner's file.  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -89,11 +89,16 @@ ESTABLISH="[schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])
 SG=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
 check "GSNP's contract, the network with provenance, is read from programs/gai/GSNP.glp" \
       "$ESTABLISH" "$SG"
+# GKK, the base contract, and GSG and GSN, which extend it (Udi, 2026-10-20,
+# to GSC #5): each opens with GKK's establish and meet.
+ESTABLISH_MEET="[schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], "
+GKKT=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
+check "GKK's contract is read from programs/gsc/GKK.glp, establish, meet and introduce" "$ESTABLISH_MEET" "$GKKT"
 GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
-check "GSG's contract is read from programs/gsc/GSG.glp, establish first" "$ESTABLISH" "$GSGT"
+check "GSG's contract is read from programs/gsc/GSG.glp, GKK's schemas first" "$ESTABLISH_MEET" "$GSGT"
 GSNT=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
-check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, establish first" \
-      "$ESTABLISH" "$GSNT"
+check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, GKK's schemas first" \
+      "$ESTABLISH_MEET" "$GSNT"
 # GSG: befriend is unobstructed, identity being added by establish, of arity
 # one, guarded and requiring and forbidding nothing (def:unobstructed, clause
 # 1), and friend being added by befriend alone (clause 2); identity and friend
@@ -122,9 +127,59 @@ check "GSN is syntactically grassroots by definition:sg-agent-named" \
       "V = syntactically_grassroots_with_listed_roles" "$out"
 check_not "GSN's message and post, guarded at a role that adds and deletes nothing, are admitted" \
           "malformed(" "$out"
+
+# GKK (programs/gsc/GKK.glp; GSC, Section 2.1, its schemas in Section 3.3's
+# table, certified with GSN in Section 7.1).  Meet is its introductory act,
+# unobstructed: guarded in both roles, it adds knows of the other at each,
+# and it requires identity, which establish adds, of arity one, guarded and
+# requiring and forbidding nothing, and forbids nothing (def:introduction,
+# def:unobstructed); introduce is no introductory act, adding at Alice no
+# atom naming Bob.  knows has traceable provenance: meet adds at each role an
+# atom naming the other role, and introduce adds knows(c) at Bob, c an
+# argument of knows(c), which Alice requires (def:grounded).  Volition holds:
+# meet and introduce are guarded in both roles, and introduce's roles are
+# joined besides by knows(Bob) at Alice, an atom of traceable provenance
+# naming the other role (def:volition).  intro_acts/2 names each
+# introductory act and whether it is unobstructed; the verdict says only that
+# one is.
+out=$(run "check($GKKT, V)." "intro_acts($GKKT, A)." "traceable_preds($GKKT, E).")
+check "GKK is syntactically grassroots" "V = syntactically_grassroots" "$out"
+check "GKK: meet is its one introductory act, and unobstructed" \
+      "A = [intro_act(meet, unobstructed)]" "$out"
+check "GKK: knows has traceable provenance, with identity" "E = [identity, knows]" "$out"
+# In GSG befriend is an introductory act too, but obstructed: it requires
+# knows of the other, which no schema of arity one adds (GSC, Section 3.6,
+# the example after def:introduction); meet is unobstructed, so GSG is
+# syntactically grassroots.  GSN likewise, by definition:sg-agent-named.
+out=$(run "intro_acts($GSGT, A)." "traceable_preds($GSGT, E).")
+check "GSG: meet unobstructed, befriend an introductory act obstructed by the knows of the other it requires at each role, which no schema of arity one adds" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable)]))]" "$out"
+check "GSG: identity, knows and friend have traceable provenance" "E = [identity, knows, friend]" "$out"
+out=$(run "intro_acts($GSNT, A).")
+check "GSN: meet unobstructed, befriend obstructed" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable)]))]" "$out"
+# Introduce's roles joined by knows(Bob) at Alice: with Bob not guarding and
+# requiring no knows(Alice), the role graph still joins them, and volition
+# holds (gkk_intro_joined); with Alice requiring no knows(Bob) besides,
+# nothing joins them, Bob's component holds no guarding role, and volition
+# fails at introduce (gkk_intro_unjoined).  And knows traced through the
+# knows(c) Alice requires: with c known to neither role, knows loses
+# traceable provenance (gkk_intro_loose).
+out=$(run "check_variant(gkk_intro_joined, $GKKT, V).")
+check "GKK, introduce guarded by Alice alone and Bob requiring no knows(Alice): knows(Bob) at Alice joins the two roles, volition holds" \
+      "V = syntactically_grassroots" "$out"
+out=$(run "check_variant(gkk_intro_unjoined, $GKKT, V).")
+check "GKK, ... and Alice requiring no knows(Bob): nothing joins introduce's roles, volition fails" \
+      "V = not_grassroots([volition(introduce, 1, 2)])" "$out"
+out=$(run "check_variant(gkk_intro_loose, $GKKT, V)." "traceable_variant(gkk_intro_loose, $GKKT, E).")
+check "GKK, knows(c) added at Bob and c required at neither role: knows is untraceable" \
+      "V = not_grassroots([untraceable([knows])])" "$out"
+check "GKK, ... and identity alone has traceable provenance" "E = [identity]" "$out"
 CUR=$(term "$GLP_DIR/programs/currencies/coins/GC.glp" gc)
-check "the currency's contract, GC, is read from programs/currencies/coins/GC.glp" \
-      "[schema(mint, [], [rs(guarded, [atom(coin, [role(1)])]" "$CUR"
+check "the currency's contract, GC, is read from programs/currencies/coins/GC.glp, GKK's schemas first" \
+      "$ESTABLISH_MEET" "$CUR"
+check "and its mint adds a coin of the minter's issue" \
+      "schema(mint, [], [rs(guarded, [atom(coin, [role(1)])]" "$CUR"
 CSSN=$(term "$GLP_DIR/programs/cssn/CSSN.glp" cssn)
 check "CSSN's contract is read from programs/cssn/CSSN.glp" \
       "reflexive([friend], [schema(establish, []," "$CSSN"
@@ -167,11 +222,19 @@ check_not "GSNP's signed terms, deliver's among them, and its guarding roles tha
 check "GSNP's nine predicates have traceable provenance" \
       "E = [identity, friend, item, authored, member, listed, closed, posted, delivered]" "$out"
 
-out=$(run "check($CUR, V)." "traceable_preds($CUR, E).")
-check "currency is syntactically grassroots" \
+# GC extends GKK (Currencies, 6499166c; GSC 079cee0, Appendix B.4): meet is
+# its introductory act, unobstructed, as in GKK; the swap is an introductory
+# act too, but obstructed, requiring knows of the other at each role, which no
+# schema of arity one adds, and a coin, which mint, requiring identity, does
+# not add as clause 1 of def:unobstructed asks; and the coin has traceable
+# provenance, as identity and knows have.
+out=$(run "check($CUR, V)." "traceable_preds($CUR, E)." "intro_acts($CUR, A).")
+check "currency is syntactically grassroots, meet its unobstructed introductory act" \
       "V = syntactically_grassroots" "$out"
-check "the coin has traceable provenance" \
-      "E = [coin]" "$out"
+check "the coin has traceable provenance, as identity and knows have" \
+      "E = [identity, knows, coin]" "$out"
+check "the currency: meet unobstructed, the swap an introductory act obstructed by the knows of the other it requires" \
+      "A = [intro_act(meet, unobstructed), intro_act(swap, obstructed([obstructed(swap, 1, atom(knows, [role(2)]), unobtainable)," "$out"
 
 # Befriend guarded in one role only: nothing is an introductory act, and
 # befriend fails volition as well.
@@ -191,8 +254,13 @@ check "impose is rejected by volition, not by clause 2" \
 check_not "impose does not obstruct befriend" "obstructed" "$out"
 
 # An act that adds it while sending no role to the other party is not excused:
-# p is left holding friend(q) with q taking no part.
-out=$(run "check_variant(sg_gossip, $GSGT, V).")
+# p is left holding friend(q) with q taking no part.  On GSG, which extends
+# GKK, meet stays an unobstructed introductory act, so the contract is
+# syntactically grassroots, and befriend's obstructions are read off
+# intro_acts.
+out=$(run "check_variant(sg_gossip, $GSGT, V)." "intro_acts_variant(sg_gossip, $GSGT, A).")
+check "on GSG with gossip meet is unobstructed, and the contract is syntactically grassroots" \
+      "V = syntactically_grassroots" "$out"
 check "gossip blocks befriend at role 1" \
       "obstructed(befriend, 1, atom(friend, [role(2)]), blocked_by(gossip, 1," "$out"
 check "gossip blocks befriend at role 2" \
@@ -328,7 +396,7 @@ EOF
 IFS= read -r -d '' child_unfriend_body <<'EOF'
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \{\mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob)\} \subseteq c_{\Alice} \text{ and } \{\mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice)\} \subseteq c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
+& \text{provided } \mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' leave_body <<'EOF'
@@ -457,20 +525,25 @@ check_not "and no display is printed for it" "begin{align" "$out"
 
 # Clause 1 of def:unobstructed skips a required atom of a reflexive predicate
 # naming the role: befriend requiring friend of each party at its own role is
-# obstructed when friend is not reflexive and unobstructed when it is.
-out=$(run "check_variant(sg_self_required, $GSGT, V).")
+# obstructed by it when friend is not reflexive and not when it is.  On GSG
+# befriend is obstructed besides by the knows of the other it requires and
+# meet is unobstructed, so befriend's obstructions are read off intro_acts.
+out=$(run "intro_acts_variant(sg_self_required, $GSGT, A).")
 check "friend of its own role required, friend not reflexive: clause 1 fails" \
-      "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), unobtainable), obstructed(befriend, 2, atom(friend, [role(2)]), unobtainable)])" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(friend, [role(1)]), unobtainable), obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 2, atom(friend, [role(2)]), unobtainable), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable)]))]" \
       "$out"
-out=$(run "check_variant(sg_refl_required, $GSGT, V).")
-check "friend of its own role required, friend reflexive: clause 1 skips it" \
+out=$(run "check_variant(sg_refl_required, $GSGT, V)." "intro_acts_variant(sg_refl_required, $GSGT, A).")
+check "friend of its own role required, friend reflexive: the contract is syntactically grassroots" \
       "V = syntactically_grassroots" "$out"
+check "friend of its own role required, friend reflexive: clause 1 skips it, befriend obstructed by knows alone" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable)]))]" \
+      "$out"
 
 # Clause 3 of def:unobstructed: the introductory act forbids at a role no atom
 # of a reflexive predicate naming that role.
-out=$(run "check_variant(sg_refl_forbidden, $GSGT, V).")
+out=$(run "intro_acts_variant(sg_refl_forbidden, $GSGT, A).")
 check "friend of its own role forbidden, friend reflexive: clause 3 fails" \
-      "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), reflexive), obstructed(befriend, 2, atom(friend, [role(2)]), reflexive)])" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 1, atom(friend, [role(1)]), reflexive), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable), obstructed(befriend, 2, atom(friend, [role(2)]), reflexive)]))]" \
       "$out"
 
 # A contract with no schemas.
@@ -523,10 +596,25 @@ check_not "and no display is printed for any of them" "begin{align" "$out"
 # layout is Udi's ruling (GSC #3 to Code, 2026-10-18 21:49 UTC), which both
 # displays print: the assignments, the required atoms on one proviso line and
 # the forbidden atoms on the next, each in role order, a line omitted when it
-# has no atom, and the guard on a line of its own.  Befriend is GSNP's, which
-# requires identity at both roles (GSG:1), and GSG's, which is the same
-# schema; the swap is GC's.
+# has no atom, and the guard on a line of its own.  Befriend is GSG's, which
+# requires identity and knows of the other at both roles (GKK:1, GSG:1;
+# GSC 21c1b28, Section 5.1, its two required atoms at a role listed before
+# \in); GSNP's, GAI's, requires identity alone, a singleton written with
+# \in; the swap is GC's, which extends GKK, transcribed from
+# sections/gc-compiled.tex at GSC 115fc8e, identity and knows of the other
+# required at both roles with its coin.
 befriend_paper=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
+& \text{provided } \mathit{identity}, \mathit{knows}(\Bob) \in c_{\Alice} \text{ and } \mathit{identity}, \mathit{knows}(\Alice) \in c_{\Bob},\\
+& \text{provided } \mathit{friend}(\Bob) \notin c_{\Alice} \text{ and } \mathit{friend}(\Alice) \notin c_{\Bob},\\
+& \text{guarded by } \{\Alice,\Bob\}
+\end{align*}
+EOF
+)
+check_eq "GSG's befriend compiles to the display of Section 5.1" \
+         "$befriend_paper" "$(compiled_in gsg "$GSGT" befriend)"
+befriend_gsnp=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
 & \text{provided } \mathit{identity} \in c_{\Alice} \text{ and } \mathit{identity} \in c_{\Bob},\\
@@ -535,15 +623,13 @@ befriend_paper=$(cat <<'EOF' | squash
 \end{align*}
 EOF
 )
-check_eq "GSNP's befriend compiles to the display of Section 5.1" \
-         "$befriend_paper" "$(compiled_in gsnp "$SG" befriend)"
-check_eq "and so does GSG's" \
-         "$befriend_paper" "$(compiled_in gsg "$GSGT" befriend)"
+check_eq "GSNP's befriend, requiring identity alone, compiles to the same display with a singleton at each role" \
+         "$befriend_gsnp" "$(compiled_in gsnp "$SG" befriend)"
 
 swap_paper=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := (c_{\Alice} \setminus \{\text{\textcent}(u)\}) \uplus \{\text{\textcent}(v)\}, \qquad c'_{\Bob} := (c_{\Bob} \setminus \{\text{\textcent}(v)\}) \uplus \{\text{\textcent}(u)\},\\
-& \text{provided } \text{\textcent}(u) \in c_{\Alice} \text{ and } \text{\textcent}(v) \in c_{\Bob},\\
+& \text{provided } \mathit{identity}, \mathit{knows}(\Bob), \text{\textcent}(u) \in c_{\Alice} \text{ and } \mathit{identity}, \mathit{knows}(\Alice), \text{\textcent}(v) \in c_{\Bob},\\
 & \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
@@ -559,10 +645,12 @@ out=$(run "compile_contract(gsnp, $SG).")
 check_eq "GSNP compiles to sixteen displays" "16" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 out=$(run "compile_contract(gc, $CUR).")
-check_eq "the currency compiles to four displays" "4" \
+check_eq "the currency compiles to seven displays, GKK's three and its own four" "7" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
-out=$(run "compile_variant(sg_gossip, $GSGT).")
+# sg_gossip on GSNP, which has no meet: on GSG meet stays an unobstructed
+# introductory act and the variant certifies (above).
+out=$(run "compile_variant(sg_gossip, $SG).")
 check "a contract that fails the conditions is not compiled" \
       "% not compiled: sg_gossip" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
@@ -697,7 +785,7 @@ check "item, authored, posted and delivered have traceable provenance there with
 forward_gsnp=$(cat <<'TEX' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(\mathrm{sgn}(x,\Alice))\},\\
-& \text{provided } \{\mathit{identity},\mathit{item}(x)\} \subseteq c_{\Alice} \text{ and } \{\mathit{identity},\mathit{friend}(\Alice)\} \subseteq c_{\Bob},\\
+& \text{provided } \mathit{identity},\mathit{item}(x) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{friend}(\Alice) \in c_{\Bob},\\
 & \text{provided } \mathit{authored}(x) \notin c_{\Alice},\\
 & \text{guarded by } \{\Alice\}
 \end{align*}
@@ -1120,8 +1208,9 @@ check "and it is not compiled, the message naming the faults" \
 # Appendix D, a token to a line, an empty line ending a line of the text
 # (notation.glp; README, "The notation"); cascade.sh joins the tokens into a
 # record's schemas.txt, as notation() does here.  GSG's befriend is the schema
-# Section 3.2 displays, befriend(Alice?, Bob?) : identity, not friend(Bob),
-# +friend(Bob)  identity, not friend(Alice), +friend(Alice), each E_i on a line
+# Section 3.2 displays, befriend(Alice?, Bob?) : identity, knows(Bob), not
+# friend(Bob), +friend(Bob)  identity, knows(Alice), not friend(Alice),
+# +friend(Alice), after GKK's establish, meet and introduce, each E_i on a line
 # labelled by its role; GSN's close is Appendix D's example, with the identity
 # the paper leaves out; GSNP's forward carries the signed term of GAI's
 # Definition Act schema; and sg_reflexive, GSG's variant, declares friend
@@ -1141,9 +1230,17 @@ gsg_notation=$(cat <<'EOF'
 establish(Alice?) :
     at Alice: +identity
 
+meet(Alice?, Bob?) :
+    at Alice: identity, +knows(Bob)
+    at Bob: identity, +knows(Alice)
+
+introduce(Alice?, Bob?; c) :
+    at Alice: identity, knows(Bob), knows(c)
+    at Bob: identity, knows(Alice), +knows(c)
+
 befriend(Alice?, Bob?) :
-    at Alice: identity, not friend(Bob), +friend(Bob)
-    at Bob: identity, not friend(Alice), +friend(Alice)
+    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
+    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
 
 unfriend(Alice?, Bob) :
     at Alice: identity, -friend(Bob)

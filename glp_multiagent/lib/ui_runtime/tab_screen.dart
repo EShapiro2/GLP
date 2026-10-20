@@ -197,6 +197,9 @@ class _TabScreenState extends State<TabScreen> {
   /// Whether AI agents has been drawn: once drawn, it stays.
   bool _agents = false;
 
+  /// Whether the first tab is Contacts, the request type last drawn offering meeting and no friendship (GKK's app); Friends otherwise.
+  bool _contacts = false;
+
   /// The person's own key, as the last request question drawn showed it.
   GTerm? _me;
 
@@ -314,6 +317,13 @@ class _TabScreenState extends State<TabScreen> {
     _agents = _agents ||
         (offers?.has('enter', 3) ?? false) ||
         (state?.aiAgents.isNotEmpty ?? false);
+    // GKK's app: the request type offers meeting and no friendship, so its
+    // first tab lists the person's contacts (programs/gsc/GKK.glp; GSC #5
+    // Cowork, Code_inbox.md, 2026-10-20 17:53 UTC: "his contacts then showing
+    // Carol").
+    if (offers != null) {
+      _contacts = offers.has('meet', 2) && !offers.has('befriend', 2);
+    }
     // A message or a creation whose sign closed without committing, its
     // notice written after it was held, is held no longer.
     if (state != null) {
@@ -390,7 +400,7 @@ class _TabScreenState extends State<TabScreen> {
           label: Text('$n'),
           offset: const Offset(14, -6),
           child: Text(switch (t) {
-            ScreenTab.friends => 'Friends',
+            ScreenTab.friends => _contacts ? 'Contacts' : 'Friends',
             ScreenTab.groups => 'Groups',
             ScreenTab.agents => 'AI agents',
           }),

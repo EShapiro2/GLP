@@ -25,8 +25,9 @@
 # program:
 #
 #   <contract>  NAME  owner       files in                  plays in
+#   gkk         GKK   GSC         programs/gsc              programs/apps/gkk (GSC's, the app's plays)
 #   gsg         GSG   GSC         programs/gsc              social_graph
-#   gsn         GSN   GSC         programs/gsc              ---
+#   gsn         GSN   GSC         programs/gsc              social_network
 #   gsnp        GSNP  GAI         programs/gai              ---
 #   gc          GC    Currencies  programs/currencies/coins currency
 #   cssn        CSSN  CSSN        programs/cssn             programs/cssn (CSSN's, the village)
@@ -99,6 +100,8 @@ case "$MODE" in write|--check|--record) ;; *) usage ;; esac
 PLAYAT=""          # the owner's plays, a directory of the repository, where it keeps them
 PLAYLIMIT=600000   # the reductions the plays' REPL session may take
 case "$NAME" in
+    gkk)  FILE=GKK;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR=""
+          PLAYAT="programs/apps/gkk" ;;
     gsg)  FILE=GSG;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
     gsn)  FILE=GSN;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_network"
           PLAYLIMIT=6000000 ;;   # the standing approvals' Requests take GSN's play past 600000 (vGLP f0acbc1; Code #12, 2026-10-20)
@@ -108,7 +111,7 @@ case "$NAME" in
           PLAYAT="programs/cssn"; PLAYLIMIT=100000000 ;;
     gfwc) FILE=GFWC; OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC"; PLAYDIR="" ;;
     gai)  FILE=GAI;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $NAME; the names are gsg gsn gsnp gc cssn gfwc gai" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc cssn gfwc gai" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
