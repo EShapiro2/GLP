@@ -2376,21 +2376,31 @@ CSSN_DIR="$GLP_DIR/programs/cssn"
 # child_adult_befriend and child_befriend the relay acts, and retired the
 # leaving mark (def:guardianship, def:leaving, def:unobstructed-marks,
 # def:relay, def:introduction-wards; programs/gsc/test_gsc.sh, which checks
-# it by hand).  The platform committed in programs/cssn is what the compiler
-# prints from it (compile.sh --check), and the platform of the record of the
-# cascade on CSSN.
+# it by hand).  After GKK (CSSN.glp at 6ff16d78, CSSN #9 Cowork): "The marks
+# are child, its guardianship (child, identity, parent, parenting), its
+# leaving mark retired, the introductory act meet, which adds knows, and the
+# relay acts child_meet and child_meet_2, by which GSC's checker certifies
+# the contract syntactically grassroots with wards" (CSSN.glp), once GSC's
+# checker follows the wards conditions CSSN proposed to GAI and GSC
+# (Code_inbox.md, CSSN #9 Cowork, 2026-10-20 19:44 UTC, item 1).  The
+# platform committed in programs/cssn is what the compiler prints from it
+# (compile.sh --check), whatever the verdict, and the platform of the record
+# of the cascade on CSSN.
 echo "--- CSSN contract, GSC's verdict, the platform ---"
 k_contract=$(bash "$CSSN_DIR/compile.sh" --check 2>&1; echo "exit $?")
 check "CSSN contract: GSC gives a verdict" "verdict: " "$k_contract"
-check "CSSN contract: syntactically grassroots with wards, befriend the act, child the mark and retired the leaving mark" "verdict: syntactically_grassroots_with_wards(befriend, \[child\], \[guardianship(child, identity, parent, parenting)\], \[relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))\], \[retired\])" "$k_contract"
+check "CSSN contract: syntactically grassroots with wards, meet the introductory act, child the mark, its guardianship" "verdict: syntactically_grassroots_with_wards(meet, \[child\], \[guardianship(child, identity, parent, parenting)\], " "$k_contract"
+check "CSSN contract: ... child_meet a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_meet, " "$k_contract"
+check "CSSN contract: ... child_meet_2 a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_meet_2, " "$k_contract"
+check "CSSN contract: ... retired the leaving mark" "verdict: syntactically_grassroots_with_wards(.*, \[retired\])$" "$k_contract"
 check_not "CSSN contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
 check_not "CSSN contract: it satisfies volition" "volition(" "$k_contract"
 check_not "CSSN contract: it is not malformed" "malformed(" "$k_contract"
 # The canonical CVA platform of the contract (vGLP a890465, Section 5.4, "Act schemas as local specifications": "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role"): child_close(r, p?, r[listed(*, n)] ; n), its listed role based at r, its first role, which does not guard, compiles, r the opener of the part p guards (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, items 1 and 5).
 check "CSSN contract: compiled to its canonical CVA platform, platform.vglp as the compiler prints it" "^platform.vglp: as printed$" "$k_contract"
 check "CSSN contract: compile.sh --check exits 0" "^exit 0$" "$k_contract"
-# CSSN, Section 5.1, "The program": compiled "with friend its introduction predicate".
-check "CSSN contract: compiled with friend its introduction predicate" "^introduction: introduction(friend)$" "$k_contract"
+# CSSN, Section 4.6.1, "The program": compiled "with knows its introduction predicate" (CSSN.glp, introduction_named(cssn, introduction(knows)), after GKK).
+check "CSSN contract: compiled with knows its introduction predicate" "^introduction: introduction(knows)$" "$k_contract"
 if cmp -s "$CSSN_DIR/platform.vglp" "$GLP_DIR/cascade/CSSN/platform.vglp"; then
     _check_pass "CSSN: platform.vglp is the platform of the recorded run of the cascade on CSSN"
 else
