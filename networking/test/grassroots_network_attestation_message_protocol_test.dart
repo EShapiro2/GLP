@@ -335,6 +335,13 @@ void main() {
     expect(calleeEvents.first, 'connected',
         reason: 'nothing is delivered before the callee has the caller\'s '
             'attestation');
-    expect(caller.queuedMessageCountForPeer(calleeId.publicKey), 0);
+    // The callee delivers the message once it has all its fragments, before
+    // their acknowledgments reach the caller, whose queue gives it up only
+    // then (spec §Message Protocol).
+    expect(
+        await waitFor(
+            () => caller.queuedMessageCountForPeer(calleeId.publicKey) == 0),
+        isTrue,
+        reason: 'the queue gives the message up once it is acknowledged');
   });
 }
