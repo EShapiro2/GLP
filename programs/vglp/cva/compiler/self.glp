@@ -22,10 +22,11 @@
 %% local.glp decides the contract over it and the printed text computes it.
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
+%% Act schemas allow numbers (GSC 9231074, Section 3.2; vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an argument of an atom may be a number or a numeric variable, a schema may carry a constraint on its numeric variables, and an atom it adds or deletes may carry a multiplicity, a number or a numeric variable, for that many copies of it"): num(X) is the numeric variable X where X is a name and the number X where X is a number, and times(K, A) is the atom A with the multiplicity K, as programs/gsc/self.glp writes them.
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer).
+            ; sgn(Constant, Integer) ; num(Constant).
 Args      ::= [] ; [Arg | Args].
-Atom      ::= atom(Constant, Args).
+Atom      ::= atom(Constant, Args) ; times(Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
 %% listed(I, Rho, Args) is the listed role pi_I[rho(*, u_2, ..., u_r)] of the agent role pi_I, its base, Args its arguments u_2, ..., u_r (GSC 8064cfb, Appendix D, Definition "Role"; programs/gsc/self.glp at GLP 96908b2d).
@@ -37,8 +38,12 @@ RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
 %% A schema's second argument is its variables, pvar(X) and svar(Y), in the order of its head, tau(pi_1, ..., pi_k ; x_1, ..., x_m) (GSC 0228e79, Definition "Act schema"; programs/gsc/README.md, "Writing a contract"; Udi, 2026-10-19, to GSC #4).
+%% A schema with a constraint on its numeric variables is nschema(Name, Vars, Constraint, Roles), the constraint true, gt(X, Y) (X > Y), le(X, Y) (X =< Y), succ(X, Y) (Y = X + 1) or or(C1, C2), over numeric arguments (programs/gsc/self.glp).
+Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
+             ; or(Constraint, Constraint).
 Schema    ::= schema(Constant, Args, RoleSpecs)
-            ; cschema(Constant, Args, Reaches, RoleSpecs).
+            ; cschema(Constant, Args, Reaches, RoleSpecs)
+            ; nschema(Constant, Args, Constraint, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
@@ -70,7 +75,10 @@ Fault     ::= no_introductory_act
             ; not_in_head(Constant, Arg)
             ; listed_base(Constant, Integer)
             ; listed_signed(Constant, Integer)
-            ; listed_guarded(Constant, Integer).
+            ; listed_guarded(Constant, Integer)
+            ; multiplicity_not_added(Constant, Integer, Atom)
+            ; multiplicity_not_numeric(Constant, Integer, Atom)
+            ; constraint_not_numeric(Constant, Arg).
 Faults    ::= [] ; [Fault | Faults].
 %% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_listed_roles and syntactically_grassroots_with_wards, of the same arguments, are the verdicts on an agent-named contract with community roles (GSC f3c4f43, Appendix D.4, Theorem "Grassroots realisation with listed roles", and def:sg-wards of CSSN's paper; programs/gsc/self.glp at GLP f5081cfa).
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
@@ -130,6 +138,40 @@ role_args(I, K, [role(I?)|R?]) :- I? =< K? | I1 := I? + 1, role_args(I1?, K?, R)
 procedure atoms_args(Atoms?, Args).
 atoms_args([], []).
 atoms_args([atom(_, As)|Xs], R?) :- atoms_args(Xs?, R1), app(As?, R1?, R).
+%% A multiplicity is an argument of its atom here: "an atom it adds or deletes may carry a multiplicity, a number or a numeric variable" (vGLP 613ee8d, Section 5.4).
+atoms_args([times(K, A)|Xs], [K?|R?]) :- atoms_args([A?|Xs?], R).
+
+%% --- Numbers -----------------------------------------------------------------
+%% "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role; a constraint is local to the role whose local variables it names, and to every role where it names none.  Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and a request names it" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications").  num_info(Name, Constraint, Locals, Role): a schema's constraint, true where it has none; its local variables, each loc(I, num(X)), I the index of the role it is local to; and the role whose local variables the constraint names, at(I), every where it names none, so that every role checks it, and two_roles where it names those of two roles or more, which the contract being a local specification forbids ("a constraint names the local variables of one role", ibid.).
+Loc     ::= loc(Integer, Arg).
+Locs    ::= [] ; [Loc | Locs].
+CRole   ::= every ; at(Integer) ; two_roles.
+NumInfo ::= num_info(Constant, Constraint, Locs, CRole).
+NumInfos ::= [] ; [NumInfo | NumInfos].
+procedure num_lookup(Constant?, NumInfos?, NumInfo).
+num_lookup(Nm, [], num_info(Nm?, true, [], every)).
+num_lookup(Nm, [num_info(N, C, L, R)|_], num_info(N?, C?, L?, R?)) :- Nm? =?= N? | true.
+num_lookup(Nm, [_|Ns], I?) :- otherwise | num_lookup(Nm?, Ns?, I).
+%% The local variables, as arguments.
+procedure loc_vars(Locs?, Args).
+loc_vars([], []).
+loc_vars([loc(_, V)|Ls], [V?|Vs?]) :- loc_vars(Ls?, Vs).
+%% Whether an argument is a numeric variable, num(X) with X a name, not a number.
+procedure is_nvar(Arg?, YesNo).
+is_nvar(num(X), no) :- number(X?) | true.
+is_nvar(num(X), yes) :- otherwise, ground(X?) | true.
+is_nvar(role(_), no).
+is_nvar(pvar(_), no).
+is_nvar(svar(_), no).
+is_nvar(nterm(_), no).
+is_nvar(sgn(_, _), no).
+%% The numeric variables a constraint names.
+procedure con_args(Constraint?, Args).
+con_args(true, []).
+con_args(gt(X, Y), [X?, Y?]).
+con_args(le(X, Y), [X?, Y?]).
+con_args(succ(X, Y), [X?, Y?]).
+con_args(or(C1, C2), A?) :- con_args(C1?, A1), con_args(C2?, A2), app(A1?, A2?, A).
 
 %% A schema's listed roles (GSC 8064cfb, Appendix D, Definition "Role"; vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"): their indices, from 1, in the order of the roles (listed_ixs); each with its index, its base, the index of its agent role, its predicate rho and its arguments u_2, ..., u_r, listing(I, Base, Rho, Args), in the order of the roles (listed_all); their bases (listed_bases); and the arguments of a role that are no arguments of its atoms, a listed role's (kind_args).  "the listed roles of a schema have one base" (ibid.), which local.glp decides.
 Listing  ::= listing(Integer, Integer, Constant, Args).

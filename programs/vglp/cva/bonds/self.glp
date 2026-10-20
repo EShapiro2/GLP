@@ -1,0 +1,135 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract bonds
+%% (../contracts.glp, contract_named(bonds, C)), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it: GB's mint_bond, advance and
+%% redeem_bc, as Currencies' programs/currencies/bonds/GB.glp writes them,
+%% with GKK's establish and meet, GB's mint_coin and swap_cb, and dawn, which
+%% gives a person their first date, date(0), GB naming no act that does
+%% (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18
+%% Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, item 3: "GB: d, k and
+%% r by the request; t local to the issuer's role, its date; mint_bond's
+%% gt(d, t) checked by the minter, redeem_bc's le(d, t) by the issuer").
+%% GB.glp's own run waits on GSC's checker reading its numbers.  Written as
+%% GSC writes a contract, u, v and r agent variables, d, d1, k, k1, t and t1
+%% numeric ones:
+%%
+%%   establish(p?)                  :  at p  +identity
+%%   meet(p?, q?)                   :  at p  identity, +knows(q)
+%%                                     at q  identity, +knows(p)
+%%   dawn(p?)                       :  at p  identity, not dated, +dated, +date(0)
+%%   mint_coin(p? ; k)              :  at p  identity, +k coin(p)
+%%   mint_bond(p? ; d, k, t)        :  at p  identity, date(t), +k bond(p, d)        d > t
+%%   advance(p ; t, t1)             :  at p  identity, -date(t), +date(t1)           t1 = t + 1
+%%   swap_cb(p?, q? ; u, k, v, d1, k1) :
+%%                                     at p  identity, knows(q), -k coin(u), +k1 bond(v, d1)
+%%                                     at q  identity, knows(p), -k1 bond(v, d1), +k coin(u)
+%%   redeem_bc(p?, q ; d, r, t)     :  at p  identity, knows(q), -bond(q, d), +coin(r)
+%%                                     at q  identity, date(t), -coin(r), +bond(q, d)  d =< t
+%%
+%% mint_bond's t, of an atom the minter's role keeps, is local to that role,
+%% and the constraint gt(d, t), naming it, is checked by the minter's machine;
+%% d and k are bound by the schema-binding and named by the request.  advance
+%% is guarded by no role, its t local to its role, of an atom it deletes, and
+%% its t1 given by the constraint once t is bound, so a dated person's machine
+%% advances their date, an unguarded part it opens, whenever it can, without
+%% end.  redeem_bc's t, of the issuer's date, is local to the issuer's role,
+%% and its constraint le(d, t), a bond mature by the issuer's date, is checked
+%% by the issuer's machine.
+%%
+%% play_bonds: alice establishes her identity and takes her first date, and
+%% her machine then advances her date on each own trigger it has no other
+%% transaction for.  She asks to mint a bond maturing at 1, mint_bond(alice,
+%% 1, 1), taken where her date is below 1, and her machine refuses it at once,
+%% unable, her date having reached 1 by her Propose, gt(1, 1) failing: her
+%% screen shows refused(mint_bond(alice, 1, 1), alice, unable([], [])), the
+%% minter's own refusal of a bond maturing no later than her date.  She mints
+%% two coins, mint_coin(alice, 2), a multiplicity, and two bonds maturing at
+%% 1000 and at 40.  Bob establishes his identity, mints two coins, asks to
+%% know alice and to meet her in person, and she answers yes; he swaps a coin
+%% of his for each of her bonds, swap_cb, she answering yes.  He redeems the
+%% bond maturing at 1000 against a coin of alice's held by her, redeem_bc(bob,
+%% alice, 1000, alice): alice's machine votes no, her date short of 1000,
+%% unable, and bob's screen shows refused(redeem_bc(bob, alice, 1000, alice),
+%% alice, unable([], [])).  He redeems the bond maturing at 40, alice's date
+%% past it, and it commits: bob holds coin(alice), and alice the bond again.
+%% The run does not suspend, alice's machine advancing her date without end,
+%% and is stopped at the REPL's :limit, its logs' tails unbound.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= establish(Peer) ; meet(Peer, Peer) ; dawn(Peer) ; mint_coin(Peer, Integer)
+           ; mint_bond(Peer, Integer, Integer) ; advance(Peer, Integer)
+           ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
+           ; redeem_bc(Peer, Peer, Integer, Peer).
+Proposal ::= establish(Peer) ; meet(Peer, Peer) ; dawn(Peer) ; mint_coin(Peer, Integer)
+           ; mint_bond(Peer, Integer, Integer)
+           ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
+           ; redeem_bc(Peer, Peer, Integer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
+YesNo    ::= yes ; no.
+Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Atom     ::= identity ; knows(Peer) ; dated ; date(Integer) ; coin(Peer) ; bond(Peer, Integer).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
+Approval ::= approval(Attempt, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_bonds(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_bonds(LA?, LB?, N?) :-
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
+          own([A2], propose(dawn(A2?))), wait(holds(dated)),
+          own([A3], propose(mint_bond(A3?, 1, 1))),
+          wait(refused(mint_bond(alice, 1, 1), alice, unable([], []))),
+          own([A4], propose(mint_coin(A4?, 2))), wait(has(coin(alice), 2)),
+          own([A5], propose(mint_bond(A5?, 1000, 1))), wait(holds(bond(alice, 1000))),
+          own([A6], propose(mint_bond(A6?, 40, 1))), wait(holds(bond(alice, 40))),
+          req(known(bob)), wait(known(bob)),
+          approval(meet(bob, alice), yes),
+          approval(swap_cb(bob, alice, bob, 1, alice, 1000, 1), yes),
+          approval(swap_cb(bob, alice, bob, 1, alice, 40, 1), yes)],
+         [own([B1], propose(establish(B1?))), wait(holds(identity)),
+          own([B2], propose(mint_coin(B2?, 2))), wait(has(coin(bob), 2)),
+          req(known(alice)), wait(known(alice)),
+          own([B3], propose(meet(B3?, alice))), wait(holds(knows(alice))),
+          own([B4], propose(swap_cb(B4?, alice, bob, 1, alice, 1000, 1))),
+          wait(holds(bond(alice, 1000))),
+          own([B5], propose(swap_cb(B5?, alice, bob, 1, alice, 40, 1))),
+          wait(holds(bond(alice, 40))),
+          own([B6], propose(redeem_bc(B6?, alice, 1000, alice))),
+          wait(refused(redeem_bc(bob, alice, 1000, alice), alice, unable([], []))),
+          own([B7], propose(redeem_bc(B7?, alice, 40, alice))),
+          wait(holds(coin(alice)))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).
