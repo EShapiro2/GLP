@@ -1,9 +1,9 @@
 # A run of the cascade on GSNP
 
-- Contract: `GSNP` (`gsnp` to the checker), its owner's two files `programs/gai/GSNP.md` and `programs/gai/GSNP.glp`, copied here as they stood at `e4788aeb`.
-- The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `a4c056dd`, for the paper's own record.
-- The tools: this repository at `e4788aeb` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-10-20 18:26 UTC by `cascade.sh gsnp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GSNP` (`gsnp` to the checker), its owner's two files `programs/gai/GSNP.md` and `programs/gai/GSNP.glp`, copied here as they stood at `10cc03d7`.
+- The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `d95cc926`, for the paper's own record.
+- The tools: this repository at `10cc03d7` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-10-20 19:51 UTC by `cascade.sh gsnp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
