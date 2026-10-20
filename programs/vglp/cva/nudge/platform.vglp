@@ -3115,7 +3115,7 @@ mates_of([], _, []).
 mates_of([schema(Nm, _, Rs)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Ps?) |
     deltas_peers(Ps?, Q),
     rs_len(Rs?, K),
-    assigns(K?, Q?, As),
+    fit_assigns(K?, Q?, Rs?, Ps?, As),
     mates_assigns(As?, Nm?, Rs?, Ps?, M1),
     mates_of(Ss?, Ps?, M2),
     app(M1?, M2?, M).
@@ -3123,7 +3123,8 @@ mates_of([schema(Nm, _, Rs)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Ps?
 mates_of([lschema(Nm, _, Rs, Lsts)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Lsts?), ground(Ps?) |
     deltas_peers(Ps?, Q),
     rs_len(Rs?, K),
-    assigns(K?, Q?, As0),
+    blank_listed(Lsts?, Rs?, Rs0),
+    fit_assigns(K?, Q?, Rs0?, Ps?, As0),
     on_base(As0?, Lsts?, As),
     deltas_peers(Ps?, Q1),
     sort_peers(Q1?, Q2),
@@ -3190,6 +3191,38 @@ listed_mates([T|Ts], As, Nm, Rs, Lsts, Ps, M?) :-
 procedure extend_all(Bindings?, Binding?, Bindings).
 extend_all([], _, []).
 extend_all([B|Bs], Cs, [B1?|R?]) :- ground(Cs?) | app(B?, Cs?, B1), extend_all(Bs?, Cs?, R).
+%% fit_assigns(K, Q, Rs, Ps, As): the assignments of the roles 1..K, of the role specifications Rs, to the participants Q, each binding b(role(I), p(P)) put in front, in the order assigns gives them (role 1 the outermost), but only those whose every role's deleted and added atoms match, under the roles assigned before it and itself, into the atoms the class's changes Ps delete and add at its person: an assignment where some role's do not determines no schema-binding of the class, its match_deltas finding none, and it is not tried (Code #12's change 5, vGLP #18 Cowork, Code_inbox.md 2026-10-20 12:03 UTC: "found by matching each schema's deleted and added atoms against the class's changes at each participant, not by trying every assignment of participants to roles").  So the schema-bindings found, and their order, are those of every assignment.
+procedure fit_assigns(Integer?, Peers?, RoleSpecs?, Deltas?, Bindings).
+fit_assigns(K, Q, Rs, Ps, As?) :- fit_roles(1, K?, Q?, Rs?, Ps?, [], As).
+procedure fit_roles(Integer?, Integer?, Peers?, RoleSpecs?, Deltas?, Binding?, Bindings).
+fit_roles(I, K, _, _, _, B, [B?]) :- I? > K? | true.
+fit_roles(I, K, Q, Rs, Ps, B, As?) :- I? =< K?, ground(Q?), ground(Rs?) |
+    nth_spec(Rs?, I?, R),
+    fit_one(Q?, I?, K?, Q?, R?, Rs?, Ps?, B?, As).
+procedure fit_one(Peers?, Integer?, Integer?, Peers?, RoleSpec?, RoleSpecs?, Deltas?, Binding?, Bindings).
+fit_one([], _, _, _, _, _, _, _, []).
+fit_one([P|Qs], I, K, Q, R, Rs, Ps, B, As?) :-
+    ground(P?), integer(I?), ground(Q?), ground(R?), ground(Rs?), ground(Ps?), ground(B?) |
+    fits(R?, [b(role(I?), p(P?))|B?], P?, Ps?, Ok),
+    I1 := I? + 1,
+    fit_next(Ok?, I1?, K?, Q?, Rs?, Ps?, [b(role(I?), p(P?))|B?], As1),
+    fit_one(Qs?, I?, K?, Q?, R?, Rs?, Ps?, B?, As2),
+    app(As1?, As2?, As).
+procedure fit_next(YesNo?, Integer?, Integer?, Peers?, RoleSpecs?, Deltas?, Binding?, Bindings).
+fit_next(no, _, _, _, _, _, _, []).
+fit_next(yes, I, K, Q, Rs, Ps, B, As?) :- fit_roles(I?, K?, Q?, Rs?, Ps?, B?, As).
+%% Whether the deleted and added atoms of the role R, sent to the participant P, match under the binding B into the atoms P deletes and adds, as match_delta1 matches them.
+procedure fits(RoleSpec?, Binding?, Peer?, Deltas?, YesNo).
+fits(R, B, P, Ps, Ok?) :- ground(R?) |
+    delta_at(Ps?, P?, D, A),
+    rs_del(R?, Dr),
+    rs_add(R?, Ar),
+    match_all(Dr?, D?, B?, Bs),
+    match_all_each(Bs?, Ar?, A?, Ms),
+    some_binding(Ms?, Ok).
+procedure some_binding(Bindings?, YesNo).
+some_binding([], no).
+some_binding([_|_], yes).
 procedure assigns(Integer?, Peers?, Bindings).
 assigns(K, Q, R?) :- assigns1(1, K?, Q?, [[]], R).
 procedure assigns1(Integer?, Integer?, Peers?, Bindings?, Bindings).
