@@ -95,8 +95,8 @@ verdict_lines(malformed(_), Nm, [H?, '%% it is malformed; check_named in program
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 verdict_lines(conditions_met, Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
-%% The verdicts on an agent-named contract with community roles (GSC 8064cfb, Appendix D.4, Theorem "Grassroots realisation with seated and listed roles", and Appendix F): compiled where its community roles are listed roles, which vGLP Section 5.4 takes (vGLP f5f1644), and refused otherwise (role_lines).
-verdict_lines(syntactically_grassroots_with_seated_and_listed_roles, _, []).
+%% The verdicts on an agent-named contract with community roles (GSC f3c4f43, Appendix D.4, Theorem "Grassroots realisation with listed roles", and def:sg-wards of CSSN's paper): compiled where its community roles are listed roles, which vGLP Section 5.4 takes (vGLP f5f1644), and refused otherwise (role_lines).
+verdict_lines(syntactically_grassroots_with_listed_roles, _, []).
 verdict_lines(syntactically_grassroots_with_wards(_, _, _, _, _), _, []).
 verdict_lines(conditions_failed(_), Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
@@ -118,6 +118,7 @@ realisable([head_repeated(_, _)|_], no).
 realisable([not_in_head(_, _)|_], no).
 realisable([listed_base(_, _)|_], no).
 realisable([listed_signed(_, _)|_], no).
+realisable([listed_guarded(_, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-

@@ -1,9 +1,12 @@
 % ---------------------------------------------------------------------------
-% Contracts with wards: Appendix F of /Grassroots/GSC,
-% sections/17-wards.tex.  The paper is the specification and no definition of
-% it is restated here; each procedure names the definition it decides:
-% def:guardianship, def:leaving, def:unobstructed-marks, def:relay and
-% def:introduction-wards.
+% Contracts with wards: GAI's appendix "Contracts with Wards",
+% /Grassroots/GAI, sections/wards.tex, which carries what GSC's Appendix F
+% did until GSC 83b951c removed it; and, for an agent-named contract with
+% wards, def:sg-wards of CSSN's paper, /Grassroots/CSSN,
+% sections/appendix-schemas.tex.  The papers are the specification and no
+% definition of them is restated here; each procedure names the definition
+% it decides: def:guardianship, def:leaving, def:unobstructed-marks,
+% def:relay, def:introduction-wards and def:sg-wards.
 %
 % def:introduction-wards is existential over finitely many things the
 % contract supplies: a nonempty set M of its marks, its predicates of arity
@@ -22,7 +25,11 @@
 % forbids, admit them besides, and the answer names them.
 % ---------------------------------------------------------------------------
 
-imported procedure unobstructed#intro_act_bindings(Schema?, Substs).
+% intro_act_bindings/2, the introductions of a schema, is unobstructed.glp's,
+% which programs/gsc/self.glp exposes to its subtree: this module sits in the
+% child directory wards/ of the checker, GAI's (Coordination Appendix B), and
+% a cross-module qualifier names a child of the caller's directory and no
+% sibling (TGLP, Section "Module System", "Cross-module type checking").
 
 % ---------------------------------------------------------------------------
 % The atoms of a contract and its predicates by arity
@@ -95,7 +102,7 @@ preds_of_arity2([P|Ps], As, N, R?) :- ground(P?), ground(Ps?), ground(As?), inte
     preds_of_arity1(A?, P?, Ps?, As?, N?, R).
 
 % preds_of_arity(C, N, Ps): the predicates of C of arity N, in order of
-% first occurrence: a mark is a predicate of arity zero (Appendix F), and g
+% first occurrence: a mark is a predicate of arity zero (GAI, "Contracts with Wards"), and g
 % and w of a guardianship are predicates of arity one (def:guardianship).
 procedure preds_of_arity3(Atoms?, Integer?, Preds).
 preds_of_arity3(As, N, R?) :- ground(As?), integer(N?) |
@@ -858,7 +865,7 @@ intro_marks0([RS1, RS2], Sc, C, Rf, M, Lv, R?) :-
     is_guarding(RS1?, G1),
     is_guarding(RS2?, G2),
     both_yes(G1?, G2?, G),
-    unobstructed # intro_act_bindings(Sc?, Bs),
+    intro_act_bindings(Sc?, Bs),
     nonempty_substs(Bs?, B),
     both_yes(G?, B?, GB),
     rs_add(RS1?, P1),
@@ -1621,11 +1628,11 @@ try_intros2(no, _, M, Lv, Gs, _, Ss, C, Rf, W?) :-
     try_intros(Ss?, C?, Rf?, M?, Lv?, Gs?, W).
 
 % --- clause 2 of def:sg-wards ----------------------------------------------
-% No seated or listed role of a schema of C adds or deletes a mark in M, a
-% leaving mark of C, an atom of the predicate e the introductory act adds, or
-% an atom of g or of w for the guardianship (m, iota, g, w) of a mark in M
-% (GSC 8064cfb); Ps holds those predicates.  A contract of Section 3 has no
-% seated or listed role.
+% No listed role of a schema of C adds or deletes a mark in M, a leaving mark
+% of C, an atom of the predicate e the introductory act adds, or an atom of g
+% or of w for the guardianship (m, iota, g, w) of a mark in M (CSSN's paper,
+% def:sg-wards); Ps holds those predicates.  A contract of Section 3 has no
+% listed role.
 
 procedure atoms_avoid1(Ans?, Atoms?, Preds?, Ans).
 atoms_avoid1(yes, _, _, no).
@@ -1637,46 +1644,46 @@ atoms_avoid([atom(Q, _)|Xs], Ps, R?) :- ground(Q?), ground(Xs?), ground(Ps?) |
     pred_member(Q?, Ps?, A),
     atoms_avoid1(A?, Xs?, Ps?, R).
 
-procedure role_seated_avoid(Ans?, RoleSpec?, Preds?, Ans).
-role_seated_avoid(yes, _, _, yes).
-role_seated_avoid(no, RS, Ps, R?) :- ground(RS?), ground(Ps?) |
+procedure role_listed_avoid(Ans?, RoleSpec?, Preds?, Ans).
+role_listed_avoid(yes, _, _, yes).
+role_listed_avoid(no, RS, Ps, R?) :- ground(RS?), ground(Ps?) |
     rs_add(RS?, Add),
     rs_del(RS?, Del),
     atoms_app(Add?, Del?, AD),
     atoms_avoid(AD?, Ps?, R).
 
-procedure roles_seated_avoid1(Ans?, RoleSpecs?, Preds?, Ans).
-roles_seated_avoid1(no, _, _, no).
-roles_seated_avoid1(yes, Rs, Ps, R?) :- ground(Rs?), ground(Ps?) | roles_seated_avoid(Rs?, Ps?, R).
+procedure roles_listed_avoid1(Ans?, RoleSpecs?, Preds?, Ans).
+roles_listed_avoid1(no, _, _, no).
+roles_listed_avoid1(yes, Rs, Ps, R?) :- ground(Rs?), ground(Ps?) | roles_listed_avoid(Rs?, Ps?, R).
 
-procedure roles_seated_avoid(RoleSpecs?, Preds?, Ans).
-roles_seated_avoid([], _, yes).
-roles_seated_avoid([RS|Rs], Ps, R?) :- ground(RS?), ground(Rs?), ground(Ps?) |
+procedure roles_listed_avoid(RoleSpecs?, Preds?, Ans).
+roles_listed_avoid([], _, yes).
+roles_listed_avoid([RS|Rs], Ps, R?) :- ground(RS?), ground(Rs?), ground(Ps?) |
     is_party_role(RS?, P),
-    role_seated_avoid(P?, RS?, Ps?, A),
-    roles_seated_avoid1(A?, Rs?, Ps?, R).
+    role_listed_avoid(P?, RS?, Ps?, A),
+    roles_listed_avoid1(A?, Rs?, Ps?, R).
 
-procedure seated_avoid1(Ans?, Contract?, Preds?, Ans).
-seated_avoid1(no, _, _, no).
-seated_avoid1(yes, Ss, Ps, R?) :- ground(Ss?), ground(Ps?) | seated_avoid(Ss?, Ps?, R).
+procedure listed_avoid1(Ans?, Contract?, Preds?, Ans).
+listed_avoid1(no, _, _, no).
+listed_avoid1(yes, Ss, Ps, R?) :- ground(Ss?), ground(Ps?) | listed_avoid(Ss?, Ps?, R).
 
-procedure seated_avoid(Contract?, Preds?, Ans).
-seated_avoid([], _, yes).
-seated_avoid([S|Ss], Ps, R?) :- ground(S?), ground(Ss?), ground(Ps?) |
+procedure listed_avoid(Contract?, Preds?, Ans).
+listed_avoid([], _, yes).
+listed_avoid([S|Ss], Ps, R?) :- ground(S?), ground(Ss?), ground(Ps?) |
     sch_roles(S?, Rs),
-    roles_seated_avoid(Rs?, Ps?, A),
-    seated_avoid1(A?, Ss?, Ps?, R).
+    roles_listed_avoid(Rs?, Ps?, A),
+    listed_avoid1(A?, Ss?, Ps?, R).
 
 procedure gw_preds(Guardianships?, Preds).
 gw_preds([], []).
 gw_preds([guardianship(_, _, G, W)|Gs], [G?, W?|R?]) :- gw_preds(Gs?, R).
 
-procedure seated_clear(Contract?, Preds?, Preds?, Constant?, Guardianships?, Ans).
-seated_clear(C, M, Lv, E, Gs, R?) :- ground(C?), ground(M?), ground(Lv?), ground(E?), ground(Gs?) |
+procedure listed_clear(Contract?, Preds?, Preds?, Constant?, Guardianships?, Ans).
+listed_clear(C, M, Lv, E, Gs, R?) :- ground(C?), ground(M?), ground(Lv?), ground(E?), ground(Gs?) |
     gw_preds(Gs?, GW),
     preds_app(Lv?, [E?|GW?], P1),
     preds_app(M?, P1?, Ps),
-    seated_avoid(C?, Ps?, R).
+    listed_avoid(C?, Ps?, R).
 
 procedure try_intros1(IntroE?, Contract?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Wards).
 try_intros1(no_intro, Ss, C, Rf, M, Lv, Gs, W?) :-
@@ -1686,7 +1693,7 @@ try_intros1(intro(Nm, E), Ss, C, Rf, M, Lv, Gs, W?) :-
     ground(Nm?), ground(E?), ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Lv?),
     ground(Gs?) |
     relays_for(C?, Rf?, M?, Lv?, Gs?, E?, M?, Rs, A1),
-    seated_clear(C?, M?, Lv?, E?, Gs?, A2),
+    listed_clear(C?, M?, Lv?, E?, Gs?, A2),
     both_yes(A1?, A2?, A),
     try_intros2(A?, Nm?, M?, Lv?, Gs?, Rs?, Ss?, C?, Rf?, W).
 

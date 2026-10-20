@@ -23,7 +23,7 @@
 #   <contract>  NAME  owner       files in                  plays in
 #   gsg         GSG   GSC         programs/gsc              social_graph
 #   gsn         GSN   GSC         programs/gsc              ---
-#   gsnp        GSNP  GSC         programs/gsc              ---
+#   gsnp        GSNP  GAI         programs/gai              ---
 #   gc          GC    Currencies  programs/currencies/coins currency
 #   cssn        CSSN  CSSN        programs/cssn             programs/cssn (CSSN's, the village)
 #   gfwc        GFWC  GFWC        programs/federation       ---
@@ -85,7 +85,7 @@ PLAYLIMIT=600000   # the reductions the plays' REPL session may take
 case "$NAME" in
     gsg)  FILE=GSG;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
     gsn)  FILE=GSN;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_network" ;;
-    gsnp) FILE=GSNP; OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;
+    gsnp) FILE=GSNP; OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
     gc)   FILE=GC;   OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
     cssn) FILE=CSSN; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR=""
           PLAYAT="programs/cssn"; PLAYLIMIT=100000000 ;;
