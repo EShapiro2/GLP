@@ -1,5 +1,5 @@
 %% ---------------------------------------------------------------------------
-%% programs/cssn --- the child-safe social network (CSSN, Section 5): its program is the canonical CVA platform of its contract, CSSN.glp (Appendix B.2), compiled by vGLP's compiler with friend its introduction predicate (CSSN, Section 5.1, "The program"; vGLP, Section 5.4, "The compilation" and "Act schemas as local specifications"), platform.vglp, which compile.sh prints and the canonical compilation compiles to GLP when the directory loads; the mini-app entry miniapp/4 that wraps it (miniapp.glp, the same file as programs/apps/gsg/miniapp.glp); its scripted person (person.glp); and the plays, the village of Section 5.3 (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it.  The person's questions are drawn by the default widgets of their interactive types (CSSN, Section 5.2): this directory declares no widget.
+%% programs/cssn --- the child-safe social network (CSSN, Section 4): its program is the canonical CVA platform of its contract, CSSN.glp (Appendix B.2), compiled by vGLP's compiler with friend its introduction predicate (CSSN, Section 4.6, "The program"; vGLP, Section 5.4, "The compilation" and "Act schemas as local specifications"), platform.vglp, which compile.sh prints and the canonical compilation compiles to GLP when the directory loads; the mini-app entry miniapp/4 that wraps it (miniapp.glp, the same file as programs/apps/gsg/miniapp.glp); its scripted person (person.glp); and the plays, the village of Section 4.6, "Village Demonstration" (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it.  The person's questions are drawn by the widgets self.vglp beside it declares, approval_sentence for Approval and social_menu for Menu, in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC), and the program's output by last_state, which the platform declares (CSSN, Section 4.6).
 %%
 %% CSSN.md and CSSN.glp, the contract's clauses and act schemas, are CSSN's Cowork's text (claude.md, "Sessions"); CSSN.glp is a module of this program, its types its own and none of its procedures exported.
 %%
@@ -10,12 +10,11 @@ Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
 Class     ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
+            ; message(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, List(Peer), Speech) ; drop(Peer, Peer, Speech)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
-            ; post_forward(Peer, Peer, Speech, Speech)
-            ; deliver(Peer, Peer, Speech, Speech) ; deliver_own(Peer, Peer, Speech, Speech)
+            ; deliver(Peer, Peer, Speech, Speech)
             ; enter(Peer, Peer) ; enter_2(Peer, Peer, Peer)
             ; of_age(Peer, Peer) ; of_age_2(Peer, Peer, Peer)
             ; child_befriend(Peer, Peer, Peer, Peer) ; child_adult_befriend(Peer, Peer, Peer)
@@ -24,11 +23,10 @@ Class     ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; child_join(Peer, Peer, Peer, Speech) ; child_join_2(Peer, Peer, Peer, Peer, Speech)
             ; child_leave(Peer, Peer, Peer, Speech) ; child_close(Peer, Peer, List(Peer), Speech).
 Proposal  ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
+            ; message(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
-            ; post_forward(Peer, Peer, Speech, Speech)
             ; enter(Peer, Peer) ; enter_2(Peer, Peer, Peer)
             ; of_age(Peer, Peer) ; of_age_2(Peer, Peer, Peer)
             ; child_befriend(Peer, Peer, Peer, Peer) ; child_adult_befriend(Peer, Peer, Peer)
@@ -45,9 +43,9 @@ Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
 Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
 Atom      ::= identity ; retired ; friend(Peer) ; child ; parent(Peer) ; parenting(Peer)
-            ; item(Speech) ; authored(Speech) ; member(CName) ; listed(Peer, Speech)
+            ; received(Speech, Peer) ; member(CName) ; listed(Peer, Speech)
             ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech)
-            ; coparent(Peer) ; coparented.
+            ; received_in(Speech, Peer, Speech) ; coparent(Peer) ; coparented.
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech).
 Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
@@ -79,7 +77,7 @@ imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Draw
 exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
 
-%% The village of Section 5.3, with no super-app (plays.glp): the screens of alice, bob, grace, frank, carol, dave and eve.
+%% The village of CSSN, Section 4.6, "Village Demonstration", with no super-app (plays.glp): the screens of alice, bob, grace, frank, carol, dave and eve.
 imported procedure plays#play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 exported procedure play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_village(A?, B?, G?, F?, C?, D?, E?) :- plays # play_village(A, B, G, F, C, D, E).

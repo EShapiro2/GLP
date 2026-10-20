@@ -172,38 +172,13 @@ KNOWN_RED_CHECKS=(
 # reads (GSC 0228e79: schema(Name, Vars, Roles)); both owners are dormant (Udi,
 # 2026-10-19).  Each entry comes off when its owner writes its contract in the
 # new form, GC's in the same commit as GC's record is re-made (Code #11, 2026-10-19).
-    "GSC: a contract that fails the conditions of Appendix D is not compiled"
-    "GSC: a contract with community roles is compiled"
-    "GSC: a join with no guarding role fails volition"
-    "GSC: a note nothing traces: seat and child keep traceable provenance"
-    "GSC: a seat atom in a child the role requires fails cohesion alone"
-    "GSC: a seat atom of no role of the schema fails cohesion, and seat traceable provenance"
-    "GSC: a seated role adding and deleting nothing is admitted in Appendix D"
-    "GSC: an atom added and deleted at a seated role is refused"
-    "GSC: and it compiles with the proviso on the state of the seated role that changes nothing"
-    "GSC: and seat and child keep traceable provenance"
-    "GSC: and seat is not rooted, which is no condition"
-    "GSC: and the contract fails traceable provenance, naming note"
-    "GSC: and the three conditions on the text are still met"
+# GSC's checks of the federation extension of act schemas left programs/gsc
+# with its code (GSC f3c4f43; Coordination #7, 2026-10-20), and their entries
+# with them; the one check reading GFWC.glp stays.
     "GSC: currency is syntactically grassroots"
-    "GSC: federate compiles to the worked box of Appendix D"
-    "GSC: form forbids the seat it adds"
-    "GSC: form ranges over the extent of its party role"
-    "GSC: form's guard is a part of that extent larger than 0 of it"
-    "GSC: join prints a proviso line per role"
-    "GSC: join prints an assignment line per role"
-    "GSC: join prints its reach condition"
-    "GSC: join's guard is the union of two parts"
-    "GSC: leave_1 is guarded by a supermajority of the parent's assembly"
-    "GSC: leave_2 is guarded by a supermajority of the child's assembly"
-    "GSC: seat and child have traceable provenance"
-    "GSC: seat is rooted"
     "GSC: the coin has traceable provenance"
-    "GSC: the community named without its decision: seat is not rooted"
     "GSC: the currency compiles to four displays"
     "GSC: the currency's contract, GC, is read from programs/currencies/coins/GC.glp"
-    "GSC: the federation compiles to five displays"
-    "GSC: the federation contract meets the conditions of Appendix D"
     "GSC: the federation's contract, GFWC, is read from programs/federation/GFWC.glp"
     "GSC: the swap compiles to the display of Appendix B.3"
     "CVA compiler: the currency's platform, each part guarded by the people its schema-binding marks, is what the compiler prints"
@@ -2396,16 +2371,17 @@ fi  # Section I
 
 if _section K; then
 # =============================================================================
-# Section K: the child-safe social network (programs/cssn), CSSN Section 5:
+# Section K: the child-safe social network (programs/cssn), CSSN Section 4:
 # its program is the canonical CVA platform of its contract, programs/cssn/
 # CSSN.glp (CSSN Appendix B.2), which vGLP's compiler prints, platform.vglp
 # (programs/cssn/compile.sh), wrapped as a mini-app of the Grassroots
 # Super-App by the entry miniapp/4 (miniapp.glp, the same file as the apps'),
-# certified; and the village of CSSN Section 5.3 (play_village, plays.glp):
+# certified; and the village of CSSN Section 4.6, "Village Demonstration"
+# (play_village, plays.glp):
 # seven executions, each with a conversation with each of the six others, the
 # persons scripted (person.glp), a parent looking at the phones of their
 # children, since a parent's state does not change by the child's acts.  Each
-# check of the village is of an act as Section 5.3 states it, read off the
+# check of the village is of an act as that section states it, read off the
 # screens the persons report: did(R) a request, gave(K, yes) an approval, and
 # the views, view(S, K), the machine state S and the persons K the agent knows.
 # =============================================================================
@@ -2418,8 +2394,8 @@ CSSN_DIR="$GLP_DIR/programs/cssn"
 # in the term form programs/gsc reads, each schema listing its variables in
 # its head (GSC 0228e79): GSC's verdict on it --- an agent-named contract,
 # its groups closed by the listed role of the members the leader lists
-# (CSSN.glp at 4cb1ec11; GSC 8064cfb, Appendix D.4),
-# with traceable provenance and volition, and an introduction with wards in
+# (CSSN.glp at 4cb1ec11; GSC 8064cfb, Appendix D.4), extending GSN and Wards
+# with no signing (CSSN.glp at fdc27eb3), with traceable provenance and volition, and an introduction with wards in
 # place of an unobstructed introductory act: the verdict syntactically
 # grassroots with wards (GSC, Appendix F, def:sg-wards, at GSC 503db66),
 # befriend the act, child the mark, parent and parenting its guardianship,
@@ -2467,7 +2443,7 @@ check "CSSN program loads" "Loaded program: .*programs/cssn$" "$k_load"
 check_not "CSSN program no type errors" "Type checking failed" "$k_load"
 check_not "CSSN program is certified" "CERTIFICATE REFUSED" "$k_load"
 
-# The village (CSSN, Section 5.3): one run, seven screens, each a line.
+# The village (CSSN, Section 4.6, "Village Demonstration"): one run, seven screens, each a line.
 echo "--- CSSN village, eight acts ---"
 k_v=$("$REPL_RUN" <<HEREDOC 2>&1
 $CSSN_DIR
@@ -2496,6 +2472,8 @@ check_not "CSSN village: no failed goal" "→ failed\|ERROR\|Error" "$k_v"
 check "CSSN village: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$k_v"
 check_not "CSSN village: ... and is not stopped at the limit" "capped" "$k_v"
 check_not "CSSN village: no attempt refused or yielded" "refused(\|yielded(" "$k_v"
+# CSSN extends GSN, not GSNP (CSSN.md; Udi, 2026-10-20): a message is content received from a friend, received(x, p), or delivered in a group by its leader, received_in(x, a, n), and nobody signs.
+check_not "CSSN village: nobody signs, and no item or authored atom is written (CSSN extends GSN)" "propose(sign(\|item(\|authored(" "$k_v"
 # Act 1, coming into the contract (GSG:1; Wards:1, CSSN:1).
 k_shows "CSSN village act 1: alice, bob, grace and frank establish their identities" F "did(propose(establish(frank)))"
 k_shows "CSSN village act 1: carol enters with her parent alice, at alice" A "view([parenting(carol), friend(carol), identity]"
@@ -2503,11 +2481,11 @@ k_shows "CSSN village act 1: ... and at carol, her phone answering yes" C "gave(
 k_shows "CSSN village act 1: dave enters with bob and grace" D "view([identity, parent(bob), parent(grace), child, child, coparented, friend(bob), friend(grace)]"
 k_shows "CSSN village act 1: ... and eve" E "gave(enter_2(bob, grace, eve), yes)"
 k_shows "CSSN village act 1: grace approves both" G "gave(enter_2(bob, grace, eve), yes)"
-# Act 2, adult friendships (GSG:2) and a direct message (GSNP:1, GSN:1).
+# Act 2, adult friendships (GSG:2) and a direct message (GSN:1).
 k_holds "CSSN village act 2: alice and bob are friends" B "friend(alice)"
 k_holds "CSSN village act 2: bob and frank" F "friend(bob)"
 k_holds "CSSN village act 2: alice and frank" F "friend(alice)"
-k_shows "CSSN village act 2: alice signs a message and sends it to bob, who holds it as she signed it" B "item(speech(utterance('Hello Bob'), alice))"
+k_shows "CSSN village act 2: alice sends bob a message, which he holds as received from her" B "received(speech(utterance('Hello Bob'), alice), alice)"
 # Act 3, child friendships (Wards:2, CSSN:2).
 k_shows "CSSN village act 3: alice proposes carol and dave, naming bob" A "did(propose(child_befriend(carol, dave, alice, bob)))"
 k_shows "CSSN village act 3: ... and bob approves" B "gave(child_befriend(carol, dave, alice, bob), yes)"
@@ -2524,16 +2502,16 @@ k_holds "CSSN village act 4: ... and frank and carol" F "friend(carol)"
 k_shows "CSSN village act 5: carol creates kids_chat" C "member(dot(community(carol), $K_K))"
 k_shows "CSSN village act 5: carol invites dave, alice, bob and dave approving" B "gave(child_join_2(carol, dave, alice, bob, $K_K), yes)"
 k_shows "CSSN village act 5: ... and eve" C "listed(eve, $K_K)"
-k_shows "CSSN village act 5: carol's own post, delivered to every member" E "item(speech(utterance('Welcome everyone!'), carol))"
-k_shows "CSSN village act 5: dave's post, delivered by carol, signed by her" E "item(speech(speech(utterance('Thanks Carol!'), dave), carol))"
-k_shows "CSSN village act 5: eve's post, delivered to dave" D "item(speech(speech(utterance('Hi all!'), eve), carol))"
+k_shows "CSSN village act 5: carol's own post, delivered to every member" E "received_in(speech(utterance('Welcome everyone!'), carol), carol, $K_K)"
+k_shows "CSSN village act 5: dave's post, sent to carol and delivered by her" E "received_in(speech(utterance('Thanks Carol!'), dave), carol, $K_K)"
+k_shows "CSSN village act 5: eve's post, delivered to dave" D "received_in(speech(utterance('Hi all!'), eve), carol, $K_K)"
 k_lacks "CSSN village act 5: eve leaves kids_chat" E "member(dot(community(carol), $K_K))"
 # Act 6, an adult leader's group, each child joining with its parent's approval.
 k_shows "CSSN village act 6: frank invites dave, bob approving" B "gave(child_join(frank, dave, bob, $K_S), yes)"
 k_shows "CSSN village act 6: ... and carol, alice approving" A "gave(child_join(frank, carol, alice, $K_S), yes)"
-k_shows "CSSN village act 6: frank's post, delivered to dave" D "item(speech(utterance('Welcome to the study group'), frank))"
-k_shows "CSSN village act 6: dave's post, delivered to carol by frank" C "item(speech(speech(utterance('Hi from Dave!'), dave), frank))"
-k_shows "CSSN village act 6: carol's post, delivered to dave by frank" D "item(speech(speech(utterance('Hi from Carol!'), carol), frank))"
+k_shows "CSSN village act 6: frank's post, delivered to dave" D "received_in(speech(utterance('Welcome to the study group'), frank), frank, $K_S)"
+k_shows "CSSN village act 6: dave's post, delivered to carol by frank" C "received_in(speech(utterance('Hi from Dave!'), dave), frank, $K_S)"
+k_shows "CSSN village act 6: carol's post, delivered to dave by frank" D "received_in(speech(utterance('Hi from Carol!'), carol), frank, $K_S)"
 # Act 7, parents ending (Wards:3).
 k_shows "CSSN village act 7: grace ends dave's friendship with carol" G "did(propose(child_unfriend(dave, carol, grace)))"
 k_lacks "CSSN village act 7: ... at dave" D "friend(carol)"
@@ -3530,18 +3508,18 @@ compile(sgnread, [schema(d, [svar(y)], [rs(unguarded, [atom(done, [svar(y), role
 compile(sgnread_not, [schema(d, [svar(y)], [rs(unguarded, [atom(done, [svar(y), role(2)])], [], [atom(listed, [role(2)])], [atom(done, [svar(y), role(2)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots).
 compile(inert, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(unguarded, [], [], [], [])])], malformed([changes_nothing(s, 2)])).
 compile(headless, [], malformed([not_in_head(s, svar(x))])).
-compile(listed_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(listed_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
 compile(wards_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_wards(enter, [m], [guardianship(m, i, g, w)], [relay(r, ward(1, m, 2), free(2))], [])).
-compile(listed_two, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(1, invited, [svar(n)]), unguarded, [], [atom(guest, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
-compile(listed_bases, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(friend, [role(2)])], []), rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(2, invited, [svar(n)]), unguarded, [], [atom(guest, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
-compile(seated_role, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(seated(ext(own(1), n), member), unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
-compile(name_term, [schema(cr, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(led, [svar(n)])], [], [], [atom(member, [nterm(ext(own(1), n))])])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(listed_two, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(1, invited, [svar(n)]), unguarded, [], [atom(guest, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(listed_bases, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(friend, [role(2)])], []), rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(2, invited, [svar(n)]), unguarded, [], [atom(guest, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(seated_role, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(seated(ext(own(1), n), member), unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(name_term, [schema(cr, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(led, [svar(n)])], [], [], [atom(member, [nterm(ext(own(1), n))])])])], syntactically_grassroots_with_listed_roles).
 compile(name_var, [schema(cr, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(nvar(z), n))]), atom(led, [svar(n)])], [], [], [])])], conditions_met).
 compile(reached, [cschema(cl, [svar(n)], [reach(own(1), friend, own(2))], [rs(guarded, [atom(closed, [svar(n)])], [], [], []), rs(unguarded, [atom(seen, [svar(n)])], [], [], [])])], conditions_met).
-compile(listed_guard, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
-compile(listed_guard_second, [schema(cl, [svar(n)], [rs(guarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
-compile(listed_two_guards, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
-compile(listed_second, [schema(cl, [svar(n)], [rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(listed_guard, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(listed_guard_second, [schema(cl, [svar(n)], [rs(guarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(listed_two_guards, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(listed_second, [schema(cl, [svar(n)], [rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
 compile(order, [schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(member, [role(2), svar(n)])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(2), svar(n)])], [atom(posted, [svar(x), svar(n)])])])], syntactically_grassroots).
 compile(listed_guard_two, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), rs(guarded, [], [], [atom(minding, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
 compile(listed_unguarded, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
@@ -3578,8 +3556,8 @@ check "CVA compiler: a contract with community roles is not compiled" "%% not co
 check "CVA compiler: a contract malformed, a role that is not guarding changing nothing, is not compiled" "%% not compiled(inert)" "$cva_refuse"
 check "CVA compiler: ... the verdict named" "%% it is malformed; check_named in programs/gsc gives the faults." "$cva_refuse"
 check "CVA compiler: a contract malformed, a variable not in its schema's head (GSC 0228e79), is not compiled, the fault of the compiler's Verdict type" "%% not compiled(headless)" "$cva_refuse"
-# The verdicts on an agent-named contract with community roles (programs/gsc/self.glp at GLP 96908b2d), of the compiler's Verdict type; its listed roles taken and its seated and constituent roles refused (vGLP f5f1644, Section 5.4, "Act schemas as local specifications"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 1).
-check "CVA compiler: the verdict syntactically_grassroots_with_seated_and_listed_roles, a schema of a listed role, compiled" "%% the canonical CVA platform of the contract(listed_named)" "$cva_refuse"
+# The verdicts on an agent-named contract with community roles (programs/gsc/self.glp at GLP f5081cfa, GSC f3c4f43), of the compiler's Verdict type; its listed roles taken and its seated and constituent roles refused (vGLP f5f1644, Section 5.4, "Act schemas as local specifications"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 1).
+check "CVA compiler: the verdict syntactically_grassroots_with_listed_roles, a schema of a listed role, compiled" "%% the canonical CVA platform of the contract(listed_named)" "$cva_refuse"
 check "CVA compiler: the verdict syntactically_grassroots_with_wards, a schema of a listed role, compiled" "%% the canonical CVA platform of the contract(wards_named)" "$cva_refuse"
 # Several listed roles of one base (vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles", and "the listed roles of a schema have one base"; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC: "refuse as not effective a schema whose listed roles have different bases").
 check "CVA compiler: a schema of two listed roles of one base, its only guarding role, compiled" "%% the canonical CVA platform of the contract(listed_two)" "$cva_refuse"
@@ -6444,7 +6422,7 @@ check_not "APPS gsn: no error" "Error" "$apps_gsn"
 check "APPS gsn network: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsn"
 check_not "APPS gsn network: ... and is not stopped at the limit" "capped" "$apps_gsn"
 
-# GSNP's app, programs/apps/gsnp: the same host on GSNP's platform, its wrapper the same file as GSG's; the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), five executions over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay (play_provenance): each establishes their identity; dan and eve, eve and carol, carol and bob, and bob and fay become friends, the second of each asked and answering yes; dan signs the item 'Flood on Main Street' (GSNP:1, Authorship), which records him its author, and sends it to eve in a message, which carries it as he signed it (GSN:1, Message), nobody asked; eve forwards it to carol, and carol to bob (GSNP:2, Forwarding), nobody asked, the item of forward(p, q, y) being y signed by p, so that bob holds it signed by dan, then by eve, then by carol (programs/gsc/GSNP.glp, the schemas sign, message and forward).
+# GSNP's app, programs/apps/gsnp: the same host on GSNP's platform, its wrapper the same file as GSG's; the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), five executions over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay (play_provenance): each establishes their identity; dan and eve, eve and carol, carol and bob, and bob and fay become friends, the second of each asked and answering yes; dan signs the item 'Flood on Main Street' (GSNP:1, Authorship), which records him its author, and sends it to eve in a message, which carries it as he signed it (GSN:1, Message), nobody asked; eve forwards it to carol, and carol to bob (GSNP:2, Forwarding), nobody asked, the item of forward(p, q, y) being y signed by p, so that bob holds it signed by dan, then by eve, then by carol (programs/gai/GSNP.glp, the schemas sign, message and forward).
 check "APPS gsnp: platform.vglp is what vGLP's compiler prints from GSNP.glp" "^gsnp/platform.vglp: as printed$" "$apps_print"
 # The request type proposes the guarded classes only: GSNP's thirteen schemas that mark a role, and not drop, deliver or deliver_own, unguarded.
 apps_gsnp_proposal=$(awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$GLP_DIR/programs/apps/gsnp/platform.vglp")

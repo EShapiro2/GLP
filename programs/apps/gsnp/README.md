@@ -4,7 +4,7 @@ The app of GSNP, the grassroots social network with provenance, as a mini-app of
 
 ## The contract
 
-GSNP is GSC's contract (Coordination Appendix C); its clauses are `programs/gsc/GSNP.md`, as GAI's paper has them, and its act schemas `programs/gsc/GSNP.glp`.  GSNP extends GSN, whose clauses GSN:1 to GSN:5 it cites (`../gsn/README.md`):
+GSNP is GAI's contract (Coordination Appendix C; GSC's until 2026-10-20); its clauses are `programs/gai/GSNP.md`, as GAI's paper has them, and its act schemas `programs/gai/GSNP.glp`.  GSNP extends GSN, whose clauses GSN:1 to GSN:5 it cites (`../gsn/README.md`):
 
 1. *Authorship.*  An agent signs the content they create.
 2. *Forwarding.*  An agent forwards content they received by sending it with the signatures it has and adding their own, and warrants that they know personally the agent they received it from.
@@ -14,7 +14,7 @@ Sixteen schemas: GSG's `establish`, `befriend` and `unfriend`; `sign`, `message`
 
 ## The cascade
 
-1. The act schemas, `programs/gsc/GSNP.glp`; the checker's verdict `syntactically_grassroots` (`cascade/GSNP/verdict.txt`).
+1. The act schemas, `programs/gai/GSNP.glp`; the checker's verdict `syntactically_grassroots_with_listed_roles` (`cascade/GSNP/verdict.txt`).
 2. The canonical CVA platform of the schemas, `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GSNP.glp; `bash programs/apps/compile.sh --check` re-prints it and compares.
 3. GLP: the canonical compilation compiles `platform.vglp` when the directory loads.
 4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/4`.

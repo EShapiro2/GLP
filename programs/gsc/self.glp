@@ -1,20 +1,34 @@
 % ---------------------------------------------------------------------------
 % GSC: the syntactically-grassroots checker.
 %
-% Decides def:syntactically-grassroots of /Grassroots/GSC, Section 3.  The
-% paper is the specification and no definition of it is restated here; each
-% procedure names the definition it decides.  README.md maps the two.
+% Decides def:syntactically-grassroots of /Grassroots/GSC, Section 3, and
+% the conditions of its Appendix D on a contract with listed roles.  The
+% signed term, reflexive predicates and contracts with wards are GAI's
+% extension of the language (GAI's appendix "Contracts with Wards"; GSC
+% 83b951c and 1a2a5f3), held here for GAI.  The papers are the specification
+% and no definition of them is restated here; each procedure names the
+% definition it decides.  README.md maps the two.
 %
 % This file is the directory's shared scope: the representation of a contract,
 % the substitution and matching machinery every condition needs, and the
 % directory's entry points.
+%
+% The condition on a contract with wards is GAI's (Coordination Appendix B;
+% Udi, 2026-10-20) and lives in the child directory wards/, entered through
+% its self.glp by the qualifier wards (TGLP, Section "Module System",
+% "Cross-module type checking": a qualifier is a child directory or module
+% file of the caller's directory).  It reads the introductions of a schema,
+% intro_act_bindings/2 of unobstructed.glp, which this file exposes to its
+% subtree (TGLP, "The -expose directive").
 % ---------------------------------------------------------------------------
+
+-expose(unobstructed).
 
 % --- The syntax of a schema (def:schema, definition:term, definition:role,
 % --- definition:schema) ----------------------------------------------------
-% A name term (definition:term): own(I) is <pi_I> and own_var(X) is <x>, nvar
-% is a name variable of Z, ext(Sigma, Y) is Sigma.y.
-NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+% A name term (definition:term): own(I) is <pi_I> and own_var(X) is <x>, for
+% an agent role and an agent variable, and ext(Sigma, Y) is Sigma.y.
+NameTerm  ::= own(Integer) ; own_var(Constant)
             ; ext(NameTerm, Constant).
 NameTerms ::= [] ; [NameTerm | NameTerms].
 
@@ -30,33 +44,30 @@ Atoms ::= [] ; [Atom | Atoms].
 
 % The base of an argument, of a name term and of a role (definition:term,
 % definition:role, definition:provenance).
-Base  ::= b_role(Integer) ; b_pvar(Constant) ; b_svar(Constant)
-        ; b_nvar(Constant).
+Base  ::= b_role(Integer) ; b_pvar(Constant) ; b_svar(Constant).
 Bases ::= [] ; [Base | Bases].
 
-% rs(Guard, Add, Del, Keep, Forb) holds a party role's four multisets in the
-% order +(i), -(i), =(i), not(i); Guard records the mark ? and guarded_at(T)
-% the mark ?_theta of a seated, constituent or listed role, T naming the
-% threshold.  crs(Kind, Guard, Add, Del, Keep, Forb) is the same for a seated,
-% a constituent or a listed role (definition:role): seated(Sigma, Mu) is
-% sigma^mu, constituent(Sigma, Rho) is sigma^{rho*}, and listed(I, Rho, Args)
-% is the listed role pi_I[rho(*, u_2, ..., u_r)] of the agent role pi_I, Args
-% its arguments u_2, ..., u_r (GSC 8064cfb).
-Guard     ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
-            ; listed(Integer, Constant, Args).
+% rs(Guard, Add, Del, Keep, Forb) holds an agent role's four multisets in the
+% order +(i), -(i), =(i), not(i); Guard records the mark ?, which only an
+% agent role may carry (Appendix D's Definition Act schema).  crs(Kind, Guard,
+% Add, Del, Keep, Forb) is the same for a listed role (definition:role):
+% listed(I, Rho, Args) is the listed role pi_I[rho(*, u_2, ..., u_r)] of the
+% agent role pi_I, Args its arguments u_2, ..., u_r (GSC 8064cfb); its Guard
+% is unguarded, and a listed role carrying ? is refused (listed_guarded).
+Guard     ::= guarded ; unguarded.
+RoleKind  ::= listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 
-% A reach condition Sigma !~>_Rho Sigma' (definition:schema); a schema
-% carrying a finite set of them is written cschema.  A schema's second
-% argument is its variables, pvar(X) and svar(Y), in the order of its head
-% (def:schema and Appendix D's Definition Act schema at GSC 0228e79).
-Reach     ::= reach(NameTerm, Constant, NameTerm).
-Reaches   ::= [] ; [Reach | Reaches].
+% A schema of Appendix D may be written cschema(Name, Vars, [], Roles): its
+% third argument is the empty list, where reach conditions stood until GSC
+% f3c4f43 removed them, and the owners' contracts write it so.  A schema's
+% second argument is its variables, pvar(X) and svar(Y), in the order of its
+% head (def:schema and Appendix D's Definition Act schema at GSC 0228e79).
+Nil       ::= [].
 Schema    ::= schema(Constant, Args, RoleSpecs)
-            ; cschema(Constant, Args, Reaches, RoleSpecs).
+            ; cschema(Constant, Args, Nil, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 
 % A contract may declare predicates of arity one reflexive (the paragraph
@@ -88,12 +99,11 @@ Ctx ::= ctx(Val, Integer).
 Ans   ::= yes ; no.
 Ints  ::= [] ; [Integer | Ints].
 Preds ::= [] ; [Constant | Preds].
-% seated(Schema, Role, Atom) and listed_role(Schema, Role, Atom) are clause
-% 2 of definition:sg-agent-named (Appendix D.4): the seated role, or the
-% listed role, Role of Schema adds Atom, of a predicate the introductory act
-% forbids at a role.
+% listed_role(Schema, Role, Atom) is clause 2 of definition:sg-agent-named
+% (Appendix D.4): the listed role Role of Schema adds Atom, of a predicate
+% the introductory act forbids at a role.
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
-        ; seated(Constant, Integer, Atom) ; listed_role(Constant, Integer, Atom).
+        ; listed_role(Constant, Integer, Atom).
 % What def:schema, and Appendix D's Definition Act schema, require of a
 % signed term, and the atom carrying one violates: it occurs in an atom not
 % marked + (not_added), its speech-act variable occurs in no atom its role
@@ -113,12 +123,13 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % role pi[rho(*, u_2, ..., u_r)], and one violates: pi an agent role of its
 % schema (listed_base), and, a signed term occurring only in an atom marked +
 % (Definition Act schema), no signed term among u_2, ..., u_r
-% (listed_signed); each names the schema and the listed role.
+% (listed_signed); each names the schema and the listed role.  What Appendix
+% D's Definition Act schema requires of the mark ?, that only an agent role
+% carry it: a listed role carrying it (listed_guarded).
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
         ; untraceable(Preds)
         ; volition(Constant, Integer, Integer)
-        ; cohesion(Constant, Integer, Atom)
         ; reflexive(Constant, Integer, Atom)
         ; signed(Constant, Integer, Atom, SgnCause)
         ; added_and_deleted(Constant, Integer, Atom)
@@ -128,10 +139,11 @@ Fault ::= no_introductory_act
         ; head_repeated(Constant, Arg)
         ; not_in_head(Constant, Arg)
         ; listed_base(Constant, Integer)
-        ; listed_signed(Constant, Integer).
+        ; listed_signed(Constant, Integer)
+        ; listed_guarded(Constant, Integer).
 Faults  ::= [] ; [Fault | Faults].
 
-% --- What an introduction with wards is made of (Appendix F) ---------------
+% --- What an introduction with wards is made of (GAI, "Contracts with Wards")
 % guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of
 % def:guardianship; a party of a relay act (def:relay) is a ward role,
 % ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is
@@ -170,16 +182,16 @@ RKs  ::= [] ; [RK | RKs].
 Kind ::= free_party ; ward_party(Constant).
 IntroE ::= intro(Constant, Constant) ; no_intro.
 
-% syntactically_grassroots_with_seated_and_listed_roles is the verdict on
-% an agent-named contract with community roles that is syntactically
-% grassroots by definition:sg-agent-named, the contract of Theorem
-% "Grassroots realisation with seated and listed roles" (Appendix D.4, GSC
-% 8064cfb), and syntactically_grassroots_with_wards the verdict on one that
-% is syntactically grassroots with wards by def:sg-wards, the contract of
-% Theorem "Grassroots realisation with wards and seated roles" (Appendix F),
-% naming what grassroots_with_wards names.
+% syntactically_grassroots_with_listed_roles is the verdict on an
+% agent-named contract with community roles that is syntactically grassroots
+% by definition:sg-agent-named, the contract of Theorem "Grassroots
+% realisation with listed roles" (Appendix D.4, GSC f3c4f43), and
+% syntactically_grassroots_with_wards the verdict on one that is
+% syntactically grassroots with wards by def:sg-wards (CSSN's paper, which
+% composes GAI's appendix "Contracts with Wards" with Appendix D.4), naming
+% what grassroots_with_wards names.
 Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
-          ; syntactically_grassroots_with_seated_and_listed_roles
+          ; syntactically_grassroots_with_listed_roles
           ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
           ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
           ; conditions_met ; conditions_failed(Faults)
@@ -594,13 +606,11 @@ schema_args(Sc, R?) :- ground(Sc?) |
 procedure nt_pvars(NameTerm?, Args).
 nt_pvars(own(_), []).
 nt_pvars(own_var(X), [pvar(X?)]).
-nt_pvars(nvar(_), []).
 nt_pvars(ext(S, _), R?) :- ground(S?) | nt_pvars(S?, R).
 
 procedure nt_svars(NameTerm?, Args).
 nt_svars(own(_), []).
 nt_svars(own_var(_), []).
-nt_svars(nvar(_), []).
 nt_svars(ext(S, Y), R?) :- ground(S?), ground(Y?) |
     nt_svars(S?, R1),
     args_app(R1?, [svar(Y?)], R).
@@ -782,7 +792,6 @@ nth_rs([_|Xs], I, R?) :- I? > 1, integer(I?), ground(Xs?) |
 
 procedure guard_marked(Guard?, Ans).
 guard_marked(guarded, yes).
-guard_marked(guarded_at(_), yes).
 guard_marked(unguarded, no).
 
 % ---------------------------------------------------------------------------
@@ -829,10 +838,10 @@ refl_keep([A|Xs], I, Rf, W, R?) :-
 % ---------------------------------------------------------------------------
 % Roles, bases and name terms (definition:term, definition:role)
 % ---------------------------------------------------------------------------
-% A schema is written schema(Name, Vars, Roles) and cschema(Name, Vars,
-% Reaches, Roles) where it carries reach conditions; a role is written
-% rs(...) where it is a party role and crs(Kind, ...) where it is seated,
-% constituent or listed.  The accessors below read either.
+% A schema is written schema(Name, Vars, Roles), or cschema(Name, Vars, [],
+% Roles) in the form of Appendix D; a role is written rs(...) where it is an
+% agent role and crs(Kind, ...) where it is a listed role.  The accessors
+% below read either.
 
 procedure sch_name(Schema?, Constant).
 sch_name(schema(Nm, _, _), Nm?).
@@ -846,10 +855,6 @@ sch_vars(cschema(_, Vs, _, _), Vs?).
 procedure sch_roles(Schema?, RoleSpecs).
 sch_roles(schema(_, _, Rs), Rs?).
 sch_roles(cschema(_, _, _, Rs), Rs?).
-
-procedure sch_reaches(Schema?, Reaches).
-sch_reaches(schema(_, _, _), []).
-sch_reaches(cschema(_, _, Th, _), Th?).
 
 procedure rs_guard(RoleSpec?, Guard).
 rs_guard(rs(G, _, _, _, _), G?).
@@ -890,15 +895,7 @@ is_guarding(RS, R?) :- ground(RS?) |
 procedure nt_base(NameTerm?, Base).
 nt_base(own(I), b_role(I?)).
 nt_base(own_var(X), b_pvar(X?)).
-nt_base(nvar(Z), b_nvar(Z?)).
 nt_base(ext(S, _), B?) :- ground(S?) | nt_base(S?, B).
-
-% The least rank of a name term (definition:mrk).
-procedure nt_mrk(NameTerm?, Integer).
-nt_mrk(own(_), 0).
-nt_mrk(own_var(_), 0).
-nt_mrk(nvar(_), 0).
-nt_mrk(ext(S, _), N?) :- ground(S?) | nt_mrk(S?, M), N := M? + 1.
 
 procedure arg_base(Arg?, Base).
 arg_base(role(I), b_role(I?)).
@@ -912,8 +909,6 @@ arg_base(sgn(_, J), b_role(J?)).
 
 procedure role_base(RoleSpec?, Integer?, Base).
 role_base(rs(_, _, _, _, _), I, b_role(I?)).
-role_base(crs(seated(S, _), _, _, _, _, _), _, B?) :- ground(S?) | nt_base(S?, B).
-role_base(crs(constituent(S, _), _, _, _, _, _), _, B?) :- ground(S?) | nt_base(S?, B).
 % The base of a listed role pi[rho(*, u_2, ..., u_r)] is the agent role pi
 % (definition:role, GSC 8064cfb).
 role_base(crs(listed(I, _, _), _, _, _, _, _), _, b_role(I?)).
@@ -923,20 +918,10 @@ nth_base(Rs, I, B?) :- ground(Rs?), integer(I?) |
     nth_rs(Rs?, I?, RS),
     role_base(RS?, I?, B).
 
-% The name term of a seated or a constituent role; a party role and a listed
-% role have none (definition:role).
-procedure rs_nterm(RoleSpec?, NameTerms).
-rs_nterm(rs(_, _, _, _, _), []).
-rs_nterm(crs(seated(S, _), _, _, _, _, _), [S?]).
-rs_nterm(crs(constituent(S, _), _, _, _, _, _), [S?]).
-rs_nterm(crs(listed(_, _, _), _, _, _, _, _), []).
-
 % The arguments u_2, ..., u_r of a listed role pi[rho(*, u_2, ..., u_r)],
-% arguments of its schema (definition:role); any other role has none.
+% arguments of its schema (definition:role); an agent role has none.
 procedure rs_kind_args(RoleSpec?, Args).
 rs_kind_args(rs(_, _, _, _, _), []).
-rs_kind_args(crs(seated(_, _), _, _, _, _, _), []).
-rs_kind_args(crs(constituent(_, _), _, _, _, _, _), []).
 rs_kind_args(crs(listed(_, _, As), _, _, _, _, _), As?).
 
 procedure rolespecs_kind_args(RoleSpecs?, Args?, Args).
@@ -946,27 +931,11 @@ rolespecs_kind_args([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
     rolespecs_kind_args(Rs?, T?, R1),
     args_app(As?, R1?, R).
 
-% A listed role (definition:role)?
-procedure rs_listed(RoleSpec?, Ans).
-rs_listed(rs(_, _, _, _, _), no).
-rs_listed(crs(seated(_, _), _, _, _, _, _), no).
-rs_listed(crs(constituent(_, _), _, _, _, _, _), no).
-rs_listed(crs(listed(_, _, _), _, _, _, _, _), yes).
-
-% The predicate of a seated, a constituent or a listed role
-% (definition:cohesive: a role predicate of C is the predicate of a role of a
-% schema of C).
-procedure rs_role_pred(RoleSpec?, Preds).
-rs_role_pred(rs(_, _, _, _, _), []).
-rs_role_pred(crs(seated(_, P), _, _, _, _, _), [P?]).
-rs_role_pred(crs(constituent(_, P), _, _, _, _, _), [P?]).
-rs_role_pred(crs(listed(_, P, _), _, _, _, _, _), [P?]).
 
 % ---------------------------------------------------------------------------
 % The name terms of a schema (definition:term)
 % ---------------------------------------------------------------------------
-% Those of its seated and constituent roles and those among the arguments of
-% its listed roles, those of its reach conditions, and those among the
+% Those among the arguments of its listed roles, and those among the
 % arguments of its atoms, in that order.
 
 procedure nts_of_args(Args?, NameTerms?, NameTerms).
@@ -976,38 +945,23 @@ nts_of_args([nterm(S)|As], T, [S?|R?]) :- ground(S?), ground(As?), ground(T?) |
 nts_of_args([A|As], T, R?) :- otherwise, ground(A?), ground(As?), ground(T?) |
     nts_of_args(As?, T?, R).
 
-procedure nts_of_reaches(Reaches?, NameTerms?, NameTerms).
-nts_of_reaches([], T, T?).
-nts_of_reaches([reach(S, _, S2)|Xs], T, [S?, S2?|R?]) :-
-    ground(S?), ground(S2?), ground(Xs?), ground(T?) |
-    nts_of_reaches(Xs?, T?, R).
-
 procedure nts_of_roles(RoleSpecs?, NameTerms?, NameTerms).
 nts_of_roles([], T, T?).
 nts_of_roles([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
-    rs_nterm(RS?, N),
     rs_kind_args(RS?, KA),
     nts_of_roles(Rs?, T?, R1),
-    nts_of_args(KA?, R1?, R2),
-    nterms_app(N?, R2?, R).
+    nts_of_args(KA?, R1?, R).
 
 procedure sch_nts(Schema?, NameTerms).
 sch_nts(Sc, R?) :- ground(Sc?) |
     sch_roles(Sc?, Rs),
-    sch_reaches(Sc?, Th),
     schema_args(Sc?, As),
     nts_of_roles(Rs?, [], N1),
-    nts_of_reaches(Th?, N1?, N2),
-    nts_of_args(As?, N2?, R).
+    nts_of_args(As?, N1?, R).
 
 % The agent and speech-act variables occurring in a schema: in its atoms,
-% within their name terms and signed terms, in the name terms of its seated
-% and constituent roles, in the arguments of its listed roles, and in its
-% reach conditions.
-procedure nts_args(NameTerms?, Args).
-nts_args([], []).
-nts_args([S|Ss], [nterm(S?)|R?]) :- nts_args(Ss?, R).
-
+% within their name terms and signed terms, and in the arguments of its
+% listed roles.
 procedure sch_occ_vars1(Args?, Args).
 sch_occ_vars1(All, R?) :- ground(All?) |
     filter_pvars(All?, Ps),
@@ -1018,17 +972,13 @@ sch_occ_vars1(All, R?) :- ground(All?) |
 procedure sch_occ_vars(Schema?, Args).
 sch_occ_vars(Sc, R?) :- ground(Sc?) |
     schema_args(Sc?, As),
-    sch_reaches(Sc?, Th),
     sch_roles(Sc?, Rs),
-    sch_occ_vars2(Rs?, Th?, As?, R).
+    sch_occ_vars2(Rs?, As?, R).
 
-procedure sch_occ_vars2(RoleSpecs?, Reaches?, Args?, Args).
-sch_occ_vars2(Rs, Th, As, R?) :- ground(Rs?), ground(Th?), ground(As?) |
-    nts_of_roles(Rs?, [], N1),
-    nts_of_reaches(Th?, N1?, Ns),
-    nts_args(Ns?, NAs),
-    rolespecs_kind_args(Rs?, NAs?, KNAs),
-    args_app(As?, KNAs?, All),
+procedure sch_occ_vars2(RoleSpecs?, Args?, Args).
+sch_occ_vars2(Rs, As, R?) :- ground(Rs?), ground(As?) |
+    rolespecs_kind_args(Rs?, [], KAs),
+    args_app(As?, KAs?, All),
     sch_occ_vars1(All?, R).
 
 procedure nts_empty(NameTerms?, Ans).
@@ -1038,10 +988,10 @@ nts_empty([_|_], no).
 % ---------------------------------------------------------------------------
 % Which language a contract is written in
 % ---------------------------------------------------------------------------
-% A contract all of whose roles are party roles, none of whose schemas
-% carries reach conditions and none of whose atoms carries a name term is a
-% contract of Section 3, whose def:schema admits no name term, and is decided
-% as one; any other is written in the language of Appendix D.
+% A contract all of whose roles are agent roles, none of whose schemas is
+% written cschema and none of whose atoms carries a name term is a contract
+% of Section 3, whose def:schema admits no name term, and is decided as one;
+% any other is written in the language of Appendix D.
 
 procedure roles_community1(Ans?, RoleSpecs?, Ans).
 roles_community1(yes, _, yes).
@@ -1076,25 +1026,8 @@ has_community([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % ---------------------------------------------------------------------------
 % Agent-named (Appendix D.4, definition:agent-named)
 % ---------------------------------------------------------------------------
-% Every role of every schema is an agent role, a seated role or a listed role,
-% and every name term of every schema has an agent role of that schema as its
-% base (GSC 8064cfb).
-
-procedure role_agent_named(RoleSpec?, Ans).
-role_agent_named(rs(_, _, _, _, _), yes).
-role_agent_named(crs(seated(_, _), _, _, _, _, _), yes).
-role_agent_named(crs(constituent(_, _), _, _, _, _, _), no).
-role_agent_named(crs(listed(_, _, _), _, _, _, _, _), yes).
-
-procedure roles_agent_named1(Ans?, RoleSpecs?, Ans).
-roles_agent_named1(no, _, no).
-roles_agent_named1(yes, Rs, R?) :- ground(Rs?) | roles_agent_named(Rs?, R).
-
-procedure roles_agent_named(RoleSpecs?, Ans).
-roles_agent_named([], yes).
-roles_agent_named([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
-    role_agent_named(RS?, A),
-    roles_agent_named1(A?, Rs?, R).
+% Every name term of every schema has an agent role of that schema as its
+% base (GSC f3c4f43).
 
 % The base B is an agent role of the schema whose roles are Rs.
 procedure base_agent_role1(Integer?, Integer?, RoleSpecs?, Ans).
@@ -1120,17 +1053,11 @@ nts_agent_based([S|Ns], Rs, R?) :- ground(S?), ground(Ns?), ground(Rs?) |
     base_agent_role(B?, Rs?, A),
     nts_agent_based1(A?, Ns?, Rs?, R).
 
-procedure sch_agent_named1(RoleSpecs?, NameTerms?, Ans).
-sch_agent_named1(Rs, Ns, R?) :- ground(Rs?), ground(Ns?) |
-    roles_agent_named(Rs?, A1),
-    nts_agent_based(Ns?, Rs?, A2),
-    both_yes(A1?, A2?, R).
-
 procedure sch_agent_named(Schema?, Ans).
 sch_agent_named(Sc, R?) :- ground(Sc?) |
     sch_roles(Sc?, Rs),
     sch_nts(Sc?, Ns),
-    sch_agent_named1(Rs?, Ns?, R).
+    nts_agent_based(Ns?, Rs?, R).
 
 procedure agent_named1(Ans?, Contract?, Ans).
 agent_named1(no, _, no).
@@ -1177,21 +1104,10 @@ imported procedure check#traceable_variant(Constant?, Contract?, Preds).
 exported procedure traceable_variant(Constant?, Contract?, Preds).
 traceable_variant(Nm, B, E?) :- check # traceable_variant(Nm?, B?, E).
 
-imported procedure check#rooted_of(Constant?, Preds).
-exported procedure rooted_of(Constant?, Preds).
-rooted_of(Nm, E?) :- check # rooted_of(Nm?, E).
-
-imported procedure check#rooted_preds(Declared?, Preds).
-exported procedure rooted_preds(Declared?, Preds).
-rooted_preds(D, E?) :- check # rooted_preds(D?, E).
-
-imported procedure check#rooted_variant(Constant?, Contract?, Preds).
-exported procedure rooted_variant(Constant?, Contract?, Preds).
-rooted_variant(Nm, B, E?) :- check # rooted_variant(Nm?, B?, E).
-
-% The introduction with wards of Appendix F, for inspection: what the search
-% found, or that there is none; the guardianships for a set of marks; and
-% the leaving marks for it, with each choice of a guardianship per mark.
+% The introduction with wards (GAI, "Contracts with Wards"), for inspection:
+% what the search found, or that there is none; the guardianships for a set
+% of marks; and the leaving marks for it, with each choice of a guardianship
+% per mark.
 imported procedure check#wards_of(Constant?, Wards).
 exported procedure wards_of(Constant?, Wards).
 wards_of(Nm, W?) :- check # wards_of(Nm?, W).

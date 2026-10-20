@@ -4,7 +4,7 @@ The app of GAI, accountable AI agents, as a mini-app of the Grassroots Super-App
 
 ## The contract
 
-GAI is GAI's contract (Coordination Appendix C); its clauses are `programs/gai/GAI.md`, as GAI's paper has them, and its act schemas `programs/gai/GAI.glp`, `GAI.md` at GLP b322e435 and `GAI.glp` at GLP 5744daec, recorded as `cascade/GAI/2026-10-19-8`.  GAI extends Wards (`programs/gsc/Wards.md`), whose clauses Wards:1 to Wards:4 it cites, with GSG and GSNP's signing, messaging and forwarding beneath it:
+GAI is GAI's contract (Coordination Appendix C); its clauses are `programs/gai/GAI.md`, as GAI's paper has them, and its act schemas `programs/gai/GAI.glp`, `GAI.md` at GLP b322e435 and `GAI.glp` at GLP 5744daec, recorded as `cascade/GAI/2026-10-19-8`.  GAI extends Wards (`programs/gai/Wards.md`), whose clauses Wards:1 to Wards:4 it cites, with GSG and GSNP's signing, messaging and forwarding beneath it:
 
 1. *Developer.*  The *developer* of an AI agent is the person who signed its code.  A person who creates an AI agent attests that it runs code signed by its developer.
 2. *Principal.*  The guardian of an AI agent is its *principal*.  Every act of the AI agent names its principal and its developer and carries its principal's attestation.

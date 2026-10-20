@@ -260,62 +260,6 @@ retired
 \}
 \end{align*}
 \iffalse
-sign
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-item
-}
-(
-x
-)
-,
-\mathit{
-authored
-}
-(
-x
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-\mathit{
-retired
-}
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
 message
 \fi
 \begin{align*}
@@ -342,28 +286,21 @@ c_
  \uplus 
 \{
 \mathit{
-item
+received
 }
 (
 x
+,
+\Alice
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,
-\mathit{
-authored
-}
-(
-x
-)
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -394,105 +331,6 @@ retired
 {
 \Alice
 }
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-forward
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-item
-}
-(
-\mathrm{sgn}(
-x
-,
-\Alice
-)
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-item
-}
-(
-x
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
-\}
- \subseteq c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-authored
-}
-(
-x
-)
-,
-\mathit{
-retired
-}
-\}
- \cap c_
-{
-\Alice
-}
- = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -594,23 +432,9 @@ n
  \text{ is an argument of no atom of } c
 ,\\
 &
-\text{guarded by } 
-G
-,\ 
-G
- \subseteq 
-\mathrm{ext}_c(
+\text{guarded by } \{
 \Alice
-)
- \text{ with } |
-G
-| > 
-0
-|
-\mathrm{ext}_c(
-\Alice
-)
-|
+\}
 \end{align*}
 \iffalse
 join
@@ -771,52 +595,11 @@ p
 )
 ,\\
 &
-\text{guarded by } 
-G_{
-1
-}
-\cup 
-G_{
-2
-}
-,\ 
-G_{
-1
-}
- \subseteq 
-\mathrm{ext}_c(
+\text{guarded by } \{
 \Alice
-)
- \text{ with } |
-G_{
-1
-}
-| > 
-0
-|
-\mathrm{ext}_c(
-\Alice
-)
-|
- \text{ and } 
-G_{
-2
-}
- \subseteq 
-\mathrm{ext}_c(
+,
 \Bob
-)
- \text{ with } |
-G_{
-2
-}
-| > 
-0
-|
-\mathrm{ext}_c(
-\Bob
-)
-|
+\}
 \end{align*}
 \iffalse
 leave
@@ -934,23 +717,9 @@ p
 )
 ,\\
 &
-\text{guarded by } 
-G
-,\ 
-G
- \subseteq 
-\mathrm{ext}_c(
+\text{guarded by } \{
 \Bob
-)
- \text{ with } |
-G
-| > 
-0
-|
-\mathrm{ext}_c(
-\Bob
-)
-|
+\}
 \end{align*}
 \iffalse
 close
@@ -1097,23 +866,9 @@ p
 )
 ,\\
 &
-\text{guarded by } 
-G
-,\ 
-G
- \subseteq 
-\mathrm{ext}_c(
+\text{guarded by } \{
 \Alice
-)
- \text{ with } |
-G
-| > 
-0
-|
-\mathrm{ext}_c(
-\Alice
-)
-|
+\}
 \end{align*}
 \iffalse
 drop
@@ -1271,13 +1026,6 @@ identity
 }
 ,\ 
 \mathit{
-item
-}
-(
-x
-)
-,\ 
-\mathit{
 member
 }
 (
@@ -1322,23 +1070,9 @@ p
 )
 ,\\
 &
-\text{guarded by } 
-G
-,\ 
-G
- \subseteq 
-\mathrm{ext}_c(
+\text{guarded by } \{
 \Alice
-)
- \text{ with } |
-G
-| > 
-0
-|
-\mathrm{ext}_c(
-\Alice
-)
-|
+\}
 \end{align*}
 \iffalse
 post
@@ -1385,13 +1119,6 @@ n
 \mathit{
 identity
 }
-,\ 
-\mathit{
-authored
-}
-(
-x
-)
 ,\ 
 \mathit{
 member
@@ -1468,135 +1195,16 @@ p
 )
 ,\\
 &
-\text{guarded by } 
-G
-,\ 
-G
- \subseteq 
-\mathrm{ext}_c(
-\Alice
-)
- \text{ with } |
-G
-| > 
-0
-|
-\mathrm{ext}_c(
-\Alice
-)
-|
-\end{align*}
-\iffalse
-post_forward
-\fi
-\begin{align*}
-&
-c'_
-p
- := 
-c_
-p
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
-,\\
-&
-c'_
-p
- := 
-c_
-p
- \uplus 
-\{
+\text{provided } 
 \mathit{
 posted
 }
 (
-\mathrm{sgn}(
 x
 ,
-\Alice
-)
-,
 n
 )
-\}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,\ 
-\mathit{
-item
-}
-(
-x
-)
-,\ 
-\mathit{
-member
-}
-(
-\langle
-\Bob
-\rangle
-\cdot
-n
-)
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,\ 
-\mathit{
-member
-}
-(
-\langle
-\Bob
-\rangle
-\cdot
-n
-)
-,\ 
-\mathit{
-listed
-}
-(
-\Alice
-,
-n
-)
-,\ 
-\mathit{
-friend
-}
-(
-\Alice
-)
-\}
- \subseteq c_
+ \notin c_
 p
 && (p \in 
 \mathrm{ext}_c(
@@ -1605,46 +1213,9 @@ p
 )
 ,\\
 &
-\text{provided } 
-\{
-\mathit{
-authored
-}
-(
-x
-)
-,\ 
-\mathit{
-retired
-}
+\text{guarded by } \{
+\Alice
 \}
- \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
-,\\
-&
-\text{guarded by } 
-G
-,\ 
-G
- \subseteq 
-\mathrm{ext}_c(
-\Alice
-)
- \text{ with } |
-G
-| > 
-0
-|
-\mathrm{ext}_c(
-\Alice
-)
-|
 \end{align*}
 \iffalse
 deliver
@@ -1662,7 +1233,7 @@ p
 delivered
 }
 (
-y
+x
 ,
 \Bob
 ,
@@ -1684,14 +1255,14 @@ p
  \uplus 
 \{
 \mathit{
-item
+received_in
 }
 (
-\mathrm{sgn}(
-y
+x
 ,
 \Alice
-)
+,
+n
 )
 \}
 && (p \in 
@@ -1722,176 +1293,9 @@ n
 posted
 }
 (
-y
+x
 ,
 n
-)
-,\ 
-\mathit{
-listed
-}
-(
-\Bob
-,
-n
-)
-,\ 
-\mathit{
-friend
-}
-(
-\Bob
-)
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,\ 
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-authored
-}
-(
-y
-)
-,\ 
-\mathit{
-delivered
-}
-(
-y
-,
-\Bob
-,
-n
-)
-\}
- \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
-,\\
-&
-\text{guarded by } \emptyset
-\end{align*}
-\iffalse
-deliver_own
-\fi
-\begin{align*}
-&
-c'_
-p
- := 
-c_
-p
- \uplus 
-\{
-\mathit{
-delivered
-}
-(
-y
-,
-\Bob
-,
-n
-)
-\}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
-,\\
-&
-c'_
-p
- := 
-c_
-p
- \uplus 
-\{
-\mathit{
-item
-}
-(
-y
-)
-\}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,\ 
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-,\ 
-\mathit{
-posted
-}
-(
-y
-,
-n
-)
-,\ 
-\mathit{
-authored
-}
-(
-y
 )
 ,\ 
 \mathit{
@@ -1950,7 +1354,7 @@ p
 delivered
 }
 (
-y
+x
 ,
 \Bob
 ,
@@ -3698,75 +3102,13 @@ p
 )
 ,\\
 &
-\text{guarded by } 
-G_{
-1
-}
-\cup 
-G_{
-2
-}
-\cup 
-G_{
-3
-}
-,\ 
-G_{
-1
-}
- \subseteq 
-\mathrm{ext}_c(
+\text{guarded by } \{
 \Alice
-)
- \text{ with } |
-G_{
-1
-}
-| > 
-0
-|
-\mathrm{ext}_c(
-\Alice
-)
-|
- \text{ and } 
-G_{
-2
-}
- \subseteq 
-\mathrm{ext}_c(
+,
 \Bob
-)
- \text{ with } |
-G_{
-2
-}
-| > 
-0
-|
-\mathrm{ext}_c(
-\Bob
-)
-|
- \text{ and } 
-G_{
-3
-}
- \subseteq 
-\mathrm{ext}_c(
+,
 \mathit{Carol}
-)
- \text{ with } |
-G_{
-3
-}
-| > 
-0
-|
-\mathrm{ext}_c(
-\mathit{Carol}
-)
-|
+\}
 \end{align*}
 \iffalse
 child_join_2
@@ -4046,98 +3388,15 @@ p
 )
 ,\\
 &
-\text{guarded by } 
-G_{
-1
-}
-\cup 
-G_{
-2
-}
-\cup 
-G_{
-3
-}
-\cup 
-G_{
-4
-}
-,\ 
-G_{
-1
-}
- \subseteq 
-\mathrm{ext}_c(
+\text{guarded by } \{
 \Alice
-)
- \text{ with } |
-G_{
-1
-}
-| > 
-0
-|
-\mathrm{ext}_c(
-\Alice
-)
-|
- \text{ and } 
-G_{
-2
-}
- \subseteq 
-\mathrm{ext}_c(
+,
 \Bob
-)
- \text{ with } |
-G_{
-2
-}
-| > 
-0
-|
-\mathrm{ext}_c(
-\Bob
-)
-|
- \text{ and } 
-G_{
-3
-}
- \subseteq 
-\mathrm{ext}_c(
+,
 \mathit{Carol}
-)
- \text{ with } |
-G_{
-3
-}
-| > 
-0
-|
-\mathrm{ext}_c(
-\mathit{Carol}
-)
-|
- \text{ and } 
-G_{
-4
-}
- \subseteq 
-\mathrm{ext}_c(
+,
 \mathit{Dave}
-)
- \text{ with } |
-G_{
-4
-}
-| > 
-0
-|
-\mathrm{ext}_c(
-\mathit{Dave}
-)
-|
+\}
 \end{align*}
 \iffalse
 child_leave
@@ -4307,23 +3566,9 @@ p
 )
 ,\\
 &
-\text{guarded by } 
-G
-,\ 
-G
- \subseteq 
-\mathrm{ext}_c(
+\text{guarded by } \{
 \mathit{Carol}
-)
- \text{ with } |
-G
-| > 
-0
-|
-\mathrm{ext}_c(
-\mathit{Carol}
-)
-|
+\}
 \end{align*}
 \iffalse
 child_close
@@ -4522,21 +3767,7 @@ p
 )
 ,\\
 &
-\text{guarded by } 
-G
-,\ 
-G
- \subseteq 
-\mathrm{ext}_c(
+\text{guarded by } \{
 \Bob
-)
- \text{ with } |
-G
-| > 
-0
-|
-\mathrm{ext}_c(
-\Bob
-)
-|
+\}
 \end{align*}
