@@ -22,11 +22,13 @@
 %%   7. sale of debt              Alice sells 10 bob-coins to Eve for 4 frank-coins
 %%
 %% What dates add is shown once, on Frank's bonds: before Frank's date reaches
-%% day 28, Diana presents one of the frank-bonds she holds for a frank-coin,
-%% and Frank's agent returns it, as it is not mature by his date; Frank's date
-%% then advances to 28 by his own calendar, and once he has presented his
-%% first diana-coin, Diana presents a frank-bond again and takes a frank-coin
-%% for it.  Bob's date advances to 25 by his own calendar.  The play drives
+%% day 28, Diana presents one of the frank-bonds she holds, to redeem it
+%% against a frank-coin, and Frank's agent returns it, as it is not mature by
+%% his date; Frank's date then advances to 28 by his own calendar, and once he
+%% has presented his fifth diana-coin, after the escrow agent's release has
+%% given him frank-coins, Diana presents a frank-bond again and redeems it
+%% against a frank-coin he holds (clause 5: a matured bond is redeemed as a
+%% coin is).  Bob's date advances to 25 by his own calendar.  The play drives
 %% the calendars.
 %%
 %% Each party runs the mini-app (dated/miniapp.glp): the compiled agent with
@@ -66,8 +68,11 @@ script(charlie, [mint(15), accept(alice), mint(10),
                  deposit(escrow, frank, now, 5)]).
 script(diana, [mint(20), swap(bob, diana, now, 20, bob, 25, 24),
                mint(15), swap(frank, diana, now, 15, frank, 28, 18),
-               mature(frank, 28),
-               await(presented(frank, frank, 28)), mature(frank, 28)]).
+               redeem(frank, 28, frank, now),
+               await(presented(frank, frank, 28)), await(presented(frank, frank, 28)),
+               await(presented(frank, frank, 28)), await(presented(frank, frank, 28)),
+               await(presented(frank, frank, 28)),
+               redeem(frank, 28, frank, now)]).
 script(eve, [mint(10), accept(charlie), mint(10),
              swap(frank, eve, now, 10, frank, now, 10),
              pay(charlie, 6), swap(charlie, frank, now, 5, alice, now, 5),
@@ -75,10 +80,10 @@ script(eve, [mint(10), accept(charlie), mint(10),
 script(frank, [mint(18, 28), accept(diana), mint(10), accept(eve),
                pay(diana, 3),
                await(not_mature_for(diana, 28)), advance(28),
-               redeem(diana, frank, 28), redeem(diana, frank, 28),
-               redeem(diana, frank, 28), redeem(diana, frank, 28),
-               redeem(diana, frank, 28),
-               accept_transfer(escrow)]).
+               redeem(diana, now, frank, 28), redeem(diana, now, frank, 28),
+               redeem(diana, now, frank, 28), redeem(diana, now, frank, 28),
+               accept_transfer(escrow),
+               redeem(diana, now, frank, 28)]).
 %% The escrow agent's calendar: its date reaches day 30 once the deposit is
 %% held.  Its acts are the escrow program's.
 script(escrow, [await(received_transfer(deposit, charlie, [lot(frank, now, 5)])),
