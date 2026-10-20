@@ -1,0 +1,27 @@
+%% Test (xix)'s vGLP program (sGLP's task of 2026-10-20 08:00 UTC, items 4, 5
+%% and 7; sGLP's paper at 0270ac6, Section 3, Definition "Screen, Seen";
+%% Section 4, "The screen" and "The log"): a program that writes to its
+%% person, Output ::= note(Integer), and asks the person a count, Count ::=
+%% count(Integer?), twice.  It writes note(N1) at once, N1 the first count,
+%% not ground until the person answers it, and note(9) after it; and once the
+%% first count is answered it asks the second.  Its canonical compilation
+%% (vGLP, Definition "Canonical Compilation") is notes.glp, by hand; the
+%% program loader skips a .vglp beside a .glp of its name, so this source is
+%% not loaded.
+
+Output ::= note(Integer).
+Count  ::= count(Integer?).
+
+%% The person's count.
+procedure (Count)*count(Integer).
+(count(N))*count(N?).
+
+%% notes(Ns, Os): the first count asked and the notes written, note(N1) and
+%% note(9); once the first count is answered, the second asked; Ns the two
+%% counts.
+exported procedure notes(Stream(Integer), Stream(Output)).
+notes([N1?, N2?], [note(N1?), note(9)]) :- count(N1), again(N1?, N2).
+
+%% again(N1?, N2): once N1 is answered, the second count N2 asked.
+procedure again(Integer?, Integer).
+again(N1, N2?) :- ground(N1?) | count(N2).

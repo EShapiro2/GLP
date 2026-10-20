@@ -1,5 +1,5 @@
 #!/bin/bash
-# The transformation of the sGLP sources of the two examples and of the five
+# The transformation of the sGLP sources of the two examples and of the eight
 # run tests into GLP (programs/sglp, transform.glp; sGLP's paper, the
 # repository svGLP-Stochastic-Volitional-GLP, Section 4, "The transformation"),
 # through the REPL.
@@ -8,7 +8,8 @@
 #   bash programs/sglp/transform.sh <dir>      print into <dir>/social_graph/, <dir>/coins/,
 #                                              <dir>/tests/reader/, <dir>/tests/delivery/,
 #                                              <dir>/tests/receipt/, <dir>/tests/panel/,
-#                                              <dir>/tests/numbers/ and <dir>/tests/steps/
+#                                              <dir>/tests/numbers/, <dir>/tests/steps/,
+#                                              <dir>/tests/screen/ and <dir>/tests/census/
 #   bash programs/sglp/transform.sh --check    print into a scratch directory and compare
 #   bash programs/sglp/transform.sh --source <src> [--check]
 #                                              print <src>/profiles.glp and <src>/population.glp
@@ -21,7 +22,7 @@
 #                                              interface <iface>, or with --check compare
 #
 # In one REPL session it loads programs/sglp and calls transform(P, Part) for
-# P social_graph, coins, reader, delivery, receipt, panel, numbers and steps and Part profiles
+# P social_graph, coins, reader, delivery, receipt, panel, numbers, steps, screen and census and Part profiles
 # and population, and writes what each prints between its lines "%% transform
 # begin" and "%% transform end" to its directory's Part.glp:
 # social_graph/profiles.glp and social_graph/population.glp, from
@@ -29,15 +30,17 @@
 # from coins/coins_sglp.glp; and the run tests' (xi) to (xiv), tests/reader/
 # from rating_sglp.glp, tests/delivery/ from chat_sglp.glp, tests/receipt/ from
 # receipt_sglp.glp, tests/panel/ from show_sglp.glp, tests/numbers/ from
-# total_sglp.glp (sGLP's task of 2026-10-14 09:46 UTC, item 3) and tests/steps/ from
-# steps_sglp.glp (sGLP's task of 2026-10-18 20:52 UTC, item 1), the run tests' programs
+# total_sglp.glp (sGLP's task of 2026-10-14 09:46 UTC, item 3), tests/steps/ from
+# steps_sglp.glp (sGLP's task of 2026-10-18 20:52 UTC, item 1), and tests/screen/ from
+# notes_sglp.glp and tests/census/ from village_sglp.glp (sGLP's task of 2026-10-20
+# 08:00 UTC, item 7), the run tests' programs
 # holding no call of the transformation (sGLP's tasks 6 and 8 of 2026-10-10
 # 07:59 and 09:33 UTC).  The program it loads includes the printed files,
 # which the harnesses call, so they are printed by the program that holds
 # them, the files it prints being those it loaded where the sources are
 # unchanged; --check says whether they are.
 #
-# Prints one line per file.  Exits 0 if all sixteen were printed, with no fault
+# Prints one line per file.  Exits 0 if all twenty were printed, with no fault
 # of the checks (a line "%% not transformed: ..."), and, with --check, each is
 # byte for byte the file in place; 1 otherwise, the faults or the differing
 # files named; 2 on a bad argument.
@@ -63,9 +66,10 @@
 # interface the cascade prints beside the platform's .vglp
 # (programs/sglp/cva/interface.sh), holding the declaration exported procedure
 # interface(SglpTerms) and the unit clause interface(V); in one REPL session it
-# calls transform_terms(V, S, Part) for Part profiles and cva_population, the
-# population with the run's entries of one arity that the harness of every
-# canonical platform calls (programs/sglp/cva/), and writes the two parts to
+# calls transform_terms(V, S, Part) for Part cva_profiles and cva_population,
+# the profiles and the population of a canonical platform, whose keys are its
+# Key, the population with the run's entries of one arity that the harness of
+# every canonical platform calls (programs/sglp/cva/), and writes the two parts to
 # <dir> as profiles.glp and population.glp, or with --check compares them with
 # those in <dir>.
 # The parts are written to <dir> and not beside the source, since a .glp in an
@@ -139,7 +143,7 @@ if [ -n "$IFACE" ]; then
     {
         echo ':limit 1000000000000000'
         echo "$HERE"
-        echo "transform_terms($V, $S, profiles)."
+        echo "transform_terms($V, $S, cva_profiles)."
         echo "transform_terms($V, $S, cva_population)."
         echo ':quit'
     } > "$WORK/input"
@@ -185,9 +189,9 @@ else
         OUT="$1"
     fi
     BASE="$HERE"
-    mkdir -p "$OUT/social_graph" "$OUT/coins" "$OUT/tests/reader" "$OUT/tests/delivery" "$OUT/tests/receipt" "$OUT/tests/panel" "$OUT/tests/numbers" "$OUT/tests/steps" || exit 2
+    mkdir -p "$OUT/social_graph" "$OUT/coins" "$OUT/tests/reader" "$OUT/tests/delivery" "$OUT/tests/receipt" "$OUT/tests/panel" "$OUT/tests/numbers" "$OUT/tests/steps" "$OUT/tests/screen" "$OUT/tests/census" || exit 2
 
-    PARTS="social_graph/profiles social_graph/population coins/profiles coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population tests/receipt/profiles tests/receipt/population tests/panel/profiles tests/panel/population tests/numbers/profiles tests/numbers/population tests/steps/profiles tests/steps/population"
+    PARTS="social_graph/profiles social_graph/population coins/profiles coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population tests/receipt/profiles tests/receipt/population tests/panel/profiles tests/panel/population tests/numbers/profiles tests/numbers/population tests/steps/profiles tests/steps/population tests/screen/profiles tests/screen/population tests/census/profiles tests/census/population"
     {
         echo ':limit 1000000000000000'
         echo "$HERE"

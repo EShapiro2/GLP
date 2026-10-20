@@ -1,0 +1,24 @@
+%% Test (xx)'s vGLP program (sGLP's task of 2026-10-20 08:00 UTC, items 1 to 4
+%% and 7; sGLP's paper at 0270ac6, Section 3, Definitions "Person, Census",
+%% "Profile, Dimension" and "Stochastic Person, Population"): a program that
+%% writes nothing to its person and asks two questions, a greeting, Hello ::=
+%% hello(Constant?, Integer?), the person writing a name and a number, and a
+%% mood, Mood ::= mood(Constant?).  Its canonical compilation (vGLP, Definition
+%% "Canonical Compilation") is village.glp, by hand; the program loader skips a
+%% .vglp beside a .glp of its name, so this source is not loaded.
+
+Hello ::= hello(Constant?, Integer?).
+Mood  ::= mood(Constant?).
+Said  ::= said(Constant, Integer, Constant).
+
+%% The person's greeting.
+procedure (Hello)*greet(Constant, Integer).
+(hello(K, N))*greet(K?, N?).
+
+%% The person's mood.
+procedure (Mood)*feel(Constant).
+(mood(M))*feel(M?).
+
+%% talk(S): the greeting and the mood asked at once, S the three answers.
+exported procedure talk(Said).
+talk(said(K?, N?, M?)) :- greet(K, N), feel(M).
