@@ -7,7 +7,7 @@
 #   <app>  contract  owner's file
 #   gsg    gsg       programs/gsc/GSG.glp
 #   gsn    gsn       programs/gsc/GSN.glp
-#   gsnp   gsnp      programs/gsc/GSNP.glp
+#   gsnp   gsnp      programs/gai/GSNP.glp
 #   gai    gai       programs/gai/GAI.glp
 #
 # The steps are cascade.sh's 1, 2 and 4: the contract, contract_named/2, from the owner's file; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/4, on the contract, its verdict and its introduction predicate, introduction_named/2 where the owner's file names one and no_introduction otherwise.  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
@@ -32,7 +32,7 @@ file_of() { # file_of <app> ; the owner's file that holds its contract
     case "$1" in
         gsg) echo "$GLP_DIR/programs/gsc/GSG.glp" ;;
         gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
-        gsnp) echo "$GLP_DIR/programs/gsc/GSNP.glp" ;;
+        gsnp) echo "$GLP_DIR/programs/gai/GSNP.glp" ;;
         gai) echo "$GLP_DIR/programs/gai/GAI.glp" ;;
     esac
 }

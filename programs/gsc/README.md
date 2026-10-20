@@ -14,10 +14,10 @@ The compiler is Section 5 and Appendix D.  A schema of Section 3's language --- 
 
 ## Running it
 
-Needs the Dart SDK and this repository; nothing else.  A contract is its owner's and lives with the owner's code, one copy, in the term form of "Writing a contract" below: GSC's are `programs/gsc/GSG.glp`, the social graph, and `GSN.glp`, the social network; GAI's `GSNP.glp`, the social network with provenance, beside GSC's until it moves to `programs/gai`; the currency's is `programs/currencies/coins/GC.glp`, the child-safe social network's `programs/cssn/CSSN.glp`, AI agents' `programs/gai/GAI.glp` and the federation's `programs/federation/GFWC.glp`.  A REPL session on the file prints the contract's term, and a session on this directory decides it.  From the repository root:
+Needs the Dart SDK and this repository; nothing else.  A contract is its owner's and lives with the owner's code, one copy, in the term form of "Writing a contract" below: GSC's are `programs/gsc/GSG.glp`, the social graph, and `GSN.glp`, the social network; GAI's `programs/gai/GSNP.glp`, the social network with provenance; the currency's is `programs/currencies/coins/GC.glp`, the child-safe social network's `programs/cssn/CSSN.glp`, AI agents' `programs/gai/GAI.glp` and the federation's `programs/federation/GFWC.glp`.  A REPL session on the file prints the contract's term, and a session on this directory decides it.  From the repository root:
 
     cd glp_runtime
-    printf '/path/to/GLP/programs/gsc/GSNP.glp\ncontract_named(gsnp, C).\n:quit\n' | bin/glpc
+    printf '/path/to/GLP/programs/gai/GSNP.glp\ncontract_named(gsnp, C).\n:quit\n' | bin/glpc
     printf '/path/to/GLP/programs/gsc/\n:limit 1000000\ncheck(<the term the first printed>, V).\n:quit\n' | bin/glpc
 
 or interactively, entering the directory path at the prompt to load the program and then a goal:
@@ -138,7 +138,7 @@ has no variable, and is
       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])]),
        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])])])
 
-and forward of GSNP, GAI's, whose GSNP.glp shows the `identity` every role but establish's requires only in establish,
+and forward of GSNP, GAI's (`programs/gai/GSNP.glp`), written with the `identity` every role but establish's requires left out,
 
     forward(Alice?, Bob; x) :   item(x), not authored(x)    friend(Alice), +item(sgn(x, Alice))
 
@@ -167,7 +167,7 @@ the signed term naming Alice, the forwarder, by her index, and Alice, who guards
 | `unobstructed.glp` | `def:introduction` and `def:unobstructed`, with clauses 1 and 2 of `definition:sg-agent-named` |
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
 | `community.glp` | the two conditions of Appendix D; its volition is `def:volition` of Section 3 too; clauses 3 and 4 of `definition:sg-agent-named` |
-| `wards.glp` | `def:guardianship`, `def:leaving`, `def:unobstructed-marks`, `def:relay` and `def:introduction-wards`, as a search over the marks and the predicates of arity one, with clauses 1 and 2 of `def:sg-wards`; and the atoms of h of clause 2 of `def:relay` the relay acts found require, for inspection |
+| `wards/` | GAI's (Coordination Appendix B; Udi, 2026-10-20), a child directory of the checker, so that the checker's modules call it by the qualifier `wards` and it sees the scope of this directory's `self.glp`, which exposes `unobstructed.glp`'s `intro_act_bindings` to it (TGLP, Section "Module System"): `wards/self.glp`, its interface, forwarding `wards`, `guardianships_for`, `leaving_for` and `relay_h_for`; and `wards/wards.glp`, `def:guardianship`, `def:leaving`, `def:unobstructed-marks`, `def:relay` and `def:introduction-wards`, as a search over the marks and the predicates of arity one, with clauses 1 and 2 of `def:sg-wards`; and the atoms of h of clause 2 of `def:relay` the relay acts found require, for inspection |
 | `check.glp` | `def:syntactically-grassroots`, the wards when its first conjunct fails, `definition:sg-agent-named` and `def:sg-wards` for an agent-named contract with community roles, and the conditions of Appendix D for any other; the refusal of a malformed contract, for its head, a listed role, the form of a schema, a reflexive predicate or a signed term |
 | `compile.glp` | `def:compile`, printed as the LaTeX of the displays of Section 5.1 and Appendix B.3, and `definition:compile`, printed in the form of Appendix D's display of close |
 | `contracts.glp` | the checker's fixtures: contracts that stand alone, by name, and variants of a contract, by name and the contract's term |

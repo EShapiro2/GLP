@@ -12,7 +12,17 @@
 % This file is the directory's shared scope: the representation of a contract,
 % the substitution and matching machinery every condition needs, and the
 % directory's entry points.
+%
+% The condition on a contract with wards is GAI's (Coordination Appendix B;
+% Udi, 2026-10-20) and lives in the child directory wards/, entered through
+% its self.glp by the qualifier wards (TGLP, Section "Module System",
+% "Cross-module type checking": a qualifier is a child directory or module
+% file of the caller's directory).  It reads the introductions of a schema,
+% intro_act_bindings/2 of unobstructed.glp, which this file exposes to its
+% subtree (TGLP, "The -expose directive").
 % ---------------------------------------------------------------------------
+
+-expose(unobstructed).
 
 % --- The syntax of a schema (def:schema, definition:term, definition:role,
 % --- definition:schema) ----------------------------------------------------

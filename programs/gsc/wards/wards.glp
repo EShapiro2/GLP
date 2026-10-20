@@ -25,7 +25,11 @@
 % forbids, admit them besides, and the answer names them.
 % ---------------------------------------------------------------------------
 
-imported procedure unobstructed#intro_act_bindings(Schema?, Substs).
+% intro_act_bindings/2, the introductions of a schema, is unobstructed.glp's,
+% which programs/gsc/self.glp exposes to its subtree: this module sits in the
+% child directory wards/ of the checker, GAI's (Coordination Appendix B), and
+% a cross-module qualifier names a child of the caller's directory and no
+% sibling (TGLP, Section "Module System", "Cross-module type checking").
 
 % ---------------------------------------------------------------------------
 % The atoms of a contract and its predicates by arity
@@ -861,7 +865,7 @@ intro_marks0([RS1, RS2], Sc, C, Rf, M, Lv, R?) :-
     is_guarding(RS1?, G1),
     is_guarding(RS2?, G2),
     both_yes(G1?, G2?, G),
-    unobstructed # intro_act_bindings(Sc?, Bs),
+    intro_act_bindings(Sc?, Bs),
     nonempty_substs(Bs?, B),
     both_yes(G?, B?, GB),
     rs_add(RS1?, P1),

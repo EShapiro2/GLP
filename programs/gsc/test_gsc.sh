@@ -86,8 +86,8 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 # (Appendix D.4, GSC 8064cfb); GSGT is GSG, a contract of Section 3, the
 # contract the checks of Section 3 below are made on.
 ESTABLISH="[schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])])"
-SG=$(term "$GLP_DIR/programs/gsc/GSNP.glp" gsnp)
-check "GSNP's contract, the network with provenance, is read from programs/gsc/GSNP.glp" \
+SG=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
+check "GSNP's contract, the network with provenance, is read from programs/gai/GSNP.glp" \
       "$ESTABLISH" "$SG"
 GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
 check "GSG's contract is read from programs/gsc/GSG.glp, establish first" "$ESTABLISH" "$GSGT"
@@ -426,10 +426,10 @@ check_not "CSSN's predicates have traceable provenance" "untraceable(" "$out"
 check_not "CSSN's contract satisfies volition" "volition(" "$out"
 check_not "CSSN's contract is not malformed" "malformed(" "$out"
 # One display per schema (Section 5.1, "A contract compiles schema by
-# schema"): CSSN.glp's twenty-nine at 4cb1ec11, GSNP's sixteen and thirteen
-# for children.
+# schema"): CSSN.glp's twenty-five at GLP fdc27eb3, GSN's twelve with the
+# child conditions and thirteen for children (CSSN #8 Cowork, 2026-10-20).
 out=$(run "compile_contract(cssn, $CSSN).")
-check_eq "and it compiles to twenty-nine displays" "29" \
+check_eq "and it compiles to twenty-five displays" "25" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
 # --- reflexive predicates (the paragraph after def:binding) ----------------

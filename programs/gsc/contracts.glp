@@ -821,8 +821,8 @@ nn_tag_loose(C?) :-
 % sign(Alice?; x) adds item(x), and forward(Alice?, Bob; x) requires item(x)
 % at Alice, adds sent(x, Bob) there, and adds item(sgn(x, Alice)) at Bob,
 % where friend(Alice) is required.  The checker's fixture, the base of
-% sg_sgn_loose below; Section 3.3's network with provenance is GSNP, GSC's
-% contract, programs/gsc/GSNP.glp, which test_gsc.sh reads.
+% sg_sgn_loose below; the network with provenance is GSNP, GAI's contract,
+% programs/gai/GSNP.glp, which test_gsc.sh reads.
 procedure sg_items(Contract).
 sg_items([schema(befriend, [],
        [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),

@@ -1,0 +1,28 @@
+% ---------------------------------------------------------------------------
+% The condition on a contract with wards, GAI's (Coordination Appendix B;
+% Udi, 2026-10-20): GAI's appendix "Contracts with Wards", /Grassroots/GAI,
+% sections/wards.tex, and def:sg-wards of CSSN's paper.  This directory is a
+% child of the checker, programs/gsc, so that the checker's modules may call
+% it, a cross-module qualifier naming a child directory of the caller's
+% directory (TGLP, Section "Module System", "Cross-module type checking"),
+% and so that wards.glp sees the representation of a contract and the
+% matching machinery of programs/gsc/self.glp, its ancestor scope.  This
+% file is the directory's interface: it exports the procedures check.glp
+% calls, each forwarded to wards.glp (TGLP, "External access").
+% ---------------------------------------------------------------------------
+
+imported procedure wards#wards(Contract?, Preds?, Wards).
+exported procedure wards(Contract?, Preds?, Wards).
+wards(C, Rf, W?) :- wards # wards(C?, Rf?, W).
+
+imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
+exported procedure guardianships_for(Contract?, Preds?, Guardianships).
+guardianships_for(C, M, G?) :- wards # guardianships_for(C?, M?, G).
+
+imported procedure wards#leaving_for(Contract?, Preds?, Leavings).
+exported procedure leaving_for(Contract?, Preds?, Leavings).
+leaving_for(C, M, L?) :- wards # leaving_for(C?, M?, L).
+
+imported procedure wards#relay_h_for(Contract?, Preds?, Wards?, RelayHs).
+exported procedure relay_h_for(Contract?, Preds?, Wards?, RelayHs).
+relay_h_for(C, Rf, W, H?) :- wards # relay_h_for(C?, Rf?, W?, H).
