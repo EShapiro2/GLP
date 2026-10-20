@@ -1,0 +1,59 @@
+establish(Alice?) :
+    at Alice: +identity
+
+befriend(Alice?, Bob?) :
+    at Alice: identity, not friend(Bob), +friend(Bob)
+    at Bob: identity, not friend(Alice), +friend(Alice)
+
+unfriend(Alice?, Bob) :
+    at Alice: identity, -friend(Bob)
+    at Bob: identity, -friend(Alice)
+
+sign(Alice?; x) :
+    at Alice: identity, +item(x), +authored(x)
+
+message(Alice?, Bob; x) :
+    at Alice: identity, authored(x)
+    at Bob: identity, friend(Alice), +item(x)
+
+forward(Alice?, Bob; x) :
+    at Alice: identity, item(x), not authored(x)
+    at Bob: identity, friend(Alice), +item(sgn(x, Alice))
+
+create(Alice?; n) :
+    at Alice: identity, not member(<Alice>.n), not closed(n), +member(<Alice>.n), +listed(Alice, n)
+
+join(Alice?, Bob?; n) :
+    at Alice: identity, member(<Alice>.n), friend(Bob), +listed(Bob, n)
+    at Bob: identity, friend(Alice), not member(<Alice>.n), +member(<Alice>.n)
+
+leave(Alice, Bob?; n) :
+    at Alice: identity, -listed(Bob, n)
+    at Bob: identity, -member(<Alice>.n)
+
+close(Alice?, Alice[listed(*, n)]; n) :
+    at Alice: identity, +closed(n), -listed(Alice, n)
+    at Alice[listed(*, n)]: identity, -member(<Alice>.n)
+
+drop(Alice, Bob; n) :
+    at Alice: identity, not friend(Bob), -listed(Bob, n)
+    at Bob: identity, -member(<Alice>.n)
+
+post_own(Alice?; x, n) :
+    at Alice: identity, item(x), member(<Alice>.n), not posted(x, n), +posted(x, n)
+
+post(Alice?, Bob; x, n) :
+    at Alice: identity, authored(x), member(<Bob>.n)
+    at Bob: identity, member(<Bob>.n), listed(Alice, n), friend(Alice), +posted(x, n)
+
+post_forward(Alice?, Bob; x, n) :
+    at Alice: identity, item(x), member(<Bob>.n), not authored(x)
+    at Bob: identity, member(<Bob>.n), listed(Alice, n), friend(Alice), +posted(sgn(x, Alice), n)
+
+deliver(Alice, Bob; y, n) :
+    at Alice: identity, member(<Alice>.n), posted(y, n), listed(Bob, n), friend(Bob), not authored(y), not delivered(y, Bob, n), +delivered(y, Bob, n)
+    at Bob: identity, member(<Alice>.n), +item(sgn(y, Alice))
+
+deliver_own(Alice, Bob; y, n) :
+    at Alice: identity, member(<Alice>.n), posted(y, n), authored(y), listed(Bob, n), friend(Bob), not delivered(y, Bob, n), +delivered(y, Bob, n)
+    at Bob: identity, member(<Alice>.n), +item(y)
