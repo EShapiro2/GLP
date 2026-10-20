@@ -669,10 +669,183 @@ gkk_intro_loose(S, C?) :-
         [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)])], []),
          rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), S?, C).
 
+% ===========================================================================
+% Numbers (GSC, Section 3.2, the paragraph after the example of def:schema)
+% ===========================================================================
+% "An argument of an atom may be a number or a numeric variable, a schema may
+% carry a constraint on its numeric variables, which every binding
+% satisfies, and an atom added or deleted may carry a multiplicity ...  A
+% number names no agent, so the conditions below do not concern them."  In
+% the term form of Currencies' GB.glp: num(x) a numeric variable, or a number
+% where x is one; times(num(k), A) the atom A with the multiplicity k;
+% nschema(Name, Vars, Constraint, Roles) a schema with a constraint, over
+% gt, le, succ and or.  The fixtures are the checker's and certify nothing
+% of GB, Currencies' (programs/currencies/bonds/GB.glp).
+%
+% establish(Alice?) : +identity
+% meet(Alice?, Bob?) : identity, +knows(Bob)    identity, +knows(Alice)
+procedure nm_base(NContract).
+nm_base([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
+
+procedure ncontract_app(NContract?, NContract?, NContract).
+ncontract_app([], T, T?).
+ncontract_app([S|Ss], T, [S?|R?]) :- ncontract_app(Ss?, T?, R).
+
+% --- a contract with numbers, syntactically grassroots ---------------------
+% mint(Alice?; d, k, t) | d > t or d <= 0 : identity, date(t), +k.bond(Alice, d)
+% advance(Alice; t, t1) | t1 = t + 1 :      identity, -date(t), +date(t1)
+% swap(Alice?, Bob?; u, d, k, v, d1, k1) :
+%     identity, knows(Bob), -k.bond(u, d), +k1.bond(v, d1)
+%     identity, knows(Alice), -k1.bond(v, d1), +k.bond(u, d)
+% mature(Alice?, Bob; d, t) | d <= t :
+%     identity, knows(Bob), -bond(Bob, d), +coin(Bob)
+%     identity, date(t), +bond(Bob, d)
+% Meet is the introductory act, unobstructed; the numbers name no agent, so
+% date has traceable provenance, bond has it through the bond the other role
+% of the swap deletes, and mature's role graph is joined by the knows(Bob)
+% and the bond of Bob that Alice requires.
+procedure nm_bonds(NContract).
+nm_bonds(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [nschema(mint, [num(d), num(k), num(t)], or(gt(num(d), num(t)), le(num(d), num(0))),
+         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
+                      [atom(identity, []), atom(date, [num(t)])], [])]),
+       nschema(advance, [num(t), num(t1)], succ(num(t), num(t1)),
+         [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])]),
+       schema(swap, [pvar(u), num(d), num(k), pvar(v), num(d1), num(k1)],
+         [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)]))],
+                      [times(num(k), atom(bond, [pvar(u), num(d)]))],
+                      [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)]))],
+                      [times(num(k1), atom(bond, [pvar(v), num(d1)]))],
+                      [atom(identity, []), atom(knows, [role(1)])], [])]),
+       nschema(mature, [num(d), num(t)], le(num(d), num(t)),
+         [rs(guarded,   [atom(coin, [role(2)])], [atom(bond, [role(2), num(d)])],
+                        [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(unguarded, [atom(bond, [role(2), num(d)])], [],
+                        [atom(identity, []), atom(date, [num(t)])], [])])], C).
+
+% --- the conditions do not concern numbers: a number required --------------
+% meet as above, but each role requires score(5), which the schema of arity
+% one score(Alice?; k) : +score(k) adds, guarded and requiring and forbidding
+% nothing: the number 5 and the numeric variable k are one to the
+% conditions, so clause 1 of def:unobstructed holds and the contract is
+% syntactically grassroots.
+procedure nm_supplied(NContract).
+nm_supplied([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(score, [num(k)],
+       [rs(guarded, [atom(score, [num(k)])], [], [], [])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(score, [num(5)])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(score, [num(5)])], [])])]).
+
+% --- negative: a number forbidden ------------------------------------------
+% meet forbids date(0) at Alice, and advance, unguarded and of arity one,
+% adds date(t1) there: the number 0 and the numeric variable t1 are one to
+% the conditions, and advance has Bob in no role, so clause 2 of
+% def:unobstructed fails, obstructed(meet, 1, date(0), blocked_by(advance,
+% 1, date(t1))).
+procedure nm_blocked(NContract).
+nm_blocked([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(date, [num(0)])]),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    nschema(advance, [num(t), num(t1)], succ(num(t), num(t1)),
+       [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])])]).
+
+% --- negative: a role that reads a number and changes nothing --------------
+% mature(Alice?, Bob; d, t) | d <= t : identity, knows(Bob), -bond(Bob, d), +coin(Bob)
+%                                      identity, date(t)
+% Bob does not guard and adds and deletes nothing, which def:schema forbids,
+% numbers or no: changes_nothing(mature, 2).
+procedure nm_reading_role(NContract).
+nm_reading_role(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [nschema(mature, [num(d), num(t)], le(num(d), num(t)),
+         [rs(guarded,   [atom(coin, [role(2)])], [atom(bond, [role(2), num(d)])],
+                        [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(unguarded, [], [], [atom(identity, []), atom(date, [num(t)])], [])])], C).
+
+% --- negative: a multiplicity on an atom required and not deleted ----------
+% spend(Alice?; k) : identity, k.coin(Alice), -coin(Alice)
+% multiplicity_not_added(spend, 1, coin(Alice)).
+procedure nm_mult_kept(NContract).
+nm_mult_kept(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [schema(spend, [num(k)],
+         [rs(guarded, [], [atom(coin, [role(1)])],
+                      [atom(identity, []), times(num(k), atom(coin, [role(1)]))], [])])], C).
+
+% --- negative: a multiplicity on an atom forbidden -------------------------
+% hoard(Alice?; k) : identity, not k.coin(Alice), +coin(Alice)
+% multiplicity_not_added(hoard, 1, coin(Alice)).
+procedure nm_mult_forbidden(NContract).
+nm_mult_forbidden(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [schema(hoard, [num(k)],
+         [rs(guarded, [atom(coin, [role(1)])], [], [atom(identity, [])],
+                      [times(num(k), atom(coin, [role(1)]))])])], C).
+
+% --- negative: a multiplicity that is not a number -------------------------
+% mint(Alice?; u) : identity, +u.coin(Alice), u an agent variable
+% multiplicity_not_numeric(mint, 1, coin(Alice)).
+procedure nm_mult_agent(NContract).
+nm_mult_agent(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [schema(mint, [pvar(u)],
+         [rs(guarded, [times(pvar(u), atom(coin, [role(1)]))], [], [atom(identity, [])], [])])], C).
+
+% --- negative: a constraint on an agent ------------------------------------
+% mint(Alice?; u, d) | u > d : identity, knows(u), +bond(Alice, d)
+% constraint_not_numeric(mint, pvar(u)).
+procedure nm_constraint_agent(NContract).
+nm_constraint_agent(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [nschema(mint, [pvar(u), num(d)], gt(pvar(u), num(d)),
+         [rs(guarded, [atom(bond, [role(1), num(d)])], [],
+                      [atom(identity, []), atom(knows, [pvar(u)])], [])])], C).
+
+% --- negative: an atom added and deleted, with a multiplicity --------------
+% churn(Alice?; k) : identity, -coin(Alice), +k.coin(Alice)
+% added_and_deleted(churn, 1, coin(Alice)).
+procedure nm_added_deleted(NContract).
+nm_added_deleted(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [schema(churn, [num(k)],
+         [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [atom(coin, [role(1)])],
+                      [atom(identity, [])], [])])], C).
+
+% --- negative: the head and the numeric variables --------------------------
+% mint(Alice?; 5, k, k) | d > t : identity, date(t), +k.bond(Alice, d)
+% The head lists the number 5, which is no variable, and k twice, and leaves
+% out d and t, which the atoms and the constraint carry:
+% head_not_variable(mint, num(5)), head_repeated(mint, num(k)),
+% not_in_head(mint, num(d)), not_in_head(mint, num(t)).
+procedure nm_head(NContract).
+nm_head(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [nschema(mint, [num(5), num(k), num(k)], gt(num(d), num(t)),
+         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
+                      [atom(identity, []), atom(date, [num(t)])], [])])], C).
+
 % --- the contracts by name -------------------------------------------------
 % A fixture that stands alone, by name.  An unknown name is the empty
 % contract, which has no introductory act.
-exported procedure contract(Constant?, Declared).
+exported procedure contract(Constant?, NDeclared).
 contract(sg_plain, C?) :- sg_plain(C).
 contract(sg_unguarded, C?) :- sg_unguarded(C).
 contract(cur_no_mint, C?) :- cur_no_mint(C).
@@ -732,6 +905,16 @@ contract(wd_listed_leaving, C?) :- wd_listed_leaving(C).
 contract(ls_faults, C?) :- ls_faults(C).
 contract(nn_tag, C?) :- nn_tag(C).
 contract(nn_tag_loose, C?) :- nn_tag_loose(C).
+contract(nm_bonds, C?) :- nm_bonds(C).
+contract(nm_supplied, C?) :- nm_supplied(C).
+contract(nm_blocked, C?) :- nm_blocked(C).
+contract(nm_reading_role, C?) :- nm_reading_role(C).
+contract(nm_mult_kept, C?) :- nm_mult_kept(C).
+contract(nm_mult_forbidden, C?) :- nm_mult_forbidden(C).
+contract(nm_mult_agent, C?) :- nm_mult_agent(C).
+contract(nm_constraint_agent, C?) :- nm_constraint_agent(C).
+contract(nm_added_deleted, C?) :- nm_added_deleted(C).
+contract(nm_head, C?) :- nm_head(C).
 contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract

@@ -30,6 +30,7 @@
 #   gsn         GSN   GSC         programs/gsc              social_network
 #   gsnp        GSNP  GAI         programs/gai              ---
 #   gc          GC    Currencies  programs/currencies/coins currency
+#   gb          GB    Currencies  programs/currencies/bonds ---
 #   cssn        CSSN  CSSN        programs/cssn             programs/cssn (CSSN's, the village)
 #   gfwc        GFWC  GFWC        programs/federation       ---
 #   gai         GAI   GAI         programs/gai              ---
@@ -107,11 +108,12 @@ case "$NAME" in
           PLAYLIMIT=6000000 ;;   # the standing approvals' Requests take GSN's play past 600000 (vGLP f0acbc1; Code #12, 2026-10-20)
     gsnp) FILE=GSNP; OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
     gc)   FILE=GC;   OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
+    gb)   FILE=GB;   OWNER="programs/currencies/bonds"; PAPER="/Users/udi/Grassroots/GB";   PLAYDIR="" ;;
     cssn) FILE=CSSN; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR=""
           PLAYAT="programs/cssn"; PLAYLIMIT=100000000 ;;
     gfwc) FILE=GFWC; OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC"; PLAYDIR="" ;;
     gai)  FILE=GAI;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc cssn gfwc gai" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
@@ -177,7 +179,9 @@ if [ $? -ne 0 ] || [ ! -s "$OUT/schemas.txt" ]; then
     grep -E '(Error|error|✗)' "$WORK/n.out" | head -10
     exit 1
 fi
-say "schemas.txt: $(grep -c '^[a-z_0-9]*(.*) :$' "$OUT/schemas.txt") schemas"
+# A head ends "... :", after its constraint where it has one (GSC, Section
+# 3.2; programs/gsc/notation.glp).
+say "schemas.txt: $(grep -cE '^[a-z_0-9]*\(.*\)( \| .*)? :$' "$OUT/schemas.txt") schemas"
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
 printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
