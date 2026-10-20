@@ -600,7 +600,9 @@ check_not "and no display is printed for any of them" "begin{align" "$out"
 # requires identity and knows of the other at both roles (GKK:1, GSG:1;
 # GSC 21c1b28, Section 5.1, its two required atoms at a role listed before
 # \in); GSNP's, GAI's, requires identity alone, a singleton written with
-# \in; the swap is GC's.
+# \in; the swap is GC's, which extends GKK, transcribed from
+# sections/gc-compiled.tex at GSC 115fc8e, identity and knows of the other
+# required at both roles with its coin.
 befriend_paper=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
@@ -627,7 +629,7 @@ check_eq "GSNP's befriend, requiring identity alone, compiles to the same displa
 swap_paper=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := (c_{\Alice} \setminus \{\text{\textcent}(u)\}) \uplus \{\text{\textcent}(v)\}, \qquad c'_{\Bob} := (c_{\Bob} \setminus \{\text{\textcent}(v)\}) \uplus \{\text{\textcent}(u)\},\\
-& \text{provided } \text{\textcent}(u) \in c_{\Alice} \text{ and } \text{\textcent}(v) \in c_{\Bob},\\
+& \text{provided } \mathit{identity}, \mathit{knows}(\Bob), \text{\textcent}(u) \in c_{\Alice} \text{ and } \mathit{identity}, \mathit{knows}(\Alice), \text{\textcent}(v) \in c_{\Bob},\\
 & \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
