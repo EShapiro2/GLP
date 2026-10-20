@@ -81,7 +81,7 @@ class TabPlace extends InheritedWidget {
   /// Hold the line [line] of a request of the kind [kind] the person sent.
   final void Function(String kind, String line)? addSent;
 
-  /// The AI agents an open approval question names as AI agents, by their terms as written: `R` of `agent_befriend(R, Q, P, Y)`, and `R` and `S` of `agents_befriend(R, S, P, Q, Y, Z)` (programs/gai/GAI.glp), so that their rows offer no Befriend, `befriend` forbidding `agent` at both parties, before the person's view records them.
+  /// The AI agents an open approval question names as AI agents, by their terms as written: `R` of `agent_meet(R, Q, P, Y)` and of `agent_befriend(R, Q, P, Y)`, and `R` and `S` of `agents_meet(R, S, P, Q, Y, Z)` and of `agents_befriend(R, S, P, Q, Y, Z)` (programs/gai/GAI.glp), so that their rows offer no Meet and no Befriend, `meet` and `befriend` forbidding `agent` at both parties, before the person's view records them.
   final Set<String> agentsAsked;
 
   /// The count of changes to the held and the sent, so that a change is drawn.
@@ -142,15 +142,18 @@ bool _concernsGroup(OpenConstruct c) {
   return groupClasses.contains(ctorArgs(xs[3]).$1);
 }
 
-/// The AI agents the approval question [c] names as AI agents: `R` of `agent_befriend(R, Q, P, Y)`, and `R` and `S` of `agents_befriend(R, S, P, Q, Y, Z)`, each by its term as written.
+/// The AI agents the approval question [c] names as AI agents: `R` of `agent_meet(R, Q, P, Y)` and of `agent_befriend(R, Q, P, Y)`, and `R` and `S` of `agents_meet(R, S, P, Q, Y, Z)` and of `agents_befriend(R, S, P, Q, Y, Z)`, each by its term as written.
 Iterable<String> _agentsNamed(OpenConstruct c) {
   final (_, args) = ctorArgs(c.view);
   final (af, xs) = ctorArgs(args[0]);
   if (af != 'attempt' || xs.length != 5) return const [];
   final (f, ys) = ctorArgs(xs[3]);
   return switch ((f, ys.length)) {
-    ('agent_befriend', 4) => [formatTerm(ys[0])],
-    ('agents_befriend', 6) => [formatTerm(ys[0]), formatTerm(ys[1])],
+    ('agent_meet' || 'agent_befriend', 4) => [formatTerm(ys[0])],
+    ('agents_meet' || 'agents_befriend', 6) => [
+        formatTerm(ys[0]),
+        formatTerm(ys[1])
+      ],
     _ => const [],
   };
 }

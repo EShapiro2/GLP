@@ -1003,9 +1003,10 @@ void appsScreens(Screens screens) {
     final bob = run.person('bob');
     final fay = run.person('fay');
 
-    // The friendships of the play (GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay, each two meeting on their Friends tabs, the first tapping Befriend and the second Accept.
+    // The friendships of the play (GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay, each two adding each other on their Friends tabs, meeting in person, the first tapping Meet and the second Yes (GKK:2), and then befriending, the first tapping Befriend and the second Accept (GSG:1), befriend requiring that the two know each other (programs/gai/GSNP.glp at GLP 35c4211a).
     for (final (p, q) in [(dan, eve), (eve, carol), (carol, bob), (bob, fay)]) {
       await run.meet(p, q);
+      await run.meetInPerson(p, q);
       await run.befriend(p, q);
     }
 
