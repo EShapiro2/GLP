@@ -4,7 +4,7 @@
 ///
 /// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The app declares `Menu =::= social_menu.` and `Approval =::= approval_sentence.` (`programs/apps/<app>/self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  Every act of a person at a phone is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest; a scripted agent's acts are its scripted person's, as in the app's plays.  No term is hand-fed to the bridge or to the program.
 ///
-/// And CSSN's mini-app (`programs/cssn`), in the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app"): Alice, Bob, Carol and Dave, a conversation between each two, as CSSN's plays hand them (`programs/cssn/plays.glp`), one of them at their phone and the other three scripted by CSSN's person (`programs/cssn/person.glp`, the roles `fig_alice` to `fig_dave`), "each run has one live person, whose screen the figure shows" (the same); its screens written to `programs/cssn/figures/cssn-app-<n>.png`, n the figure's number of the screen.  CSSN declares no widget (`programs/cssn/self.glp`), so its request and approval questions are drawn by the default widgets of their types (CSSN, Section 4.6, "The User Interface") and each act is a tap or a keystroke on their controls ([_DefaultWidgets]), construct 0 drawn by `last_state`, which every canonical platform declares.  Screens (2), (3), (4) and (6) are taken; (1) and (5) are not: the request question shows the persons its agent knew when it was asked ("each request the person makes is followed by a new menu", CSSN, Section 4.6, "Child befriending in vGLP").
+/// And CSSN's mini-app (`programs/cssn`), in the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app"): Alice, Bob, Carol and Dave, a conversation between each two, as CSSN's plays hand them (`programs/cssn/plays.glp`), one of them at their phone and the other three scripted by CSSN's person (`programs/cssn/person.glp`, the roles `fig_alice` to `fig_dave`), "each run has one live person, whose screen the figure shows" (the same); its screens written to `programs/cssn/figures/cssn-app-<n>.png`, n the figure's number of the screen.  CSSN's app declares `Menu =::= social_menu.` and `Approval =::= approval_sentence.` (`programs/cssn/self.vglp`), so its screens show sentences, as GAI's do, in the words Udi gave for the figure (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC): each person known with what the state says of them, "Carol, your child", and the requests composed as sentences, "Ask that Carol and Dave befriend, with Bob." and Submit ([_Cssn]).
 ///
 /// The screens are set in Roboto, the Material font, with MaterialIcons, both loaded from the Flutter SDK's own copies (`bin/cache/artifacts/material_fonts`), in the light theme.  The scenario runs on two kinds of phone ([Screens]):
 ///
@@ -507,10 +507,11 @@ class _Run {
           t.data,
       ];
 
-  /// Nothing on [p]'s phone is a term, a functor, a type name, an attempt number or a Submit button.
-  void plain(_Person p) {
+  /// Nothing on [p]'s phone is a term, a functor, a type name, an attempt number or a Submit button, but the words [allow].
+  void plain(_Person p, {Set<String> allow = const {}}) {
     final all = texts(p).join('\n');
     for (final w in _notShown) {
+      if (allow.contains(w)) continue;
       expect(all.contains(w), isFalse,
           reason: '${p.name}: "$w" on the screen:\n$all');
     }
@@ -620,7 +621,7 @@ class _Run {
   }
 }
 
-// === CSSN's mini-app, drawn by the default widgets ===========================
+// === CSSN's mini-app ========================================================
 
 /// The persons of the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App"): Alice and Bob, adults, and Carol and Dave, Alice's child and Bob's; a conversation between each two, as CSSN's plays hand every two agents one (`programs/cssn/plays.glp`); and the role whose script each runs in every run in which it is scripted (`programs/cssn/person.glp`, `fig_alice` to `fig_dave`).
 const List<String> _cssnFour = ['alice', 'bob', 'carol', 'dave'];
@@ -649,93 +650,51 @@ Future<_Run> _cssn(WidgetTester tester, Screens screens, String live) =>
         scripted: {for (final p in _cssnFour) if (p != live) p},
         roles: _cssnRoles);
 
-/// A person's acts on the default widgets of CSSN's questions (CSSN, Section 4.6, "The User Interface": "So a person's request is a form for an act, with a field for each person it names, and an approval shows the attempt beside a yes button and a no button"), as the construct family draws them (`lib/ui_runtime/construct_family.dart`).  CSSN declares no widget (`programs/cssn/self.glp`), so its request question, `Menu ::= menu(Key, List(Key), Request?)`, is the form `menu`, the agent's own key and the persons it knew when it asked shown, and at its third field, `[3]`, the menu of the request type: the form `propose`, whose one field is the menu of the forms of `Proposal`, and the form `known`.  A form chosen in a menu is drawn at the menu's position, and its fields at the positions under it.  Its approval question, `Approval ::= approval(Attempt, YesNo?)`, is the form `approval`, the attempt shown and the buttons yes and no at `[2]` ([_Run.answer]).
-extension _DefaultWidgets on _Run {
-  /// The node [kind] at [at] of [p]'s open request question (`nodeKey`).
-  Finder node(_Person p, String kind, List<int> at) =>
-      on(p, find.byKey(nodeKey(p.request.id, kind, at)));
-
-  /// [p] chooses the alternative [label] of the menu at [at] of their open request question.
-  Future<void> choose(_Person p, List<int> at, String label) => tap(
-      p,
-      find.descendant(
-          of: node(p, 'menu', at),
-          matching: find.widgetWithText(ChoiceChip, label)));
-
-  /// [p] types the key [q] into the peer field at [at] of their open request question.
-  Future<void> typeKey(_Person p, List<int> at, String q) =>
-      type(p, node(p, 'peer', at), q);
-
-  /// The Submit button of [p]'s open request question.
-  Finder submitButton(_Person p) =>
-      on(p, find.byKey(submitKey(p.request.id, const [3])));
-
-  /// [p] asks to know [q], Discover, which both persons request (CSSN, Appendix A4, "Knowing every participant"): `known` chosen, [q]'s key typed into its field, and Submit.
-  Future<void> discover(_Person p, String q) async {
-    await choose(p, const [3], 'known');
-    await typeKey(p, const [3, 1], q);
-    await tap(p, submitButton(p));
-  }
-
-  /// [p] requests the act [f] naming the persons [qs], in the order of its roles: `propose` chosen, then [f] among the forms of `Proposal`, each key typed into its field, and Submit; where [shot] is given, the phone taken as it before Submit, the form filled and Submit at the foot of the screen.
-  Future<void> requestAct(_Person p, String f, List<String> qs,
-      {String? shot}) async {
-    await choose(p, const [3], 'propose');
-    await choose(p, const [3, 1], f);
-    for (var k = 0; k < qs.length; k++) {
-      await typeKey(p, [3, 1, k + 1], qs[k]);
+/// A person's acts on CSSN's app as its declared widgets draw it (named_widgets.dart, `socialMenu` and `approvalSentence`): a request composed as a sentence, a person chosen into each of its places from a picker, and Submit (`_composers`).
+extension _Cssn on _Run {
+  /// [p] composes the request [kind], choosing each of [qs] into its places in order: each place tapped, which opens its picker, and the person picked.
+  Future<void> compose(_Person p, String kind, List<String> qs) async {
+    for (var i = 0; i < qs.length; i++) {
+      await tap(p, control(p, 'slot:$kind:$i'));
+      await tap(p, control(p, 'pick:$kind:$i:${qs[i]}'));
     }
-    // The form of the act under Proposal, headed by its functor, a field Peer for each person, each holding the key typed.
-    final form = node(p, 'form', const [3, 1]);
-    expect(
-        [
-          for (final t in tester.widgetList<Text>(
-              find.descendant(of: form, matching: find.byType(Text))))
-            t.data
-        ],
-        ['Proposal', f, for (final _ in qs) 'Peer']);
-    expect(
-        [
-          for (final t in tester.widgetList<TextField>(
-              find.descendant(of: form, matching: find.byType(TextField))))
-            t.controller!.text
-        ],
-        qs);
-    final submit = submitButton(p);
-    expect(tester.widget<ElevatedButton>(submit).onPressed, isNotNull,
-        reason: '${p.name}: $f(${qs.join(', ')}) not formed');
-    if (shot != null) {
-      await foot(p, submit);
-      await shoot(p, shot);
-    }
-    await tap(p, submit);
   }
 
-  /// [p]'s open approval question [a], drawn by the default widget of `Approval` at the top of Friends, above the request question: the form `approval`, the form `attempt` under Attempt, its initiator [i], its number and its rank, and under Class the form of the act [f] with a field Peer for each of the persons [qs]; and under YesNo the buttons yes and no.
-  void approvalShows(
-      _Person p, OpenConstruct a, String i, String f, List<String> qs) {
-    final t = textsOf(p, a);
-    expect(t, hasLength(14 + 2 * qs.length), reason: '$t');
-    expect(int.tryParse(t[6] ?? ''), isNotNull, reason: '$t');
-    expect(int.tryParse(t[8] ?? ''), isNotNull, reason: '$t');
-    expect([...t.take(6), t[7], ...t.skip(9)], [
-      'approval',
-      'Attempt',
-      'attempt',
-      'Peer',
-      i,
-      'Integer',
-      'Integer',
-      'Class',
-      f,
-      for (final q in qs) ...['Peer', q],
-      'YesNo',
-      'yes',
-      'no',
-    ]);
-    expect(tester.getTopLeft(on(p, find.byKey(constructKey(a.id)))).dy,
-        lessThan(tester.getTopLeft(on(p, find.byKey(constructKey(p.request.id)))).dy));
+  /// The sentence of the request [kind] on [p]'s open request question, each place as the person chosen into it reads.
+  String sentence(_Person p, String kind) {
+    final rich = tester.widget<Text>(control(p, 'sentence:$kind'));
+    var plain = rich.textSpan!.toPlainText();
+    for (final t in tester.widgetList<Text>(find.descendant(
+        of: control(p, 'sentence:$kind'), matching: find.byType(Text)))) {
+      if (t.data != null) plain = plain.replaceFirst('￼', t.data!);
+    }
+    return plain;
   }
+
+  /// The lines of the requests [kind] [p] sent, as drawn on the open request question.
+  List<String> sent(_Person p, String kind) => [
+        for (final t in tester.widgetList<Text>(on(
+            p,
+            find.byWidgetPredicate((w) =>
+                w.key is ValueKey<String> &&
+                (w.key as ValueKey<String>)
+                    .value
+                    .startsWith('${p.request.id}:social:sent:$kind:')))))
+          t.data!,
+      ];
+
+  /// The names on the rows of the persons on [p]'s Friends tab, in order, each as drawn: the person's name and what the state says of them.
+  List<String?> rowTitles(_Person p) => [
+        for (final t in tester.widgetList<ListTile>(on(
+            p,
+            find.byWidgetPredicate((w) =>
+                w is ListTile &&
+                w.key is ValueKey<String> &&
+                (w.key as ValueKey<String>)
+                    .value
+                    .startsWith('${p.request.id}:social:person:')))))
+          (t.title as Text).data,
+      ];
 
   /// [p]'s open tab scrolled so that [f] is at the foot of the screen, once the keyboard a field raised has left it.
   Future<void> foot(_Person p, Finder f) async {
@@ -1215,37 +1174,58 @@ void appsScreens(Screens screens) {
 
   testWidgets(
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Alice at her '
-      'phone: (2) her request that Carol and Dave befriend, naming Bob',
+      'phone: (1) her menu, Carol her child, Bob her friend and Dave; (2) her '
+      'request that Carol and Dave befriend, with Bob, as she composes it',
       (tester) async {
     final run = await _cssn(tester, screens, 'alice');
     final alice = run.person('alice');
-    // One tab, Friends: construct 0 drawn by last_state, which the platform declares for Stream(Output) (platform.vglp), and the request question by the default widget of its type.
+    // Two tabs, Friends and Groups, CSSN's request type offering create; the request question drawn by social_menu and the approval questions by approval_sentence (programs/cssn/self.vglp).
     expect(run.on(alice, find.byKey(tabKey(ScreenTab.friends))), findsOneWidget);
-    expect(namedWidget(alice.request.widget), isNull);
-    // Alice establishes her identity (GSG:1).
-    await run.requestAct(alice, 'establish', ['alice']);
+    expect(run.on(alice, find.byKey(tabKey(ScreenTab.groups))), findsOneWidget);
+    expect(namedWidget(alice.request.widget)?.$1, socialMenuName);
+    // Alice establishes her identity (GSG:1): Join.
+    await run.join(alice);
     expect(alice.atoms, ['identity']);
-    // Carol enters with Alice: Alice and Carol's phone each ask to know the other, and Alice enters Carol (CSSN:1, Wards:1; enter(p?, r?)), Carol's phone answering yes.
-    await run.discover(alice, 'carol');
+    // Carol enters with Alice: Alice and Carol's phone each ask to know the other, and Alice enters Carol (CSSN:1, Wards:1; enter(p?, r?)), "Enter Carol." and Submit, Carol's phone answering yes.
+    await run.add(alice, 'carol');
     expect(alice.known, ['carol']);
-    await run.requestAct(alice, 'enter', ['alice', 'carol']);
+    await run.compose(alice, 'enter', ['carol']);
+    expect(run.sentence(alice, 'enter'), 'Enter Carol.');
+    await run.tap(alice, run.control(alice, 'submit:enter'));
     expect(alice.atoms,
         unorderedEquals(['identity', 'parenting(carol)', 'friend(carol)']));
     expect(run.scriptedSeen('carol'), contains('gave(enter(alice, carol), yes)'));
+    expect(run.sent(alice, 'enter'), ['You asked to enter Carol.']);
     // Dave has entered with Bob the same way; Alice and Bob each ask to know the other.
     expect(run.scriptedAtoms('bob'),
         unorderedEquals(['identity', 'parenting(dave)', 'friend(dave)']));
-    await run.discover(alice, 'bob');
-    expect(alice.known, ['bob', 'carol']);
-    // Alice and Bob befriend (GSG:2), Alice proposing and Bob answering yes; Bob's agent then introduces Alice's and Dave's to each other, both his friends, friend being the introduction predicate (CSSN, Section 4.6, "The program").
-    await run.requestAct(alice, 'befriend', ['alice', 'bob']);
+    await run.add(alice, 'bob');
+    // Alice and Bob befriend (GSG:2): Befriend on Bob's row, and Bob answers yes; Bob's agent then introduces Alice's and Dave's to each other, both his friends, friend being the introduction predicate (CSSN, Section 4.6, "The program").
+    await run.tap(alice, run.control(alice, 'befriend:bob'));
     expect(alice.atoms, contains('friend(bob)'));
     expect(alice.known, ['bob', 'carol', 'dave']);
-    // (2) Alice's request that Carol and Dave befriend, naming Bob: child_befriend(carol, dave, alice, bob), its roles r, s, p and q in order (CSSN, Section 4.6, "Child befriending in vGLP").
-    await run.requestAct(
-        alice, 'child_befriend', ['carol', 'dave', 'alice', 'bob'],
-        shot: 'cssn-app-2.png');
-    // Bob, Carol and Dave approve, and Carol and Dave are friends (CSSN:2); Carol then ends the friendship (GSG:3).
+    // (1) Alice's menu: the persons her agent knows, each with what her state says of them, "Carol, your child", "Bob, your friend", "Dave", read off the last view; Carol's row offers no End friendship, unfriend forbidding parenting(q) at p; and the requests she may make.
+    await run.top(alice);
+    expect(run.rowTitles(alice), ['Carol, your child', 'Bob, your friend', 'Dave']);
+    expect(run.control(alice, 'unfriend:carol'), findsNothing);
+    expect(run.control(alice, 'unfriend:bob'), findsOneWidget);
+    expect(run.sentence(alice, 'child-befriend'), 'Ask that … and … befriend, with ….');
+    run.plain(alice, allow: {'Submit'});
+    await run.shoot(alice, 'cssn-app-1.png');
+    // (2) Alice's request that Carol and Dave befriend, with Bob, as she composes it: "Ask that Carol and Dave befriend, with Bob." and Submit, child_befriend(carol, dave, alice, bob), its roles r, s, p and q in order (CSSN, Section 4.6, "Child befriending in vGLP").
+    await run.compose(alice, 'child-befriend', ['carol', 'dave', 'bob']);
+    expect(run.sentence(alice, 'child-befriend'),
+        'Ask that Carol and Dave befriend, with Bob.');
+    final submit = run.control(alice, 'submit:child-befriend');
+    expect(tester.widget<ElevatedButton>(submit).onPressed, isNotNull);
+    expect(alice.unsent, isEmpty);
+    await run.foot(alice, submit);
+    run.plain(alice, allow: {'Submit'});
+    await run.shoot(alice, 'cssn-app-2.png');
+    // Once sent: "You asked that Carol and Dave befriend, with Bob."  Bob, Carol and Dave approve, and Carol and Dave are friends (CSSN:2); Carol then ends the friendship (GSG:3).
+    await run.tap(alice, submit);
+    expect(run.sent(alice, 'child-befriend'),
+        ['You asked that Carol and Dave befriend, with Bob.']);
     for (final q in ['bob', 'carol', 'dave']) {
       expect(run.scriptedSeen(q),
           contains('gave(child_befriend(carol, dave, alice, bob), yes)'));
@@ -1261,26 +1241,29 @@ void appsScreens(Screens screens) {
 
   testWidgets(
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Bob at his phone: '
-      '(3) Bob asked to approve Alice\'s attempt, with yes and no; (6) his '
-      'request declaring Dave of age', (tester) async {
+      '(3) Bob asked to approve Alice\'s attempt, "Approve?", with Yes and No; '
+      '(6) his request declaring Dave of age', (tester) async {
     final run = await _cssn(tester, screens, 'bob');
     final bob = run.person('bob');
     // Bob establishes his identity (GSG:1); Dave enters with Bob, Bob and Dave's phone each asking to know the other and Dave's phone answering yes (CSSN:1, Wards:1).
-    await run.requestAct(bob, 'establish', ['bob']);
-    await run.discover(bob, 'dave');
-    await run.requestAct(bob, 'enter', ['bob', 'dave']);
+    await run.join(bob);
+    await run.add(bob, 'dave');
+    await run.compose(bob, 'enter', ['dave']);
+    await run.tap(bob, run.control(bob, 'submit:enter'));
     expect(bob.atoms,
         unorderedEquals(['identity', 'parenting(dave)', 'friend(dave)']));
-    // Carol has entered with Alice; Bob and Alice each ask to know the other, Alice proposes that they befriend (GSG:2), and Bob, asked, answers yes.
+    // Carol has entered with Alice; Bob and Alice each ask to know the other, Alice proposes that they befriend (GSG:2), and Bob, asked, taps Accept.
     expect(run.scriptedAtoms('alice'),
         unorderedEquals(['identity', 'parenting(carol)', 'friend(carol)']));
-    await run.discover(bob, 'alice');
+    await run.add(bob, 'alice');
     expect(formatTerm(bob.approval.view),
         allOf(startsWith('approval(attempt(alice, '),
             endsWith(', befriend(alice, bob)), input([2]))')));
-    await run.answer(bob, 'yes');
+    expect(run.textsOf(bob, bob.approval),
+        ['Alice asks to be your friend.', 'Accept', 'Decline']);
+    await run.answer(bob, 'Accept');
     expect(bob.atoms, contains('friend(alice)'));
-    // (3) Alice requests that Carol and Dave befriend, naming Bob, her agent knowing Dave's by Bob's agent's introduction; Bob is asked to approve her attempt, with yes and no.  Carol and Dave have approved it.
+    // (3) Alice requests that Carol and Dave befriend, with Bob, her agent knowing Dave's by Bob's agent's introduction; Bob is asked: "Alice asks that her child Carol and your child Dave befriend.", "Approve?", Yes and No.  Carol and Dave have approved it.
     final a = bob.approval;
     expect(formatTerm(a.view),
         allOf(startsWith('approval(attempt(alice, '),
@@ -1290,18 +1273,34 @@ void appsScreens(Screens screens) {
           contains('gave(child_befriend(carol, dave, alice, bob), yes)'));
     }
     await run.top(bob);
-    run.approvalShows(
-        bob, a, 'alice', 'child_befriend', ['carol', 'dave', 'alice', 'bob']);
+    expect(run.textsOf(bob, a), [
+      'Alice asks that her child Carol and your child Dave befriend.',
+      'Approve?',
+      'Yes',
+      'No'
+    ]);
+    expect(
+        tester.getTopLeft(run.on(bob, find.byKey(constructKey(a.id)))).dy,
+        lessThan(tester.getTopLeft(run.control(bob, 'name')).dy));
+    run.plain(bob, allow: {'Submit'});
     await run.shoot(bob, 'cssn-app-3.png');
-    await run.answer(bob, 'yes');
+    await run.answer(bob, 'Yes');
     expect(bob.questions('approval'), isEmpty);
     // Carol and Dave are friends (CSSN:2), and Carol ends the friendship (GSG:3).
     expect(run.scriptedSeen('dave'),
         contains(startsWith('view([friend(carol), ')));
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
     expect(run.scriptedAtoms('carol'), isNot(contains('friend(dave)')));
-    // (6) Bob's request declaring Dave of age (CSSN:3, Wards:4; of_age(p?, r)), which ends his parenting of Dave.
-    await run.requestAct(bob, 'of_age', ['bob', 'dave'], shot: 'cssn-app-6.png');
+    // (6) Bob's request declaring Dave of age, as he composes it: "Declare Dave of age." and Submit (CSSN:3, Wards:4; of_age(p?, r)); once sent, "Dave is of age.", and nobody is asked: it ends his parenting of Dave.
+    await run.compose(bob, 'of-age', ['dave']);
+    expect(run.sentence(bob, 'of-age'), 'Declare Dave of age.');
+    final submit = run.control(bob, 'submit:of-age');
+    await run.foot(bob, submit);
+    run.plain(bob, allow: {'Submit'});
+    await run.shoot(bob, 'cssn-app-6.png');
+    await run.tap(bob, submit);
+    expect(run.sent(bob, 'of-age'), ['Dave is of age.']);
+    expect(bob.questions('approval'), isEmpty);
     expect(bob.atoms, unorderedEquals(['identity', 'friend(dave)', 'friend(alice)']));
     expect(run.scriptedAtoms('dave'), unorderedEquals(['identity', 'friend(bob)']));
     run.finish();
@@ -1309,21 +1308,23 @@ void appsScreens(Screens screens) {
 
   testWidgets(
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Carol at her '
-      'phone: (4) Carol asked to approve Alice\'s attempt; and her ending of '
-      'the friendship with Dave',
-      (tester) async {
+      'phone: (4) Carol asked to approve Alice\'s attempt, "Befriend Dave?"; '
+      '(5) her menu, Alice her parent, Dave her friend and Bob; and her ending '
+      'of the friendship with Dave', (tester) async {
     final run = await _cssn(tester, screens, 'carol');
     final carol = run.person('carol');
-    // Carol's phone at its setup, the parents holding it (CSSN, Section 4.6, "The User Interface"): no identity; it asks to know Alice, Alice enters Carol (CSSN:1, Wards:1; enter(p?, r?)), and Carol's phone, asked, answers yes.
+    // Carol's phone at its setup, the parents holding it (CSSN, Section 4.6, "The User Interface"): no identity; it asks to know Alice, Alice enters Carol (CSSN:1, Wards:1; enter(p?, r?)), and Carol's phone, asked "Alice asks to enter you.", answers Yes.
     expect(carol.atoms, isEmpty);
-    await run.discover(carol, 'alice');
+    await run.add(carol, 'alice');
     expect(formatTerm(carol.approval.view),
         allOf(startsWith('approval(attempt(alice, '),
             endsWith(', enter(alice, carol)), input([2]))')));
-    await run.answer(carol, 'yes');
+    expect(run.textsOf(carol, carol.approval),
+        ['Alice asks to enter you.', 'Yes', 'No']);
+    await run.answer(carol, 'Yes');
     expect(carol.atoms,
         unorderedEquals(['identity', 'parent(alice)', 'child', 'friend(alice)']));
-    // Dave has entered with Bob, and Alice and Bob have befriended; (4) Alice requests that Carol and Dave befriend, naming Bob, and Carol is asked to approve it.  Bob and Dave have approved it.
+    // Dave has entered with Bob, and Alice and Bob have befriended; (4) Alice requests that Carol and Dave befriend, with Bob, and Carol is asked: "Alice asks that you and Dave befriend, with Dave's parent Bob.", "Befriend Dave?", Yes and No.  Bob and Dave have approved it.
     final a = carol.approval;
     expect(formatTerm(a.view),
         allOf(startsWith('approval(attempt(alice, '),
@@ -1333,14 +1334,29 @@ void appsScreens(Screens screens) {
           contains('gave(child_befriend(carol, dave, alice, bob), yes)'));
     }
     await run.top(carol);
-    run.approvalShows(
-        carol, a, 'alice', 'child_befriend', ['carol', 'dave', 'alice', 'bob']);
+    expect(run.textsOf(carol, a), [
+      "Alice asks that you and Dave befriend, with Dave's parent Bob.",
+      'Befriend Dave?',
+      'Yes',
+      'No'
+    ]);
+    run.plain(carol);
     await run.shoot(carol, 'cssn-app-4.png');
-    await run.answer(carol, 'yes');
+    await run.answer(carol, 'Yes');
     expect(carol.atoms, contains('friend(dave)'));
     expect(run.scriptedAtoms('dave'), contains('friend(carol)'));
-    // Carol ends the friendship with Dave (GSG:3; unfriend(p?, q)), her own act: nobody is asked.
-    await run.requestAct(carol, 'unfriend', ['carol', 'dave']);
+    // (5) Carol's menu while Dave is her friend: "Alice, your parent", "Dave, your friend", "Bob", read off the last view, Alice's agent having introduced the participants of the befriending to each other; Alice's row offers no End friendship, unfriend forbidding parent(q) at p, and Bob's no Befriend, befriend forbidding child at both.  A child composes no request.
+    expect(carol.known, ['alice', 'bob', 'dave']);
+    await run.top(carol);
+    expect(run.rowTitles(carol), ['Alice, your parent', 'Dave, your friend', 'Bob']);
+    expect(run.control(carol, 'unfriend:alice'), findsNothing);
+    expect(run.control(carol, 'unfriend:dave'), findsOneWidget);
+    expect(run.control(carol, 'befriend:bob'), findsNothing);
+    expect(run.control(carol, 'compose:child-befriend'), findsNothing);
+    run.plain(carol);
+    await run.shoot(carol, 'cssn-app-5.png');
+    // Carol ends the friendship with Dave (GSG:3; unfriend(p?, q)), her own act, End friendship on Dave's row: nobody is asked.
+    await run.tap(carol, run.control(carol, 'unfriend:dave'));
     expect(carol.atoms,
         unorderedEquals(['identity', 'parent(alice)', 'child', 'friend(alice)']));
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
