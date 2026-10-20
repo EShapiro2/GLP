@@ -1,0 +1,5 @@
+V1 = [view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), view([identity], [bob, carol]), view([knows(bob), identity], [bob, carol]), view([knows(carol), knows(bob), identity], [bob, carol]), menu(alice, [bob, carol]) | _]
+V2 = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), gave(introduce(alice, bob, carol), yes), view([knows(carol), knows(alice), identity], [alice]) | _]
+V3 = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, carol), yes), view([knows(alice), identity], [alice]) | _]
+→ suspended
+
