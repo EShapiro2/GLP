@@ -1,0 +1,223 @@
+% ---------------------------------------------------------------------------
+% The notation of a contract's act schemas, printed from its term: each schema
+% as Definition Act schema of /Grassroots/GSC writes it, def:schema of Section
+% 3.2 and definition:schema of Appendix D, tau(pi_1, ..., pi_k; x_1, ..., x_m)
+% followed by its marked multisets E_1 ... E_k, a guarding role carrying ?;
+% the listed role pi[rho(*, u_2, ..., u_r)] and the name terms <u> and sigma.y
+% as Appendix D writes them (definition:role, definition:term); the signed term
+% sgn(y, pi) as GAI's Definition Act schema writes it, and the predicates a
+% contract declares reflexive under the heading of GAI's paragraph "Reflexive
+% predicates" (GAI's appendix "Contracts with Wards").  The paper is the
+% specification and no definition of it is restated in this file.
+%
+% The text is plain, as programs/gsc/README.md writes befriend of Section 3.2:
+% the mark not for the paper's negation sign, <u> for its angle brackets, a
+% full stop for its centred dot and * for its asterisk.  Each E_i is on a line
+% of its own, labelled by its role, as Section 3.3's table labels its columns
+% "at Alice" and "at Bob"; within it the unmarked atoms come first, then those
+% marked not, +, and -, the order of the paper's displays.  Roles one to four
+% are named as compile.glp names them, Alice, Bob, Carol and Dave, and a role
+% beyond the fourth p_i; a variable is written as it is named.
+%
+% GLP has no string concatenation, so the text is printed as its tokens, one
+% to a line, between the lines %% notation begin and %% notation end; the
+% empty token ends a line of the text, and the tokens between two empty ones
+% are that line.  cascade.sh joins them into schemas.txt.
+% ---------------------------------------------------------------------------
+
+% --- Arguments (def:schema, definition:term, definition:role) -------------
+
+procedure n_role(Integer?, Chunks?, Chunks).
+n_role(I, T, ['Alice'|T?]) :- I? =:= 1 | true.
+n_role(I, T, ['Bob'|T?]) :- I? =:= 2 | true.
+n_role(I, T, ['Carol'|T?]) :- I? =:= 3 | true.
+n_role(I, T, ['Dave'|T?]) :- I? =:= 4 | true.
+n_role(I, T, R?) :- otherwise, integer(I?), ground(T?) | n_role_n(I?, T?, R).
+
+% A role beyond the fourth has no name in the paper and is written p_i.
+procedure n_role_n(Constant?, Chunks?, Chunks).
+n_role_n(I, T, ['p_', I?|T?]).
+
+% A name term (definition:term): <u> for an agent role or an agent variable,
+% or sigma.y.
+procedure n_nt(NameTerm?, Chunks?, Chunks).
+n_nt(own(I), T, ['<'|R?]) :- integer(I?), ground(T?) |
+    n_role(I?, ['>'|T?], R).
+n_nt(own_var(X), T, ['<', X?, '>'|T?]).
+n_nt(ext(S, Y), T, R?) :- ground(S?), ground(Y?), ground(T?) |
+    n_nt(S?, ['.', Y?|T?], R).
+
+procedure n_arg(Arg?, Chunks?, Chunks).
+n_arg(role(I), T, R?) :- integer(I?), ground(T?) | n_role(I?, T?, R).
+n_arg(pvar(X), T, [X?|T?]).
+n_arg(svar(X), T, [X?|T?]).
+n_arg(nterm(S), T, R?) :- ground(S?), ground(T?) | n_nt(S?, T?, R).
+n_arg(sgn(X, J), T, ['sgn(', X?, ', '|R?]) :-
+    ground(X?), integer(J?), ground(T?) |
+    n_role(J?, [')'|T?], R).
+
+procedure n_args(Args?, Chunks?, Chunks).
+n_args([], T, T?).
+n_args([A], T, R?) :- ground(A?), ground(T?) | n_arg(A?, T?, R).
+n_args([A, B|As], T, R?) :- ground(A?), ground(B?), ground(As?), ground(T?) |
+    n_args([B?|As?], T?, R1),
+    n_arg(A?, [', '|R1?], R).
+
+% --- Atoms and marked atoms (def:schema) -----------------------------------
+% A predicate of arity zero carries no parentheses.
+
+procedure n_atom(Atom?, Chunks?, Chunks).
+n_atom(atom(P, []), T, [P?|T?]).
+n_atom(atom(P, [A|As]), T, [P?, '('|R?]) :-
+    ground(A?), ground(As?), ground(T?) |
+    n_args([A?|As?], [')'|T?], R).
+
+% The atoms of E_i, each with its mark: m(Mark, Atom), Mark keep for an
+% unmarked atom and forb, add and del for the marks not, + and -.
+Mark   ::= keep ; forb ; add ; del.
+MAtom  ::= m(Mark, Atom).
+MAtoms ::= [] ; [MAtom | MAtoms].
+
+procedure n_marks(Atoms?, Mark?, MAtoms?, MAtoms).
+n_marks([], _, T, T?).
+n_marks([A|As], M, T, [m(M?, A?)|R?]) :- ground(M?), ground(As?), ground(T?) |
+    n_marks(As?, M?, T?, R).
+
+procedure n_mark_token(Mark?, Chunks?, Chunks).
+n_mark_token(keep, T, T?).
+n_mark_token(forb, T, ['not '|T?]).
+n_mark_token(add, T, ['+'|T?]).
+n_mark_token(del, T, ['-'|T?]).
+
+procedure n_matom(MAtom?, Chunks?, Chunks).
+n_matom(m(M, A), T, R?) :- ground(M?), ground(A?), ground(T?) |
+    n_atom(A?, T?, R1),
+    n_mark_token(M?, R1?, R).
+
+% The marked atoms of E_i after a space, apart by a comma; nothing when E_i is
+% empty.
+procedure n_matoms(MAtoms?, Chunks?, Chunks).
+n_matoms([], T, T?).
+n_matoms([X|Xs], T, [' '|R?]) :- ground(X?), ground(Xs?), ground(T?) |
+    n_matoms1([X?|Xs?], T?, R).
+
+procedure n_matoms1(MAtoms?, Chunks?, Chunks).
+n_matoms1([], T, T?).
+n_matoms1([X], T, R?) :- ground(X?), ground(T?) | n_matom(X?, T?, R).
+n_matoms1([X, Y|Ys], T, R?) :- ground(X?), ground(Y?), ground(Ys?), ground(T?) |
+    n_matoms1([Y?|Ys?], T?, R1),
+    n_matom(X?, [', '|R1?], R).
+
+% E_i of the role RS: the unmarked atoms =(i), then not(i), +(i) and -(i).
+procedure n_e(RoleSpec?, Chunks?, Chunks).
+n_e(RS, T, R?) :- ground(RS?), ground(T?) |
+    rs_keep(RS?, K),
+    rs_forb(RS?, F),
+    rs_add(RS?, P),
+    rs_del(RS?, M),
+    n_marks(M?, del, [], L3),
+    n_marks(P?, add, L3?, L2),
+    n_marks(F?, forb, L2?, L1),
+    n_marks(K?, keep, L1?, L),
+    n_matoms(L?, T?, R).
+
+% --- Roles (def:schema, definition:role) -----------------------------------
+% An agent role by its name, and a listed role pi[rho(*, u_2, ..., u_r)] as
+% Appendix D writes close's, Alice[listed(*, n)]; a guarding role carries ?.
+
+procedure n_listed_args(Args?, Chunks?, Chunks).
+n_listed_args([], T, T?).
+n_listed_args([A|As], T, [', '|R?]) :- ground(A?), ground(As?), ground(T?) |
+    n_args([A?|As?], T?, R).
+
+procedure n_role_term(RoleSpec?, Integer?, Chunks?, Chunks).
+n_role_term(rs(_, _, _, _, _), I, T, R?) :- integer(I?), ground(T?) |
+    n_role(I?, T?, R).
+n_role_term(crs(listed(I, Rho, As), _, _, _, _, _), _, T, R?) :-
+    integer(I?), ground(Rho?), ground(As?), ground(T?) |
+    n_listed_args(As?, [')]'|T?], R1),
+    n_role(I?, ['[', Rho?, '(*'|R1?], R).
+
+procedure n_mark(Ans?, Chunks?, Chunks).
+n_mark(yes, T, ['?'|T?]).
+n_mark(no, T, T?).
+
+procedure n_head_role(RoleSpec?, Integer?, Chunks?, Chunks).
+n_head_role(RS, I, T, R?) :- ground(RS?), integer(I?), ground(T?) |
+    is_guarding(RS?, G),
+    n_mark(G?, T?, T1),
+    n_role_term(RS?, I?, T1?, R).
+
+procedure n_head_roles(RoleSpecs?, Integer?, Chunks?, Chunks).
+n_head_roles([], _, T, T?).
+n_head_roles([RS], I, T, R?) :- ground(RS?), integer(I?), ground(T?) |
+    n_head_role(RS?, I?, T?, R).
+n_head_roles([RS, RS2|Rs], I, T, R?) :-
+    ground(RS?), ground(RS2?), ground(Rs?), integer(I?), ground(T?) |
+    I1 := I? + 1,
+    n_head_roles([RS2?|Rs?], I1?, T?, R1),
+    n_head_role(RS?, I?, [', '|R1?], R).
+
+% The variables of the head, after a semicolon; none when it has none.
+procedure n_head_vars(Args?, Chunks?, Chunks).
+n_head_vars([], T, T?).
+n_head_vars([V|Vs], T, ['; '|R?]) :- ground(V?), ground(Vs?), ground(T?) |
+    n_args([V?|Vs?], T?, R).
+
+% --- A schema (def:schema, definition:schema) ------------------------------
+% The head, tau(pi_1, ..., pi_k; x_1, ..., x_m) :, on a line, then a line per
+% role, at pi_i: E_i.
+
+procedure n_role_lines(RoleSpecs?, Integer?, Chunks?, Chunks).
+n_role_lines([], _, T, T?).
+n_role_lines([RS|Rs], I, T, ['    at '|R?]) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(T?) |
+    I1 := I? + 1,
+    n_role_lines(Rs?, I1?, T?, R2),
+    n_e(RS?, [''|R2?], R1),
+    n_role_term(RS?, I?, [':'|R1?], R).
+
+procedure n_schema(Schema?, Chunks?, Chunks).
+n_schema(Sc, T, [Nm?, '('|R?]) :- ground(Sc?), ground(T?) |
+    sch_name(Sc?, Nm),
+    sch_vars(Sc?, Vs),
+    sch_roles(Sc?, Rs),
+    n_schema1(Vs?, Rs?, T?, R).
+
+procedure n_schema1(Args?, RoleSpecs?, Chunks?, Chunks).
+n_schema1(Vs, Rs, T, R?) :- ground(Vs?), ground(Rs?), ground(T?) |
+    n_role_lines(Rs?, 1, T?, R2),
+    n_head_vars(Vs?, [') :', ''|R2?], R1),
+    n_head_roles(Rs?, 1, R1?, R).
+
+% The schemas apart by an empty line.
+procedure n_schemas(Contract?, Chunks?, Chunks).
+n_schemas([], T, T?).
+n_schemas([S], T, R?) :- ground(S?), ground(T?) | n_schema(S?, T?, R).
+n_schemas([S, S2|Ss], T, R?) :- ground(S?), ground(S2?), ground(Ss?), ground(T?) |
+    n_schemas([S2?|Ss?], T?, R1),
+    n_schema(S?, [''|R1?], R).
+
+% --- A contract -------------------------------------------------------------
+% A contract declaring predicates reflexive opens with them, then an empty
+% line.
+
+procedure n_preds(Preds?, Chunks?, Chunks).
+n_preds([], T, T?).
+n_preds([P], T, [P?|T?]).
+n_preds([P, Q|Ps], T, [P?, ', '|R?]) :- ground(Q?), ground(Ps?), ground(T?) |
+    n_preds([Q?|Ps?], T?, R).
+
+procedure n_declared(Declared?, Chunks?, Chunks).
+n_declared([], T, T?).
+n_declared([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
+    n_schemas([S?|Ss?], T?, R).
+n_declared(reflexive(Ps, Ss), T, ['Reflexive predicates: '|R?]) :-
+    ground(Ps?), ground(Ss?), ground(T?) |
+    n_schemas(Ss?, T?, R2),
+    n_preds(Ps?, ['', ''|R2?], R).
+
+exported procedure notation_contract(Declared?).
+notation_contract(D) :- ground(D?) |
+    n_declared(D?, ['%% notation end'], L),
+    send_to_user(['%% notation begin'|L?]).

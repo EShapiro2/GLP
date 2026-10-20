@@ -1,0 +1,10 @@
+establish(Alice?) :
+    at Alice: +identity
+
+befriend(Alice?, Bob?) :
+    at Alice: identity, not friend(Bob), +friend(Bob)
+    at Bob: identity, not friend(Alice), +friend(Alice)
+
+unfriend(Alice?, Bob) :
+    at Alice: identity, -friend(Bob)
+    at Bob: identity, -friend(Alice)
