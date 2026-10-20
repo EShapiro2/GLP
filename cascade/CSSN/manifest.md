@@ -1,9 +1,9 @@
 # A run of the cascade on CSSN
 
-- Contract: `CSSN` (`cssn` to the checker), its owner's two files `programs/cssn/CSSN.md` and `programs/cssn/CSSN.glp`, copied here as they stood at `0a0bd896`.
+- Contract: `CSSN` (`cssn` to the checker), its owner's two files `programs/cssn/CSSN.md` and `programs/cssn/CSSN.glp`, copied here as they stood at `903c4aa3`.
 - The paper: `git@github.com:EShapiro2/SGLP.git` at `63efc1d0`, for the paper's own record.
-- The tools: this repository at `0a0bd896` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP), programs/cssn (the plays with scripted persons).
-- Run on 2026-10-20 13:35 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `903c4aa3` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP), programs/cssn (the plays with scripted persons).
+- Run on 2026-10-20 14:29 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
