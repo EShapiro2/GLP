@@ -7294,7 +7294,9 @@ if _section QD || _section QF; then
 # changed the four paths in test/vglp/program_compilation_test.dart, which is
 # what each of the three moving projects asked for --- CSSN's move carried two
 # sources and the other two one each, which is why four entries answered three
-# requests.  All eight deployed sources parse.
+# requests.  The deployed sources parse: five since 2026-10-20, when CSSN's
+# hand-written sources gave way to its compiled platform and IGLP's tests took
+# their old tree as the fixture programs/tests/linker_tree (GLP #9, IGLP-fixture).
 #
 # GLP (IGLP layer), 2026-09-24: the sovereign screen.  Currencies' b2367233 gave
 # the denominated mini-app twelve request clauses where it had seven, for SGC's
