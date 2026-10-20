@@ -35,6 +35,26 @@ play_swap(ScreenA?, ScreenB?) :-
     run(coins(bob, ch(GrantsB?, DrawsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
     person # person(bob, DrawsB?, GrantsB, [mint(2), accept(alice)], ScreenB).
 
+%% play_same(ScreenA, ScreenB): play_swap, after which alice holds bob's 2
+%% coins and asks for two acts that change no state, each excluded by GC's
+%% Definition 3.1: to redeem a bob-coin against a bob-coin (r != q), and to
+%% swap her 2 bob-coins for 2 bob-coins (u != v or k != k').  Her agent
+%% refuses each before anything is sent, the screen saying so, and her
+%% holdings stay; bob's screen shows nothing of either.
+%% Expected: ScreenA = [opened(bob), minted(2), holdings([lot(alice, 2)]),
+%%   holdings([]), swap_done(bob), holdings([lot(bob, 2)]), redeem_same(bob),
+%%   swap_same(bob, bob, 2) | _],
+%%   ScreenB = [opened(alice), minted(2), holdings([lot(bob, 2)]),
+%%   swap_done(alice), holdings([lot(alice, 2)]) | _].
+exported procedure play_same(Stream(ScreenContent), Stream(ScreenContent)).
+play_same(ScreenA?, ScreenB?) :-
+    self_module(M),
+    find_type(coins/3, T),
+    run(coins(alice, ch(GrantsA?, DrawsA), [conversation(bob, ch(AB?, BA))]), T?, M?),
+    person # person(alice, DrawsA?, GrantsA, [mint(2), swap(bob, alice, 2, bob, 2), redeem(bob, bob), swap(bob, bob, 2, bob, 2)], ScreenA),
+    run(coins(bob, ch(GrantsB?, DrawsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
+    person # person(bob, DrawsB?, GrantsB, [mint(2), accept(alice)], ScreenB).
+
 %% The scripted person the super-app's plays activate: the root's second
 %% template miniapp_person/4 (programs/self.glp) at the mini-app's own Drawn,
 %% what its dispatcher draws, and ScreenContent, the screen the person reports
