@@ -1,14 +1,14 @@
 # GSN --- Grassroots Social Network: the contract
 
-GSN's contract, GSC's (Udi, 2026-10-18; Coordination, to_all 2026-10-20 09:57 UTC); GSNP, GAI's, extends it.  GSN is the grassroots social network without provenance; the network with provenance, which this file held until GLP 4ce1da3a, is GSNP (`GSNP.md`).  GSN extends GSG, which extends GK, and cites their clauses without restating them: GK:1 to GK:3 (`GK.md`) and GSG:1 and GSG:2 (`GSG.md`), as of 2026-10-20.  Its act schemas are `GSN.glp` beside it.  GAI's paper, `/Users/udi/Grassroots/GAI/main_characterisation_ArXiv.tex`, Section "Grassroots Social Contracts", quotes it.  Written by GAI #2 Cowork at Udi's instruction (2026-10-18 20:25 local: "Write all contracts to disc, where they should be, according to the Coordination ruling"; "write act schemas only for GSG and GSN"), the text verbatim from GAI's paper at GAI e5e92fa.
+GSN's contract, GSC's (Udi, 2026-10-18; Coordination, to_all 2026-10-20 09:57 UTC); GSNP, GAI's, extends it.  GSN is the grassroots social network without provenance; the network with provenance, which this file held until GLP 4ce1da3a, is GSNP (`GSNP.md`).  GSN extends GSG, which extends GK, and cites their clauses without restating them: GK:1 to GK:3 (`GK.md`) and GSG:1 and GSG:2 (`GSG.md`), as of 2026-10-20; its clauses took Alice and Bob the same day, as every contract's (Udi, to GSC #5).  Its act schemas are `GSN.glp` beside it.  GAI's paper, `/Users/udi/Grassroots/GAI/main_characterisation_ArXiv.tex`, Section "Grassroots Social Contracts", quotes it.  Written by GAI #2 Cowork at Udi's instruction (2026-10-18 20:25 local: "Write all contracts to disc, where they should be, according to the Coordination ruling"; "write act schemas only for GSG and GSN"), the text verbatim from GAI's paper at GAI e5e92fa.
 
 A *child* is a natural person not of age.  A *computational agent*, or *AI agent*, is a program that holds a key pair of its own and takes acts of the contract with it.  An *agent* is a person, a child or a computational (AI) agent.  Note that under the above, a *non-person agent* can only be a child or an AI agent.  A child also takes the pronoun 'they', and an AI agent 'it'; Alice and Bob are variables naming distinct agents.
 
-1. *Message.*  An agent may send a message to a friend, with content they created or received from another agent.
-2. *Group.*  An agent may create a group, and is then its leader and first member.
-3. *Joining.*  The leader of a group may add a friend to it, by an act of both.
-4. *Leaving.*  A member of a group may leave it by their own act; when the leader leaves, the group ends.  A member of a group who is not a friend of its leader is removed from it.
-5. *Group message.*  A member of a group may send a message to the group, with content they created or received from another agent, and the leader delivers it to every member.
+1. *Message.*  Alice may send a message to their friend Bob, with content they created or received from another agent.
+2. *Group.*  Alice may create a group, and is then its leader and first member.
+3. *Joining.*  Alice, the leader of a group, may add their friend Bob to it, by an act of both.
+4. *Leaving.*  Bob, a member of a group, may leave it by their own act; when the leader leaves, the group ends.  A member of a group who is not a friend of its leader is removed from it.
+5. *Group message.*  Bob, a member of a group, may send a message to the group, with content they created or received from another agent, and the leader delivers it to every member.
 
 ## The schemas, and what they realise
 
