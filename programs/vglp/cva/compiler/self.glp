@@ -47,14 +47,14 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 %% Definition "Syntactically grassroots"; Appendix D.4, Definition
 %% "Syntactically grassroots, agent-named"; Appendix F, Definitions
 %% "Introduction with wards" and "Syntactically grassroots with wards").
-%% seated(Schema, Role, Atom) and listed_role(Schema, Role, Atom) are clause 2
-%% of the agent-named definition: the seated or listed role adds an atom of a
-%% predicate the introductory act forbids.
+%% listed_role(Schema, Role, Atom) is clause 2 of the agent-named definition:
+%% the listed role adds an atom of a predicate the introductory act forbids
+%% (GSC f3c4f43; programs/gsc/self.glp at GLP f5081cfa).
 Cause     ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
-            ; seated(Constant, Integer, Atom) ; listed_role(Constant, Integer, Atom).
+            ; listed_role(Constant, Integer, Atom).
 %% What GSC's Definition "Act schema", and Appendix D's, require of a signed term, and the atom carrying one violates: it occurs in an atom not marked + (not_added), its speech-act variable occurs in no atom its role requires (not_required), or its role is not an agent role (not_agent_role).
 SgnCause  ::= not_added ; not_required ; not_agent_role.
-%% What GSC's Definition "Act schema" requires of the form of a schema, and a schema formed otherwise violates, in a verdict malformed(Faults): an atom both added and deleted at a role (added_and_deleted), a role that is not guarding and adds and deletes nothing (changes_nothing), no role adding or deleting an atom (no_role_changes), an entry of the head that is not a variable (head_not_variable), an entry listed twice (head_repeated), and a variable of the schema not in its head (not_in_head), and, of a listed role, a base that is not an agent role (listed_base) or a signed term among its arguments (listed_signed), as programs/gsc/self.glp writes them.
+%% What GSC's Definition "Act schema" requires of the form of a schema, and a schema formed otherwise violates, in a verdict malformed(Faults): an atom both added and deleted at a role (added_and_deleted), a role that is not guarding and adds and deletes nothing (changes_nothing), no role adding or deleting an atom (no_role_changes), an entry of the head that is not a variable (head_not_variable), an entry listed twice (head_repeated), and a variable of the schema not in its head (not_in_head), and, of a listed role, a base that is not an agent role (listed_base), a signed term among its arguments (listed_signed) or the mark ? (listed_guarded, GSC f3c4f43), as programs/gsc/self.glp writes them.
 Fault     ::= no_introductory_act
             ; obstructed(Constant, Integer, Atom, Cause)
             ; untraceable(Preds)
@@ -69,9 +69,10 @@ Fault     ::= no_introductory_act
             ; head_repeated(Constant, Arg)
             ; not_in_head(Constant, Arg)
             ; listed_base(Constant, Integer)
-            ; listed_signed(Constant, Integer).
+            ; listed_signed(Constant, Integer)
+            ; listed_guarded(Constant, Integer).
 Faults    ::= [] ; [Fault | Faults].
-%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_seated_and_listed_roles and syntactically_grassroots_with_wards, of the same arguments, are the verdicts on an agent-named contract with community roles (GSC 8064cfb, Appendix D.4, Theorem "Grassroots realisation with seated and listed roles", and Appendix F; programs/gsc/self.glp at GLP 96908b2d).
+%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_listed_roles and syntactically_grassroots_with_wards, of the same arguments, are the verdicts on an agent-named contract with community roles (GSC f3c4f43, Appendix D.4, Theorem "Grassroots realisation with listed roles", and def:sg-wards of CSSN's paper; programs/gsc/self.glp at GLP f5081cfa).
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Party     ::= ward(Integer, Constant, Integer) ; free(Integer).
@@ -79,7 +80,7 @@ Parties   ::= [] ; [Party | Parties].
 Relay     ::= relay(Constant, Party, Party).
 Relays    ::= [] ; [Relay | Relays].
 Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
-            ; syntactically_grassroots_with_seated_and_listed_roles
+            ; syntactically_grassroots_with_listed_roles
             ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
             ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
             ; conditions_met ; conditions_failed(Faults) ; malformed(Faults).
