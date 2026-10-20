@@ -94,7 +94,13 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
 
 %% The screen: the holdings, tallied by issuer and due, after every change of
 %% them; the date after every advance; and what each act came to.  A due is `now` for coins and the maturity date for
-%% bonds.
+%% bonds.  A redemption names the instrument presented, by its issuer and its
+%% due, as well as the instrument taken: redeemed(Friend, GiveDue, WantIssuer,
+%% WantDue) at the bearer, and presented(From, GiveDue, WantIssuer, WantDue)
+%% at the issuer, whose own instrument it is.  A request that changes no state
+%% --- a swap of a lot for the same lot, swap_same, and a redemption of an
+%% instrument against one of its own issuer and due, redeem_same --- is not a
+%% transaction, and the screen says so.
 %% The holdings, each lot a field of its own (Udi, 2026-10-12: a field is
 %% named by its type; Currencies, 2026-10-14 08:48 UTC, item 3).
 Holdings ::= Stream(Lot).
@@ -115,10 +121,12 @@ ScreenContent ::= holdings(Holdings)
                 ; swap_declined(Friend)
                 ; swap_failed(From)
                 ; declined(From)
-                ; redeemed(Friend, WantIssuer, WantDue)
+                ; swap_same(Friend, GiveIssuer, GiveDue, GiveAmount)
+                ; redeemed(Friend, GiveDue, WantIssuer, WantDue)
                 ; menu(Friend, Menu)
                 ; refused(Friend)
-                ; presented(From, WantIssuer, WantDue)
+                ; redeem_same(Friend, GiveDue)
+                ; presented(From, GiveDue, WantIssuer, WantDue)
                 ; unfulfilled(From, WantIssuer, WantDue)
                 ; not_mature(Friend, Maturity)
                 ; not_mature_for(From, Maturity)
@@ -151,7 +159,7 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?)
             ; swap_declined_by(Key, Stream(Instrument))
             ; pay_taken_by(Key, Integer)
             ; pay_returned_by(Key, Stream(Instrument))
-            ; redeem_given(Key, Key, Constant, Instrument)
+            ; redeem_given(Key, Constant, Key, Constant, Instrument)
             ; redeem_menu_from(Key, Instrument, Stream(Lot))
             ; redeem_not_mature_by(Key, Instrument)
             ; redeem_declined_by(Key, Instrument)
@@ -452,19 +460,19 @@ inject_pay_result(pay_returned(Coins), Q, _, Ys, [pay_returned_by(Q?, Coins?)|Ys
 inject_pay_result(R, Q, K, [Y|Ys], [Y?|Ys1?]) :-
     inject_pay_result(R?, Q?, K?, Ys?, Ys1).
 
-%% The issuer's answer to a presentation for an instrument of R due D1, when
-%% it comes.
-procedure inject_redeem_result(RedeemResponse?, Key?, Key?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_redeem_result(redeem_give(X), Q, R, D1, Ys, [redeem_given(Q?, R?, D1?, X?)|Ys?]) :-
+%% The issuer's answer to a presentation of an instrument of Q due D for an
+%% instrument of R due D1, when it comes.
+procedure inject_redeem_result(RedeemResponse?, Key?, Constant?, Key?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_redeem_result(redeem_give(X), Q, D, R, D1, Ys, [redeem_given(Q?, D?, R?, D1?, X?)|Ys?]) :-
     ground(Q?), ground(X?) | true.
-inject_redeem_result(redeem_menu(X, Menu), Q, _, _, Ys, [redeem_menu_from(Q?, X?, Menu?)|Ys?]) :-
+inject_redeem_result(redeem_menu(X, Menu), Q, _, _, _, Ys, [redeem_menu_from(Q?, X?, Menu?)|Ys?]) :-
     ground(Q?), ground(X?), ground(Menu?) | true.
-inject_redeem_result(redeem_not_mature(Bond), Q, _, _, Ys, [redeem_not_mature_by(Q?, Bond?)|Ys?]) :-
+inject_redeem_result(redeem_not_mature(Bond), Q, _, _, _, Ys, [redeem_not_mature_by(Q?, Bond?)|Ys?]) :-
     ground(Q?), ground(Bond?) | true.
-inject_redeem_result(redeem_declined(X), Q, _, _, Ys, [redeem_declined_by(Q?, X?)|Ys?]) :-
+inject_redeem_result(redeem_declined(X), Q, _, _, _, Ys, [redeem_declined_by(Q?, X?)|Ys?]) :-
     ground(Q?), ground(X?) | true.
-inject_redeem_result(Resp, Q, R, D1, [Y|Ys], [Y?|Ys1?]) :-
-    inject_redeem_result(Resp?, Q?, R?, D1?, Ys?, Ys1).
+inject_redeem_result(Resp, Q, D, R, D1, [Y|Ys], [Y?|Ys1?]) :-
+    inject_redeem_result(Resp?, Q?, D?, R?, D1?, Ys?, Ys1).
 
 %% The receiver's answer to a proposed transfer, when it comes.
 procedure inject_transfer_result(TransferResponse?, Kind?, Key?, Stream(UserInMsg)?, Stream(UserInMsg)).

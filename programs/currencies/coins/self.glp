@@ -75,7 +75,9 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
               ; friend_output(Key, Stream(PeerMsg)?).
 
 %% The screen: the holdings, tallied by issuer, after every change, and what
-%% each act came to.
+%% each act came to.  A request that changes no state --- a swap of a lot for
+%% itself, swap_same, and a redemption of a coin against a coin of its own
+%% issuer, redeem_same --- is not a transaction, and the screen says so.
 %% The holdings, each lot a field of its own (Udi, 2026-10-12: a field is
 %% named by its type; Currencies, 2026-10-14 08:48 UTC, item 3).
 Holdings ::= Stream(Lot).
@@ -93,11 +95,13 @@ ScreenContent ::= holdings(Holdings)
                 ; swap_declined(Friend)
                 ; swap_failed(From)
                 ; declined(From)
+                ; swap_same(Friend, GiveCoin, GiveAmount)
                 ; redeemed(Friend, WantCoin)
                 ; menu(Friend, Issuers)
                 ; presented(From, WantCoin)
                 ; unfulfilled(From, WantCoin)
                 ; refused(Friend)
+                ; redeem_same(Friend)
                 ; lacking(Issuer, Amount)
                 ; no_conversation(Friend).
 Issuers ::= Stream(Issuer).

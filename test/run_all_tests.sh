@@ -2579,7 +2579,7 @@ if _section N2; then
 # programs/currencies/coins/currency is the certified program --- the agent
 # coins_agent.vglp, its canonical compilation coins_agent.glp (emitted by glpc
 # :emit; the .vglp beside it is skipped by the loader while the .glp stands),
-# the mini-app entry coins/3 and the mini-app's own two plays --- and
+# the mini-app entry coins/3 and the mini-app's own three plays --- and
 # programs/currencies/coins adds the six-agent village market of the paper's Section 5,
 # which stands in for the super-app (the conversations) and the persons.  The
 # run needs the reduction limit raised.
@@ -2656,7 +2656,7 @@ check "Coins village: Eve's holdings" "tagged(eve, holdings(\[lot(charlie, 4), l
 check "Coins village: Frank's holdings" "tagged(frank, holdings(\[lot(diana, 7), lot(eve, 10), lot(frank, 5)\]))" "$n2_run"
 check "Coins village: five redemptions" "tagged(frank, redeemed(diana, frank))" "$n2_run"
 
-echo "--- The coins mini-app's own plays (play_mint, play_swap) ---"
+echo "--- The coins mini-app's own plays (play_mint, play_swap, play_same) ---"
 
 n2_pm=$("$REPL_RUN" <<HEREDOC
 $COINS/currency
@@ -2680,6 +2680,23 @@ HEREDOC
 check_not "Coins mini-app play_swap: no failed goal" "ERROR" "$n2_ps"
 check "Coins mini-app play_swap: the proposer's screen, her conversation opened and the swap done" "A = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\])" "$n2_ps"
 check "Coins mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\])" "$n2_ps"
+
+# A request that changes no state is not a transaction (GC, Definition 3.1:
+# Redeem with r != q, Swap with u != v or k != k'): a redemption of a bob-coin
+# against a bob-coin, and a swap of a lot for itself, are refused at the
+# bearer before anything is sent, the screen saying so; the holdings stay,
+# and the counterparty's screen shows nothing of either.
+n2_same=$("$REPL_RUN" <<HEREDOC
+$COINS/currency
+:limit 5000000
+play_same(A, B).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Coins mini-app play_same: no failed goal" "ERROR" "$n2_same"
+check "Coins mini-app play_same: the bearer's screen refuses the redemption of a coin against a coin of its own issuer, redeem_same, and the swap of a lot for itself, swap_same, and her holdings stay" "A = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\]), redeem_same(bob), swap_same(bob, bob, 2) | X[0-9]*\]$" "$n2_same"
+check "Coins mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | X[0-9]*\]$" "$n2_same"
 echo ""
 
 fi  # Section N2
@@ -2692,7 +2709,7 @@ if _section N3; then
 # bonds_agent.vglp, its canonical compilation bonds_agent.glp (emitted by glpc
 # :emit; the .vglp beside it is skipped by the loader while the .glp stands),
 # the mini-app entry bonds/3, the scripted person with the escrow programs it
-# answers by, and the mini-app's own two plays --- and programs/currencies/bonds
+# answers by, and the mini-app's own three plays --- and programs/currencies/bonds
 # adds the plays that stand in for the super-app, opening the conversations
 # between the parties who transact: the seven-party village market of the
 # paper's Section 7, the credit line of its Section 5, and the instruments of
@@ -2762,9 +2779,11 @@ check "Bonds village: a bond presented before its issuer's date reaches its matu
 check "Bonds village: and the bearer holds it back" "tagged(diana, not_mature(frank, 28))" "$n3_run"
 check "Bonds village: Bob's bonds mature by his own calendar" "tagged(bob, date_advanced(25))" "$n3_run"
 check "Bonds village: Advance is the next day, so the day before is logged too" "tagged(bob, date_advanced(24))" "$n3_run"
-check "Bonds village: the redemption takes back an immature bond" "tagged(frank, redeemed(diana, frank, 28))" "$n3_run"
-check "Bonds village: once mature by its issuer's date, the bond is redeemed as a coin is, against a coin its issuer holds (GB:5)" "tagged(diana, redeemed(frank, frank, now))" "$n3_run"
-check "Bonds village: ... the issuer taking the matured bond back and giving the coin" "tagged(frank, presented(diana, frank, now))" "$n3_run"
+check "Bonds village: the redemption takes back an immature bond, the bearer's screen naming the coin presented and the bond taken" "tagged(frank, redeemed(diana, now, frank, 28))" "$n3_run"
+check "Bonds village: ... and the issuer's screen naming them too" "tagged(diana, presented(frank, now, frank, 28))" "$n3_run"
+check "Bonds village: once mature by its issuer's date, the bond is redeemed as a coin is, against a coin its issuer holds (GB:5), the bearer's screen naming the bond presented, of day 28, and the coin taken" "tagged(diana, redeemed(frank, 28, frank, now))" "$n3_run"
+check "Bonds village: ... the issuer taking the matured bond back and giving the coin, its screen naming both" "tagged(frank, presented(diana, 28, frank, now))" "$n3_run"
+check_not "Bonds village: no redemption message without the due of the instrument presented" "redeemed([a-z]*, [a-z]*, [a-z0-9]*))\|presented([a-z]*, [a-z]*, [a-z0-9]*))" "$n3_run"
 check_not "Bonds village: no Mature act, a matured bond being redeemed (GB:5), so no matured( line is logged" "matured(\|matured_for(" "$n3_run"
 check_not "Bonds village: Redeem records no date warranty, so no warranty( line is logged" "warranty(" "$n3_run"
 check "Bonds village: the escrow agent's date reaches the release date" "tagged(escrow, date_advanced(30))" "$n3_run"
@@ -3003,7 +3022,7 @@ check "Bonds letter of credit: the seller is paid in the bank's coins" "tagged(a
 check "Bonds letter of credit: the bank holds the buyer's reimbursement bonds" "tagged(bank, holdings(\[lot(bob, 30, 10)\]))" "$n3_loc"
 check "Bonds letter of credit: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_loc"
 
-echo "--- The bonds mini-app's own plays (play_mint, play_swap) ---"
+echo "--- The bonds mini-app's own plays (play_mint, play_swap, play_same) ---"
 
 n3_pm=$("$REPL_RUN" <<HEREDOC
 $BONDSD
@@ -3027,6 +3046,23 @@ HEREDOC
 check_not "Bonds mini-app play_swap: no failed goal" "ERROR" "$n3_ps"
 check "Bonds mini-app play_swap: the proposer's screen, her conversation opened and her coins swapped for bonds" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 30, 2)\])" "$n3_ps"
 check "Bonds mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\])" "$n3_ps"
+
+# A request that changes no state determines no transaction (GB, Definition
+# def:gb-transactions and Appendix A): a redemption of a bond against a bond
+# of its own issuer and due, and a swap of a lot for the same lot, are refused
+# at the bearer before anything is sent, the screen saying so; the holdings
+# stay, and the counterparty's screen shows nothing of either.
+n3_same=$("$REPL_RUN" <<HEREDOC
+$BONDSD
+:limit 5000000
+play_same(A, B).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds mini-app play_same: no failed goal" "ERROR" "$n3_same"
+check "Bonds mini-app play_same: the bearer's screen refuses the redemption of a bond against a bond of its own issuer and due, redeem_same, and the swap of a lot for the same lot, swap_same, and her holdings stay" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 30, 2)\]), redeem_same(bob, 30), swap_same(bob, bob, 30, 2) | X[0-9]*\]$" "$n3_same"
+check "Bonds mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\]) | X[0-9]*\]$" "$n3_same"
 echo ""
 
 fi  # Section N3
