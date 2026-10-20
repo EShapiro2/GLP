@@ -1,0 +1,59 @@
+%% ---------------------------------------------------------------------------
+%% GK.glp --- the grassroots keys contract, GSC's, the base contract every
+%% other contract extends (Udi, 2026-10-20, to GSC #5), in the term form
+%% programs/gsc reads (its README, "Writing a contract").  The clauses are in
+%% GK.md beside this file: establish is clause 1, Identity (GSG:1 until
+%% 2026-10-20), meet clause 2, Meeting, and introduce clause 3, Introduction;
+%% every role but establish's requires identity.  knows(q) in the state of p
+%% says that p holds q's public key; nothing deletes or forbids it, a second
+%% copy meaning the same.  Each schema is in GSC's notation above its term, at
+%% each role in turn: what the role requires, what it forbids (not), what it
+%% adds (+) and what it deletes (-); a role marked ? is a guarding role.  A
+%% schema's second argument lists its variables in the order of its head.
+%%
+%% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
+%% and is named by its index, role(1) the schema's first role; c is an agent
+%% variable, pvar.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(gk, C): the contract, GK (Coordination Appendix C).
+procedure contract_named(Constant?, Declared).
+contract_named(gk,
+%% GK:1, Identity.
+%%   establish(p?) :
+%%       at p:  +identity
+   [schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+%% GK:2, Meeting.
+%%   meet(p?, q?) :
+%%       at p:  identity, +knows(q)
+%%       at q:  identity, +knows(p)
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+%% GK:3, Introduction: p, who knows q and c, introduces c to q, who knows p.
+%%   introduce(p?, q? ; c) :
+%%       at p:  identity, knows(q), knows(c)
+%%       at q:  identity, knows(p), +knows(c)
+    schema(introduce, [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])])]).

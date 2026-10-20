@@ -2,8 +2,8 @@
 %% GSN.glp --- Grassroots Social Network, the network without provenance,
 %% GSC's (Udi, 2026-10-18; Coordination, to_all 2026-10-18 19:23 UTC), in the
 %% term form programs/gsc reads (its README, "Writing a contract").  The
-%% clauses are in GSN.md beside this file; GSN extends GSG, so the term holds
-%% GSG's three schemas, and every role but establish's requires identity.  The network with provenance that this file held until
+%% clauses are in GSN.md beside this file; GSN extends GSG, which extends GK, so the term holds
+%% GK's three schemas and GSG's two, and every role but establish's requires identity.  The network with provenance that this file held until
 %% GLP 4ce1da3a is GSNP (GSNP.md), its schemas not written.  Written by GAI #2
 %% Cowork at Udi's instruction, 2026-10-18.  Each schema is in GSC's notation
 %% above its term, at each role in turn: what the role requires, what it
@@ -44,18 +44,32 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 %% contract_named(gsn, C): the contract, GSN (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
 contract_named(gsn,
-%% GSG:1, Identity.
+%% GK:1, Identity.
 %%   establish(p?) :
 %%       at p:  +identity
    [schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
-%% GSG:2 and GSG:3.
+%% GK:2, Meeting.
+%%   meet(p?, q?) :
+%%       at p:  identity, +knows(q)
+%%       at q:  identity, +knows(p)
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+%% GK:3, Introduction: p, who knows q and c, introduces c to q, who knows p.
+%%   introduce(p?, q? ; c) :
+%%       at p:  identity, knows(q), knows(c)
+%%       at q:  identity, knows(p), +knows(c)
+    schema(introduce, [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GSG:1 and GSG:2.
 %%   befriend(p?, q?) :
-%%       at p:  identity, not friend(q), +friend(q)
-%%       at q:  identity, not friend(p), +friend(p)
+%%       at p:  identity, knows(q), not friend(q), +friend(q)
+%%       at q:  identity, knows(p), not friend(p), +friend(p)
     schema(befriend, [],
-       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])])]),
+       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
 %%   unfriend(p?, q) :
 %%       at p:  identity, -friend(q)
 %%       at q:  identity, -friend(p)
