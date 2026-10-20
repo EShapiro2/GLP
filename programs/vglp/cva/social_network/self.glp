@@ -21,17 +21,21 @@ Proposal ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech).
 Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
-Decision ::= commit ; abort.
-Attempt  ::= attempt(Peer, Integer, Integer, Class).
-Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; yield(Attempt).
+Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 CName    ::= community(Peer) ; dot(CName, Speech).
 Atom     ::= identity ; friend(Peer) ; received(Speech, Peer) ; member(CName)
            ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech)
            ; delivered(Speech, Peer, Speech) ; received_in(Speech, Peer, Speech).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).

@@ -24,7 +24,7 @@
 %%   bob, and bob's machine votes yes.
 %% play_refused: alice proposes befriending bob and bob answers no; the
 %%   else-branch records his no, his Vote, an own transaction, votes no, and the
-%%   attempt aborts at both; alice's agent, tallying his no, writes the notice refused(befriend(alice, bob), bob) (vGLP c44769f, Section 5.4, "The compilation"); alice, seeing it on her screen, requests it again, attempt 3; bob is asked again and answers yes, and it commits.
+%%   attempt aborts at both, bob its refuser, declined; alice's agent, tallying his no, ends her approval, her request, and writes the notice refused(befriend(alice, bob), bob, declined) (vGLP f0acbc1, Section 5.4, "The compilation"); alice, seeing it on her screen, requests it again, attempt 6, her requests taking numbers as her attempts do; bob is asked again and answers yes, and it commits.
 %% play_menu: alice's request questions show her agent's own key, alice, and
 %%   the persons it knows (vGLP 321127a, Section 5.4): the first, asked when
 %%   her agent starts, none; she makes bob known and, once he is, proposes
@@ -41,14 +41,18 @@ Class    ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Proposal ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
-Decision ::= commit ; abort.
-Attempt  ::= attempt(Peer, Integer, Integer, Class).
-Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; yield(Attempt).
+Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= identity ; friend(Peer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -78,21 +82,21 @@ play_unfriend(LA?, LB?, N?) :-
           wait(holds(friend(bob))),
           own([A4], propose(unfriend(A4?, bob)))],
          [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(alice)),
-          approval(attempt(alice, 2, 2, befriend(alice, bob)), yes),
+          approval(befriend(alice, bob), yes),
           wait(holds(friend(alice))),
           own([B2], propose(unfriend(B2?, alice))),
-          approval(attempt(alice, 4, 4, befriend(alice, bob)), yes)],
+          approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
 exported procedure play_refused(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_refused(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), req(known(bob)), wait(known(bob)),
           own([A2], propose(befriend(A2?, bob))),
-          wait(refused(befriend(alice, bob), bob)),
+          wait(refused(befriend(alice, bob), bob, declined)),
           own([A3], propose(befriend(A3?, bob)))],
          [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(alice)),
-          approval(attempt(alice, 2, 2, befriend(alice, bob)), no),
-          approval(attempt(alice, 3, 3, befriend(alice, bob)), yes)],
+          approval(befriend(alice, bob), no),
+          approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
 exported procedure play_menu(Stream(_), Stream(_), Stream(Sent(Cargo))).

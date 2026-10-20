@@ -3,7 +3,7 @@
 %%
 %% u1(alice, bob) and u2(bob, alice) are one class of two unguarded parts, u1(alice, bob)'s opened by alice and u2(bob, alice)'s by bob, each part's opener "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it" (vGLP 099f876, Section 5.4, "Act schemas as local specifications"; vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
 %%
-%% play_opens: alice and bob come to know each other and befriend, attempt 1.  bob marks alice, attempt 2, adding w(alice) at him, and alice's machine votes on it unasked.  The part of u2(bob, alice) then holds, and bob, its opener, proposes it as an own transaction, attempt 3, the attempt asking nobody and alice's machine voting yes; it commits.  alice holds no r(bob), so the part of u1(alice, bob), hers to open, does not hold, and she proposes nothing of the class.
+%% play_opens: alice and bob come to know each other and befriend, attempt 2, after alice's Request, number 1.  bob marks alice, attempt 4, after his Request, adding w(alice) at him, and alice's machine votes on it unasked.  The part of u2(bob, alice) then holds, and bob, its opener, proposes it as an own transaction, attempt 5, no Request before it, the attempt asking nobody and alice's machine voting yes; it commits.  alice holds no r(bob), so the part of u1(alice, bob), hers to open, does not hold, and she proposes nothing of the class.
 %%
 %% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
@@ -12,14 +12,18 @@ Class    ::= befriend(Peer, Peer) ; mark(Peer, Peer) ; rmark(Peer, Peer) ; u1(Pe
 Proposal ::= befriend(Peer, Peer) ; mark(Peer, Peer) ; rmark(Peer, Peer).
 Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
-Decision ::= commit ; abort.
-Attempt  ::= attempt(Peer, Integer, Integer, Class).
-Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; yield(Attempt).
+Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; w(Peer) ; marked_by(Peer) ; r(Peer) ; rmarked_by(Peer) ; x(Peer) ; y(Peer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).

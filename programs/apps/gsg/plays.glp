@@ -15,12 +15,12 @@ play_friends(A?, B?) :-
 
 %% play_held(In, ToBob, ToCarol): the router of alice's mini-app, on what it reads in this order: a hello to bob and a hello to carol, sent before any conversation is open, and so held; the conversation with bob, which carries bob's hello in and the hello held for him out, carol's still held; a start to bob, on his conversation; and the conversation with carol, which carries the hello held for her.  The events end, and the router closes the conversations' outgoing streams. Expected: In = [msg(alice, hello(bob))],
 %%   ToBob = [msg(bob, hello(alice)), msg(bob, cargo(alice, start(attempt(alice,
-%%   1, 1, befriend(alice, bob)))))], ToCarol = [msg(carol, hello(alice))].
+%%   1, 1, befriend(alice, bob), none))))], ToCarol = [msg(carol, hello(alice))].
 exported procedure play_held(Stream(Net), Stream(Net), Stream(Net)).
 play_held(In?, ToBob?, ToCarol?) :-
     miniapp # router([sent(msg(bob, hello(alice))),
                       sent(msg(carol, hello(alice))),
                       opened(bob, ch([msg(alice, hello(bob))], ToBob)),
-                      sent(msg(bob, cargo(alice, start(attempt(alice, 1, 1, befriend(alice, bob)))))),
+                      sent(msg(bob, cargo(alice, start(attempt(alice, 1, 1, befriend(alice, bob), none))))),
                       opened(carol, ch([], ToCarol))],
                      [], [], In).

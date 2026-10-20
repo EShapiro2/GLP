@@ -319,11 +319,38 @@ name_class(message(V1, V2, V3), _, message(V1?, V2?, V3?))
 name_class(forward(V1, V2, V3), _, forward(V1?, V2?, V3?))
 .
 
+procedure request_name(Class?, PName).
+request_name(establish(V1), pname(establish(V1?)))
+.
+request_name(befriend(V1, V2), pname(befriend(V1?, V2?)))
+.
+request_name(unfriend_p(V1, V2), pname(unfriend_p(V1?, V2?)))
+.
+request_name(unfriend_q(V1, V2), pname(unfriend_q(V1?, V2?)))
+.
+request_name(enter(V1, V2, V3), pname(enter(V1?, V2?, V3?)))
+.
+request_name(agent_befriend(V1, V2, V3, V4), pname(agent_befriend(V1?, V2?, V3?, V4?)))
+.
+request_name(agents_befriend(V1, V2, V3, V4, V5, V6), pname(agents_befriend(V1?, V2?, V3?, V4?, V5?, V6?)))
+.
+request_name(agent_unfriend(V1, V2, V3), pname(agent_unfriend(V1?, V2?, V3?)))
+.
+request_name(retire(V1, V2), pname(retire(V1?, V2?)))
+.
+request_name(sign(V1, V2), pname(sign(V1?, V2?)))
+.
+request_name(message(V1, V2, V3), pname(message(V1?, V2?, V3?)))
+.
+request_name(forward(V1, V2, V3), pname(forward(V1?, V2?, V3?)))
+.
+request_name(_, nopname) :- otherwise | true.
+
 %% ===========================================================================
-%% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, Menu, shows the agent's own key and the persons it knows and takes one request (vGLP 321127a, Section 5.4); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(S, K), the machine state S of its app state and the persons K it knows, when it starts and whenever either changes, and the person's screen shows the last view written (vGLP b7e3517, Section 5.4, "The compilation"); and, when an attempt its person proposed closes without committing, a notice, refused(Part, Q), Q the participant whose vote no closed it, or yielded(Part), where it yielded to an attempt with priority over it (vGLP c44769f, Section 5.4, "The compilation").
+%% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, Menu, shows the agent's own key and the persons it knows and takes one request (vGLP 321127a, Section 5.4); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the request propose(N) the agent takes a Request, its person's approval, which stands until the transaction is taken or refused; its machine proposes, and proposes again an attempt that yields, with no further question to its person; and a machine that cannot carry out a transaction its person approved refuses it (vGLP f0acbc1, Section 5.4, "Triggers").  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(S, K), the machine state S of its app state and the persons K it knows, when it starts and whenever either changes, and the person's screen shows the last view written (vGLP b7e3517, Section 5.4, "The compilation"); and, when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused(Part, Q, D), Part the part of the refused attempt, Q its refuser and D the reason, declined or unable, from the abort outcome, or from its own vote where its own vote no refused the attempt (vGLP f0acbc1, Section 5.4, "The compilation").
 %% ===========================================================================
 
-%% An attempt (i, k, pi, [t]_j) (vGLP 099f876, Definition "Attempt"): its initiator, its number, its rank and its part, named by a term of Class, a schema-binding of the part, of the attempt's class (Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"), the part's guard set the people in the schema-binding's marked roles.  The cargoes (Definition "Cargo, App State, Question, Free, Ready") are its start, a vote on it, its outcome and a yield of it; a message carries its sender and a cargo, a hello, an ihello, or an introduction, intro(P, Q), P's cargo intro(Q), which Commit and Introduce peers send (Definitions "CVA Platform", "Deciding" and "Introduction Rule, Introduce Peers").
+%% An attempt (i, k, pi, [t]_j, r) (vGLP f0acbc1, Definition "Attempt"): its initiator, its number, its rank, its part, named by a term of Class, a schema-binding of the part, of the attempt's class (Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"), the part's guard set the people in the schema-binding's marked roles, and the request it names, request(Rho, K), where its part is guarded and has an opener, and none otherwise.  The cargoes (Definition "Cargo, App State, Question, Approval, Free, Ready") are its start; a vote on it, a vote no carrying its reason, declined or unable; its outcome, an abort carrying its refuser, the participant whose vote no refused it, with that vote's reason; a yield of it; and a request, request(Rho, K).  A message carries its sender and a cargo, a hello, an ihello, or an introduction, intro(P, Q), P's cargo intro(Q), which Commit and Introduce peers send (Definitions "CVA Platform", "Deciding" and "Introduction Rule, Introduce Peers").  A request is a set of classes (Definition "Local Specification, Part, Guard Set, Opener, Request"): one(C), the class of a guarded part with no opener that the agent guards, C the term naming the class at the agent, a request of the agent to itself; or rho(N), rho_N, the classes of the guarded parts with an opener named N, a request to their opener, the message of the Request carrying N (Section 5.4, "The compilation").  A vote unable of the compiled program carries the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (Section 5.4, "Act schemas").
 Peer      ::= Key.
 %% A speech act is an utterance or a speech act, signed by a person (GSC,
 %% Section 3): "A speech act forwarded with its provenance is signed again at
@@ -334,10 +361,14 @@ Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
 YesNo     ::= yes ; no.
-Decision  ::= commit ; abort.
-Attempt   ::= attempt(Peer, Integer, Integer, Class).
-Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-            ; yield(Attempt).
+Reason    ::= declined ; unable(List(Atom), List(Atom)).
+Vote      ::= yes ; no(Reason).
+Decision  ::= commit ; abort(Peer, Reason) ; yield.
+Rho       ::= one(Class) ; rho(Proposal).
+Names     ::= none ; request(Rho, Integer).
+Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+            ; yield(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
 Approval  ::= approval(Attempt, YesNo?).
@@ -380,8 +411,8 @@ NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
 GAtom     ::= g(Constant, Vals).
 GAtoms    ::= [] ; [GAtom | GAtoms].
-%% The program's output to its person is of the type of the views, view(S, K): S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it, and K the persons the agent knows, in the order of identifiers, so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(P, Q) and yielded(P), P the term of the part of an attempt the person proposed and Q a participant: "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it" (vGLP f5f1644, Section 5.4, "The compilation"; Definition "Widget Declaration").
-Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+%% The program's output to its person is of the type of the views, view(S, K): S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it, and K the persons the agent knows, in the order of identifiers, so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(P, Q, D), P the term of the part of the refused attempt, Q its refuser and D the reason, declined, or unable(Lacks, Has), the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them: "when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused([t]_j, q, d)"; "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it" (vGLP f0acbc1, Section 5.4, "The compilation" and "Act schemas"; Definition "Widget Declaration").
+Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
 Shown     ::= shown(Atom) ; unshown.
 Stream(Output) =::= last_state.
 Bind      ::= b(Var, Val).
@@ -411,11 +442,12 @@ CVals     ::= [] ; [CVal | CVals].
 CAtom     ::= cmp_atom(Constant, CVals).
 CAtoms    ::= [] ; [CAtom | CAtoms].
 
-%% The app state (s, k, L, R): the machine state, the agent's number, the largest number of an attempt it has proposed or read, the lock, unlocked or the attempt it holds prepared, and the record.  The agent state: its identifier, the app state, the count of the own transactions it has taken, the peers hello has been sent to and received from, and ihello, the count at which each class of its own transactions it has met began to wait --- the opening class op([t]_j) of an unguarded part, named by the part's term, the Vote vt(At) and the Commit cm(At) on an attempt, the Wound wd(A, B) of A against B, and the Introduce peers ip(Q, R) of a pair, Q preceding R --- the classes met, the starts it holds waiting, deferred(M), and the parts it has proposed, each named by a term of Class, in the order it last proposed them, the least recent first (vGLP 099f876, Section 5.4, "The compilation"; Definition "Equivalence of the Canonical Platform": "the opening class on [t]_j of its opener").
+%% The app state (s, k, L, R) (vGLP f0acbc1, Definition "Cargo, App State, Question, Approval, Free, Ready"): the machine state; the agent's number, the largest number of an attempt it has proposed or read a start of, or of a request it has made; the lock, unlocked or the attempt it holds prepared; and the record, which holds besides requested(Rho, K), a request it has made, and ended(Rho, K) and ended(At), the end of an approval, a request or an answer yes.  The agent state (Section 5.4, "The compilation"): its identifier, the app state, the count of the own transactions it has taken, the peers hello has been sent to and received from, and ihello, the count at which each class of its own transactions it has met began to wait --- the proposing class op([t]_j) of a part, named by the part's term, the Vote vt(At) and the Commit cm(At) on an attempt, the Wound wd(A, B) of A against B, and the Introduce peers ip(Q, R) of a pair, Q preceding R --- the classes met, the starts it holds waiting, deferred(M), the requests it has made, in the order it last made them, the least recent first, and the requests it holds, held(Q, Rho, K), each a message request(Rho, K) from Q (Definition "Equivalence of the Canonical Platform": "for a part [t]_j and an agent p, p's proposing class on [t]_j").
 Lock      ::= unlocked ; held(Attempt).
 Rec       ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo)
             ; got(Attempt, Peer, YesNo) ; closed(Attempt) ; wounded(Attempt)
-            ; yielded(Attempt) ; introduced(Peer, Peer).
+            ; yielded(Attempt) ; requested(Rho, Integer) ; ended(Rho, Integer)
+            ; ended(Attempt) ; introduced(Peer, Peer).
 Recs      ::= [] ; [Rec | Recs].
 App       ::= app(GAtoms, Integer, Lock, Recs).
 Pend      ::= deferred(Net).
@@ -425,12 +457,15 @@ WKey      ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt)
 Wait      ::= w(WKey, Integer).
 Waits     ::= [] ; [Wait | Waits].
 WFound    ::= at(Integer) ; unseen.
-St        ::= st(Peer, App, Integer, Peers, Peers, Peers, Peers, Waits, Infos, Pends, Classes).
+Held      ::= held(Peer, Rho, Integer).
+Helds     ::= [] ; [Held | Helds].
+Rhos      ::= [] ; [Rho | Rhos].
+St        ::= st(Peer, App, Integer, Peers, Peers, Peers, Peers, Waits, Infos, Pends, Rhos, Helds).
 OpenApproval ::= oc(Attempt, Close?).
 OpenApprovals ::= [] ; [OpenApproval | OpenApprovals].
 Send      ::= to(Peer, Cargo).
 Sends     ::= [] ; [Send | Sends].
-Subj      ::= sub(Info) ; pair ; prop(Info, Class).
+Subj      ::= sub(Info) ; pair ; prop(Info, Class, Names).
 Cand      ::= cand(WKey, Subj).
 Cands     ::= [] ; [Cand | Cands].
 Choice    ::= take(WKey, Subj) ; none.
@@ -438,13 +473,16 @@ Pair      ::= pr(Peer, Peer).
 Pairs     ::= [] ; [Pair | Pairs].
 PKey      ::= key(WKey) ; nokey.
 Cond      ::= go(Info) ; drop.
-PCond     ::= pgo(Info, Class) ; pdrop.
-Named     ::= named(Class) ; unnamed.
+PCond     ::= pgo(Info, Class, Names) ; pdrop.
+RCond     ::= rgo(Rho, Peer) ; rdrop.
+RCand     ::= rc(Rho, Peer).
+RCands    ::= [] ; [RCand | RCands].
+PName     ::= pname(Proposal) ; nopname.
+PartRes   ::= part(Part) ; nopart.
+Mine      ::= mine(Rho, Integer) ; notmine.
+Outputs   ::= [] ; [Output | Outputs].
 Classes   ::= [] ; [Class | Classes].
-Aged      ::= aged(Integer, YesNo, Class).
-Ageds     ::= [] ; [Aged | Ageds].
-Pick      ::= picked(Aged) ; nopick.
-MCond     ::= mgo(Info) ; mdefer ; noparticipant.
+MCond     ::= mgo(Info) ; mdefer ; mhold ; noparticipant.
 Blocker   ::= blk(Attempt) ; noblk.
 FoundNet  ::= found(Net) ; nonefound.
 Last      ::= last(Attempt) ; nolast.
@@ -461,7 +499,7 @@ agent(Id, NetIn, Out?, [view([], [])|Thr?]) :- ground(Id?) |
     merge(M1?, Ans?, M2),
     merge(M2?, [own|Ow?], In),
     agent_goal([], In?, yes, Ans, Thr, Out, Ow, [],
-        st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [])).
+        st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [])).
 
 %% A request question: the agent's own key, its identifier, the persons the
 %% agent knows, in the order of identifiers, and the person's one request,
@@ -527,10 +565,8 @@ step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(N?), ground(St?) |
     st_app(St?, Ap0),
     ask_next(St?, Ans, Ans1?),
-    st_ms(St?, S),
-    name_class(N?, S?, C),
-    propose_cond(C?, St?, Cd, St1),
-    dispatch_propose(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St1?).
+    request_cond(N?, St?, Cd, St1),
+    dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St1?).
 step(req(known(Q)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(Q?), ground(St?) |
     st_app(St?, Ap0),
@@ -576,6 +612,11 @@ step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?,
     Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
 next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next_n(Th?, Kick?, Ap0?, [], Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+%% The same, with the notices Ns the dispatch gives, written after the view (put_notices).
+procedure next_n(Then?, YesNo?, App?, Outputs?, Stream(Trigger)?, Stream(Trigger)?,
+    Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
+next_n(Th, Kick, Ap0, Ns, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(Ap0?), ground(St?) |
     app_changed(Ap0?, St?, Ca1),
     app_changed(Ap0?, St?, Ca2),
@@ -585,7 +626,8 @@ next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     own_after(Th?, Ow, Ow1?, U),
     app(Ag?, Ls?, L1),
     show_state(Ap0?, St?, Thr, Thr1?),
-    agent_goal(L1?, In?, U?, Ans, Thr1, Out, Ow1, Approvals1?, St1?).
+    put_notices(Ns?, Thr1, Thr2?),
+    agent_goal(L1?, In?, U?, Ans, Thr2, Out, Ow1, Approvals1?, St1?).
 
 %% The view after the dispatch, written where the machine state differs, as a multiset, from that before it.
 procedure show_state(App?, St?, Stream(Output), Stream(Output)?).
@@ -615,7 +657,7 @@ view_of(St, view(A?, Ks?)) :- ground(St?) |
 procedure app_ms(App?, GAtoms).
 app_ms(app(S, _, _, _), S?).
 procedure st_ms(St?, GAtoms).
-st_ms(st(_, app(S, _, _, _), _, _, _, _, _, _, _, _, _), S?).
+st_ms(st(_, app(S, _, _, _), _, _, _, _, _, _, _, _, _, _), S?).
 %% The machine state as the contract writes its atoms, each by atom_of, which the compiler prints from the contract and whose last clause, giving unshown for an atom of no alternative of Atom, covers the type and is never reached.
 procedure atoms_of(GAtoms?, List(Atom)).
 atoms_of([], []).
@@ -624,39 +666,14 @@ procedure shown_cons(Shown?, List(Atom)?, List(Atom)).
 shown_cons(shown(A), As, [A?|As?]).
 shown_cons(unshown, As, As?).
 
-%% The notice, written on the output where the dispatch closed, without committing, an attempt the agent's person proposed (vGLP c44769f, Section 5.4, "The compilation": "when an attempt its person proposed closes without committing, a notice: refused([t]_j, q), q the participant whose vote no closed it, or yielded([t]_j), where it yielded to an attempt with priority over it").  Its person proposed it where it is the agent's own attempt of a guarded part, whose Propose the agent takes only on its person's request (Section 5.4, "Triggers"); an opener's attempt, of an unguarded part, gives no notice.  Tally closes an attempt on a vote no, refused_by(Q), Q the participant who cast it; Yield, on a yield, and the agent's own Wound of its attempt close it wounded, yielded_by.  The attempt is closed by the dispatch where closed(At) is in the record after it and not before, and the notice names its part by the attempt's term, refused(C, Q) or yielded(C).
-NoticeOf  ::= refused_by(Peer) ; yielded_by.
-procedure noticed(NoticeOf?, Attempt?, App?, St?, Stream(Output), Stream(Output)?, St).
-noticed(K, At, Ap0, St, Thr?, Thr1, St?) :- ground(K?), ground(At?), ground(Ap0?), ground(St?) |
-    closed_proposed(At?, Ap0?, St?, B),
-    attempt_class(At?, C),
-    notice_of(K?, C?, N),
-    put_notice(B?, N?, Thr, Thr1?).
-procedure notice_of(NoticeOf?, Class?, Output).
-notice_of(refused_by(Q), C, refused(C?, Q?)).
-notice_of(yielded_by, C, yielded(C?)).
-procedure put_notice(YesNo?, Output?, Stream(Output), Stream(Output)?).
-put_notice(yes, N, [N?|Thr1?], Thr1).
-put_notice(no, _, Thr1?, Thr1).
-%% Whether the dispatch, from the app state Ap0 to the agent state St, closed the attempt At, the agent its initiator and its part guarded, the people its schema-binding marks not none.
-procedure closed_proposed(Attempt?, App?, St?, YesNo).
-closed_proposed(At, Ap0, St, B?) :- ground(At?), ground(Ap0?), ground(St?) |
-    app_recs(Ap0?, R0),
-    mem(closed(At?), R0?, Cl0),
-    neg(Cl0?, Open0),
-    st_app(St?, Ap1),
-    app_recs(Ap1?, R1),
-    mem(closed(At?), R1?, Cl1),
-    st_id(St?, Id),
-    attempt_id(At?, P),
-    same(P?, Id?, Own),
-    attempt_class(At?, C),
-    binding_of(C?, Nm, Bn),
-    marked_people(Nm?, Bn?, G),
-    some_peer(G?, Gd),
-    and(Open0?, Cl1?, B1),
-    and(B1?, Own?, B2),
-    and(B2?, Gd?, B).
+%% The notices a dispatch writes on the output, after the view it writes, if any (vGLP f0acbc1, Section 5.4, "The compilation": "when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused([t]_j, q, d): [t]_j the part of the refused attempt, q its refuser and d the reason, from the abort outcome, or from the vote where the agent's own vote no refused it").  The effects of the transactions that end an approval by a refusal give the notice, one for each such end: the Propose that refuses at once, a guard's vote no, by Start or by Vote, the Tally that records a no, and the Outcome of an abort (ended_notice).
+procedure put_notices(Outputs?, Stream(Output), Stream(Output)?).
+put_notices([], Thr1?, Thr1).
+put_notices([N|Ns], [N?|Thr?], Thr1) :- put_notices(Ns?, Thr, Thr1?).
+%% ended_notice(Ended?, Part?, Refuser?, Reason?, Notices): the notice refused(Part, Q, D) where an approval ended, and none where none did.
+procedure ended_notice(YesNo?, Class?, Peer?, Reason?, Outputs).
+ended_notice(yes, C, Q, D, [refused(C?, Q?, D?)]).
+ended_notice(no, _, _, _, []).
 procedure some_peer(Peers?, YesNo).
 some_peer([], no).
 some_peer([_|_], yes).
@@ -684,98 +701,251 @@ procedure pend_triggers(Pends?, Stream(Trigger)).
 pend_triggers([], []).
 pend_triggers([_|_], [recheck]).
 
-%% --- Propose of a part, on the request propose([t]_j) or by the opener ------
-%% On the request propose(N), N the request name of a guarded part, the class term of the part it names at the agent's state (name_class: for a schema with a listed role, with the people the agent lists), the agent proposes, among the guarded parts of its class it guards and is ready for, the one it has proposed least recently (vGLP f5f1644, Section 5.4, "Triggers" and "The compilation"): the guarded parts of the class whose guard set holds the agent (guarding_parts), and then the conditions of Propose (initiate_cond).  The request is dropped where they do not hold.
-procedure propose_cond(Class?, St?, PCond, St).
-propose_cond(C, St, Cd?, St2?) :- ground(C?), ground(St?) |
+%% --- Request, on the request propose(N) ------------------------------------
+%% On the answer propose(N) to a request question, N the request name of a guarded part, the dispatch takes, among the Request of {[t]} to the agent itself for each class [t] of a guarded part with no opener named N that it guards and is ready for, where it is free for [t] and no such request is pending at it, and the Request of rho_N to the opener of the guarded parts with an opener named N, where the agent is free for every class of rho_N, guards one of those parts it is ready for, and rho_N is not pending at it, the one it has taken least recently, where there is one, and drops the request otherwise; the message of the Request carries N for rho_N (vGLP f0acbc1, Section 5.4, "Triggers" and "The compilation"; Definition "Proposing", Request).  The part named N at the agent is the part of the class term that N names at its state (name_class: for a schema with listed roles, with the people its state lists at the place of each), and its class is the class [t] of the Request; for rho_N, the agent's precondition is the same in every part named N, the agent not being the base of its listed roles, whose opener lists their people.  A Request to another agent sends request(rho(N), K), so that agent is known.  The Request is the agent's person's approval of each class of the request, pending until ended (Definition "Cargo, App State, Question, Approval, Free, Ready").
+procedure request_cond(Proposal?, St?, RCond, St).
+request_cond(N, St, Cd?, St2?) :- ground(N?), ground(St?) |
+    st_ms(St?, S),
+    name_class(N?, S?, C),
+    request_cond0(C?, N?, St?, Cd, St2).
+procedure request_cond0(Class?, Proposal?, St?, RCond, St).
+request_cond0(C, N, St, Cd?, St2?) :- ground(C?), ground(N?), ground(St?) |
     st_class(C?, St?, R, St1),
-    propose_cond1(R?, C?, St1?, Cd, St2).
-procedure propose_cond1(ClassRes?, Class?, St?, PCond, St).
-propose_cond1(nocls, _, St, pdrop, St?).
-propose_cond1(cls(I), C, St, Cd?, St?) :- ground(I?), ground(C?), ground(St?) |
+    request_cond1(R?, N?, C?, St1?, Cd, St2).
+procedure request_cond1(ClassRes?, Proposal?, Class?, St?, RCond, St).
+request_cond1(nocls, _, _, St, rdrop, St?).
+request_cond1(cls(I), N, C, St, Cd?, St?) :- ground(I?), ground(N?), ground(C?), ground(St?) |
+    term_part_of(I?, C?, Pr),
+    request_cands(Pr?, I?, N?, C?, St?, Cs),
+    st_made(St?, Md),
+    pick_request(Cs?, Md?, Cd).
+%% The candidate Request of the part Pr that the request name names, where its condition holds: for a guarded part with no opener, the Request of {[t]} to the agent itself, one(C0), C0 the term that names the class at the agent, where it is free for [t], ready for a guarded part of [t] with no opener that it guards, and has no request of {[t]} pending; for a guarded part with an opener, the Request of rho_N to the opener, where the agent is a guard of the part and not its opener, is free for every class of rho_N, its state is in the domain of its effect in the part, rho_N is not pending at it, and the opener is known.
+procedure request_cands(PartRes?, Info?, Proposal?, Class?, St?, RCands).
+request_cands(nopart, _, _, _, _, []).
+request_cands(part(pt(_, G, guarded_part)), I, _, _, St, Cs?) :- ground(G?), ground(I?), ground(St?) |
     st_id(St?, Id),
+    some_peer(G?, Gd),
+    free_i(I?, St?, Fr),
+    ready_guarded(I?, St?, Rd),
+    info_class(I?, C0),
+    self_request(C0?, St?, NPd),
+    and(Gd?, Fr?, B1),
+    and(B1?, Rd?, B2),
+    and(B2?, NPd?, B),
+    self_cand(B?, I?, Id?, Cs).
+request_cands(part(pt(_, G, opener(O))), _, N, C, St, Cs?) :-
+    ground(G?), ground(N?), ground(C?), ground(St?) |
+    st_id(St?, Id),
+    mem(Id?, G?, Gd),
+    same(O?, Id?, Me),
+    neg(Me?, NMe),
+    free_rho(N?, St?, Fr),
+    st_ms(St?, S),
+    part_dom(C?, Id?, S?, Rd),
+    st_app(St?, Ap),
+    app_recs(Ap?, Rc),
+    pending_request(rho(N?), Rc?, Pd),
+    neg(Pd?, NPd),
+    known_st(O?, St?, Kn),
+    and(Gd?, NMe?, B1),
+    and(B1?, Fr?, B2),
+    and(B2?, Rd?, B3),
+    and(B3?, NPd?, B4),
+    and(B4?, Kn?, B),
+    rho_cand(B?, N?, O?, Cs).
+procedure rho_cand(YesNo?, Proposal?, Peer?, RCands).
+rho_cand(yes, N, O, [rc(rho(N?), O?)]).
+rho_cand(no, _, _, []).
+procedure self_request(Class?, St?, YesNo).
+self_request(C0, St, NPd?) :- ground(C0?), ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, Rc),
+    pending_request(one(C0?), Rc?, Pd),
+    neg(Pd?, NPd).
+procedure self_cand(YesNo?, Info?, Peer?, RCands).
+self_cand(yes, I, Id, [rc(one(C0?), Id?)]) :- info_class(I?, C0).
+self_cand(no, _, _, []).
+procedure info_class(Info?, Class).
+info_class(ci(C, _, _, _, _), C?).
+%% Ready for a guarded part of the class I with no opener that the agent guards (Definition "Proposing", Request: "ready for a guarded part of a class of rho that it guards").
+procedure ready_guarded(Info?, St?, YesNo).
+ready_guarded(I, St, B?) :- ground(I?), ground(St?) |
+    st_id(St?, Id),
+    st_ms(St?, S),
     info_parts(I?, Pts),
     guarding_parts(Pts?, Id?, Ps),
-    initiate_cond(Ps?, I?, named(C?), St?, Cd).
-
-%% initiate_cond(Ps?, I?, N?, St?, PCond): where the agent may initiate a part of Ps, parts of the class I, each named by its term, Propose (Definition "Proposing"): the agent free for the class, knowing every other participant and clear, and ready for a part of Ps, its state in the part's domain.  Of the parts of Ps it is ready for, the one it has proposed least recently (Section 5.4, "The compilation"): a part it has never proposed before one it has, and of parts proposed equally long ago, or never, the part the request names, N, and then the first in the order of the class's parts.  The attempt names the part by the request's term where the part is the request's, and otherwise by the part's term.  pdrop where Ps is empty or the agent is ready for no part of it.
-procedure initiate_cond(Classes?, Info?, Named?, St?, PCond).
-initiate_cond([], _, _, _, pdrop).
-initiate_cond([P|Ps], I, N, St, Cd?) :- ground(I?), ground(N?), ground(St?) |
-    free_i(I?, St?, Fr),
-    no_prior_start(St?, Np),
-    others_known(I?, St?, K),
-    known_ok(K?, Kn),
-    and(Fr?, Np?, B1),
-    and(B1?, Kn?, B),
-    initiate_part(B?, [P?|Ps?], I?, N?, St?, Cd).
-procedure initiate_part(YesNo?, Classes?, Info?, Named?, St?, PCond).
-initiate_part(no, _, _, _, _, pdrop).
-initiate_part(yes, Ps, I, N, St, Cd?) :- ground(I?), ground(N?), ground(St?) |
-    st_id(St?, Id),
-    st_app(St?, Ap),
-    app_state(Ap?, S),
-    st_props(St?, Pr),
     ready_parts(Ps?, Id?, S?, Rs),
-    aged_parts(Rs?, I?, N?, Pr?, As),
-    pick_part(As?, nopick, F),
-    part_cond(F?, I?, N?, Cd).
-procedure part_cond(Pick?, Info?, Named?, PCond).
-part_cond(nopick, _, _, pdrop).
-part_cond(picked(aged(_, yes, _)), I, named(C), pgo(I?, C?)).
-part_cond(picked(aged(_, yes, P)), I, unnamed, pgo(I?, P?)).
-part_cond(picked(aged(_, no, P)), I, _, pgo(I?, P?)).
+    some_class(Rs?, B).
+procedure some_class(Classes?, YesNo).
+some_class([], no).
+some_class([_|_], yes).
+%% A request pending at the agent: recorded requested(Rho, K) and not ended(Rho, K).
+procedure pending_request(Rho?, Recs?, YesNo).
+pending_request(R, Rc, B?) :- ground(Rc?) | pending_request1(Rc?, R?, Rc?, B).
+procedure pending_request1(Recs?, Rho?, Recs?, YesNo).
+pending_request1([], _, _, no).
+pending_request1([requested(R1, K)|Rs], R, Rc, B?) :- ground(R1?), ground(R?), ground(Rc?), integer(K?) |
+    same(R1?, R?, Sm),
+    mem(ended(R1?, K?), Rc?, En),
+    neg(En?, NEn),
+    and(Sm?, NEn?, P),
+    pending_request2(P?, Rs?, R?, Rc?, B).
+pending_request1([_|Rs], R, Rc, B?) :- otherwise | pending_request1(Rs?, R?, Rc?, B).
+procedure pending_request2(YesNo?, Recs?, Rho?, Recs?, YesNo).
+pending_request2(yes, _, _, _, yes).
+pending_request2(no, Rs, R, Rc, B?) :- pending_request1(Rs?, R?, Rc?, B).
+%% Free for every class of rho_N: the lock unset and no question pending of a class of rho_N.
+procedure free_rho(Proposal?, St?, YesNo).
+free_rho(N, St, B?) :- ground(N?), ground(St?) |
+    st_app(St?, Ap),
+    app_lock_recs(Ap?, L, R),
+    free_rho1(L?, R?, N?, St?, B).
+procedure free_rho1(Lock?, Recs?, Proposal?, St?, YesNo).
+free_rho1(L, R, N, St, B?) :- ground(R?) |
+    unlocked(L?, U),
+    no_rho_question(R?, N?, St?, R?, Q),
+    and(U?, Q?, B).
+procedure no_rho_question(Recs?, Proposal?, St?, Recs?, YesNo).
+no_rho_question([], _, _, _, yes).
+no_rho_question([asked(At)|Rs], N, St, R, B?) :- ground(At?), ground(N?), ground(St?), ground(R?) |
+    pending_rec(At?, R?, P),
+    attempt_class(At?, C),
+    st_class(C?, St?, Cr, _),
+    st_id(St?, Id),
+    cls_in_rho(Cr?, N?, Id?, In),
+    and(P?, In?, Q),
+    no_rho_question1(Q?, Rs?, N?, St?, R?, B).
+no_rho_question([_|Rs], N, St, R, B?) :- otherwise | no_rho_question(Rs?, N?, St?, R?, B).
+procedure no_rho_question1(YesNo?, Recs?, Proposal?, St?, Recs?, YesNo).
+no_rho_question1(yes, _, _, _, _, no).
+no_rho_question1(no, Rs, N, St, R, B?) :- no_rho_question(Rs?, N?, St?, R?, B).
+procedure cls_in_rho(ClassRes?, Proposal?, Peer?, YesNo).
+cls_in_rho(nocls, _, _, no).
+cls_in_rho(cls(I), N, Id, B?) :- in_rho(I?, N?, Id?, B).
+%% Whether the class I is a class of rho_N: a guarded part of it with an opener is named N, one of the schema-bindings that determine the part having the request name N (request_name; Definition "Effective Local Specification": "whether a class is in rho_N being decidable from a part of it and N").
+procedure in_rho(Info?, Proposal?, Peer?, YesNo).
+in_rho(ci(_, _, Q, Pts, Ms), N, Id, B?) :- ground(Q?), ground(Ms?), ground(N?) |
+    opener_parts(Pts?, Q?, Ms?, N?, Id?, B).
+procedure opener_parts(Parts?, Peers?, Mates?, Proposal?, Peer?, YesNo).
+opener_parts([], _, _, _, _, no).
+opener_parts([pt(T, G, opener(_))|Ps], Q, Ms, N, Id, B?) :-
+    ground(T?), ground(G?), ground(Q?), ground(Ms?), ground(N?) |
+    part_named(Ms?, T?, G?, Q?, N?, Id?, B1),
+    opener_parts1(B1?, Ps?, Q?, Ms?, N?, Id?, B).
+opener_parts([pt(_, _, guarded_part)|Ps], Q, Ms, N, Id, B?) :- opener_parts(Ps?, Q?, Ms?, N?, Id?, B).
+procedure opener_parts1(YesNo?, Parts?, Peers?, Mates?, Proposal?, Peer?, YesNo).
+opener_parts1(yes, _, _, _, _, _, yes).
+opener_parts1(no, Ps, Q, Ms, N, Id, B?) :- opener_parts(Ps?, Q?, Ms?, N?, Id?, B).
+procedure part_named(Mates?, Class?, Peers?, Peers?, Proposal?, Peer?, YesNo).
+part_named([], _, _, _, _, _, no).
+part_named([mate(Nm, Bn, G1, _)|Ms], T, G, Q, N, Id, B?) :-
+    ground(Nm?), ground(Bn?), ground(G1?), ground(T?), ground(G?), ground(Q?), ground(N?) |
+    binding_of(T?, Nm2, Bn2),
+    same_bpart(Q?, Nm?, Bn?, G1?, Nm2?, Bn2?, G?, Sp),
+    class_of(Nm?, Bn?, Id?, C),
+    request_name(C?, Pn),
+    pname_is(Pn?, N?, Nn),
+    and(Sp?, Nn?, B1),
+    part_named1(B1?, Ms?, T?, G?, Q?, N?, Id?, B).
+procedure part_named1(YesNo?, Mates?, Class?, Peers?, Peers?, Proposal?, Peer?, YesNo).
+part_named1(yes, _, _, _, _, _, _, yes).
+part_named1(no, Ms, T, G, Q, N, Id, B?) :- part_named(Ms?, T?, G?, Q?, N?, Id?, B).
+procedure pname_is(PName?, Proposal?, YesNo).
+pname_is(pname(M), N, B?) :- same(M?, N?, B).
+pname_is(nopname, _, no).
+%% The part of the class I that the schema-binding the term C names determines.
+procedure term_part_of(Info?, Class?, PartRes).
+term_part_of(I, C, Pr?) :- ground(I?), ground(C?) |
+    info_parts(I?, Pts),
+    term_part_of1(Pts?, I?, C?, Pr).
+procedure term_part_of1(Parts?, Info?, Class?, PartRes).
+term_part_of1([], _, _, nopart).
+term_part_of1([pt(T, G, Op)|Ps], I, C, Pr?) :- ground(T?), ground(G?), ground(Op?), ground(I?), ground(C?) |
+    same_part(I?, C?, T?, B),
+    term_part_of2(B?, pt(T?, G?, Op?), Ps?, I?, C?, Pr).
+procedure term_part_of2(YesNo?, Part?, Parts?, Info?, Class?, PartRes).
+term_part_of2(yes, P, _, _, _, part(P?)).
+term_part_of2(no, _, Ps, I, C, Pr?) :- term_part_of1(Ps?, I?, C?, Pr).
+%% Of the candidate Requests, the one the agent has taken least recently: one never taken before one taken, and of those taken, the one taken longest ago, the requests the agent has made being in the order it last made them; ties to the first.
+procedure pick_request(RCands?, Rhos?, RCond).
+pick_request([], _, rdrop).
+pick_request([X|Xs], Md, Cd?) :- ground(Md?) |
+    least_rcand(Xs?, Md?, X?, Y),
+    rcand_go(Y?, Cd).
+procedure least_rcand(RCands?, Rhos?, RCand?, RCand).
+least_rcand([], _, Y, Y?).
+least_rcand([X|Xs], Md, Y, Z?) :- ground(X?), ground(Y?), ground(Md?) |
+    rcand_place(X?, Md?, AX),
+    rcand_place(Y?, Md?, AY),
+    less_int(AX?, AY?, L),
+    least_rcand1(L?, X?, Y?, Xs?, Md?, Z).
+procedure least_rcand1(YesNo?, RCand?, RCand?, RCands?, Rhos?, RCand).
+least_rcand1(yes, X, _, Xs, Md, Z?) :- least_rcand(Xs?, Md?, X?, Z).
+least_rcand1(no, _, Y, Xs, Md, Z?) :- least_rcand(Xs?, Md?, Y?, Z).
+procedure rcand_place(RCand?, Rhos?, Integer).
+rcand_place(rc(R, _), Md, A?) :- rho_place(Md?, R?, 1, A).
+procedure rho_place(Rhos?, Rho?, Integer?, Integer).
+rho_place([], _, _, 0).
+rho_place([X|Xs], R, K, A?) :- ground(X?), ground(R?), integer(K?) |
+    same(X?, R?, Sm),
+    rho_place1(Sm?, Xs?, R?, K?, A).
+procedure rho_place1(YesNo?, Rhos?, Rho?, Integer?, Integer).
+rho_place1(yes, _, _, K, K?).
+rho_place1(no, Xs, R, K, A?) :- K1 := K? + 1, rho_place(Xs?, R?, K1?, A).
+procedure less_int(Integer?, Integer?, YesNo).
+less_int(A, B, yes) :- A? < B? | true.
+less_int(A, B, no) :- A? >= B? | true.
+procedure rcand_go(RCand?, RCond).
+rcand_go(rc(R, O), rgo(R?, O?)).
 
-%% Each part the agent is ready for, aged(A, Nd, P): A the place of the part
-%% among those the agent has proposed, in the order it last proposed them,
-%% from 1, and 0 for a part never proposed; Nd yes where the part is the one
-%% the request names.
-procedure aged_parts(Classes?, Info?, Named?, Classes?, Ageds).
-aged_parts([], _, _, _, []).
-aged_parts([P|Ps], I, N, Pr, [aged(A?, Nd?, P?)|As?]) :-
-    ground(P?), ground(I?), ground(N?), ground(Pr?) |
-    part_age(Pr?, I?, P?, 1, A),
-    named_part(N?, I?, P?, Nd),
-    aged_parts(Ps?, I?, N?, Pr?, As).
-procedure part_age(Classes?, Info?, Class?, Integer?, Integer).
-part_age([], _, _, _, 0).
-part_age([E|Es], I, P, K, A?) :- ground(E?), ground(I?), ground(P?), integer(K?) |
-    term_part(E?, I?, P?, Sm),
-    part_age1(Sm?, Es?, I?, P?, K?, A).
-procedure part_age1(YesNo?, Classes?, Info?, Class?, Integer?, Integer).
-part_age1(yes, _, _, _, K, K?).
-part_age1(no, Es, I, P, K, A?) :- K1 := K? + 1, part_age(Es?, I?, P?, K1?, A).
-procedure named_part(Named?, Info?, Class?, YesNo).
-named_part(unnamed, _, _, no).
-named_part(named(C), I, P, B?) :- same_part(I?, C?, P?, B).
-%% The part of least place, a part the request names first among those of
-%% one place, and the first in order of those.
-procedure pick_part(Ageds?, Pick?, Pick).
-pick_part([], F, F?).
-pick_part([X|Xs], nopick, F?) :- pick_part(Xs?, picked(X?), F).
-pick_part([X|Xs], picked(Y), F?) :- ground(X?), ground(Y?) |
-    before(X?, Y?, B),
-    pick_part1(B?, X?, Y?, Xs?, F).
-procedure pick_part1(YesNo?, Aged?, Aged?, Ageds?, Pick).
-pick_part1(yes, X, _, Xs, F?) :- pick_part(Xs?, picked(X?), F).
-pick_part1(no, _, Y, Xs, F?) :- pick_part(Xs?, picked(Y?), F).
-procedure before(Aged?, Aged?, YesNo).
-before(aged(A1, _, _), aged(A2, _, _), yes) :- A1? < A2? | true.
-before(aged(A1, _, _), aged(A2, _, _), no) :- A1? > A2? | true.
-before(aged(A1, N1, _), aged(A2, N2, _), B?) :- A1? =:= A2? | named_first(N1?, N2?, B).
-procedure named_first(YesNo?, YesNo?, YesNo).
-named_first(yes, no, yes).
-named_first(_, _, no) :- otherwise | true.
-
-procedure dispatch_propose(PCond?, Then?, App?, Stream(Trigger)?,
+procedure dispatch_request(RCond?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
     Stream(Trigger), OpenApprovals?, St?).
-dispatch_propose(pgo(I, P), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
-    ground(I?), ground(P?), ground(St?) |
-    propose_effect(I?, P?, St?, Ss, St1),
+dispatch_request(rgo(R, O), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(R?), ground(St?) |
+    request_effect(R?, O?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
     next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
+dispatch_request(rdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+
+%% Request rho to O: the agent's number one more, the new value the request's number K; requested(rho, K) recorded; the request noted last among those the agent has made; and, where O is not the agent, request(rho, K) sent to O (Definition "Proposing", Request).
+procedure request_effect(Rho?, Peer?, St?, Sends, St).
+request_effect(R, O, St, Ss?, St2?) :- ground(R?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    request_app(R?, Ap?, K, Ap1),
+    request_sends(O?, Id?, R?, K?, Ss),
+    set_app(St?, Ap1?, St1),
+    note_made(R?, St1?, St2).
+procedure request_app(Rho?, App?, Integer, App).
+request_app(R, app(S, K, L, Rc), K1?, app(S?, K2?, L?, [requested(R?, K3?)|Rc?])) :- integer(K?) |
+    K1 := K? + 1,
+    K2 := K? + 1,
+    K3 := K? + 1.
+procedure request_sends(Peer?, Peer?, Rho?, Integer?, Sends).
+request_sends(O, Id, _, _, []) :- O? =?= Id? | true.
+request_sends(O, _, R, K, [to(O?, request(R?, K?))]) :- otherwise | true.
+%% The requests the agent has made, R put last and its earlier place dropped.
+procedure note_made(Rho?, St?, St).
+note_made(R, St, St1?) :- ground(R?), ground(St?) |
+    st_made(St?, Md),
+    remove_all(R?, Md?, Md1),
+    app(Md1?, [R?], Md2),
+    set_made(St?, Md2?, St1).
+
+%% --- Propose, an own transaction ---------------------------------------------
+%% The Propose of the part P of the class I, its attempt naming Nm (Definition "Proposing", Propose), taken on an own trigger (own_cond): its effect, and on it the views and notices written.
+procedure dispatch_propose(PCond?, Then?, App?, Stream(Trigger)?,
+    Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net),
+    Stream(Trigger), OpenApprovals?, St?).
+dispatch_propose(pgo(I, P, Nm), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    ground(I?), ground(P?), ground(Nm?), ground(St?) |
+    propose_effect(I?, P?, Nm?, St?, Ss, Ns, St1),
+    send_all(Ss?, St1?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next_n(Th?, no, Ap0?, Ns?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
 dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 
@@ -872,17 +1042,35 @@ dispatch_ihello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
 %% the agent holds it waiting (Definition "Priority, Waiting, Blocked,
 %% Clear"), putting it up again, by a
 %% recheck, after every dispatch that changes the app state or consumes a
-%% start.
+%% start.  A request, request(Rho, K), is held, mhold, until the refusal of an
+%% attempt naming it or a commit of its class (vGLP f0acbc1, Section 5.4,
+%% "The compilation": "On a message request(rho, k) it holds the request until
+%% it deletes it").
 procedure message_cond(Cargo?, St?, MCond, St).
-message_cond(X, St, Cd?, St1?) :- ground(X?), ground(St?) |
-    cargo_class(X?, C),
+message_cond(request(_, _), St, mhold, St?).
+message_cond(start(At), St, Cd?, St1?) :- ground(At?), ground(St?) |
+    attempt_class(At?, C),
     st_class(C?, St?, R, St0),
-    message_cond1(R?, X?, St0?, Cd, St1).
+    message_cond1(R?, start(At?), St0?, Cd, St1).
+message_cond(vote(At, V), St, Cd?, St1?) :- ground(At?), ground(St?) |
+    attempt_class(At?, C),
+    st_class(C?, St?, R, St0),
+    message_cond1(R?, vote(At?, V?), St0?, Cd, St1).
+message_cond(yield(At), St, Cd?, St1?) :- ground(At?), ground(St?) |
+    attempt_class(At?, C),
+    st_class(C?, St?, R, St0),
+    message_cond1(R?, yield(At?), St0?, Cd, St1).
+message_cond(outcome(At, Z), St, Cd?, St1?) :- ground(At?), ground(St?) |
+    attempt_class(At?, C),
+    st_class(C?, St?, R, St0),
+    message_cond1(R?, outcome(At?, Z?), St0?, Cd, St1).
 procedure message_cond1(ClassRes?, Cargo?, St?, MCond, St).
 %% A cargo reaches only a participant of its attempt, so its class is always
 %% one the agent takes part in; noparticipant, the other alternative of ClassRes,
-%% which the type requires covered, is never reached.
+%% which the type requires covered, is never reached; nor is a request, which
+%% message_cond holds.
 message_cond1(nocls, _, St, noparticipant, St?).
+message_cond1(_, request(_, _), St, mhold, St?).
 message_cond1(cls(I), start(At), St, Cd?, St?) :- ground(I?), ground(At?), ground(St?) |
     st_app(St?, Ap),
     app_recs(Ap?, R),
@@ -1009,11 +1197,7 @@ prio1(RA, RB, _, _, yes) :- RA? < RB? | true.
 prio1(RA, RB, _, _, no) :- RA? > RB? | true.
 prio1(RA, RB, IA, IB, P?) :- RA? =:= RB? | precedes(IA?, IB?, P).
 
-procedure cargo_class(Cargo?, Class).
-cargo_class(start(attempt(_, _, _, C)), C?).
-cargo_class(vote(attempt(_, _, _, C), _), C?).
-cargo_class(yield(attempt(_, _, _, C)), C?).
-cargo_class(outcome(attempt(_, _, _, C), _), C?).
+
 
 %% The recheck, after a dispatch that changes the app state or consumes a
 %% start: the first start held that does not wait, or whose attempt is
@@ -1063,32 +1247,47 @@ dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?,
         Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?) |
     drop_pend(deferred(M?), St?, St0),
-    start_effect(I?, At?, St0?, Ss, Cr, St1),
+    start_effect(I?, At?, St0?, Ss, Cr, Ns, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
     spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?),
-    next(Th?, yes, Ap0?, Ls?, In?, Ans1, Thr, Out1, Ow, Approvals1?, St2?).
-dispatch_message(mgo(I), _, F, vote(At, Y), Th, Ap0, Ls, In, Ans?,
+    next_n(Th?, yes, Ap0?, Ns?, Ls?, In?, Ans1, Thr, Out1, Ow, Approvals1?, St2?).
+dispatch_message(mgo(I), _, F, vote(At, V), Th, Ap0, Ls, In, Ans?,
         Thr?, Out?, Ow?, Approvals, St) :-
-    ground(At?), ground(F?), ground(Ap0?) |
-    tally_effect(I?, At?, F?, Y?, St?, Ss, St1),
-    noticed(refused_by(F?), At?, Ap0?, St1?, Thr, Thr1?, St1n),
-    send_all(Ss?, St1n?, Ms, St2),
+    ground(At?) |
+    tally_effect(I?, At?, F?, V?, St?, Ss, Ns, St1),
+    send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?).
+    next_n(Th?, no, Ap0?, Ns?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
 dispatch_message(mgo(I), _, _, yield(At), Th, Ap0, Ls, In, Ans?,
         Thr?, Out?, Ow?, Approvals, St) :-
-    ground(At?), ground(Ap0?) |
+    ground(At?) |
     yield_effect(I?, At?, St?, Ss, St1),
-    noticed(yielded_by, At?, Ap0?, St1?, Thr, Thr1?, St1n),
-    send_all(Ss?, St1n?, Ms, St2),
+    send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
 dispatch_message(mgo(I), _, _, outcome(At, Z), Th, Ap0, Ls, In, Ans?,
         Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?) |
-    outcome_effect(I?, At?, Z?, St?, St1),
+    outcome_effect(I?, At?, Z?, St?, Ns, St1),
+    next_n(Th?, no, Ap0?, Ns?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+dispatch_message(mhold, _, F, request(R, K), Th, Ap0, Ls, In, Ans?,
+        Thr?, Out?, Ow?, Approvals, St) :-
+    hold_request(F?, R?, K?, St?, St1),
     next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?).
+%% A request held, held(Q, Rho, K), once, after those held before it.
+procedure hold_request(Peer?, Rho?, Integer?, St?, St).
+hold_request(F, R, K, St, St1?) :- ground(R?), ground(St?) |
+    st_held(St?, Hd),
+    hold_once(held(F?, R?, K?), Hd?, Hd1),
+    set_held(St?, Hd1?, St1).
+procedure hold_once(Held?, Helds?, Helds).
+hold_once(X, Hd, Hd1?) :- ground(X?), ground(Hd?) |
+    mem(X?, Hd?, In),
+    hold_once1(In?, X?, Hd?, Hd1).
+procedure hold_once1(YesNo?, Held?, Helds?, Helds).
+hold_once1(yes, _, Hd, Hd?).
+hold_once1(no, X, Hd, Hd1?) :- app(Hd?, [X?], Hd1).
 
 %% Start raises the approval question, whose answers join the agent goal's input.
 procedure spawn(ApprovalRes?, OpenApprovals?, OpenApprovals, Stream(Trigger),
@@ -1155,9 +1354,8 @@ procedure close_one(YesNo?, Attempt?, Close, OpenApprovals?, Recs?, OpenApproval
 close_one(no, _, close, Cs, R, Cs1?) :- close_approvals(Cs?, R?, Cs1).
 close_one(yes, At, Cl?, Cs, R, [oc(At?, Cl)|Cs1?]) :- close_approvals(Cs?, R?, Cs1).
 
-%% --- The own transactions: Propose of the unguarded parts, Vote, Commit, ---
-%% --- Wound, Introduce peers ------------------------------------------------
-%% On own the agent goal puts up the Propose of each unguarded part the agent opens, where its machine state is in the part's domain, each part an opening class of its own (vGLP 099f876, Definition "Equivalence of the Canonical Platform"; Section 5.4, "The compilation"), the Vote on each answered question pending at it, the Commit of each attempt it initiated with a yes of every other participant recorded, the Wound of each start it holds waiting, or question answered yes, blocked by an attempt over which it has priority, and the Introduce peers of each pair the introduction rule gives it at its machine state (Definition "Introduction Rule, Introduce Peers"); it takes, among those whose condition holds, one of the class that has waited longest, ties broken in a fixed order: the opening classes in the order they are opened, then the Votes, the Commits, the Wounds and the introductions, each in the order of the record, of the starts held or of identifiers; counts it, and writes an own trigger on its stream of own triggers; and where none holds, takes nothing and writes none (vGLP 6c8c663, Section 5.4, "The compilation").
+%% --- The own transactions: Propose, Vote, Commit, Wound, Introduce peers ---
+%% On own the agent goal puts up the Propose of each unguarded part the agent opens, and of each guarded part with no opener that it guards of the class of an approval pending at it, where its machine state is in the part's domain, or, where it is in the domain of no such part of that class, of one of them, which it refuses at once; for each request it holds, the Propose of each guarded part named by the request's name that it opens and whose domain holds its machine state, naming that request, or, where there is none, of one such part, which it refuses at once; the Vote on each answered question pending at it, the Commit of each attempt it initiated with a yes of every other participant recorded, the Wound of each start it holds waiting, or answered question, blocked by an attempt over which it has priority, and the Introduce peers of each pair the introduction rule gives it at its machine state; the dispatch takes, among those whose condition holds, one of the class that has waited longest --- since it was last taken or, never taken, since its condition was first found holding --- ties broken in a fixed order: the Proposes of the unguarded parts in the order they are opened, of the guarded parts in the order of the approvals, the oldest first, and on the requests held, in the order they arrived, then the Votes, the Commits, the Wounds and the introductions, each in the order of the record, of the starts held or of identifiers; and counts it, and writes an own trigger on its stream of own triggers; and where none holds, takes nothing and writes none (vGLP f0acbc1, Section 5.4, "The compilation"; Definition "Equivalence of the Canonical Platform": "for a part [t]_j and an agent p, p's proposing class on [t]_j").
 procedure take_own(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger),
     Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
 take_own(Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :- ground(St?) |
@@ -1170,15 +1368,22 @@ own_cond(St, Ch?, St2?) :- ground(St?) |
     opening(St?, Is, St1),
     own_cond1(Is?, St1?, Ch, St2).
 procedure own_cond1(Infos?, St?, Choice, St).
-own_cond1(Is, St, Ch?, St5?) :- ground(Is?), ground(St?) |
+own_cond1(Is, St, Ch?, St3?) :- ground(Is?), ground(St?) |
     op_cands(Is?, St?, Cs1),
+    guard_cands(St?, Csg, St1),
+    held_cands(St1?, Csh, St2),
+    own_cond1a(St2?, Cs1?, Csg?, Csh?, Ch, St3).
+procedure own_cond1a(St?, Cands?, Cands?, Cands?, Choice, St).
+own_cond1a(St, Cs1, Csg, Csh, Ch?, St5?) :- ground(St?) |
     st_app(St?, Ap),
     app_recs(Ap?, R),
     vote_cands0(R?, St?, Cs2, St2),
     commit_cands_st(St2?, Cs3, St3),
     wound_cands0(St3?, Cs4, St4),
     intro_cands(St?, Cs5),
-    app(Cs1?, Cs2?, C12),
+    app(Cs1?, Csg?, Ca),
+    app(Ca?, Csh?, Cb),
+    app(Cb?, Cs2?, C12),
     app(C12?, Cs3?, C123),
     app(C123?, Cs4?, C1234),
     app(C1234?, Cs5?, Cs),
@@ -1198,7 +1403,7 @@ procedure count_own(Choice?, St?, Choice, St).
 count_own(none, St, none, St?).
 count_own(take(K, S), St, take(K?, S?), St1?) :- advance(St?, St1).
 
-%% Propose of an unguarded part, by its opener: each unguarded part of the class I that the agent opens (opening_parts), and for each the conditions of Propose as on a request (initiate_cond), no request naming it; each is its own opening class op(P), P the part's term.
+%% Propose of an unguarded part, by its opener: each unguarded part of the class I that the agent opens (opening_parts), where Propose's condition holds on the agent (may_propose) and its machine state is in the part's domain; each part the proposing class op(P), P the part's term, and the attempt naming none.
 procedure op_cands(Infos?, St?, Cands).
 op_cands([], _, []).
 op_cands([I|Is], St, Cs?) :- ground(I?), ground(St?) |
@@ -1210,13 +1415,113 @@ op_cands([I|Is], St, Cs?) :- ground(I?), ground(St?) |
     app(Cs1?, Cs2?, Cs).
 procedure part_cands(Classes?, Info?, St?, Cands).
 part_cands([], _, _, []).
-part_cands([P|Ps], I, St, Cs?) :- ground(I?), ground(St?) |
-    initiate_cond([P?], I?, unnamed, St?, Cd),
+part_cands([P|Ps], I, St, Cs?) :- ground(P?), ground(I?), ground(St?) |
+    may_propose(I?, St?, B1),
+    st_id(St?, Id),
+    st_ms(St?, S),
+    part_dom(P?, Id?, S?, B2),
+    and(B1?, B2?, B),
     part_cands(Ps?, I?, St?, Cs1),
-    keep_cand(Cd?, Cs1?, Cs).
-procedure keep_cand(PCond?, Cands?, Cands).
-keep_cand(pgo(I, P), Cs, [cand(op(P?), prop(I?, P?))|Cs?]) :- ground(P?) | true.
-keep_cand(pdrop, Cs, Cs?).
+    keep_pcand(B?, I?, P?, none, Cs1?, Cs).
+procedure keep_pcand(YesNo?, Info?, Class?, Names?, Cands?, Cands).
+keep_pcand(yes, I, P, Nm, Cs, [cand(op(P?), prop(I?, P?, Nm?))|Cs?]) :- ground(P?) | true.
+keep_pcand(no, _, _, _, Cs, Cs?).
+%% Propose's condition on the agent, the part's domain aside (Definition "Proposing", Propose): free for the class, so unlocked, and clear, and knowing every other participant, to each of whom it tells the start, or the outcome where it refuses at once.
+procedure may_propose(Info?, St?, YesNo).
+may_propose(I, St, B?) :- ground(I?), ground(St?) |
+    free_i(I?, St?, Fr),
+    no_prior_start(St?, Np),
+    others_known(I?, St?, K),
+    known_ok(K?, Kn),
+    and(Fr?, Np?, B1),
+    and(B1?, Kn?, B).
+
+%% Propose of a guarded part with no opener that the agent guards, of the class of an approval pending at it, a request of the class or an answer yes to an attempt of it, neither ended (Definition "Cargo, App State, Question, Approval, Free, Ready"): where Propose's condition holds on the agent, each such part whose domain holds its machine state, or, where none does, the first such part, which propose_effect refuses at once (Definition "Proposing", Propose: "an approval of [t] is pending at p, and s in dom(f^[t]_j_p) or s not in dom(f^[t]_j'_p) for every guarded part [t]_j' of [t] with no opener that p guards"; Section 5.4, "The compilation").  A request rho_N is of classes whose guarded parts that the agent guards have an opener, which proposes them (Definition "Local Specification, Part, Guard Set, Opener, Request"), so it is no approval the agent proposes on.  The classes in the order of the approvals, the oldest first, once each.
+procedure guard_cands(St?, Cands, St).
+guard_cands(St, Cs?, St2?) :- ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    approval_classes(R?, St?, Is, St1),
+    guard_cands1(Is?, St1?, Cs, St2).
+procedure approval_classes(Recs?, St?, Infos, St).
+approval_classes(R, St, Is?, St1?) :- ground(R?) | approval_classes1(R?, R?, St?, [], Is, St1).
+procedure approval_classes1(Recs?, Recs?, St?, Infos?, Infos, St).
+approval_classes1([], _, St, Acc, Is?, St?) :- dedup(Acc?, Is).
+approval_classes1([requested(one(C), K)|Rs], R, St, Acc, Is?, St2?) :- ground(C?), ground(R?), ground(St?) |
+    mem(ended(one(C?), K?), R?, Done),
+    st_class(C?, St?, Cr, St1),
+    open_class(Done?, Cr?, Acc?, Acc1),
+    approval_classes1(Rs?, R?, St1?, Acc1?, Is, St2).
+approval_classes1([answered(At, yes)|Rs], R, St, Acc, Is?, St2?) :- ground(At?), ground(R?), ground(St?) |
+    mem(ended(At?), R?, Done),
+    attempt_class(At?, C),
+    st_class(C?, St?, Cr, St1),
+    open_class(Done?, Cr?, Acc?, Acc1),
+    approval_classes1(Rs?, R?, St1?, Acc1?, Is, St2).
+approval_classes1([_|Rs], R, St, Acc, Is?, St1?) :- otherwise | approval_classes1(Rs?, R?, St?, Acc?, Is, St1).
+procedure open_class(YesNo?, ClassRes?, Infos?, Infos).
+open_class(no, cls(I), Acc, [I?|Acc?]).
+open_class(no, nocls, Acc, Acc?).
+open_class(yes, _, Acc, Acc?).
+procedure guard_cands1(Infos?, St?, Cands, St).
+guard_cands1([], St, [], St?).
+guard_cands1([I|Is], St, Cs?, St1?) :- ground(I?), ground(St?) |
+    st_id(St?, Id),
+    st_ms(St?, S),
+    info_parts(I?, Pts),
+    guarding_parts(Pts?, Id?, Ps),
+    may_propose(I?, St?, B),
+    guard_parts_cands(B?, Ps?, I?, Id?, S?, Cs1),
+    guard_cands1(Is?, St?, Cs2, St1),
+    app(Cs1?, Cs2?, Cs).
+procedure guard_parts_cands(YesNo?, Classes?, Info?, Peer?, GAtoms?, Cands).
+guard_parts_cands(no, _, _, _, _, []).
+guard_parts_cands(yes, Ps, I, Id, S, Cs?) :- ground(Ps?), ground(I?), ground(S?) |
+    ready_parts(Ps?, Id?, S?, Rs),
+    guard_ready(Rs?, Ps?, I?, Cs).
+procedure guard_ready(Classes?, Classes?, Info?, Cands).
+guard_ready([], [], _, []).
+guard_ready([], [P|_], I, [cand(op(P?), prop(I?, P?, none))]) :- ground(P?) | true.
+guard_ready([R|Rs], _, I, Cs?) :- part_pcands([R?|Rs?], I?, Cs).
+procedure part_pcands(Classes?, Info?, Cands).
+part_pcands([], _, []).
+part_pcands([P|Ps], I, [cand(op(P?), prop(I?, P?, none))|Cs?]) :- ground(P?), ground(I?) | part_pcands(Ps?, I?, Cs).
+
+%% Propose on a request the agent holds, held(Q, rho(N), K): the guarded part named N at its state (name_class), where the agent is its opener and Q its guard and Propose's condition holds on the agent, naming the request request(rho(N), K); propose_effect proposes it where the part's domain holds the agent's state, the parts named N whose opener lists the people of its listed roles exactly being that part, and refuses it at once otherwise (Section 5.4, "The compilation").  The requests in the order they arrived.
+procedure held_cands(St?, Cands, St).
+held_cands(St, Cs?, St1?) :- ground(St?) |
+    st_held(St?, Hd),
+    held_cands1(Hd?, St?, Cs, St1).
+procedure held_cands1(Helds?, St?, Cands, St).
+held_cands1([], St, [], St?).
+held_cands1([held(F, rho(N), K)|Hs], St, Cs?, St2?) :- ground(N?), ground(St?) |
+    st_ms(St?, S),
+    name_class(N?, S?, C),
+    held_cand0(C?, F?, N?, K?, St?, Cs1, St1),
+    held_cands1(Hs?, St1?, Cs2, St2),
+    app(Cs1?, Cs2?, Cs).
+held_cands1([held(_, one(_), _)|Hs], St, Cs?, St1?) :- held_cands1(Hs?, St?, Cs, St1).
+procedure held_cand0(Class?, Peer?, Proposal?, Integer?, St?, Cands, St).
+held_cand0(C, F, N, K, St, Cs?, St1?) :- ground(C?), ground(N?), ground(St?) |
+    st_class(C?, St?, Cr, St1),
+    held_cand(Cr?, F?, C?, request(rho(N?), K?), St?, Cs).
+procedure held_cand(ClassRes?, Peer?, Class?, Names?, St?, Cands).
+held_cand(nocls, _, _, _, _, []).
+held_cand(cls(I), F, C, Nm, St, Cs?) :- ground(I?), ground(C?), ground(St?) |
+    term_part_of(I?, C?, Pr),
+    st_id(St?, Id),
+    opens_for(Pr?, Id?, F?, Op),
+    may_propose(I?, St?, B1),
+    and(Op?, B1?, B),
+    keep_pcand(B?, I?, C?, Nm?, [], Cs).
+%% Whether the part has the agent as its opener and Q as a guard.
+procedure opens_for(PartRes?, Peer?, Peer?, YesNo).
+opens_for(part(pt(_, G, opener(O))), Id, F, B?) :- ground(G?) |
+    same(O?, Id?, B1),
+    mem(F?, G?, B2),
+    and(B1?, B2?, B).
+opens_for(part(pt(_, _, guarded_part)), _, _, no).
+opens_for(nopart, _, _, no).
 
 %% Vote on an attempt: a question pending at the agent, its answer y recorded,
 %% its initiator, to whom Vote sends, known, and y no or the question not
@@ -1444,14 +1749,14 @@ procedure dispatch_own(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?,
     Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?).
 dispatch_own(none, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
-dispatch_own(take(op(_), prop(I, P)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
-    dispatch_propose(pgo(I?, P?), write_own, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
+dispatch_own(take(op(_), prop(I, P, Nm)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
+    dispatch_propose(pgo(I?, P?, Nm?), write_own, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?).
 dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?), ground(I?) |
-    vote_effect(I?, At?, St?, Ss, St1),
+    vote_effect(I?, At?, St?, Ss, Ns, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
+    next_n(write_own, no, Ap0?, Ns?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
 dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
     ground(At?), ground(I?) |
     commit_effect(I?, At?, St?, Ss, Is, St1),
@@ -1460,12 +1765,11 @@ dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals
     put_all(Is?, Out1, Out2?),
     next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out2, Ow, Approvals?, St2?).
 dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St) :-
-    ground(B?), ground(I?), ground(Ap0?) |
+    ground(B?), ground(I?) |
     wound_effect(I?, B?, St?, Ss, St1),
-    noticed(yielded_by, B?, Ap0?, St1?, Thr, Thr1?, St1n),
-    send_all(Ss?, St1n?, Ms, St2),
+    send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?).
+    next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?).
 dispatch_own(take(ip(Q, R), pair), Ap0, Ls, In, Ans?, Thr?,
         [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?))|Out?], Ow?, Approvals, St) :-
     ground(Q?), ground(R?), ground(St?) |
@@ -1594,26 +1898,19 @@ set_wait(K, D, [X|Ws], [X?|Ws1?]) :- otherwise | set_wait(K?, D?, Ws?, Ws1).
 %% The app transactions' effects (Definition "Canonical CVA Platform")
 %% ===========================================================================
 
-%% Propose: the attempt's number one more than the agent's, its rank that of
-%% the agent's last attempt of the part where it recorded that one wounded,
-%% and its number otherwise (Definition "Proposing"); recorded voted yes;
-%% applied and closed at once where the agent is the class's only
-%% participant, and otherwise held prepared and its start told to every other
-%% participant; and the part noted last among the parts the agent has
-%% proposed.
-procedure propose_effect(Info?, Class?, St?, Sends, St).
-propose_effect(I, P, St, Ss?, St2?) :- ground(I?), ground(P?), ground(St?) |
+%% Propose (Definition "Proposing", Propose): the attempt's number one more than the agent's, its rank that of the agent's last attempt of the part where it recorded that one wounded, and its number otherwise, and the request it names, Nm.  Where the agent's state is in the domain of its effect in the part, the attempt is recorded voted yes, and is applied and closed at once where the agent is the class's only participant, ending every approval of the class pending at it, as Commit does (Definition "Decided, Committed, Aborted, Settled State": an attempt of one participant is decided once proposed), and is otherwise held prepared and its start told to every other participant.  Where it is not, the agent refuses it at once: it records voted no and closed, tells outcome(At, abort(Id, D)), D unable, with the atoms the schema requires at the agent that its state lacks and those it forbids that its state has, and, the attempt naming a request, deletes the request it holds, or, naming none, ends every approval of the class pending at it, and writes the notice where one ends.
+procedure propose_effect(Info?, Class?, Names?, St?, Sends, Outputs, St).
+propose_effect(I, P, Nm, St, Ss?, Ns?, St1?) :- ground(I?), ground(P?), ground(Nm?), ground(St?) |
     st_id(St?, Id),
     st_app(St?, Ap),
-    st_app(St?, Ap0),
-    app_count(Ap0?, K),
+    app_count(Ap?, K),
     K1 := K? + 1,
     st_app(St?, Ap2),
     app_recs(Ap2?, R),
     rank_of(I?, P?, Id?, R?, K1?, Pi),
-    propose_app(I?, attempt(Id?, K1?, Pi?, P?), Ap?, Ss, Ap1),
-    set_app(St?, Ap1?, St1),
-    note_part(I?, P?, St1?, St2).
+    st_ms(St?, S),
+    part_dom(P?, Id?, S?, Dm),
+    propose_app(Dm?, I?, attempt(Id?, K1?, Pi?, P?, Nm?), St?, Ss, Ns, St1).
 procedure rank_of(Info?, Class?, Peer?, Recs?, Integer?, Integer).
 rank_of(I, P, Id, R, K1, Pi?) :- ground(R?), integer(K1?) |
     last_own(R?, I?, P?, Id?, nolast, L),
@@ -1628,10 +1925,10 @@ procedure rank_of2(YesNo?, Integer?, Integer?, Integer).
 rank_of2(yes, P, _, P?).
 rank_of2(no, _, K1, K1?).
 %% The agent's last attempt of the part: the one of the largest number among
-%% those of the part it proposed, each recorded voted yes by its Propose.
+%% those of the part it proposed, each recorded voted, yes or no, by its Propose.
 procedure last_own(Recs?, Info?, Class?, Peer?, Last?, Last).
 last_own([], _, _, _, L, L?).
-last_own([voted(A, yes)|Rs], I, P, Id, L, L1?) :- ground(A?), ground(I?), ground(P?), ground(Id?) |
+last_own([voted(A, _)|Rs], I, P, Id, L, L1?) :- ground(A?), ground(I?), ground(P?), ground(Id?) |
     attempt_id(A?, Q),
     same(Q?, Id?, Own),
     attempt_class(A?, C),
@@ -1650,42 +1947,54 @@ later(yes, A, last(B), L?) :- ground(A?), ground(B?) |
 procedure later1(Integer?, Integer?, Attempt?, Attempt?, Last).
 later1(KA, KB, A, _, last(A?)) :- KA? > KB? | true.
 later1(KA, KB, _, B, last(B?)) :- KA? =< KB? | true.
-%% The parts the agent has proposed, the part P put last and its earlier
-%% place dropped.
-procedure note_part(Info?, Class?, St?, St).
-note_part(I, P, St, St1?) :- ground(I?), ground(P?), ground(St?) |
-    st_props(St?, Pr),
-    drop_part(Pr?, I?, P?, Pr1),
-    app(Pr1?, [P?], Pr2),
-    set_props(St?, Pr2?, St1).
-procedure drop_part(Classes?, Info?, Class?, Classes).
-drop_part([], _, _, []).
-drop_part([E|Es], I, P, R?) :- ground(E?), ground(I?), ground(P?) |
-    term_part(E?, I?, P?, Sm),
-    drop_part1(Sm?, E?, Es?, I?, P?, R).
-procedure drop_part1(YesNo?, Class?, Classes?, Info?, Class?, Classes).
-drop_part1(yes, _, Es, I, P, R?) :- drop_part(Es?, I?, P?, R).
-drop_part1(no, E, Es, I, P, [E?|R?]) :- drop_part(Es?, I?, P?, R).
-procedure propose_app(Info?, Attempt?, App?, Sends, App).
-propose_app(I, At, Ap, Ss?, Ap1?) :- ground(I?), ground(At?) |
-    attempt_id(At?, Id),
+procedure propose_app(YesNo?, Info?, Attempt?, St?, Sends, Outputs, St).
+propose_app(yes, I, At, St, Ss?, [], St1?) :- ground(I?), ground(At?), ground(St?) |
+    st_id(St?, Id),
     info_q(I?, Q),
     only_me(Q?, Id?, One),
-    propose_app1(One?, I?, At?, Ap?, Ss, Ap1).
-procedure propose_app1(YesNo?, Info?, Attempt?, App?, Sends, App).
-propose_app1(yes, I, At, app(S, _, L, R), [],
-        app(S1?, K?, L?, [closed(At?), voted(At?, yes)|R?])) :-
-    ground(At?) |
-    attempt_id(At?, Id),
+    st_app(St?, Ap),
+    propose_go(One?, I?, At?, Id?, Ap?, Ss, Ap1),
+    set_app(St?, Ap1?, St1).
+propose_app(no, I, At, St, Ss?, Ns?, St1?) :- ground(At?), ground(St?) |
+    st_id(St?, Id),
+    st_ms(St?, S),
+    attempt_class(At?, P),
+    unable_reason(P?, Id?, S?, D),
+    refuse_at_once(I?, At?, D?, St?, Ss, Ns, St1).
+procedure propose_go(YesNo?, Info?, Attempt?, Peer?, App?, Sends, App).
+propose_go(yes, I, At, Id, app(S, _, L, R), [], app(S1?, K?, L?, R2?)) :-
+    ground(I?), ground(At?), ground(R?) |
     attempt_k(At?, K),
-    apply_info(I?, Id?, S?, S1).
-propose_app1(no, I, At, app(S, _, _, R), Ss?,
-        app(S?, K?, held(At?), [voted(At?, yes)|R?])) :-
+    apply_info(I?, Id?, S?, S1),
+    end_approvals(I?, Id?, [closed(At?), voted(At?, yes)|R?], R2, _).
+propose_go(no, I, At, Id, app(S, _, _, R), Ss?, app(S?, K?, held(At?), [voted(At?, yes)|R?])) :-
     ground(At?), ground(I?) |
-    attempt_id(At?, Id),
     attempt_k(At?, K),
     info_q(I?, Q),
     tell(Q?, Id?, start(At?), Ss).
+procedure refuse_at_once(Info?, Attempt?, Reason?, St?, Sends, Outputs, St).
+refuse_at_once(I, At, D, St, Ss?, Ns?, St2?) :- ground(I?), ground(At?), ground(D?), ground(St?) |
+    st_id(St?, Id),
+    info_q(I?, Q),
+    tell(Q?, Id?, outcome(At?, abort(Id?, D?)), Ss),
+    st_app(St?, Ap),
+    attempt_names(At?, Nm1),
+    refuse_app(Nm1?, I?, At?, Id?, Ap?, En, Ap1),
+    attempt_class(At?, P),
+    ended_notice(En?, P?, Id?, D?, Ns),
+    set_app(St?, Ap1?, St1),
+    st_held(St?, Hd),
+    attempt_names(At?, Nm2),
+    drop_named(Nm2?, Hd?, Hd1),
+    set_held(St1?, Hd1?, St2).
+%% The record of a refusal at once: voted no and closed, and, the attempt naming none, the agent a guard of its part, every approval of the class pending at it ended.
+procedure refuse_app(Names?, Info?, Attempt?, Peer?, App?, YesNo, App).
+refuse_app(request(_, _), _, At, _, app(S, _, _, R), no, app(S?, K1?, unlocked, [closed(At?), voted(At?, no)|R?])) :-
+    ground(At?) |
+    attempt_k(At?, K1).
+refuse_app(none, I, At, Id, app(S, _, _, R), En?, app(S?, K1?, unlocked, R1?)) :- ground(At?) |
+    attempt_k(At?, K1),
+    end_approvals(I?, Id?, [closed(At?), voted(At?, no)|R?], R1, En).
 procedure only_me(Peers?, Peer?, YesNo).
 only_me([P], Id, yes) :- P? =?= Id? | true.
 only_me(_, _, no) :- otherwise | true.
@@ -1701,54 +2010,96 @@ procedure tell1(YesNo?, Peer?, Cargo?, Sends?, Sends).
 tell1(yes, _, _, Ss, Ss?).
 tell1(no, Q, X, Ss, [to(Q?, X?)|Ss?]).
 
-%% Vote: record the vote, send it to the initiator, and on yes hold the
-%% attempt prepared.
-procedure vote_app(Attempt?, YesNo?, App?, Sends, App).
-vote_app(At, yes, app(S, K, _, R), [to(I?, vote(At?, yes))],
+%% Vote yes: recorded, sent to the initiator, and the attempt held prepared.
+procedure vote_yes_app(Attempt?, App?, Sends, App).
+vote_yes_app(At, app(S, K, _, R), [to(I?, vote(At?, yes))],
         app(S?, K?, held(At?), [voted(At?, yes)|R?])) :-
     ground(At?) |
     attempt_id(At?, I).
-vote_app(At, no, app(S, K, L, R), [to(I?, vote(At?, no))],
-        app(S?, K?, L?, [voted(At?, no)|R?])) :-
-    ground(At?) |
-    attempt_id(At?, I).
+%% Vote no, of reason D (Section 3.2, before Definition "Proposing": "vote y records voted(alpha, y), adds message(p, i, vote(alpha, y)) to o_p, ... and, if y = no and p is a guard of [t]_j, ends every approval of [t] pending at p; the reason of a vote no is declined where p has recorded answered(alpha, no) and unable otherwise"): recorded, sent to the initiator with its reason, and, the agent a guard of the attempt's part, every approval of the class pending at it ended, with the notice, the agent its refuser (vGLP f0acbc1, Section 5.4, "The compilation": "or from the vote where the agent's own vote no refused it").
+procedure vote_no(Info?, Attempt?, Peer?, Reason?, App?, Sends, Outputs, App).
+vote_no(I, At, Id, D, app(S, K, L, R), [to(P?, vote(At?, no(D?)))], Ns?, app(S?, K?, L?, R2?)) :-
+    ground(At?), ground(D?), ground(R?) |
+    attempt_id(At?, P),
+    attempt_class(At?, C),
+    guards_part(C?, Id?, Gd),
+    guard_ends(Gd?, I?, Id?, [voted(At?, no)|R?], R2, En),
+    attempt_class(At?, C2),
+    ended_notice(En?, C2?, Id?, D?, Ns).
+%% guard_ends(Guard?, I?, Id?, R?, R1, En): where the agent is a guard of the part, every approval of the class I pending at it ended.
+procedure guard_ends(YesNo?, Info?, Peer?, Recs?, Recs, YesNo).
+guard_ends(no, _, _, R, R?, no).
+guard_ends(yes, I, Id, R, R1?, En?) :- end_approvals(I?, Id?, R?, R1, En).
+%% Whether the agent is a guard of the part the term names, a person in the marked roles of its schema-binding.
+procedure guards_part(Class?, Peer?, YesNo).
+guards_part(C, Id, B?) :- ground(C?) |
+    binding_of(C?, Nm, Bn),
+    marked_people(Nm?, Bn?, G),
+    mem(Id?, G?, B).
 
-%% Start: nothing more where the attempt is closed; otherwise no where the
-%% agent's state is not in the domain of its effect in the attempt's part, and,
-%% where it is, the question recorded and the approval question raised where
-%% the agent is asked, and yes where it is not.
-procedure start_effect(Info?, Attempt?, St?, Sends, ApprovalRes, St).
-start_effect(I, At, St, Ss?, Cr?, St1?) :- ground(St?) |
+%% Start (Definition "Starting and Wounding", Start): its number the larger of the agent's and the attempt's; nothing more where the attempt is closed; otherwise, where the agent's state is not in the domain of its effect in the attempt's part, a vote no, unable; and where it is, where the attempt names a request of the agent, yes if the request is pending and no if not; where the agent is asked by the attempt, which names none, and no approval of the class is pending at it, the question recorded and the approval question raised; and else yes, a guard whose approval stands voting on its own precondition without asking its person.
+procedure start_effect(Info?, Attempt?, St?, Sends, ApprovalRes, Outputs, St).
+start_effect(I, At, St, Ss?, Cr?, Ns?, St1?) :- ground(St?) |
     st_id(St?, Id),
     st_app(St?, Ap),
-    start_app(I?, At?, Id?, Ap?, Ss, Cr, Ap1),
+    start_app(I?, At?, Id?, Ap?, Ss, Cr, Ns, Ap1),
     set_app(St?, Ap1?, St1).
-procedure start_app(Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, App).
-start_app(I, At, Id, app(S, K, L, R), Ss?, Cr?, Ap1?) :- ground(At?), ground(R?), integer(K?) |
+procedure start_app(Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_app(I, At, Id, app(S, K, L, R), Ss?, Cr?, Ns?, Ap1?) :- ground(At?), ground(R?), integer(K?) |
     attempt_k(At?, KA),
     max_int(K?, KA?, K1),
     mem(closed(At?), R?, Cl),
-    start_app1(Cl?, I?, At?, Id?, app(S?, K1?, L?, R?), Ss, Cr, Ap1).
+    start_app1(Cl?, I?, At?, Id?, app(S?, K1?, L?, R?), Ss, Cr, Ns, Ap1).
 procedure max_int(Integer?, Integer?, Integer).
 max_int(A, B, A?) :- A? >= B? | true.
 max_int(A, B, B?) :- A? < B? | true.
-procedure start_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, App).
-start_app1(yes, _, _, _, Ap, [], noapproval, Ap?).
-start_app1(no, _, At, Id, Ap, Ss?, Cr?, Ap1?) :-
-    ground(At?), ground(Id?), ground(Ap?) |
+procedure start_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_app1(yes, _, _, _, Ap, [], noapproval, [], Ap?).
+start_app1(no, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :-
+    ground(At?), ground(Ap?) |
     app_state(Ap?, S),
     attempt_class(At?, C),
     part_dom(C?, Id?, S?, Rd),
+    start_app2(Rd?, I?, At?, Id?, Ap?, Ss, Cr, Ns, Ap1).
+procedure start_app2(YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_app2(no, I, At, Id, Ap, Ss?, noapproval, Ns?, Ap1?) :- ground(At?), ground(Ap?) |
+    app_state(Ap?, S),
+    attempt_class(At?, C),
+    unable_reason(C?, Id?, S?, D),
+    vote_no(I?, At?, Id?, D?, Ap?, Ss, Ns, Ap1).
+start_app2(yes, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(At?), ground(Ap?) |
+    app_recs(Ap?, R),
+    names_mine(At?, R?, Mn),
+    start_app3(Mn?, I?, At?, Id?, Ap?, Ss, Cr, Ns, Ap1).
+procedure start_app3(Mine?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_app3(mine(Rr, K), I, At, Id, Ap, Ss?, noapproval, Ns?, Ap1?) :- ground(Rr?), ground(Ap?) |
+    app_recs(Ap?, Rc),
+    mem(ended(Rr?, K?), Rc?, En),
+    start_named(En?, I?, At?, Id?, Ap?, Ss, Ns, Ap1).
+start_app3(notmine, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(I?), ground(At?), ground(Ap?) |
     asked_by(At?, Id?, Ak),
-    start_app2(Rd?, Ak?, At?, Ap?, Ss, Cr, Ap1).
-procedure start_app2(YesNo?, YesNo?, Attempt?, App?, Sends, ApprovalRes, App).
-start_app2(no, _, At, Ap, Ss?, noapproval, Ap1?) :- vote_app(At?, no, Ap?, Ss, Ap1).
-start_app2(yes, yes, At, app(S, K, L, R), [], approval_for(At?),
-        app(S?, K?, L?, [asked(At?)|R?])) :-
+    app_recs(Ap?, R),
+    approval_of(I?, Id?, R?, Apv),
+    start_asked(Ak?, Apv?, At?, Ap?, Ss, Cr, Ns, Ap1).
+procedure start_named(YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
+start_named(no, _, At, _, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+start_named(yes, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, unable([], []), Ap?, Ss, Ns, Ap1).
+procedure start_asked(YesNo?, YesNo?, Attempt?, App?, Sends, ApprovalRes, Outputs, App).
+start_asked(yes, no, At, app(S, K, L, R), [], approval_for(At?), [], app(S?, K?, L?, [asked(At?)|R?])) :-
     ground(At?) | true.
-start_app2(yes, no, At, Ap, Ss?, noapproval, Ap1?) :- vote_app(At?, yes, Ap?, Ss, Ap1).
+start_asked(yes, yes, At, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+start_asked(no, _, At, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+%% Whether the attempt names a request the agent made, requested(Rho, K) in its record.
+procedure names_mine(Attempt?, Recs?, Mine).
+names_mine(attempt(_, _, _, _, none), _, notmine).
+names_mine(attempt(_, _, _, _, request(Rr, K)), R, Mn?) :- ground(Rr?), ground(R?) |
+    mem(requested(Rr?, K?), R?, B),
+    mine_of(B?, Rr?, K?, Mn).
+procedure mine_of(YesNo?, Rho?, Integer?, Mine).
+mine_of(yes, Rr, K, mine(Rr?, K?)).
+mine_of(no, _, _, notmine).
 
-%% The agent is asked by an attempt where it is in the attempt's guard set, its part's, the people in the marked roles of the schema-binding its term names, and is not the initiator (vGLP 099f876, Definition "Attempt": its guard set G_alpha is G([t]_j), and the members of G_alpha other than its initiator are asked by it); an attempt of an unguarded part asks nobody.
+%% The agent is asked by an attempt where it is in the attempt's guard set, its part's, the people in the marked roles of the schema-binding its term names, and is not the initiator (vGLP f0acbc1, Definition "Attempt": its guard set G_alpha is G([t]_j), and the members of G_alpha other than its initiator are asked by it); an attempt of an unguarded part asks nobody.  Start asks it where no approval of the class is pending at it (Definition "Starting and Wounding").
 procedure asked_by(Attempt?, Peer?, YesNo).
 asked_by(At, Id, B?) :- ground(At?), ground(Id?) |
     attempt_id(At?, P),
@@ -1770,62 +2121,80 @@ answer_effect(YN, At, St, St1?) :- ground(St?) |
 procedure answer_app(YesNo?, Attempt?, App?, App).
 answer_app(YN, At, app(S, K, L, R), app(S?, K?, L?, [answered(At?, YN?)|R?])).
 
-%% Vote, an own transaction: yes where the answer is yes and the agent's state
-%% is in the domain of its effect in the attempt's part, and no otherwise; a
-%% yes is taken only where the question does not wait, so with nothing
-%% prepared.
-procedure vote_effect(Info?, Attempt?, St?, Sends, St).
-vote_effect(I, At, St, Ss?, St1?) :- ground(St?) |
+%% Vote, an own transaction (Definition "Answering and Voting", Vote): yes where the answer is yes and the agent's state is in the domain of its effect in the attempt's part; no otherwise, declined where the person answered no and unable otherwise; a yes is taken only where the question does not wait, so with nothing prepared.
+procedure vote_effect(Info?, Attempt?, St?, Sends, Outputs, St).
+vote_effect(I, At, St, Ss?, Ns?, St1?) :- ground(St?) |
     st_id(St?, Id),
     st_app(St?, Ap),
-    vote_app0(I?, At?, Id?, Ap?, Ss, Ap1),
+    vote_app0(I?, At?, Id?, Ap?, Ss, Ns, Ap1),
     set_app(St?, Ap1?, St1).
-procedure vote_app0(Info?, Attempt?, Peer?, App?, Sends, App).
-vote_app0(_, At, Id, Ap, Ss?, Ap1?) :- ground(At?), ground(Ap?) |
+procedure vote_app0(Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
+vote_app0(I, At, Id, Ap, Ss?, Ns?, Ap1?) :- ground(At?), ground(Ap?) |
     app_recs(Ap?, R),
     answer_of(At?, R?, YN),
-    vote_yes(YN?, At?, Id?, Ap?, Y),
-    vote_app(At?, Y?, Ap?, Ss, Ap1).
-procedure vote_yes(YesNo?, Attempt?, Peer?, App?, YesNo).
-vote_yes(no, _, _, _, no).
-vote_yes(yes, At, Id, app(S, _, _, _), Y?) :- attempt_class(At?, C), part_dom(C?, Id?, S?, Y).
+    app_state(Ap?, S),
+    attempt_class(At?, C),
+    part_dom(C?, Id?, S?, Dm),
+    vote_on(YN?, Dm?, I?, At?, Id?, Ap?, Ss, Ns, Ap1).
+procedure vote_on(YesNo?, YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
+vote_on(yes, yes, _, At, _, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+vote_on(yes, no, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- ground(At?), ground(Ap?) |
+    app_state(Ap?, S),
+    attempt_class(At?, C),
+    unable_reason(C?, Id?, S?, D),
+    vote_no(I?, At?, Id?, D?, Ap?, Ss, Ns, Ap1).
+vote_on(no, _, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, declined, Ap?, Ss, Ns, Ap1).
 
-%% Tally: nothing more where the attempt is closed; otherwise the vote
-%% recorded, and on no the lock released, the attempt closed and abort told to
-%% every other participant.
-procedure tally_effect(Info?, Attempt?, Peer?, YesNo?, St?, Sends, St).
-tally_effect(I, At, F, Y, St, Ss?, St1?) :- ground(St?) |
-    st_id(St?, Id),
+%% Tally (Definition "Deciding", Tally): nothing more where the attempt is closed; otherwise the vote recorded, and on a no the lock released, the attempt closed, the outcome abort told to every other participant with the voter as refuser and its vote's reason, every approval of the class pending at the agent ended where it is a guard of the part, with the notice, and the request the attempt names, if any, deleted from the requests it holds.
+procedure tally_effect(Info?, Attempt?, Peer?, Vote?, St?, Sends, Outputs, St).
+tally_effect(I, At, F, V, St, Ss?, Ns?, St1?) :- ground(At?), ground(St?) |
     st_app(St?, Ap),
-    tally_app(I?, At?, F?, Y?, Id?, Ap?, Ss, Ap1),
-    set_app(St?, Ap1?, St1).
-procedure tally_app(Info?, Attempt?, Peer?, YesNo?, Peer?, App?, Sends, App).
-tally_app(I, At, F, Y, Id, Ap, Ss?, Ap1?) :- ground(At?), ground(Ap?) |
     app_recs(Ap?, R),
     mem(closed(At?), R?, Cl),
-    tally_app1(Cl?, I?, At?, F?, Y?, Id?, Ap?, Ss, Ap1).
-procedure tally_app1(YesNo?, Info?, Attempt?, Peer?, YesNo?, Peer?, App?, Sends,
-    App).
-tally_app1(yes, _, _, _, _, _, Ap, [], Ap?).
-tally_app1(no, I, At, F, no, Id, app(S, K, _, R), Ss?,
-        app(S?, K?, unlocked, [closed(At?), got(At?, F?, no)|R?])) :-
-    ground(At?), ground(I?) |
+    tally1(Cl?, I?, At?, F?, V?, St?, Ss, Ns, St1).
+procedure tally1(YesNo?, Info?, Attempt?, Peer?, Vote?, St?, Sends, Outputs, St).
+tally1(yes, _, _, _, _, St, [], [], St?).
+tally1(no, _, At, F, yes, St, [], [], St1?) :- ground(St?) |
+    st_app(St?, Ap),
+    add_rec(got(At?, F?, yes), Ap?, Ap1),
+    set_app(St?, Ap1?, St1).
+tally1(no, I, At, F, no(D), St, Ss?, Ns?, St3?) :- ground(I?), ground(At?), ground(D?), ground(St?) |
+    st_id(St?, Id),
     info_q(I?, Q),
-    tell(Q?, Id?, outcome(At?, abort), Ss).
-tally_app1(no, _, At, F, yes, _, app(S, K, L, R), [],
-        app(S?, K?, L?, [got(At?, F?, yes)|R?])).
+    tell(Q?, Id?, outcome(At?, abort(F?, D?)), Ss),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    attempt_class(At?, C),
+    guards_part(C?, Id?, Gd),
+    guard_ends(Gd?, I?, Id?, [closed(At?), got(At?, F?, no)|R?], R1, En),
+    attempt_class(At?, C2),
+    ended_notice(En?, C2?, F?, D?, Ns),
+    st_app(St?, Ap2),
+    unlock_recs(Ap2?, R1?, Ap3),
+    set_app(St?, Ap3?, St2),
+    st_held(St?, Hd),
+    attempt_names(At?, Nm),
+    drop_named(Nm?, Hd?, Hd1),
+    set_held(St2?, Hd1?, St3).
+procedure add_rec(Rec?, App?, App).
+add_rec(X, app(S, K, L, R), app(S?, K?, L?, [X?|R?])).
+procedure unlock_recs(App?, Recs?, App).
+unlock_recs(app(S, K, _, _), R, app(S?, K?, unlocked, R?)).
 
 %% Commit, an own transaction, of an attempt the agent initiated with a yes of every
-%% other participant recorded: the effect applied, the lock released, the
-%% attempt closed and commit told; and the other participants of the attempt introduced to each other, once per pair (vGLP e2bc4f4, Definition "Deciding", Commit: "for every two participants q != r of alpha other than p for which p has not recorded introduced(q, r), p adds message(p, q, intro(r)) and message(p, r, intro(q)) to o_p and records introduced(q, r)"): for each pair {Q, R}, Q preceding R, introduced(Q, R) not recorded, intro(R) sent to Q and intro(Q) to R, each carrying its sender, msg(Q, intro(P, R)), after the outcome, and introduced(Q, R) recorded, the record Introduce peers keeps (commit_pairs, commit_intros).  The participants of a binary transaction other than its initiator are one, so its Commit introduces no one.
+%% other participant recorded (vGLP f0acbc1, Definition "Deciding", Commit): the effect applied, the lock released, the
+%% attempt closed and commit told; every approval of the class pending at the agent ended and every request of the class it holds deleted; and the other participants of the attempt introduced to each other, once per pair (vGLP e2bc4f4, Definition "Deciding", Commit: "for every two participants q != r of alpha other than p for which p has not recorded introduced(q, r), p adds message(p, q, intro(r)) and message(p, r, intro(q)) to o_p and records introduced(q, r)"): for each pair {Q, R}, Q preceding R, introduced(Q, R) not recorded, intro(R) sent to Q and intro(Q) to R, each carrying its sender, msg(Q, intro(P, R)), after the outcome, and introduced(Q, R) recorded, the record Introduce peers keeps (commit_pairs, commit_intros).  The participants of a binary transaction other than its initiator are one, so its Commit introduces no one.
 procedure commit_effect(Info?, Attempt?, St?, Sends, Nets, St).
-commit_effect(I, At, St, Ss?, Ms?, St1?) :- ground(I?), ground(At?), ground(St?) |
+commit_effect(I, At, St, Ss?, Ms?, St2?) :- ground(I?), ground(At?), ground(St?) |
     st_id(St?, Id),
     st_app(St?, Ap),
     commit_app(I?, At?, Id?, Ap?, Ss, Ap1),
     commit_pairs(I?, Id?, Ps),
     commit_intros(Ps?, Id?, Ap1?, Ms, Ap2),
-    set_app(St?, Ap2?, St1).
+    set_app(St?, Ap2?, St1),
+    st_held(St?, Hd),
+    drop_held_class(Hd?, I?, Id?, Hd1),
+    set_held(St1?, Hd1?, St2).
 %% The pairs of the participants of the attempt other than the agent, those of its class (Definition "Attempt"), each pr(Q, R), Q preceding R in the order of identifiers, as Introduce peers forms its pairs (intro_cands).
 procedure commit_pairs(Info?, Peer?, Pairs).
 commit_pairs(I, Id, Ps?) :- ground(I?) |
@@ -1848,15 +2217,18 @@ commit_intro(no, Q, R, Id, Ap, [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?))
     ground(Q?), ground(R?), ground(Id?) |
     introduce_app(Q?, R?, Ap?, Ap1).
 procedure commit_app(Info?, Attempt?, Peer?, App?, Sends, App).
-commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, [closed(At?)|R?])) :-
+commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, R1?)) :-
     ground(I?), ground(At?), ground(Id?) |
     apply_info(I?, Id?, S?, S1),
     info_q(I?, Q),
-    tell(Q?, Id?, outcome(At?, commit), Ss).
+    tell(Q?, Id?, outcome(At?, commit), Ss),
+    end_approvals(I?, Id?, [closed(At?)|R?], R1, _).
 
 %% Yield, at the initiator, on yield(At): nothing more where the attempt is
 %% closed or a yes of every other participant is recorded; otherwise the lock
-%% released, the attempt closed and recorded wounded, and abort told.
+%% released, the attempt closed and recorded wounded, and the outcome yield
+%% told (Definition "Deciding", Yield).  An attempt that yields ends no
+%% approval, and its initiator proposes it again, keeping its rank.
 procedure yield_effect(Info?, Attempt?, St?, Sends, St).
 yield_effect(I, At, St, Ss?, St1?) :- ground(I?), ground(At?), ground(St?) |
     st_id(St?, Id),
@@ -1877,13 +2249,15 @@ procedure yield_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, App).
 yield_app1(yes, _, _, _, Ap, [], Ap?).
 yield_app1(no, I, At, Id, Ap, Ss?, Ap1?) :- abort_own(I?, At?, Id?, Ap?, Ss, Ap1).
 %% The agent's own attempt aborted, wounded: the lock released, the attempt
-%% closed and recorded wounded, and abort told to every other participant.
+%% closed and recorded wounded, and the outcome yield told to every other
+%% participant (Definition "Starting and Wounding", Wound; Definition
+%% "Deciding", Yield).
 procedure abort_own(Info?, Attempt?, Peer?, App?, Sends, App).
 abort_own(I, At, Id, app(S, K, _, R), Ss?,
         app(S?, K?, unlocked, [wounded(At?), closed(At?)|R?])) :-
     ground(I?), ground(At?), ground(Id?) |
     info_q(I?, Q),
-    tell(Q?, Id?, outcome(At?, abort), Ss).
+    tell(Q?, Id?, outcome(At?, yield), Ss).
 
 %% Wound of A against B, an own transaction: where the agent initiated B, B aborted,
 %% wounded; otherwise yield(B) sent to B's initiator and yielded(B) recorded.
@@ -1928,22 +2302,120 @@ procedure all_yes2(YesNo?, Peers?, Attempt?, Peer?, Recs?, YesNo).
 all_yes2(no, _, _, _, _, no).
 all_yes2(yes, Ps, At, Id, R, B?) :- all_yes1(Ps?, At?, Id?, R?, B).
 
-%% Outcome: the effect applied on commit, the lock released where it holds the
-%% attempt, and the attempt closed.
-procedure outcome_effect(Info?, Attempt?, Decision?, St?, St).
-outcome_effect(I, At, Z, St, St1?) :- ground(St?) |
+%% Outcome (Definition "Deciding", Outcome): the effect applied on commit, the lock released where it holds the attempt, and the attempt closed.  On commit, every approval of the class pending at the agent ended and every request of the class it holds deleted.  On abort, the request the attempt names ended where it is the agent's, and, where the attempt names none, every approval of the class pending at the agent ended where it is a guard of the part that recorded voted yes or answered yes on the attempt; and the notice written where an approval ends, its refuser and reason the outcome's.  On yield, nothing more.
+procedure outcome_effect(Info?, Attempt?, Decision?, St?, Outputs, St).
+outcome_effect(I, At, Z, St, Ns?, St2?) :- ground(I?), ground(Z?), ground(St?) |
     st_id(St?, Id),
     st_app(St?, Ap),
-    outcome_app(I?, At?, Z?, Id?, Ap?, Ap1),
-    set_app(St?, Ap1?, St1).
-procedure outcome_app(Info?, Attempt?, Decision?, Peer?, App?, App).
-outcome_app(I, At, commit, Id, app(S, K, L, R), app(S1?, K?, L1?, [closed(At?)|R?])) :-
-    ground(At?) |
+    outcome_app(I?, At?, Z?, Id?, Ap?, Ns, Ap1),
+    set_app(St?, Ap1?, St1),
+    st_held(St?, Hd),
+    outcome_held(Z?, I?, Id?, Hd?, Hd1),
+    set_held(St1?, Hd1?, St2).
+procedure outcome_app(Info?, Attempt?, Decision?, Peer?, App?, Outputs, App).
+outcome_app(I, At, commit, Id, app(S, K, L, R), [], app(S1?, K?, L1?, R1?)) :-
+    ground(I?), ground(At?) |
     apply_info(I?, Id?, S?, S1),
-    release(L?, At?, L1).
-outcome_app(_, At, abort, _, app(S, K, L, R), app(S?, K?, L1?, [closed(At?)|R?])) :-
+    release(L?, At?, L1),
+    end_approvals(I?, Id?, [closed(At?)|R?], R1, _).
+outcome_app(I, At, abort(Q, D), Id, app(S, K, L, R), Ns?, app(S?, K?, L1?, R1?)) :-
+    ground(At?), ground(D?) |
+    release(L?, At?, L1),
+    attempt_names(At?, Nm),
+    abort_ends(Nm?, I?, At?, Id?, [closed(At?)|R?], R1, En),
+    attempt_class(At?, C),
+    ended_notice(En?, C?, Q?, D?, Ns).
+outcome_app(_, At, yield, _, app(S, K, L, R), [], app(S?, K?, L1?, [closed(At?)|R?])) :-
     ground(At?) |
     release(L?, At?, L1).
+procedure outcome_held(Decision?, Info?, Peer?, Helds?, Helds).
+outcome_held(commit, I, Id, Hd, Hd1?) :- drop_held_class(Hd?, I?, Id?, Hd1).
+outcome_held(abort(_, _), _, _, Hd, Hd?).
+outcome_held(yield, _, _, Hd, Hd?).
+%% The approvals an abort ends at a participant: the request the attempt names, where the agent made it; and, where it names none, every approval of the class pending at the agent, where it is a guard of the part that voted yes or answered yes on the attempt.
+procedure abort_ends(Names?, Info?, Attempt?, Peer?, Recs?, Recs, YesNo).
+abort_ends(request(Rr, K), _, _, _, R, R1?, En?) :- end_request(Rr?, K?, R?, R1, En).
+abort_ends(none, I, At, Id, R, R1?, En?) :- ground(At?), ground(R?) |
+    attempt_class(At?, C),
+    guards_part(C?, Id?, Gd),
+    mem(voted(At?, yes), R?, Vy),
+    mem(answered(At?, yes), R?, Ay),
+    or(Vy?, Ay?, Said),
+    and(Gd?, Said?, B),
+    guard_ends(B?, I?, Id?, R?, R1, En).
+procedure end_request(Rho?, Integer?, Recs?, Recs, YesNo).
+end_request(Rr, K, R, R1?, En?) :- ground(Rr?), ground(R?) |
+    mem(requested(Rr?, K?), R?, Mine),
+    mem(ended(Rr?, K?), R?, Done),
+    neg(Done?, Open),
+    and(Mine?, Open?, B),
+    end_request1(B?, Rr?, K?, R?, R1, En).
+procedure end_request1(YesNo?, Rho?, Integer?, Recs?, Recs, YesNo).
+end_request1(yes, Rr, K, R, [ended(Rr?, K?)|R?], yes).
+end_request1(no, _, _, R, R?, no).
+
+%% --- Approvals ------------------------------------------------------------------
+%% The approvals of the agent (vGLP f0acbc1, Definition "Cargo, App State, Question, Approval, Free, Ready"): "the requests requested(rho, k) it has recorded, approvals of each class of rho, and its answers answered(alpha, yes), approvals of the class of alpha; an approval is pending at p until p ends it, recording ended(rho, k) or ended(alpha)".  end_approvals ends every approval of the class I pending at the agent, En yes where it ended any; approval_of says whether one is pending.
+procedure end_approvals(Info?, Peer?, Recs?, Recs, YesNo).
+end_approvals(I, Id, R, R1?, En?) :- ground(R?) |
+    pending_approvals(R?, I?, Id?, R?, Es),
+    end_all(Es?, R?, R1, En).
+procedure approval_of(Info?, Peer?, Recs?, YesNo).
+approval_of(I, Id, R, B?) :- ground(R?) |
+    pending_approvals(R?, I?, Id?, R?, Es),
+    some_rec(Es?, B).
+%% pending_approvals(Rs, I, Id, R, Es): for each approval of the class I in Rs pending in the record R, the record of its end, ended(Rho, K) or ended(At).
+procedure pending_approvals(Recs?, Info?, Peer?, Recs?, Recs).
+pending_approvals([], _, _, _, []).
+pending_approvals([requested(Rr, K)|Rs], I, Id, R, Es?) :- ground(Rr?), ground(I?), ground(R?), integer(K?) |
+    mem(ended(Rr?, K?), R?, Done),
+    neg(Done?, Open),
+    rho_of_class(Rr?, I?, Id?, Of),
+    and(Open?, Of?, B),
+    pending_approvals(Rs?, I?, Id?, R?, Es1),
+    keep_rec(B?, ended(Rr?, K?), Es1?, Es).
+pending_approvals([answered(At, yes)|Rs], I, Id, R, Es?) :- ground(At?), ground(I?), ground(R?) |
+    mem(ended(At?), R?, Done),
+    neg(Done?, Open),
+    of_class(At?, I?, Of),
+    and(Open?, Of?, B),
+    pending_approvals(Rs?, I?, Id?, R?, Es1),
+    keep_rec(B?, ended(At?), Es1?, Es).
+pending_approvals([_|Rs], I, Id, R, Es?) :- otherwise | pending_approvals(Rs?, I?, Id?, R?, Es).
+procedure keep_rec(YesNo?, Rec?, Recs?, Recs).
+keep_rec(yes, X, Es, [X?|Es?]).
+keep_rec(no, _, Es, Es?).
+procedure end_all(Recs?, Recs?, Recs, YesNo).
+end_all([], R, R?, no).
+end_all([E|Es], R, R1?, yes) :- app([E?|Es?], R?, R1).
+procedure some_rec(Recs?, YesNo).
+some_rec([], no).
+some_rec([_|_], yes).
+%% Whether the class I is a class of the request: one(C), the class of the term C; rho(N), a class of rho_N (in_rho).
+procedure rho_of_class(Rho?, Info?, Peer?, YesNo).
+rho_of_class(one(C), I, _, B?) :- term_of_class(C?, I?, B).
+rho_of_class(rho(N), I, Id, B?) :- in_rho(I?, N?, Id?, B).
+%% The requests the agent holds of a class of which the class I is one, deleted; the one an attempt names, request(Rho, K), deleted; and none for an attempt naming none.
+procedure drop_held_class(Helds?, Info?, Peer?, Helds).
+drop_held_class([], _, _, []).
+drop_held_class([held(F, Rr, K)|Hs], I, Id, Hs1?) :- ground(Rr?), ground(I?) |
+    rho_of_class(Rr?, I?, Id?, Of),
+    drop_held_class(Hs?, I?, Id?, Hs0),
+    keep_held(Of?, held(F?, Rr?, K?), Hs0?, Hs1).
+procedure keep_held(YesNo?, Held?, Helds?, Helds).
+keep_held(yes, _, Hs, Hs?).
+keep_held(no, H, Hs, [H?|Hs?]).
+procedure drop_named(Names?, Helds?, Helds).
+drop_named(none, Hd, Hd?).
+drop_named(request(Rr, K), Hd, Hd1?) :- drop_req(Hd?, Rr?, K?, Hd1).
+procedure drop_req(Helds?, Rho?, Integer?, Helds).
+drop_req([], _, _, []).
+drop_req([held(F, Rr1, K1)|Hs], Rr, K, Hs1?) :- ground(Rr1?), ground(Rr?), integer(K1?), integer(K?) |
+    same(Rr1?, Rr?, E1),
+    same_int(K1?, K?, E2),
+    and(E1?, E2?, E),
+    drop_req(Hs?, Rr?, K?, Hs0),
+    keep_held(E?, held(F?, Rr1?, K1?), Hs0?, Hs1).
 procedure release(Lock?, Attempt?, Lock).
 release(unlocked, _, unlocked).
 release(held(A), At, unlocked) :- A? =?= At? | true.
@@ -2017,7 +2489,7 @@ answer_of(At, [_|Rs], Y?) :- otherwise | answer_of(At?, Rs?, Y).
 
 %% Whether an attempt's class is the class of an entry: the schema-binding of its part has the entry's participants and the same atoms deleted and added at each, and is linked to one of the entry's schema-bindings (in_class).  Its term met st_class when the agent first read it, or is a schema-binding of an entry's class, so the schema-binding determines a transaction.
 procedure of_class(Attempt?, Info?, YesNo).
-of_class(attempt(_, _, _, C), I, B?) :- term_of_class(C?, I?, B).
+of_class(attempt(_, _, _, C, _), I, B?) :- term_of_class(C?, I?, B).
 procedure term_of_class(Class?, Info?, YesNo).
 term_of_class(C, ci(_, Ps, Q, _, Ms), B?) :- ground(C?) |
     term_spec(C?, _, Rs, Bn),
@@ -2095,7 +2567,7 @@ procedure precedes(Peer?, Peer?, YesNo).
 precedes(P, Q, yes) :- P? @< Q? | true.
 precedes(_, _, no) :- otherwise | true.
 
-%% The guarded parts of a class with no opener whose guard set holds the agent, each named by its term; and the unguarded parts whose opener is the agent (vGLP a890465, Definition "Attempt": "The initiator is the opener o([t]_j) of [t]_j if [t]_j has one, and a guard of [t]_j if not"; Section 3.2, "The protocol": "A part with an opener is proposed by its opener, and a guarded part with none by one of its guards").  A guarded part with an opener its opener proposes on a guard's request (ibid.), which the agent does not take (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, items 2 to 4, not coded): no agent proposes it.
+%% The guarded parts of a class with no opener whose guard set holds the agent, each named by its term; and the unguarded parts whose opener is the agent (vGLP f0acbc1, Definition "Attempt": "The initiator is the opener o([t]_j) of [t]_j if [t]_j has one, and a guard of [t]_j if not"; Section 3.2, "The protocol": "A part with an opener is proposed by its opener, an unguarded one whenever the opener can carry out its effect, and a guarded one on a request of its guard, which the attempt names ... A guarded part with no opener is proposed by one of its guards whose approval stands").  A guarded part with an opener its opener proposes on a request it holds (held_cands).
 procedure guarding_parts(Parts?, Peer?, Classes).
 guarding_parts([], _, []).
 guarding_parts([pt(T, G, Op)|Ps], Id, R?) :- ground(Id?) |
@@ -2146,6 +2618,80 @@ part_dom1(Nm, Rs, Bn, Id, S, B?) :- ground(Bn?), ground(Id?), ground(S?) |
 procedure hat(Preds?, Peer?, GAtoms?, GAtoms).
 hat([], _, S, S?).
 hat([P|Ps], Id, S, [g(P?, [p(Id?)])|R?]) :- ground(Id?) | hat(Ps?, Id?, S?, R).
+%% The reason of a vote unable of the compiled program, unable(Lacks, Has): "the atoms the schema requires at the voter that its state lacks and those it forbids that its state has" (vGLP f0acbc1, Section 5.4, "Act schemas"), as the contract writes them, the atoms of the reflexive predicates naming the voter holding there; and, for the person in the base of a listed role, who "lists in d_p exactly the people of that role in L" (Section 5.4, "Act schemas as local specifications"), the listing atoms of the people of the role its state lacks, and those of others it has.
+procedure unable_reason(Class?, Peer?, GAtoms?, Reason).
+unable_reason(P, Id, S, unable(L?, H?)) :- ground(P?), ground(S?) |
+    term_spec(P?, Nm, Rs, Bn),
+    unable_atoms(Nm?, Rs?, Bn?, Id?, S?, L0, H0),
+    atoms_of(L0?, L),
+    atoms_of(H0?, H).
+procedure unable_atoms(Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+unable_atoms(Nm, Rs, Bn, Id, S, L?, H?) :- ground(Nm?), ground(Rs?), ground(Bn?), ground(S?) |
+    reflexive_preds(Rf),
+    hat(Rf?, Id?, S?, Sh),
+    specs_at(Rs?, 1, Bn?, Id?, RsP),
+    unable_at(RsP?, Bn?, Sh?, L1, H1),
+    listing_gaps(Nm?, Bn?, Id?, S?, L2, H2),
+    app(L1?, L2?, L),
+    app(H1?, H2?, H).
+procedure unable_at(RoleSpecs?, Binding?, GAtoms?, GAtoms, GAtoms).
+unable_at(RsP, Bn, Sh, L?, H?) :- ground(RsP?), ground(Bn?), ground(Sh?) |
+    reqs_of(RsP?, Q),
+    img_atoms(Q?, Bn?, G),
+    ms_diff(G?, Sh?, L),
+    forbs_of(RsP?, F),
+    img_atoms(F?, Bn?, Fg),
+    held_in(Fg?, Sh?, H0),
+    dedup(H0?, H).
+procedure held_in(GAtoms?, GAtoms?, GAtoms).
+held_in([], _, []).
+held_in([G|Gs], Sh, H?) :- ground(G?), ground(Sh?) |
+    mem(G?, Sh?, In),
+    held_in(Gs?, Sh?, H1),
+    keep_g(In?, G?, H1?, H).
+procedure keep_g(YesNo?, GAtom?, GAtoms?, GAtoms).
+keep_g(yes, G, H, [G?|H?]).
+keep_g(no, _, H, H?).
+procedure listing_gaps(Constant?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+listing_gaps(Nm, Bn, Id, S, L?, H?) :- schema_entry(Nm?, E), listing_gaps1(E?, Bn?, Id?, S?, L, H).
+procedure listing_gaps1(Schema?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+listing_gaps1(schema(_, _, _), _, _, _, [], []).
+listing_gaps1(lschema(_, _, _, Lsts), Bn, Id, S, L?, H?) :- gaps_of(Lsts?, Bn?, Id?, S?, L, H).
+procedure gaps_of(Listings?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+gaps_of([], _, _, _, [], []).
+gaps_of([listing(I, Bi, Rho, As)|Lsts], Bn, Id, S, L?, H?) :- ground(Bn?), ground(S?) |
+    role_person(Bi?, Bn?, P),
+    same(P?, Id?, Base),
+    gaps_one(Base?, I?, Rho?, As?, Bn?, S?, L1, H1),
+    gaps_of(Lsts?, Bn?, Id?, S?, L2, H2),
+    app(L1?, L2?, L),
+    app(H1?, H2?, H).
+procedure gaps_one(YesNo?, Integer?, Constant?, Vars?, Binding?, GAtoms?, GAtoms, GAtoms).
+gaps_one(no, _, _, _, _, _, [], []).
+gaps_one(yes, I, Rho, As, Bn, S, L?, H?) :- ground(Rho?), ground(As?), ground(Bn?), ground(S?) |
+    copies_of(Bn?, I?, Want),
+    list_at(Rho?, As?, Bn?, S?, Have),
+    img_args(As?, Bn?, Vs),
+    gaps_two(Want?, Have?, Rho?, Vs?, L, H).
+procedure gaps_two(Peers?, Peers?, Constant?, Vals?, GAtoms, GAtoms).
+gaps_two(Want, Have, Rho, Vs, L?, H?) :- ground(Want?), ground(Have?), ground(Rho?), ground(Vs?) |
+    peers_minus(Want?, Have?, Lp),
+    peers_minus(Have?, Want?, Hp),
+    listing_atoms(Lp?, Rho?, Vs?, L),
+    listing_atoms(Hp?, Rho?, Vs?, H).
+procedure peers_minus(Peers?, Peers?, Peers).
+peers_minus([], _, []).
+peers_minus([P|Ps], Qs, R?) :- ground(Qs?) |
+    mem(P?, Qs?, In),
+    peers_minus(Ps?, Qs?, R1),
+    keep_out(In?, P?, R1?, R).
+procedure keep_out(YesNo?, Peer?, Peers?, Peers).
+keep_out(yes, _, R, R?).
+keep_out(no, P, R, [P?|R?]).
+procedure listing_atoms(Peers?, Constant?, Vals?, GAtoms).
+listing_atoms([], _, _, []).
+listing_atoms([Q|Qs], Rho, Vs, [g(Rho?, [p(Q?)|Vs?])|Gs?]) :- ground(Rho?), ground(Vs?) |
+    listing_atoms(Qs?, Rho?, Vs?, Gs).
 %% The parts whose domain at the agent holds its state.
 procedure ready_parts(Classes?, Peer?, GAtoms?, Classes).
 ready_parts([], _, _, []).
@@ -2281,8 +2827,8 @@ delta_at([_|Ps], Id, D?, A?) :- otherwise | delta_at(Ps?, Id?, D, A).
 
 %% The class a term names, the agent's entry for it, met or new; nocls where the binding is not one (Definition "Binding": two roles share a person only if neither adds or deletes an atom naming the other; admissible), where it determines no transaction, its deleted and added atoms meeting at a participant (deltas_valid) or an atom required and forbidden there (live_at), or where the agent is no participant.  A schema-binding that determines no transaction relates no two transactions, so it is of no class (Section 5.4, the paragraph on act schemas).
 procedure st_class(Class?, St?, ClassRes, St).
-st_class(C, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), R?,
-        st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca1?, Pd?, Pr?)) :-
+st_class(C, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), R?,
+        st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca1?, Pd?, Pr?, Hd?)) :-
     ground(Id?) |
     class_info(C?, Id?, Ca?, R, Ca1).
 procedure class_info(Class?, Peer?, Infos?, ClassRes, Infos).
@@ -3383,15 +3929,15 @@ val_speech1(free, D, speech(utterance(none), D?)).
 %% ===========================================================================
 
 procedure st_id(St?, Peer).
-st_id(st(Id, _, _, _, _, _, _, _, _, _, _), Id?).
+st_id(st(Id, _, _, _, _, _, _, _, _, _, _, _), Id?).
 procedure st_app(St?, App).
-st_app(st(_, Ap, _, _, _, _, _, _, _, _, _), Ap?).
+st_app(st(_, Ap, _, _, _, _, _, _, _, _, _, _), Ap?).
 procedure st_count(St?, Integer).
-st_count(st(_, _, D, _, _, _, _, _, _, _, _), D?).
+st_count(st(_, _, D, _, _, _, _, _, _, _, _, _), D?).
 procedure st_sent(St?, Peers).
-st_sent(st(_, _, _, Se, _, _, _, _, _, _, _), Se?).
+st_sent(st(_, _, _, Se, _, _, _, _, _, _, _, _), Se?).
 procedure st_recd(St?, Peers).
-st_recd(st(_, _, _, _, Rc, _, _, _, _, _, _), Rc?).
+st_recd(st(_, _, _, _, Rc, _, _, _, _, _, _, _), Rc?).
 %% The persons the agent knows, in the order of identifiers.
 procedure st_known(St?, List(Key)).
 st_known(St, Ks?) :- ground(St?) |
@@ -3414,27 +3960,32 @@ procedure keep_peer(YesNo?, Peer?, Peers?, Peers).
 keep_peer(yes, P, Ks, [P?|Ks?]).
 keep_peer(no, _, Ks, Ks?).
 procedure st_isent(St?, Peers).
-st_isent(st(_, _, _, _, _, ISe, _, _, _, _, _), ISe?).
+st_isent(st(_, _, _, _, _, ISe, _, _, _, _, _, _), ISe?).
 procedure st_irecd(St?, Peers).
-st_irecd(st(_, _, _, _, _, _, IRc, _, _, _, _), IRc?).
+st_irecd(st(_, _, _, _, _, _, IRc, _, _, _, _, _), IRc?).
 procedure st_waits(St?, Waits).
-st_waits(st(_, _, _, _, _, _, _, W, _, _, _), W?).
+st_waits(st(_, _, _, _, _, _, _, W, _, _, _, _), W?).
 procedure st_pends(St?, Pends).
-st_pends(st(_, _, _, _, _, _, _, _, _, Pd, _), Pd?).
+st_pends(st(_, _, _, _, _, _, _, _, _, Pd, _, _), Pd?).
 procedure set_app(St?, App?, St).
-set_app(st(Id, _, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), Ap, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+set_app(st(Id, _, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), Ap, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 procedure set_waits(St?, Waits?, St).
-set_waits(st(Id, Ap, D, Se, Rc, ISe, IRc, _, Ca, Pd, Pr), W, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
-procedure st_props(St?, Classes).
-st_props(st(_, _, _, _, _, _, _, _, _, _, Pr), Pr?).
-procedure set_props(St?, Classes?, St).
-set_props(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, _), Pr, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+set_waits(st(Id, Ap, D, Se, Rc, ISe, IRc, _, Ca, Pd, Pr, Hd), W, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
+%% The requests the agent has made, in the order it last made them, and the requests it holds.
+procedure st_made(St?, Rhos).
+st_made(st(_, _, _, _, _, _, _, _, _, _, Pr, _), Pr?).
+procedure set_made(St?, Rhos?, St).
+set_made(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, _, Hd), Pr, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
+procedure st_held(St?, Helds).
+st_held(st(_, _, _, _, _, _, _, _, _, _, _, Hd), Hd?).
+procedure set_held(St?, Helds?, St).
+set_held(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, _), Hd, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 procedure set_pends(St?, Pends?, St).
-set_pends(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, _, Pr), Pd, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+set_pends(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, _, Pr, Hd), Pd, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 %% A start held waiting, once: added where not held already; and dropped.
 procedure add_pend_once(Pend?, St?, St).
-add_pend_once(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
-        st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?)) :-
+add_pend_once(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd),
+        st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?, Hd?)) :-
     ground(X?), ground(Pd?) |
     mem(X?, Pd?, In),
     add_pend1(In?, X?, Pd?, Pd1).
@@ -3442,23 +3993,23 @@ procedure add_pend1(YesNo?, Pend?, Pends?, Pends).
 add_pend1(yes, _, Pd, Pd?).
 add_pend1(no, X, Pd, Pd1?) :- app(Pd?, [X?], Pd1).
 procedure drop_pend(Pend?, St?, St).
-drop_pend(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
-        st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?)) :-
+drop_pend(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd),
+        st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?, Hd?)) :-
     remove_all(X?, Pd?, Pd1).
 procedure add_sent(Peer?, St?, St).
-add_sent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
-        st(Id?, Ap?, D?, [Q?|Se?], Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+add_sent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd),
+        st(Id?, Ap?, D?, [Q?|Se?], Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 procedure add_isent(Peer?, St?, St).
-add_isent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
-        st(Id?, Ap?, D?, Se?, Rc?, [Q?|ISe?], IRc?, W?, Ca?, Pd?, Pr?)).
+add_isent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd),
+        st(Id?, Ap?, D?, Se?, Rc?, [Q?|ISe?], IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 procedure add_irecd(Peer?, St?, St).
-add_irecd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
-        st(Id?, Ap?, D?, Se?, Rc?, ISe?, [P?|IRc?], W?, Ca?, Pd?, Pr?)).
+add_irecd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd),
+        st(Id?, Ap?, D?, Se?, Rc?, ISe?, [P?|IRc?], W?, Ca?, Pd?, Pr?, Hd?)).
 procedure add_recd(Peer?, St?, St).
-add_recd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr),
-        st(Id?, Ap?, D?, Se?, [P?|Rc?], ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+add_recd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd),
+        st(Id?, Ap?, D?, Se?, [P?|Rc?], ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 procedure advance(St?, St).
-advance(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D1?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)) :-
+advance(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), st(Id?, Ap?, D1?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)) :-
     D1 := D? + 1.
 procedure app_recs(App?, Recs).
 app_recs(app(_, _, _, R), R?).
@@ -3467,13 +4018,15 @@ app_count(app(_, K, _, _), K?).
 procedure app_state(App?, GAtoms).
 app_state(app(S, _, _, _), S?).
 procedure attempt_id(Attempt?, Peer).
-attempt_id(attempt(I, _, _, _), I?).
+attempt_id(attempt(I, _, _, _, _), I?).
 procedure attempt_k(Attempt?, Integer).
-attempt_k(attempt(_, K, _, _), K?).
+attempt_k(attempt(_, K, _, _, _), K?).
 procedure attempt_rank(Attempt?, Integer).
-attempt_rank(attempt(_, _, P, _), P?).
+attempt_rank(attempt(_, _, P, _, _), P?).
 procedure attempt_class(Attempt?, Class).
-attempt_class(attempt(_, _, _, C), C?).
+attempt_class(attempt(_, _, _, C, _), C?).
+procedure attempt_names(Attempt?, Names).
+attempt_names(attempt(_, _, _, _, Nm), Nm?).
 
 procedure and(YesNo?, YesNo?, YesNo).
 and(yes, B, B?).
