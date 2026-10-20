@@ -3,8 +3,8 @@
 %%
 %%   person judge.
 %%   Panel =::= judge_panel.
-%%   procedure judge_panel(Panel?, Integer?).
-%%   judge_panel(panel(Cs), S) :- judge(Cs?, S?).
+%%   procedure judge_panel(Panel?, Person?, Integer?).
+%%   judge_panel(panel(Cs), _, S) :- judge(Cs?, S?).
 %%   procedure judge(List(Card)?, Integer?).
 %%   judge([card(_, A?) | Cs], S) :-
 %%       random(S?, 2, K, S1), verdict(K?, slot(A)) @ 1/hour, judge(Cs?, S1?).
@@ -40,8 +40,8 @@ source(
   %% The profile and the run declaration.
   [person(judge),
    binds('Panel', judge_panel),
-   decl(judge_panel(dual('Panel'), dual('Integer'))),
-   clause(judge_panel(panel(var('Cs')), var('S')), [], [judge(var('Cs?'), var('S?'))]),
+   decl(judge_panel(dual('Panel'), dual('Person'), dual('Integer'))),
+   clause(judge_panel(panel(var('Cs')), var('_'), var('S')), [], [judge(var('Cs?'), var('S?'))]),
    decl(judge(dual('List'('Card')), dual('Integer'))),
    clause(judge([card(var('_'), var('A?')) | var('Cs')], var('S')), [],
           [random(var('S?'), 2, var('K'), var('S1')), rated(verdict(var('K?'), slot(var('A'))), rate(1, hour)),

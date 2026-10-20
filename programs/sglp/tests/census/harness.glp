@@ -1,0 +1,120 @@
+%% The run of test (xx), by hand (sGLP's paper, Section 3, Definitions "Person,
+%% Census" and "Simulation Program"; Section 4, "The run"; Appendix B,
+%% "Seeds"): the run declaration of village_sglp.glp, which names the census
+%% village.  The census draws from the first block of the second generator,
+%% started from the first value drawn from the run's seed, and the run refuses
+%% it where it draws no person or a person of a role of no dimension
+%% (population.glp, persons/5); the agents are numbered in the census's
+%% order, agent a drawing from the a-th block after the census's its
+%% stochastic person, one profile per dimension of its role, and its person
+%% process's seed.  At each agent, its initial goal talk/2 of village.glp, its
+%% screen, on [], the program writing nothing to its person (Section 3, after
+%% Definition "Well-Formed"), and its person process, with its stochastic
+%% person, its person and its seed, reading talk's ask stream; the monitor,
+%% with the run's seed and the horizon in seconds; and the log's sink, the
+%% root's send_to_user/1, which prints each entry, ground, on its own line, and
+%% the monitor's clock last.
+
+imported procedure village#talk(Said, Stream(Ask)).
+imported procedure population#declaration(Constant, Number, Span, Integer,
+                                          Integer).
+imported procedure population#persons(Integer?, Stream(Constant)?, Constant,
+                                      List(Person), Integer).
+imported procedure population#stochastic_person(Integer?, Person?, Integer?,
+                                                Profiles, Integer).
+imported procedure(X) population#start_screen(Integer?, Stream(X)?, MutualRef?,
+                                              MutualRef?, MutualRef).
+imported procedure population#person(Integer?, Profiles?, Person?, MutualRef?,
+                                     MutualRef?, Integer?, MutualRef?,
+                                     Stream(Ask)?).
+
+%% run(Ps): the run declaration's run, Ps the persons its census draws.
+exported procedure run(List(Person)).
+run(Ps?) :-
+    population # declaration(_, C, U, Seed, T1),
+    run(C?, U?, Seed?, T1?, Ps).
+
+%% seeded(Seed?, Ps): the run declaration's run from the seed Seed in place of
+%% its own, Ps the persons its census draws.
+exported procedure seeded(Integer?, List(Person)).
+seeded(Seed, Ps?) :-
+    population # declaration(_, C, U, _, T1),
+    run(C?, U?, Seed?, T1?, Ps).
+
+procedure run(Number?, Span?, Integer?, Integer?, List(Person)).
+run(C, U, Seed, T1, Ps?) :-
+    number(C?), integer(Seed?) |
+    random(Seed?, 2147483646, Base, _),
+    population # persons(Base?, [], Ok, Ps0, B),
+    go(Ok?, Ps0?, B?, C?, U?, Seed?, T1?, Ps).
+
+%% go(Ok?, Ps0?, B?, C?, U?, Seed?, T1?, Ps): the run of the persons Ps0, where
+%% the census's draw is not refused, Ps being Ps0; refused, the run takes no
+%% goal but the line refused, Ps empty.
+procedure go(Constant?, List(Person)?, Integer?, Number?, Span?, Integer?,
+             Integer?, List(Person)).
+go(yes, Ps0, B, C, U, Seed, T1, Ps0?) :-
+    ground(Ps0?), number(C?), integer(Seed?) |
+    span(U?, Secs),
+    H := C? * Secs?,
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, Entries),
+    send_to_user(Entries?),
+    monitor(Requests?, Seed?, H?, Log?),
+    agents(1, Ps0?, B?, T1?, Mon?, Log?).
+go(no, _, _, _, _, _, _, []) :- send_to_user([refused]).
+
+%% agents(A?, Ps?, B?, T1?, Mon?, Log?): agents A.., their persons Ps, B the
+%% start of A's block.
+procedure agents(Integer?, List(Person)?, Integer?, Integer?, MutualRef?,
+                 MutualRef?).
+agents(A, [H|Hs], B, T1, Mon, Log) :-
+    integer(A?), integer(B?), ground(H?) |
+    population # stochastic_person(B?, H?, T1?, P, S),
+    random(S?, 2147483646, Seed, _),
+    village # talk(_, Asks),
+    population # start_screen(A?, [], Mon?, Log?, Scr),
+    population # person(A?, P?, H?, Mon?, Scr?, Seed?, Log?, Asks?),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    agents(A1?, Hs?, B2?, T1?, Mon?, Log?).
+agents(_, [], _, _, _, _).
+
+%% draw(Ds): the population's draw of the run, each agent's stochastic person,
+%% drawn as agents/6 draws it, without the run.
+exported procedure draw(Stream(Drawn)).
+draw(Ds?) :-
+    population # declaration(_, _, _, Seed, T1),
+    draw(Seed?, T1?, Ds).
+procedure draw(Integer?, Integer?, Stream(Drawn)).
+draw(Seed, T1, Ds?) :-
+    integer(Seed?) |
+    random(Seed?, 2147483646, Base, _),
+    population # persons(Base?, [], _, Ps, B),
+    draws(1, Ps?, B?, T1?, Ds).
+procedure draws(Integer?, List(Person)?, Integer?, Integer?, Stream(Drawn)).
+draws(A, [H|Hs], B, T1, [agent(A?, P?)|Ds?]) :-
+    integer(A?), integer(B?), ground(H?) |
+    population # stochastic_person(B?, H?, T1?, P, _),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    draws(A1?, Hs?, B2?, T1?, Ds).
+draws(_, [], _, _, []).
+
+%% persons(Seed?, Ok, Ps): the census's persons for a run of seed Seed, Ok yes,
+%% or no where the run refuses them.
+exported procedure persons(Integer?, Constant, List(Person)).
+persons(Seed, Ok?, Ps?) :-
+    integer(Seed?) |
+    random(Seed?, 2147483646, Base, _),
+    population # persons(Base?, [], Ok, Ps, _).
+
+%% skip(J?, S?, S1): S1 is the seed J draws after S, one draw at a time, as the
+%% examples' harnesses draw a block (Appendix B).
+procedure skip(Integer?, Integer?, Integer).
+skip(0, S, S?).
+skip(J, S, S1?) :-
+    J? > 0, integer(S?) |
+    random(S?, 1, _, S2),
+    J1 := J? - 1,
+    skip(J1?, S2?, S1).

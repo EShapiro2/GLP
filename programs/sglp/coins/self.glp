@@ -60,10 +60,12 @@ Friends ::= [] ; [Peers | Friends].
 Ask      ::= ask(Constant, Question).
 Question ::= menu_w(Menu) ; offer_w(Offer).
 
-%% A stochastic person, one profile per dimension, as the harness hands it from
-%% the population's draw to the person process (population.glp): Spending and
-%% Credit are programs/sglp/self.glp's.
-Profiles ::= profiles(Spending, Credit).
+%% A stochastic person, of the role agent, one profile per dimension, and a
+%% person, as run n agents draws them, as the harness hands them from the
+%% population to the person process: structurally population.glp's.  Spending
+%% and Credit are programs/sglp/self.glp's.
+Profiles ::= agent(Spending, Credit).
+Person   ::= person(Constant, Constant, List(Constant)).
 
 imported procedure harness#run(Integer?, Friends?, Number?, Span?, Integer?,
                                Integer?, Integer?).

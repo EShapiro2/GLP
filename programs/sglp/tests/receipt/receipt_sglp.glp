@@ -3,8 +3,8 @@
 %%
 %%   person talker.
 %%   Stream(Msg) =::= talk.
-%%   procedure talk(Stream(Msg), Integer?).
-%%   talk(Ms?, _) :- say(1, slot(Ms)) @ 1/hour.
+%%   procedure talk(Stream(Msg), Person?, Integer?).
+%%   talk(Ms?, _, _) :- say(1, slot(Ms)) @ 1/hour.
 %%   procedure say(Integer?, Slot(Stream(Msg))?).
 %%   say(I, slot([msg(T?, St) | Ms?])) :- I? =< 3 | text(I?, T), next(St?, I?, Ms).
 %%   say(I, slot([])) :- I? > 3 | true.
@@ -48,8 +48,8 @@ source(
   %% The profile and the run declaration.
   [person(talker),
    binds('Stream'('Msg'), talk),
-   decl(talk('Stream'('Msg'), dual('Integer'))),
-   clause(talk(var('Ms?'), var('_')), [],
+   decl(talk('Stream'('Msg'), dual('Person'), dual('Integer'))),
+   clause(talk(var('Ms?'), var('_'), var('_')), [],
           [rated(say(1, slot(var('Ms'))), rate(1, hour))]),
    decl(say(dual('Integer'), dual('Slot'('Stream'('Msg'))))),
    clause(say(var('I'), slot([msg(var('T?'), var('St')) | var('Ms?')])), ['=<'(var('I?'), 3)],

@@ -1,0 +1,26 @@
+%% Test (xix)'s compiled program, written by hand: the canonical compilation
+%% of notes.vglp by vGLP's Definition "Canonical Compilation", as the steps'
+%% steps.glp is of steps.vglp.  count, notes and again reach a question and
+%% have one more argument, last, their ask stream.  count's asking clause
+%% keeps its name and the guarded clause takes count1; Count is in writer mode,
+%% so X and X? are exchanged, the ask carrying the reader X? and the program
+%% writing X; notes calls two procedures that reach a question, whose ask
+%% streams D1 and D2 are merged into its own.  The program's output to its
+%% person, construct 0, is notes' second argument, which the harness hands the
+%% agent's screen (sGLP's paper, Section 3, Definition "Simulation Program").
+%% The types are the directory's (self.glp).
+
+%% (count(N))*count(N?): the asking clause and the guarded clause.
+procedure count(Integer, Stream(Ask)).
+count(N?, [ask('Count', count_w(X?))|D?]) :- count1(N, X, D).
+procedure count1(Integer, Count, Stream(Ask)).
+count1(N?, count(N), []).
+
+%% notes(Ns, Os): the counts and the notes, the ask streams merged.
+exported procedure notes(Stream(Integer), Stream(Output), Stream(Ask)).
+notes([N1?, N2?], [note(N1?), note(9)], D?) :-
+    count(N1, D1), again(N1?, N2, D2), merge(D1?, D2?, D).
+
+%% again(N1?, N2): once N1 is answered, the second count N2 asked.
+procedure again(Integer?, Integer, Stream(Ask)).
+again(N1, N2?, D?) :- ground(N1?) | count(N2, D).

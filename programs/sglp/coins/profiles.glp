@@ -1,6 +1,9 @@
 %% Printed by programs/sglp/transform.glp from the sGLP source in the term form
 %% (README.md, "The term form"); edit the source and run transform.sh, not this file.
 %% transform(coins, profiles)
+
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).
+Person ::= person(Constant, Constant, List(Constant)).
 procedure
 request
 (
@@ -52,12 +55,17 @@ spender_menu
 Menu
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-spender_menu(M, S, Mon)
+spender_menu(M, _, S, Mon, _)
 :-
 stream_append(rated('/'(1, day), Tok), Mon?, _)
 ,
@@ -72,12 +80,17 @@ saver_menu
 Menu
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-saver_menu(M, S, Mon)
+saver_menu(M, _, S, Mon, _)
 :-
 stream_append(rated('/'(1, week), Tok), Mon?, _)
 ,
@@ -92,12 +105,17 @@ cautious_offer
 Offer
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-cautious_offer(O, _, Mon)
+cautious_offer(O, _, _, Mon, _)
 :-
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,
@@ -135,12 +153,17 @@ generous_offer
 Offer
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-generous_offer(O, _, Mon)
+generous_offer(O, _, _, Mon, _)
 :-
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,

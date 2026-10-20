@@ -7,7 +7,7 @@
 
 Profiles
 ::=
-profiles(Dimension1)
+agent(Dimension1)
 .
 Dimension1
 ::=
@@ -23,6 +23,9 @@ Stream(Msg)
 )
 .
 
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).
+Person ::= person(Constant, Constant, List(Constant)).
+
 %% The person procedures, in the profiles module.
 imported procedure
 profiles
@@ -31,27 +34,34 @@ talk
 (
 Stream(Msg)
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
 
-%% The person process (sGLP's paper, Section 4, "The person process").
-exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
-person(A, profiles(talker), Mon, Seed, Log, [ask('Stream(Msg)?', stream_msg_r(E?)) | As])
+%% The person process (sGLP's paper, Section 3, Definition "Person Process"; Section 4, "The person process").
+exported procedure person(Integer?, Profiles?, Person?, MutualRef?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
+person(A, agent(talker), H, Mon, Scr, Seed, Log, [ask('Stream(Msg)?', stream_msg_r(E?)) | As])
 :-
+ground(H?)
+|
 random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-talk(Y, K?, Mon?)
+talk(Y, H?, K?, Mon?, Scr?)
 ,
 relay_1(A?, 'Stream(Msg)?', E, Y?, Mon?, Log?)
 ,
-person(A?, profiles(talker), Mon?, S?, Log?, As?)
+person(A?, agent(talker), H?, Mon?, Scr?, S?, Log?, As?)
 .
-person(_, _, _, _, _, []).
+person(_, _, _, _, _, _, _, []).
 
 %% The relay of an interactive type (Definition "Copy, Relay").
 procedure
@@ -138,7 +148,18 @@ ground(Y?)
 true
 .
 
-%% The run declaration: its agents, horizon, seed and thresholds.
+%% The screen of an agent (sGLP's paper, Section 3, Definition "Screen, Seen"; Section 4, "The screen" and "The log").
+Seen(X) ::= seen(List(X)?).
+exported procedure(X) screen(Integer?, Stream(X)?, List(X)?, Stream(Seen(X))?, MutualRef?, MutualRef?).
+screen(A, [E|O], Os, Rs, Mon, Log) :- ground(E?) | stream_append(time(Time), Mon?, _), stream_append(entry(Time?, A?, output, E?), Log?, _), screen(A?, O?, [E?|Os?], Rs?, Mon?, Log?).
+screen(A, O, Os, [seen(Os?)|Rs], Mon, Log) :- ground(Os?) | screen(A?, O?, Os?, Rs?, Mon?, Log?).
+screen(_, [], _, [], _, _).
+
+%% An agent's screen on the program's output O to its person, and its reference, Scr, on which the person goals request seen(L).
+exported procedure(X) start_screen(Integer?, Stream(X)?, MutualRef?, MutualRef?, MutualRef).
+start_screen(A, O, Mon, Log, Scr?) :- allocate_mutual_reference(Scr, Rs), screen(A?, O?, [], Rs?, Mon?, Log?).
+
+%% The run declaration: its persons, horizon, seed and thresholds.
 exported procedure
 declaration
 (
@@ -154,18 +175,63 @@ Integer
 declaration(1, 1, week, 20260927)
 .
 
-%% An agent's stochastic person, drawn from its block (Appendix B).
+%% The persons of the run, drawn by its census (sGLP's paper, Section 3, Definition "Person, Census", and after Definition "Well-Formed"; Appendix B).
+exported procedure
+persons
+(
+Integer?
+,
+Stream(Constant)
+?
+,
+Constant
+,
+List(Person)
+,
+Integer
+)
+.
+persons(B, Ks, Ok?, Ps?, B?) :- integer(B?) | agent_persons(Ks?, Ps0), checked(Ps0?, Ok, Ps).
+procedure
+agent_persons
+(
+Stream(Constant)
+?
+,
+List(Person)
+)
+.
+agent_persons([], []).
+agent_persons([K|Ks], [person(K?, agent, [])|Ps?]) :- agent_persons(Ks?, Ps).
+procedure skip(Integer?, Integer?, Integer).
+skip(0, S, S?).
+skip(J, S, S1?) :- J? > 0, integer(S?) | random(S?, 1, _, S2), J1 := J? - 1, skip(J1?, S2?, S1).
+procedure checked(List(Person)?, Constant, List(Person)).
+checked([], no, []).
+checked([P|Ps], Ok?, [P?|Ps?]) :- ground(P?), ground(Ps?) | roles_ok([P?|Ps?], Ok).
+procedure roles_ok(List(Person)?, Constant).
+roles_ok([], yes).
+roles_ok([person(_, agent, _) | Ps], Ok?)
+:-
+roles_ok(Ps?, Ok)
+.
+roles_ok([_|_], no) :- otherwise | true.
+
+%% An agent's stochastic person, one profile per dimension of the role of its person, drawn from its block (Appendix B).
 exported procedure
 stochastic_person
 (
 Integer?
+,
+Person
+?
 ,
 Profiles
 ,
 Integer
 )
 .
-stochastic_person(B, profiles(P1?), S?)
+stochastic_person(B, person(_, agent, _), agent(P1?), S?)
 :-
 random(B?, 100, K1, S)
 ,

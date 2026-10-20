@@ -1,0 +1,50 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(screen, profiles)
+
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).
+Person ::= person(Constant, Constant, List(Constant)).
+
+%% person(looker)
+%% binds(Count, look_count)
+exported procedure
+look_count
+(
+Count
+?
+,
+Person
+?
+,
+Integer?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+look_count(C, _, _, Mon, Scr)
+:-
+stream_append(rated('/'(1, second), Tok), Mon?, _)
+,
+look(Tok?, C?, Scr?)
+.
+procedure
+look
+(
+Token?
+,
+Count
+?
+,
+MutualRef?
+)
+.
+look(stop, _, _)
+.
+look(go, count(N?), Scr)
+:-
+stream_append(seen(L), Scr?, _)
+,
+length(L?, N)
+.

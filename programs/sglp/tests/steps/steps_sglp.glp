@@ -3,13 +3,13 @@
 %%
 %%   person stepper.
 %%   Ready =::= get_ready.
-%%   procedure get_ready(Ready?, Integer?).
-%%   get_ready(ready(R?), _) :- say(slot(R)) @ 1/day.
+%%   procedure get_ready(Ready?, Person?, Integer?).
+%%   get_ready(ready(R?), _, _) :- say(slot(R)) @ 1/day.
 %%   procedure say(Slot(YesNo)?).
 %%   say(slot(yes)).
 %%   Panel =::= judge_fast.
-%%   procedure judge_fast(Panel?, Integer?).
-%%   judge_fast(panel(Cs), _) :- judge_cards(Cs?).
+%%   procedure judge_fast(Panel?, Person?, Integer?).
+%%   judge_fast(panel(Cs), _, _) :- judge_cards(Cs?).
 %%   procedure judge_cards(List(Card)?).
 %%   judge_cards([card(_, A?) | Cs]) :- verdict(slot(A)) @ 3600/hour, judge_cards(Cs?).
 %%   judge_cards([]).
@@ -45,13 +45,13 @@ source(
   %% The profile and the run declaration.
   [person(stepper),
    binds('Ready', get_ready),
-   decl(get_ready(dual('Ready'), dual('Integer'))),
-   clause(get_ready(ready(var('R?')), var('_')), [], [rated(say(slot(var('R'))), rate(1, day))]),
+   decl(get_ready(dual('Ready'), dual('Person'), dual('Integer'))),
+   clause(get_ready(ready(var('R?')), var('_'), var('_')), [], [rated(say(slot(var('R'))), rate(1, day))]),
    decl(say(dual('Slot'('YesNo')))),
    clause(say(slot(yes)), [], []),
    binds('Panel', judge_fast),
-   decl(judge_fast(dual('Panel'), dual('Integer'))),
-   clause(judge_fast(panel(var('Cs')), var('_')), [], [judge_cards(var('Cs?'))]),
+   decl(judge_fast(dual('Panel'), dual('Person'), dual('Integer'))),
+   clause(judge_fast(panel(var('Cs')), var('_'), var('_')), [], [judge_cards(var('Cs?'))]),
    decl(judge_cards(dual('List'('Card')))),
    clause(judge_cards([card(var('_'), var('A?')) | var('Cs')]), [],
           [rated(verdict(slot(var('A'))), rate(3600, hour)), judge_cards(var('Cs?'))]),

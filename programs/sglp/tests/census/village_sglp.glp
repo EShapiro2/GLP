@@ -1,0 +1,137 @@
+%% Test (xx)'s sGLP source, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form").  Its surface form:
+%%
+%%   Attr   ::= age(Integer) ; kids(Integer).
+%%   Person ::= person(Constant, Constant, List(Attr)).
+%%
+%%   procedure village(Integer?, List(Person)).
+%%   village(S, Ps?) :- random(S?, 5, K, _), family(K?, Ps).
+%%   procedure family(Integer?, List(Person)).
+%%   family(1, [person(ann, parent, [kids(1)]), person(bea, child, [age(7)])]).
+%%   family(2, [person(ann, parent, [kids(2)]), person(bea, child, [age(7)]),
+%%              person(cal, child, [age(5)])]).
+%%   family(3, [person(ann, parent, [kids(3)]), person(bea, child, [age(7)]),
+%%              person(cal, child, [age(5)]), person(dov, child, [age(3)])]).
+%%   family(4, [person(eve, stranger, [])]).
+%%   family(5, []).
+%%
+%%   person formal.
+%%   Hello =::= formal_hello.
+%%   procedure formal_hello(Hello?, Person?, Integer?).
+%%   formal_hello(hello(K?, N?), person(Me, _, _), _) :-
+%%       greet_back(Me?, slot(K), slot(N)) @ 1/hour.
+%%   procedure greet_back(Constant?, Slot(Constant)?, Slot(Integer)?).
+%%   greet_back(Me, slot(Me?), slot(N?)) :- seen(L), length(L?, N).
+%%
+%%   person kind.
+%%   Mood =::= kind_mood.
+%%   procedure kind_mood(Mood?, Person?, Integer?).
+%%   kind_mood(mood(M?), _, _) :- tell(slot(M), kind) @ 1/hour.
+%%   procedure tell(Slot(Constant)?, Constant?).
+%%   tell(slot(V?), V).
+%%
+%%   person grumpy.
+%%   Mood =::= grumpy_mood.
+%%   procedure grumpy_mood(Mood?, Person?, Integer?).
+%%   grumpy_mood(mood(M?), _, _) :- tell(slot(M), grumpy) @ 1/hour.
+%%
+%%   person casual.
+%%   Hello =::= casual_hello.
+%%   Mood =::= casual_mood.
+%%   procedure casual_hello(Hello?, Person?, Integer?).
+%%   casual_hello(hello(K?, A?), H, _) :- say_age(H?, slot(K), slot(A)) @ 1/hour.
+%%   procedure say_age(Person?, Slot(Constant)?, Slot(Integer)?).
+%%   say_age(person(Me, _, As), slot(Me?), slot(Ag?)) :- age_of(As?, Ag).
+%%   procedure age_of(List(Attr)?, Integer).
+%%   age_of([], 0).
+%%   age_of([age(A) | _], A?).
+%%   age_of([kids(_) | As], A?) :- age_of(As?, A).
+%%   procedure casual_mood(Mood?, Person?, Integer?).
+%%   casual_mood(mood(M?), _, _) :- tell(slot(M), happy) @ 1/hour.
+%%
+%%   run village [greeting of parent ~ (formal : 1.0),
+%%                temper of parent ~ (kind : 0.5 ; grumpy : 0.5),
+%%                play of child ~ (casual : 1.0)]
+%%       until 1 day seed 20260927.
+%%
+%% The census, village, draws a family from its seed: a parent, ann, its
+%% attribute the number of its children, and one to three children, each its
+%% age, two roles; or, for a test of the run's refusal, a person of a role of
+%% no dimension, eve, a stranger, or nobody (Section 3, after Definition
+%% "Well-Formed": "the run refuses a census that draws no person, or a person
+%% of a role of no dimension").  A parent has two dimensions, greeting and
+%% temper, and a child one, play, which declares both questions (Section 3,
+%% after Definition "Stochastic Person, Population").  The formal parent
+%% greets with its key and the number of the program's elements it has seen,
+%% the program writing nothing to its person, so none; the child with its key
+%% and its age, both read off its person, age_of taking every list of
+%% attributes, as the type checker requires of every input path; tell is
+%% defined once and its profiles' programs share it.
+%%
+%% transform.sh prints from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface (village.vglp) and its compiled program's
+  %% predicates (village.glp).
+  [type('Hello', [hello(dual('Constant'), dual('Integer'))]),
+   type('Mood', [mood(dual('Constant'))]),
+   volitional('Hello', '\'Hello\'', hello_w, greet('Constant', 'Integer')),
+   volitional('Mood', '\'Mood\'', mood_w, feel('Constant')),
+   compiled(greet, 3), compiled(greet1, 4), compiled(feel, 2), compiled(feel1, 3),
+   compiled(talk, 2)],
+
+  %% The census, its types, the profiles and the run declaration.
+  [type('Attr', [age('Integer'), kids('Integer')]),
+   type('Person', [person('Constant', 'Constant', 'List'('Attr'))]),
+   decl(village(dual('Integer'), 'List'('Person'))),
+   clause(village(var('S'), var('Ps?')), [], [random(var('S?'), 5, var('K'), var('_')), family(var('K?'), var('Ps'))]),
+   decl(family(dual('Integer'), 'List'('Person'))),
+   clause(family(1, [person(ann, parent, [kids(1)]), person(bea, child, [age(7)])]), [], []),
+   clause(family(2, [person(ann, parent, [kids(2)]), person(bea, child, [age(7)]),
+                     person(cal, child, [age(5)])]), [], []),
+   clause(family(3, [person(ann, parent, [kids(3)]), person(bea, child, [age(7)]),
+                     person(cal, child, [age(5)]), person(dov, child, [age(3)])]), [], []),
+   clause(family(4, [person(eve, stranger, [])]), [], []),
+   clause(family(5, []), [], []),
+
+   person(formal),
+   binds('Hello', formal_hello),
+   decl(formal_hello(dual('Hello'), dual('Person'), dual('Integer'))),
+   clause(formal_hello(hello(var('K?'), var('N?')), person(var('Me'), var('_'), var('_')), var('_')), [],
+          [rated(greet_back(var('Me?'), slot(var('K')), slot(var('N'))), rate(1, hour))]),
+   decl(greet_back(dual('Constant'), dual('Slot'('Constant')), dual('Slot'('Integer')))),
+   clause(greet_back(var('Me'), slot(var('Me?')), slot(var('N?'))), [], [seen(var('L')), length(var('L?'), var('N'))]),
+
+   person(kind),
+   binds('Mood', kind_mood),
+   decl(kind_mood(dual('Mood'), dual('Person'), dual('Integer'))),
+   clause(kind_mood(mood(var('M?')), var('_'), var('_')), [], [rated(tell(slot(var('M')), kind), rate(1, hour))]),
+   decl(tell(dual('Slot'('Constant')), dual('Constant'))),
+   clause(tell(slot(var('V?')), var('V')), [], []),
+
+   person(grumpy),
+   binds('Mood', grumpy_mood),
+   decl(grumpy_mood(dual('Mood'), dual('Person'), dual('Integer'))),
+   clause(grumpy_mood(mood(var('M?')), var('_'), var('_')), [], [rated(tell(slot(var('M')), grumpy), rate(1, hour))]),
+
+   person(casual),
+   binds('Hello', casual_hello),
+   binds('Mood', casual_mood),
+   decl(casual_hello(dual('Hello'), dual('Person'), dual('Integer'))),
+   clause(casual_hello(hello(var('K?'), var('A?')), var('H'), var('_')), [],
+          [rated(say_age(var('H?'), slot(var('K')), slot(var('A'))), rate(1, hour))]),
+   decl(say_age(dual('Person'), dual('Slot'('Constant')), dual('Slot'('Integer')))),
+   clause(say_age(person(var('Me'), var('_'), var('As')), slot(var('Me?')), slot(var('Ag?'))), [], [age_of(var('As?'), var('Ag'))]),
+   decl(age_of(dual('List'('Attr')), 'Integer')),
+   clause(age_of([], 0), [], []),
+   clause(age_of([age(var('A')) | var('_')], var('A?')), [], []),
+   clause(age_of([kids(var('_')) | var('As')], var('A?')), [], [age_of(var('As?'), var('A'))]),
+   decl(casual_mood(dual('Mood'), dual('Person'), dual('Integer'))),
+   clause(casual_mood(mood(var('M?')), var('_'), var('_')), [], [rated(tell(slot(var('M')), happy), rate(1, hour))]),
+
+   run(village,
+       [mix(greeting, parent, [share(formal, 1.0)]),
+        mix(temper, parent, [share(kind, 0.5), share(grumpy, 0.5)]),
+        mix(play, child, [share(casual, 1.0)])],
+       1, day, 20260927)]).

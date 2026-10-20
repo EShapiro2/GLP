@@ -3,8 +3,10 @@
 # svGLP-Stochastic-Volitional-GLP at d2f64b6) and its code tasks of 2026-10-02
 # 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, items 1 to 4, and
 # 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2, 08:58 UTC, 09:22 UTC and
-# 09:45 UTC, the transformation of 2026-10-03 09:27 UTC, and sGLP's tasks 5 to
-# 8 of 2026-10-09 22:01 UTC and 2026-10-10 07:59, 08:14 and 09:33 UTC.
+# 09:45 UTC, the transformation of 2026-10-03 09:27 UTC, sGLP's tasks 5 to 8 of
+# 2026-10-09 22:01 UTC and 2026-10-10 07:59, 08:14 and 09:33 UTC, and sGLP's
+# task of 2026-10-20 08:00 UTC, at sGLP 0270ac6: the census, roles, the person,
+# the screen and the log.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -148,7 +150,22 @@
 #       2026-10-14 09:54 UTC, item 2, where the single-answer check of task 6,
 #       (b), is removed with Definition "Single-Answer"); and a profile whose
 #       predicate is the compiled program's refused (Section 3, Definition
-#       "Well-Formed").
+#       "Well-Formed").  The census, roles, the person and the screen (sGLP's
+#       task of 2026-10-20 08:00 UTC, items 1 to 4; Section 3, Definitions
+#       "Person, Census", "Dual, Person Procedure, Person Declaration",
+#       "Profile, Dimension", "Well-Formed" and "Screen, Seen"): every person
+#       procedure takes its person second and the monitor's and the screen's
+#       references last, and the person process, its guard the person ground,
+#       hands each person goal its person; a census of two roles is
+#       translated, the census exported from the profiles module and called by
+#       the population's persons/5, which refuses a person of a role of no
+#       dimension, the stochastic person of each role its functor the role and
+#       one profile per dimension of the role, a person procedure shared by two
+#       profiles; and refused: a role whose dimensions do not cover the
+#       interactive types, a census undeclared, a person procedure without the
+#       person, a platform defining Person or seen, a profile defining seen, a
+#       Person not of the terms person(K, Role, V); and seen(L), in the printed
+#       profiles of (xix), the request seen(L) on the screen's reference.
 # (xi)  a run with an interactive type in reader mode (tests/reader): five
 #       ratings of the person, each logged once in the order of time and read
 #       by the program; the population printed by transform.sh before the
@@ -208,9 +225,30 @@
 #       from seed 20260927 writing one log and seed 1 another, each menu showing
 #       its agent's own key and the people it knows, the scripted person asking
 #       to meet the other, then proposing, and an attempt to befriend approved
-#       at the other; the population's draw beside the log; and a simulation
-#       record in a scratch root (cva/record.sh), its check passing on it and
-#       failing on its log or its printed population changed.
+#       at the other, and each element of the program's output each agent's
+#       screen shows, output, a view or a notice (sGLP's task of 2026-10-20
+#       08:00 UTC, items 4 and 5); the population's draw beside the log; a
+#       simulation record in a scratch root (cva/record.sh), its check passing
+#       on it and failing on its log or its printed population changed; and a
+#       census over the platform, tests/cva/census_sglp.glp, two persons keyed
+#       by the platform's keys, a host of two dimensions and a guest of one,
+#       run with census for its agents (cva/run.sh), its draw, its menus showing
+#       each agent's person's key, and a record of it and its check.
+# (xix) the screen (tests/screen; sGLP's task of 2026-10-20 08:00 UTC, items 4,
+#       5 and 7): a program writing note(N1), N1 not ground until the person's
+#       first count, and note(9) after it; the person answering each count with
+#       the number of notes seen, seen(L): 0 before the notes are shown, the
+#       first holding back the second, and 2 after; the log's output lines,
+#       each note as the screen shows it, in order.
+# (xx)  a census (tests/census; sGLP's task of 2026-10-20 08:00 UTC, items 1 to
+#       4 and 7): the census village drawing a parent and one to three
+#       children, two roles with attributes; a parent of two dimensions and a
+#       child of one; each agent the census's person in its order, greeting
+#       with the key and the attribute its person gives it, the parent with the
+#       number of elements seen, none, the program defining no Output; the
+#       draw each agent's stochastic person of its role; and the run refused
+#       for a census drawing nobody and one drawing a person of a role of no
+#       dimension.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -535,7 +573,7 @@ check "the printed modules are what the transformation prints from the sGLP sour
 # of profile p answering it after a rated goal of ans; BAD has p's dimension at
 # 0.5 and a profile r in no dimension, GOOD neither.
 V="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A')))]"
-P="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Integer'))), clause(p_q(var('X'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q(a)), [], [])"
+P="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Person'), dual('Integer'))), clause(p_q(var('X'), var('_'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q(a)), [], [])"
 repl "$WORK/txbad.out" ':limit 1000000000000' "$HERE" \
     "transform_terms($V, [$P, person(r), run(2, [mix(d, [share(p, 0.5)])], 1, day, 1)], profiles)."
 repl "$WORK/txgood.out" ':limit 1000000000000' "$HERE" \
@@ -551,30 +589,30 @@ check "a source with a dimension not summing to one and a profile in no dimensio
 ! grep -q '^%% not transformed' "$WORK/txgood.lines" &&
     grep -q '^ans(go, q(a))$' "$WORK/txgood.lines" &&
     grep -A 1 '^ans(stop, _)$' "$WORK/txgood.lines" | tr '\n' ' ' | grep -q '^ans(stop, _) \. $' &&
-    grep -q '^p_q(X, _, Mon)$' "$WORK/txgood.lines" &&
+    grep -q '^p_q(X, _, _, Mon, _)$' "$WORK/txgood.lines" &&
     grep -q "^stream_append(rated('/'(1, day), Tok), Mon?, _)$" "$WORK/txgood.lines" &&
     grep -q '^ans(Tok?, X?)$' "$WORK/txgood.lines" &&
     grep -q '^Ask ::= ask(Constant, Question).$' "$WORK/txgood.lines" &&
     grep -A 2 '^Question$' "$WORK/txgood.lines" | tr '\n' ' ' | grep -q '^Question ::= q_w(Q) $' &&
-    grep -q "^person(A, profiles(p), Mon, Seed, Log, \\[ask('Q', q_w(E)) | As\\])$" "$WORK/txgood.lines" &&
+    grep -q "^person(A, agent(p), H, Mon, Scr, Seed, Log, \\[ask('Q', q_w(E)) | As\\])$" "$WORK/txgood.lines" &&
     grep -q "^relay_1(A?, 'Q', E?, Y, Mon?, Log?)$" "$WORK/txgood.lines" &&
     grep -q '^relay_1(A, Type, q(X1?), q(Y1), Mon, Log)$' "$WORK/txgood.lines" &&
     grep -q '^random(Seed?, 2147483646, K, S)$' "$WORK/txgood.lines" &&
-    grep -q '^p_q(Y?, K?, Mon?)$' "$WORK/txgood.lines" &&
-    grep -q '^person(A?, profiles(p), Mon?, S?, Log?, As?)$' "$WORK/txgood.lines" &&
+    grep -q '^p_q(Y?, H?, K?, Mon?, Scr?)$' "$WORK/txgood.lines" &&
+    grep -q '^person(A?, agent(p), H?, Mon?, Scr?, S?, Log?, As?)$' "$WORK/txgood.lines" &&
     ! grep -q '^random(Seed?, 1, _, S)$' "$WORK/txgood.lines" &&
     grep -q '^declaration(2, 1, day, 1)$' "$WORK/txgood.lines" &&
     grep -q '^d(_, p)$' "$WORK/txgood.lines"
-check "the mended source is translated: the token, its stop clause dropping the arguments, the monitor's reference, the asks, the person process's clause on an ask and its seeding, the declaration and the draw" $?
+check "the mended source is translated: the token, its stop clause dropping the arguments, the monitor's and the screen's references, the asks, the person process's clause on an ask, its person and its seeding, the declaration and the draw" $?
 # Reader mode: one interactive type Rating in reader mode, (Rating?)*rate, the
 # person procedure fair_rating of profile fair writing the whole term, a
 # rating of 1..5, after a rated goal of give, which receives the writer in a
 # slot it reads (sGLP's paper, Section 4, at 3007ad5); and BV, a reader-mode type Bid
 # with an argument the program writes, Reply?.
 RV="[type('Rating', [rating('Integer')]), volitional(dual('Rating'), '\'Rating?\'', rating_r, rate('Integer'))]"
-RP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Integer'))), clause(fair_rating(var('R?'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), slot(var('R'))), rate(1, day))]), decl(give(dual('Integer'), dual('Slot'('Rating')))), clause(give(var('K'), slot(rating(var('K?')))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
+RP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Person'), dual('Integer'))), clause(fair_rating(var('R?'), var('_'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), slot(var('R'))), rate(1, day))]), decl(give(dual('Integer'), dual('Slot'('Rating')))), clause(give(var('K'), slot(rating(var('K?')))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
 BV="[type('Reply', [ok, no]), type('Bid', [bid('Integer', dual('Reply'))]), volitional(dual('Bid'), '\'Bid?\'', bid_r, offer('Integer'))]"
-BP="person(fair), binds('Bid', fair_bid), decl(fair_bid('Bid', dual('Integer'))), clause(fair_bid(bid(1, var('_')), var('_')), [], []), run(1, [mix(bidder, [share(fair, 1.0)])], 30, days, 1)"
+BP="person(fair), binds('Bid', fair_bid), decl(fair_bid('Bid', dual('Person'), dual('Integer'))), clause(fair_bid(bid(1, var('_')), var('_'), var('_')), [], []), run(1, [mix(bidder, [share(fair, 1.0)])], 30, days, 1)"
 repl "$WORK/txreader.out" ':limit 1000000000000' "$HERE" \
     "transform_terms($RV, [$RP], profiles)." \
     "transform_terms($RV, [$RP], population)." \
@@ -584,25 +622,25 @@ sed 's/^\(GLP> \)*//' "$WORK/txreader.out" > "$WORK/txreader.lines"
 awk '$0 == "%% transform begin" { k++; next } $0 == "%% transform end" { next } k == 2' "$WORK/txreader.lines" > "$WORK/txreader.pop"
 awk '$0 == "%% transform begin" { k++; next } $0 == "%% transform end" { next } k == 3' "$WORK/txreader.lines" > "$WORK/txreader.bid"
 ! grep -q '^%% not transformed' "$WORK/txreader.pop" &&
-    grep -q '^fair_rating(R?, S, Mon)$' "$WORK/txreader.lines" &&
-    grep -A 5 '^fair_rating$' "$WORK/txreader.pop" | tr '\n' ' ' | grep -q '^fair_rating ( Rating , Integer? , ' &&
-    grep -A 3 "^person(A, profiles(fair), Mon, Seed, Log, \\[ask('Rating?', rating_r(E?)) | As\\])$" "$WORK/txreader.pop" | tr '\n' ' ' |
-        grep -q ' :- random(Seed?, 2147483646, K, S) , $' &&
-    grep -q '^fair_rating(Y, K?, Mon?)$' "$WORK/txreader.pop" &&
+    grep -q '^fair_rating(R?, _, S, Mon, _)$' "$WORK/txreader.lines" &&
+    grep -A 8 '^fair_rating$' "$WORK/txreader.pop" | tr '\n' ' ' | grep -q '^fair_rating ( Rating , Person ? , Integer? , ' &&
+    grep -A 5 "^person(A, agent(fair), H, Mon, Scr, Seed, Log, \\[ask('Rating?', rating_r(E?)) | As\\])$" "$WORK/txreader.pop" | tr '\n' ' ' |
+        grep -q ' :- ground(H?) | random(Seed?, 2147483646, K, S) , $' &&
+    grep -q '^fair_rating(Y, H?, K?, Mon?, Scr?)$' "$WORK/txreader.pop" &&
     grep -q "^relay_1(A?, 'Rating?', E, Y?, Mon?, Log?)$" "$WORK/txreader.pop" &&
     grep -A 19 '^relay_1$' "$WORK/txreader.pop" | tr '\n' ' ' |
         grep -q '^relay_1 ( Integer? , Constant? , Rating , Rating ? , MutualRef? , MutualRef? ) \. relay_1(A, Type, X?, Y, Mon, Log) :- answer_1(A?, Type?, Y?, X, Mon?, Log?) \. ' &&
-    grep -q '^person(A?, profiles(fair), Mon?, S?, Log?, As?)$' "$WORK/txreader.pop" &&
+    grep -q '^person(A?, agent(fair), H?, Mon?, Scr?, S?, Log?, As?)$' "$WORK/txreader.pop" &&
     grep -A 16 '^answer_1$' "$WORK/txreader.pop" | tr '\n' ' ' |
         grep -q '^answer_1 ( Integer? , Constant? , Rating ? , Rating , MutualRef? , MutualRef? ) . ' &&
     grep -A 5 '^answer_1(A, Type, Y, Y?, Mon, Log)$' "$WORK/txreader.pop" | tr '\n' ' ' |
         grep -q ' :- ground(Y?) | stream_append(time(Time), Mon?, _) , $' &&
     grep -q '^stream_append(entry(Time?, A?, Type?, Y?), Log?, _)$' "$WORK/txreader.pop" &&
     ! grep -q 'rating(rating(' "$WORK/txreader.pop"
-check "in reader mode the person goal receives a writer and the program the reader: the person procedure of the dual type, the ask chosen by its type constant and taken apart to its functor only, rating_r(E?), and the relay over its own type, relay_1(Rating, Rating?), the answer assigned from the copy and logged (Definitions \"Copy, Relay\" and \"Person Process\", sGLP a5aa59b; sGLP's task of 2026-10-14 09:46 UTC, items 1 and 3)" $?
+check "in reader mode the person goal receives a writer and the program the reader: the person procedure of the dual type, its person second, the ask chosen by its type constant and taken apart to its functor only, rating_r(E?), the person ground, and the relay over its own type, relay_1(Rating, Rating?), the answer assigned from the copy and logged (Definitions \"Copy, Relay\" and \"Person Process\", sGLP a5aa59b and 0270ac6; sGLP's task of 2026-10-14 09:46 UTC, items 1 and 3)" $?
 ! grep -q '^%% not transformed' "$WORK/txreader.bid" &&
-    grep -q "^person(A, profiles(fair), Mon, Seed, Log, \\[ask('Bid?', bid_r(E?)) | As\\])$" "$WORK/txreader.bid" &&
-    grep -q '^fair_bid(Y, K?, Mon?)$' "$WORK/txreader.bid" &&
+    grep -q "^person(A, agent(fair), H, Mon, Scr, Seed, Log, \\[ask('Bid?', bid_r(E?)) | As\\])$" "$WORK/txreader.bid" &&
+    grep -q '^fair_bid(Y, H?, K?, Mon?, Scr?)$' "$WORK/txreader.bid" &&
     grep -q "^relay_1(A?, 'Bid?', E, Y?, Mon?, Log?)$" "$WORK/txreader.bid" &&
     grep -q '^answer_1(A?, Type?, Y?, X, Mon?, Log?)$' "$WORK/txreader.bid" &&
     grep -A 9 '^answer_1(A, Type, bid(Z1, Z2?), bid(Z1?, Z3), Mon, Log)$' "$WORK/txreader.bid" | tr '\n' ' ' |
@@ -621,10 +659,10 @@ check "a reader-mode type with an argument the program writes is translated: the
 # sGLP's task of 2026-10-14 09:54 UTC, item 2); CV, the mended source's
 # interface naming ans/1 a predicate of the compiled program.
 PV="[type('Status', [sent, read]), type('Line', [line('String', dual('Status'))]), type('Post', [post('Integer', dual('Line'))]), volitional('Post', '\'Post\'', post_w, poster('Integer'))]"
-PP="person(p), binds('Post', p_post), decl(p_post(dual('Post'), dual('Integer'))), clause(p_post(post(var('_'), line(hi, var('_'))), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
+PP="person(p), binds('Post', p_post), decl(p_post(dual('Post'), dual('Person'), dual('Integer'))), clause(p_post(post(var('_'), line(hi, var('_'))), var('_'), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
 NV="[type('YesNo', [yes, no]), type('Card', [card('Integer', dual('YesNo'))]), type('Panel', [panel('List'('Card'))]), type('List'('X'), [[], ['X' | 'List'('X')]]), volitional('Panel', '\'Panel\'', panel_w, show('Integer'))]"
-NP="person(p), binds('Panel', p_panel), decl(p_panel(dual('Panel'), dual('Integer'))), clause(p_panel(var('_'), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
-OP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Integer'))), clause(fair_rating(var('R?'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), var('R')), rate(1, day))]), decl(give(dual('Integer'), 'Rating')), clause(give(var('K'), rating(var('K?'))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
+NP="person(p), binds('Panel', p_panel), decl(p_panel(dual('Panel'), dual('Person'), dual('Integer'))), clause(p_panel(var('_'), var('_'), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
+OP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Person'), dual('Integer'))), clause(fair_rating(var('R?'), var('_'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), var('R')), rate(1, day))]), decl(give(dual('Integer'), 'Rating')), clause(give(var('K'), rating(var('K?'))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
 CV="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A'))), compiled(ask, 2), compiled(ask1, 3), compiled(ans, 1)]"
 repl "$WORK/txmoded.out" ':limit 1000000000000' "$HERE" \
     "transform_terms($PV, [$PP], population)." \
@@ -636,8 +674,8 @@ for k in 1 2 3 4; do
     awk -v k="$k" '$0 == "%% transform begin" { n++; next } $0 == "%% transform end" { next } n == k' "$WORK/txmoded.lines" > "$WORK/txmoded.$k"
 done
 ! grep -q '^%% not transformed' "$WORK/txmoded.1" &&
-    grep -q "^person(A, profiles(p), Mon, Seed, Log, \\[ask('Post', post_w(E)) | As\\])$" "$WORK/txmoded.1" &&
-    grep -q '^p_post(Y?, K?, Mon?)$' "$WORK/txmoded.1" &&
+    grep -q "^person(A, agent(p), H, Mon, Scr, Seed, Log, \\[ask('Post', post_w(E)) | As\\])$" "$WORK/txmoded.1" &&
+    grep -q '^p_post(Y?, H?, K?, Mon?, Scr?)$' "$WORK/txmoded.1" &&
     grep -q '^relay_1(A, Type, post(X1, X2?), post(X1?, Y2), Mon, Log)$' "$WORK/txmoded.1" &&
     grep -q '^answer_1(A?, Type?, X1?, Y2?, X2, Mon?, Log?)$' "$WORK/txmoded.1" &&
     grep -A 9 '^answer_1(A, Type, X1, line(Z1, Z2?), line(Z1?, Z3), Mon, Log)$' "$WORK/txmoded.1" | tr '\n' ' ' |
@@ -650,7 +688,7 @@ check "in writer mode an answer holding a position the program writes is handed 
 # question of its own and logged in the panel as shown whole.
 tr '\n' ' ' < "$WORK/txmoded.2" > "$WORK/txmoded.2.flat"
 ! grep -q '^%% not transformed' "$WORK/txmoded.2" &&
-    grep -q "person(A, profiles(p), Mon, Seed, Log, \[ask('Panel', panel_w(E)) | As\]) :- random(Seed?, 2147483646, K, S) , profiles # p_panel(Y?, K?, Mon?) , relay_1(A?, 'Panel', E?, Y, Mon?, Log?) , person(A?, profiles(p), Mon?, S?, Log?, As?) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "person(A, agent(p), H, Mon, Scr, Seed, Log, \[ask('Panel', panel_w(E)) | As\]) :- ground(H?) | random(Seed?, 2147483646, K, S) , profiles # p_panel(Y?, H?, K?, Mon?, Scr?) , relay_1(A?, 'Panel', E?, Y, Mon?, Log?) , person(A?, agent(p), H?, Mon?, Scr?, S?, Log?, As?) \. " "$WORK/txmoded.2.flat" &&
     grep -q "relay_1(A, Type, X, Y?, Mon, Log) :- no_readers(X?) | present_1(A?, Type?, X?, B, S, 1, _, Fs, \[\], Mon?, Log?) , show_whole(B?, S?, Fs?, Y) \. " "$WORK/txmoded.2.flat" &&
     [ "$(grep -c '^relay_1(A, Type, ' "$WORK/txmoded.2")" -eq 1 ] && ! grep -q '^relay_1(_, ' "$WORK/txmoded.2" &&
     grep -q "present_1(_, _, panel(\[\]), panel(\[\]), panel(\[\]), C0, C0?, Fs0?, Fs0, _, _) \. " "$WORK/txmoded.2.flat" &&
@@ -665,6 +703,81 @@ check "a rated goal whose procedure has an output argument is refused, nothing p
 grep -q "^%% not transformed: a predicate of a profile's program that is the compiled program's(key(ans, 1))$" "$WORK/txmoded.4" &&
     [ "$(grep -c '^%% not transformed' "$WORK/txmoded.4")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.4"
 check "a profile whose predicate is the compiled program's is refused with that fault, nothing printed" $?
+
+# The census, roles, the person and the screen (sGLP's task of 2026-10-20
+# 08:00 UTC, items 1 to 4; sGLP's paper at 0270ac6, Section 3, Definitions
+# "Person, Census", "Dual, Person Procedure, Person Declaration", "Profile,
+# Dimension", "Well-Formed" and "Screen, Seen"): CW, a census w drawing a
+# person of the role r1 and one of the role r2, with its Person; P1 and P2,
+# profiles of a dimension of r1 and of r2, P2 sharing P1's person procedure;
+# and the refusals: a dimension of a role not covering the interactive types,
+# a census undeclared, a person procedure without the person, a platform
+# defining Person or seen, a profile defining seen, and a Person not of the
+# terms person(K, Role, V).
+CW="type('Person', [person('Constant', 'Constant', 'List'('Constant'))]), decl(w(dual('Integer'), 'List'('Person'))), clause(w(var('_'), [person(k1, r1, []), person(k2, r2, [])]), [], [])"
+P1="person(p1), binds('Q', p1_q), decl(p1_q(dual('Q'), dual('Person'), dual('Integer'))), clause(p1_q(var('X'), var('_'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q(a)), [], [])"
+P2="person(p2), binds('Q', p1_q)"
+RUN2="run(w, [mix(d1, r1, [share(p1, 1.0)]), mix(d2, r2, [share(p2, 1.0)])], 1, day, 1)"
+OLDP="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Integer'))), clause(p_q(var('X'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q(a)), [], [])"
+VP="[type('A', [a]), type('Q', [q(dual('A'))]), type('Person', [person('Constant', 'Constant', 'List'('Constant'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A')))]"
+VS="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A'))), compiled(seen, 1)]"
+RUN1="run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)"
+repl "$WORK/txcensus.out" ':limit 1000000000000' "$HERE" \
+    "transform_terms($V, [$CW, $P1, $P2, $RUN2], profiles)." \
+    "transform_terms($V, [$CW, $P1, $P2, $RUN2], population)." \
+    "transform_terms($V, [$CW, $P1, person(p3), run(w, [mix(d1, r1, [share(p1, 1.0)]), mix(d2, r2, [share(p3, 1.0)])], 1, day, 1)], population)." \
+    "transform_terms($V, [$P1, run(v, [mix(d1, [share(p1, 1.0)])], 1, day, 1)], population)." \
+    "transform_terms($V, [$OLDP, $RUN1], population)." \
+    "transform_terms($VP, [$P, $RUN1], population)." \
+    "transform_terms($VS, [$P, $RUN1], population)." \
+    "transform_terms($V, [$P, decl(seen(dual('Integer'))), clause(seen(1), [], []), $RUN1], population)." \
+    "transform_terms($V, [type('Person', [someone('Constant')]), $P, $RUN1], population)."
+sed 's/^\(GLP> \)*//' "$WORK/txcensus.out" > "$WORK/txcensus.lines"
+for k in 1 2 3 4 5 6 7 8 9; do
+    awk -v k="$k" '$0 == "%% transform begin" { n++; next } $0 == "%% transform end" { next } n == k' "$WORK/txcensus.lines" > "$WORK/txcensus.$k"
+done
+tr '\n' ' ' < "$WORK/txcensus.1" > "$WORK/txcensus.1.flat"
+tr '\n' ' ' < "$WORK/txcensus.2" > "$WORK/txcensus.2.flat"
+! grep -q '^%% not transformed' "$WORK/txcensus.1" "$WORK/txcensus.2" &&
+    grep -q "Person ::= person(Constant, Constant, List(Constant)) \. exported procedure w ( Integer? , List(Person) ) \. w(_, \[person(k1, r1, \[\]), person(k2, r2, \[\])\]) \. " "$WORK/txcensus.1.flat" &&
+    ! grep -q "the source defines no Person" "$WORK/txcensus.1" &&
+    grep -q "exported procedure p1_q ( Q ? , Person ? , Integer? , MutualRef? , MutualRef? ) \. p1_q(X, _, _, Mon, _) :- stream_append(rated('/'(1, day), Tok), Mon?, _) , ans(Tok?, X?) \. " "$WORK/txcensus.1.flat" &&
+    grep -q "Profiles ::= r1(Dimension1) ; r2(Dimension2) \. " "$WORK/txcensus.2.flat" &&
+    grep -q "imported procedure profiles # w ( Integer? , List(Person) ) \. " "$WORK/txcensus.2.flat" &&
+    grep -q "person(A, r1(p1), H, Mon, Scr, Seed, Log, \[ask('Q', q_w(E)) | As\]) :- ground(H?) | random(Seed?, 2147483646, K, S) , profiles # p1_q(Y?, H?, K?, Mon?, Scr?) , " "$WORK/txcensus.2.flat" &&
+    grep -q "person(A, r2(p2), H, Mon, Scr, Seed, Log, \[ask('Q', q_w(E)) | As\]) :- ground(H?) | random(Seed?, 2147483646, K, S) , profiles # p1_q(Y?, H?, K?, Mon?, Scr?) , " "$WORK/txcensus.2.flat" &&
+    grep -q "declaration(w, 1, day, 1) \. " "$WORK/txcensus.2.flat" &&
+    grep -q "persons(B, _, Ok?, Ps?, B1?) :- integer(B?) | profiles # w(B?, Ps0) , checked(Ps0?, Ok, Ps) , skip(4096, B?, B1) \. " "$WORK/txcensus.2.flat" &&
+    grep -q "roles_ok(\[person(_, r1, _) | Ps\], Ok?) :- roles_ok(Ps?, Ok) \. roles_ok(\[person(_, r2, _) | Ps\], Ok?) :- roles_ok(Ps?, Ok) \. roles_ok(\[_|_\], no) :- otherwise | true\." "$WORK/txcensus.2.flat" &&
+    grep -q "stochastic_person(B, person(_, r1, _), r1(P1?), S?) :- random(B?, 100, K1, S) , d1(K1?, P1) \. stochastic_person(B, person(_, r2, _), r2(P1?), S?) :- random(B?, 100, K1, S) , d2(K1?, P1) \. " "$WORK/txcensus.2.flat" &&
+    grep -q "screen(A, \[E|O\], Os, Rs, Mon, Log) :- ground(E?) | stream_append(time(Time), Mon?, _), stream_append(entry(Time?, A?, output, E?), Log?, _), screen(A?, O?, \[E?|Os?\], Rs?, Mon?, Log?)\. screen(A, O, Os, \[seen(Os?)|Rs\], Mon, Log) :- ground(Os?) | screen(A?, O?, Os?, Rs?, Mon?, Log?)\. screen(_, \[\], _, \[\], _, _)\." "$WORK/txcensus.2.flat"
+check "a census of two roles is translated: the census exported from the profiles module and called by the persons of the run, which the run refuses where a person is of a role of no dimension; the stochastic person of each role, its functor the role, one profile per dimension of its role; a person procedure shared by two profiles; the person process giving each person goal its person; and the screen (Definitions \"Person, Census\", \"Stochastic Person, Population\", \"Screen, Seen\")" $?
+grep -q "^%% not transformed: the types of the dimensions of a role not disjoint or not covering the interactive types(r2)$" "$WORK/txcensus.3" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txcensus.3")" -eq 1 ] && ! grep -q '^person(' "$WORK/txcensus.3"
+check "a role whose dimensions do not cover the interactive types is refused, naming the role, nothing printed (Definition \"Profile, Dimension\": disjoint and covering for each role)" $?
+grep -q "^%% not transformed: a census undeclared, not declared procedure W(Integer?, List(Person)), or holding a rated goal or reaching the screen(v)$" "$WORK/txcensus.4" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txcensus.4")" -eq 1 ]
+check "a run declaration naming a census the source does not declare is refused (Definition \"Person, Census\")" $?
+grep -q "^%% not transformed: a person procedure undeclared or not of the type its declaration requires(p_q)$" "$WORK/txcensus.5" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txcensus.5")" -eq 1 ]
+check "a person procedure declared without the person, p(T°, Integer?), is refused (Definition \"Dual, Person Procedure, Person Declaration\": p(T°, Person?, Integer?))" $?
+grep -q "^%% not transformed: a platform that defines screen, seen, Seen or Person$" "$WORK/txcensus.6" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txcensus.6")" -eq 1 ] &&
+    grep -q "^%% not transformed: a platform that defines screen, seen, Seen or Person$" "$WORK/txcensus.7" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txcensus.7")" -eq 1 ] &&
+    grep -q "^%% not transformed: a profile or the census that defines screen, seen or Seen$" "$WORK/txcensus.8" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txcensus.8")" -eq 1 ]
+check "the reserved names: a platform defining the type Person or the procedure seen, and a profile defining seen, are refused (Definition \"Well-Formed\")" $?
+grep -q "^%% not transformed: a Person of the source not of the terms person(Key, Role, Attributes)$" "$WORK/txcensus.9" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txcensus.9")" -eq 1 ]
+check "a Person the source defines not of the terms person(K, Role, V) is refused (Definition \"Person, Census\")" $?
+# The screen in the printed profiles of tests/screen (test (xix)): seen(L) a
+# request on the screen's reference, which the person procedure and the
+# procedure calling seen take.
+tr '\n' ' ' < "$HERE/tests/screen/profiles.glp" > "$WORK/screenprof.flat"
+grep -q "exported procedure look_count ( Count ? , Person ? , Integer? , MutualRef? , MutualRef? ) \. look_count(C, _, _, Mon, Scr) :- stream_append(rated('/'(1, second), Tok), Mon?, _) , look(Tok?, C?, Scr?) \. " "$WORK/screenprof.flat" &&
+    grep -q "procedure look ( Token? , Count ? , MutualRef? ) \. look(stop, _, _) \. look(go, count(N?), Scr) :- stream_append(seen(L), Scr?, _) , length(L?, N) \. " "$WORK/screenprof.flat"
+check "a goal seen(L) becomes the request seen(L) on the screen's reference, which the person procedure and each procedure reaching the screen take, after the monitor's (Section 4, \"The transformation\")" $?
 
 echo "--- (xi) a run with an interactive type in reader mode"
 # tests/reader: the run declaration's run of one agent asking five ratings
@@ -705,7 +818,7 @@ D="$HERE/tests/delivery/population.glp"
 tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, \[\], \[\], Mon, Log) :- stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[\]), Log?, _) \." &&
     tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, \[msg(Z1, Z2?) | Z4\], \[msg(Z1?, Z3) | Z5?\], Mon, Log) :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[msg(Z1?, '_') | '_'\]), Log?, _) , present_1(A?, Type?, Z3?, Z2, Mon?, Log?) , answer_1(A?, Type?, Z4?, Z5, Mon?, Log?) \." &&
     tr '\n' ' ' < "$D" | grep -q "present_1(_, _, Y, Y?, _, _) :- ground(Y?) | true \." &&
-    tr '\n' ' ' < "$D" | grep -q "person(A, profiles(talker), Mon, Seed, Log, \[ask('Stream(Msg)?', stream_msg_r(E?)) | As\]) :- random(Seed?, 2147483646, K, S) , profiles # talk(Y, K?, Mon?) , relay_1(A?, 'Stream(Msg)?', E, Y?, Mon?, Log?) ," &&
+    tr '\n' ' ' < "$D" | grep -q "person(A, agent(talker), H, Mon, Scr, Seed, Log, \[ask('Stream(Msg)?', stream_msg_r(E?)) | As\]) :- ground(H?) | random(Seed?, 2147483646, K, S) , profiles # talk(Y, H?, K?, Mon?, Scr?) , relay_1(A?, 'Stream(Msg)?', E, Y?, Mon?, Log?) ," &&
     tr '\n' ' ' < "$D" | grep -q "relay_1(A, Type, X?, Y, Mon, Log) :- answer_1(A?, Type?, Y?, X, Mon?, Log?) \."
 check "the printed relay: each element once its text is ground, a fresh writer at its status, whose reader the person process keeps and shows the person goal once ground, the tail the next answer, and the stream's end" $?
 repl "$WORK/delivery.out" ':limit 1000000000000' "$HERE/tests/delivery" 'delivery_run(Ts).'
@@ -945,9 +1058,13 @@ st=$?
 tr '\n' ' ' < "$CVA/printed/population.glp" > "$WORK/cva_pop.flat"
 [ "$st" -eq 0 ] && ! grep -q '^%% not transformed' "$CVA/printed/population.glp" "$CVA/printed/profiles.glp" &&
     grep -q "relay_1(A, Type, menu(X1, X2, X3?), menu(X1?, X2?, Y3), Mon, Log) :- ground(X1?) , ground(X2?) | answer_1(" "$WORK/cva_pop.flat" &&
-    grep -q "stochastic_agent(A, B, Mon, Log, Asks) :- stochastic_person(B?, P, S) , random(S?, 2147483646, Seed, _) , person(A?, P?, Mon?, Seed?, Log?, Asks?) \." "$WORK/cva_pop.flat" &&
-    grep -q "run_declaration(2, 1, day, 20260927) \." "$WORK/cva_pop.flat"
-check "the scripted profiles transformed against the platform's interface (transform.sh --interface): the relay of Menu, the run's entries of one arity" $?
+    grep -q "stochastic_agent(A, B, H, Mon, Log, Asks, O) :- ground(H?) | stochastic_person(B?, H?, P, S) , random(S?, 2147483646, Seed, _) , start_screen(A?, O?, Mon?, Log?, Scr) , person(A?, P?, H?, Mon?, Scr?, Seed?, Log?, Asks?) \." "$WORK/cva_pop.flat" &&
+    grep -q "run_declaration(2, 1, day, 20260927) \." "$WORK/cva_pop.flat" &&
+    grep -q "Person ::= person(Key, Constant, List(Constant))" "$WORK/cva_pop.flat" &&
+    grep -q "Person ::= person(Key, Constant, List(Constant))" "$CVA/printed/profiles.glp" &&
+    grep -q "cva_agents(B, Ks, Mon, Log, Keys?, Seats?) :- persons(B?, Ks?, _, Ps, B1), seats(1, Ps?, B1?, Mon?, Log?, Keys, Seats)\." "$WORK/cva_pop.flat" &&
+    grep -q "Seat ( X ) ::= seat ( Key , Stream(Ask) ? , Stream(X) ? ) \." "$WORK/cva_pop.flat"
+check "the scripted profiles transformed against the platform's interface (transform.sh --interface): the relay of Menu, the person of run n agents keyed by the platform's Key, the run's entries of one arity, each agent's seat, its person process and its screen" $?
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_tx.out"
 for r in a b s1; do
     seed=20260927; [ "$r" = s1 ] && seed=1
@@ -971,11 +1088,16 @@ awk -F'\t' '
         } else if ($3 == "Approval") {
             if ($4 ~ /^approval\(attempt\(p[12], [0-9]+, [0-9]+, befriend\(p[12], p[12]\)\), yes\)$/ && index($4, "attempt(" other ", ")) app++
             else bad++
+        } else if ($3 == "output") {
+            out[$2]++
+            if ($4 !~ /^(view|refused|yielded)\(/) bad++
+            if (out[$2] == 1 && ($1 + 0 != 0 || $4 != "view([], [])")) bad++
+            if (index($4, "view([friend(" other ")")) fr++
         } else bad++
     }
     NF == 1 { c = $1 + 0; clocked = 1 }
-    END { exit !(n > 0 && seen[1] && seen[2] && bef > 0 && est > 0 && app > 0 && clocked && c == last && !bad) }' "$WORK/cva_a.log"
-check "the log: each menu showing its agent's own key and the people it knows, the first answered by asking to meet the other, proposals to establish and to befriend, an attempt of the other's approved yes, in the order of time; the clock last" $?
+    END { exit !(n > 0 && seen[1] && seen[2] && bef > 0 && est > 0 && app > 0 && out[1] > 0 && out[2] > 0 && fr > 0 && clocked && c == last && !bad) }' "$WORK/cva_a.log"
+check "the log: each menu showing its agent's own key and the people it knows, the first answered by asking to meet the other, proposals to establish and to befriend, an attempt of the other's approved yes; and each element of the program's output each agent's screen shows, output, a view or a notice, the first the empty view at 0, a friendship in a view after the approval; in the order of time; the clock last (sGLP's task of 2026-10-20 08:00 UTC, item 5)" $?
 printf 'draw scripted 2 agreeable 2\nagent 1 scripted agreeable\nagent 2 scripted agreeable\n' | cmp -s - "$WORK/cva_a.draw"
 check "the population's draw beside the log: its counts, then agents 1 and 2 with their profiles" $?
 grep -E '^(draw|wall-clock)' "$WORK/cva_a.out" | sed 's/^/        /'
@@ -1010,6 +1132,129 @@ st=$?
 [ "$st" -ne 0 ] && grep -q '^1.log: first day NOT as recorded$' "$WORK/cva_bad.out" &&
     grep -q '^population.glp: NOT as printed$' "$WORK/cva_bad.out" && grep -q '^20260927.log: first day as recorded' "$WORK/cva_bad.out"
 check "the check fails on a record whose log or printed population was changed, naming each" $?
+# A census on the canonical platform (tests/cva/census_sglp.glp; sGLP's task
+# of 2026-10-20 08:00 UTC, items 1, 2 and 7): the census pair draws p1, a
+# host, and p2, a guest, keyed by the platform's keys; a host has two
+# dimensions and a guest one; the run is cva/run.sh's with census for its
+# agents, the agents the persons in the census's order, from the blocks after
+# the census's; and a record of it and its check.
+mkdir -p "$CVA/census"
+bash "$HERE/transform.sh" --interface "$CVA/interface.glp" --source "$HERE/tests/cva/census_sglp.glp" --out "$CVA/census" > "$WORK/cva_ctx.out" 2>&1
+st=$?
+tr '\n' ' ' < "$CVA/census/population.glp" > "$WORK/cva_cpop.flat"
+[ "$st" -eq 0 ] && ! grep -q '^%% not transformed' "$CVA/census/population.glp" "$CVA/census/profiles.glp" &&
+    grep -q "Profiles ::= host(Dimension1, Dimension2) ; guest(Dimension3) \. " "$WORK/cva_cpop.flat" &&
+    grep -q "run_declaration(pair, 1, day, 20260927) \. " "$WORK/cva_cpop.flat" &&
+    grep -q "Seat ( X ) ::= seat ( Key , Stream(Ask) ? , Stream(X) ? ) \. " "$WORK/cva_cpop.flat" &&
+    grep -q "person(A, guest(guest), H, Mon, Scr, Seed, Log, \[ask('Menu', menu_w(E)) | As\]) :- ground(H?) | random(Seed?, 2147483646, K, S) , profiles # script_menu(Y?, H?, K?, Mon?, Scr?) , " "$WORK/cva_cpop.flat"
+check "a census over the canonical platform transformed against its interface: two roles, the guest's one dimension declaring both questions by the host's person procedures, the seats keyed by the platform's Key" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_ctx.out"
+bash "$HERE/cva/run.sh" "$CVA/platform.glp" "$CVA/census" census '1 day' 20260927 "$WORK/cva_c.log" > "$WORK/cva_c.out" 2>&1
+st=$?
+check "the census's two agents on the canonical platform, one day, seed 20260927: the run ends with no error" $st
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_c.out"
+printf 'draw scripted 1 agreeable 1 guest 1\nagent 1 scripted agreeable\nagent 2 guest\n' | cmp -s - "$WORK/cva_c.draw" &&
+    awk -F'\t' '
+        NF == 4 && $3 == "Menu" { if (index($4, "menu(p" $2 ", [") != 1) bad++; m[$2]++ }
+        NF == 4 && $3 == "output" { o[$2]++ }
+        NF == 1 { clocked = 1 }
+        END { exit !(m[1] > 0 && m[2] > 0 && o[1] > 0 && o[2] > 0 && clocked && !bad) }' "$WORK/cva_c.log"
+check "the draw beside the log the host's two profiles and the guest's one, agents 1 and 2 the census's persons in its order; each agent's menus show its person's key, p1 and p2, and its screen's output lines are logged" $?
+mkdir -p "$WORK/simc"
+bash "$HERE/cva/record.sh" GSG "$HERE/tests/cva/census_sglp.glp" --cascade "$CVA" --root "$WORK/simc" > "$WORK/cva_crec.out" 2>&1
+st=$?
+CREC=$(ls -d "$WORK"/simc/GSG/* 2>/dev/null | head -1)
+[ "$st" -eq 0 ] && [ -n "$CREC" ] && grep -q '^- agents: census$' "$CREC/manifest.md" &&
+    cmp -s "$CREC/20260927.log" "$WORK/cva_c.log" &&
+    bash "$HERE/cva/record.sh" --check "$CREC" > "$WORK/cva_cchk.out" 2>&1 &&
+    grep -q '^20260927.log: first day as recorded' "$WORK/cva_cchk.out"
+check "a record of the census's run (cva/record.sh), its agents census, its log the run's, and its check passing on it" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_crec.out"
+
+echo "--- (xix) the screen: seen before and after an element arrives, and the log's output lines"
+# tests/screen: the program writes note(N1), N1 its first count, not ground
+# until the person answers it, and note(9) after it; the person answers each
+# count a second after asked with the number of notes seen (sGLP's task of
+# 2026-10-20 08:00 UTC, items 4, 5 and 7; Section 3, Definition "Screen,
+# Seen"; Section 4, "The screen" and "The log").
+repl "$WORK/screen.out" ':limit 1000000000000' "$HERE/tests/screen" 'screen_run(Ns).'
+sed 's/^\(GLP> \)*//' "$WORK/screen.out" > "$WORK/screen.lines"
+grep -q '^✓ Loaded program' "$WORK/screen.out"
+check "tests/screen loads, its population printed before the run" $?
+awk '
+    /^entry\(/ { e[++n] = $0; t[n] = substr($0, 7, index($0, ",") - 7) + 0 }
+    /^Ns = \[0, 2\]$/ { ns = 1 }
+    /^clock\(/ { c = substr($0, 7, length($0) - 7) + 0; seen = 1 }
+    END {
+        if (e[1] !~ /^entry\([0-9.]+, 1, Count, count\(0\)\)$/) bad++
+        if (e[2] !~ /^entry\([0-9.]+, 1, output, note\(0\)\)$/) bad++
+        if (e[3] !~ /^entry\([0-9.]+, 1, output, note\(9\)\)$/) bad++
+        if (e[4] !~ /^entry\([0-9.]+, 1, Count, count\(2\)\)$/) bad++
+        if (!(t[1] > 0 && t[2] == t[1] && t[3] == t[1] && t[4] > t[3])) bad++
+        exit !(n == 4 && ns && seen && c == t[4] && !bad)
+    }' "$WORK/screen.lines"
+check "the log: the first count answered 0, seen before the notes were shown, note(N1) not yet ground holding back note(9); each note then shown in order, output, at the time of the answer that grounds the first; the second count answered 2, seen after both; the program reads [0, 2]; the clock last" $?
+grep '^entry(\|^clock(\|^Ns = ' "$WORK/screen.lines" | sed 's/^/        /'
+
+echo "--- (xx) a census of two roles with attributes, a dimension of one role, and seen with no Output"
+# tests/census: the census village draws a parent, ann, with the number of
+# its children, and one to three children, each with its age; a parent has
+# two dimensions and a child one; the formal parent greets with its key and
+# the number of elements it has seen, the program writing nothing to its
+# person, and a child with its key and its age, both read off its person
+# (sGLP's task of 2026-10-20 08:00 UTC, items 1 to 4 and 7).
+repl "$WORK/census.out" ':limit 1000000000000' "$HERE/tests/census" 'census_run(Ps).' 'census_draw(Ds).'
+sed 's/^\(GLP> \)*//' "$WORK/census.out" > "$WORK/census.lines"
+grep -q '^✓ Loaded program' "$WORK/census.out"
+check "tests/census loads, its population printed before the run" $?
+awk '
+    /^Ps = \[/ {
+        s = $0
+        while (match(s, /person\([a-z]+, [a-z]+, \[[a-z]+\([0-9]+\)\]\)/)) {
+            q = substr(s, RSTART + 7, RLENGTH - 8); s = substr(s, RSTART + RLENGTH)
+            split(q, f, ", "); np++; key[np] = f[1]; role[np] = f[2]
+            sub(/^\[[a-z]+\(/, "", f[3]); sub(/\)\]$/, "", f[3]); val[np] = f[3]
+        }
+    }
+    /^Ds = \[/ {
+        s = $0
+        while (match(s, /agent\([0-9]+, [a-z]+\([a-z, ]+\)\)/)) {
+            q = substr(s, RSTART + 6, RLENGTH - 7); s = substr(s, RSTART + RLENGTH)
+            a = substr(q, 1, index(q, ",") - 1) + 0; r = substr(q, index(q, ", ") + 2)
+            dr[a] = substr(r, 1, index(r, "(") - 1); dp[a] = substr(r, index(r, "(") + 1, length(r) - index(r, "(") - 1); nd++
+        }
+    }
+    /^entry\(/ {
+        n++; tm = substr($0, 7, index($0, ",") - 7) + 0; if (tm < last) bad++; last = tm
+        x = substr($0, 7, length($0) - 7); split(x, f, ", ")
+        a = f[2] + 0; ans[a] = ans[a] " " substr(x, index(x, f[3] ", ") + length(f[3]) + 2)
+    }
+    /^clock\(/ { c = substr($0, 7, length($0) - 7) + 0; seen = 1 }
+    END {
+        if (np < 2 || role[1] != "parent" || nd != np) bad++
+        for (a = 1; a <= np; a++) {
+            if (dr[a] != role[a]) bad++
+            want_n = (role[a] == "parent") ? 0 : val[a]
+            mood = (role[a] == "parent") ? substr(dp[a], index(dp[a], ", ") + 2) : "happy"
+            if (index(ans[a], " hello(" key[a] ", _)") == 0) bad++
+            if (index(ans[a], " hello(_, " want_n ")") == 0) bad++
+            if (index(ans[a], " mood(" mood ")") == 0) bad++
+        }
+        printf "        %d persons, %d entries, %d not as their persons and draws say\n", np, n, bad
+        exit !(n == 3 * np && seen && c == last && !bad)
+    }' "$WORK/census.lines"
+check "the agents are the persons the census draws, in its order, a parent and its children, each with the stochastic person of its role, a parent two profiles and a child one; each greets with the key and the attribute its person gives it, the parent with the number of elements seen, none, the program writing nothing to its person; the moods as drawn; in the order of time; the clock last" $?
+grep '^entry(\|^clock(\|^Ps = \|^Ds = ' "$WORK/census.lines" | sed 's/^/        /'
+# A census drawing nobody (seed 3) and one drawing a person of a role of no
+# dimension, a stranger (seed 4): the run is refused, taking no goal but the
+# line refused, no entry and no clock.
+repl "$WORK/census_refused.out" ':limit 1000000000000' "$HERE/tests/census" 'census_persons(3, Ok, Ps).' 'census_persons(4, Ok, Ps).' 'census_seeded(3, Ps).' 'census_seeded(4, Ps).'
+sed 's/^\(GLP> \)*//' "$WORK/census_refused.out" > "$WORK/census_refused.lines"
+grep -q '^Ok = no$' "$WORK/census_refused.lines" && [ "$(grep -c '^Ok = no$' "$WORK/census_refused.lines")" -eq 2 ] &&
+    grep -q '^Ps = \[person(eve, stranger, \[\])\]$' "$WORK/census_refused.lines" &&
+    [ "$(grep -c '^refused$' "$WORK/census_refused.lines")" -eq 2 ] &&
+    ! grep -q '^entry(\|^clock(' "$WORK/census_refused.lines"
+check "a census drawing no person, and one drawing a person of a role of no dimension, are refused by the run, which takes no goal but the line refused (Section 3, after Definition \"Well-Formed\")" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="
