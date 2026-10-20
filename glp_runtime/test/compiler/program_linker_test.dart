@@ -2,9 +2,14 @@
 ///
 /// Tests discovery, type checking, renaming, call resolution, entry-point
 /// aliasing (§3.4: exported root-level procedures only), and end-to-end
-/// compilation of the cssn program (a live multi-module platform that consumes
-/// the routing modules exposed from the root self.glp; its three vGLP agents,
-/// compiled beside their sources, are modules of it as any .glp is). Module-local
+/// compilation of the linker_tree fixture, ../programs/tests/linker_tree: a
+/// multi-module program with a nested directory agents/ carrying its own
+/// self.glp and self.vglp, whose three vGLP agents, each beside its compiled
+/// .glp, are modules of it as any .glp is, and which consumes the routing
+/// modules exposed from the root self.glp.  It is the child-safe social
+/// network's hand-written program as it stood at GLP d2495778, its comments
+/// removed and its names changed, so that no paper's program is this test's
+/// fixture; until 2026-10-20 the test read programs/cssn itself.  Module-local
 /// name-collision handling is covered by the dedicated ../programs/tests/linker_collision
 /// fixture; the nested-subprogram entry-alias rule by ../programs/tests/linker_nested.
 library;
@@ -26,38 +31,41 @@ void main() {
   // The root self.glp: every program below is discovered with it, its first
   // module and the first layer of every module's scope.
   final rootSelfGlp = File('../programs/self.glp');
-  final cssnRoot = '../programs/cssn';
+  final treeRoot = '../programs/tests/linker_tree';
+  // The fixture's path from the root, by which each of its modules is named
+  // (modules.tex, Compilation, third step).
+  const tree = 'tests/linker_tree';
   // Dedicated minimal fixture: sole coverage of module-local name-collision
   // handling (two sibling modules each defining dup/1).
   final collisionRoot = '../programs/tests/linker_collision';
   final rootSelfPath = rootSelfGlp.existsSync() ? rootSelfGlp.absolute.path : null;
 
-  if (!Directory(cssnRoot).existsSync()) {
-    print('cssn directory not found at $cssnRoot, skipping tests');
+  if (!Directory(treeRoot).existsSync()) {
+    print('linker_tree directory not found at $treeRoot, skipping tests');
     return;
   }
 
   group('Program discovery', () {
-    test('discovers all modules in cssn', () {
-      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
+    test('discovers all modules in linker_tree', () {
+      final modules = discoverProgram(treeRoot, rootSelfGlpPath: rootSelfPath);
 
-      // The program's own modules: the certified program's (the three agents,
-      // compiled from their vGLP sources, the mini-app entry, childsafe) and
-      // the plays' (plays, person, superapp, cssn) --- plus the 4 routing
+      // The program's own modules: the nested directory's (the three agents,
+      // compiled from their vGLP sources, the mini-app entry, agents) and
+      // the plays' (plays, person, host, linker_tree) --- plus the 4 routing
       // modules exposed from the root self.glp
       // (social/graph/routing/{output,inject,intro,befriend}), discovered as
       // linkable across the whole programs/ subtree (module-system spec §3.3).
       final names = modules.map((m) => m.moduleName).toSet();
-      for (final n in ['adult', 'parent', 'child', 'miniapp', 'childsafe', 'cssn',
-          'plays', 'person', 'superapp', 'output', 'inject', 'intro',
-          'befriend']) {
+      for (final n in ['adult', 'parent', 'child', 'miniapp', 'agents',
+          'linker_tree', 'plays', 'person', 'host', 'output', 'inject',
+          'intro', 'befriend']) {
         expect(names.any((m) => m == n || m.endsWith('/$n')), isTrue,
             reason: '$n is a module of the program: $names');
       }
     });
 
     test('excludes self.glp from modules', () {
-      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProgram(treeRoot, rootSelfGlpPath: rootSelfPath);
       final names = modules.map((m) => m.moduleName).toSet();
       expect(names, isNot(contains('self')));
     });
@@ -68,10 +76,10 @@ void main() {
     // paper forbids (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 6"); until
     // CSSN's port it named cssn/mad_boot/, which the port retired.
     test('collects every .glp file of the tree', () {
-      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProgram(treeRoot, rootSelfGlpPath: rootSelfPath);
       final discovered =
           modules.map((m) => File(m.filePath).absolute.path).toSet();
-      final files = Directory(cssnRoot)
+      final files = Directory(treeRoot)
           .listSync(recursive: true)
           .whereType<File>()
           .where((f) => f.path.endsWith('.glp') && !f.path.endsWith('/self.glp'))
@@ -83,7 +91,7 @@ void main() {
     });
 
     test('modules have correct ancestor scopes', () {
-      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProgram(treeRoot, rootSelfGlpPath: rootSelfPath);
 
       // All modules should have ancestor scope with self.glp types
       for (final mod in modules) {
@@ -95,9 +103,9 @@ void main() {
 
   group('Type checking', () {
     test('all modules type-check successfully', () {
-      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProgram(treeRoot, rootSelfGlpPath: rootSelfPath);
       // Should not throw
-      expect(() => typeCheckProgram(modules, rootDir: cssnRoot), returnsNormally);
+      expect(() => typeCheckProgram(modules, rootDir: treeRoot), returnsNormally);
     });
   });
 
@@ -107,21 +115,21 @@ void main() {
     late Program linked;
 
     setUp(() {
-      modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      modules = discoverProgram(treeRoot, rootSelfGlpPath: rootSelfPath);
       // Inspect renaming/resolution on the pure step (pre-DCE).
-      linkResult = linkAndResolveModules(modules, rootDir: cssnRoot);
+      linkResult = linkAndResolveModules(modules, rootDir: treeRoot);
       linked = linkResult.program;
     });
 
     test('procedures are renamed with module prefix', () {
       final procNames = linked.procedures.map((p) => p.name).toSet();
-      expect(procNames, contains('cssn/childsafe/adult:adult'));
-      expect(procNames, contains('cssn/childsafe/parent:parent'));
-      expect(procNames, contains('cssn/childsafe/child:child'));
-      expect(procNames, contains('cssn/plays:village'));
-      expect(procNames, contains('cssn/plays:party'));
-      expect(procNames, contains('cssn/person:person'));
-      expect(procNames, contains('cssn/superapp:superapp'));
+      expect(procNames, contains('$tree/agents/adult:adult'));
+      expect(procNames, contains('$tree/agents/parent:parent'));
+      expect(procNames, contains('$tree/agents/child:child'));
+      expect(procNames, contains('$tree/plays:village'));
+      expect(procNames, contains('$tree/plays:party'));
+      expect(procNames, contains('$tree/person:person'));
+      expect(procNames, contains('$tree/host:host'));
     });
 
     List<String> bodyOf(String name) => [
@@ -130,32 +138,32 @@ void main() {
         ];
 
     test('cross-module calls are resolved', () {
-      final body = bodyOf('cssn/plays:party').toSet();
-      expect(body, contains('cssn/childsafe:cssn'),
-          reason: 'childsafe # cssn should become childsafe:cssn');
-      expect(body, contains('cssn/superapp:superapp'));
-      expect(body, contains('cssn/person:person'));
+      final body = bodyOf('$tree/plays:party').toSet();
+      expect(body, contains('$tree/agents:app'),
+          reason: 'agents # app should become $tree/agents:app');
+      expect(body, contains('$tree/host:host'));
+      expect(body, contains('$tree/person:person'));
       expect(body, isNot(contains('#')),
           reason: 'No RemoteGoal # dispatch should remain');
       // The adult agent hands a party to the parent agent, and the parent
       // agent hands it back, across modules.
-      expect(bodyOf('cssn/childsafe/adult:adult'),
-          contains('cssn/childsafe/parent:parent'));
-      expect(bodyOf('cssn/childsafe/parent:after_kids'),
-          contains('cssn/childsafe/adult:adult'));
+      expect(bodyOf('$tree/agents/adult:adult'),
+          contains('$tree/agents/parent:parent'));
+      expect(bodyOf('$tree/agents/parent:after_kids'),
+          contains('$tree/agents/adult:adult'));
     });
 
     test('local calls are resolved', () {
-      final body = bodyOf('cssn/plays:village').toSet();
-      expect(body, contains('cssn/plays:party'));
-      expect(body, contains('cssn/plays:village_script'));
+      final body = bodyOf('$tree/plays:village').toSet();
+      expect(body, contains('$tree/plays:party'));
+      expect(body, contains('$tree/plays:village_script'));
     });
 
     test('a root procedure is called by the root\'s name for it', () {
       // log calls send_to_user, a procedure of the root self.glp, which the
       // linker names by the root's path from itself, the empty one
       // (modules.tex, Compilation, third step): :send_to_user.
-      final body = bodyOf('cssn/plays:log');
+      final body = bodyOf('$tree/plays:log');
       expect(body, contains(':send_to_user'), reason: '$body');
     });
 
@@ -163,7 +171,7 @@ void main() {
       // modules.tex sec:static-linking step 5: the entry points are the root
       // self.glp's exports, here forwarders for each play, so every play has
       // a bare alias (and the non-exported helper party has none).
-      final plays = modules.firstWhere((m) => m.moduleName == 'cssn/plays');
+      final plays = modules.firstWhere((m) => m.moduleName == '$tree/plays');
       final exported = plays.ast.procDeclarations
           .where((d) => d.exported)
           .map((d) => d.name)
@@ -184,7 +192,7 @@ void main() {
       final body = alias.clauses.first.body;
       expect(body, isNotNull);
       expect(body!.length, equals(1));
-      expect(body.first.functor, equals('cssn:village'));
+      expect(body.first.functor, equals('$tree:village'));
     });
   });
 
@@ -455,8 +463,8 @@ void main() {
       // The object compiled is the checked linked program, compiled in the
       // environment it was checked in, as the engine compiles a program
       // (TGLP modules.tex, Compilation).
-      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      final linked = checkedLinkedProgram(modules, rootDir: cssnRoot);
+      final modules = discoverProgram(treeRoot, rootSelfGlpPath: rootSelfPath);
+      final linked = checkedLinkedProgram(modules, rootDir: treeRoot);
 
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
@@ -466,17 +474,17 @@ void main() {
       );
 
       expect(bytecode.labels, isNotEmpty);
-      expect(bytecode.labels.containsKey('cssn/plays:village/0'), isTrue);
+      expect(bytecode.labels.containsKey('$tree/plays:village/0'), isTrue);
       expect(bytecode.labels.containsKey('village/0'), isTrue,
           reason: 'Entry point alias should be in bytecode');
     });
 
     test('play_both_ways produces correct output', () {
-      // Two adults befriend each other at once, each through its super-app
-      // stand-in; each mini-app adopts one conversation (programs/cssn,
+      // Two adults befriend each other at once, each through its stand-in
+      // host; each mini-app adopts one conversation (linker_tree,
       // plays.glp).
-      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      final linked = checkedLinkedProgram(modules, rootDir: cssnRoot);
+      final modules = discoverProgram(treeRoot, rootSelfGlpPath: rootSelfPath);
+      final linked = checkedLinkedProgram(modules, rootDir: treeRoot);
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
         linked.program,

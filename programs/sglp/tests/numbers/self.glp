@@ -21,9 +21,12 @@
 Ask      ::= ask(Constant, Question).
 Question ::= stream_integer_r(Stream(Integer)?).
 
-%% A stochastic person, one profile in the one dimension.
+%% A stochastic person, of the role agent, one profile in the one dimension,
+%% and a person, as run n agents draws them, as the harness hands them from the
+%% population to the person process: structurally population.glp's.
 Counting ::= counter.
-Profiles ::= profiles(Counting).
+Profiles ::= agent(Counting).
+Person   ::= person(Constant, Constant, List(Constant)).
 
 imported procedure harness#run(Integer).
 exported procedure numbers_run(Integer).

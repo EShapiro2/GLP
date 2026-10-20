@@ -1,0 +1,205 @@
+%% IGLP's linker fixture, programs/tests/linker_tree, for program_linker_test.dart and program_compilation_test.dart: the parent agent, a vGLP module beside its compiled parent.glp, programs/cssn/childsafe/parent.vglp as it stood at GLP d2495778, its comments removed and three names changed: the directory childsafe to agents, the module and procedure superapp to host, and the procedures cssn and cssn_child to app and app_child.
+
+imported procedure adult#adult(Stream(Request)?, Key?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?).
+
+exported procedure parent(Stream(Request)?, Key?, Kids?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?).
+
+parent(Reqs, Id, Kids, [group_reply(G, M, yes(X?))|AgentIn], NetIn, Convs, Outs, St) :-
+    ground(G?), ground(M?) |
+    setup_group_hub_side(G?, M?, St?, St1, Outs?, Outs1, NetIn?, NetIn1, X),
+    show(member_joined(G?, M?), Outs1?, Outs2),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn1?, Convs?, Outs2?, St1?).
+parent(Reqs, Id, Kids, [group_reply(_, M, no)|AgentIn], NetIn, Convs, Outs, St) :-
+    ground(M?) |
+    show(declined(M?), Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+
+parent(Reqs, Id, Kids, [group_joined(G, Ch)|AgentIn], NetIn, Convs, Outs, St) :-
+    join_commit(G?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn1?, Convs?, Outs1?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, NetIn, [conversation(Q, Ch)|Convs], Outs, St) :-
+    ground(Q?) |
+    has_friend(Q?, Outs?, Outs1, Known),
+    take_conv(Known?, Q?, Ch?, Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(_, To, item(X))|NetIn], Convs, Outs, St) :-
+    Id? =?= To? |
+    receive_item(X?, St?, St1, Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(From, To, unfriend)|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(From?) |
+    close_friend(From?, Outs?, Outs1),
+    show(unfriended(From?), Outs1?, Outs2),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs2?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(_, To, group_invite(G, R?))|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(G?) |
+    join_group(group(G?), A),
+    joined(A?, G?, R, Out),
+    merge(Out?, AgentIn?, AgentIn1),
+    parent(Reqs?, Id?, Kids?, AgentIn1?, NetIn?, Convs?, Outs?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(_, _, group_msg(group_id(L, N), Y))|NetIn], Convs, Outs, St) :-
+    L? =?= Id?, ground(L?), ground(N?) |
+    hold_post(group_id(L?, N?), Y?, St?, St1, Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(_, _, group_msg(group_id(L, N), Z))|NetIn], Convs, Outs, St) :-
+    L? =?\= Id?, ground(L?), ground(N?) |
+    receive_delivery(group_id(L?, N?), Z?, St?, St1, Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(M, _, group_leave(G, M1))|NetIn], Convs, Outs, St) :-
+    ground(G?), ground(M?), M? =?= M1? |
+    close_output(group_member(G?, M?), Outs?, Outs1),
+    show(member_left(G?, M?), Outs1?, Outs2),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs2?, St?).
+
+parent([sign(T)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?) |
+    sign_item(Id?, T?, St?, St1, Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+parent([forward(F, X)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?) |
+    forward_item(Id?, F?, X?, St?, St1, Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+parent([unfriend(F)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(F?) |
+    send_friend(F?, msg(Id?, F?, unfriend), Outs?, Outs1),
+    close_friend(F?, Outs1?, Outs2),
+    show(unfriended(F?), Outs2?, Outs3),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs3?, St?).
+
+parent([create_group(N)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(N?) |
+    setup_group_leader(group_id(Id?, N?), Outs?, Outs1, NetIn?, NetIn1),
+    show(group_joined(group_id(Id?, N?)), Outs1?, Outs2),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn1?, Convs?, Outs2?, St?).
+
+parent([invite(N, F)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(N?), ground(F?) |
+    send_friend(F?, msg(Id?, F?, group_invite(group_id(Id?, N?), R)), Outs?, Outs1),
+    inject_group_reply(group_id(Id?, N?), F?, R?, AgentIn?, AgentIn1),
+    parent(Reqs?, Id?, Kids?, AgentIn1?, NetIn?, Convs?, Outs1?, St?).
+
+parent([invite_child(N, C, P)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(N?), ground(C?), ground(P?) |
+    send_friend(P?, msg(Id?, P?, group_invite_child(group_id(Id?, N?), C?, R)), Outs?, Outs1),
+    inject_group_reply(group_id(Id?, N?), C?, R?, AgentIn?, AgentIn1),
+    parent(Reqs?, Id?, Kids?, AgentIn1?, NetIn?, Convs?, Outs1?, St?).
+
+parent([post(G, X)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?) |
+    post_item(Id?, G?, X?, St?, St1, Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+parent([leave(G)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(G?) |
+    leave_group_commit(Id?, G?, Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+
+parent(Reqs, Id, Kids, [forward_intro(C, I, Cs)|AgentIn], NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(C?) |
+    send_child(C?, msg(Id?, C?, child_intro(I?, Cs?)), Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+
+parent(Reqs, Id, Kids, [forward_group(C, G, R?)|AgentIn], NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(C?) |
+    send_child(C?, msg(Id?, C?, group_invite(G?, R)), Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, NetIn, [entered(C, Ch, Co)|Convs], Outs, St) :-
+    ground(C?), ground(Co?) |
+    enter_parent_side(C?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
+    parent(Reqs?, Id?, [kid(C?, Co?)|Kids?], AgentIn?, NetIn1?, Convs?, Outs1?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(_, To, child_intro(I, Cs))|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(I?) |
+    approve(I?, A),
+    approved(A?, I?, Cs?, Out),
+    merge(Out?, AgentIn?, AgentIn1),
+    parent(Reqs?, Id?, Kids?, AgentIn1?, NetIn?, Convs?, Outs?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(_, To, group_invite_child(G, C, R?))|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(G?), ground(C?) |
+    approve_join(join(G?, C?), A),
+    forward_join(A?, C?, G?, R, Out),
+    merge(Out?, AgentIn?, AgentIn1),
+    parent(Reqs?, Id?, Kids?, AgentIn1?, NetIn?, Convs?, Outs?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(C, To, group_consent_req(G, Consent?))|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(G?), ground(C?) |
+    approve_join(join(G?, C?), Consent),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(_, To, invite_consent_req(G, M, Consent?))|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(G?), ground(M?) |
+    approve_invite(invite(G?, M?), Consent),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs?, St?).
+
+parent(Reqs, Id, Kids, AgentIn, [msg(C, To, of_age_notice)|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(C?), ground(Kids?) |
+    close_child(C?, Outs?, Outs1),
+    show(child_of_age(C?), Outs1?, Outs2),
+    remove_kid(C?, Kids?, Kids1),
+    after_kids(Kids1?, Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs2?, St?).
+
+parent([introduce(R, Q, S)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(R?), ground(Q?), ground(S?) |
+    mint_consents(R?, S?, CR, CS),
+    introduce(Id?, R?, Q?, S?, CR?, CS?, Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+
+parent([declare_of_age(R)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(R?), ground(Kids?) |
+    kid_of(R?, Kids?, Mine),
+    declare(Mine?, R?, Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs?, St?).
+
+parent([unfriend_child(R, F)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(R?), ground(F?) |
+    send_child(R?, msg(Id?, R?, unfriend_child(F?)), Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+
+parent([leave_child(R, G)|Reqs], Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(R?), ground(G?) |
+    send_child(R?, msg(Id?, R?, leave_group(G?)), Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+
+procedure take_conv(Decision?, Key?, FriendChannel?, Stream(Request)?, Key?, Kids?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?).
+take_conv(no, Q, Ch, Reqs, Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    adopt_conversation(Q?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn1?, Convs?, Outs1?, St?).
+take_conv(yes, _, ch(_, []), Reqs, Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs?, St?).
+
+procedure declare(Decision?, Key?, Stream(Request)?, Key?, Kids?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?).
+declare(yes, R, Reqs, Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(R?) |
+    send_child(R?, msg(Id?, R?, of_age), Outs?, Outs1),
+    close_child(R?, Outs1?, Outs2),
+    show(child_of_age(R?), Outs2?, Outs3),
+    remove_kid(R?, Kids?, Kids1),
+    after_kids(Kids1?, Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs3?, St?).
+declare(no, R, Reqs, Id, Kids, AgentIn, NetIn, Convs, Outs, St) :-
+    show(not_my_child(R?), Outs?, Outs1),
+    parent(Reqs?, Id?, Kids?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+
+procedure after_kids(Kids?, Stream(Request)?, Key?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?).
+after_kids([], Reqs, Id, AgentIn, NetIn, Convs, Outs, St) :-
+    adult # adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs?, St?).
+after_kids([K|Ks], Reqs, Id, AgentIn, NetIn, Convs, Outs, St) :-
+    parent(Reqs?, Id?, [K?|Ks?], AgentIn?, NetIn?, Convs?, Outs?, St?).
+
+procedure kid_of(Key?, Kids?, Decision).
+kid_of(R, [kid(R1, _)|_], yes) :- R? =?= R1? | true.
+kid_of(R, [_|Ks], D?) :- otherwise | kid_of(R?, Ks?, D).
+kid_of(_, [], no).
+
+procedure remove_kid(Key?, Kids?, Kids).
+remove_kid(R, [kid(R1, _)|Ks], Ks?) :- R? =?= R1? | true.
+remove_kid(R, [K|Ks], [K?|Ks1?]) :- otherwise | remove_kid(R?, Ks?, Ks1).
+remove_kid(_, [], []).

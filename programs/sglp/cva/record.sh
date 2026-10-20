@@ -16,7 +16,8 @@
 # reads.  --cascade names the platform: a tag of the cascade's record,
 # cascade/<NAME>/<date>, whose platform.glp and interface.glp git holds; or a
 # directory holding the two, which a test names.  The run is the run
-# declaration's, its agents, horizon and seed, or as --agents, --until and
+# declaration's, its agents (census where it names a census), horizon and
+# seed, or as --agents, --until and
 # --seeds give them, one run per seed.  The record is written into
 # <root>/<NAME>/<date>/, <root> being simulation/ at the repository root, beside
 # cascade/, or --root's directory; a later record the same day goes to
@@ -159,10 +160,12 @@ if ! bash "$SGLP/transform.sh" --interface "$WORK/interface.glp" --source "$REC/
     echo "record.sh: the transformation failed"; cat "$WORK/tx"; grep -h '^%% not transformed' "$REC"/*.glp 2>/dev/null
     rm -rf "$REC"; exit 1
 fi
-# The run declaration's agents, horizon and seed, run_declaration/4 of the
-# printed population.
-RD=$(tr '\n' ' ' < "$REC/population.glp" | grep -oE 'run_declaration\([0-9]+, [0-9.]+, [a-z]+, [0-9]+\) \.' | head -1)
-read -r DN DC DU DS <<< "$(printf '%s' "$RD" | sed -E 's/run_declaration\(([0-9]+), ([0-9.]+), ([a-z]+), ([0-9]+)\) \./\1 \2 \3 \4/')"
+# The run declaration's persons, horizon and seed, run_declaration/4 of the
+# printed population: a number of agents, or the name of a census, for which
+# run.sh is given census.
+RD=$(tr '\n' ' ' < "$REC/population.glp" | grep -oE 'run_declaration\(([0-9]+|[a-z][a-z0-9_]*), [0-9.]+, [a-z]+, [0-9]+\) \.' | head -1)
+read -r DN DC DU DS <<< "$(printf '%s' "$RD" | sed -E 's/run_declaration\(([0-9]+|[a-z][a-z0-9_]*), ([0-9.]+), ([a-z]+), ([0-9]+)\) \./\1 \2 \3 \4/')"
+[[ "$DN" =~ ^[0-9]+$ ]] || [ -z "$DN" ] || DN=census
 [ -n "$N" ] || N=$DN
 [ -n "$UNTIL" ] || UNTIL="$DC $DU"
 [ -n "$SEEDS" ] || SEEDS=$DS

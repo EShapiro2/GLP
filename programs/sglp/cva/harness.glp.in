@@ -1,21 +1,26 @@
 %% The harness of every canonical CVA platform under sGLP (sGLP's task of
-%% 2026-10-18 20:50 UTC, item 2; sGLP's paper: Section 3, Definitions "Person
-%% Process" and "Simulation Program"; Section 4, "The run"; Appendix B): the
+%% 2026-10-18 20:50 UTC, item 2, and of 2026-10-20 08:00 UTC, items 1 and 4;
+%% sGLP's paper at 0270ac6: Section 3, Definitions "Person, Census", "Screen,
+%% Seen", "Person Process" and "Simulation Program"; Section 4, "The run",
+%% "The screen" and "The log"; Appendix B): the
 %% machine's setup, written once, for the canonical platform of any contract,
 %% its module platform.glp beside it, and the printed population of any sGLP
 %% source over that platform's questions, population.glp beside it.  The whole
 %% population is in one machine, as the guard when_idle requires (Section 4,
 %% "The guard").  Its goals:
 %%
-%%   at each agent a of 1..N, keyed by the a-th of Ks: its initial goal as
-%%   vGLP's compilation of the canonical platform states it, agent/5 of the
-%%   platform's module with its key, its input stream from the network, its
-%%   output stream to the network, the program's output to its person, which
-%%   no goal of the simulation reads, the dispatcher's place being the person
-%%   process's (Definition "Simulation Program"), and its ask stream (vGLP,
-%%   Section 5.4, "The compilation"); and its person process on that ask
-%%   stream, with its stochastic person and its seed, population.glp's
-%%   stochastic_agent/5;
+%%   at each agent a of 1..N, the persons of the run numbered in the order its
+%%   census draws them and each keyed by its person's key (sGLP's paper,
+%%   Section 3, Definition "Person, Census", and after it; population.glp,
+%%   persons/5): its initial goal as vGLP's compilation of the canonical
+%%   platform states it, agent/5 of the platform's module with its key, its
+%%   input stream from the network, its output stream to the network, the
+%%   program's output to its person, and its ask stream (vGLP, Section 5.4,
+%%   "The compilation"); its screen on the program's output to its person and
+%%   its person process on that ask stream, the dispatcher's place being the
+%%   person process's and the person's screen the screen (Definition
+%%   "Simulation Program"), with its stochastic person, its person and its
+%%   seed, population.glp's stochastic_agent/7;
 %%   at no agent, the network --- the root's mwm/2 merging the agents' output
 %%   streams, and a balanced tree of deliver/4 goals handing each message
 %%   msg(Q, C) to the input stream of the agent keyed Q, as the examples'
@@ -24,73 +29,86 @@
 %%   it names) --- the monitor, with the run's seed and the horizon in seconds,
 %%   and the log's sink.
 %%
-%% The keys are the run script's: Key is String, which GLP makes of no number,
-%% so run.sh writes them, agent a's the letter p and a's number, zero-padded to
-%% the width of N, so that the keys of agents 1..N are in the order of their
-%% numbers both ways, which the tree's comparisons, @<, take.  The draws are
-%% the examples' (Appendix B): the monitor draws from the run's seed; the
-%% population's draws are from a second generator, started at the first value
-%% drawn from the run's seed and cut into blocks of 4096 draws, agent a's the
-%% a-th, from which population.glp draws its profiles and its person process's
-%% seed.
+%% The persons: where the run declaration gives a number of agents, the census
+%% of run n agents, person(K, agent, []) for each key K of Ks, the run script's:
+%% Key is String, which GLP makes of no number, so run.sh writes them, agent
+%% a's the letter p and a's number, zero-padded to the width of N, so that the
+%% keys of agents 1..N are in the order of their numbers both ways, which the
+%% tree's comparisons, @<, take; where it names a census, the persons that
+%% census draws, Ks being empty, the keys their keys, in the census's order,
+%% which the tree takes as the order of the agents.  The run is refused where
+%% the census draws no person or a person of a role of no dimension (Section 3,
+%% after Definition "Well-Formed"): it takes no goal but the line refused.  The
+%% draws are the examples' (Appendix B): the monitor draws from the run's seed;
+%% the population's draws are from a second generator, started at the first
+%% value drawn from the run's seed and cut into blocks of 4096 draws, a census
+%% the run declaration names drawing from the first and agent a from the a-th
+%% after it, or the a-th where it gives a number of agents, from which
+%% population.glp draws its profiles and its person process's seed.  The
+%% persons stay in population.glp, their type the source's: it hands the
+%% harness each agent's key and its seat, seat(K, Asks, Thr), the writers of
+%% the agent's ask stream and of the program's output to its person, whose
+%% readers its person process and its screen hold (population.glp,
+%% cva_agents/6).
 
-imported procedure population#stochastic_agent(Integer?, Integer?, MutualRef?,
-                                               MutualRef?, Stream(Ask(Question))?).
-imported procedure population#stochastic_profiles(Integer?, _).
+%% An agent's seat, structurally population.glp's, Ask(Question) being the
+%% platform's asks, as population.glp's Ask.
+Seat(X) ::= seat(Key, Stream(Ask(Question))?, Stream(X)?).
 
-%% run(Ks?, C?, U?, Seed?): the agents keyed Ks until C Us from Seed.
+imported procedure population#cva_check(Integer?, Stream(Key)?, Constant).
+imported procedure(X) population#cva_agents(Integer?, Stream(Key)?, MutualRef?,
+                                            MutualRef?, Stream(Key),
+                                            Stream(Seat(X))).
+imported procedure population#cva_draw(Integer?, Stream(Key)?, Stream(_)).
+
+%% run(Ks?, C?, U?, Seed?): the run of the run declaration's persons until C
+%% Us from Seed, Ks the keys of run n agents, or empty where it names a census.
 exported procedure run(Stream(Key)?, Number?, Span?, Integer?).
 run(Ks, C, U, Seed) :- ground(Ks?), number(C?), integer(Seed?) |
+    random(Seed?, 2147483646, Base, _),
+    population # cva_check(Base?, Ks?, Ok),
+    go(Ok?, Base?, Ks?, C?, U?, Seed?).
+
+%% go(Ok?, B?, Ks?, C?, U?, Seed?): the run, where the census's draw is not
+%% refused, B the start of the census's block or of the first agent's.
+procedure go(Constant?, Integer?, Stream(Key)?, Number?, Span?, Integer?).
+go(yes, B, Ks, C, U, Seed) :- integer(B?), ground(Ks?), number(C?), integer(Seed?) |
     span(U?, Secs),
     H := C? * Secs?,
     allocate_mutual_reference(Mon, Requests),
     allocate_mutual_reference(Log, Entries),
     send_to_user(Entries?),
     monitor(Requests?, Seed?, H?, Log?),
-    random(Seed?, 2147483646, Base, _),
+    population # cva_agents(B?, Ks?, Mon?, Log?, Keys, Seats),
+    network(Keys?, Seats?).
+go(no, _, _, _, _, _) :- send_to_user([refused]).
+
+%% network(Ks?, Ss?): the network over the agents keyed Ks, and at each agent
+%% its initial goal on its seat of Ss.
+procedure network(Stream(Key)?, Stream(Seat(Output))?).
+network(Ks, Ss) :- ground(Ks?) |
     keys_length(Ks?, 0, N),
     tree(1, N?, Ks?, Net?, Ins, []),
     mwm(Merges?, Net),
-    agents(1, Ks?, Base?, Ins?, Merges, Mon?, Log?).
+    agents(Ss?, Ins?, Merges).
 
-%% agents(A?, Ks?, Block?, Ins?, Merges, Mon?, Log?): agents A.. keyed Ks,
-%% Block the start of A's block, Ins their input streams in order, Merges
-%% their output streams for mwm/2.
-procedure agents(Integer?, Stream(Key)?, Integer?, Stream(Stream(Net))?,
-                 MwmInput(Net), MutualRef?, MutualRef?).
-agents(A, [K|Ks], B, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :- integer(A?), integer(B?) |
-    agent(K?, In?, Out, _, Asks),
-    population # stochastic_agent(A?, B?, Mon?, Log?, Asks?),
-    skip(4096, B?, B2),
-    A1 := A? + 1,
-    agents(A1?, Ks?, B2?, Ins?, Ms, Mon?, Log?).
-agents(_, [], _, [], [], _, _).
+%% agents(Ss?, Ins?, Merges): at each agent, its initial goal, agent/5 of the
+%% platform, with its key, its input stream of Ins, its output stream for
+%% mwm/2, and the program's output to its person and its ask stream, the
+%% writers its seat holds.
+procedure agents(Stream(Seat(Output))?, Stream(Stream(Net))?, MwmInput(Net)).
+agents([seat(K, Asks?, Thr?)|Ss], [In|Ins], [merge(Out?)|Ms?]) :-
+    agent(K?, In?, Out, Thr, Asks),
+    agents(Ss?, Ins?, Ms).
+agents([], [], []).
 
 %% draw(Ks?, Seed?, D): D the list of agent(A, P), each agent's stochastic
-%% person P, A of 1..N in order, drawn from its block as agents/7 draws it,
-%% without the run.
+%% person P, A of 1..N in order, the persons' order, drawn from its block as
+%% cva_agents/6 draws it, without the run.
 exported procedure draw(Stream(Key)?, Integer?, Stream(_)).
-draw(Ks, Seed, D?) :- integer(Seed?) |
+draw(Ks, Seed, D?) :- ground(Ks?), integer(Seed?) |
     random(Seed?, 2147483646, Base, _),
-    draws(1, Ks?, Base?, D).
-procedure draws(Integer?, Stream(Key)?, Integer?, Stream(_)).
-draws(A, [_|Ks], B, [agent(A?, P?)|D?]) :- integer(A?), integer(B?) |
-    population # stochastic_profiles(B?, P),
-    skip(4096, B?, B2),
-    A1 := A? + 1,
-    draws(A1?, Ks?, B2?, D).
-draws(_, [], _, []).
-
-%% skip(J?, S?, S1): S1 is the seed J draws after S, by J draws of random/4,
-%% each reduced before the next is spawned, as the examples' harnesses draw a
-%% block (Appendix B).
-procedure skip(Integer?, Integer?, Integer).
-skip(0, S, S?).
-skip(J, S, S1?) :-
-    J? > 0, integer(S?) |
-    random(S?, 1, _, S2),
-    J1 := J? - 1,
-    skip(J1?, S2?, S1).
+    population # cva_draw(Base?, Ks?, D).
 
 %% keys_length(Ks?, A?, N): N is A plus the number of keys in Ks.
 procedure keys_length(Stream(Key)?, Integer?, Integer).

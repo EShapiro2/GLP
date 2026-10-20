@@ -845,7 +845,8 @@ befriend(P, R?) :- ground(P?) | responder # offer_from(P?, R).
         // be neither and still a vGLP module: "the questions of a program are
         // those of all its modules" (vGLP a89a751, canonical-compilation.tex),
         // so a module may ask questions it does not declare ---
-        // cssn/childsafe/parent.vglp asks the cards of its self.vglp.
+        // tests/linker_tree/agents/parent.vglp, IGLP's linker fixture, asks
+        // the questions of its self.vglp.
         final paper = !old && _declaresVolitionalProcedure(text);
         expect(isPaperSyntaxSource(text), paper, reason: f.path);
       }

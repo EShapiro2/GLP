@@ -1,0 +1,39 @@
+%% Test (xix)'s sGLP source, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form").  Its surface form:
+%%
+%%   person looker.
+%%   Count =::= look_count.
+%%   procedure look_count(Count?, Person?, Integer?).
+%%   look_count(C, _, _) :- look(C?) @ 1/second.
+%%   procedure look(Count?).
+%%   look(count(N?)) :- seen(L), length(L?, N).
+%%
+%%   run 1 agents [looking ~ (looker : 1.0)] until 1 day seed 20260927.
+%%
+%% The person answers each count, a second after it is asked on average, with
+%% the number of the program's notes the person has seen: seen(L) assigns L
+%% the elements of the program's output the screen has shown, the last first
+%% (Section 3, Definition "Screen, Seen").  The first count is answered before
+%% the notes are shown, note(N1) not yet ground holding back note(9), and the
+%% second after both are.
+%%
+%% transform.sh prints from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface (notes.vglp) and its compiled program's
+  %% predicates (notes.glp).
+  [type('Output', [note('Integer')]),
+   type('Count', [count(dual('Integer'))]),
+   volitional('Count', '\'Count\'', count_w, count('Integer')),
+   compiled(count, 2), compiled(count1, 3), compiled(notes, 3), compiled(again, 3)],
+
+  %% The profile and the run declaration.
+  [person(looker),
+   binds('Count', look_count),
+   decl(look_count(dual('Count'), dual('Person'), dual('Integer'))),
+   clause(look_count(var('C'), var('_'), var('_')), [], [rated(look(var('C?')), rate(1, second))]),
+   decl(look(dual('Count'))),
+   clause(look(count(var('N?'))), [], [seen(var('L')), length(var('L?'), var('N'))]),
+
+   run(1, [mix(looking, [share(looker, 1.0)])], 1, day, 20260927)]).

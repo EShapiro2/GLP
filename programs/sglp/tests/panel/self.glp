@@ -35,10 +35,12 @@ Panel ::= panel(List(Card)).
 Ask      ::= ask(Constant, Question).
 Question ::= panel_w(Panel).
 
-%% A stochastic person, one profile in the one dimension, as the harness hands
-%% it from the population's draw to the person process (population.glp).
+%% A stochastic person, of the role agent, one profile in the one dimension,
+%% and a person, as run n agents draws them, as the harness hands them from the
+%% population to the person process: structurally population.glp's.
 Judging  ::= judge.
-Profiles ::= profiles(Judging).
+Profiles ::= agent(Judging).
+Person   ::= person(Constant, Constant, List(Constant)).
 
 imported procedure harness#run(Integer?, Stream(YesNo)).
 exported procedure panel_run(Integer?, Stream(YesNo)).

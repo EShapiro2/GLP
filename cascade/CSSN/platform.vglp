@@ -202,7 +202,7 @@ reflexive_preds([friend])
 .
 
 procedure introduction_preds(Preds).
-introduction_preds([])
+introduction_preds([friend])
 .
 
 procedure binding_of(Class?, Constant, Binding).

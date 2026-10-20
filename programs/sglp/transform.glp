@@ -1,10 +1,12 @@
 %% The transformation of sGLP programs into GLP: sGLP's paper (the repository
-%% svGLP-Stochastic-Volitional-GLP), Section 4, "The transformation", "The
-%% person process" and "The run"; Section 3, Definitions "Dual, Person
-%% Procedure, Person Declaration, Profile, Dimension, Population" and
-%% "Simulation Program", and the well-formedness of a population, whose checks
-%% are the transformation's; Appendix B.  The paper is the specification and is
-%% not restated here.
+%% svGLP-Stochastic-Volitional-GLP, at 0270ac6), Section 4, "The
+%% transformation", "The person process", "The screen", "The run" and "The
+%% log"; Section 3, Definitions "Person, Census", "Dual, Person Procedure,
+%% Person Declaration", "Profile, Dimension", "Stochastic Person, Population",
+%% "Well-Formed", "Screen, Seen", "Person Process" and "Simulation Program",
+%% the well-formedness of a population's dimensions, profiles and
+%% distributions being the transformation's to check; Appendix B.  The paper is
+%% the specification and is not restated here.
 %%
 %% It reads an sGLP program in the term form of README.md, "The term form" ---
 %% one GLP term per declaration and clause, in GLP-Spec's term syntax
@@ -12,23 +14,31 @@
 %% compiler of grassroots social contracts does (programs/gsc/compile.glp).
 %% transform(Program, Part) prints one module of the program's translation:
 %%
-%%   profiles    the profiles translated: each person procedure, and each
-%%               procedure that holds a rated goal or calls one that takes it,
-%%               takes the monitor's reference as an added last argument; a
-%%               rated goal G @ r becomes the request rated(r, Tok) appended to
-%%               that reference, followed by G with Tok? as an added first
-%%               argument, and G's procedure takes the token first, its clauses
-%%               go there;
+%%   profiles    the profiles translated, and the types and procedures of the
+%%               source's programs, the census's among them: each person
+%%               procedure, and each procedure that holds a rated goal or calls
+%%               one that takes it, takes the monitor's reference as an added
+%%               argument, and each person procedure, and each procedure that
+%%               calls seen or calls one that takes it, the screen's after it,
+%%               both last; a rated goal G @ r becomes the request rated(r, Tok)
+%%               appended to the monitor's reference, followed by G with Tok? as
+%%               an added first argument, and G's procedure takes the token
+%%               first, its clauses go there; a goal seen(L) becomes the request
+%%               seen(L) appended to the screen's reference; and the person,
+%%               Person, where the source defines none, is the type of the
+%%               persons run n agents draws;
 %%   population  the person process, one clause per person declaration and
 %%               form of the question, the answer procedures that hand the
 %%               program the person goal's answers by the moded type and log
 %%               them, and the present procedures that show the person goal
 %%               the program's terms, in both directions at every depth
-%%               (Section 4, "The person process"; the relay, below);
-%%               and from the run declaration the
-%%               declaration itself and each agent's stochastic person, its
-%%               profile in each dimension drawn from its block.  The harness's
-%%               run/6 and run/7 --- the network, the monitor and the log's
+%%               (Section 4, "The person process"; the relay, below); the
+%%               screen, which shows the program's output to its person and
+%%               answers seen(L) (Section 4, "The screen"); and from the run
+%%               declaration the declaration itself, the persons of the run,
+%%               drawn by its census, and each agent's stochastic person, its
+%%               profile in each dimension of its role drawn from its block.
+%%               The harnesses --- the network, the monitor and the log's
 %%               reference, each agent's initial goal --- are the machine's
 %%               setup and are written once by hand (sGLP's ruling of
 %%               2026-10-03 12:10 UTC).
@@ -56,6 +66,8 @@ imported procedure tests#receipt_source(SglpTerms, SglpTerms).
 imported procedure tests#panel_source(SglpTerms, SglpTerms).
 imported procedure tests#numbers_source(SglpTerms, SglpTerms).
 imported procedure tests#steps_source(SglpTerms, SglpTerms).
+imported procedure tests#screen_source(SglpTerms, SglpTerms).
+imported procedure tests#census_source(SglpTerms, SglpTerms).
 
 Terms ::= [] ; [_ | Terms].
 Sets  ::= [] ; [Terms | Sets].
@@ -67,9 +79,10 @@ Ans   ::= yes ; no.
 
 %% transform(Program?, Part?): print Part, profiles or population, of the
 %% translation of Program, social_graph, coins or the run tests' reader,
-%% delivery, receipt, panel, numbers and steps (tests/reader, tests/delivery,
-%% tests/receipt, tests/panel, tests/numbers, tests/steps), between the lines %% transform begin and %% transform end,
-%% which transform.sh drops.
+%% delivery, receipt, panel, numbers, steps, screen and census (tests/reader,
+%% tests/delivery, tests/receipt, tests/panel, tests/numbers, tests/steps,
+%% tests/screen, tests/census), between the lines %% transform begin and %%
+%% transform end, which transform.sh drops.
 exported procedure transform(Constant?, Constant?).
 transform(Prog, Part) :- Prog? =?= social_graph |
     social_graph # source(V, S), part(social_graph, Part?, V?, S?).
@@ -87,6 +100,10 @@ transform(Prog, Part) :- Prog? =?= numbers |
     tests # numbers_source(V, S), part(numbers, Part?, V?, S?).
 transform(Prog, Part) :- Prog? =?= steps |
     tests # steps_source(V, S), part(steps, Part?, V?, S?).
+transform(Prog, Part) :- Prog? =?= screen |
+    tests # screen_source(V, S), part(screen, Part?, V?, S?).
+transform(Prog, Part) :- Prog? =?= census |
+    tests # census_source(V, S), part(census, Part?, V?, S?).
 transform(Prog, _) :- otherwise, ground(Prog?) |
     C =.. ['%% not transformed: no sGLP source of', Prog?],
     send_to_user(['%% transform begin', C?, '%% transform end']).
@@ -110,11 +127,13 @@ part(Prog, Part, V, S) :- ground(Prog?), ground(Part?), ground(V?), ground(S?) |
 
 procedure part_lines(Terms?, Constant?, Terms?, Terms?, Terms).
 part_lines([], Part, _, S, Ls?) :- Part? =?= profiles, ground(S?) |
-    profiles(S?, ['%% transform end'], Ls).
+    profiles(S?, plain, ['%% transform end'], Ls).
 part_lines([], Part, V, S, Ls?) :- Part? =?= population, ground(V?), ground(S?) |
-    population(V?, S?, ['%% transform end'], Ls).
+    population(V?, S?, plain, ['%% transform end'], Ls).
+part_lines([], Part, _, S, Ls?) :- Part? =?= cva_profiles, ground(S?) |
+    profiles(S?, canonical, ['%% transform end'], Ls).
 part_lines([], Part, V, S, Ls?) :- Part? =?= cva_population, ground(V?), ground(S?) |
-    cva_entries(S?, ['%% transform end'], Tl), population(V?, S?, Tl?, Ls).
+    cva_entries(S?, ['%% transform end'], Tl), population(V?, S?, canonical, Tl?, Ls).
 part_lines([], Part, _, _, [C?, '%% transform end']) :- otherwise, ground(Part?) |
     C =.. ['%% not transformed: no part', Part?].
 part_lines([E|Es], _, _, _, [E?|Ls?]) :- append(Es?, ['%% transform end'], Ls).
@@ -302,6 +321,42 @@ alts([], Tl, Tl?).
 alts([A], Tl, [P?|Tl?]) :- plain(A?, P).
 alts([A, A1|As], Tl, [P?, ';'|Ls?]) :- plain(A?, P), alts([A1?|As?], Tl?, Ls).
 
+%% stype_def(Name?, Alts?, Tail?, Ls): the lines of a type definition of the
+%% source, Name ::= Alt ; ... ., each alternative on a line where it holds no
+%% type T?, and otherwise token by token, a type T? as a declaration's types
+%% are printed (decl/5), GLP having no string concatenation.
+procedure stype_def(_?, Terms?, Terms?, Terms).
+stype_def(Nm, As, Tl, [P?, '::='|Ls?]) :- ground(Nm?) | plain(Nm?, P), talts(As?, ['.'|Tl?], Ls).
+procedure talts(Terms?, Terms?, Terms).
+talts([], Tl, Tl?).
+talts([A], Tl, Ls?) :- talt(A?, Tl?, Ls).
+talts([A, A1|As], Tl, Ls?) :- talts([A1?|As?], Tl?, Ls1), talt(A?, [';'|Ls1?], Ls).
+procedure talt(_?, Terms?, Terms).
+talt(dual(T), Tl, Ls?) :- type_lines(dual(T?), Tl?, Ls).
+talt(A, Tl, Ls?) :- otherwise, ground(A?) | has_dual(A?, D), talt1(D?, A?, Tl?, Ls).
+procedure talt1(Ans?, _?, Terms?, Terms).
+talt1(no, A, Tl, [P?|Tl?]) :- plain(A?, P).
+talt1(yes, [H|T], Tl, ['['|Ls?]) :- talt(H?, ['|'|Ls1?], Ls), talt(T?, [']'|Tl?], Ls1).
+talt1(yes, A, Tl, [F1?, '('|Ls?]) :- otherwise, compound(A?) |
+    parts(A?, F, As), functor_text(F?, F1), targs(As?, [')'|Tl?], Ls).
+procedure targs(Terms?, Terms?, Terms).
+targs([], Tl, Tl?).
+targs([A], Tl, Ls?) :- talt(A?, Tl?, Ls).
+targs([A, A1|As], Tl, Ls?) :- targs([A1?|As?], Tl?, Ls1), talt(A?, [','|Ls1?], Ls).
+%% has_dual(T?, A): A is yes where the type term T holds a type T1?, dual(T1).
+procedure has_dual(_?, Ans).
+has_dual(dual(_), yes).
+has_dual([], no).
+has_dual([H|T], D?) :- has_dual(H?, D1), any_dual1(D1?, [T?], D).
+has_dual(A, D?) :- otherwise, compound(A?) | parts(A?, _, As), any_dual(As?, D).
+has_dual(A, no) :- otherwise, constant(A?) | true.
+procedure any_dual(Terms?, Ans).
+any_dual([], no).
+any_dual([A|As], D?) :- has_dual(A?, D1), any_dual1(D1?, As?, D).
+procedure any_dual1(Ans?, Terms?, Ans).
+any_dual1(yes, _, yes).
+any_dual1(no, As, D?) :- any_dual(As?, D).
+
 %% ===========================================================================
 %% The source
 %% ===========================================================================
@@ -331,6 +386,30 @@ procedure types(Terms?, Terms).
 types([], []).
 types([type(N, As)|Is], [type(N?, As?)|Ts?]) :- types(Is?, Ts).
 types([I|Is], Ts?) :- otherwise, ground(I?) | types(Is?, Ts).
+
+%% mixes(Ms?, Ms1): the mixes of a run declaration, each mix(D, R, Ss), the
+%% dimension D of the role R, its shares Ss: a mix with no role, mix(D, Ss), is
+%% of the role agent (Section 3, after Definition "Person, Census"); anything
+%% else is kept, for the checks to refuse.
+procedure mixes(Terms?, Terms).
+mixes([], []).
+mixes([mix(D, Ss)|Ms], [mix(D?, agent, Ss?)|Ms1?]) :- mixes(Ms?, Ms1).
+mixes([mix(D, R, Ss)|Ms], [mix(D?, R?, Ss?)|Ms1?]) :- mixes(Ms?, Ms1).
+mixes([M|Ms], [M?|Ms1?]) :- otherwise, ground(M?) | mixes(Ms?, Ms1).
+
+%% has_type(Nm?, Ts?, A): A is yes where the types Ts define one named Nm.
+procedure has_type(_?, Terms?, Ans).
+has_type(_, [], no).
+has_type(Nm, [type(N, _)|_], yes) :- Nm? =?= N? | true.
+has_type(Nm, [type(N, _)|Ts], A?) :- Nm? =?\= N? | has_type(Nm?, Ts?, A).
+
+%% census_keys(Rs?, Ws): key(W, 2) where the run declaration names a census W,
+%% a constant that is no number (Section 3, the grammar: <persons> ::=
+%% <integer> agents | <procedure_name>); none where it gives a number of agents
+%% or is not one run declaration.
+procedure census_keys(Terms?, Terms).
+census_keys([run(W, _, _, _, _)], [key(W?, 2)]) :- string(W?) | true.
+census_keys(Rs, []) :- otherwise, ground(Rs?) | true.
 
 %% interactives(V?, Its): Its is it(T, M, Af) for each volitional procedure
 %% declaration of V, volitional(T, Qt, Af, D), its interactive type T, its
@@ -394,10 +473,12 @@ procedure unrated_keys(Terms?, Terms).
 unrated_keys([], []).
 unrated_keys([cl(_, _, Bs)|Cs], Ks?) :- unrated(Bs?, Ks2?, Ks), unrated_keys(Cs?, Ks2).
 
-%% The keys of the person procedures: P/2 for each person declaration.
+%% The keys of the person procedures: P/3 for each person declaration, the
+%% copy, the person and the seed (Definition "Dual, Person Procedure, Person
+%% Declaration").
 procedure person_keys(Terms?, Terms).
 person_keys([], []).
-person_keys([b(_, _, P)|Bs], [key(P?, 2)|Ks?]) :- person_keys(Bs?, Ks).
+person_keys([b(_, _, P)|Bs], [key(P?, 3)|Ks?]) :- person_keys(Bs?, Ks).
 
 %% mon_keys(Ps?, Cs?, Ms): Ms are the keys of the procedures that take the
 %% monitor's reference (Section 4, "The transformation"): the person
@@ -441,18 +522,38 @@ grow2(yes, no, H, M, Es, R?) :- grow1(Es?, [H?|M?], R).
 grow2(yes, yes, _, M, Es, R?) :- grow1(Es?, M?, R).
 grow2(no, _, _, M, Es, R?) :- grow1(Es?, M?, R).
 
-%% The analysis of the profiles: an(Ps, Rs, Ms), the keys of the person
-%% procedures, of the procedures a rated goal calls, and of those that take
-%% the monitor's reference.
+%% scr_keys(Ps?, Cs?, Ss): Ss are the keys of the procedures that take the
+%% screen's reference (Section 4, "The transformation"; Definition "Screen,
+%% Seen": a procedure reaches the screen if it is seen, a person procedure, or
+%% a clause of it calls a procedure that reaches the screen): the person
+%% procedures Ps, those whose clauses call seen, and those whose clauses call
+%% one of these.
+procedure scr_keys(Terms?, Terms?, Terms).
+scr_keys(Ps, Cs, Ss?) :- ground(Cs?) |
+    seers(Cs?, Hs), append(Ps?, Hs?, S0), edges(Cs?, Es), grow(S0?, Es?, Ss).
+procedure seers(Terms?, Terms).
+seers([], []).
+seers([cl(H, _, Bs)|Cs], Ks?) :- ground(H?), ground(Bs?) |
+    calls(Bs?, [], Ks0), member(key(seen, 1), Ks0?, A), seer(A?, H?, Cs?, Ks).
+procedure seer(Ans?, _?, Terms?, Terms).
+seer(no, _, Cs, Ks?) :- seers(Cs?, Ks).
+seer(yes, H, Cs, [K?|Ks?]) :- key(H?, K), seers(Cs?, Ks).
+
+%% The analysis of the profiles: an(Ps, Rs, Ms, Ss, Xs), the keys of the
+%% person procedures, of the procedures a rated goal calls, of those that take
+%% the monitor's reference, of those that take the screen's, and of those
+%% exported, the person procedures, which the person process calls, and the
+%% census, which the population's persons/5 calls, from the module beside.
 procedure analysis(Terms?, _).
 analysis(S, An?) :- ground(S?) |
-    binds(S?, none, Bs), clauses(S?, Cs), analysis1(Bs?, Cs?, An).
-procedure analysis1(Terms?, Terms?, _).
-analysis1(Bs, Cs, an(Ps?, Rs?, Ms?)) :- ground(Cs?) |
-    person_keys(Bs?, Ps0), dedup(Ps0?, Ps1), analysis2(Ps1?, Cs?, Ps, Ms),
+    binds(S?, none, Bs), clauses(S?, Cs), runs(S?, Rs), census_keys(Rs?, Ws), analysis1(Bs?, Cs?, Ws?, An).
+procedure analysis1(Terms?, Terms?, Terms?, _).
+analysis1(Bs, Cs, Ws, an(Ps?, Rs?, Ms?, Ss?, Xs?)) :- ground(Cs?) |
+    person_keys(Bs?, Ps0), dedup(Ps0?, Ps1), analysis2(Ps1?, Cs?, Ws?, Ps, Ms, Ss, Xs),
     rated_keys(Cs?, Rs0), dedup(Rs0?, Rs).
-procedure analysis2(Terms?, Terms?, Terms, Terms).
-analysis2(Ps, Cs, Ps?, Ms?) :- ground(Ps?) | mon_keys(Ps?, Cs?, Ms).
+procedure analysis2(Terms?, Terms?, Terms?, Terms, Terms, Terms, Terms).
+analysis2(Ps, Cs, Ws, Ps?, Ms?, Ss?, Xs?) :- ground(Ps?), ground(Cs?) |
+    mon_keys(Ps?, Cs?, Ms), scr_keys(Ps?, Cs?, Ss), append(Ps?, Ws?, Xs).
 
 %% ===========================================================================
 %% ===========================================================================
@@ -460,7 +561,7 @@ analysis2(Ps, Cs, Ps?, Ms?) :- ground(Ps?) | mon_keys(Ps?, Cs?, Ms).
 %% ===========================================================================
 %% GLP has no string concatenation, so the names the transformation writes are
 %% drawn from these lists, each a writer and its reader: the monitor's
-%% reference and the tokens, the first not written in the clause; the person
+%% reference, the screen's and the tokens, the first not written in the clause; the person
 %% process's variables by argument position; the dimensions' types and the
 %% answer procedures by their order.  A source that needs more than they hold
 %% is refused (checks/3).
@@ -470,6 +571,12 @@ mon_names([n('Mon', 'Mon?'), n('Mon1', 'Mon1?'), n('Mon2', 'Mon2?'),
            n('Mon3', 'Mon3?'), n('Mon4', 'Mon4?'), n('Mon5', 'Mon5?'),
            n('Mon6', 'Mon6?'), n('Mon7', 'Mon7?'), n('Mon8', 'Mon8?'),
            n('Mon9', 'Mon9?')]).
+
+procedure scr_names(Terms).
+scr_names([n('Scr', 'Scr?'), n('Scr1', 'Scr1?'), n('Scr2', 'Scr2?'),
+           n('Scr3', 'Scr3?'), n('Scr4', 'Scr4?'), n('Scr5', 'Scr5?'),
+           n('Scr6', 'Scr6?'), n('Scr7', 'Scr7?'), n('Scr8', 'Scr8?'),
+           n('Scr9', 'Scr9?')]).
 
 procedure tok_names(Terms).
 tok_names([n('Tok', 'Tok?'), n('Tok1', 'Tok1?'), n('Tok2', 'Tok2?'),
@@ -582,18 +689,43 @@ fresh1(no, yes, _, _, Cs, U, N, Ns?) :- fresh(Cs?, U?, N?, Ns).
 %% The profiles (Section 4, "The transformation")
 %% ===========================================================================
 
-procedure profiles(Terms?, Terms?, Terms).
-profiles(S, Tl, Ls?) :- ground(S?) | analysis(S?, An), items(S?, An?, Tl?, Ls).
+%% profiles(S?, Md?, Tail?, Ls): the profiles module of the source S, Md
+%% canonical for a canonical CVA platform, whose keys are its Key, and plain
+%% otherwise (default_person/4).
+procedure profiles(Terms?, _?, Terms?, Terms).
+profiles(S, Md, Tl, Ls?) :- ground(S?) |
+    analysis(S?, An), stypes(S?, Ts), has_type('Person', Ts?, AP), default_person(AP?, Md?, Ls1?, Ls),
+    items(S?, An?, Tl?, Ls1).
+
+%% stypes(S?, Ts): the types the source's programs define, type(Name, Alts)
+%% each, as the interface writes them.
+procedure stypes(Terms?, Terms).
+stypes(S, Ts?) :- types(S?, Ts).
+
+%% default_person(A?, Md?, Tail?, Ls): where the source defines no Person (A
+%% no), the type of the persons run n agents draws, person(K, agent, []), K the
+%% key of an agent, its number, a constant, or, on a canonical platform (Md
+%% canonical), the letter p and its number padded, a string, the platform's
+%% Key (Section 3, Definition "Person, Census" and after it; Appendix B).
+procedure default_person(Ans?, _?, Terms?, Terms).
+default_person(yes, _, Tl, Tl?).
+default_person(no, plain, Tl, ['', '%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).',
+                               'Person ::= person(Constant, Constant, List(Constant)).'|Tl?]).
+default_person(no, canonical, Tl, ['', '%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws on a canonical platform, person(K, agent, []), K a Key.',
+                                   'Person ::= person(Key, Constant, List(Constant)).'|Tl?]).
 
 %% items(S?, An?, Tail?, Ls): each item of S translated, in its order: a
-%% profile's name and its person declarations as comments, a procedure
-%% declaration and a clause translated; the run declaration is population's.
+%% profile's name and its person declarations as comments, a type definition
+%% printed, a procedure declaration and a clause translated; the run
+%% declaration is population's.
 procedure items(Terms?, _?, Terms?, Terms).
 items([], _, Tl, Tl?).
 items([person(P)|Is], An, Tl, ['', C?|Ls?]) :-
     C =.. ['%% person', P?], items(Is?, An?, Tl?, Ls).
 items([binds(T, P)|Is], An, Tl, [C?|Ls?]) :-
     C =.. ['%% binds', T?, P?], items(Is?, An?, Tl?, Ls).
+items([type(N, As)|Is], An, Tl, [''|Ls?]) :- ground(N?), ground(As?) |
+    items(Is?, An?, Tl?, Ls1), stype_def(N?, As?, Ls1?, Ls).
 items([decl(H)|Is], An, Tl, Ls?) :- ground(An?) |
     items(Is?, An?, Tl?, Ls1), tdecl(H?, An?, Ls1?, Ls).
 items([clause(H, Gs, Bs)|Is], An, Tl, Ls?) :- ground(An?) |
@@ -601,32 +733,36 @@ items([clause(H, Gs, Bs)|Is], An, Tl, Ls?) :- ground(An?) |
 items([I|Is], An, Tl, Ls?) :- otherwise, ground(I?) | items(Is?, An?, Tl?, Ls).
 
 %% tdecl(H?, An?, Tail?, Ls): a procedure declaration translated: Token? first
-%% for a procedure a rated goal calls, MutualRef? last for one that takes the
-%% monitor's reference, and exported for a person procedure, which the person
-%% process calls from the module beside; and, after the declaration of a
-%% procedure a rated goal calls, the clause that ends its goal once the monitor
-%% has bound the token to stop, dropping its arguments (Section 4, "The
-%% transformation"; Appendix C).
+%% for a procedure a rated goal calls, MutualRef? for one that takes the
+%% monitor's reference and MutualRef? after it for one that takes the
+%% screen's, both last, and exported for a person procedure, which the person
+%% process calls from the module beside, and for the census, which the
+%% population's persons/5 calls; and, after the declaration of a procedure a
+%% rated goal calls, the clause that ends its goal once the monitor has bound
+%% the token to stop, dropping its arguments (Section 4, "The transformation";
+%% Appendix C).
 procedure tdecl(_?, _?, Terms?, Terms).
-tdecl(H, an(Ps, Rs, Ms), Tl, Ls?) :- ground(H?) |
-    key(H?, K), tdecl1(K?, H?, Ps?, Rs?, Ms?, Tl?, Ls).
-procedure tdecl1(_?, _?, Terms?, Terms?, Terms?, Terms?, Terms).
-tdecl1(K, H, Ps, Rs, Ms, Tl, Ls?) :- ground(K?) |
-    member(K?, Ps?, AP), member(K?, Rs?, AR), member(K?, Ms?, AM),
-    tdecl2(AP?, AR?, AM?, H?, Tl?, Ls).
-procedure tdecl2(Ans?, Ans?, Ans?, _?, Terms?, Terms).
-tdecl2(AP, AR, AM, H, Tl, Ls?) :- ground(AR?), ground(AM?), ground(H?) |
-    prefix(AP?, Pre), front(AR?, [dual('Token')], Fr), back(AM?, [dual('MutualRef')], Bk),
+tdecl(H, an(_, Rs, Ms, Ss, Xs), Tl, Ls?) :- ground(H?) |
+    key(H?, K), tdecl1(K?, H?, Xs?, Rs?, Ms?, Ss?, Tl?, Ls).
+procedure tdecl1(_?, _?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+tdecl1(K, H, Xs, Rs, Ms, Ss, Tl, Ls?) :- ground(K?) |
+    member(K?, Xs?, AP), member(K?, Rs?, AR), member(K?, Ms?, AM), member(K?, Ss?, AS),
+    tdecl2(AP?, AR?, AM?, AS?, H?, Tl?, Ls).
+procedure tdecl2(Ans?, Ans?, Ans?, Ans?, _?, Terms?, Terms).
+tdecl2(AP, AR, AM, AS, H, Tl, Ls?) :- ground(AR?), ground(AM?), ground(AS?), ground(H?) |
+    prefix(AP?, Pre), front(AR?, [dual('Token')], Fr),
+    back(AM?, [dual('MutualRef')], Bk1), back(AS?, [dual('MutualRef')], Bk2), append(Bk1?, Bk2?, Bk),
     parts(H?, Nm, Ts), append(Ts?, Bk?, Ts1), append(Fr?, Ts1?, Ts2),
-    stop_clause(AR?, AM?, H?, Tl?, Tl1),
+    stop_clause(AR?, AM?, AS?, H?, Tl?, Tl1),
     decl(Pre?, Nm?, Ts2?, Tl1?, Ls).
-%% stop_clause(AR?, AM?, H?, Tail?, Ls): where AR is yes, the clause
-%% Nm(stop, _, ..., _) of the procedure H, a _ for each of its arguments and
-%% for the monitor's reference where AM is yes.
-procedure stop_clause(Ans?, Ans?, _?, Terms?, Terms).
-stop_clause(no, _, _, Tl, Tl?).
-stop_clause(yes, AM, H, Tl, Ls?) :- ground(H?) |
-    parts(H?, Nm, Ts), back(AM?, [var('_')], Bk), blanks(Ts?, Us), append(Us?, Bk?, As),
+%% stop_clause(AR?, AM?, AS?, H?, Tail?, Ls): where AR is yes, the clause
+%% Nm(stop, _, ..., _) of the procedure H, a _ for each of its arguments, for
+%% the monitor's reference where AM is yes and for the screen's where AS is.
+procedure stop_clause(Ans?, Ans?, Ans?, _?, Terms?, Terms).
+stop_clause(no, _, _, _, Tl, Tl?).
+stop_clause(yes, AM, AS, H, Tl, Ls?) :- ground(H?) |
+    parts(H?, Nm, Ts), back(AM?, [var('_')], Bk1), back(AS?, [var('_')], Bk2), blanks(Ts?, Us),
+    append(Us?, Bk1?, As1), append(As1?, Bk2?, As),
     compose(Nm?, [stop|As?], H1), clause(H1?, [], [], Tl?, Ls).
 procedure blanks(Terms?, Terms).
 blanks([], []).
@@ -642,29 +778,41 @@ back(yes, Xs, Xs?).
 back(no, _, []).
 
 %% tclause(H?, Gs?, Bs?, An?, Tail?, Ls): a clause translated.  Its head takes
-%% go first where a rated goal calls its procedure, and the monitor's reference
-%% last where its procedure takes it, or _ where the clause passes it nowhere;
-%% each rated goal G @ r of its body becomes the request rated(r, Tok) on the
-%% monitor's reference, followed by G with Tok? first; each goal whose
-%% procedure takes the monitor's reference is given it last.  Mon and Tok are
-%% the first names of their lists that the clause does not write.
+%% go first where a rated goal calls its procedure, the monitor's reference
+%% where its procedure takes it and the screen's after it where its procedure
+%% takes that, both last, or _ where the clause passes it nowhere; each rated
+%% goal G @ r of its body becomes the request rated(r, Tok) on the monitor's
+%% reference, followed by G with Tok? first; each goal seen(L) becomes the
+%% request seen(L) on the screen's reference; each goal whose procedure takes
+%% the monitor's reference, or the screen's, is given it, last.  Mon, Scr and
+%% Tok are the first names of their lists that the clause does not write.
 procedure tclause(_?, Terms?, Terms?, _?, Terms?, Terms).
 tclause(H, Gs, Bs, An, Tl, Ls?) :- ground(H?), ground(Gs?), ground(Bs?) |
     var_names(cl(H?, Gs?, Bs?), [], U), rated(Bs?, [], Rs), length(Rs?, NR),
     key(H?, K), tclause1(K?, U?, NR?, H?, Gs?, Bs?, An?, Tl?, Ls).
 procedure tclause1(_?, Terms?, Integer?, _?, Terms?, Terms?, _?, Terms?, Terms).
-tclause1(K, U, NR, H, Gs, Bs, an(_, Rs, Ms), Tl, Ls?) :- ground(U?) |
-    mon_names(MN), tok_names(TN), fresh(MN?, U?, 1, Mon), fresh(TN?, U?, NR?, Toks),
-    tclause2(Mon?, Toks?, K?, NR?, H?, Gs?, Bs?, Rs?, Ms?, Tl?, Ls).
-procedure tclause2(Terms?, Terms?, _?, Integer?, _?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
-tclause2([n(MW, MR)], Toks, K, NR, H, Gs, Bs, Rs, Ms, Tl, Ls?) :-
-    ground(K?), ground(Bs?), ground(Ms?), ground(MR?) |
-    member(K?, Rs?, AR), member(K?, Ms?, AM),
-    calls(Bs?, [], Cs), any_member(Cs?, Ms?, AC), uses(NR?, AC?, AU),
-    tbody(Bs?, Toks?, MR?, Ms?, Bs1),
-    mon_arg(AM?, AU?, MW?, Bk), front(AR?, [go], Fr), args(H?, Fr?, Bk?, H1),
+tclause1(K, U, NR, H, Gs, Bs, an(_, Rs, Ms, Ss, _), Tl, Ls?) :- ground(U?) |
+    mon_names(MN), tok_names(TN), scr_names(SN),
+    fresh(MN?, U?, 1, Mon), fresh(TN?, U?, NR?, Toks), fresh(SN?, U?, 1, Scr),
+    tclause2(Mon?, Scr?, Toks?, K?, NR?, H?, Gs?, Bs?, Rs?, Ms?, Ss?, Tl?, Ls).
+procedure tclause2(Terms?, Terms?, Terms?, _?, Integer?, _?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+tclause2([n(MW, MR)], [n(SW, SR)], Toks, K, NR, H, Gs, Bs, Rs, Ms, Ss, Tl, Ls?) :-
+    ground(K?), ground(Bs?), ground(Ms?), ground(Ss?), ground(MR?), ground(SR?) |
+    member(K?, Rs?, AR), member(K?, Ms?, AM), member(K?, Ss?, AS),
+    calls(Bs?, [], Cs), call_uses(Cs?, NR?, Ms?, Ss?, AU, ASU),
+    tbody(Bs?, Toks?, MR?, SR?, Ms?, Ss?, Bs1),
+    mon_arg(AM?, AU?, MW?, Bk1), mon_arg(AS?, ASU?, SW?, Bk2), append(Bk1?, Bk2?, Bk),
+    front(AR?, [go], Fr), args(H?, Fr?, Bk?, H1),
     clause(H1?, Gs?, Bs1?, Tl?, Ls).
-tclause2(Mon, _, _, _, _, _, _, _, _, Tl, Tl?) :- otherwise, ground(Mon?) | true.
+tclause2(Mon, Scr, _, _, _, _, _, _, _, _, _, Tl, Tl?) :- otherwise, ground(Mon?), ground(Scr?) | true.
+%% call_uses(Cs?, NR?, Ms?, Ss?, AU, ASU): AU is yes where the clause, of NR
+%% rated goals and calls Cs, uses the monitor's reference, a rated goal or a
+%% call of a procedure that takes it among its goals, and ASU where it uses the
+%% screen's, a goal seen(L) or a call of a procedure that takes it.
+procedure call_uses(Terms?, Integer?, Terms?, Terms?, Ans, Ans).
+call_uses(Cs, NR, Ms, Ss, AU?, ASU?) :- ground(Cs?), ground(Ss?) |
+    any_member(Cs?, Ms?, AC), uses(NR?, AC?, AU),
+    any_member(Cs?, Ss?, ASC), member(key(seen, 1), Cs?, AZ), either(AZ?, ASC?, ASU).
 procedure any_member(Terms?, Terms?, Ans).
 any_member([], _, no).
 any_member([X|Xs], Ys, A?) :- ground(Ys?) | member(X?, Ys?, A1), any_member1(A1?, Xs?, Ys?, A).
@@ -679,17 +827,32 @@ mon_arg(yes, yes, MW, [var(MW?)]).
 mon_arg(yes, no, _, [var('_')]).
 mon_arg(no, _, _, []).
 
-%% tbody(Bs?, Toks?, MR?, Ms?, Bs1): the body translated.
-procedure tbody(Terms?, Terms?, _?, Terms?, Terms).
-tbody([], _, _, _, []).
-tbody([rated(G, rate(R, U))|Bs], [n(TW, TR)|Ts], MR, Ms,
+%% tbody(Bs?, Toks?, MR?, SR?, Ms?, Ss?, Bs1): the body translated, MR and SR
+%% the readers of the monitor's reference and the screen's.
+procedure tbody(Terms?, Terms?, _?, _?, Terms?, Terms?, Terms).
+tbody([], _, _, _, _, _, []).
+tbody([rated(G, rate(R, U))|Bs], [n(TW, TR)|Ts], MR, SR, Ms, Ss,
       [stream_append(rated('/'(R?, U?), var(TW?)), var(MR?), var('_')), G1?|Bs1?]) :-
-    ground(G?), ground(MR?), ground(Ms?) |
-    key(G?, K), member(K?, Ms?, A), back(A?, [var(MR?)], Bk),
-    args(G?, [var(TR?)], Bk?, G1), tbody(Bs?, Ts?, MR?, Ms?, Bs1).
-tbody([B|Bs], Ts, MR, Ms, [B1?|Bs1?]) :- otherwise, ground(B?), ground(MR?), ground(Ms?) |
-    key(B?, K), member(K?, Ms?, A), back(A?, [var(MR?)], Bk),
-    args(B?, [], Bk?, B1), tbody(Bs?, Ts?, MR?, Ms?, Bs1).
+    ground(G?), ground(MR?), ground(SR?), ground(Ms?), ground(Ss?) |
+    refs(G?, MR?, SR?, Ms?, Ss?, Bk),
+    args(G?, [var(TR?)], Bk?, G1), tbody(Bs?, Ts?, MR?, SR?, Ms?, Ss?, Bs1).
+tbody([seen(L)|Bs], Ts, MR, SR, Ms, Ss, [stream_append(seen(L?), var(SR?), var('_'))|Bs1?]) :-
+    ground(SR?) |
+    tbody(Bs?, Ts?, MR?, SR?, Ms?, Ss?, Bs1).
+tbody([B|Bs], Ts, MR, SR, Ms, Ss, [B1?|Bs1?]) :-
+    otherwise, ground(B?), ground(MR?), ground(SR?), ground(Ms?), ground(Ss?) |
+    refs(B?, MR?, SR?, Ms?, Ss?, Bk),
+    args(B?, [], Bk?, B1), tbody(Bs?, Ts?, MR?, SR?, Ms?, Ss?, Bs1).
+%% refs(G?, MR?, SR?, Ms?, Ss?, Bk): the references the goal G is given last,
+%% the monitor's where its procedure takes it and the screen's where its
+%% procedure takes that.
+procedure refs(_?, _?, _?, Terms?, Terms?, Terms).
+refs(G, MR, SR, Ms, Ss, Bk?) :- ground(G?), ground(MR?), ground(SR?) |
+    key(G?, K), refs1(K?, MR?, SR?, Ms?, Ss?, Bk).
+procedure refs1(_?, _?, _?, Terms?, Terms?, Terms).
+refs1(K, MR, SR, Ms, Ss, Bk?) :- ground(K?) |
+    member(K?, Ms?, A), member(K?, Ss?, AS), back(A?, [var(MR?)], Bk1), back(AS?, [var(SR?)], Bk2),
+    append(Bk1?, Bk2?, Bk).
 
 %% ===========================================================================
 %% Moded types (Section 4, "The person process": "the person process hands the
@@ -1403,29 +1566,29 @@ proc_name1(_, _, _, K, T, Ps, Nm?) :- otherwise | proc_name(K?, T?, Ps?, Nm).
 
 %% population(V?, S?, Tail?, Ls): the person process --- its types, the person
 %% procedures it calls, one clause per person declaration and form of the
-%% question, and the answers it hands over and logs --- then the run
-%% declaration and each agent's stochastic person, its profile drawn in each
-%% dimension.
-procedure population(Terms?, Terms?, Terms?, Terms).
-population(V, S, Tl, Ls?) :- ground(V?), ground(S?) |
-    interactives(V?, Its), quoteds(V?, Qs), types(V?, Tys), binds(S?, none, Bs), runs(S?, Rs),
-    population_p(Its?, Qs?, Tys?, Rs?, Bs?, Tl?, Ls).
-procedure population_p(Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
-population_p(Its, Qs, Tys, Rs, Bs, Tl, Ls?) :- ground(Its?), ground(Tys?) |
-    plan(Its?, Tys?, Pl), population0(Rs?, Its?, Qs?, Tys?, Pl?, Bs?, Tl?, Ls).
-procedure population0(Terms?, Terms?, Terms?, Terms?, _?, Terms?, Terms?, Terms).
-population0([run(N, Mixes, C, U, Seed)], Its, Qs, Tys, Pl, Bs, Tl, Ls?) :- ground(Mixes?) |
-    dims(Mixes?, 1, Ds),
-    population1(Its?, Qs?, Tys?, Pl?, Bs?, Ds?, run(N?, Mixes?, C?, U?, Seed?), Tl?, Ls).
-population0(Rs, _, _, _, _, _, Tl, Tl?) :- otherwise, ground(Rs?) | true.
+%% question, and the answers it hands over and logs --- then the screen, then
+%% the run declaration, the persons of the run and each agent's stochastic
+%% person, its profile drawn in each dimension of its role.
+procedure population(Terms?, Terms?, _?, Terms?, Terms).
+population(V, S, Md, Tl, Ls?) :- ground(V?), ground(S?) |
+    interactives(V?, Its), quoteds(V?, Qs), types(V?, Tys), binds(S?, none, Bs), runs(S?, Rs), stypes(S?, STs),
+    population_p(Its?, Qs?, Tys?, Rs?, Bs?, STs?, Md?, Tl?, Ls).
+procedure population_p(Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, _?, Terms?, Terms).
+population_p(Its, Qs, Tys, Rs, Bs, STs, Md, Tl, Ls?) :- ground(Its?), ground(Tys?) |
+    plan(Its?, Tys?, Pl), population0(Rs?, Its?, Qs?, Tys?, Pl?, Bs?, STs?, Md?, Tl?, Ls).
+procedure population0(Terms?, Terms?, Terms?, Terms?, _?, Terms?, Terms?, _?, Terms?, Terms).
+population0([run(N, Mixes, C, U, Seed)], Its, Qs, Tys, Pl, Bs, STs, Md, Tl, Ls?) :- ground(Mixes?) |
+    mixes(Mixes?, Ms1), dims(Ms1?, 1, Ds),
+    population1(Its?, Qs?, Tys?, Pl?, Bs?, Ds?, STs?, Md?, run(N?, Mixes?, C?, U?, Seed?), Tl?, Ls).
+population0(Rs, _, _, _, _, _, _, _, Tl, Tl?) :- otherwise, ground(Rs?) | true.
 
-%% dims(Mixes?, J?, Ds): Ds is dim(J, D, Qs, Ts, Nm) for each dimension D of
+%% dims(Mixes?, J?, Ds): Ds is dim(J, D, Qs, Ts, Nm, R) for each dimension D of
 %% the run declaration, J its position, Qs its profiles, Ts its thresholds ---
-%% the cumulative percentages of its profiles but the last --- and Nm the name
-%% of its type, the J-th of dimension_names.
+%% the cumulative percentages of its profiles but the last --- Nm the name of
+%% its type, the J-th of dimension_names, and R its role.
 procedure dims(Terms?, Integer?, Terms).
 dims([], _, []).
-dims([mix(D, Ss)|Ms], J, [dim(J?, D?, Qs?, Ts?, Nm?)|Ds?]) :- integer(J?) |
+dims([mix(D, R, Ss)|Ms], J, [dim(J?, D?, Qs?, Ts?, Nm?, R?)|Ds?]) :- integer(J?) |
     shares(Ss?, Qs, Ps), thresholds(Ps?, 0, Ts),
     dimension_names(DNs), nth_or_none(J?, DNs?, Nm),
     J1 := J? + 1, dims(Ms?, J1?, Ds).
@@ -1437,32 +1600,68 @@ thresholds([], _, []).
 thresholds([_], _, []).
 thresholds([P, P1|Ps], A, [T?|Ts?]) :- T := A? + P?, thresholds([P1?|Ps?], T?, Ts).
 
-procedure population1(Terms?, Terms?, Terms?, _?, Terms?, Terms?, _?, Terms?, Terms).
-population1(Its, Qs, Tys, Pl, Bs, Ds, Run, Tl, ['', '%% The run declaration of the source:', C?|L1?]) :-
-    ground(Its?), ground(Tys?), ground(Pl?), ground(Bs?), ground(Ds?), ground(Run?) |
+%% roles(Ds?, Rs): the roles of the dimensions Ds, each once, in the order of
+%% their first dimensions.  role_dims(Ds?, R?, Rd): the dimensions of Ds of the
+%% role R, in their order.
+procedure roles(Terms?, Terms).
+roles(Ds, Rs?) :- dim_roles(Ds?, Rs0), dedup(Rs0?, Rs).
+procedure dim_roles(Terms?, Terms).
+dim_roles([], []).
+dim_roles([dim(_, _, _, _, _, R)|Ds], [R?|Rs?]) :- dim_roles(Ds?, Rs).
+procedure role_dims(Terms?, _?, Terms).
+role_dims([], _, []).
+role_dims([dim(J, D, Qs, Ts, Nm, R1)|Ds], R, [dim(J?, D?, Qs?, Ts?, Nm?, R1?)|Rd?]) :- R? =?= R1? |
+    role_dims(Ds?, R?, Rd).
+role_dims([dim(_, _, _, _, _, R1)|Ds], R, Rd?) :- R? =?\= R1? | role_dims(Ds?, R?, Rd).
+
+procedure population1(Terms?, Terms?, Terms?, _?, Terms?, Terms?, Terms?, _?, _?, Terms?, Terms).
+population1(Its, Qs, Tys, Pl, Bs, Ds, STs, Md, Run, Tl, Ls?) :- ground(Ds?) |
+    roles(Ds?, Rls), population2(Its?, Qs?, Tys?, Pl?, Bs?, Ds?, Rls?, STs?, Md?, Run?, Tl?, Ls).
+procedure population2(Terms?, Terms?, Terms?, _?, Terms?, Terms?, Terms?, Terms?, _?, _?, Terms?, Terms).
+population2(Its, Qs, Tys, Pl, Bs, Ds, Rls, STs, Md, Run, Tl, ['', '%% The run declaration of the source:', C?|L1?]) :-
+    ground(Its?), ground(Tys?), ground(Pl?), ground(Bs?), ground(Ds?), ground(Rls?), ground(STs?), ground(Md?), ground(Run?) |
     plain(Run?, R), C =.. ['%% ', R?],
-    pp_types(Its?, Ds?, L2?, L1),
-    pp_imports(Its?, Bs?, L3?, L2),
+    pp_types(Its?, Ds?, Rls?, STs?, Md?, L2?, L1),
+    pp_imports(Its?, Bs?, Run?, L3?, L2),
     pp_person(Pl?, Tys?, Bs?, Ds?, Qs?, L4?, L3),
     pp_answers(Pl?, Tys?, L5?, L4),
-    pp_run(Run?, Ds?, Tl?, L5).
+    pp_screen(L6?, L5),
+    person_key(STs?, Md?, KT),
+    pp_run(Run?, Ds?, Rls?, KT?, Tl?, L6).
 
-%% The types: the stochastic person, one profile per dimension; and the asks
-%% the person process reads on the ask stream of the agent's initial goal
-%% (vGLP, Definition "Canonical Compilation"; sGLP's paper, Section 3,
-%% Definition "Person Process, Simulation Program, Stochastic Agent"), Ask ::=
-%% ask(Constant, Question), each the interactive type T as a constant and the
-%% person's end of the question's variable under the functor t the
-%% compilation gives T, Question the union over those functors, t(T) with T in
-%% its mode: t is T's name in lowercase, its type arguments appended, with _w
-%% for writer mode and _r for reader mode, as the compiled programs have it,
+%% The types: the stochastic person, one profile per dimension of its role,
+%% one alternative per role, its functor the role (Definition "Stochastic
+%% Person, Population"); the asks the person process reads on the ask stream
+%% of the agent's initial goal (vGLP, Definition "Canonical Compilation";
+%% sGLP's paper, Section 3, Definitions "Person Process" and "Simulation
+%% Program"), Ask ::= ask(Constant, Question), each the interactive type T as a
+%% constant and the person's end of the question's variable under the functor
+%% t the compilation gives T, Question the union over those functors, t(T) with
+%% T in its mode: t is T's name in lowercase, its type arguments appended, with
+%% _w for writer mode and _r for reader mode, as the compiled programs have it,
 %% and the source's volitional declaration carries it (README.md, "The vGLP
-%% sources and their compilation" and "The term form").
-procedure pp_types(Terms?, Terms?, Terms?, Terms).
-pp_types(Its, Ds, Tl, ['', 'Profiles', '::=', P?, '.'|L1?]) :- ground(Its?), ground(Ds?) |
-    dim_types(Ds?, Nms), P =.. [profiles|Nms?],
+%% sources and their compilation" and "The term form"); and the person,
+%% Person, with the types of the source's programs (Definition "Person,
+%% Census"), as the profiles module prints them.
+procedure pp_types(Terms?, Terms?, Terms?, Terms?, _?, Terms?, Terms).
+pp_types(Its, Ds, Rls, STs, Md, Tl, ['', 'Profiles', '::='|L0?]) :- ground(Its?), ground(Ds?), ground(STs?) |
+    role_alts(Rls?, Ds?, ['.'|L1?], L0),
     dim_defs(Ds?, ['Ask ::= ask(Constant, Question).', 'Question', '::='|L2?], L1),
-    q_alts(Its?, ['.'|Tl?], L2).
+    q_alts(Its?, ['.'|L3?], L2),
+    has_type('Person', STs?, AP), default_person(AP?, Md?, L4?, L3), stype_defs(STs?, Tl?, L4).
+%% role_alts(Rls?, Ds?, Tail?, Ls): the alternatives of Profiles, R(Nm, ...)
+%% for each role R, Nm the types of its dimensions, in their order.
+procedure role_alts(Terms?, Terms?, Terms?, Terms).
+role_alts([], _, Tl, Tl?).
+role_alts([R], Ds, Tl, [P?|Tl?]) :- role_term(R?, Ds?, P).
+role_alts([R, R1|Rs], Ds, Tl, [P?, ';'|Ls?]) :- ground(Ds?) |
+    role_term(R?, Ds?, P), role_alts([R1?|Rs?], Ds?, Tl?, Ls).
+procedure role_term(_?, Terms?, _).
+role_term(R, Ds, P?) :- ground(R?) | role_dims(Ds?, R?, Rd), dim_types(Rd?, Nms), compose(R?, Nms?, P0), plain(P0?, P).
+%% stype_defs(Ts?, Tail?, Ls): the type definitions of the source's programs.
+procedure stype_defs(Terms?, Terms?, Terms).
+stype_defs([], Tl, Tl?).
+stype_defs([type(N, As)|Ts], Tl, Ls?) :- stype_defs(Ts?, Tl?, L1), stype_def(N?, As?, L1?, Ls).
 %% q_alts(Its?, Tail?, Ls): the alternatives of Question, one per interactive
 %% type, separated by ;.  q_alt(It?, Tail?, Ls): the alternative t(T) of the
 %% interactive type It, T as written where it is in writer mode and T? where
@@ -1479,17 +1678,20 @@ q_alt(it(T, input, Af), Tl, [Af?, '('|Ls?]) :- ground(T?), ground(Af?) |
     type_lines(dual(T?), [')'|Tl?], Ls).
 procedure dim_types(Terms?, Terms).
 dim_types([], []).
-dim_types([dim(_, _, _, _, Nm)|Ds], [Nm?|Nms?]) :- dim_types(Ds?, Nms).
+dim_types([dim(_, _, _, _, Nm, _)|Ds], [Nm?|Nms?]) :- dim_types(Ds?, Nms).
 procedure dim_defs(Terms?, Terms?, Terms).
 dim_defs([], Tl, Tl?).
-dim_defs([dim(_, _, Qs, _, Nm)|Ds], Tl, Ls?) :- dim_defs(Ds?, Tl?, Ls1), type_def(Nm?, Qs?, Ls1?, Ls).
+dim_defs([dim(_, _, Qs, _, Nm, _)|Ds], Tl, Ls?) :- dim_defs(Ds?, Tl?, Ls1), type_def(Nm?, Qs?, Ls1?, Ls).
 
 %% The person procedures the person process calls, in the profiles module,
-%% each declared P(T', Integer?, MutualRef?), T' the dual of the mode the vGLP
-%% program gives T (Section 3, Definition "Dual, ...").
-procedure pp_imports(Terms?, Terms?, Terms?, Terms).
-pp_imports(Its, Bs, Tl, ['', '%% The person procedures, in the profiles module.'|Ls?]) :- ground(Its?) |
-    bind_procs(Bs?, Ps0), dedup(Ps0?, Ps), imports(Ps?, Its?, Tl?, Ls).
+%% each declared P(T', Person?, Integer?, MutualRef?, MutualRef?), T' the dual
+%% of the mode the vGLP program gives T (Section 3, Definition "Dual, Person
+%% Procedure, Person Declaration"), the monitor's reference and the screen's
+%% last (Section 4, "The transformation"); and the census the run declaration
+%% names, declared W(Integer?, List(Person)) (Definition "Person, Census").
+procedure pp_imports(Terms?, Terms?, _?, Terms?, Terms).
+pp_imports(Its, Bs, Run, Tl, ['', '%% The person procedures, in the profiles module.'|Ls?]) :- ground(Its?) |
+    bind_procs(Bs?, Ps0), dedup(Ps0?, Ps), imports(Ps?, Its?, L1?, Ls), census_import(Run?, Tl?, L1).
 procedure bind_procs(Terms?, Terms).
 bind_procs([], []).
 bind_procs([b(_, T, P)|Bs], [bp(T?, P?)|Ps?]) :- bind_procs(Bs?, Ps).
@@ -1497,7 +1699,11 @@ procedure imports(Terms?, Terms?, Terms?, Terms).
 imports([], _, Tl, Tl?).
 imports([bp(T, P)|Ps], Its, Tl, Ls?) :- ground(Its?), ground(T?) |
     imports(Ps?, Its?, Tl?, Ls1), it_of(T?, Its?, It), person_type(It?, PT),
-    decl(['imported procedure', profiles, '#'], P?, [PT?, dual('Integer'), dual('MutualRef')], Ls1?, Ls).
+    decl(['imported procedure', profiles, '#'], P?, [PT?, dual('Person'), dual('Integer'), dual('MutualRef'), dual('MutualRef')], Ls1?, Ls).
+procedure census_import(_?, Terms?, Terms).
+census_import(run(W, _, _, _, _), Tl, Ls?) :- string(W?) |
+    decl(['', '%% The census, in the profiles module.', 'imported procedure', profiles, '#'], W?, [dual('Integer'), 'List'('Person')], Tl?, Ls).
+census_import(Run, Tl, Tl?) :- otherwise, ground(Run?) | true.
 procedure it_of(_?, Terms?, _).
 it_of(_, [], none).
 it_of(T, [it(T1, M, Af)|_], it(T1?, M?, Af?)) :- T? =?= T1? | true.
@@ -1507,31 +1713,36 @@ person_type(it(T, output, _), dual(T?)).
 person_type(it(T, input, _), T?).
 person_type(none, none).
 
-%% The person process: one clause per person declaration T =::= P of a
-%% profile Q of the dimension J, in the order of the source, then the clause
-%% of the closed stream, and the relay of each interactive type (Section 3,
-%% Definitions "Copy, Relay" and "Person Process", at sGLP a5aa59b; sGLP's task
-%% of 2026-10-14 09:46 UTC, item 1).  It reads the ask stream of the agent's
-%% initial goal, in the dispatcher's place (Definition "Simulation Program"),
-%% and chooses an ask ask(T, t(E)) by its type constant T, quoted as the source
-%% gives it, and its functor t, the one the compilation gives T, taking the ask
-%% to its functor only: in writer mode the head t(E) binds E to the reader the
-%% ask carries and assigns nothing; in reader mode the head t(E?) assigns the
-%% writer the ask carries the reader E?, E taking its place, term matching
-%% failing writer against writer (GLP-Spec, Appendix "Term Matching").  It
-%% draws from its seed Seed a value K of 1..2147483646 and its next seed S,
-%% spawns P on its end of a fresh copy, Y? in writer mode and Y in reader
-%% mode, with K as the goal's seed and the monitor's reference, and the relay
-%% of T, relay_k(A?, T, E?, Y, Mon?, Log?) in writer mode and relay_k(A?, T,
-%% E, Y?, Mon?, Log?) in reader mode, and goes on with the rest of the asks
-%% and S, so that the goal's draws and the process's are on different seed
-%% chains (Appendix B, "Seeds").
+%% The person process (Section 3, Definition "Person Process"; Section 4, "The
+%% person process"): person(A, Profiles, H, Mon, Scr, Seed, Log, Asks), the
+%% agent, its stochastic person, its person, the monitor's reference and its
+%% screen's, its seed, the log's reference and the ask stream.  One clause per
+%% person declaration T =::= P of a profile Q of a dimension of the role R, in
+%% the order of the source, its stochastic person R(..., Q, ...), Q at the
+%% place of its dimension among R's; then the clause of the closed stream; and
+%% the relay of each interactive type (Section 3, Definitions "Copy, Relay"
+%% and "Person Process", at sGLP a5aa59b; sGLP's task of 2026-10-14 09:46 UTC,
+%% item 1).  It reads the ask stream of the agent's initial goal, in the
+%% dispatcher's place (Definition "Simulation Program"), and chooses an ask
+%% ask(T, t(E)) by its type constant T, quoted as the source gives it, and its
+%% functor t, the one the compilation gives T, taking the ask to its functor
+%% only: in writer mode the head t(E) binds E to the reader the ask carries and
+%% assigns nothing; in reader mode the head t(E?) assigns the writer the ask
+%% carries the reader E?, E taking its place, term matching failing writer
+%% against writer (GLP-Spec, Appendix "Term Matching").  Its guard waits on the
+%% person ground.  It draws from its seed Seed a value K of 1..2147483646 and
+%% its next seed S, spawns P on its end of a fresh copy, Y? in writer mode and
+%% Y in reader mode, with the person, K as the goal's seed and the monitor's
+%% and the screen's references, and the relay of T, relay_k(A?, T, E?, Y,
+%% Mon?, Log?) in writer mode and relay_k(A?, T, E, Y?, Mon?, Log?) in reader
+%% mode, and goes on with the rest of the asks and S, so that the goal's draws
+%% and the process's are on different seed chains (Appendix B, "Seeds").
 procedure pp_person(_?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
 pp_person(plan(Rs, Ps), Tys, Bs, Ds, Qs, Tl,
-          ['', '%% The person process (sGLP\'s paper, Section 4, "The person process").',
-           'exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).'|Ls?]) :-
+          ['', '%% The person process (sGLP\'s paper, Section 3, Definition "Person Process"; Section 4, "The person process").',
+           'exported procedure person(Integer?, Profiles?, Person?, MutualRef?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).'|Ls?]) :-
     ground(Rs?) |
-    person_clauses(Bs?, Rs?, Qs?, Ds?, ['person(_, _, _, _, _, []).'|L1?], Ls),
+    person_clauses(Bs?, Rs?, Qs?, Ds?, ['person(_, _, _, _, _, _, _, []).'|L1?], Ls),
     relays(Rs?, 1, Ps?, Tys?, Tl?, L1).
 procedure person_clauses(Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
 person_clauses([], _, _, _, Tl, Tl?).
@@ -1539,8 +1750,8 @@ person_clauses([b(Q, T, P)|Bs], Rs, Qs, Ds, Tl, Ls?) :-
     ground(Rs?), ground(Qs?), ground(Ds?), ground(T?), ground(Q?) |
     person_clauses(Bs?, Rs?, Qs?, Ds?, Tl?, Ls1),
     root_index(T?, Rs?, 1, R, K), lookup(T?, Qs?, QT), relay_name(K?, RN),
-    dim_of(Q?, Ds?, J), length(Ds?, ND),
-    person_clause(R?, QT?, RN?, Q?, J?, ND?, P?, Ls1?, Ls).
+    dim_of(Q?, Ds?, Dm), role_place(Dm?, Ds?, Rl, J, ND),
+    person_clause(R?, QT?, RN?, Q?, Rl?, J?, ND?, P?, Ls1?, Ls).
 %% root_index(T?, Rs?, I?, R, K): R the root of T, the K-th of Rs, none and 0
 %% where T has none.
 procedure root_index(_?, Terms?, Integer?, _, Integer).
@@ -1554,36 +1765,53 @@ procedure root_type(_?, _).
 root_type(wr(T, _, _), T?).
 root_type(rd(T, _, _), T?).
 root_type(ww(T, _), T?).
-procedure dim_of(_?, Terms?, Integer).
-dim_of(_, [], 0).
-dim_of(Q, [dim(J, _, Qs, _, _)|Ds], K?) :- ground(Q?) | member(Q?, Qs?, A), dim_of1(A?, J?, Q?, Ds?, K).
-procedure dim_of1(Ans?, Integer?, _?, Terms?, Integer).
-dim_of1(yes, J, _, _, J?).
-dim_of1(no, _, Q, Ds, K?) :- dim_of(Q?, Ds?, K).
+%% dim_of(Q?, Ds?, Dm): Dm the dimension of Ds whose profiles hold Q, none
+%% where none does.
+procedure dim_of(_?, Terms?, _).
+dim_of(_, [], none).
+dim_of(Q, [dim(J, D, Qs, Ts, Nm, R)|Ds], Dm?) :- ground(Q?), ground(Qs?) |
+    member(Q?, Qs?, A), dim_of1(A?, dim(J?, D?, Qs?, Ts?, Nm?, R?), Q?, Ds?, Dm).
+procedure dim_of1(Ans?, _?, _?, Terms?, _).
+dim_of1(yes, Dm, _, _, Dm?).
+dim_of1(no, _, Q, Ds, Dm?) :- dim_of(Q?, Ds?, Dm).
+%% role_place(Dm?, Ds?, R, J, N): R the role of the dimension Dm, and Dm the
+%% J-th of the N dimensions of Ds of the role R; none, 0 and 0 where Dm is none.
+procedure role_place(_?, Terms?, _, Integer, Integer).
+role_place(none, _, none, 0, 0).
+role_place(dim(J, _, _, _, _, R), Ds, R?, I?, N?) :- ground(R?) |
+    role_dims(Ds?, R?, Rd), role_place1(Rd?, J?, I, N).
+procedure role_place1(Terms?, Integer?, Integer, Integer).
+role_place1(Rd, J, I?, N?) :- ground(Rd?) | length(Rd?, N), dim_place(Rd?, J?, 1, I).
+procedure dim_place(Terms?, Integer?, Integer?, Integer).
+dim_place([], _, _, 0).
+dim_place([dim(J1, _, _, _, _, _)|_], J, I, I?) :- J1? =:= J? | true.
+dim_place([dim(J1, _, _, _, _, _)|Rd], J, I, K?) :- J1? =\= J? | I1 := I? + 1, dim_place(Rd?, J?, I1?, K).
 
-%% person_clause(R?, QT?, RN?, Q?, J?, ND?, P?, Tail?, Ls): the clause of the
-%% person declaration T =::= P of the profile Q of the J-th of ND dimensions,
-%% R the root of T, QT T's constant quoted, RN the name of T's relay.
-procedure person_clause(_?, _?, _?, _?, Integer?, Integer?, _?, Terms?, Terms).
-person_clause(wr(_, Af, _), QT, RN, Q, J, ND, P, Tl, Ls?) :- integer(ND?) |
+%% person_clause(R?, QT?, RN?, Q?, Rl?, J?, ND?, P?, Tail?, Ls): the clause of
+%% the person declaration T =::= P of the profile Q of the J-th of the ND
+%% dimensions of the role Rl, R the root of T, QT T's constant quoted, RN the
+%% name of T's relay.
+procedure person_clause(_?, _?, _?, _?, _?, Integer?, Integer?, _?, Terms?, Terms).
+person_clause(wr(_, Af, _), QT, RN, Q, Rl, J, ND, P, Tl, Ls?) :- integer(ND?) |
     d_names(Dn0), take(ND?, Dn0?, Dn),
-    pclause(Af?, var('E'), var('Y?'), var('E?'), var('Y'), QT?, RN?, Dn?, Q?, J?, P?, Tl?, Ls).
-person_clause(rd(_, Af, _), QT, RN, Q, J, ND, P, Tl, Ls?) :- integer(ND?) |
+    pclause(Af?, var('E'), var('Y?'), var('E?'), var('Y'), QT?, RN?, Dn?, Q?, Rl?, J?, P?, Tl?, Ls).
+person_clause(rd(_, Af, _), QT, RN, Q, Rl, J, ND, P, Tl, Ls?) :- integer(ND?) |
     d_names(Dn0), take(ND?, Dn0?, Dn),
-    pclause(Af?, var('E?'), var('Y'), var('E'), var('Y?'), QT?, RN?, Dn?, Q?, J?, P?, Tl?, Ls).
-person_clause(ww(_, Af), QT, RN, Q, J, ND, P, Tl, Ls?) :- integer(ND?) |
+    pclause(Af?, var('E?'), var('Y'), var('E'), var('Y?'), QT?, RN?, Dn?, Q?, Rl?, J?, P?, Tl?, Ls).
+person_clause(ww(_, Af), QT, RN, Q, Rl, J, ND, P, Tl, Ls?) :- integer(ND?) |
     d_names(Dn0), take(ND?, Dn0?, Dn),
-    pclause(Af?, var('E'), var('Y?'), var('E?'), var('Y'), QT?, RN?, Dn?, Q?, J?, P?, Tl?, Ls).
-person_clause(none, _, _, _, _, _, _, Tl, Tl?).
-procedure pclause(_?, _?, _?, _?, _?, _?, _?, Terms?, _?, Integer?, _?, Terms?, Terms).
-pclause(Af, HE, PY, RE, RY, QT, RN, Dn, Q, J, P, Tl, Ls?) :- ground(QT?), ground(P?), ground(RN?) |
-    profiles_terms(Dn?, J?, Q?, 1, PW, PR),
+    pclause(Af?, var('E'), var('Y?'), var('E?'), var('Y'), QT?, RN?, Dn?, Q?, Rl?, J?, P?, Tl?, Ls).
+person_clause(none, _, _, _, _, _, _, _, Tl, Tl?).
+procedure pclause(_?, _?, _?, _?, _?, _?, _?, Terms?, _?, _?, Integer?, _?, Terms?, Terms).
+pclause(Af, HE, PY, RE, RY, QT, RN, Dn, Q, Rl, J, P, Tl, Ls?) :- ground(QT?), ground(P?), ground(RN?) |
+    profiles_terms(Dn?, J?, Q?, Rl?, 1, PW, PR),
     compose(Af?, [HE?], At),
-    G =.. [P?, PY?, var('K?'), var('Mon?')],
+    G =.. [P?, PY?, var('H?'), var('K?'), var('Mon?'), var('Scr?')],
     RG =.. [RN?, var('A?'), QT?, RE?, RY?, var('Mon?'), var('Log?')],
-    clause(person(var('A'), PW?, var('Mon'), var('Seed'), var('Log'), [ask(QT?, At?) | var('As')]), [],
+    clause(person(var('A'), PW?, var('H'), var('Mon'), var('Scr'), var('Seed'), var('Log'), [ask(QT?, At?) | var('As')]),
+           [ground(var('H?'))],
            [random(var('Seed?'), 2147483646, var('K'), var('S')), '#'(profiles, G?), RG?,
-            person(var('A?'), PR?, var('Mon?'), var('S?'), var('Log?'), var('As?'))], Tl?, Ls).
+            person(var('A?'), PR?, var('H?'), var('Mon?'), var('Scr?'), var('S?'), var('Log?'), var('As?'))], Tl?, Ls).
 
 %% The relays (Definition "Copy, Relay"): relay_k, k the position of T among
 %% the interactive types, declared relay_k(Integer?, Constant?, T°, T,
@@ -1695,12 +1923,13 @@ procedure rc_vars(Terms?, _, _, _, _).
 rc_vars([], var('_'), var('_'), var('_'), var('_')).
 rc_vars([_|_], var('A'), var('Type'), var('Mon'), var('Log')).
 
-%% profiles_terms(Dn?, J?, Q?, I?, PW, PR): the stochastic person in the
-%% clause's head, Q in the J-th dimension and a variable of Dn in each other,
-%% and in its call, their readers.
-procedure profiles_terms(Terms?, Integer?, _?, Integer?, _, _).
-profiles_terms(Dn, J, Q, I, PW?, PR?) :-
-    profile_args(Dn?, J?, Q?, I?, Ws, Rs), PW =.. [profiles|Ws?], PR =.. [profiles|Rs?].
+%% profiles_terms(Dn?, J?, Q?, Rl?, I?, PW, PR): the stochastic person of the
+%% role Rl in the clause's head, Rl its functor, Q at the J-th of its
+%% dimensions and a variable of Dn at each other, and in its call, their
+%% readers.
+procedure profiles_terms(Terms?, Integer?, _?, _?, Integer?, _, _).
+profiles_terms(Dn, J, Q, Rl, I, PW?, PR?) :- ground(Rl?) |
+    profile_args(Dn?, J?, Q?, I?, Ws, Rs), PW =.. [Rl?|Ws?], PR =.. [Rl?|Rs?].
 procedure profile_args(Terms?, Integer?, _?, Integer?, Terms, Terms).
 profile_args([], _, _, _, [], []).
 profile_args([n(W, R)|Dn], J, Q, I, [A?|As?], [B?|Bs?]) :- integer(I?), integer(J?), ground(Q?) |
@@ -2198,84 +2427,237 @@ procedure answer_type_hole(Integer?, Integer?, _?, Terms?, Terms).
 answer_type_hole(K, I, U, Ts, [dual(U?)|Ts?]) :- K? =:= I? | true.
 answer_type_hole(K, I, _, Ts, Ts?) :- K? =\= I? | true.
 
+%% The screen (Section 3, Definition "Screen, Seen"; Section 4, "The screen"
+%% and "The log"; Appendix B): the screen of an agent holds the program's
+%% output to its person, shows its elements in order, each once it is ground,
+%% an element not yet ground holding back those after it, and logs each it
+%% shows, entry(Time, A, output, E), the clock asked of the monitor; it keeps
+%% those shown, the last first, and answers each request seen(L) on its
+%% reference at once with them.  Its procedure is the Definition's, with the
+%% agent, the monitor's reference and the log's for the log; it takes the
+%% type of the output as a parameter, Output where the platform defines it,
+%% and, where it does not, the harness hands it [] (Section 3, after
+%% Definition "Well-Formed": "where M does not, O_a? stands for []").
+%% start_screen/5 allocates the screen's reference, a mutual reference (Appendix
+%% B), and spawns the screen on the output O, Os empty.
+procedure pp_screen(Terms?, Terms).
+pp_screen(Tl, ['', '%% The screen of an agent (sGLP\'s paper, Section 3, Definition "Screen, Seen"; Section 4, "The screen" and "The log").',
+               'Seen(X) ::= seen(List(X)?).',
+               'exported procedure(X) screen(Integer?, Stream(X)?, List(X)?, Stream(Seen(X))?, MutualRef?, MutualRef?).',
+               'screen(A, [E|O], Os, Rs, Mon, Log) :- ground(E?) | stream_append(time(Time), Mon?, _), stream_append(entry(Time?, A?, output, E?), Log?, _), screen(A?, O?, [E?|Os?], Rs?, Mon?, Log?).',
+               'screen(A, O, Os, [seen(Os?)|Rs], Mon, Log) :- ground(Os?) | screen(A?, O?, Os?, Rs?, Mon?, Log?).',
+               'screen(_, [], _, [], _, _).',
+               '', '%% An agent\'s screen on the program\'s output O to its person, and its reference, Scr, on which the person goals request seen(L).',
+               'exported procedure(X) start_screen(Integer?, Stream(X)?, MutualRef?, MutualRef?, MutualRef).',
+               'start_screen(A, O, Mon, Log, Scr?) :- allocate_mutual_reference(Scr, Rs), screen(A?, O?, [], Rs?, Mon?, Log?).'|Tl?]).
+
 %% The run declaration (Section 3; Section 4, "The run"; Appendix B): the
-%% declaration itself, declaration/N, its agents, horizon, seed and the
-%% thresholds of its dimensions; the stochastic person of an agent,
-%% stochastic_person(B, T1, ..., Profiles, S), its profile in each dimension
-%% drawn in order from the start B of its block by random/4 of 1..100 against
-%% the dimension's thresholds T1, ..., and S the seed its draws leave, its
-%% person process's; and the draw of each dimension D, D(K, T1, ..., Q): the
-%% I-th profile Q for a draw above the threshold before it and up to its own,
-%% the first from 1, the last to 100.
-procedure pp_run(_?, Terms?, Terms?, Terms).
-pp_run(run(N, _, C, U, Seed), Ds, Tl, Ls?) :- ground(Ds?) |
-    all_thresholds(Ds?, Ts), length(Ds?, ND),
-    pp_run1(Ts?, ND?, N?, C?, U?, Seed?, Ds?, Tl?, Ls).
-procedure pp_run1(Terms?, Integer?, _?, _?, _?, _?, Terms?, Terms?, Terms).
-pp_run1(Ts, ND, N, C, U, Seed, Ds, Tl, Ls?) :- ground(Ts?) |
-    length(Ts?, NT), t_names(Tn0), take(NT?, Tn0?, Tn),
+%% declaration itself, declaration/N, its persons --- the number of its agents
+%% or the name of its census --- horizon, seed and the thresholds of its
+%% dimensions; the persons of the run, persons(B, Ks, Ok, Ps, B1), drawn by its
+%% census, and the start of the first agent's block; the stochastic person of
+%% an agent, stochastic_person(B, H, T1, ..., Profiles, S), its profile in each
+%% dimension of the role of its person H drawn in order from the start B of
+%% its block by random/4 of 1..100 against the dimension's thresholds, and S
+%% the seed its draws leave, its person process's; and the draw of each
+%% dimension D, D(K, T1, ..., Q): the I-th profile Q for a draw above the
+%% threshold before it and up to its own, the first from 1, the last to 100.
+procedure pp_run(_?, Terms?, Terms?, _?, Terms?, Terms).
+pp_run(run(N, _, C, U, Seed), Ds, Rls, KT, Tl, Ls?) :- ground(Ds?) |
+    all_thresholds(Ds?, Ts), pp_run1(Ts?, N?, C?, U?, Seed?, Ds?, Rls?, KT?, Tl?, Ls).
+procedure pp_run1(Terms?, _?, _?, _?, _?, Terms?, Terms?, _?, Terms?, Terms).
+pp_run1(Ts, N, C, U, Seed, Ds, Rls, KT, Tl, ['', '%% The run declaration: its persons, horizon, seed and thresholds.'|Ls?]) :-
+    ground(Ts?), ground(N?), ground(Ds?), ground(Rls?) |
+    length(Ts?, NT), integers(NT?, ITs), persons_type(N?, PT),
+    append([N?, C?, U?, Seed?], Ts?, DAs), compose(declaration, DAs?, DH),
+    decl(['exported procedure'], declaration, [PT?, 'Number', 'Span', 'Integer'|ITs?], L2?, Ls),
+    clause(DH?, [], [], L3?, L2),
+    pp_persons(N?, KT?, Rls?, L4?, L3),
+    pp_stochastic(Ds?, Rls?, NT?, L5?, L4),
+    dim_procs(Ds?, Tl?, L5).
+%% persons_type(N?, T): the type of the declaration's persons, Integer for a
+%% number of agents and Constant for a census's name.
+procedure persons_type(_?, _).
+persons_type(N, 'Integer') :- integer(N?) | true.
+persons_type(N, 'Constant') :- otherwise, constant(N?) | true.
+
+%% pp_persons(N?, KT?, Rls?, Tail?, Ls): persons(B, Ks, Ok, Ps, B1), the persons of
+%% the run, Ps, the persons the census draws, with Ok yes, or no where it
+%% draws no person or a person of a role of no dimension, Rls the roles of the
+%% dimensions, which the run refuses (Section 3, after Definition
+%% "Well-Formed"); and B1 the start of the first agent's block (Appendix B,
+%% "Seeds").  Where the run declaration gives a number of agents, the census
+%% of run n agents: person(K, agent, []) for each key K of Ks, the agents'
+%% keys, which the harness gives, and the agents draw from the blocks from the
+%% first, B1 = B.  Where it names a census W, W draws from the first block,
+%% from B, at most 4096 times, which is its author's to ensure, and the agents
+%% from the blocks after it, B1 the seed 4096 draws after B, drawn one at a
+%% time, as the harnesses draw a block.
+procedure pp_persons(_?, _?, Terms?, Terms?, Terms).
+pp_persons(N, KT, Rls, Tl, ['', '%% The persons of the run, drawn by its census (sGLP\'s paper, Section 3, Definition "Person, Census", and after Definition "Well-Formed"; Appendix B).'|Ls?]) :-
+    integer(N?), ground(KT?) |
+    decl(['exported procedure'], persons, [dual('Integer'), dual('Stream'(KT?)), 'Constant', 'List'('Person'), 'Integer'],
+         ['persons(B, Ks, Ok?, Ps?, B?) :- integer(B?) | agent_persons(Ks?, Ps0), checked(Ps0?, Ok, Ps).'|L1?], Ls),
+    decl(['procedure'], agent_persons, [dual('Stream'(KT?)), 'List'('Person')],
+         ['agent_persons([], []).', 'agent_persons([K|Ks], [person(K?, agent, [])|Ps?]) :- agent_persons(Ks?, Ps).'|L2?], L1),
+    persons_check(Rls?, Tl?, L2).
+pp_persons(W, KT, Rls, Tl, ['', '%% The persons of the run, drawn by its census (sGLP\'s paper, Section 3, Definition "Person, Census", and after Definition "Well-Formed"; Appendix B).'|Ls?]) :-
+    otherwise, string(W?), ground(KT?) |
+    decl(['exported procedure'], persons, [dual('Integer'), dual('Stream'(KT?)), 'Constant', 'List'('Person'), 'Integer'], L0?, Ls),
+    G =.. [W?, var('B?'), var('Ps0')],
+    clause(persons(var('B'), var('_'), var('Ok?'), var('Ps?'), var('B1?')), [integer(var('B?'))],
+           ['#'(profiles, G?), checked(var('Ps0?'), var('Ok'), var('Ps')), skip(4096, var('B?'), var('B1'))], L1?, L0),
+    persons_check(Rls?, Tl?, L1).
+%% persons_check(Rls?, Tail?, Ls): skip(J, S, S1), S1 the seed J draws after S,
+%% one draw at a time, as the harnesses draw a block (Appendix B, "Seeds");
+%% checked(Ps, Ok, Ps1), Ok yes where the persons Ps are at least one, each of
+%% a role of Rls, and no otherwise, Ps1 Ps; roles_ok/2, a clause per role.
+procedure persons_check(Terms?, Terms?, Terms).
+persons_check(Rls, Tl, ['procedure skip(Integer?, Integer?, Integer).',
+                        'skip(0, S, S?).',
+                        'skip(J, S, S1?) :- J? > 0, integer(S?) | random(S?, 1, _, S2), J1 := J? - 1, skip(J1?, S2?, S1).',
+                        'procedure checked(List(Person)?, Constant, List(Person)).',
+                        'checked([], no, []).',
+                        'checked([P|Ps], Ok?, [P?|Ps?]) :- ground(P?), ground(Ps?) | roles_ok([P?|Ps?], Ok).',
+                        'procedure roles_ok(List(Person)?, Constant).',
+                        'roles_ok([], yes).'|Ls?]) :-
+    role_clauses(Rls?, ['roles_ok([_|_], no) :- otherwise | true.'|Tl?], Ls).
+procedure role_clauses(Terms?, Terms?, Terms).
+role_clauses([], Tl, Tl?).
+role_clauses([R|Rs], Tl, Ls?) :- ground(R?) |
+    role_clauses(Rs?, Tl?, L1),
+    clause(roles_ok([person(var('_'), R?, var('_')) | var('Ps')], var('Ok?')), [], [roles_ok(var('Ps?'), var('Ok'))], L1?, Ls).
+
+%% pp_stochastic(Ds?, Rls?, NT?, Tail?, Ls): stochastic_person/N, its
+%% declaration, the start of the block, the person and the NT thresholds of
+%% the dimensions, all roles', and a clause per role R, drawing the profile of
+%% each dimension of R, in the order of the mix, from the block (Section 3,
+%% Definition "Stochastic Person, Population"; Appendix B, "Seeds"), the
+%% thresholds of the other roles' dimensions _.
+procedure pp_stochastic(Terms?, Terms?, Integer?, Terms?, Terms).
+pp_stochastic(Ds, Rls, NT, Tl, ['', '%% An agent\'s stochastic person, one profile per dimension of the role of its person, drawn from its block (Appendix B).'|Ls?]) :-
+    integer(NT?) |
+    dual_integers(NT?, DITs), append(DITs?, ['Profiles', 'Integer'], STs),
+    decl(['exported procedure'], stochastic_person, [dual('Integer'), dual('Person')|STs?], L1?, Ls),
+    t_names(Tn0), take(NT?, Tn0?, Tn),
+    role_stochastic(Rls?, Ds?, Tn?, Tl?, L1).
+procedure role_stochastic(Terms?, Terms?, Terms?, Terms?, Terms).
+role_stochastic([], _, _, Tl, Tl?).
+role_stochastic([R|Rs], Ds, Tn, Tl, Ls?) :- ground(R?), ground(Ds?), ground(Tn?) |
+    role_stochastic(Rs?, Ds?, Tn?, Tl?, L1),
+    role_dims(Ds?, R?, Rd), role_heads(Ds?, R?, Tn?, Hs, TnR),
+    role_clause(R?, Rd?, Hs?, TnR?, L1?, Ls).
+%% role_heads(Ds?, R?, Tn?, Hs, TnR): the head's thresholds, the names of Tn of
+%% the dimensions of the role R, in order, and _ for every other; and TnR
+%% those names.
+procedure role_heads(Terms?, _?, Terms?, Terms, Terms).
+role_heads([], _, _, [], []).
+role_heads([dim(_, _, _, Ts, _, R1)|Ds], R, Tn, Hs?, TR?) :- ground(Tn?), ground(R?) |
+    length(Ts?, NT), take(NT?, Tn?, Tj), drop(NT?, Tn?, Tn1),
+    role_heads1(R1?, R?, Tj?, H1, T1), role_heads(Ds?, R?, Tn1?, H2, T2),
+    append(H1?, H2?, Hs), append(T1?, T2?, TR).
+procedure role_heads1(_?, _?, Terms?, Terms, Terms).
+role_heads1(R1, R, Tj, Ws?, Tj?) :- R1? =?= R?, ground(Tj?) | writes(Tj?, Ws).
+role_heads1(R1, R, Tj, Us?, []) :- R1? =?\= R? | blanks(Tj?, Us).
+%% role_clause(R?, Rd?, Hs?, TnR?, Tail?, Ls): the clause of stochastic_person
+%% for the role R of the dimensions Rd: its head the block's start B, the
+%% person person(_, R, _), the thresholds Hs, R(P1?, ..., Pm?) and S?; its body
+%% the draws from B, the last leaving S, and the draw of each dimension.
+procedure role_clause(_?, Terms?, Terms?, Terms?, Terms?, Terms).
+role_clause(R, Rd, Hs, TnR, Tl, Ls?) :- ground(Rd?), ground(R?) |
+    length(Rd?, ND), role_clause1(ND?, R?, Rd?, Hs?, TnR?, Tl?, Ls).
+procedure role_clause1(Integer?, _?, Terms?, Terms?, Terms?, Terms?, Terms).
+role_clause1(ND, R, Rd, Hs, TnR, Tl, Ls?) :- integer(ND?), ground(R?) |
     b_names(Bn0), k_names(Kn0), p_names(Pn0),
     take(ND?, Bn0?, Bn), take(ND?, Kn0?, Kn), take(ND?, Pn0?, Pn),
-    pp_run2(Ts?, NT?, Tn?, Bn?, Kn?, Pn?, N?, C?, U?, Seed?, Ds?, Tl?, Ls).
-procedure pp_run2(Terms?, Integer?, Terms?, Terms?, Terms?, Terms?, _?, _?, _?, _?,
-                  Terms?, Terms?, Terms).
-pp_run2(Ts, NT, Tn, Bn, Kn, Pn, N, C, U, Seed, Ds, Tl,
-        ['', '%% The run declaration: its agents, horizon, seed and thresholds.'|Ls?]) :-
-    ground(Tn?), ground(Kn?), ground(Pn?), ground(Ds?) |
-    integers(NT?, ITs), dual_integers(NT?, DITs),
-    append([N?, C?, U?, Seed?], Ts?, DAs), compose(declaration, DAs?, DH),
-    reads(Pn?, PRs), SP =.. [profiles|PRs?],
-    writes(Tn?, TWs), compose(stochastic_person, [var('B')|TWs?], SH0),
-    args(SH0?, [], [SP?, var('S?')], SH),
-    draws(Bn?, Kn?, Dr),
-    picks(Ds?, Kn?, Tn?, Pn?, Pk), append(Dr?, Pk?, SB),
-    append(DITs?, ['Profiles', 'Integer'], STs),
-    decl(['exported procedure'], declaration, ['Integer', 'Number', 'Span', 'Integer'|ITs?], L2?, Ls),
-    clause(DH?, [], [], ['', '%% An agent\'s stochastic person, drawn from its block (Appendix B).'|L3?], L2),
-    decl(['exported procedure'], stochastic_person, [dual('Integer')|STs?], L4?, L3),
-    clause(SH?, [], SB?, L5?, L4),
-    dim_procs(Ds?, Tl?, L5).
+    role_clause2(Bn?, Kn?, Pn?, R?, Rd?, Hs?, TnR?, Tl?, Ls).
+procedure role_clause2(Terms?, Terms?, Terms?, _?, Terms?, Terms?, Terms?, Terms?, Terms).
+role_clause2(Bn, Kn, Pn, R, Rd, Hs, TnR, Tl, Ls?) :- ground(Kn?), ground(Pn?), ground(R?) |
+    reads(Pn?, PRs), SP =.. [R?|PRs?],
+    append([var('B'), person(var('_'), R?, var('_'))|Hs?], [SP?, var('S?')], HA), compose(stochastic_person, HA?, SH),
+    draws(Bn?, Kn?, Dr), picks(Rd?, Kn?, TnR?, Pn?, Pk), append(Dr?, Pk?, SB),
+    clause(SH?, [], SB?, Tl?, Ls).
 
 %% cva_entries(S?, Tail?, Ls): the entries of fixed_entries/7 from the run
-%% declaration of S, its agents, horizon, seed and thresholds, which the part
+%% declaration of S, its persons, horizon, seed and thresholds, which the part
 %% cva_population prints after the population (part_lines/5).
 procedure cva_entries(Terms?, Terms?, Terms).
-cva_entries(S, Tl, Ls?) :- ground(S?) | runs(S?, Rs), cva_entries1(Rs?, Tl?, Ls).
-procedure cva_entries1(Terms?, Terms?, Terms).
-cva_entries1([run(N, Mixes, C, U, Seed)], Tl, Ls?) :- ground(Mixes?) |
-    dims(Mixes?, 1, Ds), all_thresholds(Ds?, Ts), fixed_entries(N?, C?, U?, Seed?, Ts?, Tl?, Ls).
-cva_entries1(Rs, Tl, Tl?) :- otherwise, ground(Rs?) | true.
+cva_entries(S, Tl, Ls?) :- ground(S?) | runs(S?, Rs), stypes(S?, STs), person_key(STs?, canonical, KT), cva_entries1(Rs?, KT?, Tl?, Ls).
+procedure cva_entries1(Terms?, _?, Terms?, Terms).
+cva_entries1([run(N, Mixes, C, U, Seed)], KT, Tl, Ls?) :- ground(Mixes?) |
+    mixes(Mixes?, Ms1), dims(Ms1?, 1, Ds), all_thresholds(Ds?, Ts), fixed_entries(N?, C?, U?, Seed?, Ts?, KT?, Tl?, Ls).
+cva_entries1(Rs, _, Tl, Tl?) :- otherwise, ground(Rs?) | true.
+%% person_key(STs?, Md?, KT): the type of a person's key, its first argument's
+%% in the source's Person, person(KT, Role, Attributes), and in the default
+%% Person of run n agents (default_person/4) Constant, or Key on a canonical
+%% platform (Md canonical).
+procedure person_key(Terms?, _?, _).
+person_key([], plain, 'Constant').
+person_key([], canonical, 'Key').
+person_key([type(N, [person(KT, _, _)])|_], _, KT?) :- N? =?= 'Person' | true.
+person_key([_|Ts], Md, KT?) :- otherwise | person_key(Ts?, Md?, KT).
 
-%% fixed_entries(N?, C?, U?, Seed?, Ts?, Tail?, Ls): the run's entries of one
-%% arity whatever the population, for the harness of every canonical CVA
+%% fixed_entries(N?, C?, U?, Seed?, Ts?, KT?, Tail?, Ls): the run's entries of
+%% one arity whatever the population, for the harness of every canonical CVA
 %% platform, which takes the printed population of any source
-%% (programs/sglp/cva/; sGLP's task of 2026-10-18 20:50 UTC, item 2):
-%% run_declaration/4, the run declaration's agents, horizon and seed;
-%% stochastic_agent(A, B, Mon, Log, Asks), agent A's stochastic person drawn
-%% from the start B of its block with the declaration's thresholds, its person
-%% process's seed drawn from the seed the profiles leave, and its person
-%% process on the ask stream Asks, as the examples' harnesses draw and spawn
-%% them (Appendix B, "Seeds"); and stochastic_profiles(B, P), the stochastic
-%% person P drawn from B, for the population's draw.
-procedure fixed_entries(_?, _?, _?, _?, Terms?, Terms?, Terms).
-fixed_entries(N, C, U, Seed, Ts, Tl, ['', '%% The run\'s entries of one arity, for the harness of every canonical CVA platform (programs/sglp/cva/).'|Ls?]) :-
-    ground(Ts?) |
-    compose(run_declaration, [N?, C?, U?, Seed?], RH),
-    append([var('B?')|Ts?], [var('P'), var('S')], SA1), compose(stochastic_person, SA1?, SG1),
-    append([var('B?')|Ts?], [var('P'), var('_')], SA2), compose(stochastic_person, SA2?, SG2),
-    decl(['exported procedure'], run_declaration, ['Integer', 'Number', 'Span', 'Integer'], L1?, Ls),
+%% (programs/sglp/cva/; sGLP's task of 2026-10-18 20:50 UTC, item 2, and of
+%% 2026-10-20 08:00 UTC, items 1 and 4): run_declaration/4, the run
+%% declaration's persons, horizon and seed; cva_check(B, Ks, Ok), whether the
+%% run is refused, Ok no, its census drawing no person or a person of a role of
+%% no dimension; cva_agents(B, Ks, Mon, Log, Keys, Seats), the persons of the
+%% run, Keys their keys, the agents' keys on the platform, of the type of a
+%% person's key, KT (person_key/3), and for each agent its seat,
+%% seat(K, Asks, O), the writers of its ask stream and of the program's output
+%% to its person, which its initial goal writes, its person process and its
+%% screen spawned on their readers, its stochastic person, of the role of its
+%% person, drawn from its block with the declaration's thresholds and its
+%% person process's seed drawn from the seed the profiles leave (Section 3,
+%% Definition "Simulation Program"; Appendix B, "Seeds"); and cva_draw(B, Ks,
+%% D), the population's draw, each agent's stochastic person, agent(A, P).  The
+%% persons and their type, the source's, stay in the population, the harness,
+%% written once for every source, naming the keys and the seats only.
+procedure fixed_entries(_?, _?, _?, _?, Terms?, _?, Terms?, Terms).
+fixed_entries(N, C, U, Seed, Ts, KT, Tl, ['', '%% The run\'s entries of one arity, for the harness of every canonical CVA platform (programs/sglp/cva/).'|Ls?]) :-
+    ground(Ts?), ground(N?), ground(KT?) |
+    compose(run_declaration, [N?, C?, U?, Seed?], RH), persons_type(N?, PT),
+    append([var('B?'), var('H?')|Ts?], [var('P'), var('S')], SA1), compose(stochastic_person, SA1?, SG1),
+    append([var('B?'), var('H?')|Ts?], [var('P'), var('_')], SA2), compose(stochastic_person, SA2?, SG2),
+    decl(['exported procedure'], run_declaration, [PT?, 'Number', 'Span', 'Integer'], L1?, Ls),
     clause(RH?, [], [], L2?, L1),
-    decl(['exported procedure'], stochastic_agent,
-         [dual('Integer'), dual('Integer'), dual('MutualRef'), dual('MutualRef'), dual('Stream'('Ask'))], L3?, L2),
-    clause(stochastic_agent(var('A'), var('B'), var('Mon'), var('Log'), var('Asks')), [],
+    seat_type(KT?, L3?, L2),
+    decl(['exported procedure'], cva_check, [dual('Integer'), dual('Stream'('Key')), 'Constant'],
+         ['cva_check(B, Ks, Ok?) :- persons(B?, Ks?, Ok, _, _).'|L4?], L3),
+    decl(['exported procedure(X)'], cva_agents,
+         [dual('Integer'), dual('Stream'('Key')), dual('MutualRef'), dual('MutualRef'), 'Stream'(KT?), 'Stream'('Seat'('X'))],
+         ['cva_agents(B, Ks, Mon, Log, Keys?, Seats?) :- persons(B?, Ks?, _, Ps, B1), seats(1, Ps?, B1?, Mon?, Log?, Keys, Seats).'|L5?], L4),
+    decl(['procedure(X)'], seats,
+         [dual('Integer'), dual('List'('Person')), dual('Integer'), dual('MutualRef'), dual('MutualRef'), 'Stream'(KT?), 'Stream'('Seat'('X'))],
+         ['seats(_, [], _, _, _, [], []).',
+          'seats(A, [person(K, R, V)|Ps], B, Mon, Log, [K?|Ks?], [seat(K?, Asks, O)|Ss?]) :- integer(A?), integer(B?), ground(K?), ground(V?) | stochastic_agent(A?, B?, person(K?, R?, V?), Mon?, Log?, Asks?, O?), skip(4096, B?, B2), A1 := A? + 1, seats(A1?, Ps?, B2?, Mon?, Log?, Ks, Ss).'|L6?], L5),
+    decl(['procedure(X)'], stochastic_agent,
+         [dual('Integer'), dual('Integer'), dual('Person'), dual('MutualRef'), dual('MutualRef'), dual('Stream'('Ask')), dual('Stream'('X'))], L7?, L6),
+    clause(stochastic_agent(var('A'), var('B'), var('H'), var('Mon'), var('Log'), var('Asks'), var('O')), [ground(var('H?'))],
            [SG1?, random(var('S?'), 2147483646, var('Seed'), var('_')),
-            person(var('A?'), var('P?'), var('Mon?'), var('Seed?'), var('Log?'), var('Asks?'))], L4?, L3),
-    decl(['exported procedure'], stochastic_profiles, [dual('Integer'), '_'], L5?, L4),
-    clause(stochastic_profiles(var('B'), var('P?')), [], [SG2?], Tl?, L5).
+            start_screen(var('A?'), var('O?'), var('Mon?'), var('Log?'), var('Scr')),
+            person(var('A?'), var('P?'), var('H?'), var('Mon?'), var('Scr?'), var('Seed?'), var('Log?'), var('Asks?'))], L8?, L7),
+    decl(['exported procedure'], cva_draw, [dual('Integer'), dual('Stream'('Key')), 'Stream'('_')],
+         ['cva_draw(B, Ks, D?) :- persons(B?, Ks?, _, Ps, B1), drawn(1, Ps?, B1?, D).',
+          'procedure drawn(Integer?, List(Person)?, Integer?, Stream(_)).',
+          'drawn(_, [], _, []).'|L9?], L8),
+    clause(drawn(var('A'), [var('H') | var('Hs')], var('B'), [agent(var('A?'), var('P?')) | var('D?')]),
+           [integer(var('A?')), integer(var('B?')), ground(var('H?'))],
+           [SG2?, skip(4096, var('B?'), var('B2')), ':='(var('A1'), '+'(var('A?'), 1)), drawn(var('A1?'), var('Hs?'), var('B2?'), var('D'))], Tl?, L9).
+%% seat_type(KT?, Tail?, Ls): the type of a seat, seat(K, Asks, O), K of the
+%% type of a person's key and the two streams written by its reader, the
+%% harness's agent.
+procedure seat_type(_?, Terms?, Terms).
+seat_type(KT, Tl, ['', '%% An agent\'s seat on the platform: its key, and the writers of its ask stream and of the program\'s output to its person, which its initial goal writes.', 'Seat', '(', 'X', ')', '::=', 'seat', '('|Ls?]) :-
+    ground(KT?) |
+    types_lines([KT?, dual('Stream'('Ask')), dual('Stream'('X'))], [')', '.'|Tl?], Ls).
 
 procedure all_thresholds(Terms?, Terms).
 all_thresholds([], []).
-all_thresholds([dim(_, _, _, Ts, _)|Ds], As?) :- all_thresholds(Ds?, As1), append(Ts?, As1?, As).
+all_thresholds([dim(_, _, _, Ts, _, _)|Ds], As?) :- all_thresholds(Ds?, As1), append(Ts?, As1?, As).
 procedure integers(Integer?, Terms).
 integers(N, []) :- N? =< 0 | true.
 integers(N, ['Integer'|Is?]) :- N? > 0 | N1 := N? - 1, integers(N1?, Is).
@@ -2302,7 +2684,7 @@ draws([_|_], [], []).
 %% Pj), its thresholds the next of Tn.
 procedure picks(Terms?, Terms?, Terms?, Terms?, Terms).
 picks([], _, _, _, []).
-picks([dim(_, D, _, Ts, _)|Ds], [n(_, KR)|Kn], Tn, [n(PW, _)|Pn], [G?|Gs?]) :- ground(Tn?) |
+picks([dim(_, D, _, Ts, _, _)|Ds], [n(_, KR)|Kn], Tn, [n(PW, _)|Pn], [G?|Gs?]) :- ground(Tn?) |
     length(Ts?, NT), take(NT?, Tn?, Tj), reads(Tj?, TRs),
     drop(NT?, Tn?, Tn1),
     append([var(KR?)|TRs?], [var(PW?)], As), compose(D?, As?, G),
@@ -2314,7 +2696,7 @@ picks([_|_], [_|_], _, [], []).
 %% D(K?, T1?, ..., Nm), one clause per profile.
 procedure dim_procs(Terms?, Terms?, Terms).
 dim_procs([], Tl, Tl?).
-dim_procs([dim(_, D, Qs, Ts, Nm)|Ds], Tl, ['', C?|Ls?]) :- ground(Ts?), ground(D?) |
+dim_procs([dim(_, D, Qs, Ts, Nm, _)|Ds], Tl, ['', C?|Ls?]) :- ground(Ts?), ground(D?) |
     C =.. ['%% The draw of the dimension', D?],
     dim_procs(Ds?, Tl?, Ls2),
     length(Ts?, NT), dual_integers(NT?, DTs), append([dual('Integer')|DTs?], [Nm?], DT),
@@ -2365,18 +2747,26 @@ k_var([_|_], var('K')).
 %% transformation's")
 %% ===========================================================================
 %% checks(V?, S?, Es): Es are the faults of the program, each a comment line
-%% %% not transformed: ...(...): those four, and what the transformation needs
-%% to translate it at all.
+%% %% not transformed: ...(...): the well-formedness of the population's
+%% dimensions, profiles and distributions (Definition "Well-Formed"; Section
+%% 3, after it), the reserved names, and what the transformation needs to
+%% translate it at all.
 
 procedure checks(Terms?, Terms?, Terms).
 checks(V, S, Es?) :- ground(V?), ground(S?) |
     runs(S?, Rs), interactives(V?, Its0), types(V?, Tys), compileds(V?, CKs),
-    binds(S?, none, Bs), persons(S?, Ps), decls(S?, Hs), clauses(S?, Cs),
-    check_runs(Rs?, Its0?, Tys?, CKs?, Bs?, Ps?, Hs?, Cs?, Es).
+    binds(S?, none, Bs), persons(S?, Ps), decls(S?, Hs), clauses(S?, Cs), stypes(S?, STs),
+    check_runs(Rs?, Its0?, Tys?, CKs?, Bs?, Ps?, Hs?, Cs?, STs?, Es).
 
-procedure check_runs(Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
-check_runs([run(N, Ms, C, U, Seed)], Its0, Tys, CKs, Bs, Ps, Hs, Cs, Es?) :-
-    ground(Ms?), ground(Its0?), ground(Tys?), ground(Bs?), ground(Ps?), ground(Hs?), ground(Cs?) |
+procedure check_runs(Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+check_runs([run(N, Ms0, C, U, Seed)], Its0, Tys, CKs, Bs, Ps, Hs, Cs, STs, Es?) :- ground(Ms0?) |
+    mixes(Ms0?, Ms), check_runs1(N?, Ms?, C?, U?, Seed?, Its0?, Tys?, CKs?, Bs?, Ps?, Hs?, Cs?, STs?, Es).
+check_runs([], _, _, _, _, _, _, _, _, ['%% not transformed: no run declaration']).
+check_runs([_, _|_], _, _, _, _, _, _, _, _, ['%% not transformed: more than one run declaration']).
+procedure check_runs1(_?, Terms?, _?, _?, _?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+check_runs1(N, Ms, C, U, Seed, Its0, Tys, CKs, Bs, Ps, Hs, Cs, STs, Es?) :-
+    ground(N?), ground(Ms?), ground(Its0?), ground(Tys?), ground(CKs?), ground(Bs?), ground(Ps?), ground(Hs?),
+    ground(Cs?), ground(STs?) |
     check_run(N?, C?, U?, Seed?, E0),
     check_mixes(Ms?, E1),
     check_profiles(Ms?, Ps?, E2),
@@ -2388,14 +2778,92 @@ check_runs([run(N, Ms, C, U, Seed)], Its0, Tys, CKs, Bs, Ps, Hs, Cs, Es?) :-
     check_names(Cs?, E8),
     check_decls(Hs?, E9),
     check_compiled(Hs?, Cs?, CKs?, E10),
+    check_census(N?, Hs?, Cs?, Bs?, E11),
+    check_reserved(Tys?, CKs?, Hs?, Cs?, STs?, E12),
+    check_stypes(STs?, E13),
     append(E0?, E1?, A1), append(A1?, E2?, A2), append(A2?, E3?, A3),
     append(A3?, E4?, A4), append(A4?, E5?, A5), append(A5?, E6?, A6),
     append(A6?, E7?, A7), append(A7?, E8?, A8), append(A8?, E9?, A9),
-    append(A9?, E10?, Es).
-check_runs([], _, _, _, _, _, _, _, ['%% not transformed: no run declaration']).
-check_runs([_, _|_], _, _, _, _, _, _, _, ['%% not transformed: more than one run declaration']).
+    append(A9?, E10?, A10), append(A10?, E11?, A11), append(A11?, E12?, A12),
+    append(A12?, E13?, Es).
 
-%% The run: a positive number of agents, a horizon of a unit of time, a seed.
+%% The census the run declaration names (Section 3, Definition "Person,
+%% Census"): a procedure declared W(Integer?, List(Person)), of a GLP program,
+%% so holding no rated goal and reaching no screen, which would give it the
+%% monitor's reference or the screen's.
+procedure check_census(_?, Terms?, Terms?, Terms?, Terms).
+check_census(N, _, _, _, []) :- integer(N?) | true.
+check_census(W, Hs, Cs, Bs, Es?) :- otherwise, string(W?), ground(Hs?), ground(Cs?) |
+    decl_of(key(W?, 2), Hs?, D), Rq =.. [W?, dual('Integer'), 'List'('Person')],
+    person_keys(Bs?, Ps), check_census1(D?, Rq?, W?, Ps?, Cs?, Es).
+check_census(N, _, _, _, []) :- otherwise, ground(N?) | true.
+procedure check_census1(_?, _?, _?, Terms?, Terms?, Terms).
+check_census1(D, Rq, W, Ps, Cs, Es?) :- ground(W?), ground(Ps?), ground(Cs?) |
+    mon_keys(Ps?, Cs?, Ms), scr_keys(Ps?, Cs?, Ss), append(Ms?, Ss?, MSs), member(key(W?, 2), MSs?, AR),
+    check_census2(D?, Rq?, AR?, W?, Es).
+procedure check_census2(_?, _?, Ans?, _?, Terms).
+check_census2(D, Rq, no, _, []) :- D? =?= Rq? | true.
+check_census2(_, _, _, W, [E?]) :- otherwise, ground(W?) |
+    E =.. ['%% not transformed: a census undeclared, not declared procedure W(Integer?, List(Person)), or holding a rated goal or reaching the screen', W?].
+
+%% The reserved names (Section 3, Definition "Well-Formed"; Definition
+%% "Screen, Seen"): the platform defines no procedure or type named screen,
+%% seen, Seen or Person, its types and its compiled predicates, which the
+%% interface names; and the profiles' programs and the census define none
+%% named screen, seen or Seen, their declarations', their clauses' and their
+%% types'.
+procedure check_reserved(Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+check_reserved(Tys, CKs, Hs, Cs, STs, Es?) :- ground(Tys?), ground(CKs?), ground(Hs?), ground(Cs?), ground(STs?) |
+    type_names(Tys?, TNs), key_names(CKs?, CNs), append(TNs?, CNs?, VNs),
+    any_member(VNs?, [screen, seen, 'Seen', 'Person'], AV),
+    decl_keys(Hs?, K1), head_keys(Cs?, K2), append(K1?, K2?, K3), key_names(K3?, SNs), type_names(STs?, STNs),
+    append(SNs?, STNs?, PNs), any_member(PNs?, [screen, seen, 'Seen'], AP),
+    reserved_fault(AV?, '%% not transformed: a platform that defines screen, seen, Seen or Person', E1),
+    reserved_fault(AP?, '%% not transformed: a profile or the census that defines screen, seen or Seen', E2),
+    append(E1?, E2?, Es).
+procedure reserved_fault(Ans?, _?, Terms).
+reserved_fault(no, _, []).
+reserved_fault(yes, E, [E?]).
+%% type_names(Ts?, Ns): the names of the types Ts, a parameterised type's its
+%% functor; key_names(Ks?, Ns): the names of the predicates Ks.
+procedure type_names(Terms?, Terms).
+type_names([], []).
+type_names([type(N, _)|Ts], [F?|Ns?]) :- ground(N?) | parts(N?, F, _), type_names(Ts?, Ns).
+procedure key_names(Terms?, Terms).
+key_names([], []).
+key_names([key(F, _)|Ks], [F?|Ns?]) :- key_names(Ks?, Ns).
+
+%% The types of the source's programs: each defined once, a type that two of
+%% them define having one definition in both (Definition "Well-Formed").
+procedure check_stypes(Terms?, Terms).
+check_stypes(STs, Es?) :- ground(STs?) |
+    stype_keys(STs?, Ks), check_stypes1(Ks?, E1), person_form(STs?, E2), append(E1?, E2?, Es).
+%% person_form(STs?, Es): a fault where the source defines Person but not as a
+%% type of the terms person(K, Role, V) (Section 3, Definition "Person,
+%% Census": "Person being a type of such terms").
+procedure person_form(Terms?, Terms).
+person_form([], []).
+person_form([type(N, As)|Ts], Es?) :- N? =?= 'Person' | person_form1(As?, E1), person_form(Ts?, E2), append(E1?, E2?, Es).
+person_form([_|Ts], Es?) :- otherwise | person_form(Ts?, Es).
+procedure person_form1(Terms?, Terms).
+person_form1([person(_, _, _)], []).
+person_form1(As, ['%% not transformed: a Person of the source not of the terms person(Key, Role, Attributes)']) :- otherwise, ground(As?) | true.
+procedure stype_keys(Terms?, Terms).
+stype_keys([], []).
+stype_keys([type(N, _)|Ts], [key(F?, A?)|Ks?]) :- ground(N?) | parts_n(N?, F, _, A), stype_keys(Ts?, Ks).
+procedure check_stypes1(Terms?, Terms).
+check_stypes1(Ks, Es?) :- ground(Ks?) | stype_once(Ks?, Ks?, Es).
+procedure stype_once(Terms?, Terms?, Terms).
+stype_once([], _, []).
+stype_once([K|Ks], All, Es?) :- ground(K?), ground(All?) |
+    count(K?, All?, 0, N), stype_once1(N?, K?, Ks?, All?, Es).
+procedure stype_once1(Integer?, _?, Terms?, Terms?, Terms).
+stype_once1(N, _, Ks, All, Es?) :- N? =:= 1 | stype_once(Ks?, All?, Es).
+stype_once1(N, K, Ks, All, [E?|Es?]) :- N? =\= 1 |
+    E =.. ['%% not transformed: a type defined more than once', K?], stype_once(Ks?, All?, Es).
+
+%% The run: a positive number of agents or the name of a census, a horizon of
+%% a unit of time, a seed.
 procedure check_run(_?, _?, _?, _?, Terms).
 check_run(N, C, U, Seed, Es?) :- ground(U?) |
     member(U?, [second, seconds, minute, minutes, hour, hours, day, days, week, weeks,
@@ -2404,6 +2872,8 @@ check_run(N, C, U, Seed, Es?) :- ground(U?) |
 procedure check_run1(Ans?, _?, _?, _?, _?, Terms).
 check_run1(yes, N, C, _, Seed, []) :-
     integer(N?), N? > 0, number(C?), C? > 0, integer(Seed?) | true.
+check_run1(yes, N, C, _, Seed, []) :-
+    string(N?), number(C?), C? > 0, integer(Seed?) | true.
 check_run1(A, N, C, U, Seed, [E?]) :-
     otherwise, ground(A?), ground(N?), ground(C?), ground(U?), ground(Seed?) |
     E =.. ['%% not transformed: run declaration', N?, C?, U?, Seed?].
@@ -2428,22 +2898,24 @@ procedure reserved(Terms?, Ans).
 reserved(Ds, A?) :- ground(Ds?) |
     answer_names(ANs), present_names(PNs), append(ANs?, PNs?, Ns),
     append([person, stochastic_person, declaration, random, true, show_whole, whole_frame,
-            run_declaration, stochastic_agent, stochastic_profiles], Ns?, R),
+            run_declaration, stochastic_agent, cva_check, cva_agents, seats, cva_draw, drawn,
+            screen, start_screen, persons, agent_persons, checked, roles_ok, skip,
+            allocate_mutual_reference, stream_append], Ns?, R),
     any_member(Ds?, R?, A).
 procedure mix_names(Terms?, Terms).
 mix_names([], []).
-mix_names([mix(D, _)|Ms], [D?|Ds?]) :- mix_names(Ms?, Ds).
+mix_names([mix(D, _, _)|Ms], [D?|Ds?]) :- mix_names(Ms?, Ds).
 mix_names([M|Ms], [M?|Ds?]) :- otherwise, ground(M?) | mix_names(Ms?, Ds).
 procedure all_mix_thresholds(Terms?, Integer?, Integer).
 all_mix_thresholds([], N, N?).
-all_mix_thresholds([mix(_, Ss)|Ms], N, M?) :- length(Ss?, K), all_mix_thresholds1(K?, N?, Ms?, M).
+all_mix_thresholds([mix(_, _, Ss)|Ms], N, M?) :- length(Ss?, K), all_mix_thresholds1(K?, N?, Ms?, M).
 all_mix_thresholds([_|Ms], N, M?) :- otherwise | all_mix_thresholds(Ms?, N?, M).
 procedure all_mix_thresholds1(Integer?, Integer?, Terms?, Integer).
 all_mix_thresholds1(K, N, Ms, M?) :- K? > 0 | N1 := N? + K? - 1, all_mix_thresholds(Ms?, N1?, M).
 all_mix_thresholds1(K, N, Ms, M?) :- K? =< 0 | all_mix_thresholds(Ms?, N?, M).
 procedure check_mix_list(Terms?, Terms).
 check_mix_list([], []).
-check_mix_list([mix(D, Ss)|Ms], Es?) :- ground(D?), ground(Ss?) |
+check_mix_list([mix(D, R, Ss)|Ms], Es?) :- ground(D?), constant(R?), ground(Ss?) |
     length(Ss?, K), share_sum(Ss?, 0, Sum, yes, W),
     check_mix(D?, K?, Sum?, W?, E1), check_mix_list(Ms?, E2), append(E1?, E2?, Es).
 check_mix_list([M|Ms], [E?|Es?]) :- otherwise, ground(M?) |
@@ -2472,7 +2944,7 @@ check_profiles1(Qs, Ps, Es?) :- ground(Qs?), ground(Ps?) |
     check_in_one(Ps?, Qs?, E1), check_known(Qs?, Ps?, E2), append(E1?, E2?, Es).
 procedure mix_profiles(Terms?, Terms).
 mix_profiles([], []).
-mix_profiles([mix(_, Ss)|Ms], Qs?) :- share_profiles(Ss?, Q1), mix_profiles(Ms?, Q2), append(Q1?, Q2?, Qs).
+mix_profiles([mix(_, _, Ss)|Ms], Qs?) :- share_profiles(Ss?, Q1), mix_profiles(Ms?, Q2), append(Q1?, Q2?, Qs).
 mix_profiles([_|Ms], Qs?) :- otherwise | mix_profiles(Ms?, Qs).
 procedure share_profiles(Terms?, Terms).
 share_profiles([], []).
@@ -2673,21 +3145,38 @@ check_bind(Q, yes, NQ, _, []) :- Q? =?\= none, NQ? =:= 1 | true.
 check_bind(_, _, _, B, [E?]) :- otherwise, ground(B?) |
     E =.. ['%% not transformed: a person declaration outside a profile, of no interactive type, or twice in its profile', B?].
 
-%% The dimensions: the profiles of each declare the same types; the types of
-%% the dimensions are disjoint and cover the interactive types.
+%% The dimensions: the profiles of each declare the same types; and for each
+%% role of a dimension, the types of the dimensions of that role are pairwise
+%% disjoint with union the interactive types (Section 3, Definition "Profile,
+%% Dimension": "disjoint and covering").
 procedure check_dimensions(Terms?, Terms?, Terms?, Terms).
-check_dimensions(Ms, Bs, Its0, Es?) :- ground(Bs?), ground(Its0?) |
-    dim_type_sets(Ms?, Bs?, Sets, E1), it_types(Its0?, Ts),
-    flatten(Sets?, All), check_cover0(All?, Ts?, E2), append(E1?, E2?, Es).
-procedure check_cover0(Terms?, Terms?, Terms).
-check_cover0(All, Ts, Es?) :- ground(All?) |
-    length(All?, NA), dedup(All?, All1), check_cover1(All1?, NA?, Ts?, Es).
-procedure check_cover1(Terms?, Integer?, Terms?, Terms).
-check_cover1(All1, NA, Ts, Es?) :- ground(All1?) |
-    length(All1?, NA1), subset(Ts?, All1?, Cover), check_cover(NA?, NA1?, Cover?, Es).
-procedure dim_type_sets(Terms?, Terms?, Sets, Terms).
+check_dimensions(Ms, Bs, Its0, Es?) :- ground(Ms?), ground(Bs?), ground(Its0?) |
+    dim_type_sets(Ms?, Bs?, RSets, E1), it_types(Its0?, Ts), mix_roles(Ms?, Rls0), dedup(Rls0?, Rls),
+    check_roles(Rls?, RSets?, Ts?, E2), append(E1?, E2?, Es).
+procedure mix_roles(Terms?, Terms).
+mix_roles([], []).
+mix_roles([mix(_, R, _)|Ms], [R?|Rs?]) :- mix_roles(Ms?, Rs).
+mix_roles([_|Ms], Rs?) :- otherwise | mix_roles(Ms?, Rs).
+%% check_roles(Rls?, RSets?, Ts?, Es): for each role R of Rls, the type sets of
+%% RSets of the dimensions of R, rs(R, T0) each, disjoint and covering Ts.
+procedure check_roles(Terms?, Terms?, Terms?, Terms).
+check_roles([], _, _, []).
+check_roles([R|Rs], RSets, Ts, Es?) :- ground(R?), ground(RSets?), ground(Ts?) |
+    role_sets(RSets?, R?, Sets), flatten(Sets?, All), check_cover0(All?, Ts?, R?, E1),
+    check_roles(Rs?, RSets?, Ts?, E2), append(E1?, E2?, Es).
+procedure role_sets(Terms?, _?, Sets).
+role_sets([], _, []).
+role_sets([rs(R1, T0)|RSs], R, [T0?|Sets?]) :- R? =?= R1? | role_sets(RSs?, R?, Sets).
+role_sets([rs(R1, _)|RSs], R, Sets?) :- R? =?\= R1? | role_sets(RSs?, R?, Sets).
+procedure check_cover0(Terms?, Terms?, _?, Terms).
+check_cover0(All, Ts, R, Es?) :- ground(All?) |
+    length(All?, NA), dedup(All?, All1), check_cover1(All1?, NA?, Ts?, R?, Es).
+procedure check_cover1(Terms?, Integer?, Terms?, _?, Terms).
+check_cover1(All1, NA, Ts, R, Es?) :- ground(All1?) |
+    length(All1?, NA1), subset(Ts?, All1?, Cover), check_cover(NA?, NA1?, Cover?, R?, Es).
+procedure dim_type_sets(Terms?, Terms?, Terms, Terms).
 dim_type_sets([], _, [], []).
-dim_type_sets([mix(D, Ss)|Ms], Bs, [T0?|Sets?], Es?) :- ground(Bs?), ground(D?) |
+dim_type_sets([mix(D, R, Ss)|Ms], Bs, [rs(R?, T0?)|Sets?], Es?) :- ground(Bs?), ground(D?) |
     share_profiles(Ss?, Qs), profile_type_sets(Qs?, Bs?, TSs),
     dim_same(TSs?, D?, T0, E1), dim_type_sets(Ms?, Bs?, Sets, E2), append(E1?, E2?, Es).
 dim_type_sets([_|Ms], Bs, Sets?, Es?) :- otherwise | dim_type_sets(Ms?, Bs?, Sets, Es).
@@ -2712,12 +3201,14 @@ procedure all_same1(Ans?, Ans?, Sets?, Terms?, Ans).
 all_same1(yes, yes, TSs, T0, A?) :- all_same(TSs?, T0?, A).
 all_same1(no, _, _, _, no).
 all_same1(yes, no, _, _, no).
-procedure check_cover(Integer?, Integer?, Ans?, Terms).
-check_cover(NA, NA1, yes, []) :- NA? =:= NA1? | true.
-check_cover(_, _, _, ['%% not transformed: the dimensions\' types not disjoint or not covering the interactive types']) :- otherwise | true.
+procedure check_cover(Integer?, Integer?, Ans?, _?, Terms).
+check_cover(NA, NA1, yes, _, []) :- NA? =:= NA1? | true.
+check_cover(_, _, _, R, [E?]) :- otherwise, ground(R?) |
+    E =.. ['%% not transformed: the types of the dimensions of a role not disjoint or not covering the interactive types', R?].
 
-%% The person procedures: each declared, as P(T', Integer?), T' the dual of the
-%% mode the vGLP program gives T (Section 3, Definition "Dual, ...").
+%% The person procedures: each declared, as P(T', Person?, Integer?), T' the
+%% dual of the mode the vGLP program gives T (Section 3, Definition "Dual,
+%% Person Procedure, Person Declaration").
 procedure check_person_types(Terms?, Terms?, Terms?, Terms).
 check_person_types([], _, _, []).
 check_person_types([b(_, T, P)|Bs], Its0, Hs, Es?) :- ground(T?), ground(P?), ground(Its0?), ground(Hs?) |
@@ -2728,8 +3219,8 @@ it_mode(_, [], none).
 it_mode(T, [it(T1, M, _)|_], M?) :- T? =?= T1? | true.
 it_mode(T, [it(T1, _, _)|Its], M?) :- T? =?\= T1? | it_mode(T?, Its?, M).
 procedure required(_?, _?, _).
-required(output, T, P?) :- P =.. [p, dual(T?), dual('Integer')].
-required(input, T, P?) :- P =.. [p, T?, dual('Integer')].
+required(output, T, P?) :- P =.. [p, dual(T?), dual('Person'), dual('Integer')].
+required(input, T, P?) :- P =.. [p, T?, dual('Person'), dual('Integer')].
 required(none, _, none).
 procedure declared(_?, Terms?, _).
 declared(_, [], none).
@@ -2795,8 +3286,8 @@ decl_of(K, [H|Hs], D?) :- ground(H?), ground(K?) | key(H?, K1), decl_of1(K1?, K?
 procedure decl_of1(_?, _?, _?, Terms?, _).
 decl_of1(K1, K, H, _, H?) :- K1? =?= K? | true.
 decl_of1(K1, K, _, Hs, D?) :- K1? =?\= K? | decl_of(K?, Hs?, D).
-%% The names: the monitor's reference and a token for each rated goal of a
-%% clause, among the names the clause does not write.
+%% The names: the monitor's reference, the screen's and a token for each rated
+%% goal of a clause, among the names the clause does not write.
 procedure check_names(Terms?, Terms).
 check_names([], []).
 check_names([cl(H, Gs, Bs)|Cs], Es?) :- ground(H?), ground(Gs?), ground(Bs?) |
@@ -2804,12 +3295,12 @@ check_names([cl(H, Gs, Bs)|Cs], Es?) :- ground(H?), ground(Gs?), ground(Bs?) |
     check_names0(U?, NR?, H?, E1), check_names(Cs?, E2), append(E1?, E2?, Es).
 procedure check_names0(Terms?, Integer?, _?, Terms).
 check_names0(U, NR, H, Es?) :- ground(U?) |
-    mon_names(MN), tok_names(TN), fresh(MN?, U?, 1, M), fresh(TN?, U?, NR?, T),
-    length(M?, NM), length(T?, NT), check_names1(NM?, NT?, NR?, H?, Es).
-procedure check_names1(Integer?, Integer?, Integer?, _?, Terms).
-check_names1(NM, NT, NR, _, []) :- NM? =:= 1, NT? =:= NR? | true.
-check_names1(_, _, _, H, [E?]) :- otherwise, ground(H?) |
-    E =.. ['%% not transformed: no names left for the monitor\'s reference or the tokens of the clause of', H?].
+    mon_names(MN), tok_names(TN), scr_names(SN), fresh(MN?, U?, 1, M), fresh(TN?, U?, NR?, T), fresh(SN?, U?, 1, Sc),
+    length(M?, NM), length(T?, NT), length(Sc?, NS), check_names1(NM?, NT?, NS?, NR?, H?, Es).
+procedure check_names1(Integer?, Integer?, Integer?, Integer?, _?, Terms).
+check_names1(NM, NT, NS, NR, _, []) :- NM? =:= 1, NT? =:= NR?, NS? =:= 1 | true.
+check_names1(_, _, _, _, H, [E?]) :- otherwise, ground(H?) |
+    E =.. ['%% not transformed: no names left for the monitor\'s reference, the screen\'s or the tokens of the clause of', H?].
 
 %% Each procedure declared once.
 procedure check_decls(Terms?, Terms).

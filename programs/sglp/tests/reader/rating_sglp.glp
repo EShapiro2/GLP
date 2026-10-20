@@ -3,8 +3,8 @@
 %%
 %%   person fair.
 %%   Rating =::= fair_rating.
-%%   procedure fair_rating(Rating, Integer?).
-%%   fair_rating(R?, S) :- random(S?, 5, K, _), give(K?, slot(R)) @ 1/day.
+%%   procedure fair_rating(Rating, Person?, Integer?).
+%%   fair_rating(R?, _, S) :- random(S?, 5, K, _), give(K?, slot(R)) @ 1/day.
 %%   procedure give(Integer?, Slot(Rating)?).
 %%   give(K, slot(rating(K?))).
 %%
@@ -30,8 +30,8 @@ source(
   %% The profile and the run declaration.
   [person(fair),
    binds('Rating', fair_rating),
-   decl(fair_rating('Rating', dual('Integer'))),
-   clause(fair_rating(var('R?'), var('S')), [],
+   decl(fair_rating('Rating', dual('Person'), dual('Integer'))),
+   clause(fair_rating(var('R?'), var('_'), var('S')), [],
           [random(var('S?'), 5, var('K'), var('_')),
            rated(give(var('K?'), slot(var('R'))), rate(1, day))]),
    decl(give(dual('Integer'), dual('Slot'('Rating')))),
