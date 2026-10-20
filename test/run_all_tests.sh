@@ -2444,7 +2444,7 @@ check_not "CSSN program no type errors" "Type checking failed" "$k_load"
 check_not "CSSN program is certified" "CERTIFICATE REFUSED" "$k_load"
 
 # The village (CSSN, Section 4.6, "Village Demonstration"): one run, seven screens, each a line.
-echo "--- CSSN village, eight acts ---"
+echo "--- CSSN village, eight acts, alice's closing of kids_chat among them ---"
 k_v=$("$REPL_RUN" <<HEREDOC 2>&1
 $CSSN_DIR
 :limit 100000000
@@ -2471,7 +2471,7 @@ K_S="speech(utterance(study), frank)"
 check_not "CSSN village: no failed goal" "→ failed\|ERROR\|Error" "$k_v"
 check "CSSN village: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$k_v"
 check_not "CSSN village: ... and is not stopped at the limit" "capped" "$k_v"
-check_not "CSSN village: no attempt refused or yielded" "refused(\|yielded(" "$k_v"
+check_not "CSSN village: no attempt refused, refused(P, Q, D) the notice (vGLP f0acbc1)" "refused(" "$k_v"
 # CSSN extends GSN, not GSNP (CSSN.md; Udi, 2026-10-20): a message is content received from a friend, received(x, p), or delivered in a group by its leader, received_in(x, a, n), and nobody signs.
 check_not "CSSN village: nobody signs, and no item or authored atom is written (CSSN extends GSN)" "propose(sign(\|item(\|authored(" "$k_v"
 # Act 1, coming into the contract (GSG:1; Wards:1, CSSN:1).
@@ -2520,6 +2520,11 @@ k_lacks "CSSN village act 7: carol's agent drops dave from kids_chat, his leader
 k_shows "CSSN village act 7: bob ends dave's membership of the study group" B "did(propose(child_leave(frank, dave, bob, $K_S)))"
 k_lacks "CSSN village act 7: ... at dave" D "member(dot(community(frank), $K_S))"
 k_lacks "CSSN village act 7: ... and at frank" F "listed(dave, $K_S)"
+# Alice closes kids_chat (CSSN, Section 4.6, "Village Demonstration", act 7): child_close(r, p?, r[listed(*, n)] ; n), a guarded part whose opener is the child, r, and its guard the parent, p.  Alice's request is a Request of rho_N to carol's machine, which holds it, completes the list from its listed atoms and proposes the close, naming the request; alice's machine votes yes on it unasked, and her person is never asked (vGLP f0acbc1, Section 3.2, Definitions "Local Specification, Part, Guard Set, Opener, Request" to "Deciding"; Section 5.4, "Triggers" and "The compilation").
+k_shows "CSSN village act 7: alice requests that kids_chat be closed, child_close(carol, alice, n), its parts opened by carol" A "did(propose(child_close(carol, alice, $K_K)))"
+k_holds "CSSN village act 7: ... carol's machine proposes it on alice's request, and kids_chat is closed at carol" C "closed($K_K)"
+k_lacks "CSSN village act 7: ... carol's membership and her listing of herself ended in the one act" C "listed(carol, $K_K)"
+k_never "CSSN village act 7: ... alice's person is never asked on the close, her request her approval" A "gave(child_close"
 # Act 8, coming of age (CSSN:3).
 k_shows "CSSN village act 8: grace declares eve of age" G "did(propose(of_age_2(grace, bob, eve)))"
 k_lacks "CSSN village act 8: which ends grace's parenting of eve" G "parenting(eve)"
@@ -3521,10 +3526,10 @@ compile(listed_guard_second, [schema(cl, [svar(n)], [rs(guarded, [atom(seen, [sv
 compile(listed_two_guards, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
 compile(listed_second, [schema(cl, [svar(n)], [rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
 compile(order, [schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(member, [role(2), svar(n)])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(2), svar(n)])], [atom(posted, [svar(x), svar(n)])])])], syntactically_grassroots).
-compile(listed_guard_two, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), rs(guarded, [], [], [atom(minding, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
-compile(listed_unguarded, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
-compile(listed_mixed, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(cl2, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), rs(unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
-compile(listed_likewise, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(cl3, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)]), atom(ready, [svar(n)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_seated_and_listed_roles).
+compile(listed_guard_two, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), rs(guarded, [], [], [atom(minding, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(listed_unguarded, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(listed_mixed, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(cl2, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), rs(unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(listed_likewise, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(cl3, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)]), atom(ready, [svar(n)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
 :quit
 HEREDOC
 2>&1)
