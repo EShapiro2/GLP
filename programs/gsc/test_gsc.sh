@@ -4,7 +4,7 @@
 #
 #   bash programs/gsc/test_gsc.sh
 #
-# GSC's contracts GSG and GSN (programs/gsc/), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by definition:sg-agent-named (Appendix D.4), and GSNP, the social network with provenance, GAI's, carrying the signed term of GAI's extension of the language; the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp); CSSN's and GAI's contracts; each read from its owner's file, each schema listing its variables in its head (GSC 0228e79); and contracts of Section 3, over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, in the language of Appendix D, and a contract with a name term based on an agent variable, put to the two conditions on the text of Appendix D (Appendix D.3) and compiled by definition:compile; then the signed speech-act term, on GSNP and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then agent-named contracts with community roles (Appendix D.4), over GSNP, failing one clause of definition:sg-agent-named each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than Appendix D's Definition Role allows, and schemas whose head is not their variables (def:schema).  The federation extension of act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20); GFWC's contract is still read from its owner's file.  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
+# GSC's contracts GSG and GSN (programs/gsc/), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by definition:sg-agent-named (Appendix D.4), and GSNP, the social network with provenance, GAI's, carrying the signed term of GAI's extension of the language; the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp); CSSN's and GAI's contracts; each read from its owner's file, each schema listing its variables in its head (GSC 0228e79); and contracts of Section 3, over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, in the language of Appendix D, and a contract with a name term based on an agent variable, put to the two conditions on the text of Appendix D (Appendix D.3) and compiled by definition:compile; then the signed speech-act term, on GSNP and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then agent-named contracts with community roles (Appendix D.4), over GSNP, failing one clause of definition:sg-agent-named each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than Appendix D's Definition Role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Act schema, printed from a contract's term (notation.glp).  The federation extension of act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20); GFWC's contract is still read from its owner's file.  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -1113,6 +1113,63 @@ check "a head that repeats a variable, lists a role and leaves out a variable is
 check "and it is not compiled, the message naming the faults" \
       "% not compiled: hd_faults is malformed: sign lists a variable twice in its head; sign lists in its head an entry that is not a variable; sign has a variable its head does not list; check_named gives the faults." \
       "$(printf '%s' "$out" | tr '\n' ' ')"
+
+# --- the notation (def:schema, definition:schema) --------------------------
+# notation_contract prints a contract's schemas from its term in the notation
+# of Definition Act schema, def:schema of Section 3.2 and definition:schema of
+# Appendix D, a token to a line, an empty line ending a line of the text
+# (notation.glp; README, "The notation"); cascade.sh joins the tokens into a
+# record's schemas.txt, as notation() does here.  GSG's befriend is the schema
+# Section 3.2 displays, befriend(Alice?, Bob?) : identity, not friend(Bob),
+# +friend(Bob)  identity, not friend(Alice), +friend(Alice), each E_i on a line
+# labelled by its role; GSN's close is Appendix D's example, with the identity
+# the paper leaves out; GSNP's forward carries the signed term of GAI's
+# Definition Act schema; and sg_reflexive declares friend reflexive.
+notation() { # notation <term> ; the text notation_contract prints, its tokens joined
+  run "notation_contract($1)." | sed -e 's/^\(GLP> \)*//' | perl -ne '
+    chomp;
+    if ($_ eq "%% notation begin") { $on = 1; next }
+    if ($on && $_ eq "%% notation end") { $on = 0; next }
+    next unless $on;
+    if ($_ eq "") { print "$line\n"; $line = "" } else { $line .= $_ }'
+}
+one_schema() { # one_schema <name> ; from the notation on stdin, the lines of the schema <name>
+  awk -v s="$1(" 'index($0, s) == 1 { on = 1 } on && /^$/ { exit } on'
+}
+gsg_notation=$(cat <<'EOF'
+establish(Alice?) :
+    at Alice: +identity
+
+befriend(Alice?, Bob?) :
+    at Alice: identity, not friend(Bob), +friend(Bob)
+    at Bob: identity, not friend(Alice), +friend(Alice)
+
+unfriend(Alice?, Bob) :
+    at Alice: identity, -friend(Bob)
+    at Bob: identity, -friend(Alice)
+EOF
+)
+check_eq "GSG's schemas print in the notation of def:schema, befriend as Section 3.2 writes it" \
+         "$gsg_notation" "$(notation "$GSGT")"
+close_notation=$(cat <<'EOF'
+close(Alice?, Alice[listed(*, n)]; n) :
+    at Alice: identity, +closed(n), -listed(Alice, n)
+    at Alice[listed(*, n)]: identity, -member(<Alice>.n)
+EOF
+)
+check_eq "GSN's close prints as Appendix D writes it, its listed role and name term" \
+         "$close_notation" "$(notation "$GSNT" | one_schema close)"
+forward_notation=$(cat <<'EOF'
+forward(Alice?, Bob; x) :
+    at Alice: identity, item(x), not authored(x)
+    at Bob: identity, friend(Alice), +item(sgn(x, Alice))
+EOF
+)
+check_eq "GSNP's forward prints with the signed term of GAI's Definition Act schema" \
+         "$forward_notation" "$(notation "$SG" | one_schema forward)"
+REFL=$(run 'contract_named(sg_reflexive, C).' | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
+check_eq "a contract declaring friend reflexive prints the declaration first" \
+         "Reflexive predicates: friend" "$(notation "$REFL" | head -1)"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

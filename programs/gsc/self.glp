@@ -1171,3 +1171,7 @@ compile_schema_in(Nm, D, Sn) :- compile # compile_schema_in(Nm?, D?, Sn?).
 imported procedure compile#compile_schema_variant(Constant?, Contract?, Constant?).
 exported procedure compile_schema_variant(Constant?, Contract?, Constant?).
 compile_schema_variant(Nm, B, Sn) :- compile # compile_schema_variant(Nm?, B?, Sn?).
+
+imported procedure notation#notation_contract(Declared?).
+exported procedure notation_contract(Declared?).
+notation_contract(D) :- notation # notation_contract(D?).

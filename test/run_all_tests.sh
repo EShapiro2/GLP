@@ -7078,9 +7078,11 @@ if _section CAS; then
 # =============================================================================
 # A run of the cascade on a contract is recorded in cascade/<NAME>/, at the
 # repository root, NAME the contract's name (Appendix C), as one tagged commit (claude.md "Code"; Coordination 5.7): the contract's two
-# files with the checker's verdict, the VMAT form, the canonical platform as
-# .vglp and as .glp, the platform's interface in sGLP's term form, and its run
-# with vGLP's scripted persons, with a manifest.
+# files, NAME.txt (NAME.md until its owner converts it) and NAME.glp, the
+# schemas in GSC's notation printed from the term (schemas.txt), the checker's
+# verdict, the VMAT form, the canonical platform as .vglp and as .glp, the
+# platform's interface in sGLP's term form, and its run with vGLP's scripted
+# persons, with a manifest.
 # This section re-runs cascade.sh --check on every recorded contract and holds
 # the committed artefacts to what the tools print now; a contract with no
 # record is not run.
@@ -7092,7 +7094,7 @@ for cas_c in gsg gsn gsnp gc cssn gfwc gai; do
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
-    for cas_f in "$cas_n.md" "$cas_n.glp" verdict.txt vmat.tex platform.vglp platform.glp interface.glp run.log; do
+    for cas_f in "$cas_n.txt" "$cas_n.md" "$cas_n.glp" schemas.txt verdict.txt vmat.tex platform.vglp platform.glp interface.glp run.log; do
         [ -f "$GLP_DIR/$cas_o/$cas_f" ] || continue
         check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
     done

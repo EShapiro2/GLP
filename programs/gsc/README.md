@@ -46,6 +46,13 @@ A schema's name is no part of its compiled form, so `compile_named` puts it in a
 
 Printing reaches the person, so the module's certificate is refused on load (`[CERTIFICATE REFUSED] gsc ... calls send_to_user/1`) and it carries no signature.  It loads and runs as before.
 
+## The notation
+
+    cd glp_runtime
+    printf '/path/to/GLP/programs/gsc/\n:limit 10000000\nnotation_contract(<the term>).\n:quit\n' | bin/glpc
+
+prints the schemas of a contract from its term, in the notation of Definition Act schema, `def:schema` of Section 3.2 and `definition:schema` of Appendix D: `tau(pi_1, ..., pi_k; x_1, ..., x_m) :` on a line, a guarding role carrying `?`, the semicolon and the variables left out where the schema has none, and then its marked multisets `E_1 ... E_k`, each on a line of its own, `at pi_i:`, labelled by its role as Section 3.3's table labels its columns "at Alice" and "at Bob".  Within `E_i` the unmarked atoms come first, then those marked `not`, `+` and `-`, the order of the paper's displays.  The text is plain, as befriend of Section 3.2 is written above: `not` for the paper's negation sign, `<Alice>.n` for the name term `<Alice> . n` (`definition:term`), `Alice[listed(*, n)]` for a listed role (`definition:role`), `sgn(x, Alice)` for a signed term (GAI's Definition Act schema), and a contract declaring predicates reflexive opens with them, `Reflexive predicates: friend` (GAI's appendix "Contracts with Wards", "Reflexive predicates").  Roles are named as the compiler names them, Alice, Bob, Carol, Dave and `p_i` beyond the fourth; a variable is written as it is named.  The text is printed a token to a line between the lines `%% notation begin` and `%% notation end`, an empty line ending a line of the text; `cascade.sh` joins the tokens into each record's `schemas.txt`.
+
 ## The entry points
 
 | Goal | What it returns |
@@ -54,6 +61,7 @@ Printing reaches the person, so the module's certificate is refused on load (`[C
 | `traceable_preds(C, E)` | its predicates of traceable provenance: `def:grounded`'s for a contract of Section 3, `definition:provenance`'s with each psi required at an agent role for an agent-named contract with community roles, and `definition:provenance`'s for any other |
 | `compile_contract(Name, C)` | prints the compiled form of every schema of it, refusing it under `Name` |
 | `compile_schema_in(Name, C, Schema)` | prints the compiled form of one schema of it |
+| `notation_contract(C)` | prints its schemas in the notation of Definition Act schema (`def:schema`, Appendix D's `definition:schema`), as "The notation" above says |
 | `check_named(Name, V)` | the verdict on a fixture of `contracts.glp` that stands alone |
 | `traceable_of(Name, E)`, `contract_named(Name, C)`, `compile_named(Name)`, `compile_schema(Name, Schema)` | the same of such a fixture |
 | `check_variant(Name, C, V)`, `traceable_variant(Name, C, E)`, `variant(Name, C, D)`, `compile_variant(Name, C)`, `compile_schema_variant(Name, C, Schema)` | the same of a fixture that changes the contract `C` in one place |
@@ -170,6 +178,7 @@ the signed term naming Alice, the forwarder, by her index, and Alice, who guards
 | `wards/` | GAI's (Coordination Appendix B; Udi, 2026-10-20), a child directory of the checker, so that the checker's modules call it by the qualifier `wards` and it sees the scope of this directory's `self.glp`, which exposes `unobstructed.glp`'s `intro_act_bindings` to it (TGLP, Section "Module System"): `wards/self.glp`, its interface, forwarding `wards`, `guardianships_for`, `leaving_for` and `relay_h_for`; and `wards/wards.glp`, `def:guardianship`, `def:leaving`, `def:unobstructed-marks`, `def:relay` and `def:introduction-wards`, as a search over the marks and the predicates of arity one, with clauses 1 and 2 of `def:sg-wards`; and the atoms of h of clause 2 of `def:relay` the relay acts found require, for inspection |
 | `check.glp` | `def:syntactically-grassroots`, the wards when its first conjunct fails, `definition:sg-agent-named` and `def:sg-wards` for an agent-named contract with community roles, and the conditions of Appendix D for any other; the refusal of a malformed contract, for its head, a listed role, the form of a schema, a reflexive predicate or a signed term |
 | `compile.glp` | `def:compile`, printed as the LaTeX of the displays of Section 5.1 and Appendix B.3, and `definition:compile`, printed in the form of Appendix D's display of close |
+| `notation.glp` | the notation of Definition Act schema, `def:schema` and Appendix D's `definition:schema`, printed from a contract's term |
 | `contracts.glp` | the checker's fixtures: contracts that stand alone, by name, and variants of a contract, by name and the contract's term |
 
 ## Why it terminates
