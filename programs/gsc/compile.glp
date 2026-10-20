@@ -1,16 +1,17 @@
 % ---------------------------------------------------------------------------
 % The compilation, as LaTeX: def:compile of /Grassroots/GSC, Section 5, for
-% a contract whose roles are all party roles, and definition:compile of
+% a contract whose roles are all agent roles, and definition:compile of
 % Appendix D for a contract with community roles.
 %
-% A schema of Section 3 -- its roles agent roles, no reach condition and no
+% A schema of Section 3 -- its roles agent roles, written schema and with no
 % name term -- compiles to the assignment, the proviso and the guard of
 % def:compile, and the displays of Section 5.1 and Appendix B.3 are the form
-% printed, whatever the contract it is in: befriend of GSNP, a contract with
+% printed, whatever the contract it is in: befriend of GSN, a contract with
 % a listed role, compiles to Section 5.1's display, as Section 5.1 says.  Any
-% other schema compiles to the lines of definition:compile, and the worked
-% box of Appendix D is the form printed.  For a schema of Section 3 the two
-% definitions determine the same transactions.  The paper is the
+% other schema compiles to the lines of definition:compile, each role's over
+% its extent, as Appendix D's display of close ranges over the extent of its
+% listed role.  For a schema of Section 3 the two definitions determine the
+% same transactions.  The paper is the
 % specification and neither definition is restated in this file.  Section 5
 % opens by saying that the compilation is defined for syntactically
 % grassroots contracts, so compile_named runs the checker first and compiles
@@ -37,9 +38,8 @@ is_empty([], yes).
 is_empty([_|_], no).
 
 % --- Arguments (def:schema, definition:term) -------------------------------
-% Roles one and two are the paper's \Alice and \Bob; a party or speech-act
-% variable is written as it is named; a name variable and a threshold are
-% named by a Greek letter and written as its command.
+% Roles one and two are the paper's \Alice and \Bob; an agent or speech-act
+% variable is written as it is named.
 
 procedure latex_role(Integer?, Chunks?, Chunks).
 latex_role(I, T, ['\\Alice'|T?]) :- I? =:= 1 | true.
@@ -52,39 +52,12 @@ latex_role(I, T, R?) :- otherwise, integer(I?), ground(T?) | latex_role_n(I?, T?
 procedure latex_role_n(Constant?, Chunks?, Chunks).
 latex_role_n(I, T, ['\\mathit{p}_{', I?, '}'|T?]).
 
-procedure latex_greek(Constant?, Chunks?, Chunks).
-latex_greek(alpha, T, ['\\alpha'|T?]).
-latex_greek(beta, T, ['\\beta'|T?]).
-latex_greek(gamma, T, ['\\gamma'|T?]).
-latex_greek(delta, T, ['\\delta'|T?]).
-latex_greek(epsilon, T, ['\\epsilon'|T?]).
-latex_greek(zeta, T, ['\\zeta'|T?]).
-latex_greek(eta, T, ['\\eta'|T?]).
-latex_greek(theta, T, ['\\theta'|T?]).
-latex_greek(iota, T, ['\\iota'|T?]).
-latex_greek(kappa, T, ['\\kappa'|T?]).
-latex_greek(lambda, T, ['\\lambda'|T?]).
-latex_greek(mu, T, ['\\mu'|T?]).
-latex_greek(nu, T, ['\\nu'|T?]).
-latex_greek(xi, T, ['\\xi'|T?]).
-latex_greek(pi, T, ['\\pi'|T?]).
-latex_greek(rho, T, ['\\rho'|T?]).
-latex_greek(sigma, T, ['\\sigma'|T?]).
-latex_greek(tau, T, ['\\tau'|T?]).
-latex_greek(upsilon, T, ['\\upsilon'|T?]).
-latex_greek(phi, T, ['\\phi'|T?]).
-latex_greek(chi, T, ['\\chi'|T?]).
-latex_greek(psi, T, ['\\psi'|T?]).
-latex_greek(omega, T, ['\\omega'|T?]).
-latex_greek(X, T, ['\\mathit{', X?, '}'|T?]) :- otherwise, ground(X?) | true.
-
-% A name term (definition:term): <u> for a role or a party variable, a name
-% variable, or sigma.y.
+% A name term (definition:term): <u> for an agent role or an agent variable,
+% or sigma.y.
 procedure latex_nt(NameTerm?, Chunks?, Chunks).
 latex_nt(own(I), T, ['\\langle'|R?]) :- integer(I?), ground(T?) |
     latex_role(I?, ['\\rangle'|T?], R).
 latex_nt(own_var(X), T, ['\\langle', X?, '\\rangle'|T?]).
-latex_nt(nvar(Z), T, R?) :- ground(Z?), ground(T?) | latex_greek(Z?, T?, R).
 latex_nt(ext(S, Y), T, R?) :- ground(S?), ground(Y?), ground(T?) |
     latex_nt(S?, ['\\cdot', Y?|T?], R).
 
@@ -124,7 +97,7 @@ latex_atom(atom(P, [A|As]), T, R?) :-
 % The atoms of a set are written apart by Sep, which the form of the display
 % supplies: a comma in the form of Section 5.1 and Appendix B.3, whose displays write no set of
 % two atoms, and a comma and a control space in the form of Appendix D, as its
-% worked box writes the two atoms federate adds.  latex_update and
+% display of close writes the two atoms close deletes.  latex_update and
 % req_conjs and forb_conjs supply the first, assign_lines and req_lines and
 % forb_lines the second.
 procedure latex_atoms(Atoms?, Constant?, Chunks?, Chunks).
@@ -140,23 +113,14 @@ latex_set(As, Sep, T, ['\\{'|R?]) :- ground(As?), ground(Sep?), ground(T?) |
     latex_atoms(As?, Sep?, ['\\}'|T?], R).
 
 % --- The roles as the paper writes them (definition:role, definition:extent)
-% A party role by its name, a seated role sigma^{mu}, a constituent role
-% sigma^{rho*} and a listed role pi[rho(*, u_2, ..., u_r)], as Appendix D
-% writes it and Appendix G writes close's, \Alice[\mathit{listed}(\ast,n)]
-% (GSC 8064cfb); ext_c(pi_i) is the extent of the role in c, and a line of
-% Appendix D's display ranges over the agents p in it.
+% An agent role by its name, and a listed role pi[rho(*, u_2, ..., u_r)], as
+% Appendix D writes close's, \Alice[\mathit{listed}(\ast,n)] (GSC 8064cfb);
+% ext_c(pi_i) is the extent of the role in c, and a line of Appendix D's
+% display ranges over the agents p in it.
 
 procedure latex_role_term(RoleSpec?, Integer?, Chunks?, Chunks).
 latex_role_term(rs(_, _, _, _, _), I, T, R?) :- integer(I?), ground(T?) |
     latex_role(I?, T?, R).
-latex_role_term(crs(seated(S, Mu), _, _, _, _, _), _, T, R?) :-
-    ground(S?), ground(Mu?), ground(T?) |
-    latex_pred(Mu?, ['}'|T?], R1),
-    latex_nt_sup(S?, ['^{'|R1?], R).
-latex_role_term(crs(constituent(S, Rho), _, _, _, _, _), _, T, R?) :-
-    ground(S?), ground(Rho?), ground(T?) |
-    latex_pred(Rho?, ['\\ast}'|T?], R1),
-    latex_nt_sup(S?, ['^{'|R1?], R).
 latex_role_term(crs(listed(I, Rho, As), _, _, _, _, _), _, T, R?) :-
     integer(I?), ground(Rho?), ground(As?), ground(T?) |
     latex_listed_args(As?, [')', ']'|T?], R1),
@@ -169,13 +133,6 @@ procedure latex_listed_args(Args?, Chunks?, Chunks).
 latex_listed_args([], T, T?).
 latex_listed_args([A|As], T, [','|R?]) :- ground(A?), ground(As?), ground(T?) |
     latex_args([A?|As?], T?, R).
-
-% The name term under a superscript: sigma.y in parentheses, as the paper
-% writes the seated role (<Alice>.n)^{member} (GSC, Appendix D.4).
-procedure latex_nt_sup(NameTerm?, Chunks?, Chunks).
-latex_nt_sup(ext(S, Y), T, ['('|R?]) :- ground(S?), ground(Y?), ground(T?) |
-    latex_nt(ext(S?, Y?), [')'|T?], R).
-latex_nt_sup(S, T, R?) :- otherwise, ground(S?), ground(T?) | latex_nt(S?, T?, R).
 
 procedure latex_ext(RoleSpec?, Integer?, Chunks?, Chunks).
 latex_ext(RS, I, T, ['\\mathrm{ext}_c('|R?]) :-
@@ -227,7 +184,7 @@ update_rhs(Add, Del, Sep, S, T, R?) :-
     is_empty(Del?, DE),
     update_body(AE?, DE?, Add?, Del?, Sep?, S?, T?, R).
 
-% The subscript of a party role in Section 5.1 and Appendix B.3: {\Alice}.
+% The subscript of an agent role in Section 5.1 and Appendix B.3: {\Alice}.
 procedure latex_sub(Integer?, Chunks).
 latex_sub(I, ['{'|R?]) :- integer(I?) | latex_role(I?, ['}'], R).
 
@@ -367,19 +324,19 @@ latex_s3_roles(Rs, T, R?) :- ground(Rs?), ground(T?) |
     join_lines([A?|L2?], ['\\end{align*}'|T?], R).
 
 % --- The display of a schema with community roles (definition:compile) ----
-% In the order of the lines of definition:compile (GSC aca046b): a line per
+% In the order of the lines of definition:compile (GSC f3c4f43): a line per
 % role for its assignment; a line per role that requires an atom, for its
 % required atoms, in role order; a line per role that forbids an atom, for
-% its forbidden atoms, in role order; a line c'_p \neq c_p per role that adds
-% and deletes nothing and is not a guarding agent role (change_lines, below);
-% each over p in ext_c(pi_i); then provided Theta, where the schema carries
-% reach conditions; then, for every name term sigma.y of the schema that
-% occurs in no atom required at a role, that it is an argument of no atom of
-% c (definition:compile at GSC 6d4f147); then the guard.  A role's atoms range over
-% its own extent, so the one line of Section 3's form for the required atoms,
-% and the one for the forbidden atoms, is a line per role here, as the
-% assignment is.  Each line is a Chunks; every line opens with & and ,\\
-% separates them.  The worked box of Appendix D is the display for federate.
+% its forbidden atoms, in role order; each over p in ext_c(pi_i); then, for
+% every name term sigma.y of the schema that occurs in no atom required at a
+% role, that it is an argument of no atom of c; then the guard, the guarding
+% roles of the schema, which are agent roles, written as Section 5.1 writes
+% it and as Appendix D writes close's, guarded by {\Alice}.  A role's atoms
+% range over its own extent, so the one line of Section 3's form for the
+% required atoms, and the one for the forbidden atoms, is a line per role
+% here, as the assignment is.  Each line is a Chunks; every line opens with &
+% and ,\\ separates them.  The line on what is added and deleted at an agent
+% is left out, as the displays of Section 5.1 and Appendix D leave it out.
 
 procedure assign_lines(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 assign_lines([], _, T, T?).
@@ -417,81 +374,15 @@ forb_lines([RS|Rs], I, T, R?) :-
     forb_lines(Rs?, I1?, T?, R1),
     proviso_line(Cs?, RS?, I?, R1?, R).
 
-% The proviso c'_p \neq c_p (definition:compile), over the extent of a role
-% that is not a guarding agent role.  The worked box of Appendix D leaves it
-% out for federate, whose one role, a seated role, adds two atoms: at a role
-% that adds or deletes an atom it holds under the other provisos, what is
-% added and what is deleted at p being disjoint and what is deleted being in
-% c_p.  So it is printed at a role that adds and deletes nothing and is not a
-% guarding agent role, and nowhere else.  Section 5's def:compile asks it at
-% a role that is not guarding, which def:schema forbids to add and delete
-% nothing, so the form of Section 5.1 and Appendix B.3 never carries it.
-
-procedure guarding_agent(RoleSpec?, Ans).
-guarding_agent(RS, R?) :- ground(RS?) |
-    is_party_role(RS?, P),
-    is_guarding(RS?, G),
-    both_yes(P?, G?, R).
-
-procedure role_inert(RoleSpec?, Ans).
-role_inert(RS, R?) :- ground(RS?) |
-    rs_add(RS?, Add),
-    rs_del(RS?, Del),
-    is_empty(Add?, AE),
-    is_empty(Del?, DE),
-    both_yes(AE?, DE?, R).
-
-procedure change_line(Ans?, Ans?, RoleSpec?, Integer?, ChunkLists?, ChunkLists).
-change_line(no, yes, RS, I, T, [['\\text{provided } ', 'c\'_p', '\\neq', 'c_p'|O?]|T?]) :-
-    ground(RS?), integer(I?), ground(T?) |
-    latex_over(RS?, I?, [], O).
-change_line(no, no, _, _, T, T?).
-change_line(yes, _, _, _, T, T?).
-
-procedure change_lines(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
-change_lines([], _, T, T?).
-change_lines([RS|Rs], I, T, R?) :-
-    ground(RS?), ground(Rs?), integer(I?), ground(T?) |
-    guarding_agent(RS?, GA),
-    role_inert(RS?, IN),
-    I1 := I? + 1,
-    change_lines(Rs?, I1?, T?, R1),
-    change_line(GA?, IN?, RS?, I?, R1?, R).
-
-% A reach condition sigma !~>_rho sigma' (definition:schema); the conditions
-% of Theta are joined as the conjuncts of a proviso are.
-procedure latex_reach(Reach?, Chunks?, Chunks).
-latex_reach(reach(S, Rho, S2), T, R?) :-
-    ground(S?), ground(Rho?), ground(S2?), ground(T?) |
-    latex_nt(S2?, T?, R1),
-    latex_pred(Rho?, ['}'|R1?], R2),
-    latex_nt(S?, ['\\not\\rightsquigarrow_{'|R2?], R).
-
-procedure latex_reaches(Reaches?, Chunks?, Chunks).
-latex_reaches([], T, T?).
-latex_reaches([X], T, R?) :- ground(X?), ground(T?) | latex_reach(X?, T?, R).
-latex_reaches([X, Y|Xs], T, R?) :- ground(X?), ground(Y?), ground(Xs?), ground(T?) |
-    latex_reaches([Y?|Xs?], T?, R1),
-    latex_reach(X?, [' \\text{ and } '|R1?], R).
-
-procedure reach_line(Reaches?, ChunkLists?, ChunkLists).
-reach_line([], T, T?).
-reach_line([X|Xs], T, [['\\text{provided } '|L?]|T?]) :-
-    ground(X?), ground(Xs?), ground(T?) |
-    latex_reaches([X?|Xs?], [], L).
-
-% The name terms sigma.y of a schema: those occurring in its roles, the
-% arguments of a listed role among them, its atoms and its reach conditions,
-% with the name terms within them, that are of the form sigma.y, each once
-% and in order of first occurrence.
+% The name terms sigma.y of a schema: those occurring among the arguments
+% of its listed roles and of its atoms, with the name terms within them, that
+% are of the form sigma.y, each once and in order of first occurrence.
 procedure roles_nterms(RoleSpecs?, NameTerms?, NameTerms).
 roles_nterms([], T, T?).
 roles_nterms([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
-    rs_nterm(RS?, N),
     rs_kind_args(RS?, KA),
     roles_nterms(Rs?, T?, R1),
-    args_nterms(KA?, R1?, R2),
-    nterms_app(N?, R2?, R).
+    args_nterms(KA?, R1?, R).
 
 procedure args_nterms(Args?, NameTerms?, NameTerms).
 args_nterms([], T, T?).
@@ -500,18 +391,11 @@ args_nterms([nterm(S)|As], T, [S?|R?]) :- ground(S?), ground(As?), ground(T?) |
 args_nterms([A|As], T, R?) :- otherwise, ground(A?), ground(As?), ground(T?) |
     args_nterms(As?, T?, R).
 
-procedure reaches_nterms(Reaches?, NameTerms?, NameTerms).
-reaches_nterms([], T, T?).
-reaches_nterms([reach(S, _, S2)|Xs], T, [S?, S2?|R?]) :-
-    ground(S?), ground(S2?), ground(Xs?), ground(T?) |
-    reaches_nterms(Xs?, T?, R).
-
 procedure ext_within(NameTerm?, NameTerms?, NameTerms).
 ext_within(ext(S, Y), T, [ext(S?, Y?)|R?]) :- ground(S?), ground(Y?), ground(T?) |
     ext_within(S?, T?, R).
 ext_within(own(_), T, T?).
 ext_within(own_var(_), T, T?).
-ext_within(nvar(_), T, T?).
 
 procedure ext_terms(NameTerms?, NameTerms?, NameTerms).
 ext_terms([], T, T?).
@@ -533,13 +417,10 @@ nterms_dedup([N|Ns], [N?|R?]) :- ground(N?), ground(Ns?) |
 procedure sch_ext_terms(Schema?, NameTerms).
 sch_ext_terms(Sc, R?) :- ground(Sc?) |
     sch_roles(Sc?, Rs),
-    sch_reaches(Sc?, Th),
     roles_nterms(Rs?, [], N1),
     schema_args(Sc?, As),
     args_nterms(As?, [], N2),
-    reaches_nterms(Th?, [], N3),
-    nterms_app(N2?, N3?, N23),
-    nterms_app(N1?, N23?, N),
+    nterms_app(N1?, N2?, N),
     ext_terms(N?, [], Es),
     nterms_dedup(Es?, R).
 
@@ -578,63 +459,6 @@ fresh_lines([S|Ss], T, [['\\text{provided } '|L?]|R?]) :-
     latex_nt(S?, [' \\text{ is an argument of no atom of } c'], L),
     fresh_lines(Ss?, T?, R).
 
-% --- The guard of Appendix D (definition:compile) ---------------------------
-% guarded by G_{i_1} u ... u G_{i_n}, with G_{i_j} a part of ext_c(pi_{i_j})
-% larger than theta_{i_j} of it, the parts joined as the conjuncts of a
-% proviso are; G alone where one role guards, as the worked box writes it,
-% and \emptyset where none does.  The threshold of a party role is 0
-% (definition:schema).
-
-procedure latex_theta(Guard?, Chunks?, Chunks).
-latex_theta(guarded, T, [0|T?]).
-latex_theta(guarded_at(X), T, R?) :- ground(X?), ground(T?) | latex_greek(X?, T?, R).
-latex_theta(unguarded, T, T?).
-
-procedure g_name(Integer?, Constant?, Chunks).
-g_name(N, _, ['G']) :- N? =:= 1 | true.
-g_name(N, I, ['G_{', I?, '}']) :- N? > 1, ground(I?) | true.
-
-procedure guard_part(Chunks?, RoleSpec?, Integer?, Chunks?, Chunks).
-guard_part(G, RS, I, T, R?) :- ground(G?), ground(RS?), integer(I?), ground(T?) |
-    rs_guard(RS?, Gd),
-    latex_ext(RS?, I?, ['|'|T?], E2),
-    latex_theta(Gd?, ['|'|E2?], Th),
-    chunks_app(G?, ['| > '|Th?], G2),
-    latex_ext(RS?, I?, [' \\text{ with } |'|G2?], E1),
-    chunks_app(G?, [' \\subseteq '|E1?], R).
-
-procedure guard_parts(Ints?, Integer?, RoleSpecs?, Chunks?, Chunks).
-guard_parts([], _, _, T, T?).
-guard_parts([I], N, Rs, T, R?) :- integer(I?), integer(N?), ground(Rs?), ground(T?) |
-    nth_rs(Rs?, I?, RS),
-    g_name(N?, I?, G),
-    guard_part(G?, RS?, I?, T?, R).
-guard_parts([I, J|Is], N, Rs, T, R?) :-
-    integer(I?), integer(J?), ground(Is?), integer(N?), ground(Rs?), ground(T?) |
-    guard_parts([J?|Is?], N?, Rs?, T?, R1),
-    nth_rs(Rs?, I?, RS),
-    g_name(N?, I?, G),
-    guard_part(G?, RS?, I?, [' \\text{ and } '|R1?], R).
-
-procedure guard_union(Ints?, Integer?, Chunks?, Chunks).
-guard_union([], _, T, T?).
-guard_union([I], N, T, R?) :- integer(I?), integer(N?), ground(T?) |
-    g_name(N?, I?, G),
-    chunks_app(G?, T?, R).
-guard_union([I, J|Is], N, T, R?) :-
-    integer(I?), integer(J?), ground(Is?), integer(N?), ground(T?) |
-    guard_union([J?|Is?], N?, T?, R1),
-    g_name(N?, I?, G),
-    chunks_app(G?, ['\\cup '|R1?], R).
-
-procedure guard_line(Ints?, RoleSpecs?, Chunks).
-guard_line([], _, ['\\text{guarded by } \\emptyset']).
-guard_line([I|Is], Rs, ['\\text{guarded by } '|R?]) :-
-    integer(I?), ground(Is?), ground(Rs?) |
-    ints_len([I?|Is?], N),
-    guard_parts([I?|Is?], N?, Rs?, [], P),
-    guard_union([I?|Is?], N?, [',\\ '|P?], R).
-
 procedure join_lines(ChunkLists?, Chunks?, Chunks).
 join_lines([], T, T?).
 join_lines([L], T, ['&'|R?]) :- ground(L?), ground(T?) | chunks_app(L?, T?, R).
@@ -645,31 +469,28 @@ join_lines([L, M|Ls], T, ['&'|R?]) :- ground(L?), ground(M?), ground(Ls?), groun
 procedure latex_schema_app(Schema?, Chunks?, Chunks).
 latex_schema_app(Sc, T, ['\\begin{align*}'|R?]) :- ground(Sc?), ground(T?) |
     sch_roles(Sc?, Rs),
-    sch_reaches(Sc?, Th),
     sch_ext_terms(Sc?, Es0),
-    latex_app_fresh(Rs?, Th?, Es0?, T?, R).
+    latex_app_fresh(Rs?, Es0?, T?, R).
 
-procedure latex_app_fresh(RoleSpecs?, Reaches?, NameTerms?, Chunks?, Chunks).
-latex_app_fresh(Rs, Th, Es0, T, R?) :-
-    ground(Rs?), ground(Th?), ground(Es0?), ground(T?) |
+procedure latex_app_fresh(RoleSpecs?, NameTerms?, Chunks?, Chunks).
+latex_app_fresh(Rs, Es0, T, R?) :-
+    ground(Rs?), ground(Es0?), ground(T?) |
     req_ext_terms(Rs?, Qs),
     fresh_terms(Es0?, Qs?, Es),
-    latex_app_roles(Rs?, Th?, Es?, T?, R).
+    latex_app_roles(Rs?, Es?, T?, R).
 
-procedure latex_app_roles(RoleSpecs?, Reaches?, NameTerms?, Chunks?, Chunks).
-latex_app_roles(Rs, Th, Es, T, R?) :- ground(Rs?), ground(Th?), ground(Es?), ground(T?) |
+procedure latex_app_roles(RoleSpecs?, NameTerms?, Chunks?, Chunks).
+latex_app_roles(Rs, Es, T, R?) :- ground(Rs?), ground(Es?), ground(T?) |
     guard_roles(Rs?, 1, [], G),
-    guard_line(G?, Rs?, GL),
-    fresh_lines(Es?, [GL?], L5),
-    reach_line(Th?, L5?, L4),
-    change_lines(Rs?, 1, L4?, L3),
+    latex_guard(G?, [], GL),
+    fresh_lines(Es?, [GL?], L3),
     forb_lines(Rs?, 1, L3?, L2),
     req_lines(Rs?, 1, L2?, L1),
     assign_lines(Rs?, 1, L1?, Ls),
     join_lines(Ls?, ['\\end{align*}'|T?], R).
 
 % --- The display of one schema, in its form ------------------------------
-% A schema of Section 3 -- its roles agent roles, no reach condition and no
+% A schema of Section 3 -- its roles agent roles, written schema and with no
 % name term -- in the form of Section 5.1 and Appendix B.3, any other in
 % Appendix D's.
 
@@ -705,10 +526,11 @@ latex_contract(K, [S|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
 % The checker first: a contract that is malformed, that is not syntactically
 % grassroots (def:syntactically-grassroots, or definition:sg-agent-named for
 % an agent-named contract with community roles), or that fails the
-% conditions on the text of Appendix D, is not compiled at all.  A contract grassroots with wards is compiled as a
-% syntactically grassroots one: the compilation of Section 5 uses nothing of
-% the introductory act, and its realisation is taken by def:realisation
-% (Appendix F, after def:introduction-wards).  A contract's reflexive
+% conditions on the text of Appendix D, is not compiled at all.  A contract
+% grassroots with wards is compiled as a syntactically grassroots one: the
+% compilation of Section 5 uses nothing of the introductory act, and its
+% realisation is taken as GSC's (GAI's appendix "Contracts with Wards", the
+% paragraph after Definition Compilation).  A contract's reflexive
 % predicates are no part of its compiled form, which is its schemas'.
 
 procedure find_schema1(Constant?, Constant?, Schema?, Contract?, FoundS).
@@ -741,10 +563,10 @@ not_compiled_app(Nm) :- ground(Nm?) |
                   'check_named gives the faults.']).
 
 % A malformed contract is not compiled, and the message names each fault the
-% checker found, schema and role, in the paper's words: the paragraph after
-% def:binding for a reflexive predicate, def:schema for a signed term and for
-% the form of a schema, and Appendix D's Definition Act schema for a signed
-% term whose role is not an agent role.
+% checker found, schema and role, in the papers' words: GAI's appendix
+% "Contracts with Wards" for a reflexive predicate and a signed term,
+% def:schema for the form of a schema, and Appendix D's Definitions Role and
+% Act schema for a listed role.
 procedure malformed_lines(Faults?, Chunks?, Chunks).
 malformed_lines([], T, T?).
 malformed_lines([reflexive(S, I, _)|Fs], T,
@@ -803,6 +625,11 @@ malformed_lines([listed_signed(S, I)|Fs], T,
                  'has a listed role with a signed term among its arguments;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+malformed_lines([listed_guarded(S, I)|Fs], T,
+                [S?, 'at role', I?,
+                 'has a listed role carrying the mark ?, which only an agent role may carry;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 
@@ -821,7 +648,7 @@ compile_on(grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C?) |
 compile_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
     send_to_user(L?).
-compile_on(syntactically_grassroots_with_seated_and_listed_roles, _, C) :- ground(C?) |
+compile_on(syntactically_grassroots_with_listed_roles, _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
     send_to_user(L?).
 compile_on(not_grassroots(_), Nm, _) :- ground(Nm?) | not_compiled(Nm?).
@@ -865,7 +692,7 @@ compile_s_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, Sn, C) :-
     ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, yes, Sn?).
-compile_s_on(syntactically_grassroots_with_seated_and_listed_roles, _, Sn, C) :-
+compile_s_on(syntactically_grassroots_with_listed_roles, _, Sn, C) :-
     ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, yes, Sn?).

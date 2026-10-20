@@ -6,20 +6,20 @@
 %
 % The contracts the checker is for are their owners' and live with their
 % code, one copy each (claude.md "Sessions", the cascade rule; Coordination
-% Appendix C): GSC's are programs/gsc/GSG.glp, GSN.glp and GSNP.glp, the
-% social network with provenance of GSC, Section 3.3, the currency's
+% Appendix C): GSC's are programs/gsc/GSG.glp and GSN.glp, the social
+% network of GSC, Section 3.3; GAI's programs/gai/GSNP.glp, the social
+% network with provenance, and programs/gai/GAI.glp; the currency's
 % programs/currencies/coins/GC.glp (Appendix B), the child-safe social
 % network's programs/cssn/CSSN.glp and the federation's
-% programs/federation/GFWC.glp (Appendix D).  Each
-% prints its term by contract_named/2 in a REPL session on the file, and
-% test_gsc.sh passes the term to check/2, traceable_preds/2,
-% rooted_preds/2, compile_contract/2 and compile_schema_in/3.  A fixture that
+% programs/federation/GFWC.glp.  Each prints its term by contract_named/2 in
+% a REPL session on the file, and test_gsc.sh passes the term to check/2,
+% traceable_preds/2, compile_contract/2 and compile_schema_in/3.  A fixture that
 % changes one of them in one place is a variant: variant/3 takes the owner's
 % term and gives the fixture, so no copy of a contract is kept here.
 %
 % rs(Guard, Add, Del, Keep, Forb) is the role's +(i), -(i), =(i), not(i); a
 % role is named by its index, so role(1) is the schema's first role.  A
-% schema is schema(Name, Vars, Roles) or cschema(Name, Vars, Reaches, Roles),
+% schema is schema(Name, Vars, Roles) or cschema(Name, Vars, [], Roles),
 % Vars its variables, pvar(X) and svar(Y), in the order of its head (GSC
 % 0228e79, Definition Act schema); the heads of the fixtures list them in
 % the order of their first occurrence, or of the head in the comment above.
@@ -28,9 +28,9 @@
 % --- the social graph with items of arity three, no signed term ------------
 % The social graph as Section 3.3 printed it before the signed term (GSC
 % 63b301f): item(x, a, f), the item x by a as received from f.  A fixture, the
-% base of the Appendix D variants below (sg_relay, sg_tri_cschema), since
-% Appendix D's Definition Act schema admits no signed term and the contract
-% GSNP carries one (programs/gsc/GSNP.glp); it certifies nothing of GSNP.
+% base of the Appendix D variant below, sg_tri_cschema, since GSC's language
+% admits no signed term and the contract GSNP carries one
+% (programs/gai/GSNP.glp); it certifies nothing of GSNP.
 procedure sg_plain(Contract).
 sg_plain([schema(befriend, [],
        [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
@@ -467,71 +467,9 @@ cs18_schemas([schema(parent_child, [],
 % Agent-named contracts (Appendix D.4, definition:sg-agent-named)
 % ===========================================================================
 % Variants of GSNP, an agent-named contract with the listed role of close,
-% each with one schema more and failing one clause, or passing with a listed
-% role guarded by a part of its extent, and contracts that stand on their
-% own, failing clause 1.
-
-% --- negative: a seated role adding an atom befriend forbids (clause 2) ----
-% befriend_members(a?, (<a>.n)^member ; n) :  identity, member(<a>.n)
-%                                             at (<a>.n)^member: identity, +friend(a)
-% Every member of a's group n becomes a friend of a in one act a wills.
-% friend is forbidden by befriend at both roles, so clause 2 fails at each.
-procedure sn_seated_forbidden(Contract?, Contract).
-sn_seated_forbidden(S, C?) :-
-    contract_app(S?,
-      [cschema(befriend_members, [svar(n)], [],
-         [rs(guarded, [], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], []),
-          crs(seated(ext(own(1), n), member), unguarded,
-              [atom(friend, [role(1)])], [], [atom(identity, [])], [])])], C).
-
-% --- negative: a speech act traced through a seated role only (clause 3) ---
-% note_posted(a?, (<a>.n)^member ; x, n) :  identity, +noted(x)
-%                                           at (<a>.n)^member: identity, posted(x, n)
-% x occurs in posted(x, n), required at the seated role and at no agent
-% role, so noted has traceable provenance by definition:provenance and not
-% with each psi required at an agent role.
-procedure sn_seated_witness(Contract?, Contract).
-sn_seated_witness(S, C?) :-
-    contract_app(S?,
-      [cschema(note_posted, [svar(x), svar(n)], [],
-         [rs(guarded, [atom(noted, [svar(x)])], [], [atom(identity, [])], []),
-          crs(seated(ext(own(1), n), member), unguarded,
-              [], [], [atom(identity, []), atom(posted, [svar(x), svar(n)])], [])])], C).
-
-% --- negative: a component guarded by a seated role only (clause 4) --------
-% split(a, b?, (<a>.n)^member ?theta ; n) :  identity, +split_a    identity, +split_b
-%                                            at (<a>.n)^member: identity, +split_c
-% The role graph falls into {a, (<a>.n)^member}, joined by their base, and
-% {b}; b is a guarding agent role, and the first component is guarded by the
-% seated role and by no agent role, which definition:volition admits and
-% clause 4 does not.
-procedure sn_seated_guard(Contract?, Contract).
-sn_seated_guard(S, C?) :-
-    contract_app(S?,
-      [cschema(split, [svar(n)], [],
-         [rs(unguarded, [atom(split_a, [])], [], [atom(identity, [])], []),
-          rs(guarded,   [atom(split_b, [])], [], [atom(identity, [])], []),
-          crs(seated(ext(own(1), n), member), guarded_at(theta),
-              [atom(split_c, [])], [], [atom(identity, [])], [])])], C).
-
-% --- a listed role guarded by a part of its extent -------------------------
-% vote(a, a[listed(*, n)] ?theta ; n) :  identity, member(<a>.n), +voted(n)
-%                                        at a[listed(*, n)]: identity, member(<a>.n), +voter(n)
-% The members a lists vote, a part of them larger than theta of them
-% guarding the act (Appendix D, Definition Act schema: a listed role may carry
-% the mark ?_theta, GSC 8064cfb).  n occurs in <a>.n, in member(<a>.n)
-% required at the agent role a (clause 3); the two roles share the base a
-% (clause 4); the listed role adds voter, which befriend does not forbid
-% (clause 2).  So GSNP with vote is syntactically grassroots.
-procedure sn_listed_vote(Contract?, Contract).
-sn_listed_vote(S, C?) :-
-    contract_app(S?,
-      [cschema(vote, [svar(n)], [],
-         [rs(unguarded, [atom(voted, [svar(n)])], [],
-                        [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], []),
-          crs(listed(1, listed, [svar(n)]), guarded_at(theta),
-              [atom(voter, [svar(n)])], [],
-              [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])])], C).
+% each with one schema more and failing one clause, or refused for a listed
+% role carrying the mark ?, and contracts that stand on their own, failing
+% clause 1.
 
 % --- negative: a listed role adding an atom befriend forbids (clause 2) ----
 % befriend_listed(a?, a[listed(*, n)] ; n) :  identity, member(<a>.n)
@@ -549,33 +487,47 @@ sn_listed_forbidden(S, C?) :-
 
 % --- negative: a speech act traced through a listed role only (clause 3) ---
 % note_posted(a?, a[listed(*, n)] ; x, n) :  identity, +noted(x)
-%                                            at a[listed(*, n)]: identity, posted(x, n)
+%                                            at a[listed(*, n)]: identity, posted(x, n), +noticed
 % x occurs in posted(x, n), required at the listed role and at no agent
 % role, so noted has traceable provenance by definition:provenance and not
-% with each psi required at an agent role.
+% with each psi required at an agent role.  The listed role adds noticed, a
+% role that is not guarding adding or deleting an atom (Appendix D's
+% Definition Act schema, GSC 70afdc4).
 procedure sn_listed_witness(Contract?, Contract).
 sn_listed_witness(S, C?) :-
     contract_app(S?,
       [cschema(note_posted, [svar(x), svar(n)], [],
          [rs(guarded, [atom(noted, [svar(x)])], [], [atom(identity, [])], []),
           crs(listed(1, listed, [svar(n)]), unguarded,
-              [], [], [atom(identity, []), atom(posted, [svar(x), svar(n)])], [])])], C).
+              [atom(noticed, [])], [], [atom(identity, []), atom(posted, [svar(x), svar(n)])], [])])], C).
 
-% --- negative: a component guarded by a listed role only (clause 4) --------
-% split(a, b?, a[listed(*, n)] ?theta ; n) :  identity, +split_a    identity, +split_b
-%                                             at a[listed(*, n)]: identity, +split_c
-% The role graph falls into {a, a[listed(*, n)]}, joined by their base, and
-% {b}; b is a guarding agent role, and the first component is guarded by the
-% listed role and by no agent role, which definition:volition admits and
-% clause 4 does not.
+% --- negative: a listed role carrying the mark ? ----------------------------
+% split(a, b?, a[listed(*, n)]? ; n) :  identity, +split_a    identity, +split_b
+%                                       at a[listed(*, n)]: identity, +split_c
+% Only an agent role may carry the mark ? (Appendix D's Definition Act
+% schema, GSC f3c4f43), so the contract is malformed, the listed role named.
 procedure sn_listed_guard(Contract?, Contract).
 sn_listed_guard(S, C?) :-
     contract_app(S?,
       [cschema(split, [svar(n)], [],
          [rs(unguarded, [atom(split_a, [])], [], [atom(identity, [])], []),
           rs(guarded,   [atom(split_b, [])], [], [atom(identity, [])], []),
-          crs(listed(1, listed, [svar(n)]), guarded_at(theta),
+          crs(listed(1, listed, [svar(n)]), guarded,
               [atom(split_c, [])], [], [atom(identity, [])], [])])], C).
+
+% --- negative: a listed role adding and deleting nothing --------------------
+% idle(a?, a[listed(*, n)] ; n) :  identity, +idled(n)
+%                                  at a[listed(*, n)]: identity
+% A role that is not a guarding role adds or deletes an atom (Appendix D's
+% Definition Act schema, GSC 70afdc4), and a listed role is no guarding
+% role, so the contract is malformed, the listed role named.
+procedure sn_listed_inert(Contract?, Contract).
+sn_listed_inert(S, C?) :-
+    contract_app(S?,
+      [cschema(idle, [svar(n)], [],
+         [rs(guarded, [atom(idled, [svar(n)])], [], [atom(identity, [])], []),
+          crs(listed(1, listed, [svar(n)]), unguarded,
+              [], [], [atom(identity, [])], [])])], C).
 
 % --- negative: an introductory act with a name term (clause 1) -------------
 % befriend(p?, q? ; y) :  identity, not friend(q), +friend(q), +tag(<p>.y)
@@ -601,14 +553,15 @@ an_named_unary([schema(establish, [svar(y)],
        [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])]),
         rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])])])]).
 
-% --- negative: a signed term of a seated role -------------------------------
-% note(a?, (<a>.n)^member ; x, n) :  item(x)    at (<a>.n)^member: item(x), +got(sgn(x, (<a>.n)^member))
-% Appendix D's Definition Act schema admits sgn(y, pi) for pi an agent role,
-% so the contract is malformed.
-procedure sgn_seated(Contract).
-sgn_seated([cschema(note, [svar(x), svar(n)], [],
+% --- negative: a signed term of a listed role -------------------------------
+% note(a?, a[club(*, n)] ; x, n) :  item(x)    at a[club(*, n)]: item(x), +got(sgn(x, a[club(*, n)]))
+% A signed term is of an agent role, as GSC's Appendix D admitted sgn(y, pi)
+% for pi an agent role until GSC 1a2a5f3, the signed term now GAI's, so the
+% contract is malformed.
+procedure sgn_listed(Contract).
+sgn_listed([cschema(note, [svar(x), svar(n)], [],
        [rs(guarded, [], [], [atom(item, [svar(x)])], []),
-        crs(seated(ext(own(1), n), member), unguarded,
+        crs(listed(1, club, [svar(n)]), unguarded,
             [atom(got, [sgn(x, 2)])], [], [atom(item, [svar(x)])], [])])]).
 
 % --- negative: listed roles formed otherwise than Definition Role allows ----
@@ -647,31 +600,15 @@ hd_faults([schema(sign, [svar(x), svar(x), role(1)],
        [rs(guarded, [atom(item, [svar(y)])], [], [], [])])]).
 
 % ===========================================================================
-% Agent-named contracts with wards (Appendix F, def:sg-wards)
+% Agent-named contracts with wards (def:sg-wards, CSSN's paper)
 % ===========================================================================
-% wd_leaving with one schema more, a cschema whose seated role is the agents
-% holding club(<p>.n): wd_seated's seated role requires child and adds noted,
+% wd_leaving with one schema more, gather(p?, p[club(*, n)] ; n), whose
+% listed role is the agents p lists in club(q, n) (def:sg-wards clause 2 on
+% listed roles): wd_listed's listed role requires child and adds noted,
 % which is no mark in M, no leaving mark, no friend atom and no parent or
 % parenting atom, so it is syntactically grassroots with wards;
-% wd_seated_leaving's adds retired, a leaving mark, and clause 2 of
+% wd_listed_leaving's adds retired, a leaving mark, and clause 2 of
 % def:sg-wards fails.
-procedure gather(Constant?, Schema).
-gather(A, cschema(gather, [svar(n)], [],
-    [rs(guarded, [], [], [atom(identity, [])], [atom(retired, [])]),
-     crs(seated(ext(own(1), n), club), unguarded,
-         [atom(A?, [])], [], [atom(child, [])], [])])).
-
-procedure wd_seated(Declared).
-wd_seated(C?) :- wd_retire(Rt), gather(noted, G), wd_leaving_with(Rt?, [G?], C).
-
-procedure wd_seated_leaving(Declared).
-wd_seated_leaving(C?) :- wd_retire(Rt), gather(retired, G), wd_leaving_with(Rt?, [G?], C).
-
-% The same with gather(p?, p[club(*, n)] ; n), whose listed role is the
-% agents p lists in club(q, n) (GSC 8064cfb, def:sg-wards clause 2 on seated
-% and listed roles): wd_listed's listed role requires child and adds noted,
-% syntactically grassroots with wards; wd_listed_leaving's adds retired, and
-% clause 2 of def:sg-wards fails.
 procedure gather_listed(Constant?, Schema).
 gather_listed(A, cschema(gather, [svar(n)], [],
     [rs(guarded, [], [], [atom(identity, [])], [atom(retired, [])]),
@@ -740,19 +677,19 @@ contract(wd_leave_unmarked, C?) :- wd_leave_unmarked(C).
 contract(wd_leave_guardian, C?) :- wd_leave_guardian(C).
 contract(an_named_intro, C?) :- an_named_intro(C).
 contract(an_named_unary, C?) :- an_named_unary(C).
-contract(sgn_seated, C?) :- sgn_seated(C).
+contract(sgn_listed, C?) :- sgn_listed(C).
 contract(hd_faults, C?) :- hd_faults(C).
-contract(wd_seated, C?) :- wd_seated(C).
-contract(wd_seated_leaving, C?) :- wd_seated_leaving(C).
 contract(wd_listed, C?) :- wd_listed(C).
 contract(wd_listed_leaving, C?) :- wd_listed_leaving(C).
 contract(ls_faults, C?) :- ls_faults(C).
+contract(nn_tag, C?) :- nn_tag(C).
+contract(nn_tag_loose, C?) :- nn_tag_loose(C).
 contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract
-% it changes, which test_gsc.sh reads from the owner's file: GSNP's for sg_*
-% (sg_plain's for sg_relay and sg_tri_cschema, Appendix D admitting no signed
-% term), the federation's for gf_*.  An unknown name is the empty contract.
+% it changes, which test_gsc.sh reads from the owner's file: GSG's or GSNP's
+% for sg_* and sn_* (sg_plain's for sg_tri_cschema, GSC's language admitting
+% no signed term).  An unknown name is the empty contract.
 exported procedure variant(Constant?, Contract?, Declared).
 variant(sg_imposed, S, C?) :- sg_imposed(S?, C).
 variant(sg_gossip, S, C?) :- sg_gossip(S?, C).
@@ -769,139 +706,11 @@ variant(sg_added_deleted, S, C?) :- sg_added_deleted(S?, C).
 variant(sg_self_required, S, C?) :- sg_self_required(S?, C).
 variant(sg_refl_required, S, C?) :- sg_refl_required(S?, C).
 variant(sg_refl_forbidden, S, C?) :- sg_refl_forbidden(S?, C).
-variant(sn_seated_forbidden, S, C?) :- sn_seated_forbidden(S?, C).
-variant(sn_seated_witness, S, C?) :- sn_seated_witness(S?, C).
-variant(sn_seated_guard, S, C?) :- sn_seated_guard(S?, C).
-variant(sn_listed_vote, S, C?) :- sn_listed_vote(S?, C).
 variant(sn_listed_forbidden, S, C?) :- sn_listed_forbidden(S?, C).
 variant(sn_listed_witness, S, C?) :- sn_listed_witness(S?, C).
 variant(sn_listed_guard, S, C?) :- sn_listed_guard(S?, C).
-variant(sg_relay, S, C?) :- sg_relay(S?, C).
-variant(gf_unrooted, F, C?) :- gf_unrooted(F?, C).
-variant(gf_untraceable, F, C?) :- gf_untraceable(F?, C).
-variant(gf_uncohesive, F, C?) :- gf_uncohesive(F?, C).
-variant(gf_cohesion_only, F, C?) :- gf_cohesion_only(F?, C).
-variant(gf_novolition, F, C?) :- gf_novolition(F?, C).
-variant(gf_inert_seated, F, C?) :- gf_inert_seated(F?, C).
-variant(gf_added_deleted, F, C?) :- gf_added_deleted(F?, C).
+variant(sn_listed_inert, S, C?) :- sn_listed_inert(S?, C).
 variant(_, _, []) :- otherwise | true.
-
-% --- negative: the new community named without the decision that formed it --
-% federate seats the assembly in the name of the community itself, of least
-% rank zero and at no party role, so seat is not rooted.
-procedure gf_unrooted(Contract?, Contract).
-gf_unrooted([], []).
-gf_unrooted([_], []).
-gf_unrooted([F, _ | R],
-   [F?, cschema(federate, [svar(y)], [],
-         [crs(seated(nvar(zeta), seat), guarded_at(theta),
-              [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
-               atom(seat, [nterm(nvar(zeta))])], [], [], [])]) | R?]).
-
-% --- negative: an atom naming a community nothing traces -------------------
-% federate notes a community eta that is the name term of no role and that no
-% atom any role requires names, so note loses traceable provenance; seat and
-% child keep it, and the set of predicates occurring in the contract lacks it,
-% the contract's one fault.  note is the predicate of no role, so cohesion is
-% untouched.
-procedure gf_untraceable(Contract?, Contract).
-gf_untraceable([], []).
-gf_untraceable([_], []).
-gf_untraceable([F, _ | R],
-   [F?, cschema(federate, [svar(y)], [],
-         [crs(seated(nvar(zeta), seat), guarded_at(theta),
-              [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
-               atom(seat, [nterm(ext(nvar(zeta), y))]),
-               atom(note, [nterm(nvar(eta))])], [], [], [])]) | R?]).
-
-% --- negative: a seat atom of a community that is no role of the schema -----
-% federate seats the assembly in eta, the name term of no role of it, in
-% place of the community it forms, so cohesion fails at its seated role.
-% seat is the one role predicate of the contract, every role being a party
-% or a seated role, so cohesion asks its question of seat atoms alone
-% (definition:cohesive), and a child atom naming eta would break nothing.
-% The same atom costs seat its traceable provenance, which the verdict names
-% before the cohesion fault, and its rootedness.
-procedure gf_uncohesive(Contract?, Contract).
-gf_uncohesive([], []).
-gf_uncohesive([_], []).
-gf_uncohesive([F, _ | R],
-   [F?, cschema(federate, [svar(y)], [],
-         [crs(seated(nvar(zeta), seat), guarded_at(theta),
-              [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
-               atom(seat, [nterm(nvar(eta))])], [], [], [])]) | R?]).
-
-% --- negative: cohesion alone ---------------------------------------------
-% The federation contract with one schema more,
-%     seat_child(zeta^seat ?theta ; ; zeta, eta) :
-%         zeta^seat:  child(zeta, eta), +seat(eta),
-% the assembly of zeta seating itself in a child eta of zeta.  eta is the name
-% term of no role of seat_child, and no <pi_i> of a party role or extension of
-% either, so cohesion fails at its role (definition:cohesive).  eta is an
-% argument of the child(zeta, eta) the role requires, child being in the set
-% {seat, child}, so seat keeps traceable provenance (definition:provenance);
-% the role graph is one role, so volition holds.  seat stops being rooted,
-% which is no condition (Legal 2026-10-09 18:31 UTC).
-procedure gf_cohesion_only(Contract?, Contract).
-gf_cohesion_only(F, C?) :-
-    contract_app(F?,
-      [cschema(seat_child, [], [],
-         [crs(seated(nvar(zeta), seat), guarded_at(theta),
-              [atom(seat, [nterm(nvar(eta))])], [],
-              [atom(child, [nterm(nvar(zeta)), nterm(nvar(eta))])], [])])], C).
-
-% --- a seated role that changes nothing --------------------------------------
-% The federation contract with one schema more,
-%     confirm(zeta^seat ?theta, xi^seat ; ; zeta, xi) :
-%         zeta^seat:  child(zeta, xi), +confirmed(zeta, xi)
-%         xi^seat:    child(zeta, xi),
-% the assembly of zeta confirming its child xi, whose assembly requires the
-% child atom and adds and deletes nothing.  Appendix D's Definition Act schema
-% requires +(i) and -(i) disjoint and nothing of +(i) u -(i), so the
-% contract is formed; confirmed's xi is the base of a role, child has
-% traceable provenance, and xi^seat requires child(zeta, xi), whose zeta is
-% the base of the other role, so the three conditions on the text hold.  Its
-% compiled form (definition:compile) carries c'_p \neq c_p over the extent of
-% xi^seat, a seated role adding and deleting nothing.
-procedure gf_inert_seated(Contract?, Contract).
-gf_inert_seated(F, C?) :-
-    contract_app(F?,
-      [cschema(confirm, [], [],
-         [crs(seated(nvar(zeta), seat), guarded_at(theta),
-              [atom(confirmed, [nterm(nvar(zeta)), nterm(nvar(xi))])], [],
-              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], []),
-          crs(seated(nvar(xi), seat), unguarded,
-              [], [],
-              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [])])], C).
-
-% --- negative: an atom added and deleted at a seated role ------------------
-% The federation contract with one schema more,
-%     reseat(zeta^seat ?theta ; ; zeta) :  zeta^seat:  -seat(zeta), +seat(zeta).
-% Appendix D's Definition Act schema requires +(i) and -(i) disjoint, so the
-% contract is malformed, the schema, the role and the atom named.
-procedure gf_added_deleted(Contract?, Contract).
-gf_added_deleted(F, C?) :-
-    contract_app(F?,
-      [cschema(reseat, [], [],
-         [crs(seated(nvar(zeta), seat), guarded_at(theta),
-              [atom(seat, [nterm(nvar(zeta))])],
-              [atom(seat, [nterm(nvar(zeta))])], [], [])])], C).
-
-% --- negative: a join no assembly decides ----------------------------------
-% The two roles of join are the assemblies of two communities, of different
-% bases, and neither requires an atom, so nothing joins them; with neither
-% guarding, no part of the role graph holds a guarding role.
-procedure gf_novolition(Contract?, Contract).
-gf_novolition([], []).
-gf_novolition([_], []).
-gf_novolition([F, D | _],
-   [F?, D?, cschema(join, [], [reach(nvar(xi), child, nvar(zeta))],
-         [crs(seated(nvar(zeta), seat), unguarded,
-              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
-              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
-          crs(seated(nvar(xi), seat), unguarded,
-              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
-              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])])]).
 
 % --- the speech-act variables of definition:provenance (Appendix D) ---------
 % Four small contracts of party roles, put in the language of Appendix D by a
@@ -967,33 +776,41 @@ sv_in_name_carried([cschema(found, [svar(x)], [],
        [rs(guarded, [atom(cited, [svar(x)])], [],
                     [atom(club, [nterm(ext(own(1), x))])], [])])]).
 
-% --- volition by connected component (definition:volition) ----------------
-% relay(p?, q, r, zeta^seat ?theta) :
-%     friend(q), +chained(q)    friend(r), +chained(r)    +chained(p)    +noted(zeta)
-% Over the social graph, put in the language of Appendix D by the seated role.
-% relay's role graph falls into the path p-q-r and the assembly of zeta, each
-% holding a guarding role, and r has no edge to a guarding role: relay meets
-% volition.  relay_unguarded is relay with the assembly unguarded, so that
-% the assembly's component holds no guarding role, and it fails.
-procedure sg_relay(Contract?, Contract).
-sg_relay(S, C?) :-
+% ===========================================================================
+% A contract with a name term based on an agent variable (Appendix D.3)
+% ===========================================================================
+% establish(p?) : +identity
+% befriend(p?, q?) : identity, not friend(q), +friend(q)   identity, not friend(p), +friend(p)
+% tag(p? ; q, y) : identity, friend(q), +tagged(<q>.y)
+% <q>.y is based on the agent variable q, no agent role, so the contract is
+% not agent-named (definition:agent-named) and is put to the two conditions
+% on the text of Appendix D.  q is an argument of friend(q), which tag
+% requires, and y occurs in no atom tag requires, so tagged has traceable
+% provenance (definition:provenance); every role graph is connected or
+% guarded, so volition holds: nn_tag meets the conditions.  nn_tag_loose is
+% the same with tag requiring no friend(q), so that q is traced through
+% nothing and tagged loses traceable provenance.
+procedure nn_social(Contract).
+nn_social([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(befriend, [],
+       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])])])]).
+
+procedure nn_tag(Contract).
+nn_tag(C?) :-
+    nn_social(S),
     contract_app(S?,
-      [schema(relay, [],
-         [rs(guarded,   [atom(chained, [role(2)])], [],
-                        [atom(friend, [role(2)])], []),
-          rs(unguarded, [atom(chained, [role(3)])], [],
-                        [atom(friend, [role(3)])], []),
-          rs(unguarded, [atom(chained, [role(1)])], [], [], []),
-          crs(seated(nvar(zeta), seat), guarded_at(theta),
-              [atom(noted, [nterm(nvar(zeta))])], [], [], [])]),
-       schema(relay_unguarded, [],
-         [rs(guarded,   [atom(chained, [role(2)])], [],
-                        [atom(friend, [role(2)])], []),
-          rs(unguarded, [atom(chained, [role(3)])], [],
-                        [atom(friend, [role(3)])], []),
-          rs(unguarded, [atom(chained, [role(1)])], [], [], []),
-          crs(seated(nvar(zeta), seat), unguarded,
-              [atom(noted, [nterm(nvar(zeta))])], [], [], [])])], C).
+      [schema(tag, [pvar(q), svar(y)],
+         [rs(guarded, [atom(tagged, [nterm(ext(own_var(q), y))])], [],
+                      [atom(identity, []), atom(friend, [pvar(q)])], [])])], C).
+
+procedure nn_tag_loose(Contract).
+nn_tag_loose(C?) :-
+    nn_social(S),
+    contract_app(S?,
+      [schema(tag, [pvar(q), svar(y)],
+         [rs(guarded, [atom(tagged, [nterm(ext(own_var(q), y))])], [],
+                      [atom(identity, [])], [])])], C).
 
 % ===========================================================================
 % The signed speech-act term (Sections 3.1 to 3.3; the commit 63b301f)
@@ -1119,11 +936,12 @@ sg_sgn_loose(C?) :-
                       [atom(tagged, [svar(x), pvar(u)])], [])])], C).
 
 % ===========================================================================
-% Contracts with wards (Appendix F; the commit 00319cd)
+% Contracts with wards (GAI's appendix "Contracts with Wards", GSC's Appendix F
+% until GSC 83b951c; the commit 00319cd)
 % ===========================================================================
 
 % --- wd: children and their parents ---------------------------------------
-% The schemas Appendix F describes, in the term form, and nothing else:
+% The schemas GAI's appendix describes, in the term form, and nothing else:
 % establish gives a person an identity; enter makes r the child of p, adding
 % child, identity and parent(p) at r, who had no identity, and parenting(r) at
 % p, who has one and is no child; of_age deletes the four together; befriend
@@ -1138,7 +956,7 @@ sg_sgn_loose(C?) :-
 % so clause 1 of def:unobstructed fails, and enter adds the child befriend
 % forbids at a binding that gives the other party no role, so clause 2 fails.
 % Each fixture below changes it in one place and fails one clause of one
-% definition of Appendix F, its comment naming which.
+% definition of GAI's appendix, its comment naming which.
 procedure wd_establish(Schema).
 wd_establish(schema(establish, [],
     [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])])).
@@ -1694,7 +1512,7 @@ wd_attest_free(C?) :-
     wa_with(NA?, A?, CA?, AP?, AA?, [], C).
 
 % --- leaving marks (def:leaving) -------------------------------------------
-% wd_leaving is wd with retirement written with a leaving mark, as Appendix F
+% wd_leaving is wd with retirement written with a leaving mark, as GAI's appendix
 % writes Wards:4: every guarding role of every schema of wd forbids retired,
 % and retire(p?, r) ends the guardianship of p over r, deleting friend(r) and
 % parenting(r) at p and friend(p), parent(p) and child at r, and adding
