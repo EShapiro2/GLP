@@ -61,13 +61,15 @@ const _output =
     "om', shown), field('Amount', shown)]), form(swap_done, [field('Friend'"
     ", shown)]), form(swap_declined, [field('Friend', shown)]), form(swap_f"
     "ailed, [field('From', shown)]), form(declined, [field('From', shown)])"
-    ", form(redeemed, [field('Friend', shown), field('WantCoin', shown)]), "
-    "form(menu, [field('Friend', shown), field('Issuers', thread)]), form(p"
-    "resented, [field('From', shown), field('WantCoin', shown)]), form(unfu"
-    "lfilled, [field('From', shown), field('WantCoin', shown)]), form(refus"
-    "ed, [field('Friend', shown)]), form(lacking, [field('Issuer', shown), "
-    "field('Amount', shown)]), form(no_conversation, [field('Friend', shown"
-    ")])]))";
+    ", form(swap_same, [field('Friend', shown), field('GiveCoin', shown), f"
+    "ield('GiveAmount', shown)]), form(redeemed, [field('Friend', shown), f"
+    "ield('WantCoin', shown)]), form(menu, [field('Friend', shown), field('"
+    "Issuers', thread)]), form(presented, [field('From', shown), field('Wan"
+    "tCoin', shown)]), form(unfulfilled, [field('From', shown), field('Want"
+    "Coin', shown)]), form(refused, [field('Friend', shown)]), form(redeem_"
+    "same, [field('Friend', shown)]), form(lacking, [field('Issuer', shown)"
+    ", field('Amount', shown)]), form(no_conversation, [field('Friend', sho"
+    "wn)])]))";
 
 void main() {
   late List<String> sent;

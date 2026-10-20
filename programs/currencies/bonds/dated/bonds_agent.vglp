@@ -28,8 +28,14 @@
 %% serve, ordinary GLP, which has one clause per alternative, each the clause
 %% of its transaction reading its request at the head of the stream, and
 %% carries the rest of the stream, Reqs?, through every helper that continues
-%% the agent.  A responder is a volitional procedure whose interactive type, a
-%% card, is in writer mode: its clause writes the card at once, the offer for
+%% the agent.  A swap takes two lots that differ, and a redemption an
+%% instrument that is not the one presented (Definition "The Transactions of
+%% Grassroots Bonds"): a binding at which a schema changes no state determines
+%% no transaction (Appendix A), so the clause of each carries the difference in
+%% its guard, and a second clause refuses the request whose lots are the same,
+%% before anything is sent, the screen saying so.  A responder is a volitional
+%% procedure whose interactive type, a card, is in writer mode: its clause
+%% writes the card at once, the offer for
 %% the person to see, and hands the person the writer of their answer, which a
 %% helper reads with a clause per answer.
 %%
@@ -179,11 +185,13 @@ serve(Reqs, Id, [pay_returned_by(Q, Coins)|UserIn], PeerIn, Convs, Cal, Outs, Ho
     show(not_accepted(Q?, K?), Outs?, Outs1),
     after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Serial?).
 
-%% My presentation was fulfilled: the instrument I chose is mine.
-serve(Reqs, Id, [redeem_given(Q, R, D1, X)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Serial) :-
-    ground(Id?), ground(Q?), ground(R?), ground(D1?), ground(X?) |
+%% My presentation was fulfilled: the instrument I chose is mine, and the
+%% screen names the instrument I presented, of Q due D, and the one I took, of
+%% R due D1.
+serve(Reqs, Id, [redeem_given(Q, D, R, D1, X)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Serial) :-
+    ground(Id?), ground(Q?), ground(D?), ground(R?), ground(D1?), ground(X?) |
     append_instruments(Holdings?, [X?], Holdings1),
-    show(redeemed(Q?, R?, D1?), Outs?, Outs1),
+    show(redeemed(Q?, D?, R?, D1?), Outs?, Outs1),
     after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Serial?).
 
 %% The issuer holds no instrument of the issuer and due I named: what I
@@ -284,15 +292,25 @@ serve([mint(K, D)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, S
     show(minted(K?, D?), Outs?, Outs1),
     after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Serial1?).
 
-%% Swap_{p,q}(cent^k_{u,*}, cent^{k'}_{v,*}), guarded by both: p proposes,
-%% giving one lot for another, coins or bonds, and q answers by respond_swap.
-%% The precondition at p, cent^k_{u,*} in c_p, is the selection; q's part of
-%% it is q's.
+%% Swap_{p,q}(cent^k_{u,*}, cent^{k'}_{v,*}), guarded by both, with the two
+%% lots different: p proposes, giving one lot for another, coins or bonds, and
+%% q answers by respond_swap.  The precondition at p, cent^k_{u,*} in c_p, is
+%% the selection; q's part of it is q's.
 serve([swap(Q, U, D, K, V, D1, K1)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Serial) :-
     ground(Id?), ground(Q?), ground(U?), ground(D?), integer(K?), K? >= 1,
-    ground(V?), ground(D1?), integer(K1?), K1? >= 1 |
+    ground(V?), ground(D1?), integer(K1?), K1? >= 1,
+    lot(U?, D?, K?) =?\= lot(V?, D1?, K1?) |
     select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest),
     propose_swap(Status?, Id?, Q?, lot(U?, D?, K?), lot(V?, D1?, K1?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Serial?).
+
+%% A swap of a lot for the same lot changes no state, and is not a transaction
+%% (Appendix A): refused before anything is sent, the screen saying so.
+serve([swap(Q, U, D, K, V, D1, K1)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Serial) :-
+    ground(Id?), ground(Q?), ground(U?), ground(D?), integer(K?), K? >= 1,
+    ground(V?), ground(D1?), integer(K1?), K1? >= 1,
+    lot(U?, D?, K?) =?= lot(V?, D1?, K1?) |
+    show(swap_same(Q?, U?, D?, K?), Outs?, Outs1),
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Serial?).
 
 %% Pay_{p,q}(k), guarded by p: k q-coins to q, which q takes (clause 4 of the
 %% contract).  Only coins are paid, and no date is read.  The precondition
@@ -304,13 +322,24 @@ serve([pay(Q, K)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Se
 
 %% Redeem_{p,q}(x, r, *), guarded by p: x, a q-coin or a q-bond, due D,
 %% presented to q for a coin or a bond of r that q holds, of p's choice
-%% (clause 5), due D1.  The precondition x in c_p is the selection; that a
-%% bond x is mature by q's date, d <= d*_q, and cent_{r,*} in c_q are tested
-%% at q, which discloses what it holds where the second fails.
+%% (clause 5), due D1, the instrument taken not x: each a lot of one, the two
+%% lots different.  The precondition x in c_p is the selection; that a bond x
+%% is mature by q's date, d <= d*_q, and cent_{r,*} in c_q are tested at q,
+%% which discloses what it holds where the second fails.
 serve([redeem(Q, D, R, D1)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Serial) :-
-    ground(Id?), ground(Q?), ground(D?), ground(R?), ground(D1?) |
+    ground(Id?), ground(Q?), ground(D?), ground(R?), ground(D1?),
+    lot(Q?, D?, 1) =?\= lot(R?, D1?, 1) |
     take_instrument(Q?, D?, Holdings?, Found, Rest),
     do_redeem(Found?, Id?, Q?, D?, R?, D1?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Serial?).
+
+%% A redemption of an instrument against one of its own issuer and due
+%% changes no state, and is not a transaction (Appendix A): refused before
+%% anything is sent, the screen saying so.
+serve([redeem(Q, D, R, D1)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Serial) :-
+    ground(Id?), ground(Q?), ground(D?), ground(R?), ground(D1?),
+    lot(Q?, D?, 1) =?= lot(R?, D1?, 1) |
+    show(redeem_same(Q?, D?), Outs?, Outs1),
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Serial?).
 
 %% Deposit_{p,e}(cent^k_{u,*}), guarded by both: p proposes the transfer to
 %% the escrow agent e, which answers by respond_transfer.  The precondition
@@ -385,19 +414,20 @@ take_payment(no, Id, From, Coins, pay_returned(Coins?), Reqs, UserIn, PeerIn, Co
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Serial?).
 
 %% A presentation: my coin, or my bond mature by my date, d <= d*_q, is taken
-%% back and the instrument named given, if held; else what was presented goes
-%% back with the lots I hold.  My bond not mature by my date goes back, and
-%% nothing is recorded, as no transaction took place.  Anything but my coin
-%% or my bond goes back.
+%% back and the instrument named given, if held, the screen naming the due of
+%% the instrument presented, `now` for my coin and the maturity for my bond;
+%% else what was presented goes back with the lots I hold.  My bond not mature
+%% by my date goes back, and nothing is recorded, as no transaction took
+%% place.  Anything but my coin or my bond goes back.
 procedure fulfil(Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Integer?).
 fulfil(coin(I, S), R, D1, Resp?, Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Serial) :-
     I? =?= Id? |
     take_instrument(R?, D1?, Holdings?, Found, Rest),
-    give(Found?, coin(I?, S?), R?, D1?, Resp, Id?, From?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Rest?, Date?, Serial?).
+    give(Found?, coin(I?, S?), now, R?, D1?, Resp, Id?, From?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Rest?, Date?, Serial?).
 fulfil(bond(I, M, S), R, D1, Resp?, Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Serial) :-
     I? =?= Id?, M? =< Date? |
     take_instrument(R?, D1?, Holdings?, Found, Rest),
-    give(Found?, bond(I?, M?, S?), R?, D1?, Resp, Id?, From?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Rest?, Date?, Serial?).
+    give(Found?, bond(I?, M?, S?), M?, R?, D1?, Resp, Id?, From?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Rest?, Date?, Serial?).
 fulfil(bond(I, M, S), _, _, redeem_not_mature(bond(I?, M?, S?)), Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Serial) :-
     I? =?= Id?, M? > Date? |
     show(not_mature_for(From?, M?), Outs?, Outs1),
@@ -407,12 +437,12 @@ fulfil(X, _, _, redeem_declined(X?), Id, From, Reqs, UserIn, PeerIn, Convs, Cal,
     show(refused(From?), Outs?, Outs1),
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Serial?).
 
-procedure give(Found?, Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Integer?).
-give(found(X), Mine, R, D1, redeem_give(X?), Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Rest, Date, Serial) :-
+procedure give(Found?, Instrument?, Constant?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Integer?).
+give(found(X), Mine, D, R, D1, redeem_give(X?), Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Rest, Date, Serial) :-
     append_instruments(Rest?, [Mine?], Holdings1),
-    show(presented(From?, R?, D1?), Outs?, Outs1),
+    show(presented(From?, D?, R?, D1?), Outs?, Outs1),
     after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Serial?).
-give(not_found, Mine, R, D1, redeem_menu(Mine?, Menu?), Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Rest, Date, Serial) :-
+give(not_found, Mine, _, R, D1, redeem_menu(Mine?, Menu?), Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Rest, Date, Serial) :-
     ground(Rest?) |
     menu_of(Id?, Rest?, [], Menu),
     show(unfulfilled(From?, R?, D1?), Outs?, Outs1),
@@ -509,25 +539,26 @@ send_pay(no, Id, Q, _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date,
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Serial?).
 
 %% Redeem: the coin or the bond is presented to Q, with the issuer and due
-%% wanted; holding none of Q due D, the bearer presents nothing.
+%% wanted, and its own due D kept for the screen; holding none of Q due D, the
+%% bearer presents nothing.
 procedure do_redeem(Found?, Key?, Key?, Constant?, Key?, Constant?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Integer?).
-do_redeem(found(X), Id, Q, _, R, D1, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Serial) :-
+do_redeem(found(X), Id, Q, D, R, D1, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
-    send_redeem(Known?, Id?, Q?, R?, D1?, X?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Serial?).
+    send_redeem(Known?, Id?, Q?, D?, R?, D1?, X?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Serial?).
 do_redeem(not_found, Id, Q, D, _, _, Holdings, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Serial) :-
     show(lacking(Q?, D?, 1), Outs?, Outs1),
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Serial?).
 
 %% On the conversation with Q; with no conversation open, the instrument
 %% stays.
-procedure send_redeem(Decision?, Key?, Key?, Key?, Constant?, Instrument?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Integer?).
-send_redeem(yes, Id, Q, R, D1, X, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Serial) :-
+procedure send_redeem(Decision?, Key?, Key?, Constant?, Key?, Constant?, Instrument?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Integer?).
+send_redeem(yes, Id, Q, D, R, D1, X, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, redeem(X?, R?, D1?, Resp)), Outs?, Outs1),
-    inject_redeem_result(Resp?, Q?, R?, D1?, UserIn?, UserIn1),
+    inject_redeem_result(Resp?, Q?, D?, R?, D1?, UserIn?, UserIn1),
     after_change(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs1?, Rest?, Date?, Serial?).
-send_redeem(no, Id, Q, _, _, X, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Serial) :-
+send_redeem(no, Id, Q, _, _, _, X, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Serial) :-
     append_instruments(Rest?, [X?], Orig),
     show(no_conversation(Q?), Outs?, Outs1),
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Serial?).
