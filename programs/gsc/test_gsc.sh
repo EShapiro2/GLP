@@ -1124,7 +1124,8 @@ check "and it is not compiled, the message naming the faults" \
 # +friend(Bob)  identity, not friend(Alice), +friend(Alice), each E_i on a line
 # labelled by its role; GSN's close is Appendix D's example, with the identity
 # the paper leaves out; GSNP's forward carries the signed term of GAI's
-# Definition Act schema; and sg_reflexive declares friend reflexive.
+# Definition Act schema; and sg_reflexive, GSG's variant, declares friend
+# reflexive.
 notation() { # notation <term> ; the text notation_contract prints, its tokens joined
   run "notation_contract($1)." | sed -e 's/^\(GLP> \)*//' | perl -ne '
     chomp;
@@ -1167,7 +1168,7 @@ EOF
 )
 check_eq "GSNP's forward prints with the signed term of GAI's Definition Act schema" \
          "$forward_notation" "$(notation "$SG" | one_schema forward)"
-REFL=$(run 'contract_named(sg_reflexive, C).' | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
+REFL=$(run "variant(sg_reflexive, $GSGT, C)." | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
 check_eq "a contract declaring friend reflexive prints the declaration first" \
          "Reflexive predicates: friend" "$(notation "$REFL" | head -1)"
 
