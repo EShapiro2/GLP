@@ -2371,16 +2371,17 @@ fi  # Section I
 
 if _section K; then
 # =============================================================================
-# Section K: the child-safe social network (programs/cssn), CSSN Section 5:
+# Section K: the child-safe social network (programs/cssn), CSSN Section 4:
 # its program is the canonical CVA platform of its contract, programs/cssn/
 # CSSN.glp (CSSN Appendix B.2), which vGLP's compiler prints, platform.vglp
 # (programs/cssn/compile.sh), wrapped as a mini-app of the Grassroots
 # Super-App by the entry miniapp/4 (miniapp.glp, the same file as the apps'),
-# certified; and the village of CSSN Section 5.3 (play_village, plays.glp):
+# certified; and the village of CSSN Section 4.6, "Village Demonstration"
+# (play_village, plays.glp):
 # seven executions, each with a conversation with each of the six others, the
 # persons scripted (person.glp), a parent looking at the phones of their
 # children, since a parent's state does not change by the child's acts.  Each
-# check of the village is of an act as Section 5.3 states it, read off the
+# check of the village is of an act as that section states it, read off the
 # screens the persons report: did(R) a request, gave(K, yes) an approval, and
 # the views, view(S, K), the machine state S and the persons K the agent knows.
 # =============================================================================
@@ -2393,8 +2394,8 @@ CSSN_DIR="$GLP_DIR/programs/cssn"
 # in the term form programs/gsc reads, each schema listing its variables in
 # its head (GSC 0228e79): GSC's verdict on it --- an agent-named contract,
 # its groups closed by the listed role of the members the leader lists
-# (CSSN.glp at 4cb1ec11; GSC 8064cfb, Appendix D.4),
-# with traceable provenance and volition, and an introduction with wards in
+# (CSSN.glp at 4cb1ec11; GSC 8064cfb, Appendix D.4), extending GSN and Wards
+# with no signing (CSSN.glp at fdc27eb3), with traceable provenance and volition, and an introduction with wards in
 # place of an unobstructed introductory act: the verdict syntactically
 # grassroots with wards (GSC, Appendix F, def:sg-wards, at GSC 503db66),
 # befriend the act, child the mark, parent and parenting its guardianship,
@@ -2442,7 +2443,7 @@ check "CSSN program loads" "Loaded program: .*programs/cssn$" "$k_load"
 check_not "CSSN program no type errors" "Type checking failed" "$k_load"
 check_not "CSSN program is certified" "CERTIFICATE REFUSED" "$k_load"
 
-# The village (CSSN, Section 5.3): one run, seven screens, each a line.
+# The village (CSSN, Section 4.6, "Village Demonstration"): one run, seven screens, each a line.
 echo "--- CSSN village, eight acts ---"
 k_v=$("$REPL_RUN" <<HEREDOC 2>&1
 $CSSN_DIR
@@ -2471,6 +2472,8 @@ check_not "CSSN village: no failed goal" "→ failed\|ERROR\|Error" "$k_v"
 check "CSSN village: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$k_v"
 check_not "CSSN village: ... and is not stopped at the limit" "capped" "$k_v"
 check_not "CSSN village: no attempt refused or yielded" "refused(\|yielded(" "$k_v"
+# CSSN extends GSN, not GSNP (CSSN.md; Udi, 2026-10-20): a message is content received from a friend, received(x, p), or delivered in a group by its leader, received_in(x, a, n), and nobody signs.
+check_not "CSSN village: nobody signs, and no item or authored atom is written (CSSN extends GSN)" "propose(sign(\|item(\|authored(" "$k_v"
 # Act 1, coming into the contract (GSG:1; Wards:1, CSSN:1).
 k_shows "CSSN village act 1: alice, bob, grace and frank establish their identities" F "did(propose(establish(frank)))"
 k_shows "CSSN village act 1: carol enters with her parent alice, at alice" A "view([parenting(carol), friend(carol), identity]"
@@ -2478,11 +2481,11 @@ k_shows "CSSN village act 1: ... and at carol, her phone answering yes" C "gave(
 k_shows "CSSN village act 1: dave enters with bob and grace" D "view([identity, parent(bob), parent(grace), child, child, coparented, friend(bob), friend(grace)]"
 k_shows "CSSN village act 1: ... and eve" E "gave(enter_2(bob, grace, eve), yes)"
 k_shows "CSSN village act 1: grace approves both" G "gave(enter_2(bob, grace, eve), yes)"
-# Act 2, adult friendships (GSG:2) and a direct message (GSNP:1, GSN:1).
+# Act 2, adult friendships (GSG:2) and a direct message (GSN:1).
 k_holds "CSSN village act 2: alice and bob are friends" B "friend(alice)"
 k_holds "CSSN village act 2: bob and frank" F "friend(bob)"
 k_holds "CSSN village act 2: alice and frank" F "friend(alice)"
-k_shows "CSSN village act 2: alice signs a message and sends it to bob, who holds it as she signed it" B "item(speech(utterance('Hello Bob'), alice))"
+k_shows "CSSN village act 2: alice sends bob a message, which he holds as received from her" B "received(speech(utterance('Hello Bob'), alice), alice)"
 # Act 3, child friendships (Wards:2, CSSN:2).
 k_shows "CSSN village act 3: alice proposes carol and dave, naming bob" A "did(propose(child_befriend(carol, dave, alice, bob)))"
 k_shows "CSSN village act 3: ... and bob approves" B "gave(child_befriend(carol, dave, alice, bob), yes)"
@@ -2499,16 +2502,16 @@ k_holds "CSSN village act 4: ... and frank and carol" F "friend(carol)"
 k_shows "CSSN village act 5: carol creates kids_chat" C "member(dot(community(carol), $K_K))"
 k_shows "CSSN village act 5: carol invites dave, alice, bob and dave approving" B "gave(child_join_2(carol, dave, alice, bob, $K_K), yes)"
 k_shows "CSSN village act 5: ... and eve" C "listed(eve, $K_K)"
-k_shows "CSSN village act 5: carol's own post, delivered to every member" E "item(speech(utterance('Welcome everyone!'), carol))"
-k_shows "CSSN village act 5: dave's post, delivered by carol, signed by her" E "item(speech(speech(utterance('Thanks Carol!'), dave), carol))"
-k_shows "CSSN village act 5: eve's post, delivered to dave" D "item(speech(speech(utterance('Hi all!'), eve), carol))"
+k_shows "CSSN village act 5: carol's own post, delivered to every member" E "received_in(speech(utterance('Welcome everyone!'), carol), carol, $K_K)"
+k_shows "CSSN village act 5: dave's post, sent to carol and delivered by her" E "received_in(speech(utterance('Thanks Carol!'), dave), carol, $K_K)"
+k_shows "CSSN village act 5: eve's post, delivered to dave" D "received_in(speech(utterance('Hi all!'), eve), carol, $K_K)"
 k_lacks "CSSN village act 5: eve leaves kids_chat" E "member(dot(community(carol), $K_K))"
 # Act 6, an adult leader's group, each child joining with its parent's approval.
 k_shows "CSSN village act 6: frank invites dave, bob approving" B "gave(child_join(frank, dave, bob, $K_S), yes)"
 k_shows "CSSN village act 6: ... and carol, alice approving" A "gave(child_join(frank, carol, alice, $K_S), yes)"
-k_shows "CSSN village act 6: frank's post, delivered to dave" D "item(speech(utterance('Welcome to the study group'), frank))"
-k_shows "CSSN village act 6: dave's post, delivered to carol by frank" C "item(speech(speech(utterance('Hi from Dave!'), dave), frank))"
-k_shows "CSSN village act 6: carol's post, delivered to dave by frank" D "item(speech(speech(utterance('Hi from Carol!'), carol), frank))"
+k_shows "CSSN village act 6: frank's post, delivered to dave" D "received_in(speech(utterance('Welcome to the study group'), frank), frank, $K_S)"
+k_shows "CSSN village act 6: dave's post, delivered to carol by frank" C "received_in(speech(utterance('Hi from Dave!'), dave), frank, $K_S)"
+k_shows "CSSN village act 6: carol's post, delivered to dave by frank" D "received_in(speech(utterance('Hi from Carol!'), carol), frank, $K_S)"
 # Act 7, parents ending (Wards:3).
 k_shows "CSSN village act 7: grace ends dave's friendship with carol" G "did(propose(child_unfriend(dave, carol, grace)))"
 k_lacks "CSSN village act 7: ... at dave" D "friend(carol)"
