@@ -556,7 +556,7 @@ class SocialGroup {
   String get title => SpeechAct.of(name)?.text ?? displayText(name);
 }
 
-/// The classes of a group (GSN:2 to GSN:5, programs/gsc/GSN.glp and GSNP.glp): an approval question or a notice of one of them concerns the Groups tab, and every other the Friends tab.
+/// The classes of a group (GSN:2 to GSN:5, programs/gsc/GSN.glp and GSNP.glp), and CSSN's of a child's membership, `child_join`, `child_join_2`, `child_leave` and `child_close` (GnW:2 and GnW:3, programs/cssn/CSSN.glp), which "belong in Groups, as join, leave and close do" (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 14:58 UTC): an approval question or a notice of one of them concerns the Groups tab, and every other the Friends tab.
 const Set<String> groupClasses = {
   'create',
   'join',
@@ -568,6 +568,10 @@ const Set<String> groupClasses = {
   'post_forward',
   'deliver',
   'deliver_own',
+  'child_join',
+  'child_join_2',
+  'child_leave',
+  'child_close',
 };
 
 /// A notice the agent writes on its output when an approval its person made, by a request or by an answer yes, ends by a refusal: `refused(P, Q, D)`, `P` the part of the refused attempt, a term of its class, `Q` its refuser, and `D` the reason, `declined`, or `unable(Lacks, Has)`, the atoms the schema requires at the refuser that its state lacks and those it forbids that its state has, as the contract writes them: "a notice refused([t]_j, q, d): [t]_j the part of the refused attempt, q its refuser and d the reason, from the abort outcome, or from the vote where the agent's own vote no refused it"; "A vote unable of a compiled program carries the atoms the schema requires at the voter that its state lacks, and those it forbids that its state has, and the notice shows them" (vGLP f0acbc1, Section 5.4, "The compilation" and "Act schemas"; the types `Output ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason)` and `Reason ::= declined ; unable(List(Atom), List(Atom))`, programs/apps/<app>/platform.vglp and programs/cssn/platform.vglp).  "When a refusal ends an approval, the person who made it is told who refused the transaction and why, declined or unable" (Section 5.4, "Triggers"): the person told is any guard whose approval the refusal ends, the one who requested the transaction or one who answered yes, so the sentence does not take the person to have proposed it ([sentence]).  It is drawn as one sentence in the tab it concerns.

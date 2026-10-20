@@ -176,6 +176,29 @@ final _gaiApprovalW = "named(approval_sentence, form(approval, "
     "menu([$_gaiApprovalClasses])), ${_namesW(_gaiApprovalClasses)}])), "
     "field('YesNo', buttons([yes, no]))]))";
 
+/// CSSN's classes of a child's membership, `child_join(a?, s?, p? ; n)`,
+/// `child_join_2(r?, s?, p?, q? ; n)`, `child_leave(a, s, p? ; n)` and
+/// `child_close(r, p?, r[listed(*, n)] ; n)` (programs/cssn/CSSN.glp), as
+/// programs/cssn/platform.vglp prints their Class.
+const _cssnGroupClasses = "form(child_join, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown), "
+    "field('Speech', $_speechShown)]), "
+    "form(child_join_2, [field('Peer', shown), field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown), "
+    "field('Speech', $_speechShown)]), "
+    "form(child_leave, [field('Peer', shown), field('Peer', shown), "
+    "field('Peer', shown), field('Speech', $_speechShown)]), "
+    "form(child_close, [field('Peer', shown), field('Peer', shown), "
+    "field('List(Peer)', thread), field('Speech', $_speechShown)])";
+
+/// The widget of CSSN's approval question over its classes of a child's
+/// membership, `named(approval_sentence, D)`.
+final _cssnGroupApprovalW = "named(approval_sentence, form(approval, "
+    "[field('Attempt', form(attempt, [field('Peer', shown), "
+    "field('Integer', shown), field('Integer', shown), field('Class', "
+    "menu([$_cssnGroupClasses])), ${_namesW(_cssnGroupClasses)}])), "
+    "field('YesNo', buttons([yes, no]))]))";
+
 /// The widget of construct 0, `named(last_state, D0)`.
 const _lastStateW = 'named(last_state, thread)';
 
@@ -1826,6 +1849,112 @@ void main() {
       p.plain();
       await p.tap(p.key(1, 'unfriend:dave'));
       expect(p.grants, ['input(1, [3], propose(unfriend(carol, dave)))']);
+    });
+
+    // child_join, child_join_2, child_leave and child_close "belong in
+    // Groups, as join, leave and close do" (CSSN #8 Cowork, Code_inbox.md,
+    // 2026-10-20 14:58 UTC).
+    const kids = 'speech(utterance(kids_chat), carol)';
+    const chess = 'speech(utterance(chess), dave)';
+    final childGroupParts = [
+      'child_join(alice, dave, bob, $_friends)',
+      'child_join_2(carol, dave, alice, bob, $kids)',
+      'child_leave(carol, dave, bob, $kids)',
+      'child_close(dave, bob, [carol], $chess)',
+    ];
+
+    test('the classes of a child\'s membership are classes of a group: a '
+        'notice of each concerns Groups', () {
+      expect(
+          groupClasses.containsAll(
+              ['child_join', 'child_join_2', 'child_leave', 'child_close']),
+          isTrue);
+      for (final part in childGroupParts) {
+        for (final d in ['declined', 'unable([], [])']) {
+          expect(
+              SocialNotice.of(fixtureTerm('refused($part, bob, $d)'))!
+                  .concernsGroup,
+              isTrue,
+              reason: part);
+        }
+      }
+    });
+
+    _phoneTest(
+        'Bob, Dave\'s parent: an approval of child_join, child_join_2, '
+        'child_leave and child_close each at the top of Groups, badging it, '
+        'and none in Friends', (tester) async {
+      final p = await _Phone.open(tester, 'cssn', me: 'bob');
+      await p.views([
+        _v('[friend(alice), parenting(dave), friend(dave), identity]',
+            '[alice, carol, dave]')
+      ]);
+      await p.menu(1, _cssnProposals, known: '[alice, carol, dave]');
+      final initiators = ['alice', 'carol', 'dave', 'dave'];
+      for (var i = 0; i < childGroupParts.length; i++) {
+        await p.draw('draw(${i + 2}, $_cssnGroupApprovalW, '
+            'approval_w(approval(attempt(${initiators[i]}, ${i + 4}, '
+            '${i + 4}, ${childGroupParts[i]}, none), input([2]))))');
+      }
+      // In Friends, none; the four badge Groups, and none badges Friends.
+      for (var id = 2; id <= 5; id++) {
+        expect(find.byKey(constructKey(id)), findsNothing, reason: '$id');
+      }
+      expect(p.key(1, 'person:alice'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(tabKey(ScreenTab.groups)),
+              matching: find.text('4')),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(tabKey(ScreenTab.friends)),
+              matching: find.byType(Badge)),
+          findsOneWidget);
+      expect(
+          tester
+              .widget<Badge>(find.descendant(
+                  of: find.byKey(tabKey(ScreenTab.friends)),
+                  matching: find.byType(Badge)))
+              .isLabelVisible,
+          isFalse);
+      // In Groups, each at the top, above the request question's view.
+      await p.tab(ScreenTab.groups);
+      await p.top();
+      Finder built(int id) => find.byKey(constructKey(id), skipOffstage: false);
+      for (var id = 2; id <= 5; id++) {
+        expect(built(id), findsOneWidget, reason: '$id');
+        expect(tester.getTopLeft(built(id)).dy,
+            lessThan(tester.getTopLeft(built(1)).dy),
+            reason: '$id');
+      }
+    });
+
+    _phoneTest(
+        'Dave: a notice of child_join, child_join_2, child_leave and '
+        'child_close each in Groups, and none in Friends', (tester) async {
+      final p = await _Phone.open(tester, 'cssn', me: 'dave');
+      final state = _v('[friend(bob), child, parent(bob), identity]',
+          '[alice, bob, carol]');
+      final notices = [
+        for (final part in childGroupParts) 'refused($part, bob, declined)',
+      ];
+      await p.views([state, ...notices]);
+      await p.menu(1, _cssnProposals, known: '[alice, bob, carol]');
+      final said = [
+        for (final n in notices)
+          SocialNotice.of(fixtureTerm(n))!.sentence(const GAtom('dave'))
+      ];
+      expect(said.toSet(), hasLength(4));
+      for (final s in said) {
+        expect(find.text(s), findsNothing, reason: s);
+      }
+      expect(p.key(1, 'person:bob'), findsOneWidget);
+      await p.tab(ScreenTab.groups);
+      for (final s in said) {
+        await p.reveal(find.text(s));
+        expect(find.text(s), findsOneWidget, reason: s);
+      }
     });
   });
 }
