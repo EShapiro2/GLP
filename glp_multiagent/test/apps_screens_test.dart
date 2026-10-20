@@ -1186,16 +1186,16 @@ void appsScreens(Screens screens) {
     // Alice establishes her identity (GSG:1): Join.
     await run.join(alice);
     expect(alice.atoms, ['identity']);
-    // Carol enters with Alice: Alice and Carol's phone each ask to know the other, and Alice enters Carol (CSSN:1, Wards:1; enter(p?, r?)), "Enter Carol." and Submit, Carol's phone answering yes.
+    // Carol enters with Alice: Alice and Carol's phone each ask to know the other, and Alice enters Carol (CSSN:1, Wards:1; enter(p?, r?)), "Enter Carol as your child." and Submit, Carol's phone answering yes (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, item 4).
     await run.add(alice, 'carol');
     expect(alice.known, ['carol']);
     await run.compose(alice, 'enter', ['carol']);
-    expect(run.sentence(alice, 'enter'), 'Enter Carol.');
+    expect(run.sentence(alice, 'enter'), 'Enter Carol as your child.');
     await run.tap(alice, run.control(alice, 'submit:enter'));
     expect(alice.atoms,
         unorderedEquals(['identity', 'parenting(carol)', 'friend(carol)']));
     expect(run.scriptedSeen('carol'), contains('gave(enter(alice, carol), yes)'));
-    expect(run.sent(alice, 'enter'), ['You asked to enter Carol.']);
+    expect(run.sent(alice, 'enter'), ['You entered Carol as your child.']);
     // Dave has entered with Bob the same way; Alice and Bob each ask to know the other.
     expect(run.scriptedAtoms('bob'),
         unorderedEquals(['identity', 'parenting(dave)', 'friend(dave)']));
@@ -1210,6 +1210,8 @@ void appsScreens(Screens screens) {
     expect(run.control(alice, 'unfriend:carol'), findsNothing);
     expect(run.control(alice, 'unfriend:bob'), findsOneWidget);
     expect(run.sentence(alice, 'child-befriend'), 'Ask that … and … befriend, with ….');
+    expect(run.sentence(alice, 'enter'), 'Enter … as your child.');
+    expect(run.sentence(alice, 'enter-2'), 'Enter … as your child, with ….');
     run.plain(alice, allow: {'Submit'});
     await run.shoot(alice, 'cssn-app-1.png');
     // (2) Alice's request that Carol and Dave befriend, with Bob, as she composes it: "Ask that Carol and Dave befriend, with Bob." and Submit, child_befriend(carol, dave, alice, bob), its roles r, s, p and q in order (CSSN, Section 4.6, "Child befriending in vGLP").
@@ -1263,7 +1265,7 @@ void appsScreens(Screens screens) {
         ['Alice asks to be your friend.', 'Accept', 'Decline']);
     await run.answer(bob, 'Accept');
     expect(bob.atoms, contains('friend(alice)'));
-    // (3) Alice requests that Carol and Dave befriend, with Bob, her agent knowing Dave's by Bob's agent's introduction; Bob is asked: "Alice asks that her child Carol and your child Dave befriend.", "Approve?", Yes and No.  Carol and Dave have approved it.
+    // (3) Alice requests that Carol and Dave befriend, with Bob, her agent knowing Dave's by Bob's agent's introduction; Bob is asked: "Alice asks that their child Carol and your child Dave befriend.", "Approve?", Yes and No, the initiator "their" (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, item 1).  Carol and Dave have approved it.
     final a = bob.approval;
     expect(formatTerm(a.view),
         allOf(startsWith('approval(attempt(alice, '),
@@ -1274,7 +1276,7 @@ void appsScreens(Screens screens) {
     }
     await run.top(bob);
     expect(run.textsOf(bob, a), [
-      'Alice asks that her child Carol and your child Dave befriend.',
+      'Alice asks that their child Carol and your child Dave befriend.',
       'Approve?',
       'Yes',
       'No'
@@ -1313,14 +1315,14 @@ void appsScreens(Screens screens) {
       'of the friendship with Dave', (tester) async {
     final run = await _cssn(tester, screens, 'carol');
     final carol = run.person('carol');
-    // Carol's phone at its setup, the parents holding it (CSSN, Section 4.6, "The User Interface"): no identity; it asks to know Alice, Alice enters Carol (CSSN:1, Wards:1; enter(p?, r?)), and Carol's phone, asked "Alice asks to enter you.", answers Yes.
+    // Carol's phone at its setup, the parents holding it (CSSN, Section 4.6, "The User Interface"): no identity; it asks to know Alice, Alice enters Carol (CSSN:1, Wards:1; enter(p?, r?)), and Carol's phone, asked "Alice enters you as their child.", "Approve?" (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, item 4), answers Yes.
     expect(carol.atoms, isEmpty);
     await run.add(carol, 'alice');
     expect(formatTerm(carol.approval.view),
         allOf(startsWith('approval(attempt(alice, '),
             endsWith(', enter(alice, carol)), input([2]))')));
     expect(run.textsOf(carol, carol.approval),
-        ['Alice asks to enter you.', 'Yes', 'No']);
+        ['Alice enters you as their child.', 'Approve?', 'Yes', 'No']);
     await run.answer(carol, 'Yes');
     expect(carol.atoms,
         unorderedEquals(['identity', 'parent(alice)', 'child', 'friend(alice)']));

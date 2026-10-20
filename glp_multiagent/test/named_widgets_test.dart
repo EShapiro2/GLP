@@ -57,9 +57,16 @@ const _gaiAgentBefriend = "form(agent_befriend, [field('Peer', shown), "
 const _cssnChildBefriend = "form(child_befriend, [field('Peer', shown), "
     "field('Peer', shown), field('Peer', shown), field('Peer', shown)])";
 
-/// Alice asks that her child Carol and Bob's child Dave befriend.
+/// Alice asks that their child Carol and Bob's child Dave befriend.
 const _childBefriendView = 'approval(attempt(alice, 4, 4, child_befriend('
     'carol, dave, alice, bob)), input([2]))';
+
+/// CSSN's enter and enter_2, `enter(p?, r?)` and `enter_2(p?, q?, r?)`
+/// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints their
+/// Class.
+const _cssnEnter = "form(enter, [field('Peer', shown), field('Peer', shown)])";
+const _cssnEnter2 = "form(enter_2, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown)])";
 
 /// The last views of the agents asked: Bob, Dave's parent and Alice's friend;
 /// Carol, Alice's child; and Dave, Bob's child.
@@ -401,13 +408,14 @@ void main() {
 
   testWidgets(
       'child_befriend(R, S, P, Q) at the other child\'s parent: "Alice asks '
-      'that her child Carol and your child Dave befriend.", "Approve?", Yes '
-      'and No, granting what the default widget grants', (tester) async {
+      'that their child Carol and your child Dave befriend.", "Approve?", Yes '
+      'and No, granting what the default widget grants (CSSN #8 Cowork, '
+      'Code_inbox.md, 2026-10-20 13:13 UTC, item 1)', (tester) async {
     final s = _Screen(tester);
     await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
         output: _bobParentOutput);
     expect(s.texts(), [
-      'Alice asks that her child Carol and your child Dave befriend.',
+      'Alice asks that their child Carol and your child Dave befriend.',
       'Approve?',
       'Yes',
       'No',
@@ -421,8 +429,10 @@ void main() {
 
   testWidgets(
       'child_befriend at a child: "Alice asks that you and Dave befriend, '
-      'with Dave\'s parent Bob.", "Befriend Dave?"; at the other child, the '
-      'other child and their parent named', (tester) async {
+      'with Dave\'s parent Bob.", "Befriend Dave?"; at the other child, asked '
+      'by the other child\'s parent, "Alice asks that you and their child '
+      'Carol befriend.", "Befriend Carol?" (CSSN #8 Cowork, Code_inbox.md, '
+      '2026-10-20 13:13 UTC, item 5)', (tester) async {
     final s = _Screen(tester);
     await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
         output: _carolOutput);
@@ -435,11 +445,67 @@ void main() {
     await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
         output: _daveOutput);
     expect(s.texts(), [
-      "Alice asks that you and Carol befriend, with Carol's parent Alice.",
+      'Alice asks that you and their child Carol befriend.',
       'Befriend Carol?',
       'Yes',
       'No',
     ]);
+    // Asked by a person who is neither child's parent: both named.
+    await s.draw(
+        _named([_cssnChildBefriend]),
+        'approval(attempt(grace, 4, 4, child_befriend(carol, dave, alice, '
+        'bob)), input([2]))',
+        output: _daveOutput);
+    expect(s.texts(), [
+      "Grace asks that you and Carol befriend, with Carol's parent Alice.",
+      'Befriend Carol?',
+      'Yes',
+      'No',
+    ]);
+  });
+
+  testWidgets(
+      'enter(P, R) at the child: "Alice enters you as their child.", '
+      '"Approve?", Yes and No, granting what the default widget grants '
+      '(CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, item 4)',
+      (tester) async {
+    final s = _Screen(tester);
+    const view =
+        'approval(attempt(alice, 2, 2, enter(alice, carol)), input([2]))';
+    await s.draw(_named([_cssnEnter]), view, output: '[view([], [alice])]');
+    expect(s.texts(),
+        ['Alice enters you as their child.', 'Approve?', 'Yes', 'No']);
+    final (d, n) = await s.both(
+        _defaultApproval([_cssnEnter]), view, 'yes', 'Yes',
+        output: '[view([], [alice])]');
+    expect(d, 'input(1, [2], yes)');
+    expect(n, d);
+  });
+
+  testWidgets(
+      'enter_2(P, Q, R): at the other parent, "Bob asks to enter Dave as '
+      'your child, with you."; at the child, "Bob enters you as their '
+      'child."; each "Approve?", Yes and No (CSSN #8 Cowork, Code_inbox.md, '
+      '2026-10-20 13:13 UTC, item 4)', (tester) async {
+    final s = _Screen(tester);
+    const view = 'approval(attempt(bob, 3, 3, enter_2(bob, grace, dave)), '
+        'input([2]))';
+    await s.draw(_named([_cssnEnter2]), view,
+        output: '[view([friend(bob), identity], [bob, dave])]');
+    expect(s.texts(), [
+      'Bob asks to enter Dave as your child, with you.',
+      'Approve?',
+      'Yes',
+      'No'
+    ]);
+    await s.draw(_named([_cssnEnter2]), view,
+        output: '[view([], [bob, grace])]');
+    expect(s.texts(),
+        ['Bob enters you as their child.', 'Approve?', 'Yes', 'No']);
+    // No view drawn: whom it is asked is not told, and the sentence is
+    // built from the class.
+    await s.draw(_named([_cssnEnter2]), view);
+    expect(s.texts(), ['Bob asks to enter 2 Grace, Dave.', 'Yes', 'No']);
   });
 
   testWidgets(
