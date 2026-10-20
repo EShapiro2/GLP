@@ -1,19 +1,18 @@
 %% ---------------------------------------------------------------------------
 %% GB.glp --- the grassroots bonds contract, Currencies' (a contract is its
 %% platform's paper's; Coordination Appendix C), in the term form
-%% programs/gsc reads (its README, "Writing a contract"), extended as GB's
-%% paper defines (GB, Appendix A): numbers, constraints and multiplicities
-%% are GB's extension of act schemas (Udi, 2026-10-20, to GSC #5 and to
-%% Currencies #11), and GB owns its term form and its check.  The clauses
-%% are in GB.txt beside this file.  GB extends GKK, Grassroots Keys and
+%% programs/gsc reads (its README, "Writing a contract"), with the numbers
+%% act schemas allow (GB, Appendix A).  The clauses are in GB.txt beside
+%% this file.  GB extends GKK, Grassroots Keys and
 %% Knowledge, GSC's (programs/gsc/GKK.glp), so the term holds GKK's three
 %% schemas, establish, meet and introduce; every role but establish's
 %% requires identity.  The parties to a swap and to each escrow transfer
 %% know each other, and pay, redeem and mature require knows(q) at p.
 %%
-%% The extension, as GB's Appendix A writes it.  A numeric variable x is
-%% num(x), and is listed in a schema's Vars in the order of its head.  A coin
-%% of u, the paper's cent(u, bot), is coin(u); a bond of u maturing at d, the
+%% Numbers, as act schemas allow them (GSC, Currencies' proposal of
+%% 2026-10-20, Udi discussing it with GSC).  A numeric variable x is num(x),
+%% and is listed in a schema's Vars in the order of its head.  A coin of u,
+%% the paper's cent(u, bot), is coin(u); a bond of u maturing at d, the
 %% paper's cent(u, d), is bond(u, num(d)); date(num(t)) at p is p's date.  A
 %% schema whose maturity arguments range over coins and bonds is written
 %% once for each kind: swap four times (cc, cb, bc, bb), redeem, deposit,
@@ -21,12 +20,9 @@
 %% multiplicity k on an atom A added or deleted is times(num(k), A).  A
 %% schema with a constraint is nschema(Name, Vars, Constraint, Roles), the
 %% constraint true, gt(X, Y), le(X, Y), succ(X, Y) (Y = X + 1) or
-%% or(C1, C2).  The check is by erasure (GB, Appendix A): drop the
-%% constraint, the multiplicities and every numeric argument; drop a schema
-%% all of whose atoms are numeric (advance); drop a role that neither guards
-%% nor changes its state (the issuer's role of mature, which reads a date),
-%% an agent variable standing for it; the erased contract is a contract of
-%% GSC's language, and GSC's checker's verdict on it is this contract's.
+%% or(C1, C2).  A number names no person, so the three conditions concern
+%% the persons a schema names; advance names none, and the issuer's role of
+%% mature reads a date and neither guards nor changes its state.
 %%
 %% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
 %% and is named by its index, role(1) the schema's first role; u, v, r and c
