@@ -23,17 +23,32 @@
 % GLP has no string concatenation, so a display is emitted as its tokens, one
 % to a line.  A newline is whitespace to LaTeX, so the lines are the display
 % and are pasted as they stand.
+%
+% Act schemas allow numbers (GSC, Section 3.2): a numeric argument, a
+% multiplicity on an atom added or deleted, and a constraint on the numeric
+% variables, which every binding satisfies.  GSC's Section 5 prints no schema
+% with numbers, and its Definition Compilation is written over the atoms of
+% Section 3.1, whose arguments are agents and speech acts; the display of a
+% schema with numbers is printed in the closest form the paper's notation
+% gives, the schema as written (self.glp, NSchema): a numeric argument as its
+% variable or number; a multiplicity k on an atom A as k\cdot A, as GB's
+% paper writes it (GB, Appendix A), so that k\cdot A in a multiset is A k
+% times; a multiset of required atoms carrying a multiplicity included in
+% c_S, as def:compile writes a multiset; and the constraint on a proviso line
+% of its own after the forbidden atoms, gt as >, le as \le, succ(X, Y) as
+% Y = X + 1 and or as \lor, as GB's paper writes its constraints.  A schema
+% with no number is printed as before.
 % ---------------------------------------------------------------------------
 
-imported procedure check#check(Declared?, Verdict).
-imported procedure contracts#contract(Constant?, Declared).
+imported procedure check#check(NDeclared?, Verdict).
+imported procedure contracts#contract(Constant?, NDeclared).
 imported procedure contracts#variant(Constant?, Contract?, Declared).
 
 procedure chunks_app(Chunks?, Chunks?, Chunks).
 chunks_app([], T, T?).
 chunks_app([C|Cs], T, [C?|R?]) :- chunks_app(Cs?, T?, R).
 
-procedure is_empty(Atoms?, Ans).
+procedure is_empty(Mults?, Ans).
 is_empty([], yes).
 is_empty([_|_], no).
 
@@ -70,6 +85,8 @@ latex_arg(nterm(S), T, R?) :- ground(S?), ground(T?) | latex_nt(S?, T?, R).
 latex_arg(sgn(X, J), T, ['\\mathrm{sgn}(', X?, ','|R?]) :-
     ground(X?), integer(J?), ground(T?) |
     latex_role(J?, [')'|T?], R).
+% A numeric argument, the numeric variable as it is named or the number.
+latex_arg(num(X), T, [X?|T?]).
 
 procedure latex_args(Args?, Chunks?, Chunks).
 latex_args([], T, T?).
@@ -94,6 +111,15 @@ latex_atom(atom(P, [A|As]), T, R?) :-
     latex_args([A?|As?], [')'|T?], R1),
     latex_pred(P?, ['('|R1?], R).
 
+% An atom with a multiplicity k is written k\cdot A, as GB's paper writes it
+% (GB, Appendix A).
+procedure latex_mult(Mult?, Chunks?, Chunks).
+latex_mult(atom(P, As), T, R?) :- ground(P?), ground(As?), ground(T?) |
+    latex_atom(atom(P?, As?), T?, R).
+latex_mult(times(K, A), T, R?) :- ground(K?), ground(A?), ground(T?) |
+    latex_atom(A?, T?, R1),
+    latex_arg(K?, ['\\cdot'|R1?], R).
+
 % The atoms of a set are written apart by Sep, which the form of the display
 % supplies: a comma in the form of Section 5.1 and Appendix B.3, as Section
 % 5.1 writes the two atoms befriend requires at a role, and a comma and a
@@ -101,15 +127,15 @@ latex_atom(atom(P, [A|As]), T, R?) :-
 % two atoms close deletes.  latex_update and
 % req_conjs and forb_conjs supply the first, assign_lines and req_lines and
 % forb_lines the second.
-procedure latex_atoms(Atoms?, Constant?, Chunks?, Chunks).
+procedure latex_atoms(Mults?, Constant?, Chunks?, Chunks).
 latex_atoms([], _, T, T?).
-latex_atoms([A], _, T, R?) :- ground(A?), ground(T?) | latex_atom(A?, T?, R).
+latex_atoms([A], _, T, R?) :- ground(A?), ground(T?) | latex_mult(A?, T?, R).
 latex_atoms([A, B|As], Sep, T, R?) :-
     ground(A?), ground(B?), ground(As?), ground(Sep?), ground(T?) |
     latex_atoms([B?|As?], Sep?, T?, R1),
-    latex_atom(A?, [Sep?|R1?], R).
+    latex_mult(A?, [Sep?|R1?], R).
 
-procedure latex_set(Atoms?, Constant?, Chunks?, Chunks).
+procedure latex_set(Mults?, Constant?, Chunks?, Chunks).
 latex_set(As, Sep, T, ['\\{'|R?]) :- ground(As?), ground(Sep?), ground(T?) |
     latex_atoms(As?, Sep?, ['\\}'|T?], R).
 
@@ -119,7 +145,7 @@ latex_set(As, Sep, T, ['\\{'|R?]) :- ground(As?), ground(Sep?), ground(T?) |
 % ext_c(pi_i) is the extent of the role in c, and a line of Appendix D's
 % display ranges over the agents p in it.
 
-procedure latex_role_term(RoleSpec?, Integer?, Chunks?, Chunks).
+procedure latex_role_term(NRoleSpec?, Integer?, Chunks?, Chunks).
 latex_role_term(rs(_, _, _, _, _), I, T, R?) :- integer(I?), ground(T?) |
     latex_role(I?, T?, R).
 latex_role_term(crs(listed(I, Rho, As), _, _, _, _, _), _, T, R?) :-
@@ -135,12 +161,12 @@ latex_listed_args([], T, T?).
 latex_listed_args([A|As], T, [','|R?]) :- ground(A?), ground(As?), ground(T?) |
     latex_args([A?|As?], T?, R).
 
-procedure latex_ext(RoleSpec?, Integer?, Chunks?, Chunks).
+procedure latex_ext(NRoleSpec?, Integer?, Chunks?, Chunks).
 latex_ext(RS, I, T, ['\\mathrm{ext}_c('|R?]) :-
     ground(RS?), integer(I?), ground(T?) |
     latex_role_term(RS?, I?, [')'|T?], R).
 
-procedure latex_over(RoleSpec?, Integer?, Chunks?, Chunks).
+procedure latex_over(NRoleSpec?, Integer?, Chunks?, Chunks).
 latex_over(RS, I, T, ['&& (p \\in '|R?]) :-
     ground(RS?), integer(I?), ground(T?) |
     latex_ext(RS?, I?, [')'|T?], R).
@@ -152,7 +178,7 @@ latex_over(RS, I, T, ['&& (p \\in '|R?]) :-
 % subscript, {\Alice} for a role of Section 5.1 and Appendix B.3 and p, ranging over the
 % extent, for a role of Appendix D.
 
-procedure update_body(Ans?, Ans?, Atoms?, Atoms?, Constant?, Chunks?, Chunks?,
+procedure update_body(Ans?, Ans?, Mults?, Mults?, Constant?, Chunks?, Chunks?,
                       Chunks).
 update_body(yes, yes, _, _, _, S, T, ['c_'|R?]) :- ground(S?), ground(T?) |
     chunks_app(S?, T?, R).
@@ -170,15 +196,15 @@ update_body(no, no, Add, Del, Sep, S, T, ['(c_'|R?]) :-
     latex_set(Del?, Sep?, [') \\uplus '|R1?], R2),
     chunks_app(S?, [' \\setminus '|R2?], R).
 
-procedure latex_update_at(RoleSpec?, Constant?, Chunks?, Chunks?, Chunks).
+procedure latex_update_at(NRoleSpec?, Constant?, Chunks?, Chunks?, Chunks).
 latex_update_at(RS, Sep, S, T, ['c\'_'|R?]) :-
     ground(RS?), ground(Sep?), ground(S?), ground(T?) |
-    rs_add(RS?, Add),
-    rs_del(RS?, Del),
+    nrs_add(RS?, Add),
+    nrs_del(RS?, Del),
     update_rhs(Add?, Del?, Sep?, S?, T?, R1),
     chunks_app(S?, [' := '|R1?], R).
 
-procedure update_rhs(Atoms?, Atoms?, Constant?, Chunks?, Chunks?, Chunks).
+procedure update_rhs(Mults?, Mults?, Constant?, Chunks?, Chunks?, Chunks).
 update_rhs(Add, Del, Sep, S, T, R?) :-
     ground(Add?), ground(Del?), ground(Sep?), ground(S?), ground(T?) |
     is_empty(Add?, AE),
@@ -189,12 +215,12 @@ update_rhs(Add, Del, Sep, S, T, R?) :-
 procedure latex_sub(Integer?, Chunks).
 latex_sub(I, ['{'|R?]) :- integer(I?) | latex_role(I?, ['}'], R).
 
-procedure latex_update(RoleSpec?, Integer?, Chunks?, Chunks).
+procedure latex_update(NRoleSpec?, Integer?, Chunks?, Chunks).
 latex_update(RS, I, T, R?) :- ground(RS?), integer(I?), ground(T?) |
     latex_sub(I?, S),
     latex_update_at(RS?, ',', S?, T?, R).
 
-procedure latex_updates(RoleSpecs?, Integer?, Chunks?, Chunks).
+procedure latex_updates(NRoleSpecs?, Integer?, Chunks?, Chunks).
 latex_updates([], _, T, T?).
 latex_updates([RS], I, T, R?) :- ground(RS?), integer(I?), ground(T?) |
     latex_update(RS?, I?, T?, R).
@@ -219,16 +245,16 @@ latex_updates([RS, RS2|Rs], I, T, R?) :-
 % forbidden atoms on the next, each in role order, a line omitted when it
 % has no atom, and the guard on a line of its own.
 
-procedure req_conj(Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
+% A multiset of required atoms carrying a multiplicity may hold an atom more
+% than once, and is written as def:compile writes it, included in c_S.
+procedure req_conj(Mults?, Constant?, Chunks?, ChunkLists?, ChunkLists).
 req_conj([], _, _, T, T?).
-req_conj([A], _, S, T, [C?|T?]) :- ground(A?), ground(S?), ground(T?) |
-    latex_atom(A?, [' \\in c_'|S?], C).
-req_conj([A, B|As], Sep, S, T, R?) :-
-    ground(A?), ground(B?), ground(As?), ground(Sep?), ground(S?), ground(T?) |
-    atoms_distinct([A?, B?|As?], D),
-    req_conj2(D?, [A?, B?|As?], Sep?, S?, T?, R).
+req_conj([A|As], Sep, S, T, R?) :-
+    ground(A?), ground(As?), ground(Sep?), ground(S?), ground(T?) |
+    atoms_distinct([A?|As?], D),
+    req_conj2(D?, [A?|As?], Sep?, S?, T?, R).
 
-procedure req_conj2(Ans?, Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
+procedure req_conj2(Ans?, Mults?, Constant?, Chunks?, ChunkLists?, ChunkLists).
 req_conj2(yes, As, Sep, S, T, [C?|T?]) :-
     ground(As?), ground(Sep?), ground(S?), ground(T?) |
     latex_atoms(As?, Sep?, [' \\in c_'|S?], C).
@@ -239,29 +265,39 @@ req_conj2(no, As, Sep, S, T, [C?|T?]) :-
 % The required atoms in the form of Appendix D, whose display writes no two
 % atoms required at a role: a singleton with \in, several included in c_p, as
 % definition:compile writes them.
-procedure req_conj_set(Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
+procedure req_conj_set(Mults?, Constant?, Chunks?, ChunkLists?, ChunkLists).
 req_conj_set([], _, _, T, T?).
-req_conj_set([A], _, S, T, [C?|T?]) :- ground(A?), ground(S?), ground(T?) |
-    latex_atom(A?, [' \\in c_'|S?], C).
+req_conj_set([atom(P, As)], _, S, T, [C?|T?]) :- ground(P?), ground(As?), ground(S?), ground(T?) |
+    latex_atom(atom(P?, As?), [' \\in c_'|S?], C).
+req_conj_set([times(K, A)], Sep, S, T, [C?|T?]) :-
+    ground(K?), ground(A?), ground(Sep?), ground(S?), ground(T?) |
+    latex_set([times(K?, A?)], Sep?, [' \\subseteq c_'|S?], C).
 req_conj_set([A, B|As], Sep, S, T, [C?|T?]) :-
     ground(A?), ground(B?), ground(As?), ground(Sep?), ground(S?), ground(T?) |
     latex_set([A?, B?|As?], Sep?, [' \\subseteq c_'|S?], C).
 
-% Whether no atom occurs twice among the atoms.
-procedure atoms_distinct(Atoms?, Ans).
+% Whether no atom occurs twice among the atoms, none carrying a
+% multiplicity.
+procedure mults_member(Mults?, Mult?, Ans).
+mults_member([], _, no).
+mults_member([A|_], B, yes) :- A? =?= B? | true.
+mults_member([_|As], B, R?) :- otherwise | mults_member(As?, B?, R).
+
+procedure atoms_distinct(Mults?, Ans).
 atoms_distinct([], yes).
-atoms_distinct([A|As], R?) :- ground(A?), ground(As?) |
-    atoms_member(As?, A?, M),
+atoms_distinct([times(_, _)|_], no).
+atoms_distinct([atom(P, Bs)|As], R?) :- ground(P?), ground(Bs?), ground(As?) |
+    mults_member(As?, atom(P?, Bs?), M),
     atoms_distinct1(M?, As?, R).
 
-procedure atoms_distinct1(Ans?, Atoms?, Ans).
+procedure atoms_distinct1(Ans?, Mults?, Ans).
 atoms_distinct1(yes, _, no).
 atoms_distinct1(no, As, R?) :- ground(As?) | atoms_distinct(As?, R).
 
-procedure forb_conj(Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
+procedure forb_conj(Mults?, Constant?, Chunks?, ChunkLists?, ChunkLists).
 forb_conj([], _, _, T, T?).
 forb_conj([A], _, S, T, [C?|T?]) :- ground(A?), ground(S?), ground(T?) |
-    latex_atom(A?, [' \\notin c_'|S?], C).
+    latex_mult(A?, [' \\notin c_'|S?], C).
 forb_conj([A, B|As], Sep, S, T, [C?|T?]) :-
     ground(A?), ground(B?), ground(As?), ground(Sep?), ground(S?), ground(T?) |
     chunks_app(S?, [' = \\emptyset'], S1),
@@ -269,24 +305,24 @@ forb_conj([A, B|As], Sep, S, T, [C?|T?]) :-
 
 % The conjuncts of the required atoms of every role of Section 3's form, in
 % role order, and those of the forbidden atoms.
-procedure req_conjs(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
+procedure req_conjs(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 req_conjs([], _, T, T?).
 req_conjs([RS|Rs], I, T, R?) :-
     ground(RS?), ground(Rs?), integer(I?), ground(T?) |
     I1 := I? + 1,
     req_conjs(Rs?, I1?, T?, T1),
     latex_sub(I?, S),
-    rs_req(RS?, Req),
+    nrs_req(RS?, Req),
     req_conj(Req?, ',', S?, T1?, R).
 
-procedure forb_conjs(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
+procedure forb_conjs(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 forb_conjs([], _, T, T?).
 forb_conjs([RS|Rs], I, T, R?) :-
     ground(RS?), ground(Rs?), integer(I?), ground(T?) |
     I1 := I? + 1,
     forb_conjs(Rs?, I1?, T?, T1),
     latex_sub(I?, S),
-    rs_forb(RS?, Forb),
+    nrs_forb(RS?, Forb),
     forb_conj(Forb?, ',', S?, T1?, R).
 
 procedure join_conjs(ChunkLists?, Chunks?, Chunks).
@@ -306,13 +342,13 @@ provided_line([C|Cs], T, [['\\text{provided } '|L?]|T?]) :-
 
 % --- The guarding roles of a schema -----------------------------------------
 
-procedure guard_roles(RoleSpecs?, Integer?, Ints?, Ints).
+procedure guard_roles(NRoleSpecs?, Integer?, Ints?, Ints).
 guard_roles([], _, T, T?).
 guard_roles([RS|Rs], I, T, R?) :- ground(RS?), ground(Rs?), integer(I?), ground(T?) |
-    is_guarding(RS?, A),
+    n_is_guarding(RS?, A),
     guard_roles1(A?, Rs?, I?, T?, R).
 
-procedure guard_roles1(Ans?, RoleSpecs?, Integer?, Ints?, Ints).
+procedure guard_roles1(Ans?, NRoleSpecs?, Integer?, Ints?, Ints).
 guard_roles1(yes, Rs, I, T, [I?|R?]) :- ground(Rs?), integer(I?), ground(T?) |
     I1 := I? + 1,
     guard_roles(Rs?, I1?, T?, R).
@@ -336,6 +372,33 @@ latex_guard([I|Is], T, ['\\text{guarded by } \\{'|R?]) :-
     integer(I?), ground(Is?), ground(T?) |
     latex_guard_list([I?|Is?], ['\\}'|T?], R).
 
+% --- The constraint (GSC, Section 3.2) --------------------------------------
+% A proviso line of its own, after the forbidden atoms and before the guard,
+% none for the constraint true: gt(X, Y) as X > Y, le(X, Y) as X \le Y,
+% succ(X, Y) as Y = X + 1, and or(C1, C2) as C1 \lor C2, as GB's paper writes
+% its constraints (GB, Appendix A).
+
+procedure latex_constraint(Constraint?, Chunks?, Chunks).
+latex_constraint(true, T, ['\\top'|T?]).
+latex_constraint(gt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_arg(Y?, T?, R1),
+    latex_arg(X?, ['>'|R1?], R).
+latex_constraint(le(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_arg(Y?, T?, R1),
+    latex_arg(X?, ['\\le'|R1?], R).
+latex_constraint(succ(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_arg(X?, ['+ 1'|T?], R1),
+    latex_arg(Y?, ['='|R1?], R).
+latex_constraint(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
+    latex_constraint(C2?, T?, R1),
+    latex_constraint(C1?, ['\\lor'|R1?], R).
+
+procedure constraint_line(Constraint?, ChunkLists?, ChunkLists).
+constraint_line(true, T, T?).
+constraint_line(C, T, [['\\text{provided } '|L?]|T?]) :-
+    otherwise, ground(C?), ground(T?) |
+    latex_constraint(C?, [], L).
+
 % --- The display of a schema of Section 3 (Section 5.1, Appendix B.3) -----
 % The assignments of every role on one line; the required atoms on the next,
 % the forbidden atoms on the next, each left out when it has no atom; and the
@@ -343,18 +406,20 @@ latex_guard([I|Is], T, ['\\text{guarded by } \\{'|R?]) :-
 % swap's in Appendix B.3 print them (GSC aca046b).  Each line opens with &
 % and ,\\ separates them (join_lines, below).
 
-procedure latex_schema_s3(Schema?, Chunks?, Chunks).
+procedure latex_schema_s3(NSchema?, Chunks?, Chunks).
 latex_schema_s3(Sc, T, ['\\begin{align*}'|R?]) :-
     ground(Sc?), ground(T?) |
-    sch_roles(Sc?, Rs),
-    latex_s3_roles(Rs?, T?, R).
+    nsch_roles(Sc?, Rs),
+    nsch_constraint(Sc?, Cn),
+    latex_s3_roles(Rs?, Cn?, T?, R).
 
-procedure latex_s3_roles(RoleSpecs?, Chunks?, Chunks).
-latex_s3_roles(Rs, T, R?) :- ground(Rs?), ground(T?) |
+procedure latex_s3_roles(NRoleSpecs?, Constraint?, Chunks?, Chunks).
+latex_s3_roles(Rs, Cn, T, R?) :- ground(Rs?), ground(Cn?), ground(T?) |
     guard_roles(Rs?, 1, [], G),
     latex_guard(G?, [], GL),
+    constraint_line(Cn?, [GL?], LC),
     forb_conjs(Rs?, 1, [], Fs),
-    provided_line(Fs?, [GL?], L3),
+    provided_line(Fs?, LC?, L3),
     req_conjs(Rs?, 1, [], Qs),
     provided_line(Qs?, L3?, L2),
     latex_updates(Rs?, 1, [], A),
@@ -375,7 +440,7 @@ latex_s3_roles(Rs, T, R?) :- ground(Rs?), ground(T?) |
 % and ,\\ separates them.  The line on what is added and deleted at an agent
 % is left out, as the displays of Section 5.1 and Appendix D leave it out.
 
-procedure assign_lines(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
+procedure assign_lines(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 assign_lines([], _, T, T?).
 assign_lines([RS|Rs], I, T, [L?|R?]) :-
     ground(RS?), ground(Rs?), integer(I?), ground(T?) |
@@ -384,28 +449,28 @@ assign_lines([RS|Rs], I, T, [L?|R?]) :-
     I1 := I? + 1,
     assign_lines(Rs?, I1?, T?, R).
 
-procedure proviso_line(ChunkLists?, RoleSpec?, Integer?, ChunkLists?, ChunkLists).
+procedure proviso_line(ChunkLists?, NRoleSpec?, Integer?, ChunkLists?, ChunkLists).
 proviso_line([], _, _, T, T?).
 proviso_line([C|Cs], RS, I, T, [['\\text{provided } '|L?]|T?]) :-
     ground(C?), ground(Cs?), ground(RS?), integer(I?), ground(T?) |
     latex_over(RS?, I?, [], O),
     join_conjs([C?|Cs?], O?, L).
 
-procedure req_lines(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
+procedure req_lines(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 req_lines([], _, T, T?).
 req_lines([RS|Rs], I, T, R?) :-
     ground(RS?), ground(Rs?), integer(I?), ground(T?) |
-    rs_req(RS?, Req),
+    nrs_req(RS?, Req),
     req_conj_set(Req?, ',\\ ', ['p'], [], Cs),
     I1 := I? + 1,
     req_lines(Rs?, I1?, T?, R1),
     proviso_line(Cs?, RS?, I?, R1?, R).
 
-procedure forb_lines(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
+procedure forb_lines(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 forb_lines([], _, T, T?).
 forb_lines([RS|Rs], I, T, R?) :-
     ground(RS?), ground(Rs?), integer(I?), ground(T?) |
-    rs_forb(RS?, Forb),
+    nrs_forb(RS?, Forb),
     forb_conj(Forb?, ',\\ ', ['p'], [], Cs),
     I1 := I? + 1,
     forb_lines(Rs?, I1?, T?, R1),
@@ -503,24 +568,35 @@ join_lines([L, M|Ls], T, ['&'|R?]) :- ground(L?), ground(M?), ground(Ls?), groun
     join_lines([M?|Ls?], T?, R1),
     chunks_app(L?, [',\\\\'|R1?], R).
 
-procedure latex_schema_app(Schema?, Chunks?, Chunks).
+% The name terms are read off the plain form of the schema (self.glp,
+% plain_schema), which has the same arguments.
+procedure latex_schema_app(NSchema?, Chunks?, Chunks).
 latex_schema_app(Sc, T, ['\\begin{align*}'|R?]) :- ground(Sc?), ground(T?) |
-    sch_roles(Sc?, Rs),
-    sch_ext_terms(Sc?, Es0),
-    latex_app_fresh(Rs?, Es0?, T?, R).
+    nsch_roles(Sc?, Rs),
+    nsch_constraint(Sc?, Cn),
+    plain_schema(Sc?, P),
+    latex_app_plain(P?, Rs?, Cn?, T?, R).
 
-procedure latex_app_fresh(RoleSpecs?, NameTerms?, Chunks?, Chunks).
-latex_app_fresh(Rs, Es0, T, R?) :-
-    ground(Rs?), ground(Es0?), ground(T?) |
-    req_ext_terms(Rs?, Qs),
+procedure latex_app_plain(Schema?, NRoleSpecs?, Constraint?, Chunks?, Chunks).
+latex_app_plain(P, Rs, Cn, T, R?) :-
+    ground(P?), ground(Rs?), ground(Cn?), ground(T?) |
+    sch_ext_terms(P?, Es0),
+    sch_roles(P?, PRs),
+    latex_app_fresh(Rs?, PRs?, Es0?, Cn?, T?, R).
+
+procedure latex_app_fresh(NRoleSpecs?, RoleSpecs?, NameTerms?, Constraint?, Chunks?, Chunks).
+latex_app_fresh(Rs, PRs, Es0, Cn, T, R?) :-
+    ground(Rs?), ground(PRs?), ground(Es0?), ground(Cn?), ground(T?) |
+    req_ext_terms(PRs?, Qs),
     fresh_terms(Es0?, Qs?, Es),
-    latex_app_roles(Rs?, Es?, T?, R).
+    latex_app_roles(Rs?, Es?, Cn?, T?, R).
 
-procedure latex_app_roles(RoleSpecs?, NameTerms?, Chunks?, Chunks).
-latex_app_roles(Rs, Es, T, R?) :- ground(Rs?), ground(Es?), ground(T?) |
+procedure latex_app_roles(NRoleSpecs?, NameTerms?, Constraint?, Chunks?, Chunks).
+latex_app_roles(Rs, Es, Cn, T, R?) :- ground(Rs?), ground(Es?), ground(Cn?), ground(T?) |
     guard_roles(Rs?, 1, [], G),
     latex_guard(G?, [], GL),
-    fresh_lines(Es?, [GL?], L3),
+    constraint_line(Cn?, [GL?], LC),
+    fresh_lines(Es?, LC?, L3),
     forb_lines(Rs?, 1, L3?, L2),
     req_lines(Rs?, 1, L2?, L1),
     assign_lines(Rs?, 1, L1?, Ls),
@@ -531,8 +607,13 @@ latex_app_roles(Rs, Es, T, R?) :- ground(Rs?), ground(Es?), ground(T?) |
 % name term -- in the form of Section 5.1 and Appendix B.3, any other in
 % Appendix D's.
 
-procedure s3_form(Schema?, Ans).
-s3_form(Sc, R?) :- ground(Sc?) |
+procedure s3_form(NSchema?, Ans).
+s3_form(NSc, R?) :- ground(NSc?) |
+    plain_schema(NSc?, Sc),
+    s3_form_plain(Sc?, R).
+
+procedure s3_form_plain(Schema?, Ans).
+s3_form_plain(Sc, R?) :- ground(Sc?) |
     sch_roles(Sc?, Rs),
     roles_community(Rs?, A1),
     flip(A1?, A2),
@@ -540,22 +621,22 @@ s3_form(Sc, R?) :- ground(Sc?) |
     nts_empty(Ns?, A3),
     both_yes(A2?, A3?, R).
 
-procedure latex_schema1(Ans?, Schema?, Chunks?, Chunks).
+procedure latex_schema1(Ans?, NSchema?, Chunks?, Chunks).
 latex_schema1(yes, Sc, T, R?) :- ground(Sc?), ground(T?) | latex_schema_s3(Sc?, T?, R).
 latex_schema1(no, Sc, T, R?) :- ground(Sc?), ground(T?) | latex_schema_app(Sc?, T?, R).
 
-procedure latex_schema(Ans?, Schema?, Chunks?, Chunks).
+procedure latex_schema(Ans?, NSchema?, Chunks?, Chunks).
 latex_schema(_, Sc, T, R?) :- ground(Sc?), ground(T?) |
     s3_form(Sc?, A),
     latex_schema1(A?, Sc?, T?, R).
 
 % A schema's name is no part of its compiled form, so it is carried in a
 % conditional TeX skips, and the whole output is pasted as it stands.
-procedure latex_contract(Ans?, Contract?, Chunks?, Chunks).
+procedure latex_contract(Ans?, NContract?, Chunks?, Chunks).
 latex_contract(_, [], T, T?).
 latex_contract(K, [S|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
     ground(K?), ground(S?), ground(Ss?), ground(T?) |
-    sch_name(S?, Nm),
+    nsch_name(S?, Nm),
     latex_contract(K?, Ss?, T?, R1),
     latex_schema(K?, S?, R1?, R).
 
@@ -570,18 +651,21 @@ latex_contract(K, [S|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
 % paragraph after Definition Compilation).  A contract's reflexive
 % predicates are no part of its compiled form, which is its schemas'.
 
-procedure find_schema1(Constant?, Constant?, Schema?, Contract?, FoundS).
+% A schema of a contract as written, found by its name, or none.
+NFoundS ::= found(NSchema) ; not_found.
+
+procedure find_schema1(Constant?, Constant?, NSchema?, NContract?, NFoundS).
 find_schema1(Nm, Sn, S, _, found(S?)) :- Nm? =?= Sn? | true.
 find_schema1(_, Sn, _, Ss, R?) :- otherwise, ground(Sn?), ground(Ss?) |
     find_schema(Ss?, Sn?, R).
 
-procedure find_schema(Contract?, Constant?, FoundS).
+procedure find_schema(NContract?, Constant?, NFoundS).
 find_schema([], _, not_found).
 find_schema([S|Ss], Sn, R?) :- ground(S?), ground(Ss?), ground(Sn?) |
-    sch_name(S?, Nm),
+    nsch_name(S?, Nm),
     find_schema1(Nm?, Sn?, S?, Ss?, R).
 
-procedure emit_schema(FoundS?, Ans?, Constant?).
+procedure emit_schema(NFoundS?, Ans?, Constant?).
 emit_schema(found(S), K, _) :- ground(S?), ground(K?) |
     latex_schema(K?, S?, [], L),
     send_to_user(L?).
@@ -667,6 +751,20 @@ malformed_lines([listed_guarded(S, I)|Fs], T,
                  'has a listed role carrying the mark ?, which only an agent role may carry;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+malformed_lines([multiplicity_not_added(S, I, _)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a multiplicity on an atom it neither adds nor deletes;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([multiplicity_not_numeric(S, I, _)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a multiplicity that is not a number;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([constraint_not_numeric(S, _)|Fs], T,
+                [S?, 'carries a constraint on an argument that is not a number;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 
@@ -675,7 +773,7 @@ not_compiled_malformed(Nm, Fs) :- ground(Nm?), ground(Fs?) |
     malformed_lines(Fs?, ['check_named gives the faults.'], L),
     send_to_user(['% not compiled:', Nm?, 'is malformed:'|L?]).
 
-procedure compile_on(Verdict?, Constant?, Contract?).
+procedure compile_on(Verdict?, Constant?, NContract?).
 compile_on(syntactically_grassroots, _, C) :- ground(C?) |
     latex_contract(no, C?, [], L),
     send_to_user(L?).
@@ -695,10 +793,10 @@ compile_on(conditions_met, _, C) :- ground(C?) |
 compile_on(conditions_failed(_), Nm, _) :- ground(Nm?) | not_compiled_app(Nm?).
 compile_on(malformed(Fs), Nm, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
 
-procedure compile_checked(Constant?, Declared?).
+procedure compile_checked(Constant?, NDeclared?).
 compile_checked(Nm, D) :- ground(Nm?), ground(D?) |
     check # check(D?, V),
-    decl_schemas(D?, C),
+    ndecl_schemas(D?, C),
     compile_on(V?, Nm?, C?).
 
 exported procedure compile_named(Constant?).
@@ -707,7 +805,7 @@ compile_named(Nm) :- ground(Nm?) |
     compile_checked(Nm?, C?).
 
 % A contract given as a term, under the name its displays are reported by.
-exported procedure compile_contract(Constant?, Declared?).
+exported procedure compile_contract(Constant?, NDeclared?).
 compile_contract(Nm, D) :- ground(Nm?), ground(D?) |
     compile_checked(Nm?, D?).
 
@@ -718,7 +816,7 @@ compile_variant(Nm, B) :- ground(Nm?), ground(B?) |
     contracts # variant(Nm?, B?, D),
     compile_checked(Nm?, D?).
 
-procedure compile_s_on(Verdict?, Constant?, Constant?, Contract?).
+procedure compile_s_on(Verdict?, Constant?, Constant?, NContract?).
 compile_s_on(syntactically_grassroots, _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, no, Sn?).
@@ -740,10 +838,10 @@ compile_s_on(conditions_met, _, Sn, C) :- ground(Sn?), ground(C?) |
 compile_s_on(conditions_failed(_), Nm, _, _) :- ground(Nm?) | not_compiled_app(Nm?).
 compile_s_on(malformed(Fs), Nm, _, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
 
-procedure compile_s_checked(Constant?, Constant?, Declared?).
+procedure compile_s_checked(Constant?, Constant?, NDeclared?).
 compile_s_checked(Nm, Sn, D) :- ground(Nm?), ground(Sn?), ground(D?) |
     check # check(D?, V),
-    decl_schemas(D?, C),
+    ndecl_schemas(D?, C),
     compile_s_on(V?, Nm?, Sn?, C?).
 
 exported procedure compile_schema(Constant?, Constant?).
@@ -751,7 +849,7 @@ compile_schema(Nm, Sn) :- ground(Nm?), ground(Sn?) |
     contracts # contract(Nm?, C),
     compile_s_checked(Nm?, Sn?, C?).
 
-exported procedure compile_schema_in(Constant?, Declared?, Constant?).
+exported procedure compile_schema_in(Constant?, NDeclared?, Constant?).
 compile_schema_in(Nm, D, Sn) :- ground(Nm?), ground(D?), ground(Sn?) |
     compile_s_checked(Nm?, Sn?, D?).
 

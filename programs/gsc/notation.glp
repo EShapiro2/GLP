@@ -23,6 +23,16 @@
 % to a line, between the lines %% notation begin and %% notation end; the
 % empty token ends a line of the text, and the tokens between two empty ones
 % are that line.  cascade.sh joins them into schemas.txt.
+%
+% Act schemas allow numbers (GSC, Section 3.2, the paragraph after the
+% example of def:schema), and the paper prints no schema with them.  They
+% are printed as GB's paper writes its schemas (GB, Appendix A), the closest
+% notation in print: a numeric argument as its variable or its number, the
+% numeric variables in the head with the other variables, in the order of
+% the head; a constraint after the head, tau(...) | constraint :, gt(X, Y) as
+% X > Y, le(X, Y) as X <= Y, succ(X, Y) as Y = X + 1 and or(C1, C2) as C1 or
+% C2; and a multiplicity k on an atom A as k.A, a full stop for GB's centred
+% dot, as for the centred dot of a name term.
 % ---------------------------------------------------------------------------
 
 % --- Arguments (def:schema, definition:term, definition:role) -------------
@@ -55,6 +65,7 @@ n_arg(nterm(S), T, R?) :- ground(S?), ground(T?) | n_nt(S?, T?, R).
 n_arg(sgn(X, J), T, ['sgn(', X?, ', '|R?]) :-
     ground(X?), integer(J?), ground(T?) |
     n_role(J?, [')'|T?], R).
+n_arg(num(X), T, [X?|T?]).
 
 procedure n_args(Args?, Chunks?, Chunks).
 n_args([], T, T?).
@@ -72,13 +83,21 @@ n_atom(atom(P, [A|As]), T, [P?, '('|R?]) :-
     ground(A?), ground(As?), ground(T?) |
     n_args([A?|As?], [')'|T?], R).
 
+% An atom with a multiplicity k, k.A (GB, Appendix A, k\cdot A).
+procedure n_mult(Mult?, Chunks?, Chunks).
+n_mult(atom(P, As), T, R?) :- ground(P?), ground(As?), ground(T?) |
+    n_atom(atom(P?, As?), T?, R).
+n_mult(times(K, A), T, R?) :- ground(K?), ground(A?), ground(T?) |
+    n_atom(A?, T?, R1),
+    n_arg(K?, ['.'|R1?], R).
+
 % The atoms of E_i, each with its mark: m(Mark, Atom), Mark keep for an
 % unmarked atom and forb, add and del for the marks not, + and -.
 Mark   ::= keep ; forb ; add ; del.
-MAtom  ::= m(Mark, Atom).
+MAtom  ::= m(Mark, Mult).
 MAtoms ::= [] ; [MAtom | MAtoms].
 
-procedure n_marks(Atoms?, Mark?, MAtoms?, MAtoms).
+procedure n_marks(Mults?, Mark?, MAtoms?, MAtoms).
 n_marks([], _, T, T?).
 n_marks([A|As], M, T, [m(M?, A?)|R?]) :- ground(M?), ground(As?), ground(T?) |
     n_marks(As?, M?, T?, R).
@@ -91,7 +110,7 @@ n_mark_token(del, T, ['-'|T?]).
 
 procedure n_matom(MAtom?, Chunks?, Chunks).
 n_matom(m(M, A), T, R?) :- ground(M?), ground(A?), ground(T?) |
-    n_atom(A?, T?, R1),
+    n_mult(A?, T?, R1),
     n_mark_token(M?, R1?, R).
 
 % The marked atoms of E_i after a space, apart by a comma; nothing when E_i is
@@ -109,12 +128,12 @@ n_matoms1([X, Y|Ys], T, R?) :- ground(X?), ground(Y?), ground(Ys?), ground(T?) |
     n_matom(X?, [', '|R1?], R).
 
 % E_i of the role RS: the unmarked atoms =(i), then not(i), +(i) and -(i).
-procedure n_e(RoleSpec?, Chunks?, Chunks).
+procedure n_e(NRoleSpec?, Chunks?, Chunks).
 n_e(RS, T, R?) :- ground(RS?), ground(T?) |
-    rs_keep(RS?, K),
-    rs_forb(RS?, F),
-    rs_add(RS?, P),
-    rs_del(RS?, M),
+    nrs_keep(RS?, K),
+    nrs_forb(RS?, F),
+    nrs_add(RS?, P),
+    nrs_del(RS?, M),
     n_marks(M?, del, [], L3),
     n_marks(P?, add, L3?, L2),
     n_marks(F?, forb, L2?, L1),
@@ -130,7 +149,7 @@ n_listed_args([], T, T?).
 n_listed_args([A|As], T, [', '|R?]) :- ground(A?), ground(As?), ground(T?) |
     n_args([A?|As?], T?, R).
 
-procedure n_role_term(RoleSpec?, Integer?, Chunks?, Chunks).
+procedure n_role_term(NRoleSpec?, Integer?, Chunks?, Chunks).
 n_role_term(rs(_, _, _, _, _), I, T, R?) :- integer(I?), ground(T?) |
     n_role(I?, T?, R).
 n_role_term(crs(listed(I, Rho, As), _, _, _, _, _), _, T, R?) :-
@@ -142,13 +161,13 @@ procedure n_mark(Ans?, Chunks?, Chunks).
 n_mark(yes, T, ['?'|T?]).
 n_mark(no, T, T?).
 
-procedure n_head_role(RoleSpec?, Integer?, Chunks?, Chunks).
+procedure n_head_role(NRoleSpec?, Integer?, Chunks?, Chunks).
 n_head_role(RS, I, T, R?) :- ground(RS?), integer(I?), ground(T?) |
-    is_guarding(RS?, G),
+    n_is_guarding(RS?, G),
     n_mark(G?, T?, T1),
     n_role_term(RS?, I?, T1?, R).
 
-procedure n_head_roles(RoleSpecs?, Integer?, Chunks?, Chunks).
+procedure n_head_roles(NRoleSpecs?, Integer?, Chunks?, Chunks).
 n_head_roles([], _, T, T?).
 n_head_roles([RS], I, T, R?) :- ground(RS?), integer(I?), ground(T?) |
     n_head_role(RS?, I?, T?, R).
@@ -164,11 +183,34 @@ n_head_vars([], T, T?).
 n_head_vars([V|Vs], T, ['; '|R?]) :- ground(V?), ground(Vs?), ground(T?) |
     n_args([V?|Vs?], T?, R).
 
-% --- A schema (def:schema, definition:schema) ------------------------------
-% The head, tau(pi_1, ..., pi_k; x_1, ..., x_m) :, on a line, then a line per
-% role, at pi_i: E_i.
+% --- The constraint (GSC, Section 3.2) --------------------------------------
+% After the head and a bar, as GB's paper writes it; none for true.
 
-procedure n_role_lines(RoleSpecs?, Integer?, Chunks?, Chunks).
+procedure n_constraint(Constraint?, Chunks?, Chunks).
+n_constraint(true, T, ['true'|T?]).
+n_constraint(gt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    n_arg(Y?, T?, R1),
+    n_arg(X?, [' > '|R1?], R).
+n_constraint(le(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    n_arg(Y?, T?, R1),
+    n_arg(X?, [' <= '|R1?], R).
+n_constraint(succ(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    n_arg(X?, [' + 1'|T?], R1),
+    n_arg(Y?, [' = '|R1?], R).
+n_constraint(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
+    n_constraint(C2?, T?, R1),
+    n_constraint(C1?, [' or '|R1?], R).
+
+procedure n_head_constraint(Constraint?, Chunks?, Chunks).
+n_head_constraint(true, T, T?).
+n_head_constraint(C, T, [' | '|R?]) :- otherwise, ground(C?), ground(T?) |
+    n_constraint(C?, T?, R).
+
+% --- A schema (def:schema, definition:schema) ------------------------------
+% The head, tau(pi_1, ..., pi_k; x_1, ..., x_m) :, on a line, its constraint
+% after a bar before the colon, then a line per role, at pi_i: E_i.
+
+procedure n_role_lines(NRoleSpecs?, Integer?, Chunks?, Chunks).
 n_role_lines([], _, T, T?).
 n_role_lines([RS|Rs], I, T, ['    at '|R?]) :-
     ground(RS?), ground(Rs?), integer(I?), ground(T?) |
@@ -177,21 +219,23 @@ n_role_lines([RS|Rs], I, T, ['    at '|R?]) :-
     n_e(RS?, [''|R2?], R1),
     n_role_term(RS?, I?, [':'|R1?], R).
 
-procedure n_schema(Schema?, Chunks?, Chunks).
+procedure n_schema(NSchema?, Chunks?, Chunks).
 n_schema(Sc, T, [Nm?, '('|R?]) :- ground(Sc?), ground(T?) |
-    sch_name(Sc?, Nm),
-    sch_vars(Sc?, Vs),
-    sch_roles(Sc?, Rs),
-    n_schema1(Vs?, Rs?, T?, R).
+    nsch_name(Sc?, Nm),
+    nsch_vars(Sc?, Vs),
+    nsch_roles(Sc?, Rs),
+    nsch_constraint(Sc?, Cn),
+    n_schema1(Vs?, Rs?, Cn?, T?, R).
 
-procedure n_schema1(Args?, RoleSpecs?, Chunks?, Chunks).
-n_schema1(Vs, Rs, T, R?) :- ground(Vs?), ground(Rs?), ground(T?) |
-    n_role_lines(Rs?, 1, T?, R2),
-    n_head_vars(Vs?, [') :', ''|R2?], R1),
+procedure n_schema1(Args?, NRoleSpecs?, Constraint?, Chunks?, Chunks).
+n_schema1(Vs, Rs, Cn, T, R?) :- ground(Vs?), ground(Rs?), ground(Cn?), ground(T?) |
+    n_role_lines(Rs?, 1, T?, R3),
+    n_head_constraint(Cn?, [' :', ''|R3?], R2),
+    n_head_vars(Vs?, [')'|R2?], R1),
     n_head_roles(Rs?, 1, R1?, R).
 
 % The schemas apart by an empty line.
-procedure n_schemas(Contract?, Chunks?, Chunks).
+procedure n_schemas(NContract?, Chunks?, Chunks).
 n_schemas([], T, T?).
 n_schemas([S], T, R?) :- ground(S?), ground(T?) | n_schema(S?, T?, R).
 n_schemas([S, S2|Ss], T, R?) :- ground(S?), ground(S2?), ground(Ss?), ground(T?) |
@@ -208,7 +252,7 @@ n_preds([P], T, [P?|T?]).
 n_preds([P, Q|Ps], T, [P?, ', '|R?]) :- ground(Q?), ground(Ps?), ground(T?) |
     n_preds([Q?|Ps?], T?, R).
 
-procedure n_declared(Declared?, Chunks?, Chunks).
+procedure n_declared(NDeclared?, Chunks?, Chunks).
 n_declared([], T, T?).
 n_declared([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
     n_schemas([S?|Ss?], T?, R).
@@ -217,7 +261,7 @@ n_declared(reflexive(Ps, Ss), T, ['Reflexive predicates: '|R?]) :-
     n_schemas(Ss?, T?, R2),
     n_preds(Ps?, ['', ''|R2?], R).
 
-exported procedure notation_contract(Declared?).
+exported procedure notation_contract(NDeclared?).
 notation_contract(D) :- ground(D?) |
     n_declared(D?, ['%% notation end'], L),
     send_to_user(['%% notation begin'|L?]).
