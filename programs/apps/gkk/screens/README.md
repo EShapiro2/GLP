@@ -13,5 +13,5 @@ The script builds the bundled assets (`tool/sync_glp_assets.sh`), boots the simu
 | File | What it shows |
 |---|---|
 | `gkk-a-alice-identity.png` | Alice establishes her identity (GKK:1): her Contacts tab before she does, her name and the button Join. |
-| `gkk-b-bob-asked-to-meet.png` | Alice and Bob meet in person (GKK:2): Bob's Contacts tab with the question "Alice asks to meet you in person." and the buttons Yes and No at its top, Alice listed below, known to his agent by her key, with Meet. |
-| `gkk-c-bob-contacts.png` | Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Bob's Contacts tab once he has answered Yes to "Alice introduces Carol to you.", his contacts Alice and Carol. |
+| `gkk-b-bob-asked-to-meet.png` | Alice and Bob meet in person (GKK:2): Bob's Contacts tab with the question "Alice asks to meet you in person." and the buttons Yes and No at its top, Alice listed below, known to his agent by her key, with Meet, and the field Add a person by key. |
+| `gkk-c-bob-contacts.png` | Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Bob's Contacts tab once he has answered Yes to "Alice introduces Carol to you.", his contacts Alice and Carol, and under them, Bob having two contacts, the sentence "Introduce … to …." with the button Introduce. |
