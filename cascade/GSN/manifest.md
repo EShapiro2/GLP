@@ -1,9 +1,9 @@
 # A run of the cascade on GSN
 
-- Contract: `GSN` (`gsn` to the checker), its owner's two files `programs/gsc/GSN.md` and `programs/gsc/GSN.glp`, copied here as they stood at `5e57b207`.
+- Contract: `GSN` (`gsn` to the checker), its owner's two files `programs/gsc/GSN.md` and `programs/gsc/GSN.glp`, copied here as they stood at `043fd7ca`.
 - The paper: `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `025b049b`, for the paper's own record.
-- The tools: this repository at `5e57b207` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP), programs/vglp/cva/social_network (the plays with scripted persons).
-- Run on 2026-10-20 13:34 UTC by `cascade.sh gsn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `043fd7ca` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP), programs/vglp/cva/social_network (the plays with scripted persons).
+- Run on 2026-10-20 14:27 UTC by `cascade.sh gsn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
