@@ -143,22 +143,37 @@ const _speechShown = "rec('Speech', form(speech, [field('Utterance', "
     "form(speech, [field('Utterance', ref('Utterance')), "
     "field('Peer', shown)])]))), field('Peer', shown)]))";
 
+/// The default widget of the request an attempt names, `Names ::= none ;
+/// request(Rho, Integer)`, `Rho ::= one(Class) ; rho(Proposal)`, over the
+/// classes [classes], each `form(F, [...])`, standing for the proposals too
+/// (vGLP f0acbc1, Definition "Attempt"; the construct of `approval_w` in
+/// cascade/GSG/platform.glp as cascade.sh prints it).
+String _namesW(String classes) => "field('Names', menu([shown, "
+    "form(request, [field('Rho', menu([form(one, [field('Class', "
+    "menu([$classes]))]), form(rho, [field('Proposal', menu([$classes]))])])), "
+    "field('Integer', shown)])]))";
+
+const _approvalClasses = "form(befriend, [field('Peer', shown), "
+    "field('Peer', shown)]), form(join, [field('Peer', shown), "
+    "field('Peer', shown), field('Speech', $_speechShown)])";
+
 /// The widget of the approval question, `named(approval_sentence, D)`.
-const _approvalW = "named(approval_sentence, form(approval, "
+final _approvalW = "named(approval_sentence, form(approval, "
     "[field('Attempt', form(attempt, [field('Peer', shown), "
     "field('Integer', shown), field('Integer', shown), field('Class', "
-    "menu([form(befriend, [field('Peer', shown), field('Peer', shown)]), "
-    "form(join, [field('Peer', shown), field('Peer', shown), "
-    "field('Speech', $_speechShown)])]))])), "
+    "menu([$_approvalClasses])), ${_namesW(_approvalClasses)}])), "
     "field('YesNo', buttons([yes, no]))]))";
+
+const _gaiApprovalClasses = "form(agent_befriend, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown), "
+    "field('Speech', $_speechShown)])";
 
 /// The widget of GAI's approval question, `named(approval_sentence, D)`,
 /// over agent_befriend.
-const _gaiApprovalW = "named(approval_sentence, form(approval, "
+final _gaiApprovalW = "named(approval_sentence, form(approval, "
     "[field('Attempt', form(attempt, [field('Peer', shown), "
     "field('Integer', shown), field('Integer', shown), field('Class', "
-    "menu([form(agent_befriend, [field('Peer', shown), field('Peer', shown), "
-    "field('Peer', shown), field('Speech', $_speechShown)])]))])), "
+    "menu([$_gaiApprovalClasses])), ${_namesW(_gaiApprovalClasses)}])), "
     "field('YesNo', buttons([yes, no]))]))";
 
 /// The widget of construct 0, `named(last_state, D0)`.
@@ -567,7 +582,7 @@ void main() {
       await p.views([_v('[identity, friend(bob)]', '[bob, carol]')]);
       await p.menu(4, _gsgProposals, known: '[bob, carol]');
       await p.draw('draw(5, $_approvalW, approval_w(approval(attempt(carol, '
-          '7, 7, befriend(carol, alice)), input([2]))))');
+          '7, 7, befriend(carol, alice), none), input([2]))))');
       final ys = [
         tester.getTopLeft(find.text('Carol asks to be your friend.')).dy,
         tester.getTopLeft(p.key(4, 'name')).dy,
@@ -679,7 +694,7 @@ void main() {
       await p.views([_v(_gsnState, '[bob, carol, dan]')]);
       await p.menu(1, _gsnProposals, known: '[bob, carol, dan]');
       await p.draw('draw(2, $_approvalW, approval_w(approval(attempt(dan, '
-          '4, 4, befriend(dan, alice)), input([2]))))');
+          '4, 4, befriend(dan, alice), none), input([2]))))');
       expect(find.byKey(tabKey(ScreenTab.groups)), findsOneWidget);
       expect(find.text('Dan asks to be your friend.'), findsOneWidget);
       expect(p.key(1, 'unfriend:bob'), findsOneWidget);
@@ -719,7 +734,7 @@ void main() {
       await p.views([_v(_gsnState, '[bob, carol]')]);
       await p.menu(1, _gsnProposals, known: '[bob, carol]');
       await p.draw('draw(2, $_approvalW, approval_w(approval(attempt(dan, '
-          '5, 5, join(dan, alice, speech(utterance(chess), dan))), '
+          '5, 5, join(dan, alice, speech(utterance(chess), dan)), none), '
           'input([2]))))');
       // The join approval badges Groups and is not in Friends.
       expect(find.text('Dan asks you to join the group chess.'), findsNothing);
@@ -1444,7 +1459,7 @@ void main() {
       await p.menu(1, _gaiProposals, known: '[alf, alice, carol]');
       expect(p.key(1, 'befriend:alf'), findsOneWidget);
       await p.draw('draw(5, $_gaiApprovalW, approval_w(approval(attempt(alf, '
-          '3, 3, $agentBefriend), input([2]))))');
+          '3, 3, $agentBefriend, none), input([2]))))');
       await p.top();
       expect(p.key(1, 'person:alf'), findsOneWidget);
       expect(p.key(1, 'befriend:alf'), findsNothing);
@@ -1488,7 +1503,7 @@ void main() {
       await p.views([_v(aliceState, '[alf, bob]')]);
       await p.menu(1, _gaiProposals, known: '[alf, bob]');
       await p.draw('draw(5, $_gaiApprovalW, approval_w(approval(attempt(alf, '
-          '3, 3, $agentBefriend), input([2]))))');
+          '3, 3, $agentBefriend, none), input([2]))))');
       await p.top();
       expect(textsOf(tester, 5), ['Alf asks to befriend Bob.', 'Approve?', 'Yes', 'No']);
       p.plain();
@@ -1504,7 +1519,7 @@ void main() {
       await p.views([_v('[friend(alice), identity]', '[alf, alice]')]);
       await p.menu(1, _gaiProposals, known: '[alf, alice]');
       await p.draw('draw(5, $_gaiApprovalW, approval_w(approval(attempt(alf, '
-          '3, 3, $agentBefriend), input([2]))))');
+          '3, 3, $agentBefriend, none), input([2]))))');
       await p.top();
       expect(textsOf(tester, 5), [
         'Alf, an AI agent of Alice, asks to befriend you.',

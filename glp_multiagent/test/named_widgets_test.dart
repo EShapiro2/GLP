@@ -27,13 +27,21 @@ const _speech = "rec('Speech', form(speech, [field('Utterance', "
     "field('Peer', shown)])]))), field('Peer', shown)]))";
 
 /// The default widget of `Approval ::= approval(Attempt, YesNo?)` over the
-/// classes [classes], each `form(F, [...])`, as the canonical compilation
-/// emits it (programs/apps/gsg and gsn, the construct of `approval_w`).
-String _defaultApproval(List<String> classes) =>
-    "form(approval, [field('Attempt', form(attempt, [field('Peer', shown), "
-    "field('Integer', shown), field('Integer', shown), "
-    "field('Class', menu([${classes.join(', ')}]))])), "
-    "field('YesNo', buttons([yes, no]))])";
+/// classes [classes], each `form(F, [...])`, standing for the proposals too,
+/// as the canonical compilation emits it (programs/apps/gsg and gsn, the
+/// construct of `approval_w`; cascade/GSG/platform.glp as cascade.sh prints
+/// it): `Attempt ::= attempt(Peer, Integer, Integer, Class, Names)`, `Names
+/// ::= none ; request(Rho, Integer)`, `Rho ::= one(Class) ; rho(Proposal)`
+/// (vGLP f0acbc1, Definition "Attempt").
+String _defaultApproval(List<String> classes) {
+  final cs = 'menu([${classes.join(', ')}])';
+  return "form(approval, [field('Attempt', form(attempt, [field('Peer', shown), "
+      "field('Integer', shown), field('Integer', shown), "
+      "field('Class', $cs), field('Names', menu([shown, form(request, "
+      "[field('Rho', menu([form(one, [field('Class', $cs)]), form(rho, "
+      "[field('Proposal', $cs)])])), field('Integer', shown)])]))])), "
+      "field('YesNo', buttons([yes, no]))])";
+}
 
 const _gsgClasses = [
   "form(establish, [field('Peer', shown)])",
@@ -59,7 +67,7 @@ const _cssnChildBefriend = "form(child_befriend, [field('Peer', shown), "
 
 /// Alice asks that their child Carol and Bob's child Dave befriend.
 const _childBefriendView = 'approval(attempt(alice, 4, 4, child_befriend('
-    'carol, dave, alice, bob)), input([2]))';
+    'carol, dave, alice, bob), none), input([2]))';
 
 /// CSSN's enter and enter_2, `enter(p?, r?)` and `enter_2(p?, q?, r?)`
 /// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints their
@@ -85,7 +93,7 @@ const _attestation = 'speech($_code, alice)';
 
 /// Alf, Alice's AI agent, asks to befriend Bob with its attestation.
 const _agentBefriendView = 'approval(attempt(alf, 3, 3, agent_befriend(alf, '
-    'bob, alice, $_attestation)), input([2]))';
+    'bob, alice, $_attestation), none), input([2]))';
 
 /// The last view Alice's agent wrote: she is Alf's principal and its friend.
 const _aliceOutput = '[view([principal_of(alf), friend(alf), item($_code), '
@@ -176,7 +184,7 @@ void main() {
       'buttons Accept and Decline, and nothing else', (tester) async {
     final s = _Screen(tester);
     const view =
-        'approval(attempt(alice, 2, 2, befriend(alice, bob)), input([2]))';
+        'approval(attempt(alice, 2, 2, befriend(alice, bob), none), input([2]))';
     await s.draw(_named(_gsgClasses), view);
     expect(s.texts(), ['Alice asks to be your friend.', 'Accept', 'Decline']);
     expect(find.byKey(sentenceKey(1)), findsOneWidget);
@@ -190,7 +198,7 @@ void main() {
       'the default widget of Approval does over the same view', (tester) async {
     final s = _Screen(tester);
     const view =
-        'approval(attempt(alice, 2, 2, befriend(alice, bob)), input([2]))';
+        'approval(attempt(alice, 2, 2, befriend(alice, bob), none), input([2]))';
     final def = _defaultApproval(_gsgClasses);
     final (dYes, nYes) = await s.both(def, view, 'yes', 'Accept');
     expect(dYes, 'input(1, [2], yes)');
@@ -206,7 +214,7 @@ void main() {
       'Decline, and nothing else', (tester) async {
     final s = _Screen(tester);
     const view = 'approval(attempt(alice, 5, 5, join(alice, bob, '
-        'speech(utterance(friends), alice))), input([2]))';
+        'speech(utterance(friends), alice)), none), input([2]))';
     await s.draw(_named([..._gsgClasses, _gsnJoin]), view);
     expect(s.texts(),
         ['Alice asks you to join the group friends.', 'Join', 'Decline']);
@@ -218,7 +226,7 @@ void main() {
       'default widget of Approval does over the same view', (tester) async {
     final s = _Screen(tester);
     const view = 'approval(attempt(alice, 5, 5, join(alice, bob, '
-        'speech(utterance(friends), alice))), input([2]))';
+        'speech(utterance(friends), alice)), none), input([2]))';
     final def = _defaultApproval([..._gsgClasses, _gsnJoin]);
     final (dYes, nYes) = await s.both(def, view, 'yes', 'Join');
     expect(dYes, 'input(1, [2], yes)');
@@ -234,7 +242,7 @@ void main() {
       'No', (tester) async {
     final s = _Screen(tester);
     const view = 'approval(attempt(bob, 6, 6, join(alice, bob, '
-        'speech(utterance(friends), alice))), input([2]))';
+        'speech(utterance(friends), alice)), none), input([2]))';
     await s.draw(_named([..._gsgClasses, _gsnJoin]), view);
     expect(s.texts(),
         ['Bob asks to join you.', 'friends', 'by you', 'Yes', 'No']);
@@ -246,7 +254,7 @@ void main() {
       'after, the person asked named you, and Yes and No', (tester) async {
     final s = _Screen(tester);
     const view = 'approval(attempt(dan, 1, 1, message(dan, bob, '
-        'speech(speech(speech(utterance(flood), dan), eve), bob))), '
+        'speech(speech(speech(utterance(flood), dan), eve), bob)), none), '
         'input([2]))';
     await s.draw(_named([_gsnMessage]), view);
     expect(s.texts(), [
@@ -266,7 +274,7 @@ void main() {
       'you, the view not naming the agent asked', (tester) async {
     final s = _Screen(tester);
     await s.draw(_named(_gsgClasses),
-        'approval(attempt(alf, 3, 1, befriend(alf, bob, alice)), input([2]))');
+        'approval(attempt(alf, 3, 1, befriend(alf, bob, alice), none), input([2]))');
     expect(find.text('Alf asks to befriend Bob, Alice.'), findsOneWidget);
     expect(find.textContaining('you'), findsNothing);
   });
@@ -276,7 +284,7 @@ void main() {
       'named in the class only once', (tester) async {
     final s = _Screen(tester);
     await s.draw(_named(_gsgClasses),
-        'approval(attempt(bob, 4, 4, post_own(bob, alice)), input([2]))');
+        'approval(attempt(bob, 4, 4, post_own(bob, alice), none), input([2]))');
     expect(find.text('Bob asks to post own you.'), findsOneWidget);
   });
 
@@ -285,7 +293,7 @@ void main() {
       'granting the answer, and no button', (tester) async {
     final s = _Screen(tester);
     await s.draw(_named(_gsgClasses),
-        'approval(attempt(alice, 2, 2, befriend(alice, bob)), no)');
+        'approval(attempt(alice, 2, 2, befriend(alice, bob), none), no)');
     expect(s.texts(), ['Alice asks to be your friend.', 'Decline']);
     expect(find.byType(ElevatedButton), findsNothing);
   });
@@ -341,7 +349,7 @@ void main() {
     await s.draw(
         _named([_gaiAgentBefriend]),
         'approval(attempt(alf, 3, 3, agent_befriend(alf, bob, alice, '
-        '$_attestation)), yes)',
+        '$_attestation), none), yes)',
         output: _bobOutput);
     expect(s.texts(), [
       'Alf, an AI agent of Alice, asks to befriend you.',
@@ -454,7 +462,7 @@ void main() {
     await s.draw(
         _named([_cssnChildBefriend]),
         'approval(attempt(grace, 4, 4, child_befriend(carol, dave, alice, '
-        'bob)), input([2]))',
+        'bob), none), input([2]))',
         output: _daveOutput);
     expect(s.texts(), [
       "Grace asks that you and Carol befriend, with Carol's parent Alice.",
@@ -471,7 +479,7 @@ void main() {
       (tester) async {
     final s = _Screen(tester);
     const view =
-        'approval(attempt(alice, 2, 2, enter(alice, carol)), input([2]))';
+        'approval(attempt(alice, 2, 2, enter(alice, carol), none), input([2]))';
     await s.draw(_named([_cssnEnter]), view, output: '[view([], [alice])]');
     expect(s.texts(),
         ['Alice enters you as their child.', 'Approve?', 'Yes', 'No']);
@@ -488,7 +496,7 @@ void main() {
       'child."; each "Approve?", Yes and No (CSSN #8 Cowork, Code_inbox.md, '
       '2026-10-20 13:13 UTC, item 4)', (tester) async {
     final s = _Screen(tester);
-    const view = 'approval(attempt(bob, 3, 3, enter_2(bob, grace, dave)), '
+    const view = 'approval(attempt(bob, 3, 3, enter_2(bob, grace, dave), none), '
         'input([2]))';
     await s.draw(_named([_cssnEnter2]), view,
         output: '[view([friend(bob), identity], [bob, dave])]');

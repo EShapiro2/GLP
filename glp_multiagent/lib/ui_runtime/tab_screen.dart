@@ -134,11 +134,11 @@ bool _isApproval(OpenConstruct c) {
   return f == 'approval' && args.length == 2;
 }
 
-/// Whether the approval question [c] concerns a group: the class of its attempt, `approval(attempt(I, N, K, C), Q)`, is one of [groupClasses].
+/// Whether the approval question [c] concerns a group: the class of its attempt, `approval(attempt(I, N, K, C, R), Q)`, is one of [groupClasses].
 bool _concernsGroup(OpenConstruct c) {
   final (_, args) = ctorArgs(c.view);
   final (af, xs) = ctorArgs(args[0]);
-  if (af != 'attempt' || xs.length != 4) return false;
+  if (af != 'attempt' || xs.length != 5) return false;
   return groupClasses.contains(ctorArgs(xs[3]).$1);
 }
 
@@ -146,7 +146,7 @@ bool _concernsGroup(OpenConstruct c) {
 Iterable<String> _agentsNamed(OpenConstruct c) {
   final (_, args) = ctorArgs(c.view);
   final (af, xs) = ctorArgs(args[0]);
-  if (af != 'attempt' || xs.length != 4) return const [];
+  if (af != 'attempt' || xs.length != 5) return const [];
   final (f, ys) = ctorArgs(xs[3]);
   return switch ((f, ys.length)) {
     ('agent_befriend', 4) => [formatTerm(ys[0])],

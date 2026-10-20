@@ -598,7 +598,7 @@ class _Run {
     expect(formatTerm(a.view),
         startsWith('approval(attempt(${p.name}, '));
     expect(formatTerm(a.view),
-        endsWith(', befriend(${p.name}, ${q.name})), input([2]))'));
+        endsWith(', befriend(${p.name}, ${q.name}), none), input([2]))'));
     await top(q);
     final asks = '${personName(GAtom(p.name))} asks to be your friend.';
     expect(textsOf(q, a), [asks, 'Accept', 'Decline']);
@@ -820,7 +820,7 @@ void appsScreens(Screens screens) {
     // (b) Bob's Groups tab, badged: the question "Alice asks you to join the group friends." and Join and Decline at its top.
     final a = bob.approval;
     expect(formatTerm(a.view),
-        endsWith(', join(alice, bob, $friends)), input([2]))'));
+        endsWith(', join(alice, bob, $friends), none), input([2]))'));
     expect(
         find.descendant(
             of: run.on(bob, find.byKey(tabKey(ScreenTab.groups))),
@@ -1061,7 +1061,7 @@ void appsScreens(Screens screens) {
     final aa = alice.approval;
     expect(formatTerm(aa.view), startsWith('approval(attempt(alf, '));
     expect(formatTerm(aa.view),
-        endsWith(', agent_befriend(alf, bob, alice, $attestation)), input([2]))'));
+        endsWith(', agent_befriend(alf, bob, alice, $attestation), none), input([2]))'));
 
     // (b) Alice's Friends tab, badged: "Alf asks to befriend Bob.", "Approve?", Yes and No at its top.
     await run.tab(alice, ScreenTab.friends);
@@ -1077,7 +1077,7 @@ void appsScreens(Screens screens) {
     // (c) Bob's Friends tab, badged: "Alf, an AI agent of Alice, asks to befriend you.", "Developer: Acme Ltd", "Befriend Alf?", Yes and No at its top; the developer the first signer of Alf's attestation (GAI #5 Cowork, Code_inbox.md, 2026-10-19 20:36 UTC, (c) and item 5).
     final ba = bob.approval;
     expect(formatTerm(ba.view),
-        endsWith(', agent_befriend(alf, bob, alice, $attestation)), input([2]))'));
+        endsWith(', agent_befriend(alf, bob, alice, $attestation), none), input([2]))'));
     await run.top(bob);
     expect(run.textsOf(bob, ba), [
       'Alf, an AI agent of Alice, asks to befriend you.',
@@ -1260,7 +1260,7 @@ void appsScreens(Screens screens) {
     await run.add(bob, 'alice');
     expect(formatTerm(bob.approval.view),
         allOf(startsWith('approval(attempt(alice, '),
-            endsWith(', befriend(alice, bob)), input([2]))')));
+            endsWith(', befriend(alice, bob), none), input([2]))')));
     expect(run.textsOf(bob, bob.approval),
         ['Alice asks to be your friend.', 'Accept', 'Decline']);
     await run.answer(bob, 'Accept');
@@ -1269,7 +1269,7 @@ void appsScreens(Screens screens) {
     final a = bob.approval;
     expect(formatTerm(a.view),
         allOf(startsWith('approval(attempt(alice, '),
-            endsWith(', child_befriend(carol, dave, alice, bob)), input([2]))')));
+            endsWith(', child_befriend(carol, dave, alice, bob), none), input([2]))')));
     for (final q in ['carol', 'dave']) {
       expect(run.scriptedSeen(q),
           contains('gave(child_befriend(carol, dave, alice, bob), yes)'));
@@ -1320,7 +1320,7 @@ void appsScreens(Screens screens) {
     await run.add(carol, 'alice');
     expect(formatTerm(carol.approval.view),
         allOf(startsWith('approval(attempt(alice, '),
-            endsWith(', enter(alice, carol)), input([2]))')));
+            endsWith(', enter(alice, carol), none), input([2]))')));
     expect(run.textsOf(carol, carol.approval),
         ['Alice enters you as their child.', 'Approve?', 'Yes', 'No']);
     await run.answer(carol, 'Yes');
@@ -1330,7 +1330,7 @@ void appsScreens(Screens screens) {
     final a = carol.approval;
     expect(formatTerm(a.view),
         allOf(startsWith('approval(attempt(alice, '),
-            endsWith(', child_befriend(carol, dave, alice, bob)), input([2]))')));
+            endsWith(', child_befriend(carol, dave, alice, bob), none), input([2]))')));
     for (final q in ['bob', 'dave']) {
       expect(run.scriptedSeen(q),
           contains('gave(child_befriend(carol, dave, alice, bob), yes)'));
