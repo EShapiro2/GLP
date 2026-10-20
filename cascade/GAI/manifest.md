@@ -1,9 +1,9 @@
 # A run of the cascade on GAI
 
-- Contract: `GAI` (`gai` to the checker), its owner's two files `programs/gai/GAI.md` and `programs/gai/GAI.glp`, copied here as they stood at `601933cf`.
-- The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `ed5b2f74`, for the paper's own record.
-- The tools: this repository at `601933cf` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-10-20 14:27 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GAI` (`gai` to the checker), its owner's two files `programs/gai/GAI.md` and `programs/gai/GAI.glp`, copied here as they stood at `2c7329ca`.
+- The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `a4c056dd`, for the paper's own record.
+- The tools: this repository at `2c7329ca` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-10-20 18:26 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

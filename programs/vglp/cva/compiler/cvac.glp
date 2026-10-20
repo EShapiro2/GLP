@@ -7,7 +7,8 @@
 %%
 %% The module is what is printed from the contract, here, and the text every contract shares, text.glp.  What is printed from the contract is the type Class, one alternative per schema, the schema's name applied to the people in its roles and then the values of its variables, in the order of its head, tau(pi_1, ..., pi_k ; x_1, ..., x_m), as GSC's term form gives it (GSC 0228e79, Definition "Act schema"; vGLP #15 Cowork to Code, 2026-10-19 13:34 UTC, item 2), a term of it naming a schema-binding and so its part and its class (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"); the request type, Request, with the alternative propose([t]_j) for each guarded part [t]_j, a term of Proposal, the alternatives of the schemas whose terms name guarded parts, and the alternative known(Peer) (Section 5.4, "The compilation"); the
 %% contract itself, as the term programs/gsc reads, from which the shared text
-%% computes the classes and their parts; its reflexive predicates; and per
+%% computes the classes and their parts, and each schema under its name,
+%% schema_entry; its reflexive predicates; and per
 %% schema a clause taking a term of Class to the binding it names, binding_of,
 %% and one taking a binding back to the term, class_of.  GLP has no string
 %% concatenation, so a line naming the contract or a schema is printed as a
@@ -239,7 +240,7 @@ module_lines1(Nm, C, Rf, E, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), gr
     request_parts(C?, Ps?, Fx?, Lr, Fx1),
     atom_parts(C?, La),
     text_schemas(C?, Ct),
-    T1 =.. [contract_schemas, Ct?],
+    schema_lines(Ct?, T1, Le),
     name_class_lines(C?, Ps?, Ln0),
     name_class_decl(Ln0?, Ln1),
     request_name_lines(C?, Ps?, Lq0),
@@ -255,11 +256,7 @@ module_lines1(Nm, C, Rf, E, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), gr
         'procedure class_of(Constant?, Binding?, Peer?, Class).'|L3x?], L2x),
     lapp(L1?, Lr1?, L1x),
     lapp(Lr?, La1?, Lr1),
-    lapp(La?, ['',
-        'procedure contract_schemas(Schemas).',
-        T1?,
-        '.',
-        '',
+    lapp(Le?, ['',
         'procedure reflexive_preds(Preds).',
         T2?,
         '.',
@@ -268,7 +265,11 @@ module_lines1(Nm, C, Rf, E, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), gr
         T3?,
         '.',
         '',
-        'procedure binding_of(Class?, Constant, Binding).'|L2x?], La1),
+        'procedure binding_of(Class?, Constant, Binding).'|L2x?], Le1),
+    lapp(La?, ['',
+        'procedure contract_schemas(Schemas).',
+        T1?,
+        '.'|Le1?], La1),
     lapp(['%% Printed by programs/vglp/cva/compiler from the contract named below, in the',
          '%% term form programs/gsc reads (GSC, Sections 3 and 5, Appendix D): the canonical CVA',
          '%% platform of the contract (vGLP, Section 3.2, Definition "Canonical CVA',
@@ -610,6 +611,20 @@ text_schema([], S, Hd, Rs, schema(S?, Hd?, Rs?)).
 text_schema([_|_], S, Hd, Rs, lschema(S?, Hd?, Rs1?, Ls?)) :- ground(Rs?) |
     plain_specs(Rs?, Rs1),
     listed_all(Rs?, 1, Ls).
+%% The contract, contract_schemas([S_1, ..., S_n]), and each schema under its name, schema_entry(Name, S_i), the schema of a name being found by its clause and not by building the whole contract at every look-up (Code #12's change 1 of 2026-10-20 11:55 UTC, approved by vGLP #18 Cowork as implementation, Code_inbox.md 12:03 UTC); a name of no schema has the schema of no roles, schema(Name, [], []).
+procedure schema_lines(Stream(_)?, _, Stream(_)).
+schema_lines(Ct, T1?, ['', 'procedure schema_entry(Constant?, Schema).'|Le?]) :- ground(Ct?) |
+    T1 =.. [contract_schemas, Ct?],
+    entry_lines(Ct?, Le).
+procedure entry_lines(Stream(_)?, Stream(_)).
+entry_lines([], ['schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.']).
+entry_lines([X|Xs], [E?, '.'|L?]) :- ground(X?) |
+    schema_name(X?, Nm),
+    E =.. [schema_entry, Nm?, X?],
+    entry_lines(Xs?, L).
+procedure schema_name(_?, Constant).
+schema_name(schema(Nm, _, _), Nm?).
+schema_name(lschema(Nm, _, _, _), Nm?).
 procedure plain_specs(RoleSpecs?, RoleSpecs).
 plain_specs([], []).
 plain_specs([rs(G, A, D, K, F)|Rs], [rs(G?, A?, D?, K?, F?)|Ps?]) :- plain_specs(Rs?, Ps).
