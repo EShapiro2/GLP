@@ -105,7 +105,7 @@ gsnp_run(Me, Prev, Next, [_ | Outs], Cmds?) :-
     otherwise | gsnp_run(Me?, Prev?, Next?, Outs?, Cmds).
 gsnp_run(_, _, _, [], []).
 
-%% The creator's certification, signed here over the mini-app's source identity, the contract's sixteen act schemas, establish, befriend, unfriend, sign, message, forward, create, join, leave, close, drop, post_own, post, post_forward, deliver and deliver_own (programs/gsc/GSNP.glp), and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
+%% The creator's certification, signed here over the mini-app's source identity, the contract's sixteen act schemas, establish, befriend, unfriend, sign, message, forward, create, join, leave, close, drop, post_own, post, post_forward, deliver and deliver_own (programs/gai/GSNP.glp), and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
 procedure certified(Content?, String, String).
 certified(M, CK?, CSig?) :-
     module(M?) |
