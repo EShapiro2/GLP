@@ -10,9 +10,13 @@ Peer ::= Key.
 Speech ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
 YesNo ::= yes ; no.
-Decision ::= commit ; abort.
-Attempt ::= attempt(Peer, Integer, Integer, Class).
-Cargo ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision) ; yield(Attempt).
+Reason ::= declined ; unable(List(Atom), List(Atom)).
+Vote ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho ::= one(Class) ; rho(Proposal).
+Names ::= none ; request(Rho, Integer).
+Attempt ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision) ; yield(Attempt) ; request(Rho, Integer).
 Content ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net ::= msg(Peer, Content).
 Approval ::= approval(Attempt, YesNo?).
@@ -40,7 +44,7 @@ NameParts ::= parts(Vars, Vals) ; noparts.
 Vals ::= [] ; [Val | Vals].
 GAtom ::= g(Constant, Vals).
 GAtoms ::= [] ; [GAtom | GAtoms].
-Output ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Output ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
 Shown ::= shown(Atom) ; unshown.
 Bind ::= b(Var, Val).
 Binding ::= [] ; [Bind | Binding].
@@ -66,7 +70,7 @@ CVals ::= [] ; [CVal | CVals].
 CAtom ::= cmp_atom(Constant, CVals).
 CAtoms ::= [] ; [CAtom | CAtoms].
 Lock ::= unlocked ; held(Attempt).
-Rec ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo) ; got(Attempt, Peer, YesNo) ; closed(Attempt) ; wounded(Attempt) ; yielded(Attempt) ; introduced(Peer, Peer).
+Rec ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo) ; got(Attempt, Peer, YesNo) ; closed(Attempt) ; wounded(Attempt) ; yielded(Attempt) ; requested(Rho, Integer) ; ended(Rho, Integer) ; ended(Attempt) ; introduced(Peer, Peer).
 Recs ::= [] ; [Rec | Recs].
 App ::= app(GAtoms, Integer, Lock, Recs).
 Pend ::= deferred(Net).
@@ -75,12 +79,15 @@ WKey ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt) ; ip(Peer,
 Wait ::= w(WKey, Integer).
 Waits ::= [] ; [Wait | Waits].
 WFound ::= at(Integer) ; unseen.
-St ::= st(Peer, App, Integer, Peers, Peers, Peers, Peers, Waits, Infos, Pends, Classes).
+Held ::= held(Peer, Rho, Integer).
+Helds ::= [] ; [Held | Helds].
+Rhos ::= [] ; [Rho | Rhos].
+St ::= st(Peer, App, Integer, Peers, Peers, Peers, Peers, Waits, Infos, Pends, Rhos, Helds).
 OpenApproval ::= oc(Attempt, Close?).
 OpenApprovals ::= [] ; [OpenApproval | OpenApprovals].
 Send ::= to(Peer, Cargo).
 Sends ::= [] ; [Send | Sends].
-Subj ::= sub(Info) ; pair ; prop(Info, Class).
+Subj ::= sub(Info) ; pair ; prop(Info, Class, Names).
 Cand ::= cand(WKey, Subj).
 Cands ::= [] ; [Cand | Cands].
 Choice ::= take(WKey, Subj) ; none.
@@ -88,20 +95,22 @@ Pair ::= pr(Peer, Peer).
 Pairs ::= [] ; [Pair | Pairs].
 PKey ::= key(WKey) ; nokey.
 Cond ::= go(Info) ; drop.
-PCond ::= pgo(Info, Class) ; pdrop.
-Named ::= named(Class) ; unnamed.
+PCond ::= pgo(Info, Class, Names) ; pdrop.
+RCond ::= rgo(Rho, Peer) ; rdrop.
+RCand ::= rc(Rho, Peer).
+RCands ::= [] ; [RCand | RCands].
+PName ::= pname(Proposal) ; nopname.
+PartRes ::= part(Part) ; nopart.
+Mine ::= mine(Rho, Integer) ; notmine.
+Outputs ::= [] ; [Output | Outputs].
 Classes ::= [] ; [Class | Classes].
-Aged ::= aged(Integer, YesNo, Class).
-Ageds ::= [] ; [Aged | Ageds].
-Pick ::= picked(Aged) ; nopick.
-MCond ::= mgo(Info) ; mdefer ; noparticipant.
+MCond ::= mgo(Info) ; mdefer ; mhold ; noparticipant.
 Blocker ::= blk(Attempt) ; noblk.
 FoundNet ::= found(Net) ; nonefound.
 Last ::= last(Attempt) ; nolast.
 Known ::= allknown ; unknown(Peer).
 Then ::= write_own ; own_unread ; no_own.
 ApprovalRes ::= approval_for(Attempt) ; noapproval.
-NoticeOf ::= refused_by(Peer) ; yielded_by.
 
 Question ::= menu_w(Menu) ; approval_w(Approval).
 
@@ -170,8 +179,23 @@ name_class(sign(V1, V2), _, sign(V1?, V2?)).
 name_class(message(V1, V2, V3), _, message(V1?, V2?, V3?)).
 name_class(forward(V1, V2, V3), _, forward(V1?, V2?, V3?)).
 
+procedure request_name(Class?, PName).
+request_name(establish(V1), pname(establish(V1?))).
+request_name(befriend(V1, V2), pname(befriend(V1?, V2?))).
+request_name(unfriend_p(V1, V2), pname(unfriend_p(V1?, V2?))).
+request_name(unfriend_q(V1, V2), pname(unfriend_q(V1?, V2?))).
+request_name(enter(V1, V2, V3), pname(enter(V1?, V2?, V3?))).
+request_name(agent_befriend(V1, V2, V3, V4), pname(agent_befriend(V1?, V2?, V3?, V4?))).
+request_name(agents_befriend(V1, V2, V3, V4, V5, V6), pname(agents_befriend(V1?, V2?, V3?, V4?, V5?, V6?))).
+request_name(agent_unfriend(V1, V2, V3), pname(agent_unfriend(V1?, V2?, V3?))).
+request_name(retire(V1, V2), pname(retire(V1?, V2?))).
+request_name(sign(V1, V2), pname(sign(V1?, V2?))).
+request_name(message(V1, V2, V3), pname(message(V1?, V2?, V3?))).
+request_name(forward(V1, V2, V3), pname(forward(V1?, V2?, V3?))).
+request_name(_, nopname) :- otherwise | true.
+
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
-agent(Id, NetIn, Out?, [view([], []) | Thr?], D?) :- ground(Id?) | request(Id?, [], Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, M2), merge(M2?, [own | Ow?], In), agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], []), D2), merge(D1?, D2?, D).
+agent(Id, NetIn, Out?, [view([], []) | Thr?], D?) :- ground(Id?) | request(Id?, [], Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, M2), merge(M2?, [own | Ow?], In), agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], []), D2), merge(D1?, D2?, D).
 
 procedure request(Key?, List(Key)?, Stream(Trigger), Stream(Ask(Question))).
 request(S1, S2, S3?, [ask('Menu', menu_w(X?)) | D?]) :- request1(S1?, S2?, S3, X, D).
@@ -215,7 +239,7 @@ then_read(yes, own_unread).
 then_read(no, write_own).
 
 procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
-step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(N?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), st_ms(St?, S), name_class(N?, S?, C), propose_cond(C?, St?, Cd, St1), dispatch_propose(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St1?, D2), merge(D1?, D2?, D).
+step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(N?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), request_cond(N?, St?, Cd, St1), dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St1?, D2), merge(D1?, D2?, D).
 step(req(known(Q)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(Q?), ground(St?) | st_app(St?, Ap0), ask_next(St?, Ans, Ans1?, D1), known_cond(Q?, St?, Cd), dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans1, Thr, Out, Ow, Approvals?, St?, D2), merge(D1?, D2?, D).
 step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), hello_cond(P?, St?, Cd), dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 step(net(msg(_, ihello(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), ihello_cond(P?, St?, Cd), dispatch_ihello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
@@ -226,7 +250,10 @@ step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(St
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
-next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(Ap0?), ground(St?) | app_changed(Ap0?, St?, Ca1), app_changed(Ap0?, St?, Ca2), or(Ca2?, Kick?, Re), close_falsified(Ca1?, Approvals?, St?, Approvals1), repend(Re?, St?, Ag, St1), own_after(Th?, Ow, Ow1?, U), app(Ag?, Ls?, L1), show_state(Ap0?, St?, Thr, Thr1?), agent_goal(L1?, In?, U?, Ans, Thr1, Out, Ow1, Approvals1?, St1?, D).
+next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next_n(Th?, Kick?, Ap0?, [], Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+
+procedure next_n(Then?, YesNo?, App?, Outputs?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+next_n(Th, Kick, Ap0, Ns, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(Ap0?), ground(St?) | app_changed(Ap0?, St?, Ca1), app_changed(Ap0?, St?, Ca2), or(Ca2?, Kick?, Re), close_falsified(Ca1?, Approvals?, St?, Approvals1), repend(Re?, St?, Ag, St1), own_after(Th?, Ow, Ow1?, U), app(Ag?, Ls?, L1), show_state(Ap0?, St?, Thr, Thr1?), put_notices(Ns?, Thr1, Thr2?), agent_goal(L1?, In?, U?, Ans, Thr2, Out, Ow1, Approvals1?, St1?, D).
 
 procedure show_state(App?, St?, Stream(Output), Stream(Output)?).
 show_state(Ap0, St, Thr?, Thr1) :- ground(Ap0?), ground(St?) | app_ms(Ap0?, S0), st_ms(St?, S1), ms_eq(S0?, S1?, Sm), neg(Sm?, Ch), show_view(Ch?, St?, Thr, Thr1?).
@@ -245,7 +272,7 @@ procedure app_ms(App?, GAtoms).
 app_ms(app(S, _, _, _), S?).
 
 procedure st_ms(St?, GAtoms).
-st_ms(st(_, app(S, _, _, _), _, _, _, _, _, _, _, _, _), S?).
+st_ms(st(_, app(S, _, _, _), _, _, _, _, _, _, _, _, _, _), S?).
 
 procedure atoms_of(GAtoms?, List(Atom)).
 atoms_of([], []).
@@ -255,19 +282,13 @@ procedure shown_cons(Shown?, List(Atom)?, List(Atom)).
 shown_cons(shown(A), As, [A? | As?]).
 shown_cons(unshown, As, As?).
 
-procedure noticed(NoticeOf?, Attempt?, App?, St?, Stream(Output), Stream(Output)?, St).
-noticed(K, At, Ap0, St, Thr?, Thr1, St?) :- ground(K?), ground(At?), ground(Ap0?), ground(St?) | closed_proposed(At?, Ap0?, St?, B), attempt_class(At?, C), notice_of(K?, C?, N), put_notice(B?, N?, Thr, Thr1?).
+procedure put_notices(Outputs?, Stream(Output), Stream(Output)?).
+put_notices([], Thr1?, Thr1).
+put_notices([N | Ns], [N? | Thr?], Thr1) :- put_notices(Ns?, Thr, Thr1?).
 
-procedure notice_of(NoticeOf?, Class?, Output).
-notice_of(refused_by(Q), C, refused(C?, Q?)).
-notice_of(yielded_by, C, yielded(C?)).
-
-procedure put_notice(YesNo?, Output?, Stream(Output), Stream(Output)?).
-put_notice(yes, N, [N? | Thr1?], Thr1).
-put_notice(no, _, Thr1?, Thr1).
-
-procedure closed_proposed(Attempt?, App?, St?, YesNo).
-closed_proposed(At, Ap0, St, B?) :- ground(At?), ground(Ap0?), ground(St?) | app_recs(Ap0?, R0), mem(closed(At?), R0?, Cl0), neg(Cl0?, Open0), st_app(St?, Ap1), app_recs(Ap1?, R1), mem(closed(At?), R1?, Cl1), st_id(St?, Id), attempt_id(At?, P), same(P?, Id?, Own), attempt_class(At?, C), binding_of(C?, Nm, Bn), marked_people(Nm?, Bn?, G), some_peer(G?, Gd), and(Open0?, Cl1?, B1), and(B1?, Own?, B2), and(B2?, Gd?, B).
+procedure ended_notice(YesNo?, Class?, Peer?, Reason?, Outputs).
+ended_notice(yes, C, Q, D, [refused(C?, Q?, D?)]).
+ended_notice(no, _, _, _, []).
 
 procedure some_peer(Peers?, YesNo).
 some_peer([], no).
@@ -289,63 +310,157 @@ procedure pend_triggers(Pends?, Stream(Trigger)).
 pend_triggers([], []).
 pend_triggers([_ | _], [recheck]).
 
-procedure propose_cond(Class?, St?, PCond, St).
-propose_cond(C, St, Cd?, St2?) :- ground(C?), ground(St?) | st_class(C?, St?, R, St1), propose_cond1(R?, C?, St1?, Cd, St2).
+procedure request_cond(Proposal?, St?, RCond, St).
+request_cond(N, St, Cd?, St2?) :- ground(N?), ground(St?) | st_ms(St?, S), name_class(N?, S?, C), request_cond0(C?, N?, St?, Cd, St2).
 
-procedure propose_cond1(ClassRes?, Class?, St?, PCond, St).
-propose_cond1(nocls, _, St, pdrop, St?).
-propose_cond1(cls(I), C, St, Cd?, St?) :- ground(I?), ground(C?), ground(St?) | st_id(St?, Id), info_parts(I?, Pts), guarding_parts(Pts?, Id?, Ps), initiate_cond(Ps?, I?, named(C?), St?, Cd).
+procedure request_cond0(Class?, Proposal?, St?, RCond, St).
+request_cond0(C, N, St, Cd?, St2?) :- ground(C?), ground(N?), ground(St?) | st_class(C?, St?, R, St1), request_cond1(R?, N?, C?, St1?, Cd, St2).
 
-procedure initiate_cond(Classes?, Info?, Named?, St?, PCond).
-initiate_cond([], _, _, _, pdrop).
-initiate_cond([P | Ps], I, N, St, Cd?) :- ground(I?), ground(N?), ground(St?) | free_i(I?, St?, Fr), no_prior_start(St?, Np), others_known(I?, St?, K), known_ok(K?, Kn), and(Fr?, Np?, B1), and(B1?, Kn?, B), initiate_part(B?, [P? | Ps?], I?, N?, St?, Cd).
+procedure request_cond1(ClassRes?, Proposal?, Class?, St?, RCond, St).
+request_cond1(nocls, _, _, St, rdrop, St?).
+request_cond1(cls(I), N, C, St, Cd?, St?) :- ground(I?), ground(N?), ground(C?), ground(St?) | term_part_of(I?, C?, Pr), request_cands(Pr?, I?, N?, C?, St?, Cs), st_made(St?, Md), pick_request(Cs?, Md?, Cd).
 
-procedure initiate_part(YesNo?, Classes?, Info?, Named?, St?, PCond).
-initiate_part(no, _, _, _, _, pdrop).
-initiate_part(yes, Ps, I, N, St, Cd?) :- ground(I?), ground(N?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), app_state(Ap?, S), st_props(St?, Pr), ready_parts(Ps?, Id?, S?, Rs), aged_parts(Rs?, I?, N?, Pr?, As), pick_part(As?, nopick, F), part_cond(F?, I?, N?, Cd).
+procedure request_cands(PartRes?, Info?, Proposal?, Class?, St?, RCands).
+request_cands(nopart, _, _, _, _, []).
+request_cands(part(pt(_, G, guarded_part)), I, _, _, St, Cs?) :- ground(G?), ground(I?), ground(St?) | st_id(St?, Id), some_peer(G?, Gd), free_i(I?, St?, Fr), ready_guarded(I?, St?, Rd), info_class(I?, C0), self_request(C0?, St?, NPd), and(Gd?, Fr?, B1), and(B1?, Rd?, B2), and(B2?, NPd?, B), self_cand(B?, I?, Id?, Cs).
+request_cands(part(pt(_, G, opener(O))), _, N, C, St, Cs?) :- ground(G?), ground(N?), ground(C?), ground(St?) | st_id(St?, Id), mem(Id?, G?, Gd), same(O?, Id?, Me), neg(Me?, NMe), free_rho(N?, St?, Fr), st_ms(St?, S), part_dom(C?, Id?, S?, Rd), st_app(St?, Ap), app_recs(Ap?, Rc), pending_request(rho(N?), Rc?, Pd), neg(Pd?, NPd), known_st(O?, St?, Kn), and(Gd?, NMe?, B1), and(B1?, Fr?, B2), and(B2?, Rd?, B3), and(B3?, NPd?, B4), and(B4?, Kn?, B), rho_cand(B?, N?, O?, Cs).
 
-procedure part_cond(Pick?, Info?, Named?, PCond).
-part_cond(nopick, _, _, pdrop).
-part_cond(picked(aged(_, yes, _)), I, named(C), pgo(I?, C?)).
-part_cond(picked(aged(_, yes, P)), I, unnamed, pgo(I?, P?)).
-part_cond(picked(aged(_, no, P)), I, _, pgo(I?, P?)).
+procedure rho_cand(YesNo?, Proposal?, Peer?, RCands).
+rho_cand(yes, N, O, [rc(rho(N?), O?)]).
+rho_cand(no, _, _, []).
 
-procedure aged_parts(Classes?, Info?, Named?, Classes?, Ageds).
-aged_parts([], _, _, _, []).
-aged_parts([P | Ps], I, N, Pr, [aged(A?, Nd?, P?) | As?]) :- ground(P?), ground(I?), ground(N?), ground(Pr?) | part_age(Pr?, I?, P?, 1, A), named_part(N?, I?, P?, Nd), aged_parts(Ps?, I?, N?, Pr?, As).
+procedure self_request(Class?, St?, YesNo).
+self_request(C0, St, NPd?) :- ground(C0?), ground(St?) | st_app(St?, Ap), app_recs(Ap?, Rc), pending_request(one(C0?), Rc?, Pd), neg(Pd?, NPd).
 
-procedure part_age(Classes?, Info?, Class?, Integer?, Integer).
-part_age([], _, _, _, 0).
-part_age([E | Es], I, P, K, A?) :- ground(E?), ground(I?), ground(P?), integer(K?) | term_part(E?, I?, P?, Sm), part_age1(Sm?, Es?, I?, P?, K?, A).
+procedure self_cand(YesNo?, Info?, Peer?, RCands).
+self_cand(yes, I, Id, [rc(one(C0?), Id?)]) :- info_class(I?, C0).
+self_cand(no, _, _, []).
 
-procedure part_age1(YesNo?, Classes?, Info?, Class?, Integer?, Integer).
-part_age1(yes, _, _, _, K, K?).
-part_age1(no, Es, I, P, K, A?) :- K1 := (K? + 1), part_age(Es?, I?, P?, K1?, A).
+procedure info_class(Info?, Class).
+info_class(ci(C, _, _, _, _), C?).
 
-procedure named_part(Named?, Info?, Class?, YesNo).
-named_part(unnamed, _, _, no).
-named_part(named(C), I, P, B?) :- same_part(I?, C?, P?, B).
+procedure ready_guarded(Info?, St?, YesNo).
+ready_guarded(I, St, B?) :- ground(I?), ground(St?) | st_id(St?, Id), st_ms(St?, S), info_parts(I?, Pts), guarding_parts(Pts?, Id?, Ps), ready_parts(Ps?, Id?, S?, Rs), some_class(Rs?, B).
 
-procedure pick_part(Ageds?, Pick?, Pick).
-pick_part([], F, F?).
-pick_part([X | Xs], nopick, F?) :- pick_part(Xs?, picked(X?), F).
-pick_part([X | Xs], picked(Y), F?) :- ground(X?), ground(Y?) | before(X?, Y?, B), pick_part1(B?, X?, Y?, Xs?, F).
+procedure some_class(Classes?, YesNo).
+some_class([], no).
+some_class([_ | _], yes).
 
-procedure pick_part1(YesNo?, Aged?, Aged?, Ageds?, Pick).
-pick_part1(yes, X, _, Xs, F?) :- pick_part(Xs?, picked(X?), F).
-pick_part1(no, _, Y, Xs, F?) :- pick_part(Xs?, picked(Y?), F).
+procedure pending_request(Rho?, Recs?, YesNo).
+pending_request(R, Rc, B?) :- ground(Rc?) | pending_request1(Rc?, R?, Rc?, B).
 
-procedure before(Aged?, Aged?, YesNo).
-before(aged(A1, _, _), aged(A2, _, _), yes) :- (A1? < A2?) | true.
-before(aged(A1, _, _), aged(A2, _, _), no) :- (A1? > A2?) | true.
-before(aged(A1, N1, _), aged(A2, N2, _), B?) :- (A1? =:= A2?) | named_first(N1?, N2?, B).
+procedure pending_request1(Recs?, Rho?, Recs?, YesNo).
+pending_request1([], _, _, no).
+pending_request1([requested(R1, K) | Rs], R, Rc, B?) :- ground(R1?), ground(R?), ground(Rc?), integer(K?) | same(R1?, R?, Sm), mem(ended(R1?, K?), Rc?, En), neg(En?, NEn), and(Sm?, NEn?, P), pending_request2(P?, Rs?, R?, Rc?, B).
+pending_request1([_ | Rs], R, Rc, B?) :- otherwise | pending_request1(Rs?, R?, Rc?, B).
 
-procedure named_first(YesNo?, YesNo?, YesNo).
-named_first(yes, no, yes).
-named_first(_, _, no) :- otherwise | true.
+procedure pending_request2(YesNo?, Recs?, Rho?, Recs?, YesNo).
+pending_request2(yes, _, _, _, yes).
+pending_request2(no, Rs, R, Rc, B?) :- pending_request1(Rs?, R?, Rc?, B).
+
+procedure free_rho(Proposal?, St?, YesNo).
+free_rho(N, St, B?) :- ground(N?), ground(St?) | st_app(St?, Ap), app_lock_recs(Ap?, L, R), free_rho1(L?, R?, N?, St?, B).
+
+procedure free_rho1(Lock?, Recs?, Proposal?, St?, YesNo).
+free_rho1(L, R, N, St, B?) :- ground(R?) | unlocked(L?, U), no_rho_question(R?, N?, St?, R?, Q), and(U?, Q?, B).
+
+procedure no_rho_question(Recs?, Proposal?, St?, Recs?, YesNo).
+no_rho_question([], _, _, _, yes).
+no_rho_question([asked(At) | Rs], N, St, R, B?) :- ground(At?), ground(N?), ground(St?), ground(R?) | pending_rec(At?, R?, P), attempt_class(At?, C), st_class(C?, St?, Cr, _), st_id(St?, Id), cls_in_rho(Cr?, N?, Id?, In), and(P?, In?, Q), no_rho_question1(Q?, Rs?, N?, St?, R?, B).
+no_rho_question([_ | Rs], N, St, R, B?) :- otherwise | no_rho_question(Rs?, N?, St?, R?, B).
+
+procedure no_rho_question1(YesNo?, Recs?, Proposal?, St?, Recs?, YesNo).
+no_rho_question1(yes, _, _, _, _, no).
+no_rho_question1(no, Rs, N, St, R, B?) :- no_rho_question(Rs?, N?, St?, R?, B).
+
+procedure cls_in_rho(ClassRes?, Proposal?, Peer?, YesNo).
+cls_in_rho(nocls, _, _, no).
+cls_in_rho(cls(I), N, Id, B?) :- in_rho(I?, N?, Id?, B).
+
+procedure in_rho(Info?, Proposal?, Peer?, YesNo).
+in_rho(ci(_, _, Q, Pts, Ms), N, Id, B?) :- ground(Q?), ground(Ms?), ground(N?) | opener_parts(Pts?, Q?, Ms?, N?, Id?, B).
+
+procedure opener_parts(Parts?, Peers?, Mates?, Proposal?, Peer?, YesNo).
+opener_parts([], _, _, _, _, no).
+opener_parts([pt(T, G, opener(_)) | Ps], Q, Ms, N, Id, B?) :- ground(T?), ground(G?), ground(Q?), ground(Ms?), ground(N?) | part_named(Ms?, T?, G?, Q?, N?, Id?, B1), opener_parts1(B1?, Ps?, Q?, Ms?, N?, Id?, B).
+opener_parts([pt(_, _, guarded_part) | Ps], Q, Ms, N, Id, B?) :- opener_parts(Ps?, Q?, Ms?, N?, Id?, B).
+
+procedure opener_parts1(YesNo?, Parts?, Peers?, Mates?, Proposal?, Peer?, YesNo).
+opener_parts1(yes, _, _, _, _, _, yes).
+opener_parts1(no, Ps, Q, Ms, N, Id, B?) :- opener_parts(Ps?, Q?, Ms?, N?, Id?, B).
+
+procedure part_named(Mates?, Class?, Peers?, Peers?, Proposal?, Peer?, YesNo).
+part_named([], _, _, _, _, _, no).
+part_named([mate(Nm, Bn, G1, _) | Ms], T, G, Q, N, Id, B?) :- ground(Nm?), ground(Bn?), ground(G1?), ground(T?), ground(G?), ground(Q?), ground(N?) | binding_of(T?, Nm2, Bn2), same_bpart(Q?, Nm?, Bn?, G1?, Nm2?, Bn2?, G?, Sp), class_of(Nm?, Bn?, Id?, C), request_name(C?, Pn), pname_is(Pn?, N?, Nn), and(Sp?, Nn?, B1), part_named1(B1?, Ms?, T?, G?, Q?, N?, Id?, B).
+
+procedure part_named1(YesNo?, Mates?, Class?, Peers?, Peers?, Proposal?, Peer?, YesNo).
+part_named1(yes, _, _, _, _, _, _, yes).
+part_named1(no, Ms, T, G, Q, N, Id, B?) :- part_named(Ms?, T?, G?, Q?, N?, Id?, B).
+
+procedure pname_is(PName?, Proposal?, YesNo).
+pname_is(pname(M), N, B?) :- same(M?, N?, B).
+pname_is(nopname, _, no).
+
+procedure term_part_of(Info?, Class?, PartRes).
+term_part_of(I, C, Pr?) :- ground(I?), ground(C?) | info_parts(I?, Pts), term_part_of1(Pts?, I?, C?, Pr).
+
+procedure term_part_of1(Parts?, Info?, Class?, PartRes).
+term_part_of1([], _, _, nopart).
+term_part_of1([pt(T, G, Op) | Ps], I, C, Pr?) :- ground(T?), ground(G?), ground(Op?), ground(I?), ground(C?) | same_part(I?, C?, T?, B), term_part_of2(B?, pt(T?, G?, Op?), Ps?, I?, C?, Pr).
+
+procedure term_part_of2(YesNo?, Part?, Parts?, Info?, Class?, PartRes).
+term_part_of2(yes, P, _, _, _, part(P?)).
+term_part_of2(no, _, Ps, I, C, Pr?) :- term_part_of1(Ps?, I?, C?, Pr).
+
+procedure pick_request(RCands?, Rhos?, RCond).
+pick_request([], _, rdrop).
+pick_request([X | Xs], Md, Cd?) :- ground(Md?) | least_rcand(Xs?, Md?, X?, Y), rcand_go(Y?, Cd).
+
+procedure least_rcand(RCands?, Rhos?, RCand?, RCand).
+least_rcand([], _, Y, Y?).
+least_rcand([X | Xs], Md, Y, Z?) :- ground(X?), ground(Y?), ground(Md?) | rcand_place(X?, Md?, AX), rcand_place(Y?, Md?, AY), less_int(AX?, AY?, L), least_rcand1(L?, X?, Y?, Xs?, Md?, Z).
+
+procedure least_rcand1(YesNo?, RCand?, RCand?, RCands?, Rhos?, RCand).
+least_rcand1(yes, X, _, Xs, Md, Z?) :- least_rcand(Xs?, Md?, X?, Z).
+least_rcand1(no, _, Y, Xs, Md, Z?) :- least_rcand(Xs?, Md?, Y?, Z).
+
+procedure rcand_place(RCand?, Rhos?, Integer).
+rcand_place(rc(R, _), Md, A?) :- rho_place(Md?, R?, 1, A).
+
+procedure rho_place(Rhos?, Rho?, Integer?, Integer).
+rho_place([], _, _, 0).
+rho_place([X | Xs], R, K, A?) :- ground(X?), ground(R?), integer(K?) | same(X?, R?, Sm), rho_place1(Sm?, Xs?, R?, K?, A).
+
+procedure rho_place1(YesNo?, Rhos?, Rho?, Integer?, Integer).
+rho_place1(yes, _, _, K, K?).
+rho_place1(no, Xs, R, K, A?) :- K1 := (K? + 1), rho_place(Xs?, R?, K1?, A).
+
+procedure less_int(Integer?, Integer?, YesNo).
+less_int(A, B, yes) :- (A? < B?) | true.
+less_int(A, B, no) :- (A? >= B?) | true.
+
+procedure rcand_go(RCand?, RCond).
+rcand_go(rc(R, O), rgo(R?, O?)).
+
+procedure dispatch_request(RCond?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
+dispatch_request(rgo(R, O), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(R?), ground(St?) | request_effect(R?, O?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
+dispatch_request(rdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+
+procedure request_effect(Rho?, Peer?, St?, Sends, St).
+request_effect(R, O, St, Ss?, St2?) :- ground(R?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), request_app(R?, Ap?, K, Ap1), request_sends(O?, Id?, R?, K?, Ss), set_app(St?, Ap1?, St1), note_made(R?, St1?, St2).
+
+procedure request_app(Rho?, App?, Integer, App).
+request_app(R, app(S, K, L, Rc), K1?, app(S?, K2?, L?, [requested(R?, K3?) | Rc?])) :- integer(K?) | K1 := (K? + 1), K2 := (K? + 1), K3 := (K? + 1).
+
+procedure request_sends(Peer?, Peer?, Rho?, Integer?, Sends).
+request_sends(O, Id, _, _, []) :- (O? =?= Id?) | true.
+request_sends(O, _, R, K, [to(O?, request(R?, K?))]) :- otherwise | true.
+
+procedure note_made(Rho?, St?, St).
+note_made(R, St, St1?) :- ground(R?), ground(St?) | st_made(St?, Md), remove_all(R?, Md?, Md1), app(Md1?, [R?], Md2), set_made(St?, Md2?, St1).
 
 procedure dispatch_propose(PCond?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
-dispatch_propose(pgo(I, P), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(I?), ground(P?), ground(St?) | propose_effect(I?, P?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
+dispatch_propose(pgo(I, P, Nm), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(I?), ground(P?), ground(Nm?), ground(St?) | propose_effect(I?, P?, Nm?, St?, Ss, Ns, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next_n(Th?, no, Ap0?, Ns?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
 dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure known_cond(Peer?, St?, YesNo).
@@ -377,10 +492,15 @@ dispatch_ihello(yes, P, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D
 dispatch_ihello(no, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
 procedure message_cond(Cargo?, St?, MCond, St).
-message_cond(X, St, Cd?, St1?) :- ground(X?), ground(St?) | cargo_class(X?, C), st_class(C?, St?, R, St0), message_cond1(R?, X?, St0?, Cd, St1).
+message_cond(request(_, _), St, mhold, St?).
+message_cond(start(At), St, Cd?, St1?) :- ground(At?), ground(St?) | attempt_class(At?, C), st_class(C?, St?, R, St0), message_cond1(R?, start(At?), St0?, Cd, St1).
+message_cond(vote(At, V), St, Cd?, St1?) :- ground(At?), ground(St?) | attempt_class(At?, C), st_class(C?, St?, R, St0), message_cond1(R?, vote(At?, V?), St0?, Cd, St1).
+message_cond(yield(At), St, Cd?, St1?) :- ground(At?), ground(St?) | attempt_class(At?, C), st_class(C?, St?, R, St0), message_cond1(R?, yield(At?), St0?, Cd, St1).
+message_cond(outcome(At, Z), St, Cd?, St1?) :- ground(At?), ground(St?) | attempt_class(At?, C), st_class(C?, St?, R, St0), message_cond1(R?, outcome(At?, Z?), St0?, Cd, St1).
 
 procedure message_cond1(ClassRes?, Cargo?, St?, MCond, St).
 message_cond1(nocls, _, St, noparticipant, St?).
+message_cond1(_, request(_, _), St, mhold, St?).
 message_cond1(cls(I), start(At), St, Cd?, St?) :- ground(I?), ground(At?), ground(St?) | st_app(St?, Ap), app_recs(Ap?, R), mem(closed(At?), R?, Cl), start_cond(Cl?, I?, At?, St?, Cd).
 message_cond1(cls(I), vote(_, _), St, mgo(I?), St?).
 message_cond1(cls(I), yield(_), St, mgo(I?), St?).
@@ -463,12 +583,6 @@ prio1(RA, RB, _, _, yes) :- (RA? < RB?) | true.
 prio1(RA, RB, _, _, no) :- (RA? > RB?) | true.
 prio1(RA, RB, IA, IB, P?) :- (RA? =:= RB?) | precedes(IA?, IB?, P).
 
-procedure cargo_class(Cargo?, Class).
-cargo_class(start(attempt(_, _, _, C)), C?).
-cargo_class(vote(attempt(_, _, _, C), _), C?).
-cargo_class(yield(attempt(_, _, _, C)), C?).
-cargo_class(outcome(attempt(_, _, _, C), _), C?).
-
 procedure recheck_find(Pends?, St?, FoundNet).
 recheck_find([], _, nonefound).
 recheck_find([deferred(M) | Ps], St, F?) :- ground(M?), ground(St?) | held_takeable(M?, St?, T), recheck_find1(T?, M?, Ps?, St?, F).
@@ -493,10 +607,21 @@ recheck1(nonefound, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- gro
 procedure dispatch_message(MCond?, Net?, Peer?, Cargo?, Then?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
 dispatch_message(noparticipant, _, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- add_pend_once(deferred(M?), St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
-dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?) | drop_pend(deferred(M?), St?, St0), start_effect(I?, At?, St0?, Ss, Cr, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?, D1), next(Th?, yes, Ap0?, Ls?, In?, Ans1, Thr, Out1, Ow, Approvals1?, St2?, D2), merge(D1?, D2?, D).
-dispatch_message(mgo(I), _, F, vote(At, Y), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(F?), ground(Ap0?) | tally_effect(I?, At?, F?, Y?, St?, Ss, St1), noticed(refused_by(F?), At?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?, D).
-dispatch_message(mgo(I), _, _, yield(At), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(Ap0?) | yield_effect(I?, At?, St?, Ss, St1), noticed(yielded_by, At?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?, D).
-dispatch_message(mgo(I), _, _, outcome(At, Z), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?) | outcome_effect(I?, At?, Z?, St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
+dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?) | drop_pend(deferred(M?), St?, St0), start_effect(I?, At?, St0?, Ss, Cr, Ns, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?, D1), next_n(Th?, yes, Ap0?, Ns?, Ls?, In?, Ans1, Thr, Out1, Ow, Approvals1?, St2?, D2), merge(D1?, D2?, D).
+dispatch_message(mgo(I), _, F, vote(At, V), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?) | tally_effect(I?, At?, F?, V?, St?, Ss, Ns, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next_n(Th?, no, Ap0?, Ns?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
+dispatch_message(mgo(I), _, _, yield(At), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?) | yield_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
+dispatch_message(mgo(I), _, _, outcome(At, Z), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?) | outcome_effect(I?, At?, Z?, St?, Ns, St1), next_n(Th?, no, Ap0?, Ns?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
+dispatch_message(mhold, _, F, request(R, K), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- hold_request(F?, R?, K?, St?, St1), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
+
+procedure hold_request(Peer?, Rho?, Integer?, St?, St).
+hold_request(F, R, K, St, St1?) :- ground(R?), ground(St?) | st_held(St?, Hd), hold_once(held(F?, R?, K?), Hd?, Hd1), set_held(St?, Hd1?, St1).
+
+procedure hold_once(Held?, Helds?, Helds).
+hold_once(X, Hd, Hd1?) :- ground(X?), ground(Hd?) | mem(X?, Hd?, In), hold_once1(In?, X?, Hd?, Hd1).
+
+procedure hold_once1(YesNo?, Held?, Helds?, Helds).
+hold_once1(yes, _, Hd, Hd?).
+hold_once1(no, X, Hd, Hd1?) :- app(Hd?, [X?], Hd1).
 
 procedure spawn(ApprovalRes?, OpenApprovals?, OpenApprovals, Stream(Trigger), Stream(Trigger)?, Stream(Ask(Question))).
 spawn(noapproval, Cs, Cs?, Ans?, Ans, []).
@@ -540,7 +665,10 @@ procedure own_cond(St?, Choice, St).
 own_cond(St, Ch?, St2?) :- ground(St?) | opening(St?, Is, St1), own_cond1(Is?, St1?, Ch, St2).
 
 procedure own_cond1(Infos?, St?, Choice, St).
-own_cond1(Is, St, Ch?, St5?) :- ground(Is?), ground(St?) | op_cands(Is?, St?, Cs1), st_app(St?, Ap), app_recs(Ap?, R), vote_cands0(R?, St?, Cs2, St2), commit_cands_st(St2?, Cs3, St3), wound_cands0(St3?, Cs4, St4), intro_cands(St?, Cs5), app(Cs1?, Cs2?, C12), app(C12?, Cs3?, C123), app(C123?, Cs4?, C1234), app(C1234?, Cs5?, Cs), own_cond2(Cs?, St4?, Ch, St5).
+own_cond1(Is, St, Ch?, St3?) :- ground(Is?), ground(St?) | op_cands(Is?, St?, Cs1), guard_cands(St?, Csg, St1), held_cands(St1?, Csh, St2), own_cond1a(St2?, Cs1?, Csg?, Csh?, Ch, St3).
+
+procedure own_cond1a(St?, Cands?, Cands?, Cands?, Choice, St).
+own_cond1a(St, Cs1, Csg, Csh, Ch?, St5?) :- ground(St?) | st_app(St?, Ap), app_recs(Ap?, R), vote_cands0(R?, St?, Cs2, St2), commit_cands_st(St2?, Cs3, St3), wound_cands0(St3?, Cs4, St4), intro_cands(St?, Cs5), app(Cs1?, Csg?, Ca), app(Ca?, Csh?, Cb), app(Cb?, Cs2?, C12), app(C12?, Cs3?, C123), app(C123?, Cs4?, C1234), app(C1234?, Cs5?, Cs), own_cond2(Cs?, St4?, Ch, St5).
 
 procedure own_cond2(Cands?, St?, Choice, St).
 own_cond2(Cs, St, Ch?, St2?) :- ground(St?) | st_waits(St?, W), st_app(St?, Ap), app_recs(Ap?, R), prune_waits(W?, R?, W0), st_count(St?, D), choose(Cs?, W0?, D?, Ch0, W1), set_waits(St?, W1?, St1), count_own(Ch0?, St1?, Ch, St2).
@@ -555,11 +683,68 @@ op_cands([I | Is], St, Cs?) :- ground(I?), ground(St?) | st_id(St?, Id), info_pa
 
 procedure part_cands(Classes?, Info?, St?, Cands).
 part_cands([], _, _, []).
-part_cands([P | Ps], I, St, Cs?) :- ground(I?), ground(St?) | initiate_cond([P?], I?, unnamed, St?, Cd), part_cands(Ps?, I?, St?, Cs1), keep_cand(Cd?, Cs1?, Cs).
+part_cands([P | Ps], I, St, Cs?) :- ground(P?), ground(I?), ground(St?) | may_propose(I?, St?, B1), st_id(St?, Id), st_ms(St?, S), part_dom(P?, Id?, S?, B2), and(B1?, B2?, B), part_cands(Ps?, I?, St?, Cs1), keep_pcand(B?, I?, P?, none, Cs1?, Cs).
 
-procedure keep_cand(PCond?, Cands?, Cands).
-keep_cand(pgo(I, P), Cs, [cand(op(P?), prop(I?, P?)) | Cs?]) :- ground(P?) | true.
-keep_cand(pdrop, Cs, Cs?).
+procedure keep_pcand(YesNo?, Info?, Class?, Names?, Cands?, Cands).
+keep_pcand(yes, I, P, Nm, Cs, [cand(op(P?), prop(I?, P?, Nm?)) | Cs?]) :- ground(P?) | true.
+keep_pcand(no, _, _, _, Cs, Cs?).
+
+procedure may_propose(Info?, St?, YesNo).
+may_propose(I, St, B?) :- ground(I?), ground(St?) | free_i(I?, St?, Fr), no_prior_start(St?, Np), others_known(I?, St?, K), known_ok(K?, Kn), and(Fr?, Np?, B1), and(B1?, Kn?, B).
+
+procedure guard_cands(St?, Cands, St).
+guard_cands(St, Cs?, St2?) :- ground(St?) | st_app(St?, Ap), app_recs(Ap?, R), approval_classes(R?, St?, Is, St1), guard_cands1(Is?, St1?, Cs, St2).
+
+procedure approval_classes(Recs?, St?, Infos, St).
+approval_classes(R, St, Is?, St1?) :- ground(R?) | approval_classes1(R?, R?, St?, [], Is, St1).
+
+procedure approval_classes1(Recs?, Recs?, St?, Infos?, Infos, St).
+approval_classes1([], _, St, Acc, Is?, St?) :- dedup(Acc?, Is).
+approval_classes1([requested(one(C), K) | Rs], R, St, Acc, Is?, St2?) :- ground(C?), ground(R?), ground(St?) | mem(ended(one(C?), K?), R?, Done), st_class(C?, St?, Cr, St1), open_class(Done?, Cr?, Acc?, Acc1), approval_classes1(Rs?, R?, St1?, Acc1?, Is, St2).
+approval_classes1([answered(At, yes) | Rs], R, St, Acc, Is?, St2?) :- ground(At?), ground(R?), ground(St?) | mem(ended(At?), R?, Done), attempt_class(At?, C), st_class(C?, St?, Cr, St1), open_class(Done?, Cr?, Acc?, Acc1), approval_classes1(Rs?, R?, St1?, Acc1?, Is, St2).
+approval_classes1([_ | Rs], R, St, Acc, Is?, St1?) :- otherwise | approval_classes1(Rs?, R?, St?, Acc?, Is, St1).
+
+procedure open_class(YesNo?, ClassRes?, Infos?, Infos).
+open_class(no, cls(I), Acc, [I? | Acc?]).
+open_class(no, nocls, Acc, Acc?).
+open_class(yes, _, Acc, Acc?).
+
+procedure guard_cands1(Infos?, St?, Cands, St).
+guard_cands1([], St, [], St?).
+guard_cands1([I | Is], St, Cs?, St1?) :- ground(I?), ground(St?) | st_id(St?, Id), st_ms(St?, S), info_parts(I?, Pts), guarding_parts(Pts?, Id?, Ps), may_propose(I?, St?, B), guard_parts_cands(B?, Ps?, I?, Id?, S?, Cs1), guard_cands1(Is?, St?, Cs2, St1), app(Cs1?, Cs2?, Cs).
+
+procedure guard_parts_cands(YesNo?, Classes?, Info?, Peer?, GAtoms?, Cands).
+guard_parts_cands(no, _, _, _, _, []).
+guard_parts_cands(yes, Ps, I, Id, S, Cs?) :- ground(Ps?), ground(I?), ground(S?) | ready_parts(Ps?, Id?, S?, Rs), guard_ready(Rs?, Ps?, I?, Cs).
+
+procedure guard_ready(Classes?, Classes?, Info?, Cands).
+guard_ready([], [], _, []).
+guard_ready([], [P | _], I, [cand(op(P?), prop(I?, P?, none))]) :- ground(P?) | true.
+guard_ready([R | Rs], _, I, Cs?) :- part_pcands([R? | Rs?], I?, Cs).
+
+procedure part_pcands(Classes?, Info?, Cands).
+part_pcands([], _, []).
+part_pcands([P | Ps], I, [cand(op(P?), prop(I?, P?, none)) | Cs?]) :- ground(P?), ground(I?) | part_pcands(Ps?, I?, Cs).
+
+procedure held_cands(St?, Cands, St).
+held_cands(St, Cs?, St1?) :- ground(St?) | st_held(St?, Hd), held_cands1(Hd?, St?, Cs, St1).
+
+procedure held_cands1(Helds?, St?, Cands, St).
+held_cands1([], St, [], St?).
+held_cands1([held(F, rho(N), K) | Hs], St, Cs?, St2?) :- ground(N?), ground(St?) | st_ms(St?, S), name_class(N?, S?, C), held_cand0(C?, F?, N?, K?, St?, Cs1, St1), held_cands1(Hs?, St1?, Cs2, St2), app(Cs1?, Cs2?, Cs).
+held_cands1([held(_, one(_), _) | Hs], St, Cs?, St1?) :- held_cands1(Hs?, St?, Cs, St1).
+
+procedure held_cand0(Class?, Peer?, Proposal?, Integer?, St?, Cands, St).
+held_cand0(C, F, N, K, St, Cs?, St1?) :- ground(C?), ground(N?), ground(St?) | st_class(C?, St?, Cr, St1), held_cand(Cr?, F?, C?, request(rho(N?), K?), St?, Cs).
+
+procedure held_cand(ClassRes?, Peer?, Class?, Names?, St?, Cands).
+held_cand(nocls, _, _, _, _, []).
+held_cand(cls(I), F, C, Nm, St, Cs?) :- ground(I?), ground(C?), ground(St?) | term_part_of(I?, C?, Pr), st_id(St?, Id), opens_for(Pr?, Id?, F?, Op), may_propose(I?, St?, B1), and(Op?, B1?, B), keep_pcand(B?, I?, C?, Nm?, [], Cs).
+
+procedure opens_for(PartRes?, Peer?, Peer?, YesNo).
+opens_for(part(pt(_, G, opener(O))), Id, F, B?) :- ground(G?) | same(O?, Id?, B1), mem(F?, G?, B2), and(B1?, B2?, B).
+opens_for(part(pt(_, _, guarded_part)), _, _, no).
+opens_for(nopart, _, _, no).
 
 procedure vote_cands0(Recs?, St?, Cands, St).
 vote_cands0(R, St, Cs?, St1?) :- ground(R?) | vote_cands(R?, R?, St?, [], Cs, St1).
@@ -672,10 +857,10 @@ dead_key(ip(Q, R1), R, D?) :- mem(introduced(Q?, R1?), R?, D).
 
 procedure dispatch_own(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, St?, Stream(Ask(Question))).
 dispatch_own(none, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
-dispatch_own(take(op(_), prop(I, P)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- dispatch_propose(pgo(I?, P?), write_own, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
-dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(I?) | vote_effect(I?, At?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
+dispatch_own(take(op(_), prop(I, P, Nm)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- dispatch_propose(pgo(I?, P?, Nm?), write_own, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
+dispatch_own(take(vt(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(I?) | vote_effect(I?, At?, St?, Ss, Ns, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next_n(write_own, no, Ap0?, Ns?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
 dispatch_own(take(cm(At), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(At?), ground(I?) | commit_effect(I?, At?, St?, Ss, Is, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), put_all(Is?, Out1, Out2?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out2, Ow, Approvals?, St2?, D).
-dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(B?), ground(I?), ground(Ap0?) | wound_effect(I?, B?, St?, Ss, St1), noticed(yielded_by, B?, Ap0?, St1?, Thr, Thr1?, St1n), send_all(Ss?, St1n?, Ms, St2), put_all(Ms?, Out, Out1?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, St2?, D).
+dispatch_own(take(wd(_, B), sub(I)), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- ground(B?), ground(I?) | wound_effect(I?, B?, St?, Ss, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, St2?, D).
 dispatch_own(take(ip(Q, R), pair), Ap0, Ls, In, Ans?, Thr?, [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?)) | Out?], Ow?, Approvals, St, D?) :- ground(Q?), ground(R?), ground(St?) | st_id(St?, Id), introduce_effect(Q?, R?, St?, St1), next(write_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St1?, D).
 dispatch_own(take(_, _), Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, St, D?) :- otherwise | next(no_own, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, St?, D).
 
@@ -762,8 +947,8 @@ set_wait(K, D, [], [w(K?, D?)]).
 set_wait(K, D, [w(K1, _) | Ws], [w(K1?, D?) | Ws?]) :- (K? =?= K1?) | true.
 set_wait(K, D, [X | Ws], [X? | Ws1?]) :- otherwise | set_wait(K?, D?, Ws?, Ws1).
 
-procedure propose_effect(Info?, Class?, St?, Sends, St).
-propose_effect(I, P, St, Ss?, St2?) :- ground(I?), ground(P?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), st_app(St?, Ap0), app_count(Ap0?, K), K1 := (K? + 1), st_app(St?, Ap2), app_recs(Ap2?, R), rank_of(I?, P?, Id?, R?, K1?, Pi), propose_app(I?, attempt(Id?, K1?, Pi?, P?), Ap?, Ss, Ap1), set_app(St?, Ap1?, St1), note_part(I?, P?, St1?, St2).
+procedure propose_effect(Info?, Class?, Names?, St?, Sends, Outputs, St).
+propose_effect(I, P, Nm, St, Ss?, Ns?, St1?) :- ground(I?), ground(P?), ground(Nm?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), app_count(Ap?, K), K1 := (K? + 1), st_app(St?, Ap2), app_recs(Ap2?, R), rank_of(I?, P?, Id?, R?, K1?, Pi), st_ms(St?, S), part_dom(P?, Id?, S?, Dm), propose_app(Dm?, I?, attempt(Id?, K1?, Pi?, P?, Nm?), St?, Ss, Ns, St1).
 
 procedure rank_of(Info?, Class?, Peer?, Recs?, Integer?, Integer).
 rank_of(I, P, Id, R, K1, Pi?) :- ground(R?), integer(K1?) | last_own(R?, I?, P?, Id?, nolast, L), rank_of1(L?, R?, K1?, Pi).
@@ -778,7 +963,7 @@ rank_of2(no, _, K1, K1?).
 
 procedure last_own(Recs?, Info?, Class?, Peer?, Last?, Last).
 last_own([], _, _, _, L, L?).
-last_own([voted(A, yes) | Rs], I, P, Id, L, L1?) :- ground(A?), ground(I?), ground(P?), ground(Id?) | attempt_id(A?, Q), same(Q?, Id?, Own), attempt_class(A?, C), term_part(C?, I?, P?, Pt), and(Own?, Pt?, B), later(B?, A?, L?, L0), last_own(Rs?, I?, P?, Id?, L0?, L1).
+last_own([voted(A, _) | Rs], I, P, Id, L, L1?) :- ground(A?), ground(I?), ground(P?), ground(Id?) | attempt_id(A?, Q), same(Q?, Id?, Own), attempt_class(A?, C), term_part(C?, I?, P?, Pt), and(Own?, Pt?, B), later(B?, A?, L?, L0), last_own(Rs?, I?, P?, Id?, L0?, L1).
 last_own([_ | Rs], I, P, Id, L, L1?) :- otherwise | last_own(Rs?, I?, P?, Id?, L?, L1).
 
 procedure later(YesNo?, Attempt?, Last?, Last).
@@ -790,23 +975,20 @@ procedure later1(Integer?, Integer?, Attempt?, Attempt?, Last).
 later1(KA, KB, A, _, last(A?)) :- (KA? > KB?) | true.
 later1(KA, KB, _, B, last(B?)) :- (KA? =< KB?) | true.
 
-procedure note_part(Info?, Class?, St?, St).
-note_part(I, P, St, St1?) :- ground(I?), ground(P?), ground(St?) | st_props(St?, Pr), drop_part(Pr?, I?, P?, Pr1), app(Pr1?, [P?], Pr2), set_props(St?, Pr2?, St1).
+procedure propose_app(YesNo?, Info?, Attempt?, St?, Sends, Outputs, St).
+propose_app(yes, I, At, St, Ss?, [], St1?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), info_q(I?, Q), only_me(Q?, Id?, One), st_app(St?, Ap), propose_go(One?, I?, At?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
+propose_app(no, I, At, St, Ss?, Ns?, St1?) :- ground(At?), ground(St?) | st_id(St?, Id), st_ms(St?, S), attempt_class(At?, P), unable_reason(P?, Id?, S?, D), refuse_at_once(I?, At?, D?, St?, Ss, Ns, St1).
 
-procedure drop_part(Classes?, Info?, Class?, Classes).
-drop_part([], _, _, []).
-drop_part([E | Es], I, P, R?) :- ground(E?), ground(I?), ground(P?) | term_part(E?, I?, P?, Sm), drop_part1(Sm?, E?, Es?, I?, P?, R).
+procedure propose_go(YesNo?, Info?, Attempt?, Peer?, App?, Sends, App).
+propose_go(yes, I, At, Id, app(S, _, L, R), [], app(S1?, K?, L?, R2?)) :- ground(I?), ground(At?), ground(R?) | attempt_k(At?, K), apply_info(I?, Id?, S?, S1), end_approvals(I?, Id?, [closed(At?), voted(At?, yes) | R?], R2, _).
+propose_go(no, I, At, Id, app(S, _, _, R), Ss?, app(S?, K?, held(At?), [voted(At?, yes) | R?])) :- ground(At?), ground(I?) | attempt_k(At?, K), info_q(I?, Q), tell(Q?, Id?, start(At?), Ss).
 
-procedure drop_part1(YesNo?, Class?, Classes?, Info?, Class?, Classes).
-drop_part1(yes, _, Es, I, P, R?) :- drop_part(Es?, I?, P?, R).
-drop_part1(no, E, Es, I, P, [E? | R?]) :- drop_part(Es?, I?, P?, R).
+procedure refuse_at_once(Info?, Attempt?, Reason?, St?, Sends, Outputs, St).
+refuse_at_once(I, At, D, St, Ss?, Ns?, St2?) :- ground(I?), ground(At?), ground(D?), ground(St?) | st_id(St?, Id), info_q(I?, Q), tell(Q?, Id?, outcome(At?, abort(Id?, D?)), Ss), st_app(St?, Ap), attempt_names(At?, Nm1), refuse_app(Nm1?, I?, At?, Id?, Ap?, En, Ap1), attempt_class(At?, P), ended_notice(En?, P?, Id?, D?, Ns), set_app(St?, Ap1?, St1), st_held(St?, Hd), attempt_names(At?, Nm2), drop_named(Nm2?, Hd?, Hd1), set_held(St1?, Hd1?, St2).
 
-procedure propose_app(Info?, Attempt?, App?, Sends, App).
-propose_app(I, At, Ap, Ss?, Ap1?) :- ground(I?), ground(At?) | attempt_id(At?, Id), info_q(I?, Q), only_me(Q?, Id?, One), propose_app1(One?, I?, At?, Ap?, Ss, Ap1).
-
-procedure propose_app1(YesNo?, Info?, Attempt?, App?, Sends, App).
-propose_app1(yes, I, At, app(S, _, L, R), [], app(S1?, K?, L?, [closed(At?), voted(At?, yes) | R?])) :- ground(At?) | attempt_id(At?, Id), attempt_k(At?, K), apply_info(I?, Id?, S?, S1).
-propose_app1(no, I, At, app(S, _, _, R), Ss?, app(S?, K?, held(At?), [voted(At?, yes) | R?])) :- ground(At?), ground(I?) | attempt_id(At?, Id), attempt_k(At?, K), info_q(I?, Q), tell(Q?, Id?, start(At?), Ss).
+procedure refuse_app(Names?, Info?, Attempt?, Peer?, App?, YesNo, App).
+refuse_app(request(_, _), _, At, _, app(S, _, _, R), no, app(S?, K1?, unlocked, [closed(At?), voted(At?, no) | R?])) :- ground(At?) | attempt_k(At?, K1).
+refuse_app(none, I, At, Id, app(S, _, _, R), En?, app(S?, K1?, unlocked, R1?)) :- ground(At?) | attempt_k(At?, K1), end_approvals(I?, Id?, [closed(At?), voted(At?, no) | R?], R1, En).
 
 procedure only_me(Peers?, Peer?, YesNo).
 only_me([P], Id, yes) :- (P? =?= Id?) | true.
@@ -820,28 +1002,57 @@ procedure tell1(YesNo?, Peer?, Cargo?, Sends?, Sends).
 tell1(yes, _, _, Ss, Ss?).
 tell1(no, Q, X, Ss, [to(Q?, X?) | Ss?]).
 
-procedure vote_app(Attempt?, YesNo?, App?, Sends, App).
-vote_app(At, yes, app(S, K, _, R), [to(I?, vote(At?, yes))], app(S?, K?, held(At?), [voted(At?, yes) | R?])) :- ground(At?) | attempt_id(At?, I).
-vote_app(At, no, app(S, K, L, R), [to(I?, vote(At?, no))], app(S?, K?, L?, [voted(At?, no) | R?])) :- ground(At?) | attempt_id(At?, I).
+procedure vote_yes_app(Attempt?, App?, Sends, App).
+vote_yes_app(At, app(S, K, _, R), [to(I?, vote(At?, yes))], app(S?, K?, held(At?), [voted(At?, yes) | R?])) :- ground(At?) | attempt_id(At?, I).
 
-procedure start_effect(Info?, Attempt?, St?, Sends, ApprovalRes, St).
-start_effect(I, At, St, Ss?, Cr?, St1?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), start_app(I?, At?, Id?, Ap?, Ss, Cr, Ap1), set_app(St?, Ap1?, St1).
+procedure vote_no(Info?, Attempt?, Peer?, Reason?, App?, Sends, Outputs, App).
+vote_no(I, At, Id, D, app(S, K, L, R), [to(P?, vote(At?, no(D?)))], Ns?, app(S?, K?, L?, R2?)) :- ground(At?), ground(D?), ground(R?) | attempt_id(At?, P), attempt_class(At?, C), guards_part(C?, Id?, Gd), guard_ends(Gd?, I?, Id?, [voted(At?, no) | R?], R2, En), attempt_class(At?, C2), ended_notice(En?, C2?, Id?, D?, Ns).
 
-procedure start_app(Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, App).
-start_app(I, At, Id, app(S, K, L, R), Ss?, Cr?, Ap1?) :- ground(At?), ground(R?), integer(K?) | attempt_k(At?, KA), max_int(K?, KA?, K1), mem(closed(At?), R?, Cl), start_app1(Cl?, I?, At?, Id?, app(S?, K1?, L?, R?), Ss, Cr, Ap1).
+procedure guard_ends(YesNo?, Info?, Peer?, Recs?, Recs, YesNo).
+guard_ends(no, _, _, R, R?, no).
+guard_ends(yes, I, Id, R, R1?, En?) :- end_approvals(I?, Id?, R?, R1, En).
+
+procedure guards_part(Class?, Peer?, YesNo).
+guards_part(C, Id, B?) :- ground(C?) | binding_of(C?, Nm, Bn), marked_people(Nm?, Bn?, G), mem(Id?, G?, B).
+
+procedure start_effect(Info?, Attempt?, St?, Sends, ApprovalRes, Outputs, St).
+start_effect(I, At, St, Ss?, Cr?, Ns?, St1?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), start_app(I?, At?, Id?, Ap?, Ss, Cr, Ns, Ap1), set_app(St?, Ap1?, St1).
+
+procedure start_app(Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_app(I, At, Id, app(S, K, L, R), Ss?, Cr?, Ns?, Ap1?) :- ground(At?), ground(R?), integer(K?) | attempt_k(At?, KA), max_int(K?, KA?, K1), mem(closed(At?), R?, Cl), start_app1(Cl?, I?, At?, Id?, app(S?, K1?, L?, R?), Ss, Cr, Ns, Ap1).
 
 procedure max_int(Integer?, Integer?, Integer).
 max_int(A, B, A?) :- (A? >= B?) | true.
 max_int(A, B, B?) :- (A? < B?) | true.
 
-procedure start_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, App).
-start_app1(yes, _, _, _, Ap, [], noapproval, Ap?).
-start_app1(no, _, At, Id, Ap, Ss?, Cr?, Ap1?) :- ground(At?), ground(Id?), ground(Ap?) | app_state(Ap?, S), attempt_class(At?, C), part_dom(C?, Id?, S?, Rd), asked_by(At?, Id?, Ak), start_app2(Rd?, Ak?, At?, Ap?, Ss, Cr, Ap1).
+procedure start_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_app1(yes, _, _, _, Ap, [], noapproval, [], Ap?).
+start_app1(no, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(At?), ground(Ap?) | app_state(Ap?, S), attempt_class(At?, C), part_dom(C?, Id?, S?, Rd), start_app2(Rd?, I?, At?, Id?, Ap?, Ss, Cr, Ns, Ap1).
 
-procedure start_app2(YesNo?, YesNo?, Attempt?, App?, Sends, ApprovalRes, App).
-start_app2(no, _, At, Ap, Ss?, noapproval, Ap1?) :- vote_app(At?, no, Ap?, Ss, Ap1).
-start_app2(yes, yes, At, app(S, K, L, R), [], approval_for(At?), app(S?, K?, L?, [asked(At?) | R?])) :- ground(At?) | true.
-start_app2(yes, no, At, Ap, Ss?, noapproval, Ap1?) :- vote_app(At?, yes, Ap?, Ss, Ap1).
+procedure start_app2(YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_app2(no, I, At, Id, Ap, Ss?, noapproval, Ns?, Ap1?) :- ground(At?), ground(Ap?) | app_state(Ap?, S), attempt_class(At?, C), unable_reason(C?, Id?, S?, D), vote_no(I?, At?, Id?, D?, Ap?, Ss, Ns, Ap1).
+start_app2(yes, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(At?), ground(Ap?) | app_recs(Ap?, R), names_mine(At?, R?, Mn), start_app3(Mn?, I?, At?, Id?, Ap?, Ss, Cr, Ns, Ap1).
+
+procedure start_app3(Mine?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_app3(mine(Rr, K), I, At, Id, Ap, Ss?, noapproval, Ns?, Ap1?) :- ground(Rr?), ground(Ap?) | app_recs(Ap?, Rc), mem(ended(Rr?, K?), Rc?, En), start_named(En?, I?, At?, Id?, Ap?, Ss, Ns, Ap1).
+start_app3(notmine, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(I?), ground(At?), ground(Ap?) | asked_by(At?, Id?, Ak), app_recs(Ap?, R), approval_of(I?, Id?, R?, Apv), start_asked(Ak?, Apv?, At?, Ap?, Ss, Cr, Ns, Ap1).
+
+procedure start_named(YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
+start_named(no, _, At, _, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+start_named(yes, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, unable([], []), Ap?, Ss, Ns, Ap1).
+
+procedure start_asked(YesNo?, YesNo?, Attempt?, App?, Sends, ApprovalRes, Outputs, App).
+start_asked(yes, no, At, app(S, K, L, R), [], approval_for(At?), [], app(S?, K?, L?, [asked(At?) | R?])) :- ground(At?) | true.
+start_asked(yes, yes, At, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+start_asked(no, _, At, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+
+procedure names_mine(Attempt?, Recs?, Mine).
+names_mine(attempt(_, _, _, _, none), _, notmine).
+names_mine(attempt(_, _, _, _, request(Rr, K)), R, Mn?) :- ground(Rr?), ground(R?) | mem(requested(Rr?, K?), R?, B), mine_of(B?, Rr?, K?, Mn).
+
+procedure mine_of(YesNo?, Rho?, Integer?, Mine).
+mine_of(yes, Rr, K, mine(Rr?, K?)).
+mine_of(no, _, _, notmine).
 
 procedure asked_by(Attempt?, Peer?, YesNo).
 asked_by(At, Id, B?) :- ground(At?), ground(Id?) | attempt_id(At?, P), attempt_class(At?, C), binding_of(C?, Nm, Bn), marked_people(Nm?, Bn?, G), mem(Id?, G?, In), same(Id?, P?, Me), neg(Me?, NotMe), and(In?, NotMe?, B).
@@ -852,29 +1063,33 @@ answer_effect(YN, At, St, St1?) :- ground(St?) | st_app(St?, Ap), answer_app(YN?
 procedure answer_app(YesNo?, Attempt?, App?, App).
 answer_app(YN, At, app(S, K, L, R), app(S?, K?, L?, [answered(At?, YN?) | R?])).
 
-procedure vote_effect(Info?, Attempt?, St?, Sends, St).
-vote_effect(I, At, St, Ss?, St1?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), vote_app0(I?, At?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
+procedure vote_effect(Info?, Attempt?, St?, Sends, Outputs, St).
+vote_effect(I, At, St, Ss?, Ns?, St1?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), vote_app0(I?, At?, Id?, Ap?, Ss, Ns, Ap1), set_app(St?, Ap1?, St1).
 
-procedure vote_app0(Info?, Attempt?, Peer?, App?, Sends, App).
-vote_app0(_, At, Id, Ap, Ss?, Ap1?) :- ground(At?), ground(Ap?) | app_recs(Ap?, R), answer_of(At?, R?, YN), vote_yes(YN?, At?, Id?, Ap?, Y), vote_app(At?, Y?, Ap?, Ss, Ap1).
+procedure vote_app0(Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
+vote_app0(I, At, Id, Ap, Ss?, Ns?, Ap1?) :- ground(At?), ground(Ap?) | app_recs(Ap?, R), answer_of(At?, R?, YN), app_state(Ap?, S), attempt_class(At?, C), part_dom(C?, Id?, S?, Dm), vote_on(YN?, Dm?, I?, At?, Id?, Ap?, Ss, Ns, Ap1).
 
-procedure vote_yes(YesNo?, Attempt?, Peer?, App?, YesNo).
-vote_yes(no, _, _, _, no).
-vote_yes(yes, At, Id, app(S, _, _, _), Y?) :- attempt_class(At?, C), part_dom(C?, Id?, S?, Y).
+procedure vote_on(YesNo?, YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
+vote_on(yes, yes, _, At, _, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+vote_on(yes, no, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- ground(At?), ground(Ap?) | app_state(Ap?, S), attempt_class(At?, C), unable_reason(C?, Id?, S?, D), vote_no(I?, At?, Id?, D?, Ap?, Ss, Ns, Ap1).
+vote_on(no, _, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, declined, Ap?, Ss, Ns, Ap1).
 
-procedure tally_effect(Info?, Attempt?, Peer?, YesNo?, St?, Sends, St).
-tally_effect(I, At, F, Y, St, Ss?, St1?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), tally_app(I?, At?, F?, Y?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
+procedure tally_effect(Info?, Attempt?, Peer?, Vote?, St?, Sends, Outputs, St).
+tally_effect(I, At, F, V, St, Ss?, Ns?, St1?) :- ground(At?), ground(St?) | st_app(St?, Ap), app_recs(Ap?, R), mem(closed(At?), R?, Cl), tally1(Cl?, I?, At?, F?, V?, St?, Ss, Ns, St1).
 
-procedure tally_app(Info?, Attempt?, Peer?, YesNo?, Peer?, App?, Sends, App).
-tally_app(I, At, F, Y, Id, Ap, Ss?, Ap1?) :- ground(At?), ground(Ap?) | app_recs(Ap?, R), mem(closed(At?), R?, Cl), tally_app1(Cl?, I?, At?, F?, Y?, Id?, Ap?, Ss, Ap1).
+procedure tally1(YesNo?, Info?, Attempt?, Peer?, Vote?, St?, Sends, Outputs, St).
+tally1(yes, _, _, _, _, St, [], [], St?).
+tally1(no, _, At, F, yes, St, [], [], St1?) :- ground(St?) | st_app(St?, Ap), add_rec(got(At?, F?, yes), Ap?, Ap1), set_app(St?, Ap1?, St1).
+tally1(no, I, At, F, no(D), St, Ss?, Ns?, St3?) :- ground(I?), ground(At?), ground(D?), ground(St?) | st_id(St?, Id), info_q(I?, Q), tell(Q?, Id?, outcome(At?, abort(F?, D?)), Ss), st_app(St?, Ap), app_recs(Ap?, R), attempt_class(At?, C), guards_part(C?, Id?, Gd), guard_ends(Gd?, I?, Id?, [closed(At?), got(At?, F?, no) | R?], R1, En), attempt_class(At?, C2), ended_notice(En?, C2?, F?, D?, Ns), st_app(St?, Ap2), unlock_recs(Ap2?, R1?, Ap3), set_app(St?, Ap3?, St2), st_held(St?, Hd), attempt_names(At?, Nm), drop_named(Nm?, Hd?, Hd1), set_held(St2?, Hd1?, St3).
 
-procedure tally_app1(YesNo?, Info?, Attempt?, Peer?, YesNo?, Peer?, App?, Sends, App).
-tally_app1(yes, _, _, _, _, _, Ap, [], Ap?).
-tally_app1(no, I, At, F, no, Id, app(S, K, _, R), Ss?, app(S?, K?, unlocked, [closed(At?), got(At?, F?, no) | R?])) :- ground(At?), ground(I?) | info_q(I?, Q), tell(Q?, Id?, outcome(At?, abort), Ss).
-tally_app1(no, _, At, F, yes, _, app(S, K, L, R), [], app(S?, K?, L?, [got(At?, F?, yes) | R?])).
+procedure add_rec(Rec?, App?, App).
+add_rec(X, app(S, K, L, R), app(S?, K?, L?, [X? | R?])).
+
+procedure unlock_recs(App?, Recs?, App).
+unlock_recs(app(S, K, _, _), R, app(S?, K?, unlocked, R?)).
 
 procedure commit_effect(Info?, Attempt?, St?, Sends, Nets, St).
-commit_effect(I, At, St, Ss?, Ms?, St1?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), commit_app(I?, At?, Id?, Ap?, Ss, Ap1), commit_pairs(I?, Id?, Ps), commit_intros(Ps?, Id?, Ap1?, Ms, Ap2), set_app(St?, Ap2?, St1).
+commit_effect(I, At, St, Ss?, Ms?, St2?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), commit_app(I?, At?, Id?, Ap?, Ss, Ap1), commit_pairs(I?, Id?, Ps), commit_intros(Ps?, Id?, Ap1?, Ms, Ap2), set_app(St?, Ap2?, St1), st_held(St?, Hd), drop_held_class(Hd?, I?, Id?, Hd1), set_held(St1?, Hd1?, St2).
 
 procedure commit_pairs(Info?, Peer?, Pairs).
 commit_pairs(I, Id, Ps?) :- ground(I?) | info_q(I?, Q), remove_all(Id?, Q?, Q1), dedup(Q1?, Q2), sort_peers(Q2?, Q3), pairs_of(Q3?, Ps).
@@ -888,7 +1103,7 @@ commit_intro(yes, _, _, _, Ap, Ms?, Ms, Ap?).
 commit_intro(no, Q, R, Id, Ap, [msg(Q?, intro(Id?, R?)), msg(R?, intro(Id?, Q?)) | Ms?], Ms, Ap1?) :- ground(Q?), ground(R?), ground(Id?) | introduce_app(Q?, R?, Ap?, Ap1).
 
 procedure commit_app(Info?, Attempt?, Peer?, App?, Sends, App).
-commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, [closed(At?) | R?])) :- ground(I?), ground(At?), ground(Id?) | apply_info(I?, Id?, S?, S1), info_q(I?, Q), tell(Q?, Id?, outcome(At?, commit), Ss).
+commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, R1?)) :- ground(I?), ground(At?), ground(Id?) | apply_info(I?, Id?, S?, S1), info_q(I?, Q), tell(Q?, Id?, outcome(At?, commit), Ss), end_approvals(I?, Id?, [closed(At?) | R?], R1, _).
 
 procedure yield_effect(Info?, Attempt?, St?, Sends, St).
 yield_effect(I, At, St, Ss?, St1?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), yield_app(I?, At?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
@@ -904,7 +1119,7 @@ yield_app1(yes, _, _, _, Ap, [], Ap?).
 yield_app1(no, I, At, Id, Ap, Ss?, Ap1?) :- abort_own(I?, At?, Id?, Ap?, Ss, Ap1).
 
 procedure abort_own(Info?, Attempt?, Peer?, App?, Sends, App).
-abort_own(I, At, Id, app(S, K, _, R), Ss?, app(S?, K?, unlocked, [wounded(At?), closed(At?) | R?])) :- ground(I?), ground(At?), ground(Id?) | info_q(I?, Q), tell(Q?, Id?, outcome(At?, abort), Ss).
+abort_own(I, At, Id, app(S, K, _, R), Ss?, app(S?, K?, unlocked, [wounded(At?), closed(At?) | R?])) :- ground(I?), ground(At?), ground(Id?) | info_q(I?, Q), tell(Q?, Id?, outcome(At?, yield), Ss).
 
 procedure wound_effect(Info?, Attempt?, St?, Sends, St).
 wound_effect(I, B, St, Ss?, St1?) :- ground(I?), ground(B?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), attempt_id(B?, P), same(P?, Id?, Own), wound_app(Own?, I?, B?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
@@ -930,12 +1145,73 @@ procedure all_yes2(YesNo?, Peers?, Attempt?, Peer?, Recs?, YesNo).
 all_yes2(no, _, _, _, _, no).
 all_yes2(yes, Ps, At, Id, R, B?) :- all_yes1(Ps?, At?, Id?, R?, B).
 
-procedure outcome_effect(Info?, Attempt?, Decision?, St?, St).
-outcome_effect(I, At, Z, St, St1?) :- ground(St?) | st_id(St?, Id), st_app(St?, Ap), outcome_app(I?, At?, Z?, Id?, Ap?, Ap1), set_app(St?, Ap1?, St1).
+procedure outcome_effect(Info?, Attempt?, Decision?, St?, Outputs, St).
+outcome_effect(I, At, Z, St, Ns?, St2?) :- ground(I?), ground(Z?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), outcome_app(I?, At?, Z?, Id?, Ap?, Ns, Ap1), set_app(St?, Ap1?, St1), st_held(St?, Hd), outcome_held(Z?, I?, Id?, Hd?, Hd1), set_held(St1?, Hd1?, St2).
 
-procedure outcome_app(Info?, Attempt?, Decision?, Peer?, App?, App).
-outcome_app(I, At, commit, Id, app(S, K, L, R), app(S1?, K?, L1?, [closed(At?) | R?])) :- ground(At?) | apply_info(I?, Id?, S?, S1), release(L?, At?, L1).
-outcome_app(_, At, abort, _, app(S, K, L, R), app(S?, K?, L1?, [closed(At?) | R?])) :- ground(At?) | release(L?, At?, L1).
+procedure outcome_app(Info?, Attempt?, Decision?, Peer?, App?, Outputs, App).
+outcome_app(I, At, commit, Id, app(S, K, L, R), [], app(S1?, K?, L1?, R1?)) :- ground(I?), ground(At?) | apply_info(I?, Id?, S?, S1), release(L?, At?, L1), end_approvals(I?, Id?, [closed(At?) | R?], R1, _).
+outcome_app(I, At, abort(Q, D), Id, app(S, K, L, R), Ns?, app(S?, K?, L1?, R1?)) :- ground(At?), ground(D?) | release(L?, At?, L1), attempt_names(At?, Nm), abort_ends(Nm?, I?, At?, Id?, [closed(At?) | R?], R1, En), attempt_class(At?, C), ended_notice(En?, C?, Q?, D?, Ns).
+outcome_app(_, At, yield, _, app(S, K, L, R), [], app(S?, K?, L1?, [closed(At?) | R?])) :- ground(At?) | release(L?, At?, L1).
+
+procedure outcome_held(Decision?, Info?, Peer?, Helds?, Helds).
+outcome_held(commit, I, Id, Hd, Hd1?) :- drop_held_class(Hd?, I?, Id?, Hd1).
+outcome_held(abort(_, _), _, _, Hd, Hd?).
+outcome_held(yield, _, _, Hd, Hd?).
+
+procedure abort_ends(Names?, Info?, Attempt?, Peer?, Recs?, Recs, YesNo).
+abort_ends(request(Rr, K), _, _, _, R, R1?, En?) :- end_request(Rr?, K?, R?, R1, En).
+abort_ends(none, I, At, Id, R, R1?, En?) :- ground(At?), ground(R?) | attempt_class(At?, C), guards_part(C?, Id?, Gd), mem(voted(At?, yes), R?, Vy), mem(answered(At?, yes), R?, Ay), or(Vy?, Ay?, Said), and(Gd?, Said?, B), guard_ends(B?, I?, Id?, R?, R1, En).
+
+procedure end_request(Rho?, Integer?, Recs?, Recs, YesNo).
+end_request(Rr, K, R, R1?, En?) :- ground(Rr?), ground(R?) | mem(requested(Rr?, K?), R?, Mine), mem(ended(Rr?, K?), R?, Done), neg(Done?, Open), and(Mine?, Open?, B), end_request1(B?, Rr?, K?, R?, R1, En).
+
+procedure end_request1(YesNo?, Rho?, Integer?, Recs?, Recs, YesNo).
+end_request1(yes, Rr, K, R, [ended(Rr?, K?) | R?], yes).
+end_request1(no, _, _, R, R?, no).
+
+procedure end_approvals(Info?, Peer?, Recs?, Recs, YesNo).
+end_approvals(I, Id, R, R1?, En?) :- ground(R?) | pending_approvals(R?, I?, Id?, R?, Es), end_all(Es?, R?, R1, En).
+
+procedure approval_of(Info?, Peer?, Recs?, YesNo).
+approval_of(I, Id, R, B?) :- ground(R?) | pending_approvals(R?, I?, Id?, R?, Es), some_rec(Es?, B).
+
+procedure pending_approvals(Recs?, Info?, Peer?, Recs?, Recs).
+pending_approvals([], _, _, _, []).
+pending_approvals([requested(Rr, K) | Rs], I, Id, R, Es?) :- ground(Rr?), ground(I?), ground(R?), integer(K?) | mem(ended(Rr?, K?), R?, Done), neg(Done?, Open), rho_of_class(Rr?, I?, Id?, Of), and(Open?, Of?, B), pending_approvals(Rs?, I?, Id?, R?, Es1), keep_rec(B?, ended(Rr?, K?), Es1?, Es).
+pending_approvals([answered(At, yes) | Rs], I, Id, R, Es?) :- ground(At?), ground(I?), ground(R?) | mem(ended(At?), R?, Done), neg(Done?, Open), of_class(At?, I?, Of), and(Open?, Of?, B), pending_approvals(Rs?, I?, Id?, R?, Es1), keep_rec(B?, ended(At?), Es1?, Es).
+pending_approvals([_ | Rs], I, Id, R, Es?) :- otherwise | pending_approvals(Rs?, I?, Id?, R?, Es).
+
+procedure keep_rec(YesNo?, Rec?, Recs?, Recs).
+keep_rec(yes, X, Es, [X? | Es?]).
+keep_rec(no, _, Es, Es?).
+
+procedure end_all(Recs?, Recs?, Recs, YesNo).
+end_all([], R, R?, no).
+end_all([E | Es], R, R1?, yes) :- app([E? | Es?], R?, R1).
+
+procedure some_rec(Recs?, YesNo).
+some_rec([], no).
+some_rec([_ | _], yes).
+
+procedure rho_of_class(Rho?, Info?, Peer?, YesNo).
+rho_of_class(one(C), I, _, B?) :- term_of_class(C?, I?, B).
+rho_of_class(rho(N), I, Id, B?) :- in_rho(I?, N?, Id?, B).
+
+procedure drop_held_class(Helds?, Info?, Peer?, Helds).
+drop_held_class([], _, _, []).
+drop_held_class([held(F, Rr, K) | Hs], I, Id, Hs1?) :- ground(Rr?), ground(I?) | rho_of_class(Rr?, I?, Id?, Of), drop_held_class(Hs?, I?, Id?, Hs0), keep_held(Of?, held(F?, Rr?, K?), Hs0?, Hs1).
+
+procedure keep_held(YesNo?, Held?, Helds?, Helds).
+keep_held(yes, _, Hs, Hs?).
+keep_held(no, H, Hs, [H? | Hs?]).
+
+procedure drop_named(Names?, Helds?, Helds).
+drop_named(none, Hd, Hd?).
+drop_named(request(Rr, K), Hd, Hd1?) :- drop_req(Hd?, Rr?, K?, Hd1).
+
+procedure drop_req(Helds?, Rho?, Integer?, Helds).
+drop_req([], _, _, []).
+drop_req([held(F, Rr1, K1) | Hs], Rr, K, Hs1?) :- ground(Rr1?), ground(Rr?), integer(K1?), integer(K?) | same(Rr1?, Rr?, E1), same_int(K1?, K?, E2), and(E1?, E2?, E), drop_req(Hs?, Rr?, K?, Hs0), keep_held(E?, held(F?, Rr1?, K1?), Hs0?, Hs1).
 
 procedure release(Lock?, Attempt?, Lock).
 release(unlocked, _, unlocked).
@@ -985,7 +1261,7 @@ answer_of(At, [answered(A, Y) | _], Y?) :- (At? =?= A?) | true.
 answer_of(At, [_ | Rs], Y?) :- otherwise | answer_of(At?, Rs?, Y).
 
 procedure of_class(Attempt?, Info?, YesNo).
-of_class(attempt(_, _, _, C), I, B?) :- term_of_class(C?, I?, B).
+of_class(attempt(_, _, _, C, _), I, B?) :- term_of_class(C?, I?, B).
 
 procedure term_of_class(Class?, Info?, YesNo).
 term_of_class(C, ci(_, Ps, Q, _, Ms), B?) :- ground(C?) | term_spec(C?, _, Rs, Bn), of_class1(Rs?, Bn?, Ps?, Q?, Ms?, B).
@@ -1075,6 +1351,53 @@ procedure hat(Preds?, Peer?, GAtoms?, GAtoms).
 hat([], _, S, S?).
 hat([P | Ps], Id, S, [g(P?, [p(Id?)]) | R?]) :- ground(Id?) | hat(Ps?, Id?, S?, R).
 
+procedure unable_reason(Class?, Peer?, GAtoms?, Reason).
+unable_reason(P, Id, S, unable(L?, H?)) :- ground(P?), ground(S?) | term_spec(P?, Nm, Rs, Bn), unable_atoms(Nm?, Rs?, Bn?, Id?, S?, L0, H0), atoms_of(L0?, L), atoms_of(H0?, H).
+
+procedure unable_atoms(Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+unable_atoms(Nm, Rs, Bn, Id, S, L?, H?) :- ground(Nm?), ground(Rs?), ground(Bn?), ground(S?) | reflexive_preds(Rf), hat(Rf?, Id?, S?, Sh), specs_at(Rs?, 1, Bn?, Id?, RsP), unable_at(RsP?, Bn?, Sh?, L1, H1), listing_gaps(Nm?, Bn?, Id?, S?, L2, H2), app(L1?, L2?, L), app(H1?, H2?, H).
+
+procedure unable_at(RoleSpecs?, Binding?, GAtoms?, GAtoms, GAtoms).
+unable_at(RsP, Bn, Sh, L?, H?) :- ground(RsP?), ground(Bn?), ground(Sh?) | reqs_of(RsP?, Q), img_atoms(Q?, Bn?, G), ms_diff(G?, Sh?, L), forbs_of(RsP?, F), img_atoms(F?, Bn?, Fg), held_in(Fg?, Sh?, H0), dedup(H0?, H).
+
+procedure held_in(GAtoms?, GAtoms?, GAtoms).
+held_in([], _, []).
+held_in([G | Gs], Sh, H?) :- ground(G?), ground(Sh?) | mem(G?, Sh?, In), held_in(Gs?, Sh?, H1), keep_g(In?, G?, H1?, H).
+
+procedure keep_g(YesNo?, GAtom?, GAtoms?, GAtoms).
+keep_g(yes, G, H, [G? | H?]).
+keep_g(no, _, H, H?).
+
+procedure listing_gaps(Constant?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+listing_gaps(Nm, Bn, Id, S, L?, H?) :- schema_entry(Nm?, E), listing_gaps1(E?, Bn?, Id?, S?, L, H).
+
+procedure listing_gaps1(Schema?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+listing_gaps1(schema(_, _, _), _, _, _, [], []).
+listing_gaps1(lschema(_, _, _, Lsts), Bn, Id, S, L?, H?) :- gaps_of(Lsts?, Bn?, Id?, S?, L, H).
+
+procedure gaps_of(Listings?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+gaps_of([], _, _, _, [], []).
+gaps_of([listing(I, Bi, Rho, As) | Lsts], Bn, Id, S, L?, H?) :- ground(Bn?), ground(S?) | role_person(Bi?, Bn?, P), same(P?, Id?, Base), gaps_one(Base?, I?, Rho?, As?, Bn?, S?, L1, H1), gaps_of(Lsts?, Bn?, Id?, S?, L2, H2), app(L1?, L2?, L), app(H1?, H2?, H).
+
+procedure gaps_one(YesNo?, Integer?, Constant?, Vars?, Binding?, GAtoms?, GAtoms, GAtoms).
+gaps_one(no, _, _, _, _, _, [], []).
+gaps_one(yes, I, Rho, As, Bn, S, L?, H?) :- ground(Rho?), ground(As?), ground(Bn?), ground(S?) | copies_of(Bn?, I?, Want), list_at(Rho?, As?, Bn?, S?, Have), img_args(As?, Bn?, Vs), gaps_two(Want?, Have?, Rho?, Vs?, L, H).
+
+procedure gaps_two(Peers?, Peers?, Constant?, Vals?, GAtoms, GAtoms).
+gaps_two(Want, Have, Rho, Vs, L?, H?) :- ground(Want?), ground(Have?), ground(Rho?), ground(Vs?) | peers_minus(Want?, Have?, Lp), peers_minus(Have?, Want?, Hp), listing_atoms(Lp?, Rho?, Vs?, L), listing_atoms(Hp?, Rho?, Vs?, H).
+
+procedure peers_minus(Peers?, Peers?, Peers).
+peers_minus([], _, []).
+peers_minus([P | Ps], Qs, R?) :- ground(Qs?) | mem(P?, Qs?, In), peers_minus(Ps?, Qs?, R1), keep_out(In?, P?, R1?, R).
+
+procedure keep_out(YesNo?, Peer?, Peers?, Peers).
+keep_out(yes, _, R, R?).
+keep_out(no, P, R, [P? | R?]).
+
+procedure listing_atoms(Peers?, Constant?, Vals?, GAtoms).
+listing_atoms([], _, _, []).
+listing_atoms([Q | Qs], Rho, Vs, [g(Rho?, [p(Q?) | Vs?]) | Gs?]) :- ground(Rho?), ground(Vs?) | listing_atoms(Qs?, Rho?, Vs?, Gs).
+
 procedure ready_parts(Classes?, Peer?, GAtoms?, Classes).
 ready_parts([], _, _, []).
 ready_parts([P | Ps], Id, S, R?) :- ground(P?), ground(Id?), ground(S?) | part_dom(P?, Id?, S?, B), ready_parts(Ps?, Id?, S?, R1), keep_class(B?, P?, R1?, R).
@@ -1160,7 +1483,7 @@ delta_at([delta(P, D, A) | _], Id, D?, A?) :- (P? =?= Id?) | true.
 delta_at([_ | Ps], Id, D?, A?) :- otherwise | delta_at(Ps?, Id?, D, A).
 
 procedure st_class(Class?, St?, ClassRes, St).
-st_class(C, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), R?, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca1?, Pd?, Pr?)) :- ground(Id?) | class_info(C?, Id?, Ca?, R, Ca1).
+st_class(C, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), R?, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca1?, Pd?, Pr?, Hd?)) :- ground(Id?) | class_info(C?, Id?, Ca?, R, Ca1).
 
 procedure class_info(Class?, Peer?, Infos?, ClassRes, Infos).
 class_info(C, Id, Ca, R?, Ca1?) :- ground(C?) | binding_of(C?, Nm, B), class_info1(Nm?, B?, C?, Id?, Ca?, R, Ca1).
@@ -1951,19 +2274,19 @@ val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 
 procedure st_id(St?, Peer).
-st_id(st(Id, _, _, _, _, _, _, _, _, _, _), Id?).
+st_id(st(Id, _, _, _, _, _, _, _, _, _, _, _), Id?).
 
 procedure st_app(St?, App).
-st_app(st(_, Ap, _, _, _, _, _, _, _, _, _), Ap?).
+st_app(st(_, Ap, _, _, _, _, _, _, _, _, _, _), Ap?).
 
 procedure st_count(St?, Integer).
-st_count(st(_, _, D, _, _, _, _, _, _, _, _), D?).
+st_count(st(_, _, D, _, _, _, _, _, _, _, _, _), D?).
 
 procedure st_sent(St?, Peers).
-st_sent(st(_, _, _, Se, _, _, _, _, _, _, _), Se?).
+st_sent(st(_, _, _, Se, _, _, _, _, _, _, _, _), Se?).
 
 procedure st_recd(St?, Peers).
-st_recd(st(_, _, _, _, Rc, _, _, _, _, _, _), Rc?).
+st_recd(st(_, _, _, _, Rc, _, _, _, _, _, _, _), Rc?).
 
 procedure st_known(St?, List(Key)).
 st_known(St, Ks?) :- ground(St?) | st_sent(St?, Se), st_isent(St?, ISe), app(Se?, ISe?, Ps), known_sorted(Ps?, St?, Ks).
@@ -1980,56 +2303,62 @@ keep_peer(yes, P, Ks, [P? | Ks?]).
 keep_peer(no, _, Ks, Ks?).
 
 procedure st_isent(St?, Peers).
-st_isent(st(_, _, _, _, _, ISe, _, _, _, _, _), ISe?).
+st_isent(st(_, _, _, _, _, ISe, _, _, _, _, _, _), ISe?).
 
 procedure st_irecd(St?, Peers).
-st_irecd(st(_, _, _, _, _, _, IRc, _, _, _, _), IRc?).
+st_irecd(st(_, _, _, _, _, _, IRc, _, _, _, _, _), IRc?).
 
 procedure st_waits(St?, Waits).
-st_waits(st(_, _, _, _, _, _, _, W, _, _, _), W?).
+st_waits(st(_, _, _, _, _, _, _, W, _, _, _, _), W?).
 
 procedure st_pends(St?, Pends).
-st_pends(st(_, _, _, _, _, _, _, _, _, Pd, _), Pd?).
+st_pends(st(_, _, _, _, _, _, _, _, _, Pd, _, _), Pd?).
 
 procedure set_app(St?, App?, St).
-set_app(st(Id, _, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), Ap, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+set_app(st(Id, _, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), Ap, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 
 procedure set_waits(St?, Waits?, St).
-set_waits(st(Id, Ap, D, Se, Rc, ISe, IRc, _, Ca, Pd, Pr), W, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+set_waits(st(Id, Ap, D, Se, Rc, ISe, IRc, _, Ca, Pd, Pr, Hd), W, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 
-procedure st_props(St?, Classes).
-st_props(st(_, _, _, _, _, _, _, _, _, _, Pr), Pr?).
+procedure st_made(St?, Rhos).
+st_made(st(_, _, _, _, _, _, _, _, _, _, Pr, _), Pr?).
 
-procedure set_props(St?, Classes?, St).
-set_props(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, _), Pr, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+procedure set_made(St?, Rhos?, St).
+set_made(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, _, Hd), Pr, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
+
+procedure st_held(St?, Helds).
+st_held(st(_, _, _, _, _, _, _, _, _, _, _, Hd), Hd?).
+
+procedure set_held(St?, Helds?, St).
+set_held(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, _), Hd, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 
 procedure set_pends(St?, Pends?, St).
-set_pends(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, _, Pr), Pd, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+set_pends(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, _, Pr, Hd), Pd, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 
 procedure add_pend_once(Pend?, St?, St).
-add_pend_once(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?)) :- ground(X?), ground(Pd?) | mem(X?, Pd?, In), add_pend1(In?, X?, Pd?, Pd1).
+add_pend_once(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?, Hd?)) :- ground(X?), ground(Pd?) | mem(X?, Pd?, In), add_pend1(In?, X?, Pd?, Pd1).
 
 procedure add_pend1(YesNo?, Pend?, Pends?, Pends).
 add_pend1(yes, _, Pd, Pd?).
 add_pend1(no, X, Pd, Pd1?) :- app(Pd?, [X?], Pd1).
 
 procedure drop_pend(Pend?, St?, St).
-drop_pend(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?)) :- remove_all(X?, Pd?, Pd1).
+drop_pend(X, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd1?, Pr?, Hd?)) :- remove_all(X?, Pd?, Pd1).
 
 procedure add_sent(Peer?, St?, St).
-add_sent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, [Q? | Se?], Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+add_sent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), st(Id?, Ap?, D?, [Q? | Se?], Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 
 procedure add_isent(Peer?, St?, St).
-add_isent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, Rc?, [Q? | ISe?], IRc?, W?, Ca?, Pd?, Pr?)).
+add_isent(Q, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), st(Id?, Ap?, D?, Se?, Rc?, [Q? | ISe?], IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 
 procedure add_irecd(Peer?, St?, St).
-add_irecd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, Rc?, ISe?, [P? | IRc?], W?, Ca?, Pd?, Pr?)).
+add_irecd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), st(Id?, Ap?, D?, Se?, Rc?, ISe?, [P? | IRc?], W?, Ca?, Pd?, Pr?, Hd?)).
 
 procedure add_recd(Peer?, St?, St).
-add_recd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D?, Se?, [P? | Rc?], ISe?, IRc?, W?, Ca?, Pd?, Pr?)).
+add_recd(P, st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), st(Id?, Ap?, D?, Se?, [P? | Rc?], ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)).
 
 procedure advance(St?, St).
-advance(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr), st(Id?, Ap?, D1?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?)) :- D1 := (D? + 1).
+advance(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd), st(Id?, Ap?, D1?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?)) :- D1 := (D? + 1).
 
 procedure app_recs(App?, Recs).
 app_recs(app(_, _, _, R), R?).
@@ -2041,16 +2370,19 @@ procedure app_state(App?, GAtoms).
 app_state(app(S, _, _, _), S?).
 
 procedure attempt_id(Attempt?, Peer).
-attempt_id(attempt(I, _, _, _), I?).
+attempt_id(attempt(I, _, _, _, _), I?).
 
 procedure attempt_k(Attempt?, Integer).
-attempt_k(attempt(_, K, _, _), K?).
+attempt_k(attempt(_, K, _, _, _), K?).
 
 procedure attempt_rank(Attempt?, Integer).
-attempt_rank(attempt(_, _, P, _), P?).
+attempt_rank(attempt(_, _, P, _, _), P?).
 
 procedure attempt_class(Attempt?, Class).
-attempt_class(attempt(_, _, _, C), C?).
+attempt_class(attempt(_, _, _, C, _), C?).
+
+procedure attempt_names(Attempt?, Names).
+attempt_names(attempt(_, _, _, _, Nm), Nm?).
 
 procedure and(YesNo?, YesNo?, YesNo).
 and(yes, B, B?).
@@ -2259,7 +2591,7 @@ form_module(_, refused) :- otherwise | true.
 Drawn ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
-dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, Ss), output(named(last_state, thread(menu([form(view, [field('List(Atom)', thread(menu([shown, shown, form(friend, [field('Peer', shown)]), shown, form(principal, [field('Peer', shown)]), form(principal_of, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(attestation, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_of, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(retired_of, [field('Peer', shown)]), form(authored, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Key)', thread)]), form(refused, [field('Class', menu([form(establish, [field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend_p, [field('Peer', shown), field('Peer', shown)]), form(unfriend_q, [field('Peer', shown), field('Peer', shown)]), form(enter, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agents_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_unfriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(retire, [field('Peer', shown), field('Peer', shown)]), form(sign, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(message, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(forward, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Key', shown)]), form(yielded, [field('Class', menu([form(establish, [field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend_p, [field('Peer', shown), field('Peer', shown)]), form(unfriend_q, [field('Peer', shown), field('Peer', shown)]), form(enter, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agents_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_unfriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(retire, [field('Peer', shown), field('Peer', shown)]), form(sign, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(message, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(forward, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])]))), MOut?, ODs), constructs(Ss?).
+dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, Ss), output(named(last_state, thread(menu([form(view, [field('List(Atom)', thread(menu([shown, shown, form(friend, [field('Peer', shown)]), shown, form(principal, [field('Peer', shown)]), form(principal_of, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(attestation, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_of, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(retired_of, [field('Peer', shown)]), form(authored, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Key)', thread)]), form(refused, [field('Class', menu([form(establish, [field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend_p, [field('Peer', shown), field('Peer', shown)]), form(unfriend_q, [field('Peer', shown), field('Peer', shown)]), form(enter, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agents_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_unfriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(retire, [field('Peer', shown), field('Peer', shown)]), form(sign, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(message, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(forward, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Key', shown), field('Reason', menu([shown, form(unable, [field('List(Atom)', thread(menu([shown, shown, form(friend, [field('Peer', shown)]), shown, form(principal, [field('Peer', shown)]), form(principal_of, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(attestation, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_of, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(retired_of, [field('Peer', shown)]), form(authored, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Atom)', thread(menu([shown, shown, form(friend, [field('Peer', shown)]), shown, form(principal, [field('Peer', shown)]), form(principal_of, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(attestation, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_of, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(retired_of, [field('Peer', shown)]), form(authored, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])))])]))])]))), MOut?, ODs), constructs(Ss?).
 
 procedure constructs(Stream(Spawn(Question, Drawn))?).
 constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).
@@ -2267,7 +2599,7 @@ constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 construct(Id, menu_w(X), Gs, Ds?) :- present_menu([], X?, Gs?, _, Vs, Done), run_menu_w(Id?, form(menu, [field('Key', shown), field('List(Key)', thread), field('Request', menu([form(propose, [field('Proposal', menu([form(establish, [field('Peer', peer)]), form(befriend, [field('Peer', peer), field('Peer', peer)]), form(unfriend_p, [field('Peer', peer), field('Peer', peer)]), form(unfriend_q, [field('Peer', peer), field('Peer', peer)]), form(enter, [field('Peer', peer), field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]), form(agent_befriend, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]), form(agents_befriend, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)]))), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]), form(agent_unfriend, [field('Peer', peer), field('Peer', peer), field('Peer', peer)]), form(retire, [field('Peer', peer), field('Peer', peer)]), form(sign, [field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]), form(message, [field('Peer', peer), field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]), form(forward, [field('Peer', peer), field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))])]))]), form(known, [field('Peer', peer)])]))]), Vs?, Done?, Ds).
-construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs?, _, Vs, Done), run_approval_w(Id?, form(approval, [field('Attempt', form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend_p, [field('Peer', shown), field('Peer', shown)]), form(unfriend_q, [field('Peer', shown), field('Peer', shown)]), form(enter, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agents_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_unfriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(retire, [field('Peer', shown), field('Peer', shown)]), form(sign, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(message, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(forward, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs?, _, Vs, Done), run_approval_w(Id?, form(approval, [field('Attempt', form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend_p, [field('Peer', shown), field('Peer', shown)]), form(unfriend_q, [field('Peer', shown), field('Peer', shown)]), form(enter, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agents_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_unfriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(retire, [field('Peer', shown), field('Peer', shown)]), form(sign, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(message, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(forward, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend_p, [field('Peer', shown), field('Peer', shown)]), form(unfriend_q, [field('Peer', shown), field('Peer', shown)]), form(enter, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agents_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_unfriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(retire, [field('Peer', shown), field('Peer', shown)]), form(sign, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(message, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(forward, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend_p, [field('Peer', shown), field('Peer', shown)]), form(unfriend_q, [field('Peer', shown), field('Peer', shown)]), form(enter, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agents_befriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(agent_unfriend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(retire, [field('Peer', shown), field('Peer', shown)]), form(sign, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(message, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(forward, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])])), field('Integer', shown)])]))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
 
 procedure output(_?, Stream(Output)?, Stream(Draw(Drawn))).
 output(W, Ms, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Ds).
