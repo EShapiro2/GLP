@@ -167,34 +167,9 @@ KNOWN_RED_CHECKS=(
     "SG two mini-apps on two smartphones: the currency's conversation opens"
     "SG two mini-apps on two smartphones: alice's swap settles"
     "SG two mini-apps on two smartphones: bob's swap settles"
-# Currencies' programs/currencies/coins/GC.glp and GFWC's programs/federation/GFWC.glp
-# are in GSC's old term form, schema(Name, Roles), which the checker no longer
-# reads (GSC 0228e79: schema(Name, Vars, Roles)); both owners are dormant (Udi,
-# 2026-10-19).  Each entry comes off when its owner writes its contract in the
-# new form, GC's in the same commit as GC's record is re-made (Code #11, 2026-10-19).
-# GSC's checks of the federation extension of act schemas left programs/gsc
-# with its code (GSC f3c4f43; Coordination #7, 2026-10-20), and their entries
-# with them; the one check reading GFWC.glp stays.  GC.glp is in the new form
-# since 6499166c, and GSC's checks of it pass but the swap's display, which
-# GSC's paper, Appendix B.3 (sections/gc-compiled.tex at GSC 079cee0), prints
-# without the identity and the knows of the other GC's swap requires: GSC's to
-# correct.
+# GFWC's programs/federation/GFWC.glp is in GSC's old term form, schema(Name, Roles), which the checker no longer reads (GSC 0228e79: schema(Name, Vars, Roles)); GFWC is dormant (Udi, 2026-10-19), and its entry comes off when it writes its contract in the new form (Code #11, 2026-10-19).  GSC's checks of the federation extension of act schemas left programs/gsc with its code (GSC f3c4f43; Coordination #7, 2026-10-20), and their entries with them; the one check reading GFWC.glp stays.  Currencies' programs/currencies/coins/GC.glp is in GSC's current term form since 6499166c, and the checks of it pass but four of GSC's: three hold it to the contract before it extended GKK, mint its first schema, the coin the only predicate of traceable provenance and four displays, GSC's to bring to GC.glp as it stands, which branch GSC-gkk does under new names (e39d8e31), its merge taking these three entries off; and the fourth is the swap's display in GSC's paper, Appendix B.3, printed without the identity and the knows of the other that GC's swap requires, GSC's to correct.
     "GSC: the federation's contract, GFWC, is read from programs/federation/GFWC.glp"
     "GSC: the swap compiles to the display of Appendix B.3"
-    "CVA compiler: the currency's platform, each part guarded by the people its schema-binding marks, is what the compiler prints"
-    "CVA compiler: no contract refused or missing"
-    "CVA currency: the program's output to its person is of the type of the views, a machine state, a list of the contract's atoms, and the persons the agent knows, and the notices (vGLP c44769f)"
-    "CVA currency: a notice where Tally closes an attempt the person proposed on a vote no, refused(Part, Q)"
-    "CVA currency: ... and where Yield or the agent's own Wound closes it, yielded(Part)"
-    "CVA currency: ... only for the agent's own attempt of a guarded part, closed by the dispatch"
-    "cascade gc: GC.md is what the tools print"
-    "cascade gc: GC.glp is what the tools print"
-    "cascade gc: verdict.txt is what the tools print"
-    "cascade gc: vmat.tex is what the tools print"
-    "cascade gc: platform.vglp is what the tools print"
-    "cascade gc: platform.glp is what the tools print"
-    "cascade gc: run.log is what the tools print"
-    "cascade gc: cascade.sh --check exits 0"
 )
 KR_CHECKS=0
 
@@ -3697,8 +3672,8 @@ check "CVA compiler: ... and the adult role not forbidding child, one class, its
 # knows, asked when the agent starts and again when the agent goal reads each
 # answer (vGLP 321127a, Section 5.4; vGLP #14's task of 2026-10-18 21:22 UTC;
 # vGLP ca78e11; vGLP 2026-10-16 13:53 UTC, C.1); and its agent goal writes on the program's output to its person, Output, construct 0, its view, view(S, K), the machine state S of its app state and the persons K it knows, when it starts and whenever either changes: "the compilation defines Output as the type of the views, and declares for the type Stream(Output) of the output a widget that draws the last view written" (vGLP b7e3517, Section 5.4, "The compilation"; vGLP #15, Code_inbox.md, 2026-10-19 10:55 UTC and 12:27 UTC).  A machine state is a list of the contract's atoms, Atom the union of the contract's predicates at their argument types, which the compiler prints from the contract, so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type"); the agent writes no transaction names, no outcome(At) and no discover(Q).  The plays' persons read the output from construct 0's draws, draw(0, W, output(T)), and from nowhere else.
-# The standing approvals (vGLP f0acbc1, Section 3.2, "The protocol" and Definitions "Cargo, App State, Question, Approval, Free, Ready" to "Deciding"; Section 5.4, "Triggers" and "The compilation"; vGLP #18 Cowork to Code, 2026-10-20 10:44 UTC): an attempt (i, k, pi, [t]_j, r) names its request r or none; a vote no carries its reason, declined or unable(Lacks, Has); an abort its refuser and that vote's reason, and a yield is an outcome of its own; a request, request(Rho, K), is a cargo; and the notice, refused(Part, Q, D), is written when an approval the person made ends by a refusal, the notice yielded gone.  The social graph's platform and vGLP's coins, each printed now; the currency's, printed before vGLP f0acbc1 and not printed again, GC.glp being in GSC's old term form, keeps its checks below.
-for c in social_graph coins; do
+# The standing approvals (vGLP f0acbc1, Section 3.2, "The protocol" and Definitions "Cargo, App State, Question, Approval, Free, Ready" to "Deciding"; Section 5.4, "Triggers" and "The compilation"; vGLP #18 Cowork to Code, 2026-10-20 10:44 UTC): an attempt (i, k, pi, [t]_j, r) names its request r or none; a vote no carries its reason, declined or unable(Lacks, Has); an abort its refuser and that vote's reason, and a yield is an outcome of its own; a request, request(Rho, K), is a cargo; and the notice, refused(Part, Q, D), is written when an approval the person made ends by a refusal, the notice yielded gone.  The social graph's platform, vGLP's coins and the currency's, each printed now, the currency's from GC.glp in GSC's current term form (Currencies 6499166c).
+for c in social_graph coins currency; do
     cva_agent=$(cat "$CVA/$c/platform.vglp")
     check "CVA approvals, $c: the agent is an ordinary procedure, no longer volitional" "^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output))\.$" "$cva_agent"
     check "CVA approvals, $c: the request question, Menu, shows the agent's own key and the persons it knows and takes one request" "^Menu      ::= menu(Key, List(Key), Request?)\.$" "$cva_agent"
@@ -3734,26 +3709,13 @@ for c in social_graph coins; do
     check_not "CVA approvals, $c: no notice yielded, no noticed and no proposing on the request question" "yielded(Class)\|noticed(\|propose_cond(\|initiate_cond(" "$cva_agent"
     check_not "CVA approvals, $c: no session question" "Session" "$cva_agent"
 done
-# The currency's platform as printed before vGLP f0acbc1 (Currencies' GC.glp in GSC's old term form, known red; Currencies dormant): its checks as they were.
-for c in currency; do
-    cva_agent=$(cat "$CVA/$c/platform.vglp")
-    check "CVA $c: the agent is an ordinary procedure, no longer volitional" "^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output))\.$" "$cva_agent"
-    check "CVA $c: the request question, Menu, shows the agent's own key and the persons it knows and takes one request" "^Menu      ::= menu(Key, List(Key), Request?)\.$" "$cva_agent"
-    check "CVA $c: ... asked by a volitional procedure" "^procedure (Menu)\*request(Key?, List(Key)?, Stream(Trigger))\.$" "$cva_agent"
-    check "CVA $c: ... the key the agent's own identifier, when the agent starts" "^    request(Id?, \[\], Rq),$" "$cva_agent"
-    check "CVA $c: ... and on reading each answer" "^    request(Id?, Ks?, R),$" "$cva_agent"
-    check_not "CVA $c: no stream of requests as the agent's question" "(Stream(Request)?)\*agent" "$cva_agent"
-    check "CVA $c: the program's output to its person is of the type of the views, a machine state, a list of the contract's atoms, and the persons the agent knows, and the notices (vGLP c44769f)" "^Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class)\.$" "$cva_agent"
-    check "CVA $c: ... drawn by the widget last_state, which draws the last view written and the notices written after it" "^Stream(Output) =::= last_state\.$" "$cva_agent"
-    check "CVA $c: a notice where Tally closes an attempt the person proposed on a vote no, refused(Part, Q)" "^    noticed(refused_by(F?), At?, Ap0?, St1?, Thr, Thr1?, St1n),$" "$cva_agent"
-    check "CVA $c: ... and where Yield or the agent's own Wound closes it, yielded(Part)" "^    noticed(yielded_by, B?, Ap0?, St1?, Thr, Thr1?, St1n),$" "$cva_agent"
-    check "CVA $c: ... only for the agent's own attempt of a guarded part, closed by the dispatch" "^    some_peer(G?, Gd),$" "$cva_agent"
-    check "CVA $c: ... the view written when the agent starts: the empty machine state and no person known" "^agent(Id, NetIn, Out?, \[view(\[\], \[\])|Thr?\]) :- ground(Id?) |$" "$cva_agent"
-    check "CVA $c: ... and the new view, where the machine state changes or a peer becomes known, its atoms as the contract writes them" "^show_view(yes, St, \[V?|Thr1?\], Thr1) :- view_of(St?, V)\.$" "$cva_agent"
-    check "CVA $c: ... a peer becoming known at the second hello of an exchange" "^    show_known(Q?, St?, St1?, Thr, Thr1?, St2),$" "$cva_agent"
-    check_not "CVA $c: ... no transaction names, no outcome(At) and no discover(Q) on the output" "^Txn \|discover_q\|\[discover(\|\[outcome(At" "$cva_agent"
-    check_not "CVA $c: no session question" "Session" "$cva_agent"
-done
+# What the loop above does not check of the currency's platform: the request question asked with the agent's own key, when the agent starts and on reading each answer; a peer becoming known at the second hello of an exchange; and nothing on the output but the views and the notices.
+cva_agent=$(cat "$CVA/currency/platform.vglp")
+check "CVA currency: ... the key the agent's own identifier, when the agent starts" "^    request(Id?, \[\], Rq),$" "$cva_agent"
+check "CVA currency: ... and on reading each answer" "^    request(Id?, Ks?, R),$" "$cva_agent"
+check_not "CVA currency: no stream of requests as the agent's question" "(Stream(Request)?)\*agent" "$cva_agent"
+check "CVA currency: ... a peer becoming known at the second hello of an exchange" "^    show_known(Q?, St?, St1?, Thr, Thr1?, St2),$" "$cva_agent"
+check_not "CVA currency: ... no transaction names, no outcome(At) and no discover(Q) on the output" "^Txn \|discover_q\|\[discover(\|\[outcome(At" "$cva_agent"
 cva_person=$(cat "$CVA/self.glp")
 check "CVA plays: the person reads the views from construct 0" "^person(\[draw(0, _, output(T))|Ds\]" "$cva_person"
 check_not "CVA plays: ... and no session" "session_w" "$cva_person"
@@ -3863,6 +3825,10 @@ HEREDOC
 check "CVA currency: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/currency" "$cva_cur_load"
 check_not "CVA currency: no type errors" "Type checking failed" "$cva_cur_load"
 
+# The plays of GC, which extends GKK (Currencies 6499166c): each person
+# establishes their identity, which every other role requires, and mints, and
+# alice and bob meet before they swap, pay or redeem (GKK:1, GKK:2, GC:2 to
+# GC:4).  swap(P, Q, U, V): P gives a coin of U and takes one of V.
 cva_cur_payswap=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
 :limit 600000
@@ -3870,12 +3836,15 @@ play_pay_swap(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA pay and swap: alice's mint, a class of one participant, applied at its Propose: her coin on her screen before bob is known" "A = \[view(\[\], \[\]), view(\[coin(alice)\], \[\]), view(\[coin(alice)\], \[bob\])" "$cva_cur_payswap"
-check "CVA pay and swap: alice proposes the swap, and bob is asked, answers yes, and holds her coin once it commits" "B = \[.*gave(swap(alice, bob, bob, alice), yes), view(\[coin(alice)\], \[alice\])" "$cva_cur_payswap"
-check "CVA pay and swap: ... and the swap commits" "sent(alice, bob, outcome(attempt(alice, 2, 2, swap(alice, bob, bob, alice)), commit))" "$cva_cur_payswap"
-check "CVA pay and swap: alice pays bob, guarded by her alone, and bob's machine votes yes, unasked, and it commits" "sent(alice, bob, start(attempt(alice, 3, 3, pay(alice, bob)))), sent(bob, alice, vote(attempt(alice, 3, 3, pay(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, 3, pay(alice, bob)), commit))" "$cva_cur_payswap"
-check "CVA pay and swap: bob, unasked, holds his coin again once the pay commits" "B = \[.*view(\[coin(alice)\], \[alice\]), view(\[coin(bob), coin(alice)\], \[alice\]) |" "$cva_cur_payswap"
-check "CVA pay and swap: ... and alice holds none" "A = \[.*view(\[coin(bob)\], \[bob\]), view(\[\], \[bob\]) |" "$cva_cur_payswap"
+check "CVA pay and swap: alice's establish and mint, each a class of one participant, applied at its Propose: her identity and her coin on her screen before bob is known" "A = \[view(\[\], \[\]), view(\[identity\], \[\]), view(\[coin(alice), identity\], \[\]), view(\[coin(alice), identity\], \[bob\])" "$cva_cur_payswap"
+check "CVA pay and swap: alice proposes meeting bob, guarded by both, attempt 6; bob is asked and answers yes, and it commits" "sent(alice, bob, start(attempt(alice, 6, 6, meet(alice, bob), none))), sent(bob, alice, vote(attempt(alice, 6, 6, meet(alice, bob), none), yes)), sent(alice, bob, outcome(attempt(alice, 6, 6, meet(alice, bob), none), commit))" "$cva_cur_payswap"
+check "CVA pay and swap: ... bob's screen: his answer, and alice known to him once it commits" "B = \[.*gave(meet(alice, bob), yes), view(\[knows(alice), coin(bob), identity\], \[alice\])" "$cva_cur_payswap"
+check "CVA pay and swap: ... alice's screen: bob known to her once it commits" "A = \[.*view(\[coin(alice), identity\], \[bob\]), view(\[knows(bob), coin(alice), identity\], \[bob\])" "$cva_cur_payswap"
+check "CVA pay and swap: alice proposes the swap, and bob is asked, answers yes, and holds her coin once it commits" "B = \[.*gave(swap(alice, bob, alice, bob), yes), view(\[coin(alice), knows(alice), identity\], \[alice\])" "$cva_cur_payswap"
+check "CVA pay and swap: ... and the swap commits" "sent(alice, bob, outcome(attempt(alice, 8, 8, swap(alice, bob, alice, bob), none), commit))" "$cva_cur_payswap"
+check "CVA pay and swap: alice pays bob, guarded by her, and bob's machine votes yes, unasked, and it commits" "sent(alice, bob, start(attempt(alice, 10, 10, pay(alice, bob), none))), sent(bob, alice, vote(attempt(alice, 10, 10, pay(alice, bob), none), yes)), sent(alice, bob, outcome(attempt(alice, 10, 10, pay(alice, bob), none), commit))" "$cva_cur_payswap"
+check "CVA pay and swap: bob, unasked, holds his coin again once the pay commits" "B = \[.*view(\[coin(alice), knows(alice), identity\], \[alice\]), view(\[coin(bob), coin(alice), knows(alice), identity\], \[alice\]) |" "$cva_cur_payswap"
+check "CVA pay and swap: ... and alice holds no coin" "A = \[.*view(\[coin(bob), knows(bob), identity\], \[bob\]), view(\[knows(bob), identity\], \[bob\]) |" "$cva_cur_payswap"
 
 # An attempt's guard set is its part's (vGLP 099f876, Definition "Attempt";
 # vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 5): the swap back's class
@@ -3892,13 +3861,13 @@ play_redeem(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA redeem: the swap back, alice proposing the swaps' part her request names, guarded by alice and bob, attempt 3: bob is asked and answers yes" "sent(alice, bob, start(attempt(alice, 3, 3, swap(alice, bob, alice, bob))))" "$cva_cur_redeem"
-check "CVA redeem: ... his answer" "B = \[.*gave(swap(alice, bob, alice, bob), yes)" "$cva_cur_redeem"
-check "CVA redeem: ... it commits" "sent(bob, alice, vote(attempt(alice, 3, 3, swap(alice, bob, alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, 3, swap(alice, bob, alice, bob)), commit))" "$cva_cur_redeem"
-check "CVA redeem: after a second swap, attempt 4, alice requests the swap back again and proposes her redeem's part, proposed less recently, attempt 5" "sent(alice, bob, outcome(attempt(alice, 4, 4, swap(alice, bob, bob, alice)), commit)), sent(alice, bob, start(attempt(alice, 5, 5, redeem(alice, bob, alice))))" "$cva_cur_redeem"
-check "CVA redeem: ... alice's screen: her coin and bob's exchanged at each commit, her own back at the last" "A = \[.*view(\[coin(bob)\], \[bob\]), view(\[coin(alice)\], \[bob\]), view(\[coin(bob)\], \[bob\]), view(\[coin(alice)\], \[bob\]) | " "$cva_cur_redeem"
-check "CVA redeem: ... guarded by alice alone: bob's machine votes yes, unasked, and it commits" "sent(bob, alice, vote(attempt(alice, 5, 5, redeem(alice, bob, alice)), yes)), sent(alice, bob, outcome(attempt(alice, 5, 5, redeem(alice, bob, alice)), commit)) | " "$cva_cur_redeem"
-check_not "CVA redeem: bob answers nothing for the redeem" "gave(attempt(alice, 5, 5, redeem\|gave(redeem" "$cva_cur_redeem"
+check "CVA redeem: the swap back, alice proposing the swaps' part her request names, guarded by alice and bob, attempt 10: bob is asked and answers yes" "sent(alice, bob, start(attempt(alice, 10, 10, swap(alice, bob, bob, alice), none)))" "$cva_cur_redeem"
+check "CVA redeem: ... his answer" "B = \[.*gave(swap(alice, bob, bob, alice), yes)" "$cva_cur_redeem"
+check "CVA redeem: ... it commits" "sent(bob, alice, vote(attempt(alice, 10, 10, swap(alice, bob, bob, alice), none), yes)), sent(alice, bob, outcome(attempt(alice, 10, 10, swap(alice, bob, bob, alice), none), commit))" "$cva_cur_redeem"
+check "CVA redeem: after a second swap, attempt 12, alice requests the swap back again and proposes her redeem's part, proposed less recently, attempt 14" "sent(alice, bob, outcome(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), commit)), sent(alice, bob, start(attempt(alice, 14, 14, redeem(alice, bob, alice), none)))" "$cva_cur_redeem"
+check "CVA redeem: ... alice's screen: her coin and bob's exchanged at each commit, her own back at the last" "A = \[.*view(\[coin(bob), knows(bob), identity\], \[bob\]), view(\[coin(alice), knows(bob), identity\], \[bob\]), view(\[coin(bob), knows(bob), identity\], \[bob\]), view(\[coin(alice), knows(bob), identity\], \[bob\]) | " "$cva_cur_redeem"
+check "CVA redeem: ... guarded by alice: bob's machine votes yes, unasked, and it commits" "sent(bob, alice, vote(attempt(alice, 14, 14, redeem(alice, bob, alice), none), yes)), sent(alice, bob, outcome(attempt(alice, 14, 14, redeem(alice, bob, alice), none), commit)) | " "$cva_cur_redeem"
+check_not "CVA redeem: bob answers nothing for the redeem" "gave(attempt(alice, 14, 14, redeem\|gave(redeem" "$cva_cur_redeem"
 
 cva_cur_busy=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
@@ -3910,14 +3879,17 @@ HEREDOC
 # play_busy (vGLP 49cd9f7, wound-wait): no vote no for contention.  alice
 # holds her swap prepared, bob's approval question on it open; bob proposes a pay, whose
 # start waits at alice, blocked by her swap, which has priority over it, so
-# no Wound; bob answers her approval question no, her swap aborts, and the pay's start,
-# put up again, is taken and the pay commits at its first attempt.
-check "CVA busy: alice proposes a swap, attempt 4; bob, asked, leaves his approval question open, proposes a pay, attempt 5, and answers no once the request question is drawn again" "sent(alice, bob, start(attempt(alice, 4, 4, swap(alice, bob, bob, alice)))), sent(bob, alice, start(attempt(bob, 5, 5, pay(bob, alice)))), sent(bob, alice, vote(attempt(alice, 4, 4, swap(alice, bob, bob, alice)), no))" "$cva_cur_busy"
-check "CVA busy: ... his answer" "B = \[.*gave(attempt(alice, 4, 4, swap(alice, bob, bob, alice)), no)" "$cva_cur_busy"
-check "CVA busy: alice holds the pay's start waiting while her swap holds her lock: her vote on it comes only after her swap's outcome" "sent(alice, bob, outcome(attempt(alice, 4, 4, swap(alice, bob, bob, alice)), abort)), sent(alice, bob, vote(attempt(bob, 5, 5, pay(bob, alice)), yes))" "$cva_cur_busy"
-check_not "CVA busy: ... no vote no on the pay, and no Wound: no yield asked" "vote(attempt(bob, 5, 5, pay(bob, alice)), no)\|yield(" "$cva_cur_busy"
-check "CVA busy: bob answers alice's approval question no, and her swap aborts" "sent(bob, alice, vote(attempt(alice, 4, 4, swap(alice, bob, bob, alice)), no)), sent(alice, bob, outcome(attempt(alice, 4, 4, swap(alice, bob, bob, alice)), abort))" "$cva_cur_busy"
-check "CVA busy: the lock released, alice's machine votes yes on the waiting pay, and it commits" "sent(alice, bob, vote(attempt(bob, 5, 5, pay(bob, alice)), yes)), sent(bob, alice, outcome(attempt(bob, 5, 5, pay(bob, alice)), commit))" "$cva_cur_busy"
+# no Wound; bob answers her approval question no, his vote no declined, her
+# swap aborts, bob its refuser, and the pay's start, put up again, is taken
+# and the pay commits at its first attempt (vGLP f0acbc1, Definitions "Cargo,
+# App State, Question, Approval, Free, Ready" to "Deciding").
+check "CVA busy: alice proposes a swap, attempt 12; bob, asked, leaves his approval question open, proposes a pay, attempt 14, and answers no once the request question is drawn again" "sent(alice, bob, start(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none))), sent(bob, alice, start(attempt(bob, 14, 14, pay(bob, alice), none))), sent(bob, alice, vote(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), no(declined)))" "$cva_cur_busy"
+check "CVA busy: ... his answer" "B = \[.*gave(swap(alice, bob, alice, bob), no)" "$cva_cur_busy"
+check "CVA busy: alice holds the pay's start waiting while her swap holds her lock: her vote on it comes only after her swap's outcome" "sent(alice, bob, outcome(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), abort(bob, declined))), sent(alice, bob, vote(attempt(bob, 14, 14, pay(bob, alice), none), yes))" "$cva_cur_busy"
+check_not "CVA busy: ... no vote no on the pay, and no Wound: no yield asked" "vote(attempt(bob, 14, 14, pay(bob, alice), none), no\|yield(" "$cva_cur_busy"
+check "CVA busy: bob answers alice's approval question no, his vote no declined, and her swap aborts, bob its refuser" "sent(bob, alice, vote(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), no(declined))), sent(alice, bob, outcome(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), abort(bob, declined)))" "$cva_cur_busy"
+check "CVA busy: the lock released, alice's machine votes yes on the waiting pay, and it commits" "sent(alice, bob, vote(attempt(bob, 14, 14, pay(bob, alice), none), yes)), sent(bob, alice, outcome(attempt(bob, 14, 14, pay(bob, alice), none), commit))" "$cva_cur_busy"
+check "CVA busy: alice's screen: the notice refused(swap(alice, bob, alice, bob), bob, declined) once bob's refusal ends her approval, and her coin paid back to her once the pay commits" "A = \[.*view(\[coin(alice), coin(bob), knows(bob), identity\], \[bob\]), refused(swap(alice, bob, alice, bob), bob, declined), view(\[coin(alice), coin(alice), coin(bob), knows(bob), identity\], \[bob\]) |" "$cva_cur_busy"
 
 cva_cur_declined=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
@@ -3926,9 +3898,10 @@ play_declined(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA declined: bob, not holding the coin, votes on the start without asking his person, his screen unchanged" "B = \[view(\[\], \[\]), view(\[\], \[alice\]) |" "$cva_cur_declined"
-check "CVA declined: ... no, and it aborts at both" "sent(bob, alice, vote(attempt(alice, 2, 2, swap(alice, bob, carol, alice)), no)), sent(alice, bob, outcome(attempt(alice, 2, 2, swap(alice, bob, carol, alice)), abort))" "$cva_cur_declined"
-check_not "CVA declined: no approval question answered" "gave(" "$cva_cur_declined"
+check "CVA declined: bob, not holding the coin, votes on the start without asking his person, his screen unchanged since he met alice" "B = \[view(\[\], \[\]), view(\[identity\], \[\]), view(\[identity\], \[alice\]), gave(meet(alice, bob), yes), view(\[knows(alice), identity\], \[alice\]) |" "$cva_cur_declined"
+check "CVA declined: ... no, unable, the coin his state lacks named, and it aborts at both, bob its refuser" "sent(bob, alice, vote(attempt(alice, 8, 8, swap(alice, bob, alice, carol), none), no(unable(\[coin(carol)\], \[\])))), sent(alice, bob, outcome(attempt(alice, 8, 8, swap(alice, bob, alice, carol), none), abort(bob, unable(\[coin(carol)\], \[\]))))" "$cva_cur_declined"
+check "CVA declined: ... alice's screen: the notice of her approval ended by bob's refusal" "A = \[.*view(\[knows(bob), coin(alice), identity\], \[bob\]), refused(swap(alice, bob, alice, carol), bob, unable(\[coin(carol)\], \[\])) |" "$cva_cur_declined"
+check_not "CVA declined: no approval question answered for the swap" "gave(swap\|gave(attempt(alice, 8, " "$cva_cur_declined"
 
 # vGLP's contract nudge (programs/vglp/cva/contracts.glp): befriend and an
 # unguarded nudge, the one contract here with an unguarded class.  Its opener,
@@ -4142,7 +4115,7 @@ cva_atom() { # cva_atom <platform.vglp>: the alternatives of Atom, one line
 }
 check "CVA machine states: the social graph's atoms, identity, knows(Peer) and friend(Peer)" "^identity knows(Peer) friend(Peer) $" "$(cva_atom "$CVA/social_graph/platform.vglp")"
 check "CVA machine states: ... friend(bob) written as the contract writes it" "^atom_of(g(friend, \[p(V1)\]), shown(friend(V1?)))$" "$cva_sg_text"
-check "CVA machine states: the currency's atom, coin(Peer)" "^coin(Peer) $" "$(cva_atom "$CVA/currency/platform.vglp")"
+check "CVA machine states: the currency's atoms, GKK's identity and knows(Peer) and its own coin(Peer)" "^identity knows(Peer) coin(Peer) $" "$(cva_atom "$CVA/currency/platform.vglp")"
 check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place and a community name at a name term's" "^identity knows(Peer) friend(Peer) received(Speech, Peer) member(CName) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) received_in(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
 check "CVA machine states: GSNP's, a signed term a speech act" "^identity friend(Peer) item(Speech) authored(Speech) member(CName) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
 
