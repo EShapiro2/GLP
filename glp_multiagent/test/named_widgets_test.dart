@@ -52,6 +52,24 @@ const _gsnMessage =
 const _gaiAgentBefriend = "form(agent_befriend, [field('Peer', shown), "
     "field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
 
+/// CSSN's child_befriend, `child_befriend(r?, s?, p?, q?)`
+/// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints its Class.
+const _cssnChildBefriend = "form(child_befriend, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown), field('Peer', shown)])";
+
+/// Alice asks that her child Carol and Bob's child Dave befriend.
+const _childBefriendView = 'approval(attempt(alice, 4, 4, child_befriend('
+    'carol, dave, alice, bob)), input([2]))';
+
+/// The last views of the agents asked: Bob, Dave's parent and Alice's friend;
+/// Carol, Alice's child; and Dave, Bob's child.
+const _bobParentOutput = '[view([friend(alice), parenting(dave), '
+    'friend(dave), identity], [alice, carol, dave])]';
+const _carolOutput = '[view([friend(alice), child, parent(alice), identity], '
+    '[alice, bob, dave])]';
+const _daveOutput = '[view([friend(bob), child, parent(bob), identity], '
+    '[alice, bob, carol])]';
+
 /// The code of Alf, 'The code of Alf' signed by acme_ltd, its developer, signed
 /// by Alice; and Alf's attestation, the code signed over by Alice at enter
 /// (programs/apps/gai/person.glp).
@@ -379,6 +397,80 @@ void main() {
     expect(personName(const GAtom('alf')), 'Alf');
     expect(personName(const GAtom('acme_ltd')), 'Acme Ltd');
     expect(personName(const GAtom('acme')), 'Acme');
+  });
+
+  testWidgets(
+      'child_befriend(R, S, P, Q) at the other child\'s parent: "Alice asks '
+      'that her child Carol and your child Dave befriend.", "Approve?", Yes '
+      'and No, granting what the default widget grants', (tester) async {
+    final s = _Screen(tester);
+    await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
+        output: _bobParentOutput);
+    expect(s.texts(), [
+      'Alice asks that her child Carol and your child Dave befriend.',
+      'Approve?',
+      'Yes',
+      'No',
+    ]);
+    final (d, n) = await s.both(_defaultApproval([_cssnChildBefriend]),
+        _childBefriendView, 'yes', 'Yes',
+        output: _bobParentOutput);
+    expect(d, 'input(1, [2], yes)');
+    expect(n, d);
+  });
+
+  testWidgets(
+      'child_befriend at a child: "Alice asks that you and Dave befriend, '
+      'with Dave\'s parent Bob.", "Befriend Dave?"; at the other child, the '
+      'other child and their parent named', (tester) async {
+    final s = _Screen(tester);
+    await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
+        output: _carolOutput);
+    expect(s.texts(), [
+      "Alice asks that you and Dave befriend, with Dave's parent Bob.",
+      'Befriend Dave?',
+      'Yes',
+      'No',
+    ]);
+    await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
+        output: _daveOutput);
+    expect(s.texts(), [
+      "Alice asks that you and Carol befriend, with Carol's parent Alice.",
+      'Befriend Carol?',
+      'Yes',
+      'No',
+    ]);
+  });
+
+  testWidgets(
+      'child_befriend with no view drawn, whom it is asked not told: the '
+      'sentence built from the class', (tester) async {
+    final s = _Screen(tester);
+    await s.draw(_named([_cssnChildBefriend]), _childBefriendView);
+    expect(s.texts(), [
+      'Alice asks to child befriend Carol, Dave, Bob.',
+      'Yes',
+      'No',
+    ]);
+  });
+
+  test('what a CSSN state says of each person: child, parent, friend', () {
+    final (_, alice) = SocialState.read(fixtureTerm(
+        '[view([friend(bob), parenting(carol), friend(carol), identity], '
+        '[bob, carol, dave])]'));
+    expect(alice!.children.map(formatTerm), ['carol']);
+    expect(alice.isChild, isFalse);
+    expect(alice.relationOf(const GAtom('carol')), 'your child');
+    expect(alice.relationOf(const GAtom('bob')), 'your friend');
+    expect(alice.relationOf(const GAtom('dave')), isNull);
+    final (_, carol) = SocialState.read(fixtureTerm(_carolOutput));
+    expect(carol!.isChild, isTrue);
+    expect(carol.parents.map(formatTerm), ['alice']);
+    expect(carol.relationOf(const GAtom('alice')), 'your parent');
+    expect(carol.hasWards, isTrue);
+    final (_, gsg) = SocialState.read(
+        fixtureTerm('[view([friend(bob), identity], [bob])]'));
+    expect(gsg!.hasWards, isFalse);
   });
 
   testWidgets(

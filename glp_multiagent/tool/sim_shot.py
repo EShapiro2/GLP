@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """The iOS Simulator's screen taken as a phone's screenshot, for the screens of
-the apps' figures (programs/apps/<app>/screens/).
+the apps' figures (programs/apps/<app>/screens/) and of CSSN's Figure 3
+(programs/cssn/figures/).
 
     python3 tool/sim_shot.py serve <udid> <programs> <raw-dir> <port-file>
     python3 tool/sim_shot.py frame <raw.png> <out.png>
 
 serve: an HTTP service on 127.0.0.1, its port written to <port-file>, started
 by tool/sim_screens.sh and asked by integration_test/apps_screens_test.dart,
-GET /shot?app=<app>&file=<file>, at each screen of the scenario.  It takes the
-simulator's screenshot, `xcrun simctl io <udid> screenshot --mask=alpha`: the
-display as the simulator draws it, the status bar included, its rounded
-corners and its sensor housing transparent.  It keeps it as
-<raw-dir>/<app>/<file>, frames it (below) into
-<programs>/apps/<app>/screens/<file>, and answers once that is written, so the
-scenario goes on only after its screen is taken.
+GET /shot?app=<app>&dir=<dir>&file=<file>, at each screen of the scenario,
+<dir> the directory under <programs> the screen is written to, by default
+apps/<app>/screens.  It takes the simulator's screenshot, `xcrun simctl io
+<udid> screenshot --mask=alpha`: the display as the simulator draws it, the
+status bar included, its rounded corners and its sensor housing transparent.
+It keeps it as <raw-dir>/<app>/<file>, frames it (below) into
+<programs>/<dir>/<file>, and answers once that is written, so the scenario
+goes on only after its screen is taken.
 
 frame: the screenshot set in the phone's black bezel.  The simulator's
 screenshot is the display alone --- the Simulator app's device chrome is not in
@@ -72,6 +74,7 @@ def frame(raw, out):
 def serve(udid, programs, raw_dir, port_file):
     name = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
     png = re.compile(r"^[a-z0-9][a-z0-9_-]*\.png$")
+    path = re.compile(r"^[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)*$")
 
     class Shot(BaseHTTPRequestHandler):
         def answer(self, status, text):
@@ -87,7 +90,9 @@ def serve(udid, programs, raw_dir, port_file):
             q = parse_qs(url.query)
             app = (q.get("app") or [""])[0]
             file = (q.get("file") or [""])[0]
-            if url.path != "/shot" or not name.match(app) or not png.match(file):
+            where = (q.get("dir") or [f"apps/{app}/screens"])[0]
+            if (url.path != "/shot" or not name.match(app) or not png.match(file)
+                    or not path.match(where)):
                 return self.answer(400, f"not a screen: {self.path}")
             raw = os.path.join(raw_dir, app, file)
             os.makedirs(os.path.dirname(raw), exist_ok=True)
@@ -97,13 +102,13 @@ def serve(udid, programs, raw_dir, port_file):
                 capture_output=True, text=True)
             if took.returncode != 0:
                 return self.answer(500, f"simctl: {took.stderr.strip()}")
-            out = os.path.join(programs, "apps", app, "screens", file)
+            out = os.path.join(programs, where, file)
             try:
                 b, gap = frame(raw, out)
             except Exception as e:  # reported to the scenario, which fails on it
                 return self.answer(500, f"frame: {e}")
             size = Image.open(raw).size
-            self.answer(200, f"wrote programs/apps/{app}/screens/{file} "
+            self.answer(200, f"wrote programs/{where}/{file} "
                              f"(display {size[0]}x{size[1]}, bezel {b}, corner gap {gap})")
 
         def log_message(self, fmt, *args):
