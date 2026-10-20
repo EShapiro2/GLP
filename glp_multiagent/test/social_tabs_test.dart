@@ -1142,6 +1142,12 @@ void main() {
               'bob'),
           "Dave's machine refused your declaring Dave of age: you are not "
           "Dave's parent.");
+      // An adult's request to meet a child, offered on the child's row, the
+      // adult's state not recording them as one: the child's machine refuses
+      // it, meet forbidding child at both roles, and the adult is told (CSSN,
+      // Section 4.6.2).
+      expect(say('refused(meet(alice, dave), dave, unable([], [child]))'),
+          "Dave's machine refused your meeting: Dave is a child.");
       // No atoms: a vote no on a request no longer pending.
       expect(say('refused(befriend(alice, bob), bob, unable([], []))'),
           "Bob's machine refused your friendship.");
@@ -2084,8 +2090,9 @@ void main() {
     });
 
     _phoneTest(
-        'A child composes no meeting, introduction or meeting of a child; '
-        'her rows offer no Meet', (tester) async {
+        'A child composes no meeting or meeting of a child, and composes '
+        'an introduction; her rows offer no Meet, and her screen no field '
+        'Add a person by key (CSSN, Section 4.6.2)', (tester) async {
       final p = await _Phone.open(tester, 'cssn', me: 'carol');
       await p.views([
         _v('[friend(alice), knows(alice), knows(dave), child, parent(alice), '
@@ -2097,6 +2104,22 @@ void main() {
       for (final k in ['meet', 'child-meet', 'child-meet-2']) {
         expect(p.key(1, 'compose:$k'), findsNothing, reason: k);
       }
+      expect(p.key(1, 'compose:introduce'), findsOneWidget);
+      expect(p.key(1, 'add-field'), findsNothing);
+      expect(p.key(1, 'add'), findsNothing);
+    });
+
+    _phoneTest(
+        'A child\'s phone at its setup, before the entering, its state '
+        'holding no child, has the field Add a person by key, by which its '
+        'agent discovers its parents\' (CSSN, Appendix C.4)', (tester) async {
+      final p = await _Phone.open(tester, 'cssn', me: 'carol');
+      await p.views([_v('[]', '[]')]);
+      await p.menu(1, _cssnProposals, known: '[]');
+      expect(p.key(1, 'add-field'), findsOneWidget);
+      await p.type(p.key(1, 'add-field'), 'alice');
+      await p.tap(p.key(1, 'add'));
+      expect(p.grants, ['input(1, [3], known(alice))']);
     });
 
     const study = 'speech(utterance(study), frank)';

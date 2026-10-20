@@ -1602,6 +1602,9 @@ void appsScreens(Screens screens) {
       expect(run.control(carol, 'compose:$k'), findsNothing, reason: k);
     }
     expect(run.sentence(carol, 'introduce'), 'Introduce … to ….');
+    // A child's menu offers no adding a person by key (CSSN, Section 4.6.2; Appendix C.4): Carol's agent discovered Alice's at the setup of her phone, before the entering, and comes to know an agent only by a child meet a parent requests (CSSN:2).
+    expect(run.control(carol, 'add-field'), findsNothing);
+    expect(run.control(carol, 'add'), findsNothing);
     run.plain(carol);
     await run.shoot(carol, 'cssn-app-5.png');
     // Carol ends the friendship with Dave (GSG:2; unfriend(p?, q)), her own act, End friendship on Dave's row: nobody is asked.
