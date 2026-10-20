@@ -35,16 +35,38 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % An argument is a role, named by its index in the schema, a party variable, a
 % speech-act variable, a name term or a signed term: sgn(Y, I) is the signed
 % term sgn(y, pi_I) of def:schema, the speech act y signed by the agent in
-% role I.
+% role I.  Act schemas allow numbers (GSC, Section 3.2, the paragraph after
+% the example of def:schema): num(X) is a numeric argument, the numeric
+% variable X where X is a name and the number X where X is a number.
 Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-        ; sgn(Constant, Integer).
+        ; sgn(Constant, Integer) ; num(Constant).
 Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
 
+% --- The numbers act schemas allow (GSC, Section 3.2) ----------------------
+% "An argument of an atom may be a number or a numeric variable, a schema may
+% carry a constraint on its numeric variables, which every binding satisfies,
+% and an atom added or deleted may carry a multiplicity."  times(K, A) is the
+% atom A with the multiplicity K, K a numeric argument; a constraint is true,
+% gt(X, Y) (X > Y), le(X, Y) (X =< Y), succ(X, Y) (Y = X + 1) or or(C1, C2),
+% over numeric arguments, the term form of Currencies' GB.glp (b9369200).  A
+% schema with a constraint is nschema(Name, Vars, Constraint, Roles), its
+% numeric variables listed in Vars with its other variables, in the order of
+% its head.  The contract as written is of the types N...; the conditions are
+% decided on its plain form, plain_decl below, the multiplicities and the
+% constraint dropped and the numeric arguments kept, since "a number names no
+% agent, so the conditions below do not concern them" (GSC, ibid.).
+Mult       ::= Atom ; times(Arg, Atom).
+Mults      ::= [] ; [Mult | Mults].
+Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
+             ; or(Constraint, Constraint).
+
 % The base of an argument, of a name term and of a role (definition:term,
 % definition:role, definition:provenance).
-Base  ::= b_role(Integer) ; b_pvar(Constant) ; b_svar(Constant).
+% A numeric argument names no agent, and its base, b_num, is the base of no
+% role (GSC, Section 3.2); community.glp passes it by.
+Base  ::= b_role(Integer) ; b_pvar(Constant) ; b_svar(Constant) ; b_num.
 Bases ::= [] ; [Base | Bases].
 
 % rs(Guard, Add, Del, Keep, Forb) holds an agent role's four multisets in the
@@ -75,13 +97,30 @@ Contract  ::= [] ; [Schema | Contract].
 % one that does not is the list of its schemas.
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
+% The contract as written, with the numbers act schemas allow: a role's four
+% multisets may carry multiplicities, which def:schema admits on an atom
+% added or deleted and check.glp refuses elsewhere (multiplicity_not_added),
+% and a schema may be written nschema, with a constraint.  A contract with no
+% number is of these types as it is of the plain ones.
+NRoleSpec  ::= rs(Guard, Mults, Mults, Mults, Mults)
+             ; crs(RoleKind, Guard, Mults, Mults, Mults, Mults).
+NRoleSpecs ::= [] ; [NRoleSpec | NRoleSpecs].
+NSchema    ::= schema(Constant, Args, NRoleSpecs)
+             ; cschema(Constant, Args, Nil, NRoleSpecs)
+             ; nschema(Constant, Args, Constraint, NRoleSpecs).
+NContract  ::= [] ; [NSchema | NContract].
+NDeclared  ::= NContract ; reflexive(Preds, NContract).
+
 % --- The image of a binding (def:schema, def:binding) ----------------------
 % People and speech acts are numbered; person(0) and person(1) are the two
 % the conditions quantify over.  signed(S, P) is the image of a signed term,
 % the pair of the speech act S and the person P in its role
 % (def:binding).  undef marks a variable that a partial substitution leaves
-% unbound and occurs in no completed one.
-Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef.
+% unbound and occurs in no completed one.  anynum is the image of a numeric
+% argument: a number names no agent, so the conditions do not concern numbers
+% (GSC, Section 3.2), and to them every number is the one value anynum, which
+% names no one and which every numeric argument matches.
+Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef ; anynum.
 Vals  ::= [] ; [Val | Vals].
 GAtom ::= gatom(Constant, Vals).
 
@@ -125,7 +164,17 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % (Definition Act schema), no signed term among u_2, ..., u_r
 % (listed_signed); each names the schema and the listed role.  What Appendix
 % D's Definition Act schema requires of the mark ?, that only an agent role
-% carry it: a listed role carrying it (listed_guarded).
+% carry it: a listed role carrying it (listed_guarded).  What GSC's passage on
+% numbers (Section 3.2) requires of them: a multiplicity on an atom added or
+% deleted, so one on an atom required or forbidden and neither added nor
+% deleted is a fault multiplicity_not_added(Schema, Role, Atom); a
+% multiplicity a number, so one that is no numeric argument is a fault
+% multiplicity_not_numeric(Schema, Role, Atom); and a constraint on the
+% schema's numeric variables, so an argument of the constraint that is no
+% numeric argument is a fault constraint_not_numeric(Schema, Arg).  A numeric
+% variable is a variable of the schema, listed in its head like the others
+% (not_in_head, head_repeated), and a number in the head is no variable
+% (head_not_variable).
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
         ; untraceable(Preds)
@@ -140,7 +189,10 @@ Fault ::= no_introductory_act
         ; not_in_head(Constant, Arg)
         ; listed_base(Constant, Integer)
         ; listed_signed(Constant, Integer)
-        ; listed_guarded(Constant, Integer).
+        ; listed_guarded(Constant, Integer)
+        ; multiplicity_not_added(Constant, Integer, Atom)
+        ; multiplicity_not_numeric(Constant, Integer, Atom)
+        ; constraint_not_numeric(Constant, Arg).
 Faults  ::= [] ; [Fault | Faults].
 
 % --- What an introduction with wards is made of (GAI, "Contracts with Wards")
@@ -374,6 +426,7 @@ procedure apply_arg(Subst?, Arg?, Val).
 apply_arg(S, sgn(Y, J), signed(SV?, PV?)) :- ground(S?), ground(Y?), integer(J?) |
     apply_arg(S?, svar(Y?), SV),
     apply_arg(S?, role(J?), PV).
+apply_arg(_, num(_), anynum).
 apply_arg(S, A, V?) :- otherwise, ground(S?), ground(A?) |
     subst_lookup(S?, A?, F),
     unwrap_val(F?, V).
@@ -403,23 +456,35 @@ kind_ok(role(_), person(_), yes).
 kind_ok(role(_), speech(_), no).
 kind_ok(role(_), signed(_, _), no).
 kind_ok(role(_), undef, no).
+kind_ok(role(_), anynum, no).
 kind_ok(pvar(_), person(_), yes).
 kind_ok(pvar(_), speech(_), no).
 kind_ok(pvar(_), signed(_, _), no).
 kind_ok(pvar(_), undef, no).
+kind_ok(pvar(_), anynum, no).
 kind_ok(svar(_), person(_), no).
 kind_ok(svar(_), speech(_), yes).
 kind_ok(svar(_), signed(_, _), yes).
 kind_ok(svar(_), undef, no).
+kind_ok(svar(_), anynum, no).
 kind_ok(nterm(_), person(_), no).
 kind_ok(nterm(_), speech(_), no).
 kind_ok(nterm(_), signed(_, _), no).
 kind_ok(nterm(_), undef, no).
+kind_ok(nterm(_), anynum, no).
 % A signed term is matched by its two parts (match_sgn below), never here.
 kind_ok(sgn(_, _), person(_), no).
 kind_ok(sgn(_, _), speech(_), no).
 kind_ok(sgn(_, _), signed(_, _), yes).
 kind_ok(sgn(_, _), undef, no).
+kind_ok(sgn(_, _), anynum, no).
+% A numeric argument matches every number and nothing else (match_num below),
+% the conditions not concerning numbers.
+kind_ok(num(_), anynum, yes).
+kind_ok(num(_), person(_), no).
+kind_ok(num(_), speech(_), no).
+kind_ok(num(_), signed(_, _), no).
+kind_ok(num(_), undef, no).
 
 % subst_role_at(S, V, R): S sends a role to V.  Clause 2 of def:unobstructed
 % asks it of the other party.
@@ -511,6 +576,8 @@ binding_ok(svar(_), _, _, _, yes).
 binding_ok(nterm(_), _, _, _, yes).
 % A signed term is no variable and is matched by its parts (match_sgn).
 binding_ok(sgn(_, _), _, _, _, no).
+% A numeric argument binds nothing and is matched by match_num.
+binding_ok(num(_), _, _, _, no).
 
 procedure match_bind(Ans?, Arg?, Val?, Subst?, MatchRes).
 match_bind(yes, A, V, S, match([bind(A?, V?)|S?])).
@@ -542,11 +609,24 @@ match_sgn(Y, J, signed(SV, PV), S, Rs, R?) :-
 match_sgn(_, _, person(_), _, _, nomatch).
 match_sgn(_, _, speech(_), _, _, nomatch).
 match_sgn(_, _, undef, _, _, nomatch).
+match_sgn(_, _, anynum, _, _, nomatch).
+
+% A numeric argument matches a number and binds nothing: a number names no
+% agent, so the conditions do not concern numbers (GSC, Section 3.2), and
+% every number is the one value anynum to them.
+procedure match_num(Val?, Subst?, MatchRes).
+match_num(anynum, S, match(S?)).
+match_num(person(_), _, nomatch).
+match_num(speech(_), _, nomatch).
+match_num(signed(_, _), _, nomatch).
+match_num(undef, _, nomatch).
 
 procedure match_one(Arg?, Val?, Subst?, RoleSpecs?, MatchRes).
 match_one(sgn(Y, J), V, S, Rs, R?) :-
     ground(Y?), integer(J?), ground(V?), ground(S?), ground(Rs?) |
     match_sgn(Y?, J?, V?, S?, Rs?, R).
+match_one(num(_), V, S, _, R?) :- ground(V?), ground(S?) |
+    match_num(V?, S?, R).
 match_one(A, V, S, Rs, R?) :- otherwise, ground(A?), ground(V?), ground(S?), ground(Rs?) |
     subst_lookup(S?, A?, F),
     match_one1(F?, A?, V?, S?, Rs?, R).
@@ -632,6 +712,7 @@ filter_pvars([pvar(X)|As], [pvar(X?)|R?]) :- filter_pvars(As?, R).
 filter_pvars([role(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([svar(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([sgn(_, _)|As], R?) :- filter_pvars(As?, R).
+filter_pvars([num(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_pvars(S?, Ps),
     filter_pvars(As?, R1),
@@ -643,10 +724,20 @@ filter_svars([svar(X)|As], [svar(X?)|R?]) :- filter_svars(As?, R).
 filter_svars([role(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([pvar(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([sgn(Y, _)|As], [svar(Y?)|R?]) :- filter_svars(As?, R).
+filter_svars([num(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_svars(S?, Ss),
     filter_svars(As?, R1),
     args_app(Ss?, R1?, R).
+
+% The numeric variables among arguments: num(X) with X a name, a number being
+% no variable (GSC, Section 3.2).
+procedure filter_nvars(Args?, Args).
+filter_nvars([], []).
+filter_nvars([num(X)|As], R?) :- number(X?), ground(As?) | filter_nvars(As?, R).
+filter_nvars([num(X)|As], [num(X?)|R?]) :- otherwise, ground(X?), ground(As?) |
+    filter_nvars(As?, R).
+filter_nvars([A|As], R?) :- otherwise, ground(A?), ground(As?) | filter_nvars(As?, R).
 
 procedure schema_pvars(Schema?, Args).
 schema_pvars(Sc, R?) :- ground(Sc?) |
@@ -694,6 +785,7 @@ fresh_val(pvar(_), N, person(N?)).
 fresh_val(svar(_), N, speech(N?)).
 fresh_val(nterm(_), _, undef).
 fresh_val(sgn(_, _), _, undef).
+fresh_val(num(_), _, anynum).
 
 procedure complete1(Found?, Arg?, Args?, Subst?, Integer?, Subst).
 complete1(bound(_), _, As, S, N, R?) :- ground(As?), ground(S?), integer(N?) |
@@ -915,6 +1007,7 @@ arg_base(nterm(S), B?) :- ground(S?) | nt_base(S?, B).
 % (definition:provenance): this is the base of pi, an agent role, and
 % filter_svars gives y.
 arg_base(sgn(_, J), b_role(J?)).
+arg_base(num(_), b_num).
 
 procedure role_base(RoleSpec?, Integer?, Base).
 role_base(rs(_, _, _, _, _), I, b_role(I?)).
@@ -993,6 +1086,189 @@ sch_occ_vars2(Rs, As, R?) :- ground(Rs?), ground(As?) |
 procedure nts_empty(NameTerms?, Ans).
 nts_empty([], yes).
 nts_empty([_|_], no).
+
+% ---------------------------------------------------------------------------
+% The contract as written, with numbers (GSC, Section 3.2)
+% ---------------------------------------------------------------------------
+% A contract is read as written, of the types N..., and its plain form is
+% the one the conditions are decided on: each multiplicity dropped, leaving
+% its atom, and the constraint of an nschema dropped, leaving a schema with
+% the same name, variables and roles.  A number names no agent, so the
+% conditions do not concern numbers (GSC, Section 3.2): a numeric argument
+% stays in its atom, where it names no one (apply_arg, match_num).  The form
+% of a schema is decided on the plain form too, an atom with a multiplicity
+% being an atom added or deleted (def:schema), and the head and the numbers
+% on the contract as written (check.glp).
+
+procedure plain_mult(Mult?, Atom).
+plain_mult(atom(P, As), atom(P?, As?)).
+plain_mult(times(_, A), A?).
+
+procedure plain_mults(Mults?, Atoms).
+plain_mults([], []).
+plain_mults([M|Ms], [A?|R?]) :- ground(M?), ground(Ms?) |
+    plain_mult(M?, A),
+    plain_mults(Ms?, R).
+
+procedure plain_role(NRoleSpec?, RoleSpec).
+plain_role(rs(G, P, M, K, N), rs(G?, P1?, M1?, K1?, N1?)) :-
+    ground(P?), ground(M?), ground(K?), ground(N?) |
+    plain_mults(P?, P1),
+    plain_mults(M?, M1),
+    plain_mults(K?, K1),
+    plain_mults(N?, N1).
+plain_role(crs(Kd, G, P, M, K, N), crs(Kd?, G?, P1?, M1?, K1?, N1?)) :-
+    ground(P?), ground(M?), ground(K?), ground(N?) |
+    plain_mults(P?, P1),
+    plain_mults(M?, M1),
+    plain_mults(K?, K1),
+    plain_mults(N?, N1).
+
+procedure plain_roles(NRoleSpecs?, RoleSpecs).
+plain_roles([], []).
+plain_roles([RS|Rs], [R1?|R?]) :- ground(RS?), ground(Rs?) |
+    plain_role(RS?, R1),
+    plain_roles(Rs?, R).
+
+procedure plain_schema(NSchema?, Schema).
+plain_schema(schema(Nm, Vs, Rs), schema(Nm?, Vs?, R?)) :- ground(Rs?) |
+    plain_roles(Rs?, R).
+plain_schema(cschema(Nm, Vs, Nl, Rs), cschema(Nm?, Vs?, Nl?, R?)) :- ground(Rs?) |
+    plain_roles(Rs?, R).
+plain_schema(nschema(Nm, Vs, _, Rs), schema(Nm?, Vs?, R?)) :- ground(Rs?) |
+    plain_roles(Rs?, R).
+
+procedure plain_contract(NContract?, Contract).
+plain_contract([], []).
+plain_contract([S|Ss], [P?|R?]) :- ground(S?), ground(Ss?) |
+    plain_schema(S?, P),
+    plain_contract(Ss?, R).
+
+procedure plain_decl(NDeclared?, Declared).
+plain_decl([], []).
+plain_decl([S|Ss], R?) :- ground(S?), ground(Ss?) | plain_contract([S?|Ss?], R).
+plain_decl(reflexive(Rf, C), reflexive(Rf?, R?)) :- ground(C?) | plain_contract(C?, R).
+
+% The schemas of a contract as written, and the predicates it declares
+% reflexive.
+procedure ndecl_schemas(NDeclared?, NContract).
+ndecl_schemas([], []).
+ndecl_schemas([S|Ss], [S?|Ss?]).
+ndecl_schemas(reflexive(_, C), C?).
+
+procedure ndecl_reflexive(NDeclared?, Preds).
+ndecl_reflexive([], []).
+ndecl_reflexive([_|_], []).
+ndecl_reflexive(reflexive(Rf, _), Rf?).
+
+% The parts of a schema as written.  The constraint of a schema with none is
+% true.
+procedure nsch_name(NSchema?, Constant).
+nsch_name(schema(Nm, _, _), Nm?).
+nsch_name(cschema(Nm, _, _, _), Nm?).
+nsch_name(nschema(Nm, _, _, _), Nm?).
+
+procedure nsch_vars(NSchema?, Args).
+nsch_vars(schema(_, Vs, _), Vs?).
+nsch_vars(cschema(_, Vs, _, _), Vs?).
+nsch_vars(nschema(_, Vs, _, _), Vs?).
+
+procedure nsch_roles(NSchema?, NRoleSpecs).
+nsch_roles(schema(_, _, Rs), Rs?).
+nsch_roles(cschema(_, _, _, Rs), Rs?).
+nsch_roles(nschema(_, _, _, Rs), Rs?).
+
+procedure nsch_constraint(NSchema?, Constraint).
+nsch_constraint(schema(_, _, _), true).
+nsch_constraint(cschema(_, _, _, _), true).
+nsch_constraint(nschema(_, _, C, _), C?).
+
+procedure nrs_guard(NRoleSpec?, Guard).
+nrs_guard(rs(G, _, _, _, _), G?).
+nrs_guard(crs(_, G, _, _, _, _), G?).
+
+procedure nrs_add(NRoleSpec?, Mults).
+nrs_add(rs(_, P, _, _, _), P?).
+nrs_add(crs(_, _, P, _, _, _), P?).
+
+procedure nrs_del(NRoleSpec?, Mults).
+nrs_del(rs(_, _, M, _, _), M?).
+nrs_del(crs(_, _, _, M, _, _), M?).
+
+procedure nrs_keep(NRoleSpec?, Mults).
+nrs_keep(rs(_, _, _, K, _), K?).
+nrs_keep(crs(_, _, _, _, K, _), K?).
+
+procedure nrs_forb(NRoleSpec?, Mults).
+nrs_forb(rs(_, _, _, _, N), N?).
+nrs_forb(crs(_, _, _, _, _, N), N?).
+
+procedure mults_app(Mults?, Mults?, Mults).
+mults_app([], T, T?).
+mults_app([M|Ms], T, [M?|R?]) :- mults_app(Ms?, T?, R).
+
+% The atoms a role requires, as written: =(i) u -(i).
+procedure nrs_req(NRoleSpec?, Mults).
+nrs_req(RS, R?) :- ground(RS?) |
+    nrs_del(RS?, M),
+    nrs_keep(RS?, K),
+    mults_app(K?, M?, R).
+
+procedure n_is_guarding(NRoleSpec?, Ans).
+n_is_guarding(RS, R?) :- ground(RS?) |
+    nrs_guard(RS?, G),
+    guard_marked(G?, R).
+
+% The arguments of a constraint, and the multiplicities among a multiset as
+% written.
+procedure constraint_args(Constraint?, Args?, Args).
+constraint_args(true, T, T?).
+constraint_args(gt(X, Y), T, [X?, Y?|T?]).
+constraint_args(le(X, Y), T, [X?, Y?|T?]).
+constraint_args(succ(X, Y), T, [X?, Y?|T?]).
+constraint_args(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
+    constraint_args(C2?, T?, R1),
+    constraint_args(C1?, R1?, R).
+
+procedure mults_margs(Mults?, Args?, Args).
+mults_margs([], T, T?).
+mults_margs([atom(_, _)|Ms], T, R?) :- ground(Ms?), ground(T?) | mults_margs(Ms?, T?, R).
+mults_margs([times(K, _)|Ms], T, [K?|R?]) :- ground(Ms?), ground(T?) | mults_margs(Ms?, T?, R).
+
+procedure nroles_margs(NRoleSpecs?, Args?, Args).
+nroles_margs([], T, T?).
+nroles_margs([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    nrs_add(RS?, P),
+    nrs_del(RS?, M),
+    nrs_keep(RS?, K),
+    nrs_forb(RS?, N),
+    nroles_margs(Rs?, T?, R1),
+    mults_margs(N?, R1?, R2),
+    mults_margs(K?, R2?, R3),
+    mults_margs(M?, R3?, R4),
+    mults_margs(P?, R4?, R).
+
+% The variables occurring in a schema as written: its agent and speech-act
+% variables (sch_occ_vars of its plain form), then its numeric variables, in
+% its atoms, its multiplicities and its constraint.
+procedure nsch_occ_vars(NSchema?, Args).
+nsch_occ_vars(NSc, R?) :- ground(NSc?) |
+    plain_schema(NSc?, Sc),
+    nsch_roles(NSc?, NRs),
+    nsch_constraint(NSc?, Cn),
+    nsch_occ_vars1(Sc?, NRs?, Cn?, R).
+
+procedure nsch_occ_vars1(Schema?, NRoleSpecs?, Constraint?, Args).
+nsch_occ_vars1(Sc, NRs, Cn, R?) :- ground(Sc?), ground(NRs?), ground(Cn?) |
+    sch_occ_vars(Sc?, PS),
+    schema_args(Sc?, As),
+    nroles_margs(NRs?, [], Ms),
+    constraint_args(Cn?, [], Cs),
+    args_app(Ms?, Cs?, MC),
+    args_app(As?, MC?, All),
+    filter_nvars(All?, Ns),
+    args_dedup(Ns?, Ns1),
+    args_app(PS?, Ns1?, R).
 
 % ---------------------------------------------------------------------------
 % Which language a contract is written in
@@ -1089,8 +1365,8 @@ agent_named([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % header); contracts.glp holds the checker's fixtures, by name, and its
 % variants of a contract, by name and the contract's term.
 
-imported procedure check#check(Declared?, Verdict).
-exported procedure check(Declared?, Verdict).
+imported procedure check#check(NDeclared?, Verdict).
+exported procedure check(NDeclared?, Verdict).
 check(C, V?) :- check # check(C?, V).
 
 imported procedure check#check_named(Constant?, Verdict).
@@ -1105,8 +1381,8 @@ imported procedure check#traceable_of(Constant?, Preds).
 exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- check # traceable_of(Nm?, E).
 
-imported procedure check#traceable_preds(Declared?, Preds).
-exported procedure traceable_preds(Declared?, Preds).
+imported procedure check#traceable_preds(NDeclared?, Preds).
+exported procedure traceable_preds(NDeclared?, Preds).
 traceable_preds(D, E?) :- check # traceable_preds(D?, E).
 
 imported procedure check#traceable_variant(Constant?, Contract?, Preds).
@@ -1115,8 +1391,8 @@ traceable_variant(Nm, B, E?) :- check # traceable_variant(Nm?, B?, E).
 
 % The introductory acts of a contract, for inspection (def:introduction,
 % def:unobstructed): each unobstructed, or obstructed with its faults.
-imported procedure check#intro_acts(Declared?, IntroActs).
-exported procedure intro_acts(Declared?, IntroActs).
+imported procedure check#intro_acts(NDeclared?, IntroActs).
+exported procedure intro_acts(NDeclared?, IntroActs).
 intro_acts(D, A?) :- check # intro_acts(D?, A).
 
 imported procedure check#intro_acts_variant(Constant?, Contract?, IntroActs).
@@ -1131,36 +1407,36 @@ imported procedure check#wards_of(Constant?, Wards).
 exported procedure wards_of(Constant?, Wards).
 wards_of(Nm, W?) :- check # wards_of(Nm?, W).
 
-imported procedure check#wards(Declared?, Wards).
-exported procedure wards(Declared?, Wards).
+imported procedure check#wards(NDeclared?, Wards).
+exported procedure wards(NDeclared?, Wards).
 wards(D, W?) :- check # wards(D?, W).
 
 imported procedure check#wards_variant(Constant?, Contract?, Wards).
 exported procedure wards_variant(Constant?, Contract?, Wards).
 wards_variant(Nm, B, W?) :- check # wards_variant(Nm?, B?, W).
 
-imported procedure check#guardianships(Declared?, Preds?, Guardianships).
-exported procedure guardianships(Declared?, Preds?, Guardianships).
+imported procedure check#guardianships(NDeclared?, Preds?, Guardianships).
+exported procedure guardianships(NDeclared?, Preds?, Guardianships).
 guardianships(D, M, G?) :- check # guardianships(D?, M?, G).
 
 % The atoms the relay acts of the introduction with wards require at their ward roles as atoms of h, by clause 2 of def:relay and by none of its other alternatives (GSC 410a440), of a contract given as a term.
-imported procedure check#relay_h(Declared?, RelayHs).
-exported procedure relay_h(Declared?, RelayHs).
+imported procedure check#relay_h(NDeclared?, RelayHs).
+exported procedure relay_h(NDeclared?, RelayHs).
 relay_h(D, H?) :- check # relay_h(D?, H).
 
 % The leaving marks of a contract for a set of marks (def:leaving), for each
 % choice of a guardianship of each mark, of a contract given as a term and
 % of a fixture by name.
-imported procedure check#leaving(Declared?, Preds?, Leavings).
-exported procedure leaving(Declared?, Preds?, Leavings).
+imported procedure check#leaving(NDeclared?, Preds?, Leavings).
+exported procedure leaving(NDeclared?, Preds?, Leavings).
 leaving(D, M, L?) :- check # leaving(D?, M?, L).
 
 imported procedure check#leaving_of(Constant?, Preds?, Leavings).
 exported procedure leaving_of(Constant?, Preds?, Leavings).
 leaving_of(Nm, M, L?) :- check # leaving_of(Nm?, M?, L).
 
-imported procedure contracts#contract(Constant?, Declared).
-exported procedure contract_named(Constant?, Declared).
+imported procedure contracts#contract(Constant?, NDeclared).
+exported procedure contract_named(Constant?, NDeclared).
 contract_named(Nm, C?) :- contracts # contract(Nm?, C).
 
 imported procedure contracts#variant(Constant?, Contract?, Declared).
@@ -1171,8 +1447,8 @@ imported procedure compile#compile_named(Constant?).
 exported procedure compile_named(Constant?).
 compile_named(Nm) :- compile # compile_named(Nm?).
 
-imported procedure compile#compile_contract(Constant?, Declared?).
-exported procedure compile_contract(Constant?, Declared?).
+imported procedure compile#compile_contract(Constant?, NDeclared?).
+exported procedure compile_contract(Constant?, NDeclared?).
 compile_contract(Nm, D) :- compile # compile_contract(Nm?, D?).
 
 imported procedure compile#compile_variant(Constant?, Contract?).
@@ -1183,14 +1459,14 @@ imported procedure compile#compile_schema(Constant?, Constant?).
 exported procedure compile_schema(Constant?, Constant?).
 compile_schema(Nm, Sn) :- compile # compile_schema(Nm?, Sn?).
 
-imported procedure compile#compile_schema_in(Constant?, Declared?, Constant?).
-exported procedure compile_schema_in(Constant?, Declared?, Constant?).
+imported procedure compile#compile_schema_in(Constant?, NDeclared?, Constant?).
+exported procedure compile_schema_in(Constant?, NDeclared?, Constant?).
 compile_schema_in(Nm, D, Sn) :- compile # compile_schema_in(Nm?, D?, Sn?).
 
 imported procedure compile#compile_schema_variant(Constant?, Contract?, Constant?).
 exported procedure compile_schema_variant(Constant?, Contract?, Constant?).
 compile_schema_variant(Nm, B, Sn) :- compile # compile_schema_variant(Nm?, B?, Sn?).
 
-imported procedure notation#notation_contract(Declared?).
-exported procedure notation_contract(Declared?).
+imported procedure notation#notation_contract(NDeclared?).
+exported procedure notation_contract(NDeclared?).
 notation_contract(D) :- notation # notation_contract(D?).

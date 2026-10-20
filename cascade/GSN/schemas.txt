@@ -1,9 +1,17 @@
 establish(Alice?) :
     at Alice: +identity
 
+meet(Alice?, Bob?) :
+    at Alice: identity, +knows(Bob)
+    at Bob: identity, +knows(Alice)
+
+introduce(Alice?, Bob?; c) :
+    at Alice: identity, knows(Bob), knows(c)
+    at Bob: identity, knows(Alice), +knows(c)
+
 befriend(Alice?, Bob?) :
-    at Alice: identity, not friend(Bob), +friend(Bob)
-    at Bob: identity, not friend(Alice), +friend(Alice)
+    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
+    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
 
 unfriend(Alice?, Bob) :
     at Alice: identity, -friend(Bob)
