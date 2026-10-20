@@ -139,7 +139,7 @@ Done ::= done.
 % UTC): the mini-app's end reads the person's grants, input(Id, P, R), Id the
 % construct, P the path of the position in it the grant writes, R the person's
 % input, and writes what the mini-app draws for its person, draw(Id, W, V), W
-% the widget, untyped, and V at T, and withdraw(Id); nothing merged, a
+% the widget, of type Widget, and V at T, and withdraw(Id); nothing merged, a
 % program's output reaching the person as the elements of the output thread,
 % construct 0.  Neither stream ends: the person and the program stay
 % connected, and a goal standing for the person waits on the draws when it
@@ -149,7 +149,37 @@ PersonIn(T) ::= [Input(T) | PersonIn(T)].
 PersonOut(T) ::= [Draw(T) | PersonOut(T)].
 Input(T) ::= input(Integer, Path, T).
 Path ::= [] ; [Integer | Path].
-Draw(T) ::= draw(Integer, _, T) ; withdraw(Integer).
+Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
+
+% The widget in a draw (vGLP, Section 6.3: "Widget is the type of the terms
+% that draw widgets: the terms of the default widgets, built from the
+% constructors of Definition Default Widget, and, for a declared widget, the
+% term named(W, D) of the name W its declaration gives and the default widget
+% D of its type"; GLP #9 Cowork, 2026-10-20 09:22 UTC, item 4.1: "the root's
+% Widget has the alternative named(Constant, Widget)").  The default widgets
+% of Definition Default Widget, as the canonical compilation writes them: a
+% button, button(C), C a constant or []; a row of buttons, buttons(Cs); a
+% text field, text; a number field, number; a peer field, peer; a form headed
+% by its functor F, form(F, Fs), each field labelled by the name L of its
+% declared type, field(L, W), or, for a stream or a list inside a form the
+% person writes, submitted as a separate question and drawn under the form,
+% question(L, W); a menu, menu(Ws); a value the program writes, shown; a
+% picker, picker; a stream the person writes, input_box(W), and a list,
+% input_list(W); and a stream the program writes, a thread, thread(W), or
+% thread where its elements are shown.  The widget of a recursive type is
+% finite by a reference back to itself, rec(T, W) binding the name T of the
+% type to its widget W, within which ref(T) is T again ("a field of a
+% recursive type drawn when the person opens it").
+Widget ::= button(ButtonValue) ; buttons(List(ButtonValue))
+      ; text ; number ; peer
+      ; form(String, List(WidgetField)) ; menu(List(Widget))
+      ; shown ; picker
+      ; input_box(Widget) ; input_list(Widget)
+      ; thread ; thread(Widget)
+      ; rec(String, Widget) ; ref(String)
+      ; named(Constant, Widget).
+WidgetField ::= field(String, Widget) ; question(String, Widget).
+ButtonValue ::= Constant ; [].
 
 % The channel to the social graph (GSG, 2026-10-13 11:57 UTC, Udi: approved;
 % the held report and the warm call, GSG 2026-10-14 11:36 UTC, item 3, Udi:

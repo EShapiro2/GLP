@@ -239,8 +239,10 @@ run(_).
       expect(c.source, contains('exported procedure dispatch_1('));
       expect(c.source, contains('procedure(Q, T) dispatch_1('));
       expect(c.source, contains('Ask_1(Q) ::= ask(Constant, Q).'));
-      expect(c.source, contains('procedure run_t_r(Integer?, _?, Stream(_)?, '
-          'Done?, Stream(Draw(Drawn))).'));
+      // The widget at the root's Widget, the type of the widget in a draw
+      // (vGLP, Section 6.3; GLP #9 Cowork, 2026-10-20 09:22 UTC, item 4.1).
+      expect(c.source, contains('procedure run_t_r(Integer?, Widget?, '
+          'Stream(_)?, Done?, Stream(Draw(Drawn))).'));
       expect(c.source, contains('constructs_1([spawn(Id, Q, Gs, Ds?) | Ss]) '
           ':- construct_1(Id?, Q?, Gs?, Ds), constructs_1(Ss?).'));
       expect(c.source, contains('construct_1(Id, t_r(X?), Gs, Ds?) :- '));
