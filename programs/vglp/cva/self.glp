@@ -271,10 +271,6 @@ find_approval1(K, [seen(Id, P, At)|Cs], Done, approval_at(Id?, P?, Rest?)) :-
 find_approval1(K, [seen(Id, P, attempt(_, _, _, C, _))|Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(C?), ground(K?), K? =?= C? |
     rev_seen(Done?, Cs?, Rest).
-%% An attempt of four, without the request it names, as the currency's platform, printed before vGLP f0acbc1 and not printed again (currency/self.glp), writes it.
-find_approval1(K, [seen(Id, P, attempt(_, _, _, C))|Cs], Done, approval_at(Id?, P?, Rest?)) :-
-    ground(C?), ground(K?), K? =?= C? |
-    rev_seen(Done?, Cs?, Rest).
 find_approval1(K, [S|Cs], Done, F?) :- otherwise | find_approval1(K?, Cs?, [S?|Done?], F).
 procedure rev_seen(Seens?, Seens?, Seens).
 rev_seen([], Acc, Acc?).
