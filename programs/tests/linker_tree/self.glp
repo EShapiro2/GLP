@@ -1,0 +1,473 @@
+%% IGLP's linker fixture, programs/tests/linker_tree, for program_linker_test.dart and program_compilation_test.dart: the program's self.glp, its types, its helpers and its exports, each play forwarded to plays.glp, programs/cssn/self.glp as it stood at GLP d2495778, its comments removed and three names changed: the directory childsafe to agents, the module and procedure superapp to host, and the procedures cssn and cssn_child to app and app_child.
+
+MyChild      ::= Key.
+Friend       ::= Key.
+FriendsChild ::= Key.
+Parent       ::= Key.
+Child        ::= Key.
+OtherChild   ::= Key.
+Member       ::= Key.
+Leader       ::= Key.
+Name         ::= Constant.
+Text         ::= Constant.
+
+GroupId ::= group_id(Leader, Name).
+
+Item    ::= sgn(Content, Key).
+Content ::= Constant ; Item.
+
+Request ::= introduce(MyChild, Friend, FriendsChild)
+          ; declare_of_age(MyChild)
+          ; sign(Text)
+          ; forward(Friend, Item)
+          ; unfriend(Friend)
+          ; unfriend_child(MyChild, Friend)
+          ; create_group(Name)
+          ; invite(Name, Friend)
+          ; invite_child(Name, FriendsChild, Friend)
+          ; post(GroupId, Item)
+          ; leave(GroupId)
+          ; leave_child(MyChild, GroupId).
+
+YesNo ::= yes ; no.
+
+Intro ::= intro(Parent, Child, OtherChild).
+Card  ::= card(Intro, YesNo?).
+
+GroupOffer ::= group(GroupId).
+GroupCard  ::= card(GroupOffer, YesNo?).
+
+JoinOffer ::= join(GroupId, Child).
+JoinCard  ::= card(JoinOffer, YesNo?).
+
+InviteOffer ::= invite(GroupId, Member).
+InviteCard  ::= card(InviteOffer, YesNo?).
+
+Conveyance(F)      ::= friend(F) ; already_friends ; declined.
+ProposerConsent(F) ::= yes(Conveyance(F)) ; no.
+AcceptorConsent    ::= yes ; no.
+
+Consents ::= propose(ProposerConsent(FriendChannel)?, AcceptorConsent)
+           ; accept(AcceptorConsent?, ProposerConsent(FriendChannel)).
+
+GroupReply ::= yes(GroupChannel?) ; no.
+
+FriendContent ::= item(Item)
+                ; unfriend
+                ; child_intro(Intro, Consents)
+                ; of_age
+                ; of_age_notice
+                ; unfriend_child(Friend)
+                ; group_invite(GroupId, GroupReply?)
+                ; group_invite_child(GroupId, Child, GroupReply?)
+                ; group_consent_req(GroupId, YesNo?)
+                ; invite_consent_req(GroupId, Member, YesNo?)
+                ; leave_group(GroupId)
+                ; group_msg(GroupId, Item)
+                ; group_leave(GroupId, Key).
+FriendMsg     ::= msg(Key, Key, FriendContent).
+FriendChannel ::= ch(Stream(FriendMsg), Stream(FriendMsg)?).
+
+GroupContent ::= group_msg(GroupId, Item)
+               ; group_leave(GroupId, Key).
+GroupMsg     ::= msg(Key, Key, GroupContent).
+GroupChannel ::= ch(Stream(GroupMsg), Stream(GroupMsg)?).
+
+Conversation ::= conversation(Key, FriendChannel)
+               ; entered(Child, FriendChannel, Stream(Parent)).
+
+ParentEnd  ::= parent(Parent, FriendChannel).
+ParentEnds ::= [] ; [ParentEnd | ParentEnds].
+
+Kid  ::= kid(Child, Stream(Parent)).
+Kids ::= [] ; [Kid | Kids].
+
+BefriendOutcome ::= consented(Key, Conveyance(FriendChannel)?)
+                  ; adopt(Key, FriendChannel)
+                  ; declined(Key).
+
+AgentIn ::= outcome(BefriendOutcome)
+          ; forward_intro(Child, Intro, Consents)
+          ; group_reply(GroupId, Member, GroupReply)
+          ; group_joined(GroupId, GroupChannel)
+          ; forward_group(Child, GroupId, GroupReply?)
+          ; invite_now(GroupId, Member).
+
+GroupPost  ::= post(GroupId, Item).
+Delivery   ::= delivered(GroupId, Item, Key).
+AgentState ::= state(Stream(Item), Stream(GroupPost), Stream(Delivery)).
+
+Screen ::= connected(Key)
+         ; unfriended(Key)
+         ; signed(Item)
+         ; received(Item)
+         ; not_held(Item)
+         ; refused(Key)
+         ; no_conversation(Key)
+         ; declined(Key)
+         ; not_my_child(Key)
+         ; parent(Key)
+         ; child(Key)
+         ; of_age
+         ; child_of_age(Key)
+         ; adult
+         ; group_joined(GroupId)
+         ; member_joined(GroupId, Key)
+         ; group_left(GroupId)
+         ; member_left(GroupId, Key)
+         ; group_received(GroupId, Item).
+ScreenMsg ::= msg(Constant, Constant, Screen).
+Output ::= Screen.
+
+OutputKey   ::= group(GroupId) ; group_member(GroupId, Key).
+OutputEntry ::= user_output(Stream(ScreenMsg)?)
+              ; friend_output(Key, Stream(FriendMsg)?)
+              ; child_output(Key, Stream(FriendMsg)?)
+              ; parent_output(Key, Stream(FriendMsg)?)
+              ; group_entry(OutputKey, Stream(GroupMsg)?).
+
+Decision ::= yes ; no.
+
+Question ::= stream_request_r(Stream(Request)?)
+           ; card_w(Card)
+           ; groupCard_w(GroupCard)
+           ; joinCard_w(JoinCard)
+           ; inviteCard_w(InviteCard).
+Drawn ::= stream_request_r(_) ; card_w(_)
+        ; groupCard_w(_) ; joinCard_w(_) ; inviteCard_w(_)
+        ; output(List(Output)) ; YesNo ; Request.
+Ask(Q) ::= ask(Constant, Q).
+
+Offer ::= Intro ; GroupOffer ; JoinOffer ; InviteOffer.
+Step ::= req(Request)
+       ; answer(Offer, YesNo)
+       ; await(Screen)
+       ; await_at(Key, Screen)
+       ; befriend(Key)
+       ; accept_friend(Key).
+Script ::= [] ; [Step | Script].
+
+Logged  ::= Screen ; did(Step).
+Watched ::= watched(Key, _).
+
+ReqId     ::= req(Integer).
+SgCmd     ::= connect(Key) ; decision(Decision, Key, ReqId).
+SgNotify  ::= befriend(Key, ReqId) ; declined(Key).
+SgResponse  ::= sg_accept(FriendChannel) ; sg_decline.
+SgContent   ::= sg_invite(Key, SgResponse?).
+SgOutMsg    ::= sg(Key, SgContent).
+SgOutStream ::= [] ; [SgOutMsg | SgOutStream].
+SgInMsg     ::= sg(Key, SgContent) ; sg_answer(Key, SgResponse).
+SgInStream  ::= [] ; [SgInMsg | SgInStream].
+SgEntry     ::= sg_entry(Key, SgInStream?).
+SgPendingValue ::= sg_response(SgResponse?) ; sg_error.
+SgPending   ::= sg_pending(ReqId, SgPendingValue).
+
+procedure adopt_conversation(Key?, FriendChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
+adopt_conversation(Q, ch(In, Out?), Outs, Outs2?, NetIn, NetIn1?) :-
+    ground(Q?) |
+    add_friend_output(Q?, Out, Outs?, Outs1),
+    send_user(msg(agent, person, connected(Q?)), Outs1?, Outs2),
+    merge(NetIn?, In?, NetIn1).
+
+procedure has_friend(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
+has_friend(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
+    Q? =?= K? | true.
+has_friend(Q, [E|Rest], [E?|Rest1?], Open?) :-
+    otherwise |
+    has_friend(Q?, Rest?, Rest1, Open).
+has_friend(_, [], [], no).
+
+procedure member_of(Key?, Stream(Key)?, Decision).
+member_of(K, [K1|_], yes) :- K? =?= K1? | true.
+member_of(K, [_|Ks], D?) :- otherwise | member_of(K?, Ks?, D).
+member_of(_, [], no).
+
+procedure remove_key(Key?, Stream(Key)?, Stream(Key)).
+remove_key(K, [K1|Ks], Ks?) :- K? =?= K1? | true.
+remove_key(K, [K1|Ks], [K1?|Ks1?]) :- otherwise | remove_key(K?, Ks?, Ks1).
+remove_key(_, [], []).
+
+procedure show(Screen?, Stream(OutputEntry)?, Stream(OutputEntry)).
+show(S, Outs, Outs1?) :- send_user(msg(agent, person, S?), Outs?, Outs1).
+
+procedure enter_parent_side(Key?, FriendChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
+enter_parent_side(Child, ch(FromChild, ToChild?), Outs, Outs2?, NetIn, NetIn1?) :-
+    ground(Child?) |
+    add_child_output(Child?, ToChild, Outs?, Outs1),
+    show(child(Child?), Outs1?, Outs2),
+    merge(NetIn?, FromChild?, NetIn1).
+
+procedure enter_child_side(ParentEnds?, Stream(Key), Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
+enter_child_side([parent(P, ch(FromParent, ToParent?))|Es], [P?|Ps?], Outs, Outs3?, NetIn, NetIn2?) :-
+    ground(P?) |
+    add_parent_output(P?, ToParent, Outs?, Outs1),
+    show(parent(P?), Outs1?, Outs2),
+    merge(NetIn?, FromParent?, NetIn1),
+    enter_child_side(Es?, Ps, Outs2?, Outs3, NetIn1?, NetIn2).
+enter_child_side([], [], Outs, Outs?, NetIn, NetIn?).
+
+procedure add_child_output(Key?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
+add_child_output(Name, Out?, Outs, [child_output(Name?, Out)|Outs?]).
+
+procedure add_parent_output(Key?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
+add_parent_output(Name, Out?, Outs, [parent_output(Name?, Out)|Outs?]).
+
+procedure close_child(Key?, Stream(OutputEntry)?, Stream(OutputEntry)).
+close_child(_, [], []).
+close_child(Name, [child_output(K, [])|Rest], Rest?) :-
+    Name? =?= K? | true.
+close_child(Name, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    close_child(Name?, Rest?, Rest1).
+
+procedure close_parent(Key?, Stream(OutputEntry)?, Stream(OutputEntry)).
+close_parent(_, [], []).
+close_parent(Name, [parent_output(K, [])|Rest], Rest?) :-
+    Name? =?= K? | true.
+close_parent(Name, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    close_parent(Name?, Rest?, Rest1).
+
+procedure mint_consents(Key?, Key?, Consents, Consents).
+mint_consents(R, S, propose(PC, AC?), accept(AC, PC?)) :- R? @< S? | true.
+mint_consents(_, _, accept(AC, PC?), propose(PC, AC?)) :- otherwise | true.
+
+procedure introduce(Key?, Key?, Key?, Key?, Consents?, Consents?, Stream(OutputEntry)?, Stream(OutputEntry)).
+introduce(Id, R, Q, S, CR, CS, Outs, Outs2?) :-
+    Q? =?= Id?, ground(Id?), ground(R?), ground(S?) |
+    send_child(R?, msg(Id?, R?, child_intro(intro(Id?, R?, S?), CR?)), Outs?, Outs1),
+    send_child(S?, msg(Id?, S?, child_intro(intro(Id?, R?, S?), CS?)), Outs1?, Outs2).
+introduce(Id, R, Q, S, CR, CS, Outs, Outs2?) :-
+    Q? =?\= Id?, ground(Id?), ground(R?), ground(Q?), ground(S?) |
+    send_child(R?, msg(Id?, R?, child_intro(intro(Id?, R?, S?), CR?)), Outs?, Outs1),
+    send_friend(Q?, msg(Id?, Q?, child_intro(intro(Id?, R?, S?), CS?)), Outs1?, Outs2).
+
+procedure holds(Item?, Stream(Item)?, Decision).
+holds(X, [Y|_], yes) :- X? =?= Y? | true.
+holds(X, [_|Ys], D?) :- otherwise | holds(X?, Ys?, D).
+holds(_, [], no).
+
+procedure sign_item(Key?, Text?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+sign_item(Id, T, state(Is, Ps, Ds), state([sgn(T?, Id?)|Is?], Ps?, Ds?), Outs, Outs1?) :-
+    ground(Id?), ground(T?) |
+    show(signed(sgn(T?, Id?)), Outs?, Outs1).
+
+procedure forward_item(Key?, Key?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+forward_item(Id, Q, X, state(Is, Ps, Ds), state(Is?, Ps?, Ds?), Outs, Outs1?) :-
+    ground(Is?), ground(X?) |
+    holds(X?, Is?, Held),
+    forward_held(Held?, Id?, Q?, X?, Outs?, Outs1).
+
+procedure forward_held(Decision?, Key?, Key?, Item?, Stream(OutputEntry)?, Stream(OutputEntry)).
+forward_held(yes, Id, Q, X, Outs, Outs1?) :-
+    ground(Id?), ground(Q?) |
+    send_friend(Q?, msg(Id?, Q?, item(sgn(X?, Id?))), Outs?, Outs1).
+forward_held(no, _, _, X, Outs, Outs1?) :-
+    show(not_held(X?), Outs?, Outs1).
+
+procedure receive_item(Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+receive_item(X, state(Is, Ps, Ds), state([X?|Is?], Ps?, Ds?), Outs, Outs1?) :-
+    ground(X?) |
+    show(received(X?), Outs?, Outs1).
+
+procedure setup_group_hub_side(GroupId?, Key?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg), GroupChannel).
+setup_group_hub_side(G, M, state(Is, Ps, Ds), state(Is?, Ps?, Ds1?), Outs, Outs2?, NetIn, NetIn1?,
+    ch(HubToMember?, MemberToHub)) :-
+    ground(G?), ground(M?), ground(Ps?) |
+    add_group_output(group_member(G?, M?), HubToMember, Outs?, Outs1),
+    catch_up(Ps?, G?, M?, Ds?, Ds1, Outs1?, Outs2),
+    merge(NetIn?, MemberToHub?, NetIn1).
+
+procedure catch_up(Stream(GroupPost)?, GroupId?, Key?, Stream(Delivery)?, Stream(Delivery), Stream(OutputEntry)?, Stream(OutputEntry)).
+catch_up([post(G1, Y)|Ps], G, M, Ds, Ds2?, Outs, Outs2?) :-
+    G? =?= G1?, ground(G?), ground(Y?), ground(M?), ground(Ds?) |
+    delivered_already(G?, Y?, M?, Ds?, D),
+    deliver(D?, G?, Y?, M?, Ds?, Ds1, Outs?, Outs1),
+    catch_up(Ps?, G?, M?, Ds1?, Ds2, Outs1?, Outs2).
+catch_up([_|Ps], G, M, Ds, Ds1?, Outs, Outs1?) :-
+    otherwise |
+    catch_up(Ps?, G?, M?, Ds?, Ds1, Outs?, Outs1).
+catch_up([], _, _, Ds, Ds?, Outs, Outs?).
+
+procedure hold_post(GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+hold_post(G, Y, state(Is, Ps, Ds), state(Is?, Ps1?, Ds1?), Outs, Outs3?) :-
+    ground(G?), ground(Y?) |
+    add_post(post(G?, Y?), Ps?, Ps1),
+    members_of(G?, Outs?, Outs1, Ms),
+    deliver_to(Ms?, G?, Y?, Ds?, Ds1, Outs1?, Outs2),
+    show(group_received(G?, Y?), Outs2?, Outs3).
+
+procedure add_post(GroupPost?, Stream(GroupPost)?, Stream(GroupPost)).
+add_post(P, [], [P?]).
+add_post(P, [Q|Rest], [Q?|Rest1?]) :-
+    add_post(P?, Rest?, Rest1).
+
+procedure members_of(GroupId?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(Key)).
+members_of(G, [group_entry(group_member(G1, Q), Out?)|Rest], [group_entry(group_member(G1?, Q?), Out)|Rest1?], [Q?|Qs?]) :-
+    G? =?= G1?, ground(Q?) |
+    members_of(G?, Rest?, Rest1, Qs).
+members_of(G, [E|Rest], [E?|Rest1?], Qs?) :-
+    otherwise |
+    members_of(G?, Rest?, Rest1, Qs).
+members_of(_, [], [], []).
+
+procedure deliver_to(Stream(Key)?, GroupId?, Item?, Stream(Delivery)?, Stream(Delivery), Stream(OutputEntry)?, Stream(OutputEntry)).
+deliver_to([Q|Qs], G, Y, Ds, Ds2?, Outs, Outs2?) :-
+    ground(Q?), ground(G?), ground(Y?), ground(Ds?) |
+    delivered_already(G?, Y?, Q?, Ds?, D),
+    deliver(D?, G?, Y?, Q?, Ds?, Ds1, Outs?, Outs1),
+    deliver_to(Qs?, G?, Y?, Ds1?, Ds2, Outs1?, Outs2).
+deliver_to([], _, _, Ds, Ds?, Outs, Outs?).
+
+procedure delivered_already(GroupId?, Item?, Key?, Stream(Delivery)?, Decision).
+delivered_already(G, Y, Q, [delivered(G1, Y1, Q1)|_], yes) :-
+    G? =?= G1?, Y? =?= Y1?, Q? =?= Q1? | true.
+delivered_already(G, Y, Q, [_|Ds], D?) :-
+    otherwise |
+    delivered_already(G?, Y?, Q?, Ds?, D).
+delivered_already(_, _, _, [], no).
+
+procedure deliver(Decision?, GroupId?, Item?, Key?, Stream(Delivery)?, Stream(Delivery), Stream(OutputEntry)?, Stream(OutputEntry)).
+deliver(no, group_id(L, N), Y, Q, Ds, [delivered(group_id(L?, N?), Y?, Q?)|Ds?], Outs, Outs1?) :-
+    ground(L?), ground(N?), ground(Y?), ground(Q?) |
+    lookup_send_group(group_member(group_id(L?, N?), Q?), msg(L?, Q?, group_msg(group_id(L?, N?), sgn(Y?, L?))), Outs?, Outs1).
+deliver(yes, _, _, _, Ds, Ds?, Outs, Outs?).
+
+procedure receive_delivery(GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+receive_delivery(G, Z, St, St1?, Outs, Outs2?) :-
+    ground(G?) |
+    has_group(group(G?), Outs?, Outs1, Member),
+    hold_delivery(Member?, G?, Z?, St?, St1, Outs1?, Outs2).
+
+procedure hold_delivery(Decision?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+hold_delivery(yes, G, Z, state(Is, Ps, Ds), state([Z?|Is?], Ps?, Ds?), Outs, Outs1?) :-
+    ground(Z?) |
+    show(group_received(G?, Z?), Outs?, Outs1).
+hold_delivery(no, _, _, St, St?, Outs, Outs?).
+
+procedure post_item(Key?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_item(Id, G, X, state(Is, Ps, Ds), St?, Outs, Outs1?) :-
+    ground(Is?), ground(X?) |
+    holds(X?, Is?, Held),
+    post_held(Held?, Id?, G?, X?, state(Is?, Ps?, Ds?), St, Outs?, Outs1).
+
+procedure post_held(Decision?, Key?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_held(yes, Id, group_id(L, N), X, St, St1?, Outs, Outs2?) :-
+    L? =?= Id?, ground(L?), ground(N?), ground(X?) |
+    has_group(group(group_id(L?, N?)), Outs?, Outs1, Member),
+    post_own(Member?, group_id(L?, N?), X?, St?, St1, Outs1?, Outs2).
+post_held(yes, Id, group_id(L, N), X, St, St?, Outs, Outs2?) :-
+    L? =?\= Id?, ground(Id?), ground(L?), ground(N?), ground(X?) |
+    has_group(group(group_id(L?, N?)), Outs?, Outs1, Member),
+    post_to(Member?, Id?, group_id(L?, N?), X?, Outs1?, Outs2).
+post_held(no, _, _, X, St, St?, Outs, Outs1?) :-
+    show(not_held(X?), Outs?, Outs1).
+
+procedure post_own(Decision?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_own(yes, G, X, state(Is, Ps, Ds), St?, Outs, Outs1?) :-
+    ground(G?), ground(X?), ground(Ps?) |
+    posted_already(G?, X?, Ps?, Posted),
+    post_new(Posted?, G?, X?, state(Is?, Ps?, Ds?), St, Outs?, Outs1).
+post_own(no, _, _, St, St?, Outs, Outs?).
+
+procedure post_new(Decision?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_new(no, G, X, St, St1?, Outs, Outs1?) :-
+    hold_post(G?, X?, St?, St1, Outs?, Outs1).
+post_new(yes, _, _, St, St?, Outs, Outs?).
+
+procedure posted_already(GroupId?, Item?, Stream(GroupPost)?, Decision).
+posted_already(G, X, [post(G1, X1)|_], yes) :-
+    G? =?= G1?, X? =?= X1? | true.
+posted_already(G, X, [_|Ps], D?) :-
+    otherwise |
+    posted_already(G?, X?, Ps?, D).
+posted_already(_, _, [], no).
+
+procedure post_to(Decision?, Key?, GroupId?, Item?, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_to(yes, Id, group_id(L, N), X, Outs, Outs1?) :-
+    ground(Id?), ground(L?), ground(N?) |
+    lookup_send_group(group(group_id(L?, N?)), msg(Id?, L?, group_msg(group_id(L?, N?), sgn(X?, Id?))), Outs?, Outs1).
+post_to(no, _, _, _, Outs, Outs?).
+
+procedure has_group(OutputKey?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
+has_group(Key, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest?], yes) :-
+    Key? =?= K? | true.
+has_group(Key, [E|Rest], [E?|Rest1?], D?) :-
+    otherwise |
+    has_group(Key?, Rest?, Rest1, D).
+has_group(_, [], [], no).
+
+procedure setup_group_leader(GroupId?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
+setup_group_leader(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
+    ground(GroupId?) |
+    add_group_output(group(GroupId?), MemberToHub, Outs?, Outs1),
+    merge(NetIn?, MemberToHub?, NetIn1).
+
+procedure lookup_send_group(OutputKey?, GroupMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+lookup_send_group(Key, Msg, Outs, Outs1?) :-
+    ground(Key?) |
+    lookup_send_group_step(Key?, Msg?, Outs?, Outs1).
+
+procedure lookup_send_group_step(OutputKey?, GroupMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+lookup_send_group_step(Key, Msg, [group_entry(K, [Msg?|Out1?])|Rest], [group_entry(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+lookup_send_group_step(Key, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    lookup_send_group_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_group_step(_, _, [], []).
+
+procedure leave_group_commit(Key?, GroupId?, Stream(OutputEntry)?, Stream(OutputEntry)).
+leave_group_commit(Id, GroupId, Outs, Outs3?) :-
+    ground(Id?), ground(GroupId?) |
+    lookup_send_group(group(GroupId?), msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
+    close_output(group(GroupId?), Outs1?, Outs2),
+    show(group_left(GroupId?), Outs2?, Outs3).
+
+procedure join_commit(GroupId?, GroupChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
+join_commit(GroupId, ch(FromHub, ToHub?), Outs, Outs2?, NetIn, NetIn1?) :-
+    ground(GroupId?) |
+    add_group_output(group(GroupId?), ToHub, Outs?, Outs1),
+    merge(NetIn?, FromHub?, NetIn1),
+    show(group_joined(GroupId?), Outs1?, Outs2).
+
+procedure add_group_output(OutputKey?, Stream(GroupMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
+add_group_output(Key, Out?, Outs, [group_entry(Key?, Out)|Outs?]).
+
+procedure close_output(OutputKey?, Stream(OutputEntry)?, Stream(OutputEntry)).
+close_output(_, [], []).
+close_output(Key, [group_entry(K, [])|Rest], Rest?) :-
+    Key? =?= K? | true.
+close_output(Key, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    close_output(Key?, Rest?, Rest1).
+
+procedure inject_group_reply(GroupId?, Key?, GroupReply?, Stream(AgentIn)?, Stream(AgentIn)).
+inject_group_reply(G, M, R, Ys, [group_reply(G?, M?, R?)|Ys?]) :-
+    known(R?) | true.
+inject_group_reply(G, M, R, [Y|Ys], [Y?|Ys1?]) :-
+    inject_group_reply(G?, M?, R?, Ys?, Ys1).
+
+imported procedure plays#village.
+exported procedure village.
+village :- plays # village.
+
+imported procedure plays#play_two_parents.
+exported procedure play_two_parents.
+play_two_parents :- plays # play_two_parents.
+
+imported procedure plays#play_twice.
+exported procedure play_twice.
+play_twice :- plays # play_twice.
+
+imported procedure plays#play_both_ways.
+exported procedure play_both_ways.
+play_both_ways :- plays # play_both_ways.
+
+imported procedure plays#play_late_join.
+exported procedure play_late_join.
+play_late_join :- plays # play_late_join.
+
+imported procedure plays#play_child_leave.
+exported procedure play_child_leave.
+play_child_leave :- plays # play_child_leave.

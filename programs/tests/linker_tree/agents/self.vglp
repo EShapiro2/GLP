@@ -1,0 +1,50 @@
+%% IGLP's linker fixture, programs/tests/linker_tree, for program_linker_test.dart and program_compilation_test.dart: the self.vglp of the nested directory, the volitional procedures the three agents share, programs/cssn/childsafe/self.vglp as it stood at GLP d2495778, its comments removed and three names changed: the directory childsafe to agents, the module and procedure superapp to host, and the procedures cssn and cssn_child to app and app_child.
+
+procedure (Card)*approve(Intro?, YesNo).
+(card(I?, A))*approve(I, A?).
+
+procedure (Card)*accept(Intro?, YesNo).
+(card(I?, A))*accept(I, A?).
+
+procedure (GroupCard)*join_group(GroupOffer?, YesNo).
+(card(O?, A))*join_group(O, A?).
+
+procedure (JoinCard)*approve_join(JoinOffer?, YesNo).
+(card(O?, A))*approve_join(O, A?).
+
+procedure (InviteCard)*approve_invite(InviteOffer?, YesNo).
+(card(O?, A))*approve_invite(O, A?).
+
+procedure accepted(YesNo?, Key?, Consents?, Stream(AgentIn)).
+accepted(yes, Peer, propose(Mine?, Theirs), Out?) :-
+    ground(Peer?) |
+    Mine = yes(C?),
+    await_consent(Peer?, Theirs?, C, [], Os),
+    tag(Os?, Out).
+accepted(yes, Peer, accept(Mine?, Theirs), Out?) :-
+    ground(Peer?) |
+    Mine = yes,
+    await_conveyance(Peer?, Theirs?, [], Os),
+    tag(Os?, Out).
+accepted(no, _, propose(Mine?, _), []) :- Mine = no.
+accepted(no, _, accept(Mine?, _), []) :- Mine = no.
+
+procedure tag(Stream(BefriendOutcome)?, Stream(AgentIn)).
+tag([O|Os], [outcome(O?)|Out?]) :- tag(Os?, Out).
+tag([], []).
+
+procedure approved(YesNo?, Intro?, Consents?, Stream(AgentIn)).
+approved(yes, intro(P, R, S), Cs, [forward_intro(S?, intro(P?, R?, S?), Cs?)]).
+approved(no, _, propose(Mine?, _), []) :- Mine = no.
+approved(no, _, accept(Mine?, _), []) :- Mine = no.
+
+procedure joined(YesNo?, GroupId?, GroupReply, Stream(AgentIn)).
+joined(yes, G, yes(X), Out?) :- await_group(G?, X?, Out).
+joined(no, _, no, []).
+
+procedure await_group(GroupId?, GroupChannel?, Stream(AgentIn)).
+await_group(G, ch(In, Out?), [group_joined(G?, ch(In?, Out))]) :- true.
+
+procedure forward_join(YesNo?, Key?, GroupId?, GroupReply, Stream(AgentIn)).
+forward_join(yes, C, G, R?, [forward_group(C?, G?, R)]).
+forward_join(no, _, _, no, []).

@@ -134,7 +134,7 @@ Section Q generates the bundled GLP assets, then runs `flutter test` over all of
 cd glp_multiagent && bash tool/sync_glp_assets.sh
 ```
 
-Writes `pingapp.glpw`, `currency.glpw`, `childsafe.glpw`, `denominated.glpw` and `dated.glpw`, the script's list, and exits 1 with `sync_glp_assets: <name>.glpw was not written` at the first it does not write.  Section Q's asset step checks each of them on disc, and none of those checks is known red.
+Writes `pingapp.glpw`, `currency.glpw`, `denominated.glpw`, `dated.glpw`, `gsg.glpw` and `gsn.glpw`, the script's list, and exits 1 with `sync_glp_assets: <name>.glpw was not written` at the first it does not write.  Section Q's asset step checks each of them on disc, and none of those checks is known red.
 
 ```bash
 cd glp_multiagent && flutter test test/roundtrip_isolate_test.dart

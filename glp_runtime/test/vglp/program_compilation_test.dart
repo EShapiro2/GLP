@@ -15,6 +15,7 @@ import 'package:glp_runtime/vglp/program_compilation.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart'
     show TypeEnvironment;
 import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
+import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 
 const _programs = '../programs';
 
@@ -189,27 +190,24 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
   });
 
   group('the deployed sources', () {
-    // EIGHT, and a list written from memory misses one: cssn/child_agent.vglp
-    // arrived on 2026-08-16, coins_agent.vglp and bonds_agent.vglp on
-    // 2026-09-03, social/graph/core/home.vglp on 2026-09-09 and
-    // sovereign/denominated/sovereign_agent.vglp on 2026-09-15.  Count them on
-    // disc --- `find programs -name "*.vglp"`, less the one-clause fixture of
-    // programs/tests/vglp, which load_test covers.  Four of the paths moved on
-    // 2026-09-08, each source going with its .glp into the certified program of
-    // a mini-app --- social/graph/core, coins/currency and cssn/childsafe ---
-    // since a lone .vglp is compiled by the loader and must stand beside its
-    // .glp.  They all PARSE as vGLP.  coins/currency/coins_agent.vglp,
+    // Five are asked here, and a list written from memory misses one:
+    // coins_agent.vglp and bonds_agent.vglp arrived on 2026-09-03,
+    // social/graph/core/home.vglp on 2026-09-09 and
+    // sovereign/denominated/sovereign_agent.vglp on 2026-09-15.  The child-safe
+    // social network's three agents and their self.vglp, asked here until
+    // 2026-10-20, went with its hand-written program (CSSN-play 185a2c3f);
+    // their copies in IGLP's linker_tree fixture are asked in the next group.
+    // Four of the paths moved on 2026-09-08, each source going with its .glp
+    // into the certified program of a mini-app --- social/graph/core,
+    // coins/currency and cssn/childsafe --- since a lone .vglp is compiled by
+    // the loader and must stand beside its .glp.  They all PARSE as vGLP.  coins/currency/coins_agent.vglp,
     // bonds/dated/bonds_agent.vglp and sovereign/denominated/sovereign_agent.vglp
     // also COMPILE and RUN --- Sections N2, N3 and N4 of test/run_all_tests.sh
     // load their emitted .glp and run the village market; social/graph/core/
     // home.vglp compiles, its home.glp being the compiler's output, which
     // Section SG runs on the dispatcher (superapp_ui/3); social/graph/core/
     // agent.vglp compiles, beside the hand-written agent.glp the program
-    // loads.  The
-    // cssn sources compile since CSSN's port: adult.vglp, parent.vglp and
-    // child.vglp, three modules that hand a party to one another, with the
-    // cards of their self.vglp; Section K re-emits them and runs the village
-    // on them.
+    // loads.
     //
     // A currency source is asked what vGLP's Definition "Guarded Clause,
     // Volitional Procedure, Interactive Type, Interactive Term, Ordinary
@@ -228,9 +226,6 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
       'currencies/sovereign/denominated/sovereign_agent.vglp',
       'social/graph/core/agent.vglp',
       'social/graph/core/home.vglp',
-      'cssn/childsafe/adult.vglp',
-      'cssn/childsafe/child.vglp',
-      'cssn/childsafe/self.vglp',
     ]) {
       test('$path parses as vGLP and holds a volitional procedure', () {
         final file = File('$_programs/$path');
@@ -241,13 +236,38 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
         expect(m.procedures.where((p) => p.isVolitional), isNotEmpty);
       });
     }
+  });
+
+  group('the linker_tree fixture\'s sources', () {
+    // IGLP's fixture, programs/tests/linker_tree: the child-safe social
+    // network's hand-written program as it stood at GLP d2495778, its
+    // comments removed and its names changed (program_linker_test.dart).  Its
+    // nested directory agents/ holds three vGLP modules, adult.vglp,
+    // parent.vglp and child.vglp, that hand a party to one another, each
+    // beside its compiled .glp, and the questions of their self.vglp.
+    const tree = 'tests/linker_tree';
+    const agents = '$tree/agents';
+
+    for (final name in ['adult', 'child', 'self']) {
+      final path = '$agents/$name.vglp';
+      test('$path parses as vGLP and holds a volitional procedure', () {
+        final file = File('$_programs/$path');
+        expect(file.existsSync(), isTrue, reason: '$path is not on disc');
+        final m = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
+            .parseModule();
+        expect(m.volitionalDeclarations, isNotEmpty);
+        expect(m.procedures.where((p) => p.isVolitional), isNotEmpty);
+      });
+    }
+
     // The parent agent declares no volitional procedure of its own: it asks
-    // the cards its self.vglp shares with the adult and child agents, and is
-    // a vGLP module because it reaches their questions (vGLP a89a751,
+    // the questions its self.vglp shares with the adult and child agents, and
+    // is a vGLP module because it reaches their questions (vGLP a89a751,
     // canonical-compilation.tex: "the questions of a program are those of
     // all its modules").
-    test('cssn/childsafe/parent.vglp parses as vGLP and asks the cards of its self.vglp', () {
-      final file = File('$_programs/cssn/childsafe/parent.vglp');
+    test('$agents/parent.vglp parses as vGLP and asks the questions of its '
+        'self.vglp', () {
+      final file = File('$_programs/$agents/parent.vglp');
       expect(file.existsSync(), isTrue);
       final m = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
           .parseModule();
@@ -260,6 +280,40 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
           if (c.body != null) for (final g in c.body!) g.functor
       };
       expect(calls, containsAll(['approve', 'approve_join', 'join_group']));
+    });
+
+    // A compiled module committed beside its source is the compiler's own
+    // output, held to what :emit prints (GLP/CLAUDE.md, "Generated files").
+    // :emit writes beside the sources it compiles, so it runs on a copy of
+    // the fixture at the same depth below the root, with the same scope, and
+    // the copy goes when the test ends.
+    test('the committed adult.glp, parent.glp and child.glp are what :emit '
+        'prints from their sources', () {
+      final copy = Directory('$_programs/tests/linker_tree_emit_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}');
+      addTearDown(() {
+        if (copy.existsSync()) copy.deleteSync(recursive: true);
+      });
+      final from = Directory('$_programs/$tree');
+      for (final f in from.listSync(recursive: true).whereType<File>()) {
+        final rel = f.path.substring(from.path.length + 1);
+        File('${copy.path}/$rel')
+          ..createSync(recursive: true)
+          ..writeAsStringSync(f.readAsStringSync());
+      }
+      final written = emitVglpSources(copy.absolute.path,
+          rootSelfGlpPath: rootSelfGlp.absolute.path);
+      final agentsCopy = '${copy.absolute.path}/agents';
+      expect(written.toSet(), {
+        '$agentsCopy/adult.glp',
+        '$agentsCopy/parent.glp',
+        '$agentsCopy/child.glp',
+      });
+      for (final name in ['adult', 'parent', 'child']) {
+        expect(File('$agentsCopy/$name.glp').readAsStringSync(),
+            File('$_programs/$agents/$name.glp').readAsStringSync(),
+            reason: '$agents/$name.glp is not what :emit prints');
+      }
     });
   });
 }

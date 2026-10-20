@@ -65,10 +65,11 @@ fi
 # directory, and what it reads there is a certified compiled program. A .glpw
 # is a build product (gitignored), so it is built here from the canonical
 # sources rather than copied --- the same :artefact the tests use, writing
-# <name>.glpw into the super-app's directory in the bundle.
+# <name>.glpw into the super-app's directory in the bundle.  The child-safe
+# mini-app is not among them until GSG ports the super-app to CSSN's compiled
+# platform (GLP #9 Cowork, Code_inbox 2026-10-20 09:22 UTC, item 1).
 ( cd ../glp_runtime && for prog in ../programs/social/graph/pingapp \
                                    ../programs/currencies/coins/currency \
-                                   ../programs/cssn/childsafe \
                                    ../programs/currencies/sovereign/denominated \
                                    ../programs/currencies/bonds/dated \
                                    ../programs/apps/gsg \
@@ -89,7 +90,7 @@ while read -r p; do
   printf '%s\t%s\n' "$name" "$p" >> "$OUT/manifest.txt"
 done < <(cd "$OUT" && find programs -type f | sort)
 
-for a in pingapp currency childsafe denominated dated gsg gsn; do
+for a in pingapp currency denominated dated gsg gsn; do
   test -s "$DST/social/graph/core/$a.glpw" \
     || { echo "sync_glp_assets: $a.glpw was not written" >&2; exit 1; }
 done
