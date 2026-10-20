@@ -88,7 +88,7 @@ imported procedure wards#wards(Contract?, Preds?, Wards).
 imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
 imported procedure wards#leaving_for(Contract?, Preds?, Leavings).
 imported procedure wards#relay_h_for(Contract?, Preds?, Wards?, RelayHs).
-imported procedure contracts#contract(Constant?, Declared).
+imported procedure contracts#contract(Constant?, NDeclared).
 imported procedure contracts#variant(Constant?, Contract?, Declared).
 
 procedure verdict(Faults?, Verdict).
@@ -507,9 +507,14 @@ listed_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % before a fault head_repeated(Schema, Entry), and each variable occurring
 % in the schema and not in its head a fault not_in_head(Schema, Var).
 
+% A numeric variable, num(X) with X a name, is a variable of the head, and a
+% number, num(X) with X a number, is not (GSC, Section 3.2).
 procedure head_entry_fault(Arg?, Constant?, Faults?, Faults).
 head_entry_fault(pvar(_), _, T, T?).
 head_entry_fault(svar(_), _, T, T?).
+head_entry_fault(num(X), Nm, T, [head_not_variable(Nm?, num(X?))|T?]) :-
+    number(X?), ground(Nm?), ground(T?) | true.
+head_entry_fault(num(_), _, T, T?) :- otherwise | true.
 head_entry_fault(A, Nm, T, [head_not_variable(Nm?, A?)|T?]) :-
     otherwise, ground(A?), ground(Nm?), ground(T?) | true.
 
@@ -542,48 +547,147 @@ head_schema1(Nm, H, Os, R?) :- ground(Nm?), ground(H?), ground(Os?) |
     unlisted_faults(Os?, H?, Nm?, F2),
     faults_app(F1?, F2?, R).
 
-procedure head_schema(Schema?, Faults).
+% The head of a schema as written: its numeric variables occur in its atoms,
+% its multiplicities and its constraint, and are listed in its head with its
+% agent and speech-act variables (GSC, Section 3.2; Currencies' GB.glp).
+procedure head_schema(NSchema?, Faults).
 head_schema(S, R?) :- ground(S?) |
-    sch_name(S?, Nm),
-    sch_vars(S?, H),
-    sch_occ_vars(S?, Os),
+    nsch_name(S?, Nm),
+    nsch_vars(S?, H),
+    nsch_occ_vars(S?, Os),
     head_schema1(Nm?, H?, Os?, R).
 
-procedure head_schemas(Contract?, Faults).
+procedure head_schemas(NContract?, Faults).
 head_schemas([], []).
 head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     head_schema(S?, F1),
     head_schemas(Ss?, F2),
     faults_app(F1?, F2?, R).
 
+% --- the numbers of a schema (GSC, Section 3.2) -----------------------------
+% "An argument of an atom may be a number or a numeric variable, a schema may
+% carry a constraint on its numeric variables, which every binding
+% satisfies, and an atom added or deleted may carry a multiplicity."  Each
+% atom carrying a multiplicity that a role requires or forbids and neither
+% adds nor deletes is a fault multiplicity_not_added(Schema, Role, Atom); each
+% multiplicity that is no numeric argument a fault
+% multiplicity_not_numeric(Schema, Role, Atom); and each argument of the
+% constraint that is no numeric argument a fault constraint_not_numeric(Schema,
+% Arg).  A numeric argument is num(X), a numeric variable or a number.
+
+procedure is_num(Arg?, Ans).
+is_num(num(_), yes).
+is_num(A, no) :- otherwise, ground(A?) | true.
+
+% A multiplicity on an atom a role adds or deletes: it is a numeric argument.
+procedure mult_num_fault(Ans?, Atom?, Constant?, Integer?, Faults?, Faults).
+mult_num_fault(yes, _, _, _, T, T?).
+mult_num_fault(no, A, Nm, I, T, [multiplicity_not_numeric(Nm?, I?, A?)|T?]).
+
+procedure mults_numeric(Mults?, Constant?, Integer?, Faults?, Faults).
+mults_numeric([], _, _, T, T?).
+mults_numeric([atom(_, _)|Ms], Nm, I, T, R?) :-
+    ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_numeric(Ms?, Nm?, I?, T?, R).
+mults_numeric([times(K, A)|Ms], Nm, I, T, R?) :-
+    ground(K?), ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    is_num(K?, Ok),
+    mults_numeric(Ms?, Nm?, I?, T?, R1),
+    mult_num_fault(Ok?, A?, Nm?, I?, R1?, R).
+
+% A multiplicity on an atom a role requires or forbids only.
+procedure mults_unadded(Mults?, Constant?, Integer?, Faults?, Faults).
+mults_unadded([], _, _, T, T?).
+mults_unadded([atom(_, _)|Ms], Nm, I, T, R?) :-
+    ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_unadded(Ms?, Nm?, I?, T?, R).
+mults_unadded([times(_, A)|Ms], Nm, I, T, [multiplicity_not_added(Nm?, I?, A?)|R?]) :-
+    ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_unadded(Ms?, Nm?, I?, T?, R).
+
+procedure num_roles(NRoleSpecs?, Integer?, Constant?, Faults).
+num_roles([], _, _, []).
+num_roles([RS|Rs], I, Nm, R?) :- ground(RS?), ground(Rs?), integer(I?), ground(Nm?) |
+    nrs_add(RS?, P),
+    nrs_del(RS?, M),
+    nrs_keep(RS?, K),
+    nrs_forb(RS?, N),
+    mults_app(P?, M?, PM),
+    mults_app(K?, N?, KN),
+    I1 := I? + 1,
+    num_roles(Rs?, I1?, Nm?, R1),
+    mults_unadded(KN?, Nm?, I?, R1?, R2),
+    mults_numeric(PM?, Nm?, I?, R2?, R).
+
+procedure cons_num_fault(Ans?, Arg?, Constant?, Faults?, Faults).
+cons_num_fault(yes, _, _, T, T?).
+cons_num_fault(no, A, Nm, T, [constraint_not_numeric(Nm?, A?)|T?]).
+
+procedure cons_faults(Args?, Constant?, Faults).
+cons_faults([], _, []).
+cons_faults([A|As], Nm, R?) :- ground(A?), ground(As?), ground(Nm?) |
+    is_num(A?, Ok),
+    cons_faults(As?, Nm?, R1),
+    cons_num_fault(Ok?, A?, Nm?, R1?, R).
+
+procedure num_schema(NSchema?, Faults).
+num_schema(S, R?) :- ground(S?) |
+    nsch_name(S?, Nm),
+    nsch_roles(S?, Rs),
+    nsch_constraint(S?, Cn),
+    num_schema1(Nm?, Rs?, Cn?, R).
+
+procedure num_schema1(Constant?, NRoleSpecs?, Constraint?, Faults).
+num_schema1(Nm, Rs, Cn, R?) :- ground(Nm?), ground(Rs?), ground(Cn?) |
+    num_roles(Rs?, 1, Nm?, F1),
+    constraint_args(Cn?, [], As),
+    cons_faults(As?, Nm?, F2),
+    faults_app(F1?, F2?, R).
+
+procedure num_schemas(NContract?, Faults).
+num_schemas([], []).
+num_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
+    num_schema(S?, F1),
+    num_schemas(Ss?, F2),
+    faults_app(F1?, F2?, R).
+
 % A malformed contract is refused; a contract that is not is decided by
 % Section 3 or by Appendix D, according to its roles.  The faults are given
-% in the order: the head, the listed roles, the form of a schema, the
-% reflexive predicates, the signed terms.
+% in the order: the head, the numbers, the listed roles, the form of a
+% schema, the reflexive predicates, the signed terms.  The head and the
+% numbers are decided on the contract as written, the rest on its plain form
+% (self.glp, plain_decl), and so are the conditions.
 procedure check_formed(Faults?, Ans?, Contract?, Preds?, Verdict).
 check_formed([], A, C, Rf, V?) :- ground(A?), ground(C?), ground(Rf?) |
     check1(A?, C?, Rf?, V).
 check_formed([F|Fs], _, _, _, malformed([F?|Fs?])).
 
-procedure check_decl(Contract?, Preds?, Verdict).
-check_decl(C, Rf, V?) :- ground(C?), ground(Rf?) |
+procedure check_decl(Contract?, Preds?, Faults?, Verdict).
+check_decl(C, Rf, MHN, V?) :- ground(C?), ground(Rf?), ground(MHN?) |
     has_community(C?, A),
     form_schemas(C?, M0),
     refl_schemas(C?, Rf?, M1),
     sgn_schemas(C?, M2),
-    head_schemas(C?, MH),
     listed_schemas(C?, ML),
     faults_app(M1?, M2?, M12),
     faults_app(ML?, M0?, ML0),
-    faults_app(MH?, ML0?, MH0),
+    faults_app(MHN?, ML0?, MH0),
     faults_app(MH0?, M12?, M),
     check_formed(M?, A?, C?, Rf?, V).
 
-exported procedure check(Declared?, Verdict).
+procedure check_ndecl(NContract?, Preds?, Verdict).
+check_ndecl(NC, Rf, V?) :- ground(NC?), ground(Rf?) |
+    plain_contract(NC?, C),
+    head_schemas(NC?, MH),
+    num_schemas(NC?, MN),
+    faults_app(MH?, MN?, MHN),
+    check_decl(C?, Rf?, MHN?, V).
+
+exported procedure check(NDeclared?, Verdict).
 check(D, V?) :- ground(D?) |
-    decl_schemas(D?, C),
-    decl_reflexive(D?, Rf),
-    check_decl(C?, Rf?, V).
+    ndecl_schemas(D?, NC),
+    ndecl_reflexive(D?, Rf),
+    check_ndecl(NC?, Rf?, V).
 
 exported procedure check_named(Constant?, Verdict).
 check_named(Nm, V?) :- ground(Nm?) |
@@ -619,11 +723,15 @@ traceable_in(C, E?) :- ground(C?) |
 exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- ground(Nm?) |
     contracts # contract(Nm?, D),
-    decl_schemas(D?, C),
-    traceable_in(C?, E).
+    traceable_preds(D?, E).
 
-exported procedure traceable_preds(Declared?, Preds).
+exported procedure traceable_preds(NDeclared?, Preds).
 traceable_preds(D, E?) :- ground(D?) |
+    plain_decl(D?, PD),
+    traceable_pd(PD?, E).
+
+procedure traceable_pd(Declared?, Preds).
+traceable_pd(D, E?) :- ground(D?) |
     decl_schemas(D?, C),
     traceable_in(C?, E).
 
@@ -637,8 +745,13 @@ traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |
 % the contract, unobstructed, or obstructed with the faults of its first
 % introduction.  The verdict says that some introductory act is
 % unobstructed; this says which.
-exported procedure intro_acts(Declared?, IntroActs).
+exported procedure intro_acts(NDeclared?, IntroActs).
 intro_acts(D, A?) :- ground(D?) |
+    plain_decl(D?, PD),
+    intro_acts_pd(PD?, A).
+
+procedure intro_acts_pd(Declared?, IntroActs).
+intro_acts_pd(D, A?) :- ground(D?) |
     decl_schemas(D?, C),
     decl_reflexive(D?, Rf),
     unobstructed # intro_acts(C?, Rf?, A).
@@ -668,8 +781,13 @@ wards_in(C, Rf, W?) :- ground(C?), ground(Rf?) |
     has_community(C?, A),
     wards1(A?, C?, Rf?, W).
 
-exported procedure wards(Declared?, Wards).
+exported procedure wards(NDeclared?, Wards).
 wards(D, W?) :- ground(D?) |
+    plain_decl(D?, PD),
+    wards_pd(PD?, W).
+
+procedure wards_pd(Declared?, Wards).
+wards_pd(D, W?) :- ground(D?) |
     decl_schemas(D?, C),
     decl_reflexive(D?, Rf),
     wards_in(C?, Rf?, W).
@@ -690,16 +808,26 @@ relay_h1(C, Rf, H?) :- ground(C?), ground(Rf?) |
     wards_in(C?, Rf?, W),
     wards # relay_h_for(C?, Rf?, W?, H).
 
-exported procedure relay_h(Declared?, RelayHs).
+exported procedure relay_h(NDeclared?, RelayHs).
 relay_h(D, H?) :- ground(D?) |
+    plain_decl(D?, PD),
+    relay_h_pd(PD?, H).
+
+procedure relay_h_pd(Declared?, RelayHs).
+relay_h_pd(D, H?) :- ground(D?) |
     decl_schemas(D?, C),
     decl_reflexive(D?, Rf),
     relay_h1(C?, Rf?, H).
 
 % The guardianships for a set of marks M (def:guardianship), every one of
 % each mark, for inspection.
-exported procedure guardianships(Declared?, Preds?, Guardianships).
+exported procedure guardianships(NDeclared?, Preds?, Guardianships).
 guardianships(D, M, G?) :- ground(D?), ground(M?) |
+    plain_decl(D?, PD),
+    guardianships_pd(PD?, M?, G).
+
+procedure guardianships_pd(Declared?, Preds?, Guardianships).
+guardianships_pd(D, M, G?) :- ground(D?), ground(M?) |
     decl_schemas(D?, C),
     wards # guardianships_for(C?, M?, G).
 
@@ -707,8 +835,13 @@ guardianships(D, M, G?) :- ground(D?), ground(M?) |
 % inspection: def:leaving supposes a guardianship for every mark in M, and
 % its clause 3 reads the g of that guardianship, so the leaving marks are
 % given for each choice of a guardianship for each mark, leaving(Gs, L).
-exported procedure leaving(Declared?, Preds?, Leavings).
+exported procedure leaving(NDeclared?, Preds?, Leavings).
 leaving(D, M, L?) :- ground(D?), ground(M?) |
+    plain_decl(D?, PD),
+    leaving_pd(PD?, M?, L).
+
+procedure leaving_pd(Declared?, Preds?, Leavings).
+leaving_pd(D, M, L?) :- ground(D?), ground(M?) |
     decl_schemas(D?, C),
     wards # leaving_for(C?, M?, L).
 
