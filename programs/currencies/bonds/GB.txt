@@ -11,4 +11,4 @@ GB: Grassroots Bonds
 4. Payment.  Alice may decide to pay Bob-coins they hold to Bob, whom they know.
 5. Redemption.  Alice may decide to redeem a Bob-coin, or a matured Bob-bond, they hold against any coin or bond held by Bob, whom they know.
 6. Pricing.  Alice prices their offerings in Alice-coins and accepts them in payment at those prices.
-7. Escrow.  Alice may deposit coins and bonds with Carol for Bob, Carol and Bob may jointly decide to release them to Bob, and Carol and Alice to return them to Alice, as the agreed condition is met or fails, each act between two parties who know each other.
+7. Escrow.  Alice may deposit coins and bonds with Carol for Bob, on a condition the three agree; Carol and Bob may jointly decide to release them to Bob when the condition is met, and Carol and Alice may jointly decide to return them to Alice when it fails; each act is between two parties who know each other.
