@@ -1,0 +1,26 @@
+%% Test (xx)'s compiled program, written by hand: the canonical compilation of
+%% village.vglp by vGLP's Definition "Canonical Compilation", as the steps'
+%% steps.glp is of steps.vglp.  greet, feel and talk reach a question and have
+%% one more argument, last, their ask stream.  Each asking clause keeps its
+%% procedure's name and the guarded clause takes the name with 1 appended;
+%% Hello and Mood are in writer mode, so X and X? are exchanged, the ask
+%% carrying the reader X? and the program writing X; talk calls two procedures
+%% that reach a question, whose ask streams D1 and D2 are merged into its own.
+%% The program defines no Output and writes nothing to its person.  The types
+%% are the directory's (self.glp).
+
+%% (hello(K, N))*greet(K?, N?): the asking clause and the guarded clause.
+procedure greet(Constant, Integer, Stream(Ask)).
+greet(K?, N?, [ask('Hello', hello_w(X?))|D?]) :- greet1(K, N, X, D).
+procedure greet1(Constant, Integer, Hello, Stream(Ask)).
+greet1(K?, N?, hello(K, N), []).
+
+%% (mood(M))*feel(M?): the asking clause and the guarded clause.
+procedure feel(Constant, Stream(Ask)).
+feel(M?, [ask('Mood', mood_w(X?))|D?]) :- feel1(M, X, D).
+procedure feel1(Constant, Mood, Stream(Ask)).
+feel1(M?, mood(M), []).
+
+%% talk(S): the greeting and the mood, their ask streams merged.
+exported procedure talk(Said, Stream(Ask)).
+talk(said(K?, N?, M?), D?) :- greet(K, N, D1), feel(M, D2), merge(D1?, D2?, D).

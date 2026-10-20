@@ -2,6 +2,9 @@
 %% (README.md, "The term form"); edit the source and run transform.sh, not this file.
 %% transform(reader, profiles)
 
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).
+Person ::= person(Constant, Constant, List(Constant)).
+
 %% person(fair)
 %% binds(Rating, fair_rating)
 exported procedure
@@ -9,12 +12,17 @@ fair_rating
 (
 Rating
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-fair_rating(R?, S, Mon)
+fair_rating(R?, _, S, Mon, _)
 :-
 random(S?, 5, K, _)
 ,

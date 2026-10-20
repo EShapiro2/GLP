@@ -10,10 +10,10 @@
 %%
 %%   person scripted.
 %%   Menu =::= script_menu.
-%%   procedure script_menu(Menu?, Integer?).
-%%   script_menu(menu(p1, [], R?), _) :- say(slot(R), known(p2)) @ 1/hour.
-%%   script_menu(menu(p2, [], R?), _) :- say(slot(R), known(p1)) @ 1/hour.
-%%   script_menu(menu(Me, [Q | _], R?), S) :-
+%%   procedure script_menu(Menu?, Person?, Integer?).
+%%   script_menu(menu(p1, [], R?), _, _) :- say(slot(R), known(p2)) @ 1/hour.
+%%   script_menu(menu(p2, [], R?), _, _) :- say(slot(R), known(p1)) @ 1/hour.
+%%   script_menu(menu(Me, [Q | _], R?), _, S) :-
 %%       random(S?, 2, K, _), act(K?, Me?, Q?, slot(R)) @ 1/hour.
 %%   procedure say(Slot(Request)?, Request?).
 %%   say(slot(V?), V).
@@ -23,8 +23,8 @@
 %%
 %%   person agreeable.
 %%   Approval =::= agree.
-%%   procedure agree(Approval?, Integer?).
-%%   agree(approval(_, A?), _) :- say_yes(slot(A)) @ 1/hour.
+%%   procedure agree(Approval?, Person?, Integer?).
+%%   agree(approval(_, A?), _, _) :- say_yes(slot(A)) @ 1/hour.
 %%   procedure say_yes(Slot(YesNo)?).
 %%   say_yes(slot(yes)).
 %%
@@ -41,10 +41,10 @@ exported procedure source(SglpTerms).
 source([
    person(scripted),
    binds('Menu', script_menu),
-   decl(script_menu(dual('Menu'), dual('Integer'))),
-   clause(script_menu(menu(p1, [], var('R?')), var('_')), [], [rated(say(slot(var('R')), known(p2)), rate(1, hour))]),
-   clause(script_menu(menu(p2, [], var('R?')), var('_')), [], [rated(say(slot(var('R')), known(p1)), rate(1, hour))]),
-   clause(script_menu(menu(var('Me'), [var('Q') | var('_')], var('R?')), var('S')), [],
+   decl(script_menu(dual('Menu'), dual('Person'), dual('Integer'))),
+   clause(script_menu(menu(p1, [], var('R?')), var('_'), var('_')), [], [rated(say(slot(var('R')), known(p2)), rate(1, hour))]),
+   clause(script_menu(menu(p2, [], var('R?')), var('_'), var('_')), [], [rated(say(slot(var('R')), known(p1)), rate(1, hour))]),
+   clause(script_menu(menu(var('Me'), [var('Q') | var('_')], var('R?')), var('_'), var('S')), [],
           [random(var('S?'), 2, var('K'), var('_')),
            rated(act(var('K?'), var('Me?'), var('Q?'), slot(var('R'))), rate(1, hour))]),
    decl(say(dual('Slot'('Request')), dual('Request'))),
@@ -55,8 +55,8 @@ source([
 
    person(agreeable),
    binds('Approval', agree),
-   decl(agree(dual('Approval'), dual('Integer'))),
-   clause(agree(approval(var('_'), var('A?')), var('_')), [], [rated(say_yes(slot(var('A'))), rate(1, hour))]),
+   decl(agree(dual('Approval'), dual('Person'), dual('Integer'))),
+   clause(agree(approval(var('_'), var('A?')), var('_'), var('_')), [], [rated(say_yes(slot(var('A'))), rate(1, hour))]),
    decl(say_yes(dual('Slot'('YesNo')))),
    clause(say_yes(slot(yes)), [], []),
 

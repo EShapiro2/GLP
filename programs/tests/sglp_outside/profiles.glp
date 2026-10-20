@@ -2,6 +2,9 @@
 %% (README.md, "The term form"); edit the source and run transform.sh, not this file.
 %% transform(given, profiles)
 
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).
+Person ::= person(Constant, Constant, List(Constant)).
+
 %% person(agreeable)
 %% binds(Poll, agreeable_poll)
 exported procedure
@@ -10,12 +13,17 @@ agreeable_poll
 Poll
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-agreeable_poll(P, S, Mon)
+agreeable_poll(P, _, S, Mon, _)
 :-
 random(S?, 100, K, _)
 ,

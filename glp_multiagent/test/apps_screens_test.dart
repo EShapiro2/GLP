@@ -770,7 +770,8 @@ void appsScreens(Screens screens) {
   testWidgets(
       'GSNP\'s app on five phones, the play of GAI\'s GSNP figure: Bob\'s '
       'chat with Carol, the item with its author and who forwarded it, and '
-      'Forward; and the warranty question once he picks Fay', (tester) async {
+      'Forward; the warranty question once he picks Fay; and Fay\'s chat '
+      'with Bob once he forwards it', (tester) async {
     final run = await _Run.start(tester, screens, 'gsnp',
         chain: const ['dan', 'eve', 'carol', 'bob', 'fay']);
     final dan = run.person('dan');
@@ -852,6 +853,33 @@ void appsScreens(Screens screens) {
     expect(fay.atoms, isNot(contains('item(speech($fromCarol, bob))')));
     run.plain(bob);
     await run.shoot(bob, 'gsnp-b-bob-forward.png');
+
+    // Bob taps Yes, which proposes forward(bob, fay, x) (GSNP:2, Forwarding): Fay holds the item signed again by Bob.  Nobody is asked.
+    await run.tap(bob, run.groupControl(bob, 'forward-yes:'));
+    const fromBob = 'speech($fromCarol, bob)';
+    expect(fay.atoms, contains('item($fromBob)'));
+    expect(fay.questions('approval'), isEmpty);
+
+    // (c) Fay's chat with Bob (GAI #5 Cowork, Code_inbox.md, 2026-10-19 22:29 UTC): she taps his row; the item "Flood on Main Street", "Author: Dan" and "via Eve, via Carol, via Bob", and Forward under it.
+    await run.tap(fay, run.name(fay, 'person:bob', 'Bob'));
+    expect(run.control(fay, 'chat:bob'), findsOneWidget);
+    await run.top(fay);
+    final forwarded = run.groupControl(fay, 'item:');
+    expect(forwarded, findsOneWidget);
+    expect(
+        [
+          for (final t in run.tester.widgetList<Text>(
+              find.descendant(of: forwarded, matching: find.byType(Text))))
+            t.data,
+        ],
+        [
+          'Flood on Main Street',
+          'Author: Dan',
+          'via Eve, via Carol, via Bob',
+          'Forward'
+        ]);
+    run.plain(fay);
+    await run.shoot(fay, 'gsnp-c-fay-chat.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 
@@ -859,8 +887,9 @@ void appsScreens(Screens screens) {
       'GAI\'s app, the example of GAI\'s paper in the order of its Table 2, '
       'Alice and Bob at their phones and Alf\'s program scripted: Alice '
       'creating Alf in her AI agents tab; Alice and Bob asked to approve Alf '
-      'befriending Bob; and Bob\'s chat with Alf, its item naming its '
-      'principal and its developer', (tester) async {
+      'befriending Bob; Bob\'s Friends tab once Alf is his friend, Alf\'s row '
+      'naming its principal and its developer; and Bob\'s chat with Alf, its '
+      'item naming its principal and its developer', (tester) async {
     // Alice and Bob, persons, and Alf, Alice's AI agent, a conversation between each two (GAI's paper, Section 3.2, the example and Table "The components that change in the example"), on GAI's contract (programs/gai/GAI.glp).  The test plays Table 2 exactly, acting for Alice and Bob at their phones (GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 3); Alf is scripted (programs/apps/gai/person.glp), its script the AI agent's program, which takes its acts: once entered, it proposes to befriend Bob with its attestation, and once his friend it signs the item "Today's summary of the news" (GSNP:1) and sends it to him by message (GSN:1).  The code of Alf is 'The code of Alf' signed by its developer acme_ltd, drawn Acme Ltd (the same, item 1).
     final run = await _Run.start(tester, screens, 'gai',
         chain: const ['alice', 'alf', 'bob'],
@@ -965,12 +994,27 @@ void appsScreens(Screens screens) {
         containsAll(['friend(alf)', 'friend(alice)', 'agent_of(alf, alice, $attestation)', 'item($summary)']));
     expect(run.scriptedAtoms('alf'), containsAll(['item($summary)', 'authored($summary)']));
 
-    // Alf's row in Bob's Friends tab names its developer (GAI #5 Cowork, Code_inbox.md, 2026-10-19 20:36 UTC, item 5).
-    expect(
-        find.descendant(
-            of: run.control(bob, 'person:alf'),
-            matching: find.text('Developer: Acme Ltd')),
-        findsOneWidget);
+    // (d) Bob's Friends tab after Alf befriends him, right after his Yes: Alf listed with "an AI agent of Alice" and "Developer: Acme Ltd" under his name, read from agent_of(alf, alice, y), and the item he sent, with End friendship, unfriend_p of a friend who is not Bob's own AI agent, and no Befriend; and Alice, his friend, with End friendship (GAI #5 Cowork, Code_inbox.md, 2026-10-20 08:01 UTC; GAI's paper, Section 3.1: "every friend of an AI agent sees its principal and its developer"; the developer line, the same, 2026-10-19 20:36 UTC, item 5).
+    await run.top(bob);
+    List<String?> row(String q) => [
+          for (final t in tester.widgetList<Text>(find.descendant(
+              of: run.control(bob, 'person:$q'), matching: find.byType(Text))))
+            t.data,
+        ];
+    expect(row('alf'), [
+      'A',
+      'Alf',
+      'an AI agent of Alice',
+      'Developer: Acme Ltd',
+      "Today's summary of the news",
+      'End friendship'
+    ]);
+    expect(run.control(bob, 'unfriend:alf'), findsOneWidget);
+    expect(run.control(bob, 'befriend:alf'), findsNothing);
+    expect(row('alice'), ['A', 'Alice', 'End friendship']);
+    expect(run.control(bob, 'unfriend:alice'), findsOneWidget);
+    run.plain(bob);
+    await run.shoot(bob, 'gai-e-bob-friends.png');
 
     // Bob's chat with Alf: he taps Alf's row; the item "Today's summary of the news", "Author: Alf, an AI agent of Alice", "Developer: Acme Ltd" (GAI:2, "Every act of the AI agent names its principal and its developer"), and Forward under it; under them the field Message and Send, as in GSNP's chat, GAI offering message.
     await run.tap(bob, run.name(bob, 'person:alf', 'Alf'));

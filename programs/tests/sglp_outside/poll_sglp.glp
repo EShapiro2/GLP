@@ -3,8 +3,8 @@
 %%
 %%   person agreeable.
 %%   Poll =::= agreeable_poll.
-%%   procedure agreeable_poll(Poll?, Integer?).
-%%   agreeable_poll(P, S) :- random(S?, 100, K, _), agreeable_answer(K?, P?) @ 1/day.
+%%   procedure agreeable_poll(Poll?, Person?, Integer?).
+%%   agreeable_poll(P, _, S) :- random(S?, 100, K, _), agreeable_answer(K?, P?) @ 1/day.
 %%   procedure agreeable_answer(Integer?, Poll?).
 %%   agreeable_answer(K, poll(_, yes)) :- K? =< 80 | true.
 %%   agreeable_answer(K, poll(_, no)) :- K? > 80 | true.
@@ -25,8 +25,8 @@ source(
   %% The profile and the run declaration.
   [person(agreeable),
    binds('Poll', agreeable_poll),
-   decl(agreeable_poll(dual('Poll'), dual('Integer'))),
-   clause(agreeable_poll(var('P'), var('S')), [],
+   decl(agreeable_poll(dual('Poll'), dual('Person'), dual('Integer'))),
+   clause(agreeable_poll(var('P'), var('_'), var('S')), [],
           [random(var('S?'), 100, var('K'), var('_')),
            rated(agreeable_answer(var('K?'), var('P?')), rate(1, day))]),
    decl(agreeable_answer(dual('Integer'), dual('Poll'))),

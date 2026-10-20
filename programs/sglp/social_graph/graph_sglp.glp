@@ -46,8 +46,8 @@ source(
   %% The profiles and the run declaration.
   [person(homophile),
    binds('Menu', homophile_menu),
-   decl(homophile_menu(dual('Menu'), dual('Integer'))),
-   clause(homophile_menu(var('M'), var('S')), [],
+   decl(homophile_menu(dual('Menu'), dual('Person'), dual('Integer'))),
+   clause(homophile_menu(var('M'), var('_'), var('S')), [],
           [random(var('S?'), 100, var('K'), var('S1')),
            rated(homophile_pick(var('K?'), var('S1?'), var('M?')), rate(1, week))]),
    decl(homophile_pick(dual('Integer'), dual('Integer'), dual('Menu'))),
@@ -60,8 +60,8 @@ source(
 
    person(indifferent),
    binds('Menu', indifferent_menu),
-   decl(indifferent_menu(dual('Menu'), dual('Integer'))),
-   clause(indifferent_menu(var('M'), var('S')), [],
+   decl(indifferent_menu(dual('Menu'), dual('Person'), dual('Integer'))),
+   clause(indifferent_menu(var('M'), var('_'), var('S')), [],
           [random(var('S?'), 100, var('K'), var('S1')),
            rated(indifferent_pick(var('K?'), var('S1?'), var('M?')), rate(2, week))]),
    decl(indifferent_pick(dual('Integer'), dual('Integer'), dual('Menu'))),
@@ -74,8 +74,8 @@ source(
 
    person(wary),
    binds('Approval', wary_approval),
-   decl(wary_approval(dual('Approval'), dual('Integer'))),
-   clause(wary_approval(var('C'), var('S')), [],
+   decl(wary_approval(dual('Approval'), dual('Person'), dual('Integer'))),
+   clause(wary_approval(var('C'), var('_'), var('S')), [],
           [random(var('S?'), 100, var('K'), var('_')),
            rated(wary_answer(var('K?'), var('C?')), rate(1, day))]),
    decl(wary_answer(dual('Integer'), dual('Approval'))),
@@ -84,8 +84,8 @@ source(
 
    person(sociable),
    binds('Approval', sociable_approval),
-   decl(sociable_approval(dual('Approval'), dual('Integer'))),
-   clause(sociable_approval(var('C'), var('S')), [],
+   decl(sociable_approval(dual('Approval'), dual('Person'), dual('Integer'))),
+   clause(sociable_approval(var('C'), var('_'), var('S')), [],
           [random(var('S?'), 100, var('K'), var('_')),
            rated(sociable_answer(var('K?'), var('C?')), rate(1, hour))]),
    decl(sociable_answer(dual('Integer'), dual('Approval'))),

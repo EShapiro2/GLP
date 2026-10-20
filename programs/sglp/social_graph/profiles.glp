@@ -2,6 +2,9 @@
 %% (README.md, "The term form"); edit the source and run transform.sh, not this file.
 %% transform(social_graph, profiles)
 
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).
+Person ::= person(Constant, Constant, List(Constant)).
+
 %% person(homophile)
 %% binds(Menu, homophile_menu)
 exported procedure
@@ -10,12 +13,17 @@ homophile_menu
 Menu
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-homophile_menu(M, S, Mon)
+homophile_menu(M, _, S, Mon, _)
 :-
 random(S?, 100, K, S1)
 ,
@@ -63,12 +71,17 @@ indifferent_menu
 Menu
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-indifferent_menu(M, S, Mon)
+indifferent_menu(M, _, S, Mon, _)
 :-
 random(S?, 100, K, S1)
 ,
@@ -116,12 +129,17 @@ wary_approval
 Approval
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-wary_approval(C, S, Mon)
+wary_approval(C, _, S, Mon, _)
 :-
 random(S?, 100, K, _)
 ,
@@ -163,12 +181,17 @@ sociable_approval
 Approval
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-sociable_approval(C, S, Mon)
+sociable_approval(C, _, S, Mon, _)
 :-
 random(S?, 100, K, _)
 ,
