@@ -252,11 +252,10 @@ done(swap(Q, _, _, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(swap(Q, _, _, _, _, _, _), swap_declined(Q1), yes) :- Q? =?= Q1? | true.
 done(pay(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
 done(pay(Q, K), not_accepted(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
-done(redeem(Q, R, D1), redeemed(Q1, R1, D2), yes) :- Q? =?= Q1?, R? =?= R1?, D1? =?= D2? | true.
-done(redeem(Q, _, _), refused(Q1), yes) :- Q? =?= Q1? | true.
-done(redeem(Q, _, _), menu(Q1, _), yes) :- Q? =?= Q1? | true.
-done(mature(Q, D), matured(Q1, D1), yes) :- Q? =?= Q1?, D? =:= D1? | true.
-done(mature(Q, D), not_mature(Q1, D1), yes) :- Q? =?= Q1?, D? =:= D1? | true.
+done(redeem(Q, _, R, D1), redeemed(Q1, R1, D2), yes) :- Q? =?= Q1?, R? =?= R1?, D1? =?= D2? | true.
+done(redeem(Q, D, _, _), not_mature(Q1, D1), yes) :- Q? =?= Q1?, D? =?= D1? | true.
+done(redeem(Q, _, _, _), refused(Q1), yes) :- Q? =?= Q1? | true.
+done(redeem(Q, _, _, _), menu(Q1, _), yes) :- Q? =?= Q1? | true.
 done(deposit(E, _, _, _), transferred(deposit, E1), yes) :- E? =?= E1? | true.
 done(deposit(E, _, _, _), transfer_declined(deposit, E1), yes) :- E? =?= E1? | true.
 done(release(Q, _, _, _), transferred(release, Q1), yes) :- Q? =?= Q1? | true.
@@ -295,8 +294,7 @@ pick(mint(K), form(C, P), Swaps, Ts, grant(C?, P?, mint(K?)), Swaps?, Ts?).
 pick(mint(K, D), form(C, P), Swaps, Ts, grant(C?, P?, mint(K?, D?)), Swaps?, Ts?).
 pick(swap(Q, U, D, K, V, D1, K1), form(C, P), Swaps, Ts, grant(C?, P?, swap(Q?, U?, D?, K?, V?, D1?, K1?)), Swaps?, Ts?).
 pick(pay(Q, K), form(C, P), Swaps, Ts, grant(C?, P?, pay(Q?, K?)), Swaps?, Ts?).
-pick(redeem(Q, R, D1), form(C, P), Swaps, Ts, grant(C?, P?, redeem(Q?, R?, D1?)), Swaps?, Ts?).
-pick(mature(Q, D), form(C, P), Swaps, Ts, grant(C?, P?, mature(Q?, D?)), Swaps?, Ts?).
+pick(redeem(Q, D, R, D1), form(C, P), Swaps, Ts, grant(C?, P?, redeem(Q?, D?, R?, D1?)), Swaps?, Ts?).
 pick(deposit(E, U, D, K), form(C, P), Swaps, Ts, grant(C?, P?, deposit(E?, U?, D?, K?)), Swaps?, Ts?).
 pick(release(Q, U, D, K), form(C, P), Swaps, Ts, grant(C?, P?, release(Q?, U?, D?, K?)), Swaps?, Ts?).
 pick(return(R, U, D, K), form(C, P), Swaps, Ts, grant(C?, P?, return(R?, U?, D?, K?)), Swaps?, Ts?).

@@ -41,17 +41,16 @@ SwapResponse ::= swap_accept(Stream(Instrument)) ; swap_decline(Stream(Instrumen
 %% are not the payee's own coins.  No date is read.
 PayResponse ::= pay_taken ; pay_returned(Stream(Instrument)).
 
-%% The issuer's answer to a presentation of its coin: the instrument taken in
-%% exchange; the presented coin returned with the lots the issuer holds, its
-%% own apart, for the bearer to choose among; or what was presented returned
-%% because it is not the issuer's coin.  No date is read.
+%% The issuer's answer to a presentation of its coin, or of its bond, which it
+%% tests by its own date (clause 5): the instrument taken in exchange; the
+%% presented instrument returned with the lots the issuer holds, its own
+%% apart, for the bearer to choose among; the presented bond returned because
+%% it is not mature by the issuer's date; or what was presented returned
+%% because it is neither the issuer's coin nor its bond.
 RedeemResponse ::= redeem_give(Instrument)
                  ; redeem_menu(Instrument, Stream(Lot))
+                 ; redeem_not_mature(Instrument)
                  ; redeem_declined(Instrument).
-
-%% The issuer's answer to a matured bond presented to it: a coin of its own
-%% for it, or the bond returned, because it is not mature by the issuer's date.
-MatureResponse ::= mature_give(Instrument) ; mature_declined(Instrument).
 
 %% The receiver's answer to an escrow transfer: taken, or the instruments
 %% returned.
@@ -62,7 +61,6 @@ TransferResponse ::= transfer_accept ; transfer_decline(Stream(Instrument)).
 PeerContent ::= pay(Stream(Instrument), PayResponse?)
               ; swap(Lot, Stream(Instrument), SwapResponse?)
               ; redeem(Instrument, Key, Constant, RedeemResponse?)
-              ; mature(Instrument, MatureResponse?)
               ; transfer(Kind, Stream(Instrument), TransferResponse?).
 PeerMsg     ::= msg(Key, Key, PeerContent).
 
@@ -122,9 +120,7 @@ ScreenContent ::= holdings(Holdings)
                 ; refused(Friend)
                 ; presented(From, WantIssuer, WantDue)
                 ; unfulfilled(From, WantIssuer, WantDue)
-                ; matured(Friend, Maturity)
                 ; not_mature(Friend, Maturity)
-                ; matured_for(From, Maturity)
                 ; not_mature_for(From, Maturity)
                 ; offered_transfer(Kind, Friend, Lot)
                 ; transferred(Kind, Friend)
@@ -157,9 +153,8 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?)
             ; pay_returned_by(Key, Stream(Instrument))
             ; redeem_given(Key, Key, Constant, Instrument)
             ; redeem_menu_from(Key, Instrument, Stream(Lot))
+            ; redeem_not_mature_by(Key, Instrument)
             ; redeem_declined_by(Key, Instrument)
-            ; matured_by(Key, Integer, Instrument)
-            ; not_matured_by(Key, Instrument)
             ; accept_transfer(Kind, Key, Stream(Instrument), TransferResponse?)
             ; decline_transfer(Kind, Key, Stream(Instrument), TransferResponse?)
             ; transfer_accepted(Kind, Key)
@@ -187,9 +182,10 @@ Given         ::= Stream(Instrument).
 
 %% A request: one alternative per request clause of the agent, each a
 %% transaction at the party whose election it is --- Mint_p(k), Mint_p(d, k),
-%% Swap, Pay, Redeem, Mature, Deposit, Release and Return --- with the
-%% arguments its clause reads.  A due is `now` for coins and the maturity date
-%% for bonds.
+%% Swap, Pay, Redeem, Deposit, Release and Return --- with the arguments its
+%% clause reads.  A due is `now` for coins and the maturity date for bonds.
+%% A redemption names the issuer, the due of the instrument presented, a coin
+%% or a bond of the issuer, and the issuer and due of the instrument wanted.
 %% The fields of a request, one named type per meaning over its base type,
 %% each named by the variable its clause gives it, so that vGLP labels the
 %% field by it (Definition "Widget Declaration, Default Widget"): the
@@ -216,8 +212,7 @@ Request ::= mint(Amount)
           ; mint(Amount, Maturity)
           ; swap(Friend, GiveIssuer, GiveDue, GiveAmount, WantIssuer, WantDue, WantAmount)
           ; pay(Friend, Amount)
-          ; redeem(Friend, WantIssuer, WantDue)
-          ; mature(Friend, Maturity)
+          ; redeem(Friend, GiveDue, WantIssuer, WantDue)
           ; deposit(EscrowAgent, Issuer, Due, Amount)
           ; release(Beneficiary, Issuer, Due, Amount)
           ; return(Depositor, Issuer, Due, Amount).
@@ -268,8 +263,7 @@ Step ::= mint(Integer)
        ; advance(Integer)
        ; swap(Key, Key, Constant, Integer, Key, Constant, Integer)
        ; pay(Key, Integer)
-       ; redeem(Key, Key, Constant)
-       ; mature(Key, Integer)
+       ; redeem(Key, Constant, Key, Constant)
        ; deposit(Key, Key, Constant, Integer)
        ; release(Key, Key, Constant, Integer)
        ; return(Key, Key, Constant, Integer)
@@ -363,16 +357,6 @@ take_instrument(Issuer, D, [X|Rest], Found?, [X?|Rem?]) :-
     otherwise |
     take_instrument(Issuer?, D?, Rest?, Found, Rem).
 take_instrument(_, _, [], not_found, []).
-
-%% One bond of Issuer maturing at D out of the holdings, or not_found with the
-%% holdings intact.
-procedure take_bond(Key?, Integer?, Stream(Instrument)?, Found, Stream(Instrument)).
-take_bond(Issuer, D, [bond(I, M, S)|Rest], found(bond(I?, M?, S?)), Rest?) :-
-    Issuer? =?= I?, D? =:= M? | true.
-take_bond(Issuer, D, [X|Rest], Found?, [X?|Rem?]) :-
-    otherwise |
-    take_bond(Issuer?, D?, Rest?, Found, Rem).
-take_bond(_, _, [], not_found, []).
 
 %% Whether every instrument is a coin of the holder: what a payee takes as a
 %% payment of its own coins.
@@ -473,21 +457,14 @@ inject_pay_result(R, Q, K, [Y|Ys], [Y?|Ys1?]) :-
 procedure inject_redeem_result(RedeemResponse?, Key?, Key?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
 inject_redeem_result(redeem_give(X), Q, R, D1, Ys, [redeem_given(Q?, R?, D1?, X?)|Ys?]) :-
     ground(Q?), ground(X?) | true.
-inject_redeem_result(redeem_menu(Coin, Menu), Q, _, _, Ys, [redeem_menu_from(Q?, Coin?, Menu?)|Ys?]) :-
-    ground(Q?), ground(Coin?), ground(Menu?) | true.
-inject_redeem_result(redeem_declined(Coin), Q, _, _, Ys, [redeem_declined_by(Q?, Coin?)|Ys?]) :-
-    ground(Q?), ground(Coin?) | true.
+inject_redeem_result(redeem_menu(X, Menu), Q, _, _, Ys, [redeem_menu_from(Q?, X?, Menu?)|Ys?]) :-
+    ground(Q?), ground(X?), ground(Menu?) | true.
+inject_redeem_result(redeem_not_mature(Bond), Q, _, _, Ys, [redeem_not_mature_by(Q?, Bond?)|Ys?]) :-
+    ground(Q?), ground(Bond?) | true.
+inject_redeem_result(redeem_declined(X), Q, _, _, Ys, [redeem_declined_by(Q?, X?)|Ys?]) :-
+    ground(Q?), ground(X?) | true.
 inject_redeem_result(Resp, Q, R, D1, [Y|Ys], [Y?|Ys1?]) :-
     inject_redeem_result(Resp?, Q?, R?, D1?, Ys?, Ys1).
-
-%% The issuer's answer to a bond maturing at D presented to it, when it comes.
-procedure inject_mature_result(MatureResponse?, Key?, Integer?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_mature_result(mature_give(Coin), Q, D, Ys, [matured_by(Q?, D?, Coin?)|Ys?]) :-
-    ground(Q?), ground(Coin?) | true.
-inject_mature_result(mature_declined(Bond), Q, _, Ys, [not_matured_by(Q?, Bond?)|Ys?]) :-
-    ground(Q?), ground(Bond?) | true.
-inject_mature_result(Resp, Q, D, [Y|Ys], [Y?|Ys1?]) :-
-    inject_mature_result(Resp?, Q?, D?, Ys?, Ys1).
 
 %% The receiver's answer to a proposed transfer, when it comes.
 procedure inject_transfer_result(TransferResponse?, Kind?, Key?, Stream(UserInMsg)?, Stream(UserInMsg)).
