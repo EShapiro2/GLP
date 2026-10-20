@@ -4,7 +4,7 @@ The app of GSG, the grassroots social graph, as a mini-app of the Grassroots Sup
 
 ## The contract
 
-GSG is GSC's contract (Coordination Appendix C); its clauses are `programs/gsc/GSG.md`, as GSC's paper, Section 2.2, has them, and its act schemas `programs/gsc/GSG.glp`.  GSG extends GKK, the base contract (`programs/gsc/GKK.md`; the app `../gkk`), whose clauses it cites: Identity, GKK:1; Meeting, GKK:2; and Introduction, GKK:3.
+GSG is GSC's contract (Coordination Appendix C); its clauses are `programs/gsc/GSG.txt`, as GSC's paper, Section 2.2, has them, and its act schemas `programs/gsc/GSG.glp`.  GSG extends GKK, the base contract (`programs/gsc/GKK.txt`; the app `../gkk`), whose clauses it cites: Identity, GKK:1; Meeting, GKK:2; and Introduction, GKK:3.
 
 1. *Friendship.*  Alice and Bob, who know each other personally and are not friends, may jointly decide to become friends by an act of both.
 2. *Ending a friendship.*  Alice may end their friendship with Bob by their own act.
@@ -52,8 +52,8 @@ printf '../programs/apps/gsg\nplay_held(In, ToBob, ToCarol).\n:limit 600000\npla
 `play_friends` runs two executions over one conversation, the play handing each its end of the root channel as the social graph does.  Each person establishes their identity; Alice and Bob ask to know each other; Alice asks to meet Bob in person, and Bob is asked and answers yes; Alice offers him friendship, and Bob is asked and answers yes; then Bob ends the friendship, and nobody is asked.  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens are the views their agents write, with the persons a request question shows where the script looks (`menu(K, Ks)`) and each answer the person gives (`gave(C, A)`), held exactly by the suite's Section APPS:
 
 ```
-A = [view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), menu(alice, [bob]), view([friend(bob), identity], [bob]), view([identity], [bob]) | _]
-B = [view([], []), view([identity], []), view([identity], [alice]), gave(befriend(alice, bob), yes), view([friend(alice), identity], [alice]), view([identity], [alice]) | _]
+A = [view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), view([knows(bob), identity], [bob]), menu(alice, [bob]), view([friend(bob), knows(bob), identity], [bob]), view([knows(bob), identity], [bob]) | _]
+B = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), gave(befriend(alice, bob), yes), view([friend(alice), knows(alice), identity], [alice]), view([knows(alice), identity], [alice]) | _]
 ```
 
 `play_held` runs the router on a hello sent to Bob and one to Carol before any conversation is open, then Bob's conversation, a start to Bob, and Carol's conversation: each hello goes on its recipient's conversation once it opens.
@@ -67,8 +67,8 @@ G=$(cd .. && pwd); printf ':artefact %s/programs/apps/gsg %s/programs/social/gra
 Two isolates, each the super-app of `programs/social/graph/core` with its own key pair.  Each person trusts the compiler's key and installs `gsg.glpw`; Alice connects to Bob and they become friends in the super-app's social graph; Alice invites Bob to the mini-app and Bob accepts; the handshake opens their conversation; then the steps of `play_friends` run over it.  The boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent ... there is no clock and no polling"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers"), so each event reduces to quiescence and the boot settles.  The two persons' lines interleave as the isolates run; each person's, in order, held exactly by the suite's Section APPS:
 
 ```
-[alice] sg(connected(bob)), view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), menu(alice, [bob]), view([friend(bob), identity], [bob]), view([identity], [bob])
-[bob]   sg(befriend(alice)), sg(connected(alice)), view([], []), view([identity], []), view([identity], [alice]), gave(befriend(alice, bob), yes), view([friend(alice), identity], [alice]), view([identity], [alice])
+[alice] sg(connected(bob)), view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), view([knows(bob), identity], [bob]), menu(alice, [bob]), view([friend(bob), knows(bob), identity], [bob]), view([knows(bob), identity], [bob])
+[bob]   sg(befriend(alice)), sg(connected(alice)), view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), gave(befriend(alice, bob), yes), view([friend(alice), knows(alice), identity], [alice]), view([knows(alice), identity], [alice])
 ```
 
 ### In the Flutter super-app

@@ -4,7 +4,7 @@ The app of GKK, Grassroots Keys and Knowledge, the base mini-app of the grassroo
 
 ## The contract
 
-GKK is GSC's contract, the base contract every contract extends (Coordination Appendix C); its clauses are `programs/gsc/GKK.md`, as GSC's paper, Section 2.1, has them, and its act schemas `programs/gsc/GKK.glp`:
+GKK is GSC's contract, the base contract every contract extends (Coordination Appendix C); its clauses are `programs/gsc/GKK.txt`, as GSC's paper, Section 2.1, has them, and its act schemas `programs/gsc/GKK.glp`:
 
 1. *Identity.*  Alice may act to establish their identity by choosing their own key pair.  They make themselves known by the public key, sign their acts with the private key, and are accountable for every act signed with it.
 2. *Meeting.*  Alice and Bob may come to know each other by an act of both.
@@ -46,7 +46,13 @@ From `glp_runtime/`:
 printf '../programs/apps/gkk\n:limit 600000\nplay_keys(A, B, C).\n:quit\n' | bin/glpc
 ```
 
-`play_keys` runs three executions, Alice's over a conversation with Bob and one with Carol.  Each person establishes their identity; Alice and Bob ask to know each other, and so do Alice and Carol; Alice asks to meet Bob in person, Bob is asked and answers yes, and each then knows the other; Alice and Carol meet likewise; and Alice, who knows Bob and Carol, introduces Carol to Bob, Bob is asked and answers yes, and he then knows Carol; Carol is not asked.  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens are the views their agents write, with the persons a request question shows where the script looks (`menu(K, Ks)`) and each answer the person gives (`gave(C, A)`), held exactly by the suite's Section APPS.
+`play_keys` runs three executions, Alice's over a conversation with Bob and one with Carol.  Each person establishes their identity; Alice and Bob ask to know each other, and so do Alice and Carol; Alice asks to meet Bob in person, Bob is asked and answers yes, and each then knows the other; Alice and Carol meet likewise; and Alice, who knows Bob and Carol, introduces Carol to Bob, Bob is asked and answers yes, and he then knows Carol; Carol is not asked.  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens are the views their agents write, with the persons a request question shows where the script looks (`menu(K, Ks)`) and each answer the person gives (`gave(C, A)`), held exactly by the suite's Section APPS:
+
+```
+A = [view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), view([identity], [bob, carol]), view([knows(bob), identity], [bob, carol]), view([knows(carol), knows(bob), identity], [bob, carol]), menu(alice, [bob, carol]) | _]
+B = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), gave(introduce(alice, bob, carol), yes), view([knows(carol), knows(alice), identity], [alice]) | _]
+C = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, carol), yes), view([knows(alice), identity], [alice]) | _]
+```
 
 ## The screens
 
