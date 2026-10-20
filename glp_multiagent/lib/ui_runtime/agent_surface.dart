@@ -1149,8 +1149,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           children: shown
               .map((f) => TextField(
                     controller: controllers[f.name],
-                    keyboardType: (f.type == FieldType.number ||
-                            f.type == FieldType.date)
+                    keyboardType: f.type == FieldType.number
                         ? TextInputType.number
                         : TextInputType.text,
                     decoration: InputDecoration(labelText: f.label),
@@ -1181,9 +1180,6 @@ class _AgentSurfaceState extends State<AgentSurface> {
   GTerm _fieldTerm(FieldDesc f, String raw) {
     switch (f.type) {
       case FieldType.number:
-      case FieldType.date:
-        // One term for both widgets: a date field's Xs_C takes an Integer, the
-        // day the program counts.
         return GInt(int.tryParse(raw) ?? 0);
       case FieldType.peer:
         return GAtom(raw.toLowerCase());

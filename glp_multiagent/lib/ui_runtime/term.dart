@@ -130,7 +130,7 @@ String formatTerm(GTerm t) {
 /// screen without a widget of its own goes through it: a card's context
 /// values, the panel's list, a declared view's rows and keys, a template's
 /// substitutions, a bubble's text. The construct family has the text, string,
-/// number, date and peer widgets and no widget of a lot, a coin or a list of
+/// number and peer widgets and no widget of a lot, a coin or a list of
 /// bonds, and a display declaration declares no `context(Y, W)` item for
 /// them, so the default display is what shows them. No widget is added to
 /// the family and no declaration changes.
