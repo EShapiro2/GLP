@@ -1,0 +1,85 @@
+%% miniapp.glp --- the canonical CVA platform of this directory, platform.vglp, as a mini-app of the Grassroots Super-App (GSG paper, Section 2, "Activation and joining" and "What the super-app grants a mini-app").  The apps of programs/apps each hold this file, the same in each, and their self.glp the types of their platform (README.md, "GSN's app"); the suite's Section APPS holds the copies equal.
+%%
+%% miniapp(Id, Ui, Sg, Cal) is the entry the super-app activates by run/3: the instance of the root's entry template miniapp/4 (programs/self.glp) at the mini-app's two types, Drawn, what its dispatcher draws for its person, and Net, the platform's network messages, which its root channels carry.  Its grants: Id, the person's key, which the super-app holds and which is the person's identity (GSG:1, Identity), the agent's Peer; Ui, the person channel (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"); Sg, the channel to the social graph, down which the social graph hands the mini-app, at each invitation, one end of the root channel of a conversation with the execution of this program at a friend; and Cal, the calendar, which the platform ignores, having no clock (vGLP, Section 5.4, "Triggers": the agent takes its own transactions "when it starts and after each trigger, one at a time until none holds").  The mini-app holds nothing else, and calls nothing that reaches the network or the person, so the program is certified.
+%%
+%% It runs the platform's agent with the person's key as its Peer and the dispatcher on the agent's asks, as the canonical compilation runs a vGLP program (vGLP, "The canonical compilation"): the agent's questions, its request questions and approval questions, are drawn on the person channel, and its thread, the program's output to the person, is drawn as construct 0.  The agent's network is the conversations: each message msg(Q, C) the agent sends goes on the conversation with Q, and each message arriving on a conversation joins the agent's input.
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
+miniapp(Id, Ui, ch(Down, Up?), _) :-
+    ground(Id?) |
+    platform # agent(Id?, NetIn?, NetOut, Thread, Asks),
+    platform # dispatch(Asks?, Ui?, MCh),
+    to_person(MCh?, Thread?),
+    from_sg(Down?, SgEvents, Up),
+    from_agent(NetOut?, AgentEvents),
+    merge(SgEvents?, AgentEvents?, Events),
+    router(Events?, [], [], NetIn).
+
+%% The program's output to its person, the thread, on the dispatcher's channel to the program, which draws it as construct 0 (vGLP, "The canonical compilation").
+procedure to_person(Channel(Stream(_), Stream(Output))?, Stream(Output)?).
+to_person(ch(_, O?), O).
+
+%% =============================================================================
+%% The network over the conversations
+%% =============================================================================
+
+%% The social graph's stream: each conversation, as it opens.  A held end is passed over: the platform forwards no variable of a conversation, so the mini-app makes no warm call, and its stream up to the social graph closes when the social graph's does.
+procedure from_sg(Stream(SgToApp(Net))?, Stream(NetEvent), Stream(AppToSg)).
+from_sg([conversation(K, Ch) | Down], [opened(K?, Ch?) | Es?], Up?) :-
+    from_sg(Down?, Es, Up).
+from_sg([held(_, _) | Down], Es?, Up?) :-
+    from_sg(Down?, Es, Up).
+from_sg([], [], []).
+
+%% The agent's network output, each message as it is sent.
+procedure from_agent(Stream(Net)?, Stream(NetEvent)).
+from_agent([M | Ms], [sent(M?) | Es?]) :- from_agent(Ms?, Es).
+from_agent([], []).
+
+%% router(Events, Routes, Held, In): a conversation opened joins its incoming stream to the agent's input In, sends on it the messages held for its peer, in the order sent, and becomes the peer's route; a message the agent sent goes on the route to its recipient, and is held, in order, while no conversation with the recipient is open, the network delivering every message the agent sends (vGLP, Section 5.4, "Communicate is the agent goal's reading of a message the network streams carried to it").
+exported procedure router(Stream(NetEvent)?, Routes?, List(Net)?, Stream(Net)).
+router([opened(K, ch(I, O?)) | Es], Rs, Hs, In?) :-
+    ground(K?), ground(Hs?) |
+    merge(I?, In1?, In),
+    flush(K?, Hs?, O, T?, Hs1),
+    router(Es?, [route(K?, T) | Rs?], Hs1?, In1).
+router([sent(msg(Q, C)) | Es], Rs, Hs, In?) :-
+    ground(Q?), ground(C?) |
+    send(Q?, msg(Q?, C?), Rs?, Rs1, S),
+    hold(S?, Hs?, Hs1),
+    router(Es?, Rs1?, Hs1?, In).
+router([], Rs, _, []) :-
+    close_routes(Rs?).
+
+%% send(Q, M, Rs, Rs1, S): M on the route to Q, the newest first.
+procedure send(Key?, Net?, Routes?, Routes, Sending).
+send(Q, M, [route(K, [M? | W?]) | Rs], [route(K?, W) | Rs?], went) :-
+    Q? =?= K? | true.
+send(Q, M, [R | Rs], [R? | Rs1?], S?) :-
+    otherwise | send(Q?, M?, Rs?, Rs1, S).
+send(_, M, [], [], held(M?)).
+
+%% A message with no route, held after those held before it.
+procedure hold(Sending?, List(Net)?, List(Net)).
+hold(went, Hs, Hs?).
+hold(held(M), Hs, Hs1?) :- append_net(Hs?, M?, Hs1).
+
+procedure append_net(List(Net)?, Net?, List(Net)).
+append_net([H | Hs], M, [H? | Hs1?]) :- append_net(Hs?, M?, Hs1).
+append_net([], M, [M?]).
+
+%% flush(K, Hs, O, T, Hs1): the messages held for K written on O, in order, followed by T; those held for others kept, in order, in Hs1.
+procedure flush(Key?, List(Net)?, Stream(Net), Stream(Net)?, List(Net)).
+flush(K, [msg(Q, C) | Hs], [msg(Q?, C?) | O?], T, Hs1?) :-
+    K? =?= Q? | flush(K?, Hs?, O, T?, Hs1).
+flush(K, [M | Hs], O?, T, [M? | Hs1?]) :-
+    otherwise | flush(K?, Hs?, O, T?, Hs1).
+flush(_, [], T?, T, []).
+
+%% Every conversation's outgoing stream closed, once the social graph's stream and the agent's have ended.
+procedure close_routes(Routes?).
+close_routes([route(_, []) | Rs]) :- close_routes(Rs?).
+close_routes([]).
