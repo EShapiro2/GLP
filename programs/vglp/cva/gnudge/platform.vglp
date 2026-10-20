@@ -49,6 +49,15 @@ procedure contract_schemas(Schemas).
 contract_schemas([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(nudge, [], [rs(unguarded, [atom(nudged, [role(2)])], [], [atom(friend, [role(2)])], [atom(nudged, [role(2)])]), rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(friend, [role(1)])], [])]), schema(g, [], [rs(guarded, [atom(nudged_by, [role(2)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(nudged, [role(1)])], [], [atom(friend, [role(1)])], [atom(nudged, [role(1)])])])])
 .
 
+procedure schema_entry(Constant?, Schema).
+schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]))
+.
+schema_entry(nudge, schema(nudge, [], [rs(unguarded, [atom(nudged, [role(2)])], [], [atom(friend, [role(2)])], [atom(nudged, [role(2)])]), rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(friend, [role(1)])], [])]))
+.
+schema_entry(g, schema(g, [], [rs(guarded, [atom(nudged_by, [role(2)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(nudged, [role(1)])], [], [atom(friend, [role(1)])], [atom(nudged, [role(1)])])]))
+.
+schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
+
 procedure reflexive_preds(Preds).
 reflexive_preds([])
 .
@@ -3318,13 +3327,6 @@ cimg_sgn(_, _, V, cmp_free(V?)) :- otherwise | true.
 %% Atoms, bindings and matching
 %% ===========================================================================
 
-procedure schema_entry(Constant?, Schema).
-schema_entry(Nm, E?) :- contract_schemas(Ss), find_entry(Ss?, Nm?, E).
-procedure find_entry(Schemas?, Constant?, Schema).
-find_entry([], Nm, schema(Nm?, [], [])).
-find_entry([schema(M, Vs, Rs)|_], Nm, schema(M?, Vs?, Rs?)) :- M? =?= Nm? | true.
-find_entry([lschema(M, Vs, Rs, L)|_], Nm, lschema(M?, Vs?, Rs?, L?)) :- M? =?= Nm? | true.
-find_entry([_|Ss], Nm, E?) :- otherwise | find_entry(Ss?, Nm?, E).
 %% The roles of a schema-binding, each with its atoms: those of the schema, and, for a schema with listed roles, each listed role's place bound to the base person with no atom, and one role more for each person of the list of each listed role, of that listed role's atoms, the roles after its own, the lists in the order of the roles.
 procedure bound_spec(Constant?, Binding?, RoleSpecs).
 bound_spec(Nm, B, Rs?) :- schema_entry(Nm?, E), bound_spec1(E?, B?, Rs).
