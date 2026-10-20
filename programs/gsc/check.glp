@@ -77,6 +77,7 @@
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_result(Contract?, Preds?, Faults).
+imported procedure unobstructed#intro_acts(Contract?, Preds?, IntroActs).
 imported procedure prov#traceable(Contract?, Preds).
 imported procedure prov#all_preds(Contract?, Preds).
 imported procedure community#volition_faults(Contract?, Preds?, Faults).
@@ -630,6 +631,22 @@ exported procedure traceable_variant(Constant?, Contract?, Preds).
 traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |
     contracts # variant(Nm?, B?, D),
     traceable_preds(D?, E).
+
+% The introductory acts of a contract, for inspection (def:introduction,
+% def:unobstructed): each schema that is an introductory act, in the order of
+% the contract, unobstructed, or obstructed with the faults of its first
+% introduction.  The verdict says that some introductory act is
+% unobstructed; this says which.
+exported procedure intro_acts(Declared?, IntroActs).
+intro_acts(D, A?) :- ground(D?) |
+    decl_schemas(D?, C),
+    decl_reflexive(D?, Rf),
+    unobstructed # intro_acts(C?, Rf?, A).
+
+exported procedure intro_acts_variant(Constant?, Contract?, IntroActs).
+intro_acts_variant(Nm, B, A?) :- ground(Nm?), ground(B?) |
+    contracts # variant(Nm?, B?, D),
+    intro_acts(D?, A).
 
 % The introduction with wards (GAI's appendix "Contracts with Wards"), for
 % inspection, searched for whatever the verdict: what it found, or

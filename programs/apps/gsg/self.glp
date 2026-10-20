@@ -7,8 +7,10 @@
 %% ---------------------------------------------------------------------------
 
 Peer     ::= Key.
-Class    ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
-Proposal ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
+Class    ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+           ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
+Proposal ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+           ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable(List(Atom), List(Atom)).
@@ -21,7 +23,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Atom     ::= identity ; friend(Peer).
+Atom     ::= identity ; knows(Peer) ; friend(Peer).
 Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).

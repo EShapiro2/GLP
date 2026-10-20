@@ -5,6 +5,7 @@
 #   bash programs/apps/compile.sh --check    print into a scratch directory and compare
 #
 #   <app>  contract  owner's file
+#   gkk    gkk       programs/gsc/GKK.glp
 #   gsg    gsg       programs/gsc/GSG.glp
 #   gsn    gsn       programs/gsc/GSN.glp
 #   gsnp   gsnp      programs/gai/GSNP.glp
@@ -18,10 +19,11 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-APPS="gsg gsn gsnp gai"
+APPS="gkk gsg gsn gsnp gai"
 
 contract_of() { # contract_of <app> ; the checker's name of its contract
     case "$1" in
+        gkk) echo gkk ;;
         gsg) echo gsg ;;
         gsn) echo gsn ;;
         gsnp) echo gsnp ;;
@@ -30,6 +32,7 @@ contract_of() { # contract_of <app> ; the checker's name of its contract
 }
 file_of() { # file_of <app> ; the owner's file that holds its contract
     case "$1" in
+        gkk) echo "$GLP_DIR/programs/gsc/GKK.glp" ;;
         gsg) echo "$GLP_DIR/programs/gsc/GSG.glp" ;;
         gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
         gsnp) echo "$GLP_DIR/programs/gai/GSNP.glp" ;;

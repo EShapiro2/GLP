@@ -4,15 +4,15 @@ The app of GSN, the grassroots social network, as a mini-app of the Grassroots S
 
 ## The contract
 
-GSN is GSC's contract (Coordination Appendix C); its clauses are `programs/gsc/GSN.md`, as GAI's paper has them, and its act schemas `programs/gsc/GSN.glp`.  GSN extends GSG, whose clauses GSG:1 to GSG:3 it cites (`../gsg/README.md`):
+GSN is GSC's contract (Coordination Appendix C); its clauses are `programs/gsc/GSN.md`, and its act schemas `programs/gsc/GSN.glp`.  GSN extends GSG, which extends GKK, and cites their clauses, GKK:1 to GKK:3 and GSG:1 and GSG:2 (`../gkk/README.md`, `../gsg/README.md`):
 
-1. *Message.*  An agent may send a message to a friend, with content they created or received from another agent.
-2. *Group.*  An agent may create a group, and is then its leader and first member.
-3. *Joining.*  The leader of a group may add a friend to it, by an act of both.
-4. *Leaving.*  A member of a group may leave it by their own act; when the leader leaves, the group ends.  Ending the friendship of a member and the leader ends the membership.
-5. *Group message.*  A member of a group may send a message to the group, with content they created or received from another agent, and the leader delivers it to every member.
+1. *Message.*  Alice may send a message to their friend Bob, with content they created or received from another agent.
+2. *Group.*  Alice may create a group, and is then its leader and first member.
+3. *Joining.*  Alice, the leader of a group, may add their friend Bob to it, by an act of both.
+4. *Leaving.*  Bob, a member of a group, may leave it by their own act; when the leader leaves, the group ends.  A member of a group who is not a friend of its leader is removed from it.
+5. *Group message.*  Bob, a member of a group, may send a message to the group, with content they created or received from another agent, and the leader delivers it to every member.
 
-Twelve schemas: GSG's `establish`, `befriend` and `unfriend`, and `message`, `create`, `join`, `leave`, `close`, `drop`, `post_own`, `post` and `deliver` (`GSN.md`, "The schemas, and what they realise"; GLP 120bf8bd).  `drop`, which no role guards, ends the membership of a member who is not the leader's friend; `post` and `deliver` require the member's friendship at the leader.  A group is named by its leader and a name, and content and a group's name are speech acts, `speech(Utterance, Peer)`, an utterance and the person who signs it.
+Fourteen schemas: GKK's `establish`, `meet` and `introduce`, GSG's `befriend` and `unfriend`, and `message`, `create`, `join`, `leave`, `close`, `drop`, `post_own`, `post` and `deliver` (`GSN.md`, "The schemas, and what they realise"; GLP 120bf8bd).  `drop`, which no role guards, ends the membership of a member who is not the leader's friend; `post` and `deliver` require the member's friendship at the leader.  A group is named by its leader and a name, and content and a group's name are speech acts, `speech(Utterance, Peer)`, an utterance and the person who signs it.
 
 ## The cascade
 
@@ -42,7 +42,7 @@ From `glp_runtime/`:
 printf '../programs/apps/gsn\n:limit 2000000\nplay_network(A, B).\n:quit\n' | bin/glpc
 ```
 
-`play_network` runs two executions over one conversation, the play handing each its end of the root channel as the social graph does: Alice and Bob each establish their identity (GSG:1), ask to know each other and become friends; Alice creates the group `friends` and adds Bob to it, and he answers yes; she sends Bob the message 'Hi Bob'; Bob sends the group the message 'Hi all', and Alice delivers it to him; Bob leaves the group.  Alice sends her message last: nothing on her screen shows a message committed, her state being unchanged by it, and her agent drops a request made while the message is open.  The persons' screens, the views their agents write with Bob's answers, held exactly by the suite's Section APPS:
+`play_network` runs two executions over one conversation, the play handing each its end of the root channel as the social graph does: Alice and Bob each establish their identity (GKK:1), ask to know each other, meet in person (GKK:2) and become friends (GSG:1); Alice creates the group `friends` and adds Bob to it, and he answers yes; she sends Bob the message 'Hi Bob'; Bob sends the group the message 'Hi all', and Alice delivers it to him; Bob leaves the group.  Alice sends her message last: nothing on her screen shows a message committed, her state being unchanged by it, and her agent drops a request made while the message is open.  The persons' screens, the views their agents write with Bob's answers, held exactly by the suite's Section APPS:
 
 ```
 A = [view([], []), view([identity], []), view([identity], [bob]), view([friend(bob), identity], [bob]), view([member(dot(community(alice), speech(utterance(friends), alice))), listed(alice, speech(utterance(friends), alice)), friend(bob), identity], [bob]), view([listed(bob, ...), member(dot(community(alice), ...)), listed(alice, ...), friend(bob), identity], [bob]), view([posted(speech(utterance('Hi all'), bob), speech(utterance(friends), alice)), ...], [bob]), view([delivered(speech(utterance('Hi all'), bob), bob, speech(utterance(friends), alice)), posted(...), ...], [bob]), view([delivered(...), posted(...), member(dot(community(alice), ...)), listed(alice, ...), friend(bob), identity], [bob]) | _]

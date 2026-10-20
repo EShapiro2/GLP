@@ -14,6 +14,10 @@
 Class ::=
 establish(Peer)
 ;
+meet(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
 befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
@@ -40,6 +44,10 @@ deliver(Peer, Peer, Speech, Speech)
 Proposal ::=
 establish(Peer)
 ;
+meet(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
 befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
@@ -65,6 +73,8 @@ Request ::= propose(Proposal) ; known(Peer).
 Atom ::=
 identity
 ;
+knows(Peer)
+;
 friend(Peer)
 ;
 received(Speech, Peer)
@@ -85,6 +95,8 @@ received_in(Speech, Peer, Speech)
 procedure atom_of(GAtom?, Shown).
 atom_of(g(identity, []), shown(identity))
 .
+atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
+.
 atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
 .
 atom_of(g(received, [s(V1), p(V2)]), shown(received(V1?, V2?)))
@@ -104,7 +116,7 @@ atom_of(g(received_in, [s(V1), p(V2), s(V3)]), shown(received_in(V1?, V2?, V3?))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(message, [svar(x)], [rs(guarded, [], [], [atom(identity, [])], []), rs(unguarded, [atom(received, [svar(x), role(1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))])])]), schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(2, 1, listed, [svar(n)])]), schema(drop, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), schema(post_own, [svar(x), svar(n)], [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [atom(posted, [svar(x), svar(n)])])]), schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [atom(posted, [svar(x), svar(n)])])]), schema(deliver, [svar(x), svar(n)], [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(x), svar(n)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(delivered, [svar(x), role(2), svar(n)])]), rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(message, [svar(x)], [rs(guarded, [], [], [atom(identity, [])], []), rs(unguarded, [atom(received, [svar(x), role(1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))])])]), schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(2, 1, listed, [svar(n)])]), schema(drop, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), schema(post_own, [svar(x), svar(n)], [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [atom(posted, [svar(x), svar(n)])])]), schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [atom(posted, [svar(x), svar(n)])])]), schema(deliver, [svar(x), svar(n)], [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(x), svar(n)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(delivered, [svar(x), role(2), svar(n)])]), rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])])])
 .
 
 procedure reflexive_preds(Preds).
@@ -117,6 +129,10 @@ introduction_preds([])
 
 procedure binding_of(Class?, Constant, Binding).
 binding_of(establish(V1), establish, [b(role(1), p(V1?))])
+.
+binding_of(meet(V1, V2), meet, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
+binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(c), p(V3?))])
 .
 binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
@@ -151,6 +167,28 @@ ground(B?)
 ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
+.
+class_of(meet, B, D, meet(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(introduce, B, D, introduce(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(pvar(c), B?, D?, V3)
 .
 class_of(befriend, B, D, befriend(V1?, V2?))
 :-
@@ -286,6 +324,10 @@ val_speech(svar(n), B?, D?, V4)
 procedure name_class(Proposal?, GAtoms?, Class).
 name_class(establish(V1), _, establish(V1?))
 .
+name_class(meet(V1, V2), _, meet(V1?, V2?))
+.
+name_class(introduce(V1, V2, V3), _, introduce(V1?, V2?, V3?))
+.
 name_class(befriend(V1, V2), _, befriend(V1?, V2?))
 .
 name_class(unfriend(V1, V2), _, unfriend(V1?, V2?))
@@ -309,6 +351,10 @@ name_class(post(V1, V2, V3, V4), _, post(V1?, V2?, V3?, V4?))
 
 procedure request_name(Class?, PName).
 request_name(establish(V1), pname(establish(V1?)))
+.
+request_name(meet(V1, V2), pname(meet(V1?, V2?)))
+.
+request_name(introduce(V1, V2, V3), pname(introduce(V1?, V2?, V3?)))
 .
 request_name(befriend(V1, V2), pname(befriend(V1?, V2?)))
 .

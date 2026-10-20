@@ -1,0 +1,15 @@
+%% plays.glp --- the GKK mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for three executions, with the two ends of a root channel handed to each two of them as their conversation, the play standing in for the social graph, as ../gsg/plays.glp does.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.
+
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+
+%% play_keys(A, B, C): alice, bob and carol, a conversation between alice's execution and bob's, and one between alice's and carol's.  Each establishes their identity (GKK:1, Identity); alice and bob ask to know each other, and so do alice and carol; alice asks to meet bob in person, and he answers yes, after which each knows the other (GKK:2, Meeting, an act of both); alice and carol meet likewise; and alice, who knows bob and carol, introduces carol to bob, he answers yes, and he then knows carol (GKK:3, Introduction, an act of alice and bob).  These are the acts of the screens of GKK's app (screens/).
+exported procedure play_keys(Stream(Seen), Stream(Seen), Stream(Seen)).
+play_keys(A?, B?, C?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, DA), ch([conversation(bob, ch(BA?, AB)), conversation(carol, ch(CA?, AC))], _), []), T?, M?),
+    person # miniapp_person(alice, alice, ch(DA?, GA), A),
+    run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA))], _), []), T?, M?),
+    person # miniapp_person(bob, bob, ch(DB?, GB), B),
+    run(miniapp(carol, ch(GC?, DC), ch([conversation(alice, ch(AC?, CA))], _), []), T?, M?),
+    person # miniapp_person(carol, carol, ch(DC?, GC), C).

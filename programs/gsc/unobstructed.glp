@@ -472,3 +472,46 @@ intro_scan([S|Ss], C, Rf, Cd, R?) :-
 % intro_result(C, Rf, Faults): Rf is the predicates C declares reflexive.
 exported procedure intro_result(Contract?, Preds?, Faults).
 intro_result(C, Rf, R?) :- ground(C?), ground(Rf?) | intro_scan(C?, C?, Rf?, none, R).
+
+% --- the introductory acts, for inspection ---------------------------------
+% Each schema of the contract that is an introductory act (def:introduction),
+% in the order of the contract: unobstructed where some introduction of it
+% meets def:unobstructed, with clause 2 of definition:sg-agent-named for an
+% agent-named contract, as intro_result decides it; obstructed(Faults)
+% otherwise, the faults of its first introduction, as intro_result reports
+% them for the first introductory act.
+
+procedure ia_status1(Faults?, Substs?, Schema?, Contract?, Preds?, Cand?, IntroStatus).
+ia_status1([], _, _, _, _, _, unobstructed).
+ia_status1([F|Fs], Bs, S, C, Rf, Cd, R?) :-
+    ground(F?), ground(Fs?), ground(Bs?), ground(S?), ground(C?), ground(Rf?),
+    ground(Cd?) |
+    note_cand(Cd?, [F?|Fs?], Cd1),
+    ia_status(Bs?, S?, C?, Rf?, Cd1?, R).
+
+procedure ia_status(Substs?, Schema?, Contract?, Preds?, Cand?, IntroStatus).
+ia_status([], _, _, _, some(F), obstructed(F?)).
+ia_status([B|Bs], S, C, Rf, Cd, R?) :-
+    ground(B?), ground(Bs?), ground(S?), ground(C?), ground(Rf?), ground(Cd?) |
+    unobstructed(S?, B?, C?, Rf?, F),
+    ia_status1(F?, Bs?, S?, C?, Rf?, Cd?, R).
+
+% A schema with introductions is an introductory act, and is listed.
+procedure ia_add(Substs?, Schema?, Contract?, Preds?, IntroActs?, IntroActs).
+ia_add([], _, _, _, T, T?).
+ia_add([B|Bs], S, C, Rf, T, [intro_act(Nm?, St?)|T?]) :-
+    ground(B?), ground(Bs?), ground(S?), ground(C?), ground(Rf?) |
+    sch_name(S?, Nm),
+    ia_status([B?|Bs?], S?, C?, Rf?, none, St).
+
+procedure ia_scan(Contract?, Contract?, Preds?, IntroActs).
+ia_scan([], _, _, []).
+ia_scan([S|Ss], C, Rf, R?) :-
+    ground(S?), ground(Ss?), ground(C?), ground(Rf?) |
+    intro_act_bindings(S?, Bs),
+    ia_scan(Ss?, C?, Rf?, R1),
+    ia_add(Bs?, S?, C?, Rf?, R1?, R).
+
+% intro_acts(C, Rf, Acts): Rf is the predicates C declares reflexive.
+exported procedure intro_acts(Contract?, Preds?, IntroActs).
+intro_acts(C, Rf, R?) :- ground(C?), ground(Rf?) | ia_scan(C?, C?, Rf?, R).

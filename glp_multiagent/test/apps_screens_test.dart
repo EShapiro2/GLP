@@ -117,6 +117,9 @@ const List<String> _notShown = [
   'rank',
   'befriend(',
   'friend(',
+  'knows(',
+  'meet(',
+  'introduce(',
   'identity',
   'received',
   'member(',
@@ -591,7 +594,31 @@ class _Run {
     expect(q.known, contains(p.name));
   }
 
-  /// [p] offers [q] friendship (GSG:2): Befriend on [q]'s row; and [q], asked, taps Accept.
+  /// [p] asks to meet [q] in person (GKK:2): Meet on [q]'s row; and [q], asked "Alice asks to meet you in person." at the top of their first tab, taps Yes.  Each then knows the other, `knows(Q)`.  Where [shot] is given, [q]'s phone is shot asked.
+  Future<void> meetInPerson(_Person p, _Person q, {String? shot}) async {
+    await tap(p, control(p, 'meet:${q.name}'));
+    final a = q.approval;
+    expect(formatTerm(a.view),
+        startsWith('approval(attempt(${p.name}, '));
+    expect(formatTerm(a.view),
+        endsWith(', meet(${p.name}, ${q.name}), none), input([2]))'));
+    await top(q);
+    final asks = '${personName(GAtom(p.name))} asks to meet you in person.';
+    expect(textsOf(q, a), [asks, 'Yes', 'No']);
+    // At the top of the tab, before the person's own name.
+    expect(tester.getTopLeft(on(q, find.text(asks))).dy,
+        lessThan(tester.getTopLeft(control(q, 'name')).dy));
+    if (shot != null) {
+      plain(q);
+      await shoot(q, shot);
+    }
+    await answer(q, 'Yes');
+    expect(q.questions('approval'), isEmpty);
+    expect(p.atoms, contains('knows(${q.name})'));
+    expect(q.atoms, contains('knows(${p.name})'));
+  }
+
+  /// [p] offers [q] friendship (GSG:1): Befriend on [q]'s row; and [q], asked, taps Accept.
   Future<void> befriend(_Person p, _Person q, {String? shot}) async {
     await tap(p, control(p, 'befriend:${q.name}'));
     final a = q.approval;
@@ -713,6 +740,81 @@ void main() => appsScreens(Screens.flat(programsDir()));
 /// The scenario, the four apps' screens in their figures' order, on [screens]: here, and on the simulator (`integration_test/apps_screens_test.dart`).
 void appsScreens(Screens screens) {
   testWidgets(
+      'GKK\'s app on three phones: Alice establishes her identity; Bob asked '
+      'to meet Alice in person; and Bob\'s contacts once Alice has '
+      'introduced Carol to him', (tester) async {
+    final run = await _Run.start(tester, screens, 'gkk',
+        chain: const ['alice', 'bob', 'carol'],
+        pairs: const [('alice', 'bob'), ('alice', 'carol')]);
+    final alice = run.alice;
+    final bob = run.bob;
+    final carol = run.person('carol');
+
+    // One tab, Contacts: GKK offers meeting and no friendship, and no group.
+    expect(
+        run.on(alice,
+            find.descendant(
+                of: find.byKey(tabKey(ScreenTab.friends)),
+                matching: find.text('Contacts'))),
+        findsOneWidget);
+    expect(run.on(alice, find.byKey(tabKey(ScreenTab.groups))), findsNothing);
+
+    // (a) Alice establishes her identity (GKK:1): her name and Join, which proposes establish(alice), before she taps it.
+    expect(run.control(alice, 'name'), findsOneWidget);
+    expect(run.control(alice, 'join'), findsOneWidget);
+    expect(alice.atoms, isEmpty);
+    run.plain(alice);
+    await run.shoot(alice, 'gkk-a-alice-identity.png');
+    await run.join(alice);
+    expect(alice.atoms, ['identity']);
+
+    // Bob and Carol join; Alice and Bob add each other by key, and Alice and Carol.  Each agent then knows the other, and Bob's row on Alice's phone offers Meet.
+    await run.meet(alice, bob);
+    await run.meet(alice, carol);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'person:bob'),
+            matching: find.widgetWithText(ElevatedButton, 'Meet')),
+        findsOneWidget);
+
+    // (b) Alice taps Meet on Bob's row (GKK:2): Bob's Contacts tab, the question "Alice asks to meet you in person." and Yes and No at its top; he taps Yes, and each knows the other.  Then Alice and Carol meet.
+    await run.meetInPerson(alice, bob, shot: 'gkk-b-bob-asked-to-meet.png');
+    await run.meetInPerson(alice, carol);
+    expect(alice.atoms,
+        unorderedEquals(['identity', 'knows(bob)', 'knows(carol)']));
+    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
+
+    // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): she composes "Introduce Carol to Bob." and taps Introduce, which proposes introduce(alice, bob, carol), in the order of introduce's head, introduce(p?, q? ; c) (programs/gsc/GKK.glp).
+    await run.compose(alice, 'introduce', ['carol', 'bob']);
+    expect(run.sentence(alice, 'introduce'), 'Introduce Carol to Bob.');
+    await run.tap(alice, run.control(alice, 'submit:introduce'));
+    expect(run.sent(alice, 'introduce'),
+        ['You asked to introduce Carol to Bob.']);
+
+    // Bob is asked, "Alice introduces Carol to you.", with Yes and No, and taps Yes; he then knows Carol, and Carol is not asked.
+    final a = bob.approval;
+    expect(formatTerm(a.view),
+        endsWith(', introduce(alice, bob, carol), none), input([2]))'));
+    await run.top(bob);
+    expect(run.textsOf(bob, a), ['Alice introduces Carol to you.', 'Yes', 'No']);
+    run.plain(bob);
+    await run.answer(bob, 'Yes');
+    expect(bob.questions('approval'), isEmpty);
+    expect(carol.questions('approval'), isEmpty);
+    expect(bob.atoms,
+        unorderedEquals(['identity', 'knows(alice)', 'knows(carol)']));
+
+    // (c) Bob's contacts once he has approved: Alice and Carol.
+    await run.top(bob);
+    expect(run.control(bob, 'person:alice'), findsOneWidget);
+    expect(run.control(bob, 'person:carol'), findsOneWidget);
+    expect(run.texts(bob), containsAllInOrder(['Bob', 'Alice', 'Carol']));
+    run.plain(bob);
+    await run.shoot(bob, 'gkk-c-bob-contacts.png');
+    run.finish();
+  }, timeout: const Timeout(Duration(minutes: 20)));
+
+  testWidgets(
       'GSG\'s app on two phones: Bob asked to be Alice\'s friend; Alice\'s '
       'Friends with Bob her friend; and after Bob ends the friendship',
       (tester) async {
@@ -729,16 +831,26 @@ void appsScreens(Screens screens) {
     expect(run.control(alice, 'join'), findsOneWidget);
     expect(alice.atoms, isEmpty);
 
-    // Each joins (GSG:1) and adds the other by key; each then knows the other.
+    // Each joins (GKK:1) and adds the other by key; each agent then knows the other, and Bob's row offers Meet, not Befriend: befriend requires that the two know each other (GSG:1).
     await run.meet(alice, bob);
     expect(run.control(alice, 'join'), findsNothing);
     expect(
         find.descendant(
             of: run.control(alice, 'person:bob'),
+            matching: find.widgetWithText(ElevatedButton, 'Meet')),
+        findsOneWidget);
+    expect(run.control(alice, 'befriend:bob'), findsNothing);
+
+    // Alice asks to meet Bob in person (GKK:2) and he taps Yes; each then knows the other, and Bob's row offers Befriend.
+    await run.meetInPerson(alice, bob);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'person:bob'),
             matching: find.widgetWithText(ElevatedButton, 'Befriend')),
         findsOneWidget);
+    expect(run.control(alice, 'meet:bob'), findsNothing);
 
-    // (a) Alice taps Befriend on Bob's row (GSG:2): Bob's Friends tab, the question "Alice asks to be your friend." and Accept and Decline at its top.
+    // (a) Alice taps Befriend on Bob's row (GSG:1): Bob's Friends tab, the question "Alice asks to be your friend." and Accept and Decline at its top.
     await run.befriend(alice, bob, shot: 'gsg-a-bob-asked.png');
 
     // (b) Alice's Friends tab after the befriend commits: Bob her friend, with End friendship.
@@ -753,11 +865,11 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gsg-b-alice-friends.png');
 
-    // Bob ends the friendship (GSG:3), his own act: End friendship on Alice's row.  Alice is not asked.
+    // Bob ends the friendship (GSG:2), his own act: End friendship on Alice's row.  Alice is not asked, and each still knows the other.
     await run.tap(bob, run.control(bob, 'unfriend:alice'));
     expect(alice.questions('approval'), isEmpty);
-    expect(alice.atoms, ['identity']);
-    expect(bob.atoms, ['identity']);
+    expect(alice.atoms, unorderedEquals(['identity', 'knows(bob)']));
+    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
 
     // (c) Alice's Friends tab after Bob ends the friendship: Bob listed, with Befriend.
     await run.top(alice);
@@ -787,8 +899,9 @@ void appsScreens(Screens screens) {
     // Two tabs: GSN's request type offers create.
     expect(run.on(alice, find.byKey(tabKey(ScreenTab.groups))), findsOneWidget);
 
-    // Identity, knowing each other and friendship, on the Friends tab as in GSG's app.
+    // Identity, knowing each other, meeting in person and friendship, on the Friends tab as in GSG's app.
     await run.meet(alice, bob);
+    await run.meetInPerson(alice, bob);
     await run.befriend(alice, bob);
 
     // A message to a friend (GSN:1): Alice taps Bob's row, which opens her chat with him, types Hi Bob, and taps Send.  Bob is not asked.

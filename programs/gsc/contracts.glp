@@ -621,6 +621,54 @@ wd_listed(C?) :- wd_retire(Rt), gather_listed(noted, G), wd_leaving_with(Rt?, [G
 procedure wd_listed_leaving(Declared).
 wd_listed_leaving(C?) :- wd_retire(Rt), gather_listed(retired, G), wd_leaving_with(Rt?, [G?], C).
 
+% ===========================================================================
+% GKK's introduce changed in one place (programs/gsc/GKK.glp; GSC, Section
+% 7.1: "introduce's role Alice requires knows(Bob) ... an atom of traceable
+% provenance naming the other role", and introduce "adds knows(c) at Bob, c
+% an argument of knows(c), which Alice requires")
+% ===========================================================================
+% schema_set(Name, New, S, C): the contract S with its schema Name replaced
+% by New.
+procedure schema_set(Constant?, Schema?, Contract?, Contract).
+schema_set(_, _, [], []).
+schema_set(Nm, N, [schema(M, _, _)|Ss], [N?|Ss?]) :- Nm? =?= M? | true.
+schema_set(Nm, N, [S|Ss], [S?|R?]) :-
+    otherwise, ground(Nm?), ground(N?), ground(Ss?) |
+    schema_set(Nm?, N?, Ss?, R).
+
+% introduce(p?, q ; c) :  identity, knows(q), knows(c)    identity, +knows(c)
+% q does not guard and requires no knows(p); p requires knows(q), an atom of
+% traceable provenance naming q, which joins the two roles, so volition holds
+% (def:volition) and the contract is syntactically grassroots.
+procedure gkk_intro_joined(Contract?, Contract).
+gkk_intro_joined(S, C?) :-
+    schema_set(introduce,
+      schema(introduce, [pvar(c)],
+        [rs(guarded,   [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+         rs(unguarded, [atom(knows, [pvar(c)])], [], [atom(identity, [])], [])]), S?, C).
+
+% --- negative: and p does not require knows(q) -----------------------------
+% introduce(p?, q ; c) :  identity, knows(c)    identity, +knows(c)
+% Nothing joins the two roles and q's connected component holds no guarding
+% role, so volition fails at introduce, naming its two roles.
+procedure gkk_intro_unjoined(Contract?, Contract).
+gkk_intro_unjoined(S, C?) :-
+    schema_set(introduce,
+      schema(introduce, [pvar(c)],
+        [rs(guarded,   [], [], [atom(identity, []), atom(knows, [pvar(c)])], []),
+         rs(unguarded, [atom(knows, [pvar(c)])], [], [atom(identity, [])], [])]), S?, C).
+
+% --- negative: knows(c) added at q, c known to neither ---------------------
+% introduce(p?, q? ; c) :  identity, knows(q)    identity, knows(p), +knows(c)
+% c is an argument of no atom required at a role, so knows loses traceable
+% provenance (def:grounded).
+procedure gkk_intro_loose(Contract?, Contract).
+gkk_intro_loose(S, C?) :-
+    schema_set(introduce,
+      schema(introduce, [pvar(c)],
+        [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)])], []),
+         rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), S?, C).
+
 % --- the contracts by name -------------------------------------------------
 % A fixture that stands alone, by name.  An unknown name is the empty
 % contract, which has no introductory act.
@@ -688,7 +736,7 @@ contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract
 % it changes, which test_gsc.sh reads from the owner's file: GSG's or GSNP's
-% for sg_* and sn_* (sg_plain's for sg_tri_cschema, GSC's language admitting
+% for sg_* and sn_*, GKK's for gkk_* (sg_plain's for sg_tri_cschema, GSC's language admitting
 % no signed term).  An unknown name is the empty contract.
 exported procedure variant(Constant?, Contract?, Declared).
 variant(sg_imposed, S, C?) :- sg_imposed(S?, C).
@@ -710,6 +758,9 @@ variant(sn_listed_forbidden, S, C?) :- sn_listed_forbidden(S?, C).
 variant(sn_listed_witness, S, C?) :- sn_listed_witness(S?, C).
 variant(sn_listed_guard, S, C?) :- sn_listed_guard(S?, C).
 variant(sn_listed_inert, S, C?) :- sn_listed_inert(S?, C).
+variant(gkk_intro_joined, S, C?) :- gkk_intro_joined(S?, C).
+variant(gkk_intro_unjoined, S, C?) :- gkk_intro_unjoined(S?, C).
+variant(gkk_intro_loose, S, C?) :- gkk_intro_loose(S?, C).
 variant(_, _, []) :- otherwise | true.
 
 % --- the speech-act variables of definition:provenance (Appendix D) ---------
