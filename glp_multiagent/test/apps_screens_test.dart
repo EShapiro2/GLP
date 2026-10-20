@@ -1381,22 +1381,20 @@ void appsScreens(Screens screens) {
     expect(run.scriptedAtoms('bob'), unorderedEquals(
         ['identity', 'parenting(dave)', 'friend(dave)', 'knows(dave)']));
     await run.add(alice, 'bob');
-    // Alice and Bob meet (GKK:2): "Meet Bob." and Submit, in CSSN's words (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 4), Bob answering yes; Bob's agent then introduces Alice's and Dave's to each other, Bob knowing both, knows being the introduction predicate (CSSN, Section 4.6.1, "The program").
-    await run.compose(alice, 'meet', ['bob']);
-    expect(run.sentence(alice, 'meet'), 'Meet Bob.');
-    await run.tap(alice, run.control(alice, 'submit:meet'));
+    // Alice and Bob meet (GKK:2): Meet on Bob's row, in GKK's words as in every app that extends GKK (GSC #5 Cowork, Code_inbox.md, 2026-10-20 20:21 UTC), Bob answering yes; Bob's agent then introduces Alice's and Dave's to each other, Bob knowing both, knows being the introduction predicate (CSSN, Section 4.6.1, "The program").
+    await run.tap(alice, run.control(alice, 'meet:bob'));
     expect(run.scriptedSeen('bob'), contains('gave(meet(alice, bob), yes)'));
     expect(alice.atoms, contains('knows(bob)'));
-    expect(run.sent(alice, 'meet'), ['You asked to meet Bob.']);
     // Alice and Bob befriend (GSG:1): Befriend on Bob's row, Bob now known to her, and Bob answers yes.
     await run.tap(alice, run.control(alice, 'befriend:bob'));
     expect(alice.atoms, contains('friend(bob)'));
     expect(alice.known, ['bob', 'carol', 'dave']);
-    // (1) Alice's menu: the persons her agent knows, each with what her state says of them, "Carol, your child", "Bob, your friend", "Dave", read off the last view; Carol's row offers no End friendship, unfriend forbidding parenting(q) at p, and Dave's nothing, Alice not having met him; and the requests she may make.
+    // (1) Alice's menu: the persons her agent knows, each with what her state says of them, "Carol, your child", "Bob, your friend", "Dave", read off the last view; Carol's row offers no End friendship, unfriend forbidding parenting(q) at p, and Dave's Meet, Alice not having met him, and no Befriend; and the requests she may make.
     await run.top(alice);
     expect(run.rowTitles(alice), ['Carol, your child', 'Bob, your friend', 'Dave']);
     expect(run.control(alice, 'unfriend:carol'), findsNothing);
     expect(run.control(alice, 'unfriend:bob'), findsOneWidget);
+    expect(run.control(alice, 'meet:dave'), findsOneWidget);
     expect(run.control(alice, 'befriend:dave'), findsNothing);
     expect(run.sentence(alice, 'child-meet-2'), 'Ask that … and … meet, with ….');
     expect(run.sentence(alice, 'child-befriend'), 'Ask that … and … befriend, with ….');
@@ -1456,7 +1454,7 @@ void appsScreens(Screens screens) {
     await run.tap(bob, run.control(bob, 'submit:enter'));
     expect(bob.atoms, unorderedEquals(
         ['identity', 'parenting(dave)', 'friend(dave)', 'knows(dave)']));
-    // Carol has entered with Alice; Bob and Alice each ask to know the other, and Alice asks to meet Bob (GKK:2): "Alice asks to meet you.", "Meet Alice?", Yes and No, in CSSN's words (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 4).
+    // Carol has entered with Alice; Bob and Alice each ask to know the other, and Alice asks to meet Bob (GKK:2): "Alice asks to meet you in person.", Yes and No, GKK's words, which serve every app that extends GKK (GSC #5 Cowork, Code_inbox.md, 2026-10-20 20:21 UTC).
     expect(run.scriptedAtoms('alice'), unorderedEquals(
         ['identity', 'parenting(carol)', 'friend(carol)', 'knows(carol)']));
     await run.add(bob, 'alice');
@@ -1464,7 +1462,7 @@ void appsScreens(Screens screens) {
         allOf(startsWith('approval(attempt(alice, '),
             endsWith(', meet(alice, bob), none), input([2]))')));
     expect(run.textsOf(bob, bob.approval),
-        ['Alice asks to meet you.', 'Meet Alice?', 'Yes', 'No']);
+        ['Alice asks to meet you in person.', 'Yes', 'No']);
     await run.answer(bob, 'Yes');
     expect(bob.atoms, contains('knows(alice)'));
     // Alice proposes that they befriend (GSG:1), and Bob, asked, taps Accept.
@@ -1585,12 +1583,12 @@ void appsScreens(Screens screens) {
       'Yes',
       'No'
     ]);
-    run.plain(carol, allow: {'Submit'});
+    run.plain(carol);
     await run.shoot(carol, 'cssn-app-4.png');
     await run.answer(carol, 'Yes');
     expect(carol.atoms, contains('friend(dave)'));
     expect(run.scriptedAtoms('dave'), contains('friend(carol)'));
-    // (5) Carol's menu while Dave is her friend: "Alice, your parent", "Dave, your friend", "Bob", read off the last view, Alice's agent having introduced Carol's and Bob's to each other, Alice knowing both; Alice's row offers no End friendship, unfriend forbidding parent(q) at p, and Bob's no Befriend and no Meet, befriend and meet forbidding child at both.  Of the requests, a child composes only an introduction, "Introduce … to ….", introduce(p?, q? ; c) forbidding child only at q (programs/cssn/CSSN.glp), the menu offering every request the person's own state allows (CSSN, Section 4.6.2).
+    // (5) Carol's menu while Dave is her friend: "Alice, your parent", "Dave, your friend", "Bob", read off the last view, Alice's agent having introduced Carol's and Bob's to each other, Alice knowing both; Alice's row offers no End friendship, unfriend forbidding parent(q) at p, and Bob's no Befriend and no Meet, befriend and meet forbidding child at both.  Of the requests, a child composes only an introduction, "Introduce … to …." and Introduce, introduce(p?, q? ; c) forbidding child only at q (programs/cssn/CSSN.glp), the menu offering every request the person's own state allows (CSSN, Section 4.6.2).
     expect(carol.known, ['alice', 'bob', 'dave']);
     await run.top(carol);
     expect(run.rowTitles(carol), ['Alice, your parent', 'Dave, your friend', 'Bob']);
@@ -1603,7 +1601,7 @@ void appsScreens(Screens screens) {
       expect(run.control(carol, 'compose:$k'), findsNothing, reason: k);
     }
     expect(run.sentence(carol, 'introduce'), 'Introduce … to ….');
-    run.plain(carol, allow: {'Submit'});
+    run.plain(carol);
     await run.shoot(carol, 'cssn-app-5.png');
     // Carol ends the friendship with Dave (GSG:2; unfriend(p?, q)), her own act, End friendship on Dave's row: nobody is asked.
     await run.tap(carol, run.control(carol, 'unfriend:dave'));

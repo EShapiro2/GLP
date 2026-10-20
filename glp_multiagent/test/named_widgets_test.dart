@@ -599,17 +599,18 @@ void main() {
   });
 
   testWidgets(
-      'meet and introduce in CSSN\'s app, in CSSN\'s words: "Alice asks to '
-      'meet you.", "Meet Alice?"; "Alice introduces Carol to you.", '
-      '"Accept?"; each with Yes and No, granting what the default widget '
-      'grants; and in GSC\'s apps, GSC\'s words (CSSN #9 Cowork, '
-      'Code_inbox.md, 2026-10-20 19:44 UTC, item 4)', (tester) async {
+      'meet and introduce in CSSN\'s app in GKK\'s words, as in every app '
+      'that extends GKK: "Alice asks to meet you in person."; "Alice '
+      'introduces Carol to you."; each with Yes and No, granting what the '
+      'default widget grants (GSC #5 Cowork, Code_inbox.md, 2026-10-20 20:21 '
+      'UTC: "One wording serves every app that extends GKK")',
+      (tester) async {
     final s = _Screen(tester);
     const meet =
         'approval(attempt(alice, 2, 2, meet(alice, bob), none), input([2]))';
     await s.draw(_named(_cssnClasses), meet,
         output: '[view([identity], [alice])]');
-    expect(s.texts(), ['Alice asks to meet you.', 'Meet Alice?', 'Yes', 'No']);
+    expect(s.texts(), ['Alice asks to meet you in person.', 'Yes', 'No']);
     final (d, n) = await s.both(
         _defaultApproval(_cssnClasses), meet, 'yes', 'Yes',
         output: '[view([identity], [alice])]');
@@ -619,9 +620,8 @@ void main() {
         'carol), none), input([2]))';
     await s.draw(_named(_cssnClasses), introduce,
         output: '[view([knows(alice), identity], [alice, carol])]');
-    expect(s.texts(),
-        ['Alice introduces Carol to you.', 'Accept?', 'Yes', 'No']);
-    // GSC's apps, whose classes have no child_befriend: GSC's words.
+    expect(s.texts(), ['Alice introduces Carol to you.', 'Yes', 'No']);
+    // GSC's apps, whose classes have no child_befriend: the same words.
     final gsc = [..._gsgClasses, _meet, _introduce];
     await s.draw(_named(gsc), meet, output: '[view([identity], [alice])]');
     expect(s.texts(), ['Alice asks to meet you in person.', 'Yes', 'No']);

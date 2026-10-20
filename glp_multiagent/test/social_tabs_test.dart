@@ -1704,7 +1704,7 @@ void main() {
     _phoneTest(
         '(1) Alice\'s menu: "Carol, your child", "Bob, your friend", "Dave", '
         'her child\'s row with no End friendship, and Dave\'s, whom she has '
-        'not met, with nothing, meeting being composed in CSSN\'s app; and '
+        'not met, with Meet, as in every app that extends GKK; and '
         'the requests she composes, (2) "Ask that Carol and Dave befriend, '
         'with Bob." and Submit, proposing child_befriend(carol, dave, alice, '
         'bob), and once sent "You asked that Carol and Dave befriend, with '
@@ -1723,10 +1723,10 @@ void main() {
       expect(p.key(1, 'unfriend:carol'), findsNothing);
       expect(p.key(1, 'unfriend:bob'), findsOneWidget);
       // Dave is not a contact: befriend requires that the two know each
-      // other (GSG:1), and in CSSN's app meeting is composed, "Meet Dave.".
+      // other (GSG:1), and his row offers Meet (GKK:2).
       expect(p.key(1, 'befriend:dave'), findsNothing);
-      expect(p.key(1, 'meet:dave'), findsNothing);
-      expect(sentence(tester, 1, 'meet'), 'Meet ….');
+      expect(p.key(1, 'meet:dave'), findsOneWidget);
+      expect(p.key(1, 'compose:meet'), findsNothing);
       expect(sentence(tester, 1, 'introduce'), 'Introduce … to ….');
       expect(sentence(tester, 1, 'child-meet'), 'Ask that … and … meet.');
       expect(sentence(tester, 1, 'child-meet-2'),
@@ -1994,9 +1994,10 @@ void main() {
         ];
 
     _phoneTest(
-        'Alice composes "Meet Bob.", a person she knows whom she has not met, '
-        'proposing meet(alice, bob); once sent "You asked to meet Bob."; and '
-        '"Introduce Carol to Bob.", two persons she has met, and Submit, '
+        'In CSSN\'s app as in every app that extends GKK (GSC #5 Cowork, '
+        'Code_inbox.md, 2026-10-20 20:21 UTC): Meet on the row of a person '
+        'Alice knows whom she has not met, proposing meet(alice, bob); and '
+        '"Introduce Carol to Bob.", two persons she has met, and Introduce, '
         'proposing introduce(alice, bob, carol)', (tester) async {
       final p = await _Phone.open(tester, 'cssn');
       await p.views([
@@ -2004,14 +2005,12 @@ void main() {
             '[bob, carol]')
       ]);
       await p.menu(1, _cssnProposals, known: '[bob, carol]');
-      // Carol is a contact; Bob is not, and only he is offered to meet.
-      await p.tap(p.key(1, 'slot:meet:0'));
-      expect(picks(tester, p, 1, 'meet:0'), ['Bob']);
-      await p.tap(p.key(1, 'pick:meet:0:bob'));
-      expect(sentence(tester, 1, 'meet'), 'Meet Bob.');
+      // Carol is a contact; Bob is not, and only his row offers Meet.
+      expect(p.key(1, 'meet:carol'), findsNothing);
+      expect(p.key(1, 'compose:meet'), findsNothing);
       // Fewer than two contacts: nothing to introduce.
       expect(p.key(1, 'sentence:introduce'), findsNothing);
-      await p.tap(p.key(1, 'submit:meet'));
+      await p.tap(p.key(1, 'meet:bob'));
       expect(p.grants, ['input(1, [3], propose(meet(alice, bob)))']);
       await p.draw('withdraw(1)');
       await p.views([
@@ -2021,17 +2020,15 @@ void main() {
             'identity]', '[bob, carol]'),
       ]);
       await p.menu(2, _cssnProposals, known: '[bob, carol]');
-      await p.reveal(p.key(2, 'sent:meet:0'));
-      expect(tester.widget<Text>(p.key(2, 'sent:meet:0')).data,
-          'You asked to meet Bob.');
-      // Bob is now a contact: Befriend on his row, and nobody left to meet.
+      // Bob is now a contact: Befriend on his row, and no Meet.
       expect(p.key(2, 'befriend:bob'), findsOneWidget);
-      expect(p.key(2, 'sentence:meet'), findsNothing);
+      expect(p.key(2, 'meet:bob'), findsNothing);
       await compose(p, 2, 'introduce', ['carol', 'bob']);
       expect(sentence(tester, 2, 'introduce'), 'Introduce Carol to Bob.');
       expect(
           find.descendant(
-              of: p.key(2, 'submit:introduce'), matching: find.text('Submit')),
+              of: p.key(2, 'submit:introduce'),
+              matching: find.text('Introduce')),
           findsOneWidget);
       await p.tap(p.key(2, 'submit:introduce'));
       expect(p.grants.last,
