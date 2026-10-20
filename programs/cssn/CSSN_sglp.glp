@@ -30,7 +30,8 @@ source([
    type('Person', [person('Key', 'Constant', 'List'('CsAttr'))]),
    type('CsKeys', [ks('Key', 'Key', 'Key', 'Key', 'Key')]),
    type('CsPick', [pick('Key'), nothing]),
-   type('CsTodo', [know('Key'), enter1('Key', 'Key'), enter2('Key', 'Key', 'Key'), steady]),
+   type('CsTodo', [establish, know('Key'), enter1('Key', 'Key'), enter2('Key', 'Key', 'Key'), steady]),
+   type('CsPair', [acq('Key', 'Key')]),
 
    %% THE CENSUS.  cs_villages draws four villages of ten families, cs_villages40 forty, for the cost
    %% run.  A family has two parents 70 times in 100 and one otherwise, and one, two or three children,
@@ -44,7 +45,29 @@ source([
    decl(cs_census(dual('List'('CsKeys')), dual('Integer'), 'List'('Person'))),
    clause(cs_census(var('Ks'), var('S'), var('Ps?')), [], [cs_draw(var('Ks?'), 1, 1, var('S?'), var('Fs'), var('S1')), cs_persons_all(var('Fs?'), var('S1?'), var('Ps'))]),
    decl(cs_persons_all(dual('List'('CsFam')), dual('Integer'), 'List'('Person'))),
-   clause(cs_persons_all(var('Fs'), var('S'), var('Ps?')), [ground(var('Fs?'))], [cs_persons(var('Fs?'), var('Fs?'), var('S?'), var('Ps'))]),
+   clause(cs_persons_all(var('Fs'), var('S'), var('Ps?')), [ground(var('Fs?'))], [cs_acq(var('Fs?'), var('Fs?'), var('S?'), var('Pairs')), cs_persons_pairs(var('Fs?'), var('Pairs?'), var('Ps'))]),
+   decl(cs_persons_pairs(dual('List'('CsFam')), dual('List'('CsPair')), 'List'('Person'))),
+   clause(cs_persons_pairs(var('Fs'), var('Pairs'), var('Ps?')), [ground(var('Fs?')), ground(var('Pairs?'))], [cs_persons(var('Fs?'), var('Fs?'), var('Pairs?'), var('Ps'))]),
+   %% cs_acq(Fs?, All?, S?, Pairs): for each parent, two parents of other villages drawn uniformly, their
+   %% acquaintances, as the pairs acq(P, A); acquaintance is mutual, so A knows P too (cs_acq_of).
+   decl(cs_acq(dual('List'('CsFam')), dual('List'('CsFam')), dual('Integer'), 'List'('CsPair'))),
+   clause(cs_acq([], var('_'), var('_'), []), [], []),
+   clause(cs_acq([fam(var('V'), var('Pa'), var('_')) | var('Fs')], var('All'), var('S'), var('Pairs?')), [ground(var('V?')), ground(var('All?'))], [cs_other_parents(var('All?'), var('V?'), var('Op')), cs_acq_parents(var('Pa?'), var('Op?'), var('S?'), var('Pairs1'), var('S1')), cs_acq(var('Fs?'), var('All?'), var('S1?'), var('Pairs2')), cs_app_pairs(var('Pairs1?'), var('Pairs2?'), var('Pairs'))]),
+   decl(cs_acq_parents(dual('List'('Key')), dual('List'('Key')), dual('Integer'), 'List'('CsPair'), 'Integer')),
+   clause(cs_acq_parents([], var('_'), var('S'), [], var('S?')), [], []),
+   clause(cs_acq_parents([var('P') | var('Pa')], var('Op'), var('S'), var('Pairs?'), var('S2?')), [ground(var('P?')), ground(var('Op?'))], [cs_two(var('Op?'), var('S?'), var('Ac'), var('S1')), cs_pairs_of(var('P?'), var('Ac?'), var('Pairs1')), cs_acq_parents(var('Pa?'), var('Op?'), var('S1?'), var('Pairs2'), var('S2')), cs_app_pairs(var('Pairs1?'), var('Pairs2?'), var('Pairs'))]),
+   decl(cs_pairs_of(dual('Key'), dual('List'('Key')), 'List'('CsPair'))),
+   clause(cs_pairs_of(var('_'), [], []), [], []),
+   clause(cs_pairs_of(var('P'), [var('A') | var('As')], [acq(var('P?'), var('A?')) | var('Pairs?')]), [ground(var('P?'))], [cs_pairs_of(var('P?'), var('As?'), var('Pairs'))]),
+   decl(cs_app_pairs(dual('List'('CsPair')), dual('List'('CsPair')), 'List'('CsPair'))),
+   clause(cs_app_pairs([], var('Ys'), var('Ys?')), [], []),
+   clause(cs_app_pairs([var('X') | var('Xs')], var('Ys'), [var('X?') | var('Zs?')]), [], [cs_app_pairs(var('Xs?'), var('Ys?'), var('Zs'))]),
+   decl(cs_acq_of(dual('Key'), dual('List'('CsPair')), 'List'('Key'))),
+   %% cs_acq_of(P?, Pairs?, Ac): the acquaintances of P, those P drew and those who drew P.
+   clause(cs_acq_of(var('_'), [], []), [], []),
+   clause(cs_acq_of(var('P'), [acq(var('P1'), var('A')) | var('Pairs')], [var('A?') | var('Ac?')]), ['=?='(var('P?'), var('P1?')), ground(var('P?'))], [cs_acq_of(var('P?'), var('Pairs?'), var('Ac'))]),
+   clause(cs_acq_of(var('P'), [acq(var('B'), var('P2')) | var('Pairs')], [var('B?') | var('Ac?')]), ['=?='(var('P?'), var('P2?')), ground(var('P?'))], [cs_acq_of(var('P?'), var('Pairs?'), var('Ac'))]),
+   clause(cs_acq_of(var('P'), [var('_') | var('Pairs')], var('Ac?')), [otherwise], [cs_acq_of(var('P?'), var('Pairs?'), var('Ac'))]),
    %% cs_draw(Ks?, V?, F?, S?, Fs, S1): the families, from the key table, ten to a village.
    decl(cs_draw(dual('List'('CsKeys')), dual('Integer'), dual('Integer'), dual('Integer'), 'List'('CsFam'), 'Integer')),
    clause(cs_draw([], var('_'), var('_'), var('S'), [], var('S?')), [], []),
@@ -59,13 +82,16 @@ source([
    decl(cs_next(dual('Integer'), dual('Integer'), 'Integer', 'Integer')),
    clause(cs_next(var('V'), 10, var('V1?'), 1), [], [':='(var('V1'), '+'(var('V?'), 1))]),
    clause(cs_next(var('V'), var('F'), var('V?'), var('F1?')), ['<'(var('F?'), 10)], [':='(var('F1'), '+'(var('F?'), 1))]),
-   %% cs_persons(Fs?, All?, S?, Ps): the persons of the families Fs, All the table of all of them.
-   decl(cs_persons(dual('List'('CsFam')), dual('List'('CsFam')), dual('Integer'), 'List'('Person'))),
+   %% cs_persons(Fs?, All?, Pairs?, Ps): the persons of the families Fs, All the table of all of them, Pairs the acquaintances.
+   decl(cs_persons(dual('List'('CsFam')), dual('List'('CsFam')), dual('List'('CsPair')), 'List'('Person'))),
    clause(cs_persons([], var('_'), var('_'), []), [], []),
-   clause(cs_persons([fam(var('V'), var('Pa'), var('Ch')) | var('Fs')], var('All'), var('S'), var('Ps?')), [ground(var('V?')), ground(var('Pa?')), ground(var('Ch?')), ground(var('All?'))], [cs_parent_persons(var('Pa?'), var('V?'), var('Pa?'), var('Ch?'), var('All?'), var('S?'), var('Ps1'), var('S1')), cs_child_persons(var('Ch?'), var('V?'), var('Pa?'), var('Ps2')), cs_persons(var('Fs?'), var('All?'), var('S1?'), var('Ps3')), cs_app(var('Ps1?'), var('Ps2?'), var('Ps12')), cs_app(var('Ps12?'), var('Ps3?'), var('Ps'))]),
-   decl(cs_parent_persons(dual('List'('Key')), dual('Integer'), dual('List'('Key')), dual('List'('Key')), dual('List'('CsFam')), dual('Integer'), 'List'('Person'), 'Integer')),
-   clause(cs_parent_persons([], var('_'), var('_'), var('_'), var('_'), var('S'), [], var('S?')), [], []),
-   clause(cs_parent_persons([var('P') | var('Pa')], var('V'), var('Pa0'), var('Ch'), var('All'), var('S'), [person(var('P?'), parent, [village(var('V?')), parents(var('Pa0?')), children(var('Ch?')), knows(var('Kn?')), families(var('All?'))]) | var('Ps?')], var('S2?')), [ground(var('P?')), ground(var('V?')), ground(var('Pa0?')), ground(var('Ch?')), ground(var('All?'))], [cs_village_parents(var('All?'), var('V?'), var('P?'), var('Vp')), cs_other_parents(var('All?'), var('V?'), var('Op')), cs_two(var('Op?'), var('S?'), var('Ac'), var('S1')), cs_app(var('Vp?'), var('Ac?'), var('Kn1')), cs_app(var('Kn1?'), var('Ch?'), var('Kn')), cs_parent_persons(var('Pa?'), var('V?'), var('Pa0?'), var('Ch?'), var('All?'), var('S1?'), var('Ps'), var('S2'))]),
+   clause(cs_persons([fam(var('V'), var('Pa'), var('Ch')) | var('Fs')], var('All'), var('Pairs'), var('Ps?')), [ground(var('V?')), ground(var('Pa?')), ground(var('Ch?')), ground(var('All?')), ground(var('Pairs?'))], [cs_parent_persons(var('Pa?'), var('V?'), var('Pa?'), var('Ch?'), var('All?'), var('Pairs?'), var('Ps1')), cs_child_persons(var('Ch?'), var('V?'), var('Pa?'), var('Ps2')), cs_persons(var('Fs?'), var('All?'), var('Pairs?'), var('Ps3')), cs_app_persons(var('Ps1?'), var('Ps2?'), var('Ps12')), cs_app_persons(var('Ps12?'), var('Ps3?'), var('Ps'))]),
+   decl(cs_app_persons(dual('List'('Person')), dual('List'('Person')), 'List'('Person'))),
+   clause(cs_app_persons([], var('Ys'), var('Ys?')), [], []),
+   clause(cs_app_persons([var('X') | var('Xs')], var('Ys'), [var('X?') | var('Zs?')]), [], [cs_app_persons(var('Xs?'), var('Ys?'), var('Zs'))]),
+   decl(cs_parent_persons(dual('List'('Key')), dual('Integer'), dual('List'('Key')), dual('List'('Key')), dual('List'('CsFam')), dual('List'('CsPair')), 'List'('Person'))),
+   clause(cs_parent_persons([], var('_'), var('_'), var('_'), var('_'), var('_'), []), [], []),
+   clause(cs_parent_persons([var('P') | var('Pa')], var('V'), var('Pa0'), var('Ch'), var('All'), var('Pairs'), [person(var('P?'), parent, [village(var('V?')), parents(var('Pa0?')), children(var('Ch?')), knows(var('Kn?')), families(var('All?'))]) | var('Ps?')]), [ground(var('P?')), ground(var('V?')), ground(var('Pa0?')), ground(var('Ch?')), ground(var('All?')), ground(var('Pairs?'))], [cs_village_parents(var('All?'), var('V?'), var('P?'), var('Vp')), cs_acq_of(var('P?'), var('Pairs?'), var('Ac')), cs_app(var('Vp?'), var('Ac?'), var('Kn1')), cs_app(var('Kn1?'), var('Ch?'), var('Kn')), cs_parent_persons(var('Pa?'), var('V?'), var('Pa0?'), var('Ch?'), var('All?'), var('Pairs?'), var('Ps'))]),
    decl(cs_child_persons(dual('List'('Key')), dual('Integer'), dual('List'('Key')), 'List'('Person'))),
    clause(cs_child_persons([], var('_'), var('_'), []), [], []),
    clause(cs_child_persons([var('C') | var('Ch')], var('V'), var('Pa'), [person(var('C?'), child, [village(var('V?')), parents(var('Pa?')), knows(var('Pa?'))]) | var('Ps?')]), [ground(var('V?')), ground(var('Pa?'))], [cs_child_persons(var('Ch?'), var('V?'), var('Pa?'), var('Ps'))]),
@@ -173,14 +199,17 @@ source([
    %%   person local.  Menu =::= local_menu.
    %%   local_menu(menu(Me, Ks, R?), person(_, _, As), S) :- seen(L), cs_parent_menu(95, Me?, Ks?, As?, L?, S?, slot(R)).
    %%   person open.   Menu =::= open_menu.   (the same at 60)
-   %% A parent first makes known the persons they know from outside the app, one per menu, and enters each
-   %% of their children not yet entered, the first parent of the family proposing the entering with the
-   %% second; these answers take no time.  Then the parent answers the menu 65 times a year on average:
-   %% 52 in 65 an offer of friendship to a parent the agent knows who is not yet a friend --- a local parent
-   %% to a parent of their own village 95 times in 100, an open parent 60 times in 100; 12 in 65 a request
-   %% that a child of theirs and a child of a friend befriend; and 1 in 65 the ending of a friendship with a
-   %% friend who is not their child.  Where the act drawn has no candidate the parent offers friendship
-   %% instead, and where nothing can be done the menu is answered by making known a person known already.
+   %% A parent first establishes their identity, makes known the persons they know from outside the app,
+   %% one per menu, and enters each of their children not yet entered, the first parent of the family
+   %% proposing the entering with the second; each of these answers comes after an hour on average.  Then
+   %% the parent answers the menu 67 times a year on average: 52 in 67 an offer of friendship to a parent
+   %% the agent knows who is not yet a friend --- a local parent to a parent of their own village 95 times
+   %% in 100, an open parent 60 times in 100; 12 in 67 a request that a child of theirs and a child of a
+   %% friend befriend; 1 in 67 a request that a child of theirs and a friend of theirs befriend; 1 in 67 the
+   %% ending of a friendship of a child of theirs with a child the agent knows; and 1 in 67 the ending of a
+   %% friendship of their own with a friend who is not their child.  Where the act drawn has no candidate
+   %% the parent offers friendship instead, and where nothing can be done the menu is answered by making
+   %% known a person known already.
 
    person(local),
    binds('Menu', local_menu),
@@ -192,36 +221,47 @@ source([
    decl(open_menu(dual('Menu'), dual('Person'), dual('Integer'))),
    clause(open_menu(menu(var('Me'), var('Ks'), var('R?')), person(var('_'), var('_'), var('As')), var('S')), [], [seen(var('L')), cs_parent_menu(60, var('Me?'), var('Ks?'), var('As?'), var('L?'), var('S?'), slot(var('R')))]),
    decl(cs_parent_menu(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Output')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_parent_menu(var('Local'), var('Me'), var('Ks'), var('As'), var('L'), var('S'), var('Slot')), [], [cs_last_view(var('L?'), var('Atoms')), cs_parent_menu1(var('Atoms?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('S?'), var('Slot?'))]),
+   clause(cs_parent_menu(var('Local'), var('Me'), var('Ks'), var('As'), var('L'), var('S'), slot(var('W?'))), [], [cs_last_view(var('L?'), var('Atoms')), cs_parent_menu1(var('Atoms?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('S?'), slot(var('W')))]),
    decl(cs_parent_menu1(dual('List'('Atom')), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_parent_menu1(var('Atoms'), var('Local'), var('Me'), var('Ks'), var('As'), var('S'), var('Slot')), [ground(var('Atoms?')), ground(var('Me?')), ground(var('Ks?')), ground(var('As?'))], [cs_attr_knows(var('As?'), var('Kn')), cs_first_missing(var('Kn?'), var('Ks?'), var('Miss')), cs_parenting(var('Atoms?'), var('Entered')), cs_attr_children(var('As?'), var('Ch')), cs_first_missing(var('Ch?'), var('Entered?'), var('Un')), cs_attr_parents(var('As?'), var('Pa')), cs_todo_of(var('Miss?'), var('Un?'), var('Me?'), var('Pa?'), var('Todo')), cs_parent_do(var('Todo?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), var('Slot?'))]),
-   decl(cs_todo_of(dual('CsPick'), dual('CsPick'), dual('Key'), dual('List'('Key')), 'CsTodo')),
-   clause(cs_todo_of(pick(var('Q')), var('_'), var('_'), var('_'), know(var('Q?'))), [], []),
-   clause(cs_todo_of(nothing, pick(var('C')), var('Me'), [var('_')], enter1(var('Me?'), var('C?'))), [], []),
-   clause(cs_todo_of(nothing, pick(var('C')), var('Me'), [var('P1'), var('P2')], enter2(var('Me?'), var('P2?'), var('C?'))), ['=?='(var('Me?'), var('P1?')), ground(var('Me?'))], [true]),
-   clause(cs_todo_of(nothing, pick(var('_')), var('_'), [var('_'), var('_')], steady), [otherwise], [true]),
-   clause(cs_todo_of(nothing, nothing, var('_'), var('_'), steady), [], []),
+   clause(cs_parent_menu1(var('Atoms'), var('Local'), var('Me'), var('Ks'), var('As'), var('S'), slot(var('W?'))), [ground(var('Atoms?')), ground(var('Me?')), ground(var('Ks?')), ground(var('As?'))], [cs_has_identity(var('Atoms?'), var('Id')), cs_attr_knows(var('As?'), var('Kn')), cs_first_missing(var('Kn?'), var('Ks?'), var('Miss')), cs_parenting(var('Atoms?'), var('Entered')), cs_attr_children(var('As?'), var('Ch')), cs_first_missing(var('Ch?'), var('Entered?'), var('Un')), cs_attr_parents(var('As?'), var('Pa')), cs_todo_of(var('Id?'), var('Miss?'), var('Un?'), var('Me?'), var('Pa?'), var('Todo')), cs_parent_do(var('Todo?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   decl(cs_has_identity(dual('List'('Atom')), 'YesNo')),
+   clause(cs_has_identity([], no), [], []),
+   clause(cs_has_identity([identity | var('_')], yes), [], []),
+   clause(cs_has_identity([var('_') | var('As')], var('R?')), [otherwise], [cs_has_identity(var('As?'), var('R'))]),
+   decl(cs_todo_of(dual('YesNo'), dual('CsPick'), dual('CsPick'), dual('Key'), dual('List'('Key')), 'CsTodo')),
+   clause(cs_todo_of(no, var('_'), var('_'), var('_'), var('_'), establish), [], []),
+   clause(cs_todo_of(yes, pick(var('Q')), var('_'), var('_'), var('_'), know(var('Q?'))), [], []),
+   clause(cs_todo_of(yes, nothing, pick(var('C')), var('Me'), [var('_')], enter1(var('Me?'), var('C?'))), [], []),
+   clause(cs_todo_of(yes, nothing, pick(var('C')), var('Me'), [var('P1'), var('P2')], enter2(var('Me?'), var('P2?'), var('C?'))), ['=?='(var('Me?'), var('P1?')), ground(var('Me?'))], [true]),
+   clause(cs_todo_of(yes, nothing, pick(var('_')), var('_'), [var('_'), var('_')], steady), [otherwise], [true]),
+   clause(cs_todo_of(yes, nothing, nothing, var('_'), var('_'), steady), [], []),
    decl(cs_parent_do(dual('CsTodo'), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_parent_do(know(var('Q')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(known(var('Q?')))), [], []),
-   clause(cs_parent_do(enter1(var('Me'), var('C')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(propose(enter(var('Me?'), var('C?'))))), [], []),
-   clause(cs_parent_do(enter2(var('Me'), var('Q'), var('C')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(propose(enter_2(var('Me?'), var('Q?'), var('C?'))))), [], []),
-   clause(cs_parent_do(steady, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [], [random(var('S?'), 65, var('K'), var('S1')), rated(cs_parent_act(var('K?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S1?'), var('Slot?')), rate(65, year))]),
-   %% cs_parent_act(K?, Local?, Me?, Ks?, As?, Atoms?, S?, Slot): the act drawn, K in 1..65, by the rates above.
+   clause(cs_parent_do(establish, var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), propose(establish(var('Me?')))), rate(1, hour))]),
+   clause(cs_parent_do(know(var('Q')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), known(var('Q?'))), rate(1, hour))]),
+   clause(cs_parent_do(enter1(var('Me'), var('C')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), propose(enter(var('Me?'), var('C?')))), rate(1, hour))]),
+   clause(cs_parent_do(enter2(var('Me'), var('Q'), var('C')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), propose(enter_2(var('Me?'), var('Q?'), var('C?')))), rate(1, hour))]),
+   clause(cs_parent_do(steady, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [random(var('S?'), 67, var('K'), var('S1')), rated(cs_parent_act(var('K?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S1?'), slot(var('W'))), rate(67, year))]),
+   decl(cs_request(dual('Slot'('Request')), dual('Request'))),
+   %% cs_request(slot(W), R?): the request R as the menu's answer, after an hour on average where rated so.
+   clause(cs_request(slot(var('V?')), var('V')), [], []),
+   %% cs_parent_act(K?, Local?, Me?, Ks?, As?, Atoms?, S?, slot(W)): the act drawn, K in 1..67, by the rates above.
    decl(cs_parent_act(dual('Integer'), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_parent_act(var('K'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), ['=<'(var('K?'), 52)], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), var('Slot?'))]),
-   clause(cs_parent_act(var('K'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), ['>'(var('K?'), 52), '=<'(var('K?'), 64)], [cs_child_request(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), var('Slot?'))]),
-   clause(cs_parent_act(65, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [], [cs_end_friendship(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), var('Slot?'))]),
+   clause(cs_parent_act(var('K'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), ['=<'(var('K?'), 52)], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   clause(cs_parent_act(var('K'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), ['>'(var('K?'), 52), '=<'(var('K?'), 64)], [cs_child_request(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   clause(cs_parent_act(65, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_child_adult_request(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   clause(cs_parent_act(66, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_end_child_friendship(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   clause(cs_parent_act(67, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_end_friendship(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
    %% cs_offer: an offer of friendship, propose(befriend(Me, Q)), Q a parent the agent knows who is not
    %% yet a friend, of the own village Local times in 100 and of another otherwise, from the other list
    %% where the one drawn is empty, and known(Q0) for the first person known where both are empty.
    decl(cs_offer(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_offer(var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [ground(var('Me?')), ground(var('Ks?')), ground(var('As?'))], [cs_attr_families(var('As?'), var('All')), cs_attr_village(var('As?'), var('V')), cs_friends(var('Atoms?'), var('Fr')), cs_cands(var('All?'), var('V?'), var('Me?'), var('Ks?'), var('Fr?'), var('Vc'), var('Oc')), random(var('S?'), 100, var('D'), var('S1')), cs_offer_from(var('D?'), var('Local?'), var('Vc?'), var('Oc?'), var('Me?'), var('Ks?'), var('S1?'), var('Slot?'))]),
+   clause(cs_offer(var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Me?')), ground(var('Ks?')), ground(var('As?'))], [cs_attr_families(var('As?'), var('All')), cs_attr_village(var('As?'), var('V')), cs_friends(var('Atoms?'), var('Fr')), cs_cands(var('All?'), var('V?'), var('Me?'), var('Ks?'), var('Fr?'), var('Vc'), var('Oc')), random(var('S?'), 100, var('D'), var('S1')), cs_offer_from(var('D?'), var('Local?'), var('Vc?'), var('Oc?'), var('Me?'), var('Ks?'), var('S1?'), slot(var('W')))]),
    decl(cs_cands(dual('List'('CsFam')), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('Key')), 'List'('Key'), 'List'('Key'))),
    %% cs_cands(All?, V?, Me?, Ks?, Fr?, Vc, Oc): the parents of village V, and of the others, that Me's agent knows and are not yet friends.
    clause(cs_cands(var('All'), var('V'), var('Me'), var('Ks'), var('Fr'), var('Vc?'), var('Oc?')), [ground(var('All?')), ground(var('V?')), ground(var('Ks?')), ground(var('Fr?'))], [cs_village_parents(var('All?'), var('V?'), var('Me?'), var('Vp')), cs_other_parents(var('All?'), var('V?'), var('Op')), cs_inter(var('Vp?'), var('Ks?'), var('Vk')), cs_minus(var('Vk?'), var('Fr?'), var('Vc')), cs_inter(var('Op?'), var('Ks?'), var('Ok')), cs_minus(var('Ok?'), var('Fr?'), var('Oc'))]),
    decl(cs_offer_from(dual('Integer'), dual('Integer'), dual('List'('Key')), dual('List'('Key')), dual('Key'), dual('List'('Key')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_offer_from(var('D'), var('Local'), var('Vc'), var('Oc'), var('Me'), var('Ks'), var('S'), var('Slot')), ['=<'(var('D?'), var('Local?'))], [cs_offer_to(var('Vc?'), var('Oc?'), var('Me?'), var('Ks?'), var('S?'), var('Slot?'))]),
-   clause(cs_offer_from(var('D'), var('Local'), var('Vc'), var('Oc'), var('Me'), var('Ks'), var('S'), var('Slot')), ['>'(var('D?'), var('Local?'))], [cs_offer_to(var('Oc?'), var('Vc?'), var('Me?'), var('Ks?'), var('S?'), var('Slot?'))]),
+   clause(cs_offer_from(var('D'), var('Local'), var('Vc'), var('Oc'), var('Me'), var('Ks'), var('S'), slot(var('W?'))), ['=<'(var('D?'), var('Local?'))], [cs_offer_to(var('Vc?'), var('Oc?'), var('Me?'), var('Ks?'), var('S?'), slot(var('W')))]),
+   clause(cs_offer_from(var('D'), var('Local'), var('Vc'), var('Oc'), var('Me'), var('Ks'), var('S'), slot(var('W?'))), ['>'(var('D?'), var('Local?'))], [cs_offer_to(var('Oc?'), var('Vc?'), var('Me?'), var('Ks?'), var('S?'), slot(var('W')))]),
    decl(cs_offer_to(dual('List'('Key')), dual('List'('Key')), dual('Key'), dual('List'('Key')), dual('Integer'), dual('Slot'('Request')))),
    clause(cs_offer_to([var('X') | var('Xs')], var('_'), var('Me'), var('_'), var('S'), slot(propose(befriend(var('Me?'), var('Q?'))))), [], [cs_pick([var('X?') | var('Xs?')], var('S?'), var('Q'), var('_'))]),
    clause(cs_offer_to([], [var('X') | var('Xs')], var('Me'), var('_'), var('S'), slot(propose(befriend(var('Me?'), var('Q?'))))), [], [cs_pick([var('X?') | var('Xs?')], var('S?'), var('Q'), var('_'))]),
@@ -229,22 +269,46 @@ source([
    %% cs_child_request: propose(child_befriend(R, Sc, Me, Q)), R a child of Me entered, Q a friend of Me who
    %% is a parent, Sc a child of Q, each drawn uniformly; an offer of friendship where there is none.
    decl(cs_child_request(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_child_request(var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [ground(var('As?')), ground(var('Atoms?'))], [cs_parenting(var('Atoms?'), var('Mine')), cs_friends(var('Atoms?'), var('Fr')), cs_attr_families(var('As?'), var('All')), cs_child_request0(var('All?'), var('Mine?'), var('Fr?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), var('Slot?'))]),
+   clause(cs_child_request(var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('As?')), ground(var('Atoms?'))], [cs_parenting(var('Atoms?'), var('Mine')), cs_friends(var('Atoms?'), var('Fr')), cs_attr_families(var('As?'), var('All')), cs_child_request0(var('All?'), var('Mine?'), var('Fr?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
    decl(cs_child_request0(dual('List'('CsFam')), dual('List'('Key')), dual('List'('Key')), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_child_request0(var('All'), var('Mine'), var('Fr'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [ground(var('All?')), ground(var('Me?'))], [cs_all_parents(var('All?'), var('Ap')), cs_inter(var('Fr?'), var('Ap?'), var('Fp')), cs_without(var('Fp?'), var('Me?'), var('Fq')), random(var('S?'), 2147483646, var('S1'), var('S2')), random(var('S2?'), 2147483646, var('S3'), var('S4')), cs_pick_or_nothing(var('Mine?'), var('S1?'), var('Rp')), cs_pick_or_nothing(var('Fq?'), var('S3?'), var('Qp')), cs_child_request1(var('Rp?'), var('Qp?'), var('All?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S4?'), var('Slot?'))]),
+   clause(cs_child_request0(var('All'), var('Mine'), var('Fr'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('All?')), ground(var('Me?'))], [cs_all_parents(var('All?'), var('Ap')), cs_inter(var('Fr?'), var('Ap?'), var('Fp')), cs_without(var('Fp?'), var('Me?'), var('Fq')), random(var('S?'), 2147483646, var('S1'), var('S2')), random(var('S2?'), 2147483646, var('S3'), var('S4')), cs_pick_or_nothing(var('Mine?'), var('S1?'), var('Rp')), cs_pick_or_nothing(var('Fq?'), var('S3?'), var('Qp')), cs_child_request1(var('Rp?'), var('Qp?'), var('All?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S4?'), slot(var('W')))]),
    decl(cs_child_request1(dual('CsPick'), dual('CsPick'), dual('List'('CsFam')), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_child_request1(pick(var('R')), pick(var('Q')), var('All'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [ground(var('Q?'))], [cs_children_of(var('All?'), var('Q?'), var('Cq')), random(var('S?'), 2147483646, var('S1'), var('S2')), cs_pick_or_nothing(var('Cq?'), var('S1?'), var('Sp')), cs_child_request2(var('Sp?'), var('R?'), var('Q?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S2?'), var('Slot?'))]),
-   clause(cs_child_request1(nothing, var('_'), var('_'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), var('Slot?'))]),
-   clause(cs_child_request1(pick(var('_')), nothing, var('_'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), var('Slot?'))]),
+   clause(cs_child_request1(pick(var('R')), pick(var('Q')), var('All'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Q?'))], [cs_children_of(var('All?'), var('Q?'), var('Cq')), random(var('S?'), 2147483646, var('S1'), var('S2')), cs_pick_or_nothing(var('Cq?'), var('S1?'), var('Sp')), cs_child_request2(var('Sp?'), var('R?'), var('Q?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S2?'), slot(var('W')))]),
+   clause(cs_child_request1(nothing, var('_'), var('_'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   clause(cs_child_request1(pick(var('_')), nothing, var('_'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
    decl(cs_child_request2(dual('CsPick'), dual('Key'), dual('Key'), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
    clause(cs_child_request2(pick(var('Sc')), var('R'), var('Q'), var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(propose(child_befriend(var('R?'), var('Sc?'), var('Me?'), var('Q?'))))), [], []),
-   clause(cs_child_request2(nothing, var('_'), var('_'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), var('Slot?'))]),
+   clause(cs_child_request2(nothing, var('_'), var('_'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   %% cs_child_adult_request: propose(child_adult_befriend(R, A, Me)), R a child of Me entered and A a friend
+   %% of Me who is a parent, each drawn uniformly; an offer of friendship where there is none.
+   decl(cs_child_adult_request(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
+   clause(cs_child_adult_request(var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('As?')), ground(var('Atoms?'))], [cs_parenting(var('Atoms?'), var('Mine')), cs_friends(var('Atoms?'), var('Fr')), cs_attr_families(var('As?'), var('All')), cs_child_adult_request0(var('All?'), var('Mine?'), var('Fr?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   decl(cs_child_adult_request0(dual('List'('CsFam')), dual('List'('Key')), dual('List'('Key')), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
+   clause(cs_child_adult_request0(var('All'), var('Mine'), var('Fr'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Me?'))], [cs_all_parents(var('All?'), var('Ap')), cs_inter(var('Fr?'), var('Ap?'), var('Fp')), cs_without(var('Fp?'), var('Me?'), var('Fq')), random(var('S?'), 2147483646, var('S1'), var('S2')), random(var('S2?'), 2147483646, var('S3'), var('S4')), cs_pick_or_nothing(var('Mine?'), var('S1?'), var('Rp')), cs_pick_or_nothing(var('Fq?'), var('S3?'), var('Ap2')), cs_child_adult_request1(var('Rp?'), var('Ap2?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S4?'), slot(var('W')))]),
+   decl(cs_child_adult_request1(dual('CsPick'), dual('CsPick'), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
+   clause(cs_child_adult_request1(pick(var('R')), pick(var('A')), var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(propose(child_adult_befriend(var('R?'), var('A?'), var('Me?'))))), [], []),
+   clause(cs_child_adult_request1(nothing, var('_'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   clause(cs_child_adult_request1(pick(var('_')), nothing, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   %% cs_end_child_friendship: propose(child_unfriend(R, Sc, Me)), R a child of Me entered and Sc a child the
+   %% agent knows who is not a child of Me, each drawn uniformly; the attempt fails where the two are not
+   %% friends, a parent holding no record of their child's friends; an offer where there is none.
+   decl(cs_end_child_friendship(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
+   clause(cs_end_child_friendship(var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('As?')), ground(var('Atoms?')), ground(var('Ks?'))], [cs_parenting(var('Atoms?'), var('Mine')), cs_attr_families(var('As?'), var('All')), cs_all_children(var('All?'), var('Ac')), cs_inter(var('Ks?'), var('Ac?'), var('Kc')), cs_end_child_friendship0(var('Mine?'), var('Kc?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   decl(cs_end_child_friendship0(dual('List'('Key')), dual('List'('Key')), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
+   clause(cs_end_child_friendship0(var('Mine'), var('Kc'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Mine?'))], [cs_minus(var('Kc?'), var('Mine?'), var('Others')), random(var('S?'), 2147483646, var('S1'), var('S2')), random(var('S2?'), 2147483646, var('S3'), var('S4')), cs_pick_or_nothing(var('Mine?'), var('S1?'), var('Rp')), cs_pick_or_nothing(var('Others?'), var('S3?'), var('Sp')), cs_end_child_friendship1(var('Rp?'), var('Sp?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S4?'), slot(var('W')))]),
+   decl(cs_end_child_friendship1(dual('CsPick'), dual('CsPick'), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
+   clause(cs_end_child_friendship1(pick(var('R')), pick(var('Sc')), var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(propose(child_unfriend(var('R?'), var('Sc?'), var('Me?'))))), [], []),
+   clause(cs_end_child_friendship1(nothing, var('_'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   clause(cs_end_child_friendship1(pick(var('_')), nothing, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   decl(cs_all_children(dual('List'('CsFam')), 'List'('Key'))),
+   clause(cs_all_children([], []), [], []),
+   clause(cs_all_children([fam(var('_'), var('_'), var('Ch')) | var('Fs')], var('Cs?')), [], [cs_all_children(var('Fs?'), var('Cs1')), cs_app(var('Ch?'), var('Cs1?'), var('Cs'))]),
    %% cs_end_friendship: propose(unfriend(Me, Q)), Q a friend who is not a child of Me; an offer where there is none.
    decl(cs_end_friendship(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_end_friendship(var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [ground(var('Me?')), ground(var('Atoms?'))], [cs_friends(var('Atoms?'), var('Fr')), cs_parenting(var('Atoms?'), var('Mine')), cs_minus(var('Fr?'), var('Mine?'), var('Fq')), random(var('S?'), 2147483646, var('S1'), var('S2')), cs_pick_or_nothing(var('Fq?'), var('S1?'), var('Qp')), cs_end_friendship1(var('Qp?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S2?'), var('Slot?'))]),
+   clause(cs_end_friendship(var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Me?')), ground(var('Atoms?'))], [cs_friends(var('Atoms?'), var('Fr')), cs_parenting(var('Atoms?'), var('Mine')), cs_minus(var('Fr?'), var('Mine?'), var('Fq')), random(var('S?'), 2147483646, var('S1'), var('S2')), cs_pick_or_nothing(var('Fq?'), var('S1?'), var('Qp')), cs_end_friendship1(var('Qp?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S2?'), slot(var('W')))]),
    decl(cs_end_friendship1(dual('CsPick'), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
    clause(cs_end_friendship1(pick(var('Q')), var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(propose(unfriend(var('Me?'), var('Q?'))))), [], []),
-   clause(cs_end_friendship1(nothing, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), var('Slot')), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), var('Slot?'))]),
+   clause(cs_end_friendship1(nothing, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_offer(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
    %% The policy: strict or permissive.  Asked to approve the entering of their child with the other
    %% parent, a parent approves at once.  Every other approval is answered after a day on average: an
    %% offer of friendship approved 90 times in 100; a child's befriending, a child's joining a group and
@@ -280,14 +344,14 @@ source([
    clause(cs_yes_if(var('K'), var('P'), no), ['>'(var('K?'), var('P?'))], [true]),
 
    %% THE CHILDREN'S PROFILES.  A child has one dimension, the response, choosy or keen, which answers both
-   %% questions.  A child first makes known their parents, at once; then the child answers the menu once a
+   %% questions.  A child first makes known their parents, each after an hour on average; then the child answers the menu once a
    %% year on average, ending a friendship with a friend who is not a parent, and where there is none makes
    %% known a person known already.  Asked to approve their entering, a child approves at once; asked to
    %% approve a friendship or a joining, a choosy child approves 50 times in 100 and a keen one 90, after a
    %% day on average; anything else they approve.
    %%   person choosy.  Menu =::= child_menu.  Approval =::= choosy_approval.
    %%   child_menu(menu(Me, Ks, R?), person(_, _, As), S) :- seen(L), cs_child_menu(Me?, Ks?, As?, L?, S?, slot(R)).
-   %%   choosy_approval(approval(attempt(_, _, _, enter(_, _)), A?), _, _) :- cs_say(slot(A), yes).
+   %%   choosy_approval(approval(attempt(_, _, _, enter(_, _)), A?), _, _) :- cs_say(slot(A), yes).  (and enter_2)
    %%   choosy_approval(approval(attempt(_, _, _, enter_2(_, _, _)), A?), _, _) :- cs_say(slot(A), yes).
    %%   choosy_approval(approval(attempt(_, _, _, C), A?), _, S) :- otherwise | cs_child_answer(50, C?, S?, slot(A)) @ 1/day.
    %%   person keen.  (the same menu; the approval at 90)
@@ -298,12 +362,12 @@ source([
    decl(child_menu(dual('Menu'), dual('Person'), dual('Integer'))),
    clause(child_menu(menu(var('Me'), var('Ks'), var('R?')), person(var('_'), var('_'), var('As')), var('S')), [], [seen(var('L')), cs_child_menu(var('Me?'), var('Ks?'), var('As?'), var('L?'), var('S?'), slot(var('R')))]),
    decl(cs_child_menu(dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Output')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_child_menu(var('Me'), var('Ks'), var('As'), var('L'), var('S'), var('Slot')), [ground(var('Ks?')), ground(var('As?'))], [cs_attr_parents(var('As?'), var('Pa')), cs_first_missing(var('Pa?'), var('Ks?'), var('Miss')), cs_last_view(var('L?'), var('Atoms')), cs_child_do(var('Miss?'), var('Me?'), var('Ks?'), var('Atoms?'), var('S?'), var('Slot?'))]),
+   clause(cs_child_menu(var('Me'), var('Ks'), var('As'), var('L'), var('S'), slot(var('W?'))), [ground(var('Ks?')), ground(var('As?'))], [cs_attr_parents(var('As?'), var('Pa')), cs_first_missing(var('Pa?'), var('Ks?'), var('Miss')), cs_last_view(var('L?'), var('Atoms')), cs_child_do(var('Miss?'), var('Me?'), var('Ks?'), var('Atoms?'), var('S?'), slot(var('W')))]),
    decl(cs_child_do(dual('CsPick'), dual('Key'), dual('List'('Key')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_child_do(pick(var('Q')), var('_'), var('_'), var('_'), var('_'), slot(known(var('Q?')))), [], []),
-   clause(cs_child_do(nothing, var('Me'), var('Ks'), var('Atoms'), var('S'), var('Slot')), [], [rated(cs_child_act(var('Me?'), var('Ks?'), var('Atoms?'), var('S?'), var('Slot?')), rate(1, year))]),
+   clause(cs_child_do(pick(var('Q')), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), known(var('Q?'))), rate(1, hour))]),
+   clause(cs_child_do(nothing, var('Me'), var('Ks'), var('Atoms'), var('S'), slot(var('W?'))), [], [rated(cs_child_act(var('Me?'), var('Ks?'), var('Atoms?'), var('S?'), slot(var('W'))), rate(1, year))]),
    decl(cs_child_act(dual('Key'), dual('List'('Key')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_child_act(var('Me'), var('Ks'), var('Atoms'), var('S'), var('Slot')), [ground(var('Atoms?'))], [cs_friends(var('Atoms?'), var('Fr')), cs_parents_in(var('Atoms?'), var('Pa')), cs_minus(var('Fr?'), var('Pa?'), var('Fq')), cs_pick_or_nothing(var('Fq?'), var('S?'), var('Qp')), cs_child_act1(var('Qp?'), var('Me?'), var('Ks?'), var('Slot?'))]),
+   clause(cs_child_act(var('Me'), var('Ks'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Atoms?'))], [cs_friends(var('Atoms?'), var('Fr')), cs_parents_in(var('Atoms?'), var('Pa')), cs_minus(var('Fr?'), var('Pa?'), var('Fq')), cs_pick_or_nothing(var('Fq?'), var('S?'), var('Qp')), cs_child_act1(var('Qp?'), var('Me?'), var('Ks?'), slot(var('W')))]),
    decl(cs_child_act1(dual('CsPick'), dual('Key'), dual('List'('Key')), dual('Slot'('Request')))),
    clause(cs_child_act1(pick(var('Q')), var('Me'), var('_'), slot(propose(unfriend(var('Me?'), var('Q?'))))), [], []),
    clause(cs_child_act1(nothing, var('_'), [var('Q0') | var('_')], slot(known(var('Q0?')))), [], []),
