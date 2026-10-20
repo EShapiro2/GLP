@@ -15,7 +15,7 @@
 %% programs/sglp/transform.glp prints a clause's head; a source variable is a
 %% constant whose name is the variable's, V1, V1?, from vname/3.
 
-Line  ::= String ; guarded_only(String).
+Line  ::= String ; guarded_only(String) ; unguarded_only(String).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, Stream(_)).
@@ -240,7 +240,10 @@ module_lines1(Nm, C, Rf, E, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), gr
     text_schemas(C?, Ct),
     T1 =.. [contract_schemas, Ct?],
     name_class_lines(C?, Ps?, Ln0),
-    name_class_decl(Ln0?, Ln),
+    name_class_decl(Ln0?, Ln1),
+    request_name_lines(C?, Ps?, Lq0),
+    request_name_decl(Lq0?, Lq),
+    lapp(Ln1?, Lq?, Ln),
     T2 =.. [reflexive_preds, Rf?],
     T3 =.. [introduction_preds, E?],
     binding_lines(C?, L2),
@@ -357,11 +360,13 @@ alts_rest([A|As], Tl, [';', A?|L?]) :- alts_rest(As?, Tl?, L).
 procedure any_name(Preds?, YesNo).
 any_name([], no).
 any_name([_|_], yes).
-%% The shared text's lines, a line guarded_only(L) printed as L where the contract has a guarded part and left out where it has none.
+%% The shared text's lines, a line guarded_only(L) printed as L where the contract has a guarded part and left out where it has none, and a line unguarded_only(L) the other way about.
 procedure shared_lines(Lines?, YesNo?, Stream(_)).
 shared_lines([], _, []).
 shared_lines([guarded_only(L)|Ls], yes, [L?|Ls1?]) :- shared_lines(Ls?, yes, Ls1).
 shared_lines([guarded_only(_)|Ls], no, Ls1?) :- shared_lines(Ls?, no, Ls1).
+shared_lines([unguarded_only(_)|Ls], yes, Ls1?) :- shared_lines(Ls?, yes, Ls1).
+shared_lines([unguarded_only(L)|Ls], no, [L?|Ls1?]) :- shared_lines(Ls?, no, Ls1).
 shared_lines([L|Ls], G, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, Ls1).
 
 %% The type of the machine states, List(Atom), in the type of the views, Output ::= view(List(Atom), List(Key)) in the shared text (vGLP b7e3517, Section 5.4, "The compilation": "the compilation defines Output as the type of the views", a view being view(s, K), "the machine state s of its app state and the persons K it knows"): a machine state is a multiset of the contract's atoms, written as a list, and Atom is the union of the contract's predicates at their argument types: an argument is of the type Peer, a person, where the schemas write a role, a party variable or a name term, and of the type Speech, a speech act, where they write a speech-act variable or a signed term; Atom has one alternative for each predicate and argument types the schemas write it with, in order of first occurrence.  The agent holds an atom as g(Name, Vals), each value p(Peer) or s(Speech), and writes it on the output as the contract writes it: atom_of(g(friend, [p(V1)]), shown(friend(V1?))), one clause per alternative.
@@ -650,6 +655,44 @@ keep_at(no, X, R, [X?|R?]).
 procedure name_class_decl(Stream(_)?, Stream(_)).
 name_class_decl([], []).
 name_class_decl([X|Xs], ['', 'procedure name_class(Proposal?, GAtoms?, Class).', X?|Xs?]).
+
+%% request_name(C, pname(N)): the request name N of the part the class term C names, its schema-binding, with no list of the people of its listed roles, for the schemas the request type proposes, and nopname for any other class term (vGLP f0acbc1, Section 5.4, "Act schemas as local specifications": "its request name is the schema-binding"); the shared text asks it whether a class is of a request rho_N, a guarded part of the class with an opener being named N (in_rho; Definition "Effective Local Specification": "whether a class is in rho_N being decidable from a part of it and N").  Printed for the schemas the request type proposes, and only where it has one.
+procedure request_name_lines(Contract?, Preds?, Stream(_)).
+request_name_lines([], _, []).
+request_name_lines([schema(S, Hd, Rs)|Ss], Ps, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Ps?) |
+    mem(S?, Ps?, In),
+    request_name_lines1(In?, S?, Hd?, Rs?, L1),
+    request_name_lines(Ss?, Ps?, L2),
+    lapp(L1?, L2?, L).
+request_name_lines([cschema(_, _, _, _)|Ss], Ps, L?) :- request_name_lines(Ss?, Ps?, L).
+procedure request_name_lines1(YesNo?, Constant?, Args?, RoleSpecs?, Stream(_)).
+request_name_lines1(no, _, _, _, []).
+request_name_lines1(yes, S, Hd, Rs, [T?, '.']) :- ground(S?), ground(Hd?), ground(Rs?) |
+    schema_vars(Rs?, Hd?, Vs),
+    listed_ixs(Rs?, 1, Lis1),
+    listed_ixs(Rs?, 1, Lis2),
+    var_names(Vs?, 1, Ns0, Qs0),
+    blank_names(Ns0?, 1, Lis1?, Ns),
+    drop_at(Qs0?, 1, Lis2?, Qs),
+    In =.. [S?|Ns?],
+    Out =.. [S?|Qs?],
+    P =.. [pname, Out?],
+    T =.. [request_name, In?, P?].
+%% The names, the place of each listed role written _, which the clause does not read.
+procedure blank_names(Stream(_)?, Integer?, Ints?, Stream(_)).
+blank_names([], _, _, []).
+blank_names([X|Xs], I, Lis, [Y?|R?]) :- integer(I?), ground(Lis?) |
+    I1 := I? + 1,
+    mem(I?, Lis?, In),
+    blank_one(In?, X?, Y),
+    blank_names(Xs?, I1?, Lis?, R).
+procedure blank_one(YesNo?, _?, _).
+blank_one(yes, _, '_').
+blank_one(no, X, X?).
+procedure request_name_decl(Stream(_)?, Stream(_)).
+request_name_decl([], []).
+request_name_decl([X|Xs], ['', 'procedure request_name(Class?, PName).', X?|Xs1?]) :-
+    lapp(Xs?, ['request_name(_, nopname) :- otherwise | true.'], Xs1).
 
 %% Lines are constants and terms, each printed on a line of its own.
 procedure lapp(Stream(_)?, Stream(_)?, Stream(_)).

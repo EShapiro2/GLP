@@ -1,6 +1,6 @@
 %% local.glp --- whether a contract of act schemas is a local and effective specification (vGLP 099f876, Section 5.4, the paragraph "Act schemas as local specifications"; Section 3.2, Definition "Local Specification, Part, Guard Set, Opener"), and, where it is not, the lines saying why; and the schemas whose terms name guarded parts, which the request type proposes.
 %%
-%% Local: each schema-binding "determines a part [t]_j of its class: the set of transactions it determines, ... and with the people in its marked roles as its guard set.  Such a contract is a local specification" (ibid.).  So a contract whose roles are party roles and listed roles is a local specification with no condition on its guards (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 2; vGLP f5f1644, the same paragraph: "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"), and nothing here decides locality; cvac.glp refuses a contract with seated or constituent roles, reach conditions or name variables.  A schema with listed roles is effective where they have one base, which is its only guarding role or, not a guarding role, its first role (listed_lines).  A schema with a listed role whose base is not a guarding role determines guarded parts that the person in its base opens, and "the contract is a local specification where every other guarded part of the class that a guard of such a part guards is determined likewise, with the same opener" (vGLP a890465, ibid.): nothing here decides that condition, a gap reported to Code #11 on 2026-10-19.
+%% Local: each schema-binding "determines a part [t]_j of its class: the set of transactions it determines, ... and with the people in its marked roles as its guard set.  Such a contract is a local specification" (ibid.).  So a contract whose roles are party roles and listed roles is a local specification with no condition on its guards (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 2; vGLP f5f1644, the same paragraph: "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"), and nothing here decides locality; cvac.glp refuses a contract with seated or constituent roles, reach conditions or name variables.  A schema with listed roles is effective where they have one base, which is its only guarding role or, not a guarding role, its first role (listed_lines).  A schema with a listed role whose base is not a guarding role determines guarded parts that the person in its base, its first role, opens, and "the contract is a local specification where every such schema has one guarding role, and every other guarded part of the class that a guard of such a part guards is determined likewise, with the same opener" (vGLP f0acbc1, ibid.; vGLP #18 Cowork to Code, 2026-10-20 10:44 UTC, item 5, the gap Code #11 reported on 2026-10-19 18:02 UTC): locality_lines decides it, and the contract is refused where it fails.
 %%
 %% Effective: "The contract is effective (Definition "Effective Local Specification") where, moreover, every variable of a schema that occurs in an atom it requires or forbids also occurs in an atom it deletes or adds, a variable inside a signed term or a name term included, so that a class has finitely many parts, and the atoms each unguarded schema requires at its first role name every other role and every variable of its deleted and added atoms" (ibid.).  A variable here is a party variable or a speech-act variable, the sentence naming roles and variables apart, "every other role and every variable", and a role being bound to one of the finitely many participants (vGLP #15, ibid., answer (2)); a signed term sgn(y, i) in a deleted or added atom holds the variable y and names role i (GSC, Section 3: "An atom names what is among its arguments or is the signer of one"), so y is a variable of the atom.  Otherwise the contract is refused, the schema named.
 %%
@@ -27,7 +27,10 @@ Deltas   ::= [] ; [Delta | Deltas].
 Found    ::= found(Val) ; unbound.
 
 exported procedure faults(Contract?, Preds?, Stream(_)).
-faults(C, _, Ls?) :- ground(C?) | effective_lines(C?, Ls).
+faults(C, Rf, Ls?) :- ground(C?), ground(Rf?) |
+    effective_lines(C?, L1),
+    locality_lines(C?, C?, Rf?, L2),
+    lapp(L1?, L2?, Ls).
 
 %% The value of a variable in a binding; a variable the binding leaves free
 %% is its own value, free_var(V), one fresh person or speech act per variable.
@@ -705,3 +708,343 @@ meets1(no, Xs, B, R?) :- meets(Xs?, B?, R).
 procedure lapp(Stream(_)?, Stream(_)?, Stream(_)).
 lapp([], Ys, Ys?).
 lapp([X|Xs], Ys, [X?|Zs?]) :- lapp(Xs?, Ys?, Zs).
+
+%% --- Local: the opener of a guarded part ----------------------------------
+%% "The opener of an unguarded part is the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it, and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part; the contract is a local specification where every such schema has one guarding role, and every other guarded part of the class that a guard of such a part guards is determined likewise, with the same opener" (vGLP f0acbc1, Section 5.4, "Act schemas as local specifications"; Definition "Local Specification, Part, Guard Set, Opener, Request": a local specification "may designate one for a guarded part with one guard, a participant o([t]_j) in Q([t]) \ G([t]_j), such that the guarded parts of a class that one participant guards have one opener, or none").  For each schema with a listed role whose base is not a guarding role (opened_schema): it has one guarding role; and at each of its schema-bindings up to renaming that determines a transaction and whose person in the first role, the opener, is not the guard, the schema-bindings of every schema of the contract of the same participants and the same atoms deleted and added at each (mates_onto) that a chain of links joins to it make its class, two linked where no atom one requires at a participant the other forbids there (class_closure), and each of them that determines another part guarded by its guard is of such a schema, with the same person in its first role, not a guard of its part (check_mates).  The listed role is taken as a party role here, its person one of the people of the role, as everywhere in this module.
+LMate   ::= lm(Constant, RoleSpecs, Binding).
+LMates  ::= [] ; [LMate | LMates].
+MRes    ::= mok(Binding) ; mno.
+DFound  ::= dfound(GAs, GAs) ; dnone.
+procedure locality_lines(Contract?, Contract?, Preds?, Stream(_)).
+locality_lines([], _, _, []).
+locality_lines([schema(Nm, Hd, Rs)|Ss], C, Rf, L?) :- ground(Nm?), ground(Hd?), ground(Rs?), ground(C?), ground(Rf?) |
+    opened_schema(Rs?, Op),
+    locality_schema(Op?, Nm?, Hd?, Rs?, C?, Rf?, L1),
+    locality_lines(Ss?, C?, Rf?, L2),
+    lapp(L1?, L2?, L).
+locality_lines([cschema(_, _, _, _)|Ss], C, Rf, L?) :- locality_lines(Ss?, C?, Rf?, L).
+%% Whether a schema has a listed role whose base is not a guarding role; its listed roles have one base (listed_lines).
+procedure opened_schema(RoleSpecs?, YesNo).
+opened_schema(Rs, Op?) :- ground(Rs?) |
+    listed_bases(Rs?, Bs),
+    opened_base(Bs?, Rs?, Op).
+procedure opened_base(Ints?, RoleSpecs?, YesNo).
+opened_base([], _, no).
+opened_base([B|_], Rs, Op?) :- ground(Rs?), integer(B?) |
+    nth_spec(Rs?, B?, R),
+    rs_guarded(R?, G),
+    neg(G?, Op).
+procedure locality_schema(YesNo?, Constant?, Args?, RoleSpecs?, Contract?, Preds?, Stream(_)).
+locality_schema(no, _, _, _, _, _, []).
+locality_schema(yes, Nm, Hd, Rs, C, Rf, L?) :- ground(Rs?) |
+    guard_indices(Rs?, 1, Gs),
+    locality_one(Gs?, Nm?, Hd?, Rs?, C?, Rf?, L).
+procedure locality_one(Ints?, Constant?, Args?, RoleSpecs?, Contract?, Preds?, Stream(_)).
+locality_one([], Nm, _, _, _, _, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a schema',
+        '%% with a listed role whose base is not a guarding role has no guarding role, and it has one:', T?]) :-
+    ground(Nm?) | T =.. ['%% the schema', Nm?].
+locality_one([_, _|_], Nm, _, _, _, _, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a schema',
+        '%% with a listed role whose base is not a guarding role has more than one guarding role, and it has one:', T?]) :-
+    ground(Nm?) | T =.. ['%% the schema', Nm?].
+locality_one([G], Nm, Hd, Rs, C, Rf, L?) :- ground(Hd?), ground(Rs?), ground(Nm?), integer(G?) |
+    canon_bindings(Rs?, Hd?, Bs),
+    opener_bindings(Bs?, G?, Nm?, Rs?, C?, Rf?, Ns),
+    dedup(Ns?, Ns1),
+    locality_faults(Ns1?, Nm?, L).
+procedure locality_faults(Preds?, Constant?, Stream(_)).
+locality_faults([], _, []).
+locality_faults([N2|_], Nm, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a guard of a',
+        '%% guarded part with an opener, of a schema with a listed role whose base is not a guarding role,',
+        '%% guards another guarded part of its class that is not determined likewise, with the same opener:', T?]) :-
+    ground(Nm?), ground(N2?) | T =.. ['%% the schema and the other', Nm?, N2?].
+%% The schemas of the other parts at fault, over the schema-bindings Bs of the schema: each determining a transaction, its person in the first role not its guard.
+procedure opener_bindings(Bindings?, Integer?, Constant?, RoleSpecs?, Contract?, Preds?, Preds).
+opener_bindings([], _, _, _, _, _, []).
+opener_bindings([B|Bs], G, Nm, Rs, C, Rf, Ns?) :- ground(B?), integer(G?), ground(Nm?), ground(Rs?), ground(C?), ground(Rf?) |
+    sig_of(Rs?, B?, Pt),
+    role_person(1, B?, O),
+    role_person(G?, B?, Gp),
+    opener_binding(Pt?, O?, Gp?, B?, Nm?, Rs?, C?, Rf?, Ns1),
+    opener_bindings(Bs?, G?, Nm?, Rs?, C?, Rf?, Ns2),
+    app(Ns1?, Ns2?, Ns).
+procedure opener_binding(Deltas?, Integer?, Integer?, Binding?, Constant?, RoleSpecs?, Contract?, Preds?, Preds).
+opener_binding(Pt, O, Gp, B, Nm, Rs, C, Rf, Ns?) :- ground(Pt?), integer(O?), integer(Gp?), ground(B?), ground(Rs?), ground(Rf?) |
+    determines(Pt?, B?, Rs?, Rf?, D),
+    int_is(O?, Gp?, Same),
+    neg(Same?, Opens),
+    and(D?, Opens?, Go),
+    opener_binding1(Go?, Pt?, O?, Gp?, B?, Nm?, Rs?, C?, Rf?, Ns).
+procedure opener_binding1(YesNo?, Deltas?, Integer?, Integer?, Binding?, Constant?, RoleSpecs?, Contract?, Preds?, Preds).
+opener_binding1(no, _, _, _, _, _, _, _, _, []).
+opener_binding1(yes, Pt, O, Gp, B, Nm, Rs, C, Rf, Ns?) :- ground(Pt?), ground(B?), ground(Rs?), ground(Rf?) |
+    mates_onto(C?, Pt?, Rf?, Ms),
+    deltas_people(Pt?, Q),
+    deltas_people(Pt?, Q2),
+    class_closure([lm(Nm?, Rs?, B?)], Ms?, Q?, Rf?, [], Cl),
+    guard_people(Rs?, 1, B?, G1),
+    check_mates(Cl?, O?, Gp?, Rs?, B?, G1?, Q2?, Rf?, Ns).
+%% check_mates: of the class Cl, the schemas of the schema-bindings that determine another part the guard Gp guards and are not of a schema with a listed role whose base is not a guarding role, with the opener O in their first role and not a guard of their part.
+procedure check_mates(LMates?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, Ints?, Preds?, Preds).
+check_mates([], _, _, _, _, _, _, _, []).
+check_mates([lm(N2, Rs2, B2)|Ms], O, Gp, Rs, B, G1, Q, Rf, Ns?) :-
+    ground(N2?), ground(Rs2?), ground(B2?), integer(O?), integer(Gp?), ground(Rs?), ground(B?), ground(G1?), ground(Q?), ground(Rf?) |
+    guard_people(Rs2?, 1, B2?, G2),
+    check_mate(G2?, N2?, Rs2?, B2?, O?, Gp?, Rs?, B?, G1?, Q?, Rf?, Ns1),
+    check_mates(Ms?, O?, Gp?, Rs?, B?, G1?, Q?, Rf?, Ns2),
+    app(Ns1?, Ns2?, Ns).
+procedure check_mate(Ints?, Constant?, RoleSpecs?, Binding?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, Ints?, Preds?, Preds).
+check_mate(G2, N2, Rs2, B2, O, Gp, Rs, B, G1, Q, Rf, Ns?) :-
+    ground(G2?), ground(Rs2?), ground(B2?), integer(O?), integer(Gp?) |
+    mem(Gp?, G2?, Guards),
+    same_lpart(Q?, Rs?, B?, G1?, Rs2?, B2?, G2?, Rf?, Same),
+    neg(Same?, Other),
+    and(Guards?, Other?, Asked),
+    opened_schema(Rs2?, Op2),
+    role_person(1, B2?, O2),
+    int_is(O2?, O?, SameO),
+    mem(O?, G2?, OGuard),
+    neg(OGuard?, ONot),
+    and(Op2?, SameO?, L1),
+    and(L1?, ONot?, Likewise),
+    neg(Likewise?, Unlike),
+    and(Asked?, Unlike?, Fault),
+    keep_name(Fault?, N2?, [], Ns).
+%% Whether two schema-bindings of the participants Q determine one part: the same people marked, and the same atoms required, as multisets, and forbidden, as sets, at every participant (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 1, as the shared text's same_bpart).
+procedure same_lpart(Ints?, RoleSpecs?, Binding?, Ints?, RoleSpecs?, Binding?, Ints?, Preds?, YesNo).
+same_lpart(Q, Rs1, B1, G1, Rs2, B2, G2, Rf, S?) :- ground(G1?), ground(G2?) |
+    ints_sub(G1?, G2?, E1),
+    ints_sub(G2?, G1?, E2),
+    same_ldoms(Q?, Rs1?, B1?, Rs2?, B2?, Rf?, E3),
+    and(E1?, E2?, E12),
+    and(E12?, E3?, S).
+procedure ints_sub(Ints?, Ints?, YesNo).
+ints_sub([], _, yes).
+ints_sub([X|Xs], Ys, B?) :- ground(Ys?) | mem(X?, Ys?, B1), ints_sub1(B1?, Xs?, Ys?, B).
+procedure ints_sub1(YesNo?, Ints?, Ints?, YesNo).
+ints_sub1(no, _, _, no).
+ints_sub1(yes, Xs, Ys, B?) :- ints_sub(Xs?, Ys?, B).
+procedure same_ldoms(Ints?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+same_ldoms([], _, _, _, _, _, yes).
+same_ldoms([P|Ps], Rs1, B1, Rs2, B2, Rf, S?) :- ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?), integer(P?) |
+    reqs_at(Rs1?, B1?, P?, Rf?, R1),
+    reqs_at(Rs2?, B2?, P?, Rf?, R2),
+    forbs_at(Rs1?, B1?, P?, F1),
+    forbs_at(Rs2?, B2?, P?, F2),
+    ms_same(R1?, R2?, E1),
+    dedup(F1?, F1s),
+    dedup(F2?, F2s),
+    ms_same(F1s?, F2s?, E2),
+    and(E1?, E2?, E),
+    same_ldoms1(E?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, S).
+procedure same_ldoms1(YesNo?, Ints?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+same_ldoms1(no, _, _, _, _, _, _, no).
+same_ldoms1(yes, Ps, Rs1, B1, Rs2, B2, Rf, S?) :- same_ldoms(Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, S).
+procedure(X) ms_same(Stream(X)?, Stream(X)?, YesNo).
+ms_same(X, Y, E?) :- ground(X?), ground(Y?) |
+    ms_diff(X?, Y?, R1),
+    ms_diff(Y?, X?, R2),
+    both_empty(R1?, R2?, E).
+procedure(X) both_empty(Stream(X)?, Stream(X)?, YesNo).
+both_empty([], [], yes).
+both_empty([_|_], _, no).
+both_empty([], [_|_], no).
+
+%% The class of a schema-binding among the schema-bindings Rest of its participants Q and its atoms: those a chain of links joins to it (class_closure(Front, Rest, Q, Rf, Done, Out), as the shared text's grow).
+procedure class_closure(LMates?, LMates?, Ints?, Preds?, LMates?, LMates).
+class_closure([], _, _, _, Done, Done?).
+class_closure([lm(N, Rs, B)|Fs], Rest, Q, Rf, Done, Out?) :- ground(N?), ground(Rs?), ground(B?), ground(Rest?), ground(Q?), ground(Rf?) |
+    split_lm(Rest?, Rs?, B?, Q?, Rf?, New, Keep),
+    app(Fs?, New?, Fs1),
+    class_closure(Fs1?, Keep?, Q?, Rf?, [lm(N?, Rs?, B?)|Done?], Out).
+procedure split_lm(LMates?, RoleSpecs?, Binding?, Ints?, Preds?, LMates, LMates).
+split_lm([], _, _, _, _, [], []).
+split_lm([lm(N2, Rs2, B2)|Ms], Rs, B, Q, Rf, New?, Keep?) :-
+    ground(N2?), ground(Rs2?), ground(B2?), ground(Rs?), ground(B?), ground(Q?), ground(Rf?) |
+    linked_l(Q?, Rs?, B?, Rs2?, B2?, Rf?, L),
+    split_lm(Ms?, Rs?, B?, Q?, Rf?, New1, Keep1),
+    split_lm1(L?, lm(N2?, Rs2?, B2?), New1?, Keep1?, New, Keep).
+procedure split_lm1(YesNo?, LMate?, LMates?, LMates?, LMates, LMates).
+split_lm1(yes, M, New, Keep, [M?|New?], Keep?).
+split_lm1(no, M, New, Keep, New?, [M?|Keep?]).
+%% Two schema-bindings of the same participants and atoms are linked where no atom one requires at a participant the other forbids there.
+procedure linked_l(Ints?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+linked_l([], _, _, _, _, _, yes).
+linked_l([P|Ps], Rs1, B1, Rs2, B2, Rf, L?) :- ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?), integer(P?) |
+    reqs_at(Rs1?, B1?, P?, Rf?, R1),
+    reqs_at(Rs2?, B2?, P?, Rf?, R2),
+    forbs_at(Rs1?, B1?, P?, F1),
+    forbs_at(Rs2?, B2?, P?, F2),
+    meets(R1?, F2?, C1),
+    meets(R2?, F1?, C2),
+    or(C1?, C2?, C),
+    linked_l1(C?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
+procedure linked_l1(YesNo?, Ints?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+linked_l1(yes, _, _, _, _, _, _, no).
+linked_l1(no, Ps, Rs1, B1, Rs2, B2, Rf, L?) :- linked_l(Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
+
+%% The schema-bindings of the schemas of the contract onto the participants and atoms Pt: each schema's roles sent onto its participants, every participant some role's, the variables bound by matching the atoms each participant's roles delete and add with Pt's, and each kept where it is a binding (Definition "Binding", rule_ok and admissible), its participants and atoms are Pt's and it determines a transaction.
+procedure mates_onto(Contract?, Deltas?, Preds?, LMates).
+mates_onto([], _, _, []).
+mates_onto([schema(Nm, _, Rs)|Ss], Pt, Rf, M?) :- ground(Nm?), ground(Rs?), ground(Pt?), ground(Rf?) |
+    deltas_people(Pt?, Q),
+    rs_count(Rs?, K),
+    role_assigns(1, K?, Q?, [[]], As),
+    lmates_assigns(As?, Nm?, Rs?, Pt?, Rf?, M1),
+    mates_onto(Ss?, Pt?, Rf?, M2),
+    app(M1?, M2?, M).
+mates_onto([cschema(_, _, _, _)|Ss], Pt, Rf, M?) :- mates_onto(Ss?, Pt?, Rf?, M).
+procedure role_assigns(Integer?, Integer?, Ints?, Bindings?, Bindings).
+role_assigns(I, K, _, Acc, Acc?) :- I? > K? | true.
+role_assigns(I, K, Q, Acc, R?) :- I? =< K?, ground(Q?) |
+    assign_role(Acc?, I?, Q?, Acc1),
+    I1 := I? + 1,
+    role_assigns(I1?, K?, Q?, Acc1?, R).
+procedure assign_role(Bindings?, Integer?, Ints?, Bindings).
+assign_role([], _, _, []).
+assign_role([B|Bs], I, Q, R?) :- ground(B?), integer(I?), ground(Q?) |
+    assign_one(Q?, I?, B?, R1),
+    assign_role(Bs?, I?, Q?, R2),
+    app(R1?, R2?, R).
+procedure assign_one(Ints?, Integer?, Binding?, Bindings).
+assign_one([], _, _, []).
+assign_one([P|Ps], I, B, [[bnd(role(I?), person(P?))|B?]|R?]) :- ground(B?), integer(I?) |
+    assign_one(Ps?, I?, B?, R).
+procedure lmates_assigns(Bindings?, Constant?, RoleSpecs?, Deltas?, Preds?, LMates).
+lmates_assigns([], _, _, _, _, []).
+lmates_assigns([B|Bs], Nm, Rs, Pt, Rf, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Pt?), ground(Rf?) |
+    deltas_people(Pt?, Q),
+    role_people(Rs?, 1, B?, Ws),
+    ints_sub(Q?, Ws?, Onto),
+    rule_ok(Rs?, B?, Ok),
+    and(Onto?, Ok?, Go),
+    lmates_assign(Go?, B?, Nm?, Rs?, Pt?, Rf?, M1),
+    lmates_assigns(Bs?, Nm?, Rs?, Pt?, Rf?, M2),
+    app(M1?, M2?, M).
+procedure lmates_assign(YesNo?, Binding?, Constant?, RoleSpecs?, Deltas?, Preds?, LMates).
+lmates_assign(no, _, _, _, _, _, []).
+lmates_assign(yes, B, Nm, Rs, Pt, Rf, M?) :- ground(Rs?), ground(Pt?) |
+    match_deltas_l(Pt?, Rs?, [B?], Bs),
+    lmates_check(Bs?, Nm?, Rs?, Pt?, Rf?, M).
+procedure match_deltas_l(Deltas?, RoleSpecs?, Bindings?, Bindings).
+match_deltas_l([], _, Bs, Bs?).
+match_deltas_l([delta(P, D, A)|Ps], Rs, Bs, R?) :- ground(D?), ground(A?), ground(Rs?), integer(P?) |
+    match_delta_l(Bs?, P?, D?, A?, Rs?, Bs1),
+    match_deltas_l(Ps?, Rs?, Bs1?, R).
+procedure match_delta_l(Bindings?, Integer?, GAs?, GAs?, RoleSpecs?, Bindings).
+match_delta_l([], _, _, _, _, []).
+match_delta_l([B|Bs], P, D, A, Rs, R?) :- ground(B?), integer(P?), ground(D?), ground(A?), ground(Rs?) |
+    specs_at(Rs?, 1, B?, P?, RsP1),
+    specs_at(Rs?, 1, B?, P?, RsP2),
+    rs_dels(RsP1?, Dp),
+    rs_adds(RsP2?, Ap),
+    match_into_all(Dp?, D?, B?, B1),
+    match_each(B1?, Ap?, A?, B2),
+    match_delta_l(Bs?, P?, D?, A?, Rs?, R2),
+    app(B2?, R2?, R).
+procedure rs_dels(RoleSpecs?, Atoms).
+rs_dels([], []).
+rs_dels([R|Rs], A?) :- ground(R?) | rs_lists(R?, _, M, _, _), rs_dels(Rs?, A1), app(M?, A1?, A).
+procedure rs_adds(RoleSpecs?, Atoms).
+rs_adds([], []).
+rs_adds([R|Rs], A?) :- ground(R?) | rs_lists(R?, P, _, _, _), rs_adds(Rs?, A1), app(P?, A1?, A).
+procedure lmates_check(Bindings?, Constant?, RoleSpecs?, Deltas?, Preds?, LMates).
+lmates_check([], _, _, _, _, []).
+lmates_check([B|Bs], Nm, Rs, Pt, Rf, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Pt?), ground(Rf?) |
+    sig_of(Rs?, B?, Pt1),
+    deltas_same(Pt?, Pt1?, E1),
+    admissible(Rs?, B?, E2),
+    determines(Pt?, B?, Rs?, Rf?, E3),
+    and(E1?, E2?, E12),
+    and(E12?, E3?, E),
+    keep_lm(E?, lm(Nm?, Rs?, B?), M1),
+    lmates_check(Bs?, Nm?, Rs?, Pt?, Rf?, M2),
+    app(M1?, M2?, M).
+procedure keep_lm(YesNo?, LMate?, LMates).
+keep_lm(yes, M, [M?]).
+keep_lm(no, _, []).
+%% Two signatures of the same participants and, at each, the same atoms deleted and added, as multisets.
+procedure deltas_same(Deltas?, Deltas?, YesNo).
+deltas_same(P1, P2, E?) :- ground(P1?), ground(P2?) |
+    deltas_sub(P1?, P2?, E1),
+    deltas_sub(P2?, P1?, E2),
+    and(E1?, E2?, E).
+procedure deltas_sub(Deltas?, Deltas?, YesNo).
+deltas_sub([], _, yes).
+deltas_sub([delta(P, D, A)|Xs], Ys, E?) :- ground(Ys?), integer(P?) |
+    delta_found(Ys?, P?, F),
+    delta_match(F?, D?, A?, E1),
+    deltas_sub1(E1?, Xs?, Ys?, E).
+procedure deltas_sub1(YesNo?, Deltas?, Deltas?, YesNo).
+deltas_sub1(no, _, _, no).
+deltas_sub1(yes, Xs, Ys, E?) :- deltas_sub(Xs?, Ys?, E).
+procedure delta_found(Deltas?, Integer?, DFound).
+delta_found([], _, dnone).
+delta_found([delta(Q, D, A)|_], P, dfound(D?, A?)) :- Q? =:= P? | true.
+delta_found([_|Ys], P, F?) :- otherwise | delta_found(Ys?, P?, F).
+procedure delta_match(DFound?, GAs?, GAs?, YesNo).
+delta_match(dnone, _, _, no).
+delta_match(dfound(D1, A1), D, A, E?) :-
+    ms_same(D?, D1?, E1),
+    ms_same(A?, A1?, E2),
+    and(E1?, E2?, E).
+
+%% Matching a schema's atoms with a signature's: each atom with some atom of the signature, the bindings extending B under which it is that atom (match_into_all); a role bound to a person, a party variable to a person, a speech-act variable to a speech act, a signed term sgn(y, i) to the speech act bound to y signed by the person in role i, and a name term to the community name it denotes (img_args, the other way).
+procedure match_into_all(Atoms?, GAs?, Binding?, Bindings).
+match_into_all([], _, B, [B?]).
+match_into_all([A|As], Gs, B, R?) :- ground(Gs?) |
+    match_into(A?, Gs?, B?, Bs),
+    match_each(Bs?, As?, Gs?, R).
+procedure match_each(Bindings?, Atoms?, GAs?, Bindings).
+match_each([], _, _, []).
+match_each([B|Bs], As, Gs, R?) :- ground(As?), ground(Gs?) |
+    match_into_all(As?, Gs?, B?, R1),
+    match_each(Bs?, As?, Gs?, R2),
+    app(R1?, R2?, R).
+procedure match_into(Atom?, GAs?, Binding?, Bindings).
+match_into(_, [], _, []).
+match_into(A, [G|Gs], B, R?) :- ground(A?), ground(B?) |
+    match_ga(A?, G?, B?, M),
+    match_into1(M?, A?, Gs?, B?, R).
+procedure match_into1(MRes?, Atom?, GAs?, Binding?, Bindings).
+match_into1(mok(B1), A, Gs, B, [B1?|R?]) :- match_into(A?, Gs?, B?, R).
+match_into1(mno, A, Gs, B, R?) :- match_into(A?, Gs?, B?, R).
+procedure match_ga(Atom?, GA?, Binding?, MRes).
+match_ga(atom(P, As), ga(Q, Vs), B, R?) :- P? =?= Q? | match_vals(As?, Vs?, B?, R).
+match_ga(_, _, _, mno) :- otherwise | true.
+procedure match_vals(Args?, Vals?, Binding?, MRes).
+match_vals([], [], B, mok(B?)).
+match_vals([], [_|_], _, mno).
+match_vals([_|_], [], _, mno).
+match_vals([A|As], [V|Vs], B, R?) :- ground(A?), ground(V?), ground(B?) |
+    match_arg(A?, V?, B?, R1),
+    match_vals1(R1?, As?, Vs?, R).
+procedure match_vals1(MRes?, Args?, Vals?, MRes).
+match_vals1(mno, _, _, mno).
+match_vals1(mok(B), As, Vs, R?) :- match_vals(As?, Vs?, B?, R).
+procedure match_arg(Arg?, Val?, Binding?, MRes).
+match_arg(sgn(Y, I), sp(sp(U, S), P), B, R?) :- ground(U?), ground(B?) |
+    match_arg(svar(Y?), sp(U?, S?), B?, R1),
+    match_then(R1?, role(I?), person(P?), R).
+match_arg(nterm(N), V, B, R?) :- ground(N?), ground(V?), ground(B?) | match_nt(N?, V?, B?, R).
+match_arg(A, V, B, R?) :- otherwise, ground(A?), ground(V?), ground(B?) |
+    lookup(A?, B?, F),
+    kind_fits(A?, V?, K),
+    match_one(F?, K?, A?, V?, B?, R).
+procedure match_then(MRes?, Arg?, Val?, MRes).
+match_then(mno, _, _, mno).
+match_then(mok(B), A, V, R?) :- match_arg(A?, V?, B?, R).
+procedure match_nt(NameTerm?, Val?, Binding?, MRes).
+match_nt(own(I), cn(V), B, R?) :- match_arg(role(I?), V?, B?, R).
+match_nt(own_var(X), cn(V), B, R?) :- match_arg(pvar(X?), V?, B?, R).
+match_nt(ext(N, Y), cdot(C, V), B, R?) :- match_nt(N?, C?, B?, R1), match_then(R1?, svar(Y?), V?, R).
+match_nt(_, _, _, mno) :- otherwise | true.
+procedure match_one(Found?, YesNo?, Arg?, Val?, Binding?, MRes).
+match_one(found(W), _, _, V, B, mok(B?)) :- W? =?= V? | true.
+match_one(found(_), _, _, _, _, mno) :- otherwise | true.
+match_one(unbound, yes, A, V, B, mok([bnd(A?, V?)|B?])).
+match_one(unbound, no, _, _, _, mno).
+procedure kind_fits(Arg?, Val?, YesNo).
+kind_fits(role(_), person(_), yes).
+kind_fits(pvar(_), person(_), yes).
+kind_fits(svar(_), sp(_, _), yes).
+kind_fits(_, _, no) :- otherwise | true.

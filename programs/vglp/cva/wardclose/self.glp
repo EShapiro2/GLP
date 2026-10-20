@@ -1,0 +1,181 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract wardclose
+%% (../contracts.glp, contract_named(wardclose, C): a group whose child leader's
+%% parent closes it, CSSN's child_close(r, p?, r[listed(*, n)] ; n) with no
+%% identity), platform.vglp, which programs/vglp/cva/compile.sh prints from it:
+%% two-phase commit coordinated by the initiating agent; a guarded part with an
+%% opener, which the opener proposes on its guard's request, the attempt naming
+%% the request; wound-wait (vGLP f0acbc1, Section 3.2, "The protocol" and
+%% Definitions "Local Specification, Part, Guard Set, Opener, Request" to
+%% "Deciding"; Section 5.4, "Triggers", "The compilation" and "Act schemas as
+%% local specifications").  It runs four agents, their persons scripted and
+%% paced on their screens (../self.glp), and gives each person's log, the
+%% views and the notices, with gave(K, A) where the person answers an approval
+%% question, and the network's log of the cargoes it carries.
+%%
+%% play_child_close: alice adopts carol, carol asked and answering yes; carol
+%% befriends dave, creates the group named by her and n, speech(utterance(club),
+%% carol), and adds dave to it, dave asked and answering yes each time.  alice,
+%% carol's parent, requests child_close(carol, alice, n), the request name of
+%% child_close, whose parts have the opener carol: her machine takes the
+%% Request of rho_N to carol's, request(rho(child_close(carol, alice, n)), K),
+%% her approval.  carol's machine holds it and, on an own trigger, completes
+%% the list from its listed atoms and proposes child_close(carol, alice,
+%% [carol, dave], n), naming the request; alice's machine votes yes on it,
+%% unasked, the request it names pending at her.  dave votes yes and holds the
+%% close prepared; bob, who knows dave, proposes befriending him, an attempt of
+%% rank 2, which has priority over the close; dave holds bob's start waiting,
+%% blocked by the close, and asks carol to yield, Wound; carol, not every yes
+%% recorded, aborts the close, the outcome yield.  The yield ends no approval:
+%% dave, his lock released, is asked on bob's befriend and answers yes, it
+%% commits, and carol's machine proposes the close again on the request it still
+%% holds, keeping the wounded rank, with no question to anyone; alice's machine
+%% votes yes again, unasked, dave's too, and it commits at all three, carol's
+%% Commit introducing alice and dave to each other.  alice's person acted once,
+%% the request, and is never asked (vGLP #18 Cowork to Code, 2026-10-20 10:44
+%% UTC, item 6).
+%%
+%% The network holds three messages, each until another passes: alice's
+%% request to carol until carol's commit of dave's join reaches dave, so that
+%% the group has a member besides carol when she proposes the close; bob's
+%% start to dave until dave's yes on the close, so that dave holds the close
+%% prepared when it arrives; and alice's vote on the first close until dave's
+%% yield, so that carol has not every yes when the yield arrives.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Speech   ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+Class    ::= befriend(Peer, Peer) ; adopt(Peer, Peer) ; create(Peer, Speech)
+           ; join(Peer, Peer, Speech) ; child_close(Peer, Peer, List(Peer), Speech).
+Proposal ::= befriend(Peer, Peer) ; adopt(Peer, Peer) ; create(Peer, Speech)
+           ; join(Peer, Peer, Speech) ; child_close(Peer, Peer, Speech).
+Request  ::= propose(Proposal) ; known(Peer).
+YesNo    ::= yes ; no.
+Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Atom     ::= friend(Peer) ; parenting(Peer) ; parent(Peer) ; member(Peer, Speech)
+           ; listed(Peer, Speech) ; closed(Speech).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
+Approval ::= approval(Attempt, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_child_close(Stream(_), Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+play_child_close(LA?, LB?, LC?, LD?, N?) :-
+    quartet([req(known(carol)), wait(known(carol)),
+             own([A1], propose(adopt(A1?, carol))),
+             wait(holds(parenting(carol))),
+             own([A2], propose(child_close(carol, A2?, speech(utterance(club), carol))))],
+            [req(known(dave)), wait(known(dave)),
+             own([B1], propose(befriend(B1?, dave)))],
+            [req(known(alice)), wait(known(alice)),
+             approval(adopt(alice, carol), yes),
+             wait(holds(parent(alice))),
+             req(known(dave)), wait(known(dave)),
+             own([C1], propose(befriend(C1?, dave))),
+             wait(holds(friend(dave))),
+             own([C2, C3], propose(create(C2?, speech(utterance(club), C3?)))),
+             wait(holds(member(carol, speech(utterance(club), carol)))),
+             own([C4, C5], propose(join(C4?, dave, speech(utterance(club), C5?))))],
+            [req(known(carol)), wait(known(carol)),
+             approval(befriend(carol, dave), yes),
+             approval(join(carol, dave, speech(utterance(club), carol)), yes),
+             wait(holds(member(carol, speech(utterance(club), carol)))),
+             req(known(bob)), wait(known(bob)),
+             approval(befriend(bob, dave), yes)],
+            LA, LB, LC, LD, N).
+
+%% alice, bob, carol and dave, each with its dispatcher and scripted person,
+%% their networks joined through the reordering below.
+procedure quartet(Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_),
+    Stream(_), Stream(_), Stream(Sent(Cargo))).
+quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    platform # agent(dave, InD?, OutD, TD, AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), MD),
+    to_person(MD?, TD?),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    merge(OutA?, OutB?, Net1),
+    merge(OutC?, OutD?, Net2),
+    merge(Net1?, Net2?, Net),
+    reorder(Net?, s(open, open, open), Net3),
+    route4(Net3?, alice, InA, bob, InB, carol, InC, dave, InD, N).
+
+%% reorder(In?, Slots?, Out): each message passed on, but one held by a rule
+%% whose slot is open, kept in the slot until a message releasing the rule
+%% passes, and then passed on after it.
+Slot  ::= open ; held(Net) ; passed.
+Slots ::= s(Slot, Slot, Slot).
+procedure reorder(Stream(Net)?, Slots?, Stream(Net)).
+reorder([M|Ms], Ss, Out?) :- ground(M?), ground(Ss?) |
+    hold_rule(M?, H),
+    slot_of(H?, Ss?, S),
+    reorder1(S?, H?, M?, Ms?, Ss?, Out).
+reorder([], _, []).
+procedure reorder1(Slot?, Integer?, Net?, Stream(Net)?, Slots?, Stream(Net)).
+reorder1(open, H, M, Ms, Ss, Out?) :- H? > 0 |
+    set_slot(H?, Ss?, held(M?), Ss1),
+    reorder(Ms?, Ss1?, Out).
+reorder1(_, _, M, Ms, Ss, [M?|Out?]) :- otherwise, ground(M?) |
+    rel_rule(M?, R),
+    released(R?, Ss?, Ms?, Ms1, Ss1),
+    reorder(Ms1?, Ss1?, Out).
+procedure released(Integer?, Slots?, Stream(Net)?, Stream(Net), Slots).
+released(0, Ss, Ms, Ms?, Ss?).
+released(R, Ss, Ms, Ms1?, Ss1?) :- R? > 0, ground(Ss?) |
+    slot_of(R?, Ss?, S),
+    set_slot(R?, Ss?, passed, Ss1),
+    released1(S?, Ms?, Ms1).
+procedure released1(Slot?, Stream(Net)?, Stream(Net)).
+released1(held(H), Ms, [H?|Ms?]).
+released1(open, Ms, Ms?).
+released1(passed, Ms, Ms?).
+procedure hold_rule(Net?, Integer).
+hold_rule(msg(carol, cargo(alice, request(_, _))), 1).
+hold_rule(msg(dave, cargo(bob, start(attempt(_, _, _, befriend(bob, dave), _)))), 2).
+hold_rule(msg(carol, cargo(alice, vote(attempt(_, _, _, child_close(_, _, _, _), _), _))), 3).
+hold_rule(_, 0) :- otherwise | true.
+procedure rel_rule(Net?, Integer).
+rel_rule(msg(dave, cargo(carol, outcome(attempt(_, _, _, join(_, _, _), _), commit))), 1).
+rel_rule(msg(carol, cargo(dave, vote(attempt(_, _, _, child_close(_, _, _, _), _), yes))), 2).
+rel_rule(msg(carol, cargo(dave, yield(_))), 3).
+rel_rule(_, 0) :- otherwise | true.
+procedure slot_of(Integer?, Slots?, Slot).
+slot_of(0, _, passed).
+slot_of(1, s(S, _, _), S?).
+slot_of(2, s(_, S, _), S?).
+slot_of(3, s(_, _, S), S?).
+procedure set_slot(Integer?, Slots?, Slot?, Slots).
+set_slot(1, s(_, B, C), S, s(S?, B?, C?)).
+set_slot(2, s(A, _, C), S, s(A?, S?, C?)).
+set_slot(3, s(A, B, _), S, s(A?, B?, S?)).
