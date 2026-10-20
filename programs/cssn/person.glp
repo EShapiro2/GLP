@@ -165,27 +165,33 @@ script(eve, [req(known(bob)), req(known(grace)),
              own([E3], propose(leave(carol, E3?, speech(utterance(kids_chat), carol)))), wait(lacks(member(dot(community(carol), speech(utterance(kids_chat), carol))))),
              wait(lacks(child)),
              own([E4], propose(befriend(E4?, frank))), wait(holds(friend(frank)))]).
-%% The scenario of the app, CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app", in which each run has one live person and the other three are scripted (glp_multiagent/test/apps_screens_test.dart): the roles fig_alice, fig_bob, fig_carol and fig_dave, each the script of that person in every run in which they are scripted.  Carol enters with Alice (enter(p?, r?)), and Dave with Bob; Alice and Bob befriend (GSG:2), Alice proposing; Alice requests that Carol and Dave befriend, naming Bob, and Bob, Carol and Dave approve (child_befriend(r?, s?, p?, q?)); Carol ends the friendship with Dave (GSG:3; unfriend(p?, q)); and Bob declares Dave of age (CSSN:3; of_age(p?, r)), which is Bob's at his phone only, since Bob's state does not change when Carol ends the friendship and a scripted Bob does not look at Dave's phone.
+%% The scenario of the app, CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app", in which each run has one live person and the other three are scripted (glp_multiagent/test/apps_screens_test.dart): the roles fig_alice, fig_bob, fig_carol and fig_dave, each the script of that person in every run in which they are scripted.  Carol enters with Alice (enter(p?, r?)), and Dave with Bob; Alice and Bob meet (GKK:2; meet(p?, q?)) and befriend (GSG:1), Alice proposing; Alice requests that Carol and Dave meet, naming Bob, and Bob, Carol and Dave approve (CSSN:2; child_meet_2(r?, s?, p?, q?)); Alice, looking at Carol's phone until it shows that Carol knows Dave, requests that they befriend, naming Bob, and Bob, Carol and Dave approve (CSSN:3; child_befriend(r?, s?, p?, q?)); Carol ends the friendship with Dave (GSG:2; unfriend(p?, q)); and Bob declares Dave of age (CSSN:4; of_age(p?, r)), which is Bob's at his phone only, since Bob's state does not change when Carol ends the friendship and a scripted Bob does not look at Dave's phone.  The scenario of CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 3.  A scripted Alice is the village's person, village_person/5, looking at Carol's phone, which the harness hands her (self.glp).
 script(fig_alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
                    req(known(carol)), wait(known(carol)),
                    own([A2], propose(enter(A2?, carol))), wait(holds(parenting(carol))),
                    req(known(bob)), wait(known(bob)),
-                   own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
+                   own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
+                   own([A4], propose(befriend(A4?, bob))), wait(holds(friend(bob))),
                    wait(known(dave)),
-                   own([A4], propose(child_befriend(carol, dave, A4?, bob)))]).
+                   own([A5], propose(child_meet_2(carol, dave, A5?, bob))), at(carol, holds(knows(dave))),
+                   own([A6], propose(child_befriend(carol, dave, A6?, bob)))]).
 script(fig_bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
                  req(known(dave)), wait(known(dave)),
                  own([B2], propose(enter(B2?, dave))), wait(holds(parenting(dave))),
                  req(known(alice)),
+                 approval(meet(alice, bob), yes),
                  approval(befriend(alice, bob), yes),
+                 approval(child_meet_2(carol, dave, alice, bob), yes),
                  approval(child_befriend(carol, dave, alice, bob), yes)]).
 script(fig_carol, [req(known(alice)),
                    approval(enter(alice, carol), yes),
+                   approval(child_meet_2(carol, dave, alice, bob), yes),
                    approval(child_befriend(carol, dave, alice, bob), yes),
                    wait(holds(friend(dave))), wait(known(dave)),
                    own([C1], propose(unfriend(C1?, dave)))]).
 script(fig_dave, [req(known(bob)),
                   approval(enter(bob, dave), yes),
+                  approval(child_meet_2(carol, dave, alice, bob), yes),
                   approval(child_befriend(carol, dave, alice, bob), yes)]).
 script(_, []) :- otherwise | true.
 

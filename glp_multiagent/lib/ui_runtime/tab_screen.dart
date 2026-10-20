@@ -8,7 +8,7 @@
 ///
 /// Where the request question is open, construct 0 is not drawn a second time: `social_menu` is drawn with the last value drawn on construct 0 ("A declared widget is drawn also with the last value drawn on construct 0, and is drawn again when that value changes, so that a request form can show the state the program last wrote to its person", vGLP e924f73, Section 6.2) and draws that view in the tab, with the request's controls in it, so what construct 0 shows is on the screen.  A construct 0 not drawn by `last_state` is drawn in Friends, by its widget, where no request question is open.
 ///
-/// The screen holds the chat open in Friends, opened by tapping a friend and closed by its back arrow, across the request questions the agent asks one after another, so that a chat stays open as its messages are sent.  It holds, in CSSN's app, the line of each request the person composed and sent (named_widgets.dart, `_composers`), drawn on every later request question.  It holds the person's own key, which each request question shows (vGLP, Section 5.4, "The compilation": the request question "shows the agent's own key and the persons it knows"), so that construct 0, drawn by `last_state` where no request question is open, draws a group the person leads with its members, as `social_menu` does.  It holds also, across them, the message of each Send in GSNP's chat, proposed on a later request question than the sign that precedes it, and the friend each item the person authored was sent to, in whose chat it is drawn (named_widgets.dart, `_chat`); in GAI's app, the creation of each AI agent, its enter proposed on a later request question than the sign of its code, and what the person typed into the form Create an AI agent (named_widgets.dart, `_create`).
+/// The screen holds the chat open in Friends, opened by tapping a friend and closed by its back arrow, across the request questions the agent asks one after another, so that a chat stays open as its messages are sent.  It holds, in CSSN's app, the line of each request the person composed and sent (named_widgets.dart, `_composers`), drawn on every later request question, and the class of each attempt the person approved, from which a parent names their child's groups (named_widgets.dart, `_childGroupComposers`).  It holds the person's own key, which each request question shows (vGLP, Section 5.4, "The compilation": the request question "shows the agent's own key and the persons it knows"), so that construct 0, drawn by `last_state` where no request question is open, draws a group the person leads with its members, as `social_menu` does.  It holds also, across them, the message of each Send in GSNP's chat, proposed on a later request question than the sign that precedes it, and the friend each item the person authored was sent to, in whose chat it is drawn (named_widgets.dart, `_chat`); in GAI's app, the creation of each AI agent, its enter proposed on a later request question than the sign of its code, and what the person typed into the form Create an AI agent (named_widgets.dart, `_create`).
 library;
 
 import 'package:flutter/foundation.dart' show setEquals;
@@ -81,6 +81,9 @@ class TabPlace extends InheritedWidget {
   /// Hold the line [line] of a request of the kind [kind] the person sent.
   final void Function(String kind, String line)? addSent;
 
+  /// The classes of the attempts the person approved, answering yes, in the order approved, each as its attempt names it: in CSSN's app a parent's state holds nothing of their child's groups (CSSN, Section 4), so the groups a parent names in ending a child's membership or closing a child's group are those of their own approvals of the child's joining (named_widgets.dart, `_childGroupComposers`).
+  final List<GTerm> approved;
+
   /// The AI agents an open approval question names as AI agents, by their terms as written: `R` of `agent_befriend(R, Q, P, Y)`, and `R` and `S` of `agents_befriend(R, S, P, Q, Y, Z)` (programs/gai/GAI.glp), so that their rows offer no Befriend, `befriend` forbidding `agent` at both parties, before the person's view records them.
   final Set<String> agentsAsked;
 
@@ -103,6 +106,7 @@ class TabPlace extends InheritedWidget {
     this.field,
     this.sent = const [],
     this.addSent,
+    this.approved = const [],
     this.agentsAsked = const {},
     this.version = 0,
     required super.child,
@@ -218,7 +222,10 @@ class _TabScreenState extends State<TabScreen> {
   /// The requests the person composed and sent ([TabPlace.sent]).
   final List<(String, String)> _sentLines = [];
 
-  /// The count of changes to [_held], [_sent], [_heldEnters] and [_sentLines].
+  /// The classes of the attempts the person approved ([TabPlace.approved]).
+  final List<GTerm> _approved = [];
+
+  /// The count of changes to [_held], [_sent], [_heldEnters], [_sentLines] and [_approved].
   int _version = 0;
 
   @override
@@ -352,7 +359,19 @@ class _TabScreenState extends State<TabScreen> {
           family: widget.family,
           output: output,
           card: card,
-          grant: (path, raw) => widget.grant(c.id, path, raw),
+          grant: (path, raw) {
+            // An approval answered yes: its attempt's class is held.
+            if (_isApproval(c) && formatTerm(raw) == 'yes') {
+              final (af, xs) = ctorArgs(ctorArgs(c.view).$2[0]);
+              if (af == 'attempt' && xs.length == 5) {
+                setState(() {
+                  _approved.add(xs[3]);
+                  _version++;
+                });
+              }
+            }
+            widget.grant(c.id, path, raw);
+          },
         );
 
     Widget tab(ScreenTab t) => TabPlace(
@@ -370,6 +389,7 @@ class _TabScreenState extends State<TabScreen> {
           field: _field,
           sent: List.unmodifiable(_sentLines),
           addSent: _addSent,
+          approved: List.unmodifiable(_approved),
           agentsAsked: {
             for (final a in approvals)
               if (_open(a)) ..._agentsNamed(a)
