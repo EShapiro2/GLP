@@ -4,6 +4,7 @@ import 'dart:io' show InternetAddress, RawDatagramSocket;
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:redux/redux.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
@@ -42,6 +43,9 @@ void main() {
   });
 
   setUp(() {
+    // The layer keeps its fair-delivery queue in the application's
+    // SharedPreferences (GNA §2.10); a fresh store for every test.
+    SharedPreferences.setMockInitialValues({});
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(

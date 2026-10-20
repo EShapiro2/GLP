@@ -24,12 +24,14 @@ import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/message_transport.dart';
+import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
 import 'package:grassroots_networking_core/src/routing/message_router.dart';
 import 'package:grassroots_networking_core/src/session/application_identity.dart';
 import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/transport_service.dart';
+import 'store/outbound_queue_preferences.dart';
 
 /// Configuration for Grassroots transport
 class GrassrootsNetworkConfig {
@@ -525,6 +527,38 @@ class GrassrootsNetwork {
   /// [_AckPendingMessage] for the full rationale.
   final Map<String, _AckPendingMessage> _ackPendingMessages = {};
 
+  /// Every message [send] accepted and its recipient has not yet
+  /// acknowledged — those in [_outboundMessageQueue] and those in
+  /// [_ackPendingMessages] — saved before [send] returns and dropped on the
+  /// recipient's ACK, so that the queue survives the termination of the
+  /// application (GNA §2.10).
+  late final PersistentOutboundQueue _persistedQueue;
+
+  /// Read the persisted queue back into [_outboundMessageQueue], each
+  /// message recorded in the store as queued; the heartbeat and each peer's
+  /// completed attestation exchange replay it, as they replay any queued
+  /// message.  [initialize] and [send] wait for it.
+  void _restoreOutboundQueue() {
+    unawaited(_persistedQueue.restored.then((entries) {
+      for (final entry in entries) {
+        final recipientPubkey = _hexToBytes(entry.recipientHex);
+        store.dispatch(MessageSendingAction(
+          messageId: entry.messageId,
+          underlay: Underlay.pan, // Tentative — updated on actual send
+          recipientPubkey: recipientPubkey,
+          payloadSize: entry.payload.length,
+        ));
+        _queueOutboundMessage(
+          recipientPubkey: recipientPubkey,
+          payload: entry.payload,
+          messageId: entry.messageId,
+        );
+      }
+    }, onError: (Object e) {
+      debugPrint('[queue] Could not read the persisted queue: $e');
+    }));
+  }
+
   /// Serialize rendezvous connect/re-announce work so a public-address update
   /// cannot race a save-triggered connect or a signaling-triggered re-register.
   Future<void> _rendezvousTaskQueue = Future.value();
@@ -638,8 +672,11 @@ class GrassrootsNetwork {
   /// connects to over the WAN (may be empty), the platform attestation or
   /// none, and the platform geofencing or none.  A server's listen port and
   /// static public address are the headless profile's alone (GNA, 2026-10-11,
-  /// Q4).  The Redux [store], [sodium] and the host-address reader are
-  /// implementation arguments.
+  /// Q4).  The Redux [store], [sodium], the host-address reader and the
+  /// store of the fair-delivery queue are implementation arguments; the
+  /// queue's store is the application's SharedPreferences unless another is
+  /// given ([SharedPreferencesOutboundQueueStore]), and the queue persisted
+  /// there for [identity] is read back and replayed (GNA §2.10).
   ///
   /// To change the underlays or the rendezvous servers, an embedding disposes
   /// the layer and instantiates another; there are no toggles and no call that
@@ -654,6 +691,7 @@ class GrassrootsNetwork {
     required this.sodium,
     this.config = const GrassrootsNetworkConfig(),
     LocalHostAddressReader? localHostAddressReader,
+    OutboundQueueStore? outboundQueueStore,
   })  : underlays = Set.unmodifiable(underlays),
         rendezvousServers = List.unmodifiable(rendezvousServers),
         _readLocalHostAddresses =
@@ -671,6 +709,11 @@ class GrassrootsNetwork {
       fragmentHandler: _fragmentHandler,
     );
     _setupRouterCallbacks();
+    _persistedQueue = PersistentOutboundQueue(
+      store: outboundQueueStore ?? const SharedPreferencesOutboundQueueStore(),
+      ownerHex: _pubkeyToHex(identity.publicKey),
+    );
+    _restoreOutboundQueue();
 
     // Listen to network connectivity changes (WiFi ↔ cellular, etc.)
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
@@ -972,7 +1015,11 @@ class GrassrootsNetwork {
   /// 3. Set up routing
   ///
   /// Call [start] after this to begin scanning/advertising.
+  ///
+  /// The persisted queue is read back first (GNA §2.10); a queue that cannot
+  /// be read is thrown.
   Future<bool> initialize() async {
+    await _persistedQueue.restored;
     if (_initialized) {
       debugPrint('Already initialized');
       return _bleAvailable || _udpAvailable;
@@ -2019,6 +2066,11 @@ class GrassrootsNetwork {
   /// Transport selection: tries BLE first (preferred for nearby peers),
   /// falls back to UDP; a peer reachable over neither is queued for.
   /// Delivery is confirmed by an application-level ACK, not the transport write.
+  ///
+  /// The message is saved in the persisted queue before this returns, and
+  /// dropped from it on the recipient's ACK, so that the queue survives the
+  /// termination of the application (GNA §2.10); a save that fails is
+  /// thrown.
   Future<String?> send(
     Uint8List recipientPubkey,
     Uint8List payload, {
@@ -2032,6 +2084,12 @@ class GrassrootsNetwork {
     // Use provided message ID or generate one. Full UUID required — the
     // MESSAGE payload carries it as a fixed 36-character prefix.
     messageId ??= _uuid.v4();
+
+    await _persistedQueue.add(OutboundQueueEntry(
+      recipientHex: _pubkeyToHex(recipientPubkey),
+      messageId: messageId,
+      payload: payload,
+    ));
 
     // Dispatch sending action (clock icon)
     store.dispatch(
@@ -3442,6 +3500,7 @@ class GrassrootsNetwork {
       debugPrint('ACK received for message $messageId');
       store.dispatch(MessageDeliveredAction(messageId: messageId));
       _clearAckPending(messageId);
+      unawaited(_persistedQueue.remove(messageId));
       _udpMessageSender.handleMessageAck(messageId);
       _bleMessageSender.handleMessageAck(messageId);
     };
@@ -4080,6 +4139,10 @@ class GrassrootsNetwork {
     if (_udpService != null) {
       await _udpService!.dispose();
     }
+
+    // Every save of the queue begun so far, so that a layer instantiated
+    // next with the same store reads the queue as this one left it.
+    await _persistedQueue.flush();
   }
 
   /// Re-dial each rendezvous server with no connection standing (spec
