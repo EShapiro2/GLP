@@ -2364,28 +2364,17 @@ echo ""
 
 CSSN_DIR="$GLP_DIR/programs/cssn"
 
-# The contract's act schemas (CSSN Appendix B.2), programs/cssn/CSSN.glp,
-# in the term form programs/gsc reads, each schema listing its variables in
-# its head (GSC 0228e79): GSC's verdict on it --- an agent-named contract,
-# its groups closed by the listed role of the members the leader lists
-# (CSSN.glp at 4cb1ec11; GSC 8064cfb, Appendix D.4), extending GSN and Wards
-# with no signing (CSSN.glp at fdc27eb3), with traceable provenance and volition, and an introduction with wards in
-# place of an unobstructed introductory act: the verdict syntactically
-# grassroots with wards (GSC, Appendix F, def:sg-wards, at GSC 503db66),
-# befriend the act, child the mark, parent and parenting its guardianship,
-# child_adult_befriend and child_befriend the relay acts, and retired the
-# leaving mark (def:guardianship, def:leaving, def:unobstructed-marks,
-# def:relay, def:introduction-wards; programs/gsc/test_gsc.sh, which checks
-# it by hand).  After GKK (CSSN.glp at 6ff16d78, CSSN #9 Cowork): "The marks
-# are child, its guardianship (child, identity, parent, parenting), its
-# leaving mark retired, the introductory act meet, which adds knows, and the
-# relay acts child_meet and child_meet_2, by which GSC's checker certifies
-# the contract syntactically grassroots with wards" (CSSN.glp), once GSC's
-# checker follows the wards conditions CSSN proposed to GAI and GSC
-# (Code_inbox.md, CSSN #9 Cowork, 2026-10-20 19:44 UTC, item 1).  The
-# platform committed in programs/cssn is what the compiler prints from it
-# (compile.sh --check), whatever the verdict, and the platform of the record
-# of the cascade on CSSN.
+# The contract's act schemas (CSSN Appendix C.2), programs/cssn/CSSN.glp, in
+# the term form programs/gsc reads (CSSN.glp at a261cb74, its comments at
+# 89e11f96, CSSN #9 Cowork): GSC's verdict on it, by the conditions for a
+# contract with wards (GAI ddf0a33, sections/wards.tex; CSSN, Appendix B.4):
+# "The marks are child, its guardianship (child, identity, parent,
+# parenting), its leaving mark retired, the introductory act meet, which
+# adds knows, and the relay acts child_meet and child_meet_2, by which GSC's
+# checker certifies the contract syntactically grassroots with wards"
+# (CSSN.glp), with traceable provenance and volition.  The platform committed
+# in programs/cssn is what the compiler prints from it (compile.sh --check)
+# and the platform of the record of the cascade on CSSN.
 echo "--- CSSN contract, GSC's verdict, the platform ---"
 k_contract=$(bash "$CSSN_DIR/compile.sh" --check 2>&1; echo "exit $?")
 check "CSSN contract: GSC gives a verdict" "verdict: " "$k_contract"
@@ -2458,31 +2447,55 @@ check_not "CSSN village: ... and is not stopped at the limit" "capped" "$k_v"
 check_not "CSSN village: no attempt refused, refused(P, Q, D) the notice (vGLP f0acbc1)" "refused(" "$k_v"
 # CSSN extends GSN, not GSNP (CSSN.md; Udi, 2026-10-20): a message is content received from a friend, received(x, p), or delivered in a group by its leader, received_in(x, a, n), and nobody signs.
 check_not "CSSN village: nobody signs, and no item or authored atom is written (CSSN extends GSN)" "propose(sign(\|item(\|authored(" "$k_v"
-# Act 1, coming into the contract (GSG:1; Wards:1, CSSN:1).
+# Act 1, coming into the contract (GKK:1, GKK:2; GnW:1, CSSN:1): the adults establish their identities and meet, Alice and Bob, Bob and Frank, and Bob and Grace, who then enter Dave and Eve together, an entering with two parents requiring that the two know each other; Carol enters with her parent Alice (CSSN, Section 4.6.3, act 1).
 k_shows "CSSN village act 1: alice, bob, grace and frank establish their identities" F "did(propose(establish(frank)))"
-k_shows "CSSN village act 1: carol enters with her parent alice, at alice" A "view([parenting(carol), friend(carol), identity]"
-k_shows "CSSN village act 1: ... and at carol, her phone answering yes" C "gave(enter(alice, carol), yes), view([identity, parent(alice), child, friend(alice)]"
-k_shows "CSSN village act 1: dave enters with bob and grace" D "view([identity, parent(bob), parent(grace), child, child, coparented, friend(bob), friend(grace)]"
+k_shows "CSSN village act 1: alice and bob meet (GKK:2), alice requesting" A "did(propose(meet(alice, bob)))"
+k_shows "CSSN village act 1: ... and bob approving" B "gave(meet(alice, bob), yes)"
+k_shows "CSSN village act 1: bob and frank meet, frank approving" F "gave(meet(bob, frank), yes)"
+k_shows "CSSN village act 1: bob and grace meet, grace approving" G "gave(meet(bob, grace), yes)"
+k_shows "CSSN village act 1: ... before they enter dave together, the two knowing each other" G "gave(meet(bob, grace), yes), view([knows(bob), identity], [bob, dave, eve]), gave(enter_2(bob, grace, dave), yes)"
+k_shows "CSSN village act 1: carol enters with her parent alice, at alice" A "view([parenting(carol), friend(carol), knows(carol), identity]"
+k_shows "CSSN village act 1: ... and at carol, her phone answering yes" C "gave(enter(alice, carol), yes), view([identity, parent(alice), child, friend(alice), knows(alice)]"
+k_shows "CSSN village act 1: dave enters with bob and grace" D "view([identity, parent(bob), parent(grace), child, child, coparented, friend(bob), friend(grace), knows(bob), knows(grace)]"
 k_shows "CSSN village act 1: ... and eve" E "gave(enter_2(bob, grace, eve), yes)"
 k_shows "CSSN village act 1: grace approves both" G "gave(enter_2(bob, grace, eve), yes)"
-# Act 2, adult friendships (GSG:2) and a direct message (GSN:1).
+# Act 2, adult friendships (GSG:1), a direct message (GSN:1) and the introductions (GKK:3): Bob introduces Frank to Alice, an act of Bob and Alice, and Alice to Frank, an act of Bob and Frank, and Alice befriends Frank (CSSN, Section 4.6.3, act 2).
 k_holds "CSSN village act 2: alice and bob are friends" B "friend(alice)"
-k_holds "CSSN village act 2: bob and frank" F "friend(bob)"
-k_holds "CSSN village act 2: alice and frank" F "friend(alice)"
 k_shows "CSSN village act 2: alice sends bob a message, which he holds as received from her" B "received(speech(utterance('Hello Bob'), alice), alice)"
-# Act 3, child friendships (Wards:2, CSSN:2).
-k_shows "CSSN village act 3: alice proposes carol and dave, naming bob" A "did(propose(child_befriend(carol, dave, alice, bob)))"
+k_holds "CSSN village act 2: bob and frank are friends" F "friend(bob)"
+k_shows "CSSN village act 2: bob introduces frank to alice (GKK:3)" B "did(propose(introduce(bob, alice, frank)))"
+k_shows "CSSN village act 2: ... an act of bob and alice, alice approving" A "gave(introduce(bob, alice, frank), yes)"
+k_holds "CSSN village act 2: ... after which alice knows frank" A "knows(frank)"
+k_shows "CSSN village act 2: bob introduces alice to frank" B "did(propose(introduce(bob, frank, alice)))"
+k_shows "CSSN village act 2: ... an act of bob and frank, frank approving" F "gave(introduce(bob, frank, alice), yes)"
+k_holds "CSSN village act 2: ... after which frank knows alice" F "knows(alice)"
+k_shows "CSSN village act 2: alice befriends frank" A "did(propose(befriend(alice, frank)))"
+k_holds "CSSN village act 2: ... and alice and frank are friends" F "friend(alice)"
+# Act 3, child meetings (GnW:2, CSSN:2; child_meet_2(r?, s?, p?, q?)) and child friendships (GnW:2, CSSN:3; child_befriend(r?, s?, p?, q?)).
+k_shows "CSSN village act 3: alice requests that carol and dave meet, naming bob" A "did(propose(child_meet_2(carol, dave, alice, bob)))"
+k_shows "CSSN village act 3: ... and bob approves" B "gave(child_meet_2(carol, dave, alice, bob), yes)"
+k_shows "CSSN village act 3: ... and carol" C "gave(child_meet_2(carol, dave, alice, bob), yes)"
+k_shows "CSSN village act 3: ... and dave, after which he knows carol" D "gave(child_meet_2(carol, dave, alice, bob), yes), view([knows(carol), "
+k_shows "CSSN village act 3: alice then proposes that carol and dave befriend, naming bob" A "did(propose(child_befriend(carol, dave, alice, bob)))"
 k_shows "CSSN village act 3: ... and bob approves" B "gave(child_befriend(carol, dave, alice, bob), yes)"
-k_shows "CSSN village act 3: the sibling case, bob both parents named" D "gave(child_befriend(dave, eve, bob, bob), yes)"
 k_shows "CSSN village act 3: carol and dave are friends" C "friend(dave)"
-k_holds "CSSN village act 3: ... dave and eve" E "friend(dave)"
-k_holds "CSSN village act 3: ... and carol and eve" E "friend(carol)"
-# Act 4, child-adult friendships.
-k_shows "CSSN village act 4: bob proposes dave and frank" B "did(propose(child_adult_befriend(dave, frank, bob)))"
-k_shows "CSSN village act 4: alice proposes carol and frank" A "did(propose(child_adult_befriend(carol, frank, alice)))"
+k_shows "CSSN village act 3: the sibling case, bob both parents named, dave and eve meeting" D "gave(child_meet_2(dave, eve, bob, bob), yes)"
+k_shows "CSSN village act 3: ... and then befriending" D "gave(child_befriend(dave, eve, bob, bob), yes)"
+k_holds "CSSN village act 3: ... dave and eve are friends" E "friend(dave)"
+k_shows "CSSN village act 3: alice requests that carol and eve meet, naming bob" A "did(propose(child_meet_2(carol, eve, alice, bob)))"
+k_shows "CSSN village act 3: ... then that they befriend" A "did(propose(child_befriend(carol, eve, alice, bob)))"
+k_holds "CSSN village act 3: ... and carol and eve are friends" E "friend(carol)"
+k_never "CSSN village act 3: a parent's state does not change by the child's meeting, alice never knowing dave" A "knows(dave)"
+# Act 4, child-adult meetings (CSSN:2; child_meet(r?, a?, p?)) and friendships (CSSN:3; child_adult_befriend(r?, a?, p?)).
+k_shows "CSSN village act 4: bob requests that dave and frank meet" B "did(propose(child_meet(dave, frank, bob)))"
+k_shows "CSSN village act 4: ... frank approving" F "gave(child_meet(dave, frank, bob), yes)"
+k_shows "CSSN village act 4: ... then that they befriend" B "did(propose(child_adult_befriend(dave, frank, bob)))"
+k_shows "CSSN village act 4: alice requests that carol and frank meet" A "did(propose(child_meet(carol, frank, alice)))"
+k_shows "CSSN village act 4: ... carol approving" C "gave(child_meet(carol, frank, alice), yes)"
+k_shows "CSSN village act 4: ... then that they befriend" A "did(propose(child_adult_befriend(carol, frank, alice)))"
 k_holds "CSSN village act 4: frank and dave are friends" F "friend(dave)"
 k_holds "CSSN village act 4: ... and frank and carol" F "friend(carol)"
-# Act 5, a child leader's group (GSN:2 to GSN:5, Wards:2).
+# Act 5, a child leader's group (GSN:2 to GSN:5, GnW:2, CSSN:6).
 k_shows "CSSN village act 5: carol creates kids_chat" C "member(dot(community(carol), $K_K))"
 k_shows "CSSN village act 5: carol invites dave, alice, bob and dave approving" B "gave(child_join_2(carol, dave, alice, bob, $K_K), yes)"
 k_shows "CSSN village act 5: ... and eve" C "listed(eve, $K_K)"
@@ -2496,7 +2509,7 @@ k_shows "CSSN village act 6: ... and carol, alice approving" A "gave(child_join(
 k_shows "CSSN village act 6: frank's post, delivered to dave" D "received_in(speech(utterance('Welcome to the study group'), frank), frank, $K_S)"
 k_shows "CSSN village act 6: dave's post, delivered to carol by frank" C "received_in(speech(utterance('Hi from Dave!'), dave), frank, $K_S)"
 k_shows "CSSN village act 6: carol's post, delivered to dave by frank" D "received_in(speech(utterance('Hi from Carol!'), carol), frank, $K_S)"
-# Act 7, parents ending (Wards:3).
+# Act 7, parents ending (GnW:3).
 k_shows "CSSN village act 7: grace ends dave's friendship with carol" G "did(propose(child_unfriend(dave, carol, grace)))"
 k_lacks "CSSN village act 7: ... at dave" D "friend(carol)"
 k_lacks "CSSN village act 7: ... and at carol" C "friend(dave)"
@@ -2509,12 +2522,16 @@ k_shows "CSSN village act 7: alice requests that kids_chat be closed, child_clos
 k_holds "CSSN village act 7: ... carol's machine proposes it on alice's request, and kids_chat is closed at carol" C "closed($K_K)"
 k_lacks "CSSN village act 7: ... carol's membership and her listing of herself ended in the one act" C "listed(carol, $K_K)"
 k_never "CSSN village act 7: ... alice's person is never asked on the close, her request her approval" A "gave(child_close"
-# Act 8, coming of age (CSSN:3).
+# Act 8, coming of age (CSSN:4): Eve, an adult, "meets Frank and befriends him, with no parent among the guards" (CSSN, Section 4.6.3, act 8).
 k_shows "CSSN village act 8: grace declares eve of age" G "did(propose(of_age_2(grace, bob, eve)))"
 k_lacks "CSSN village act 8: which ends grace's parenting of eve" G "parenting(eve)"
 k_lacks "CSSN village act 8: ... and bob's" B "parenting(eve)"
 k_lacks "CSSN village act 8: eve is an adult" E "child"
-k_holds "CSSN village act 8: eve befriends frank, with no parent among the guards" E "friend(frank)"
+k_shows "CSSN village act 8: eve meets frank (GKK:2), with no parent among the guards" E "did(propose(meet(eve, frank)))"
+k_shows "CSSN village act 8: ... frank approving" F "gave(meet(eve, frank), yes)"
+k_holds "CSSN village act 8: ... after which eve knows frank" E "knows(frank)"
+k_shows "CSSN village act 8: eve befriends frank" E "did(propose(befriend(eve, frank)))"
+k_holds "CSSN village act 8: ... and eve and frank are friends, with no parent among the guards" E "friend(frank)"
 k_holds "CSSN village act 8: eve and her parents remain friends" E "friend(bob), friend(grace)"
 k_never "CSSN village: a parent's state does not change by the child's acts" A "friend(dave)"
 
