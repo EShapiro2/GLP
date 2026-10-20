@@ -62,9 +62,12 @@ role_bases([RS|Rs], I, [B?|R?]) :- ground(RS?), ground(Rs?), integer(I?) |
     I1 := I? + 1,
     role_bases(Rs?, I1?, R).
 
+% A numeric argument has no base: a number names no agent (GSC, Section 3.2).
 procedure args_bases(Args?, Bases?, Bases).
 args_bases([], T, T?).
-args_bases([A|As], T, [B?|R?]) :- ground(A?), ground(As?), ground(T?) |
+args_bases([num(_)|As], T, R?) :- ground(As?), ground(T?) |
+    args_bases(As?, T?, R).
+args_bases([A|As], T, [B?|R?]) :- otherwise, ground(A?), ground(As?), ground(T?) |
     arg_base(A?, B),
     args_bases(As?, T?, R).
 
@@ -154,6 +157,9 @@ prov_arg1(B, _, RBs, QBs, R?) :- otherwise, ground(B?), ground(RBs?), ground(QBs
 
 procedure prov_c1(Arg?, Base?, Bases?, Bases?, Ans).
 prov_c1(svar(_), _, _, _, yes).
+% A numeric argument names no agent and is outside R, X and Y, so the
+% definition asks nothing of it (GSC, Section 3.2).
+prov_c1(num(_), _, _, _, yes).
 prov_c1(A, RB, RBs, QBs, R?) :-
     otherwise, ground(A?), ground(RB?), ground(RBs?), ground(QBs?) |
     arg_base(A?, B),

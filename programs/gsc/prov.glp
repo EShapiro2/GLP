@@ -75,6 +75,11 @@ args_ok([sgn(X, _)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), gr
     args_ok1(A?, As?, All?, E?, R).
 args_ok([nterm(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
     args_ok(As?, All?, E?, R).
+% A numeric argument is in none of R, X and Y, and names no agent, so the
+% definition asks nothing of it (GSC, Section 3.2: "A number names no agent,
+% so the conditions below do not concern them").
+args_ok([num(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
+    args_ok(As?, All?, E?, R).
 args_ok([pvar(X)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |
     any_req_names(All?, pvar(X?), E?, A),
     args_ok1(A?, As?, All?, E?, R).
