@@ -44,9 +44,9 @@ exported procedure run.
 run :-
     village # villager(alice,
         [mint(5), swap(bob, alice, now, 5, bob, 20, 6),
-         await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
-         await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
-         await(presented(bob, bob, 20)),
+         await(presented(bob, now, bob, 20)), await(presented(bob, now, bob, 20)),
+         await(presented(bob, now, bob, 20)), await(presented(bob, now, bob, 20)),
+         await(presented(bob, now, bob, 20)),
          mint(5), swap(bob, alice, now, 5, bob, 30, 6),
          accept_transfer(escrow)],
         [conversation(bob, ch(AB?, BA)), conversation(escrow, ch(AG?, GA))]),
