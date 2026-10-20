@@ -17,14 +17,15 @@
 # owner writes in its directory, NAME.md, the clauses, and NAME.glp, the act
 # schemas in the term form programs/gsc reads, each in GSC's notation above
 # its term, printed by contract_named(<contract>, C); vGLP keeps the plays with
-# scripted persons for some, in directories that keep their names:
+# scripted persons for some, in directories under programs/vglp/cva/ that keep
+# their names, and an owner keeps them for its own, beside its program:
 #
-#   <contract>  NAME  owner       files in                  plays in programs/vglp/cva/
+#   <contract>  NAME  owner       files in                  plays in
 #   gsg         GSG   GSC         programs/gsc              social_graph
 #   gsn         GSN   GSC         programs/gsc              ---
 #   gsnp        GSNP  GSC         programs/gsc              ---
 #   gc          GC    Currencies  programs/currencies/coins currency
-#   cssn        CSSN  CSSN        programs/cssn             ---
+#   cssn        CSSN  CSSN        programs/cssn             programs/cssn (CSSN's, the village)
 #   gfwc        GFWC  GFWC        programs/federation       ---
 #   gai         GAI   GAI         programs/gai              ---
 #
@@ -52,8 +53,8 @@
 #      simulation of the platform under sGLP is transformed against
 #      (programs/sglp/transform.sh --interface; sGLP's task of 2026-10-18
 #      20:50 UTC, item 1).
-#   6. run.log: the run of the platform with vGLP's scripted persons, the plays
-#      vGLP keeps for it, each play's logs as the REPL prints
+#   6. run.log: the run of the platform with scripted persons, the plays vGLP
+#      or the owner keeps for it, each play's logs as the REPL prints
 #      them; the plays run the platform.vglp committed there, which the run
 #      requires to be the one this script printed.
 # and manifest.md, naming the contract, its owner, the paper's repository and
@@ -79,12 +80,15 @@ NAME="$1"
 MODE="${2:-write}"
 case "$MODE" in write|--check|--record) ;; *) usage ;; esac
 
+PLAYAT=""          # the owner's plays, a directory of the repository, where it keeps them
+PLAYLIMIT=600000   # the reductions the plays' REPL session may take
 case "$NAME" in
     gsg)  FILE=GSG;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
     gsn)  FILE=GSN;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_network" ;;
     gsnp) FILE=GSNP; OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;
     gc)   FILE=GC;   OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
-    cssn) FILE=CSSN; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR="" ;;
+    cssn) FILE=CSSN; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR=""
+          PLAYAT="programs/cssn"; PLAYLIMIT=100000000 ;;
     gfwc) FILE=GFWC; OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC"; PLAYDIR="" ;;
     gai)  FILE=GAI;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
     *) echo "cascade.sh: no contract named $NAME; the names are gsg gsn gsnp gc cssn gfwc gai" >&2; exit 2 ;;
@@ -92,6 +96,7 @@ esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
 PLAYS=""; [ -n "$PLAYDIR" ] && PLAYS="$GLP_DIR/programs/vglp/cva/$PLAYDIR"
+[ -n "$PLAYAT" ] && PLAYS="$GLP_DIR/$PLAYAT"
 for f in "$FILE.md" "$FILE.glp"; do
     [ -f "$SRC/$f" ] || { echo "cascade.sh: $OWNER/$f is missing; the contract is its owner's two files" >&2; exit 2; }
 done
@@ -211,7 +216,7 @@ if [ "$COMPILED" = 1 ]; then
     # 6. The run with scripted persons: the plays vGLP keeps for the contract.
     if [ -n "$PLAYS" ] && [ -d "$PLAYS" ] && [ -f "$PLAYS/self.glp" ]; then
         if ! cmp -s "$OUT/platform.vglp" "$PLAYS/platform.vglp"; then
-            say "the plays' platform.vglp in $PLAYS is not the one printed now; run programs/vglp/cva/compile.sh first"
+            say "the plays' platform.vglp in $PLAYS is not the one printed now; run its compile.sh first (programs/vglp/cva/compile.sh, or the owner's)"
             exit 1
         fi
         # One goal per play the plays export, a fresh variable per argument.
@@ -225,7 +230,7 @@ if [ "$COMPILED" = 1 ]; then
             NOTE+=("run: $PLAYS/self.glp exports no play")
             say "run: no play exported by the plays"
         else
-            { echo "$PLAYS/"; echo ':limit 600000'; printf '%s\n' "$GOALS"; echo ':quit'; } > "$WORK/r.in"
+            { echo "$PLAYS/"; echo ":limit $PLAYLIMIT"; printf '%s\n' "$GOALS"; echo ':quit'; } > "$WORK/r.in"
             repl "$WORK/r.in" "$WORK/r.out"
             # The plays' logs as the REPL prints them, less the limit's acknowledgement;
             # an unbound tail is printed as the heap's variable name, X<n>, which is

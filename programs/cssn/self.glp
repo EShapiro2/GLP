@@ -1,674 +1,85 @@
-%% self.glp --- the child-safe social network: the types and helpers shared by
-%% the certified program (childsafe/) and the plays of this directory.
+%% ---------------------------------------------------------------------------
+%% programs/cssn --- the child-safe social network (CSSN, Section 5): its program is the canonical CVA platform of its contract, CSSN.glp (Appendix B.2), compiled by vGLP's compiler with friend its introduction predicate (CSSN, Section 5.1, "The program"; vGLP, Section 5.4, "The compilation" and "Act schemas as local specifications"), platform.vglp, which compile.sh prints and the canonical compilation compiles to GLP when the directory loads; the mini-app entry miniapp/4 that wraps it (miniapp.glp, the same file as programs/apps/gsg/miniapp.glp); its scripted person (person.glp); and the plays, the village of Section 5.3 (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it.  The person's questions are drawn by the default widgets of their interactive types (CSSN, Section 5.2): this directory declares no widget.
 %%
-%% The program (CSSN paper, Section 6) is three agents, adult, parent and
-%% child (childsafe/adult.vglp, parent.vglp, child.vglp), three vGLP modules
-%% whose states exclude one another and which hand a party over to each other
-%% --- an adult to the parent module when a child enters with it, a parent back
-%% when its last child is declared of age, a child to the adult module when it
-%% is declared of age --- with the cards they share (childsafe/self.vglp) and
-%% the mini-app's entries (childsafe/miniapp.glp).  This directory adds a
-%% scripted person (person.glp), the stand-in for the super-app
-%% (superapp.glp) and the plays (plays.glp), the village of Section 6.3 among
-%% them.
+%% CSSN.md and CSSN.glp, the contract's clauses and act schemas, are CSSN's Cowork's text (claude.md, "Sessions"); CSSN.glp is a module of this program, its types its own and none of its procedures exported.
 %%
-%% A party's records, the components of its local state (CSSN, Section 3), are
-%% its channels and its state: the friend set c_p is the friend_output entries
-%% of its outputs, the parents rho_p the parent_output entries --- and the
-%% child agent's list of its parents --- and the children kappa_p the
-%% child_output entries, with the parent agent's list of them and their
-%% co-parents (gamma_p); the groups mu_p it is a member of are its group
-%% entries, and the member list lambda_p^g of a group it leads its group_member
-%% entries.  What no channel stands for is the state: the items h_p it holds,
-%% and, at the leader of a group, the posts pi_p^g it holds and its record
-%% delta_p^g of what it has delivered to whom.  A parent's state does not
-%% change by its child's acts.
-
-%% =============================================================================
-%% THE PERSON'S REQUESTS --- the agents' question, Stream(Request)? (Section 6.1)
-%% =============================================================================
-
-%% The fields, each a named type over its base type, named for what it is, so
-%% that the default widget labels the field by it.
-MyChild      ::= Key.
-Friend       ::= Key.
-FriendsChild ::= Key.
-Parent       ::= Key.
-Child        ::= Key.
-OtherChild   ::= Key.
-Member       ::= Key.
-Leader       ::= Key.
-Name         ::= Constant.
-Text         ::= Constant.
-
-%% A group is named by its leader and the name the leader gave it (GSN:2).
-GroupId ::= group_id(Leader, Name).
-
-%% An item is a speech act: content, an utterance or an item, signed by an
-%% agent (CSSN, Appendix B.1).  Its author signs it (sign), and every agent
-%% that forwards it, the member who posts it to a group and the leader who
-%% delivers it sign it again, the earlier signatures inside (forward, post,
-%% deliver).
-Item    ::= sgn(Content, Key).
-Content ::= Constant ; Item.
-
-%% One alternative per request clause of the agents: introducing a child of
-%% one's own to a child of a friend, or to another child of one's own when the
-%% friend named is oneself; declaring a child of one's own of age, a parent's
-%% act alone; signing content of one's own, and forwarding an item one holds
-%% to a friend; ending a friendship, one's own or a child's; and the group
-%% acts, a post being of an item one holds.
-Request ::= introduce(MyChild, Friend, FriendsChild)
-          ; declare_of_age(MyChild)
-          ; sign(Text)
-          ; forward(Friend, Item)
-          ; unfriend(Friend)
-          ; unfriend_child(MyChild, Friend)
-          ; create_group(Name)
-          ; invite(Name, Friend)
-          ; invite_child(Name, FriendsChild, Friend)
-          ; post(GroupId, Item)
-          ; leave(GroupId)
-          ; leave_child(MyChild, GroupId).
-
-%% =============================================================================
-%% THE CARDS (childsafe/self.vglp) --- each shows what the program writes and
-%% takes yes or no
-%% =============================================================================
-
-YesNo ::= yes ; no.
-
-%% Child befriending (Section 6.1): the introduction as the introducing parent
-%% made it --- that parent, its child, the other child --- approved by the
-%% other parent and accepted by each child.
-Intro ::= intro(Parent, Child, OtherChild).
-Card  ::= card(Intro, YesNo?).
-
-%% Joining a group: the card at the party invited.
-GroupOffer ::= group(GroupId).
-GroupCard  ::= card(GroupOffer, YesNo?).
-
-%% A parent's approval of a child of its own joining a group.
-JoinOffer ::= join(GroupId, Child).
-JoinCard  ::= card(JoinOffer, YesNo?).
-
-%% A parent's approval of a child of its own, the leader of a group, inviting
-%% a member into it.
-InviteOffer ::= invite(GroupId, Member).
-InviteCard  ::= card(InviteOffer, YesNo?).
-
-%% =============================================================================
-%% WHAT THE AGENTS SAY TO ONE ANOTHER
-%% =============================================================================
-
-%% The befriending's consents (GSG paper, Section 5.1; the routing of
-%% social/graph/routing, generic in the friend channel's type): each child
-%% consents by binding a variable the other reads.  The child whose name sorts
-%% first proposes, its consent carrying the conveyance it will write; the
-%% other accepts, yes or no.  A position marked ? is written by the term's
-%% receiver.
-Conveyance(F)      ::= friend(F) ; already_friends ; declined.
-ProposerConsent(F) ::= yes(Conveyance(F)) ; no.
-AcceptorConsent    ::= yes ; no.
-
-%% What a child holds of an introduction, by its role: its own consent, to
-%% write, and the other child's, to read.
-Consents ::= propose(ProposerConsent(FriendChannel)?, AcceptorConsent)
-           ; accept(AcceptorConsent?, ProposerConsent(FriendChannel)).
-
-%% A group invitation is answered by the invitee's yes, carrying the writer of
-%% the member's end of the group channel, which the leader binds.
-GroupReply ::= yes(GroupChannel?) ; no.
-
-%% A message on a friend channel, a conversation, a parent-child channel or a
-%% group's: an item forwarded, signed by its sender, and the rest.
-FriendContent ::= item(Item)
-                ; unfriend
-                ; child_intro(Intro, Consents)
-                ; of_age
-                ; of_age_notice
-                ; unfriend_child(Friend)
-                ; group_invite(GroupId, GroupReply?)
-                ; group_invite_child(GroupId, Child, GroupReply?)
-                ; group_consent_req(GroupId, YesNo?)
-                ; invite_consent_req(GroupId, Member, YesNo?)
-                ; leave_group(GroupId)
-                ; group_msg(GroupId, Item)
-                ; group_leave(GroupId, Key).
-FriendMsg     ::= msg(Key, Key, FriendContent).
-FriendChannel ::= ch(Stream(FriendMsg), Stream(FriendMsg)?).
-
-%% A group's channel carries its own messages, which the agent reads with the
-%% rest of its input: a member's post to the leader and the leader's delivery
-%% to a member, each an item signed by its sender, and a member's leaving.
-GroupContent ::= group_msg(GroupId, Item)
-               ; group_leave(GroupId, Key).
-GroupMsg     ::= msg(Key, Key, GroupContent).
-GroupChannel ::= ch(Stream(GroupMsg), Stream(GroupMsg)?).
-
-%% What the social graph hands the mini-app on its channel to the social graph
-%% (GSG paper, Section 3): at each invitation, one end of the root channel of
-%% a conversation with a friend's execution of this program.  Adopting it is
-%% an adult's befriending; a child refuses it.  And, at the setup of a child's
-%% phone (Appendix C.3, Enter), the parent's end of the parent-child channel,
-%% with the child's other parent where it has two.
-Conversation ::= conversation(Key, FriendChannel)
-               ; entered(Child, FriendChannel, Stream(Parent)).
-
-%% The parents a child enters with, each with the child's end of its
-%% parent-child channel.
-ParentEnd  ::= parent(Parent, FriendChannel).
-ParentEnds ::= [] ; [ParentEnd | ParentEnds].
-
-%% A parent's children, each with its co-parents (kappa_p and gamma_p).
-Kid  ::= kid(Child, Stream(Parent)).
-Kids ::= [] ; [Kid | Kids].
-
-%% =============================================================================
-%% THE AGENT'S OWN INPUT AND ITS RECORDS
-%% =============================================================================
-
-%% A befriending's outcome, as the routing's awaits write it.
-BefriendOutcome ::= consented(Key, Conveyance(FriendChannel)?)
-                  ; adopt(Key, FriendChannel)
-                  ; declined(Key).
-
-%% What the agent's cards and awaits hand it: a child befriending's outcome;
-%% an introduction the person approved for a child of its own, to forward; a
-%% group invitation's reply, at the leader; a group joined; a group invitation
-%% a parent approved for its child, to forward; a parent's consent to a child
-%% leader's invitation, which the child then sends.
-AgentIn ::= outcome(BefriendOutcome)
-          ; forward_intro(Child, Intro, Consents)
-          ; group_reply(GroupId, Member, GroupReply)
-          ; group_joined(GroupId, GroupChannel)
-          ; forward_group(Child, GroupId, GroupReply?)
-          ; invite_now(GroupId, Member).
-
-%% The agent's state: the items it holds, h_p; and, as the leader of a group,
-%% the posts it holds, pi_p^g, in the order they were posted, and its record
-%% of what it has delivered to whom, delta_p^g.
-GroupPost  ::= post(GroupId, Item).
-Delivery   ::= delivered(GroupId, Item, Key).
-AgentState ::= state(Stream(Item), Stream(GroupPost), Stream(Delivery)).
-
-%% =============================================================================
-%% THE SCREEN --- the program's output to its person, Output (vGLP, Definition
-%% "Canonical Compilation": the reserved name, drawn as the thread of
-%% construct 0)
-%% =============================================================================
-
-Screen ::= connected(Key)
-         ; unfriended(Key)
-         ; signed(Item)
-         ; received(Item)
-         ; not_held(Item)
-         ; refused(Key)
-         ; no_conversation(Key)
-         ; declined(Key)
-         ; not_my_child(Key)
-         ; parent(Key)
-         ; child(Key)
-         ; of_age
-         ; child_of_age(Key)
-         ; adult
-         ; group_joined(GroupId)
-         ; member_joined(GroupId, Key)
-         ; group_left(GroupId)
-         ; member_left(GroupId, Key)
-         ; group_received(GroupId, Item).
-ScreenMsg ::= msg(Constant, Constant, Screen).
-Output ::= Screen.
-
-%% The agent's outputs: the screen, and a channel per friend, parent, child and
-%% group, keyed.
-OutputKey   ::= group(GroupId) ; group_member(GroupId, Key).
-OutputEntry ::= user_output(Stream(ScreenMsg)?)
-              ; friend_output(Key, Stream(FriendMsg)?)
-              ; child_output(Key, Stream(FriendMsg)?)
-              ; parent_output(Key, Stream(FriendMsg)?)
-              ; group_entry(OutputKey, Stream(GroupMsg)?).
-
-Decision ::= yes ; no.
-
-%% =============================================================================
-%% THE COMPILED PROGRAM'S DISPATCHER
-%% =============================================================================
-
-%% The vocabulary of the compiled agents' dispatcher, so that the mini-app
-%% entry and the plays can type the goals they spawn: the program's questions
-%% --- the person's requests and the six cards --- and the asks its goals
-%% send, as the canonical compilation forms them over the linked program.
-%% Drawn is the type its person channel carries: the values the dispatcher
-%% draws under the functors of the asks, the output thread, and the grants'
-%% raw inputs (vGLP, Definition "Construct Process").  The compiled modules'
-%% own definitions shadow these within them, and the two agree.
-Question ::= stream_request_r(Stream(Request)?)
-           ; card_w(Card)
-           ; groupCard_w(GroupCard)
-           ; joinCard_w(JoinCard)
-           ; inviteCard_w(InviteCard).
-Drawn ::= stream_request_r(_) ; card_w(_)
-        ; groupCard_w(_) ; joinCard_w(_) ; inviteCard_w(_)
-        ; output(List(Output)) ; YesNo ; Request.
-Ask(Q) ::= ask(Constant, Q).
-
-%% =============================================================================
-%% THE SCRIPTED PERSON (childsafe/person.glp) AND THE SUPER-APP STAND-IN
-%% =============================================================================
-
-%% A step of a person's script: a request on the request form; an answer on
-%% the card showing an offer; a wait for a screen message; a wait for a
-%% message on the screen of another party, a parent looking at its child's
-%% phone; and, at the super-app, asking a party to befriend and accepting a
-%% party's offer.
-Offer ::= Intro ; GroupOffer ; JoinOffer ; InviteOffer.
-Step ::= req(Request)
-       ; answer(Offer, YesNo)
-       ; await(Screen)
-       ; await_at(Key, Screen)
-       ; befriend(Key)
-       ; accept_friend(Key).
-Script ::= [] ; [Step | Script].
-
-%% What the person logs: the screen, and each step as it takes it; and a line
-%% of a party's log as another person sees it, tagged with the party.
-Logged  ::= Screen ; did(Step).
-Watched ::= watched(Key, _).
-
-%% The super-app stand-in's vocabulary (superapp.glp): the person's
-%% befriending commands and what the stand-in shows, and its own network.
-ReqId     ::= req(Integer).
-SgCmd     ::= connect(Key) ; decision(Decision, Key, ReqId).
-SgNotify  ::= befriend(Key, ReqId) ; declined(Key).
-SgResponse  ::= sg_accept(FriendChannel) ; sg_decline.
-SgContent   ::= sg_invite(Key, SgResponse?).
-SgOutMsg    ::= sg(Key, SgContent).
-SgOutStream ::= [] ; [SgOutMsg | SgOutStream].
-SgInMsg     ::= sg(Key, SgContent) ; sg_answer(Key, SgResponse).
-SgInStream  ::= [] ; [SgInMsg | SgInStream].
-SgEntry     ::= sg_entry(Key, SgInStream?).
-SgPendingValue ::= sg_response(SgResponse?) ; sg_error.
-SgPending   ::= sg_pending(ReqId, SgPendingValue).
-
-%% =============================================================================
-%% HELPERS OF THE TWO AGENTS
-%% =============================================================================
-
-%% Adopt the conversation with Q: its write side becomes Q's friend channel,
-%% its read side joins the agent's input, and the person is told.
-procedure adopt_conversation(Key?, FriendChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
-adopt_conversation(Q, ch(In, Out?), Outs, Outs2?, NetIn, NetIn1?) :-
-    ground(Q?) |
-    add_friend_output(Q?, Out, Outs?, Outs1),
-    send_user(msg(agent, person, connected(Q?)), Outs1?, Outs2),
-    merge(NetIn?, In?, NetIn1).
-
-%% Whether Q's friend channel is among the outputs.
-procedure has_friend(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
-has_friend(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
-    Q? =?= K? | true.
-has_friend(Q, [E|Rest], [E?|Rest1?], Open?) :-
-    otherwise |
-    has_friend(Q?, Rest?, Rest1, Open).
-has_friend(_, [], [], no).
-
-%% Whether K is in a list of parties.
-procedure member_of(Key?, Stream(Key)?, Decision).
-member_of(K, [K1|_], yes) :- K? =?= K1? | true.
-member_of(K, [_|Ks], D?) :- otherwise | member_of(K?, Ks?, D).
-member_of(_, [], no).
-
-%% A list of parties less K.
-procedure remove_key(Key?, Stream(Key)?, Stream(Key)).
-remove_key(K, [K1|Ks], Ks?) :- K? =?= K1? | true.
-remove_key(K, [K1|Ks], [K1?|Ks1?]) :- otherwise | remove_key(K?, Ks?, Ks1).
-remove_key(_, [], []).
-
-%% The screen message.
-procedure show(Screen?, Stream(OutputEntry)?, Stream(OutputEntry)).
-show(S, Outs, Outs1?) :- send_user(msg(agent, person, S?), Outs?, Outs1).
-
-%% The parent-child channel, at the parent: its write end becomes the child's
-%% output and its read end joins the input.
-procedure enter_parent_side(Key?, FriendChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
-enter_parent_side(Child, ch(FromChild, ToChild?), Outs, Outs2?, NetIn, NetIn1?) :-
-    ground(Child?) |
-    add_child_output(Child?, ToChild, Outs?, Outs1),
-    show(child(Child?), Outs1?, Outs2),
-    merge(NetIn?, FromChild?, NetIn1).
-
-%% At the child: each parent's channel installed, its write end the parent's
-%% output and its read end merged into the input; the parents' names listed.
-procedure enter_child_side(ParentEnds?, Stream(Key), Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
-enter_child_side([parent(P, ch(FromParent, ToParent?))|Es], [P?|Ps?], Outs, Outs3?, NetIn, NetIn2?) :-
-    ground(P?) |
-    add_parent_output(P?, ToParent, Outs?, Outs1),
-    show(parent(P?), Outs1?, Outs2),
-    merge(NetIn?, FromParent?, NetIn1),
-    enter_child_side(Es?, Ps, Outs2?, Outs3, NetIn1?, NetIn2).
-enter_child_side([], [], Outs, Outs?, NetIn, NetIn?).
-
-procedure add_child_output(Key?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
-add_child_output(Name, Out?, Outs, [child_output(Name?, Out)|Outs?]).
-
-procedure add_parent_output(Key?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
-add_parent_output(Name, Out?, Outs, [parent_output(Name?, Out)|Outs?]).
-
-procedure close_child(Key?, Stream(OutputEntry)?, Stream(OutputEntry)).
-close_child(_, [], []).
-close_child(Name, [child_output(K, [])|Rest], Rest?) :-
-    Name? =?= K? | true.
-close_child(Name, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    close_child(Name?, Rest?, Rest1).
-
-procedure close_parent(Key?, Stream(OutputEntry)?, Stream(OutputEntry)).
-close_parent(_, [], []).
-close_parent(Name, [parent_output(K, [])|Rest], Rest?) :-
-    Name? =?= K? | true.
-close_parent(Name, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    close_parent(Name?, Rest?, Rest1).
-
-%% The two introductions a parent sends for child befriending: the two
-%% consent variables minted, the child whose name sorts first proposing.  R is
-%% the parent's own child, S the other.
-procedure mint_consents(Key?, Key?, Consents, Consents).
-mint_consents(R, S, propose(PC, AC?), accept(AC, PC?)) :- R? @< S? | true.
-mint_consents(_, _, accept(AC, PC?), propose(PC, AC?)) :- otherwise | true.
-
-%% The introductions sent: to the parent's own child R, and to the friend Q
-%% for its child S, or, where Q is the parent itself, to its other child S.
-procedure introduce(Key?, Key?, Key?, Key?, Consents?, Consents?, Stream(OutputEntry)?, Stream(OutputEntry)).
-introduce(Id, R, Q, S, CR, CS, Outs, Outs2?) :-
-    Q? =?= Id?, ground(Id?), ground(R?), ground(S?) |
-    send_child(R?, msg(Id?, R?, child_intro(intro(Id?, R?, S?), CR?)), Outs?, Outs1),
-    send_child(S?, msg(Id?, S?, child_intro(intro(Id?, R?, S?), CS?)), Outs1?, Outs2).
-introduce(Id, R, Q, S, CR, CS, Outs, Outs2?) :-
-    Q? =?\= Id?, ground(Id?), ground(R?), ground(Q?), ground(S?) |
-    send_child(R?, msg(Id?, R?, child_intro(intro(Id?, R?, S?), CR?)), Outs?, Outs1),
-    send_friend(Q?, msg(Id?, Q?, child_intro(intro(Id?, R?, S?), CS?)), Outs1?, Outs2).
-
-%% =============================================================================
-%% ITEMS --- the items the agent holds are its state (sign, forward)
-%% =============================================================================
-
-%% Whether the agent holds the item X.
-procedure holds(Item?, Stream(Item)?, Decision).
-holds(X, [Y|_], yes) :- X? =?= Y? | true.
-holds(X, [_|Ys], D?) :- otherwise | holds(X?, Ys?, D).
-holds(_, [], no).
-
-%% Sign(p, x): content of the agent's own, signed by it, held, and shown.
-procedure sign_item(Key?, Text?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-sign_item(Id, T, state(Is, Ps, Ds), state([sgn(T?, Id?)|Is?], Ps?, Ds?), Outs, Outs1?) :-
-    ground(Id?), ground(T?) |
-    show(signed(sgn(T?, Id?)), Outs?, Outs1).
-
-%% Forward(p, q, x): an item the agent holds goes to the friend Q, signed by
-%% the agent; the agent's state does not change.  An item it does not hold is
-%% not forwarded, and the screen says so.
-procedure forward_item(Key?, Key?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-forward_item(Id, Q, X, state(Is, Ps, Ds), state(Is?, Ps?, Ds?), Outs, Outs1?) :-
-    ground(Is?), ground(X?) |
-    holds(X?, Is?, Held),
-    forward_held(Held?, Id?, Q?, X?, Outs?, Outs1).
-
-procedure forward_held(Decision?, Key?, Key?, Item?, Stream(OutputEntry)?, Stream(OutputEntry)).
-forward_held(yes, Id, Q, X, Outs, Outs1?) :-
-    ground(Id?), ground(Q?) |
-    send_friend(Q?, msg(Id?, Q?, item(sgn(X?, Id?))), Outs?, Outs1).
-forward_held(no, _, _, X, Outs, Outs1?) :-
-    show(not_held(X?), Outs?, Outs1).
-
-%% Forward(q, p, x), at p: the item, signed by the friend who forwarded it,
-%% held, and shown.
-procedure receive_item(Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-receive_item(X, state(Is, Ps, Ds), state([X?|Is?], Ps?, Ds?), Outs, Outs1?) :-
-    ground(X?) |
-    show(received(X?), Outs?, Outs1).
-
-%% =============================================================================
-%% GROUPS --- the leader's member list is its group_member entries; the posts
-%% it holds and its record of what it has delivered to whom are its state
-%% =============================================================================
-
-%% Join group, at the leader: the joining member's stream is opened, and every
-%% post of the group the leader holds that it has not delivered to this member
-%% is delivered on it, in the order the posts were made (Deliver to member: a
-%% member is owed a post while it is on the list and the leader has not
-%% delivered it that post).
-procedure setup_group_hub_side(GroupId?, Key?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg), GroupChannel).
-setup_group_hub_side(G, M, state(Is, Ps, Ds), state(Is?, Ps?, Ds1?), Outs, Outs2?, NetIn, NetIn1?,
-    ch(HubToMember?, MemberToHub)) :-
-    ground(G?), ground(M?), ground(Ps?) |
-    add_group_output(group_member(G?, M?), HubToMember, Outs?, Outs1),
-    catch_up(Ps?, G?, M?, Ds?, Ds1, Outs1?, Outs2),
-    merge(NetIn?, MemberToHub?, NetIn1).
-
-%% This group's posts, each delivered to the member M unless it has been.
-procedure catch_up(Stream(GroupPost)?, GroupId?, Key?, Stream(Delivery)?, Stream(Delivery), Stream(OutputEntry)?, Stream(OutputEntry)).
-catch_up([post(G1, Y)|Ps], G, M, Ds, Ds2?, Outs, Outs2?) :-
-    G? =?= G1?, ground(G?), ground(Y?), ground(M?), ground(Ds?) |
-    delivered_already(G?, Y?, M?, Ds?, D),
-    deliver(D?, G?, Y?, M?, Ds?, Ds1, Outs?, Outs1),
-    catch_up(Ps?, G?, M?, Ds1?, Ds2, Outs1?, Outs2).
-catch_up([_|Ps], G, M, Ds, Ds1?, Outs, Outs1?) :-
-    otherwise |
-    catch_up(Ps?, G?, M?, Ds?, Ds1, Outs?, Outs1).
-catch_up([], _, _, Ds, Ds?, Outs, Outs?).
-
-%% A post the leader holds, at the end of its posts: delivered to every member
-%% on the list now that it has not been delivered to, and shown.
-procedure hold_post(GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-hold_post(G, Y, state(Is, Ps, Ds), state(Is?, Ps1?, Ds1?), Outs, Outs3?) :-
-    ground(G?), ground(Y?) |
-    add_post(post(G?, Y?), Ps?, Ps1),
-    members_of(G?, Outs?, Outs1, Ms),
-    deliver_to(Ms?, G?, Y?, Ds?, Ds1, Outs1?, Outs2),
-    show(group_received(G?, Y?), Outs2?, Outs3).
-
-%% A post joins the holding at its end.
-procedure add_post(GroupPost?, Stream(GroupPost)?, Stream(GroupPost)).
-add_post(P, [], [P?]).
-add_post(P, [Q|Rest], [Q?|Rest1?]) :-
-    add_post(P?, Rest?, Rest1).
-
-%% The members on the list of the group G now, the leader's group_member
-%% entries.
-procedure members_of(GroupId?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(Key)).
-members_of(G, [group_entry(group_member(G1, Q), Out?)|Rest], [group_entry(group_member(G1?, Q?), Out)|Rest1?], [Q?|Qs?]) :-
-    G? =?= G1?, ground(Q?) |
-    members_of(G?, Rest?, Rest1, Qs).
-members_of(G, [E|Rest], [E?|Rest1?], Qs?) :-
-    otherwise |
-    members_of(G?, Rest?, Rest1, Qs).
-members_of(_, [], [], []).
-
-%% The post Y, delivered to each member unless it has been.
-procedure deliver_to(Stream(Key)?, GroupId?, Item?, Stream(Delivery)?, Stream(Delivery), Stream(OutputEntry)?, Stream(OutputEntry)).
-deliver_to([Q|Qs], G, Y, Ds, Ds2?, Outs, Outs2?) :-
-    ground(Q?), ground(G?), ground(Y?), ground(Ds?) |
-    delivered_already(G?, Y?, Q?, Ds?, D),
-    deliver(D?, G?, Y?, Q?, Ds?, Ds1, Outs?, Outs1),
-    deliver_to(Qs?, G?, Y?, Ds1?, Ds2, Outs1?, Outs2).
-deliver_to([], _, _, Ds, Ds?, Outs, Outs?).
-
-%% Whether the leader has delivered the post Y to the member Q in the group G.
-procedure delivered_already(GroupId?, Item?, Key?, Stream(Delivery)?, Decision).
-delivered_already(G, Y, Q, [delivered(G1, Y1, Q1)|_], yes) :-
-    G? =?= G1?, Y? =?= Y1?, Q? =?= Q1? | true.
-delivered_already(G, Y, Q, [_|Ds], D?) :-
-    otherwise |
-    delivered_already(G?, Y?, Q?, Ds?, D).
-delivered_already(_, _, _, [], no).
-
-%% Deliver to member(g, q, y): the post goes to the member on its stream,
-%% signed by the leader, and the delivery is recorded; a post delivered to the
-%% member before is not delivered again.
-procedure deliver(Decision?, GroupId?, Item?, Key?, Stream(Delivery)?, Stream(Delivery), Stream(OutputEntry)?, Stream(OutputEntry)).
-deliver(no, group_id(L, N), Y, Q, Ds, [delivered(group_id(L?, N?), Y?, Q?)|Ds?], Outs, Outs1?) :-
-    ground(L?), ground(N?), ground(Y?), ground(Q?) |
-    lookup_send_group(group_member(group_id(L?, N?), Q?), msg(L?, Q?, group_msg(group_id(L?, N?), sgn(Y?, L?))), Outs?, Outs1).
-deliver(yes, _, _, _, Ds, Ds?, Outs, Outs?).
-
-%% Deliver to member(g, q, y), at q: the post, signed by the leader, held
-%% and shown while q is a member of the group; a delivery the leader made
-%% before it learned that q had left is not held.
-procedure receive_delivery(GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-receive_delivery(G, Z, St, St1?, Outs, Outs2?) :-
-    ground(G?) |
-    has_group(group(G?), Outs?, Outs1, Member),
-    hold_delivery(Member?, G?, Z?, St?, St1, Outs1?, Outs2).
-
-procedure hold_delivery(Decision?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-hold_delivery(yes, G, Z, state(Is, Ps, Ds), state([Z?|Is?], Ps?, Ds?), Outs, Outs1?) :-
-    ground(Z?) |
-    show(group_received(G?, Z?), Outs?, Outs1).
-hold_delivery(no, _, _, St, St?, Outs, Outs?).
-
-%% A post of an item the agent holds to the group G: Post to own group(g, x)
-%% where the agent leads the group, and Post to group(g, p, x) where it is a
-%% member, the item sent to the leader signed by the agent, whose state does
-%% not change.  An item it does not hold is not posted, and the screen says
-%% so; to a group it is not a member of, nothing is posted.
-procedure post_item(Key?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-post_item(Id, G, X, state(Is, Ps, Ds), St?, Outs, Outs1?) :-
-    ground(Is?), ground(X?) |
-    holds(X?, Is?, Held),
-    post_held(Held?, Id?, G?, X?, state(Is?, Ps?, Ds?), St, Outs?, Outs1).
-
-procedure post_held(Decision?, Key?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-post_held(yes, Id, group_id(L, N), X, St, St1?, Outs, Outs2?) :-
-    L? =?= Id?, ground(L?), ground(N?), ground(X?) |
-    has_group(group(group_id(L?, N?)), Outs?, Outs1, Member),
-    post_own(Member?, group_id(L?, N?), X?, St?, St1, Outs1?, Outs2).
-post_held(yes, Id, group_id(L, N), X, St, St?, Outs, Outs2?) :-
-    L? =?\= Id?, ground(Id?), ground(L?), ground(N?), ground(X?) |
-    has_group(group(group_id(L?, N?)), Outs?, Outs1, Member),
-    post_to(Member?, Id?, group_id(L?, N?), X?, Outs1?, Outs2).
-post_held(no, _, _, X, St, St?, Outs, Outs1?) :-
-    show(not_held(X?), Outs?, Outs1).
-
-%% Post to own group(g, x): the post held, unless the group holds it already.
-procedure post_own(Decision?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-post_own(yes, G, X, state(Is, Ps, Ds), St?, Outs, Outs1?) :-
-    ground(G?), ground(X?), ground(Ps?) |
-    posted_already(G?, X?, Ps?, Posted),
-    post_new(Posted?, G?, X?, state(Is?, Ps?, Ds?), St, Outs?, Outs1).
-post_own(no, _, _, St, St?, Outs, Outs?).
-
-procedure post_new(Decision?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
-post_new(no, G, X, St, St1?, Outs, Outs1?) :-
-    hold_post(G?, X?, St?, St1, Outs?, Outs1).
-post_new(yes, _, _, St, St?, Outs, Outs?).
-
-%% Whether the group G holds the post X.
-procedure posted_already(GroupId?, Item?, Stream(GroupPost)?, Decision).
-posted_already(G, X, [post(G1, X1)|_], yes) :-
-    G? =?= G1?, X? =?= X1? | true.
-posted_already(G, X, [_|Ps], D?) :-
-    otherwise |
-    posted_already(G?, X?, Ps?, D).
-posted_already(_, _, [], no).
-
-%% Post to group(g, p, x), at p: the item, signed by the member, goes to the
-%% leader on the member's stream into the group.
-procedure post_to(Decision?, Key?, GroupId?, Item?, Stream(OutputEntry)?, Stream(OutputEntry)).
-post_to(yes, Id, group_id(L, N), X, Outs, Outs1?) :-
-    ground(Id?), ground(L?), ground(N?) |
-    lookup_send_group(group(group_id(L?, N?)), msg(Id?, L?, group_msg(group_id(L?, N?), sgn(X?, Id?))), Outs?, Outs1).
-post_to(no, _, _, _, Outs, Outs?).
-
-%% Whether the agent holds a stream into the group, as its leader or a member.
-procedure has_group(OutputKey?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
-has_group(Key, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest?], yes) :-
-    Key? =?= K? | true.
-has_group(Key, [E|Rest], [E?|Rest1?], D?) :-
-    otherwise |
-    has_group(Key?, Rest?, Rest1, D).
-has_group(_, [], [], no).
-
-%% The leader's own stream into its group, read with the rest of its input.
-procedure setup_group_leader(GroupId?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
-setup_group_leader(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
-    ground(GroupId?) |
-    add_group_output(group(GroupId?), MemberToHub, Outs?, Outs1),
-    merge(NetIn?, MemberToHub?, NetIn1).
-
-procedure lookup_send_group(OutputKey?, GroupMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-lookup_send_group(Key, Msg, Outs, Outs1?) :-
-    ground(Key?) |
-    lookup_send_group_step(Key?, Msg?, Outs?, Outs1).
-
-procedure lookup_send_group_step(OutputKey?, GroupMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-lookup_send_group_step(Key, Msg, [group_entry(K, [Msg?|Out1?])|Rest], [group_entry(K?, Out1)|Rest?]) :-
-    Key? =?= K? | true.
-lookup_send_group_step(Key, Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    lookup_send_group_step(Key?, Msg?, Rest?, Rest1).
-lookup_send_group_step(_, _, [], []).
-
-%% Leave group(g, q): the member's own stream to the group is told and closed.
-procedure leave_group_commit(Key?, GroupId?, Stream(OutputEntry)?, Stream(OutputEntry)).
-leave_group_commit(Id, GroupId, Outs, Outs3?) :-
-    ground(Id?), ground(GroupId?) |
-    lookup_send_group(group(GroupId?), msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
-    close_output(group(GroupId?), Outs1?, Outs2),
-    show(group_left(GroupId?), Outs2?, Outs3).
-
-%% Join group, at the member: its stream to the group is installed and its
-%% read end merged into its input.
-procedure join_commit(GroupId?, GroupChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
-join_commit(GroupId, ch(FromHub, ToHub?), Outs, Outs2?, NetIn, NetIn1?) :-
-    ground(GroupId?) |
-    add_group_output(group(GroupId?), ToHub, Outs?, Outs1),
-    merge(NetIn?, FromHub?, NetIn1),
-    show(group_joined(GroupId?), Outs1?, Outs2).
-
-procedure add_group_output(OutputKey?, Stream(GroupMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
-add_group_output(Key, Out?, Outs, [group_entry(Key?, Out)|Outs?]).
-
-procedure close_output(OutputKey?, Stream(OutputEntry)?, Stream(OutputEntry)).
-close_output(_, [], []).
-close_output(Key, [group_entry(K, [])|Rest], Rest?) :-
-    Key? =?= K? | true.
-close_output(Key, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    close_output(Key?, Rest?, Rest1).
-
-%% The reply to a group invitation, when it comes, at the leader.
-procedure inject_group_reply(GroupId?, Key?, GroupReply?, Stream(AgentIn)?, Stream(AgentIn)).
-inject_group_reply(G, M, R, Ys, [group_reply(G?, M?, R?)|Ys?]) :-
-    known(R?) | true.
-inject_group_reply(G, M, R, [Y|Ys], [Y?|Ys1?]) :-
-    inject_group_reply(G?, M?, R?, Ys?, Ys1).
-
-%% =============================================================================
-%% THE PLAYS (plays.glp), by name
-%% =============================================================================
-
-imported procedure plays#village.
-exported procedure village.
-village :- plays # village.
-
-imported procedure plays#play_two_parents.
-exported procedure play_two_parents.
-play_two_parents :- plays # play_two_parents.
-
-imported procedure plays#play_twice.
-exported procedure play_twice.
-play_twice :- plays # play_twice.
-
-imported procedure plays#play_both_ways.
-exported procedure play_both_ways.
-play_both_ways :- plays # play_both_ways.
-
-imported procedure plays#play_late_join.
-exported procedure play_late_join.
-play_late_join :- plays # play_late_join.
-
-imported procedure plays#play_child_leave.
-exported procedure play_child_leave.
-play_child_leave :- plays # play_child_leave.
+%% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module, as every hand-written module importing a compiled procedure restates them today (programs/apps/gsnp/self.glp likewise).  The compiled module's own definitions shadow these within it, and the two must agree.
+%% ---------------------------------------------------------------------------
+
+Peer      ::= Key.
+Speech    ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+Class     ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+            ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
+            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+            ; leave(Peer, Peer, Speech) ; close(Peer, List(Peer), Speech) ; drop(Peer, Peer, Speech)
+            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
+            ; post_forward(Peer, Peer, Speech, Speech)
+            ; deliver(Peer, Peer, Speech, Speech) ; deliver_own(Peer, Peer, Speech, Speech)
+            ; enter(Peer, Peer) ; enter_2(Peer, Peer, Peer)
+            ; of_age(Peer, Peer) ; of_age_2(Peer, Peer, Peer)
+            ; child_befriend(Peer, Peer, Peer, Peer) ; child_adult_befriend(Peer, Peer, Peer)
+            ; child_unfriend(Peer, Peer, Peer)
+            ; parent_unfriend(Peer, Peer) ; parent_unfriend_2(Peer, Peer, Peer)
+            ; child_join(Peer, Peer, Peer, Speech) ; child_join_2(Peer, Peer, Peer, Peer, Speech)
+            ; child_leave(Peer, Peer, Peer, Speech) ; child_close(Peer, Peer, List(Peer), Speech).
+Proposal  ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+            ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
+            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+            ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
+            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
+            ; post_forward(Peer, Peer, Speech, Speech)
+            ; enter(Peer, Peer) ; enter_2(Peer, Peer, Peer)
+            ; of_age(Peer, Peer) ; of_age_2(Peer, Peer, Peer)
+            ; child_befriend(Peer, Peer, Peer, Peer) ; child_adult_befriend(Peer, Peer, Peer)
+            ; child_unfriend(Peer, Peer, Peer)
+            ; parent_unfriend(Peer, Peer) ; parent_unfriend_2(Peer, Peer, Peer)
+            ; child_join(Peer, Peer, Peer, Speech) ; child_join_2(Peer, Peer, Peer, Peer, Speech)
+            ; child_leave(Peer, Peer, Peer, Speech) ; child_close(Peer, Peer, Speech).
+Request   ::= propose(Proposal) ; known(Peer).
+YesNo     ::= yes ; no.
+Decision  ::= commit ; abort.
+Attempt   ::= attempt(Peer, Integer, Integer, Class).
+Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+            ; yield(Attempt).
+Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net       ::= msg(Peer, Content).
+Atom      ::= identity ; retired ; friend(Peer) ; child ; parent(Peer) ; parenting(Peer)
+            ; item(Speech) ; authored(Speech) ; member(CName) ; listed(Peer, Speech)
+            ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech)
+            ; coparent(Peer) ; coparented.
+%% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP, Section 5.4, "Act schemas as local specifications").
+CName     ::= community(Peer) ; dot(CName, Speech).
+Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Approval  ::= approval(Attempt, YesNo?).
+Menu      ::= menu(Key, List(Key), Request?).
+Question  ::= menu_w(Menu) ; approval_w(Approval).
+Drawn     ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)    ::= ask(Constant, Q).
+
+%% What the scripted person reports, its screen (person.glp): each view the program writes, once, the machine state and the persons the agent knows, and each notice, refused(P, Q) or yielded(P) (vGLP, Section 5.4, "The compilation"); the agent's own key and the persons a request question shows, where the script looks; each request it makes, did(R); and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
+Asked     ::= Class ; Attempt.
+Seen      ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo) ; did(Request).
+%% A line of a child's screen, which a parent's scripted person reads as the parent looking at the child's phone (person.glp, the step at(K, C); plays.glp).
+Watch     ::= seen(Key, Seen).
+
+%% The network of the platform over the conversations (miniapp.glp), as in programs/apps/gsg/self.glp.
+NetEvent  ::= opened(Key, RootChannel(Net)) ; sent(Net).
+Route     ::= route(Key, Stream(Net)?).
+Routes    ::= [] ; [Route | Routes].
+Sending   ::= went ; held(Net).
+
+%% The mini-app's entry, the instance of the root's entry template miniapp/4 (programs/self.glp) at the mini-app's two types, Drawn and Net.
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
+miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+
+%% The scripted person, the instance of the root's second template miniapp_person/4 at Drawn and at Seen.
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+
+%% The village of Section 5.3, with no super-app (plays.glp): the screens of alice, bob, grace, frank, carol, dave and eve.
+imported procedure plays#play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+exported procedure play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_village(A?, B?, G?, F?, C?, D?, E?) :- plays # play_village(A, B, G, F, C, D, E).

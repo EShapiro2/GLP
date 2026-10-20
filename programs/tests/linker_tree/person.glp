@@ -1,0 +1,132 @@
+%% IGLP's linker fixture, programs/tests/linker_tree, for program_linker_test.dart and program_compilation_test.dart: the scripted person, programs/cssn/person.glp as it stood at GLP d2495778, its comments removed and three names changed: the directory childsafe to agents, the module and procedure superapp to host, and the procedures cssn and cssn_child to app and app_child.
+
+OpenCard  ::= open(_, Integer, Path) ; none.
+OpenCards ::= [] ; [OpenCard | OpenCards].
+Form      ::= no_form ; form(Integer, Path).
+SgOffer   ::= sg_offer(Key, ReqId).
+SgOffers  ::= [] ; [SgOffer | SgOffers].
+Choice    ::= grant(Integer, Path, Drawn) ; sg(SgCmd) ; next ; wait.
+
+exported procedure person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(Watched)?, Stream(_)).
+person(Id, Ds, Gs?, Ns, Cs?, Script, Ws, Log?) :-
+    ground(Id?) |
+    person(Id?, Ds?, Gs, Ns?, Cs, Script?, no_form, [], [], [], [], Ws?, Log).
+
+procedure person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
+
+person(Id, [draw(0, _, output(Ms))|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    ground(Id?), ground(Ms?), ground(Seen?) |
+    newer(Seen?, Ms?, Log, Log1?),
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Ms?, Wd?, Ws?, Log1).
+
+person(Id, [draw(C, _, stream_request_r(input(P)))|Ds], Gs?, Ns, Cs?, Script, _, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    ground(C?), ground(P?), C? > 0 |
+    path_of(P?, P1),
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, form(C?, P1?), Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+
+person(Id, [draw(C, _, V)|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    ground(C?), ground(V?), C? > 0 |
+    card_of(V?, Card),
+    add_card(Card?, C?, Cards?, Cards1),
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards1?, Offers?, Seen?, Wd?, Ws?, Log).
+
+person(Id, [withdraw(C)|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    ground(C?) |
+    drop_card(C?, Cards?, Cards1),
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards1?, Offers?, Seen?, Wd?, Ws?, Log).
+
+person(Id, Ds, Gs?, [befriend(Q, R)|Ns], Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    ground(Q?), ground(R?) |
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, [sg_offer(Q?, R?)|Offers?], Seen?, Wd?, Ws?, Log).
+
+person(Id, Ds, Gs?, [declined(Q)|Ns], Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, [declined(Q?)|Log?]) :-
+    ground(Q?) |
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+
+person(Id, Ds, Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, [W|Ws], Log?) :-
+    ground(W?) |
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, [W?|Wd?], Ws?, Log).
+
+procedure step(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
+step(Id, Ds, Gs?, Ns, Cs?, [], Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    person(Id?, Ds?, Gs, Ns?, Cs, [], Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+step(Id, Ds, Gs?, Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    ground(S?), ground(Form?), ground(Cards?), ground(Offers?), ground(Seen?), ground(Wd?) |
+    choose(S?, Form?, Cards?, Offers?, Seen?, Wd?, Choice, Cards1, Offers1),
+    act(Choice?, Id?, Ds?, Gs, Ns?, Cs, [S?|Script?], Form?, Cards1?, Offers1?, Seen?, Wd?, Ws?, Log).
+
+procedure choose(Step?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Choice, OpenCards, SgOffers).
+choose(req(R), form(C, P), Cards, Offers, _, _, grant(C?, P?, R?), Cards?, Offers?).
+choose(answer(O, A), _, Cards, Offers, _, _, Ch?, Cards1?, Offers?) :-
+    ground(O?), ground(A?) |
+    find_card(O?, A?, Cards?, Ch, Cards1).
+choose(await(M), _, Cards, Offers, Seen, _, Ch?, Cards?, Offers?) :-
+    ground(M?) |
+    seen(M?, Seen?, Ch).
+choose(await_at(K, M), _, Cards, Offers, _, Wd, Ch?, Cards?, Offers?) :-
+    ground(K?), ground(M?) |
+    seen_at(K?, M?, Wd?, Ch).
+choose(befriend(Q), _, Cards, Offers, _, _, sg(connect(Q?)), Cards?, Offers?).
+choose(accept_friend(Q), _, Cards, Offers, _, _, Ch?, Cards?, Offers1?) :-
+    ground(Q?) |
+    find_offer(Q?, Offers?, Ch, Offers1).
+choose(_, _, Cards, Offers, _, _, wait, Cards?, Offers?) :- otherwise | true.
+
+procedure act(Choice?, Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
+act(grant(C, P, X), Id, Ds, [input(C?, P?, X?)|Gs?], Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, Wd, Ws, [did(S?)|Log?]) :-
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+act(sg(Cmd), Id, Ds, Gs?, Ns, [Cmd?|Cs?], [S|Script], Form, Cards, Offers, Seen, Wd, Ws, [did(S?)|Log?]) :-
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+act(next, Id, Ds, Gs?, Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, Wd, Ws, [did(S?)|Log?]) :-
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+act(wait, Id, Ds, Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    person(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+
+procedure newer(_?, _?, Stream(_), Stream(_)?).
+newer([_|Ss], [_|Ms], Log?, Log1) :- newer(Ss?, Ms?, Log, Log1?).
+newer([], [M|Ms], [M?|Log?], Log1) :- newer([], Ms?, Log, Log1?).
+newer(_, [], Log?, Log).
+
+procedure seen(_?, _?, Choice).
+seen(M, [M1|_], next) :- M? =?= M1? | true.
+seen(M, [_|Ms], Ch?) :- otherwise | seen(M?, Ms?, Ch).
+seen(_, [], wait).
+
+procedure seen_at(Key?, _?, Stream(Watched)?, Choice).
+seen_at(K, M, [watched(K1, M1)|_], next) :- K? =?= K1?, M? =?= M1? | true.
+seen_at(K, M, [_|Ws], Ch?) :- otherwise | seen_at(K?, M?, Ws?, Ch).
+seen_at(_, _, [], wait).
+
+procedure card_of(_?, OpenCard).
+card_of(card_w(V), O?) :- open_of(V?, O).
+card_of(groupCard_w(V), O?) :- open_of(V?, O).
+card_of(joinCard_w(V), O?) :- open_of(V?, O).
+card_of(inviteCard_w(V), O?) :- open_of(V?, O).
+card_of(_, none) :- otherwise | true.
+
+procedure open_of(_?, OpenCard).
+open_of(card(O, input(P)), open(O?, 0, P1?)) :- ground(O?), ground(P?) | path_of(P?, P1).
+
+procedure add_card(OpenCard?, Integer?, OpenCards?, OpenCards).
+add_card(none, _, Cards, Cards?).
+add_card(open(O, _, P), C, Cards, [open(O?, C?, P?)|Cards1?]) :-
+    ground(C?) | drop_card(C?, Cards?, Cards1).
+
+procedure drop_card(Integer?, OpenCards?, OpenCards).
+drop_card(C, [open(_, C1, _)|Cards], Cards?) :- C? =:= C1? | true.
+drop_card(C, [K|Cards], [K?|Cards1?]) :- otherwise | drop_card(C?, Cards?, Cards1).
+drop_card(_, [], []).
+
+procedure find_card(_?, YesNo?, OpenCards?, Choice, OpenCards).
+find_card(O, A, [open(O1, C, P)|Cards], grant(C?, P?, A?), Cards?) :- O? =?= O1? | true.
+find_card(O, A, [K|Cards], Ch?, [K?|Cards1?]) :- otherwise | find_card(O?, A?, Cards?, Ch, Cards1).
+find_card(_, _, [], wait, []).
+
+procedure find_offer(Key?, SgOffers?, Choice, SgOffers).
+find_offer(Q, [sg_offer(Q1, R)|Offers], sg(decision(yes, Q1?, R?)), Offers?) :- Q? =?= Q1? | true.
+find_offer(Q, [O|Offers], Ch?, [O?|Offers1?]) :- otherwise | find_offer(Q?, Offers?, Ch, Offers1).
+find_offer(_, [], wait, []).
+
+procedure path_of(_?, Path).
+path_of([I|Is], P?) :- integer(I?) | P = [I?|P1?], path_of(Is?, P1).
+path_of([], []).
