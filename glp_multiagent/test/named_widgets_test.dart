@@ -55,10 +55,10 @@ const _gsnJoin =
 const _gsnMessage =
     "form(message, [field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
 
-/// GAI's agent_befriend, `agent_befriend(r?, q?, p? ; y)` (programs/gai/GAI.glp),
-/// as programs/apps/gai/platform.vglp prints its Class.
+/// GAI's agent_befriend, `agent_befriend(r?, q?, p?)` (programs/gai/GAI.glp at
+/// GLP 9d736804), as programs/apps/gai/platform.vglp prints its Class.
 const _gaiAgentBefriend = "form(agent_befriend, [field('Peer', shown), "
-    "field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
+    "field('Peer', shown), field('Peer', shown)])";
 
 /// CSSN's child_befriend, `child_befriend(r?, s?, p?, q?)`
 /// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints its Class.
@@ -91,16 +91,24 @@ const _daveOutput = '[view([friend(bob), child, parent(bob), identity], '
 const _code = "speech(speech(utterance('The code of Alf'), acme_ltd), alice)";
 const _attestation = 'speech($_code, alice)';
 
-/// Alf, Alice's AI agent, asks to befriend Bob with its attestation.
+/// Alf, Alice's AI agent, asks to befriend Bob, the two knowing each other.
 const _agentBefriendView = 'approval(attempt(alf, 3, 3, agent_befriend(alf, '
-    'bob, alice, $_attestation), none), input([2]))';
+    'bob, alice), none), input([2]))';
 
 /// The last view Alice's agent wrote: she is Alf's principal and its friend.
 const _aliceOutput = '[view([principal_of(alf), friend(alf), item($_code), '
     'authored($_code), friend(bob), identity], [alf, bob])]';
 
-/// The last view Bob's agent wrote: he knows Alf and Alice, Alice his friend.
-const _bobOutput = '[view([friend(alice), identity], [alf, alice])]';
+/// The last view Bob's agent wrote: he knows Alf, by agent_meet, which recorded
+/// Alf, its principal Alice and its attestation, agent_of(alf, alice, y); and
+/// he knows Alice, his friend.
+const _bobOutput = '[view([knows(alf), agent_of(alf, alice, $_attestation), '
+    'friend(alice), knows(alice), identity], [alf, alice])]';
+
+/// A last view of Bob's that holds no record of Alf: he knows Alf, introduced
+/// to him (GKK:3), which records nothing of it.
+const _bobUnrecordedOutput = '[view([knows(alf), friend(alice), '
+    'knows(alice), identity], [alf, alice])]';
 
 /// The widget of a question of `Approval` where the declaration
 /// `Approval =::= approval_sentence.` holds, over the classes [classes]:
@@ -299,7 +307,7 @@ void main() {
   });
 
   testWidgets(
-      'agent_befriend(R, Q, P, Y) at the principal, whose view holds '
+      'agent_befriend(R, Q, P) at the principal, whose view holds '
       'principal_of(R): "Alf asks to befriend Bob.", "Approve?", Yes and No, '
       'and nothing else; Yes grants yes and No grants no at [2], as the '
       'default widget does', (tester) async {
@@ -320,9 +328,10 @@ void main() {
   });
 
   testWidgets(
-      'agent_befriend(R, Q, P, Y) at the other party: "Alf, an AI agent of '
+      'agent_befriend(R, Q, P) at the other party: "Alf, an AI agent of '
       'Alice, asks to befriend you.", "Developer: Acme Ltd", the first signer of '
-      'the attestation, "Befriend Alf?", Yes and No, and nothing else',
+      'the attestation of the record of Alf the party holds, agent_of(alf, '
+      'alice, y), "Befriend Alf?", Yes and No, and nothing else',
       (tester) async {
     final s = _Screen(tester);
     await s.draw(_named([_gaiAgentBefriend]), _agentBefriendView,
@@ -348,8 +357,8 @@ void main() {
     final s = _Screen(tester);
     await s.draw(
         _named([_gaiAgentBefriend]),
-        'approval(attempt(alf, 3, 3, agent_befriend(alf, bob, alice, '
-        '$_attestation), none), yes)',
+        'approval(attempt(alf, 3, 3, agent_befriend(alf, bob, alice), '
+        'none), yes)',
         output: _bobOutput);
     expect(s.texts(), [
       'Alf, an AI agent of Alice, asks to befriend you.',
@@ -362,14 +371,26 @@ void main() {
 
   testWidgets(
       'agent_befriend with no view drawn, whom it is asked not told: the '
-      'sentence built from the class, its speech act under it, and Yes and No',
+      'sentence built from the class, and Yes and No',
       (tester) async {
     final s = _Screen(tester);
     await s.draw(_named([_gaiAgentBefriend]), _agentBefriendView);
     expect(s.texts(), [
       'Alf asks to agent befriend Bob, Alice.',
-      'The code of Alf',
-      'by Acme Ltd, via Alice, via Alice',
+      'Yes',
+      'No',
+    ]);
+  });
+
+  testWidgets(
+      'agent_befriend at a party whose view holds no record of the AI agent: '
+      'the sentence built from the class, and Yes and No, its principal and '
+      'its developer not told', (tester) async {
+    final s = _Screen(tester);
+    await s.draw(_named([_gaiAgentBefriend]), _agentBefriendView,
+        output: _bobUnrecordedOutput);
+    expect(s.texts(), [
+      'Alf asks to agent befriend Bob, Alice.',
       'Yes',
       'No',
     ]);
