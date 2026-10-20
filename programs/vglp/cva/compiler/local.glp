@@ -826,8 +826,8 @@ ints_sub1(yes, Xs, Ys, B?) :- ints_sub(Xs?, Ys?, B).
 procedure same_ldoms(Ints?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
 same_ldoms([], _, _, _, _, _, yes).
 same_ldoms([P|Ps], Rs1, B1, Rs2, B2, Rf, S?) :- ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?), integer(P?) |
-    reqs_at(Rs1?, B1?, P?, Rf?, R1),
-    reqs_at(Rs2?, B2?, P?, Rf?, R2),
+    lreqs_at(Rs1?, B1?, P?, Rf?, R1),
+    lreqs_at(Rs2?, B2?, P?, Rf?, R2),
     forbs_at(Rs1?, B1?, P?, F1),
     forbs_at(Rs2?, B2?, P?, F2),
     ms_same(R1?, R2?, E1),
@@ -839,6 +839,25 @@ same_ldoms([P|Ps], Rs1, B1, Rs2, B2, Rf, S?) :- ground(Rs1?), ground(B1?), groun
 procedure same_ldoms1(YesNo?, Ints?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
 same_ldoms1(no, _, _, _, _, _, _, no).
 same_ldoms1(yes, Ps, Rs1, B1, Rs2, B2, Rf, S?) :- same_ldoms(Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, S).
+%% The atoms a schema-binding requires at P, its listing atoms among them: for each listed role whose base is sent to P, rho(q, u_2, ..., u_r), q the person of the listed role, the listed role taken as a party role here ("for p the person in the base of a listed role, p lists in d_p exactly the people of that role in L", vGLP f0acbc1, Section 5.4, "Act schemas as local specifications").
+procedure lreqs_at(RoleSpecs?, Binding?, Integer?, Preds?, GAs).
+lreqs_at(Rs, B, P, Rf, R?) :- ground(Rs?), ground(B?), integer(P?) |
+    reqs_at(Rs?, B?, P?, Rf?, R1),
+    listing_reqs(Rs?, 1, B?, P?, R2),
+    app(R1?, R2?, R).
+procedure listing_reqs(RoleSpecs?, Integer?, Binding?, Integer?, GAs).
+listing_reqs([], _, _, _, []).
+listing_reqs([crs(listed(Bi, Rho, As), _, _, _, _, _)|Rs], I, B, P, G?) :- integer(I?), integer(Bi?), ground(B?), integer(P?) |
+    role_person(Bi?, B?, Pb),
+    role_person(I?, B?, Q),
+    img_args(As?, B?, Vs),
+    I1 := I? + 1,
+    listing_reqs(Rs?, I1?, B?, P?, G1),
+    keep_listing(Pb?, P?, ga(Rho?, [person(Q?)|Vs?]), G1?, G).
+listing_reqs([_|Rs], I, B, P, G?) :- otherwise, integer(I?) | I1 := I? + 1, listing_reqs(Rs?, I1?, B?, P?, G).
+procedure keep_listing(Integer?, Integer?, GA?, GAs?, GAs).
+keep_listing(Pb, P, A, G, [A?|G?]) :- Pb? =:= P? | true.
+keep_listing(_, _, _, G, G?) :- otherwise | true.
 procedure(X) ms_same(Stream(X)?, Stream(X)?, YesNo).
 ms_same(X, Y, E?) :- ground(X?), ground(Y?) |
     ms_diff(X?, Y?, R1),
@@ -870,8 +889,8 @@ split_lm1(no, M, New, Keep, New?, [M?|Keep?]).
 procedure linked_l(Ints?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
 linked_l([], _, _, _, _, _, yes).
 linked_l([P|Ps], Rs1, B1, Rs2, B2, Rf, L?) :- ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?), integer(P?) |
-    reqs_at(Rs1?, B1?, P?, Rf?, R1),
-    reqs_at(Rs2?, B2?, P?, Rf?, R2),
+    lreqs_at(Rs1?, B1?, P?, Rf?, R1),
+    lreqs_at(Rs2?, B2?, P?, Rf?, R2),
     forbs_at(Rs1?, B1?, P?, F1),
     forbs_at(Rs2?, B2?, P?, F2),
     meets(R1?, F2?, C1),
