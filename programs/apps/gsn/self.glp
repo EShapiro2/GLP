@@ -20,23 +20,27 @@ Proposal  ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech).
 Request   ::= propose(Proposal) ; known(Peer).
 YesNo     ::= yes ; no.
-Decision  ::= commit ; abort.
-Attempt   ::= attempt(Peer, Integer, Integer, Class).
-Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-            ; yield(Attempt).
+Reason    ::= declined ; unable(List(Atom), List(Atom)).
+Vote      ::= yes ; no(Reason).
+Decision  ::= commit ; abort(Peer, Reason) ; yield.
+Rho       ::= one(Class) ; rho(Proposal).
+Names     ::= none ; request(Rho, Integer).
+Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+            ; yield(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
 Atom      ::= identity ; friend(Peer) ; received(Speech, Peer) ; member(CName) ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech) ; received_in(Speech, Peer, Speech).
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech).
-Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
 Approval  ::= approval(Attempt, YesNo?).
 Menu      ::= menu(Key, List(Key), Request?).
 Question  ::= menu_w(Menu) ; approval_w(Approval).
 Drawn     ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)    ::= ask(Constant, Q).
 
-%% What the mini-app's scripted person reports, its screen (person.glp): each view the program writes, once, the machine state and the persons the agent knows (vGLP b7e3517, Section 5.4, "The compilation"), and each notice, refused(P, Q) or yielded(P) (vGLP c44769f); the agent's own key and the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
+%% What the mini-app's scripted person reports, its screen (person.glp): each view the program writes, once, the machine state and the persons the agent knows (vGLP b7e3517, Section 5.4, "The compilation"), and each notice, refused(P, Q, D) (vGLP f0acbc1, Section 5.4, "The compilation"); the agent's own key and the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
 Asked     ::= Class ; Attempt.
 Seen      ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo).
 

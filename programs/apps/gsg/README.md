@@ -38,7 +38,7 @@ GSG:1 is the schema `establish`, guarded by the person, which adds `identity` at
 The super-app grants the mini-app the person's key, the person channel, the channel to the social graph and a calendar (GSG paper, Section 2, "What the super-app grants a mini-app").
 
 - The agent runs with the person's key as its `Peer`.
-- Its dispatcher draws the agent's questions on the person channel: the request questions and the approval questions.  The program's output to the person is drawn as construct `0`: the agent writes there its view, `view(S, K)`, its machine state and the persons it knows, when it starts and whenever either changes, and a notice, `refused(P, Q)` or `yielded(P)`, when an attempt the person proposed closes without committing; the screen shows the last view and the notices written after it (vGLP, Section 5.4, "The compilation").
+- Its dispatcher draws the agent's questions on the person channel: the request questions and the approval questions.  The program's output to the person is drawn as construct `0`: the agent writes there its view, `view(S, K)`, its machine state and the persons it knows, when it starts and whenever either changes, and a notice, `refused(P, Q, D)`, when an approval the person made, by a request or by an answer yes, ends by a refusal, `P` the part of the refused attempt, `Q` its refuser and `D` the reason, `declined` or `unable(Lacks, Has)`; the screen shows the last view and the notices written after it (vGLP, Section 5.4, "The compilation").
 - Its network is the conversations the social graph hands the mini-app at each invitation, one per friend.  Each message `msg(Q, C)` the agent sends goes on the conversation with `Q`; each message arriving on a conversation joins the agent's input.  A message to a participant with whom no conversation is open yet is held, and goes on the conversation, in order, once the social graph opens it.
 - The calendar is not read: the platform has no clock.  The agent takes its own transactions when it starts and after each trigger, one at a time until none holds (vGLP, Section 5.4, "Triggers").
 
@@ -84,7 +84,7 @@ What each person sees, as the construct family draws the app (`glp_multiagent/li
 
 `glp_multiagent/test/apps_screens_test.dart` runs the app for Alice and Bob over one conversation and takes each person's acts by tapping and typing on the tab's controls: each taps Join and adds the other by key; Alice taps Befriend on Bob's row; Bob is asked and taps Accept; Bob taps End friendship on Alice's row, and Alice is not asked.  `screens/README.md` names the three screens it renders, those of GAI's figure.
 
-Had Bob tapped Decline, the else-branch of his answer is taken: his vote is no, the attempt aborts at both, and neither view changes (vGLP's `play_refused`, `programs/vglp/cva/social_graph`, shows the same on GSN's platform).
+Had Bob tapped Decline, the else-branch of his answer is taken: his vote is no, declined, the attempt aborts at both, neither view changes, and Alice's request, her approval, ends by Bob's refusal, so her screen shows the notice `refused(befriend(alice, bob), bob, declined)` (vGLP's `play_refused`, `programs/vglp/cva/social_graph`, shows the same on the platform of GSC's GSG).
 
 ## GSN's app
 
@@ -94,4 +94,4 @@ The host carries a message only to a participant with whom the social graph has 
 
 ## The types written again
 
-`self.glp` writes again the types of `platform.vglp` that the imported declarations of `platform#agent` and `platform#dispatch` carry: `Peer`, `Class`, `Proposal`, `Request`, `YesNo`, `Decision`, `Attempt`, `Cargo`, `Content`, `Net`, `Atom` and `Output`, `Approval` and `Menu`; and the types the canonical compilation forms for them, `Question`, `Drawn` and `Ask(Q)`.  vGLP's Section 6.3 has the compilation write these into each module that imports a compiled procedure; once the compiler does, these copies go.
+`self.glp` writes again the types of `platform.vglp` that the imported declarations of `platform#agent` and `platform#dispatch` carry: `Peer`, `Class`, `Proposal`, `Request`, `YesNo`, `Reason`, `Vote`, `Decision`, `Rho`, `Names`, `Attempt`, `Cargo`, `Content`, `Net`, `Atom` and `Output`, `Approval` and `Menu`; and the types the canonical compilation forms for them, `Question`, `Drawn` and `Ask(Q)`.  vGLP's Section 6.3 has the compilation write these into each module that imports a compiled procedure; once the compiler does, these copies go.
