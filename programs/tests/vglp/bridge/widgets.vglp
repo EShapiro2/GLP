@@ -17,7 +17,8 @@
 %%   YesNo?           a union of constants: a row of buttons
 %%   String?          a text field
 %%   Integer?, Real?  a number field
-%%   Date?            a date picker
+%%   Date?            Date ::= Integer, drawn by its definition: a number
+%%                    field (vGLP #18 Cowork, Code_inbox 2026-10-20 21:00 UTC)
 %%   Peer?            an agent identifier: a peer field
 %%   Pay?             a tuple: a form with one field per argument
 %%   Request?         a union of tuples: a menu of forms

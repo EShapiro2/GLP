@@ -1052,11 +1052,11 @@ class _Generator {
 
   /// The Stream or the List [t] is, or names through named types each
   /// defined as one type: `Stream(String)` itself, and `Lines` where `Lines
-  /// ::= Stream(String)`, "a named type so built", which "draws as the
-  /// stream it names, like Date and Key draw by their names" (vGLP at
-  /// 66b6500, Definition "Volitional Procedure, Interactive Type, ...";
-  /// vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2); null for any other
-  /// type.
+  /// ::= Stream(String)`, one of the "named types so built" (vGLP,
+  /// Definition "Volitional Procedure, Interactive Type"), which draws as
+  /// the stream it names: "A named type, recursive or not, is its
+  /// definition" (the proof of Proposition "Default Widgets"; vGLP #7
+  /// Cowork, 2026-10-11 14:31 UTC, item 2); null for any other type.
   ///
   /// A scope's type definitions name an instantiated Stream or List by its
   /// instantiation, `Stream<Instrument>`, which is `Stream(Instrument)`
@@ -2244,7 +2244,6 @@ class _Generator {
       if (alts.length == 1) return _altWidget(n, alts.single, visiting);
       return 'menu([${alts.map((a) => _altWidget(n, a, visiting)).join(', ')}])';
     }
-    if (t is TypeRef && t.name == 'Date') return 'date';
     // An agent identifier: Peer, or Key or a type defined as Key, whatever
     // it is named (vGLP #6 Cowork, 2026-10-11 12:55 UTC, item 3, Q1).
     if (t is TypeRef && (t.name == 'Peer' || _isKey(t))) return 'peer';

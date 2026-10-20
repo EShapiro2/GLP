@@ -454,10 +454,13 @@ Order ::= order(Peer, Lot) ; cancel.
 procedure (Order?)*order(Order).
 (O)*order(O?).
 ''').source;
+      // Date ::= Integer is drawn by its definition, a number field: the
+      // paper names no date field (vGLP #18 Cowork, Code_inbox 2026-10-20
+      // 21:00 UTC: "drop the Date case").
       expect(
           s,
           contains("menu([form(order, [field('Peer', peer), field('Lot', "
-              "form(lot, [field('Integer', number), field('Date', date)]))]), "
+              "form(lot, [field('Integer', number), field('Date', number)]))]), "
               'button(cancel)])'));
       expect(
           s,
@@ -1892,10 +1895,12 @@ procedure (Pay?)*pay(Pay).
 procedure (Offer)*offer(YesNo).
 (offer(bob, [1, 2], A))*offer(A?).
 ''');
+      // Date ::= Integer, a number field, labelled Date (vGLP #18 Cowork,
+      // Code_inbox 2026-10-20 21:00 UTC: "drop the Date case").
       expect(
           c.widgets['Pay?'],
           "form(pay, [field('Peer', peer), field('Integer', number), "
-          "field('Date', date), field('Real', number)])");
+          "field('Date', number), field('Real', number)])");
       expect(
           c.widgets['Offer'],
           "form(offer, [field('Peer', shown), field('Stream(Integer)', "
