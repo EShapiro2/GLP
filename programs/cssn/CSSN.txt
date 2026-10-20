@@ -1,0 +1,12 @@
+% CSSN: Child-Safe Social Network --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: CSSN.  The paper, /Users/udi/Grassroots/CSSN/main_CSSN.tex, prints it in its box in Section 4.1 and cites a clause as CSSN:1.
+% Extends: GSN, Grassroots Social Network, GSC's (programs/gsc), and through it GSG, Grassroots Social Graph, GSC's; and GnW, Guardians 'n' Wards, GAI's (programs/gai), its wards children and their guardians parents.  It cites their clauses whole, GSG:1 to GSG:3, GSN:1 to GSN:5 and GnW:1 to GnW:4, and restates none.
+% Defines: parent, the guardian of a child (CSSN:1).  Person and adult are defined with GSG, child, agent and non-person agent with GSN, ward, guardian and relation with GnW.
+% Last changed: 2026-10-19.  Clauses 1 to 3 are CSSN #5's proposal, approved by Udi (2026-10-18); clauses 4 and 5 CSSN #6's (Udi, 2026-10-19).
+% Schemas: CSSN.glp beside this file, twenty-five over fifteen predicates, the term from which a run of the cascade prints schemas.txt (cascade.sh).
+CSSN: Child-Safe Social Network
+1. Parents.  Every ward is a child, and their guardians are their parents.  An adult, or two adults jointly, may create a child, and are then the child's parents.  A person declares themselves a parent of a child only if they are the legal parent of that child.
+2. Friendship of a child.  Two children become friends only if the two parents in the act are friends, and a child and an adult only if the adult is a friend of the parent in the act.
+3. Coming of age.  A parent declares the child of age, which ends the guardianship of every parent of the child; a parent shall do so when the child comes of age, and not before.
+4. A child with no guardian.  An adult who knows that an agent with no guardian is a child shall not befriend them, nor let their child befriend them, and shall report it to the child's parents if they know them.
+5. A child's group.  Only children may join a group a child leads.
