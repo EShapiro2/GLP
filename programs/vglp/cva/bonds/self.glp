@@ -37,23 +37,32 @@
 %% by the issuer's machine.
 %%
 %% play_bonds: alice establishes her identity and takes her first date, and
-%% her machine then advances her date on each own trigger it has no other
-%% transaction for.  She asks to mint a bond maturing at 1, mint_bond(alice,
-%% 1, 1), taken where her date is below 1, and her machine refuses it at once,
-%% unable, her date having reached 1 by her Propose, gt(1, 1) failing: her
-%% screen shows refused(mint_bond(alice, 1, 1), alice, unable([], [])), the
-%% minter's own refusal of a bond maturing no later than her date.  She mints
-%% two coins, mint_coin(alice, 2), a multiplicity, and two bonds maturing at
-%% 1000 and at 40.  Bob establishes his identity, mints two coins, asks to
-%% know alice and to meet her in person, and she answers yes; he swaps a coin
-%% of his for each of her bonds, swap_cb, she answering yes.  He redeems the
-%% bond maturing at 1000 against a coin of alice's held by her, redeem_bc(bob,
-%% alice, 1000, alice): alice's machine votes no, her date short of 1000,
-%% unable, and bob's screen shows refused(redeem_bc(bob, alice, 1000, alice),
-%% alice, unable([], [])).  He redeems the bond maturing at 40, alice's date
-%% past it, and it commits: bob holds coin(alice), and alice the bond again.
-%% The run does not suspend, alice's machine advancing her date without end,
-%% and is stopped at the REPL's :limit, its logs' tails unbound.
+%% her machine then advances her date on each own trigger, an unguarded part
+%% it opens, without end.  She mints a bond maturing at 40 while her date is
+%% below it, mint_bond(alice, 40, 1), gt(40, t) checked by her machine at her
+%% date.  She asks to mint a bond maturing at 0, mint_bond(alice, 0, 1), which
+%% gt(0, t) refuses at every date; what her machine does with the request is
+%% recorded and not asserted, vGLP's paper not yet saying whether a request
+%% whose guard is not ready is refused or not taken (Code #12's question 5 to
+%% vGLP, 2026-10-20 22:23 UTC).  She mints two coins, mint_coin(alice, 2), a
+%% multiplicity, and a bond maturing at 1000000, which her date never reaches.
+%% Bob establishes his identity, mints two coins, asks to know alice and to
+%% meet her in person, and she answers yes; he swaps a coin of his for each of
+%% her bonds, swap_cb, she answering yes.  He then asks to redeem each bond
+%% against a coin of alice's held by her, redeem_bc(bob, alice, d, alice).  Its
+%% class holds swap_cb(alice, bob, alice, 1, alice, d, 1), the same
+%% transaction, a part guarded by alice and bob beside redeem_bc's part
+%% guarded by bob, and bob's machine, ready for both, may propose either
+%% (vGLP, Definition "Proposing", Propose); his machine proposes the swap's
+%% part, the first of the class, and alice is asked: she answers no on the
+%% bond maturing at 1000000, and bob's screen shows refused(swap_cb(alice,
+%% bob, alice, 1, alice, 1000000, 1), alice, declined), and yes on the bond
+%% maturing at 40, which commits, bob holding coin(alice) and alice the bond.
+%% Which part a guard proposes is the compiled agent's choice, which the
+%% paper leaves open, and the checks hold neither (Code #13's finding to
+%% vGLP and Currencies).  The run does not suspend, alice's machine advancing
+%% her date without end, and is stopped at the REPL's :limit, its logs' tails
+%% unbound.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -96,25 +105,26 @@ exported procedure play_bonds(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_bonds(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(dawn(A2?))), wait(holds(dated)),
-          own([A3], propose(mint_bond(A3?, 1, 1))),
-          wait(refused(mint_bond(alice, 1, 1), alice, unable([], []))),
-          own([A4], propose(mint_coin(A4?, 2))), wait(has(coin(alice), 2)),
-          own([A5], propose(mint_bond(A5?, 1000, 1))), wait(holds(bond(alice, 1000))),
-          own([A6], propose(mint_bond(A6?, 40, 1))), wait(holds(bond(alice, 40))),
+          own([A3], propose(mint_bond(A3?, 40, 1))), wait(holds(bond(alice, 40))),
+          own([A4], propose(mint_bond(A4?, 0, 1))),
+          own([A5], propose(mint_coin(A5?, 2))), wait(has(coin(alice), 2)),
+          own([A6], propose(mint_bond(A6?, 1000000, 1))), wait(holds(bond(alice, 1000000))),
           req(known(bob)), wait(known(bob)),
           approval(meet(bob, alice), yes),
-          approval(swap_cb(bob, alice, bob, 1, alice, 1000, 1), yes),
-          approval(swap_cb(bob, alice, bob, 1, alice, 40, 1), yes)],
+          approval(swap_cb(bob, alice, bob, 1, alice, 1000000, 1), yes),
+          approval(swap_cb(bob, alice, bob, 1, alice, 40, 1), yes),
+          approval(swap_cb(alice, bob, alice, 1, alice, 1000000, 1), no),
+          approval(swap_cb(alice, bob, alice, 1, alice, 40, 1), yes)],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint_coin(B2?, 2))), wait(has(coin(bob), 2)),
           req(known(alice)), wait(known(alice)),
           own([B3], propose(meet(B3?, alice))), wait(holds(knows(alice))),
-          own([B4], propose(swap_cb(B4?, alice, bob, 1, alice, 1000, 1))),
-          wait(holds(bond(alice, 1000))),
+          own([B4], propose(swap_cb(B4?, alice, bob, 1, alice, 1000000, 1))),
+          wait(holds(bond(alice, 1000000))),
           own([B5], propose(swap_cb(B5?, alice, bob, 1, alice, 40, 1))),
           wait(holds(bond(alice, 40))),
-          own([B6], propose(redeem_bc(B6?, alice, 1000, alice))),
-          wait(refused(redeem_bc(bob, alice, 1000, alice), alice, unable([], []))),
+          own([B6], propose(redeem_bc(B6?, alice, 1000000, alice))),
+          wait(refused(swap_cb(alice, bob, alice, 1, alice, 1000000, 1), alice, declined)),
           own([B7], propose(redeem_bc(B7?, alice, 40, alice))),
           wait(holds(coin(alice)))],
          LA, LB, N).
