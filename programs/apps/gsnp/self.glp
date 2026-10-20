@@ -1,5 +1,5 @@
 %% ---------------------------------------------------------------------------
-%% programs/apps/gsnp --- the app of GSNP, the grassroots social network with provenance (GAI's contract, programs/gai/GSNP.md and GSNP.glp; Coordination Appendix C), which extends GSN, as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its act schemas: the canonical CVA platform vGLP's compiler prints from them, platform.vglp (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), compiled to GLP by the canonical compilation when the directory loads (vGLP, Section 6.3, "The canonical compilation").  It is the host of GSN's app, ../gsn, on GSNP's platform: the same entry miniapp/4 (miniapp.glp, the same file as ../gsg's and ../gsn's), its scripted person (person.glp) and the play that activates it by run/3, five executions over four conversations, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gsnp.glpw is what the super-app installs; the plays of the super-app hosting it on five smartphones are ../gsnp_boot.glp.
+%% programs/apps/gsnp --- the app of GSNP, the grassroots social network with provenance (GAI's contract, programs/gai/GSNP.txt and GSNP.glp; Coordination Appendix C), which extends GSN, and through it GSG and GKK, as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its act schemas: the canonical CVA platform vGLP's compiler prints from them, platform.vglp (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), compiled to GLP by the canonical compilation when the directory loads (vGLP, Section 6.3, "The canonical compilation").  It is the host of GSN's app, ../gsn, on GSNP's platform: the same entry miniapp/4 (miniapp.glp, the same file as ../gsg's and ../gsn's), its scripted person (person.glp) and the play that activates it by run/3, five executions over four conversations, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gsnp.glpw is what the super-app installs; the plays of the super-app hosting it on five smartphones are ../gsnp_boot.glp.
 %%
 %% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module, as every hand-written module importing a compiled procedure restates them today.  The compiled module's own definitions shadow these within it, and the two must agree.
 %% ---------------------------------------------------------------------------
@@ -7,14 +7,16 @@
 Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
-Class     ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+Class     ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, List(Peer), Speech) ; drop(Peer, Peer, Speech)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
             ; post_forward(Peer, Peer, Speech, Speech)
             ; deliver(Peer, Peer, Speech, Speech) ; deliver_own(Peer, Peer, Speech, Speech).
-Proposal  ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+Proposal  ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
@@ -32,7 +34,7 @@ Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
             ; yield(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Atom      ::= identity ; friend(Peer) ; item(Speech) ; authored(Speech) ; member(CName) ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech).
+Atom      ::= identity ; knows(Peer) ; friend(Peer) ; item(Speech) ; authored(Speech) ; member(CName) ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech).
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech).
 Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
