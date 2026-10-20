@@ -130,7 +130,7 @@ procedure reflexive_preds(Preds).
 reflexive_preds([friend]).
 
 procedure introduction_preds(Preds).
-introduction_preds([]).
+introduction_preds([friend]).
 
 procedure binding_of(Class?, Constant, Binding).
 binding_of(establish(V1), establish, [b(role(1), p(V1?))]).
