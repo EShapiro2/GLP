@@ -1,0 +1,224 @@
+%% IGLP's linker fixture, programs/tests/linker_tree, for program_linker_test.dart and program_compilation_test.dart: the plays, each person a scripted person on the mini-app's person channel beside a stand-in host, programs/cssn/plays.glp as it stood at GLP d2495778, its comments removed and three names changed: the directory childsafe to agents, the module and procedure superapp to host, and the procedures cssn and cssn_child to app and app_child.
+
+imported procedure agents#app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure agents#app_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure host#host(Key?, Stream(SgCmd)?, Stream(SgNotify), Stream(Conversation), SgOutStream, SgInStream?, Stream(SgPending)?, Integer?).
+imported procedure host#sg_switch(SgOutStream?, Stream(SgEntry)?).
+imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(Watched)?, Stream(_)).
+
+procedure party(Key?, Script?, Stream(Conversation)?, Stream(Watched)?, SgInStream?, SgOutStream).
+party(Id, Script, Setup, Watch, SgIn, SgOut?) :-
+    ground(Id?) |
+    host # host(Id?, Cmds?, Notes, Convs, SgOut, SgIn?, [], 1),
+    merge(Setup?, Convs?, Convs1),
+    agents # app(Id?, ch(Gs?, Ds), Convs1?),
+    person # person(Id?, Ds?, Gs, Notes?, Cmds, Script?, Watch?, Log),
+    log(Id?, Log?).
+
+procedure child_party(Key?, ParentEnds?, Script?, SgInStream?, SgOutStream, Stream(Watched)).
+child_party(Id, Es, Script, SgIn, SgOut?, Shown?) :-
+    ground(Id?) |
+    host # host(Id?, Cmds?, Notes, Convs, SgOut, SgIn?, [], 1),
+    agents # app_child(Id?, Es?, ch(Gs?, Ds), Convs?),
+    person # person(Id?, Ds?, Gs, Notes?, Cmds, Script?, [], Log),
+    log_shown(Id?, Log?, Shown).
+
+procedure enter(Key?, Key?, ParentEnds, Stream(Conversation)).
+enter(P, R, [parent(P?, CEnd?)], [entered(R?, PEnd?, [])]) :-
+    new_channel(CEnd, PEnd).
+
+procedure enter2(Key?, Key?, Key?, ParentEnds, Stream(Conversation), Stream(Conversation)).
+enter2(P, Q, R, [parent(P?, CP?), parent(Q?, CQ?)], [entered(R?, PEnd?, [Q?])], [entered(R?, QEnd?, [P?])]) :-
+    ground(P?), ground(Q?), ground(R?) |
+    new_channel(CP, PEnd),
+    new_channel(CQ, QEnd).
+
+procedure log(Key?, Stream(_)?).
+log(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log(Id?, Ms?).
+log(_, []).
+
+procedure log_shown(Key?, Stream(_)?, Stream(Watched)).
+log_shown(Id, [M|Ms], [watched(Id?, M?)|Ws?]) :-
+    ground(Id?), ground(M?) |
+    send_to_user([tagged(Id?, M?)]),
+    log_shown(Id?, Ms?, Ws).
+log_shown(_, [], []).
+
+exported procedure village.
+village :-
+    enter(alice, carol, CE, AS),
+    enter(bob, dave, DE, BS1),
+    enter(bob, eve, EE, BS2),
+    merge(BS1?, BS2?, BS),
+    village_script(alice, SA), party(alice, SA?, AS?, [], AIn?, AOut),
+    village_script(bob, SB), party(bob, SB?, BS?, BW?, BIn?, BOut),
+    village_script(frank, SF), party(frank, SF?, [], [], FIn?, FOut),
+    village_script(carol, SC), child_party(carol, CE?, SC?, CIn?, COut, _),
+    village_script(dave, SD), child_party(dave, DE?, SD?, DIn?, DOut, DW),
+    village_script(eve, SE), child_party(eve, EE?, SE?, EIn?, EOut, EW),
+    merge(DW?, EW?, BW),
+    merge(AOut?, BOut?, O1), merge(O1?, FOut?, O2), merge(O2?, COut?, O3),
+    merge(O3?, DOut?, O4), merge(O4?, EOut?, Os),
+    host # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn), sg_entry(frank, FIn),
+                               sg_entry(carol, CIn), sg_entry(dave, DIn), sg_entry(eve, EIn)]).
+
+procedure village_script(Key?, Script).
+village_script(alice, [
+    befriend(bob), befriend(frank), await(connected(bob)), await(connected(frank)),
+    req(sign('Hello Bob')), req(forward(bob, sgn('Hello Bob', alice))),
+    req(introduce(carol, bob, dave)),
+    req(introduce(carol, bob, eve)),
+    answer(invite(group_id(carol, kids_chat), dave), yes),
+    answer(invite(group_id(carol, kids_chat), eve), yes),
+    answer(join(group_id(frank, study), carol), yes)]).
+village_script(bob, [
+    accept_friend(alice), befriend(frank), await(connected(frank)),
+    answer(intro(alice, carol, dave), yes),
+    req(introduce(dave, bob, eve)),
+    answer(intro(alice, carol, eve), yes),
+    answer(join(group_id(carol, kids_chat), dave), yes),
+    answer(join(group_id(carol, kids_chat), eve), yes),
+    answer(join(group_id(frank, study), dave), yes),
+    await(received(sgn(sgn('Dave posted', frank), frank))),
+    req(leave_child(dave, group_id(frank, study))),
+    await_at(eve, group_left(group_id(carol, kids_chat))),
+    await_at(dave, group_left(group_id(frank, study))),
+    await_at(dave, unfriended(carol)),
+    req(declare_of_age(eve))]).
+village_script(frank, [
+    accept_friend(alice), accept_friend(bob),
+    req(create_group(study)),
+    req(invite_child(study, dave, bob)), req(invite_child(study, carol, alice)),
+    await(member_joined(group_id(frank, study), dave)),
+    await(member_joined(group_id(frank, study), carol)),
+    req(sign('Welcome to the study group')),
+    req(post(group_id(frank, study), sgn('Welcome to the study group', frank))),
+    await(group_received(group_id(frank, study), sgn(sgn('Hi from Dave!', dave), dave))),
+    req(sign('Dave posted')), req(forward(bob, sgn('Dave posted', frank))),
+    accept_friend(eve)]).
+village_script(carol, [
+    answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, eve), yes),
+    await(connected(dave)), await(connected(eve)),
+    req(create_group(kids_chat)),
+    req(invite(kids_chat, dave)), req(invite(kids_chat, eve)),
+    await(member_joined(group_id(carol, kids_chat), dave)),
+    await(member_joined(group_id(carol, kids_chat), eve)),
+    req(sign('Hi from Carol')),
+    req(post(group_id(carol, kids_chat), sgn('Hi from Carol', carol))),
+    answer(group(group_id(frank, study)), yes),
+    await(group_received(group_id(frank, study), sgn(sgn(sgn('Hi from Dave!', dave), dave), frank))),
+    req(sign('Hi from Carol!')),
+    req(post(group_id(frank, study), sgn('Hi from Carol!', carol))),
+    req(unfriend(dave))]).
+village_script(dave, [
+    answer(intro(alice, carol, dave), yes), answer(intro(bob, dave, eve), yes),
+    answer(group(group_id(carol, kids_chat)), yes),
+    await(group_received(group_id(carol, kids_chat), sgn(sgn('Hi from Carol', carol), carol))),
+    req(sign('Hi from Dave')),
+    req(post(group_id(carol, kids_chat), sgn('Hi from Dave', dave))),
+    answer(group(group_id(frank, study)), yes),
+    await(group_joined(group_id(frank, study))),
+    req(sign('Hi from Dave!')),
+    req(post(group_id(frank, study), sgn('Hi from Dave!', dave)))]).
+village_script(eve, [
+    answer(intro(bob, dave, eve), yes), answer(intro(alice, carol, eve), yes),
+    answer(group(group_id(carol, kids_chat)), yes),
+    await(group_received(group_id(carol, kids_chat), sgn(sgn(sgn('Hi from Dave', dave), dave), carol))),
+    req(sign('Hi from Eve')),
+    req(post(group_id(carol, kids_chat), sgn('Hi from Eve', eve))),
+    await(group_received(group_id(carol, kids_chat), sgn(sgn(sgn('Hi from Eve', eve), eve), carol))),
+    req(leave(group_id(carol, kids_chat))),
+    await(of_age),
+    befriend(frank), await(connected(frank))]).
+
+exported procedure play_two_parents.
+play_two_parents :-
+    enter2(alice, bob, carol, CE, AS, BS),
+    party(alice, [await(child(carol)), accept_friend(dave), await(connected(dave)),
+                  req(declare_of_age(carol)), await(child_of_age(carol)),
+                  req(declare_of_age(carol)), await(not_my_child(carol))], AS?, [], AIn?, AOut),
+    party(bob, [await(child_of_age(carol)), req(declare_of_age(carol)),
+                await(not_my_child(carol))], BS?, [], BIn?, BOut),
+    child_party(carol, CE?, [req(introduce(carol, alice, dave)), await(not_my_child(carol)),
+                             accept_friend(dave), await(refused(dave)),
+                             await(of_age), befriend(dave), await(connected(dave))], CIn?, COut, _),
+    party(dave, [befriend(carol), await(connected(carol)), befriend(alice),
+                 accept_friend(carol)], [], [], DIn?, DOut),
+    merge(AOut?, BOut?, O1), merge(O1?, COut?, O2), merge(O2?, DOut?, Os),
+    host # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn),
+                               sg_entry(carol, CIn), sg_entry(dave, DIn)]).
+
+exported procedure play_twice.
+play_twice :-
+    enter(alice, carol, CE, AS),
+    enter(bob, dave, DE, BS),
+    party(alice, [befriend(bob), await(connected(bob)),
+                  req(introduce(carol, bob, dave)), req(introduce(carol, bob, dave))], AS?, [], AIn?, AOut),
+    party(bob, [accept_friend(alice),
+                answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, dave), yes)], BS?, [], BIn?, BOut),
+    child_party(carol, CE?, [answer(intro(alice, carol, dave), yes),
+                             answer(intro(alice, carol, dave), yes)], CIn?, COut, _),
+    child_party(dave, DE?, [answer(intro(alice, carol, dave), yes),
+                            answer(intro(alice, carol, dave), yes)], DIn?, DOut, _),
+    merge(AOut?, BOut?, O1), merge(O1?, COut?, O2), merge(O2?, DOut?, Os),
+    host # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn),
+                               sg_entry(carol, CIn), sg_entry(dave, DIn)]).
+
+exported procedure play_both_ways.
+play_both_ways :-
+    party(alice, [befriend(bob), accept_friend(bob)], [], [], AIn?, AOut),
+    party(bob, [befriend(alice), accept_friend(alice)], [], [], BIn?, BOut),
+    merge(AOut?, BOut?, Os),
+    host # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn)]).
+
+exported procedure play_late_join.
+play_late_join :-
+    party(alice, [befriend(bob), befriend(carol), befriend(dave),
+                  await(connected(bob)), await(connected(carol)), await(connected(dave)),
+                  req(create_group(late_join)), req(invite(late_join, bob)),
+                  await(member_joined(group_id(alice, late_join), bob)),
+                  req(sign('Posted before Carol joined')),
+                  req(post(group_id(alice, late_join), sgn('Posted before Carol joined', alice))),
+                  await(group_received(group_id(alice, late_join), sgn('Posted before Carol joined', alice))),
+                  req(invite(late_join, carol)),
+                  await(member_joined(group_id(alice, late_join), carol)),
+                  req(sign('Posted before Dave joined')),
+                  req(post(group_id(alice, late_join), sgn('Posted before Dave joined', alice))),
+                  await(group_received(group_id(alice, late_join), sgn('Posted before Dave joined', alice))),
+                  req(invite(late_join, dave))], [], [], AIn?, AOut),
+    party(bob, [accept_friend(alice), answer(group(group_id(alice, late_join)), yes)], [], [], BIn?, BOut),
+    party(carol, [accept_friend(alice), answer(group(group_id(alice, late_join)), yes)], [], [], CIn?, COut),
+    party(dave, [accept_friend(alice), answer(group(group_id(alice, late_join)), yes)], [], [], DIn?, DOut),
+    merge(AOut?, BOut?, O1), merge(O1?, COut?, O2), merge(O2?, DOut?, Os),
+    host # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn),
+                               sg_entry(carol, CIn), sg_entry(dave, DIn)]).
+
+exported procedure play_child_leave.
+play_child_leave :-
+    enter(alice, carol, CE, AS),
+    enter(bob, dave, DE, BS1),
+    enter(bob, eve, EE, BS2),
+    merge(BS1?, BS2?, BS),
+    party(alice, [befriend(bob), await(connected(bob)),
+                  req(introduce(carol, bob, dave)), req(introduce(carol, bob, eve)),
+                  answer(invite(group_id(carol, kids_chat), dave), yes),
+                  answer(invite(group_id(carol, kids_chat), eve), yes)], AS?, [], AIn?, AOut),
+    party(bob, [accept_friend(alice),
+                answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, eve), yes),
+                answer(join(group_id(carol, kids_chat), dave), yes),
+                answer(join(group_id(carol, kids_chat), eve), yes),
+                await_at(dave, group_joined(group_id(carol, kids_chat))),
+                req(leave_child(dave, group_id(carol, kids_chat)))], BS?, DW?, BIn?, BOut),
+    child_party(carol, CE?, [answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, eve), yes),
+                             await(connected(dave)), await(connected(eve)),
+                             req(create_group(kids_chat)),
+                             req(invite(kids_chat, dave)), req(invite(kids_chat, eve))], CIn?, COut, _),
+    child_party(dave, DE?, [answer(intro(alice, carol, dave), yes),
+                            answer(group(group_id(carol, kids_chat)), yes)], DIn?, DOut, DW),
+    child_party(eve, EE?, [answer(intro(alice, carol, eve), yes),
+                           answer(group(group_id(carol, kids_chat)), yes),
+                           await(group_joined(group_id(carol, kids_chat))),
+                           req(leave(group_id(carol, kids_chat)))], EIn?, EOut, _),
+    merge(AOut?, BOut?, O1), merge(O1?, COut?, O2), merge(O2?, DOut?, O3), merge(O3?, EOut?, Os),
+    host # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn), sg_entry(carol, CIn),
+                               sg_entry(dave, DIn), sg_entry(eve, EIn)]).

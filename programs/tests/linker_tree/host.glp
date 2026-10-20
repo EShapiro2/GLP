@@ -1,0 +1,84 @@
+%% IGLP's linker fixture, programs/tests/linker_tree, for program_linker_test.dart and program_compilation_test.dart: the stand-in host, programs/cssn/superapp.glp as it stood at GLP d2495778, its comments removed and three names changed: the directory childsafe to agents, the module and procedure superapp to host, and the procedures cssn and cssn_child to app and app_child.
+
+exported procedure host(Key?, Stream(SgCmd)?, Stream(SgNotify), Stream(Conversation), SgOutStream, SgInStream?, Stream(SgPending)?, Integer?).
+
+host(Id, [connect(Target)|Cmds], Notify?, Convs?, [sg(Target?, sg_invite(Id?, Resp))|Out?], In, Ps, N) :-
+    ground(Id?), ground(Target?) |
+    inject_sg_answer(Resp?, Target?, In?, In1),
+    host(Id?, Cmds?, Notify, Convs, Out, In1?, Ps?, N?).
+
+host(Id, [decision(Dec, From, ReqId)|Cmds], Notify?, Convs?, Out?, In, Ps, N) :-
+    ground(Id?), ground(Dec?), ground(From?), ground(ReqId?) |
+    lookup_sg(ReqId?, Val, Ps?, Ps1),
+    answer_invite(Dec?, From?, Val?, Convs, Convs1?),
+    host(Id?, Cmds?, Notify, Convs1, Out, In?, Ps1?, N?).
+
+host(Id, Cmds, Notify?, Convs?, Out?, [sg(Id1, sg_invite(From, Resp?))|In], Ps, N) :-
+    Id? =?= Id1?, ground(From?), ground(N?) |
+    N1 := N? + 1,
+    show_invite(From?, req(N?), Notify, Notify1?),
+    host(Id?, Cmds?, Notify1, Convs, Out, In?, [sg_pending(req(N?), sg_response(Resp))|Ps?], N1?).
+
+host(Id, Cmds, Notify?, Convs?, Out?, [sg_answer(Target, sg_accept(End))|In], Ps, N) :-
+    ground(Target?) |
+    open_conv(Target?, End?, Convs, Convs1?),
+    host(Id?, Cmds?, Notify, Convs1, Out, In?, Ps?, N?).
+
+host(Id, Cmds, Notify?, Convs?, Out?, [sg_answer(Target, sg_decline)|In], Ps, N) :-
+    ground(Target?) |
+    show_declined(Target?, Notify, Notify1?),
+    host(Id?, Cmds?, Notify1, Convs, Out, In?, Ps?, N?).
+
+procedure show_invite(Key?, ReqId?, Stream(SgNotify), Stream(SgNotify)?).
+show_invite(From, ReqId, [befriend(From?, ReqId?)|Notify1?], Notify1).
+
+procedure show_declined(Key?, Stream(SgNotify), Stream(SgNotify)?).
+show_declined(Target, [declined(Target?)|Notify1?], Notify1).
+
+procedure lookup_sg(ReqId?, SgPendingValue, Stream(SgPending)?, Stream(SgPending)).
+lookup_sg(ReqId, Val?, [sg_pending(Id, Val)|Rest], Rest?) :-
+    ReqId? =?= Id? | true.
+lookup_sg(ReqId, Val?, [P|Rest], [P?|Rest1?]) :-
+    otherwise |
+    lookup_sg(ReqId?, Val, Rest?, Rest1).
+lookup_sg(_, sg_error, [], []).
+
+procedure answer_invite(Decision?, Key?, SgPendingValue?, Stream(Conversation), Stream(Conversation)?).
+answer_invite(Dec, From, sg_response(Resp?), Convs?, Convs1) :-
+    ground(Dec?), ground(From?) |
+    bind_invite(Resp, Dec?, From?, Convs, Convs1?).
+answer_invite(_, _, sg_error, Convs?, Convs).
+
+procedure bind_invite(SgResponse, Decision?, Key?, Stream(Conversation), Stream(Conversation)?).
+bind_invite(sg_accept(TheirEnd?), yes, From, Convs?, Convs1) :-
+    ground(From?), new_channel(TheirEnd, MyEnd) |
+    open_conv(From?, MyEnd?, Convs, Convs1?).
+bind_invite(sg_decline, no, _, Convs?, Convs).
+
+procedure open_conv(Key?, FriendChannel?, Stream(Conversation), Stream(Conversation)?).
+open_conv(Q, End, [conversation(Q?, End?)|Convs1?], Convs1).
+
+procedure inject_sg_answer(SgResponse?, Key?, SgInStream?, SgInStream).
+inject_sg_answer(Resp, Target, Ys, [sg_answer(Target?, Resp?)|Ys?]) :-
+    known(Resp?), ground(Target?) | true.
+inject_sg_answer(Resp, Target, [Y|Ys], [Y?|Ys1?]) :-
+    inject_sg_answer(Resp?, Target?, Ys?, Ys1).
+
+exported procedure sg_switch(SgOutStream?, Stream(SgEntry)?).
+sg_switch([sg(Dest, Content)|In], Entries) :-
+    ground(Dest?) |
+    sg_send(Dest?, sg(Dest?, Content?), Entries?, Entries1),
+    sg_switch(In?, Entries1?).
+sg_switch([], Entries) :- sg_close(Entries?).
+
+procedure sg_close(Stream(SgEntry)?).
+sg_close([sg_entry(_, [])|Rest]) :- sg_close(Rest?).
+sg_close([]).
+
+procedure sg_send(Key?, SgInMsg?, Stream(SgEntry)?, Stream(SgEntry)).
+sg_send(Dest, Msg, [sg_entry(K, [Msg?|Out1?])|Rest], [sg_entry(K?, Out1)|Rest?]) :-
+    Dest? =?= K? | true.
+sg_send(Dest, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    sg_send(Dest?, Msg?, Rest?, Rest1).
+sg_send(_, _, [], []).

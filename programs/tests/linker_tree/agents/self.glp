@@ -1,0 +1,9 @@
+%% IGLP's linker fixture, programs/tests/linker_tree, for program_linker_test.dart and program_compilation_test.dart: the self.glp of the nested directory, exporting the mini-app's two entries, programs/cssn/childsafe/self.glp as it stood at GLP d2495778, its comments removed and three names changed: the directory childsafe to agents, the module and procedure superapp to host, and the procedures cssn and cssn_child to app and app_child.
+
+imported procedure miniapp#app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+exported procedure app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+app(Id, Ui, Convs) :- miniapp # app(Id?, Ui?, Convs?).
+
+imported procedure miniapp#app_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+exported procedure app_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+app_child(Id, Es, Ui, Convs) :- miniapp # app_child(Id?, Es?, Ui?, Convs?).
