@@ -168,6 +168,33 @@ void main() {
     });
   });
 
+  // "the error for an ill-typed term prints the first failing path and the
+  // number of the rest" (GLP #9 Cowork, 2026-10-20 09:22 UTC, item 3): each
+  // path of a list runs down its spine, and until 2026-10-20 every failing
+  // path was printed in full, text quadratic in the list's length (Code #11,
+  // 2026-10-19 17:32 UTC).
+  test(
+      'a clause whose argument is a list of $_n ill-typed elements is refused, '
+      'its error printing the first failing path and the number of the rest',
+      () {
+    final source = 'exported procedure g(Stream(Integer)).\n'
+        'g([${_elements(_n, (i) => "'s$i'")}]).\n';
+    Object? error;
+    try {
+      load('all_bad.glp', source);
+    } catch (e) {
+      error = e;
+    }
+    final s = error.toString();
+    expect(s, contains('Type checking failed'));
+    expect(s, contains('Head of g is not well-typed:\n'
+        '  Inconsistent path: Integer type requires integer literal\n'
+        '  Path: '));
+    expect(s, contains('and ${_n - 1} more inconsistent paths of the term'));
+    expect('Inconsistent path:'.allMatches(s).length, 1);
+    expect(s.length, lessThan(2000));
+  });
+
   test(
       'input coverage of a list in the head reports each uncovered '
       'alternative, in the order of the walk', () {

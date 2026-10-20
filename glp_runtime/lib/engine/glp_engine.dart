@@ -944,21 +944,26 @@ class GlpEngine {
     if (inputs.toSet().length != inputs.length) {
       throw GoalRefused('An input is named twice: ${inputs.join(', ')}');
     }
+    // The goal's variables, each subterm visited from a stack of those still
+    // to visit, so a list of any length is walked in constant stack depth
+    // (TGLP well-typing.tex, Definition "Well-Typed Clause", puts no bound on
+    // a term's size; GLP #9 Cowork, 2026-10-20 09:22 UTC, item 3).
     final readers = <String>{};
     final writers = <String>{};
-    void walk(Term? t) {
+    final pending = <Term?>[
+      for (final goal in goals) ...goal.args.reversed,
+    ];
+    while (pending.isNotEmpty) {
+      final t = pending.removeLast();
       if (t is VarTerm) {
         (t.isReader ? readers : writers).add(t.name);
       } else if (t is StructTerm) {
-        t.args.forEach(walk);
+        pending.addAll(t.args.reversed);
       } else if (t is ListTerm) {
-        walk(t.head);
-        walk(t.tail);
+        pending
+          ..add(t.tail)
+          ..add(t.head);
       }
-    }
-
-    for (final goal in goals) {
-      goal.args.forEach(walk);
     }
     for (final name in inputs) {
       if (writers.contains(name)) {
@@ -1645,74 +1650,88 @@ class GlpEngine {
     Map<String, HeapCell> queryVarWriters,
     Map<String, HeapCell> varNameToId,
   ) {
-    if (list.isNil) {
-      return rt.ConstTerm(rt.nil);
-    }
-
-    final head = list.head;
-    final tail = list.tail;
-
-    rt.Term headTerm;
-    if (head is ConstTerm) {
-      headTerm = rt.ConstTerm(head.value);
-    } else if (head is VarTerm) {
-      final baseName = head.name;
-      final existingId = varNameToId[baseName];
-      if (existingId != null) {
-        headTerm = rt.VarRef(head.isReader
-            ? runtime.heap.pairedReaderAddr(existingId)
-            : existingId);
+    // An element of the list.
+    rt.Term element(Term? head) {
+      rt.Term headTerm;
+      if (head is ConstTerm) {
+        headTerm = rt.ConstTerm(head.value);
+      } else if (head is VarTerm) {
+        final baseName = head.name;
+        final existingId = varNameToId[baseName];
+        if (existingId != null) {
+          headTerm = rt.VarRef(head.isReader
+              ? runtime.heap.pairedReaderAddr(existingId)
+              : existingId);
+        } else {
+          final (writerId, readerId) = runtime.heap.allocateVariable();
+          varNameToId[baseName] = writerId;
+          // Reported whichever occurrence meets it first (_setupArgument).
+          queryVarWriters[baseName] = writerId;
+          headTerm = rt.VarRef(head.isReader ? readerId : writerId);
+        }
+      } else if (head is ListTerm) {
+        headTerm = _buildListTerm(runtime, head, queryVarWriters, varNameToId);
+      } else if (head is StructTerm) {
+        headTerm = _buildStructTerm(runtime, head, queryVarWriters, varNameToId);
+      } else if (head is UnderscoreTerm) {
+        headTerm = _anonymousWriter(runtime, head);
       } else {
-        final (writerId, readerId) = runtime.heap.allocateVariable();
-        varNameToId[baseName] = writerId;
-        // Reported whichever occurrence meets it first (_setupArgument).
-        queryVarWriters[baseName] = writerId;
-        headTerm = rt.VarRef(head.isReader ? readerId : writerId);
+        throw Exception('Unsupported list head type: ${head.runtimeType}');
       }
-    } else if (head is ListTerm) {
-      headTerm = _buildListTerm(runtime, head, queryVarWriters, varNameToId);
-    } else if (head is StructTerm) {
-      headTerm = _buildStructTerm(runtime, head, queryVarWriters, varNameToId);
-    } else if (head is UnderscoreTerm) {
-      headTerm = _anonymousWriter(runtime, head);
-    } else {
-      throw Exception('Unsupported list head type: ${head.runtimeType}');
+      return headTerm;
     }
 
     // The tail as written, whatever term it is (GLP-Spec appendix-lp.tex,
     // Definition "Logic Programs Syntax": `[X|Xs]` is a list cell, a compound
-    // term, and its subterms are terms).  Until 2026-10-07 a tail that was
-    // neither a list nor a variable was built as ConstTerm(null), which the
-    // display took for [], so `X = [a | b].` posted `[a]`; and a `_` head
-    // threw.
-    rt.Term tailTerm;
-    if (tail is ListTerm) {
-      tailTerm = _buildListTerm(runtime, tail, queryVarWriters, varNameToId);
-    } else if (tail is VarTerm) {
-      final baseName = tail.name;
-      final existingId = varNameToId[baseName];
-      if (existingId != null) {
-        tailTerm = rt.VarRef(tail.isReader
-            ? runtime.heap.pairedReaderAddr(existingId)
-            : existingId);
+    // term, and its subterms are terms), where it is not a list cell or [].
+    // Until 2026-10-07 a tail that was neither a list nor a variable was built
+    // as ConstTerm(null), which the display took for [], so `X = [a | b].`
+    // posted `[a]`; and a `_` head threw.
+    rt.Term ending(Term? tail) {
+      rt.Term tailTerm;
+      if (tail is VarTerm) {
+        final baseName = tail.name;
+        final existingId = varNameToId[baseName];
+        if (existingId != null) {
+          tailTerm = rt.VarRef(tail.isReader
+              ? runtime.heap.pairedReaderAddr(existingId)
+              : existingId);
+        } else {
+          final (writerId, readerId) = runtime.heap.allocateVariable();
+          varNameToId[baseName] = writerId;
+          // Reported whichever occurrence meets it first (_setupArgument).
+          queryVarWriters[baseName] = writerId;
+          tailTerm = rt.VarRef(tail.isReader ? readerId : writerId);
+        }
+      } else if (tail is ConstTerm) {
+        tailTerm = rt.ConstTerm(tail.value);
+      } else if (tail is StructTerm) {
+        tailTerm = _buildStructTerm(runtime, tail, queryVarWriters, varNameToId);
+      } else if (tail is UnderscoreTerm) {
+        tailTerm = _anonymousWriter(runtime, tail);
       } else {
-        final (writerId, readerId) = runtime.heap.allocateVariable();
-        varNameToId[baseName] = writerId;
-        // Reported whichever occurrence meets it first (_setupArgument).
-        queryVarWriters[baseName] = writerId;
-        tailTerm = rt.VarRef(tail.isReader ? readerId : writerId);
+        throw Exception('Unsupported list tail type: ${tail.runtimeType}');
       }
-    } else if (tail is ConstTerm) {
-      tailTerm = rt.ConstTerm(tail.value);
-    } else if (tail is StructTerm) {
-      tailTerm = _buildStructTerm(runtime, tail, queryVarWriters, varNameToId);
-    } else if (tail is UnderscoreTerm) {
-      tailTerm = _anonymousWriter(runtime, tail);
-    } else {
-      throw Exception('Unsupported list tail type: ${tail.runtimeType}');
+      return tailTerm;
     }
 
-    return rt.StructTerm('.', [headTerm, tailTerm]);
+    // The list along its spine, in a loop, and each element by recursion,
+    // as the checker walks it: a list of any length is built in constant
+    // stack depth (TGLP well-typing.tex, Definition "Well-Typed Clause",
+    // puts no bound on a term's size; GLP #9 Cowork, 2026-10-20 09:22 UTC,
+    // item 3).  The elements are built first to last and the tail after
+    // them, so the variables are allocated in the order they are written.
+    final elements = <rt.Term>[];
+    Term? rest = list;
+    while (rest is ListTerm && !rest.isNil) {
+      elements.add(element(rest.head));
+      rest = rest.tail;
+    }
+    var built = rest is ListTerm ? rt.ConstTerm(rt.nil) as rt.Term : ending(rest);
+    for (var i = elements.length - 1; i >= 0; i--) {
+      built = rt.StructTerm('.', [elements[i], built]);
+    }
+    return built;
   }
 
   rt.Term _buildListTermForConj(
@@ -1721,70 +1740,84 @@ class GlpEngine {
     Map<String, HeapCell> queryVarWriters,
     Map<String, HeapCell> varNameToId,
   ) {
-    if (list.isNil) {
-      return rt.ConstTerm(rt.nil);
-    }
-
-    final head = list.head;
-    final tail = list.tail;
-
-    rt.Term headTerm;
-    if (head is ConstTerm) {
-      headTerm = rt.ConstTerm(head.value);
-    } else if (head is VarTerm) {
-      final baseName = head.name;
-      final existingId = varNameToId[baseName];
-      if (existingId != null) {
-        headTerm = rt.VarRef(head.isReader
-            ? runtime.heap.pairedReaderAddr(existingId)
-            : existingId);
+    // An element of the list.
+    rt.Term element(Term? head) {
+      rt.Term headTerm;
+      if (head is ConstTerm) {
+        headTerm = rt.ConstTerm(head.value);
+      } else if (head is VarTerm) {
+        final baseName = head.name;
+        final existingId = varNameToId[baseName];
+        if (existingId != null) {
+          headTerm = rt.VarRef(head.isReader
+              ? runtime.heap.pairedReaderAddr(existingId)
+              : existingId);
+        } else {
+          final (writerId, readerId) = runtime.heap.allocateVariable();
+          varNameToId[baseName] = writerId;
+          // Reported whichever occurrence meets it first (_setupArgument).
+          queryVarWriters[baseName] = writerId;
+          headTerm = head.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
+        }
+      } else if (head is ListTerm) {
+        headTerm = _buildListTermForConj(runtime, head, queryVarWriters, varNameToId);
+      } else if (head is StructTerm) {
+        headTerm =
+            _buildStructTermForConj(runtime, head, queryVarWriters, varNameToId);
+      } else if (head is UnderscoreTerm) {
+        headTerm = _anonymousWriter(runtime, head);
       } else {
-        final (writerId, readerId) = runtime.heap.allocateVariable();
-        varNameToId[baseName] = writerId;
-        // Reported whichever occurrence meets it first (_setupArgument).
-        queryVarWriters[baseName] = writerId;
-        headTerm = head.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
+        throw Exception('Unsupported list head type: ${head.runtimeType}');
       }
-    } else if (head is ListTerm) {
-      headTerm = _buildListTermForConj(runtime, head, queryVarWriters, varNameToId);
-    } else if (head is StructTerm) {
-      headTerm =
-          _buildStructTermForConj(runtime, head, queryVarWriters, varNameToId);
-    } else if (head is UnderscoreTerm) {
-      headTerm = _anonymousWriter(runtime, head);
-    } else {
-      throw Exception('Unsupported list head type: ${head.runtimeType}');
+      return headTerm;
     }
 
     // The tail as written ([_buildListTerm]).
-    rt.Term tailTerm;
-    if (tail is ListTerm) {
-      tailTerm = _buildListTermForConj(runtime, tail, queryVarWriters, varNameToId);
-    } else if (tail is VarTerm) {
-      final baseName = tail.name;
-      final existingId = varNameToId[baseName];
-      if (existingId != null) {
-        tailTerm = rt.VarRef(tail.isReader
-            ? runtime.heap.pairedReaderAddr(existingId)
-            : existingId);
+    rt.Term ending(Term? tail) {
+      rt.Term tailTerm;
+      if (tail is VarTerm) {
+        final baseName = tail.name;
+        final existingId = varNameToId[baseName];
+        if (existingId != null) {
+          tailTerm = rt.VarRef(tail.isReader
+              ? runtime.heap.pairedReaderAddr(existingId)
+              : existingId);
+        } else {
+          final (writerId, readerId) = runtime.heap.allocateVariable();
+          varNameToId[baseName] = writerId;
+          // Reported whichever occurrence meets it first (_setupArgument).
+          queryVarWriters[baseName] = writerId;
+          tailTerm = tail.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
+        }
+      } else if (tail is ConstTerm) {
+        tailTerm = rt.ConstTerm(tail.value);
+      } else if (tail is StructTerm) {
+        tailTerm =
+            _buildStructTermForConj(runtime, tail, queryVarWriters, varNameToId);
+      } else if (tail is UnderscoreTerm) {
+        tailTerm = _anonymousWriter(runtime, tail);
       } else {
-        final (writerId, readerId) = runtime.heap.allocateVariable();
-        varNameToId[baseName] = writerId;
-        // Reported whichever occurrence meets it first (_setupArgument).
-        queryVarWriters[baseName] = writerId;
-        tailTerm = tail.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
+        throw Exception('Unsupported list tail type: ${tail.runtimeType}');
       }
-    } else if (tail is ConstTerm) {
-      tailTerm = rt.ConstTerm(tail.value);
-    } else if (tail is StructTerm) {
-      tailTerm =
-          _buildStructTermForConj(runtime, tail, queryVarWriters, varNameToId);
-    } else if (tail is UnderscoreTerm) {
-      tailTerm = _anonymousWriter(runtime, tail);
-    } else {
-      throw Exception('Unsupported list tail type: ${tail.runtimeType}');
+      return tailTerm;
     }
 
-    return rt.StructTerm('.', [headTerm, tailTerm]);
+    // The list along its spine, in a loop, and each element by recursion,
+    // as the checker walks it: a list of any length is built in constant
+    // stack depth (TGLP well-typing.tex, Definition "Well-Typed Clause",
+    // puts no bound on a term's size; GLP #9 Cowork, 2026-10-20 09:22 UTC,
+    // item 3).  The elements are built first to last and the tail after
+    // them, so the variables are allocated in the order they are written.
+    final elements = <rt.Term>[];
+    Term? rest = list;
+    while (rest is ListTerm && !rest.isNil) {
+      elements.add(element(rest.head));
+      rest = rest.tail;
+    }
+    var built = rest is ListTerm ? rt.ConstTerm(rt.nil) as rt.Term : ending(rest);
+    for (var i = elements.length - 1; i >= 0; i--) {
+      built = rt.StructTerm('.', [elements[i], built]);
+    }
+    return built;
   }
 }
