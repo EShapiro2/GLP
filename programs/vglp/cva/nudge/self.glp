@@ -18,8 +18,9 @@
 %%   alice's with priority, she preceding bob in the order of identifiers
 %%   (vGLP, Definition "Priority, Waiting, Blocked, Clear"): bob, holding his own
 %%   attempt prepared, holds alice's start waiting and wounds his attempt,
-%%   which aborts; alice holds his start waiting, her lock set, and takes it,
-%%   the attempt closed, after its abort.  bob then takes her start and votes
+%%   which yields, the outcome yield (vGLP f0acbc1, Definitions "Starting and
+%%   Wounding" and "Deciding"); alice holds his start waiting, her lock set,
+%%   and takes it, the attempt closed, after its yield.  bob then takes her start and votes
 %%   yes, and her nudge commits at both; bob proposes again, his attempt
 %%   keeping the rank of the wounded one, and it commits at both.
 %%
@@ -31,14 +32,18 @@ Class    ::= befriend(Peer, Peer) ; nudge(Peer, Peer).
 Proposal ::= befriend(Peer, Peer).
 Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
-Decision ::= commit ; abort.
-Attempt  ::= attempt(Peer, Integer, Integer, Class).
-Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; yield(Attempt).
+Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; nudged(Peer) ; nudged_by(Peer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key) ; yielded(Class).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).

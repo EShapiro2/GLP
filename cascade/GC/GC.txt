@@ -1,0 +1,12 @@
+% GC: Grassroots Currencies --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: Currencies (GC).  The paper, /Users/udi/Grassroots/GC/main_Grassroots_Currencies.tex, prints it in its box in Section 2.1 and cites a clause as GC:1; GSC's paper quotes it beside GSN.
+% Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none; no clause of it requires a friend.
+% Defines: grassroots coin, a unit of debt that names its issuer; Alice-coin, a grassroots coin issued by Alice.  Person, and knowing a person, are defined with GKK; Alice and Bob are variables naming distinct persons.
+% Last changed: 2026-10-20.  The clauses as Udi approved them, in chat with GSC #5 (reported by GSC, 2026-10-20 16:52 UTC) and with Currencies #11 (2026-10-20): clauses 2 to 4 require that Alice knows Bob, and clause 2 that Bob knows Alice.
+% Schemas: GC.glp beside this file, GKK's three and four over the predicate coin, the term from which a run of the cascade prints schemas.txt (cascade.sh).
+GC: Grassroots Currencies
+1. Minting.  Alice may decide to issue Alice-coins.
+2. Swap.  Alice and Bob, who know each other, may jointly decide to swap coins they hold.
+3. Payment.  Alice may decide to pay Bob-coins they hold to Bob, whom they know.
+4. Redemption.  Alice may decide to redeem a Bob-coin they hold against any coin held by Bob, whom they know.
+5. Pricing.  Alice prices their offerings in Alice-coins and accepts them in payment at those prices.

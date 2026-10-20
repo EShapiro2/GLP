@@ -1086,11 +1086,11 @@ awk -F'\t' '
             if (index($4, "propose(befriend(" me ", " other "))")) bef++
             if (index($4, "propose(establish(" me "))")) est++
         } else if ($3 == "Approval") {
-            if ($4 ~ /^approval\(attempt\(p[12], [0-9]+, [0-9]+, befriend\(p[12], p[12]\)\), yes\)$/ && index($4, "attempt(" other ", ")) app++
+            if ($4 ~ /^approval\(attempt\(p[12], [0-9]+, [0-9]+, befriend\(p[12], p[12]\), none\), yes\)$/ && index($4, "attempt(" other ", ")) app++
             else bad++
         } else if ($3 == "output") {
             out[$2]++
-            if ($4 !~ /^(view|refused|yielded)\(/) bad++
+            if ($4 !~ /^(view|refused)\(/) bad++
             if (out[$2] == 1 && ($1 + 0 != 0 || $4 != "view([], [])")) bad++
             if (index($4, "view([friend(" other ")")) fr++
         } else bad++

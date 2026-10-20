@@ -3,7 +3,7 @@
 imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 imported procedure miniapp#router(Stream(NetEvent)?, Routes?, List(Net)?, Stream(Net)).
 
-%% play_friends(A, B): alice and bob, one conversation between their two executions.  Each establishes their identity (GSG:1, Identity) and asks to know the other, and each agent sends the other a hello on the conversation; once alice knows bob she offers him friendship, his approval question asks him, and he answers yes (GSG:2, Friendship, an act of both); once it commits bob ends the friendship, which asks nobody (GSG:3, Ending a friendship, an act of one).
+%% play_friends(A, B): alice and bob, one conversation between their two executions.  Each establishes their identity (GKK:1, Identity) and asks to know the other, and each agent sends the other a hello on the conversation; once alice's agent knows bob she asks to meet him in person, his approval question asks him, and he answers yes, after which each knows the other (GKK:2, Meeting, an act of both); once she knows him she offers him friendship, and he answers yes (GSG:1, Friendship, an act of both); once it commits bob ends the friendship, which asks nobody (GSG:2, Ending a friendship, an act of one).
 exported procedure play_friends(Stream(Seen), Stream(Seen)).
 play_friends(A?, B?) :-
     self_module(M),
@@ -15,12 +15,12 @@ play_friends(A?, B?) :-
 
 %% play_held(In, ToBob, ToCarol): the router of alice's mini-app, on what it reads in this order: a hello to bob and a hello to carol, sent before any conversation is open, and so held; the conversation with bob, which carries bob's hello in and the hello held for him out, carol's still held; a start to bob, on his conversation; and the conversation with carol, which carries the hello held for her.  The events end, and the router closes the conversations' outgoing streams. Expected: In = [msg(alice, hello(bob))],
 %%   ToBob = [msg(bob, hello(alice)), msg(bob, cargo(alice, start(attempt(alice,
-%%   1, 1, befriend(alice, bob)))))], ToCarol = [msg(carol, hello(alice))].
+%%   1, 1, befriend(alice, bob), none))))], ToCarol = [msg(carol, hello(alice))].
 exported procedure play_held(Stream(Net), Stream(Net), Stream(Net)).
 play_held(In?, ToBob?, ToCarol?) :-
     miniapp # router([sent(msg(bob, hello(alice))),
                       sent(msg(carol, hello(alice))),
                       opened(bob, ch([msg(alice, hello(bob))], ToBob)),
-                      sent(msg(bob, cargo(alice, start(attempt(alice, 1, 1, befriend(alice, bob)))))),
+                      sent(msg(bob, cargo(alice, start(attempt(alice, 1, 1, befriend(alice, bob), none))))),
                       opened(carol, ch([], ToCarol))],
                      [], [], In).

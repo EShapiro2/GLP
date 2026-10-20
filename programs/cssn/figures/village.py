@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# The village figure of CSSN, Section 5.3 (figures/cssn-village.png): one panel per agent, the narrative of the agent's screen in the run of play_village (programs/cssn/plays.glp).  The narrative is read off the screen the scripted person reports (person.glp): each request the person makes, did(R); each approval it gives, gave(K, yes); and, from each view the agent writes, view(S, K), what changed in the machine state S since the last view: a friend, a child or a parent gained or lost, an identity established, a group joined or left, a member listed or no longer, and an item received.  Nothing is added that the screens do not show.
+# The village figure of CSSN, Section 4.6, "Village Demonstration" (figures/cssn-village.png): one panel per agent, the narrative of the agent's screen in the run of play_village (programs/cssn/plays.glp).  The narrative is read off the screen the scripted person reports (person.glp): each request the person makes, did(R); each approval it gives, gave(K, yes); and, from each view the agent writes, view(S, K), what changed in the machine state S since the last view: a friend, a child or a parent gained or lost, an identity established, a group joined, left or closed, a member listed or no longer, and a message received, from a friend, received(x, p) (GSN:1), or in a group, received_in(x, a, n), delivered by its leader a (GSN:5).  Nothing is added that the screens do not show.
 #
 #   python3 programs/cssn/figures/village.py <log> [<png>]
 #
@@ -123,7 +123,7 @@ def name(t):
 
 
 def text(x):
-    # speech(utterance(T), P) or speech(speech(...), P): the utterance's text
+    # speech(utterance(T), P): the utterance's text
     while x[0] == "speech":
         x = x[1][0]
     if x[0] == "utterance":
@@ -131,12 +131,9 @@ def text(x):
     return x[0]
 
 
-def signers(x):
-    out = []
-    while x[0] == "speech":
-        out.append(name(x[1][1]))
-        x = x[1][0]
-    return list(reversed(out))
+def author(x):
+    # speech(utterance(T), P): its author P
+    return name(x[1][1])
 
 
 def group(n):
@@ -165,8 +162,6 @@ def request(me, r):
         return "Entering %s as our child, with %s" % (name(a[2]), name(a[1]))
     if f == "befriend":
         return "Offering %s friendship" % name(a[1])
-    if f == "sign":
-        return "Signing %s" % says(text(a[1]))
     if f == "message":
         return "Sending %s to %s" % (says(text(a[2])), name(a[1]))
     if f == "child_befriend":
@@ -238,6 +233,7 @@ def changes(me, old, new):
     added = [x for k, (c, x) in n.items() if c > o.get(k, (0, None))[0]]
     removed = [x for k, (c, x) in o.items() if c > n.get(k, (0, None))[0]]
     lines = []
+    closed = [repr(x[1][0]) for x in added if x[0] == "closed"]
     for x in removed:
         f, a = x
         if f == "friend":
@@ -246,7 +242,7 @@ def changes(me, old, new):
             lines.append(("result", "%s is no longer my child" % name(a[0])))
         elif f == "parent":
             lines.append(("result", "%s is no longer my parent" % name(a[0])))
-        elif f == "member":
+        elif f == "member" and repr(a[0][1][1]) not in closed:
             lines.append(("result", "Left %s" % group(a[0][1][1])))
         elif f == "listed" and a[0][0] != me:
             lines.append(("result", "%s left %s" % (name(a[0]), group(a[1]))))
@@ -267,10 +263,12 @@ def changes(me, old, new):
             lines.append(("result", "Created %s" % g if a[0][1][0][1][0][0] == me else "Joined %s" % g))
         elif f == "listed" and a[0][0] != me:
             lines.append(("result", "%s joined %s" % (name(a[0]), group(a[1]))))
-        elif f == "item" and not any(y[0] == "authored" and y[1][0] == a[0] for y in new):
-            who = signers(a[0])
-            via = (" (%s, via %s)" % (who[0], who[-1])) if len(who) > 1 else (" (%s)" % who[0])
-            lines.append(("message", says(text(a[0])) + via))
+        elif f in ("received", "received_in"):
+            # received(x, p), from the friend p; received_in(x, a, n), delivered by the leader a
+            who, via = author(a[0]), name(a[1])
+            lines.append(("message", says(text(a[0])) + (" (%s)" % who if who == via else " (%s, via %s)" % (who, via))))
+        elif f == "closed":
+            lines.append(("result", "Closed %s" % group(a[0])))
         elif f == "retired":
             lines.append(("result", "Retired"))
     return lines
@@ -291,7 +289,7 @@ def narrative(me, screen):
                 lines.append(("request", r))
         elif f == "gave" and a[1][0] == "yes":
             lines.append(("request", approval(me, a[0])))
-        elif f in ("refused", "yielded"):
+        elif f == "refused":
             lines.append(("result", "%s: %s" % (f, a[0][0])))
     return lines
 

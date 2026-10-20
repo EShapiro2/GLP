@@ -1,14 +1,15 @@
 # A run of the cascade on GAI
 
-- Contract: `GAI` (`gai` to the checker), its owner's two files `programs/gai/GAI.md` and `programs/gai/GAI.glp`, copied here as they stood.
-- The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `d69b2a4f`, for the paper's own record.
-- The tools: this repository at `b322e435` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-10-19 20:40 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GAI` (`gai` to the checker), its owner's two files `programs/gai/GAI.md` and `programs/gai/GAI.glp`, copied here as they stood at `45b87b7e`.
+- The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `d95cc926`, for the paper's own record.
+- The tools: this repository at `45b87b7e` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-10-20 19:51 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
-| `GAI.md` | the clauses |
-| `GAI.glp` | the act schemas, each in GSC's notation above its term |
+| `GAI.md` | the contract |
+| `GAI.glp` | the act schemas, as terms |
+| `schemas.txt` | the act schemas in GSC's notation, printed from the terms |
 | `verdict.txt` | the checker's verdict: `grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of)], [relay(agent_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [retired])` |
 | `vmat.tex` | the VMAT form, 12 displays, one per schema |
 | `platform.vglp` | the canonical CVA platform, as printed |

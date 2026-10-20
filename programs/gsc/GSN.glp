@@ -2,13 +2,10 @@
 %% GSN.glp --- Grassroots Social Network, the network without provenance,
 %% GSC's (Udi, 2026-10-18; Coordination, to_all 2026-10-18 19:23 UTC), in the
 %% term form programs/gsc reads (its README, "Writing a contract").  The
-%% clauses are in GSN.md beside this file; GSN extends GSG, so the term holds
-%% GSG's three schemas, and every role but establish's requires identity.  The network with provenance that this file held until
-%% GLP 4ce1da3a is GSNP (GSNP.md), its schemas not written.  Written by GAI #2
-%% Cowork at Udi's instruction, 2026-10-18.  Each schema is in GSC's notation
-%% above its term, at each role in turn: what the role requires, what it
-%% forbids (not), what it adds (+) and what it deletes (-); a role marked ? is
-%% a guarding role.
+%% clauses are in GSN.txt beside this file; GSN extends GSG, which extends GKK, so the term holds
+%% GKK's three schemas and GSG's two, and every role but establish's requires identity.  The network with provenance that this file held until
+%% GLP 4ce1da3a is GSNP (GSNP.txt), its schemas not written.  Written by GAI #2
+%% Cowork at Udi's instruction, 2026-10-18.  The notation of each schema is printed from the term by a run of the cascade (schemas.txt).
 %% A schema's second argument lists its variables in the order of its head
 %% (GSC, Definition Act schema; Udi, 2026-10-19, to GSC #4).
 %%
@@ -44,87 +41,49 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 %% contract_named(gsn, C): the contract, GSN (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
 contract_named(gsn,
-%% GSG:1, Identity.
-%%   establish(p?) :
-%%       at p:  +identity
    [schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
-%% GSG:2 and GSG:3.
-%%   befriend(p?, q?) :
-%%       at p:  identity, not friend(q), +friend(q)
-%%       at q:  identity, not friend(p), +friend(p)
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    schema(introduce, [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
     schema(befriend, [],
-       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])])]),
-%%   unfriend(p?, q) :
-%%       at p:  identity, -friend(q)
-%%       at q:  identity, -friend(p)
+       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
     schema(unfriend, [],
        [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
         rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
-%% GSN:1, Message.
-%%   message(p?, q ; x) :
-%%       at p:  identity
-%%       at q:  identity, friend(p), +received(x, p)
     schema(message, [svar(x)],
        [rs(guarded,   [], [], [atom(identity, [])], []),
         rs(unguarded, [atom(received, [svar(x), role(1)])], [],
                       [atom(identity, []), atom(friend, [role(1)])], [])]),
-%% GSN:2, Group.
-%%   create(a? ; n) :
-%%       at a:  identity, not member(<a>.n), not closed(n), +member(<a>.n), +listed(a, n)
     schema(create, [svar(n)],
        [rs(guarded, [atom(member, [nterm(ext(own(1), n))]),
                      atom(listed, [role(1), svar(n)])], [], [atom(identity, [])],
                     [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)])])]),
-%% GSN:3, Joining.
-%%   join(a?, q? ; n) :
-%%       at a:  identity, member(<a>.n), friend(q), +listed(q, n)
-%%       at q:  identity, friend(a), not member(<a>.n), +member(<a>.n)
     schema(join, [svar(n)],
        [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                     [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], []),
         rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [],
                     [atom(identity, []), atom(friend, [role(1)])],
                     [atom(member, [nterm(ext(own(1), n))])])]),
-%% GSN:4, Leaving: a member leaves; the leader leaving ends the group.
-%%   leave(a, q? ; n) :
-%%       at a:  identity, -listed(q, n)
-%%       at q:  identity, -member(<a>.n)
     schema(leave, [svar(n)],
        [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
         rs(guarded,   [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-%%   close(a?, a[listed(*, n)] ; n) :
-%%       at a:  identity, +closed(n), -listed(a, n)
-%%       at a[listed(*, n)]:  identity, -member(<a>.n)
-%%   The listed role is every member the leader lists, the leader among them,
-%%   so closing a group ends every membership in one act (Udi, 2026-10-19, to
-%%   GSC #4, on CSSN #6's request of 13:12 UTC and vGLP #15's question of
-%%   14:02 UTC; GSC, Appendix D.4).
     cschema(close, [svar(n)], [],
        [rs(guarded, [atom(closed, [svar(n)])],
                     [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []),
         crs(listed(1, listed, [svar(n)]), unguarded,
             [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-%%   A member of a group who is not a friend of its leader is removed from it
-%%   (CSSN #6's request, approved by Udi, 2026-10-19); no role guards drop.
-%%   drop(a, q ; n) :
-%%       at a:  identity, not friend(q), -listed(q, n)
-%%       at q:  identity, -member(<a>.n)
     schema(drop, [svar(n)],
        [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]),
         rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-%% GSN:5, Group message: the leader's own, a member's sent to the leader, and
-%% the leader delivering it to every member.
-%%   post_own(a? ; x, n) :
-%%       at a:  identity, member(<a>.n), not posted(x, n), +posted(x, n)
     schema(post_own, [svar(x), svar(n)],
        [rs(guarded, [atom(posted, [svar(x), svar(n)])], [],
                     [atom(identity, []), atom(member, [nterm(ext(own(1), n))])],
                     [atom(posted, [svar(x), svar(n)])])]),
-%%   post(p?, a ; x, n) :
-%%       at p:  identity, member(<a>.n)
-%%       at a:  identity, member(<a>.n), listed(p, n), friend(p), not posted(x, n), +posted(x, n)
     schema(post, [svar(x), svar(n)],
        [rs(guarded,   [], [],
                       [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], []),
@@ -132,9 +91,6 @@ contract_named(gsn,
                       [atom(identity, []), atom(member, [nterm(ext(own(2), n))]),
                        atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])],
                       [atom(posted, [svar(x), svar(n)])])]),
-%%   deliver(a, q ; x, n) :
-%%       at a:  identity, member(<a>.n), posted(x, n), listed(q, n), friend(q), not delivered(x, q, n), +delivered(x, q, n)
-%%       at q:  identity, member(<a>.n), +received_in(x, a, n)
     schema(deliver, [svar(x), svar(n)],
        [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [],
                       [atom(identity, []), atom(member, [nterm(ext(own(1), n))]),

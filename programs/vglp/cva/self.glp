@@ -4,7 +4,7 @@
 %% beside GSC's three, their owners' (contracts.glp), the platforms it prints
 %% (social_graph/platform.vglp, social_network/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
 %% introduce/platform.vglp, gnudge/platform.vglp, childsafe/platform.vglp,
-%% link/platform.vglp, friends/platform.vglp, waves/platform.vglp, parts/platform.vglp, opens/platform.vglp, groups/platform.vglp, counter/platform.vglp, merges/platform.vglp, each beside its plays) and what the plays of all of them share, here: a
+%% link/platform.vglp, friends/platform.vglp, waves/platform.vglp, parts/platform.vglp, opens/platform.vglp, groups/platform.vglp, counter/platform.vglp, merges/platform.vglp, coins/platform.vglp, wardclose/platform.vglp, each beside its plays) and what the plays of all of them share, here: a
 %% scripted person and a network between two agents, three or four.
 %%
 %% A play runs the agents of a compiled platform, each the agent of the module
@@ -15,7 +15,7 @@
 %% route3/8 or route4/10.  The person reads what its dispatcher draws (vGLP,
 %% the construct process, draw(Id, W, V) and withdraw(Id); a grant input(Id,
 %% P, R)): the agent's request questions, each showing the agent's own key and
-%% the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, on which the agent goal writes its view, view(S, K), the machine state S of its app state, the contract's atoms, and the persons K it knows, when it starts and whenever either changes, drawn element by element, which it logs (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an attempt its person proposed closes without committing, refused(P, Q) and yielded(P) (vGLP c44769f); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation"), and the plays pace the persons on what their screens show: the last view, the notices after it, the request question open and the approval questions drawn.
+%% the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, on which the agent goal writes its view, view(S, K), the machine state S of its app state, the contract's atoms, and the persons K it knows, when it starts and whenever either changes, drawn element by element, which it logs (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(P, Q, D), P the part of the refused attempt, Q its refuser and D the reason, declined or unable(Lacks, Has) (vGLP f0acbc1, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation"), and the plays pace the persons on what their screens show: the last view, the notices after it, the request question open and the approval questions drawn.
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
 %% request question open, once one is drawn; own(Ks, R) grants R likewise,
@@ -27,7 +27,7 @@
 %% own key"), and a script, one clause, holds a hole for each place its
 %% request names the agent, GLP's variables being single-reader; look logs
 %% menu(K, Ks), K the agent's own key and Ks the persons the request question
-%% open shows, once one is drawn; wait(C) waits until the person's screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  A person whose request comes to nothing waits on its notice, refused(P, Q) or yielded(P), and makes the request again (vGLP c44769f, Section 5.4, "The compilation"; vGLP #15 Cowork to Code, 2026-10-19 13:34 UTC, item 1).  The screen shows known(Q) where the last view written shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q) and yielded(P) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  Its log is the output, each view and each notice once, with menu(K, Ks) where it looks and gave(K, A) where it answers an approval question.  It reads what
+%% open shows, once one is drawn; wait(C) waits until the person's screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  A request is the person's approval, which stands until the transaction is taken or refused: the agent proposes, and proposes again an attempt that yields, with no further question to the person; a person whose approval ends by a refusal sees the notice, refused(P, Q, D), and may make the request again (vGLP f0acbc1, Section 5.4, "Triggers" and "The compilation").  The screen shows known(Q) where the last view written shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  Its log is the output, each view and each notice once, with menu(K, Ks) where it looks and gave(K, A) where it answers an approval question.  It reads what
 %% the dispatcher sends it as any term and its script as terms of any form, the
 %% steps holding the platform's requests, transactions, attempts and classes
 %% (docs/typed-glp-manual.md, 18.3, the play of programs/tests/vglp/fragments
@@ -207,12 +207,9 @@ shows(has(A, K), _, T, _, B?) :- ground(A?), integer(K?), ground(T?) |
     last_of(T?, L),
     count_in(A?, L?, N),
     at_least(N?, K?, B).
-shows(refused(P, Q), _, T, _, B?) :- ground(P?), ground(Q?), ground(T?) |
+shows(refused(P, Q, D), _, T, _, B?) :- ground(P?), ground(Q?), ground(D?), ground(T?) |
     notices_of(T?, Ns),
-    among(refused(P?, Q?), Ns?, B).
-shows(yielded(P), _, T, _, B?) :- ground(P?), ground(T?) |
-    notices_of(T?, Ns),
-    among(yielded(P?), Ns?, B).
+    among(refused(P?, Q?, D?), Ns?, B).
 shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
     find_approval(K?, Cs?, F),
     found_yn(F?, B).
@@ -271,7 +268,7 @@ find_approval1(_, [], _, noapproval).
 find_approval1(K, [seen(Id, P, At)|Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(At?), ground(K?), K? =?= At? |
     rev_seen(Done?, Cs?, Rest).
-find_approval1(K, [seen(Id, P, attempt(_, _, _, C))|Cs], Done, approval_at(Id?, P?, Rest?)) :-
+find_approval1(K, [seen(Id, P, attempt(_, _, _, C, _))|Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(C?), ground(K?), K? =?= C? |
     rev_seen(Done?, Cs?, Rest).
 find_approval1(K, [S|Cs], Done, F?) :- otherwise | find_approval1(K?, Cs?, [S?|Done?], F).

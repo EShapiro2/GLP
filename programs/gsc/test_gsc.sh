@@ -4,7 +4,7 @@
 #
 #   bash programs/gsc/test_gsc.sh
 #
-# GSC's contracts GSG, GSN and GSNP (programs/gsc/), GSNP being the social network with provenance of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by definition:sg-agent-named (Appendix D.4), and the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp), read from their owners' files, each schema listing its variables in its head (GSC 0228e79); and contracts of Section 3, over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then contracts declaring a predicate reflexive (the paragraph after def:binding); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then the contract of a grassroots federation, /Grassroots/GFWC sections/schemas.tex, read from programs/federation/GFWC.glp, against the three conditions of Appendix D of /Grassroots/GSC, and five contracts changing it in one place each, four against those and one against rootedness, which is none of them; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, in the language of Appendix D; then the compilation of Appendix D, against its worked box, and the form of a schema there; then the signed speech-act term of Sections 3.1 to 3.3, on GSNP and on contracts refused for a signed term where def:schema forbids it; then contracts with wards, Appendix F, on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay (GSC 410a440), and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, and on agent-named contracts with wards (def:sg-wards), with a seated role and with a listed role; then agent-named contracts with community roles (Appendix D.4), over GSNP, failing one clause of definition:sg-agent-named each, by a seated role and by a listed role, and one with a listed role guarded by a part of its extent; then listed roles formed otherwise than Appendix D's Definition Role allows, and schemas whose head is not their variables (def:schema).  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
+# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its introductory act meet, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by definition:sg-agent-named (Appendix D.4), and GSNP, the social network with provenance, GAI's, carrying the signed term of GAI's extension of the language; the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp); CSSN's and GAI's contracts; each read from its owner's file, each schema listing its variables in its head (GSC 0228e79); and contracts of Section 3, over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, in the language of Appendix D, and a contract with a name term based on an agent variable, put to the two conditions on the text of Appendix D (Appendix D.3) and compiled by definition:compile; then the signed speech-act term, on GSNP and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then agent-named contracts with community roles (Appendix D.4), over GSNP, failing one clause of definition:sg-agent-named each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than Appendix D's Definition Role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Act schema, printed from a contract's term (notation.glp).  The federation extension of act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20); GFWC's contract is still read from its owner's file.  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -77,7 +77,7 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 
 # The contracts, each read from its owner's file: one copy, which GSC's
 # checker and vGLP's compiler load from there, each schema written
-# schema(Name, Vars, Roles) or cschema(Name, Vars, Reaches, Roles), Vars its
+# schema(Name, Vars, Roles) or cschema(Name, Vars, [], Roles), Vars its
 # variables in the order of its head (GSC 0228e79, Definition Act schema).
 # GSC's three, GSG, GSN and GSNP, each open with establish, GSG:1, which adds
 # identity and requires and forbids nothing, and every other role of each
@@ -86,14 +86,19 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 # (Appendix D.4, GSC 8064cfb); GSGT is GSG, a contract of Section 3, the
 # contract the checks of Section 3 below are made on.
 ESTABLISH="[schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])])"
-SG=$(term "$GLP_DIR/programs/gsc/GSNP.glp" gsnp)
-check "GSNP's contract, the network with provenance, is read from programs/gsc/GSNP.glp" \
+SG=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
+check "GSNP's contract, the network with provenance, is read from programs/gai/GSNP.glp" \
       "$ESTABLISH" "$SG"
+# GKK, the base contract, and GSG and GSN, which extend it (Udi, 2026-10-20,
+# to GSC #5): each opens with GKK's establish and meet.
+ESTABLISH_MEET="[schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], "
+GKKT=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
+check "GKK's contract is read from programs/gsc/GKK.glp, establish, meet and introduce" "$ESTABLISH_MEET" "$GKKT"
 GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
-check "GSG's contract is read from programs/gsc/GSG.glp, establish first" "$ESTABLISH" "$GSGT"
+check "GSG's contract is read from programs/gsc/GSG.glp, GKK's schemas first" "$ESTABLISH_MEET" "$GSGT"
 GSNT=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
-check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, establish first" \
-      "$ESTABLISH" "$GSNT"
+check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, GKK's schemas first" \
+      "$ESTABLISH_MEET" "$GSNT"
 # GSG: befriend is unobstructed, identity being added by establish, of arity
 # one, guarded and requiring and forbidding nothing (def:unobstructed, clause
 # 1), and friend being added by befriend alone (clause 2); identity and friend
@@ -103,8 +108,7 @@ check "GSN's contract, the network without provenance, is read from programs/gsc
 # community name <a>.n and close takes the listed role a[listed(*, n)],
 # every member a lists (GSC 8064cfb, Appendix D's Definition Role), every
 # name term based on the agent role a, so GSN is agent-named (Appendix D.4,
-# definition:agent-named: every role an agent, a seated or a listed role) and
-# is decided by definition:sg-agent-named: befriend, with agent roles and no
+# definition:agent-named) and is decided by definition:sg-agent-named: befriend, with agent roles and no
 # name term, is unobstructed, identity from establish, of an agent role and
 # no name term, and close's listed role adds no atom (clauses 1 and 2); its
 # message, group and delivery schemas add atoms whose arguments are roles,
@@ -113,19 +117,69 @@ check "GSN's contract, the network without provenance, is read from programs/gsc
 # connected or has a guarding agent role in each component, close's two
 # roles sharing the base a, the base of a listed role being its agent role
 # (clause 4).  So it is syntactically grassroots by definition:sg-agent-named
-# (Theorem "Grassroots realisation with seated and listed roles"), and not
+# (Theorem "Grassroots realisation with listed roles"), and not
 # malformed: message's and post's guarding role adds and deletes nothing,
 # which def:schema and Appendix D's Definition Act schema admit.
 out=$(run "check($GSGT, V).")
 check "GSG is syntactically grassroots" "V = syntactically_grassroots" "$out"
 out=$(run "check($GSNT, V).")
 check "GSN is syntactically grassroots by definition:sg-agent-named" \
-      "V = syntactically_grassroots_with_seated_and_listed_roles" "$out"
+      "V = syntactically_grassroots_with_listed_roles" "$out"
 check_not "GSN's message and post, guarded at a role that adds and deletes nothing, are admitted" \
           "malformed(" "$out"
+
+# GKK (programs/gsc/GKK.glp; GSC, Section 2.1, its schemas in Section 3.3's
+# table, certified with GSN in Section 7.1).  Meet is its introductory act,
+# unobstructed: guarded in both roles, it adds knows of the other at each,
+# and it requires identity, which establish adds, of arity one, guarded and
+# requiring and forbidding nothing, and forbids nothing (def:introduction,
+# def:unobstructed); introduce is no introductory act, adding at Alice no
+# atom naming Bob.  knows has traceable provenance: meet adds at each role an
+# atom naming the other role, and introduce adds knows(c) at Bob, c an
+# argument of knows(c), which Alice requires (def:grounded).  Volition holds:
+# meet and introduce are guarded in both roles, and introduce's roles are
+# joined besides by knows(Bob) at Alice, an atom of traceable provenance
+# naming the other role (def:volition).  intro_acts/2 names each
+# introductory act and whether it is unobstructed; the verdict says only that
+# one is.
+out=$(run "check($GKKT, V)." "intro_acts($GKKT, A)." "traceable_preds($GKKT, E).")
+check "GKK is syntactically grassroots" "V = syntactically_grassroots" "$out"
+check "GKK: meet is its one introductory act, and unobstructed" \
+      "A = [intro_act(meet, unobstructed)]" "$out"
+check "GKK: knows has traceable provenance, with identity" "E = [identity, knows]" "$out"
+# In GSG befriend is an introductory act too, but obstructed: it requires
+# knows of the other, which no schema of arity one adds (GSC, Section 3.6,
+# the example after def:introduction); meet is unobstructed, so GSG is
+# syntactically grassroots.  GSN likewise, by definition:sg-agent-named.
+out=$(run "intro_acts($GSGT, A)." "traceable_preds($GSGT, E).")
+check "GSG: meet unobstructed, befriend an introductory act obstructed by the knows of the other it requires at each role, which no schema of arity one adds" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable)]))]" "$out"
+check "GSG: identity, knows and friend have traceable provenance" "E = [identity, knows, friend]" "$out"
+out=$(run "intro_acts($GSNT, A).")
+check "GSN: meet unobstructed, befriend obstructed" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable)]))]" "$out"
+# Introduce's roles joined by knows(Bob) at Alice: with Bob not guarding and
+# requiring no knows(Alice), the role graph still joins them, and volition
+# holds (gkk_intro_joined); with Alice requiring no knows(Bob) besides,
+# nothing joins them, Bob's component holds no guarding role, and volition
+# fails at introduce (gkk_intro_unjoined).  And knows traced through the
+# knows(c) Alice requires: with c known to neither role, knows loses
+# traceable provenance (gkk_intro_loose).
+out=$(run "check_variant(gkk_intro_joined, $GKKT, V).")
+check "GKK, introduce guarded by Alice alone and Bob requiring no knows(Alice): knows(Bob) at Alice joins the two roles, volition holds" \
+      "V = syntactically_grassroots" "$out"
+out=$(run "check_variant(gkk_intro_unjoined, $GKKT, V).")
+check "GKK, ... and Alice requiring no knows(Bob): nothing joins introduce's roles, volition fails" \
+      "V = not_grassroots([volition(introduce, 1, 2)])" "$out"
+out=$(run "check_variant(gkk_intro_loose, $GKKT, V)." "traceable_variant(gkk_intro_loose, $GKKT, E).")
+check "GKK, knows(c) added at Bob and c required at neither role: knows is untraceable" \
+      "V = not_grassroots([untraceable([knows])])" "$out"
+check "GKK, ... and identity alone has traceable provenance" "E = [identity]" "$out"
 CUR=$(term "$GLP_DIR/programs/currencies/coins/GC.glp" gc)
-check "the currency's contract, GC, is read from programs/currencies/coins/GC.glp" \
-      "[schema(mint, [], [rs(guarded, [atom(coin, [role(1)])]" "$CUR"
+check "the currency's contract, GC, is read from programs/currencies/coins/GC.glp, GKK's schemas first" \
+      "$ESTABLISH_MEET" "$CUR"
+check "and its mint adds a coin of the minter's issue" \
+      "schema(mint, [], [rs(guarded, [atom(coin, [role(1)])]" "$CUR"
 CSSN=$(term "$GLP_DIR/programs/cssn/CSSN.glp" cssn)
 check "CSSN's contract is read from programs/cssn/CSSN.glp" \
       "reflexive([friend], [schema(establish, []," "$CSSN"
@@ -152,7 +206,7 @@ check "GAI's contract is read from programs/gai/GAI.glp" \
 # role"); and the role graphs meet clause 4, close's two roles having the
 # base Alice.  So it is syntactically grassroots, as Section 7.1 says by
 # Definition sg-agent-named, and its realisation volitionally grassroots by
-# Theorem "Grassroots realisation with seated and listed roles".  Its signed
+# Theorem "Grassroots realisation with listed roles".  Its signed
 # terms, in
 # forward, post_forward and deliver, are each of an agent role that requires
 # an atom carrying the speech act (def:schema; Appendix D's Definition Act
@@ -163,16 +217,24 @@ out=$(run "check($SG, V)." "traceable_preds($SG, E).")
 check "the program loads" "Loaded program" "$out"
 check_not "no type error" "Error loading" "$out"
 check "GSNP is syntactically grassroots by definition:sg-agent-named" \
-      "V = syntactically_grassroots_with_seated_and_listed_roles" "$out"
+      "V = syntactically_grassroots_with_listed_roles" "$out"
 check_not "GSNP's signed terms, deliver's among them, and its guarding roles that change nothing are admitted" "malformed(" "$out"
 check "GSNP's nine predicates have traceable provenance" \
       "E = [identity, friend, item, authored, member, listed, closed, posted, delivered]" "$out"
 
-out=$(run "check($CUR, V)." "traceable_preds($CUR, E).")
-check "currency is syntactically grassroots" \
+# GC extends GKK (Currencies, 6499166c; GSC 079cee0, Appendix B.4): meet is
+# its introductory act, unobstructed, as in GKK; the swap is an introductory
+# act too, but obstructed, requiring knows of the other at each role, which no
+# schema of arity one adds, and a coin, which mint, requiring identity, does
+# not add as clause 1 of def:unobstructed asks; and the coin has traceable
+# provenance, as identity and knows have.
+out=$(run "check($CUR, V)." "traceable_preds($CUR, E)." "intro_acts($CUR, A).")
+check "currency is syntactically grassroots, meet its unobstructed introductory act" \
       "V = syntactically_grassroots" "$out"
-check "the coin has traceable provenance" \
-      "E = [coin]" "$out"
+check "the coin has traceable provenance, as identity and knows have" \
+      "E = [identity, knows, coin]" "$out"
+check "the currency: meet unobstructed, the swap an introductory act obstructed by the knows of the other it requires" \
+      "A = [intro_act(meet, unobstructed), intro_act(swap, obstructed([obstructed(swap, 1, atom(knows, [role(2)]), unobtainable)," "$out"
 
 # Befriend guarded in one role only: nothing is an introductory act, and
 # befriend fails volition as well.
@@ -192,8 +254,13 @@ check "impose is rejected by volition, not by clause 2" \
 check_not "impose does not obstruct befriend" "obstructed" "$out"
 
 # An act that adds it while sending no role to the other party is not excused:
-# p is left holding friend(q) with q taking no part.
-out=$(run "check_variant(sg_gossip, $GSGT, V).")
+# p is left holding friend(q) with q taking no part.  On GSG, which extends
+# GKK, meet stays an unobstructed introductory act, so the contract is
+# syntactically grassroots, and befriend's obstructions are read off
+# intro_acts.
+out=$(run "check_variant(sg_gossip, $GSGT, V)." "intro_acts_variant(sg_gossip, $GSGT, A).")
+check "on GSG with gossip meet is unobstructed, and the contract is syntactically grassroots" \
+      "V = syntactically_grassroots" "$out"
 check "gossip blocks befriend at role 1" \
       "obstructed(befriend, 1, atom(friend, [role(2)]), blocked_by(gossip, 1," "$out"
 check "gossip blocks befriend at role 2" \
@@ -218,7 +285,7 @@ check "a path role graph at arity four certifies" \
       "V = syntactically_grassroots" "$out"
 out=$(run "check_variant(sg_chain, $SG, V).")
 check "and on GSNP, by clause 4 of definition:sg-agent-named" \
-      "V = syntactically_grassroots_with_seated_and_listed_roles" "$out"
+      "V = syntactically_grassroots_with_listed_roles" "$out"
 
 out=$(run "check_variant(sg_chain_cut, $GSGT, V).")
 check "cutting an edge of the path fails volition" \
@@ -329,7 +396,7 @@ EOF
 IFS= read -r -d '' child_unfriend_body <<'EOF'
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \{\mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob)\} \subseteq c_{\Alice} \text{ and } \{\mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice)\} \subseteq c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
+& \text{provided } \mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' leave_body <<'EOF'
@@ -412,9 +479,9 @@ expanded child_leave_2_q  q '\mathit{Dave}'  "$child_leave_2_body"
 #   naming the other related role.
 # So it is syntactically grassroots with wards and its verdict names the
 # leaving mark retired: the protocol realising it is volitionally grassroots
-# (Theorem "Grassroots realisation with wards and seated roles").  It is
-# compiled, its realisation being taken by def:realisation (Appendix F,
-# after def:introduction-wards).  The leaving marks for {child} are given
+# (Theorem "Grassroots realisation with wards and seated roles" of CSSN's
+# paper, def:sg-wards).  It is compiled, its realisation being taken as GSC's
+# (GAI's appendix "Contracts with Wards").  The leaving marks for {child} are given
 # with the guardianship of child taken, clause 3 of def:leaving reading its
 # g (GSC 07d413c).
 out=$(run "check($CSSN, V)." "leaving($CSSN, [child], L).")
@@ -427,10 +494,10 @@ check_not "CSSN's predicates have traceable provenance" "untraceable(" "$out"
 check_not "CSSN's contract satisfies volition" "volition(" "$out"
 check_not "CSSN's contract is not malformed" "malformed(" "$out"
 # One display per schema (Section 5.1, "A contract compiles schema by
-# schema"): CSSN.glp's twenty-nine at 4cb1ec11, GSNP's sixteen and thirteen
-# for children.
+# schema"): CSSN.glp's twenty-five at GLP fdc27eb3, GSN's twelve with the
+# child conditions and thirteen for children (CSSN #8 Cowork, 2026-10-20).
 out=$(run "compile_contract(cssn, $CSSN).")
-check_eq "and it compiles to twenty-nine displays" "29" \
+check_eq "and it compiles to twenty-five displays" "25" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
 # --- reflexive predicates (the paragraph after def:binding) ----------------
@@ -458,20 +525,25 @@ check_not "and no display is printed for it" "begin{align" "$out"
 
 # Clause 1 of def:unobstructed skips a required atom of a reflexive predicate
 # naming the role: befriend requiring friend of each party at its own role is
-# obstructed when friend is not reflexive and unobstructed when it is.
-out=$(run "check_variant(sg_self_required, $GSGT, V).")
+# obstructed by it when friend is not reflexive and not when it is.  On GSG
+# befriend is obstructed besides by the knows of the other it requires and
+# meet is unobstructed, so befriend's obstructions are read off intro_acts.
+out=$(run "intro_acts_variant(sg_self_required, $GSGT, A).")
 check "friend of its own role required, friend not reflexive: clause 1 fails" \
-      "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), unobtainable), obstructed(befriend, 2, atom(friend, [role(2)]), unobtainable)])" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(friend, [role(1)]), unobtainable), obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 2, atom(friend, [role(2)]), unobtainable), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable)]))]" \
       "$out"
-out=$(run "check_variant(sg_refl_required, $GSGT, V).")
-check "friend of its own role required, friend reflexive: clause 1 skips it" \
+out=$(run "check_variant(sg_refl_required, $GSGT, V)." "intro_acts_variant(sg_refl_required, $GSGT, A).")
+check "friend of its own role required, friend reflexive: the contract is syntactically grassroots" \
       "V = syntactically_grassroots" "$out"
+check "friend of its own role required, friend reflexive: clause 1 skips it, befriend obstructed by knows alone" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable)]))]" \
+      "$out"
 
 # Clause 3 of def:unobstructed: the introductory act forbids at a role no atom
 # of a reflexive predicate naming that role.
-out=$(run "check_variant(sg_refl_forbidden, $GSGT, V).")
+out=$(run "intro_acts_variant(sg_refl_forbidden, $GSGT, A).")
 check "friend of its own role forbidden, friend reflexive: clause 3 fails" \
-      "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), reflexive), obstructed(befriend, 2, atom(friend, [role(2)]), reflexive)])" \
+      "A = [intro_act(meet, unobstructed), intro_act(befriend, obstructed([obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 1, atom(friend, [role(1)]), reflexive), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable), obstructed(befriend, 2, atom(friend, [role(2)]), reflexive)]))]" \
       "$out"
 
 # A contract with no schemas.
@@ -489,7 +561,8 @@ check "the empty contract has no introductory act" \
 # deletes nothing, a schema no role of which adds or deletes an atom, and an
 # atom added and deleted at one role are each refused, the contract
 # malformed, and it is not compiled.  Appendix D's Definition Act schema
-# requires the third and not the other two (the gf_ fixtures below).
+# requires the same of a schema with listed roles (GSC 70afdc4;
+# sn_listed_inert below).
 out=$(run "check_variant(sg_inert_role, $GSGT, V).")
 check "a role that does not guard and adds and deletes nothing is refused" \
       "V = malformed([changes_nothing(poke, 2)])" "$out"
@@ -523,10 +596,25 @@ check_not "and no display is printed for any of them" "begin{align" "$out"
 # layout is Udi's ruling (GSC #3 to Code, 2026-10-18 21:49 UTC), which both
 # displays print: the assignments, the required atoms on one proviso line and
 # the forbidden atoms on the next, each in role order, a line omitted when it
-# has no atom, and the guard on a line of its own.  Befriend is GSNP's, which
-# requires identity at both roles (GSG:1), and GSG's, which is the same
-# schema; the swap is GC's.
+# has no atom, and the guard on a line of its own.  Befriend is GSG's, which
+# requires identity and knows of the other at both roles (GKK:1, GSG:1;
+# GSC 21c1b28, Section 5.1, its two required atoms at a role listed before
+# \in); GSNP's, GAI's, requires identity alone, a singleton written with
+# \in; the swap is GC's, which extends GKK, transcribed from
+# sections/gc-compiled.tex at GSC 115fc8e, identity and knows of the other
+# required at both roles with its coin.
 befriend_paper=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
+& \text{provided } \mathit{identity}, \mathit{knows}(\Bob) \in c_{\Alice} \text{ and } \mathit{identity}, \mathit{knows}(\Alice) \in c_{\Bob},\\
+& \text{provided } \mathit{friend}(\Bob) \notin c_{\Alice} \text{ and } \mathit{friend}(\Alice) \notin c_{\Bob},\\
+& \text{guarded by } \{\Alice,\Bob\}
+\end{align*}
+EOF
+)
+check_eq "GSG's befriend compiles to the display of Section 5.1" \
+         "$befriend_paper" "$(compiled_in gsg "$GSGT" befriend)"
+befriend_gsnp=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
 & \text{provided } \mathit{identity} \in c_{\Alice} \text{ and } \mathit{identity} \in c_{\Bob},\\
@@ -535,15 +623,13 @@ befriend_paper=$(cat <<'EOF' | squash
 \end{align*}
 EOF
 )
-check_eq "GSNP's befriend compiles to the display of Section 5.1" \
-         "$befriend_paper" "$(compiled_in gsnp "$SG" befriend)"
-check_eq "and so does GSG's" \
-         "$befriend_paper" "$(compiled_in gsg "$GSGT" befriend)"
+check_eq "GSNP's befriend, requiring identity alone, compiles to the same display with a singleton at each role" \
+         "$befriend_gsnp" "$(compiled_in gsnp "$SG" befriend)"
 
 swap_paper=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := (c_{\Alice} \setminus \{\text{\textcent}(u)\}) \uplus \{\text{\textcent}(v)\}, \qquad c'_{\Bob} := (c_{\Bob} \setminus \{\text{\textcent}(v)\}) \uplus \{\text{\textcent}(u)\},\\
-& \text{provided } \text{\textcent}(u) \in c_{\Alice} \text{ and } \text{\textcent}(v) \in c_{\Bob},\\
+& \text{provided } \mathit{identity}, \mathit{knows}(\Bob), \text{\textcent}(u) \in c_{\Alice} \text{ and } \mathit{identity}, \mathit{knows}(\Alice), \text{\textcent}(v) \in c_{\Bob},\\
 & \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
@@ -559,10 +645,12 @@ out=$(run "compile_contract(gsnp, $SG).")
 check_eq "GSNP compiles to sixteen displays" "16" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 out=$(run "compile_contract(gc, $CUR).")
-check_eq "the currency compiles to four displays" "4" \
+check_eq "the currency compiles to seven displays, GKK's three and its own four" "7" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
-out=$(run "compile_variant(sg_gossip, $GSGT).")
+# sg_gossip on GSNP, which has no meet: on GSG meet stays an unobstructed
+# introductory act and the variant certifies (above).
+out=$(run "compile_variant(sg_gossip, $SG).")
 check "a contract that fails the conditions is not compiled" \
       "% not compiled: sg_gossip" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
@@ -577,71 +665,6 @@ out=$(run 'compile_schema(cs18, nosuch).')
 check "a schema the contract does not hold is reported" \
       "% no schema named" "$(printf '%s' "$out" | tr '\n' ' ')"
 
-
-# --- the contract of a grassroots federation (Appendix D) -------------------
-# GFWC's five schemas over seat and child, /Grassroots/GFWC
-# sections/schemas.tex, every role of them a party role or a seated role,
-# certified in its Section 3.1 by hand against the conditions of Appendix D of
-# /Grassroots/GSC; the checker returns the same.
-
-out=$(run "check($FED, V)." "rooted_preds($FED, E).")
-check "the federation contract meets the conditions of Appendix D" \
-      "V = conditions_met" "$out"
-check "seat is rooted" "E = [seat]" "$out"
-
-out=$(run "traceable_preds($FED, E).")
-check "seat and child have traceable provenance" "E = [seat, child]" "$out"
-
-# Seating the assembly in the name of the community itself: the name argument
-# is of least rank zero and at no party role.  Rootedness is no condition on
-# the text.
-out=$(run "check_variant(gf_unrooted, $FED, V)." "rooted_variant(gf_unrooted, $FED, E).")
-check "the community named without its decision: seat is not rooted" \
-      "E = []" "$out"
-check "and the three conditions on the text are still met" \
-      "V = conditions_met" "$out"
-
-# A note of a community that is the name term of no role and that no required
-# atom names: note loses traceable provenance, seat and child keep it, and the
-# set of predicates occurring in the contract lacks it, the one condition of
-# the three the contract fails.
-out=$(run "traceable_variant(gf_untraceable, $FED, E).")
-check "a note nothing traces: seat and child keep traceable provenance" \
-      "E = [seat, child]" "$out"
-check_not "and note does not have it" "note" "$out"
-out=$(run "check_variant(gf_untraceable, $FED, V).")
-check "and the contract fails traceable provenance, naming note" \
-      "V = conditions_failed([untraceable([note])])" "$out"
-
-# Seating the assembly in a community that is the name term of no role of the
-# schema.  seat is the one role predicate of the contract, every role being a
-# party role or a seated role, so cohesion asks its question of seat atoms
-# (definition:cohesive).  The same atom costs seat its traceable provenance,
-# so the verdict names seat as untraceable before the cohesion fault.
-out=$(run "check_variant(gf_uncohesive, $FED, V).")
-check "a seat atom of no role of the schema fails cohesion, and seat traceable provenance" \
-      "V = conditions_failed([untraceable([seat]), cohesion(federate, 1, atom(seat, [nterm(nvar(eta))]))])" \
-      "$out"
-
-# Cohesion alone (Legal 2026-10-09 18:31 UTC): the federation with one schema
-# more, seat_child, whose seated role requires child(zeta, eta) and seats its
-# assembly in eta.  eta is the name term of no role of it, so cohesion fails;
-# it is an argument of the required child atom, so seat keeps traceable
-# provenance; the role graph is one role, so volition holds.  seat stops
-# being rooted, which is no condition.
-out=$(run "check_variant(gf_cohesion_only, $FED, V)." "traceable_variant(gf_cohesion_only, $FED, T)." \
-          "rooted_variant(gf_cohesion_only, $FED, E).")
-check "a seat atom in a child the role requires fails cohesion alone" \
-      "V = conditions_failed([cohesion(seat_child, 1, atom(seat, [nterm(nvar(eta))]))])" \
-      "$out"
-check "and seat and child keep traceable provenance" "T = [seat, child]" "$out"
-check "and seat is not rooted, which is no condition" "E = []" "$out"
-
-# A join no assembly decides: its two roles are the assemblies of the two
-# communities, nothing joins them, and neither guards.
-out=$(run "check_variant(gf_novolition, $FED, V).")
-check "a join with no guarding role fails volition" \
-      "V = conditions_failed([volition(join, 1, 2)])" "$out"
 
 # The speech-act variables of definition:provenance.  The first clause asks
 # after the arguments of an added atom outside Y, the second after every
@@ -676,148 +699,61 @@ out=$(run 'traceable_of(sv_in_name_carried, E).')
 check "a speech act carried from a name term of a required atom: cited keeps it" \
       "E = [club, cited]" "$out"
 
-# Volition by connected component (definition:volition): relay's role graph
-# is the path 1-2-3 and its seated role alone, each holding a guarding role,
-# and role 3 has no edge to one; relay_unguarded is relay with its seated role
-# unguarded.  Over the social graph, whose predicates keep in the language of
-# Appendix D the traceable provenance Section 3 gives them.
-# The Appendix D variants take the social graph without the signed term, the
-# fixture sg_plain, a contract of Section 3.  relay's seated role is of a
-# name variable, so sg_relay is not agent-named and is decided by the three
-# conditions of Appendix D.
+# Volition by connected component in the language of Appendix D
+# (definition:volition): sg_tri_cschema, a variant of the social graph
+# without the signed term, the fixture sg_plain, a contract of Section 3.
 SGP=$(run 'contract_named(sg_plain, C).' | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
 check "the social graph without the signed term, sg_plain, is read" \
       "[schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])]" "$SGP"
-out=$(run "check_variant(sg_relay, $SGP, V)." "traceable_variant(sg_relay, $SGP, E).")
-check_not "a guarding role in every connected component meets volition" \
-      "volition(relay," "$out"
-check "and a component holding none fails it" \
-      "V = conditions_failed([volition(relay_unguarded, 1, 4)])" "$out"
-check "the social graph keeps its traceable provenance in Appendix D" \
-      "E = [friend, item, sent, chained, noted]" "$out"
 
 # sg_tri with tri written as a cschema, in the language of Appendix D, of
 # agent roles and no name term, so agent-named: clause 4 of
-# definition:sg-agent-named holds of tri, each component holding a guarding
-# agent role, as def:volition holds of it in Section 3.
+# definition:sg-agent-named, definition:volition, holds of tri, each
+# component holding a guarding role, as def:volition holds of it in Section
+# 3.
 out=$(run "check_variant(sg_tri_cschema, $SGP, V).")
 check "tri as a cschema meets definition:sg-agent-named, as it meets def:syntactically-grassroots in Section 3" \
-      "V = syntactically_grassroots_with_seated_and_listed_roles" "$out"
+      "V = syntactically_grassroots_with_listed_roles" "$out"
 
-# Rootedness is a notion of Appendix D; a contract of Section 3 is not asked
-# about it, and keeps the verdict of def:syntactically-grassroots.
-out=$(run "rooted_preds($GSGT, E)." "check($GSGT, V).")
-check "a contract of Section 3 is not asked which predicates are rooted" \
-      "E = []" "$out"
-check "and keeps the verdict of Section 3" \
-      "V = syntactically_grassroots" "$out"
-
-# The compiled form of a schema with community roles is Definition Compilation
-# of Appendix D, which the compiler prints for a contract that meets the
-# conditions on the text and for no other.
-out=$(run "compile_contract(gfwc, $FED).")
-check "a contract with community roles is compiled" \
-      "begin{align" "$out"
-check_not "and not refused" "not compiled" "$out"
-check_not "no role of the federation is a constituent role" '\ast}' "$out"
-
-out=$(run "compile_variant(gf_novolition, $FED).")
-check "a contract that fails the conditions of Appendix D is not compiled" \
-      "% not compiled: gf_novolition" "$(printf '%s' "$out" | tr '\n' ' ')"
-check_not "and no display is printed for it" "begin{align" "$out"
-
-# --- the compilation of Appendix D (definition:compile) ---------------------
-# The worked box of Appendix D, transcribed from
-# /Grassroots/GSC/sections/13-community-roles.tex, is the display for
-# federate: the one assignment over the extent of its seated role, adding both
-# atoms, the line on freshness and the guard.  Compared with the whitespace
-# removed, as the displays of Section 5.1 and Appendix B.3 are, and without the full stop
-# that closes the box's sentence.  The box is read by read, not by a here
-# document inside $( ): its one c'_p is a lone quote, which bash 3.2, the
-# system shell of macOS, takes to open a string there and never close.
-
-IFS= read -r -d '' federate_tex <<'EOF'
-\begin{align*}
-& c'_p := c_p \uplus \{\mathit{child}(\zeta\cdot y,\zeta),\ \mathit{seat}(\zeta\cdot y)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{seat}})),\\
-& \text{provided } \zeta\cdot y \text{ is an argument of no atom of } c,\\
-& \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\zeta^{\mathit{seat}}) \text{ with } |G|>\theta|\mathrm{ext}_c(\zeta^{\mathit{seat}})|
-\end{align*}
-EOF
-federate_box=$(printf '%s' "$federate_tex" | squash)
-check_eq "federate compiles to the worked box of Appendix D" \
-         "$federate_box" "$(compiled_in gfwc "$FED" federate)"
-
-# The five schemas of the contract, in the one form of Appendix D.
-out=$(run "compile_contract(gfwc, $FED).")
-check_eq "the federation compiles to five displays" "5" \
-         "$(printf '%s' "$out" | grep -c 'begin{align')"
-
-# form: a party role in the form of Appendix D, over its extent, with a proviso
-# line for the seat it forbids, guarded by a part of it larger than the
-# threshold 0; no name term sigma.y, so no line on freshness.
-form=$(compiled_in gfwc "$FED" form)
-check "form ranges over the extent of its party role" \
-      "(p\\in\\mathrm{ext}_c(\\Alice))" "$form"
-check "form forbids the seat it adds" \
-      "\\text{provided}\\mathit{seat}(\\langle\\Alice\\rangle)\\notinc_p&&(p\\in\\mathrm{ext}_c(\\Alice))" \
-      "$form"
-check "form's guard is a part of that extent larger than 0 of it" \
-      "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\Alice)\\text{with}|G|>0|\\mathrm{ext}_c(\\Alice)|" \
-      "$form"
-check_not "form forms no name and prints no freshness line" \
-      "noatomof" "$form"
-
-# join: an assignment line and a proviso line per role, the reach condition,
-# and a guard that is the union of two parts, each at its own threshold.
-join=$(compiled_in gfwc "$FED" join)
-check_eq "join prints an assignment line per role" "2" \
-         "$(printf '%s' "$join" | grep -o "c'_p:=" | wc -l | tr -d ' ')"
-check_eq "join prints a proviso line per role" "2" \
-         "$(printf '%s' "$join" | grep -o '\\notinc_p' | wc -l | tr -d ' ')"
-check "join prints its reach condition" \
-      "\\text{provided}\\xi\\not\\rightsquigarrow_{\\mathit{child}}\\zeta" "$join"
-check "join's guard is the union of two parts" \
-      "\\text{guardedby}G_{1}\\cupG_{2},\\G_{1}\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})\\text{with}|G_{1}|>\\theta|\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})|\\text{and}G_{2}\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})\\text{with}|G_{2}|>\\theta|\\mathrm{ext}_c(\\xi^{\\mathit{seat}})|" \
-      "$join"
-
-# leave_1 and leave_2 differ only in which assembly guards.
-check "leave_1 is guarded by a supermajority of the parent's assembly" \
-      "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})" \
-      "$(compiled_in gfwc "$FED" leave_1)"
-check "leave_2 is guarded by a supermajority of the child's assembly" \
-      "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})" \
-      "$(compiled_in gfwc "$FED" leave_2)"
-
-# The form of a schema in Appendix D: its Definition Act schema requires
-# +(i) and -(i) disjoint, and nothing of +(i) u -(i).  gf_inert_seated's
-# confirm has a seated role, xi^seat, that adds and deletes nothing: the
-# contract is formed, meets the three conditions on the text, and compiles,
-# by definition:compile at GSC aca046b, to the assignment of each role over
-# its extent; the required atoms of each role in role order, neither
-# forbidding any; the proviso c'_p \neq c_p over the extent of xi^seat, which
-# is no guarding agent role and whose state the other provisos do not change;
-# and the guard.  An atom added and deleted at a seated role is refused,
-# gf_added_deleted malformed.
-out=$(run "check_variant(gf_inert_seated, $FED, V).")
-check "a seated role adding and deleting nothing is admitted in Appendix D" \
+# A contract with a name term based on an agent variable (Appendix D.3):
+# nn_tag's tag(p? ; q, y) adds tagged(<q>.y), <q>.y based on the agent
+# variable q, so the contract is not agent-named (definition:agent-named) and
+# is decided by the two conditions on the text of Appendix D, traceable
+# provenance and volition; Appendix D proves no theorem of it.  q is an
+# argument of friend(q), which tag requires, so tagged has traceable
+# provenance, and nn_tag meets the two conditions.  nn_tag_loose's tag
+# requires no friend(q), and tagged loses traceable provenance.
+out=$(run 'check_named(nn_tag, V).' 'traceable_of(nn_tag, E).')
+check "a contract with a name term based on an agent variable meets the conditions of Appendix D" \
       "V = conditions_met" "$out"
-IFS= read -r -d '' confirm_tex <<'TEX'
+check "and its three predicates have traceable provenance" \
+      "E = [identity, friend, tagged]" "$out"
+out=$(run 'check_named(nn_tag_loose, V).')
+check "with q traced through nothing, it fails traceable provenance, naming tagged" \
+      "V = conditions_failed([untraceable([tagged])])" "$out"
+
+# A contract meeting the conditions of Appendix D is compiled
+# (definition:compile), tag in Appendix D's form: its assignment and its
+# proviso over the extent of its role; the freshness of <q>.y, which occurs
+# in no atom required at a role; and the guard, its one guarding role, as
+# Section 5.1 writes a guard and Appendix D writes close's (GSC f3c4f43).
+# One that fails them is not compiled.  (read, not cat in a command
+# substitution: the display's one apostrophe would open a quote to the
+# shell's scan of the substitution.)
+IFS= read -r -d '' tag_tex <<'TEX'
 \begin{align*}
-& c'_p := c_p \uplus \{\mathit{confirmed}(\zeta,\xi)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{seat}})),\\
-& c'_p := c_p && (p\in\mathrm{ext}_c(\xi^{\mathit{seat}})),\\
-& \text{provided } \mathit{child}(\zeta,\xi) \in c_p && (p\in\mathrm{ext}_c(\zeta^{\mathit{seat}})),\\
-& \text{provided } \mathit{child}(\zeta,\xi) \in c_p && (p\in\mathrm{ext}_c(\xi^{\mathit{seat}})),\\
-& \text{provided } c'_p \neq c_p && (p\in\mathrm{ext}_c(\xi^{\mathit{seat}})),\\
-& \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\zeta^{\mathit{seat}}) \text{ with } |G|>\theta|\mathrm{ext}_c(\zeta^{\mathit{seat}})|
+& c'_p := c_p \uplus \{\mathit{tagged}(\langle q\rangle\cdot y)\} && (p\in\mathrm{ext}_c(\Alice)),\\
+& \text{provided } \{\mathit{identity},\ \mathit{friend}(q)\} \subseteq c_p && (p\in\mathrm{ext}_c(\Alice)),\\
+& \text{provided } \langle q\rangle\cdot y \text{ is an argument of no atom of } c,\\
+& \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
-confirm_out=$(run "compile_schema_variant(gf_inert_seated, $FED, confirm)." \
-  | sed -n '/begin{align/,/end{align/p' | sed 's/GLP>//' | squash)
-check_eq "and it compiles with the proviso on the state of the seated role that changes nothing" \
-         "$(printf '%s' "$confirm_tex" | squash)" "$confirm_out"
-out=$(run "check_variant(gf_added_deleted, $FED, V).")
-check "an atom added and deleted at a seated role is refused" \
-      "V = malformed([added_and_deleted(reseat, 1, atom(seat, [nterm(nvar(zeta))]))])" "$out"
+check_eq "and tag compiles by definition:compile, guarded by its guarding role" \
+         "$(printf '%s' "$tag_tex" | squash)" "$(compiled nn_tag tag)"
+out=$(run 'compile_named(nn_tag_loose).')
+check "a contract that fails the conditions of Appendix D is not compiled" \
+      "% not compiled: nn_tag_loose" "$(printf '%s' "$out" | tr '\n' ' ')"
+check_not "and no display is printed for it" "begin{align" "$out"
 
 # --- the signed speech-act term (Sections 3.1 to 3.3) ----------------------
 # GSNP, Section 3.3's network with provenance, item of arity one, forward
@@ -828,7 +764,7 @@ check "an atom added and deleted at a seated role is refused" \
 # 6d4f147, Appendix D admitting the signed terms of Section 3).
 out=$(run "check($SG, V)." "traceable_preds($SG, E).")
 check "GSNP, carrying signed terms in forward, post_forward and deliver, is syntactically grassroots by definition:sg-agent-named" \
-      "V = syntactically_grassroots_with_seated_and_listed_roles" "$out"
+      "V = syntactically_grassroots_with_listed_roles" "$out"
 check "item, authored, posted and delivered have traceable provenance there with the rest" \
       "E = [identity, friend, item, authored, member, listed, closed, posted, delivered]" "$out"
 
@@ -849,7 +785,7 @@ check "item, authored, posted and delivered have traceable provenance there with
 forward_gsnp=$(cat <<'TEX' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(\mathrm{sgn}(x,\Alice))\},\\
-& \text{provided } \{\mathit{identity},\mathit{item}(x)\} \subseteq c_{\Alice} \text{ and } \{\mathit{identity},\mathit{friend}(\Alice)\} \subseteq c_{\Bob},\\
+& \text{provided } \mathit{identity},\mathit{item}(x) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{friend}(\Alice) \in c_{\Bob},\\
 & \text{provided } \mathit{authored}(x) \notin c_{\Alice},\\
 & \text{guarded by } \{\Alice\}
 \end{align*}
@@ -864,14 +800,15 @@ check_eq "forward compiles with the signed term and authored(x) forbidden at the
 # deleting nothing, c'_p := c_p; at the leader posted(x, n) added, the item
 # as its author signed it; the required atoms of each role over its extent;
 # no freshness line, <a>.n occurring in member(<a>.n), which both roles
-# require; and the guard, a part of the member's extent larger than 0 of it.
+# require; and the guard, the member, its guarding role (definition:compile,
+# guarded by the guarding roles of the schema, GSC f3c4f43).
 post_gsnp=$(cat <<'TEX' | squash
 \begin{align*}
 & c'_p := c_p && (p\in\mathrm{ext}_c(\Alice)),\\
 & c'_p := c_p \uplus \{\mathit{posted}(x,n)\} && (p\in\mathrm{ext}_c(\Bob)),\\
 & \text{provided } \{\mathit{identity},\ \mathit{authored}(x),\ \mathit{member}(\langle\Bob\rangle\cdot n)\} \subseteq c_p && (p\in\mathrm{ext}_c(\Alice)),\\
 & \text{provided } \{\mathit{identity},\ \mathit{member}(\langle\Bob\rangle\cdot n),\ \mathit{listed}(\Alice,n),\ \mathit{friend}(\Alice)\} \subseteq c_p && (p\in\mathrm{ext}_c(\Bob)),\\
-& \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\Alice) \text{ with } |G|>0|\mathrm{ext}_c(\Alice)|
+& \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
 )
@@ -887,7 +824,7 @@ post_forward_gsnp=$(cat <<'TEX' | squash
 & \text{provided } \{\mathit{identity},\ \mathit{item}(x),\ \mathit{member}(\langle\Bob\rangle\cdot n)\} \subseteq c_p && (p\in\mathrm{ext}_c(\Alice)),\\
 & \text{provided } \{\mathit{identity},\ \mathit{member}(\langle\Bob\rangle\cdot n),\ \mathit{listed}(\Alice,n),\ \mathit{friend}(\Alice)\} \subseteq c_p && (p\in\mathrm{ext}_c(\Bob)),\\
 & \text{provided } \mathit{authored}(x) \notin c_p && (p\in\mathrm{ext}_c(\Alice)),\\
-& \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\Alice) \text{ with } |G|>0|\mathrm{ext}_c(\Alice)|
+& \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
 )
@@ -926,7 +863,7 @@ IFS= read -r -d '' create_tex <<'TEX'
 & \text{provided } \mathit{identity} \in c_p && (p\in\mathrm{ext}_c(\Alice)),\\
 & \text{provided } \{\mathit{member}(\langle\Alice\rangle\cdot n),\ \mathit{closed}(n)\} \cap c_p = \emptyset && (p\in\mathrm{ext}_c(\Alice)),\\
 & \text{provided } \langle\Alice\rangle\cdot n \text{ is an argument of no atom of } c,\\
-& \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\Alice) \text{ with } |G|>0|\mathrm{ext}_c(\Alice)|
+& \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
 check_eq "create compiles with the freshness of the name it forms" \
@@ -939,15 +876,15 @@ check_not "join, requiring member(<a>.n), asks no freshness of it" \
 # deletes member(<a>.n) (Appendix G at GSC 8064cfb); the listed role written
 # as Appendix D's Definition Role and Appendix G write it,
 # \Alice[\mathit{listed}(\ast,n)]; no freshness line, member(<a>.n) being
-# required at the listed role; and the guard, a part of the leader's extent.
-# GSN's close is GSNP's.
+# required at the listed role; and the guard, the leader, as Appendix D
+# writes it, guarded by {\Alice}.  GSN's close is GSNP's.
 close_gsnp=$(cat <<'TEX' | squash
 \begin{align*}
 & c'_p := (c_p \setminus \{\mathit{listed}(\Alice,n)\}) \uplus \{\mathit{closed}(n)\} && (p\in\mathrm{ext}_c(\Alice)),\\
 & c'_p := c_p \setminus \{\mathit{member}(\langle\Alice\rangle\cdot n)\} && (p\in\mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)])),\\
 & \text{provided } \{\mathit{identity},\ \mathit{listed}(\Alice,n)\} \subseteq c_p && (p\in\mathrm{ext}_c(\Alice)),\\
 & \text{provided } \{\mathit{identity},\ \mathit{member}(\langle\Alice\rangle\cdot n)\} \subseteq c_p && (p\in\mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)])),\\
-& \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\Alice) \text{ with } |G|>0|\mathrm{ext}_c(\Alice)|
+& \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
 )
@@ -998,15 +935,16 @@ check "and the message names the fault, in the words of def:schema" \
 
 # Appendix D's Definition Act schema admits the signed terms of Section 3,
 # sgn(y, pi) for pi an agent role, with def:schema's requirements (GSC
-# 6d4f147): sgn_community, sign written as a cschema, is admitted, and has no
-# introductory act; sgn_seated signs at a seated role and is refused.
+# 6d4f147, until GSC 1a2a5f3 made the signed term GAI's): sgn_community, sign
+# written as a cschema, is admitted, and has no introductory act; sgn_listed
+# signs at a listed role and is refused.
 out=$(run 'check_named(sgn_community, V).')
 check "a signed term of an agent role in a contract with community roles is admitted" \
       "V = not_grassroots([no_introductory_act])" "$out"
-out=$(run 'check_named(sgn_seated, V).' 'compile_named(sgn_seated).')
-check "a signed term of a seated role is refused" \
+out=$(run 'check_named(sgn_listed, V).' 'compile_named(sgn_listed).')
+check "a signed term of a listed role is refused" \
       "V = malformed([signed(note, 2, atom(got, [sgn(x, 2)]), not_agent_role)])" "$out"
-check "and the message names the fault, in the words of Appendix D's Definition Act schema" \
+check "and the message names the fault: its role is not an agent role" \
       "note at role 2 carries a signed term whose role is not an agent role; check_named gives the faults." \
       "$(printf '%s' "$out" | tr '\n' ' ')"
 
@@ -1182,27 +1120,15 @@ check "attestation is the h of clause 2 of def:relay at the AI agents' ward role
 check_not "GAI's predicates have traceable provenance" "untraceable(" "$out"
 check_not "GAI's contract satisfies volition" "volition(" "$out"
 
-# --- agent-named contracts with wards (Appendix F, def:sg-wards) -----------
-# wd_leaving with gather(p?, (<p>.n)^club ; n), whose seated role requires
-# child: an agent-named contract with wards (GSC 503db66).  wd_seated's
-# seated role adds noted, no mark in M, leaving mark, friend, parent or
-# parenting atom, so it meets clause 2 of def:sg-wards, and clauses 1 and 3
-# as wd_leaving does: syntactically grassroots with wards.  wd_seated_leaving's
-# adds retired, a leaving mark, and clause 2 fails: no introduction with
-# wards meets def:sg-wards, and the verdict is definition:sg-agent-named's.
-out=$(run 'check_named(wd_seated, V).')
-check "a seated role adding no mark, leaving mark, friend or guardianship atom: syntactically grassroots with wards" \
-      "V = syntactically_grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [retired])" \
-      "$out"
-out=$(run 'check_named(wd_seated_leaving, V).' 'wards_of(wd_seated_leaving, W).')
-check "a seated role adding a leaving mark fails clause 2 of def:sg-wards" \
-      "W = no_introduction_with_wards" "$out"
-check "and the verdict is definition:sg-agent-named's, naming the seated role" \
-      "obstructed(enter, 1, atom(retired, []), seated(gather, 2, atom(retired, [])))" "$out"
-check_not "and it is not syntactically grassroots with wards" "syntactically_grassroots_with_wards" "$out"
-# The same with gather(p?, p[club(*, n)] ; n), whose listed role is the
-# agents p lists (GSC 8064cfb: clause 2 of def:sg-wards asks of seated and
-# listed roles).
+# --- agent-named contracts with wards (def:sg-wards, CSSN's paper) ---------
+# wd_leaving with gather(p?, p[club(*, n)] ; n), whose listed role is the
+# agents p lists and requires child: an agent-named contract with wards.
+# wd_listed's listed role adds noted, no mark in M, leaving mark, friend,
+# parent or parenting atom, so it meets clause 2 of def:sg-wards, and
+# clauses 1 and 3 as wd_leaving does: syntactically grassroots with wards.
+# wd_listed_leaving's adds retired, a leaving mark, and clause 2 fails: no
+# introduction with wards meets def:sg-wards, and the verdict is
+# definition:sg-agent-named's.
 out=$(run 'check_named(wd_listed, V).')
 check "a listed role adding no mark, leaving mark, friend or guardianship atom: syntactically grassroots with wards" \
       "V = syntactically_grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [retired])" \
@@ -1217,10 +1143,6 @@ check_not "and it is not syntactically grassroots with wards" "syntactically_gra
 # --- agent-named contracts (Appendix D.4, definition:sg-agent-named) -------
 # GSNP with one schema more, each failing one clause, and two contracts that
 # stand on their own, failing clause 1.
-out=$(run "check_variant(sn_seated_forbidden, $SG, V).")
-check "a seated role adding friend, which befriend forbids, fails clause 2 at both roles" \
-      "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(2)]), seated(befriend_members, 2, atom(friend, [role(1)]))), obstructed(befriend, 2, atom(friend, [role(1)]), seated(befriend_members, 2, atom(friend, [role(1)])))])" \
-      "$out"
 out=$(run 'check_named(an_named_intro, V).')
 check "an introductory act with a name term is none, by clause 1" \
       "V = not_grassroots([no_introductory_act])" "$out"
@@ -1228,22 +1150,15 @@ out=$(run 'check_named(an_named_unary, V).')
 check "identity added only by a schema with a name term is unobtainable, by clause 1" \
       "V = not_grassroots([obstructed(befriend, 1, atom(identity, []), unobtainable), obstructed(befriend, 2, atom(identity, []), unobtainable)])" \
       "$out"
-out=$(run "check_variant(sn_seated_witness, $SG, V)." "traceable_variant(sn_seated_witness, $SG, E).")
-check "a speech act traced through a seated role only fails clause 3" \
-      "V = not_grassroots([untraceable([noted])])" "$out"
-check_not "and noted is not among the predicates traced through agent roles" "noted" \
-          "$(printf '%s' "$out" | grep '^E = \|GLP> E = ')"
-out=$(run "check_variant(sn_seated_guard, $SG, V).")
-check "a component guarded by a seated role only fails clause 4" \
-      "V = not_grassroots([volition(split, 1, 2)])" "$out"
-
-# The same four over a listed role pi[rho(*, u_2, ..., u_r)] (Appendix D,
-# Definitions Role and Extent, GSC 8064cfb): its base is the agent role pi,
-# so it joins pi in the role graph (clause 4), it is no agent role (clauses 3
-# and 4), and clause 2 asks of it what it asks of a seated role, the fault
-# naming it listed_role.  sn_listed_vote's listed role carries the mark
-# ?_theta, a part of the members a lists larger than theta of them guarding
-# vote (Definition Act schema), and GSNP with it is syntactically grassroots.
+# Over a listed role pi[rho(*, u_2, ..., u_r)] (Appendix D, Definitions Role
+# and Extent, GSC 8064cfb): its base is the agent role pi, so it joins pi in
+# the role graph (clause 4), it is no agent role (clause 3), and clause 2
+# asks of it what clause 2 of def:unobstructed asks of an agent role, the
+# fault naming it listed_role.  Only an agent role may carry the mark ?, and
+# a role that does not guard adds or deletes an atom (Appendix D's
+# Definition Act schema, GSC f3c4f43 and 70afdc4): sn_listed_guard's listed
+# role carries ?, and sn_listed_inert's adds and deletes nothing, and each is
+# refused.
 out=$(run "check_variant(sn_listed_forbidden, $SG, V).")
 check "a listed role adding friend, which befriend forbids, fails clause 2 at both roles" \
       "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(2)]), listed_role(befriend_listed, 2, atom(friend, [role(1)]))), obstructed(befriend, 2, atom(friend, [role(1)]), listed_role(befriend_listed, 2, atom(friend, [role(1)])))])" \
@@ -1253,31 +1168,15 @@ check "a speech act traced through a listed role only fails clause 3" \
       "V = not_grassroots([untraceable([noted])])" "$out"
 check_not "and noted is not among the predicates traced through agent roles" "noted" \
           "$(printf '%s' "$out" | grep '^E = \|GLP> E = ')"
-out=$(run "check_variant(sn_listed_guard, $SG, V).")
-check "a component guarded by a listed role only fails clause 4" \
-      "V = not_grassroots([volition(split, 1, 2)])" "$out"
-out=$(run "check_variant(sn_listed_vote, $SG, V)." "traceable_variant(sn_listed_vote, $SG, E).")
-check "a listed role guarded with ?_theta, joined to its agent role: GSNP with vote is syntactically grassroots" \
-      "V = syntactically_grassroots_with_seated_and_listed_roles" "$out"
-check "and voted and voter have traceable provenance, n traced through member(<a>.n) at the agent role" \
-      "E = [identity, friend, item, authored, member, listed, closed, posted, delivered, voted, voter]" "$out"
-# vote compiles (definition:compile) to an assignment over each role's
-# extent, the listed role's written \Alice[\mathit{listed}(\ast,n)], a
-# proviso line per role, and the guard, a part of the listed role's extent
-# larger than theta of it.
-vote_tex=$(cat <<'TEX' | squash
-\begin{align*}
-& c'_p := c_p \uplus \{\mathit{voted}(n)\} && (p\in\mathrm{ext}_c(\Alice)),\\
-& c'_p := c_p \uplus \{\mathit{voter}(n)\} && (p\in\mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)])),\\
-& \text{provided } \{\mathit{identity},\ \mathit{member}(\langle\Alice\rangle\cdot n)\} \subseteq c_p && (p\in\mathrm{ext}_c(\Alice)),\\
-& \text{provided } \{\mathit{identity},\ \mathit{member}(\langle\Alice\rangle\cdot n)\} \subseteq c_p && (p\in\mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)])),\\
-& \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)]) \text{ with } |G|>\theta|\mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)])|
-\end{align*}
-TEX
-)
-check_eq "vote compiles with the guard a part of the listed role's extent larger than theta of it" \
-         "$vote_tex" \
-         "$(run "compile_schema_variant(sn_listed_vote, $SG, vote)." | sed -n '/begin{align/,/end{align/p' | sed 's/GLP>//' | squash)"
+out=$(run "check_variant(sn_listed_guard, $SG, V)." "compile_variant(sn_listed_guard, $SG).")
+check "a listed role carrying the mark ? is refused" \
+      "V = malformed([listed_guarded(split, 3)])" "$out"
+check "and it is not compiled, the message naming the fault" \
+      "% not compiled: sn_listed_guard is malformed: split at role 3 has a listed role carrying the mark ?, which only an agent role may carry; check_named gives the faults." \
+      "$(printf '%s' "$out" | tr '\n' ' ')"
+out=$(run "check_variant(sn_listed_inert, $SG, V).")
+check "a listed role adding and deleting nothing is refused" \
+      "V = malformed([changes_nothing(idle, 2)])" "$out"
 
 # --- listed roles formed otherwise (Appendix D, Definition Role) -----------
 # close_b's listed role is of itself, no agent role; note_l's carries a
@@ -1302,6 +1201,73 @@ check "a head that repeats a variable, lists a role and leaves out a variable is
 check "and it is not compiled, the message naming the faults" \
       "% not compiled: hd_faults is malformed: sign lists a variable twice in its head; sign lists in its head an entry that is not a variable; sign has a variable its head does not list; check_named gives the faults." \
       "$(printf '%s' "$out" | tr '\n' ' ')"
+
+# --- the notation (def:schema, definition:schema) --------------------------
+# notation_contract prints a contract's schemas from its term in the notation
+# of Definition Act schema, def:schema of Section 3.2 and definition:schema of
+# Appendix D, a token to a line, an empty line ending a line of the text
+# (notation.glp; README, "The notation"); cascade.sh joins the tokens into a
+# record's schemas.txt, as notation() does here.  GSG's befriend is the schema
+# Section 3.2 displays, befriend(Alice?, Bob?) : identity, knows(Bob), not
+# friend(Bob), +friend(Bob)  identity, knows(Alice), not friend(Alice),
+# +friend(Alice), after GKK's establish, meet and introduce, each E_i on a line
+# labelled by its role; GSN's close is Appendix D's example, with the identity
+# the paper leaves out; GSNP's forward carries the signed term of GAI's
+# Definition Act schema; and sg_reflexive, GSG's variant, declares friend
+# reflexive.
+notation() { # notation <term> ; the text notation_contract prints, its tokens joined
+  run "notation_contract($1)." | sed -e 's/^\(GLP> \)*//' | perl -ne '
+    chomp;
+    if ($_ eq "%% notation begin") { $on = 1; next }
+    if ($on && $_ eq "%% notation end") { $on = 0; next }
+    next unless $on;
+    if ($_ eq "") { print "$line\n"; $line = "" } else { $line .= $_ }'
+}
+one_schema() { # one_schema <name> ; from the notation on stdin, the lines of the schema <name>
+  awk -v s="$1(" 'index($0, s) == 1 { on = 1 } on && /^$/ { exit } on'
+}
+gsg_notation=$(cat <<'EOF'
+establish(Alice?) :
+    at Alice: +identity
+
+meet(Alice?, Bob?) :
+    at Alice: identity, +knows(Bob)
+    at Bob: identity, +knows(Alice)
+
+introduce(Alice?, Bob?; c) :
+    at Alice: identity, knows(Bob), knows(c)
+    at Bob: identity, knows(Alice), +knows(c)
+
+befriend(Alice?, Bob?) :
+    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
+    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
+
+unfriend(Alice?, Bob) :
+    at Alice: identity, -friend(Bob)
+    at Bob: identity, -friend(Alice)
+EOF
+)
+check_eq "GSG's schemas print in the notation of def:schema, befriend as Section 3.2 writes it" \
+         "$gsg_notation" "$(notation "$GSGT")"
+close_notation=$(cat <<'EOF'
+close(Alice?, Alice[listed(*, n)]; n) :
+    at Alice: identity, +closed(n), -listed(Alice, n)
+    at Alice[listed(*, n)]: identity, -member(<Alice>.n)
+EOF
+)
+check_eq "GSN's close prints as Appendix D writes it, its listed role and name term" \
+         "$close_notation" "$(notation "$GSNT" | one_schema close)"
+forward_notation=$(cat <<'EOF'
+forward(Alice?, Bob; x) :
+    at Alice: identity, item(x), not authored(x)
+    at Bob: identity, friend(Alice), +item(sgn(x, Alice))
+EOF
+)
+check_eq "GSNP's forward prints with the signed term of GAI's Definition Act schema" \
+         "$forward_notation" "$(notation "$SG" | one_schema forward)"
+REFL=$(run "variant(sg_reflexive, $GSGT, C)." | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
+check_eq "a contract declaring friend reflexive prints the declaration first" \
+         "Reflexive predicates: friend" "$(notation "$REFL" | head -1)"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

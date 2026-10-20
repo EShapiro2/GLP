@@ -171,6 +171,34 @@
 %%                         at a[listed(*, n2)]   -member(a, n2), +member(a, n1)
 %%
 %% The members of n2 become members of n1, the members of n1 record the merger, and the leader leads n2 no more.  A schema-binding of merge determines a part for each pair of lists, of the people of each listed role, the persons q with listed(q, n1), and with listed(q, n2), in the state of the person in a, and the base person requires that it list exactly the people of each (ibid.).  Its request name is merge(a, n1, n2), and the base agent, on its person's request, completes both lists from its listed atoms.  The base of both listed roles, a, is merge's only guarding role, as Section 5.4 asks.  merges/self.glp plays it.
+%%
+%% coins is a currency of coins of one unit, GC's mint, swap and pay (Currencies' programs/currencies/coins/GC.glp, compiled here as the currency, currency/), less GKK's identity and knows, which GC requires, and less redeem, so that a contract compiled here has a guard whose standing approval its machine can no longer carry out, and refuses at once, and a swap its other party declines (vGLP f0acbc1, Section 3.2, "The protocol": "A machine that cannot carry out a transaction its person approved refuses it, so that the approval ends and the person is told"; vGLP #18 Cowork to Code, 2026-10-20 10:44 UTC, item 6).  Without redeem, a swap that gives a person's coin back to them is of no class with a redeem's part, guarded by one party alone, so the swap asks its other party:
+%%
+%%   mint(p?)         :  at p  +coin(p)
+%%   swap(p?, q? ; v, u) :
+%%                       at p  +coin(v), -coin(u)
+%%                       at q  +coin(u), -coin(v)
+%%   pay(p?, q)       :  at p  -coin(q)
+%%                       at q  +coin(q)
+%%
+%% A state is a multiset, so a person may mint and hold several coins of one person.  coins/self.glp plays it.
+%%
+%% wardclose is a group whose child leader's parent closes it, CSSN's child_close (programs/cssn/CSSN.glp) with no identity, so that a contract compiled here has a schema with a listed role whose base is not a guarding role: its guarded part is opened by the person in its first role, the child, on its guard's request, the parent's (vGLP f0acbc1, Section 5.4, "Act schemas as local specifications": "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part"; Definition "Local Specification, Part, Guard Set, Opener, Request"; vGLP #18 Cowork to Code, 2026-10-20 10:44 UTC, item 6):
+%%
+%%   befriend(p?, q?)   :  at p  not friend(q), +friend(q)
+%%                         at q  not friend(p), +friend(p)
+%%   adopt(p?, r?)      :  at p  not parenting(r), +parenting(r)
+%%                         at r  not parent(p), +parent(p)
+%%   create(a? ; n)     :  at a  not member(a, n), not closed(n), +member(a, n),
+%%                               +listed(a, n)
+%%   join(a?, q? ; n)   :  at a  member(a, n), friend(q), +listed(q, n)
+%%                         at q  friend(a), not member(a, n), +member(a, n)
+%%   child_close(r, p?, r[listed(*, n)] ; n) :
+%%                         at r                 parent(p), -listed(r, n), +closed(n)
+%%                         at p                 parenting(r)
+%%                         at r[listed(*, n)]   -member(r, n)
+%%
+%% child_close's one guarding role is p, its listed role's base r its first role, and no other schema determines a transaction of its class, so the contract is a local specification (ibid.).  Its request name is child_close(r, p, n), whose parts, one for each list of the people r lists, have the opener r; the parent's Request of rho_N goes to the child's machine, which completes the list from its own listed atoms and proposes the part, naming the request.  wardclose/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it.
@@ -209,6 +237,8 @@ contract_named(opens, C?) :- opens(C).
 contract_named(groups, C?) :- groups(C).
 contract_named(counter, C?) :- counter(C).
 contract_named(merges, C?) :- merges(C).
+contract_named(coins, C?) :- coins(C).
+contract_named(wardclose, C?) :- wardclose(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -227,6 +257,8 @@ introduction_named(opens, no_introduction).
 introduction_named(groups, no_introduction).
 introduction_named(counter, no_introduction).
 introduction_named(merges, no_introduction).
+introduction_named(coins, no_introduction).
+introduction_named(wardclose, no_introduction).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -385,3 +417,35 @@ merges([schema(befriend, [],
                [atom(merged, [svar(n2), svar(n1)])], [], [atom(member, [role(1), svar(n1)])], []),
            crs(listed(1, listed, [svar(n2)]), unguarded,
                [atom(member, [role(1), svar(n1)])], [atom(member, [role(1), svar(n2)])], [], [])])]).
+
+procedure coins(Contract).
+coins([schema(mint, [],
+         [rs(guarded, [atom(coin, [role(1)])], [], [], [])]),
+       schema(swap, [pvar(v), pvar(u)],
+         [rs(guarded, [atom(coin, [pvar(v)])], [atom(coin, [pvar(u)])], [], []),
+          rs(guarded, [atom(coin, [pvar(u)])], [atom(coin, [pvar(v)])], [], [])]),
+       schema(pay, [],
+         [rs(guarded, [], [atom(coin, [role(2)])], [], []),
+          rs(unguarded, [atom(coin, [role(2)])], [], [], [])])]).
+
+procedure wardclose(Contract).
+wardclose([schema(befriend, [],
+             [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+              rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+           schema(adopt, [],
+             [rs(guarded, [atom(parenting, [role(2)])], [], [], [atom(parenting, [role(2)])]),
+              rs(guarded, [atom(parent, [role(1)])], [], [], [atom(parent, [role(1)])])]),
+           schema(create, [svar(n)],
+             [rs(guarded, [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [], [],
+                          [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]),
+           schema(join, [svar(n)],
+             [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
+                          [atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], []),
+              rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])],
+                          [atom(member, [role(1), svar(n)])])]),
+           cschema(child_close, [svar(n)], [],
+             [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])],
+                            [atom(parent, [role(2)])], []),
+              rs(guarded, [], [], [atom(parenting, [role(1)])], []),
+              crs(listed(1, listed, [svar(n)]), unguarded,
+                  [], [atom(member, [role(1), svar(n)])], [], [])])]).

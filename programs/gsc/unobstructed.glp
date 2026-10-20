@@ -11,13 +11,13 @@
 % An agent-named contract (Appendix D.4, definition:sg-agent-named) is put to
 % the same definitions, with clause 1 of definition:sg-agent-named: the
 % introductory act has agent roles and no name term, and so has each schema
-% of arity one of clause 1 of def:unobstructed.  A seated or a listed role
-% adds at the agents of its extent, which no binding names, so clause 2 of
+% of arity one of clause 1 of def:unobstructed.  A listed role adds at the
+% agents of its extent, which no binding names, so clause 2 of
 % def:unobstructed is asked of the agent roles of a schema, and clause 2 of
-% definition:sg-agent-named of its seated and listed roles: none adds an
-% atom of a predicate the introductory act forbids at a role (GSC 8064cfb).
-% For a contract of Section 3 these restrictions ask nothing, its roles
-% being agent roles and its schemas carrying no name term.
+% definition:sg-agent-named of its listed roles: none adds an atom of a
+% predicate the introductory act forbids at a role (GSC f3c4f43).  For a
+% contract of Section 3 these restrictions ask nothing, its roles being
+% agent roles and its schemas carrying no name term.
 % ---------------------------------------------------------------------------
 
 % --- the introductions of person(0) and person(1) --------------------------
@@ -136,7 +136,7 @@ iab1(no, _, []).
 iab1(yes, Sc, R?) :- ground(Sc?) | intro_bindings(Sc?, R).
 
 % The introductions of a schema, empty unless it is an introductory act.
-% Appendix F reads it too (wards.glp).
+% The search for an introduction with wards reads it too (wards).
 exported procedure intro_act_bindings(Schema?, Substs).
 intro_act_bindings(Sc, R?) :- ground(Sc?) |
     is_two_guarded(Sc?, A),
@@ -225,10 +225,9 @@ role_blocks1(clear, Rs, J, Sc, Cx, G, P, R?) :-
     role_blocks(Rs?, J1?, Sc?, Cx?, G?, P?, R).
 role_blocks1(blocked(Nm, Jx, Psi), _, _, _, _, _, _, blocked(Nm?, Jx?, Psi?)).
 
-% A seated or a listed role adds at the agents of its extent, not at a person
-% a binding sends it to, and clause 2 of definition:sg-agent-named asks of it
-% what this clause asks of an agent role (seated_faults, below): it is passed
-% by.
+% A listed role adds at the agents of its extent, not at a person a binding
+% sends it to, and clause 2 of definition:sg-agent-named asks of it what this
+% clause asks of an agent role (listed_faults, below): it is passed by.
 procedure role_blocks(RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
 role_blocks([], _, _, _, _, _, clear).
 role_blocks([RS|Rs], J, Sc, Cx, G, P, R?) :-
@@ -355,32 +354,24 @@ unob_roles([RS|Rs], I, Nm, B, C, Fb, Rf, R?) :-
     faults_app(F1?, F2?, R).
 
 % --- clause 2 of definition:sg-agent-named ---------------------------------
-% No seated or listed role of a schema of C adds an atom of a predicate that
-% the introductory act forbids at a role (GSC 8064cfb).  Each atom A the act
-% Nm forbids at its role I, and each atom a seated role J of a schema Nm2
-% adds of A's predicate, is a fault obstructed(Nm, I, A, seated(Nm2, J,
-% Added)), and each one a listed role J adds a fault obstructed(Nm, I, A,
-% listed_role(Nm2, J, Added)).  A contract of Section 3 has no seated or
-% listed role and no such fault.
+% No listed role of a schema of C adds an atom of a predicate that the
+% introductory act forbids at a role (GSC f3c4f43).  Each atom A the act Nm
+% forbids at its role I, and each atom a listed role J of a schema Nm2 adds
+% of A's predicate, is a fault obstructed(Nm, I, A, listed_role(Nm2, J,
+% Added)).  A contract of Section 3 has no listed role and no such fault.
 
-% The cause, by the kind of the role: yes for a listed role.
-procedure sh_cause(Ans?, Constant?, Integer?, Atom?, Cause).
-sh_cause(no, Nm2, J, X, seated(Nm2?, J?, X?)).
-sh_cause(yes, Nm2, J, X, listed_role(Nm2?, J?, X?)).
-
-procedure sh_atoms(Atoms?, Constant?, Ans?, Constant?, Integer?, Atom?, Constant?, Integer?,
+procedure sh_atoms(Atoms?, Constant?, Constant?, Integer?, Atom?, Constant?, Integer?,
                    Faults?, Faults).
-sh_atoms([], _, _, _, _, _, _, _, T, T?).
-sh_atoms([atom(Q, Bs)|Xs], P, L, Nm2, J, A, Nm, I,
-         T, [obstructed(Nm?, I?, A?, Cs?)|R?]) :-
-    Q? =?= P?, ground(Bs?), ground(Xs?), ground(L?), ground(Nm2?), integer(J?), ground(A?),
+sh_atoms([], _, _, _, _, _, _, T, T?).
+sh_atoms([atom(Q, Bs)|Xs], P, Nm2, J, A, Nm, I,
+         T, [obstructed(Nm?, I?, A?, listed_role(Nm2?, J?, atom(Q?, Bs?)))|R?]) :-
+    Q? =?= P?, ground(Bs?), ground(Xs?), ground(Nm2?), integer(J?), ground(A?),
     ground(Nm?), integer(I?), ground(T?) |
-    sh_cause(L?, Nm2?, J?, atom(Q?, Bs?), Cs),
-    sh_atoms(Xs?, P?, L?, Nm2?, J?, A?, Nm?, I?, T?, R).
-sh_atoms([atom(_, _)|Xs], P, L, Nm2, J, A, Nm, I, T, R?) :-
-    otherwise, ground(Xs?), ground(P?), ground(L?), ground(Nm2?), integer(J?), ground(A?),
+    sh_atoms(Xs?, P?, Nm2?, J?, A?, Nm?, I?, T?, R).
+sh_atoms([atom(_, _)|Xs], P, Nm2, J, A, Nm, I, T, R?) :-
+    otherwise, ground(Xs?), ground(P?), ground(Nm2?), integer(J?), ground(A?),
     ground(Nm?), integer(I?), ground(T?) |
-    sh_atoms(Xs?, P?, L?, Nm2?, J?, A?, Nm?, I?, T?, R).
+    sh_atoms(Xs?, P?, Nm2?, J?, A?, Nm?, I?, T?, R).
 
 procedure sh_role(Ans?, RoleSpec?, Constant?, Constant?, Integer?, Atom?, Constant?, Integer?,
                   Faults?, Faults).
@@ -389,8 +380,7 @@ sh_role(no, RS, P, Nm2, J, A, Nm, I, T, R?) :-
     ground(RS?), ground(P?), ground(Nm2?), integer(J?), ground(A?), ground(Nm?),
     integer(I?), ground(T?) |
     rs_add(RS?, Add),
-    rs_listed(RS?, L),
-    sh_atoms(Add?, P?, L?, Nm2?, J?, A?, Nm?, I?, T?, R).
+    sh_atoms(Add?, P?, Nm2?, J?, A?, Nm?, I?, T?, R).
 
 procedure sh_roles(RoleSpecs?, Integer?, Constant?, Constant?, Atom?, Constant?, Integer?,
                    Faults?, Faults).
@@ -419,13 +409,13 @@ sh_forb([atom(P, As)|Xs], C, Nm, I, T, R?) :-
     sh_forb(Xs?, C?, Nm?, I?, T?, R1),
     sh_schemas(C?, P?, atom(P?, As?), Nm?, I?, R1?, R).
 
-procedure seated_faults(RoleSpecs?, Integer?, Constant?, Contract?, Faults).
-seated_faults([], _, _, _, []).
-seated_faults([RS|Rs], I, Nm, C, R?) :-
+procedure listed_faults(RoleSpecs?, Integer?, Constant?, Contract?, Faults).
+listed_faults([], _, _, _, []).
+listed_faults([RS|Rs], I, Nm, C, R?) :-
     ground(RS?), ground(Rs?), integer(I?), ground(Nm?), ground(C?) |
     rs_forb(RS?, N),
     I1 := I? + 1,
-    seated_faults(Rs?, I1?, Nm?, C?, R1),
+    listed_faults(Rs?, I1?, Nm?, C?, R1),
     sh_forb(N?, C?, Nm?, I?, R1?, R).
 
 % unobstructed(Sc, B, C, Rf, Faults): the faults of def:unobstructed at the
@@ -443,7 +433,7 @@ procedure unobstructed1(RoleSpecs?, Constant?, Subst?, Contract?, Integer?, Pred
 unobstructed1(Rs, Nm, B, C, N, Rf, R?) :-
     ground(Rs?), ground(Nm?), ground(B?), ground(C?), integer(N?), ground(Rf?) |
     unob_roles(Rs?, 1, Nm?, B?, C?, N?, Rf?, F1),
-    seated_faults(Rs?, 1, Nm?, C?, F2),
+    listed_faults(Rs?, 1, Nm?, C?, F2),
     faults_app(F1?, F2?, R).
 
 % --- def:syntactically-grassroots, first half ------------------------------
@@ -482,3 +472,46 @@ intro_scan([S|Ss], C, Rf, Cd, R?) :-
 % intro_result(C, Rf, Faults): Rf is the predicates C declares reflexive.
 exported procedure intro_result(Contract?, Preds?, Faults).
 intro_result(C, Rf, R?) :- ground(C?), ground(Rf?) | intro_scan(C?, C?, Rf?, none, R).
+
+% --- the introductory acts, for inspection ---------------------------------
+% Each schema of the contract that is an introductory act (def:introduction),
+% in the order of the contract: unobstructed where some introduction of it
+% meets def:unobstructed, with clause 2 of definition:sg-agent-named for an
+% agent-named contract, as intro_result decides it; obstructed(Faults)
+% otherwise, the faults of its first introduction, as intro_result reports
+% them for the first introductory act.
+
+procedure ia_status1(Faults?, Substs?, Schema?, Contract?, Preds?, Cand?, IntroStatus).
+ia_status1([], _, _, _, _, _, unobstructed).
+ia_status1([F|Fs], Bs, S, C, Rf, Cd, R?) :-
+    ground(F?), ground(Fs?), ground(Bs?), ground(S?), ground(C?), ground(Rf?),
+    ground(Cd?) |
+    note_cand(Cd?, [F?|Fs?], Cd1),
+    ia_status(Bs?, S?, C?, Rf?, Cd1?, R).
+
+procedure ia_status(Substs?, Schema?, Contract?, Preds?, Cand?, IntroStatus).
+ia_status([], _, _, _, some(F), obstructed(F?)).
+ia_status([B|Bs], S, C, Rf, Cd, R?) :-
+    ground(B?), ground(Bs?), ground(S?), ground(C?), ground(Rf?), ground(Cd?) |
+    unobstructed(S?, B?, C?, Rf?, F),
+    ia_status1(F?, Bs?, S?, C?, Rf?, Cd?, R).
+
+% A schema with introductions is an introductory act, and is listed.
+procedure ia_add(Substs?, Schema?, Contract?, Preds?, IntroActs?, IntroActs).
+ia_add([], _, _, _, T, T?).
+ia_add([B|Bs], S, C, Rf, T, [intro_act(Nm?, St?)|T?]) :-
+    ground(B?), ground(Bs?), ground(S?), ground(C?), ground(Rf?) |
+    sch_name(S?, Nm),
+    ia_status([B?|Bs?], S?, C?, Rf?, none, St).
+
+procedure ia_scan(Contract?, Contract?, Preds?, IntroActs).
+ia_scan([], _, _, []).
+ia_scan([S|Ss], C, Rf, R?) :-
+    ground(S?), ground(Ss?), ground(C?), ground(Rf?) |
+    intro_act_bindings(S?, Bs),
+    ia_scan(Ss?, C?, Rf?, R1),
+    ia_add(Bs?, S?, C?, Rf?, R1?, R).
+
+% intro_acts(C, Rf, Acts): Rf is the predicates C declares reflexive.
+exported procedure intro_acts(Contract?, Preds?, IntroActs).
+intro_acts(C, Rf, R?) :- ground(C?), ground(Rf?) | ia_scan(C?, C?, Rf?, R).

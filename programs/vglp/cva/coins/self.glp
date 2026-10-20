@@ -1,0 +1,113 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract coins
+%% (../contracts.glp, contract_named(coins, C): GC's mint, swap and pay, with
+%% coins of one unit), platform.vglp, which programs/vglp/cva/compile.sh prints
+%% from it: two-phase commit coordinated by the initiating agent, a person's
+%% request its standing approval (vGLP f0acbc1, Section 3.2, "The protocol" and
+%% Definitions "Proposing" to "Deciding"; Section 5.4, "Triggers" and "The
+%% compilation").  It runs three agents, alice, bob and carol, their persons
+%% scripted and paced on their screens (../self.glp), and gives each person's
+%% log, the views and the notices, with gave(K, A) where the person answers an
+%% approval question, and the network's log of the cargoes it carries.
+%%
+%% play_coins: each mints a coin of their own.  carol swaps her coin for bob's,
+%% bob asked and answering yes, and then bob's coin for alice's, alice asked and
+%% answering yes: alice holds one Bob-coin, and has never known bob.  alice
+%% requests a payment of it to bob, pay(alice, bob), and a swap of it with bob
+%% for a Carol-coin, swap(alice, bob, carol, bob), both Requests to her own
+%% machine, her person's approvals, taken while she holds the coin; her
+%% machine proposes neither while bob is unknown, Propose telling every other
+%% participant.  Once alice and bob know each other, her machine proposes the
+%% payment, the approval made first, bob's machine voting yes, unasked, and it
+%% commits, spending the coin: "the one decided first spending the coin".  Her
+%% approval of the swap stands, and her state is in the domain of no part of
+%% its class that she guards, so her machine proposes the swap and refuses it
+%% at once: voted no, closed, the outcome abort told to bob with alice as
+%% refuser, reason unable, the Bob-coin the swap requires at her and her state
+%% lacks; her approval ends, and her screen shows the notice
+%% refused(swap(alice, bob, carol, bob), alice, unable([coin(bob)], [])), naming her
+%% machine (vGLP #18 Cowork to Code, 2026-10-20 10:44 UTC, item 6).  alice mints
+%% again and requests a swap of her coin for bob's, swap(alice, bob, bob,
+%% alice); bob, asked, answers no, his vote no declined, and alice's machine
+%% tallies it: the outcome abort, bob its refuser, declined, and her screen
+%% shows refused(swap(alice, bob, bob, alice), bob, declined).
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer).
+Proposal ::= mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
+YesNo    ::= yes ; no.
+Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Atom     ::= coin(Peer).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
+Approval ::= approval(Attempt, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_coins(Stream(_), Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_coins(LA?, LB?, LC?, N?) :-
+    trio([own([A1], propose(mint(A1?))), wait(holds(coin(alice))),
+          req(known(carol)), wait(known(carol)),
+          approval(swap(carol, alice, alice, bob), yes),
+          wait(holds(coin(bob))),
+          own([A2], propose(pay(A2?, bob))),
+          own([A3], propose(swap(A3?, bob, carol, bob))),
+          req(known(bob)),
+          wait(refused(swap(alice, bob, carol, bob), alice, unable([coin(bob)], []))),
+          own([A4], propose(mint(A4?))),
+          wait(holds(coin(alice))),
+          own([A5], propose(swap(A5?, bob, bob, alice))),
+          wait(refused(swap(alice, bob, bob, alice), bob, declined))],
+         [own([B1], propose(mint(B1?))), wait(holds(coin(bob))),
+          req(known(carol)), wait(known(carol)),
+          approval(swap(carol, bob, bob, carol), yes),
+          wait(holds(coin(carol))),
+          req(known(alice)),
+          approval(swap(alice, bob, bob, alice), no)],
+         [own([C1], propose(mint(C1?))), wait(holds(coin(carol))),
+          req(known(bob)), wait(known(bob)),
+          own([C2], propose(swap(C2?, bob, bob, carol))),
+          wait(holds(coin(bob))),
+          req(known(alice)), wait(known(alice)),
+          own([C3], propose(swap(C3?, alice, alice, bob)))],
+         LA, LB, LC, N).
+
+%% alice, bob and carol, each with its dispatcher and scripted person, their
+%% networks joined.
+procedure trio(Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    merge(OutA?, OutB?, Net1),
+    merge(Net1?, OutC?, Net),
+    route3(Net?, alice, InA, bob, InB, carol, InC, N).
