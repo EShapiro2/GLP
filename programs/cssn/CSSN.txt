@@ -7,7 +7,7 @@
 CSSN: Child-Safe Social Network
 1. Parents.  Only an adult may create a child's identity; two adults may do so by an act of both, and are then both parents of the child.  Alice declares themselves a parent of Carol only if they are Carol's legal parent.
 2. Meeting of a child.  Carol comes to know Bob only by an act of both and of a parent of Carol who knows Bob. Carol comes to know Dave only by an act of both and of a parent of each, the two parents knowing each other.
-3. Friendship of a child.  To enter a friendship relation between Carol and Dave, the acting parents must be friends;  and between Carol and Alice,  the acting parent must be a friend of Alice.
+3. Friendship of a child.  To enter a friendship relation between Carol and Dave, the acting parents must be friends; to enter a friendship relation between Carol and Alice, the acting parent must be a friend of Alice.
 4. Coming of age.  A parent of Carol ends their guardianship by declaring Carol of age, which ends the guardianship of every parent of Carol; a parent shall do so when Carol comes of age, and not before.
 5. A child with no guardian.  Alice, aware that Dave is a child though Dave's identity is not a ward, shall neither befriend Dave nor let their child befriend Dave, and shall report it to Dave's parents if Alice knows who they are.
 6. A child's group.  Only a child may join a group Carol leads.
