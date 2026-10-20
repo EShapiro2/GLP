@@ -3,8 +3,8 @@
 %%
 %%   person counter.
 %%   Stream(Integer) =::= count.
-%%   procedure count(Stream(Integer), Integer?).
-%%   count(Ns?, _) :- step(1, slot(Ns)) @ 1/hour.
+%%   procedure count(Stream(Integer), Person?, Integer?).
+%%   count(Ns?, _, _) :- step(1, slot(Ns)) @ 1/hour.
 %%   procedure step(Integer?, Slot(Stream(Integer))?).
 %%   step(I, slot([I? | Ns?])) :- I? =< 3 | I1 := I? + 1, step(I1?, slot(Ns)) @ 1/hour.
 %%   step(I, slot([])) :- I? > 3 | true.
@@ -34,8 +34,8 @@ source(
   %% The profile and the run declaration.
   [person(counter),
    binds('Stream'('Integer'), count),
-   decl(count('Stream'('Integer'), dual('Integer'))),
-   clause(count(var('Ns?'), var('_')), [],
+   decl(count('Stream'('Integer'), dual('Person'), dual('Integer'))),
+   clause(count(var('Ns?'), var('_'), var('_')), [],
           [rated(step(1, slot(var('Ns'))), rate(1, hour))]),
    decl(step(dual('Integer'), dual('Slot'('Stream'('Integer'))))),
    clause(step(var('I'), slot([var('I?') | var('Ns?')])), ['=<'(var('I?'), 3)],

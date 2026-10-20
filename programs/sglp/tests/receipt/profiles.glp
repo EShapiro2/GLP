@@ -2,6 +2,9 @@
 %% (README.md, "The term form"); edit the source and run transform.sh, not this file.
 %% transform(receipt, profiles)
 
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).
+Person ::= person(Constant, Constant, List(Constant)).
+
 %% person(talker)
 %% binds(Stream(Msg), talk)
 exported procedure
@@ -9,12 +12,17 @@ talk
 (
 Stream(Msg)
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-talk(Ms?, _, Mon)
+talk(Ms?, _, _, Mon, _)
 :-
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,

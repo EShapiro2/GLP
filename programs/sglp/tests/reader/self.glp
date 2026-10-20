@@ -31,10 +31,12 @@ Rating ::= rating(Integer).
 Ask      ::= ask(Constant, Question).
 Question ::= rating_r(Rating?).
 
-%% A stochastic person, one profile in the one dimension, as the harness hands
-%% it from the population's draw to the person process (population.glp).
+%% A stochastic person, of the role agent, one profile in the one dimension,
+%% and a person, as run n agents draws them, as the harness hands them from the
+%% population to the person process: structurally population.glp's.
 Rater    ::= fair.
-Profiles ::= profiles(Rater).
+Profiles ::= agent(Rater).
+Person   ::= person(Constant, Constant, List(Constant)).
 
 imported procedure harness#run(Integer?, Stream(Integer)).
 exported procedure reader_run(Integer?, Stream(Integer)).

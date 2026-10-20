@@ -2,6 +2,9 @@
 %% (README.md, "The term form"); edit the source and run transform.sh, not this file.
 %% transform(steps, profiles)
 
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).
+Person ::= person(Constant, Constant, List(Constant)).
+
 %% person(stepper)
 %% binds(Ready, get_ready)
 exported procedure
@@ -10,12 +13,17 @@ get_ready
 Ready
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-get_ready(ready(R?), _, Mon)
+get_ready(ready(R?), _, _, Mon, _)
 :-
 stream_append(rated('/'(1, day), Tok), Mon?, _)
 ,
@@ -41,12 +49,17 @@ judge_fast
 Panel
 ?
 ,
+Person
+?
+,
 Integer?
+,
+MutualRef?
 ,
 MutualRef?
 )
 .
-judge_fast(panel(Cs), _, Mon)
+judge_fast(panel(Cs), _, _, Mon, _)
 :-
 judge_cards(Cs?, Mon?)
 .

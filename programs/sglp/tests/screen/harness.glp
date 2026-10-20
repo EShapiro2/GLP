@@ -1,0 +1,56 @@
+%% The run of test (xix), by hand, as the other run tests' harnesses (sGLP's
+%% paper, Section 3, Definition "Simulation Program"; Section 4, "The run" and
+%% "The screen"; Appendix B): the run declaration of notes_sglp.glp, one agent,
+%% its person drawn by the census of run 1 agents, person(1, agent, []), its
+%% initial goal notes/3 of notes.glp, its screen on notes' output to its
+%% person, and its person process (population.glp, person/8), with its
+%% stochastic person, its person and its seed, reading notes' ask stream in
+%% the dispatcher's place; the monitor, with the run's seed and the horizon in
+%% seconds; and the log's sink, the root's send_to_user/1, which prints each
+%% entry, ground, on its own line, and the monitor's clock last.  The program
+%% holds no call of the transformation, which printed population.glp before
+%% the run (transform.sh).
+
+imported procedure notes#notes(Stream(Integer), Stream(Output), Stream(Ask)).
+imported procedure population#declaration(Integer, Number, Span, Integer).
+imported procedure population#persons(Integer?, Stream(Constant)?, Constant,
+                                      List(Person), Integer).
+imported procedure population#stochastic_person(Integer?, Person?, Profiles,
+                                                Integer).
+imported procedure(X) population#start_screen(Integer?, Stream(X)?, MutualRef?,
+                                              MutualRef?, MutualRef).
+imported procedure population#person(Integer?, Profiles?, Person?, MutualRef?,
+                                     MutualRef?, Integer?, MutualRef?,
+                                     Stream(Ask)?).
+
+%% run(Ns): the run declaration's run, Ns the counts the program read.
+exported procedure run(Stream(Integer)).
+run(Ns?) :-
+    population # declaration(N, C, U, Seed),
+    run(N?, C?, U?, Seed?, Ns).
+
+%% run(N?, C?, U?, Seed?, Ns): the run of one agent until C Us from Seed: its
+%% person drawn by the census, refused where it draws no person or a person of
+%% a role of no dimension (Section 3, after Definition "Well-Formed").
+procedure run(Integer?, Number?, Span?, Integer?, Stream(Integer)).
+run(1, C, U, Seed, Ns?) :-
+    number(C?), integer(Seed?) |
+    random(Seed?, 2147483646, Base, _),
+    population # persons(Base?, [1], Ok, Ps, B),
+    go(Ok?, Ps?, B?, C?, U?, Seed?, Ns).
+
+procedure go(Constant?, List(Person)?, Integer?, Number?, Span?, Integer?,
+             Stream(Integer)).
+go(yes, [H], B, C, U, Seed, Ns?) :-
+    ground(H?), number(C?), integer(Seed?) |
+    span(U?, Secs),
+    Hz := C? * Secs?,
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, Entries),
+    send_to_user(Entries?),
+    monitor(Requests?, Seed?, Hz?, Log?),
+    population # stochastic_person(B?, H?, P, S),
+    notes # notes(Ns, Os, Asks),
+    population # start_screen(1, Os?, Mon?, Log?, Scr),
+    population # person(1, P?, H?, Mon?, Scr?, S?, Log?, Asks?).
+go(no, _, _, _, _, _, []) :- send_to_user([refused]).

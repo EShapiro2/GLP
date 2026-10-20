@@ -38,10 +38,12 @@ Receipt ::= plain(String) ; acked(String, Ack).
 Ask      ::= ask(Constant, Question).
 Question ::= stream_msg_r(Stream(Msg)?).
 
-%% A stochastic person, one profile in the one dimension, as the harness hands
-%% it from the population's draw to the person process (population.glp).
+%% A stochastic person, of the role agent, one profile in the one dimension,
+%% and a person, as run n agents draws them, as the harness hands them from the
+%% population to the person process: structurally population.glp's.
 Talking  ::= talker.
-Profiles ::= profiles(Talking).
+Profiles ::= agent(Talking).
+Person   ::= person(Constant, Constant, List(Constant)).
 
 imported procedure harness#run(Stream(Receipt)).
 exported procedure receipt_run(Stream(Receipt)).

@@ -51,10 +51,12 @@ Msg     ::= msg(Peer, Content).
 Ask      ::= ask(Constant, Question).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 
-%% A stochastic person, one profile per dimension, as the harness hands it from
-%% the population's draw to the person process (population.glp): Approach and
-%% Response are programs/sglp/self.glp's.
-Profiles ::= profiles(Approach, Response).
+%% A stochastic person, of the role agent, one profile per dimension, and a
+%% person, as run n agents draws them, as the harness hands them from the
+%% population to the person process: structurally population.glp's.  Approach
+%% and Response are programs/sglp/self.glp's.
+Profiles ::= agent(Approach, Response).
+Person   ::= person(Constant, Constant, List(Constant)).
 
 imported procedure harness#run(Integer?, Number?, Span?, Integer?, Integer?,
                                Integer?).

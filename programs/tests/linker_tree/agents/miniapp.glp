@@ -1,0 +1,26 @@
+%% IGLP's linker fixture, programs/tests/linker_tree, for program_linker_test.dart and program_compilation_test.dart: the mini-app's entries, programs/cssn/childsafe/miniapp.glp as it stood at GLP d2495778, its comments removed and three names changed: the directory childsafe to agents, the module and procedure superapp to host, and the procedures cssn and cssn_child to app and app_child.
+
+imported procedure adult#agent(Key?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+imported procedure child#child_agent(Key?, ParentEnds?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+imported procedure adult#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+app(Id, Ui, Convs) :-
+    ground(Id?) |
+    adult # agent(Id?, [], [], Convs?, [user_output(Screen)], state([], [], []), Asks),
+    adult # dispatch(Asks?, Ui?, MCh),
+    show_screen(MCh?, Screen?).
+
+exported procedure app_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+app_child(Id, Es, Ui, Convs) :-
+    ground(Id?) |
+    child # child_agent(Id?, Es?, [], [], Convs?, [user_output(Screen)], state([], [], []), Asks),
+    adult # dispatch(Asks?, Ui?, MCh),
+    show_screen(MCh?, Screen?).
+
+procedure show_screen(Channel(Stream(_), Stream(Output))?, Stream(ScreenMsg)?).
+show_screen(ch(_, Out?), Screen) :- relay(Screen?, Out).
+
+procedure relay(Stream(ScreenMsg)?, Stream(Output)).
+relay([msg(_, _, C)|Ms], [C?|Out?]) :- relay(Ms?, Out).
+relay([], []).

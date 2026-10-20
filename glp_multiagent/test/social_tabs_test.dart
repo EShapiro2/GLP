@@ -1244,6 +1244,18 @@ void main() {
               matching: find.text('End friendship')),
           findsNothing);
       expect(p.key(1, 'befriend:alf'), findsNothing);
+      // She holds principal_of(alf), not agent_of(alf, p, y): her row of Alf
+      // names no principal and no developer.
+      expect(
+          find.descendant(
+              of: p.key(1, 'person:alf'),
+              matching: find.textContaining('an AI agent of')),
+          findsNothing);
+      expect(
+          find.descendant(
+              of: p.key(1, 'person:alf'),
+              matching: find.textContaining('Developer')),
+          findsNothing);
       expect(
           find.descendant(
               of: p.key(1, 'person:bob'),
@@ -1296,6 +1308,11 @@ void main() {
       expect(
           find.descendant(
               of: p.key(1, 'person:alf'), matching: find.text('Developer: Acme Ltd')),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: p.key(1, 'person:alf'),
+              matching: find.text('an AI agent of Alice')),
           findsOneWidget);
       expect(p.key(1, 'befriend:carol'), findsOneWidget);
       expect(p.key(1, 'unfriend:alice'), findsOneWidget);
@@ -1406,7 +1423,8 @@ void main() {
             of: p.key(2, 'person:alf'), matching: find.byType(Text))))
           t.data,
       ];
-      expect(row, containsAllInOrder(['Alf', 'Developer: Acme Ltd']));
+      expect(row,
+          containsAllInOrder(['Alf', 'an AI agent of Alice', 'Developer: Acme Ltd']));
       p.plain();
       await p.tap(p.key(2, 'person:alf'));
       expect(p.key(2, 'chat:alf'), findsOneWidget);
@@ -1424,13 +1442,55 @@ void main() {
             'Forward',
           ]);
       p.plain();
-      // Alice is no AI agent: her row names no developer.
+      // Alice is no AI agent: her row names no principal and no developer.
       await p.tap(p.key(2, 'back'));
       expect(
           find.descendant(
               of: p.key(2, 'person:alice'),
               matching: find.textContaining('Developer')),
           findsNothing);
+      expect(
+          find.descendant(
+              of: p.key(2, 'person:alice'),
+              matching: find.textContaining('an AI agent of')),
+          findsNothing);
+    });
+
+    _phoneTest(
+        '(e) Bob\'s Friends tab after Alf befriends him: Alf\'s row, under his '
+        'name, "an AI agent of Alice" and "Developer: Acme Ltd", read from '
+        'agent_of(alf, alice, y), with End friendship, proposing '
+        'unfriend_p(bob, alf), and no Befriend; Alice his friend, with End '
+        'friendship and neither line', (tester) async {
+      // GAI #5 Cowork, Code_inbox.md, 2026-10-20 08:01 UTC; GAI's paper,
+      // Section 3.1: "every friend of an AI agent sees its principal and its
+      // developer".
+      final p = await _Phone.open(tester, 'gai', me: 'bob');
+      await p.views([
+        _v('[item($summary), friend(alf), agent_of(alf, alice, '
+            '$attestation), friend(alice), identity]', '[alf, alice]')
+      ]);
+      await p.menu(1, _gaiProposals, known: '[alf, alice]');
+      await p.top();
+      List<String?> row(String q) => [
+            for (final t in tester.widgetList<Text>(find.descendant(
+                of: p.key(1, 'person:$q'), matching: find.byType(Text))))
+              t.data,
+          ];
+      expect(row('alf'), [
+        'A',
+        'Alf',
+        'an AI agent of Alice',
+        'Developer: Acme Ltd',
+        'Summary of the news',
+        'End friendship',
+      ]);
+      expect(p.key(1, 'befriend:alf'), findsNothing);
+      expect(row('alice'), ['A', 'Alice', 'End friendship']);
+      expect(p.key(1, 'befriend:alice'), findsNothing);
+      p.plain();
+      await p.tap(p.key(1, 'unfriend:alf'));
+      expect(p.grants, ['input(1, [3], propose(unfriend_p(bob, alf)))']);
     });
   });
 }

@@ -1,7 +1,7 @@
 %% The run of test (xiii), by hand, as the examples' harnesses (sGLP's paper,
 %% Section 4, "The run"; Appendix B): the run declaration of receipt_sglp.glp,
 %% one agent, its initial goal chat/2 of chat.glp and its person process
-%% (population.glp, person/6), with its stochastic person and its seed,
+%% (population.glp, person/8), with its stochastic person, its person and its seed,
 %% reading chat/2's ask stream in the dispatcher's place (Section 3,
 %% Definition "Simulation Program"); the monitor, with the run's seed and the
 %% horizon in seconds; and the log's sink, the root's send_to_user/1, which
@@ -13,9 +13,15 @@
 
 imported procedure chat#chat(Stream(Receipt), Stream(Ask)).
 imported procedure population#declaration(Integer, Number, Span, Integer).
-imported procedure population#stochastic_person(Integer?, Profiles, Integer).
-imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
-                                     MutualRef?, Stream(Ask)?).
+imported procedure population#persons(Integer?, Stream(Constant)?, Constant,
+                                      List(Person), Integer).
+imported procedure population#stochastic_person(Integer?, Person?, Profiles,
+                                                Integer).
+imported procedure(X) population#start_screen(Integer?, Stream(X)?, MutualRef?,
+                                              MutualRef?, MutualRef).
+imported procedure population#person(Integer?, Profiles?, Person?, MutualRef?,
+                                     MutualRef?, Integer?, MutualRef?,
+                                     Stream(Ask)?).
 
 %% run(Rs): the run declaration's run, Rs the receipts the program output.
 exported procedure run(Stream(Receipt)).
@@ -27,13 +33,28 @@ run(Rs?) :-
 procedure run(Integer?, Number?, Span?, Integer?, Stream(Receipt)).
 run(1, C, U, Seed, Rs?) :-
     number(C?), integer(Seed?) |
+    random(Seed?, 2147483646, Base, _),
+    population # persons(Base?, [1], Ok, Ps, B),
+    go(Ok?, Ps?, B?, C?, U?, Seed?, Rs).
+
+%% go(Ok?, Ps?, B?, C?, U?, Seed?, ...): the run of the one person of Ps, run 1
+%% agents' person(1, agent, []), B the start of its block, where the census's
+%% draw is not refused (Section 3, after Definition "Well-Formed"): the
+%% monitor, the log's sink, the agent's initial goal, its screen, on [], the
+%% program writing nothing to its person, and its person process; refused, the
+%% run takes no goal but the line refused.
+procedure go(Constant?, List(Person)?, Integer?, Number?, Span?, Integer?,
+             Stream(Receipt)).
+go(yes, [H], B, C, U, Seed, Rs?) :-
+    ground(H?), number(C?), integer(Seed?) |
     span(U?, Secs),
-    H := C? * Secs?,
+    Hz := C? * Secs?,
     allocate_mutual_reference(Mon, Requests),
     allocate_mutual_reference(Log, Entries),
     send_to_user(Entries?),
-    monitor(Requests?, Seed?, H?, Log?),
-    random(Seed?, 2147483646, Base, _),
-    population # stochastic_person(Base?, P, S),
+    monitor(Requests?, Seed?, Hz?, Log?),
+    population # stochastic_person(B?, H?, P, S),
     chat # chat(Rs, Asks),
-    population # person(1, P?, Mon?, S?, Log?, Asks?).
+    population # start_screen(1, [], Mon?, Log?, Scr),
+    population # person(1, P?, H?, Mon?, Scr?, S?, Log?, Asks?).
+go(no, _, _, _, _, _, []) :- send_to_user([refused]).

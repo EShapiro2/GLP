@@ -18,31 +18,38 @@
 %% and Cred, integers 0..100: an agent's first draw K, of 1..100, makes it a
 %% spender for K =< Spend and a saver otherwise, its second cautious for K =<
 %% Cred and generous otherwise, so 0 is none and 100 is all: they are the
-%% thresholds of the population's draw, stochastic_person/5 of population.glp,
-%% and the run declaration's are 50 and 50.  The whole population is in one
-%% machine, as the guard when_idle requires (Section 4, "The guard").  Its
-%% goals:
+%% thresholds of the population's draw, stochastic_person/6 of population.glp,
+%% and the run declaration's are 50 and 50.  The persons are run N agents',
+%% drawn by its census, person(a, agent, []) for a of 1..N, each agent's key
+%% its number (Section 3, after Definition "Person, Census"; Appendix B;
+%% population.glp, persons/5), and the run is refused where the census draws
+%% no person or a person of a role of no dimension (Section 3, after
+%% Definition "Well-Formed").  The whole population is in one machine, as the
+%% guard when_idle requires (Section 4, "The guard").  Its goals:
 %%
 %%   at each agent a of 1..N, its start goal --- the compiled start/5, with a,
-%%   its friends, its input and output streams and its ask stream --- and its
-%%   person process, with its stochastic person and its seed, reading that ask
-%%   stream in the dispatcher's place (population.glp, person/6; Section 3,
-%%   Definition "Simulation Program");
+%%   its friends, its input and output streams and its ask stream --- its
+%%   person process, with its stochastic person, its person and its seed,
+%%   reading that ask stream in the dispatcher's place (population.glp,
+%%   person/8), and its screen, on [], the program writing nothing to its person
+%%   (Section 3, Definition "Simulation Program"; population.glp,
+%%   start_screen/5);
 %%   at no agent, the network --- the root's mwm/2 merging the agents' output
 %%   streams, and a balanced tree of deliver/4 goals handing each message to the
 %%   input stream of the agent it names --- the monitor, with the run's seed and
 %%   the horizon in seconds, and the log's sink.
 %%
 %% In one machine a goal is at agent a by being one of a's: its start goal, its
-%% person process, and the goals they spawn; no goal carries a place.
+%% person process, its screen, and the goals they spawn; no goal carries a place.
 %%
 %% The network, the monitor, the log's sink and the seeds' blocks are the social
 %% graph's (social_graph/harness.glp), tree/5, deliver/4 and skip/3 copied with
 %% this directory's Msg.  The draws (Appendix B): the monitor draws from the
 %% run's seed; the population's draws are from a second generator, started at
 %% the first value drawn from the run's seed, split into blocks of 4096
-%% consecutive draws: agent a's block is the a-th.  Its first two draws pick a's
-%% profile in each dimension by the mix (population.glp, stochastic_person/5);
+%% consecutive draws: agent a's block is the a-th, run N agents naming no
+%% census (Appendix B, "Seeds").  Its first two draws pick a's profile in each
+%% dimension of its role by the mix (population.glp, stochastic_person/6);
 %% the next is the seed of its person process, a value of 1..2147483646 drawn
 %% from the seed the profiles leave, random(S?, 2147483646, Seed, _), so that
 %% the person process's draws are on a chain of their own, as the social
@@ -56,44 +63,69 @@
 
 imported procedure coins#start(Peer?, Peers?, Stream(Msg)?, Stream(Msg),
                                Stream(Ask)).
-imported procedure population#stochastic_person(Integer?, Integer?, Integer?,
-                                                Profiles, Integer).
-imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
-                                     MutualRef?, Stream(Ask)?).
+imported procedure population#persons(Integer?, Stream(Constant)?, Constant,
+                                      List(Person), Integer).
+imported procedure population#stochastic_person(Integer?, Person?, Integer?,
+                                                Integer?, Profiles, Integer).
+imported procedure(X) population#start_screen(Integer?, Stream(X)?, MutualRef?,
+                                              MutualRef?, MutualRef).
+imported procedure population#person(Integer?, Profiles?, Person?, MutualRef?,
+                                     MutualRef?, Integer?, MutualRef?,
+                                     Stream(Ask)?).
 
 exported procedure run(Integer?, Friends?, Number?, Span?, Integer?, Integer?,
                        Integer?).
 run(N, Fss, C, U, Seed, Spend, Cred) :-
     N? >= 1,
     Spend? >= 0, Spend? =< 100, Cred? >= 0, Cred? =< 100 |
+    random(Seed?, 2147483646, Base, _),
+    numbers(1, N?, Ks),
+    population # persons(Base?, Ks?, Ok, Ps, B),
+    go(Ok?, Ps?, B?, N?, Fss?, C?, U?, Seed?, Spend?, Cred?).
+
+%% go(Ok?, Ps?, B?, N?, Fss?, C?, U?, Seed?, Spend?, Cred?): the run of the
+%% persons Ps, where the census's draw is not refused, B the start of the
+%% first agent's block; refused, the run takes no goal but the line refused.
+procedure go(Constant?, List(Person)?, Integer?, Integer?, Friends?, Number?,
+             Span?, Integer?, Integer?, Integer?).
+go(yes, Ps, B, N, Fss, C, U, Seed, Spend, Cred) :-
+    integer(N?) |
     span(U?, Secs),
     H := C? * Secs?,
     allocate_mutual_reference(Mon, Requests),
     allocate_mutual_reference(Log, Entries),
     send_to_user(Entries?),
     monitor(Requests?, Seed?, H?, Log?),
-    random(Seed?, 2147483646, Base, _),
     tree(1, N?, Net?, Ins, []),
     mwm(Merges?, Net),
-    agents(1, N?, Fss?, Base?, Spend?, Cred?, Ins?, Merges, Mon?, Log?).
+    agents(1, N?, Fss?, Ps?, B?, Spend?, Cred?, Ins?, Merges, Mon?, Log?).
+go(no, _, _, _, _, _, _, _, _, _) :- send_to_user([refused]).
 
-%% agents(A?, N?, Fss?, Block?, Spend?, Cred?, Ins?, Merges, Mon?, Log?): agents
-%% A..N, Fss their friends in order, Block the start of A's block, Spend and
-%% Cred the mix, Ins their input streams in order, Merges their output streams
-%% for mwm/2.
-procedure agents(Integer?, Integer?, Friends?, Integer?, Integer?, Integer?,
-                 Stream(Stream(Msg))?, MwmInput(Msg), MutualRef?, MutualRef?).
-agents(A, N, [Fs|Fss], B, Spend, Cred, [In|Ins], [merge(Out?)|Ms?], Mon,
+%% numbers(A?, N?, Ks): Ks the agents A..N, each agent's key its number (Appendix
+%% B, "The agents are numbered").
+procedure numbers(Integer?, Integer?, Stream(Constant)).
+numbers(A, N, [A?|Ks?]) :- A? =< N? | A1 := A? + 1, numbers(A1?, N?, Ks).
+numbers(A, N, []) :- A? > N? | true.
+
+%% agents(A?, N?, Fss?, Ps?, Block?, Spend?, Cred?, Ins?, Merges, Mon?, Log?):
+%% agents A..N, Fss their friends in order, Ps their persons, Block the start
+%% of A's block, Spend and Cred the mix, Ins their input streams in order,
+%% Merges their output streams for mwm/2.
+procedure agents(Integer?, Integer?, Friends?, List(Person)?, Integer?, Integer?,
+                 Integer?, Stream(Stream(Msg))?, MwmInput(Msg), MutualRef?,
+                 MutualRef?).
+agents(A, N, [Fs|Fss], [P|Ps], B, Spend, Cred, [In|Ins], [merge(Out?)|Ms?], Mon,
        Log) :-
-    A? =< N? |
-    population # stochastic_person(B?, Spend?, Cred?, P, S),
+    A? =< N?, ground(P?) |
+    population # stochastic_person(B?, P?, Spend?, Cred?, Pr, S),
     random(S?, 2147483646, Seed, _),
     coins # start(A?, Fs?, In?, Out, Asks),
-    population # person(A?, P?, Mon?, Seed?, Log?, Asks?),
+    population # person(A?, Pr?, P?, Mon?, Scr?, Seed?, Log?, Asks?),
+    population # start_screen(A?, [], Mon?, Log?, Scr),
     skip(4096, B?, B2),
     A1 := A? + 1,
-    agents(A1?, N?, Fss?, B2?, Spend?, Cred?, Ins?, Ms, Mon?, Log?).
-agents(A, N, [], _, _, _, [], [], _, _) :-
+    agents(A1?, N?, Fss?, Ps?, B2?, Spend?, Cred?, Ins?, Ms, Mon?, Log?).
+agents(A, N, [], [], _, _, _, [], [], _, _) :-
     A? > N? | true.
 
 %% The population's draw (sGLP's code task of 2026-10-03 09:45 UTC).
@@ -102,42 +134,46 @@ agents(A, N, [], _, _, _, [], [], _, _) :-
 %% dimension in the run of N agents from Seed with the mix Spend and Cred, and
 %% As the list of agent(A, Spending, Credit), A of 1..N in order, each agent's
 %% profiles, without running it: each agent's stochastic person drawn from its
-%% block by population.glp's stochastic_person/5, as agents/10 draws it, and
-%% counted as they are listed.  The draws do not depend on the friendship graph.  run.sh
-%% calls it in a REPL session of its own, so that the run's machine is the same
-%% with it as without, and its log the same.  tally/14 draws as agents/10
-%% does, and a change to the one is a change to the other.
+%% block by population.glp's stochastic_person/6, as agents/11 draws it, of
+%% its person drawn by the census, and counted as they are listed.  The draws
+%% do not depend on the friendship graph.  run.sh calls it in a REPL session of
+%% its own, so that the run's machine is the same with it as without, and its
+%% log the same.  tally/15 draws as agents/11 does, and a change to the one is
+%% a change to the other.
 exported procedure draw(Integer?, Integer?, Integer?, Integer?, CoinsDraw).
 draw(N, Seed, Spend, Cred, draw(Sp?, Sv?, G?, C?, As?)) :-
     N? >= 1,
     Spend? >= 0, Spend? =< 100, Cred? >= 0, Cred? =< 100 |
     random(Seed?, 2147483646, Base, _),
-    tally(1, N?, Base?, Spend?, Cred?, 0, 0, 0, 0, As, Sp, Sv, G, C).
+    numbers(1, N?, Ks),
+    population # persons(Base?, Ks?, _, Ps, B),
+    tally(1, N?, Ps?, B?, Spend?, Cred?, 0, 0, 0, 0, As, Sp, Sv, G, C).
 
-%% tally(A?, N?, Block?, Spend?, Cred?, Sp?, Sv?, G?, C?, As, Sp2, Sv2, G2,
-%% C2): agents A..N, Block the start of A's block, listed in As, and added to
-%% Sp spenders, Sv savers, G generous and C cautious agents before A, giving
-%% Sp2, Sv2, G2 and C2.
-procedure tally(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
-                Integer?, Integer?, Integer?, CoinsDrawn, Integer, Integer,
-                Integer, Integer).
-tally(A, N, B, Spend, Cred, Sp, Sv, G, C, [agent(A?, Spg?, Crd?)|As?],
+%% tally(A?, N?, Ps?, Block?, Spend?, Cred?, Sp?, Sv?, G?, C?, As, Sp2, Sv2,
+%% G2, C2): agents A..N, Ps their persons, Block the start of A's block, listed
+%% in As, and added to Sp spenders, Sv savers, G generous and C cautious agents
+%% before A, giving Sp2, Sv2, G2 and C2.
+procedure tally(Integer?, Integer?, List(Person)?, Integer?, Integer?, Integer?,
+                Integer?, Integer?, Integer?, Integer?, CoinsDrawn, Integer,
+                Integer, Integer, Integer).
+tally(A, N, [P|Ps], B, Spend, Cred, Sp, Sv, G, C, [agent(A?, Spg?, Crd?)|As?],
       Sp2?, Sv2?, G2?, C2?) :-
-    A? =< N? |
-    population # stochastic_person(B?, Spend?, Cred?, P, _),
-    profiles_of(P?, Spg1, Crd1),
+    A? =< N?, ground(P?) |
+    population # stochastic_person(B?, P?, Spend?, Cred?, Pr, _),
+    profiles_of(Pr?, Spg1, Crd1),
     add_spending(Spg1?, Sp?, Sv?, Sp1, Sv1, Spg),
     add_credit(Crd1?, G?, C?, G1, C1, Crd),
     skip(4096, B?, B2),
     A1 := A? + 1,
-    tally(A1?, N?, B2?, Spend?, Cred?, Sp1?, Sv1?, G1?, C1?, As, Sp2, Sv2,
+    tally(A1?, N?, Ps?, B2?, Spend?, Cred?, Sp1?, Sv1?, G1?, C1?, As, Sp2, Sv2,
           G2, C2).
-tally(A, N, _, _, _, Sp, Sv, G, C, [], Sp?, Sv?, G?, C?) :-
+tally(A, N, [], _, _, _, Sp, Sv, G, C, [], Sp?, Sv?, G?, C?) :-
     A? > N? | true.
 
-%% profiles_of(P?, Spg, Crd): the profiles of the stochastic person P.
+%% profiles_of(P?, Spg, Crd): the profiles of the stochastic person P, of the
+%% role agent.
 procedure profiles_of(Profiles?, Spending, Credit).
-profiles_of(profiles(Spg, Crd), Spg?, Crd?).
+profiles_of(agent(Spg, Crd), Spg?, Crd?).
 
 %% add_spending(Spg?, Sp?, Sv?, Sp1, Sv1, Spg1) and add_credit(Crd?, G?, C?,
 %% G1, C1, Crd1): one agent of the profile added to its count, the profile
