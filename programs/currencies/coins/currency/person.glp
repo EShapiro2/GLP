@@ -105,8 +105,10 @@ person(Id, [msg(_, _, M)|Es], Gs?, [], Form, Swaps, Pending, [M?|Screen?]) :-
 procedure done(Step?, ScreenContent?, Decision).
 done(mint(K), minted(K1), yes) :- K? =:= K1? | true.
 done(swap(Q, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
+done(swap(Q, _, _, _, _), swap_same(Q1, _, _), yes) :- Q? =?= Q1? | true.
 done(pay(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
 done(redeem(Q, R), redeemed(Q1, R1), yes) :- Q? =?= Q1?, R? =?= R1? | true.
+done(redeem(Q, _), redeem_same(Q1), yes) :- Q? =?= Q1? | true.
 done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(await(M), M1, yes) :- M? =?= M1? | true.
 done(_, _, no) :- otherwise | true.
