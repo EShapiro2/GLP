@@ -2363,7 +2363,7 @@ class _SocialTabState extends State<SocialTab> {
         child: Text(initial, style: const TextStyle(fontSize: 13)),
       ),
       title: Text(count == 1 ? coinName(u) : '$count ${coinName(u)}s'),
-      trailing: pays
+      trailing: ask != null && pays
           ? ElevatedButton(
               key: socialKey(_id, 'pay:$k'),
               onPressed: () {
