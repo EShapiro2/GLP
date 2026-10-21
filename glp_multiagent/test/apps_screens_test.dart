@@ -1,8 +1,8 @@
-/// The screens of GSC's three apps, GSG's, GSN's and GSNP's (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), and of GAI's (`programs/apps/gai`), each person's phone as the bridge draws it, written to PNG files for GAI's paper (`programs/apps/<app>/screens/`); and of CSSN's mini-app (`programs/cssn`), for CSSN's paper (`programs/cssn/figures/`), below.
+/// The screens of GSC's three apps, GSG's, GSN's and GSNP's (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), of GAI's (`programs/apps/gai`) and of GC's (`programs/apps/gc`), each person's phone as the bridge draws it, written to PNG files for GAI's paper and GSC's (`programs/apps/<app>/screens/`); and of CSSN's mini-app (`programs/cssn`), for CSSN's paper (`programs/cssn/figures/`), below.
 ///
 /// Each app's directory is a certified program: the canonical CVA platform of its contract, `platform.vglp`, compiled to GLP when the directory loads (vGLP, Section 6.3), and the mini-app's entry `miniapp/4` (`miniapp.glp`), which runs the platform's agent with the person's key and its dispatcher on the agent's asks.  The engine loads the directory and posts the entry for alice and bob over one conversation, as the plays of each directory do (`plays.glp`); for GSNP's app for dan, eve, carol, bob and fay, over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay, the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4); and for GAI's app for alice, alf and bob, over three conversations, alice's with alf, alf's with bob and bob's with alice, the agents of the example of GAI's paper (Section 3.2), alf scripted by the app's person (`programs/apps/gai/person.glp`), its script the AI agent's program, and alice and bob at their phones, the test playing the paper's Table 2 exactly.  Each person's channel is `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"): the host hands each person's bridge every term of `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant the bridge returns, `input(Id, P, R)`.
 ///
-/// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The app declares `Menu =::= social_menu.` and `Approval =::= approval_sentence.` (`programs/apps/<app>/self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  Every act of a person at a phone is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest; a scripted agent's acts are its scripted person's, as in the app's plays.  No term is hand-fed to the bridge or to the program.
+/// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The app declares `Menu =::= social_menu.` and `Approval =::= approval_sentence.` (`programs/apps/<app>/self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and, where it offers `mint`, Coins, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  Every act of a person at a phone is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest; a scripted agent's acts are its scripted person's, as in the app's plays.  No term is hand-fed to the bridge or to the program.
 ///
 /// And CSSN's mini-app (`programs/cssn`), in the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app"): Alice, Bob, Carol and Dave, a conversation between each two, as CSSN's plays hand them (`programs/cssn/plays.glp`), one of them at their phone and the other three scripted by CSSN's person (`programs/cssn/person.glp`, the roles `fig_alice` to `fig_dave`), "each run has one live person, whose screen the figure shows" (the same); its screens written to `programs/cssn/figures/cssn-app-<n>.png`, n the figure's number of the screen.  CSSN's app declares `Menu =::= social_menu.` and `Approval =::= approval_sentence.` (`programs/cssn/self.vglp`), so its screens show sentences, as GAI's do, in the words Udi gave for the figure (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC): each person known with what the state says of them, "Carol, your child", and the requests composed as sentences, "Ask that Carol and Dave befriend, with Bob." and Submit ([_Cssn]).
 ///
@@ -130,6 +130,10 @@ const List<String> _notShown = [
   'principal',
   'retired',
   'enter(',
+  'coin(',
+  'mint(',
+  'swap(',
+  'pay(',
 ];
 
 /// One person at their phone: their bridge, the writer of their grants, and the stream of draws their mini-app writes.
@@ -1055,6 +1059,115 @@ void appsScreens(Screens screens) {
     run.plain(bob);
     await run.shoot(bob, 'gsn-c-bob-group.png');
 
+    run.finish();
+  }, timeout: const Timeout(Duration(minutes: 20)));
+
+  testWidgets(
+      'GC\'s app on two phones: Alice\'s Coins tab once she mints an '
+      'Alice-coin; Bob asked to swap a Bob-coin for Alice\'s Alice-coin; '
+      'Bob\'s holdings after the swap; and Alice\'s once she pays the Bob-coin '
+      'to Bob', (tester) async {
+    // GC's app (programs/apps/gc), compiled down the cascade from GC.glp (programs/currencies/coins/GC.glp), the play of Currencies' task for its screens (Code_inbox.md, Currencies #11 Cowork, 2026-10-20 18:10 UTC, task 2): Alice and Bob establish their identities and meet (GKK:1, GKK:2); each mints a coin (GC:1); Alice asks Bob to swap her Alice-coin for his Bob-coin and Bob accepts (GC:2); Alice pays the Bob-coin to Bob (GC:3).
+    final run = await _Run.start(tester, screens, 'gc');
+    final alice = run.alice;
+    final bob = run.bob;
+
+    // Two tabs, Contacts and Coins: GC extends GKK and not GSG, so its request type offers meeting and no friendship, and it offers mint (GC:1); no group.
+    for (final p in [alice, bob]) {
+      expect(
+          run.on(
+              p,
+              find.descendant(
+                  of: find.byKey(tabKey(ScreenTab.friends)),
+                  matching: find.text('Contacts'))),
+          findsOneWidget);
+      expect(run.on(p, find.byKey(tabKey(ScreenTab.coins))), findsOneWidget);
+      expect(run.on(p, find.byKey(tabKey(ScreenTab.groups))), findsNothing);
+    }
+
+    // Each joins (GKK:1) and adds the other by key; Alice taps Meet on Bob's row and Bob, asked, taps Yes (GKK:2).  No act of GC requires a friend, and the request type offers no friendship: Bob's row then offers nothing.
+    await run.meet(alice, bob);
+    await run.meetInPerson(alice, bob);
+    expect(run.control(alice, 'meet:bob'), findsNothing);
+    expect(run.control(alice, 'befriend:bob'), findsNothing);
+
+    // (a) Alice mints (GC:1): on her Coins tab, holding no coin, she taps Mint, which proposes mint(alice); her holdings then one Alice-coin.
+    await run.tab(alice, ScreenTab.coins);
+    expect(run.control(alice, 'no-coins'), findsOneWidget);
+    await run.tap(alice, run.control(alice, 'mint'));
+    expect(alice.atoms, unorderedEquals(['identity', 'knows(bob)', 'coin(alice)']));
+    await run.top(alice);
+    expect(run.control(alice, 'coin:alice'), findsOneWidget);
+    expect(run.control(alice, 'no-coins'), findsNothing);
+    expect(run.texts(alice), containsAllInOrder(['Alice', 'Mint', 'Alice-coin']));
+    // Her own coin is not paid: pay(p?, q) pays a q-coin to q, whom p knows.
+    expect(run.control(alice, 'pay:alice'), findsNothing);
+    run.plain(alice);
+    await run.shoot(alice, 'gc-a-alice-mint.png');
+
+    // Bob mints a Bob-coin likewise.
+    await run.tab(bob, ScreenTab.coins);
+    await run.tap(bob, run.control(bob, 'mint'));
+    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)', 'coin(bob)']));
+
+    // Alice asks Bob to swap her Alice-coin for his Bob-coin (GC:2): she composes "Swap an Alice-coin for a Bob-coin with Bob." and taps Swap, which proposes swap(alice, bob, alice, bob), in the order of swap's head, swap(p?, q? ; u, v), p giving a u-coin and taking a v-coin (programs/currencies/coins/GC.glp).
+    await run.compose(alice, 'swap', ['coin(alice)', 'coin(bob)', 'bob']);
+    expect(run.sentence(alice, 'swap'),
+        'Swap an Alice-coin for a Bob-coin with Bob.');
+    await run.tap(alice, run.control(alice, 'submit:swap'));
+    expect(run.sent(alice, 'swap'),
+        ['You asked to swap an Alice-coin for a Bob-coin with Bob.']);
+
+    // (b) Bob is asked at the top of his Coins tab: "Alice asks to swap an Alice-coin for a Bob-coin.", with Yes and No.
+    final a = bob.approval;
+    expect(formatTerm(a.view), startsWith('approval(attempt(alice, '));
+    expect(formatTerm(a.view),
+        endsWith(', swap(alice, bob, alice, bob), none), input([2]))'));
+    expect(
+        find.descendant(
+            of: run.on(bob, find.byKey(tabKey(ScreenTab.coins))),
+            matching: find.text('1')),
+        findsOneWidget);
+    await run.tab(bob, ScreenTab.coins);
+    await run.top(bob);
+    const asks = 'Alice asks to swap an Alice-coin for a Bob-coin.';
+    expect(run.textsOf(bob, a), [asks, 'Yes', 'No']);
+    expect(run.tester.getTopLeft(run.on(bob, find.text(asks))).dy,
+        lessThan(run.tester.getTopLeft(run.control(bob, 'name')).dy));
+    run.plain(bob);
+    await run.shoot(bob, 'gc-b-bob-asked.png');
+
+    // He taps Yes, and the swap commits at both.
+    await run.answer(bob, 'Yes');
+    expect(bob.questions('approval'), isEmpty);
+    expect(alice.atoms, unorderedEquals(['identity', 'knows(bob)', 'coin(bob)']));
+    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)', 'coin(alice)']));
+
+    // (c) Bob's holdings after the swap: one Alice-coin, which he may pay to Alice.
+    await run.top(bob);
+    expect(run.control(bob, 'coin:alice'), findsOneWidget);
+    expect(run.control(bob, 'coin:bob'), findsNothing);
+    expect(run.control(bob, 'pay:alice'), findsOneWidget);
+    expect(run.texts(bob), containsAllInOrder(['Bob', 'Mint', 'Alice-coin', 'Pay']));
+    run.plain(bob);
+    await run.shoot(bob, 'gc-c-bob-holdings.png');
+
+    // Alice pays the Bob-coin to Bob (GC:3): Pay on her Bob-coin's row, which proposes pay(alice, bob); Bob is not asked.
+    await run.tab(alice, ScreenTab.coins);
+    await run.tap(alice, run.control(alice, 'pay:bob'));
+    expect(bob.questions('approval'), isEmpty);
+    expect(alice.atoms, unorderedEquals(['identity', 'knows(bob)']));
+    expect(bob.atoms,
+        unorderedEquals(['identity', 'knows(alice)', 'coin(alice)', 'coin(bob)']));
+
+    // (d) Alice's Coins tab once she has paid: her request, "You asked to pay a Bob-coin to Bob.", and her holdings, none.
+    await run.top(alice);
+    expect(run.sent(alice, 'pay'), ['You asked to pay a Bob-coin to Bob.']);
+    expect(run.control(alice, 'no-coins'), findsOneWidget);
+    expect(run.texts(alice),
+        containsAllInOrder(['Alice', 'Mint', 'No coins', 'You asked to pay a Bob-coin to Bob.']));
+    run.plain(alice);
+    await run.shoot(alice, 'gc-d-alice-pay.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 
