@@ -36,22 +36,22 @@ GKK:1 is the schema `establish(p?)`, which adds `identity` at the person, and ev
 
 ## How the mini-app runs
 
-As GSG's app runs (`../gsg/README.md`, "How the mini-app runs"): the agent runs with the person's key as its `Peer`, its dispatcher draws the agent's questions on the person channel and its output as construct 0, and its network is the conversations the social graph hands the mini-app, one per friend in the super-app.  Meeting and introducing are acts among those the agent can reach: the participants of meet and introduce are its two roles, so `p` and `q` each run the mini-app over a conversation between them; Carol, the person introduced, takes no part in the introduction, and Bob's agent knows her key from it, `knows(carol)`, without reaching her.
+As GSG's app runs (`../gsg/README.md`, "How the mini-app runs"): the agent runs with the person's key as its `Peer`, its dispatcher draws the agent's questions on the person channel and its output as construct 0, and its network is the conversations the social graph hands the mini-app, one per friend in the super-app.  Meeting and introducing are acts among those the agent can reach: the participants of meet and introduce are its two roles, so `p` and `q` each run the mini-app over a conversation between them; Carol, the person introduced, takes no part in the introduction, and Bob gains `knows(carol)` by it.  At the commit Alice's agent introduces Bob's agent and Carol's to each other, `intro(carol)` to Bob's and `intro(bob)` to Carol's: Alice's role requires `knows(c)`, `c` an agent variable bound to Carol, and Bob's role gains `knows(c)`, so the introduction rule gives Alice the pair {Bob, Carol} (vGLP, Section 3.2, Definition "Introduction Rule, Introduce Peers"; Section 5.4, "Act schemas as local specifications").  The two agents then exchange ihellos, over a conversation between them where one is open, and know each other, so that Bob's agent can reach Carol's.
 
 ## Running it
 
 From `glp_runtime/`:
 
 ```bash
-printf '../programs/apps/gkk\n:limit 600000\nplay_keys(A, B, C).\n:quit\n' | bin/glpc
+printf '../programs/apps/gkk\n:limit 20000000\nplay_keys(A, B, C).\n:quit\n' | bin/glpc
 ```
 
-`play_keys` runs three executions, Alice's over a conversation with Bob and one with Carol.  Each person establishes their identity; Alice and Bob ask to know each other, and so do Alice and Carol; Alice asks to meet Bob in person, Bob is asked and answers yes, and each then knows the other; Alice and Carol meet likewise; and Alice, who knows Bob and Carol, introduces Carol to Bob, Bob is asked and answers yes, and he then knows Carol; Carol is not asked.  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens are the views their agents write, with the persons a request question shows where the script looks (`menu(K, Ks)`) and each answer the person gives (`gave(C, A)`), held exactly by the suite's Section APPS:
+`play_keys` runs three executions, over a conversation between Alice and Bob, one between Alice and Carol, and one between Bob and Carol.  Each person establishes their identity; Alice and Bob ask to know each other, and so do Alice and Carol; Alice asks to meet Bob in person, Bob is asked and answers yes, and each then knows the other; Alice and Carol meet likewise; and Alice, who knows Bob and Carol, introduces Carol to Bob, Bob is asked and answers yes, and he then knows Carol; Carol is not asked.  At the commit Alice's agent introduces Bob's and Carol's to each other; they exchange ihellos and know each other, and Bob asks to meet Carol in person, Carol is asked and answers yes, and each then knows the other, Bob holding `knows(carol)` twice, the introduction's and the meeting's (GKK:2; GKK has no befriend, which is GSG's).  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens are the views their agents write, with the persons a request question shows where the script looks (`menu(K, Ks)`) and each answer the person gives (`gave(C, A)`), held exactly by the suite's Section APPS:
 
 ```
 A = [view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), view([identity], [bob, carol]), view([knows(bob), identity], [bob, carol]), view([knows(carol), knows(bob), identity], [bob, carol]), menu(alice, [bob, carol]) | _]
-B = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), gave(introduce(alice, bob, carol), yes), view([knows(carol), knows(alice), identity], [alice]) | _]
-C = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, carol), yes), view([knows(alice), identity], [alice]) | _]
+B = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), gave(introduce(alice, bob, carol), yes), view([knows(carol), knows(alice), identity], [alice]), view([knows(carol), knows(alice), identity], [alice, carol]), view([knows(carol), knows(carol), knows(alice), identity], [alice, carol]) | _]
+C = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, carol), yes), view([knows(alice), identity], [alice]), view([knows(alice), identity], [alice, bob]), gave(meet(bob, carol), yes), view([knows(bob), knows(alice), identity], [alice, bob]) | _]
 ```
 
 ## The screens

@@ -201,23 +201,29 @@
 %% child_close's one guarding role is p, its listed role's base r its first role, and no other schema determines a transaction of its class, so the contract is a local specification (ibid.).  Its request name is child_close(r, p, n), whose parts, one for each list of the people r lists, have the opener r; the parent's Request of rho_N goes to the child's machine, which completes the list from its own listed atoms and proposes the part, naming the request.  wardclose/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
-%% The contract, as programs/gsc/self.glp writes it.
+%% The contract, as programs/gsc/self.glp writes it, with the numbers act schemas allow (GSC 9231074, Section 3.2): num(X) the numeric variable X where X is a name and the number X where X is a number, times(K, A) the atom A with the multiplicity K, and nschema(Name, Vars, Constraint, Roles) a schema with a constraint on its numeric variables.
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
-Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; num(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
+Mult      ::= Atom ; times(Arg, Atom).
+Mults     ::= [] ; [Mult | Mults].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
 RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
             ; listed(Integer, Constant, Args).
-RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
-            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpec  ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
-%% A schema's second argument is its variables, pvar(X) and svar(Y), in the order of its head (GSC 0228e79, Definition "Act schema"); none of these contracts has a variable, each schema's head naming its roles only.
-Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs).
+Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
+             ; or(Constraint, Constraint).
+%% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
+Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
+            ; nschema(Constant, Args, Constraint, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
@@ -239,6 +245,9 @@ contract_named(counter, C?) :- counter(C).
 contract_named(merges, C?) :- merges(C).
 contract_named(coins, C?) :- coins(C).
 contract_named(wardclose, C?) :- wardclose(C).
+contract_named(numbers, C?) :- numbers(C).
+contract_named(bonds, C?) :- bonds(C).
+contract_named(intros, C?) :- intros(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -259,6 +268,9 @@ introduction_named(counter, no_introduction).
 introduction_named(merges, no_introduction).
 introduction_named(coins, no_introduction).
 introduction_named(wardclose, no_introduction).
+introduction_named(numbers, no_introduction).
+introduction_named(bonds, no_introduction).
+introduction_named(intros, no_introduction).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -449,3 +461,46 @@ wardclose([schema(befriend, [],
               rs(guarded, [], [], [atom(parenting, [role(1)])], []),
               crs(listed(1, listed, [svar(n)]), unguarded,
                   [], [atom(member, [role(1), svar(n)])], [], [])])]).
+
+procedure numbers(Contract).
+numbers([schema(befriend, [],
+           [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+            rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+         schema(start, [],
+           [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]),
+         schema(refuel, [num(k)],
+           [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]),
+         nschema(step, [num(t), num(t1)], succ(num(t), num(t1)),
+           [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]),
+         nschema(claim, [num(d), num(t)], le(num(d), num(t)),
+           [rs(guarded, [atom(claimed, [role(2), num(d)])], [], [atom(friend, [role(2)])], []),
+            rs(unguarded, [atom(honoured, [role(1), num(d)])], [], [atom(friend, [role(1)]), atom(level, [num(t)])], [])])]).
+
+procedure bonds(Contract).
+bonds([schema(establish, [],
+         [rs(guarded, [atom(identity, [])], [], [], [])]),
+       schema(meet, [],
+         [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+          rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+       schema(dawn, [],
+         [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [atom(identity, [])], [atom(dated, [])])]),
+       schema(mint_coin, [num(k)],
+         [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
+       nschema(mint_bond, [num(d), num(k), num(t)], gt(num(d), num(t)),
+         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]),
+       nschema(advance, [num(t), num(t1)], succ(num(t), num(t1)),
+         [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])]),
+       schema(swap_cb, [pvar(u), num(k), pvar(v), num(d1), num(k1)],
+         [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+       nschema(redeem_bc, [num(d), pvar(r), num(t)], le(num(d), num(t)),
+         [rs(guarded,   [atom(coin, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(date, [num(t)])], [])])]).
+
+procedure intros(Contract).
+intros([schema(meet, [],
+          [rs(guarded, [atom(knows, [role(2)])], [], [], []),
+           rs(guarded, [atom(knows, [role(1)])], [], [], [])]),
+        schema(introduce, [pvar(c)],
+          [rs(guarded, [], [], [atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+           rs(guarded, [atom(knows, [pvar(c)])], [], [atom(knows, [role(1)])], [])])]).
