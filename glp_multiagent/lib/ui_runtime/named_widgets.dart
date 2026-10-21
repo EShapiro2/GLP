@@ -2,7 +2,7 @@
 ///
 /// A named widget is drawn over its construct's view, as the draw `draw(Id, named(W, D), V)` carries it, and takes the person's input through the grant of the question the view marks `input(P)` (bridge.dart).  The draw carries the name `W`, the default widget `D` of the type, and the view `V`: "It is drawn with the default widget of its type beside its name, from which it reads the type's constructors" (vGLP 92e6d3b, Section 6.2, the paragraph after Proposition "Default Widgets"; Section 6.3, the type `Widget`).  The construct family hands it `D` with the view, and the last value drawn on construct 0: "A declared widget is drawn also with the last value drawn on construct 0, and is drawn again when that value changes, so that a request form can show the state the program last wrote to its person" (vGLP e924f73, Section 6.2, the paragraph after Proposition "Default Widgets"; construct_family.dart, `_named`).  It grants the raw input the default widget of the type grants, so that the construct process forms the same answers from it (Definition "Construct Process").
 ///
-/// Three named widgets are here.  [lastState] and [socialMenu], below, draw the apps of GSC's contracts in their tabs, GSNP's items and the notices of attempts that close without committing among them, and, declared likewise by CSSN's app (programs/cssn/self.vglp), its persons each with what the state says of them and its composed requests.  The first is [approvalSentence], over the approval question of every canonical CVA platform vGLP's compiler prints (programs/vglp/cva/compiler; vGLP, Section 5.4, "The compilation"): `Approval ::= approval(Attempt, YesNo?)`, `Attempt ::= attempt(Peer, Integer, Integer, Class, Names)`, the attempt (i, k, pi, [t]_j, r) naming its request r, `Names ::= none ; request(Rho, Integer)` (vGLP f0acbc1, Definition "Attempt"), `YesNo ::= yes ; no`, each class an act schema applied to its arguments, each argument a `Peer` or a `Speech`, `Speech ::= speech(Utterance, Peer)`, `Utterance ::= utterance(String) ; Speech`.  It reads the class off the view and draws one sentence for it and two buttons labelled for it, in the words of GAI's task for the apps of GSC's contracts (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, item 3, its sentences as corrected at 11:35 UTC): `befriend(A, Me)`, "Alice asks to be your friend.", Accept and Decline; `join(A, Me, n)`, "Alice asks you to join the group friends.", Join and Decline; and, in GAI's app, `agent_befriend(R, Q, P)`, in the words of GAI's task for its figure (Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (b) and (c)), at the principal "Alf asks to befriend Bob." and "Approve?", and at the other party "Alf, an AI agent of Alice, asks to befriend you.", "Developer: Acme", read from the record of Alf that party holds, and "Befriend Alf?", with Yes and No; and `agent_meet(R, Q, P, Y)` likewise, "Alf asks to meet Bob." and "Approve?" at the principal, and "Alf, an AI agent of Alice, asks to meet you.", "Developer: Acme" and "Meet Alf?" at the other party.  And, in CSSN's app, `child_befriend(R, S, P, Q)`, in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC, (3) and (4)), at a parent "Alice asks that their child Carol and your child Dave befriend." and "Approve?", and at a child "Alice asks that you and Dave befriend, with Dave's parent Bob." and "Befriend Dave?", or, asked by the other child's parent, "Alice asks that you and their child Carol befriend." and "Befriend Carol?", with Yes and No (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, items 1 and 5); and `enter(P, R)` and `enter_2(P, Q, R)`, at the child "Alice enters you as their child." and at the other parent "Bob asks to enter Dave as your child, with you.", each with "Approve?", Yes and No (the same, item 4).  A class the task gives no words for is drawn by a sentence built from its schema and its persons, each speech act of the class under it, and the buttons Yes and No.  A person is shown by name, their key with its underscores as spaces and each word capitalised (the same task, its preamble, which capitalised the first letter; GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 1: "The developer's key is acme_ltd, drawn \"Acme Ltd\"").
+/// Three named widgets are here.  [lastState] and [socialMenu], below, draw the apps of GSC's contracts in their tabs, GSNP's items and the notices of attempts that close without committing among them, and, declared likewise by CSSN's app (programs/cssn/self.vglp), its persons each with what the state says of them and its composed requests.  The first is [approvalSentence], over the approval question of every canonical CVA platform vGLP's compiler prints (programs/vglp/cva/compiler; vGLP, Section 5.4, "The compilation"): `Approval ::= approval(Attempt, YesNo?)`, `Attempt ::= attempt(Peer, Integer, Integer, Class, Names)`, the attempt (i, k, pi, [t]_j, r) naming its request r, `Names ::= none ; request(Rho, Integer)` (vGLP f0acbc1, Definition "Attempt"), `YesNo ::= yes ; no`, each class an act schema applied to its arguments, each argument a `Peer` or a `Speech`, `Speech ::= speech(Utterance, Peer)`, `Utterance ::= utterance(String) ; Speech`.  It reads the class off the view and draws one sentence for it and two buttons labelled for it, in the words of GAI's task for the apps of GSC's contracts (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, item 3, its sentences as corrected at 11:35 UTC): `befriend(A, Me)`, "Alice asks to be your friend.", Accept and Decline; `join(A, Me, n)`, "Alice asks you to join the group friends.", Join and Decline; and, in GAI's app, `agent_befriend(R, Q, P)`, in the words of GAI's task for its figure (Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (b) and (c)), at the principal "Alf asks to befriend Bob." and "Approve?", and at the other party "Alf, an AI agent of Alice, asks to befriend you.", "Developer: Acme", read from the record of Alf that party holds, and "Befriend Alf?", with Yes and No; and `agent_meet(R, Q, P, Y)` likewise, "Alf asks to meet Bob." and "Approve?" at the principal, and "Alf, an AI agent of Alice, asks to meet you.", "Developer: Acme" and "Meet Alf?" at the other party.  And, in CSSN's app, `child_befriend(R, S, P, Q)`, in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC, (3) and (4)), at a parent "Alice asks that their child Carol and your child Dave befriend." and "Approve?", and at a child "Alice asks that you and Dave befriend, with Dave's parent Bob." and "Befriend Dave?", or, asked by the other child's parent, "Alice asks that you and their child Carol befriend." and "Befriend Carol?", with Yes and No (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, items 1 and 5); and `enter(P, R)` and `enter_2(P, Q, R)`, at the child "Alice enters you as their child." and at the other parent "Bob asks to enter Dave as your child, with you.", each with "Approve?", Yes and No (the same, item 4); and CSSN's meetings of a child and a child's joining of a group, in the words CSSN gave (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 4; [ApprovalWording._cssnWorded]), GKK's meet and introduce in GKK's words in CSSN's app as in every app that extends GKK (GSC #5 Cowork, Code_inbox.md, 2026-10-20 20:21 UTC: "One wording serves every app that extends GKK").  A class the task gives no words for is drawn by a sentence built from its schema and its persons, each speech act of the class under it, and the buttons Yes and No.  A person is shown by name, their key with its underscores as spaces and each word capitalised (the same task, its preamble, which capitalised the first letter; GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 1: "The developer's key is acme_ltd, drawn \"Acme Ltd\"").
 library;
 
 import 'package:flutter/material.dart';
@@ -48,14 +48,19 @@ class ApprovalWording {
   const ApprovalWording(this.sentence, this.speech, this.yes, this.no,
       {this.notes = const [], this.question});
 
-  /// The wording of [attempt], `attempt(I, N, K, C, R)`, or null where it is not one: the words of GAI's tasks where they word the class `C`, and a sentence built from `C` otherwise.  [state] is the last view the agent asked wrote on construct 0, with which the widget is drawn ("A declared widget is drawn also with the last value drawn on construct 0", vGLP e924f73, Section 6.2), where it tells whom the question is asked; null where no view is drawn.
-  static ApprovalWording? of(GTerm attempt, [SocialState? state]) {
+  /// The wording of [attempt], `attempt(I, N, K, C, R)`, or null where it is not one: the words of GAI's tasks where they word the class `C`, and a sentence built from `C` otherwise.  [state] is the last view the agent asked wrote on construct 0, with which the widget is drawn ("A declared widget is drawn also with the last value drawn on construct 0", vGLP e924f73, Section 6.2), where it tells whom the question is asked; null where no view is drawn.  [classes] are the classes the platform's `Class` offers, each its functor and arity, `child_meet/3`, read off the default widget of `Approval` ([classesOf]): where they hold `child_befriend/4`, the app is CSSN's, and its own acts are worded in CSSN's words ([_cssnWorded]); null where not read.  GKK's meet and introduce are worded in GKK's words in every app ([_worded]).
+  static ApprovalWording? of(GTerm attempt,
+      [SocialState? state, Set<String>? classes]) {
     final (af, xs) = ctorArgs(attempt);
     if (af != 'attempt' || xs.length != 5) return null;
     final (schema, args) = ctorArgs(xs[3]);
     if (schema.isEmpty) return null;
     if (schema == 'child_befriend' && args.length == 4) {
       return _childBefriend(xs[0], args, state) ?? _built(xs[0], schema, args);
+    }
+    if (classes != null && classes.contains('child_befriend/4')) {
+      final w = _cssnWorded(xs[0], schema, args, state);
+      if (w != null) return w;
     }
     if ((schema == 'enter' && args.length == 2) ||
         (schema == 'enter_2' && args.length == 3)) {
@@ -66,7 +71,12 @@ class ApprovalWording {
 
   /// `child_befriend(R, S, P, Q)`, the children `R` and `S` befriending by an act of both and of a parent of each, `P` of `R` and `Q` of `S`, `P` a friend of `Q` (CSSN:2, Wards:2; `child_befriend(r?, s?, p?, q?)`, programs/cssn/CSSN.glp), in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC, (3) and (4)), with the initiator "their", the paper's pronoun for a person, and the approval of the child whose parent did not ask (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, items 1 and 5), whom it is asked read off the last view.  At a parent, whose view holds `parenting` of one of the two children, the initiator being the other child's parent: "Alice asks that their child Carol and your child Dave befriend.", "Approve?", Yes and No.  At a child, whose view holds `child` and `parent` of the parent of one of the two: where the initiator is the other child's parent, "Alice asks that you and their child Carol befriend.", "Befriend Carol?"; otherwise "Alice asks that you and Dave befriend, with Dave's parent Bob.", "Befriend Dave?", the other child and their parent named; with Yes and No.  Null where no view is drawn or it tells neither, so that the sentence is built from the class.
   static ApprovalWording? _childBefriend(
-      GTerm initiator, List<GTerm> args, SocialState? state) {
+          GTerm initiator, List<GTerm> args, SocialState? state) =>
+      _twoChildren(initiator, args, state, 'befriend', 'Befriend');
+
+  /// An act of two children `R` and `S` and of a parent of each, `P` of `R` and `Q` of `S`, `args` being `[R, S, P, Q]`, worded with the verb [verb] and, at a child, the question "[ask] Dave?": `child_befriend(R, S, P, Q)` ([_childBefriend]) and `child_meet_2(R, S, P, Q)` ([_cssnWorded]).
+  static ApprovalWording? _twoChildren(GTerm initiator, List<GTerm> args,
+      SocialState? state, String verb, String ask) {
     if (state == null || args.any((a) => SpeechAct.of(a) != null)) return null;
     final (r, s, p, q) = (args[0], args[1], args[2], args[3]);
     bool same(GTerm a, GTerm b) => formatTerm(a) == formatTerm(b);
@@ -78,7 +88,7 @@ class ApprovalWording {
           same(initiator, otherParent)) {
         return ApprovalWording(
             '$i asks that their child ${personName(other)} and your child '
-            '${personName(mine)} befriend.',
+            '${personName(mine)} $verb.',
             const [],
             'Yes',
             'No',
@@ -92,15 +102,109 @@ class ApprovalWording {
           final o = personName(other);
           return ApprovalWording(
               same(initiator, otherParent)
-                  ? '$i asks that you and their child $o befriend.'
-                  : '$i asks that you and $o befriend, with $o\'s parent '
+                  ? '$i asks that you and their child $o $verb.'
+                  : '$i asks that you and $o $verb, with $o\'s parent '
                       '${personName(otherParent)}.',
               const [],
               'Yes',
               'No',
-              question: 'Befriend $o?');
+              question: '$ask $o?');
         }
       }
+    }
+    return null;
+  }
+
+  /// The classes the platform's `Class` offers, each its functor and arity, `meet/2`, read off [dflt], the default widget of `Approval ::= approval(Attempt, YesNo?)`: its form `approval`, whose first field is the form `attempt`, whose fourth is the menu of the forms of `Class` (vGLP f0acbc1, Definition "Attempt").  Empty where [dflt] is not of that type.
+  static Set<String> classesOf(GTerm dflt) {
+    final classes = <String>{};
+    final (k, ws) = ctorArgs(RequestOffers._bare(dflt));
+    if (k != 'form' || ws.length != 2 || ws[1] is! GList) return classes;
+    final fields = (ws[1] as GList).items;
+    if (fields.length != 2) return classes;
+    final (ak, aws) = ctorArgs(RequestOffers._fieldWidget(fields[0]));
+    if (ak != 'form' || aws.length != 2 || aws[1] is! GList) return classes;
+    final afs = (aws[1] as GList).items;
+    if (afs.length != 5) return classes;
+    for (final c in RequestOffers._alternatives(
+        RequestOffers._fieldWidget(afs[3]))) {
+      final (ck, cws) = ctorArgs(c);
+      if (ck == 'form' && cws.length == 2 && cws[1] is GList) {
+        classes.add('${ctorArgs(cws[0]).$1}/${(cws[1] as GList).items.length}');
+      }
+    }
+    return classes;
+  }
+
+  /// CSSN's own acts in the words CSSN gave (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 4), each with Yes and No, the initiator `I`, and whom it is asked read off the last view; GKK's meet and introduce keep GKK's words, which serve every app that extends GKK (GSC #5 Cowork, Code_inbox.md, 2026-10-20 20:21 UTC: "CSSN's "Meet Alice?" and "Accept?" are not taken"):
+  ///
+  ///   - `child_meet(R, A, P)`, CSSN:2, `P` the initiator, `R` their child and `A` an adult: at `A`, whose view holds no `child`, "Alice asks that their child Carol and you meet.", "Meet Carol?"; at `R`, a child of `P`, "Alice asks that you and Frank meet.", "Meet Frank?";
+  ///   - `child_meet_2(R, S, P, Q)`, CSSN:2, as `child_befriend` is worded ([_twoChildren]): at the other parent "Alice asks that their child Carol and your child Dave meet.", "Approve?"; at a child "Alice asks that you and Dave meet, with Dave's parent Bob.", "Meet Dave?", or "Alice asks that you and their child Carol meet.", "Meet Carol?";
+  ///   - `child_join(A, S, P, N)`, `A` the leader and the initiator, `S` a child and `P` their parent: at `S` "Frank invites you to kids_chat, with your parent Alice.", "Join?"; at `P` "Frank invites your child Carol to kids_chat.", "Approve?";
+  ///   - `child_join_2(R, S, P, Q, N)`, `R` the child leader and the initiator, `S` a child, `P` and `Q` their parents: at `S` "Carol invites you to kids_chat, with Carol's parent Alice and your parent Bob.", "Join?"; at `P` "Your child Carol invites Dave, Bob's child, to kids_chat.", "Approve?"; at `Q` "Carol, Alice's child, invites your child Dave to kids_chat.", "Approve?".
+  ///
+  /// `child_leave` and `child_close` ask nobody.  Null for every other class, and where the view does not tell whom it is asked, so that the sentence is built from the class.
+  static ApprovalWording? _cssnWorded(GTerm initiator, String schema,
+      List<GTerm> args, SocialState? state) {
+    bool same(GTerm a, GTerm b) => formatTerm(a) == formatTerm(b);
+    bool person(GTerm a) => SpeechAct.of(a) == null;
+    String n(GTerm a) => personName(a);
+    final i = n(initiator);
+    ApprovalWording asked(String sentence, String question) =>
+        ApprovalWording(sentence, const [], 'Yes', 'No', question: question);
+    switch ((schema, args.length)) {
+      case ('child_meet', 3)
+          when state != null && args.every(person) && same(initiator, args[2]):
+        final (r, a, p) = (args[0], args[1], args[2]);
+        if (state.isChild && state.isChildOf(p)) {
+          return asked('$i asks that you and ${n(a)} meet.', 'Meet ${n(a)}?');
+        }
+        if (!state.isChild && !state.isParentOf(r)) {
+          return asked('$i asks that their child ${n(r)} and you meet.',
+              'Meet ${n(r)}?');
+        }
+      case ('child_meet_2', 4):
+        return _twoChildren(initiator, args, state, 'meet', 'Meet');
+      case ('child_join', 4)
+          when state != null &&
+              args.take(3).every(person) &&
+              same(initiator, args[0]):
+        final (s, p, g) = (args[1], args[2], SpeechAct.of(args[3]));
+        if (g == null) return null;
+        if (state.isChild && state.isChildOf(p)) {
+          return asked(
+              '$i invites you to ${g.text}, with your parent ${n(p)}.',
+              'Join?');
+        }
+        if (state.isParentOf(s)) {
+          return asked(
+              '$i invites your child ${n(s)} to ${g.text}.', 'Approve?');
+        }
+      case ('child_join_2', 5)
+          when state != null &&
+              args.take(4).every(person) &&
+              same(initiator, args[0]):
+        final (r, s, p, q, g) =
+            (args[0], args[1], args[2], args[3], SpeechAct.of(args[4]));
+        if (g == null) return null;
+        if (state.isChild && state.isChildOf(q)) {
+          return asked(
+              '$i invites you to ${g.text}, with $i\'s parent ${n(p)} and '
+              'your parent ${n(q)}.',
+              'Join?');
+        }
+        if (state.isParentOf(r) && !state.isParentOf(s)) {
+          return asked(
+              'Your child $i invites ${n(s)}, ${n(q)}\'s child, to '
+              '${g.text}.',
+              'Approve?');
+        }
+        if (state.isParentOf(s) && !state.isParentOf(r)) {
+          return asked(
+              '$i, ${n(p)}\'s child, invites your child ${n(s)} to '
+              '${g.text}.',
+              'Approve?');
+        }
     }
     return null;
   }
@@ -286,7 +390,9 @@ Widget approvalSentence(
   final p = questionAt(args[1]);
   final pending = pendingAt(args[0]) != null;
   final (_, state) = SocialState.read(output);
-  final wording = pending ? null : ApprovalWording.of(args[0], state);
+  final wording = pending
+      ? null
+      : ApprovalWording.of(args[0], state, ApprovalWording.classesOf(dflt));
   if (!pending && wording == null) {
     return _cannotDraw(approvalSentenceName, view);
   }
@@ -702,7 +808,7 @@ class SocialNotice {
     return reasons.isEmpty ? '$head.' : '$head: ${reasons.join('; ')}.';
   }
 
-  /// The transaction the part names, as the person reads it, a noun phrase, the person as "you" and "your": a friendship, "your friendship with Bob", or "your friendship" where the other is the refuser, "the friendship of Carol and Dave" where the person is neither; its end, "the end of your friendship with Bob"; a group's acts, "Bob's joining the group friends", "the closing of the group friends"; "your message to Carol"; CSSN's, "Alice's entering Carol as their child", "your entering Dave as your child, with Grace", "Bob's declaring Dave of age"; and, for a class not named here, "the act" and its schema and persons, "the act agent unfriend of Alf, Bob and Alice".
+  /// The transaction the part names, as the person reads it, a noun phrase, the person as "you" and "your": a friendship, "your friendship with Bob", or "your friendship" where the other is the refuser, "the friendship of Carol and Dave" where the person is neither; its end, "the end of your friendship with Bob"; a group's acts, "Bob's joining the group friends", "the closing of the group friends"; "your message to Carol"; CSSN's, "Alice's entering Carol as their child", "your entering Dave as your child, with Grace", "Bob's declaring Dave of age", and a child's meeting as a meeting, "the meeting of Carol and Dave"; and, for a class not named here, "the act" and its schema and persons, "the act agent unfriend of Alf, Bob and Alice".
   String _act(bool Function(GTerm) isMe) {
     final (f, xs) = ctorArgs(part);
     String who(GTerm q) => isMe(q) ? 'you' : personName(q);
@@ -756,7 +862,14 @@ class SocialNotice {
         return 'the signing of "${_text(xs[1])}"';
       case 'establish' when xs.length == 1 && persons([0]):
         return 'the establishing of ${whose(xs[0])} identity';
-      case 'meet' || 'agent_meet' || 'agents_meet' when persons([0, 1]):
+      // CSSN's child_meet(R, A, P) and child_meet_2(R, S, P, Q): the meeting
+      // of the two named first (CSSN:2); GAI's agent_meet and agents_meet.
+      case 'meet' ||
+              'child_meet' ||
+              'child_meet_2' ||
+              'agent_meet' ||
+              'agents_meet'
+          when persons([0, 1]):
         for (final (x, y) in [(xs[0], xs[1]), (xs[1], xs[0])]) {
           if (isMe(x)) {
             return _same(y, by)
@@ -973,7 +1086,7 @@ Widget lastState(
   );
 }
 
-/// `social_menu`: the request question of a canonical platform of GSC's contracts, `Menu ::= menu(Key, List(Key), Request?)`, drawn with the last view on construct 0, the machine state and the persons known, in the tab it is drawn in, as GAI's task words it (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, items 1 and 2).  In the Friends tab: the person's own name at the top; before their identity is established, the button Join, proposing `establish(Me)`; after it, the persons known, one row each, a friend with the button End friendship, proposing `unfriend(Me, Q)`, and any other with Befriend, proposing `befriend(Me, Q)`; at the bottom the field Add a person by key with Add, answering `known(Q)`.  Where the request type offers `meet(Me, Q)`, GKK:2 (programs/gsc/GKK.glp, which every contract of GSC's extends), the rows are the persons known and the person's contacts, those the state knows, `knows(Q)`; a person known who is not a contact is drawn with Meet, proposing `meet(Me, Q)`, and Befriend is drawn on a contact's row, befriend requiring that the two know each other (GSG:1); and where it offers `introduce(Me, Q, C)`, GKK:3, the person composes "Introduce Carol to Bob." under the rows ([_SocialTabState._composers]).  Where the request type offers `message(Me, Q, X)`, tapping a friend opens the chat with them, its messages and a text field with Send, proposing `message(Me, Q, x)`, x the speech act of the text typed signed by the person.  Where it offers `create(Me, N)`, the Groups tab: the field New group with Create, proposing `create(Me, n)`; each group the person is in, its name, its leader and its messages, and, in a group they lead, its members; in a group the person leads, Add member, a picker of their friends not in it, proposing `join(Me, Q, n)`, and Close group, proposing `close(Me, n)`; in any group, a text field with Send, proposing `post_own(Me, x, n)` where they lead it and `post(Me, A, x, n)` otherwise; and in a group they do not lead, Leave group, proposing `leave(A, Me, n)`.  Each control is drawn where the request type offers its request, read off `D` ([RequestOffers]), and while the question is open; each grants `propose(P)` or `known(Q)` at the question's position, `[3]`, as the default widget of the request type grants it, so the construct process forms the same answers from it.  No term, functor, type name or Submit button is drawn.  The persons known, and who is a friend, are read off the last view, which the agent writes whenever either changes (vGLP b7e3517), and not off the request question, which shows the persons known when it was asked.  Where construct 0 holds no stream of views, it is drawn as such, named, and takes no input.
+/// `social_menu`: the request question of a canonical platform of GSC's contracts, `Menu ::= menu(Key, List(Key), Request?)`, drawn with the last view on construct 0, the machine state and the persons known, in the tab it is drawn in, as GAI's task words it (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, items 1 and 2).  In the Friends tab: the person's own name at the top; before their identity is established, the button Join, proposing `establish(Me)`; after it, the persons known, one row each, a friend with the button End friendship, proposing `unfriend(Me, Q)`, and any other with Befriend, proposing `befriend(Me, Q)`; at the bottom the field Add a person by key with Add, answering `known(Q)`, except on a child's screen in CSSN's app, its state holding `child`: "A child's menu offers ... neither meeting nor adding a person by key", the child's agent discovering only its parents' agents, at the setup of the child's phone, before the entering (CSSN, Section 4.6.2; Appendix C.4; CSSN #9 Cowork, Code_inbox.md, 2026-10-20 22:04 UTC, item 2).  Where the request type offers `meet(Me, Q)`, GKK:2 (programs/gsc/GKK.glp, which every contract of GSC's extends), the rows are the persons known and the person's contacts, those the state knows, `knows(Q)`; a person known who is not a contact is drawn with Meet, proposing `meet(Me, Q)`, and Befriend is drawn on a contact's row, befriend requiring that the two know each other (GSG:1); and where it offers `introduce(Me, Q, C)`, GKK:3, the person composes "Introduce Carol to Bob." under the rows ([_SocialTabState._composers]).  Where the request type offers `message(Me, Q, X)`, tapping a friend opens the chat with them, its messages and a text field with Send, proposing `message(Me, Q, x)`, x the speech act of the text typed signed by the person.  Where it offers `create(Me, N)`, the Groups tab: the field New group with Create, proposing `create(Me, n)`; each group the person is in, its name, its leader and its messages, and, in a group they lead, its members; in a group the person leads, Add member, a picker of their friends not in it, proposing `join(Me, Q, n)`, and Close group, proposing `close(Me, n)`; in any group, a text field with Send, proposing `post_own(Me, x, n)` where they lead it and `post(Me, A, x, n)` otherwise; and in a group they do not lead, Leave group, proposing `leave(A, Me, n)`.  Each control is drawn where the request type offers its request, read off `D` ([RequestOffers]), and while the question is open; each grants `propose(P)` or `known(Q)` at the question's position, `[3]`, as the default widget of the request type grants it, so the construct process forms the same answers from it.  No term, functor, type name or Submit button is drawn.  The persons known, and who is a friend, are read off the last view, which the agent writes whenever either changes (vGLP b7e3517), and not off the request question, which shows the persons known when it was asked.  Where construct 0 holds no stream of views, it is drawn as such, named, and takes no input.
 ///
 /// In GSNP (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, items 1 to 3): an item the person holds is drawn in the chat with the friend it came from, its last signer, its text, "Author: Dan" and, where it was forwarded, "via Eve, via Carol"; under one the person did not author, Forward, which opens a picker of their friends and, once one is picked, the warranty question of GSNP:2 with Yes, proposing `forward(Me, Q, x)`, and No; the chat's Send signs the text, proposing `sign(Me, x)`, and holds `message(Me, Q, x)` for the next request question, proposed once the view holds `authored(x)` ([_SocialTabState._chat]).  An item the person authored is drawn in the chat it was sent from, and an item from a person who is not a friend, or authored and sent from no chat on this screen, under Messages at the bottom of the Friends tab.  In GAI's app (programs/apps/gai), whose request type offers `sign(Me, X)`, `message(Me, Q, X)` and `forward(Me, Q, X)` as GSNP's does, an item is drawn as in GSNP, and an author the person holds recorded as an AI agent, `agent_of(r, p, y)`, is named with its principal, "Author: Alf, an AI agent of Alice" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, its last paragraph), with its developer under it, "Developer: Acme", as in its row in Friends; and, where the request type offers `enter(Me, R, X)`, the AI agents tab: the form Create an AI agent, taking the name and the code and proposing `sign(Me, k)` and then `enter(Me, r, k)`, and the person's AI agents, each with Retire, proposing `retire(Me, R)` (GAI #5 Cowork, 2026-10-19 20:36 UTC, (a) and item 5; [_SocialTabState._agents]).  A post carries an item, which the person signs before posting it (GSNP:1; `post_own(a? ; x, n)` requires `item(x)` at `a`, programs/gai/GSNP.glp), so the text typed in a group forms no post: where the request type offers `sign(Me, X)`, no text field and Send are drawn in a group.  The notices are drawn as `last_state` draws them.
 ///
@@ -1238,7 +1351,17 @@ class _SocialTabState extends State<SocialTab> {
                     ? () => open(q)
                     : null),
         if (ask != null && s.identity) ..._composers(context, s, ask),
-        if (ask != null && ask.at != null && ask.offers.known) ...[
+        // In CSSN's app a child's screen has no field Add a person by key:
+        // "A child's menu offers ... neither meeting nor adding a person by
+        // key: a child comes to know an agent only by a child meet a parent
+        // requests (CSSN:2), and the child's agent discovers only its
+        // parents' agents, at the setup of the child's phone" (CSSN, Section
+        // 4.6.2; Appendix C.4), before the entering, when its state holds no
+        // child.
+        if (ask != null &&
+            ask.at != null &&
+            ask.offers.known &&
+            !s.isChild) ...[
           const SizedBox(height: 16),
           _entry(
             field: 'add-field',
@@ -1293,13 +1416,16 @@ class _SocialTabState extends State<SocialTab> {
         !friend &&
         ask.can('meet', 2) &&
         !s.isContact(q) &&
+        !s.isChild &&
         !s.isKnownAgent(q) &&
         !(widget.place?.agentsAsked.contains(k) ?? false)) {
       // GKK:2: a person known by key and not yet met is met in person, an
-      // act of both, before anything that requires knowing them.  In GAI
-      // `meet(p?, q?)` forbids `agent` at both parties (programs/gai/GAI.glp
-      // at GLP 88d85368): an AI agent the view shows, or an open approval
-      // question names, is met by `agent_meet`, with its principal.
+      // act of both, before anything that requires knowing them.  In CSSN
+      // `meet(p?, q?)` forbids `child` at both roles (CSSN:2), so a child's
+      // rows offer no Meet.  In GAI `meet(p?, q?)` forbids `agent` at both
+      // parties (programs/gai/GAI.glp at GLP 88d85368): an AI agent the view
+      // shows, or an open approval question names, is met by `agent_meet`,
+      // with its principal.
       button = ElevatedButton(
         key: socialKey(_id, 'meet:$k'),
         onPressed: () => ask.propose(GStruct('meet', [ask.me, q])),
@@ -1309,6 +1435,9 @@ class _SocialTabState extends State<SocialTab> {
         !friend &&
         ask.can('befriend', 2) &&
         !s.isChild &&
+        // befriend requiring that the two know each other (GSG:1), where
+        // the request type offers meeting.
+        (!ask.can('meet', 2) || s.isContact(q)) &&
         !s.isKnownAgent(q) &&
         !(widget.place?.agentsAsked.contains(k) ?? false)) {
       button = ElevatedButton(
@@ -1544,17 +1673,23 @@ class _SocialTabState extends State<SocialTab> {
   bool _relations(SocialState s) =>
       _ask?.offers.has('child_befriend', 4) ?? s.hasWards;
 
-  /// The requests composed, each a sentence the person completes by choosing a person into each of its places, and Submit: in the apps of GSC's contracts that extend GKK, where the request type offers `introduce(P, Q, C)`, "Introduce Carol to Bob." with the button Introduce, no Submit being drawn in GSC's apps, `C` a contact of the person's and `Q` another the agent knows, proposing `introduce(Me, Q, C)` (GKK:3; `introduce(p?, q? ; c)`, programs/gsc/GKK.glp); once sent, "You asked to introduce Carol to Bob." (the words drawn by Code for GSC's confirmation, GSC #5 Cowork, Code_inbox.md, 2026-10-20 17:53 UTC); and in CSSN's app, in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC, (2) and (6)):
+  /// Whether the app is CSSN's: its request type offers `child_befriend(R, S, P, Q)` (programs/cssn/CSSN.glp), so that its requests are composed in CSSN's words ([_composers], [_childGroupComposers]).
+  bool get _cssn => _ask?.offers.has('child_befriend', 4) ?? false;
+
+  /// The requests composed, each a sentence the person completes by choosing a person into each of its places, and Submit: in every app whose contract extends GKK, CSSN's among them, where the request type offers `introduce(P, Q, C)`, "Introduce Carol to Bob." with the button Introduce, `C` a contact of the person's and `Q` another the agent knows, proposing `introduce(Me, Q, C)` (GKK:3; `introduce(p?, q? ; c)`, programs/gsc/GKK.glp); once sent, "You asked to introduce Carol to Bob." (the words drawn by Code for GSC's confirmation, GSC #5 Cowork, Code_inbox.md, 2026-10-20 17:53 UTC; one wording for every app that extends GKK, GSC #5 Cowork, 20:21 UTC); and in CSSN's app, in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC, (2) and (6)) and the words CSSN gave for its own acts (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 4), each with Submit, the person a child where the schema allows a child at their role and no child otherwise:
   ///
-  ///   - where the request type offers `child_befriend(R, S, P, Q)` and the person is a parent and no child: "Ask that Carol and Dave befriend, with Bob.", `R` one of their children, `parenting(R)`, `S` a person they know, and `Q` a friend of theirs who is not their child, proposing `child_befriend(R, S, Me, Q)` (CSSN:2; `child_befriend(r?, s?, p?, q?)`, programs/cssn/CSSN.glp); once sent, "You asked that Carol and Dave befriend, with Bob.";
-  ///   - where it offers `of_age(P, R)` and the person is a parent: "Declare Dave of age.", `R` one of their children, proposing `of_age(Me, R)` (CSSN:3; `of_age(p?, r)`), which nobody is asked; once sent, "Dave is of age.";
+  ///   - where it offers `child_meet(R, A, P)` and the person is a parent: "Ask that Carol and Frank meet.", `R` one of their children and `A` a contact of theirs who is not their child, proposing `child_meet(R, A, Me)` (CSSN:2; `child_meet(r?, a?, p?)`); once sent, "You asked that Carol and Frank meet.";
+  ///   - where it offers `child_meet_2(R, S, P, Q)` and the person is a parent: "Ask that Carol and Dave meet, with Bob.", `R` one of their children, `S` a person they know, and `Q` a contact of theirs who is neither their child nor their parent, proposing `child_meet_2(R, S, Me, Q)` (CSSN:2; `child_meet_2(r?, s?, p?, q?)`); once sent, "You asked that Carol and Dave meet, with Bob.";
+  ///   - where it offers `child_befriend(R, S, P, Q)` and the person is a parent and no child: "Ask that Carol and Dave befriend, with Bob.", `R` one of their children, `parenting(R)`, `S` a person they know, and `Q` a friend of theirs who is not their child, proposing `child_befriend(R, S, Me, Q)` (CSSN:3; `child_befriend(r?, s?, p?, q?)`, programs/cssn/CSSN.glp); once sent, "You asked that Carol and Dave befriend, with Bob.";
+  ///   - where it offers `of_age(P, R)` and the person is a parent: "Declare Dave of age.", `R` one of their children, proposing `of_age(Me, R)` (CSSN:4; `of_age(p?, r)`), which nobody is asked; once sent, "Dave is of age.";
   ///   - where it offers `enter(P, R)` and the person is no child, in the words CSSN gave (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, item 4): "Enter Carol as your child.", `R` a person they know who is not their friend, proposing `enter(Me, R)` (CSSN:1; `enter(p?, r?)`); once sent, "You entered Carol as your child.";
-  ///   - where it offers `enter_2(P, Q, R)` and the person is no child, in the same words: "Enter Dave as your child, with Grace.", `R` a person they know who is not their friend, and `Q` a friend of theirs who is neither their child nor their parent, proposing `enter_2(Me, Q, R)` (CSSN:1; `enter_2(p?, q?, r?)`); once sent, "You entered Dave as your child, with Grace.".
+  ///   - where it offers `enter_2(P, Q, R)` and the person is no child, in the same words: "Enter Dave as your child, with Grace.", `R` a person they know who is not their friend, and `Q` a contact of theirs who is neither their child nor their parent, `enter_2(p?, q?, r?)` requiring that the two parents know each other, proposing `enter_2(Me, Q, R)` (CSSN:1); once sent, "You entered Dave as your child, with Grace.".
   ///
-  /// What the person sent is drawn in the request's place on every later request question, the screen of tabs holding it ([TabPlace.sent]).
+  /// Meeting is requested by Meet on a person's row, as in every app that extends GKK ([_person]).  The sentences once sent of child_meet and child_meet_2 are Code's, made by analogy with child_befriend's, for CSSN's word.  The requests of a child's group are composed in the Groups tab ([_childGroupComposers], [_group]).  What the person sent is drawn in the request's place on every later request question, the screen of tabs holding it ([TabPlace.sent]).
   List<Widget> _composers(BuildContext context, SocialState s, SocialAsk ask) {
     final me = ask.me;
     bool same(GTerm a, GTerm b) => formatTerm(a) == formatTerm(b);
+    final cssn = _cssn;
     final children = s.children;
     final known = <GTerm>[];
     final seen = <String>{formatTerm(me)};
@@ -1563,7 +1698,7 @@ class _SocialTabState extends State<SocialTab> {
     }
     final r = _chosen['child-befriend:0'];
     // A friend who is neither the person's child nor their parent: the other
-    // parent of a child befriending, and of a child entered by two.
+    // parent of a child befriending.
     final coparents = [
       for (final q in s.friends)
         if (!s.isParentOf(q) && !s.isChildOf(q) && !same(q, me)) q
@@ -1576,7 +1711,16 @@ class _SocialTabState extends State<SocialTab> {
       for (final q in s.contacts)
         if (!same(q, me)) q
     ];
+    // A contact who is neither the person's child nor their parent: the other
+    // parent of a child's meeting, and of a child entered by two, enter_2
+    // requiring that the two parents know each other (programs/cssn/CSSN.glp).
+    final coparentContacts = [
+      for (final q in contacts)
+        if (!s.isParentOf(q) && !s.isChildOf(q)) q
+    ];
     final c0 = _chosen['introduce:0'];
+    final m0 = _chosen['child-meet:0'];
+    final m20 = _chosen['child-meet-2:0'];
     return [
       if (ask.offers.has('introduce', 3))
         _composer(
@@ -1597,6 +1741,43 @@ class _SocialTabState extends State<SocialTab> {
           button: 'Introduce',
           request: (c) => GStruct('introduce', [me, c[1], c[0]]),
           sent: (c) => 'You asked to introduce ${n(c[0])} to ${n(c[1])}.',
+        ),
+      if (cssn && ask.offers.has('child_meet', 3) && !s.isChild)
+        _composer(
+          context,
+          ask,
+          kind: 'child-meet',
+          composing: children.isNotEmpty &&
+              contacts.any((q) => !s.isParentOf(q)),
+          slots: [
+            children,
+            [
+              for (final q in contacts)
+                if (!s.isParentOf(q) && (m0 == null || !same(q, m0))) q
+            ],
+          ],
+          pieces: ['Ask that ', 0, ' and ', 1, ' meet.'],
+          request: (c) => GStruct('child_meet', [c[0], c[1], me]),
+          sent: (c) => 'You asked that ${n(c[0])} and ${n(c[1])} meet.',
+        ),
+      if (cssn && ask.offers.has('child_meet_2', 4) && !s.isChild)
+        _composer(
+          context,
+          ask,
+          kind: 'child-meet-2',
+          composing: children.isNotEmpty && coparentContacts.isNotEmpty,
+          slots: [
+            children,
+            [
+              for (final q in known)
+                if (m20 == null || !same(q, m20)) q
+            ],
+            coparentContacts,
+          ],
+          pieces: ['Ask that ', 0, ' and ', 1, ' meet, with ', 2, '.'],
+          request: (c) => GStruct('child_meet_2', [c[0], c[1], me, c[2]]),
+          sent: (c) =>
+              'You asked that ${n(c[0])} and ${n(c[1])} meet, with ${n(c[2])}.',
         ),
       if (ask.offers.has('child_befriend', 4) && !s.isChild)
         _composer(
@@ -1649,13 +1830,14 @@ class _SocialTabState extends State<SocialTab> {
           context,
           ask,
           kind: 'enter-2',
-          composing: known.any((q) => !s.isFriend(q)) && coparents.isNotEmpty,
+          composing:
+              known.any((q) => !s.isFriend(q)) && coparentContacts.isNotEmpty,
           slots: [
             [
               for (final q in known)
                 if (!s.isFriend(q)) q
             ],
-            coparents,
+            coparentContacts,
           ],
           pieces: ['Enter ', 0, ' as your child, with ', 1, '.'],
           request: (c) => GStruct('enter_2', [me, c[1], c[0]]),
@@ -1664,7 +1846,111 @@ class _SocialTabState extends State<SocialTab> {
     ];
   }
 
-  /// One composed request [kind]: what the person sent of it, each one line; and, where [composing], its sentence of [pieces], each a text or the index of a place, a person chosen into it from [slots] by tapping it, which opens a picker of the persons it takes, "…" where none is chosen; and the button [button], Submit unless given, enabled once every place holds a person and the question is open, which proposes [request] of the persons chosen and holds [sent] of them on the screen.  Nothing is drawn where nothing is sent and the person cannot compose it.
+  /// The requests of a child's group a parent composes in the Groups tab, in the words CSSN gave (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 4), each with Submit and asking nobody:
+  ///
+  ///   - where the request type offers `child_leave(A, S, P, N)`: "End Carol's membership of kids_chat.", `S` one of their children and `N` a group led by another, `A`, that the person approved `S` joining, proposing `child_leave(A, S, Me, N)` (GnW:3; `child_leave(a, s, p? ; n)`, programs/cssn/CSSN.glp); once sent, "You ended Carol's membership of kids_chat.";
+  ///   - where it offers `child_close(R, P, N)`: "Close Carol's group kids_chat.", `R` one of their children and `N` a group `R` leads, which the person approved another joining, proposing `child_close(R, Me, N)` (GnW:3; `child_close(r, p?, r[listed(*, n)] ; n)`), which the child's machine proposes, completing the list of members (CSSN, Section 4.6.2); once sent, "You closed Carol's group kids_chat.".
+  ///
+  /// A parent's state holds nothing of their child's groups (CSSN, Section 4), so the groups named are those of the person's own approvals of a child's joining, `child_join(A, S, Me, N)` and `child_join_2(R, S, P, Q, N)` with `Me` as `P` or `Q`, which the screen of tabs holds ([TabPlace.approved]); a group in a place is drawn by its name.  The sentences once sent are Code's, made by analogy with "You entered Carol as your child.", for CSSN's word.
+  List<Widget> _childGroupComposers(
+      BuildContext context, SocialState s, SocialAsk ask) {
+    final me = ask.me;
+    bool same(GTerm a, GTerm b) => formatTerm(a) == formatTerm(b);
+    String n(GTerm q) => personName(q);
+    // The memberships of the person's children their approvals named, each the child, the group's leader and its name, once each.
+    final memberships = <(GTerm, GTerm, GTerm)>[];
+    final seen = <String>{};
+    void add(GTerm child, GTerm leader, GTerm name) {
+      if (!s.isParentOf(child)) return;
+      if (seen.add('${formatTerm(child)} ${groupKey(leader, name)}')) {
+        memberships.add((child, leader, name));
+      }
+    }
+
+    for (final c in widget.place?.approved ?? const <GTerm>[]) {
+      final (f, xs) = ctorArgs(c);
+      if (f == 'child_join' && xs.length == 4 && same(xs[2], me)) {
+        add(xs[1], xs[0], xs[3]);
+      } else if (f == 'child_join_2' && xs.length == 5) {
+        if (same(xs[2], me)) add(xs[0], xs[0], xs[4]);
+        if (same(xs[3], me)) add(xs[1], xs[0], xs[4]);
+      }
+    }
+    GTerm group(GTerm leader, GTerm name) => GStruct('group', [leader, name]);
+    final members = [
+      for (final (c, a, _) in memberships)
+        if (!same(c, a)) c
+    ];
+    final leaders = [
+      for (final (c, a, _) in memberships)
+        if (same(c, a)) c
+    ];
+    List<GTerm> once(List<GTerm> qs) {
+      final seen = <String>{};
+      return [
+        for (final q in qs)
+          if (seen.add(formatTerm(q))) q
+      ];
+    }
+
+    final l0 = _chosen['child-leave:0'];
+    final k0 = _chosen['child-close:0'];
+    return [
+      if (ask.offers.has('child_leave', 4))
+        _composer(
+          context,
+          ask,
+          kind: 'child-leave',
+          composing: members.isNotEmpty,
+          slots: [
+            once(members),
+            [
+              for (final (c, a, g) in memberships)
+                if (!same(c, a) && (l0 == null || same(c, l0))) group(a, g)
+            ],
+          ],
+          pieces: ['End ', 0, '\'s membership of ', 1, '.'],
+          request: (c) {
+            final (_, ag) = ctorArgs(c[1]);
+            return GStruct('child_leave', [ag[0], c[0], me, ag[1]]);
+          },
+          sent: (c) =>
+              'You ended ${n(c[0])}\'s membership of ${_placeName(c[1])}.',
+        ),
+      if (ask.offers.has('child_close', 3))
+        _composer(
+          context,
+          ask,
+          kind: 'child-close',
+          composing: leaders.isNotEmpty,
+          slots: [
+            once(leaders),
+            [
+              for (final (c, a, g) in memberships)
+                if (same(c, a) && (k0 == null || same(c, k0))) group(a, g)
+            ],
+          ],
+          pieces: ['Close ', 0, '\'s group ', 1, '.'],
+          request: (c) {
+            final (_, ag) = ctorArgs(c[1]);
+            return GStruct('child_close', [c[0], me, ag[1]]);
+          },
+          sent: (c) =>
+              'You closed ${n(c[0])}\'s group ${_placeName(c[1])}.',
+        ),
+    ];
+  }
+
+  /// What a place of a composed request is drawn as: a group, `group(A, N)`, by its name; a person by name.
+  static String _placeName(GTerm q) {
+    final (f, xs) = ctorArgs(q);
+    if (f == 'group' && xs.length == 2) {
+      return SpeechAct.of(xs[1])?.text ?? displayText(xs[1]);
+    }
+    return personName(q);
+  }
+
+  /// One composed request [kind]: what the person sent of it, each one line; and, where [composing], its sentence of [pieces], each a text or the index of a place, a person, or a group by its name ([_placeName]), chosen into it from [slots] by tapping it, which opens a picker of the persons or groups it takes, "…" where none is chosen; and the button [button], Submit unless given, enabled once every place holds a person and the question is open, which proposes [request] of the persons chosen and holds [sent] of them on the screen.  Nothing is drawn where nothing is sent and the person cannot compose it.
   Widget _composer(
     BuildContext context,
     SocialAsk ask, {
@@ -1706,7 +1992,7 @@ class _SocialTabState extends State<SocialTab> {
             onTap: () => setState(
                 () => _picking = _picking == '$kind:$i' ? null : '$kind:$i'),
             child: Text(
-              chosen[i] == null ? '…' : personName(chosen[i]!),
+              chosen[i] == null ? '…' : _placeName(chosen[i]!),
               style: body?.copyWith(
                 color: theme.colorScheme.primary,
                 decoration: TextDecoration.underline,
@@ -1754,7 +2040,7 @@ class _SocialTabState extends State<SocialTab> {
                       ActionChip(
                         key: socialKey(
                             _id, 'pick:$kind:$openAt:${formatTerm(q)}'),
-                        label: Text(personName(q)),
+                        label: Text(_placeName(q)),
                         onPressed: () => setState(() {
                           _chosen['$kind:$openAt'] = q;
                           _picking = null;
@@ -1935,11 +2221,13 @@ class _SocialTabState extends State<SocialTab> {
           const SizedBox(height: 12),
         ],
         for (final g in s.groups(me: _me)) _group(context, s, g),
+        if (ask != null && s.identity && _cssn && !s.isChild)
+          ..._childGroupComposers(context, s, ask),
       ],
     );
   }
 
-  /// A group the person is in: its name, its leader, its messages, and, where they lead it, the members their state lists in it ([SocialState.groups]); and, for the request question, its controls.
+  /// A group the person is in: its name, its leader, its messages, and, where they lead it, the members their state lists in it ([SocialState.groups]); and, for the request question, its controls.  In CSSN's app, a group the person leads invites a child in the words CSSN gave (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 4), each with Submit: an adult leader "Invite Carol to kids_chat, with Alice.", `S` a friend not listed in it and `P` another person the agent knows, the child's parent, proposing `child_join(Me, S, P, n)` (GnW:2, CSSN:6; `child_join(a?, s?, p? ; n)`, programs/cssn/CSSN.glp), beside Add member; and a child leader, whom `join(a?, q? ; n)` forbids as leader (CSSN:6), in place of Add member, "Invite Dave to kids_chat, with Alice and Bob.", `S` a friend not listed in it, `P` their own parent and `Q` another person the agent knows, the other child's parent, proposing `child_join_2(Me, S, P, Q, n)` (`child_join_2(r?, s?, p?, q? ; n)`).  Once sent, "You invited Carol to kids_chat, with Alice." and "You invited Dave to kids_chat, with Alice and Bob.", Code's, made by analogy with "You entered Carol as your child.", for CSSN's word.
   Widget _group(BuildContext context, SocialState s, SocialGroup g) {
     final ask = _ask;
     final k = groupKey(g.leader, g.name);
@@ -1950,6 +2238,29 @@ class _SocialTabState extends State<SocialTab> {
       for (final f in s.friends)
         if (!listed.contains(formatTerm(f))) f
     ];
+    bool same(GTerm a, GTerm b) => formatTerm(a) == formatTerm(b);
+    String n(GTerm q) => personName(q);
+    // The persons the agent knows, the person's own key not among them: the
+    // parents a leader names in inviting a child.
+    final known = <GTerm>[];
+    final seen = <String>{if (ask != null) formatTerm(ask.me)};
+    for (final q in [...s.known, ...s.friends]) {
+      if (seen.add(formatTerm(q))) known.add(q);
+    }
+    final cj0 = _chosen['child-join:$k:0'];
+    final cj20 = _chosen['child-join-2:$k:0'];
+    final cj21 = _chosen['child-join-2:$k:1'];
+    final childJoin = leads &&
+        _cssn &&
+        !s.isChild &&
+        ask.offers.has('child_join', 4) &&
+        candidates.isNotEmpty;
+    final childJoin2 = leads &&
+        _cssn &&
+        s.isChild &&
+        ask.offers.has('child_join_2', 5) &&
+        candidates.isNotEmpty &&
+        s.parents.isNotEmpty;
     // In GSNP a post carries an item the person signed (GSNP:1), which a
     // text typed here is not ([socialMenu]).
     final posts = ask != null &&
@@ -1991,7 +2302,10 @@ class _SocialTabState extends State<SocialTab> {
                   : GStruct('post', [ask.me, g.leader, ask.say(t), g.name])),
             ),
           ],
-          if (leads && ask.can('join', 3) && candidates.isNotEmpty) ...[
+          if (leads &&
+              ask.can('join', 3) &&
+              candidates.isNotEmpty &&
+              !(_cssn && s.isChild)) ...[
             const SizedBox(height: 8),
             Wrap(
               key: socialKey(_id, 'add-member:$k'),
@@ -2010,6 +2324,47 @@ class _SocialTabState extends State<SocialTab> {
               ],
             ),
           ],
+          if (childJoin)
+            _composer(
+              context,
+              ask,
+              kind: 'child-join:$k',
+              composing: true,
+              slots: [
+                candidates,
+                [
+                  for (final q in known)
+                    if (cj0 == null || !same(q, cj0)) q
+                ],
+              ],
+              pieces: ['Invite ', 0, ' to ${g.title}, with ', 1, '.'],
+              request: (c) =>
+                  GStruct('child_join', [ask.me, c[0], c[1], g.name]),
+              sent: (c) =>
+                  'You invited ${n(c[0])} to ${g.title}, with ${n(c[1])}.',
+            ),
+          if (childJoin2)
+            _composer(
+              context,
+              ask,
+              kind: 'child-join-2:$k',
+              composing: true,
+              slots: [
+                candidates,
+                s.parents,
+                [
+                  for (final q in known)
+                    if ((cj20 == null || !same(q, cj20)) &&
+                        (cj21 == null || !same(q, cj21)))
+                      q
+                ],
+              ],
+              pieces: ['Invite ', 0, ' to ${g.title}, with ', 1, ' and ', 2, '.'],
+              request: (c) => GStruct(
+                  'child_join_2', [ask.me, c[0], c[1], c[2], g.name]),
+              sent: (c) => 'You invited ${n(c[0])} to ${g.title}, with '
+                  '${n(c[1])} and ${n(c[2])}.',
+            ),
           if (leads && ask.can('close', 2)) ...[
             const SizedBox(height: 8),
             OutlinedButton(
