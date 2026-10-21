@@ -1,47 +1,9 @@
 %% ---------------------------------------------------------------------------
-%% CSSN.glp --- the child-safe social network, CSSN's (Udi, 2026-10-18;
-%% Coordination, to_all 2026-10-18 19:23 UTC), in the term form programs/gsc
-%% reads (its README, "Writing a contract"), for programs/vglp/cva/compiler to
-%% compile into its canonical CVA platform (CSSN, Section 4.6.1, "The program";
-%% Appendix C.5).  compile.sh beside this file has GSC's checker give its
-%% verdict and then runs the compiler on it.  The clauses are in CSSN.txt
-%% beside this file; CSSN extends GSN, GSC's, and GnW, Guardians 'n' Wards,
-%% GAI's (Udi, 2026-10-20; until then GSNP and Wards, GnW's name until that
-%% day), so the term holds GSN's twelve schemas (programs/gsc/GSN.glp), with
-%% child forbidden at both roles of befriend and of join (the leader's by
-%% CSSN:5), and thirteen schemas for children, which realise GnW (CSSN,
-%% Appendix B.2; the tables in Appendix C.2, sections/artefact-schemas.tex).
-%% Written by CSSN #5 Cowork, 2026-10-18; GSNP's schemas brought to GLP
-%% 88cb0c45 by CSSN #6 Cowork, 2026-10-19: a group is the community name
-%% <a>.n, and a schema's second argument lists its variables in the order of
-%% its head; close and child_close take the listed role a[listed(*, n)], every
-%% member the leader lists, as GSNP.glp's close does at GLP 542ec8ca (GSC,
-%% Appendices D.4 and F, at GSC 8064cfb), by CSSN #7 Cowork, 2026-10-19.
+%% CSSN.glp --- the child-safe social network, CSSN's (Udi, 2026-10-18; Coordination, to_all 2026-10-18 19:23 UTC), in the term form programs/gsc reads (its README, "Writing a contract"), for programs/vglp/cva/compiler to compile into its canonical CVA platform (CSSN, Section 4.6.1, "The program"; Appendix C.5).  compile.sh beside this file has GSC's checker give its verdict and then runs the compiler on it.  The clauses are in CSSN.txt beside this file; CSSN extends GSN, GSC's, and through it GSG and GKK, GSC's, and GnW, Guardians 'n' Wards, GAI's (Udi, 2026-10-20; until then GSNP and Wards, GnW's name until that day), so the term holds GSN's fourteen schemas (programs/gsc/GSN.glp: GKK's establish, meet and introduce, GSG's befriend and unfriend, message and the seven of a group), with child forbidden at both roles of meet, at the role of introduce of the agent who comes to know (CSSN:2), at both roles of befriend and of join (the leader's by CSSN:6), and fifteen schemas for children, which realise GnW (CSSN, Appendix B.2; the tables in Appendix C.2, sections/artefact-schemas.tex).  Written by CSSN #5 Cowork, 2026-10-18; GSNP's schemas brought to GLP 88cb0c45 by CSSN #6 Cowork, 2026-10-19: a group is the community name <a>.n, and a schema's second argument lists its variables in the order of its head; close and child_close take the listed role a[listed(*, n)], every member the leader lists, as GSNP.glp's close does at GLP 542ec8ca (GSC, Appendices D.4 and F, at GSC 8064cfb), by CSSN #7 Cowork, 2026-10-19.  After GKK (Udi, 2026-10-20, to GSC #5; GSG.glp at GLP 883a7533), by CSSN #9 Cowork, 2026-10-20: meet, introduce and knows; befriend, child_befriend and child_adult_befriend requiring that the two know each other; enter and enter_2 adding knows between the parents and the child, and enter_2 requiring that the two parents know each other; and child_meet and child_meet_2, CSSN:2, Meeting of a child (Udi, 2026-10-20, approving CSSN #9's proposal): a child comes to know an agent only by an act of both and of a parent who knows the agent, two children by an act of both and of a parent of each, the parents knowing each other.
 %%
-%% Twenty-five schemas over fifteen predicates (CSSN #8 Cowork, 2026-10-20, from
-%% twenty-nine over fifteen with GSNP); friend is reflexive.  Every
-%% role requires identity, except the role of establish, which adds it, and
-%% the child's role of enter and enter_2, which forbid it and add it; every
-%% guarding role, establish's included, forbids retired, so a retired child
-%% takes no act (GnW:4, as CSSN asked GSC, GSC_inbox 2026-10-18 22:04 UTC).  A
-%% parent's role in the children's schemas, and the sender's in message and
-%% post, adds and deletes nothing: a guarding role may (GSC,
-%% Definition 2, at GSC bd0ebc4; GSNP.glp at GLP 120bf8bd).  child_unfriend
-%% forbids parenting of the child at the friend's role, so only a parent
-%% unfriend ends the friendship of a parent and their child.  The marks are
-%% child, its guardianship (child, identity, parent, parenting), its leaving
-%% mark retired, the introductory act befriend and the relay acts
-%% child_adult_befriend and child_befriend, by which GSC's checker certifies
-%% the contract syntactically grassroots with wards (cascade/CSSN/verdict.txt)
-%% and the paper proves it so, Proposition "Certification" (Appendix B.4, its
-%% proof in C.2), by its own Theorem "Grassroots realisation with wards and
-%% listed roles".  CSSN:4 describes no act and has no schema.
+%% Twenty-nine schemas over sixteen predicates (CSSN #9 Cowork, 2026-10-20; twenty-five over fifteen from CSSN #8's GSN, twenty-nine over fifteen with GSNP before it); friend and knows are reflexive, for the parent of both children.  Every role requires identity, except the role of establish, which adds it, and the child's role of enter and enter_2, which forbid it and add it; every guarding role, establish's included, forbids retired, so a retired child takes no act (GnW:4, as CSSN asked GSC, GSC_inbox 2026-10-18 22:04 UTC).  A parent's role in the children's schemas, and the sender's in message and post, adds and deletes nothing: a guarding role may (GSC, Definition 2, at GSC bd0ebc4; GSNP.glp at GLP 120bf8bd).  child_unfriend forbids parenting of the child at the friend's role, so only a parent unfriend ends the friendship of a parent and their child.  The marks are child, its guardianship (child, identity, parent, parenting), its leaving mark retired, the introductory act meet, which adds knows, and the relay acts child_meet and child_meet_2, by which GSC's checker certifies the contract syntactically grassroots with wards (cascade/CSSN/verdict.txt) and the paper proves it so, Proposition "Certification" (Appendix B.4, its proof in C.2), by its own Theorem "Grassroots realisation with wards and listed roles".  CSSN:5 describes no act and has no schema.
 %%
-%% This term is the one source of the schemas: a run of the cascade prints
-%% their notation from it as schemas.txt (cascade.sh, programs/gsc/notation.glp),
-%% and the notation hand-written above each term until 2026-10-20 is gone
-%% (GAI #5's task, Code_inbox 2026-10-20 12:38 UTC, Udi approving; CSSN #8
-%% Cowork).  Each comment below names the clause a schema realises.
+%% This term is the one source of the schemas: a run of the cascade prints their notation from it as schemas.txt (cascade.sh, programs/gsc/notation.glp), and the notation hand-written above each term until 2026-10-20 is gone (GAI #5's task, Code_inbox 2026-10-20 12:38 UTC, Udi approving; CSSN #8 Cowork).  Each comment below names the clause a schema realises.
 %% ---------------------------------------------------------------------------
 
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
@@ -66,12 +28,12 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 
 %% contract_named(cssn, C): the contract, CSSN (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
-contract_named(cssn, reflexive([friend], C?)) :- cssn_schemas(C).
+contract_named(cssn, reflexive([friend, knows], C?)) :- cssn_schemas(C).
 
-%% introduction_named(cssn, I): the contract's introduction predicate, friend, by which an agent introduces to each other every two of its friends (CSSN, Section 4.6.1, "The program"; Appendix C.4; vGLP, Section 5.4, the paragraph on act schemas), in the form of programs/vglp/cva/contracts.glp.  Added by CSSN #8 Cowork, 2026-10-19, on Code #12's finding that the compiler printed introduction_preds([]).
+%% introduction_named(cssn, I): the contract's introduction predicate, knows, by which an agent introduces to each other, at the level of the machines, every two agents its person knows (CSSN, Section 4.6.1, "The program"; Appendix C.4; vGLP, Section 5.4, the paragraph on act schemas), in the form of programs/vglp/cva/contracts.glp.  Added by CSSN #8 Cowork, 2026-10-19, on Code #12's finding that the compiler printed introduction_preds([]), with friend; knows since GKK (CSSN #9 Cowork, 2026-10-20).
 Intro ::= no_introduction ; introduction(Constant).
 procedure introduction_named(Constant?, Intro).
-introduction_named(cssn, introduction(friend)).
+introduction_named(cssn, introduction(knows)).
 
 procedure cssn_schemas(Contract).
 cssn_schemas(C?) :-
@@ -83,25 +45,33 @@ procedure app(Contract?, Contract?, Contract).
 app([], Ys, Ys?).
 app([X|Xs], Ys, [X?|Zs?]) :- app(Xs?, Ys?, Zs).
 
-%% GSN's twelve schemas, as programs/gsc/GSN.glp has them at GLP e364eed4,
-%% with child forbidden at both roles of befriend and of join (the leader's by
-%% CSSN:5), parent and parenting of the other forbidden at the first role of
-%% unfriend, and retired forbidden at every guarding role.  CSSN extends GSN,
-%% not GSNP (Udi, 2026-10-20): no items, no signatures; a message is content
-%% x received from a friend, received(x, p), and a group message content
-%% delivered by the leader, received_in(x, a, n).
+%% GSN's fourteen schemas, as programs/gsc/GSN.glp has them at GLP 883a7533, with child forbidden at both roles of meet, at the role of introduce of the agent who comes to know (CSSN:2), at both roles of befriend and of join (the leader's by CSSN:6), parent and parenting of the other forbidden at the first role of unfriend, and retired forbidden at every guarding role.  CSSN extends GSN, not GSNP (Udi, 2026-10-20): no items, no signatures; a message is content x received from a friend, received(x, p), and a group message content delivered by the leader, received_in(x, a, n).
 procedure gsn_schemas(Contract).
 gsn_schemas([
-%% GSG:1, Identity.
+%% GKK:1, Identity.
     schema(establish, [],
       [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])]),
-%% GSG:2, Friendship, for two persons.
+%% GKK:2, Meeting, for two persons: a child comes to know an agent only by child_meet or child_meet_2 (CSSN:2).
+    schema(meet, [],
+      [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])],
+                   [atom(child, []), atom(retired, [])]),
+       rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])],
+                   [atom(child, []), atom(retired, [])])]),
+%% GKK:3, Introduction: the agent who comes to know, role 2, is not a child (CSSN:2); the agent introduced, c, takes no part.
+    schema(introduce, [pvar(c)],
+      [rs(guarded, [], [],
+                   [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])],
+                   [atom(retired, [])]),
+       rs(guarded, [atom(knows, [pvar(c)])], [],
+                   [atom(identity, []), atom(knows, [role(1)])],
+                   [atom(child, []), atom(retired, [])])]),
+%% GSG:1, Friendship, for two persons who know each other.
     schema(befriend, [],
-      [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])],
+      [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])],
                    [atom(child, []), atom(friend, [role(2)]), atom(retired, [])]),
-       rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
+       rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])],
                    [atom(child, []), atom(friend, [role(1)]), atom(retired, [])])]),
-%% GSG:3, Ending a friendship, but for that of a parent and their child.
+%% GSG:2, Ending a friendship, but for that of a parent and their child.
     schema(unfriend, [],
       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])],
                      [atom(parent, [role(2)]), atom(parenting, [role(2)]), atom(retired, [])]),
@@ -116,7 +86,7 @@ gsn_schemas([
       [rs(guarded, [atom(member, [nterm(ext(own(1), n))]),
                     atom(listed, [role(1), svar(n)])], [], [atom(identity, [])],
                    [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)]), atom(retired, [])])]),
-%% GSN:3, Joining, with CSSN:5, A child's group.
+%% GSN:3, Joining, with CSSN:6, A child's group.
     schema(join, [svar(n)],
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])],
@@ -161,29 +131,29 @@ gsn_schemas([
        rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [],
                      [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])])]).
 
-%% The thirteen schemas for children, realising GnW with CSSN:1 to CSSN:3.
+%% The fifteen schemas for children, realising GnW with CSSN:1 to CSSN:4.
 procedure children_schemas(Contract).
 children_schemas([
-%% CSSN:1, Parents, with GnW:1.
+%% CSSN:1, Parents, with GnW:1: the parents and the child become friends, and know each other.
     schema(enter, [],
-      [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)])], [],
+      [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)]), atom(knows, [role(2)])], [],
                    [atom(identity, [])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
-                    atom(friend, [role(1)])], [],
+                    atom(friend, [role(1)]), atom(knows, [role(1)])], [],
                    [], [atom(identity, []), atom(retired, [])])]),
     schema(enter_2, [],
       [rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(2)]),
-                    atom(friend, [role(3)])], [],
-                   [atom(identity, [])], [atom(child, []), atom(retired, [])]),
+                    atom(friend, [role(3)]), atom(knows, [role(3)])], [],
+                   [atom(identity, []), atom(knows, [role(2)])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(1)]),
-                    atom(friend, [role(3)])], [],
-                   [atom(identity, [])], [atom(child, []), atom(retired, [])]),
+                    atom(friend, [role(3)]), atom(knows, [role(3)])], [],
+                   [atom(identity, []), atom(knows, [role(1)])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(identity, []), atom(parent, [role(1)]),
                     atom(parent, [role(2)]), atom(child, []), atom(child, []),
                     atom(coparented, []), atom(friend, [role(1)]),
-                    atom(friend, [role(2)])], [],
+                    atom(friend, [role(2)]), atom(knows, [role(1)]), atom(knows, [role(2)])], [],
                    [], [atom(identity, []), atom(retired, [])])]),
-%% CSSN:3, Coming of age, with GnW:4.
+%% CSSN:4, Coming of age, with GnW:4.
     schema(of_age, [],
       [rs(guarded, [], [atom(parenting, [role(2)])], [atom(identity, [])], [atom(retired, [])]),
        rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])],
@@ -196,13 +166,37 @@ children_schemas([
        rs(unguarded, [], [atom(parent, [role(1)]), atom(parent, [role(2)]),
                           atom(child, []), atom(child, []), atom(coparented, [])],
                      [atom(identity, [])], [])]),
-%% CSSN:2, Friendship of a child, with GnW:2.
+%% CSSN:2, Meeting of a child: a child and an adult come to know each other by an act of both and of a parent of the child who knows the adult; two children by an act of both and of a parent of each, the parents knowing each other.  Neither forbids knows of the other, as meet does not: knows is a count, and the wards conditions forbid at a relay act only marks (CSSN, Appendix B.4).
+    schema(child_meet, [],
+      [rs(guarded, [atom(knows, [role(2)])], [],
+                   [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
+                   [atom(retired, [])]),
+       rs(guarded, [atom(knows, [role(1)])], [],
+                   [atom(identity, [])],
+                   [atom(child, []), atom(retired, [])]),
+       rs(guarded, [], [],
+                   [atom(identity, []), atom(parenting, [role(1)]), atom(knows, [role(2)])],
+                   [atom(child, []), atom(retired, [])])]),
+    schema(child_meet_2, [],
+      [rs(guarded, [atom(knows, [role(2)])], [],
+                   [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
+                   [atom(retired, [])]),
+       rs(guarded, [atom(knows, [role(1)])], [],
+                   [atom(identity, []), atom(child, []), atom(parent, [role(4)])],
+                   [atom(retired, [])]),
+       rs(guarded, [], [],
+                   [atom(identity, []), atom(parenting, [role(1)]), atom(knows, [role(4)])],
+                   [atom(child, []), atom(retired, [])]),
+       rs(guarded, [], [],
+                   [atom(identity, []), atom(parenting, [role(2)]), atom(knows, [role(3)])],
+                   [atom(child, []), atom(retired, [])])]),
+%% CSSN:3, Friendship of a child, with GnW:2, for two children who know each other, and for a child and an adult who do.
     schema(child_befriend, [],
       [rs(guarded, [atom(friend, [role(2)])], [],
-                   [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
+                   [atom(identity, []), atom(child, []), atom(parent, [role(3)]), atom(knows, [role(2)])],
                    [atom(friend, [role(2)]), atom(retired, [])]),
        rs(guarded, [atom(friend, [role(1)])], [],
-                   [atom(identity, []), atom(child, []), atom(parent, [role(4)])],
+                   [atom(identity, []), atom(child, []), atom(parent, [role(4)]), atom(knows, [role(1)])],
                    [atom(friend, [role(1)]), atom(retired, [])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
@@ -212,10 +206,10 @@ children_schemas([
                    [atom(child, []), atom(retired, [])])]),
     schema(child_adult_befriend, [],
       [rs(guarded, [atom(friend, [role(2)])], [],
-                   [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
+                   [atom(identity, []), atom(child, []), atom(parent, [role(3)]), atom(knows, [role(2)])],
                    [atom(friend, [role(2)]), atom(retired, [])]),
        rs(guarded, [atom(friend, [role(1)])], [],
-                   [atom(identity, [])],
+                   [atom(identity, []), atom(knows, [role(1)])],
                    [atom(child, []), atom(friend, [role(1)]), atom(retired, [])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
