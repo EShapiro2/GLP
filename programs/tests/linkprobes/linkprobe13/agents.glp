@@ -1,16 +1,5 @@
-%% linkprobe13/agents.glp --- A CHANNEL WHOSE TWO ENDS BOTH CROSS, to
-%% different agents.  carol first gives alice and bob a stream each, as a cold
-%% call does, and then sends one end of a fresh channel to each ON THOSE
-%% STREAMS, as the social graph sends an introduction over two friend
-%% channels; neither of them made the channel, and carol keeps neither end.  Each of
-%% them greets the other on the end it was given and reports what it reads.
-%% This is the introduction of the social graph: the introducer makes the
-%% channel and hands an end to each of the two it introduces (core/agent.glp,
-%% "User introduces P to Q").  Both links are therefore HELD, and this probe
-%% never calls authorise_link/2, so neither greeting is delivered: that is the
-%% held link doing its work and not a defect (withdrawn as a bug report by
-%% SGSG Code, 2026-09-09).  What happens: no output, and the boot settles with
-%% three agents.  See ../linkprobes.md.
+%% linkprobe13/agents.glp --- A CHANNEL WHOSE TWO ENDS BOTH CROSS, to different agents.  carol first gives alice and bob a stream each, as a cold call does, and then sends one end of a fresh channel to each ON THOSE STREAMS, as the social graph sends an introduction over two friend channels; neither of them made the channel, and no goal of carol's holds either end.  Each of them greets the other on the end it was given and reports what it reads.  This is the introduction of the social graph: the introducer makes the channel and hands an end to each of the two it introduces (core/agent.glp, "User introduces P to Q").
+%% carol made the channel, so she anchors every link it is sent on and exchanged each name with the agent she sent it to: no link is held (IGLP madglp-spec.tex, Held Links), and each greeting flows through carol's local pair (IGLP, Lemma "Both Ends Exported").  What happens: alice sees hello_from(bob), bob sees hello_from(alice), and the boot settles with three agents.  Until 2026-10-21 nothing passed: the runtime sent the greeting hello(Me?) with Me's value on a link of its own, which carol forwarded and its holder held (the global_send callback, glp_runtime/lib/multiagent/mad_context.dart).  See ../linkprobes.md.
 
 Greeting ::= hello(Constant).
 GreetStream ::= [] ; [Greeting | GreetStream].

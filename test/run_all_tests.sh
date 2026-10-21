@@ -5688,20 +5688,7 @@ check "MB4 the twice-crossed end delivers the hand-over reduction's element" "\[
 check "MB4 and the element written into its tail afterwards" "\[bob\] saw(probe)" "$mb4"
 check "MB4 the holder's assignment comes back" "\[alice\] got(hi)" "$mb4"
 
-# MB5: the link probes (programs/tests/linkprobes, and linkprobes.md beside
-# them).  Eight `:boot` programs that fence in what crosses a link and what
-# does not: each is a cold call between isolates, after which one side writes
-# on a stream the other reads.  They differ in how many crossings the reader's
-# end made before it was read, and whether the elements were written in one
-# reduction or in two.  They were the evidence for the defect repaired on
-# 2026-09-08 in lib/runtime/heap_fcp.dart (fireBoundCallbacks), where a value
-# written into the tail of a stream whose reader had already crossed a link was
-# produced and never sent, and until now nothing in the suite loaded them: MB4
-# above covers the same repair on one program, and these cover the six shapes
-# that isolate it.  linkprobe13 and linkprobe14 are the pair in which the
-# channel is handed over by a third agent, so every link is held and neither
-# probe calls authorise_link/2: nothing passing is the correct behaviour, not a
-# defect (withdrawn by SGSG Code, 2026-09-09).
+# MB5: the link probes (programs/tests/linkprobes, and linkprobes.md beside them).  Eight `:boot` programs that fence in what crosses a link and what does not: each is a cold call between isolates, after which one side writes on a stream the other reads.  They differ in how many crossings the reader's end made before it was read, and whether the elements were written in one reduction or in two.  They were the evidence for the defect repaired on 2026-09-08 in lib/runtime/heap_fcp.dart (fireBoundCallbacks), where a value written into the tail of a stream whose reader had already crossed a link was produced and never sent, and until now nothing in the suite loaded them: MB4 above covers the same repair on one program, and these cover the six shapes that isolate it.  linkprobe13 and linkprobe14 are the pair in which the channel is handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 the third agent made the channel and anchors every link, so no link is held and both greetings pass through her (IGLP madglp-spec.tex, Held Links; Lemma "Both Ends Exported"); in linkprobe14 she forwards an end, the link is held, and nothing passes.
 LP_DIR="$GLP_DIR/programs/tests/linkprobes"
 rm -f "$LP_DIR"/runprobe/*.glpw
 
@@ -5769,16 +5756,15 @@ check "MB5 runprobe an activated mini-app's writer crosses: the greeting arrives
 check "MB5 runprobe and the element it wrote into the tail" "\[bob\] saw(probe)" "$lpr"
 check "MB5 runprobe the holder's assignment comes back" "\[alice\] got(hi)" "$lpr"
 
-# linkprobe13 and linkprobe14: a channel handed over by a third agent.  Every
-# link so made is held, and neither probe calls authorise_link/2, so neither
-# greeting is delivered --- the held link doing its work, not a defect.
+# linkprobe13 and linkprobe14: a channel handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 carol made the channel and anchors every link, so none is held and each greeting passes through her; in linkprobe14 she forwards an end, the link is held, and neither greeting is delivered.
 lp13=$("$REPL_RUN" <<HEREDOC
 :boot $LP_DIR/linkprobe13_boot.glp $LP_DIR/linkprobe13
 :quit
 HEREDOC
 2>&1)
 check "MB5 linkprobe13 both ends of the channel cross: the boot settles" "Boot settled: 3 agents" "$lp13"
-check_not "MB5 linkprobe13 nothing passes on a held link neither side authorises" "saw(hello_from" "$lp13"
+check "MB5 linkprobe13 no link is held: alice reads bob's greeting, through carol" "\[alice\] saw(hello_from(bob))" "$lp13"
+check "MB5 linkprobe13 no link is held: bob reads alice's greeting, through carol" "\[bob\] saw(hello_from(alice))" "$lp13"
 
 lp14=$("$REPL_RUN" <<HEREDOC
 :boot $LP_DIR/linkprobe14_boot.glp $LP_DIR/linkprobe14
