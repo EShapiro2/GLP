@@ -93,17 +93,22 @@ const _gsnpProposals = [
   "form(post_forward, [$_p, $_p, $_s, $_s])",
 ];
 
-/// GAI's, as programs/apps/gai/platform.vglp prints its Proposal: GSG's with
-/// unfriend one per role, the wards core's for an AI agent and its
-/// principal, retire, and GSNP's sign, message and forward.
+/// GAI's, as programs/apps/gai/platform.vglp prints its Proposal from
+/// programs/gai/GAI.glp at GLP 9d736804: GKK's establish, meet and introduce,
+/// GSG's befriend with unfriend one per role, GnW's and GAI's for an AI agent
+/// and its principal, retire, and GSNP's sign, message and forward.
 const _gaiProposals = [
   "form(establish, [$_p])",
+  "form(meet, [$_p, $_p])",
+  "form(introduce, [$_p, $_p, $_p])",
   "form(befriend, [$_p, $_p])",
   "form(unfriend_p, [$_p, $_p])",
   "form(unfriend_q, [$_p, $_p])",
   "form(enter, [$_p, $_p, $_s])",
-  "form(agent_befriend, [$_p, $_p, $_p, $_s])",
-  "form(agents_befriend, [$_p, $_p, $_p, $_p, $_s, $_s])",
+  "form(agent_meet, [$_p, $_p, $_p, $_s])",
+  "form(agents_meet, [$_p, $_p, $_p, $_p, $_s, $_s])",
+  "form(agent_befriend, [$_p, $_p, $_p])",
+  "form(agents_befriend, [$_p, $_p, $_p, $_p])",
   "form(agent_unfriend, [$_p, $_p, $_p])",
   "form(retire, [$_p, $_p])",
   "form(sign, [$_p, $_s])",
@@ -111,14 +116,29 @@ const _gaiProposals = [
   "form(forward, [$_p, $_p, $_s])",
 ];
 
-/// CSSN's, as programs/cssn/platform.vglp prints its Proposal: GSNP's, and
-/// the thirteen of the children (programs/cssn/CSSN.glp).
+/// CSSN's, as programs/cssn/platform.vglp prints its Proposal after GKK
+/// (CSSN.glp at GLP 6ff16d78): GSN's, with GKK's meet and introduce, and
+/// those of the children, child_meet and child_meet_2 among them
+/// (programs/cssn/CSSN.glp).
 const _cssnProposals = [
-  ..._gsnpProposals,
+  "form(establish, [$_p])",
+  "form(meet, [$_p, $_p])",
+  "form(introduce, [$_p, $_p, $_p])",
+  "form(befriend, [$_p, $_p])",
+  "form(unfriend, [$_p, $_p])",
+  "form(message, [$_p, $_p, $_s])",
+  "form(create, [$_p, $_s])",
+  "form(join, [$_p, $_p, $_s])",
+  "form(leave, [$_p, $_p, $_s])",
+  "form(close, [$_p, $_s])",
+  "form(post_own, [$_p, $_s, $_s])",
+  "form(post, [$_p, $_p, $_s, $_s])",
   "form(enter, [$_p, $_p])",
   "form(enter_2, [$_p, $_p, $_p])",
   "form(of_age, [$_p, $_p])",
   "form(of_age_2, [$_p, $_p, $_p])",
+  "form(child_meet, [$_p, $_p, $_p])",
+  "form(child_meet_2, [$_p, $_p, $_p, $_p])",
   "form(child_befriend, [$_p, $_p, $_p, $_p])",
   "form(child_adult_befriend, [$_p, $_p, $_p])",
   "form(child_unfriend, [$_p, $_p, $_p])",
@@ -165,8 +185,7 @@ final _approvalW = "named(approval_sentence, form(approval, "
     "field('YesNo', buttons([yes, no]))]))";
 
 const _gaiApprovalClasses = "form(agent_befriend, [field('Peer', shown), "
-    "field('Peer', shown), field('Peer', shown), "
-    "field('Speech', $_speechShown)])";
+    "field('Peer', shown), field('Peer', shown)])";
 
 /// The widget of GAI's approval question, `named(approval_sentence, D)`,
 /// over agent_befriend.
@@ -339,6 +358,9 @@ class _Phone {
   Future<void> tap(Finder f) async {
     await reveal(f);
     expect(f, findsOneWidget);
+    // Built but below the screen, as a request composed low in the tab is.
+    await tester.ensureVisible(f);
+    await tester.pumpAndSettle();
     await tester.tap(f);
     await tester.pumpAndSettle();
   }
@@ -1124,6 +1146,12 @@ void main() {
               'bob'),
           "Dave's machine refused your declaring Dave of age: you are not "
           "Dave's parent.");
+      // An adult's request to meet a child, offered on the child's row, the
+      // adult's state not recording them as one: the child's machine refuses
+      // it, meet forbidding child at both roles, and the adult is told (CSSN,
+      // Section 4.6.2).
+      expect(say('refused(meet(alice, dave), dave, unable([], [child]))'),
+          "Dave's machine refused your meeting: Dave is a child.");
       // No atoms: a vote no on a request no longer pending.
       expect(say('refused(befriend(alice, bob), bob, unable([], []))'),
           "Bob's machine refused your friendship.");
@@ -1288,9 +1316,9 @@ void main() {
     const code = "speech(speech(utterance('The code of Alf'), acme_ltd), alice)";
     const attestation = 'speech($code, alice)';
     final summary = _sp('Summary of the news', 'alf');
-    const aliceState = '[principal_of(alf), friend(alf), item($code), '
-        'authored($code), friend(bob), identity]';
-    const agentBefriend = 'agent_befriend(alf, bob, alice, $attestation)';
+    const aliceState = '[principal_of(alf), friend(alf), knows(alf), '
+        'item($code), authored($code), friend(bob), knows(bob), identity]';
+    const agentBefriend = 'agent_befriend(alf, bob, alice)';
 
     /// The texts construct [id] draws, in order.
     List<String?> textsOf(WidgetTester tester, int id) => [
@@ -1425,12 +1453,13 @@ void main() {
 
     _phoneTest(
         'Alice after retiring Alf: Alf\'s row offers no Befriend, befriend '
-        'forbidding agent at both parties, while Carol\'s, a person, does',
-        (tester) async {
+        'forbidding agent at both parties, while Carol\'s, a person she knows, '
+        'does', (tester) async {
       final p = await _Phone.open(tester, 'gai');
       await p.views([
-        _v('[retired_of(alf), principal_of(alf), item($code), '
-            'authored($code), friend(bob), identity]', '[alf, bob, carol]')
+        _v('[retired_of(alf), principal_of(alf), knows(alf), item($code), '
+            'authored($code), friend(bob), knows(bob), knows(carol), '
+            'identity]', '[alf, bob, carol]')
       ]);
       await p.menu(1, _gaiProposals, known: '[alf, bob, carol]');
       expect(p.key(1, 'person:alf'), findsOneWidget);
@@ -1448,11 +1477,12 @@ void main() {
     _phoneTest(
         'Bob after ending his friendship with Alf: Alf\'s row, Alf recorded as '
         'Alice\'s AI agent, offers no Befriend and still names its developer, '
-        'while Carol\'s, a person, offers Befriend', (tester) async {
+        'while Carol\'s, a person he knows, offers Befriend', (tester) async {
       final p = await _Phone.open(tester, 'gai', me: 'bob');
       await p.views([
-        _v('[friend(alice), item($summary), agent_of(alf, alice, '
-            '$attestation), identity]', '[alf, alice, carol]')
+        _v('[friend(alice), item($summary), knows(alf), agent_of(alf, alice, '
+            '$attestation), knows(alice), knows(carol), identity]',
+            '[alf, alice, carol]')
       ]);
       await p.menu(1, _gaiProposals, known: '[alf, alice, carol]');
       expect(p.key(1, 'person:alf'), findsOneWidget);
@@ -1475,10 +1505,14 @@ void main() {
     _phoneTest(
         'Bob asked to befriend Alf: while the question, which names Alf an AI '
         'agent of Alice, is open, Alf\'s row offers no Befriend, though his '
-        'view does not yet record Alf; Carol\'s does; once the question is '
-        'withdrawn, Alf\'s row offers it again', (tester) async {
+        'view, knowing Alf by an introduction (GKK:3), does not record Alf; '
+        'Carol\'s does; once the question is withdrawn, Alf\'s row offers it '
+        'again', (tester) async {
       final p = await _Phone.open(tester, 'gai', me: 'bob');
-      await p.views([_v('[friend(alice), identity]', '[alf, alice, carol]')]);
+      await p.views([
+        _v('[knows(alf), friend(alice), knows(alice), knows(carol), '
+            'identity]', '[alf, alice, carol]')
+      ]);
       await p.menu(1, _gaiProposals, known: '[alf, alice, carol]');
       expect(p.key(1, 'befriend:alf'), findsOneWidget);
       await p.draw('draw(5, $_gaiApprovalW, approval_w(approval(attempt(alf, '
@@ -1538,8 +1572,14 @@ void main() {
         '(c) Bob asked to befriend Alf: "Alf, an AI agent of Alice, asks to '
         'befriend you.", "Developer: Acme Ltd", "Befriend Alf?", Yes and No; then '
         'Alf\'s row and its item, each with "Developer: Acme Ltd"', (tester) async {
+      // Bob knows Alf by agent_meet, which recorded Alf, its principal and
+      // its attestation, agent_of(alf, alice, y) (programs/gai/GAI.glp at GLP
+      // 9d736804; GAI's paper, Section 3.3, part 2).
       final p = await _Phone.open(tester, 'gai', me: 'bob');
-      await p.views([_v('[friend(alice), identity]', '[alf, alice]')]);
+      await p.views([
+        _v('[knows(alf), agent_of(alf, alice, $attestation), friend(alice), '
+            'knows(alice), identity]', '[alf, alice]')
+      ]);
       await p.menu(1, _gaiProposals, known: '[alf, alice]');
       await p.draw('draw(5, $_gaiApprovalW, approval_w(approval(attempt(alf, '
           '3, 3, $agentBefriend, none), input([2]))))');
@@ -1567,8 +1607,9 @@ void main() {
       await p.draw('withdraw(5)');
       await p.draw('withdraw(1)');
       await p.views([
-        _v('[item($summary), friend(alf), agent_of(alf, alice, '
-            '$attestation), friend(alice), identity]', '[alf, alice]')
+        _v('[item($summary), friend(alf), knows(alf), agent_of(alf, alice, '
+            '$attestation), friend(alice), knows(alice), identity]',
+            '[alf, alice]')
       ]);
       await p.menu(2, _gaiProposals, known: '[alf, alice]');
       final row = [
@@ -1685,14 +1726,16 @@ void main() {
 
     _phoneTest(
         '(1) Alice\'s menu: "Carol, your child", "Bob, your friend", "Dave", '
-        'her child\'s row with no End friendship; and the requests she '
-        'composes, (2) "Ask that Carol and Dave befriend, with Bob." and '
-        'Submit, proposing child_befriend(carol, dave, alice, bob), and once '
-        'sent "You asked that Carol and Dave befriend, with Bob."',
-        (tester) async {
+        'her child\'s row with no End friendship, and Dave\'s, whom she has '
+        'not met, with Meet, as in every app that extends GKK; and '
+        'the requests she composes, (2) "Ask that Carol and Dave befriend, '
+        'with Bob." and Submit, proposing child_befriend(carol, dave, alice, '
+        'bob), and once sent "You asked that Carol and Dave befriend, with '
+        'Bob."', (tester) async {
       final p = await _Phone.open(tester, 'cssn');
       await p.views([
-        _v('[friend(bob), parenting(carol), friend(carol), identity]',
+        _v('[friend(bob), knows(bob), parenting(carol), friend(carol), '
+            'knows(carol), identity]',
             '[bob, carol, dave]')
       ]);
       // The request question shows the persons known when it was asked; the
@@ -1702,7 +1745,15 @@ void main() {
       expect(rows(tester, 1), ['Carol, your child', 'Bob, your friend', 'Dave']);
       expect(p.key(1, 'unfriend:carol'), findsNothing);
       expect(p.key(1, 'unfriend:bob'), findsOneWidget);
-      expect(p.key(1, 'befriend:dave'), findsOneWidget);
+      // Dave is not a contact: befriend requires that the two know each
+      // other (GSG:1), and his row offers Meet (GKK:2).
+      expect(p.key(1, 'befriend:dave'), findsNothing);
+      expect(p.key(1, 'meet:dave'), findsOneWidget);
+      expect(p.key(1, 'compose:meet'), findsNothing);
+      expect(sentence(tester, 1, 'introduce'), 'Introduce … to ….');
+      expect(sentence(tester, 1, 'child-meet'), 'Ask that … and … meet.');
+      expect(sentence(tester, 1, 'child-meet-2'),
+          'Ask that … and … meet, with ….');
       expect(sentence(tester, 1, 'child-befriend'),
           'Ask that … and … befriend, with ….');
       expect(sentence(tester, 1, 'of-age'), 'Declare … of age.');
@@ -1799,15 +1850,16 @@ void main() {
 
     _phoneTest(
         'Bob composes "Enter Dave as your child, with Grace.", a person he '
-        'knows who is not his friend and a friend of his, proposing '
+        'knows who is not his friend and a person he has met, enter_2 '
+        'requiring that the two parents know each other, proposing '
         'enter_2(bob, grace, dave); once sent "You entered Dave as your '
         'child, with Grace." (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 '
-        'UTC, item 4)', (tester) async {
+        'UTC, item 4; CSSN.glp at GLP 6ff16d78)', (tester) async {
       final p = await _Phone.open(tester, 'cssn', me: 'bob');
-      await p.views([_v('[friend(grace), identity]', '[dave, grace]')]);
+      await p.views([_v('[knows(grace), identity]', '[dave, grace]')]);
       await p.menu(1, _cssnProposals, known: '[dave, grace]');
       expect(sentence(tester, 1, 'enter-2'), 'Enter … as your child, with ….');
-      // The other parent's place offers his friends.
+      // The other parent's place offers the persons he has met.
       await p.tap(p.key(1, 'slot:enter-2:1'));
       expect(
           [
@@ -1955,6 +2007,254 @@ void main() {
         await p.reveal(find.text(s));
         expect(find.text(s), findsOneWidget, reason: s);
       }
+    });
+    // The words of CSSN's acts (CSSN #9 Cowork, Code_inbox.md, 2026-10-20
+    // 19:44 UTC, item 4), each a request composed and Submit.
+    List<String?> picks(WidgetTester tester, _Phone p, int id, String at) => [
+          for (final c in tester.widgetList<ActionChip>(find.descendant(
+              of: p.key(id, 'pick:$at'), matching: find.byType(ActionChip))))
+            (c.label as Text).data
+        ];
+
+    _phoneTest(
+        'In CSSN\'s app as in every app that extends GKK (GSC #5 Cowork, '
+        'Code_inbox.md, 2026-10-20 20:21 UTC): Meet on the row of a person '
+        'Alice knows whom she has not met, proposing meet(alice, bob); and '
+        '"Introduce Carol to Bob.", two persons she has met, and Introduce, '
+        'proposing introduce(alice, bob, carol)', (tester) async {
+      final p = await _Phone.open(tester, 'cssn');
+      await p.views([
+        _v('[parenting(carol), friend(carol), knows(carol), identity]',
+            '[bob, carol]')
+      ]);
+      await p.menu(1, _cssnProposals, known: '[bob, carol]');
+      // Carol is a contact; Bob is not, and only his row offers Meet.
+      expect(p.key(1, 'meet:carol'), findsNothing);
+      expect(p.key(1, 'compose:meet'), findsNothing);
+      // Fewer than two contacts: nothing to introduce.
+      expect(p.key(1, 'sentence:introduce'), findsNothing);
+      await p.tap(p.key(1, 'meet:bob'));
+      expect(p.grants, ['input(1, [3], propose(meet(alice, bob)))']);
+      await p.draw('withdraw(1)');
+      await p.views([
+        _v('[parenting(carol), friend(carol), knows(carol), identity]',
+            '[bob, carol]'),
+        _v('[knows(bob), parenting(carol), friend(carol), knows(carol), '
+            'identity]', '[bob, carol]'),
+      ]);
+      await p.menu(2, _cssnProposals, known: '[bob, carol]');
+      // Bob is now a contact: Befriend on his row, and no Meet.
+      expect(p.key(2, 'befriend:bob'), findsOneWidget);
+      expect(p.key(2, 'meet:bob'), findsNothing);
+      await compose(p, 2, 'introduce', ['carol', 'bob']);
+      expect(sentence(tester, 2, 'introduce'), 'Introduce Carol to Bob.');
+      expect(
+          find.descendant(
+              of: p.key(2, 'submit:introduce'),
+              matching: find.text('Introduce')),
+          findsOneWidget);
+      await p.tap(p.key(2, 'submit:introduce'));
+      expect(p.grants.last,
+          'input(2, [3], propose(introduce(alice, bob, carol)))');
+    });
+
+    _phoneTest(
+        'Alice composes "Ask that Carol and Frank meet.", her child and a '
+        'person she has met, proposing child_meet(carol, frank, alice), and '
+        '"Ask that Carol and Dave meet, with Bob.", proposing '
+        'child_meet_2(carol, dave, alice, bob); once sent "You asked that '
+        'Carol and Frank meet." and "You asked that Carol and Dave meet, with '
+        'Bob."', (tester) async {
+      final p = await _Phone.open(tester, 'cssn');
+      await p.views([
+        _v('[friend(bob), knows(bob), knows(frank), parenting(carol), '
+            'friend(carol), knows(carol), identity]',
+            '[bob, carol, dave, frank]')
+      ]);
+      await p.menu(1, _cssnProposals, known: '[bob, carol, dave, frank]');
+      await p.tap(p.key(1, 'slot:child-meet:0'));
+      expect(picks(tester, p, 1, 'child-meet:0'), ['Carol']);
+      await p.tap(p.key(1, 'pick:child-meet:0:carol'));
+      // The other place: the persons she has met, her child not among them.
+      await p.tap(p.key(1, 'slot:child-meet:1'));
+      expect(picks(tester, p, 1, 'child-meet:1'), ['Bob', 'Frank']);
+      await p.tap(p.key(1, 'pick:child-meet:1:frank'));
+      expect(sentence(tester, 1, 'child-meet'), 'Ask that Carol and Frank meet.');
+      await p.tap(p.key(1, 'submit:child-meet'));
+      expect(p.grants,
+          ['input(1, [3], propose(child_meet(carol, frank, alice)))']);
+      await p.draw('withdraw(1)');
+      await p.menu(2, _cssnProposals, known: '[bob, carol, dave, frank]');
+      await p.reveal(p.key(2, 'sent:child-meet:0'));
+      expect(tester.widget<Text>(p.key(2, 'sent:child-meet:0')).data,
+          'You asked that Carol and Frank meet.');
+      // The other parent's place: the persons she has met who are neither
+      // her child nor her parent.
+      await p.tap(p.key(2, 'slot:child-meet-2:2'));
+      expect(picks(tester, p, 2, 'child-meet-2:2'), ['Bob', 'Frank']);
+      await p.tap(p.key(2, 'slot:child-meet-2:2'));
+      await compose(p, 2, 'child-meet-2', ['carol', 'dave', 'bob']);
+      expect(sentence(tester, 2, 'child-meet-2'),
+          'Ask that Carol and Dave meet, with Bob.');
+      await p.tap(p.key(2, 'submit:child-meet-2'));
+      expect(p.grants.last,
+          'input(2, [3], propose(child_meet_2(carol, dave, alice, bob)))');
+      await p.draw('withdraw(2)');
+      await p.menu(3, _cssnProposals, known: '[bob, carol, dave, frank]');
+      await p.reveal(p.key(3, 'sent:child-meet-2:0'));
+      expect(tester.widget<Text>(p.key(3, 'sent:child-meet-2:0')).data,
+          'You asked that Carol and Dave meet, with Bob.');
+    });
+
+    _phoneTest(
+        'A child composes no meeting or meeting of a child, and composes '
+        'an introduction; her rows offer no Meet, and her screen no field '
+        'Add a person by key (CSSN, Section 4.6.2)', (tester) async {
+      final p = await _Phone.open(tester, 'cssn', me: 'carol');
+      await p.views([
+        _v('[friend(alice), knows(alice), knows(dave), child, parent(alice), '
+            'identity]', '[alice, bob, dave]')
+      ]);
+      await p.menu(1, _cssnProposals, known: '[alice, bob, dave]');
+      expect(p.key(1, 'meet:bob'), findsNothing);
+      expect(p.key(1, 'befriend:bob'), findsNothing);
+      for (final k in ['meet', 'child-meet', 'child-meet-2']) {
+        expect(p.key(1, 'compose:$k'), findsNothing, reason: k);
+      }
+      expect(p.key(1, 'compose:introduce'), findsOneWidget);
+      expect(p.key(1, 'add-field'), findsNothing);
+      expect(p.key(1, 'add'), findsNothing);
+    });
+
+    _phoneTest(
+        'A child\'s phone at its setup, before the entering, its state '
+        'holding no child, has the field Add a person by key, by which its '
+        'agent discovers its parents\' (CSSN, Appendix C.4)', (tester) async {
+      final p = await _Phone.open(tester, 'cssn', me: 'carol');
+      await p.views([_v('[]', '[]')]);
+      await p.menu(1, _cssnProposals, known: '[]');
+      expect(p.key(1, 'add-field'), findsOneWidget);
+      await p.type(p.key(1, 'add-field'), 'alice');
+      await p.tap(p.key(1, 'add'));
+      expect(p.grants, ['input(1, [3], known(alice))']);
+    });
+
+    const study = 'speech(utterance(study), frank)';
+
+    _phoneTest(
+        'In Groups, Frank, an adult leading study, composes "Invite Carol to '
+        'study, with Alice.", a friend not in it and the child\'s parent, '
+        'proposing child_join(frank, carol, alice, study), beside Add member; '
+        'once sent "You invited Carol to study, with Alice."',
+        (tester) async {
+      final p = await _Phone.open(tester, 'cssn', me: 'frank');
+      await p.views([
+        _v('[friend(carol), knows(carol), knows(alice), '
+            'member(dot(community(frank), $study)), listed(frank, $study), '
+            'identity]', '[alice, carol]')
+      ]);
+      await p.menu(1, _cssnProposals, known: '[alice, carol]');
+      await p.tab(ScreenTab.groups);
+      const k = 'child-join:frank:$study';
+      expect(p.key(1, 'add-member:frank:$study'), findsOneWidget);
+      await compose(p, 1, k, ['carol', 'alice']);
+      expect(sentence(tester, 1, k), 'Invite Carol to study, with Alice.');
+      await p.tap(p.key(1, 'submit:$k'));
+      expect(p.grants,
+          ['input(1, [3], propose(child_join(frank, carol, alice, $study)))']);
+      await p.draw('withdraw(1)');
+      await p.menu(2, _cssnProposals, known: '[alice, carol]');
+      await p.reveal(p.key(2, 'sent:$k:0'));
+      expect(tester.widget<Text>(p.key(2, 'sent:$k:0')).data,
+          'You invited Carol to study, with Alice.');
+    });
+
+    _phoneTest(
+        'In Groups, Carol, a child leading kids_chat, has no Add member and '
+        'composes "Invite Dave to kids_chat, with Alice and Bob.", a friend '
+        'not in it, her parent and the other child\'s, proposing '
+        'child_join_2(carol, dave, alice, bob, kids_chat)', (tester) async {
+      final p = await _Phone.open(tester, 'cssn', me: 'carol');
+      await p.views([
+        _v('[friend(alice), knows(alice), friend(dave), knows(dave), child, '
+            'parent(alice), member(dot(community(carol), $kids)), '
+            'listed(carol, $kids), identity]', '[alice, bob, dave]')
+      ]);
+      await p.menu(1, _cssnProposals, known: '[alice, bob, dave]');
+      await p.tab(ScreenTab.groups);
+      const k = 'child-join-2:carol:$kids';
+      expect(p.key(1, 'add-member:carol:$kids'), findsNothing);
+      await p.tap(p.key(1, 'slot:$k:1'));
+      expect(picks(tester, p, 1, '$k:1'), ['Alice']);
+      await p.tap(p.key(1, 'slot:$k:1'));
+      await compose(p, 1, k, ['dave', 'alice', 'bob']);
+      expect(sentence(tester, 1, k),
+          'Invite Dave to kids_chat, with Alice and Bob.');
+      await p.tap(p.key(1, 'submit:$k'));
+      expect(p.grants, [
+        'input(1, [3], propose(child_join_2(carol, dave, alice, bob, $kids)))'
+      ]);
+    });
+
+    _phoneTest(
+        'In Groups, Alice, a parent, having approved Carol\'s joining of '
+        'study and Dave\'s of kids_chat, which Carol leads, composes "End '
+        'Carol\'s membership of study.", proposing child_leave(frank, carol, '
+        'alice, study), and "Close Carol\'s group kids_chat.", proposing '
+        'child_close(carol, alice, kids_chat); nobody is asked',
+        (tester) async {
+      final p = await _Phone.open(tester, 'cssn');
+      await p.views([
+        _v('[friend(bob), knows(bob), parenting(carol), friend(carol), '
+            'knows(carol), identity]', '[bob, carol, dave, frank]')
+      ]);
+      await p.menu(1, _cssnProposals, known: '[bob, carol, dave, frank]');
+      await p.tab(ScreenTab.groups);
+      // Nothing approved: no group of hers to name.
+      expect(p.key(1, 'compose:child-leave'), findsNothing);
+      expect(p.key(1, 'compose:child-close'), findsNothing);
+      await p.draw('draw(2, $_cssnGroupApprovalW, approval_w(approval('
+          'attempt(carol, 4, 4, child_join_2(carol, dave, alice, bob, $kids), '
+          'none), input([2]))))');
+      await p.draw('draw(3, $_cssnGroupApprovalW, approval_w(approval('
+          'attempt(frank, 5, 5, child_join(frank, carol, alice, $study), '
+          'none), input([2]))))');
+      for (final id in [2, 3]) {
+        await p.tap(find.descendant(
+            of: find.byKey(constructKey(id)),
+            matching: find.widgetWithText(ElevatedButton, 'Yes')));
+      }
+      expect(p.grants, ['input(2, [2], yes)', 'input(3, [2], yes)']);
+      await p.draw('withdraw(2)');
+      await p.draw('withdraw(3)');
+      await p.top();
+      await p.tap(p.key(1, 'slot:child-leave:0'));
+      expect(picks(tester, p, 1, 'child-leave:0'), ['Carol']);
+      await p.tap(p.key(1, 'pick:child-leave:0:carol'));
+      await p.tap(p.key(1, 'slot:child-leave:1'));
+      expect(picks(tester, p, 1, 'child-leave:1'), ['study']);
+      await p.tap(p.key(1, 'pick:child-leave:1:group(frank, $study)'));
+      expect(sentence(tester, 1, 'child-leave'),
+          "End Carol's membership of study.");
+      await p.tap(p.key(1, 'submit:child-leave'));
+      expect(p.grants.last,
+          'input(1, [3], propose(child_leave(frank, carol, alice, $study)))');
+      await p.draw('withdraw(1)');
+      await p.menu(4, _cssnProposals, known: '[bob, carol, dave, frank]');
+      await p.reveal(p.key(4, 'sent:child-leave:0'));
+      expect(tester.widget<Text>(p.key(4, 'sent:child-leave:0')).data,
+          "You ended Carol's membership of study.");
+      await compose(p, 4, 'child-close', ['carol', 'group(carol, $kids)']);
+      expect(sentence(tester, 4, 'child-close'),
+          "Close Carol's group kids_chat.");
+      await p.tap(p.key(4, 'submit:child-close'));
+      expect(p.grants.last,
+          'input(4, [3], propose(child_close(carol, alice, $kids)))');
+      await p.draw('withdraw(4)');
+      await p.menu(5, _cssnProposals, known: '[bob, carol, dave, frank]');
+      await p.reveal(p.key(5, 'sent:child-close:0'));
+      expect(tester.widget<Text>(p.key(5, 'sent:child-close:0')).data,
+          "You closed Carol's group kids_chat.");
     });
   });
 }

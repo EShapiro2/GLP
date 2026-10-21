@@ -14,6 +14,10 @@
 Class ::=
 establish(Peer)
 ;
+meet(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
 befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
@@ -44,6 +48,10 @@ of_age(Peer, Peer)
 ;
 of_age_2(Peer, Peer, Peer)
 ;
+child_meet(Peer, Peer, Peer)
+;
+child_meet_2(Peer, Peer, Peer, Peer)
+;
 child_befriend(Peer, Peer, Peer, Peer)
 ;
 child_adult_befriend(Peer, Peer, Peer)
@@ -65,6 +73,10 @@ child_close(Peer, Peer, List(Peer), Speech)
 
 Proposal ::=
 establish(Peer)
+;
+meet(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
 ;
 befriend(Peer, Peer)
 ;
@@ -91,6 +103,10 @@ enter_2(Peer, Peer, Peer)
 of_age(Peer, Peer)
 ;
 of_age_2(Peer, Peer, Peer)
+;
+child_meet(Peer, Peer, Peer)
+;
+child_meet_2(Peer, Peer, Peer, Peer)
 ;
 child_befriend(Peer, Peer, Peer, Peer)
 ;
@@ -119,9 +135,11 @@ identity
 ;
 retired
 ;
-friend(Peer)
+knows(Peer)
 ;
 child
+;
+friend(Peer)
 ;
 parent(Peer)
 ;
@@ -151,9 +169,11 @@ atom_of(g(identity, []), shown(identity))
 .
 atom_of(g(retired, []), shown(retired))
 .
-atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
+atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 .
 atom_of(g(child, []), shown(child))
+.
+atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
 .
 atom_of(g(parent, [p(V1)]), shown(parent(V1?)))
 .
@@ -180,13 +200,17 @@ atom_of(g(coparented, []), shown(coparented))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(parent, [role(2)]), atom(parenting, [role(2)]), atom(retired, [])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(message, [svar(x)], [rs(guarded, [], [], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [atom(received, [svar(x), role(1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)]), atom(retired, [])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(child, []), atom(member, [nterm(ext(own(1), n))]), atom(retired, [])])]), schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [atom(retired, [])])]), lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(2, 1, listed, [svar(n)])]), schema(drop, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), schema(post_own, [svar(x), svar(n)], [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [atom(posted, [svar(x), svar(n)]), atom(retired, [])])]), schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], [atom(retired, [])]), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [atom(posted, [svar(x), svar(n)])])]), schema(deliver, [svar(x), svar(n)], [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(x), svar(n)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(delivered, [svar(x), role(2), svar(n)])]), rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]), schema(enter, [], [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []), atom(friend, [role(1)])], [], [], [atom(identity, []), atom(retired, [])])]), schema(enter_2, [], [rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(2)]), atom(friend, [role(3)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(1)]), atom(friend, [role(3)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(parent, [role(2)]), atom(child, []), atom(child, []), atom(coparented, []), atom(friend, [role(1)]), atom(friend, [role(2)])], [], [], [atom(identity, []), atom(retired, [])])]), schema(of_age, [], [rs(guarded, [], [atom(parenting, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])], [atom(identity, [])], [atom(coparented, [])])]), schema(of_age_2, [], [rs(guarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(parent, [role(1)]), atom(parent, [role(2)]), atom(child, []), atom(child, []), atom(coparented, [])], [atom(identity, [])], [])]), schema(child_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)])], [atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])], [atom(child, []), atom(retired, [])])]), schema(child_adult_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(parenting, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])])]), schema(parent_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(parenting, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [atom(retired, [])], [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, [])], [atom(identity, [])], [atom(coparented, [])])]), schema(parent_unfriend_2, [], [rs(guarded, [], [atom(friend, [role(3)]), atom(parenting, [role(3)]), atom(coparent, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(coparent, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, []), atom(coparented, [])], [atom(identity, [])], [])]), schema(child_join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)]), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_join_2, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(child, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)]), atom(parent, [role(3)])], [atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)]), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]), lschema(child_close, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, []), atom(child, []), atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(3, 1, listed, [svar(n)])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], [atom(retired, [])]), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(child, []), atom(retired, [])])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(child, []), atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(parent, [role(2)]), atom(parenting, [role(2)]), atom(retired, [])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(message, [svar(x)], [rs(guarded, [], [], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [atom(received, [svar(x), role(1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)]), atom(retired, [])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(child, []), atom(member, [nterm(ext(own(1), n))]), atom(retired, [])])]), schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [atom(retired, [])])]), lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(2, 1, listed, [svar(n)])]), schema(drop, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), schema(post_own, [svar(x), svar(n)], [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [atom(posted, [svar(x), svar(n)]), atom(retired, [])])]), schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], [atom(retired, [])]), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [atom(posted, [svar(x), svar(n)])])]), schema(deliver, [svar(x), svar(n)], [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(x), svar(n)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(delivered, [svar(x), role(2), svar(n)])]), rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]), schema(enter, [], [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)]), atom(knows, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []), atom(friend, [role(1)]), atom(knows, [role(1)])], [], [], [atom(identity, []), atom(retired, [])])]), schema(enter_2, [], [rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(2)]), atom(friend, [role(3)]), atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(1)]), atom(friend, [role(3)]), atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(parent, [role(2)]), atom(child, []), atom(child, []), atom(coparented, []), atom(friend, [role(1)]), atom(friend, [role(2)]), atom(knows, [role(1)]), atom(knows, [role(2)])], [], [], [atom(identity, []), atom(retired, [])])]), schema(of_age, [], [rs(guarded, [], [atom(parenting, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])], [atom(identity, [])], [atom(coparented, [])])]), schema(of_age_2, [], [rs(guarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(parent, [role(1)]), atom(parent, [role(2)]), atom(child, []), atom(child, []), atom(coparented, [])], [atom(identity, [])], [])]), schema(child_meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(retired, [])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(knows, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_meet_2, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(retired, [])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(knows, [role(4)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)]), atom(knows, [role(3)])], [atom(child, []), atom(retired, [])])]), schema(child_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)]), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)]), atom(knows, [role(1)])], [atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])], [atom(child, []), atom(retired, [])])]), schema(child_adult_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)]), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(parenting, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])])]), schema(parent_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(parenting, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [atom(retired, [])], [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, [])], [atom(identity, [])], [atom(coparented, [])])]), schema(parent_unfriend_2, [], [rs(guarded, [], [atom(friend, [role(3)]), atom(parenting, [role(3)]), atom(coparent, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(coparent, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, []), atom(coparented, [])], [atom(identity, [])], [])]), schema(child_join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)]), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_join_2, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(child, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)]), atom(parent, [role(3)])], [atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)]), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]), schema(child_leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]), lschema(child_close, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, []), atom(child, []), atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(3, 1, listed, [svar(n)])])])
 .
 
 procedure schema_entry(Constant?, Schema).
 schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])]))
 .
-schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])])]))
+schema_entry(meet, schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])])]))
+.
+schema_entry(introduce, schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], [atom(retired, [])]), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(child, []), atom(retired, [])])]))
+.
+schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(child, []), atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])])]))
 .
 schema_entry(unfriend, schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(parent, [role(2)]), atom(parenting, [role(2)]), atom(retired, [])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]))
 .
@@ -208,17 +232,21 @@ schema_entry(post, schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(i
 .
 schema_entry(deliver, schema(deliver, [svar(x), svar(n)], [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(x), svar(n)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(delivered, [svar(x), role(2), svar(n)])]), rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]))
 .
-schema_entry(enter, schema(enter, [], [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []), atom(friend, [role(1)])], [], [], [atom(identity, []), atom(retired, [])])]))
+schema_entry(enter, schema(enter, [], [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)]), atom(knows, [role(2)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []), atom(friend, [role(1)]), atom(knows, [role(1)])], [], [], [atom(identity, []), atom(retired, [])])]))
 .
-schema_entry(enter_2, schema(enter_2, [], [rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(2)]), atom(friend, [role(3)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(1)]), atom(friend, [role(3)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(parent, [role(2)]), atom(child, []), atom(child, []), atom(coparented, []), atom(friend, [role(1)]), atom(friend, [role(2)])], [], [], [atom(identity, []), atom(retired, [])])]))
+schema_entry(enter_2, schema(enter_2, [], [rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(2)]), atom(friend, [role(3)]), atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(1)]), atom(friend, [role(3)]), atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(child, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(parent, [role(2)]), atom(child, []), atom(child, []), atom(coparented, []), atom(friend, [role(1)]), atom(friend, [role(2)]), atom(knows, [role(1)]), atom(knows, [role(2)])], [], [], [atom(identity, []), atom(retired, [])])]))
 .
 schema_entry(of_age, schema(of_age, [], [rs(guarded, [], [atom(parenting, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])], [atom(identity, [])], [atom(coparented, [])])]))
 .
 schema_entry(of_age_2, schema(of_age_2, [], [rs(guarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(2)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(parent, [role(1)]), atom(parent, [role(2)]), atom(child, []), atom(child, []), atom(coparented, [])], [atom(identity, [])], [])]))
 .
-schema_entry(child_befriend, schema(child_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)])], [atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])], [atom(child, []), atom(retired, [])])]))
+schema_entry(child_meet, schema(child_meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(retired, [])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(knows, [role(2)])], [atom(child, []), atom(retired, [])])]))
 .
-schema_entry(child_adult_befriend, schema(child_adult_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])])]))
+schema_entry(child_meet_2, schema(child_meet_2, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(retired, [])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(knows, [role(4)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)]), atom(knows, [role(3)])], [atom(child, []), atom(retired, [])])]))
+.
+schema_entry(child_befriend, schema(child_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)]), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(4)]), atom(knows, [role(1)])], [atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])], [atom(child, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])], [atom(child, []), atom(retired, [])])]))
+.
+schema_entry(child_adult_befriend, schema(child_adult_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)]), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(retired, [])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(child, []), atom(friend, [role(1)]), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])])]))
 .
 schema_entry(child_unfriend, schema(child_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(parenting, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])])]))
 .
@@ -237,15 +265,19 @@ schema_entry(child_close, lschema(child_close, [svar(n)], [rs(unguarded, [atom(c
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
 procedure reflexive_preds(Preds).
-reflexive_preds([friend])
+reflexive_preds([friend, knows])
 .
 
 procedure introduction_preds(Preds).
-introduction_preds([friend])
+introduction_preds([knows])
 .
 
 procedure binding_of(Class?, Constant, Binding).
 binding_of(establish(V1), establish, [b(role(1), p(V1?))])
+.
+binding_of(meet(V1, V2), meet, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
+binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(c), p(V3?))])
 .
 binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
@@ -279,6 +311,10 @@ binding_of(of_age(V1, V2), of_age, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(of_age_2(V1, V2, V3), of_age_2, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
 .
+binding_of(child_meet(V1, V2, V3), child_meet, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+.
+binding_of(child_meet_2(V1, V2, V3, V4), child_meet_2, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(role(4), p(V4?))])
+.
 binding_of(child_befriend(V1, V2, V3, V4), child_befriend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(role(4), p(V4?))])
 .
 binding_of(child_adult_befriend(V1, V2, V3), child_adult_befriend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
@@ -308,6 +344,28 @@ ground(B?)
 ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
+.
+class_of(meet, B, D, meet(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(introduce, B, D, introduce(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(pvar(c), B?, D?, V3)
 .
 class_of(befriend, B, D, befriend(V1?, V2?))
 :-
@@ -483,6 +541,32 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(role(3), B?, D?, V3)
 .
+class_of(child_meet, B, D, child_meet(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+.
+class_of(child_meet_2, B, D, child_meet_2(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+,
+val_peer(role(4), B?, D?, V4)
+.
 class_of(child_befriend, B, D, child_befriend(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
@@ -605,6 +689,10 @@ val_speech(svar(n), B?, D?, V4)
 procedure name_class(Proposal?, GAtoms?, Class).
 name_class(establish(V1), _, establish(V1?))
 .
+name_class(meet(V1, V2), _, meet(V1?, V2?))
+.
+name_class(introduce(V1, V2, V3), _, introduce(V1?, V2?, V3?))
+.
 name_class(befriend(V1, V2), _, befriend(V1?, V2?))
 .
 name_class(unfriend(V1, V2), _, unfriend(V1?, V2?))
@@ -633,6 +721,10 @@ name_class(of_age(V1, V2), _, of_age(V1?, V2?))
 .
 name_class(of_age_2(V1, V2, V3), _, of_age_2(V1?, V2?, V3?))
 .
+name_class(child_meet(V1, V2, V3), _, child_meet(V1?, V2?, V3?))
+.
+name_class(child_meet_2(V1, V2, V3, V4), _, child_meet_2(V1?, V2?, V3?, V4?))
+.
 name_class(child_befriend(V1, V2, V3, V4), _, child_befriend(V1?, V2?, V3?, V4?))
 .
 name_class(child_adult_befriend(V1, V2, V3), _, child_adult_befriend(V1?, V2?, V3?))
@@ -656,6 +748,10 @@ listed_class(child_close, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(n), s(
 
 procedure request_name(Class?, PName).
 request_name(establish(V1), pname(establish(V1?)))
+.
+request_name(meet(V1, V2), pname(meet(V1?, V2?)))
+.
+request_name(introduce(V1, V2, V3), pname(introduce(V1?, V2?, V3?)))
 .
 request_name(befriend(V1, V2), pname(befriend(V1?, V2?)))
 .
@@ -682,6 +778,10 @@ request_name(enter_2(V1, V2, V3), pname(enter_2(V1?, V2?, V3?)))
 request_name(of_age(V1, V2), pname(of_age(V1?, V2?)))
 .
 request_name(of_age_2(V1, V2, V3), pname(of_age_2(V1?, V2?, V3?)))
+.
+request_name(child_meet(V1, V2, V3), pname(child_meet(V1?, V2?, V3?)))
+.
+request_name(child_meet_2(V1, V2, V3, V4), pname(child_meet_2(V1?, V2?, V3?, V4?)))
 .
 request_name(child_befriend(V1, V2, V3, V4), pname(child_befriend(V1?, V2?, V3?, V4?)))
 .

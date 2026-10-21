@@ -35,6 +35,211 @@ retired
 \}
 \end{align*}
 \iffalse
+meet
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+c
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+c
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
 befriend
 \fi
 \begin{align*}
@@ -82,6 +287,13 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
  \in c_
 {
 \Alice
@@ -90,6 +302,13 @@ identity
 \mathit{
 identity
 }
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
  \in c_
 {
 \Bob
@@ -193,7 +412,6 @@ friend
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -204,13 +422,11 @@ friend
 (
 \Bob
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -221,8 +437,7 @@ friend
 (
 \Alice
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -305,7 +520,6 @@ identity
 \Alice
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -316,8 +530,7 @@ friend
 (
 \Alice
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -1400,6 +1613,13 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
 \}
 , \qquad 
 c'_
@@ -1430,6 +1650,13 @@ child
 ,
 \mathit{
 friend
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
 }
 (
 \Alice
@@ -1521,6 +1748,13 @@ friend
 (
 \mathit{Carol}
 )
+,
+\mathit{
+knows
+}
+(
+\mathit{Carol}
+)
 \}
 , \qquad 
 c'_
@@ -1550,6 +1784,13 @@ coparent
 ,
 \mathit{
 friend
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+knows
 }
 (
 \mathit{Carol}
@@ -1610,6 +1851,20 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
 \}
 ,\\
 &
@@ -1617,6 +1872,13 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
  \in c_
 {
 \Alice
@@ -1625,6 +1887,13 @@ identity
 \mathit{
 identity
 }
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
  \in c_
 {
 \Bob
@@ -1735,7 +2004,6 @@ child
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -1746,13 +2014,11 @@ parenting
 (
 \Bob
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -1767,8 +2033,7 @@ parent
 \mathit{
 child
 }
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -1893,7 +2158,6 @@ coparented
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -1911,13 +2175,11 @@ coparent
 (
 \Bob
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -1935,8 +2197,7 @@ coparent
 (
 \Alice
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -1990,6 +2251,365 @@ retired
 &
 \text{guarded by } \{
 \Alice
+\}
+\end{align*}
+\iffalse
+child_meet
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+parent
+}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\mathit{Carol}
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+child_meet_2
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+, \qquad 
+c'_
+{
+\mathit{Dave}
+}
+ := 
+c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+parent
+}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+parent
+}
+(
+\mathit{Dave}
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+\mathit{Dave}
+)
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Bob
+}
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\mathit{Carol}
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\mathit{Dave}
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+,
+\mathit{Dave}
 \}
 \end{align*}
 \iffalse
@@ -2057,7 +2677,6 @@ c_
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -2072,13 +2691,18 @@ parent
 (
 \mathit{Carol}
 )
-\}
- \subseteq c_
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -2093,13 +2717,18 @@ parent
 (
 \mathit{Dave}
 )
-\}
- \subseteq c_
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
 {
 \Bob
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -2117,13 +2746,11 @@ friend
 (
 \mathit{Dave}
 )
-\}
- \subseteq c_
+ \in c_
 {
 \mathit{Carol}
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -2141,8 +2768,7 @@ friend
 (
 \mathit{Carol}
 )
-\}
- \subseteq c_
+ \in c_
 {
 \mathit{Dave}
 }
@@ -2281,7 +2907,6 @@ c_
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -2296,8 +2921,14 @@ parent
 (
 \mathit{Carol}
 )
-\}
- \subseteq c_
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
 {
 \Alice
 }
@@ -2305,12 +2936,18 @@ parent
 \mathit{
 identity
 }
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
  \in c_
 {
 \Bob
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -2328,8 +2965,7 @@ friend
 (
 \Bob
 )
-\}
- \subseteq c_
+ \in c_
 {
 \mathit{Carol}
 }
@@ -2455,7 +3091,6 @@ c_
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -2477,13 +3112,11 @@ friend
 (
 \Bob
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -2494,13 +3127,11 @@ friend
 (
 \Alice
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -2511,8 +3142,7 @@ parenting
 (
 \Alice
 )
-\}
- \subseteq c_
+ \in c_
 {
 \mathit{Carol}
 }
@@ -2619,7 +3249,6 @@ retired
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -2637,13 +3266,11 @@ parenting
 (
 \Bob
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -2665,8 +3292,7 @@ parent
 \mathit{
 child
 }
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -2787,7 +3413,6 @@ coparented
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -2812,13 +3437,11 @@ coparent
 (
 \Bob
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -2829,13 +3452,11 @@ coparent
 (
 \Alice
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
@@ -2861,8 +3482,7 @@ child
 \mathit{
 coparented
 }
-\}
- \subseteq c_
+ \in c_
 {
 \mathit{Carol}
 }

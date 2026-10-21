@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# The village figure of CSSN, Section 4.6, "Village Demonstration" (figures/cssn-village.png): one panel per agent, the narrative of the agent's screen in the run of play_village (programs/cssn/plays.glp).  The narrative is read off the screen the scripted person reports (person.glp): each request the person makes, did(R); each approval it gives, gave(K, yes); and, from each view the agent writes, view(S, K), what changed in the machine state S since the last view: a friend, a child or a parent gained or lost, an identity established, a group joined, left or closed, a member listed or no longer, and a message received, from a friend, received(x, p) (GSN:1), or in a group, received_in(x, a, n), delivered by its leader a (GSN:5).  Nothing is added that the screens do not show.
+# The village figure of CSSN, Section 4.6, "Village Demonstration" (figures/cssn-village.png): one panel per agent, the narrative of the agent's screen in the run of play_village (programs/cssn/plays.glp).  The narrative is read off the screen the scripted person reports (person.glp): each request the person makes, did(R); each approval it gives, gave(K, yes); and, from each view the agent writes, view(S, K), what changed in the machine state S since the last view: a person known (GKK:2 and GKK:3, knows(q), but where the same view adds them as a friend, an entering adding both), a friend, a child or a parent gained or lost, an identity established, a group joined, left or closed, a member listed or no longer, and a message received, from a friend, received(x, p) (GSN:1), or in a group, received_in(x, a, n), delivered by its leader a (GSN:5).  The requests and approvals of GKK's meet and introduce and of CSSN's child_meet and child_meet_2 (CSSN:2) are drawn as those of befriending are.  Nothing is added that the screens do not show.
 #
 #   python3 programs/cssn/figures/village.py <log> [<png>]
 #
@@ -160,6 +160,11 @@ def request(me, r):
         return "Entering %s as my child" % name(a[1])
     if f == "enter_2":
         return "Entering %s as our child, with %s" % (name(a[2]), name(a[1]))
+    if f == "meet":
+        return "Asking to meet %s" % name(a[1])
+    if f == "introduce":
+        # introduce(p, q, c): p introduces c to q (GKK:3)
+        return "Introducing %s to %s" % (name(a[2]), name(a[1]))
     if f == "befriend":
         return "Offering %s friendship" % name(a[1])
     if f == "message":
@@ -170,6 +175,12 @@ def request(me, r):
         return "Proposing that %s and %s befriend, with %s" % (name(a[0]), name(a[1]), name(a[3]))
     if f == "child_adult_befriend":
         return "Proposing that %s and %s befriend" % (name(a[0]), name(a[1]))
+    if f == "child_meet_2":
+        if a[2] == a[3]:
+            return "Proposing that %s and %s meet (siblings)" % (name(a[0]), name(a[1]))
+        return "Proposing that %s and %s meet, with %s" % (name(a[0]), name(a[1]), name(a[3]))
+    if f == "child_meet":
+        return "Proposing that %s and %s meet" % (name(a[0]), name(a[1]))
     if f == "create":
         return "Creating the group %s" % group(a[1])
     if f == "child_join_2":
@@ -207,6 +218,12 @@ def approval(me, k):
         if me == a[2][0]:
             return "Approving my entering, with %s and %s" % (name(a[0]), name(a[1]))
         return "Approving %s's entering, with %s" % (name(a[2]), name(a[0]))
+    if f == "meet":
+        return "Agreeing to meet %s" % name(a[0])
+    if f == "introduce":
+        return "Accepting %s's introduction of %s" % (name(a[0]), name(a[2]))
+    if f in ("child_meet", "child_meet_2"):
+        return "Approving %s–%s meeting" % (name(a[0]), name(a[1]))
     if f == "befriend":
         return "Accepting %s's friendship" % name(a[0])
     if f == "child_befriend":
@@ -248,9 +265,12 @@ def changes(me, old, new):
             lines.append(("result", "%s left %s" % (name(a[0]), group(a[1]))))
     if any(x[0] == "child" for x in removed) and not any(x[0] == "child" for x in new):
         lines.append(("result", "No parent on record: an adult"))
+    befriended = [repr(x[1][0]) for x in added if x[0] == "friend"]
     for x in added:
         f, a = x
-        if f == "identity":
+        if f == "knows" and repr(a[0]) not in befriended:
+            lines.append(("result", "Now knows %s" % name(a[0])))
+        elif f == "identity":
             lines.append(("result", "Identity established"))
         elif f == "friend":
             lines.append(("result", "Now friends with %s" % name(a[0])))
