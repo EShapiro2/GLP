@@ -11,8 +11,8 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// ANNOUNCE and Liveness; §4.2, Address-change recovery): ANNOUNCE on every
 /// live session on the heartbeat; a session silent for two intervals torn
 /// down; the heartbeat sweep re-initiating connections to known peers at
-/// their recorded addresses; and a verified ANNOUNCE for a key from a new
-/// address resetting the session the peer no longer holds.
+/// their recorded addresses; and a new handshake for a key, from a new
+/// address, replacing the session the peer no longer holds.
 ///
 /// An address change is simulated on the loopback by stopping the moving
 /// layer and starting it again, which binds a new port and loses its

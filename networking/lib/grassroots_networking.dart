@@ -3,7 +3,9 @@
 /// One overlay over three underlays: the PAN over BLE (dual-role), the LAN
 /// discovered by DNS-SD, and the WAN over UDP through rendezvous servers.
 /// It handles:
-/// - Noise XX sessions between Ed25519 keys, and attestation, on every underlay
+/// - Noise sessions between Ed25519 keys, IK where the initiator expects the
+///   responder's key and XX for a first contact under Open trust, and
+///   attestation, on every underlay
 /// - Packet fragmentation and reassembly
 /// - Local queueing of our own outbound messages for offline peers
 /// 

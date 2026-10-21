@@ -108,8 +108,8 @@ void main() {
     expect(serviceConnected, contains(_hex(pusher.identity.publicKey)));
     expect(service.isPeerReachable(pusher.identity.publicKey), isTrue);
 
-    // Stranger: same sequence, unregistered key — the service drops its
-    // ANNOUNCE and refuses its handshake; no session, no delivery.
+    // Stranger: same sequence, unregistered key — the service answers no
+    // IK first message from it (GNA §2.6); no session, no delivery.
     var strangerLinked = false;
     stranger.onPeerConnected = (_, __, ___) => strangerLinked = true;
     stranger.wan.putPeerAddress(service.identity.publicKey, address);

@@ -10,17 +10,18 @@ import 'package:test/test.dart';
 
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
-/// Handshake glare against the headless acceptor, per the paper's Wire
-/// mechanics note (Implementation Notes): the strict IP dial sequence has
-/// the dialer ANNOUNCE and wait, but the phone coordinator's send path may
-/// also initiate Noise from the dialer side opportunistically; the session
-/// manager's deterministic glare rule (smaller key keeps the initiator
-/// role) resolves the crossed handshakes, so the on-wire outcome conforms.
+/// Handshake glare against the headless layer (GNA §4.1: "When both
+/// endpoints might initiate---mutual LAN discovery, simultaneous
+/// reconnection---the deterministic initiator is the endpoint with the
+/// lexicographically smaller public key"). Every WAN connection runs Noise
+/// IK, each end expecting the other's key (GNA §2.6), so two ends that dial
+/// each other at once send crossing first messages; the session manager keeps
+/// the smaller key's handshake and the larger answers it.
 ///
-/// This test drives a phone-style dialer — connect, ANNOUNCE, and
-/// immediately initiate — against [HeadlessGrassrootsNetwork], in both key
-/// orderings (dialer smaller / larger than the acceptor). Each run must
-/// converge: session established, payload delivered, ACK returned.
+/// A dialer built from the core internals and the headless layer each start
+/// IK toward the other, the dialer holding its first message back until the
+/// layer's arrives, so that the two cross; in both key orderings. Each run
+/// must converge: session established, payload delivered, ACK returned.
 ///
 /// Needs a native libsodium (`brew install libsodium` / `apt-get install
 /// libsodium23`, or LIBSODIUM_PATH) — the suite self-skips when absent.
@@ -61,13 +62,12 @@ void main() {
       rendezvousServers: const [],
       sodium: sodium!,
     );
-    final dialer = _PhoneStyleDialer(dialerId, sodium!);
+    final dialer = _CrossingDialer(dialerId, sodium!);
     addTearDown(() async {
       await dialer.dispose();
       await acceptor.dispose();
     });
 
-    acceptor.putKnownPeer(dialerId.publicKey);
     final delivered = <String>[];
     acceptor.onMessageReceived = (sender, payload, messageId, underlay) {
       expect(_hex(sender), _hex(dialerId.publicKey));
@@ -76,16 +76,21 @@ void main() {
 
     expect(await acceptor.start(), isTrue);
     await dialer.start();
+    acceptor.putKnownPeer(dialerId.publicKey);
+    acceptor.wan.putPeerAddress(dialerId.publicKey, dialer.address);
 
-    // Phone-coordinator behavior: ANNOUNCE and immediately initiate Noise —
-    // crossing with the acceptor-initiated handshake of the dial sequence.
-    final established = await dialer.dialAnnounceAndInitiate(
+    // The dialer's first message waits for the layer's, and the layer
+    // initiates by sending.
+    final established = dialer.dialHoldingFirstMessage(
       acceptorId.publicKey,
       '127.0.0.1',
       acceptor.boundPort!,
     );
-    expect(established, isTrue,
+    await acceptor.send(
+        dialerId.publicKey, Uint8List.fromList(utf8.encode('to the dialer')));
+    expect(await established, isTrue,
         reason: 'glare must converge to an established session');
+    expect(dialer.crossed, isTrue, reason: 'the first messages crossed');
 
     const messageId = '00000000-0000-4000-8000-000000000042';
     expect(
@@ -112,8 +117,8 @@ void main() {
       markTestSkipped(sodiumUnavailable!);
       return;
     }
-    // 0x11 → d04a…, 0x22 → a09a…: dialer larger — the dialer yields its
-    // initiator role on the acceptor's crossed message 1.
+    // 0x11 → d04a…, 0x22 → a09a…: dialer larger — the dialer answers the
+    // layer's first message.
     await runGlareCase(
         dialerSeed: 0x11, acceptorSeed: 0x22, dialerKeySmaller: false);
   }, timeout: const Timeout(Duration(minutes: 2)));
@@ -123,17 +128,19 @@ void main() {
       markTestSkipped(sodiumUnavailable!);
       return;
     }
-    // 0x33 → 17cb…, 0x44 → d759…: dialer smaller — the acceptor yields.
+    // 0x33 → 17cb…, 0x44 → d759…: dialer smaller — the layer answers the
+    // dialer's.
     await runGlareCase(
         dialerSeed: 0x33, acceptorSeed: 0x44, dialerKeySmaller: true);
   }, timeout: const Timeout(Duration(minutes: 2)));
 }
 
-/// The phone coordinator's UDP wiring reduced to its dial path, built from
-/// the same core internals (store, router, session manager, UDP transport):
-/// dials, ANNOUNCEs, and immediately initiates the Noise handshake.
-class _PhoneStyleDialer {
-  _PhoneStyleDialer(this.identity, this.sodium) {
+/// A WAN agent's UDP wiring reduced to its dial path, built from the same
+/// core internals (store, router, session manager, UDP transport): it
+/// initiates IK toward the layer, holding its first message back until the
+/// layer's arrives, so that the two cross.
+class _CrossingDialer {
+  _CrossingDialer(this.identity, this.sodium) {
     store = Store<AppState>(
       appReducer,
       initialState: const AppState(),
@@ -149,20 +156,27 @@ class _PhoneStyleDialer {
         udp?.mapIncomingConnectionToPubkey(udpPeerId, _hex(senderPubkey));
     router.onNoiseHandshakeReceived =
         (packet, transport, {String? peerId}) async {
-      await sessions.handleHandshakePacket(
-        packet,
-        transport: transport,
-        peerId: peerId,
-        sendResponse: (payload, remotePubkey) async {
-          await udp!.sendToPeer(
-            peerId ?? _hex(remotePubkey),
-            GrassrootsPacket(
-              type: PacketType.noiseHandshake,
-              payload: payload,
-            ).serialize(),
-          );
-        },
-      );
+      // The layer's message 1 has arrived: send ours across it first.
+      final held = _heldFirstMessage;
+      if (held != null) {
+        _heldFirstMessage = null;
+        crossed = true;
+        await udp!.sendToPeer(_peerHex!, _framed(held));
+      }
+      try {
+        final result = await sessions.handleHandshakePacket(
+          packet,
+          transport: transport,
+          peerId: peerId,
+          acceptFirstMessage: (pattern, _) => pattern == NoisePattern.ik,
+          sendResponse: (payload, remotePubkey) async {
+            await udp!.sendToPeer(peerId ?? _hex(remotePubkey), _framed(payload));
+          },
+        );
+        if (result.sessionEstablished && peerId != null) {
+          udp?.mapIncomingConnectionToPubkey(peerId, _hex(result.remotePubkey));
+        }
+      } catch (_) {}
     };
     router.decryptSessionPacket =
         (packet, transport, {String? peerId}) async {
@@ -193,6 +207,18 @@ class _PhoneStyleDialer {
   UdpTransportService? udp;
   final Set<String> ackedMessageIds = {};
   final Map<String, Future<void>> _rxChains = {};
+  Uint8List? _heldFirstMessage;
+  String? _peerHex;
+
+  /// Whether our first message went out across the layer's.
+  bool crossed = false;
+
+  String get address =>
+      '127.0.0.1:${udp!.localPortForAddressType(InternetAddressType.IPv4)}';
+
+  static Uint8List _framed(Uint8List payload) =>
+      GrassrootsPacket(type: PacketType.noiseHandshake, payload: payload)
+          .serialize();
 
   Future<void> start() async {
     final service = UdpTransportService(
@@ -220,45 +246,25 @@ class _PhoneStyleDialer {
     udp = service;
   }
 
-  /// Connect, ANNOUNCE, and immediately initiate Noise (the glare trigger).
-  /// On glare the larger-key dialer's first wait fails when it yields the
-  /// initiator role; the responder handshake then completes — wait again,
-  /// as the phone coordinator's queue-drain path effectively does.
-  Future<bool> dialAnnounceAndInitiate(
+  /// Open the path and start IK, holding message 1 back until the layer's
+  /// message 1 arrives. Whichever side keeps its handshake, a waiter on the
+  /// session is released when the session is made.
+  Future<bool> dialHoldingFirstMessage(
     Uint8List peerPubkey,
     String host,
     int port,
   ) async {
     final hex = _hex(peerPubkey);
+    _peerHex = hex;
     if (!await udp!.connectToPeer(hex, InternetAddress(host), port)) {
       return false;
     }
-    await udp!.sendToPeer(
-      hex,
-      GrassrootsPacket(
-        type: PacketType.announce,
-        payload: protocol.createAnnouncePayload(),
-      ).serialize(),
+    _heldFirstMessage = await sessions.startHandshake(
+      PeerTransport.udp,
+      peerPubkey,
+      pattern: NoisePattern.ik,
+      peerId: hex,
     );
-    final message1 =
-        await sessions.startHandshake(PeerTransport.udp, peerPubkey);
-    if (message1 != null) {
-      await udp!.sendToPeer(
-        hex,
-        GrassrootsPacket(
-          type: PacketType.noiseHandshake,
-          payload: message1,
-        ).serialize(),
-      );
-    }
-    if (await sessions.waitForSession(PeerTransport.udp, peerPubkey)) {
-      await sendAttestation(peerPubkey);
-      return true;
-    }
-    if (sessions.hasSession(PeerTransport.udp, peerPubkey)) {
-      await sendAttestation(peerPubkey);
-      return true;
-    }
     final established =
         await sessions.waitForSession(PeerTransport.udp, peerPubkey);
     if (established) await sendAttestation(peerPubkey);

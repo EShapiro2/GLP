@@ -200,11 +200,11 @@ class PeerState {
   /// any prior observation was for a different network path.
   final DateTime? lastDirectReachAt;
 
-  /// Whether there is an authenticated UDP path to this peer — a UDP path whose Noise XX session has completed. Set true when the Noise handshake authenticates, false when the session is torn down. Unlike [udpAddress] (preserved for reconnection), this reflects the actual authenticated-connection state right now.
+  /// Whether there is an authenticated UDP path to this peer — a UDP path whose Noise session has completed. Set true when the Noise handshake authenticates, false when the session is torn down. Unlike [udpAddress] (preserved for reconnection), this reflects the actual authenticated-connection state right now.
   final bool hasLiveUdpConnection;
 
   /// Whether there is an authenticated BLE path to this peer — a live BLE link
-  /// whose Noise XX session has completed. Set true when the BLE Noise
+  /// whose Noise session has completed. Set true when the BLE Noise
   /// handshake authenticates, cleared when the last BLE path drops. Distinct
   /// from [hasBleConnection] (the raw link, set on ANNOUNCE so we can route the
   /// handshake itself): a peer is only [isReachable] once authenticated.

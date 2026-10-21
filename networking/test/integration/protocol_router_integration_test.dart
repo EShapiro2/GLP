@@ -117,7 +117,7 @@ void main() {
       AnnounceData? receivedAnnounce;
       PeerTransport? receivedTransport;
       bobRouter.onPeerAnnounced =
-          (data, transport, {bool isNew = false, String? udpPeerId}) {
+          (data, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
         receivedAnnounce = data;
         receivedTransport = transport;
       };
@@ -159,7 +159,7 @@ void main() {
 
       bool announced = false;
       bobRouter.onPeerAnnounced =
-          (_, __, {bool isNew = false, String? udpPeerId}) {
+          (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
         announced = true;
       };
 
@@ -268,7 +268,7 @@ void main() {
       AnnounceData? receivedAnnounce;
       PeerTransport? receivedTransport;
       bobRouter.onPeerAnnounced =
-          (data, transport, {bool isNew = false, String? udpPeerId}) {
+          (data, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
         receivedAnnounce = data;
         receivedTransport = transport;
       };
@@ -402,7 +402,7 @@ void main() {
 
       int announceCount = 0;
       bobRouter.onPeerAnnounced =
-          (_, __, {bool isNew = false, String? udpPeerId}) {
+          (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
         announceCount++;
       };
 

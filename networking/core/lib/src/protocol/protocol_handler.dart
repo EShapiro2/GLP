@@ -15,7 +15,8 @@ const int announcePayloadLength = 98;
 class ProtocolHandler {
   final GrassrootsIdentity identity;
   final Sodium _sodium;
-  /// The protocol version carried in ANNOUNCE; a mismatch is refused there.
+  /// The protocol version, carried in ANNOUNCE and opening every Noise
+  /// handshake envelope; a mismatch is refused at either.
   ///
   /// 3 since 2026-07-12, for the Message Protocol (spec §Message Protocol): self-contained, session-encrypted fragments over UDP datagrams and GATT writes, acknowledged per fragment, and the self-ordering handshake.
   ///
@@ -45,7 +46,17 @@ class ProtocolHandler {
   /// a version-5 peer's single attestation packet is not a fragment, and this
   /// layer's fragment decoder does not tolerate it — so a mixed pair would
   /// wait on an exchange neither side can read. Refused here instead.
-  static const int protocolVersion = 6;
+  ///
+  /// 7 since 2026-10-21, for Noise IK whenever the initiator expects the
+  /// responder's key, ANNOUNCE inside the session, and the final handshake
+  /// message retransmitted until the attestation arrives (GNA §2.5, §2.6,
+  /// "Protocol version 7, version 6 refused at the handshake"). The SHAPE
+  /// changes: a version-6 peer opens contact with a clear ANNOUNCE and an XX
+  /// handshake whose envelope this version does not read, and reads none of
+  /// this version's IK. Since a version-7 handshake is not preceded by
+  /// ANNOUNCE, the refusal is at the handshake, whose envelope opens with the
+  /// version; ANNOUNCE refuses another version too.
+  static const int protocolVersion = 7;
 
   /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
   static const int announceSignatureLength = 64;

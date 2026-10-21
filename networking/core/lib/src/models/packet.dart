@@ -2,7 +2,10 @@ import 'dart:typed_data';
 
 /// Packet types matching Grassroots protocol
 enum PacketType {
-  /// Peer identity announcement (sent periodically)
+  /// Peer identity announcement: the signed record of GNA §2.5. On the wire
+  /// in clear only as the identity bootstrap of a first contact under Open
+  /// trust, before the XX handshake; inside a session it travels as
+  /// [secureAnnounce], the heartbeat.
   announce(0x01),
 
   /// Message fragment. Every fragment is self-contained: it carries the
@@ -24,7 +27,7 @@ enum PacketType {
   /// address)
   signaling(0x09),
 
-  /// Noise XX handshake message.
+  /// Noise handshake message, IK or XX (GNA §2.6).
   noiseHandshake(0x0A),
 
   /// Session-encrypted message fragment.
@@ -53,7 +56,12 @@ enum PacketType {
   attestationFragment(0x13),
 
   /// Session-encrypted attestation fragment.
-  secureAttestationFragment(0x14);
+  secureAttestationFragment(0x14),
+
+  /// Session-encrypted ANNOUNCE: "Once the session is established, ANNOUNCE
+  /// is sent inside it, and repeats periodically ... on every live
+  /// connection of every underlay" (GNA §2.5, Heartbeat).
+  secureAnnounce(0x15);
 
   final int value;
   const PacketType(this.value);
@@ -68,8 +76,10 @@ enum PacketType {
 
 extension PacketTypeSessionSecurity on PacketType {
   /// Whether this packet type should be payload-encrypted once a Noise session
-  /// exists. ANNOUNCE and Noise handshake packets intentionally stay clear so
-  /// peers can identify each other and bootstrap the session.
+  /// exists. ANNOUNCE and Noise handshake packets stay clear here: a handshake
+  /// is what makes the session, and the ANNOUNCE of a first contact under
+  /// Open trust precedes it; the ANNOUNCE a session carries is encrypted
+  /// explicitly, as [secureAnnounce] ([hasSecureVariant]).
   bool get usesSessionSecurity {
     switch (this) {
       case PacketType.fragment:
@@ -87,9 +97,16 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
+      case PacketType.secureAnnounce:
         return false;
     }
   }
+
+  /// Whether a session can carry this packet type encrypted: every type
+  /// [usesSessionSecurity] names, and ANNOUNCE, which a session carries as
+  /// its heartbeat (GNA §2.5).
+  bool get hasSecureVariant =>
+      usesSessionSecurity || this == PacketType.announce;
 
   bool get isSessionEncrypted {
     switch (this) {
@@ -99,6 +116,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
+      case PacketType.secureAnnounce:
         return true;
       case PacketType.announce:
       case PacketType.fragment:
@@ -127,6 +145,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.attestationFragment:
         return PacketType.secureAttestationFragment;
       case PacketType.announce:
+        return PacketType.secureAnnounce;
       case PacketType.noiseHandshake:
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
@@ -134,6 +153,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
+      case PacketType.secureAnnounce:
         throw StateError('Packet type $this has no secure variant');
     }
   }
@@ -152,6 +172,8 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.signaling;
       case PacketType.secureAttestationFragment:
         return PacketType.attestationFragment;
+      case PacketType.secureAnnounce:
+        return PacketType.announce;
       case PacketType.announce:
       case PacketType.fragment:
       case PacketType.fragmentAck:
@@ -181,8 +203,10 @@ extension PacketTypeSessionSecurity on PacketType {
 /// The frame carries no identity, authentication, or identifiers of its
 /// own. Sender identity and integrity come from the layer the payload rides
 /// in: session-encrypted types are authenticated by the Noise session's
-/// AEAD, ANNOUNCE payloads are self-signed identity records, and Noise
-/// handshake payloads carry (and authenticate) the peer's identity claim.
+/// AEAD, ANNOUNCE payloads are self-signed identity records, and a Noise
+/// handshake authenticates the peer it runs with: an XX envelope carries its
+/// identity claim, an IK first message the initiator's key encrypted to the
+/// responder's.
 /// Message identity (delivery dedup, ACK correlation) is payload content:
 /// MESSAGE payloads open with their messageId, as fragment payloads
 /// always have.

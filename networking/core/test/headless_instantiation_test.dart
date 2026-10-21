@@ -120,8 +120,8 @@ void main() {
     }
 
     test(
-        'marked, the layer completes ANNOUNCE and the handshake with an '
-        'unknown key over the WAN, and the session carries a message',
+        'marked, the layer answers an unknown key\'s IK handshake over the '
+        'WAN, and the session carries a message',
         () async {
       if (sodiumUnavailable != null) {
         markTestSkipped(sodiumUnavailable!);
