@@ -1,0 +1,13 @@
+%% plays.glp --- the GC mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for two executions, with the two ends of one root channel handed to them as their conversation, the play standing in for the social graph, as ../gsg/plays.glp does.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.  The super-app hosting the mini-app on two smartphones is ../gc_boot.glp.
+
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+
+%% play_coins(A, B): alice and bob, one conversation between their two executions.  Each establishes their identity (GKK:1, Identity), and bob mints a Bob-coin (GC:1, Minting); each asks to know the other; alice asks to meet bob in person, he answers yes, and each then knows the other (GKK:2, Meeting, an act of both); alice mints an Alice-coin (GC:1) and asks bob to swap it for his Bob-coin, swap(alice, bob, alice, bob), and he answers yes (GC:2, Swap, an act of both); and alice pays the Bob-coin to bob, pay(alice, bob), which asks nobody (GC:3, Payment, an act of alice).  These are the acts of the screens of GC's app (screens/), bob minting before the meeting (person.glp).
+exported procedure play_coins(Stream(Seen), Stream(Seen)).
+play_coins(A?, B?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, DA), ch([conversation(bob, ch(BA?, AB))], _), []), T?, M?),
+    person # miniapp_person(alice, alice, ch(DA?, GA), A),
+    run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA))], _), []), T?, M?),
+    person # miniapp_person(bob, bob, ch(DB?, GB), B).

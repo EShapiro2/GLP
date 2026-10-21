@@ -1,8 +1,8 @@
 /// The screen of tabs of the grassroots app's construct family: the layout of the constructs of the apps of GSC's contracts, "one screen with tabs, Friends and, in GSN, Groups too, drawn from the person's state; the questions are drawn inside the tab they concern" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC).  "A question's type fixes a construct's semantic content --- what it shows, what it takes, and the answer each submission forms --- and nothing of its layout" (vGLP, Remark "Construct Families"), so the tabs are the family's layout, and no construct's content changes with them.
 ///
-/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  The tabs are Friends; where the request type offers `create(Me, N)`, the person is in a group, or a notice of a class of a group is written, Groups; and, in GAI's app, where the request type offers `enter(Me, R, X)` or the person is the principal of an AI agent, AI agents (GAI's paper, Figure "The GAI app": "her AI agents tab", Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (a)); once drawn, Groups and AI agents stay.  Each tab holds, in order:
+/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  The tabs are Friends; where the request type offers `create(Me, N)`, the person is in a group, or a notice of a class of a group is written, Groups; in GAI's app, where the request type offers `enter(Me, R, X)` or the person is the principal of an AI agent, AI agents (GAI's paper, Figure "The GAI app": "her AI agents tab", Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (a)); and, in GC's app, where the request type offers `mint(Me)` (GC:1; `mint(p?)`, programs/currencies/coins/GC.glp), the person holds a coin, or an approval question or a notice of a class of the coins is drawn, Coins (Currencies #11 Cowork, Code_inbox.md, 2026-10-20 18:10 UTC, task 2); once drawn, Groups, AI agents and Coins stay.  Each tab holds, in order:
 ///
-///   1. the approval questions it concerns, at its top, each drawn by its widget: an approval of a class of a group ([groupClasses]) in Groups, and every other in Friends;
+///   1. the approval questions it concerns, at its top, each drawn by its widget: an approval of a class of a group ([groupClasses]) in Groups, of a class of the coins ([coinClasses]) in Coins, and every other in Friends;
 ///   2. in Friends, every other question that is neither an approval question nor the request question, by its widget;
 ///   3. the request question, drawn by `social_menu` in the tab, where it is open; and otherwise construct 0, drawn by `last_state` in the tab.
 ///
@@ -20,7 +20,7 @@ import 'named_widgets.dart';
 import 'term.dart';
 
 /// A tab of the screen.
-enum ScreenTab { friends, groups, agents }
+enum ScreenTab { friends, groups, agents, coins }
 
 /// A message held for a later request question: the item the person signed, the friend it is for, the request question that took the sign, [askedOn], and the count of notices written when it was held, [notices], those before the last view among them ([SocialState.written]).
 class HeldMessage {
@@ -139,11 +139,17 @@ bool _isApproval(OpenConstruct c) {
 }
 
 /// Whether the approval question [c] concerns a group: the class of its attempt, `approval(attempt(I, N, K, C, R), Q)`, is one of [groupClasses].
-bool _concernsGroup(OpenConstruct c) {
+bool _concernsGroup(OpenConstruct c) => groupClasses.contains(_classOf(c));
+
+/// Whether the approval question [c] concerns the coins: the class of its attempt is one of [coinClasses].
+bool _concernsCoin(OpenConstruct c) => coinClasses.contains(_classOf(c));
+
+/// The schema of the class of the attempt of the approval question [c], `approval(attempt(I, N, K, C, R), Q)`; empty where its view is not one.
+String _classOf(OpenConstruct c) {
   final (_, args) = ctorArgs(c.view);
   final (af, xs) = ctorArgs(args[0]);
-  if (af != 'attempt' || xs.length != 5) return false;
-  return groupClasses.contains(ctorArgs(xs[3]).$1);
+  if (af != 'attempt' || xs.length != 5) return '';
+  return ctorArgs(xs[3]).$1;
 }
 
 /// The AI agents the approval question [c] names as AI agents: `R` of `agent_meet(R, Q, P, Y)` and of `agent_befriend(R, Q, P)`, and `R` and `S` of `agents_meet(R, S, P, Q, Y, Z)` and of `agents_befriend(R, S, P, Q)`, each by its term as written.
@@ -203,6 +209,9 @@ class _TabScreenState extends State<TabScreen> {
 
   /// Whether AI agents has been drawn: once drawn, it stays.
   bool _agents = false;
+
+  /// Whether Coins has been drawn: once drawn, it stays.
+  bool _coins = false;
 
   /// Whether the first tab is Contacts, the request type last drawn offering meeting and no friendship (GKK's app); Friends otherwise.
   bool _contacts = false;
@@ -327,6 +336,11 @@ class _TabScreenState extends State<TabScreen> {
     _agents = _agents ||
         (offers?.has('enter', 3) ?? false) ||
         (state?.aiAgents.isNotEmpty ?? false);
+    _coins = _coins ||
+        (offers?.has('mint', 1) ?? false) ||
+        (state?.coins.isNotEmpty ?? false) ||
+        (state?.notices.any((n) => n.concernsCoin) ?? false) ||
+        approvals.any(_concernsCoin);
     // GKK's app: the request type offers meeting and no friendship, so its
     // first tab lists the person's contacts (programs/gsc/GKK.glp; GSC #5
     // Cowork, Code_inbox.md, 2026-10-20 17:53 UTC: "his contacts then showing
@@ -351,9 +365,13 @@ class _TabScreenState extends State<TabScreen> {
       ScreenTab.friends,
       if (_groups) ScreenTab.groups,
       if (_agents) ScreenTab.agents,
+      if (_coins) ScreenTab.coins,
     ];
-    ScreenTab tabOf(OpenConstruct a) =>
-        _groups && _concernsGroup(a) ? ScreenTab.groups : ScreenTab.friends;
+    ScreenTab tabOf(OpenConstruct a) => _groups && _concernsGroup(a)
+        ? ScreenTab.groups
+        : _coins && _concernsCoin(a)
+            ? ScreenTab.coins
+            : ScreenTab.friends;
     final byState = c0 != null && _declared(c0) == lastStateName;
 
     Widget view(OpenConstruct c, {bool card = true}) => ConstructView(
@@ -426,6 +444,7 @@ class _TabScreenState extends State<TabScreen> {
             ScreenTab.friends => _contacts ? 'Contacts' : 'Friends',
             ScreenTab.groups => 'Groups',
             ScreenTab.agents => 'AI agents',
+            ScreenTab.coins => 'Coins',
           }),
         ),
       );
