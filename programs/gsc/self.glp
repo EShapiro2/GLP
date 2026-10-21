@@ -53,10 +53,14 @@ Atoms ::= [] ; [Atom | Atoms].
 % over numeric arguments, the term form of Currencies' GB.glp (b9369200).  A
 % schema with a constraint is nschema(Name, Vars, Constraint, Roles), its
 % numeric variables listed in Vars with its other variables, in the order of
-% its head.  The contract as written is of the types N...; the conditions are
-% decided on its plain form, plain_decl below, the multiplicities and the
-% constraint dropped and the numeric arguments kept, since "a number names no
-% agent, so the conditions below do not concern them" (GSC, ibid.).
+% its head.  The contract as written is of the types N...; traceable
+% provenance and volition are decided on its plain form, plain_decl below,
+% the multiplicities and the constraint dropped and the numeric arguments
+% kept, since "a number names no agent, so the conditions below do not
+% concern them" (GSC, ibid.).  def:unobstructed is decided on the contract as
+% written (unobstructed.glp): its clauses ask that an atom be added at a
+% binding, which satisfies its schema's constraint, so a number is matched by
+% equality under that binding.
 Mult       ::= Atom ; times(Arg, Atom).
 Mults      ::= [] ; [Mult | Mults].
 Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
@@ -116,11 +120,14 @@ NDeclared  ::= NContract ; reflexive(Preds, NContract).
 % the conditions quantify over.  signed(S, P) is the image of a signed term,
 % the pair of the speech act S and the person P in its role
 % (def:binding).  undef marks a variable that a partial substitution leaves
-% unbound and occurs in no completed one.  anynum is the image of a numeric
-% argument: a number names no agent, so the conditions do not concern numbers
-% (GSC, Section 3.2), and to them every number is the one value anynum, which
-% names no one and which every numeric argument matches.
-Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef ; anynum.
+% unbound and occurs in no completed one.  nval(N) is the image of a numeric
+% argument that is the number N, or a numeric variable a binding sends to N;
+% nfree(X) is the image of the numeric variable X of the introductory act,
+% whose introduction (def:introduction) chooses the number: the checker
+% leaves it unchosen, and a match that rests on its value is maybe(S), below.
+% A number names no agent (GSC, Section 3.2), so neither names anyone.
+Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef
+        ; nval(Constant) ; nfree(Constant).
 Vals  ::= [] ; [Val | Vals].
 GAtom ::= gatom(Constant, Vals).
 
@@ -128,7 +135,9 @@ Bind     ::= bind(Arg, Val).
 Subst    ::= [] ; [Bind | Subst].
 Substs   ::= [] ; [Subst | Substs].
 Found    ::= bound(Val) ; free.
-MatchRes ::= match(Subst) ; nomatch.
+% maybe(S): the atoms match under S if the introduction's numbers are chosen
+% so, which the checker does not choose (nfree above).
+MatchRes ::= match(Subst) ; nomatch ; maybe(Subst).
 
 % --- What clause 2 of def:unobstructed is decided against ------------------
 % The other party of the introduction, and the first unused name index.
@@ -143,6 +152,18 @@ Preds ::= [] ; [Constant | Preds].
 % the introductory act forbids at a role.
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
         ; listed_role(Constant, Integer, Atom).
+% What def:unobstructed asks and the paper does not settle, a number being
+% at stake (GSC, Section 3.2, which does not say which numbers there are or
+% whether a multiplicity must be positive): whether the schema of arity one
+% Schema adds an atom Psi equal to the atom required at some binding
+% satisfying its constraint (supplied_by(Schema, Psi)); whether the schema
+% Schema adds at its role Role an atom Psi equal to the atom forbidden at
+% some binding satisfying its constraint that clause 2 does not excuse
+% (added_by(Schema, Role, Psi)); and whether the atom is required at all,
+% its multiplicity a numeric variable of the introductory act and no schema
+% of arity one supplying it (multiplicity).
+Unsettled ::= supplied_by(Constant, Atom) ; added_by(Constant, Integer, Atom)
+            ; multiplicity.
 % What def:schema, and Appendix D's Definition Act schema, require of a
 % signed term, and the atom carrying one violates: it occurs in an atom not
 % marked + (not_added), its speech-act variable occurs in no atom its role
@@ -192,7 +213,9 @@ Fault ::= no_introductory_act
         ; listed_guarded(Constant, Integer)
         ; multiplicity_not_added(Constant, Integer, Atom)
         ; multiplicity_not_numeric(Constant, Integer, Atom)
-        ; constraint_not_numeric(Constant, Arg).
+        ; constraint_not_numeric(Constant, Arg)
+        ; unsettled(Constant, Integer, Atom, Unsettled)
+        ; unsettled_introduction(Constant).
 Faults  ::= [] ; [Fault | Faults].
 
 % --- What an introduction with wards is made of (GAI, "Contracts with Wards")
@@ -247,18 +270,28 @@ Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
           ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
           ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
           ; conditions_met ; conditions_failed(Faults)
-          ; malformed(Faults).
+          ; malformed(Faults)
+          ; unsettled(Faults).
 
 % The introductory acts of a contract, for inspection (def:introduction,
 % def:unobstructed): intro_act(Schema, Status), each schema that is an
 % introductory act, Status unobstructed where some introduction of it meets
-% def:unobstructed, and obstructed(Faults) otherwise, the faults of its first
-% introduction.
-IntroStatus ::= unobstructed ; obstructed(Faults).
+% def:unobstructed, unsettled(Faults) where none does and every fault of one
+% rests on numbers the paper does not settle, the faults of the first such,
+% and obstructed(Faults) otherwise, the faults of its first introduction.
+IntroStatus ::= unobstructed ; obstructed(Faults) ; unsettled(Faults).
 IntroAct    ::= intro_act(Constant, IntroStatus).
 IntroActs   ::= [] ; [IntroAct | IntroActs].
 
-Block   ::= blocked(Constant, Integer, Atom) ; clear.
+% The answer to a question on numbers: yes, no, or unsettled where it rests on
+% a number the paper does not settle (Unsettled above).  The value of a
+% numeric argument under a binding: the number, a variable it leaves free, or
+% the unchosen number of the introductory act (nfree).
+Tri     ::= yes ; no ; unsettled.
+NumV    ::= known(Constant) ; free ; sym.
+Supply  ::= supplied ; unsupplied ; supply_unsettled(Constant, Atom).
+Block   ::= blocked(Constant, Integer, Atom) ; clear
+          ; block_unsettled(Constant, Integer, Atom).
 Cand    ::= none ; some(Faults).
 Missing ::= missing(Integer) ; all_reached.
 
@@ -426,10 +459,24 @@ procedure apply_arg(Subst?, Arg?, Val).
 apply_arg(S, sgn(Y, J), signed(SV?, PV?)) :- ground(S?), ground(Y?), integer(J?) |
     apply_arg(S?, svar(Y?), SV),
     apply_arg(S?, role(J?), PV).
-apply_arg(_, num(_), anynum).
+apply_arg(S, num(X), V?) :- ground(S?), ground(X?) | apply_num(S?, X?, V).
 apply_arg(S, A, V?) :- otherwise, ground(S?), ground(A?) |
     subst_lookup(S?, A?, F),
     unwrap_val(F?, V).
+
+% The image of a numeric argument (GSC, Section 3.2): the number itself, or
+% what the binding sends the numeric variable to; a numeric variable the
+% binding leaves free is the introductory act's, whose number its
+% introduction chooses (nfree).
+procedure apply_num(Subst?, Constant?, Val).
+apply_num(_, X, nval(X?)) :- number(X?) | true.
+apply_num(S, X, V?) :- otherwise, ground(S?), ground(X?) |
+    subst_lookup(S?, num(X?), F),
+    unwrap_num(F?, X?, V).
+
+procedure unwrap_num(Found?, Constant?, Val).
+unwrap_num(bound(V), _, V?).
+unwrap_num(free, X, nfree(X?)).
 
 procedure apply_args(Subst?, Args?, Vals).
 apply_args(_, [], []).
@@ -456,31 +503,36 @@ kind_ok(role(_), person(_), yes).
 kind_ok(role(_), speech(_), no).
 kind_ok(role(_), signed(_, _), no).
 kind_ok(role(_), undef, no).
-kind_ok(role(_), anynum, no).
+kind_ok(role(_), nval(_), no).
+kind_ok(role(_), nfree(_), no).
 kind_ok(pvar(_), person(_), yes).
 kind_ok(pvar(_), speech(_), no).
 kind_ok(pvar(_), signed(_, _), no).
 kind_ok(pvar(_), undef, no).
-kind_ok(pvar(_), anynum, no).
+kind_ok(pvar(_), nval(_), no).
+kind_ok(pvar(_), nfree(_), no).
 kind_ok(svar(_), person(_), no).
 kind_ok(svar(_), speech(_), yes).
 kind_ok(svar(_), signed(_, _), yes).
 kind_ok(svar(_), undef, no).
-kind_ok(svar(_), anynum, no).
+kind_ok(svar(_), nval(_), no).
+kind_ok(svar(_), nfree(_), no).
 kind_ok(nterm(_), person(_), no).
 kind_ok(nterm(_), speech(_), no).
 kind_ok(nterm(_), signed(_, _), no).
 kind_ok(nterm(_), undef, no).
-kind_ok(nterm(_), anynum, no).
+kind_ok(nterm(_), nval(_), no).
+kind_ok(nterm(_), nfree(_), no).
 % A signed term is matched by its two parts (match_sgn below), never here.
 kind_ok(sgn(_, _), person(_), no).
 kind_ok(sgn(_, _), speech(_), no).
 kind_ok(sgn(_, _), signed(_, _), yes).
 kind_ok(sgn(_, _), undef, no).
-kind_ok(sgn(_, _), anynum, no).
-% A numeric argument matches every number and nothing else (match_num below),
-% the conditions not concerning numbers.
-kind_ok(num(_), anynum, yes).
+kind_ok(sgn(_, _), nval(_), no).
+kind_ok(sgn(_, _), nfree(_), no).
+% A numeric argument matches a number and nothing else (match_num below).
+kind_ok(num(_), nval(_), yes).
+kind_ok(num(_), nfree(_), yes).
 kind_ok(num(_), person(_), no).
 kind_ok(num(_), speech(_), no).
 kind_ok(num(_), signed(_, _), no).
@@ -576,7 +628,7 @@ binding_ok(svar(_), _, _, _, yes).
 binding_ok(nterm(_), _, _, _, yes).
 % A signed term is no variable and is matched by its parts (match_sgn).
 binding_ok(sgn(_, _), _, _, _, no).
-% A numeric argument binds nothing and is matched by match_num.
+% A numeric argument is matched by match_num, never here.
 binding_ok(num(_), _, _, _, no).
 
 procedure match_bind(Ans?, Arg?, Val?, Subst?, MatchRes).
@@ -609,24 +661,51 @@ match_sgn(Y, J, signed(SV, PV), S, Rs, R?) :-
 match_sgn(_, _, person(_), _, _, nomatch).
 match_sgn(_, _, speech(_), _, _, nomatch).
 match_sgn(_, _, undef, _, _, nomatch).
-match_sgn(_, _, anynum, _, _, nomatch).
+match_sgn(_, _, nval(_), _, _, nomatch).
+match_sgn(_, _, nfree(_), _, _, nomatch).
 
-% A numeric argument matches a number and binds nothing: a number names no
-% agent, so the conditions do not concern numbers (GSC, Section 3.2), and
-% every number is the one value anynum to them.
-procedure match_num(Val?, Subst?, MatchRes).
-match_num(anynum, S, match(S?)).
-match_num(person(_), _, nomatch).
-match_num(speech(_), _, nomatch).
-match_num(signed(_, _), _, nomatch).
-match_num(undef, _, nomatch).
+% A numeric argument num(X) matches a number by equality (def:unobstructed,
+% at a binding of its schema; GSC, Section 3.2): the number X matches the
+% number equal to it, and the numeric variable X is sent to the number it
+% meets, or matches it if the binding sends X to it already.  Against the
+% unchosen number of the introductory act (nfree) a number matches if the
+% introduction chooses it so, maybe(S); a numeric variable is sent to it.
+procedure match_num(Constant?, Val?, Subst?, MatchRes).
+match_num(X, V, S, R?) :- number(X?), ground(V?), ground(S?) | match_lit(X?, V?, S?, R).
+match_num(X, V, S, R?) :- otherwise, ground(X?), ground(V?), ground(S?) |
+    subst_lookup(S?, num(X?), F),
+    match_nvar(F?, X?, V?, S?, R).
+
+procedure match_lit(Constant?, Val?, Subst?, MatchRes).
+match_lit(X, nval(N), S, R?) :- number(N?), ground(S?) | num_eq(X?, N?, S?, R).
+match_lit(_, nfree(_), S, maybe(S?)).
+match_lit(_, _, _, nomatch) :- otherwise | true.
+
+procedure num_eq(Constant?, Constant?, Subst?, MatchRes).
+num_eq(X, N, S, match(S?)) :- X? =:= N? | true.
+num_eq(_, _, _, nomatch) :- otherwise | true.
+
+procedure match_nvar(Found?, Constant?, Val?, Subst?, MatchRes).
+match_nvar(free, X, nval(N), S, match([bind(num(X?), nval(N?))|S?])).
+match_nvar(free, X, nfree(Y), S, match([bind(num(X?), nfree(Y?))|S?])).
+match_nvar(bound(W), _, V, S, R?) :- ground(W?), ground(V?), ground(S?) |
+    num_same(W?, V?, S?, R).
+match_nvar(_, _, _, _, nomatch) :- otherwise | true.
+
+procedure num_same(Val?, Val?, Subst?, MatchRes).
+num_same(nval(M), nval(N), S, R?) :- number(M?), number(N?), ground(S?) | num_eq(M?, N?, S?, R).
+num_same(nfree(Z), nfree(Y), S, match(S?)) :- Z? =?= Y? | true.
+num_same(nval(_), nfree(_), S, maybe(S?)).
+num_same(nfree(_), nval(_), S, maybe(S?)).
+num_same(nfree(_), nfree(_), S, maybe(S?)) :- otherwise | true.
+num_same(_, _, _, nomatch) :- otherwise | true.
 
 procedure match_one(Arg?, Val?, Subst?, RoleSpecs?, MatchRes).
 match_one(sgn(Y, J), V, S, Rs, R?) :-
     ground(Y?), integer(J?), ground(V?), ground(S?), ground(Rs?) |
     match_sgn(Y?, J?, V?, S?, Rs?, R).
-match_one(num(_), V, S, _, R?) :- ground(V?), ground(S?) |
-    match_num(V?, S?, R).
+match_one(num(X), V, S, _, R?) :- ground(X?), ground(V?), ground(S?) |
+    match_num(X?, V?, S?, R).
 match_one(A, V, S, Rs, R?) :- otherwise, ground(A?), ground(V?), ground(S?), ground(Rs?) |
     subst_lookup(S?, A?, F),
     match_one1(F?, A?, V?, S?, Rs?, R).
@@ -635,6 +714,15 @@ procedure match_rest(MatchRes?, Args?, Vals?, RoleSpecs?, MatchRes).
 match_rest(nomatch, _, _, _, nomatch).
 match_rest(match(S), As, Vs, Rs, R?) :- ground(S?), ground(As?), ground(Vs?), ground(Rs?) |
     match_args(As?, Vs?, S?, Rs?, R).
+match_rest(maybe(S), As, Vs, Rs, R?) :- ground(S?), ground(As?), ground(Vs?), ground(Rs?) |
+    match_args(As?, Vs?, S?, Rs?, R1),
+    to_maybe(R1?, R).
+
+% A match resting on the introduction's choice of a number stays one.
+procedure to_maybe(MatchRes?, MatchRes).
+to_maybe(match(S), maybe(S?)).
+to_maybe(maybe(S), maybe(S?)).
+to_maybe(nomatch, nomatch).
 
 procedure match_args(Args?, Vals?, Subst?, RoleSpecs?, MatchRes).
 match_args([], [], S, _, match(S?)).
@@ -651,17 +739,14 @@ match_atom(atom(P, As), gatom(Q, Vs), Rs, S, R?) :-
     match_args(As?, Vs?, S?, Rs?, R).
 match_atom(atom(_, _), gatom(_, _), _, _, nomatch) :- otherwise | true.
 
-% some_match(Psis, G, Rs, S, R): does any of Psis match G over S?
-procedure some_match1(MatchRes?, Atoms?, GAtom?, RoleSpecs?, Subst?, Ans).
-some_match1(match(_), _, _, _, _, yes).
-some_match1(nomatch, As, G, Rs, S, R?) :- ground(As?), ground(G?), ground(Rs?), ground(S?) |
-    some_match(As?, G?, Rs?, S?, R).
-
-procedure some_match(Atoms?, GAtom?, RoleSpecs?, Subst?, Ans).
-some_match([], _, _, _, no).
-some_match([A|As], G, Rs, S, R?) :- ground(A?), ground(As?), ground(G?), ground(Rs?), ground(S?) |
-    match_atom(A?, G?, Rs?, S?, M),
-    some_match1(M?, As?, G?, Rs?, S?, R).
+% all_unsettled(Fs, R): every fault of Fs is one the numbers leave
+% unsettled (Unsettled above), so none of them settles that the
+% introduction fails.
+procedure all_unsettled(Faults?, Ans).
+all_unsettled([], yes).
+all_unsettled([unsettled(_, _, _, _)|Fs], R?) :- all_unsettled(Fs?, R).
+all_unsettled([unsettled_introduction(_)|Fs], R?) :- all_unsettled(Fs?, R).
+all_unsettled([_|_], no) :- otherwise | true.
 
 % ---------------------------------------------------------------------------
 % The variables of a schema
@@ -785,7 +870,7 @@ fresh_val(pvar(_), N, person(N?)).
 fresh_val(svar(_), N, speech(N?)).
 fresh_val(nterm(_), _, undef).
 fresh_val(sgn(_, _), _, undef).
-fresh_val(num(_), _, anynum).
+fresh_val(num(X), _, nfree(X?)).
 
 procedure complete1(Found?, Arg?, Args?, Subst?, Integer?, Subst).
 complete1(bound(_), _, As, S, N, R?) :- ground(As?), ground(S?), integer(N?) |
@@ -1091,14 +1176,18 @@ nts_empty([_|_], no).
 % The contract as written, with numbers (GSC, Section 3.2)
 % ---------------------------------------------------------------------------
 % A contract is read as written, of the types N..., and its plain form is
-% the one the conditions are decided on: each multiplicity dropped, leaving
-% its atom, and the constraint of an nschema dropped, leaving a schema with
-% the same name, variables and roles.  A number names no agent, so the
-% conditions do not concern numbers (GSC, Section 3.2): a numeric argument
-% stays in its atom, where it names no one (apply_arg, match_num).  The form
-% of a schema is decided on the plain form too, an atom with a multiplicity
-% being an atom added or deleted (def:schema), and the head and the numbers
-% on the contract as written (check.glp).
+% the one traceable provenance and volition are decided on: each
+% multiplicity dropped, leaving its atom, and the constraint of an nschema
+% dropped, leaving a schema with the same name, variables and roles.  A
+% number names no agent, so those conditions do not concern numbers (GSC,
+% Section 3.2): a numeric argument stays in its atom, where it names no one.
+% def:unobstructed asks that an atom be added at a binding of a schema, which
+% satisfies its constraint, and is decided on the contract as written
+% (unobstructed.glp), the number of a numeric argument matched by equality
+% (apply_arg, match_num).  The form of a schema is decided on the plain form
+% too, an atom with a multiplicity being an atom added or deleted
+% (def:schema), and the head and the numbers on the contract as written
+% (check.glp).
 
 procedure plain_mult(Mult?, Atom).
 plain_mult(atom(P, As), atom(P?, As?)).

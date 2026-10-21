@@ -677,6 +677,15 @@ not_compiled(Nm) :- ground(Nm?) |
     send_to_user(['% not compiled:', Nm?,
                   'is not syntactically grassroots; check_named gives the faults.']).
 
+% def:compile is defined for a syntactically grassroots contract (GSC, the
+% sentence after def:syntactically-grassroots), and a contract whose numbers
+% leave that unsettled is not compiled.
+procedure not_compiled_unsettled(Constant?).
+not_compiled_unsettled(Nm) :- ground(Nm?) |
+    send_to_user(['% not compiled:', Nm?,
+                  'is not settled to be syntactically grassroots, its numbers leaving def:unobstructed unsettled;',
+                  'check_named gives the faults.']).
+
 procedure not_compiled_app(Constant?).
 not_compiled_app(Nm) :- ground(Nm?) |
     send_to_user(['% not compiled:', Nm?,
@@ -792,6 +801,7 @@ compile_on(conditions_met, _, C) :- ground(C?) |
     send_to_user(L?).
 compile_on(conditions_failed(_), Nm, _) :- ground(Nm?) | not_compiled_app(Nm?).
 compile_on(malformed(Fs), Nm, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
+compile_on(unsettled(_), Nm, _) :- ground(Nm?) | not_compiled_unsettled(Nm?).
 
 procedure compile_checked(Constant?, NDeclared?).
 compile_checked(Nm, D) :- ground(Nm?), ground(D?) |
@@ -837,6 +847,7 @@ compile_s_on(conditions_met, _, Sn, C) :- ground(Sn?), ground(C?) |
     emit_schema(S?, yes, Sn?).
 compile_s_on(conditions_failed(_), Nm, _, _) :- ground(Nm?) | not_compiled_app(Nm?).
 compile_s_on(malformed(Fs), Nm, _, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
+compile_s_on(unsettled(_), Nm, _, _) :- ground(Nm?) | not_compiled_unsettled(Nm?).
 
 procedure compile_s_checked(Constant?, Constant?, NDeclared?).
 compile_s_checked(Nm, Sn, D) :- ground(Nm?), ground(Sn?), ground(D?) |
