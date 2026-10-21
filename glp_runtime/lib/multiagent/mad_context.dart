@@ -7,6 +7,7 @@
 library;
 
 import 'package:glp_runtime/runtime/runtime.dart';
+import 'package:glp_runtime/runtime/body_kernels.dart' show deepDeref;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/machine_state.dart';
@@ -223,7 +224,9 @@ class MadContext {
   ///
   /// When a writer is bound, its paired reader becomes "known". If there's
   /// a global_send goal watching that reader, fire it now.
-  void _fireGlobalSendGoalIfExists(HeapCell writerAddr, Term value) {
+  void _fireGlobalSendGoalIfExists(HeapCell writerAddr, Term bound) {
+    // The value sent is the writer's value with every assignment made by then applied, a reader whose writer is assigned standing for its value, as '_send' sends it (body_kernels.dart, sendKernel).  cGLP Reduce communicates the restriction of $(\hat\sigma?)^\star$, the pair completion applied to a fixed point, to the readers of the goal's writers, so a goal writer's value carries the head writers' values (GLP-Spec glp.tex and IGLP concurrent-glp.tex, Definition "cGLP Transition System"), and the value of a Send is $T^\uparrow$ (IGLP madglp-spec.tex, Definition "madGLP Send Transaction").  Until 2026-10-21 the callback globalized such a reader as a variable of T, and p(X, f(X?)) :- ground(X?) | q(X?) with the goal p(a, Y) sent f(_r(alice, 3)) on Y's link and then a on a link of its own (ground_reader_at_reduction_test.dart).
+    final value = deepDeref(runtime, bound);
     // Check if there's a global_send goal watching this writer's reader
     final result = globalSendRegistry.onWriterBound(
       writerAddr: writerAddr,

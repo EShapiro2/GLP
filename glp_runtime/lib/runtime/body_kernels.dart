@@ -473,7 +473,9 @@ Object? _deref(GlpRuntime rt, Object? term) {
 /// replaces did: until 2026-10-02 it recursed once a list element, and
 /// `'_output'` of a list of some 10,000 elements and more overflowed the Dart
 /// stack.
-Term _deepDeref(GlpRuntime rt, Term term) {
+///
+/// Public for the `global_send` callback ([MadContext]), which sends the value as `'_send'` does ([sendKernel]): a reader whose writer is assigned is its value, not a variable of the term sent (IGLP Implementation Notes, "Dereferencing" and "The global_send goal").
+Term deepDeref(GlpRuntime rt, Term term) {
   // The term itself dereferenced: its value, or the unbound variable it is.
   Term follow(Term t) {
     var current = t;
@@ -797,10 +799,10 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   // Get term T (first argument)
-  // IMPORTANT: Use _deepDeref to fully resolve nested structures.
+  // IMPORTANT: Use deepDeref to fully resolve nested structures.
   // _deref only follows top-level VarRefs, leaving nested structure args as VarRefs.
   // This causes serialization bugs where msg(bob, intro(alice, X)) becomes msg(VarRef, VarRef).
-  final termArg = _deepDeref(rt, args[0] as Term);
+  final termArg = deepDeref(rt, args[0] as Term);
   if (termArg is! Term) {
     print('[ABORT] \'_send\'/3: first argument (T) must be a term, got ${termArg.runtimeType}');
     return BodyKernelResult.abort;
@@ -1050,7 +1052,7 @@ BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
   }
   final hSrc = artefact.hM;
 
-  final term = _deepDeref(rt, args[0] as Term);
+  final term = deepDeref(rt, args[0] as Term);
   final WireTerm wired;
   try {
     wired = PayloadCodec.termToWire(term);
@@ -1635,7 +1637,7 @@ BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  final term = _deepDeref(rt, args[0] as Term);
+  final term = deepDeref(rt, args[0] as Term);
 
   final toPerson = rt.outputTermCallback;
   if (toPerson != null) {
