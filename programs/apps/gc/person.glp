@@ -1,0 +1,230 @@
+%% person.glp --- the GC mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gc_boot.glp); the plays of this directory call it beside the entry (plays.glp).  It is GSG's app's person (../gsg/person.glp) with GC's scripts.
+%%
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(P, Q, D), P the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP f0acbc1, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
+%%
+%% The roles, by which the plays choose a script:
+%%   alice  looks at her request question; establishes her identity (GKK:1);
+%%          asks to know bob; once her agent knows him, asks to meet him in
+%%          person (GKK:2); once she knows him, mints an Alice-coin (GC:1);
+%%          once she holds it, asks bob to swap it for a Bob-coin, swap(alice,
+%%          bob, alice, bob) (GC:2); once she holds the Bob-coin, pays it to
+%%          bob, pay(alice, bob) (GC:3); looks again.
+%%   bob    establishes his identity; mints a Bob-coin; once he holds it, asks
+%%          to know alice; once his agent knows her, answers yes to her asking
+%%          to meet him in person, and yes to her asking to swap her Alice-coin
+%%          for his Bob-coin.  He mints before he answers the meeting, so that
+%%          he holds the Bob-coin when alice's swap reaches him: alice cannot
+%%          see his holdings, and the swap's start would otherwise race his
+%%          mint.
+%% Any other role has no script: its person reports the views and acts on nothing.
+
+Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
+Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
+        ; refused(Class, Key, Reason) ; asked(Asked) ; asking.
+Last  ::= last(List(Atom), List(Key)) ; nolast.
+Steps ::= [] ; [Step | Steps].
+Holes ::= [] ; [Key? | Holes].
+Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
+Shown ::= shown(Integer, Path, Attempt).
+Shows ::= [] ; [Shown | Shows].
+PSt   ::= ps(Sess, List(Output), Shows, Steps).
+ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
+YN    ::= y ; n.
+
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
+    script(Role?, Ss),
+    person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
+
+procedure script(Constant?, Steps).
+script(alice, [look, own([A1], propose(establish(A1?))), req(known(bob)), wait(known(bob)),
+               own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+               own([A2], propose(mint(A2?))), wait(holds(coin(alice))),
+               own([A3, A4], propose(swap(A3?, bob, A4?, bob))), wait(holds(coin(bob))),
+               own([A5], propose(pay(A5?, bob))), wait(lacks(coin(bob))), look]).
+script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
+             own([B2], propose(mint(B2?))), wait(holds(coin(bob))),
+             req(known(alice)), wait(known(alice)),
+             approval(meet(alice, bob), yes),
+             approval(swap(alice, bob, alice, bob), yes)]).
+script(_, []) :- otherwise | true.
+
+%% The person.
+procedure person(PersonOut(Drawn)?, PersonIn(Drawn), PSt?, Stream(Seen)).
+person([draw(0, _, output(T)) | Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
+    ground(T?) |
+    log_new(Old?, T?, Log, Log1?),
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log1, Log2?),
+    person(Ds?, Gs1, St1?, Log2).
+person([draw(Id, _, menu_w(menu(Me, Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
+    person(Ds?, Gs1, St1?, Log1).
+person([draw(Id, _, approval_w(approval(At, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?), ground(At?) |
+    advance(ps(Se?, T?, [shown(Id?, P?, At?) | Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
+    person(Ds?, Gs1, St1?, Log1).
+person([withdraw(Id) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+    ground(Id?) |
+    drop_shown(Id?, Cs?, Cs1),
+    person(Ds?, Gs, ps(Se?, T?, Cs1?, Ss?), Log).
+person([_ | Ds], Gs?, St, Log?) :-
+    otherwise | person(Ds?, Gs, St?, Log).
+
+%% advance(St, Gs, Gs1, St1, Log, Log1): the script's steps taken as far as they can be, the grants written on Gs, continuing at Gs1.
+procedure advance(PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+advance(ps(sess(Id, P, _, _), T, Cs, [req(R) | Ss]), [input(Id?, P?, R?) | Gs?], Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?) |
+    advance(ps(nosess, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [req(R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?) | Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P, Me, _), T, Cs, [own(Ks, R) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?) |
+    fill(Me?, Ks?),
+    grant(Id?, P?, R?, Gs, Gs2?),
+    advance(ps(nosess, T?, Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [own(Ks, R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?) | Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P, Me, Ks), T, Cs, [look | Ss]), Gs?, Gs1, St1?, [menu(Me?, Ks?) | Log?], Log1) :-
+    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [look | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [look | Ss?]), Log1?, Log1).
+advance(ps(Se, T, Cs, [wait(X) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Se?), ground(T?), ground(Cs?), ground(X?) |
+    shows(X?, Se?, T?, Cs?, B),
+    waited(B?, ps(Se?, T?, Cs?, [wait(X?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, [approval(K, A) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Cs?), ground(K?) |
+    find_approval(K?, Cs?, F),
+    approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
+
+%% fill(Me, Ks): the agent's own key Me written into each hole of Ks.
+procedure fill(Key?, Holes?).
+fill(Me, [Me? | Ks]) :- ground(Me?) | fill(Me?, Ks?).
+fill(_, []).
+
+%% grant(Id, P, R, Gs, Gs1): the grant of R on the question Id at P, once R, its holes filled, is ground.
+procedure grant(Integer?, Path?, Request?, PersonIn(Drawn), PersonIn(Drawn)?).
+grant(Id, P, R, [input(Id?, P?, R?) | Gs1?], Gs1) :- ground(R?) | true.
+
+procedure waited(YN?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+waited(y, ps(Se, T, Cs, [_ | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+waited(n, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% What the person's screen shows (the step wait(C)): the last view written and the notices written after it, the approval questions drawn and not answered, and whether a request question is drawn and not answered.
+procedure shows(Cond?, Sess?, List(Output)?, Shows?, YN).
+shows(known(Q), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    known_in(Q?, L?, B).
+shows(holds(A), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, 1, B).
+shows(lacks(A), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, 1, B1),
+    flip(B1?, B).
+shows(has(A, K), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, K?, B).
+shows(refused(P, Q, D), _, T, _, B?) :- ground(P?), ground(Q?), ground(D?), ground(T?) |
+    notices_of(T?, Ns),
+    among_output(refused(P?, Q?, D?), Ns?, B).
+shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
+    find_approval(K?, Cs?, F),
+    found_yn(F?, B).
+shows(asking, sess(_, _, _, _), _, _, y).
+shows(asking, nosess, _, _, n).
+
+%% The last view written, or none: the output holds the views and the notices.
+procedure last_of(List(Output)?, Last).
+last_of(T, L?) :- last_view(T?, nolast, L).
+procedure last_view(List(Output)?, Last?, Last).
+last_view([], L, L?).
+last_view([view(S, K) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
+
+%% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
+procedure notices_of(List(Output)?, List(Output)).
+notices_of(T, Ns?) :- notices_after(T?, [], Ns).
+procedure notices_after(List(Output)?, List(Output)?, List(Output)).
+notices_after([], Ns, Ns?).
+notices_after([view(_, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
+procedure among_output(Output?, List(Output)?, YN).
+among_output(_, [], n).
+among_output(X, [Y | _], y) :- X? =?= Y? | true.
+among_output(X, [_ | Ys], B?) :- otherwise | among_output(X?, Ys?, B).
+
+procedure known_in(Key?, Last?, YN).
+known_in(Q, last(_, Ks), B?) :- among_key(Q?, Ks?, B).
+known_in(_, nolast, n).
+
+procedure among_key(Key?, List(Key)?, YN).
+among_key(_, [], n).
+among_key(X, [Y | _], y) :- X? =?= Y? | true.
+among_key(X, [_ | Ys], B?) :- otherwise | among_key(X?, Ys?, B).
+
+procedure count_in(Atom?, Last?, Integer).
+count_in(A, last(S, _), N?) :- count(A?, S?, N).
+count_in(_, nolast, 0).
+
+procedure count(Atom?, List(Atom)?, Integer).
+count(_, [], 0).
+count(X, [Y | Ys], N?) :- X? =?= Y? | count(X?, Ys?, M), N := M? + 1.
+count(X, [_ | Ys], N?) :- otherwise | count(X?, Ys?, N).
+
+procedure at_least(Integer?, Integer?, YN).
+at_least(N, K, y) :- N? >= K? | true.
+at_least(N, K, n) :- N? < K? | true.
+
+procedure flip(YN?, YN).
+flip(y, n).
+flip(n, y).
+
+procedure found_yn(ApprovalAt?, YN).
+found_yn(approval_at(_, _, _), y).
+found_yn(noapproval, n).
+
+procedure approved(ApprovalAt?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+approved(approval_at(Id, P, Cs1), ps(Se, T, _, [approval(K, A) | Ss]),
+         [input(Id?, P?, A?) | Gs?], Gs1, St1?, [gave(K?, A?) | Log?], Log1) :-
+    ground(K?), ground(A?) |
+    advance(ps(Se?, T?, Cs1?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+approved(noapproval, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% The approval question of the attempt K, or of an attempt of the class K, the earliest drawn first.
+procedure find_approval(Asked?, Shows?, ApprovalAt).
+find_approval(K, Cs, F?) :- ground(Cs?) | rev_shown(Cs?, [], Rs), find_approval1(K?, Rs?, [], F).
+
+procedure find_approval1(Asked?, Shows?, Shows?, ApprovalAt).
+find_approval1(_, [], _, noapproval).
+find_approval1(K, [shown(Id, P, At) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(At?), ground(K?), K? =?= At? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [shown(Id, P, attempt(_, _, _, C, _)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(C?), ground(K?), K? =?= C? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [S | Cs], Done, F?) :-
+    otherwise | find_approval1(K?, Cs?, [S? | Done?], F).
+
+procedure rev_shown(Shows?, Shows?, Shows).
+rev_shown([], Acc, Acc?).
+rev_shown([S | Ss], Acc, R?) :- rev_shown(Ss?, [S? | Acc?], R).
+
+procedure drop_shown(Integer?, Shows?, Shows).
+drop_shown(_, [], []).
+drop_shown(Id, [shown(J, _, _) | Cs], Cs?) :- Id? =:= J? | true.
+drop_shown(Id, [S | Cs], [S? | Cs1?]) :- otherwise | drop_shown(Id?, Cs?, Cs1).
+
+%% The views and the notices not reported before: the output is drawn whole each time it grows, so those past the old one's length are new.
+procedure log_new(List(Output)?, List(Output)?, Stream(Seen), Stream(Seen)?).
+log_new([_ | Os], [_ | Ns], Log?, Log1) :- log_new(Os?, Ns?, Log, Log1?).
+log_new([], Ns, Log?, Log1) :- put(Ns?, Log, Log1?).
+log_new([_ | _], [], Log1?, Log1).
+
+procedure put(List(Output)?, Stream(Seen), Stream(Seen)?).
+put([X | Xs], [X? | Log?], Log1) :- put(Xs?, Log, Log1?).
+put([], Log1?, Log1).
