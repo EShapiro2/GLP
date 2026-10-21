@@ -70,10 +70,10 @@ Future<void> main(List<String> argv) async {
     return;
   }
 
-  // The spec sequence: putPeerAddress supplies key and address; send dials,
+  // The spec sequence: wan.putPeerAddress supplies key and address; send dials,
   // establishes the Noise session with the service's key as the expected
   // static, and delivers.
-  network.putPeerAddress(servicePk, args['address'] as String);
+  network.wan.putPeerAddress(servicePk, args['address'] as String);
   final messageId = await network.send(
     servicePk,
     Uint8List.fromList(utf8.encode(args['message'] as String)),

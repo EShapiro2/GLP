@@ -89,7 +89,7 @@ void main() {
       expect(underlay, Underlay.wan);
       if (!pusherLinked.isCompleted) pusherLinked.complete();
     };
-    pusher.putPeerAddress(service.identity.publicKey, address);
+    pusher.wan.putPeerAddress(service.identity.publicKey, address);
     final messageId = await pusher.send(
       service.identity.publicKey,
       Uint8List.fromList(utf8.encode('gpw/area-push/1 payload')),
@@ -112,7 +112,7 @@ void main() {
     // ANNOUNCE and refuses its handshake; no session, no delivery.
     var strangerLinked = false;
     stranger.onPeerConnected = (_, __, ___) => strangerLinked = true;
-    stranger.putPeerAddress(service.identity.publicKey, address);
+    stranger.wan.putPeerAddress(service.identity.publicKey, address);
     final strangerMessage = await stranger.send(
       service.identity.publicKey,
       Uint8List.fromList(utf8.encode('stranger payload')),
@@ -162,7 +162,7 @@ void main() {
     };
     expect(await service.start(), isTrue);
     expect(await caller.start(), isTrue);
-    caller.putPeerAddress(
+    caller.wan.putPeerAddress(
       service.identity.publicKey,
       '127.0.0.1:${service.boundPort}',
     );

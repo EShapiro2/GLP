@@ -21,6 +21,7 @@ import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
+import 'package:grassroots_networking_core/src/models/underlay_api.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/message_transport.dart';
@@ -250,6 +251,10 @@ Set<String> computeStaleBlePeerPubkeys({
 ///   // peer reachable over `underlay` (PAN, LAN or WAN)
 /// };
 ///
+/// // The functions of one underlay are on its sub-object (GNA §2.2).
+/// grassroots.pan?.setTrustLevel(ColdCallTrustLevel.open);
+/// grassroots.wan?.putPeerAddress(peerPubkey, '198.51.100.4:9514');
+///
 /// await grassroots.initialize();
 /// await grassroots.start();
 ///
@@ -296,7 +301,7 @@ class GrassrootsNetwork {
   /// sets are retained — an unreachable peer holds no entry.
   final Map<String, Set<Underlay>> _lastKnownUnderlays = {};
 
-  /// Pubkeys (hex) already surfaced via [onPeerDiscovered] this session.
+  /// Pubkeys (hex) already surfaced via [ProximityApi.onPeerDiscovered] this session.
   /// Discovery is the identity-learned event on a proximity underlay — the
   /// first accepted ANNOUNCE carrying a nearby peer's public key, over the PAN
   /// or from a LAN source — which precedes the Noise session and therefore
@@ -583,14 +588,30 @@ class GrassrootsNetwork {
     Underlay underlay,
   )? onMessageReceived;
 
-  /// Called for each nearby Grassroots agent found, with the underlay of
-  /// discovery (spec §Concepts and Principles, Discovery:
-  /// `onPeerDiscovered(pk, underlay)`). The agent's key is known once ANNOUNCE
-  /// has run, so this fires on the first accepted ANNOUNCE from a nearby
-  /// agent: over the PAN, or from a source within one of the agent's own
-  /// local prefixes on the LAN. WAN contact is not discovery and does not
-  /// fire it.
-  void Function(Uint8List pk, ProximityUnderlay underlay)? onPeerDiscovered;
+  /// The PAN sub-object (GNA §2.2: "The layer exposes one sub-object for
+  /// each underlay it runs, pan, lan and wan, and null for an underlay it does
+  /// not run"): discovery and the trust level on the PAN (GNA §3.1).  Null
+  /// where the layer does not run [Underlay.pan].
+  late final ProximityApi? pan = _runsPan
+      ? _GrassrootsProximity(this, ProximityUnderlay.pan)
+      : null;
+
+  /// The LAN sub-object (GNA §2.2): discovery and the trust level on the LAN
+  /// (GNA §3.1).  Null where the layer does not run [Underlay.lan].
+  late final ProximityApi? lan = _runsLan
+      ? _GrassrootsProximity(this, ProximityUnderlay.lan)
+      : null;
+
+  /// The WAN sub-object (GNA §2.2): the public address, peer addresses, hole
+  /// punching and the local network identity (GNA §4.2, §4.3).  Null where
+  /// the layer does not run [Underlay.wan].
+  late final WanApi? wan = _runsWan ? _GrassrootsWan(this) : null;
+
+  /// The sub-object of [underlay], or null where the layer does not run it.
+  ProximityApi? _proximity(ProximityUnderlay underlay) => switch (underlay) {
+        ProximityUnderlay.pan => pan,
+        ProximityUnderlay.lan => lan,
+      };
 
   /// Called when a peer becomes reachable over an underlay. Fires once per
   /// underlay: a peer reachable over the PAN and over the LAN or WAN fires
@@ -619,37 +640,6 @@ class GrassrootsNetwork {
 
   /// Called when UDP transport becomes available
   void Function()? onUdpInitialized;
-
-  /// Spec §Connectivity and Address, `onConnectivityStatusChanged(old?,
-  /// new?)`: "Callback when the networking layer detects a change in the
-  /// agent's public IP address ... Fired on startup and on every address
-  /// change." Fired at [start] with the address as it stands, on each
-  /// address a rendezvous server reflects, and on its loss.
-  ///
-  /// Receives `(oldAddress, newAddress)` as `ip:port` strings (or null when
-  /// no public address is available). The caller derives the kind of
-  /// change:
-  ///   - startup / gain: `oldAddress == null && newAddress != null`
-  ///   - loss:           `oldAddress != null && newAddress == null`
-  ///   - update:         both non-null and `oldAddress != newAddress`
-  void Function(String? oldAddress, String? newAddress)?
-      onConnectivityStatusChanged;
-
-  /// Spec: `docs/GLP_Networking_API/sections/ip.tex` §Local Network Identity —
-  /// "Callback when the fingerprint changes. Receives `(oldId, newId)`, either
-  /// of which may be null."
-  ///
-  /// This is not [onConnectivityStatusChanged]. That one reports the agent's
-  /// public address; this one reports the local network it is attached to, and
-  /// the two are independent in both directions: the attached local network can
-  /// change while the public address does not, and the public address can
-  /// change while the attached local network does not. GLP uses this to lower a
-  /// LAN trust level upon leaving a trusted local network (spec §Trust levels).
-  ///
-  /// The fingerprint is best-effort and collision-prone. A match is evidence
-  /// that the agent is attached to the same local network as before, not proof
-  /// of it; what to do with that is GLP's decision, not the layer's.
-  void Function(String? oldId, String? newId)? onNetworkChanged;
 
   // ===== Convenience accessors for Redux state =====
 
@@ -752,18 +742,15 @@ class GrassrootsNetwork {
   /// PubKey`. The private key is held internally and never returned here.
   Uint8List getIdentity() => identity.publicKey;
 
-  /// The nearby Grassroots agents on the proximity underlays (spec §Concepts
-  /// and Principles, Discovery, `getPeers() → List<Peer>`: "Scan and browse
-  /// the proximity underlays for nearby Grassroots agents"), limited to them
-  /// (GNA, 2026-10-11, Task C): one entry per peer and proximity underlay it
-  /// is reachable over, PAN before LAN. A peer reachable over the WAN alone is
-  /// not nearby. Until 2026-10-12 this answered every reachable peer.
-  List<({Uint8List publicKey, ProximityUnderlay underlay})> getPeers() => [
+  /// The nearby Grassroots agents on [underlay] (GNA §3.1, Discovery,
+  /// `getPeers() → List<Peer>`), behind [ProximityApi.getPeers]: the peers
+  /// reachable over that proximity underlay (GNA, 2026-10-11, Task C).  A
+  /// peer reachable over the WAN alone is not nearby.
+  List<Uint8List> _peersOn(ProximityUnderlay underlay) => [
         for (final peer in _peersState.peersList)
-          for (final underlay in ProximityUnderlay.values)
-            if (peer.reachableUnderlays
-                .contains(Underlay.values.byName(underlay.name)))
-              (publicKey: peer.publicKey, underlay: underlay),
+          if (peer.reachableUnderlays
+              .contains(Underlay.values.byName(underlay.name)))
+            peer.publicKey,
       ];
 
   /// Check if a peer is reachable via any transport
@@ -778,28 +765,13 @@ class GrassrootsNetwork {
       _peersState.getPeerByPubkey(pk)?.reachableUnderlays.toList() ??
       const <Underlay>[];
 
-  /// The agent's current public `ip:port`, or null if not yet known.
-  /// Address changes are surfaced via [onConnectivityStatusChanged].
-  String? getPublicAddress() => store.state.transports.publicAddress;
-
-  /// An opaque fingerprint of the local network the agent is currently
-  /// attached to, or null when it is attached to none or no constituent is
-  /// readable. Spec `docs/GLP_Networking_API/sections/ip.tex` §Local Network
-  /// Identity. Changes are surfaced via [onNetworkChanged].
-  ///
-  /// The same interface enumeration also yields the agent's own local address
-  /// prefixes, held in `store.state.localNetwork`. They stay inside the layer:
-  /// they decide whether an inbound source address is LAN contact (spec §Cold
-  /// Calls), and GLP is given the fingerprint, never the addresses.
-  String? networkIdentity() => store.state.localNetwork.networkId;
-
   /// The public `ip:port` at which the layer observes the connected peer — the
   /// source address of its live, attested UDP session — or null when the peer
-  /// is reachable over no IP underlay (spec §Connectivity and Address,
-  /// `observedPeerAddress(pk)`, behind `peer_address/2`). Not the dial-book
-  /// address, which GLP supplies or a session observed earlier (GNA,
-  /// 2026-10-11, Task C); until 2026-10-12 `peerAddress` answered that.
-  String? observedPeerAddress(Uint8List pubkey) {
+  /// is reachable over no IP underlay (GNA §4.2, `observedPeerAddress(pk)`,
+  /// behind `peer_address/2`), behind [WanApi.observedPeerAddress]. Not the
+  /// dial-book address, which GLP supplies or a session observed earlier
+  /// (GNA, 2026-10-11, Task C).
+  String? _observedPeerAddress(Uint8List pubkey) {
     final peer = _peersState.getPeerByPubkey(pubkey);
     if (peer == null ||
         !peer.reachableUnderlays.any((u) => u != Underlay.pan)) {
@@ -825,7 +797,7 @@ class GrassrootsNetwork {
   /// is rejected with an [ArgumentError]. This call only ever *supplies* an
   /// address — it never clears one; stored addresses are cleared only when the
   /// peer itself reports it no longer has one.
-  void putPeerAddress(Uint8List pubkey, String address) {
+  void _putPeerAddress(Uint8List pubkey, String address) {
     final parsed = parseAddressString(address);
     if (parsed == null) {
       throw ArgumentError.value(address, 'address', 'not a valid ip:port');
@@ -906,11 +878,12 @@ class GrassrootsNetwork {
   /// Whether UDP — the LAN and WAN underlays' carrier — runs and is available.
   bool get isUdpEnabled => _udpAvailable;
 
-  /// The cold-call trust level of [underlay] (spec §Trust levels). Closed
-  /// until GLP sets it with [setTrustLevel]. The two proximity underlays carry
-  /// their own levels, so an agent may answer strangers over one while
-  /// ignoring them over the other.
-  ColdCallTrustLevel trustLevelOf(ProximityUnderlay underlay) =>
+  /// The cold-call trust level of [underlay] (GNA §2.7), behind
+  /// [ProximityApi.trustLevel]. Closed until GLP sets it with
+  /// [ProximityApi.setTrustLevel]. The two proximity underlays carry their own
+  /// levels, so an agent may answer strangers over one while ignoring them
+  /// over the other.
+  ColdCallTrustLevel _trustLevelOf(ProximityUnderlay underlay) =>
       store.state.settings.trustLevelOf(underlay);
 
   /// Whether IP contact from [senderPubkey] is answered (spec §Cold Calls,
@@ -942,7 +915,7 @@ class GrassrootsNetwork {
       return true;
     }
     if (underlay == Underlay.lan &&
-        trustLevelOf(ProximityUnderlay.lan) == ColdCallTrustLevel.open) {
+        _trustLevelOf(ProximityUnderlay.lan) == ColdCallTrustLevel.open) {
       return true;
     }
     return false;
@@ -962,7 +935,7 @@ class GrassrootsNetwork {
   /// "A LAN connection and a WAN connection are both IP connections; the layer
   /// tells them apart by whether the peer's address is on the agent's own
   /// local network" (spec §Networking API); the prefixes come from the
-  /// interface enumeration behind [networkIdentity], and an address not known
+  /// interface enumeration behind [WanApi.networkIdentity], and an address not known
   /// is not known to be local.
   Underlay? _ipUnderlayFor(InternetAddress? address) {
     if (_runsLan &&
@@ -1214,7 +1187,7 @@ class GrassrootsNetwork {
     _started = true;
     // "Fired on startup" (spec §Connectivity and Address): the public address
     // as it stands, none until a rendezvous server reflects one.
-    onConnectivityStatusChanged?.call(null, _publicAddress);
+    wan?.onConnectivityStatusChanged?.call(null, _publicAddress);
     // Keep the Android process unfrozen while transports run — a frozen Dart
     // VM goes ANNOUNCE-silent and never dials reverse BLE legs, while its
     // radio links stay up (peers then flap us through their stale sweeps).
@@ -1492,7 +1465,7 @@ class GrassrootsNetwork {
   /// Read the attached local network and, if it differs from the held one,
   /// record it and tell the runtime.
   ///
-  /// The layer's own emission point for [onNetworkChanged], separate from the
+  /// The layer's own emission point for [WanApi.onNetworkChanged], separate from the
   /// public-address one: the two facts are independent, so neither refresh
   /// implies the other. Called at construction, on every connectivity event
   /// (before the event is filtered — the local network can change while the
@@ -1508,7 +1481,7 @@ class GrassrootsNetwork {
       '[local-network] ${previous.networkId} -> ${network.networkId} '
       '(prefixes: ${network.prefixes.join(', ')})',
     );
-    onNetworkChanged?.call(previous.networkId, network.networkId);
+    wan?.onNetworkChanged?.call(previous.networkId, network.networkId);
   }
 
   void _seedConnectivityState() {
@@ -1569,7 +1542,7 @@ class GrassrootsNetwork {
     store.dispatch(ClearPublicConnectivityAction());
     // Spec §Connectivity and Address: "loss: new=null" --- every address
     // change is reported, a loss included.
-    if (lost != null) onConnectivityStatusChanged?.call(lost, null);
+    if (lost != null) wan?.onConnectivityStatusChanged?.call(lost, null);
   }
 
   /// Handle network connectivity changes (WiFi ↔ cellular, etc.).
@@ -1774,7 +1747,7 @@ class GrassrootsNetwork {
   }
 
   /// Replay cached LAN instances against the (grown) known set. Called by
-  /// [putKnownPeer] and [putPeerAddress]; already-connected peers short out
+  /// [putKnownPeer] and [WanApi.putPeerAddress]; already-connected peers short out
   /// in [_tryLanContact].
   void _rematchLanInstances() {
     if (_lanResolvedInstances.isEmpty) return;
@@ -1851,7 +1824,7 @@ class GrassrootsNetwork {
   /// Each side's ANNOUNCE identifies it to the other, and the existing
   /// handshake glare resolution settles the pair from there.
   void _lanColdCall(String token, String address) {
-    final trust = trustLevelOf(ProximityUnderlay.lan);
+    final trust = _trustLevelOf(ProximityUnderlay.lan);
     if (trust != ColdCallTrustLevel.open) {
       debugPrint(
         '[lan] unmatched instance $token ignored (lan trust=${trust.name})',
@@ -1929,17 +1902,16 @@ class GrassrootsNetwork {
     await _bleService?.applyRoleModeChange();
   }
 
-  /// Set the cold-call trust level of the given [ProximityUnderlay] to Open
-  /// or Closed (spec §Concepts and Principles, Discovery:
-  /// `setTrustLevel(underlay, level)`; §Trust levels). Until set, both levels
-  /// are Closed.
+  /// Set the cold-call trust level of [underlay] to Open or Closed (GNA
+  /// §2.7, §3.1), behind [ProximityApi.setTrustLevel] on that underlay's
+  /// sub-object. Until set, both levels are Closed.
   ///
   /// A LAN session and a WAN session are both IP sessions, and only LAN
   /// contact — a source within one of the agent's own local prefixes — is
   /// governed by the LAN level; WAN contact is governed by no level. The two
   /// levels are independent — GLP raises one upon entering a trusted place or
   /// local network and lowers it upon leaving.
-  Future<void> setTrustLevel(
+  Future<void> _setTrustLevel(
     ProximityUnderlay underlay,
     ColdCallTrustLevel level,
   ) async {
@@ -1954,7 +1926,7 @@ class GrassrootsNetwork {
   /// `punch_udp/1`.
   ///
   /// [address] is an `ip:port` (IPv4, or bracketed IPv6 as `[ip]:port`); an
-  /// unparseable one is rejected with an [ArgumentError], as [putPeerAddress]
+  /// unparseable one is rejected with an [ArgumentError], as [WanApi.putPeerAddress]
   /// rejects it. No peer key is named and none is needed: punching is the
   /// mechanism of opening the mapping, and *who* to punch toward, *when*, and
   /// *whether* are GLP's decisions, taken above this line.
@@ -1965,7 +1937,7 @@ class GrassrootsNetwork {
   /// background. GLP punches and then waits to hear from the peer; it does not
   /// wait on this call. A punch toward an address on an IP family this layer
   /// has no socket for is a no-op.
-  void punchUdp(String address) {
+  void _punchUdp(String address) {
     final parsed = parseAddressString(address);
     if (parsed == null) {
       throw ArgumentError.value(address, 'address', 'not a valid ip:port');
@@ -2559,7 +2531,7 @@ class GrassrootsNetwork {
   /// is known.
   ///
   /// A hermetic test reads the address its node listens on from here: there is
-  /// no rendezvous server to reflect a public one, and `getPublicAddress()` is
+  /// no rendezvous server to reflect a public one, and `wan.getPublicAddress()` is
   /// null until one does (spec §Connectivity and Address).
   @visibleForTesting
   Set<String> debugLocalCandidates() => _connectionLocalCandidates();
@@ -3716,7 +3688,7 @@ class GrassrootsNetwork {
       if (discoveredOn != null &&
           !_isRendezvousPubkeyHex(pubkeyHex) &&
           _discoveredPubkeyHexes.add(pubkeyHex)) {
-        onPeerDiscovered?.call(data.publicKey, discoveredOn);
+        _proximity(discoveredOn)?.onPeerDiscovered?.call(data.publicKey);
       }
 
       // onPeerConnected is driven by the reachability subscriber (it fires once
@@ -3842,7 +3814,7 @@ class GrassrootsNetwork {
     _resetAutoUdpBackoff();
     unawaited(_syncConfiguredRendezvous(reason: 'reflected-address-updated'));
     // Spec onConnectivityStatus: RV-reflection-driven address change.
-    onConnectivityStatusChanged?.call(previous, reflected);
+    wan?.onConnectivityStatusChanged?.call(previous, reflected);
   }
 
   /// Diff each peer's set of reachable transports against the previous store
@@ -4359,6 +4331,68 @@ class GrassrootsNetwork {
     store.dispatch(StalePeersRemovedAction(staleThreshold));
   }
 
+}
+
+/// The `pan` or `lan` sub-object of a [GrassrootsNetwork] (GNA §2.2, §3.1):
+/// discovery and the trust level of one proximity underlay, with no underlay
+/// parameter.
+class _GrassrootsProximity implements ProximityApi {
+  _GrassrootsProximity(this._layer, this.underlay);
+
+  final GrassrootsNetwork _layer;
+
+  @override
+  final ProximityUnderlay underlay;
+
+  @override
+  List<Uint8List> getPeers() => _layer._peersOn(underlay);
+
+  @override
+  void Function(Uint8List pk)? onPeerDiscovered;
+
+  @override
+  Future<void> setTrustLevel(ColdCallTrustLevel level) =>
+      _layer._setTrustLevel(underlay, level);
+
+  @override
+  ColdCallTrustLevel get trustLevel => _layer._trustLevelOf(underlay);
+}
+
+/// The `wan` sub-object of a [GrassrootsNetwork] (GNA §2.2, §4.2, §4.3).
+class _GrassrootsWan implements WanApi {
+  _GrassrootsWan(this._layer);
+
+  final GrassrootsNetwork _layer;
+
+  @override
+  void Function(String? oldAddress, String? newAddress)?
+      onConnectivityStatusChanged;
+
+  /// The agent's current public `ip:port`, as a rendezvous server observed
+  /// it, or null if not yet known (GNA §4.2).
+  @override
+  String? getPublicAddress() => _layer.store.state.transports.publicAddress;
+
+  /// The fingerprint of the attached local network (GNA §4.3).  The same
+  /// interface enumeration also yields the agent's own local address
+  /// prefixes, held in `store.state.localNetwork`; they stay inside the
+  /// layer, deciding whether an inbound source address is LAN contact (GNA
+  /// §2.7), and GLP is given the fingerprint, never the addresses.
+  @override
+  String? networkIdentity() => _layer.store.state.localNetwork.networkId;
+
+  @override
+  void Function(String? oldId, String? newId)? onNetworkChanged;
+
+  @override
+  void putPeerAddress(Uint8List pk, String address) =>
+      _layer._putPeerAddress(pk, address);
+
+  @override
+  String? observedPeerAddress(Uint8List pk) => _layer._observedPeerAddress(pk);
+
+  @override
+  void punchUdp(String address) => _layer._punchUdp(address);
 }
 
 /// Diff each peer's set of reachable underlays against the previous tick and

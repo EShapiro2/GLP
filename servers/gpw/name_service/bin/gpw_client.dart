@@ -197,7 +197,7 @@ Future<void> _areaVerify(_Opts o) async {
 }
 
 /// The phone side of the push channel, per the GLP-Networking-API answer:
-/// `putPeerAddress(servicePk, address)` then `send(servicePk, payload)`,
+/// `wan.putPeerAddress(servicePk, address)` then `send(servicePk, payload)`,
 /// the payload being the gpw/area-push/1 snapshot of a signed area.  Waits
 /// for the service's gpw/push-ack/1.
 Future<void> _push(_Opts o) async {
@@ -250,7 +250,7 @@ Future<void> _push(_Opts o) async {
     stderr.writeln('push: failed to bind a UDP socket');
     exit(1);
   }
-  network.putPeerAddress(unb64url(servicePk), serviceAddr);
+  network.wan.putPeerAddress(unb64url(servicePk), serviceAddr);
   await network.send(
       unb64url(servicePk), Uint8List.fromList(payload));
 

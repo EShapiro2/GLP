@@ -11,6 +11,7 @@ import '../models/packet.dart';
 import '../models/peer.dart';
 import '../models/rendezvous_server.dart';
 import '../models/underlay.dart';
+import '../models/underlay_api.dart';
 import '../platform/compat.dart';
 import '../protocol/fragment_handler.dart';
 import '../protocol/message_transport.dart';
@@ -38,8 +39,8 @@ class ServerAddress {
   /// The UDP port the server binds: the port of its published address.
   final int listenPort;
 
-  /// The server's static public `ip:port`, canonical; what
-  /// [HeadlessGrassrootsNetwork.getPublicAddress] returns.
+  /// The server's static public `ip:port`, canonical; what the layer's
+  /// `wan.getPublicAddress()` returns.
   final String publicAddress;
 
   const ServerAddress._(this.listenPort, this.publicAddress);
@@ -68,12 +69,13 @@ class ServerAddress {
 /// A headless embedding of the same session, framing, and router internals
 /// the Flutter package runs — no reimplementation and no fork — exposing the
 /// spec's API for the WAN underlay (GNA, 2026-10-11, Task C): construction
-/// with identity, [getIdentity]; [putKnownPeer] / [removeKnownPeer] /
-/// [putPeerAddress]; [onPeerConnected] / [onPeerDisconnected],
-/// [isPeerReachable], [peerUnderlays]; [send], [onMessageReceived]; [sign],
-/// [verify]; [onConnectivityStatusChanged], [getPublicAddress],
-/// [networkIdentity], [onNetworkChanged], [observedPeerAddress],
-/// [punchUdp]. It realizes
+/// with identity, [getIdentity]; [putKnownPeer] / [removeKnownPeer];
+/// [onPeerConnected] / [onPeerDisconnected], [isPeerReachable],
+/// [peerUnderlays]; [send], [onMessageReceived]; [sign], [verify]; and on the
+/// [wan] sub-object (GNA §2.2) `onConnectivityStatusChanged`,
+/// `getPublicAddress`, `networkIdentity`, `onNetworkChanged`,
+/// `putPeerAddress`, `observedPeerAddress` and `punchUdp`, the [pan] and
+/// [lan] sub-objects being null. It realizes
 /// the WAN underlay alone (spec §Networking API: "a server-side agent ...
 /// realizes the WAN underlay alone, headless, with proximity discovery
 /// absent"), so every callback reports [Underlay.wan]: no BLE, no mDNS, no
@@ -154,7 +156,8 @@ class HeadlessGrassrootsNetwork {
   final List<RendezvousServer> rendezvousServers;
 
   /// A server's listen port and static public address, or null: then an
-  /// ephemeral port is bound and [getPublicAddress] answers null.
+  /// ephemeral port is bound and `wan.getPublicAddress()` answers null until a
+  /// rendezvous server reflects an address.
   final ServerAddress? serverAddress;
 
   /// Whether this agent is a rendezvous server (GNA §2.2, "Rendezvous server,
@@ -286,12 +289,26 @@ class HeadlessGrassrootsNetwork {
   /// `onPeerDisconnected(pk, underlay)`).
   void Function(Uint8List pk, Underlay underlay)? onPeerDisconnected;
 
+  /// The `pan` sub-object (GNA §2.2): null, this profile running no PAN
+  /// ("a server-side agent ... realizes the WAN underlay alone, headless,
+  /// with proximity discovery absent", GNA §2).
+  ProximityApi? get pan => null;
+
+  /// The `lan` sub-object (GNA §2.2): null, this profile running no LAN.
+  ProximityApi? get lan => null;
+
+  /// The `wan` sub-object (GNA §2.2): the public address, peer addresses,
+  /// hole punching and the local network identity (GNA §4.2, §4.3), this
+  /// profile's one underlay.
+  late final WanApi wan = _HeadlessWan(this);
+
   /// The agent's current public `ip:port`: the static address of its
   /// [serverAddress], or else the address a configured rendezvous server last
   /// reflected (spec §Connectivity and Address: "an agent learns it from a
   /// rendezvous server, which observes the source address of the agent's
-  /// packets"), or null when there is neither.
-  String? getPublicAddress() =>
+  /// packets"), or null when there is neither; behind
+  /// [WanApi.getPublicAddress].
+  String? _publicAddress() =>
       serverAddress?.publicAddress ?? _reflectedAddress;
 
   /// The address a configured rendezvous server last reflected, or null.
@@ -299,23 +316,6 @@ class HeadlessGrassrootsNetwork {
 
   /// The agent's own public key (spec §Identity, `getIdentity() → PubKey`).
   Uint8List getIdentity() => identity.publicKey;
-
-  /// Callback when the layer detects a change in the agent's public address
-  /// (spec §Connectivity and Address, `onConnectivityStatusChanged(old?,
-  /// new?)`): "Fired on startup and on every address change."  It fires at
-  /// [start], with `old` null and the static address of the [serverAddress]
-  /// or none; and, on an agent with no server address, whenever a configured
-  /// rendezvous server reflects an address other than the one held.
-  void Function(String? oldAddress, String? newAddress)?
-      onConnectivityStatusChanged;
-
-  /// Callback when the fingerprint of the attached local network changes
-  /// (spec §Local Network Identity, `onNetworkChanged(oldId?, newId?)`).
-  void Function(String? oldId, String? newId)? onNetworkChanged;
-
-  /// An opaque fingerprint of the local network the agent is attached to, or
-  /// null (spec §Local Network Identity, `networkIdentity()`).
-  String? networkIdentity() => store.state.localNetwork.networkId;
 
   /// The underlays [pubkey] is reachable over (spec §Connection and
   /// Reachability, `peerUnderlays(pk)`): [Underlay.wan], this profile's one,
@@ -325,8 +325,9 @@ class HeadlessGrassrootsNetwork {
 
   /// The public `ip:port` at which the layer observes the connected peer — the
   /// source address of its live session — or null when it is not connected
-  /// (spec §Connectivity and Address, `observedPeerAddress(pk)`).
-  String? observedPeerAddress(Uint8List pubkey) {
+  /// (spec §Connectivity and Address, `observedPeerAddress(pk)`); behind
+  /// [WanApi.observedPeerAddress].
+  String? _observedPeerAddress(Uint8List pubkey) {
     if (!isPeerReachable(pubkey)) return null;
     final udp = _udpService;
     final peerId = udp?.getPeerIdForPubkey(pubkey);
@@ -357,8 +358,8 @@ class HeadlessGrassrootsNetwork {
   /// mapping, and return at once (spec §Connectivity and Address,
   /// `punchUdp(address)`, behind `punch_udp/1`). Throws [ArgumentError] on an
   /// unparseable address; toward a family this layer has no socket for it is
-  /// a no-op.
-  void punchUdp(String address) {
+  /// a no-op. Behind [WanApi.punchUdp].
+  void _punchUdp(String address) {
     final parsed = parseAddressString(address);
     if (parsed == null) {
       throw ArgumentError.value(address, 'address', 'not a valid ip:port');
@@ -407,7 +408,7 @@ class HeadlessGrassrootsNetwork {
     if (reflected == previous) return;
     _reflectedAddress = reflected;
     debugPrint('[headless][reflect] public address $previous → $reflected');
-    onConnectivityStatusChanged?.call(previous, reflected);
+    wan.onConnectivityStatusChanged?.call(previous, reflected);
   }
 
   /// On a rendezvous server: reflect to [pubkey] the address its session is
@@ -415,7 +416,7 @@ class HeadlessGrassrootsNetwork {
   /// (spec §Rendezvous Server, "Address observation"; §Connectivity and
   /// Address).
   void _reflectAddressTo(Uint8List pubkey) {
-    final observed = observedPeerAddress(pubkey);
+    final observed = _observedPeerAddress(pubkey);
     final parsed = observed == null ? null : parseAddressString(observed);
     if (parsed == null) return;
     final payload = const SignalingCodec()
@@ -452,7 +453,7 @@ class HeadlessGrassrootsNetwork {
     final previous = store.state.localNetwork.network;
     if (network == previous) return;
     store.dispatch(LocalNetworkChangedAction(network));
-    onNetworkChanged?.call(previous.networkId, network.networkId);
+    wan.onNetworkChanged?.call(previous.networkId, network.networkId);
   }
 
   /// The actually bound UDP port (after [start]); useful when no
@@ -485,8 +486,9 @@ class HeadlessGrassrootsNetwork {
 
   /// Inform the layer of a peer's current public `ip:port` (spec
   /// §Connectivity and Address). Supplying an address also supplies the key.
-  /// Throws [ArgumentError] on an unparseable address.
-  void putPeerAddress(Uint8List pubkey, String address) {
+  /// Throws [ArgumentError] on an unparseable address. Behind
+  /// [WanApi.putPeerAddress].
+  void _putPeerAddress(Uint8List pubkey, String address) {
     final parsed = parseAddressString(address);
     if (parsed == null) {
       throw ArgumentError.value(address, 'address', 'not a valid ip:port');
@@ -544,7 +546,7 @@ class HeadlessGrassrootsNetwork {
     });
     // "Fired on startup" (spec §Connectivity and Address): the static
     // address, or none.
-    onConnectivityStatusChanged?.call(null, getPublicAddress());
+    wan.onConnectivityStatusChanged?.call(null, _publicAddress());
     await _refreshLocalNetwork();
     debugPrint('[headless] listening on UDP port $boundPort '
         '(${_hex(identity.publicKey).substring(0, 8)}…)');
@@ -1509,4 +1511,39 @@ class HeadlessGrassrootsNetwork {
     }
     return out;
   }
+}
+
+/// The `wan` sub-object of a [HeadlessGrassrootsNetwork] (GNA §2.2, §4.2,
+/// §4.3).
+class _HeadlessWan implements WanApi {
+  _HeadlessWan(this._layer);
+
+  final HeadlessGrassrootsNetwork _layer;
+
+  /// Fires at [HeadlessGrassrootsNetwork.start], with `old` null and the
+  /// static address of the server address or none; and, on an agent with no
+  /// server address, whenever a configured rendezvous server reflects an
+  /// address other than the one held.
+  @override
+  void Function(String? oldAddress, String? newAddress)?
+      onConnectivityStatusChanged;
+
+  @override
+  String? getPublicAddress() => _layer._publicAddress();
+
+  @override
+  String? networkIdentity() => _layer.store.state.localNetwork.networkId;
+
+  @override
+  void Function(String? oldId, String? newId)? onNetworkChanged;
+
+  @override
+  void putPeerAddress(Uint8List pk, String address) =>
+      _layer._putPeerAddress(pk, address);
+
+  @override
+  String? observedPeerAddress(Uint8List pk) => _layer._observedPeerAddress(pk);
+
+  @override
+  void punchUdp(String address) => _layer._punchUdp(address);
 }

@@ -149,7 +149,7 @@ void main() {
     // The peer becomes reachable: each knows the other, and the recipient
     // reconnects to its known peers.
     second.putKnownPeer(recipientId.publicKey);
-    recipient.putPeerAddress(senderId.publicKey, await listeningAddress(second));
+    recipient.wan!.putPeerAddress(senderId.publicKey, await listeningAddress(second));
     await recipient.reconnectKnownPeers(reason: 'test');
 
     expect(await waitFor(() => received.isNotEmpty, seconds: 30), isTrue,

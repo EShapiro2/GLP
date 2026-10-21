@@ -93,7 +93,7 @@ void main() {
   test('Open contacts an unmatched LAN instance, keyed by its address',
       () async {
     final network = await startNode(await identityFromSeed(0x71));
-    await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
+    await network.lan!.setTrustLevel(ColdCallTrustLevel.open);
 
     const address = '127.0.0.1:45071';
     expect(network.debugUdpPeerIdForAddress(address), isNull,
@@ -114,7 +114,7 @@ void main() {
 
   test('Closed ignores an unmatched LAN instance', () async {
     final network = await startNode(await identityFromSeed(0x72));
-    await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.closed);
+    await network.lan!.setTrustLevel(ColdCallTrustLevel.closed);
 
     const address = '127.0.0.1:45072';
     network.debugResolveLanInstance(unmatchedToken, address);
@@ -128,7 +128,7 @@ void main() {
   test('a second resolution of the same instance does not dial twice',
       () async {
     final network = await startNode(await identityFromSeed(0x73));
-    await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
+    await network.lan!.setTrustLevel(ColdCallTrustLevel.open);
 
     const address = '127.0.0.1:45073';
     network.debugResolveLanInstance(unmatchedToken, address);
@@ -145,7 +145,7 @@ void main() {
 
   test('an unusable address is not dialed', () async {
     final network = await startNode(await identityFromSeed(0x74));
-    await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
+    await network.lan!.setTrustLevel(ColdCallTrustLevel.open);
 
     network.debugResolveLanInstance(unmatchedToken, 'not-an-address');
     await settle();

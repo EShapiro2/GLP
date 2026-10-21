@@ -60,7 +60,7 @@ void main() {
   Future<void> connect(
       HeadlessGrassrootsNetwork a, HeadlessGrassrootsNetwork b) async {
     b.putKnownPeer(a.identity.publicKey);
-    a.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
+    a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
     await a.send(b.identity.publicKey, Uint8List.fromList([1]));
     expect(
         await waitFor(() =>
@@ -99,7 +99,7 @@ void main() {
         reason: 'delivered well inside the two intervals liveness waits');
     expect(atB, ['up', 'down', 'up'],
         reason: 'the stale session reset, then the fresh one attested');
-    expect(b.observedPeerAddress(a.identity.publicKey),
+    expect(b.wan.observedPeerAddress(a.identity.publicKey),
         '127.0.0.1:${a.boundPort}');
   }, timeout: const Timeout(Duration(minutes: 1)));
 
@@ -133,8 +133,8 @@ void main() {
       if (skip()) return;
       final a = await node(first);
       final b = await node(second);
-      a.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
-      b.putPeerAddress(a.identity.publicKey, '127.0.0.1:${a.boundPort}');
+      a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
+      b.wan.putPeerAddress(a.identity.publicKey, '127.0.0.1:${a.boundPort}');
       expect(
           await waitFor(
               () =>

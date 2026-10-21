@@ -23,8 +23,19 @@
 /// Every function of the API passes straight through (GNA, 2026-10-11, Task
 /// C): `getPeers` answers the agents on the proximity underlays, and
 /// `observedPeerAddress` the address at which the layer observes a connected
-/// peer.  Until 2026-10-12 the two threw [UnsupportedError], the layer's
-/// answering every reachable peer and the dial-book address.
+/// peer.
+///
+/// The layer exposes one sub-object for each underlay it runs, `pan`, `lan`
+/// and `wan`, null for one it does not run (GNA §2.2), and a function of one
+/// underlay is called on its sub-object, with no underlay parameter.  The
+/// runtime's interface keeps the underlay parameter of `setTrustLevel`, which
+/// `trust_declare/2` takes, so this glue maps `trust_declare(pan|lan, Level)`
+/// to that sub-object's `setTrustLevel(Level)`; `getPeers` gathers both
+/// proximity sub-objects' peers, and `onPeerDiscovered` the discoveries of
+/// both.  A function of an underlay the layer does not run finds no
+/// sub-object and throws [UnsupportedError], as the runtime's interface has
+/// a realisation do for a function it does not provide; a callback of such an
+/// underlay is held and never fires.
 library;
 
 import 'dart:async';
@@ -32,6 +43,7 @@ import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_core/src/models/underlay.dart';
+import 'package:grassroots_networking_core/src/models/underlay_api.dart';
 import 'package:grassroots_networking_core/src/store/settings_state.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
@@ -46,6 +58,20 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
   static glp.PubKey _key(Uint8List bytes) => glp.PubKey.fromList(bytes);
 
   static glp.Underlay _underlay(Underlay u) => glp.Underlay.values.byName(u.name);
+
+  static Never _absent(String function, String underlay) =>
+      throw UnsupportedError('$function: the layer (GrassrootsNetwork) runs '
+          'no $underlay underlay, so it has no $underlay sub-object (GNA '
+          '§2.2)');
+
+  /// The layer's sub-object of proximity underlay [underlay], or null.
+  ProximityApi? _proximity(glp.ProximityUnderlay underlay) => switch (underlay) {
+        glp.ProximityUnderlay.pan => layer.pan,
+        glp.ProximityUnderlay.lan => layer.lan,
+      };
+
+  /// The layer's `wan` sub-object, or [UnsupportedError] for [function].
+  WanApi _wan(String function) => layer.wan ?? _absent(function, 'WAN');
 
   // --- Identity ---
 
@@ -139,9 +165,9 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
 
   @override
   List<glp.DiscoveredPeer> getPeers() => [
-        for (final peer in layer.getPeers())
-          glp.DiscoveredPeer(_key(peer.publicKey),
-              glp.ProximityUnderlay.values.byName(peer.underlay.name)),
+        for (final underlay in glp.ProximityUnderlay.values)
+          for (final pk in _proximity(underlay)?.getPeers() ?? const [])
+            glp.DiscoveredPeer(_key(pk), underlay),
       ];
 
   void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)?
@@ -155,18 +181,20 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
   set onPeerDiscovered(
       void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)? cb) {
     _onPeerDiscovered = cb;
-    layer.onPeerDiscovered = cb == null
-        ? null
-        : (pk, underlay) =>
-            cb(_key(pk), glp.ProximityUnderlay.values.byName(underlay.name));
+    for (final underlay in glp.ProximityUnderlay.values) {
+      _proximity(underlay)?.onPeerDiscovered =
+          cb == null ? null : (pk) => cb(_key(pk), underlay);
+    }
   }
 
+  /// `trust_declare(pan|lan, Level)`: that sub-object's `setTrustLevel`.
   @override
-  void setTrustLevel(glp.ProximityUnderlay underlay, glp.TrustLevel level) =>
-      unawaited(layer.setTrustLevel(
-        ProximityUnderlay.values.byName(underlay.name),
-        ColdCallTrustLevel.values.byName(level.name),
-      ));
+  void setTrustLevel(glp.ProximityUnderlay underlay, glp.TrustLevel level) {
+    final proximity = _proximity(underlay) ??
+        _absent('setTrustLevel', underlay.name.toUpperCase());
+    unawaited(proximity
+        .setTrustLevel(ColdCallTrustLevel.values.byName(level.name)));
+  }
 
   // --- WAN ---
 
@@ -181,14 +209,14 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
   set onConnectivityStatusChanged(
       void Function(String? oldAddress, String? newAddress)? cb) {
     _onConnectivityStatusChanged = cb;
-    layer.onConnectivityStatusChanged = cb;
+    layer.wan?.onConnectivityStatusChanged = cb;
   }
 
   @override
-  String? getPublicAddress() => layer.getPublicAddress();
+  String? getPublicAddress() => _wan('getPublicAddress').getPublicAddress();
 
   @override
-  String? networkIdentity() => layer.networkIdentity();
+  String? networkIdentity() => _wan('networkIdentity').networkIdentity();
 
   void Function(String? oldId, String? newId)? _onNetworkChanged;
 
@@ -199,19 +227,19 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
   @override
   set onNetworkChanged(void Function(String? oldId, String? newId)? cb) {
     _onNetworkChanged = cb;
-    layer.onNetworkChanged = cb;
+    layer.wan?.onNetworkChanged = cb;
   }
 
   @override
   void putPeerAddress(glp.PubKey pk, String address) =>
-      layer.putPeerAddress(pk.bytes, address);
+      _wan('putPeerAddress').putPeerAddress(pk.bytes, address);
 
   @override
   String? observedPeerAddress(glp.PubKey pk) =>
-      layer.observedPeerAddress(pk.bytes);
+      _wan('observedPeerAddress').observedPeerAddress(pk.bytes);
 
   @override
-  void punchUdp(String address) => layer.punchUdp(address);
+  void punchUdp(String address) => _wan('punchUdp').punchUdp(address);
 
   // --- Places ---
 

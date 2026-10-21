@@ -72,7 +72,7 @@ void main() {
     expect(store.state.peers.getPeerByPubkeyHex(peerHex), isNotNull);
 
     // Idempotent: a second put changes nothing and never clears an address.
-    network.putPeerAddress(peer.publicKey, '203.0.113.5:4001');
+    network.wan!.putPeerAddress(peer.publicKey, '203.0.113.5:4001');
     network.putKnownPeer(peer.publicKey);
 
     expect(store.state.knownPeers.addressOf(peerHex), equals('203.0.113.5:4001'));
@@ -93,7 +93,7 @@ void main() {
 
     // A peer never seen before: putPeerAddress creates the dial-book entry
     // AND makes the key known (Closed-mode recognition covers it).
-    network.putPeerAddress(peer.publicKey, '203.0.113.5:4001');
+    network.wan!.putPeerAddress(peer.publicKey, '203.0.113.5:4001');
 
     expect(store.state.knownPeers.isKnown(peerHex), isTrue);
     expect(store.state.knownPeers.addressOf(peerHex), equals('203.0.113.5:4001'));
@@ -120,7 +120,7 @@ void main() {
     );
 
     expect(
-      () => network.putPeerAddress(peer.publicKey, 'not-an-address'),
+      () => network.wan!.putPeerAddress(peer.publicKey, 'not-an-address'),
       throwsArgumentError,
     );
 
@@ -142,7 +142,7 @@ void main() {
       sodium: sodium,
     );
 
-    network.putPeerAddress(peer.publicKey, '203.0.113.5:4001');
+    network.wan!.putPeerAddress(peer.publicKey, '203.0.113.5:4001');
     expect(store.state.knownPeers.isKnown(peerHex), isTrue);
 
     network.removeKnownPeer(peer.publicKey);

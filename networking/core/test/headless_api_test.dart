@@ -69,7 +69,7 @@ void main() {
     HeadlessGrassrootsNetwork b,
   ) async {
     b.putKnownPeer(a.identity.publicKey);
-    a.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
+    a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
     await a.send(b.identity.publicKey, Uint8List.fromList([1]));
     expect(
         await waitFor(() =>
@@ -112,14 +112,14 @@ void main() {
 
     expect(a.peerUnderlays(b.identity.publicKey), [Underlay.wan]);
     expect(b.peerUnderlays(a.identity.publicKey), [Underlay.wan]);
-    expect(a.observedPeerAddress(b.identity.publicKey),
+    expect(a.wan.observedPeerAddress(b.identity.publicKey),
         '127.0.0.1:${b.boundPort}');
-    expect(b.observedPeerAddress(a.identity.publicKey),
+    expect(b.wan.observedPeerAddress(a.identity.publicKey),
         '127.0.0.1:${a.boundPort}',
         reason: 'the address the layer observes, which no one supplied');
 
     expect(a.peerUnderlays(stranger.publicKey), isEmpty);
-    expect(a.observedPeerAddress(stranger.publicKey), isNull);
+    expect(a.wan.observedPeerAddress(stranger.publicKey), isNull);
   });
 
   test('punchUdp sends punch datagrams toward the address', () async {
@@ -138,10 +138,10 @@ void main() {
       if (packet != null && !punched.isCompleted) punched.complete(packet);
     });
 
-    a.punchUdp('127.0.0.1:${target.port}');
+    a.wan.punchUdp('127.0.0.1:${target.port}');
     final packet = await punched.future.timeout(const Duration(seconds: 5));
     expect(packet.senderPubkey, a.identity.publicKey);
-    expect(() => a.punchUdp('nowhere'), throwsArgumentError);
+    expect(() => a.wan.punchUdp('nowhere'), throwsArgumentError);
   });
 
   test(
@@ -151,12 +151,12 @@ void main() {
     if (sodiumUnavailable != null) return;
     final a = await node(0xa7, start: false);
     final changes = <(String?, String?)>[];
-    a.onNetworkChanged = (oldId, newId) => changes.add((oldId, newId));
-    expect(a.networkIdentity(), isNull, reason: 'not read before start');
+    a.wan.onNetworkChanged = (oldId, newId) => changes.add((oldId, newId));
+    expect(a.wan.networkIdentity(), isNull, reason: 'not read before start');
     expect(await a.start(), isTrue);
 
     final attached = (await readLocalNetwork()).networkId;
-    expect(a.networkIdentity(), attached);
+    expect(a.wan.networkIdentity(), attached);
     expect(changes, attached == null ? isEmpty : [(null, attached)]);
   });
 
@@ -172,9 +172,9 @@ void main() {
     final client = await node(0xa9, start: false);
     final serverReports = <(String?, String?)>[];
     final clientReports = <(String?, String?)>[];
-    server.onConnectivityStatusChanged =
+    server.wan.onConnectivityStatusChanged =
         (oldAddress, newAddress) => serverReports.add((oldAddress, newAddress));
-    client.onConnectivityStatusChanged =
+    client.wan.onConnectivityStatusChanged =
         (oldAddress, newAddress) => clientReports.add((oldAddress, newAddress));
     expect(await server.start(), isTrue);
     expect(await client.start(), isTrue);
@@ -191,7 +191,7 @@ void main() {
       HeadlessGrassrootsNetwork receiver, {
       int seconds = 6,
     }) async {
-      caller.putPeerAddress(
+      caller.wan.putPeerAddress(
           receiver.identity.publicKey, '127.0.0.1:${receiver.boundPort}');
       await caller.send(receiver.identity.publicKey, Uint8List.fromList([9]));
       return waitFor(

@@ -79,6 +79,7 @@ export 'package:grassroots_networking_core/src/models/peer.dart';
 export 'package:grassroots_networking_core/src/models/packet.dart';
 export 'package:grassroots_networking_core/src/models/block.dart';
 export 'package:grassroots_networking_core/src/models/underlay.dart';
+export 'package:grassroots_networking_core/src/models/underlay_api.dart';
 export 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 
 // Redux Store (core states/actions/reducers; persistence is Flutter-side)

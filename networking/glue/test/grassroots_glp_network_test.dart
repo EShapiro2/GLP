@@ -116,13 +116,15 @@ void main() {
     expect(layer.store.state.knownPeers.known.containsKey(peer.hex), isFalse);
 
     network.setTrustLevel(glp.ProximityUnderlay.lan, glp.TrustLevel.open);
-    expect(layer.trustLevelOf(ProximityUnderlay.lan).name, 'open');
-    expect(layer.trustLevelOf(ProximityUnderlay.pan).name, 'closed');
+    // trust_declare(lan, open) reaches the lan sub-object's setTrustLevel
+    // (GNA §2.2).
+    expect(layer.lan!.trustLevel.name, 'open');
+    expect(layer.pan!.trustLevel.name, 'closed');
 
     expect(network.isPeerReachable(peer), isFalse);
     expect(network.peerUnderlays(peer), isEmpty);
-    expect(network.getPublicAddress(), layer.getPublicAddress());
-    expect(network.networkIdentity(), layer.networkIdentity());
+    expect(network.getPublicAddress(), layer.wan!.getPublicAddress());
+    expect(network.networkIdentity(), layer.wan!.networkIdentity());
     expect(() => network.punchUdp('nowhere'), throwsArgumentError,
         reason: "the layer's refusal of an unparseable address, unchanged");
 
@@ -169,13 +171,13 @@ void main() {
     network.onNetworkChanged =
         (oldId, newId) => events.add('network $oldId $newId');
 
-    layer.onPeerDiscovered!(peer.bytes, ProximityUnderlay.lan);
+    layer.lan!.onPeerDiscovered!(peer.bytes);
     layer.onPeerConnected!(peer.bytes, Underlay.pan, attested);
     layer.onMessageReceived!(
         peer.bytes, Uint8List.fromList([1, 2, 3]), 'm-1', Underlay.lan);
     layer.onPeerDisconnected!(peer.bytes, Underlay.wan);
-    layer.onConnectivityStatusChanged!(null, '203.0.113.7:9600');
-    layer.onNetworkChanged!('n-1', null);
+    layer.wan!.onConnectivityStatusChanged!(null, '203.0.113.7:9600');
+    layer.wan!.onNetworkChanged!('n-1', null);
 
     expect(events, [
       'discovered ${peer.hex} ${glp.ProximityUnderlay.lan}',
@@ -222,11 +224,12 @@ void main() {
 
     // Nothing is nearby and nothing is connected: the layer's answers.
     expect(network.getPeers(), isEmpty);
-    expect(layer.getPeers(), isEmpty);
+    expect(layer.pan!.getPeers(), isEmpty);
+    expect(layer.lan!.getPeers(), isEmpty);
     network.putPeerAddress(peer, '198.51.100.4:9601');
     expect(network.observedPeerAddress(peer), isNull,
         reason: 'the dial-book address is no observed one');
-    expect(layer.observedPeerAddress(peer.bytes), isNull);
+    expect(layer.wan!.observedPeerAddress(peer.bytes), isNull);
 
     await layer.dispose();
   });
