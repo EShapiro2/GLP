@@ -233,7 +233,7 @@ void main() {
         DateTime.now().isBefore(deadline)) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
-    final observed = server.wan!.observedPeerAddress(node.identity.publicKey);
+    final observed = server.wan.observedPeerAddress(node.identity.publicKey);
     expect(observed, isNotNull);
     expect(node.wan!.getPublicAddress(), observed,
         reason: 'the address the server observes, reflected');
@@ -258,7 +258,7 @@ void main() {
 
     // A known peer, connected over a session.
     node.putKnownPeer(peerId.publicKey);
-    peer.wan!.putPeerAddress(nodeId.publicKey, (await localCandidates(node)).first);
+    peer.wan.putPeerAddress(nodeId.publicKey, (await localCandidates(node)).first);
     await peer.send(nodeId.publicKey, Uint8List.fromList([1]));
     final deadline = DateTime.now().add(const Duration(seconds: 20));
     while (!peer.isPeerReachable(nodeId.publicKey) &&
