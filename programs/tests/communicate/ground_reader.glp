@@ -1,11 +1,5 @@
-%% vGLP #13's case (2026-10-15 10:42 UTC): a ground-guarded reader occurring
-%% twice in a clause, each occurrence to receive the writer's value, since
-%% Communicate keeps the assignment (GLP-Spec 555552c, glp.tex, Remark "Guards
-%% and SRSW"; maglp.tex, Communicate; IGLP 84b36fe).  q/1 and r/1 show their
-%% person what they receive.  The goal p(a, Y), r(Y?) shows q(a) and r(f(a)).
-%% Read by glp_runtime/test/multiagent/communicate_keeps_assignment_test.dart,
-%% which runs the same clauses at one agent and at two.  GLP, 2026-10-15 11:00
-%% UTC, item 3.
+%% vGLP #13's case (2026-10-15 10:42 UTC): a ground-guarded reader occurring twice in a clause, each occurrence receiving the writer's value at the reduction, by Reduce applying the head writers' values to the body (GLP-Spec 57e290d, glp.tex, Definition "cGLP Transition System", Reduce, and Section 2.3; IGLP 405a2d8, concurrent-glp.tex, the same, and maglp.tex, Communicate).  q/1 and r/1 show their person what they receive.  The goal p(a, Y), r(Y?) shows q(a) and r(f(a)).
+%% Read by glp_runtime/test/multiagent/ground_reader_at_reduction_test.dart, which runs the same clauses at one agent and at two.  GLP, 2026-10-15 11:00 UTC, item 3.
 F ::= f(Constant).
 
 procedure p(Constant?, F).

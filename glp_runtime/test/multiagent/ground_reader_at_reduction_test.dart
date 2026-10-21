@@ -1,20 +1,12 @@
-/// Communicate keeps the assignment: every occurrence of a ground-guarded
-/// reader receives the writer's value, at the agent that assigned it and at
-/// any other.
+/// Every occurrence of a ground-guarded reader receives the writer's value at the reduction, by Reduce applying the head writers' values to the body.
 ///
-/// Normative source: the GLP language paper, GLP-Spec 555552c, maglp.tex,
-/// Definition of the maGLP transition system, Communicate: "$\sigma'_p =
-/// \sigma_p$" --- "It keeps the assignment in $\sigma_p$, as cGLP does, so
-/// that every occurrence of $X?$ receives it, at $q$ or at any other agent";
-/// glp.tex, Remark "Guards and SRSW": "$X?$ may then occur several times in a
-/// goal, and each occurrence receives the ground term, since Communicate keeps
-/// the assignment"; IGLP 84b36fe, maglp.tex, Communicate.  GLP, 2026-10-15
-/// 11:00 UTC, item 3, on vGLP #13's case:
+/// Normative source: the GLP paper, GLP-Spec 57e290d, glp.tex, Definition "cGLP Transition System", Reduce: "$G' = (G \setminus \{A\}) \cup B(\hat\sigma?)^\star$, and $\sigma' = \sigma \circ \tau$, where $\tau$ is the restriction of $(\hat\sigma?)^\star$ to the readers of the writers of $A$", and Section 2.3, Guards, Definitions "Ground Position, Ground-Guarded Writer" and "Ground Instantiation, SRSW of a Guarded Clause"; IGLP 405a2d8, concurrent-glp.tex, the same Definition: "The head writers' values are applied to the body, whose readers are theirs; the goal writers' values are communicated to their readers, which are elsewhere"; and maglp.tex, Definition "Multiagent GLP", Communicate, which removes the assignment from $\sigma_p$.
+///
+/// vGLP #13's case (GLP, 2026-10-15 11:00 UTC, item 3):
 ///
 ///   p(X, f(X?)) :- ground(X?) | q(X?).
 ///
-/// with the goal p(a, Y), r(Y?): q receives a and r receives f(a), q and r at
-/// one agent, and at two.
+/// with the goal p(a, Y), r(Y?).  The writer mgu is {X := a, Y := f(X?)}: the body receives X's value, q(a), and Y's value with X's applied, f(a), is communicated to r.  q receives a and r receives f(a), q and r at one agent, and at two.
 library;
 
 import 'dart:io';
