@@ -1,0 +1,102 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract intros
+%% (../contracts.glp, contract_named(intros, C)), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it: GKK's meeting and
+%% introduction (programs/gsc/GKK.glp) with no identity, so that a contract
+%% compiled here has an introduction at a commit (vGLP 613ee8d, Section 3.2,
+%% Definition "Introduction Rule, Introduce Peers": "Commit, and Outcome on a
+%% commit, of an attempt of [t]_j at p add the same messages and record for
+%% every {q, r} in iota_p([t]_j) with q, r in known_p for which p has not
+%% recorded introduced(q, r)"; Section 5.4, "Act schemas as local
+%% specifications").  Written as GSC writes a contract, c an agent variable:
+%%
+%%   meet(p?, q?)           :  at p  +knows(q)
+%%                             at q  +knows(p)
+%%   introduce(p?, q? ; c)  :  at p  knows(q), knows(c)
+%%                             at q  knows(p), +knows(c)
+%%
+%% In a schema-binding of introduce, p's role requires an atom naming the
+%% agent c, bound to a variable, and q's role gains an atom naming c, so the
+%% introduction rule gives p the pair {q, c}: "at the commit p, who knows both,
+%% introduces them to each other, so that the machine of a person who comes to
+%% know an agent can reach it" (ibid.).
+%%
+%% play_intros: alice meets bob and carol, each asked and answering yes; alice
+%% introduces carol to bob, introduce(alice, bob, carol), bob asked and
+%% answering yes, carol taking no part; at the commit alice's agent sends
+%% intro(carol) to bob and intro(bob) to carol, which neither asked for
+%% (sent(alice, bob, intro(carol)) and sent(alice, carol, intro(bob)) on the
+%% network's log), and records introduced(bob, carol).  Bob's agent and
+%% carol's each send the other ihello, and know each other, though neither
+%% person asked to know the other; bob asks to meet carol, she is asked and
+%% answers yes, and each knows the other, bob holding knows(carol) twice.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= meet(Peer, Peer) ; introduce(Peer, Peer, Peer).
+Proposal ::= meet(Peer, Peer) ; introduce(Peer, Peer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
+YesNo    ::= yes ; no.
+Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Atom     ::= knows(Peer).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
+Approval ::= approval(Attempt, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_intros(Stream(_), Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_intros(LA?, LB?, LC?, N?) :-
+    trio([req(known(bob)), req(known(carol)),
+          wait(known(bob)), own([A1], propose(meet(A1?, bob))),
+          wait(holds(knows(bob))),
+          wait(known(carol)), own([A2], propose(meet(A2?, carol))),
+          wait(holds(knows(carol))),
+          own([A3], propose(introduce(A3?, bob, carol)))],
+         [req(known(alice)), wait(known(alice)),
+          approval(meet(alice, bob), yes),
+          approval(introduce(alice, bob, carol), yes),
+          wait(known(carol)), own([B1], propose(meet(B1?, carol))),
+          wait(has(knows(carol), 2))],
+         [req(known(alice)), wait(known(alice)),
+          approval(meet(alice, carol), yes),
+          wait(known(bob)), approval(meet(bob, carol), yes)],
+         LA, LB, LC, N).
+
+%% alice, bob and carol, each with its dispatcher and scripted person, their
+%% networks joined.
+procedure trio(Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    merge(OutA?, OutB?, Net1),
+    merge(Net1?, OutC?, Net),
+    route3(Net?, alice, InA, bob, InB, carol, InC, N).

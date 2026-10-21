@@ -19,7 +19,8 @@
 Line  ::= String ; guarded_only(String) ; unguarded_only(String).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
-imported procedure local#faults(Contract?, Preds?, Stream(_)).
+imported procedure local#faults(Contract?, Preds?, NumInfos?, Stream(_)).
+imported procedure local#num_info_of(Constant?, Args?, Constraint?, RoleSpecs?, NumInfo).
 imported procedure local#proposable(Contract?, Preds?, Preds).
 
 Found ::= named(Constant, Constant) ; unnamed.
@@ -33,44 +34,49 @@ compile(Nm, D, V) :- compile_intro(Nm?, D?, V?, no_introduction).
 %% no_introduction.
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?).
 compile(Nm, D, V, I) :- compile_intro(Nm?, D?, V?, I?).
+%% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): each schema's constraint, its local variables and the role whose local variables the constraint names, the table Nt (local.glp, num_info_of); the contract compiled is its plain form (plain_contract), each schema's head less its local variables, which "the schema-binding does not bind", so that a class term names the schema-binding: its roles and its other variables, "bound by the schema-binding, as a speech-act variable is", in the order of the head.
 procedure compile_intro(Constant?, Declared?, Verdict?, Intro?).
 compile_intro(Nm, D, V, I) :- ground(D?), ground(I?) |
     decl_schemas(D?, C0),
-    plain_contract(C0?, C),
+    decl_schemas(D?, C1),
+    decl_schemas(D?, C2),
+    num_table(C1?, Nt),
+    num_table(C2?, Nt1),
+    plain_contract(C0?, Nt1?, C),
     decl_reflexive(D?, Rf),
     intro_preds(I?, E),
-    compile0(Nm?, C?, Rf?, E?, V?).
+    compile0(Nm?, C?, Rf?, E?, Nt?, V?).
 procedure intro_preds(Intro?, Preds).
 intro_preds(no_introduction, []).
 intro_preds(introduction(P), [P?]).
-procedure compile0(Constant?, Contract?, Preds?, Preds?, Verdict?).
-compile0(Nm, C, Rf, E, V) :- ground(Nm?), ground(C?) |
+procedure compile0(Constant?, Contract?, Preds?, Preds?, NumInfos?, Verdict?).
+compile0(Nm, C, Rf, E, Nt, V) :- ground(Nm?), ground(C?) |
     verdict_lines(V?, Nm?, L1),
     role_lines(C?, Nm?, L2),
     lapp(L1?, L2?, L),
-    compile1(L?, Nm?, C?, Rf?, E?).
+    compile1(L?, Nm?, C?, Rf?, E?, Nt?).
 
-procedure compile1(Stream(_)?, Constant?, Contract?, Preds?, Preds?).
-compile1([], Nm, C, Rf, E) :- ground(C?) |
+procedure compile1(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?).
+compile1([], Nm, C, Rf, E, Nt) :- ground(C?) |
     names_lines(C?, Nm?, L1),
-    compile2(L1?, Nm?, C?, Rf?, E?).
-compile1([L|Ls], _, _, _, _) :-
+    compile2(L1?, Nm?, C?, Rf?, E?, Nt?).
+compile1([L|Ls], _, _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),
     lapp(Ls?, ['%% compile end'], Ls1).
 
-procedure compile2(Stream(_)?, Constant?, Contract?, Preds?, Preds?).
-compile2([], Nm, C, Rf, E) :- ground(C?), ground(Rf?) |
-    local # faults(C?, Rf?, Fs),
-    compile3(Fs?, Nm?, C?, Rf?, E?).
-compile2([L|Ls], _, _, _, _) :-
+procedure compile2(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?).
+compile2([], Nm, C, Rf, E, Nt) :- ground(C?), ground(Rf?), ground(Nt?) |
+    local # faults(C?, Rf?, Nt?, Fs),
+    compile3(Fs?, Nm?, C?, Rf?, E?, Nt?).
+compile2([L|Ls], _, _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),
     lapp(Ls?, ['%% compile end'], Ls1).
 
-procedure compile3(Stream(_)?, Constant?, Contract?, Preds?, Preds?).
-compile3([], Nm, C, Rf, E) :-
-    module_lines(Nm?, C?, Rf?, E?, Ls),
+procedure compile3(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?).
+compile3([], Nm, C, Rf, E, Nt) :-
+    module_lines(Nm?, C?, Rf?, E?, Nt?, Ls),
     send_to_user(['%% compile begin'|Ls?]).
-compile3([F|Fs], Nm, _, _, _) :- ground(Nm?) |
+compile3([F|Fs], Nm, _, _, _, _) :- ground(Nm?) |
     H =.. ['%% not compiled', Nm?],
     send_to_user(['%% compile begin', H?, F?|Fs1?]),
     lapp(Fs?, ['%% compile end'], Fs1).
@@ -120,6 +126,9 @@ realisable([not_in_head(_, _)|_], no).
 realisable([listed_base(_, _)|_], no).
 realisable([listed_signed(_, _)|_], no).
 realisable([listed_guarded(_, _)|_], no).
+realisable([multiplicity_not_added(_, _, _)|_], no).
+realisable([multiplicity_not_numeric(_, _, _)|_], no).
+realisable([constraint_not_numeric(_, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
@@ -136,6 +145,7 @@ role_flags([], F, F?).
 role_flags([schema(_, _, Rs)|Ss], F, F2?) :- ground(Rs?), ground(F?) |
     schema_flags(no, Rs?, F?, F1),
     role_flags(Ss?, F1?, F2).
+role_flags([nschema(_, _, _, _)|Ss], F, F2?) :- role_flags(Ss?, F?, F2).
 role_flags([cschema(_, _, Rc, Rs)|Ss], F, F2?) :- ground(Rc?), ground(Rs?), ground(F?) |
     some_reach(Rc?, R),
     schema_flags(R?, Rs?, F?, F1),
@@ -201,12 +211,38 @@ procedure head_line(Stream(_)?, Constant?, Stream(_)).
 head_line([], _, []).
 head_line([X|Xs], Nm, [H?, X?|Xs?]) :- ground(Nm?) | H =.. ['%% not compiled', Nm?].
 
-%% A cschema with no reach conditions is a schema of its roles (GSC, Appendix D: a schema carrying a finite set of reach conditions is written cschema, programs/gsc/README.md).
-procedure plain_contract(Contract?, Contract).
-plain_contract([], []).
-plain_contract([schema(S, Hd, Rs)|Ss], [schema(S?, Hd?, Rs?)|Ps?]) :- plain_contract(Ss?, Ps).
-plain_contract([cschema(S, Hd, [], Rs)|Ss], [schema(S?, Hd?, Rs?)|Ps?]) :- plain_contract(Ss?, Ps).
-plain_contract([cschema(S, Hd, [R|Rc], Rs)|Ss], [cschema(S?, Hd?, [R?|Rc?], Rs?)|Ps?]) :- plain_contract(Ss?, Ps).
+%% A cschema with no reach conditions is a schema of its roles (GSC, Appendix D: a schema carrying a finite set of reach conditions is written cschema, programs/gsc/README.md); a schema with a constraint, nschema, is a schema of its roles, its constraint in the table Nt; and each schema's head is taken less its local variables.
+procedure plain_contract(Contract?, NumInfos?, Contract).
+plain_contract([], _, []).
+plain_contract([schema(S, Hd, Rs)|Ss], Nt, [schema(S?, Hd1?, Rs?)|Ps?]) :- ground(S?), ground(Nt?) |
+    strip_locals(S?, Hd?, Nt?, Hd1),
+    plain_contract(Ss?, Nt?, Ps).
+plain_contract([nschema(S, Hd, _, Rs)|Ss], Nt, [schema(S?, Hd1?, Rs?)|Ps?]) :- ground(S?), ground(Nt?) |
+    strip_locals(S?, Hd?, Nt?, Hd1),
+    plain_contract(Ss?, Nt?, Ps).
+plain_contract([cschema(S, Hd, [], Rs)|Ss], Nt, [schema(S?, Hd1?, Rs?)|Ps?]) :- ground(S?), ground(Nt?) |
+    strip_locals(S?, Hd?, Nt?, Hd1),
+    plain_contract(Ss?, Nt?, Ps).
+plain_contract([cschema(S, Hd, [R|Rc], Rs)|Ss], Nt, [cschema(S?, Hd?, [R?|Rc?], Rs?)|Ps?]) :- plain_contract(Ss?, Nt?, Ps).
+procedure strip_locals(Constant?, Args?, NumInfos?, Args).
+strip_locals(S, Hd, Nt, Hd1?) :- num_lookup(S?, Nt?, Ni), strip_locals1(Ni?, Hd?, Hd1).
+procedure strip_locals1(NumInfo?, Args?, Args).
+strip_locals1(num_info(_, _, Ls, _), Hd, Hd1?) :- loc_vars(Ls?, Vs), drop_args(Hd?, Vs?, Hd1).
+procedure drop_args(Args?, Args?, Args).
+drop_args([], _, []).
+drop_args([A|As], Vs, R?) :- ground(A?), ground(Vs?) |
+    mem(A?, Vs?, In),
+    drop_args(As?, Vs?, R1),
+    keep_unless(In?, A?, R1?, R).
+procedure keep_unless(YesNo?, Arg?, Args?, Args).
+keep_unless(yes, _, R, R?).
+keep_unless(no, A, R, [A?|R?]).
+%% The table of the schemas' numbers: each schema's constraint, true where it has none, its local variables and the role whose local variables the constraint names (local.glp, num_info_of).
+procedure num_table(Contract?, NumInfos).
+num_table([], []).
+num_table([schema(S, Hd, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, true, Rs?, N), num_table(Ss?, Ns).
+num_table([nschema(S, Hd, C, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, C?, Rs?, N), num_table(Ss?, Ns).
+num_table([cschema(S, Hd, _, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, true, Rs?, N), num_table(Ss?, Ns).
 
 %% A schema's variables are named V1, V2, ... in the printed clauses; there are
 %% as many names as vname/3 has.
@@ -218,6 +254,7 @@ names_lines([schema(S, Hd, Rs)|Ss], Nm, L?) :- ground(S?), ground(Hd?), ground(R
     vname(N?, F),
     names_lines1(F?, S?, Ss?, Nm?, L).
 names_lines([cschema(_, _, _, _)|Ss], Nm, L?) :- names_lines(Ss?, Nm?, L).
+names_lines([nschema(_, _, _, _)|Ss], Nm, L?) :- names_lines(Ss?, Nm?, L).
 procedure names_lines1(Found?, Constant?, Contract?, Constant?, Stream(_)).
 names_lines1(named(_, _), _, Ss, Nm, L?) :- names_lines(Ss?, Nm?, L).
 names_lines1(unnamed, S, _, Nm, [H?, H2?]) :- ground(Nm?), ground(S?) |
@@ -228,19 +265,21 @@ count_args([], 0).
 count_args([_|As], N?) :- count_args(As?, M), N := M? + 1.
 
 %% --- The module ------------------------------------------------------------
-procedure module_lines(Constant?, Contract?, Preds?, Preds?, Stream(_)).
-module_lines(Nm, C, Rf, E, Ls?) :- ground(C?), ground(Rf?) |
+procedure module_lines(Constant?, Contract?, Preds?, Preds?, NumInfos?, Stream(_)).
+module_lines(Nm, C, Rf, E, Nt, Ls?) :- ground(C?), ground(Rf?) |
     local # proposable(C?, Rf?, Ps),
-    module_lines1(Nm?, C?, Rf?, E?, Ps?, Ls).
-procedure module_lines1(Constant?, Contract?, Preds?, Preds?, Preds?, Stream(_)).
-module_lines1(Nm, C, Rf, E, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(E?), ground(Ps?) |
+    module_lines1(Nm?, C?, Rf?, E?, Nt?, Ps?, Ls).
+procedure module_lines1(Constant?, Contract?, Preds?, Preds?, NumInfos?, Preds?, Stream(_)).
+module_lines1(Nm, C, Rf, E, Nt, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(E?), ground(Nt?), ground(Ps?) |
     H =.. ['%% the canonical CVA platform of the contract', Nm?],
     class_lines(C?, L1),
     text # fixed_text(Fx),
     request_parts(C?, Ps?, Fx?, Lr, Fx1),
     atom_parts(C?, La),
     text_schemas(C?, Ct),
-    schema_lines(Ct?, T1, Le),
+    schema_lines(Ct?, T1, Le0),
+    numeric_lines(Nt?, Lm),
+    lapp(Le0?, Lm?, Le),
     name_class_lines(C?, Ps?, Ln0),
     name_class_decl(Ln0?, Ln1),
     request_name_lines(C?, Ps?, Lq0),
@@ -248,7 +287,7 @@ module_lines1(Nm, C, Rf, E, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), gr
     lapp(Ln1?, Lq?, Ln),
     T2 =.. [reflexive_preds, Rf?],
     T3 =.. [introduction_preds, E?],
-    binding_lines(C?, L2),
+    binding_lines(C?, Nt?, L2),
     class_of_lines(C?, L3),
     lapp(Ln?, [''|Fx1?], Lnx),
     lapp(L3?, Lnx?, L3x),
@@ -295,6 +334,7 @@ class_lines([schema(S, Hd, Rs)|Ss], [A?|L?]) :- ground(S?), ground(Hd?), ground(
     A =.. [S?|Ts?],
     class_lines1(Ss?, L).
 class_lines([cschema(_, _, _, _)|Ss], L?) :- class_lines(Ss?, L).
+class_lines([nschema(_, _, _, _)|Ss], L?) :- class_lines(Ss?, L).
 procedure class_lines1(Contract?, Stream(_)).
 class_lines1([], ['.']).
 class_lines1([S|Ss], [';'|L?]) :- class_lines([S?|Ss?], L).
@@ -306,6 +346,7 @@ var_types_l([pvar(_)|Vs], Lis, ['Peer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([svar(_)|Vs], Lis, ['Speech'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([nterm(_)|Vs], Lis, ['Peer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([sgn(_, _)|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
+var_types_l([num(_)|Vs], Lis, ['Integer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 procedure role_type(YesNo?, Constant).
 role_type(yes, 'List(Peer)').
 role_type(no, 'Peer').
@@ -329,6 +370,8 @@ var_types([nterm(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
 %% A signed term is no variable of a schema (schema_vars); the clause covers
 %% the type.
 var_types([sgn(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
+%% A numeric variable the schema-binding binds, a number in the class term and in the request, so the request form takes it, a number field (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "a request names it, so the request form takes it").
+var_types([num(_)|Vs], ['Integer'|Ts?]) :- var_types(Vs?, Ts).
 
 %% The request type: Proposal ::= the alternatives of the schemas whose terms name guarded parts (local.glp, proposable), separated by ;, and Request ::= propose(Proposal) ; known(Peer); where there are none, Request ::= known(Peer) alone, and the shared text's lines guarded_only(L), its clauses on the request propose([t]_j), are not printed.
 procedure request_parts(Contract?, Preds?, Lines?, Stream(_), Stream(_)).
@@ -349,6 +392,7 @@ proposal_alts([schema(S, Hd, Rs)|Ss], Ps, As?) :- ground(S?), ground(Hd?), groun
     proposal_alts(Ss?, Ps?, As1),
     keep_alt(In?, A?, As1?, As).
 proposal_alts([cschema(_, _, _, _)|Ss], Ps, As?) :- proposal_alts(Ss?, Ps?, As).
+proposal_alts([nschema(_, _, _, _)|Ss], Ps, As?) :- proposal_alts(Ss?, Ps?, As).
 procedure keep_alt(YesNo?, _?, Stream(_)?, Stream(_)).
 keep_alt(yes, A, As, [A?|As?]).
 keep_alt(no, _, As, As?).
@@ -372,7 +416,7 @@ shared_lines([unguarded_only(L)|Ls], no, [L?|Ls1?]) :- shared_lines(Ls?, no, Ls1
 shared_lines([L|Ls], G, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, Ls1).
 
 %% The type of the machine states, List(Atom), in the type of the views, Output ::= view(List(Atom), List(Key)) in the shared text (vGLP b7e3517, Section 5.4, "The compilation": "the compilation defines Output as the type of the views", a view being view(s, K), "the machine state s of its app state and the persons K it knows"): a machine state is a multiset of the contract's atoms, written as a list, and Atom is the union of the contract's predicates at their argument types: an argument is of the type Peer, a person, where the schemas write a role, a party variable or a name term, and of the type Speech, a speech act, where they write a speech-act variable or a signed term; Atom has one alternative for each predicate and argument types the schemas write it with, in order of first occurrence.  The agent holds an atom as g(Name, Vals), each value p(Peer) or s(Speech), and writes it on the output as the contract writes it: atom_of(g(friend, [p(V1)]), shown(friend(V1?))), one clause per alternative.
-Kind  ::= peer ; speech ; name.
+Kind  ::= peer ; speech ; name ; num.
 Kinds ::= [] ; [Kind | Kinds].
 Sig   ::= sig(Constant, Kinds).
 Sigs  ::= [] ; [Sig | Sigs].
@@ -391,6 +435,7 @@ procedure contract_atoms(Contract?, Atoms).
 contract_atoms([], []).
 contract_atoms([schema(_, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
 contract_atoms([cschema(_, _, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
+contract_atoms([nschema(_, _, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
 procedure rs_atoms(RoleSpecs?, Atoms).
 rs_atoms([], []).
 rs_atoms([R|Rs], As?) :- ground(R?) |
@@ -403,6 +448,7 @@ rs_atoms([R|Rs], As?) :- ground(R?) |
 procedure atom_sigs(Atoms?, Sigs).
 atom_sigs([], []).
 atom_sigs([atom(F, Xs)|As], [sig(F?, Ks?)|Gs?]) :- arg_kinds(Xs?, Ks), atom_sigs(As?, Gs).
+atom_sigs([times(_, A)|As], Gs?) :- atom_sigs([A?|As?], Gs).
 procedure arg_kinds(Args?, Kinds).
 arg_kinds([], []).
 arg_kinds([role(_)|Xs], [peer|Ks?]) :- arg_kinds(Xs?, Ks).
@@ -410,6 +456,7 @@ arg_kinds([pvar(_)|Xs], [peer|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([nterm(_)|Xs], [name|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([svar(_)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([sgn(_, _)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
+arg_kinds([num(_)|Xs], [num|Ks?]) :- arg_kinds(Xs?, Ks).
 %% Atom ::= the alternatives, separated by ;, each the predicate applied to its argument types, a predicate of no argument a constant.
 procedure atom_alts(Sigs?, Stream(_)).
 atom_alts([], ['.']).
@@ -429,6 +476,7 @@ kind_types([], []).
 kind_types([peer|Ks], ['Peer'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([speech|Ks], ['Speech'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([name|Ks], ['CName'|Ts?]) :- kind_types(Ks?, Ts).
+kind_types([num|Ks], ['Integer'|Ts?]) :- kind_types(Ks?, Ts).
 %% atom_of(g(f, [p(V1), s(V2)]), shown(f(V1?, V2?))), one clause per alternative of Atom, and a last clause on any other atom, which covers the type GAtom and is never reached: the agent holds only atoms the contract's schemas add.
 procedure atom_of_lines(Sigs?, Stream(_)).
 atom_of_lines([], ['atom_of(_, unshown) :- otherwise | true.']).
@@ -452,23 +500,34 @@ procedure kind_val(Kind?, Constant?, _).
 kind_val(peer, N, p(N?)).
 kind_val(name, N, c(N?)).
 kind_val(speech, N, s(N?)).
+kind_val(num, N, n(N?)).
 
-%% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]).
-procedure binding_lines(Contract?, Stream(_)).
-binding_lines([], []).
-binding_lines([schema(S, Hd, Rs)|Ss], L?) :- ground(Hd?), ground(Rs?) |
+%% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]), and, for each variable local to a role, b(num(X), lv(s, X)): the schema-binding does not bind it, and its value in the binding stands for the variable, which the state of the person in its role binds (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role: the schema-binding does not bind it"; the shared text, dom_bindings).
+procedure binding_lines(Contract?, NumInfos?, Stream(_)).
+binding_lines([], _, []).
+binding_lines([schema(S, Hd, Rs)|Ss], Nt, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Nt?) |
     schema_vars(Rs?, Hd?, Vs),
     listed_ixs(Rs?, 1, Lis),
-    binding_line_l(Lis?, S?, Vs?, L1),
-    binding_lines(Ss?, L2),
+    num_lookup(S?, Nt?, Ni),
+    local_binds(Ni?, S?, Lb),
+    binding_line_l(Lis?, S?, Vs?, Lb?, L1),
+    binding_lines(Ss?, Nt?, L2),
     lapp(L1?, L2?, L).
-binding_lines([cschema(_, _, _, _)|Ss], L?) :- binding_lines(Ss?, L).
+binding_lines([cschema(_, _, _, _)|Ss], Nt, L?) :- binding_lines(Ss?, Nt?, L).
+binding_lines([nschema(_, _, _, _)|Ss], Nt, L?) :- binding_lines(Ss?, Nt?, L).
+procedure local_binds(NumInfo?, Constant?, Stream(_)).
+local_binds(num_info(_, _, Ls, _), S, Lb?) :- ground(S?) | loc_vars(Ls?, Vs), local_binds1(Vs?, S?, Lb).
+procedure local_binds1(Args?, Constant?, Stream(_)).
+local_binds1([], _, []).
+local_binds1([num(X)|Vs], S, [b(num(X?), lv(S?, X?))|Lb?]) :- ground(X?), ground(S?) | local_binds1(Vs?, S?, Lb).
+local_binds1([_|Vs], S, Lb?) :- otherwise | local_binds1(Vs?, S?, Lb).
 %% binding_of(c(V1, ..., Vn), c, B): the binding a class term names; for a schema with listed roles at i_1, ..., i_m, the binding of its other roles and its variables, and the list [Vi_1, ..., Vi_m] of the people of each listed role, in the order of the roles, which the shared text sends onto the roles of the schema it carries for them (listed_binding).
-procedure binding_line_l(Ints?, Constant?, Args?, Stream(_)).
-binding_line_l([], S, Vs, [T?, '.']) :- binding_line(S?, Vs?, T).
-binding_line_l([I|Is], S, Vs, [T?, ':-', G?, '.']) :- integer(I?), ground(Is?), ground(S?), ground(Vs?) |
+procedure binding_line_l(Ints?, Constant?, Args?, Stream(_)?, Stream(_)).
+binding_line_l([], S, Vs, Lb, [T?, '.']) :- binding_line(S?, Vs?, Lb?, T).
+binding_line_l([I|Is], S, Vs, Lb, [T?, ':-', G?, '.']) :- integer(I?), ground(Is?), ground(S?), ground(Vs?) |
     var_names(Vs?, 1, Ns, _),
-    bind_terms_skip(Vs?, 1, [I?|Is?], Bs),
+    bind_terms_skip(Vs?, 1, [I?|Is?], Bs0),
+    lapp(Bs0?, Lb?, Bs),
     list_names([I?|Is?], Lqs),
     Hd =.. [S?|Ns?],
     T =.. [binding_of, Hd?, S?, 'B?'],
@@ -492,10 +551,11 @@ keep_bind(yes, _, _, Bs, Bs?).
 keep_bind(no, I, V, Bs, [b(V?, W?)|Bs?]) :- ground(V?), integer(I?) |
     vname(I?, F),
     wrapped(V?, F?, W).
-procedure binding_line(Constant?, Args?, _).
-binding_line(S, Vs, T?) :- ground(S?), ground(Vs?) |
+procedure binding_line(Constant?, Args?, Stream(_)?, _).
+binding_line(S, Vs, Lb, T?) :- ground(S?), ground(Vs?) |
     var_names(Vs?, 1, Ns, _),
-    bind_terms(Vs?, 1, Bs),
+    bind_terms(Vs?, 1, Bs0),
+    lapp(Bs0?, Lb?, Bs),
     Hd =.. [S?|Ns?],
     T =.. [binding_of, Hd?, S?, Bs?].
 procedure bind_terms(Args?, Integer?, Stream(_)).
@@ -510,6 +570,7 @@ wrapped(role(_), named(_, Q), p(Q?)).
 wrapped(pvar(_), named(_, Q), p(Q?)).
 wrapped(svar(_), named(_, Q), s(Q?)).
 wrapped(nterm(_), named(_, Q), p(Q?)).
+wrapped(num(_), named(_, Q), n(Q?)).
 wrapped(_, unnamed, p(unnamed)).
 procedure var_names(Args?, Integer?, Stream(_), Stream(_)).
 var_names([], _, [], []).
@@ -534,6 +595,7 @@ class_of_lines([schema(S, Hd, Rs)|Ss], [T?, ':-', 'ground(B?)', ',', 'ground(D?)
     class_of_lines(Ss?, L2),
     lapp(L1?, L2?, L).
 class_of_lines([cschema(_, _, _, _)|Ss], L?) :- class_of_lines(Ss?, L).
+class_of_lines([nschema(_, _, _, _)|Ss], L?) :- class_of_lines(Ss?, L).
 procedure class_of_line(Constant?, Args?, Ints?, _, Stream(_)).
 class_of_line(S, Vs, Lis, T?, L1?) :- ground(S?), ground(Vs?) |
     var_names(Vs?, 1, _, Qs),
@@ -561,6 +623,7 @@ val_goal(svar(X), N, G?) :- ground(X?), ground(N?) | G =.. [val_speech, svar(X?)
 val_goal(role(I), N, G?) :- ground(N?) | G =.. [val_peer, role(I?), 'B?', 'D?', N?].
 val_goal(pvar(X), N, G?) :- ground(X?), ground(N?) | G =.. [val_peer, pvar(X?), 'B?', 'D?', N?].
 val_goal(nterm(_), N, G?) :- ground(N?) | G =.. [val_peer, unnamed, 'B?', 'D?', N?].
+val_goal(num(X), N, G?) :- ground(X?), ground(N?) | G =.. [val_num, num(X?), 'B?', N?].
 %% A signed term is no variable of a schema (schema_vars); the clause covers
 %% the type.
 val_goal(sgn(_, _), N, G?) :- ground(N?) | G =.. [val_peer, unnamed, 'B?', 'D?', N?].
@@ -606,6 +669,7 @@ text_schemas([schema(S, Hd, Rs)|Ss], [X?|Xs?]) :- ground(S?), ground(Hd?), groun
     text_schema(Lis?, S?, Hd?, Rs?, X),
     text_schemas(Ss?, Xs).
 text_schemas([cschema(_, _, _, _)|Ss], Xs?) :- text_schemas(Ss?, Xs).
+text_schemas([nschema(_, _, _, _)|Ss], Xs?) :- text_schemas(Ss?, Xs).
 procedure text_schema(Ints?, Constant?, Args?, RoleSpecs?, _).
 text_schema([], S, Hd, Rs, schema(S?, Hd?, Rs?)).
 text_schema([_|_], S, Hd, Rs, lschema(S?, Hd?, Rs1?, Ls?)) :- ground(Rs?) |
@@ -622,6 +686,25 @@ entry_lines([X|Xs], [E?, '.'|L?]) :- ground(X?) |
     schema_name(X?, Nm),
     E =.. [schema_entry, Nm?, X?],
     entry_lines(Xs?, L).
+%% The schemas' numbers, schema_numeric(Name, numeric(Constraint, Locals, Role)), printed for each schema with a constraint or a local variable: its constraint, its variables local to a role and the role whose local variables the constraint names, at(I), or every, where it names none and every role checks it (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "a constraint is local to the role whose local variables it names, and to every role where it names none, which each checks"); any other schema has none, numeric(true, [], every).
+procedure numeric_lines(NumInfos?, Stream(_)).
+numeric_lines(Nt, ['', 'procedure schema_numeric(Constant?, Numeric).'|L?]) :- numeric_lines1(Nt?, L).
+procedure numeric_lines1(NumInfos?, Stream(_)).
+numeric_lines1([], ['schema_numeric(_, numeric(true, [], every)) :- otherwise | true.']).
+numeric_lines1([num_info(S, C, Ls, R)|Ns], L?) :- ground(S?), ground(C?), ground(Ls?), ground(R?) |
+    loc_vars(Ls?, Vs1),
+    loc_vars(Ls?, Vs2),
+    plain_num(C?, Vs1?, R?, P),
+    numeric_line(P?, S?, C?, Vs2?, R?, L1),
+    numeric_lines1(Ns?, L2),
+    lapp(L1?, L2?, L).
+procedure plain_num(Constraint?, Args?, CRole?, YesNo).
+plain_num(true, [], every, yes).
+plain_num(_, _, _, no) :- otherwise | true.
+procedure numeric_line(YesNo?, Constant?, Constraint?, Args?, CRole?, Stream(_)).
+numeric_line(yes, _, _, _, _, []).
+numeric_line(no, S, C, Vs, R, [T?, '.']) :- ground(S?), ground(C?), ground(Vs?), ground(R?) |
+    T =.. [schema_numeric, S?, numeric(C?, Vs?, R?)].
 procedure schema_name(_?, Constant).
 schema_name(schema(Nm, _, _), Nm?).
 schema_name(lschema(Nm, _, _, _), Nm?).
@@ -639,6 +722,7 @@ name_class_lines([schema(S, Hd, Rs)|Ss], Ps, L?) :- ground(S?), ground(Hd?), gro
     name_class_lines(Ss?, Ps?, L2),
     lapp(L1?, L2?, L).
 name_class_lines([cschema(_, _, _, _)|Ss], Ps, L?) :- name_class_lines(Ss?, Ps?, L).
+name_class_lines([nschema(_, _, _, _)|Ss], Ps, L?) :- name_class_lines(Ss?, Ps?, L).
 procedure name_class_lines1(YesNo?, Constant?, Args?, RoleSpecs?, Stream(_)).
 name_class_lines1(no, _, _, _, []).
 name_class_lines1(yes, S, Hd, Rs, L?) :- ground(S?), ground(Hd?), ground(Rs?) |
@@ -681,6 +765,7 @@ request_name_lines([schema(S, Hd, Rs)|Ss], Ps, L?) :- ground(S?), ground(Hd?), g
     request_name_lines(Ss?, Ps?, L2),
     lapp(L1?, L2?, L).
 request_name_lines([cschema(_, _, _, _)|Ss], Ps, L?) :- request_name_lines(Ss?, Ps?, L).
+request_name_lines([nschema(_, _, _, _)|Ss], Ps, L?) :- request_name_lines(Ss?, Ps?, L).
 procedure request_name_lines1(YesNo?, Constant?, Args?, RoleSpecs?, Stream(_)).
 request_name_lines1(no, _, _, _, []).
 request_name_lines1(yes, S, Hd, Rs, [T?, '.']) :- ground(S?), ground(Hd?), ground(Rs?) |

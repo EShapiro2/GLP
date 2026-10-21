@@ -3491,7 +3491,7 @@ echo ""
 # no tick, vGLP efe7bbc; the agent taking its own transactions one at a time, one on each own trigger it reads, which it writes on a stream of its own merged fairly with its other triggers, when it starts, after each other trigger it reads unless one it wrote is still unread, and after each own transaction it takes, vGLP 6c8c663).  GSC's social graph
 # and currency (their owners', programs/gsc/GSG.glp and
 # programs/currencies/coins/GC.glp) and vGLP's nudge, introduce, gnudge, childsafe, link, friends, waves,
-# parts, opens, groups, counter and merges (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
+# parts, opens, groups, counter, merges, coins, wardclose, numbers, bonds and intros (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not effective, and those it
 # compiles whatever their guards; and the plays of each platform, two agents
 # or three with scripted persons paced on their screens, each run on the
@@ -3521,6 +3521,9 @@ check "CVA compiler: vGLP's counter, an unguarded count always open to its agent
 check "CVA compiler: vGLP's merges, merge taking two listed roles of one base, certified by GSC's check/2, compiled to the platform it prints (vGLP c649c0d)" "merges/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's coins, GC's mint, swap and pay with coins of one unit, certified by GSC's check/2, compiled to the platform it prints (vGLP f0acbc1)" "coins/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's wardclose, child_close taking a listed role whose base is not a guarding role, its guarded part opened by the child, certified by GSC's check/2, compiled to the platform it prints (vGLP f0acbc1)" "wardclose/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's numbers, act schemas with numbers, a multiplicity, a variable local to a role and a constraint checked by the role whose local variable it names, certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "numbers/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's bonds, GB's mint_bond, advance and redeem_bc with GKK's establish and meet, GB's mint_coin and swap_cb, and dawn, certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "bonds/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's intros, GKK's meeting and introduction with no identity, its introduction at a commit, certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "intros/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3569,6 +3572,13 @@ compile(listed_guard_two, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [s
 compile(listed_unguarded, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
 compile(listed_mixed, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(cl2, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), rs(unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
 compile(listed_likewise, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(cl3, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)]), atom(ready, [svar(n)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_listed_roles).
+compile(two_locals, [nschema(s, [num(a), num(b)], gt(num(a), num(b)), [rs(guarded, [atom(x, [])], [], [atom(m, [num(a)])], []), rs(guarded, [atom(y, [])], [], [atom(m, [num(b)])], [])])], syntactically_grassroots).
+compile(one_local, [nschema(s, [num(d), num(t)], le(num(d), num(t)), [rs(guarded, [atom(x, [num(d)])], [], [], []), rs(unguarded, [atom(y, [num(d)])], [], [atom(m, [num(t)])], [])])], syntactically_grassroots).
+compile(gt_open, [nschema(u, [num(t), num(t1)], gt(num(t1), num(t)), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
+compile(succ_open, [nschema(u, [num(t), num(t1)], succ(num(t), num(t1)), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
+compile(or_open, [nschema(u, [num(t), num(t1)], or(succ(num(t), num(t1)), gt(num(t1), num(t))), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
+compile(two_role_num, [schema(s, [num(n)], [rs(guarded, [atom(x, [])], [], [atom(m, [num(n)])], []), rs(guarded, [atom(y, [])], [], [atom(m, [num(n)])], [])])], syntactically_grassroots).
+compile(mult, [schema(s, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])], syntactically_grassroots).
 :quit
 HEREDOC
 2>&1)
@@ -3627,12 +3637,27 @@ check "CVA compiler: a schema whose listed role's base guards with another guard
 # The locality condition on a guarded part with an opener (vGLP f0acbc1, Section 5.4, "Act schemas as local specifications": "the contract is a local specification where every such schema has one guarding role, and every other guarded part of the class that a guard of such a part guards is determined likewise, with the same opener"; vGLP #18 Cowork to Code, 2026-10-20 10:44 UTC, item 5): a schema with a listed role whose base is not a guarding role, with two guarding roles or none, is refused; a contract one of whose such schemas determines a part of a class another part of which, guarded by its guard, is of a schema without a listed role, is refused, both schemas named; and one whose other part is of such a schema, with the same person in its first role, is compiled.
 check "CVA compiler: a schema with a listed role whose base is not a guarding role, and two guarding roles, refused as not local (listed_guard_two)" "%% not compiled(listed_guard_two)" "$cva_refuse"
 check "CVA compiler: ... the reason" "%% with a listed role whose base is not a guarding role has more than one guarding role, and it has one:" "$cva_refuse"
-check "CVA compiler: ... and no guarding role, refused as not local (listed_unguarded)" "%% not compiled(listed_unguarded)" "$cva_refuse"
-check "CVA compiler: ... the reason" "%% with a listed role whose base is not a guarding role has no guarding role, and it has one:" "$cva_refuse"
+# "every such schema has one guarding role or none" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:00 UTC): a schema with a listed role whose base is not a guarding role and no guarding role determines unguarded parts, its base its first role, which opens them.
+check "CVA compiler: ... and no guarding role, compiled, its parts unguarded, opened by its first role (listed_unguarded)" "%% the canonical CVA platform of the contract(listed_unguarded)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(listed_unguarded)" "$cva_refuse"
+check_not "CVA compiler: ... no reason of no guarding role given" "has no guarding role, and it has one:" "$cva_refuse"
 check "CVA compiler: a guard of a guarded part opened by the child guarding another part of its class, of a schema with no listed role, refused as not local (listed_mixed)" "%% not compiled(listed_mixed)" "$cva_refuse"
 check "CVA compiler: ... both schemas named" "%% the schema and the other(cl, cl2)" "$cva_refuse"
 check "CVA compiler: ... the other part of a schema with a listed role whose base is not a guarding role, the same person in its first role, compiled (listed_likewise)" "%% the canonical CVA platform of the contract(listed_likewise)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(listed_likewise)" "$cva_refuse"
+# Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, item 1): "A numeric variable that occurs only in atoms a schema requires or deletes at one role, and in the constraint, is local to that role ... A constraint is local to the role whose local variables it names, and to every role where it names none, which each checks.  Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and the request names it, so the request form takes it, a number field.  A multiplicity k on an atom added or deleted adds or deletes k copies.  Locality: a constraint names the local variables of one role; refuse otherwise.  Effectiveness: a local variable need not occur in a deleted or added atom; a variable of an added atom of an unguarded schema that the required atoms do not name may be bound by the constraint to finitely many values (GB's advance, succ)."
+check "CVA numbers: a constraint naming the local variables of two roles, refused as not local (two_locals)" "%% not compiled(two_locals)" "$cva_refuse"
+check "CVA numbers: ... the reason" "%% names the local variables of two roles or more, and it names those of one:" "$cva_refuse"
+check "CVA numbers: a constraint local to one role, its variable in no deleted or added atom, compiled (one_local)" "%% the canonical CVA platform of the contract(one_local)" "$cva_refuse"
+check "CVA numbers: ... the constraint printed as checked by the role whose local variable it names, and the request naming d, a number field" "^schema_numeric(s, numeric(le(num(d), num(t)), \[num(t)\], at(2)))$" "$cva_refuse"
+check "CVA numbers: ... the schema-binding binding d and not t, which stands for itself" "^binding_of(s(V1, V2, V3), s, \[b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(d), n(V3?)), b(num(t), lv(s, t))\])$" "$cva_refuse"
+check "CVA numbers: an unguarded schema adding a variable its constraint gives infinitely many values, gt, refused as not effective (gt_open)" "%% not compiled(gt_open)" "$cva_refuse"
+check "CVA numbers: ... the same with succ, which gives it one value, compiled, as GB's advance (succ_open)" "%% the canonical CVA platform of the contract(succ_open)" "$cva_refuse"
+check_not "CVA numbers: ... and not refused" "%% not compiled(succ_open)" "$cva_refuse"
+check "CVA numbers: ... or(succ, gt), one branch giving infinitely many values, refused (or_open)" "%% not compiled(or_open)" "$cva_refuse"
+check "CVA numbers: a numeric variable of atoms two roles require and of no deleted or added atom, local to neither, refused as not effective, the variable named (two_role_num)" "%% the schema and the variable(s, num(n))" "$cva_refuse"
+check "CVA numbers: a multiplicity bound by the schema-binding, compiled (mult)" "%% the canonical CVA platform of the contract(mult)" "$cva_refuse"
+check "CVA numbers: ... the request naming k, a number" "^binding_of(s(V1, V2), s, \[b(role(1), p(V1?)), b(num(k), n(V2?))\])$" "$cva_refuse"
 # "The opener of an unguarded part is the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it, and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part" (vGLP a890465, Section 5.4, "Act schemas as local specifications"), and "A part with an opener is proposed by its opener, and a guarded part with none by one of its guards" (Section 3.2, "The protocol"): the shared text gives such a part its opener, and a guard proposes only a guarded part with no opener.
 cva_groups_text=$(cat "$CVA/groups/platform.vglp" 2>&1 || true)
 check "CVA openers: a guarded part opened by the person in the first role of its schema-bindings of a schema whose listed roles' base does not guard, not a guard of the part" "^    part_gfirsts(All?, mate(N?, B?, G?, F?), Q?, G?, Fo),$" "$cva_groups_text"
@@ -4397,6 +4422,87 @@ check "CVA wardclose: dave's membership ended in the one act, and he comes to kn
 check "CVA wardclose: alice's screen: she adopted carol and comes to know dave, her person acting once on the close, the request" "A = \[view(\[\], \[\]), view(\[\], \[carol\]), view(\[parenting(carol)\], \[carol\]), view(\[parenting(carol)\], \[carol, dave\]) | " "$cva_wardclose"
 check_not "CVA wardclose: alice's person is never asked on the close, and no notice is written: the yield ends no approval" "gave(attempt([a-z]*, [0-9]*, [0-9]*, child_close\|gave(child_close\|refused(\|yielded(" "$cva_wardclose"
 
+# Numbers in act schemas (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an argument of an atom may be a number or a numeric variable, a schema may carry a constraint on its numeric variables, and an atom it adds or deletes may carry a multiplicity, a number or a numeric variable, for that many copies of it.  A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role; a constraint is local to the role whose local variables it names, and to every role where it names none.  Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and a request names it, so the request form takes it"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, items 1 and 3).  vGLP's contract numbers (programs/vglp/cva/contracts.glp): start, refuel(p? ; k) adding k fuel, step(p ; t, t1), unguarded, deleting a fuel and level(t) and adding level(t1), succ(t, t1), and claim(p?, q ; d, t), q's role keeping level(t), t local to it and le(d, t) checked by q's machine.  bob starts, asks for two units of fuel, and his machine steps his level once for each, an unguarded part it opens; alice claims 3 of bob, refused unable by bob's machine, his level 2, and then 2, which commits (numbers/self.glp).
+cva_numbers_load=$("$REPL_RUN" <<HEREDOC
+$CVA/numbers/
+:quit
+HEREDOC
+2>&1)
+check "CVA numbers: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/numbers" "$cva_numbers_load"
+check_not "CVA numbers: no type errors" "Type checking failed" "$cva_numbers_load"
+check "CVA numbers: refuel's request names k, a number field, and claim's names d; step, unguarded, is not proposed by a person" "^befriend(Peer, Peer) start(Peer) refuel(Peer, Integer) claim(Peer, Peer, Integer) $" "$(cva_proposal "$CVA/numbers/platform.vglp")"
+cva_numbers=$("$REPL_RUN" <<HEREDOC
+$CVA/numbers/
+:limit 20000000
+play_numbers(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA numbers: bob starts at level 0, refuel(bob, 2) adds two copies of fuel, the multiplicity k bound by his request, and his machine takes step once for each, deleting a fuel and level(t), t bound by his state, and adding level(t1), t1 = t + 1, and no more once the fuel is spent" "B = \[view(\[\], \[\]), view(\[started, level(0)\], \[\]), view(\[fuel, fuel, started, level(0)\], \[\]), view(\[level(1), fuel, started\], \[\]), view(\[level(2), started\], \[\]), view(\[level(2), started\], \[alice\])" "$cva_numbers"
+check_not "CVA numbers: ... step asks nobody and sends nothing, an attempt of one participant decided at its Propose" "gave(step\|gave(attempt([a-z]*, [0-9]*, [0-9]*, step\|start(attempt([a-z]*, [0-9]*, [0-9]*, step" "$cva_numbers"
+check "CVA numbers: alice claims 3 of bob: bob's machine, his level 2, votes no, unable, the constraint le(d, t) local to his role, his state holding every atom the schema requires there, and alice's machine tells the abort, bob its refuser" "sent(alice, bob, start(attempt(alice, 10, 10, claim(alice, bob, 3), none))), sent(bob, alice, vote(attempt(alice, 10, 10, claim(alice, bob, 3), none), no(unable(\[\], \[\])))), sent(alice, bob, outcome(attempt(alice, 10, 10, claim(alice, bob, 3), none), abort(bob, unable(\[\], \[\]))))" "$cva_numbers"
+check "CVA numbers: ... her screen shows the notice naming bob, unable" "A = \[.*refused(claim(alice, bob, 3), bob, unable(\[\], \[\]))" "$cva_numbers"
+check "CVA numbers: alice claims 2, bob's machine votes yes, and it commits" "sent(alice, bob, start(attempt(alice, 12, 12, claim(alice, bob, 2), none))), sent(bob, alice, vote(attempt(alice, 12, 12, claim(alice, bob, 2), none), yes)), sent(alice, bob, outcome(attempt(alice, 12, 12, claim(alice, bob, 2), none), commit))" "$cva_numbers"
+check "CVA numbers: ... alice holds claimed(bob, 2)" "A = \[.*view(\[claimed(bob, 2), friend(bob)\], \[bob\]) | " "$cva_numbers"
+check "CVA numbers: ... and bob honoured(alice, 2), his level unchanged" "B = \[.*view(\[honoured(alice, 2), friend(alice), level(2), started\], \[alice\]) | " "$cva_numbers"
+check_not "CVA numbers: bob's person is never asked on a claim, his role not guarding" "gave(claim\|gave(attempt([a-z]*, [0-9]*, [0-9]*, claim" "$cva_numbers"
+check_not "CVA numbers: no introduction: no role requires an atom naming an agent bound to a variable" "intro(" "$cva_numbers"
+
+# The introduction at a commit (vGLP 613ee8d, Section 3.2, Definition "Introduction Rule, Introduce Peers": "Commit, and Outcome on a commit, of an attempt of [t]_j at p add the same messages and record for every {q, r} in iota_p([t]_j) with q, r in known_p for which p has not recorded introduced(q, r)"; Section 5.4, "Act schemas as local specifications": the introduction rule of a contract "gives each person p, for a part determined by a schema-binding in which p's role requires an atom naming an agent c bound to a variable and the person q in another role gains an atom naming c, the pair {q, c}: at the commit p, who knows both, introduces them to each other"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, item 2).  vGLP's contract intros (programs/vglp/cva/contracts.glp), GKK's meet and introduce with no identity: alice meets bob and carol, introduces carol to bob, and at the commit her machine introduces bob's and carol's to each other; they exchange ihellos and know each other, and bob meets carol (intros/self.glp).
+cva_intros_text=$(cat "$CVA/intros/platform.vglp")
+check "CVA introductions: Commit adds to the pairs of the attempt's other participants the pairs the introduction rule gives the agent for the part" "^    iota_known(P?, Id?, St?, Ps2),$" "$cva_intros_text"
+check "CVA introductions: ... and Outcome on a commit those it gives a participant" "^outcome_intros(commit, At, Id, St, Ap, Ms?, Ap1?) :- ground(At?), ground(St?) |$" "$cva_intros_text"
+cva_intros_load=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:quit
+HEREDOC
+2>&1)
+check "CVA intros: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/intros" "$cva_intros_load"
+check_not "CVA intros: no type errors" "Type checking failed" "$cva_intros_load"
+cva_intros=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 20000000
+play_intros(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA intros: alice meets bob and then carol, each asked and answering yes" "A = \[view(\[\], \[\]), view(\[\], \[bob\]), view(\[\], \[bob, carol\]), view(\[knows(bob)\], \[bob, carol\]), view(\[knows(carol), knows(bob)\], \[bob, carol\]) | " "$cva_intros"
+check "CVA intros: alice introduces carol to bob, bob's machine asks him and votes yes, and at the commit alice's machine sends intro(carol) to bob and intro(bob) to carol, which no person asked for" "sent(alice, bob, start(attempt(alice, 6, 6, introduce(alice, bob, carol), none))), sent(bob, alice, vote(attempt(alice, 6, 6, introduce(alice, bob, carol), none), yes)), sent(alice, bob, outcome(attempt(alice, 6, 6, introduce(alice, bob, carol), none), commit)), intro(alice, bob, carol), intro(alice, carol, bob)" "$cva_intros"
+check "CVA intros: ... bob gains knows(carol), and his machine, introduced to carol's, comes to know her by the ihello exchange" "B = \[.*gave(introduce(alice, bob, carol), yes), view(\[knows(carol), knows(alice)\], \[alice\]), view(\[knows(carol), knows(alice)\], \[alice, carol\])" "$cva_intros"
+check "CVA intros: ... carol, not a participant and not asked, comes to know bob likewise" "C = \[view(\[\], \[\]), view(\[\], \[alice\]), gave(meet(alice, carol), yes), view(\[knows(alice)\], \[alice\]), view(\[knows(alice)\], \[alice, bob\])" "$cva_intros"
+check_not "CVA intros: ... carol's person is never asked on the introduction" "C = \[.*gave(introduce" "$cva_intros"
+check "CVA intros: bob asks to meet carol, whom his machine knows by the introduction, she is asked and answers yes, and it commits" "sent(bob, carol, start(attempt(bob, 8, 8, meet(bob, carol), none))), sent(carol, bob, vote(attempt(bob, 8, 8, meet(bob, carol), none), yes)), sent(bob, carol, outcome(attempt(bob, 8, 8, meet(bob, carol), none), commit))" "$cva_intros"
+check "CVA intros: ... bob holds knows(carol) twice, the introduction's and the meeting's, and carol knows(bob)" "B = \[.*view(\[knows(carol), knows(carol), knows(alice)\], \[alice, carol\]) | " "$cva_intros"
+check "CVA intros: ... carol's answer and her state" "C = \[.*gave(meet(bob, carol), yes), view(\[knows(bob), knows(alice)\], \[alice, bob\]) | " "$cva_intros"
+check_not "CVA intros: a meeting introduces no one: its roles require no atom naming an agent bound to a variable" "intro(alice, bob, alice)\|intro(alice, carol, alice)\|intro(bob, carol, bob)" "$cva_intros"
+
+# GB's mint_bond, advance and redeem_bc (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, items 1 and 3: "GB: d, k and r by the request; t local to the issuer's role, its date; mint_bond's gt(d, t) checked by the minter, redeem_bc's le(d, t) by the issuer").  vGLP's contract bonds (programs/vglp/cva/contracts.glp): GB's three schemas as programs/currencies/bonds/GB.glp writes them, with GKK's establish and meet, GB's mint_coin and swap_cb, and dawn, which gives a person their first date, date(0), GB naming no act that does (Code #12 to Currencies, 2026-10-20 22:23 UTC).  advance, unguarded, its t local to its role and t1 given by succ, is opened by a dated person's machine whenever it can, so the run does not suspend and is stopped at the REPL's :limit (bonds/self.glp).  What the machine does with a request of mint_bond whose guard is not ready (Code #12's question 5 to vGLP, 22:23 UTC) and which part of redeem_bc's class, which holds swap_cb's mirror, the holder's machine proposes (Code #13's finding) are recorded in bonds/self.glp and not held here.
+cva_bonds_load=$("$REPL_RUN" <<HEREDOC
+$CVA/bonds/
+:quit
+HEREDOC
+2>&1)
+check "CVA bonds: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/bonds" "$cva_bonds_load"
+check_not "CVA bonds: no type errors" "Type checking failed" "$cva_bonds_load"
+check "CVA bonds: mint_bond's request names d and k, numbers, and not the minter's date t, local to her role; advance, unguarded, is not proposed by a person" "^establish(Peer) meet(Peer, Peer) dawn(Peer) mint_coin(Peer, Integer) mint_bond(Peer, Integer, Integer) swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer) redeem_bc(Peer, Peer, Integer, Peer) $" "$(cva_proposal "$CVA/bonds/platform.vglp")"
+cva_bonds=$("$REPL_RUN" <<HEREDOC
+$CVA/bonds/
+:limit 5000000
+play_bonds(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA bonds: alice's machine advances her date, date(t) deleted and date(t1) added, t1 = t + 1, an unguarded part it opens" "A = \[.*view(\[date([1-9][0-9]), " "$cva_bonds"
+check_not "CVA bonds: ... advance asks nobody and sends nothing, an attempt of one participant decided at its Propose" "gave(advance\|gave(attempt([a-z]*, [0-9]*, [0-9]*, advance\|advance(alice" "$cva_bonds"
+check "CVA bonds: ... without end: the run is stopped at the REPL's :limit" "capped" "$cva_bonds"
+check "CVA bonds: alice mints a bond maturing at 40 at a date below it, gt(d, t) checked by her machine, t her date" "A = \[.*bond(alice, 40)" "$cva_bonds"
+check "CVA bonds: ... and one maturing at 1000000" "A = \[.*bond(alice, 1000000)" "$cva_bonds"
+check_not "CVA bonds: no bond maturing at 0 is minted, gt(0, t) failing at every date" "bond(alice, 0)" "$cva_bonds"
+check "CVA bonds: alice mints two coins, mint_coin(alice, 2), the multiplicity k bound by her request" "A = \[.*coin(alice), coin(alice), " "$cva_bonds"
+check "CVA bonds: ... and bob likewise" "B = \[view(\[\], \[\]), view(\[identity\], \[\]), view(\[coin(bob), coin(bob), identity\], \[\])" "$cva_bonds"
+check "CVA bonds: bob swaps a coin of his for each of alice's bonds, she asked and answering yes" "sent(bob, alice, outcome(attempt(bob, 8, 8, swap_cb(bob, alice, bob, 1, alice, 1000000, 1), none), commit)), .*sent(bob, alice, outcome(attempt(bob, 10, 10, swap_cb(bob, alice, bob, 1, alice, 40, 1), none), commit))" "$cva_bonds"
+check "CVA bonds: ... bob holds both bonds" "B = \[.*view(\[bond(alice, 40), bond(alice, 1000000), knows(alice), identity\], \[alice\])" "$cva_bonds"
+
 # GSC's social network, GSN (programs/gsc/GSN.glp, the checker's gsn), compiled and run with scripted persons (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, item 5; vGLP a890465, Section 7): four agents; create, join with its approval question, a message, a member's post and the leader's deliveries of it, leave, the drop of a member who is no longer the leader's friend, and close by the leader taking the listed role a[listed(*, n)] of every member the leader lists (social_network/self.glp).
 cva_net_load=$("$REPL_RUN" <<HEREDOC
 $CVA/social_network/
@@ -4469,7 +4575,7 @@ check "CVA counter: the run does not suspend: alice's agent counts without end, 
 check_not "CVA counter: no person asked for count" "gave(attempt([a-z]*, [0-9]*, [0-9]*, count\|gave(count" "$cva_counter"
 
 # No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes its own transactions "one at a time, each on an own trigger that the agent writes on a stream merged fairly with its other triggers, when it starts, after another trigger and after each own transaction it takes, until none holds", vGLP 6c8c663; Udi's approval of 2026-10-18, reported by Code #10): each play's run but the counter's suspends once every agent has taken its own transactions until none holds and no trigger is left to read, where until vGLP efe7bbc it ran to the REPL's :limit, each agent's clock ticking without end.
-for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens cva_groups cva_merges cva_network cva_coins cva_wardclose; do
+for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens cva_groups cva_merges cva_network cva_coins cva_wardclose cva_numbers cva_intros; do
     check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
     check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
 done
@@ -6415,7 +6521,7 @@ check_not "APPS gsg: no error" "Error" "$apps_gsg"
 check "APPS gsg friends: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsg"
 check_not "APPS gsg friends: ... and is not stopped at the limit" "capped" "$apps_gsg"
 
-# GKK's app, programs/apps/gkk: the base mini-app of the grassroots app, which every other mini-app extends (GSC #5 Cowork, Code_inbox.md, 2026-10-20 17:53 UTC), the same host on GKK's platform, its wrapper the same file as GSG's; three executions over two conversations, alice's with bob and alice's with carol (play_keys): each establishes their identity (GKK:1); alice asks to meet bob in person, bob is asked and answers yes, and each then knows the other (GKK:2, meet(p?, q?)); alice and carol meet likewise; and alice, who knows bob and carol, introduces carol to bob, bob is asked and answers yes, and he then knows carol, carol not asked (GKK:3, introduce(p?, q? ; c)).
+# GKK's app, programs/apps/gkk: the base mini-app of the grassroots app, which every other mini-app extends (GSC #5 Cowork, Code_inbox.md, 2026-10-20 17:53 UTC), the same host on GKK's platform, its wrapper the same file as GSG's; three executions over three conversations, alice's with bob, alice's with carol and bob's with carol (play_keys): each establishes their identity (GKK:1); alice asks to meet bob in person, bob is asked and answers yes, and each then knows the other (GKK:2, meet(p?, q?)); alice and carol meet likewise; and alice, who knows bob and carol, introduces carol to bob, bob is asked and answers yes, and he then knows carol, carol not asked (GKK:3, introduce(p?, q? ; c)).  At the commit alice's agent introduces bob's and carol's to each other, the introduction rule giving her the pair {bob, carol}, her role requiring knows(c), c an agent variable, and bob's gaining knows(c) (vGLP 613ee8d, Definition "Introduction Rule, Introduce Peers"; Section 5.4, "Act schemas as local specifications": "under GKK:3 Alice introduces Carol and Bob"); their agents exchange ihellos and know each other, and bob asks to meet carol in person, she answers yes, and each knows the other (GKK:2; GKK has no befriend, vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, item 3, and Code #12's question 6 of 22:23 UTC to vGLP).
 check "APPS gkk: platform.vglp is what vGLP's compiler prints from GKK.glp" "^gkk/platform.vglp: as printed$" "$apps_print"
 apps_gkk_proposal=$(awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$GLP_DIR/programs/apps/gkk/platform.vglp")
 check "APPS gkk: the request type proposes GKK's three classes" "^establish(Peer) meet(Peer, Peer) introduce(Peer, Peer, Peer) $" "$apps_gkk_proposal"
@@ -6428,7 +6534,7 @@ APPS_ART=$(mktemp -d)
 apps_gkk=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gkk $APPS_ART
 $GLP_DIR/programs/apps/gkk
-:limit 600000
+:limit 20000000
 play_keys(A, B, C).
 :quit
 HEREDOC
@@ -6437,8 +6543,8 @@ rm -rf "$APPS_ART"
 check "APPS gkk: the mini-app's artefact is certified" "gkk.glpw --- certified under" "$apps_gkk"
 check "APPS gkk loads" "Loaded program: .*programs/apps/gkk$" "$apps_gkk"
 apps_line "APPS gkk keys: alice's screen" "A = [view([], []), menu(alice, []), view([identity], []), view([identity], [bob]), view([identity], [bob, carol]), view([knows(bob), identity], [bob, carol]), view([knows(carol), knows(bob), identity], [bob, carol]), menu(alice, [bob, carol]) | _]" "$apps_gkk"
-apps_line "APPS gkk keys: bob's screen" "B = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), gave(introduce(alice, bob, carol), yes), view([knows(carol), knows(alice), identity], [alice]) | _]" "$apps_gkk"
-apps_line "APPS gkk keys: carol's screen" "C = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, carol), yes), view([knows(alice), identity], [alice]) | _]" "$apps_gkk"
+apps_line "APPS gkk keys: bob's screen: once he has answered yes to the introduction, his agent, introduced to carol's by alice's at the commit, comes to know her by the ihello exchange, and he meets her in person, holding knows(carol) twice" "B = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), gave(introduce(alice, bob, carol), yes), view([knows(carol), knows(alice), identity], [alice]), view([knows(carol), knows(alice), identity], [alice, carol]), view([knows(carol), knows(carol), knows(alice), identity], [alice, carol]) | _]" "$apps_gkk"
+apps_line "APPS gkk keys: carol's screen: not asked on the introduction, her agent comes to know bob's by it, and she answers yes to meeting him in person" "C = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, carol), yes), view([knows(alice), identity], [alice]), view([knows(alice), identity], [alice, bob]), gave(meet(bob, carol), yes), view([knows(bob), knows(alice), identity], [alice, bob]) | _]" "$apps_gkk"
 check "APPS gkk: alice introduces carol to bob, in the order of introduce's head, introduce(p?, q? ; c)" "own(\[A4\], propose(introduce(A4?, bob, carol)))" "$(cat "$GLP_DIR/programs/apps/gkk/person.glp")"
 check "APPS gkk: the types written again hold knows(Peer)" "^Atom     ::= identity ; knows(Peer)\.$" "$(cat "$GLP_DIR/programs/apps/gkk/self.glp")"
 check_not "APPS gkk: no failed play" "→ failed" "$apps_gkk"

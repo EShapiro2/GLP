@@ -1,0 +1,102 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract numbers
+%% (../contracts.glp, contract_named(numbers, C)), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it: act schemas with numbers
+%% (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an
+%% argument of an atom may be a number or a numeric variable, a schema may
+%% carry a constraint on its numeric variables, and an atom it adds or deletes
+%% may carry a multiplicity, a number or a numeric variable, for that many
+%% copies of it").  Written as GSC writes a contract, d, k, t and t1 numeric
+%% variables:
+%%
+%%   befriend(p?, q?)       :  at p  not friend(q), +friend(q)
+%%                             at q  not friend(p), +friend(p)
+%%   start(p?)              :  at p  not started, +started, +level(0)
+%%   refuel(p? ; k)         :  at p  started, +k fuel
+%%   step(p ; t, t1)        :  at p  -fuel, -level(t), +level(t1)      t1 = t + 1
+%%   claim(p?, q ; d, t)    :  at p  friend(q), +claimed(q, d)
+%%                             at q  friend(p), level(t), +honoured(p, d)   d =< t
+%%
+%% refuel's k is bound by the schema-binding and named by the request, a
+%% number field, and its fuel atom carries the multiplicity k; step's t occurs
+%% only in an atom its role deletes, and in the constraint, so it is local to
+%% that role, bound by the person's state, and t1, of an atom an unguarded
+%% schema adds, is given its one value by the constraint once t is bound; and
+%% claim's t, of an atom q's role keeps, is local to q's role, so the
+%% constraint, which names it, is checked by q's machine, and d is bound by
+%% the schema-binding, the request naming it.
+%%
+%% play_numbers: bob starts, at level 0, and asks for two units of fuel,
+%% refuel(bob, 2), adding two copies of fuel; his machine then takes step,
+%% an unguarded part he opens, once for each unit, each attempt asking nobody,
+%% his level 1 and then 2, and no more, the fuel spent.  Bob, at level 2, asks
+%% to know alice and to befriend her, and she answers yes.  Alice claims 3 of
+%% bob, claim(alice, bob, 3): bob's machine votes no, his level 2 short of 3,
+%% unable, and alice's screen shows refused(claim(alice, bob, 3), bob,
+%% unable([], [])), bob's state holding every atom the schema requires there
+%% and none it forbids, the constraint failing.  Alice claims 2, bob's machine
+%% votes yes, and it commits: alice holds claimed(bob, 2) and bob
+%% honoured(alice, 2).
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= befriend(Peer, Peer) ; start(Peer) ; refuel(Peer, Integer) ; step(Peer, Integer)
+           ; claim(Peer, Peer, Integer).
+Proposal ::= befriend(Peer, Peer) ; start(Peer) ; refuel(Peer, Integer) ; claim(Peer, Peer, Integer).
+Request  ::= propose(Proposal) ; known(Peer).
+YesNo    ::= yes ; no.
+Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Atom     ::= friend(Peer) ; started ; level(Integer) ; fuel ; claimed(Peer, Integer) ; honoured(Peer, Integer).
+Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
+Approval ::= approval(Attempt, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_numbers(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_numbers(LA?, LB?, N?) :-
+    pair([req(known(bob)), wait(known(bob)),
+          approval(befriend(bob, alice), yes),
+          wait(holds(friend(bob))),
+          own([A1], propose(claim(A1?, bob, 3))),
+          wait(refused(claim(alice, bob, 3), bob, unable([], []))),
+          own([A2], propose(claim(A2?, bob, 2))),
+          wait(holds(claimed(bob, 2)))],
+         [own([B1], propose(start(B1?))), wait(holds(started)),
+          own([B2], propose(refuel(B2?, 2))), wait(holds(level(2))),
+          req(known(alice)), wait(known(alice)),
+          own([B3], propose(befriend(B3?, alice))),
+          wait(holds(honoured(alice, 2)))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).
