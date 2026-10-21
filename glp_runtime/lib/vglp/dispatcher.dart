@@ -46,13 +46,16 @@ const inputsTypeName = 'Inputs';
 /// The root's types of the person channel (programs/self.glp; vGLP, Section
 /// 6.3, Definition "Person Channel, Person Writer, GLP with Persons, Grant"):
 /// the channel, PersonChannel(T) ::= Channel(PersonIn(T), PersonOut(T)), a
-/// grant, Input(T) ::= input(Integer, Path, T), its path, Path, and a draw,
-/// Draw(T) ::= draw(Integer, _, T) ; withdraw(Integer).  Every program names
+/// grant, Input(T) ::= input(Integer, Path, T), its path, Path, a draw,
+/// Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer), and the widget
+/// in it, Widget, "the type of the terms that draw widgets" (vGLP, Section
+/// 6.3; GLP #9 Cowork, 2026-10-20 09:22 UTC, item 4.1).  Every program names
 /// them from the root, the ancestor scope of every program.
 const personChannelTypeName = 'PersonChannel';
 const inputTypeName = 'Input';
 const pathTypeName = 'Path';
 const drawTypeName = 'Draw';
+const widgetTypeName = 'Widget';
 
 /// The dispatcher's entry point, dispatch(Asks?, PersonCh?, MCh, Spawns); the
 /// compiled program's dispatch/3, which the bridge or a play spawns beside

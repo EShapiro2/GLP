@@ -175,6 +175,7 @@ import '../compiler/error.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../compiler/glp_printer.dart' show constantSource, functorNameSource;
 import 'mediator.dart' show typeSource;
+import 'dispatcher.dart' show widgetTypeName;
 
 /// The Definition an interactive type is refused by where it is not one.
 const _definition = 'vGLP, Definition "Volitional Procedure, Interactive Type"';
@@ -595,8 +596,8 @@ class _Generator {
     final r = gen.run(f);
     _runs[f] = r;
     _out
-      ..writeln('procedure $r(Integer?, _?, Stream(_)?, ${gen.doneType}?, '
-          'Stream(${gen.drawType})).')
+      ..writeln('procedure $r(Integer?, $widgetTypeName?, Stream(_)?, '
+          '${gen.doneType}?, Stream(${gen.drawType})).')
       ..writeln('$r(Id, _, _, done, [withdraw(Id?)]).')
       ..writeln('$r(Id, W, [V | Vs], Done, [draw(Id?, W?, $f(V?)) | Ds?]) :- '
           'ground(W?), ground(V?) | $r(Id?, W?, Vs?, Done?, Ds).')
@@ -620,16 +621,16 @@ class _Generator {
     const es = 'List($outputTypeName)';
     final ds = 'Stream(${gen.drawType})';
     _out
-      ..writeln('procedure $o(_?, $ms?, $ds).')
+      ..writeln('procedure $o($widgetTypeName?, $ms?, $ds).')
       ..writeln('$o(W, Ms, [draw(0, W?, output([])) | Ds?]) :- '
           'ground(W?) | $more(W?, Ms?, [], Ds).')
       ..writeln()
-      ..writeln('procedure $more(_?, $ms?, $es?, $ds).')
+      ..writeln('procedure $more($widgetTypeName?, $ms?, $es?, $ds).')
       ..writeln('$more(W, [M | Ms], Es, Ds?) :- ground(M?), ground(Es?) | '
           '$add(Es?, M?, Es1), $draw(W?, Ms?, Es1?, Ds).')
       ..writeln('$more(_, [], _, []).')
       ..writeln()
-      ..writeln('procedure $draw(_?, $ms?, $es?, $ds).')
+      ..writeln('procedure $draw($widgetTypeName?, $ms?, $es?, $ds).')
       ..writeln('$draw(W, Ms, Es, [draw(0, W?, output(Es?)) | Ds?]) :- '
           'ground(W?), ground(Es?) | $more(W?, Ms?, Es?, Ds).')
       ..writeln()
@@ -1051,11 +1052,11 @@ class _Generator {
 
   /// The Stream or the List [t] is, or names through named types each
   /// defined as one type: `Stream(String)` itself, and `Lines` where `Lines
-  /// ::= Stream(String)`, "a named type so built", which "draws as the
-  /// stream it names, like Date and Key draw by their names" (vGLP at
-  /// 66b6500, Definition "Volitional Procedure, Interactive Type, ...";
-  /// vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2); null for any other
-  /// type.
+  /// ::= Stream(String)`, one of the "named types so built" (vGLP,
+  /// Definition "Volitional Procedure, Interactive Type"), which draws as
+  /// the stream it names: "A named type, recursive or not, is its
+  /// definition" (the proof of Proposition "Default Widgets"; vGLP #7
+  /// Cowork, 2026-10-11 14:31 UTC, item 2); null for any other type.
   ///
   /// A scope's type definitions name an instantiated Stream or List by its
   /// instantiation, `Stream<Instrument>`, which is `Stream(Instrument)`
@@ -2243,7 +2244,6 @@ class _Generator {
       if (alts.length == 1) return _altWidget(n, alts.single, visiting);
       return 'menu([${alts.map((a) => _altWidget(n, a, visiting)).join(', ')}])';
     }
-    if (t is TypeRef && t.name == 'Date') return 'date';
     // An agent identifier: Peer, or Key or a type defined as Key, whatever
     // it is named (vGLP #6 Cowork, 2026-10-11 12:55 UTC, item 3, Q1).
     if (t is TypeRef && (t.name == 'Peer' || _isKey(t))) return 'peer';

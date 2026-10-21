@@ -206,14 +206,14 @@ construct(Id, friendRequest_w(X), Gs, Ds?) :- present_friendRequest([], X?, Gs?,
 construct(Id, introRequest_w(X), Gs, Ds?) :- present_introRequest([], X?, Gs?, _, Vs, Done), run_introRequest_w(Id?, form(from, [field('Introducer', shown), field('Other', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Ds).
 construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run_stream_request_r(Id?, input_box(menu([form(trust, [field('CompilerKey', peer)]), form(install, [field('AppName', text), field('Artefact', text)]), form(invite, [field('AppName', text), field('Friend', peer)]), form(connect, [field('Friend', peer)])])), [input([])], Done?, Ds).
 
-procedure output(_?, Stream(Output)?, Stream(Draw(Drawn))).
+procedure output(Widget?, Stream(Output)?, Stream(Draw(Drawn))).
 output(W, Ms, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Ds).
 
-procedure output_more(_?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
+procedure output_more(Widget?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
 output_more(W, [M | Ms], Es, Ds?) :- ground(M?), ground(Es?) | output_add(Es?, M?, Es1), output_draw(W?, Ms?, Es1?, Ds).
 output_more(_, [], _, []).
 
-procedure output_draw(_?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
+procedure output_draw(Widget?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
 output_draw(W, Ms, Es, [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_more(W?, Ms?, Es?, Ds).
 
 procedure output_add(List(Output)?, Output?, List(Output)).
@@ -250,7 +250,7 @@ procedure present_friendRequest_wait(Path?, FriendRequest?, Inputs(Drawn)?, Inpu
 present_friendRequest_wait(P, from(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_friendRequest(P?, from(H1?, H2), Gs?, Gs1, Vs, Done).
 present_friendRequest_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_friendRequest_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure run_friendRequest_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+procedure run_friendRequest_w(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
 run_friendRequest_w(Id, _, _, done, [withdraw(Id?)]).
 run_friendRequest_w(Id, W, [V | Vs], Done, [draw(Id?, W?, friendRequest_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_friendRequest_w(Id?, W?, Vs?, Done?, Ds).
 run_friendRequest_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
@@ -274,7 +274,7 @@ procedure present_introRequest_wait(Path?, IntroRequest?, Inputs(Drawn)?, Inputs
 present_introRequest_wait(P, from(H1, H2, H3?), Gs, Gs1?, Vs?, Done?) :- present_introRequest(P?, from(H1?, H2?, H3), Gs?, Gs1, Vs, Done).
 present_introRequest_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_introRequest_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure run_introRequest_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+procedure run_introRequest_w(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
 run_introRequest_w(Id, _, _, done, [withdraw(Id?)]).
 run_introRequest_w(Id, W, [V | Vs], Done, [draw(Id?, W?, introRequest_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_introRequest_w(Id?, W?, Vs?, Done?, Ds).
 run_introRequest_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
@@ -312,7 +312,7 @@ procedure take_stream_request(Formed(Request)?, Path?, Stream(Request), Input(Dr
 take_stream_request(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- answer_stream_request(P?, X1, Gs?, Gs1, Done).
 take_stream_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_stream_request(P?, X, Gs?, Gs1, Done).
 
-procedure run_stream_request_r(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+procedure run_stream_request_r(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
 run_stream_request_r(Id, _, _, done, [withdraw(Id?)]).
 run_stream_request_r(Id, W, [V | Vs], Done, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r(Id?, W?, Vs?, Done?, Ds).
 run_stream_request_r(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).

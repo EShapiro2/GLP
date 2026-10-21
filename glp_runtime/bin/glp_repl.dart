@@ -6,8 +6,6 @@ library;
 
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:glp_runtime/compiler/glp_printer.dart'
-    show constantSource, functorNameSource;
 import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
@@ -18,7 +16,7 @@ import 'package:glp_runtime/multiagent/isolate_manager.dart'
     show IsolateManager;
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
-import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
+import 'package:glp_runtime/runtime/body_kernels.dart' show formatTerm;
 
 void main() async {
   final gitCommit = await _getGitCommit();
@@ -413,126 +411,22 @@ void _printHelp() {
 
 /// [term] as the REPL displays a binding: text that reads back as the term
 /// (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax"; GLP #3
-/// Cowork, 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"), each constant and
-/// functor as the printer writes it (glp_printer.dart, [constantSource],
-/// [functorNameSource]): `'G'`, `'+'`, `'42'` and `'a b'` in single quotes,
-/// `"str"`, the string `str`, as `str` (GLP #3 Cowork, 2026-10-04 15:19 UTC,
-/// FAULT 2 (b): the double-quoted form is read and never printed).  Until
-/// 2026-10-04 a constant was shown
+/// Cowork, 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"), by the printer the boot
+/// prints its agents' lines by too (body_kernels.dart, [formatTerm]; GLP #9
+/// Cowork, 2026-10-20 09:22 UTC, item 4.2: "one printer serves both").  Each
+/// variable met is dereferenced in [engine]'s heap, and an unbound one is
+/// shown `X<n>`, `X<n>?` for a reader.  Until 2026-10-04 a constant was shown
 /// unquoted, as send_to_user/1 shows it to the person, which stays as it is
 /// (body_kernels.dart, `formatGroundTerm`): `'G'` was shown `G`, a variable.
-String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<HeapCell>? path]) {
+String _formatTerm(rt.Term? term, [GlpEngine? engine]) {
   if (term == null) return '[]';
-
-  path ??= <HeapCell>{};
-
-  if (term is rt.ConstTerm) {
-    final value = term.value;
-    if (value == null || value == rt.nil) return '[]';
-    return constantSource(value);
-  }
-
-  if (term is rt.StructTerm && term.functor == '.' && term.args.length == 2) {
-    final elements = <String>[];
-    rt.Term? current = term;
-
-    while (true) {
-      if (current is! rt.StructTerm || current.functor != '.') break;
-
-      final head = current.args[0];
-      final tail = current.args[1];
-
-      String headStr;
-      if (head is rt.VarRef && engine != null) {
-        final addr = head.addr;
-        if (path.contains(addr)) {
-          headStr = '<circular>';
-        } else {
-          path.add(addr);
-          final derefHead = engine.runtime.heap.dereference(head);
-          if (derefHead is rt.VarRef) {
-            final displayId = derefHead.addr;
-            headStr = engine.runtime.heap.isReader(derefHead.addr)
-                ? 'X$displayId?'
-                : 'X$displayId';
-          } else {
-            headStr = _formatTerm(derefHead, engine, path);
-          }
-          path.remove(addr);
-        }
-      } else {
-        headStr = _formatTerm(head, engine, path);
-      }
-
-      elements.add(headStr);
-
-      if (tail is rt.VarRef && engine != null) {
-        final addr = tail.addr;
-        if (path.contains(addr)) {
-          final displayId = addr;
-          final label = engine.runtime.heap.isReader(tail.addr)
-              ? 'X$displayId?'
-              : 'X$displayId';
-          return '[${elements.join(', ')} | <circular $label>]';
-        }
-        path.add(addr);
-        final derefTail = engine.runtime.heap.dereference(tail);
-        if (derefTail is rt.VarRef) {
-          path.remove(addr);
-          final displayId = derefTail.addr;
-          final label = engine.runtime.heap.isReader(derefTail.addr)
-              ? 'X$displayId?'
-              : 'X$displayId';
-          return '[${elements.join(', ')} | $label]';
-        }
-        current = derefTail;
-        path.remove(addr);
-      } else {
-        current = tail;
-      }
-    }
-
-    // The list ends at [] or at another tail, a constant or a structure, which
-    // is shown after "|" as send_to_user shows it (formatGroundTerm).  Until
-    // 2026-10-03 such a tail was dropped, [holding(G, H)|W] shown as
-    // [holding(G, H)] (GLP #3 Cowork, 2026-10-03 21:18 UTC, "11:58. 3": "a
-    // fault, fix it").
-    if (current == null ||
-        (current is rt.ConstTerm &&
-            (current.value == rt.nil || current.value == null))) {
-      return '[${elements.join(', ')}]';
-    }
-    return '[${elements.join(', ')} | ${_formatTerm(current, engine, path)}]';
-  }
-
-  if (term is rt.StructTerm) {
-    final currentPath = path;
-    final formattedArgs = term.args.map((arg) {
-      if (arg is rt.VarRef && engine != null) {
-        final addr = arg.addr;
-        if (currentPath.contains(addr)) {
-          return '<circular>';
-        }
-        currentPath.add(addr);
-        final deref = engine.runtime.heap.dereference(arg);
-        String result;
-        if (deref is rt.VarRef) {
-          final displayId = deref.addr;
-          result = engine.runtime.heap.isReader(deref.addr)
-              ? 'X$displayId?'
-              : 'X$displayId';
-        } else {
-          result = _formatTerm(deref, engine, currentPath);
-        }
-        currentPath.remove(addr);
-        return result;
-      }
-      return _formatTerm(arg, engine, currentPath);
-    }).join(', ');
-    return '${functorNameSource(term.functor)}($formattedArgs)';
-  }
-
-  return term.toString();
+  if (term is rt.VarRef) return term.toString();
+  if (engine == null) return formatTerm(term);
+  final heap = engine.runtime.heap;
+  return formatTerm(term,
+      deref: (v) => heap.dereference(v),
+      variableName: (v) =>
+          heap.isReader(v.addr) ? 'X${v.addr}?' : 'X${v.addr}');
 }
 
 Future<String?> _getGitCommit() async {

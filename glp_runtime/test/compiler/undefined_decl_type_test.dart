@@ -89,11 +89,14 @@ void main() {
 
     test('a self.glp of a directory program: its file and line', () {
       final dir = _programDir({
-        'self.glp': 'exported procedure go(Widget).\ngo(_).\n',
+        // Gadget: a name no type of the root defines (the root's Widget is
+        // defined since 2026-10-20, GLP #9 Cowork, 2026-10-20 09:22 UTC,
+        // item 4.1).
+        'self.glp': 'exported procedure go(Gadget).\ngo(_).\n',
       });
       try {
         _refusedNaming(() => _engine().loadProgram(dir.absolute.path),
-            ['self.glp:1', 'undefined type "Widget"', 'go/1']);
+            ['self.glp:1', 'undefined type "Gadget"', 'go/1']);
       } finally {
         dir.deleteSync(recursive: true);
       }

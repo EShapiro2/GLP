@@ -153,6 +153,36 @@ abstract class ClauseError {
   String get message;
 }
 
+/// The lines of the message of [errors], the errors of one ill-typed term:
+/// its first inconsistent path in full, in the order the paths are walked
+/// ([forEachCheckedPath]), and the number of the others, and each other error
+/// in full (GLP #9 Cowork, 2026-10-20 09:22 UTC, item 3: "the error for an
+/// ill-typed term prints the first failing path and the number of the rest").
+/// Each path of a list runs down its spine, so printing every path printed
+/// text quadratic in the list's length: a term of 100000 ill-typed elements
+/// had some five billion steps in its paths (Code #11, 2026-10-19 17:32 UTC).
+String termErrorLines(List<WellTypedError> errors) {
+  final lines = <String>[];
+  var paths = 0;
+  var first = -1;
+  for (final e in errors) {
+    if (e is InconsistentPathError) {
+      if (paths++ == 0) {
+        first = lines.length;
+        lines.add(e.message);
+      }
+    } else {
+      lines.add(e.message);
+    }
+  }
+  if (paths > 1) {
+    final rest = paths - 1;
+    lines.insert(first + 1,
+        'and $rest more inconsistent ${rest == 1 ? 'path' : 'paths'} of the term');
+  }
+  return lines.join('\n  ');
+}
+
 /// Error in head checking
 class HeadError extends ClauseError {
   final String procedureName;
@@ -162,7 +192,7 @@ class HeadError extends ClauseError {
 
   @override
   String get message =>
-      'Head of $procedureName is not well-typed:\n  ${termErrors.map((e) => e.message).join('\n  ')}';
+      'Head of $procedureName is not well-typed:\n  ${termErrorLines(termErrors)}';
 
   @override
   String toString() => message;
@@ -178,7 +208,7 @@ class BodyAtomError extends ClauseError {
 
   @override
   String get message =>
-      'Body atom $atomIndex ($procedureName) is not well-typed:\n  ${termErrors.map((e) => e.message).join('\n  ')}';
+      'Body atom $atomIndex ($procedureName) is not well-typed:\n  ${termErrorLines(termErrors)}';
 
   @override
   String toString() => message;

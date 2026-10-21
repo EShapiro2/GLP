@@ -23,6 +23,7 @@ import 'dart:typed_data';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart' show TypeEnvironment;
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/body_kernels.dart' show formatTerm;
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 import 'package:glp_runtime/multiagent/boot_loader.dart';
@@ -920,7 +921,14 @@ void _agentIsolateEntry(AgentConfig config) async {
   // What the agent sends to its person is printed under the agent's name, so
   // a harness reading the process's output can tell whose line it is, and is
   // forwarded to the manager, so a harness can assert it (IsolateManager.outputOf).
-  runtime.outputCallback = (text) {
+  // Each element is printed in GLP syntax, as the REPL prints a binding, a
+  // quoted constant quoted, so that the line reads back as the term
+  // ([formatTerm]; GLP #9 Cowork, 2026-10-20 09:22 UTC, item 4.2): the
+  // runtime hands it the term whole ('_output'/1, outputKernel).  Until
+  // 2026-10-20 it was handed the text send_to_user/1 shows on a terminal, a
+  // constant unquoted ([formatGroundTerm]).
+  runtime.outputTermCallback = (term) {
+    final text = formatTerm(term);
     print('[$agentId] $text');
     config.mainPort.send(AgentOutput(agentId, text));
   };

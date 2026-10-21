@@ -97,18 +97,87 @@ class CoverageError {
   final String procedure;
   final int argIndex;
   final String uncoveredLabel;
-  final String path;
+  final _LabelPath _path;
 
-  CoverageError({
-    required this.procedure,
-    required this.argIndex,
-    required this.uncoveredLabel,
-    required this.path,
-  });
+  CoverageError._(
+      this.procedure, this.argIndex, this.uncoveredLabel, this._path);
+
+  /// The path of the alternative, written out only when it is read: each
+  /// path of a list in a head runs down its spine, so the paths of all the
+  /// alternatives of a list are text quadratic in its length.
+  String get path => _path.toString();
 
   @override
   String toString() =>
       '$procedure argument $argIndex: uncovered alternative "$uncoveredLabel" at path: $path';
+}
+
+/// The lines of the message of [errors], the uncovered alternatives of one
+/// input argument in the order of the walk: the first in full and the number
+/// of the others, as an ill-typed term's error prints its first inconsistent
+/// path and the number of the rest (well_typed_clause.dart, termErrorLines;
+/// GLP #9 Cowork, Code_inbox 2026-10-20 22:54 UTC, item 3: "the input-coverage
+/// error prints the first uncovered path and the number of the rest, as the
+/// ill-typed term's error does").  Every uncovered alternative printed with
+/// its full path was text quadratic in a list's length: a clause of 2000,
+/// 4000 and 8000 integers at an input printed 34, 136 and 545 MB (Code #12,
+/// 2026-10-20 11:08 UTC).
+String coverageErrorLines(List<CoverageError> errors) {
+  final first = errors.first.toString();
+  final rest = errors.length - 1;
+  if (rest == 0) return first;
+  return '$first\n  and $rest more uncovered '
+      '${rest == 1 ? 'alternative' : 'alternatives'} of the argument';
+}
+
+/// A path of the input argument's type in the walk of
+/// [TypeChecker._checkStateCoverage], as its last label and the path it
+/// extends, the type's name at the root; written out when an error's message
+/// is read, so that a step of the walk costs no copy of the path.
+class _LabelPath {
+  final _LabelPath? parent;
+  final String label;
+
+  _LabelPath(this.parent, this.label);
+
+  @override
+  String toString() {
+    final labels = <String>[];
+    for (_LabelPath? p = this; p != null; p = p.parent) {
+      labels.add(p.label);
+    }
+    return labels.reversed.join(' → ');
+  }
+}
+
+/// A structural path of the input argument (the argument indices taken from
+/// it), as a node of a trie rooted at the argument, with the subterm at the
+/// path in each clause's head, null where the clause has none there.  One
+/// node per path, its children made once: a step of the walk descends one
+/// argument of each clause's subterm, and a visited state is keyed by its
+/// node, where a structural path written out at every step made the walk
+/// quadratic in the length of a list in a head.
+class _StructNode {
+  final List<ast.Term?> terms;
+  final Map<int, _StructNode> _children = {};
+
+  _StructNode(this.terms);
+
+  _StructNode child(int idx) => _children.putIfAbsent(
+      idx, () => _StructNode([for (final t in terms) _argOf(t, idx)]));
+
+  /// Argument [idx] (1-based) of [term]: of a structure its argument, of a
+  /// non-empty list its head (1) or tail (2); null for a constant, a variable,
+  /// the empty list or no term.
+  static ast.Term? _argOf(ast.Term? term, int idx) {
+    if (term is ast.StructTerm) {
+      return idx < 1 || idx > term.args.length ? null : term.args[idx - 1];
+    }
+    if (term is ast.ListTerm && !term.isNil) {
+      return idx == 1 ? term.head : (idx == 2 ? term.tail : null);
+    }
+    return null;
+  }
 }
 
 /// A visit of a state, at its path and structural path, or an error, still to
@@ -116,16 +185,17 @@ class CoverageError {
 class _CoverageItem {
   final CoverageError? error;
   final DFAState? state;
-  final String pathPrefix;
-  final List<int> structPath;
+  final _LabelPath? path;
+  final _StructNode? node;
 
-  _CoverageItem.visit(DFAState this.state, this.pathPrefix, this.structPath)
+  _CoverageItem.visit(DFAState this.state, _LabelPath this.path,
+      _StructNode this.node)
       : error = null;
 
   _CoverageItem.error(CoverageError this.error)
       : state = null,
-        pathPrefix = '',
-        structPath = const [];
+        path = null,
+        node = null;
 }
 
 // =============================================================================
@@ -472,22 +542,30 @@ class TypeChecker {
     }
 
     // Track visited states to handle recursive types
-    final visited = <String>{};
+    final visited = <(String, _StructNode)>{};
 
-    // Check coverage starting from the start state
+    // Check coverage starting from the start state, at the argument of each
+    // clause's head
     final coverageErrors = _checkStateCoverage(
       inputAutomaton.startState,
-      clauses,
       argIndex,
-      typeRef.name,
+      _LabelPath(null, typeRef.name),
       visited,
       inputAutomaton,
       decl,
+      _StructNode([
+        for (final clause in clauses)
+          argIndex <= clause.head.args.length
+              ? clause.head.args[argIndex - 1]
+              : null
+      ]),
     );
 
-    for (final coverageError in coverageErrors) {
+    // One error for the argument: its first uncovered alternative and the
+    // number of the others (coverageErrorLines).
+    if (coverageErrors.isNotEmpty) {
       errors.add(TypeError(
-        coverageError.toString(),
+        coverageErrorLines(coverageErrors),
         decl.line,
         decl.column,
       ));
@@ -496,11 +574,9 @@ class TypeChecker {
     return errors;
   }
 
-  /// Check coverage at a DFA state and the states below it, tracking
-  /// structural path
-  ///
-  /// structPath: list of argument indices taken from root (e.g., [1, 2] means
-  /// "arg 1 of root, then arg 2 of that substructure")
+  /// Check coverage at a DFA state and the states below it, at a path of the
+  /// argument's type ([path]) and a structural path of the argument ([node],
+  /// the argument indices taken from it and the subterm of each clause there)
   ///
   /// The states are visited with a stack of the visits and errors still to
   /// come, in the order of the recursive walk this replaces: each state's
@@ -509,21 +585,22 @@ class TypeChecker {
   /// A clause head whose input argument is a list descends a state for each
   /// cell, and a list of some 5000 elements overflowed the stack in the
   /// recursion: TGLP well-typing.tex, Definition "Well-Typed Clause", puts no
-  /// bound on a term's size.
+  /// bound on a term's size.  A step costs no copy of the paths and no walk
+  /// from the argument's root (_LabelPath, _StructNode), so the walk is linear
+  /// in the size of the heads.
   List<CoverageError> _checkStateCoverage(
     DFAState state,
-    List<ast.Clause> clauses,
     int argIndex,
-    String pathPrefix,
-    Set<String> visited,
+    _LabelPath path,
+    Set<(String, _StructNode)> visited,
     Automaton automaton,
-    ProcDecl decl, {
-    List<int> structPath = const [],
-  }) {
+    ProcDecl decl,
+    _StructNode node,
+  ) {
     final errors = <CoverageError>[];
     // The visits and errors still to come, the next at the end.
     final pending = <_CoverageItem>[
-      _CoverageItem.visit(state, pathPrefix, structPath),
+      _CoverageItem.visit(state, path, node),
     ];
     while (pending.isNotEmpty) {
       final item = pending.removeLast();
@@ -532,8 +609,8 @@ class TypeChecker {
         errors.add(error);
         continue;
       }
-      pending.addAll(_coverageStep(item.state!, clauses, argIndex,
-              item.pathPrefix, visited, automaton, decl, item.structPath)
+      pending.addAll(_coverageStep(item.state!, argIndex, item.path!, visited,
+              automaton, decl, item.node!)
           .reversed);
     }
     return errors;
@@ -544,28 +621,27 @@ class TypeChecker {
   /// none does --- or nothing, where the state needs no coverage here.
   List<_CoverageItem> _coverageStep(
     DFAState state,
-    List<ast.Clause> clauses,
     int argIndex,
-    String pathPrefix,
-    Set<String> visited,
+    _LabelPath path,
+    Set<(String, _StructNode)> visited,
     Automaton automaton,
     ProcDecl decl,
-    List<int> structPath,
+    _StructNode node,
   ) {
     final items = <_CoverageItem>[];
 
-    // Prevent infinite recursion on cyclic types. Key on (state, structPath):
-    // a type may be reached at several structural positions (e.g. a list head
-    // vs. a nested field), and coverage at a state depends on which clause
-    // subterms sit at that path, so each (state, path) is a distinct check.
-    // Termination holds because structPath only grows by descending into a
-    // constructor argument, and descent stops once clauses run out of depth or
-    // a clause variable covers the position (finite clause terms bound depth).
-    final visitKey = '${state.name}@$structPath';
-    if (visited.contains(visitKey)) {
+    // Prevent infinite recursion on cyclic types. Key on (state, structural
+    // path): a type may be reached at several structural positions (e.g. a
+    // list head vs. a nested field), and coverage at a state depends on which
+    // clause subterms sit at that path, so each (state, path) is a distinct
+    // check.  A structural path is one node of the trie (_StructNode).
+    // Termination holds because the structural path only grows by descending
+    // into a constructor argument, and descent stops once clauses run out of
+    // depth or a clause variable covers the position (finite clause terms
+    // bound depth).
+    if (!visited.add((state.name, node))) {
       return items;
     }
-    visited.add(visitKey);
 
     // Leaf states (primitives) don't need structural coverage
     // They're covered by variables matching the appropriate mode
@@ -581,7 +657,7 @@ class TypeChecker {
 
     // Check if any clause has a VARIABLE at this path position
     // If so, the variable covers ALL alternatives - no need to check further
-    if (_anyClauseHasVariableAtPath(clauses, argIndex, structPath)) {
+    if (_anyClauseHasVariableAt(node)) {
       return items;  // Variable covers everything
     }
 
@@ -613,41 +689,29 @@ class TypeChecker {
       }
 
       final label = transLabel.toString();
+      final labelPath = _LabelPath(path, label);
 
       // Check if some clause accepts this transition at the current path
-      if (_clauseAcceptsLabelAtPath(clauses, argIndex, structPath, label)) {
+      if (_clauseAcceptsLabelAt(node, label)) {
         // Check the target state with extended path
-        final newPath = '$pathPrefix → $label';
         // Extract arg index from symbol like "f(2,1)" or "\(2,1)" or "[|](2,1)"
         final argIdxFromLabel = _extractArgIndex(label);
-        final newStructPath = argIdxFromLabel != null
-            ? [...structPath, argIdxFromLabel]
-            : structPath;
-        items.add(_CoverageItem.visit(targetState, newPath, newStructPath));
+        final newNode =
+            argIdxFromLabel != null ? node.child(argIdxFromLabel) : node;
+        items.add(_CoverageItem.visit(targetState, labelPath, newNode));
       } else {
         // No clause covers this alternative
-        items.add(_CoverageItem.error(CoverageError(
-          procedure: decl.name,
-          argIndex: argIndex,
-          uncoveredLabel: label,
-          path: '$pathPrefix → $label',
-        )));
+        items.add(_CoverageItem.error(
+            CoverageError._(decl.name, argIndex, label, labelPath)));
       }
     }
 
     return items;
   }
 
-  /// Check if any clause has a variable at the given structural path
-  bool _anyClauseHasVariableAtPath(
-    List<ast.Clause> clauses,
-    int argIndex,
-    List<int> structPath,
-  ) {
-    for (final clause in clauses) {
-      if (argIndex > clause.head.args.length) continue;
-      final topArg = clause.head.args[argIndex - 1];
-      final termAtPath = _navigateToPath(topArg, structPath);
+  /// Check if any clause has a variable at the structural path [node]
+  bool _anyClauseHasVariableAt(_StructNode node) {
+    for (final termAtPath in node.terms) {
       if (termAtPath is ast.VarTerm || termAtPath is ast.UnderscoreTerm) {
         return true;  // Variable at this path covers all alternatives
       }
@@ -655,18 +719,9 @@ class TypeChecker {
     return false;
   }
 
-  /// Check if any clause accepts the label at the given structural path
-  bool _clauseAcceptsLabelAtPath(
-    List<ast.Clause> clauses,
-    int argIndex,
-    List<int> structPath,
-    String labelStr,
-  ) {
-    for (final clause in clauses) {
-      if (argIndex > clause.head.args.length) continue;
-      final topArg = clause.head.args[argIndex - 1];
-      final termAtPath = _navigateToPath(topArg, structPath);
-
+  /// Check if any clause accepts the label at the structural path [node]
+  bool _clauseAcceptsLabelAt(_StructNode node, String labelStr) {
+    for (final termAtPath in node.terms) {
       if (termAtPath == null) continue;
 
       // Variable accepts anything
@@ -685,34 +740,6 @@ class TypeChecker {
       }
     }
     return false;
-  }
-
-  /// Navigate into a term following a structural path
-  ///
-  /// structPath is a list of 1-based argument indices
-  ast.Term? _navigateToPath(ast.Term term, List<int> structPath) {
-    ast.Term? current = term;
-    for (final idx in structPath) {
-      if (current == null) return null;
-
-      if (current is ast.StructTerm) {
-        if (idx < 1 || idx > current.args.length) return null;
-        current = current.args[idx - 1];
-      } else if (current is ast.ListTerm && !current.isNil) {
-        // List [H|T]: idx 1 is head, idx 2 is tail
-        if (idx == 1) {
-          current = current.head;
-        } else if (idx == 2) {
-          current = current.tail;
-        } else {
-          return null;
-        }
-      } else {
-        // Can't navigate into constants, variables, or nil
-        return null;
-      }
-    }
-    return current;
   }
 
   /// Extract argument index from a path element symbol

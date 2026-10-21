@@ -42,7 +42,7 @@ library;
 import 'term.dart';
 
 /// The constructors of the person channel of a compiled module, its draws
-/// and its grants (the root's `Draw(T) ::= draw(Integer, _, T) ;
+/// and its grants (the root's `Draw(T) ::= draw(Integer, Widget, T) ;
 /// withdraw(Integer).` and `Input(T) ::= input(Integer, Path, T).`,
 /// `programs/self.glp`).
 const String drawCtor = 'draw';

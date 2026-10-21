@@ -201,21 +201,21 @@ void main() {
     final button = p.the('button(ok)');
     final buttons = p.the('buttons([yes, no])');
     final text = p.the('text');
-    final date = p.the('date');
     final peer = p.the('peer');
+    // Date ::= Integer is drawn by its definition, a number field: the
+    // paper names no date field (vGLP #18 Cowork, Code_inbox 2026-10-20
+    // 21:00 UTC: "drop the Date case").
     final numbers = p.drawn('number');
-    expect(numbers, hasLength(2), reason: 'Integer? and Real?');
+    expect(numbers, hasLength(3), reason: 'Integer?, Real? and Date?');
 
     // Each drawn as its widget: a button, a row of buttons, a text field, a
-    // number field, a date picker and a peer field.
+    // number field and a peer field.
     expect(find.byKey(nodeKey(button.id, 'button', [])), findsOneWidget);
     expect(p.inside(button, find.widgetWithText(ElevatedButton, 'ok')),
         findsOneWidget);
     expect(find.byKey(nodeKey(buttons.id, 'buttons', [])), findsOneWidget);
     expect(p.inside(buttons, find.byType(ElevatedButton)), findsNWidgets(2));
     expect(find.byKey(nodeKey(text.id, 'text', [])), findsOneWidget);
-    expect(find.byKey(nodeKey(date.id, 'date', [])), findsOneWidget);
-    expect(p.inside(date, find.text('day 0')), findsOneWidget);
     expect(find.byKey(nodeKey(peer.id, 'peer', [])), findsOneWidget);
     for (final n in numbers) {
       expect(find.byKey(nodeKey(n.id, 'number', [])), findsOneWidget);
@@ -253,20 +253,10 @@ void main() {
     expect(p.screen, contains('got(peer, carol)'));
     p.withdrawn(peer);
 
-    // A date picker: the local date, an Integer.
-    for (var i = 0; i < 3; i++) {
-      await tester.tap(find.byKey(ValueKey('${date.id}:date:[]:later')));
-      await tester.pump();
-    }
-    expect(p.inside(date, find.text('day 3')), findsOneWidget);
-    await p.submit(date);
-    expect(p.grants.last, 'input(${date.id}, [], 3)');
-    expect(p.screen, contains('got(date, 3)'));
-    p.withdrawn(date);
-
-    // Two number fields, the Integer question's and the Real question's,
-    // one widget over two types.  2.5 is granted on both: the Real question
-    // forms its answer, and the Integer question refuses it and stays open.
+    // Three number fields, the Integer question's, the Real question's and
+    // the Date question's, one widget over three types.  2.5 is granted on
+    // each: the Real question forms its answer, and the Integer and the
+    // Date questions refuse it and stay open.
     for (final n in numbers) {
       await p.type(n, 'number', [], '2.5');
       await p.submit(n);
@@ -274,14 +264,23 @@ void main() {
     }
     expect(p.screen, contains('got(real, 2.5)'));
     final open = [for (final n in numbers) if (p.ui.bridge.construct(n.id) != null) n];
-    expect(open, hasLength(1), reason: 'the Integer question refused 2.5');
-    final integer = open.single;
-    p.open(integer);
-    await p.type(integer, 'number', [], '7');
-    await p.submit(integer);
-    expect(p.grants.last, 'input(${integer.id}, [], 7)');
-    expect(p.screen, contains('got(integer, 7)'));
-    p.withdrawn(integer);
+    expect(open, hasLength(2),
+        reason: 'the Integer and the Date questions refused 2.5');
+    // 7 granted on one and 3 on the other: each forms its answer, an
+    // Integer, the Date question's too.
+    for (final (n, x) in [(open[0], '7'), (open[1], '3')]) {
+      p.open(n);
+      await p.type(n, 'number', [], x);
+      await p.submit(n);
+      expect(p.grants.last, 'input(${n.id}, [], $x)');
+      p.withdrawn(n);
+    }
+    final got = p.screen.toSet();
+    expect(
+        (got.contains('got(integer, 7)') && got.contains('got(date, 3)')) ||
+            (got.contains('got(integer, 3)') && got.contains('got(date, 7)')),
+        isTrue,
+        reason: 'the Integer and the Date questions each answered: $got');
 
     // Every question answered and every construct withdrawn; the program's
     // own output shown in its view, and no draw among it.
@@ -1135,13 +1134,15 @@ void main() {
     testWidgets(
         'a form field is labelled by the name of its declared type, and no '
         'field by its widget\'s kind (item 6)', (tester) async {
+      // Date ::= Integer, a number field (vGLP #18 Cowork, Code_inbox
+      // 2026-10-20 21:00 UTC).
       r.handle(fixtureTerm("draw(6, form(lot, [field('Key', peer), "
-          "field('Integer', number), field('Date', date)]), input([]))"));
+          "field('Integer', number), field('Date', number)]), input([]))"));
       await surface(tester);
       for (final label in ['Key', 'Integer', 'Date']) {
         expect(inside(6, find.text(label)), findsOneWidget, reason: label);
       }
-      for (final kind in ['peer', 'number', 'date', 'text']) {
+      for (final kind in ['peer', 'number', 'text']) {
         expect(inside(6, find.text(kind)), findsNothing, reason: kind);
       }
     });

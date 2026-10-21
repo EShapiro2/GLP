@@ -24,9 +24,10 @@
 ///     `Module`: a text field, `text` (an interactive type has "no type
 ///     parameter at a position the person writes", vGLP, Definition
 ///     "Volitional Procedure, Interactive Type");
-///   - `String`, a number (`Integer` or `Real`), `Date` and an agent
-///     identifier: a text field, a number field, a date picker and a peer
-///     field, `text`, `number`, `date` and `peer`;
+///   - `String`, a number (`Integer` or `Real`) and an agent identifier: a
+///     text field, a number field and a peer field, `text`, `number` and
+///     `peer`; a named type is drawn by its definition, `Date ::= Integer` a
+///     number field (vGLP #18 Cowork, Code_inbox 2026-10-20 21:00 UTC);
 ///   - a tuple: a form headed by its functor, with one field per argument,
 ///     each labelled by the name of its declared type, `form(F, [E1, ...,
 ///     En])`, `F` the heading, in both modes (vGLP f9b63d6), each `Ei`
@@ -88,10 +89,8 @@
 /// nothing stands in for it.
 ///
 /// The person's input is returned raw: a button grants its constant, a text
-/// field a `String`, a number field an `Integer` or a `Real` as typed, a date
-/// picker the `Integer` of the local date it picks (`Date` is "a named type
-/// over `Integer`, the local date an agent counts"), a peer field the
-/// identifier typed, a form the tuple of its fields --- `[]` at a question
+/// field a `String`, a number field an `Integer` or a `Real` as typed, a peer
+/// field the identifier typed, a form the tuple of its fields --- `[]` at a question
 /// of its own, which the form's answer leaves open --- a menu the
 /// alternative chosen, and a list's end button [listEnd], `[end]`.  The
 /// construct process forms the answer from it, and refuses one that forms no
@@ -224,9 +223,6 @@ class _ConstructViewState extends State<ConstructView> {
 
   /// The alternative chosen in each menu, by position.
   final Map<String, int> _alternative = {};
-
-  /// The local date each date picker is at, by position.
-  final Map<String, int> _days = {};
 
   /// The fields of a recursive type the person has opened, by position
   /// (bridge.dart, [recursiveWidget]).
@@ -443,7 +439,7 @@ class _ConstructViewState extends State<ConstructView> {
         }
       // A position the person has answered, inside a form whose answer left
       // a question of its own open: the answer, shown and no more edited.
-      case 'text' || 'number' || 'date' || 'peer' when ws.isEmpty:
+      case 'text' || 'number' || 'peer' when ws.isEmpty:
         return _keyed('shown', at, Text(displayText(v)));
       case 'button' || 'buttons' || 'input_box' || 'input_list'
           when ws.length == 1:
@@ -549,7 +545,7 @@ class _ConstructViewState extends State<ConstructView> {
                 ),
               ],
             ));
-      case 'text' || 'number' || 'date' || 'peer' when ws.isEmpty:
+      case 'text' || 'number' || 'peer' when ws.isEmpty:
         return _submitting(w, p, at, keepOpen: false, recs: recs1);
       case 'form' when _isForm(ws):
         return _submitting(w, p, at, keepOpen: false, recs: recs1);
@@ -624,25 +620,6 @@ class _ConstructViewState extends State<ConstructView> {
               decoration: InputDecoration(labelText: label, isDense: true),
               onChanged: (_) => setState(() {}),
             ));
-      case 'date' when ws.isEmpty:
-        final day = _days[k] ?? 0;
-        return _keyed(
-            'date',
-            at,
-            Row(children: [
-              if (label != null) Text(label),
-              IconButton(
-                key: ValueKey('$_id:date:$k:earlier'),
-                icon: const Icon(Icons.chevron_left),
-                onPressed: day == 0 ? null : () => setState(() => _days[k] = day - 1),
-              ),
-              Text('day $day'),
-              IconButton(
-                key: ValueKey('$_id:date:$k:later'),
-                icon: const Icon(Icons.chevron_right),
-                onPressed: () => setState(() => _days[k] = day + 1),
-              ),
-            ]));
       case 'button' when ws.length == 1:
         return _keyed('button', at,
             _labelled(label, Chip(label: Text(displayText(ws[0])))));
@@ -744,8 +721,6 @@ class _ConstructViewState extends State<ConstructView> {
       case 'peer' when ws.isEmpty:
         final s = _text(k).text.trim();
         return _identifier.hasMatch(s) ? GAtom(s) : null;
-      case 'date' when ws.isEmpty:
-        return GInt(_days[k] ?? 0);
       case 'button' when ws.length == 1:
         return ws[0];
       case 'buttons' when ws.length == 1:
@@ -795,7 +770,6 @@ class _ConstructViewState extends State<ConstructView> {
     }
     _chosen.removeWhere((k, _) => under(k));
     _alternative.removeWhere((k, _) => under(k));
-    _days.removeWhere((k, _) => under(k));
     // The fields of recursive types below [at] close again; one at [at]
     // itself stays open, its menu choosing within it.
     _opened.removeWhere((k) => k != own && under(k));

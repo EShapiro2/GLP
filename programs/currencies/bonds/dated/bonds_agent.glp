@@ -262,14 +262,14 @@ construct(Id, swapCard_w(X), Gs, Ds?) :- present_swapCard([], X?, Gs?, _, Vs, Do
 construct(Id, transferCard_w(X), Gs, Ds?) :- present_transferCard([], X?, Gs?, _, Vs, Done), run_transferCard_w(Id?, form(card, [field('TransferOffer', form(offer_transfer, [field('Kind', shown), field('From', shown), field('Given', thread(menu([form(coin, [field('Issuer', shown), field('Serial', shown)]), form(bond, [field('Issuer', shown), field('Maturity', shown), field('Serial', shown)])])))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
 construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run_stream_request_r(Id?, input_box(menu([form(mint, [field('Amount', number)]), form(mint, [field('Amount', number), field('Maturity', number)]), form(swap, [field('Friend', peer), field('GiveIssuer', peer), field('GiveDue', text), field('GiveAmount', number), field('WantIssuer', peer), field('WantDue', text), field('WantAmount', number)]), form(pay, [field('Friend', peer), field('Amount', number)]), form(redeem, [field('Friend', peer), field('GiveDue', text), field('WantIssuer', peer), field('WantDue', text)]), form(deposit, [field('EscrowAgent', peer), field('Issuer', peer), field('Due', text), field('Amount', number)]), form(release, [field('Beneficiary', peer), field('Issuer', peer), field('Due', text), field('Amount', number)]), form(return, [field('Depositor', peer), field('Issuer', peer), field('Due', text), field('Amount', number)])])), [input([])], Done?, Ds).
 
-procedure output(_?, Stream(Output)?, Stream(Draw(Drawn))).
+procedure output(Widget?, Stream(Output)?, Stream(Draw(Drawn))).
 output(W, Ms, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Ds).
 
-procedure output_more(_?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
+procedure output_more(Widget?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
 output_more(W, [M | Ms], Es, Ds?) :- ground(M?), ground(Es?) | output_add(Es?, M?, Es1), output_draw(W?, Ms?, Es1?, Ds).
 output_more(_, [], _, []).
 
-procedure output_draw(_?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
+procedure output_draw(Widget?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
 output_draw(W, Ms, Es, [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_more(W?, Ms?, Es?, Ds).
 
 procedure output_add(List(Output)?, Output?, List(Output)).
@@ -306,7 +306,7 @@ procedure present_swapCard_wait(Path?, SwapCard?, Inputs(Drawn)?, Inputs(Drawn),
 present_swapCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_swapCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
 present_swapCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_swapCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure run_swapCard_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+procedure run_swapCard_w(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
 run_swapCard_w(Id, _, _, done, [withdraw(Id?)]).
 run_swapCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, swapCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_swapCard_w(Id?, W?, Vs?, Done?, Ds).
 run_swapCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
@@ -328,7 +328,7 @@ procedure present_transferCard_wait(Path?, TransferCard?, Inputs(Drawn)?, Inputs
 present_transferCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_transferCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
 present_transferCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_transferCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure run_transferCard_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+procedure run_transferCard_w(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
 run_transferCard_w(Id, _, _, done, [withdraw(Id?)]).
 run_transferCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, transferCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_transferCard_w(Id?, W?, Vs?, Done?, Ds).
 run_transferCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
@@ -404,7 +404,7 @@ procedure take_stream_request(Formed(Request)?, Path?, Stream(Request), Input(Dr
 take_stream_request(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- answer_stream_request(P?, X1, Gs?, Gs1, Done).
 take_stream_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_stream_request(P?, X, Gs?, Gs1, Done).
 
-procedure run_stream_request_r(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+procedure run_stream_request_r(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
 run_stream_request_r(Id, _, _, done, [withdraw(Id?)]).
 run_stream_request_r(Id, W, [V | Vs], Done, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r(Id?, W?, Vs?, Done?, Ds).
 run_stream_request_r(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
