@@ -36,6 +36,26 @@ play_swap(ScreenA?, ScreenB?) :-
     run(bonds(bob, ch(GrantsB?, DrawsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
     person # person(bob, DrawsB?, GrantsB, _, [mint(2, 30), accept(alice)], none, ScreenB).
 
+%% play_same(ScreenA, ScreenB): play_swap, after which alice holds bob's 2
+%% bonds maturing day 30 and asks for two acts that change no state, each a
+%% binding that determines no transaction (GB, Appendix A): to redeem a bond
+%% of bob due 30 against a bond of bob due 30, and to swap her 2 of them for 2
+%% of them.  Her agent refuses each before anything is sent, the screen saying
+%% so, and her holdings stay; bob's screen shows nothing of either.
+%% Expected: ScreenA = [opened(bob), minted(2, now), holdings([lot(alice, now, 2)]),
+%%   holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)]),
+%%   redeem_same(bob, 30), swap_same(bob, bob, 30, 2) | _],
+%%   ScreenB = [opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]),
+%%   swap_done(alice), holdings([lot(alice, now, 2)]) | _].
+exported procedure play_same(Stream(ScreenContent), Stream(ScreenContent)).
+play_same(ScreenA?, ScreenB?) :-
+    self_module(M),
+    find_type(bonds/3, T),
+    run(bonds(alice, ch(GrantsA?, DrawsA), [conversation(bob, ch(AB?, BA))]), T?, M?),
+    person # person(alice, DrawsA?, GrantsA, _, [mint(2), swap(bob, alice, now, 2, bob, 30, 2), redeem(bob, 30, bob, 30), swap(bob, bob, 30, 2, bob, 30, 2)], none, ScreenA),
+    run(bonds(bob, ch(GrantsB?, DrawsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
+    person # person(bob, DrawsB?, GrantsB, _, [mint(2, 30), accept(alice)], none, ScreenB).
+
 %% The scripted person the super-app's plays activate: the root's second
 %% template miniapp_person/4 (programs/self.glp) at the mini-app's own Drawn,
 %% what its dispatcher draws, and ScreenContent, the screen the person reports

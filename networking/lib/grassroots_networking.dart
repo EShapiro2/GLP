@@ -85,6 +85,11 @@ export 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 export 'package:grassroots_networking_core/src/store/store.dart';
 export 'src/store/persistence_service.dart';
 
+// The fair-delivery queue's persistence (spec §Networking Assumptions): the
+// seam and its stores, the core's and SharedPreferences'.
+export 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
+export 'src/store/outbound_queue_preferences.dart';
+
 // UI adornments for core types (icons)
 export 'src/transport/transport_display.dart';
 

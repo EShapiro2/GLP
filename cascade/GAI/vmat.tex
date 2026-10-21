@@ -35,6 +35,218 @@ retired
 \}
 \end{align*}
 \iffalse
+meet
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+agent
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+agent
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+c
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+c
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+agent
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+agent
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
 befriend
 \fi
 \begin{align*}
@@ -82,6 +294,13 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
  \in c_
 {
 \Alice
@@ -90,6 +309,13 @@ identity
 \mathit{
 identity
 }
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
  \in c_
 {
 \Bob
@@ -391,6 +617,13 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
 \}
 , \qquad 
 c'_
@@ -421,6 +654,13 @@ principal
 ,
 \mathit{
 friend
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
 }
 (
 \Alice
@@ -495,7 +735,7 @@ retired
 \}
 \end{align*}
 \iffalse
-agent_befriend
+agent_meet
 \fi
 \begin{align*}
 &
@@ -511,7 +751,7 @@ c_
  \uplus 
 \{
 \mathit{
-friend
+knows
 }
 (
 \Bob
@@ -530,7 +770,7 @@ c_
  \uplus 
 \{
 \mathit{
-friend
+knows
 }
 (
 \Alice
@@ -589,6 +829,373 @@ y
 \mathit{
 identity
 }
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+principal_of
+}
+(
+\Alice
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+agent
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+ \text{ and } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+agents_meet
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+agent_of
+}
+(
+\Bob
+,
+\mathit{Dave}
+,
+z
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+agent_of
+}
+(
+\Alice
+,
+\mathit{Carol}
+,
+y
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+, \qquad 
+c'_
+{
+\mathit{Dave}
+}
+ := 
+c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+agent
+}
+,
+\mathit{
+principal
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+attestation
+}
+(
+y
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+agent
+}
+,
+\mathit{
+principal
+}
+(
+\mathit{Dave}
+)
+,
+\mathit{
+attestation
+}
+(
+z
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+principal_of
+}
+(
+\Alice
+)
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+principal_of
+}
+(
+\Bob
+)
+ \in c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+,
+\mathit{Dave}
+\}
+\end{align*}
+\iffalse
+agent_befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+agent
+}
+,
+\mathit{
+principal
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
  \in c_
 {
 \Bob
@@ -690,17 +1297,6 @@ friend
 (
 \Bob
 )
-,
-\mathit{
-agent_of
-}
-(
-\Bob
-,
-\mathit{Dave}
-,
-z
-)
 \}
 , \qquad 
 c'_
@@ -719,17 +1315,6 @@ friend
 }
 (
 \Alice
-)
-,
-\mathit{
-agent_of
-}
-(
-\Alice
-,
-\mathit{Carol}
-,
-y
 )
 \}
 , \qquad 
@@ -771,10 +1356,10 @@ principal
 )
 ,
 \mathit{
-attestation
+knows
 }
 (
-y
+\Bob
 )
  \in c_
 {
@@ -797,10 +1382,10 @@ principal
 )
 ,
 \mathit{
-attestation
+knows
 }
 (
-z
+\Alice
 )
  \in c_
 {

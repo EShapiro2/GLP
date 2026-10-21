@@ -41,3 +41,7 @@ play_mint(S?) :- plays # play_mint(S).
 imported procedure plays#play_swap(Stream(ScreenContent), Stream(ScreenContent)).
 exported procedure play_swap(Stream(ScreenContent), Stream(ScreenContent)).
 play_swap(A?, B?) :- plays # play_swap(A, B).
+
+imported procedure plays#play_same(Stream(ScreenContent), Stream(ScreenContent)).
+exported procedure play_same(Stream(ScreenContent), Stream(ScreenContent)).
+play_same(A?, B?) :- plays # play_same(A, B).

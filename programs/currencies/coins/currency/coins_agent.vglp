@@ -18,7 +18,11 @@
 %% serve, ordinary GLP, which has one clause per alternative, each the clause
 %% of its transaction reading its request at the head of the stream, and
 %% carries the rest of the stream, Reqs?, through every helper that continues
-%% the agent.  The responder is a volitional procedure whose interactive type,
+%% the agent.  A swap takes two lots that differ, u != v or k != k', and a
+%% redemption a coin of another issuer, r != q (Definition 3.1): the clause of
+%% each carries the difference in its guard, and a second clause refuses the
+%% request that would change no state, before anything is sent, the screen
+%% saying so.  The responder is a volitional procedure whose interactive type,
 %% an approval question, is in writer mode: its clause writes the approval question at once, the offer
 %% for the person to see, and hands the person the writer of their answer,
 %% which a helper reads with a clause per answer.
@@ -176,13 +180,23 @@ serve([mint(Amount)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     show(minted(Amount?), Outs?, Outs1),
     after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial1?).
 
-%% Swap_{p,q}(cent^k_u, cent^{k'}_v), guarded by both: p proposes, giving k
-%% u-coins for k' v-coins, and q answers by respond_swap.  The precondition at
-%% p, cent^k_u in c_p, is the selection; q's part of it is q's.
+%% Swap_{p,q}(cent^k_u, cent^{k'}_v), guarded by both, with u != v or
+%% k != k': p proposes, giving k u-coins for k' v-coins, and q answers by
+%% respond_swap.  The precondition at p, cent^k_u in c_p, is the selection;
+%% q's part of it is q's.
 serve([swap(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
-    ground(Id?), ground(Friend?), ground(GiveCoin?), integer(GiveAmount?), GiveAmount? >= 1, ground(WantCoin?), integer(WantAmount?), WantAmount? >= 1 |
+    ground(Id?), ground(Friend?), ground(GiveCoin?), integer(GiveAmount?), GiveAmount? >= 1, ground(WantCoin?), integer(WantAmount?), WantAmount? >= 1,
+    lot(GiveCoin?, GiveAmount?) =?\= lot(WantCoin?, WantAmount?) |
     select_coins(GiveCoin?, GiveAmount?, Holdings?, Status, Give, Rest),
     propose_swap(Status?, Id?, Friend?, lot(GiveCoin?, GiveAmount?), lot(WantCoin?, WantAmount?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
+
+%% A swap of a lot for itself changes no state, and is not a transaction:
+%% refused before anything is sent, the screen saying so.
+serve([swap(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Friend?), ground(GiveCoin?), integer(GiveAmount?), GiveAmount? >= 1, ground(WantCoin?), integer(WantAmount?), WantAmount? >= 1,
+    lot(GiveCoin?, GiveAmount?) =?= lot(WantCoin?, WantAmount?) |
+    show(swap_same(Friend?, GiveCoin?, GiveAmount?), Outs?, Outs1),
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?).
 
 %% Pay_{p,q}(k), guarded by p: k q-coins to q, which q accepts (clause 3 of the
 %% contract).  The precondition cent^k_q in c_p is the selection.
@@ -191,13 +205,23 @@ serve([pay(Friend, Amount)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Ser
     select_coins(Friend?, Amount?, Holdings?, Status, Give, Rest),
     do_pay(Status?, Id?, Friend?, Amount?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
 
-%% Redeem_{p,q}(r), guarded by p: a q-coin presented to q for an r-coin q holds
-%% (clause 4).  The precondition cent_q in c_p is the selection; cent_r in c_q
-%% is tested at q, which discloses what it holds where it fails.
+%% Redeem_{p,q}(r), guarded by p, with r != q: a q-coin presented to q for an
+%% r-coin q holds (clause 4).  The precondition cent_q in c_p is the
+%% selection; cent_r in c_q is tested at q, which discloses what it holds
+%% where it fails.
 serve([redeem(Friend, WantCoin)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
-    ground(Id?), ground(Friend?), ground(WantCoin?) |
+    ground(Id?), ground(Friend?), ground(WantCoin?),
+    Friend? =?\= WantCoin? |
     take_coin(Friend?, Holdings?, Found, Rest),
     do_redeem(Found?, Id?, Friend?, WantCoin?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
+
+%% A redemption of a q-coin against a q-coin changes no state, and is not a
+%% transaction: refused before anything is sent, the screen saying so.
+serve([redeem(Friend, WantCoin)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Friend?), ground(WantCoin?),
+    Friend? =?= WantCoin? |
+    show(redeem_same(Friend?), Outs?, Outs1),
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?).
 
 %% =============================================================================
 %% An arriving act, on the conversation it came on
