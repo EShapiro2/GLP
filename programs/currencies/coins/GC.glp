@@ -11,9 +11,11 @@
 %% require that Alice knows Bob, and clause 2 that Bob knows Alice: the swap
 %% requires knows of the other at both roles, and pay and redeem require
 %% knows(q) at p (Udi, 2026-10-20, in chat with GSC #5 and Currencies #11).
-%% No role requires a friend.  The schemas are at unit amounts: mint mints
-%% one coin, and a swap exchanges one coin for one; the paper's amounts k and
-%% k' are multiplicities on the atoms (GC, Appendix A).  GSC's checker
+%% No role requires a friend.  Amounts are numbers, as act schemas allow
+%% them (GSC, Section 3.2): mint mints k coins, a swap exchanges k coins for
+%% k1, and a payment pays k, the paper's multiplicities k and k' (GC,
+%% Appendix A); num(k) is a numeric variable, listed in Vars in the order of
+%% the paper's head, and times(num(k), A) the atom A k times.  GSC's checker
 %% (programs/gsc/test_gsc.sh) and vGLP's compiler to the canonical CVA
 %% platform (programs/vglp/cva/compile.sh) read the term from here,
 %% contract_named/2 printing it.
@@ -33,14 +35,16 @@
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer).
+            ; sgn(Constant, Integer) ; num(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
+Mult      ::= Atom ; times(Arg, Atom).
+Mults     ::= [] ; [Mult | Mults].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
 RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
-RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
-            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpec  ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
@@ -63,17 +67,17 @@ contract_named(gc,
     schema(introduce, [pvar(c)],
        [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
         rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% GC:1, Minting: p mints a p-coin.
-    schema(mint, [],
-       [rs(guarded, [atom(coin, [role(1)])], [], [atom(identity, [])], [])]),
-%% GC:2, Swap: p and q, who know each other, swap a u-coin of p's for a v-coin of q's.
-    schema(swap, [pvar(u), pvar(v)],
-       [rs(guarded, [atom(coin, [pvar(v)])], [atom(coin, [pvar(u)])], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [atom(coin, [pvar(u)])], [atom(coin, [pvar(v)])], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% GC:3, Payment: p pays a q-coin to q, whom p knows.
-    schema(pay, [],
-       [rs(guarded,   [], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(unguarded, [atom(coin, [role(2)])], [], [atom(identity, [])], [])]),
+%% GC:1, Minting: p mints k p-coins.
+    schema(mint, [num(k)],
+       [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
+%% GC:2, Swap: p and q, who know each other, swap k u-coins of p's for k1 v-coins of q's.
+    schema(swap, [pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:3, Payment: p pays k q-coins to q, whom p knows.
+    schema(pay, [num(k)],
+       [rs(guarded,   [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]),
 %% GC:4, Redemption: p redeems a q-coin against an r-coin q holds, q whom p knows.
     schema(redeem, [pvar(r)],
        [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),

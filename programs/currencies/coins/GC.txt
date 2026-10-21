@@ -3,7 +3,7 @@
 % Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none; no clause of it requires a friend.
 % Defines: grassroots coin, a unit of debt that names its issuer; Alice-coin, a grassroots coin issued by Alice.  Person, and knowing a person, are defined with GKK; Alice and Bob are variables naming distinct persons.
 % Last changed: 2026-10-20.  The clauses as Udi approved them, in chat with GSC #5 (reported by GSC, 2026-10-20 16:52 UTC) and with Currencies #11 (2026-10-20): clauses 2 to 4 require that Alice knows Bob, and clause 2 that Bob knows Alice.
-% Schemas: GC.glp beside this file, GKK's three and four over the predicate coin, the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Schemas: GC.glp beside this file, GKK's three and four over the predicate coin, amounts as the numbers act schemas allow (GSC, Section 3.2), the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GC: Grassroots Currencies
 1. Minting.  Alice may decide to issue Alice-coins.
 2. Swap.  Alice and Bob, who know each other, may jointly decide to swap coins they hold.
