@@ -4,7 +4,7 @@
 %% beside GSC's three, their owners' (contracts.glp), the platforms it prints
 %% (social_graph/platform.vglp, social_network/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
 %% introduce/platform.vglp, gnudge/platform.vglp, childsafe/platform.vglp,
-%% link/platform.vglp, friends/platform.vglp, waves/platform.vglp, parts/platform.vglp, opens/platform.vglp, groups/platform.vglp, counter/platform.vglp, merges/platform.vglp, coins/platform.vglp, wardclose/platform.vglp, each beside its plays) and what the plays of all of them share, here: a
+%% link/platform.vglp, friends/platform.vglp, waves/platform.vglp, parts/platform.vglp, opens/platform.vglp, groups/platform.vglp, counter/platform.vglp, merges/platform.vglp, coins/platform.vglp, wardclose/platform.vglp, numbers/platform.vglp, bonds/platform.vglp, intros/platform.vglp, each beside its plays) and what the plays of all of them share, here: a
 %% scripted person and a network between two agents, three or four.
 %%
 %% A play runs the agents of a compiled platform, each the agent of the module
@@ -33,7 +33,7 @@
 %% (docs/typed-glp-manual.md, 18.3, the play of programs/tests/vglp/fragments
 %% likewise).  The network logs each cargo it carries, sent(From, To, Cargo),
 %% so a play shows what the views do not, the starts, the votes and the outcomes.
-%% The person channel never closes, so a run does not end: once each agent has taken its own transactions until none holds and no trigger is left to read, the run suspends, the logs' tails unbound (vGLP 6c8c663, Section 5.4, "Triggers": the agent takes its own transactions "one at a time, each on an own trigger that the agent writes on a stream merged fairly with its other triggers, when it starts, after another trigger and after each own transaction it takes, until none holds").  The counter's run does not suspend, its agent counting without end, and is stopped at the REPL's :limit (counter/self.glp).
+%% The person channel never closes, so a run does not end: once each agent has taken its own transactions until none holds and no trigger is left to read, the run suspends, the logs' tails unbound (vGLP 6c8c663, Section 5.4, "Triggers": the agent takes its own transactions "one at a time, each on an own trigger that the agent writes on a stream merged fairly with its other triggers, when it starts, after another trigger and after each own transaction it takes, until none holds").  The counter's run does not suspend, its agent counting without end, and is stopped at the REPL's :limit (counter/self.glp), and so is the bonds' run, a dated person's agent advancing their date without end (bonds/self.glp).
 %% ---------------------------------------------------------------------------
 
 Peer       ::= Key.

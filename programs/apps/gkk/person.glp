@@ -10,9 +10,14 @@
 %%          bob (GKK:3); looks again.
 %%   bob    establishes his identity; asks to know alice; once his agent knows
 %%          her, answers yes to her asking to meet him in person, and yes to
-%%          her introducing carol to him.
+%%          her introducing carol to him; once his agent knows carol, which
+%%          alice's introduction at the commit and the ihello exchange bring
+%%          about, asks to meet her in person (GKK:2), and waits until he
+%%          holds knows(carol) twice, the introduction's and the meeting's.
 %%   carol  establishes her identity; asks to know alice; once her agent knows
-%%          her, answers yes to her asking to meet her in person.
+%%          her, answers yes to her asking to meet her in person; once her
+%%          agent knows bob, by the same introduction, answers yes to his
+%%          asking to meet her in person.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
@@ -40,9 +45,12 @@ script(alice, [look, own([A1], propose(establish(A1?))), req(known(bob)), req(kn
                own([A4], propose(introduce(A4?, bob, carol))), look]).
 script(bob, [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(alice)),
              approval(meet(alice, bob), yes),
-             approval(introduce(alice, bob, carol), yes)]).
+             approval(introduce(alice, bob, carol), yes),
+             wait(known(carol)), own([B2], propose(meet(B2?, carol))),
+             wait(has(knows(carol), 2))]).
 script(carol, [own([C1], propose(establish(C1?))), req(known(alice)), wait(known(alice)),
-               approval(meet(alice, carol), yes)]).
+               approval(meet(alice, carol), yes),
+               wait(known(bob)), approval(meet(bob, carol), yes)]).
 script(_, []) :- otherwise | true.
 
 %% The person.
