@@ -38,10 +38,13 @@ void main() {
     final aliceSessions = NoiseSessionManager(identity: alice, sodium: sodium);
     final bobSessions = NoiseSessionManager(identity: bob, sodium: sodium);
 
+    // Noise IK, Alice expecting Bob's key (GNA §2.6): two messages.
     Future<void> completeHandshake(PeerTransport transport) async {
       final msg1 = await aliceSessions.startHandshake(
         transport,
         bob.publicKey,
+        pattern: NoisePattern.ik,
+        peerId: 'bob-conn',
       );
       expect(msg1, isNotNull);
 
@@ -49,26 +52,22 @@ void main() {
         handshakePacket(msg1!),
         transport: transport,
         peerId: 'alice-conn',
+        acceptFirstMessage: (pattern, key) => pattern == NoisePattern.ik,
       );
       expect(msg2.remotePubkey, equals(alice.publicKey));
+      expect(msg2.sessionEstablished, isTrue);
       expect(msg2.responsePayload, isNotNull);
 
-      final msg3 = await aliceSessions.handleHandshakePacket(
+      final finished = await aliceSessions.handleHandshakePacket(
         handshakePacket(msg2.responsePayload!),
         transport: transport,
         peerId: 'bob-conn',
+        acceptFirstMessage: (_, __) => false,
       );
-      expect(msg3.remotePubkey, equals(bob.publicKey));
-      expect(msg3.sessionEstablished, isTrue);
-      expect(msg3.responsePayload, isNotNull);
-
-      final finished = await bobSessions.handleHandshakePacket(
-        handshakePacket(msg3.responsePayload!),
-        transport: transport,
-        peerId: 'alice-conn',
-      );
-      expect(finished.remotePubkey, equals(alice.publicKey));
+      expect(finished.remotePubkey, equals(bob.publicKey));
       expect(finished.sessionEstablished, isTrue);
+      expect(finished.responsePayload, isNull,
+          reason: 'IK message 2 has no reply');
       expect(aliceSessions.hasSession(transport, bob.publicKey), isTrue);
       expect(bobSessions.hasSession(transport, alice.publicKey), isTrue);
     }
@@ -139,8 +138,10 @@ void main() {
 
     const transport = PeerTransport.udp;
 
-    // Alice initiates a handshake she believes is with Bob.
-    final msg1 = await aliceSessions.startHandshake(transport, bob.publicKey);
+    // Alice initiates an XX handshake she believes is with Bob, whose key
+    // an ANNOUNCE claimed (GNA §2.6).
+    final msg1 = await aliceSessions.startHandshake(transport, bob.publicKey,
+        pattern: NoisePattern.xx);
     expect(msg1, isNotNull);
 
     // Mallory intercepts and answers it herself. Her message 2 honestly
@@ -149,15 +150,17 @@ void main() {
       handshakePacket(msg1!),
       transport: transport,
       peerId: 'alice-conn',
+      acceptFirstMessage: (_, __) => true,
     );
     expect(msg2.responsePayload, isNotNull);
 
     // In flight, the envelope's identity claim is rewritten to say "Bob".
     // Messages 2/3 bind claim to static via the Noise transcript, not a
-    // signature, so the claim bytes (offset 2, after version + msgType) are
-    // rewritable — the mismatch must be caught by the static-key check.
+    // signature, so the claim bytes (offset 3, after the version and the
+    // kind) are rewritable — the mismatch must be caught by the static-key
+    // check.
     final tampered = Uint8List.fromList(msg2.responsePayload!);
-    tampered.setRange(2, 34, bob.publicKey);
+    tampered.setRange(3, 35, bob.publicKey);
 
     // Alice routes the message to her in-flight handshake with "Bob". The
     // delivered static is Mallory's and does not match the X25519 form of
@@ -166,6 +169,7 @@ void main() {
       handshakePacket(tampered),
       transport: transport,
       peerId: 'bob-conn',
+      acceptFirstMessage: (_, __) => false,
     );
 
     expect(result.sessionEstablished, isFalse);

@@ -188,7 +188,7 @@ void main() {
       test('drops ANNOUNCE with a tampered payload byte', () async {
         bool announced = false;
         router.onPeerAnnounced =
-            (_, __, {bool isNew = false, String? udpPeerId}) =>
+            (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) =>
                 announced = true;
 
         final payload = otherAnnouncePayload();
@@ -394,7 +394,7 @@ void main() {
         AnnounceData? receivedData;
         PeerTransport? receivedTransport;
         router.onPeerAnnounced =
-            (data, transport, {bool isNew = false, String? udpPeerId}) {
+            (data, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
           receivedData = data;
           receivedTransport = transport;
         };
@@ -418,7 +418,7 @@ void main() {
 
         int announceCount = 0;
         router.onPeerAnnounced =
-            (_, __, {bool isNew = false, String? udpPeerId}) => announceCount++;
+            (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) => announceCount++;
 
         await router.processPacket(
           p,
@@ -945,7 +945,7 @@ void main() {
       test('fires onPeerAnnounced callback with UDP transport', () async {
         PeerTransport? receivedTransport;
         router.onPeerAnnounced =
-            (_, transport, {bool isNew = false, String? udpPeerId}) {
+            (_, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
           receivedTransport = transport;
         };
 

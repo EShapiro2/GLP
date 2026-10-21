@@ -144,11 +144,11 @@ void main() {
     expect(receiverAddress, isNotNull);
 
     receiverStore.dispatch(LocalNetworkChangedAction(receiverLocalNetwork));
-    await receiver.setTrustLevel(ProximityUnderlay.lan, lanLevel);
+    await receiver.lan!.setTrustLevel(lanLevel);
 
     // The caller learns where to dial; the receiver is told nothing about the
     // caller, so the caller's contact is unsolicited and its key unknown.
-    caller.putPeerAddress(
+    caller.wan!.putPeerAddress(
       receiverId.publicKey,
       receiverAddress!,
     );
@@ -237,7 +237,7 @@ void main() {
 
     Future<bool> answered(GrassrootsNetwork caller, Uint8List callerKey,
         {required int seconds}) async {
-      caller.putPeerAddress(receiverId.publicKey, receiverAddress!);
+      caller.wan!.putPeerAddress(receiverId.publicKey, receiverAddress!);
       await caller.send(
           receiverId.publicKey, Uint8List.fromList(utf8.encode('wan call')));
       final deadline = DateTime.now().add(Duration(seconds: seconds));
@@ -263,7 +263,10 @@ void main() {
     final receiverId = await identityFromSeed(0x64);
 
     final (caller, _) = await startNode(callerId);
-    final (receiver, receiverStore) = await startNode(receiverId);
+    // The receiver runs the PAN too, so that its PAN level can be set on its
+    // pan sub-object (GNA §2.2).
+    final (receiver, receiverStore) = await startNode(receiverId,
+        underlays: const {Underlay.pan, Underlay.lan, Underlay.wan});
     addTearDown(() async {
       await caller.dispose();
       await receiver.dispose();
@@ -274,15 +277,12 @@ void main() {
     expect(receiverAddress, isNotNull);
 
     receiverStore.dispatch(LocalNetworkChangedAction(loopbackIsLocal));
-    await receiver.setTrustLevel(
-        ProximityUnderlay.pan, ColdCallTrustLevel.open);
+    await receiver.pan!.setTrustLevel(ColdCallTrustLevel.open);
 
-    expect(receiver.trustLevelOf(ProximityUnderlay.pan),
-        ColdCallTrustLevel.open);
-    expect(receiver.trustLevelOf(ProximityUnderlay.lan),
-        ColdCallTrustLevel.closed);
+    expect(receiver.pan!.trustLevel, ColdCallTrustLevel.open);
+    expect(receiver.lan!.trustLevel, ColdCallTrustLevel.closed);
 
-    caller.putPeerAddress(
+    caller.wan!.putPeerAddress(
       receiverId.publicKey,
       receiverAddress!,
     );
@@ -348,11 +348,15 @@ void main() {
     receiver.onMessageReceived = (sender, payload, messageId, underlay) {
       if (hexOf(sender) == callerHex) received.add(underlay);
     };
-    receiver.onPeerDiscovered = (pk, underlay) {
-      if (hexOf(pk) == callerHex) discovered.add(underlay);
-    };
+    for (final underlay in ProximityUnderlay.values) {
+      final proximity =
+          underlay == ProximityUnderlay.pan ? receiver.pan : receiver.lan;
+      proximity?.onPeerDiscovered = (pk) {
+        if (hexOf(pk) == callerHex) discovered.add(underlay);
+      };
+    }
 
-    caller.putPeerAddress(receiverId.publicKey, receiverAddress!);
+    caller.wan!.putPeerAddress(receiverId.publicKey, receiverAddress!);
     await caller.send(
       receiverId.publicKey,
       Uint8List.fromList(utf8.encode('which underlay')),
@@ -379,10 +383,15 @@ void main() {
       discovered: discovered,
       reachable: receiver.peerUnderlays(callerId.publicKey),
       nearby: [
-        for (final peer in receiver.getPeers())
-          if (hexOf(peer.publicKey) == callerHex) peer.underlay,
+        for (final (underlay, proximity) in [
+          (ProximityUnderlay.pan, receiver.pan),
+          (ProximityUnderlay.lan, receiver.lan),
+        ])
+          for (final pk in proximity?.getPeers() ?? const <Uint8List>[])
+            if (hexOf(pk) == callerHex) underlay,
       ],
-      observed: receiver.observedPeerAddress(callerId.publicKey),
+      // A layer running no WAN has no wan sub-object, and observes no address.
+      observed: receiver.wan?.observedPeerAddress(callerId.publicKey),
       callerAddress: callerAddress!,
     );
   }

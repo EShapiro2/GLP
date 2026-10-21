@@ -140,8 +140,8 @@ void main() {
     // key and loopback address — first contact then rides the coordinator's
     // own dial + ANNOUNCE + Noise machinery, with initiation possible from
     // both ends (the glare under test).
-    sender.putPeerAddress(recipientId.publicKey, recipientAddress);
-    recipient.putPeerAddress(senderId.publicKey, senderAddress);
+    sender.wan!.putPeerAddress(recipientId.publicKey, recipientAddress);
+    recipient.wan!.putPeerAddress(senderId.publicKey, senderAddress);
 
     final messageId = await sender.send(
       recipientId.publicKey,

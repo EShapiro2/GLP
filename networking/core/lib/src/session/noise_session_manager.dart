@@ -8,65 +8,119 @@ import 'package:sodium/sodium_sumo.dart' as libsodium;
 import '../models/identity.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
+import '../protocol/protocol_handler.dart';
 
-const _noiseProtocolName = 'Noise_XX_25519_ChaChaPoly_SHA256';
-const _handshakePayloadVersion = 2;
+const _xxProtocolName = 'Noise_XX_25519_ChaChaPoly_SHA256';
+const _ikProtocolName = 'Noise_IK_25519_ChaChaPoly_SHA256';
+
+/// The prologue both ends mix into the handshake hash: a label and the
+/// protocol version, so that two ends speaking different versions derive
+/// different keys even where an envelope's clear version field was altered.
+const _prologueLabel = 'grassroots noise prologue';
 const _applicationPayloadVersion = 1;
 const _aeadMacLength = 16;
 const _signatureLength = 64;
+const _keyLength = 32;
+
+/// The Noise pattern of a handshake (GNA §2.6, Session Establishment): IK
+/// when the initiator expects a specific responder key, XX for a first
+/// contact with an unrecognized presence under Open trust, after ANNOUNCE.
+enum NoisePattern {
+  /// `-> e, es, s, ss` / `<- e, ee, se`: the initiator sends its static key
+  /// in the first message, encrypted to the expected key, and the responder
+  /// never transmits its static key.
+  ik,
+
+  /// `-> e` / `<- e, ee, s, es` / `-> s, se`: each side transmits its static
+  /// key, and each verifies the delivered key against the key ANNOUNCE
+  /// claimed.
+  xx,
+}
 
 enum NoiseHandshakeRole { initiator, responder }
 
-enum _NoiseHandshakeMessage {
-  message1(1),
-  message2(2),
-  message3(3);
+/// What a handshake message is, by the envelope's kind byte.
+enum _Kind {
+  xx1(0x01, NoisePattern.xx),
+  xx2(0x02, NoisePattern.xx),
+  xx3(0x03, NoisePattern.xx),
+  ik1(0x11, NoisePattern.ik),
+  ik2(0x12, NoisePattern.ik);
 
   final int value;
-  const _NoiseHandshakeMessage(this.value);
+  final NoisePattern pattern;
+  const _Kind(this.value, this.pattern);
 
-  static _NoiseHandshakeMessage fromValue(int value) {
-    return _NoiseHandshakeMessage.values.firstWhere(
-      (message) => message.value == value,
-      orElse: () => throw FormatException('Unknown Noise message: $value'),
-    );
-  }
+  static _Kind fromValue(int value) => _Kind.values.firstWhere(
+        (kind) => kind.value == value,
+        orElse: () =>
+            throw FormatException('Unknown Noise handshake message: $value'),
+      );
+
+  /// Whether the envelope carries the sender's identity claim in clear: the
+  /// XX messages, whose keys ANNOUNCE has already made public, and not the
+  /// IK ones, whose initiator key travels encrypted and whose responder key
+  /// does not travel at all (GNA §2.6).
+  bool get carriesClaim => pattern == NoisePattern.xx;
 }
 
 class NoiseHandshakeResult {
+  /// The peer this handshake message is from: for XX the identity claim of
+  /// the envelope (message 1 verified by its signature, messages 2 and 3
+  /// against the Noise-authenticated static); for IK the key the first
+  /// message carried encrypted, checked against its static, or the key the
+  /// initiator expected, which only its holder can answer for.
+  final Uint8List remotePubkey;
+
+  /// The pattern of the handshake the message belongs to.
+  final NoisePattern pattern;
+
   final Uint8List? responsePayload;
+
+  /// Whether this message established the session: true once per session.
   final bool sessionEstablished;
 
-  /// The peer identity this handshake message claims (message 1: verified by
-  /// its signed identity claim; messages 2/3: verified against the
-  /// Noise-authenticated static once the handshake reaches that step). Lets
-  /// the caller route the response and fire session callbacks without any
-  /// identity on the wire frame.
-  final Uint8List remotePubkey;
+  /// Whether the response is this side's final handshake message, the one
+  /// with no reply (IK message 2, XX message 3), which the caller
+  /// retransmits until the other side's attestation message arrives (GNA
+  /// §2.6).
+  final bool sentFinal;
+
+  /// Whether the handshake this message started replaced a session the pair
+  /// held: the peer runs a new handshake, so the session it held is gone.
+  final bool replacedSession;
 
   const NoiseHandshakeResult({
     required this.remotePubkey,
+    required this.pattern,
     this.responsePayload,
     this.sessionEstablished = false,
+    this.sentFinal = false,
+    this.replacedSession = false,
   });
 }
 
-/// Owns Noise XX session state, keyed by transport medium plus peer identity.
+/// Owns Noise session state, keyed by transport medium plus peer identity,
+/// and runs the two handshakes of GNA §2.6: Noise IK whenever the initiator
+/// expects the responder's key, and Noise XX for a first contact with an
+/// unrecognized presence under Open trust.
 ///
 /// The Noise static key is the X25519 form of the local Ed25519 transport
 /// identity, derived via the standard birational map (libsodium
-/// `crypto_sign_ed25519_*_to_curve25519`). Because the public half is a public
-/// function of the Ed25519 public key, each peer recomputes the expected static
-/// from the counterpart's known identity and verifies the Noise-delivered static
-/// against it, aborting on mismatch (see [_verifyRemoteStatic]) — the key check
-/// in `docs/GLP_Networking_API/sections/ip.tex` §IP Connection.
+/// `crypto_sign_ed25519_*_to_curve25519`): "the expected static is
+/// computable from the peer's Ed25519 public key alone" (GNA §2.6).  An IK
+/// initiator therefore takes the responder's expected static from its
+/// Ed25519 key; an IK responder reads the initiator's static from the first
+/// message, with the initiator's Ed25519 key as that message's encrypted
+/// payload, and checks that the one is the image of the other.
 ///
-/// The wire frame carries no identity, so each handshake message's envelope
-/// carries the sender's Ed25519 identity claim. Message 1 — the one XX
-/// message with no MAC — additionally carries an Ed25519 signature over
-/// (claim ‖ noise body), so an in-flight handshake cannot be clobbered by a
-/// fabricated claim; messages 2/3 are bound to their claims by
-/// [_verifyRemoteStatic] against the Noise-authenticated static.
+/// Every handshake envelope opens with the protocol version (GNA §2.6:
+/// version 7, a peer on another version refused at the handshake), and both
+/// ends mix it into the handshake hash as the prologue.  The XX envelopes
+/// carry the sender's identity claim in clear, message 1 signed over the
+/// claim and its ephemeral; the IK envelopes carry no identity, so the
+/// initiator's key is read only by the holder of the key it expects, and the
+/// responder's key never travels.
 class NoiseSessionManager {
   final GrassrootsIdentity identity;
 
@@ -78,9 +132,10 @@ class NoiseSessionManager {
 
   final Map<_SessionKey, _SessionEntry> _entries = {};
 
-  /// Connection → verified peer identity, learned at handshake completion.
-  /// Lets [decryptPacket] resolve which identity-keyed session owns a packet
-  /// that arrived on a given transport connection.
+  /// Connection → verified peer identity, learned at handshake completion,
+  /// or by a session-encrypted packet decrypting on the connection. Lets
+  /// [decryptPacket] resolve which identity-keyed session owns a packet that
+  /// arrived on a given transport connection.
   final Map<_ConnectionKey, Uint8List> _connectionPeers = {};
 
   Future<SimpleKeyPair>? _staticKeyPairFuture;
@@ -91,10 +146,20 @@ class NoiseSessionManager {
     this.handshakeTimeout = const Duration(seconds: 5),
   });
 
+  /// The protocol version every handshake envelope opens with (GNA §2.6).
+  static int get protocolVersion => ProtocolHandler.protocolVersion;
+
   bool hasSession(PeerTransport transport, Uint8List remotePubkey) {
     return _entries[_SessionKey(transport, _hex(remotePubkey))]?.session !=
         null;
   }
+
+  /// The peers with an established session on [transport].
+  Iterable<Uint8List> sessionPeers(PeerTransport transport) => [
+        for (final entry in _entries.entries)
+          if (entry.key.transport == transport && entry.value.session != null)
+            _bytes(entry.key.pubkeyHex),
+      ];
 
   /// The final handshake hash of the session with [remotePubkey] on
   /// [transport], or null when there is none.
@@ -112,44 +177,76 @@ class NoiseSessionManager {
           ?.session
           ?.handshakeHash;
 
-  /// Starts an XX initiator handshake if no session or in-flight handshake
-  /// exists. Returns the encoded first handshake payload to send, or null if
-  /// the caller should simply wait for the existing handshake.
+  /// Starts a [pattern] initiator handshake with [remotePubkey] over the
+  /// connection [peerId] if no session or in-flight handshake exists.
+  /// Returns the encoded first handshake message to send, or null if the
+  /// caller should simply wait for the existing session or handshake.
+  ///
+  /// For IK, [remotePubkey] is the key the initiator expects: the first
+  /// message is encrypted to its X25519 image, so only its holder can read or
+  /// answer it (GNA §2.6).
   Future<Uint8List?> startHandshake(
     PeerTransport transport,
-    Uint8List remotePubkey,
-  ) async {
+    Uint8List remotePubkey, {
+    required NoisePattern pattern,
+    String? peerId,
+  }) async {
     final key = _SessionKey(transport, _hex(remotePubkey));
     final entry = _entries.putIfAbsent(key, _SessionEntry.new);
     if (entry.session != null || entry.handshake != null) {
       return null;
     }
 
-    final handshake = await _NoiseHandshakeState.create(
-      role: NoiseHandshakeRole.initiator,
-      localStaticKeyPair: await _staticKeyPair(),
-    );
-    final body = await handshake.writeMessage1();
+    final Uint8List encoded;
+    final _NoiseHandshakeState handshake;
+    switch (pattern) {
+      case NoisePattern.ik:
+        final Uint8List expectedStatic;
+        try {
+          expectedStatic = sodium.crypto.sign.pkToCurve25519(remotePubkey);
+        } catch (_) {
+          throw ArgumentError.value(
+              remotePubkey, 'remotePubkey', 'not an Ed25519 public key');
+        }
+        handshake = await _NoiseHandshakeState.create(
+          role: NoiseHandshakeRole.initiator,
+          pattern: NoisePattern.ik,
+          localStaticKeyPair: await _staticKeyPair(),
+          remoteStatic: expectedStatic,
+        );
+        // The payload is our Ed25519 identity, encrypted after the static:
+        // the responder checks that the static is its image.
+        final body = await handshake.writeIk1(identity.publicKey);
+        encoded = _encodeEnvelope(_Kind.ik1, body);
+      case NoisePattern.xx:
+        handshake = await _NoiseHandshakeState.create(
+          role: NoiseHandshakeRole.initiator,
+          pattern: NoisePattern.xx,
+          localStaticKeyPair: await _staticKeyPair(),
+        );
+        final body = await handshake.writeXx1();
+        encoded = _encodeEnvelope(
+          _Kind.xx1,
+          body,
+          claim: identity.publicKey,
+          signature: _signIdentityClaim(body),
+        );
+    }
     entry
       ..session = null
       ..handshake = handshake
+      ..finalSent = null
+      ..connectionId = peerId
       // Keep a pending waiter: the dialer may already be awaiting the
       // session (waitForSession registers before the handshake starts).
       ..completer ??= Completer<bool>();
-    final encoded = _encodeHandshakePayload(
-      _NoiseHandshakeMessage.message1,
-      identity.publicKey,
-      body,
-      signature: _signIdentityClaim(body),
-    );
     entry.lastSentEncoded = encoded;
     return encoded;
   }
 
   /// Wait for a session with [remotePubkey] to establish. When no handshake
-  /// is in flight yet, registers a waiter anyway — the IP dial sequence
-  /// (spec Implementation Notes) has the dialer send ANNOUNCE and await the
-  /// handshake the accepting endpoint initiates.
+  /// is in flight yet, registers a waiter anyway, so that a session the peer
+  /// initiates releases it too.
   Future<bool> waitForSession(
     PeerTransport transport,
     Uint8List remotePubkey,
@@ -173,19 +270,11 @@ class NoiseSessionManager {
     }
   }
 
-  /// The sender identity a handshake payload claims (envelope field, public
-  /// on the wire; verified during [handleHandshakePacket] — message 1 by its
-  /// signature, messages 2/3 against the Noise-authenticated static).
-  /// Exposed so a coordinator can serialize handshake processing per pair
-  /// (spec §Session Establishment: one handshake per underlay per pair).
-  Uint8List claimedHandshakeSender(Uint8List payload) =>
-      _decodeHandshakePayload(payload).$2;
-
-  /// The handshake payload this side last sent for a still-in-flight
+  /// The handshake message this side last sent for a still-in-flight
   /// handshake with [remotePubkey] — retransmitted on a timer over a lossy
-  /// carrier (spec §Session Establishment: each handshake message is
-  /// retransmitted until its reply arrives). Null once the session is
-  /// established or no handshake is in flight.
+  /// carrier until the next message arrives (GNA §2.6: "each handshake
+  /// message is retransmitted on a timer until the next one arrives"). Null
+  /// once the session is established or no handshake is in flight.
   Uint8List? handshakeRetransmitPayload(
     PeerTransport transport,
     Uint8List remotePubkey,
@@ -197,40 +286,57 @@ class NoiseSessionManager {
     return entry.lastSentEncoded;
   }
 
-  /// Process an inbound handshake packet.
+  /// This side's final handshake message of the session with [remotePubkey]
+  /// — IK message 2 as responder, XX message 3 as initiator — which "has no
+  /// reply" and is retransmitted "until the other side's attestation message
+  /// arrives" (GNA §2.6). Null when there is no session, or the other side
+  /// sent the final message.
+  Uint8List? finalHandshakePayload(
+    PeerTransport transport,
+    Uint8List remotePubkey,
+  ) {
+    final entry = _entries[_SessionKey(transport, _hex(remotePubkey))];
+    if (entry == null || entry.session == null) return null;
+    return entry.finalSent;
+  }
+
+  /// Process an inbound handshake packet arriving on the connection [peerId].
+  ///
+  /// [acceptFirstMessage] is the responder's trust check (GNA §2.6: "The
+  /// responder enforces the trust level"): asked of the first message of a
+  /// handshake, with its pattern and the key it is from, before any response
+  /// or responder state exists; false refuses it, and [StateError] is
+  /// thrown.
+  ///
+  /// A handshake envelope on another protocol version is refused with a
+  /// [FormatException] (GNA §2.6: version 7, version 6 refused at the
+  /// handshake).
   ///
   /// When [sendResponse] is provided, the manager transmits any response
   /// payload through it BEFORE releasing [waitForSession] waiters, and
   /// returns a result whose [NoiseHandshakeResult.responsePayload] is null.
-  /// The ordering matters: on receiving message 2 the initiator's session
-  /// becomes usable, and a released waiter can push an encrypted packet
-  /// onto the wire ahead of message 3 — which the responder cannot yet
-  /// decrypt. A caller that passes no [sendResponse] must transmit the
-  /// returned payload itself and accepts that race.
+  /// The ordering matters: a released waiter can push an encrypted packet
+  /// onto the wire ahead of the final handshake message, which the other
+  /// side cannot yet decrypt. A caller that passes no [sendResponse] must
+  /// transmit the returned payload itself and accepts that race.
   Future<NoiseHandshakeResult> handleHandshakePacket(
     GrassrootsPacket packet, {
     required PeerTransport transport,
     String? peerId,
+    required bool Function(NoisePattern pattern, Uint8List remotePubkey)
+        acceptFirstMessage,
     Future<void> Function(Uint8List responsePayload, Uint8List remotePubkey)?
         sendResponse,
   }) async {
-    final (message, remotePubkey, signature, body) =
-        _decodeHandshakePayload(packet.payload);
-    if (message == _NoiseHandshakeMessage.message1 &&
-        !_verifyIdentityClaim(remotePubkey, signature!, body)) {
-      throw const FormatException(
-          'Noise message 1 identity claim failed verification');
-    }
-    final key = _SessionKey(transport, _hex(remotePubkey));
-    final entry = _entries.putIfAbsent(key, _SessionEntry.new);
+    final envelope = _decodeEnvelope(packet.payload);
 
-    var result = switch (message) {
-      _NoiseHandshakeMessage.message1 =>
-        await _handleMessage1(entry, key, remotePubkey, body),
-      _NoiseHandshakeMessage.message2 => await _handleMessage2(
-          entry, key, remotePubkey, body, transport, peerId),
-      _NoiseHandshakeMessage.message3 => await _handleMessage3(
-          entry, key, remotePubkey, body, transport, peerId),
+    var result = switch (envelope.kind) {
+      _Kind.xx1 => await _handleXx1(envelope, transport, acceptFirstMessage),
+      _Kind.xx2 => await _handleXx2(envelope, transport, peerId),
+      _Kind.xx3 => await _handleXx3(envelope, transport, peerId),
+      _Kind.ik1 =>
+        await _handleIk1(envelope, transport, peerId, acceptFirstMessage),
+      _Kind.ik2 => await _handleIk2(envelope, transport, peerId),
     };
 
     final response = result.responsePayload;
@@ -238,12 +344,16 @@ class NoiseSessionManager {
       await sendResponse(response, result.remotePubkey);
       result = NoiseHandshakeResult(
         remotePubkey: result.remotePubkey,
+        pattern: result.pattern,
         sessionEstablished: result.sessionEstablished,
+        sentFinal: result.sentFinal,
+        replacedSession: result.replacedSession,
       );
     }
     // Release waiters only after any response is on the wire.
     if (result.sessionEstablished) {
-      _entries[key]?.complete(true);
+      _entries[_SessionKey(transport, _hex(result.remotePubkey))]
+          ?.complete(true);
     }
     return result;
   }
@@ -253,7 +363,7 @@ class NoiseSessionManager {
     required PeerTransport transport,
     required Uint8List remotePubkey,
   }) async {
-    if (!packet.type.usesSessionSecurity) return packet;
+    if (!packet.type.hasSecureVariant) return packet;
 
     final key = _SessionKey(transport, _hex(remotePubkey));
     final session = _entries[key]?.session;
@@ -274,9 +384,12 @@ class NoiseSessionManager {
   /// attestation it carries is judged against (spec §Session Establishment).
   ///
   /// The owning session is resolved by identity: first the caller-supplied
-  /// [remotePubkey] (when the connection is already identified, e.g. via
-  /// ANNOUNCE), then the connection→identity mapping learned at handshake
-  /// completion.
+  /// [remotePubkey] (when the connection is already identified), then the
+  /// connection→identity mapping learned at handshake completion.  Over the
+  /// PAN a pair holds one session over two GATT legs, and a leg opened after
+  /// the handshake is identified by no handshake: a packet on a connection
+  /// neither names is tried against each GATT session, the one whose keys
+  /// open it naming the peer, and the connection is recorded as that peer's.
   Future<(GrassrootsPacket, Uint8List, Uint8List)> decryptPacket(
     GrassrootsPacket packet, {
     required PeerTransport transport,
@@ -287,30 +400,44 @@ class NoiseSessionManager {
       throw ArgumentError('Not a session-encrypted packet: ${packet.type}');
     }
 
-    final connectionPeer =
-        peerId != null ? _connectionPeers[_ConnectionKey(transport, peerId)] : null;
-    Uint8List? sender;
-    _NoiseTransportSession? session;
+    final connectionPeer = peerId != null
+        ? _connectionPeers[_ConnectionKey(transport, peerId)]
+        : null;
+    final clearType = packet.type.clearVariant;
     for (final candidate in [remotePubkey, connectionPeer]) {
       if (candidate == null) continue;
       final found = _entries[_SessionKey(transport, _hex(candidate))]?.session;
       if (found != null) {
-        sender = candidate;
-        session = found;
-        break;
+        final clearPayload = await found.decryptPayload(packet, clearType);
+        return (
+          packet.copyWith(type: clearType, payload: clearPayload),
+          candidate,
+          found.handshakeHash,
+        );
       }
     }
-    if (sender == null || session == null) {
-      throw StateError('No Noise session for $transport/$peerId');
-    }
 
-    final clearType = packet.type.clearVariant;
-    final clearPayload = await session.decryptPayload(packet, clearType);
-    return (
-      packet.copyWith(type: clearType, payload: clearPayload),
-      sender,
-      session.handshakeHash,
-    );
+    if (transport == PeerTransport.bleDirect && peerId != null) {
+      for (final entry in _entries.entries.toList()) {
+        if (entry.key.transport != transport) continue;
+        final session = entry.value.session;
+        if (session == null) continue;
+        final Uint8List clearPayload;
+        try {
+          clearPayload = await session.decryptPayload(packet, clearType);
+        } catch (_) {
+          continue;
+        }
+        final sender = _bytes(entry.key.pubkeyHex);
+        _recordConnectionPeer(transport, peerId, sender);
+        return (
+          packet.copyWith(type: clearType, payload: clearPayload),
+          sender,
+          session.handshakeHash,
+        );
+      }
+    }
+    throw StateError('No Noise session for $transport/$peerId');
   }
 
   void reset(PeerTransport transport, Uint8List remotePubkey) {
@@ -340,12 +467,22 @@ class NoiseSessionManager {
     _connectionPeers.clear();
   }
 
-  Future<NoiseHandshakeResult> _handleMessage1(
-    _SessionEntry entry,
-    _SessionKey key,
-    Uint8List remotePubkey,
-    Uint8List body,
+  // ===== XX =====
+
+  Future<NoiseHandshakeResult> _handleXx1(
+    _Envelope envelope,
+    PeerTransport transport,
+    bool Function(NoisePattern, Uint8List) accept,
   ) async {
+    final remotePubkey = envelope.claim!;
+    final body = envelope.body;
+    if (!_verifyIdentityClaim(remotePubkey, envelope.signature!, body)) {
+      throw const FormatException(
+          'Noise XX message 1 identity claim failed verification');
+    }
+    final key = _SessionKey(transport, _hex(remotePubkey));
+    final entry = _entries.putIfAbsent(key, _SessionEntry.new);
+
     // A retransmitted message 1 (our message 2 was lost): resend the same
     // message 2 — a fresh responder state would break the initiator's
     // in-flight handshake.
@@ -354,118 +491,137 @@ class NoiseSessionManager {
         _bytesEqual(entry.lastInboundBody!, body)) {
       return NoiseHandshakeResult(
         remotePubkey: remotePubkey,
+        pattern: NoisePattern.xx,
         responsePayload: entry.lastSentEncoded,
       );
     }
 
-    final existingHandshake = entry.handshake;
-    if (existingHandshake?.role == NoiseHandshakeRole.initiator) {
-      final localHex = _hex(identity.publicKey);
-      if (localHex.compareTo(key.pubkeyHex) < 0) {
-        return NoiseHandshakeResult(remotePubkey: remotePubkey);
-      }
-      entry.complete(false);
+    if (!accept(NoisePattern.xx, remotePubkey)) {
+      throw StateError('Noise XX message 1 from '
+          '${_hex(remotePubkey).substring(0, 8)} refused by the trust level');
+    }
+
+    if (_yieldsToOwnInitiation(entry, key)) {
+      return NoiseHandshakeResult(
+          remotePubkey: remotePubkey, pattern: NoisePattern.xx);
     }
 
     final handshake = await _NoiseHandshakeState.create(
       role: NoiseHandshakeRole.responder,
+      pattern: NoisePattern.xx,
       localStaticKeyPair: await _staticKeyPair(),
     );
-    await handshake.readMessage1(body);
-    final responseBody = await handshake.writeMessage2();
+    await handshake.readXx1(body);
+    final responseBody = await handshake.writeXx2();
+    final replaced = entry.session != null;
     entry
       ..session = null
       ..handshake = handshake
+      ..finalSent = null
       ..lastInboundBody = body
       // Keep a pending waiter: the dialer may already be awaiting the
       // session (waitForSession registers before the handshake starts).
       ..completer ??= Completer<bool>();
-    final encoded = _encodeHandshakePayload(
-      _NoiseHandshakeMessage.message2,
-      identity.publicKey,
+    final encoded = _encodeEnvelope(
+      _Kind.xx2,
       responseBody,
+      claim: identity.publicKey,
     );
     entry.lastSentEncoded = encoded;
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,
+      pattern: NoisePattern.xx,
       responsePayload: encoded,
+      replacedSession: replaced,
     );
   }
 
-  Future<NoiseHandshakeResult> _handleMessage2(
-    _SessionEntry entry,
-    _SessionKey key,
-    Uint8List remotePubkey,
-    Uint8List body,
+  Future<NoiseHandshakeResult> _handleXx2(
+    _Envelope envelope,
     PeerTransport transport,
     String? peerId,
   ) async {
+    final remotePubkey = envelope.claim!;
+    final body = envelope.body;
+    final key = _SessionKey(transport, _hex(remotePubkey));
+    final entry = _entries.putIfAbsent(key, _SessionEntry.new);
     final handshake = entry.handshake;
     if (handshake == null ||
         handshake.role != NoiseHandshakeRole.initiator ||
+        handshake.pattern != NoisePattern.xx ||
         entry.session != null) {
       // A retransmitted message 2 after we completed (our message 3 was
       // lost): resend the same message 3.
       if (entry.session != null &&
-          entry.lastSentEncoded != null &&
+          entry.finalSent != null &&
           entry.lastInboundBody != null &&
           _bytesEqual(entry.lastInboundBody!, body)) {
         return NoiseHandshakeResult(
           remotePubkey: remotePubkey,
-          responsePayload: entry.lastSentEncoded,
-          sessionEstablished: true,
+          pattern: NoisePattern.xx,
+          responsePayload: entry.finalSent,
         );
       }
-      return NoiseHandshakeResult(remotePubkey: remotePubkey);
+      return NoiseHandshakeResult(
+          remotePubkey: remotePubkey, pattern: NoisePattern.xx);
     }
     entry.lastInboundBody = body;
 
-    await handshake.readMessage2(body);
+    await handshake.readXx2(body);
     if (!_verifyRemoteStatic(handshake, remotePubkey)) {
       _entries.remove(key);
       entry.complete(false);
-      return NoiseHandshakeResult(remotePubkey: remotePubkey);
+      return NoiseHandshakeResult(
+          remotePubkey: remotePubkey, pattern: NoisePattern.xx);
     }
-    final responseBody = await handshake.writeMessage3();
+    final responseBody = await handshake.writeXx3();
     final session = await handshake.splitForInitiator();
+    final encoded = _encodeEnvelope(
+      _Kind.xx3,
+      responseBody,
+      claim: identity.publicKey,
+    );
     entry
       ..session = session
-      ..handshake = null;
+      ..handshake = null
+      ..lastSentEncoded = encoded
+      ..finalSent = encoded;
     // Waiters are released by handleHandshakePacket, after message 3 is sent.
     _recordConnectionPeer(transport, peerId, remotePubkey);
-    final encoded = _encodeHandshakePayload(
-      _NoiseHandshakeMessage.message3,
-      identity.publicKey,
-      responseBody,
-    );
-    entry.lastSentEncoded = encoded;
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,
+      pattern: NoisePattern.xx,
       responsePayload: encoded,
       sessionEstablished: true,
+      sentFinal: true,
     );
   }
 
-  Future<NoiseHandshakeResult> _handleMessage3(
-    _SessionEntry entry,
-    _SessionKey key,
-    Uint8List remotePubkey,
-    Uint8List body,
+  Future<NoiseHandshakeResult> _handleXx3(
+    _Envelope envelope,
     PeerTransport transport,
     String? peerId,
   ) async {
+    final remotePubkey = envelope.claim!;
+    final body = envelope.body;
+    final key = _SessionKey(transport, _hex(remotePubkey));
+    final entry = _entries.putIfAbsent(key, _SessionEntry.new);
     final handshake = entry.handshake;
     if (handshake == null ||
         handshake.role != NoiseHandshakeRole.responder ||
+        handshake.pattern != NoisePattern.xx ||
         entry.session != null) {
-      return NoiseHandshakeResult(remotePubkey: remotePubkey);
+      // A retransmitted message 3 after we completed: nothing to answer.
+      return NoiseHandshakeResult(
+          remotePubkey: remotePubkey, pattern: NoisePattern.xx);
     }
 
-    await handshake.readMessage3(body);
+    await handshake.readXx3(body);
     if (!_verifyRemoteStatic(handshake, remotePubkey)) {
       _entries.remove(key);
       entry.complete(false);
-      return NoiseHandshakeResult(remotePubkey: remotePubkey);
+      return NoiseHandshakeResult(
+          remotePubkey: remotePubkey, pattern: NoisePattern.xx);
     }
     final session = await handshake.splitForResponder();
     entry
@@ -475,8 +631,160 @@ class NoiseSessionManager {
     _recordConnectionPeer(transport, peerId, remotePubkey);
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,
+      pattern: NoisePattern.xx,
       sessionEstablished: true,
     );
+  }
+
+  // ===== IK =====
+
+  Future<NoiseHandshakeResult> _handleIk1(
+    _Envelope envelope,
+    PeerTransport transport,
+    String? peerId,
+    bool Function(NoisePattern, Uint8List) accept,
+  ) async {
+    final body = envelope.body;
+    // Only the holder of the key the initiator expects can read the message,
+    // and reading it is what names the initiator.
+    final handshake = await _NoiseHandshakeState.create(
+      role: NoiseHandshakeRole.responder,
+      pattern: NoisePattern.ik,
+      localStaticKeyPair: await _staticKeyPair(),
+    );
+    final Uint8List remotePubkey;
+    try {
+      remotePubkey = await handshake.readIk1(body);
+    } catch (e) {
+      throw FormatException('Noise IK message 1 does not open: $e');
+    }
+    if (remotePubkey.length != _keyLength ||
+        !_verifyRemoteStatic(handshake, remotePubkey)) {
+      throw const FormatException(
+          'Noise IK message 1: the static key is not the image of the '
+          'identity key it carries');
+    }
+    final key = _SessionKey(transport, _hex(remotePubkey));
+    final entry = _entries.putIfAbsent(key, _SessionEntry.new);
+
+    // A retransmitted message 1 (our message 2 was lost): resend the same
+    // message 2, the session it established standing.
+    if (entry.lastInboundBody != null &&
+        _bytesEqual(entry.lastInboundBody!, body) &&
+        entry.session != null &&
+        entry.finalSent != null) {
+      return NoiseHandshakeResult(
+        remotePubkey: remotePubkey,
+        pattern: NoisePattern.ik,
+        responsePayload: entry.finalSent,
+      );
+    }
+
+    if (!accept(NoisePattern.ik, remotePubkey)) {
+      throw StateError('Noise IK message 1 from '
+          '${_hex(remotePubkey).substring(0, 8)} refused by the trust level');
+    }
+
+    if (_yieldsToOwnInitiation(entry, key)) {
+      return NoiseHandshakeResult(
+          remotePubkey: remotePubkey, pattern: NoisePattern.ik);
+    }
+
+    final responseBody = await handshake.writeIk2();
+    final session = await handshake.splitForResponder();
+    final replaced = entry.session != null;
+    final encoded = _encodeEnvelope(_Kind.ik2, responseBody);
+    entry
+      ..session = session
+      ..handshake = null
+      ..lastInboundBody = body
+      ..lastSentEncoded = encoded
+      ..finalSent = encoded
+      ..completer ??= Completer<bool>();
+    _recordConnectionPeer(transport, peerId, remotePubkey);
+    return NoiseHandshakeResult(
+      remotePubkey: remotePubkey,
+      pattern: NoisePattern.ik,
+      responsePayload: encoded,
+      sessionEstablished: true,
+      sentFinal: true,
+      replacedSession: replaced,
+    );
+  }
+
+  Future<NoiseHandshakeResult> _handleIk2(
+    _Envelope envelope,
+    PeerTransport transport,
+    String? peerId,
+  ) async {
+    final body = envelope.body;
+
+    // The initiator's handshake in flight on this connection, then every IK
+    // initiator handshake in flight on the medium: message 2 names no one,
+    // and only the handshake it answers can open it.
+    final candidates = <_SessionKey>[];
+    for (final entry in _entries.entries) {
+      if (entry.key.transport != transport) continue;
+      final handshake = entry.value.handshake;
+      if (handshake == null ||
+          handshake.role != NoiseHandshakeRole.initiator ||
+          handshake.pattern != NoisePattern.ik ||
+          entry.value.session != null) {
+        // A retransmitted message 2 after we completed: nothing to answer.
+        if (entry.value.session != null &&
+            entry.value.lastInboundBody != null &&
+            _bytesEqual(entry.value.lastInboundBody!, body)) {
+          return NoiseHandshakeResult(
+            remotePubkey: _bytes(entry.key.pubkeyHex),
+            pattern: NoisePattern.ik,
+          );
+        }
+        continue;
+      }
+      if (peerId != null && entry.value.connectionId == peerId) {
+        candidates.insert(0, entry.key);
+      } else {
+        candidates.add(entry.key);
+      }
+    }
+
+    for (final key in candidates) {
+      final entry = _entries[key];
+      final handshake = entry?.handshake;
+      if (entry == null || handshake == null) continue;
+      final trial = handshake.copy();
+      try {
+        await trial.readIk2(body);
+      } catch (_) {
+        continue;
+      }
+      final remotePubkey = _bytes(key.pubkeyHex);
+      final session = await trial.splitForInitiator();
+      entry
+        ..session = session
+        ..handshake = null
+        ..lastInboundBody = body
+        ..finalSent = null;
+      _recordConnectionPeer(transport, peerId, remotePubkey);
+      return NoiseHandshakeResult(
+        remotePubkey: remotePubkey,
+        pattern: NoisePattern.ik,
+        sessionEstablished: true,
+      );
+    }
+    throw const FormatException(
+        'Noise IK message 2 answers no handshake in flight');
+  }
+
+  /// Glare: the pair's first messages crossed. "The deterministic initiator
+  /// is the endpoint with the lexicographically smaller public key" (GNA
+  /// §2.7, §4.1): with the smaller key, keep our own handshake and leave
+  /// theirs unanswered; with the larger, drop ours and answer theirs, a
+  /// waiter on our session staying to be released by the one theirs makes.
+  bool _yieldsToOwnInitiation(_SessionEntry entry, _SessionKey key) {
+    final existing = entry.handshake;
+    if (existing?.role != NoiseHandshakeRole.initiator) return false;
+    return _hex(identity.publicKey).compareTo(key.pubkeyHex) < 0;
   }
 
   void _recordConnectionPeer(
@@ -489,7 +797,7 @@ class NoiseSessionManager {
         Uint8List.fromList(remotePubkey);
   }
 
-  /// Sign the message-1 identity claim: our Ed25519 identity over
+  /// Sign the XX message-1 identity claim: our Ed25519 identity over
   /// (claim ‖ noise body), binding the claim to this handshake's ephemeral.
   Uint8List _signIdentityClaim(Uint8List body) {
     final message = Uint8List.fromList([...identity.publicKey, ...body]);
@@ -547,11 +855,11 @@ class NoiseSessionManager {
     }();
   }
 
-  /// Verify the Noise-delivered remote static key equals the X25519 form of the
-  /// claimed sender's Ed25519 identity ([remotePubkey]). A mismatch — a peer
+  /// Verify the Noise-delivered remote static key equals the X25519 form of
+  /// the sender's Ed25519 identity ([remotePubkey]): the XX claim, or the IK
+  /// initiator's identity carried in its first message. A mismatch — a peer
   /// presenting a static that does not belong to the identity it claims, or a
-  /// tampered handshake — aborts the handshake. Implements the key check in
-  /// `docs/GLP_Networking_API/sections/ip.tex` §IP Connection.
+  /// tampered handshake — aborts the handshake (GNA §2.6).
   bool _verifyRemoteStatic(
     _NoiseHandshakeState handshake,
     Uint8List remotePubkey,
@@ -583,15 +891,24 @@ class _SessionEntry {
   _NoiseHandshakeState? handshake;
   Completer<bool>? completer;
 
-  /// The last handshake payload this side put on the wire (encoded m1, m2
-  /// or m3) — retransmitted on a timer over a lossy carrier, and resent
-  /// when the peer's retransmitted previous message shows the reply was
-  /// lost (spec §Session Establishment: the handshake is self-ordering).
+  /// The last handshake message this side put on the wire — retransmitted on
+  /// a timer over a lossy carrier while its handshake is in flight, and
+  /// resent when the peer's retransmitted previous message shows the reply
+  /// was lost (GNA §2.6: the handshake is self-ordering).
   Uint8List? lastSentEncoded;
+
+  /// This side's final handshake message of the standing session, where this
+  /// side sent it: retransmitted until the other side's attestation message
+  /// arrives (GNA §2.6).
+  Uint8List? finalSent;
 
   /// The last inbound handshake body, to tell a retransmitted duplicate
   /// (resend the stored reply) from a genuinely new handshake attempt.
   Uint8List? lastInboundBody;
+
+  /// The connection this side's first message went out on, as initiator:
+  /// where the answering message 2, which names no one, is looked for first.
+  String? connectionId;
 
   void complete(bool value) {
     final pending = completer;
@@ -638,6 +955,7 @@ class _ConnectionKey {
 
 class _NoiseHandshakeState {
   final NoiseHandshakeRole role;
+  final NoisePattern pattern;
   final SimpleKeyPair localStaticKeyPair;
   final _NoiseSymmetricState symmetric;
   final X25519 _x25519 = X25519();
@@ -648,39 +966,88 @@ class _NoiseHandshakeState {
   _NoiseTransportSession? _initiatorSession;
   _NoiseTransportSession? _responderSession;
 
-  /// The remote peer's static public key as delivered in the XX handshake
-  /// (messages 2/3). Verified against the expected identity by
-  /// [NoiseSessionManager._verifyRemoteStatic].
+  /// The remote peer's static public key: as delivered in the handshake (XX
+  /// messages 2/3, IK message 1), verified against the expected identity by
+  /// [NoiseSessionManager._verifyRemoteStatic]; or, for an IK initiator, the
+  /// key it expects.
   SimplePublicKey? get remoteStaticPublicKey => _remoteStaticPublicKey;
 
   _NoiseHandshakeState._({
     required this.role,
+    required this.pattern,
     required this.localStaticKeyPair,
     required this.symmetric,
   });
 
   static Future<_NoiseHandshakeState> create({
     required NoiseHandshakeRole role,
+    required NoisePattern pattern,
     required SimpleKeyPair localStaticKeyPair,
+    Uint8List? remoteStatic,
   }) async {
-    final symmetric = await _NoiseSymmetricState.initialize();
-    return _NoiseHandshakeState._(
+    final symmetric = await _NoiseSymmetricState.initialize(
+      pattern == NoisePattern.ik ? _ikProtocolName : _xxProtocolName,
+    );
+    await symmetric.mixHash(_prologue());
+    final state = _NoiseHandshakeState._(
       role: role,
+      pattern: pattern,
       localStaticKeyPair: localStaticKeyPair,
       symmetric: symmetric,
     );
+    if (pattern == NoisePattern.ik) {
+      // The pre-message `<- s`: the responder's static, known to both.
+      if (role == NoiseHandshakeRole.initiator) {
+        if (remoteStatic == null) {
+          throw ArgumentError('An IK initiator needs the expected key');
+        }
+        state._remoteStaticPublicKey = SimplePublicKey(
+          Uint8List.fromList(remoteStatic),
+          type: KeyPairType.x25519,
+        );
+        await symmetric.mixHash(remoteStatic);
+      } else {
+        final own = await localStaticKeyPair.extractPublicKey();
+        await symmetric.mixHash(own.bytes);
+      }
+    }
+    return state;
   }
 
-  Future<Uint8List> writeMessage1() async {
+  /// A copy to try a message on, leaving this state as it was if the message
+  /// does not open.
+  _NoiseHandshakeState copy() {
+    final copied = _NoiseHandshakeState._(
+      role: role,
+      pattern: pattern,
+      localStaticKeyPair: localStaticKeyPair,
+      symmetric: symmetric.copy(),
+    );
+    copied._localEphemeralKeyPair = _localEphemeralKeyPair;
+    copied._remoteEphemeralPublicKey = _remoteEphemeralPublicKey;
+    copied._remoteStaticPublicKey = _remoteStaticPublicKey;
+    return copied;
+  }
+
+  static Uint8List _prologue() {
+    final version = ByteData(2)
+      ..setUint16(0, NoiseSessionManager.protocolVersion, Endian.big);
+    return Uint8List.fromList(
+        [...utf8.encode(_prologueLabel), ...version.buffer.asUint8List()]);
+  }
+
+  // --- XX: -> e / <- e, ee, s, es / -> s, se ---
+
+  Future<Uint8List> writeXx1() async {
     _localEphemeralKeyPair = await _x25519.newKeyPair();
     final ephemeral = await _localEphemeralKeyPair!.extractPublicKey();
     await symmetric.mixHash(ephemeral.bytes);
     return Uint8List.fromList(ephemeral.bytes);
   }
 
-  Future<void> readMessage1(Uint8List body) async {
-    if (body.length != 32) {
-      throw const FormatException('Noise message 1 must be 32 bytes');
+  Future<void> readXx1(Uint8List body) async {
+    if (body.length != _keyLength) {
+      throw const FormatException('Noise XX message 1 must be 32 bytes');
     }
     _remoteEphemeralPublicKey = SimplePublicKey(
       Uint8List.fromList(body),
@@ -689,7 +1056,7 @@ class _NoiseHandshakeState {
     await symmetric.mixHash(body);
   }
 
-  Future<Uint8List> writeMessage2() async {
+  Future<Uint8List> writeXx2() async {
     final remoteEphemeral = _requireRemoteEphemeral();
     _localEphemeralKeyPair = await _x25519.newKeyPair();
     final ephemeral = await _localEphemeralKeyPair!.extractPublicKey();
@@ -703,12 +1070,12 @@ class _NoiseHandshakeState {
     return Uint8List.fromList([...ephemeral.bytes, ...encryptedStatic]);
   }
 
-  Future<void> readMessage2(Uint8List body) async {
-    if (body.length != 32 + 48) {
-      throw const FormatException('Noise message 2 must be 80 bytes');
+  Future<void> readXx2(Uint8List body) async {
+    if (body.length != _keyLength + _keyLength + _aeadMacLength) {
+      throw const FormatException('Noise XX message 2 must be 80 bytes');
     }
     final localEphemeral = _requireLocalEphemeral();
-    final remoteEphemeralBytes = body.sublist(0, 32);
+    final remoteEphemeralBytes = body.sublist(0, _keyLength);
     _remoteEphemeralPublicKey = SimplePublicKey(
       Uint8List.fromList(remoteEphemeralBytes),
       type: KeyPairType.x25519,
@@ -718,7 +1085,8 @@ class _NoiseHandshakeState {
       await _dh(localEphemeral, _remoteEphemeralPublicKey!),
     );
 
-    final remoteStaticBytes = await symmetric.decryptAndHash(body.sublist(32));
+    final remoteStaticBytes =
+        await symmetric.decryptAndHash(body.sublist(_keyLength));
     _remoteStaticPublicKey = SimplePublicKey(
       Uint8List.fromList(remoteStaticBytes),
       type: KeyPairType.x25519,
@@ -726,7 +1094,7 @@ class _NoiseHandshakeState {
     await symmetric.mixKey(await _dh(localEphemeral, _remoteStaticPublicKey!));
   }
 
-  Future<Uint8List> writeMessage3() async {
+  Future<Uint8List> writeXx3() async {
     final remoteEphemeral = _requireRemoteEphemeral();
     final staticPublic = await localStaticKeyPair.extractPublicKey();
     final encryptedStatic = await symmetric.encryptAndHash(staticPublic.bytes);
@@ -734,9 +1102,9 @@ class _NoiseHandshakeState {
     return Uint8List.fromList(encryptedStatic);
   }
 
-  Future<void> readMessage3(Uint8List body) async {
-    if (body.length != 48) {
-      throw const FormatException('Noise message 3 must be 48 bytes');
+  Future<void> readXx3(Uint8List body) async {
+    if (body.length != _keyLength + _aeadMacLength) {
+      throw const FormatException('Noise XX message 3 must be 48 bytes');
     }
     final localEphemeral = _requireLocalEphemeral();
     final remoteStaticBytes = await symmetric.decryptAndHash(body);
@@ -745,6 +1113,78 @@ class _NoiseHandshakeState {
       type: KeyPairType.x25519,
     );
     await symmetric.mixKey(await _dh(localEphemeral, _remoteStaticPublicKey!));
+  }
+
+  // --- IK: <- s / ... / -> e, es, s, ss / <- e, ee, se ---
+
+  /// Write IK message 1, carrying [payload] encrypted after the static.
+  Future<Uint8List> writeIk1(Uint8List payload) async {
+    final remoteStatic = _remoteStaticPublicKey!;
+    _localEphemeralKeyPair = await _x25519.newKeyPair();
+    final ephemeral = await _localEphemeralKeyPair!.extractPublicKey();
+    await symmetric.mixHash(ephemeral.bytes);
+    await symmetric.mixKey(await _dh(_localEphemeralKeyPair!, remoteStatic));
+    final staticPublic = await localStaticKeyPair.extractPublicKey();
+    final encryptedStatic = await symmetric.encryptAndHash(staticPublic.bytes);
+    await symmetric.mixKey(await _dh(localStaticKeyPair, remoteStatic));
+    final encryptedPayload = await symmetric.encryptAndHash(payload);
+    return Uint8List.fromList(
+        [...ephemeral.bytes, ...encryptedStatic, ...encryptedPayload]);
+  }
+
+  /// Read IK message 1 and answer its payload: the initiator's identity.
+  Future<Uint8List> readIk1(Uint8List body) async {
+    const length = _keyLength + (_keyLength + _aeadMacLength) * 2;
+    if (body.length != length) {
+      throw FormatException('Noise IK message 1 must be $length bytes');
+    }
+    final remoteEphemeralBytes = body.sublist(0, _keyLength);
+    _remoteEphemeralPublicKey = SimplePublicKey(
+      Uint8List.fromList(remoteEphemeralBytes),
+      type: KeyPairType.x25519,
+    );
+    await symmetric.mixHash(remoteEphemeralBytes);
+    await symmetric
+        .mixKey(await _dh(localStaticKeyPair, _remoteEphemeralPublicKey!));
+    const staticEnd = _keyLength * 2 + _aeadMacLength;
+    final remoteStaticBytes =
+        await symmetric.decryptAndHash(body.sublist(_keyLength, staticEnd));
+    _remoteStaticPublicKey = SimplePublicKey(
+      Uint8List.fromList(remoteStaticBytes),
+      type: KeyPairType.x25519,
+    );
+    await symmetric.mixKey(await _dh(localStaticKeyPair, _remoteStaticPublicKey!));
+    return symmetric.decryptAndHash(body.sublist(staticEnd));
+  }
+
+  Future<Uint8List> writeIk2() async {
+    final remoteEphemeral = _requireRemoteEphemeral();
+    final remoteStatic = _remoteStaticPublicKey!;
+    _localEphemeralKeyPair = await _x25519.newKeyPair();
+    final ephemeral = await _localEphemeralKeyPair!.extractPublicKey();
+    await symmetric.mixHash(ephemeral.bytes);
+    await symmetric.mixKey(await _dh(_localEphemeralKeyPair!, remoteEphemeral));
+    await symmetric.mixKey(await _dh(_localEphemeralKeyPair!, remoteStatic));
+    final tag = await symmetric.encryptAndHash(const <int>[]);
+    return Uint8List.fromList([...ephemeral.bytes, ...tag]);
+  }
+
+  Future<void> readIk2(Uint8List body) async {
+    if (body.length != _keyLength + _aeadMacLength) {
+      throw const FormatException('Noise IK message 2 must be 48 bytes');
+    }
+    final localEphemeral = _requireLocalEphemeral();
+    final remoteEphemeralBytes = body.sublist(0, _keyLength);
+    _remoteEphemeralPublicKey = SimplePublicKey(
+      Uint8List.fromList(remoteEphemeralBytes),
+      type: KeyPairType.x25519,
+    );
+    await symmetric.mixHash(remoteEphemeralBytes);
+    await symmetric.mixKey(
+        await _dh(localEphemeral, _remoteEphemeralPublicKey!));
+    await symmetric.mixKey(
+        await _dh(localStaticKeyPair, _remoteEphemeralPublicKey!));
+    await symmetric.decryptAndHash(body.sublist(_keyLength));
   }
 
   Future<_NoiseTransportSession> splitForInitiator() async {
@@ -795,8 +1235,8 @@ class _NoiseSymmetricState {
     required this.handshakeHash,
   });
 
-  static Future<_NoiseSymmetricState> initialize() async {
-    final protocolName = utf8.encode(_noiseProtocolName);
+  static Future<_NoiseSymmetricState> initialize(String protocol) async {
+    final protocolName = utf8.encode(protocol);
     final initialHash = Uint8List(32);
     if (protocolName.length <= 32) {
       initialHash.setRange(0, protocolName.length, protocolName);
@@ -808,6 +1248,13 @@ class _NoiseSymmetricState {
       handshakeHash: Uint8List.fromList(initialHash),
     );
   }
+
+  _NoiseSymmetricState copy() => _NoiseSymmetricState._(
+        chainingKey: Uint8List.fromList(chainingKey),
+        handshakeHash: Uint8List.fromList(handshakeHash),
+      )
+        ..cipherKey = cipherKey == null ? null : Uint8List.fromList(cipherKey!)
+        ..nonce = nonce;
 
   Future<void> mixHash(List<int> data) async {
     final builder = BytesBuilder()
@@ -976,49 +1423,77 @@ Future<(Uint8List, Uint8List)> _hkdf2(
   return (Uint8List.fromList(output1), Uint8List.fromList(output2));
 }
 
-Uint8List _encodeHandshakePayload(
-  _NoiseHandshakeMessage message,
-  Uint8List senderPubkey,
+/// A decoded handshake envelope.
+class _Envelope {
+  final _Kind kind;
+
+  /// The sender's identity claim: the XX messages' alone.
+  final Uint8List? claim;
+
+  /// The signature over the claim and the ephemeral: XX message 1's alone.
+  final Uint8List? signature;
+
+  final Uint8List body;
+
+  const _Envelope(this.kind, this.claim, this.signature, this.body);
+}
+
+/// The handshake envelope: the protocol version (2 bytes, big-endian), the
+/// message kind (1 byte), for XX the sender's identity claim (32 bytes) and,
+/// on message 1, its signature over the claim and the ephemeral (64 bytes),
+/// and the Noise message.
+Uint8List _encodeEnvelope(
+  _Kind kind,
   Uint8List body, {
+  Uint8List? claim,
   Uint8List? signature,
 }) {
+  final version = ByteData(2)
+    ..setUint16(0, NoiseSessionManager.protocolVersion, Endian.big);
   return Uint8List.fromList([
-    _handshakePayloadVersion,
-    message.value,
-    ...senderPubkey,
+    ...version.buffer.asUint8List(),
+    kind.value,
+    if (claim != null) ...claim,
     if (signature != null) ...signature,
     ...body,
   ]);
 }
 
-/// Decode a handshake envelope: (message, sender identity claim, message-1
-/// claim signature or null, noise body).
-(_NoiseHandshakeMessage, Uint8List, Uint8List?, Uint8List)
-    _decodeHandshakePayload(Uint8List payload) {
-  if (payload.length < 2 + 32) {
+/// Decode a handshake envelope. A peer on another protocol version is
+/// refused here, at the handshake (GNA §2.6): its envelope is not read
+/// further.
+_Envelope _decodeEnvelope(Uint8List payload) {
+  if (payload.length < 3) {
     throw const FormatException('Noise handshake payload is truncated');
   }
-  if (payload[0] != _handshakePayloadVersion) {
-    throw FormatException('Unsupported Noise payload version: ${payload[0]}');
+  final version =
+      ByteData.sublistView(payload, 0, 2).getUint16(0, Endian.big);
+  if (version != NoiseSessionManager.protocolVersion) {
+    throw FormatException('Noise handshake protocol version $version != '
+        '${NoiseSessionManager.protocolVersion}; refused');
   }
-  final message = _NoiseHandshakeMessage.fromValue(payload[1]);
-  final senderPubkey = Uint8List.fromList(payload.sublist(2, 34));
-  var offset = 34;
+  final kind = _Kind.fromValue(payload[2]);
+  var offset = 3;
+  Uint8List? claim;
   Uint8List? signature;
-  if (message == _NoiseHandshakeMessage.message1) {
-    if (payload.length < offset + _signatureLength) {
-      throw const FormatException('Noise message 1 signature is truncated');
+  if (kind.carriesClaim) {
+    if (payload.length < offset + _keyLength) {
+      throw const FormatException('Noise handshake claim is truncated');
     }
-    signature =
-        Uint8List.fromList(payload.sublist(offset, offset + _signatureLength));
-    offset += _signatureLength;
+    claim = Uint8List.fromList(payload.sublist(offset, offset + _keyLength));
+    offset += _keyLength;
+    if (kind == _Kind.xx1) {
+      if (payload.length < offset + _signatureLength) {
+        throw const FormatException(
+            'Noise XX message 1 signature is truncated');
+      }
+      signature = Uint8List.fromList(
+          payload.sublist(offset, offset + _signatureLength));
+      offset += _signatureLength;
+    }
   }
-  return (
-    message,
-    senderPubkey,
-    signature,
-    Uint8List.fromList(payload.sublist(offset)),
-  );
+  return _Envelope(
+      kind, claim, signature, Uint8List.fromList(payload.sublist(offset)));
 }
 
 SecretBox _secretBoxWithoutNonce(Uint8List data, {required Uint8List nonce}) {
@@ -1067,4 +1542,12 @@ Uint8List _applicationAad(PacketType clearType) {
 
 String _hex(Uint8List bytes) {
   return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+}
+
+Uint8List _bytes(String hex) {
+  final out = Uint8List(hex.length ~/ 2);
+  for (var i = 0; i < out.length; i++) {
+    out[i] = int.parse(hex.substring(2 * i, 2 * i + 2), radix: 16);
+  }
+  return out;
 }

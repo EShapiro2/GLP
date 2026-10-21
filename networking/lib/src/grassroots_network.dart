@@ -21,6 +21,7 @@ import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
+import 'package:grassroots_networking_core/src/models/underlay_api.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/message_transport.dart';
@@ -250,6 +251,10 @@ Set<String> computeStaleBlePeerPubkeys({
 ///   // peer reachable over `underlay` (PAN, LAN or WAN)
 /// };
 ///
+/// // The functions of one underlay are on its sub-object (GNA §2.2).
+/// grassroots.pan?.setTrustLevel(ColdCallTrustLevel.open);
+/// grassroots.wan?.putPeerAddress(peerPubkey, '198.51.100.4:9514');
+///
 /// await grassroots.initialize();
 /// await grassroots.start();
 ///
@@ -296,7 +301,7 @@ class GrassrootsNetwork {
   /// sets are retained — an unreachable peer holds no entry.
   final Map<String, Set<Underlay>> _lastKnownUnderlays = {};
 
-  /// Pubkeys (hex) already surfaced via [onPeerDiscovered] this session.
+  /// Pubkeys (hex) already surfaced via [ProximityApi.onPeerDiscovered] this session.
   /// Discovery is the identity-learned event on a proximity underlay — the
   /// first accepted ANNOUNCE carrying a nearby peer's public key, over the PAN
   /// or from a LAN source — which precedes the Noise session and therefore
@@ -333,15 +338,19 @@ class GrassrootsNetwork {
     });
   }
 
-  /// Per-pair handshake serialization (spec §Session Establishment: one
-  /// handshake per underlay per pair). The announce-triggered initiation and
-  /// the inbound handshake handler both mutate the pair's handshake state
-  /// across awaits; run concurrently they can each observe no handshake in
-  /// flight and create one, clobbering the pair's single state machine —
-  /// glare then stalls instead of resolving by the deterministic rule.
-  /// Keyed per medium and pair; waiting for the session happens outside
-  /// the chain.
+  /// Handshake serialization (spec §Session Establishment: one handshake per
+  /// underlay per pair). An initiation and the inbound handshake handler both
+  /// mutate a pair's handshake state across awaits; run concurrently they can
+  /// each observe no handshake in flight and create one, clobbering the
+  /// pair's single state machine — glare then stalls instead of resolving by
+  /// the deterministic rule. An IK first message names its sender only once
+  /// it is read (GNA §2.6), so the chain is one per medium
+  /// ([_handshakeChainOf]); waiting for the session happens outside it.
   final Map<String, Future<void>> _handshakeChains = {};
+
+  /// The handshake chain of [transport].
+  static String _handshakeChainOf(PeerTransport transport) =>
+      'handshake:${transport.name}';
 
   Future<T> _serializedHandshake<T>(
     String pairKey,
@@ -401,47 +410,95 @@ class GrassrootsNetwork {
     },
   );
 
+  /// The retransmission timer of each pair's handshake, per medium: one at a
+  /// time, a new one replacing the old.
+  final Map<String, Timer> _handshakeRetransmits = {};
+
   /// Retransmit the in-flight handshake message with backoff until its
-  /// reply arrives (spec §Session Establishment: self-ordering handshake
-  /// over the lossy IP carrier; BLE needs no timer — GATT writes are
-  /// link-acknowledged).
-  void _scheduleHandshakeRetransmit(Uint8List pubkey, {String? peerId}) {
+  /// reply arrives, over GATT as over UDP (GNA §2.6: "over a lossy carrier
+  /// each handshake message is retransmitted on a timer until the next one
+  /// arrives"; §2.9: a GATT write without response is lossy, and
+  /// "retransmission is the reliability mechanism on both underlays").
+  void _scheduleHandshakeRetransmit(
+    PeerTransport transport,
+    Uint8List pubkey, {
+    String? peerId,
+  }) {
+    final key = _handshakePairKey(transport, pubkey);
+    _handshakeRetransmits.remove(key)?.cancel();
     var attempt = 0;
     void tick() {
-      final payload = _noiseSessions.handshakeRetransmitPayload(
-          PeerTransport.udp, pubkey);
-      if (payload == null || attempt >= 5 || _udpService == null) return;
+      _handshakeRetransmits.remove(key);
+      final payload =
+          _noiseSessions.handshakeRetransmitPayload(transport, pubkey);
+      if (payload == null || attempt >= 5) return;
       attempt++;
       debugPrint('[noise] Retransmitting handshake to '
-          '${_pubkeyToHex(pubkey).substring(0, 8)} (attempt $attempt)');
-      unawaited(_udpService?.sendToPeer(
-        peerId ?? _pubkeyToHex(pubkey),
-        GrassrootsPacket(type: PacketType.noiseHandshake, payload: payload)
-            .serialize(),
+          '${_pubkeyToHex(pubkey).substring(0, 8)} over ${transport.name} '
+          '(attempt $attempt)');
+      unawaited(_sendNoiseHandshakePacket(
+        transport: transport,
+        recipientPubkey: pubkey,
+        peerId: peerId,
+        payload: payload,
       ));
-      Timer(Duration(milliseconds: 600 * (1 << attempt)), tick);
+      _handshakeRetransmits[key] =
+          Timer(Duration(milliseconds: 600 * (1 << attempt)), tick);
     }
 
-    Timer(const Duration(milliseconds: 800), tick);
+    _handshakeRetransmits[key] = Timer(const Duration(milliseconds: 800), tick);
   }
 
-  /// Pair key for an inbound handshake packet: the payload's claimed sender
-  /// (verified inside handleHandshakePacket); falls back to the connection
-  /// id for an undecodable payload, which the handler then rejects anyway.
-  String _peekHandshakePairKey(
-    GrassrootsPacket packet,
+  /// Retransmit this side's final handshake message, which has no reply (IK
+  /// message 2, XX message 3), "until the other side's attestation message
+  /// arrives" (GNA §2.6), with backoff, as long as the peer's attempts to
+  /// deliver it last ([_awaitPeerAttestation] tears the session down after
+  /// that).
+  void _retransmitFinalUntilAttestation(
     PeerTransport transport,
+    Uint8List pubkey, {
     String? peerId,
-  ) {
-    try {
-      return _handshakePairKey(
-        transport,
-        _noiseSessions.claimedHandshakeSender(packet.payload),
-      );
-    } catch (_) {
-      return '${transport.name}:${peerId ?? "?"}';
+  }) {
+    final hash = _noiseSessions.handshakeHashFor(transport, pubkey);
+    if (hash == null) return;
+    final key = _handshakePairKey(transport, pubkey);
+    _handshakeRetransmits.remove(key)?.cancel();
+    final window = Stopwatch()..start();
+    final sender = switch (transport) {
+      PeerTransport.udp => _udpMessageSender,
+      PeerTransport.bleDirect => _bleMessageSender,
+    };
+    var interval = const Duration(milliseconds: 800);
+    void tick() {
+      _handshakeRetransmits.remove(key);
+      if (!_isCurrentSession(transport, pubkey, hash)) return;
+      final arrived = _attestationArrivedOn[key];
+      if (arrived != null && listEquals(arrived, hash)) return;
+      if (window.elapsed > sender.attemptWindow) return;
+      final payload = _noiseSessions.finalHandshakePayload(transport, pubkey);
+      if (payload == null) return;
+      debugPrint('[noise] Retransmitting the final handshake message to '
+          '${_pubkeyToHex(pubkey).substring(0, 8)} over ${transport.name}: '
+          'no attestation yet');
+      unawaited(_sendNoiseHandshakePacket(
+        transport: transport,
+        recipientPubkey: pubkey,
+        peerId: peerId,
+        payload: payload,
+      ));
+      final next = interval * 2;
+      interval =
+          next > const Duration(seconds: 5) ? const Duration(seconds: 5) : next;
+      _handshakeRetransmits[key] = Timer(interval, tick);
     }
+
+    _handshakeRetransmits[key] = Timer(interval, tick);
   }
+
+  /// The session each peer's attestation message arrived on, per medium, by
+  /// its handshake hash: what ends the retransmission of our final handshake
+  /// message (GNA §2.6).
+  final Map<String, Uint8List> _attestationArrivedOn = {};
 
   /// Hole-punch services for NAT traversal, keyed by IP family.
   final Map<InternetAddressType, HolePunchService> _holePunchServices = {};
@@ -497,7 +554,8 @@ class GrassrootsNetwork {
   /// Message router for incoming packet processing
   late final MessageRouter _messageRouter;
 
-  /// Per-peer, per-transport Noise XX sessions for payload encryption.
+  /// Per-peer, per-transport Noise sessions for payload encryption, IK or XX
+  /// (GNA §2.6).
   late final NoiseSessionManager _noiseSessions;
 
   /// Deduplicate in-flight UDP path setups (punch and association) across all
@@ -583,14 +641,30 @@ class GrassrootsNetwork {
     Underlay underlay,
   )? onMessageReceived;
 
-  /// Called for each nearby Grassroots agent found, with the underlay of
-  /// discovery (spec §Concepts and Principles, Discovery:
-  /// `onPeerDiscovered(pk, underlay)`). The agent's key is known once ANNOUNCE
-  /// has run, so this fires on the first accepted ANNOUNCE from a nearby
-  /// agent: over the PAN, or from a source within one of the agent's own
-  /// local prefixes on the LAN. WAN contact is not discovery and does not
-  /// fire it.
-  void Function(Uint8List pk, ProximityUnderlay underlay)? onPeerDiscovered;
+  /// The PAN sub-object (GNA §2.2: "The layer exposes one sub-object for
+  /// each underlay it runs, pan, lan and wan, and null for an underlay it does
+  /// not run"): discovery and the trust level on the PAN (GNA §3.1).  Null
+  /// where the layer does not run [Underlay.pan].
+  late final ProximityApi? pan = _runsPan
+      ? _GrassrootsProximity(this, ProximityUnderlay.pan)
+      : null;
+
+  /// The LAN sub-object (GNA §2.2): discovery and the trust level on the LAN
+  /// (GNA §3.1).  Null where the layer does not run [Underlay.lan].
+  late final ProximityApi? lan = _runsLan
+      ? _GrassrootsProximity(this, ProximityUnderlay.lan)
+      : null;
+
+  /// The WAN sub-object (GNA §2.2): the public address, peer addresses, hole
+  /// punching and the local network identity (GNA §4.2, §4.3).  Null where
+  /// the layer does not run [Underlay.wan].
+  late final WanApi? wan = _runsWan ? _GrassrootsWan(this) : null;
+
+  /// The sub-object of [underlay], or null where the layer does not run it.
+  ProximityApi? _proximity(ProximityUnderlay underlay) => switch (underlay) {
+        ProximityUnderlay.pan => pan,
+        ProximityUnderlay.lan => lan,
+      };
 
   /// Called when a peer becomes reachable over an underlay. Fires once per
   /// underlay: a peer reachable over the PAN and over the LAN or WAN fires
@@ -619,37 +693,6 @@ class GrassrootsNetwork {
 
   /// Called when UDP transport becomes available
   void Function()? onUdpInitialized;
-
-  /// Spec §Connectivity and Address, `onConnectivityStatusChanged(old?,
-  /// new?)`: "Callback when the networking layer detects a change in the
-  /// agent's public IP address ... Fired on startup and on every address
-  /// change." Fired at [start] with the address as it stands, on each
-  /// address a rendezvous server reflects, and on its loss.
-  ///
-  /// Receives `(oldAddress, newAddress)` as `ip:port` strings (or null when
-  /// no public address is available). The caller derives the kind of
-  /// change:
-  ///   - startup / gain: `oldAddress == null && newAddress != null`
-  ///   - loss:           `oldAddress != null && newAddress == null`
-  ///   - update:         both non-null and `oldAddress != newAddress`
-  void Function(String? oldAddress, String? newAddress)?
-      onConnectivityStatusChanged;
-
-  /// Spec: `docs/GLP_Networking_API/sections/ip.tex` §Local Network Identity —
-  /// "Callback when the fingerprint changes. Receives `(oldId, newId)`, either
-  /// of which may be null."
-  ///
-  /// This is not [onConnectivityStatusChanged]. That one reports the agent's
-  /// public address; this one reports the local network it is attached to, and
-  /// the two are independent in both directions: the attached local network can
-  /// change while the public address does not, and the public address can
-  /// change while the attached local network does not. GLP uses this to lower a
-  /// LAN trust level upon leaving a trusted local network (spec §Trust levels).
-  ///
-  /// The fingerprint is best-effort and collision-prone. A match is evidence
-  /// that the agent is attached to the same local network as before, not proof
-  /// of it; what to do with that is GLP's decision, not the layer's.
-  void Function(String? oldId, String? newId)? onNetworkChanged;
 
   // ===== Convenience accessors for Redux state =====
 
@@ -752,18 +795,15 @@ class GrassrootsNetwork {
   /// PubKey`. The private key is held internally and never returned here.
   Uint8List getIdentity() => identity.publicKey;
 
-  /// The nearby Grassroots agents on the proximity underlays (spec §Concepts
-  /// and Principles, Discovery, `getPeers() → List<Peer>`: "Scan and browse
-  /// the proximity underlays for nearby Grassroots agents"), limited to them
-  /// (GNA, 2026-10-11, Task C): one entry per peer and proximity underlay it
-  /// is reachable over, PAN before LAN. A peer reachable over the WAN alone is
-  /// not nearby. Until 2026-10-12 this answered every reachable peer.
-  List<({Uint8List publicKey, ProximityUnderlay underlay})> getPeers() => [
+  /// The nearby Grassroots agents on [underlay] (GNA §3.1, Discovery,
+  /// `getPeers() → List<Peer>`), behind [ProximityApi.getPeers]: the peers
+  /// reachable over that proximity underlay (GNA, 2026-10-11, Task C).  A
+  /// peer reachable over the WAN alone is not nearby.
+  List<Uint8List> _peersOn(ProximityUnderlay underlay) => [
         for (final peer in _peersState.peersList)
-          for (final underlay in ProximityUnderlay.values)
-            if (peer.reachableUnderlays
-                .contains(Underlay.values.byName(underlay.name)))
-              (publicKey: peer.publicKey, underlay: underlay),
+          if (peer.reachableUnderlays
+              .contains(Underlay.values.byName(underlay.name)))
+            peer.publicKey,
       ];
 
   /// Check if a peer is reachable via any transport
@@ -778,28 +818,13 @@ class GrassrootsNetwork {
       _peersState.getPeerByPubkey(pk)?.reachableUnderlays.toList() ??
       const <Underlay>[];
 
-  /// The agent's current public `ip:port`, or null if not yet known.
-  /// Address changes are surfaced via [onConnectivityStatusChanged].
-  String? getPublicAddress() => store.state.transports.publicAddress;
-
-  /// An opaque fingerprint of the local network the agent is currently
-  /// attached to, or null when it is attached to none or no constituent is
-  /// readable. Spec `docs/GLP_Networking_API/sections/ip.tex` §Local Network
-  /// Identity. Changes are surfaced via [onNetworkChanged].
-  ///
-  /// The same interface enumeration also yields the agent's own local address
-  /// prefixes, held in `store.state.localNetwork`. They stay inside the layer:
-  /// they decide whether an inbound source address is LAN contact (spec §Cold
-  /// Calls), and GLP is given the fingerprint, never the addresses.
-  String? networkIdentity() => store.state.localNetwork.networkId;
-
   /// The public `ip:port` at which the layer observes the connected peer — the
   /// source address of its live, attested UDP session — or null when the peer
-  /// is reachable over no IP underlay (spec §Connectivity and Address,
-  /// `observedPeerAddress(pk)`, behind `peer_address/2`). Not the dial-book
-  /// address, which GLP supplies or a session observed earlier (GNA,
-  /// 2026-10-11, Task C); until 2026-10-12 `peerAddress` answered that.
-  String? observedPeerAddress(Uint8List pubkey) {
+  /// is reachable over no IP underlay (GNA §4.2, `observedPeerAddress(pk)`,
+  /// behind `peer_address/2`), behind [WanApi.observedPeerAddress]. Not the
+  /// dial-book address, which GLP supplies or a session observed earlier
+  /// (GNA, 2026-10-11, Task C).
+  String? _observedPeerAddress(Uint8List pubkey) {
     final peer = _peersState.getPeerByPubkey(pubkey);
     if (peer == null ||
         !peer.reachableUnderlays.any((u) => u != Underlay.pan)) {
@@ -825,7 +850,7 @@ class GrassrootsNetwork {
   /// is rejected with an [ArgumentError]. This call only ever *supplies* an
   /// address — it never clears one; stored addresses are cleared only when the
   /// peer itself reports it no longer has one.
-  void putPeerAddress(Uint8List pubkey, String address) {
+  void _putPeerAddress(Uint8List pubkey, String address) {
     final parsed = parseAddressString(address);
     if (parsed == null) {
       throw ArgumentError.value(address, 'address', 'not a valid ip:port');
@@ -906,46 +931,91 @@ class GrassrootsNetwork {
   /// Whether UDP — the LAN and WAN underlays' carrier — runs and is available.
   bool get isUdpEnabled => _udpAvailable;
 
-  /// The cold-call trust level of [underlay] (spec §Trust levels). Closed
-  /// until GLP sets it with [setTrustLevel]. The two proximity underlays carry
-  /// their own levels, so an agent may answer strangers over one while
-  /// ignoring them over the other.
-  ColdCallTrustLevel trustLevelOf(ProximityUnderlay underlay) =>
+  /// The cold-call trust level of [underlay] (GNA §2.7), behind
+  /// [ProximityApi.trustLevel]. Closed until GLP sets it with
+  /// [ProximityApi.setTrustLevel]. The two proximity underlays carry their own
+  /// levels, so an agent may answer strangers over one while ignoring them
+  /// over the other.
+  ColdCallTrustLevel _trustLevelOf(ProximityUnderlay underlay) =>
       store.state.settings.trustLevelOf(underlay);
 
-  /// Whether IP contact from [senderPubkey] is answered (spec §Cold Calls,
-  /// Trust levels).
+  /// The responder's trust check on a handshake's first message (GNA §2.6:
+  /// "The responder enforces the trust level: under Closed trust, and on the
+  /// WAN except on a rendezvous server, it answers an IK first message only
+  /// from a key in the known-peer set, and answers no XX first message, so a
+  /// stranger never learns its key").
   ///
-  /// Unsolicited inbound IP contact from outside the agent's own local network
-  /// is governed by no trust level: it is refused unless the peer is in the
-  /// known-peer set. LAN contact arrives on this
-  /// same path, a LAN session being an IP session, so the two are told apart
-  /// by the source address alone — a source within one of the agent's own
-  /// local address prefixes is LAN contact, governed by the LAN level; any
-  /// other source is governed by no level.
-  ///
-  /// Independent of every level: configured rendezvous servers (infrastructure
-  /// this agent itself dials) and solicited contact — an ANNOUNCE arriving on a connection this
-  /// agent dialed, which is keyed by the dialed key (unsolicited inbound
-  /// carries a temp connection id until identified).
-  ///
-  /// Contact whose source falls under no underlay this layer runs is refused
-  /// outright: there is no session to be had with it (GNA, 2026-10-11, Q1).
-  bool _acceptsUdpContactFrom(Uint8List senderPubkey, {String? udpPeerId}) {
-    final underlay = _ipUnderlayOfConnection(udpPeerId);
-    if (underlay == null) return false;
-    if (_isKnownPeerPubkey(senderPubkey)) return true;
-    final hex = _pubkeyToHex(senderPubkey);
-    if (_isRendezvousPubkeyHex(hex)) return true;
-    if (udpPeerId == hex &&
-        _udpService?.getPeerIdForPubkey(senderPubkey) != null) {
-      return true;
+  /// An IK first message is answered from a known key on every underlay, and
+  /// from any key on a proximity underlay under Open trust. An XX first
+  /// message is answered only under Open trust on a proximity underlay, from
+  /// the key the ANNOUNCE on the same connection claimed: "the peers exchange
+  /// ANNOUNCE first and run Noise XX ... and each verifies the delivered key
+  /// against the key ANNOUNCE claimed". IP contact is LAN contact when its
+  /// source address lies within one of the agent's own local prefixes, and
+  /// WAN contact otherwise (GNA §2.7); contact whose source falls under no
+  /// underlay this layer runs is refused outright, there being no session to
+  /// be had with it (GNA, 2026-10-11, Q1).
+  bool _acceptsHandshakeFrom(
+    NoisePattern pattern,
+    Uint8List remotePubkey,
+    PeerTransport transport,
+    String? peerId,
+  ) {
+    switch (transport) {
+      case PeerTransport.bleDirect:
+        final open = store.state.settings.isOpenOn(ProximityUnderlay.pan);
+        if (pattern == NoisePattern.ik) {
+          return open || _isKnownPeerPubkey(remotePubkey);
+        }
+        final announced =
+            peerId == null ? null : _bleService?.getPubkeyForPeerId(peerId);
+        return open &&
+            announced != null &&
+            listEquals(announced, remotePubkey);
+      case PeerTransport.udp:
+        final underlay = _ipUnderlayOfConnection(peerId);
+        if (underlay == null) return false;
+        final lanOpen = underlay == Underlay.lan &&
+            store.state.settings.isOpenOn(ProximityUnderlay.lan);
+        if (pattern == NoisePattern.ik) {
+          return lanOpen || _isKnownPeerPubkey(remotePubkey);
+        }
+        return lanOpen && peerId == _pubkeyToHex(remotePubkey);
     }
-    if (underlay == Underlay.lan &&
-        trustLevelOf(ProximityUnderlay.lan) == ColdCallTrustLevel.open) {
-      return true;
+  }
+
+  /// Whether a clear ANNOUNCE on [transport] is answered: only on a
+  /// proximity underlay under Open trust, the identity bootstrap of a first
+  /// contact (GNA §2.5: "only the ANNOUNCE of a first contact under Open
+  /// trust travels before the handshake"; Trust gating: "Under Closed trust
+  /// ... an ANNOUNCE arriving before a handshake is ignored and its
+  /// connection dropped"). Over IP that is LAN contact, by its source address
+  /// (GNA §2.7); WAN contact is initiated by address with the peer's key
+  /// already expected, and has no ANNOUNCE before its handshake.
+  bool _acceptsClearAnnounce(PeerTransport transport, {String? udpPeerId}) =>
+      switch (transport) {
+        PeerTransport.bleDirect =>
+          store.state.settings.isOpenOn(ProximityUnderlay.pan),
+        PeerTransport.udp =>
+          _ipUnderlayOfConnection(udpPeerId) == Underlay.lan &&
+              store.state.settings.isOpenOn(ProximityUnderlay.lan),
+      };
+
+  /// The pattern this side runs as initiator toward [pubkey] (GNA §2.6): IK
+  /// "when the initiator expects a specific responder key": for a known peer
+  /// (a recognized proximity token being a known peer's), for a rendezvous
+  /// server, and on every WAN connection; XX only for a first contact with
+  /// an unrecognized presence under Open trust, after ANNOUNCE.
+  NoisePattern _patternToward(PeerTransport transport, Uint8List pubkey) {
+    if (_isKnownPeerPubkey(pubkey) ||
+        _isRendezvousPubkeyHex(_pubkeyToHex(pubkey))) {
+      return NoisePattern.ik;
     }
-    return false;
+    if (transport == PeerTransport.udp &&
+        _udpUnderlayOf(pubkey) == Underlay.wan) {
+      return NoisePattern.ik;
+    }
+    return NoisePattern.xx;
   }
 
   bool get _runsPan => underlays.contains(Underlay.pan);
@@ -962,7 +1032,7 @@ class GrassrootsNetwork {
   /// "A LAN connection and a WAN connection are both IP connections; the layer
   /// tells them apart by whether the peer's address is on the agent's own
   /// local network" (spec §Networking API); the prefixes come from the
-  /// interface enumeration behind [networkIdentity], and an address not known
+  /// interface enumeration behind [WanApi.networkIdentity], and an address not known
   /// is not known to be local.
   Underlay? _ipUnderlayFor(InternetAddress? address) {
     if (_runsLan &&
@@ -1214,7 +1284,7 @@ class GrassrootsNetwork {
     _started = true;
     // "Fired on startup" (spec §Connectivity and Address): the public address
     // as it stands, none until a rendezvous server reflects one.
-    onConnectivityStatusChanged?.call(null, _publicAddress);
+    wan?.onConnectivityStatusChanged?.call(null, _publicAddress);
     // Keep the Android process unfrozen while transports run — a frozen Dart
     // VM goes ANNOUNCE-silent and never dials reverse BLE legs, while its
     // radio links stay up (peers then flap us through their stale sweeps).
@@ -1433,26 +1503,36 @@ class GrassrootsNetwork {
 
         _lastRendezvousSuppressionLogKey.remove(configKey);
 
-        final announce = await _createSignedAnnounce();
-        if (await _udpService!.sendToPeer(rendezvous.pubkeyHex, announce)) {
+        // A session stands: its heartbeat is ANNOUNCE inside it (GNA §2.5).
+        if (_noiseSessions.hasSession(
+            PeerTransport.udp, rendezvous.publicKey)) {
+          await _announceInSession(PeerTransport.udp, rendezvous.publicKey,
+              peerId: rendezvous.pubkeyHex);
           _resetRendezvousBackoff(configKey);
           debugPrint(
-            '[rendezvous] Re-announced via existing session '
+            '[rendezvous] Announced inside the standing session '
             '(${rendezvous.pubkeyHex.substring(0, 8)}..., $reason)',
           );
           return true;
         }
 
-        final success = await _sendViaUdp(
-          rendezvous.pubkeyHex,
-          rendezvous.address,
-          announce,
-          isRendezvous: true,
-        );
+        // Otherwise the path, then Noise IK with the key the server was
+        // configured with (GNA §2.6: "for a rendezvous server, whose key it
+        // is given at instantiation").
+        final success = await _ensureUdpConnection(
+              rendezvous.pubkeyHex,
+              rendezvous.address,
+              isRendezvous: true,
+            ) &&
+            await _ensureNoiseSession(
+              transport: PeerTransport.udp,
+              recipientPubkey: rendezvous.publicKey,
+              peerId: rendezvous.pubkeyHex,
+            );
         if (success) {
           _resetRendezvousBackoff(configKey);
           debugPrint(
-            '[rendezvous] Connected and announced '
+            '[rendezvous] Session established '
             '(${rendezvous.pubkeyHex.substring(0, 8)}..., $reason)',
           );
           return true;
@@ -1492,7 +1572,7 @@ class GrassrootsNetwork {
   /// Read the attached local network and, if it differs from the held one,
   /// record it and tell the runtime.
   ///
-  /// The layer's own emission point for [onNetworkChanged], separate from the
+  /// The layer's own emission point for [WanApi.onNetworkChanged], separate from the
   /// public-address one: the two facts are independent, so neither refresh
   /// implies the other. Called at construction, on every connectivity event
   /// (before the event is filtered — the local network can change while the
@@ -1508,7 +1588,7 @@ class GrassrootsNetwork {
       '[local-network] ${previous.networkId} -> ${network.networkId} '
       '(prefixes: ${network.prefixes.join(', ')})',
     );
-    onNetworkChanged?.call(previous.networkId, network.networkId);
+    wan?.onNetworkChanged?.call(previous.networkId, network.networkId);
   }
 
   void _seedConnectivityState() {
@@ -1569,7 +1649,7 @@ class GrassrootsNetwork {
     store.dispatch(ClearPublicConnectivityAction());
     // Spec §Connectivity and Address: "loss: new=null" --- every address
     // change is reported, a loss included.
-    if (lost != null) onConnectivityStatusChanged?.call(lost, null);
+    if (lost != null) wan?.onConnectivityStatusChanged?.call(lost, null);
   }
 
   /// Handle network connectivity changes (WiFi ↔ cellular, etc.).
@@ -1774,7 +1854,7 @@ class GrassrootsNetwork {
   }
 
   /// Replay cached LAN instances against the (grown) known set. Called by
-  /// [putKnownPeer] and [putPeerAddress]; already-connected peers short out
+  /// [putKnownPeer] and [WanApi.putPeerAddress]; already-connected peers short out
   /// in [_tryLanContact].
   void _rematchLanInstances() {
     if (_lanResolvedInstances.isEmpty) return;
@@ -1787,8 +1867,8 @@ class GrassrootsNetwork {
   /// dialing directly — never into distribution — and the deterministic
   /// initiator (lexicographically smaller public key, as everywhere) dials;
   /// the other side waits for the inbound connection. The recognized key is
-  /// the expected static: [_connectToPeerViaUdp] dials that key, and the
-  /// session aborts on a key mismatch.
+  /// the expected one: [_connectToPeerViaUdp] runs Noise IK with it, which
+  /// only its holder can answer (GNA §2.6, §3.2).
   ///
   /// An unmatched instance is a cold call: under Open trust the layer contacts
   /// it as well as answering it (spec §Discovery and §Cold-Call Trust Levels —
@@ -1851,7 +1931,7 @@ class GrassrootsNetwork {
   /// Each side's ANNOUNCE identifies it to the other, and the existing
   /// handshake glare resolution settles the pair from there.
   void _lanColdCall(String token, String address) {
-    final trust = trustLevelOf(ProximityUnderlay.lan);
+    final trust = _trustLevelOf(ProximityUnderlay.lan);
     if (trust != ColdCallTrustLevel.open) {
       debugPrint(
         '[lan] unmatched instance $token ignored (lan trust=${trust.name})',
@@ -1895,8 +1975,8 @@ class GrassrootsNetwork {
       debugPrint('[lan] could not open a path to $canonical');
       return;
     }
-    final announce = await _createSignedAnnounce();
-    final sent = await udp.sendToPeer(canonical, announce);
+    // The first contact's ANNOUNCE, before the XX handshake (GNA §2.5).
+    final sent = await _sendClearAnnounce(PeerTransport.udp, canonical);
     debugPrint(
       sent
           ? '[lan] ANNOUNCE sent to $canonical; awaiting theirs'
@@ -1929,17 +2009,16 @@ class GrassrootsNetwork {
     await _bleService?.applyRoleModeChange();
   }
 
-  /// Set the cold-call trust level of the given [ProximityUnderlay] to Open
-  /// or Closed (spec §Concepts and Principles, Discovery:
-  /// `setTrustLevel(underlay, level)`; §Trust levels). Until set, both levels
-  /// are Closed.
+  /// Set the cold-call trust level of [underlay] to Open or Closed (GNA
+  /// §2.7, §3.1), behind [ProximityApi.setTrustLevel] on that underlay's
+  /// sub-object. Until set, both levels are Closed.
   ///
   /// A LAN session and a WAN session are both IP sessions, and only LAN
   /// contact — a source within one of the agent's own local prefixes — is
   /// governed by the LAN level; WAN contact is governed by no level. The two
   /// levels are independent — GLP raises one upon entering a trusted place or
   /// local network and lowers it upon leaving.
-  Future<void> setTrustLevel(
+  Future<void> _setTrustLevel(
     ProximityUnderlay underlay,
     ColdCallTrustLevel level,
   ) async {
@@ -1954,7 +2033,7 @@ class GrassrootsNetwork {
   /// `punch_udp/1`.
   ///
   /// [address] is an `ip:port` (IPv4, or bracketed IPv6 as `[ip]:port`); an
-  /// unparseable one is rejected with an [ArgumentError], as [putPeerAddress]
+  /// unparseable one is rejected with an [ArgumentError], as [WanApi.putPeerAddress]
   /// rejects it. No peer key is named and none is needed: punching is the
   /// mechanism of opening the mapping, and *who* to punch toward, *when*, and
   /// *whether* are GLP's decisions, taken above this line.
@@ -1965,7 +2044,7 @@ class GrassrootsNetwork {
   /// background. GLP punches and then waits to hear from the peer; it does not
   /// wait on this call. A punch toward an address on an IP family this layer
   /// has no socket for is a no-op.
-  void punchUdp(String address) {
+  void _punchUdp(String address) {
     final parsed = parseAddressString(address);
     if (parsed == null) {
       throw ArgumentError.value(address, 'address', 'not a valid ip:port');
@@ -2201,12 +2280,12 @@ class GrassrootsNetwork {
 
   /// Bring a session with [pubkey] up where none is attested: over a GATT
   /// link already standing, start its handshake; over IP, connect on demand
-  /// from the dial book, introduce ourselves by ANNOUNCE, and start the
-  /// handshake.  A peer with no usable address waits for one: who learns an
+  /// from the dial book and start the handshake, Noise IK with the dialed key
+  /// (GNA §2.6).  A peer with no usable address waits for one: who learns an
   /// address is the social graph's, and it enters the layer by
-  /// putPeerAddress (spec §Connectivity and Address). The attestation exchange follows each session
-  /// ([_onNoiseSessionEstablished]); its completion makes the peer reachable
-  /// and drains the queue.
+  /// putPeerAddress (spec §Connectivity and Address). The attestation
+  /// exchange follows each session ([_onNoiseSessionEstablished]); its
+  /// completion makes the peer reachable and drains the queue.
   Future<void> _openPathsTo(Uint8List pubkey) {
     final pubkeyHex = _pubkeyToHex(pubkey);
     final inFlight = _pathOpeningsInFlight[pubkeyHex];
@@ -2254,11 +2333,8 @@ class GrassrootsNetwork {
       final address = target.udpAddress ?? candidates.first;
       debugPrint('Connecting via UDP to ${target.displayName} at $address');
       if (!await _ensureUdpConnection(target.pubkeyHex, address)) return false;
-      // Introduce ourselves so the acceptor can verify us and initiate the
-      // session (dial sequence, Implementation Notes); and initiate it
-      // ourselves, the glare rule settling the pair.
-      await _udpService?.sendToPeer(
-          target.pubkeyHex, await _createSignedAnnounce());
+      // Where both ends dial, the first messages cross and the glare rule
+      // settles the pair.
       await _ensureNoiseSession(
         transport: PeerTransport.udp,
         recipientPubkey: pubkey,
@@ -2559,7 +2635,7 @@ class GrassrootsNetwork {
   /// is known.
   ///
   /// A hermetic test reads the address its node listens on from here: there is
-  /// no rendezvous server to reflect a public one, and `getPublicAddress()` is
+  /// no rendezvous server to reflect a public one, and `wan.getPublicAddress()` is
   /// null until one does (spec §Connectivity and Address).
   @visibleForTesting
   Set<String> debugLocalCandidates() => _connectionLocalCandidates();
@@ -2747,7 +2823,44 @@ class GrassrootsNetwork {
   bool _isKnownPeerPubkey(Uint8List pubkey) =>
       store.state.knownPeers.isKnown(_pubkeyToHex(pubkey));
 
-  /// Fired when a Noise XX session for [transport] with [pubkey] completes
+  /// The handshake identified the peer on the connection [peerId] (GNA §2.6),
+  /// which ANNOUNCE no longer does before it: the peer is recorded as seen
+  /// over [transport], and a GATT leg as the peer's, central or peripheral by
+  /// its path, as the router records an ANNOUNCE.
+  void _recordHandshakeIdentity(
+    PeerTransport transport,
+    Uint8List pubkey,
+    String? peerId,
+  ) {
+    String? centralId;
+    String? peripheralId;
+    BleRole? role;
+    if (transport == PeerTransport.bleDirect && peerId != null) {
+      if (peerId.startsWith('central:')) {
+        role = BleRole.central;
+        centralId = peerId;
+      } else if (peerId.startsWith('peripheral:')) {
+        role = BleRole.peripheral;
+        peripheralId = peerId;
+      }
+    }
+    store.dispatch(PeerAnnounceReceivedAction(
+      publicKey: pubkey,
+      protocolVersion: ProtocolHandler.protocolVersion,
+      transport: transport,
+      bleCentralDeviceId: centralId,
+      blePeripheralDeviceId: peripheralId,
+    ));
+    if (role != null) {
+      store.dispatch(AssociateBleDeviceAction(
+        publicKey: pubkey,
+        deviceId: peerId!,
+        role: role,
+      ));
+    }
+  }
+
+  /// Fired when a Noise session for [transport] with [pubkey] completes
   /// authentication. Consolidated reachability — and therefore
   /// [onPeerConnected] — is gated on this: a transport counts toward
   /// `isReachable` only once its session is authenticated (spec
@@ -2767,6 +2880,25 @@ class GrassrootsNetwork {
       case PeerTransport.bleDirect:
         store.dispatch(PeerBleAuthenticatedAction(pubkey));
         break;
+    }
+    // "Once the session is established, ANNOUNCE is sent inside it" (GNA
+    // §2.5).
+    unawaited(_announceInSession(transport, pubkey));
+    // A session over a proximity underlay identifies a nearby agent: its
+    // discovery, once per identity, the handshake having taken the place of
+    // the ANNOUNCE that identified it before (GNA §3.1). The rendezvous
+    // server is infrastructure, not a discoverable peer.
+    final underlay = _underlayOf(transport, pubkey);
+    final discoveredOn = switch (underlay) {
+      Underlay.pan => ProximityUnderlay.pan,
+      Underlay.lan => ProximityUnderlay.lan,
+      Underlay.wan || null => null,
+    };
+    final pubkeyHex = _pubkeyToHex(pubkey);
+    if (discoveredOn != null &&
+        !_isRendezvousPubkeyHex(pubkeyHex) &&
+        _discoveredPubkeyHexes.add(pubkeyHex)) {
+      _proximity(discoveredOn)?.onPeerDiscovered?.call(pubkey);
     }
     // The handshake is followed by the mutual attestation exchange, and
     // neither peer is reported reachable until it succeeds (spec §Session
@@ -2945,6 +3077,9 @@ class GrassrootsNetwork {
           'longer current; dropped');
       return;
     }
+    // It arrived: our final handshake message has been read (GNA §2.6).
+    _attestationArrivedOn[_handshakePairKey(transport, senderPubkey)] =
+        handshakeHash;
     // Delivery is at least once, so a re-sent attestation can arrive again;
     // on a session already attested it is ignored (GNA, 2026-10-11, Task B).
     final attestedOn = _attestedOn[_handshakePairKey(transport, senderPubkey)];
@@ -3064,6 +3199,13 @@ class GrassrootsNetwork {
     );
   }
 
+  /// Establish the session with [recipientPubkey] on [transport] if none
+  /// exists, as initiator: Noise IK where this side expects the peer's key,
+  /// XX for an Open first contact after ANNOUNCE ([_patternToward]), the
+  /// first message retransmitted until the second arrives. XX is run only
+  /// under Open trust on the underlay: "under Closed trust ... no ANNOUNCE is
+  /// sent or answered before the handshake", and an XX first contact follows
+  /// one (GNA §2.5, §2.6).
   Future<bool> _ensureNoiseSession({
     required PeerTransport transport,
     required Uint8List recipientPubkey,
@@ -3071,13 +3213,32 @@ class GrassrootsNetwork {
   }) async {
     if (_noiseSessions.hasSession(transport, recipientPubkey)) return true;
 
-    // Initiation is serialized with inbound handshake processing for the
-    // same pair; the wait happens outside the pair's chain.
-    final sent = await _serializedHandshake(
-        _handshakePairKey(transport, recipientPubkey), () async {
+    final pattern = _patternToward(transport, recipientPubkey);
+    if (pattern == NoisePattern.xx) {
+      final open = switch (transport) {
+        PeerTransport.bleDirect =>
+          store.state.settings.isOpenOn(ProximityUnderlay.pan),
+        PeerTransport.udp =>
+          _udpUnderlayOf(recipientPubkey) == Underlay.lan &&
+              store.state.settings.isOpenOn(ProximityUnderlay.lan),
+      };
+      if (!open) {
+        debugPrint('[noise] No handshake toward the stranger '
+            '${_pubkeyToHex(recipientPubkey).substring(0, 8)}: its underlay '
+            'is Closed');
+        return false;
+      }
+    }
+
+    // Initiation is serialized with inbound handshake processing on the
+    // medium; the wait happens outside the chain.
+    final sent = await _serializedHandshake(_handshakeChainOf(transport),
+        () async {
       final payload = await _noiseSessions.startHandshake(
         transport,
         recipientPubkey,
+        pattern: pattern,
+        peerId: peerId,
       );
       if (payload == null) return true;
       final sent = await _sendNoiseHandshakePacket(
@@ -3090,9 +3251,7 @@ class GrassrootsNetwork {
         _noiseSessions.reset(transport, recipientPubkey);
         return false;
       }
-      if (transport == PeerTransport.udp) {
-        _scheduleHandshakeRetransmit(recipientPubkey, peerId: peerId);
-      }
+      _scheduleHandshakeRetransmit(transport, recipientPubkey, peerId: peerId);
       return true;
     });
     if (!sent) return false;
@@ -3137,7 +3296,7 @@ class GrassrootsNetwork {
     String? peerId,
   }) async {
     var outgoing = packet;
-    if (packet.type.usesSessionSecurity) {
+    if (packet.type.hasSecureVariant) {
       // Where the session exists the packet is encrypted in the caller's
       // synchronous step, with no await before the session is read: the
       // message transport asks a bound message whether its session is still
@@ -3230,37 +3389,6 @@ class GrassrootsNetwork {
   }
 
   // ===== UDP Connect-on-Demand =====
-
-  /// Send data to a peer via UDP, connecting first if needed.
-  ///
-  /// UdpTransportService sends only on an associated path: where none stands,
-  /// this method associates one first, punching toward an address behind
-  /// NAT, and then sends.
-  Future<bool> _sendViaUdp(
-    String pubkeyHex,
-    String udpAddress,
-    Uint8List data, {
-    bool isRendezvous = false,
-  }) async {
-    if (_udpService == null) return false;
-    final peerShort = pubkeyHex.substring(0, 8);
-
-    // Already connected? Send directly.
-    if (await _udpService!.sendToPeer(pubkeyHex, data)) {
-      debugPrint('[udp-send] Sent to $peerShort via existing connection');
-      return true;
-    }
-
-    final connected = await _ensureUdpConnection(
-      pubkeyHex,
-      udpAddress,
-      isRendezvous: isRendezvous,
-    );
-    if (!connected) return false;
-
-    debugPrint('[udp-send] Connected, sending data to $peerShort');
-    return _udpService!.sendToPeer(pubkeyHex, data);
-  }
 
   Future<bool> _sendPacketViaUdp({
     required String pubkeyHex,
@@ -3391,8 +3519,8 @@ class GrassrootsNetwork {
   /// address. Called by the reconnection sweeps (heartbeat tick, connectivity
   /// change, settings enable).
   ///
-  /// Sends our own ANNOUNCE as the first message so the remote side learns
-  /// our identity on the new UDP connection.
+  /// The connection is initiated by address with the peer's key expected, so
+  /// the handshake is Noise IK and no ANNOUNCE precedes it (GNA §2.5, §2.6).
   Future<void> _connectToPeerViaUdp(
     String pubkeyHex,
     String udpAddress,
@@ -3428,13 +3556,15 @@ class GrassrootsNetwork {
     late final Future<void> task;
     task = () async {
       try {
-        final announce = await _createSignedAnnounce();
-
-        final success = await _sendViaUdp(
-          pubkeyHex,
-          normalizedAddress,
-          announce,
-        );
+        final success = await _ensureUdpConnection(
+              pubkeyHex,
+              normalizedAddress,
+            ) &&
+            await _ensureNoiseSession(
+              transport: PeerTransport.udp,
+              recipientPubkey: _hexToBytes(pubkeyHex),
+              peerId: pubkeyHex,
+            );
         if (success) {
           debugPrint(
             '[auto-udp] Proactive UDP connection to '
@@ -3550,9 +3680,8 @@ class GrassrootsNetwork {
       store.dispatch(MessageReadAction(messageId: messageId));
     };
 
-    // Map incoming UDP connections from any verified packet's senderPubkey.
-    // Previously required ANNOUNCE as the first message on a stream; now any
-    // verified packet identifies the sender via its header.
+    // Map incoming UDP connections from any verified packet's sender: a
+    // verified ANNOUNCE, or a packet a session decrypted.
     _messageRouter.onUdpPeerIdentified = (senderPubkey, udpPeerId) {
       final pubkeyHex =
           senderPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
@@ -3562,66 +3691,51 @@ class GrassrootsNetwork {
     _messageRouter.onNoiseHandshakeReceived =
         (packet, transport, {String? peerId}) async {
       try {
-        // Serialized with any in-flight announce-triggered initiation for
-        // the same pair (spec §Session Establishment: one handshake per underlay per pair).
+        // Serialized with every initiation on the medium (spec §Session
+        // Establishment: one handshake per underlay per pair); an IK first
+        // message names its sender only once it is read.
         final result = await _serializedHandshake(
-          _peekHandshakePairKey(packet, transport, peerId),
+          _handshakeChainOf(transport),
           () => _noiseSessions.handleHandshakePacket(
             packet,
             transport: transport,
             peerId: peerId,
+            // The responder's trust check, before any response or state
+            // (GNA §2.6): a key it does not answer learns nothing.
+            acceptFirstMessage: (pattern, remotePubkey) =>
+                _acceptsHandshakeFrom(pattern, remotePubkey, transport, peerId),
             // The manager transmits the response before releasing session
             // waiters, so a queued sender cannot race its first encrypted
-            // packet ahead of handshake message 3.
-            sendResponse: (payload, remotePubkey) async {
-              // Trust gate (spec §Cold Calls, Trust levels): under Closed no
-              // handshake response goes to an unanswerable key — the
-              // handshake cannot complete.
-              if (transport == PeerTransport.udp &&
-                  !_acceptsUdpContactFrom(remotePubkey, udpPeerId: peerId)) {
-                throw StateError(
-                  'unsolicited handshake from unknown key '
-                  '${_pubkeyToHex(remotePubkey).substring(0, 8)} under Closed '
-                  'trust',
-                );
-              }
-              await _sendNoiseHandshakePacket(
-                transport: transport,
-                recipientPubkey: remotePubkey,
-                peerId: peerId,
-                payload: payload,
-              );
-            },
+            // packet ahead of the final handshake message.
+            sendResponse: (payload, remotePubkey) => _sendNoiseHandshakePacket(
+              transport: transport,
+              recipientPubkey: remotePubkey,
+              peerId: peerId,
+              payload: payload,
+            ).then((_) {}),
           ),
         );
-        if (transport == PeerTransport.udp &&
-            !_acceptsUdpContactFrom(result.remotePubkey, udpPeerId: peerId)) {
-          debugPrint(
-            '[trust] Rejecting Noise handshake from unknown '
-            '${_pubkeyToHex(result.remotePubkey).substring(0, 8)}',
-          );
-          _noiseSessions.reset(transport, result.remotePubkey);
-          unawaited(
-            _udpService?.disconnectFromPeer(_pubkeyToHex(result.remotePubkey)),
-          );
-          return;
-        }
+        final remote = result.remotePubkey;
         if (result.sessionEstablished) {
           // The handshake authenticated the connection's identity — map any
-          // still-anonymous inbound UDP connection to the peer's pubkey.
+          // still-anonymous inbound UDP connection to the peer's pubkey, and
+          // a GATT leg to its peer.
           if (transport == PeerTransport.udp && peerId != null) {
             _udpService?.mapIncomingConnectionToPubkey(
               peerId,
-              _pubkeyToHex(result.remotePubkey),
+              _pubkeyToHex(remote),
             );
           }
-          _onNoiseSessionEstablished(transport, result.remotePubkey);
-        } else if (transport == PeerTransport.udp &&
-            _noiseSessions.handshakeRetransmitPayload(
-                    transport, result.remotePubkey) !=
-                null) {
-          // We just sent message 2 (or 1): retransmit until its reply.
-          _scheduleHandshakeRetransmit(result.remotePubkey, peerId: peerId);
+          _recordHandshakeIdentity(transport, remote, peerId);
+          _onNoiseSessionEstablished(transport, remote);
+          if (result.sentFinal) {
+            _retransmitFinalUntilAttestation(transport, remote, peerId: peerId);
+          }
+        } else if (_noiseSessions.handshakeRetransmitPayload(
+                transport, remote) !=
+            null) {
+          // We just sent XX message 2: retransmit it until message 3.
+          _scheduleHandshakeRetransmit(transport, remote, peerId: peerId);
         }
       } catch (e) {
         debugPrint('[noise] Dropping handshake packet: $e');
@@ -3645,9 +3759,10 @@ class GrassrootsNetwork {
         (packet, transport, {String? peerId}) async {
       try {
         // Resolve the connection's identity when the transport already knows
-        // it (BLE deviceId→pubkey from ANNOUNCE identification; UDP peerId is
-        // the pubkey hex once the connection is mapped). The session manager
-        // falls back to its own connection→identity map from the handshake.
+        // it (BLE deviceId→pubkey from the handshake or an ANNOUNCE; UDP
+        // peerId is the pubkey hex once the connection is mapped). The session
+        // manager falls back to its own connection→identity map from the
+        // handshake, and over GATT to the session whose keys open the packet.
         Uint8List? remotePubkey;
         if (peerId != null) {
           if (transport == PeerTransport.bleDirect) {
@@ -3671,52 +3786,55 @@ class GrassrootsNetwork {
     };
 
     // Peer ANNOUNCE processed
-    _messageRouter.onPeerAnnounced =
-        (data, transport, {bool isNew = false, String? udpPeerId}) {
-      final pubkeyHex =
-          data.publicKey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-      // debugPrint('Announce inc');
+    _messageRouter.onPeerAnnounced = (data, transport,
+        {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+      final pubkeyHex = _pubkeyToHex(data.publicKey);
       // ANNOUNCE is identity beacon and heartbeat only (spec §ANNOUNCE and
       // Liveness): it carries no addresses, so nothing is registered from it.
-      // Peer addresses reach the layer via putPeerAddress, fed by GLP;
-      // reconnection toward known peers is driven by the heartbeat tick over
-      // the dial book, not by announce contents.
+      // Peer addresses reach the layer via putPeerAddress, fed by GLP.
 
-      // A configured rendezvous server too: the layer holds a session with it
-      // as with any peer, and it is reachable only once that session is
-      // established, authenticated and attested (spec §Session
-      // Establishment), unattested by design.
-      final announcedPeer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
-      if (announcedPeer != null) {
-        unawaited(_startNoiseHandshakeForPeer(
-          transport: transport,
-          peer: announcedPeer,
-          peerId: udpPeerId,
-        ));
-      }
+      if (!inSession) {
+        // The clear ANNOUNCE of a first contact under Open trust, admitted by
+        // the gate (GNA §2.5): "the peers exchange ANNOUNCE first and run
+        // Noise XX" (§2.6). Answer with ours once per connection, so that the
+        // other side has the key to check our static against, and start the
+        // handshake; where both start, the glare rule settles the pair.
+        final announcedPeer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
+        if (announcedPeer != null) {
+          final connection = switch (transport) {
+            PeerTransport.bleDirect =>
+              _connectedBleDeviceIdForPeer(announcedPeer),
+            PeerTransport.udp => udpPeerId,
+          };
+          if (connection != null &&
+              !_noiseSessions.hasSession(transport, data.publicKey)) {
+            unawaited(
+                _sendClearAnnounce(transport, connection, reply: true));
+          }
+          unawaited(_startNoiseHandshakeForPeer(
+            transport: transport,
+            peer: announcedPeer,
+            peerId: udpPeerId,
+          ));
+        }
 
-      // onPeerDiscovered is the identity-learned event on a proximity
-      // underlay: a nearby peer's public key arrives in the signed ANNOUNCE,
-      // which is sent in the clear and precedes the Noise session. Because
-      // onPeerConnected is gated on an authenticated Noise session (see
-      // processReachabilityTransitions), discovery strictly precedes
-      // connection — so we surface it here, once per identity, rather than
-      // coupling it to the reachability transition. Discovery is over the
-      // proximity underlays (spec §Concepts and Principles, Discovery): a BLE
-      // ANNOUNCE is PAN discovery, a UDP ANNOUNCE from a source within one of
-      // the agent's own local prefixes is LAN discovery, and WAN contact is
-      // not discovery. The rendezvous server is infrastructure, not a
-      // discoverable peer.
-      final discoveredOn = switch (transport) {
-        PeerTransport.bleDirect => ProximityUnderlay.pan,
-        PeerTransport.udp => _ipUnderlayOfConnection(udpPeerId) == Underlay.lan
-            ? ProximityUnderlay.lan
-            : null,
-      };
-      if (discoveredOn != null &&
-          !_isRendezvousPubkeyHex(pubkeyHex) &&
-          _discoveredPubkeyHexes.add(pubkeyHex)) {
-        onPeerDiscovered?.call(data.publicKey, discoveredOn);
+        // onPeerDiscovered is the identity-learned event on a proximity
+        // underlay: the clear ANNOUNCE of a first contact carries the nearby
+        // peer's key before any session, so it is discovery, once per
+        // identity (GNA §3.1). A session over a proximity underlay is the
+        // other identity-learned event ([_onNoiseSessionEstablished]).
+        final discoveredOn = switch (transport) {
+          PeerTransport.bleDirect => ProximityUnderlay.pan,
+          PeerTransport.udp =>
+            _ipUnderlayOfConnection(udpPeerId) == Underlay.lan
+                ? ProximityUnderlay.lan
+                : null,
+        };
+        if (discoveredOn != null &&
+            !_isRendezvousPubkeyHex(pubkeyHex) &&
+            _discoveredPubkeyHexes.add(pubkeyHex)) {
+          _proximity(discoveredOn)?.onPeerDiscovered?.call(data.publicKey);
+        }
       }
 
       // onPeerConnected is driven by the reachability subscriber (it fires once
@@ -3842,7 +3960,7 @@ class GrassrootsNetwork {
     _resetAutoUdpBackoff();
     unawaited(_syncConfiguredRendezvous(reason: 'reflected-address-updated'));
     // Spec onConnectivityStatus: RV-reflection-driven address change.
-    onConnectivityStatusChanged?.call(previous, reflected);
+    wan?.onConnectivityStatusChanged?.call(previous, reflected);
   }
 
   /// Diff each peer's set of reachable transports against the previous store
@@ -3879,19 +3997,22 @@ class GrassrootsNetwork {
       });
     };
 
+    // A clear ANNOUNCE is a first contact's, under Open trust; under Closed
+    // trust it "is ignored and its connection dropped" (GNA §2.5, Trust
+    // gating), the PAN level alone governing a PAN encounter (§2.7). A known
+    // peer is contacted with IK, and needs no ANNOUNCE.
     _messageRouter.shouldAcceptBleAnnounce =
-        (senderPubkey, {String? bleDeviceId, BleRole? bleRole}) {
-      // The BLE level alone governs a BLE encounter (spec §Trust levels).
-      if (store.state.settings.isOpenOn(ProximityUnderlay.pan)) {
-        return true;
-      }
-      // Closed: recognize only already-known peers — keys GLP supplied via
-      // the API, never a friendship record (spec §Trust gating).
-      return _isKnownPeerPubkey(senderPubkey);
-    };
+        (senderPubkey, {String? bleDeviceId, BleRole? bleRole}) =>
+            _acceptsClearAnnounce(PeerTransport.bleDirect);
 
     _messageRouter.onBleAnnounceRejected = (senderPubkey, bleDeviceId) {
       if (bleDeviceId == null) return;
+      // Not a leg that carries the pair's session.
+      final carrier = _bleService?.getPubkeyForPeerId(bleDeviceId);
+      if (carrier != null &&
+          _noiseSessions.hasSession(PeerTransport.bleDirect, carrier)) {
+        return;
+      }
       unawaited(_bleService?.disconnectDevice(bleDeviceId));
     };
 
@@ -3903,18 +4024,16 @@ class GrassrootsNetwork {
       _noiseSessions.reset(PeerTransport.bleDirect, peer.publicKey);
     };
 
-    // Per spec (`docs/GLP_Networking_API/sections/ble.tex` §BLE Discovery):
-    // "Upon successful BLE connection, an ANNOUNCE packet is exchanged."
-    // Fire an immediate directed ANNOUNCE to the newly connected path so the
-    // peer learns our identity within milliseconds rather than waiting up to
-    // a full periodic-broadcast cycle. The periodic broadcast still runs as
-    // a keep-alive and as a refresh after BLE-address rotation; receivers
-    // treat repeated ANNOUNCEs from the same pubkey as idempotent.
+    // A GATT leg came up (GNA §3.3, Connection and Identity): "Upon BLE
+    // connection to a recognized presence, the peers establish the IK session
+    // ... over the GATT connection directly; to an unrecognized presence
+    // under Open trust, they first exchange ANNOUNCE".
     _bleService!.connectionStream.listen((event) {
       if (event.connected) {
-        unawaited(_sendAnnounceToDevice(event.peerId));
+        _onBleLegReady(event.peerId);
       } else {
         debugPrint('BLE device disconnected: ${event.peerId}');
+        _clearAnnouncedOn.remove('ble:${event.peerId}');
         _requeueMessagesOnBleDisconnect(event.peerId);
       }
     });
@@ -3947,17 +4066,22 @@ class GrassrootsNetwork {
       });
     };
 
-    // Trust gate for unsolicited IP contact (spec §Cold Calls, Trust
-    // levels): an unknown key's ANNOUNCE is dropped unless it is LAN contact
-    // under Open. Known peers, solicited contact (a connection this agent
-    // dialed) and configured rendezvous servers pass.
+    // A clear ANNOUNCE over IP is a first contact's on the LAN under Open
+    // trust; any other "is ignored and its connection dropped" (GNA §2.5,
+    // Trust gating): WAN contact runs IK with the expected key and sends no
+    // ANNOUNCE before it.
     _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) =>
-        _acceptsUdpContactFrom(senderPubkey, udpPeerId: udpPeerId);
+        _acceptsClearAnnounce(PeerTransport.udp, udpPeerId: udpPeerId);
 
     _messageRouter.onUdpAnnounceRejected = (senderPubkey, udpPeerId) {
-      unawaited(
-        _udpService?.disconnectFromPeer(_pubkeyToHex(senderPubkey)),
-      );
+      if (udpPeerId == null) return;
+      // Not a path that carries a session.
+      final carrier = _udpService?.getPubkeyForPeerId(udpPeerId);
+      if (carrier != null &&
+          _noiseSessions.hasSession(PeerTransport.udp, carrier)) {
+        return;
+      }
+      unawaited(_udpService?.disconnectFromPeer(udpPeerId));
     };
 
     // Listen to connection events — update Redux state and log
@@ -3967,8 +4091,9 @@ class GrassrootsNetwork {
       // or an outbound LAN cold call. There is no identity to record against,
       // and the Redux state is a projection of what the transports report, not
       // an inference from it, so nothing identity-keyed happens here. The
-      // ANNOUNCE that names the peer re-keys the path and fires a second
-      // connection event under the real key, and that one does this work.
+      // handshake or the ANNOUNCE that names the peer re-keys the path and
+      // fires a second connection event under the real key, and that one does
+      // this work.
       if (event.peerId.contains(':')) {
         debugPrint(
           'UDP path ${event.connected ? "opened" : "closed"} for the '
@@ -4124,6 +4249,10 @@ class GrassrootsNetwork {
       deadline.timer.cancel();
     }
     _attestationDeadlines.clear();
+    for (final timer in _handshakeRetransmits.values) {
+      timer.cancel();
+    }
+    _handshakeRetransmits.clear();
 
     _noiseSessions.dispose();
 
@@ -4207,76 +4336,174 @@ class GrassrootsNetwork {
     }
   }
 
-  /// Send ANNOUNCE to all connected BLE devices.
-  ///
-  /// Each connected device is targeted individually so friend/non-friend
-  /// address inclusion is decided using the current mapping for that exact BLE
-  /// device ID. This avoids the old exclude-list logic that broke when BLE IDs
-  /// rotated or when a peer had separate central/peripheral connections.
+  /// The heartbeat over the PAN (GNA §2.5, Heartbeat): ANNOUNCE inside the
+  /// session of each GATT leg that carries one, "on every live connection";
+  /// on a leg that carries none, its contact afresh ([_contactBleLeg]).
   Future<void> _broadcastAnnounce() async {
-    if (_bleService == null || !_bleAvailable) return;
-
-    for (final bleId in _bleService!.connectedPeerIds) {
-      await _sendAnnounceToDevice(bleId);
+    final service = _bleService;
+    if (service == null || !_bleAvailable) return;
+    for (final deviceId in service.connectedPeerIds) {
+      _contactBleLeg(deviceId);
     }
   }
 
-  /// Broadcast ANNOUNCE via UDP to all connected peers.
+  /// The heartbeat over IP (GNA §2.5, Heartbeat): ANNOUNCE inside every UDP
+  /// session; on an identified path that carries no session, toward a key
+  /// this side expects, the IK handshake afresh.
   Future<void> _broadcastAnnounceViaUdp() async {
-    if (_udpService == null || !_udpAvailable) return;
-
-    final announce = await _createSignedAnnounce();
-    await _udpService!.broadcast(announce);
+    final udp = _udpService;
+    if (udp == null || !_udpAvailable) return;
+    for (final peer in _peersState.peersList) {
+      final pubkey = peer.publicKey;
+      if (udp.getPeerIdForPubkey(pubkey) == null) continue;
+      if (_noiseSessions.hasSession(PeerTransport.udp, pubkey)) {
+        await _announceInSession(PeerTransport.udp, pubkey);
+      } else if (_patternToward(PeerTransport.udp, pubkey) == NoisePattern.ik) {
+        unawaited(_ensureNoiseSession(
+          transport: PeerTransport.udp,
+          recipientPubkey: pubkey,
+          peerId: peer.pubkeyHex,
+        ));
+      }
+    }
   }
 
-  /// Send ANNOUNCE directly to a specific BLE device ID.
-  ///
-  /// Called from the periodic [_broadcastAnnounce] loop, and fired
-  /// immediately when a BLE path becomes connected (per spec §BLE Discovery:
-  /// ANNOUNCE is exchanged upon successful BLE connection). Receivers treat
-  /// repeated ANNOUNCEs from the same pubkey as idempotent, so racing with
-  /// the periodic broadcast is harmless.
-  ///
-  /// Trust gating (spec §Cold-Call Trust Levels): under Closed trust, no
-  /// ANNOUNCE is sent to an unknown device — only to devices mapped to a
-  /// known key, or matching a known peer's derived per-slot UUID.
-  Future<bool> _sendAnnounceToDevice(String deviceId) async {
-    if (_bleService == null || !_bleAvailable) return false;
+  /// How long a peripheral GATT leg under Open trust waits for the central's
+  /// handshake before it sends the ANNOUNCE of a first contact: the central
+  /// sees our advertisement and may recognize our token, and a central under
+  /// Closed trust drops a connection an ANNOUNCE arrives on before the
+  /// handshake (GNA §2.5, Trust gating), while the peripheral end of a leg
+  /// cannot tell who dialed it until something arrives.
+  static const Duration _peripheralAnnounceDelay =
+      Duration(milliseconds: 1500);
 
-    // Check if this device ID already belongs to an authenticated known peer.
-    final pubkey = _bleService!.getPubkeyForPeerId(deviceId);
-    final isKnown = pubkey != null && _isKnownPeerPubkey(pubkey);
-
-    final knownHint = _bleService!.getKnownPeerPubkeyHintForPeerId(deviceId);
-    // A BLE device is a BLE encounter, so the BLE level governs it.
-    final allowsColdCall = store.state.settings.isOpenOn(ProximityUnderlay.pan);
-    if (!isKnown && !allowsColdCall && knownHint == null) {
-      debugPrint(
-        '[ble-announce] Suppressed ANNOUNCE to $deviceId '
-        '(closed BLE trust, unknown peer)',
-      );
-      return false;
+  /// A GATT leg came up (GNA §3.3, Connection and Identity).
+  void _onBleLegReady(String deviceId) {
+    if (deviceId.startsWith('peripheral:') &&
+        store.state.settings.isOpenOn(ProximityUnderlay.pan) &&
+        _bleService?.getPubkeyForPeerId(deviceId) == null) {
+      Timer(_peripheralAnnounceDelay, () {
+        if (_bleService?.isDeviceConnected(deviceId) ?? false) {
+          _contactBleLeg(deviceId);
+        }
+      });
+      return;
     }
+    _contactBleLeg(deviceId);
+  }
 
-    final announce = await _createSignedAnnounce();
-    final sent = await _bleService!.sendToPeer(deviceId, announce);
+  /// Contact over the GATT leg [deviceId] (GNA §3.3): on a leg of a peer the
+  /// pair holds a session with, ANNOUNCE inside it, which identifies the leg
+  /// to the other side; on a leg to a recognized presence, the IK session
+  /// with the key its token names; on any other leg, under Open trust, the
+  /// ANNOUNCE of a first contact, before XX. Under Closed trust "no ANNOUNCE
+  /// is sent or answered before the handshake" (GNA §2.5), and an
+  /// unrecognized leg is left to the other side.
+  void _contactBleLeg(String deviceId) {
+    final service = _bleService;
+    if (service == null || !_bleAvailable) return;
+    final mapped = service.getPubkeyForPeerId(deviceId);
+    if (mapped != null &&
+        _noiseSessions.hasSession(PeerTransport.bleDirect, mapped)) {
+      unawaited(_announceInSession(PeerTransport.bleDirect, mapped,
+          peerId: deviceId));
+      return;
+    }
+    final recognized = service.getKnownPeerPubkeyHintForPeerId(deviceId);
+    if (recognized != null) {
+      unawaited(_ensureNoiseSession(
+        transport: PeerTransport.bleDirect,
+        recipientPubkey: recognized,
+        peerId: deviceId,
+      ));
+      return;
+    }
+    if (!store.state.settings.isOpenOn(ProximityUnderlay.pan)) {
+      debugPrint('[ble-announce] No ANNOUNCE to the unrecognized $deviceId '
+          '(closed PAN trust)');
+      return;
+    }
+    unawaited(_sendClearAnnounce(PeerTransport.bleDirect, deviceId));
+  }
+
+  /// Connections this side sent the clear ANNOUNCE of a first contact on, by
+  /// medium and by GATT leg or by the peer's address: an ANNOUNCE is answered
+  /// once per connection, so two sides answering each other do not repeat it
+  /// without end.
+  final Set<String> _clearAnnouncedOn = {};
+
+  String? _clearAnnounceKey(PeerTransport transport, String connection) {
+    switch (transport) {
+      case PeerTransport.bleDirect:
+        return 'ble:$connection';
+      case PeerTransport.udp:
+        final remote = _udpService?.getRemoteAddress(connection);
+        return remote == null
+            ? null
+            : 'udp:${AddressInfo(remote.ip, remote.port).toAddressString()}';
+    }
+  }
+
+  /// Send our ANNOUNCE in clear on [connection], the identity bootstrap of a
+  /// first contact under Open trust (GNA §2.5); with [reply], only where this
+  /// side has not sent one on that connection yet.
+  Future<bool> _sendClearAnnounce(
+    PeerTransport transport,
+    String connection, {
+    bool reply = false,
+  }) async {
+    final key = _clearAnnounceKey(transport, connection);
+    if (key != null && !_clearAnnouncedOn.add(key) && reply) return false;
+    final bytes = _announcePacket().serialize();
+    final sent = switch (transport) {
+      PeerTransport.bleDirect =>
+        await _bleService?.sendToPeer(connection, bytes) ?? false,
+      PeerTransport.udp =>
+        await _udpService?.sendToPeer(connection, bytes) ?? false,
+    };
     if (!sent) {
-      debugPrint('[ble-announce] Failed to send ANNOUNCE to $deviceId');
+      debugPrint('[announce] Failed to send ANNOUNCE on $connection');
     }
     return sent;
   }
 
-  /// Create a signed ANNOUNCE packet — the irreducible identity record
-  /// (spec §ANNOUNCE and Liveness): key + version + trailing signature.
-  Future<Uint8List> _createSignedAnnounce() async {
-    final payload = _protocolHandler.createAnnouncePayload();
-    // The ANNOUNCE payload is a self-signed identity record; the frame needs
-    // no further authentication.
-    return GrassrootsPacket(
-      type: PacketType.announce,
-      payload: payload,
-    ).serialize();
+  /// Send our ANNOUNCE inside the session with [pubkey] on [transport] (GNA
+  /// §2.5: "Once the session is established, ANNOUNCE is sent inside it, and
+  /// repeats periodically ... on every live connection"), over [peerId] or
+  /// the peer's connection on that medium.
+  Future<bool> _announceInSession(
+    PeerTransport transport,
+    Uint8List pubkey, {
+    String? peerId,
+  }) async {
+    if (!_noiseSessions.hasSession(transport, pubkey)) return false;
+    final connection = peerId ??
+        switch (transport) {
+          PeerTransport.bleDirect => _bleService?.getPeerIdForPubkey(pubkey),
+          PeerTransport.udp => _pubkeyToHex(pubkey),
+        };
+    if (connection == null) return false;
+    final bytes = await _packetBytesForTransport(
+      packet: _announcePacket(),
+      transport: transport,
+      recipientPubkey: pubkey,
+      peerId: connection,
+    );
+    if (bytes == null) return false;
+    return switch (transport) {
+      PeerTransport.bleDirect =>
+        await _bleService?.sendToPeer(connection, bytes) ?? false,
+      PeerTransport.udp =>
+        await _udpService?.sendToPeer(connection, bytes) ?? false,
+    };
   }
+
+  /// Our ANNOUNCE — the irreducible identity record (spec §ANNOUNCE and
+  /// Liveness): key + version + trailing signature.
+  GrassrootsPacket _announcePacket() => GrassrootsPacket(
+        type: PacketType.announce,
+        payload: _protocolHandler.createAnnouncePayload(),
+      );
 
   /// Remove peers that haven't sent an ANNOUNCE within the interval.
   ///
@@ -4359,6 +4586,68 @@ class GrassrootsNetwork {
     store.dispatch(StalePeersRemovedAction(staleThreshold));
   }
 
+}
+
+/// The `pan` or `lan` sub-object of a [GrassrootsNetwork] (GNA §2.2, §3.1):
+/// discovery and the trust level of one proximity underlay, with no underlay
+/// parameter.
+class _GrassrootsProximity implements ProximityApi {
+  _GrassrootsProximity(this._layer, this.underlay);
+
+  final GrassrootsNetwork _layer;
+
+  @override
+  final ProximityUnderlay underlay;
+
+  @override
+  List<Uint8List> getPeers() => _layer._peersOn(underlay);
+
+  @override
+  void Function(Uint8List pk)? onPeerDiscovered;
+
+  @override
+  Future<void> setTrustLevel(ColdCallTrustLevel level) =>
+      _layer._setTrustLevel(underlay, level);
+
+  @override
+  ColdCallTrustLevel get trustLevel => _layer._trustLevelOf(underlay);
+}
+
+/// The `wan` sub-object of a [GrassrootsNetwork] (GNA §2.2, §4.2, §4.3).
+class _GrassrootsWan implements WanApi {
+  _GrassrootsWan(this._layer);
+
+  final GrassrootsNetwork _layer;
+
+  @override
+  void Function(String? oldAddress, String? newAddress)?
+      onConnectivityStatusChanged;
+
+  /// The agent's current public `ip:port`, as a rendezvous server observed
+  /// it, or null if not yet known (GNA §4.2).
+  @override
+  String? getPublicAddress() => _layer.store.state.transports.publicAddress;
+
+  /// The fingerprint of the attached local network (GNA §4.3).  The same
+  /// interface enumeration also yields the agent's own local address
+  /// prefixes, held in `store.state.localNetwork`; they stay inside the
+  /// layer, deciding whether an inbound source address is LAN contact (GNA
+  /// §2.7), and GLP is given the fingerprint, never the addresses.
+  @override
+  String? networkIdentity() => _layer.store.state.localNetwork.networkId;
+
+  @override
+  void Function(String? oldId, String? newId)? onNetworkChanged;
+
+  @override
+  void putPeerAddress(Uint8List pk, String address) =>
+      _layer._putPeerAddress(pk, address);
+
+  @override
+  String? observedPeerAddress(Uint8List pk) => _layer._observedPeerAddress(pk);
+
+  @override
+  void punchUdp(String address) => _layer._punchUdp(address);
 }
 
 /// Diff each peer's set of reachable underlays against the previous tick and

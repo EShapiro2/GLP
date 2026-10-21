@@ -27,9 +27,11 @@
 /// so `getPeers` is empty, there being no proximity underlay to find a nearby
 /// agent on, and `setTrustLevel` and the place functions are refused as
 /// unsupported, throwing [UnsupportedError] (GNA, 2026-10-11, the adapter's
-/// Q1).  Every other function of the API the layer has (GNA, 2026-10-11, Task
-/// C), and passes straight through.  A callback the layer has no event for ---
-/// onPeerDiscovered, onPlaceEvent --- is held and never fires.
+/// Q1): the layer's `pan` and `lan` sub-objects are null (GNA §2.2).  Every
+/// other function of the API the layer has (GNA, 2026-10-11, Task C), and
+/// passes straight through, the WAN functions to the layer's `wan`
+/// sub-object.  A callback the layer has no event for --- onPeerDiscovered,
+/// onPlaceEvent --- is held and never fires.
 library;
 
 import 'dart:async';
@@ -170,14 +172,14 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
   set onConnectivityStatusChanged(
       void Function(String? oldAddress, String? newAddress)? cb) {
     _onConnectivityStatusChanged = cb;
-    layer.onConnectivityStatusChanged = cb;
+    layer.wan.onConnectivityStatusChanged = cb;
   }
 
   @override
-  String? getPublicAddress() => layer.getPublicAddress();
+  String? getPublicAddress() => layer.wan.getPublicAddress();
 
   @override
-  String? networkIdentity() => layer.networkIdentity();
+  String? networkIdentity() => layer.wan.networkIdentity();
 
   void Function(String? oldId, String? newId)? _onNetworkChanged;
 
@@ -188,19 +190,19 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
   @override
   set onNetworkChanged(void Function(String? oldId, String? newId)? cb) {
     _onNetworkChanged = cb;
-    layer.onNetworkChanged = cb;
+    layer.wan.onNetworkChanged = cb;
   }
 
   @override
   void putPeerAddress(glp.PubKey pk, String address) =>
-      layer.putPeerAddress(pk.bytes, address);
+      layer.wan.putPeerAddress(pk.bytes, address);
 
   @override
   String? observedPeerAddress(glp.PubKey pk) =>
-      layer.observedPeerAddress(pk.bytes);
+      layer.wan.observedPeerAddress(pk.bytes);
 
   @override
-  void punchUdp(String address) => layer.punchUdp(address);
+  void punchUdp(String address) => layer.wan.punchUdp(address);
 
   // --- Places (no location service on a headless server) ---
 

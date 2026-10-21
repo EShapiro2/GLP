@@ -134,7 +134,7 @@ class PeerBleDisconnectedAction extends PeerAction {
   PeerBleDisconnectedAction(this.publicKey, {this.role});
 }
 
-/// A peer's Noise XX session over UDP was established or torn down. Updates [PeerState.hasLiveUdpConnection].
+/// A peer's Noise session over UDP was established or torn down. Updates [PeerState.hasLiveUdpConnection].
 class PeerUdpConnectionChangedAction extends PeerAction {
   final String pubkeyHex;
   final bool connected;
@@ -145,7 +145,7 @@ class PeerUdpConnectionChangedAction extends PeerAction {
   });
 }
 
-/// A BLE Noise XX session with a peer completed authentication.
+/// A BLE Noise session with a peer completed authentication.
 /// Sets [PeerState.bleAuthenticated] — the BLE half of consolidated
 /// reachability. Cleared by [PeerBleDisconnectedAction] when the last BLE
 /// path drops.

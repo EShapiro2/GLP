@@ -638,10 +638,12 @@ class BleTransportService extends TransportService {
   ///
   /// For already authenticated paths this returns the mapped pubkey when it
   /// belongs to a known peer (a key GLP supplied via the API). For
-  /// pre-ANNOUNCE central paths it may return a known peer whose derived
-  /// service UUID matches the advertisement. That second case is only a hint:
-  /// a spoofed derived UUID must not pass for an authenticated identity —
-  /// identity is established only by the signed ANNOUNCE that follows.
+  /// unidentified central paths it may return a known peer whose derived
+  /// service UUID matches the advertisement: a recognized presence, which the
+  /// layer contacts with the IK handshake expecting that key (GNA §2.6,
+  /// §3.3). That second case is only a hint: a spoofed derived UUID must not
+  /// pass for an authenticated identity — only the holder of the key can
+  /// answer the handshake that follows.
   Uint8List? getKnownPeerPubkeyHintForPeerId(String peerId) {
     final mappedPubkey = getPubkeyForPeerId(peerId);
     if (mappedPubkey != null &&

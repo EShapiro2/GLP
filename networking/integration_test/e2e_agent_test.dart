@@ -168,7 +168,7 @@ class Agent {
   Future<String> loopbackAddress({int timeoutSeconds = 90}) async {
     final deadline = DateTime.now().add(Duration(seconds: timeoutSeconds));
     while (DateTime.now().isBefore(deadline)) {
-      final publicAddr = network.getPublicAddress();
+      final publicAddr = network.wan!.getPublicAddress();
       if (publicAddr != null && publicAddr.isNotEmpty) {
         final portIndex = publicAddr.lastIndexOf(':');
         final port = publicAddr.substring(portIndex + 1);
@@ -314,7 +314,7 @@ Future<void> runB() async {
   final aPk = pubkeyFromHex(aHex);
   agent.network.putKnownPeer(aPk);
   final aAddr = await bbWait('a_cold_call_addr', timeoutSeconds: 180);
-  agent.network.putPeerAddress(aPk, aAddr);
+  agent.network.wan!.putPeerAddress(aPk, aAddr);
   note('item2: declared A and dialing it at $aAddr');
 
   // Item 3 driver: the message drains once the session is up.
@@ -357,7 +357,7 @@ Future<void> runC() async {
   // The stranger knows A\'s key and address out-of-band — no rendezvous
   // server, unknown to A.
   final aPk = pubkeyFromHex(aHex);
-  agent.network.putPeerAddress(aPk, aAddr);
+  agent.network.wan!.putPeerAddress(aPk, aAddr);
   note('item6: dialing A at $aAddr, unknown to it...');
   final sendId = await agent.network
       .send(aPk, Uint8List.fromList(utf8.encode('stranger-hello')));
@@ -380,7 +380,7 @@ Future<void> runA2() async {
   // Item 5: no rendezvous server is running; the dial book alone must carry
   // the connection.
   final bPk = pubkeyFromHex(bHex);
-  agent.network.putPeerAddress(bPk, bAddr);
+  agent.network.wan!.putPeerAddress(bPk, bAddr);
   note('item5: direct-dialing B at $bAddr (no server)...');
   final id = await agent.network
       .send(bPk, Uint8List.fromList(utf8.encode('direct-dial-hello')));

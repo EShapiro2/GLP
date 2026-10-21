@@ -489,16 +489,18 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   }
 
   /// Re-supply persisted known peers (contacts) to the layer via its API:
-  /// putPeerAddress for peers with a stored dial address, putKnownPeer for
-  /// the rest. This is the app playing GLP's role — the social graph lives
-  /// above the layer, which recognizes only the keys supplied here.
+  /// putPeerAddress, on the layer's wan sub-object (GNA §2.2), for peers with
+  /// a stored dial address where the layer runs the WAN, putKnownPeer for the
+  /// rest. This is the app playing GLP's role — the social graph lives above
+  /// the layer, which recognizes only the keys supplied here.
   void _hydrateKnownPeers(GrassrootsNetwork grassroots) {
+    final wan = grassroots.wan;
     for (final entry in appStore.state.knownPeers.known.entries) {
       final pubkey = ChatMessage.hexToPubkey(entry.key);
       final address = entry.value;
-      if (address != null && address.isNotEmpty) {
+      if (wan != null && address != null && address.isNotEmpty) {
         try {
-          grassroots.putPeerAddress(pubkey, address);
+          wan.putPeerAddress(pubkey, address);
         } on ArgumentError {
           grassroots.putKnownPeer(pubkey);
         }

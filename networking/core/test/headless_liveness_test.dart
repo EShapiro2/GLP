@@ -11,8 +11,8 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// ANNOUNCE and Liveness; §4.2, Address-change recovery): ANNOUNCE on every
 /// live session on the heartbeat; a session silent for two intervals torn
 /// down; the heartbeat sweep re-initiating connections to known peers at
-/// their recorded addresses; and a verified ANNOUNCE for a key from a new
-/// address resetting the session the peer no longer holds.
+/// their recorded addresses; and a new handshake for a key, from a new
+/// address, replacing the session the peer no longer holds.
 ///
 /// An address change is simulated on the loopback by stopping the moving
 /// layer and starting it again, which binds a new port and loses its
@@ -60,7 +60,7 @@ void main() {
   Future<void> connect(
       HeadlessGrassrootsNetwork a, HeadlessGrassrootsNetwork b) async {
     b.putKnownPeer(a.identity.publicKey);
-    a.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
+    a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
     await a.send(b.identity.publicKey, Uint8List.fromList([1]));
     expect(
         await waitFor(() =>
@@ -99,7 +99,7 @@ void main() {
         reason: 'delivered well inside the two intervals liveness waits');
     expect(atB, ['up', 'down', 'up'],
         reason: 'the stale session reset, then the fresh one attested');
-    expect(b.observedPeerAddress(a.identity.publicKey),
+    expect(b.wan.observedPeerAddress(a.identity.publicKey),
         '127.0.0.1:${a.boundPort}');
   }, timeout: const Timeout(Duration(minutes: 1)));
 
@@ -133,8 +133,8 @@ void main() {
       if (skip()) return;
       final a = await node(first);
       final b = await node(second);
-      a.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
-      b.putPeerAddress(a.identity.publicKey, '127.0.0.1:${a.boundPort}');
+      a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
+      b.wan.putPeerAddress(a.identity.publicKey, '127.0.0.1:${a.boundPort}');
       expect(
           await waitFor(
               () =>

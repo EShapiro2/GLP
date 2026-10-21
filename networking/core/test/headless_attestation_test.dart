@@ -118,7 +118,7 @@ void main() {
     HeadlessGrassrootsNetwork caller,
     HeadlessGrassrootsNetwork service,
   ) async {
-    caller.putPeerAddress(
+    caller.wan.putPeerAddress(
       service.identity.publicKey,
       '127.0.0.1:${service.boundPort}',
     );

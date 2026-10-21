@@ -94,7 +94,7 @@ void main() {
     // listens there.
     final first = senderLayer();
     expect(await first.start(), isTrue);
-    first.putPeerAddress(recipientId.publicKey, recipientAddress);
+    first.wan.putPeerAddress(recipientId.publicKey, recipientAddress);
     final messageId = await first.send(
       recipientId.publicKey,
       Uint8List.fromList(utf8.encode('queued before termination')),
@@ -174,7 +174,7 @@ void main() {
     recipient.putKnownPeer(senderId.publicKey);
     expect(await recipient.start(), isTrue);
     expect(await sender.start(), isTrue);
-    sender.putPeerAddress(
+    sender.wan.putPeerAddress(
         recipientId.publicKey, '127.0.0.1:${recipient.boundPort}');
 
     final id = await sender.send(

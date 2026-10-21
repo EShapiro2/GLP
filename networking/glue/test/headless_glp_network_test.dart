@@ -148,7 +148,7 @@ void main() {
       expect(network.peerUnderlays(peer), isEmpty);
       expect(network.observedPeerAddress(peer), isNull,
           reason: 'the peer is not connected');
-      expect(network.networkIdentity(), layer.networkIdentity());
+      expect(network.networkIdentity(), layer.wan.networkIdentity());
       expect(() => network.punchUdp('nowhere'), throwsArgumentError,
           reason: "the layer's refusal of an unparseable address, unchanged");
 
@@ -157,8 +157,8 @@ void main() {
           (oldAddress, newAddress) => events.add('address $oldAddress $newAddress');
       network.onNetworkChanged =
           (oldId, newId) => events.add('network $oldId $newId');
-      layer.onConnectivityStatusChanged!(null, '203.0.113.7:9600');
-      layer.onNetworkChanged!(null, 'n-1');
+      layer.wan.onConnectivityStatusChanged!(null, '203.0.113.7:9600');
+      layer.wan.onNetworkChanged!(null, 'n-1');
       expect(events, ['address null 203.0.113.7:9600', 'network null n-1']);
     });
 
@@ -172,6 +172,9 @@ void main() {
         return;
       }
       expect(network.getPeers(), isEmpty);
+      // The layer's pan and lan sub-objects are null (GNA §2.2).
+      expect(layer.pan, isNull);
+      expect(layer.lan, isNull);
       expect(
           () => network.setTrustLevel(
               glp.ProximityUnderlay.pan, glp.TrustLevel.open),

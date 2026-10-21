@@ -173,7 +173,7 @@ void main() {
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);
     callee.putKnownPeer(callerId.publicKey);
-    caller.putPeerAddress(calleeId.publicKey, calleeAddress);
+    caller.wan!.putPeerAddress(calleeId.publicKey, calleeAddress);
 
     await caller.send(
       calleeId.publicKey,
@@ -231,7 +231,7 @@ void main() {
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);
     callee.putKnownPeer(callerId.publicKey);
-    caller.putPeerAddress(calleeId.publicKey, calleeAddress);
+    caller.wan!.putPeerAddress(calleeId.publicKey, calleeAddress);
     await caller.send(
       calleeId.publicKey,
       Uint8List.fromList(utf8.encode('hello')),
@@ -289,7 +289,7 @@ void main() {
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);
     callee.putKnownPeer(callerId.publicKey);
-    caller.putPeerAddress(calleeId.publicKey, calleeAddress);
+    caller.wan!.putPeerAddress(calleeId.publicKey, calleeAddress);
     await caller.send(
       calleeId.publicKey,
       Uint8List.fromList(utf8.encode('hello')),
