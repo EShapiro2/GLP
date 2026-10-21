@@ -93,17 +93,22 @@ const _gsnpProposals = [
   "form(post_forward, [$_p, $_p, $_s, $_s])",
 ];
 
-/// GAI's, as programs/apps/gai/platform.vglp prints its Proposal: GSG's with
-/// unfriend one per role, the wards core's for an AI agent and its
-/// principal, retire, and GSNP's sign, message and forward.
+/// GAI's, as programs/apps/gai/platform.vglp prints its Proposal from
+/// programs/gai/GAI.glp at GLP 9d736804: GKK's establish, meet and introduce,
+/// GSG's befriend with unfriend one per role, GnW's and GAI's for an AI agent
+/// and its principal, retire, and GSNP's sign, message and forward.
 const _gaiProposals = [
   "form(establish, [$_p])",
+  "form(meet, [$_p, $_p])",
+  "form(introduce, [$_p, $_p, $_p])",
   "form(befriend, [$_p, $_p])",
   "form(unfriend_p, [$_p, $_p])",
   "form(unfriend_q, [$_p, $_p])",
   "form(enter, [$_p, $_p, $_s])",
-  "form(agent_befriend, [$_p, $_p, $_p, $_s])",
-  "form(agents_befriend, [$_p, $_p, $_p, $_p, $_s, $_s])",
+  "form(agent_meet, [$_p, $_p, $_p, $_s])",
+  "form(agents_meet, [$_p, $_p, $_p, $_p, $_s, $_s])",
+  "form(agent_befriend, [$_p, $_p, $_p])",
+  "form(agents_befriend, [$_p, $_p, $_p, $_p])",
   "form(agent_unfriend, [$_p, $_p, $_p])",
   "form(retire, [$_p, $_p])",
   "form(sign, [$_p, $_s])",
@@ -165,8 +170,7 @@ final _approvalW = "named(approval_sentence, form(approval, "
     "field('YesNo', buttons([yes, no]))]))";
 
 const _gaiApprovalClasses = "form(agent_befriend, [field('Peer', shown), "
-    "field('Peer', shown), field('Peer', shown), "
-    "field('Speech', $_speechShown)])";
+    "field('Peer', shown), field('Peer', shown)])";
 
 /// The widget of GAI's approval question, `named(approval_sentence, D)`,
 /// over agent_befriend.
@@ -1288,9 +1292,9 @@ void main() {
     const code = "speech(speech(utterance('The code of Alf'), acme_ltd), alice)";
     const attestation = 'speech($code, alice)';
     final summary = _sp('Summary of the news', 'alf');
-    const aliceState = '[principal_of(alf), friend(alf), item($code), '
-        'authored($code), friend(bob), identity]';
-    const agentBefriend = 'agent_befriend(alf, bob, alice, $attestation)';
+    const aliceState = '[principal_of(alf), friend(alf), knows(alf), '
+        'item($code), authored($code), friend(bob), knows(bob), identity]';
+    const agentBefriend = 'agent_befriend(alf, bob, alice)';
 
     /// The texts construct [id] draws, in order.
     List<String?> textsOf(WidgetTester tester, int id) => [
@@ -1425,12 +1429,13 @@ void main() {
 
     _phoneTest(
         'Alice after retiring Alf: Alf\'s row offers no Befriend, befriend '
-        'forbidding agent at both parties, while Carol\'s, a person, does',
-        (tester) async {
+        'forbidding agent at both parties, while Carol\'s, a person she knows, '
+        'does', (tester) async {
       final p = await _Phone.open(tester, 'gai');
       await p.views([
-        _v('[retired_of(alf), principal_of(alf), item($code), '
-            'authored($code), friend(bob), identity]', '[alf, bob, carol]')
+        _v('[retired_of(alf), principal_of(alf), knows(alf), item($code), '
+            'authored($code), friend(bob), knows(bob), knows(carol), '
+            'identity]', '[alf, bob, carol]')
       ]);
       await p.menu(1, _gaiProposals, known: '[alf, bob, carol]');
       expect(p.key(1, 'person:alf'), findsOneWidget);
@@ -1448,11 +1453,12 @@ void main() {
     _phoneTest(
         'Bob after ending his friendship with Alf: Alf\'s row, Alf recorded as '
         'Alice\'s AI agent, offers no Befriend and still names its developer, '
-        'while Carol\'s, a person, offers Befriend', (tester) async {
+        'while Carol\'s, a person he knows, offers Befriend', (tester) async {
       final p = await _Phone.open(tester, 'gai', me: 'bob');
       await p.views([
-        _v('[friend(alice), item($summary), agent_of(alf, alice, '
-            '$attestation), identity]', '[alf, alice, carol]')
+        _v('[friend(alice), item($summary), knows(alf), agent_of(alf, alice, '
+            '$attestation), knows(alice), knows(carol), identity]',
+            '[alf, alice, carol]')
       ]);
       await p.menu(1, _gaiProposals, known: '[alf, alice, carol]');
       expect(p.key(1, 'person:alf'), findsOneWidget);
@@ -1475,10 +1481,14 @@ void main() {
     _phoneTest(
         'Bob asked to befriend Alf: while the question, which names Alf an AI '
         'agent of Alice, is open, Alf\'s row offers no Befriend, though his '
-        'view does not yet record Alf; Carol\'s does; once the question is '
-        'withdrawn, Alf\'s row offers it again', (tester) async {
+        'view, knowing Alf by an introduction (GKK:3), does not record Alf; '
+        'Carol\'s does; once the question is withdrawn, Alf\'s row offers it '
+        'again', (tester) async {
       final p = await _Phone.open(tester, 'gai', me: 'bob');
-      await p.views([_v('[friend(alice), identity]', '[alf, alice, carol]')]);
+      await p.views([
+        _v('[knows(alf), friend(alice), knows(alice), knows(carol), '
+            'identity]', '[alf, alice, carol]')
+      ]);
       await p.menu(1, _gaiProposals, known: '[alf, alice, carol]');
       expect(p.key(1, 'befriend:alf'), findsOneWidget);
       await p.draw('draw(5, $_gaiApprovalW, approval_w(approval(attempt(alf, '
@@ -1538,8 +1548,14 @@ void main() {
         '(c) Bob asked to befriend Alf: "Alf, an AI agent of Alice, asks to '
         'befriend you.", "Developer: Acme Ltd", "Befriend Alf?", Yes and No; then '
         'Alf\'s row and its item, each with "Developer: Acme Ltd"', (tester) async {
+      // Bob knows Alf by agent_meet, which recorded Alf, its principal and
+      // its attestation, agent_of(alf, alice, y) (programs/gai/GAI.glp at GLP
+      // 9d736804; GAI's paper, Section 3.3, part 2).
       final p = await _Phone.open(tester, 'gai', me: 'bob');
-      await p.views([_v('[friend(alice), identity]', '[alf, alice]')]);
+      await p.views([
+        _v('[knows(alf), agent_of(alf, alice, $attestation), friend(alice), '
+            'knows(alice), identity]', '[alf, alice]')
+      ]);
       await p.menu(1, _gaiProposals, known: '[alf, alice]');
       await p.draw('draw(5, $_gaiApprovalW, approval_w(approval(attempt(alf, '
           '3, 3, $agentBefriend, none), input([2]))))');
@@ -1567,8 +1583,9 @@ void main() {
       await p.draw('withdraw(5)');
       await p.draw('withdraw(1)');
       await p.views([
-        _v('[item($summary), friend(alf), agent_of(alf, alice, '
-            '$attestation), friend(alice), identity]', '[alf, alice]')
+        _v('[item($summary), friend(alf), knows(alf), agent_of(alf, alice, '
+            '$attestation), friend(alice), knows(alice), identity]',
+            '[alf, alice]')
       ]);
       await p.menu(2, _gaiProposals, known: '[alf, alice]');
       final row = [
