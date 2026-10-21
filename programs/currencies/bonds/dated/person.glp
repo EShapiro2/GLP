@@ -250,9 +250,11 @@ done(mint(K, D), minted(K1, D1), yes) :- K? =:= K1?, D? =?= D1? | true.
 done(advance(T), date_advanced(T1), yes) :- T? =:= T1? | true.
 done(swap(Q, _, _, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(swap(Q, _, _, _, _, _, _), swap_declined(Q1), yes) :- Q? =?= Q1? | true.
+done(swap(Q, _, _, _, _, _, _), swap_same(Q1, _, _, _), yes) :- Q? =?= Q1? | true.
 done(pay(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
 done(pay(Q, K), not_accepted(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
-done(redeem(Q, _, R, D1), redeemed(Q1, R1, D2), yes) :- Q? =?= Q1?, R? =?= R1?, D1? =?= D2? | true.
+done(redeem(Q, D, R, D1), redeemed(Q1, D2, R1, D3), yes) :- Q? =?= Q1?, D? =?= D2?, R? =?= R1?, D1? =?= D3? | true.
+done(redeem(Q, D, _, _), redeem_same(Q1, D1), yes) :- Q? =?= Q1?, D? =?= D1? | true.
 done(redeem(Q, D, _, _), not_mature(Q1, D1), yes) :- Q? =?= Q1?, D? =?= D1? | true.
 done(redeem(Q, _, _, _), refused(Q1), yes) :- Q? =?= Q1? | true.
 done(redeem(Q, _, _, _), menu(Q1, _), yes) :- Q? =?= Q1? | true.

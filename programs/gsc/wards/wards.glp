@@ -1,6 +1,6 @@
 % ---------------------------------------------------------------------------
 % Contracts with wards: GAI's appendix "Contracts with Wards",
-% /Grassroots/GAI, sections/wards.tex, which carries what GSC's Appendix F
+% /Grassroots/GAI, sections/wards.tex at GAI ddf0a33, which carries what GSC's Appendix F
 % did until GSC 83b951c removed it; and, for an agent-named contract with
 % wards, def:sg-wards of CSSN's paper, /Grassroots/CSSN,
 % sections/appendix-schemas.tex.  The papers are the specification and no
@@ -744,85 +744,29 @@ role_req_supplied(C, Rf, Lv, RS, I, R?) :-
     refl_keep(Req?, I?, Rf?, no, Req1),
     req_supplied(C?, Lv?, Req1?, I?, R).
 
-% Clause 2: every atom the act forbids at the role is a mark in M, a leaving
-% mark of C, or the one atom it adds there.
-procedure forb_marks_or_added(Atoms?, Preds?, Preds?, Atom?, Ans).
-forb_marks_or_added([], _, _, _, yes).
-forb_marks_or_added([A|As], M, Lv, Added, R?) :-
-    ground(A?), ground(As?), ground(M?), ground(Lv?), ground(Added?) |
+% Clause 2: every atom the act forbids at the role is a mark in M or a
+% leaving mark of C.  Clause 3 of def:relay asks the same of every role of a
+% relay act, and relay_role calls this procedure for it.
+procedure forbids_marks(Atoms?, Preds?, Preds?, Ans).
+forbids_marks([], _, _, yes).
+forbids_marks([A|As], M, Lv, R?) :-
+    ground(A?), ground(As?), ground(M?), ground(Lv?) |
     is_mark_of(A?, M?, A1),
     is_mark_of(A?, Lv?, A2),
-    same_atom(A?, Added?, A3),
     or_yes(A1?, A2?, A12),
-    or_yes(A12?, A3?, A123),
-    forb_marks_or_added(As?, M?, Lv?, Added?, A4),
-    both_yes(A123?, A4?, R).
-
-% Clause 3: every atom of e a schema adds or deletes at a role is e(pi_j) for
-% a role pi_j of that schema, and the schema adds, or deletes, e(pi_i) at
-% pi_j.  Which = add or del says which.
-procedure e_sym_atom(Args?, Integer?, RoleSpecs?, Integer?, Constant?, Constant?, Ans).
-e_sym_atom([role(J)], I, All, K, E, Which, R?) :-
-    J? >= 1, J? =< K?, integer(I?), ground(All?), ground(E?), ground(Which?) |
-    nth_rs(All?, J?, RJ),
-    rs_which(Which?, RJ?, PJ),
-    atoms_member(PJ?, atom(E?, [role(I?)]), R).
-e_sym_atom(_, _, _, _, _, _, no) :- otherwise | true.
-
-procedure rs_which(Constant?, RoleSpec?, Atoms).
-rs_which(add, RS, P?) :- ground(RS?) | rs_add(RS?, P).
-rs_which(del, RS, M?) :- ground(RS?) | rs_del(RS?, M).
-
-procedure e_sym_atoms(Atoms?, Integer?, RoleSpecs?, Integer?, Constant?, Constant?, Ans).
-e_sym_atoms([], _, _, _, _, _, yes).
-e_sym_atoms([atom(Q, As)|Xs], I, All, K, E, Which, R?) :-
-    Q? =?= E?, ground(As?), ground(Xs?), integer(I?), ground(All?), integer(K?), ground(Which?) |
-    e_sym_atom(As?, I?, All?, K?, E?, Which?, A1),
-    e_sym_atoms(Xs?, I?, All?, K?, E?, Which?, A2),
-    both_yes(A1?, A2?, R).
-e_sym_atoms([atom(_, _)|Xs], I, All, K, E, Which, R?) :-
-    otherwise, ground(Xs?), integer(I?), ground(All?), integer(K?), ground(E?), ground(Which?) |
-    e_sym_atoms(Xs?, I?, All?, K?, E?, Which?, R).
-
-procedure e_sym_roles(RoleSpecs?, Integer?, RoleSpecs?, Integer?, Constant?, Ans).
-e_sym_roles([], _, _, _, _, yes).
-e_sym_roles([RS|Rs], I, All, K, E, R?) :-
-    ground(RS?), ground(Rs?), integer(I?), ground(All?), integer(K?), ground(E?) |
-    rs_add(RS?, P),
-    rs_del(RS?, M),
-    e_sym_atoms(P?, I?, All?, K?, E?, add, A1),
-    e_sym_atoms(M?, I?, All?, K?, E?, del, A2),
-    both_yes(A1?, A2?, A12),
-    I1 := I? + 1,
-    e_sym_roles(Rs?, I1?, All?, K?, E?, A3),
+    forbids_marks(As?, M?, Lv?, A3),
     both_yes(A12?, A3?, R).
-
-procedure e_sym_schema(RoleSpecs?, Constant?, Ans).
-e_sym_schema(Rs, E, R?) :- ground(Rs?), ground(E?) |
-    roles_len(Rs?, K),
-    e_sym_roles(Rs?, 1, Rs?, K?, E?, R).
-
-procedure e_symmetric(Contract?, Constant?, Ans).
-e_symmetric([], _, yes).
-e_symmetric([S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(E?) |
-    sch_roles(S?, Rs),
-    e_sym_schema(Rs?, E?, A1),
-    e_symmetric(Ss?, E?, A2),
-    both_yes(A1?, A2?, R).
 
 % --- the act -------------------------------------------------------------
 % An introductory act (def:introduction: arity two, guarded in both roles,
-% with an introduction) that adds one atom at each role, of one predicate e,
-% and meets the three clauses at both roles.
+% with an introduction) that adds one atom at each role, of one predicate e
+% of arity one, and meets the two clauses at both roles.  Nothing in the two
+% clauses, nor in def:relay, asks of a schema of C anything of an atom of e
+% beyond this (GAI ddf0a33).
 
 procedure one_atom_e(Atoms?, Atoms?, Preds).
-one_atom_e([atom(E, _)], [atom(E2, _)], [E?]) :- E? =?= E2? | true.
+one_atom_e([atom(E, [_])], [atom(E2, [_])], [E?]) :- E? =?= E2? | true.
 one_atom_e(_, _, []) :- otherwise | true.
-
-% The one atom a role adds, where one_atom_e found exactly one.
-procedure added_one(Atoms?, Atom).
-added_one([A], A?).
-added_one(_, atom(none, [])) :- otherwise | true.
 
 procedure nonempty_substs(Substs?, Ans).
 nonempty_substs([], no).
@@ -843,17 +787,11 @@ intro_marks2([E], yes, C, Rf, M, Lv, Nm, RS1, RS2, R?) :-
     role_req_supplied(C?, Rf?, Lv?, RS2?, 2, A2),
     rs_forb(RS1?, N1),
     rs_forb(RS2?, N2),
-    rs_add(RS1?, P1s),
-    rs_add(RS2?, P2s),
-    added_one(P1s?, P1),
-    added_one(P2s?, P2),
-    forb_marks_or_added(N1?, M?, Lv?, P1?, A3),
-    forb_marks_or_added(N2?, M?, Lv?, P2?, A4),
-    e_symmetric(C?, E?, A5),
+    forbids_marks(N1?, M?, Lv?, A3),
+    forbids_marks(N2?, M?, Lv?, A4),
     both_yes(A1?, A2?, A12),
     both_yes(A3?, A4?, A34),
-    both_yes(A12?, A34?, A1234),
-    both_yes(A1234?, A5?, A),
+    both_yes(A12?, A34?, A),
     intro_marks3(A?, Nm?, E?, R).
 
 % intro_act_bindings asks of the act two guarded agent roles and no name
@@ -980,12 +918,6 @@ nth_rk([X|_], I, X?) :- I? =:= 1 | true.
 nth_rk([_|Xs], I, R?) :- I? > 1, integer(I?), ground(Xs?) |
     I1 := I? - 1,
     nth_rk(Xs?, I1?, R).
-
-procedure rk_is_party(RK?, Ans).
-rk_is_party(rk_ward(_, _), yes).
-rk_is_party(rk_free, yes).
-rk_is_party(rk_guard, no).
-rk_is_party(rk_other, no).
 
 procedure rk_is_guard(RK?, Ans).
 rk_is_guard(rk_guard, yes).
@@ -1269,40 +1201,8 @@ roles_req([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
     roles_req(Rs?, T),
     atoms_app(Q?, T?, R).
 
-% Clause 3: every atom the schema forbids at a role is a mark in M, a leaving
-% mark of C, or, at a party, the atom of e naming the other party.
-procedure other_party(Integer?, Party?, Party?, Integer).
-other_party(X, P1, P2, R?) :- integer(X?), ground(P1?), ground(P2?) |
-    party_role(P1?, I),
-    party_role(P2?, J),
-    other_party1(X?, I?, J?, R).
-
-procedure other_party1(Integer?, Integer?, Integer?, Integer).
-other_party1(X, I, J, J?) :- X? =:= I? | true.
-other_party1(X, I, J, I?) :- X? =:= J? | true.
-other_party1(_, _, _, 0) :- otherwise | true.
-
-procedure forb_atom_ok(Atom?, Integer?, RK?, Preds?, Preds?, Constant?, Party?, Party?, Ans).
-forb_atom_ok(Phi, X, KX, M, Lv, E, P1, P2, R?) :-
-    ground(Phi?), integer(X?), ground(KX?), ground(M?), ground(Lv?), ground(E?), ground(P1?),
-    ground(P2?) |
-    is_mark_of(Phi?, M?, A1),
-    is_mark_of(Phi?, Lv?, A2),
-    rk_is_party(KX?, IsP),
-    other_party(X?, P1?, P2?, O),
-    same_atom(Phi?, atom(E?, [role(O?)]), A3),
-    both_yes(IsP?, A3?, A4),
-    or_yes(A1?, A2?, A12),
-    or_yes(A12?, A4?, R).
-
-procedure forb_atoms_ok(Atoms?, Integer?, RK?, Preds?, Preds?, Constant?, Party?, Party?, Ans).
-forb_atoms_ok([], _, _, _, _, _, _, _, yes).
-forb_atoms_ok([Phi|Phis], X, KX, M, Lv, E, P1, P2, R?) :-
-    ground(Phi?), ground(Phis?), integer(X?), ground(KX?), ground(M?), ground(Lv?), ground(E?),
-    ground(P1?), ground(P2?) |
-    forb_atom_ok(Phi?, X?, KX?, M?, Lv?, E?, P1?, P2?, A1),
-    forb_atoms_ok(Phis?, X?, KX?, M?, Lv?, E?, P1?, P2?, A2),
-    both_yes(A1?, A2?, R).
+% Clause 3: every atom the schema forbids at a role is a mark in M or a
+% leaving mark of C (GAI ddf0a33), forbids_marks above.
 
 % --- the three clauses at every role --------------------------------------
 
@@ -1328,7 +1228,7 @@ relay_role(RS, X, K, KX, RKs, C, Rf, M, Lv, E, Gs, P1, P2, All, R?) :-
     rs_req(RS?, Req),
     req_atoms_ok(Req?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, All?, A2),
     rs_forb(RS?, N),
-    forb_atoms_ok(N?, X?, KX?, M?, Lv?, E?, P1?, P2?, A3),
+    forbids_marks(N?, M?, Lv?, A3),
     both_yes(A1?, A2?, A12),
     both_yes(A12?, A3?, R).
 

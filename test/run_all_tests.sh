@@ -2364,33 +2364,32 @@ echo ""
 
 CSSN_DIR="$GLP_DIR/programs/cssn"
 
-# The contract's act schemas (CSSN Appendix B.2), programs/cssn/CSSN.glp,
-# in the term form programs/gsc reads, each schema listing its variables in
-# its head (GSC 0228e79): GSC's verdict on it --- an agent-named contract,
-# its groups closed by the listed role of the members the leader lists
-# (CSSN.glp at 4cb1ec11; GSC 8064cfb, Appendix D.4), extending GSN and Wards
-# with no signing (CSSN.glp at fdc27eb3), with traceable provenance and volition, and an introduction with wards in
-# place of an unobstructed introductory act: the verdict syntactically
-# grassroots with wards (GSC, Appendix F, def:sg-wards, at GSC 503db66),
-# befriend the act, child the mark, parent and parenting its guardianship,
-# child_adult_befriend and child_befriend the relay acts, and retired the
-# leaving mark (def:guardianship, def:leaving, def:unobstructed-marks,
-# def:relay, def:introduction-wards; programs/gsc/test_gsc.sh, which checks
-# it by hand).  The platform committed in programs/cssn is what the compiler
-# prints from it (compile.sh --check), and the platform of the record of the
-# cascade on CSSN.
+# The contract's act schemas (CSSN Appendix C.2), programs/cssn/CSSN.glp, in
+# the term form programs/gsc reads (CSSN.glp at a261cb74, its comments at
+# 89e11f96, CSSN #9 Cowork): GSC's verdict on it, by the conditions for a
+# contract with wards (GAI ddf0a33, sections/wards.tex; CSSN, Appendix B.4):
+# "The marks are child, its guardianship (child, identity, parent,
+# parenting), its leaving mark retired, the introductory act meet, which
+# adds knows, and the relay acts child_meet and child_meet_2, by which GSC's
+# checker certifies the contract syntactically grassroots with wards"
+# (CSSN.glp), with traceable provenance and volition.  The platform committed
+# in programs/cssn is what the compiler prints from it (compile.sh --check)
+# and the platform of the record of the cascade on CSSN.
 echo "--- CSSN contract, GSC's verdict, the platform ---"
 k_contract=$(bash "$CSSN_DIR/compile.sh" --check 2>&1; echo "exit $?")
 check "CSSN contract: GSC gives a verdict" "verdict: " "$k_contract"
-check "CSSN contract: syntactically grassroots with wards, befriend the act, child the mark and retired the leaving mark" "verdict: syntactically_grassroots_with_wards(befriend, \[child\], \[guardianship(child, identity, parent, parenting)\], \[relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))\], \[retired\])" "$k_contract"
+check "CSSN contract: syntactically grassroots with wards, meet the introductory act, child the mark, its guardianship" "verdict: syntactically_grassroots_with_wards(meet, \[child\], \[guardianship(child, identity, parent, parenting)\], " "$k_contract"
+check "CSSN contract: ... child_meet a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_meet, " "$k_contract"
+check "CSSN contract: ... child_meet_2 a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_meet_2, " "$k_contract"
+check "CSSN contract: ... retired the leaving mark" "verdict: syntactically_grassroots_with_wards(.*, \[retired\])$" "$k_contract"
 check_not "CSSN contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
 check_not "CSSN contract: it satisfies volition" "volition(" "$k_contract"
 check_not "CSSN contract: it is not malformed" "malformed(" "$k_contract"
 # The canonical CVA platform of the contract (vGLP a890465, Section 5.4, "Act schemas as local specifications": "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role"): child_close(r, p?, r[listed(*, n)] ; n), its listed role based at r, its first role, which does not guard, compiles, r the opener of the part p guards (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, items 1 and 5).
 check "CSSN contract: compiled to its canonical CVA platform, platform.vglp as the compiler prints it" "^platform.vglp: as printed$" "$k_contract"
 check "CSSN contract: compile.sh --check exits 0" "^exit 0$" "$k_contract"
-# CSSN, Section 5.1, "The program": compiled "with friend its introduction predicate".
-check "CSSN contract: compiled with friend its introduction predicate" "^introduction: introduction(friend)$" "$k_contract"
+# CSSN, Section 4.6.1, "The program": compiled "with knows its introduction predicate" (CSSN.glp, introduction_named(cssn, introduction(knows)), after GKK).
+check "CSSN contract: compiled with knows its introduction predicate" "^introduction: introduction(knows)$" "$k_contract"
 if cmp -s "$CSSN_DIR/platform.vglp" "$GLP_DIR/cascade/CSSN/platform.vglp"; then
     _check_pass "CSSN: platform.vglp is the platform of the recorded run of the cascade on CSSN"
 else
@@ -2448,31 +2447,55 @@ check_not "CSSN village: ... and is not stopped at the limit" "capped" "$k_v"
 check_not "CSSN village: no attempt refused, refused(P, Q, D) the notice (vGLP f0acbc1)" "refused(" "$k_v"
 # CSSN extends GSN, not GSNP (CSSN.md; Udi, 2026-10-20): a message is content received from a friend, received(x, p), or delivered in a group by its leader, received_in(x, a, n), and nobody signs.
 check_not "CSSN village: nobody signs, and no item or authored atom is written (CSSN extends GSN)" "propose(sign(\|item(\|authored(" "$k_v"
-# Act 1, coming into the contract (GSG:1; Wards:1, CSSN:1).
+# Act 1, coming into the contract (GKK:1, GKK:2; GnW:1, CSSN:1): the adults establish their identities and meet, Alice and Bob, Bob and Frank, and Bob and Grace, who then enter Dave and Eve together, an entering with two parents requiring that the two know each other; Carol enters with her parent Alice (CSSN, Section 4.6.3, act 1).
 k_shows "CSSN village act 1: alice, bob, grace and frank establish their identities" F "did(propose(establish(frank)))"
-k_shows "CSSN village act 1: carol enters with her parent alice, at alice" A "view([parenting(carol), friend(carol), identity]"
-k_shows "CSSN village act 1: ... and at carol, her phone answering yes" C "gave(enter(alice, carol), yes), view([identity, parent(alice), child, friend(alice)]"
-k_shows "CSSN village act 1: dave enters with bob and grace" D "view([identity, parent(bob), parent(grace), child, child, coparented, friend(bob), friend(grace)]"
+k_shows "CSSN village act 1: alice and bob meet (GKK:2), alice requesting" A "did(propose(meet(alice, bob)))"
+k_shows "CSSN village act 1: ... and bob approving" B "gave(meet(alice, bob), yes)"
+k_shows "CSSN village act 1: bob and frank meet, frank approving" F "gave(meet(bob, frank), yes)"
+k_shows "CSSN village act 1: bob and grace meet, grace approving" G "gave(meet(bob, grace), yes)"
+k_shows "CSSN village act 1: ... before they enter dave together, the two knowing each other" G "gave(meet(bob, grace), yes), view([knows(bob), identity], [bob, dave, eve]), gave(enter_2(bob, grace, dave), yes)"
+k_shows "CSSN village act 1: carol enters with her parent alice, at alice" A "view([parenting(carol), friend(carol), knows(carol), identity]"
+k_shows "CSSN village act 1: ... and at carol, her phone answering yes" C "gave(enter(alice, carol), yes), view([identity, parent(alice), child, friend(alice), knows(alice)]"
+k_shows "CSSN village act 1: dave enters with bob and grace" D "view([identity, parent(bob), parent(grace), child, child, coparented, friend(bob), friend(grace), knows(bob), knows(grace)]"
 k_shows "CSSN village act 1: ... and eve" E "gave(enter_2(bob, grace, eve), yes)"
 k_shows "CSSN village act 1: grace approves both" G "gave(enter_2(bob, grace, eve), yes)"
-# Act 2, adult friendships (GSG:2) and a direct message (GSN:1).
+# Act 2, adult friendships (GSG:1), a direct message (GSN:1) and the introductions (GKK:3): Bob introduces Frank to Alice, an act of Bob and Alice, and Alice to Frank, an act of Bob and Frank, and Alice befriends Frank (CSSN, Section 4.6.3, act 2).
 k_holds "CSSN village act 2: alice and bob are friends" B "friend(alice)"
-k_holds "CSSN village act 2: bob and frank" F "friend(bob)"
-k_holds "CSSN village act 2: alice and frank" F "friend(alice)"
 k_shows "CSSN village act 2: alice sends bob a message, which he holds as received from her" B "received(speech(utterance('Hello Bob'), alice), alice)"
-# Act 3, child friendships (Wards:2, CSSN:2).
-k_shows "CSSN village act 3: alice proposes carol and dave, naming bob" A "did(propose(child_befriend(carol, dave, alice, bob)))"
+k_holds "CSSN village act 2: bob and frank are friends" F "friend(bob)"
+k_shows "CSSN village act 2: bob introduces frank to alice (GKK:3)" B "did(propose(introduce(bob, alice, frank)))"
+k_shows "CSSN village act 2: ... an act of bob and alice, alice approving" A "gave(introduce(bob, alice, frank), yes)"
+k_holds "CSSN village act 2: ... after which alice knows frank" A "knows(frank)"
+k_shows "CSSN village act 2: bob introduces alice to frank" B "did(propose(introduce(bob, frank, alice)))"
+k_shows "CSSN village act 2: ... an act of bob and frank, frank approving" F "gave(introduce(bob, frank, alice), yes)"
+k_holds "CSSN village act 2: ... after which frank knows alice" F "knows(alice)"
+k_shows "CSSN village act 2: alice befriends frank" A "did(propose(befriend(alice, frank)))"
+k_holds "CSSN village act 2: ... and alice and frank are friends" F "friend(alice)"
+# Act 3, child meetings (GnW:2, CSSN:2; child_meet_2(r?, s?, p?, q?)) and child friendships (GnW:2, CSSN:3; child_befriend(r?, s?, p?, q?)).
+k_shows "CSSN village act 3: alice requests that carol and dave meet, naming bob" A "did(propose(child_meet_2(carol, dave, alice, bob)))"
+k_shows "CSSN village act 3: ... and bob approves" B "gave(child_meet_2(carol, dave, alice, bob), yes)"
+k_shows "CSSN village act 3: ... and carol" C "gave(child_meet_2(carol, dave, alice, bob), yes)"
+k_shows "CSSN village act 3: ... and dave, after which he knows carol" D "gave(child_meet_2(carol, dave, alice, bob), yes), view([knows(carol), "
+k_shows "CSSN village act 3: alice then proposes that carol and dave befriend, naming bob" A "did(propose(child_befriend(carol, dave, alice, bob)))"
 k_shows "CSSN village act 3: ... and bob approves" B "gave(child_befriend(carol, dave, alice, bob), yes)"
-k_shows "CSSN village act 3: the sibling case, bob both parents named" D "gave(child_befriend(dave, eve, bob, bob), yes)"
 k_shows "CSSN village act 3: carol and dave are friends" C "friend(dave)"
-k_holds "CSSN village act 3: ... dave and eve" E "friend(dave)"
-k_holds "CSSN village act 3: ... and carol and eve" E "friend(carol)"
-# Act 4, child-adult friendships.
-k_shows "CSSN village act 4: bob proposes dave and frank" B "did(propose(child_adult_befriend(dave, frank, bob)))"
-k_shows "CSSN village act 4: alice proposes carol and frank" A "did(propose(child_adult_befriend(carol, frank, alice)))"
+k_shows "CSSN village act 3: the sibling case, bob both parents named, dave and eve meeting" D "gave(child_meet_2(dave, eve, bob, bob), yes)"
+k_shows "CSSN village act 3: ... and then befriending" D "gave(child_befriend(dave, eve, bob, bob), yes)"
+k_holds "CSSN village act 3: ... dave and eve are friends" E "friend(dave)"
+k_shows "CSSN village act 3: alice requests that carol and eve meet, naming bob" A "did(propose(child_meet_2(carol, eve, alice, bob)))"
+k_shows "CSSN village act 3: ... then that they befriend" A "did(propose(child_befriend(carol, eve, alice, bob)))"
+k_holds "CSSN village act 3: ... and carol and eve are friends" E "friend(carol)"
+k_never "CSSN village act 3: a parent's state does not change by the child's meeting, alice never knowing dave" A "knows(dave)"
+# Act 4, child-adult meetings (CSSN:2; child_meet(r?, a?, p?)) and friendships (CSSN:3; child_adult_befriend(r?, a?, p?)).
+k_shows "CSSN village act 4: bob requests that dave and frank meet" B "did(propose(child_meet(dave, frank, bob)))"
+k_shows "CSSN village act 4: ... frank approving" F "gave(child_meet(dave, frank, bob), yes)"
+k_shows "CSSN village act 4: ... then that they befriend" B "did(propose(child_adult_befriend(dave, frank, bob)))"
+k_shows "CSSN village act 4: alice requests that carol and frank meet" A "did(propose(child_meet(carol, frank, alice)))"
+k_shows "CSSN village act 4: ... carol approving" C "gave(child_meet(carol, frank, alice), yes)"
+k_shows "CSSN village act 4: ... then that they befriend" A "did(propose(child_adult_befriend(carol, frank, alice)))"
 k_holds "CSSN village act 4: frank and dave are friends" F "friend(dave)"
 k_holds "CSSN village act 4: ... and frank and carol" F "friend(carol)"
-# Act 5, a child leader's group (GSN:2 to GSN:5, Wards:2).
+# Act 5, a child leader's group (GSN:2 to GSN:5, GnW:2, CSSN:6).
 k_shows "CSSN village act 5: carol creates kids_chat" C "member(dot(community(carol), $K_K))"
 k_shows "CSSN village act 5: carol invites dave, alice, bob and dave approving" B "gave(child_join_2(carol, dave, alice, bob, $K_K), yes)"
 k_shows "CSSN village act 5: ... and eve" C "listed(eve, $K_K)"
@@ -2486,7 +2509,7 @@ k_shows "CSSN village act 6: ... and carol, alice approving" A "gave(child_join(
 k_shows "CSSN village act 6: frank's post, delivered to dave" D "received_in(speech(utterance('Welcome to the study group'), frank), frank, $K_S)"
 k_shows "CSSN village act 6: dave's post, delivered to carol by frank" C "received_in(speech(utterance('Hi from Dave!'), dave), frank, $K_S)"
 k_shows "CSSN village act 6: carol's post, delivered to dave by frank" D "received_in(speech(utterance('Hi from Carol!'), carol), frank, $K_S)"
-# Act 7, parents ending (Wards:3).
+# Act 7, parents ending (GnW:3).
 k_shows "CSSN village act 7: grace ends dave's friendship with carol" G "did(propose(child_unfriend(dave, carol, grace)))"
 k_lacks "CSSN village act 7: ... at dave" D "friend(carol)"
 k_lacks "CSSN village act 7: ... and at carol" C "friend(dave)"
@@ -2499,12 +2522,16 @@ k_shows "CSSN village act 7: alice requests that kids_chat be closed, child_clos
 k_holds "CSSN village act 7: ... carol's machine proposes it on alice's request, and kids_chat is closed at carol" C "closed($K_K)"
 k_lacks "CSSN village act 7: ... carol's membership and her listing of herself ended in the one act" C "listed(carol, $K_K)"
 k_never "CSSN village act 7: ... alice's person is never asked on the close, her request her approval" A "gave(child_close"
-# Act 8, coming of age (CSSN:3).
+# Act 8, coming of age (CSSN:4): Eve, an adult, "meets Frank and befriends him, with no parent among the guards" (CSSN, Section 4.6.3, act 8).
 k_shows "CSSN village act 8: grace declares eve of age" G "did(propose(of_age_2(grace, bob, eve)))"
 k_lacks "CSSN village act 8: which ends grace's parenting of eve" G "parenting(eve)"
 k_lacks "CSSN village act 8: ... and bob's" B "parenting(eve)"
 k_lacks "CSSN village act 8: eve is an adult" E "child"
-k_holds "CSSN village act 8: eve befriends frank, with no parent among the guards" E "friend(frank)"
+k_shows "CSSN village act 8: eve meets frank (GKK:2), with no parent among the guards" E "did(propose(meet(eve, frank)))"
+k_shows "CSSN village act 8: ... frank approving" F "gave(meet(eve, frank), yes)"
+k_holds "CSSN village act 8: ... after which eve knows frank" E "knows(frank)"
+k_shows "CSSN village act 8: eve befriends frank" E "did(propose(befriend(eve, frank)))"
+k_holds "CSSN village act 8: ... and eve and frank are friends, with no parent among the guards" E "friend(frank)"
 k_holds "CSSN village act 8: eve and her parents remain friends" E "friend(bob), friend(grace)"
 k_never "CSSN village: a parent's state does not change by the child's acts" A "friend(dave)"
 
@@ -2579,7 +2606,7 @@ if _section N2; then
 # programs/currencies/coins/currency is the certified program --- the agent
 # coins_agent.vglp, its canonical compilation coins_agent.glp (emitted by glpc
 # :emit; the .vglp beside it is skipped by the loader while the .glp stands),
-# the mini-app entry coins/3 and the mini-app's own two plays --- and
+# the mini-app entry coins/3 and the mini-app's own three plays --- and
 # programs/currencies/coins adds the six-agent village market of the paper's Section 5,
 # which stands in for the super-app (the conversations) and the persons.  The
 # run needs the reduction limit raised.
@@ -2656,7 +2683,7 @@ check "Coins village: Eve's holdings" "tagged(eve, holdings(\[lot(charlie, 4), l
 check "Coins village: Frank's holdings" "tagged(frank, holdings(\[lot(diana, 7), lot(eve, 10), lot(frank, 5)\]))" "$n2_run"
 check "Coins village: five redemptions" "tagged(frank, redeemed(diana, frank))" "$n2_run"
 
-echo "--- The coins mini-app's own plays (play_mint, play_swap) ---"
+echo "--- The coins mini-app's own plays (play_mint, play_swap, play_same) ---"
 
 n2_pm=$("$REPL_RUN" <<HEREDOC
 $COINS/currency
@@ -2680,6 +2707,23 @@ HEREDOC
 check_not "Coins mini-app play_swap: no failed goal" "ERROR" "$n2_ps"
 check "Coins mini-app play_swap: the proposer's screen, her conversation opened and the swap done" "A = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\])" "$n2_ps"
 check "Coins mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\])" "$n2_ps"
+
+# A request that changes no state is not a transaction (GC, Definition 3.1:
+# Redeem with r != q, Swap with u != v or k != k'): a redemption of a bob-coin
+# against a bob-coin, and a swap of a lot for itself, are refused at the
+# bearer before anything is sent, the screen saying so; the holdings stay,
+# and the counterparty's screen shows nothing of either.
+n2_same=$("$REPL_RUN" <<HEREDOC
+$COINS/currency
+:limit 5000000
+play_same(A, B).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Coins mini-app play_same: no failed goal" "ERROR" "$n2_same"
+check "Coins mini-app play_same: the bearer's screen refuses the redemption of a coin against a coin of its own issuer, redeem_same, and the swap of a lot for itself, swap_same, and her holdings stay" "A = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\]), redeem_same(bob), swap_same(bob, bob, 2) | X[0-9]*\]$" "$n2_same"
+check "Coins mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | X[0-9]*\]$" "$n2_same"
 echo ""
 
 fi  # Section N2
@@ -2692,7 +2736,7 @@ if _section N3; then
 # bonds_agent.vglp, its canonical compilation bonds_agent.glp (emitted by glpc
 # :emit; the .vglp beside it is skipped by the loader while the .glp stands),
 # the mini-app entry bonds/3, the scripted person with the escrow programs it
-# answers by, and the mini-app's own two plays --- and programs/currencies/bonds
+# answers by, and the mini-app's own three plays --- and programs/currencies/bonds
 # adds the plays that stand in for the super-app, opening the conversations
 # between the parties who transact: the seven-party village market of the
 # paper's Section 7, the credit line of its Section 5, and the instruments of
@@ -2762,9 +2806,11 @@ check "Bonds village: a bond presented before its issuer's date reaches its matu
 check "Bonds village: and the bearer holds it back" "tagged(diana, not_mature(frank, 28))" "$n3_run"
 check "Bonds village: Bob's bonds mature by his own calendar" "tagged(bob, date_advanced(25))" "$n3_run"
 check "Bonds village: Advance is the next day, so the day before is logged too" "tagged(bob, date_advanced(24))" "$n3_run"
-check "Bonds village: the redemption takes back an immature bond" "tagged(frank, redeemed(diana, frank, 28))" "$n3_run"
-check "Bonds village: once mature by its issuer's date, the bond is redeemed as a coin is, against a coin its issuer holds (GB:5)" "tagged(diana, redeemed(frank, frank, now))" "$n3_run"
-check "Bonds village: ... the issuer taking the matured bond back and giving the coin" "tagged(frank, presented(diana, frank, now))" "$n3_run"
+check "Bonds village: the redemption takes back an immature bond, the bearer's screen naming the coin presented and the bond taken" "tagged(frank, redeemed(diana, now, frank, 28))" "$n3_run"
+check "Bonds village: ... and the issuer's screen naming them too" "tagged(diana, presented(frank, now, frank, 28))" "$n3_run"
+check "Bonds village: once mature by its issuer's date, the bond is redeemed as a coin is, against a coin its issuer holds (GB:5), the bearer's screen naming the bond presented, of day 28, and the coin taken" "tagged(diana, redeemed(frank, 28, frank, now))" "$n3_run"
+check "Bonds village: ... the issuer taking the matured bond back and giving the coin, its screen naming both" "tagged(frank, presented(diana, 28, frank, now))" "$n3_run"
+check_not "Bonds village: no redemption message without the due of the instrument presented" "redeemed([a-z]*, [a-z]*, [a-z0-9]*))\|presented([a-z]*, [a-z]*, [a-z0-9]*))" "$n3_run"
 check_not "Bonds village: no Mature act, a matured bond being redeemed (GB:5), so no matured( line is logged" "matured(\|matured_for(" "$n3_run"
 check_not "Bonds village: Redeem records no date warranty, so no warranty( line is logged" "warranty(" "$n3_run"
 check "Bonds village: the escrow agent's date reaches the release date" "tagged(escrow, date_advanced(30))" "$n3_run"
@@ -3003,7 +3049,7 @@ check "Bonds letter of credit: the seller is paid in the bank's coins" "tagged(a
 check "Bonds letter of credit: the bank holds the buyer's reimbursement bonds" "tagged(bank, holdings(\[lot(bob, 30, 10)\]))" "$n3_loc"
 check "Bonds letter of credit: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_loc"
 
-echo "--- The bonds mini-app's own plays (play_mint, play_swap) ---"
+echo "--- The bonds mini-app's own plays (play_mint, play_swap, play_same) ---"
 
 n3_pm=$("$REPL_RUN" <<HEREDOC
 $BONDSD
@@ -3027,6 +3073,23 @@ HEREDOC
 check_not "Bonds mini-app play_swap: no failed goal" "ERROR" "$n3_ps"
 check "Bonds mini-app play_swap: the proposer's screen, her conversation opened and her coins swapped for bonds" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 30, 2)\])" "$n3_ps"
 check "Bonds mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\])" "$n3_ps"
+
+# A request that changes no state determines no transaction (GB, Definition
+# def:gb-transactions and Appendix A): a redemption of a bond against a bond
+# of its own issuer and due, and a swap of a lot for the same lot, are refused
+# at the bearer before anything is sent, the screen saying so; the holdings
+# stay, and the counterparty's screen shows nothing of either.
+n3_same=$("$REPL_RUN" <<HEREDOC
+$BONDSD
+:limit 5000000
+play_same(A, B).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds mini-app play_same: no failed goal" "ERROR" "$n3_same"
+check "Bonds mini-app play_same: the bearer's screen refuses the redemption of a bond against a bond of its own issuer and due, redeem_same, and the swap of a lot for the same lot, swap_same, and her holdings stay" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 30, 2)\]), redeem_same(bob, 30), swap_same(bob, bob, 30, 2) | X[0-9]*\]$" "$n3_same"
+check "Bonds mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\]) | X[0-9]*\]$" "$n3_same"
 echo ""
 
 fi  # Section N3
@@ -4143,7 +4206,7 @@ check "CVA machine states: the social graph's atoms, identity, knows(Peer) and f
 check "CVA machine states: ... friend(bob) written as the contract writes it" "^atom_of(g(friend, \[p(V1)\]), shown(friend(V1?)))$" "$cva_sg_text"
 check "CVA machine states: the currency's atoms, GKK's identity and knows(Peer) and its own coin(Peer)" "^identity knows(Peer) coin(Peer) $" "$(cva_atom "$CVA/currency/platform.vglp")"
 check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place and a community name at a name term's" "^identity knows(Peer) friend(Peer) received(Speech, Peer) member(CName) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) received_in(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
-check "CVA machine states: GSNP's, a signed term a speech act" "^identity friend(Peer) item(Speech) authored(Speech) member(CName) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
+check "CVA machine states: GSNP's, on GKK, a signed term a speech act" "^identity knows(Peer) friend(Peer) item(Speech) authored(Speech) member(CName) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
 
 cva_friends_load=$("$REPL_RUN" <<HEREDOC
 $CVA/friends/
@@ -6542,11 +6605,11 @@ check_not "APPS gsn: no error" "Error" "$apps_gsn"
 check "APPS gsn network: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsn"
 check_not "APPS gsn network: ... and is not stopped at the limit" "capped" "$apps_gsn"
 
-# GSNP's app, programs/apps/gsnp: the same host on GSNP's platform, its wrapper the same file as GSG's; the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), five executions over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay (play_provenance): each establishes their identity; dan and eve, eve and carol, carol and bob, and bob and fay become friends, the second of each asked and answering yes; dan signs the item 'Flood on Main Street' (GSNP:1, Authorship), which records him its author, and sends it to eve in a message, which carries it as he signed it (GSN:1, Message), nobody asked; eve forwards it to carol, and carol to bob (GSNP:2, Forwarding), nobody asked, the item of forward(p, q, y) being y signed by p, so that bob holds it signed by dan, then by eve, then by carol (programs/gai/GSNP.glp, the schemas sign, message and forward).
+# GSNP's app, programs/apps/gsnp: the same host on GSNP's platform, its wrapper the same file as GSG's; the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), five executions over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay (play_provenance), on GSNP's contract on GKK (programs/gai/GSNP.glp at GLP 35c4211a): each establishes their identity; dan and eve, eve and carol, carol and bob, and bob and fay meet in person and then become friends, the second of each asked and answering yes to each (GKK:2, GSG:1); dan signs the item 'Flood on Main Street' (GSNP:1, Authorship), which records him its author, and sends it to eve in a message, which carries it as he signed it (GSN:1, Message), nobody asked; eve forwards it to carol, and carol to bob (GSNP:2, Forwarding), nobody asked, the item of forward(p, q, y) being y signed by p, so that bob holds it signed by dan, then by eve, then by carol (programs/gai/GSNP.glp, the schemas sign, message and forward).
 check "APPS gsnp: platform.vglp is what vGLP's compiler prints from GSNP.glp" "^gsnp/platform.vglp: as printed$" "$apps_print"
-# The request type proposes the guarded classes only: GSNP's thirteen schemas that mark a role, and not drop, deliver or deliver_own, unguarded.
+# The request type proposes the guarded classes only: GSNP's fifteen schemas that mark a role, and not drop, deliver or deliver_own, unguarded.
 apps_gsnp_proposal=$(awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$GLP_DIR/programs/apps/gsnp/platform.vglp")
-check "APPS gsnp: the request type proposes the guarded classes, not drop, deliver or deliver_own" "^establish(Peer) befriend(Peer, Peer) unfriend(Peer, Peer) sign(Peer, Speech) message(Peer, Peer, Speech) forward(Peer, Peer, Speech) create(Peer, Speech) join(Peer, Peer, Speech) leave(Peer, Peer, Speech) close(Peer, Speech) post_own(Peer, Speech, Speech) post(Peer, Peer, Speech, Speech) post_forward(Peer, Peer, Speech, Speech) $" "$apps_gsnp_proposal"
+check "APPS gsnp: the request type proposes the guarded classes, not drop, deliver or deliver_own" "^establish(Peer) meet(Peer, Peer) introduce(Peer, Peer, Peer) befriend(Peer, Peer) unfriend(Peer, Peer) sign(Peer, Speech) message(Peer, Peer, Speech) forward(Peer, Peer, Speech) create(Peer, Speech) join(Peer, Peer, Speech) leave(Peer, Peer, Speech) close(Peer, Speech) post_own(Peer, Speech, Speech) post(Peer, Peer, Speech, Speech) post_forward(Peer, Peer, Speech, Speech) $" "$apps_gsnp_proposal"
 if cmp -s "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$GLP_DIR/programs/apps/gsnp/miniapp.glp"; then
     _check_pass "APPS gsnp: miniapp.glp is the same file as GSG's app's"
 else
@@ -6564,11 +6627,11 @@ HEREDOC
 rm -rf "$APPS_ART"
 check "APPS gsnp: the mini-app's artefact is certified" "gsnp.glpw --- certified under" "$apps_gsnp"
 check "APPS gsnp loads" "Loaded program: .*programs/apps/gsnp$" "$apps_gsnp"
-apps_line "APPS gsnp provenance: dan's screen" "D = [view([], []), view([identity], []), view([identity], [eve]), view([friend(eve), identity], [eve]), view([item(speech(utterance('Flood on Main Street'), dan)), authored(speech(utterance('Flood on Main Street'), dan)), friend(eve), identity], [eve]) | _]" "$apps_gsnp"
-apps_line "APPS gsnp provenance: eve's screen" "E = [view([], []), view([identity], []), view([identity], [dan]), view([identity], [carol, dan]), gave(befriend(dan, eve), yes), view([friend(dan), identity], [carol, dan]), view([item(speech(utterance('Flood on Main Street'), dan)), friend(dan), identity], [carol, dan]), view([friend(carol), item(speech(utterance('Flood on Main Street'), dan)), friend(dan), identity], [carol, dan]) | _]" "$apps_gsnp"
-apps_line "APPS gsnp provenance: carol's screen" "C = [view([], []), view([identity], []), view([identity], [bob]), view([identity], [bob, eve]), gave(befriend(eve, carol), yes), view([friend(eve), identity], [bob, eve]), view([item(speech(speech(utterance('Flood on Main Street'), dan), eve)), friend(eve), identity], [bob, eve]), view([friend(bob), item(speech(speech(utterance('Flood on Main Street'), dan), eve)), friend(eve), identity], [bob, eve]) | _]" "$apps_gsnp"
-apps_line "APPS gsnp provenance: bob's screen" "B = [view([], []), view([identity], []), view([identity], [fay]), view([identity], [carol, fay]), gave(befriend(carol, bob), yes), view([friend(carol), identity], [carol, fay]), view([item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), identity], [carol, fay]), view([friend(fay), item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), identity], [carol, fay]) | _]" "$apps_gsnp"
-apps_line "APPS gsnp provenance: fay's screen" "F = [view([], []), view([identity], []), view([identity], [bob]), gave(befriend(bob, fay), yes), view([friend(bob), identity], [bob]) | _]" "$apps_gsnp"
+apps_line "APPS gsnp provenance: dan's screen" "D = [view([], []), view([identity], []), view([identity], [eve]), view([knows(eve), identity], [eve]), view([friend(eve), knows(eve), identity], [eve]), view([item(speech(utterance('Flood on Main Street'), dan)), authored(speech(utterance('Flood on Main Street'), dan)), friend(eve), knows(eve), identity], [eve]) | _]" "$apps_gsnp"
+apps_line "APPS gsnp provenance: eve's screen" "E = [view([], []), view([identity], []), view([identity], [dan]), view([identity], [carol, dan]), gave(meet(dan, eve), yes), view([knows(dan), identity], [carol, dan]), gave(befriend(dan, eve), yes), view([friend(dan), knows(dan), identity], [carol, dan]), view([item(speech(utterance('Flood on Main Street'), dan)), friend(dan), knows(dan), identity], [carol, dan]), view([knows(carol), item(speech(utterance('Flood on Main Street'), dan)), friend(dan), knows(dan), identity], [carol, dan]), view([friend(carol), knows(carol), item(speech(utterance('Flood on Main Street'), dan)), friend(dan), knows(dan), identity], [carol, dan]) | _]" "$apps_gsnp"
+apps_line "APPS gsnp provenance: carol's screen" "C = [view([], []), view([identity], []), view([identity], [bob]), view([identity], [bob, eve]), gave(meet(eve, carol), yes), view([knows(eve), identity], [bob, eve]), gave(befriend(eve, carol), yes), view([friend(eve), knows(eve), identity], [bob, eve]), view([item(speech(speech(utterance('Flood on Main Street'), dan), eve)), friend(eve), knows(eve), identity], [bob, eve]), view([knows(bob), item(speech(speech(utterance('Flood on Main Street'), dan), eve)), friend(eve), knows(eve), identity], [bob, eve]), view([friend(bob), knows(bob), item(speech(speech(utterance('Flood on Main Street'), dan), eve)), friend(eve), knows(eve), identity], [bob, eve]) | _]" "$apps_gsnp"
+apps_line "APPS gsnp provenance: bob's screen" "B = [view([], []), view([identity], []), view([identity], [fay]), view([identity], [carol, fay]), gave(meet(carol, bob), yes), view([knows(carol), identity], [carol, fay]), gave(befriend(carol, bob), yes), view([friend(carol), knows(carol), identity], [carol, fay]), view([item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay]), view([knows(fay), item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay]), view([friend(fay), knows(fay), item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay]) | _]" "$apps_gsnp"
+apps_line "APPS gsnp provenance: fay's screen" "F = [view([], []), view([identity], []), view([identity], [bob]), gave(meet(bob, fay), yes), view([knows(bob), identity], [bob]), gave(befriend(bob, fay), yes), view([friend(bob), knows(bob), identity], [bob]) | _]" "$apps_gsnp"
 check "APPS gsnp: dan signs the item by the key his request question shows" "own(\[D3, D4\], propose(sign(D3?, speech(utterance('Flood on Main Street'), D4?))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
 check "APPS gsnp: dan sends the item he authored to eve in a message, as he signed it" "own(\[D5, D6\], propose(message(D5?, eve, speech(utterance('Flood on Main Street'), D6?))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
 check "APPS gsnp: carol forwards to bob the item signed by dan and then by eve" "own(\[C3\], propose(forward(C3?, bob, speech(speech(utterance('Flood on Main Street'), dan), eve))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
@@ -6577,7 +6640,7 @@ check_not "APPS gsnp: no error" "Error" "$apps_gsnp"
 check "APPS gsnp provenance: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsnp"
 check_not "APPS gsnp provenance: ... and is not stopped at the limit" "capped" "$apps_gsnp"
 
-# GAI's app, programs/apps/gai: the same host on GAI's platform, its wrapper the same file as GSG's; the example of GAI's paper (Section 3.2, and Table "The components that change in the example"), on GAI's contract, GAI.glp at GLP 5744daec (programs/gai/GAI.glp; cascade/GAI/2026-10-19-8), three executions over three conversations, alice's with alf, alf's with bob and bob's with alice (play_agents): alice and bob establish their identities (GSG:1); alice signs the code of alf, 'The code of Alf' signed by acme_ltd, its developer (GSNP:1, GAI:1; sign(p? ; x)); alice enters her AI agent alf with it, which answers yes, and she is its principal and its friend, alf holding its attestation sgn(k, alice) (Wards:1, GAI:1, GAI:2; enter(p?, r? ; x)); alf proposes to befriend bob with its attestation, and bob and alice, its principal, are asked and answer yes (Wards:2, GAI:2; agent_befriend(r?, q?, p? ; y)), bob recording agent_of(alf, alice, y); alf signs the item 'Today's summary of the news' (GSNP:1) and sends it to bob by message (GSN:1; message(p?, q ; x)), nobody asked, bob holding it signed once, by alf; bob offers alice friendship and she answers yes (GSG:2); alice retires alf (GAI:4; retire(p?, r)), which ends their friendship, alf asked nothing and holding retired; and bob ends his friendship with alf (GSG:3; unfriend_p(p?, q), which requires at alf only identity), concurrent with the retire, alf a participant of both, the platform taking bob's first here: the play takes each act once its agent's screen shows what it waits on, and the paper's Table 2 is one run of the protocol, not an order the persons see (GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 3).  The final states are those of the paper's table after Unfriend: alice's friend bob, the code she signed and her retired AI agent alf; bob's friend alice, his record that alf is alice's AI agent with its attestation, and the item; alf retired, with no friend, its attestation and the item.
+# GAI's app, programs/apps/gai: the same host on GAI's platform, its wrapper the same file as GSG's; the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"), on GAI's contract on GKK, GAI.glp at GLP 9d736804 (programs/gai/GAI.glp), three executions over three conversations, alice's with alf, alf's with bob and bob's with alice (play_agents): alice and bob establish their identities (GKK:1); alice asks to meet bob in person and he answers yes (GKK:2; meet(p?, q?)); alice signs the code of alf, 'The code of Alf' signed by acme_ltd, its developer (GSNP:1, GAI:1; sign(p? ; x)); alice enters her AI agent alf with it, which answers yes, and she is its principal and its friend, the two knowing each other, alf holding its attestation sgn(k, alice) (GnW:1, GAI:1, GAI:2; enter(p?, r? ; x)); alf proposes to meet bob, presenting its attestation, and bob and alice, its principal, are asked and answer yes (GnW:2, GAI:2; agent_meet(r?, q?, p? ; y)), bob recording agent_of(alf, alice, y); alf, who knows bob by that meeting, proposes to befriend him, and bob and alice are asked and answer yes (GnW:2; agent_befriend(r?, q?, p?)); alf signs the item 'Today's summary of the news' (GSNP:1) and sends it to bob by message (GSN:1; message(p?, q ; x)), nobody asked, bob holding it signed once, by alf; bob offers alice friendship and she answers yes (GSG:1); alice retires alf (GAI:4; retire(p?, r)), which ends their friendship, alf asked nothing and holding retired; and bob ends his friendship with alf (GSG:2; unfriend_p(p?, q), which requires at alf only identity), concurrent with the retire, alf a participant of both, the platform taking bob's first here: the play takes each act once its agent's screen shows what it waits on, and the paper's Table 2 is one run of the protocol, not an order the persons see (GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 3).  The final states are those of the paper's table after Unfriend: alice's friend bob, the persons she knows, the code she signed and her retired AI agent alf; bob's friend alice, the agents he knows, his record that alf is alice's AI agent with its attestation, and the item; alf retired, with no friend, the agents it knows, its attestation and the item.
 check "APPS gai: platform.vglp is what vGLP's compiler prints from GAI.glp" "^gai/platform.vglp: as printed$" "$apps_print"
 if cmp -s "$GLP_DIR/programs/apps/gai/platform.vglp" "$GLP_DIR/cascade/GAI/platform.vglp"; then
     _check_pass "APPS gai: platform.vglp is the platform of the recorded run of the cascade on GAI"
@@ -6586,9 +6649,9 @@ else
 fi
 # The request type proposes the guarded classes: every schema of GAI marks a role.
 apps_gai_proposal=$(awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$GLP_DIR/programs/apps/gai/platform.vglp")
-check "APPS gai: the request type proposes the twelve classes, every schema marking a role" "^establish(Peer) befriend(Peer, Peer) unfriend_p(Peer, Peer) unfriend_q(Peer, Peer) enter(Peer, Peer, Speech) agent_befriend(Peer, Peer, Peer, Speech) agents_befriend(Peer, Peer, Peer, Peer, Speech, Speech) agent_unfriend(Peer, Peer, Peer) retire(Peer, Peer) sign(Peer, Speech) message(Peer, Peer, Speech) forward(Peer, Peer, Speech) $" "$apps_gai_proposal"
+check "APPS gai: the request type proposes the sixteen classes, every schema marking a role" "^establish(Peer) meet(Peer, Peer) introduce(Peer, Peer, Peer) befriend(Peer, Peer) unfriend_p(Peer, Peer) unfriend_q(Peer, Peer) enter(Peer, Peer, Speech) agent_meet(Peer, Peer, Peer, Speech) agents_meet(Peer, Peer, Peer, Peer, Speech, Speech) agent_befriend(Peer, Peer, Peer) agents_befriend(Peer, Peer, Peer, Peer) agent_unfriend(Peer, Peer, Peer) retire(Peer, Peer) sign(Peer, Speech) message(Peer, Peer, Speech) forward(Peer, Peer, Speech) $" "$apps_gai_proposal"
 check "APPS gai: the view writes the record of an AI agent, its principal and its attestation, agent_of(r, p, y)" "^atom_of(g(agent_of, \[p(V1), p(V2), s(V3)\]), shown(agent_of(V1?, V2?, V3?)))$" "$(cat "$GLP_DIR/programs/apps/gai/platform.vglp")"
-check "APPS gai: the types written again hold GAI's atoms" "^Atom      ::= identity ; retired ; friend(Peer) ; agent ; principal(Peer) ; principal_of(Peer) ; item(Speech) ; attestation(Speech) ; agent_of(Peer, Peer, Speech) ; retired_of(Peer) ; authored(Speech)\.$" "$(cat "$GLP_DIR/programs/apps/gai/self.glp")"
+check "APPS gai: the types written again hold GAI's atoms" "^Atom      ::= identity ; retired ; knows(Peer) ; agent ; friend(Peer) ; principal(Peer) ; principal_of(Peer) ; item(Speech) ; attestation(Speech) ; agent_of(Peer, Peer, Speech) ; retired_of(Peer) ; authored(Speech)\.$" "$(cat "$GLP_DIR/programs/apps/gai/self.glp")"
 if cmp -s "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$GLP_DIR/programs/apps/gai/miniapp.glp"; then
     _check_pass "APPS gai: miniapp.glp is the same file as GSG's app's"
 else
@@ -6606,12 +6669,14 @@ HEREDOC
 rm -rf "$APPS_ART"
 check "APPS gai: the mini-app's artefact is certified" "gai.glpw --- certified under" "$apps_gai"
 check "APPS gai loads" "Loaded program: .*programs/apps/gai$" "$apps_gai"
-apps_line "APPS gai agents: alice's screen, alf known before her identity is established, her Request and its Propose two transactions (vGLP f0acbc1)" "A = [view([], []), view([], [alf]), view([identity], [alf]), view([identity], [alf, bob]), view([item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), authored(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), identity], [alf, bob]), view([principal_of(alf), friend(alf), item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), authored(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), identity], [alf, bob]), gave(agent_befriend(alf, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), yes), gave(befriend(bob, alice), yes), view([friend(bob), principal_of(alf), friend(alf), item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), authored(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), identity], [alf, bob]), view([retired_of(alf), friend(bob), principal_of(alf), item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), authored(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), identity], [alf, bob]) | _]" "$apps_gai"
-apps_line "APPS gai agents: alf's screen" "R = [view([], []), view([], [alice]), gave(enter(alice, alf, speech(speech(utterance('The code of Alf'), acme_ltd), alice)), yes), view([identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice]), view([identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]), view([friend(bob), identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]), view([item(speech(utterance('Today\'s summary of the news'), alf)), authored(speech(utterance('Today\'s summary of the news'), alf)), friend(bob), identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]), view([item(speech(utterance('Today\'s summary of the news'), alf)), authored(speech(utterance('Today\'s summary of the news'), alf)), identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]), view([retired, item(speech(utterance('Today\'s summary of the news'), alf)), authored(speech(utterance('Today\'s summary of the news'), alf)), identity, agent, principal(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]) | _]" "$apps_gai"
-apps_line "APPS gai agents: bob's screen" "B = [view([], []), view([identity], []), view([identity], [alice]), view([identity], [alf, alice]), gave(agent_befriend(alf, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), yes), view([friend(alf), agent_of(alf, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), identity], [alf, alice]), view([item(speech(utterance('Today\'s summary of the news'), alf)), friend(alf), agent_of(alf, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), identity], [alf, alice]), view([friend(alice), item(speech(utterance('Today\'s summary of the news'), alf)), friend(alf), agent_of(alf, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), identity], [alf, alice]), view([friend(alice), item(speech(utterance('Today\'s summary of the news'), alf)), agent_of(alf, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), identity], [alf, alice]) | _]" "$apps_gai"
+apps_line "APPS gai agents: alice's screen, alf known before her identity is established, her Request and its Propose two transactions (vGLP f0acbc1)" "A = [view([], []), view([], [alf]), view([identity], [alf]), view([identity], [alf, bob]), view([knows(bob), identity], [alf, bob]), view([item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), authored(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), knows(bob), identity], [alf, bob]), view([principal_of(alf), friend(alf), knows(alf), item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), authored(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), knows(bob), identity], [alf, bob]), gave(agent_meet(alf, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), yes), gave(agent_befriend(alf, bob, alice), yes), gave(befriend(bob, alice), yes), view([friend(bob), principal_of(alf), friend(alf), knows(alf), item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), authored(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), knows(bob), identity], [alf, bob]), view([retired_of(alf), friend(bob), principal_of(alf), knows(alf), item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), authored(speech(speech(utterance('The code of Alf'), acme_ltd), alice)), knows(bob), identity], [alf, bob]) | _]" "$apps_gai"
+apps_line "APPS gai agents: alf's screen" "R = [view([], []), view([], [alice]), gave(enter(alice, alf, speech(speech(utterance('The code of Alf'), acme_ltd), alice)), yes), view([identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice]), view([identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]), view([knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]), view([friend(bob), knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]), view([item(speech(utterance('Today\'s summary of the news'), alf)), authored(speech(utterance('Today\'s summary of the news'), alf)), friend(bob), knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]), view([item(speech(utterance('Today\'s summary of the news'), alf)), authored(speech(utterance('Today\'s summary of the news'), alf)), knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]), view([retired, item(speech(utterance('Today\'s summary of the news'), alf)), authored(speech(utterance('Today\'s summary of the news'), alf)), knows(bob), identity, agent, principal(alice), knows(alice), attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))], [alice, bob]) | _]" "$apps_gai"
+apps_line "APPS gai agents: bob's screen" "B = [view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), view([knows(alice), identity], [alf, alice]), gave(agent_meet(alf, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), yes), view([knows(alf), agent_of(alf, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice]), gave(agent_befriend(alf, bob, alice), yes), view([friend(alf), knows(alf), agent_of(alf, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice]), view([item(speech(utterance('Today\'s summary of the news'), alf)), friend(alf), knows(alf), agent_of(alf, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice]), view([friend(alice), item(speech(utterance('Today\'s summary of the news'), alf)), friend(alf), knows(alf), agent_of(alf, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice]), view([friend(alice), item(speech(utterance('Today\'s summary of the news'), alf)), knows(alf), agent_of(alf, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice]) | _]" "$apps_gai"
 check "APPS gai: alice signs the code of alf, signed by its developer, by the key her request question shows" "own(\[A2, A3\], propose(sign(A2?, speech(speech(utterance('The code of Alf'), acme_ltd), A3?))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
 check "APPS gai: alice enters her AI agent alf with the code she signed, by the key her request question shows" "own(\[A4, A5\], propose(enter(A4?, alf, speech(speech(utterance('The code of Alf'), acme_ltd), A5?))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
-check "APPS gai: alf, its program, proposes to befriend bob with alice its principal and its attestation" "own(\[R1\], propose(agent_befriend(R1?, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alice asks to meet bob in person by the key her request question shows" "own(\[M1\], propose(meet(M1?, bob)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alf, its program, proposes to meet bob with alice its principal, presenting its attestation" "own(\[R0\], propose(agent_meet(R0?, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alf, its program, proposes to befriend bob with alice its principal" "own(\[R1\], propose(agent_befriend(R1?, bob, alice)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
 check "APPS gai: alf sends bob by message the item it signed" "own(\[R4, R5\], propose(message(R4?, bob, speech(utterance('Today.'s summary of the news'), R5?))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
 check "APPS gai: alice retires alf by the key her request question shows" "own(\[A6\], propose(retire(A6?, alf)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
 check "APPS gai: bob ends his friendship with alf, unfriend_p, by the key his request question shows" "own(\[B3\], propose(unfriend_p(B3?, alf)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
@@ -6675,18 +6740,18 @@ check "APPS gsnp on five smartphones: the mini-app's artefact is certified" "gsn
 check "APPS gsnp on five smartphones: the boot settles" "Boot settled: 5 agents (dan, eve, carol, bob, fay)" "$apps_gsnp_boot"
 check_not "APPS gsnp on five smartphones: no event stopped at the cap" "did not quiesce" "$apps_gsnp_boot"
 apps_same "APPS gsnp on five smartphones: dan's super-app lines" "[sg(connected(eve))]" "$(apps_person_sg dan "$apps_gsnp_boot")"
-apps_same "APPS gsnp on five smartphones: dan's screen" "[view([], []), view([identity], []), view([identity], [eve]), view([friend(eve), identity], [eve]), view([item(speech(utterance(Flood on Main Street), dan)), authored(speech(utterance(Flood on Main Street), dan)), friend(eve), identity], [eve])]" "$(apps_person_screen dan "$apps_gsnp_boot")"
+apps_same "APPS gsnp on five smartphones: dan's screen" "[view([], []), view([identity], []), view([identity], [eve]), view([knows(eve), identity], [eve]), view([friend(eve), knows(eve), identity], [eve]), view([item(speech(utterance(Flood on Main Street), dan)), authored(speech(utterance(Flood on Main Street), dan)), friend(eve), knows(eve), identity], [eve])]" "$(apps_person_screen dan "$apps_gsnp_boot")"
 apps_same "APPS gsnp on five smartphones: eve's super-app lines" "[sg(befriend(dan)), sg(connected(dan)), sg(connected(carol))]" "$(apps_person_sg eve "$apps_gsnp_boot")"
 # Eve's agent comes to know Dan and Carol on two isolates, either first, as the run interleaves them: both are correct runs (Code #12, 2026-10-20, as for carol).
-apps_same_either "APPS gsnp on five smartphones: eve's screen" "[view([], []), view([identity], []), view([identity], [dan]), view([identity], [carol, dan]), gave(befriend(dan, eve), yes), view([friend(dan), identity], [carol, dan]), view([item(speech(utterance(Flood on Main Street), dan)), friend(dan), identity], [carol, dan]), view([friend(carol), item(speech(utterance(Flood on Main Street), dan)), friend(dan), identity], [carol, dan])]" "[view([], []), view([identity], []), view([identity], [carol]), view([identity], [carol, dan]), gave(befriend(dan, eve), yes), view([friend(dan), identity], [carol, dan]), view([item(speech(utterance(Flood on Main Street), dan)), friend(dan), identity], [carol, dan]), view([friend(carol), item(speech(utterance(Flood on Main Street), dan)), friend(dan), identity], [carol, dan])]" "$(apps_person_screen eve "$apps_gsnp_boot")"
+apps_same_either "APPS gsnp on five smartphones: eve's screen" "[view([], []), view([identity], []), view([identity], [dan]), view([identity], [carol, dan]), gave(meet(dan, eve), yes), view([knows(dan), identity], [carol, dan]), gave(befriend(dan, eve), yes), view([friend(dan), knows(dan), identity], [carol, dan]), view([item(speech(utterance(Flood on Main Street), dan)), friend(dan), knows(dan), identity], [carol, dan]), view([knows(carol), item(speech(utterance(Flood on Main Street), dan)), friend(dan), knows(dan), identity], [carol, dan]), view([friend(carol), knows(carol), item(speech(utterance(Flood on Main Street), dan)), friend(dan), knows(dan), identity], [carol, dan])]" "[view([], []), view([identity], []), view([identity], [carol]), view([identity], [carol, dan]), gave(meet(dan, eve), yes), view([knows(dan), identity], [carol, dan]), gave(befriend(dan, eve), yes), view([friend(dan), knows(dan), identity], [carol, dan]), view([item(speech(utterance(Flood on Main Street), dan)), friend(dan), knows(dan), identity], [carol, dan]), view([knows(carol), item(speech(utterance(Flood on Main Street), dan)), friend(dan), knows(dan), identity], [carol, dan]), view([friend(carol), knows(carol), item(speech(utterance(Flood on Main Street), dan)), friend(dan), knows(dan), identity], [carol, dan])]" "$(apps_person_screen eve "$apps_gsnp_boot")"
 apps_same "APPS gsnp on five smartphones: carol's super-app lines" "[sg(befriend(eve)), sg(connected(eve)), sg(connected(bob))]" "$(apps_person_sg carol "$apps_gsnp_boot")"
 # Carol's agent comes to know Eve and Bob on two isolates, Eve first or Bob first, as the run interleaves them: both are correct runs (Code #12, 2026-10-20, the full suite at 864c8c4b drawing Bob first).
-apps_same_either "APPS gsnp on five smartphones: carol's screen" "[view([], []), view([identity], []), view([identity], [eve]), view([identity], [bob, eve]), gave(befriend(eve, carol), yes), view([friend(eve), identity], [bob, eve]), view([item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), identity], [bob, eve]), view([friend(bob), item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), identity], [bob, eve])]" "[view([], []), view([identity], []), view([identity], [bob]), view([identity], [bob, eve]), gave(befriend(eve, carol), yes), view([friend(eve), identity], [bob, eve]), view([item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), identity], [bob, eve]), view([friend(bob), item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), identity], [bob, eve])]" "$(apps_person_screen carol "$apps_gsnp_boot")"
+apps_same_either "APPS gsnp on five smartphones: carol's screen" "[view([], []), view([identity], []), view([identity], [eve]), view([identity], [bob, eve]), gave(meet(eve, carol), yes), view([knows(eve), identity], [bob, eve]), gave(befriend(eve, carol), yes), view([friend(eve), knows(eve), identity], [bob, eve]), view([item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), knows(eve), identity], [bob, eve]), view([knows(bob), item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), knows(eve), identity], [bob, eve]), view([friend(bob), knows(bob), item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), knows(eve), identity], [bob, eve])]" "[view([], []), view([identity], []), view([identity], [bob]), view([identity], [bob, eve]), gave(meet(eve, carol), yes), view([knows(eve), identity], [bob, eve]), gave(befriend(eve, carol), yes), view([friend(eve), knows(eve), identity], [bob, eve]), view([item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), knows(eve), identity], [bob, eve]), view([knows(bob), item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), knows(eve), identity], [bob, eve]), view([friend(bob), knows(bob), item(speech(speech(utterance(Flood on Main Street), dan), eve)), friend(eve), knows(eve), identity], [bob, eve])]" "$(apps_person_screen carol "$apps_gsnp_boot")"
 apps_same "APPS gsnp on five smartphones: bob's super-app lines" "[sg(befriend(carol)), sg(connected(carol)), sg(connected(fay))]" "$(apps_person_sg bob "$apps_gsnp_boot")"
 # Bob's agent comes to know Carol and Fay on two isolates, either first, as the run interleaves them: both are correct runs (Code #12, 2026-10-20, as for carol).
-apps_same_either "APPS gsnp on five smartphones: bob's screen" "[view([], []), view([identity], []), view([identity], [carol]), view([identity], [carol, fay]), gave(befriend(carol, bob), yes), view([friend(carol), identity], [carol, fay]), view([item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), identity], [carol, fay]), view([friend(fay), item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), identity], [carol, fay])]" "[view([], []), view([identity], []), view([identity], [fay]), view([identity], [carol, fay]), gave(befriend(carol, bob), yes), view([friend(carol), identity], [carol, fay]), view([item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), identity], [carol, fay]), view([friend(fay), item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), identity], [carol, fay])]" "$(apps_person_screen bob "$apps_gsnp_boot")"
+apps_same_either "APPS gsnp on five smartphones: bob's screen" "[view([], []), view([identity], []), view([identity], [carol]), view([identity], [carol, fay]), gave(meet(carol, bob), yes), view([knows(carol), identity], [carol, fay]), gave(befriend(carol, bob), yes), view([friend(carol), knows(carol), identity], [carol, fay]), view([item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay]), view([knows(fay), item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay]), view([friend(fay), knows(fay), item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay])]" "[view([], []), view([identity], []), view([identity], [fay]), view([identity], [carol, fay]), gave(meet(carol, bob), yes), view([knows(carol), identity], [carol, fay]), gave(befriend(carol, bob), yes), view([friend(carol), knows(carol), identity], [carol, fay]), view([item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay]), view([knows(fay), item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay]), view([friend(fay), knows(fay), item(speech(speech(speech(utterance(Flood on Main Street), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay])]" "$(apps_person_screen bob "$apps_gsnp_boot")"
 apps_same "APPS gsnp on five smartphones: fay's super-app lines" "[sg(befriend(bob)), sg(connected(bob))]" "$(apps_person_sg fay "$apps_gsnp_boot")"
-apps_same "APPS gsnp on five smartphones: fay's screen" "[view([], []), view([identity], []), view([identity], [bob]), gave(befriend(bob, fay), yes), view([friend(bob), identity], [bob])]" "$(apps_person_screen fay "$apps_gsnp_boot")"
+apps_same "APPS gsnp on five smartphones: fay's screen" "[view([], []), view([identity], []), view([identity], [bob]), gave(meet(bob, fay), yes), view([knows(bob), identity], [bob]), gave(befriend(bob, fay), yes), view([friend(bob), knows(bob), identity], [bob])]" "$(apps_person_screen fay "$apps_gsnp_boot")"
 
 # GAI's app on three smartphones (programs/apps/gai_boot.glp), alf, alice's AI agent, on a smartphone of its own: alice connects to alf, and once connected alf connects to bob and bob to alice; each pair befriends in the super-app's social graph; once connected to the next, each invites them to gai; and the steps of play_agents run over the three conversations.  Each agent's super-app lines, sg(...), and their mini-app screen are each held exactly, in order: the platform takes bob's unfriend_p before alice's retire here, as in play_agents.
 apps_gai_boot=$("$REPL_RUN" <<HEREDOC
@@ -6700,11 +6765,11 @@ check "APPS gai on three smartphones: the mini-app's artefact is certified" "gai
 check "APPS gai on three smartphones: the boot settles" "Boot settled: 3 agents (alice, alf, bob)" "$apps_gai_boot"
 check_not "APPS gai on three smartphones: no event stopped at the cap" "did not quiesce" "$apps_gai_boot"
 apps_same "APPS gai on three smartphones: alice's super-app lines" "[sg(connected(alf)), sg(befriend(bob)), sg(connected(bob))]" "$(apps_person_sg alice "$apps_gai_boot")"
-apps_same "APPS gai on three smartphones: alice's screen" "[view([], []), view([identity], []), view([identity], [alf]), view([item(speech(speech(utterance(The code of Alf), acme_ltd), alice)), authored(speech(speech(utterance(The code of Alf), acme_ltd), alice)), identity], [alf]), view([item(speech(speech(utterance(The code of Alf), acme_ltd), alice)), authored(speech(speech(utterance(The code of Alf), acme_ltd), alice)), identity], [alf, bob]), view([principal_of(alf), friend(alf), item(speech(speech(utterance(The code of Alf), acme_ltd), alice)), authored(speech(speech(utterance(The code of Alf), acme_ltd), alice)), identity], [alf, bob]), gave(agent_befriend(alf, bob, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), yes), gave(befriend(bob, alice), yes), view([friend(bob), principal_of(alf), friend(alf), item(speech(speech(utterance(The code of Alf), acme_ltd), alice)), authored(speech(speech(utterance(The code of Alf), acme_ltd), alice)), identity], [alf, bob]), view([retired_of(alf), friend(bob), principal_of(alf), item(speech(speech(utterance(The code of Alf), acme_ltd), alice)), authored(speech(speech(utterance(The code of Alf), acme_ltd), alice)), identity], [alf, bob])]" "$(apps_person_screen alice "$apps_gai_boot")"
+apps_same "APPS gai on three smartphones: alice's screen" "[view([], []), view([identity], []), view([identity], [alf]), view([identity], [alf, bob]), view([knows(bob), identity], [alf, bob]), view([item(speech(speech(utterance(The code of Alf), acme_ltd), alice)), authored(speech(speech(utterance(The code of Alf), acme_ltd), alice)), knows(bob), identity], [alf, bob]), view([principal_of(alf), friend(alf), knows(alf), item(speech(speech(utterance(The code of Alf), acme_ltd), alice)), authored(speech(speech(utterance(The code of Alf), acme_ltd), alice)), knows(bob), identity], [alf, bob]), gave(agent_meet(alf, bob, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), yes), gave(agent_befriend(alf, bob, alice), yes), gave(befriend(bob, alice), yes), view([friend(bob), principal_of(alf), friend(alf), knows(alf), item(speech(speech(utterance(The code of Alf), acme_ltd), alice)), authored(speech(speech(utterance(The code of Alf), acme_ltd), alice)), knows(bob), identity], [alf, bob]), view([retired_of(alf), friend(bob), principal_of(alf), knows(alf), item(speech(speech(utterance(The code of Alf), acme_ltd), alice)), authored(speech(speech(utterance(The code of Alf), acme_ltd), alice)), knows(bob), identity], [alf, bob])]" "$(apps_person_screen alice "$apps_gai_boot")"
 apps_same "APPS gai on three smartphones: alf's super-app lines" "[sg(befriend(alice)), sg(connected(alice)), sg(connected(bob))]" "$(apps_person_sg alf "$apps_gai_boot")"
-apps_same "APPS gai on three smartphones: alf's screen" "[view([], []), view([], [alice]), gave(enter(alice, alf, speech(speech(utterance(The code of Alf), acme_ltd), alice)), yes), view([identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice]), view([identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob]), view([friend(bob), identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob]), view([item(speech(utterance(Today's summary of the news), alf)), authored(speech(utterance(Today's summary of the news), alf)), friend(bob), identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob]), view([item(speech(utterance(Today's summary of the news), alf)), authored(speech(utterance(Today's summary of the news), alf)), identity, agent, principal(alice), friend(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob]), view([retired, item(speech(utterance(Today's summary of the news), alf)), authored(speech(utterance(Today's summary of the news), alf)), identity, agent, principal(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob])]" "$(apps_person_screen alf "$apps_gai_boot")"
+apps_same "APPS gai on three smartphones: alf's screen" "[view([], []), view([], [alice]), gave(enter(alice, alf, speech(speech(utterance(The code of Alf), acme_ltd), alice)), yes), view([identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice]), view([identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob]), view([knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob]), view([friend(bob), knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob]), view([item(speech(utterance(Today's summary of the news), alf)), authored(speech(utterance(Today's summary of the news), alf)), friend(bob), knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob]), view([item(speech(utterance(Today's summary of the news), alf)), authored(speech(utterance(Today's summary of the news), alf)), knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob]), view([retired, item(speech(utterance(Today's summary of the news), alf)), authored(speech(utterance(Today's summary of the news), alf)), knows(bob), identity, agent, principal(alice), knows(alice), attestation(speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice))], [alice, bob])]" "$(apps_person_screen alf "$apps_gai_boot")"
 apps_same "APPS gai on three smartphones: bob's super-app lines" "[sg(befriend(alf)), sg(connected(alf)), sg(connected(alice))]" "$(apps_person_sg bob "$apps_gai_boot")"
-apps_same "APPS gai on three smartphones: bob's screen" "[view([], []), view([identity], []), view([identity], [alice]), view([identity], [alf, alice]), gave(agent_befriend(alf, bob, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), yes), view([friend(alf), agent_of(alf, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), identity], [alf, alice]), view([item(speech(utterance(Today's summary of the news), alf)), friend(alf), agent_of(alf, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), identity], [alf, alice]), view([friend(alice), item(speech(utterance(Today's summary of the news), alf)), friend(alf), agent_of(alf, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), identity], [alf, alice]), view([friend(alice), item(speech(utterance(Today's summary of the news), alf)), agent_of(alf, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), identity], [alf, alice])]" "$(apps_person_screen bob "$apps_gai_boot")"
+apps_same "APPS gai on three smartphones: bob's screen" "[view([], []), view([identity], []), view([identity], [alice]), gave(meet(alice, bob), yes), view([knows(alice), identity], [alice]), view([knows(alice), identity], [alf, alice]), gave(agent_meet(alf, bob, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), yes), view([knows(alf), agent_of(alf, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice]), gave(agent_befriend(alf, bob, alice), yes), view([friend(alf), knows(alf), agent_of(alf, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice]), view([item(speech(utterance(Today's summary of the news), alf)), friend(alf), knows(alf), agent_of(alf, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice]), view([friend(alice), item(speech(utterance(Today's summary of the news), alf)), friend(alf), knows(alf), agent_of(alf, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice]), view([friend(alice), item(speech(utterance(Today's summary of the news), alf)), knows(alf), agent_of(alf, alice, speech(speech(speech(utterance(The code of Alf), acme_ltd), alice), alice)), knows(alice), identity], [alf, alice])]" "$(apps_person_screen bob "$apps_gai_boot")"
 
 echo ""
 
@@ -7325,7 +7390,7 @@ if _section CAS; then
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in gsg gsn gsnp gc cssn gfwc gai; do
+for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai; do
     cas_n=$(printf '%s' "$cas_c" | tr a-z A-Z)
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue

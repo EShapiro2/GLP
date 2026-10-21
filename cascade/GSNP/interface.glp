@@ -7,10 +7,10 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), sign('Peer', 'Speech'), message('Peer', 'Peer', 'Speech'), forward('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'List'('Peer'), 'Speech'), drop('Peer', 'Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), post_forward('Peer', 'Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Speech'), deliver_own('Peer', 'Peer', 'Speech', 'Speech')]),
-  type('Proposal', [establish('Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), sign('Peer', 'Speech'), message('Peer', 'Peer', 'Speech'), forward('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), post_forward('Peer', 'Peer', 'Speech', 'Speech')]),
+  type('Class', [establish('Peer'), meet('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), sign('Peer', 'Speech'), message('Peer', 'Peer', 'Speech'), forward('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'List'('Peer'), 'Speech'), drop('Peer', 'Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), post_forward('Peer', 'Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Speech'), deliver_own('Peer', 'Peer', 'Speech', 'Speech')]),
+  type('Proposal', [establish('Peer'), meet('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), sign('Peer', 'Speech'), message('Peer', 'Peer', 'Speech'), forward('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), post_forward('Peer', 'Peer', 'Speech', 'Speech')]),
   type('Request', [propose('Proposal'), known('Peer')]),
-  type('Atom', [identity, friend('Peer'), item('Speech'), authored('Speech'), member('CName'), listed('Peer', 'Speech'), closed('Speech'), posted('Speech', 'Speech'), delivered('Speech', 'Peer', 'Speech')]),
+  type('Atom', [identity, knows('Peer'), friend('Peer'), item('Speech'), authored('Speech'), member('CName'), listed('Peer', 'Speech'), closed('Speech'), posted('Speech', 'Speech'), delivered('Speech', 'Peer', 'Speech')]),
   type('Peer', ['Key']),
   type('Speech', [speech('Utterance', 'Peer')]),
   type('Utterance', [utterance('String'), 'Speech']),
@@ -814,6 +814,8 @@ interface([
   compiled(output_draw, 4),
   compiled(output_add, 3),
   compiled(join_proposal_establish_1, 2),
+  compiled(join_proposal_meet_2, 3),
+  compiled(join_proposal_introduce_3, 4),
   compiled(join_proposal_befriend_2, 3),
   compiled(join_proposal_unfriend_2, 3),
   compiled(join_utterance_utterance_1, 2),

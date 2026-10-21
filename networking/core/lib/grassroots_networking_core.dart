@@ -16,6 +16,7 @@ export 'src/models/rendezvous_server.dart';
 export 'src/protocol/protocol_handler.dart';
 export 'src/protocol/fragment_handler.dart';
 export 'src/protocol/message_transport.dart';
+export 'src/protocol/outbound_queue_store.dart';
 export 'src/session/noise_session_manager.dart';
 export 'src/session/platform_attestation.dart';
 export 'src/session/application_identity.dart';
