@@ -5531,8 +5531,8 @@ mb1=$("$REPL_RUN" <<HEREDOC
 HEREDOC
 2>&1)
 check "MB1 the boot settles with three agents" "Boot settled: 3 agents" "$mb1"
-check "MB1 the holder's assignment is held and reported, from the forwarding friend" "\[carol\] held(carol, _w(alice, [0-9]*), bob)" "$mb1"
-check "MB1 the anchor's incoming assignment is held and reported, from the holder" "\[alice\] held(alice, _w(alice, [0-9]*), carol)" "$mb1"
+check "MB1 the holder's assignment is held and reported, from the forwarding friend" "\[carol\] held(carol, '_w'(alice, [0-9]*), bob)" "$mb1"
+check "MB1 the anchor's incoming assignment is held and reported, from the holder" "\[alice\] held(alice, '_w'(alice, [0-9]*), carol)" "$mb1"
 check "MB1 both ends authorised, the value is delivered at the anchor" "\[alice\] delivered(hello_from_carol)" "$mb1"
 
 # MB2's artefact is a build output, ignored by git, written before the boot and
