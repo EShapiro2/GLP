@@ -1071,6 +1071,7 @@ void appsScreens(Screens screens) {
     final run = await _Run.start(tester, screens, 'gc');
     final alice = run.alice;
     final bob = run.bob;
+    // A coin is drawn by its issuer's name, Alice-coin, its hyphen the non-breaking hyphen, U+2011, so that no line breaks inside it (coinName).
 
     // Two tabs, Contacts and Coins: GC extends GKK and not GSG, so its request type offers meeting and no friendship, and it offers mint (GC:1); no group.
     for (final p in [alice, bob]) {
@@ -1099,7 +1100,7 @@ void appsScreens(Screens screens) {
     await run.top(alice);
     expect(run.control(alice, 'coin:alice'), findsOneWidget);
     expect(run.control(alice, 'no-coins'), findsNothing);
-    expect(run.texts(alice), containsAllInOrder(['Alice', 'Mint', 'Alice-coin']));
+    expect(run.texts(alice), containsAllInOrder(['Alice', 'Mint', 'Alice\u2011coin']));
     // Her own coin is not paid: pay(p?, q) pays a q-coin to q, whom p knows.
     expect(run.control(alice, 'pay:alice'), findsNothing);
     run.plain(alice);
@@ -1113,10 +1114,10 @@ void appsScreens(Screens screens) {
     // Alice asks Bob to swap her Alice-coin for his Bob-coin (GC:2): she composes "Swap an Alice-coin for a Bob-coin with Bob." and taps Swap, which proposes swap(alice, bob, alice, bob), in the order of swap's head, swap(p?, q? ; u, v), p giving a u-coin and taking a v-coin (programs/currencies/coins/GC.glp).
     await run.compose(alice, 'swap', ['coin(alice)', 'coin(bob)', 'bob']);
     expect(run.sentence(alice, 'swap'),
-        'Swap an Alice-coin for a Bob-coin with Bob.');
+        'Swap an Alice\u2011coin for a Bob\u2011coin with Bob.');
     await run.tap(alice, run.control(alice, 'submit:swap'));
     expect(run.sent(alice, 'swap'),
-        ['You asked to swap an Alice-coin for a Bob-coin with Bob.']);
+        ['You asked to swap an Alice\u2011coin for a Bob\u2011coin with Bob.']);
 
     // (b) Bob is asked at the top of his Coins tab: "Alice asks to swap an Alice-coin for a Bob-coin.", with Yes and No.
     final a = bob.approval;
@@ -1130,7 +1131,7 @@ void appsScreens(Screens screens) {
         findsOneWidget);
     await run.tab(bob, ScreenTab.coins);
     await run.top(bob);
-    const asks = 'Alice asks to swap an Alice-coin for a Bob-coin.';
+    const asks = 'Alice asks to swap an Alice\u2011coin for a Bob\u2011coin.';
     expect(run.textsOf(bob, a), [asks, 'Yes', 'No']);
     expect(run.tester.getTopLeft(run.on(bob, find.text(asks))).dy,
         lessThan(run.tester.getTopLeft(run.control(bob, 'name')).dy));
@@ -1148,7 +1149,7 @@ void appsScreens(Screens screens) {
     expect(run.control(bob, 'coin:alice'), findsOneWidget);
     expect(run.control(bob, 'coin:bob'), findsNothing);
     expect(run.control(bob, 'pay:alice'), findsOneWidget);
-    expect(run.texts(bob), containsAllInOrder(['Bob', 'Mint', 'Alice-coin', 'Pay']));
+    expect(run.texts(bob), containsAllInOrder(['Bob', 'Mint', 'Alice\u2011coin', 'Pay']));
     run.plain(bob);
     await run.shoot(bob, 'gc-c-bob-holdings.png');
 
@@ -1162,10 +1163,10 @@ void appsScreens(Screens screens) {
 
     // (d) Alice's Coins tab once she has paid: her request, "You asked to pay a Bob-coin to Bob.", and her holdings, none.
     await run.top(alice);
-    expect(run.sent(alice, 'pay'), ['You asked to pay a Bob-coin to Bob.']);
+    expect(run.sent(alice, 'pay'), ['You asked to pay a Bob\u2011coin to Bob.']);
     expect(run.control(alice, 'no-coins'), findsOneWidget);
     expect(run.texts(alice),
-        containsAllInOrder(['Alice', 'Mint', 'No coins', 'You asked to pay a Bob-coin to Bob.']));
+        containsAllInOrder(['Alice', 'Mint', 'No coins', 'You asked to pay a Bob\u2011coin to Bob.']));
     run.plain(alice);
     await run.shoot(alice, 'gc-d-alice-pay.png');
     run.finish();

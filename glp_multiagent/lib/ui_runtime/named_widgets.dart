@@ -28,8 +28,8 @@ String personName(GTerm p) => [
         if (w.isNotEmpty) '${w[0].toUpperCase()}${w.substring(1)}'
     ].join(' ');
 
-/// A coin issued by [u], `coin(u)`, by its issuer's name: "Alice-coin" (GC, programs/currencies/coins/GC.txt: "Alice-coin, a grassroots coin issued by Alice").
-String coinName(GTerm u) => '${personName(u)}-coin';
+/// A coin issued by [u], `coin(u)`, by its issuer's name: "Alice-coin" (GC, programs/currencies/coins/GC.txt: "Alice-coin, a grassroots coin issued by Alice"), its hyphen the non-breaking hyphen, U+2011, so that a line is not broken inside it.
+String coinName(GTerm u) => '${personName(u)}\u2011coin';
 
 /// [coinName] with its indefinite article: "an Alice-coin", "a Bob-coin".
 String aCoin(GTerm u) {
