@@ -4,7 +4,7 @@
 #
 #   bash programs/gsc/test_gsc.sh
 #
-# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its introductory act meet, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by definition:sg-agent-named (Appendix D.4), and GSNP, the social network with provenance, GAI's, carrying the signed term of GAI's extension of the language; the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp); CSSN's and GAI's contracts; each read from its owner's file, each schema listing its variables in its head (GSC 0228e79); and contracts of Section 3, over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, in the language of Appendix D, and a contract with a name term based on an agent variable, put to the two conditions on the text of Appendix D (Appendix D.3) and compiled by definition:compile; then the signed speech-act term, on GSNP and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then agent-named contracts with community roles (Appendix D.4), over GSNP, failing one clause of definition:sg-agent-named each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than Appendix D's Definition Role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Act schema, printed from a contract's term (notation.glp); then the numbers act schemas allow (GSC, Section 3.2, the paragraph after the example of def:schema), which the conditions do not concern, a number naming no agent: GB, the bonds, Currencies' (programs/currencies/bonds/GB.glp), its verdict, its displays and its notation, a contract with numbers certified, a number required and supplied and one forbidden and obstructed, and a fixture of each malformation the passage forbids.  The federation extension of act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20); GFWC's contract is still read from its owner's file.  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
+# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its introductory act meet, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by definition:sg-agent-named (Appendix D.4), and GSNP, the social network with provenance, GAI's, carrying the signed term of GAI's extension of the language; the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp); CSSN's and GAI's contracts; each read from its owner's file, each schema listing its variables in its head (GSC 0228e79); and contracts of Section 3, over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, in the language of Appendix D, and a contract with a name term based on an agent variable, put to the two conditions on the text of Appendix D (Appendix D.3) and compiled by definition:compile; then the signed speech-act term, on GSNP and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then agent-named contracts with community roles (Appendix D.4), over GSNP, failing one clause of definition:sg-agent-named each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than Appendix D's Definition Role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Act schema, printed from a contract's term (notation.glp); then the numbers act schemas allow (GSC, Section 3.2, the paragraph after the example of def:schema), which traceable provenance and volition do not concern, a number naming no agent: GB, the bonds, Currencies' (programs/currencies/bonds/GB.glp), its verdict, its displays and its notation, a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, and the cases whose answer rests on which numbers there are, which the paper does not say, unsettled --- and a fixture of each malformation the passage forbids.  The federation extension of act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20); GFWC's contract is still read from its owner's file.  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -1290,6 +1290,8 @@ check "GB's predicates all have traceable provenance, date naming no agent" \
       "E = [identity, knows, coin, bond, date]" "$out"
 check "GB's introductory act is meet, unobstructed" \
       "A = [intro_act(meet, unobstructed)," "$out"
+check "GB's swap_cc, obstructed by the knows it requires, deletes k coins, k its own numeric variable: whether its introduction may delete none rests on whether a multiplicity must be positive" \
+      "intro_act(swap_cc, obstructed([obstructed(swap_cc, 1, atom(knows, [role(2)]), unobtainable), unsettled(swap_cc, 1, atom(coin, [pvar(u)]), multiplicity)," "$out"
 # The displays of GB's schemas with numbers (GSC, Section 5, in the closest
 # form its notation gives: the constraint on a proviso line of its own, and a
 # multiplicity k\cdot A, as GB's paper writes it, a multiset with one
@@ -1330,21 +1332,55 @@ check_eq "GB's advance, guarded by no role, prints succ as t1 = t + 1" \
 check_eq "GB's twenty-one schemas print" "21" "$(printf '%s\n' "$gb_notation" | grep -c ' :$')"
 
 # The checker's fixtures with numbers (contracts.glp, "Numbers").  nm_bonds
-# is syntactically grassroots; nm_supplied is too, the number 5 meet
-# requires being added by score of arity one at its numeric variable k;
-# nm_blocked is not, the date(0) meet forbids being added by advance at its
-# numeric variable t1, which has Bob in no role: to the conditions every
-# number is one (README, "One thing to know about the reading").
+# is syntactically grassroots.  def:unobstructed asks that an atom be added
+# by a schema at a binding, which satisfies that schema's constraint (GSC,
+# Section 3.2), so a number is matched by equality there.  Clause 1:
+# nm_supplied's meet requires score(5), which score adds at the binding
+# sending k to 5, its constraint true; nm_admits's score adds it under
+# k > 3, which 5 satisfies; nm_excludes's does not, under k <= 4, which 5
+# fails; nm_other_number's score adds score(4), and 4 is not 5.  Clause 2:
+# nm_forbid_admits's meet forbids date(0), which set_date adds at the
+# binding sending t to 0, under t <= 3, set_date having Bob in no role;
+# nm_forbid_excludes's set_date adds it at no binding, under t > 3.  A
+# number of the introductory act is the introduction's to choose: in
+# nm_intro_var score adds score(n) whatever the number, and in
+# nm_intro_var_bounded where it is above 3, which the checker does not
+# choose.  nm_blocked's advance adds date(0) where t is -1, under
+# t1 = t + 1, and whether -1 is a number the paper does not say: unsettled.
 out=$(run "check_named(nm_bonds, V)." "traceable_of(nm_bonds, E)." \
           "check_named(nm_supplied, V)." "check_named(nm_blocked, V).")
 check "a contract with numbers, multiplicities and constraints of each kind is syntactically grassroots" \
       "V = syntactically_grassroots" "$(printf '%s\n' "$out" | grep 'V = ' | sed -n 1p)"
 check "its predicates all have traceable provenance, bond and date with numeric arguments" \
       "E = [identity, knows, bond, date, coin]" "$out"
-check "a number required at the introductory act is supplied by a schema of arity one adding a numeric variable" \
+check "a number required at the introductory act is supplied by a schema of arity one adding it at the binding sending its numeric variable to that number" \
       "V = syntactically_grassroots" "$(printf '%s\n' "$out" | grep 'V = ' | sed -n 2p)"
-check "a number forbidden at the introductory act is obstructed by a schema adding a numeric variable" \
-      "V = not_grassroots([obstructed(meet, 1, atom(date, [num(0)]), blocked_by(advance, 1, atom(date, [num(t1)])))])" "$out"
+check "a number forbidden at the introductory act, added only at a binding resting on whether -1 is a number, is unsettled" \
+      "V = unsettled([unsettled(meet, 1, atom(date, [num(0)]), added_by(advance, 1, atom(date, [num(t1)])))])" "$out"
+out=$(run "check_named(nm_admits, V)." "check_named(nm_excludes, V)." \
+          "check_named(nm_other_number, V)." "check_named(nm_forbid_admits, V)." \
+          "check_named(nm_forbid_excludes, V)." "check_named(nm_intro_var, V)." \
+          "check_named(nm_intro_var_bounded, V)." "compile_named(nm_blocked).")
+nmv() { printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n "$1p"; }
+check_eq "a required score(5) is supplied by a schema of arity one adding score(k) under a constraint that admits 5, k > 3" \
+         "V = syntactically_grassroots" "$(nmv 1)"
+check_eq "a required score(5) is not supplied by a schema of arity one adding score(k) under a constraint that excludes 5, k <= 4" \
+         "V = not_grassroots([obstructed(meet, 1, atom(score, [num(5)]), unobtainable), obstructed(meet, 2, atom(score, [num(5)]), unobtainable)])" "$(nmv 2)"
+check_eq "a required score(5) is not supplied by a schema adding score(4), a number matched by equality" \
+         "V = not_grassroots([obstructed(meet, 1, atom(score, [num(5)]), unobtainable), obstructed(meet, 2, atom(score, [num(5)]), unobtainable)])" "$(nmv 3)"
+check_eq "a forbidden date(0) is added by a schema adding date(t) under a constraint that admits 0, t <= 3, the other party in no role: obstructed" \
+         "V = not_grassroots([obstructed(meet, 1, atom(date, [num(0)]), blocked_by(set_date, 1, atom(date, [num(t)])))])" "$(nmv 4)"
+check_eq "a forbidden date(0) is added at no binding of a schema adding date(t) under a constraint that excludes 0, t > 3: unobstructed" \
+         "V = syntactically_grassroots" "$(nmv 5)"
+check_eq "a number of the introductory act required, supplied whatever number its introduction chooses" \
+         "V = syntactically_grassroots" "$(nmv 6)"
+check_eq "a number of the introductory act required, supplied where its introduction chooses a number above 3, which the checker does not choose: unsettled" \
+         "V = unsettled([unsettled(meet, 1, atom(score, [num(n)]), supplied_by(score, atom(score, [num(k)]))), unsettled(meet, 2, atom(score, [num(n)]), supplied_by(score, atom(score, [num(k)])))])" "$(nmv 7)"
+check "a contract whose numbers leave def:unobstructed unsettled is not compiled" \
+      "% not compiled: nm_blocked is not settled to be syntactically grassroots" "$(printf '%s\n' "$out" | tr '\n' ' ')"
+NMBL=$(run "contract_named(nm_blocked, C)." | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
+check "the introductory acts of a contract whose numbers leave meet unsettled say so" \
+      "A = [intro_act(meet, unsettled([unsettled(meet, 1, atom(date, [num(0)]), added_by(advance, 1, atom(date, [num(t1)])))]))]" "$(run "intro_acts($NMBL, A).")"
 nm_mint_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\mathit{bond}(\Alice,d)\},\\&\text{provided}\mathit{identity},\mathit{date}(t)\inc_{\Alice},\\&\text{provided}d>t\lord\le0,\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "nm_bonds's mint compiles its constraint, or as \\lor" \
          "$nm_mint_display" "$(compiled nm_bonds mint)"

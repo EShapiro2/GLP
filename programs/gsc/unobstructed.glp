@@ -6,7 +6,12 @@
 % person (prop:anonymity), so one pair stands for every pair, and the bindings
 % over it are finite: person(0) and person(1) take the two roles, each party
 % variable takes one of the two, and each speech-act variable a speech act of
-% its own.  intro_bindings enumerates them and keeps the introductions.
+% its own.  intro_bindings enumerates them and keeps the introductions.  The
+% numeric variables of the act (GSC, Section 3.2) are left to the
+% introduction to choose; the clauses are decided on the contract as written,
+% a number matched by equality at a binding satisfying its schema's
+% constraint, and where the numbers leave a clause unsettled the fault says
+% so (unsettled, below and self.glp).
 %
 % An agent-named contract (Appendix D.4, definition:sg-agent-named) is put to
 % the same definitions, with clause 1 of definition:sg-agent-named: the
@@ -142,172 +147,478 @@ intro_act_bindings(Sc, R?) :- ground(Sc?) |
     is_two_guarded(Sc?, A),
     iab1(A?, Sc?, R).
 
+
+% --- numbers (GSC, Section 3.2) ---------------------------------------------
+% "A schema may carry a constraint on its numeric variables, which every
+% binding satisfies, and an atom added or deleted may carry a multiplicity."
+% def:unobstructed asks of an atom that some schema add it at a binding, so
+% the binding satisfies that schema's constraint and the atom is in the
+% multiset it adds: its multiplicity is one or more there.  The two clauses
+% are decided on the contract as written, a number matched by equality
+% (match_num, self.glp).  The value of a numeric argument at a binding is
+% known(N), the number N; free, a variable the binding leaves free; or sym,
+% the number the introduction of the introductory act chooses, which the
+% checker does not choose (nfree, self.glp).  A constraint holds or fails as
+% the numbers the binding gives it decide: true holds, gt, le and succ hold or
+% fail on two numbers, or holds where one side holds and fails where both
+% fail.  One that rests on a variable the binding leaves free is unsettled:
+% whether some number satisfies it rests on which numbers there are, which
+% the paper does not say (Section 3.2).
+
+procedure num_v(Subst?, Arg?, NumV).
+num_v(_, num(X), known(X?)) :- number(X?) | true.
+num_v(S, num(X), R?) :- otherwise, ground(S?), ground(X?) |
+    subst_lookup(S?, num(X?), F),
+    num_v1(F?, R).
+num_v(_, A, sym) :- otherwise, ground(A?) | true.
+
+procedure num_v1(Found?, NumV).
+num_v1(bound(nval(N)), known(N?)).
+num_v1(bound(nfree(_)), sym).
+num_v1(free, free).
+num_v1(bound(V), sym) :- otherwise, ground(V?) | true.
+
+procedure tri_and(Tri?, Tri?, Tri).
+tri_and(no, _, no).
+tri_and(yes, T, T?).
+tri_and(unsettled, no, no).
+tri_and(unsettled, yes, unsettled).
+tri_and(unsettled, unsettled, unsettled).
+
+procedure tri_or(Tri?, Tri?, Tri).
+tri_or(yes, _, yes).
+tri_or(no, T, T?).
+tri_or(unsettled, yes, yes).
+tri_or(unsettled, no, unsettled).
+tri_or(unsettled, unsettled, unsettled).
+
+procedure ans_tri(Ans?, Tri).
+ans_tri(yes, yes).
+ans_tri(no, no).
+
+procedure tri_gt(NumV?, NumV?, Tri).
+tri_gt(known(X), known(Y), yes) :- X? > Y? | true.
+tri_gt(known(X), known(Y), no) :- X? =< Y? | true.
+tri_gt(_, _, unsettled) :- otherwise | true.
+
+procedure tri_le(NumV?, NumV?, Tri).
+tri_le(known(X), known(Y), yes) :- X? =< Y? | true.
+tri_le(known(X), known(Y), no) :- X? > Y? | true.
+tri_le(_, _, unsettled) :- otherwise | true.
+
+procedure tri_eq(Constant?, Constant?, Tri).
+tri_eq(X, Y, yes) :- X? =:= Y? | true.
+tri_eq(_, _, no) :- otherwise | true.
+
+% succ(X, Y) is Y = X + 1.
+procedure tri_succ(NumV?, NumV?, Tri).
+tri_succ(known(X), known(Y), R?) :- number(X?), number(Y?) |
+    Z := X? + 1,
+    tri_eq(Z?, Y?, R).
+tri_succ(_, _, unsettled) :- otherwise | true.
+
+% cons_holds(C, S, R): the constraint C at the binding S.
+procedure cons_holds(Constraint?, Subst?, Tri).
+cons_holds(true, _, yes).
+cons_holds(gt(A, B), S, R?) :- ground(A?), ground(B?), ground(S?) |
+    num_v(S?, A?, VA),
+    num_v(S?, B?, VB),
+    tri_gt(VA?, VB?, R).
+cons_holds(le(A, B), S, R?) :- ground(A?), ground(B?), ground(S?) |
+    num_v(S?, A?, VA),
+    num_v(S?, B?, VB),
+    tri_le(VA?, VB?, R).
+cons_holds(succ(A, B), S, R?) :- ground(A?), ground(B?), ground(S?) |
+    num_v(S?, A?, VA),
+    num_v(S?, B?, VB),
+    tri_succ(VA?, VB?, R).
+cons_holds(or(C1, C2), S, R?) :- ground(C1?), ground(C2?), ground(S?) |
+    cons_holds(C1?, S?, R1),
+    cons_holds(C2?, S?, R2),
+    tri_or(R1?, R2?, R).
+
+% mult_holds(M, S, C, R): the atom M carries no multiplicity, or one that is
+% one or more at the binding S.  A numeric variable S leaves free and the
+% constraint C does not mention can be sent to one; one C mentions is
+% unsettled, as a constraint resting on a free variable is.
+procedure mult_holds(Mult?, Subst?, Constraint?, Tri).
+mult_holds(atom(_, _), _, _, yes).
+mult_holds(times(K, _), S, C, R?) :- ground(K?), ground(S?), ground(C?) |
+    num_v(S?, K?, V),
+    ge_one(V?, K?, C?, R).
+
+procedure ge_one(NumV?, Arg?, Constraint?, Tri).
+ge_one(known(X), _, _, yes) :- X? >= 1 | true.
+ge_one(known(X), _, _, no) :- X? < 1 | true.
+ge_one(free, K, C, R?) :- ground(K?), ground(C?) |
+    constraint_args(C?, [], As),
+    args_member(As?, K?, In),
+    free_ge_one(In?, R).
+ge_one(_, _, _, unsettled) :- otherwise | true.
+
+procedure free_ge_one(Ans?, Tri).
+free_ge_one(no, yes).
+free_ge_one(yes, unsettled).
+
+% added_at(M, S, C, R): the binding S satisfies the constraint C of the
+% schema and adds the atom M, its multiplicity one or more.
+procedure added_at(Mult?, Subst?, Constraint?, Tri).
+added_at(M, S, C, R?) :- ground(M?), ground(S?), ground(C?) |
+    cons_holds(C?, S?, R1),
+    mult_holds(M?, S?, C?, R2),
+    tri_and(R1?, R2?, R).
+
+% A match resting on the introduction's choice of a number (maybe) settles
+% nothing but that the atoms do not match.
+procedure maybe_tri(Tri?, Tri).
+maybe_tri(no, no).
+maybe_tri(yes, unsettled).
+maybe_tri(unsettled, unsettled).
+
+procedure match_added(MatchRes?, Mult?, Constraint?, Tri).
+match_added(nomatch, _, _, no).
+match_added(match(S), M, C, R?) :- ground(S?), ground(M?), ground(C?) |
+    added_at(M?, S?, C?, R).
+match_added(maybe(S), M, C, R?) :- ground(S?), ground(M?), ground(C?) |
+    added_at(M?, S?, C?, R1),
+    maybe_tri(R1?, R).
+
 % --- clause 1 of def:unobstructed -----------------------------------------
 % The atom is added by a schema of arity one, guarded in its role and
-% requiring and forbidding nothing, at the binding sending its role to the
-% person in question; its role is an agent role and it has no name term
-% (definition:sg-agent-named, clause 1).
+% requiring and forbidding nothing, at a binding sending its role to the
+% person in question, which satisfies the schema's constraint: an atom the
+% schema adds equals it there, numbers included.  Its role is an agent role
+% and it has no name term (definition:sg-agent-named, clause 1).  The answer
+% is supplied, unsupplied, or supply_unsettled(Schema, Psi), the first atom
+% Psi of a schema whose supplying it the numbers leave unsettled, where no
+% schema supplies it.
 
-procedure unary_supplies1(RoleSpecs?, NameTerms?, GAtom?, Val?, Ans).
-unary_supplies1([rs(guarded, P, [], [], [])], [], G, V, R?) :-
-    ground(P?), ground(G?), ground(V?) |
-    some_match(P?, G?, [rs(guarded, P?, [], [], [])], [bind(role(1), V?)], R).
-unary_supplies1(Rs, _, _, _, no) :- otherwise, ground(Rs?) | true.
+procedure first_unsettled(Supply?, Constant?, Atom?, Supply).
+first_unsettled(unsupplied, Nm, Psi, supply_unsettled(Nm?, Psi?)).
+first_unsettled(supply_unsettled(N, P), _, _, supply_unsettled(N?, P?)).
+first_unsettled(supplied, _, _, supplied).
 
-procedure unary_supplies(Schema?, GAtom?, Val?, Ans).
-unary_supplies(Sc, G, V, R?) :- ground(Sc?), ground(G?), ground(V?) |
+procedure mults_supply1(Tri?, Atom?, Mults?, Constant?, RoleSpecs?, Constraint?, GAtom?, Val?, Supply?, Supply).
+mults_supply1(yes, _, _, _, _, _, _, _, _, supplied).
+mults_supply1(no, _, Ms, Nm, Rs, C, G, V, Acc, R?) :-
+    ground(Ms?), ground(Nm?), ground(Rs?), ground(C?), ground(G?), ground(V?), ground(Acc?) |
+    mults_supply(Ms?, Nm?, Rs?, C?, G?, V?, Acc?, R).
+mults_supply1(unsettled, Psi, Ms, Nm, Rs, C, G, V, Acc, R?) :-
+    ground(Psi?), ground(Ms?), ground(Nm?), ground(Rs?), ground(C?), ground(G?),
+    ground(V?), ground(Acc?) |
+    first_unsettled(Acc?, Nm?, Psi?, Acc1),
+    mults_supply(Ms?, Nm?, Rs?, C?, G?, V?, Acc1?, R).
+
+procedure mult_supply(Atom?, Mult?, Mults?, Constant?, RoleSpecs?, Constraint?, GAtom?, Val?, Supply?, Supply).
+mult_supply(Psi, M, Ms, Nm, Rs, C, G, V, Acc, R?) :-
+    ground(Psi?), ground(M?), ground(Ms?), ground(Nm?), ground(Rs?), ground(C?),
+    ground(G?), ground(V?), ground(Acc?) |
+    match_atom(Psi?, G?, Rs?, [bind(role(1), V?)], MR),
+    match_added(MR?, M?, C?, T),
+    mults_supply1(T?, Psi?, Ms?, Nm?, Rs?, C?, G?, V?, Acc?, R).
+
+procedure mults_supply(Mults?, Constant?, RoleSpecs?, Constraint?, GAtom?, Val?, Supply?, Supply).
+mults_supply([], _, _, _, _, _, Acc, Acc?).
+mults_supply([M|Ms], Nm, Rs, C, G, V, Acc, R?) :-
+    ground(M?), ground(Ms?), ground(Nm?), ground(Rs?), ground(C?), ground(G?),
+    ground(V?), ground(Acc?) |
+    plain_mult(M?, Psi),
+    mult_supply(Psi?, M?, Ms?, Nm?, Rs?, C?, G?, V?, Acc?, R).
+
+procedure unary_supplies1(RoleSpecs?, NameTerms?, NRoleSpecs?, Constant?, Constraint?, GAtom?, Val?, Supply?, Supply).
+unary_supplies1([rs(guarded, P, [], [], [])], [], [rs(guarded, PM, [], [], [])], Nm, C, G, V, Acc, R?) :-
+    ground(P?), ground(PM?), ground(Nm?), ground(C?), ground(G?), ground(V?), ground(Acc?) |
+    mults_supply(PM?, Nm?, [rs(guarded, P?, [], [], [])], C?, G?, V?, Acc?, R).
+unary_supplies1(_, _, _, _, _, _, _, Acc, Acc?) :- otherwise | true.
+
+procedure unary_supplies0(Schema?, NSchema?, GAtom?, Val?, Supply?, Supply).
+unary_supplies0(Sc, NSc, G, V, Acc, R?) :-
+    ground(Sc?), ground(NSc?), ground(G?), ground(V?), ground(Acc?) |
     sch_roles(Sc?, Rs),
     sch_nts(Sc?, Ns),
-    unary_supplies1(Rs?, Ns?, G?, V?, R).
+    sch_name(Sc?, Nm),
+    nsch_roles(NSc?, NRs),
+    nsch_constraint(NSc?, C),
+    unary_supplies1(Rs?, Ns?, NRs?, Nm?, C?, G?, V?, Acc?, R).
 
-procedure obtainable1(Ans?, Contract?, GAtom?, Val?, Ans).
-obtainable1(yes, _, _, _, yes).
-obtainable1(no, Ss, G, V, R?) :- ground(Ss?), ground(G?), ground(V?) |
-    obtainable(Ss?, G?, V?, R).
+procedure unary_supplies(NSchema?, GAtom?, Val?, Supply?, Supply).
+unary_supplies(NSc, G, V, Acc, R?) :- ground(NSc?), ground(G?), ground(V?), ground(Acc?) |
+    plain_schema(NSc?, Sc),
+    unary_supplies0(Sc?, NSc?, G?, V?, Acc?, R).
 
-procedure obtainable(Contract?, GAtom?, Val?, Ans).
-obtainable([], _, _, no).
-obtainable([S|Ss], G, V, R?) :- ground(S?), ground(Ss?), ground(G?), ground(V?) |
-    unary_supplies(S?, G?, V?, A),
+procedure obtainable1(Supply?, NContract?, GAtom?, Val?, Supply).
+obtainable1(supplied, _, _, _, supplied).
+obtainable1(A, Ss, G, V, R?) :- otherwise, ground(A?), ground(Ss?), ground(G?), ground(V?) |
+    obtainable(Ss?, G?, V?, A?, R).
+
+procedure obtainable(NContract?, GAtom?, Val?, Supply?, Supply).
+obtainable([], _, _, Acc, Acc?).
+obtainable([S|Ss], G, V, Acc, R?) :- ground(S?), ground(Ss?), ground(G?), ground(V?), ground(Acc?) |
+    unary_supplies(S?, G?, V?, Acc?, A),
     obtainable1(A?, Ss?, G?, V?, R).
+
+% Whether the introductory act requires the atom at its introduction B: one
+% carrying no multiplicity it requires, and one carrying the multiplicity k
+% (an atom deleted) it requires where B sends k to one or more.  The number
+% of a numeric variable of the act is the introduction's to choose, and
+% whether it may choose none of the atom, a multiplicity below one, rests on
+% whether a multiplicity must be positive, which the paper does not say
+% (Section 3.2): unsettled.
+procedure req_cond(Mult?, Subst?, Tri).
+req_cond(atom(_, _), _, yes).
+req_cond(times(K, _), B, R?) :- ground(K?), ground(B?) |
+    num_v(B?, K?, V),
+    req_cond1(V?, R).
+
+procedure req_cond1(NumV?, Tri).
+req_cond1(known(X), yes) :- X? >= 1 | true.
+req_cond1(known(X), no) :- X? < 1 | true.
+req_cond1(_, unsettled) :- otherwise | true.
+
+procedure req_fault(Tri?, Supply?, Constant?, Integer?, Atom?, Faults?, Faults).
+req_fault(no, _, _, _, _, T, T?).
+req_fault(yes, supplied, _, _, _, T, T?).
+req_fault(unsettled, supplied, _, _, _, T, T?).
+req_fault(yes, unsupplied, Nm, I, A, T, [obstructed(Nm?, I?, A?, unobtainable)|T?]).
+req_fault(unsettled, unsupplied, Nm, I, A, T, [unsettled(Nm?, I?, A?, multiplicity)|T?]).
+req_fault(yes, supply_unsettled(N2, P), Nm, I, A, T,
+          [unsettled(Nm?, I?, A?, supplied_by(N2?, P?))|T?]).
+req_fault(unsettled, supply_unsettled(N2, P), Nm, I, A, T,
+          [unsettled(Nm?, I?, A?, supplied_by(N2?, P?))|T?]).
+
+procedure unob_req1(Atom?, Mult?, Mults?, Val?, Integer?, Constant?, Subst?, NContract?, Faults).
+unob_req1(A, M, Ms, V, I, Nm, B, NC, R?) :-
+    ground(A?), ground(M?), ground(Ms?), ground(V?), integer(I?), ground(Nm?),
+    ground(B?), ground(NC?) |
+    apply_atom(B?, A?, G),
+    req_cond(M?, B?, Rq),
+    obtainable(NC?, G?, V?, unsupplied, Sp),
+    unob_req(Ms?, V?, I?, Nm?, B?, NC?, R1),
+    req_fault(Rq?, Sp?, Nm?, I?, A?, R1?, R).
+
+procedure unob_req(Mults?, Val?, Integer?, Constant?, Subst?, NContract?, Faults).
+unob_req([], _, _, _, _, _, []).
+unob_req([M|Ms], V, I, Nm, B, NC, R?) :-
+    ground(M?), ground(Ms?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(NC?) |
+    plain_mult(M?, A),
+    unob_req1(A?, M?, Ms?, V?, I?, Nm?, B?, NC?, R).
 
 % --- clause 2 of def:unobstructed -----------------------------------------
 % Every atom every schema adds is matched against the forbidden one at that
-% party; a match the clause does not excuse is the fault.  excused/4 is the
-% clause's two tests, both read off the completed binding: the other party of
-% the introduction holds a role, and the multiset added at the role in question
-% names it.
+% party, the number of a numeric argument by equality, and a match is a
+% binding adding it where it satisfies the schema's constraint and the
+% atom's multiplicity is one or more there (added_at).  A binding adding it
+% that the clause does not excuse is the fault.  excused/5 is the clause's
+% two tests, both read off the completed binding: the other party of the
+% introduction holds a role, and the multiset added at the role in question
+% names it.  Where the numbers leave it unsettled whether some binding adds
+% the atom, or whether that binding is excused, the answer is
+% block_unsettled(Schema, Role, Psi), unless another schema blocks it.
 
 procedure ctx_parts(Ctx?, Val, Integer).
 ctx_parts(ctx(O, N), O?, N?).
 
-procedure excused(Subst?, Atoms?, Val?, Ans).
-excused(S, Plus, O, R?) :- ground(S?), ground(Plus?), ground(O?) |
+% The multiplicity of an atom: one for an atom that carries none.
+procedure mult_of(Mult?, Arg).
+mult_of(atom(_, _), num(1)).
+mult_of(times(K, _), K?).
+
+% An atom naming the other party is added at every binding that adds the
+% forbidden one when it carries no multiplicity, or the multiplicity of the
+% forbidden one, or a number of one or more at the binding.
+procedure naming_mult(Mult?, Arg?, Subst?, Tri).
+naming_mult(atom(_, _), _, _, yes).
+naming_mult(times(K, _), Kf, _, yes) :- K? =?= Kf? | true.
+naming_mult(times(K, _), _, S, R?) :- otherwise, ground(K?), ground(S?) |
+    num_v(S?, K?, V),
+    req_cond1(V?, R).
+
+procedure naming_tri1(Ans?, Mult?, Arg?, Subst?, Tri).
+naming_tri1(no, _, _, _, no).
+naming_tri1(yes, M, Kf, S, R?) :- ground(M?), ground(Kf?), ground(S?) |
+    naming_mult(M?, Kf?, S?, R).
+
+procedure naming_tri(Mults?, Subst?, Val?, Arg?, Tri).
+naming_tri([], _, _, _, no).
+naming_tri([M|Ms], S, O, Kf, R?) :-
+    ground(M?), ground(Ms?), ground(S?), ground(O?), ground(Kf?) |
+    plain_mult(M?, A),
+    naming_tri2(A?, M?, Ms?, S?, O?, Kf?, R).
+
+procedure naming_tri2(Atom?, Mult?, Mults?, Subst?, Val?, Arg?, Tri).
+naming_tri2(A, M, Ms, S, O, Kf, R?) :-
+    ground(A?), ground(M?), ground(Ms?), ground(S?), ground(O?), ground(Kf?) |
+    apply_atom(S?, A?, G),
+    gatom_has(G?, O?, H),
+    naming_tri1(H?, M?, Kf?, S?, T1),
+    naming_tri(Ms?, S?, O?, Kf?, T2),
+    tri_or(T1?, T2?, R).
+
+procedure excused(Subst?, Mults?, Val?, Mult?, Tri).
+excused(S, Plus, O, M, R?) :- ground(S?), ground(Plus?), ground(O?), ground(M?) |
     subst_role_at(S?, O?, A1),
-    atoms_name(Plus?, S?, O?, A2),
-    both_yes(A1?, A2?, R).
+    ans_tri(A1?, T1),
+    mult_of(M?, Kf),
+    naming_tri(Plus?, S?, O?, Kf?, T2),
+    tri_and(T1?, T2?, R).
 
-procedure psi_block1(Ans?, Atom?, Atoms?, Atoms?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
-psi_block1(yes, _, Ps, Plus, J, Sc, Cx, G, P, R?) :-
-    ground(Ps?), ground(Plus?), integer(J?), ground(Sc?), ground(Cx?),
-    ground(G?), ground(P?) |
-    plus_blocks(Ps?, Plus?, J?, Sc?, Cx?, G?, P?, R).
-psi_block1(no, Psi, _, _, J, Sc, _, _, _, blocked(Nm?, J?, Psi?)) :-
-    ground(Psi?), integer(J?), ground(Sc?) |
-    sch_name(Sc?, Nm).
+% The match's subst, and whether it rests on the introduction's choice.
+procedure match_subst(MatchRes?, Subst).
+match_subst(match(S), S?).
+match_subst(maybe(S), S?).
+match_subst(nomatch, []).
 
-procedure psi_block(MatchRes?, Atom?, Atoms?, Atoms?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
-psi_block(nomatch, _, Ps, Plus, J, Sc, Cx, G, P, R?) :-
-    ground(Ps?), ground(Plus?), integer(J?), ground(Sc?), ground(Cx?),
-    ground(G?), ground(P?) |
-    plus_blocks(Ps?, Plus?, J?, Sc?, Cx?, G?, P?, R).
-psi_block(match(S), Psi, Ps, Plus, J, Sc, Cx, G, P, R?) :-
-    ground(S?), ground(Psi?), ground(Ps?), ground(Plus?), integer(J?),
-    ground(Sc?), ground(Cx?), ground(G?), ground(P?) |
+% block3(E, T, ...): E whether the binding is excused, T whether it adds the
+% forbidden atom (yes where settled).
+procedure block3(Tri?, Tri?, Constant?, Integer?, Atom?, Block?, Block).
+block3(yes, _, _, _, _, Acc, Acc?).
+block3(no, yes, Nm, J, Psi, _, blocked(Nm?, J?, Psi?)).
+block3(no, unsettled, Nm, J, Psi, Acc, R?) :- ground(Nm?), integer(J?), ground(Psi?), ground(Acc?) |
+    first_block_unsettled(Acc?, Nm?, J?, Psi?, R).
+block3(unsettled, _, Nm, J, Psi, Acc, R?) :- ground(Nm?), integer(J?), ground(Psi?), ground(Acc?) |
+    first_block_unsettled(Acc?, Nm?, J?, Psi?, R).
+block3(no, no, _, _, _, Acc, Acc?).
+
+procedure first_block_unsettled(Block?, Constant?, Integer?, Atom?, Block).
+first_block_unsettled(clear, Nm, J, Psi, block_unsettled(Nm?, J?, Psi?)).
+first_block_unsettled(block_unsettled(N, I, P), _, _, _, block_unsettled(N?, I?, P?)).
+first_block_unsettled(blocked(N, I, P), _, _, _, blocked(N?, I?, P?)).
+
+procedure block2(Tri?, MatchRes?, Mult?, Mults?, Integer?, Schema?, Constant?, Ctx?, Atom?, Block?, Block).
+block2(no, _, _, _, _, _, _, _, _, Acc, Acc?).
+block2(T, MR, M, Plus, J, Sc, Nm, Cx, Psi, Acc, R?) :-
+    otherwise, ground(T?), ground(MR?), ground(M?), ground(Plus?), integer(J?),
+    ground(Sc?), ground(Nm?), ground(Cx?), ground(Psi?), ground(Acc?) |
+    match_subst(MR?, S),
     ctx_parts(Cx?, O, N),
     complete(Sc?, S?, N?, S1),
-    excused(S1?, Plus?, O?, Ex),
-    psi_block1(Ex?, Psi?, Ps?, Plus?, J?, Sc?, Cx?, G?, P?, R).
+    excused(S1?, Plus?, O?, M?, E),
+    block3(E?, T?, Nm?, J?, Psi?, Acc?, R).
 
-procedure plus_blocks(Atoms?, Atoms?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
-plus_blocks([], _, _, _, _, _, _, clear).
-plus_blocks([Psi|Ps], Plus, J, Sc, Cx, G, P, R?) :-
-    ground(Psi?), ground(Ps?), ground(Plus?), integer(J?), ground(Sc?),
-    ground(Cx?), ground(G?), ground(P?) |
-    sch_roles(Sc?, Rs),
-    match_atom(Psi?, G?, Rs?, [bind(role(J?), P?)], M),
-    psi_block(M?, Psi?, Ps?, Plus?, J?, Sc?, Cx?, G?, P?, R).
+procedure plus_block1(Block?, Mults?, Mults?, Integer?, Schema?, RoleSpecs?, Constant?, Constraint?, Ctx?, GAtom?, Val?, Block).
+plus_block1(blocked(N, I, P), _, _, _, _, _, _, _, _, _, _, blocked(N?, I?, P?)).
+plus_block1(Acc, Ms, Plus, J, Sc, Rs, Nm, C, Cx, G, P, R?) :-
+    otherwise, ground(Acc?), ground(Ms?), ground(Plus?), integer(J?), ground(Sc?),
+    ground(Rs?), ground(Nm?), ground(C?), ground(Cx?), ground(G?), ground(P?) |
+    plus_blocks(Ms?, Plus?, J?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, Acc?, R).
 
-procedure role_blocks1(Block?, RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
-role_blocks1(clear, Rs, J, Sc, Cx, G, P, R?) :-
-    ground(Rs?), integer(J?), ground(Sc?), ground(Cx?), ground(G?), ground(P?) |
+procedure plus_block(Atom?, Mult?, Mults?, Mults?, Integer?, Schema?, RoleSpecs?, Constant?, Constraint?, Ctx?, GAtom?, Val?, Block?, Block).
+plus_block(Psi, M, Ms, Plus, J, Sc, Rs, Nm, C, Cx, G, P, Acc, R?) :-
+    ground(Psi?), ground(M?), ground(Ms?), ground(Plus?), integer(J?), ground(Sc?),
+    ground(Rs?), ground(Nm?), ground(C?), ground(Cx?), ground(G?), ground(P?), ground(Acc?) |
+    match_atom(Psi?, G?, Rs?, [bind(role(J?), P?)], MR),
+    plus_block_mr(MR?, Psi?, M?, Ms?, Plus?, J?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, Acc?, R).
+
+% The match is read twice, so it is taken ground in a head of its own.
+procedure plus_block_mr(MatchRes?, Atom?, Mult?, Mults?, Mults?, Integer?, Schema?, RoleSpecs?, Constant?, Constraint?, Ctx?, GAtom?, Val?, Block?, Block).
+plus_block_mr(MR, Psi, M, Ms, Plus, J, Sc, Rs, Nm, C, Cx, G, P, Acc, R?) :-
+    ground(MR?), ground(Psi?), ground(M?), ground(Ms?), ground(Plus?), integer(J?),
+    ground(Sc?), ground(Rs?), ground(Nm?), ground(C?), ground(Cx?), ground(G?),
+    ground(P?), ground(Acc?) |
+    match_added(MR?, M?, C?, T),
+    block2(T?, MR?, M?, Plus?, J?, Sc?, Nm?, Cx?, Psi?, Acc?, B),
+    plus_block1(B?, Ms?, Plus?, J?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, R).
+
+procedure plus_blocks(Mults?, Mults?, Integer?, Schema?, RoleSpecs?, Constant?, Constraint?, Ctx?, GAtom?, Val?, Block?, Block).
+plus_blocks([], _, _, _, _, _, _, _, _, _, Acc, Acc?).
+plus_blocks([M|Ms], Plus, J, Sc, Rs, Nm, C, Cx, G, P, Acc, R?) :-
+    ground(M?), ground(Ms?), ground(Plus?), integer(J?), ground(Sc?), ground(Rs?),
+    ground(Nm?), ground(C?), ground(Cx?), ground(G?), ground(P?), ground(Acc?) |
+    plain_mult(M?, Psi),
+    plus_block(Psi?, M?, Ms?, Plus?, J?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, Acc?, R).
+
+procedure n_is_party_role(NRoleSpec?, Ans).
+n_is_party_role(rs(_, _, _, _, _), yes).
+n_is_party_role(crs(_, _, _, _, _, _), no).
+
+procedure role_blocks1(Block?, NRoleSpecs?, Integer?, Schema?, RoleSpecs?, Constant?, Constraint?, Ctx?, GAtom?, Val?, Block).
+role_blocks1(blocked(N, I, P), _, _, _, _, _, _, _, _, _, blocked(N?, I?, P?)).
+role_blocks1(Acc, NRs, J, Sc, Rs, Nm, C, Cx, G, P, R?) :-
+    otherwise, ground(Acc?), ground(NRs?), integer(J?), ground(Sc?), ground(Rs?),
+    ground(Nm?), ground(C?), ground(Cx?), ground(G?), ground(P?) |
     J1 := J? + 1,
-    role_blocks(Rs?, J1?, Sc?, Cx?, G?, P?, R).
-role_blocks1(blocked(Nm, Jx, Psi), _, _, _, _, _, _, blocked(Nm?, Jx?, Psi?)).
+    role_blocks(NRs?, J1?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, Acc?, R).
 
 % A listed role adds at the agents of its extent, not at a person a binding
 % sends it to, and clause 2 of definition:sg-agent-named asks of it what this
 % clause asks of an agent role (listed_faults, below): it is passed by.
-procedure role_blocks(RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
-role_blocks([], _, _, _, _, _, clear).
-role_blocks([RS|Rs], J, Sc, Cx, G, P, R?) :-
-    ground(RS?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
-    ground(G?), ground(P?) |
-    is_party_role(RS?, A),
-    role_blocks2(A?, RS?, Rs?, J?, Sc?, Cx?, G?, P?, R).
+procedure role_blocks2(Ans?, NRoleSpec?, NRoleSpecs?, Integer?, Schema?, RoleSpecs?, Constant?, Constraint?, Ctx?, GAtom?, Val?, Block?, Block).
+role_blocks2(yes, NRS, NRs, J, Sc, Rs, Nm, C, Cx, G, P, Acc, R?) :-
+    ground(NRS?), ground(NRs?), integer(J?), ground(Sc?), ground(Rs?), ground(Nm?),
+    ground(C?), ground(Cx?), ground(G?), ground(P?), ground(Acc?) |
+    nrs_add(NRS?, Plus),
+    role_blocks_plus(Plus?, NRs?, J?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, Acc?, R).
+role_blocks2(no, _, NRs, J, Sc, Rs, Nm, C, Cx, G, P, Acc, R?) :-
+    ground(NRs?), integer(J?), ground(Sc?), ground(Rs?), ground(Nm?), ground(C?),
+    ground(Cx?), ground(G?), ground(P?), ground(Acc?) |
+    role_blocks1(Acc?, NRs?, J?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, R).
 
-procedure role_blocks2(Ans?, RoleSpec?, RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
-role_blocks2(yes, RS, Rs, J, Sc, Cx, G, P, R?) :-
-    ground(RS?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
-    ground(G?), ground(P?) |
-    rs_add(RS?, Plus),
-    role_blocks_plus(Plus?, Rs?, J?, Sc?, Cx?, G?, P?, R).
-role_blocks2(no, _, Rs, J, Sc, Cx, G, P, R?) :-
-    ground(Rs?), integer(J?), ground(Sc?), ground(Cx?), ground(G?), ground(P?) |
-    role_blocks1(clear, Rs?, J?, Sc?, Cx?, G?, P?, R).
+procedure role_blocks_plus(Mults?, NRoleSpecs?, Integer?, Schema?, RoleSpecs?, Constant?, Constraint?, Ctx?, GAtom?, Val?, Block?, Block).
+role_blocks_plus(Plus, NRs, J, Sc, Rs, Nm, C, Cx, G, P, Acc, R?) :-
+    ground(Plus?), ground(NRs?), integer(J?), ground(Sc?), ground(Rs?), ground(Nm?),
+    ground(C?), ground(Cx?), ground(G?), ground(P?), ground(Acc?) |
+    plus_blocks(Plus?, Plus?, J?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, Acc?, B),
+    role_blocks1(B?, NRs?, J?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, R).
 
-procedure role_blocks_plus(Atoms?, RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
-role_blocks_plus(Plus, Rs, J, Sc, Cx, G, P, R?) :-
-    ground(Plus?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
-    ground(G?), ground(P?) |
-    plus_blocks(Plus?, Plus?, J?, Sc?, Cx?, G?, P?, B),
-    role_blocks1(B?, Rs?, J?, Sc?, Cx?, G?, P?, R).
+procedure role_blocks(NRoleSpecs?, Integer?, Schema?, RoleSpecs?, Constant?, Constraint?, Ctx?, GAtom?, Val?, Block?, Block).
+role_blocks([], _, _, _, _, _, _, _, _, Acc, Acc?).
+role_blocks([NRS|NRs], J, Sc, Rs, Nm, C, Cx, G, P, Acc, R?) :-
+    ground(NRS?), ground(NRs?), integer(J?), ground(Sc?), ground(Rs?), ground(Nm?),
+    ground(C?), ground(Cx?), ground(G?), ground(P?), ground(Acc?) |
+    n_is_party_role(NRS?, A),
+    role_blocks2(A?, NRS?, NRs?, J?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, Acc?, R).
 
-procedure schema_blocks(Schema?, Ctx?, GAtom?, Val?, Block).
-schema_blocks(Sc, Cx, G, P, R?) :-
-    ground(Sc?), ground(Cx?), ground(G?), ground(P?) |
+procedure schema_blocks0(Schema?, NSchema?, Ctx?, GAtom?, Val?, Block?, Block).
+schema_blocks0(Sc, NSc, Cx, G, P, Acc, R?) :-
+    ground(Sc?), ground(NSc?), ground(Cx?), ground(G?), ground(P?), ground(Acc?) |
     sch_roles(Sc?, Rs),
-    role_blocks(Rs?, 1, Sc?, Cx?, G?, P?, R).
+    sch_name(Sc?, Nm),
+    nsch_roles(NSc?, NRs),
+    nsch_constraint(NSc?, C),
+    role_blocks(NRs?, 1, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, Acc?, R).
 
-procedure blocker1(Block?, Contract?, Ctx?, GAtom?, Val?, Block).
-blocker1(clear, Ss, Cx, G, P, R?) :-
-    ground(Ss?), ground(Cx?), ground(G?), ground(P?) |
-    blocker(Ss?, Cx?, G?, P?, R).
+procedure schema_blocks(NSchema?, Ctx?, GAtom?, Val?, Block?, Block).
+schema_blocks(NSc, Cx, G, P, Acc, R?) :-
+    ground(NSc?), ground(Cx?), ground(G?), ground(P?), ground(Acc?) |
+    plain_schema(NSc?, Sc),
+    schema_blocks0(Sc?, NSc?, Cx?, G?, P?, Acc?, R).
+
+procedure blocker1(Block?, NContract?, Ctx?, GAtom?, Val?, Block).
 blocker1(blocked(Nm, Jx, Psi), _, _, _, _, blocked(Nm?, Jx?, Psi?)).
+blocker1(Acc, Ss, Cx, G, P, R?) :-
+    otherwise, ground(Acc?), ground(Ss?), ground(Cx?), ground(G?), ground(P?) |
+    blocker(Ss?, Cx?, G?, P?, Acc?, R).
 
-procedure blocker(Contract?, Ctx?, GAtom?, Val?, Block).
-blocker([], _, _, _, clear).
-blocker([S|Ss], Cx, G, P, R?) :-
-    ground(S?), ground(Ss?), ground(Cx?), ground(G?), ground(P?) |
-    schema_blocks(S?, Cx?, G?, P?, B),
+procedure blocker(NContract?, Ctx?, GAtom?, Val?, Block?, Block).
+blocker([], _, _, _, Acc, Acc?).
+blocker([S|Ss], Cx, G, P, Acc, R?) :-
+    ground(S?), ground(Ss?), ground(Cx?), ground(G?), ground(P?), ground(Acc?) |
+    schema_blocks(S?, Cx?, G?, P?, Acc?, B),
     blocker1(B?, Ss?, Cx?, G?, P?, R).
 
-% --- def:unobstructed at one introduction ---------------------------------
+procedure forb_fault(Block?, Constant?, Integer?, Atom?, Faults?, Faults).
+forb_fault(clear, _, _, _, T, T?).
+forb_fault(blocked(Nm2, Jx, Psi), Nm, I, A, T,
+           [obstructed(Nm?, I?, A?, blocked_by(Nm2?, Jx?, Psi?))|T?]).
+forb_fault(block_unsettled(Nm2, Jx, Psi), Nm, I, A, T,
+           [unsettled(Nm?, I?, A?, added_by(Nm2?, Jx?, Psi?))|T?]).
 
-procedure unob_req1(Ans?, Atom?, Atoms?, Val?, Integer?, Constant?, Subst?, Contract?, Faults).
-unob_req1(yes, _, As, V, I, Nm, B, C, R?) :-
-    ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(C?) |
-    unob_req(As?, V?, I?, Nm?, B?, C?, R).
-unob_req1(no, A, As, V, I, Nm, B, C, [obstructed(Nm?, I?, A?, unobtainable)|R?]) :-
-    ground(A?), ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(C?) |
-    unob_req(As?, V?, I?, Nm?, B?, C?, R).
-
-procedure unob_req(Atoms?, Val?, Integer?, Constant?, Subst?, Contract?, Faults).
-unob_req([], _, _, _, _, _, []).
-unob_req([A|As], V, I, Nm, B, C, R?) :-
-    ground(A?), ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(C?) |
+procedure unob_forb1(Atom?, Mults?, Val?, Integer?, Constant?, Subst?, NContract?, Ctx?, Faults).
+unob_forb1(A, Ms, V, I, Nm, B, NC, Cx, R?) :-
+    ground(A?), ground(Ms?), ground(V?), integer(I?), ground(Nm?), ground(B?),
+    ground(NC?), ground(Cx?) |
     apply_atom(B?, A?, G),
-    obtainable(C?, G?, V?, Ok),
-    unob_req1(Ok?, A?, As?, V?, I?, Nm?, B?, C?, R).
+    blocker(NC?, Cx?, G?, V?, clear, Bl),
+    unob_forb(Ms?, V?, I?, Nm?, B?, NC?, Cx?, R1),
+    forb_fault(Bl?, Nm?, I?, A?, R1?, R).
 
-procedure unob_forb1(Block?, Atom?, Atoms?, Val?, Integer?, Constant?, Subst?, Contract?, Ctx?, Faults).
-unob_forb1(clear, _, As, V, I, Nm, B, C, Cx, R?) :-
-    ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(C?), ground(Cx?) |
-    unob_forb(As?, V?, I?, Nm?, B?, C?, Cx?, R).
-unob_forb1(blocked(Nm2, Jx, Psi), A, As, V, I, Nm, B, C, Cx,
-           [obstructed(Nm?, I?, A?, blocked_by(Nm2?, Jx?, Psi?))|R?]) :-
-    ground(A?), ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?),
-    ground(C?), ground(Cx?) |
-    unob_forb(As?, V?, I?, Nm?, B?, C?, Cx?, R).
-
-procedure unob_forb(Atoms?, Val?, Integer?, Constant?, Subst?, Contract?, Ctx?, Faults).
+procedure unob_forb(Mults?, Val?, Integer?, Constant?, Subst?, NContract?, Ctx?, Faults).
 unob_forb([], _, _, _, _, _, _, []).
-unob_forb([A|As], V, I, Nm, B, C, Cx, R?) :-
-    ground(A?), ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?),
-    ground(C?), ground(Cx?) |
-    apply_atom(B?, A?, G),
-    blocker(C?, Cx?, G?, V?, Bl),
-    unob_forb1(Bl?, A?, As?, V?, I?, Nm?, B?, C?, Cx?, R).
+unob_forb([M|Ms], V, I, Nm, B, NC, Cx, R?) :-
+    ground(M?), ground(Ms?), ground(V?), integer(I?), ground(Nm?), ground(B?),
+    ground(NC?), ground(Cx?) |
+    plain_mult(M?, A),
+    unob_forb1(A?, Ms?, V?, I?, Nm?, B?, NC?, Cx?, R).
 
 % --- clause 3 of def:unobstructed -----------------------------------------
 % The introductory act forbids at a role no atom of a reflexive predicate
@@ -319,38 +630,58 @@ refl_faults([A|As], I, Nm, [obstructed(Nm?, I?, A?, reflexive)|R?]) :-
     ground(As?), integer(I?), ground(Nm?) |
     refl_faults(As?, I?, Nm?, R).
 
+% The atoms as written that the role requires, those of a reflexive predicate
+% naming the role left out (refl_keep, self.glp, on the atoms).
+procedure n_refl_drop1(Ans?, Mult?, Mults?, Integer?, Preds?, Mults).
+n_refl_drop1(yes, _, Ms, I, Rf, R?) :- ground(Ms?), integer(I?), ground(Rf?) |
+    n_refl_drop(Ms?, I?, Rf?, R).
+n_refl_drop1(no, M, Ms, I, Rf, [M?|R?]) :- ground(Ms?), integer(I?), ground(Rf?) |
+    n_refl_drop(Ms?, I?, Rf?, R).
+
+procedure n_refl_drop2(Atom?, Mult?, Mults?, Integer?, Preds?, Mults).
+n_refl_drop2(A, M, Ms, I, Rf, R?) :- ground(A?), ground(Ms?), integer(I?), ground(Rf?) |
+    own_reflexive(A?, I?, Rf?, B),
+    n_refl_drop1(B?, M?, Ms?, I?, Rf?, R).
+
+procedure n_refl_drop(Mults?, Integer?, Preds?, Mults).
+n_refl_drop([], _, _, []).
+n_refl_drop([M|Ms], I, Rf, R?) :- ground(M?), ground(Ms?), integer(I?), ground(Rf?) |
+    plain_mult(M?, A),
+    n_refl_drop2(A?, M?, Ms?, I?, Rf?, R).
+
 % The person in the role is produced by the body, so the three clauses of
 % def:unobstructed are put to it through one call that can guard on it.
 % Clause 1 skips a required atom of a reflexive predicate naming the role.
-procedure unob_role1(Val?, Atoms?, Atoms?, Integer?, Constant?, Subst?, Contract?, Ctx?, Preds?, Faults).
-unob_role1(V, Req, Forb, I, Nm, B, C, Cx, Rf, R?) :-
+procedure unob_role1(Val?, Mults?, Mults?, Integer?, Constant?, Subst?, NContract?, Ctx?, Preds?, Faults).
+unob_role1(V, Req, Forb, I, Nm, B, NC, Cx, Rf, R?) :-
     ground(V?), ground(Req?), ground(Forb?), integer(I?), ground(Nm?),
-    ground(B?), ground(C?), ground(Cx?), ground(Rf?) |
-    refl_keep(Req?, I?, Rf?, no, Req1),
-    unob_req(Req1?, V?, I?, Nm?, B?, C?, F1),
-    unob_forb(Forb?, V?, I?, Nm?, B?, C?, Cx?, F2),
-    refl_keep(Forb?, I?, Rf?, yes, Own),
+    ground(B?), ground(NC?), ground(Cx?), ground(Rf?) |
+    n_refl_drop(Req?, I?, Rf?, Req1),
+    unob_req(Req1?, V?, I?, Nm?, B?, NC?, F1),
+    unob_forb(Forb?, V?, I?, Nm?, B?, NC?, Cx?, F2),
+    plain_mults(Forb?, ForbA),
+    refl_keep(ForbA?, I?, Rf?, yes, Own),
     refl_faults(Own?, I?, Nm?, F3),
     faults_app(F2?, F3?, F23),
     faults_app(F1?, F23?, R).
 
 % An introductory act has two roles (def:introduction), so the other role of
 % the one at I is 3 - I, and clause 2 is decided against the party there.
-procedure unob_roles(RoleSpecs?, Integer?, Constant?, Subst?, Contract?, Integer?, Preds?, Faults).
+procedure unob_roles(NRoleSpecs?, Integer?, Constant?, Subst?, NContract?, Integer?, Preds?, Faults).
 unob_roles([], _, _, _, _, _, _, []).
-unob_roles([RS|Rs], I, Nm, B, C, Fb, Rf, R?) :-
+unob_roles([RS|Rs], I, Nm, B, NC, Fb, Rf, R?) :-
     ground(RS?), ground(Rs?), integer(I?),
-    ground(Nm?), ground(B?), ground(C?), integer(Fb?), ground(Rf?) |
-    rs_del(RS?, M),
-    rs_keep(RS?, K),
-    rs_forb(RS?, N),
+    ground(Nm?), ground(B?), ground(NC?), integer(Fb?), ground(Rf?) |
+    nrs_del(RS?, M),
+    nrs_keep(RS?, K),
+    nrs_forb(RS?, N),
     apply_arg(B?, role(I?), V),
     O := 3 - I?,
     apply_arg(B?, role(O?), OV),
-    atoms_app(K?, M?, Req),
-    unob_role1(V?, Req?, N?, I?, Nm?, B?, C?, ctx(OV?, Fb?), Rf?, F1),
+    mults_app(K?, M?, Req),
+    unob_role1(V?, Req?, N?, I?, Nm?, B?, NC?, ctx(OV?, Fb?), Rf?, F1),
     I1 := I? + 1,
-    unob_roles(Rs?, I1?, Nm?, B?, C?, Fb?, Rf?, F2),
+    unob_roles(Rs?, I1?, Nm?, B?, NC?, Fb?, Rf?, F2),
     faults_app(F1?, F2?, R).
 
 % --- clause 2 of definition:sg-agent-named ---------------------------------
@@ -418,100 +749,230 @@ listed_faults([RS|Rs], I, Nm, C, R?) :-
     listed_faults(Rs?, I1?, Nm?, C?, R1),
     sh_forb(N?, C?, Nm?, I?, R1?, R).
 
-% unobstructed(Sc, B, C, Rf, Faults): the faults of def:unobstructed at the
-% introduction B, Rf being the predicates the contract declares reflexive,
-% then those of clause 2 of definition:sg-agent-named; empty when it
-% satisfies the clauses at every role.
-procedure unobstructed(Schema?, Subst?, Contract?, Preds?, Faults).
-unobstructed(Sc, B, C, Rf, R?) :- ground(Sc?), ground(B?), ground(C?), ground(Rf?) |
+
+% --- the numbers of an introduction ----------------------------------------
+% An introduction is a binding of the introductory act (def:introduction),
+% which satisfies the act's constraint, and under it some atom added at each
+% role names the other party: one carrying a multiplicity is added where the
+% multiplicity is one or more there (mult_holds).  intro_bindings enumerates
+% the assignments of the act's agent and speech-act variables, its numeric
+% variables left to the introduction to choose; intro_num asks the rest of
+% them: yes, no (then the assignment is no introduction), or unsettled.
+
+procedure names_tri3(Ans?, Mult?, Subst?, Constraint?, Tri).
+names_tri3(no, _, _, _, no).
+names_tri3(yes, M, B, C, R?) :- ground(M?), ground(B?), ground(C?) |
+    mult_holds(M?, B?, C?, R).
+
+procedure names_tri2(Atom?, Mult?, Mults?, Subst?, Val?, Constraint?, Tri).
+names_tri2(A, M, Ms, B, V, C, R?) :-
+    ground(A?), ground(M?), ground(Ms?), ground(B?), ground(V?), ground(C?) |
+    apply_atom(B?, A?, G),
+    gatom_has(G?, V?, H),
+    names_tri3(H?, M?, B?, C?, T1),
+    names_tri(Ms?, B?, V?, C?, T2),
+    tri_or(T1?, T2?, R).
+
+procedure names_tri(Mults?, Subst?, Val?, Constraint?, Tri).
+names_tri([], _, _, _, no).
+names_tri([M|Ms], B, V, C, R?) :-
+    ground(M?), ground(Ms?), ground(B?), ground(V?), ground(C?) |
+    plain_mult(M?, A),
+    names_tri2(A?, M?, Ms?, B?, V?, C?, R).
+
+procedure intro_num1(NRoleSpecs?, Constraint?, Subst?, Tri).
+intro_num1([NR1, NR2], C, B, R?) :- ground(NR1?), ground(NR2?), ground(C?), ground(B?) |
+    cons_holds(C?, B?, T0),
+    nrs_add(NR1?, P1),
+    nrs_add(NR2?, P2),
+    names_tri(P1?, B?, person(1), C?, T1),
+    names_tri(P2?, B?, person(0), C?, T2),
+    tri_and(T1?, T2?, T12),
+    tri_and(T0?, T12?, R).
+intro_num1(_, _, _, no) :- otherwise | true.
+
+procedure intro_num(NSchema?, Subst?, Tri).
+intro_num(NSc, B, R?) :- ground(NSc?), ground(B?) |
+    nsch_constraint(NSc?, C),
+    nsch_roles(NSc?, NRs),
+    intro_num1(NRs?, C?, B?, R).
+
+% unobstructed(Sc, NSc, B, NC, C, Rf, T, Faults): the faults of
+% def:unobstructed at the introduction B of the act Sc, written NSc, in the
+% contract written NC, its plain form C, Rf being the predicates the contract
+% declares reflexive, then those of clause 2 of definition:sg-agent-named;
+% empty when it satisfies the clauses at every role.  T is intro_num's
+% answer, yes or unsettled, and an unsettled one is the fault
+% unsettled_introduction(Act) before the others.
+procedure intro_fault(Tri?, Constant?, Faults?, Faults).
+intro_fault(yes, _, F, F?).
+intro_fault(unsettled, Nm, F, [unsettled_introduction(Nm?)|F?]).
+intro_fault(no, _, F, F?).
+
+procedure unobstructed(Schema?, NSchema?, Subst?, NContract?, Contract?, Preds?, Tri?, Faults).
+unobstructed(Sc, NSc, B, NC, C, Rf, T, R?) :-
+    ground(Sc?), ground(NSc?), ground(B?), ground(NC?), ground(C?), ground(Rf?), ground(T?) |
     sch_name(Sc?, Nm),
     sch_roles(Sc?, Rs),
+    nsch_roles(NSc?, NRs),
     fresh_base(Sc?, N),
-    unobstructed1(Rs?, Nm?, B?, C?, N?, Rf?, R).
+    unobstructed1(NRs?, Rs?, Nm?, B?, NC?, C?, N?, Rf?, F),
+    intro_fault(T?, Nm?, F?, R).
 
-procedure unobstructed1(RoleSpecs?, Constant?, Subst?, Contract?, Integer?, Preds?, Faults).
-unobstructed1(Rs, Nm, B, C, N, Rf, R?) :-
-    ground(Rs?), ground(Nm?), ground(B?), ground(C?), integer(N?), ground(Rf?) |
-    unob_roles(Rs?, 1, Nm?, B?, C?, N?, Rf?, F1),
+procedure unobstructed1(NRoleSpecs?, RoleSpecs?, Constant?, Subst?, NContract?, Contract?, Integer?, Preds?, Faults).
+unobstructed1(NRs, Rs, Nm, B, NC, C, N, Rf, R?) :-
+    ground(NRs?), ground(Rs?), ground(Nm?), ground(B?), ground(NC?), ground(C?),
+    integer(N?), ground(Rf?) |
+    unob_roles(NRs?, 1, Nm?, B?, NC?, N?, Rf?, F1),
     listed_faults(Rs?, 1, Nm?, C?, F2),
     faults_app(F1?, F2?, R).
 
 % --- def:syntactically-grassroots, first half ------------------------------
 % Some schema is an introductory act unobstructed at some introduction.  The
-% faults reported are those of the first introductory act at its first
-% failing introduction.
+% faults reported are those of the first introduction all of whose faults
+% the numbers leave unsettled, where there is one, and otherwise those of
+% the first introductory act at its first failing introduction.
 
 procedure note_cand(Cand?, Faults?, Cand).
 note_cand(none, F, some(F?)).
 note_cand(some(F), _, some(F?)).
 
-procedure intro_try1(Faults?, Substs?, Schema?, Contract?, Contract?, Preds?, Cand?, Faults).
-intro_try1([], _, _, _, _, _, _, []).
-intro_try1([F|Fs], Bs, S, Ss, C, Rf, Cd, R?) :-
-    ground(F?), ground(Fs?), ground(Bs?), ground(S?), ground(Ss?), ground(C?),
-    ground(Rf?), ground(Cd?) |
+procedure note_unsettled(Ans?, Cand?, Faults?, Cand).
+note_unsettled(yes, none, F, some(F?)).
+note_unsettled(yes, some(F), _, some(F?)).
+note_unsettled(no, Cu, _, Cu?).
+
+procedure scan_end(Cand?, Cand?, Faults).
+scan_end(some(F), _, F?).
+scan_end(none, some(F), F?).
+scan_end(none, none, [no_introductory_act]).
+
+procedure intro_try1(Faults?, Substs?, Schema?, NSchema?, NContract?, NContract?, Contract?, Preds?, Cand?, Cand?, Faults).
+intro_try1([], _, _, _, _, _, _, _, _, _, []).
+intro_try1([F|Fs], Bs, S, NS, NSs, NC, C, Rf, Cd, Cu, R?) :-
+    ground(F?), ground(Fs?), ground(Bs?), ground(S?), ground(NS?), ground(NSs?),
+    ground(NC?), ground(C?), ground(Rf?), ground(Cd?), ground(Cu?) |
+    all_unsettled([F?|Fs?], U),
     note_cand(Cd?, [F?|Fs?], Cd1),
-    intro_try(Bs?, S?, Ss?, C?, Rf?, Cd1?, R).
+    note_unsettled(U?, Cu?, [F?|Fs?], Cu1),
+    intro_try(Bs?, S?, NS?, NSs?, NC?, C?, Rf?, Cd1?, Cu1?, R).
 
-procedure intro_try(Substs?, Schema?, Contract?, Contract?, Preds?, Cand?, Faults).
-intro_try([], _, Ss, C, Rf, Cd, R?) :- ground(Ss?), ground(C?), ground(Rf?), ground(Cd?) |
-    intro_scan(Ss?, C?, Rf?, Cd?, R).
-intro_try([B|Bs], S, Ss, C, Rf, Cd, R?) :-
-    ground(B?), ground(Bs?), ground(S?), ground(Ss?), ground(C?), ground(Rf?), ground(Cd?) |
-    unobstructed(S?, B?, C?, Rf?, F),
-    intro_try1(F?, Bs?, S?, Ss?, C?, Rf?, Cd?, R).
+procedure intro_try_num(Tri?, Subst?, Substs?, Schema?, NSchema?, NContract?, NContract?, Contract?, Preds?, Cand?, Cand?, Faults).
+intro_try_num(no, _, Bs, S, NS, NSs, NC, C, Rf, Cd, Cu, R?) :-
+    ground(Bs?), ground(S?), ground(NS?), ground(NSs?), ground(NC?), ground(C?),
+    ground(Rf?), ground(Cd?), ground(Cu?) |
+    intro_try(Bs?, S?, NS?, NSs?, NC?, C?, Rf?, Cd?, Cu?, R).
+intro_try_num(T, B, Bs, S, NS, NSs, NC, C, Rf, Cd, Cu, R?) :-
+    otherwise, ground(T?), ground(B?), ground(Bs?), ground(S?), ground(NS?),
+    ground(NSs?), ground(NC?), ground(C?), ground(Rf?), ground(Cd?), ground(Cu?) |
+    unobstructed(S?, NS?, B?, NC?, C?, Rf?, T?, F),
+    intro_try1(F?, Bs?, S?, NS?, NSs?, NC?, C?, Rf?, Cd?, Cu?, R).
 
-procedure intro_scan(Contract?, Contract?, Preds?, Cand?, Faults).
-intro_scan([], _, _, none, [no_introductory_act]).
-intro_scan([], _, _, some(F), F?).
-intro_scan([S|Ss], C, Rf, Cd, R?) :-
-    ground(S?), ground(Ss?), ground(C?), ground(Rf?), ground(Cd?) |
+procedure intro_try(Substs?, Schema?, NSchema?, NContract?, NContract?, Contract?, Preds?, Cand?, Cand?, Faults).
+intro_try([], _, _, NSs, NC, C, Rf, Cd, Cu, R?) :-
+    ground(NSs?), ground(NC?), ground(C?), ground(Rf?), ground(Cd?), ground(Cu?) |
+    intro_scan(NSs?, NC?, C?, Rf?, Cd?, Cu?, R).
+intro_try([B|Bs], S, NS, NSs, NC, C, Rf, Cd, Cu, R?) :-
+    ground(B?), ground(Bs?), ground(S?), ground(NS?), ground(NSs?), ground(NC?),
+    ground(C?), ground(Rf?), ground(Cd?), ground(Cu?) |
+    intro_num(NS?, B?, T),
+    intro_try_num(T?, B?, Bs?, S?, NS?, NSs?, NC?, C?, Rf?, Cd?, Cu?, R).
+
+procedure intro_scan1(Schema?, NSchema?, NContract?, NContract?, Contract?, Preds?, Cand?, Cand?, Faults).
+intro_scan1(S, NS, NSs, NC, C, Rf, Cd, Cu, R?) :-
+    ground(S?), ground(NS?), ground(NSs?), ground(NC?), ground(C?), ground(Rf?),
+    ground(Cd?), ground(Cu?) |
     intro_act_bindings(S?, Bs),
-    intro_try(Bs?, S?, Ss?, C?, Rf?, Cd?, R).
+    intro_try(Bs?, S?, NS?, NSs?, NC?, C?, Rf?, Cd?, Cu?, R).
 
-% intro_result(C, Rf, Faults): Rf is the predicates C declares reflexive.
-exported procedure intro_result(Contract?, Preds?, Faults).
-intro_result(C, Rf, R?) :- ground(C?), ground(Rf?) | intro_scan(C?, C?, Rf?, none, R).
+procedure intro_scan(NContract?, NContract?, Contract?, Preds?, Cand?, Cand?, Faults).
+intro_scan([], _, _, _, Cd, Cu, R?) :- ground(Cd?), ground(Cu?) | scan_end(Cu?, Cd?, R).
+intro_scan([NS|NSs], NC, C, Rf, Cd, Cu, R?) :-
+    ground(NS?), ground(NSs?), ground(NC?), ground(C?), ground(Rf?), ground(Cd?), ground(Cu?) |
+    plain_schema(NS?, S),
+    intro_scan1(S?, NS?, NSs?, NC?, C?, Rf?, Cd?, Cu?, R).
+
+% intro_result(NC, Rf, Faults): NC is the contract as written, Rf the
+% predicates it declares reflexive.
+exported procedure intro_result(NContract?, Preds?, Faults).
+intro_result(NC, Rf, R?) :- ground(NC?), ground(Rf?) |
+    plain_contract(NC?, C),
+    intro_scan(NC?, NC?, C?, Rf?, none, none, R).
 
 % --- the introductory acts, for inspection ---------------------------------
 % Each schema of the contract that is an introductory act (def:introduction),
 % in the order of the contract: unobstructed where some introduction of it
 % meets def:unobstructed, with clause 2 of definition:sg-agent-named for an
-% agent-named contract, as intro_result decides it; obstructed(Faults)
-% otherwise, the faults of its first introduction, as intro_result reports
-% them for the first introductory act.
+% agent-named contract, as intro_result decides it; unsettled(Faults) where
+% none does and the numbers leave every fault of one unsettled, the faults of
+% the first such; obstructed(Faults) otherwise, the faults of its first
+% introduction, as intro_result reports them for the first introductory act.
 
-procedure ia_status1(Faults?, Substs?, Schema?, Contract?, Preds?, Cand?, IntroStatus).
-ia_status1([], _, _, _, _, _, unobstructed).
-ia_status1([F|Fs], Bs, S, C, Rf, Cd, R?) :-
-    ground(F?), ground(Fs?), ground(Bs?), ground(S?), ground(C?), ground(Rf?),
-    ground(Cd?) |
+IAS ::= ia(IntroStatus) ; ia_none.
+
+procedure ia_end(Cand?, Cand?, IAS).
+ia_end(some(F), _, ia(unsettled(F?))).
+ia_end(none, some(F), ia(obstructed(F?))).
+ia_end(none, none, ia_none).
+
+procedure ia_status1(Faults?, Substs?, Schema?, NSchema?, NContract?, Contract?, Preds?, Cand?, Cand?, IAS).
+ia_status1([], _, _, _, _, _, _, _, _, ia(unobstructed)).
+ia_status1([F|Fs], Bs, S, NS, NC, C, Rf, Cd, Cu, R?) :-
+    ground(F?), ground(Fs?), ground(Bs?), ground(S?), ground(NS?), ground(NC?),
+    ground(C?), ground(Rf?), ground(Cd?), ground(Cu?) |
+    all_unsettled([F?|Fs?], U),
     note_cand(Cd?, [F?|Fs?], Cd1),
-    ia_status(Bs?, S?, C?, Rf?, Cd1?, R).
+    note_unsettled(U?, Cu?, [F?|Fs?], Cu1),
+    ia_status(Bs?, S?, NS?, NC?, C?, Rf?, Cd1?, Cu1?, R).
 
-procedure ia_status(Substs?, Schema?, Contract?, Preds?, Cand?, IntroStatus).
-ia_status([], _, _, _, some(F), obstructed(F?)).
-ia_status([B|Bs], S, C, Rf, Cd, R?) :-
-    ground(B?), ground(Bs?), ground(S?), ground(C?), ground(Rf?), ground(Cd?) |
-    unobstructed(S?, B?, C?, Rf?, F),
-    ia_status1(F?, Bs?, S?, C?, Rf?, Cd?, R).
+procedure ia_status_num(Tri?, Subst?, Substs?, Schema?, NSchema?, NContract?, Contract?, Preds?, Cand?, Cand?, IAS).
+ia_status_num(no, _, Bs, S, NS, NC, C, Rf, Cd, Cu, R?) :-
+    ground(Bs?), ground(S?), ground(NS?), ground(NC?), ground(C?), ground(Rf?),
+    ground(Cd?), ground(Cu?) |
+    ia_status(Bs?, S?, NS?, NC?, C?, Rf?, Cd?, Cu?, R).
+ia_status_num(T, B, Bs, S, NS, NC, C, Rf, Cd, Cu, R?) :-
+    otherwise, ground(T?), ground(B?), ground(Bs?), ground(S?), ground(NS?),
+    ground(NC?), ground(C?), ground(Rf?), ground(Cd?), ground(Cu?) |
+    unobstructed(S?, NS?, B?, NC?, C?, Rf?, T?, F),
+    ia_status1(F?, Bs?, S?, NS?, NC?, C?, Rf?, Cd?, Cu?, R).
 
-% A schema with introductions is an introductory act, and is listed.
-procedure ia_add(Substs?, Schema?, Contract?, Preds?, IntroActs?, IntroActs).
-ia_add([], _, _, _, T, T?).
-ia_add([B|Bs], S, C, Rf, T, [intro_act(Nm?, St?)|T?]) :-
-    ground(B?), ground(Bs?), ground(S?), ground(C?), ground(Rf?) |
+procedure ia_status(Substs?, Schema?, NSchema?, NContract?, Contract?, Preds?, Cand?, Cand?, IAS).
+ia_status([], _, _, _, _, _, Cd, Cu, R?) :- ground(Cd?), ground(Cu?) | ia_end(Cu?, Cd?, R).
+ia_status([B|Bs], S, NS, NC, C, Rf, Cd, Cu, R?) :-
+    ground(B?), ground(Bs?), ground(S?), ground(NS?), ground(NC?), ground(C?),
+    ground(Rf?), ground(Cd?), ground(Cu?) |
+    intro_num(NS?, B?, T),
+    ia_status_num(T?, B?, Bs?, S?, NS?, NC?, C?, Rf?, Cd?, Cu?, R).
+
+% A schema with an introduction is an introductory act, and is listed.
+procedure ia_add1(IAS?, Constant?, IntroActs?, IntroActs).
+ia_add1(ia(St), Nm, T, [intro_act(Nm?, St?)|T?]).
+ia_add1(ia_none, _, T, T?).
+
+procedure ia_add(Substs?, Schema?, NSchema?, NContract?, Contract?, Preds?, IntroActs?, IntroActs).
+ia_add(Bs, S, NS, NC, C, Rf, T, R?) :-
+    ground(Bs?), ground(S?), ground(NS?), ground(NC?), ground(C?), ground(Rf?), ground(T?) |
     sch_name(S?, Nm),
-    ia_status([B?|Bs?], S?, C?, Rf?, none, St).
+    ia_status(Bs?, S?, NS?, NC?, C?, Rf?, none, none, St),
+    ia_add1(St?, Nm?, T?, R).
 
-procedure ia_scan(Contract?, Contract?, Preds?, IntroActs).
-ia_scan([], _, _, []).
-ia_scan([S|Ss], C, Rf, R?) :-
-    ground(S?), ground(Ss?), ground(C?), ground(Rf?) |
+procedure ia_scan1(Schema?, NSchema?, NContract?, NContract?, Contract?, Preds?, IntroActs).
+ia_scan1(S, NS, NSs, NC, C, Rf, R?) :-
+    ground(S?), ground(NS?), ground(NSs?), ground(NC?), ground(C?), ground(Rf?) |
     intro_act_bindings(S?, Bs),
-    ia_scan(Ss?, C?, Rf?, R1),
-    ia_add(Bs?, S?, C?, Rf?, R1?, R).
+    ia_scan(NSs?, NC?, C?, Rf?, R1),
+    ia_add(Bs?, S?, NS?, NC?, C?, Rf?, R1?, R).
 
-% intro_acts(C, Rf, Acts): Rf is the predicates C declares reflexive.
-exported procedure intro_acts(Contract?, Preds?, IntroActs).
-intro_acts(C, Rf, R?) :- ground(C?), ground(Rf?) | ia_scan(C?, C?, Rf?, R).
+procedure ia_scan(NContract?, NContract?, Contract?, Preds?, IntroActs).
+ia_scan([], _, _, _, []).
+ia_scan([NS|NSs], NC, C, Rf, R?) :-
+    ground(NS?), ground(NSs?), ground(NC?), ground(C?), ground(Rf?) |
+    plain_schema(NS?, S),
+    ia_scan1(S?, NS?, NSs?, NC?, C?, Rf?, R).
+
+% intro_acts(NC, Rf, Acts): NC is the contract as written, Rf the predicates
+% it declares reflexive.
+exported procedure intro_acts(NContract?, Preds?, IntroActs).
+intro_acts(NC, Rf, R?) :- ground(NC?), ground(Rf?) |
+    plain_contract(NC?, C),
+    ia_scan(NC?, NC?, C?, Rf?, R).
