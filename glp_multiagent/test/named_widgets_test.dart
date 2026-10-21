@@ -55,10 +55,10 @@ const _gsnJoin =
 const _gsnMessage =
     "form(message, [field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
 
-/// GAI's agent_befriend, `agent_befriend(r?, q?, p? ; y)` (programs/gai/GAI.glp),
-/// as programs/apps/gai/platform.vglp prints its Class.
+/// GAI's agent_befriend, `agent_befriend(r?, q?, p?)` (programs/gai/GAI.glp at
+/// GLP 9d736804), as programs/apps/gai/platform.vglp prints its Class.
 const _gaiAgentBefriend = "form(agent_befriend, [field('Peer', shown), "
-    "field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
+    "field('Peer', shown), field('Peer', shown)])";
 
 /// CSSN's child_befriend, `child_befriend(r?, s?, p?, q?)`
 /// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints its Class.
@@ -76,6 +76,40 @@ const _cssnEnter = "form(enter, [field('Peer', shown), field('Peer', shown)])";
 const _cssnEnter2 = "form(enter_2, [field('Peer', shown), "
     "field('Peer', shown), field('Peer', shown)])";
 
+/// GKK's meet and introduce, `meet(p?, q?)` and `introduce(p?, q? ; c)`
+/// (programs/gsc/GKK.glp), and CSSN's meetings of a child, `child_meet(r?,
+/// a?, p?)` and `child_meet_2(r?, s?, p?, q?)`, and joinings of a child,
+/// `child_join(a?, s?, p? ; n)` and `child_join_2(r?, s?, p?, q? ; n)`
+/// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints their
+/// Class.
+const _meet = "form(meet, [field('Peer', shown), field('Peer', shown)])";
+const _introduce = "form(introduce, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown)])";
+const _cssnChildMeet = "form(child_meet, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown)])";
+const _cssnChildMeet2 = "form(child_meet_2, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown), field('Peer', shown)])";
+const _cssnChildJoin = "form(child_join, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
+const _cssnChildJoin2 = "form(child_join_2, [field('Peer', shown), "
+    "field('Peer', shown), field('Peer', shown), field('Peer', shown), "
+    "field('Speech', $_speech)])";
+
+/// CSSN's classes these tests draw: child_befriend among them, by which the
+/// app is told CSSN's.
+const _cssnClasses = [
+  _meet,
+  _introduce,
+  _cssnChildMeet,
+  _cssnChildMeet2,
+  _cssnChildBefriend,
+  _cssnChildJoin,
+  _cssnChildJoin2,
+];
+
+/// The group kids_chat, led by Carol.
+const _kidsChat = 'speech(utterance(kids_chat), carol)';
+
 /// The last views of the agents asked: Bob, Dave's parent and Alice's friend;
 /// Carol, Alice's child; and Dave, Bob's child.
 const _bobParentOutput = '[view([friend(alice), parenting(dave), '
@@ -91,16 +125,24 @@ const _daveOutput = '[view([friend(bob), child, parent(bob), identity], '
 const _code = "speech(speech(utterance('The code of Alf'), acme_ltd), alice)";
 const _attestation = 'speech($_code, alice)';
 
-/// Alf, Alice's AI agent, asks to befriend Bob with its attestation.
+/// Alf, Alice's AI agent, asks to befriend Bob, the two knowing each other.
 const _agentBefriendView = 'approval(attempt(alf, 3, 3, agent_befriend(alf, '
-    'bob, alice, $_attestation), none), input([2]))';
+    'bob, alice), none), input([2]))';
 
 /// The last view Alice's agent wrote: she is Alf's principal and its friend.
 const _aliceOutput = '[view([principal_of(alf), friend(alf), item($_code), '
     'authored($_code), friend(bob), identity], [alf, bob])]';
 
-/// The last view Bob's agent wrote: he knows Alf and Alice, Alice his friend.
-const _bobOutput = '[view([friend(alice), identity], [alf, alice])]';
+/// The last view Bob's agent wrote: he knows Alf, by agent_meet, which recorded
+/// Alf, its principal Alice and its attestation, agent_of(alf, alice, y); and
+/// he knows Alice, his friend.
+const _bobOutput = '[view([knows(alf), agent_of(alf, alice, $_attestation), '
+    'friend(alice), knows(alice), identity], [alf, alice])]';
+
+/// A last view of Bob's that holds no record of Alf: he knows Alf, introduced
+/// to him (GKK:3), which records nothing of it.
+const _bobUnrecordedOutput = '[view([knows(alf), friend(alice), '
+    'knows(alice), identity], [alf, alice])]';
 
 /// The widget of a question of `Approval` where the declaration
 /// `Approval =::= approval_sentence.` holds, over the classes [classes]:
@@ -299,7 +341,7 @@ void main() {
   });
 
   testWidgets(
-      'agent_befriend(R, Q, P, Y) at the principal, whose view holds '
+      'agent_befriend(R, Q, P) at the principal, whose view holds '
       'principal_of(R): "Alf asks to befriend Bob.", "Approve?", Yes and No, '
       'and nothing else; Yes grants yes and No grants no at [2], as the '
       'default widget does', (tester) async {
@@ -320,9 +362,10 @@ void main() {
   });
 
   testWidgets(
-      'agent_befriend(R, Q, P, Y) at the other party: "Alf, an AI agent of '
+      'agent_befriend(R, Q, P) at the other party: "Alf, an AI agent of '
       'Alice, asks to befriend you.", "Developer: Acme Ltd", the first signer of '
-      'the attestation, "Befriend Alf?", Yes and No, and nothing else',
+      'the attestation of the record of Alf the party holds, agent_of(alf, '
+      'alice, y), "Befriend Alf?", Yes and No, and nothing else',
       (tester) async {
     final s = _Screen(tester);
     await s.draw(_named([_gaiAgentBefriend]), _agentBefriendView,
@@ -348,8 +391,8 @@ void main() {
     final s = _Screen(tester);
     await s.draw(
         _named([_gaiAgentBefriend]),
-        'approval(attempt(alf, 3, 3, agent_befriend(alf, bob, alice, '
-        '$_attestation), none), yes)',
+        'approval(attempt(alf, 3, 3, agent_befriend(alf, bob, alice), '
+        'none), yes)',
         output: _bobOutput);
     expect(s.texts(), [
       'Alf, an AI agent of Alice, asks to befriend you.',
@@ -362,14 +405,26 @@ void main() {
 
   testWidgets(
       'agent_befriend with no view drawn, whom it is asked not told: the '
-      'sentence built from the class, its speech act under it, and Yes and No',
+      'sentence built from the class, and Yes and No',
       (tester) async {
     final s = _Screen(tester);
     await s.draw(_named([_gaiAgentBefriend]), _agentBefriendView);
     expect(s.texts(), [
       'Alf asks to agent befriend Bob, Alice.',
-      'The code of Alf',
-      'by Acme Ltd, via Alice, via Alice',
+      'Yes',
+      'No',
+    ]);
+  });
+
+  testWidgets(
+      'agent_befriend at a party whose view holds no record of the AI agent: '
+      'the sentence built from the class, and Yes and No, its principal and '
+      'its developer not told', (tester) async {
+    final s = _Screen(tester);
+    await s.draw(_named([_gaiAgentBefriend]), _agentBefriendView,
+        output: _bobUnrecordedOutput);
+    expect(s.texts(), [
+      'Alf asks to agent befriend Bob, Alice.',
       'Yes',
       'No',
     ]);
@@ -545,6 +600,182 @@ void main() {
     final (_, gsg) = SocialState.read(
         fixtureTerm('[view([friend(bob), identity], [bob])]'));
     expect(gsg!.hasWards, isFalse);
+  });
+
+  test('the classes of the platform read off the default widget of Approval',
+      () {
+    expect(ApprovalWording.classesOf(fixtureTerm(_defaultApproval(_cssnClasses))),
+        {
+          'meet/2',
+          'introduce/3',
+          'child_meet/3',
+          'child_meet_2/4',
+          'child_befriend/4',
+          'child_join/4',
+          'child_join_2/5',
+        });
+    expect(ApprovalWording.classesOf(fixtureTerm(_named(_gsgClasses))),
+        {'establish/1', 'befriend/2', 'unfriend/2'});
+    expect(ApprovalWording.classesOf(fixtureTerm('buttons([yes, no])')), isEmpty);
+  });
+
+  testWidgets(
+      'meet and introduce in CSSN\'s app in GKK\'s words, as in every app '
+      'that extends GKK: "Alice asks to meet you in person."; "Alice '
+      'introduces Carol to you."; each with Yes and No, granting what the '
+      'default widget grants (GSC #5 Cowork, Code_inbox.md, 2026-10-20 20:21 '
+      'UTC: "One wording serves every app that extends GKK")',
+      (tester) async {
+    final s = _Screen(tester);
+    const meet =
+        'approval(attempt(alice, 2, 2, meet(alice, bob), none), input([2]))';
+    await s.draw(_named(_cssnClasses), meet,
+        output: '[view([identity], [alice])]');
+    expect(s.texts(), ['Alice asks to meet you in person.', 'Yes', 'No']);
+    final (d, n) = await s.both(
+        _defaultApproval(_cssnClasses), meet, 'yes', 'Yes',
+        output: '[view([identity], [alice])]');
+    expect(d, 'input(1, [2], yes)');
+    expect(n, d);
+    const introduce = 'approval(attempt(alice, 3, 3, introduce(alice, bob, '
+        'carol), none), input([2]))';
+    await s.draw(_named(_cssnClasses), introduce,
+        output: '[view([knows(alice), identity], [alice, carol])]');
+    expect(s.texts(), ['Alice introduces Carol to you.', 'Yes', 'No']);
+    // GSC's apps, whose classes have no child_befriend: the same words.
+    final gsc = [..._gsgClasses, _meet, _introduce];
+    await s.draw(_named(gsc), meet, output: '[view([identity], [alice])]');
+    expect(s.texts(), ['Alice asks to meet you in person.', 'Yes', 'No']);
+    await s.draw(_named(gsc), introduce,
+        output: '[view([knows(alice), identity], [alice, carol])]');
+    expect(s.texts(), ['Alice introduces Carol to you.', 'Yes', 'No']);
+  });
+
+  testWidgets(
+      'child_meet(R, A, P): at the adult, "Alice asks that their child Carol '
+      'and you meet.", "Meet Carol?"; at the child, "Alice asks that you and '
+      'Frank meet.", "Meet Frank?" (CSSN #9 Cowork, Code_inbox.md, '
+      '2026-10-20 19:44 UTC, item 4)', (tester) async {
+    final s = _Screen(tester);
+    const view = 'approval(attempt(alice, 5, 5, child_meet(carol, frank, '
+        'alice), none), input([2]))';
+    await s.draw(_named(_cssnClasses), view,
+        output: '[view([knows(alice), identity], [alice, carol])]');
+    expect(s.texts(), [
+      'Alice asks that their child Carol and you meet.',
+      'Meet Carol?',
+      'Yes',
+      'No'
+    ]);
+    await s.draw(_named(_cssnClasses), view, output: _carolOutput);
+    expect(s.texts(),
+        ['Alice asks that you and Frank meet.', 'Meet Frank?', 'Yes', 'No']);
+    final (d, n) = await s.both(
+        _defaultApproval(_cssnClasses), view, 'yes', 'Yes',
+        output: _carolOutput);
+    expect(d, 'input(1, [2], yes)');
+    expect(n, d);
+  });
+
+  testWidgets(
+      'child_meet_2(R, S, P, Q): at the other parent, "Alice asks that their '
+      'child Carol and your child Dave meet.", "Approve?"; at a child, '
+      '"Alice asks that you and Dave meet, with Dave\'s parent Bob.", "Meet '
+      'Dave?", and at the other child "Alice asks that you and their child '
+      'Carol meet.", "Meet Carol?" (CSSN #9 Cowork, Code_inbox.md, '
+      '2026-10-20 19:44 UTC, item 4)', (tester) async {
+    final s = _Screen(tester);
+    const view = 'approval(attempt(alice, 6, 6, child_meet_2(carol, dave, '
+        'alice, bob), none), input([2]))';
+    await s.draw(_named(_cssnClasses), view, output: _bobParentOutput);
+    expect(s.texts(), [
+      'Alice asks that their child Carol and your child Dave meet.',
+      'Approve?',
+      'Yes',
+      'No'
+    ]);
+    await s.draw(_named(_cssnClasses), view, output: _carolOutput);
+    expect(s.texts(), [
+      "Alice asks that you and Dave meet, with Dave's parent Bob.",
+      'Meet Dave?',
+      'Yes',
+      'No'
+    ]);
+    await s.draw(_named(_cssnClasses), view, output: _daveOutput);
+    expect(s.texts(), [
+      'Alice asks that you and their child Carol meet.',
+      'Meet Carol?',
+      'Yes',
+      'No'
+    ]);
+  });
+
+  testWidgets(
+      'child_join(A, S, P, N): at the child, "Frank invites you to kids_chat, '
+      'with your parent Alice.", "Join?"; at the parent, "Frank invites your '
+      'child Carol to kids_chat.", "Approve?" (CSSN #9 Cowork, Code_inbox.md, '
+      '2026-10-20 19:44 UTC, item 4)', (tester) async {
+    final s = _Screen(tester);
+    const view = 'approval(attempt(frank, 7, 7, child_join(frank, carol, '
+        'alice, $_kidsChat), none), input([2]))';
+    await s.draw(_named(_cssnClasses), view, output: _carolOutput);
+    expect(s.texts(), [
+      'Frank invites you to kids_chat, with your parent Alice.',
+      'Join?',
+      'Yes',
+      'No'
+    ]);
+    await s.draw(_named(_cssnClasses), view,
+        output: '[view([friend(bob), parenting(carol), friend(carol), '
+            'identity], [bob, carol, frank])]');
+    expect(s.texts(), [
+      'Frank invites your child Carol to kids_chat.',
+      'Approve?',
+      'Yes',
+      'No'
+    ]);
+  });
+
+  testWidgets(
+      'child_join_2(R, S, P, Q, N): at the child invited, "Carol invites you '
+      'to kids_chat, with Carol\'s parent Alice and your parent Bob.", '
+      '"Join?"; at the leader\'s parent, "Your child Carol invites Dave, '
+      'Bob\'s child, to kids_chat."; at the invited child\'s parent, "Carol, '
+      'Alice\'s child, invites your child Dave to kids_chat."; each parent '
+      '"Approve?" (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item '
+      '4)', (tester) async {
+    final s = _Screen(tester);
+    const view = 'approval(attempt(carol, 8, 8, child_join_2(carol, dave, '
+        'alice, bob, $_kidsChat), none), input([2]))';
+    await s.draw(_named(_cssnClasses), view, output: _daveOutput);
+    expect(s.texts(), [
+      "Carol invites you to kids_chat, with Carol's parent Alice and your "
+          'parent Bob.',
+      'Join?',
+      'Yes',
+      'No'
+    ]);
+    await s.draw(_named(_cssnClasses), view,
+        output: '[view([friend(bob), parenting(carol), friend(carol), '
+            'identity], [bob, carol, dave])]');
+    expect(s.texts(), [
+      "Your child Carol invites Dave, Bob's child, to kids_chat.",
+      'Approve?',
+      'Yes',
+      'No'
+    ]);
+    await s.draw(_named(_cssnClasses), view, output: _bobParentOutput);
+    expect(s.texts(), [
+      "Carol, Alice's child, invites your child Dave to kids_chat.",
+      'Approve?',
+      'Yes',
+      'No'
+    ]);
+    final (d, n) = await s.both(
+        _defaultApproval(_cssnClasses), view, 'yes', 'Yes',
+        output: _bobParentOutput);
+    expect(d, 'input(1, [2], yes)');
+    expect(n, d);
   });
 
   testWidgets(

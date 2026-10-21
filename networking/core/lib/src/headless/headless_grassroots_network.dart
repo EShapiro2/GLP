@@ -14,6 +14,7 @@ import '../models/underlay.dart';
 import '../platform/compat.dart';
 import '../protocol/fragment_handler.dart';
 import '../protocol/message_transport.dart';
+import '../protocol/outbound_queue_store.dart';
 import '../protocol/protocol_handler.dart';
 import '../routing/message_router.dart';
 import '../session/application_identity.dart';
@@ -98,7 +99,12 @@ class ServerAddress {
 ///
 /// Known peers persist through [HeadlessKnownPeersStore] — file-backed
 /// ([FileKnownPeersStore]) or in-memory ([MemoryKnownPeersStore]) — replacing
-/// the Flutter package's SharedPreferences persistence.
+/// the Flutter package's SharedPreferences persistence.  The fair-delivery
+/// queue persists through an [OutboundQueueStore] the same way — a file its
+/// embedder names ([FileOutboundQueueStore]) or memory
+/// ([MemoryOutboundQueueStore], the default), so that it survives the
+/// termination of the application (GNA §2.10) wherever the embedder gives it
+/// a file.
 class HeadlessGrassrootsNetwork {
   HeadlessGrassrootsNetwork({
     required this.identity,
@@ -108,8 +114,14 @@ class HeadlessGrassrootsNetwork {
     this.rendezvousServer = false,
     required this.sodium,
     HeadlessKnownPeersStore? knownPeersStore,
+    OutboundQueueStore? outboundQueueStore,
   })  : rendezvousServers = List.unmodifiable(rendezvousServers),
         _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
+    _persistedQueue = PersistentOutboundQueue(
+      store: outboundQueueStore ?? MemoryOutboundQueueStore(),
+      ownerHex: _hex(identity.publicKey),
+    );
+    _restoreOutboundQueue();
     // GNA §2.2: a rendezvous server is one having a server address.
     if (rendezvousServer && serverAddress == null) {
       throw ArgumentError.value(rendezvousServer, 'rendezvousServer',
@@ -216,6 +228,32 @@ class HeadlessGrassrootsNetwork {
   /// another peer's traffic.
   final Map<String, List<({String messageId, Uint8List payload})>>
       _outboundQueue = {};
+
+  /// Every message [send] accepted and its recipient has not yet
+  /// acknowledged — those in [_outboundQueue] and those the message
+  /// transport is carrying — saved before [send] returns and dropped once
+  /// acknowledged, so that the queue survives the termination of the
+  /// application (GNA §2.10).
+  late final PersistentOutboundQueue _persistedQueue;
+
+  /// Read the persisted queue back into [_outboundQueue], where the
+  /// heartbeat replays it (GNA §2.5, Heartbeat).  [send] and [start] wait
+  /// for it.
+  void _restoreOutboundQueue() {
+    unawaited(_persistedQueue.restored.then((entries) {
+      for (final entry in entries) {
+        _outboundQueue
+            .putIfAbsent(entry.recipientHex, () => [])
+            .add((messageId: entry.messageId, payload: entry.payload));
+      }
+      if (entries.isNotEmpty) {
+        debugPrint('[headless] Restored ${entries.length} queued '
+            'message(s)');
+      }
+    }, onError: (Object e) {
+      debugPrint('[headless] Could not read the persisted queue: $e');
+    }));
+  }
 
   // ===== Spec API surface =====
 
@@ -470,8 +508,11 @@ class HeadlessGrassrootsNetwork {
 
   /// Bind the UDP socket(s) (on the [serverAddress]'s listen port, or an
   /// ephemeral one) and start accepting and dialing; dial each rendezvous
-  /// server. Returns false when no socket could be bound.
+  /// server. Returns false when no socket could be bound. The persisted
+  /// queue is read back first, and the heartbeat replays it; a queue that
+  /// cannot be read is thrown.
   Future<bool> start() async {
+    await _persistedQueue.restored;
     if (_udpService != null) return true;
     final udp = UdpTransportService(
       identity: identity,
@@ -662,11 +703,15 @@ class HeadlessGrassrootsNetwork {
     await udp?.dispose();
   }
 
+  /// Stop, and wait for every save of the queue begun so far, so that a layer
+  /// instantiated next with the same store reads the queue as this one left
+  /// it.
   Future<void> dispose() async {
     await stop();
     await _storeSubscription?.cancel();
     _storeSubscription = null;
     _noiseSessions.dispose();
+    await _persistedQueue.flush();
   }
 
   // ===== Send =====
@@ -677,7 +722,10 @@ class HeadlessGrassrootsNetwork {
   /// GNA, 2026-10-11, Task A) — and delivered then: a peer not reachable is
   /// dialed at its dial-book address on demand, and the message queues
   /// (fair delivery, §Networking Assumptions) until the attestation exchange
-  /// completes. Returns the message id, or null for invalid input.
+  /// completes. The message is saved in the persisted queue before this
+  /// returns, and dropped from it once acknowledged, so that the queue
+  /// survives the termination of the application (GNA §2.10); a save that
+  /// fails is thrown. Returns the message id, or null for invalid input.
   Future<String?> send(
     Uint8List recipientPubkey,
     Uint8List payload, {
@@ -688,6 +736,11 @@ class HeadlessGrassrootsNetwork {
       return null;
     }
     messageId ??= _uuid.v4();
+    await _persistedQueue.add(OutboundQueueEntry(
+      recipientHex: _hex(recipientPubkey),
+      messageId: messageId,
+      payload: payload,
+    ));
     if (await _trySendNow(recipientPubkey, payload, messageId)) {
       return messageId;
     }
@@ -719,12 +772,17 @@ class HeadlessGrassrootsNetwork {
 
     unawaited(
       _udpMessageSender.sendMessage(hex, messageId, payload).then((ok) {
-        if (!ok && _udpService != null) {
-          _outboundQueue
-              .putIfAbsent(hex, () => [])
-              .add((messageId: messageId, payload: payload));
-          debugPrint('[headless] Transport gave up on $messageId; re-queued');
+        if (ok) {
+          // Acknowledged: the recipient has it (spec §Message Protocol).
+          unawaited(_persistedQueue.remove(messageId));
+          return;
         }
+        // Still outstanding, so back to the queue, also when the layer has
+        // stopped: a later start replays it from there.
+        _outboundQueue
+            .putIfAbsent(hex, () => [])
+            .add((messageId: messageId, payload: payload));
+        debugPrint('[headless] Transport gave up on $messageId; re-queued');
       }),
     );
     return true;

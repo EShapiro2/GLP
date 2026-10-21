@@ -14,7 +14,7 @@
 ///   glp_net_service --port 9600 --identity service-identity.json \
 ///     --public-address 203.0.113.7:9600 \
 ///     [--known-peer <pubkey-hex>]... [--known-peers-file peers.json] \
-///     [--trust closed|open]
+///     [--outbound-queue-file queue.json] [--trust closed|open]
 library;
 
 import 'dart:async';
@@ -43,6 +43,10 @@ Future<void> main(List<String> argv) async {
     ..addOption('known-peers-file',
         help: 'JSON file persisting the known-peer set across restarts '
             '(default: in-memory only)')
+    ..addOption('outbound-queue-file',
+        help: 'JSON file persisting the fair-delivery queue across restarts, '
+            'so that it survives the termination of the service (GNA '
+            '§2.10; default: in-memory only)')
     ..addFlag('help', abbr: 'h', negatable: false);
 
   final ArgResults args;
@@ -64,6 +68,7 @@ Future<void> main(List<String> argv) async {
   print('Service identity: ${_hex(identity.publicKey)}');
 
   final knownPeersFile = args['known-peers-file'] as String?;
+  final outboundQueueFile = args['outbound-queue-file'] as String?;
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
     sodium: sodium,
@@ -76,6 +81,9 @@ Future<void> main(List<String> argv) async {
     knownPeersStore: knownPeersFile != null
         ? FileKnownPeersStore(knownPeersFile)
         : MemoryKnownPeersStore(),
+    outboundQueueStore: outboundQueueFile != null
+        ? FileOutboundQueueStore(outboundQueueFile)
+        : MemoryOutboundQueueStore(),
   );
 
   for (final hex in args['known-peer'] as List<String>) {

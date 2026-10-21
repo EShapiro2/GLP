@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:redux/redux.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
@@ -119,6 +120,9 @@ void main() {
   });
 
   setUp(() {
+    // The layer keeps its fair-delivery queue in the application's
+    // SharedPreferences (GNA §2.10); a fresh store for every test.
+    SharedPreferences.setMockInitialValues({});
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(
@@ -331,6 +335,13 @@ void main() {
     expect(calleeEvents.first, 'connected',
         reason: 'nothing is delivered before the callee has the caller\'s '
             'attestation');
-    expect(caller.queuedMessageCountForPeer(calleeId.publicKey), 0);
+    // The callee delivers the message once it has all its fragments, before
+    // their acknowledgments reach the caller, whose queue gives it up only
+    // then (spec §Message Protocol).
+    expect(
+        await waitFor(
+            () => caller.queuedMessageCountForPeer(calleeId.publicKey) == 0),
+        isTrue,
+        reason: 'the queue gives the message up once it is acknowledged');
   });
 }

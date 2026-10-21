@@ -1,5 +1,5 @@
 %% ---------------------------------------------------------------------------
-%% programs/cssn --- the child-safe social network (CSSN, Section 4): its program is the canonical CVA platform of its contract, CSSN.glp (Appendix B.2), compiled by vGLP's compiler with friend its introduction predicate (CSSN, Section 4.6, "The program"; vGLP, Section 5.4, "The compilation" and "Act schemas as local specifications"), platform.vglp, which compile.sh prints and the canonical compilation compiles to GLP when the directory loads; the mini-app entry miniapp/4 that wraps it (miniapp.glp, the same file as programs/apps/gsg/miniapp.glp); its scripted person (person.glp); and the plays, the village of Section 4.6, "Village Demonstration" (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it.  The person's questions are drawn by the widgets self.vglp beside it declares, approval_sentence for Approval and social_menu for Menu, in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC), and the program's output by last_state, which the platform declares (CSSN, Section 4.6).
+%% programs/cssn --- the child-safe social network (CSSN, Section 4): its program is the canonical CVA platform of its contract, CSSN.glp (Appendix B.2), compiled by vGLP's compiler with knows its introduction predicate (CSSN, Section 4.6, "The program"; vGLP, Section 5.4, "The compilation" and "Act schemas as local specifications"), platform.vglp, which compile.sh prints and the canonical compilation compiles to GLP when the directory loads; the mini-app entry miniapp/4 that wraps it (miniapp.glp, the same file as programs/apps/gsg/miniapp.glp); its scripted person (person.glp); and the plays, the village of Section 4.6, "Village Demonstration" (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it.  The person's questions are drawn by the widgets self.vglp beside it declares, approval_sentence for Approval and social_menu for Menu, in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC), and the program's output by last_state, which the platform declares (CSSN, Section 4.6).
 %%
 %% CSSN.txt and CSSN.glp, the contract's clauses and act schemas, are CSSN's Cowork's text (claude.md, "Sessions"); CSSN.glp is a module of this program, its types its own and none of its procedures exported.
 %%
@@ -9,7 +9,8 @@
 Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
-Class     ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+Class     ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; message(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, List(Peer), Speech) ; drop(Peer, Peer, Speech)
@@ -17,18 +18,21 @@ Class     ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; deliver(Peer, Peer, Speech, Speech)
             ; enter(Peer, Peer) ; enter_2(Peer, Peer, Peer)
             ; of_age(Peer, Peer) ; of_age_2(Peer, Peer, Peer)
+            ; child_meet(Peer, Peer, Peer) ; child_meet_2(Peer, Peer, Peer, Peer)
             ; child_befriend(Peer, Peer, Peer, Peer) ; child_adult_befriend(Peer, Peer, Peer)
             ; child_unfriend(Peer, Peer, Peer)
             ; parent_unfriend(Peer, Peer) ; parent_unfriend_2(Peer, Peer, Peer)
             ; child_join(Peer, Peer, Peer, Speech) ; child_join_2(Peer, Peer, Peer, Peer, Speech)
             ; child_leave(Peer, Peer, Peer, Speech) ; child_close(Peer, Peer, List(Peer), Speech).
-Proposal  ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+Proposal  ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; message(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
             ; enter(Peer, Peer) ; enter_2(Peer, Peer, Peer)
             ; of_age(Peer, Peer) ; of_age_2(Peer, Peer, Peer)
+            ; child_meet(Peer, Peer, Peer) ; child_meet_2(Peer, Peer, Peer, Peer)
             ; child_befriend(Peer, Peer, Peer, Peer) ; child_adult_befriend(Peer, Peer, Peer)
             ; child_unfriend(Peer, Peer, Peer)
             ; parent_unfriend(Peer, Peer) ; parent_unfriend_2(Peer, Peer, Peer)
@@ -46,7 +50,7 @@ Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
             ; yield(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Atom      ::= identity ; retired ; friend(Peer) ; child ; parent(Peer) ; parenting(Peer)
+Atom      ::= identity ; retired ; knows(Peer) ; child ; friend(Peer) ; parent(Peer) ; parenting(Peer)
             ; received(Speech, Peer) ; member(CName) ; listed(Peer, Speech)
             ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech)
             ; received_in(Speech, Peer, Speech) ; coparent(Peer) ; coparented.
@@ -80,6 +84,11 @@ miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+
+%% The scripted person looking also at the phones of the person's children, each line of a child's screen seen(K, S) (person.glp, the step at(K, C)): a parent's state does not change by the child's acts (CSSN, Section 4), so a scripted parent waits on the child's phone, in the village (plays.glp) and in the scenario of the app (glp_multiagent/test/apps_screens_test.dart), where the child's screen is handed to it by the harness.
+imported procedure person#village_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
+exported procedure village_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
+village_person(Id, Role, PEnd, Ws, Screen?) :- person # village_person(Id?, Role?, PEnd?, Ws?, Screen).
 
 %% The village of CSSN, Section 4.6, "Village Demonstration", with no super-app (plays.glp): the screens of alice, bob, grace, frank, carol, dave and eve.
 imported procedure plays#play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).

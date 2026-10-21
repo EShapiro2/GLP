@@ -1,11 +1,19 @@
-Reflexive predicates: friend
+Reflexive predicates: friend, knows
 
 establish(Alice?) :
     at Alice: not retired, +identity
 
+meet(Alice?, Bob?) :
+    at Alice: identity, not child, not retired, +knows(Bob)
+    at Bob: identity, not child, not retired, +knows(Alice)
+
+introduce(Alice?, Bob?; c) :
+    at Alice: identity, knows(Bob), knows(c), not retired
+    at Bob: identity, knows(Alice), not child, not retired, +knows(c)
+
 befriend(Alice?, Bob?) :
-    at Alice: identity, not child, not friend(Bob), not retired, +friend(Bob)
-    at Bob: identity, not child, not friend(Alice), not retired, +friend(Alice)
+    at Alice: identity, knows(Bob), not child, not friend(Bob), not retired, +friend(Bob)
+    at Bob: identity, knows(Alice), not child, not friend(Alice), not retired, +friend(Alice)
 
 unfriend(Alice?, Bob) :
     at Alice: identity, not parent(Bob), not parenting(Bob), not retired, -friend(Bob)
@@ -46,13 +54,13 @@ deliver(Alice, Bob; x, n) :
     at Bob: identity, member(<Alice>.n), +received_in(x, Alice, n)
 
 enter(Alice?, Bob?) :
-    at Alice: identity, not child, not retired, +parenting(Bob), +friend(Bob)
-    at Bob: not identity, not retired, +identity, +parent(Alice), +child, +friend(Alice)
+    at Alice: identity, not child, not retired, +parenting(Bob), +friend(Bob), +knows(Bob)
+    at Bob: not identity, not retired, +identity, +parent(Alice), +child, +friend(Alice), +knows(Alice)
 
 enter_2(Alice?, Bob?, Carol?) :
-    at Alice: identity, not child, not retired, +parenting(Carol), +coparent(Bob), +friend(Carol)
-    at Bob: identity, not child, not retired, +parenting(Carol), +coparent(Alice), +friend(Carol)
-    at Carol: not identity, not retired, +identity, +parent(Alice), +parent(Bob), +child, +child, +coparented, +friend(Alice), +friend(Bob)
+    at Alice: identity, knows(Bob), not child, not retired, +parenting(Carol), +coparent(Bob), +friend(Carol), +knows(Carol)
+    at Bob: identity, knows(Alice), not child, not retired, +parenting(Carol), +coparent(Alice), +friend(Carol), +knows(Carol)
+    at Carol: not identity, not retired, +identity, +parent(Alice), +parent(Bob), +child, +child, +coparented, +friend(Alice), +friend(Bob), +knows(Alice), +knows(Bob)
 
 of_age(Alice?, Bob) :
     at Alice: identity, not retired, -parenting(Bob)
@@ -63,15 +71,26 @@ of_age_2(Alice?, Bob, Carol) :
     at Bob: identity, -parenting(Carol), -coparent(Alice)
     at Carol: identity, -parent(Alice), -parent(Bob), -child, -child, -coparented
 
+child_meet(Alice?, Bob?, Carol?) :
+    at Alice: identity, child, parent(Carol), not retired, +knows(Bob)
+    at Bob: identity, not child, not retired, +knows(Alice)
+    at Carol: identity, parenting(Alice), knows(Bob), not child, not retired
+
+child_meet_2(Alice?, Bob?, Carol?, Dave?) :
+    at Alice: identity, child, parent(Carol), not retired, +knows(Bob)
+    at Bob: identity, child, parent(Dave), not retired, +knows(Alice)
+    at Carol: identity, parenting(Alice), knows(Dave), not child, not retired
+    at Dave: identity, parenting(Bob), knows(Carol), not child, not retired
+
 child_befriend(Alice?, Bob?, Carol?, Dave?) :
-    at Alice: identity, child, parent(Carol), not friend(Bob), not retired, +friend(Bob)
-    at Bob: identity, child, parent(Dave), not friend(Alice), not retired, +friend(Alice)
+    at Alice: identity, child, parent(Carol), knows(Bob), not friend(Bob), not retired, +friend(Bob)
+    at Bob: identity, child, parent(Dave), knows(Alice), not friend(Alice), not retired, +friend(Alice)
     at Carol: identity, parenting(Alice), friend(Dave), not child, not retired
     at Dave: identity, parenting(Bob), friend(Carol), not child, not retired
 
 child_adult_befriend(Alice?, Bob?, Carol?) :
-    at Alice: identity, child, parent(Carol), not friend(Bob), not retired, +friend(Bob)
-    at Bob: identity, not child, not friend(Alice), not retired, +friend(Alice)
+    at Alice: identity, child, parent(Carol), knows(Bob), not friend(Bob), not retired, +friend(Bob)
+    at Bob: identity, knows(Alice), not child, not friend(Alice), not retired, +friend(Alice)
     at Carol: identity, parenting(Alice), friend(Bob), not child, not retired
 
 child_unfriend(Alice, Bob, Carol?) :
