@@ -20,13 +20,7 @@ import 'term.dart';
 /// atom where the clause's answer type takes a `Constant`, a GLP `String`
 /// where it takes a `String`. The declaration does not settle that; the
 /// compiled answer type `Xs_C` does, so a transcriber reads both.
-///
-/// [number] and [date] are the mirror of that pair: two widgets over one term,
-/// a GLP `Integer` — every `field(X, date)` on disc has `Integer` in its
-/// clause's `Xs_C`, a day the program counts rather than a calendar date. What
-/// a date widget shows, and what a picked calendar date would become, no
-/// specification fixes; until one does it takes the day as typed.
-enum FieldType { text, string, number, date, peer }
+enum FieldType { text, string, number, peer }
 
 /// One field of a compose form — one person input of the clause.
 class FieldDesc {

@@ -2030,25 +2030,46 @@ class _StructureState {
   String toString() => 'StructureState(S=$S, mode=$mode, struct=$currentStructure)';
 }
 
-/// Helper function to recursively convert _TentativeStruct to StructTerm
+/// [tentative], a structure built in the head, as the term committed: each
+/// nested tentative structure converted the same way, an argument that is a
+/// Term as it is, `null` as ConstTerm(null), and a raw value as its constant.
+///
+/// The structures are converted with a stack of those still open, each
+/// completed once its last argument is, so the stack depth is constant
+/// whatever the term's depth: a list built in a head nests its cells down the
+/// tail, and TGLP well-typing.tex, Definition "Well-Typed Clause", puts no
+/// bound on a term's size.  Until 2026-10-20 this recursed on each nested
+/// structure, and g(X) on a clause of 30000 integers overflowed the stack
+/// (Code #11, 2026-10-19 17:32 UTC; GLP #9 Cowork, 2026-10-20 09:22 UTC,
+/// item 3).
 StructTerm _convertTentativeToStruct(_TentativeStruct tentative, RunnerContext cx) {
-  final termArgs = <Term>[];
-  for (final arg in tentative.args) {
+  // Each structure open, with its arguments converted so far.
+  final open = <(_TentativeStruct, List<Term>)>[(tentative, <Term>[])];
+  StructTerm? completed;
+  while (true) {
+    final (struct, args) = open.last;
+    if (completed != null) {
+      args.add(completed);
+      completed = null;
+    }
+    if (args.length == struct.args.length) {
+      open.removeLast();
+      final term = StructTerm(struct.functor, args);
+      if (open.isEmpty) return term;
+      completed = term;
+      continue;
+    }
+    final arg = struct.args[args.length];
     if (arg is _TentativeStruct) {
-      // Recursively convert nested tentative structures
-      termArgs.add(_convertTentativeToStruct(arg, cx));
+      open.add((arg, <Term>[]));
     } else if (arg is Term) {
-      // Already a Term - use as-is
-      termArgs.add(arg);
+      args.add(arg);
     } else if (arg == null) {
-      // Null -> ConstTerm(null)
-      termArgs.add(ConstTerm(null));
+      args.add(ConstTerm(null));
     } else {
-      // Raw value -> ConstTerm
-      termArgs.add(ConstTerm(arg));
+      args.add(ConstTerm(arg));
     }
   }
-  return StructTerm(tentative.functor, termArgs);
 }
 
 /// A guard argument's structure being built (before commit) where its last

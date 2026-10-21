@@ -68,7 +68,8 @@ class PunchPacket {
 /// 2. Each outgoing packet creates an outbound NAT mapping on Alice's router.
 /// 3. Bob simultaneously sends punch packets to Alice's public ip:port.
 /// 4. Once both NATs have mappings, packets can flow in both directions.
-/// 5. Once the path is open, the peers establish their Noise XX session over it.
+/// 5. Once the path is open, the peers establish their Noise session over it, IK
+///    with the expected key (GNA §2.6).
 ///
 /// [punch] is fire-and-forget: it sends packets for a fixed duration, and
 /// both peers punch at once so that their bursts overlap.

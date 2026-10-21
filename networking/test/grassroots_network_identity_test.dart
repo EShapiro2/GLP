@@ -63,7 +63,7 @@ void main() {
     final home = networkOf('192.168.1.5');
     store.dispatch(LocalNetworkChangedAction(home));
 
-    expect(network.networkIdentity(), home.networkId);
+    expect(network.wan!.networkIdentity(), home.networkId);
     await network.dispose();
   });
 
@@ -80,7 +80,7 @@ void main() {
 
     store.dispatch(LocalNetworkChangedAction(LocalNetwork.none));
 
-    expect(network.networkIdentity(), isNull);
+    expect(network.wan!.networkIdentity(), isNull);
     await network.dispose();
   });
 
@@ -97,15 +97,15 @@ void main() {
 
     final home = networkOf('192.168.1.5');
     store.dispatch(LocalNetworkChangedAction(home));
-    final before = network.networkIdentity();
+    final before = network.wan!.networkIdentity();
 
     // The public address changes; the attached local network does not.
     store.dispatch(PublicAddressUpdatedAction('[2001:db8::1]:9514'));
-    expect(network.networkIdentity(), before);
+    expect(network.wan!.networkIdentity(), before);
 
     // The attached local network changes; the public address does not.
     store.dispatch(LocalNetworkChangedAction(networkOf('10.11.12.5')));
-    expect(network.networkIdentity(), isNot(before));
+    expect(network.wan!.networkIdentity(), isNot(before));
     expect(store.state.transports.publicAddress, '[2001:db8::1]:9514');
 
     await network.dispose();
@@ -124,11 +124,11 @@ void main() {
 
     final expected = await readLocalNetwork();
     // The constructor's read is in flight; give it a moment to land.
-    for (var i = 0; i < 50 && network.networkIdentity() == null; i++) {
+    for (var i = 0; i < 50 && network.wan!.networkIdentity() == null; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 10));
     }
 
-    expect(network.networkIdentity(), expected.networkId);
+    expect(network.wan!.networkIdentity(), expected.networkId);
     await network.dispose();
   });
 
@@ -144,12 +144,12 @@ void main() {
     );
 
     // Let the construction-time read settle before watching for changes.
-    for (var i = 0; i < 50 && network.networkIdentity() == null; i++) {
+    for (var i = 0; i < 50 && network.wan!.networkIdentity() == null; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 10));
     }
 
     final networkChanges = <String?>[];
-    network.onNetworkChanged = (oldId, newId) => networkChanges.add(newId);
+    network.wan!.onNetworkChanged = (oldId, newId) => networkChanges.add(newId);
 
     store.dispatch(PublicAddressUpdatedAction('[2001:db8::1]:9514'));
     await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -170,7 +170,7 @@ void main() {
     );
 
     final changes = <(String?, String?)>[];
-    network.onNetworkChanged = (oldId, newId) => changes.add((oldId, newId));
+    network.wan!.onNetworkChanged = (oldId, newId) => changes.add((oldId, newId));
 
     // The construction-time read reports the first attachment: null -> id.
     for (var i = 0; i < 50 && changes.isEmpty; i++) {
@@ -179,11 +179,11 @@ void main() {
 
     if (changes.isNotEmpty) {
       expect(changes.single.$1, isNull);
-      expect(changes.single.$2, network.networkIdentity());
+      expect(changes.single.$2, network.wan!.networkIdentity());
     } else {
       // No non-loopback interface on this machine: attached to no local
       // network, so there is nothing to report.
-      expect(network.networkIdentity(), isNull);
+      expect(network.wan!.networkIdentity(), isNull);
     }
     await network.dispose();
   });

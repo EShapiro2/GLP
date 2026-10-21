@@ -339,8 +339,8 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
 
     // The friends know each other at their addresses, as the social graph
     // tells their layers (peer_declare/1, address_declare/2), and connect.
-    a.layer.putPeerAddress(b.key.bytes, '127.0.0.1:${b.layer.boundPort}');
-    b.layer.putPeerAddress(a.key.bytes, '127.0.0.1:${a.layer.boundPort}');
+    a.layer.wan.putPeerAddress(b.key.bytes, '127.0.0.1:${b.layer.boundPort}');
+    b.layer.wan.putPeerAddress(a.key.bytes, '127.0.0.1:${a.layer.boundPort}');
     expect(
         await _until(() =>
             a.layer.isPeerReachable(b.key.bytes) &&
@@ -387,7 +387,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
             b.layer.isPeerReachable(a.key.bytes)),
         isTrue,
         reason: 'reconnected');
-    expect(_loopback(b.layer.observedPeerAddress(a.key.bytes)!, newPort),
+    expect(_loopback(b.layer.wan.observedPeerAddress(a.key.bytes)!, newPort),
         isTrue);
     expect(serverLines, contains('CONNECTED ${a.key.hex}'));
   }, timeout: const Timeout(Duration(minutes: 4)));

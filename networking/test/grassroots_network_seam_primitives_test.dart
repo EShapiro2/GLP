@@ -140,11 +140,11 @@ void main() {
     final self = await identity();
     final network = networkFor(self);
 
-    expect(() => network.punchUdp('not-an-address'), throwsArgumentError);
-    expect(() => network.punchUdp(''), throwsArgumentError);
-    expect(() => network.punchUdp('203.0.113.5'), throwsArgumentError);
+    expect(() => network.wan!.punchUdp('not-an-address'), throwsArgumentError);
+    expect(() => network.wan!.punchUdp(''), throwsArgumentError);
+    expect(() => network.wan!.punchUdp('203.0.113.5'), throwsArgumentError);
     // Unbracketed IPv6 is not an address the layer accepts anywhere.
-    expect(() => network.punchUdp('2001:db8::1:4242'), throwsArgumentError);
+    expect(() => network.wan!.punchUdp('2001:db8::1:4242'), throwsArgumentError);
   });
 
   test('punchUdp accepts a well-formed address and returns at once', () async {
@@ -154,7 +154,7 @@ void main() {
     // No UDP transport is started here, so there is no hole-punch service for
     // either family: the punch is a no-op. What the call must not do is throw
     // or block — it is fire-and-forget, and a NAT mapping reports nothing.
-    expect(() => network.punchUdp('203.0.113.5:4242'), returnsNormally);
-    expect(() => network.punchUdp('[2001:db8::1]:4242'), returnsNormally);
+    expect(() => network.wan!.punchUdp('203.0.113.5:4242'), returnsNormally);
+    expect(() => network.wan!.punchUdp('[2001:db8::1]:4242'), returnsNormally);
   });
 }

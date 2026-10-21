@@ -97,6 +97,33 @@ void _expectFamily(ExecutionStatus status, Map<String, String> b) {
   }
 }
 
+/// A root of its own in a system temporary directory, named by [prefix]: the
+/// path of its programs/, which links every entry of the root programs/ but
+/// tests/.  A program written below its tests/ lies under a root (TGLP
+/// modules.tex, "Scope construction", which program_linker.dart's
+/// requireUnderRoot holds) and has the scope it has below programs/: the root
+/// self.glp, the modules the root exposes, and the dispatcher's source in
+/// vglp/; and none of its files is under programs/, where another test file
+/// running in parallel collects every .vglp when it loads (canonical_test.dart,
+/// "an old source with no mediator ... is refused").  Until 2026-10-20 the
+/// copies were made in programs/tests/vglp, and that test met one as its
+/// tearDown deleted it, PathNotFoundException on
+/// vself_emit_.../family/parent.vglp, about one run in two (Code #11,
+/// 2026-10-19 15:55 UTC; GLP #9 Cowork, 2026-10-20 09:22 UTC, item 2: "yes,
+/// vself_test makes its copy in a system temporary directory").  Deleting the
+/// directory deletes the links and not what they point to.
+String _rootOfItsOwn(String prefix) {
+  final tmp = Directory.systemTemp.createTempSync(prefix);
+  final programs = Directory(ppath.join(tmp.path, 'programs'))..createSync();
+  final real = ppath.normalize(Directory(_programs).absolute.path);
+  for (final e in Directory(real).listSync()) {
+    final name = ppath.basename(e.path);
+    if (name == 'tests') continue;
+    Link(ppath.join(programs.path, name)).createSync(e.path);
+  }
+  return ppath.normalize(programs.path);
+}
+
 /// Copy the directory [from] to [to], recursively.
 void _copy(String from, String to) {
   for (final e in Directory(from).listSync(recursive: true)) {
@@ -134,24 +161,28 @@ void main() {
     });
 
     group('emitted, in a copy', () {
+      // The copy is the program's directory in a root of its own, at the
+      // path it has below programs/ ([_rootOfItsOwn]).
+      late String tree;
       late String copy;
+      late String root;
       setUp(() {
-        copy = ppath.normalize(Directory('$_programs/tests/vglp')
-            .createTempSync('vself_emit_')
-            .absolute
-            .path);
+        final programs = _rootOfItsOwn('vself_emit_');
+        tree = ppath.dirname(programs);
+        root = ppath.join(programs, 'self.glp');
+        copy = ppath.join(programs, 'tests', 'vglp', 'vself');
         _copy(_vself, copy);
       });
       tearDown(() {
-        if (Directory(copy).existsSync()) {
-          Directory(copy).deleteSync(recursive: true);
+        if (Directory(tree).existsSync()) {
+          Directory(tree).deleteSync(recursive: true);
         }
       });
 
       test(':emit writes the self.vglp as the directory\'s self.glp, with the '
           'compiler\'s header, and the program runs from what it wrote, the '
           'same; a second :emit writes the same bytes', () async {
-        final written = emitVglpSources(copy, rootSelfGlpPath: _root);
+        final written = emitVglpSources(copy, rootSelfGlpPath: root);
         final self = File('$copy/self.glp');
         expect(written.map(ppath.normalize),
             containsAll([
@@ -169,7 +200,7 @@ void main() {
 
         // Loaded from disc: the self.glp written is the directory's own, its
         // self.vglp a source still, and the compiled modules stand for theirs.
-        final modules = discoverProgram('$copy/family', rootSelfGlpPath: _root);
+        final modules = discoverProgram('$copy/family', rootSelfGlpPath: root);
         final selfModule = modules.singleWhere(
             (m) => ppath.normalize(m.filePath) == ppath.join(copy, 'self.glp'));
         final inMemory = discoverProgram('$_vself/family',
@@ -179,13 +210,14 @@ void main() {
         expect(selfModule.ast.procedures.map((p) => p.signature).toSet(),
             inMemory.ast.procedures.map((p) => p.signature).toSet());
         expect(selfModule.volitional.keys, inMemory.volitional.keys);
-        final (status, b) = await _play('$copy/family', 'play_family(P, C, L)');
+        final (status, b) =
+            await _play('$copy/family', 'play_family(P, C, L)', root: root);
         _expectFamily(status, b);
 
         final before = {
           for (final p in written) p: File(p).readAsStringSync(),
         };
-        final again = emitVglpSources(copy, rootSelfGlpPath: _root);
+        final again = emitVglpSources(copy, rootSelfGlpPath: root);
         expect(again.map(ppath.normalize).toSet(),
             written.map(ppath.normalize).toSet());
         for (final p in again) {
@@ -196,9 +228,16 @@ void main() {
   });
 
   group('a call N # p into a directory whose self.glp is its self.vglp', () {
+    // The fixture is a program in a root of its own ([_rootOfItsOwn]).
+    late String tree;
+    late String root;
     late Directory fixture;
     setUp(() {
-      fixture = Directory('$_programs/tests/vglp').createTempSync('vself_np_');
+      final programs = _rootOfItsOwn('vself_np_');
+      tree = ppath.dirname(programs);
+      root = ppath.join(programs, 'self.glp');
+      fixture = Directory(ppath.join(programs, 'tests', 'vglp', 'np'))
+        ..createSync(recursive: true);
       Directory('${fixture.path}/sub').createSync();
       File('${fixture.path}/self.glp').writeAsStringSync('''
 imported procedure sub#hello(Constant).
@@ -211,18 +250,20 @@ hello(hi).
 ''');
     });
     tearDown(() {
-      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+      if (Directory(tree).existsSync()) {
+        Directory(tree).deleteSync(recursive: true);
+      }
     });
 
     test('resolves to the procedure that self.glp exports, in memory and '
         'from what :emit writes', () async {
-      final (s1, b1) = await _play(fixture.path, 'go(X)');
+      final (s1, b1) = await _play(fixture.path, 'go(X)', root: root);
       expect(s1, isNot(ExecutionStatus.failed));
       expect(b1['X'], 'hi');
-      emitVglpSources(fixture.path, rootSelfGlpPath: _root);
+      emitVglpSources(fixture.path, rootSelfGlpPath: root);
       final written = File('${fixture.path}/sub/self.glp');
       expect(written.readAsStringSync().startsWith(compiledHeader), isTrue);
-      final (s2, b2) = await _play(fixture.path, 'go(X)');
+      final (s2, b2) = await _play(fixture.path, 'go(X)', root: root);
       expect(s2, isNot(ExecutionStatus.failed));
       expect(b2['X'], 'hi');
     });

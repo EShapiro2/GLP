@@ -13,11 +13,17 @@ import '../platform/compat.dart';
 ///
 /// The wire frame carries no identity or signature, so sender identity comes
 /// from the payload layer: ANNOUNCE payloads are self-signed identity records
-/// (verified by [ProtocolHandler.decodeAnnounce]), Noise handshake envelopes
-/// carry an authenticated identity claim (handled by the session manager),
-/// and session-encrypted packets are authenticated by the Noise session that
+/// (verified by [ProtocolHandler.decodeAnnounce]), a Noise handshake
+/// authenticates the peer it runs with (handled by the session manager), and
+/// session-encrypted packets are authenticated by the Noise session that
 /// decrypts them. Clear application-data packets carry no authentication and
 /// are dropped.
+///
+/// ANNOUNCE arrives two ways (GNA §2.5): in clear, only before the XX
+/// handshake of a first contact under Open trust, which the coordinator's
+/// gates [shouldAcceptBleAnnounce] and [shouldAcceptUdpAnnounce] admit or
+/// drop; and inside a session, as the heartbeat, its record naming the key
+/// of the session that carried it.
 ///
 /// Responsibilities:
 /// - ANNOUNCE decoding and Redux dispatch
@@ -65,8 +71,10 @@ class MessageRouter {
   /// Called when a peer ANNOUNCE is processed (new or updated peer).
   /// [udpPeerId] is the transport-level peer identifier (tempKey for incoming
   /// UDP connections) so the coordinator can map it to the peer's pubkey.
+  /// [inSession] tells the ANNOUNCE a session carried, the heartbeat, from the
+  /// clear one of a first contact under Open trust (GNA §2.5).
   void Function(AnnounceData data, PeerTransport transport,
-      {bool isNew, String? udpPeerId})? onPeerAnnounced;
+      {bool isNew, String? udpPeerId, bool inSession})? onPeerAnnounced;
 
   /// Called when a message needs an ACK sent back to the sender
   void Function(PeerTransport transport, String? peerId, String messageId)?
@@ -303,6 +311,16 @@ class MessageRouter {
     }
 
     switch (packet.type) {
+      case PacketType.announce:
+        _handleSessionAnnounce(
+          packet,
+          senderPubkey: senderPubkey,
+          transport: transport,
+          bleDeviceId: bleDeviceId,
+          bleRole: bleRole,
+          udpPeerId: effectiveUdpPeerId,
+          rssi: rssi,
+        );
       case PacketType.fragment:
       case PacketType.attestationFragment:
         _handleFragment(
@@ -325,7 +343,6 @@ class MessageRouter {
           observedIp: observedIp,
           observedPort: observedPort,
         );
-      case PacketType.announce:
       case PacketType.noiseHandshake:
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
@@ -333,11 +350,49 @@ class MessageRouter {
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
+      case PacketType.secureAnnounce:
         return;
     }
   }
 
   // ===== Handlers =====
+
+  /// The ANNOUNCE a session carried: "Once the session is established,
+  /// ANNOUNCE is sent inside it, and repeats periodically ... on every live
+  /// connection of every underlay" (GNA §2.5, Heartbeat). Its record must
+  /// name the key of the session that decrypted it; one that names another
+  /// is dropped.
+  void _handleSessionAnnounce(
+    GrassrootsPacket packet, {
+    required Uint8List senderPubkey,
+    required PeerTransport transport,
+    String? bleDeviceId,
+    BleRole? bleRole,
+    String? udpPeerId,
+    int? rssi,
+  }) {
+    final AnnounceData data;
+    try {
+      data = protocolHandler.decodeAnnounce(packet.payload);
+    } catch (e) {
+      debugPrint('Dropping unverifiable session ANNOUNCE: $e');
+      return;
+    }
+    if (_pubkeyToHex(data.publicKey) != _pubkeyToHex(senderPubkey)) {
+      debugPrint('Dropping a session ANNOUNCE naming another key than its '
+          'session\'s');
+      return;
+    }
+    _handleAnnounce(
+      data,
+      transport: transport,
+      bleDeviceId: bleDeviceId,
+      bleRole: bleRole,
+      udpPeerId: udpPeerId,
+      rssi: rssi,
+      inSession: true,
+    );
+  }
 
   void _handleAnnounce(
     AnnounceData data, {
@@ -346,6 +401,7 @@ class MessageRouter {
     BleRole? bleRole,
     String? udpPeerId,
     int? rssi,
+    bool inSession = false,
   }) {
     final pubkey = data.publicKey;
 
@@ -415,7 +471,8 @@ class MessageRouter {
         'Peer ${isNew ? "connected" : "updated"}: '
         '${data.pubkeyHex.substring(0, 8)}... via ${transport.name}');
 
-    onPeerAnnounced?.call(data, transport, isNew: isNew, udpPeerId: udpPeerId);
+    onPeerAnnounced?.call(data, transport,
+        isNew: isNew, udpPeerId: udpPeerId, inSession: inSession);
   }
 
   void _handleFragment(

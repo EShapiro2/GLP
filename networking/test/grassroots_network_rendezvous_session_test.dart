@@ -14,7 +14,6 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
-import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/session/application_identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
@@ -159,18 +158,13 @@ void main() {
   test(
       'a configured rendezvous server that never completes the handshake is '
       'never reported reachable (GNA §2.3, §2.6)', () async {
-    // A server that answers the node's ANNOUNCE with its own, signed by the
-    // configured key, and answers nothing else: the handshake the node
-    // starts with it never completes.
+    // A server that answers nothing: the IK handshake the node starts with
+    // the configured key never completes.
     final silentId = await identityFromSeed(0x93);
-    final silentAnnounce = GrassrootsPacket(
-      type: PacketType.announce,
-      payload: ProtocolHandler(identity: silentId, sodium: sodium)
-          .createAnnouncePayload(),
-    ).serialize();
     final socket = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(socket.close);
     final received = <PacketType>[];
+    final kinds = <int>{};
     socket.listen((event) {
       if (event != RawSocketEvent.read) return;
       for (var d = socket.receive(); d != null; d = socket.receive()) {
@@ -181,8 +175,9 @@ void main() {
           continue;
         }
         received.add(packet.type);
-        if (packet.type == PacketType.announce) {
-          socket.send(silentAnnounce, d.address, d.port);
+        if (packet.type == PacketType.noiseHandshake &&
+            packet.payload.length > 2) {
+          kinds.add(packet.payload[2]);
         }
       }
     });
@@ -206,15 +201,17 @@ void main() {
       },
     );
 
-    // Several heartbeats: the node dials, the server announces, the node
-    // starts the handshake and retransmits it, and the server never answers.
+    // Several heartbeats: the node dials, starts the handshake and
+    // retransmits it, and the server never answers.
     await Future<void>.delayed(const Duration(seconds: 12));
 
-    expect(received, contains(PacketType.announce),
-        reason: 'the node dials its configured rendezvous server');
     expect(received, contains(PacketType.noiseHandshake),
         reason: 'the node runs the Noise handshake with its rendezvous '
             'server, as with any peer');
+    expect(kinds, {0x11},
+        reason: 'IK, with the key the server was configured with (GNA '
+            '§2.6), and no ANNOUNCE before it');
+    expect(received, isNot(contains(PacketType.announce)));
     expect(connects, isEmpty);
     expect(node.isPeerReachable(silentPk), isFalse);
     expect(node.peerUnderlays(silentPk), isEmpty);

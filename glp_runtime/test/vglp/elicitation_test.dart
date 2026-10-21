@@ -300,7 +300,10 @@ void main() {
     // Section 6.3): fair/5 of programs/vglp/dispatcher.glp, which merges the
     // three into the one stream serve/7 reads, takes the input whose turn it
     // is, else the next after it that has come.  Asks keep arriving, the
-    // stream's tail open, a grant and a draw and a withdrawal waiting.
+    // stream's tail open, a grant and a draw and a withdrawal waiting.  The
+    // draw's widget is a term of the root's Widget, the default widget of a
+    // value the program writes (vGLP, Section 6.3; GLP #9 Cowork, 2026-10-20
+    // 09:22 UTC, item 4.1).
     test('with asks arriving without end, the grant and the draws are taken '
         'between them, not after them', () async {
       final engine = GlpEngine(rootSelfGlpPath: _root);
@@ -311,12 +314,12 @@ void main() {
       final r = _Run(
           await engine.runGoal('fair(ask, [ask(a, 1), ask(a, 2), ask(a, 3), '
               'ask(a, 4), ask(a, 5) | As?], [input(1, [], yes) | Is?], '
-              '[draw(1, w, v), withdraw(1) | Ds?], Es)'),
+              '[draw(1, shown, v), withdraw(1) | Ds?], Es)'),
           engine);
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(
           r['Es'],
-          '[ask(a, 1), input(1, [], yes), draw(1, w, v), ask(a, 2), '
+          '[ask(a, 1), input(1, [], yes), draw(1, shown, v), ask(a, 2), '
           'withdraw(1), ask(a, 3), ask(a, 4), ask(a, 5) | _]');
     });
   });

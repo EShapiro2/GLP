@@ -2788,14 +2788,14 @@ procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 construct(Id, menu_w(X), Gs, Ds?) :- present_menu([], X?, Gs?, _, Vs, Done), run_menu_w(Id?, form(menu, [field('Key', shown), field('List(Key)', thread), field('Request', menu([form(propose, [field('Proposal', menu([form(establish, [field('Peer', peer)]), form(meet, [field('Peer', peer), field('Peer', peer)]), form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])]))]), form(known, [field('Peer', peer)])]))]), Vs?, Done?, Ds).
 construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs?, _, Vs, Done), run_approval_w(Id?, form(approval, [field('Attempt', form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(meet, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(meet, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(meet, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)])]))])])), field('Integer', shown)])]))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
 
-procedure output(_?, Stream(Output)?, Stream(Draw(Drawn))).
+procedure output(Widget?, Stream(Output)?, Stream(Draw(Drawn))).
 output(W, Ms, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Ds).
 
-procedure output_more(_?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
+procedure output_more(Widget?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
 output_more(W, [M | Ms], Es, Ds?) :- ground(M?), ground(Es?) | output_add(Es?, M?, Es1), output_draw(W?, Ms?, Es1?, Ds).
 output_more(_, [], _, []).
 
-procedure output_draw(_?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
+procedure output_draw(Widget?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
 output_draw(W, Ms, Es, [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_more(W?, Ms?, Es?, Ds).
 
 procedure output_add(List(Output)?, Output?, List(Output)).
@@ -2863,7 +2863,7 @@ procedure present_menu_wait(Path?, Menu?, Inputs(Drawn)?, Inputs(Drawn), Stream(
 present_menu_wait(P, menu(H1, H2, H3?), Gs, Gs1?, Vs?, Done?) :- present_menu(P?, menu(H1?, H2?, H3), Gs?, Gs1, Vs, Done).
 present_menu_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_menu_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure run_menu_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+procedure run_menu_w(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
 run_menu_w(Id, _, _, done, [withdraw(Id?)]).
 run_menu_w(Id, W, [V | Vs], Done, [draw(Id?, W?, menu_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_menu_w(Id?, W?, Vs?, Done?, Ds).
 run_menu_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
@@ -2898,7 +2898,7 @@ procedure present_approval_wait(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn),
 present_approval_wait(P, approval(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_approval(P?, approval(H1?, H2), Gs?, Gs1, Vs, Done).
 present_approval_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_approval_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure run_approval_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+procedure run_approval_w(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
 run_approval_w(Id, _, _, done, [withdraw(Id?)]).
 run_approval_w(Id, W, [V | Vs], Done, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w(Id?, W?, Vs?, Done?, Ds).
 run_approval_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).

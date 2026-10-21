@@ -86,7 +86,7 @@ void main() {
         announceInterval: Duration(seconds: 2),
       ),
     );
-    network.onConnectivityStatusChanged = onConnectivityStatusChanged;
+    network.wan!.onConnectivityStatusChanged = onConnectivityStatusChanged;
     expect(await network.initialize(), isTrue,
         reason: 'UDP must initialize on loopback');
     return network;
@@ -123,7 +123,7 @@ void main() {
     // Give any would-be discovery the whole window it used to take.
     await Future<void>.delayed(const Duration(seconds: 2));
 
-    expect(node.getPublicAddress(), isNull,
+    expect(node.wan!.getPublicAddress(), isNull,
         reason: 'the layer must invent no public address of its own');
     expect(node.udpAddress, isNull);
     expect(node.store.state.transports.publicAddress, isNull);
@@ -146,7 +146,7 @@ void main() {
       isTrue,
       reason: 'the injected reader named loopback and nothing else: $candidates',
     );
-    expect(node.getPublicAddress(), isNull,
+    expect(node.wan!.getPublicAddress(), isNull,
         reason: 'host candidates are not a public address');
   });
 
@@ -175,7 +175,7 @@ void main() {
     // never seed one and the layer would never obtain an address at all.
     caller.putKnownPeer(calleeId.publicKey);
     callee.putKnownPeer(callerId.publicKey);
-    caller.putPeerAddress(calleeId.publicKey, calleeAddress);
+    caller.wan!.putPeerAddress(calleeId.publicKey, calleeAddress);
 
     await caller.send(
       calleeId.publicKey,
@@ -188,7 +188,7 @@ void main() {
     }
 
     expect(delivered, ['first contact without an address']);
-    expect(caller.getPublicAddress(), isNull,
+    expect(caller.wan!.getPublicAddress(), isNull,
         reason: 'a peer session is not a rendezvous reflection');
   });
 
@@ -229,13 +229,13 @@ void main() {
     await node.start();
 
     final deadline = DateTime.now().add(const Duration(seconds: 20));
-    while (node.getPublicAddress() == null &&
+    while (node.wan!.getPublicAddress() == null &&
         DateTime.now().isBefore(deadline)) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
-    final observed = server.observedPeerAddress(node.identity.publicKey);
+    final observed = server.wan.observedPeerAddress(node.identity.publicKey);
     expect(observed, isNotNull);
-    expect(node.getPublicAddress(), observed,
+    expect(node.wan!.getPublicAddress(), observed,
         reason: 'the address the server observes, reflected');
     expect(reports, [(null, null), (null, observed)]);
   }, timeout: const Timeout(Duration(minutes: 1)));
@@ -258,7 +258,7 @@ void main() {
 
     // A known peer, connected over a session.
     node.putKnownPeer(peerId.publicKey);
-    peer.putPeerAddress(nodeId.publicKey, (await localCandidates(node)).first);
+    peer.wan.putPeerAddress(nodeId.publicKey, (await localCandidates(node)).first);
     await peer.send(nodeId.publicKey, Uint8List.fromList([1]));
     final deadline = DateTime.now().add(const Duration(seconds: 20));
     while (!peer.isPeerReachable(nodeId.publicKey) &&
@@ -274,7 +274,7 @@ void main() {
                 .encode(AddrReflectMessage(ip: '203.0.113.5', port: 4242))),
         isTrue);
     await Future<void>.delayed(const Duration(seconds: 2));
-    expect(node.getPublicAddress(), isNull,
+    expect(node.wan!.getPublicAddress(), isNull,
         reason: 'only a configured rendezvous server reflects an address');
   }, timeout: const Timeout(Duration(minutes: 1)));
 }

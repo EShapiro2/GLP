@@ -12,7 +12,11 @@
 % outside it.  Volition is one condition in Section 3 and Appendix D, def:volition
 % being definition:volition for a contract whose roles are all agent roles
 % (Appendix D, after its Definition Volition), so the third conjunct is decided
-% by community.glp's volition_faults, as Appendix D's volition is.
+% by community.glp's volition_faults, as Appendix D's volition is.  Where the
+% numbers of a contract (GSC, Section 3.2) leave the first conjunct
+% unsettled -- no introduction meets def:unobstructed, and every fault of one
+% rests on a number the paper does not settle (self.glp, Unsettled) -- and
+% the other two hold, the verdict is unsettled(Faults), those faults.
 %
 % A contract written in the language of Appendix D -- with a listed role, a
 % name term or a schema written cschema -- that is agent-named (Appendix
@@ -76,8 +80,8 @@
 % grassroots and no more.  Otherwise the faults are reported as before.
 % ---------------------------------------------------------------------------
 
-imported procedure unobstructed#intro_result(Contract?, Preds?, Faults).
-imported procedure unobstructed#intro_acts(Contract?, Preds?, IntroActs).
+imported procedure unobstructed#intro_result(NContract?, Preds?, Faults).
+imported procedure unobstructed#intro_acts(NContract?, Preds?, IntroActs).
 imported procedure prov#traceable(Contract?, Preds).
 imported procedure prov#all_preds(Contract?, Preds).
 imported procedure community#volition_faults(Contract?, Preds?, Faults).
@@ -101,18 +105,20 @@ procedure untraceable_faults(Preds?, Faults).
 untraceable_faults([], []).
 untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
 
-procedure check_section3(Contract?, Preds?, Verdict).
-check_section3(C, Rf, V?) :- ground(C?), ground(Rf?) |
+procedure check_section3(Contract?, NContract?, Preds?, Verdict).
+check_section3(C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
     prov # traceable(C?, E),
-    section3_verdict(C?, Rf?, E?, V).
+    section3_verdict(C?, NC?, Rf?, E?, V).
 
 % E is read by two conjuncts, so it is taken ground in a head of its own.
-procedure section3_verdict(Contract?, Preds?, Preds?, Verdict).
-section3_verdict(C, Rf, E, V?) :- ground(C?), ground(Rf?), ground(E?) |
+% The first conjunct, def:unobstructed, is decided on the contract as
+% written, NC (unobstructed.glp), the other two on its plain form, C.
+procedure section3_verdict(Contract?, NContract?, Preds?, Preds?, Verdict).
+section3_verdict(C, NC, Rf, E, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(E?) |
     prov # all_preds(C?, Ps),
     preds_diff(Ps?, E?, Missing),
     untraceable_faults(Missing?, FT),
-    unobstructed # intro_result(C?, Rf?, F1),
+    unobstructed # intro_result(NC?, Rf?, F1),
     community # volition_faults(C?, E?, F2),
     faults_app(FT?, F2?, F23),
     wards_verdict(F1?, F23?, C?, Rf?, V).
@@ -121,17 +127,26 @@ section3_verdict(C, Rf, E, V?) :- ground(C?), ground(Rf?), ground(E?) |
 % (GAI's appendix "Contracts with Wards"): a contract with an introduction
 % with wards is grassroots with wards (def:introduction-wards,
 % thm:grassroots-wards); otherwise the faults of the three conjuncts are
-% reported as before, in their order.
+% reported as before, in their order.  Where the first conjunct's faults are
+% all ones the numbers leave unsettled (self.glp, all_unsettled) and the
+% other two hold, the paper does not settle whether the contract is
+% syntactically grassroots, and the verdict is unsettled(Faults).
 procedure wards_verdict(Faults?, Faults?, Contract?, Preds?, Verdict).
 wards_verdict([], F23, _, _, V?) :- ground(F23?) | verdict(F23?, V).
 wards_verdict([F|Fs], [], C, Rf, V?) :-
     ground(F?), ground(Fs?), ground(C?), ground(Rf?) |
-    wards # wards(C?, Rf?, W),
-    wards_verdict1(W?, [F?|Fs?], V).
+    all_unsettled([F?|Fs?], U),
+    wards_verdict2(U?, [F?|Fs?], C?, Rf?, V).
 wards_verdict([F|Fs], [G|Gs], _, _, V?) :-
     ground(F?), ground(Fs?), ground(G?), ground(Gs?) |
     faults_app([F?|Fs?], [G?|Gs?], FF),
     verdict(FF?, V).
+
+procedure wards_verdict2(Ans?, Faults?, Contract?, Preds?, Verdict).
+wards_verdict2(yes, F, _, _, unsettled(F?)).
+wards_verdict2(no, F, C, Rf, V?) :- ground(F?), ground(C?), ground(Rf?) |
+    wards # wards(C?, Rf?, W),
+    wards_verdict1(W?, F?, V).
 
 procedure wards_verdict1(Wards?, Faults?, Verdict).
 wards_verdict1(introduction_with_wards(Nm, M, Gs, Rs, Lv), _,
@@ -165,43 +180,52 @@ named_wards1(introduction_with_wards(Nm, M, Gs, Rs, Lv), _,
              syntactically_grassroots_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
 named_wards1(no_introduction_with_wards, F, not_grassroots(F?)).
 
+procedure named_verdict2(Ans?, Faults?, Contract?, Preds?, Verdict).
+named_verdict2(yes, F, _, _, unsettled(F?)).
+named_verdict2(no, F, C, Rf, V?) :- ground(F?), ground(C?), ground(Rf?) |
+    wards # wards(C?, Rf?, W),
+    named_wards1(W?, F?, V).
+
 procedure named_verdict1(Faults?, Faults?, Contract?, Preds?, Verdict).
 named_verdict1([], [], _, _, syntactically_grassroots_with_listed_roles).
 named_verdict1([], [F|Fs], _, _, not_grassroots([F?|Fs?])).
 named_verdict1([F|Fs], [], C, Rf, V?) :-
     ground(F?), ground(Fs?), ground(C?), ground(Rf?) |
-    wards # wards(C?, Rf?, W),
-    named_wards1(W?, [F?|Fs?], V).
+    all_unsettled([F?|Fs?], U),
+    named_verdict2(U?, [F?|Fs?], C?, Rf?, V).
 named_verdict1([F|Fs], [G|Gs], _, _, V?) :-
     ground(F?), ground(Fs?), ground(G?), ground(Gs?) |
     faults_app([F?|Fs?], [G?|Gs?], FF),
     verdict(FF?, V).
 
-procedure named_verdict(Contract?, Preds?, Preds?, Preds?, Verdict).
-named_verdict(C, Rf, E3, E, V?) :- ground(C?), ground(Rf?), ground(E3?), ground(E?) |
+procedure named_verdict(Contract?, NContract?, Preds?, Preds?, Preds?, Verdict).
+named_verdict(C, NC, Rf, E3, E, V?) :-
+    ground(C?), ground(NC?), ground(Rf?), ground(E3?), ground(E?) |
     prov # all_preds(C?, Ps),
     preds_diff(Ps?, E3?, Missing),
     untraceable_faults(Missing?, FT),
-    unobstructed # intro_result(C?, Rf?, F12),
+    unobstructed # intro_result(NC?, Rf?, F12),
     community # volition_faults(C?, E?, F4),
     faults_app(FT?, F4?, F34),
     named_verdict1(F12?, F34?, C?, Rf?, V).
 
-procedure check_agent_named(Contract?, Preds?, Verdict).
-check_agent_named(C, Rf, V?) :- ground(C?), ground(Rf?) |
+procedure check_agent_named(Contract?, NContract?, Preds?, Verdict).
+check_agent_named(C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
     community # traceable_agent(C?, E3),
     community # traceable(C?, E),
-    named_verdict(C?, Rf?, E3?, E?, V).
+    named_verdict(C?, NC?, Rf?, E3?, E?, V).
 
-procedure check_app1(Ans?, Contract?, Preds?, Verdict).
-check_app1(yes, C, Rf, V?) :- ground(C?), ground(Rf?) | check_agent_named(C?, Rf?, V).
-check_app1(no, C, _, V?) :- ground(C?) | check_appendix(C?, V).
+procedure check_app1(Ans?, Contract?, NContract?, Preds?, Verdict).
+check_app1(yes, C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
+    check_agent_named(C?, NC?, Rf?, V).
+check_app1(no, C, _, _, V?) :- ground(C?) | check_appendix(C?, V).
 
-procedure check1(Ans?, Contract?, Preds?, Verdict).
-check1(no, C, Rf, V?) :- ground(C?), ground(Rf?) | check_section3(C?, Rf?, V).
-check1(yes, C, Rf, V?) :- ground(C?), ground(Rf?) |
+procedure check1(Ans?, Contract?, NContract?, Preds?, Verdict).
+check1(no, C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
+    check_section3(C?, NC?, Rf?, V).
+check1(yes, C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
     agent_named(C?, A),
-    check_app1(A?, C?, Rf?, V).
+    check_app1(A?, C?, NC?, Rf?, V).
 
 % --- the form of a schema (def:schema; Appendix D, Definition Act schema) --
 % def:schema, and Appendix D's Definition Act schema (GSC 70afdc4), require
@@ -656,14 +680,15 @@ num_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % in the order: the head, the numbers, the listed roles, the form of a
 % schema, the reflexive predicates, the signed terms.  The head and the
 % numbers are decided on the contract as written, the rest on its plain form
-% (self.glp, plain_decl), and so are the conditions.
-procedure check_formed(Faults?, Ans?, Contract?, Preds?, Verdict).
-check_formed([], A, C, Rf, V?) :- ground(A?), ground(C?), ground(Rf?) |
-    check1(A?, C?, Rf?, V).
-check_formed([F|Fs], _, _, _, malformed([F?|Fs?])).
+% (self.glp, plain_decl), and so are traceable provenance and volition;
+% def:unobstructed is decided on the contract as written (unobstructed.glp).
+procedure check_formed(Faults?, Ans?, Contract?, NContract?, Preds?, Verdict).
+check_formed([], A, C, NC, Rf, V?) :- ground(A?), ground(C?), ground(NC?), ground(Rf?) |
+    check1(A?, C?, NC?, Rf?, V).
+check_formed([F|Fs], _, _, _, _, malformed([F?|Fs?])).
 
-procedure check_decl(Contract?, Preds?, Faults?, Verdict).
-check_decl(C, Rf, MHN, V?) :- ground(C?), ground(Rf?), ground(MHN?) |
+procedure check_decl(Contract?, NContract?, Preds?, Faults?, Verdict).
+check_decl(C, NC, Rf, MHN, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(MHN?) |
     has_community(C?, A),
     form_schemas(C?, M0),
     refl_schemas(C?, Rf?, M1),
@@ -673,7 +698,7 @@ check_decl(C, Rf, MHN, V?) :- ground(C?), ground(Rf?), ground(MHN?) |
     faults_app(ML?, M0?, ML0),
     faults_app(MHN?, ML0?, MH0),
     faults_app(MH0?, M12?, M),
-    check_formed(M?, A?, C?, Rf?, V).
+    check_formed(M?, A?, C?, NC?, Rf?, V).
 
 procedure check_ndecl(NContract?, Preds?, Verdict).
 check_ndecl(NC, Rf, V?) :- ground(NC?), ground(Rf?) |
@@ -681,7 +706,7 @@ check_ndecl(NC, Rf, V?) :- ground(NC?), ground(Rf?) |
     head_schemas(NC?, MH),
     num_schemas(NC?, MN),
     faults_app(MH?, MN?, MHN),
-    check_decl(C?, Rf?, MHN?, V).
+    check_decl(C?, NC?, Rf?, MHN?, V).
 
 exported procedure check(NDeclared?, Verdict).
 check(D, V?) :- ground(D?) |
@@ -747,14 +772,9 @@ traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |
 % unobstructed; this says which.
 exported procedure intro_acts(NDeclared?, IntroActs).
 intro_acts(D, A?) :- ground(D?) |
-    plain_decl(D?, PD),
-    intro_acts_pd(PD?, A).
-
-procedure intro_acts_pd(Declared?, IntroActs).
-intro_acts_pd(D, A?) :- ground(D?) |
-    decl_schemas(D?, C),
-    decl_reflexive(D?, Rf),
-    unobstructed # intro_acts(C?, Rf?, A).
+    ndecl_schemas(D?, NC),
+    ndecl_reflexive(D?, Rf),
+    unobstructed # intro_acts(NC?, Rf?, A).
 
 exported procedure intro_acts_variant(Constant?, Contract?, IntroActs).
 intro_acts_variant(Nm, B, A?) :- ground(Nm?), ground(B?) |

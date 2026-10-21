@@ -17,6 +17,8 @@ import 'dart:typed_data';
 
 import 'runtime.dart';
 import 'terms.dart';
+import 'package:glp_runtime/compiler/glp_printer.dart'
+    show constantSource, functorNameSource;
 import 'machine_state.dart' show GoalRef;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
@@ -1678,5 +1680,87 @@ String formatGroundTerm(Term term) {
     return '${term.functor}($args)';
   }
   return term.toString();
+}
+
+/// [term] as GLP text that reads back as the term (GLP-Spec appendix-lp.tex,
+/// Definition "Logic Programs Syntax"): each constant and functor as the
+/// printer writes it ([constantSource], [functorNameSource]) --- `'G'`, `'+'`,
+/// `'42'` and `'Flood on Main Street'` in single quotes --- `[]` for the empty
+/// list, a list as `[a, b, c]` or `[a, b | T]`, and a structure as `f(a, b)`.
+/// The one printer of the REPL's bindings (bin/glp_repl.dart) and of the
+/// lines a boot prints, each element an agent emits to its person
+/// (multiagent/isolate_manager.dart) (GLP #9 Cowork, 2026-10-20 09:22 UTC,
+/// item 4.2: "the boot prints a term in GLP syntax, as the REPL does, a
+/// quoted constant quoted, so that what is printed reads back as the term;
+/// one printer serves both").  Until 2026-10-20 the boot printed by
+/// [formatGroundTerm], `utterance(Flood on Main Street)` where the REPL
+/// printed `utterance('Flood on Main Street')` (Code #11, 2026-10-19 11:45
+/// UTC).  send_to_user/1 on a terminal prints by [formatGroundTerm], a
+/// constant unquoted, as it stays (bin/glp_repl.dart; GLP #3 Cowork,
+/// 2026-10-04 09:06 UTC).
+///
+/// [deref] is called at each variable met and gives the term it is bound to,
+/// or a variable where it is unbound, which [variableName] names; with no
+/// [deref] a variable is shown as the runtime shows it.  A variable met again
+/// inside its own value is shown `<circular>`, or, as a list's tail,
+/// `<circular X>` after the elements before it.  The list is walked along its
+/// spine in a loop and its elements by recursion, as the checker walks it.
+String formatTerm(Term term,
+    {Term Function(VarRef v)? deref, String Function(VarRef v)? variableName}) {
+  final path = <Object>{};
+  String name(VarRef v) => variableName?.call(v) ?? v.toString();
+
+  String show(Term t) {
+    if (t is VarRef) {
+      final d = deref;
+      if (d == null) return t.toString();
+      if (path.contains(t.addr)) return '<circular>';
+      path.add(t.addr);
+      final value = d(t);
+      final s = value is VarRef ? name(value) : show(value);
+      path.remove(t.addr);
+      return s;
+    }
+    if (t is ConstTerm) {
+      final value = t.value;
+      if (value == null || value == nil) return '[]';
+      return constantSource(value);
+    }
+    if (t is StructTerm && t.functor == '.' && t.args.length == 2) {
+      final elements = <String>[];
+      Term current = t;
+      final d = deref;
+      while (true) {
+        if (current is VarRef && d != null) {
+          if (path.contains(current.addr)) {
+            return '[${elements.join(', ')} | <circular ${name(current)}>]';
+          }
+          final value = d(current);
+          if (value is VarRef) return '[${elements.join(', ')} | ${name(value)}]';
+          current = value;
+          continue;
+        }
+        if (current is StructTerm &&
+            current.functor == '.' &&
+            current.args.length == 2) {
+          elements.add(show(current.args[0]));
+          current = current.args[1];
+          continue;
+        }
+        break;
+      }
+      if (current is ConstTerm &&
+          (current.value == nil || current.value == null)) {
+        return '[${elements.join(', ')}]';
+      }
+      return '[${elements.join(', ')} | ${show(current)}]';
+    }
+    if (t is StructTerm) {
+      return '${functorNameSource(t.functor)}(${t.args.map(show).join(', ')})';
+    }
+    return t.toString();
+  }
+
+  return show(term);
 }
 

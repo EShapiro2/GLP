@@ -168,16 +168,89 @@ void main() {
     });
   });
 
+  // "the error for an ill-typed term prints the first failing path and the
+  // number of the rest" (GLP #9 Cowork, 2026-10-20 09:22 UTC, item 3): each
+  // path of a list runs down its spine, and until 2026-10-20 every failing
+  // path was printed in full, text quadratic in the list's length (Code #11,
+  // 2026-10-19 17:32 UTC).
   test(
-      'input coverage of a list in the head reports each uncovered '
-      'alternative, in the order of the walk', () {
-    refused(
-        'cover.glp',
-        'exported procedure k(Stream(Integer)?).\nk([0, 1, 2]).\n',
-        'k argument 1: uncovered alternative "[]" at path: Stream<Integer> → [] at line 1\n'
-            '  k argument 1: uncovered alternative "[]" at path: Stream<Integer> → [|](2,2):↓ → [] at line 1\n'
-            '  k argument 1: uncovered alternative "[]" at path: Stream<Integer> → [|](2,2):↓ → [|](2,2):↓ → [] at line 1\n'
-            '  k argument 1: uncovered alternative "[|](2,1):↓" at path: Stream<Integer> → [|](2,2):↓ → [|](2,2):↓ → [|](2,2):↓ → [|](2,1):↓ at line 1\n'
-            '  k argument 1: uncovered alternative "[|](2,2):↓" at path: Stream<Integer> → [|](2,2):↓ → [|](2,2):↓ → [|](2,2):↓ → [|](2,2):↓ at line 1');
+      'a clause whose argument is a list of $_n ill-typed elements is refused, '
+      'its error printing the first failing path and the number of the rest',
+      () {
+    final source = 'exported procedure g(Stream(Integer)).\n'
+        'g([${_elements(_n, (i) => "'s$i'")}]).\n';
+    Object? error;
+    try {
+      load('all_bad.glp', source);
+    } catch (e) {
+      error = e;
+    }
+    final s = error.toString();
+    expect(s, contains('Type checking failed'));
+    expect(s, contains('Head of g is not well-typed:\n'
+        '  Inconsistent path: Integer type requires integer literal\n'
+        '  Path: '));
+    expect(s, contains('and ${_n - 1} more inconsistent paths of the term'));
+    expect('Inconsistent path:'.allMatches(s).length, 1);
+    expect(s.length, lessThan(2000));
+  });
+
+  // "the input-coverage error prints the first uncovered path and the number
+  // of the rest, as the ill-typed term's error does" (GLP #9 Cowork,
+  // Code_inbox 2026-10-20 22:54 UTC, item 3): until 2026-10-21 every
+  // uncovered alternative of a list in a head was printed with its full path,
+  // text quadratic in the list's length, 545 MB for a clause of 8000 integers
+  // (Code #12, 2026-10-20 11:08 UTC).
+  test(
+      'input coverage of a list in the head reports its first uncovered '
+      'alternative, in the order of the walk, and the number of the rest', () {
+    Object? error;
+    try {
+      load('cover.glp', 'exported procedure k(Stream(Integer)?).\nk([0, 1, 2]).\n');
+    } catch (e) {
+      error = e;
+    }
+    final s = error.toString();
+    expect(s, contains('Type checking failed'));
+    expect(
+        s,
+        contains(
+            '  k argument 1: uncovered alternative "[]" at path: Stream<Integer> → []\n'
+            '  and 4 more uncovered alternatives of the argument at line 1'));
+    expect('uncovered alternative "'.allMatches(s).length, 1);
+  });
+
+  test('an argument with one uncovered alternative prints it and no count', () {
+    Object? error;
+    try {
+      load('cover1.glp',
+          'Kind ::= x ; y.\nexported procedure q(Kind?).\nq(x).\n');
+    } catch (e) {
+      error = e;
+    }
+    final s = error.toString();
+    expect(s, contains('Type checking failed'));
+    expect(s, contains('q argument 1: uncovered alternative "y" at path: '));
+    expect(s, isNot(contains('more uncovered')));
+  });
+
+  test(
+      'a clause whose input argument is a list of $_n integers, uncovered at '
+      'each of its cells, is refused, its error printing the first uncovered '
+      'alternative and the number of the rest', () {
+    Object? error;
+    try {
+      load('cover_long.glp', _integers(_n).replaceFirst('g(Stream(Integer))', 'g(Stream(Integer)?)'));
+    } catch (e) {
+      error = e;
+    }
+    final s = error.toString();
+    expect(s, contains('Type checking failed'));
+    expect(
+        s,
+        contains('  g argument 1: uncovered alternative "[]" at path: Stream<Integer> → []\n'
+            '  and ${_n + 1} more uncovered alternatives of the argument at line 1'));
+    expect('uncovered alternative "'.allMatches(s).length, 1);
+    expect(s.length, lessThan(2000));
   });
 }

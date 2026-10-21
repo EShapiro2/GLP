@@ -61,7 +61,7 @@ void main() {
       addTearDown(layer.dispose);
       expect(await layer.start(), isTrue);
       expect(layer.boundPort, port);
-      expect(layer.getPublicAddress(), '203.0.113.9:$port');
+      expect(layer.wan.getPublicAddress(), '203.0.113.9:$port');
     });
 
     test('without one, an ephemeral port and no public address', () async {
@@ -77,7 +77,7 @@ void main() {
       addTearDown(layer.dispose);
       expect(await layer.start(), isTrue);
       expect(layer.boundPort, greaterThan(0));
-      expect(layer.getPublicAddress(), isNull);
+      expect(layer.wan.getPublicAddress(), isNull);
     });
 
     test('refuses a port out of range and an unparseable address', () {
@@ -107,7 +107,7 @@ void main() {
           received.complete();
         }
       };
-      caller.putPeerAddress(
+      caller.wan.putPeerAddress(
           layer.identity.publicKey, '127.0.0.1:${layer.boundPort}');
       await caller.send(layer.identity.publicKey, Uint8List.fromList([7]));
       try {
@@ -120,8 +120,8 @@ void main() {
     }
 
     test(
-        'marked, the layer completes ANNOUNCE and the handshake with an '
-        'unknown key over the WAN, and the session carries a message',
+        'marked, the layer answers an unknown key\'s IK handshake over the '
+        'WAN, and the session carries a message',
         () async {
       if (sodiumUnavailable != null) {
         markTestSkipped(sodiumUnavailable!);
@@ -292,7 +292,7 @@ void main() {
     addTearDown(agent.dispose);
     final changes = <String>[];
     final reflected = Completer<String>();
-    agent.onConnectivityStatusChanged = (oldAddress, newAddress) {
+    agent.wan.onConnectivityStatusChanged = (oldAddress, newAddress) {
       changes.add('$oldAddress -> $newAddress');
       if (newAddress != null && !reflected.isCompleted) {
         reflected.complete(newAddress);
@@ -303,10 +303,10 @@ void main() {
     final address =
         await reflected.future.timeout(const Duration(seconds: 15));
     expect(address,
-        server.observedPeerAddress(agent.identity.publicKey),
+        server.wan.observedPeerAddress(agent.identity.publicKey),
         reason: 'the address the server observes the agent at');
     expect(address, endsWith(':${agent.boundPort}'));
-    expect(agent.getPublicAddress(), address);
+    expect(agent.wan.getPublicAddress(), address);
     expect(changes, ['null -> null', 'null -> $address'],
         reason: 'none at startup, then the reflected one');
   }, timeout: const Timeout(Duration(minutes: 1)));

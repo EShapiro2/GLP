@@ -730,12 +730,12 @@ nm_bonds(C?) :-
           rs(unguarded, [atom(bond, [role(2), num(d)])], [],
                         [atom(identity, []), atom(date, [num(t)])], [])])], C).
 
-% --- the conditions do not concern numbers: a number required --------------
+% --- a number required and supplied ----------------------------------------
 % meet as above, but each role requires score(5), which the schema of arity
 % one score(Alice?; k) : +score(k) adds, guarded and requiring and forbidding
-% nothing: the number 5 and the numeric variable k are one to the
-% conditions, so clause 1 of def:unobstructed holds and the contract is
-% syntactically grassroots.
+% nothing, at the binding sending k to 5, which satisfies its constraint,
+% true: clause 1 of def:unobstructed holds, a number matched by equality, and
+% the contract is syntactically grassroots.
 procedure nm_supplied(NContract).
 nm_supplied([schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
@@ -745,12 +745,12 @@ nm_supplied([schema(establish, [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(score, [num(5)])], []),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(score, [num(5)])], [])])]).
 
-% --- negative: a number forbidden ------------------------------------------
+% --- a number forbidden, unsettled -----------------------------------------
 % meet forbids date(0) at Alice, and advance, unguarded and of arity one,
-% adds date(t1) there: the number 0 and the numeric variable t1 are one to
-% the conditions, and advance has Bob in no role, so clause 2 of
-% def:unobstructed fails, obstructed(meet, 1, date(0), blocked_by(advance,
-% 1, date(t1))).
+% adds date(t1) there at a binding satisfying t1 = t + 1.  Such a binding
+% sending t1 to 0 sends t to -1, and whether -1 is a number the paper does
+% not say (GSC, Section 3.2), so whether clause 2 of def:unobstructed holds
+% is unsettled: unsettled(meet, 1, date(0), added_by(advance, 1, date(t1))).
 procedure nm_blocked(NContract).
 nm_blocked([schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
@@ -759,6 +759,112 @@ nm_blocked([schema(establish, [],
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
     nschema(advance, [num(t), num(t1)], succ(num(t), num(t1)),
        [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])])]).
+
+% --- a number required, and the constraint of the schema adding it ---------
+% meet requiring score(5) at each role (nm_supplied), and a schema of arity
+% one adding score(k) at a binding satisfying its constraint
+% (def:unobstructed, clause 1; GSC, Section 3.2).
+procedure nm_score_meet(NContract).
+nm_score_meet([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(score, [num(5)])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(score, [num(5)])], [])])]).
+
+% score(Alice?; k) | k > 3 : +score(k): the binding sending k to 5 satisfies
+% 5 > 3 and adds score(5), so meet is unobstructed and the contract
+% syntactically grassroots.
+procedure nm_admits(NContract).
+nm_admits(C?) :-
+    nm_score_meet(B),
+    ncontract_app(B?,
+      [nschema(score, [num(k)], gt(num(k), num(3)),
+         [rs(guarded, [atom(score, [num(k)])], [], [], [])])], C).
+
+% --- negative: score(Alice?; k) | k <= 4 : +score(k) ------------------------
+% The one binding adding score(5) sends k to 5, which 5 <= 4 excludes, so no
+% schema of arity one adds score(5): obstructed(meet, 1, score(5),
+% unobtainable), and at role 2 the same.
+procedure nm_excludes(NContract).
+nm_excludes(C?) :-
+    nm_score_meet(B),
+    ncontract_app(B?,
+      [nschema(score, [num(k)], le(num(k), num(4)),
+         [rs(guarded, [atom(score, [num(k)])], [], [], [])])], C).
+
+% --- negative: score(Alice?) : +score(4) ------------------------------------
+% The schema adds score(4), and 4 is not 5: no schema of arity one adds
+% score(5), obstructed at both roles.
+procedure nm_other_number(NContract).
+nm_other_number(C?) :-
+    nm_score_meet(B),
+    ncontract_app(B?,
+      [schema(score, [],
+         [rs(guarded, [atom(score, [num(4)])], [], [], [])])], C).
+
+% --- a number forbidden, and the constraint of the schema adding it --------
+% meet forbidding date(0) at Alice (nm_blocked), and set_date(Alice; t),
+% unguarded and of arity one, requiring identity and adding date(t) at a
+% binding satisfying its constraint (def:unobstructed, clause 2).
+procedure nm_date_meet(NContract).
+nm_date_meet([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(date, [num(0)])]),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
+
+% --- negative: set_date(Alice; t) | t <= 3 : identity, +date(t) -------------
+% The binding sending t to 0 satisfies 0 <= 3 and adds date(0) at Alice, and
+% set_date has Bob in no role: clause 2 fails, obstructed(meet, 1, date(0),
+% blocked_by(set_date, 1, date(t))).
+procedure nm_forbid_admits(NContract).
+nm_forbid_admits(C?) :-
+    nm_date_meet(B),
+    ncontract_app(B?,
+      [nschema(set_date, [num(t)], le(num(t), num(3)),
+         [rs(unguarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
+
+% set_date(Alice; t) | t > 3 : identity, +date(t): the one binding adding
+% date(0) sends t to 0, which 0 > 3 excludes, so no binding of set_date adds
+% the atom meet forbids, clause 2 holds and the contract is syntactically
+% grassroots.
+procedure nm_forbid_excludes(NContract).
+nm_forbid_excludes(C?) :-
+    nm_date_meet(B),
+    ncontract_app(B?,
+      [nschema(set_date, [num(t)], gt(num(t), num(3)),
+         [rs(unguarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
+
+% --- a number of the introductory act --------------------------------------
+% meet(Alice?, Bob?; n) requires score(n) at each role, n its numeric
+% variable, whose number its introduction chooses (def:introduction); score
+% is as in nm_supplied, or carries the constraint k > 3.
+procedure nm_var_meet(NContract).
+nm_var_meet([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [num(n)],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(score, [num(n)])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(score, [num(n)])], [])])]).
+
+% score(Alice?; k) : +score(k) adds score(n) at the binding sending k to n,
+% whatever number the introduction sends n to: syntactically grassroots.
+procedure nm_intro_var(NContract).
+nm_intro_var(C?) :-
+    nm_var_meet(B),
+    ncontract_app(B?,
+      [schema(score, [num(k)],
+         [rs(guarded, [atom(score, [num(k)])], [], [], [])])], C).
+
+% score(Alice?; k) | k > 3 : +score(k) adds score(n) where the introduction
+% sends n to a number above 3.  The checker does not choose the number, and
+% the verdict is unsettled: unsettled(meet, 1, score(n), supplied_by(score,
+% score(k))), and at role 2 the same.
+procedure nm_intro_var_bounded(NContract).
+nm_intro_var_bounded(C?) :-
+    nm_var_meet(B),
+    ncontract_app(B?,
+      [nschema(score, [num(k)], gt(num(k), num(3)),
+         [rs(guarded, [atom(score, [num(k)])], [], [], [])])], C).
 
 % --- negative: a role that reads a number and changes nothing --------------
 % mature(Alice?, Bob; d, t) | d <= t : identity, knows(Bob), -bond(Bob, d), +coin(Bob)
@@ -919,6 +1025,13 @@ contract(nm_mult_agent, C?) :- nm_mult_agent(C).
 contract(nm_constraint_agent, C?) :- nm_constraint_agent(C).
 contract(nm_added_deleted, C?) :- nm_added_deleted(C).
 contract(nm_head, C?) :- nm_head(C).
+contract(nm_admits, C?) :- nm_admits(C).
+contract(nm_excludes, C?) :- nm_excludes(C).
+contract(nm_other_number, C?) :- nm_other_number(C).
+contract(nm_forbid_admits, C?) :- nm_forbid_admits(C).
+contract(nm_forbid_excludes, C?) :- nm_forbid_excludes(C).
+contract(nm_intro_var, C?) :- nm_intro_var(C).
+contract(nm_intro_var_bounded, C?) :- nm_intro_var_bounded(C).
 contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract

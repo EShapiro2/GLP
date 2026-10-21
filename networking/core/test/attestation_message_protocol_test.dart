@@ -307,7 +307,7 @@ void main() {
     HeadlessGrassrootsNetwork service,
     int port,
   ) async {
-    caller.putPeerAddress(service.identity.publicKey, '127.0.0.1:$port');
+    caller.wan.putPeerAddress(service.identity.publicKey, '127.0.0.1:$port');
     await caller.send(
       service.identity.publicKey,
       Uint8List.fromList(utf8.encode('hello')),
