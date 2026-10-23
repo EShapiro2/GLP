@@ -108,10 +108,15 @@ void main() {
 
     // The callee's layer, which answers no unsolicited contact from a key
     // outside its known-peer set (GNA, "Cold Calls", Trust levels).
+    // Each layer keeps its fair-delivery queue in a file its embedder names
+    // (GNA §2.11, "the queue survives the termination of the application").
+    final queues = Directory.systemTemp.createTempSync('glp_headless_queue_');
+    addTearDown(() => queues.deleteSync(recursive: true));
     final calleeLayer = HeadlessGrassrootsNetwork(
       identity: calleeId,
       rendezvousServers: const [],
       sodium: sodium!,
+      outboundQueueStore: FileOutboundQueueStore('${queues.path}/callee.json'),
     );
     addTearDown(calleeLayer.dispose);
     final calleeNet = HeadlessGlpNetwork(calleeLayer);
@@ -123,6 +128,7 @@ void main() {
       identity: callerId,
       rendezvousServers: const [],
       sodium: sodium!,
+      outboundQueueStore: FileOutboundQueueStore('${queues.path}/caller.json'),
     );
     addTearDown(callerLayer.dispose);
     final callerNet = HeadlessGlpNetwork(callerLayer);

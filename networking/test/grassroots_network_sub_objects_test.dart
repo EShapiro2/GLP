@@ -103,22 +103,22 @@ void main() {
     final pan = layer.pan!;
     final lan = layer.lan!;
 
-    expect(pan.trustLevel, ColdCallTrustLevel.closed);
-    expect(lan.trustLevel, ColdCallTrustLevel.closed);
+    // The levels the layer holds, in its store; the sub-objects set them and
+    // have no call that reads them back (GNA §3.1, Discovery).
+    ColdCallTrustLevel levelOf(ProximityUnderlay underlay) =>
+        layer.store.state.settings.trustLevelOf(underlay);
+    expect(levelOf(ProximityUnderlay.pan), ColdCallTrustLevel.closed);
+    expect(levelOf(ProximityUnderlay.lan), ColdCallTrustLevel.closed);
 
     await pan.setTrustLevel(ColdCallTrustLevel.open);
-    expect(pan.trustLevel, ColdCallTrustLevel.open);
-    expect(lan.trustLevel, ColdCallTrustLevel.closed,
+    expect(levelOf(ProximityUnderlay.pan), ColdCallTrustLevel.open);
+    expect(levelOf(ProximityUnderlay.lan), ColdCallTrustLevel.closed,
         reason: 'the PAN level leaves the LAN level as it was');
-    expect(layer.store.state.settings.trustLevelOf(ProximityUnderlay.pan),
-        ColdCallTrustLevel.open);
 
     await lan.setTrustLevel(ColdCallTrustLevel.open);
     await pan.setTrustLevel(ColdCallTrustLevel.closed);
-    expect(pan.trustLevel, ColdCallTrustLevel.closed);
-    expect(lan.trustLevel, ColdCallTrustLevel.open);
-    expect(layer.store.state.settings.trustLevelOf(ProximityUnderlay.lan),
-        ColdCallTrustLevel.open);
+    expect(levelOf(ProximityUnderlay.pan), ColdCallTrustLevel.closed);
+    expect(levelOf(ProximityUnderlay.lan), ColdCallTrustLevel.open);
 
     // Nothing is nearby on either underlay.
     expect(pan.getPeers(), isEmpty);

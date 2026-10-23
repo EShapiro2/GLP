@@ -46,6 +46,7 @@ class PushService {
     required int port,
     required String publicAddress,
     required MirrorWriter writer,
+    required String outboundQueuePath,
     String? knownPeersPath,
   }) async {
     final sodium = await initHeadlessSodium();
@@ -62,6 +63,9 @@ class PushService {
       knownPeersStore: knownPeersPath == null
           ? null
           : FileKnownPeersStore(knownPeersPath),
+      // The layer's fair-delivery queue, kept in a file so that it survives
+      // the termination of the service (GNA §2.11).
+      outboundQueueStore: FileOutboundQueueStore(outboundQueuePath),
     );
     final service = PushService._(network, writer);
     network.onMessageReceived =

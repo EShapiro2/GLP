@@ -279,8 +279,10 @@ void main() {
     receiverStore.dispatch(LocalNetworkChangedAction(loopbackIsLocal));
     await receiver.pan!.setTrustLevel(ColdCallTrustLevel.open);
 
-    expect(receiver.pan!.trustLevel, ColdCallTrustLevel.open);
-    expect(receiver.lan!.trustLevel, ColdCallTrustLevel.closed);
+    expect(receiver.store.state.settings.trustLevelOf(ProximityUnderlay.pan),
+        ColdCallTrustLevel.open);
+    expect(receiver.store.state.settings.trustLevelOf(ProximityUnderlay.lan),
+        ColdCallTrustLevel.closed);
 
     caller.wan!.putPeerAddress(
       receiverId.publicKey,

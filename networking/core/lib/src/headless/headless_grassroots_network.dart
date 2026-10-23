@@ -106,11 +106,12 @@ class ServerAddress {
 /// Known peers persist through [HeadlessKnownPeersStore] — file-backed
 /// ([FileKnownPeersStore]) or in-memory ([MemoryKnownPeersStore]) — replacing
 /// the Flutter package's SharedPreferences persistence.  The fair-delivery
-/// queue persists through an [OutboundQueueStore] the same way — a file its
-/// embedder names ([FileOutboundQueueStore]) or memory
-/// ([MemoryOutboundQueueStore], the default), so that it survives the
-/// termination of the application (GNA §2.10) wherever the embedder gives it
-/// a file.
+/// queue persists through the [OutboundQueueStore] the layer is given, which
+/// it cannot be constructed without, so that the queue survives the
+/// termination of the application (GNA §2.11, Networking Assumptions: "the
+/// queue survives the termination of the application"): each embedder names
+/// its file ([FileOutboundQueueStore]); a test may give memory
+/// ([MemoryOutboundQueueStore]), which lasts as long as the process.
 class HeadlessGrassrootsNetwork {
   HeadlessGrassrootsNetwork({
     required this.identity,
@@ -120,11 +121,11 @@ class HeadlessGrassrootsNetwork {
     this.rendezvousServer = false,
     required this.sodium,
     HeadlessKnownPeersStore? knownPeersStore,
-    OutboundQueueStore? outboundQueueStore,
+    required OutboundQueueStore outboundQueueStore,
   })  : rendezvousServers = List.unmodifiable(rendezvousServers),
         _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
     _persistedQueue = PersistentOutboundQueue(
-      store: outboundQueueStore ?? MemoryOutboundQueueStore(),
+      store: outboundQueueStore,
       ownerHex: _hex(identity.publicKey),
     );
     _restoreOutboundQueue();

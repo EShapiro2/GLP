@@ -55,6 +55,7 @@ void main() {
     setUp(() async {
       if (sodiumUnavailable != null) return;
       layer = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await identityFromSeed(seedOf(0x21)),
         rendezvousServers: const [],
         sodium: sodium!,
@@ -160,6 +161,41 @@ void main() {
       layer.wan.onConnectivityStatusChanged!(null, '203.0.113.7:9600');
       layer.wan.onNetworkChanged!(null, 'n-1');
       expect(events, ['address null 203.0.113.7:9600', 'network null n-1']);
+    });
+
+    test(
+        "send awaits the layer's save of the queue, and a save that fails "
+        "fails the glue's send (GNA §2.11)", () async {
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      final store = MemoryOutboundQueueStore();
+      final saving = HeadlessGrassrootsNetwork(
+        identity: await identityFromSeed(seedOf(0x23)),
+        rendezvousServers: const [],
+        sodium: sodium!,
+        outboundQueueStore: store,
+      );
+      addTearDown(saving.dispose);
+      await HeadlessGlpNetwork(saving).send(peer, Uint8List.fromList([1]));
+      expect(
+          (await store.load(_hex(saving.identity.publicKey)))
+              .map((e) => e.recipientHex),
+          [peer.hex],
+          reason: 'the message is saved once the glue\'s send completes');
+
+      final failing = HeadlessGrassrootsNetwork(
+        identity: await identityFromSeed(seedOf(0x24)),
+        rendezvousServers: const [],
+        sodium: sodium!,
+        outboundQueueStore: _FailingQueueStore(),
+      );
+      addTearDown(failing.dispose);
+      await expectLater(
+          HeadlessGlpNetwork(failing).send(peer, Uint8List.fromList([2])),
+          throwsA(isA<FileSystemException>()),
+          reason: 'a save that fails reaches the caller of the glue\'s send');
     });
 
     test(
@@ -283,6 +319,7 @@ answer(forty_two).
 
       // This process: the caller over its own headless layer.
       final layer = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: callerIdentity,
         rendezvousServers: const [],
         sodium: sodium!,
@@ -345,6 +382,16 @@ answer(forty_two).
       await fromChild((l) => l == 'CONNECTED ${caller.hex} wan null');
     }, timeout: const Timeout(Duration(minutes: 3)));
   });
+}
+
+/// A store of the queue whose every save fails, as a full disc's does.
+class _FailingQueueStore implements OutboundQueueStore {
+  @override
+  Future<List<OutboundQueueEntry>> load(String ownerHex) async => [];
+
+  @override
+  Future<void> save(String ownerHex, List<OutboundQueueEntry> entries) async =>
+      throw const FileSystemException('the disc is full');
 }
 
 /// The first line of [lines] that [test] accepts, waiting up to 90 seconds

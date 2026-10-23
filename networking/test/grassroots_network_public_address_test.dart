@@ -16,6 +16,7 @@ import 'helpers/sodium_test_bootstrap.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/headless/headless_grassroots_network.dart';
+import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
 import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
 
 /// Hermetic host candidates (see the glare test).
@@ -198,6 +199,7 @@ void main() {
     final port = probe.port;
     probe.close();
     final server = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(fill),
       rendezvousServers: const [],
       serverAddress:
@@ -249,6 +251,7 @@ void main() {
     addTearDown(node.dispose);
     await node.start();
     final peer = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: peerId,
       rendezvousServers: const [],
       sodium: sodium,

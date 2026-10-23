@@ -119,6 +119,7 @@ void main() {
     bool rendezvousServer = false,
   }) async {
     final layer = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(fill),
       rendezvousServers: rendezvousServers,
       serverAddress: serverAddress,

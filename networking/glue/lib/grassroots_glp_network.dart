@@ -129,9 +129,14 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
 
   // --- Point-to-point communication ---
 
+  /// `send(pubKey, payload)`: the layer's `send`, awaited, so that a save of
+  /// the queue that fails reaches the caller: the layer saves the message
+  /// before its `send` returns, so that the queue survives the termination
+  /// of the application (GNA §2.11).
   @override
-  void send(glp.PubKey pk, Uint8List payload) =>
-      unawaited(layer.send(pk.bytes, payload));
+  Future<void> send(glp.PubKey pk, Uint8List payload) async {
+    await layer.send(pk.bytes, payload);
+  }
 
   void Function(glp.PubKey sender, Uint8List payload, String messageId,
       glp.Underlay underlay)? _onMessageReceived;

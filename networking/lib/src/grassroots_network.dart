@@ -931,11 +931,10 @@ class GrassrootsNetwork {
   /// Whether UDP — the LAN and WAN underlays' carrier — runs and is available.
   bool get isUdpEnabled => _udpAvailable;
 
-  /// The cold-call trust level of [underlay] (GNA §2.7), behind
-  /// [ProximityApi.trustLevel]. Closed until GLP sets it with
-  /// [ProximityApi.setTrustLevel]. The two proximity underlays carry their own
-  /// levels, so an agent may answer strangers over one while ignoring them
-  /// over the other.
+  /// The cold-call trust level of [underlay] (GNA §2.7), which the layer
+  /// enforces. Closed until GLP sets it with [ProximityApi.setTrustLevel].
+  /// The two proximity underlays carry their own levels, so an agent may
+  /// answer strangers over one while ignoring them over the other.
   ColdCallTrustLevel _trustLevelOf(ProximityUnderlay underlay) =>
       store.state.settings.trustLevelOf(underlay);
 
@@ -1760,11 +1759,10 @@ class GrassrootsNetwork {
 
   /// Walk every known peer with a dial-book address and bring it back online
   /// by dialing its recorded address (spec §Connectivity and Address,
-  /// "Address-change recovery"). Idempotent —
-  /// already-connected peers are skipped by [_connectToPeerViaUdp] and by the
-  /// second-pass [getPeerIdForPubkey] guard. (Spec §Heartbeat: the heartbeat
-  /// tick drives reconnection attempts toward unreachable peers the layer has
-  /// addresses for; who those peers are is GLP's supply.)
+  /// "Address-change recovery"), at once after a connectivity change; the
+  /// heartbeat sweeps the unreachable ones on every tick ([_sweepKnownPeers]).
+  /// Idempotent — already-connected peers are skipped by
+  /// [_connectToPeerViaUdp]; who those peers are is GLP's supply.
   Future<void> _reconnectKnownPeers({required String reason}) async {
     if (!_udpAvailable) return;
 
@@ -4290,6 +4288,25 @@ class GrassrootsNetwork {
     unawaited(_syncConfiguredRendezvous(configs: down, reason: 'heartbeat'));
   }
 
+  /// Re-initiate a connection to each unreachable known peer at its recorded
+  /// address (GNA §2.5, Heartbeat: "The same heartbeat tick drives
+  /// reconnection attempts towards unreachable known peers ... and the replay
+  /// of queued messages once a recipient is live again"; §4.2, Address-change
+  /// recovery: "The heartbeat sweep therefore re-initiates connections to the
+  /// known peers").  A peer reachable over any underlay is not swept.  A dial
+  /// in flight is not repeated, and one that failed waits out its backoff
+  /// ([_connectToPeerViaUdp]).  The session's attestation exchange makes the
+  /// peer reachable, and that drains its queue.
+  void _sweepKnownPeers() {
+    if (_udpService == null || !_udpAvailable) return;
+    for (final entry in store.state.knownPeers.dialBook.entries) {
+      final peer = _peersState.getPeerByPubkeyHex(entry.key);
+      if (peer != null && peer.isReachable) continue;
+      unawaited(
+          _connectToPeerViaUdp(entry.key, peer?.udpAddress ?? entry.value));
+    }
+  }
+
   /// Start the periodic ANNOUNCE timer
   void _startAnnounceTimer() {
     _announceTimer?.cancel();
@@ -4297,6 +4314,7 @@ class GrassrootsNetwork {
       _broadcastAnnounce();
       _broadcastAnnounceViaUdp();
       _holdRendezvousSessions();
+      _sweepKnownPeers();
       _removeStalePeers();
       _drainQueuedMessagesForLivePeers();
       unawaited(_refreshLocalNetwork());
@@ -4608,9 +4626,6 @@ class _GrassrootsProximity implements ProximityApi {
   @override
   Future<void> setTrustLevel(ColdCallTrustLevel level) =>
       _layer._setTrustLevel(underlay, level);
-
-  @override
-  ColdCallTrustLevel get trustLevel => _layer._trustLevelOf(underlay);
 }
 
 /// The `wan` sub-object of a [GrassrootsNetwork] (GNA §2.2, §4.2, §4.3).

@@ -273,7 +273,8 @@ void main() {
     final knownId = await identityFromSeed(0x86);
     final callee = await startNode(calleeId);
     callee.putKnownPeer(knownId.publicKey);
-    expect(callee.lan!.trustLevel, ColdCallTrustLevel.closed);
+    expect(callee.store.state.settings.trustLevelOf(ProximityUnderlay.lan),
+        ColdCallTrustLevel.closed);
 
     final xx1 = (await NoiseSessionManager(identity: knownId, sodium: sodium)
         .startHandshake(PeerTransport.udp, calleeId.publicKey,

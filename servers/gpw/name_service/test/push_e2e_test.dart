@@ -47,6 +47,7 @@ void main() {
 
     // The mirroring service agent.
     final serviceNet = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await GrassrootsIdentity.generate(),
       rendezvousServers: const [],
       sodium: sodium!,
@@ -81,6 +82,7 @@ void main() {
     await signArea(area, person, 'me.$zone', 1);
 
     final phone = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: personIdentity, rendezvousServers: const [], sodium: sodium!);
     addTearDown(() async {
       await phone.dispose();
@@ -114,6 +116,7 @@ void main() {
 
     // A stranger cannot complete a session, so nothing reaches the writer.
     final stranger = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await GrassrootsIdentity.generate(),
         rendezvousServers: const [],
         sodium: sodium!);

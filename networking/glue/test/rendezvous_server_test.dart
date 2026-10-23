@@ -180,6 +180,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     Future<_Friend> friend(int fill, String id) async {
       final identity = await identityFromSeed(fill);
       final layer = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: identity,
         rendezvousServers: [rvServer],
         sodium: sodium!,
@@ -224,6 +225,8 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
       '$rvPort',
       '--public-address',
       '127.0.0.1:$rvPort',
+      '--outbound-queue-file',
+      '${dir.path}/rv-$rvFill-queue.json',
       '--graph',
       graph,
       '--program',

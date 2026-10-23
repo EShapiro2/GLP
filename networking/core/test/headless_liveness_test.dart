@@ -36,6 +36,7 @@ void main() {
 
   Future<HeadlessGrassrootsNetwork> node(int fill) async {
     final layer = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await GrassrootsIdentity.create(
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),

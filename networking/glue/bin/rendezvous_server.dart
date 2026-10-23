@@ -26,12 +26,15 @@
 ///
 /// Run:
 ///   rendezvous_server --identity rv-identity.json --port 9516 \
-///     --public-address 203.0.113.7:9516 --graph <hash> \
+///     --public-address 203.0.113.7:9516 --outbound-queue-file rv-queue.json \
+///     --graph <hash> \
 ///     --program <GLP>/programs/examples/rendezvous/rv_agent.glp \
 ///     --root-self <GLP>/programs/self.glp
 ///
 /// `--identity` is the key pair, a JSON file `{"seed": <hex>}` created with a
-/// fresh seed on first run; `--graph` is the social graph's source identity,
+/// fresh seed on first run; `--outbound-queue-file` the file that keeps the
+/// layer's fair-delivery queue, so that it survives the termination of the
+/// server (GNA Section 2.11); `--graph` is the social graph's source identity,
 /// the Hash `signature/2` reports for a signature made under the social
 /// graph, which the agent admits a reconnection attestation under and no
 /// other (rv_agent.glp, "Capability verification").
@@ -63,6 +66,10 @@ Future<void> main(List<String> argv) async {
         mandatory: true,
         help: "The server's static public ip:port; with --port, the server "
             'address of GNA Section 2.2')
+    ..addOption('outbound-queue-file',
+        mandatory: true,
+        help: "The layer's fair-delivery queue: a JSON file, so that the "
+            'queue survives the termination of the server (GNA Section 2.11)')
     ..addOption('graph',
         mandatory: true,
         help: "The social graph's source identity, the Hash under which the "
@@ -105,6 +112,8 @@ Future<void> main(List<String> argv) async {
     ),
     rendezvousServer: true,
     sodium: sodium,
+    outboundQueueStore:
+        FileOutboundQueueStore(args['outbound-queue-file'] as String),
   );
   final network = HeadlessGlpNetwork(layer);
   final key = glp.PubKey.fromList(identity.publicKey);

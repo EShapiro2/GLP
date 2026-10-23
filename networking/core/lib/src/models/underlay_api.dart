@@ -39,10 +39,6 @@ abstract interface class ProximityApi {
   /// `setTrustLevel(level)`: set the cold-call trust level of this underlay
   /// to Open or Closed (GNA §2.7, §3.1); it is Closed until set.
   Future<void> setTrustLevel(ColdCallTrustLevel level);
-
-  /// The cold-call trust level of this underlay, Closed until
-  /// [setTrustLevel] sets it.
-  ColdCallTrustLevel get trustLevel;
 }
 
 /// The functions of the WAN underlay (GNA §4.2, §4.3): the `wan` sub-object.
