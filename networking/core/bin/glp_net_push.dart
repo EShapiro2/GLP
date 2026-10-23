@@ -64,7 +64,6 @@ Future<void> main(List<String> argv) async {
 
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
-    rendezvousServers: const [],
     sodium: sodium,
     outboundQueueStore:
         FileOutboundQueueStore(args['outbound-queue-file'] as String),

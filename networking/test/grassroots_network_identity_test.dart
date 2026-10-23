@@ -55,7 +55,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: self,
       underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
       store: store,
       sodium: sodium,
     );
@@ -73,7 +72,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: self,
       underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
       store: store,
       sodium: sodium,
     );
@@ -90,7 +88,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: self,
       underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
       store: store,
       sodium: sodium,
     );
@@ -117,7 +114,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: self,
       underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
       store: store,
       sodium: sodium,
     );
@@ -138,7 +134,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: self,
       underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
       store: store,
       sodium: sodium,
     );
@@ -164,7 +159,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: self,
       underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
       store: store,
       sodium: sodium,
     );

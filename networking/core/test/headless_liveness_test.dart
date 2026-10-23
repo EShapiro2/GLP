@@ -41,7 +41,6 @@ void main() {
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
       ),
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     addTearDown(layer.dispose);

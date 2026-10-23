@@ -70,7 +70,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
       store: Store<AppState>(appReducer, initialState: const AppState()),
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,
@@ -237,7 +236,6 @@ void main() {
     GrassrootsNetwork layer() => GrassrootsNetwork(
           identity: id,
           underlays: const {Underlay.lan, Underlay.wan},
-          rendezvousServers: const [],
           store: Store<AppState>(appReducer, initialState: const AppState()),
           sodium: sodium,
           localHostAddressReader: _loopbackHostAddresses,

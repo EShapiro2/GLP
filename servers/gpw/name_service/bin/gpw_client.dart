@@ -238,7 +238,6 @@ Future<void> _push(_Opts o) async {
   );
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
-    rendezvousServers: const [],
     sodium: sodium,
     // The layer's fair-delivery queue, kept in a file so that it survives
     // the termination of the client (GNA §2.11).

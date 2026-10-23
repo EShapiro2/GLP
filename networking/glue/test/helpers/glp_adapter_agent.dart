@@ -47,7 +47,6 @@ Future<void> main(List<String> args) async {
   final layer = HeadlessGrassrootsNetwork(
     outboundQueueStore: MemoryOutboundQueueStore(),
     identity: identity,
-    rendezvousServers: const [],
     sodium: sodium,
   );
   final network = HeadlessGlpNetwork(layer);

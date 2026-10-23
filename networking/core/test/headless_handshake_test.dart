@@ -121,12 +121,15 @@ void main() {
     final layer = HeadlessGrassrootsNetwork(
       outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(fill),
-      rendezvousServers: rendezvousServers,
       serverAddress: serverAddress,
       rendezvousServer: rendezvousServer,
       sodium: sodium!,
     );
     addTearDown(layer.dispose);
+    // Declared as GLP declares them (GNA §4.2).
+    for (final server in rendezvousServers) {
+      layer.wan.putRendezvousServer(server.publicKey, server.address);
+    }
     expect(await layer.start(), isTrue);
     return layer;
   }
@@ -265,8 +268,8 @@ void main() {
   });
 
   test(
-      'a client holds its session with a configured rendezvous server by IK, '
-      'the server\'s key given at instantiation', () async {
+      'a client holds its session with a declared rendezvous server by IK, '
+      'with the key GLP declared it by', () async {
     if (skipped()) return;
     final server = await node(0x5b,
         serverAddress:

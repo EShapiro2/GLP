@@ -19,8 +19,8 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// `programs/examples/rendezvous/rv_agent.glp`, over it through the adapter.
 ///
 /// Two friends, each a madGLP agent over its own headless layer in this
-/// process, configured with the server (GNA Section 2.2, "Rendezvous
-/// servers"), hold each other's signature over the pair `attest(PkA, PkB)`
+/// process, each declaring the server to its layer (GNA Section 4.2,
+/// "Rendezvous servers"), hold each other's signature over the pair `attest(PkA, PkB)`
 /// (GNA Section 6, "Reconnection").  The one sends the server a reconnection
 /// request naming the other and carrying the other's signature, the other an
 /// availability notice carrying the first's; the agent verifies each
@@ -160,7 +160,8 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
       );
 
   /// The server, a process of its own, and two friends, each a madGLP agent
-  /// over its own headless layer configured with it, holding each other's
+  /// over its own headless layer, which is declared the server, holding each
+  /// other's
   /// signature over their pair; each friend's layer started.
   Future<_World> standUp(int rvFill, int aFill, int bFill) async {
     // The server's port, and its key pair as an identity file.
@@ -173,18 +174,17 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     final rvKey = glp.PubKey.fromList((await GrassrootsIdentity.create(
             keyPair: await Ed25519().newKeyPairFromSeed(rvSeed)))
         .publicKey);
-    final rvServer = RendezvousServer('127.0.0.1:$rvPort', rvKey.bytes);
 
     // The two friends, each a madGLP agent over its own headless layer
-    // configured with the server.
+    // declaring the server.
     Future<_Friend> friend(int fill, String id) async {
       final identity = await identityFromSeed(fill);
       final layer = HeadlessGrassrootsNetwork(
         outboundQueueStore: MemoryOutboundQueueStore(),
         identity: identity,
-        rendezvousServers: [rvServer],
         sodium: sodium!,
       );
+      layer.wan.putRendezvousServer(rvKey.bytes, '127.0.0.1:$rvPort');
       addTearDown(layer.dispose);
       final key = glp.PubKey.fromList(identity.publicKey);
       final agent = AgentRuntime(

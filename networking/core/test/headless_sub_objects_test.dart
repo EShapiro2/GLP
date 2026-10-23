@@ -38,7 +38,6 @@ void main() {
     final layer = HeadlessGrassrootsNetwork(
       outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(fill),
-      rendezvousServers: const [],
       serverAddress: serverAddress,
       sodium: sodium!,
     );

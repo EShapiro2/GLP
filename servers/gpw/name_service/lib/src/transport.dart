@@ -57,7 +57,6 @@ class PushService {
       // The mirroring service holds no session with a rendezvous server; its
       // port and public address are the server address of GNA
       // §Instantiation, one pair.
-      rendezvousServers: const [],
       serverAddress:
           ServerAddress(listenPort: port, publicAddress: publicAddress),
       knownPeersStore: knownPeersPath == null

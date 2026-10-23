@@ -103,9 +103,6 @@ Future<void> main(List<String> argv) async {
   final identity = await loadOrCreateIdentity(args['identity'] as String);
   final layer = HeadlessGrassrootsNetwork(
     identity: identity,
-    // A rendezvous server holds no session with another: "the servers do
-    // not communicate with one another" (GNA Section 6).
-    rendezvousServers: const [],
     serverAddress: ServerAddress(
       listenPort: port,
       publicAddress: args['public-address'] as String,

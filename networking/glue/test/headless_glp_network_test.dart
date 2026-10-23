@@ -57,7 +57,6 @@ void main() {
       layer = HeadlessGrassrootsNetwork(
         outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await identityFromSeed(seedOf(0x21)),
-        rendezvousServers: const [],
         sodium: sodium!,
         serverAddress: ServerAddress(
             listenPort: 9600, publicAddress: '203.0.113.7:9600'),
@@ -173,7 +172,6 @@ void main() {
       final store = MemoryOutboundQueueStore();
       final saving = HeadlessGrassrootsNetwork(
         identity: await identityFromSeed(seedOf(0x23)),
-        rendezvousServers: const [],
         sodium: sodium!,
         outboundQueueStore: store,
       );
@@ -187,7 +185,6 @@ void main() {
 
       final failing = HeadlessGrassrootsNetwork(
         identity: await identityFromSeed(seedOf(0x24)),
-        rendezvousServers: const [],
         sodium: sodium!,
         outboundQueueStore: _FailingQueueStore(),
       );
@@ -321,7 +318,6 @@ answer(forty_two).
       final layer = HeadlessGrassrootsNetwork(
         outboundQueueStore: MemoryOutboundQueueStore(),
         identity: callerIdentity,
-        rendezvousServers: const [],
         sodium: sodium!,
       );
       addTearDown(layer.dispose);

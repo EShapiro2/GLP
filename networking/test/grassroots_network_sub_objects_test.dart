@@ -56,7 +56,6 @@ void main() {
     final layer = GrassrootsNetwork(
       identity: await identity(),
       underlays: underlays,
-      rendezvousServers: const [],
       store: Store<AppState>(appReducer, initialState: const AppState()),
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,

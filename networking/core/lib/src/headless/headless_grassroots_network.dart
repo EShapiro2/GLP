@@ -74,21 +74,23 @@ class ServerAddress {
 /// [peerUnderlays]; [send], [onMessageReceived]; [sign], [verify]; and on the
 /// [wan] sub-object (GNA §2.2) `onConnectivityStatusChanged`,
 /// `getPublicAddress`, `networkIdentity`, `onNetworkChanged`,
-/// `putPeerAddress`, `observedPeerAddress` and `punchUdp`, the [pan] and
-/// [lan] sub-objects being null. It realizes
+/// `putPeerAddress`, `observedPeerAddress`, `punchUdp`,
+/// `putRendezvousServer` and `removeRendezvousServer`, the [pan] and [lan]
+/// sub-objects being null. It realizes
 /// the WAN underlay alone (spec §Networking API: "a server-side agent ...
 /// realizes the WAN underlay alone, headless, with proximity discovery
 /// absent"), so every callback reports [Underlay.wan]: no BLE, no mDNS, no
 /// connectivity plugin.
 ///
-/// Instantiation (GNA §2.2): the key pair, the rendezvous servers, the
-/// attestation, a server's listen port and static public address as one
-/// optional pair ([ServerAddress]), and whether the agent is a rendezvous
-/// server ([rendezvousServer]).  It runs [Underlay.wan] alone, so it takes no
-/// underlays; it has no location service, so it takes none (GNA, 2026-10-11,
-/// Q3).  It holds a session with each rendezvous server, dialing it at [start]
-/// and again on the heartbeat tick while none stands (Q2); a rendezvous server
-/// passes an empty list.
+/// Instantiation (GNA §2.2): the key pair, the attestation, a server's listen
+/// port and static public address as one optional pair ([ServerAddress]), and
+/// whether the agent is a rendezvous server ([rendezvousServer]).  It runs
+/// [Underlay.wan] alone, so it takes no underlays; it has no location service,
+/// so it takes none (GNA, 2026-10-11, Q3).  It is given no rendezvous server:
+/// GLP declares and removes them while the layer runs, on the [wan]
+/// sub-object (GNA §4.2), and the layer holds a session with each declared
+/// server, dialing it when it is declared, at [start], and again on the
+/// heartbeat tick while none stands.
 ///
 /// This profile has no proximity underlay and therefore no trust level (GNA
 /// §2.7 — a level is held per `ProximityUnderlay`, and this profile has none).
@@ -115,15 +117,13 @@ class ServerAddress {
 class HeadlessGrassrootsNetwork {
   HeadlessGrassrootsNetwork({
     required this.identity,
-    required List<RendezvousServer> rendezvousServers,
     this.attestation = const NoPlatformAttestation(),
     this.serverAddress,
     this.rendezvousServer = false,
     required this.sodium,
     HeadlessKnownPeersStore? knownPeersStore,
     required OutboundQueueStore outboundQueueStore,
-  })  : rendezvousServers = List.unmodifiable(rendezvousServers),
-        _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
+  }) : _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
     _persistedQueue = PersistentOutboundQueue(
       store: outboundQueueStore,
       ownerHex: _hex(identity.publicKey),
@@ -156,9 +156,12 @@ class HeadlessGrassrootsNetwork {
   final GrassrootsIdentity identity;
   final SodiumSumo sodium;
 
-  /// The rendezvous servers this agent holds a session with (spec
-  /// §Instantiation); empty on a rendezvous server itself.
-  final List<RendezvousServer> rendezvousServers;
+  /// The rendezvous servers GLP declared, by public key hex (GNA §4.2: "The
+  /// rendezvous servers the layer connects to are those GLP has declared,
+  /// each by its public key and its address, and GLP adds and removes them
+  /// while the layer runs"), through [WanApi.putRendezvousServer] and
+  /// [WanApi.removeRendezvousServer]; a rendezvous server declares none.
+  final Map<String, RendezvousServer> _rendezvousServers = {};
 
   /// A server's listen port and static public address, or null: then an
   /// ephemeral port is bound and `wan.getPublicAddress()` answers null until a
@@ -297,7 +300,7 @@ class HeadlessGrassrootsNetwork {
   late final WanApi wan = _HeadlessWan(this);
 
   /// The agent's current public `ip:port`: the static address of its
-  /// [serverAddress], or else the address a configured rendezvous server last
+  /// [serverAddress], or else the address a declared rendezvous server last
   /// reflected (spec §Connectivity and Address: "an agent learns it from a
   /// rendezvous server, which observes the source address of the agent's
   /// packets"), or null when there is neither; behind
@@ -305,7 +308,7 @@ class HeadlessGrassrootsNetwork {
   String? _publicAddress() =>
       serverAddress?.publicAddress ?? _reflectedAddress;
 
-  /// The address a configured rendezvous server last reflected, or null.
+  /// The address a declared rendezvous server last reflected, or null.
   String? _reflectedAddress;
 
   /// The agent's own public key (spec §Identity, `getIdentity() → PubKey`).
@@ -368,7 +371,7 @@ class HeadlessGrassrootsNetwork {
   }
 
   /// A signaling payload arrived over a session. This profile acts on one
-  /// kind, from a configured rendezvous server: the address the server
+  /// kind, from a declared rendezvous server: the address the server
   /// observes this agent at (spec §Connectivity and Address).
   void _onSignalingReceived(Uint8List senderPubkey, Uint8List payload) {
     final SignalingMessage message;
@@ -384,14 +387,14 @@ class HeadlessGrassrootsNetwork {
     }
   }
 
-  /// A configured rendezvous server reflected the address it observes this
+  /// A declared rendezvous server reflected the address it observes this
   /// agent at: on an agent with no server address of its own, that is its
   /// public address (spec §Connectivity and Address).  From any other sender
   /// it is dropped.
   void _onAddressReflected(Uint8List senderPubkey, AddrReflectMessage message) {
     if (!_isRendezvousServer(senderPubkey)) {
       debugPrint('[headless][reflect] an address reflected by a sender that '
-          'is no configured rendezvous server; dropped');
+          'is no declared rendezvous server; dropped');
       return;
     }
     if (serverAddress != null) return;
@@ -468,14 +471,66 @@ class HeadlessGrassrootsNetwork {
   /// reset, the connection torn down, and reachability dropped now — not
   /// when the transport's disconnect event arrives.
   void removeKnownPeer(Uint8List pubkey) {
+    store.dispatch(KnownPeerRemovedAction(_hex(pubkey)));
+    _endSession(pubkey);
+  }
+
+  /// End the session with [pubkey] now, and its path: the session is reset,
+  /// the message transport gives up the messages it carries to the peer,
+  /// which return to the queue, the connection is torn down, and
+  /// reachability dropped now, not when the transport's disconnect event
+  /// arrives.
+  void _endSession(Uint8List pubkey) {
     final hex = _hex(pubkey);
-    store.dispatch(KnownPeerRemovedAction(hex));
+    _handshakeRetransmits.remove(hex)?.cancel();
+    _attestationDeadlines.remove(hex)?.timer.cancel();
+    _attestedOn.remove(hex);
     _noiseSessions.reset(PeerTransport.udp, pubkey);
     _udpMessageSender.abandonPeer(hex);
+    store.dispatch(PeerUdpConnectionChangedAction(
+      pubkeyHex: hex,
+      connected: false,
+    ));
     unawaited(_udpService?.disconnectFromPeer(hex));
     if (_reachablePeers.remove(hex)) {
       onPeerDisconnected?.call(pubkey, Underlay.wan);
     }
+  }
+
+  /// Declare the rendezvous server holding [pubkey] at [address] (GNA §4.2,
+  /// `putRendezvousServer(pk, address)`, behind `rendezvous_declare/2`): add
+  /// it to the servers the layer connects to, or, for a key declared before,
+  /// replace its address.  A session standing with the server is kept; where
+  /// none stands, a path toward the replaced address is dropped, so that the
+  /// layer dials the address declared.  Throws [ArgumentError] on an
+  /// unparseable address or a key that is not 32 bytes.  Behind
+  /// [WanApi.putRendezvousServer].
+  void _putRendezvousServer(Uint8List pubkey, String address) {
+    final server = RendezvousServer(address, pubkey);
+    final hex = server.pubkeyHex;
+    final previous = _rendezvousServers[hex];
+    _rendezvousServers[hex] = server;
+    if (previous != null &&
+        previous.address != server.address &&
+        !_noiseSessions.hasSession(PeerTransport.udp, server.publicKey)) {
+      _endSession(server.publicKey);
+    }
+    final inFlight = _connecting[hex];
+    if (inFlight != null) {
+      unawaited(inFlight.whenComplete(_holdRendezvousSessions));
+    } else {
+      _holdRendezvousSessions();
+    }
+  }
+
+  /// Remove the rendezvous server holding [pubkey] from those the layer
+  /// connects to, and end the layer's session with it (GNA §4.2,
+  /// `removeRendezvousServer(pk)`, behind `rendezvous_remove/1`); a key not
+  /// declared does nothing.  The heartbeat dials it no more.  Behind
+  /// [WanApi.removeRendezvousServer].
+  void _removeRendezvousServer(Uint8List pubkey) {
+    if (_rendezvousServers.remove(_hex(pubkey)) == null) return;
+    _endSession(pubkey);
   }
 
   /// Inform the layer of a peer's current public `ip:port` (spec
@@ -503,8 +558,8 @@ class HeadlessGrassrootsNetwork {
   // ===== Lifecycle =====
 
   /// Bind the UDP socket(s) (on the [serverAddress]'s listen port, or an
-  /// ephemeral one) and start accepting and dialing; dial each rendezvous
-  /// server. Returns false when no socket could be bound. The persisted
+  /// ephemeral one) and start accepting and dialing; dial each declared
+  /// rendezvous server. Returns false when no socket could be bound. The persisted
   /// queue is read back first, and the heartbeat replays it; a queue that
   /// cannot be read is thrown.
   Future<bool> start() async {
@@ -590,7 +645,7 @@ class HeadlessGrassrootsNetwork {
   /// Re-initiate a connection to each known peer with a recorded address
   /// that is not reachable (spec §Connectivity and Address, Address-change
   /// recovery: "The heartbeat sweep therefore re-initiates connections to
-  /// the known peers and the configured rendezvous servers"; §ANNOUNCE and
+  /// the known peers and the declared rendezvous servers"; §ANNOUNCE and
   /// Liveness, Heartbeat: the tick "drives reconnection attempts towards
   /// unreachable known peers").
   void _sweepKnownPeers() {
@@ -625,19 +680,20 @@ class HeadlessGrassrootsNetwork {
     }
   }
 
-  /// Dial each rendezvous server with no session standing (spec
-  /// §Instantiation; §Connectivity and Address: "The heartbeat sweep
-  /// therefore re-initiates connections to the known peers and the
-  /// configured rendezvous servers"), running IK with the server's key, which
-  /// "it is given at instantiation" (GNA §2.6).
+  /// Dial each declared rendezvous server with no session standing (GNA
+  /// §4.2, Address-change recovery: "The heartbeat sweep therefore
+  /// re-initiates connections to the known peers and the declared rendezvous
+  /// servers"; §2.5, Heartbeat), running IK with the key GLP declared the
+  /// server by (GNA §2.6).  A server removed while its dial ran has its
+  /// session ended.
   void _holdRendezvousSessions() {
     final udp = _udpService;
     if (udp == null) return;
-    for (final server in rendezvousServers) {
+    for (final server in _rendezvousServers.values.toList()) {
       if (_noiseSessions.hasSession(PeerTransport.udp, server.publicKey)) {
         continue;
       }
-      final hex = _hex(server.publicKey);
+      final hex = server.pubkeyHex;
       if (_connecting.containsKey(hex)) continue;
       _connecting[hex] = () async {
         try {
@@ -647,6 +703,9 @@ class HeadlessGrassrootsNetwork {
             return;
           }
           await _ensureUdpSession(server.publicKey);
+          if (!_rendezvousServers.containsKey(hex)) {
+            _endSession(server.publicKey);
+          }
         } finally {
           _connecting.remove(hex);
         }
@@ -894,10 +953,8 @@ class HeadlessGrassrootsNetwork {
   bool _isKnown(Uint8List pubkey) =>
       store.state.knownPeers.known.containsKey(_hex(pubkey));
 
-  bool _isRendezvousServer(Uint8List pubkey) {
-    final hex = _hex(pubkey);
-    return rendezvousServers.any((server) => server.pubkeyHex == hex);
-  }
+  bool _isRendezvousServer(Uint8List pubkey) =>
+      _rendezvousServers.containsKey(_hex(pubkey));
 
   /// The responder's trust check on a handshake's first message (GNA §2.6:
   /// "on the WAN except on a rendezvous server, it answers an IK first message
@@ -1491,7 +1548,7 @@ class _HeadlessWan implements WanApi {
 
   /// Fires at [HeadlessGrassrootsNetwork.start], with `old` null and the
   /// static address of the server address or none; and, on an agent with no
-  /// server address, whenever a configured rendezvous server reflects an
+  /// server address, whenever a declared rendezvous server reflects an
   /// address other than the one held.
   @override
   void Function(String? oldAddress, String? newAddress)?
@@ -1515,4 +1572,12 @@ class _HeadlessWan implements WanApi {
 
   @override
   void punchUdp(String address) => _layer._punchUdp(address);
+
+  @override
+  void putRendezvousServer(Uint8List pk, String address) =>
+      _layer._putRendezvousServer(pk, address);
+
+  @override
+  void removeRendezvousServer(Uint8List pk) =>
+      _layer._removeRendezvousServer(pk);
 }

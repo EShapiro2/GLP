@@ -107,7 +107,6 @@ void main() {
       GrassrootsNetwork(
         identity: self,
         underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
-        rendezvousServers: const [],
         store: Store<AppState>(appReducer, initialState: const AppState()),
         sodium: sodium,
         placeGeofenceBackend: backend,

@@ -114,7 +114,6 @@ void main() {
     addTearDown(() => queues.deleteSync(recursive: true));
     final calleeLayer = HeadlessGrassrootsNetwork(
       identity: calleeId,
-      rendezvousServers: const [],
       sodium: sodium!,
       outboundQueueStore: FileOutboundQueueStore('${queues.path}/callee.json'),
     );
@@ -126,7 +125,6 @@ void main() {
     // peer_declare/1 and address_declare/2 give it.
     final callerLayer = HeadlessGrassrootsNetwork(
       identity: callerId,
-      rendezvousServers: const [],
       sodium: sodium!,
       outboundQueueStore: FileOutboundQueueStore('${queues.path}/caller.json'),
     );

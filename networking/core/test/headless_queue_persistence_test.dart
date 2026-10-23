@@ -84,7 +84,6 @@ void main() {
 
     HeadlessGrassrootsNetwork senderLayer() => HeadlessGrassrootsNetwork(
           identity: senderId,
-          rendezvousServers: const [],
           sodium: sodium!,
           knownPeersStore: FileKnownPeersStore(knownPeersFile),
           outboundQueueStore: FileOutboundQueueStore(queueFile),
@@ -111,7 +110,6 @@ void main() {
     final recipient = HeadlessGrassrootsNetwork(
       outboundQueueStore: MemoryOutboundQueueStore(),
       identity: recipientId,
-      rendezvousServers: const [],
       sodium: sodium!,
       serverAddress:
           ServerAddress(listenPort: port, publicAddress: recipientAddress),
@@ -156,14 +154,12 @@ void main() {
     final recipientId = await identityFromSeed(0x64);
     final sender = HeadlessGrassrootsNetwork(
       identity: senderId,
-      rendezvousServers: const [],
       sodium: sodium!,
       outboundQueueStore: store,
     );
     final recipient = HeadlessGrassrootsNetwork(
       outboundQueueStore: MemoryOutboundQueueStore(),
       identity: recipientId,
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     addTearDown(() async {
@@ -201,7 +197,6 @@ void main() {
     expect(
         () => Function.apply(HeadlessGrassrootsNetwork.new, const [], {
               #identity: id,
-              #rendezvousServers: const <RendezvousServer>[],
               #sodium: sodium!,
             }),
         throwsNoSuchMethodError,
@@ -209,7 +204,6 @@ void main() {
             'application would lose (GNA §2.11)');
     final layer = Function.apply(HeadlessGrassrootsNetwork.new, const [], {
       #identity: id,
-      #rendezvousServers: const <RendezvousServer>[],
       #sodium: sodium!,
       #outboundQueueStore: MemoryOutboundQueueStore(),
     }) as HeadlessGrassrootsNetwork;
@@ -280,7 +274,6 @@ void main() {
       final id = await identityFromSeed(0x65);
       final layer = HeadlessGrassrootsNetwork(
         identity: id,
-        rendezvousServers: const [],
         sodium: sodium!,
         outboundQueueStore: FileOutboundQueueStore(path),
       );

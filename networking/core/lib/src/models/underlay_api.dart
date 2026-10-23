@@ -4,8 +4,8 @@
 /// underlays are called on the layer itself; "the functions that belong to one
 /// underlay are called on its sub-object, and take no underlay parameter:
 /// discovery and the trust level on `pan` and `lan` (Section 3.1), and the
-/// public address, peer addresses, hole punching and the local network
-/// identity on `wan` (Section 4)."  So a call that makes no sense on an
+/// public address, peer addresses, hole punching, the rendezvous servers and
+/// the local network identity on `wan` (Section 4)."  So a call that makes no sense on an
 /// underlay cannot be written, and a call on an underlay the layer does not
 /// run finds no sub-object.
 ///
@@ -77,4 +77,16 @@ abstract interface class WanApi {
   /// datagrams to open the NAT mapping" (GNA §4.2); behind `punch_udp/1`.
   /// Throws [ArgumentError] on an unparseable address.
   void punchUdp(String address);
+
+  /// `putRendezvousServer(pk, address)`: "Add the rendezvous server with
+  /// public key pk at address to the servers the layer connects to; a
+  /// further declaration of the same pk replaces its address" (GNA §4.2);
+  /// behind `rendezvous_declare/2`.  Throws [ArgumentError] on an unparseable
+  /// address or a key that is not 32 bytes.
+  void putRendezvousServer(Uint8List pk, String address);
+
+  /// `removeRendezvousServer(pk)`: "Remove the server from those the layer
+  /// connects to, and end the layer's session with it; a key not declared
+  /// does nothing" (GNA §4.2); behind `rendezvous_remove/1`.
+  void removeRendezvousServer(Uint8List pk);
 }

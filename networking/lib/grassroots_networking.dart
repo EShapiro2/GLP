@@ -21,10 +21,12 @@
 /// final grassroots = GrassrootsNetwork(
 ///   identity: identity,
 ///   underlays: {Underlay.pan, Underlay.lan, Underlay.wan},
-///   rendezvousServers: [RendezvousServer('203.0.113.7:9514', serverKey)],
 ///   store: store,
 ///   sodium: sodium,
 /// );
+/// 
+/// // GLP declares the rendezvous servers (GNA §4.2)
+/// grassroots.wan?.putRendezvousServer(serverKey, '203.0.113.7:9514');
 /// 
 /// // Set up callbacks
 /// grassroots.onMessageReceived = (sender, payload, messageId, underlay) {

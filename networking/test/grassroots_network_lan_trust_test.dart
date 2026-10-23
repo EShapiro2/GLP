@@ -73,7 +73,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: id,
       underlays: underlays,
-      rendezvousServers: const [],
       store: store,
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,

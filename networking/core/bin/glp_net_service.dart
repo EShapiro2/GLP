@@ -73,8 +73,6 @@ Future<void> main(List<String> argv) async {
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
     sodium: sodium,
-    // A service holds no session with a rendezvous server.
-    rendezvousServers: const [],
     serverAddress: ServerAddress(
       listenPort: int.parse(args['port'] as String),
       publicAddress: args['public-address'] as String,

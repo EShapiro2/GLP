@@ -32,7 +32,6 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
-import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
@@ -119,8 +118,8 @@ class Agent {
   final connects = <(String, Underlay, DateTime)>[];
   final disconnects = <(String, Underlay, DateTime)>[];
 
-  /// [rendezvous]: whether the agent is instantiated with the anchor as its
-  /// rendezvous server (GNA §Instantiation) --- A and B are, C is not.
+  /// [rendezvous]: whether the anchor is declared as the agent's rendezvous
+  /// server (GNA §4.2) --- A's and B's, not C's.
   static Future<Agent> spawn({bool rendezvous = false}) async {
     final sodium = await SodiumSumoInit.init();
     final identity = await GrassrootsIdentity.create(
@@ -135,12 +134,13 @@ class Agent {
     final network = GrassrootsNetwork(
       identity: identity,
       underlays: const {Underlay.lan, Underlay.wan},
-      rendezvousServers: [
-        if (rendezvous) RendezvousServer(anchorAddr, pubkeyFromHex(anchorPk)),
-      ],
       store: store,
       sodium: sodium,
     );
+    // Declared as GLP declares a rendezvous server (GNA §4.2).
+    if (rendezvous) {
+      network.wan!.putRendezvousServer(pubkeyFromHex(anchorPk), anchorAddr);
+    }
     final agent = Agent(identity, store, network);
     network.onMessageReceived = (sender, payload, messageId, underlay) {
       agent.messages.add((hexOf(sender), payload));

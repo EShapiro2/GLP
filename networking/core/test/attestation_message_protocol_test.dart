@@ -281,14 +281,12 @@ void main() {
     final service = HeadlessGrassrootsNetwork(
       outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(seed),
-      rendezvousServers: const [],
       sodium: sodium!,
       attestation: serviceAttestation,
     );
     final caller = HeadlessGrassrootsNetwork(
       outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(seed + 1),
-      rendezvousServers: const [],
       sodium: sodium!,
       attestation: callerAttestation,
     );

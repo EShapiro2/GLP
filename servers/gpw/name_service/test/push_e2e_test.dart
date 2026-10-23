@@ -49,7 +49,6 @@ void main() {
     final serviceNet = HeadlessGrassrootsNetwork(
       outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await GrassrootsIdentity.generate(),
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     final mirrors = Directory('${tmp.path}/mirrors')..createSync();
@@ -83,7 +82,7 @@ void main() {
 
     final phone = HeadlessGrassrootsNetwork(
         outboundQueueStore: MemoryOutboundQueueStore(),
-        identity: personIdentity, rendezvousServers: const [], sodium: sodium!);
+        identity: personIdentity, sodium: sodium!);
     addTearDown(() async {
       await phone.dispose();
       await serviceNet.dispose();
@@ -118,7 +117,6 @@ void main() {
     final stranger = HeadlessGrassrootsNetwork(
         outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await GrassrootsIdentity.generate(),
-        rendezvousServers: const [],
         sodium: sodium!);
     addTearDown(() => stranger.dispose());
     var strangerLinked = false;

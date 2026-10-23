@@ -46,12 +46,15 @@ void main() {
     final layer = HeadlessGrassrootsNetwork(
       outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(fill),
-      rendezvousServers: rendezvousServers,
       serverAddress: serverAddress,
       rendezvousServer: rendezvousServer,
       sodium: sodium!,
     );
     addTearDown(layer.dispose);
+    // Declared as GLP declares them (GNA §4.2).
+    for (final server in rendezvousServers) {
+      layer.wan.putRendezvousServer(server.publicKey, server.address);
+    }
     if (start) expect(await layer.start(), isTrue);
     return layer;
   }
