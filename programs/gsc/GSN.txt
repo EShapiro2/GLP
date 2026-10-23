@@ -2,7 +2,7 @@
 % Owner: GSC.  The paper, /Users/udi/Grassroots/GSC/main.tex, prints it in its box in Section 2.3 and cites a clause as GSN:1; GSNP, GAI's, and CSSN extend it.
 % Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK, Grassroots Keys and Knowledge, GSC's.  It cites their clauses whole, GKK:1 to GKK:3 and GSG:1 and GSG:2, and restates none.
 % Defines: group, leader, member, message.  The clauses say "agent" where GSC's paper says "person", so that CSSN can add children and GAI AI agents (Udi, 2026-10-20); an agent is a person, a child or an AI agent, and the pronoun 'they'.
-% Last changed: 2026-10-23, the pragmas after the clauses, which the app built from the contract follows, and each clause opening with its modality, ■ enforced, ◆ attested, ○ undertaken (Udi, to GSC #6; GSC's paper, Section 8).  2026-10-20: written by GAI #2 Cowork (2026-10-18) from GAI's paper; clause 4's second sentence CSSN #6's request, approved by Udi (2026-10-19); the clauses with Alice and Bob (Udi, 2026-10-20, to GSC #5).
+% Last changed: 2026-10-23, every button bears its act's name, Message [Message] and Joining [Join] (Udi, to GSC #7); the pragmas after the clauses, which the app built from the contract follows, and each clause opening with its modality, ■ enforced, ◆ attested, ○ undertaken (Udi, to GSC #6; GSC's paper, Section 8).  2026-10-20: written by GAI #2 Cowork (2026-10-18) from GAI's paper; clause 4's second sentence CSSN #6's request, approved by Udi (2026-10-19); the clauses with Alice and Bob (Udi, 2026-10-20, to GSC #5).
 % Schemas: GSN.glp beside this file, GKK's three, GSG's two, message and the seven schemas of a group, over ten predicates, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GSN: Grassroots Social Network
 1. ■ Message.  Alice may send a message to their friend Bob, with content they created or received from another agent.
@@ -12,8 +12,8 @@ GSN: Grassroots Social Network
 5. ■ Group message.  Bob, a member of a group, may send a message to the group, with content they created or received from another agent, and the leader delivers it to every member.
 Pragmas
 Groups: the groups Alice is a member of.
-Message: [Send] <text>
+Message: [Message] <text>
 Group: [Create] <name>
-Joining: [Add] Alice asks you to join their group.
+Joining: [Join] Alice asks you to join their group.
 Leaving: [Leave]
 Group message: [Post] <text>
