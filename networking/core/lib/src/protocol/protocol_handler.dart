@@ -56,7 +56,16 @@ class ProtocolHandler {
   /// this version's IK. Since a version-7 handshake is not preceded by
   /// ANNOUNCE, the refusal is at the handshake, whose envelope opens with the
   /// version; ANNOUNCE refuses another version too.
-  static const int protocolVersion = 7;
+  ///
+  /// 8 since 2026-10-23, for the version number in the attestation exchange
+  /// (GNA §2.6, "H("glp attest" | pk | v | h), where v is the application's
+  /// version number"): the attestation message carries v, and the
+  /// per-session signature is over a digest naming it. The SHAPE changes: a
+  /// version-7 attestation message carries no version number, and its
+  /// signature is over a digest this version does not compute, so a mixed
+  /// pair would tear every session down at the exchange. Refused at the
+  /// handshake instead.
+  static const int protocolVersion = 8;
 
   /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
   static const int announceSignatureLength = 64;

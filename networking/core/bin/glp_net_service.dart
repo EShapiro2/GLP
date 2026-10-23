@@ -13,8 +13,8 @@
 /// Usage:
 ///   glp_net_service --port 9600 --identity service-identity.json \
 ///     --public-address 203.0.113.7:9600 \
-///     [--known-peer <pubkey-hex>]... [--known-peers-file peers.json] \
-///     [--outbound-queue-file queue.json] [--trust closed|open]
+///     --outbound-queue-file queue.json \
+///     [--known-peer <pubkey-hex>]... [--known-peers-file peers.json]
 library;
 
 import 'dart:async';
@@ -44,9 +44,10 @@ Future<void> main(List<String> argv) async {
         help: 'JSON file persisting the known-peer set across restarts '
             '(default: in-memory only)')
     ..addOption('outbound-queue-file',
+        mandatory: true,
         help: 'JSON file persisting the fair-delivery queue across restarts, '
             'so that it survives the termination of the service (GNA '
-            '§2.10; default: in-memory only)')
+            '§2.11)')
     ..addFlag('help', abbr: 'h', negatable: false);
 
   final ArgResults args;
@@ -68,12 +69,10 @@ Future<void> main(List<String> argv) async {
   print('Service identity: ${_hex(identity.publicKey)}');
 
   final knownPeersFile = args['known-peers-file'] as String?;
-  final outboundQueueFile = args['outbound-queue-file'] as String?;
+  final outboundQueueFile = args['outbound-queue-file'] as String;
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
     sodium: sodium,
-    // A service holds no session with a rendezvous server.
-    rendezvousServers: const [],
     serverAddress: ServerAddress(
       listenPort: int.parse(args['port'] as String),
       publicAddress: args['public-address'] as String,
@@ -81,9 +80,7 @@ Future<void> main(List<String> argv) async {
     knownPeersStore: knownPeersFile != null
         ? FileKnownPeersStore(knownPeersFile)
         : MemoryKnownPeersStore(),
-    outboundQueueStore: outboundQueueFile != null
-        ? FileOutboundQueueStore(outboundQueueFile)
-        : MemoryOutboundQueueStore(),
+    outboundQueueStore: FileOutboundQueueStore(outboundQueueFile),
   );
 
   for (final hex in args['known-peer'] as List<String>) {
@@ -111,8 +108,7 @@ Future<void> main(List<String> argv) async {
     exitCode = 1;
     return;
   }
-  print('Listening on UDP port ${network.boundPort} '
-      '(trust: ${args['trust']})');
+  print('Listening on UDP port ${network.boundPort}');
 
   // Run until terminated.
   final done = Completer<void>();

@@ -5,11 +5,14 @@ import Foundation
 
 /// The iOS producer of the attestation exchange (spec §Session Establishment).
 ///
-/// "Each agent holds an attestation key generated in its platform's secure
-/// element and attested there once---App Attest on iOS ...---over a challenge
-/// naming the agent's identity public key pk.  Per session each side sends
-/// that attestation together with a signature by the attestation key over the
-/// digest H("glp attest" | pk | h)".
+/// GNA §2.6: "Once, the layer asks the platform to generate an attestation
+/// key in its secure element and to attest it over a challenge naming the
+/// agent's identity public key pk ... For each session, the layer asks the
+/// platform to sign with that key the digest H("glp attest" | pk | v | h),
+/// where v is the application's version number".  The version number is the
+/// bundle version, `CFBundleVersion`; App Attest names no version, and an
+/// updated application signs its new version number with the attestation it
+/// has (GNA §2.6).
 ///
 /// On iOS the attestation key is an App Attest key: generated in the Secure
 /// Enclave, attested once by Apple over a clientDataHash of SHA-256(pk), and
@@ -18,8 +21,8 @@ import Foundation
 /// clientDataHash. Verification is the core's (`app_attest.dart`); this file
 /// produces and nothing else.
 ///
-/// The channel is `grassroots/attestation`; its two methods are documented on
-/// the Dart side, `native_platform_attestation.dart`.
+/// The channel is `grassroots/attestation`; its three methods are documented
+/// on the Dart side, `native_platform_attestation.dart`.
 ///
 /// What is kept, per identity key: the key identifier and the attestation
 /// object. Neither is secret — the identifier is a hash of the public key and
@@ -52,6 +55,10 @@ class PlatformAttestationPlugin: NSObject {
   // MARK: - Method channel
 
   private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    if call.method == "version" {
+      result(Self.applicationVersion)
+      return
+    }
     guard let args = call.arguments as? [String: Any],
       let pk = (args["identityPublicKey"] as? FlutterStandardTypedData)?.data
     else {
@@ -92,6 +99,19 @@ class PlatformAttestationPlugin: NSObject {
       let bundleId = Bundle.main.bundleIdentifier
     else { return nil }
     return prefix + bundleId
+  }
+
+  // MARK: - The version number
+
+  /// The application's version number, which it signs in each session's
+  /// digest: the bundle version, `CFBundleVersion`, where it is a whole
+  /// number; nil otherwise, and then the agent offers no attestation.
+  private static var applicationVersion: Int? {
+    guard
+      let text = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+      let version = Int(text), version >= 0
+    else { return nil }
+    return version
   }
 
   // MARK: - Attest

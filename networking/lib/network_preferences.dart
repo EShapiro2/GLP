@@ -5,21 +5,23 @@ import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// The demo app's choice of how to instantiate the layer: the underlays it
-/// runs and the rendezvous servers it connects to.
+/// The demo app's choice of how to instantiate the layer and what to declare
+/// to it: the underlays it runs and the rendezvous servers it connects to.
 ///
-/// These are not the layer's settings.  The layer takes both as constructor
-/// arguments and holds them for its lifetime (GNA §Instantiation: "The layer
+/// These are not the layer's settings.  The layer takes the underlays as a
+/// constructor argument and holds them for its lifetime (GNA §2.2: "The layer
 /// is created once per agent, with everything it needs to run; nothing in it
-/// changes for the layer's lifetime"), so the app keeps them here and, when
-/// the person changes them, disposes the layer and instantiates another.
+/// changes for the layer's lifetime"), and the app declares the rendezvous
+/// servers to it, as GLP declares them (GNA §4.2); so the app keeps both
+/// here and, when the person changes them, disposes the layer and
+/// instantiates another, declaring the servers to it.
 @immutable
 class NetworkPreferences {
   /// The underlays the layer is instantiated with: a non-empty subset of
   /// PAN, LAN and WAN.
   final Set<Underlay> underlays;
 
-  /// The rendezvous servers the layer is instantiated with.
+  /// The rendezvous servers the app declares to the layer.
   final List<RendezvousServer> rendezvousServers;
 
   NetworkPreferences({

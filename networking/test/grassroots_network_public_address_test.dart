@@ -16,6 +16,7 @@ import 'helpers/sodium_test_bootstrap.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/headless/headless_grassroots_network.dart';
+import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
 import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
 
 /// Hermetic host candidates (see the glare test).
@@ -78,7 +79,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
-      rendezvousServers: rendezvousServers,
       store: store,
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,
@@ -87,6 +87,10 @@ void main() {
       ),
     );
     network.wan!.onConnectivityStatusChanged = onConnectivityStatusChanged;
+    // Declared as GLP declares them (GNA §4.2).
+    for (final server in rendezvousServers) {
+      network.wan!.putRendezvousServer(server.publicKey, server.address);
+    }
     expect(await network.initialize(), isTrue,
         reason: 'UDP must initialize on loopback');
     return network;
@@ -198,8 +202,8 @@ void main() {
     final port = probe.port;
     probe.close();
     final server = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(fill),
-      rendezvousServers: const [],
       serverAddress:
           ServerAddress(listenPort: port, publicAddress: '127.0.0.1:$port'),
       rendezvousServer: true,
@@ -211,7 +215,7 @@ void main() {
   }
 
   test(
-      'a configured rendezvous server reflects the address it observes the '
+      'a declared rendezvous server reflects the address it observes the '
       'agent at, and that is the agent\'s public address (GNA §4.2, §6 '
       '"Address observation")', () async {
     final server = await rendezvousServer(0x75);
@@ -241,7 +245,7 @@ void main() {
   }, timeout: const Timeout(Duration(minutes: 1)));
 
   test(
-      'signaling from a peer that is no configured rendezvous server is '
+      'signaling from a peer that is no declared rendezvous server is '
       'dropped: a reflected address from it is not the agent\'s', () async {
     final peerId = await identityFromSeed(0x77);
     final nodeId = await identityFromSeed(0x78);
@@ -249,8 +253,8 @@ void main() {
     addTearDown(node.dispose);
     await node.start();
     final peer = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: peerId,
-      rendezvousServers: const [],
       sodium: sodium,
     );
     addTearDown(peer.dispose);
@@ -275,6 +279,6 @@ void main() {
         isTrue);
     await Future<void>.delayed(const Duration(seconds: 2));
     expect(node.wan!.getPublicAddress(), isNull,
-        reason: 'only a configured rendezvous server reflects an address');
+        reason: 'only a declared rendezvous server reflects an address');
   }, timeout: const Timeout(Duration(minutes: 1)));
 }

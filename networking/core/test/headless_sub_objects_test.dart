@@ -36,8 +36,8 @@ void main() {
   Future<HeadlessGrassrootsNetwork> node(int fill,
       {ServerAddress? serverAddress}) async {
     final layer = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(fill),
-      rendezvousServers: const [],
       serverAddress: serverAddress,
       sodium: sodium!,
     );

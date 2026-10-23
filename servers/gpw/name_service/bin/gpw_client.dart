@@ -17,7 +17,7 @@
 ///   gpw_client area-verify --mirror-url <base> (--pubkey <b64url> | --ns-url <base> --name <label>)
 ///   gpw_client push --key <keyfile> --dir <signed-area-dir> --address <web-address>
 ///              (--service-pk <b64url> --service-addr <ip:port> | --ns-url <base>)
-///              [--timeout <seconds>]
+///              --queue-file <file> [--timeout <seconds>]
 library;
 
 import 'dart:async';
@@ -27,7 +27,11 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart' show Ed25519;
 import 'package:grassroots_networking_core/grassroots_networking_core.dart'
-    show GrassrootsIdentity, HeadlessGrassrootsNetwork, initHeadlessSodium;
+    show
+        FileOutboundQueueStore,
+        GrassrootsIdentity,
+        HeadlessGrassrootsNetwork,
+        initHeadlessSodium;
 import 'package:gpw_name_service/gpw_name_service.dart';
 
 Future<void> main(List<String> args) async {
@@ -234,8 +238,10 @@ Future<void> _push(_Opts o) async {
   );
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
-    rendezvousServers: const [],
     sodium: sodium,
+    // The layer's fair-delivery queue, kept in a file so that it survives
+    // the termination of the client (GNA §2.11).
+    outboundQueueStore: FileOutboundQueueStore(o.req('queue-file')),
   );
   final ack = Completer<Map>();
   network.onMessageReceived = (senderPk, bytes, messageId, underlay) {

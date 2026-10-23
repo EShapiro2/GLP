@@ -6,7 +6,13 @@
 ///
 /// Usage:
 ///   glp_net_push --peer <service-pubkey-hex> --address <ip:port> \
-///     --message 'payload' [--identity pusher-identity.json] [--timeout 15]
+///     --message 'payload' --outbound-queue-file pusher-queue.json \
+///     [--identity pusher-identity.json] [--timeout 15]
+///
+/// The fair-delivery queue is kept in the file `--outbound-queue-file` names,
+/// so that it survives the termination of the pusher (GNA §2.11): a message
+/// not acknowledged before the pusher ends is replayed by the next run with
+/// the same identity and file.
 library;
 
 import 'dart:async';
@@ -26,6 +32,9 @@ Future<void> main(List<String> argv) async {
     ..addOption('identity',
         defaultsTo: 'pusher-identity.json',
         help: 'Path to identity file (created on first run)')
+    ..addOption('outbound-queue-file',
+        help: 'JSON file persisting the fair-delivery queue across runs, so '
+            'that it survives the termination of the pusher (GNA §2.11)')
     ..addOption('timeout',
         defaultsTo: '15', help: 'Seconds to wait for the session')
     ..addFlag('help', abbr: 'h', negatable: false);
@@ -42,7 +51,8 @@ Future<void> main(List<String> argv) async {
   if (args['help'] as bool ||
       args['peer'] == null ||
       args['address'] == null ||
-      args['message'] == null) {
+      args['message'] == null ||
+      args['outbound-queue-file'] == null) {
     print(parser.usage);
     if (args['help'] != true) exitCode = 64;
     return;
@@ -54,8 +64,9 @@ Future<void> main(List<String> argv) async {
 
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
-    rendezvousServers: const [],
     sodium: sodium,
+    outboundQueueStore:
+        FileOutboundQueueStore(args['outbound-queue-file'] as String),
   );
   final servicePk = _bytes(args['peer'] as String);
   final connected = Completer<void>();

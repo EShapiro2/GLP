@@ -84,7 +84,6 @@ void main() {
 
     HeadlessGrassrootsNetwork senderLayer() => HeadlessGrassrootsNetwork(
           identity: senderId,
-          rendezvousServers: const [],
           sodium: sodium!,
           knownPeersStore: FileKnownPeersStore(knownPeersFile),
           outboundQueueStore: FileOutboundQueueStore(queueFile),
@@ -109,8 +108,8 @@ void main() {
 
     // The recipient comes up at that address, knowing the sender.
     final recipient = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: recipientId,
-      rendezvousServers: const [],
       sodium: sodium!,
       serverAddress:
           ServerAddress(listenPort: port, publicAddress: recipientAddress),
@@ -155,13 +154,12 @@ void main() {
     final recipientId = await identityFromSeed(0x64);
     final sender = HeadlessGrassrootsNetwork(
       identity: senderId,
-      rendezvousServers: const [],
       sodium: sodium!,
       outboundQueueStore: store,
     );
     final recipient = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: recipientId,
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     addTearDown(() async {
@@ -189,6 +187,28 @@ void main() {
         isTrue,
         reason: 'an acknowledged message is removed from the saved queue');
   }, timeout: const Timeout(Duration(minutes: 1)));
+
+  test(
+      'a layer constructed without a store of its queue is refused: the '
+      'store is a required argument, and each embedder names its file',
+      () async {
+    if (skip()) return;
+    final id = await identityFromSeed(0x66);
+    expect(
+        () => Function.apply(HeadlessGrassrootsNetwork.new, const [], {
+              #identity: id,
+              #sodium: sodium!,
+            }),
+        throwsNoSuchMethodError,
+        reason: 'no layer is made whose queue the termination of the '
+            'application would lose (GNA §2.11)');
+    final layer = Function.apply(HeadlessGrassrootsNetwork.new, const [], {
+      #identity: id,
+      #sodium: sodium!,
+      #outboundQueueStore: MemoryOutboundQueueStore(),
+    }) as HeadlessGrassrootsNetwork;
+    await layer.dispose();
+  });
 
   group('FileOutboundQueueStore', () {
     final owner = 'ab' * 32;
@@ -254,7 +274,6 @@ void main() {
       final id = await identityFromSeed(0x65);
       final layer = HeadlessGrassrootsNetwork(
         identity: id,
-        rendezvousServers: const [],
         sodium: sodium!,
         outboundQueueStore: FileOutboundQueueStore(path),
       );

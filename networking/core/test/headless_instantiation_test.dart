@@ -8,12 +8,12 @@ import 'package:test/test.dart';
 
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
-/// The headless profile's instantiation (GNA §Instantiation, with GNA's
-/// answers of 2026-10-11): it takes the rendezvous servers and holds a session
-/// with each, a rendezvous server passing an empty list (Q2); and a server's
-/// listen port and static public address as one optional pair (Q4); and
-/// whether it is a rendezvous server, one having a server address and
-/// answering any key's WAN contact (GNA §2.2, §2.7; GNA, 2026-10-12, Task D).
+/// The headless profile's instantiation (GNA §2.2, with GNA's answers of
+/// 2026-10-11): a server's listen port and static public address as one
+/// optional pair (Q4); and whether it is a rendezvous server, one having a
+/// server address and answering any key's WAN contact (GNA §2.2, §2.8; GNA,
+/// 2026-10-12, Task D).  It is given no rendezvous server: GLP declares them,
+/// and the layer holds a session with each (GNA §4.2).
 ///
 /// Needs a native libsodium, as `headless_e2e_test.dart` does; self-skips
 /// when absent.
@@ -52,8 +52,8 @@ void main() {
       }
       final port = await freePort();
       final layer = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await identityFromSeed(0x81),
-        rendezvousServers: const [],
         serverAddress:
             ServerAddress(listenPort: port, publicAddress: '203.0.113.9:$port'),
         sodium: sodium!,
@@ -70,8 +70,8 @@ void main() {
         return;
       }
       final layer = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await identityFromSeed(0x82),
-        rendezvousServers: const [],
         sodium: sodium!,
       );
       addTearDown(layer.dispose);
@@ -129,8 +129,8 @@ void main() {
       }
       final port = await freePort();
       final server = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await identityFromSeed(0x85),
-        rendezvousServers: const [],
         serverAddress:
             ServerAddress(listenPort: port, publicAddress: '203.0.113.9:$port'),
         rendezvousServer: true,
@@ -138,8 +138,8 @@ void main() {
       );
       addTearDown(server.dispose);
       final stranger = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await identityFromSeed(0x86),
-        rendezvousServers: const [],
         sodium: sodium!,
       );
       addTearDown(stranger.dispose);
@@ -164,16 +164,16 @@ void main() {
       }
       final port = await freePort();
       final server = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await identityFromSeed(0x87),
-        rendezvousServers: const [],
         serverAddress:
             ServerAddress(listenPort: port, publicAddress: '203.0.113.9:$port'),
         sodium: sodium!,
       );
       addTearDown(server.dispose);
       final stranger = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
         identity: await identityFromSeed(0x88),
-        rendezvousServers: const [],
         sodium: sodium!,
       );
       addTearDown(stranger.dispose);
@@ -195,8 +195,8 @@ void main() {
       final identity = await identityFromSeed(0x89);
       expect(
           () => HeadlessGrassrootsNetwork(
+                outboundQueueStore: MemoryOutboundQueueStore(),
                 identity: identity,
-                rendezvousServers: const [],
                 rendezvousServer: true,
                 sodium: sodium!,
               ),
@@ -205,8 +205,8 @@ void main() {
   });
 
   test(
-      'holds a session with each rendezvous server from start, with nothing '
-      'sent, and answers the server though it never supplied its key',
+      'holds a session with each declared rendezvous server from start, with '
+      'nothing sent, and answers the server though it never supplied its key',
       () async {
     if (sodiumUnavailable != null) {
       markTestSkipped(sodiumUnavailable!);
@@ -214,12 +214,12 @@ void main() {
     }
     final serverId = await identityFromSeed(0x83);
     final agentId = await identityFromSeed(0x84);
-    // A rendezvous server passes an empty list, and is marked one (GNA §2.2),
-    // so it answers the agent's key though no one supplied it (GNA §2.7).
+    // A rendezvous server declares none, and is marked one (GNA §2.2), so it
+    // answers the agent's key though no one supplied it (GNA §2.8).
     final port = await freePort();
     final server = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: serverId,
-      rendezvousServers: const [],
       serverAddress:
           ServerAddress(listenPort: port, publicAddress: '203.0.113.9:$port'),
       rendezvousServer: true,
@@ -235,13 +235,13 @@ void main() {
     expect(await server.start(), isTrue);
 
     final agent = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: agentId,
-      rendezvousServers: [
-        RendezvousServer('127.0.0.1:${server.boundPort}', serverId.publicKey),
-      ],
       sodium: sodium!,
     );
     addTearDown(agent.dispose);
+    agent.wan.putRendezvousServer(
+        serverId.publicKey, '127.0.0.1:${server.boundPort}');
     final agentSaw = Completer<Underlay>();
     agent.onPeerConnected = (pk, underlay, _) {
       if (_hex(pk) == _hex(serverId.publicKey) && !agentSaw.isCompleted) {
@@ -257,7 +257,7 @@ void main() {
     expect(agent.isPeerReachable(serverId.publicKey), isTrue);
     expect(agent.store.state.knownPeers.known.containsKey(_hex(serverId.publicKey)),
         isFalse,
-        reason: 'a rendezvous server is answered as configured, not as a '
+        reason: 'a rendezvous server is answered as declared, not as a '
             'known peer');
   }, timeout: const Timeout(Duration(minutes: 1)));
 
@@ -272,8 +272,8 @@ void main() {
     final serverId = await identityFromSeed(0x85);
     final port = await freePort();
     final server = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: serverId,
-      rendezvousServers: const [],
       serverAddress:
           ServerAddress(listenPort: port, publicAddress: '203.0.113.9:$port'),
       rendezvousServer: true,
@@ -283,13 +283,13 @@ void main() {
     expect(await server.start(), isTrue);
 
     final agent = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(0x86),
-      rendezvousServers: [
-        RendezvousServer('127.0.0.1:${server.boundPort}', serverId.publicKey),
-      ],
       sodium: sodium!,
     );
     addTearDown(agent.dispose);
+    agent.wan.putRendezvousServer(
+        serverId.publicKey, '127.0.0.1:${server.boundPort}');
     final changes = <String>[];
     final reflected = Completer<String>();
     agent.wan.onConnectivityStatusChanged = (oldAddress, newAddress) {

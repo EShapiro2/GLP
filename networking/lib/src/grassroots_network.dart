@@ -27,7 +27,7 @@ import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/message_transport.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
 import 'package:grassroots_networking_core/src/routing/message_router.dart';
-import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
@@ -238,7 +238,6 @@ Set<String> computeStaleBlePeerPubkeys({
 /// final grassroots = GrassrootsNetwork(
 ///   identity: identity,
 ///   underlays: {Underlay.pan, Underlay.lan, Underlay.wan},
-///   rendezvousServers: [RendezvousServer('203.0.113.7:9514', serverKey)],
 ///   store: store,
 ///   sodium: sodium,
 /// );
@@ -247,13 +246,15 @@ Set<String> computeStaleBlePeerPubkeys({
 ///   // Handle incoming GSG block
 /// };
 ///
-/// grassroots.onPeerConnected = (pk, underlay, identity) {
-///   // peer reachable over `underlay` (PAN, LAN or WAN)
+/// grassroots.onPeerConnected = (pk, underlay, application) {
+///   // peer reachable over `underlay` (PAN, LAN or WAN); `application` the
+///   // attested application, or null for an unattested identity
 /// };
 ///
 /// // The functions of one underlay are on its sub-object (GNA §2.2).
 /// grassroots.pan?.setTrustLevel(ColdCallTrustLevel.open);
 /// grassroots.wan?.putPeerAddress(peerPubkey, '198.51.100.4:9514');
+/// grassroots.wan?.putRendezvousServer(serverKey, '203.0.113.7:9514');
 ///
 /// await grassroots.initialize();
 /// await grassroots.start();
@@ -286,9 +287,12 @@ class GrassrootsNetwork {
   /// API).
   final Set<Underlay> underlays;
 
-  /// The rendezvous servers this layer connects to over the WAN (spec
-  /// §Instantiation); fixed for the layer's lifetime.
-  final List<RendezvousServer> rendezvousServers;
+  /// The rendezvous servers GLP declared, by public key hex (GNA §4.2: "The
+  /// rendezvous servers the layer connects to are those GLP has declared,
+  /// each by its public key and its address, and GLP adds and removes them
+  /// while the layer runs"), through [WanApi.putRendezvousServer] and
+  /// [WanApi.removeRendezvousServer].
+  final Map<String, RendezvousServer> _rendezvousServers = {};
 
   /// Subscription for listening to store changes
   StreamSubscription<AppState>? _storeSubscription;
@@ -670,15 +674,16 @@ class GrassrootsNetwork {
   /// underlay: a peer reachable over the PAN and over the LAN or WAN fires
   /// twice, and an underlay that drops and later recovers fires again.
   /// Receives the peer's public key, the [Underlay] over which it connected,
-  /// and the peer's attested application identity — null where the peer's
-  /// platform provides no attestation (spec §Connection and Reachability,
-  /// `onPeerConnected(pk, underlay, identity?)`; §Session Establishment). A
-  /// peer is reachable only once its session is established, authenticated
-  /// AND attested, so this never fires before the attestation exchange.
+  /// and, for an attested identity, the attested application: its developer,
+  /// its name and its version number; null for an unattested identity (GNA
+  /// §2.3, `onPeerConnected(pk, underlay, application?)`; §2.6). A peer is
+  /// reachable only once its session is established, authenticated AND its
+  /// attestation exchange completed, so this never fires before the
+  /// exchange.
   void Function(
     Uint8List pk,
     Underlay underlay,
-    ApplicationIdentity? identity,
+    Application? application,
   )? onPeerConnected;
 
   /// Called when an existing peer sends an ANNOUNCE update.
@@ -711,8 +716,7 @@ class GrassrootsNetwork {
   /// Instantiate the layer with everything it needs to run (spec
   /// §Instantiation: "The layer is created once per agent, with everything it
   /// needs to run; nothing in it changes for the layer's lifetime"): the key
-  /// pair ([identity]), the [underlays] it runs, the [rendezvousServers] it
-  /// connects to over the WAN (may be empty), the platform attestation or
+  /// pair ([identity]), the [underlays] it runs, the platform attestation or
   /// none, and the platform geofencing or none.  A server's listen port and
   /// static public address are the headless profile's alone (GNA, 2026-10-11,
   /// Q4).  The Redux [store], [sodium], the host-address reader and the
@@ -721,13 +725,13 @@ class GrassrootsNetwork {
   /// given ([SharedPreferencesOutboundQueueStore]), and the queue persisted
   /// there for [identity] is read back and replayed (GNA §2.10).
   ///
-  /// To change the underlays or the rendezvous servers, an embedding disposes
-  /// the layer and instantiates another; there are no toggles and no call that
-  /// adds or removes a server.
+  /// To change the underlays, an embedding disposes the layer and
+  /// instantiates another; there are no toggles.  The rendezvous servers are
+  /// not given here: GLP declares and removes them while the layer runs, on
+  /// the [wan] sub-object (GNA §4.2).
   GrassrootsNetwork({
     required this.identity,
     required Set<Underlay> underlays,
-    required List<RendezvousServer> rendezvousServers,
     PlatformAttestation? platformAttestation,
     PlaceGeofenceBackend? placeGeofenceBackend,
     required this.store,
@@ -736,7 +740,6 @@ class GrassrootsNetwork {
     LocalHostAddressReader? localHostAddressReader,
     OutboundQueueStore? outboundQueueStore,
   })  : underlays = Set.unmodifiable(underlays),
-        rendezvousServers = List.unmodifiable(rendezvousServers),
         _readLocalHostAddresses =
             localHostAddressReader ?? readLocalHostAddresses,
         _attestation = platformAttestation ?? const NoPlatformAttestation(),
@@ -931,11 +934,10 @@ class GrassrootsNetwork {
   /// Whether UDP — the LAN and WAN underlays' carrier — runs and is available.
   bool get isUdpEnabled => _udpAvailable;
 
-  /// The cold-call trust level of [underlay] (GNA §2.7), behind
-  /// [ProximityApi.trustLevel]. Closed until GLP sets it with
-  /// [ProximityApi.setTrustLevel]. The two proximity underlays carry their own
-  /// levels, so an agent may answer strangers over one while ignoring them
-  /// over the other.
+  /// The cold-call trust level of [underlay] (GNA §2.7), which the layer
+  /// enforces. Closed until GLP sets it with [ProximityApi.setTrustLevel].
+  /// The two proximity underlays carry their own levels, so an agent may
+  /// answer strangers over one while ignoring them over the other.
   ColdCallTrustLevel _trustLevelOf(ProximityUnderlay underlay) =>
       store.state.settings.trustLevelOf(underlay);
 
@@ -1231,10 +1233,10 @@ class GrassrootsNetwork {
       // here and cannot be: it arrives by rendezvous reflection.
       _localHostAddressFuture = _refreshLocalHostAddresses();
 
-      // Treat the configured rendezvous server as a UDP peer we keep a
-      // session with so it can immediately learn or refresh our address.
+      // Hold a session with each declared rendezvous server, as with a UDP
+      // peer, so it can immediately learn or refresh our address.
       _resetRendezvousBackoff();
-      unawaited(_syncConfiguredRendezvous(reason: 'udp-initialized'));
+      unawaited(_syncDeclaredRendezvous(reason: 'udp-initialized'));
 
       debugPrint('UDP transport initialized successfully');
       onUdpInitialized?.call();
@@ -1293,7 +1295,7 @@ class GrassrootsNetwork {
     _startScanTimer();
     if (_udpAvailable) {
       _resetRendezvousBackoff();
-      unawaited(_syncConfiguredRendezvous(reason: 'transport-started'));
+      unawaited(_syncDeclaredRendezvous(reason: 'transport-started'));
     }
   }
 
@@ -1337,13 +1339,67 @@ class GrassrootsNetwork {
     return Uint8List.fromList(bytes);
   }
 
-  /// The configured rendezvous server holding [pubkeyHex], or null.
-  RendezvousServer? _rendezvousServerFor(String pubkeyHex) {
-    for (final server in rendezvousServers) {
-      if (server.pubkeyHex == pubkeyHex) return server;
+  /// The declared rendezvous server holding [pubkeyHex], or null.
+  RendezvousServer? _rendezvousServerFor(String pubkeyHex) =>
+      _rendezvousServers[pubkeyHex];
+
+  /// Declare the rendezvous server holding [pubkey] at [address] (GNA §4.2,
+  /// `putRendezvousServer(pk, address)`, behind `rendezvous_declare/2`): add
+  /// it to the servers the layer connects to, or, for a key declared before,
+  /// replace its address.  A session standing with the server is kept; where
+  /// none stands, a path toward the replaced address is dropped, so that the
+  /// layer dials the address declared.  Throws [ArgumentError] on an
+  /// unparseable address or a key that is not 32 bytes.
+  void _putRendezvousServer(Uint8List pubkey, String address) {
+    final server = RendezvousServer(address, pubkey);
+    final previous = _rendezvousServers[server.pubkeyHex];
+    _rendezvousServers[server.pubkeyHex] = server;
+    if (previous != null && previous.address != server.address) {
+      _resetRendezvousBackoff(_rendezvousConfigKey(previous));
+      if (!_noiseSessions.hasSession(PeerTransport.udp, server.publicKey)) {
+        _endUdpSession(server.publicKey, 'its declared address was replaced');
+      }
     }
-    return null;
+    _resetRendezvousBackoff(_rendezvousConfigKey(server));
+    if (_udpService != null && _udpAvailable) {
+      unawaited(_syncDeclaredRendezvous(configs: [server], reason: 'declared'));
+    }
   }
+
+  /// Remove the rendezvous server holding [pubkey] from those the layer
+  /// connects to, and end the layer's session with it (GNA §4.2,
+  /// `removeRendezvousServer(pk)`, behind `rendezvous_remove/1`); a key not
+  /// declared does nothing.  The heartbeat dials it no more.
+  void _removeRendezvousServer(Uint8List pubkey) {
+    final removed = _rendezvousServers.remove(_pubkeyToHex(pubkey));
+    if (removed == null) return;
+    _resetRendezvousBackoff(_rendezvousConfigKey(removed));
+    _endUdpSession(pubkey, 'it is no longer a declared rendezvous server');
+  }
+
+  /// End the UDP session with [pubkey], and its path: its handshake and its
+  /// attestation exchange stop, and the reachability subscriber reports the
+  /// peer disconnected over the IP underlay where it was reachable.
+  void _endUdpSession(Uint8List pubkey, String reason) {
+    final pubkeyHex = _pubkeyToHex(pubkey);
+    debugPrint('[udp] Ending the session with ${pubkeyHex.substring(0, 8)}: '
+        '$reason');
+    final key = _handshakePairKey(PeerTransport.udp, pubkey);
+    _handshakeRetransmits.remove(key)?.cancel();
+    _attestationDeadlines.remove(key)?.timer.cancel();
+    _attestedOn.remove(key);
+    _noiseSessions.reset(PeerTransport.udp, pubkey);
+    store.dispatch(PeerUdpConnectionChangedAction(
+      pubkeyHex: pubkeyHex,
+      connected: false,
+    ));
+    unawaited(_udpService?.disconnectFromPeer(pubkeyHex));
+  }
+
+  /// Whether [server] is still declared, at its address: what a dial begun
+  /// before a removal or a replacement checks once its session stands.
+  bool _isDeclared(RendezvousServer server) =>
+      _rendezvousServers[server.pubkeyHex] == server;
 
   bool _isRendezvousPubkeyHex(String pubkeyHex) =>
       _rendezvousServerFor(pubkeyHex.toLowerCase()) != null;
@@ -1453,11 +1509,11 @@ class GrassrootsNetwork {
     return completer.future;
   }
 
-  Future<bool> _syncConfiguredRendezvous({
+  Future<bool> _syncDeclaredRendezvous({
     List<RendezvousServer>? configs,
     String reason = 'sync',
   }) async {
-    final targets = configs ?? rendezvousServers;
+    final targets = configs ?? _rendezvousServers.values.toList();
     if (targets.isEmpty) {
       return Future.value(false);
     }
@@ -1516,9 +1572,10 @@ class GrassrootsNetwork {
           return true;
         }
 
-        // Otherwise the path, then Noise IK with the key the server was
-        // configured with (GNA §2.6: "for a rendezvous server, whose key it
-        // is given at instantiation").
+        // Otherwise the path, then Noise IK with the key GLP declared the
+        // server by (GNA §2.6: "for a rendezvous server, whose key GLP
+        // declared").
+        if (!_isDeclared(rendezvous)) return false;
         final success = await _ensureUdpConnection(
               rendezvous.pubkeyHex,
               rendezvous.address,
@@ -1529,6 +1586,14 @@ class GrassrootsNetwork {
               recipientPubkey: rendezvous.publicKey,
               peerId: rendezvous.pubkeyHex,
             );
+        if (success && !_isDeclared(rendezvous)) {
+          // Removed, or its address replaced, while the dial ran.
+          if (_rendezvousServerFor(rendezvous.pubkeyHex) == null) {
+            _endUdpSession(rendezvous.publicKey,
+                'it was removed while the layer dialed it');
+          }
+          return false;
+        }
         if (success) {
           _resetRendezvousBackoff(configKey);
           debugPrint(
@@ -1659,7 +1724,7 @@ class GrassrootsNetwork {
   /// 1. Tear down the old UDP service (dead socket, dead connections)
   /// 2. Re-initialize with a new socket on the new interface
   /// 3. Re-discover public address (new IP from new network)
-  /// 4. Re-register with the configured rendezvous servers
+  /// 4. Re-register with the declared rendezvous servers
   /// 5. Re-connect to known peers
   void _onConnectivityChanged(List<ConnectivityResult> results) {
     // Filter out irrelevant connection types like bluetooth
@@ -1760,11 +1825,10 @@ class GrassrootsNetwork {
 
   /// Walk every known peer with a dial-book address and bring it back online
   /// by dialing its recorded address (spec §Connectivity and Address,
-  /// "Address-change recovery"). Idempotent —
-  /// already-connected peers are skipped by [_connectToPeerViaUdp] and by the
-  /// second-pass [getPeerIdForPubkey] guard. (Spec §Heartbeat: the heartbeat
-  /// tick drives reconnection attempts toward unreachable peers the layer has
-  /// addresses for; who those peers are is GLP's supply.)
+  /// "Address-change recovery"), at once after a connectivity change; the
+  /// heartbeat sweeps the unreachable ones on every tick ([_sweepKnownPeers]).
+  /// Idempotent — already-connected peers are skipped by
+  /// [_connectToPeerViaUdp]; who those peers are is GLP's supply.
   Future<void> _reconnectKnownPeers({required String reason}) async {
     if (!_udpAvailable) return;
 
@@ -3010,26 +3074,29 @@ class GrassrootsNetwork {
     final sentOn = _attestationSentOn[sentKey];
     if (sentOn != null && listEquals(sentOn, handshakeHash)) return;
     _attestationSentOn[sentKey] = handshakeHash;
-    final digest = attestationDigest(
-      identityPublicKey: identity.publicKey,
-      handshakeHash: handshakeHash,
-    );
-
-    // Both halves or neither. The attestation is long-lived — the binding
+    // All three or none. The attestation is long-lived — the binding
     // obtains it once per install — while the signature is computed afresh
-    // over this session's digest.
+    // over this session's digest, which names the application's version
+    // number (GNA §2.6).
     AttestationEvidence? evidence;
     try {
       final attestation = await _attestation.attestationFor(identity.publicKey);
-      final signature = attestation == null
+      final version =
+          attestation == null ? null : await _attestation.applicationVersion();
+      final signature = version == null
           ? null
           : await _attestation.signSessionDigest(
               identityPublicKey: identity.publicKey,
-              digest: digest,
+              digest: attestationDigest(
+                identityPublicKey: identity.publicKey,
+                version: version,
+                handshakeHash: handshakeHash,
+              ),
             );
-      if (attestation != null && signature != null) {
+      if (attestation != null && version != null && signature != null) {
         evidence = AttestationEvidence(
           attestation: attestation,
+          version: version,
           signature: signature,
         );
       }
@@ -3100,11 +3167,6 @@ class GrassrootsNetwork {
       return;
     }
 
-    final digest = attestationDigest(
-      identityPublicKey: senderPubkey,
-      handshakeHash: handshakeHash,
-    );
-
     AttestationEvidence? offered;
     try {
       offered = decodeAttestationPayload(payload);
@@ -3118,7 +3180,7 @@ class GrassrootsNetwork {
     try {
       verdict = await _attestation.verify(
         evidence: offered,
-        digest: digest,
+        handshakeHash: handshakeHash,
         peerIdentityKey: senderPubkey,
       );
     } catch (e) {
@@ -3129,13 +3191,13 @@ class GrassrootsNetwork {
 
     final attestedKey = _handshakePairKey(transport, senderPubkey);
     switch (verdict) {
-      case AttestedApplication(:final identity):
-        debugPrint('[attest] $peerShort attested as $identity');
+      case AttestedApplication(:final application):
+        debugPrint('[attest] $peerShort attested: $application');
         _attestedOn[attestedKey] = handshakeHash;
         store.dispatch(PeerAttestedAction(
           publicKey: senderPubkey,
           underlay: underlay,
-          attestation: PeerAttestation(identity: identity),
+          attestation: PeerAttestation(application: application),
         ));
         _drainQueuedMessagesForPeer(senderPubkey);
       case UnattestedPlatform(:final reason):
@@ -3891,7 +3953,7 @@ class GrassrootsNetwork {
   }
 
   /// A signaling payload arrived over a session.  Signaling is between an
-  /// agent and its rendezvous servers alone, so it is taken from a configured
+  /// agent and its rendezvous servers alone, so it is taken from a declared
   /// rendezvous server and from no one else: the address the server observes
   /// this agent at (spec §Connectivity and Address).
   void _onSignalingReceived(Uint8List senderPubkey, Uint8List payload) {
@@ -3958,7 +4020,7 @@ class GrassrootsNetwork {
     store.dispatch(PublicAddressUpdatedAction(reflected));
     _resetRendezvousBackoff();
     _resetAutoUdpBackoff();
-    unawaited(_syncConfiguredRendezvous(reason: 'reflected-address-updated'));
+    unawaited(_syncDeclaredRendezvous(reason: 'reflected-address-updated'));
     // Spec onConnectivityStatus: RV-reflection-driven address change.
     wan?.onConnectivityStatusChanged?.call(previous, reflected);
   }
@@ -4203,7 +4265,7 @@ class GrassrootsNetwork {
   ///      poisoned them while we were backgrounded (Android in particular
   ///      EPERMs background sends and leaves the socket FD in a permanently
   ///      broken state — fixable only by close + bind).
-  ///   2. Re-sync configured rendezvous servers (an existing path may be
+  ///   2. Re-sync the declared rendezvous servers (an existing path may be
   ///      bound to a NAT mapping that lapsed in the background, or the rebind
   ///      in step 1 just dropped every path).
   Future<void> onAppResumed() async {
@@ -4214,7 +4276,7 @@ class GrassrootsNetwork {
         debugPrint('[lifecycle] UDP transport rebound after foreground probe');
       }
     }
-    unawaited(_syncConfiguredRendezvous(reason: 'app-resumed'));
+    unawaited(_syncDeclaredRendezvous(reason: 'app-resumed'));
     _drainQueuedMessagesForLivePeers();
   }
 
@@ -4274,20 +4336,39 @@ class GrassrootsNetwork {
     await _persistedQueue.flush();
   }
 
-  /// Re-dial each rendezvous server with no connection standing (spec
-  /// §Connectivity and Address: "The heartbeat sweep therefore re-initiates
-  /// connections to the known peers and the configured rendezvous servers").
-  /// The per-server backoff in [_syncConfiguredRendezvous] spaces the
-  /// attempts.
+  /// Re-dial each declared rendezvous server with no connection standing
+  /// (GNA §4.2, Address-change recovery: "The heartbeat sweep therefore
+  /// re-initiates connections to the known peers and the declared rendezvous
+  /// servers"; §2.5, Heartbeat). The per-server backoff in
+  /// [_syncDeclaredRendezvous] spaces the attempts.
   void _holdRendezvousSessions() {
     final udp = _udpService;
     if (udp == null || !_udpAvailable) return;
     final down = [
-      for (final server in rendezvousServers)
+      for (final server in _rendezvousServers.values)
         if (udp.getPeerIdForPubkey(server.publicKey) == null) server,
     ];
     if (down.isEmpty) return;
-    unawaited(_syncConfiguredRendezvous(configs: down, reason: 'heartbeat'));
+    unawaited(_syncDeclaredRendezvous(configs: down, reason: 'heartbeat'));
+  }
+
+  /// Re-initiate a connection to each unreachable known peer at its recorded
+  /// address (GNA §2.5, Heartbeat: "The same heartbeat tick drives
+  /// reconnection attempts towards unreachable known peers ... and the replay
+  /// of queued messages once a recipient is live again"; §4.2, Address-change
+  /// recovery: "The heartbeat sweep therefore re-initiates connections to the
+  /// known peers").  A peer reachable over any underlay is not swept.  A dial
+  /// in flight is not repeated, and one that failed waits out its backoff
+  /// ([_connectToPeerViaUdp]).  The session's attestation exchange makes the
+  /// peer reachable, and that drains its queue.
+  void _sweepKnownPeers() {
+    if (_udpService == null || !_udpAvailable) return;
+    for (final entry in store.state.knownPeers.dialBook.entries) {
+      final peer = _peersState.getPeerByPubkeyHex(entry.key);
+      if (peer != null && peer.isReachable) continue;
+      unawaited(
+          _connectToPeerViaUdp(entry.key, peer?.udpAddress ?? entry.value));
+    }
   }
 
   /// Start the periodic ANNOUNCE timer
@@ -4297,6 +4378,7 @@ class GrassrootsNetwork {
       _broadcastAnnounce();
       _broadcastAnnounceViaUdp();
       _holdRendezvousSessions();
+      _sweepKnownPeers();
       _removeStalePeers();
       _drainQueuedMessagesForLivePeers();
       unawaited(_refreshLocalNetwork());
@@ -4608,9 +4690,6 @@ class _GrassrootsProximity implements ProximityApi {
   @override
   Future<void> setTrustLevel(ColdCallTrustLevel level) =>
       _layer._setTrustLevel(underlay, level);
-
-  @override
-  ColdCallTrustLevel get trustLevel => _layer._trustLevelOf(underlay);
 }
 
 /// The `wan` sub-object of a [GrassrootsNetwork] (GNA §2.2, §4.2, §4.3).
@@ -4648,6 +4727,14 @@ class _GrassrootsWan implements WanApi {
 
   @override
   void punchUdp(String address) => _layer._punchUdp(address);
+
+  @override
+  void putRendezvousServer(Uint8List pk, String address) =>
+      _layer._putRendezvousServer(pk, address);
+
+  @override
+  void removeRendezvousServer(Uint8List pk) =>
+      _layer._removeRendezvousServer(pk);
 }
 
 /// Diff each peer's set of reachable underlays against the previous tick and
@@ -4676,7 +4763,7 @@ void processReachabilityTransitions({
   required void Function(
     Uint8List pk,
     Underlay underlay,
-    ApplicationIdentity? identity,
+    Application? application,
   )? onConnected,
   required void Function(Uint8List pk, Underlay underlay)? onDisconnected,
 }) {
@@ -4693,7 +4780,7 @@ void processReachabilityTransitions({
       onConnected?.call(
         peer.publicKey,
         u,
-        peer.attestationFor(u)?.identity,
+        peer.attestationFor(u)?.application,
       );
     }
     for (final u in previous.difference(current)) {

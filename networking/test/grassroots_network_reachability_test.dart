@@ -5,7 +5,7 @@ import 'package:grassroots_networking/src/grassroots_network.dart'
     show processReachabilityTransitions;
 import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
-import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/store/peers_state.dart';
 
 /// Tests for the reachability-transition diff that drives the per-underlay
@@ -83,7 +83,7 @@ void main() {
   void onConnected(
     Uint8List pk,
     Underlay u,
-    ApplicationIdentity? identity,
+    Application? application,
   ) =>
       connects.add((pubkeyHex(pk), u));
   void onDisconnected(Uint8List pk, Underlay u) =>

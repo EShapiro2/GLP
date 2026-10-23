@@ -46,6 +46,7 @@ class PushService {
     required int port,
     required String publicAddress,
     required MirrorWriter writer,
+    required String outboundQueuePath,
     String? knownPeersPath,
   }) async {
     final sodium = await initHeadlessSodium();
@@ -56,12 +57,14 @@ class PushService {
       // The mirroring service holds no session with a rendezvous server; its
       // port and public address are the server address of GNA
       // §Instantiation, one pair.
-      rendezvousServers: const [],
       serverAddress:
           ServerAddress(listenPort: port, publicAddress: publicAddress),
       knownPeersStore: knownPeersPath == null
           ? null
           : FileKnownPeersStore(knownPeersPath),
+      // The layer's fair-delivery queue, kept in a file so that it survives
+      // the termination of the service (GNA §2.11).
+      outboundQueueStore: FileOutboundQueueStore(outboundQueuePath),
     );
     final service = PushService._(network, writer);
     network.onMessageReceived =

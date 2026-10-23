@@ -73,7 +73,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: id,
       underlays: underlays,
-      rendezvousServers: const [],
       store: store,
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,
@@ -279,8 +278,10 @@ void main() {
     receiverStore.dispatch(LocalNetworkChangedAction(loopbackIsLocal));
     await receiver.pan!.setTrustLevel(ColdCallTrustLevel.open);
 
-    expect(receiver.pan!.trustLevel, ColdCallTrustLevel.open);
-    expect(receiver.lan!.trustLevel, ColdCallTrustLevel.closed);
+    expect(receiver.store.state.settings.trustLevelOf(ProximityUnderlay.pan),
+        ColdCallTrustLevel.open);
+    expect(receiver.store.state.settings.trustLevelOf(ProximityUnderlay.lan),
+        ColdCallTrustLevel.closed);
 
     caller.wan!.putPeerAddress(
       receiverId.publicKey,
@@ -342,7 +343,7 @@ void main() {
     final connected = <Underlay>[];
     final received = <Underlay>[];
     final discovered = <ProximityUnderlay>[];
-    receiver.onPeerConnected = (pk, underlay, identity) {
+    receiver.onPeerConnected = (pk, underlay, application) {
       if (hexOf(pk) == callerHex) connected.add(underlay);
     };
     receiver.onMessageReceived = (sender, payload, messageId, underlay) {
