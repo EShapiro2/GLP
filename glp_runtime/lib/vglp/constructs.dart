@@ -2208,8 +2208,9 @@ class _Generator {
   /// A declaration's labels hold within its widget: each constructor of its
   /// type, and of the types under it, that the declaration labels is drawn
   /// as `label(S, W)`, W its widget and S its label, a constant in a row of
-  /// buttons `label(S, C)`, and a field the declaration labels as
-  /// `field(L, label(S, W))` (vGLP 1126f4f, Section 6.2, "The words a
+  /// buttons `label(S, C)`, and a field the declaration names is entered as
+  /// `field(S, W)`, S its name in place of the name of its declared type,
+  /// which labels a field "where it is given none" (vGLP 1126f4f, Section 6.2, "The words a
   /// platform shows": "a widget term carries a label beside each
   /// constructor of Definition Default Widget.  A construct family draws the
   /// label it is given, and the name of the type where it is given none").
@@ -2245,13 +2246,12 @@ class _Generator {
     return l == null ? w : 'label(${constantSource(l)}, $w)';
   }
 
-  /// [w], the widget of the place [i] of the constructor [f], with the label
-  /// the declaration in force gives that place; [w] itself where it gives
-  /// none.
-  String _labelledPlace(String f, int i, String w) {
-    final l = _labels?.ofPlace(f, i);
-    return l == null ? w : 'label(${constantSource(l)}, $w)';
-  }
+  /// The name of the field at the place [i] of the constructor [f]: the
+  /// name the declaration in force gives it, or [type], the name of its
+  /// declared type, where it gives none (Definition "Default Widget": "one
+  /// field per argument, each labelled by the name of its declared type").
+  String _fieldName(String f, int i, String type) =>
+      _labels?.ofPlace(f, i) ?? type;
 
   String _defaultWidget(_Node n, Set<String> visiting) {
     final t = n.type;
@@ -2344,8 +2344,8 @@ class _Generator {
     final ws = [
       for (var i = 0; i < kids.length; i++)
         '${_isNestedSeq(n, kids[i]) ? 'question' : 'field'}'
-            '(${constantSource(kids[i].typeKey)}, '
-            '${_labelledPlace(f, i + 1, _widget(kids[i], visiting))})'
+            '(${constantSource(_fieldName(f, i + 1, kids[i].typeKey))}, '
+            '${_widget(kids[i], visiting)})'
     ].join(', ');
     return _labelled(f, 'form(${constantSource(f)}, [$ws])');
   }

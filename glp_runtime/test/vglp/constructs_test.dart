@@ -2246,8 +2246,8 @@ procedure (YesNo?)*approve(Integer?).
           c.widgets['Ask'],
           "named(social_menu, form(ask, [field('Act', menu(["
           "label('Meet', form(meet, [field('Peer', peer), field('Peer', peer)])), "
-          "label('Send', form(send, [field('Peer', peer), field('Speech', "
-          "label(text, form(speech, [field('String', text), field('Peer', peer)])))])), "
+          "label('Send', form(send, [field('Peer', peer), field(text, "
+          "form(speech, [field('String', text), field('Peer', peer)]))])), "
           "form(leave, [field('Peer', peer)])]))]))");
       expect(c.widgets['YesNo?'],
           "named(approval_sentence, buttons([label('Accept', yes), no]))");
