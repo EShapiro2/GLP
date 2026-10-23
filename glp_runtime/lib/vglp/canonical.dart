@@ -1408,7 +1408,17 @@ String _widgetType(String left, int line, int column) {
 /// Q3), as its constant.  An atom is a string, and a quoted name and a
 /// double-quoted string are two spellings of one string (GLP-Spec
 /// appendix-lp.tex, Definition "Logic Programs Syntax"), so `'inbox_card'`
-/// and `"inbox_card"` name one widget.
+/// and `"inbox_card"` name one widget.  Or the atom applied to the list of
+/// the labels its declaration gives the type's constructors,
+/// `social_menu([label(establish, "Join"), label(message, 3, "text")])`:
+/// "A label is the same for every question of its type --- the name of a
+/// request in the menu, the name of a field in its form, the two answers of
+/// an approval question, the name of a list in the view --- so the compiler
+/// writes it into the widget declaration it prints for that type, and a
+/// widget term carries a label beside each constructor of Definition
+/// Default Widget" (vGLP 1126f4f, Section 6.2, "The words a platform
+/// shows"); its text as [DeclaredWidget.source] writes it, which
+/// [DeclaredWidget.parse] reads back.
 String _widgetAtom(String right, int line, int column) {
   if (RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(right)) return right;
   final q = right.isEmpty ? '' : right[0];
@@ -1420,9 +1430,106 @@ String _widgetAtom(String right, int line, int column) {
       return toks.first.lexeme;
     }
   }
+  final labelled = DeclaredWidget.tryParse(right);
+  if (labelled != null) return labelled.source;
   throw CompileError(
       'A widget declaration "T =::= W" whose W, "$right", is not an atom '
-      'naming a widget', line, column, phase: 'parser');
+      'naming a widget, nor one applied to the list of its labels, each '
+      'label(F, S) or label(F, I, S), F a constructor, I a place of it and S '
+      'a string', line, column, phase: 'parser');
+}
+
+/// A widget a declaration names, with the labels it gives (vGLP 1126f4f,
+/// Section 6.2, "The words a platform shows"): its [name], an atom naming a
+/// widget of the construct family, and the labels it gives the constructors
+/// of its type, `label(F, S)`, the constructor F --- a tuple's functor or a
+/// constant --- labelled S, and `label(F, I, S)`, the I-th argument of the
+/// tuple of functor F, a field of its form, labelled S.  The labels hold
+/// within the widget of the declared type, the types under it included,
+/// down to a type a declaration of its own names (constructs.dart,
+/// `_widget`).
+class DeclaredWidget {
+  final String name;
+
+  /// The label of each constructor, by its functor or its constant.
+  final Map<String, String> constructors;
+
+  /// The label of each place, by `F/I`, F the functor and I the place,
+  /// from 1.
+  final Map<String, String> places;
+
+  const DeclaredWidget(this.name,
+      [this.constructors = const {}, this.places = const {}]);
+
+  /// The declaration's widget as the map of widget declarations carries it
+  /// ([WidgetDeclarations.byModedType]): its name alone, or its name applied
+  /// to its labels, `w([label(f, 'S'), label(f, 3, 'S')])`.
+  String get source {
+    if (constructors.isEmpty && places.isEmpty) return name;
+    final ls = [
+      for (final e in constructors.entries)
+        'label(${constantSource(e.key)}, ${constantSource(e.value)})',
+      for (final e in places.entries)
+        'label(${constantSource(e.key.substring(0, e.key.lastIndexOf('/')))}, '
+            '${e.key.substring(e.key.lastIndexOf('/') + 1)}, '
+            '${constantSource(e.value)})',
+    ];
+    return '${constantSource(name)}([${ls.join(', ')}])';
+  }
+
+  /// The widget [w] names, as [source] writes it or as a declaration writes
+  /// it.
+  static DeclaredWidget parse(String w) =>
+      tryParse(w) ?? DeclaredWidget(w);
+
+  /// The widget [w] names, an atom applied to the list of its labels, or
+  /// null where [w] is not one.
+  static DeclaredWidget? tryParse(String w) {
+    Term? t;
+    try {
+      final program = Parser(Lexer('w($w).').tokenize()).parse();
+      final head = program.procedures.single.clauses.single.head;
+      if (head.args.length == 1) t = head.args.single;
+    } on Object {
+      return null;
+    }
+    if (t is! StructTerm || t.args.length != 1) return null;
+    final constructors = <String, String>{};
+    final places = <String, String>{};
+    Term? cell = t.args.single;
+    while (cell is ListTerm && !cell.isNil) {
+      final l = cell.head;
+      if (l is! StructTerm || l.functor != 'label') return null;
+      final f = _labelConstant(l.args.first);
+      final s = _labelConstant(l.args.last);
+      if (f == null || s == null) return null;
+      if (l.args.length == 2) {
+        constructors[f] = s;
+      } else if (l.args.length == 3) {
+        final i = l.args[1];
+        if (i is! ConstTerm || i.value is! int) return null;
+        places['$f/${i.value}'] = s;
+      } else {
+        return null;
+      }
+      cell = cell.tail;
+    }
+    if (cell is! ListTerm || !cell.isNil) return null;
+    return DeclaredWidget(t.functor, constructors, places);
+  }
+
+  static String? _labelConstant(Term t) {
+    if (t is ConstTerm && t.value is String) return t.value as String;
+    if (t is StructTerm && t.args.isEmpty) return t.functor;
+    if (t is ListTerm && t.isNil) return '[]';
+    return null;
+  }
+
+  /// The label of the constructor [f], or null where none is given.
+  String? ofConstructor(String f) => constructors[f];
+
+  /// The label of the place [i] of the constructor [f], or null.
+  String? ofPlace(String f, int i) => places['$f/$i'];
 }
 
 // ---------------------------------------------------------------------------

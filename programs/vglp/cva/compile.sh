@@ -20,7 +20,12 @@
 # (GSC, Section 5): for each contract, a REPL session on its owner's file, or
 # on contracts.glp, prints it, contract_named/2; one on programs/gsc prints the
 # checker's verdict on it, check/2; and one on the compiler calls
-# compile(Name, Contract, Verdict, Intro) and writes what it prints between
+# compile(Name, Contract, Verdict, Intro, Pragmas, Clauses), the contract's
+# pragmas, the words its app shows, read from the NAME.txt beside its owner's
+# file and those of the contracts it extends by compiler/pragmas.sh, or
+# no_pragmas for contracts.glp, and the schemas that realise each clause,
+# clauses_named/2 where the owner's file names them, no_clauses otherwise
+# (vGLP, Section 5.4, "The contract's words"), and writes what it prints between
 # its lines "%% compile begin" and "%% compile end" to the contract's
 # platform.vglp.  A contract a step fails on is named, and its platform.vglp
 # is left as it is.  The compiled modules are committed beside their plays,
@@ -95,6 +100,19 @@ for c in $CONTRACTS; do
         repl "$WORK/i.in" "$WORK/$c.i.out"
         it=$(grep -E '^I = ' "$WORK/$c.i.out" | head -1 | sed -e 's/^I = //')
     fi
+    pr=no_pragmas
+    if [ "$src" != "$HERE/contracts.glp" ] && [ -f "${src%.glp}.txt" ] \
+        && ! pr=$(bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" 2> "$WORK/$c.pr.err"); then
+        echo "missing $d: its pragmas were not read: $(head -1 "$WORK/$c.pr.err")" >> "$WORK/status"
+        continue
+    fi
+    cl=no_clauses
+    if grep -q "^clauses_named($c," "$src"; then
+        printf '%s\nclauses_named(%s, N).\n:quit\n' "$src" "$c" > "$WORK/n.in"
+        repl "$WORK/n.in" "$WORK/$c.n.out"
+        nt=$(grep -E '^N = ' "$WORK/$c.n.out" | head -1 | sed -e 's/^N = //')
+        [ -n "$nt" ] && cl="clauses($nt)"
+    fi
     vt=""
     if [ -n "$ct" ]; then
         # The REPL stops a goal at 10000 reductions unless told otherwise; the
@@ -108,7 +126,7 @@ for c in $CONTRACTS; do
         grep -hE '^(Error|✗)' "$WORK/$c".*.out | head -3 >> "$WORK/status"
         continue
     fi
-    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$c" "$ct" "$vt" "$it" > "$WORK/p.in"
+    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$c" "$ct" "$vt" "$it" "$pr" "$cl" > "$WORK/p.in"
     repl "$WORK/p.in" "$WORK/$c.p.out"
     f="$OUT/$d/platform.vglp"
     if ! awk '

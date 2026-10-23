@@ -12,7 +12,7 @@
 #   gai    gai       programs/gai/GAI.glp
 #   gc     gc        programs/currencies/coins/GC.glp
 #
-# The steps are cascade.sh's 1, 2 and 4: the contract, contract_named/2, from the owner's file; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/4, on the contract, its verdict and its introduction predicate, introduction_named/2 where the owner's file names one and no_introduction otherwise.  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
+# The steps are cascade.sh's 1, 2 and 4: the contract, contract_named/2, from the owner's file; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/6, on the contract, its verdict, its introduction predicate, introduction_named/2 where the owner's file names one and no_introduction otherwise, its pragmas, the words its app shows, read from the NAME.txt beside the owner's file and from those of the contracts it extends by programs/vglp/cva/compiler/pragmas.sh, and the schemas that realise each clause, clauses_named/2 where the owner's file names them and no_clauses otherwise (vGLP, Section 5.4, "The contract's words").  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
 #
 # Prints one line per app.  Exits 0 if each was compiled and, with --check, each is byte for byte the file in place; 1 otherwise, the app not compiled or the differing file named; 2 on a bad argument.
 
@@ -70,6 +70,20 @@ for app in $APPS; do
         it=$(grep -E '^I = ' "$WORK/i.out" | head -1 | sed -e 's/^I = //')
         [ -n "$it" ] && intro="$it"
     fi
+    # The contract's words: its pragmas, from its NAME.txt and those of the contracts it extends, and the schemas that realise each clause, clauses_named/2, where the owner's file names them.
+    pr=no_pragmas
+    if [ -f "${src%.glp}.txt" ] && ! pr=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${src%.glp}.txt" 2> "$WORK/pr.err"); then
+        echo "$app: its pragmas were not read: $(head -1 "$WORK/pr.err")"
+        OK=0
+        continue
+    fi
+    cl=no_clauses
+    if grep -q "^clauses_named($name," "$src"; then
+        printf '%s\nclauses_named(%s, N).\n:quit\n' "$src" "$name" > "$WORK/n.in"
+        repl "$WORK/n.in" "$WORK/n.out"
+        nt=$(grep -E '^N = ' "$WORK/n.out" | head -1 | sed -e 's/^N = //')
+        [ -n "$nt" ] && cl="clauses($nt)"
+    fi
     vt=""
     if [ -n "$ct" ]; then
         printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$ct" > "$WORK/v.in"
@@ -81,7 +95,7 @@ for app in $APPS; do
         OK=0
         continue
     fi
-    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$name" "$ct" "$vt" "$intro" > "$WORK/p.in"
+    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$name" "$ct" "$vt" "$intro" "$pr" "$cl" > "$WORK/p.in"
     repl "$WORK/p.in" "$WORK/p.out"
     mkdir -p "$WORK/out/$app"
     out="$WORK/out/$app/platform.vglp"

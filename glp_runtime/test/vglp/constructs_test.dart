@@ -2221,6 +2221,38 @@ procedure (YesNo?)*ask(Integer?).
       expect(widget('"toggle"'), widget("'toggle'"));
     });
 
+    // "A label is the same for every question of its type ... so the
+    // compiler writes it into the widget declaration it prints for that
+    // type, and a widget term carries a label beside each constructor of
+    // Definition Default Widget.  A construct family draws the label it is
+    // given, and the name of the type where it is given none" (vGLP 1126f4f,
+    // Section 6.2, "The words a platform shows").
+    test('a declaration labels the constructors and the places of its type, '
+        'and the widget term carries each label beside its constructor', () {
+      final c = compile('''
+Peer ::= Key.
+Speech ::= speech(String, Peer).
+Act ::= meet(Peer, Peer) ; send(Peer, Speech) ; leave(Peer).
+YesNo ::= yes ; no.
+Ask ::= ask(Act?).
+Ask =::= social_menu([label(meet, "Meet"), label(send, "Send"), label(send, 2, "text"), label(yes, "Accept")]).
+YesNo? =::= approval_sentence([label(yes, "Accept")]).
+procedure (Ask)*request(Integer?).
+(ask(_))*request(_).
+procedure (YesNo?)*approve(Integer?).
+(yes)*approve(_).
+''');
+      expect(
+          c.widgets['Ask'],
+          "named(social_menu, form(ask, [field('Act', menu(["
+          "label('Meet', form(meet, [field('Peer', peer), field('Peer', peer)])), "
+          "label('Send', form(send, [field('Peer', peer), field('Speech', "
+          "label(text, form(speech, [field('String', text), field('Peer', peer)])))])), "
+          "form(leave, [field('Peer', peer)])]))]))");
+      expect(c.widgets['YesNo?'],
+          "named(approval_sentence, buttons([label('Accept', yes), no]))");
+    });
+
     test('are refused where W is not an atom, T not a moded type, or two name '
         'one moded type', () {
       expect(() => compile('''

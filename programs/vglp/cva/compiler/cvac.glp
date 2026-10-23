@@ -16,7 +16,8 @@
 %% programs/sglp/transform.glp prints a clause's head; a source variable is a
 %% constant whose name is the variable's, V1, V1?, from vname/3.
 
-Line  ::= String ; guarded_only(String) ; unguarded_only(String).
+Line  ::= String ; guarded_only(String) ; unguarded_only(String)
+        ; pragma_only(String) ; plain_only(String).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, NumInfos?, Stream(_)).
@@ -26,17 +27,22 @@ imported procedure local#proposable(Contract?, Preds?, Preds).
 Found ::= named(Constant, Constant) ; unnamed.
 
 exported procedure compile(Constant?, Declared?, Verdict?).
-compile(Nm, D, V) :- compile_intro(Nm?, D?, V?, no_introduction).
+compile(Nm, D, V) :- compile_intro(Nm?, D?, V?, no_introduction, words(no_pragmas, no_clauses)).
 %% compile(Name, Contract, Verdict, Intro): the same, for a contract naming
 %% an introduction predicate e, introduction(e), whose introduction rule the
 %% platform's agents follow (vGLP, Section 3.2, Definition "Introduction Rule,
 %% Introduce Peers"; Section 5.4, the paragraph on act schemas), or none,
 %% no_introduction.
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?).
-compile(Nm, D, V, I) :- compile_intro(Nm?, D?, V?, I?).
+compile(Nm, D, V, I) :- compile_intro(Nm?, D?, V?, I?, words(no_pragmas, no_clauses)).
+%% compile(Name, Contract, Verdict, Intro, Pragmas, Clauses): the same, for a contract carrying pragmas, the words its app shows, and the term naming the schemas that realise each clause (vGLP, Section 5.4, "The contract's words": "The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type, a sentence into the approval question that Start raises, and a list's name into the view the agent writes"; Section 6.2, "The words a platform shows").  A contract with no pragmas, no_pragmas, is compiled as by compile/4, but for the two widget declarations every platform carries.
+exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Clauses?).
+compile(Nm, D, V, I, P, Cl) :- compile_intro(Nm?, D?, V?, I?, words(P?, Cl?)).
+%% The contract's words, its pragmas and the term naming the schemas of each clause, carried through the compiler whole.
+Words ::= words(Pragmas, Clauses).
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): each schema's constraint, its local variables and the role whose local variables the constraint names, the table Nt (local.glp, num_info_of); the contract compiled is its plain form (plain_contract), each schema's head less its local variables, which "the schema-binding does not bind", so that a class term names the schema-binding: its roles and its other variables, "bound by the schema-binding, as a speech-act variable is", in the order of the head.
-procedure compile_intro(Constant?, Declared?, Verdict?, Intro?).
-compile_intro(Nm, D, V, I) :- ground(D?), ground(I?) |
+procedure compile_intro(Constant?, Declared?, Verdict?, Intro?, Words?).
+compile_intro(Nm, D, V, I, W) :- ground(D?), ground(I?) |
     decl_schemas(D?, C0),
     decl_schemas(D?, C1),
     decl_schemas(D?, C2),
@@ -45,41 +51,52 @@ compile_intro(Nm, D, V, I) :- ground(D?), ground(I?) |
     plain_contract(C0?, Nt1?, C),
     decl_reflexive(D?, Rf),
     intro_preds(I?, E),
-    compile0(Nm?, C?, Rf?, E?, Nt?, V?).
+    compile0(Nm?, C?, Rf?, E?, Nt?, V?, W?).
 procedure intro_preds(Intro?, Preds).
 intro_preds(no_introduction, []).
 intro_preds(introduction(P), [P?]).
-procedure compile0(Constant?, Contract?, Preds?, Preds?, NumInfos?, Verdict?).
-compile0(Nm, C, Rf, E, Nt, V) :- ground(Nm?), ground(C?) |
+procedure compile0(Constant?, Contract?, Preds?, Preds?, NumInfos?, Verdict?, Words?).
+compile0(Nm, C, Rf, E, Nt, V, W) :- ground(Nm?), ground(C?) |
     verdict_lines(V?, Nm?, L1),
     role_lines(C?, Nm?, L2),
     lapp(L1?, L2?, L),
-    compile1(L?, Nm?, C?, Rf?, E?, Nt?).
+    compile1(L?, Nm?, C?, Rf?, E?, Nt?, W?).
 
-procedure compile1(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?).
-compile1([], Nm, C, Rf, E, Nt) :- ground(C?) |
+procedure compile1(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
+compile1([], Nm, C, Rf, E, Nt, W) :- ground(C?) |
     names_lines(C?, Nm?, L1),
-    compile2(L1?, Nm?, C?, Rf?, E?, Nt?).
-compile1([L|Ls], _, _, _, _, _) :-
+    compile2(L1?, Nm?, C?, Rf?, E?, Nt?, W?).
+compile1([L|Ls], _, _, _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),
     lapp(Ls?, ['%% compile end'], Ls1).
 
-procedure compile2(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?).
-compile2([], Nm, C, Rf, E, Nt) :- ground(C?), ground(Rf?), ground(Nt?) |
+procedure compile2(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
+compile2([], Nm, C, Rf, E, Nt, W) :- ground(C?), ground(Rf?), ground(Nt?) |
     local # faults(C?, Rf?, Nt?, Fs),
-    compile3(Fs?, Nm?, C?, Rf?, E?, Nt?).
-compile2([L|Ls], _, _, _, _, _) :-
+    compile3(Fs?, Nm?, C?, Rf?, E?, Nt?, W?).
+compile2([L|Ls], _, _, _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),
     lapp(Ls?, ['%% compile end'], Ls1).
 
-procedure compile3(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?).
-compile3([], Nm, C, Rf, E, Nt) :-
-    module_lines(Nm?, C?, Rf?, E?, Nt?, Ls),
-    send_to_user(['%% compile begin'|Ls?]).
-compile3([F|Fs], Nm, _, _, _, _) :- ground(Nm?) |
+procedure compile3(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
+compile3([], Nm, C, Rf, E, Nt, W) :- ground(C?), ground(Rf?), ground(W?) |
+    local # proposable(C?, Rf?, Ps),
+    word_faults(W?, C?, Wf),
+    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, W?, Ps?).
+compile3([F|Fs], Nm, _, _, _, _, _) :- ground(Nm?) |
     H =.. ['%% not compiled', Nm?],
     send_to_user(['%% compile begin', H?, F?|Fs1?]),
     lapp(Fs?, ['%% compile end'], Fs1).
+
+%% A contract whose words do not name its schemas is not compiled, with the lines saying why (word_faults).
+procedure compile4(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?, Preds?).
+compile4([], Nm, C, Rf, E, Nt, W, Ps) :-
+    module_lines(Nm?, C?, Rf?, E?, Nt?, W?, Ps?, Ls),
+    send_to_user(['%% compile begin'|Ls?]).
+compile4([L|Ls], Nm, _, _, _, _, _, _) :- ground(Nm?) |
+    H =.. ['%% not compiled', Nm?],
+    send_to_user(['%% compile begin', H?, L?|Ls1?]),
+    lapp(Ls?, ['%% compile end'], Ls1).
 
 %% --- The contract compiled ------------------------------------------------
 procedure decl_schemas(Declared?, Contract).
@@ -265,16 +282,15 @@ count_args([], 0).
 count_args([_|As], N?) :- count_args(As?, M), N := M? + 1.
 
 %% --- The module ------------------------------------------------------------
-procedure module_lines(Constant?, Contract?, Preds?, Preds?, NumInfos?, Stream(_)).
-module_lines(Nm, C, Rf, E, Nt, Ls?) :- ground(C?), ground(Rf?) |
-    local # proposable(C?, Rf?, Ps),
-    module_lines1(Nm?, C?, Rf?, E?, Nt?, Ps?, Ls).
-procedure module_lines1(Constant?, Contract?, Preds?, Preds?, NumInfos?, Preds?, Stream(_)).
-module_lines1(Nm, C, Rf, E, Nt, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(E?), ground(Nt?), ground(Ps?) |
+procedure module_lines(Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?, Preds?, Stream(_)).
+module_lines(Nm, C, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(E?), ground(Nt?), ground(W?), ground(Ps?) |
     H =.. ['%% the canonical CVA platform of the contract', Nm?],
     class_lines(C?, L1),
     text # fixed_text(Fx),
-    request_parts(C?, Ps?, Fx?, Lr, Fx1),
+    has_pragmas(W?, Pm),
+    request_parts(C?, Ps?, Pm?, Fx?, Lr0, Fx1),
+    widget_lines(W?, C?, Ps?, Lw),
+    lapp(Lr0?, Lw?, Lr),
     atom_parts(C?, La),
     text_schemas(C?, Ct),
     schema_lines(Ct?, T1, Le0),
@@ -284,7 +300,9 @@ module_lines1(Nm, C, Rf, E, Nt, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?)
     name_class_decl(Ln0?, Ln1),
     request_name_lines(C?, Ps?, Lq0),
     request_name_decl(Lq0?, Lq),
-    lapp(Ln1?, Lq?, Ln),
+    word_lines(W?, C?, Lp),
+    lapp(Lq?, Lp?, Lqp),
+    lapp(Ln1?, Lqp?, Ln),
     T2 =.. [reflexive_preds, Rf?],
     T3 =.. [introduction_preds, E?],
     binding_lines(C?, Nt?, L2),
@@ -374,12 +392,12 @@ var_types([sgn(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 var_types([num(_)|Vs], ['Integer'|Ts?]) :- var_types(Vs?, Ts).
 
 %% The request type: Proposal ::= the alternatives of the schemas whose terms name guarded parts (local.glp, proposable), separated by ;, and Request ::= propose(Proposal) ; known(Peer); where there are none, Request ::= known(Peer) alone, and the shared text's lines guarded_only(L), its clauses on the request propose([t]_j), are not printed.
-procedure request_parts(Contract?, Preds?, Lines?, Stream(_), Stream(_)).
-request_parts(C, Ps, Fx, Lr?, Fx1?) :- ground(C?), ground(Ps?) |
+procedure request_parts(Contract?, Preds?, YesNo?, Lines?, Stream(_), Stream(_)).
+request_parts(C, Ps, Pm, Fx, Lr?, Fx1?) :- ground(C?), ground(Ps?) |
     proposal_alts(C?, Ps?, As),
     request_lines(As?, Lr),
     any_name(Ps?, G),
-    shared_lines(Fx?, G?, Fx1).
+    shared_lines(Fx?, G?, Pm?, Fx1).
 procedure proposal_alts(Contract?, Preds?, Stream(_)).
 proposal_alts([], _, []).
 proposal_alts([schema(S, Hd, Rs)|Ss], Ps, As?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Ps?) |
@@ -406,14 +424,18 @@ alts_rest([A|As], Tl, [';', A?|L?]) :- alts_rest(As?, Tl?, L).
 procedure any_name(Preds?, YesNo).
 any_name([], no).
 any_name([_|_], yes).
-%% The shared text's lines, a line guarded_only(L) printed as L where the contract has a guarded part and left out where it has none, and a line unguarded_only(L) the other way about.
-procedure shared_lines(Lines?, YesNo?, Stream(_)).
-shared_lines([], _, []).
-shared_lines([guarded_only(L)|Ls], yes, [L?|Ls1?]) :- shared_lines(Ls?, yes, Ls1).
-shared_lines([guarded_only(_)|Ls], no, Ls1?) :- shared_lines(Ls?, no, Ls1).
-shared_lines([unguarded_only(_)|Ls], yes, Ls1?) :- shared_lines(Ls?, yes, Ls1).
-shared_lines([unguarded_only(L)|Ls], no, [L?|Ls1?]) :- shared_lines(Ls?, no, Ls1).
-shared_lines([L|Ls], G, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, Ls1).
+%% The shared text's lines, a line guarded_only(L) printed as L where the contract has a guarded part and left out where it has none, and a line unguarded_only(L) the other way about; a line pragma_only(L) printed as L where the contract carries pragmas and left out where it carries none, and a line plain_only(L) the other way about (vGLP, Section 5.4, "The contract's words": the sentence goes "into the approval question that Start raises, and a list's name into the view the agent writes").
+procedure shared_lines(Lines?, YesNo?, YesNo?, Stream(_)).
+shared_lines([], _, _, []).
+shared_lines([guarded_only(L)|Ls], yes, P, [L?|Ls1?]) :- shared_lines(Ls?, yes, P?, Ls1).
+shared_lines([guarded_only(_)|Ls], no, P, Ls1?) :- shared_lines(Ls?, no, P?, Ls1).
+shared_lines([unguarded_only(_)|Ls], yes, P, Ls1?) :- shared_lines(Ls?, yes, P?, Ls1).
+shared_lines([unguarded_only(L)|Ls], no, P, [L?|Ls1?]) :- shared_lines(Ls?, no, P?, Ls1).
+shared_lines([pragma_only(L)|Ls], G, yes, [L?|Ls1?]) :- shared_lines(Ls?, G?, yes, Ls1).
+shared_lines([pragma_only(_)|Ls], G, no, Ls1?) :- shared_lines(Ls?, G?, no, Ls1).
+shared_lines([plain_only(_)|Ls], G, yes, Ls1?) :- shared_lines(Ls?, G?, yes, Ls1).
+shared_lines([plain_only(L)|Ls], G, no, [L?|Ls1?]) :- shared_lines(Ls?, G?, no, Ls1).
+shared_lines([L|Ls], G, P, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, P?, Ls1).
 
 %% The type of the machine states, List(Atom), in the type of the views, Output ::= view(List(Atom), List(Key)) in the shared text (vGLP b7e3517, Section 5.4, "The compilation": "the compilation defines Output as the type of the views", a view being view(s, K), "the machine state s of its app state and the persons K it knows"): a machine state is a multiset of the contract's atoms, written as a list, and Atom is the union of the contract's predicates at their argument types: an argument is of the type Peer, a person, where the schemas write a role, a party variable or a name term, and of the type Speech, a speech act, where they write a speech-act variable or a signed term; Atom has one alternative for each predicate and argument types the schemas write it with, in order of first occurrence.  The agent holds an atom as g(Name, Vals), each value p(Peer) or s(Speech), and writes it on the output as the contract writes it: atom_of(g(friend, [p(V1)]), shown(friend(V1?))), one clause per alternative.
 Kind  ::= peer ; speech ; name ; num.
@@ -794,6 +816,328 @@ procedure request_name_decl(Stream(_)?, Stream(_)).
 request_name_decl([], []).
 request_name_decl([X|Xs], ['', 'procedure request_name(Class?, PName).', X?|Xs1?]) :-
     lapp(Xs?, ['request_name(_, nopname) :- otherwise | true.'], Xs1).
+
+%% --- The contract's words ---------------------------------------------------
+%% vGLP, Section 5.4, "The contract's words": "Beside its clauses and its schemas a contract carries the words its app shows, its pragmas: for each schema, the label of the request that proposes its act and a name for each field the person fills in, and, for each guarding role, the sentence put to that role's agent and its two answers; and, for each list the app shows, its name and what it lists.  A sentence names the roles and the variables of its schema, which the platform fills in from the binding of the attempt it asks about.  The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type (Section 6.2), a sentence into the approval question that Start raises, and a list's name into the view the agent writes."  GSC, Section 2, its first paragraph: "the first line names a tab of the app and what it lists, and each other line names a clause, then the button proposing its act, in brackets, any field the person fills, in angle brackets, and, where the act needs another person's will, the question that person is then asked."  The forms the papers leave open, and the forms chosen here, are in README.md beside this file.
+
+procedure has_pragmas(Words?, YesNo).
+has_pragmas(words(no_pragmas, _), no).
+has_pragmas(words(pragmas(_, _), _), yes).
+
+%% A contract whose pragmas name what the contract does not hold is not compiled, with a line saying why: pragmas and no term naming the schemas of each clause; a list naming no predicate of the contract, or more than one; a pragma naming a clause whose schemas the term does not name; the term naming a schema the contract does not hold; a pragma naming more fields than a schema of its clause has variables the person fills; and a sentence naming a person, Alice, Bob or Carol, that a schema of its clause does not have.
+procedure word_faults(Words?, Contract?, Stream(_)).
+word_faults(words(no_pragmas, _), _, []).
+word_faults(words(pragmas(_, _), no_clauses), _, ['%% it carries pragmas, and its .glp names the schemas of no clause by clauses_named/2: a pragma names a clause, and the compiler reads no schema off a clause by its name.']).
+word_faults(words(pragmas(Ls, As), clauses(Cs)), C, F?) :- ground(Ls?), ground(As?), ground(Cs?), ground(C?) |
+    contract_preds(C?, Pr),
+    list_faults(Ls?, Pr?, F1),
+    act_faults(As?, Cs?, C?, F2),
+    lapp(F1?, F2?, F).
+
+%% The predicates of the contract's atoms, each once.
+procedure contract_preds(Contract?, Preds).
+contract_preds(C, Ps?) :- ground(C?) |
+    contract_atoms(C?, As),
+    atom_names(As?, Ns),
+    dedup(Ns?, Ps).
+procedure atom_names(Atoms?, Preds).
+atom_names([], []).
+atom_names([atom(F, _)|As], [F?|Ns?]) :- atom_names(As?, Ns).
+atom_names([times(_, A)|As], Ns?) :- atom_names([A?|As?], Ns).
+
+%% What a list lists: the one predicate of the contract among the words of its pragma, "the persons Alice knows" the predicate knows, "the friends of Alice" friend, "the groups Alice is a member of" member.
+procedure list_faults(PLists?, Preds?, Stream(_)).
+list_faults([], _, []).
+list_faults([list(N, Ws)|Ls], Pr, F?) :- ground(N?), ground(Ws?), ground(Pr?) |
+    listed_preds(Ws?, Pr?, Ms),
+    list_fault(Ms?, N?, F1),
+    list_faults(Ls?, Pr?, F2),
+    lapp(F1?, F2?, F).
+procedure listed_preds(Strings?, Preds?, Preds).
+listed_preds(Ws, Pr, Ms?) :- ground(Ws?), ground(Pr?) |
+    listed_preds1(Ws?, Pr?, Ms0),
+    dedup(Ms0?, Ms).
+procedure listed_preds1(Strings?, Preds?, Preds).
+listed_preds1([], _, []).
+listed_preds1([W|Ws], Pr, Ms?) :- ground(W?), ground(Pr?) |
+    mem(W?, Pr?, In),
+    listed_preds1(Ws?, Pr?, Ms1),
+    keep_pred(In?, W?, Ms1?, Ms).
+procedure keep_pred(YesNo?, Constant?, Preds?, Preds).
+keep_pred(yes, P, Ps, [P?|Ps?]).
+keep_pred(no, _, Ps, Ps?).
+procedure list_fault(Preds?, String?, Stream(_)).
+list_fault([_], _, []).
+list_fault([], N, [H?]) :- ground(N?) | H =.. ['%% the list of its pragmas names no predicate of the contract:', N?].
+list_fault([_, _|_], N, [H?]) :- ground(N?) | H =.. ['%% the list of its pragmas names more than one predicate of the contract:', N?].
+
+%% The schemas the term names for a clause.
+CFound ::= cfound(Preds) ; nocfound.
+procedure clause_schemas(Constant?, Integer?, NamedClauses?, CFound).
+clause_schemas(_, _, [], nocfound).
+clause_schemas(X, N, [clause(Y, M, Ss)|_], cfound(Ss?)) :- X? =?= Y?, N? =?= M? | true.
+clause_schemas(X, N, [_|Cs], F?) :- otherwise | clause_schemas(X?, N?, Cs?, F).
+%% A schema of the contract, its head and its roles.
+SFound ::= sfound(Args, RoleSpecs) ; nosfound.
+procedure find_schema(Constant?, Contract?, SFound).
+find_schema(_, [], nosfound).
+find_schema(S, [schema(T, Hd, Rs)|_], sfound(Hd?, Rs?)) :- S? =?= T? | true.
+find_schema(S, [_|Cs], F?) :- otherwise | find_schema(S?, Cs?, F).
+
+procedure act_faults(PActs?, NamedClauses?, Contract?, Stream(_)).
+act_faults([], _, _, []).
+act_faults([act(X, N, _, Fs, Q)|As], Cs, C, F?) :- ground(X?), ground(N?), ground(Fs?), ground(Q?), ground(Cs?), ground(C?) |
+    clause_schemas(X?, N?, Cs?, Cf),
+    act_fault(Cf?, X?, N?, Fs?, Q?, C?, F1),
+    act_faults(As?, Cs?, C?, F2),
+    lapp(F1?, F2?, F).
+procedure act_fault(CFound?, Constant?, Integer?, Strings?, Said?, Contract?, Stream(_)).
+act_fault(nocfound, X, N, _, _, _, [H?]) :- ground(X?), ground(N?) |
+    H =.. ['%% a pragma names a clause whose schemas clauses_named does not name:', X?, N?].
+act_fault(cfound(Ss), _, _, Fs, Q, C, F?) :- ground(Fs?), ground(Q?), ground(C?) |
+    schema_faults(Ss?, Fs?, Q?, C?, F).
+procedure schema_faults(Preds?, Strings?, Said?, Contract?, Stream(_)).
+schema_faults([], _, _, _, []).
+schema_faults([S|Ss], Fs, Q, C, F?) :- ground(S?), ground(Fs?), ground(Q?), ground(C?) |
+    find_schema(S?, C?, Sf),
+    schema_fault(Sf?, S?, Fs?, Q?, F1),
+    schema_faults(Ss?, Fs?, Q?, C?, F2),
+    lapp(F1?, F2?, F).
+procedure schema_fault(SFound?, Constant?, Strings?, Said?, Stream(_)).
+schema_fault(nosfound, S, _, _, [H?]) :- ground(S?) |
+    H =.. ['%% clauses_named names a schema the contract does not hold:', S?].
+schema_fault(sfound(Hd, Rs), S, Fs, Q, F?) :- ground(Hd?), ground(Rs?), ground(S?), ground(Fs?) |
+    field_places(Hd?, Rs?, Fp),
+    person_places(Hd?, Rs?, Pp),
+    count_ints(Fp?, NF),
+    count_strings(Fs?, NS),
+    field_fault(NS?, NF?, S?, F1),
+    said_fault(Q?, Pp?, S?, F2),
+    lapp(F1?, F2?, F).
+procedure field_fault(Integer?, Integer?, Constant?, Stream(_)).
+field_fault(NS, NF, _, []) :- NS? =< NF? | true.
+field_fault(NS, NF, S, [H?]) :- NS? > NF?, ground(S?) |
+    H =.. ['%% a pragma names more fields than the schema has variables the person fills:', S?].
+procedure said_fault(Said?, Ints?, Constant?, Stream(_)).
+said_fault(none, _, _, []).
+said_fault(said(Ws), Pp, S, F?) :- ground(Ws?), ground(Pp?), ground(S?) |
+    count_ints(Pp?, NP),
+    said_fault1(Ws?, NP?, S?, F).
+procedure said_fault1(PWords?, Integer?, Constant?, Stream(_)).
+said_fault1([], _, _, []).
+said_fault1([text(_)|Ws], NP, S, F?) :- said_fault1(Ws?, NP?, S?, F).
+said_fault1([person(I)|Ws], NP, S, F?) :- I? =< NP? | said_fault1(Ws?, NP?, S?, F).
+said_fault1([person(I)|_], NP, S, [H?]) :- I? > NP?, ground(S?) |
+    H =.. ['%% a sentence names a person the schema does not have:', S?].
+procedure count_strings(Strings?, Integer).
+count_strings([], 0).
+count_strings([_|Xs], N?) :- count_strings(Xs?, M), N := M? + 1.
+procedure count_ints(Ints?, Integer).
+count_ints([], 0).
+count_ints([_|Xs], N?) :- count_ints(Xs?, M), N := M? + 1.
+
+%% The places of a schema's request name that the person fills, in the order of its head: its speech-act and numeric variables, after the people in its roles, the places of its listed roles left out (proposal_alts: the request name is "the binding, its head with no extent"); a pragma's fields, in angle brackets, name them in order, the first field the first of them.
+procedure field_places(Args?, RoleSpecs?, Ints).
+field_places(Hd, Rs, Fp?) :- ground(Hd?), ground(Rs?) |
+    schema_vars(Rs?, Hd?, Vs0),
+    listed_ixs(Rs?, 1, Lis),
+    drop_listed(Vs0?, Lis?, Vs),
+    field_places1(Vs?, 1, Fp).
+procedure field_places1(Args?, Integer?, Ints).
+field_places1([], _, []).
+field_places1([V|Vs], I, Fp?) :- integer(I?) |
+    I1 := I? + 1,
+    filled(V?, F),
+    field_places1(Vs?, I1?, Fp1),
+    keep_int(F?, I?, Fp1?, Fp).
+procedure filled(Arg?, YesNo).
+filled(svar(_), yes).
+filled(num(_), yes).
+filled(role(_), no).
+filled(pvar(_), no).
+filled(nterm(_), no).
+filled(sgn(_, _), no).
+procedure keep_int(YesNo?, Integer?, Ints?, Ints).
+keep_int(yes, I, Is, [I?|Is?]).
+keep_int(no, _, Is, Is?).
+%% The places of a schema's class term that hold its persons, in the order of its head: its roles that are not listed roles, then its agent variables.  A sentence's Alice, Bob and Carol are the first, the second and the third of them, as GSC writes a schema, befriend(Alice?, Bob?), introduce(Alice?, Bob?; c), Carol its agent variable c (GSC, Sections 3.2 and 3.3).
+procedure person_places(Args?, RoleSpecs?, Ints).
+person_places(Hd, Rs, Pp?) :- ground(Hd?), ground(Rs?) |
+    schema_vars(Rs?, Hd?, Vs),
+    listed_ixs(Rs?, 1, Lis),
+    person_places1(Vs?, 1, Lis?, Pp).
+procedure person_places1(Args?, Integer?, Ints?, Ints).
+person_places1([], _, _, []).
+person_places1([V|Vs], I, Lis, Pp?) :- integer(I?), ground(Lis?) |
+    I1 := I? + 1,
+    a_person(V?, I?, Lis?, P),
+    person_places1(Vs?, I1?, Lis?, Pp1),
+    keep_int(P?, I?, Pp1?, Pp).
+procedure a_person(Arg?, Integer?, Ints?, YesNo).
+a_person(role(_), I, Lis, P?) :- mem(I?, Lis?, In), neg(In?, P).
+a_person(pvar(_), _, _, yes).
+a_person(svar(_), _, _, no).
+a_person(num(_), _, _, no).
+a_person(nterm(_), _, _, no).
+a_person(sgn(_, _), _, _, no).
+
+%% The two widget declarations every platform carries (vGLP, Section 6.2, "The words a platform shows"; Section 8: "with the two widget declarations (Definition Widget Declaration) the compiler prints, a sentence with two buttons for an approval question and a menu for the request question"), so that no app writes a self.vglp: the approval question drawn by the construct family's approval_sentence, the request question by its social_menu.  With pragmas, the request type's declaration carries the labels the contract gives: label(F, S), the request whose name is a schema-binding of F labelled S, the button in brackets; and label(F, I, S), the I-th place of that request, a field the person fills, named S, the name in angle brackets.  The approval question's two answers are given by no pragma, so its declaration carries no label, and the construct family draws the name of each (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").
+procedure widget_lines(Words?, Contract?, Preds?, Stream(_)).
+widget_lines(words(no_pragmas, _), _, _, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu.', 'Approval =::= approval_sentence.', 'Menu =::= social_menu.']).
+widget_lines(words(pragmas(_, As), clauses(Cs)), C, Ps, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract\'s pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I.', 'Approval =::= approval_sentence.', T?, '.']) :-
+    ground(As?), ground(Cs?), ground(C?), ground(Ps?) |
+    act_labels(As?, Cs?, C?, Ps?, Lb),
+    T =.. ['Menu =::= social_menu', Lb?].
+widget_lines(words(pragmas(_, _), no_clauses), _, _, []).
+procedure act_labels(PActs?, NamedClauses?, Contract?, Preds?, Stream(_)).
+act_labels([], _, _, _, []).
+act_labels([act(X, N, B, Fs, _)|As], Cs, C, Ps, L?) :- ground(X?), ground(N?), ground(B?), ground(Fs?), ground(Cs?), ground(C?), ground(Ps?) |
+    clause_schemas(X?, N?, Cs?, Cf),
+    clause_labels(Cf?, B?, Fs?, C?, Ps?, L1),
+    act_labels(As?, Cs?, C?, Ps?, L2),
+    lapp(L1?, L2?, L).
+procedure clause_labels(CFound?, String?, Strings?, Contract?, Preds?, Stream(_)).
+clause_labels(nocfound, _, _, _, _, []).
+clause_labels(cfound(Ss), B, Fs, C, Ps, L?) :- ground(B?), ground(Fs?), ground(C?), ground(Ps?) |
+    schema_labels(Ss?, B?, Fs?, C?, Ps?, L).
+procedure schema_labels(Preds?, String?, Strings?, Contract?, Preds?, Stream(_)).
+schema_labels([], _, _, _, _, []).
+schema_labels([S|Ss], B, Fs, C, Ps, L?) :- ground(S?), ground(B?), ground(Fs?), ground(C?), ground(Ps?) |
+    mem(S?, Ps?, In),
+    find_schema(S?, C?, Sf),
+    schema_labels1(In?, Sf?, S?, B?, Fs?, L1),
+    schema_labels(Ss?, B?, Fs?, C?, Ps?, L2),
+    lapp(L1?, L2?, L).
+%% The labels of a schema the request type proposes: its request, and each place a field names.
+procedure schema_labels1(YesNo?, SFound?, Constant?, String?, Strings?, Stream(_)).
+schema_labels1(no, _, _, _, _, []).
+schema_labels1(yes, nosfound, _, _, _, []).
+schema_labels1(yes, sfound(Hd, Rs), S, B, Fs, [label(S?, B?)|L?]) :- ground(Hd?), ground(Rs?), ground(S?) |
+    field_places(Hd?, Rs?, Fp),
+    place_labels(Fp?, Fs?, S?, L).
+procedure place_labels(Ints?, Strings?, Constant?, Stream(_)).
+place_labels(_, [], _, []).
+place_labels([], [_|_], _, []).
+place_labels([I|Is], [F|Fs], S, [label(S?, I?, F?)|L?]) :- ground(S?) | place_labels(Is?, Fs?, S?, L).
+
+%% The lists and the sentences, printed for a contract with pragmas: tabs(Ts), the lists its app shows, tab(Name, P), P the predicate whose atoms the list holds; and sentence_of(C, Me, Ws), the sentence the contract puts to the agent Me on an attempt of the part C, its roles and variables filled in from the binding C names, or [] where it puts none: where the pragma of C's clause has no sentence, or where the sentence names Me, the sentence being put to the guarding roles whose persons it does not name (README.md beside this file, "The pragmas").
+procedure word_lines(Words?, Contract?, Stream(_)).
+word_lines(words(no_pragmas, _), _, []).
+word_lines(words(pragmas(_, _), no_clauses), _, []).
+word_lines(words(pragmas(Ls, As), clauses(Cs)), C, L?) :- ground(Ls?), ground(As?), ground(Cs?), ground(C?) |
+    contract_preds(C?, Pr),
+    tab_terms(Ls?, Pr?, Ts),
+    T =.. [tabs, Ts?],
+    sentence_lines(As?, Cs?, C?, Lsn),
+    lapp(Lsn?, ['sentence_of(_, _, []) :- otherwise | true.',
+        'procedure said(Peers?, Peer?, List(Word)?, List(Word)).',
+        'said(Ns, Me, Ws, R?) :- ground(Ns?), ground(Me?) |',
+        '    mem(Me?, Ns?, In),',
+        '    said1(In?, Ws?, R).',
+        'procedure said1(YesNo?, List(Word)?, List(Word)).',
+        'said1(yes, _, []).',
+        'said1(no, Ws, Ws?).'], Lsn1),
+    lapp(['',
+        '%% The lists the app shows, as the contract\'s pragmas give them, each its name and the predicate whose atoms it lists (vGLP, Section 5.4, "The contract\'s words").',
+        'procedure tabs(List(Tab)).',
+        T?,
+        '.',
+        '',
+        '%% The sentence the contract puts to the agent Me on an attempt of the part C, its persons filled in from the binding C names; none, [], where the contract puts none, or where the sentence names Me (vGLP, Section 6.2, "The words a platform shows").',
+        'procedure sentence_of(Class?, Peer?, List(Word)).'|Lsn1?], [], L).
+procedure tab_terms(PLists?, Preds?, Stream(_)).
+tab_terms([], _, []).
+tab_terms([list(N, Ws)|Ls], Pr, [tab(N?, P?)|Ts?]) :- ground(N?), ground(Ws?), ground(Pr?) |
+    listed_preds(Ws?, Pr?, Ms),
+    first_pred(Ms?, P),
+    tab_terms(Ls?, Pr?, Ts).
+procedure first_pred(Preds?, Constant).
+first_pred([P|_], P?).
+first_pred([], none).
+procedure sentence_lines(PActs?, NamedClauses?, Contract?, Stream(_)).
+sentence_lines([], _, _, []).
+sentence_lines([act(X, N, _, _, Q)|As], Cs, C, L?) :- ground(X?), ground(N?), ground(Q?), ground(Cs?), ground(C?) |
+    clause_schemas(X?, N?, Cs?, Cf),
+    clause_sentences(Cf?, Q?, C?, L1),
+    sentence_lines(As?, Cs?, C?, L2),
+    lapp(L1?, L2?, L).
+procedure clause_sentences(CFound?, Said?, Contract?, Stream(_)).
+clause_sentences(nocfound, _, _, []).
+clause_sentences(cfound(_), none, _, []).
+clause_sentences(cfound(Ss), said(Ws), C, L?) :- ground(Ss?), ground(Ws?), ground(C?) |
+    schema_sentences(Ss?, Ws?, C?, L).
+procedure schema_sentences(Preds?, PWords?, Contract?, Stream(_)).
+schema_sentences([], _, _, []).
+schema_sentences([S|Ss], Ws, C, L?) :- ground(S?), ground(Ws?), ground(C?) |
+    find_schema(S?, C?, Sf),
+    schema_sentence(Sf?, S?, Ws?, L1),
+    schema_sentences(Ss?, Ws?, C?, L2),
+    lapp(L1?, L2?, L).
+%% sentence_of(s(V1, _, V3), Me, Ws?) :- ground(V1?), ground(V3?), ground(Me?) | said([V1?, V3?], Me?, [person(V1?), text(...), person(V3?), ...], Ws), each person the sentence names at the place of its class term that holds it, every other place _.
+procedure schema_sentence(SFound?, Constant?, PWords?, Stream(_)).
+schema_sentence(nosfound, _, _, []).
+schema_sentence(sfound(Hd, Rs), S, Ws, L?) :- ground(Hd?), ground(Rs?) |
+    person_places(Hd?, Rs?, Pp),
+    schema_vars(Rs?, Hd?, Vs),
+    schema_sentence1(Pp?, Vs?, S?, Ws?, L).
+procedure schema_sentence1(Ints?, Args?, Constant?, PWords?, Stream(_)).
+schema_sentence1(Pp, Vs, S, Ws, [T?, ':-'|L?]) :- ground(Pp?), ground(Vs?), ground(S?), ground(Ws?) |
+    said_places(Ws?, Pp?, Ns0),
+    dedup(Ns0?, Ns),
+    said_words(Ws?, Pp?, Sw),
+    schema_sentence2(Ns?, Vs?, S?, Sw?, T, L).
+procedure schema_sentence2(Ints?, Args?, Constant?, Stream(_)?, _, Stream(_)).
+schema_sentence2(Ns, Vs, S, Sw, T?, L?) :- ground(Ns?), ground(Vs?), ground(S?), ground(Sw?) |
+    head_names(Vs?, 1, Ns?, Hn),
+    Cl =.. [S?|Hn?],
+    T =.. [sentence_of, Cl?, 'Me', 'Ws?'],
+    guard_lines(Ns?, Lg),
+    place_reads(Ns?, Nr),
+    B =.. [said, Nr?, 'Me?', Sw?, 'Ws'],
+    lapp(Lg?, ['ground(Me?)', '|', B?, '.'], L).
+%% The places of the class term a sentence names, in its order.
+procedure said_places(PWords?, Ints?, Ints).
+said_places([], _, []).
+said_places([text(_)|Ws], Pp, Ns?) :- said_places(Ws?, Pp?, Ns).
+said_places([person(K)|Ws], Pp, [I?|Ns?]) :- ground(Pp?) | nth_int(K?, Pp?, I), said_places(Ws?, Pp?, Ns).
+procedure nth_int(Integer?, Ints?, Integer).
+nth_int(1, [I|_], I?).
+nth_int(K, [_|Is], I?) :- K? > 1 | K1 := K? - 1, nth_int(K1?, Is?, I).
+nth_int(_, [], 0).
+%% The class term's arguments: V_i at a place i the sentence names, _ elsewhere.
+procedure head_names(Args?, Integer?, Ints?, Stream(_)).
+head_names([], _, _, []).
+head_names([_|Vs], I, Ns, [X?|Xs?]) :- integer(I?), ground(Ns?) |
+    mem(I?, Ns?, In),
+    vname(I?, F),
+    head_name(In?, F?, X),
+    I1 := I? + 1,
+    head_names(Vs?, I1?, Ns?, Xs).
+procedure head_name(YesNo?, Found?, Constant).
+head_name(yes, named(N, _), N?).
+head_name(yes, unnamed, unnamed).
+head_name(no, _, '_').
+procedure guard_lines(Ints?, Stream(_)).
+guard_lines([], []).
+guard_lines([I|Is], [G?, ','|L?]) :- integer(I?) |
+    vname(I?, F),
+    name_of(F?, _, Q),
+    G =.. [ground, Q?],
+    guard_lines(Is?, L).
+procedure place_reads(Ints?, Stream(_)).
+place_reads([], []).
+place_reads([I|Is], [Q?|Qs?]) :- integer(I?) |
+    vname(I?, F),
+    name_of(F?, _, Q),
+    place_reads(Is?, Qs).
+procedure said_words(PWords?, Ints?, Stream(_)).
+said_words([], _, []).
+said_words([text(S)|Ws], Pp, [text(S?)|Xs?]) :- said_words(Ws?, Pp?, Xs).
+said_words([person(K)|Ws], Pp, [person(Q?)|Xs?]) :- ground(Pp?) |
+    nth_int(K?, Pp?, I),
+    vname(I?, F),
+    name_of(F?, _, Q),
+    said_words(Ws?, Pp?, Xs).
 
 %% Lines are constants and terms, each printed on a line of its own.
 procedure lapp(Stream(_)?, Stream(_)?, Stream(_)).

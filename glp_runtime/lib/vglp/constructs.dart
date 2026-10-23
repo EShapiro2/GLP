@@ -176,6 +176,7 @@ import '../analysis/type_checker/type_ast.dart';
 import '../compiler/glp_printer.dart' show constantSource, functorNameSource;
 import 'mediator.dart' show typeSource;
 import 'dispatcher.dart' show widgetTypeName;
+import 'canonical.dart' show DeclaredWidget;
 
 /// The Definition an interactive type is refused by where it is not one.
 const _definition = 'vGLP, Definition "Volitional Procedure, Interactive Type"';
@@ -494,6 +495,13 @@ class _Generator {
   final _suffixes = <String, String>{};
   final _suffixesUsed = <String, Set<String>>{};
   final _nestedMemo = <String, bool>{};
+
+  /// The labels of the declaration whose widget is being drawn, from its
+  /// declared type down to a type a declaration of its own names; null
+  /// where none is (vGLP 1126f4f, Section 6.2, "The words a platform shows":
+  /// "a widget term carries a label beside each constructor of Definition
+  /// Default Widget").
+  DeclaredWidget? _labels;
 
   /// The types of the grants' raw inputs, R in input(Id, P, R): each
   /// question's type, or its element type where it is a stream or a list,
@@ -865,7 +873,17 @@ class _Generator {
           '"Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, item 4)',
           output.line, output.column, phase: 'analyzer');
     }
-    final w = _widget(root, {});
+    // The labels of a declaration of Stream(Output) hold within its widget.
+    final named = declared['Stream($outputTypeName)'];
+    final dw = named == null ? null : DeclaredWidget.parse(named);
+    final outer = _labels;
+    if (dw != null) _labels = dw;
+    final String w;
+    try {
+      w = _widget(root, {});
+    } finally {
+      _labels = outer;
+    }
     // The widget of Stream(Output), by default a thread of the elements, each
     // drawn by the widget of Output; named(W, D) where a declaration in scope
     // names it W, D that thread (vGLP 92e6d3b, Section 6.3; vGLP 99c7dc8,
@@ -877,8 +895,7 @@ class _Generator {
     // type").  The program writes it, so the declaration is of the moded type
     // Stream(Output), with no `?`.
     final d = w == 'shown' ? 'thread' : 'thread($w)';
-    final named = declared['Stream($outputTypeName)'];
-    return named == null ? d : 'named(${constantSource(named)}, $d)';
+    return dw == null ? d : 'named(${constantSource(dw.name)}, $d)';
   }
 
   /// The widget of interactive type [t], whose root is [root]: the one in
@@ -2187,22 +2204,53 @@ class _Generator {
   /// widget, "drawn when the person opens it" (Definition "Default Widget").
   /// A declared recursive type is `named(W, rec(T, ...))`, each occurrence
   /// of it within `named(W, ref(T))`, every widget of the type named.
+  ///
+  /// A declaration's labels hold within its widget: each constructor of its
+  /// type, and of the types under it, that the declaration labels is drawn
+  /// as `label(S, W)`, W its widget and S its label, a constant in a row of
+  /// buttons `label(S, C)`, and a field the declaration labels as
+  /// `field(L, label(S, W))` (vGLP 1126f4f, Section 6.2, "The words a
+  /// platform shows": "a widget term carries a label beside each
+  /// constructor of Definition Default Widget.  A construct family draws the
+  /// label it is given, and the name of the type where it is given none").
   String _widget(_Node n, Set<String> visiting) {
     final name = constantSource(n.typeKey);
-    final String d;
-    if (visiting.contains(n.key)) {
-      d = 'ref($name)';
-    } else {
-      visiting.add(n.key);
-      try {
-        final w = _defaultWidget(n, visiting);
-        d = _recursive(n) ? 'rec($name, $w)' : w;
-      } finally {
-        visiting.remove(n.key);
-      }
-    }
     final named = declared[n.moded];
-    return named == null ? d : 'named(${constantSource(named)}, $d)';
+    final dw = named == null ? null : DeclaredWidget.parse(named);
+    final outer = _labels;
+    if (dw != null) _labels = dw;
+    final String d;
+    try {
+      if (visiting.contains(n.key)) {
+        d = 'ref($name)';
+      } else {
+        visiting.add(n.key);
+        try {
+          final w = _defaultWidget(n, visiting);
+          d = _recursive(n) ? 'rec($name, $w)' : w;
+        } finally {
+          visiting.remove(n.key);
+        }
+      }
+    } finally {
+      _labels = outer;
+    }
+    return dw == null ? d : 'named(${constantSource(dw.name)}, $d)';
+  }
+
+  /// [w], the widget of the constructor [f], with the label the declaration
+  /// in force gives [f], `label(S, W)`; [w] itself where it gives none.
+  String _labelled(String f, String w) {
+    final l = _labels?.ofConstructor(f);
+    return l == null ? w : 'label(${constantSource(l)}, $w)';
+  }
+
+  /// [w], the widget of the place [i] of the constructor [f], with the label
+  /// the declaration in force gives that place; [w] itself where it gives
+  /// none.
+  String _labelledPlace(String f, int i, String w) {
+    final l = _labels?.ofPlace(f, i);
+    return l == null ? w : 'label(${constantSource(l)}, $w)';
   }
 
   String _defaultWidget(_Node n, Set<String> visiting) {
@@ -2258,8 +2306,13 @@ class _Generator {
     }
     final alts = _nodeAlts(n);
     if (alts.every((a) => a is _ConstAlt)) {
-      final cs = alts.map((a) => constantSource((a as _ConstAlt).value));
-      return alts.length == 1 ? 'button(${cs.single})' : 'buttons([${cs.join(', ')}])';
+      if (alts.length == 1) return _altWidget(n, alts.single, visiting);
+      final cs = [
+        for (final a in alts)
+          _labelled(_constKey((a as _ConstAlt).value),
+              constantSource(a.value))
+      ];
+      return 'buttons([${cs.join(', ')}])';
     }
     if (alts.length == 1) return _altWidget(n, alts.single, visiting);
     return 'menu([${alts.map((a) => _altWidget(n, a, visiting)).join(', ')}])';
@@ -2274,7 +2327,9 @@ class _Generator {
   /// form" (item 2).
   String _altWidget(_Node n, _Alt a, Set<String> visiting) {
     if (a is _ConstAlt) {
-      return n.person ? 'button(${constantSource(a.value)})' : 'shown';
+      return n.person
+          ? _labelled(_constKey(a.value), 'button(${constantSource(a.value)})')
+          : 'shown';
     }
     if (a is _NilAlt) return n.person ? 'button([])' : 'shown';
     if (a is _LeafAlt) return n.person ? _leafWidget(a.leaf) : 'shown';
@@ -2285,13 +2340,19 @@ class _Generator {
           '_checkInteractive refuses');
     }
     final kids = _children(n, a);
+    final f = (a as _StructAlt).functor;
     final ws = [
-      for (final k in kids)
-        '${_isNestedSeq(n, k) ? 'question' : 'field'}'
-            '(${constantSource(k.typeKey)}, ${_widget(k, visiting)})'
+      for (var i = 0; i < kids.length; i++)
+        '${_isNestedSeq(n, kids[i]) ? 'question' : 'field'}'
+            '(${constantSource(kids[i].typeKey)}, '
+            '${_labelledPlace(f, i + 1, _widget(kids[i], visiting))})'
     ].join(', ');
-    return 'form(${constantSource((a as _StructAlt).functor)}, [$ws])';
+    return _labelled(f, 'form(${constantSource(f)}, [$ws])');
   }
+
+  /// The key of a constant among a declaration's labels: the constant as
+  /// the declaration writes it, a string as itself.
+  static String _constKey(Object? c) => c is String ? c : '$c';
 
   bool _altHasQuestion(_Node n, _Alt a) =>
       _children(n, a).any(_hasQuestion);

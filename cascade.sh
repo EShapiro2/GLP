@@ -51,8 +51,13 @@
 #      compile_contract/2 prints them (GSC, Section 5.2; Section 8's worked
 #      box), or its line saying why the contract is not compiled.
 #   5. platform.vglp: the canonical CVA platform, as programs/vglp/cva/compiler's
-#      compile/4 prints it (vGLP, Section 5.4, Definition "Compilation of the
-#      Canonical Platform"), or its lines saying why it is not compiled.
+#      compile/6 prints it (vGLP, Section 5.4, Definition "Compilation of the
+#      Canonical Platform"), with the contract's pragmas, the words its app
+#      shows, read from NAME.txt and from the NAME.txt of the contracts it
+#      extends by programs/vglp/cva/compiler/pragmas.sh, and the schemas that
+#      realise each clause, clauses_named/2 where NAME.glp names them (vGLP,
+#      Section 5.4, "The contract's words"), or its lines saying why it is not
+#      compiled.
 #   6. platform.glp: the platform compiled to GLP by the canonical compilation,
 #      as the REPL's :emit writes it (vGLP, Definition "Canonical Compilation");
 #      and interface.glp beside it, the platform's interface in sGLP's term
@@ -212,8 +217,21 @@ else
     say "VMAT form: $(grep -c '^\\begin{align\*}$' "$OUT/vmat.tex") displays"
 fi
 
-# 5. The canonical platform, from programs/vglp/cva/compiler.
-printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$NAME" "$CT" "$VT" "$INTRO" > "$WORK/p.in"
+# 5. The canonical platform, from programs/vglp/cva/compiler, with the
+# contract's words: its pragmas and the schemas that realise each clause.
+PR=no_pragmas
+if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" 2> "$WORK/pr.err"); then
+    say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
+    exit 1
+fi
+CL=no_clauses
+if grep -q "^clauses_named($NAME," "$SRC/$FILE.glp"; then
+    printf '%s\nclauses_named(%s, N).\n:quit\n' "$SRC/$FILE.glp" "$NAME" > "$WORK/cl.in"
+    repl "$WORK/cl.in" "$WORK/cl.out"
+    NT=$(grep -E '^N = ' "$WORK/cl.out" | head -1 | sed -e 's/^N = //')
+    [ -n "$NT" ] && CL="clauses($NT)"
+fi
+printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$NAME" "$CT" "$VT" "$INTRO" "$PR" "$CL" > "$WORK/p.in"
 repl "$WORK/p.in" "$WORK/p.out"
 awk '
     $0 == "%% compile begin" { on = 1; next }
@@ -307,7 +325,7 @@ fi
     echo ""
     echo "- Contract: \`$FILE\` (\`$NAME\` to the checker), its owner's two files \`$OWNER/$CTXT\` and \`$OWNER/$FILE.glp\`, copied here as they stood at \`$GLP_COMMIT\`."
     echo "- The paper: \`$PAPER_URL\` at \`$PAPER_COMMIT\`, for the paper's own record."
-    echo "- The tools: this repository at \`$GLP_COMMIT\` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP)${PLAYS:+, ${PLAYS#$GLP_DIR/} (the plays with scripted persons)}."
+    echo "- The tools: this repository at \`$GLP_COMMIT\` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/6, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP)${PLAYS:+, ${PLAYS#$GLP_DIR/} (the plays with scripted persons)}."
     echo "- Run on $(date -u '+%Y-%m-%d %H:%M UTC') by \`cascade.sh $NAME\`; the suite's Section CAS re-runs it and holds these files to what the tools print."
     echo ""
     echo "| Artefact | What it holds |"

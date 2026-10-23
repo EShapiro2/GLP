@@ -97,12 +97,31 @@ Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
 %% the paragraph on act schemas), given to compile/4.
 Intro     ::= no_introduction ; introduction(Constant).
 
+%% A contract's pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words"; GSC, Section 2, its first paragraph), as the scripts that run the compiler read them from the contract's .txt and from the .txt of every contract it extends (README.md beside this file, "The pragmas"): pragmas(Lists, Acts), or no_pragmas for a contract whose .txt has none.  A list, list(Name, Words), is a pragma's first line: the name of the list and the words of what it lists, each in lower case and, where it ends in s, also without it.  An act, act(Contract, Clause, Button, Fields, Sentence), is each other line: the contract and the number of the clause it names, the label of the button in brackets, the name of each field in angle brackets, in order, and the sentence after them, said(Words), or none, each word of it text(S) or person(I), I the place of Alice, Bob or Carol, 1, 2 or 3.  Every string is carried as its source text, quotes and all, since the printer writes a constant as it is and GLP has no string concatenation.
+PWord     ::= text(String) ; person(Integer).
+PWords    ::= [] ; [PWord | PWords].
+Said      ::= none ; said(PWords).
+Strings   ::= [] ; [String | Strings].
+PList     ::= list(String, Strings).
+PLists    ::= [] ; [PList | PLists].
+PAct      ::= act(Constant, Integer, String, Strings, Said).
+PActs     ::= [] ; [PAct | PActs].
+Pragmas   ::= no_pragmas ; pragmas(PLists, PActs).
+%% Which schemas realise each clause, clause(Contract, Number, Schemas), for the contract's own clauses and those of every contract it extends, as the contract's .glp names them by clauses_named/2 (Code #14's proposal to GSC, GSC_inbox.md, 2026-10-23 18:03 UTC); no_clauses where it names none.  A contract with pragmas and no such term is not compiled: a pragma names a clause, and the compiler never reads a schema off a clause by its name.
+NamedClause  ::= clause(Constant, Integer, Preds).
+NamedClauses ::= [] ; [NamedClause | NamedClauses].
+Clauses   ::= no_clauses ; clauses(NamedClauses).
+
 imported procedure cvac#compile(Constant?, Declared?, Verdict?).
 exported procedure compile(Constant?, Declared?, Verdict?).
 compile(Nm, D, V) :- cvac # compile(Nm?, D?, V?).
 imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?).
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?).
 compile(Nm, D, V, I) :- cvac # compile(Nm?, D?, V?, I?).
+%% compile(Name, Contract, Verdict, Intro, Pragmas, Clauses): the same, with the contract's pragmas and the term naming the schemas of each clause, so that the platform printed carries the contract's words (vGLP, Sections 5.4 and 6.2).
+imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Clauses?).
+exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Clauses?).
+compile(Nm, D, V, I, P, Cl) :- cvac # compile(Nm?, D?, V?, I?, P?, Cl?).
 
 %% ---------------------------------------------------------------------------
 %% Shared by the modules of the compiler
