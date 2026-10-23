@@ -17,7 +17,7 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// the peers exchange ANNOUNCE first and run Noise XX"; "The responder
 /// enforces the trust level"; the final message "(message 2 of IK, message 3
 /// of XX)" retransmitted "until the other side's attestation message
-/// arrives"; protocol version 7, version 6 refused at the handshake.
+/// arrives"; protocol version 8, versions 7 and 6 refused at the handshake.
 ///
 /// GATT is a connection id per leg, `central:` or `peripheral:`, as the BLE
 /// carrier names its paths; the GATT carrier itself is not driven here, as
@@ -89,7 +89,7 @@ void main() {
         pattern: NoisePattern.ik,
         peerId: initiatorLeg,
       ))!;
-      expect(envelopeHead(m1), (7, 0x11));
+      expect(envelopeHead(m1), (8, 0x11));
       expect(contains(m1, alice.publicKey), isFalse,
           reason: 'the initiator\'s key travels encrypted to the expected one');
       expect(aliceSessions.handshakeRetransmitPayload(transport, bob.publicKey),
@@ -113,7 +113,7 @@ void main() {
       expect(atBob.sessionEstablished, isTrue);
       expect(atBob.sentFinal, isTrue);
       final m2 = atBob.responsePayload!;
-      expect(envelopeHead(m2), (7, 0x12));
+      expect(envelopeHead(m2), (8, 0x12));
       expect(contains(m2, bob.publicKey), isFalse,
           reason: 'the responder never transmits its static key');
       expect(bobSessions.finalHandshakePayload(transport, alice.publicKey), m2,
@@ -241,14 +241,14 @@ void main() {
 
     final m1 = (await aliceSessions.startHandshake(transport, bob.publicKey,
         pattern: NoisePattern.xx, peerId: hexOf(bob.publicKey)))!;
-    expect(envelopeHead(m1), (7, 0x01));
+    expect(envelopeHead(m1), (8, 0x01));
     final atBob = await bobSessions.handleHandshakePacket(handshake(m1),
         transport: transport,
         peerId: hexOf(alice.publicKey),
         acceptFirstMessage: openFor);
     expect(atBob.sessionEstablished, isFalse);
     final m2 = atBob.responsePayload!;
-    expect(envelopeHead(m2), (7, 0x02));
+    expect(envelopeHead(m2), (8, 0x02));
     expect(bobSessions.handshakeRetransmitPayload(transport, alice.publicKey),
         m2);
 
@@ -259,7 +259,7 @@ void main() {
     expect(atAlice.sessionEstablished, isTrue);
     expect(atAlice.sentFinal, isTrue);
     final m3 = atAlice.responsePayload!;
-    expect(envelopeHead(m3), (7, 0x03));
+    expect(envelopeHead(m3), (8, 0x03));
     expect(aliceSessions.finalHandshakePayload(transport, bob.publicKey), m3);
 
     final done = await bobSessions.handleHandshakePacket(handshake(m3),
@@ -462,6 +462,15 @@ void main() {
     final relabelled = Uint8List.fromList(m1)..setRange(0, 2, [0, 6]);
     await expectLater(
         bobSessions.handleHandshakePacket(handshake(relabelled),
+            transport: transport, acceptFirstMessage: (_, __) => true),
+        throwsFormatException);
+    expect(bobSessions.hasSession(transport, alice.publicKey), isFalse);
+
+    // And bearing version 7, the version before the attestation message
+    // carried the application's version number (GNA §2.6).
+    final version7 = Uint8List.fromList(m1)..setRange(0, 2, [0, 7]);
+    await expectLater(
+        bobSessions.handleHandshakePacket(handshake(version7),
             transport: transport, acceptFirstMessage: (_, __) => true),
         throwsFormatException);
     expect(bobSessions.hasSession(transport, alice.publicKey), isFalse);

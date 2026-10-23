@@ -3,14 +3,13 @@ import 'dart:typed_data';
 import '../platform/compat.dart';
 import '../transport/address_utils.dart';
 
-/// A rendezvous server the layer connects to over the WAN (GNA §Instantiation,
-/// "Rendezvous servers: list of (ip:port, PubKey) --- The servers the layer
-/// connects to over the WAN (Section Rendezvous Server); may be empty").
+/// A rendezvous server the layer connects to over the WAN, as GLP declared
+/// it, by its public key and its address (GNA §4.2: "The rendezvous servers
+/// the layer connects to are those GLP has declared, each by its public key
+/// and its address, and GLP adds and removes them while the layer runs").
 ///
-/// A constructor argument of the layer, in both profiles: "The layer is
-/// created once per agent, with everything it needs to run; nothing in it
-/// changes for the layer's lifetime."  There is no call that adds or removes
-/// one.
+/// Both profiles record each server `wan.putRendezvousServer(pk, address)`
+/// declares as one of these, and drop it on `wan.removeRendezvousServer(pk)`.
 @immutable
 class RendezvousServer {
   /// The server's static, globally-routable `ip:port`, canonical (IPv4, or

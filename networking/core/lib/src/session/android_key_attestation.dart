@@ -17,7 +17,7 @@
 /// What this proves, and the paper says so: that the attestation key lives in
 /// the device's secure hardware, and that the application holding it carries
 /// the signing identity of the attested binary. It is not a measurement of the
-/// running code, and on many devices the application identity is asserted by
+/// running code, and on many devices the attested application is asserted by
 /// the operating system rather than by the secure element, so a device whose
 /// OS is modified can forge it. The guarantee is against repackaging, not
 /// against a compromised operating system.
@@ -27,7 +27,7 @@ import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
 
-import 'application_identity.dart';
+import '../platform/compat.dart';
 import 'attestation_roots.dart';
 import 'x509.dart';
 
@@ -70,13 +70,13 @@ class AndroidKeyDescription {
   /// What the key was generated with — for us, the agent's identity key.
   final Uint8List attestationChallenge;
 
-  /// The application identity, where the certificate carries one.
+  /// The `attestationApplicationId`, where the certificate carries one.
   ///
   /// It sits in `softwareEnforced` and not in `teeEnforced`: platform code
   /// populates it, not the secure element. That is exactly the limit the
   /// paper states, and it is why it is read from there rather than from the
   /// hardware-enforced list.
-  final AndroidApplicationIdentity? applicationIdentity;
+  final AndroidAttestationApplicationId? attestationApplicationId;
 
   const AndroidKeyDescription({
     required this.attestationVersion,
@@ -84,7 +84,7 @@ class AndroidKeyDescription {
     required this.keymasterVersion,
     required this.keymasterSecurityLevel,
     required this.attestationChallenge,
-    required this.applicationIdentity,
+    required this.attestationApplicationId,
   });
 
   /// Parse the KeyDescription extension of [leaf].
@@ -165,7 +165,7 @@ class AndroidKeyDescription {
       keymasterSecurityLevel: levelAt(3, 'keymasterSecurityLevel'),
       attestationChallenge: octetsAt(4, 'attestationChallenge'),
       // e[5] is uniqueId, e[6] softwareEnforced, e[7] teeEnforced.
-      applicationIdentity: _applicationIdentity(e[6]),
+      attestationApplicationId: _attestationApplicationId(e[6]),
     );
   }
 
@@ -177,7 +177,8 @@ class AndroidKeyDescription {
   /// scanned for the tag rather than fully decoded, because the list carries
   /// dozens of fields this layer has no use for and decoding them all would be
   /// surface for no gain.
-  static AndroidApplicationIdentity? _applicationIdentity(ASN1Object list) {
+  static AndroidAttestationApplicationId? _attestationApplicationId(
+      ASN1Object list) {
     if (list is! ASN1Sequence) {
       throw const X509Exception('AuthorizationList is not a SEQUENCE');
     }
@@ -220,9 +221,10 @@ class AndroidKeyDescription {
   /// version INTEGER }`.
   ///
   /// The version is read as well as the name: Android's certificate "names the
-  /// package, its version and the digest of its signing certificate" (spec
-  /// §Session Establishment), and all three are the application identity.
-  static AndroidApplicationIdentity _decodeApplicationId(Uint8List der) {
+  /// digest of the developer's signing certificate, the package and its
+  /// version" (GNA §2.6).  The version the attested application is reported
+  /// with is the one it signs per session, not this one.
+  static AndroidAttestationApplicationId _decodeApplicationId(Uint8List der) {
     final top = ASN1Parser(der).nextObject();
     if (top is! ASN1Sequence || top.elements.length < 2) {
       throw const X509Exception('AttestationApplicationId is malformed');
@@ -262,11 +264,80 @@ class AndroidKeyDescription {
       digests.add(Uint8List.fromList(d.valueBytes()));
     }
 
-    return AndroidApplicationIdentity(
+    return AndroidAttestationApplicationId(
       packages: packages,
       signatureDigests: digests,
     );
   }
+}
+
+/// One package an Android attestation names, with its version.
+@immutable
+class AndroidPackage {
+  final String name;
+  final int version;
+
+  const AndroidPackage({required this.name, required this.version});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AndroidPackage && other.name == name && other.version == version;
+
+  @override
+  int get hashCode => Object.hash(name, version);
+
+  @override
+  String toString() => '$name@$version';
+}
+
+/// Google's `AttestationApplicationId`: the packages the key attestation
+/// names, each with its version, and the SHA-256 digests of the certificates
+/// the application is signed with.
+///
+/// It is a set of packages because packages sharing a user ID share a
+/// keystore; for an application of its own it holds one.  The attested
+/// application is its one package, as its name, and its one signing
+/// certificate's digest, as its developer (GNA §2.6).
+@immutable
+class AndroidAttestationApplicationId {
+  final List<AndroidPackage> packages;
+  final List<Uint8List> signatureDigests;
+
+  const AndroidAttestationApplicationId({
+    required this.packages,
+    required this.signatureDigests,
+  });
+
+  /// The package names alone.
+  List<String> get packageNames => [for (final p in packages) p.name];
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! AndroidAttestationApplicationId) return false;
+    if (other.packages.length != packages.length) return false;
+    for (var i = 0; i < packages.length; i++) {
+      if (other.packages[i] != packages[i]) return false;
+    }
+    if (other.signatureDigests.length != signatureDigests.length) return false;
+    for (var i = 0; i < signatureDigests.length; i++) {
+      if (!_sameBytes(other.signatureDigests[i], signatureDigests[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        Object.hashAll(packages),
+        Object.hashAll([for (final d in signatureDigests) ...d]),
+      );
+
+  @override
+  String toString() => 'AndroidAttestationApplicationId('
+      '${packages.join(", ")}; ${signatureDigests.length} signing digest(s))';
 }
 
 /// What an Android attestation chain established, once it verified.
@@ -289,7 +360,7 @@ class AndroidAttestationResult {
 /// public key — §Session Establishment has the attestation made "over a
 /// challenge naming the agent's identity public key", and this is where that
 /// binding is checked. [expectedPackageNames] and [expectedSignatureDigests],
-/// where given, are the application identity this build accepts.
+/// where given, are the applications this build accepts.
 ///
 /// Throws [X509Exception] with the reason on any failure. Every failure here
 /// is an attestation "offered and found invalid", which tears the session down
@@ -324,31 +395,30 @@ AndroidAttestationResult verifyAndroidAttestation({
     );
   }
 
-  final identity = description.applicationIdentity;
+  final applicationId = description.attestationApplicationId;
   if (expectedPackageNames != null) {
-    if (identity == null) {
+    if (applicationId == null) {
       throw const X509Exception(
-        'The certificate carries no application identity, and this build '
-        'requires one',
+        'The certificate names no application, and this build requires one',
       );
     }
     final matched =
-        identity.packageNames.any(expectedPackageNames.contains);
+        applicationId.packageNames.any(expectedPackageNames.contains);
     if (!matched) {
       throw X509Exception(
-        'The attested package ${identity.packageNames.join(", ")} is not one '
-        'this build accepts',
+        'The attested package ${applicationId.packageNames.join(", ")} is '
+        'not one this build accepts',
       );
     }
   }
   if (expectedSignatureDigests != null) {
-    if (identity == null) {
+    if (applicationId == null) {
       throw const X509Exception(
-        'The certificate carries no application identity, and this build '
-        'requires a signing-certificate digest',
+        'The certificate names no application, and this build requires a '
+        'signing-certificate digest',
       );
     }
-    final matched = identity.signatureDigests.any(
+    final matched = applicationId.signatureDigests.any(
       (d) => expectedSignatureDigests.any((e) => _sameBytes(d, e)),
     );
     if (!matched) {
@@ -364,11 +434,10 @@ AndroidAttestationResult verifyAndroidAttestation({
 /// Verify the per-session half: [signature], ECDSA with SHA-256 over [digest],
 /// by the key the attestation's leaf carries.
 ///
-/// Spec §Session Establishment: "Per session each side sends that attestation
-/// together with a signature by the attestation key over the digest
-/// H("glp attest" | pk | h) ... and each side verifies both: the attestation
-/// against the platform's root, and the signature against the key the
-/// attestation carries." An Android keystore key signs arbitrary bytes, so the
+/// GNA §2.6: "For each session, the layer asks the platform to sign with that
+/// key the digest H("glp attest" | pk | v | h)" ... "The receiver verifies the
+/// attestation against the platform's root, and the signature against the
+/// key the attestation carries." An Android keystore key signs arbitrary bytes, so the
 /// signature is over the digest itself, `SHA256withECDSA`, DER-encoded as the
 /// keystore returns it.
 ///

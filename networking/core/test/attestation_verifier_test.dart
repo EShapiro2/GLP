@@ -4,19 +4,20 @@ import 'package:test/test.dart';
 
 import 'package:grassroots_networking_core/src/session/android_key_attestation.dart';
 import 'package:grassroots_networking_core/src/session/app_attest.dart';
-import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/session/attestation_verifier.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/session/x509.dart';
 
 import 'helpers/attestation_fixtures.dart';
 
-/// Both halves of the exchange of spec §Session Establishment, for both
-/// platforms: "Per session each side sends that attestation together with a
-/// signature by the attestation key over the digest H("glp attest" | pk | h)
-/// ... and each side verifies both: the attestation against the platform's
-/// root, and the signature against the key the attestation carries.  Either
-/// failing tears the session down."
+/// Both halves of the exchange of GNA §2.6, for both platforms: the
+/// attestation, and the signature by the attestation key over the digest
+/// H("glp attest" | pk | v | h), v the application's version number; "The
+/// receiver verifies the attestation against the platform's root, and the
+/// signature against the key the attestation carries; either failing tears
+/// the session down".  The attested application is its developer, its name
+/// and the version number it signed.
 ///
 /// The fixtures are built in the test (helpers/attestation_fixtures.dart),
 /// with their private keys, so the per-session signature is real ECDSA by the
@@ -25,14 +26,29 @@ void main() {
   /// The peer's identity key, which the attestation's challenge names.
   final pk = Uint8List.fromList(List.generate(32, (i) => i + 1));
 
-  /// This session's digest, and another session's.
+  /// The version number the peer's application signs, which is not the one
+  /// the Android fixture's certificate names (7).
+  const version = 42;
+
+  /// This session's handshake hash.
+  final hash = Uint8List.fromList(List.filled(32, 0x22));
+
+  /// This session's digest, another session's, and this session's over
+  /// another version number.
   final digest = attestationDigest(
     identityPublicKey: pk,
-    handshakeHash: Uint8List.fromList(List.filled(32, 0x22)),
+    version: version,
+    handshakeHash: hash,
   );
   final otherSessionDigest = attestationDigest(
     identityPublicKey: pk,
+    version: version,
     handshakeHash: Uint8List.fromList(List.filled(32, 0x23)),
+  );
+  final otherVersionDigest = attestationDigest(
+    identityPublicKey: pk,
+    version: version + 1,
+    handshakeHash: hash,
   );
 
   group('App Attest, both halves', () {
@@ -193,10 +209,11 @@ void main() {
 
     test('a chain and a signature over this session verify, naming the '
         'package, its version and the signing digest', () {
-      final identity = verify().keyDescription.applicationIdentity!;
-      expect(identity.packages,
+      final applicationId =
+          verify().keyDescription.attestationApplicationId!;
+      expect(applicationId.packages,
           [const AndroidPackage(name: 'com.eshapiro.grassapp', version: 7)]);
-      expect(identity.signatureDigests.single, android.signingDigest);
+      expect(applicationId.signatureDigests.single, android.signingDigest);
     });
 
     test('a signature over another session\'s digest is refused', () {
@@ -342,26 +359,40 @@ void main() {
       androidRoots: [android.root],
     );
 
-    AttestationEvidence iosEvidence({Uint8List? assertion}) =>
-        AttestationEvidence(
-          attestation: encodePlatformAttestation(AppAttestContent(
-            appId: ios.appId,
-            attestationObject: ios.attestationObject(pk),
-          )),
-          signature: assertion ?? ios.assertion(digest),
-        );
+    AttestationEvidence iosEvidence({
+      Uint8List? assertion,
+      int carried = version,
+      AppAttestFixture? fixture,
+    }) {
+      final f = fixture ?? ios;
+      return AttestationEvidence(
+        attestation: encodePlatformAttestation(AppAttestContent(
+          appId: f.appId,
+          attestationObject: f.attestationObject(pk),
+        )),
+        version: carried,
+        signature: assertion ?? f.assertion(digest),
+      );
+    }
 
-    AttestationEvidence androidEvidence({Uint8List? signature}) =>
-        AttestationEvidence(
-          attestation: encodePlatformAttestation(
-            AndroidKeyAttestationContent(android.chain(pk)),
-          ),
-          signature: signature ?? android.sign(digest),
-        );
+    AttestationEvidence androidEvidence({
+      Uint8List? signature,
+      int carried = version,
+      AndroidFixture? fixture,
+    }) {
+      final f = fixture ?? android;
+      return AttestationEvidence(
+        attestation: encodePlatformAttestation(
+          AndroidKeyAttestationContent(f.chain(pk)),
+        ),
+        version: carried,
+        signature: signature ?? f.sign(digest),
+      );
+    }
 
     AttestationVerdict run(AttestationEvidence? evidence) => verifier.verify(
           evidence: evidence,
-          digest: digest,
+          handshakeHash: hash,
           peerIdentityKey: pk,
         );
 
@@ -369,25 +400,77 @@ void main() {
       expect(run(null), isA<UnattestedPlatform>());
     });
 
-    test('an iOS peer is attested as its App ID', () {
+    test(
+        'an iOS peer is attested as its team identifier, its bundle '
+        'identifier and the version number it signed', () {
       final verdict = run(iosEvidence());
       expect(verdict, isA<AttestedApplication>());
-      expect((verdict as AttestedApplication).identity,
-          IosApplicationIdentity(ios.appId));
+      expect(
+        (verdict as AttestedApplication).application,
+        const Application(
+          developer: 'ABCDE12345',
+          name: 'com.eshapiro.grassapp',
+          version: version,
+        ),
+      );
     });
 
-    test('an Android peer is attested as its package, version and digest', () {
+    test(
+        'an Android peer is attested as the digest of its signing '
+        'certificate, its package and the version number it signed, not '
+        "the certificate's", () {
       final verdict = run(androidEvidence());
       expect(verdict, isA<AttestedApplication>());
       expect(
-        (verdict as AttestedApplication).identity,
-        AndroidApplicationIdentity(
-          packages: const [
-            AndroidPackage(name: 'com.eshapiro.grassapp', version: 7),
-          ],
-          signatureDigests: [android.signingDigest],
+        (verdict as AttestedApplication).application,
+        Application(
+          developer: _hex(android.signingDigest),
+          name: 'com.eshapiro.grassapp',
+          version: version,
         ),
       );
+    });
+
+    test(
+        'a signature over another version number than the one carried is '
+        'invalid, on either platform', () {
+      expect(run(iosEvidence(assertion: ios.assertion(otherVersionDigest))),
+          isA<InvalidAttestation>());
+      expect(
+          run(androidEvidence(signature: android.sign(otherVersionDigest))),
+          isA<InvalidAttestation>());
+      expect(run(iosEvidence(carried: version + 1)), isA<InvalidAttestation>(),
+          reason: 'a version number carried that the signature does not name');
+      expect(run(androidEvidence(carried: version + 1)),
+          isA<InvalidAttestation>());
+    });
+
+    test('an App ID that names no team identifier is invalid', () {
+      final noTeam = AppAttestFixture(appId: 'grassapp');
+      final verdict = AttestationVerifier(
+        clock: () => fixtureTime,
+        appAttestRoots: [noTeam.root],
+      ).verify(
+        evidence: iosEvidence(fixture: noTeam),
+        handshakeHash: hash,
+        peerIdentityKey: pk,
+      );
+      expect(verdict, isA<InvalidAttestation>());
+    });
+
+    test('an Android attestation naming more than one package is invalid',
+        () {
+      final shared = AndroidFixture(
+          otherPackages: const ['com.eshapiro.grassapp.helper']);
+      final verdict = AttestationVerifier(
+        clock: () => fixtureTime,
+        androidRoots: [shared.root],
+      ).verify(
+        evidence: androidEvidence(fixture: shared),
+        handshakeHash: hash,
+        peerIdentityKey: pk,
+      );
+      expect(verdict, isA<InvalidAttestation>());
     });
 
     test('a signature over another session is invalid, on either platform',
@@ -406,10 +489,7 @@ void main() {
       expect(
         verifier.verify(
           evidence: iosEvidence(),
-          digest: attestationDigest(
-            identityPublicKey: otherPk,
-            handshakeHash: Uint8List.fromList(List.filled(32, 0x22)),
-          ),
+          handshakeHash: hash,
           peerIdentityKey: otherPk,
         ),
         isA<InvalidAttestation>(),
@@ -420,6 +500,7 @@ void main() {
       expect(
         run(AttestationEvidence(
           attestation: Uint8List.fromList([0x55, 1, 2, 3]),
+          version: version,
           signature: Uint8List.fromList([0x66]),
         )),
         isA<InvalidAttestation>(),
@@ -431,7 +512,7 @@ void main() {
       expect(
         const AttestationVerifier().verify(
           evidence: iosEvidence(),
-          digest: digest,
+          handshakeHash: hash,
           peerIdentityKey: pk,
         ),
         isA<InvalidAttestation>(),
@@ -439,3 +520,6 @@ void main() {
     });
   });
 }
+
+String _hex(List<int> bytes) =>
+    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();

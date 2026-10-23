@@ -11,7 +11,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
-import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
@@ -23,15 +23,19 @@ Future<List<InternetAddress>> _loopbackHostAddresses() async =>
 
 /// A platform that attests, with a verdict the test chooses.
 ///
-/// The two-step of §Session Establishment: a long-lived attestation over a
-/// challenge naming the identity key, and a per-session signature over the
-/// digest. [offers] null is a platform with neither.
+/// The two-step of GNA §2.6: a long-lived attestation over a challenge naming
+/// the identity key, and a per-session signature over the digest, which
+/// names the application's version number. [offers] null is a platform with
+/// neither.
 class _StubAttestation implements PlatformAttestation {
-  _StubAttestation({this.offers, required this.verdictFor});
+  _StubAttestation({this.offers, required this.verdictFor, this.version = 5});
 
   /// What this platform offers as its long-lived attestation. Null is a
   /// platform with none.
   final Uint8List? offers;
+
+  /// The version number of its application.
+  final int version;
 
   /// The verdict this platform returns for a peer's evidence.
   final AttestationVerdict Function(AttestationEvidence? offered) verdictFor;
@@ -42,7 +46,9 @@ class _StubAttestation implements PlatformAttestation {
   /// The digests this platform was asked to sign — one per session.
   final List<Uint8List> signed = [];
 
-  /// The digests this platform was asked to verify against.
+  /// The digests this platform verified the peer's signature against: the
+  /// peer's key, the version number its message carried, and the session's
+  /// handshake hash.
   final List<Uint8List> verified = [];
 
   @override
@@ -50,6 +56,9 @@ class _StubAttestation implements PlatformAttestation {
     attestedKeys.add(identityPublicKey);
     return offers;
   }
+
+  @override
+  Future<int?> applicationVersion() async => offers == null ? null : version;
 
   @override
   Future<Uint8List?> signSessionDigest({
@@ -66,10 +75,16 @@ class _StubAttestation implements PlatformAttestation {
   @override
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   }) async {
-    verified.add(digest);
+    if (evidence != null) {
+      verified.add(attestationDigest(
+        identityPublicKey: peerIdentityKey,
+        version: evidence.version,
+        handshakeHash: handshakeHash,
+      ));
+    }
     return verdictFor(evidence);
   }
 }
@@ -122,7 +137,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
       store: store,
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,
@@ -163,11 +177,11 @@ void main() {
       await callee.dispose();
     });
 
-    final connects = <(String, Underlay, ApplicationIdentity?)>[];
-    caller.onPeerConnected = (pk, underlay, identity) => connects.add((
+    final connects = <(String, Underlay, Application?)>[];
+    caller.onPeerConnected = (pk, underlay, application) => connects.add((
           pk.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
           underlay,
-          identity,
+          application,
         ));
 
     final calleeAddress = await listeningAddress(callee);
@@ -186,8 +200,8 @@ void main() {
     // UDP session is WAN.
     expect(connects.single.$2, Underlay.wan);
     expect(connects.single.$3, isNull,
-        reason: 'a platform with no attestation yields a null identity — '
-            'unattested, not refused');
+        reason: 'a platform with no attestation yields null for the '
+            'application: the identity is unattested, not refused');
     expect(caller.isPeerReachable(calleeId.publicKey), isTrue);
   });
 
@@ -195,16 +209,19 @@ void main() {
       () async {
     final callerAttestation = _StubAttestation(
       offers: Uint8List.fromList(List.filled(48, 0xa1)),
-      verdictFor: (offered) => const AttestedApplication(
-          IosApplicationIdentity('ABCDE12345.com.eshapiro.callee')),
+      verdictFor: (offered) => const AttestedApplication(Application(
+        developer: 'ABCDE12345',
+        name: 'com.eshapiro.callee',
+        version: 5,
+      )),
     );
     final calleeAttestation = _StubAttestation(
       offers: Uint8List.fromList(List.filled(48, 0xc3)),
-      verdictFor: (offered) => AttestedApplication(AndroidApplicationIdentity(
-        packages: const [
-          AndroidPackage(name: 'com.eshapiro.caller', version: 3),
-        ],
-        signatureDigests: [Uint8List.fromList(List.filled(32, 0xd4))],
+      version: 3,
+      verdictFor: (offered) => AttestedApplication(Application(
+        developer: 'd4' * 32,
+        name: 'com.eshapiro.caller',
+        version: offered!.version,
       )),
     );
 
@@ -217,11 +234,11 @@ void main() {
       await callee.dispose();
     });
 
-    ApplicationIdentity? attestedIdentity;
+    Application? attested;
     var connected = false;
-    caller.onPeerConnected = (pk, transport, identity) {
+    caller.onPeerConnected = (pk, transport, application) {
       connected = true;
-      attestedIdentity = identity;
+      attested = application;
     };
     // Each side judges the other's half on its own schedule: what the callee
     // verified is asserted below, so wait for the callee as well.
@@ -238,9 +255,14 @@ void main() {
     );
 
     expect(await waitFor(() => connected && calleeConnected), isTrue);
-    expect(attestedIdentity,
-        const IosApplicationIdentity('ABCDE12345.com.eshapiro.callee'),
-        reason: 'onPeerConnected carries the attested application identity');
+    expect(
+        attested,
+        const Application(
+          developer: 'ABCDE12345',
+          name: 'com.eshapiro.callee',
+          version: 5,
+        ),
+        reason: 'onPeerConnected carries the attested application');
 
     // The long-lived half names the agent's OWN identity key — not the peer's
     // and not the session. This is what makes it long-lived: it is the same
@@ -250,9 +272,10 @@ void main() {
     expect(calleeAttestation.attestedKeys.first, calleeId.publicKey);
 
     // The per-session half is the signature. Each side signed over its OWN
-    // key's digest and verified over the PEER's, both against the same
-    // handshake hash — so the two digests differ, and the digest one side
-    // signed is the digest the other verified.
+    // key's digest, naming its OWN version number, and verified over the
+    // PEER's, both against the same handshake hash — so the two digests
+    // differ, and the digest one side signed is the digest the other
+    // verified, the version number the message carried included.
     expect(callerAttestation.signed, isNotEmpty);
     expect(callerAttestation.verified, isNotEmpty);
     expect(callerAttestation.signed.first,
@@ -284,7 +307,7 @@ void main() {
     });
 
     var connected = false;
-    caller.onPeerConnected = (pk, transport, identity) => connected = true;
+    caller.onPeerConnected = (pk, transport, application) => connected = true;
 
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);

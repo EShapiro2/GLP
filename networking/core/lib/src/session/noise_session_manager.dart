@@ -114,8 +114,8 @@ class NoiseHandshakeResult {
 /// message, with the initiator's Ed25519 key as that message's encrypted
 /// payload, and checks that the one is the image of the other.
 ///
-/// Every handshake envelope opens with the protocol version (GNA §2.6:
-/// version 7, a peer on another version refused at the handshake), and both
+/// Every handshake envelope opens with the protocol version (version 8, a
+/// peer on another version refused at the handshake), and both
 /// ends mix it into the handshake hash as the prologue.  The XX envelopes
 /// carry the sender's identity claim in clear, message 1 signed over the
 /// claim and its ephemeral; the IK envelopes carry no identity, so the
@@ -309,7 +309,7 @@ class NoiseSessionManager {
   /// thrown.
   ///
   /// A handshake envelope on another protocol version is refused with a
-  /// [FormatException] (GNA §2.6: version 7, version 6 refused at the
+  /// [FormatException] (version 8; versions 7 and 6 refused at the
   /// handshake).
   ///
   /// When [sendResponse] is provided, the manager transmits any response

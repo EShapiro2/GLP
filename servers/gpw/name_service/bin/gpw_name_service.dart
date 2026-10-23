@@ -51,6 +51,7 @@ Future<void> main(List<String> args) async {
             Directory(opts['mirrors-dir'] ?? '$stateDir/mirrors'),
       ),
       knownPeersPath: '$stateDir/known-peers.json',
+      outboundQueuePath: '$stateDir/outbound-queue.json',
     );
     registrar = LayerRegistrar(push.network);
   }

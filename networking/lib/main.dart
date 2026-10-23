@@ -410,13 +410,13 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   }
 
   /// Instantiate the layer under [identity] with the current preferences
-  /// (spec §Instantiation: the key pair, the underlays, the rendezvous
-  /// servers, the attestation, the location service).
+  /// (GNA §2.2: the key pair, the underlays, the attestation, the location
+  /// service), and declare to it the rendezvous servers the preferences hold,
+  /// as GLP declares them (GNA §4.2).
   GrassrootsNetwork _buildLayer(GrassrootsIdentity identity) {
     final grassroots = GrassrootsNetwork(
       identity: identity,
       underlays: _preferences.underlays,
-      rendezvousServers: _preferences.rendezvousServers,
       // Attestation needs the platform's secure element, which only the
       // app embedding has (spec §Session Establishment).
       platformAttestation: _platformAttestation(),
@@ -430,12 +430,16 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         (senderPubkey, payload, messageId, underlay) {
       _handleIncomingMessage(messageId, senderPubkey, payload, underlay);
     };
+    for (final server in _preferences.rendezvousServers) {
+      grassroots.wan?.putRendezvousServer(server.publicKey, server.address);
+    }
     return grassroots;
   }
 
-  /// Persist [preferences] and rebuild the layer with them: the underlays and
-  /// the rendezvous servers are constructor arguments, fixed for a layer's
-  /// lifetime (spec §Instantiation), so a change is a new layer.
+  /// Persist [preferences] and rebuild the layer with them: the underlays are
+  /// a constructor argument, fixed for a layer's lifetime (GNA §2.2), so a
+  /// change is a new layer, to which the rendezvous servers are declared
+  /// afresh.
   Future<void> _applyPreferences(NetworkPreferences preferences) async {
     if (preferences == _preferences) return;
     await _preferencesStore.save(preferences);

@@ -6,12 +6,14 @@
 /// holds an *attestation key* generated in its platform's secure element and
 /// attested there once — App Attest on iOS, hardware key attestation on
 /// Android — over a challenge naming the agent's identity public key `pk`.
-/// Per session each side sends that attestation together with a signature by
-/// the attestation key over the digest `H("glp attest" | pk | h)`, `h` being
-/// the final Noise handshake hash, and each side verifies both: the
-/// attestation against the platform's root, and the signature against the key
-/// the attestation carries. Either failing tears the session down and
-/// `onPeerConnected` does not fire.
+/// Per session each side sends that attestation together with the
+/// application's version number `v` and a signature by the attestation key
+/// over the digest `H("glp attest" | pk | v | h)`, `h` being the final Noise
+/// handshake hash (GNA §2.6), and each side verifies both: the attestation
+/// against the platform's root, and the signature against the key the
+/// attestation carries. Either failing tears the session down and
+/// `onPeerConnected` does not fire. The version number reported for the
+/// peer's application is the one it signed, on both platforms.
 ///
 /// The attestation is long-lived because a platform fixes the challenge when
 /// the key is generated, so a per-session challenge would demand a
@@ -32,25 +34,35 @@ import 'dart:typed_data';
 
 import 'package:cryptography/dart.dart' show DartSha256;
 
-import 'application_identity.dart';
+import 'application.dart';
 import 'attestation_verifier.dart';
 
 /// Domain separator for the attestation digest.
 const String kAttestationLabel = 'glp attest';
 
-/// The digest a platform attests over: `H("glp attest" | pk | h)`.
+/// The digest a platform signs per session: `H("glp attest" | pk | v | h)`
+/// (GNA §2.6).
 ///
-/// [identityPublicKey] is the attesting agent's OWN identity key, and
-/// [handshakeHash] the final Noise handshake hash of the session being
-/// attested. Both ends compute the peer's expected digest from the peer's key
-/// and the shared hash, so neither has to be told what was attested.
+/// [identityPublicKey] is the attesting agent's OWN identity key, [version]
+/// the version number of the application it runs, and [handshakeHash] the
+/// final Noise handshake hash of the session being attested. The version
+/// number is written as eight bytes, big-endian; [version] is a whole number
+/// below 2^63.  The receiver computes the peer's digest from the peer's key,
+/// the version number its attestation message carries, and the shared hash.
 Uint8List attestationDigest({
   required Uint8List identityPublicKey,
+  required int version,
   required Uint8List handshakeHash,
 }) {
+  if (version < 0) {
+    throw ArgumentError.value(version, 'version', 'not a version number');
+  }
   final message = BytesBuilder()
     ..add(utf8.encode(kAttestationLabel))
     ..add(identityPublicKey)
+    ..add((ByteData(8)..setUint64(0, version, Endian.big))
+        .buffer
+        .asUint8List())
     ..add(handshakeHash);
   return Uint8List.fromList(
     const DartSha256().hashSync(message.toBytes()).bytes,
@@ -68,21 +80,19 @@ sealed class AttestationVerdict {
   const AttestationVerdict();
 }
 
-/// The peer attested, and this is the application identity its platform
-/// attested: App Attest's application identifier on iOS, the package with its
-/// version and the signing-certificate digest on Android (spec §Session
-/// Establishment).
+/// The peer's identity is attested, and this is the attested application:
+/// its developer, its name and the version number it signed (GNA §2.6).
 class AttestedApplication extends AttestationVerdict {
-  /// The attested application identity, carried to GLP on `onPeerConnected`.
-  final ApplicationIdentity identity;
+  /// The attested application, carried to GLP on `onPeerConnected`.
+  final Application application;
 
-  const AttestedApplication(this.identity);
+  const AttestedApplication(this.application);
 }
 
 /// The peer's platform provides no attestation — a headless server profile
-/// has none. The peer is reported unattested, and `onPeerConnected` carries a
-/// null identity. Whether to transact with an unattested peer is a GLP-level
-/// decision.
+/// has none. The peer's identity is reported unattested, and
+/// `onPeerConnected` carries null for the application. Whether to transact
+/// with an unattested peer is a GLP-level decision.
 class UnattestedPlatform extends AttestationVerdict {
   /// Why no attestation was available, for the log. Not carried to GLP:
   /// unattested is unattested.
@@ -99,24 +109,30 @@ class InvalidAttestation extends AttestationVerdict {
   const InvalidAttestation(this.reason);
 }
 
-/// What one side sends: the long-lived attestation and the per-session
-/// signature over the digest.
+/// What one side sends: the long-lived attestation, the application's
+/// version number, and the per-session signature over the digest that names
+/// it.
 ///
-/// The two travel together and are verified together. Neither alone is
+/// The three travel together and are verified together. None alone is
 /// meaningful — the attestation without the signature does not name this
-/// session, and the signature without the attestation names no hardware-held
-/// key.
+/// session, the signature without the attestation names no hardware-held
+/// key, and the version number is the application's only under the signature.
 class AttestationEvidence {
   /// The platform's attestation of this agent's attestation key, over a
   /// challenge naming the agent's identity public key. Long-lived: obtained
   /// once per install, not once per session.
   final Uint8List attestation;
 
-  /// A signature by the attested key over `H("glp attest" | pk | h)`.
+  /// The version number of the application, which the signature names (GNA
+  /// §2.6: "the attestation message carries v").
+  final int version;
+
+  /// A signature by the attested key over `H("glp attest" | pk | v | h)`.
   final Uint8List signature;
 
   const AttestationEvidence({
     required this.attestation,
+    required this.version,
     required this.signature,
   });
 }
@@ -141,6 +157,16 @@ abstract class PlatformAttestation {
   /// rather than refusing.
   Future<Uint8List?> attestationFor(Uint8List identityPublicKey);
 
+  /// The version number of the application this agent runs, which it signs
+  /// in each session's digest (GNA §2.6: "On iOS the attestation key remains
+  /// valid through updates of the application, so an updated application
+  /// needs no new attestation and signs its new version number in each new
+  /// session").
+  ///
+  /// Returns null where this platform provides no attestation, the same
+  /// condition as [attestationFor] returning null.
+  Future<int?> applicationVersion();
+
   /// Sign the per-session [digest] with the key attested for
   /// [identityPublicKey].
   ///
@@ -151,15 +177,17 @@ abstract class PlatformAttestation {
     required Uint8List digest,
   });
 
-  /// Verify a peer's [evidence] — the attestation against this platform's
-  /// pinned root, its challenge naming [peerIdentityKey]; and the signature
-  /// against the key the attestation carries, over [digest].
+  /// Verify a peer's [evidence] for the session whose handshake hash is
+  /// [handshakeHash] — the attestation against this platform's pinned root,
+  /// its challenge naming [peerIdentityKey]; and the signature against the
+  /// key the attestation carries, over the digest of [peerIdentityKey], the
+  /// version number the evidence carries, and [handshakeHash].
   ///
   /// [evidence] is null when the peer sent none, which is
   /// [UnattestedPlatform] and not a failure.
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   });
 }
@@ -187,6 +215,9 @@ class NoPlatformAttestation implements PlatformAttestation {
   Future<Uint8List?> attestationFor(Uint8List identityPublicKey) async => null;
 
   @override
+  Future<int?> applicationVersion() async => null;
+
+  @override
   Future<Uint8List?> signSessionDigest({
     required Uint8List identityPublicKey,
     required Uint8List digest,
@@ -196,12 +227,12 @@ class NoPlatformAttestation implements PlatformAttestation {
   @override
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   }) async =>
       verifier.verify(
         evidence: evidence,
-        digest: digest,
+        handshakeHash: handshakeHash,
         peerIdentityKey: peerIdentityKey,
       );
 }
@@ -212,12 +243,17 @@ const int _attestationAbsent = 0x00;
 /// Tag byte for "an attestation follows".
 const int _attestationPresent = 0x01;
 
+/// Width of the version-number field, a whole number big-endian.
+const int _versionBytes = 8;
+
 /// Width of the attestation-length field: the attestation is variable-length
 /// and the signature takes the remainder, so exactly one length is carried.
 const int _attestationLengthBytes = 4;
 
-/// Frame the evidence for the wire: one tag byte, the attestation length, the
-/// attestation, then the signature as the remainder.
+/// Frame the evidence for the wire: one tag byte, the version number, the
+/// attestation length, the attestation, then the signature as the remainder.
+/// The statement of no attestation is the tag alone, and carries no
+/// application (GNA §2.6).
 ///
 /// The tag is what keeps absence and failure distinct on the wire: a peer
 /// with no platform attestation says so explicitly rather than sending
@@ -235,8 +271,12 @@ Uint8List encodeAttestationPayload(AttestationEvidence? evidence) {
   if (evidence.signature.isEmpty) {
     throw ArgumentError('Cannot frame evidence with an empty signature');
   }
-  final header = ByteData(_attestationLengthBytes)
-    ..setUint32(0, evidence.attestation.length, Endian.big);
+  if (evidence.version < 0) {
+    throw ArgumentError('Cannot frame the version number ${evidence.version}');
+  }
+  final header = ByteData(_versionBytes + _attestationLengthBytes)
+    ..setUint64(0, evidence.version, Endian.big)
+    ..setUint32(_versionBytes, evidence.attestation.length, Endian.big);
   return Uint8List.fromList([
     _attestationPresent,
     ...header.buffer.asUint8List(),
@@ -263,14 +303,21 @@ AttestationEvidence? decodeAttestationPayload(Uint8List payload) {
       }
       return null;
     case _attestationPresent:
-      const headerEnd = 1 + _attestationLengthBytes;
+      const headerEnd = 1 + _versionBytes + _attestationLengthBytes;
       if (payload.length < headerEnd) {
         throw const FormatException(
-          'Attestation payload is too short for its length field',
+          'Attestation payload is too short for its version number and its '
+          'length field',
         );
       }
-      final attestationLength = ByteData.sublistView(payload, 1, headerEnd)
-          .getUint32(0, Endian.big);
+      final header = ByteData.sublistView(payload, 1, headerEnd);
+      final version = header.getUint64(0, Endian.big);
+      if (version < 0) {
+        throw const FormatException(
+          'Attestation payload carries a version number of 2^63 or more',
+        );
+      }
+      final attestationLength = header.getUint32(_versionBytes, Endian.big);
       if (attestationLength == 0) {
         throw const FormatException(
           'Attestation payload claims presence and carries no attestation',
@@ -291,6 +338,7 @@ AttestationEvidence? decodeAttestationPayload(Uint8List payload) {
       return AttestationEvidence(
         attestation:
             Uint8List.sublistView(payload, headerEnd, signatureStart),
+        version: version,
         signature: Uint8List.sublistView(payload, signatureStart),
       );
     default:

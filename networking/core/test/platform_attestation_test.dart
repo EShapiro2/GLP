@@ -2,18 +2,20 @@ import 'dart:typed_data';
 
 import 'package:test/test.dart';
 
-import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/session/attestation_verifier.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 
 import 'helpers/attestation_fixtures.dart';
 
-/// The attestation digest and its wire framing (spec §Session Establishment).
+/// The attestation digest and its wire framing (GNA §2.6).
 ///
-/// The digest is what binds an attestation to one session: an identity key is
+/// The digest, `H("glp attest" | pk | v | h)`, is what binds an attestation to
+/// one session and to the application's version number: an identity key is
 /// long-lived, so an attestation over the key alone would be replayable onto
 /// every channel that agent opens, while the handshake hash is unique per
-/// session, identical at both ends, and chosen by neither side alone.
+/// session, identical at both ends, and chosen by neither side alone; and the
+/// version number is the application's only under the signature.
 void main() {
   Uint8List bytes(int fill, [int length = 32]) =>
       Uint8List.fromList(List.filled(length, fill));
@@ -22,10 +24,12 @@ void main() {
     test('is a 32-byte digest and is deterministic', () {
       final a = attestationDigest(
         identityPublicKey: bytes(0x11),
+        version: 7,
         handshakeHash: bytes(0x22),
       );
       final b = attestationDigest(
         identityPublicKey: bytes(0x11),
+        version: 7,
         handshakeHash: bytes(0x22),
       );
       expect(a.length, 32);
@@ -35,10 +39,12 @@ void main() {
     test('a different handshake hash gives a different digest', () {
       final session1 = attestationDigest(
         identityPublicKey: bytes(0x11),
+        version: 7,
         handshakeHash: bytes(0x22),
       );
       final session2 = attestationDigest(
         identityPublicKey: bytes(0x11),
+        version: 7,
         handshakeHash: bytes(0x23),
       );
       expect(session1, isNot(session2),
@@ -50,31 +56,78 @@ void main() {
       expect(
         attestationDigest(
           identityPublicKey: bytes(0x11),
+          version: 7,
           handshakeHash: bytes(0x22),
         ),
         isNot(attestationDigest(
           identityPublicKey: bytes(0x12),
+          version: 7,
           handshakeHash: bytes(0x22),
         )),
       );
     });
 
+    test('a different version number gives a different digest', () {
+      expect(
+        attestationDigest(
+          identityPublicKey: bytes(0x11),
+          version: 7,
+          handshakeHash: bytes(0x22),
+        ),
+        isNot(attestationDigest(
+          identityPublicKey: bytes(0x11),
+          version: 8,
+          handshakeHash: bytes(0x22),
+        )),
+        reason: 'this is what makes the version number the one the '
+            'application signed',
+      );
+    });
+
+    test('the version number is eight bytes, big-endian, between pk and h',
+        () {
+      expect(
+        attestationDigest(
+          identityPublicKey: bytes(0x11),
+          version: 0x0102030405060708,
+          handshakeHash: bytes(0x22),
+        ),
+        sha256([
+          ...'glp attest'.codeUnits,
+          ...bytes(0x11),
+          1, 2, 3, 4, 5, 6, 7, 8,
+          ...bytes(0x22),
+        ]),
+      );
+      expect(
+          () => attestationDigest(
+                identityPublicKey: bytes(0x11),
+                version: -1,
+                handshakeHash: bytes(0x22),
+              ),
+          throwsArgumentError);
+    });
+
     test('what separates pk from h is their fixed length, not the label', () {
       // The digest is a plain concatenation, as the specification writes it,
       // so the boundary between pk and h is not marked. It does not have to
-      // be: pk is a 32-byte Ed25519 key and h a 32-byte SHA-256 hash, both
-      // fixed, so no other pair produces the same bytes. Recorded here
-      // because the invariant is a length invariant and would be silently
-      // lost if either field ever became variable-length.
+      // be: pk is a 32-byte Ed25519 key, v eight bytes and h a 32-byte
+      // SHA-256 hash, all fixed, so no other triple produces the same bytes.
+      // Recorded here because the invariant is a length invariant and would
+      // be silently lost if a field ever became variable-length: pk of four
+      // bytes, v = 7 and h of four bytes, and pk of five bytes, the fifth
+      // 0x00, v = 0x0711 and h of three bytes, hash the same bytes.
       final split4And4 = attestationDigest(
         identityPublicKey: bytes(0x11, 4),
+        version: 7,
         handshakeHash: bytes(0x11, 4),
       );
-      final split3And5 = attestationDigest(
-        identityPublicKey: bytes(0x11, 3),
-        handshakeHash: bytes(0x11, 5),
+      final split5And3 = attestationDigest(
+        identityPublicKey: Uint8List.fromList([...bytes(0x11, 4), 0x00]),
+        version: 0x0711,
+        handshakeHash: bytes(0x11, 3),
       );
-      expect(split4And4, split3And5,
+      expect(split4And4, split5And3,
           reason: 'variable-length fields WOULD collide — the label is a '
               'domain separator against other uses of the hash, not a '
               'field separator');
@@ -88,14 +141,16 @@ void main() {
       expect(decodeAttestationPayload(encoded), isNull);
     });
 
-    test('evidence round-trips with both halves intact', () {
+    test('evidence round-trips with its three parts intact', () {
       final evidence = AttestationEvidence(
         attestation: bytes(0x7f, 4096),
+        version: 0x0102030405060708,
         signature: bytes(0x5a, 71),
       );
       final decoded =
           decodeAttestationPayload(encodeAttestationPayload(evidence))!;
       expect(decoded.attestation, evidence.attestation);
+      expect(decoded.version, evidence.version);
       expect(decoded.signature, evidence.signature);
     });
 
@@ -107,11 +162,17 @@ void main() {
       // whose length is not a round number.
       final evidence = AttestationEvidence(
         attestation: bytes(0xAB, 1),
+        version: 42,
         signature: bytes(0xCD, 1),
       );
       final encoded = encodeAttestationPayload(evidence);
-      expect(encoded.length, 1 + 4 + 1 + 1);
+      expect(encoded.length, 1 + 8 + 4 + 1 + 1,
+          reason: 'the tag, the version number, the length, the attestation '
+              'and the signature');
+      expect(encoded.sublist(1, 9), [0, 0, 0, 0, 0, 0, 0, 42],
+          reason: 'the version number, eight bytes, big-endian');
       final decoded = decodeAttestationPayload(encoded)!;
+      expect(decoded.version, 42);
       expect(decoded.attestation, hasLength(1));
       expect(decoded.signature, hasLength(1));
       expect(decoded.attestation.single, 0xAB);
@@ -127,28 +188,40 @@ void main() {
         throwsFormatException,
         reason: 'claims absence and carries bytes',
       );
+      const v = [0, 0, 0, 0, 0, 0, 0, 42];
       expect(
         () => decodeAttestationPayload(Uint8List.fromList([0x01])),
+        throwsFormatException,
+        reason: 'claims presence and carries no version number',
+      );
+      expect(
+        () => decodeAttestationPayload(Uint8List.fromList([0x01, ...v])),
         throwsFormatException,
         reason: 'claims presence and carries no length field',
       );
       expect(
         () => decodeAttestationPayload(
-            Uint8List.fromList([0x01, 0x00, 0x00, 0x00, 0x00])),
+            Uint8List.fromList([0x01, ...v, 0x00, 0x00, 0x00, 0x00])),
         throwsFormatException,
         reason: 'claims presence and a zero-length attestation',
       );
       expect(
-        () => decodeAttestationPayload(
-            Uint8List.fromList([0x01, 0x00, 0x00, 0x00, 0x08, 0x01, 0x02])),
+        () => decodeAttestationPayload(Uint8List.fromList(
+            [0x01, ...v, 0x00, 0x00, 0x00, 0x08, 0x01, 0x02])),
         throwsFormatException,
         reason: 'claims more attestation bytes than it carries',
       );
       expect(
-        () => decodeAttestationPayload(
-            Uint8List.fromList([0x01, 0x00, 0x00, 0x00, 0x02, 0x01, 0x02])),
+        () => decodeAttestationPayload(Uint8List.fromList(
+            [0x01, ...v, 0x00, 0x00, 0x00, 0x02, 0x01, 0x02])),
         throwsFormatException,
         reason: 'carries the attestation and no signature',
+      );
+      expect(
+        () => decodeAttestationPayload(Uint8List.fromList(
+            [0x01, 0x80, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, 0x00, 0x01, 1, 2])),
+        throwsFormatException,
+        reason: 'a version number of 2^63 or more',
       );
       expect(
         () => decodeAttestationPayload(Uint8List.fromList([0x02, 0x03])),
@@ -172,6 +245,7 @@ void main() {
       expect(
         () => encodeAttestationPayload(AttestationEvidence(
           attestation: Uint8List(0),
+          version: 42,
           signature: bytes(0x01, 64),
         )),
         throwsArgumentError,
@@ -179,7 +253,16 @@ void main() {
       expect(
         () => encodeAttestationPayload(AttestationEvidence(
           attestation: bytes(0x01, 64),
+          version: 42,
           signature: Uint8List(0),
+        )),
+        throwsArgumentError,
+      );
+      expect(
+        () => encodeAttestationPayload(AttestationEvidence(
+          attestation: bytes(0x01, 64),
+          version: -1,
+          signature: bytes(0x01, 64),
         )),
         throwsArgumentError,
       );
@@ -189,8 +272,10 @@ void main() {
   group('NoPlatformAttestation', () {
     const attestation = NoPlatformAttestation();
 
-    test('offers neither an attestation nor a signature', () async {
+    test('offers no attestation, no version number and no signature',
+        () async {
       expect(await attestation.attestationFor(bytes(0x11)), isNull);
+      expect(await attestation.applicationVersion(), isNull);
       expect(
         await attestation.signSessionDigest(
           identityPublicKey: bytes(0x11),
@@ -204,7 +289,7 @@ void main() {
         () async {
       final verdict = await attestation.verify(
         evidence: null,
-        digest: bytes(0x01),
+        handshakeHash: bytes(0x01),
         peerIdentityKey: bytes(0x11),
       );
       expect(verdict, isA<UnattestedPlatform>());
@@ -220,20 +305,23 @@ void main() {
       final verdict = await attestation.verify(
         evidence: AttestationEvidence(
           attestation: bytes(0x55, 512),
+          version: 42,
           signature: bytes(0x66, 64),
         ),
-        digest: bytes(0x01),
+        handshakeHash: bytes(0x01),
         peerIdentityKey: bytes(0x11),
       );
       expect(verdict, isA<InvalidAttestation>());
     });
 
-    test('a peer whose evidence verifies is attested, with its identity',
-        () async {
+    test(
+        'a peer whose evidence verifies is attested, with the application '
+        'and the version number it signed', () async {
       final ios = AppAttestFixture();
       final pk = bytes(0x11);
       final digest = attestationDigest(
         identityPublicKey: pk,
+        version: 42,
         handshakeHash: bytes(0x22),
       );
       final verdict = await NoPlatformAttestation(
@@ -247,14 +335,19 @@ void main() {
             appId: ios.appId,
             attestationObject: ios.attestationObject(pk),
           )),
+          version: 42,
           signature: ios.assertion(digest),
         ),
-        digest: digest,
+        handshakeHash: bytes(0x22),
         peerIdentityKey: pk,
       );
       expect(verdict, isA<AttestedApplication>());
-      expect((verdict as AttestedApplication).identity,
-          IosApplicationIdentity(ios.appId));
+      expect((verdict as AttestedApplication).application,
+          const Application(
+            developer: 'ABCDE12345',
+            name: 'com.eshapiro.grassapp',
+            version: 42,
+          ));
     });
   });
 }

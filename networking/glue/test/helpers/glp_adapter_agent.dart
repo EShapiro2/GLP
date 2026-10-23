@@ -45,8 +45,8 @@ Future<void> main(List<String> args) async {
     keyPair: await Ed25519().newKeyPairFromSeed(seed),
   );
   final layer = HeadlessGrassrootsNetwork(
+    outboundQueueStore: MemoryOutboundQueueStore(),
     identity: identity,
-    rendezvousServers: const [],
     sodium: sodium,
   );
   final network = HeadlessGlpNetwork(layer);

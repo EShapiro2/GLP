@@ -13,9 +13,9 @@ import 'package:grassroots_networking_core/src/store/settings_state.dart';
 import 'package:grassroots_networking_core/src/store/transports_state.dart';
 import 'package:grassroots_networking_core/src/transport/transport_service.dart';
 
-/// Settings screen: the underlays and rendezvous servers the layer is
-/// instantiated with ([NetworkPreferences], which the app applies by
-/// rebuilding the layer), and the settings of the running layer (the BLE role
+/// Settings screen: the underlays the layer is instantiated with and the
+/// rendezvous servers declared to it ([NetworkPreferences], which the app
+/// applies by rebuilding the layer), and the settings of the running layer (the BLE role
 /// mode and the cold-call trust levels).
 class SettingsScreen extends StatefulWidget {
   final Store<AppState> store;
@@ -23,7 +23,8 @@ class SettingsScreen extends StatefulWidget {
   /// Callback when a setting of the running layer is changed
   final VoidCallback? onSettingsChanged;
 
-  /// The underlays and rendezvous servers the layer was instantiated with.
+  /// The underlays the layer was instantiated with and the rendezvous
+  /// servers declared to it.
   final NetworkPreferences preferences;
 
   /// Persist [NetworkPreferences] and rebuild the layer with them.

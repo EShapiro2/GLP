@@ -42,18 +42,18 @@ void main() {
       return;
     }
     final service = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(0x22),
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     final pusher = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(0x11),
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     final stranger = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(0x33),
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     addTearDown(() async {
@@ -139,13 +139,13 @@ void main() {
       return;
     }
     final service = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(0x44),
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     final caller = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: await identityFromSeed(0x55),
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     addTearDown(() async {

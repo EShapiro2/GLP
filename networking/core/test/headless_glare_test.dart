@@ -58,8 +58,8 @@ void main() {
     );
 
     final acceptor = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
       identity: acceptorId,
-      rendezvousServers: const [],
       sodium: sodium!,
     );
     final dialer = _CrossingDialer(dialerId, sodium!);

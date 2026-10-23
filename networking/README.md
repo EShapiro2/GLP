@@ -52,6 +52,6 @@ From `ios/Runner/Info.plist`:
 - `NSBluetoothAlwaysUsageDescription` and `NSBluetoothPeripheralUsageDescription`, for the PAN, and `UIBackgroundModes` with `bluetooth-central` and `bluetooth-peripheral`.
 - `NSLocalNetworkUsageDescription` and `NSBonjourServices` with `_grassroots._udp`, for LAN discovery.
 - `NSLocationWhenInUseUsageDescription`, for the place functions, while in use only.
-- `GrassrootsAppIdentifierPrefix`, set to `$(AppIdentifierPrefix)`, from which the attestation producer forms the application identity.
+- `GrassrootsAppIdentifierPrefix`, set to `$(AppIdentifierPrefix)`, from which the attestation producer forms the App ID it attests under, `<teamID>.<bundleID>`, whose team identifier is the attested application's developer and bundle identifier its name (GNA §2.6).
 
 The demo app's `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` are for its own photo messages; the layer does not need them.  The iOS deployment target is 13.0 (`ios/Podfile`).

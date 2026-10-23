@@ -70,7 +70,6 @@ void main() {
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
       store: Store<AppState>(appReducer, initialState: const AppState()),
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,
@@ -171,6 +170,49 @@ void main() {
         reason: 'an acknowledged message is removed from the saved queue');
   }, timeout: const Timeout(Duration(minutes: 2)));
 
+  test(
+      'a layer started with a restored queue delivers it to a recipient that '
+      'does not connect first: the heartbeat sweeps the unreachable known '
+      'peers at their recorded addresses (GNA §2.5, Heartbeat)', () async {
+    final senderId = await identityFromSeed(0x98);
+    final recipientId = await identityFromSeed(0x99);
+
+    // The first layer queues a message to a peer it cannot reach.
+    final first = await startNode(senderId);
+    final messageId = await first.send(
+      recipientId.publicKey,
+      Uint8List.fromList(utf8.encode('restored and swept')),
+    );
+    expect(messageId, isNotNull);
+    await first.dispose();
+
+    // The recipient knows the sender's key and no address of it, so it
+    // cannot connect first.
+    final recipient = await startNode(recipientId);
+    recipient.putKnownPeer(senderId.publicKey);
+    final received = <(String, String, String)>[];
+    recipient.onMessageReceived = (sender, payload, id, underlay) =>
+        received.add((hex(sender), utf8.decode(payload), id));
+    expect(recipient.store.state.knownPeers.dialBook, isEmpty);
+
+    // A new layer with the same identity and store reads the queue back and
+    // is given the recipient's address; nothing else asks it to dial.
+    final second = await startNode(senderId);
+    addTearDown(() async {
+      await second.dispose();
+      await recipient.dispose();
+    });
+    expect(second.queuedMessageCount, 1);
+    second.wan!
+        .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
+
+    expect(await waitFor(() => received.isNotEmpty, seconds: 30), isTrue,
+        reason: 'the heartbeat dials the unreachable known peer, and its '
+            'reachability drains the restored queue');
+    expect(received.first,
+        (hex(senderId.publicKey), 'restored and swept', messageId));
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
   test("each agent's queue is its own", () async {
     final aId = await identityFromSeed(0x93);
     final bId = await identityFromSeed(0x94);
@@ -194,7 +236,6 @@ void main() {
     GrassrootsNetwork layer() => GrassrootsNetwork(
           identity: id,
           underlays: const {Underlay.lan, Underlay.wan},
-          rendezvousServers: const [],
           store: Store<AppState>(appReducer, initialState: const AppState()),
           sodium: sodium,
           localHostAddressReader: _loopbackHostAddresses,
