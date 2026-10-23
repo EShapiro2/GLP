@@ -3925,7 +3925,13 @@ check_not "CVA currency: no type errors" "Type checking failed" "$cva_cur_load"
 # The plays of GC, which extends GKK (Currencies 6499166c): each person
 # establishes their identity, which every other role requires, and mints, and
 # alice and bob meet before they swap, pay or redeem (GKK:1, GKK:2, GC:2 to
-# GC:4).  swap(P, Q, U, V): P gives a coin of U and takes one of V.
+# GC:4).  GC's schemas carry amounts (Currencies 72cf826b): mint of k coins,
+# swap of k for k1, payment of k, redemption of one coin; a numeric variable
+# bound by the schema-binding is named by the request, and a multiplicity k
+# adds or deletes k copies (vGLP 660834d, Section 5.4, "Act schemas as local
+# specifications").  mint(P, K): P mints K coins; swap(P, Q, U, K, V, K1): P
+# gives K coins of U and takes K1 of V; pay(P, Q, K): P pays Q K coins of Q.
+check "CVA request type: the currency proposes GKK's three and GC's four, mint, swap and pay naming their amounts and redeem one coin" "^establish(Peer) meet(Peer, Peer) introduce(Peer, Peer, Peer) mint(Peer, Integer) swap(Peer, Peer, Peer, Integer, Peer, Integer) pay(Peer, Peer, Integer) redeem(Peer, Peer, Peer) $" "$(cva_proposal "$CVA/currency/platform.vglp")"
 cva_cur_payswap=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
 :limit 600000
@@ -3933,15 +3939,16 @@ play_pay_swap(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA pay and swap: alice's establish and mint, each a class of one participant, applied at its Propose: her identity and her coin on her screen before bob is known" "A = \[view(\[\], \[\]), view(\[identity\], \[\]), view(\[coin(alice), identity\], \[\]), view(\[coin(alice), identity\], \[bob\])" "$cva_cur_payswap"
+check "CVA pay and swap: alice's establish and her mint of 2 coins, each a class of one participant, applied at its Propose: her identity and her 2 coins on her screen before bob is known" "A = \[view(\[\], \[\]), view(\[identity\], \[\]), view(\[coin(alice), coin(alice), identity\], \[\]), view(\[coin(alice), coin(alice), identity\], \[bob\])" "$cva_cur_payswap"
 check "CVA pay and swap: alice proposes meeting bob, guarded by both, attempt 6; bob is asked and answers yes, and it commits" "sent(alice, bob, start(attempt(alice, 6, 6, meet(alice, bob), none))), sent(bob, alice, vote(attempt(alice, 6, 6, meet(alice, bob), none), yes)), sent(alice, bob, outcome(attempt(alice, 6, 6, meet(alice, bob), none), commit))" "$cva_cur_payswap"
-check "CVA pay and swap: ... bob's screen: his answer, and alice known to him once it commits" "B = \[.*gave(meet(alice, bob), yes), view(\[knows(alice), coin(bob), identity\], \[alice\])" "$cva_cur_payswap"
-check "CVA pay and swap: ... alice's screen: bob known to her once it commits" "A = \[.*view(\[coin(alice), identity\], \[bob\]), view(\[knows(bob), coin(alice), identity\], \[bob\])" "$cva_cur_payswap"
-check "CVA pay and swap: alice proposes the swap, and bob is asked, answers yes, and holds her coin once it commits" "B = \[.*gave(swap(alice, bob, alice, bob), yes), view(\[coin(alice), knows(alice), identity\], \[alice\])" "$cva_cur_payswap"
-check "CVA pay and swap: ... and the swap commits" "sent(alice, bob, outcome(attempt(alice, 8, 8, swap(alice, bob, alice, bob), none), commit))" "$cva_cur_payswap"
-check "CVA pay and swap: alice pays bob, guarded by her, and bob's machine votes yes, unasked, and it commits" "sent(alice, bob, start(attempt(alice, 10, 10, pay(alice, bob), none))), sent(bob, alice, vote(attempt(alice, 10, 10, pay(alice, bob), none), yes)), sent(alice, bob, outcome(attempt(alice, 10, 10, pay(alice, bob), none), commit))" "$cva_cur_payswap"
-check "CVA pay and swap: bob, unasked, holds his coin again once the pay commits" "B = \[.*view(\[coin(alice), knows(alice), identity\], \[alice\]), view(\[coin(bob), coin(alice), knows(alice), identity\], \[alice\]) |" "$cva_cur_payswap"
-check "CVA pay and swap: ... and alice holds no coin" "A = \[.*view(\[coin(bob), knows(bob), identity\], \[bob\]), view(\[knows(bob), identity\], \[bob\]) |" "$cva_cur_payswap"
+check "CVA pay and swap: ... bob's screen: his answer, and alice known to him once it commits" "B = \[.*gave(meet(alice, bob), yes), view(\[knows(alice), coin(bob), coin(bob), coin(bob), identity\], \[alice\])" "$cva_cur_payswap"
+check "CVA pay and swap: ... alice's screen: bob known to her once it commits" "A = \[.*view(\[coin(alice), coin(alice), identity\], \[bob\]), view(\[knows(bob), coin(alice), coin(alice), identity\], \[bob\])" "$cva_cur_payswap"
+check "CVA pay and swap: alice proposes swapping 2 of her coins for 3 of bob's, and bob is asked, answers yes, and holds her 2 coins and none of his own once it commits" "B = \[.*gave(swap(alice, bob, alice, 2, bob, 3), yes), view(\[coin(alice), coin(alice), knows(alice), identity\], \[alice\])" "$cva_cur_payswap"
+check "CVA pay and swap: ... and the swap commits" "sent(alice, bob, outcome(attempt(alice, 8, 8, swap(alice, bob, alice, 2, bob, 3), none), commit))" "$cva_cur_payswap"
+check "CVA pay and swap: ... alice's screen: bob's 3 coins and none of hers once it commits" "A = \[.*view(\[knows(bob), coin(alice), coin(alice), identity\], \[bob\]), view(\[coin(bob), coin(bob), coin(bob), knows(bob), identity\], \[bob\])" "$cva_cur_payswap"
+check "CVA pay and swap: alice pays bob 2 of his coins, guarded by her, and bob's machine votes yes, unasked, and it commits" "sent(alice, bob, start(attempt(alice, 10, 10, pay(alice, bob, 2), none))), sent(bob, alice, vote(attempt(alice, 10, 10, pay(alice, bob, 2), none), yes)), sent(alice, bob, outcome(attempt(alice, 10, 10, pay(alice, bob, 2), none), commit))" "$cva_cur_payswap"
+check "CVA pay and swap: bob, unasked, holds 2 of his coins again once the pay commits" "B = \[.*view(\[coin(alice), coin(alice), knows(alice), identity\], \[alice\]), view(\[coin(bob), coin(bob), coin(alice), coin(alice), knows(alice), identity\], \[alice\]) |" "$cva_cur_payswap"
+check "CVA pay and swap: ... and alice holds the one coin of bob's she kept" "A = \[.*view(\[coin(bob), coin(bob), coin(bob), knows(bob), identity\], \[bob\]), view(\[coin(bob), knows(bob), identity\], \[bob\]) |" "$cva_cur_payswap"
 
 # An attempt's guard set is its part's (vGLP 099f876, Definition "Attempt";
 # vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 5): the swap back's class
@@ -3958,10 +3965,10 @@ play_redeem(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA redeem: the swap back, alice proposing the swaps' part her request names, guarded by alice and bob, attempt 10: bob is asked and answers yes" "sent(alice, bob, start(attempt(alice, 10, 10, swap(alice, bob, bob, alice), none)))" "$cva_cur_redeem"
-check "CVA redeem: ... his answer" "B = \[.*gave(swap(alice, bob, bob, alice), yes)" "$cva_cur_redeem"
-check "CVA redeem: ... it commits" "sent(bob, alice, vote(attempt(alice, 10, 10, swap(alice, bob, bob, alice), none), yes)), sent(alice, bob, outcome(attempt(alice, 10, 10, swap(alice, bob, bob, alice), none), commit))" "$cva_cur_redeem"
-check "CVA redeem: after a second swap, attempt 12, alice requests the swap back again and proposes her redeem's part, proposed less recently, attempt 14" "sent(alice, bob, outcome(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), commit)), sent(alice, bob, start(attempt(alice, 14, 14, redeem(alice, bob, alice), none)))" "$cva_cur_redeem"
+check "CVA redeem: the swap back, alice proposing the swaps' part her request names, guarded by alice and bob, attempt 10: bob is asked and answers yes" "sent(alice, bob, start(attempt(alice, 10, 10, swap(alice, bob, bob, 1, alice, 1), none)))" "$cva_cur_redeem"
+check "CVA redeem: ... his answer" "B = \[.*gave(swap(alice, bob, bob, 1, alice, 1), yes)" "$cva_cur_redeem"
+check "CVA redeem: ... it commits" "sent(bob, alice, vote(attempt(alice, 10, 10, swap(alice, bob, bob, 1, alice, 1), none), yes)), sent(alice, bob, outcome(attempt(alice, 10, 10, swap(alice, bob, bob, 1, alice, 1), none), commit))" "$cva_cur_redeem"
+check "CVA redeem: after a second swap, attempt 12, alice requests the swap back again and proposes her redeem's part, proposed less recently, attempt 14" "sent(alice, bob, outcome(attempt(alice, 12, 12, swap(alice, bob, alice, 1, bob, 1), none), commit)), sent(alice, bob, start(attempt(alice, 14, 14, redeem(alice, bob, alice), none)))" "$cva_cur_redeem"
 check "CVA redeem: ... alice's screen: her coin and bob's exchanged at each commit, her own back at the last" "A = \[.*view(\[coin(bob), knows(bob), identity\], \[bob\]), view(\[coin(alice), knows(bob), identity\], \[bob\]), view(\[coin(bob), knows(bob), identity\], \[bob\]), view(\[coin(alice), knows(bob), identity\], \[bob\]) | " "$cva_cur_redeem"
 check "CVA redeem: ... guarded by alice: bob's machine votes yes, unasked, and it commits" "sent(bob, alice, vote(attempt(alice, 14, 14, redeem(alice, bob, alice), none), yes)), sent(alice, bob, outcome(attempt(alice, 14, 14, redeem(alice, bob, alice), none), commit)) | " "$cva_cur_redeem"
 check_not "CVA redeem: bob answers nothing for the redeem" "gave(attempt(alice, 14, 14, redeem\|gave(redeem" "$cva_cur_redeem"
@@ -3980,13 +3987,13 @@ HEREDOC
 # swap aborts, bob its refuser, and the pay's start, put up again, is taken
 # and the pay commits at its first attempt (vGLP f0acbc1, Definitions "Cargo,
 # App State, Question, Approval, Free, Ready" to "Deciding").
-check "CVA busy: alice proposes a swap, attempt 12; bob, asked, leaves his approval question open, proposes a pay, attempt 14, and answers no once the request question is drawn again" "sent(alice, bob, start(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none))), sent(bob, alice, start(attempt(bob, 14, 14, pay(bob, alice), none))), sent(bob, alice, vote(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), no(declined)))" "$cva_cur_busy"
-check "CVA busy: ... his answer" "B = \[.*gave(swap(alice, bob, alice, bob), no)" "$cva_cur_busy"
-check "CVA busy: alice holds the pay's start waiting while her swap holds her lock: her vote on it comes only after her swap's outcome" "sent(alice, bob, outcome(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), abort(bob, declined))), sent(alice, bob, vote(attempt(bob, 14, 14, pay(bob, alice), none), yes))" "$cva_cur_busy"
-check_not "CVA busy: ... no vote no on the pay, and no Wound: no yield asked" "vote(attempt(bob, 14, 14, pay(bob, alice), none), no\|yield(" "$cva_cur_busy"
-check "CVA busy: bob answers alice's approval question no, his vote no declined, and her swap aborts, bob its refuser" "sent(bob, alice, vote(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), no(declined))), sent(alice, bob, outcome(attempt(alice, 12, 12, swap(alice, bob, alice, bob), none), abort(bob, declined)))" "$cva_cur_busy"
-check "CVA busy: the lock released, alice's machine votes yes on the waiting pay, and it commits" "sent(alice, bob, vote(attempt(bob, 14, 14, pay(bob, alice), none), yes)), sent(bob, alice, outcome(attempt(bob, 14, 14, pay(bob, alice), none), commit))" "$cva_cur_busy"
-check "CVA busy: alice's screen: the notice refused(swap(alice, bob, alice, bob), bob, declined) once bob's refusal ends her approval, and her coin paid back to her once the pay commits" "A = \[.*view(\[coin(alice), coin(bob), knows(bob), identity\], \[bob\]), refused(swap(alice, bob, alice, bob), bob, declined), view(\[coin(alice), coin(alice), coin(bob), knows(bob), identity\], \[bob\]) |" "$cva_cur_busy"
+check "CVA busy: alice proposes a swap, attempt 10; bob, asked, leaves his approval question open, proposes a pay, attempt 12, and answers no once the request question is drawn again" "sent(alice, bob, start(attempt(alice, 10, 10, swap(alice, bob, alice, 1, bob, 1), none))), sent(bob, alice, start(attempt(bob, 12, 12, pay(bob, alice, 1), none))), sent(bob, alice, vote(attempt(alice, 10, 10, swap(alice, bob, alice, 1, bob, 1), none), no(declined)))" "$cva_cur_busy"
+check "CVA busy: ... his answer" "B = \[.*gave(swap(alice, bob, alice, 1, bob, 1), no)" "$cva_cur_busy"
+check "CVA busy: alice holds the pay's start waiting while her swap holds her lock: her vote on it comes only after her swap's outcome" "sent(alice, bob, outcome(attempt(alice, 10, 10, swap(alice, bob, alice, 1, bob, 1), none), abort(bob, declined))), sent(alice, bob, vote(attempt(bob, 12, 12, pay(bob, alice, 1), none), yes))" "$cva_cur_busy"
+check_not "CVA busy: ... no vote no on the pay, and no Wound: no yield asked" "vote(attempt(bob, 12, 12, pay(bob, alice, 1), none), no\|yield(" "$cva_cur_busy"
+check "CVA busy: bob answers alice's approval question no, his vote no declined, and her swap aborts, bob its refuser" "sent(bob, alice, vote(attempt(alice, 10, 10, swap(alice, bob, alice, 1, bob, 1), none), no(declined))), sent(alice, bob, outcome(attempt(alice, 10, 10, swap(alice, bob, alice, 1, bob, 1), none), abort(bob, declined)))" "$cva_cur_busy"
+check "CVA busy: the lock released, alice's machine votes yes on the waiting pay, and it commits" "sent(alice, bob, vote(attempt(bob, 12, 12, pay(bob, alice, 1), none), yes)), sent(bob, alice, outcome(attempt(bob, 12, 12, pay(bob, alice, 1), none), commit))" "$cva_cur_busy"
+check "CVA busy: alice's screen: the notice refused(swap(alice, bob, alice, 1, bob, 1), bob, declined) once bob's refusal ends her approval, and her coin paid back to her once the pay commits" "A = \[.*view(\[coin(bob), knows(bob), coin(alice), identity\], \[bob\]), refused(swap(alice, bob, alice, 1, bob, 1), bob, declined), view(\[coin(alice), coin(bob), knows(bob), coin(alice), identity\], \[bob\]) |" "$cva_cur_busy"
 
 cva_cur_declined=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
@@ -3996,8 +4003,8 @@ play_declined(A, B, N).
 HEREDOC
 2>&1)
 check "CVA declined: bob, not holding the coin, votes on the start without asking his person, his screen unchanged since he met alice" "B = \[view(\[\], \[\]), view(\[identity\], \[\]), view(\[identity\], \[alice\]), gave(meet(alice, bob), yes), view(\[knows(alice), identity\], \[alice\]) |" "$cva_cur_declined"
-check "CVA declined: ... no, unable, the coin his state lacks named, and it aborts at both, bob its refuser" "sent(bob, alice, vote(attempt(alice, 8, 8, swap(alice, bob, alice, carol), none), no(unable(\[coin(carol)\], \[\])))), sent(alice, bob, outcome(attempt(alice, 8, 8, swap(alice, bob, alice, carol), none), abort(bob, unable(\[coin(carol)\], \[\]))))" "$cva_cur_declined"
-check "CVA declined: ... alice's screen: the notice of her approval ended by bob's refusal" "A = \[.*view(\[knows(bob), coin(alice), identity\], \[bob\]), refused(swap(alice, bob, alice, carol), bob, unable(\[coin(carol)\], \[\])) |" "$cva_cur_declined"
+check "CVA declined: ... no, unable, the coin his state lacks named, and it aborts at both, bob its refuser" "sent(bob, alice, vote(attempt(alice, 8, 8, swap(alice, bob, alice, 1, carol, 1), none), no(unable(\[coin(carol)\], \[\])))), sent(alice, bob, outcome(attempt(alice, 8, 8, swap(alice, bob, alice, 1, carol, 1), none), abort(bob, unable(\[coin(carol)\], \[\]))))" "$cva_cur_declined"
+check "CVA declined: ... alice's screen: the notice of her approval ended by bob's refusal" "A = \[.*view(\[knows(bob), coin(alice), identity\], \[bob\]), refused(swap(alice, bob, alice, 1, carol, 1), bob, unable(\[coin(carol)\], \[\])) |" "$cva_cur_declined"
 check_not "CVA declined: no approval question answered for the swap" "gave(swap\|gave(attempt(alice, 8, " "$cva_cur_declined"
 
 # vGLP's contract nudge (programs/vglp/cva/contracts.glp): befriend and an

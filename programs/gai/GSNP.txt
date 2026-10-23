@@ -2,9 +2,13 @@
 % Owner: GAI (Udi, 2026-10-20; GSC's until that day).  The paper, /Users/udi/Grassroots/GAI/main_characterisation_ArXiv.tex, prints it in its box in Section 4.1 and cites a clause as GSNP:1.
 % Extends: GSN, Grassroots Social Network, GSC's (programs/gsc), and through it GSG, Grassroots Social Graph, and GKK, Grassroots Keys and Knowledge, GSC's.  It cites their clauses whole, GKK:1 to GKK:3, GSG:1 and GSG:2 and GSN:1 to GSN:5, and restates none.
 % Defines: item, content signed by its author and, when forwarded, by each agent that forwarded it, in order; and the signed terms of the language, GAI's paper, Appendix "Contracts with Wards".  Agent is defined with GSN; Alice and Bob are variables naming distinct agents.
-% Last changed: 2026-10-20.  Written by GAI #2 Cowork (2026-10-18) from GAI's paper, Udi's text; the clauses with Alice and Bob (Udi, 2026-10-20, to GAI #6).
+% Last changed: 2026-10-23, each clause opening with its modality after its number, ■ GSNP:1, ◆ GSNP:2, ○ GSNP:3, and the pragmas after the clauses, which the app built from the contract follows, Confidence describing no act and carrying no line (Udi, to GSC #6; Coordination #8, to_all; GAI #8).  2026-10-20: written by GAI #2 Cowork (2026-10-18) from GAI's paper, Udi's text; the clauses with Alice and Bob (Udi, 2026-10-20, to GAI #6).
 % Schemas: GSNP.glp beside this file, eighteen over ten predicates: GKK's three, GSG's two, sign, message and forward, and the seven schemas of a group, a group message carried as an item; the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GSNP: Grassroots Social Network with Provenance
-1. Authorship.  Alice signs the content they create.
-2. Forwarding.  Alice forwards content they received by sending it to Bob with the signatures it has and adding their own, and warrants that they know personally the agent they received it from.
-3. Confidence.  Alice shall disclose content they received only by forwarding it.
+1. ■ Authorship.  Alice signs the content they create.
+2. ◆ Forwarding.  Alice forwards content they received by sending it to Bob with the signatures it has and adding their own, and warrants that they know personally the agent they received it from.
+3. ○ Confidence.  Alice shall disclose content they received only by forwarding it.
+Pragmas
+Items: an item shows its author and every agent that forwarded it, in order.
+Authorship: [Sign] <text>
+Forwarding: [Forward] You warrant that you know personally the agent you received this from.

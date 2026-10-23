@@ -18,11 +18,11 @@ meet(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint(Peer)
+mint(Peer, Integer)
 ;
-swap(Peer, Peer, Peer, Peer)
+swap(Peer, Peer, Peer, Integer, Peer, Integer)
 ;
-pay(Peer, Peer)
+pay(Peer, Peer, Integer)
 ;
 redeem(Peer, Peer, Peer)
 .
@@ -34,16 +34,20 @@ meet(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint(Peer)
+mint(Peer, Integer)
 ;
-swap(Peer, Peer, Peer, Peer)
+swap(Peer, Peer, Peer, Integer, Peer, Integer)
 ;
-pay(Peer, Peer)
+pay(Peer, Peer, Integer)
 ;
 redeem(Peer, Peer, Peer)
 .
 
 Request ::= propose(Proposal) ; known(Peer).
+
+%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family's approval_sentence, and its request question by its social_menu.
+Approval =::= approval_sentence.
+Menu =::= social_menu.
 
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(List(Atom), List(Key)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP b7e3517, Section 5.4, "The compilation").
 Atom ::=
@@ -64,7 +68,7 @@ atom_of(g(coin, [p(V1)]), shown(coin(V1?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(mint, [], [rs(guarded, [atom(coin, [role(1)])], [], [atom(identity, [])], [])]), schema(swap, [pvar(u), pvar(v)], [rs(guarded, [atom(coin, [pvar(v)])], [atom(coin, [pvar(u)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(coin, [pvar(u)])], [atom(coin, [pvar(v)])], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [], [rs(guarded, [], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [], [atom(identity, [])], [])]), schema(redeem, [pvar(r)], [rs(guarded, [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, [pvar(u), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [num(k)], [rs(guarded, [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, [pvar(r)], [rs(guarded, [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -74,11 +78,11 @@ schema_entry(meet, schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [
 .
 schema_entry(introduce, schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(mint, schema(mint, [], [rs(guarded, [atom(coin, [role(1)])], [], [atom(identity, [])], [])]))
+schema_entry(mint, schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]))
 .
-schema_entry(swap, schema(swap, [pvar(u), pvar(v)], [rs(guarded, [atom(coin, [pvar(v)])], [atom(coin, [pvar(u)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(coin, [pvar(u)])], [atom(coin, [pvar(v)])], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(swap, schema(swap, [pvar(u), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(pay, schema(pay, [], [rs(guarded, [], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [], [atom(identity, [])], [])]))
+schema_entry(pay, schema(pay, [num(k)], [rs(guarded, [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]))
 .
 schema_entry(redeem, schema(redeem, [pvar(r)], [rs(guarded, [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]))
 .
@@ -102,11 +106,11 @@ binding_of(meet(V1, V2), meet, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(c), p(V3?))])
 .
-binding_of(mint(V1), mint, [b(role(1), p(V1?))])
+binding_of(mint(V1, V2), mint, [b(role(1), p(V1?)), b(num(k), n(V2?))])
 .
-binding_of(swap(V1, V2, V3, V4), swap, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(u), p(V3?)), b(pvar(v), p(V4?))])
+binding_of(swap(V1, V2, V3, V4, V5, V6), swap, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(u), p(V3?)), b(num(k), n(V4?)), b(pvar(v), p(V5?)), b(num(k1), n(V6?))])
 .
-binding_of(pay(V1, V2), pay, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+binding_of(pay(V1, V2, V3), pay, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(k), n(V3?))])
 .
 binding_of(redeem(V1, V2, V3), redeem, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(r), p(V3?))])
 .
@@ -142,15 +146,17 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar(c), B?, D?, V3)
 .
-class_of(mint, B, D, mint(V1?))
+class_of(mint, B, D, mint(V1?, V2?))
 :-
 ground(B?)
 ,
 ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
+,
+val_num(num(k), B?, V2)
 .
-class_of(swap, B, D, swap(V1?, V2?, V3?, V4?))
+class_of(swap, B, D, swap(V1?, V2?, V3?, V4?, V5?, V6?))
 :-
 ground(B?)
 ,
@@ -162,9 +168,13 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar(u), B?, D?, V3)
 ,
-val_peer(pvar(v), B?, D?, V4)
+val_num(num(k), B?, V4)
+,
+val_peer(pvar(v), B?, D?, V5)
+,
+val_num(num(k1), B?, V6)
 .
-class_of(pay, B, D, pay(V1?, V2?))
+class_of(pay, B, D, pay(V1?, V2?, V3?))
 :-
 ground(B?)
 ,
@@ -173,6 +183,8 @@ ground(D?)
 val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
+,
+val_num(num(k), B?, V3)
 .
 class_of(redeem, B, D, redeem(V1?, V2?, V3?))
 :-
@@ -194,11 +206,11 @@ name_class(meet(V1, V2), _, meet(V1?, V2?))
 .
 name_class(introduce(V1, V2, V3), _, introduce(V1?, V2?, V3?))
 .
-name_class(mint(V1), _, mint(V1?))
+name_class(mint(V1, V2), _, mint(V1?, V2?))
 .
-name_class(swap(V1, V2, V3, V4), _, swap(V1?, V2?, V3?, V4?))
+name_class(swap(V1, V2, V3, V4, V5, V6), _, swap(V1?, V2?, V3?, V4?, V5?, V6?))
 .
-name_class(pay(V1, V2), _, pay(V1?, V2?))
+name_class(pay(V1, V2, V3), _, pay(V1?, V2?, V3?))
 .
 name_class(redeem(V1, V2, V3), _, redeem(V1?, V2?, V3?))
 .
@@ -210,11 +222,11 @@ request_name(meet(V1, V2), pname(meet(V1?, V2?)))
 .
 request_name(introduce(V1, V2, V3), pname(introduce(V1?, V2?, V3?)))
 .
-request_name(mint(V1), pname(mint(V1?)))
+request_name(mint(V1, V2), pname(mint(V1?, V2?)))
 .
-request_name(swap(V1, V2, V3, V4), pname(swap(V1?, V2?, V3?, V4?)))
+request_name(swap(V1, V2, V3, V4, V5, V6), pname(swap(V1?, V2?, V3?, V4?, V5?, V6?)))
 .
-request_name(pay(V1, V2), pname(pay(V1?, V2?)))
+request_name(pay(V1, V2, V3), pname(pay(V1?, V2?, V3?)))
 .
 request_name(redeem(V1, V2, V3), pname(redeem(V1?, V2?, V3?)))
 .

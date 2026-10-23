@@ -29,7 +29,11 @@
 %% the schema's first role; a schema's second argument lists its variables in
 %% the order of its head; u, v, r and c are agent variables, pvar.
 %% Written by Currencies #11 Cowork, 2026-10-20, in place of the term of
-%% 2026-10-18 in GSC's old form, schema(Name, Roles).
+%% 2026-10-18 in GSC's old form, schema(Name, Roles); establish forbidding
+%% identity by Currencies #12, 2026-10-23.  The multiplicities k and k1 are
+%% positive whole numbers, as every multiplicity is (GSC, 2026-10-23: a
+%% multiplicity is a positive whole number, by what counting is), so the
+%% schemas carry no constraint on them.
 %% ---------------------------------------------------------------------------
 
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
@@ -56,9 +60,9 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 %% contract_named(gc, C): the contract, GC (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
 contract_named(gc,
-%% GKK:1, Identity.
+%% GKK:1, Identity: act once, so establish forbids the identity it adds (Udi, 2026-10-23, to GSC #6).
    [schema(establish, [],
-       [rs(guarded, [atom(identity, [])], [], [], [])]),
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
 %% GKK:2, Meeting.
     schema(meet, [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),

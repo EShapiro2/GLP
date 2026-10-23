@@ -22,11 +22,11 @@
 %
 % Act schemas allow numbers (GSC, Section 3.2; def:numbers): a numeric
 % argument, a multiplicity on an atom added or deleted, and a constraint on
-% the numeric variables, which every binding satisfies.  def:compile applies
-% to a schema with numbers as written (the appendix "Numbers in Act
+% the value variables, which every binding satisfies.  def:compile applies
+% to a schema with values as written (the appendix "Values in Act
 % Schemas"), whose example prints GB's redeem_bc in the form below, the
 % constraint on a proviso line of its own; the display of a schema with
-% numbers is the schema as written (self.glp, NSchema): a numeric argument as its
+% numbers is the schema as written (self.glp, NSchema): a value argument as its
 % variable or number; a multiplicity k on an atom A as k\cdot A, as GB's
 % paper writes it (GB, Appendix A), so that k\cdot A in a multiset is A k
 % times; a multiset of required atoms carrying a multiplicity included in
@@ -82,7 +82,7 @@ latex_arg(nterm(S), T, R?) :- ground(S?), ground(T?) | latex_nt(S?, T?, R).
 latex_arg(sgn(X, J), T, ['\\mathrm{sgn}(', X?, ','|R?]) :-
     ground(X?), integer(J?), ground(T?) |
     latex_role(J?, [')'|T?], R).
-% A numeric argument, the numeric variable as it is named or the number.
+% A value argument, the value variable as it is named or the number.
 latex_arg(num(X), T, [X?|T?]).
 
 procedure latex_args(Args?, Chunks?, Chunks).
@@ -117,13 +117,9 @@ latex_mult(times(K, A), T, R?) :- ground(K?), ground(A?), ground(T?) |
     latex_atom(A?, T?, R1),
     latex_arg(K?, ['\\cdot'|R1?], R).
 
-% The atoms of a set are written apart by Sep, which the form of the display
-% supplies: a comma in the form of Section 5.1 and Appendix B.3, as Section
-% 5.1 writes the two atoms befriend requires at a role, and a comma and a
-% control space in the general form, as the checker's display of close writes the
-% two atoms close deletes.  latex_update and
-% req_conjs and forb_conjs supply the first, assign_lines and req_lines and
-% forb_lines the second.
+% The atoms of a set are written apart by Sep, a comma, as Section 5.1
+% writes the two atoms befriend requires at a role and the two close deletes
+% at its leader.
 procedure latex_atoms(Mults?, Constant?, Chunks?, Chunks).
 latex_atoms([], _, T, T?).
 latex_atoms([A], _, T, R?) :- ground(A?), ground(T?) | latex_mult(A?, T?, R).
@@ -139,8 +135,7 @@ latex_set(As, Sep, T, ['\\{'|R?]) :- ground(As?), ground(Sep?), ground(T?) |
 % --- The roles as the paper writes them (def:role, def:extent) -------------
 % An agent role by its name, and a listed role pi[rho(*, u_2, ..., u_r)], as
 % Section 5.1 writes close's, \Alice[\mathit{listed}(\ast,n)] (GSC 8064cfb);
-% ext_c(pi_i) is the extent of the role in c (def:extent), and a line of the
-% general form ranges over the agents p in it.
+% ext_c(pi_i) is the extent of the role in c (def:extent).
 
 procedure latex_role_term(NRoleSpec?, Integer?, Chunks?, Chunks).
 latex_role_term(rs(_, _, _, _, _), I, T, R?) :- integer(I?), ground(T?) |
@@ -163,17 +158,12 @@ latex_ext(RS, I, T, ['\\mathrm{ext}_c('|R?]) :-
     ground(RS?), integer(I?), ground(T?) |
     latex_role_term(RS?, I?, [')'|T?], R).
 
-procedure latex_over(NRoleSpec?, Integer?, Chunks?, Chunks).
-latex_over(RS, I, T, ['&& (p \\in '|R?]) :-
-    ground(RS?), integer(I?), ground(T?) |
-    latex_ext(RS?, I?, [')'|T?], R).
-
 % --- The assignment of one role (def:compile) ------------------------------
 % c'_S := (c_S \ -(i)) u +(i), with an empty half left out, and both at a
 % guarding role that adds and deletes nothing, which def:schema admits:
 % c'_S := c_S, the assignment def:compile gives it (1 <= i <= k); S is the
-% subscript, {\Alice} for a role of Section 5.1 and Appendix B.3 and p, ranging over the
-% extent, for a role in the general form.
+% subscript, {\Alice} for the agent of an agent role and q for the other
+% agents of a listed role's extent.
 
 procedure update_body(Ans?, Ans?, Mults?, Mults?, Constant?, Chunks?, Chunks?,
                       Chunks).
@@ -258,19 +248,6 @@ req_conj2(yes, As, Sep, S, T, [C?|T?]) :-
 req_conj2(no, As, Sep, S, T, [C?|T?]) :-
     ground(As?), ground(Sep?), ground(S?), ground(T?) |
     latex_set(As?, Sep?, [' \\subseteq c_'|S?], C).
-
-% The required atoms in the general form: a singleton with \in, several
-% included in c_p, as def:compile writes them.
-procedure req_conj_set(Mults?, Constant?, Chunks?, ChunkLists?, ChunkLists).
-req_conj_set([], _, _, T, T?).
-req_conj_set([atom(P, As)], _, S, T, [C?|T?]) :- ground(P?), ground(As?), ground(S?), ground(T?) |
-    latex_atom(atom(P?, As?), [' \\in c_'|S?], C).
-req_conj_set([times(K, A)], Sep, S, T, [C?|T?]) :-
-    ground(K?), ground(A?), ground(Sep?), ground(S?), ground(T?) |
-    latex_set([times(K?, A?)], Sep?, [' \\subseteq c_'|S?], C).
-req_conj_set([A, B|As], Sep, S, T, [C?|T?]) :-
-    ground(A?), ground(B?), ground(As?), ground(Sep?), ground(S?), ground(T?) |
-    latex_set([A?, B?|As?], Sep?, [' \\subseteq c_'|S?], C).
 
 % Whether no atom occurs twice among the atoms, none carrying a
 % multiplicity.
@@ -368,7 +345,7 @@ latex_guard([I|Is], T, ['\\text{guarded by } \\{'|R?]) :-
     integer(I?), ground(Is?), ground(T?) |
     latex_guard_list([I?|Is?], ['\\}'|T?], R).
 
-% --- The constraint (GSC, Section 3.2) --------------------------------------
+% --- The constraint (GSC, Section 3.2; def:numbers) -------------------------
 % A proviso line of its own, after the forbidden atoms and before the guard,
 % none for the constraint true: gt(X, Y) as X > Y, le(X, Y) as X \le Y,
 % succ(X, Y) as Y = X + 1, and or(C1, C2) as C1 \lor C2, as GB's paper writes
@@ -422,55 +399,345 @@ latex_s3_roles(Rs, Cn, T, R?) :- ground(Rs?), ground(Cn?), ground(T?) |
     join_lines([A?|L2?], ['\\end{align*}'|T?], R).
 
 % --- The display of a schema in the general form (def:compile) ------------
-% In the order of the lines of def:compile's display (GSC f3c4f43): a line per
-% role for its assignment; a line per role that requires an atom, for its
-% required atoms, in role order; a line per role that forbids an atom, for
-% its forbidden atoms, in role order; each over p in ext_c(pi_i); then, for
+% A line per agent, as def:compile's display has it and Section 5.1 prints
+% close's (Udi, 2026-10-23, to GSC #7, reported by GSC #7 Cowork): first the
+% agent of each agent role, in role order, its line joining what every role
+% whose extent holds it adds and deletes there; then the other agents of
+% the extents of the listed roles, q, their line joining what those roles
+% do.  The agent of an agent role is in the extent of a listed role
+% pi[rho(*, u_2, ..., u_r)] (def:extent) where the role pi requires
+% rho(that role, u_2, ..., u_r), as close's leader requires
+% listed(\Alice, n) and is in the extent of \Alice[listed(*, n)]; it is not
+% where pi forbids that atom; and where the schema says neither, its line is
+% written for each case, the case after it in parentheses.  The required
+% atoms follow, on one proviso line, an agent role's included in c_{\Alice}
+% and a listed role's in c_q over its extent, the extent after the line in
+% parentheses; then the forbidden atoms the same way; then the freshness of
 % every name term sigma.y of the schema that occurs in no atom required at a
-% role, that it is an argument of no atom of c; then the guard, the guarding
-% roles of the schema, which are agent roles, written as Section 5.1 writes
-% it and as it writes close's, guarded by {\Alice}.  A role's atoms
-% range over its own extent, so the one line of the short form for the
-% required atoms, and the one for the forbidden atoms, is a line per role
-% here, as the assignment is.  Each line is a Chunks; every line opens with &
-% and ,\\ separates them.  The line on what is added and deleted at an agent
+% role (GSC 6d4f147); then the constraint; and the guard, the guarding roles
+% of the schema, which are agent roles, written as Section 5.1 writes it.
+% A schema of more than one listed role has a proviso line per listed role
+% after the agent roles' line, and a line for q per set of the listed roles
+% whose extents hold q.  The line on what is added and deleted at an agent
 % is left out, as the displays of Section 5.1 leave it out.
 
-procedure assign_lines(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
-assign_lines([], _, T, T?).
-assign_lines([RS|Rs], I, T, [L?|R?]) :-
-    ground(RS?), ground(Rs?), integer(I?), ground(T?) |
-    latex_over(RS?, I?, [], O),
-    latex_update_at(RS?, ',\\ ', ['p'], O?, L),
-    I1 := I? + 1,
-    assign_lines(Rs?, I1?, T?, R).
+Mem      ::= m_in ; m_out ; m_open.
+IntLists ::= [] ; [Ints | IntLists].
 
-procedure proviso_line(ChunkLists?, NRoleSpec?, Integer?, ChunkLists?, ChunkLists).
-proviso_line([], _, _, T, T?).
-proviso_line([C|Cs], RS, I, T, [['\\text{provided } '|L?]|T?]) :-
-    ground(C?), ground(Cs?), ground(RS?), integer(I?), ground(T?) |
-    latex_over(RS?, I?, [], O),
-    join_conjs([C?|Cs?], O?, L).
+procedure nth_nrs(NRoleSpecs?, Integer?, NRoleSpec).
+nth_nrs([], _, rs(unguarded, [], [], [], [])).
+nth_nrs([X|_], I, X?) :- I? =:= 1 | true.
+nth_nrs([_|Xs], I, R?) :- I? > 1, integer(I?), ground(Xs?) |
+    I1 := I? - 1,
+    nth_nrs(Xs?, I1?, R).
 
-procedure req_lines(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
-req_lines([], _, T, T?).
-req_lines([RS|Rs], I, T, R?) :-
-    ground(RS?), ground(Rs?), integer(I?), ground(T?) |
-    nrs_req(RS?, Req),
-    req_conj_set(Req?, ',\\ ', ['p'], [], Cs),
+% The indices of the agent roles and of the listed roles, in role order.
+procedure agent_idx(NRoleSpecs?, Integer?, Ints).
+agent_idx([], _, []).
+agent_idx([rs(_, _, _, _, _)|Rs], I, [I?|R?]) :- integer(I?), ground(Rs?) |
     I1 := I? + 1,
-    req_lines(Rs?, I1?, T?, R1),
-    proviso_line(Cs?, RS?, I?, R1?, R).
+    agent_idx(Rs?, I1?, R).
+agent_idx([crs(_, _, _, _, _, _)|Rs], I, R?) :- integer(I?), ground(Rs?) |
+    I1 := I? + 1,
+    agent_idx(Rs?, I1?, R).
 
-procedure forb_lines(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
-forb_lines([], _, T, T?).
-forb_lines([RS|Rs], I, T, R?) :-
-    ground(RS?), ground(Rs?), integer(I?), ground(T?) |
-    nrs_forb(RS?, Forb),
-    forb_conj(Forb?, ',\\ ', ['p'], [], Cs),
+procedure listed_idx(NRoleSpecs?, Integer?, Ints).
+listed_idx([], _, []).
+listed_idx([crs(_, _, _, _, _, _)|Rs], I, [I?|R?]) :- integer(I?), ground(Rs?) |
     I1 := I? + 1,
-    forb_lines(Rs?, I1?, T?, R1),
-    proviso_line(Cs?, RS?, I?, R1?, R).
+    listed_idx(Rs?, I1?, R).
+listed_idx([rs(_, _, _, _, _)|Rs], I, R?) :- integer(I?), ground(Rs?) |
+    I1 := I? + 1,
+    listed_idx(Rs?, I1?, R).
+
+% Whether the agent of the agent role A is in the extent of the listed role
+% LR: its base requires the atom of LR's predicate naming A, forbids it, or
+% does neither.
+procedure membership(Integer?, NRoleSpec?, NRoleSpecs?, Mem).
+membership(A, crs(listed(I, Rho, Us), _, _, _, _, _), Rs, M?) :-
+    integer(A?), integer(I?), ground(Rho?), ground(Us?), ground(Rs?) |
+    nth_nrs(Rs?, I?, B),
+    mem_of(B?, atom(Rho?, [role(A?)|Us?]), M).
+membership(_, rs(_, _, _, _, _), _, m_out).
+
+procedure mem_of(NRoleSpec?, Atom?, Mem).
+mem_of(B, At, M?) :- ground(B?), ground(At?) |
+    nrs_req(B?, Rq),
+    plain_mults(Rq?, RqA),
+    atoms_member(RqA?, At?, In),
+    nrs_forb(B?, Fb),
+    plain_mults(Fb?, FbA),
+    atoms_member(FbA?, At?, Out),
+    mem_of1(In?, Out?, M).
+
+procedure mem_of1(Ans?, Ans?, Mem).
+mem_of1(yes, _, m_in).
+mem_of1(no, yes, m_out).
+mem_of1(no, no, m_open).
+
+% mems(Ls, A, Rs, K, U): the listed roles among Ls whose extent holds the
+% agent of A, K, and those of which the schema does not say, U.
+procedure mems(Ints?, Integer?, NRoleSpecs?, Ints, Ints).
+mems([], _, _, [], []).
+mems([L|Ls], A, Rs, K?, U?) :- integer(L?), ground(Ls?), integer(A?), ground(Rs?) |
+    nth_nrs(Rs?, L?, LR),
+    membership(A?, LR?, Rs?, M),
+    mems(Ls?, A?, Rs?, K1, U1),
+    mems1(M?, L?, K1?, U1?, K, U).
+
+procedure mems1(Mem?, Integer?, Ints?, Ints?, Ints, Ints).
+mems1(m_in, L, K1, U1, [L?|K1?], U1?).
+mems1(m_out, _, K1, U1, K1?, U1?).
+mems1(m_open, L, K1, U1, K1?, [L?|U1?]).
+
+procedure ints_app(Ints?, Ints?, Ints).
+ints_app([], T, T?).
+ints_app([X|Xs], T, [X?|R?]) :- ints_app(Xs?, T?, R).
+
+procedure lists_app(IntLists?, IntLists?, IntLists).
+lists_app([], T, T?).
+lists_app([X|Xs], T, [X?|R?]) :- lists_app(Xs?, T?, R).
+
+procedure with_x(IntLists?, Integer?, IntLists).
+with_x([], _, []).
+with_x([S|Ss], X, [[X?|S?]|R?]) :- integer(X?), ground(Ss?) | with_x(Ss?, X?, R).
+
+% Every subset of a list, those without its first member first, each in the
+% order of the list.
+procedure subsets(Ints?, IntLists).
+subsets([], [[]]).
+subsets([X|Xs], R?) :- integer(X?), ground(Xs?) |
+    subsets(Xs?, S),
+    subsets1(S?, X?, R).
+
+procedure subsets1(IntLists?, Integer?, IntLists).
+subsets1(S, X, R?) :- ground(S?), integer(X?) |
+    with_x(S?, X?, WX),
+    lists_app(S?, WX?, R).
+
+% The join of what the roles Is add and delete (def:compile): the atoms of
+% each, in role order, each once.
+procedure mults_union(Mults?, Mults?, Mults).
+mults_union(A, [], A?).
+mults_union(A, [M|Ms], R?) :- ground(A?), ground(M?), ground(Ms?) |
+    mults_member(A?, M?, In),
+    mults_union1(In?, A?, M?, Ms?, R).
+
+procedure mults_union1(Ans?, Mults?, Mult?, Mults?, Mults).
+mults_union1(yes, A, _, Ms, R?) :- ground(A?), ground(Ms?) | mults_union(A?, Ms?, R).
+mults_union1(no, A, M, Ms, R?) :- ground(A?), ground(M?), ground(Ms?) |
+    mults_app(A?, [M?], A1),
+    mults_union(A1?, Ms?, R).
+
+procedure join_one(NRoleSpec?, Ints?, NRoleSpecs?, Mults?, Mults?, Mults, Mults).
+join_one(RS, Is, Rs, A, D, RA?, RD?) :-
+    ground(RS?), ground(Is?), ground(Rs?), ground(A?), ground(D?) |
+    nrs_add(RS?, P),
+    nrs_del(RS?, M),
+    mults_union(A?, P?, A1),
+    mults_union(D?, M?, D1),
+    join_roles(Is?, Rs?, A1?, D1?, RA, RD).
+
+procedure join_roles(Ints?, NRoleSpecs?, Mults?, Mults?, Mults, Mults).
+join_roles([], _, A, D, A?, D?).
+join_roles([I|Is], Rs, A, D, RA?, RD?) :-
+    integer(I?), ground(Is?), ground(Rs?), ground(A?), ground(D?) |
+    nth_nrs(Rs?, I?, RS),
+    join_one(RS?, Is?, Rs?, A?, D?, RA, RD).
+
+% c'_S := (c_S \ D) u A, with the side condition T after it.
+procedure latex_assign(Mults?, Mults?, Chunks?, Chunks?, Chunks).
+latex_assign(Add, Del, S, T, ['c\'_'|R?]) :-
+    ground(Add?), ground(Del?), ground(S?), ground(T?) |
+    update_rhs(Add?, Del?, ',', S?, T?, R1),
+    chunks_app(S?, [' := '|R1?], R).
+
+procedure assign_joined(Ints?, NRoleSpecs?, Chunks?, Chunks?, Chunks).
+assign_joined(Is, Rs, S, T, R?) :- ground(Is?), ground(Rs?), ground(S?), ground(T?) |
+    join_roles(Is?, Rs?, [], [], A, D),
+    latex_assign(A?, D?, S?, T?, R).
+
+% \mathrm{ext}_c(pi) of the listed role L.
+procedure ext_of(Integer?, NRoleSpecs?, Chunks?, Chunks).
+ext_of(L, Rs, T, R?) :- integer(L?), ground(Rs?), ground(T?) |
+    nth_nrs(Rs?, L?, LR),
+    latex_ext(LR?, L?, T?, R).
+
+% Items of a side condition, joined by a comma and a control space, after a
+% \qquad and in parentheses; none where there is no item.
+procedure join_items(ChunkLists?, Chunks?, Chunks).
+join_items([], T, T?).
+join_items([C], T, R?) :- ground(C?), ground(T?) | chunks_app(C?, T?, R).
+join_items([C, D|Cs], T, R?) :- ground(C?), ground(D?), ground(Cs?), ground(T?) |
+    join_items([D?|Cs?], T?, R1),
+    chunks_app(C?, [',\\ '|R1?], R).
+
+procedure side(ChunkLists?, Chunks).
+side([], []).
+side([C|Cs], [' \\qquad ('|R?]) :- ground(C?), ground(Cs?) | join_items([C?|Cs?], [')'], R).
+
+% The membership of a term W (a role's name, or q) in the extents of the
+% listed roles Ls, those of S holding it and the rest not.
+procedure mem_items(Ints?, Ints?, Chunks?, NRoleSpecs?, ChunkLists?, ChunkLists).
+mem_items([], _, _, _, T, T?).
+mem_items([L|Ls], S, W, Rs, T, [I?|R?]) :-
+    integer(L?), ground(Ls?), ground(S?), ground(W?), ground(Rs?), ground(T?) |
+    ints_member(S?, L?, In),
+    mem_rel(In?, Op),
+    ext_of(L?, Rs?, [], E),
+    chunks_app(Op?, E?, OE),
+    chunks_app(W?, OE?, I),
+    mem_items(Ls?, S?, W?, Rs?, T?, R).
+
+procedure mem_rel(Ans?, Chunks).
+mem_rel(yes, [' \\in ']).
+mem_rel(no, [' \\notin ']).
+
+% The lines of the agent of the agent role A, one per case of the listed
+% roles U its schema does not say whether hold it.
+procedure agent_case_lines(IntLists?, Integer?, Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists).
+agent_case_lines([], _, _, _, _, T, T?).
+agent_case_lines([S|Ss], A, K, U, Rs, T, [L?|R?]) :-
+    ground(S?), ground(Ss?), integer(A?), ground(K?), ground(U?), ground(Rs?), ground(T?) |
+    latex_role(A?, [], W),
+    mem_items(U?, S?, W?, Rs?, [], Its),
+    side(Its?, Sd),
+    ints_app(K?, S?, KS),
+    latex_sub(A?, Sub),
+    assign_joined([A?|KS?], Rs?, Sub?, Sd?, L),
+    agent_case_lines(Ss?, A?, K?, U?, Rs?, T?, R).
+
+procedure agent_lines1(Ints?, Ints?, Integer?, Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists).
+agent_lines1(K, U, A, As, Ls, Rs, T, R?) :-
+    ground(K?), ground(U?), integer(A?), ground(As?), ground(Ls?), ground(Rs?), ground(T?) |
+    subsets(U?, Ss),
+    agent_lines(As?, Ls?, Rs?, T?, R1),
+    agent_case_lines(Ss?, A?, K?, U?, Rs?, R1?, R).
+
+procedure agent_lines(Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists).
+agent_lines([], _, _, T, T?).
+agent_lines([A|As], Ls, Rs, T, R?) :-
+    integer(A?), ground(As?), ground(Ls?), ground(Rs?), ground(T?) |
+    mems(Ls?, A?, Rs?, K, U),
+    agent_lines1(K?, U?, A?, As?, Ls?, Rs?, T?, R).
+
+% The agent roles whose agent may be in the extent of a listed role, which
+% the lines of q leave out.
+procedure x_agents(Ints?, Ints?, NRoleSpecs?, Ints).
+x_agents([], _, _, []).
+x_agents([A|As], Ls, Rs, R?) :- integer(A?), ground(As?), ground(Ls?), ground(Rs?) |
+    mems(Ls?, A?, Rs?, K, U),
+    x_agents(As?, Ls?, Rs?, R1),
+    x_agent1(K?, U?, A?, R1?, R).
+
+procedure x_agent1(Ints?, Ints?, Integer?, Ints?, Ints).
+x_agent1([], [], _, T, T?).
+x_agent1(K, U, A, T, [A?|T?]) :- otherwise, ground(K?), ground(U?), integer(A?), ground(T?) | true.
+
+procedure neq_items(Ints?, ChunkLists?, ChunkLists).
+neq_items([], T, T?).
+neq_items([A|As], T, [I?|R?]) :- integer(A?), ground(As?), ground(T?) |
+    latex_role(A?, [], W),
+    chunks_app(['q \\neq '], W?, I),
+    neq_items(As?, T?, R).
+
+% The lines of q, one per nonempty set S of the listed roles whose extents
+% hold it.
+procedure q_lines1(IntLists?, Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists).
+q_lines1([], _, _, _, T, T?).
+q_lines1([[]|Ss], Ls, X, Rs, T, R?) :- ground(Ss?), ground(Ls?), ground(X?), ground(Rs?), ground(T?) |
+    q_lines1(Ss?, Ls?, X?, Rs?, T?, R).
+q_lines1([[I|Is]|Ss], Ls, X, Rs, T, [L?|R?]) :-
+    integer(I?), ground(Is?), ground(Ss?), ground(Ls?), ground(X?), ground(Rs?), ground(T?) |
+    neq_items(X?, [], Ne),
+    mem_items(Ls?, [I?|Is?], ['q'], Rs?, Ne?, Its),
+    side(Its?, Sd),
+    assign_joined([I?|Is?], Rs?, ['q'], Sd?, L),
+    q_lines1(Ss?, Ls?, X?, Rs?, T?, R).
+
+procedure q_lines(Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists).
+q_lines(Ls, As, Rs, T, R?) :- ground(Ls?), ground(As?), ground(Rs?), ground(T?) |
+    subsets(Ls?, Ss),
+    x_agents(As?, Ls?, Rs?, X),
+    q_lines1(Ss?, Ls?, X?, Rs?, T?, R).
+
+% The proviso conjuncts of the agent roles As, in role order: the required
+% atoms (W = req) or the forbidden ones (W = forb).
+Which ::= req ; forb.
+
+procedure role_conj(Which?, NRoleSpec?, Chunks?, ChunkLists?, ChunkLists).
+role_conj(req, RS, S, T, R?) :- ground(RS?), ground(S?), ground(T?) |
+    nrs_req(RS?, Q),
+    req_conj(Q?, ',', S?, T?, R).
+role_conj(forb, RS, S, T, R?) :- ground(RS?), ground(S?), ground(T?) |
+    nrs_forb(RS?, F),
+    forb_conj(F?, ',', S?, T?, R).
+
+procedure agent_conjs(Ints?, Which?, NRoleSpecs?, ChunkLists?, ChunkLists).
+agent_conjs([], _, _, T, T?).
+agent_conjs([A|As], W, Rs, T, R?) :-
+    integer(A?), ground(As?), ground(W?), ground(Rs?), ground(T?) |
+    nth_nrs(Rs?, A?, RS),
+    latex_sub(A?, S),
+    agent_conjs(As?, W?, Rs?, T?, R1),
+    role_conj(W?, RS?, S?, R1?, R).
+
+% The line of conjuncts Cs, with the side condition Sd; none where there is
+% no conjunct.
+procedure conj_line(ChunkLists?, Chunks?, ChunkLists?, ChunkLists).
+conj_line([], _, T, T?).
+conj_line([C|Cs], Sd, T, [['\\text{provided } '|L?]|T?]) :-
+    ground(C?), ground(Cs?), ground(Sd?), ground(T?) |
+    join_conjs([C?|Cs?], Sd?, L).
+
+% The side condition of a listed role's conjunct: (q \in ext_c(pi)), where it
+% has one.
+procedure listed_side(ChunkLists?, Integer?, NRoleSpecs?, Chunks).
+listed_side([], _, _, []).
+listed_side([_|_], L, Rs, R?) :- integer(L?), ground(Rs?) |
+    ext_of(L?, Rs?, [], E),
+    chunks_app(['q \\in '], E?, I),
+    side([I?], R).
+
+% One listed role: its conjunct on the line of the agent roles', its side
+% condition after it.  Several: a line for the agent roles' conjuncts, then
+% one for each listed role's.
+procedure prov_lines(Ints?, Ints?, Which?, NRoleSpecs?, ChunkLists?, ChunkLists).
+prov_lines(As, [L], W, Rs, T, R?) :-
+    ground(As?), integer(L?), ground(W?), ground(Rs?), ground(T?) |
+    nth_nrs(Rs?, L?, LR),
+    agent_conjs(As?, W?, Rs?, [], CA),
+    prov_one(LR?, L?, CA?, W?, Rs?, T?, R).
+prov_lines(As, Ls, W, Rs, T, R?) :-
+    otherwise, ground(As?), ground(Ls?), ground(W?), ground(Rs?), ground(T?) |
+    agent_conjs(As?, W?, Rs?, [], CA),
+    listed_prov(Ls?, W?, Rs?, T?, R1),
+    conj_line(CA?, [], R1?, R).
+
+procedure prov_one(NRoleSpec?, Integer?, ChunkLists?, Which?, NRoleSpecs?, ChunkLists?, ChunkLists).
+prov_one(LR, L, CA, W, Rs, T, R?) :-
+    ground(LR?), integer(L?), ground(CA?), ground(W?), ground(Rs?), ground(T?) |
+    role_conj(W?, LR?, ['q'], [], CL),
+    prov_one1(CL?, L?, CA?, Rs?, T?, R).
+
+procedure prov_one1(ChunkLists?, Integer?, ChunkLists?, NRoleSpecs?, ChunkLists?, ChunkLists).
+prov_one1(CL, L, CA, Rs, T, R?) :-
+    ground(CL?), integer(L?), ground(CA?), ground(Rs?), ground(T?) |
+    listed_side(CL?, L?, Rs?, Sd),
+    chunklists_app(CA?, CL?, Cs),
+    conj_line(Cs?, Sd?, T?, R).
+
+procedure listed_prov(Ints?, Which?, NRoleSpecs?, ChunkLists?, ChunkLists).
+listed_prov([], _, _, T, T?).
+listed_prov([L|Ls], W, Rs, T, R?) :-
+    integer(L?), ground(Ls?), ground(W?), ground(Rs?), ground(T?) |
+    nth_nrs(Rs?, L?, LR),
+    listed_prov(Ls?, W?, Rs?, T?, R1),
+    prov_one(LR?, L?, [], W?, Rs?, R1?, R).
+
+procedure chunklists_app(ChunkLists?, ChunkLists?, ChunkLists).
+chunklists_app([], T, T?).
+chunklists_app([C|Cs], T, [C?|R?]) :- chunklists_app(Cs?, T?, R).
 
 % The name terms sigma.y of a schema: those occurring among the arguments
 % of its listed roles and of its atoms, with the name terms within them, that
@@ -589,14 +856,21 @@ latex_app_fresh(Rs, PRs, Es0, Cn, T, R?) :-
 
 procedure latex_app_roles(NRoleSpecs?, NameTerms?, Constraint?, Chunks?, Chunks).
 latex_app_roles(Rs, Es, Cn, T, R?) :- ground(Rs?), ground(Es?), ground(Cn?), ground(T?) |
+    agent_idx(Rs?, 1, As),
+    listed_idx(Rs?, 1, Ls),
     guard_roles(Rs?, 1, [], G),
     latex_guard(G?, [], GL),
     constraint_line(Cn?, [GL?], LC),
     fresh_lines(Es?, LC?, L3),
-    forb_lines(Rs?, 1, L3?, L2),
-    req_lines(Rs?, 1, L2?, L1),
-    assign_lines(Rs?, 1, L1?, Ls),
-    join_lines(Ls?, ['\\end{align*}'|T?], R).
+    gen_lines(As?, Ls?, Rs?, L3?, Lines),
+    join_lines(Lines?, ['\\end{align*}'|T?], R).
+
+procedure gen_lines(Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists).
+gen_lines(As, Ls, Rs, T, R?) :- ground(As?), ground(Ls?), ground(Rs?), ground(T?) |
+    prov_lines(As?, Ls?, forb, Rs?, T?, L2),
+    prov_lines(As?, Ls?, req, Rs?, L2?, L1),
+    q_lines(Ls?, As?, Rs?, L1?, L0),
+    agent_lines(As?, Ls?, Rs?, L0?, R).
 
 % --- The display of one schema, in its form ------------------------------
 % A schema of agent roles, written schema and with no name term, in the
@@ -638,8 +912,7 @@ latex_contract(K, [S|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
 
 % --- Entry points ----------------------------------------------------------
 % The checker first: a contract that is malformed, that is not syntactically
-% grassroots (def:syntactically-grassroots), or whose answer rests on the
-% values the contract fixes, is not compiled at all.  A contract
+% grassroots (def:syntactically-grassroots) is not compiled at all.  A contract
 % grassroots with wards is compiled as a syntactically grassroots one: the
 % compilation of Section 5 uses nothing of the introductory act, and its
 % realisation is taken as GSC's (GAI's appendix "Contracts with Wards", the
@@ -671,16 +944,6 @@ procedure not_compiled(Constant?).
 not_compiled(Nm) :- ground(Nm?) |
     send_to_user(['% not compiled:', Nm?,
                   'is not syntactically grassroots; check_named gives the faults.']).
-
-% def:compile is defined for a syntactically grassroots contract (GSC, the
-% sentence after def:syntactically-grassroots), and a contract for which
-% that rests on the values it fixes, which its term does not carry, is not
-% compiled.
-procedure not_compiled_unsettled(Constant?).
-not_compiled_unsettled(Nm) :- ground(Nm?) |
-    send_to_user(['% not compiled:', Nm?,
-                  'is not settled to be syntactically grassroots, def:unobstructed resting on the values it fixes, which its term does not carry;',
-                  'check_named gives the faults.']).
 
 % A malformed contract is not compiled, and the message names each fault the
 % checker found, schema and role, in the papers' words: GAI's appendix
@@ -764,6 +1027,11 @@ malformed_lines([multiplicity_not_numeric(S, I, _)|Fs], T,
                  'carries a multiplicity that is not a number;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+malformed_lines([multiplicity_not_whole(S, I, _)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a multiplicity that is not a positive whole number;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
 malformed_lines([constraint_not_numeric(S, _)|Fs], T,
                 [S?, 'carries a constraint on an argument that is not a number;'|R?]) :-
     ground(Fs?), ground(T?) |
@@ -788,7 +1056,6 @@ compile_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C
     send_to_user(L?).
 compile_on(not_grassroots(_), Nm, _) :- ground(Nm?) | not_compiled(Nm?).
 compile_on(malformed(Fs), Nm, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
-compile_on(unsettled(_), Nm, _) :- ground(Nm?) | not_compiled_unsettled(Nm?).
 
 procedure compile_checked(Constant?, NDeclared?).
 compile_checked(Nm, D) :- ground(Nm?), ground(D?) |
@@ -826,7 +1093,6 @@ compile_s_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, Sn, C) :-
     emit_schema(S?, yes, Sn?).
 compile_s_on(not_grassroots(_), Nm, _, _) :- ground(Nm?) | not_compiled(Nm?).
 compile_s_on(malformed(Fs), Nm, _, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
-compile_s_on(unsettled(_), Nm, _, _) :- ground(Nm?) | not_compiled_unsettled(Nm?).
 
 procedure compile_s_checked(Constant?, Constant?, NDeclared?).
 compile_s_checked(Nm, Sn, D) :- ground(Nm?), ground(Sn?), ground(D?) |

@@ -12,32 +12,46 @@
 %% and bob, their persons scripted and paced on their screens (../self.glp), and
 %% gives each person's log, the views and the notices, with gave(K, A) where
 %% the person answers an approval question, and the network's log of the
-%% cargoes it carries.  swap(P, Q, U, V): P gives a coin of U and takes one of
-%% V, Q the converse; redeem(P, Q, R): P gives Q a coin of Q and takes a coin
-%% of R that Q holds.
+%% cargoes it carries.
 %%
-%% Each play opens alike: each person establishes their identity and mints a
-%% coin of their own, each a class of one participant, applied at once; each
+%% GC's schemas carry amounts, the numbers act schemas allow (Currencies
+%% 72cf826b; GSC, Section 3.2 and Appendix "Numbers in Act Schemas"): mint mints
+%% k coins, a swap exchanges k coins for k1, a payment pays k, and a redemption
+%% redeems one coin.  Each amount is a numeric variable bound by the
+%% schema-binding, so the request names it and the request form takes it, and
+%% an atom with the multiplicity k is added or deleted k times (vGLP 660834d,
+%% Section 5.4, "Act schemas as local specifications": "Every other numeric
+%% variable is bound by the schema-binding, as a speech-act variable is, and a
+%% request names it, so the request form takes it"; "a multiplicity k deleting
+%% or adding k copies").  The classes, as the platform names them: mint(P, K),
+%% P mints K coins of P; swap(P, Q, U, K, V, K1), P gives K coins of U and
+%% takes K1 of V, Q the converse; pay(P, Q, K), P pays Q K coins of Q;
+%% redeem(P, Q, R), P gives Q a coin of Q and takes a coin of R that Q holds.
+%%
+%% Each play opens alike: each person establishes their identity and mints
+%% coins of their own, each a class of one participant, applied at once; each
 %% comes to know the other's agent; and alice requests meeting bob, who is
 %% asked and answers yes, and once it commits each knows the other.
 %%
-%% play_pay_swap: alice requests swapping her coin for bob's, swap(alice, bob,
-%%   alice, bob); bob is asked and answers yes, and it commits; alice then pays
-%%   bob his coin back, pay(alice, bob), guarded by her, and bob's machine
-%%   votes yes, unasked.
-%% play_redeem: swapped as above, alice requests the swap back, swap(alice,
-%%   bob, bob, alice), whose class redeem(alice, bob, alice) and redeem(bob,
-%%   alice, bob) also determine, each schema-binding a part with the people in
-%%   its marked roles as its guard set (vGLP, Section 5.4, "Act schemas as
-%%   local specifications"): the swaps' part, guarded by alice and bob, and the
-%%   two redeems', guarded by alice and by bob.  Her machine proposes the part
-%%   her request names, the swaps', which asks bob; he answers yes and it
-%%   commits.  She swaps again and requests the swap back again; her machine
-%%   now proposes her redeem's part, the one it has proposed less recently
-%%   (Section 5.4, "The compilation"), which asks nobody, and bob's machine
-%%   votes yes.
-%% play_busy: bob having minted twice, swapped as above and alice minted
-%%   again, alice requests a swap and bob, asked, leaves his approval question
+%% play_pay_swap: alice mints 2 coins and bob 3; alice requests swapping 2 of
+%%   hers for 3 of bob's, swap(alice, bob, alice, 2, bob, 3); bob is asked and
+%%   answers yes, and it commits; alice then pays bob 2 of his coins back,
+%%   pay(alice, bob, 2), guarded by her, and bob's machine votes yes, unasked.
+%% play_redeem: each mints one coin and they swap them one for one,
+%%   swap(alice, bob, alice, 1, bob, 1); alice then requests the swap back,
+%%   swap(alice, bob, bob, 1, alice, 1), whose
+%%   class redeem(alice, bob, alice) and redeem(bob, alice, bob) also
+%%   determine, a redemption moving one coin each way, each schema-binding a
+%%   part with the people in its marked roles as its guard set (vGLP, Section
+%%   5.4, "Act schemas as local specifications"): the swaps' part, guarded by
+%%   alice and bob, and the two redeems', guarded by alice and by bob.  Her
+%%   machine proposes the part her request names, the swaps', which asks bob;
+%%   he answers yes and it commits.  She swaps again and requests the swap back
+%%   again; her machine now proposes her redeem's part, the one it has
+%%   proposed less recently (Section 5.4, "The compilation"), which asks
+%%   nobody, and bob's machine votes yes.
+%% play_busy: each having minted 2 coins and swapped one coin for one,
+%%   alice requests a second swap and bob, asked, leaves his approval question
 %%   open, alice's machine holding her attempt prepared; bob requests paying
 %%   alice her coin back, and alice's machine holds the pay's start waiting,
 %%   her lock set by her swap, which has priority over the pay, so it wounds
@@ -45,22 +59,22 @@
 %%   wound-wait); bob answers alice's approval question no, his vote no
 %%   declined, and her swap aborts, bob its refuser; alice's machine then takes
 %%   the pay's start, votes yes, and the pay commits at its first attempt.
-%% play_declined: alice requests a swap for a coin of carol's, which bob does
-%%   not hold; bob's machine, its state not in the domain of its part, votes
-%%   no without asking his person, unable, the coin it lacks named, and it
-%%   aborts at both; alice's screen shows the notice of her approval ended by
-%%   bob's refusal.
+%% play_declined: alice requests swapping a coin of hers for a coin of
+%%   carol's, which bob does not hold; bob's machine, its state not in the
+%%   domain of its part, votes no without asking his person, unable, the coin
+%%   it lacks named, and it aborts at both; alice's screen shows the notice of
+%%   her approval ended by bob's refusal.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
 Class    ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer)
-           ; redeem(Peer, Peer, Peer).
+           ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
+           ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
 Proposal ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer)
-           ; redeem(Peer, Peer, Peer).
+           ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
+           ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
 Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable(List(Atom), List(Atom)).
@@ -89,70 +103,68 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 exported procedure play_pay_swap(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_pay_swap(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([A2], propose(mint(A2?))), wait(holds(coin(alice))),
+          own([A2], propose(mint(A2?, 2))), wait(has(coin(alice), 2)),
           req(known(bob)), wait(known(bob)),
           own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, bob))),
-          wait(holds(coin(bob))),
-          own([A6], propose(pay(A6?, bob)))],
+          own([A4, A5], propose(swap(A4?, bob, A5?, 2, bob, 3))),
+          wait(has(coin(bob), 3)),
+          own([A6], propose(pay(A6?, bob, 2)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          own([B2], propose(mint(B2?))), wait(holds(coin(bob))),
+          own([B2], propose(mint(B2?, 3))), wait(has(coin(bob), 3)),
           req(known(alice)), wait(known(alice)),
           approval(meet(alice, bob), yes),
-          approval(swap(alice, bob, alice, bob), yes)],
+          approval(swap(alice, bob, alice, 2, bob, 3), yes)],
          LA, LB, N).
 
 exported procedure play_redeem(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_redeem(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([A2], propose(mint(A2?))), wait(holds(coin(alice))),
+          own([A2], propose(mint(A2?, 1))), wait(holds(coin(alice))),
           req(known(bob)), wait(known(bob)),
           own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, bob))),
+          own([A4, A5], propose(swap(A4?, bob, A5?, 1, bob, 1))),
           wait(holds(coin(bob))),
-          own([A6, A7], propose(swap(A6?, bob, bob, A7?))),
+          own([A6, A7], propose(swap(A6?, bob, bob, 1, A7?, 1))),
           wait(holds(coin(alice))),
-          own([A8, A9], propose(swap(A8?, bob, A9?, bob))),
+          own([A8, A9], propose(swap(A8?, bob, A9?, 1, bob, 1))),
           wait(holds(coin(bob))),
-          own([A10, A11], propose(swap(A10?, bob, bob, A11?)))],
+          own([A10, A11], propose(swap(A10?, bob, bob, 1, A11?, 1)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          own([B2], propose(mint(B2?))), wait(holds(coin(bob))),
+          own([B2], propose(mint(B2?, 1))), wait(holds(coin(bob))),
           req(known(alice)), wait(known(alice)),
           approval(meet(alice, bob), yes),
-          approval(swap(alice, bob, alice, bob), yes),
-          approval(swap(alice, bob, bob, alice), yes),
-          approval(swap(alice, bob, alice, bob), yes)],
+          approval(swap(alice, bob, alice, 1, bob, 1), yes),
+          approval(swap(alice, bob, bob, 1, alice, 1), yes),
+          approval(swap(alice, bob, alice, 1, bob, 1), yes)],
          LA, LB, N).
 
 exported procedure play_busy(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_busy(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([A2], propose(mint(A2?))), wait(holds(coin(alice))),
+          own([A2], propose(mint(A2?, 2))), wait(has(coin(alice), 2)),
           req(known(bob)), wait(known(bob)),
           own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, bob))),
+          own([A4, A5], propose(swap(A4?, bob, A5?, 1, bob, 1))),
           wait(holds(coin(bob))),
-          own([A6], propose(mint(A6?))), wait(holds(coin(alice))),
-          own([A7, A8], propose(swap(A7?, bob, A8?, bob)))],
+          own([A6, A7], propose(swap(A6?, bob, A7?, 1, bob, 1)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          own([B2], propose(mint(B2?))), wait(has(coin(bob), 1)),
-          own([B3], propose(mint(B3?))), wait(has(coin(bob), 2)),
+          own([B2], propose(mint(B2?, 2))), wait(has(coin(bob), 2)),
           req(known(alice)), wait(known(alice)),
           approval(meet(alice, bob), yes),
-          approval(swap(alice, bob, alice, bob), yes),
-          wait(asked(swap(alice, bob, alice, bob))),
-          own([B4], propose(pay(B4?, alice))),
+          approval(swap(alice, bob, alice, 1, bob, 1), yes),
+          wait(asked(swap(alice, bob, alice, 1, bob, 1))),
+          own([B3], propose(pay(B3?, alice, 1))),
           wait(asking),
-          approval(swap(alice, bob, alice, bob), no)],
+          approval(swap(alice, bob, alice, 1, bob, 1), no)],
          LA, LB, N).
 
 exported procedure play_declined(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_declined(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([A2], propose(mint(A2?))), wait(holds(coin(alice))),
+          own([A2], propose(mint(A2?, 1))), wait(holds(coin(alice))),
           req(known(bob)), wait(known(bob)),
           own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, carol)))],
+          own([A4, A5], propose(swap(A4?, bob, A5?, 1, carol, 1)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           req(known(alice)), wait(known(alice)),
           approval(meet(alice, bob), yes)],

@@ -709,19 +709,20 @@ uo_other([schema(establish, [],
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
 
 % ===========================================================================
-% Numbers (GSC, Section 3.2, and the appendix Numbers in Act Schemas)
+% Values (GSC, Section 3.2, and the appendix Values in Act Schemas)
 % ===========================================================================
-% "An argument of an atom may be a number or a numeric variable, a schema may
-% carry a constraint on its numeric variables, which every binding
-% satisfies, and an atom added or deleted may carry a multiplicity ...  A
-% number names no agent, so the conditions below do not concern them."  In
-% the term form of Currencies' GB.glp: num(x) a numeric variable, or a number
+% "Act schemas allow values of any type: an argument of an atom may be a
+% value or a value variable, a schema may carry a constraint on its value
+% variables, which every binding satisfies, and an atom added or deleted may
+% carry a multiplicity, a count of copies and so a positive whole number ...
+% A value names no agent, so the conditions below do not concern it."  In
+% the term form of Currencies' GB.glp: num(x) a value variable, or a number
 % where x is one; times(num(k), A) the atom A with the multiplicity k;
 % nschema(Name, Vars, Constraint, Roles) a schema with a constraint, over
-% gt, le, succ and or.  A contract fixes a countable set V_C of numbers, its
-% values (def:numbers); the term form carries none, so the checker does not
-% know them.  The fixtures are the checker's and certify nothing of GB,
-% Currencies' (programs/currencies/bonds/GB.glp).
+% gt, le, succ and or.  A binding sends a value variable to a value, a
+% multiplicity to a positive whole number (def:binding-numbers).  The
+% fixtures are the checker's and certify nothing of GB, Currencies'
+% (programs/currencies/bonds/GB.glp).
 %
 % establish(Alice?) : +identity
 % meet(Alice?, Bob?) : identity, +knows(Bob)    identity, +knows(Alice)
@@ -786,13 +787,12 @@ nm_supplied([schema(establish, [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(score, [num(5)])], []),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(score, [num(5)])], [])])]).
 
-% --- a number forbidden, unsettled -----------------------------------------
+% --- negative: a value forbidden, added at a binding of a successor --------
 % meet forbids date(0) at Alice, and advance, unguarded and of arity one,
-% adds date(t1) there at a binding satisfying t1 = t + 1.  Such a binding
-% sending t1 to 0 sends t to -1, and whether -1 is a value of the contract
-% (def:numbers) its term does not say, so whether clause 2 of
-% def:unobstructed holds is unsettled: unsettled(meet, 1, date(0),
-% added_by(advance, 1, date(t1))).
+% adds date(t1) there at a binding satisfying t1 = t + 1.  The binding
+% sending t1 to 0 and t to -1, a value, satisfies it, Bob in no role, so
+% clause 2 of def:unobstructed fails: obstructed(meet, 1, date(0),
+% blocked_by(advance, 1, date(t1))).
 procedure nm_blocked(NContract).
 nm_blocked([schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
@@ -898,9 +898,8 @@ nm_intro_var(C?) :-
          [rs(guarded, [atom(score, [num(k)])], [], [], [])])], C).
 
 % score(Alice?; k) | k > 3 : +score(k) adds score(n) where the introduction
-% sends n to a value above 3.  Whether the contract has one its term does
-% not say, and the verdict is unsettled: unsettled(meet, 1, score(n),
-% supplied_by(score, score(k))), and at role 2 the same.
+% sends n to a value above 3, which it chooses (the appendix "Values in Act
+% Schemas"): syntactically grassroots.
 procedure nm_intro_var_bounded(NContract).
 nm_intro_var_bounded(C?) :-
     nm_var_meet(B),
@@ -920,6 +919,44 @@ nm_once(C?) :-
     ncontract_app(B?,
       [schema(score, [num(k), num(j)],
          [rs(guarded, [atom(score, [num(k)])], [], [], [atom(score, [num(j)])])])], C).
+
+% --- a multiplicity constrained below one --------------------------------
+% meet forbids flag at Alice, and raise(Alice; k) | k <= 0 : identity, +k.flag,
+% unguarded and of arity one, adds flag at no binding, a multiplicity being
+% a positive whole number at every binding (def:binding-numbers): clause 2 of
+% def:unobstructed holds and the contract is syntactically grassroots
+% (nm_mult_unsat).  Under k <= 1 the binding sending k to 1 adds flag at
+% Alice, Bob in no role, and clause 2 fails (nm_mult_sat).
+procedure nm_flag_meet(NContract).
+nm_flag_meet([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(flag, [])]),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
+
+procedure nm_mult_unsat(NContract).
+nm_mult_unsat(C?) :-
+    nm_flag_meet(B),
+    ncontract_app(B?,
+      [nschema(raise, [num(k)], le(num(k), num(0)),
+         [rs(unguarded, [times(num(k), atom(flag, []))], [], [atom(identity, [])], [])])], C).
+
+procedure nm_mult_sat(NContract).
+nm_mult_sat(C?) :-
+    nm_flag_meet(B),
+    ncontract_app(B?,
+      [nschema(raise, [num(k)], le(num(k), num(1)),
+         [rs(unguarded, [times(num(k), atom(flag, []))], [], [atom(identity, [])], [])])], C).
+
+% --- negative: a multiplicity that is no positive whole number -------------
+% mint(Alice?) : +0.coin(Alice): a multiplicity written as a number is a
+% positive whole number (def:numbers), so the contract is malformed:
+% multiplicity_not_whole(mint, 1, coin(Alice)).
+procedure nm_mult_zero(NContract).
+nm_mult_zero([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(mint, [],
+       [rs(guarded, [times(num(0), atom(coin, [role(1)]))], [], [atom(identity, [])], [])])]).
 
 % --- negative: a role that reads a number and changes nothing --------------
 % mature(Alice?, Bob; d, t) | d <= t : identity, knows(Bob), -bond(Bob, d), +coin(Bob)
@@ -989,7 +1026,7 @@ nm_added_deleted(C?) :-
          [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [atom(coin, [role(1)])],
                       [atom(identity, [])], [])])], C).
 
-% --- negative: the head and the numeric variables --------------------------
+% --- negative: the head and the value variables --------------------------
 % mint(Alice?; 5, k, k) | d > t : identity, date(t), +k.bond(Alice, d)
 % The head lists the number 5, which is no variable, and k twice, and leaves
 % out d and t, which the atoms and the constraint carry:
@@ -1088,6 +1125,9 @@ contract(nm_forbid_excludes, C?) :- nm_forbid_excludes(C).
 contract(nm_intro_var, C?) :- nm_intro_var(C).
 contract(nm_intro_var_bounded, C?) :- nm_intro_var_bounded(C).
 contract(nm_once, C?) :- nm_once(C).
+contract(nm_mult_unsat, C?) :- nm_mult_unsat(C).
+contract(nm_mult_sat, C?) :- nm_mult_sat(C).
+contract(nm_mult_zero, C?) :- nm_mult_zero(C).
 contract(uo_twice, C?) :- uo_twice(C).
 contract(uo_twice_free, C?) :- uo_twice_free(C).
 contract(uo_other, C?) :- uo_other(C).

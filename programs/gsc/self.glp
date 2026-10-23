@@ -3,7 +3,7 @@
 %
 % Decides def:syntactically-grassroots of /Grassroots/GSC, Section 3, one
 % definition for a contract of agent roles and listed roles (GSC ac7ad63),
-% with the numbers of its appendix "Numbers in Act Schemas" (app:numbers).
+% with the values of its appendix "Values in Act Schemas" (app:numbers).
 % The signed term, reflexive predicates and contracts with wards are GAI's
 % extension of the language (GAI's appendix "Contracts with Wards"; GSC
 % 83b951c and 1a2a5f3), held here for GAI.  The papers are the specification
@@ -38,8 +38,8 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % speech-act variable, a name term or a signed term: sgn(Y, I) is the signed
 % term sgn(y, pi_I) of def:schema, the speech act y signed by the agent in
 % role I.  Act schemas allow numbers (GSC, Section 3.2, the paragraph after
-% the example of def:schema, and def:numbers): num(X) is a numeric argument,
-% the numeric variable X where X is a name and the number X where X is a
+% the example of def:schema, and def:numbers): num(X) is a value argument,
+% the value variable X where X is a name and the number X where X is a
 % number.
 Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
         ; sgn(Constant, Integer) ; num(Constant).
@@ -47,19 +47,20 @@ Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
 
-% --- The numbers act schemas allow (GSC, def:numbers) ----------------------
-% "An argument of an atom may be a number or a numeric variable, a schema may
-% carry a constraint on its numeric variables, which every binding satisfies,
-% and an atom added or deleted may carry a multiplicity" (Section 3.2;
-% def:numbers and def:binding-numbers in the appendix).  times(K, A) is the
-% atom A with the multiplicity K, K a numeric argument; a constraint is true,
+% --- The values act schemas allow (GSC, def:numbers) -----------------------
+% "Act schemas allow values of any type: an argument of an atom may be a
+% value or a value variable, a schema may carry a constraint on its value
+% variables, which every binding satisfies, and an atom added or deleted may
+% carry a multiplicity, a count of copies and so a positive whole number"
+% (Section 3.2; def:numbers and def:binding-numbers in the appendix).  times(K, A) is the
+% atom A with the multiplicity K, K a value argument; a constraint is true,
 % gt(X, Y) (X > Y), le(X, Y) (X =< Y), succ(X, Y) (Y = X + 1) or or(C1, C2),
-% over numeric arguments, the term form of Currencies' GB.glp (b9369200).  A
+% over value arguments, the term form of Currencies' GB.glp (b9369200).  A
 % schema with a constraint is nschema(Name, Vars, Constraint, Roles), its
-% numeric variables listed in Vars with its other variables, in the order of
+% value variables listed in Vars with its other variables, in the order of
 % its head.  The contract as written is of the types N...; traceable
 % provenance and volition are decided on its plain form, plain_decl below,
-% the multiplicities and the constraint dropped and the numeric arguments
+% the multiplicities and the constraint dropped and the value arguments
 % kept, since "a number names no agent, so the conditions below do not
 % concern them" (GSC, ibid.; the appendix, after def:binding-numbers).
 % def:unobstructed is decided on the contract as written (unobstructed.glp):
@@ -70,10 +71,13 @@ Mult       ::= Atom ; times(Arg, Atom).
 Mults      ::= [] ; [Mult | Mults].
 Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
              ; or(Constraint, Constraint).
+% A schema's constraint, and the value variables it uses as multiplicities,
+% which a binding sends to positive whole numbers (def:binding-numbers).
+NumCtx     ::= nc(Constraint, Args).
 
 % The base of an argument, of a name term and of a role (def:role,
 % def:grounded).
-% A numeric argument names no agent, and its base, b_num, is the base of no
+% A value argument names no agent, and its base, b_num, is the base of no
 % role (GSC, Section 3.2); prov.glp and volition.glp pass it by.
 Base  ::= b_role(Integer) ; b_pvar(Constant) ; b_svar(Constant) ; b_num.
 Bases ::= [] ; [Base | Bases].
@@ -107,7 +111,7 @@ Contract  ::= [] ; [Schema | Contract].
 % schemas.
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
-% The contract as written, with the numbers act schemas allow: a role's four
+% The contract as written, with the values act schemas allow: a role's four
 % multisets may carry multiplicities, which def:schema admits on an atom
 % added or deleted and check.glp refuses elsewhere (multiplicity_not_added),
 % and a schema may be written nschema, with a constraint.  A contract with no
@@ -126,14 +130,12 @@ NDeclared  ::= NContract ; reflexive(Preds, NContract).
 % the conditions quantify over.  signed(S, P) is the image of a signed term,
 % the pair of the speech act S and the person P in its role
 % (def:binding).  undef marks a variable that a partial substitution leaves
-% unbound and occurs in no completed one.  nval(N) is the image of a numeric
-% argument that is the number N, or a numeric variable a binding sends to N;
-% nfree(X) is the image of the numeric variable X of the introductory act,
-% whose introduction (def:introduction) chooses the number among the values
-% the contract fixes (def:binding-numbers): the checker, not knowing them,
-% leaves it unchosen, and a match that rests on its value is maybe(S),
-% below.
-% A number names no agent (GSC, Section 3.2), so neither names anyone.
+% unbound and occurs in no completed one.  nval(N) is the image of a value
+% argument that is the number N, or a value variable a binding sends to N;
+% nfree(X) is the image of the value variable X of the introductory act
+% before its introduction chooses the value (def:binding-numbers;
+% unobstructed.glp, try_vals), and a match that rests on it is maybe(S),
+% below.  A value names no agent (GSC, Section 3.2), so neither names anyone.
 Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef
         ; nval(Constant) ; nfree(Constant).
 Vals  ::= [] ; [Val | Vals].
@@ -143,8 +145,8 @@ Bind     ::= bind(Arg, Val).
 Subst    ::= [] ; [Bind | Subst].
 Substs   ::= [] ; [Subst | Substs].
 Found    ::= bound(Val) ; free.
-% maybe(S): the atoms match under S if the introduction's numbers are chosen
-% so, which the checker does not choose (nfree above).
+% maybe(S): the atoms match under S if the introduction's values are chosen
+% so (nfree above).
 MatchRes ::= match(Subst) ; nomatch ; maybe(Subst).
 
 % --- What clause 2 of def:unobstructed is decided against ------------------
@@ -160,15 +162,16 @@ Preds ::= [] ; [Constant | Preds].
 % predicate of an atom the introductory act forbids at a role.
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
         ; listed_role(Constant, Integer, Atom).
-% What def:unobstructed asks whose answer rests on the values V_C the
-% contract fixes (def:numbers), which the contract's term does not carry, so
-% that the checker does not know them: whether the schema of arity one
+% What def:unobstructed asks whose answer rests on a value of the
+% introductory act that its introduction chooses (def:binding-numbers), asked
+% before the values are chosen and settled when they are (unobstructed.glp,
+% try_vals), so that no verdict carries one: whether the schema of arity one
 % Schema adds an atom Psi equal to the atom required at some binding
 % satisfying its constraint (supplied_by(Schema, Psi)); whether the schema
 % Schema adds at its role Role an atom Psi equal to the atom forbidden at
 % some binding satisfying its constraint that clause 2 does not excuse
 % (added_by(Schema, Role, Psi)); and whether the atom is required at all,
-% its multiplicity a numeric variable of the introductory act and no schema
+% its multiplicity a value variable of the introductory act and no schema
 % of arity one supplying it (multiplicity).
 Unsettled ::= supplied_by(Constant, Atom) ; added_by(Constant, Integer, Atom)
             ; multiplicity.
@@ -199,11 +202,13 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % (Section 3.2, def:numbers) requires of them: a multiplicity on an atom
 % added or deleted, so one on an atom required or forbidden and neither
 % added nor deleted is a fault multiplicity_not_added(Schema, Role, Atom); a
-% multiplicity a value or a numeric variable, so one that is no numeric
-% argument is a fault multiplicity_not_numeric(Schema, Role, Atom); and a
-% constraint on the schema's numeric variables, so an argument of the
-% constraint that is no numeric argument is a fault
-% constraint_not_numeric(Schema, Arg).  A numeric variable is a variable of
+% multiplicity a positive whole number or a value variable, so one that is
+% no value argument is a fault multiplicity_not_numeric(Schema, Role, Atom),
+% and one that is a number and no positive whole number a fault
+% multiplicity_not_whole(Schema, Role, Atom); and a
+% constraint on the schema's value variables, so an argument of the
+% constraint that is no value argument is a fault
+% constraint_not_numeric(Schema, Arg).  A value variable is a variable of
 % the schema, listed in its head like the others (not_in_head,
 % head_repeated), and a number in the head is no variable
 % (head_not_variable).
@@ -225,6 +230,7 @@ Fault ::= no_introductory_act
         ; listed_guarded(Constant, Integer)
         ; multiplicity_not_added(Constant, Integer, Atom)
         ; multiplicity_not_numeric(Constant, Integer, Atom)
+        ; multiplicity_not_whole(Constant, Integer, Atom)
         ; constraint_not_numeric(Constant, Arg)
         ; unsettled(Constant, Integer, Atom, Unsettled)
         ; unsettled_introduction(Constant).
@@ -276,30 +282,36 @@ IntroE ::= intro(Constant, Constant) ; no_intro.
 % appendix "Contracts with Wards", and syntactically_grassroots_with_wards
 % the verdict on one with them that is syntactically grassroots with wards by
 % def:sg-wards of CSSN's paper, naming what grassroots_with_wards names.
-% unsettled(Faults) is the verdict where every fault rests on the values the
-% contract fixes, which its term does not carry (Unsettled above).
 Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
           ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
           ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
-          ; malformed(Faults)
-          ; unsettled(Faults).
+          ; malformed(Faults).
 
 % The introductory acts of a contract, for inspection (def:introduction,
 % def:unobstructed): intro_act(Schema, Status), each schema that is an
 % introductory act, Status unobstructed where some introduction of it meets
-% def:unobstructed, unsettled(Faults) where none does and every fault of one
-% rests on the values the contract fixes, the faults of the first such, and
-% obstructed(Faults) otherwise, the faults of its first introduction.
-IntroStatus ::= unobstructed ; obstructed(Faults) ; unsettled(Faults).
+% def:unobstructed, and obstructed(Faults) otherwise, the faults of its first
+% introduction.
+IntroStatus ::= unobstructed ; obstructed(Faults).
 IntroAct    ::= intro_act(Constant, IntroStatus).
 IntroActs   ::= [] ; [IntroAct | IntroActs].
 
-% The answer to a question on numbers: yes, no, or unsettled where it rests on
-% the values the contract fixes (Unsettled above).  The value of a
-% numeric argument under a binding: the number, a variable it leaves free, or
-% the unchosen number of the introductory act (nfree).
+% The answer to a question on values: yes, no, or unsettled where it rests on
+% a value of the introductory act not yet chosen (Unsettled above).  The
+% value of an argument under a binding: the number, the value variable of
+% another schema that the binding leaves free, or the unchosen value of the
+% introductory act (nfree).
 Tri     ::= yes ; no ; unsettled.
-NumV    ::= known(Constant) ; free ; sym.
+NumV    ::= known(Constant) ; free(Arg) ; sym.
+% The search of an introduction's values (unobstructed.glp, try_vals): an
+% introduction meeting def:unobstructed (t_ok), the faults of the first that
+% does not (t_bad), or none at all (t_none); the act, its plain form, the
+% contract as written and plain, and its reflexive predicates (IntroCtx); and
+% the candidate values, every one and the positive whole ones (Cands).
+Try      ::= t_ok ; t_bad(Faults) ; t_none.
+IntroCtx ::= ic(Schema, NSchema, NContract, Contract, Preds).
+Nums     ::= [] ; [Constant | Nums].
+Cands    ::= cands(Nums, Nums).
 Supply  ::= supplied ; unsupplied ; supply_unsettled(Constant, Atom).
 Block   ::= blocked(Constant, Integer, Atom) ; clear
           ; block_unsettled(Constant, Integer, Atom).
@@ -475,10 +487,9 @@ apply_arg(S, A, V?) :- otherwise, ground(S?), ground(A?) |
     subst_lookup(S?, A?, F),
     unwrap_val(F?, V).
 
-% The image of a numeric argument (GSC, Section 3.2): the number itself, or
-% what the binding sends the numeric variable to; a numeric variable the
-% binding leaves free is the introductory act's, whose number its
-% introduction chooses (nfree).
+% The image of a value argument (GSC, Section 3.2): the number itself, or
+% what the binding sends the value variable to; one the binding leaves free
+% is written nfree, as a value not yet chosen.
 procedure apply_num(Subst?, Constant?, Val).
 apply_num(_, X, nval(X?)) :- number(X?) | true.
 apply_num(S, X, V?) :- otherwise, ground(S?), ground(X?) |
@@ -541,7 +552,7 @@ kind_ok(sgn(_, _), signed(_, _), yes).
 kind_ok(sgn(_, _), undef, no).
 kind_ok(sgn(_, _), nval(_), no).
 kind_ok(sgn(_, _), nfree(_), no).
-% A numeric argument matches a number and nothing else (match_num below).
+% A value argument matches a number and nothing else (match_num below).
 kind_ok(num(_), nval(_), yes).
 kind_ok(num(_), nfree(_), yes).
 kind_ok(num(_), person(_), no).
@@ -639,7 +650,7 @@ binding_ok(svar(_), _, _, _, yes).
 binding_ok(nterm(_), _, _, _, yes).
 % A signed term is no variable and is matched by its parts (match_sgn).
 binding_ok(sgn(_, _), _, _, _, no).
-% A numeric argument is matched by match_num, never here.
+% A value argument is matched by match_num, never here.
 binding_ok(num(_), _, _, _, no).
 
 procedure match_bind(Ans?, Arg?, Val?, Subst?, MatchRes).
@@ -675,12 +686,12 @@ match_sgn(_, _, undef, _, _, nomatch).
 match_sgn(_, _, nval(_), _, _, nomatch).
 match_sgn(_, _, nfree(_), _, _, nomatch).
 
-% A numeric argument num(X) matches a number by equality (def:unobstructed,
-% at a binding of its schema; GSC, Section 3.2): the number X matches the
-% number equal to it, and the numeric variable X is sent to the number it
-% meets, or matches it if the binding sends X to it already.  Against the
-% unchosen number of the introductory act (nfree) a number matches if the
-% introduction chooses it so, maybe(S); a numeric variable is sent to it.
+% A value argument num(X) matches a value by equality (def:unobstructed, at
+% a binding of its schema; def:binding-numbers): the number X matches the
+% number equal to it, and the value variable X is sent to the value it meets,
+% or matches it if the binding sends X to it already.  Against the unchosen
+% value of the introductory act (nfree) a number matches if the introduction
+% chooses it so, maybe(S); a value variable is sent to it.
 procedure match_num(Constant?, Val?, Subst?, MatchRes).
 match_num(X, V, S, R?) :- number(X?), ground(V?), ground(S?) | match_lit(X?, V?, S?, R).
 match_num(X, V, S, R?) :- otherwise, ground(X?), ground(V?), ground(S?) |
@@ -750,14 +761,26 @@ match_atom(atom(P, As), gatom(Q, Vs), Rs, S, R?) :-
     match_args(As?, Vs?, S?, Rs?, R).
 match_atom(atom(_, _), gatom(_, _), _, _, nomatch) :- otherwise | true.
 
-% all_unsettled(Fs, R): every fault of Fs is one whose answer rests on the
-% values the contract fixes (Unsettled above), so none of them settles that
-% the introduction fails.
+% all_unsettled(Fs, R): every fault of Fs is one whose answer rests on a
+% value the introduction has not yet chosen (Unsettled above), so none of them
+% settles that the introduction fails; some_unsettled(Fs, R): some fault is.
 procedure all_unsettled(Faults?, Ans).
 all_unsettled([], yes).
 all_unsettled([unsettled(_, _, _, _)|Fs], R?) :- all_unsettled(Fs?, R).
 all_unsettled([unsettled_introduction(_)|Fs], R?) :- all_unsettled(Fs?, R).
 all_unsettled([_|_], no) :- otherwise | true.
+
+% A positive whole number, the value of a multiplicity (def:numbers,
+% def:binding-numbers).
+procedure pos_whole(Constant?, Ans).
+pos_whole(X, yes) :- number(X?), X? >= 1, X? =:= floor(X?) | true.
+pos_whole(_, no) :- otherwise | true.
+
+procedure some_unsettled(Faults?, Ans).
+some_unsettled([], no).
+some_unsettled([unsettled(_, _, _, _)|_], yes).
+some_unsettled([unsettled_introduction(_)|_], yes).
+some_unsettled([_|Fs], R?) :- otherwise | some_unsettled(Fs?, R).
 
 % ---------------------------------------------------------------------------
 % The variables of a schema
@@ -826,7 +849,7 @@ filter_svars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     filter_svars(As?, R1),
     args_app(Ss?, R1?, R).
 
-% The numeric variables among arguments: num(X) with X a name, a number being
+% The value variables among arguments: num(X) with X a name, a number being
 % no variable (GSC, Section 3.2).
 procedure filter_nvars(Args?, Args).
 filter_nvars([], []).
@@ -1116,11 +1139,14 @@ nth_base(Rs, I, B?) :- ground(Rs?), integer(I?) |
     nth_rs(Rs?, I?, RS),
     role_base(RS?, I?, B).
 
-% The bases of arguments (def:grounded): a numeric argument has none, a
-% number naming no agent (GSC, Section 3.2).
+% The bases of arguments (def:grounded at GSC 1934846): an agent role, an
+% agent variable and a name term have one; a value and a speech-act variable
+% have none, a value naming no agent (the appendix "Values in Act Schemas").
 procedure args_bases(Args?, Bases?, Bases).
 args_bases([], T, T?).
 args_bases([num(_)|As], T, R?) :- ground(As?), ground(T?) |
+    args_bases(As?, T?, R).
+args_bases([svar(_)|As], T, R?) :- ground(As?), ground(T?) |
     args_bases(As?, T?, R).
 args_bases([A|As], T, [B?|R?]) :- otherwise, ground(A?), ground(As?), ground(T?) |
     arg_base(A?, B),
@@ -1215,10 +1241,10 @@ nts_empty([_|_], no).
 % multiplicity dropped, leaving its atom, and the constraint of an nschema
 % dropped, leaving a schema with the same name, variables and roles.  A
 % number names no agent, so those conditions do not concern numbers (GSC,
-% Section 3.2): a numeric argument stays in its atom, where it names no one.
+% Section 3.2): a value argument stays in its atom, where it names no one.
 % def:unobstructed asks that an atom be added at a binding of a schema, which
 % satisfies its constraint, and is decided on the contract as written
-% (unobstructed.glp), the number of a numeric argument matched by equality
+% (unobstructed.glp), the number of a value argument matched by equality
 % (apply_arg, match_num).  The form of a schema is decided on the plain form
 % too, an atom with a multiplicity being an atom added or deleted
 % (def:schema), and the head and the numbers on the contract as written
@@ -1284,6 +1310,16 @@ procedure ndecl_reflexive(NDeclared?, Preds).
 ndecl_reflexive([], []).
 ndecl_reflexive([_|_], []).
 ndecl_reflexive(reflexive(Rf, _), Rf?).
+
+% num_ctx(NSc, nc(C, Pw)): the constraint of a schema as written, true where
+% it has none, and the value variables it uses as multiplicities.
+procedure num_ctx(NSchema?, NumCtx).
+num_ctx(NSc, nc(C?, Pw?)) :- ground(NSc?) |
+    nsch_constraint(NSc?, C),
+    nsch_roles(NSc?, Rs),
+    nroles_margs(Rs?, [], Ms),
+    filter_nvars(Ms?, Ms1),
+    args_dedup(Ms1?, Pw).
 
 % The parts of a schema as written.  The constraint of a schema with none is
 % true.
@@ -1373,7 +1409,7 @@ nroles_margs([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
     mults_margs(P?, R4?, R).
 
 % The variables occurring in a schema as written: its agent and speech-act
-% variables (sch_occ_vars of its plain form), then its numeric variables, in
+% variables (sch_occ_vars of its plain form), then its value variables, in
 % its atoms, its multiplicities and its constraint.
 procedure nsch_occ_vars(NSchema?, Args).
 nsch_occ_vars(NSc, R?) :- ground(NSc?) |
