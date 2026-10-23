@@ -1,0 +1,194 @@
+% ---------------------------------------------------------------------------
+% Volition (def:volition of /Grassroots/GSC, Section 3.6), for a contract of
+% agent roles and listed roles alike (GSC ac7ad63).
+%
+% The paper is the specification and no definition of it is restated here.
+% An edge of the role graph: the two roles have the same base, or one of the
+% two requires an atom of traceable provenance an argument of which has the
+% base of the other.  cv1 asks the definition's first disjunct, that the role
+% graph is connected; first_unguarded asks the second, that every connected
+% component of it holds a guarding role, which is an agent role
+% (def:schema).  The atoms of traceable provenance are those of def:grounded,
+% the set prov.glp gives (check.glp).
+% ---------------------------------------------------------------------------
+
+procedure same_base(Base?, Base?, Ans).
+same_base(B, C, yes) :- B? =?= C? | true.
+same_base(_, _, no) :- otherwise | true.
+
+procedure req_base_names(RoleSpec?, Base?, Preds?, Ans).
+req_base_names(RS, B, E, R?) :- ground(RS?), ground(B?), ground(E?) |
+    rs_req(RS?, Req),
+    phi_bases(Req?, E?, [], Bs),
+    base_member(Bs?, B?, R).
+
+procedure edge(Integer?, Integer?, RoleSpecs?, Preds?, Ans).
+edge(I, J, Rs, E, R?) :- integer(I?), integer(J?), ground(Rs?), ground(E?) |
+    nth_rs(Rs?, I?, RI),
+    nth_rs(Rs?, J?, RJ),
+    edge_roles(I?, J?, RI?, RJ?, E?, R).
+
+procedure edge_roles(Integer?, Integer?, RoleSpec?, RoleSpec?, Preds?, Ans).
+edge_roles(I, J, RI, RJ, E, R?) :-
+    integer(I?), integer(J?), ground(RI?), ground(RJ?), ground(E?) |
+    role_base(RI?, I?, BI),
+    role_base(RJ?, J?, BJ),
+    edge_bases(RI?, RJ?, BI?, BJ?, E?, R).
+
+procedure edge_bases(RoleSpec?, RoleSpec?, Base?, Base?, Preds?, Ans).
+edge_bases(RI, RJ, BI, BJ, E, R?) :-
+    ground(RI?), ground(RJ?), ground(BI?), ground(BJ?), ground(E?) |
+    same_base(BI?, BJ?, A0),
+    req_base_names(RI?, BJ?, E?, A1),
+    req_base_names(RJ?, BI?, E?, A2),
+    or_yes(A1?, A2?, A12),
+    or_yes(A0?, A12?, R).
+
+procedure linked_any1(Ans?, Ints?, Integer?, RoleSpecs?, Preds?, Ans).
+linked_any1(yes, _, _, _, _, yes).
+linked_any1(no, Is, J, Rs, E, R?) :-
+    ground(Is?), integer(J?), ground(Rs?), ground(E?) |
+    linked_any(Is?, J?, Rs?, E?, R).
+
+procedure linked_any(Ints?, Integer?, RoleSpecs?, Preds?, Ans).
+linked_any([], _, _, _, no).
+linked_any([I|Is], J, Rs, E, R?) :-
+    integer(I?), integer(J?), ground(Is?), ground(Rs?), ground(E?) |
+    edge(I?, J?, Rs?, E?, A),
+    linked_any1(A?, Is?, J?, Rs?, E?, R).
+
+procedure conn_scan2(Ans?, Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_scan2(yes, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    conn_scan(J1?, [J?|Reached?], K?, Rs?, E?, R).
+conn_scan2(no, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    conn_scan(J1?, Reached?, K?, Rs?, E?, R).
+
+procedure conn_scan1(Ans?, Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_scan1(yes, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    conn_scan(J1?, Reached?, K?, Rs?, E?, R).
+conn_scan1(no, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    linked_any(Reached?, J?, Rs?, E?, A),
+    conn_scan2(A?, J?, Reached?, K?, Rs?, E?, R).
+
+procedure conn_scan(Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_scan(J, Reached, K, _, _, Reached?) :- J? > K? | true.
+conn_scan(J, Reached, K, Rs, E, R?) :-
+    J? =< K?, integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    ints_member(Reached?, J?, M),
+    conn_scan1(M?, J?, Reached?, K?, Rs?, E?, R).
+
+procedure conn_loop2(Integer?, Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_loop2(L1, L0, R1, _, _, _, R1?) :- L1? =:= L0? | true.
+conn_loop2(_, _, R1, K, Rs, E, R?) :-
+    otherwise, ground(R1?), integer(K?), ground(Rs?), ground(E?) |
+    conn_loop(R1?, K?, Rs?, E?, R).
+
+procedure conn_loop1(Ints?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_loop1(R1, R0, K, Rs, E, R?) :-
+    ground(R1?), ground(R0?), integer(K?), ground(Rs?), ground(E?) |
+    ints_len(R1?, L1),
+    ints_len(R0?, L0),
+    conn_loop2(L1?, L0?, R1?, K?, Rs?, E?, R).
+
+procedure conn_loop(Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_loop(Reached, K, Rs, E, R?) :-
+    ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    conn_scan(1, Reached?, K?, Rs?, E?, R1),
+    conn_loop1(R1?, Reached?, K?, Rs?, E?, R).
+
+% The connected component of the role I.
+procedure reached_from(Integer?, Integer?, RoleSpecs?, Preds?, Ints).
+reached_from(I, K, Rs, E, R?) :- integer(I?), integer(K?), ground(Rs?), ground(E?) |
+    conn_loop([I?], K?, Rs?, E?, R).
+
+procedure first_missing1(Ans?, Integer?, Integer?, Ints?, Missing).
+first_missing1(no, J, _, _, missing(J?)).
+first_missing1(yes, J, K, Reached, R?) :-
+    integer(J?), integer(K?), ground(Reached?) |
+    J1 := J? + 1,
+    first_missing(J1?, K?, Reached?, R).
+
+procedure first_missing(Integer?, Integer?, Ints?, Missing).
+first_missing(J, K, _, all_reached) :- J? > K? | true.
+first_missing(J, K, Reached, R?) :-
+    J? =< K?, integer(J?), integer(K?), ground(Reached?) |
+    ints_member(Reached?, J?, M),
+    first_missing1(M?, J?, K?, Reached?, R).
+
+% Is a guarding role among those reached?
+procedure guarded_in1(Ans?, Ints?, RoleSpecs?, Ans).
+guarded_in1(yes, _, _, yes).
+guarded_in1(no, Is, Rs, R?) :- ground(Is?), ground(Rs?) |
+    guarded_in(Is?, Rs?, R).
+
+procedure guarded_in(Ints?, RoleSpecs?, Ans).
+guarded_in([], _, no).
+guarded_in([I|Is], Rs, R?) :- integer(I?), ground(Is?), ground(Rs?) |
+    nth_rs(Rs?, I?, RS),
+    is_guarding(RS?, A),
+    guarded_in1(A?, Is?, Rs?, R).
+
+% The first role whose connected component holds no guarding role.
+procedure first_unguarded1(Ans?, Integer?, Integer?, RoleSpecs?, Preds?, Missing).
+first_unguarded1(yes, J, K, Rs, E, R?) :-
+    integer(J?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    first_unguarded(J1?, K?, Rs?, E?, R).
+first_unguarded1(no, J, _, _, _, missing(J?)).
+
+procedure first_unguarded(Integer?, Integer?, RoleSpecs?, Preds?, Missing).
+first_unguarded(J, K, _, _, all_reached) :- J? > K? | true.
+first_unguarded(J, K, Rs, E, R?) :-
+    J? =< K?, integer(J?), integer(K?), ground(Rs?), ground(E?) |
+    reached_from(J?, K?, Rs?, E?, Reached),
+    guarded_in(Reached?, Rs?, A),
+    first_unguarded1(A?, J?, K?, Rs?, E?, R).
+
+procedure cv3(Missing?, Constant?, Integer?, Faults).
+cv3(all_reached, _, _, []).
+cv3(missing(_), Nm, J, [volition(Nm?, 1, J?)]).
+
+procedure cv2(Missing?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+cv2(all_reached, _, _, _, _, []).
+cv2(missing(J), K, Nm, Rs, E, R?) :-
+    integer(J?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    first_unguarded(1, K?, Rs?, E?, U),
+    cv3(U?, Nm?, J?, R).
+
+procedure cv1(Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+cv1(K, _, _, _, []) :- K? < 2 | true.
+cv1(K, Nm, Rs, E, R?) :-
+    K? >= 2, integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    reached_from(1, K?, Rs?, E?, Reached),
+    first_missing(1, K?, Reached?, M),
+    cv2(M?, K?, Nm?, Rs?, E?, R).
+
+procedure schema_volition(Schema?, Preds?, Faults).
+schema_volition(Sc, E, R?) :- ground(Sc?), ground(E?) |
+    sch_name(Sc?, Nm),
+    sch_roles(Sc?, Rs),
+    volition_roles(Nm?, Rs?, E?, R).
+
+procedure volition_roles(Constant?, RoleSpecs?, Preds?, Faults).
+volition_roles(Nm, Rs, E, R?) :- ground(Nm?), ground(Rs?), ground(E?) |
+    roles_len(Rs?, K),
+    cv1(K?, Nm?, Rs?, E?, R).
+
+procedure volition_on(Contract?, Preds?, Faults).
+volition_on([], _, []).
+volition_on([S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(E?) |
+    schema_volition(S?, E?, F1),
+    volition_on(Ss?, E?, F2),
+    faults_app(F1?, F2?, R).
+
+% def:volition: its faults, one per schema whose role graph is disconnected
+% and has a connected component with no guarding role.
+exported procedure volition_faults(Contract?, Preds?, Faults).
+volition_faults(C, E, R?) :- ground(C?), ground(E?) | volition_on(C?, E?, R).

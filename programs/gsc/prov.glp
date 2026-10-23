@@ -1,10 +1,21 @@
 % ---------------------------------------------------------------------------
-% Traceable provenance (def:grounded of /Grassroots/GSC, Section 3).
+% Traceable provenance (def:grounded of /Grassroots/GSC, Section 3.6), for a
+% contract of agent roles and listed roles alike (GSC ac7ad63).
 %
 % The largest set of predicates having it is a greatest fixpoint: start from
 % every predicate of the contract, drop those the definition rejects against
 % the set in hand, and repeat until nothing drops.  A contract has finitely
 % many predicates, so the loop ends.
+%
+% Each added atom of Phi_E is put to the definition's two requirements:
+% prov_c1s the first, on every argument of the atom outside Y whose base is
+% not that of its role, and prov_c2s the second, on every speech-act
+% variable that is an argument of the atom or occurs in a name term among
+% its arguments.  The atoms psi are those required at an agent role.
+% ---------------------------------------------------------------------------
+
+% ---------------------------------------------------------------------------
+% The predicates of a contract
 % ---------------------------------------------------------------------------
 
 procedure atoms_preds(Atoms?, Preds?, Preds).
@@ -38,96 +49,210 @@ all_preds(C, R?) :- ground(C?) |
     contract_preds(C?, [], P),
     preds_dedup(P?, R).
 
-% --- one pass -------------------------------------------------------------
-% args_ok(As, All, E, R): every argument of an added atom meets def:grounded.
-% A role meets it outright, since the argument in question is one of the
-% schema's own roles; a party variable needs a required atom of Phi_E naming
-% it, at some role of the same schema; and a speech-act variable is an
-% argument of such a required atom or occurs in no atom required at a role of
-% the schema, whatever its predicate.  A signed term sgn(y, pi) counts as the
-% two arguments y and pi: pi is a role of the schema and y is put to the
-% clause on speech-act variables (def:grounded).  A name term does not occur
-% in a schema of Section 3.
+% ---------------------------------------------------------------------------
+% What one schema is decided against
+% ---------------------------------------------------------------------------
 
-procedure args_ok1(Ans?, Args?, RoleSpecs?, Preds?, Ans).
-args_ok1(no, _, _, _, no).
-args_ok1(yes, As, All, E, R?) :- ground(As?), ground(All?), ground(E?) |
-    args_ok(As?, All?, E?, R).
+procedure role_bases(RoleSpecs?, Integer?, Bases).
+role_bases([], _, []).
+role_bases([RS|Rs], I, [B?|R?]) :- ground(RS?), ground(Rs?), integer(I?) |
+    role_base(RS?, I?, B),
+    I1 := I? + 1,
+    role_bases(Rs?, I1?, R).
 
-% svar_ok(All, Y, E, R): Y is an argument of a required atom of Phi_E, or
-% occurs in no required atom.
-procedure svar_ok(RoleSpecs?, Arg?, Preds?, Ans).
-svar_ok(All, Y, E, R?) :- ground(All?), ground(Y?), ground(E?) |
-    any_req_names(All?, Y?, E?, A1),
-    any_req_occurs(All?, Y?, A2),
+% The bases carried by the atoms of Phi_E the roles of a schema require.
+procedure req_bases(RoleSpecs?, Preds?, Bases?, Bases).
+req_bases([], _, T, T?).
+req_bases([RS|Rs], E, T, R?) :- ground(RS?), ground(Rs?), ground(E?), ground(T?) |
+    rs_req(RS?, Req),
+    req_bases(Rs?, E?, T?, R1),
+    phi_bases(Req?, E?, R1?, R).
+
+% The speech-act variables occurring in the atoms the roles require, as
+% arguments or in name terms among them.
+procedure req_args(RoleSpecs?, Args?, Args).
+req_args([], T, T?).
+req_args([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    rs_req(RS?, Req),
+    req_args(Rs?, T?, R1),
+    atoms_args(Req?, R1?, R).
+
+procedure req_svars(RoleSpecs?, Args).
+req_svars(Rs, R?) :- ground(Rs?) |
+    req_args(Rs?, [], As),
+    filter_svars(As?, SV),
+    args_dedup(SV?, R).
+
+% The same of the atoms of Phi_E the roles require.
+procedure phi_args1(Ans?, Args?, Args?, Args).
+phi_args1(no, _, T, T?).
+phi_args1(yes, As, T, R?) :- ground(As?), ground(T?) | args_app(As?, T?, R).
+
+procedure phi_args(Atoms?, Preds?, Args?, Args).
+phi_args([], _, T, T?).
+phi_args([atom(Q, As)|Xs], E, T, R?) :-
+    ground(Q?), ground(As?), ground(Xs?), ground(E?), ground(T?) |
+    pred_member(Q?, E?, M),
+    phi_args(Xs?, E?, T?, R1),
+    phi_args1(M?, As?, R1?, R).
+
+procedure req_phi_args(RoleSpecs?, Preds?, Args?, Args).
+req_phi_args([], _, T, T?).
+req_phi_args([RS|Rs], E, T, R?) :- ground(RS?), ground(Rs?), ground(E?), ground(T?) |
+    rs_req(RS?, Req),
+    req_phi_args(Rs?, E?, T?, R1),
+    phi_args(Req?, E?, R1?, R).
+
+procedure req_phi_svars(RoleSpecs?, Preds?, Args).
+req_phi_svars(Rs, E, R?) :- ground(Rs?), ground(E?) |
+    req_phi_args(Rs?, E?, [], As),
+    filter_svars(As?, SV),
+    args_dedup(SV?, R).
+
+% The agent roles of a schema, whose required atoms of Phi_E are the psi of
+% the definition: they carry the bases and the speech-act variables a traced
+% argument may be among.
+procedure agent_roles(RoleSpecs?, RoleSpecs).
+agent_roles([], []).
+agent_roles([rs(G, P, M, K, N)|Rs], [rs(G?, P?, M?, K?, N?)|R?]) :- agent_roles(Rs?, R).
+agent_roles([crs(_, _, _, _, _, _)|Rs], R?) :- agent_roles(Rs?, R).
+
+% ---------------------------------------------------------------------------
+% The two requirements of def:grounded
+% ---------------------------------------------------------------------------
+
+% The first, on an argument outside Y whose base is not that of the role: its
+% base is that of some role, or of some argument of a required atom of Phi_E
+% at an agent role.  It asks nothing of a speech-act variable.
+procedure prov_arg1(Base?, Base?, Bases?, Bases?, Ans).
+prov_arg1(B, RB, _, _, yes) :- B? =?= RB? | true.
+prov_arg1(B, _, RBs, QBs, R?) :- otherwise, ground(B?), ground(RBs?), ground(QBs?) |
+    base_member(RBs?, B?, A1),
+    base_member(QBs?, B?, A2),
+    or_yes(A1?, A2?, R).
+
+procedure prov_c1(Arg?, Base?, Bases?, Bases?, Ans).
+prov_c1(svar(_), _, _, _, yes).
+% A numeric argument names no agent and is outside R, X and Y, so the
+% definition asks nothing of it (GSC, Section 3.2; the appendix, after
+% def:binding-numbers).
+prov_c1(num(_), _, _, _, yes).
+prov_c1(A, RB, RBs, QBs, R?) :-
+    otherwise, ground(A?), ground(RB?), ground(RBs?), ground(QBs?) |
+    arg_base(A?, B),
+    prov_arg1(B?, RB?, RBs?, QBs?, R).
+
+procedure prov_c1s1(Ans?, Args?, Base?, Bases?, Bases?, Ans).
+prov_c1s1(no, _, _, _, _, no).
+prov_c1s1(yes, As, RB, RBs, QBs, R?) :-
+    ground(As?), ground(RB?), ground(RBs?), ground(QBs?) |
+    prov_c1s(As?, RB?, RBs?, QBs?, R).
+
+procedure prov_c1s(Args?, Base?, Bases?, Bases?, Ans).
+prov_c1s([], _, _, _, yes).
+prov_c1s([A|As], RB, RBs, QBs, R?) :-
+    ground(A?), ground(As?), ground(RB?), ground(RBs?), ground(QBs?) |
+    prov_c1(A?, RB?, RBs?, QBs?, A1),
+    prov_c1s1(A1?, As?, RB?, RBs?, QBs?, R).
+
+% The second, on a speech-act variable Y of the added atom.  QSV holds the
+% speech-act variables of the required atoms of Phi_E at agent roles, as
+% arguments or in name terms among them, and SV those of every atom required
+% at a role; Y meets the requirement when it is in QSV or not in SV.  A
+% signed term sgn(y, pi), GAI's, counts as the two arguments y and pi:
+% filter_svars gives y, and arg_base the base of pi.
+procedure prov_c2(Arg?, Args?, Args?, Ans).
+prov_c2(Y, QSV, SV, R?) :- ground(Y?), ground(QSV?), ground(SV?) |
+    args_member(QSV?, Y?, A1),
+    args_member(SV?, Y?, A2),
     flip(A2?, A3),
     or_yes(A1?, A3?, R).
 
-procedure args_ok(Args?, RoleSpecs?, Preds?, Ans).
-args_ok([], _, _, yes).
-args_ok([role(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
-    args_ok(As?, All?, E?, R).
-args_ok([svar(X)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |
-    svar_ok(All?, svar(X?), E?, A),
-    args_ok1(A?, As?, All?, E?, R).
-args_ok([sgn(X, _)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |
-    svar_ok(All?, svar(X?), E?, A),
-    args_ok1(A?, As?, All?, E?, R).
-args_ok([nterm(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
-    args_ok(As?, All?, E?, R).
-% A numeric argument is in none of R, X and Y, and names no agent, so the
-% definition asks nothing of it (GSC, Section 3.2: "A number names no agent,
-% so the conditions below do not concern them").
-args_ok([num(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
-    args_ok(As?, All?, E?, R).
-args_ok([pvar(X)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |
-    any_req_names(All?, pvar(X?), E?, A),
-    args_ok1(A?, As?, All?, E?, R).
+procedure prov_c2s1(Ans?, Args?, Args?, Args?, Ans).
+prov_c2s1(no, _, _, _, no).
+prov_c2s1(yes, Ys, QSV, SV, R?) :- ground(Ys?), ground(QSV?), ground(SV?) |
+    prov_c2s(Ys?, QSV?, SV?, R).
 
-% The added atoms of one role, those carrying the predicate under test.
-procedure plus_ok1(Ans?, Atoms?, Constant?, RoleSpecs?, Preds?, Ans).
-plus_ok1(no, _, _, _, _, no).
-plus_ok1(yes, Xs, Pd, All, E, R?) :- ground(Xs?), ground(Pd?), ground(All?), ground(E?) |
-    plus_ok(Xs?, Pd?, All?, E?, R).
+procedure prov_c2s(Args?, Args?, Args?, Ans).
+prov_c2s([], _, _, yes).
+prov_c2s([Y|Ys], QSV, SV, R?) :-
+    ground(Y?), ground(Ys?), ground(QSV?), ground(SV?) |
+    prov_c2(Y?, QSV?, SV?, A),
+    prov_c2s1(A?, Ys?, QSV?, SV?, R).
 
-procedure plus_ok(Atoms?, Constant?, RoleSpecs?, Preds?, Ans).
-plus_ok([], _, _, _, yes).
-plus_ok([atom(Q, As)|Xs], Pd, All, E, R?) :-
-    Q? =?= Pd?, ground(As?), ground(Xs?), ground(Pd?), ground(All?), ground(E?) |
-    args_ok(As?, All?, E?, A),
-    plus_ok1(A?, Xs?, Pd?, All?, E?, R).
-plus_ok([atom(_, _)|Xs], Pd, All, E, R?) :-
-    otherwise, ground(Xs?), ground(Pd?), ground(All?), ground(E?) |
-    plus_ok(Xs?, Pd?, All?, E?, R).
+% One added atom of Phi_E, with arguments As, at a role of base RB.
+procedure prov_atom(Args?, Base?, PCtx?, Ans).
+prov_atom(As, RB, pctx(RBs, QBs, QSV, SV), R?) :-
+    ground(As?), ground(RB?), ground(RBs?), ground(QBs?), ground(QSV?), ground(SV?) |
+    prov_c1s(As?, RB?, RBs?, QBs?, A1),
+    filter_svars(As?, Ys),
+    prov_c2s(Ys?, QSV?, SV?, A2),
+    both_yes(A1?, A2?, R).
 
-procedure roles_ok1(Ans?, RoleSpecs?, Constant?, RoleSpecs?, Preds?, Ans).
-roles_ok1(no, _, _, _, _, no).
-roles_ok1(yes, Rs, Pd, All, E, R?) :- ground(Rs?), ground(Pd?), ground(All?), ground(E?) |
-    roles_ok(Rs?, Pd?, All?, E?, R).
+procedure prov_plus1(Ans?, Atoms?, Constant?, Base?, PCtx?, Ans).
+prov_plus1(no, _, _, _, _, no).
+prov_plus1(yes, Xs, Pd, RB, Cx, R?) :-
+    ground(Xs?), ground(Pd?), ground(RB?), ground(Cx?) |
+    prov_plus(Xs?, Pd?, RB?, Cx?, R).
 
-procedure roles_ok(RoleSpecs?, Constant?, RoleSpecs?, Preds?, Ans).
-roles_ok([], _, _, _, yes).
-roles_ok([RS|Rs], Pd, All, E, R?) :-
-    ground(RS?), ground(Rs?), ground(Pd?), ground(All?), ground(E?) |
+procedure prov_plus(Atoms?, Constant?, Base?, PCtx?, Ans).
+prov_plus([], _, _, _, yes).
+prov_plus([atom(Q, As)|Xs], Pd, RB, Cx, R?) :-
+    Q? =?= Pd?, ground(As?), ground(Xs?), ground(RB?), ground(Cx?) |
+    prov_atom(As?, RB?, Cx?, A),
+    prov_plus1(A?, Xs?, Pd?, RB?, Cx?, R).
+prov_plus([atom(_, _)|Xs], Pd, RB, Cx, R?) :-
+    otherwise, ground(Xs?), ground(Pd?), ground(RB?), ground(Cx?) |
+    prov_plus(Xs?, Pd?, RB?, Cx?, R).
+
+procedure prov_roles1(Ans?, RoleSpecs?, Integer?, Constant?, PCtx?, Ans).
+prov_roles1(no, _, _, _, _, no).
+prov_roles1(yes, Rs, I, Pd, Cx, R?) :-
+    ground(Rs?), integer(I?), ground(Pd?), ground(Cx?) |
+    I1 := I? + 1,
+    prov_roles(Rs?, I1?, Pd?, Cx?, R).
+
+procedure prov_roles(RoleSpecs?, Integer?, Constant?, PCtx?, Ans).
+prov_roles([], _, _, _, yes).
+prov_roles([RS|Rs], I, Pd, Cx, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(Pd?), ground(Cx?) |
     rs_add(RS?, P),
-    plus_ok(P?, Pd?, All?, E?, A),
-    roles_ok1(A?, Rs?, Pd?, All?, E?, R).
+    role_base(RS?, I?, RB),
+    prov_plus(P?, Pd?, RB?, Cx?, A),
+    prov_roles1(A?, Rs?, I?, Pd?, Cx?, R).
 
-procedure pred_ok1(Ans?, Constant?, Contract?, Preds?, Ans).
-pred_ok1(no, _, _, _, no).
-pred_ok1(yes, Pd, Ss, E, R?) :- ground(Pd?), ground(Ss?), ground(E?) |
-    pred_ok(Pd?, Ss?, E?, R).
+procedure prov_pred1(Ans?, Constant?, Contract?, Preds?, Ans).
+prov_pred1(no, _, _, _, no).
+prov_pred1(yes, Pd, Ss, E, R?) :- ground(Pd?), ground(Ss?), ground(E?) |
+    prov_pred(Pd?, Ss?, E?, R).
 
-procedure pred_ok(Constant?, Contract?, Preds?, Ans).
-pred_ok(_, [], _, yes).
-pred_ok(Pd, [S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
+procedure prov_pred(Constant?, Contract?, Preds?, Ans).
+prov_pred(_, [], _, yes).
+prov_pred(Pd, [S|Ss], E, R?) :-
+    ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
     sch_roles(S?, Rs),
-    pred_ok_roles(Rs?, Pd?, Ss?, E?, R).
+    prov_pred_w(Rs?, Pd?, Ss?, E?, R).
 
-procedure pred_ok_roles(RoleSpecs?, Constant?, Contract?, Preds?, Ans).
-pred_ok_roles(Rs, Pd, Ss, E, R?) :- ground(Rs?), ground(Pd?), ground(Ss?), ground(E?) |
-    roles_ok(Rs?, Pd?, Rs?, E?, A),
-    pred_ok1(A?, Pd?, Ss?, E?, R).
+procedure prov_pred_w(RoleSpecs?, Constant?, Contract?, Preds?, Ans).
+prov_pred_w(Rs, Pd, Ss, E, R?) :-
+    ground(Rs?), ground(Pd?), ground(Ss?), ground(E?) |
+    agent_roles(Rs?, Ws),
+    prov_pred_roles(Rs?, Ws?, Pd?, Ss?, E?, R).
+
+% Ws are the agent roles of the schema.
+procedure prov_pred_roles(RoleSpecs?, RoleSpecs?, Constant?, Contract?, Preds?, Ans).
+prov_pred_roles(Rs, Ws, Pd, Ss, E, R?) :-
+    ground(Rs?), ground(Ws?), ground(Pd?), ground(Ss?), ground(E?) |
+    role_bases(Rs?, 1, RBs),
+    req_bases(Ws?, E?, [], QBs),
+    req_phi_svars(Ws?, E?, QSV),
+    req_svars(Rs?, SV),
+    prov_roles(Rs?, 1, Pd?, pctx(RBs?, QBs?, QSV?, SV?), A),
+    prov_pred1(A?, Pd?, Ss?, E?, R).
+
+% ---------------------------------------------------------------------------
+% The fixpoint
+% ---------------------------------------------------------------------------
 
 procedure tp_filter1(Ans?, Constant?, Preds?, Contract?, Preds?, Preds).
 tp_filter1(yes, P, Ps, C, E, [P?|R?]) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
@@ -138,10 +263,8 @@ tp_filter1(no, _, Ps, C, E, R?) :- ground(Ps?), ground(C?), ground(E?) |
 procedure tp_filter(Preds?, Contract?, Preds?, Preds).
 tp_filter([], _, _, []).
 tp_filter([P|Ps], C, E, R?) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
-    pred_ok(P?, C?, E?, A),
+    prov_pred(P?, C?, E?, A),
     tp_filter1(A?, P?, Ps?, C?, E?, R).
-
-% --- the fixpoint ---------------------------------------------------------
 
 procedure tp_loop2(Integer?, Integer?, Preds?, Contract?, Preds).
 tp_loop2(L1, L2, E1, _, E1?) :- L1? =:= L2? | true.
@@ -159,6 +282,7 @@ tp_loop(C, E, R?) :- ground(C?), ground(E?) |
     tp_filter(E?, C?, E?, E1),
     tp_loop1(E1?, E?, C?, R).
 
+% The largest set of predicates of the contract having traceable provenance.
 exported procedure traceable(Contract?, Preds).
 traceable(C, E?) :- ground(C?) |
     all_preds(C?, P0),
