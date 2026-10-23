@@ -1137,11 +1137,11 @@ Set<String> _variablesTypedAtSomeOccurrence(ast.Clause clause, ProgramDFA dfa,
 // "The root declares the body kernel :=(Number, Exp?) ..., which assigns to its
 // writer the value of an arithmetic expression.  A goal X := E is checked with
 // the type of X taken as Integer where E is an integer expression --- an integer
-// literal, a reader of type Integer, one of +, -, *, //, mod, unary - or abs over
-// integer expressions, or integer, round, floor or ceil over any expression ---
-// and as Number otherwise, / and the remaining functions of Exp yielding a
-// Number whatever their operands" (TGLP dbb09f4, restated in 2e39edb; Udi's
-// ruling of 2026-10-02).  The declaration stays as it is; the goal is checked
+// literal, a reader of type Integer, one of +, -, *, //, mod or abs over integer
+// expressions, or integer, round, floor or ceil over any expression --- and as
+// Number otherwise, / and the remaining functions of Exp yielding a Number
+// whatever their operands" (TGLP 6858789, typed-constant-readers.tex, "Type
+// checking of :=").  The declaration stays as it is; the goal is checked
 // against it with its first argument an `Integer` where the rule says so.
 
 /// Whether [atom] is an arithmetic assignment `X := E`.
@@ -1158,10 +1158,9 @@ ast.Goal _unspawned(ast.Goal atom) {
 }
 
 /// The operators and functions of `Exp` that keep an integer expression one:
-/// "+, -, *, //, mod, unary - or abs over integer expressions".  Unary minus
-/// parses to `neg`, the functor the root's `Exp` names for it.
+/// "+, -, *, //, mod or abs over integer expressions" (TGLP 6858789).
 const Set<String> _integerOperators = {'+', '-', '*', '//', 'mod'};
-const Set<String> _integerUnary = {'neg', 'abs'};
+const Set<String> _integerUnary = {'abs'};
 
 /// The functions of `Exp` whose value is an integer over any expression:
 /// "integer, round, floor or ceil over any expression".
@@ -1169,9 +1168,9 @@ const Set<String> _integerConversions = {'integer', 'round', 'floor', 'ceil'};
 
 /// Whether [e] is an INTEGER EXPRESSION (TGLP typed-glp.tex, "Type checking of
 /// :="): an integer literal, a reader of type Integer --- [integerReader]
-/// answers for one by its variable's name --- one of `+`, `-`, `*`, `//`, `mod`,
-/// unary `-` or `abs` over integer expressions, or `integer`, `round`, `floor`
-/// or `ceil` over any expression.  Anything else is not: a real literal, `/`,
+/// answers for one by its variable's name --- one of `+`, `-`, `*`, `//`, `mod`
+/// or `abs` over integer expressions, or `integer`, `round`, `floor` or `ceil`
+/// over any expression.  Anything else is not: a real literal, `/`,
 /// the other functions, a writer, a term outside `Exp`.
 bool isIntegerExpression(ast.Term e, bool Function(String name) integerReader) {
   if (e is ast.ConstTerm) return e.value is int;

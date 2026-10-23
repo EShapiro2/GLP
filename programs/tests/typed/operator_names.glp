@@ -30,9 +30,10 @@ op(procedure, R?) :- R = is_procedure.
 op(+, R?) :- R = is_plus.
 op(=, R?) :- R = is_equals.
 
-%% The operators as before: mod infix, unary minus, + and * by precedence.
+%% The operators as before: mod infix, 0 - 5 for the negation of 5 (GLP has no
+%% unary minus, TGLP 6858789), + and * by precedence.
 procedure arith(Integer, Integer, Integer).
-arith(A?, B?, C?) :- A := 7 mod 3, B := - 5 + 2, C := 2 + 3 * 4.
+arith(A?, B?, C?) :- A := 7 mod 3, B := 0 - 5 + 2, C := 2 + 3 * 4.
 
 procedure even(Integer?, Constant).
 even(X, R?) :- X? mod 2 =:= 0 | R = even.

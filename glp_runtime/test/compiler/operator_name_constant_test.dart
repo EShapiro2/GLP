@@ -104,12 +104,38 @@ void main() {
       expect(e.args, hasLength(2));
     });
 
-    test('unary minus is neg', () {
-      final g = _body('p(Z?) :- Z := - 5.').single;
-      expect((g.args[1] as StructTerm).functor, 'neg');
+    test('a minus before an operand does not parse: GLP has no unary minus '
+        '(TGLP 6858789; GLP-Spec 5381f71)', () {
+      for (final src in [
+        'p(Z?) :- Z := - 5.',
+        'p(X, Z?) :- Z := -X?.',
+        'p(X, Z?) :- Z := 1 + -X?.',
+        'p(X, Z) :- -X? > 0 | Z = a.',
+      ]) {
+        expect(
+            () => _body(src),
+            throwsA(predicate((e) => e.toString().contains(
+                'GLP has no unary minus: write 0 - X for the negation of X'))),
+            reason: src);
+      }
     });
 
-    test('-(X, Y) is a structure, not neg', () {
+    test('a minus directly before a digit is the sign of a number literal, '
+        'not an operator', () {
+      final g = _body('p(Z?) :- Z := -5.').single;
+      expect(g.args[1], isA<ConstTerm>().having((c) => c.value, 'value', -5));
+      final r = _body('p(Z?) :- Z := -2.5.').single;
+      expect(r.args[1], isA<ConstTerm>().having((c) => c.value, 'value', -2.5));
+    });
+
+    test('0 - X is the negation of X, -(0, X)', () {
+      final g = _body('p(X, Z?) :- Z := 0 - X?.').single;
+      final e = g.args[1] as StructTerm;
+      expect(e.functor, '-');
+      expect(e.args, hasLength(2));
+    });
+
+    test('-(X, Y) is a structure', () {
       final t = _headArgs('p(-(a, b)).').single as StructTerm;
       expect(t.functor, '-');
       expect(t.args, hasLength(2));
