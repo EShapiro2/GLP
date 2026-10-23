@@ -12,6 +12,6 @@ The script builds the bundled assets (`tool/sync_glp_assets.sh`), boots the simu
 
 | File | What it shows |
 |---|---|
-| `gkk-a-alice-identity.png` | Alice establishes her identity (GKK:1): her Contacts tab before she does, her name, the button Join, GKK's "[Join]", and the field Peer with known, the request `known(Q)`, which no contract names. |
+| `gkk-a-alice-identity.png` | Alice establishes her identity (GKK:1): her Contacts tab before she does, her name, the button Establish, GKK's "[Establish]", and the field Peer with known, the request `known(Q)`, which no contract names. |
 | `gkk-b-bob-asked-to-meet.png` | Alice and Bob meet in person (GKK:2): Bob's Contacts tab with GKK's question "Alice wishes that you know each other." and the answers yes and no at its top, Alice listed below, known to his agent by her key, with Meet, and the field Peer with known. |
 | `gkk-c-bob-contacts.png` | Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Bob's Contacts tab once he has answered yes to "Alice asks to introduce Carol to you.", his contacts Alice and Carol, and under them, Bob having two contacts, Introduce with a picker at each of its places, each named Peer. |

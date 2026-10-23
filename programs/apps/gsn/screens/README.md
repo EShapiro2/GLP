@@ -12,6 +12,6 @@ The script builds the bundled assets (`tool/sync_glp_assets.sh`), boots the simu
 
 | File | What it shows |
 |---|---|
-| `gsn-a-bob-chat.png` | Bob's chat with Alice in his Friends tab, her message "Hi Bob" with her name under it, and the field text with Send, GSN's "[Send] <text>". |
+| `gsn-a-bob-chat.png` | Bob's chat with Alice in his Friends tab, her message "Hi Bob" with her name under it, and the field text with Message, GSN's "[Message] <text>". |
 | `gsn-b-bob-asked-to-join.png` | Bob's Groups tab with GSN's question "Alice asks you to join their group.", the group's name, friends, under it, and the answers yes and no at its top. |
 | `gsn-c-bob-group.png` | Bob's Groups tab with the group friends, its leader Alice, the message "Hi all" with Bob's name under it as Alice delivered it to him, no member list, the field text with Post and Leave. |

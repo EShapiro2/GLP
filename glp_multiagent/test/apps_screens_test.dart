@@ -867,11 +867,11 @@ void appsScreens(Screens screens) {
     expect(run.on(alice, find.byKey(listTabKey('friend'))), findsNothing);
     expect(run.on(alice, find.byKey(listTabKey('member'))), findsNothing);
 
-    // (a) Alice establishes her identity (GKK:1): her name and Join, GKK's "[Join]", which proposes establish(alice), before she taps it; and the request known(Q), known and its field Peer.
+    // (a) Alice establishes her identity (GKK:1): her name and Establish, GKK's "[Establish]", the button bearing its act's name (GSC, Section 2), which proposes establish(alice), before she taps it; and the request known(Q), known and its field Peer.
     expect(run.control(alice, 'name'), findsOneWidget);
     expect(
         find.descendant(
-            of: run.control(alice, 'join'), matching: find.text('Join')),
+            of: run.control(alice, 'join'), matching: find.text('Establish')),
         findsOneWidget);
     expect(
         find.descendant(
@@ -946,7 +946,7 @@ void appsScreens(Screens screens) {
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
     expect(run.on(alice, find.byKey(listTabKey('member'))), findsNothing);
 
-    // Before her identity is established, her name and Join, which proposes establish(alice).
+    // Before her identity is established, her name and Establish, GKK's "[Establish]", which proposes establish(alice).
     expect(run.control(alice, 'name'), findsOneWidget);
     expect(run.control(alice, 'join'), findsOneWidget);
     expect(alice.atoms, isEmpty);
@@ -1030,14 +1030,14 @@ void appsScreens(Screens screens) {
     await run.meetInPerson(alice, bob);
     await run.befriend(alice, bob);
 
-    // A message to a friend (GSN:1): in her Friends tab Alice taps Bob's row, which opens her chat with him, types Hi Bob into the field text, GSN's "<text>", and taps Send, GSN's "[Send]".  Bob is not asked.
+    // A message to a friend (GSN:1): in her Friends tab Alice taps Bob's row, which opens her chat with him, types Hi Bob into the field text, GSN's "<text>", and taps Message, GSN's "[Message]".  Bob is not asked.
     await run.list(alice, 'friend');
     await run.tap(alice, run.name(alice, 'person:bob', 'Bob'));
     expect(run.control(alice, 'chat:bob'), findsOneWidget);
     await run.type(alice, run.control(alice, 'chat-field:bob'), 'Hi Bob');
     expect(
         find.descendant(
-            of: run.control(alice, 'send:bob'), matching: find.text('Send')),
+            of: run.control(alice, 'send:bob'), matching: find.text('Message')),
         findsOneWidget);
     await run.tap(alice, run.control(alice, 'send:bob'));
     expect(bob.questions('approval'), isEmpty);
@@ -1059,7 +1059,7 @@ void appsScreens(Screens screens) {
     expect(alice.atoms,
         containsAll(['member($friendsGroup)', 'listed(alice, $friends)']));
 
-    // Joining (GSN:3): in the group, Add, GSN's "[Add]", offers her friends not in it; she taps Bob.
+    // Joining (GSN:3): in the group, Join, GSN's "[Join]", offers her friends not in it; she taps Bob.  GSN's close and post_own, the leader's leaving and posting, no button of its pragmas names, so the compiler gives them no label and the leader's group draws them by their names, close and post_own (programs/vglp/cva/compiler/README.md).
     await run.tap(alice, run.groupControl(alice, 'join:', ':bob'));
 
     // (b) Bob's Groups tab, badged: GSN's question "Alice asks you to join their group.", the group's name, friends, under it, and yes and no at its top.
