@@ -8,10 +8,12 @@
 % many predicates, so the loop ends.
 %
 % Each added atom of Phi_E is put to the definition's two requirements:
-% prov_c1s the first, on every argument of the atom outside Y whose base is
-% not that of its role, and prov_c2s the second, on every speech-act
-% variable that is an argument of the atom or occurs in a name term among
-% its arguments.  The atoms psi are those required at an agent role.
+% prov_c1s the first, on every argument of the atom that is an agent role, an
+% agent variable or a name term, whose base is not that of its role (GSC
+% 1934846, a value having no base), and prov_c2s the second, on every
+% speech-act variable that is an argument of the atom or occurs in a name
+% term among its arguments.  The atoms psi are those required at an agent
+% role.
 % ---------------------------------------------------------------------------
 
 % ---------------------------------------------------------------------------
@@ -121,9 +123,10 @@ agent_roles([crs(_, _, _, _, _, _)|Rs], R?) :- agent_roles(Rs?, R).
 % The two requirements of def:grounded
 % ---------------------------------------------------------------------------
 
-% The first, on an argument outside Y whose base is not that of the role: its
-% base is that of some role, or of some argument of a required atom of Phi_E
-% at an agent role.  It asks nothing of a speech-act variable.
+% The first, on an argument that is an agent role, an agent variable or a
+% name term, whose base is not that of the role: its base is that of some
+% role, or of some argument of a required atom of Phi_E at an agent role.  It
+% asks nothing of a speech-act variable or a value, which have no base.
 procedure prov_arg1(Base?, Base?, Bases?, Bases?, Ans).
 prov_arg1(B, RB, _, _, yes) :- B? =?= RB? | true.
 prov_arg1(B, _, RBs, QBs, R?) :- otherwise, ground(B?), ground(RBs?), ground(QBs?) |
@@ -133,9 +136,8 @@ prov_arg1(B, _, RBs, QBs, R?) :- otherwise, ground(B?), ground(RBs?), ground(QBs
 
 procedure prov_c1(Arg?, Base?, Bases?, Bases?, Ans).
 prov_c1(svar(_), _, _, _, yes).
-% A numeric argument names no agent and is outside R, X and Y, so the
-% definition asks nothing of it (GSC, Section 3.2; the appendix, after
-% def:binding-numbers).
+% A value is no agent role, no agent variable and no name term, so the
+% definition asks nothing of it (the appendix "Values in Act Schemas").
 prov_c1(num(_), _, _, _, yes).
 prov_c1(A, RB, RBs, QBs, R?) :-
     otherwise, ground(A?), ground(RB?), ground(RBs?), ground(QBs?) |
