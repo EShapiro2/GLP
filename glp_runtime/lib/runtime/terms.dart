@@ -133,6 +133,12 @@ class MutualRefTerm implements Term {
 
   MutualRefTerm(this._currentWriterAddr) : id = _nextId++;
 
+  /// A MutualRef of a restarted agent, under the id it had when its state was
+  /// saved (saved_state.dart); later ones are numbered past it.
+  MutualRefTerm.restored(this._currentWriterAddr, this.id) {
+    if (_nextId <= id) _nextId = id + 1;
+  }
+
   /// Get/set the current writer address
   HeapCell get currentWriterAddr => _currentWriterAddr;
   set currentWriterAddr(HeapCell addr) => _currentWriterAddr = addr;
