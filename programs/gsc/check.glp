@@ -11,10 +11,10 @@
 % The second conjunct is decided from the largest set of predicates having
 % traceable provenance, which traceable_of gives: the fault names the
 % predicates of the contract outside it, and volition is decided over that
-% set.  Where the first conjunct fails, every fault of it resting on the
-% values the contract fixes (def:numbers), which its term does not carry
-% (self.glp, Unsettled), and the other two hold, the verdict is
-% unsettled(Faults), those faults.
+% set.  A schema may carry values (the appendix "Values in Act Schemas"):
+% the first conjunct is decided on the contract as written, an introduction
+% choosing its own values (unobstructed.glp), and the other two on its plain
+% form, a value naming no agent.
 %
 % A schema is an act schema only when it is formed as def:role and
 % def:schema require: its name terms based on its agent roles, its listed
@@ -96,24 +96,19 @@ contract_verdict(C, NC, Rf, E, V?) :- ground(C?), ground(NC?), ground(Rf?), grou
 % The first conjunct failing and the other two holding, the wards are tried
 % (GAI's appendix "Contracts with Wards"; CSSN's def:sg-wards for a contract
 % with community roles); otherwise the faults of the three conjuncts are
-% reported, in their order.  Where the first conjunct's faults all rest on
-% the values the contract fixes (self.glp, all_unsettled) and the other two
-% hold, the checker does not know whether the contract is syntactically
-% grassroots, and the verdict is unsettled(Faults).
+% reported, in their order.
 procedure wards_verdict(Faults?, Faults?, Contract?, Preds?, Verdict).
 wards_verdict([], F23, _, _, V?) :- ground(F23?) | verdict(F23?, V).
 wards_verdict([F|Fs], [], C, Rf, V?) :-
     ground(F?), ground(Fs?), ground(C?), ground(Rf?) |
-    all_unsettled([F?|Fs?], U),
-    wards_verdict2(U?, [F?|Fs?], C?, Rf?, V).
+    wards_verdict2([F?|Fs?], C?, Rf?, V).
 wards_verdict([F|Fs], [G|Gs], _, _, V?) :-
     ground(F?), ground(Fs?), ground(G?), ground(Gs?) |
     faults_app([F?|Fs?], [G?|Gs?], FF),
     verdict(FF?, V).
 
-procedure wards_verdict2(Ans?, Faults?, Contract?, Preds?, Verdict).
-wards_verdict2(yes, F, _, _, unsettled(F?)).
-wards_verdict2(no, F, C, Rf, V?) :- ground(F?), ground(C?), ground(Rf?) |
+procedure wards_verdict2(Faults?, Contract?, Preds?, Verdict).
+wards_verdict2(F, C, Rf, V?) :- ground(F?), ground(C?), ground(Rf?) |
     has_community(C?, A),
     wards # wards(C?, Rf?, W),
     wards_verdict1(A?, W?, F?, V).
@@ -476,7 +471,7 @@ listed_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % before a fault head_repeated(Schema, Entry), and each variable occurring
 % in the schema and not in its head a fault not_in_head(Schema, Var).
 
-% A numeric variable, num(X) with X a name, is a variable of the head, and a
+% A value variable, num(X) with X a name, is a variable of the head, and a
 % number, num(X) with X a number, is not (GSC, Section 3.2).
 procedure head_entry_fault(Arg?, Constant?, Faults?, Faults).
 head_entry_fault(pvar(_), _, T, T?).
@@ -516,7 +511,7 @@ head_schema1(Nm, H, Os, R?) :- ground(Nm?), ground(H?), ground(Os?) |
     unlisted_faults(Os?, H?, Nm?, F2),
     faults_app(F1?, F2?, R).
 
-% The head of a schema as written: its numeric variables occur in its atoms,
+% The head of a schema as written: its value variables occur in its atoms,
 % its multiplicities and its constraint, and are listed in its head with its
 % agent and speech-act variables (GSC, Section 3.2; Currencies' GB.glp).
 procedure head_schema(NSchema?, Faults).
@@ -533,23 +528,23 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     head_schemas(Ss?, F2),
     faults_app(F1?, F2?, R).
 
-% --- the numbers of a schema (GSC, Section 3.2; def:numbers) ---------------
-% "An argument of an atom may be a number or a numeric variable, a schema may
-% carry a constraint on its numeric variables, which every binding
-% satisfies, and an atom added or deleted may carry a multiplicity"
-% (Section 3.2), a value or a numeric variable (def:numbers).  Each
+% --- the values of a schema (GSC, Section 3.2; def:numbers) ----------------
+% "An argument of an atom may be a value or a value variable, a schema may
+% carry a constraint on its value variables, which every binding
+% satisfies, and an atom added or deleted may carry a multiplicity, a count
+% of copies and so a positive whole number" (Section 3.2; def:numbers).  Each
 % atom carrying a multiplicity that a role requires or forbids and neither
 % adds nor deletes is a fault multiplicity_not_added(Schema, Role, Atom); each
-% multiplicity that is no numeric argument a fault
+% multiplicity that is no value argument a fault
 % multiplicity_not_numeric(Schema, Role, Atom); and each argument of the
-% constraint that is no numeric argument a fault constraint_not_numeric(Schema,
-% Arg).  A numeric argument is num(X), a numeric variable or a number.
+% constraint that is no value argument a fault constraint_not_numeric(Schema,
+% Arg).  A value argument is num(X), a value variable or a number.
 
 procedure is_num(Arg?, Ans).
 is_num(num(_), yes).
 is_num(A, no) :- otherwise, ground(A?) | true.
 
-% A multiplicity on an atom a role adds or deletes: it is a numeric argument.
+% A multiplicity on an atom a role adds or deletes: it is a value argument.
 procedure mult_num_fault(Ans?, Atom?, Constant?, Integer?, Faults?, Faults).
 mult_num_fault(yes, _, _, _, T, T?).
 mult_num_fault(no, A, Nm, I, T, [multiplicity_not_numeric(Nm?, I?, A?)|T?]).
@@ -562,8 +557,21 @@ mults_numeric([atom(_, _)|Ms], Nm, I, T, R?) :-
 mults_numeric([times(K, A)|Ms], Nm, I, T, R?) :-
     ground(K?), ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     is_num(K?, Ok),
+    is_whole(K?, Wh),
     mults_numeric(Ms?, Nm?, I?, T?, R1),
-    mult_num_fault(Ok?, A?, Nm?, I?, R1?, R).
+    mult_whole_fault(Wh?, A?, Nm?, I?, R1?, R2),
+    mult_num_fault(Ok?, A?, Nm?, I?, R2?, R).
+
+% A multiplicity written as a number is a positive whole number
+% (def:numbers); a value variable is one at every binding
+% (def:binding-numbers).
+procedure is_whole(Arg?, Ans).
+is_whole(num(X), R?) :- number(X?) | pos_whole(X?, R).
+is_whole(A, yes) :- otherwise, ground(A?) | true.
+
+procedure mult_whole_fault(Ans?, Atom?, Constant?, Integer?, Faults?, Faults).
+mult_whole_fault(yes, _, _, _, T, T?).
+mult_whole_fault(no, A, Nm, I, T, [multiplicity_not_whole(Nm?, I?, A?)|T?]).
 
 % A multiplicity on an atom a role requires or forbids only.
 procedure mults_unadded(Mults?, Constant?, Integer?, Faults?, Faults).

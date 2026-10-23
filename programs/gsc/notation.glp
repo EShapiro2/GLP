@@ -27,7 +27,7 @@
 % Act schemas allow numbers (GSC, Section 3.2, the paragraph after the
 % example of def:schema), and they are printed as def:numbers writes a
 % schema with numbers, as GB's paper does (GB, Appendix A): a numeric
-% argument as its variable or its number, the numeric variables in the head
+% argument as its variable or its number, the value variables in the head
 % with the other variables, in the order of the head; a constraint after the
 % head, tau(...) | constraint :, gt(X, Y) as X > Y, le(X, Y) as X <= Y,
 % succ(X, Y) as Y = X + 1 and or(C1, C2) as C1 or C2; and a multiplicity k on
