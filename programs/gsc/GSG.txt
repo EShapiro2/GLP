@@ -2,11 +2,11 @@
 % Owner: GSC.  The paper, /Users/udi/Grassroots/GSC/main.tex, prints it in its box in Section 2.2 and cites a clause as GSG:1; GAI's and CSSN's papers quote it.
 % Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none; Identity was its clause 1 until 2026-10-20.
 % Defines: friend.  Person, and knowing a person, are defined with GKK; Alice and Bob are variables naming distinct persons.
-% Last changed: 2026-10-23, the pragmas after the clauses, which the app built from the contract follows (Udi, to GSC #6).  2026-10-20: written by GAI #2 Cowork (2026-10-18) from GAI's paper; the trailing clauses of Friendship and Ending a friendship cut, Identity moved to GKK, the clauses with Alice and Bob, and "know each other personally" kept, attested (Udi, 2026-10-20, to GSC #5).
+% Last changed: 2026-10-23, the pragmas after the clauses, which the app built from the contract follows, and each clause ending with its modality in place of its period, ■ enforced, ◆ attested, ○ undertaken (Udi, to GSC #6; GSC's paper, Section 8).  2026-10-20: written by GAI #2 Cowork (2026-10-18) from GAI's paper; the trailing clauses of Friendship and Ending a friendship cut, Identity moved to GKK, the clauses with Alice and Bob, and "know each other personally" kept, attested (Udi, 2026-10-20, to GSC #5).
 % Schemas: GSG.glp beside this file, GKK's three and two over the predicate friend, befriend requiring that each knows the other, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GSG: Grassroots Social Graph
-1. Friendship.  Alice and Bob, who know each other personally and are not friends, may jointly decide to become friends by an act of both.
-2. Ending a friendship.  Alice may end their friendship with Bob by their own act.
+1. Friendship.  Alice and Bob, who know each other personally and are not friends, may jointly decide to become friends by an act of both ◆
+2. Ending a friendship.  Alice may end their friendship with Bob by their own act ■
 Pragmas
 Friends: the friends of Alice.
 Friendship: [Befriend] Alice asks to be your friend.
