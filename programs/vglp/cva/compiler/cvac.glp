@@ -3,7 +3,7 @@
 %% Definition "Canonical CVA Platform"; Section 5.4, "The compilation" and the
 %% paragraph "Act schemas"; self.glp says more).
 %%
-%% A contract is compiled when programs/gsc finds it syntactically grassroots, grassroots with wards, syntactically grassroots with seated and listed roles or with wards, or finds no fault in it but its introductory acts, so with traceable provenance and volition (verdict_lines below), every role a party role or a listed role, and no name variable (role_lines), so that it is a local specification (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "Such a contract is a local specification"), and when it is effective, by the same paragraph, which local.glp decides.  Otherwise it prints the lines saying why and nothing else.  A signed term sgn(y, i) in an added atom is the speech act bound to y, signed by the person in role i (vGLP, Section 5.4, "Act schemas as local specifications"; GSC, Definition "Act schema"): local.glp decides the contract over it and the printed text, text.glp, computes it.
+%% A contract is compiled when programs/gsc finds it syntactically grassroots, grassroots with wards or syntactically grassroots with wards, or finds no fault in it but its introductory acts, so with traceable provenance and volition (verdict_lines below), every role a party role or a listed role, and no name variable (role_lines), so that it is a local specification (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "Such a contract is a local specification"), and when it is effective, by the same paragraph, which local.glp decides.  Otherwise it prints the lines saying why and nothing else.  A signed term sgn(y, i) in an added atom is the speech act bound to y, signed by the person in role i (vGLP, Section 5.4, "Act schemas as local specifications"; GSC, Definition "Act schema"): local.glp decides the contract over it and the printed text, text.glp, computes it.
 %%
 %% The module is what is printed from the contract, here, and the text every contract shares, text.glp.  What is printed from the contract is the type Class, one alternative per schema, the schema's name applied to the people in its roles and then the values of its variables, in the order of its head, tau(pi_1, ..., pi_k ; x_1, ..., x_m), as GSC's term form gives it (GSC 0228e79, Definition "Act schema"; vGLP #15 Cowork to Code, 2026-10-19 13:34 UTC, item 2), a term of it naming a schema-binding and so its part and its class (vGLP 099f876, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"); the request type, Request, with the alternative propose([t]_j) for each guarded part [t]_j, a term of Proposal, the alternatives of the schemas whose terms name guarded parts, and the alternative known(Peer) (Section 5.4, "The compilation"); the
 %% contract itself, as the term programs/gsc reads, from which the shared text
@@ -117,12 +117,10 @@ verdict_lines(not_grassroots(Fs), Nm, L?) :- ground(Fs?), ground(Nm?) |
     realisable_lines(B?, Nm?, L).
 verdict_lines(malformed(_), Nm, [H?, '%% it is malformed; check_named in programs/gsc gives the faults.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
-verdict_lines(conditions_met, Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
-    ground(Nm?) | H =.. ['%% not compiled', Nm?].
-%% The verdicts on an agent-named contract with community roles (GSC f3c4f43, Appendix D.4, Theorem "Grassroots realisation with listed roles", and def:sg-wards of CSSN's paper): compiled where its community roles are listed roles, which vGLP Section 5.4 takes (vGLP f5f1644), and refused otherwise (role_lines).
-verdict_lines(syntactically_grassroots_with_listed_roles, _, []).
+%% The verdict on a contract with wards and listed roles or name terms (def:sg-wards of CSSN's paper): compiled, its listed roles taken by vGLP Section 5.4 (vGLP f5f1644), and any other community role refused (role_lines).
 verdict_lines(syntactically_grassroots_with_wards(_, _, _, _, _), _, []).
-verdict_lines(conditions_failed(_), Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
+%% A contract whose every fault rests on the values it fixes, which its term does not carry: "the verdict is unsettled(Faults), and it is not compiled" (programs/gsc/README.md, at GSC-unob3 f06db5dc).
+verdict_lines(unsettled(_), Nm, [H?, '%% the checker leaves it unsettled, its faults resting on the values the contract fixes; check_named in programs/gsc gives them.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 procedure realisable(Faults?, YesNo).
 realisable([], yes).
@@ -130,7 +128,9 @@ realisable([no_introductory_act|Fs], B?) :- realisable(Fs?, B).
 realisable([obstructed(_, _, _, _)|Fs], B?) :- realisable(Fs?, B).
 realisable([untraceable(_)|_], no).
 realisable([volition(_, _, _)|_], no).
-realisable([cohesion(_, _, _)|_], no).
+%% A fault the checker leaves unsettled is of an introductory act (def:unobstructed), as obstructed is.
+realisable([unsettled(_, _, _, _)|Fs], B?) :- realisable(Fs?, B).
+realisable([unsettled_introduction(_)|Fs], B?) :- realisable(Fs?, B).
 realisable([reflexive(_, _, _)|_], no).
 realisable([signed(_, _, _, _)|_], no).
 %% A fault of a schema's form comes in a verdict malformed(Faults), which verdict_lines refuses whole; these clauses cover the type.
@@ -140,6 +140,7 @@ realisable([no_role_changes(_)|_], no).
 realisable([head_not_variable(_, _)|_], no).
 realisable([head_repeated(_, _)|_], no).
 realisable([not_in_head(_, _)|_], no).
+realisable([name_term_base(_, _)|_], no).
 realisable([listed_base(_, _)|_], no).
 realisable([listed_signed(_, _)|_], no).
 realisable([listed_guarded(_, _)|_], no).
