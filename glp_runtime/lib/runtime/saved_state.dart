@@ -1,8 +1,8 @@
 /// The bytes of an agent's saved state: the codec the runtime writes its local
-/// state with at the end of each event cycle, and reads it back with at
-/// restart (IGLP, Definition "Restart" and Remark "What Is Saved and When",
-/// madglp-spec.tex; Implementation Notes, "Persistence": "The runtime keeps,
-/// beside the layer's queue, everything a restarted agent runs from").
+/// state with in each event cycle, and reads it back with at restart (IGLP,
+/// Definition "Restart", madglp-spec.tex; Implementation Notes,
+/// "Persistence": "In the meantime the runtime keeps it by a store the host
+/// gives it, beside the layer's queue").
 ///
 /// The heap is no array (IGLP app:in-heap, Variable pairs): a cell is reached
 /// from a goal, a suspension, a table or another cell.  So the state is

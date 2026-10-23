@@ -27,22 +27,7 @@
 /// characters, as self_key/1 presents it.  Until 2026-10-12 the host built the
 /// simulation's network itself, always.
 ///
-/// Termination and restart (IGLP, Definition "Restart" and Remark "What Is
-/// Saved and When", madglp-spec.tex; Implementation Notes, "Persistence"):
-/// where the host is given an [AgentStateStore], the agent's local state
-/// survives the termination of its application.  The agent is event-driven:
-/// each event --- the initial start, a message the layer delivers, the
-/// person's act, a place event --- is one cycle, which applies the event,
-/// reduces to quiescence, performs its Sends and saves the local state; the
-/// cycles are taken one at a time, in order of arrival.  "The runtime saves
-/// the local state at the end of each such cycle, and a terminated cycle is
-/// run again at restart from the state saved before it": at restart the host
-/// reads the state and the agent goes on from it, with no entry goal posted.
-/// "A cycle whose save fails is not complete, and is run again": the host
-/// goes back to the state saved before the cycle and applies the event again.
-/// "The runtime tells the layer that a message is delivered only once the
-/// cycle that applied it is saved" ([onDelivered]).  Until 2026-10-23 the
-/// runtime saved nothing (Code #13 to GNA, 2026-10-20 23:56 UTC).
+/// Termination and restart (IGLP, Definition "Restart", madglp-spec.tex; Implementation Notes, "Persistence"): where the host is given an [AgentStateStore], the agent's local state survives the termination of its application, kept by the store, and "a message is handed to the layer, and a delivered message acknowledged to the layer, only from a state the store holds, and a restart resumes from the state the store holds".  The agent is event-driven (Implementation Notes, "Event-driven execution"): each event --- the initial start, a message the layer delivers, the person's act, a place event --- is one cycle, which applies the event, reduces to quiescence, saves the local state with the cycle's outgoing messages undelivered in M_p, and only then hands them to the layer; the cycles are taken one at a time, in order of arrival.  At restart the agent goes on from the state the store holds, with no entry goal posted, and hands to the layer the messages that state holds undelivered.  A cycle whose save fails goes back to the state saved before it and applies the event again.  The layer is told that a message is delivered once the cycle that applied it is saved ([onDelivered]).  Until 2026-10-23 the runtime saved nothing (Code #13 to GNA, 2026-10-20 23:56 UTC), and until 2026-10-24 a cycle handed its messages to the layer before its save.
 library;
 
 import 'dart:async';
@@ -81,8 +66,7 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
 /// 5. In the simulation, call onMadMessageReceived(from, payload) for network
 ///    messages; a given network delivers its own
 ///
-/// Given a [stateStore], the agent saves its local state at the end of each
-/// event cycle, and a host made again over the same store goes on from it.
+/// Given a [stateStore], the agent saves its local state in each event cycle before its outgoing messages are handed to the layer, and a host made again over the same store goes on from it.
 class AgentRuntime {
   /// The host's handle on the agent: its name in the simulation, which names
   /// agents symbolically, and its tag in the log.  Over a given network the
@@ -150,18 +134,11 @@ class AgentRuntime {
   /// the layer the file of its queue.
   final AgentStateStore? stateStore;
 
-  /// The runtime tells the layer that the message of [messageId] is delivered:
-  /// called once the cycle that applied it is saved, or, where there is no
-  /// [stateStore], once the cycle is complete (IGLP, Implementation Notes,
-  /// "Persistence": "The runtime tells the layer that a message is delivered
-  /// only once the cycle that applied it is saved, and the layer delivers
-  /// again a message not so acknowledged").  [GlpNetwork] has no function for
-  /// it, GNA's API giving none yet, so the host binds it to the layer's.
+  /// The runtime tells the layer that the message of [messageId] is delivered: called once the cycle that applied it is saved, or, where there is no [stateStore], once the cycle is complete (IGLP, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, only from a state the store holds").  [GlpNetwork] has no function for it, GNA's API giving none yet, so the host binds it to the layer's.
   void Function(String messageId)? onDelivered;
 
   // Runtime state
-  /// The engine the agent runs in: made at [initialize], and made again where
-  /// a cycle whose save failed is run again from the state saved before it.
+  /// The engine the agent runs in: made at [initialize], and made again where a cycle whose save failed goes back to the state saved before it.
   GlpEngine? _engine;
 
   /// The key pair the agent runs under, fixed at [initialize].
@@ -171,9 +148,11 @@ class AgentRuntime {
   /// held to at restart: its program counters index this code.
   Uint8List? _programIdentity;
 
-  /// The state saved at the end of the last cycle that completed, which a
-  /// cycle whose save fails is run again from.  Null until the first is saved.
+  /// The state last saved, which a cycle whose save fails goes back to.  Null until the first is saved.
   Uint8List? _lastSaved;
+
+  /// The messages [_lastSaved] holds undelivered have been handed to the layer since it was saved ([_handOver]), so that a cycle going back to it takes them out of M_p and hands none of them over twice ([_rollBack]).
+  bool _lastSavedHandedOver = false;
 
   /// The events waiting for their cycle, in order of arrival, each with the
   /// completer of whoever submitted it.
@@ -307,10 +286,7 @@ class AgentRuntime {
   // INITIALIZATION
   // =========================================================================
 
-  /// Start the agent: where its [stateStore] holds a saved state, go on from
-  /// it (IGLP, Definition "Restart": "the local state s_p of p at restart is
-  /// its local state at termination"); otherwise boot it, the initial start
-  /// being its first event cycle.
+  /// Start the agent: where its [stateStore] holds a saved state, go on from it (IGLP, Definition "Restart": "the local state s_p of p at restart is its local state at termination"; Implementation Notes, "Persistence": "a restart resumes from the state the store holds"), the restart's cycle handing to the layer the messages that state holds undelivered ([_Resume]); otherwise boot it, the initial start being its first event cycle.
   Future<void> initialize() async {
     _log('INIT: Starting');
     // The agent's key pair: provided by the coordinator, or generated. The
@@ -324,11 +300,13 @@ class AgentRuntime {
     if (saved != null) {
       _restore(saved);
       _lastSaved = saved;
-      _initialized = true;
-      updateStats();
+      _lastSavedHandedOver = false;
       _log('INIT: restored the state saved at termination '
           '(${saved.length} bytes), GQ=${_runtime!.gq.length}');
       _output('[INIT] Restored the agent\'s saved state');
+      await _submit(const _Resume());
+      _initialized = true;
+      updateStats();
       return;
     }
     await _submit(const _Boot());
@@ -402,7 +380,7 @@ class AgentRuntime {
     }
 
     // A place event the layer reports is an event of its own: its cycle
-    // delivers it onto the place's stream, reduces and saves ([_cycle]).
+    // delivers it onto the place's stream, reduces, saves and sends ([_cycle]).
     _ctx!.placeEventSink = (place, event, declaration) => unawaited(
         _submit(_PlaceEvent(place, event, declaration))
             .catchError((Object _) {}));
@@ -596,54 +574,118 @@ class AgentRuntime {
     _pumping = false;
   }
 
-  /// One event cycle (IGLP, Remark "What Is Saved and When": "A madGLP agent
-  /// is event-driven: it applies an event, reduces to quiescence and performs
-  /// its Sends.  The runtime saves the local state at the end of each such
-  /// cycle"): apply [event], reduce and send ([_apply]), and save.  "A cycle
-  /// whose save fails is not complete, and is run again" (Implementation
-  /// Notes, "Persistence"): the agent goes back to the state saved before it
-  /// and applies the event again.  A state that cannot be written is a fault
-  /// of the runtime, not a failed save, and ends the cycle with the error.
-  /// Once the cycle is saved, the layer is told the message it applied is
-  /// delivered ([onDelivered]).
+  /// One event cycle (IGLP, Implementation Notes, "Event-driven execution": "On each event the agent binds what the event delivers, reduces until quiescent ... and then performs its Sends").  With no [stateStore], the agent applies [event], reduces and performs its Sends ([_apply], [Scheduler.drainAndSend]).  With one, it saves before it sends ([_cycleSaving]).  Once the cycle is complete --- saved, where there is a store --- the layer is told the message it applied is delivered ([onDelivered]).
   Future<void> _cycle(_AgentEvent event) async {
-    while (true) {
-      _apply(event);
-      final store = stateStore;
-      if (store == null) break;
-      final state = _snapshot();
-      try {
-        await store.save(state);
-        _lastSaved = state;
-        break;
-      } catch (e) {
-        _log('SAVE FAILED: $e; the cycle of $event is run again from the '
-            'state saved before it');
-        _output('[ERROR] the agent\'s state was not saved: $e; the event is '
-            'applied again');
-        _rollBack();
-      }
+    final store = stateStore;
+    if (store == null) {
+      _apply(event, send: true);
+    } else {
+      await _cycleSaving(event, store);
     }
     if (event is _Message && event.messageId.isNotEmpty) {
       onDelivered?.call(event.messageId);
     }
   }
 
-  /// Go back to the state saved before the cycle in progress: the engine made
-  /// again and the state read back, or, before any state was saved, a fresh
-  /// engine for the boot.
+  /// The cycle of [event] over [store] (IGLP, Implementation Notes, "Persistence": "a message is handed to the layer, and a delivered message acknowledged to the layer, only from a state the store holds, and a restart resumes from the state the store holds").  The agent applies the event and reduces to quiescence, the Sends it makes left undelivered in M_p; saves the state, which holds them undelivered; and then hands them to the layer ([_handOver]).  Where the hand-over leaves the machine idle with a goal waiting on when_idle, the agent reduces again, which re-tries the goal, saves and hands over again, as [Scheduler.drainAndSend] does with no store; [maxQuiescenceCycles] bounds the goals of the whole cycle.  Once the last hand-over has handed messages to the layer, the state is saved again, holding them delivered, so that a restart hands over again only what the store holds undelivered.  The restart's cycle ([_Resume]) applies nothing, and begins with the hand-over of what the restored state holds undelivered.
+  Future<void> _cycleSaving(_AgentEvent event, AgentStateStore store) async {
+    var goals = 0;
+    String? status;
+    if (event is! _Resume) {
+      (status, goals) = await _stepAndSave(store,
+          () => _apply(event, send: false), 'the event is applied again');
+    }
+    while (true) {
+      final handed = _handOver();
+      // A run that stopped at the net, or on an error of the runtime, is not
+      // run again; the cycle ends with its hand-over.
+      final stopped =
+          status == ExecutionStatus.capped.name || status == 'error';
+      final idle = _runtime!.hasIdleWaits && _runtime!.isIdle;
+      if (stopped || !idle || goals >= maxQuiescenceCycles) {
+        if (!stopped && idle) _reportCapped(goals);
+        if (handed > 0) await _saveHandedOver(store);
+        return;
+      }
+      final (runStatus, ran) = await _stepAndSave(
+          store,
+          () => _runSync(send: false, maxCycles: maxQuiescenceCycles - goals),
+          'the run after the hand-over is made again');
+      status = runStatus;
+      goals += ran;
+    }
+  }
+
+  /// Take [step] --- the event applied, or a run after a hand-over --- and save the state it leaves: the status of the step's run, and the number of goals it ran.  Where the save fails, the agent goes back to the state saved before the step ([_rollBack]) and takes it again, and says so in [again].  A state that cannot be written is a fault of the runtime, not a failed save, and ends the cycle with the error.
+  Future<(String?, int)> _stepAndSave(
+      AgentStateStore store, String? Function() step, String again) async {
+    while (true) {
+      final before = goalCount;
+      final status = step();
+      final goals = goalCount - before;
+      final state = _snapshot();
+      try {
+        await store.save(state);
+        _lastSaved = state;
+        _lastSavedHandedOver = false;
+        return (status, goals);
+      } catch (e) {
+        _log('SAVE FAILED: $e; $again from the state saved before it');
+        _output('[ERROR] the agent\'s state was not saved: $e; $again');
+        _rollBack();
+      }
+    }
+  }
+
+  /// Hand to the layer every message M_p holds undelivered and not held (IGLP, Definition "madGLP Send Transaction": Send "is enabled when (m, q) ∈ M_p is undelivered and not held"), from the state the store holds: the state just saved, or the state a restart resumes from.  The number of messages handed over.
+  int _handOver() {
+    final handed = _ctx!.flushMessages();
+    _lastSavedHandedOver = true;
+    if (handed > 0) _log('RUN: handed $handed messages to the layer');
+    return handed;
+  }
+
+  /// Save the state after the last hand-over of a cycle, which holds the messages handed over delivered, so that a restart from it does not hand them over again.  Where the save fails it is made again: the state is the one the agent holds, and nothing of the cycle is to be taken again.
+  Future<void> _saveHandedOver(AgentStateStore store) async {
+    final state = _snapshot();
+    while (true) {
+      try {
+        await store.save(state);
+        _lastSaved = state;
+        _lastSavedHandedOver = false;
+        return;
+      } catch (e) {
+        _log('SAVE FAILED: $e; the state after the hand-over is saved again');
+        _output('[ERROR] the agent\'s state was not saved: $e; it is saved '
+            'again');
+      }
+    }
+  }
+
+  /// Go back to the state saved before the step in progress: the engine made again and the state read back, or, before any state was saved, a fresh engine for the boot.  Where the messages that state holds undelivered have been handed to the layer since it was saved, they are taken out of M_p, so that none is handed over twice.
   void _rollBack() {
     _setUp();
     final saved = _lastSaved;
-    if (saved != null) _restore(saved);
+    if (saved == null) return;
+    _restore(saved);
+    if (_lastSavedHandedOver) {
+      final removed = _ctx!.mp.removeSendable();
+      if (removed > 0) {
+        _log('ROLLBACK: $removed messages the saved state holds undelivered '
+            'were handed to the layer after it was saved, and are taken out '
+            'of M_p');
+      }
+    }
   }
 
-  /// Apply [event] and reduce: the event's binding, a run until quiescent and
-  /// the Sends it makes.
-  void _apply(_AgentEvent event) {
+  /// Apply [event] and reduce: the event's binding and a run until quiescent, and, with [send], the Sends it makes ([_runSync]).  The status of the run, or null where none was made.
+  String? _apply(_AgentEvent event, {required bool send}) {
     switch (event) {
       case _Boot():
         _boot();
+      case _Resume():
+        // The restart binds nothing.
+        break;
       case _Message(:final from, :final payload):
         try {
           _ctx!.handleIncomingPayload(payload: payload, fromAgent: from);
@@ -656,7 +698,7 @@ class AgentRuntime {
         if (input == null) {
           _log('USER_INPUT: $goalLabel takes no person stream; the act is '
               'dropped');
-          return;
+          return null;
         }
         try {
           final activations = input.inject(act);
@@ -667,19 +709,20 @@ class AgentRuntime {
         } catch (e, st) {
           _log('USER_INPUT ERROR: $e\n$st');
           _output('[ERROR] $e');
-          return;
+          return null;
         }
       case _PlaceEvent(:final place, :final event, :final declaration):
         _ctx!.deliverPlaceEvent(place, event, declaration: declaration);
     }
-    final status = _runSync();
+    final status = _runSync(send: send);
     if (event is _Boot) {
       _log('INIT: Initial run status: $status, GQ after: '
           '${_runtime!.gq.length}');
     }
+    return status;
   }
 
-  /// The agent's local state as the bytes saved at the end of a cycle.
+  /// The agent's local state as the bytes saved in a cycle.
   Uint8List _snapshot() {
     final w = StateWriter(
       programIdentity: _programIdentity!,
@@ -722,13 +765,7 @@ class AgentRuntime {
       network.send(pk, Uint8List.fromList(msg.payload));
     };
 
-    // Incoming: the Receive transaction, from the sender the layer
-    // authenticated, then a run and the Sends it makes, and the save: the
-    // message's event cycle ([_cycle]), taken once the code that delivered
-    // the message has returned, since a layer may deliver from inside a call
-    // the runtime made of it, and a transaction or a run is never started
-    // inside another.  A place event the layer reports is a cycle of its own
-    // likewise ([MadContext.placeEventSink], set by [_setUp]).
+    // Incoming: the Receive transaction, from the sender the layer authenticated, then a run, and the Sends it makes, after the save where there is a store: the message's event cycle ([_cycle]), taken once the code that delivered the message has returned, since a layer may deliver from inside a call the runtime made of it, and a transaction or a run is never started inside another.  A place event the layer reports is a cycle of its own likewise ([MadContext.placeEventSink], set by [_setUp]).
     network.onMessageReceived = (sender, payload, messageId, underlay) {
       _log('MAD_RECV from ${sender.hex} over ${underlay.name} '
           '(${payload.length} bytes)');
@@ -806,9 +843,9 @@ class AgentRuntime {
   /// The person acts through the user interface, and the acts arrive as
   /// ground terms, never as text (GSG, Appendix "The Prototype's Screens",
   /// and Section 3, "What the super-app grants a mini-app", (ib)).  The act is
-  /// an event, and its cycle is taken in turn ([_cycle]); "an input whose
-  /// cycle did not complete is lost; the person acts again" (IGLP, Remark
-  /// "What Is Saved and When").
+  /// an event, and its cycle is taken in turn ([_cycle]).  An act whose cycle
+  /// is not saved before the application terminates is not in the state the
+  /// store holds, and no message of its cycle has reached the layer.
   Future<void> injectUserInput(rt.Term act) async {
     final shown = formatTerm(act);
     _log('USER_INPUT: $shown');
@@ -902,8 +939,8 @@ class AgentRuntime {
 
   Future<String?> _runUntilQuiescent() async => _runSync();
 
-  /// The run of [runUntilQuiescent], within an event cycle.
-  String? _runSync() {
+  /// The run of [runUntilQuiescent], within an event cycle.  With [send] false, the run makes no Sends: its messages stay undelivered in M_p, for a cycle over a store to hand to the layer once the state holding them is saved ([_cycleSaving]).  [maxCycles], where given, bounds the goals of this run in place of [maxQuiescenceCycles].
+  String? _runSync({bool send = true, int? maxCycles}) {
     _log('RUN: start (GQ=${_runtime?.gq.length ?? 0})');
     if (_scheduler == null || _runtime == null) {
       _log('RUN: early return (not initialized)');
@@ -912,25 +949,21 @@ class AgentRuntime {
 
     try {
       // Per spec: drain all runnable goals, then flush outbound messages, and
-      // again while a goal waits on when_idle.
+      // again while a goal waits on when_idle; or, with no Sends, drain only.
       var messagesFlushed = 0;
-      final result = _scheduler!.drainAndSend(
-          () => messagesFlushed += _ctx!.flushMessages(),
-          maxCycles: maxQuiescenceCycles,
-          debug: glpTraceEnabled);
+      final limit = maxCycles ?? maxQuiescenceCycles;
+      final result = send
+          ? _scheduler!.drainAndSend(
+              () => messagesFlushed += _ctx!.flushMessages(),
+              maxCycles: limit,
+              debug: glpTraceEnabled)
+          : _scheduler!
+              .drainToQuiescence(maxCycles: limit, debug: glpTraceEnabled);
       _log('RUN: status=${result.status}, goals=${result.goalsRun}');
       goalCount += result.goalsRun;
 
       if (result.status == ExecutionStatus.capped) {
-        // The net caught something, which for a program that quiesces it never
-        // does. Say so where the person and the log both see it, and say what
-        // is left standing: a run stopped here is half a run, and nothing that
-        // follows it means what it says.
-        _output('[ERROR] The program did not quiesce: stopped after '
-            '${result.goalsRun} goals with ${_runtime!.gq.length} '
-            'still queued (the limit is $maxQuiescenceCycles).');
-        _log('RUN: CAPPED after ${result.goalsRun} goals, '
-            'GQ=${_runtime!.gq.length}');
+        _reportCapped(result.goalsRun);
       }
 
       if (messagesFlushed > 0) {
@@ -944,6 +977,14 @@ class AgentRuntime {
       _log('RUN ERROR: $e\n$st');
       return 'error';
     }
+  }
+
+  /// The net caught something, which for a program that quiesces it never does: the run stopped after [goalsRun] goals.  Say so where the person and the log both see it, and say what is left standing: a run stopped here is half a run, and nothing that follows it means what it says.
+  void _reportCapped(int goalsRun) {
+    _output('[ERROR] The program did not quiesce: stopped after '
+        '$goalsRun goals with ${_runtime!.gq.length} '
+        'still queued (the limit is $maxQuiescenceCycles).');
+    _log('RUN: CAPPED after $goalsRun goals, GQ=${_runtime!.gq.length}');
   }
 
   // =========================================================================
@@ -1007,8 +1048,8 @@ class AgentRuntime {
 /// An event of the agent: what one cycle applies (IGLP, Implementation Notes,
 /// "Event-driven execution": "an event is the initial start, an incoming
 /// assignment message, the person's input on the UI channel, or a place event
-/// from the networking layer").  Each is data, so a cycle whose save failed is
-/// run again on an engine made again.
+/// from the networking layer"), and the restart.  Each is data, so a cycle
+/// whose save failed is taken again on an engine made again.
 sealed class _AgentEvent {
   const _AgentEvent();
 }
@@ -1018,6 +1059,13 @@ final class _Boot extends _AgentEvent {
   const _Boot();
   @override
   String toString() => 'the initial start';
+}
+
+/// The restart from the state the store holds (IGLP, Implementation Notes, "Persistence": "a restart resumes from the state the store holds"): its cycle applies nothing, and hands to the layer the messages that state holds undelivered, which were saved before their hand-over and may not have reached the layer before the termination ([AgentRuntime._cycleSaving]).
+final class _Resume extends _AgentEvent {
+  const _Resume();
+  @override
+  String toString() => 'the restart';
 }
 
 /// A message the layer delivers, from the agent named [from], under the
