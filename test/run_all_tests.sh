@@ -5514,6 +5514,29 @@ HEREDOC
 2>&1)
 check "RM9 an activated module reaches a root-scope procedure in its body" "Z = \[a, b\]" "$rm9"
 
+# find_type(P/N, Hs, Type) (GLP-Spec appendix-guards, "Dynamic activation";
+# TGLP modules.tex, Definition "Type Identity of a Type, Opaque Instance"): Hs
+# is a list of type identities, one per type parameter of the caller's
+# parameterised declaration of P/N in declaration order, and find_type/3 errs
+# where the length of Hs is not the number of its type parameters.  The
+# fixture calls it on the root's merge/3, of one type parameter, and
+# miniapp/4, of two.
+rm10=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/find_type_list
+one(T).
+two(T, U).
+none(T).
+short(T).
+long(T).
+:quit
+HEREDOC
+2>&1)
+check "RM10 find_type/3 at one type parameter, a list of one" "T = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm10"
+check "RM10 find_type/3 at two type parameters, a list of two" "U = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm10"
+check "RM10 find_type/3 errs on an empty list for one type parameter" "_find_type/3: the length of the list of type identities, 0, is not the number of type parameters of the declaration of :merge/3, 1" "$rm10"
+check "RM10 find_type/3 errs on one identity for two type parameters" "_find_type/3: the length of the list of type identities, 1, is not the number of type parameters of the declaration of :miniapp/4, 2" "$rm10"
+check "RM10 find_type/3 errs on two identities for one type parameter" "_find_type/3: the length of the list of type identities, 2, is not the number of type parameters of the declaration of :merge/3, 1" "$rm10"
+
 echo ""
 fi  # Section RM
 

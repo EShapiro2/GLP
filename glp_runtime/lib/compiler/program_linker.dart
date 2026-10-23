@@ -2920,9 +2920,9 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
   // self.glp's, and resolves to its renamed form; '_find_type' is the kernel
   // and stays bare.
   //
-  // find_type(P/N, H, T) names the caller's parameterised declaration of P/N
+  // find_type(P/N, Hs, T) names the caller's parameterised declaration of P/N
   // (GLP-Spec catalogue, "Dynamic activation"), resolved the same way.
-  // opaque_type(P/N, Module, H) names an entry of Module's exports, not a
+  // opaque_type(P/N, Module, Hs) names an entry of Module's exports, not a
   // declaration of the caller's scope, and its P/N is not resolved.
   if ((goal.functor == 'find_type' || goal.functor == '_find_type') &&
       (goal.arity == 2 || goal.arity == 3)) {

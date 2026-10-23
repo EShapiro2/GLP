@@ -152,6 +152,27 @@ void main() {
           isFalse);
     });
 
+    test('the step back at two labels takes Opaque back to the one the other '
+        'side has at the same position, and to none where it has none', () {
+      // P2 ::= p(h1, h2, Integer).  PO ::= p(Opaque, Opaque, Integer).
+      // PB ::= p(Opaque, Opaque, Opaque).
+      final env2 = TypeEnvironment({
+        r'$abstract_@H1': TypeDef(r'$abstract_@H1', const [], 0, 0),
+        r'$abstract_@H2': TypeDef(r'$abstract_@H2', const [], 0, 0),
+        'P2': TypeDef('P2', [StructAlt('p', [r(r'$abstract_@H1'),
+            r(r'$abstract_@H2'), r('Integer')], 0, 0)], 0, 0),
+        'PO': TypeDef('PO', [StructAlt('p', [r('Opaque'), r('Opaque'),
+            r('Integer')], 0, 0)], 0, 0),
+        'PB': TypeDef('PB', [StructAlt('p', [r('Opaque'), r('Opaque'),
+            r('Opaque')], 0, 0)], 0, 0),
+      }, {});
+      final dfa2 = buildProgramDFA(env2);
+      DFAState s2(String n) => dfa2.getState(n);
+      final both = {s2(r'$abstract_@H1'), s2(r'$abstract_@H2')};
+      expect(isSubtypeWithOpaqueAs(s2('PO'), s2('P2'), both, dfa2), isTrue);
+      expect(isSubtypeWithOpaqueAs(s2('PB'), s2('P2'), both, dfa2), isFalse);
+    });
+
     test('a parameter\'s abstract type is below Opaque inside a type only '
         'where it is at a bare position', () {
       expect(withParametersNotBelowOpaque(
@@ -227,6 +248,27 @@ void main() {
       expect(_refusal('rootelsewhere.glp'),
           contains('the body occurrence produces RootChannel<Opaque>, which is '
               r'not within what the head occurrence hands out (RootChannel<$abstract_X>)'));
+    });
+
+    test('at a template of two type parameters both in the type of one '
+        'position, Pair(X, Y), a Pair(Opaque, Opaque) variable there loads, '
+        'each Opaque taken back to the opaque type of its own parameter', () {
+      expect(_refusal('twopos.glp'), '');
+    });
+
+    test('at a template of two type parameters, a variable whose type has '
+        'Opaque where the position\'s type has Integer is refused: it is not '
+        'T°', () {
+      final r = _refusal('twowrongpos.glp');
+      expect(r, contains('the head occurrence receives Bad, which is not '
+          r'within what the body occurrence accepts (Pair<$abstract_@Hs[1],$abstract_@Hs[2]>)'));
+      expect(r, contains('in the goal run/3 activates'));
+    });
+
+    test('and at a template of one, the same', () {
+      final r = _refusal('onewrongpos.glp');
+      expect(r, contains('the head occurrence receives Bad, which is not '
+          r'within what the body occurrence accepts (One<$abstract_@Hs>)'));
     });
 
     test('in the activating goal, a RootChannel(Opaque) end at a position '

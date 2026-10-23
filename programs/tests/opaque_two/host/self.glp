@@ -4,8 +4,7 @@
 %% template's opaque instance at them (find_type/3), and activates the guest
 %% under it (run/3), handing it a person channel and a social graph channel it
 %% holds at Opaque: the step back admits each at the position typed by the
-%% opaque type of its own parameter.  PROVISIONAL (Udi, 2026-10-15), pending
-%% GLP-Spec's final form.
+%% opaque type of its own parameter.
 
 Done ::= done.
 

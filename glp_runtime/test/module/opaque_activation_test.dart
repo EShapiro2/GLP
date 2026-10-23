@@ -8,11 +8,8 @@
 /// host/ is the host, and guest_a, guest_c and guest_not are guests at Move,
 /// at Bid, and at no type.  A guest's module reaches the host as a file of its
 /// directory, read by load_file/2, written here from the guest's compiled
-/// artefact and removed after.
-///
-/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: Hs is the
-/// list of type identities, one per type parameter of the template in
-/// declaration order, a one-parameter template's the list of one.
+/// artefact and removed after.  Hs is the list of type identities, one per
+/// type parameter of the template in declaration order, here a list of one.
 library;
 
 import 'dart:io';
@@ -164,7 +161,7 @@ void main() {
   });
 
   test('find_type/3 errs where P/N is not declared in the caller\'s scope or '
-      'has not one type parameter for each identity given', () {
+      'the length of Hs is not the number of its type parameters', () {
     final rt = inHost();
     final h = list(['a' * 64]);
     // Not declared.
@@ -176,10 +173,15 @@ void main() {
     // closed/2 is the host's own parameterised declaration, with one.
     expect(call(rt, '_find_type', [ref('tests/opaque/host:closed', 2), h]).$1,
         BodyKernelResult.success);
-    // Two identities for its one parameter, and a bare identity, not a list.
+    // Two identities for its one parameter, none, and a bare identity, not
+    // a list: the length of Hs is not the number of its type parameters.
     expect(
         call(rt, '_find_type',
             [ref('tests/opaque/host:closed', 2), list(['a' * 64, 'b' * 64])]).$1,
+        BodyKernelResult.abort);
+    expect(
+        call(rt, '_find_type', [ref('tests/opaque/host:closed', 2), list([])])
+            .$1,
         BodyKernelResult.abort);
     expect(
         call(rt, '_find_type',

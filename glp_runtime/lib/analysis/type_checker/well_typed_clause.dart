@@ -444,8 +444,8 @@ ClauseCheckResult checkClause(
   final uninstantiated = <(int, ast.Goal, ProcDecl)>[];
 
   // The goals `run/3` activates under a type identity `find_type/3` obtained
-  // at h, each read by its template's opaque instance at h, by the index of
-  // its run/3 goal ([_opaqueActivations]).
+  // at h_1, ..., h_k, each read by its template's opaque instance at them, by
+  // the index of its run/3 goal ([_opaqueActivations]).
   final activations = _opaqueActivations(clause, dfa, env);
 
   // Step 2: Check each body atom
@@ -469,10 +469,10 @@ ClauseCheckResult checkClause(
     }
 
     // The goal this run/3 goal activates, where it is one of [activations]:
-    // checked by the template's opaque instance at h, and its occurrences
-    // typed by it and merged with the run/3 goal's own, each marked
-    // [_activatedMark] so that the pair checks below take the one step back
-    // at it ([_stepBack]).
+    // checked by the template's opaque instance at h_1, ..., h_k, and its
+    // occurrences typed by it and merged with the run/3 goal's own, each
+    // marked [_activatedMark] so that the pair checks below take the one step
+    // back at it ([_stepBack]).
     final activation = activations[i];
     var activated = const <String>{};
     if (activation != null) {
@@ -485,9 +485,9 @@ ClauseCheckResult checkClause(
             i,
             goalResult.errors));
       }
-      // The goal's occurrences are typed by D⟨h⟩, in place of the `_?` the
-      // run/3 goal's first argument gives them (Definition "Type
-      // Assignment"): the goal run/3 activates is read by D⟨h⟩.
+      // The goal's occurrences are typed by D⟨h_1, ..., h_k⟩, in place of the
+      // `_?` the run/3 goal's first argument gives them (Definition "Type
+      // Assignment"): the goal run/3 activates is read by D⟨h_1, ..., h_k⟩.
       activated = goalResult.variableTypes.keys.toSet();
       atomResult = WellTypedResult(
         isWellTyped: atomResult.isWellTyped,
@@ -643,30 +643,21 @@ const String _activatedMark = ', in the goal run/3 activates';
 
 /// The one step back from `Opaque` (TGLP modules.tex, "Opaque types": "The
 /// type checker takes Opaque back to one opaque type in one place: in a goal
-/// that run activates at an opaque instance at h, a variable of type T° may
-/// stand at a position typed T, for a type T whose opaque types are labelled
-/// h"; GLP-Spec appendix-guards.tex, "Dynamic activation": "At a position
-/// whose type has the template's parameter in it, Goal may hold a variable
-/// whose type has Opaque in its place"; GLP, 2026-10-13 20:04 UTC, point 3:
-/// "the step back substitutes Opaque -> h throughout the type of the run
-/// goal's argument --- the whole end, not only a bare Opaque").
+/// that run activates at an opaque instance at h_1, ..., h_k, a variable of
+/// type T° may stand at a position typed T, for a type T whose opaque types
+/// are labelled among h_1, ..., h_k"; GLP-Spec appendix-guards.tex, "Dynamic
+/// activation": "At a position whose type has a parameter of the template in
+/// it, Goal may hold a variable whose type has Opaque in its place").
 ///
 /// Whether a pair whose one occurrence, of type [sub], must be within the
 /// other's, [sup], at [supLocation], holds by it: the occurrence at [sup] is
-/// in the goal run/3 activates, the opaque types of [sup] are labelled h, one
-/// h ([_labelledOpaqueOf]), and [sub] with `Opaque` replaced throughout by the
-/// opaque type labelled h is below [sup] (subtyping.dart,
-/// [isSubtypeWithOpaqueAs]) --- of which [sub] = [sup]° is the case the
-/// paper names.  Nowhere else: outside that goal `Opaque` is below no opaque
-/// type (subtyping.dart, [isSubtype]), and it is a variable that stands
-/// there, since a pair is of a variable's two occurrences.
-///
-/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: a template
-/// of k type parameters is activated at the opaque types labelled h_1, ...,
-/// h_k, and `Opaque` is admitted at each position typed by the opaque type
-/// labelled h_i: [sup]'s opaque types are those labelled h_1, ..., h_k, and
-/// `Opaque` in [sub] is taken back to the one [sup] has at the same position
-/// ([isSubtypeWithOpaqueAs]).
+/// in the goal run/3 activates, the opaque types of [sup] are labelled among
+/// h_1, ..., h_k ([_labelledOpaquesOf]), and [sub] with each `Opaque` taken
+/// back to the opaque type [sup] has at the same position is below [sup]
+/// (subtyping.dart, [isSubtypeWithOpaqueAs]) --- of which [sub] = [sup]° is
+/// the case the paper names.  Nowhere else: outside that goal `Opaque` is
+/// below no opaque type (subtyping.dart, [isSubtype]), and it is a variable
+/// that stands there, since a pair is of a variable's two occurrences.
 bool _stepBack(
     DFAState sub, DFAState sup, String supLocation, ProgramDFA dfa) {
   if (!supLocation.endsWith(_activatedMark)) return false;
@@ -677,9 +668,9 @@ bool _stepBack(
 
 /// The opaque types labelled h ([DFAState.isRunOpaqueType]) that output type
 /// [t] has at its positions, at either mode: "a type T whose opaque types are
-/// labelled h" (TGLP modules.tex, "Opaque types"), each h one of the labels a
-/// run/3 activation names.  Empty where [t] has no opaque type, and null where
-/// it has one that is not labelled so.
+/// labelled among h_1, ..., h_k" (TGLP modules.tex, "Opaque types"), each h
+/// one of the labels a run/3 activation names.  Empty where [t] has no opaque
+/// type, and null where it has one that is not labelled so.
 Set<DFAState>? _labelledOpaquesOf(DFAState t, ProgramDFA dfa) {
   final found = <DFAState>{};
   final seen = <String>{};
@@ -707,7 +698,7 @@ Set<DFAState>? _labelledOpaquesOf(DFAState t, ProgramDFA dfa) {
 }
 
 /// A goal that `run/3` activates under a type identity `find_type/3`
-/// obtained at h, read by its template's opaque instance at h.
+/// obtained at h_1, ..., h_k, read by its template's opaque instance at them.
 class _OpaqueActivation {
   /// The goal, the first argument of the run/3 goal.
   final ast.Goal goal;
@@ -723,8 +714,8 @@ class _OpaqueActivation {
   /// opaque type labelled with its h ([runOpaqueTypeName]).
   final ProcDecl decl;
 
-  /// The environment D⟨h⟩ is checked in: the clause's, with the opaque type
-  /// and the types D⟨h⟩ reaches.
+  /// The environment D⟨h_1, ..., h_k⟩ is checked in: the clause's, with the
+  /// opaque types and the types D⟨h_1, ..., h_k⟩ reaches.
   final TypeEnvironment env;
 
   _OpaqueActivation(this.goal, this.template, this.label, this.decl, this.env);
@@ -733,26 +724,23 @@ class _OpaqueActivation {
 /// The goals of [clause] that `run/3` activates at an opaque instance, by the
 /// index of their run/3 goal among the clause's body atoms.
 ///
-/// "In a goal that run activates at an opaque instance at h" (TGLP
-/// modules.tex, "Opaque types"); the construct is the GLP language paper's
-/// (GLP-Spec appendix-guards.tex, "Dynamic activation"): a host activates a
-/// guest "by opaque_type(P/N, M, H), find_type(P/N, H, Type) and run(Goal,
-/// Type, M)", `find_type(P/N, H, Type)` assigning Type "the type identity of
-/// the opaque instance at H of the caller's parameterised declaration of
-/// P/N".  So a goal is one of them where the clause's body has
-/// `find_type(P/N, H, Type)`, P/N a ground reference to a parameterised
-/// declaration of the clause's scope with exactly one type parameter and
-/// Type a writer, and `run(Goal, Type?, M)` with Goal a goal of P/N: Goal is
-/// then authored for D⟨h⟩, h being what H holds, and is read by it, the
-/// parameter an opaque type labelled by H as the clause writes it --- two
-/// such being one exactly when H is.  A run/3 goal under any other type
-/// identity is read as before, its goal at `_?`.
-///
-/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form:
-/// `find_type(P/N, Hs, Type)` takes the list of type identities, one per type
-/// parameter of the template in declaration order, and the template may have
-/// any number k of them; each parameter X_i is replaced by an opaque type
-/// labelled h_i ([_activationLabels]).
+/// "In a goal that run activates at an opaque instance at h_1, ..., h_k"
+/// (TGLP modules.tex, "Opaque types"); the construct is the GLP language
+/// paper's (GLP-Spec appendix-guards.tex, "Dynamic activation"): a host
+/// activates a guest "by opaque_type(P/N, M, Hs), find_type(P/N, Hs, Type)
+/// and run(Goal, Type, M)", `find_type(P/N, Hs, Type)` assigning Type "the
+/// type identity of the opaque instance at Hs of the caller's parameterised
+/// declaration of P/N, Hs a list of type identities, one per type parameter
+/// of the declaration in declaration order".  So a goal is one of them where
+/// the clause's body has `find_type(P/N, Hs, Type)`, P/N a ground reference
+/// to a parameterised declaration of the clause's scope, of k type
+/// parameters, Hs a list of k elements or a variable ([_activationLabels]),
+/// and Type a writer, and `run(Goal, Type?, M)` with Goal a goal of P/N: Goal
+/// is then authored for D⟨h_1, ..., h_k⟩, h_i being what Hs holds at i, and
+/// is read by it, each parameter X_i an opaque type labelled by h_i as the
+/// clause writes it --- two such being one exactly when the clause writes
+/// them alike.  A run/3 goal under any other type identity is read as before,
+/// its goal at `_?`.
 Map<int, _OpaqueActivation> _opaqueActivations(
     TypedClause clause, ProgramDFA dfa, TypeEnvironment env) {
   final atoms = clause.bodyAtoms;
@@ -841,7 +829,6 @@ Map<int, _OpaqueActivation> _opaqueActivations(
 /// [hs] is a list of k elements; the i-th element of the list a variable `H`
 /// holds, `H[i]`, where it is a variable, or `H` itself where k is 1; null
 /// otherwise.  Two labels are one exactly when the clause writes them alike.
-/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form.
 List<String>? _activationLabels(ast.Term hs, int k) {
   String? one(ast.Term t) => switch (t) {
         ast.VarTerm(:final name) => name,
@@ -864,7 +851,7 @@ List<String>? _activationLabels(ast.Term hs, int k) {
   return out;
 }
 
-/// The goal of [activation], checked by D⟨h⟩ as a body goal is by its
+/// The goal of [activation], checked by D⟨h_1, ..., h_k⟩ as a body goal is by its
 /// declaration (Definition "Well-Typed Clause", condition 2).
 WellTypedResult _checkActivatedGoal(
     _OpaqueActivation activation, ProgramDFA dfa) {

@@ -303,14 +303,6 @@ String? _procedureKey(GlpRuntime rt, Object? ref) {
   return null;
 }
 
-/// A type identity: a ground string, or null.
-String? _identity(GlpRuntime rt, Object? arg) {
-  final t = _deref(rt, arg);
-  if (t is ConstTerm && t.value is String) return t.value as String;
-  if (t is String) return t;
-  return null;
-}
-
 /// A list of type identities, ground strings, or null where [arg] is none.
 List<String>? _identities(GlpRuntime rt, Object? arg) {
   // Followed through every reference: the list's cells are a term's.
@@ -336,16 +328,20 @@ List<String>? _identities(GlpRuntime rt, Object? arg) {
   return null;
 }
 
-/// `_find_type(P/N, Hs, Type)`/3 — the type identity of the opaque instance
-/// at `Hs` of the caller's parameterised declaration of `P/N` (GLP-Spec
-/// catalogue, "Dynamic activation"; TGLP modules.tex, Definition "Type
-/// Identity of a Type, Opaque Instance"), and an error where `P/N` is not
-/// declared there or its declaration has not one type parameter for each
-/// identity of `Hs`.  PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final
-/// form: `Hs` is the list of type identities, one per type parameter of the
-/// template in declaration order, a one-parameter template's the list of one.  The caller's scope is
-/// the declared tables' of the module the calling goal points to, `P/N` keyed
-/// as the compiled module carries the declaration, as for `_find_type`/2.
+/// `_find_type(P/N, Hs, Type)`/3, `'_find_type'(_?, List(Constant)?,
+/// Constant)` — the type identity of the opaque instance at `Hs` of the
+/// caller's parameterised declaration of `P/N`, `Hs` a list of type
+/// identities, one per type parameter of the declaration in declaration
+/// order, and an error where `P/N` is not declared there or the length of
+/// `Hs` is not the number of its type parameters (GLP-Spec appendix-guards,
+/// the Modules kernel rows and "Dynamic activation"; TGLP modules.tex,
+/// Definition "Type Identity of a Type, Opaque Instance", and after it: "each
+/// takes the list, and refuses one whose length is not the number of D's
+/// parameters").  The error is an abort, as a body kernel's is (GLP-Spec
+/// appendix-guards: "A body kernel whose precondition fails ... aborts").
+/// The caller's scope is the declared tables' of the module the calling goal
+/// points to, `P/N` keyed as the compiled module carries the declaration, as
+/// for `_find_type`/2.
 BodyKernelResult findTypeOpaqueKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] _find_type/3: expected 3 arguments, got ${args.length}');
@@ -358,9 +354,9 @@ BodyKernelResult findTypeOpaqueKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
   final labels = _identities(rt, args[1]);
-  if (labels == null || labels.isEmpty) {
-    print('[ABORT] _find_type/3: second argument is not a non-empty list of '
-        'type identities (ground strings), got ${_deref(rt, args[1])}');
+  if (labels == null) {
+    print('[ABORT] _find_type/3: second argument is not a list of type '
+        'identities (ground strings), got ${_deref(rt, args[1])}');
     return BodyKernelResult.abort;
   }
   final goalId = rt.currentGoalId;
@@ -381,15 +377,14 @@ BodyKernelResult findTypeOpaqueKernel(GlpRuntime rt, List<Object?> args) {
   return _bind(rt, args[2], ConstTerm(identity), '_find_type/3');
 }
 
-/// `_opaque_type(P/N, Module, Hs)`/3 — the list of the type identities of the
-/// types at which `Module`'s exports record its entry `P/N` as the instance
-/// of a parameterised declaration, one per type parameter in declaration
-/// order (GLP-Spec catalogue, "Dynamic activation"; TGLP modules.tex, Dynamic
-/// Activation, "Opaque types": "The host obtains iota(T) from the module
-/// value"), and an error where they record none.  PROVISIONAL (Udi,
-/// 2026-10-15), pending GLP-Spec's final form: a list, a one-parameter
-/// template's the list of one.  The record
-/// is derived with the exported table from the artefact's interface text and
+/// `_opaque_type(P/N, Module, Hs)`/3, `'_opaque_type'(_?, Module?,
+/// List(Constant))` — the list of the type identities of the types at which
+/// `Module`'s exports record its entry `P/N` as the instance of a
+/// parameterised declaration, in the order of its parameters, and an error
+/// where they record none (GLP-Spec appendix-guards, the Modules kernel rows
+/// and "Dynamic activation"; TGLP modules.tex, Dynamic Activation, "Opaque
+/// types": "The host obtains ι(T̄) from the module value").  The record is
+/// derived with the exported table from the artefact's interface text and
 /// cached on the module value, as `_run`/3's is.
 BodyKernelResult opaqueTypeKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {

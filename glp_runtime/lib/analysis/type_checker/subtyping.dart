@@ -30,47 +30,42 @@ bool isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
   return _isSubtype(stateA, stateB, dfa, <String>{}, open, null);
 }
 
-/// Whether output type [stateA], with `Opaque` replaced throughout by the
-/// opaque type [labelled] (an opaque type labelled h, [DFAState.isRunOpaqueType]),
-/// is a subtype of output type [stateB]: the one step back from `Opaque`
-/// (TGLP modules.tex, "Opaque types": "in a goal that run activates at an
-/// opaque instance at h, a variable of type T° may stand at a position typed
-/// T, for a type T whose opaque types are labelled h"; GLP, 2026-10-13 20:04
-/// UTC, point 3: "the step back substitutes Opaque -> h throughout the type of
-/// the run goal's argument").  The replacement follows [stateA]'s own
-/// structure through every mode inversion, where the comparison reverses
-/// (well_typed_clause.dart, `_stepBack`).
-///
-/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: [labelled]
-/// holds the opaque types labelled h_1, ..., h_k of a template of k type
-/// parameters, and `Opaque` is taken back to the one of them the other side
-/// has at the same position; with one, to it wherever `Opaque` stands, as
-/// before.
+/// Whether output type [stateA], with each `Opaque` taken back to the opaque
+/// type of [labelled] that [stateB] has at the same position, is a subtype of
+/// output type [stateB]: the one step back from `Opaque` (TGLP modules.tex,
+/// "Opaque types": "in a goal that run activates at an opaque instance at
+/// h_1, ..., h_k, a variable of type T° may stand at a position typed T, for
+/// a type T whose opaque types are labelled among h_1, ..., h_k").
+/// [labelled] holds the opaque types labelled h_1, ..., h_k
+/// ([DFAState.isRunOpaqueType]) that [stateB] has.  An `Opaque` of
+/// [stateA] at a position where [stateB] has none of them stays `Opaque`, and
+/// is below what [stateB] has there only where that is `Opaque` ([isSubtype]):
+/// T° has `Opaque` exactly where T has an opaque type.  The replacement
+/// follows [stateA]'s own structure through every mode inversion, where the
+/// comparison reverses (well_typed_clause.dart, `_stepBack`).
 bool isSubtypeWithOpaqueAs(DFAState stateA, DFAState stateB,
     Set<DFAState> labelled, ProgramDFA dfa) {
   return _isSubtype(
       stateA, stateB, dfa, <String>{}, const {}, _OpaqueAs(labelled, true));
 }
 
-/// The replacement of `Opaque` by an opaque type labelled h on one side of a
-/// comparison ([isSubtypeWithOpaqueAs]): on the left where [onLeft], and the
-/// side changes at each mode inversion, where the comparison reverses.  The h
-/// is the one of [labelled] the other side has at that position; where the
-/// other side has none of them, the one of [labelled] if there is one.
+/// The step back from `Opaque` on one side of a comparison
+/// ([isSubtypeWithOpaqueAs]): on the left where [onLeft], and the side
+/// changes at each mode inversion, where the comparison reverses.  An
+/// `Opaque` there is taken back to the state the other side has at the same
+/// position where that state is one of [labelled], and is left as it is
+/// otherwise.
 class _OpaqueAs {
   final Set<DFAState> labelled;
   final bool onLeft;
   const _OpaqueAs(this.labelled, this.onLeft);
   _OpaqueAs get reversed => _OpaqueAs(labelled, !onLeft);
-  DFAState _as(DFAState other) => labelled.contains(other)
-      ? other
-      : labelled.length == 1
-          ? labelled.single
-          : other;
+  DFAState _as(DFAState s, DFAState other) =>
+      labelled.contains(other) ? other : s;
   DFAState left(DFAState s, DFAState other) =>
-      onLeft && s.isOpaqueUnion ? _as(other) : s;
+      onLeft && s.isOpaqueUnion ? _as(s, other) : s;
   DFAState right(DFAState s, DFAState other) =>
-      !onLeft && s.isOpaqueUnion ? _as(other) : s;
+      !onLeft && s.isOpaqueUnion ? _as(s, other) : s;
 }
 
 /// Structural type identity (TGLP sections/modules.tex, "Structural type

@@ -1,0 +1,18 @@
+%% twowrongpos.glp at a template of one type parameter: a variable of type
+%% Bad, with Opaque also where One(X) has Integer, at a position typed
+%% One(h), whose T° has Integer at that place.  Refused (TGLP modules.tex,
+%% "Opaque types").
+
+One(X) ::= one(X, Integer).
+Bad ::= one(Opaque, Opaque).
+
+procedure(X) entry(One(X)?).
+entry(_).
+
+Inv ::= inv(Module, Bad).
+
+procedure host(Inv?).
+host(inv(M, P)) :-
+    opaque_type(entry/1, M?, Hs),
+    find_type(entry/1, Hs?, T),
+    run(entry(P?), T?, M?).

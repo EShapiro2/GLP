@@ -342,8 +342,8 @@ procedure '_decompose_module'(Module?, Key, Hash, Hash).
 procedure '_run'(_?, Module?).
 procedure '_run'(_?, Constant?, Module?).
 procedure '_find_type'(_?, Constant).
-procedure '_find_type'(_?, Stream(Constant)?, Constant).
-procedure '_opaque_type'(_?, Module?, Stream(Constant)).
+procedure '_find_type'(_?, List(Constant)?, Constant).
+procedure '_opaque_type'(_?, Module?, List(Constant)).
 procedure '_load_file'(String?, Content).
 
 % I/O: the output kernel takes a term of any type, a parameter, so that a
@@ -775,22 +775,22 @@ procedure find_type(_?, Constant).
 find_type(P, T?) :- ground(P?) | '_find_type'(P?, T).
 
 %% find_type(P/N, Hs, Type) assigns Type the type identity of the opaque
-%% instance at Hs of the caller's parameterised declaration of P/N, and errs
-%% where P/N is not declared there or its declaration has not one type
-%% parameter for each identity of Hs.  opaque_type(P/N, Module, Hs) assigns Hs
-%% the list of the type identities of the types at which Module's exports
-%% record its entry P/N as the instance of a parameterised declaration, one per
-%% type parameter in declaration order, and errs where they record none.  A
-%% host activates a guest it was not compiled with by opaque_type(P/N, M, Hs),
-%% find_type(P/N, Hs, Type) and run(Goal, Type, M), holding no declaration of
-%% the guest's own types (GLP-Spec appendix-guards, "Dynamic activation"; the
-%% opaque instance is TGLP's, modules.tex, Dynamic Activation).
-%% PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: Hs is a list,
-%% a one-parameter template's the list of one.
-procedure find_type(_?, Stream(Constant)?, Constant).
+%% instance at Hs of the caller's parameterised declaration of P/N, Hs a list
+%% of type identities, one per type parameter of the declaration in
+%% declaration order, and errs where P/N is not declared there or the length
+%% of Hs is not the number of its type parameters.  opaque_type(P/N, Module,
+%% Hs) assigns Hs the list of the type identities of the types at which
+%% Module's exports record its entry P/N as the instance of a parameterised
+%% declaration, in the order of its parameters, and errs where they record
+%% none.  A host activates a guest it was not compiled with by
+%% opaque_type(P/N, M, Hs), find_type(P/N, Hs, Type) and run(Goal, Type, M),
+%% holding no declaration of the guest's own types (GLP-Spec appendix-guards,
+%% "Dynamic activation"; the opaque instance is TGLP's, modules.tex, Dynamic
+%% Activation).
+procedure find_type(_?, List(Constant)?, Constant).
 find_type(P, Hs, T?) :- ground(P?), ground(Hs?) | '_find_type'(P?, Hs?, T).
 
-procedure opaque_type(_?, Module?, Stream(Constant)).
+procedure opaque_type(_?, Module?, List(Constant)).
 opaque_type(P, M, Hs?) :- ground(P?), known(M?) | '_opaque_type'(P?, M?, Hs).
 
 %% load_file/2 - read the file Name names and assign Content the module that

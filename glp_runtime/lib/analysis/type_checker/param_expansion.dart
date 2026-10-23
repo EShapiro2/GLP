@@ -263,9 +263,10 @@ Map<String, TypeDef> materializeInstantiations(
 /// [DFAState.isAbstractType]).
 const String abstractTypePrefix = r'$abstract_';
 
-/// The prefix of the name of the opaque type labelled h at which the type
+/// The prefix of the name of an opaque type labelled h at which the type
 /// checker reads a goal that `run/3` activates under a type identity
-/// `find_type/3` obtained at h, `$abstract_@<h>` ([runOpaqueTypeName]).  It
+/// `find_type/3` obtained at a list of which h is one, `$abstract_@<h>`
+/// ([runOpaqueTypeName]).  It
 /// is an abstract type's prefix, so the state is an opaque type in every
 /// respect ([DFAState.isAbstractType]); `@` occurs in no type parameter's
 /// name, so it is none of a parameter's.

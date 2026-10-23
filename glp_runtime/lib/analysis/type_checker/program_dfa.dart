@@ -107,13 +107,14 @@ class DFAState {
   /// two types, although every abstract type has the same, empty, automaton.
   bool get isAbstractType => baseName.startsWith(abstractTypePrefix);
 
-  /// True for the opaque type labelled with the type identity a goal that
-  /// `run/3` activates was obtained under by `find_type/3`
+  /// True for an opaque type labelled with one of the type identities of the
+  /// list a goal that `run/3` activates was obtained under by `find_type/3`
   /// ([runOpaqueTypeName]): an abstract type ([isAbstractType]) in every
   /// respect, and the one place a variable of type `Opaque` may stand (TGLP
   /// modules.tex, "Opaque types": "in a goal that run activates at an opaque
-  /// instance at h, a variable of type Opaque may stand at a position typed by
-  /// the opaque type labelled h"; subtyping.dart, [isSubtype]).
+  /// instance at h_1, ..., h_k, a variable of type T° may stand at a position
+  /// typed T, for a type T whose opaque types are labelled among h_1, ...,
+  /// h_k"; subtyping.dart, [isSubtypeWithOpaqueAs]).
   bool get isRunOpaqueType => baseName.startsWith(runOpaqueTypePrefix);
 
   /// True for the built-in type `Opaque`, the union of all opaque types (TGLP
