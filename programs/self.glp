@@ -169,7 +169,15 @@ Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
 % thread where its elements are shown.  The widget of a recursive type is
 % finite by a reference back to itself, rec(T, W) binding the name T of the
 % type to its widget W, within which ref(T) is T again ("a field of a
-% recursive type drawn when the person opens it").
+% recursive type drawn when the person opens it").  A widget carries the
+% label its widget declaration gives it beside its constructor, label(S, W),
+% the widget W labelled S, and a constant in a row of buttons label(S, C)
+% (vGLP 1126f4f, Section 6.3: "Widget is the type of the terms that draw
+% widgets: the terms of the default widgets, built from the constructors of
+% Definition Default Widget, each carrying the label its widget declaration
+% gives it"; Section 6.2: "a widget term carries a label beside each
+% constructor of Definition Default Widget.  A construct family draws the
+% label it is given, and the name of the type where it is given none").
 Widget ::= button(ButtonValue) ; buttons(List(ButtonValue))
       ; text ; number ; peer
       ; form(String, List(WidgetField)) ; menu(List(Widget))
@@ -177,9 +185,10 @@ Widget ::= button(ButtonValue) ; buttons(List(ButtonValue))
       ; input_box(Widget) ; input_list(Widget)
       ; thread ; thread(Widget)
       ; rec(String, Widget) ; ref(String)
-      ; named(Constant, Widget).
+      ; named(Constant, Widget)
+      ; label(String, Widget).
 WidgetField ::= field(String, Widget) ; question(String, Widget).
-ButtonValue ::= Constant ; [].
+ButtonValue ::= Constant ; [] ; label(String, ButtonValue).
 
 % The channel to the social graph (GSG, 2026-10-13 11:57 UTC, Udi: approved;
 % the held report and the warm call, GSG 2026-10-14 11:36 UTC, item 3, Udi:
