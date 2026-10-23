@@ -50,7 +50,7 @@ procedure gsn_schemas(Contract).
 gsn_schemas([
 %% GKK:1, Identity.
     schema(establish, [],
-      [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])]),
+      [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])]),
 %% GKK:2, Meeting, for two persons: a child comes to know an agent only by child_meet or child_meet_2 (CSSN:2).
     schema(meet, [],
       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])],
