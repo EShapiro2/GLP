@@ -60,11 +60,13 @@ Cause     ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
 %% What GSC's Definition "Act schema", and Appendix D's, require of a signed term, and the atom carrying one violates: it occurs in an atom not marked + (not_added), its speech-act variable occurs in no atom its role requires (not_required), or its role is not an agent role (not_agent_role).
 SgnCause  ::= not_added ; not_required ; not_agent_role.
 %% What GSC's Definition "Act schema" requires of the form of a schema, and a schema formed otherwise violates, in a verdict malformed(Faults): an atom both added and deleted at a role (added_and_deleted), a role that is not guarding and adds and deletes nothing (changes_nothing), no role adding or deleting an atom (no_role_changes), an entry of the head that is not a variable (head_not_variable), an entry listed twice (head_repeated), and a variable of the schema not in its head (not_in_head), and, of a listed role, a base that is not an agent role (listed_base), a signed term among its arguments (listed_signed) or the mark ? (listed_guarded, GSC f3c4f43), as programs/gsc/self.glp writes them.
+%% What def:unobstructed asks whose answer rests on the values the contract fixes, which its term does not carry (GSC, Appendix "Numbers in Act Schemas"; programs/gsc/self.glp at GSC-unob3 f06db5dc): unsettled(Schema, Role, Atom, U), U one of Unsettled, and unsettled_introduction(Schema); and name_term_base(Schema, N), a name term on a base that is not an agent role of the schema, a fault of its form.
+Unsettled ::= supplied_by(Constant, Atom) ; added_by(Constant, Integer, Atom)
+            ; multiplicity.
 Fault     ::= no_introductory_act
             ; obstructed(Constant, Integer, Atom, Cause)
             ; untraceable(Preds)
             ; volition(Constant, Integer, Integer)
-            ; cohesion(Constant, Integer, Atom)
             ; reflexive(Constant, Integer, Atom)
             ; signed(Constant, Integer, Atom, SgnCause)
             ; added_and_deleted(Constant, Integer, Atom)
@@ -73,25 +75,28 @@ Fault     ::= no_introductory_act
             ; head_not_variable(Constant, Arg)
             ; head_repeated(Constant, Arg)
             ; not_in_head(Constant, Arg)
+            ; name_term_base(Constant, NameTerm)
             ; listed_base(Constant, Integer)
             ; listed_signed(Constant, Integer)
             ; listed_guarded(Constant, Integer)
             ; multiplicity_not_added(Constant, Integer, Atom)
             ; multiplicity_not_numeric(Constant, Integer, Atom)
-            ; constraint_not_numeric(Constant, Arg).
+            ; constraint_not_numeric(Constant, Arg)
+            ; unsettled(Constant, Integer, Atom, Unsettled)
+            ; unsettled_introduction(Constant).
 Faults    ::= [] ; [Fault | Faults].
-%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_listed_roles and syntactically_grassroots_with_wards, of the same arguments, are the verdicts on an agent-named contract with community roles (GSC f3c4f43, Appendix D.4, Theorem "Grassroots realisation with listed roles", and def:sg-wards of CSSN's paper; programs/gsc/self.glp at GLP f5081cfa).
+%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_wards, of the same arguments, is the verdict on one with listed roles or name terms (def:sg-wards of CSSN's paper; programs/gsc/self.glp at GSC-unob3 f06db5dc).
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Party     ::= ward(Integer, Constant, Integer) ; free(Integer).
 Parties   ::= [] ; [Party | Parties].
 Relay     ::= relay(Constant, Party, Party).
 Relays    ::= [] ; [Relay | Relays].
+%% The verdict, as programs/gsc/self.glp writes it at GSC-unob3 f06db5dc: syntactically_grassroots, by GSC's one definition for agent roles and listed roles alike (GSC ac7ad63, Section 3), syntactically_grassroots_with_listed_roles merged into it and conditions_met and conditions_failed gone with GSC's Appendix D; unsettled(Faults) where every fault rests on the values the contract fixes, "and it is not compiled" (programs/gsc/README.md).
 Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
-            ; syntactically_grassroots_with_listed_roles
             ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
             ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
-            ; conditions_met ; conditions_failed(Faults) ; malformed(Faults).
+            ; malformed(Faults) ; unsettled(Faults).
 
 %% A contract's introduction predicate, where it names one (vGLP, Section 5.4,
 %% the paragraph on act schemas), given to compile/4.

@@ -1,62 +1,30 @@
 % ---------------------------------------------------------------------------
 % The verdict.
 %
-% A contract whose roles are all agent roles is the contract of
-% /Grassroots/GSC, Section 3, and is decided by
-% def:syntactically-grassroots: it passes when it has an unobstructed
-% introductory act, when the set of predicates occurring in it has traceable
-% provenance, and when it satisfies volition; the faults of the three
-% conjuncts are reported together, in that order.  The second conjunct is
-% decided from the largest set of predicates having traceable provenance,
-% which traceable_of gives: the fault names the predicates of the contract
-% outside it.  Volition is one condition in Section 3 and Appendix D, def:volition
-% being definition:volition for a contract whose roles are all agent roles
-% (Appendix D, after its Definition Volition), so the third conjunct is decided
-% by community.glp's volition_faults, as Appendix D's volition is.  Where the
-% numbers of a contract (GSC, Section 3.2) leave the first conjunct
-% unsettled -- no introduction meets def:unobstructed, and every fault of one
-% rests on a number the paper does not settle (self.glp, Unsettled) -- and
-% the other two hold, the verdict is unsettled(Faults), those faults.
+% A contract is decided by def:syntactically-grassroots of /Grassroots/GSC,
+% Section 3.6, one definition for a contract of agent roles and listed roles
+% (GSC ac7ad63): it passes when it has an unobstructed introductory act
+% (def:introduction, def:unobstructed, unobstructed.glp), when the set of
+% predicates occurring in it has traceable provenance (def:grounded,
+% prov.glp), and when it satisfies volition (def:volition, volition.glp);
+% the faults of the three conjuncts are reported together, in that order.
+% The second conjunct is decided from the largest set of predicates having
+% traceable provenance, which traceable_of gives: the fault names the
+% predicates of the contract outside it, and volition is decided over that
+% set.  Where the first conjunct fails, every fault of it resting on the
+% values the contract fixes (def:numbers), which its term does not carry
+% (self.glp, Unsettled), and the other two hold, the verdict is
+% unsettled(Faults), those faults.
 %
-% A contract written in the language of Appendix D -- with a listed role, a
-% name term or a schema written cschema -- that is agent-named (Appendix
-% D.4, definition:agent-named: every name term based on an agent role of its
-% schema, GSC f3c4f43) is decided by the four clauses of
-% definition:sg-agent-named: an unobstructed introductory act with agent
-% roles and no name term, the schemas of arity one of clause 1 of
-% def:unobstructed having an agent role and no name term; no listed role
-% adding an atom of a predicate the introductory act forbids at a role;
-% traceable provenance of the set of predicates occurring in it, each atom
-% psi required at an agent role; and volition (definition:volition), a
-% listed role being no guarding role.  The faults of the four are reported
-% together, in that order, the first two as the first conjunct of
-% def:syntactically-grassroots is; a contract meeting them is
-% syntactically_grassroots_with_listed_roles, and the protocol realising it
-% is volitionally grassroots (Theorem "Grassroots realisation with listed
-% roles").  When its first two clauses fail and the other two hold, the
-% wards are tried: an agent-named contract with an introduction with wards
-% that meets def:sg-wards (CSSN's paper, composing GAI's appendix "Contracts
-% with Wards" with Appendix D.4) is syntactically_grassroots_with_wards(Act,
-% Marks, Guardianships, Relays, Leaving).
-%
-% Any other contract with community roles, one with a name term based on an
-% agent variable, is decided by the two conditions on the text of Appendix
-% D: traceable provenance of the set of predicates occurring in it
-% (definition:provenance) and volition (definition:volition), each of which
-% it meets or fails; the faults of the two are reported together, in that
-% order.  The first is decided from the largest set of predicates having
-% traceable provenance, which traceable_of gives, as for a contract of
-% Section 3.  Appendix D proves no theorem of such a contract, and nothing
-% is claimed of it here.
-%
-% A schema is an act schema only when it is formed as def:schema, and
-% Appendix D's Definition Act schema, require: +(i) and -(i) disjoint at
-% every role, and +(i) u -(i) nonempty at every role that is not a guarding
-% role and at some role, a guarding role being one that may add and delete
-% nothing (def:schema and the sentence after its example); and only an agent
-% role carries the mark ?.  A contract with a schema formed otherwise is
-% malformed: it is refused, its verdict malformed(Faults), and no condition
-% is decided for it.
+% A schema is an act schema only when it is formed as def:role and
+% def:schema require: its name terms based on its agent roles, its listed
+% roles of its agent roles, +(i) and -(i) disjoint at every role, and
+% +(i) u -(i) nonempty at every role that is not a guarding role and at some
+% role, a guarding role being one that may add and delete nothing (def:schema
+% and the sentence after its example); and only an agent role carries the
+% mark ?.  A contract with a schema formed otherwise is malformed: it is
+% refused, its verdict malformed(Faults), and no condition is decided for
+% it.
 %
 % GAI's extension of the language (GAI's appendix "Contracts with Wards"):
 % a contract may declare predicates of arity one reflexive, and then no
@@ -68,26 +36,28 @@
 % speech-act variable occur in an atom its role requires -- or whose role is
 % not an agent role.
 %
-% A contract of Section 3 whose first conjunct fails may still be grassroots
-% with wards (GAI's appendix "Contracts with Wards"): when it has an
-% introduction with wards (def:introduction-wards), traceable provenance and
-% volition, the protocol realising it is volitionally grassroots
-% (thm:grassroots-wards), and its verdict names the introductory act, the
-% marks, their guardianships, the relay acts the search found and the
-% leaving marks of the contract (def:leaving): with none the realisation is
-% open and the protocol is grassroots as well (the paragraph after
-% thm:grassroots-wards); with any, the paper claims it volitionally
-% grassroots and no more.  Otherwise the faults are reported as before.
+% A contract whose first conjunct fails, and whose other two hold, may be
+% grassroots with wards.  One with no community roles (self.glp) is decided
+% by GAI's appendix "Contracts with Wards": when it has an introduction with
+% wards (def:introduction-wards), the protocol realising it is volitionally
+% grassroots (thm:grassroots-wards), and its verdict names the introductory
+% act, the marks, their guardianships, the relay acts the search found and
+% the leaving marks of the contract (def:leaving): with none the
+% realisation is open and the protocol is grassroots as well (the paragraph
+% after thm:grassroots-wards); with any, the paper claims it volitionally
+% grassroots and no more.  One with community roles is decided by
+% def:sg-wards of CSSN's paper, which composes GAI's appendix with GSC's
+% conditions: an agent-named contract with an introduction with wards
+% meeting it is syntactically_grassroots_with_wards(Act, Marks,
+% Guardianships, Relays, Leaving).  Otherwise the faults are reported as
+% before.
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_result(NContract?, Preds?, Faults).
 imported procedure unobstructed#intro_acts(NContract?, Preds?, IntroActs).
 imported procedure prov#traceable(Contract?, Preds).
 imported procedure prov#all_preds(Contract?, Preds).
-imported procedure community#volition_faults(Contract?, Preds?, Faults).
-imported procedure community#conditions(Contract?, Faults).
-imported procedure community#traceable(Contract?, Preds).
-imported procedure community#traceable_agent(Contract?, Preds).
+imported procedure volition#volition_faults(Contract?, Preds?, Faults).
 imported procedure wards#wards(Contract?, Preds?, Wards).
 imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
 imported procedure wards#leaving_for(Contract?, Preds?, Leavings).
@@ -105,32 +75,31 @@ procedure untraceable_faults(Preds?, Faults).
 untraceable_faults([], []).
 untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
 
-procedure check_section3(Contract?, NContract?, Preds?, Verdict).
-check_section3(C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
+procedure check_contract(Contract?, NContract?, Preds?, Verdict).
+check_contract(C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
     prov # traceable(C?, E),
-    section3_verdict(C?, NC?, Rf?, E?, V).
+    contract_verdict(C?, NC?, Rf?, E?, V).
 
 % E is read by two conjuncts, so it is taken ground in a head of its own.
 % The first conjunct, def:unobstructed, is decided on the contract as
 % written, NC (unobstructed.glp), the other two on its plain form, C.
-procedure section3_verdict(Contract?, NContract?, Preds?, Preds?, Verdict).
-section3_verdict(C, NC, Rf, E, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(E?) |
+procedure contract_verdict(Contract?, NContract?, Preds?, Preds?, Verdict).
+contract_verdict(C, NC, Rf, E, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(E?) |
     prov # all_preds(C?, Ps),
     preds_diff(Ps?, E?, Missing),
     untraceable_faults(Missing?, FT),
     unobstructed # intro_result(NC?, Rf?, F1),
-    community # volition_faults(C?, E?, F2),
+    volition # volition_faults(C?, E?, F2),
     faults_app(FT?, F2?, F23),
     wards_verdict(F1?, F23?, C?, Rf?, V).
 
 % The first conjunct failing and the other two holding, the wards are tried
-% (GAI's appendix "Contracts with Wards"): a contract with an introduction
-% with wards is grassroots with wards (def:introduction-wards,
-% thm:grassroots-wards); otherwise the faults of the three conjuncts are
-% reported as before, in their order.  Where the first conjunct's faults are
-% all ones the numbers leave unsettled (self.glp, all_unsettled) and the
-% other two hold, the paper does not settle whether the contract is
-% syntactically grassroots, and the verdict is unsettled(Faults).
+% (GAI's appendix "Contracts with Wards"; CSSN's def:sg-wards for a contract
+% with community roles); otherwise the faults of the three conjuncts are
+% reported, in their order.  Where the first conjunct's faults all rest on
+% the values the contract fixes (self.glp, all_unsettled) and the other two
+% hold, the checker does not know whether the contract is syntactically
+% grassroots, and the verdict is unsettled(Faults).
 procedure wards_verdict(Faults?, Faults?, Contract?, Preds?, Verdict).
 wards_verdict([], F23, _, _, V?) :- ground(F23?) | verdict(F23?, V).
 wards_verdict([F|Fs], [], C, Rf, V?) :-
@@ -145,92 +114,68 @@ wards_verdict([F|Fs], [G|Gs], _, _, V?) :-
 procedure wards_verdict2(Ans?, Faults?, Contract?, Preds?, Verdict).
 wards_verdict2(yes, F, _, _, unsettled(F?)).
 wards_verdict2(no, F, C, Rf, V?) :- ground(F?), ground(C?), ground(Rf?) |
+    has_community(C?, A),
     wards # wards(C?, Rf?, W),
-    wards_verdict1(W?, F?, V).
+    wards_verdict1(A?, W?, F?, V).
 
-procedure wards_verdict1(Wards?, Faults?, Verdict).
-wards_verdict1(introduction_with_wards(Nm, M, Gs, Rs, Lv), _,
+% A contract with no community roles that has an introduction with wards is
+% grassroots with wards (GAI's appendix); one with community roles is
+% syntactically grassroots with wards (CSSN's def:sg-wards, whose clauses 1
+% and 2 the search of wards asks).
+procedure wards_verdict1(Ans?, Wards?, Faults?, Verdict).
+wards_verdict1(no, introduction_with_wards(Nm, M, Gs, Rs, Lv), _,
                grassroots_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
-wards_verdict1(no_introduction_with_wards, F, not_grassroots(F?)).
+wards_verdict1(yes, introduction_with_wards(Nm, M, Gs, Rs, Lv), _,
+               syntactically_grassroots_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
+wards_verdict1(_, no_introduction_with_wards, F, not_grassroots(F?)).
 
-procedure community_verdict(Faults?, Verdict).
-community_verdict([], conditions_met).
-community_verdict([F|Fs], conditions_failed([F?|Fs?])).
+% --- the name terms of a schema (def:role) ---------------------------------
+% A name term of a schema is <pi> for an agent role pi of it, or sigma.y for
+% a name term sigma of it, so its base is an agent role of the schema; each
+% name term whose base is not is a fault name_term_base(Schema, NameTerm),
+% once per name term.
 
-procedure check_appendix(Contract?, Verdict).
-check_appendix(C, V?) :- ground(C?) |
-    community # conditions(C?, F),
-    community_verdict(F?, V).
+procedure nts_remove(NameTerms?, NameTerm?, NameTerms).
+nts_remove([], _, []).
+nts_remove([N|Ns], M, R?) :- N? =?= M? | nts_remove(Ns?, M?, R).
+nts_remove([N|Ns], M, [N?|R?]) :- otherwise, ground(N?) | nts_remove(Ns?, M?, R).
 
-% --- an agent-named contract (Appendix D.4, definition:sg-agent-named) ----
-% Clause 3 is decided from the largest set of predicates having traceable
-% provenance with each psi required at an agent role, E3, which traceable_of
-% gives for such a contract: its fault names the predicates outside it.
-% Clause 4 is definition:volition, its role graph over the predicates of
-% traceable provenance of definition:provenance, E.  Clauses 1 and 2 are
-% unobstructed.glp's, at each introductory act in turn.  Clauses 1 and 2
-% failing and clauses 3 and 4 holding, the wards are tried, as for a
-% contract of Section 3: an agent-named contract with an introduction with
-% wards meeting def:sg-wards (CSSN's paper) is syntactically grassroots with
-% wards; clause 1 of def:sg-wards, on the introductory act, the relay acts
-% and the schemas of arity one, and its clause 2, on the listed roles, are
-% asked in the search of wards, its clause 3 here.
-procedure named_wards1(Wards?, Faults?, Verdict).
-named_wards1(introduction_with_wards(Nm, M, Gs, Rs, Lv), _,
-             syntactically_grassroots_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
-named_wards1(no_introduction_with_wards, F, not_grassroots(F?)).
+procedure nts_dedup(NameTerms?, NameTerms).
+nts_dedup([], []).
+nts_dedup([N|Ns], [N?|R?]) :- ground(N?), ground(Ns?) |
+    nts_remove(Ns?, N?, Ns1),
+    nts_dedup(Ns1?, R).
 
-procedure named_verdict2(Ans?, Faults?, Contract?, Preds?, Verdict).
-named_verdict2(yes, F, _, _, unsettled(F?)).
-named_verdict2(no, F, C, Rf, V?) :- ground(F?), ground(C?), ground(Rf?) |
-    wards # wards(C?, Rf?, W),
-    named_wards1(W?, F?, V).
+procedure nt_base_fault(Ans?, Constant?, NameTerm?, Faults?, Faults).
+nt_base_fault(yes, _, _, T, T?).
+nt_base_fault(no, Nm, S, T, [name_term_base(Nm?, S?)|T?]).
 
-procedure named_verdict1(Faults?, Faults?, Contract?, Preds?, Verdict).
-named_verdict1([], [], _, _, syntactically_grassroots_with_listed_roles).
-named_verdict1([], [F|Fs], _, _, not_grassroots([F?|Fs?])).
-named_verdict1([F|Fs], [], C, Rf, V?) :-
-    ground(F?), ground(Fs?), ground(C?), ground(Rf?) |
-    all_unsettled([F?|Fs?], U),
-    named_verdict2(U?, [F?|Fs?], C?, Rf?, V).
-named_verdict1([F|Fs], [G|Gs], _, _, V?) :-
-    ground(F?), ground(Fs?), ground(G?), ground(Gs?) |
-    faults_app([F?|Fs?], [G?|Gs?], FF),
-    verdict(FF?, V).
+procedure nt_faults(NameTerms?, RoleSpecs?, Constant?, Faults).
+nt_faults([], _, _, []).
+nt_faults([S|Ns], Rs, Nm, R?) :- ground(S?), ground(Ns?), ground(Rs?), ground(Nm?) |
+    nt_base(S?, B),
+    base_agent_role(B?, Rs?, A),
+    nt_faults(Ns?, Rs?, Nm?, R1),
+    nt_base_fault(A?, Nm?, S?, R1?, R).
 
-procedure named_verdict(Contract?, NContract?, Preds?, Preds?, Preds?, Verdict).
-named_verdict(C, NC, Rf, E3, E, V?) :-
-    ground(C?), ground(NC?), ground(Rf?), ground(E3?), ground(E?) |
-    prov # all_preds(C?, Ps),
-    preds_diff(Ps?, E3?, Missing),
-    untraceable_faults(Missing?, FT),
-    unobstructed # intro_result(NC?, Rf?, F12),
-    community # volition_faults(C?, E?, F4),
-    faults_app(FT?, F4?, F34),
-    named_verdict1(F12?, F34?, C?, Rf?, V).
+procedure nt_schema1(NameTerms?, RoleSpecs?, Constant?, Faults).
+nt_schema1(Ns, Rs, Nm, R?) :- ground(Ns?), ground(Rs?), ground(Nm?) |
+    nts_dedup(Ns?, Ns1),
+    nt_faults(Ns1?, Rs?, Nm?, R).
 
-procedure check_agent_named(Contract?, NContract?, Preds?, Verdict).
-check_agent_named(C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
-    community # traceable_agent(C?, E3),
-    community # traceable(C?, E),
-    named_verdict(C?, NC?, Rf?, E3?, E?, V).
+procedure nt_schemas(Contract?, Faults).
+nt_schemas([], []).
+nt_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
+    sch_name(S?, Nm),
+    sch_roles(S?, Rs),
+    sch_nts(S?, Ns),
+    nt_schema1(Ns?, Rs?, Nm?, F1),
+    nt_schemas(Ss?, F2),
+    faults_app(F1?, F2?, R).
 
-procedure check_app1(Ans?, Contract?, NContract?, Preds?, Verdict).
-check_app1(yes, C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
-    check_agent_named(C?, NC?, Rf?, V).
-check_app1(no, C, _, _, V?) :- ground(C?) | check_appendix(C?, V).
-
-procedure check1(Ans?, Contract?, NContract?, Preds?, Verdict).
-check1(no, C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
-    check_section3(C?, NC?, Rf?, V).
-check1(yes, C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
-    agent_named(C?, A),
-    check_app1(A?, C?, NC?, Rf?, V).
-
-% --- the form of a schema (def:schema; Appendix D, Definition Act schema) --
-% def:schema, and Appendix D's Definition Act schema (GSC 70afdc4), require
-% that +(i) and -(i) be disjoint, and that +(i) u -(i) be nonempty at every
-% role that is not a guarding role and at some role.  Each atom a role both
+% --- the form of a schema (def:schema) -------------------------------------
+% def:schema requires that +(i) and -(i) be disjoint, and that +(i) u -(i)
+% be nonempty at every role that is not a guarding role and at some role.  Each atom a role both
 % adds and deletes is a fault added_and_deleted(Schema, Role, Atom); each
 % role that is not a guarding role and adds and deletes nothing a fault
 % changes_nothing(Schema, Role); and a schema adding and deleting nothing at
@@ -357,13 +302,13 @@ refl_schemas([S|Ss], Rf, R?) :- ground(S?), ground(Ss?), ground(Rf?) |
 % --- the signed terms of a schema (GAI, Definition Act schema) -------------
 % GAI's Definition Act schema requires of a signed term sgn(y, pi) that it
 % occur only in an atom marked +, and that its speech-act variable y occur in
-% an atom its role pi requires; and that pi be an agent role, as GSC's
-% Appendix D required of it until GSC 1a2a5f3 removed the signed term from
-% GSC's language.  Each atom carrying a signed term that violates one of
-% them is a fault signed(Schema, Role, Atom, Cause), not_added for the first,
+% an atom its role pi requires; and that pi be an agent role, as GSC
+% required of it until GSC 1a2a5f3 removed the signed term from GSC's
+% language.  Each atom carrying a signed term that violates one of them is a
+% fault signed(Schema, Role, Atom, Cause), not_added for the first,
 % not_required for the second and not_agent_role for the third, one per
-% requirement it violates.  The roles of a schema of Section 3 are agent
-% roles, so the third asks nothing of it.
+% requirement it violates.  A schema of agent roles has no fault of the
+% third.
 
 % The signed terms among the arguments of an atom.
 procedure args_sgns(Args?, Args).
@@ -437,7 +382,7 @@ sgn_added([atom(P, As)|Xs], Rs, Nm, I, T, R?) :-
     sgn_added(Xs?, Rs?, Nm?, I?, T?, R1),
     sgn_added1(Ss?, atom(P?, As?), Rs?, Nm?, I?, R1?, R).
 
-% The roles of a schema of Section 3: the two requirements at each.
+% The roles of a schema: the two requirements at each.
 procedure sgn_roles(RoleSpecs?, Integer?, RoleSpecs?, Constant?, Faults).
 sgn_roles([], _, _, _, []).
 sgn_roles([RS|Rs], I, All, Nm, R?) :-
@@ -470,14 +415,14 @@ sgn_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     sgn_schemas(Ss?, F2),
     faults_app(F1?, F2?, R).
 
-% --- a listed role (Appendix D, Definitions Role and Act schema) -----------
+% --- a listed role (def:role, def:schema) ----------------------------------
 % A listed role pi[rho(*, u_2, ..., u_r)] is of an agent role pi of its
-% schema; listed(I, Rho, Args) whose role I is not an agent role of the
-% schema is a fault listed_base(Schema, Role), Role the listed role.  Its
-% arguments u_2, ..., u_r are arguments of the schema, and a signed term
-% occurs only in an atom marked +, so a signed term among them is a fault
-% listed_signed(Schema, Role).  Only an agent role may carry the mark ?
-% (Definition Act schema), so a listed role carrying it is a fault
+% schema (def:role); listed(I, Rho, Args) whose role I is not an agent role
+% of the schema is a fault listed_base(Schema, Role), Role the listed role.
+% Its arguments u_2, ..., u_r are arguments of the schema, and a signed term,
+% GAI's, occurs only in an atom marked +, so a signed term among them is a
+% fault listed_signed(Schema, Role).  Only an agent role may carry the mark ?
+% (def:schema), so a listed role carrying it is a fault
 % listed_guarded(Schema, Role).
 
 procedure listed_base_fault(Ans?, Constant?, Integer?, Faults?, Faults).
@@ -523,7 +468,7 @@ listed_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     listed_schemas(Ss?, F2),
     faults_app(F1?, F2?, R).
 
-% --- the head of a schema (def:schema; Appendix D, Definition Act schema) ---
+% --- the head of a schema (def:schema) -------------------------------------
 % A schema lists its variables x_1, ..., x_m in its head, distinct agent and
 % speech-act variables, and its atoms are over its roles, those variables
 % and its signed terms (GSC 0228e79).  Each entry of the head that is not a
@@ -588,10 +533,11 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     head_schemas(Ss?, F2),
     faults_app(F1?, F2?, R).
 
-% --- the numbers of a schema (GSC, Section 3.2) -----------------------------
+% --- the numbers of a schema (GSC, Section 3.2; def:numbers) ---------------
 % "An argument of an atom may be a number or a numeric variable, a schema may
 % carry a constraint on its numeric variables, which every binding
-% satisfies, and an atom added or deleted may carry a multiplicity."  Each
+% satisfies, and an atom added or deleted may carry a multiplicity"
+% (Section 3.2), a value or a numeric variable (def:numbers).  Each
 % atom carrying a multiplicity that a role requires or forbids and neither
 % adds nor deletes is a fault multiplicity_not_added(Schema, Role, Atom); each
 % multiplicity that is no numeric argument a fault
@@ -676,29 +622,30 @@ num_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     faults_app(F1?, F2?, R).
 
 % A malformed contract is refused; a contract that is not is decided by
-% Section 3 or by Appendix D, according to its roles.  The faults are given
-% in the order: the head, the numbers, the listed roles, the form of a
-% schema, the reflexive predicates, the signed terms.  The head and the
-% numbers are decided on the contract as written, the rest on its plain form
-% (self.glp, plain_decl), and so are traceable provenance and volition;
+% def:syntactically-grassroots.  The faults are given in the order: the
+% head, the numbers, the name terms, the listed roles, the form of a schema,
+% the reflexive predicates, the signed terms.  The head and the numbers are
+% decided on the contract as written, the rest on its plain form (self.glp,
+% plain_decl), and so are traceable provenance and volition;
 % def:unobstructed is decided on the contract as written (unobstructed.glp).
-procedure check_formed(Faults?, Ans?, Contract?, NContract?, Preds?, Verdict).
-check_formed([], A, C, NC, Rf, V?) :- ground(A?), ground(C?), ground(NC?), ground(Rf?) |
-    check1(A?, C?, NC?, Rf?, V).
-check_formed([F|Fs], _, _, _, _, malformed([F?|Fs?])).
+procedure check_formed(Faults?, Contract?, NContract?, Preds?, Verdict).
+check_formed([], C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
+    check_contract(C?, NC?, Rf?, V).
+check_formed([F|Fs], _, _, _, malformed([F?|Fs?])).
 
 procedure check_decl(Contract?, NContract?, Preds?, Faults?, Verdict).
 check_decl(C, NC, Rf, MHN, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(MHN?) |
-    has_community(C?, A),
     form_schemas(C?, M0),
     refl_schemas(C?, Rf?, M1),
     sgn_schemas(C?, M2),
+    nt_schemas(C?, MT),
     listed_schemas(C?, ML),
     faults_app(M1?, M2?, M12),
     faults_app(ML?, M0?, ML0),
-    faults_app(MHN?, ML0?, MH0),
+    faults_app(MT?, ML0?, MT0),
+    faults_app(MHN?, MT0?, MH0),
     faults_app(MH0?, M12?, M),
-    check_formed(M?, A?, C?, NC?, Rf?, V).
+    check_formed(M?, C?, NC?, Rf?, V).
 
 procedure check_ndecl(NContract?, Preds?, Verdict).
 check_ndecl(NC, Rf, V?) :- ground(NC?), ground(Rf?) |
@@ -726,24 +673,10 @@ check_variant(Nm, B, V?) :- ground(Nm?), ground(B?) |
     contracts # variant(Nm?, B?, D),
     check(D?, V).
 
-% The predicates of traceable provenance, for inspection: def:grounded for a
-% contract of Section 3, definition:provenance with each psi required at an
-% agent role for an agent-named contract with community roles (clause 3 of
-% definition:sg-agent-named), and definition:provenance for any other.
-procedure traceable2(Ans?, Contract?, Preds).
-traceable2(yes, C, E?) :- ground(C?) | community # traceable_agent(C?, E).
-traceable2(no, C, E?) :- ground(C?) | community # traceable(C?, E).
-
-procedure traceable1(Ans?, Contract?, Preds).
-traceable1(no, C, E?) :- ground(C?) | prov # traceable(C?, E).
-traceable1(yes, C, E?) :- ground(C?) |
-    agent_named(C?, A),
-    traceable2(A?, C?, E).
-
+% The predicates of traceable provenance, for inspection: the largest set
+% having it (def:grounded).
 procedure traceable_in(Contract?, Preds).
-traceable_in(C, E?) :- ground(C?) |
-    has_community(C?, A),
-    traceable1(A?, C?, E).
+traceable_in(C, E?) :- ground(C?) | prov # traceable(C?, E).
 
 exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- ground(Nm?) |
@@ -783,23 +716,18 @@ intro_acts_variant(Nm, B, A?) :- ground(Nm?), ground(B?) |
 
 % The introduction with wards (GAI's appendix "Contracts with Wards"), for
 % inspection, searched for whatever the verdict: what it found, or
-% no_introduction_with_wards.  A contract with community roles that is not
-% agent-named has none, GAI's appendix being written over the schemas of
-% Section 3 and def:sg-wards over those of an agent-named contract.
+% no_introduction_with_wards.  A contract with a name term not based on an
+% agent role, which def:role admits not and check refuses, has none, GAI's
+% appendix being written over the schemas of agent roles and def:sg-wards
+% over those of an agent-named contract (CSSN's def:agent-named).
 procedure wards2(Ans?, Contract?, Preds?, Wards).
 wards2(yes, C, Rf, W?) :- ground(C?), ground(Rf?) | wards # wards(C?, Rf?, W).
 wards2(no, _, _, no_introduction_with_wards).
 
-procedure wards1(Ans?, Contract?, Preds?, Wards).
-wards1(no, C, Rf, W?) :- ground(C?), ground(Rf?) | wards # wards(C?, Rf?, W).
-wards1(yes, C, Rf, W?) :- ground(C?), ground(Rf?) |
-    agent_named(C?, A),
-    wards2(A?, C?, Rf?, W).
-
 procedure wards_in(Contract?, Preds?, Wards).
 wards_in(C, Rf, W?) :- ground(C?), ground(Rf?) |
-    has_community(C?, A),
-    wards1(A?, C?, Rf?, W).
+    agent_named(C?, A),
+    wards2(A?, C?, Rf?, W).
 
 exported procedure wards(NDeclared?, Wards).
 wards(D, W?) :- ground(D?) |
