@@ -2,12 +2,12 @@
 % Owner: GSC.  The paper, /Users/udi/Grassroots/GSC/main.tex, prints it in its box in Section 2.1 and cites a clause as GKK:1; GSG, GSN and GC quote it as what they extend.
 % Extends: nothing; it is the base contract every contract extends (Udi, 2026-10-20).
 % Defines: person, a legally culpable entity, a natural person of age or a legal person of good standing, taking the pronoun 'they'; knowing a person, holding their public key; Alice, Bob and Carol are variables naming distinct persons.
-% Last changed: 2026-10-23, the pragmas after the clauses, which the app built from the contract follows, and each clause ending with its modality in place of its period, ■ enforced, ◆ attested, ○ undertaken (Udi, to GSC #6; GSC's paper, Section 8).  2026-10-20: the clauses as Udi approved them in chat with GSC #5: Identity was GSG:1 until that day; Introduction is his wording; GK until the evening, renamed GKK and clause 1 reworded at his word.
+% Last changed: 2026-10-23, the pragmas after the clauses, which the app built from the contract follows, and each clause opening with its modality, ■ enforced, ◆ attested, ○ undertaken (Udi, to GSC #6; GSC's paper, Section 8).  2026-10-20: the clauses as Udi approved them in chat with GSC #5: Identity was GSG:1 until that day; Introduction is his wording; GK until the evening, renamed GKK and clause 1 reworded at his word.
 % Schemas: GKK.glp beside this file, three over the predicates identity and knows, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GKK: Grassroots Keys and Knowledge
-1. Identity.  Alice may act to establish their identity by choosing their own key pair.  They make themselves known by the public key, sign their acts with the private key, and are accountable for every act signed with it ○
-2. Meeting.  Alice and Bob may come to know each other by an act of both ■
-3. Introduction.  If Alice and Bob know each other and Alice knows Carol, then an act of Alice and Bob can introduce Carol to Bob, following which Bob knows Carol ■
+1. ○ Identity.  Alice may act to establish their identity by choosing their own key pair.  They make themselves known by the public key, sign their acts with the private key, and are accountable for every act signed with it.
+2. ■ Meeting.  Alice and Bob may come to know each other by an act of both.
+3. ■ Introduction.  If Alice and Bob know each other and Alice knows Carol, then an act of Alice and Bob can introduce Carol to Bob, following which Bob knows Carol.
 Pragmas
 Contacts: the persons Alice knows.
 Identity: [Join]
