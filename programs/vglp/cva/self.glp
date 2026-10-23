@@ -135,6 +135,11 @@ person([draw(Id, _, approval_w(approval(At, input(P))))|Ds], Gs?, ps(Se, T, Cs, 
     ground(Id?), ground(P?), ground(At?) |
     advance(ps(Se?, T?, [seen(Id?, P?, At?)|Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
+%% The approval question of a platform compiled from a contract with pragmas, approval(At, Ws, YN), Ws the sentence the contract puts to the person (vGLP, Section 6.2, "The words a platform shows"): answered as any other, its answer at the place the draw marks.
+person([draw(Id, _, approval_w(approval(At, _, input(P))))|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?), ground(At?) |
+    advance(ps(Se?, T?, [seen(Id?, P?, At?)|Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
+    person(Ds?, Gs1, St1?, Log1).
 person([withdraw(Id)|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :- ground(Id?) |
     drop_seen(Id?, Cs?, Cs1),
     person(Ds?, Gs, ps(Se?, T?, Cs1?, Ss?), Log).
@@ -223,6 +228,8 @@ last_of(T, L?) :- last_view(T?, none, L).
 procedure last_view(Stream(_)?, _?, _).
 last_view([], L, L?).
 last_view([view(S, K)|Xs], _, L?) :- last_view(Xs?, view(S?, K?), L).
+%% The view of a platform compiled from a contract with pragmas carries also the lists its app shows (vGLP, Section 5.4, "The contract's words"), which the script does not look at.
+last_view([view(S, K, _)|Xs], _, L?) :- last_view(Xs?, view(S?, K?), L).
 last_view([_|Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
 procedure notices_of(Stream(_)?, Stream(_)).
@@ -230,6 +237,7 @@ notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(Stream(_)?, Stream(_)?, Stream(_)).
 notices_after([], Ns, Ns?).
 notices_after([view(_, _)|Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _)|Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X|Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X?|Ns0?], Ns).
 procedure known_in(_?, _?, YN).
 known_in(Q, view(_, Ks), B?) :- among(Q?, Ks?, B).

@@ -29,6 +29,10 @@ pay(Peer, Peer)
 
 Request ::= propose(Proposal) ; known(Peer).
 
+%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family's approval_sentence, and its request question by its social_menu.
+Approval =::= approval_sentence.
+Menu =::= social_menu.
+
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(List(Atom), List(Key)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP b7e3517, Section 5.4, "The compilation").
 Atom ::=
 coin(Peer)
