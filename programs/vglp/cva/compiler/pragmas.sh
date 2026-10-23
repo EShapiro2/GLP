@@ -3,7 +3,7 @@
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
-# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The first line after "Pragmas" is a list, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is an act, "Clause: [Button] <field> ... sentence", act(contract, N, Button, Fields, Sentence), N the number of the clause of that title in the same NAME.txt, Sentence said(Words) or none, each word text(S) or person(I), Alice, Bob and Carol the persons 1, 2 and 3.  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
+# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The first line after "Pragmas" is a list, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is an act, "Clause: [Button] <field> ... sentence", act(Schema, Button, Fields, Sentence), Schema the button's text in lower case, the name of the schema it proposes ("the button proposing its act, in brackets, which bears the act's name", GSC 1934846, Section 2), the clause being one of that title in the same NAME.txt, Sentence said(Words) or none, each word text(S) or person(I), Alice, Bob and Carol the persons 1, 2 and 3.  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
 
 set -u
 [ $# -eq 1 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt>" >&2; exit 2; }
@@ -53,7 +53,6 @@ my (@lists, @acts);
 for my $f (@order) {
     my @l = read_txt($f);
     (my $name = $f) =~ s{.*/}{}; $name =~ s/\.txt$//;
-    my $c = lc $name;
     my %clause; my $after = 0; my $first = 1;
     for my $x (@l) {
         next if $x =~ /^%/;
@@ -92,7 +91,7 @@ for my $f (@order) {
             }
             $said = "said([" . join(", ", @words) . "])";
         }
-        push @acts, "act($c, $clause{$title}, " . q_string($button) . ", ["
+        push @acts, "act(" . q_atom(lc $button) . ", " . q_string($button) . ", ["
             . join(", ", map { q_string($_) } @fields) . "], $said)";
     }
 }
