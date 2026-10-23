@@ -1,36 +1,32 @@
 % ---------------------------------------------------------------------------
-% The compilation, as LaTeX: def:compile of /Grassroots/GSC, Section 5, for
-% a contract whose roles are all agent roles, and definition:compile of
-% Appendix D for a contract with community roles.
+% The compilation, as LaTeX: def:compile of /Grassroots/GSC, Section 5.1,
+% one definition for a schema of agent roles and listed roles (GSC ac7ad63),
+% printed in one of two forms.
 %
-% A schema of Section 3 -- its roles agent roles, written schema and with no
-% name term -- compiles to the assignment, the proviso and the guard of
-% def:compile, and the displays of Section 5.1 and Appendix B.3 are the form
-% printed, whatever the contract it is in: befriend of GSN, a contract with
-% a listed role, compiles to Section 5.1's display, as Section 5.1 says.  Any
-% other schema compiles to the lines of definition:compile, each role's over
-% its extent, as Appendix D's display of close ranges over the extent of its
-% listed role.  For a schema of Section 3 the two definitions determine the
-% same transactions.  The paper is the
-% specification and neither definition is restated in this file.  Section 5
+% A schema of agent roles, written schema and with no name term, is printed
+% in the short form, the form of the displays of befriend in Section 5.1 and
+% of the swap in Appendix B.3: the assignment, the proviso and the guard of
+% def:compile, whatever the contract it is in, as befriend of GSN, a
+% contract with a listed role, compiles to Section 5.1's display.  Any other
+% schema is printed in the general form, the lines of def:compile's own
+% display (the full version), each role's over its extent ext_c(pi_i), the
+% form of GSC's Appendix D until GSC ac7ad63.  The paper is the
+% specification and def:compile is not restated in this file.  Section 5
 % opens by saying that the compilation is defined for syntactically
 % grassroots contracts, so compile_named runs the checker first and compiles
-% nothing otherwise; an agent-named contract with community roles is
-% compiled when it is syntactically grassroots by definition:sg-agent-named,
-% and any other contract with community roles when it meets the conditions on
-% the text of Appendix D.
+% nothing otherwise.
 %
 % GLP has no string concatenation, so a display is emitted as its tokens, one
 % to a line.  A newline is whitespace to LaTeX, so the lines are the display
 % and are pasted as they stand.
 %
-% Act schemas allow numbers (GSC, Section 3.2): a numeric argument, a
-% multiplicity on an atom added or deleted, and a constraint on the numeric
-% variables, which every binding satisfies.  GSC's Section 5 prints no schema
-% with numbers, and its Definition Compilation is written over the atoms of
-% Section 3.1, whose arguments are agents and speech acts; the display of a
-% schema with numbers is printed in the closest form the paper's notation
-% gives, the schema as written (self.glp, NSchema): a numeric argument as its
+% Act schemas allow numbers (GSC, Section 3.2; def:numbers): a numeric
+% argument, a multiplicity on an atom added or deleted, and a constraint on
+% the numeric variables, which every binding satisfies.  def:compile applies
+% to a schema with numbers as written (the appendix "Numbers in Act
+% Schemas"), whose example prints GB's redeem_bc in the form below, the
+% constraint on a proviso line of its own; the display of a schema with
+% numbers is the schema as written (self.glp, NSchema): a numeric argument as its
 % variable or number; a multiplicity k on an atom A as k\cdot A, as GB's
 % paper writes it (GB, Appendix A), so that k\cdot A in a multiset is A k
 % times; a multiset of required atoms carrying a multiplicity included in
@@ -52,7 +48,7 @@ procedure is_empty(Mults?, Ans).
 is_empty([], yes).
 is_empty([_|_], no).
 
-% --- Arguments (def:schema, definition:term) -------------------------------
+% --- Arguments (def:schema, def:role) --------------------------------------
 % Roles one and two are the paper's \Alice and \Bob; an agent or speech-act
 % variable is written as it is named.
 
@@ -67,8 +63,9 @@ latex_role(I, T, R?) :- otherwise, integer(I?), ground(T?) | latex_role_n(I?, T?
 procedure latex_role_n(Constant?, Chunks?, Chunks).
 latex_role_n(I, T, ['\\mathit{p}_{', I?, '}'|T?]).
 
-% A name term (definition:term): <u> for an agent role or an agent variable,
-% or sigma.y.
+% A name term (def:role): <u> for an agent role, or sigma.y; <x> for an
+% agent variable, which def:role does not admit, is printed for a contract
+% given to latex_schema directly, compile_named refusing one.
 procedure latex_nt(NameTerm?, Chunks?, Chunks).
 latex_nt(own(I), T, ['\\langle'|R?]) :- integer(I?), ground(T?) |
     latex_role(I?, ['\\rangle'|T?], R).
@@ -123,7 +120,7 @@ latex_mult(times(K, A), T, R?) :- ground(K?), ground(A?), ground(T?) |
 % The atoms of a set are written apart by Sep, which the form of the display
 % supplies: a comma in the form of Section 5.1 and Appendix B.3, as Section
 % 5.1 writes the two atoms befriend requires at a role, and a comma and a
-% control space in the form of Appendix D, as its display of close writes the
+% control space in the general form, as the checker's display of close writes the
 % two atoms close deletes.  latex_update and
 % req_conjs and forb_conjs supply the first, assign_lines and req_lines and
 % forb_lines the second.
@@ -139,11 +136,11 @@ procedure latex_set(Mults?, Constant?, Chunks?, Chunks).
 latex_set(As, Sep, T, ['\\{'|R?]) :- ground(As?), ground(Sep?), ground(T?) |
     latex_atoms(As?, Sep?, ['\\}'|T?], R).
 
-% --- The roles as the paper writes them (definition:role, definition:extent)
+% --- The roles as the paper writes them (def:role, def:extent) -------------
 % An agent role by its name, and a listed role pi[rho(*, u_2, ..., u_r)], as
-% Appendix D writes close's, \Alice[\mathit{listed}(\ast,n)] (GSC 8064cfb);
-% ext_c(pi_i) is the extent of the role in c, and a line of Appendix D's
-% display ranges over the agents p in it.
+% Section 5.1 writes close's, \Alice[\mathit{listed}(\ast,n)] (GSC 8064cfb);
+% ext_c(pi_i) is the extent of the role in c (def:extent), and a line of the
+% general form ranges over the agents p in it.
 
 procedure latex_role_term(NRoleSpec?, Integer?, Chunks?, Chunks).
 latex_role_term(rs(_, _, _, _, _), I, T, R?) :- integer(I?), ground(T?) |
@@ -171,12 +168,12 @@ latex_over(RS, I, T, ['&& (p \\in '|R?]) :-
     ground(RS?), integer(I?), ground(T?) |
     latex_ext(RS?, I?, [')'|T?], R).
 
-% --- The assignment of one role (def:compile, definition:compile) ----------
+% --- The assignment of one role (def:compile) ------------------------------
 % c'_S := (c_S \ -(i)) u +(i), with an empty half left out, and both at a
 % guarding role that adds and deletes nothing, which def:schema admits:
 % c'_S := c_S, the assignment def:compile gives it (1 <= i <= k); S is the
 % subscript, {\Alice} for a role of Section 5.1 and Appendix B.3 and p, ranging over the
-% extent, for a role of Appendix D.
+% extent, for a role in the general form.
 
 procedure update_body(Ans?, Ans?, Mults?, Mults?, Constant?, Chunks?, Chunks?,
                       Chunks).
@@ -230,7 +227,7 @@ latex_updates([RS, RS2|Rs], I, T, R?) :-
     latex_updates([RS2?|Rs?], I1?, T?, R1),
     latex_update(RS?, I?, [', \\qquad '|R1?], R).
 
-% --- The proviso of one role (def:compile, definition:compile) -------------
+% --- The proviso of one role (def:compile) ---------------------------------
 % =(i) u -(i) included in c_S and not(i) disjoint from it, one conjunct each
 % and left out when the multiset is empty; a singleton is written with \in and
 % \notin, as Section 5.1 and Appendix B.3 write it, and, in the form of
@@ -240,7 +237,7 @@ latex_updates([RS, RS2|Rs], I, T, R?) :-
 % multiset of required atoms with an atom twice in it is written as
 % def:compile writes it, included in c_S.  The layout is Udi's
 % ruling (GSC #3 to Code, 2026-10-18 21:49 UTC; GSC aca046b, Definition
-% Compilation and Appendix D's, befriend's display in Section 5.1 and the
+% Compilation, befriend's display in Section 5.1 and the
 % swap's in Appendix B.3): the required atoms on one proviso line and the
 % forbidden atoms on the next, each in role order, a line omitted when it
 % has no atom, and the guard on a line of its own.
@@ -262,9 +259,8 @@ req_conj2(no, As, Sep, S, T, [C?|T?]) :-
     ground(As?), ground(Sep?), ground(S?), ground(T?) |
     latex_set(As?, Sep?, [' \\subseteq c_'|S?], C).
 
-% The required atoms in the form of Appendix D, whose display writes no two
-% atoms required at a role: a singleton with \in, several included in c_p, as
-% definition:compile writes them.
+% The required atoms in the general form: a singleton with \in, several
+% included in c_p, as def:compile writes them.
 procedure req_conj_set(Mults?, Constant?, Chunks?, ChunkLists?, ChunkLists).
 req_conj_set([], _, _, T, T?).
 req_conj_set([atom(P, As)], _, S, T, [C?|T?]) :- ground(P?), ground(As?), ground(S?), ground(T?) |
@@ -303,7 +299,7 @@ forb_conj([A, B|As], Sep, S, T, [C?|T?]) :-
     chunks_app(S?, [' = \\emptyset'], S1),
     latex_set([A?, B?|As?], Sep?, [' \\cap c_'|S1?], C).
 
-% The conjuncts of the required atoms of every role of Section 3's form, in
+% The conjuncts of the required atoms of every role of the short form, in
 % role order, and those of the forbidden atoms.
 procedure req_conjs(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 req_conjs([], _, T, T?).
@@ -332,7 +328,7 @@ join_conjs([C, D|Cs], T, R?) :- ground(C?), ground(D?), ground(Cs?), ground(T?) 
     join_conjs([D?|Cs?], T?, R1),
     chunks_app(C?, [' \\text{ and } '|R1?], R).
 
-% A proviso line of Section 3's form, its conjuncts joined by "and"; no
+% A proviso line of the short form, its conjuncts joined by "and"; no
 % line where there is no conjunct.
 procedure provided_line(ChunkLists?, ChunkLists?, ChunkLists).
 provided_line([], T, T?).
@@ -399,7 +395,7 @@ constraint_line(C, T, [['\\text{provided } '|L?]|T?]) :-
     otherwise, ground(C?), ground(T?) |
     latex_constraint(C?, [], L).
 
-% --- The display of a schema of Section 3 (Section 5.1, Appendix B.3) -----
+% --- The display of a schema in the short form (Section 5.1, Appendix B.3) -
 % The assignments of every role on one line; the required atoms on the next,
 % the forbidden atoms on the next, each left out when it has no atom; and the
 % guard on a line of its own, as befriend's display in Section 5.1 and the
@@ -425,20 +421,20 @@ latex_s3_roles(Rs, Cn, T, R?) :- ground(Rs?), ground(Cn?), ground(T?) |
     latex_updates(Rs?, 1, [], A),
     join_lines([A?|L2?], ['\\end{align*}'|T?], R).
 
-% --- The display of a schema with community roles (definition:compile) ----
-% In the order of the lines of definition:compile (GSC f3c4f43): a line per
+% --- The display of a schema in the general form (def:compile) ------------
+% In the order of the lines of def:compile's display (GSC f3c4f43): a line per
 % role for its assignment; a line per role that requires an atom, for its
 % required atoms, in role order; a line per role that forbids an atom, for
 % its forbidden atoms, in role order; each over p in ext_c(pi_i); then, for
 % every name term sigma.y of the schema that occurs in no atom required at a
 % role, that it is an argument of no atom of c; then the guard, the guarding
 % roles of the schema, which are agent roles, written as Section 5.1 writes
-% it and as Appendix D writes close's, guarded by {\Alice}.  A role's atoms
-% range over its own extent, so the one line of Section 3's form for the
+% it and as it writes close's, guarded by {\Alice}.  A role's atoms
+% range over its own extent, so the one line of the short form for the
 % required atoms, and the one for the forbidden atoms, is a line per role
 % here, as the assignment is.  Each line is a Chunks; every line opens with &
 % and ,\\ separates them.  The line on what is added and deleted at an agent
-% is left out, as the displays of Section 5.1 and Appendix D leave it out.
+% is left out, as the displays of Section 5.1 leave it out.
 
 procedure assign_lines(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 assign_lines([], _, T, T?).
@@ -543,7 +539,7 @@ req_atoms_all([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
     atoms_app(Q?, R1?, R).
 
 % Those of Es occurring in no atom required at a role, which are the name
-% terms definition:compile asks freshness of.
+% terms def:compile asks freshness of.
 procedure fresh_terms1(Ans?, NameTerm?, NameTerms?, NameTerms?, NameTerms).
 fresh_terms1(yes, _, Es, Qs, R?) :- ground(Es?), ground(Qs?) | fresh_terms(Es?, Qs?, R).
 fresh_terms1(no, S, Es, Qs, [S?|R?]) :- ground(Es?), ground(Qs?) | fresh_terms(Es?, Qs?, R).
@@ -603,9 +599,9 @@ latex_app_roles(Rs, Es, Cn, T, R?) :- ground(Rs?), ground(Es?), ground(Cn?), gro
     join_lines(Ls?, ['\\end{align*}'|T?], R).
 
 % --- The display of one schema, in its form ------------------------------
-% A schema of Section 3 -- its roles agent roles, written schema and with no
-% name term -- in the form of Section 5.1 and Appendix B.3, any other in
-% Appendix D's.
+% A schema of agent roles, written schema and with no name term, in the
+% short form, of Section 5.1 and Appendix B.3; any other in the general
+% form.
 
 procedure s3_form(NSchema?, Ans).
 s3_form(NSc, R?) :- ground(NSc?) |
@@ -642,9 +638,8 @@ latex_contract(K, [S|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
 
 % --- Entry points ----------------------------------------------------------
 % The checker first: a contract that is malformed, that is not syntactically
-% grassroots (def:syntactically-grassroots, or definition:sg-agent-named for
-% an agent-named contract with community roles), or that fails the
-% conditions on the text of Appendix D, is not compiled at all.  A contract
+% grassroots (def:syntactically-grassroots), or whose answer rests on the
+% values the contract fixes, is not compiled at all.  A contract
 % grassroots with wards is compiled as a syntactically grassroots one: the
 % compilation of Section 5 uses nothing of the introductory act, and its
 % realisation is taken as GSC's (GAI's appendix "Contracts with Wards", the
@@ -678,25 +673,20 @@ not_compiled(Nm) :- ground(Nm?) |
                   'is not syntactically grassroots; check_named gives the faults.']).
 
 % def:compile is defined for a syntactically grassroots contract (GSC, the
-% sentence after def:syntactically-grassroots), and a contract whose numbers
-% leave that unsettled is not compiled.
+% sentence after def:syntactically-grassroots), and a contract for which
+% that rests on the values it fixes, which its term does not carry, is not
+% compiled.
 procedure not_compiled_unsettled(Constant?).
 not_compiled_unsettled(Nm) :- ground(Nm?) |
     send_to_user(['% not compiled:', Nm?,
-                  'is not settled to be syntactically grassroots, its numbers leaving def:unobstructed unsettled;',
-                  'check_named gives the faults.']).
-
-procedure not_compiled_app(Constant?).
-not_compiled_app(Nm) :- ground(Nm?) |
-    send_to_user(['% not compiled:', Nm?,
-                  'fails the conditions on the text of Appendix D;',
+                  'is not settled to be syntactically grassroots, def:unobstructed resting on the values it fixes, which its term does not carry;',
                   'check_named gives the faults.']).
 
 % A malformed contract is not compiled, and the message names each fault the
 % checker found, schema and role, in the papers' words: GAI's appendix
 % "Contracts with Wards" for a reflexive predicate and a signed term,
-% def:schema for the form of a schema, and Appendix D's Definitions Role and
-% Act schema for a listed role.
+% def:schema for the form of a schema, and def:role and def:schema for a
+% name term and a listed role.
 procedure malformed_lines(Faults?, Chunks?, Chunks).
 malformed_lines([], T, T?).
 malformed_lines([reflexive(S, I, _)|Fs], T,
@@ -743,6 +733,10 @@ malformed_lines([head_repeated(S, _)|Fs], T,
     malformed_lines(Fs?, T?, R).
 malformed_lines([not_in_head(S, _)|Fs], T,
                 [S?, 'has a variable its head does not list;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([name_term_base(S, _)|Fs], T,
+                [S?, 'has a name term whose base is not an agent role of the schema;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([listed_base(S, I)|Fs], T,
@@ -792,14 +786,7 @@ compile_on(grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C?) |
 compile_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
     send_to_user(L?).
-compile_on(syntactically_grassroots_with_listed_roles, _, C) :- ground(C?) |
-    latex_contract(yes, C?, [], L),
-    send_to_user(L?).
 compile_on(not_grassroots(_), Nm, _) :- ground(Nm?) | not_compiled(Nm?).
-compile_on(conditions_met, _, C) :- ground(C?) |
-    latex_contract(yes, C?, [], L),
-    send_to_user(L?).
-compile_on(conditions_failed(_), Nm, _) :- ground(Nm?) | not_compiled_app(Nm?).
 compile_on(malformed(Fs), Nm, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
 compile_on(unsettled(_), Nm, _) :- ground(Nm?) | not_compiled_unsettled(Nm?).
 
@@ -837,15 +824,7 @@ compile_s_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, Sn, C) :-
     ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, yes, Sn?).
-compile_s_on(syntactically_grassroots_with_listed_roles, _, Sn, C) :-
-    ground(Sn?), ground(C?) |
-    find_schema(C?, Sn?, S),
-    emit_schema(S?, yes, Sn?).
 compile_s_on(not_grassroots(_), Nm, _, _) :- ground(Nm?) | not_compiled(Nm?).
-compile_s_on(conditions_met, _, Sn, C) :- ground(Sn?), ground(C?) |
-    find_schema(C?, Sn?, S),
-    emit_schema(S?, yes, Sn?).
-compile_s_on(conditions_failed(_), Nm, _, _) :- ground(Nm?) | not_compiled_app(Nm?).
 compile_s_on(malformed(Fs), Nm, _, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
 compile_s_on(unsettled(_), Nm, _, _) :- ground(Nm?) | not_compiled_unsettled(Nm?).
 

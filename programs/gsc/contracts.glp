@@ -28,9 +28,9 @@
 % --- the social graph with items of arity three, no signed term ------------
 % The social graph as Section 3.3 printed it before the signed term (GSC
 % 63b301f): item(x, a, f), the item x by a as received from f.  A fixture, the
-% base of the Appendix D variant below, sg_tri_cschema, since GSC's language
-% admits no signed term and the contract GSNP carries one
-% (programs/gai/GSNP.glp); it certifies nothing of GSNP.
+% base of the variant below, sg_tri_cschema, since GSC's language admits no
+% signed term and the contract GSNP carries one (programs/gai/GSNP.glp); it
+% certifies nothing of GSNP.
 procedure sg_plain(Contract).
 sg_plain([schema(befriend, [],
        [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
@@ -122,13 +122,14 @@ sg_chain_cut(S, C?) :-
                         [atom(friend, [role(4)])], []),
           rs(unguarded, [atom(chained, [role(3)])], [], [], [])])], C).
 
-% --- volition by connected component, in Section 3 as in Appendix D ---------
+% --- volition by connected component (def:volition) -----------------------
 % tri(p?, q, r?) :  +chained(q)    friend(p), +chained(p)    +chained(p)
 % q requires friend(p), which joins roles 1 and 2, and nothing joins role 3,
 % so the role graph falls into {1,2} and {3}, each holding a guarding role:
 % tri is neither guarded in all its roles nor connected, and meets
 % def:volition.  sg_tri_cschema is the same contract with tri written as a
-% cschema, in the language of Appendix D, where it meets definition:volition.
+% cschema, the form a schema with a listed role may take, and meets it the
+% same.
 procedure tri_roles(RoleSpecs).
 tri_roles([rs(guarded,   [atom(chained, [role(2)])], [], [], []),
            rs(unguarded, [atom(chained, [role(1)])], [],
@@ -196,7 +197,7 @@ cur_loose_mint([schema(mint, [pvar(u)],
        [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [], []),
         rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
 
-% --- reflexive predicates (the paragraph after def:binding) ----------------
+% --- reflexive predicates (GAI's appendix "Contracts with Wards") ----------
 % The social graph with friend declared reflexive: every state is taken to
 % hold friend of its holder, and nothing else changes, so it certifies.
 procedure sg_reflexive(Contract?, Declared).
@@ -464,19 +465,20 @@ cs18_schemas([schema(parent_child, [],
                      atom(listed, [role(1), svar(n)])], [])])]).
 
 % ===========================================================================
-% Agent-named contracts (Appendix D.4, definition:sg-agent-named)
+% Listed roles and name terms (def:role, def:introduction, def:unobstructed,
+% def:grounded)
 % ===========================================================================
-% Variants of GSNP, an agent-named contract with the listed role of close,
-% each with one schema more and failing one clause, or refused for a listed
-% role carrying the mark ?, and contracts that stand on their own, failing
-% clause 1.
+% Variants of GSNP, a contract with the listed role of close, each with one
+% schema more and failing one condition, or refused for a listed role
+% carrying the mark ?, and contracts that stand on their own, failing
+% def:introduction or clause 1 of def:unobstructed by a name term.
 
-% --- negative: a listed role adding an atom befriend forbids (clause 2) ----
+% --- negative: a listed role adding an atom befriend forbids --------------
 % befriend_listed(a?, a[listed(*, n)] ; n) :  identity, member(<a>.n)
 %                                             at a[listed(*, n)]: identity, +friend(a)
 % Every member a lists becomes a friend of a in one act a wills.  friend is
-% forbidden by befriend at both roles, so clause 2 fails at each, naming the
-% listed role.
+% forbidden by befriend at both roles, so the first part of clause 2 of
+% def:unobstructed fails at each, naming the listed role.
 procedure sn_listed_forbidden(Contract?, Contract).
 sn_listed_forbidden(S, C?) :-
     contract_app(S?,
@@ -485,14 +487,13 @@ sn_listed_forbidden(S, C?) :-
           crs(listed(1, listed, [svar(n)]), unguarded,
               [atom(friend, [role(1)])], [], [atom(identity, [])], [])])], C).
 
-% --- negative: a speech act traced through a listed role only (clause 3) ---
+% --- negative: a speech act traced through a listed role only -------------
 % note_posted(a?, a[listed(*, n)] ; x, n) :  identity, +noted(x)
-%                                            at a[listed(*, n)]: identity, posted(x, n), +noticed
 % x occurs in posted(x, n), required at the listed role and at no agent
-% role, so noted has traceable provenance by definition:provenance and not
-% with each psi required at an agent role.  The listed role adds noticed, a
-% role that is not guarding adding or deleting an atom (Appendix D's
-% Definition Act schema, GSC 70afdc4).
+% role, and def:grounded traces it through an atom psi required at an agent
+% role, so noted has no traceable provenance.  The listed role adds noticed,
+% a role that is not guarding adding or deleting an atom (def:schema, GSC
+% 70afdc4).
 procedure sn_listed_witness(Contract?, Contract).
 sn_listed_witness(S, C?) :-
     contract_app(S?,
@@ -504,8 +505,8 @@ sn_listed_witness(S, C?) :-
 % --- negative: a listed role carrying the mark ? ----------------------------
 % split(a, b?, a[listed(*, n)]? ; n) :  identity, +split_a    identity, +split_b
 %                                       at a[listed(*, n)]: identity, +split_c
-% Only an agent role may carry the mark ? (Appendix D's Definition Act
-% schema, GSC f3c4f43), so the contract is malformed, the listed role named.
+% Only an agent role may carry the mark ? (def:schema, GSC f3c4f43), so the
+% contract is malformed, the listed role named.
 procedure sn_listed_guard(Contract?, Contract).
 sn_listed_guard(S, C?) :-
     contract_app(S?,
@@ -518,9 +519,9 @@ sn_listed_guard(S, C?) :-
 % --- negative: a listed role adding and deleting nothing --------------------
 % idle(a?, a[listed(*, n)] ; n) :  identity, +idled(n)
 %                                  at a[listed(*, n)]: identity
-% A role that is not a guarding role adds or deletes an atom (Appendix D's
-% Definition Act schema, GSC 70afdc4), and a listed role is no guarding
-% role, so the contract is malformed, the listed role named.
+% A role that is not a guarding role adds or deletes an atom (def:schema,
+% GSC 70afdc4), and a listed role is no guarding role, so the contract is
+% malformed, the listed role named.
 procedure sn_listed_inert(Contract?, Contract).
 sn_listed_inert(S, C?) :-
     contract_app(S?,
@@ -529,11 +530,11 @@ sn_listed_inert(S, C?) :-
           crs(listed(1, listed, [svar(n)]), unguarded,
               [], [], [atom(identity, [])], [])])], C).
 
-% --- negative: an introductory act with a name term (clause 1) -------------
+% --- negative: an introductory act with a name term -----------------------
 % befriend(p?, q? ; y) :  identity, not friend(q), +friend(q), +tag(<p>.y)
 %                         identity, not friend(p), +friend(p)
 % The one schema of arity two guarded in both roles carries a name term, so
-% the contract has no introductory act of clause 1.
+% the contract has no introductory act (def:introduction).
 procedure an_named_intro(Contract).
 an_named_intro([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]),
     schema(befriend, [svar(y)],
@@ -555,9 +556,9 @@ an_named_unary([schema(establish, [svar(y)],
 
 % --- negative: a signed term of a listed role -------------------------------
 % note(a?, a[club(*, n)] ; x, n) :  item(x)    at a[club(*, n)]: item(x), +got(sgn(x, a[club(*, n)]))
-% A signed term is of an agent role, as GSC's Appendix D admitted sgn(y, pi)
-% for pi an agent role until GSC 1a2a5f3, the signed term now GAI's, so the
-% contract is malformed.
+% A signed term is of an agent role, as GSC admitted sgn(y, pi) for pi an
+% agent role until GSC 1a2a5f3, the signed term now GAI's, so the contract is
+% malformed.
 procedure sgn_listed(Contract).
 sgn_listed([cschema(note, [svar(x), svar(n)], [],
        [rs(guarded, [], [], [atom(item, [svar(x)])], []),
@@ -670,7 +671,45 @@ gkk_intro_loose(S, C?) :-
          rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), S?, C).
 
 % ===========================================================================
-% Numbers (GSC, Section 3.2, the paragraph after the example of def:schema)
+% Clause 1 of def:unobstructed: a schema of arity one forbidding the atom it
+% adds
+% ===========================================================================
+% Clause 1 admits as the schema of arity one adding an atom the introductory
+% act requires one that requires nothing and forbids nothing or only that
+% atom, the introductory act then requiring that atom once at the role (GSC,
+% Section 3.6).  GKK's establish(Alice?) : not identity, +identity is one.
+%
+% uo_twice: meet requires identity twice at Alice, and establish, forbidding
+% the identity it adds, does not supply it: obstructed(meet, 1, identity,
+% unobtainable), once for each copy meet requires.
+procedure uo_twice(Contract).
+uo_twice([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
+
+% uo_twice_free: the same with establish forbidding nothing, which supplies
+% identity however many times meet requires it: syntactically grassroots.
+procedure uo_twice_free(Contract).
+uo_twice_free([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
+
+% uo_other: establish(Alice?) : not banned, +identity forbids an atom other
+% than the one it adds, so it is no schema of clause 1: obstructed(meet, 1,
+% identity, unobtainable), and at role 2 the same.
+procedure uo_other(Contract).
+uo_other([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(banned, [])])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
+
+% ===========================================================================
+% Numbers (GSC, Section 3.2, and the appendix Numbers in Act Schemas)
 % ===========================================================================
 % "An argument of an atom may be a number or a numeric variable, a schema may
 % carry a constraint on its numeric variables, which every binding
@@ -679,8 +718,10 @@ gkk_intro_loose(S, C?) :-
 % the term form of Currencies' GB.glp: num(x) a numeric variable, or a number
 % where x is one; times(num(k), A) the atom A with the multiplicity k;
 % nschema(Name, Vars, Constraint, Roles) a schema with a constraint, over
-% gt, le, succ and or.  The fixtures are the checker's and certify nothing
-% of GB, Currencies' (programs/currencies/bonds/GB.glp).
+% gt, le, succ and or.  A contract fixes a countable set V_C of numbers, its
+% values (def:numbers); the term form carries none, so the checker does not
+% know them.  The fixtures are the checker's and certify nothing of GB,
+% Currencies' (programs/currencies/bonds/GB.glp).
 %
 % establish(Alice?) : +identity
 % meet(Alice?, Bob?) : identity, +knows(Bob)    identity, +knows(Alice)
@@ -748,9 +789,10 @@ nm_supplied([schema(establish, [],
 % --- a number forbidden, unsettled -----------------------------------------
 % meet forbids date(0) at Alice, and advance, unguarded and of arity one,
 % adds date(t1) there at a binding satisfying t1 = t + 1.  Such a binding
-% sending t1 to 0 sends t to -1, and whether -1 is a number the paper does
-% not say (GSC, Section 3.2), so whether clause 2 of def:unobstructed holds
-% is unsettled: unsettled(meet, 1, date(0), added_by(advance, 1, date(t1))).
+% sending t1 to 0 sends t to -1, and whether -1 is a value of the contract
+% (def:numbers) its term does not say, so whether clause 2 of
+% def:unobstructed holds is unsettled: unsettled(meet, 1, date(0),
+% added_by(advance, 1, date(t1))).
 procedure nm_blocked(NContract).
 nm_blocked([schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
@@ -763,7 +805,7 @@ nm_blocked([schema(establish, [],
 % --- a number required, and the constraint of the schema adding it ---------
 % meet requiring score(5) at each role (nm_supplied), and a schema of arity
 % one adding score(k) at a binding satisfying its constraint
-% (def:unobstructed, clause 1; GSC, Section 3.2).
+% (def:unobstructed, clause 1; def:binding-numbers).
 procedure nm_score_meet(NContract).
 nm_score_meet([schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
@@ -856,15 +898,28 @@ nm_intro_var(C?) :-
          [rs(guarded, [atom(score, [num(k)])], [], [], [])])], C).
 
 % score(Alice?; k) | k > 3 : +score(k) adds score(n) where the introduction
-% sends n to a number above 3.  The checker does not choose the number, and
-% the verdict is unsettled: unsettled(meet, 1, score(n), supplied_by(score,
-% score(k))), and at role 2 the same.
+% sends n to a value above 3.  Whether the contract has one its term does
+% not say, and the verdict is unsettled: unsettled(meet, 1, score(n),
+% supplied_by(score, score(k))), and at role 2 the same.
 procedure nm_intro_var_bounded(NContract).
 nm_intro_var_bounded(C?) :-
     nm_var_meet(B),
     ncontract_app(B?,
       [nschema(score, [num(k)], gt(num(k), num(3)),
          [rs(guarded, [atom(score, [num(k)])], [], [], [])])], C).
+
+% --- a number required once, supplied by a schema forbidding it ------------
+% meet requiring score(5) at each role (nm_supplied), and
+% score(Alice?; k, j) : not score(j), +score(k), which forbids only the atom
+% it adds at the binding sending k and j to 5: clause 1 of def:unobstructed
+% holds, meet requiring score(5) once at each role, and the contract is
+% syntactically grassroots.
+procedure nm_once(NContract).
+nm_once(C?) :-
+    nm_score_meet(B),
+    ncontract_app(B?,
+      [schema(score, [num(k), num(j)],
+         [rs(guarded, [atom(score, [num(k)])], [], [], [atom(score, [num(j)])])])], C).
 
 % --- negative: a role that reads a number and changes nothing --------------
 % mature(Alice?, Bob; d, t) | d <= t : identity, knows(Bob), -bond(Bob, d), +coin(Bob)
@@ -1032,6 +1087,10 @@ contract(nm_forbid_admits, C?) :- nm_forbid_admits(C).
 contract(nm_forbid_excludes, C?) :- nm_forbid_excludes(C).
 contract(nm_intro_var, C?) :- nm_intro_var(C).
 contract(nm_intro_var_bounded, C?) :- nm_intro_var_bounded(C).
+contract(nm_once, C?) :- nm_once(C).
+contract(uo_twice, C?) :- uo_twice(C).
+contract(uo_twice_free, C?) :- uo_twice_free(C).
+contract(uo_other, C?) :- uo_other(C).
 contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract
@@ -1063,12 +1122,12 @@ variant(gkk_intro_unjoined, S, C?) :- gkk_intro_unjoined(S?, C).
 variant(gkk_intro_loose, S, C?) :- gkk_intro_loose(S?, C).
 variant(_, _, []) :- otherwise | true.
 
-% --- the speech-act variables of definition:provenance (Appendix D) ---------
-% Four small contracts of party roles, put in the language of Appendix D by a
-% cschema with no reach conditions.  The first clause of definition:provenance
-% asks after the arguments of an added atom outside Y, the second after every
-% speech-act variable that is an argument of it or occurs in a name term among
-% its arguments.
+% --- the speech-act variables of def:grounded -----------------------------
+% Four small contracts of agent roles, some with a name term or a schema
+% written cschema.  The first requirement of def:grounded asks after the
+% arguments of an added atom outside Y, the second after every speech-act
+% variable that is an argument of it or occurs in a name term among its
+% arguments.
 %
 % sign(p?; x) : +item(x, p)        take(p?, q) : +got(q)    item(z, p), +mark(q)
 % x is a speech-act variable, so only the second clause asks after it, and it
@@ -1088,7 +1147,7 @@ sv_signed(C?) :-
 
 % --- negative: the same speech act carried from an untraceable record ------
 % note(p?; x, u) : +tagged(x, u)      tag(p?; x, u) : tagged(x, u), +item(x, p)
-% The case of sg_svar_loose, in the language of Appendix D.  u is named by no
+% The case of sg_svar_loose, written with a cschema.  u is named by no
 % atom note requires, so tagged loses traceable provenance; the x of the item
 % tag adds occurs in tagged(x, u), which tag requires, and in no required atom
 % of traceable provenance, so the second clause drops item, and take loses the
@@ -1128,19 +1187,15 @@ sv_in_name_carried([cschema(found, [svar(x)], [],
                     [atom(club, [nterm(ext(own(1), x))])], [])])]).
 
 % ===========================================================================
-% A contract with a name term based on an agent variable (Appendix D.3)
+% A name term based on an agent variable, which def:role does not admit
 % ===========================================================================
 % establish(p?) : +identity
 % befriend(p?, q?) : identity, not friend(q), +friend(q)   identity, not friend(p), +friend(p)
 % tag(p? ; q, y) : identity, friend(q), +tagged(<q>.y)
-% <q>.y is based on the agent variable q, no agent role, so the contract is
-% not agent-named (definition:agent-named) and is put to the two conditions
-% on the text of Appendix D.  q is an argument of friend(q), which tag
-% requires, and y occurs in no atom tag requires, so tagged has traceable
-% provenance (definition:provenance); every role graph is connected or
-% guarded, so volition holds: nn_tag meets the conditions.  nn_tag_loose is
-% the same with tag requiring no friend(q), so that q is traced through
-% nothing and tagged loses traceable provenance.
+% <q>.y is based on the agent variable q, no agent role of tag, so it is no
+% name term of def:role and the contract is malformed:
+% name_term_base(tag, ext(own_var(q), y)).  nn_tag_loose is the same with tag
+% requiring no friend(q), and is malformed alike.
 procedure nn_social(Contract).
 nn_social([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]),
     schema(befriend, [],
@@ -1192,7 +1247,7 @@ sg_items([schema(befriend, [],
 % --- an introduction through the signed term alone -------------------------
 % exchange(Alice?, Bob?; x, y) :  item(x), +got(sgn(y, Bob))    item(y), +got(sgn(x, Alice))
 % over sign.  Each role adds an atom naming the other only as the role of its
-% signed term (Section 3.1, what an atom names; Appendix D, "names"), so
+% signed term (Section 3.1, what an atom names), so
 % exchange is an introductory act (def:introduction); it is unobstructed, the
 % item each role requires being added by sign, of arity one, guarded,
 % requiring and forbidding nothing (clause 1 of def:unobstructed); got has
@@ -1218,17 +1273,17 @@ sgn_intro_plain([S?,
         rs(guarded, [atom(got, [svar(x)])], [], [atom(item, [svar(y)])], [])])]) :-
     sgn_sign(S).
 
-% --- negative: the signed term where def:schema forbids it -----------------
+% --- negative: the signed term where GAI's Definition Act schema forbids it
 % Contracts of sign and forward, each with its signed term violating one of
-% the two requirements def:schema makes of it, and refused as malformed
+% the two requirements GAI's Definition Act schema makes of it, and refused
+% as malformed
 % (check.glp, sgn_schemas): in sgn_not_added forward requires
 % item(sgn(x, Alice)) at Bob, an atom not marked +; in sgn_other_role it adds
 % item(sgn(x, Bob)) at Bob, and Bob requires no atom with x among its
 % arguments, Alice being the role that requires item(x); in sgn_not_required
 % sign adds item(sgn(x, Alice)) with x required at no role.  sgn_community
-% writes sign as a cschema, so that the contract has community roles, whose
-% schemas admit no signed term (Appendix D, Definition Act schema), and
-% forward's is refused as outside the language.
+% writes sign as a cschema, so that the contract has community roles, its
+% signed term of an agent role meeting both requirements, and is admitted.
 procedure sgn_not_added(Contract).
 sgn_not_added([S?,
     schema(forward, [svar(x)],
@@ -1306,9 +1361,10 @@ sg_sgn_loose(C?) :-
 % (GAI ddf0a33), so friend is a multiset, as GKK's knows is.  The guardianship for child is (child,
 % identity, parent, parenting); befriend is unobstructed but for {child}; and
 % wd has an introduction with wards (def:introduction-wards).  It is not
-% syntactically grassroots: establish forbids the identity befriend requires,
-% so clause 1 of def:unobstructed fails, and enter adds the child befriend
-% forbids at a binding that gives the other party no role, so clause 2 fails.
+% syntactically grassroots: establish forbids the identity it adds, which
+% clause 1 of def:unobstructed admits (GSC b2bb8be), but enter adds the child
+% befriend and enter forbid at a binding that gives the other party no role,
+% so clause 2 fails.
 % Each fixture below changes it in one place and fails one clause of one
 % definition of GAI's appendix, its comment naming which.
 procedure wd_establish(Schema).

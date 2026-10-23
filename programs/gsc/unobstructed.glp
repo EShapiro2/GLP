@@ -1,28 +1,28 @@
 % ---------------------------------------------------------------------------
 % The introductory act (def:introduction) and unobstructedness
-% (def:unobstructed) of /Grassroots/GSC, Section 3.
+% (def:unobstructed) of /Grassroots/GSC, Section 3.6, for a contract of agent
+% roles and listed roles alike (GSC ac7ad63).
 %
 % Both definitions quantify over all distinct p and q.  The schemas name no
 % person (prop:anonymity), so one pair stands for every pair, and the bindings
 % over it are finite: person(0) and person(1) take the two roles, each party
 % variable takes one of the two, and each speech-act variable a speech act of
-% its own.  intro_bindings enumerates them and keeps the introductions.  The
-% numeric variables of the act (GSC, Section 3.2) are left to the
-% introduction to choose; the clauses are decided on the contract as written,
-% a number matched by equality at a binding satisfying its schema's
-% constraint, and where the numbers leave a clause unsettled the fault says
-% so (unsettled, below and self.glp).
+% its own.  intro_bindings enumerates them and keeps the introductions.  An
+% introduction chooses its own numbers (the appendix "Numbers in Act
+% Schemas", after def:binding-numbers), among the values the contract fixes
+% (def:numbers); its term does not say which values those are, so the
+% checker leaves the numeric variables of the act unchosen.  The clauses are
+% decided on the contract as written, a number matched by equality at a
+% binding satisfying its schema's constraint, and where an answer rests on
+% the values the fault says so (unsettled, below and self.glp).
 %
-% An agent-named contract (Appendix D.4, definition:sg-agent-named) is put to
-% the same definitions, with clause 1 of definition:sg-agent-named: the
-% introductory act has agent roles and no name term, and so has each schema
+% An introductory act is guarded in both its roles, which are therefore
+% agent roles, and has no name term (def:introduction); so has each schema
 % of arity one of clause 1 of def:unobstructed.  A listed role adds at the
-% agents of its extent, which no binding names, so clause 2 of
-% def:unobstructed is asked of the agent roles of a schema, and clause 2 of
-% definition:sg-agent-named of its listed roles: none adds an atom of a
-% predicate the introductory act forbids at a role (GSC f3c4f43).  For a
-% contract of Section 3 these restrictions ask nothing, its roles being
-% agent roles and its schemas carrying no name term.
+% agents of its extent, which no binding names, so the second part of clause
+% 2 of def:unobstructed is asked of the agent roles of a schema, and its
+% first part of the listed roles: none adds an atom of the predicate of an
+% atom the introductory act forbids at a role.
 % ---------------------------------------------------------------------------
 
 % --- the introductions of person(0) and person(1) --------------------------
@@ -122,8 +122,8 @@ intro_bindings(Sc, R?) :- ground(Sc?) |
     pvar_assignments(PV?, PAs),
     intro_filter(PAs?, SB?, Sc?, R).
 
-% Arity two, both roles agent roles and guarded (def:introduction), and no
-% name term (definition:sg-agent-named, clause 1).
+% Arity two, both roles guarded, so agent roles, and no name term
+% (def:introduction).
 procedure two_guarded(RoleSpecs?, Ans).
 two_guarded([rs(guarded, _, _, _, _), rs(guarded, _, _, _, _)], yes).
 two_guarded(Rs, no) :- otherwise, ground(Rs?) | true.
@@ -148,7 +148,7 @@ intro_act_bindings(Sc, R?) :- ground(Sc?) |
     iab1(A?, Sc?, R).
 
 
-% --- numbers (GSC, Section 3.2) ---------------------------------------------
+% --- numbers (GSC, Section 3.2; def:numbers, def:binding-numbers) ----------
 % "A schema may carry a constraint on its numeric variables, which every
 % binding satisfies, and an atom added or deleted may carry a multiplicity."
 % def:unobstructed asks of an atom that some schema add it at a binding, so
@@ -162,8 +162,8 @@ intro_act_bindings(Sc, R?) :- ground(Sc?) |
 % the numbers the binding gives it decide: true holds, gt, le and succ hold or
 % fail on two numbers, or holds where one side holds and fails where both
 % fail.  One that rests on a variable the binding leaves free is unsettled:
-% whether some number satisfies it rests on which numbers there are, which
-% the paper does not say (Section 3.2).
+% whether some value satisfies it rests on the values the contract fixes
+% (def:numbers), which its term does not carry.
 
 procedure num_v(Subst?, Arg?, NumV).
 num_v(_, num(X), known(X?)) :- number(X?) | true.
@@ -284,86 +284,192 @@ match_added(maybe(S), M, C, R?) :- ground(S?), ground(M?), ground(C?) |
     maybe_tri(R1?, R).
 
 % --- clause 1 of def:unobstructed -----------------------------------------
-% The atom is added by a schema of arity one, guarded in its role and
-% requiring and forbidding nothing, at a binding sending its role to the
-% person in question, which satisfies the schema's constraint: an atom the
-% schema adds equals it there, numbers included.  Its role is an agent role
-% and it has no name term (definition:sg-agent-named, clause 1).  The answer
-% is supplied, unsupplied, or supply_unsettled(Schema, Psi), the first atom
-% Psi of a schema whose supplying it the numbers leave unsettled, where no
-% schema supplies it.
+% The atom is added by a schema of arity one, guarded in its role, with no
+% name term, requiring nothing, and forbidding nothing or only that atom,
+% which the introductory act then requires once at its role, at a binding
+% sending its role to the person in question, which satisfies the schema's
+% constraint: an atom the schema adds equals the atom there, numbers
+% included, and so does each atom it forbids.  Its role is guarded, so an
+% agent role.  The answer is supplied, unsupplied, or
+% supply_unsettled(Schema, Psi), the first atom Psi of a schema whose
+% supplying it rests on the values the contract fixes, where no schema
+% supplies it.  O is whether the introductory act requires the atom once at
+% its role (req_once, below), asked where the schema forbids an atom.
 
 procedure first_unsettled(Supply?, Constant?, Atom?, Supply).
 first_unsettled(unsupplied, Nm, Psi, supply_unsettled(Nm?, Psi?)).
 first_unsettled(supply_unsettled(N, P), _, _, supply_unsettled(N?, P?)).
 first_unsettled(supplied, _, _, supplied).
 
-procedure mults_supply1(Tri?, Atom?, Mults?, Constant?, RoleSpecs?, Constraint?, GAtom?, Val?, Supply?, Supply).
-mults_supply1(yes, _, _, _, _, _, _, _, _, supplied).
-mults_supply1(no, _, Ms, Nm, Rs, C, G, V, Acc, R?) :-
-    ground(Ms?), ground(Nm?), ground(Rs?), ground(C?), ground(G?), ground(V?), ground(Acc?) |
-    mults_supply(Ms?, Nm?, Rs?, C?, G?, V?, Acc?, R).
-mults_supply1(unsettled, Psi, Ms, Nm, Rs, C, G, V, Acc, R?) :-
-    ground(Psi?), ground(Ms?), ground(Nm?), ground(Rs?), ground(C?), ground(G?),
-    ground(V?), ground(Acc?) |
+% Each atom the schema forbids equals the atom in question at a binding
+% extending the match of the atom it adds: it matches it, the match binding
+% what the first left free.
+procedure forb_match(Atoms?, GAtom?, RoleSpecs?, MatchRes?, MatchRes).
+forb_match([], _, _, MR, MR?).
+forb_match([_|_], _, _, nomatch, nomatch).
+forb_match([F|Fs], G, Rs, match(S), R?) :-
+    ground(F?), ground(Fs?), ground(G?), ground(Rs?), ground(S?) |
+    match_atom(F?, G?, Rs?, S?, MR),
+    forb_match(Fs?, G?, Rs?, MR?, R).
+forb_match([F|Fs], G, Rs, maybe(S), R?) :-
+    ground(F?), ground(Fs?), ground(G?), ground(Rs?), ground(S?) |
+    match_atom(F?, G?, Rs?, S?, MR),
+    to_maybe(MR?, MR1),
+    forb_match(Fs?, G?, Rs?, MR1?, R).
+
+% A schema that forbids an atom supplies it only where the introductory act
+% requires it once.
+procedure once_and(Atoms?, Tri?, Tri?, Tri).
+once_and([], _, T, T?).
+once_and([_|_], O, T, R?) :- ground(O?), ground(T?) | tri_and(T?, O?, R).
+
+procedure mults_supply1(Tri?, Atom?, Mults?, Atoms?, Constant?, RoleSpecs?, Constraint?, GAtom?, Val?, Tri?, Supply?, Supply).
+mults_supply1(yes, _, _, _, _, _, _, _, _, _, _, supplied).
+mults_supply1(no, _, Ms, N, Nm, Rs, C, G, V, O, Acc, R?) :-
+    ground(Ms?), ground(N?), ground(Nm?), ground(Rs?), ground(C?), ground(G?), ground(V?),
+    ground(O?), ground(Acc?) |
+    mults_supply(Ms?, N?, Nm?, Rs?, C?, G?, V?, O?, Acc?, R).
+mults_supply1(unsettled, Psi, Ms, N, Nm, Rs, C, G, V, O, Acc, R?) :-
+    ground(Psi?), ground(Ms?), ground(N?), ground(Nm?), ground(Rs?), ground(C?), ground(G?),
+    ground(V?), ground(O?), ground(Acc?) |
     first_unsettled(Acc?, Nm?, Psi?, Acc1),
-    mults_supply(Ms?, Nm?, Rs?, C?, G?, V?, Acc1?, R).
+    mults_supply(Ms?, N?, Nm?, Rs?, C?, G?, V?, O?, Acc1?, R).
 
-procedure mult_supply(Atom?, Mult?, Mults?, Constant?, RoleSpecs?, Constraint?, GAtom?, Val?, Supply?, Supply).
-mult_supply(Psi, M, Ms, Nm, Rs, C, G, V, Acc, R?) :-
-    ground(Psi?), ground(M?), ground(Ms?), ground(Nm?), ground(Rs?), ground(C?),
-    ground(G?), ground(V?), ground(Acc?) |
-    match_atom(Psi?, G?, Rs?, [bind(role(1), V?)], MR),
-    match_added(MR?, M?, C?, T),
-    mults_supply1(T?, Psi?, Ms?, Nm?, Rs?, C?, G?, V?, Acc?, R).
+procedure mult_supply(Atom?, Mult?, Mults?, Atoms?, Constant?, RoleSpecs?, Constraint?, GAtom?, Val?, Tri?, Supply?, Supply).
+mult_supply(Psi, M, Ms, N, Nm, Rs, C, G, V, O, Acc, R?) :-
+    ground(Psi?), ground(M?), ground(Ms?), ground(N?), ground(Nm?), ground(Rs?), ground(C?),
+    ground(G?), ground(V?), ground(O?), ground(Acc?) |
+    match_atom(Psi?, G?, Rs?, [bind(role(1), V?)], MR0),
+    forb_match(N?, G?, Rs?, MR0?, MR),
+    match_added(MR?, M?, C?, T0),
+    once_and(N?, O?, T0?, T),
+    mults_supply1(T?, Psi?, Ms?, N?, Nm?, Rs?, C?, G?, V?, O?, Acc?, R).
 
-procedure mults_supply(Mults?, Constant?, RoleSpecs?, Constraint?, GAtom?, Val?, Supply?, Supply).
-mults_supply([], _, _, _, _, _, Acc, Acc?).
-mults_supply([M|Ms], Nm, Rs, C, G, V, Acc, R?) :-
-    ground(M?), ground(Ms?), ground(Nm?), ground(Rs?), ground(C?), ground(G?),
-    ground(V?), ground(Acc?) |
+procedure mults_supply(Mults?, Atoms?, Constant?, RoleSpecs?, Constraint?, GAtom?, Val?, Tri?, Supply?, Supply).
+mults_supply([], _, _, _, _, _, _, _, Acc, Acc?).
+mults_supply([M|Ms], N, Nm, Rs, C, G, V, O, Acc, R?) :-
+    ground(M?), ground(Ms?), ground(N?), ground(Nm?), ground(Rs?), ground(C?), ground(G?),
+    ground(V?), ground(O?), ground(Acc?) |
     plain_mult(M?, Psi),
-    mult_supply(Psi?, M?, Ms?, Nm?, Rs?, C?, G?, V?, Acc?, R).
+    mult_supply(Psi?, M?, Ms?, N?, Nm?, Rs?, C?, G?, V?, O?, Acc?, R).
 
-procedure unary_supplies1(RoleSpecs?, NameTerms?, NRoleSpecs?, Constant?, Constraint?, GAtom?, Val?, Supply?, Supply).
-unary_supplies1([rs(guarded, P, [], [], [])], [], [rs(guarded, PM, [], [], [])], Nm, C, G, V, Acc, R?) :-
-    ground(P?), ground(PM?), ground(Nm?), ground(C?), ground(G?), ground(V?), ground(Acc?) |
-    mults_supply(PM?, Nm?, [rs(guarded, P?, [], [], [])], C?, G?, V?, Acc?, R).
-unary_supplies1(_, _, _, _, _, _, _, Acc, Acc?) :- otherwise | true.
+procedure unary_supplies1(RoleSpecs?, NameTerms?, NRoleSpecs?, Constant?, Constraint?, GAtom?, Val?, Tri?, Supply?, Supply).
+unary_supplies1([rs(guarded, P, [], [], N)], [], [rs(guarded, PM, [], [], _)], Nm, C, G, V, O, Acc, R?) :-
+    ground(P?), ground(N?), ground(PM?), ground(Nm?), ground(C?), ground(G?), ground(V?),
+    ground(O?), ground(Acc?) |
+    mults_supply(PM?, N?, Nm?, [rs(guarded, P?, [], [], N?)], C?, G?, V?, O?, Acc?, R).
+unary_supplies1(_, _, _, _, _, _, _, _, Acc, Acc?) :- otherwise | true.
 
-procedure unary_supplies0(Schema?, NSchema?, GAtom?, Val?, Supply?, Supply).
-unary_supplies0(Sc, NSc, G, V, Acc, R?) :-
-    ground(Sc?), ground(NSc?), ground(G?), ground(V?), ground(Acc?) |
+procedure unary_supplies0(Schema?, NSchema?, GAtom?, Val?, Tri?, Supply?, Supply).
+unary_supplies0(Sc, NSc, G, V, O, Acc, R?) :-
+    ground(Sc?), ground(NSc?), ground(G?), ground(V?), ground(O?), ground(Acc?) |
     sch_roles(Sc?, Rs),
     sch_nts(Sc?, Ns),
     sch_name(Sc?, Nm),
     nsch_roles(NSc?, NRs),
     nsch_constraint(NSc?, C),
-    unary_supplies1(Rs?, Ns?, NRs?, Nm?, C?, G?, V?, Acc?, R).
+    unary_supplies1(Rs?, Ns?, NRs?, Nm?, C?, G?, V?, O?, Acc?, R).
 
-procedure unary_supplies(NSchema?, GAtom?, Val?, Supply?, Supply).
-unary_supplies(NSc, G, V, Acc, R?) :- ground(NSc?), ground(G?), ground(V?), ground(Acc?) |
+procedure unary_supplies(NSchema?, GAtom?, Val?, Tri?, Supply?, Supply).
+unary_supplies(NSc, G, V, O, Acc, R?) :-
+    ground(NSc?), ground(G?), ground(V?), ground(O?), ground(Acc?) |
     plain_schema(NSc?, Sc),
-    unary_supplies0(Sc?, NSc?, G?, V?, Acc?, R).
+    unary_supplies0(Sc?, NSc?, G?, V?, O?, Acc?, R).
 
-procedure obtainable1(Supply?, NContract?, GAtom?, Val?, Supply).
-obtainable1(supplied, _, _, _, supplied).
-obtainable1(A, Ss, G, V, R?) :- otherwise, ground(A?), ground(Ss?), ground(G?), ground(V?) |
-    obtainable(Ss?, G?, V?, A?, R).
+procedure obtainable1(Supply?, NContract?, GAtom?, Val?, Tri?, Supply).
+obtainable1(supplied, _, _, _, _, supplied).
+obtainable1(A, Ss, G, V, O, R?) :-
+    otherwise, ground(A?), ground(Ss?), ground(G?), ground(V?), ground(O?) |
+    obtainable(Ss?, G?, V?, O?, A?, R).
 
-procedure obtainable(NContract?, GAtom?, Val?, Supply?, Supply).
-obtainable([], _, _, Acc, Acc?).
-obtainable([S|Ss], G, V, Acc, R?) :- ground(S?), ground(Ss?), ground(G?), ground(V?), ground(Acc?) |
-    unary_supplies(S?, G?, V?, Acc?, A),
-    obtainable1(A?, Ss?, G?, V?, R).
+procedure obtainable(NContract?, GAtom?, Val?, Tri?, Supply?, Supply).
+obtainable([], _, _, _, Acc, Acc?).
+obtainable([S|Ss], G, V, O, Acc, R?) :-
+    ground(S?), ground(Ss?), ground(G?), ground(V?), ground(O?), ground(Acc?) |
+    unary_supplies(S?, G?, V?, O?, Acc?, A),
+    obtainable1(A?, Ss?, G?, V?, O?, R).
+
+% req_once(Req, B, G, R): the introductory act requires the atom G once at
+% its role at the introduction B -- the images under B of the atoms Req the
+% role requires, each as many times as its multiplicity, hold G once
+% ("which tau then requires once at pi_i", clause 1).  Where an image or a
+% multiplicity rests on the numbers the introduction chooses, among the
+% values the contract fixes, the answer is unsettled unless the atoms
+% certain to equal G already hold it twice.
+procedure req_once(Mults?, Subst?, GAtom?, Tri).
+req_once(Ms, B, G, R?) :- ground(Ms?), ground(B?), ground(G?) |
+    req_count(Ms?, B?, G?, 0, no, R).
+
+procedure req_count(Mults?, Subst?, GAtom?, Integer?, Ans?, Tri).
+req_count([], _, _, N, U, R?) :- integer(N?), ground(U?) | once_tri(U?, N?, R).
+req_count([M|Ms], B, G, N, U, R?) :-
+    ground(M?), ground(Ms?), ground(B?), ground(G?), integer(N?), ground(U?) |
+    plain_mult(M?, A),
+    req_count1(A?, M?, Ms?, B?, G?, N?, U?, R).
+
+procedure req_count1(Atom?, Mult?, Mults?, Subst?, GAtom?, Integer?, Ans?, Tri).
+req_count1(A, M, Ms, B, G, N, U, R?) :-
+    ground(A?), ground(M?), ground(Ms?), ground(B?), ground(G?), integer(N?), ground(U?) |
+    apply_atom(B?, A?, GA),
+    gatom_eq(GA?, G?, E),
+    mult_count(M?, B?, K),
+    req_count2(E?, K?, Ms?, B?, G?, N?, U?, R).
+
+procedure req_count2(Tri?, NumV?, Mults?, Subst?, GAtom?, Integer?, Ans?, Tri).
+req_count2(no, _, Ms, B, G, N, U, R?) :-
+    ground(Ms?), ground(B?), ground(G?), integer(N?), ground(U?) |
+    req_count(Ms?, B?, G?, N?, U?, R).
+req_count2(yes, known(K), Ms, B, G, N, U, R?) :-
+    integer(K?), ground(Ms?), ground(B?), ground(G?), integer(N?), ground(U?) |
+    N1 := N? + K?,
+    req_count(Ms?, B?, G?, N1?, U?, R).
+req_count2(_, _, Ms, B, G, N, _, R?) :-
+    otherwise, ground(Ms?), ground(B?), ground(G?), integer(N?) |
+    req_count(Ms?, B?, G?, N?, yes, R).
+
+% The multiplicity of an atom required at the introduction B: one for an
+% atom that carries none.
+procedure mult_count(Mult?, Subst?, NumV).
+mult_count(atom(_, _), _, known(1)).
+mult_count(times(K, _), B, V?) :- ground(K?), ground(B?) | num_v(B?, K?, V).
+
+% U is whether some image or multiplicity rested on a number unchosen.
+procedure once_tri(Ans?, Integer?, Tri).
+once_tri(no, N, yes) :- N? =:= 1 | true.
+once_tri(yes, N, no) :- N? >= 2 | true.
+once_tri(yes, N, unsettled) :- N? < 2 | true.
+once_tri(no, _, no) :- otherwise | true.
+
+% Two images are equal, unequal, or equal where the numbers the introduction
+% chooses are, which rests on the values the contract fixes (unsettled).
+procedure val_eq(Val?, Val?, Tri).
+val_eq(V, W, yes) :- V? =?= W? | true.
+val_eq(nval(M), nval(N), R?) :- otherwise, number(M?), number(N?) | tri_eq(M?, N?, R).
+val_eq(nfree(_), nval(_), unsettled) :- otherwise | true.
+val_eq(nval(_), nfree(_), unsettled) :- otherwise | true.
+val_eq(nfree(_), nfree(_), unsettled) :- otherwise | true.
+val_eq(_, _, no) :- otherwise | true.
+
+procedure vals_eq(Vals?, Vals?, Tri).
+vals_eq([], [], yes).
+vals_eq([V|Vs], [W|Ws], R?) :- ground(V?), ground(W?), ground(Vs?), ground(Ws?) |
+    val_eq(V?, W?, T1),
+    vals_eq(Vs?, Ws?, T2),
+    tri_and(T1?, T2?, R).
+vals_eq(_, _, no) :- otherwise | true.
+
+procedure gatom_eq(GAtom?, GAtom?, Tri).
+gatom_eq(gatom(P, Vs), gatom(Q, Ws), R?) :- P? =?= Q?, ground(Vs?), ground(Ws?) |
+    vals_eq(Vs?, Ws?, R).
+gatom_eq(_, _, no) :- otherwise | true.
 
 % Whether the introductory act requires the atom at its introduction B: one
 % carrying no multiplicity it requires, and one carrying the multiplicity k
 % (an atom deleted) it requires where B sends k to one or more.  The number
 % of a numeric variable of the act is the introduction's to choose, and
 % whether it may choose none of the atom, a multiplicity below one, rests on
-% whether a multiplicity must be positive, which the paper does not say
-% (Section 3.2): unsettled.
+% the values the contract fixes (def:numbers, def:binding-numbers), which
+% its term does not carry: unsettled.
 procedure req_cond(Mult?, Subst?, Tri).
 req_cond(atom(_, _), _, yes).
 req_cond(times(K, _), B, R?) :- ground(K?), ground(B?) |
@@ -386,24 +492,35 @@ req_fault(yes, supply_unsettled(N2, P), Nm, I, A, T,
 req_fault(unsettled, supply_unsettled(N2, P), Nm, I, A, T,
           [unsettled(Nm?, I?, A?, supplied_by(N2?, P?))|T?]).
 
-procedure unob_req1(Atom?, Mult?, Mults?, Val?, Integer?, Constant?, Subst?, NContract?, Faults).
-unob_req1(A, M, Ms, V, I, Nm, B, NC, R?) :-
-    ground(A?), ground(M?), ground(Ms?), ground(V?), integer(I?), ground(Nm?),
+% The person in the role and the image of the atom are produced by the body,
+% so they are put to clause 1 through a call that can guard on them; All is
+% every atom the role requires, which req_once counts.
+procedure unob_req2(GAtom?, Tri?, Atom?, Mults?, Mults?, Val?, Integer?, Constant?, Subst?, NContract?, Faults).
+unob_req2(G, Rq, A, Ms, All, V, I, Nm, B, NC, R?) :-
+    ground(G?), ground(Rq?), ground(A?), ground(Ms?), ground(All?), ground(V?), integer(I?),
+    ground(Nm?), ground(B?), ground(NC?) |
+    req_once(All?, B?, G?, O),
+    obtainable(NC?, G?, V?, O?, unsupplied, Sp),
+    unob_req(Ms?, All?, V?, I?, Nm?, B?, NC?, R1),
+    req_fault(Rq?, Sp?, Nm?, I?, A?, R1?, R).
+
+procedure unob_req1(Atom?, Mult?, Mults?, Mults?, Val?, Integer?, Constant?, Subst?, NContract?, Faults).
+unob_req1(A, M, Ms, All, V, I, Nm, B, NC, R?) :-
+    ground(A?), ground(M?), ground(Ms?), ground(All?), ground(V?), integer(I?), ground(Nm?),
     ground(B?), ground(NC?) |
     apply_atom(B?, A?, G),
     req_cond(M?, B?, Rq),
-    obtainable(NC?, G?, V?, unsupplied, Sp),
-    unob_req(Ms?, V?, I?, Nm?, B?, NC?, R1),
-    req_fault(Rq?, Sp?, Nm?, I?, A?, R1?, R).
+    unob_req2(G?, Rq?, A?, Ms?, All?, V?, I?, Nm?, B?, NC?, R).
 
-procedure unob_req(Mults?, Val?, Integer?, Constant?, Subst?, NContract?, Faults).
-unob_req([], _, _, _, _, _, []).
-unob_req([M|Ms], V, I, Nm, B, NC, R?) :-
-    ground(M?), ground(Ms?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(NC?) |
+procedure unob_req(Mults?, Mults?, Val?, Integer?, Constant?, Subst?, NContract?, Faults).
+unob_req([], _, _, _, _, _, _, []).
+unob_req([M|Ms], All, V, I, Nm, B, NC, R?) :-
+    ground(M?), ground(Ms?), ground(All?), ground(V?), integer(I?), ground(Nm?), ground(B?),
+    ground(NC?) |
     plain_mult(M?, A),
-    unob_req1(A?, M?, Ms?, V?, I?, Nm?, B?, NC?, R).
+    unob_req1(A?, M?, Ms?, All?, V?, I?, Nm?, B?, NC?, R).
 
-% --- clause 2 of def:unobstructed -----------------------------------------
+% --- clause 2 of def:unobstructed, its second part: the agent roles -------
 % Every atom every schema adds is matched against the forbidden one at that
 % party, the number of a numeric argument by equality, and a match is a
 % binding adding it where it satisfies the schema's constraint and the
@@ -411,8 +528,8 @@ unob_req([M|Ms], V, I, Nm, B, NC, R?) :-
 % that the clause does not excuse is the fault.  excused/5 is the clause's
 % two tests, both read off the completed binding: the other party of the
 % introduction holds a role, and the multiset added at the role in question
-% names it.  Where the numbers leave it unsettled whether some binding adds
-% the atom, or whether that binding is excused, the answer is
+% names it.  Where it rests on the values the contract fixes whether some
+% binding adds the atom, or whether that binding is excused, the answer is
 % block_unsettled(Schema, Role, Psi), unless another schema blocks it.
 
 procedure ctx_parts(Ctx?, Val, Integer).
@@ -540,8 +657,9 @@ role_blocks1(Acc, NRs, J, Sc, Rs, Nm, C, Cx, G, P, R?) :-
     role_blocks(NRs?, J1?, Sc?, Rs?, Nm?, C?, Cx?, G?, P?, Acc?, R).
 
 % A listed role adds at the agents of its extent, not at a person a binding
-% sends it to, and clause 2 of definition:sg-agent-named asks of it what this
-% clause asks of an agent role (listed_faults, below): it is passed by.
+% sends it to, and the first part of clause 2 of def:unobstructed asks of it
+% what the second asks of an agent role (listed_faults, below): it is passed
+% by.
 procedure role_blocks2(Ans?, NRoleSpec?, NRoleSpecs?, Integer?, Schema?, RoleSpecs?, Constant?, Constraint?, Ctx?, GAtom?, Val?, Block?, Block).
 role_blocks2(yes, NRS, NRs, J, Sc, Rs, Nm, C, Cx, G, P, Acc, R?) :-
     ground(NRS?), ground(NRs?), integer(J?), ground(Sc?), ground(Rs?), ground(Nm?),
@@ -657,7 +775,7 @@ unob_role1(V, Req, Forb, I, Nm, B, NC, Cx, Rf, R?) :-
     ground(V?), ground(Req?), ground(Forb?), integer(I?), ground(Nm?),
     ground(B?), ground(NC?), ground(Cx?), ground(Rf?) |
     n_refl_drop(Req?, I?, Rf?, Req1),
-    unob_req(Req1?, V?, I?, Nm?, B?, NC?, F1),
+    unob_req(Req1?, Req?, V?, I?, Nm?, B?, NC?, F1),
     unob_forb(Forb?, V?, I?, Nm?, B?, NC?, Cx?, F2),
     plain_mults(Forb?, ForbA),
     refl_keep(ForbA?, I?, Rf?, yes, Own),
@@ -684,12 +802,12 @@ unob_roles([RS|Rs], I, Nm, B, NC, Fb, Rf, R?) :-
     unob_roles(Rs?, I1?, Nm?, B?, NC?, Fb?, Rf?, F2),
     faults_app(F1?, F2?, R).
 
-% --- clause 2 of definition:sg-agent-named ---------------------------------
-% No listed role of a schema of C adds an atom of a predicate that the
-% introductory act forbids at a role (GSC f3c4f43).  Each atom A the act Nm
+% --- clause 2 of def:unobstructed, its first part: the listed roles --------
+% No listed role of a schema of C adds an atom whose predicate is that of an
+% atom the introductory act forbids at a role.  Each atom A the act Nm
 % forbids at its role I, and each atom a listed role J of a schema Nm2 adds
 % of A's predicate, is a fault obstructed(Nm, I, A, listed_role(Nm2, J,
-% Added)).  A contract of Section 3 has no listed role and no such fault.
+% Added)).  A contract with no listed role has no such fault.
 
 procedure sh_atoms(Atoms?, Constant?, Constant?, Integer?, Atom?, Constant?, Integer?,
                    Faults?, Faults).
@@ -800,8 +918,8 @@ intro_num(NSc, B, R?) :- ground(NSc?), ground(B?) |
 % unobstructed(Sc, NSc, B, NC, C, Rf, T, Faults): the faults of
 % def:unobstructed at the introduction B of the act Sc, written NSc, in the
 % contract written NC, its plain form C, Rf being the predicates the contract
-% declares reflexive, then those of clause 2 of definition:sg-agent-named;
-% empty when it satisfies the clauses at every role.  T is intro_num's
+% declares reflexive, those of the listed roles last; empty when it
+% satisfies the clauses at every role.  T is intro_num's
 % answer, yes or unsettled, and an unsettled one is the fault
 % unsettled_introduction(Act) before the others.
 procedure intro_fault(Tri?, Constant?, Faults?, Faults).
@@ -830,8 +948,8 @@ unobstructed1(NRs, Rs, Nm, B, NC, C, N, Rf, R?) :-
 % --- def:syntactically-grassroots, first half ------------------------------
 % Some schema is an introductory act unobstructed at some introduction.  The
 % faults reported are those of the first introduction all of whose faults
-% the numbers leave unsettled, where there is one, and otherwise those of
-% the first introductory act at its first failing introduction.
+% rest on the values the contract fixes, where there is one, and otherwise
+% those of the first introductory act at its first failing introduction.
 
 procedure note_cand(Cand?, Faults?, Cand).
 note_cand(none, F, some(F?)).
@@ -902,11 +1020,11 @@ intro_result(NC, Rf, R?) :- ground(NC?), ground(Rf?) |
 % --- the introductory acts, for inspection ---------------------------------
 % Each schema of the contract that is an introductory act (def:introduction),
 % in the order of the contract: unobstructed where some introduction of it
-% meets def:unobstructed, with clause 2 of definition:sg-agent-named for an
-% agent-named contract, as intro_result decides it; unsettled(Faults) where
-% none does and the numbers leave every fault of one unsettled, the faults of
-% the first such; obstructed(Faults) otherwise, the faults of its first
-% introduction, as intro_result reports them for the first introductory act.
+% meets def:unobstructed, as intro_result decides it; unsettled(Faults)
+% where none does and every fault of one rests on the values the contract
+% fixes, the faults of the first such; obstructed(Faults) otherwise, the
+% faults of its first introduction, as intro_result reports them for the
+% first introductory act.
 
 IAS ::= ia(IntroStatus) ; ia_none.
 

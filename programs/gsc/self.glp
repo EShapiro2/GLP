@@ -1,9 +1,10 @@
 % ---------------------------------------------------------------------------
 % GSC: the syntactically-grassroots checker.
 %
-% Decides def:syntactically-grassroots of /Grassroots/GSC, Section 3, and
-% the conditions of its Appendix D on a contract with listed roles.  The
-% signed term, reflexive predicates and contracts with wards are GAI's
+% Decides def:syntactically-grassroots of /Grassroots/GSC, Section 3, one
+% definition for a contract of agent roles and listed roles (GSC ac7ad63),
+% with the numbers of its appendix "Numbers in Act Schemas" (app:numbers).
+% The signed term, reflexive predicates and contracts with wards are GAI's
 % extension of the language (GAI's appendix "Contracts with Wards"; GSC
 % 83b951c and 1a2a5f3), held here for GAI.  The papers are the specification
 % and no definition of them is restated here; each procedure names the
@@ -24,10 +25,11 @@
 
 -expose(unobstructed).
 
-% --- The syntax of a schema (def:schema, definition:term, definition:role,
-% --- definition:schema) ----------------------------------------------------
-% A name term (definition:term): own(I) is <pi_I> and own_var(X) is <x>, for
-% an agent role and an agent variable, and ext(Sigma, Y) is Sigma.y.
+% --- The syntax of a schema (def:role, def:schema) -------------------------
+% A name term (def:role): own(I) is <pi_I>, for an agent role pi_I of its
+% schema, and ext(Sigma, Y) is Sigma.y.  own_var(X), <x> for an agent
+% variable x, is read and is no name term of def:role: a contract carrying
+% one is refused (name_term_base, check.glp).
 NameTerm  ::= own(Integer) ; own_var(Constant)
             ; ext(NameTerm, Constant).
 NameTerms ::= [] ; [NameTerm | NameTerms].
@@ -36,18 +38,20 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % speech-act variable, a name term or a signed term: sgn(Y, I) is the signed
 % term sgn(y, pi_I) of def:schema, the speech act y signed by the agent in
 % role I.  Act schemas allow numbers (GSC, Section 3.2, the paragraph after
-% the example of def:schema): num(X) is a numeric argument, the numeric
-% variable X where X is a name and the number X where X is a number.
+% the example of def:schema, and def:numbers): num(X) is a numeric argument,
+% the numeric variable X where X is a name and the number X where X is a
+% number.
 Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
         ; sgn(Constant, Integer) ; num(Constant).
 Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
 
-% --- The numbers act schemas allow (GSC, Section 3.2) ----------------------
+% --- The numbers act schemas allow (GSC, def:numbers) ----------------------
 % "An argument of an atom may be a number or a numeric variable, a schema may
 % carry a constraint on its numeric variables, which every binding satisfies,
-% and an atom added or deleted may carry a multiplicity."  times(K, A) is the
+% and an atom added or deleted may carry a multiplicity" (Section 3.2;
+% def:numbers and def:binding-numbers in the appendix).  times(K, A) is the
 % atom A with the multiplicity K, K a numeric argument; a constraint is true,
 % gt(X, Y) (X > Y), le(X, Y) (X =< Y), succ(X, Y) (Y = X + 1) or or(C1, C2),
 % over numeric arguments, the term form of Currencies' GB.glp (b9369200).  A
@@ -57,48 +61,50 @@ Atoms ::= [] ; [Atom | Atoms].
 % provenance and volition are decided on its plain form, plain_decl below,
 % the multiplicities and the constraint dropped and the numeric arguments
 % kept, since "a number names no agent, so the conditions below do not
-% concern them" (GSC, ibid.).  def:unobstructed is decided on the contract as
-% written (unobstructed.glp): its clauses ask that an atom be added at a
-% binding, which satisfies its schema's constraint, so a number is matched by
+% concern them" (GSC, ibid.; the appendix, after def:binding-numbers).
+% def:unobstructed is decided on the contract as written (unobstructed.glp):
+% its clauses ask that an atom be added at a binding, which satisfies its
+% schema's constraint (def:binding-numbers), so a number is matched by
 % equality under that binding.
 Mult       ::= Atom ; times(Arg, Atom).
 Mults      ::= [] ; [Mult | Mults].
 Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
              ; or(Constraint, Constraint).
 
-% The base of an argument, of a name term and of a role (definition:term,
-% definition:role, definition:provenance).
+% The base of an argument, of a name term and of a role (def:role,
+% def:grounded).
 % A numeric argument names no agent, and its base, b_num, is the base of no
-% role (GSC, Section 3.2); community.glp passes it by.
+% role (GSC, Section 3.2); prov.glp and volition.glp pass it by.
 Base  ::= b_role(Integer) ; b_pvar(Constant) ; b_svar(Constant) ; b_num.
 Bases ::= [] ; [Base | Bases].
 
 % rs(Guard, Add, Del, Keep, Forb) holds an agent role's four multisets in the
 % order +(i), -(i), =(i), not(i); Guard records the mark ?, which only an
-% agent role may carry (Appendix D's Definition Act schema).  crs(Kind, Guard,
-% Add, Del, Keep, Forb) is the same for a listed role (definition:role):
-% listed(I, Rho, Args) is the listed role pi_I[rho(*, u_2, ..., u_r)] of the
-% agent role pi_I, Args its arguments u_2, ..., u_r (GSC 8064cfb); its Guard
-% is unguarded, and a listed role carrying ? is refused (listed_guarded).
+% agent role may carry (def:schema).  crs(Kind, Guard, Add, Del, Keep, Forb)
+% is the same for a listed role (def:role): listed(I, Rho, Args) is the
+% listed role pi_I[rho(*, u_2, ..., u_r)] of the agent role pi_I, Args its
+% arguments u_2, ..., u_r (GSC 8064cfb); its Guard is unguarded, and a listed
+% role carrying ? is refused (listed_guarded).
 Guard     ::= guarded ; unguarded.
 RoleKind  ::= listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 
-% A schema of Appendix D may be written cschema(Name, Vars, [], Roles): its
-% third argument is the empty list, where reach conditions stood until GSC
-% f3c4f43 removed them, and the owners' contracts write it so.  A schema's
-% second argument is its variables, pvar(X) and svar(Y), in the order of its
-% head (def:schema and Appendix D's Definition Act schema at GSC 0228e79).
+% A schema with a listed role may be written cschema(Name, Vars, [], Roles),
+% as the owners' contracts write close: its third argument is the empty
+% list, where reach conditions stood until GSC f3c4f43 removed them.  A
+% schema's second argument is its variables, pvar(X) and svar(Y), in the
+% order of its head (def:schema, GSC 0228e79).
 Nil       ::= [].
 Schema    ::= schema(Constant, Args, RoleSpecs)
             ; cschema(Constant, Args, Nil, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 
-% A contract may declare predicates of arity one reflexive (the paragraph
-% after def:binding); one that does is written reflexive(Preds, Schemas), and
-% one that does not is the list of its schemas.
+% A contract may declare predicates of arity one reflexive (GAI's appendix
+% "Contracts with Wards", "Reflexive predicates"); one that does is written
+% reflexive(Preds, Schemas), and one that does not is the list of its
+% schemas.
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
 % The contract as written, with the numbers act schemas allow: a role's four
@@ -123,8 +129,10 @@ NDeclared  ::= NContract ; reflexive(Preds, NContract).
 % unbound and occurs in no completed one.  nval(N) is the image of a numeric
 % argument that is the number N, or a numeric variable a binding sends to N;
 % nfree(X) is the image of the numeric variable X of the introductory act,
-% whose introduction (def:introduction) chooses the number: the checker
-% leaves it unchosen, and a match that rests on its value is maybe(S), below.
+% whose introduction (def:introduction) chooses the number among the values
+% the contract fixes (def:binding-numbers): the checker, not knowing them,
+% leaves it unchosen, and a match that rests on its value is maybe(S),
+% below.
 % A number names no agent (GSC, Section 3.2), so neither names anyone.
 Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef
         ; nval(Constant) ; nfree(Constant).
@@ -147,14 +155,14 @@ Ctx ::= ctx(Val, Integer).
 Ans   ::= yes ; no.
 Ints  ::= [] ; [Integer | Ints].
 Preds ::= [] ; [Constant | Preds].
-% listed_role(Schema, Role, Atom) is clause 2 of definition:sg-agent-named
-% (Appendix D.4): the listed role Role of Schema adds Atom, of a predicate
-% the introductory act forbids at a role.
+% listed_role(Schema, Role, Atom) is the first part of clause 2 of
+% def:unobstructed: the listed role Role of Schema adds Atom, of the
+% predicate of an atom the introductory act forbids at a role.
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
         ; listed_role(Constant, Integer, Atom).
-% What def:unobstructed asks and the paper does not settle, a number being
-% at stake (GSC, Section 3.2, which does not say which numbers there are or
-% whether a multiplicity must be positive): whether the schema of arity one
+% What def:unobstructed asks whose answer rests on the values V_C the
+% contract fixes (def:numbers), which the contract's term does not carry, so
+% that the checker does not know them: whether the schema of arity one
 % Schema adds an atom Psi equal to the atom required at some binding
 % satisfying its constraint (supplied_by(Schema, Psi)); whether the schema
 % Schema adds at its role Role an atom Psi equal to the atom forbidden at
@@ -164,11 +172,10 @@ Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
 % of arity one supplying it (multiplicity).
 Unsettled ::= supplied_by(Constant, Atom) ; added_by(Constant, Integer, Atom)
             ; multiplicity.
-% What def:schema, and Appendix D's Definition Act schema, require of a
-% signed term, and the atom carrying one violates: it occurs in an atom not
-% marked + (not_added), its speech-act variable occurs in no atom its role
-% requires (not_required), or its role is not an agent role
-% (not_agent_role), Appendix D admitting sgn(y, pi) for pi an agent role.
+% What GAI's Definition Act schema requires of a signed term, and the atom
+% carrying one violates: it occurs in an atom not marked + (not_added), its
+% speech-act variable occurs in no atom its role requires (not_required), or
+% its role is not an agent role (not_agent_role).
 SgnCause ::= not_added ; not_required ; not_agent_role.
 % What def:schema requires of the form of a schema, and a schema formed
 % otherwise violates: an atom both added and deleted at a role
@@ -179,22 +186,26 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % atoms over its roles, those variables and its signed terms: an entry of
 % the head that is not a variable (head_not_variable), an entry listed twice
 % (head_repeated), and a variable of the schema not in its head
-% (not_in_head).  What Appendix D's Definition Role requires of a listed
-% role pi[rho(*, u_2, ..., u_r)], and one violates: pi an agent role of its
-% schema (listed_base), and, a signed term occurring only in an atom marked +
-% (Definition Act schema), no signed term among u_2, ..., u_r
-% (listed_signed); each names the schema and the listed role.  What Appendix
-% D's Definition Act schema requires of the mark ?, that only an agent role
-% carry it: a listed role carrying it (listed_guarded).  What GSC's passage on
-% numbers (Section 3.2) requires of them: a multiplicity on an atom added or
-% deleted, so one on an atom required or forbidden and neither added nor
-% deleted is a fault multiplicity_not_added(Schema, Role, Atom); a
-% multiplicity a number, so one that is no numeric argument is a fault
-% multiplicity_not_numeric(Schema, Role, Atom); and a constraint on the
-% schema's numeric variables, so an argument of the constraint that is no
-% numeric argument is a fault constraint_not_numeric(Schema, Arg).  A numeric
-% variable is a variable of the schema, listed in its head like the others
-% (not_in_head, head_repeated), and a number in the head is no variable
+% (not_in_head).  What def:role requires of a name term, <pi> for an agent
+% role pi of its schema or sigma.y for a name term sigma of it: a name term
+% whose base is not an agent role of its schema (name_term_base), naming the
+% schema and the name term.  What def:role requires of a listed role
+% pi[rho(*, u_2, ..., u_r)], and one violates: pi an agent role of its
+% schema (listed_base), and u_2, ..., u_r arguments of the schema, a signed
+% term (GAI's) occurring only in an atom marked +, so no signed term among
+% them (listed_signed); each names the schema and the listed role.  What
+% def:schema requires of the mark ?, that only an agent role carry it: a
+% listed role carrying it (listed_guarded).  What GSC's passage on numbers
+% (Section 3.2, def:numbers) requires of them: a multiplicity on an atom
+% added or deleted, so one on an atom required or forbidden and neither
+% added nor deleted is a fault multiplicity_not_added(Schema, Role, Atom); a
+% multiplicity a value or a numeric variable, so one that is no numeric
+% argument is a fault multiplicity_not_numeric(Schema, Role, Atom); and a
+% constraint on the schema's numeric variables, so an argument of the
+% constraint that is no numeric argument is a fault
+% constraint_not_numeric(Schema, Arg).  A numeric variable is a variable of
+% the schema, listed in its head like the others (not_in_head,
+% head_repeated), and a number in the head is no variable
 % (head_not_variable).
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
@@ -208,6 +219,7 @@ Fault ::= no_introductory_act
         ; head_not_variable(Constant, Arg)
         ; head_repeated(Constant, Arg)
         ; not_in_head(Constant, Arg)
+        ; name_term_base(Constant, NameTerm)
         ; listed_base(Constant, Integer)
         ; listed_signed(Constant, Integer)
         ; listed_guarded(Constant, Integer)
@@ -257,19 +269,18 @@ RKs  ::= [] ; [RK | RKs].
 Kind ::= free_party ; ward_party(Constant).
 IntroE ::= intro(Constant, Constant) ; no_intro.
 
-% syntactically_grassroots_with_listed_roles is the verdict on an
-% agent-named contract with community roles that is syntactically grassroots
-% by definition:sg-agent-named, the contract of Theorem "Grassroots
-% realisation with listed roles" (Appendix D.4, GSC f3c4f43), and
-% syntactically_grassroots_with_wards the verdict on one that is
-% syntactically grassroots with wards by def:sg-wards (CSSN's paper, which
-% composes GAI's appendix "Contracts with Wards" with Appendix D.4), naming
-% what grassroots_with_wards names.
+% syntactically_grassroots is the verdict on a contract that is so by
+% def:syntactically-grassroots, of agent roles and listed roles alike (GSC
+% ac7ad63).  grassroots_with_wards is the verdict on a contract with no
+% listed role and no name term that is grassroots with wards by GAI's
+% appendix "Contracts with Wards", and syntactically_grassroots_with_wards
+% the verdict on one with them that is syntactically grassroots with wards by
+% def:sg-wards of CSSN's paper, naming what grassroots_with_wards names.
+% unsettled(Faults) is the verdict where every fault rests on the values the
+% contract fixes, which its term does not carry (Unsettled above).
 Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
-          ; syntactically_grassroots_with_listed_roles
           ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
           ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
-          ; conditions_met ; conditions_failed(Faults)
           ; malformed(Faults)
           ; unsettled(Faults).
 
@@ -277,14 +288,14 @@ Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
 % def:unobstructed): intro_act(Schema, Status), each schema that is an
 % introductory act, Status unobstructed where some introduction of it meets
 % def:unobstructed, unsettled(Faults) where none does and every fault of one
-% rests on numbers the paper does not settle, the faults of the first such,
-% and obstructed(Faults) otherwise, the faults of its first introduction.
+% rests on the values the contract fixes, the faults of the first such, and
+% obstructed(Faults) otherwise, the faults of its first introduction.
 IntroStatus ::= unobstructed ; obstructed(Faults) ; unsettled(Faults).
 IntroAct    ::= intro_act(Constant, IntroStatus).
 IntroActs   ::= [] ; [IntroAct | IntroActs].
 
 % The answer to a question on numbers: yes, no, or unsettled where it rests on
-% a number the paper does not settle (Unsettled above).  The value of a
+% the values the contract fixes (Unsettled above).  The value of a
 % numeric argument under a binding: the number, a variable it leaves free, or
 % the unchosen number of the introductory act (nfree).
 Tri     ::= yes ; no ; unsettled.
@@ -295,7 +306,7 @@ Block   ::= blocked(Constant, Integer, Atom) ; clear
 Cand    ::= none ; some(Faults).
 Missing ::= missing(Integer) ; all_reached.
 
-% --- What definition:provenance is decided against, for one schema --------
+% --- What def:grounded is decided against, for one schema ----------------
 % The bases of its roles, the bases of the arguments of the atoms of Phi_E it
 % requires, the speech-act variables occurring in those atoms, and the
 % speech-act variables occurring in any atom it requires.
@@ -553,7 +564,7 @@ roles_at([bind(_, _)|S], V, R?) :- otherwise | roles_at(S?, V?, R).
 
 % args_name_role(As, J, R): the arguments As name role J -- it is among them
 % or is the role of a signed term among them (Section 3.1, what an atom
-% names in a schema; Appendix D, "names").
+% names in a schema).
 procedure arg_names_role(Arg?, Integer?, Ans).
 arg_names_role(role(I), J, yes) :- I? =:= J? | true.
 arg_names_role(sgn(_, I), J, yes) :- I? =:= J? | true.
@@ -739,9 +750,9 @@ match_atom(atom(P, As), gatom(Q, Vs), Rs, S, R?) :-
     match_args(As?, Vs?, S?, Rs?, R).
 match_atom(atom(_, _), gatom(_, _), _, _, nomatch) :- otherwise | true.
 
-% all_unsettled(Fs, R): every fault of Fs is one the numbers leave
-% unsettled (Unsettled above), so none of them settles that the
-% introduction fails.
+% all_unsettled(Fs, R): every fault of Fs is one whose answer rests on the
+% values the contract fixes (Unsettled above), so none of them settles that
+% the introduction fails.
 procedure all_unsettled(Faults?, Ans).
 all_unsettled([], yes).
 all_unsettled([unsettled(_, _, _, _)|Fs], R?) :- all_unsettled(Fs?, R).
@@ -776,7 +787,7 @@ schema_args(Sc, R?) :- ground(Sc?) |
     sch_roles(Sc?, Rs),
     rolespecs_args(Rs?, [], R).
 
-% The party and speech-act variables a name term carries (definition:term).
+% The party and speech-act variables a name term carries (def:role).
 procedure nt_pvars(NameTerm?, Args).
 nt_pvars(own(_), []).
 nt_pvars(own_var(X), [pvar(X?)]).
@@ -946,7 +957,7 @@ any_req_names([RS|Rs], U, E, R?) :- ground(RS?), ground(Rs?), ground(U?), ground
 
 % req_occurs(Role, Y, R): the speech-act variable Y occurs in an atom the role
 % requires, whatever its predicate -- as an argument or inside a name-term
-% argument (def:grounded, definition:provenance: "occurs in no atom required
+% argument (def:grounded: "occurs in no atom required
 % at a role").
 procedure req_occurs(RoleSpec?, Arg?, Ans).
 req_occurs(RS, Y, R?) :- ground(RS?), ground(Y?) |
@@ -981,7 +992,7 @@ guard_marked(guarded, yes).
 guard_marked(unguarded, no).
 
 % ---------------------------------------------------------------------------
-% Reflexive predicates (the paragraph after def:binding)
+% Reflexive predicates (GAI's appendix "Contracts with Wards")
 % ---------------------------------------------------------------------------
 
 % The predicates a contract declares reflexive, and its schemas.
@@ -1022,12 +1033,12 @@ refl_keep([A|Xs], I, Rf, W, R?) :-
     refl_keep1(B?, W?, A?, Xs?, I?, Rf?, R).
 
 % ---------------------------------------------------------------------------
-% Roles, bases and name terms (definition:term, definition:role)
+% Roles, bases and name terms (def:role)
 % ---------------------------------------------------------------------------
 % A schema is written schema(Name, Vars, Roles), or cschema(Name, Vars, [],
-% Roles) in the form of Appendix D; a role is written rs(...) where it is an
-% agent role and crs(Kind, ...) where it is a listed role.  The accessors
-% below read either.
+% Roles); a role is written rs(...) where it is an agent role and
+% crs(Kind, ...) where it is a listed role.  The accessors below read
+% either.
 
 procedure sch_name(Schema?, Constant).
 sch_name(schema(Nm, _, _), Nm?).
@@ -1062,7 +1073,7 @@ procedure rs_forb(RoleSpec?, Atoms).
 rs_forb(rs(_, _, _, _, N), N?).
 rs_forb(crs(_, _, _, _, _, N), N?).
 
-% The atoms a role requires: =(i) u -(i) (definition:schema).
+% The atoms a role requires: =(i) u -(i) (def:schema).
 procedure rs_req(RoleSpec?, Atoms).
 rs_req(RS, R?) :- ground(RS?) |
     rs_del(RS?, M),
@@ -1089,7 +1100,7 @@ arg_base(pvar(X), b_pvar(X?)).
 arg_base(svar(X), b_svar(X?)).
 arg_base(nterm(S), B?) :- ground(S?) | nt_base(S?, B).
 % A signed term sgn(y, pi) counts as the two arguments y and pi
-% (definition:provenance): this is the base of pi, an agent role, and
+% (def:grounded): this is the base of pi, an agent role, and
 % filter_svars gives y.
 arg_base(sgn(_, J), b_role(J?)).
 arg_base(num(_), b_num).
@@ -1097,7 +1108,7 @@ arg_base(num(_), b_num).
 procedure role_base(RoleSpec?, Integer?, Base).
 role_base(rs(_, _, _, _, _), I, b_role(I?)).
 % The base of a listed role pi[rho(*, u_2, ..., u_r)] is the agent role pi
-% (definition:role, GSC 8064cfb).
+% (def:role, GSC 8064cfb).
 role_base(crs(listed(I, _, _), _, _, _, _, _), _, b_role(I?)).
 
 procedure nth_base(RoleSpecs?, Integer?, Base).
@@ -1105,8 +1116,32 @@ nth_base(Rs, I, B?) :- ground(Rs?), integer(I?) |
     nth_rs(Rs?, I?, RS),
     role_base(RS?, I?, B).
 
+% The bases of arguments (def:grounded): a numeric argument has none, a
+% number naming no agent (GSC, Section 3.2).
+procedure args_bases(Args?, Bases?, Bases).
+args_bases([], T, T?).
+args_bases([num(_)|As], T, R?) :- ground(As?), ground(T?) |
+    args_bases(As?, T?, R).
+args_bases([A|As], T, [B?|R?]) :- otherwise, ground(A?), ground(As?), ground(T?) |
+    arg_base(A?, B),
+    args_bases(As?, T?, R).
+
+% The bases of the arguments of the atoms of Phi_E among a list of atoms
+% (def:grounded, def:volition).
+procedure phi_bases1(Ans?, Args?, Bases?, Bases).
+phi_bases1(no, _, T, T?).
+phi_bases1(yes, As, T, R?) :- ground(As?), ground(T?) | args_bases(As?, T?, R).
+
+procedure phi_bases(Atoms?, Preds?, Bases?, Bases).
+phi_bases([], _, T, T?).
+phi_bases([atom(Q, As)|Xs], E, T, R?) :-
+    ground(Q?), ground(As?), ground(Xs?), ground(E?), ground(T?) |
+    pred_member(Q?, E?, M),
+    phi_bases(Xs?, E?, T?, R1),
+    phi_bases1(M?, As?, R1?, R).
+
 % The arguments u_2, ..., u_r of a listed role pi[rho(*, u_2, ..., u_r)],
-% arguments of its schema (definition:role); an agent role has none.
+% arguments of its schema (def:role); an agent role has none.
 procedure rs_kind_args(RoleSpec?, Args).
 rs_kind_args(rs(_, _, _, _, _), []).
 rs_kind_args(crs(listed(_, _, As), _, _, _, _, _), As?).
@@ -1120,7 +1155,7 @@ rolespecs_kind_args([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
 
 
 % ---------------------------------------------------------------------------
-% The name terms of a schema (definition:term)
+% The name terms of a schema (def:role)
 % ---------------------------------------------------------------------------
 % Those among the arguments of its listed roles, and those among the
 % arguments of its atoms, in that order.
@@ -1173,7 +1208,7 @@ nts_empty([], yes).
 nts_empty([_|_], no).
 
 % ---------------------------------------------------------------------------
-% The contract as written, with numbers (GSC, Section 3.2)
+% The contract as written, with numbers (GSC, def:numbers)
 % ---------------------------------------------------------------------------
 % A contract is read as written, of the types N..., and its plain form is
 % the one traceable provenance and volition are decided on: each
@@ -1360,12 +1395,14 @@ nsch_occ_vars1(Sc, NRs, Cn, R?) :- ground(Sc?), ground(NRs?), ground(Cn?) |
     args_app(PS?, Ns1?, R).
 
 % ---------------------------------------------------------------------------
-% Which language a contract is written in
+% A contract with community roles
 % ---------------------------------------------------------------------------
-% A contract all of whose roles are agent roles, none of whose schemas is
-% written cschema and none of whose atoms carries a name term is a contract
-% of Section 3, whose def:schema admits no name term, and is decided as one;
-% any other is written in the language of Appendix D.
+% A contract with a listed role, a name term or a schema written cschema has
+% community roles.  def:syntactically-grassroots is one definition for every
+% contract (GSC ac7ad63), and the distinction is the wards': GAI's appendix
+% "Contracts with Wards" is written over the schemas of agent roles with no
+% name term, and CSSN's def:sg-wards over those of an agent-named contract
+% (check.glp; wards/).
 
 procedure roles_community1(Ans?, RoleSpecs?, Ans).
 roles_community1(yes, _, yes).
@@ -1398,10 +1435,14 @@ has_community([S|Ss], R?) :- ground(S?), ground(Ss?) |
     has_community1(A?, Ss?, R).
 
 % ---------------------------------------------------------------------------
-% Agent-named (Appendix D.4, definition:agent-named)
+% The base of a name term (def:role)
 % ---------------------------------------------------------------------------
-% Every name term of every schema has an agent role of that schema as its
-% base (GSC f3c4f43).
+% A name term of a schema is <pi> for an agent role pi of it, or sigma.y for
+% a name term sigma of it (def:role), so its base is an agent role of that
+% schema; check.glp refuses a contract with a name term whose base is not
+% (name_term_base).  A contract every name term of which is so is
+% agent-named in the sense of CSSN's def:agent-named, which def:sg-wards
+% asks of a contract with wards and listed roles.
 
 % The base B is an agent role of the schema whose roles are Rs.
 procedure base_agent_role1(Integer?, Integer?, RoleSpecs?, Ans).
@@ -1448,7 +1489,7 @@ agent_named([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % ---------------------------------------------------------------------------
 
 % The directory's interface: each entry point is forwarded to the module that
-% defines it (manual 19.6).  check.glp composes the two halves of
+% defines it (manual 19.6).  check.glp composes the three conjuncts of
 % def:syntactically-grassroots.  A contract is given as a term, printed by
 % contract_named/2 in a REPL session on its owner's file (contracts.glp, the
 % header); contracts.glp holds the checker's fixtures, by name, and its
