@@ -35,7 +35,7 @@ compile(Nm, D, V) :- compile_intro(Nm?, D?, V?, no_introduction, words(no_pragma
 %% no_introduction.
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?).
 compile(Nm, D, V, I) :- compile_intro(Nm?, D?, V?, I?, words(no_pragmas)).
-%% compile(Name, Contract, Verdict, Intro, Pragmas): the same, for a contract carrying pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words": "The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type, a sentence into the approval question that Start raises, and a list's name into the view the agent writes"; Section 6.2, "The words a platform shows").  Each act a pragma proposes is the schema its button names: "the button proposing its act, in brackets, which bears the act's name" (GSC 1934846, Section 2, its first paragraph).  A contract with no pragmas, no_pragmas, is compiled as by compile/4, but for the two widget declarations every platform carries.
+%% compile(Name, Contract, Verdict, Intro, Pragmas): the same, for a contract carrying pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words": "The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type, a sentence into the approval question that Start raises, and a list's name into the view the agent writes"; Section 6.2, "The words a platform shows").  Each act a pragma proposes is the schema its button names: "a button for each act of it a person proposes, in brackets, each bearing its act's name" (GSC 2991379, Section 2, its first paragraph).  A contract with no pragmas, no_pragmas, is compiled as by compile/4, but for the two widget declarations every platform carries.
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?).
 compile(Nm, D, V, I, P) :- compile_intro(Nm?, D?, V?, I?, words(P?)).
 %% The contract's words, its pragmas, carried through the compiler whole.
@@ -825,7 +825,7 @@ procedure has_pragmas(Words?, YesNo).
 has_pragmas(words(no_pragmas), no).
 has_pragmas(words(pragmas(_, _)), yes).
 
-%% A contract whose pragmas name what the contract does not hold is not compiled, with a line saying why: a list naming no predicate of the contract, or more than one; a button naming no schema of the contract, the button's text read in lower case being the schema's name ("the button ... bears the act's name", GSC 1934846, Section 2); a pragma naming more fields than its schema has variables the person fills; and a sentence naming a person, Alice, Bob or Carol, that its schema does not have.
+%% A contract whose pragmas name what the contract does not hold is not compiled, with a line saying why: a list naming no predicate of the contract, or more than one; a button naming no schema of the contract, the button's text read in lower case being the schema's name ("each bearing its act's name", GSC 2991379, Section 2); a pragma naming more fields than its schema has variables the person fills; and a sentence naming a person, Alice, Bob or Carol, that its schema does not have.
 procedure word_faults(Words?, Contract?, Stream(_)).
 word_faults(words(no_pragmas), _, []).
 word_faults(words(pragmas(Ls, As)), C, F?) :- ground(Ls?), ground(As?), ground(C?) |

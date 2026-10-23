@@ -3,7 +3,7 @@
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
-# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The first line after "Pragmas" is a list, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is an act, "Clause: [Button] <field> ... sentence", act(Schema, Button, Fields, Sentence), Schema the button's text in lower case, the name of the schema it proposes ("the button proposing its act, in brackets, which bears the act's name", GSC 1934846, Section 2), the clause being one of that title in the same NAME.txt, Sentence said(Words) or none, each word text(S) or person(I), Alice, Bob and Carol the persons 1, 2 and 3.  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
+# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The first line after "Pragmas" is a list, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is "Clause: [Button] ... <field> ... sentence", a button for each act of the clause a person proposes, and an act for each button, act(Schema, Button, Fields, Sentence), Schema the button's text in lower case, each space an underscore, the name of the schema it proposes ("a button for each act of it a person proposes, in brackets, each bearing its act's name", GSC 2991379, Section 2), the fields and the sentence of the line each act's, the clause being one of that title in the same NAME.txt, Sentence said(Words) or none, each word text(S) or person(I), Alice, Bob and Carol the persons 1, 2 and 3.  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
 
 set -u
 [ $# -eq 1 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt>" >&2; exit 2; }
@@ -75,8 +75,10 @@ for my $f (@order) {
             next;
         }
         exists $clause{$title} or die "pragmas.sh: $f: the pragma \"$title\" names no clause of $name\n";
-        my ($button, $tail) = $rest =~ /^\[([^\]]+)\]\s*(.*)$/
-            or die "pragmas.sh: $f: the pragma \"$title\" has no button in brackets\n";
+        my @buttons;
+        my $tail = $rest;
+        while ($tail =~ s/^\[([^\]]+)\]\s*//) { push @buttons, $1 }
+        @buttons or die "pragmas.sh: $f: the pragma \"$title\" has no button in brackets\n";
         my @fields;
         while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
         my $said = "none";
@@ -91,8 +93,11 @@ for my $f (@order) {
             }
             $said = "said([" . join(", ", @words) . "])";
         }
-        push @acts, "act(" . q_atom(lc $button) . ", " . q_string($button) . ", ["
-            . join(", ", map { q_string($_) } @fields) . "], $said)";
+        for my $button (@buttons) {
+            (my $act = lc $button) =~ s/ +/_/g;
+            push @acts, "act(" . q_atom($act) . ", " . q_string($button) . ", ["
+                . join(", ", map { q_string($_) } @fields) . "], $said)";
+        }
     }
 }
 print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "])\n";
