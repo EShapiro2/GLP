@@ -27,7 +27,7 @@ import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/message_transport.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
 import 'package:grassroots_networking_core/src/routing/message_router.dart';
-import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
@@ -246,8 +246,9 @@ Set<String> computeStaleBlePeerPubkeys({
 ///   // Handle incoming GSG block
 /// };
 ///
-/// grassroots.onPeerConnected = (pk, underlay, identity) {
-///   // peer reachable over `underlay` (PAN, LAN or WAN)
+/// grassroots.onPeerConnected = (pk, underlay, application) {
+///   // peer reachable over `underlay` (PAN, LAN or WAN); `application` the
+///   // attested application, or null for an unattested identity
 /// };
 ///
 /// // The functions of one underlay are on its sub-object (GNA §2.2).
@@ -673,15 +674,16 @@ class GrassrootsNetwork {
   /// underlay: a peer reachable over the PAN and over the LAN or WAN fires
   /// twice, and an underlay that drops and later recovers fires again.
   /// Receives the peer's public key, the [Underlay] over which it connected,
-  /// and the peer's attested application identity — null where the peer's
-  /// platform provides no attestation (spec §Connection and Reachability,
-  /// `onPeerConnected(pk, underlay, identity?)`; §Session Establishment). A
-  /// peer is reachable only once its session is established, authenticated
-  /// AND attested, so this never fires before the attestation exchange.
+  /// and, for an attested identity, the attested application: its developer,
+  /// its name and its version number; null for an unattested identity (GNA
+  /// §2.3, `onPeerConnected(pk, underlay, application?)`; §2.6). A peer is
+  /// reachable only once its session is established, authenticated AND its
+  /// attestation exchange completed, so this never fires before the
+  /// exchange.
   void Function(
     Uint8List pk,
     Underlay underlay,
-    ApplicationIdentity? identity,
+    Application? application,
   )? onPeerConnected;
 
   /// Called when an existing peer sends an ANNOUNCE update.
@@ -3072,26 +3074,29 @@ class GrassrootsNetwork {
     final sentOn = _attestationSentOn[sentKey];
     if (sentOn != null && listEquals(sentOn, handshakeHash)) return;
     _attestationSentOn[sentKey] = handshakeHash;
-    final digest = attestationDigest(
-      identityPublicKey: identity.publicKey,
-      handshakeHash: handshakeHash,
-    );
-
-    // Both halves or neither. The attestation is long-lived — the binding
+    // All three or none. The attestation is long-lived — the binding
     // obtains it once per install — while the signature is computed afresh
-    // over this session's digest.
+    // over this session's digest, which names the application's version
+    // number (GNA §2.6).
     AttestationEvidence? evidence;
     try {
       final attestation = await _attestation.attestationFor(identity.publicKey);
-      final signature = attestation == null
+      final version =
+          attestation == null ? null : await _attestation.applicationVersion();
+      final signature = version == null
           ? null
           : await _attestation.signSessionDigest(
               identityPublicKey: identity.publicKey,
-              digest: digest,
+              digest: attestationDigest(
+                identityPublicKey: identity.publicKey,
+                version: version,
+                handshakeHash: handshakeHash,
+              ),
             );
-      if (attestation != null && signature != null) {
+      if (attestation != null && version != null && signature != null) {
         evidence = AttestationEvidence(
           attestation: attestation,
+          version: version,
           signature: signature,
         );
       }
@@ -3162,11 +3167,6 @@ class GrassrootsNetwork {
       return;
     }
 
-    final digest = attestationDigest(
-      identityPublicKey: senderPubkey,
-      handshakeHash: handshakeHash,
-    );
-
     AttestationEvidence? offered;
     try {
       offered = decodeAttestationPayload(payload);
@@ -3180,7 +3180,7 @@ class GrassrootsNetwork {
     try {
       verdict = await _attestation.verify(
         evidence: offered,
-        digest: digest,
+        handshakeHash: handshakeHash,
         peerIdentityKey: senderPubkey,
       );
     } catch (e) {
@@ -3191,13 +3191,13 @@ class GrassrootsNetwork {
 
     final attestedKey = _handshakePairKey(transport, senderPubkey);
     switch (verdict) {
-      case AttestedApplication(:final identity):
-        debugPrint('[attest] $peerShort attested as $identity');
+      case AttestedApplication(:final application):
+        debugPrint('[attest] $peerShort attested: $application');
         _attestedOn[attestedKey] = handshakeHash;
         store.dispatch(PeerAttestedAction(
           publicKey: senderPubkey,
           underlay: underlay,
-          attestation: PeerAttestation(identity: identity),
+          attestation: PeerAttestation(application: application),
         ));
         _drainQueuedMessagesForPeer(senderPubkey);
       case UnattestedPlatform(:final reason):
@@ -4763,7 +4763,7 @@ void processReachabilityTransitions({
   required void Function(
     Uint8List pk,
     Underlay underlay,
-    ApplicationIdentity? identity,
+    Application? application,
   )? onConnected,
   required void Function(Uint8List pk, Underlay underlay)? onDisconnected,
 }) {
@@ -4780,7 +4780,7 @@ void processReachabilityTransitions({
       onConnected?.call(
         peer.publicKey,
         u,
-        peer.attestationFor(u)?.identity,
+        peer.attestationFor(u)?.application,
       );
     }
     for (final u in previous.difference(current)) {

@@ -76,6 +76,7 @@ void main() {
     // platform with no attestation, not a failure.
     final binding = NativePlatformAttestation();
     expect(await binding.attestationFor(pk), isNull);
+    expect(await binding.applicationVersion(), isNull);
     expect(
       await binding.signSessionDigest(identityPublicKey: pk, digest: digest),
       isNull,
@@ -131,6 +132,16 @@ void main() {
     expect(calls.single.arguments['digest'], digest);
   });
 
+  test(
+      "the version number is the running application's, asked of the "
+      'producer, which it signs in each session (GNA §2.6)', () async {
+    answer((call) async => 42);
+    expect(await NativePlatformAttestation().applicationVersion(), 42);
+    expect(calls.single.method, 'version');
+    expect(calls.single.arguments, isNull,
+        reason: 'the version number names no identity key');
+  });
+
   test('a reply of any other shape is refused', () async {
     for (final reply in <Map<Object?, Object?>>[
       {'platform': 'windows'},
@@ -150,16 +161,18 @@ void main() {
   test('verification is the core verifier\'s', () async {
     final binding = NativePlatformAttestation();
     expect(
-      await binding.verify(evidence: null, digest: digest, peerIdentityKey: pk),
+      await binding.verify(
+          evidence: null, handshakeHash: digest, peerIdentityKey: pk),
       isA<UnattestedPlatform>(),
     );
     expect(
       await binding.verify(
         evidence: AttestationEvidence(
           attestation: Uint8List.fromList([0x01, 0x00, 0x01, 0x41, 0x00]),
+          version: 42,
           signature: Uint8List.fromList([0x00]),
         ),
-        digest: digest,
+        handshakeHash: digest,
         peerIdentityKey: pk,
       ),
       isA<InvalidAttestation>(),

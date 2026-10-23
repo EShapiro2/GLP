@@ -25,11 +25,12 @@ import java.util.concurrent.Executors
  * The Android producer of the attestation exchange (spec §Session
  * Establishment).
  *
- * "Each agent holds an attestation key generated in its platform's secure
- * element and attested there once---... hardware key attestation on
- * Android---over a challenge naming the agent's identity public key pk.  Per
- * session each side sends that attestation together with a signature by the
- * attestation key over the digest H("glp attest" | pk | h)".
+ * GNA §2.6: "Once, the layer asks the platform to generate an attestation
+ * key in its secure element and to attest it over a challenge naming the
+ * agent's identity public key pk ... For each session, the layer asks the
+ * platform to sign with that key the digest H("glp attest" | pk | v | h),
+ * where v is the application's version number".  The version number is the
+ * application's version code.
  *
  * On Android the attestation key is an Android Keystore key: EC P-256,
  * generated in StrongBox where the device has it and in the TEE otherwise,
@@ -40,8 +41,8 @@ import java.util.concurrent.Executors
  * the core's (`android_key_attestation.dart`); this file produces and nothing
  * else.
  *
- * The channel is `grassroots/attestation`; its two methods are documented on
- * the Dart side, `native_platform_attestation.dart`.
+ * The channel is `grassroots/attestation`; its three methods are documented
+ * on the Dart side, `native_platform_attestation.dart`.
  *
  * Where this device provides no attestation — below API 24, which has no key
  * attestation, or a key the keystore holds outside secure hardware — `attest`
@@ -83,6 +84,10 @@ class PlatformAttestationPlugin private constructor(
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
+        if (call.method == "version") {
+            onWorker(result) { versionCode() }
+            return
+        }
         val pk = call.argument<ByteArray>("identityPublicKey")
         if (pk == null) {
             result.error("badArguments", "identityPublicKey is required", null)
@@ -112,6 +117,20 @@ class PlatformAttestationPlugin private constructor(
             } catch (e: Exception) {
                 main.post { result.error("attestationFailed", e.toString(), null) }
             }
+        }
+    }
+
+    /**
+     * The application's version number, its version code, which it signs in
+     * each session's digest (GNA §2.6).
+     */
+    private fun versionCode(): Long {
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            info.versionCode.toLong()
         }
     }
 

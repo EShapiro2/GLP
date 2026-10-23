@@ -18,7 +18,7 @@ import '../protocol/message_transport.dart';
 import '../protocol/outbound_queue_store.dart';
 import '../protocol/protocol_handler.dart';
 import '../routing/message_router.dart';
-import '../session/application_identity.dart';
+import '../session/application.dart';
 import '../session/noise_session_manager.dart';
 import '../session/platform_attestation.dart';
 import '../signaling/signaling_codec.dart';
@@ -269,16 +269,16 @@ class HeadlessGrassrootsNetwork {
     Underlay underlay,
   )? onMessageReceived;
 
-  /// Fired when a peer becomes reachable (authenticated and attested session
-  /// up). Receives the peer's public key, the underlay over which it
-  /// connected — [Underlay.wan] in this profile — and the peer's attested
-  /// application identity, null where the peer's platform provides none
-  /// (spec §Connection and Reachability, `onPeerConnected(pk, underlay,
-  /// identity?)`).
+  /// Fired when a peer becomes reachable (its session authenticated and its
+  /// attestation exchange completed). Receives the peer's public key, the
+  /// underlay over which it connected — [Underlay.wan] in this profile — and,
+  /// for an attested identity, the attested application: its developer, its
+  /// name and its version number; null for an unattested identity (GNA §2.3,
+  /// `onPeerConnected(pk, underlay, application?)`).
   void Function(
     Uint8List pk,
     Underlay underlay,
-    ApplicationIdentity? identity,
+    Application? application,
   )? onPeerConnected;
 
   /// Fired when a peer is no longer reachable over an underlay —
@@ -1366,24 +1366,31 @@ class HeadlessGrassrootsNetwork {
     final hex = _hex(pubkey);
     if (_sameBytes(_attestationSentOn[hex], handshakeHash)) return;
     _attestationSentOn[hex] = handshakeHash;
-    final digest = attestationDigest(
-      identityPublicKey: identity.publicKey,
-      handshakeHash: handshakeHash,
-    );
-    // Both halves or neither: a platform with no attestation key has neither
-    // an attestation nor a signature to give, and sends the explicit absence.
+    // All three or none: a platform with no attestation key has no
+    // attestation, no version number to sign and no signature to give, and
+    // sends the explicit absence.  The digest names the application's
+    // version number (GNA §2.6).
     AttestationEvidence? evidence;
     try {
       final offered = await attestation.attestationFor(identity.publicKey);
-      final signature = offered == null
+      final version =
+          offered == null ? null : await attestation.applicationVersion();
+      final signature = version == null
           ? null
           : await attestation.signSessionDigest(
               identityPublicKey: identity.publicKey,
-              digest: digest,
+              digest: attestationDigest(
+                identityPublicKey: identity.publicKey,
+                version: version,
+                handshakeHash: handshakeHash,
+              ),
             );
-      if (offered != null && signature != null) {
-        evidence =
-            AttestationEvidence(attestation: offered, signature: signature);
+      if (offered != null && version != null && signature != null) {
+        evidence = AttestationEvidence(
+          attestation: offered,
+          version: version,
+          signature: signature,
+        );
       }
     } catch (e) {
       // A platform that errs offers nothing; the peer reports us unattested
@@ -1444,16 +1451,11 @@ class HeadlessGrassrootsNetwork {
           'session already attested; ignored');
       return;
     }
-    final digest = attestationDigest(
-      identityPublicKey: senderPubkey,
-      handshakeHash: handshakeHash,
-    );
-
     AttestationVerdict verdict;
     try {
       verdict = await attestation.verify(
         evidence: decodeAttestationPayload(payload),
-        digest: digest,
+        handshakeHash: handshakeHash,
         peerIdentityKey: senderPubkey,
       );
     } on FormatException catch (e) {
@@ -1469,10 +1471,10 @@ class HeadlessGrassrootsNetwork {
         debugPrint('[headless][attest] $peerShort failed verification: '
             '$reason; tearing the session down');
         _tearDownSession(senderPubkey);
-      case AttestedApplication(:final identity):
-        debugPrint('[headless][attest] $peerShort attested as $identity');
+      case AttestedApplication(:final application):
+        debugPrint('[headless][attest] $peerShort attested: $application');
         _completeAttestation(senderPubkey, handshakeHash,
-            PeerAttestation(identity: identity));
+            PeerAttestation(application: application));
       case UnattestedPlatform(:final reason):
         debugPrint('[headless][attest] $peerShort unattested: $reason');
         _completeAttestation(
@@ -1492,7 +1494,7 @@ class HeadlessGrassrootsNetwork {
       attestation: attestation,
     ));
     if (_reachablePeers.add(_hex(pubkey))) {
-      onPeerConnected?.call(pubkey, Underlay.wan, attestation.identity);
+      onPeerConnected?.call(pubkey, Underlay.wan, attestation.application);
     }
     if (rendezvousServer) _reflectAddressTo(pubkey);
     _drainQueueFor(pubkey);

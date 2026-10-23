@@ -12,7 +12,7 @@ import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
-import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
@@ -24,17 +24,20 @@ Future<List<InternetAddress>> _loopbackHostAddresses() async =>
     [InternetAddress.loopbackIPv4];
 
 /// A platform that offers [offers] as its long-lived attestation and accepts
-/// what it is offered as [identity], recording each offer it was given.
+/// what it is offered as [application], recording each offer it was given.
 class _LargeAttestation implements PlatformAttestation {
-  _LargeAttestation({required this.offers, required this.identity});
+  _LargeAttestation({required this.offers, required this.application});
 
   final Uint8List offers;
-  final ApplicationIdentity identity;
+  final Application application;
   final List<AttestationEvidence?> offered = [];
 
   @override
   Future<Uint8List?> attestationFor(Uint8List identityPublicKey) async =>
       offers;
+
+  @override
+  Future<int?> applicationVersion() async => 5;
 
   @override
   Future<Uint8List?> signSessionDigest({
@@ -46,11 +49,11 @@ class _LargeAttestation implements PlatformAttestation {
   @override
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   }) async {
     offered.add(evidence);
-    return AttestedApplication(identity);
+    return AttestedApplication(application);
   }
 }
 
@@ -180,10 +183,12 @@ void main() {
     return predicate();
   }
 
-  const callerIdentity =
-      IosApplicationIdentity('ABCDE12345.com.eshapiro.caller');
-  const calleeIdentity =
-      IosApplicationIdentity('ABCDE12345.com.eshapiro.callee');
+  const callerApplication =
+      Application(
+          developer: 'ABCDE12345', name: 'com.eshapiro.caller', version: 5);
+  const calleeApplication =
+      Application(
+          developer: 'ABCDE12345', name: 'com.eshapiro.callee', version: 5);
 
   test('a multi-kilobyte attestation over UDP reaches the peer whole',
       () async {
@@ -191,10 +196,10 @@ void main() {
         Uint8List.fromList(List.generate(6000, (i) => (i * 7) % 256));
     final callerAttestation = _LargeAttestation(
       offers: Uint8List.fromList(List.generate(5000, (i) => (i * 3) % 256)),
-      identity: calleeIdentity,
+      application: calleeApplication,
     );
     final calleeAttestation =
-        _LargeAttestation(offers: calleeOffers, identity: callerIdentity);
+        _LargeAttestation(offers: calleeOffers, application: callerApplication);
 
     final callerId = await identityFromSeed(0x91);
     final calleeId = await identityFromSeed(0x92);
@@ -205,10 +210,10 @@ void main() {
       await callee.dispose();
     });
 
-    ApplicationIdentity? callerSaw;
-    ApplicationIdentity? calleeSaw;
-    caller.onPeerConnected = (_, __, identity) => callerSaw = identity;
-    callee.onPeerConnected = (_, __, identity) => calleeSaw = identity;
+    Application? callerSaw;
+    Application? calleeSaw;
+    caller.onPeerConnected = (_, __, application) => callerSaw = application;
+    callee.onPeerConnected = (_, __, application) => calleeSaw = application;
 
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);
@@ -221,8 +226,8 @@ void main() {
 
     expect(await waitFor(() => callerSaw != null && calleeSaw != null), isTrue,
         reason: 'both sides verified the other\'s multi-kilobyte offer');
-    expect(callerSaw, calleeIdentity);
-    expect(calleeSaw, callerIdentity);
+    expect(callerSaw, calleeApplication);
+    expect(calleeSaw, callerApplication);
     // What the callee offered is what the caller was given, byte for byte:
     // fragmented by the carrier and reassembled whole.
     expect(calleeOffers.length, greaterThan(5 * FragmentHandler.udpMaxChunk));
@@ -232,11 +237,11 @@ void main() {
   test('a lost attestation fragment over UDP is retransmitted', () async {
     final callerAttestation = _LargeAttestation(
       offers: Uint8List.fromList(List.generate(3000, (i) => (i * 5) % 256)),
-      identity: calleeIdentity,
+      application: calleeApplication,
     );
     final calleeAttestation = _LargeAttestation(
       offers: Uint8List.fromList(List.generate(3000, (i) => (i * 11) % 256)),
-      identity: callerIdentity,
+      application: callerApplication,
     );
 
     final callerId = await identityFromSeed(0x93);
@@ -258,8 +263,8 @@ void main() {
         datagram.first == PacketType.secureAttestationFragment.value &&
         relay.dropped == 0;
 
-    ApplicationIdentity? calleeSaw;
-    callee.onPeerConnected = (_, __, identity) => calleeSaw = identity;
+    Application? calleeSaw;
+    callee.onPeerConnected = (_, __, application) => calleeSaw = application;
 
     caller.putKnownPeer(calleeId.publicKey);
     callee.putKnownPeer(callerId.publicKey);
@@ -271,7 +276,7 @@ void main() {
 
     expect(await waitFor(() => calleeSaw != null), isTrue,
         reason: 'the exchange completed although a fragment was lost');
-    expect(calleeSaw, callerIdentity);
+    expect(calleeSaw, callerApplication);
     expect(relay.dropped, 1);
     // Three fragments at the IP carrier's chunk; the callee had them all, so
     // the lost one came again.
@@ -286,11 +291,11 @@ void main() {
       'Task A)', () async {
     final callerAttestation = _LargeAttestation(
       offers: Uint8List.fromList(List.generate(3000, (i) => (i * 13) % 256)),
-      identity: calleeIdentity,
+      application: calleeApplication,
     );
     final calleeAttestation = _LargeAttestation(
       offers: Uint8List.fromList(List.generate(3000, (i) => (i * 17) % 256)),
-      identity: callerIdentity,
+      application: callerApplication,
     );
 
     final callerId = await identityFromSeed(0x95);

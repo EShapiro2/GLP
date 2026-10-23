@@ -20,13 +20,13 @@ import 'package:grassroots_networking_core/src/session/x509.dart';
 /// only against hardware.
 ///
 /// What the fixtures DO establish honestly is the chain arithmetic, the
-/// challenge binding, the security-level refusal and the application-identity
+/// challenge binding, the security-level refusal and the attested application
 /// matching — all of which are this layer's logic rather than Android's format.
 void main() {
   Uint8List der(String b64) => Uint8List.fromList(base64.decode(b64));
 
   // A test root and a leaf it signed, the leaf carrying a KeyDescription whose
-  // challenge is the 32 bytes 0x00..0x1f and whose application identity is
+  // challenge is the 32 bytes 0x00..0x1f and whose application is
   // com.eshapiro.grassapp.
   final testRoot = der(
     'MIIByTCCAW+gAwIBAgIUdKZRacY+qIIuDvd+j8sCoqvSEz8wCgYIKoZIzj0EAwIwOjEeMBwGA1'
@@ -78,7 +78,7 @@ void main() {
   final now = DateTime.utc(2027, 1, 1); // inside the fixture's window
 
   group('KeyDescription parsing', () {
-    test('reads the challenge, the levels and the application identity', () {
+    test('reads the challenge, the levels and the application', () {
       final leaf = X509Certificate.fromDer(testLeaf);
       final kd = AndroidKeyDescription.fromCertificate(leaf);
 
@@ -89,25 +89,25 @@ void main() {
           AndroidSecurityLevel.trustedEnvironment);
       expect(kd.attestationChallenge, challenge);
 
-      final identity = kd.applicationIdentity;
-      expect(identity, isNotNull);
-      expect(identity!.packageNames, ['com.eshapiro.grassapp']);
-      expect(identity.packages.single.version, 7,
-          reason: 'the version is part of the application identity');
-      expect(identity.signatureDigests, hasLength(1));
-      expect(identity.signatureDigests.single, signingDigest);
+      final applicationId = kd.attestationApplicationId;
+      expect(applicationId, isNotNull);
+      expect(applicationId!.packageNames, ['com.eshapiro.grassapp']);
+      expect(applicationId.packages.single.version, 7,
+          reason: 'the certificate names the package with its version');
+      expect(applicationId.signatureDigests, hasLength(1));
+      expect(applicationId.signatureDigests.single, signingDigest);
     });
 
     test('the tag-709 walk finds a high-tag-number field', () {
       // attestationApplicationId is tag 709, which needs DER's
       // high-tag-number form (0xBF 0x85 0x45). A parser that only handled the
-      // low form would silently find no application identity and this layer
-      // would then accept any package, so the identity being read at all is
-      // the assertion.
+      // low form would silently find no application and this layer would
+      // then accept any package, so the application being read at all is the
+      // assertion.
       final kd = AndroidKeyDescription.fromCertificate(
         X509Certificate.fromDer(testLeaf),
       );
-      expect(kd.applicationIdentity?.packageNames, isNotEmpty);
+      expect(kd.attestationApplicationId?.packageNames, isNotEmpty);
     });
 
     test('a certificate with no KeyDescription is refused', () {

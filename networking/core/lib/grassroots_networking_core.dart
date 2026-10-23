@@ -20,7 +20,7 @@ export 'src/protocol/message_transport.dart';
 export 'src/protocol/outbound_queue_store.dart';
 export 'src/session/noise_session_manager.dart';
 export 'src/session/platform_attestation.dart';
-export 'src/session/application_identity.dart';
+export 'src/session/application.dart';
 export 'src/session/attestation_verifier.dart';
 export 'src/routing/message_router.dart';
 export 'src/store/store.dart';

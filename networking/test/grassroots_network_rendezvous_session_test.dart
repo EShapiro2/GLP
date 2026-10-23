@@ -15,7 +15,7 @@ import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
 import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
-import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
@@ -70,7 +70,7 @@ void main() {
     GrassrootsIdentity id,
     RendezvousServer server, {
     required void Function(Uint8List pk, Underlay underlay,
-            ApplicationIdentity? identity)
+            Application? application)
         onPeerConnected,
     void Function(AppState state)? onState,
   }) async {
@@ -257,21 +257,21 @@ void main() {
     final serverPk = server.identity.publicKey;
 
     final nodeId = await identityFromSeed(0x92);
-    final connects = <(Underlay, ApplicationIdentity?)>[];
+    final connects = <(Underlay, Application?)>[];
     final serverConnects = Completer<void>();
     final node = await startNode(
       nodeId,
       RendezvousServer('127.0.0.1:${server.boundPort}', serverPk),
-      onPeerConnected: (pk, underlay, identity) {
+      onPeerConnected: (pk, underlay, application) {
         if (hex(pk) != hex(serverPk)) return;
-        connects.add((underlay, identity));
+        connects.add((underlay, application));
         if (!serverConnects.isCompleted) serverConnects.complete();
       },
     );
 
     await serverConnects.future.timeout(const Duration(seconds: 30));
 
-    // Reported once, over the WAN, with no attested application identity.
+    // Reported once, over the WAN, unattested: null for the application.
     expect(connects, [(Underlay.wan, null)]);
     expect(node.isPeerReachable(serverPk), isTrue);
     expect(node.peerUnderlays(serverPk), [Underlay.wan]);
@@ -329,7 +329,7 @@ void main() {
     final node = await startNode(
       await identityFromSeed(0x94),
       RendezvousServer('127.0.0.1:${socket.port}', silentPk),
-      onPeerConnected: (pk, underlay, identity) {
+      onPeerConnected: (pk, underlay, application) {
         if (hex(pk) == hex(silentPk)) connects.add(underlay);
       },
       onState: (state) {

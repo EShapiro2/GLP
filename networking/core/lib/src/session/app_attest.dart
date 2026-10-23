@@ -51,12 +51,13 @@ class AppAttestResult {
   /// carries it.
   final Uint8List keyIdentifier;
 
-  /// The application identity this key was attested under: the App ID whose
-  /// SHA-256 is `authData`'s rpIdHash.
+  /// The application identifier this key was attested under: the App ID,
+  /// `<teamID>.<bundleID>`, whose SHA-256 is `authData`'s rpIdHash.
   ///
-  /// This is what `onPeerConnected` carries as the attested application
-  /// identity on iOS. App Attest produces no hash of the running binary, and
-  /// this file does not pretend it does.
+  /// Its team identifier is the attested application's developer and its
+  /// bundle identifier the application's name (GNA §2.6). App Attest
+  /// produces no hash of the running binary, and this file does not pretend
+  /// it does.
   final String appId;
 
   const AppAttestResult({
@@ -228,11 +229,10 @@ AppAttestResult verifyAppAttestAttestation({
 /// Verify the per-session half: an App Attest assertion over [digest] by the
 /// key [attestation] carries.
 ///
-/// Spec §Session Establishment: "Per session each side sends that attestation
-/// together with a signature by the attestation key over the digest
-/// H("glp attest" | pk | h) ... and each side verifies both: the attestation
-/// against the platform's root, and the signature against the key the
-/// attestation carries."
+/// GNA §2.6: "For each session, the layer asks the platform to sign with that
+/// key the digest H("glp attest" | pk | v | h)" ... "The receiver verifies the
+/// attestation against the platform's root, and the signature against the
+/// key the attestation carries."
 ///
 /// An App Attest key signs nothing but assertions, so the signature is one:
 /// the device calls `generateAssertion` with the digest as its clientDataHash,

@@ -85,7 +85,7 @@ class _Relay {
 /// only from a key in the known-peer set, and answers no XX first message";
 /// "ANNOUNCE is sent inside it" (GNA §2.5); the final handshake message
 /// retransmitted "until the other side's attestation message arrives";
-/// version 6 refused at the handshake.
+/// versions 7 and 6 refused at the handshake.
 ///
 /// Needs a native libsodium; self-skips when absent.
 void main() {
@@ -313,7 +313,7 @@ void main() {
         reason: 'not after the attestation arrived');
   }, timeout: const Timeout(Duration(minutes: 2)));
 
-  test('a version-6 peer is refused at the handshake', () async {
+  test('a peer on version 6 or 7 is refused at the handshake', () async {
     if (skipped()) return;
     final callee = await node(0x5f);
     final v6Id = await identityFromSeed(0x60);
@@ -353,6 +353,16 @@ void main() {
             callee,
             GrassrootsPacket(
                     type: PacketType.noiseHandshake, payload: relabelled)
+                .serialize()),
+        isFalse);
+    // And bearing version 7, the version before the attestation message
+    // carried the application's version number (GNA §2.6).
+    final version7 = Uint8List.fromList(ik)..setRange(0, 2, [0, 7]);
+    expect(
+        await answered(
+            callee,
+            GrassrootsPacket(
+                    type: PacketType.noiseHandshake, payload: version7)
                 .serialize()),
         isFalse);
     expect(callee.isPeerReachable(v6Id.publicKey), isFalse);

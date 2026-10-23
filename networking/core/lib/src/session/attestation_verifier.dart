@@ -1,11 +1,14 @@
 /// The verifier of a peer's attestation offer, for both platforms.
 ///
-/// Spec §Session Establishment: "Per session each side sends that attestation
-/// together with a signature by the attestation key over the digest
-/// H("glp attest" | pk | h), where h is the final Noise handshake hash, and
-/// each side verifies both: the attestation against the platform's root, and
-/// the signature against the key the attestation carries.  Either failing
-/// tears the session down, and onPeerConnected does not fire."
+/// GNA §2.6: "For each session, the layer asks the platform to sign with that
+/// key the digest H("glp attest" | pk | v | h), where v is the application's
+/// version number and h is the final Noise handshake hash" ... "The receiver
+/// verifies the attestation against the platform's root, and the signature
+/// against the key the attestation carries; either failing tears the session
+/// down".  The receiver takes the version number from the attestation
+/// message, and the signature over the digest that names it is what makes it
+/// the application's (GNA §2.6: "On both platforms the version number is the
+/// one the application signs in the per-session digest").
 ///
 /// Verification is arithmetic over bytes against pinned roots, so it lives in
 /// the core and runs the same on every platform and in the headless profile:
@@ -27,8 +30,9 @@
 ///
 /// The App ID travels beside the attestation object because App Attest's
 /// `authData` carries only its SHA-256, the rpIdHash, under Apple's signature:
-/// the identifier is accepted only where its SHA-256 is that hash, and is then
-/// the attested application identifier the spec has `onPeerConnected` carry.
+/// the identifier is accepted only where its SHA-256 is that hash, and its
+/// team identifier is then the attested application's developer and its
+/// bundle identifier the application's name (GNA §2.6).
 ///
 /// THE SIGNATURE FIELD is the platform's own signature object: on iOS the App
 /// Attest assertion (CBOR) over the digest, on Android the DER ECDSA
@@ -40,7 +44,7 @@ import 'dart:typed_data';
 
 import 'android_key_attestation.dart';
 import 'app_attest.dart';
-import 'application_identity.dart';
+import 'application.dart';
 import 'platform_attestation.dart';
 
 /// Platform tag: an App Attest attestation follows.
@@ -214,16 +218,20 @@ class AttestationVerifier {
   final bool allowAppAttestDevelopment;
 
   /// The verdict on [evidence], sent by the peer holding [peerIdentityKey],
-  /// over this session's [digest] for that key.
+  /// for the session whose handshake hash is [handshakeHash]: the signature
+  /// is checked over `H("glp attest" | pk | v | h)`, `v` the version number
+  /// the evidence carries.
   ///
   /// No evidence is [UnattestedPlatform]. Evidence that verifies is
-  /// [AttestedApplication] with the identity the platform attested. Anything
-  /// else offered — malformed, chained elsewhere, naming another key or
-  /// application, signed over another session — is [InvalidAttestation]: it
-  /// was "offered and found invalid", and the session is torn down.
+  /// [AttestedApplication] with the attested application: its developer and
+  /// its name as the platform attested them, and the version number it
+  /// signed. Anything else offered — malformed, chained elsewhere, naming
+  /// another key or more than one application, signed over another session or
+  /// another version number — is [InvalidAttestation]: it was "offered and
+  /// found invalid", and the session is torn down.
   AttestationVerdict verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   }) {
     if (evidence == null) {
@@ -231,6 +239,11 @@ class AttestationVerifier {
     }
     final at = (clock ?? DateTime.now)();
     try {
+      final digest = attestationDigest(
+        identityPublicKey: peerIdentityKey,
+        version: evidence.version,
+        handshakeHash: handshakeHash,
+      );
       switch (decodePlatformAttestation(evidence.attestation)) {
         case AppAttestContent(:final appId, :final attestationObject):
           verifyAppAttestEvidence(
@@ -243,7 +256,19 @@ class AttestationVerifier {
             pinnedRoots: appAttestRoots,
             allowDevelopmentEnvironment: allowAppAttestDevelopment,
           );
-          return AttestedApplication(IosApplicationIdentity(appId));
+          // `<teamID>.<bundleID>`: the developer, then the name.
+          final dot = appId.indexOf('.');
+          if (dot <= 0 || dot == appId.length - 1) {
+            return InvalidAttestation(
+              'The App ID $appId names no team identifier and bundle '
+              'identifier',
+            );
+          }
+          return AttestedApplication(Application(
+            developer: appId.substring(0, dot),
+            name: appId.substring(dot + 1),
+            version: evidence.version,
+          ));
         case AndroidKeyAttestationContent(:final chain):
           final result = verifyAndroidEvidence(
             chain: chain,
@@ -253,13 +278,29 @@ class AttestationVerifier {
             at: at,
             pinnedRoots: androidRoots,
           );
-          final identity = result.keyDescription.applicationIdentity;
-          if (identity == null) {
+          final applicationId =
+              result.keyDescription.attestationApplicationId;
+          if (applicationId == null) {
             return const InvalidAttestation(
               'The Android attestation names no application',
             );
           }
-          return AttestedApplication(identity);
+          // The attested application is one package, signed with one
+          // certificate (GNA §2.6: "Android's certificate names the digest of
+          // the developer's signing certificate, the package and its
+          // version").
+          if (applicationId.packages.length != 1 ||
+              applicationId.signatureDigests.length != 1) {
+            return InvalidAttestation(
+              'The Android attestation names $applicationId, not one '
+              'application',
+            );
+          }
+          return AttestedApplication(Application(
+            developer: _hex(applicationId.signatureDigests.single),
+            name: applicationId.packages.single.name,
+            version: evidence.version,
+          ));
       }
     } catch (e) {
       // Every failure of an offered attestation is a failure: X509Exception
@@ -269,3 +310,6 @@ class AttestationVerifier {
     }
   }
 }
+
+String _hex(List<int> bytes) =>
+    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();

@@ -12,6 +12,10 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
 import 'helpers/attestation_fixtures.dart';
 
+/// The version number the fixture producers' applications sign, which is not
+/// the one the Android fixture's certificate names.
+const int _signedVersion = 42;
+
 /// An Android producer on the test fixtures: a chain of three P-256
 /// certificates over the identity key, and the per-session signature by the
 /// attestation key it carries.
@@ -28,6 +32,9 @@ class _AndroidProducer implements PlatformAttestation {
           AndroidKeyAttestationContent(fixture.chain(identityPublicKey)));
 
   @override
+  Future<int?> applicationVersion() async => _signedVersion;
+
+  @override
   Future<Uint8List?> signSessionDigest({
     required Uint8List identityPublicKey,
     required Uint8List digest,
@@ -37,12 +44,12 @@ class _AndroidProducer implements PlatformAttestation {
   @override
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   }) async =>
       verifier.verify(
         evidence: evidence,
-        digest: digest,
+        handshakeHash: handshakeHash,
         peerIdentityKey: peerIdentityKey,
       );
 }
@@ -70,6 +77,9 @@ class _AppAttestProducer implements PlatformAttestation {
       ));
 
   @override
+  Future<int?> applicationVersion() async => _signedVersion;
+
+  @override
   Future<Uint8List?> signSessionDigest({
     required Uint8List identityPublicKey,
     required Uint8List digest,
@@ -79,12 +89,12 @@ class _AppAttestProducer implements PlatformAttestation {
   @override
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   }) async =>
       verifier.verify(
         evidence: evidence,
-        digest: digest,
+        handshakeHash: handshakeHash,
         peerIdentityKey: peerIdentityKey,
       );
 }
@@ -98,6 +108,7 @@ Future<Uint8List> _exchangePayload(
 ) async =>
     encodeAttestationPayload(AttestationEvidence(
       attestation: (await producer.attestationFor(identityPublicKey))!,
+      version: (await producer.applicationVersion())!,
       signature: (await producer.signSessionDigest(
         identityPublicKey: identityPublicKey,
         digest: Uint8List(32),
@@ -192,6 +203,9 @@ class _SilentProducer implements PlatformAttestation {
       Completer<Uint8List?>().future;
 
   @override
+  Future<int?> applicationVersion() => Completer<int?>().future;
+
+  @override
   Future<Uint8List?> signSessionDigest({
     required Uint8List identityPublicKey,
     required Uint8List digest,
@@ -201,12 +215,12 @@ class _SilentProducer implements PlatformAttestation {
   @override
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   }) =>
       const NoPlatformAttestation().verify(
         evidence: evidence,
-        digest: digest,
+        handshakeHash: handshakeHash,
         peerIdentityKey: peerIdentityKey,
       );
 }
@@ -220,6 +234,9 @@ class _CountingVerifier implements PlatformAttestation {
   Future<Uint8List?> attestationFor(Uint8List identityPublicKey) async => null;
 
   @override
+  Future<int?> applicationVersion() async => null;
+
+  @override
   Future<Uint8List?> signSessionDigest({
     required Uint8List identityPublicKey,
     required Uint8List digest,
@@ -229,13 +246,13 @@ class _CountingVerifier implements PlatformAttestation {
   @override
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   }) {
     verifications++;
     return const NoPlatformAttestation().verify(
       evidence: evidence,
-      digest: digest,
+      handshakeHash: handshakeHash,
       peerIdentityKey: peerIdentityKey,
     );
   }
@@ -314,9 +331,13 @@ void main() {
     );
   }
 
-  final androidIdentity = AndroidApplicationIdentity(
-    packages: const [AndroidPackage(name: 'com.eshapiro.grassapp', version: 7)],
-    signatureDigests: [AndroidFixture().signingDigest],
+  final androidApplication = Application(
+    developer: AndroidFixture()
+        .signingDigest
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join(),
+    name: 'com.eshapiro.grassapp',
+    version: _signedVersion,
   );
 
   group('headless profile, over UDP', () {
@@ -343,22 +364,22 @@ void main() {
       );
       expect(payload.length, greaterThan(FragmentHandler.udpMaxChunk));
 
-      final serviceSaw = Completer<ApplicationIdentity?>();
-      final callerSaw = Completer<ApplicationIdentity?>();
-      service.onPeerConnected = (_, __, identity) {
-        if (!serviceSaw.isCompleted) serviceSaw.complete(identity);
+      final serviceSaw = Completer<Application?>();
+      final callerSaw = Completer<Application?>();
+      service.onPeerConnected = (_, __, application) {
+        if (!serviceSaw.isCompleted) serviceSaw.complete(application);
       };
-      caller.onPeerConnected = (_, __, identity) {
-        if (!callerSaw.isCompleted) callerSaw.complete(identity);
+      caller.onPeerConnected = (_, __, application) {
+        if (!callerSaw.isCompleted) callerSaw.complete(application);
       };
 
       await dial(caller, service, service.boundPort!);
 
       expect(await serviceSaw.future.timeout(const Duration(seconds: 15)),
-          androidIdentity,
+          androidApplication,
           reason: 'the service verified the caller\'s Android chain');
       expect(await callerSaw.future.timeout(const Duration(seconds: 15)),
-          androidIdentity,
+          androidApplication,
           reason: 'the caller verified the service\'s Android chain');
     });
 
@@ -377,22 +398,26 @@ void main() {
       expect(payload.length, greaterThan(3 * FragmentHandler.udpMaxChunk),
           reason: 'four fragments or more');
 
-      final serviceSaw = Completer<ApplicationIdentity?>();
-      final callerSaw = Completer<ApplicationIdentity?>();
-      service.onPeerConnected = (_, __, identity) {
-        if (!serviceSaw.isCompleted) serviceSaw.complete(identity);
+      final serviceSaw = Completer<Application?>();
+      final callerSaw = Completer<Application?>();
+      service.onPeerConnected = (_, __, application) {
+        if (!serviceSaw.isCompleted) serviceSaw.complete(application);
       };
-      caller.onPeerConnected = (_, __, identity) {
-        if (!callerSaw.isCompleted) callerSaw.complete(identity);
+      caller.onPeerConnected = (_, __, application) {
+        if (!callerSaw.isCompleted) callerSaw.complete(application);
       };
 
       await dial(caller, service, service.boundPort!);
 
-      final appId = AppAttestFixture().appId;
+      const application = Application(
+        developer: 'ABCDE12345',
+        name: 'com.eshapiro.grassapp',
+        version: _signedVersion,
+      );
       expect(await serviceSaw.future.timeout(const Duration(seconds: 15)),
-          IosApplicationIdentity(appId));
+          application);
       expect(await callerSaw.future.timeout(const Duration(seconds: 15)),
-          IosApplicationIdentity(appId));
+          application);
     });
 
     test(
@@ -411,15 +436,15 @@ void main() {
       relay.dropTowardService =
           (datagram) => _isAttestationFragment(datagram) && relay.dropped == 0;
 
-      final serviceSaw = Completer<ApplicationIdentity?>();
-      service.onPeerConnected = (_, __, identity) {
-        if (!serviceSaw.isCompleted) serviceSaw.complete(identity);
+      final serviceSaw = Completer<Application?>();
+      service.onPeerConnected = (_, __, application) {
+        if (!serviceSaw.isCompleted) serviceSaw.complete(application);
       };
 
       await dial(caller, service, relay.port);
 
       expect(await serviceSaw.future.timeout(const Duration(seconds: 15)),
-          androidIdentity,
+          androidApplication,
           reason: 'the exchange completed although a fragment was lost');
       expect(relay.dropped, 1);
       // The chain needs two fragments; the service had both, so the lost one

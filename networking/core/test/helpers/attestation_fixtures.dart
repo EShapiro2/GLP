@@ -322,12 +322,14 @@ class AppAttestFixture {
 // ===== Android key attestation =====
 
 /// An Android keystore in miniature: a root, an intermediate, and an
-/// attestation key whose leaf names [packageName] at [version], signed with a
-/// certificate whose SHA-256 is [signingDigest].
+/// attestation key whose leaf names [packageName] at [version], and
+/// [otherPackages] beside it, signed with a certificate whose SHA-256 is
+/// [signingDigest].
 class AndroidFixture {
   AndroidFixture({
     this.packageName = 'com.eshapiro.grassapp',
     this.version = 7,
+    this.otherPackages = const [],
     String seed = 'android',
     this.securityLevel = 1,
   })  : rootKey = TestEcKey('$seed root'),
@@ -337,6 +339,9 @@ class AndroidFixture {
 
   final String packageName;
   final int version;
+
+  /// Packages sharing the key's user ID, each named at [version].
+  final List<String> otherPackages;
   final int securityLevel;
   final TestEcKey rootKey;
   final TestEcKey intermediateKey;
@@ -355,18 +360,20 @@ class AndroidFixture {
     extensions: [caExtension()],
   );
 
-  /// Google's KeyDescription over [challenge], the application identity in
+  /// Google's KeyDescription over [challenge], the application in
   /// softwareEnforced at tag 709.
   static Uint8List keyDescription({
     required Uint8List challenge,
     required String packageName,
     required int version,
     required Uint8List signingDigest,
+    List<String> otherPackages = const [],
     int securityLevel = 1,
   }) {
     final applicationId = derSeq([
       derSet([
-        derSeq([derOctets(utf8.encode(packageName)), derSmallInt(version)]),
+        for (final name in [packageName, ...otherPackages])
+          derSeq([derOctets(utf8.encode(name)), derSmallInt(version)]),
       ]),
       derSet([derOctets(signingDigest)]),
     ]);
@@ -402,6 +409,7 @@ class AndroidFixture {
               packageName: packageName,
               version: version,
               signingDigest: signingDigest,
+              otherPackages: otherPackages,
               securityLevel: securityLevel,
             ),
           ),

@@ -99,10 +99,11 @@ void main() {
         return;
       }
       final events = <String>[];
-      const attested = IosApplicationIdentity('TEAM.app.grassroots');
-      Object? identitySeen;
-      network.onPeerConnected = (pk, underlay, identity) {
-        identitySeen = identity;
+      const attested =
+        Application(developer: 'TEAM', name: 'app.grassroots', version: 1);
+      Object? applicationSeen;
+      network.onPeerConnected = (pk, underlay, application) {
+        applicationSeen = application;
         events.add('connected ${pk.hex} $underlay');
       };
       network.onPeerDisconnected =
@@ -120,8 +121,8 @@ void main() {
         'received ${peer.hex} [1, 2, 3] m-1 ${glp.Underlay.wan}',
         'disconnected ${peer.hex} ${glp.Underlay.wan}',
       ]);
-      expect(identical(identitySeen, attested), isTrue,
-          reason: 'the attested application identity, as the layer reports it');
+      expect(identical(applicationSeen, attested), isTrue,
+          reason: 'the attested application, as the layer reports it');
 
       network.onPeerConnected = null;
       network.onPeerDisconnected = null;

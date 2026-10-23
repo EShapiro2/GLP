@@ -13,7 +13,7 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/places/place_registry.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
-import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'package:grassroots_networking_core/src/headless/libsodium_loader.dart';
@@ -170,11 +170,12 @@ void main() {
     final network = GrassrootsGlpNetwork(layer);
     final peer = glp.PubKey.fromList((await identity()).publicKey);
     final events = <String>[];
-    const attested = IosApplicationIdentity('TEAM.app.grassroots');
-    Object? identitySeen;
+    const attested =
+        Application(developer: 'TEAM', name: 'app.grassroots', version: 1);
+    Object? applicationSeen;
 
-    network.onPeerConnected = (pk, underlay, identity) {
-      identitySeen = identity;
+    network.onPeerConnected = (pk, underlay, application) {
+      applicationSeen = application;
       events.add('connected ${pk.hex} $underlay');
     };
     network.onPeerDisconnected =
@@ -204,8 +205,8 @@ void main() {
       'address null 203.0.113.7:9600',
       'network n-1 null',
     ]);
-    expect(identical(identitySeen, attested), isTrue,
-        reason: 'the attested application identity, as the layer reports it');
+    expect(identical(applicationSeen, attested), isTrue,
+        reason: 'the attested application, as the layer reports it');
 
     network.onPeerConnected = null;
     network.onMessageReceived = null;

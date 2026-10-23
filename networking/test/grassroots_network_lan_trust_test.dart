@@ -343,7 +343,7 @@ void main() {
     final connected = <Underlay>[];
     final received = <Underlay>[];
     final discovered = <ProximityUnderlay>[];
-    receiver.onPeerConnected = (pk, underlay, identity) {
+    receiver.onPeerConnected = (pk, underlay, application) {
       if (hexOf(pk) == callerHex) connected.add(underlay);
     };
     receiver.onMessageReceived = (sender, payload, messageId, underlay) {

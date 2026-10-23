@@ -33,8 +33,9 @@
 ///   // Handle incoming GSG block
 /// };
 /// 
-/// grassroots.onPeerConnected = (pk, underlay, identity) {
-///   // peer reachable over `underlay` (PAN, LAN or WAN)
+/// grassroots.onPeerConnected = (pk, underlay, application) {
+///   // peer reachable over `underlay` (PAN, LAN or WAN); `application` the
+///   // attested application, or null for an unattested identity
 /// };
 /// 
 /// // Initialize and start
@@ -68,11 +69,10 @@ export 'src/transport/transport.dart';
 export 'package:grassroots_networking_core/src/places/place_registry.dart';
 export 'src/places/platform_place_geofence_backend.dart';
 
-// Attestation: the seam, the attested application identity, the core's
-// verifier, and the binding to the platform's native producer (spec §Session
-// Establishment).
+// Attestation: the seam, the attested application, the core's verifier, and
+// the binding to the platform's native producer (GNA §2.6).
 export 'package:grassroots_networking_core/src/session/platform_attestation.dart';
-export 'package:grassroots_networking_core/src/session/application_identity.dart';
+export 'package:grassroots_networking_core/src/session/application.dart';
 export 'package:grassroots_networking_core/src/session/attestation_verifier.dart';
 export 'src/attestation/native_platform_attestation.dart';
 

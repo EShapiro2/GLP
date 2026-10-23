@@ -19,8 +19,9 @@
 /// Every function the layer has passes straight through, and nothing is
 /// interpreted: a key travels as its 32 bytes, an underlay, a trust level and
 /// a place event by their names, which the two sides share; the attested
-/// application identity of `onPeerConnected` travels as the layer reports it,
-/// since "the runtime relies on none of it" (IGLP, The contract).
+/// application of `onPeerConnected` travels as the layer reports it, or null
+/// for an unattested identity (GNA §2.3), since "the runtime relies on none
+/// of it" (IGLP, The contract).
 ///
 /// The profile has no proximity underlay and no location service (GNA,
 /// Section "Instantiation": "Location service ... none on a headless server"),
@@ -71,21 +72,22 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
 
   // --- Connection and reachability ---
 
-  void Function(glp.PubKey pk, glp.Underlay underlay, Object? identity)?
+  void Function(glp.PubKey pk, glp.Underlay underlay, Object? application)?
       _onPeerConnected;
 
   @override
-  void Function(glp.PubKey pk, glp.Underlay underlay, Object? identity)?
+  void Function(glp.PubKey pk, glp.Underlay underlay, Object? application)?
       get onPeerConnected => _onPeerConnected;
 
   @override
   set onPeerConnected(
-      void Function(glp.PubKey pk, glp.Underlay underlay, Object? identity)?
+      void Function(glp.PubKey pk, glp.Underlay underlay, Object? application)?
           cb) {
     _onPeerConnected = cb;
     layer.onPeerConnected = cb == null
         ? null
-        : (pk, underlay, identity) => cb(_key(pk), _underlay(underlay), identity);
+        : (pk, underlay, application) =>
+            cb(_key(pk), _underlay(underlay), application);
   }
 
   void Function(glp.PubKey pk, glp.Underlay underlay)? _onPeerDisconnected;

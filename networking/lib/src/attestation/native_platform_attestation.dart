@@ -2,18 +2,19 @@
 /// producer each platform has — App Attest on iOS, hardware key attestation
 /// on Android.
 ///
-/// Spec §Session Establishment: "Each agent holds an attestation key
-/// generated in its platform's secure element and attested there once---App
-/// Attest on iOS, hardware key attestation on Android---over a challenge
-/// naming the agent's identity public key pk.  Per session each side sends
-/// that attestation together with a signature by the attestation key over the
-/// digest H("glp attest" | pk | h)".
+/// GNA §2.6: "Once, the layer asks the platform to generate an attestation
+/// key in its secure element and to attest it over a challenge naming the
+/// agent's identity public key pk: App Attest on iOS, hardware key
+/// attestation on Android.  For each session, the layer asks the platform to
+/// sign with that key the digest H("glp attest" | pk | v | h), where v is the
+/// application's version number and h is the final Noise handshake hash".
 ///
 /// Production needs a secure element, and so a native channel; verification
 /// is the core's ([AttestationVerifier]), the same on every platform and in
 /// the headless profile. This class is the binding alone: what crosses the
 /// channel is the identity key and the digest one way, and the platform's own
-/// attestation and signature objects the other.
+/// attestation and signature objects and the application's version number
+/// the other.
 ///
 /// THE CHANNEL, `grassroots/attestation`:
 ///
@@ -24,6 +25,10 @@
 ///    `{platform: 'android', chain}`, the chain leaf first. The producer
 ///    generates the attestation key once, attests it over the identity key,
 ///    and keeps both: the attestation is long-lived.
+///  - `version` → the version number of the running application, which it
+///    signs in each session's digest: on Android the version code, on iOS
+///    the bundle version (`CFBundleVersion`), a whole number; null where it
+///    is not one, and then this agent offers no attestation.
 ///  - `sign` `{identityPublicKey, digest}` → the platform's signature over the
 ///    digest by the key attested for that identity key: on iOS an App Attest
 ///    assertion with the digest as its clientDataHash, on Android a DER
@@ -95,6 +100,15 @@ class NativePlatformAttestation implements PlatformAttestation {
   }
 
   @override
+  Future<int?> applicationVersion() async {
+    try {
+      return await _channel.invokeMethod<int>('version');
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
+  @override
   Future<Uint8List?> signSessionDigest({
     required Uint8List identityPublicKey,
     required Uint8List digest,
@@ -112,12 +126,12 @@ class NativePlatformAttestation implements PlatformAttestation {
   @override
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
-    required Uint8List digest,
+    required Uint8List handshakeHash,
     required Uint8List peerIdentityKey,
   }) async =>
       _verifier.verify(
         evidence: evidence,
-        digest: digest,
+        handshakeHash: handshakeHash,
         peerIdentityKey: peerIdentityKey,
       );
 
