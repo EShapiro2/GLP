@@ -9,6 +9,8 @@ library;
 
 import 'dart:collection';
 
+import 'package:glp_runtime/runtime/saved_state.dart';
+
 /// Type of outbound message
 enum MessageType {
   /// Assignment: (G := T, destination)
@@ -207,6 +209,56 @@ class MessageQueue {
   /// Clear all messages for all destinations
   void clear() {
     _queuesByDestination.clear();
+  }
+
+  /// Write the outgoing messages into the agent's saved state, by destination
+  /// and in order, each with its held mark (IGLP, Implementation Notes,
+  /// "Persistence": "the outgoing messages with their pending and held
+  /// marks"; the pending values are MadContext's).
+  void saveState(StateWriter w) {
+    w.uint(_queuesByDestination.length);
+    for (final MapEntry(key: destination, value: queue)
+        in _queuesByDestination.entries) {
+      w.str(destination);
+      w.uint(queue.length);
+      for (final m in queue) {
+        w.u8(m.type.index);
+        w.bytes(m.payload);
+        final link = m.link;
+        w.boolean(link != null);
+        if (link != null) {
+          w.str(link.$1);
+          w.uint(link.$2);
+          w.boolean(link.$3);
+        }
+        w.boolean(m.held);
+      }
+    }
+  }
+
+  /// Read back what [saveState] wrote, into a queue fresh from construction.
+  void restoreState(StateReader r) {
+    _queuesByDestination.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final destination = r.str();
+      for (var j = r.uint(); j > 0; j--) {
+        final type = MessageType.values[r.u8()];
+        final payload = r.bytes();
+        (String, int, bool)? link;
+        if (r.boolean()) {
+          final anchor = r.str();
+          final index = r.uint();
+          link = (anchor, index, r.boolean());
+        }
+        add(OutboundMessage(
+          destination: destination,
+          type: type,
+          payload: payload,
+          link: link,
+          held: r.boolean(),
+        ));
+      }
+    }
   }
   
   /// Clear all messages for a specific destination

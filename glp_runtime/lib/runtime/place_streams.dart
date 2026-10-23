@@ -25,6 +25,7 @@ library;
 import 'heap_fcp.dart' show HeapCell;
 import 'machine_state.dart' show GoalRef;
 import 'runtime.dart';
+import 'saved_state.dart';
 import 'terms.dart';
 
 class PlaceStreams {
@@ -85,6 +86,36 @@ class PlaceStreams {
     if (writer == null) return false;
     _wake(_rt.heap.bindVariable(writer, ConstTerm(nil)));
     return true;
+  }
+
+  /// Write the places declared, each with its stream's tail writer, and the
+  /// number of each place's standing declaration (IGLP, Implementation Notes,
+  /// "Persistence": "the places ... declared").
+  void saveState(StateWriter w) {
+    w.uint(_tails.length);
+    for (final MapEntry(key: place, value: tail) in _tails.entries) {
+      w.str(place);
+      w.cell(tail);
+    }
+    w.uint(_declarations.length);
+    for (final MapEntry(key: place, value: n) in _declarations.entries) {
+      w.str(place);
+      w.uint(n);
+    }
+  }
+
+  /// Read back what [saveState] wrote.
+  void restoreState(StateReader r) {
+    _tails.clear();
+    _declarations.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final place = r.str();
+      _tails[place] = r.cell();
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final place = r.str();
+      _declarations[place] = r.uint();
+    }
   }
 
   void _wake(List<GoalRef> activations) {

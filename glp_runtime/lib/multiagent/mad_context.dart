@@ -11,6 +11,7 @@ import 'package:glp_runtime/runtime/body_kernels.dart' show deepDeref;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/machine_state.dart';
+import 'package:glp_runtime/runtime/saved_state.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
@@ -66,6 +67,15 @@ class MadContext {
   /// (IGLP, Implementation Notes, "Event-driven execution").  Set by a host
   /// over a given network; the simulation reports no place events.
   void Function()? onPlaceEventDelivered;
+
+  /// Where the layer's place events go, where set: to the host, which
+  /// delivers each in an event cycle of its own by [deliverPlaceEvent], so
+  /// that the cycle is saved and, where its save fails, run again (IGLP,
+  /// Remark "What Is Saved and When").  [declaration] is the declaration a
+  /// refusal answers, null for an event; it is checked when the event is
+  /// delivered.  Where it is not set, an event is delivered as it arrives.
+  void Function(String place, PlaceEvent event, int? declaration)?
+      placeEventSink;
 
   /// The canonical bytes e(T) of a ground term T, which a signature signs and
   /// a verifier checks (IGLP code-format-fragment.tex, "Signed and Hashed
@@ -339,9 +349,7 @@ class MadContext {
     for (final newGoal in result.newGoals) {
       _trace('[MAD $agentId] global_send spawned new goal: ${newGoal.globalName}');
       globalSendRegistry.register(newGoal);
-      runtime.heap.onBind(newGoal.readerAddr, (Term value) {
-        onWriterBound(newGoal.readerAddr, value);
-      });
+      _watch(newGoal.readerAddr);
     }
   }
 
@@ -388,12 +396,17 @@ class MadContext {
   void registerGlobalSendSpawns(List<GlobalSendSpawn> spawns) {
     for (final spawn in spawns) {
       globalSendRegistry.register(GlobalSendGoal.fromSpawn(spawn));
-      runtime.heap.onBind(spawn.readerAddr, (Term value) {
-        onWriterBound(spawn.readerAddr, value);
-      });
+      _watch(spawn.readerAddr);
       _trace('[MAD $agentId] registered global_send goal: ${spawn.globalName} -> ${spawn.destAgent}');
     }
   }
+
+  /// The heap callback of the `global_send` goal registered under [key]: when
+  /// the writer is assigned, [onWriterBound] fires the goal.  Tagged with
+  /// [key], from which [restoreState] makes it again for a restarted agent.
+  void _watch(HeapCell key) =>
+      runtime.heap.onBind(key, (Term value) => onWriterBound(key, value),
+          tag: key);
 
   /// Record the reader names a globalization forwarded (Definition Globalize,
   /// case 3): from now on a value arriving for such a name is stale
@@ -651,9 +664,10 @@ class MadContext {
         _trace('[MAD $agentId] declarePlace($place): refused by the platform '
             '— unobservable');
         // Answers can arrive after place_remove or after a superseding
-        // declaration, whose stream is the successor's, not this one's.
-        if (!runtime.placeStreams.isStanding(place, declaration)) return;
-        deliverPlaceEvent(place, PlaceEvent.unobservable);
+        // declaration, whose stream is the successor's, not this one's: the
+        // declaration answered goes with the event, and is checked when it
+        // is delivered.
+        _placeEvent(place, PlaceEvent.unobservable, declaration);
       },
       onError: (Object e) => _trace(
           '[MAD $agentId] declarePlace($place): layer failed: $e'),
@@ -680,7 +694,27 @@ class MadContext {
   void _installPlaceEventHandler(GlpNetwork network) {
     if (identical(_placeEventHandlerNetwork, network)) return;
     _placeEventHandlerNetwork = network;
-    network.onPlaceEvent = deliverPlaceEvent;
+    network.onPlaceEvent = (place, event) => _placeEvent(place, event, null);
+  }
+
+  /// A place event the layer reports, or a refusal answering [declaration]:
+  /// to the host's [placeEventSink] where it is set, delivered at once where
+  /// it is not.
+  void _placeEvent(String place, PlaceEvent event, int? declaration) {
+    final sink = placeEventSink;
+    if (sink != null) {
+      sink(place, event, declaration);
+    } else {
+      deliverPlaceEvent(place, event, declaration: declaration);
+    }
+  }
+
+  /// Route the layer's place events onto the streams of the places a
+  /// restarted agent declared, as [declarePlace] routes them.
+  void resumePlaceEvents() {
+    final network = this.network;
+    if (network == null || runtime.placeStreams.places.isEmpty) return;
+    _installPlaceEventHandler(network);
   }
 
   GlpNetwork? _placeEventHandlerNetwork;
@@ -690,8 +724,15 @@ class MadContext {
   /// fresh writer as the new tail, and reactivate whatever suspended on the
   /// stream. One declaration yields one stream however many events follow.
   ///
-  /// An event for a place that is not declared here is dropped.
-  void deliverPlaceEvent(String place, PlaceEvent event) {
+  /// An event for a place that is not declared here is dropped, and so is a
+  /// refusal answering a [declaration] that no longer stands.
+  void deliverPlaceEvent(String place, PlaceEvent event, {int? declaration}) {
+    if (declaration != null &&
+        !runtime.placeStreams.isStanding(place, declaration)) {
+      _trace('[MAD $agentId] refusal of $place answers a declaration that '
+          'no longer stands — dropped');
+      return;
+    }
     if (!runtime.placeStreams.deliver(place, ConstTerm(event.name))) {
       _trace('[MAD $agentId] place event $event for undeclared $place — dropped');
       return;
@@ -1326,6 +1367,186 @@ class MadContext {
     _trace('[MAD $agentId] _dropLink: $gn released — entry, record, goal');
   }
 
+  // =========================================================================
+  // The agent's saved state (IGLP, Definition "Restart"; Implementation
+  // Notes, "Persistence")
+  // =========================================================================
+
+  /// Write what this context holds into the agent's saved state: the global
+  /// writers table W_p, the imported-writer records U_p, the outgoing messages
+  /// M_p with their held marks and the pending values, the `global_send` goals
+  /// and the heap callbacks that fire them, and the records Implementation
+  /// Notes adds to the local state --- the early and held assignments, the
+  /// applied and forwarded reader names, the held requests and recorded
+  /// requesters, and the links reported and not yet answered.  Written at the
+  /// end of an event cycle, when no transaction is in progress.
+  void saveState(StateWriter w) {
+    if (_deferredReports.isNotEmpty) {
+      throw StateError('the state is saved inside a transaction, with '
+          '${_deferredReports.length} reports not yet appended');
+    }
+    wp.saveState(w);
+    up.saveState(w);
+    mp.saveState(w);
+    globalSendRegistry.saveState(w);
+
+    final callbacks = runtime.heap.bindCallbackTags.toList();
+    w.uint(callbacks.length);
+    for (final (at, tag) in callbacks) {
+      if (tag == null) {
+        throw StateError('a heap callback on cell ${at.id} was registered '
+            'with no tag, and cannot be made again for a restarted agent');
+      }
+      w.cell(at);
+      w.cell(tag);
+    }
+
+    w.uint(_heldReaderAssignments.length);
+    for (final MapEntry(key: (agent, index), value: held)
+        in _heldReaderAssignments.entries) {
+      w.str(agent);
+      w.uint(index);
+      w.term(held.value);
+      w.str(held.fromAgent);
+    }
+    w.uint(_pendingReaderValues.length);
+    for (final MapEntry(key: (agent, index), value: pending)
+        in _pendingReaderValues.entries) {
+      w.str(agent);
+      w.uint(index);
+      w.bytes(pending.payload);
+      w.str(pending.destination);
+      w.uint(pending.nestedReaderNames.length);
+      for (final gn in pending.nestedReaderNames) {
+        gn.save(w);
+      }
+    }
+    _saveNames(w, _forwardedReaderNames);
+    _saveNames(w, _appliedReaderNames);
+    w.uint(_heldAssignments.length);
+    for (final MapEntry(key: (agent, index, isWriter), value: held)
+        in _heldAssignments.entries) {
+      w.str(agent);
+      w.uint(index);
+      w.boolean(isWriter);
+      w.term(held.value);
+      w.str(held.fromAgent);
+    }
+    w.uint(_heldRequests.length);
+    for (final MapEntry(key: (agent, index), value: requesters)
+        in _heldRequests.entries) {
+      w.str(agent);
+      w.uint(index);
+      w.uint(requesters.length);
+      for (final q in requesters) {
+        w.str(q);
+      }
+    }
+    w.uint(_requestPairs.length);
+    for (final MapEntry(key: (agent, index), value: requesters)
+        in _requestPairs.entries) {
+      w.str(agent);
+      w.uint(index);
+      w.uint(requesters.length);
+      for (final q in requesters) {
+        w.str(q);
+      }
+    }
+    w.uint(_reportedLinks.length);
+    for (final MapEntry(key: (agent, index, isWriter), value: sender)
+        in _reportedLinks.entries) {
+      w.str(agent);
+      w.uint(index);
+      w.boolean(isWriter);
+      w.str(sender);
+    }
+  }
+
+  static void _saveNames(StateWriter w, Set<(String, int)> names) {
+    w.uint(names.length);
+    for (final (agent, index) in names) {
+      w.str(agent);
+      w.uint(index);
+    }
+  }
+
+  static Set<(String, int)> _restoreNames(StateReader r) => {
+        for (var i = r.uint(); i > 0; i--) (r.str(), r.uint()),
+      };
+
+  /// Read back what [saveState] wrote, into a context fresh from
+  /// construction, and make again the heap callbacks of the `global_send`
+  /// goals, each on the cell it sat on.
+  void restoreState(StateReader r) {
+    wp.restoreState(r);
+    up.restoreState(r);
+    mp.restoreState(r);
+    globalSendRegistry.restoreState(r);
+
+    for (var i = r.uint(); i > 0; i--) {
+      final at = r.cell();
+      final key = r.cell();
+      runtime.heap.restoreBindCallback(
+          at, (Term value) => onWriterBound(key, value), key);
+    }
+
+    _heldReaderAssignments.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final agent = r.str();
+      final index = r.uint();
+      final value = r.term();
+      _heldReaderAssignments[(agent, index)] =
+          (value: value, fromAgent: r.str());
+    }
+    _pendingReaderValues.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final agent = r.str();
+      final index = r.uint();
+      final payload = r.bytes();
+      final destination = r.str();
+      final nested = [for (var j = r.uint(); j > 0; j--) GlobalName.restore(r)];
+      _pendingReaderValues[(agent, index)] = (
+        payload: payload,
+        destination: destination,
+        nestedReaderNames: nested,
+      );
+    }
+    _forwardedReaderNames
+      ..clear()
+      ..addAll(_restoreNames(r));
+    _appliedReaderNames
+      ..clear()
+      ..addAll(_restoreNames(r));
+    _heldAssignments.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final agent = r.str();
+      final index = r.uint();
+      final isWriter = r.boolean();
+      final value = r.term();
+      _heldAssignments[(agent, index, isWriter)] =
+          (value: value, fromAgent: r.str());
+    }
+    _heldRequests.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final agent = r.str();
+      final index = r.uint();
+      _heldRequests[(agent, index)] = [for (var j = r.uint(); j > 0; j--) r.str()];
+    }
+    _requestPairs.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final agent = r.str();
+      final index = r.uint();
+      _requestPairs[(agent, index)] = {for (var j = r.uint(); j > 0; j--) r.str()};
+    }
+    _reportedLinks.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final agent = r.str();
+      final index = r.uint();
+      final isWriter = r.boolean();
+      _reportedLinks[(agent, index, isWriter)] = r.str();
+    }
+  }
+
   /// Number of pending (sent, unacknowledged) reader-name values.
   int get pendingReaderValueCount => _pendingReaderValues.length;
 
@@ -1367,9 +1588,7 @@ class MadContext {
     for (final v in vars) {
       if (v.isWriter) {
         // Set up callback so when this writer is bound, we can route the assignment
-        runtime.heap.onBind(v.addr, (Term value) {
-          onWriterBound(v.addr, value);
-        });
+        _watch(v.addr);
         _trace('[MAD $agentId] exportTerm: registered callback for writer ${v.addr}');
       }
     }
