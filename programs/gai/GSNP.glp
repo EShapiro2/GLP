@@ -28,7 +28,7 @@ procedure contract_named(Constant?, Declared).
 contract_named(gsnp,
 %% GKK:1, Identity.
    [schema(establish, [],
-       [rs(guarded, [atom(identity, [])], [], [], [])]),
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
 %% GKK:2, Meeting.
     schema(meet, [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),

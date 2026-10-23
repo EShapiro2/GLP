@@ -2,13 +2,20 @@
 % Owner: Currencies (GB).  The paper, /Users/udi/Grassroots/GB/main_Grassroots_Bonds.tex, prints it in its box in Section 3.1 and cites a clause as GB:1.
 % Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none; no clause of it requires a friend.  Clauses 1, 3, 4, 5 and 6 are GC's (programs/currencies/coins/GC.txt) with a bond beside the coin where the act allows one, and clause 5's redemption of a matured bond, clause 2 and clause 7 are GB's own.
 % Defines: grassroots bond, a unit of debt that names its issuer and a maturity date and is due then; Alice-bond, a grassroots bond issued by Alice; mature, of a bond whose maturity date is at most the date of its issuer; a party's date.  Grassroots coin and Alice-coin are defined with GC; person, and knowing a person, with GKK; Alice, Bob and Carol are variables naming distinct persons, Carol the escrow agent of clause 7.
-% Last changed: 2026-10-20.  The clauses as Udi approved them with Currencies #11 (2026-10-20): the parties to a swap and to each escrow transfer know each other, a payment and a redemption are to a person the bearer knows, and a matured bond is redeemed as a coin is (clause 5; no role only reads, Udi, 2026-10-20).
-% Schemas: GB.glp beside this file, GKK's three and the eight of Appendix A written as twenty-one terms, with the numbers act schemas allow (Currencies' proposal to GSC, 2026-10-20), the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Last changed: 2026-10-23, each clause opening with its modality after its number, ■ enforced, ◆ attested, ○ undertaken, GB:1, GB:3, GB:4, GB:5 and GB:7 enforced and GB:2 and GB:6 undertaken (GB, Section 3.1 and Appendix A; GSC's paper, Section 8), and the pragmas after the clauses, which the app built from the contract follows: the first line names a tab and what it lists, each other line names a clause, then a button for each act of it a person proposes, bearing the act's name, the fields the person fills in angle brackets, a due being a day number and 0 for a coin, and, where the act needs another person's will, the question that person is asked; Date carries no line, its acts being willed by no one (Udi, 2026-10-23, to GSC #6; Coordination #8; written by Currencies #12).  2026-10-20.  The clauses as Udi approved them with Currencies #11 (2026-10-20): the parties to a swap and to each escrow transfer know each other, a payment and a redemption are to a person the bearer knows, and a matured bond is redeemed as a coin is (clause 5; no role only reads, Udi, 2026-10-20).
+% Schemas: GB.glp beside this file, GKK's three and nine of its own, the eight of Appendix A with mint written once for a coin and once for a bond, over the predicates cent(u, d), an instrument of u due at d, a coin at 0, and date(t), with the numbers act schemas allow (GSC, Section 3.2; written so by Currencies #12, 2026-10-23, in place of the twenty-one terms of 2026-10-20), the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GB: Grassroots Bonds
-1. Minting.  Alice may decide to issue Alice-coins, and Alice-bonds of a maturity later than their own date.
-2. Date.  Alice keeps their date at the current date.
-3. Swap.  Alice and Bob, who know each other, may jointly decide to swap coins and bonds they hold.
-4. Payment.  Alice may decide to pay Bob-coins they hold to Bob, whom they know.
-5. Redemption.  Alice may decide to redeem a Bob-coin, or a matured Bob-bond, they hold against any coin or bond held by Bob, whom they know.
-6. Pricing.  Alice prices their offerings in Alice-coins and accepts them in payment at those prices.
-7. Escrow.  Alice may deposit coins and bonds with Carol for Bob, on a condition the three agree; Carol and Bob may jointly decide to release them to Bob when the condition is met, and Carol and Alice may jointly decide to return them to Alice when it fails; each act is between two parties who know each other.
+1. ■ Minting.  Alice may decide to issue Alice-coins, and Alice-bonds of a maturity later than their own date.
+2. ○ Date.  Alice keeps their date at the current date.
+3. ■ Swap.  Alice and Bob, who know each other, may jointly decide to swap coins and bonds they hold.
+4. ■ Payment.  Alice may decide to pay Bob-coins they hold to Bob, whom they know.
+5. ■ Redemption.  Alice may decide to redeem a Bob-coin, or a matured Bob-bond, they hold against any coin or bond held by Bob, whom they know.
+6. ○ Pricing.  Alice prices their offerings in Alice-coins and accepts them in payment at those prices.
+7. ■ Escrow.  Alice may deposit coins and bonds with Carol for Bob, on a condition the three agree; Carol and Bob may jointly decide to release them to Bob when the condition is met, and Carol and Alice may jointly decide to return them to Alice when it fails; each act is between two parties who know each other.
+Pragmas
+Holdings: the coins and bonds Alice holds, and Alice's date.
+Minting: [Mint coin] <amount> [Mint bond] <amount> <maturity>
+Swap: [Swap] <issuer given> <due given> <amount given> <issuer wanted> <due wanted> <amount wanted> Alice asks to swap coins or bonds with you.
+Payment: [Pay] <amount>
+Redemption: [Redeem] <issuer wanted> <due wanted>
+Escrow: [Deposit] <issuer> <due> <amount> Alice asks to deposit coins or bonds with you.  [Release] <issuer> <due> <amount> Carol asks to release coins or bonds to you.  [Return] <issuer> <due> <amount> Carol asks to return coins or bonds to you.
