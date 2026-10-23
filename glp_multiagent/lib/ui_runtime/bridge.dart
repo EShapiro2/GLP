@@ -103,12 +103,53 @@ const String namedCtor = 'named';
   return (_recName(ws[0]), ws[1]);
 }
 
+/// A label a widget term carries beside its constructor, `label(S, W)`: the
+/// widget `W` drawn with `S` in place of the name of its type, the functor
+/// heading its form, the constant on its button or the item naming it in a
+/// menu; and, in a row of buttons, `label(S, C)`, the button granting the
+/// constant `C` drawn as `S` (vGLP 1126f4f, Section 6.2, "The words a
+/// platform shows": "a widget term carries a label beside each constructor
+/// of Definition Default Widget.  A construct family draws the label it is
+/// given, and the name of the type where it is given none"; programs/self.glp,
+/// the type Widget).  The compiler emits it wherever the widget declaration
+/// in force labels a constructor (`glp_runtime/lib/vglp/constructs.dart`,
+/// `_labelled`); a field of a form named by its declaration carries the name
+/// in its entry, `field(L, W)`, `L` the name in place of the type's.
+const String labelCtor = 'label';
+
+/// The label `S` and the widget, or the button's constant, `W` of [w], where
+/// it is `label(S, W)`; null for any other term.
+(String, GTerm)? labelledWidget(GTerm w) {
+  final (k, ws) = ctorArgs(w);
+  if (k != labelCtor || ws.length != 2) return null;
+  return (displayText(ws[0]), ws[1]);
+}
+
+/// [w] with the labels at its top taken off.
+GTerm unlabelled(GTerm w) {
+  var cur = w;
+  for (var l = labelledWidget(cur); l != null; l = labelledWidget(cur)) {
+    cur = l.$2;
+  }
+  return cur;
+}
+
+/// What a button of the constant [c], or of `label(S, C)`, shows and what it
+/// grants: the label and `C`, or the constant itself and [c].
+(String, GTerm) buttonOf(GTerm c) {
+  final l = labelledWidget(c);
+  if (l == null) return (displayText(c), c);
+  return (l.$1, unlabelled(l.$2));
+}
+
 /// Whether [w] is the widget of a recursive type, `rec(T, W)` or `ref(T)`,
 /// or a declared widget of one, `named(W, D)` with `D` either: a field of a
 /// form drawn by it is drawn when the person opens it.
 bool recursiveWidget(GTerm w) {
   final (k, ws) = ctorArgs(w);
-  if (k == namedCtor && ws.length == 2) return recursiveWidget(ws[1]);
+  if ((k == namedCtor || k == labelCtor) && ws.length == 2) {
+    return recursiveWidget(ws[1]);
+  }
   return (k == recCtor && ws.length == 2) || (k == refCtor && ws.length == 1);
 }
 

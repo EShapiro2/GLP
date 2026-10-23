@@ -1,6 +1,6 @@
 /// The screen of tabs of the grassroots app's construct family: the layout of the constructs of the apps of GSC's contracts, "one screen with tabs, Friends and, in GSN, Groups too, drawn from the person's state; the questions are drawn inside the tab they concern" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC).  "A question's type fixes a construct's semantic content --- what it shows, what it takes, and the answer each submission forms --- and nothing of its layout" (vGLP, Remark "Construct Families"), so the tabs are the family's layout, and no construct's content changes with them.
 ///
-/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  The tabs are Friends; where the request type offers `create(Me, N)`, the person is in a group, or a notice of a class of a group is written, Groups; in GAI's app, where the request type offers `enter(Me, R, X)` or the person is the principal of an AI agent, AI agents (GAI's paper, Figure "The GAI app": "her AI agents tab", Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (a)); and, in GC's app, where the request type offers `mint(Me)` (GC:1; `mint(p?)`, programs/currencies/coins/GC.glp), the person holds a coin, or an approval question or a notice of a class of the coins is drawn, Coins (Currencies #11 Cowork, Code_inbox.md, 2026-10-20 18:10 UTC, task 2); once drawn, Groups, AI agents and Coins stay.  Each tab holds, in order:
+/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  On a platform compiled from a contract with pragmas, GKK's, GSG's and GSN's, the tabs are the lists its view names, each named by the contract (vGLP 1126f4f, Section 5.4, "The contract's words"; `_TabScreenState._worded`).  Otherwise, for the apps whose contracts carry no pragmas yet, the tabs are Friends; where the request type offers `create(Me, N)`, the person is in a group, or a notice of a class of a group is written, Groups; in GAI's app, where the request type offers `enter(Me, R, X)` or the person is the principal of an AI agent, AI agents (GAI's paper, Figure "The GAI app": "her AI agents tab", Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (a)); and, in GC's app, where the request type offers `mint(Me)` (GC:1; `mint(p?)`, programs/currencies/coins/GC.glp), the person holds a coin, or an approval question or a notice of a class of the coins is drawn, Coins (Currencies #11 Cowork, Code_inbox.md, 2026-10-20 18:10 UTC, task 2); once drawn, Groups, AI agents and Coins stay.  Each tab holds, in order:
 ///
 ///   1. the approval questions it concerns, at its top, each drawn by its widget: an approval of a class of a group ([groupClasses]) in Groups, of a class of the coins ([coinClasses]) in Coins, and every other in Friends;
 ///   2. in Friends, every other question that is neither an approval question nor the request question, by its widget;
@@ -39,6 +39,9 @@ class HeldEnter {
 /// The tab a widget is drawn in, the chat open in Friends, and the messages the screen holds.
 class TabPlace extends InheritedWidget {
   final ScreenTab tab;
+
+  /// The predicate of the list the tab draws, where the screen's tabs are the lists the view names (named_widgets.dart, `SocialState.lists`); null otherwise.
+  final String? list;
 
   /// The friend whose chat is open in Friends; null where none is.
   final GTerm? chat;
@@ -93,6 +96,7 @@ class TabPlace extends InheritedWidget {
   const TabPlace({
     super.key,
     required this.tab,
+    this.list,
     required this.chat,
     this.me,
     required this.openChat,
@@ -119,6 +123,7 @@ class TabPlace extends InheritedWidget {
   @override
   bool updateShouldNotify(TabPlace old) =>
       old.tab != tab ||
+      old.list != list ||
       old.version != version ||
       !setEquals(old.agentsAsked, agentsAsked) ||
       (old.me == null) != (me == null) ||
@@ -129,13 +134,17 @@ class TabPlace extends InheritedWidget {
 /// The key of the tab [tab] in the tab bar.
 ValueKey<String> tabKey(ScreenTab tab) => ValueKey('tab:${tab.name}');
 
+/// The key of the tab of the list of the predicate [predicate], on the screen of a platform compiled from a contract with pragmas.
+ValueKey<String> listTabKey(String predicate) =>
+    ValueKey('tab:list:$predicate');
+
 /// The name of the declared widget of [c], where it has one.
 String? _declared(OpenConstruct c) => namedWidget(c.widget)?.$1;
 
-/// Whether [c] is an approval question, `approval(Attempt, YesNo?)`.
+/// Whether [c] is an approval question, `approval(Attempt, YesNo?)`, or, on a platform compiled from a contract with pragmas, `approval(Attempt, Ws, YesNo?)`.
 bool _isApproval(OpenConstruct c) {
   final (f, args) = ctorArgs(c.view);
-  return f == 'approval' && args.length == 2;
+  return f == 'approval' && (args.length == 2 || args.length == 3);
 }
 
 /// Whether the approval question [c] concerns a group: the class of its attempt, `approval(attempt(I, N, K, C, R), Q)`, is one of [groupClasses].
@@ -168,8 +177,8 @@ Iterable<String> _agentsNamed(OpenConstruct c) {
   };
 }
 
-/// Whether the approval question [c] is open: its answer's position marked `input(P)`.
-bool _open(OpenConstruct c) => questionAt(ctorArgs(c.view).$2[1]) != null;
+/// Whether the approval question [c] is open: its answer's position, its last, marked `input(P)`.
+bool _open(OpenConstruct c) => questionAt(ctorArgs(c.view).$2.last) != null;
 
 /// The family's layout of [constructs]: the screen of tabs, where one of them is drawn by `last_state` or `social_menu`, and null otherwise ([ScreenLayout]).
 Widget? tabbedScreen(
@@ -319,6 +328,12 @@ class _TabScreenState extends State<TabScreen> {
     }
     final output = c0?.view;
     final (_, state) = SocialState.read(output);
+    // A platform compiled from a contract with pragmas: its tabs are the
+    // lists its view names.
+    final lists = state?.lists;
+    if (lists != null && lists.isNotEmpty) {
+      return _worded(lists, c0, request, approvals, others, output);
+    }
     if (request != null) {
       final (f, xs) = ctorArgs(request.view);
       if (f == 'menu' && xs.length == 3 && pendingAt(xs[0]) == null) {
@@ -461,6 +476,84 @@ class _TabScreenState extends State<TabScreen> {
           ),
           Expanded(
             child: TabBarView(children: [for (final t in tabs) tab(t)]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The screen of a platform compiled from a contract with pragmas: a tab for each list its view names, in their order, named by the contract (vGLP 1126f4f, Section 5.4, "The contract's words": "for each list the app shows, its name and what it lists"), each holding the approval questions it concerns at its top (`wordedListOf`), the other questions in the first, and the request question drawn in the tab, or construct 0 where none is open; the chat opened in the list of `friend`.
+  Widget _worded(
+      List<({String name, String predicate})> lists,
+      OpenConstruct? c0,
+      OpenConstruct? request,
+      List<OpenConstruct> approvals,
+      List<OpenConstruct> others,
+      GTerm? output) {
+    final first = lists.first.predicate;
+    String listOf(OpenConstruct a) => wordedListOf(_classOf(a), lists) ?? first;
+    final byState = c0 != null && _declared(c0) == lastStateName;
+    Widget view(OpenConstruct c, {bool card = true}) => ConstructView(
+          key: constructKey(c.id),
+          construct: c,
+          family: widget.family,
+          output: output,
+          card: card,
+          grant: (path, raw) => widget.grant(c.id, path, raw),
+        );
+    Widget tab(String pred) => TabPlace(
+          tab: ScreenTab.friends,
+          list: pred,
+          chat: pred == 'friend' ? _chat : null,
+          me: _me,
+          openChat: (f) => setState(() => _chat = f),
+          hold: _hold,
+          release: _release,
+          destination: _destination,
+          field: _field,
+          version: _version,
+          child: ListView(
+            key: ValueKey('tab-view:list:$pred'),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              for (final a in approvals)
+                if (listOf(a) == pred) view(a),
+              if (pred == first)
+                for (final o in others) view(o),
+              if (request != null)
+                view(request, card: false)
+              else if (c0 != null && (byState || pred == first))
+                view(c0, card: !byState),
+            ],
+          ),
+        );
+    Widget label(({String name, String predicate}) l) {
+      final n = approvals
+          .where((a) => listOf(a) == l.predicate && _open(a))
+          .length;
+      return Tab(
+        key: listTabKey(l.predicate),
+        child: Badge(
+          isLabelVisible: n > 0,
+          label: Text('$n'),
+          offset: const Offset(14, -6),
+          child: Text(l.name),
+        ),
+      );
+    }
+
+    return DefaultTabController(
+      key: ValueKey('tabs:list:${lists.length}'),
+      length: lists.length,
+      child: Column(
+        children: [
+          Material(
+            color: Colors.white,
+            child: TabBar(tabs: [for (final l in lists) label(l)]),
+          ),
+          Expanded(
+            child: TabBarView(
+                children: [for (final l in lists) tab(l.predicate)]),
           ),
         ],
       ),

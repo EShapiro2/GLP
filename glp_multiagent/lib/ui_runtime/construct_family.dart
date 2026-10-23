@@ -64,7 +64,17 @@
 ///     person's form and in the program's alike, so that the widget unfolds
 ///     only as far as the person goes and every finite answer is formed by
 ///     finitely many acts; at the root of a question, or as the element of
-///     a stream or a list, `rec(T, W)` is drawn at once as `W`.
+///     a stream or a list, `rec(T, W)` is drawn at once as `W`;
+///   - a label the widget declaration gives a constructor, `label(S, W)`:
+///     `W` drawn with `S` in place of the name of its type --- its form's
+///     heading, its button's constant, its item in a menu --- and in a row
+///     of buttons `label(S, C)`, the button granting `C` drawn as `S`; a
+///     field the declaration names carries the name in its entry,
+///     `field(S, W)` (vGLP 1126f4f, Section 6.2, "The words a platform
+///     shows": "a widget term carries a label beside each constructor of
+///     Definition Default Widget.  A construct family draws the label it is
+///     given, and the name of the type where it is given none"; bridge.dart,
+///     [labelCtor]).
 ///
 /// A widget a declaration names (`T =::= W`) is drawn as `named(W, D)`, `W`
 /// a constant naming a Dart widget and `D` the default widget of `T`: "It is
@@ -290,10 +300,14 @@ class _ConstructViewState extends State<ConstructView> {
     // of named(W, D) names the form.
     final named = namedWidget(w);
     if (named != null) w = named.$2;
+    // A labelled form's placeholder names it by its label.
+    final label = labelledWidget(w)?.$1;
+    w = unlabelled(w);
     final (kind0, ws0) = ctorArgs(w);
     final (kind, ws) =
         kind0 == recCtor && ws0.length == 2 ? ctorArgs(ws0[1]) : (kind0, ws0);
-    final form = kind == 'form' && _isForm(ws) ? _name(ws[0]) : null;
+    final form =
+        kind == 'form' && _isForm(ws) ? label ?? _name(ws[0]) : null;
     return _keyed(
         'pending',
         at,
@@ -302,15 +316,18 @@ class _ConstructViewState extends State<ConstructView> {
                 color: Colors.grey.shade600, fontStyle: FontStyle.italic)));
   }
 
-  /// A position the program writes, drawn by its widget.
+  /// A position the program writes, drawn by its widget; [name], where
+  /// given, the label its widget carries, drawn in place of its type's name.
   Widget _shown(GTerm w, GTerm v, List<int> at,
-      [Map<String, GTerm> recs = const {}]) {
+      [Map<String, GTerm> recs = const {}, String? name]) {
     final u = unfoldWidget(w, recs);
     if (u == null) return _undrawable(w, at);
     final (w1, recs1) = u;
     w = w1;
     final (kind, ws) = ctorArgs(w);
     switch (kind) {
+      case labelCtor when ws.length == 2:
+        return _shown(ws[1], v, at, recs1, displayText(ws[0]));
       case namedCtor when ws.length == 2:
         return _named(w, v, at, (d) => _shown(d, v, at, recs1));
       case 'shown' when ws.isEmpty:
@@ -397,7 +414,7 @@ class _ConstructViewState extends State<ConstructView> {
         final fields = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _keyed('heading', at, _heading(f)),
+            _keyed('heading', at, _heading(name ?? f)),
             for (var i = 0; i < entries.length; i++)
               if (!entries[i].own) entry(i),
             for (var i = 0; i < entries.length; i++)
@@ -426,7 +443,7 @@ class _ConstructViewState extends State<ConstructView> {
         final (vf, vs) = _viewArgs(v);
         final alts = (ws[0] as GList).items;
         for (final a in alts) {
-          final (ak, aws) = ctorArgs(a);
+          final (ak, aws) = ctorArgs(unlabelled(a));
           if (ak == 'form' &&
               _isForm(aws) &&
               _name(aws[0]) == vf &&
@@ -488,33 +505,40 @@ class _ConstructViewState extends State<ConstructView> {
 
   // === A question ==========================================================
 
-  /// The question at path [at], drawn by its widget [w].
+  /// The question at path [at], drawn by its widget [w]; [name], where
+  /// given, the label its widget carries.
   Widget _question(GTerm w, GList p, List<int> at,
-      [Map<String, GTerm> recs = const {}]) {
+      [Map<String, GTerm> recs = const {}, String? name]) {
     final u = unfoldWidget(w, recs);
     if (u == null) return _undrawable(w, at);
     final (w1, recs1) = u;
     w = w1;
     final (kind, ws) = ctorArgs(w);
     switch (kind) {
+      case labelCtor when ws.length == 2:
+        return _question(ws[1], p, at, recs1, displayText(ws[0]));
       case namedCtor when ws.length == 2:
         return _named(
             w, questionView(p), at, (d) => _question(d, p, at, recs1));
       case 'button' when ws.length == 1:
-        return _keyed('button', at, _button(ws[0], () => widget.grant(p, ws[0])));
+        final (shows, c) = buttonOf(ws[0]);
+        return _keyed('button', at,
+            _button(name ?? shows, () => widget.grant(p, c)));
       case 'buttons' when ws.length == 1 && ws[0] is GList:
         return _keyed(
             'buttons',
             at,
             Wrap(spacing: 8, runSpacing: 4, children: [
-              for (final c in (ws[0] as GList).items)
-                _button(c, () => widget.grant(p, c)),
+              for (final (shows, c) in [
+                for (final b in (ws[0] as GList).items) buttonOf(b)
+              ])
+                _button(shows, () => widget.grant(p, c)),
             ]));
       case 'input_box' when ws.length == 1:
         // The widget of the element type, kept open: each submission grants
         // one element at the stream's own position, and the box clears for
         // the next.
-        final (ek, _) = ctorArgs(ws[0]);
+        final (ek, _) = ctorArgs(unlabelled(ws[0]));
         if (ek == 'button' || ek == 'buttons') {
           return _keyed('input_box', at, _question(ws[0], p, at, recs1));
         }
@@ -523,7 +547,7 @@ class _ConstructViewState extends State<ConstructView> {
       case 'input_list' when ws.length == 1:
         // The same, with a button that ends the list: it grants [end], the
         // list's end (listEnd), at the list's position.
-        final (ek, _) = ctorArgs(ws[0]);
+        final (ek, _) = ctorArgs(unlabelled(ws[0]));
         return _keyed(
             'input_list',
             at,
@@ -546,11 +570,11 @@ class _ConstructViewState extends State<ConstructView> {
               ],
             ));
       case 'text' || 'number' || 'peer' when ws.isEmpty:
-        return _submitting(w, p, at, keepOpen: false, recs: recs1);
+        return _submitting(w, p, at, keepOpen: false, recs: recs1, name: name);
       case 'form' when _isForm(ws):
-        return _submitting(w, p, at, keepOpen: false, recs: recs1);
+        return _submitting(w, p, at, keepOpen: false, recs: recs1, name: name);
       case 'menu' when ws.length == 1 && ws[0] is GList:
-        return _submitting(w, p, at, keepOpen: false, recs: recs1);
+        return _submitting(w, p, at, keepOpen: false, recs: recs1, name: name);
     }
     return _undrawable(w, at);
   }
@@ -558,12 +582,14 @@ class _ConstructViewState extends State<ConstructView> {
   /// A question answered by a submission: its editor and a button granting
   /// what the editor holds, enabled once it holds an input of the widget.
   Widget _submitting(GTerm w, GList p, List<int> at,
-      {required bool keepOpen, Map<String, GTerm> recs = const {}}) {
+      {required bool keepOpen,
+      Map<String, GTerm> recs = const {},
+      String? name}) {
     final value = _value(w, at, recs);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _editor(w, at, null, recs),
+        _editor(w, at, null, recs, name),
         const SizedBox(height: 6),
         Align(
           alignment: Alignment.centerRight,
@@ -585,9 +611,11 @@ class _ConstructViewState extends State<ConstructView> {
   // === Editors: the person's input before it is submitted ==================
 
   /// The editor of widget [w] at position [at], labelled [label] where it
-  /// is a field of a form, by the name of the field's declared type.
+  /// is a field of a form, by the name its declaration gives the field or
+  /// else the name of the field's declared type; [name], where given, the
+  /// label the widget carries, drawn in place of its type's name.
   Widget _editor(GTerm w, List<int> at, String? label,
-      [Map<String, GTerm> recs = const {}]) {
+      [Map<String, GTerm> recs = const {}, String? name]) {
     final u = unfoldWidget(w, recs);
     if (u == null) return _undrawable(w, at);
     final (w1, recs1) = u;
@@ -595,6 +623,8 @@ class _ConstructViewState extends State<ConstructView> {
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
+      case labelCtor when ws.length == 2:
+        return _editor(ws[1], at, label, recs1, displayText(ws[0]));
       case namedCtor when ws.length == 2:
         // A declared widget inside a form the person writes: a named widget
         // draws a question or a value, and no field of a form, so the field
@@ -622,16 +652,18 @@ class _ConstructViewState extends State<ConstructView> {
             ));
       case 'button' when ws.length == 1:
         return _keyed('button', at,
-            _labelled(label, Chip(label: Text(displayText(ws[0])))));
+            _labelled(label, Chip(label: Text(name ?? buttonOf(ws[0]).$1))));
       case 'buttons' when ws.length == 1 && ws[0] is GList:
         final chosen = _chosen[k];
         return _keyed(
             'buttons',
             at,
             _labelled(label, Wrap(spacing: 8, children: [
-              for (final c in (ws[0] as GList).items)
+              for (final (shows, c) in [
+                for (final b in (ws[0] as GList).items) buttonOf(b)
+              ])
                 ChoiceChip(
-                  label: Text(displayText(c)),
+                  label: Text(shows),
                   selected: chosen != null && formatTerm(chosen) == formatTerm(c),
                   onSelected: (_) => setState(() => _chosen[k] = c),
                 ),
@@ -650,7 +682,7 @@ class _ConstructViewState extends State<ConstructView> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _keyed('heading', at, _heading(_name(ws[0]))),
+                    _keyed('heading', at, _heading(name ?? _name(ws[0]))),
                     for (var i = 0; i < entries.length; i++)
                       if (!entries[i].own)
                         Padding(
@@ -686,7 +718,7 @@ class _ConstructViewState extends State<ConstructView> {
                     ),
                 ]),
                 if (chosen != null &&
-                    (ctorArgs(alts[chosen]).$1 == 'form' ||
+                    (ctorArgs(unlabelled(alts[chosen])).$1 == 'form' ||
                         recursiveWidget(alts[chosen])))
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -708,6 +740,8 @@ class _ConstructViewState extends State<ConstructView> {
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
+      case labelCtor when ws.length == 2:
+        return _value(ws[1], at, recs1);
       case namedCtor when ws.length == 2:
         return _value(namedWidget(w)!.$2, at, recs1);
       case 'text' when ws.isEmpty:
@@ -722,7 +756,7 @@ class _ConstructViewState extends State<ConstructView> {
         final s = _text(k).text.trim();
         return _identifier.hasMatch(s) ? GAtom(s) : null;
       case 'button' when ws.length == 1:
-        return ws[0];
+        return buttonOf(ws[0]).$2;
       case 'buttons' when ws.length == 1:
         return _chosen[k];
       case 'form' when _isForm(ws):
@@ -780,9 +814,10 @@ class _ConstructViewState extends State<ConstructView> {
 
   // === Pieces ==============================================================
 
-  Widget _button(GTerm c, VoidCallback onPressed) => ElevatedButton(
+  /// A button showing [shows]: its constant, or the label it carries.
+  Widget _button(String shows, VoidCallback onPressed) => ElevatedButton(
         onPressed: onPressed,
-        child: Text(displayText(c)),
+        child: Text(shows),
       );
 
   /// A field of a recursive type the person has not opened, at [at]: its
@@ -904,16 +939,20 @@ class _ConstructViewState extends State<ConstructView> {
   /// (Remark "Construct Families"; vGLP #6 Cowork, 2026-10-11 12:55 UTC,
   /// item 3, Q3); or its button's constant.
   static String _alternativeLabel(List<GTerm> alts, int i) {
+    // A labelled alternative is called by its label (vGLP 1126f4f, Section
+    // 6.2: "A construct family draws the label it is given").
+    final l = labelledWidget(alts[i]);
+    if (l != null) return l.$1;
     final (k, ws) = ctorArgs(alts[i]);
     if (k == 'form' && _isForm(ws)) {
       final f = _name(ws[0]);
       final shared = alts.where((a) {
-        final (ak, aws) = ctorArgs(a);
+        final (ak, aws) = ctorArgs(unlabelled(a));
         return ak == 'form' && _isForm(aws) && _name(aws[0]) == f;
       }).length;
       return shared > 1 ? '$f/${_entries(ws).length}' : f;
     }
-    if (k == 'button' && ws.length == 1) return displayText(ws[0]);
+    if (k == 'button' && ws.length == 1) return buttonOf(ws[0]).$1;
     if (recursiveWidget(alts[i])) return displayText(ws[0]);
     return formatTerm(alts[i]);
   }
