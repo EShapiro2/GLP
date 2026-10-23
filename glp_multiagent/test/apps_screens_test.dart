@@ -1059,7 +1059,7 @@ void appsScreens(Screens screens) {
     expect(alice.atoms,
         containsAll(['member($friendsGroup)', 'listed(alice, $friends)']));
 
-    // Joining (GSN:3): in the group, Join, GSN's "[Join]", offers her friends not in it; she taps Bob.  GSN's close and post_own, the leader's leaving and posting, no button of its pragmas names, so the compiler gives them no label and the leader's group draws them by their names, close and post_own (programs/vglp/cva/compiler/README.md).
+    // Joining (GSN:3): in the group, Join, GSN's "[Join]", offers her friends not in it; she taps Bob.
     await run.tap(alice, run.groupControl(alice, 'join:', ':bob'));
 
     // (b) Bob's Groups tab, badged: GSN's question "Alice asks you to join their group.", the group's name, friends, under it, and yes and no at its top.
@@ -1117,6 +1117,39 @@ void appsScreens(Screens screens) {
         findsOneWidget);
     run.plain(bob);
     await run.shoot(bob, 'gsn-c-bob-group.png');
+
+    // The leader's acts on the group, a button for each guarded act of a clause (GSN's pragmas at GLP dfc8f5eb): Alice types Welcome into the field text and taps Post own, GSN's "[Post own] <text>", which proposes post_own(alice, x, n), her own message (GSN:5); her agent delivers it to Bob, unasked.
+    await run.list(alice, 'member');
+    await run.type(alice, run.groupControl(alice, 'post-field:'), 'Welcome');
+    expect(
+        find.descendant(
+            of: run.groupControl(alice, 'post:'), matching: find.text('Post own')),
+        findsOneWidget);
+    await run.tap(alice, run.groupControl(alice, 'post:'));
+    expect(bob.questions('approval'), isEmpty);
+    const welcome = "speech(utterance('Welcome'), alice)";
+    expect(alice.atoms, contains('posted($welcome, $friends)'));
+    expect(bob.atoms, contains('received_in($welcome, alice, $friends)'));
+
+    // (d) Alice's view of the group she leads: its members, Bob's message and hers, the field text with Post own, and Close, GSN's "[Close]".
+    await run.top(alice);
+    final ga = run.groupControl(alice, 'group:');
+    final inHers = [
+      for (final t in run.tester.widgetList<Text>(
+          find.descendant(of: ga, matching: find.byType(Text))))
+        if (t.data != null) t.data!,
+    ];
+    expect(inHers, containsAllInOrder(['friends', 'Alice', 'Bob, Alice']));
+    expect(inHers, containsAll(['Hi all', 'Welcome', 'Post own', 'Close']));
+    run.plain(alice);
+    await run.shoot(alice, 'gsn-d-alice-group.png');
+
+    // Alice closes the group (GSN:4: "when the leader leaves, the group ends"): Close proposes close(alice, n), its listed role every member she lists; Bob's machine votes unasked, and the group ends at both.
+    await run.tap(alice, run.groupControl(alice, 'close:'));
+    expect(bob.questions('approval'), isEmpty);
+    expect(alice.atoms, isNot(contains('member($friendsGroup)')));
+    expect(bob.atoms, isNot(contains('member($friendsGroup)')));
+    expect(alice.atoms, contains('closed($friends)'));
 
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
