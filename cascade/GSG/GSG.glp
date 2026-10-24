@@ -36,7 +36,7 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 procedure contract_named(Constant?, Declared).
 contract_named(gsg,
    [schema(establish, [],
-       [rs(guarded, [atom(identity, [])], [], [], [])]),
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
     schema(meet, [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
