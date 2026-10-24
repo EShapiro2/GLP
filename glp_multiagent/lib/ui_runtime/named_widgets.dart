@@ -1168,6 +1168,20 @@ class ActInfo {
         .holds(atoms, {this.me: me});
   }
 
+  /// Whether each person the form of the act names beside its proposer, but one a field names by key or a held atom fills, can be picked from the viewer's rows: the act requires, at the proposer's role, an atom naming that place, and the viewer's state [atoms] holds some atom of that predicate (vGLP 5e130c3, Section 6.2, "The words a platform shows": "for a form, only at a guarding role where the act requires an atom naming each other role the form names, and the viewer holds some atom of each such predicate, so that each place can be picked from the viewer's rows").
+  bool pickable(List<GTerm> atoms) {
+    final hp = heldPlaces.difference({...persons, ...itemPlaces, ...keys});
+    for (final k in persons) {
+      if (k == me || keys.contains(k) || hp.contains(k)) continue;
+      final ok = conds.any((c) =>
+          !c.forbids &&
+          c.args.contains(k) &&
+          atoms.any((a) => ctorArgs(a).$1 == c.pred));
+      if (!ok) return false;
+    }
+    return true;
+  }
+
   /// Whether the act requires or deletes, at the proposer's role, an atom of [pred] naming a place of [places] (vGLP feda043, Section 6.2: "beside a row of a tab only where the act requires or deletes, at the viewer's role, the atom of that tab's predicate naming the row's item").
   bool requiresOf(String pred, Set<int> places) => conds.any((c) =>
       !c.forbids &&
@@ -2227,12 +2241,18 @@ class _SocialTabState extends State<SocialTab> {
       if (!onThis(f)) continue;
       final all = o.allActs[k] ?? [first];
       // Drawn only where the viewer's state meets the act's own precondition at some guarding role (vGLP 897d1ce, Section 6.2).
-      final cands = [for (final a in all) if (a.ownHolds(s.atoms, me)) a];
-      if (cands.isEmpty) continue;
+      final owns = [for (final a in all) if (a.ownHolds(s.atoms, me)) a];
+      if (owns.isEmpty) continue;
       if (first.keys.isNotEmpty && n == 2) {
         out.add(_keyForm(context, s, ask, o, k, first));
         continue;
       }
+      // A form only at a guarding role whose places the viewer can pick from their rows (vGLP 5e130c3, Section 6.2); an act that names none is not a form.
+      final cands = [
+        for (final a in owns)
+          if (a.namedCount(o.kinds[k] ?? const []) == 0 || a.pickable(s.atoms)) a
+      ];
+      if (cands.isEmpty) continue;
       final others = {for (var i = 1; i <= n; i++) i};
       final pick = cands
               .where((a) => a.requiresOf(pred, {...others}..remove(a.me)))
