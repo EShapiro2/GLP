@@ -282,6 +282,15 @@ class GlpRuntime {
   /// Get the module VALUE a goal runs (its ModuleTerm), or null if unset.
   Object? getGoalModule(GoalId g) => _goalModules[g];
 
+  /// The root self.glp's declared type-identity table (TGLP, Implementation
+  /// Notes, "The tables"), keyed as the root's compiled code carries each
+  /// procedure, `:p/n`: the table of the caller's scope for a goal that runs
+  /// no module, one posted at the root with no program loaded, whose scope is
+  /// the root's.  `find_type` reads it there (module_kernels.dart).  Built on
+  /// first use by the engine that set it; null where none did.  Untyped, as
+  /// [ModuleTerm.declaredTypes] is.
+  Object? Function()? rootDeclaredTypes;
+
   void _enqueueAll(List<GoalRef> acts) {
     for (final a in acts) {
       enqueueReactivatedGoal(a);

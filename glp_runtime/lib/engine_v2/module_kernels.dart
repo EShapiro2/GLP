@@ -268,9 +268,7 @@ BodyKernelResult findTypeKernel(GlpRuntime rt, List<Object?> args) {
   }
   final key = '$name/$arity';
 
-  final goalId = rt.currentGoalId;
-  final module = goalId == null ? null : rt.getGoalModule(goalId);
-  final tables = module is ModuleTerm ? module.declaredTypes : null;
+  final tables = _callerTables(rt);
   if (tables is! TypeIdentityTables) {
     print('[ABORT] _find_type/2: the calling goal\'s module carries no '
         'declared table, so $key is not declared in the caller\'s scope');
@@ -288,6 +286,21 @@ BodyKernelResult findTypeKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
   return _bind(rt, args[1], ConstTerm(identity));
+}
+
+/// The declared table of the caller's scope (TGLP, Implementation Notes,
+/// "The tables"): the module the calling goal runs carries it; a goal that
+/// runs no module, one posted at the root with no program loaded, is in the
+/// root's scope, and its table is the root's ([GlpRuntime.rootDeclaredTypes]).
+/// "find_type assigns the type identity of a declaration in the caller's
+/// scope" (TGLP modules.tex, "Dynamic Activation").  Until 2026-10-24 such a
+/// goal had no table, and find_type(now/1, T) at the prompt with no program
+/// loaded erred.
+Object? _callerTables(GlpRuntime rt) {
+  final goalId = rt.currentGoalId;
+  final module = goalId == null ? null : rt.getGoalModule(goalId);
+  if (module is ModuleTerm) return module.declaredTypes;
+  return rt.rootDeclaredTypes?.call();
 }
 
 /// A procedure reference `P/N` as its key `p/n`, or null where [ref] is none.
@@ -359,9 +372,7 @@ BodyKernelResult findTypeOpaqueKernel(GlpRuntime rt, List<Object?> args) {
         'identities (ground strings), got ${_deref(rt, args[1])}');
     return BodyKernelResult.abort;
   }
-  final goalId = rt.currentGoalId;
-  final module = goalId == null ? null : rt.getGoalModule(goalId);
-  final tables = module is ModuleTerm ? module.declaredTypes : null;
+  final tables = _callerTables(rt);
   if (tables is! TypeIdentityTables) {
     print('[ABORT] _find_type/3: the calling goal\'s module carries no '
         'declared table, so $key is not declared in the caller\'s scope');
