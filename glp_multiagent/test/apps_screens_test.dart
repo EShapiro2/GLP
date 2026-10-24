@@ -427,8 +427,8 @@ class _Run {
       GList(state.known),
       GList(state.pending),
       GList([
-        for (final l in state.lists ?? const <({String name, String predicate})>[])
-          GStruct('tab', [GString(l.name), GAtom(l.predicate)]),
+        for (final l in state.lists ?? const <({String name, String predicate, bool counted})>[])
+          GStruct('tab', [GString(l.name), GAtom(l.predicate), if (l.counted) GAtom('counted')]),
       ]),
     ]);
   }
