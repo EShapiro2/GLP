@@ -121,7 +121,7 @@ const List<String> _notShown = [
   'meet(',
   'introduce(',
   'identity',
-  'received',
+  'received(',
   'member(',
   'listed',
   'item(',
@@ -1276,7 +1276,7 @@ void appsScreens(Screens screens) {
     expect(eve.questions('approval'), isEmpty);
     expect(eve.atoms, contains('item($flood)'));
 
-    // Eve's Items tab: the item's row, its text and its author, Dan (vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9: "an item's row its author and the agents that forwarded it").
+    // Eve's Items tab: the item's row, its text and its author, Dan (vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9: "an item's row its author and the agents that forwarded it"), and after them the buttons of the acts that name an item, Enter, Forward, Post own and Post forward, each drawn beside each item the view lists (vGLP 932c710, Section 6.2).
     await run.list(eve, 'item');
     await run.top(eve);
     final row = run.control(eve, 'row:$flood');
@@ -1286,7 +1286,7 @@ void appsScreens(Screens screens) {
           for (final t in run.tester.widgetList<Text>(
               find.descendant(of: row, matching: find.byType(Text))))
             if (t.data != null && t.data!.length > 1) t.data!,
-        ],
+        ].take(2),
         ['Flood on Main Street', 'Dan']);
     run.plain(eve);
 
@@ -1321,11 +1321,11 @@ void appsScreens(Screens screens) {
     run.plain(bob);
     await run.shoot(bob, 'gsnp-a-bob-chat.png');
 
-    // (b) Bob forwards it to Fay, his friend: Forward beside the item, Fay picked, the warranty above the button.
+    // (b) Bob forwards it to Fay, his friend: Forward beside the item, Fay picked, the warranty above the button.  The persons he may pick are drawn under the name of their place's type, Peer, no pragma naming a field for a person the act names beside the proposer that the view lists (vGLP, Section 6.2: "a construct family draws the label it is given, and the name of the type where it is given none").
     await run.tap(bob, run.control(bob, 'act:forward:$byCarol'));
     await run.tap(bob, run.control(bob, 'pick:forward:$byCarol:2:fay'));
     expect(run.on(bob, find.text('You warrant that you know personally the agent you received this from.')), findsOneWidget);
-    run.plain(bob);
+    run.plain(bob, allow: const {'Peer'});
     await run.shoot(bob, 'gsnp-b-bob-forward.png');
     await run.tap(bob, run.control(bob, 'send:forward:$byCarol'));
     final byBob = 'speech($byCarol, bob)';
@@ -1399,7 +1399,8 @@ void appsScreens(Screens screens) {
       await run.tap(alice, run.control(alice, 'act:$f:alf'));
       await run.tap(alice, run.control(alice, 'pick:$f:alf:2:bob'));
       if (shot.isNotEmpty) {
-        run.plain(alice);
+        // The persons Alice may pick are drawn under the name of their place's type, Peer (vGLP, Section 6.2: "the name of the type where it is given none").
+        run.plain(alice, allow: const {'Peer'});
         await run.shoot(alice, shot);
       }
       await run.tap(alice, run.control(alice, 'send:$f:alf'));
