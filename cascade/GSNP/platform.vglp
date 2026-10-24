@@ -869,7 +869,7 @@ Net       ::= msg(Peer, Content).
 Asking    ::= Attempt ; hello(Peer, Proposal).
 %% The approval question of a contract with pragmas carries the sentence the contract puts to the guarding role, which the platform writes, its roles and variables filled in from the binding of the attempt it asks about, each word text(S), as the contract writes it, or person(P), a person the sentence names (vGLP, Section 6.2, "The words a platform shows": "A sentence put to a guarding role names the roles and the variables of the attempt, so the platform writes it into the approval question, and its widget draws it as it draws any output of the program"; Section 5.4, "The contract's words").
 Approval  ::= approval(Asking, List(Word), YesNo?).
-Word      ::= text(String) ; person(Peer).
+Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
 %% The question of a guarding role beyond the proposer's, q(R, Words), R the person in that role (sentence_of; GSC, Section 2, its first paragraph).
 RoleAsk   ::= q(Peer, List(Word)).
 Menu      ::= menu(Key, List(Key), Request?).
@@ -924,9 +924,9 @@ GAtom     ::= g(Constant, Vals).
 GAtoms    ::= [] ; [GAtom | GAtoms].
 %% The program's output to its person is of the type of the views, view(S, K, A): S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it; K the persons the agent knows, in the order of identifiers; and A the approvals its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part, a term of Proposal, in which no Stream or List occurs (Definition "Effective Local Specification"), so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined, or unable(Lacks, Has), the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part"; "a notice refused(N, q, d): N the request name of the part of the refused attempt, q its refuser and d the reason"; "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it"; "Act schemas"; Definition "Widget Declaration").  A contract with no guarded part has no approvals, and its A is always empty: Approved is then Constant, of which it holds none.
 Approved  ::= Proposal.
-%% The view of a contract with pragmas carries also the lists its app shows, each tab(Name, P), its name and the predicate P whose atoms in the machine state it lists, as the contract's pragmas give them (vGLP, Section 5.4, "The contract's words": "a tab's name and what it lists into the view the agent writes"), view(S, K, A, Ts).
+%% The view of a contract with pragmas carries also the lists its app shows, each tab(Name, P), its name and the predicate P whose atoms in the machine state it lists, as the contract's pragmas give them, or tab(Name, P, counted) where the contract adds or deletes P with a multiplicity, its rows showing their counts (vGLP 110caf4, Section 5.4) (vGLP, Section 5.4, "The contract's words": "a tab's name and what it lists into the view the agent writes"), view(S, K, A, Ts).
 Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
-Tab       ::= tab(String, Constant).
+Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Shown     ::= shown(Atom) ; unshown.
 Stream(Output) =::= last_state.
 Bind      ::= b(Var, Val).
@@ -2147,24 +2147,24 @@ guard_cands1([ap(I, F)|Is], V, Cs?) :- ground(I?), ground(F?), ground(V?) |
     v_ms(V?, S),
     info_parts(I?, Pts),
     guarding_parts(Pts?, Id?, Ps0),
-    parts_of(F?, Ps0?, Ps),
+    approval_parts(F?, I?, Ps0?, Ps),
     may_propose(I?, V?, B),
     guard_parts_cands(B?, Ps?, I?, Id?, S?, Cs1),
     guard_cands1(Is?, V?, Cs2),
     app(Cs1?, Cs2?, Cs).
-%% The parts an approval proposes: of a request, those whose request name is that of the part the request named, its schema-binding (request_name); of an answer yes, all.
-procedure parts_of(PartsOf?, Classes?, Classes).
-parts_of(any_part, Ps, Ps?).
-parts_of(by_name(C), Ps, Ps1?) :- ground(C?) |
-    request_name(C?, N),
-    parts_named(Ps?, N?, Ps1).
-procedure parts_named(Classes?, PName?, Classes).
-parts_named([], _, []).
-parts_named([P|Ps], N, R?) :- ground(P?), ground(N?) |
-    request_name(P?, M),
-    same(M?, N?, B),
-    parts_named(Ps?, N?, R1),
-    keep_class(B?, P?, R1?, R).
+%% The parts an approval proposes: of a request, the part its schema-binding C determines, proposed by that schema-binding, where it is a part the agent guards; of an answer yes, all.  "A request names a schema-binding, and the part is the one that schema-binding determines, so where two schema-bindings determine one part a request of either proposes it, and where their guard sets differ they are two parts" (vGLP #20, Code_inbox.md, 2026-10-24 10:45 UTC; vGLP 110caf4, Section 5.4): the part is found by same_part, and not by the name of the first schema-binding that determines it, so that GB's release_c, one schema with deposit_c, is proposed as release_c.
+procedure approval_parts(PartsOf?, Info?, Classes?, Classes).
+approval_parts(any_part, _, Ps, Ps?).
+approval_parts(by_name(C), I, Ps, Ps1?) :- ground(C?), ground(I?) |
+    parts_named(Ps?, I?, C?, Ps1).
+procedure parts_named(Classes?, Info?, Class?, Classes).
+parts_named([], _, _, []).
+parts_named([P|Ps], I, C, R?) :- ground(P?), ground(I?), ground(C?) |
+    same_part(I?, C?, P?, B),
+    named_part(B?, Ps?, I?, C?, R).
+procedure named_part(YesNo?, Classes?, Info?, Class?, Classes).
+named_part(yes, _, _, C, [C?]).
+named_part(no, Ps, I, C, R?) :- parts_named(Ps?, I?, C?, R).
 procedure guard_parts_cands(YesNo?, Classes?, Info?, Peer?, GAtoms?, Cands).
 guard_parts_cands(no, _, _, _, _, []).
 guard_parts_cands(yes, Ps, I, Id, S, Cs?) :- ground(Ps?), ground(I?), ground(S?) |
@@ -5020,11 +5020,12 @@ procedure vars_bound1(Found?, Vars?, Binding?, YesNo).
 vars_bound1(free, _, _, no).
 vars_bound1(found(_), Vs, B, R?) :- vars_bound(Vs?, B?, R).
 
-%% The bindings extending B under which every atom of As is one of Gs.
+%% The bindings extending B under which every atom of As is one of Gs, each once: the copies of an atom in a state match it in one way, so equal bindings from equal atoms are one (vGLP, Section 5.4, "Act schemas as local specifications": "with the local variables bound by them in one way").
 procedure match_all(SAtoms?, GAtoms?, Binding?, Bindings).
 match_all([], _, B, [B?]).
 match_all([A|As], Gs, B, R?) :- ground(Gs?) |
-    match_into(A?, Gs?, B?, Bs),
+    match_into(A?, Gs?, B?, Bs0),
+    dedup(Bs0?, Bs),
     match_all_each(Bs?, As?, Gs?, R).
 procedure match_all_each(Bindings?, SAtoms?, GAtoms?, Bindings).
 match_all_each([], _, _, []).
