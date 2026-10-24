@@ -117,11 +117,21 @@ numeric_locality1(two_roles, S, ['%% it is not a local specification (vGLP, Sect
         '%% names the local variables of two roles or more, and it names those of one:', T?]) :-
     ground(S?) | T =.. ['%% the schema', S?].
 
-%% The variables a constraint gives finitely many values once those of Bd are bound: succ(X, Y), Y = X + 1, gives Y one value once X is bound, and X one once Y is; gt and le give a variable no finite set of values; or(C1, C2) gives a variable finitely many values where each of C1 and C2 does (vGLP 613ee8d, Section 5.4: "or the constraint gives the variable finitely many values once those are bound").  A number is bound.
+%% The variables a constraint gives finitely many values once those of Bd are bound: succ(X, Y), Y = X + 1, gives Y one value once X is bound, and X one once Y is; eq(X, Y), an equality of two linear expressions (GSC bcc1891, Definition "Schema with values"), gives its one numeric variable not in Bd one value, where it has one and its coefficient in X - Y is not 0; le, lt, ge and gt give a variable no finite set of values; and(C1, C2) gives a variable finitely many values where C1 or C2 does; or(C1, C2) where each of C1 and C2 does (vGLP 613ee8d, Section 5.4: "or the constraint gives the variable finitely many values once those are bound").  A number is bound.
 procedure con_det(Constraint?, Args?, Args).
 con_det(true, _, []).
-con_det(gt(_, _), _, []).
+con_det(and(C1, C2), Bd, D?) :- ground(Bd?) |
+    con_det(C1?, Bd?, D1),
+    con_det(C2?, Bd?, D2),
+    app(D1?, D2?, D).
+con_det(eq(X, Y), Bd, D?) :- ground(Bd?), ground(X?), ground(Y?) |
+    exprs_args(X?, Y?, A),
+    unbound_nvars(A?, Bd?, [], U),
+    eq_det(U?, X?, Y?, D).
 con_det(le(_, _), _, []).
+con_det(lt(_, _), _, []).
+con_det(ge(_, _), _, []).
+con_det(gt(_, _), _, []).
 con_det(succ(X, Y), Bd, D?) :- ground(Bd?), ground(X?), ground(Y?) |
     bound_arg(X?, Bd?, BX),
     bound_arg(Y?, Bd?, BY),
@@ -130,6 +140,72 @@ con_det(or(C1, C2), Bd, D?) :- ground(Bd?) |
     con_det(C1?, Bd?, D1),
     con_det(C2?, Bd?, D2),
     args_both(D1?, D2?, D).
+%% The numeric variables among the arguments that are not in Bd, each once, added to U0.
+procedure unbound_nvars(Args?, Args?, Args?, Args).
+unbound_nvars([], _, U0, U0?).
+unbound_nvars([A|As], Bd, U0, U?) :- ground(A?), ground(Bd?), ground(U0?) |
+    is_nvar(A?, V),
+    bound_arg(A?, Bd?, B),
+    mem(A?, U0?, In),
+    unbound_add(V?, B?, In?, A?, U0?, U1),
+    unbound_nvars(As?, Bd?, U1?, U).
+procedure unbound_add(YesNo?, YesNo?, YesNo?, Arg?, Args?, Args).
+unbound_add(yes, no, no, A, U0, [A?|U0?]).
+unbound_add(_, _, _, _, U0, U0?) :- otherwise | true.
+procedure eq_det(Args?, Expr?, Expr?, Args).
+eq_det([V], X, Y, D?) :- ground(V?), ground(X?), ground(Y?) |
+    lin_coef(minus(X?, Y?), V?, K),
+    nonzero_det(K?, V?, D).
+eq_det(_, _, _, []) :- otherwise | true.
+procedure nonzero_det(Number?, Arg?, Args).
+nonzero_det(K, V, [V?]) :- K? =\= 0 | true.
+nonzero_det(_, _, []) :- otherwise | true.
+%% The coefficient of the numeric variable V in a linear expression: in a product, one factor has no numeric variable, the checker refusing a product of two that each carry one (GSC's constraint_not_linear), and its value scales the other's coefficient.
+procedure lin_coef(Expr?, Arg?, Number).
+lin_coef(plus(A, B), V, K?) :- ground(A?), ground(B?), ground(V?) |
+    lin_coef(A?, V?, K1),
+    lin_coef(B?, V?, K2),
+    K := K1? + K2?.
+lin_coef(minus(A, B), V, K?) :- ground(A?), ground(B?), ground(V?) |
+    lin_coef(A?, V?, K1),
+    lin_coef(B?, V?, K2),
+    K := K1? - K2?.
+lin_coef(mul(A, B), V, K?) :- ground(A?), ground(B?), ground(V?) |
+    expr_args(A?, AA),
+    has_nvar(AA?, HA),
+    mul_coef(HA?, A?, B?, V?, K).
+lin_coef(num(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K).
+lin_coef(role(_), _, 0).
+lin_coef(pvar(_), _, 0).
+lin_coef(svar(_), _, 0).
+lin_coef(nterm(_), _, 0).
+lin_coef(sgn(_, _), _, 0).
+procedure same_arg_coef(Arg?, Arg?, Number).
+same_arg_coef(A, V, 1) :- A? =?= V? | true.
+same_arg_coef(_, _, 0) :- otherwise | true.
+procedure mul_coef(YesNo?, Expr?, Expr?, Arg?, Number).
+mul_coef(no, A, B, V, K?) :- ground(A?), ground(B?), ground(V?) |
+    const_val(A?, CA),
+    lin_coef(B?, V?, KB),
+    K := CA? * KB?.
+mul_coef(yes, A, B, V, K?) :- ground(A?), ground(B?), ground(V?) |
+    const_val(B?, CB),
+    lin_coef(A?, V?, KA),
+    K := KA? * CB?.
+%% Whether some argument is a numeric variable.
+procedure has_nvar(Args?, YesNo).
+has_nvar([], no).
+has_nvar([A|As], H?) :- ground(A?) |
+    is_nvar(A?, V),
+    has_nvar(As?, H1),
+    or(V?, H1?, H).
+%% The value of an expression of numbers alone.
+procedure const_val(Expr?, Number).
+const_val(plus(A, B), K?) :- ground(A?), ground(B?) | const_val(A?, K1), const_val(B?, K2), K := K1? + K2?.
+const_val(minus(A, B), K?) :- ground(A?), ground(B?) | const_val(A?, K1), const_val(B?, K2), K := K1? - K2?.
+const_val(mul(A, B), K?) :- ground(A?), ground(B?) | const_val(A?, K1), const_val(B?, K2), K := K1? * K2?.
+const_val(num(X), K?) :- number(X?) | K := X?.
+const_val(_, 0) :- otherwise | true.
 procedure bound_arg(Arg?, Args?, YesNo).
 bound_arg(num(X), _, yes) :- number(X?) | true.
 bound_arg(A, Bd, B?) :- otherwise | mem(A?, Bd?, B).
@@ -272,16 +348,17 @@ effective_one(no, Nm, Rs, Con, L?) :- ground(Rs?), ground(Nm?), ground(Con?) |
     determined(Con?, Fa?, Bd),
     all_member(Need?, Bd?, Ok),
     effective_one1(Ok?, Nm?, L).
-%% The arguments the first role names, Fa, and the variables the constraint gives finitely many values once those are bound, taken twice, so that one it determines from another it determines is taken (con_det).
+%% The arguments the first role names, Fa, and the variables the constraint gives finitely many values once those are bound, taken again with each variable it gives until it gives none more, so that one it determines from another it determines is taken (con_det).
 procedure determined(Constraint?, Args?, Args).
 determined(Con, Fa, Bd?) :- ground(Con?), ground(Fa?) |
-    con_det(Con?, Fa?, D1),
-    app(Fa?, D1?, Bd1),
-    determined1(Con?, Bd1?, Bd).
-procedure determined1(Constraint?, Args?, Args).
-determined1(Con, Bd1, Bd?) :- ground(Con?), ground(Bd1?) |
-    con_det(Con?, Bd1?, D2),
-    app(Bd1?, D2?, Bd).
+    con_det(Con?, Fa?, D),
+    args_minus(D?, Fa?, N),
+    det_more(N?, Con?, Fa?, Bd).
+procedure det_more(Args?, Constraint?, Args?, Args).
+det_more([], _, Fa, Fa?).
+det_more([A|As], Con, Fa, Bd?) :- ground(Fa?) |
+    app(Fa?, [A?|As?], Fa1),
+    determined(Con?, Fa1?, Bd).
 procedure effective_one1(YesNo?, Constant?, Stream(_)).
 effective_one1(yes, _, []).
 effective_one1(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): an unguarded',

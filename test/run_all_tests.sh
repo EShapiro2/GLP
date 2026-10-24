@@ -3534,7 +3534,8 @@ compile(free_x, [schema(s, [pvar(x)], [rs(guarded, [atom(x1, [])], [], [atom(r, 
 compile(uneff, [schema(u, [], [rs(unguarded, [atom(x, [role(2)])], [], [], []), rs(unguarded, [atom(y, [role(1)])], [], [], [])])], syntactically_grassroots).
 compile(gossip, [], not_grassroots([untraceable([p])])).
 compile(nointro, [], not_grassroots([no_introductory_act])).
-compile(unsettled_numbers, [], unsettled([unsettled_introduction(meet)])).
+compile(jointly, [], not_grassroots([obstructed_jointly(meet)])).
+compile(nonlinear, [], malformed([constraint_not_linear(s, mul(num(x), num(y)))])).
 compile(one_req, [schema(s1, [], [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [], [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])])], syntactically_grassroots).
 compile(two_gsets, [schema(s1, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(unguarded, [atom(z, [])], [], [], [])]), schema(s2, [], [rs(unguarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots).
 compile(unguarded_reqs, [schema(u1, [], [rs(unguarded, [atom(x, [role(2)])], [], [atom(r, [role(2)])], []), rs(unguarded, [atom(y, [role(1)])], [], [atom(w, [role(1)])], [])]), schema(u2, [], [rs(unguarded, [atom(y, [role(2)])], [], [atom(w, [role(2)])], []), rs(unguarded, [atom(x, [role(1)])], [], [], [])])], syntactically_grassroots).
@@ -3577,6 +3578,11 @@ compile(one_local, [nschema(s, [num(d), num(t)], le(num(d), num(t)), [rs(guarded
 compile(gt_open, [nschema(u, [num(t), num(t1)], gt(num(t1), num(t)), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
 compile(succ_open, [nschema(u, [num(t), num(t1)], succ(num(t), num(t1)), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
 compile(or_open, [nschema(u, [num(t), num(t1)], or(succ(num(t), num(t1)), gt(num(t1), num(t))), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
+compile(eq_open, [nschema(u, [num(t), num(t1)], eq(num(t1), plus(num(t), num(1))), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
+compile(eq_scaled, [nschema(u, [num(t), num(t1)], eq(mul(num(2), num(t1)), num(t)), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
+compile(eq_zero, [nschema(u, [num(t), num(t1)], eq(minus(num(t1), num(t1)), num(t)), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
+compile(and_chain, [nschema(u, [num(t), num(t1), num(t2)], and(eq(num(t2), plus(num(t1), num(1))), eq(num(t1), plus(num(t), num(1)))), [rs(unguarded, [atom(level, [num(t2)]), atom(mid, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
+compile(and_lt, [nschema(u, [num(t), num(t1)], and(lt(num(t), num(6)), gt(num(t1), num(t))), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
 compile(two_role_num, [schema(s, [num(n)], [rs(guarded, [atom(x, [])], [], [atom(m, [num(n)])], []), rs(guarded, [atom(y, [])], [], [atom(m, [num(n)])], [])])], syntactically_grassroots).
 compile(mult, [schema(s, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])], syntactically_grassroots).
 :quit
@@ -3605,7 +3611,9 @@ check "CVA compiler: ... its first role requiring no atom naming y, refused as n
 check "CVA compiler: ... the schema named" "%% the schema(d)" "$cva_refuse"
 check "CVA compiler: a contract without traceable provenance is not compiled" "%% not compiled(gossip)" "$cva_refuse"
 check "CVA compiler: a contract whose one fault is that it has no unobstructed introductory act, traceable provenance and volition met, compiled (vGLP, Section 5.4, asks locality and effectiveness alone; CSSN, Appendix B.4)" "%% the canonical CVA platform of the contract(nointro)" "$cva_refuse"
-check "CVA compiler: a contract the checker leaves unsettled, every fault resting on the values it fixes, is not compiled (programs/gsc/README.md at GSC-unob3 f06db5dc)" "%% not compiled(unsettled_numbers)" "$cva_refuse"
+# The verdicts of programs/gsc at GSC-unob3 62fb0342, every value case decided (GSC bcc1891, Appendix "Values in Act Schemas"), of the compiler's Verdict type: obstructed_jointly, a fault of an introductory act, as obstructed is; and a constraint that is not linear, a fault of the schema's form in a verdict malformed.
+check "CVA compiler: a contract whose one fault is an introductory act obstructed jointly, no choice of its values meeting every condition of def:unobstructed, compiled, as one with no unobstructed introductory act (jointly)" "%% the canonical CVA platform of the contract(jointly)" "$cva_refuse"
+check "CVA compiler: a contract malformed, a product of two value variables in its constraint, is not compiled (nonlinear)" "%% not compiled(nonlinear)" "$cva_refuse"
 # A verdict malformed, of a schema's form (GSC, Definition "Act schema", as programs/gsc/self.glp writes its faults), is refused whole, its faults of the compiler's Verdict type.
 check "CVA compiler: a contract malformed, a role that is not guarding changing nothing, is not compiled" "%% not compiled(inert)" "$cva_refuse"
 check "CVA compiler: ... the verdict named" "%% it is malformed; check_named in programs/gsc gives the faults." "$cva_refuse"
@@ -3655,6 +3663,14 @@ check "CVA numbers: an unguarded schema adding a variable its constraint gives i
 check "CVA numbers: ... the same with succ, which gives it one value, compiled, as GB's advance (succ_open)" "%% the canonical CVA platform of the contract(succ_open)" "$cva_refuse"
 check_not "CVA numbers: ... and not refused" "%% not compiled(succ_open)" "$cva_refuse"
 check "CVA numbers: ... or(succ, gt), one branch giving infinitely many values, refused (or_open)" "%% not compiled(or_open)" "$cva_refuse"
+# A constraint in GSC's form, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"; programs/gsc/self.glp at GSC-unob3 62fb0342): an equality gives its one variable not bound one value where its coefficient is not 0, and a conjunction what either conjunct gives, taken again with each value given (vGLP, Section 5.4, "Act schemas as local specifications": "or the constraint gives the variable finitely many values once those are bound").
+check "CVA numbers: an unguarded schema adding a variable a linear equality gives one value, t1 = t + 1, compiled (eq_open)" "%% the canonical CVA platform of the contract(eq_open)" "$cva_refuse"
+check_not "CVA numbers: ... and not refused" "%% not compiled(eq_open)" "$cva_refuse"
+check "CVA numbers: ... 2 t1 = t, its coefficient 2, compiled (eq_scaled)" "%% the canonical CVA platform of the contract(eq_scaled)" "$cva_refuse"
+check "CVA numbers: ... t1 - t1 = t, its coefficient 0, giving t1 no value, refused as not effective (eq_zero)" "%% not compiled(eq_zero)" "$cva_refuse"
+check "CVA numbers: a conjunction of two equalities, t2 = t1 + 1 and t1 = t + 1, t1 given by the second and t2 by the first once t1 is, compiled (and_chain)" "%% the canonical CVA platform of the contract(and_chain)" "$cva_refuse"
+check "CVA numbers: ... its constraint printed as the contract writes it" "^schema_numeric(u, numeric(and(eq(num(t2), plus(num(t1), num(1))), eq(num(t1), plus(num(t), num(1)))), \[num(t)\], at(1)))$" "$cva_refuse"
+check "CVA numbers: a conjunction of two inequalities, t < 6 and t1 > t, giving t1 infinitely many values, refused as not effective (and_lt)" "%% not compiled(and_lt)" "$cva_refuse"
 check "CVA numbers: a numeric variable of atoms two roles require and of no deleted or added atom, local to neither, refused as not effective, the variable named (two_role_num)" "%% the schema and the variable(s, num(n))" "$cva_refuse"
 check "CVA numbers: a multiplicity bound by the schema-binding, compiled (mult)" "%% the canonical CVA platform of the contract(mult)" "$cva_refuse"
 check "CVA numbers: ... the request naming k, a number" "^binding_of(s(V1, V2), s, \[b(role(1), p(V1?)), b(num(k), n(V2?))\])$" "$cva_refuse"

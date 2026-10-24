@@ -119,18 +119,14 @@ verdict_lines(malformed(_), Nm, [H?, '%% it is malformed; check_named in program
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 %% The verdict on a contract with wards and listed roles or name terms (def:sg-wards of CSSN's paper): compiled, its listed roles taken by vGLP Section 5.4 (vGLP f5f1644), and any other community role refused (role_lines).
 verdict_lines(syntactically_grassroots_with_wards(_, _, _, _, _), _, []).
-%% A contract whose every fault rests on the values it fixes, which its term does not carry: "the verdict is unsettled(Faults), and it is not compiled" (programs/gsc/README.md, at GSC-unob3 f06db5dc).
-verdict_lines(unsettled(_), Nm, [H?, '%% the checker leaves it unsettled, its faults resting on the values the contract fixes; check_named in programs/gsc gives them.']) :-
-    ground(Nm?) | H =.. ['%% not compiled', Nm?].
 procedure realisable(Faults?, YesNo).
 realisable([], yes).
 realisable([no_introductory_act|Fs], B?) :- realisable(Fs?, B).
 realisable([obstructed(_, _, _, _)|Fs], B?) :- realisable(Fs?, B).
 realisable([untraceable(_)|_], no).
 realisable([volition(_, _, _)|_], no).
-%% A fault the checker leaves unsettled is of an introductory act (def:unobstructed), as obstructed is.
-realisable([unsettled(_, _, _, _)|Fs], B?) :- realisable(Fs?, B).
-realisable([unsettled_introduction(_)|Fs], B?) :- realisable(Fs?, B).
+%% obstructed_jointly(Act) is a fault of an introductory act, as obstructed is: each condition of def:unobstructed holds at some choice of its values, and no one choice satisfies them all (GSC bcc1891, Appendix "Values in Act Schemas"; programs/gsc/unobstructed.glp at GSC-unob3 62fb0342).
+realisable([obstructed_jointly(_)|Fs], B?) :- realisable(Fs?, B).
 realisable([reflexive(_, _, _)|_], no).
 realisable([signed(_, _, _, _)|_], no).
 %% A fault of a schema's form comes in a verdict malformed(Faults), which verdict_lines refuses whole; these clauses cover the type.
@@ -146,7 +142,10 @@ realisable([listed_signed(_, _)|_], no).
 realisable([listed_guarded(_, _)|_], no).
 realisable([multiplicity_not_added(_, _, _)|_], no).
 realisable([multiplicity_not_numeric(_, _, _)|_], no).
+realisable([multiplicity_not_whole(_, _, _)|_], no).
 realisable([constraint_not_numeric(_, _)|_], no).
+realisable([constraint_not_linear(_, _)|_], no).
+realisable([constraint_not_conjunction(_, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-

@@ -38,9 +38,12 @@ RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
 %% A schema's second argument is its variables, pvar(X) and svar(Y), in the order of its head, tau(pi_1, ..., pi_k ; x_1, ..., x_m) (GSC 0228e79, Definition "Act schema"; programs/gsc/README.md, "Writing a contract"; Udi, 2026-10-19, to GSC #4).
-%% A schema with a constraint on its numeric variables is nschema(Name, Vars, Constraint, Roles), the constraint true, gt(X, Y) (X > Y), le(X, Y) (X =< Y), succ(X, Y) (Y = X + 1) or or(C1, C2), over numeric arguments (programs/gsc/self.glp).
-Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
+%% A schema with a constraint on its numeric variables is nschema(Name, Vars, Constraint, Roles), the constraint "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"), as programs/gsc/self.glp writes it at GSC-unob3 62fb0342: true, and(C1, C2), and eq, le, lt, ge and gt of two expressions, X = Y, X =< Y, X < Y, X >= Y and X > Y, with succ(X, Y), Y = X + 1; an expression a numeric argument, plus(X, Y), minus(X, Y) or mul(X, Y); or(C1, C2) is in the type, a contract carrying it being refused by the checker, malformed(constraint_not_conjunction(...)).
+Constraint ::= true ; and(Constraint, Constraint)
+             ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
+             ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
              ; or(Constraint, Constraint).
+Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 Schema    ::= schema(Constant, Args, RoleSpecs)
             ; cschema(Constant, Args, Reaches, RoleSpecs)
             ; nschema(Constant, Args, Constraint, RoleSpecs).
@@ -60,9 +63,7 @@ Cause     ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
 %% What GSC's Definition "Act schema", and Appendix D's, require of a signed term, and the atom carrying one violates: it occurs in an atom not marked + (not_added), its speech-act variable occurs in no atom its role requires (not_required), or its role is not an agent role (not_agent_role).
 SgnCause  ::= not_added ; not_required ; not_agent_role.
 %% What GSC's Definition "Act schema" requires of the form of a schema, and a schema formed otherwise violates, in a verdict malformed(Faults): an atom both added and deleted at a role (added_and_deleted), a role that is not guarding and adds and deletes nothing (changes_nothing), no role adding or deleting an atom (no_role_changes), an entry of the head that is not a variable (head_not_variable), an entry listed twice (head_repeated), and a variable of the schema not in its head (not_in_head), and, of a listed role, a base that is not an agent role (listed_base), a signed term among its arguments (listed_signed) or the mark ? (listed_guarded, GSC f3c4f43), as programs/gsc/self.glp writes them.
-%% What def:unobstructed asks whose answer rests on the values the contract fixes, which its term does not carry (GSC, Appendix "Numbers in Act Schemas"; programs/gsc/self.glp at GSC-unob3 f06db5dc): unsettled(Schema, Role, Atom, U), U one of Unsettled, and unsettled_introduction(Schema); and name_term_base(Schema, N), a name term on a base that is not an agent role of the schema, a fault of its form.
-Unsettled ::= supplied_by(Constant, Atom) ; added_by(Constant, Integer, Atom)
-            ; multiplicity.
+%% name_term_base(Schema, N), a name term on a base that is not an agent role of the schema, a fault of its form; of a schema's values, in a verdict malformed(Faults), a multiplicity on an atom neither added nor deleted (multiplicity_not_added), one that is no value argument (multiplicity_not_numeric), one written as a number that is no positive whole number (multiplicity_not_whole), an argument of the constraint that is no value argument (constraint_not_numeric), a product of two expressions each carrying a value variable (constraint_not_linear) and a disjunction (constraint_not_conjunction); and obstructed_jointly(Act), an introductory act each of whose conditions of def:unobstructed is met at some choice of its values and no choice meets them all, as programs/gsc/self.glp writes them at GSC-unob3 62fb0342 (GSC bcc1891, Appendix "Values in Act Schemas").
 Fault     ::= no_introductory_act
             ; obstructed(Constant, Integer, Atom, Cause)
             ; untraceable(Preds)
@@ -81,9 +82,11 @@ Fault     ::= no_introductory_act
             ; listed_guarded(Constant, Integer)
             ; multiplicity_not_added(Constant, Integer, Atom)
             ; multiplicity_not_numeric(Constant, Integer, Atom)
+            ; multiplicity_not_whole(Constant, Integer, Atom)
             ; constraint_not_numeric(Constant, Arg)
-            ; unsettled(Constant, Integer, Atom, Unsettled)
-            ; unsettled_introduction(Constant).
+            ; constraint_not_linear(Constant, Expr)
+            ; constraint_not_conjunction(Constant, Constraint)
+            ; obstructed_jointly(Constant).
 Faults    ::= [] ; [Fault | Faults].
 %% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_wards, of the same arguments, is the verdict on one with listed roles or name terms (def:sg-wards of CSSN's paper; programs/gsc/self.glp at GSC-unob3 f06db5dc).
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
@@ -92,11 +95,11 @@ Party     ::= ward(Integer, Constant, Integer) ; free(Integer).
 Parties   ::= [] ; [Party | Parties].
 Relay     ::= relay(Constant, Party, Party).
 Relays    ::= [] ; [Relay | Relays].
-%% The verdict, as programs/gsc/self.glp writes it at GSC-unob3 f06db5dc: syntactically_grassroots, by GSC's one definition for agent roles and listed roles alike (GSC ac7ad63, Section 3), syntactically_grassroots_with_listed_roles merged into it and conditions_met and conditions_failed gone with GSC's Appendix D; unsettled(Faults) where every fault rests on the values the contract fixes, "and it is not compiled" (programs/gsc/README.md).
+%% The verdict, as programs/gsc/self.glp writes it at GSC-unob3 62fb0342: syntactically_grassroots, by GSC's one definition for agent roles and listed roles alike (GSC ac7ad63, Section 3), syntactically_grassroots_with_listed_roles merged into it and conditions_met and conditions_failed gone with GSC's Appendix D; each condition decided at every value case (GSC bcc1891, Appendix "Values in Act Schemas": the conditions "stay decidable, the constraints being linear").
 Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
             ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
             ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
-            ; malformed(Faults) ; unsettled(Faults).
+            ; malformed(Faults).
 
 %% A contract's introduction predicate, where it names one (vGLP, Section 5.4,
 %% the paragraph on act schemas), given to compile/4.
@@ -186,13 +189,30 @@ is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
 is_nvar(nterm(_), no).
 is_nvar(sgn(_, _), no).
-%% The numeric variables a constraint names.
+%% The numeric arguments a constraint names, those of its expressions included.
 procedure con_args(Constraint?, Args).
 con_args(true, []).
-con_args(gt(X, Y), [X?, Y?]).
-con_args(le(X, Y), [X?, Y?]).
+con_args(and(C1, C2), A?) :- con_args(C1?, A1), con_args(C2?, A2), app(A1?, A2?, A).
+con_args(eq(X, Y), A?) :- exprs_args(X?, Y?, A).
+con_args(le(X, Y), A?) :- exprs_args(X?, Y?, A).
+con_args(lt(X, Y), A?) :- exprs_args(X?, Y?, A).
+con_args(ge(X, Y), A?) :- exprs_args(X?, Y?, A).
+con_args(gt(X, Y), A?) :- exprs_args(X?, Y?, A).
 con_args(succ(X, Y), [X?, Y?]).
 con_args(or(C1, C2), A?) :- con_args(C1?, A1), con_args(C2?, A2), app(A1?, A2?, A).
+procedure exprs_args(Expr?, Expr?, Args).
+exprs_args(X, Y, A?) :- expr_args(X?, A1), expr_args(Y?, A2), app(A1?, A2?, A).
+%% The numeric arguments of an expression, in order.
+procedure expr_args(Expr?, Args).
+expr_args(plus(X, Y), A?) :- exprs_args(X?, Y?, A).
+expr_args(minus(X, Y), A?) :- exprs_args(X?, Y?, A).
+expr_args(mul(X, Y), A?) :- exprs_args(X?, Y?, A).
+expr_args(num(X), [num(X?)]).
+expr_args(role(I), [role(I?)]).
+expr_args(pvar(X), [pvar(X?)]).
+expr_args(svar(X), [svar(X?)]).
+expr_args(nterm(N), [nterm(N?)]).
+expr_args(sgn(Y, J), [sgn(Y?, J?)]).
 
 %% A schema's listed roles (GSC 8064cfb, Appendix D, Definition "Role"; vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"): their indices, from 1, in the order of the roles (listed_ixs); each with its index, its base, the index of its agent role, its predicate rho and its arguments u_2, ..., u_r, listing(I, Base, Rho, Args), in the order of the roles (listed_all); their bases (listed_bases); and the arguments of a role that are no arguments of its atoms, a listed role's (kind_args).  "the listed roles of a schema have one base" (ibid.), which local.glp decides.
 Listing  ::= listing(Integer, Integer, Constant, Args).

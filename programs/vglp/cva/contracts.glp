@@ -206,6 +206,15 @@
 %%   advance(p)    :  at p  today(d), -date(t), +date(d), d > t
 %%
 %% The first date is 0.  advance is unguarded, opened by p, t local to p's role and d bound by the today(d) p's state holds, so it is proposed once a day by the own-trigger Propose: on a date d past the date p holds, and not again until the next.  days/self.glp plays it.
+%%
+%% linear is a contract whose constraints are in GSC's form, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"; programs/gsc/self.glp at GSC-unob3 62fb0342), so that a contract compiled here has an unguarded schema whose added atom names a variable an equality gives once the atoms its first role requires bind the others (vGLP, Section 5.4, "Act schemas as local specifications": "or the constraint gives the variable finitely many values once those are bound"):
+%%
+%%   start(p?)             :  at p  not started, +started, +level(0)
+%%   refuel(p? ; k)        :  at p  started, +k fuel
+%%   climb(p ; t, t1)      :  at p  -fuel, -level(t), +level(t1)         t1 = t + 2 and t < 6
+%%   mark(p ; t, m)        :  at p  level(t), not marked(m), +marked(m)  3m = t + 3
+%%
+%% climb and mark are unguarded, opened by p; t is local to p's role in each, bound by the level p holds; climb's t1 is the one value its equality gives, and its inequality holds below 6; mark's m is the whole number its equality gives, where there is one, at the levels 0 and 6 and at no level between.  linear/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it, with the numbers act schemas allow (GSC 9231074, Section 3.2): num(X) the numeric variable X where X is a name and the number X where X is a number, times(K, A) the atom A with the multiplicity K, and nschema(Name, Vars, Constraint, Roles) a schema with a constraint on its numeric variables.
@@ -226,8 +235,11 @@ RoleSpec  ::= rs(Guard, Mults, Mults, Atoms, Atoms)
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
-Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
+Constraint ::= true ; and(Constraint, Constraint)
+             ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
+             ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
              ; or(Constraint, Constraint).
+Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 %% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
 Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
             ; nschema(Constant, Args, Constraint, RoleSpecs).
@@ -256,6 +268,7 @@ contract_named(numbers, C?) :- numbers(C).
 contract_named(bonds, C?) :- bonds(C).
 contract_named(intros, C?) :- intros(C).
 contract_named(days, C?) :- days(C).
+contract_named(linear, C?) :- linear(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -280,6 +293,7 @@ introduction_named(numbers, no_introduction).
 introduction_named(bonds, no_introduction).
 introduction_named(intros, no_introduction).
 introduction_named(days, no_introduction).
+introduction_named(linear, no_introduction).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -519,3 +533,13 @@ days([schema(dawn, [],
         [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [], [atom(dated, [])])]),
       nschema(advance, [num(t), num(d)], gt(num(d), num(t)),
         [rs(unguarded, [atom(date, [num(d)])], [atom(date, [num(t)])], [atom(today, [num(d)])], [])])]).
+
+procedure linear(Contract).
+linear([schema(start, [],
+          [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]),
+        schema(refuel, [num(k)],
+          [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]),
+        nschema(climb, [num(t), num(t1)], and(eq(num(t1), plus(num(t), num(2))), lt(num(t), num(6))),
+          [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]),
+        nschema(mark, [num(t), num(m)], eq(mul(num(3), num(m)), plus(num(t), num(3))),
+          [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])])]).
