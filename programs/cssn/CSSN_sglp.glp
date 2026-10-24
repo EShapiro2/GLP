@@ -34,13 +34,15 @@ source([
    type('CsTodo', [establish, know('Key'), meet('Key'), enter1('Key', 'Key'), enter2('Key', 'Key', 'Key'), steady]),
    type('CsPair', [acq('Key', 'Key')]),
 
-   %% THE CENSUS.  cs_villages draws four villages of ten families, cs_villages40 forty, for the cost
+   %% THE CENSUS.  cs_village1 draws one village of ten families, the run's (Udi, 2026-10-24: an hour at most); cs_villages four villages of ten families, cs_villages40 forty, for the cost
    %% run.  A family has two parents 70 times in 100 and one otherwise, and one, two or three children,
    %% equally likely.  A parent knows at the start the parents of their own village, two parents of
    %% other villages, their acquaintances, and their children; a child knows their parents.
    %%   cs_villages(S, Ps) :- cs_keys4(Ks), cs_census(Ks?, S?, Ps).
    decl(cs_villages(dual('Integer'), 'List'('Person'))),
    clause(cs_villages(var('S'), var('Ps?')), [], [cs_keys4(var('Ks')), cs_census(var('Ks?'), var('S?'), var('Ps'))]),
+   decl(cs_village1(dual('Integer'), 'List'('Person'))),
+   clause(cs_village1(var('S'), var('Ps?')), [], [cs_keys1(var('Ks')), cs_census(var('Ks?'), var('S?'), var('Ps'))]),
    decl(cs_villages40(dual('Integer'), 'List'('Person'))),
    clause(cs_villages40(var('S'), var('Ps?')), [], [cs_keys40(var('Ks')), cs_census(var('Ks?'), var('S?'), var('Ps'))]),
    decl(cs_census(dual('List'('CsKeys')), dual('Integer'), 'List'('Person'))),
@@ -422,17 +424,19 @@ source([
    %% THE RUN.  Four villages for one simulated year, the parents half local and half open, all strict,
    %% the children all choosy; the three other mixes are all permissive, all keen, and both (Section 5,
    %% "The runs"), run with the shares exchanged, and the cost run names cs_villages40.
-   %%   run cs_villages [ approach of parent ~ (local : 0.5 ; open : 0.5),
+   %%   run cs_village1 [ approach of parent ~ (local : 0.5 ; open : 0.5),
    %%                     policy of parent ~ (strict : 1.0 ; permissive : 0.0),
    %%                     response of child ~ (choosy : 1.0 ; keen : 0.0) ]
    %%       until 1 year seed 1.
-   run(cs_villages,
+   run(cs_village1,
        [mix(approach, parent, [share(local, 0.5), share(open, 0.5)]),
         mix(policy, parent, [share(strict, 1.0), share(permissive, 0.0)]),
         mix(response, child, [share(choosy, 1.0), share(keen, 0.0)])],
        1, year, 1),
 
    %% THE KEY TABLES: five keys per family, two parents' and three children's, for four villages and for forty.
+   decl(cs_keys1('List'('CsKeys'))),
+   clause(cs_keys1([ks(v1f01p1, v1f01p2, v1f01c1, v1f01c2, v1f01c3), ks(v1f02p1, v1f02p2, v1f02c1, v1f02c2, v1f02c3), ks(v1f03p1, v1f03p2, v1f03c1, v1f03c2, v1f03c3), ks(v1f04p1, v1f04p2, v1f04c1, v1f04c2, v1f04c3), ks(v1f05p1, v1f05p2, v1f05c1, v1f05c2, v1f05c3), ks(v1f06p1, v1f06p2, v1f06c1, v1f06c2, v1f06c3), ks(v1f07p1, v1f07p2, v1f07c1, v1f07c2, v1f07c3), ks(v1f08p1, v1f08p2, v1f08c1, v1f08c2, v1f08c3), ks(v1f09p1, v1f09p2, v1f09c1, v1f09c2, v1f09c3), ks(v1f10p1, v1f10p2, v1f10c1, v1f10c2, v1f10c3)]), [], []),
    decl(cs_keys4('List'('CsKeys'))),
    clause(cs_keys4([ks(v1f01p1, v1f01p2, v1f01c1, v1f01c2, v1f01c3), ks(v1f02p1, v1f02p2, v1f02c1, v1f02c2, v1f02c3),
      ks(v1f03p1, v1f03p2, v1f03c1, v1f03c2, v1f03c3), ks(v1f04p1, v1f04p2, v1f04c1, v1f04c2, v1f04c3),
