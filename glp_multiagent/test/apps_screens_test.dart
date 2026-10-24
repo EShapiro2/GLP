@@ -1703,13 +1703,19 @@ void appsScreens(Screens screens) {
     await run.answer(bob, 'yes');
     expect(bob.atoms, contains('agent_of(alf, alice, $attestation)'));
 
-    // Agent befriend (GnW:2): the same, from Alice's AI agents tab.  (c) Alice's composer of the befriending, Bob picked; (d) Bob asked GAI's question "Alf, an AI agent, asks to befriend you.".
-    await agentAct('agent_befriend', 'gai-c-alice-asked.png');
+    // Agent befriend (GnW:2): Alf's program proposes it once it knows Bob, pressing GAI's "[Agent befriend]", the button drawn at its guarding role (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles"; Code_inbox.md, GAI #8 Cowork, 2026-10-24 14:39 UTC: "Alf proposes agent_meet and agent_befriend, and Alice and Bob each answer on their phones"); its meeting with Bob Alice proposed, above, since a machine takes a proposal only where it knows every agent it sends to (vGLP, Section 4: "each is taken only where p knows every agent it sends a message to"), and Alf comes to know Bob by that meeting.  Alice and Bob are each asked GAI's question, "Alf, an AI agent, asks to befriend you.", the contract's one question for every guarding role (GAI.txt, "Knowing and relations").  (c) Alice asked, on her AI agents tab; (d) Bob asked.
+    await run.list(alice, 'principal_of');
+    await run.top(alice);
+    expect(run.on(alice, find.text('Alf, an AI agent, asks to befriend you.')), findsOneWidget);
+    run.plain(alice);
+    await run.shoot(alice, 'gai-c-alice-asked.png');
     await run.list(bob, 'principal_of');
     await run.top(bob);
     expect(run.on(bob, find.text('Alf, an AI agent, asks to befriend you.')), findsOneWidget);
     run.plain(bob);
     await run.shoot(bob, 'gai-d-bob-asked.png');
+    await run.answer(alice, 'yes');
+    expect(bob.atoms, isNot(contains('friend(alf)')));
     await run.answer(bob, 'yes');
     expect(bob.atoms, contains('friend(alf)'));
 
