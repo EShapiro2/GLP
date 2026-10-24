@@ -184,22 +184,63 @@ n_head_vars([V|Vs], T, ['; '|R?]) :- ground(V?), ground(Vs?), ground(T?) |
     n_args([V?|Vs?], T?, R).
 
 % --- The constraint (GSC, def:numbers) -------------------------------------
-% After the head and a bar, as GB's paper writes it; none for true.
+% After the head and a bar, as GB's paper writes it; none for true.  and as
+% a comma, eq, le, lt, ge and gt as =, <=, <, >= and >, succ(X, Y) as Y = X
+% + 1; plus, minus and a product as +, - and *, an operand that is a sum or
+% a difference in parentheses where it follows a minus or is a factor.
 
 procedure n_constraint(Constraint?, Chunks?, Chunks).
 n_constraint(true, T, ['true'|T?]).
-n_constraint(gt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
-    n_arg(Y?, T?, R1),
-    n_arg(X?, [' > '|R1?], R).
-n_constraint(le(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
-    n_arg(Y?, T?, R1),
-    n_arg(X?, [' <= '|R1?], R).
+n_constraint(and(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
+    n_constraint(C2?, T?, R1),
+    n_constraint(C1?, [', '|R1?], R).
+n_constraint(eq(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | n_cmp(X?, ' = ', Y?, T?, R).
+n_constraint(le(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | n_cmp(X?, ' <= ', Y?, T?, R).
+n_constraint(lt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | n_cmp(X?, ' < ', Y?, T?, R).
+n_constraint(ge(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | n_cmp(X?, ' >= ', Y?, T?, R).
+n_constraint(gt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | n_cmp(X?, ' > ', Y?, T?, R).
 n_constraint(succ(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
     n_arg(X?, [' + 1'|T?], R1),
     n_arg(Y?, [' = '|R1?], R).
 n_constraint(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     n_constraint(C2?, T?, R1),
     n_constraint(C1?, [' or '|R1?], R).
+
+procedure n_cmp(Expr?, Constant?, Expr?, Chunks?, Chunks).
+n_cmp(X, Op, Y, T, R?) :- ground(X?), ground(Op?), ground(Y?), ground(T?) |
+    n_expr(Y?, T?, R1),
+    n_expr(X?, [Op?|R1?], R).
+
+procedure n_expr(Expr?, Chunks?, Chunks).
+n_expr(plus(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    n_expr(B?, T?, R1),
+    n_expr(A?, [' + '|R1?], R).
+n_expr(minus(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    n_operand(B?, T?, R1),
+    n_expr(A?, [' - '|R1?], R).
+n_expr(mul(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    n_operand(B?, T?, R1),
+    n_operand(A?, ['*'|R1?], R).
+n_expr(num(X), T, R?) :- n_arg(num(X?), T?, R).
+n_expr(role(I), T, R?) :- n_arg(role(I?), T?, R).
+n_expr(pvar(X), T, R?) :- n_arg(pvar(X?), T?, R).
+n_expr(svar(X), T, R?) :- n_arg(svar(X?), T?, R).
+n_expr(nterm(N), T, R?) :- n_arg(nterm(N?), T?, R).
+n_expr(sgn(Y, J), T, R?) :- n_arg(sgn(Y?, J?), T?, R).
+
+procedure n_operand(Expr?, Chunks?, Chunks).
+n_operand(plus(A, B), T, ['('|R?]) :- ground(A?), ground(B?), ground(T?) |
+    n_expr(plus(A?, B?), [')'|T?], R).
+n_operand(minus(A, B), T, ['('|R?]) :- ground(A?), ground(B?), ground(T?) |
+    n_expr(minus(A?, B?), [')'|T?], R).
+n_operand(mul(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    n_expr(mul(A?, B?), T?, R).
+n_operand(num(X), T, R?) :- n_arg(num(X?), T?, R).
+n_operand(role(I), T, R?) :- n_arg(role(I?), T?, R).
+n_operand(pvar(X), T, R?) :- n_arg(pvar(X?), T?, R).
+n_operand(svar(X), T, R?) :- n_arg(svar(X?), T?, R).
+n_operand(nterm(N), T, R?) :- n_arg(nterm(N?), T?, R).
+n_operand(sgn(Y, J), T, R?) :- n_arg(sgn(Y?, J?), T?, R).
 
 procedure n_head_constraint(Constraint?, Chunks?, Chunks).
 n_head_constraint(true, T, T?).

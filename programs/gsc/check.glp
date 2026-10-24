@@ -538,7 +538,12 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % multiplicity that is no value argument a fault
 % multiplicity_not_numeric(Schema, Role, Atom); and each argument of the
 % constraint that is no value argument a fault constraint_not_numeric(Schema,
-% Arg).  A value argument is num(X), a value variable or a number.
+% Arg).  A value argument is num(X), a value variable or a number.  The
+% constraint "is a conjunction of linear equalities and inequalities over its
+% value variables and values" (def:numbers): a disjunction in it is a fault
+% constraint_not_conjunction(Schema, Or), and a product of two expressions
+% each carrying a value variable a fault constraint_not_linear(Schema,
+% Product).
 
 procedure is_num(Arg?, Ans).
 is_num(num(_), yes).
@@ -620,7 +625,69 @@ num_schema1(Nm, Rs, Cn, R?) :- ground(Nm?), ground(Rs?), ground(Cn?) |
     num_roles(Rs?, 1, Nm?, F1),
     constraint_args(Cn?, [], As),
     cons_faults(As?, Nm?, F2),
-    faults_app(F1?, F2?, R).
+    shape_faults(Cn?, Nm?, F3),
+    faults_app(F2?, F3?, F23),
+    faults_app(F1?, F23?, R).
+
+% A value variable occurs in the expression.
+procedure expr_var(Expr?, Ans).
+expr_var(num(X), no) :- number(X?) | true.
+expr_var(num(X), yes) :- otherwise, ground(X?) | true.
+expr_var(plus(A, B), R?) :- ground(A?), ground(B?) |
+    expr_var(A?, R1),
+    expr_var(B?, R2),
+    or_yes(R1?, R2?, R).
+expr_var(minus(A, B), R?) :- ground(A?), ground(B?) |
+    expr_var(A?, R1),
+    expr_var(B?, R2),
+    or_yes(R1?, R2?, R).
+expr_var(mul(A, B), R?) :- ground(A?), ground(B?) |
+    expr_var(A?, R1),
+    expr_var(B?, R2),
+    or_yes(R1?, R2?, R).
+expr_var(X, no) :- otherwise, ground(X?) | true.
+
+% Each product of two expressions that both carry a value variable.
+procedure expr_faults(Expr?, Constant?, Faults?, Faults).
+expr_faults(plus(A, B), Nm, T, R?) :- ground(A?), ground(B?), ground(Nm?), ground(T?) |
+    expr_faults(B?, Nm?, T?, R1),
+    expr_faults(A?, Nm?, R1?, R).
+expr_faults(minus(A, B), Nm, T, R?) :- ground(A?), ground(B?), ground(Nm?), ground(T?) |
+    expr_faults(B?, Nm?, T?, R1),
+    expr_faults(A?, Nm?, R1?, R).
+expr_faults(mul(A, B), Nm, T, R?) :- ground(A?), ground(B?), ground(Nm?), ground(T?) |
+    expr_var(A?, VA),
+    expr_var(B?, VB),
+    both_yes(VA?, VB?, NL),
+    expr_faults(B?, Nm?, T?, R1),
+    expr_faults(A?, Nm?, R1?, R2),
+    nonlin_fault(NL?, mul(A?, B?), Nm?, R2?, R).
+expr_faults(X, _, T, T?) :- otherwise, ground(X?) | true.
+
+procedure nonlin_fault(Ans?, Expr?, Constant?, Faults?, Faults).
+nonlin_fault(yes, X, Nm, T, [constraint_not_linear(Nm?, X?)|T?]).
+nonlin_fault(no, _, _, T, T?).
+
+procedure exprs_faults(Exprs?, Constant?, Faults?, Faults).
+exprs_faults([], _, T, T?).
+exprs_faults([X|Xs], Nm, T, R?) :- ground(X?), ground(Xs?), ground(Nm?), ground(T?) |
+    exprs_faults(Xs?, Nm?, T?, R1),
+    expr_faults(X?, Nm?, R1?, R).
+
+% The constraint is a conjunction of linear equalities and inequalities.
+procedure shape_faults(Constraint?, Constant?, Faults).
+shape_faults(true, _, []).
+shape_faults(and(A, B), Nm, R?) :- ground(A?), ground(B?), ground(Nm?) |
+    shape_faults(A?, Nm?, R1),
+    shape_faults(B?, Nm?, R2),
+    faults_app(R1?, R2?, R).
+shape_faults(or(A, B), Nm, [constraint_not_conjunction(Nm?, or(A?, B?))]).
+shape_faults(eq(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_faults([X?, Y?], Nm?, [], R).
+shape_faults(le(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_faults([X?, Y?], Nm?, [], R).
+shape_faults(lt(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_faults([X?, Y?], Nm?, [], R).
+shape_faults(ge(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_faults([X?, Y?], Nm?, [], R).
+shape_faults(gt(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_faults([X?, Y?], Nm?, [], R).
+shape_faults(succ(_, _), _, []).
 
 procedure num_schemas(NContract?, Faults).
 num_schemas([], []).
