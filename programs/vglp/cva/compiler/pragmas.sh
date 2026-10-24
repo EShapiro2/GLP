@@ -22,19 +22,99 @@ if (defined $term && $term ne "") {
         $svars{$n} = [ $a =~ /\w+\((\w+)\)/g ];
     }
 }
-# The schemas a button realises: its schema, the button in lower case, or, where the contract has none of that name, those named by it and a suffix after an underscore; the button alone where the term is not given or none is found.
+# The contract term read whole, for the roles of each schema: tparse gives a term as [functor, args] for a compound, ["[]", items] for a list, and [name] for a constant.
+my $tsrc = "";
+sub tparse {
+    $tsrc =~ /\G\s*/gc;
+    if ($tsrc =~ /\G\[/gc) {
+        my @items;
+        $tsrc =~ /\G\s*/gc;
+        return ["[]", []] if $tsrc =~ /\G\]/gc;
+        while (1) {
+            push @items, tparse();
+            $tsrc =~ /\G\s*/gc;
+            next if $tsrc =~ /\G,/gc;
+            if ($tsrc =~ /\G\|/gc) { push @items, tparse(); $tsrc =~ /\G\s*\]/gc; last }
+            $tsrc =~ /\G\]/gc or die "pragmas.sh: the contract term is not read at " . pos($tsrc) . "\n";
+            last;
+        }
+        return ["[]", \@items];
+    }
+    $tsrc =~ /\G(\x27(?:[^\x27\\]|\\.)*\x27|"(?:[^"\\]|\\.)*"|-?\d+|[A-Za-z_]\w*)/gc
+        or die "pragmas.sh: the contract term is not read at " . (pos($tsrc) // 0) . "\n";
+    my $n = $1;
+    return [$n] unless $tsrc =~ /\G\(/gc;
+    my @args;
+    while (1) {
+        push @args, tparse();
+        $tsrc =~ /\G\s*/gc;
+        next if $tsrc =~ /\G,/gc;
+        $tsrc =~ /\G\)/gc or die "pragmas.sh: the contract term is not read at " . pos($tsrc) . "\n";
+        last;
+    }
+    return [$n, \@args];
+}
+sub tstr {   # a term written back, to compare arguments
+    my ($t) = @_;
+    return $t->[0] if @$t == 1;
+    return "[" . join(",", map { tstr($_) } @{ $t->[1] }) . "]" if $t->[0] eq "[]";
+    return $t->[0] . "(" . join(",", map { tstr($_) } @{ $t->[1] }) . ")";
+}
+# Each schema, its roles, $roles{S}, each { guarded, listed, comps }, comps its four lists of atoms, each [P, [args]], in the order of rs/5 (added, deleted, required, forbidden); and its head, $head{S}, the variables after its roles.
+my (%roles, %head);
+sub find_schemas {
+    my ($t) = @_;
+    return if @$t == 1;
+    if ($t->[0] =~ /^[nc]?schema$/ && @{ $t->[1][0] } == 1) {
+        my $n = $t->[1][0][0];
+        return if exists $roles{$n};
+        $head{$n} = $t->[1][1][1];
+        my @rs;
+        for my $r (@{ $t->[1][-1][1] }) {
+            my ($kind, $g, @c) = $r->[0] eq "crs" ? @{ $r->[1] } : (undef, @{ $r->[1] });
+            push @rs, { guarded => ($g->[0] eq "unguarded" ? 0 : 1),
+                        listed => ((defined $kind && $kind->[0] eq "listed") ? 1 : 0),
+                        comps => [ map { [ map { [ $_->[1][0][0], $_->[1][1][1] ] } @{ $_->[1] } ] } @c ] };
+        }
+        $roles{$n} = \@rs;
+        return;
+    }
+    find_schemas($_) for @{ $t->[1] };
+}
+if (defined $term && $term ne "") { $tsrc = $term; find_schemas(tparse()) }
+# The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
+my %named_by_button;
 sub realising {
     my ($act) = @_;
-    return ($act) if !@snames || exists $svars{$act};
-    my @r = grep { index($_, "${act}_") == 0 } @snames;
+    return ($act) if !@snames;
+    my @r = grep { $_ eq $act || (index($_, "${act}_") == 0 && !$named_by_button{$_}) } @snames;
     return @r ? @r : ($act);
+}
+# A meeting schema, as cvac.glp meeting_schema reads one: two roles, both guarding, whose atoms deleted or required at each name neither the other role nor a name term or a signature built on it.
+sub is_meeting {
+    my ($s) = @_;
+    my $rs = $roles{$s};
+    return 0 unless defined $rs && @$rs == 2;
+    for my $i (0, 1) {
+        my $o = 2 - $i;
+        return 0 unless $rs->[$i]{guarded};
+        for my $a (@{ $rs->[$i]{comps}[1] }, @{ $rs->[$i]{comps}[2] }) {
+            return 0 if join(",", map { tstr($_) } @{ $a->[1] }) =~ /role\($o\)|own\($o\)|sgn\(\w+,$o\)/;
+        }
+    }
+    return 1;
+}
+# The fields of a schema, as cvac.glp field_places counts them: the peer of a meeting schema, then the variables of its head a person fills, each by its name.
+sub field_keys {
+    my ($s) = @_;
+    return ((is_meeting($s) ? ("#peer") : ()), @{ $svars{$s} });
 }
 # The union of the variables of the schemas, in head order: the variables of each schema merged in, each one not yet held placed after the one before it in that schema.
 sub union_vars {
     my @u;
     for my $s (@_) {
         my $at = -1;
-        for my $v (@{ $svars{$s} }) {
+        for my $v (field_keys($s)) {
             my ($i) = grep { $u[$_] eq $v } 0 .. $#u;
             if (defined $i) { $at = $i; next }
             splice(@u, $at + 1, 0, $v); $at++;
@@ -84,6 +164,14 @@ my @own = read_txt($top);
 unless (grep { $_ eq "Pragmas" } @own) { print "no_pragmas\n"; exit 0 }
 visit($top);
 my (@lists, @acts);
+# Every button of every contract read, by the schema name it bears, so that a schema one button names is realised by no other.
+for my $f (@order) {
+    my $after = 0;
+    for my $x (read_txt($f)) {
+        if (!$after) { $after = 1 if $x eq "Pragmas"; next }
+        while ($x =~ /\[([^\]]+)\]/g) { (my $a = lc $1) =~ s/ +/_/g; $named_by_button{$a} = 1 }
+    }
+}
 # The names the clauses use: words of a capital and lower-case letters written within a sentence, not first in it.
 my %is_name;
 for my $f (@order) {
@@ -196,12 +284,12 @@ for my $f (@order) {
                         . join(", ", map { q_string($_) } @fields) . "], $said, " . q_string($tab) . ")";
                     next;
                 }
-                # Several schemas realise the button: the fields name the union of their variables in head order, and each schema has the fields of its variables, in its order, a field of a variable it does not have left out (GSC, ibid.: "the fields the union of their variables in head order, an inapplicable field left empty").
+                # Several schemas realise the button: the fields name the union of their fields, the peer of a meeting schema and the variables in head order, and each schema has the fields of its variables, in its order, a field of a variable it does not have left out (GSC, ibid.: "the fields the union of their variables in head order, an inapplicable field left empty").
                 my @u = union_vars(@real);
                 @fields <= @u or die "pragmas.sh: $f: the pragma \"$title\" names more fields than its schemas have variables\n";
                 my %name; @name{ @u[0 .. $#fields] } = @fields if @fields;
                 for my $s (@real) {
-                    my @own = map { exists $name{$_} ? $name{$_} : "" } @{ $svars{$s} };
+                    my @own = map { exists $name{$_} ? $name{$_} : "" } field_keys($s);
                     pop @own while @own && $own[-1] eq "";
                     push @acts, "act(" . q_atom($s) . ", " . q_string($button) . ", ["
                         . join(", ", map { q_string($_) } @own) . "], $said, " . q_string($tab) . ")";
