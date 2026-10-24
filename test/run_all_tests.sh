@@ -4262,7 +4262,7 @@ check "CVA machine states: the social graph's atoms, identity, knows(Peer) and f
 check "CVA machine states: ... friend(bob) written as the contract writes it" "^atom_of(g(friend, \[p(V1)\]), shown(friend(V1?)))$" "$cva_sg_text"
 check "CVA machine states: the currency's atoms, GKK's identity and knows(Peer) and its own coin(Peer)" "^identity knows(Peer) coin(Peer) $" "$(cva_atom "$CVA/currency/platform.vglp")"
 check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place and a community name at a name term's" "^identity knows(Peer) friend(Peer) received(Speech, Peer) member(CName) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) received_in(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
-check "CVA machine states: GSNP's, on GKK, a signed term a speech act" "^identity knows(Peer) friend(Peer) item(Speech) authored(Speech) member(CName) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
+check "CVA machine states: GSNP's, on GKK, GnW and GAI, a signed term a speech act" "^identity retired knows(Peer) agent friend(Peer) principal(Peer) principal_of(Peer) agent_of(Peer, Peer, Speech) item(Speech) attestation(Speech) retired_of(Peer) authored(Speech) member(CName) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
 
 cva_friends_load=$("$REPL_RUN" <<HEREDOC
 $CVA/friends/
