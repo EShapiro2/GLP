@@ -5537,6 +5537,28 @@ check "RM10 find_type/3 errs on an empty list for one type parameter" "_find_typ
 check "RM10 find_type/3 errs on one identity for two type parameters" "_find_type/3: the length of the list of type identities, 1, is not the number of type parameters of the declaration of :miniapp/4, 2" "$rm10"
 check "RM10 find_type/3 errs on two identities for one type parameter" "_find_type/3: the length of the list of type identities, 2, is not the number of type parameters of the declaration of :merge/3, 1" "$rm10"
 
+# At the prompt after a load, a posted goal's P/N names a declaration of the
+# root as a clause of the program does: find_type "assigns the type identity
+# of a declaration in the caller's scope" (TGLP modules.tex, "Dynamic
+# Activation"), and the scope of a goal posted at the root holds the root's
+# declarations.  Until 2026-10-24 find_type(now/1, V) and find_type(merge/3,
+# [h1], U) erred there "not declared in the caller's scope".  U is the
+# identity one/1, a clause of the program, obtains for the same goal.
+rm11=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/find_type_list
+one(T).
+find_type(merge/3, [h1], U).
+find_type(now/1, V).
+:quit
+HEREDOC
+2>&1)
+check "RM11 find_type/3 at the prompt finds the root's merge/3" "U = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm11"
+check "RM11 find_type/2 at the prompt finds the root's now/1" "V = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm11"
+rm11_t=$(echo "$rm11" | sed -n "s/.*T = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+rm11_u=$(echo "$rm11" | sed -n "s/.*U = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+check "RM11 the prompt's identity of merge/3 at [h1] is the program clause's" "^same$" "$([ -n "$rm11_t" ] && [ "$rm11_t" = "$rm11_u" ] && echo same)"
+check_not "RM11 no find_type errs at the prompt" "_find_type/[23]:" "$rm11"
+
 echo ""
 fi  # Section RM
 
