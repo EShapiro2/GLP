@@ -1,6 +1,6 @@
 %% person.glp --- the GC mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gc_boot.glp); the plays of this directory call it beside the entry (plays.glp).  It is GSG's app's person (../gsg/person.glp) with GC's scripts.
 %%
-%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, has(A, N) where it holds A at least N times, and lacks(A, N) where it holds fewer than N; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
 %%
 %% The roles, by which the plays choose a script:
 %%   alice  looks at her request question; establishes her identity (GKK:1);
@@ -17,10 +17,12 @@
 %%          meeting, so that he holds the Bob-coins when alice's swap reaches
 %%          him: alice cannot see his holdings, and the swap's start would
 %%          otherwise race his mint.
+%%   market_alice to market_frank  the six villagers of the village market
+%%          of GC's paper (play_village, plays.glp), their scripts below.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
-Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
+Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; lacks(Atom, Integer) ; has(Atom, Integer)
         ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
 Last  ::= last(List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
@@ -47,6 +49,58 @@ script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              own([B2], propose(mint(B2?, 3))), wait(has(coin(bob), 3)),
              approval(meet(alice, bob), yes),
              approval(swap(alice, bob, alice, 2, bob, 3), yes)]).
+%% The village market of GC's paper, Appendix "Village Market Demonstration", on the compiled app (play_village, plays.glp): six villagers, each script its villager's acts of the six operations, after each has minted its coins and met those it transacts with (GKK:2), each meeting willed by both.  Each waits on its own screen, so that a request is made once what it needs of its proposer holds; what it needs of the other party holds by the order of the scripts, each party minting before it answers a meeting.  The coins each mints are the coins of its issue the operations need: 30 alice-coins, 39 bob-coins, 25 charlie-coins, 35 diana-coins, 20 eve-coins and 28 frank-coins.
+script(market_alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
+        own([A2], propose(mint(A2?, 30))), wait(has(coin(alice), 30)),
+        own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+        own([M2], propose(meet(M2?, charlie))), wait(holds(knows(charlie))),
+        own([M3], propose(meet(M3?, eve))), wait(holds(knows(eve))),
+        own([A3, A4], propose(swap(A3?, bob, A4?, 15, bob, 15))), wait(has(coin(bob), 15)),
+        own([A5, A6], propose(swap(A5?, charlie, A6?, 15, charlie, 15))), wait(has(coin(charlie), 15)),
+        wait(has(coin(alice), 8)),
+        own([A7], propose(swap(A7?, eve, bob, 10, frank, 4))), wait(has(coin(frank), 4)), look]).
+script(market_bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
+        own([B2], propose(mint(B2?, 39))), wait(has(coin(bob), 39)),
+        approval(meet(alice, bob), yes), approval(meet(diana, bob), yes),
+        approval(swap(alice, bob, alice, 15, bob, 15), yes),
+        approval(swap(diana, bob, diana, 20, bob, 24), yes),
+        wait(has(coin(alice), 15)),
+        own([B3], propose(pay(B3?, alice, 5))), wait(lacks(coin(alice), 11)), look]).
+script(market_charlie, [own([C1], propose(establish(C1?))), wait(holds(identity)),
+        own([C2], propose(mint(C2?, 25))), wait(has(coin(charlie), 25)),
+        approval(meet(alice, charlie), yes),
+        own([M1], propose(meet(M1?, eve))), wait(holds(knows(eve))),
+        approval(swap(alice, charlie, alice, 15, charlie, 15), yes),
+        own([C3, C4], propose(swap(C3?, eve, C4?, 10, eve, 10))), wait(has(coin(eve), 10)),
+        approval(swap(eve, charlie, frank, 5, alice, 5), yes), wait(has(coin(frank), 5)), look]).
+script(market_diana, [own([D1], propose(establish(D1?))), wait(holds(identity)),
+        own([D2], propose(mint(D2?, 35))), wait(has(coin(diana), 35)),
+        own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+        own([M2], propose(meet(M2?, frank))), wait(holds(knows(frank))),
+        own([D3, D4], propose(swap(D3?, bob, D4?, 20, bob, 24))), wait(has(coin(bob), 24)),
+        own([D5, D6], propose(swap(D5?, frank, D6?, 15, frank, 18))), wait(has(coin(frank), 18)), look]).
+script(market_eve, [own([E1], propose(establish(E1?))), wait(holds(identity)),
+        own([E2], propose(mint(E2?, 20))), wait(has(coin(eve), 20)),
+        approval(meet(alice, eve), yes), approval(meet(charlie, eve), yes),
+        own([M1], propose(meet(M1?, frank))), wait(holds(knows(frank))),
+        approval(swap(charlie, eve, charlie, 10, eve, 10), yes),
+        own([E3, E4], propose(swap(E3?, frank, E4?, 10, frank, 10))), wait(has(coin(frank), 10)),
+        own([E5], propose(pay(E5?, charlie, 6))), wait(lacks(coin(charlie), 5)),
+        own([E6], propose(swap(E6?, charlie, frank, 5, alice, 5))), wait(has(coin(alice), 5)),
+        own([E7], propose(pay(E7?, alice, 3))), wait(lacks(coin(alice), 3)),
+        approval(swap(alice, eve, bob, 10, frank, 4), yes), wait(has(coin(bob), 10)), look]).
+script(market_frank, [own([F1], propose(establish(F1?))), wait(holds(identity)),
+        own([F2], propose(mint(F2?, 28))), wait(has(coin(frank), 28)),
+        approval(meet(diana, frank), yes), approval(meet(eve, frank), yes),
+        approval(swap(diana, frank, diana, 15, frank, 18), yes),
+        approval(swap(eve, frank, eve, 10, frank, 10), yes),
+        wait(has(coin(diana), 15)),
+        own([F3], propose(pay(F3?, diana, 3))), wait(lacks(coin(diana), 13)),
+        own([F4, F5], propose(redeem(F4?, diana, F5?))), wait(lacks(coin(diana), 12)),
+        own([F6, F7], propose(redeem(F6?, diana, F7?))), wait(lacks(coin(diana), 11)),
+        own([F8, F9], propose(redeem(F8?, diana, F9?))), wait(lacks(coin(diana), 10)),
+        own([F10, F11], propose(redeem(F10?, diana, F11?))), wait(lacks(coin(diana), 9)),
+        own([F12, F13], propose(redeem(F12?, diana, F13?))), wait(lacks(coin(diana), 8)), look]).
 script(_, []) :- otherwise | true.
 
 %% The person.
@@ -124,6 +178,11 @@ shows(lacks(A), _, T, _, B?) :- ground(T?) |
     last_of(T?, L),
     count_in(A?, L?, N),
     at_least(N?, 1, B1),
+    flip(B1?, B).
+shows(lacks(A, K), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, K?, B1),
     flip(B1?, B).
 shows(has(A, K), _, T, _, B?) :- ground(T?) |
     last_of(T?, L),
