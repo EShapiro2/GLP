@@ -2928,20 +2928,21 @@ check_mix(D, K, Sum, W, [E?]) :- otherwise, ground(D?), ground(K?), ground(Sum?)
 %% Ss, and W is no where one of them is not a profile and a whole percentage.
 procedure share_sum(Terms?, Integer?, Integer, Ans?, Ans).
 share_sum([], A, A?, W, W?).
-share_sum([share(Q, P)|Ss], A, Sum?, W, W1?) :- constant(Q?), number(P?), P? > 0 |
+share_sum([share(Q, P)|Ss], A, Sum?, W, W1?) :- constant(Q?), number(P?), P? >= 0 |
     N := round(P? * 100), D := abs(P? * 100 - N?), share_sum1(D?, N?, A?, Ss?, Sum, W?, W1).
 share_sum([S|Ss], A, Sum?, _, W?) :- otherwise, ground(S?) | share_sum(Ss?, A?, Sum, no, W).
 procedure share_sum1(Number?, Integer?, Integer?, Terms?, Integer, Ans?, Ans).
 share_sum1(D, N, A, Ss, Sum?, W, W1?) :- D? < 0.000001 | A1 := A? + N?, share_sum(Ss?, A1?, Sum, W?, W1).
 share_sum1(D, N, A, Ss, Sum?, _, W1?) :- D? >= 0.000001 | A1 := A? + N?, share_sum(Ss?, A1?, Sum, no, W1).
 
-%% The profiles: each profile of the source in exactly one dimension, and each
-%% profile of a dimension one of the source's.
+%% The profiles: each profile of a dimension one of the source's; a profile of
+%% the source that no dimension names is a program the run does not use, and a
+%% profile of share 0 is drawn by no agent (sGLP, Section 3, Definitions
+%% "Stochastic Person, Population" and "Well-Formed").
 procedure check_profiles(Terms?, Terms?, Terms).
 check_profiles(Ms, Ps, Es?) :- mix_profiles(Ms?, Qs), check_profiles1(Qs?, Ps?, Es).
 procedure check_profiles1(Terms?, Terms?, Terms).
-check_profiles1(Qs, Ps, Es?) :- ground(Qs?), ground(Ps?) |
-    check_in_one(Ps?, Qs?, E1), check_known(Qs?, Ps?, E2), append(E1?, E2?, Es).
+check_profiles1(Qs, Ps, Es?) :- ground(Qs?), ground(Ps?) | check_known(Qs?, Ps?, Es).
 procedure mix_profiles(Terms?, Terms).
 mix_profiles([], []).
 mix_profiles([mix(_, _, Ss)|Ms], Qs?) :- share_profiles(Ss?, Q1), mix_profiles(Ms?, Q2), append(Q1?, Q2?, Qs).
@@ -2950,14 +2951,6 @@ procedure share_profiles(Terms?, Terms).
 share_profiles([], []).
 share_profiles([share(Q, _)|Ss], [Q?|Qs?]) :- share_profiles(Ss?, Qs).
 share_profiles([_|Ss], Qs?) :- otherwise | share_profiles(Ss?, Qs).
-procedure check_in_one(Terms?, Terms?, Terms).
-check_in_one([], _, []).
-check_in_one([P|Ps], Qs, Es?) :- ground(P?), ground(Qs?) |
-    count(P?, Qs?, 0, N), check_in_one1(N?, P?, Ps?, Qs?, Es).
-procedure check_in_one1(Integer?, _?, Terms?, Terms?, Terms).
-check_in_one1(N, _, Ps, Qs, Es?) :- N? =:= 1 | check_in_one(Ps?, Qs?, Es).
-check_in_one1(N, P, Ps, Qs, [E?|Es?]) :- N? =\= 1 |
-    E =.. ['%% not transformed: a profile not in exactly one dimension', P?], check_in_one(Ps?, Qs?, Es).
 procedure check_known(Terms?, Terms?, Terms).
 check_known([], _, []).
 check_known([Q|Qs], Ps, Es?) :- ground(Q?), ground(Ps?) | member(Q?, Ps?, A), check_known1(A?, Q?, Qs?, Ps?, Es).

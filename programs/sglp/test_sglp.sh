@@ -98,9 +98,12 @@
 #       population.glp and coins/profiles.glp and population.glp, are what the
 #       transformation prints from the sGLP sources, graph_sglp.glp and
 #       coins_sglp.glp, byte for byte (transform.sh --check); a source with a
-#       dimension whose probabilities do not sum to one and a profile in no
-#       dimension is refused with those two faults and nothing printed; the
-#       same source with them mended is translated, the rated goal's procedure
+#       dimension whose probabilities do not sum to one is refused with that
+#       fault and nothing printed, its profile in no dimension being no fault
+#       (sGLP's paper at 8813a7f, Section 3, Definitions "Stochastic Person,
+#       Population" and "Well-Formed"; sGLP's task of 2026-10-24 08:32 UTC); a
+#       mix with a share of 0.0 is translated, its draw selecting that profile
+#       for no draw of 1..100; the same source mended is translated, the rated goal's procedure
 #       taking the token, the person procedure the monitor's reference, the
 #       asks Ask ::= ask(Constant, Question) and Question the union of t(T),
 #       the person process a clause for its person declaration, which reads an
@@ -571,7 +574,9 @@ check "the printed modules are what the transformation prints from the sGLP sour
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/tx.out"
 # A small source: one interactive type Q ::= q(A?), the person procedure p_q
 # of profile p answering it after a rated goal of ans; BAD has p's dimension at
-# 0.5 and a profile r in no dimension, GOOD neither.
+# 0.5 and a profile r in no dimension, GOOD neither; ZERO has a dimension of p
+# at 1.0 and r, sharing p's person procedure, at 0.0, and ZERO1 the same with r
+# first.
 V="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A')))]"
 P="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Person'), dual('Integer'))), clause(p_q(var('X'), var('_'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q(a)), [], [])"
 repl "$WORK/txbad.out" ':limit 1000000000000' "$HERE" \
@@ -579,13 +584,27 @@ repl "$WORK/txbad.out" ':limit 1000000000000' "$HERE" \
 repl "$WORK/txgood.out" ':limit 1000000000000' "$HERE" \
     "transform_terms($V, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], profiles)." \
     "transform_terms($V, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], population)."
+repl "$WORK/txzero.out" ':limit 1000000000000' "$HERE" \
+    "transform_terms($V, [$P, person(r), binds('Q', p_q), run(2, [mix(d, [share(p, 1.0), share(r, 0.0)])], 1, day, 1)], population)." \
+    "transform_terms($V, [$P, person(r), binds('Q', p_q), run(2, [mix(d, [share(r, 0.0), share(p, 1.0)])], 1, day, 1)], population)."
 sed 's/^\(GLP> \)*//' "$WORK/txbad.out" > "$WORK/txbad.lines"
 sed 's/^\(GLP> \)*//' "$WORK/txgood.out" > "$WORK/txgood.lines"
 grep -q '^%% not transformed: the probabilities of a dimension (one to nine profiles, whole percentages, summing to one)(d)$' "$WORK/txbad.lines" &&
-    grep -q '^%% not transformed: a profile not in exactly one dimension(r)$' "$WORK/txbad.lines" &&
-    [ "$(grep -c '^%% not transformed' "$WORK/txbad.lines")" -eq 2 ] &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txbad.lines")" -eq 1 ] &&
     ! grep -q '^p_q(' "$WORK/txbad.lines"
-check "a source with a dimension not summing to one and a profile in no dimension is refused with those faults, nothing printed" $?
+check "a source with a dimension not summing to one is refused with that fault alone, nothing printed, its profile in no dimension being no fault (Definitions \"Stochastic Person, Population\", \"Well-Formed\")" $?
+sed 's/^\(GLP> \)*//' "$WORK/txzero.out" > "$WORK/txzero.lines"
+for k in 1 2; do
+    awk -v k="$k" '$0 == "%% transform begin" { n++; next } $0 == "%% transform end" { next } n == k' "$WORK/txzero.lines" | tr '\n' ' ' > "$WORK/txzero.$k.flat"
+done
+! grep -q '^%% not transformed' "$WORK/txzero.lines" &&
+    grep -q "declaration(2, 1, day, 1, 100) \. " "$WORK/txzero.1.flat" &&
+    grep -q "d(K, T1, p) :- '=<'(K?, T1?) | true \. d(K, T1, r) :- '>'(K?, T1?) | true \. " "$WORK/txzero.1.flat" &&
+    grep -q "declaration(2, 1, day, 1, 0) \. " "$WORK/txzero.2.flat" &&
+    grep -q "d(K, T1, r) :- '=<'(K?, T1?) | true \. d(K, T1, p) :- '>'(K?, T1?) | true \. " "$WORK/txzero.2.flat" &&
+    grep -q "random(B?, 100, K1, S) , d(K1?, T1?, P1)" "$WORK/txzero.1.flat" &&
+    grep -q "random(B?, 100, K1, S) , d(K1?, T1?, P1)" "$WORK/txzero.2.flat"
+check "a mix with a share of 0.0 is translated, last or first, and its draw of 1..100 against the threshold 100 or 0 selects that profile for no agent (Definitions \"Stochastic Person, Population\", \"Well-Formed\")" $?
 ! grep -q '^%% not transformed' "$WORK/txgood.lines" &&
     grep -q '^ans(go, q(a))$' "$WORK/txgood.lines" &&
     grep -A 1 '^ans(stop, _)$' "$WORK/txgood.lines" | tr '\n' ' ' | grep -q '^ans(stop, _) \. $' &&
