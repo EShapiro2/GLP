@@ -18,18 +18,25 @@
 %% paper's cent(u, d): a bond due at the day d, and a coin due at 0, the
 %% paper's bot, since a coin is due now and every date is at least 0, so a
 %% coin satisfies redeem's constraint at every date and fails mint_bond's.
-%% date(t) at p is p's date.  A numeric variable x is num(x), listed in a
+%% date(t) at p is p's date, and today(d) at p is the day, which the
+%% platform writes from the device's calendar and no schema adds or deletes
+%% (vGLP, Section 5.4; Udi, 2026-10-24): first_date gives p the day as their
+%% date once, the mark dated forbidding a second, and advance takes the date
+%% to the next day while the day is not past; so GB:2 is realised by two
+%% unguarded schemas and the calendar.  A numeric variable x is num(x), listed in a
 %% schema's Vars in the order of the paper's head, and num(0) is the number
 %% 0.  A multiplicity k on an atom A added or deleted is times(num(k), A),
 %% and a multiplicity is a positive whole number (GSC, 2026-10-23), so the
 %% schemas carry no constraint on amounts.  A schema with a constraint is
-%% nschema(Name, Vars, Constraint, Roles), the constraint gt(X, Y),
-%% le(X, Y) or succ(X, Y) (Y = X + 1).  A number names no person, so the
+%% nschema(Name, Vars, Constraint, Roles), the constraint a conjunction,
+%% and(C1, C2), of gt(X, Y), le(X, Y) and succ(X, Y) (Y = X + 1) (GSC,
+%% Definition Schema with values: a conjunction of linear equalities and
+%% inequalities).  A number names no person, so the
 %% three conditions concern the persons a schema names; advance names none.
 %%
-%% The nine schemas of GB are the eight of Appendix A, mint written once
+%% The ten schemas of GB are the eight of Appendix A, mint written once
 %% for a coin and once for a bond, clause 1 describing the two acts, so
-%% that each has its button (GB.txt, Pragmas); a swap, a redemption and an
+%% that each has its button (GB.txt, Pragmas), and first_date; a swap, a redemption and an
 %% escrow transfer each take coins and bonds alike in one schema, the due
 %% an argument.  This replaces the twenty-one terms of 2026-10-20, which
 %% wrote a schema once for each kind of instrument it took.  A role is
@@ -40,7 +47,7 @@
 %% the condition of an escrow (clause 7) are the escrow agreement's, held
 %% by the escrow agent, and name no role of a transfer (GB, Section 5).
 %% Written by Currencies #11 Cowork, 2026-10-20; rewritten by Currencies
-%% #12 Cowork, 2026-10-23.
+%% #12 Cowork, 2026-10-23, first_date and today added 2026-10-24.
 %% ---------------------------------------------------------------------------
 
 NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
@@ -57,8 +64,8 @@ RoleKind   ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
 RoleSpec   ::= rs(Guard, Mults, Mults, Atoms, Atoms)
              ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
 RoleSpecs  ::= [] ; [RoleSpec | RoleSpecs].
-Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
-             ; or(Constraint, Constraint).
+Constraint ::= true ; and(Constraint, Constraint)
+             ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg).
 Reach      ::= reach(NameTerm, Constant, NameTerm).
 Reaches    ::= [] ; [Reach | Reaches].
 Schema     ::= schema(Constant, Args, RoleSpecs)
@@ -88,9 +95,12 @@ contract_named(gb,
 %% GB:1, Minting: p mints k p-bonds maturing at d, later than p's date t.
     nschema(mint_bond, [num(d), num(k), num(t)], gt(num(d), num(t)),
        [rs(guarded, [times(num(k), atom(cent, [role(1), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]),
-%% GB:2, Date: p's date advances to the next day; no role guards it.
-    nschema(advance, [num(t), num(t1)], succ(num(t), num(t1)),
-       [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])]),
+%% GB:2, Date: p's first date is the day, once; no role guards it.
+    schema(first_date, [num(d)],
+       [rs(unguarded, [atom(date, [num(d)]), atom(dated, [])], [], [atom(identity, []), atom(today, [num(d)])], [atom(dated, [])])]),
+%% GB:2, Date: p's date advances to the next day, not past the day; no role guards it.
+    nschema(advance, [num(t), num(t1), num(d)], and(succ(num(t), num(t1)), le(num(t1), num(d))),
+       [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, []), atom(today, [num(d)])], [])]),
 %% GB:3, Swap: p and q, who know each other, swap k instruments of u due at d for k1 instruments of v due at d1.
     schema(swap, [pvar(u), num(d), num(k), pvar(v), num(d1), num(k1)],
        [rs(guarded, [times(num(k1), atom(cent, [pvar(v), num(d1)]))], [times(num(k), atom(cent, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
