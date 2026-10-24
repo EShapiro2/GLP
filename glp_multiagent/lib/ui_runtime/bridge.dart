@@ -141,8 +141,11 @@ const String actCtor = 'act';
 /// The label `S` and the widget, or the button's constant, `W` of [w], where
 /// it is `label(S, W)`, or `act(P, label(S, W))`; null for any other term.
 (String, GTerm)? labelledWidget(GTerm w) {
-  final a = actWidget(w);
-  final (k, ws) = ctorArgs(a == null ? w : a.$2);
+  var cur = w;
+  for (var a = actWidget(cur); a != null; a = actWidget(cur)) {
+    cur = a.$2;
+  }
+  final (k, ws) = ctorArgs(cur);
   if (k != labelCtor || ws.length != 2) return null;
   return (displayText(ws[0]), ws[1]);
 }

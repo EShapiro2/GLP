@@ -1237,6 +1237,9 @@ class RequestOffers {
   /// Where the button of each alternative of Proposal is drawn, by its functor and arity, where the widget term says ([ActInfo]; `act(P, W)`, bridge.dart).
   final Map<String, ActInfo> acts;
 
+  /// Every place the button of each alternative of Proposal is drawn at, one for each of its guarding roles, the first that of [acts] (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles, beside each row that fills its variable"; nested `act(P, W)`, bridge.dart).
+  final Map<String, List<ActInfo>> allActs;
+
   /// The kind of the field of each place of each alternative of Proposal, by its functor and arity, in order, read off its widget: `peer`, `number`, `text`, `speech` or `other`.
   final Map<String, List<String>> kinds;
 
@@ -1246,6 +1249,7 @@ class RequestOffers {
       this.knownLabel,
       this.knownField = 'Peer',
       this.acts = const {},
+      this.allActs = const {},
       this.kinds = const {}});
 
   /// The alternative of Proposal of functor [f], its key `f/n`; null where there is none.
@@ -1291,6 +1295,7 @@ class RequestOffers {
     final labels = <String, String>{};
     final fields = <String, List<String>>{};
     final acts = <String, ActInfo>{};
+    final allActs = <String, List<ActInfo>>{};
     final kinds = <String, List<String>>{};
     var known = false;
     String? knownLabel;
@@ -1317,7 +1322,6 @@ class RequestOffers {
           if (f == 'propose' && afs.items.length == 1) {
             for (final praw in _items(_fieldWidget(afs.items[0]))) {
               final pl = labelledWidget(praw)?.$1;
-              final pa = actWidget(praw)?.$1;
               final (pk, pws) = ctorArgs(_bare(praw));
               if (pk == 'form' && pws.length == 2 && pws[1] is GList) {
                 final key =
@@ -1328,9 +1332,12 @@ class RequestOffers {
                 kinds[key] = [
                   for (final e in (pws[1] as GList).items) _kind(e)
                 ];
-                if (pa != null) {
-                  final a = ActInfo.of(pa);
-                  if (a != null) acts[key] = a;
+                // The places of its guarding roles, nested, the first outermost.
+                for (var cur = actWidget(praw); cur != null; cur = actWidget(cur.$2)) {
+                  final a = ActInfo.of(cur.$1);
+                  if (a == null) continue;
+                  acts.putIfAbsent(key, () => a);
+                  (allActs[key] ??= []).add(a);
                 }
               }
             }
@@ -1344,6 +1351,7 @@ class RequestOffers {
         knownLabel: knownLabel,
         knownField: knownField,
         acts: acts,
+        allActs: allActs,
         kinds: kinds);
   }
 
@@ -2688,12 +2696,10 @@ class _SocialTabState extends State<SocialTab> {
       final (j, k) = a.groups.first;
       return {j: g.$1, k: g.$2};
     }
-    if (SpeechAct.of(item) != null) {
-      for (final (k, p) in a.items) {
-        if (p == pred) return {k: item};
-      }
-      return const {};
+    for (final (k, p) in a.items) {
+      if (p == pred) return {k: item};
     }
+    if (SpeechAct.of(item) != null) return const {};
     if (item is GAtom && a.persons.isNotEmpty) return {a.persons.first: item};
     return const {};
   }
@@ -2710,8 +2716,16 @@ class _SocialTabState extends State<SocialTab> {
     final speech = SpeechAct.of(item) != null;
     final acts = <(String, ActInfo)>[];
     for (final key in o.proposals) {
-      final a = o.acts[key];
-      if (a == null) continue;
+      final places = o.allActs[key] ?? const <ActInfo>[];
+      if (places.isEmpty) continue;
+      // An act of several guarding roles is drawn on a row at the first of its places the row fills, by an item of the row's list (vGLP 110caf4, Section 6.2: "beside each row that fills its variable"); an act of one, at its place.
+      if (places.length > 1) {
+        final at = places.where((a) =>
+            g == null && a.items.any((x) => x.$2 == pred) && !mine);
+        if (at.isNotEmpty) acts.add((key, at.first));
+        continue;
+      }
+      final a = places.first;
       if (g != null) {
         if (a.groups.isNotEmpty) {
           final (j, _) = a.groups.first;
