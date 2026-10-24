@@ -18,15 +18,15 @@ unfriend(Alice?, Bob) :
     at Bob: identity, -friend(Alice)
 
 message(Alice?, Bob; x) :
-    at Alice: identity
-    at Bob: identity, friend(Alice), +received(x, Alice)
+    at Alice: identity, friend(Bob)
+    at Bob: identity, +received(x, Alice)
 
 create(Alice?; n) :
     at Alice: identity, not member(<Alice>.n), not closed(n), +member(<Alice>.n), +listed(Alice, n)
 
 join(Alice?, Bob?; n) :
     at Alice: identity, member(<Alice>.n), friend(Bob), +listed(Bob, n)
-    at Bob: identity, friend(Alice), not member(<Alice>.n), +member(<Alice>.n)
+    at Bob: identity, not member(<Alice>.n), +member(<Alice>.n)
 
 leave(Alice, Bob?; n) :
     at Alice: identity, -listed(Bob, n)
