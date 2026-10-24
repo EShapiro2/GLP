@@ -586,7 +586,7 @@ class _Run {
     final asks = '${personName(GAtom(p.name))} wishes that you know each other.';
     expect(textsOf(q, a), [asks, 'yes', 'no']);
     if (shot != null) {
-      plain(q, allow: const {'Peer'});
+      plain(q);
       await shoot(q, shot);
     }
     await answer(q, 'yes');
@@ -732,7 +732,7 @@ class _Run {
     expect(tester.getTopLeft(on(q, find.text(asks))).dy,
         lessThan(tester.getTopLeft(control(q, 'name')).dy));
     if (shot != null) {
-      plain(q, allow: worded ? const {'Peer'} : const {});
+      plain(q);
       await shoot(q, shot);
     }
     await answer(q, worded ? 'yes' : 'Yes');
@@ -767,7 +767,7 @@ class _Run {
           lessThan(tester.getTopLeft(control(q, 'name')).dy));
     }
     if (shot != null) {
-      plain(q, allow: worded ? const {'Peer'} : const {});
+      plain(q);
       await shoot(q, shot);
     }
     await answer(q, worded ? 'yes' : 'Accept');
@@ -906,8 +906,13 @@ void appsScreens(Screens screens) {
         find.descendant(
             of: run.control(alice, 'key-send:meet'), matching: find.text('Meet')),
         findsOneWidget);
+    // Meet's field for the peer's key, named GKK's "<person>" (vGLP e286276, Section 5.4, "The contract's words").
+    expect(
+        find.descendant(
+            of: run.control(alice, 'key:meet'), matching: find.text('person')),
+        findsOneWidget);
     expect(alice.atoms, isEmpty);
-    run.plain(alice, allow: const {'Peer'});
+    run.plain(alice);
     await run.shoot(alice, 'gkk-a-alice-identity.png');
     await run.join(alice);
     expect(alice.atoms, ['identity']);
@@ -921,10 +926,15 @@ void appsScreens(Screens screens) {
         unorderedEquals(['identity', 'knows(bob)', 'knows(carol)']));
     expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
 
-    // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Introduce, GKK's "[Introduce]", beside Bob in her Contacts, Bob filling the first person of introduce(p?, q? ; c); she picks Carol into the second, its field named by its type, Peer, and taps Introduce.
+    // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Introduce, GKK's "[Introduce]", beside Bob in her Contacts, Bob filling the first person of introduce(p?, q? ; c); she types Carol's key into its field, GKK's "<person>", a person the act names by key (vGLP e286276, Section 5.4, "The contract's words"), and taps Introduce.
     await run.list(alice, 'knows');
     await run.tap(alice, run.control(alice, 'act:introduce:bob'));
-    await run.tap(alice, run.control(alice, 'pick:introduce:bob:3:carol'));
+    expect(
+        find.descendant(
+            of: run.control(alice, 'field:introduce:bob:3'),
+            matching: find.text('person')),
+        findsOneWidget);
+    await run.type(alice, run.control(alice, 'field:introduce:bob:3'), 'carol');
     expect(
         find.descendant(
             of: run.control(alice, 'send:introduce:bob'),
@@ -939,7 +949,7 @@ void appsScreens(Screens screens) {
     await run.top(bob);
     expect(run.textsOf(bob, a),
         ['Alice asks to introduce Carol to you.', 'yes', 'no']);
-    run.plain(bob, allow: const {'Peer'});
+    run.plain(bob);
     await run.answer(bob, 'yes');
     expect(bob.questions('approval'), isEmpty);
     expect(carol.questions('approval'), isEmpty);
@@ -952,7 +962,7 @@ void appsScreens(Screens screens) {
     expect(run.control(bob, 'row:carol'), findsOneWidget);
     expect(run.control(bob, 'act:meet:alice'), findsOneWidget);
     expect(run.texts(bob), containsAllInOrder(['Bob', 'Carol', 'Alice']));
-    run.plain(bob, allow: const {'Peer'});
+    run.plain(bob);
     await run.shoot(bob, 'gkk-c-bob-contacts.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
@@ -1003,7 +1013,7 @@ void appsScreens(Screens screens) {
     await run.top(alice);
     expect(run.control(alice, 'row:bob'), findsOneWidget);
     expect(run.texts(alice), containsAllInOrder(['Alice', 'Bob', 'Befriend']));
-    run.plain(alice, allow: const {'Peer'});
+    run.plain(alice);
     await run.shoot(alice, 'gsg-c-alice-ended.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
