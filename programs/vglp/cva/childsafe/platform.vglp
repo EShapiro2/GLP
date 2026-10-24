@@ -606,8 +606,7 @@ own_after(write_own, [own|Ow1?], Ow1, yes).
 own_after(own_unread, Ow1?, Ow1, yes).
 own_after(no_own, Ow1?, Ow1, no).
 
-%% repend(Again?, St?, Ag, St1): a recheck of the starts held waiting, where
-%% there are any and the dispatch changed the app state or consumed a start.
+%% repend(Again?, St?, Ag, St1): where the dispatch changed the app state or consumed a start, the requests of its person the agent holds, each put up again, and then a recheck of the starts held waiting, where there are any (vGLP, Section 5.4, "The compilation": "After every dispatch the agent goal puts up again the starts and the requests of its person it holds").  The requests come first, so that a request held while the agent was busy is an approval again before a start of its class is taken, and the person who made it is not asked on that start: "The two-phase commit of the meet then runs with both approvals standing, so no second question is asked" (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 1).
 procedure repend(YesNo?, St?, Stream(Trigger), St).
 repend(no, St, [], St?).
 repend(yes, St, Ag?, St1?) :- ground(St?) |
@@ -615,7 +614,7 @@ repend(yes, St, Ag?, St1?) :- ground(St?) |
     pend_triggers(Pd?, Ag0),
     st_reqs(St?, Rq),
     again_triggers(Rq?, Ag1),
-    app(Ag0?, Ag1?, Ag),
+    app(Ag1?, Ag0?, Ag),
     set_reqs(St?, [], St1).
 %% The requests of its person the agent holds, each put up again, again(N), and taken, held again or dropped on its reading as a request read is.
 procedure again_triggers(Proposals?, Stream(Trigger)).
@@ -643,24 +642,22 @@ request_cond1(cls(I), N, C, St, Cd?, St?) :- ground(I?), ground(N?), ground(C?),
     request_cands(Pr?, I?, N?, C?, St?, Rq),
     st_made(St?, Md),
     pick_request(Rq?, N?, C?, Md?, Cd).
-%% The candidate Request of the part Pr that the request name names, where its condition holds: for a guarded part with no opener, the Request of {[t]} to the agent itself, one(C0), C0 the term that names the class at the agent, where it is free for [t], ready for a guarded part of [t] with no opener that it guards, and has no request of {[t]} pending; for a guarded part with an opener, the Request of rho_N to the opener, where the agent is a guard of the part and not its opener, is free for every class of rho_N, its state is in the domain of its effect in the part, rho_N is not pending at it, and the opener is known.  With the candidates, rq(Cs, Busy, Ready): Busy, whether the agent, a guard of the part and not its opener, is not free for a class of its Request, and Ready, whether it is ready for the part, which it guards or opens.
+%% The candidate Request of the part Pr that the request name names, where its condition holds: for a guarded part with no opener, the Request of {[t]} to the agent itself, one(C0), C0 the term that names the class at the agent, where it is free for [t], ready for the part named N, which it guards, and has no request of {[t]} pending (vGLP, Section 5.4, "The compilation": "the Request of {[t]} to itself for each class [t] of a guarded part with no opener named N that it guards and is ready for"); for a guarded part with an opener, the Request of rho_N to the opener, where the agent is a guard of the part and not its opener, is free for every class of rho_N, its state is in the domain of its effect in the part, rho_N is not pending at it, and the opener is known.  With the candidates, rq(Cs, Busy, Ready): Busy, whether the agent, a guard of the part and not its opener, is not free for a class of its Request, and Ready, whether it is ready for the part, which it guards or opens.
 procedure request_cands(PartRes?, Info?, Proposal?, Class?, St?, RQ).
 request_cands(nopart, _, _, _, _, rq([], no, no)).
 request_cands(part(pt(_, G, guarded_part)), I, _, C, St, rq(Cs?, Bz?, RdN?)) :- ground(G?), ground(I?), ground(C?), ground(St?) |
     st_id(St?, Id),
     mem(Id?, G?, Gd),
     free_i(I?, St?, Fr),
-    ready_guarded(I?, St?, Rd),
-    info_class(I?, C0),
-    self_request(C0?, St?, NPd),
-    and(Gd?, Fr?, B1),
-    and(B1?, Rd?, B2),
-    and(B2?, NPd?, B),
-    self_cand(B?, I?, Id?, Cs),
-    neg(Fr?, NFr),
-    and(Gd?, NFr?, Bz),
     st_ms(St?, S),
     part_dom(C?, Id?, S?, Dm),
+    self_request(I?, St?, NPd),
+    and(Gd?, Fr?, B1),
+    and(B1?, Dm?, B2),
+    and(B2?, NPd?, B),
+    self_cand(B?, C?, Id?, Cs),
+    neg(Fr?, NFr),
+    and(Gd?, NFr?, Bz),
     and(Gd?, Dm?, RdN).
 request_cands(part(pt(_, G, opener(O))), _, N, C, St, rq(Cs?, Bz?, RdN?)) :-
     ground(G?), ground(N?), ground(C?), ground(St?) |
@@ -691,29 +688,30 @@ request_cands(part(pt(_, G, opener(O))), _, N, C, St, rq(Cs?, Bz?, RdN?)) :-
 procedure rho_cand(YesNo?, Proposal?, Peer?, RCands).
 rho_cand(yes, N, O, [rc(rho(N?), O?)]).
 rho_cand(no, _, _, []).
-procedure self_request(Class?, St?, YesNo).
-self_request(C0, St, NPd?) :- ground(C0?), ground(St?) |
+%% Whether no request of the agent to itself of the class I is pending: "where it is free for [t] and no such request is pending at it" (vGLP, Section 5.4, "The compilation").  A request of {[t]} is recorded by the term of the part it names, one(C), so that it is proposed on, and shown in the view, by its name (Section 5.4: "the requests by their names"; "of the class of a pending request, only the parts that request names"), and it is of the class of that term.
+procedure self_request(Info?, St?, YesNo).
+self_request(I, St, NPd?) :- ground(I?), ground(St?) |
     st_app(St?, Ap),
     app_recs(Ap?, Rc),
-    pending_request(one(C0?), Rc?, Pd),
+    class_request0(Rc?, I?, Pd),
     neg(Pd?, NPd).
-procedure self_cand(YesNo?, Info?, Peer?, RCands).
-self_cand(yes, I, Id, [rc(one(C0?), Id?)]) :- info_class(I?, C0).
+procedure class_request0(Recs?, Info?, YesNo).
+class_request0(R, I, B?) :- ground(R?) | class_request(R?, I?, R?, B).
+procedure class_request(Recs?, Info?, Recs?, YesNo).
+class_request([], _, _, no).
+class_request([requested(one(C), K)|Rs], I, R, B?) :- ground(C?), ground(I?), ground(R?), integer(K?) |
+    mem(ended(one(C?), K?), R?, Done),
+    neg(Done?, Open),
+    term_of_class(C?, I?, Of),
+    and(Open?, Of?, P),
+    class_request1(P?, Rs?, I?, R?, B).
+class_request([_|Rs], I, R, B?) :- otherwise | class_request(Rs?, I?, R?, B).
+procedure class_request1(YesNo?, Recs?, Info?, Recs?, YesNo).
+class_request1(yes, _, _, _, yes).
+class_request1(no, Rs, I, R, B?) :- class_request(Rs?, I?, R?, B).
+procedure self_cand(YesNo?, Class?, Peer?, RCands).
+self_cand(yes, C, Id, [rc(one(C?), Id?)]).
 self_cand(no, _, _, []).
-procedure info_class(Info?, Class).
-info_class(ci(C, _, _, _, _), C?).
-%% Ready for a guarded part of the class I with no opener that the agent guards (Definition "Proposing", Request: "ready for a guarded part of a class of rho that it guards").
-procedure ready_guarded(Info?, St?, YesNo).
-ready_guarded(I, St, B?) :- ground(I?), ground(St?) |
-    st_id(St?, Id),
-    st_ms(St?, S),
-    info_parts(I?, Pts),
-    guarding_parts(Pts?, Id?, Ps),
-    ready_parts(Ps?, Id?, S?, Rs),
-    some_class(Rs?, B).
-procedure some_class(Classes?, YesNo).
-some_class([], no).
-some_class([_|_], yes).
 %% A request pending at the agent: recorded requested(Rho, K) and not ended(Rho, K).
 procedure pending_request(Rho?, Recs?, YesNo).
 pending_request(R, Rc, B?) :- ground(Rc?) | pending_request1(Rc?, R?, Rc?, B).

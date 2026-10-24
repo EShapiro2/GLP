@@ -21,14 +21,17 @@
 %% introduces them to each other, so that the machine of a person who comes to
 %% know an agent can reach it" (ibid.).
 %%
-%% play_intros: alice meets bob and carol, each asked and answering yes; alice
+%% play_intros: alice meets bob and carol, meet a meeting schema, each a cold
+%% call whose hello asks the other, each answering yes, their request of it
+%% (vGLP, Section 5.4, "The compilation"); alice
 %% introduces carol to bob, introduce(alice, bob, carol), bob asked and
 %% answering yes, carol taking no part; at the commit alice's agent sends
 %% intro(carol) to bob and intro(bob) to carol, which neither asked for
 %% (sent(alice, bob, intro(carol)) and sent(alice, carol, intro(bob)) on the
 %% network's log), and records introduced(bob, carol).  Bob's agent and
 %% carol's each send the other ihello, and know each other, though neither
-%% person asked to know the other; bob asks to meet carol, she is asked and
+%% person asked to meet the other; bob asks to meet carol, whom his machine
+%% knows, so no hello is sent and she is asked on his attempt's start, and
 %% answers yes, and each knows the other, bob holding knows(carol) twice.
 %%
 %% The types of platform.vglp, written again for the declarations of the

@@ -20,15 +20,17 @@
 %% does not propose it while bob is unknown, Propose telling every other
 %% participant.  She then requests a swap of it with bob for a Carol-coin,
 %% swap(alice, bob, carol, bob), whose hello asks bob, and bob answers yes, his
-%% request: once alice and bob know each other, her machine proposes the
-%% payment, the approval made first, bob's machine voting yes, unasked, and it
-%% commits, spending the coin: "the one decided first spending the coin".  Her
-%% approval of the swap stands, and her state is in the domain of no part of
-%% its class that she guards, so the swap is refused, her machine refusing it
-%% at once or voting no on bob's attempt of it, the refuser alice, reason
-%% unable, the Bob-coin the swap requires at her and her state lacks; her
-%% approval ends, and her screen shows the notice refused(swap(alice, bob,
-%% carol, bob), alice, unable([coin(bob)], [])), naming her machine (vGLP #18
+%% request of it, which his machine proposes: alice's request of the swap
+%% pending, her machine votes yes, unasked.  Her machine proposes the payment
+%% too, once bob is known; bob's attempt of the swap, of the smaller rank, has
+%% priority, and her machine wounds her attempt of the payment, which yields,
+%% and votes yes on his: the swap commits, spending the coin, "the one decided
+%% first spending the coin".  Her approval of the payment stands, and her state
+%% is in the domain of no part of its class that she guards, so her machine
+%% proposes it again and refuses it at once, the refuser alice, reason unable,
+%% the Bob-coin the payment requires at her and her state lacks; her approval
+%% ends, and her screen shows the notice refused(pay(alice, bob), alice,
+%% unable([coin(bob)], [])), naming her machine (vGLP #18
 %% Cowork to Code, 2026-10-20 10:44 UTC, item 6).  alice mints again and
 %% requests a swap of her coin for bob's, swap(alice, bob, bob, alice); bob,
 %% asked by the question Start raises, answers no, his vote no declined, and
@@ -75,7 +77,7 @@ play_coins(LA?, LB?, LC?, N?) :-
           wait(holds(coin(bob))),
           own([A2], propose(pay(A2?, bob))),
           own([A3], propose(swap(A3?, bob, carol, bob))),
-          wait(refused(swap(alice, bob, carol, bob), alice, unable([coin(bob)], []))),
+          wait(refused(pay(alice, bob), alice, unable([coin(bob)], []))),
           own([A4], propose(mint(A4?))),
           wait(holds(coin(alice))),
           own([A5], propose(swap(A5?, bob, bob, alice))),

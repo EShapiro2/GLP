@@ -46,10 +46,13 @@
 %%   5.4, "Act schemas as local specifications"): the swaps' part, guarded by
 %%   alice and bob, and the two redeems', guarded by alice and by bob.  Her
 %%   machine proposes the part her request names, the swaps', which asks bob;
-%%   he answers yes and it commits.  She swaps again and requests the swap back
-%%   again; her machine now proposes her redeem's part, the one it has
-%%   proposed less recently (Section 5.4, "The compilation"), which asks
-%%   nobody, and bob's machine votes yes.
+%%   he answers yes and it commits.  She swaps again and then requests the
+%%   redemption, redeem(alice, bob, alice), a Bob-coin given back for an
+%%   Alice-coin bob holds: "on an own trigger the agent proposes, of the class
+%%   of a pending request, only the parts that request names" (vGLP, Section
+%%   5.4, "The compilation"; vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC,
+%%   item 4), so her machine proposes her redeem's part, guarded by her, which
+%%   asks nobody, and bob's machine votes yes.
 %% play_busy: each having minted 2 coins and swapped one coin for one,
 %%   alice requests a second swap and bob, asked, leaves his approval question
 %%   open, alice's machine holding her attempt prepared; bob requests paying
@@ -128,7 +131,7 @@ play_redeem(LA?, LB?, N?) :-
           wait(holds(coin(alice))),
           own([A8, A9], propose(swap(A8?, bob, A9?, 1, bob, 1))),
           wait(holds(coin(bob))),
-          own([A10, A11], propose(swap(A10?, bob, bob, 1, A11?, 1)))],
+          own([A10, A11], propose(redeem(A10?, bob, A11?)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint(B2?, 1))), wait(holds(coin(bob))),
           

@@ -12,7 +12,9 @@
 %%
 %% play_deadlock: Idit's deadlock, two initiators outside the intersection of
 %% their attempts' participants.  carol and dave each befriend alice and then
-%% bob.  alice proposes link(alice, carol, dave) and bob link(bob, carol,
+%% bob, befriend a meeting schema, by which they come to know each other: the
+%% request is the cold call, the hello, and the called person's yes their
+%% request of it (vGLP, Section 5.4, "The compilation").  alice proposes link(alice, carol, dave) and bob link(bob, carol,
 %% dave); the network delivers alice's start to carol first and bob's to dave
 %% first, so carol holds alice's attempt prepared and dave bob's, and each
 %% holds the other's start waiting: without wound-wait, neither ever votes.
@@ -22,7 +24,8 @@
 %% her attempt commits.  bob's attempt, yielding, ends no approval, so his machine proposes his link again, on his request still standing, with no question to his person: his retried attempt keeps the rank of the wounded one, and it commits once alice's has (vGLP f0acbc1, Section 3.2, "The protocol": "an attempt that yields ends none, and its initiator proposes it again").
 %%
 %% The network holds three starts, each until a message is delivered: alice's
-%% start to carol until carol's befriending of bob commits, so that carol is
+%% start to carol until the befriending of carol and bob commits, whichever of
+%% the two proposed the attempt that commits, so that carol is
 %% free when it arrives; alice's start to dave until bob's start to dave; and
 %% bob's start to carol until alice's start to carol.
 %%
@@ -143,6 +146,7 @@ hold_rule(msg(carol, cargo(bob, start(attempt(_, _, _, link(_, _, _), _)))), 3).
 hold_rule(_, 0) :- otherwise | true.
 procedure rel_rule(Net?, Integer).
 rel_rule(msg(bob, cargo(carol, outcome(attempt(_, _, _, befriend(carol, bob), _), commit))), 1).
+rel_rule(msg(carol, cargo(bob, outcome(attempt(_, _, _, befriend(carol, bob), _), commit))), 1).
 rel_rule(msg(dave, cargo(bob, start(attempt(_, _, _, link(_, _, _), _)))), 2).
 rel_rule(msg(carol, cargo(alice, start(attempt(_, _, _, link(_, _, _), _)))), 3).
 rel_rule(_, 0) :- otherwise | true.
