@@ -21,13 +21,20 @@ identity
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 retired
 }
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -446,7 +453,7 @@ friend
 \text{provided } 
 \{
 \mathit{
-parent
+creator
 }
 (
 \Bob
@@ -556,10 +563,14 @@ create
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
+{
+\Alice
+}
  \uplus 
 \{
 \mathit{
@@ -572,7 +583,7 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 listed
 }
@@ -582,11 +593,6 @@ listed
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 \text{provided } 
@@ -594,12 +600,9 @@ n
 identity
 }
  \in c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -614,26 +617,23 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 closed
 }
 (
 n
 )
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
+}
+ = \emptyset
 ,\\
 &
 \text{provided } 
@@ -655,10 +655,14 @@ join
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
+{
+\Alice
+}
  \uplus 
 \{
 \mathit{
@@ -670,18 +674,17 @@ listed
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 c'_
-p
+{
+\Bob
+}
  := 
 c_
-p
+{
+\Bob
+}
  \uplus 
 \{
 \mathit{
@@ -695,19 +698,13 @@ member
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -718,43 +715,32 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 friend
 }
 (
 \Bob
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 friend
 }
 (
 \Alice
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Bob
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -762,27 +748,22 @@ p
 \mathit{
 child
 }
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
+}
+ = \emptyset
+ \text{ and } 
 \{
 \mathit{
 child
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -793,19 +774,16 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Bob
-)
-)
+}
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -820,10 +798,14 @@ leave
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
+{
+\Alice
+}
  \setminus 
 \{
 \mathit{
@@ -835,18 +817,17 @@ listed
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 c'_
-p
+{
+\Bob
+}
  := 
 c_
-p
+{
+\Bob
+}
  \setminus 
 \{
 \mathit{
@@ -860,19 +841,13 @@ member
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 listed
 }
@@ -881,22 +856,15 @@ listed
 ,
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -907,14 +875,10 @@ member
 \cdot
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Bob
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -922,12 +886,9 @@ p
 retired
 }
  \notin c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Bob
-)
-)
+}
 ,\\
 &
 \text{guarded by } \{
@@ -940,10 +901,14 @@ close
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 (c_
-p
+{
+\Alice
+}
  \setminus 
 \{
 \mathit{
@@ -952,6 +917,17 @@ listed
 (
 \Alice
 ,
+n
+)
+,
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
 n
 )
 \}
@@ -964,18 +940,13 @@ closed
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 c'_
-p
+q
  := 
 c_
-p
+q
  \setminus 
 \{
 \mathit{
@@ -989,7 +960,9 @@ member
 n
 )
 \}
-&& (p \in 
+ \qquad (
+q
+ \in 
 \mathrm{ext}_c(
 \Alice
 [
@@ -1003,15 +976,17 @@ n
 )
 ]
 )
+,\ 
+q \neq 
+\Alice
 )
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 listed
 }
@@ -1020,22 +995,15 @@ listed
 ,
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -1046,10 +1014,10 @@ member
 \cdot
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
+ \in c_
+q
+ \qquad (
+q \in 
 \mathrm{ext}_c(
 \Alice
 [
@@ -1071,12 +1039,9 @@ n
 retired
 }
  \notin c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
+}
 ,\\
 &
 \text{guarded by } \{
@@ -1089,10 +1054,14 @@ drop
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
+{
+\Alice
+}
  \setminus 
 \{
 \mathit{
@@ -1104,18 +1073,17 @@ listed
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 c'_
-p
+{
+\Bob
+}
  := 
 c_
-p
+{
+\Bob
+}
  \setminus 
 \{
 \mathit{
@@ -1129,19 +1097,13 @@ member
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 listed
 }
@@ -1150,22 +1112,15 @@ listed
 ,
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -1176,14 +1131,10 @@ member
 \cdot
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Bob
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -1194,12 +1145,9 @@ friend
 \Bob
 )
  \notin c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
+}
 ,\\
 &
 \text{guarded by } \emptyset
@@ -1210,10 +1158,14 @@ post_own
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
+{
+\Alice
+}
  \uplus 
 \{
 \mathit{
@@ -1225,19 +1177,13 @@ x
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -1248,14 +1194,10 @@ member
 \cdot
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -1268,19 +1210,16 @@ x
 ,
 n
 )
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
+}
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -1293,22 +1232,25 @@ post
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
+}
 ,\\
 &
 c'_
-p
+{
+\Bob
+}
  := 
 c_
-p
+{
+\Bob
+}
  \uplus 
 \{
 \mathit{
@@ -1320,19 +1262,13 @@ x
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -1343,22 +1279,15 @@ member
 \cdot
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -1369,7 +1298,7 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 listed
 }
@@ -1378,21 +1307,17 @@ listed
 ,
 n
 )
-,\ 
+,
 \mathit{
 friend
 }
 (
 \Alice
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Bob
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -1400,15 +1325,10 @@ p
 retired
 }
  \notin c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
+}
+ \text{ and } 
 \mathit{
 posted
 }
@@ -1418,12 +1338,9 @@ x
 n
 )
  \notin c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Bob
-)
-)
+}
 ,\\
 &
 \text{guarded by } \{
@@ -1436,10 +1353,14 @@ deliver
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
+{
+\Alice
+}
  \uplus 
 \{
 \mathit{
@@ -1453,18 +1374,17 @@ x
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 c'_
-p
+{
+\Bob
+}
  := 
 c_
-p
+{
+\Bob
+}
  \uplus 
 \{
 \mathit{
@@ -1478,19 +1398,13 @@ x
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -1501,7 +1415,7 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 posted
 }
@@ -1510,7 +1424,7 @@ x
 ,
 n
 )
-,\ 
+,
 \mathit{
 listed
 }
@@ -1519,29 +1433,22 @@ listed
 ,
 n
 )
-,\ 
+,
 \mathit{
 friend
 }
 (
 \Bob
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -1552,14 +1459,10 @@ member
 \cdot
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Bob
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -1574,12 +1477,9 @@ x
 n
 )
  \notin c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
+}
 ,\\
 &
 \text{guarded by } \emptyset
@@ -1601,6 +1501,13 @@ c_
  \uplus 
 \{
 \mathit{
+created
+}
+(
+\Bob
+)
+,
+\mathit{
 parenting
 }
 (
@@ -1638,15 +1545,15 @@ identity
 }
 ,
 \mathit{
-parent
+child
+}
+,
+\mathit{
+creator
 }
 (
 \Alice
 )
-,
-\mathit{
-child
-}
 ,
 \mathit{
 friend
@@ -1713,7 +1620,7 @@ retired
 \}
 \end{align*}
 \iffalse
-enter_2
+make_parent
 \fi
 \begin{align*}
 &
@@ -1729,30 +1636,11 @@ c_
  \uplus 
 \{
 \mathit{
-parenting
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-coparent
+made
 }
 (
 \Bob
-)
 ,
-\mathit{
-friend
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-knows
-}
-(
 \mathit{Carol}
 )
 \}
@@ -1770,20 +1658,6 @@ c_
 \{
 \mathit{
 parenting
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-coparent
-}
-(
-\Alice
-)
-,
-\mathit{
-friend
 }
 (
 \mathit{Carol}
@@ -1808,57 +1682,6 @@ c_
 }
  \uplus 
 \{
-\mathit{
-identity
-}
-,
-\mathit{
-parent
-}
-(
-\Alice
-)
-,
-\mathit{
-parent
-}
-(
-\Bob
-)
-,
-\mathit{
-child
-}
-,
-\mathit{
-child
-}
-,
-\mathit{
-coparented
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
 \mathit{
 knows
 }
@@ -1872,6 +1695,13 @@ knows
 \mathit{
 identity
 }
+,
+\mathit{
+created
+}
+(
+\mathit{Carol}
+)
 ,
 \mathit{
 knows
@@ -1898,6 +1728,25 @@ knows
 {
 \Bob
 }
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+creator
+}
+(
+\Alice
+)
+ \in c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
@@ -1905,6 +1754,15 @@ knows
 \mathit{
 child
 }
+,
+\mathit{
+made
+}
+(
+\Bob
+,
+\mathit{Carol}
+)
 ,
 \mathit{
 retired
@@ -1922,6 +1780,13 @@ child
 }
 ,
 \mathit{
+parenting
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
 retired
 }
 \}
@@ -1931,20 +1796,13 @@ retired
 }
  = \emptyset
  \text{ and } 
-\{
-\mathit{
-identity
-}
-,
 \mathit{
 retired
 }
-\}
- \cap c_
+ \notin c_
 {
 \mathit{Carol}
 }
- = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -1953,6 +1811,118 @@ retired
 \Bob
 ,
 \mathit{Carol}
+\}
+\end{align*}
+\iffalse
+end_parent
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+made
+}
+(
+\Bob
+,
+r
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+parenting
+}
+(
+r
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+created
+}
+(
+r
+)
+,
+\mathit{
+made
+}
+(
+\Bob
+,
+r
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+r
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+retired
+}
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+created
+}
+(
+r
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
 \}
 \end{align*}
 \iffalse
@@ -1972,13 +1942,82 @@ c_
  \setminus 
 \{
 \mathit{
+created
+}
+(
+\Bob
+)
+,
+\mathit{
 parenting
 }
 (
 \Bob
 )
 \}
-, \qquad 
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+created
+}
+(
+\Bob
+)
+,
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
+,\\
+&
 c'_
 {
 \Bob
@@ -1991,22 +2030,133 @@ c_
  \setminus 
 \{
 \mathit{
-parent
+child
+}
+,
+\mathit{
+creator
+}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+creator
 }
 (
 \Alice
 )
 ,
 \mathit{
-child
+parenting
 }
+(
+\Bob
+)
 \}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
 ,\\
 &
 \text{provided } 
 \mathit{
 identity
 }
+,
+\mathit{
+created
+}
+(
+\Bob
+)
 ,
 \mathit{
 parenting
@@ -2024,19 +2174,48 @@ identity
 }
 ,
 \mathit{
-parent
+child
+}
+,
+\mathit{
+creator
 }
 (
 \Alice
 )
-,
-\mathit{
-child
-}
  \in c_
 {
 \Bob
 }
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Bob
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
 ,\\
 &
 \text{provided } 
@@ -2049,12 +2228,29 @@ retired
 }
  \text{ and } 
 \mathit{
-coparented
+created
 }
- \notin c_
-{
+(
 \Bob
+)
+ \notin c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
 }
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
 ,\\
 &
 \text{guarded by } \{
@@ -2062,7 +2258,7 @@ coparented
 \}
 \end{align*}
 \iffalse
-of_age_2
+retire
 \fi
 \begin{align*}
 &
@@ -2078,83 +2274,220 @@ c_
  \setminus 
 \{
 \mathit{
-parenting
+created
 }
 (
-\mathit{Carol}
+\Bob
 )
 ,
 \mathit{
-coparent
+parenting
 }
 (
 \Bob
 )
 \}
-, \qquad 
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+created
+}
+(
+\Bob
+)
+,
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
+,\\
+&
 c'_
 {
 \Bob
 }
  := 
-c_
+(c_
 {
 \Bob
 }
  \setminus 
 \{
 \mathit{
-parenting
+child
 }
-(
-\mathit{Carol}
-)
 ,
 \mathit{
-coparent
+creator
 }
 (
 \Alice
 )
 \}
-, \qquad 
+) \uplus 
+\{
+\mathit{
+retired
+}
+\}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
+,\\
+&
 c'_
 {
-\mathit{Carol}
+\Bob
 }
  := 
-c_
+(c_
 {
-\mathit{Carol}
+\Bob
 }
  \setminus 
 \{
 \mathit{
-parent
+child
+}
+,
+\mathit{
+creator
 }
 (
 \Alice
 )
 ,
 \mathit{
-parent
+parenting
 }
 (
 \Bob
 )
-,
+\}
+) \uplus 
+\{
 \mathit{
-child
-}
-,
-\mathit{
-child
-}
-,
-\mathit{
-coparented
+retired
 }
 \}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{
+parenting
+}
+(
+\Bob
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
 ,\\
 &
 \text{provided } 
@@ -2163,14 +2496,14 @@ identity
 }
 ,
 \mathit{
-parenting
+created
 }
 (
-\mathit{Carol}
+\Bob
 )
 ,
 \mathit{
-coparent
+parenting
 }
 (
 \Bob
@@ -2185,14 +2518,11 @@ identity
 }
 ,
 \mathit{
-parenting
+child
 }
-(
-\mathit{Carol}
-)
 ,
 \mathit{
-coparent
+creator
 }
 (
 \Alice
@@ -2202,41 +2532,34 @@ coparent
 \Bob
 }
  \text{ and } 
-\{
 \mathit{
 identity
 }
 ,
 \mathit{
-parent
-}
-(
-\Alice
-)
-,
-\mathit{
-parent
+parenting
 }
 (
 \Bob
 )
-,
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
 \mathit{
-child
+made
 }
+(
+\ast
 ,
-\mathit{
-child
-}
-,
-\mathit{
-coparented
-}
-\}
- \subseteq c_
-{
-\mathit{Carol}
-}
+\Bob
+)
+]
+)
+)
 ,\\
 &
 \text{provided } 
@@ -2247,6 +2570,31 @@ retired
 {
 \Alice
 }
+ \text{ and } 
+\mathit{
+created
+}
+(
+\Bob
+)
+ \notin c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+made
+}
+(
+\ast
+,
+\Bob
+)
+]
+)
+)
 ,\\
 &
 \text{guarded by } \{
@@ -2315,13 +2663,6 @@ identity
 \mathit{
 child
 }
-,
-\mathit{
-parent
-}
-(
-\mathit{Carol}
-)
  \in c_
 {
 \Alice
@@ -2478,13 +2819,6 @@ identity
 \mathit{
 child
 }
-,
-\mathit{
-parent
-}
-(
-\mathit{Carol}
-)
  \in c_
 {
 \Alice
@@ -2497,13 +2831,6 @@ identity
 \mathit{
 child
 }
-,
-\mathit{
-parent
-}
-(
-\mathit{Dave}
-)
  \in c_
 {
 \Bob
@@ -2686,13 +3013,6 @@ child
 }
 ,
 \mathit{
-parent
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
 knows
 }
 (
@@ -2710,13 +3030,6 @@ identity
 \mathit{
 child
 }
-,
-\mathit{
-parent
-}
-(
-\mathit{Dave}
-)
 ,
 \mathit{
 knows
@@ -2916,13 +3229,6 @@ child
 }
 ,
 \mathit{
-parent
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
 knows
 }
 (
@@ -3100,13 +3406,6 @@ child
 }
 ,
 \mathit{
-parent
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
 friend
 }
 (
@@ -3181,337 +3480,19 @@ retired
 \}
 \end{align*}
 \iffalse
-parent_unfriend
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-friend
-}
-(
-\Bob
-)
-,
-\mathit{
-parenting
-}
-(
-\Bob
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-friend
-}
-(
-\Alice
-)
-,
-\mathit{
-parent
-}
-(
-\Alice
-)
-,
-\mathit{
-child
-}
-\}
-) \uplus 
-\{
-\mathit{
-retired
-}
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
-,
-\mathit{
-parenting
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
-,
-\mathit{
-parent
-}
-(
-\Alice
-)
-,
-\mathit{
-child
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-retired
-}
- \notin c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-coparented
-}
- \notin c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-parent_unfriend_2
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-friend
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-parenting
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-coparent
-}
-(
-\Bob
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-coparent
-}
-(
-\Alice
-)
-\}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
- \setminus 
-\{
-\mathit{
-friend
-}
-(
-\Alice
-)
-,
-\mathit{
-parent
-}
-(
-\Alice
-)
-,
-\mathit{
-child
-}
-,
-\mathit{
-coparented
-}
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-parenting
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-coparent
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-coparent
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
-,
-\mathit{
-parent
-}
-(
-\Alice
-)
-,
-\mathit{
-child
-}
-,
-\mathit{
-coparented
-}
- \in c_
-{
-\mathit{Carol}
-}
-,\\
-&
-\text{provided } 
-\mathit{
-retired
-}
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
 child_join
 \fi
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
+{
+\Alice
+}
  \uplus 
 \{
 \mathit{
@@ -3523,18 +3504,17 @@ listed
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 c'_
-p
+{
+\Bob
+}
  := 
 c_
-p
+{
+\Bob
+}
  \uplus 
 \{
 \mathit{
@@ -3548,31 +3528,24 @@ member
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
 ,\\
 &
 c'_
-p
+{
+\mathit{Carol}
+}
  := 
 c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \mathit{Carol}
-)
-)
+}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -3583,76 +3556,51 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 friend
 }
 (
 \Bob
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 child
 }
-,\ 
-\mathit{
-parent
-}
-(
-\mathit{Carol}
-)
-,\ 
+,
 \mathit{
 friend
 }
 (
 \Alice
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Bob
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 parenting
 }
 (
 \Bob
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \mathit{Carol}
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -3660,22 +3608,17 @@ p
 \mathit{
 child
 }
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
+}
+ = \emptyset
+ \text{ and } 
 \{
 \mathit{
 member
@@ -3687,39 +3630,31 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Bob
-)
-)
-,\\
-&
-\text{provided } 
+}
+ = \emptyset
+ \text{ and } 
 \{
 \mathit{
 child
 }
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \mathit{Carol}
-)
-)
+}
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -3736,10 +3671,14 @@ child_join_2
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
+{
+\Alice
+}
  \uplus 
 \{
 \mathit{
@@ -3751,18 +3690,17 @@ listed
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 c'_
-p
+{
+\Bob
+}
  := 
 c_
-p
+{
+\Bob
+}
  \uplus 
 \{
 \mathit{
@@ -3776,47 +3714,39 @@ member
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
 ,\\
 &
 c'_
-p
- := 
-c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \mathit{Carol}
-)
-)
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 c'_
-p
+{
+\mathit{Dave}
+}
  := 
 c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \mathit{Dave}
-)
-)
+}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 child
 }
-,\ 
+,
 \mathit{
 member
 }
@@ -3827,105 +3757,66 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 friend
 }
 (
 \Bob
 )
-,\ 
-\mathit{
-parent
-}
-(
-\mathit{Carol}
-)
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 child
 }
-,\ 
-\mathit{
-parent
-}
-(
-\mathit{Dave}
-)
-,\ 
+,
 \mathit{
 friend
 }
 (
 \Alice
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Bob
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 parenting
 }
 (
 \Alice
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \mathit{Carol}
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 parenting
 }
 (
 \Bob
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \mathit{Dave}
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -3933,15 +3824,10 @@ p
 retired
 }
  \notin c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
+}
+ \text{ and } 
 \{
 \mathit{
 member
@@ -3953,59 +3839,46 @@ member
 \cdot
 n
 )
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Bob
-)
-)
-,\\
-&
-\text{provided } 
+}
+ = \emptyset
+ \text{ and } 
 \{
 \mathit{
 child
 }
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \mathit{Carol}
-)
-)
-,\\
-&
-\text{provided } 
+}
+ = \emptyset
+ \text{ and } 
 \{
 \mathit{
 child
 }
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \mathit{Dave}
-)
-)
+}
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -4024,10 +3897,14 @@ child_leave
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 c_
-p
+{
+\Alice
+}
  \setminus 
 \{
 \mathit{
@@ -4039,18 +3916,17 @@ listed
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
 ,\\
 &
 c'_
-p
+{
+\Bob
+}
  := 
 c_
-p
+{
+\Bob
+}
  \setminus 
 \{
 \mathit{
@@ -4064,31 +3940,24 @@ member
 n
 )
 \}
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
 ,\\
 &
 c'_
-p
+{
+\mathit{Carol}
+}
  := 
 c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \mathit{Carol}
-)
-)
+}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 listed
 }
@@ -4097,33 +3966,19 @@ listed
 ,
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 child
 }
-,\ 
-\mathit{
-parent
-}
-(
-\mathit{Carol}
-)
-,\ 
+,
 \mathit{
 member
 }
@@ -4134,36 +3989,25 @@ member
 \cdot
 n
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \Bob
-)
-)
-,\\
-&
-\text{provided } 
-\{
+}
+ \text{ and } 
 \mathit{
 identity
 }
-,\ 
+,
 \mathit{
 parenting
 }
 (
 \Bob
 )
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+ \in c_
+{
 \mathit{Carol}
-)
-)
+}
 ,\\
 &
 \text{provided } 
@@ -4171,19 +4015,16 @@ p
 \mathit{
 child
 }
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \mathit{Carol}
-)
-)
+}
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -4196,10 +4037,14 @@ child_close
 \begin{align*}
 &
 c'_
-p
+{
+\Alice
+}
  := 
 (c_
-p
+{
+\Alice
+}
  \setminus 
 \{
 \mathit{
@@ -4208,6 +4053,17 @@ listed
 (
 \Alice
 ,
+n
+)
+,
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
 n
 )
 \}
@@ -4220,30 +4076,45 @@ closed
 n
 )
 \}
-&& (p \in 
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \notin 
 \mathrm{ext}_c(
 \Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+n
+)
+]
 )
 )
 ,\\
 &
 c'_
-p
- := 
-c_
-p
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Bob
-)
-)
-,\\
-&
-c'_
-p
+}
  := 
 c_
-p
+{
+\Bob
+}
  \setminus 
 \{
 \mathit{
@@ -4257,7 +4128,9 @@ member
 n
 )
 \}
-&& (p \in 
+ \qquad (
+\Bob
+ \in 
 \mathrm{ext}_c(
 \Alice
 [
@@ -4274,69 +4147,13 @@ n
 )
 ,\\
 &
-\text{provided } 
+c'_
+q
+ := 
+c_
+q
+ \setminus 
 \{
-\mathit{
-identity
-}
-,\ 
-\mathit{
-child
-}
-,\ 
-\mathit{
-parent
-}
-(
-\Bob
-)
-,\ 
-\mathit{
-listed
-}
-(
-\Alice
-,
-n
-)
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
-\Alice
-)
-)
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,\ 
-\mathit{
-parenting
-}
-(
-\Alice
-)
-\}
- \subseteq c_
-p
-&& (p \in 
-\mathrm{ext}_c(
-\Bob
-)
-)
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,\ 
 \mathit{
 member
 }
@@ -4348,9 +4165,86 @@ member
 n
 )
 \}
- \subseteq c_
-p
-&& (p \in 
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+n
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+child
+}
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parenting
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+ \in c_
+q
+ \qquad (
+q \in 
 \mathrm{ext}_c(
 \Alice
 [
@@ -4372,19 +4266,16 @@ n
 \mathit{
 child
 }
-,\ 
+,
 \mathit{
 retired
 }
 \}
  \cap c_
-p
- = \emptyset
-&& (p \in 
-\mathrm{ext}_c(
+{
 \Bob
-)
-)
+}
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
