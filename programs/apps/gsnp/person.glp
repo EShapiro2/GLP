@@ -1,24 +1,24 @@
 %% person.glp --- the GSNP mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsnp_boot.glp); the play of this directory calls it beside the entry (plays.glp).  It is GSN's app's person (../gsn/person.glp) with GSNP's scripts.
 %%
-%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(P, Q, D), P the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP f0acbc1, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
 %%
-%% The roles, by which the super-app's plays choose a script, are the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): "Dan, Eve, Carol, Bob and Fay; the friendships Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay; Dan writes "Flood on Main Street" and sends it to Eve; Eve forwards it to Carol; Carol forwards it to Bob."  On GSNP's contract on GKK, GSNP.glp at GLP 35c4211a, each pair meets in person before befriending, befriend requiring that the two know each other (GKK:2, GSG:1).  The item is the speech act 'Flood on Main Street', signed by dan, its author (GSNP:1, Authorship), whose message carries it as he signed it, and each forward signs it again (GSNP:2, Forwarding):
-%%   dan    establishes his identity (GKK:1); asks to know eve; once his agent knows her, asks to meet her in person (GKK:2); once they know each other, offers her friendship (GSG:1); once they are friends, signs the item; once he sees himself its author, sends it to eve in a message.
-%%   eve    establishes her identity; asks to know dan and carol; once her agent knows dan, answers yes to his asking to meet her and to his offer of friendship; once his message of the item has reached her and her agent knows carol, asks to meet carol, and once they know each other, offers carol friendship; once they are friends, forwards the item, signed by dan, to carol.
-%%   carol  establishes her identity; asks to know eve and bob; once her agent knows eve, answers yes to her asking to meet and to her offer of friendship; once eve's forward has reached her and her agent knows bob, asks to meet bob, and once they know each other, offers bob friendship; once they are friends, forwards the item, signed by dan and then by eve, to bob.
-%%   bob    establishes his identity; asks to know carol and fay; once his agent knows carol, answers yes to her asking to meet and to her offer of friendship; once her forward has reached him, holding the item signed by dan, eve and carol, and once his agent knows fay, asks to meet fay, and once they know each other, offers fay friendship.  He forwards the item to nobody.
-%% Each person who takes part in the item's passage offers their next friendship once the item has reached them, and so proposes nothing while an attempt that adds the item to their state is open: the agent drops a request whose condition does not hold when it reads it (vGLP, Section 5.4, "The compilation").
-%%   fay    establishes her identity; asks to know bob; once her agent knows him, answers yes to his asking to meet and to his offer of friendship.
+%% The roles, by which the super-app's plays choose a script, are the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): "Dan, Eve, Carol, Bob and Fay; the friendships Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay; Dan writes "Flood on Main Street" and sends it to Eve; Eve forwards it to Carol; Carol forwards it to Bob."  On GSNP's contract on GKK, programs/gai/GSNP.glp, the first of each two meets the second by their key, a cold call, the second answering yes to its hello, before befriending, befriend requiring that the two know each other (GKK:2, GSG:1).  The item is the speech act 'Flood on Main Street', signed by dan, its author (GSNP:1, Authorship), whose message carries it as he signed it, and each forward signs it again (GSNP:2, Forwarding):
+%%   dan    establishes his identity (GKK:1); once it is established, meets eve by her key (GKK:2); once they know each other, offers her friendship (GSG:1); once they are friends, signs the item; once he sees himself its author, sends it to eve in a message.
+%%   eve    establishes her identity; answers yes to dan's asking to meet her and to his offer of friendship; once his message of the item has reached her, meets carol by her key, and once they know each other, offers carol friendship; once they are friends, forwards the item, signed by dan, to carol.
+%%   carol  establishes her identity; answers yes to eve's asking to meet her and to her offer of friendship; once eve's forward has reached her, meets bob by his key, and once they know each other, offers bob friendship; once they are friends, forwards the item, signed by dan and then by eve, to bob.
+%%   bob    establishes his identity; answers yes to carol's asking to meet him and to her offer of friendship; once her forward has reached him, holding the item signed by dan, eve and carol, meets fay by her key, and once they know each other, offers fay friendship.  He forwards the item to nobody.
+%%   fay    establishes her identity; answers yes to bob's asking to meet her and to his offer of friendship.
+%% Each person who takes part in the item's passage offers their next friendship once the item has reached them, and so proposes nothing while an attempt that adds the item to their state is open.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
 Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
-        ; refused(Class, Key, Reason) ; asked(Asked) ; asking.
+        ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
 Last  ::= last(List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
 Holes ::= [] ; [Key? | Holes].
 Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
-Shown ::= shown(Integer, Path, Attempt).
+Shown ::= shown(Integer, Path, Asking).
 Shows ::= [] ; [Shown | Shows].
 PSt   ::= ps(Sess, List(Output), Shows, Steps).
 ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
@@ -30,42 +30,36 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
 procedure script(Constant?, Steps).
-script(dan, [own([D1], propose(establish(D1?))), req(known(eve)), wait(known(eve)),
+script(dan, [own([D1], propose(establish(D1?))), wait(holds(identity)),
              own([M1], propose(meet(M1?, eve))), wait(holds(knows(eve))),
              own([D2], propose(befriend(D2?, eve))),
              wait(holds(friend(eve))),
              own([D3, D4], propose(sign(D3?, speech(utterance('Flood on Main Street'), D4?)))),
              wait(holds(authored(speech(utterance('Flood on Main Street'), dan)))),
              own([D5, D6], propose(message(D5?, eve, speech(utterance('Flood on Main Street'), D6?))))]).
-script(eve, [own([E1], propose(establish(E1?))), req(known(dan)), req(known(carol)),
-             wait(known(dan)),
+script(eve, [own([E1], propose(establish(E1?))), wait(holds(identity)),
              approval(meet(dan, eve), yes),
              approval(befriend(dan, eve), yes),
              wait(holds(item(speech(utterance('Flood on Main Street'), dan)))),
-             wait(known(carol)),
              own([M2], propose(meet(M2?, carol))), wait(holds(knows(carol))),
              own([E2], propose(befriend(E2?, carol))),
              wait(holds(friend(carol))),
              own([E3], propose(forward(E3?, carol, speech(utterance('Flood on Main Street'), dan))))]).
-script(carol, [own([C1], propose(establish(C1?))), req(known(eve)), req(known(bob)),
-               wait(known(eve)),
+script(carol, [own([C1], propose(establish(C1?))), wait(holds(identity)),
                approval(meet(eve, carol), yes),
                approval(befriend(eve, carol), yes),
                wait(holds(item(speech(speech(utterance('Flood on Main Street'), dan), eve)))),
-               wait(known(bob)),
                own([M3], propose(meet(M3?, bob))), wait(holds(knows(bob))),
                own([C2], propose(befriend(C2?, bob))),
                wait(holds(friend(bob))),
                own([C3], propose(forward(C3?, bob, speech(speech(utterance('Flood on Main Street'), dan), eve))))]).
-script(bob, [own([B1], propose(establish(B1?))), req(known(carol)), req(known(fay)),
-             wait(known(carol)),
+script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              approval(meet(carol, bob), yes),
              approval(befriend(carol, bob), yes),
              wait(holds(item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)))),
-             wait(known(fay)),
              own([M4], propose(meet(M4?, fay))), wait(holds(knows(fay))),
              own([B2], propose(befriend(B2?, fay)))]).
-script(fay, [own([F1], propose(establish(F1?))), req(known(bob)), wait(known(bob)),
+script(fay, [own([F1], propose(establish(F1?))), wait(holds(identity)),
              approval(meet(bob, fay), yes),
              approval(befriend(bob, fay), yes)]).
 script(_, []) :- otherwise | true.
@@ -81,7 +75,7 @@ person([draw(Id, _, menu_w(menu(Me, Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss)
     ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
     advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, approval_w(approval(At, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+person([draw(Id, _, approval_w(approval(At, _, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
     advance(ps(Se?, T?, [shown(Id?, P?, At?) | Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
@@ -164,7 +158,7 @@ procedure last_of(List(Output)?, Last).
 last_of(T, L?) :- last_view(T?, nolast, L).
 procedure last_view(List(Output)?, Last?, Last).
 last_view([], L, L?).
-last_view([view(S, K) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+last_view([view(S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
 last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
@@ -172,7 +166,7 @@ procedure notices_of(List(Output)?, List(Output)).
 notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(List(Output)?, List(Output)?, List(Output)).
 notices_after([], Ns, Ns?).
-notices_after([view(_, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
 procedure among_output(Output?, List(Output)?, YN).
 among_output(_, [], n).
@@ -227,6 +221,9 @@ find_approval1(K, [shown(Id, P, At) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [shown(Id, P, attempt(_, _, _, C, _)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(C?), ground(K?), K? =?= C? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [shown(Id, P, hello(_, N)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(N?), ground(K?), K? =?= N? |
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [S | Cs], Done, F?) :-
     otherwise | find_approval1(K?, Cs?, [S? | Done?], F).

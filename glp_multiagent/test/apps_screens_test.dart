@@ -226,7 +226,7 @@ class _Run {
   _Person get bob => persons[1];
 
   /// Whether the app's platform is compiled from a contract with pragmas, GKK's, GSG's and GSN's: every word on its screens is the contract's, its tabs the lists its view names (vGLP 1126f4f, Sections 5.4, 6.2 and 8).
-  bool get worded => const {'gkk', 'gsg', 'gsn', 'gc'}.contains(app);
+  bool get worded => const {'gkk', 'gsg', 'gsn', 'gsnp', 'gc'}.contains(app);
 
   /// The person [name] of the run.
   _Person person(String name) => persons.singleWhere((p) => p.name == name);
@@ -1237,119 +1237,59 @@ void appsScreens(Screens screens) {
   }, timeout: const Timeout(Duration(minutes: 20)));
 
   testWidgets(
-      'GSNP\'s app on five phones, the play of GAI\'s GSNP figure: Bob\'s '
-      'chat with Carol, the item with its author and who forwarded it, and '
-      'Forward; the warranty question once he picks Fay; and Fay\'s chat '
-      'with Bob once he forwards it', (tester) async {
+      'GSNP\'s app on five phones, the play of GAI\'s GSNP figure, compiled '
+      'from GSNP\'s contract and pragmas: the friendships, Dan signing the '
+      'item on his Items tab and sending it to Eve by Message, and Eve\'s '
+      'Items tab holding it with its author', (tester) async {
+    // GSNP's app (programs/apps/gsnp), compiled down the cascade from GSNP.glp (programs/gai/GSNP.glp) and its pragmas, GSNP.txt with those of GSN, GSG and GKK, which it extends: four tabs, Contacts, Friends, Groups and Items, "Items: the items Alice holds."
     final run = await _Run.start(tester, screens, 'gsnp',
         chain: const ['dan', 'eve', 'carol', 'bob', 'fay']);
     final dan = run.person('dan');
     final eve = run.person('eve');
-    final carol = run.person('carol');
-    final bob = run.person('bob');
-    final fay = run.person('fay');
+    expect(run.listNamed(dan, 'knows', 'Contacts'), findsOneWidget);
+    expect(run.listNamed(dan, 'friend', 'Friends'), findsOneWidget);
+    expect(run.listNamed(dan, 'member', 'Groups'), findsOneWidget);
+    expect(run.listNamed(dan, 'item', 'Items'), findsOneWidget);
 
-    // The friendships of the play (GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay, each two adding each other on their Friends tabs, meeting in person, the first tapping Meet and the second Yes (GKK:2), and then befriending, the first tapping Befriend and the second Accept (GSG:1), befriend requiring that the two know each other (programs/gai/GSNP.glp at GLP 35c4211a).
-    for (final (p, q) in [(dan, eve), (eve, carol), (carol, bob), (bob, fay)]) {
-      await run.meet(p, q);
-      await run.meetInPerson(p, q);
-      await run.befriend(p, q);
+    // The friendships of the play (GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay; each establishes their identity (GKK:1), the first of each two meets the second by their key, the second answering yes (GKK:2), and then befriends them, the second answering yes (GSG:1).
+    for (final p in run.persons) {
+      await run.join(p);
+    }
+    for (final (p, q) in [('dan', 'eve'), ('eve', 'carol'), ('carol', 'bob'), ('bob', 'fay')]) {
+      await run.meetByKey(run.person(p), run.person(q));
+      await run.befriend(run.person(p), run.person(q));
     }
 
-    // Dan writes "Flood on Main Street" and sends it to Eve: in his chat with her he types it and taps Send, which signs it, sign(dan, x) (GSNP:1, Authorship), and, once his view holds authored(x), sends it, message(dan, eve, x) (GSN:1), carrying the item as he signed it.  Nobody is asked.
+    // Authorship (GSNP:1): on his Items tab, the tab of GSNP, Dan types "Flood on Main Street" into Sign's field text, GSNP's "[Sign] <text>", and taps Sign, which proposes sign(dan, x), x the speech act he signs; he holds it, its author.
     const flood = "speech(utterance('Flood on Main Street'), dan)";
-    await run.tap(dan, run.name(dan, 'person:eve', 'Eve'));
-    await run.type(dan, run.control(dan, 'chat-field:eve'), 'Flood on Main Street');
-    await run.tap(dan, run.control(dan, 'send:eve'));
-    await run.settle();
+    await run.list(dan, 'item');
+    await run.type(dan, run.control(dan, 'field:sign::2'), 'Flood on Main Street');
+    await run.tap(dan, run.control(dan, 'send:sign:'));
     expect(dan.atoms, containsAll(['item($flood)', 'authored($flood)']));
-    expect(eve.atoms, contains('item($flood)'));
+
+    // A message (GSN:1): Message, GSN's "[Message] <text>", beside Eve in his Friends tab, its field text the same words, which proposes message(dan, eve, x), the item he authored; Eve is not asked, and holds the item as he signed it.
+    await run.list(dan, 'friend');
+    await run.tap(dan, run.control(dan, 'act:message:eve'));
+    await run.type(dan, run.control(dan, 'field:message:eve:3'), 'Flood on Main Street');
+    await run.tap(dan, run.control(dan, 'send:message:eve'));
     expect(eve.questions('approval'), isEmpty);
+    expect(eve.atoms, contains('item($flood)'));
 
-    // Each forwards the item to the next (GSNP:2, Forwarding): in their chat with the friend it came from, Forward, the friend picked, and Yes to the warranty question, which proposes forward(p, q, x); the friend then holds the item signed again by the one who forwarded it.  Nobody is asked.
-    Future<void> forward(_Person p, _Person from, _Person to) async {
-      await run.tap(p, run.name(p, 'person:${from.name}', personName(GAtom(from.name))));
-      await run.tap(p, run.groupControl(p, 'forward:'));
-      await run.tap(p, run.groupControl(p, 'forward-to:', ':${to.name}'));
-      final w = run.groupControl(p, 'warranty:');
-      expect(
-          find.descendant(of: w, matching: find.text(
-              'You warrant that you know ${personName(GAtom(from.name))} personally.')),
-          findsOneWidget);
-      await run.tap(p, run.groupControl(p, 'forward-yes:'));
-      await run.tap(p, run.control(p, 'back'));
-      expect(to.questions('approval'), isEmpty);
-    }
-
-    await forward(eve, dan, carol);
-    const fromEve = 'speech($flood, eve)';
-    expect(carol.atoms, contains('item($fromEve)'));
-    await forward(carol, eve, bob);
-    const fromCarol = 'speech($fromEve, carol)';
-    expect(bob.atoms, contains('item($fromCarol)'));
-    expect(bob.atoms, containsAll(['friend(carol)', 'friend(fay)']));
-    expect(fay.atoms, contains('friend(bob)'));
-
-    // (a) Bob's chat with Carol: the item "Flood on Main Street", "Author: Dan" and "via Eve, via Carol", and Forward under it.
-    await run.tap(bob, run.name(bob, 'person:carol', 'Carol'));
-    expect(run.control(bob, 'chat:carol'), findsOneWidget);
-    await run.top(bob);
-    final item = run.groupControl(bob, 'item:');
-    expect(item, findsOneWidget);
+    // Eve's Items tab: the item's row, its text and its author, Dan (vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9: "an item's row its author and the agents that forwarded it").
+    await run.list(eve, 'item');
+    await run.top(eve);
+    final row = run.control(eve, 'row:$flood');
+    expect(row, findsOneWidget);
     expect(
         [
           for (final t in run.tester.widgetList<Text>(
-              find.descendant(of: item, matching: find.byType(Text))))
-            t.data,
+              find.descendant(of: row, matching: find.byType(Text))))
+            if (t.data != null && t.data!.length > 1) t.data!,
         ],
-        ['Flood on Main Street', 'Author: Dan', 'via Eve, via Carol', 'Forward']);
-    run.plain(bob);
-    await run.shoot(bob, 'gsnp-a-bob-chat.png');
+        ['Flood on Main Street', 'Dan']);
+    run.plain(eve);
 
-    // (b) The same screen after Bob taps Forward and picks Fay: the warranty question, "Forward to Fay?  You warrant that you know Carol personally.", with Yes and No.  Nothing is proposed until he answers.
-    await run.tap(bob, run.groupControl(bob, 'forward:'));
-    expect(run.groupControl(bob, 'forward-picker:'), findsOneWidget);
-    await run.tap(bob, run.groupControl(bob, 'forward-to:', ':fay'));
-    expect(run.groupControl(bob, 'forward-picker:'), findsNothing);
-    final w = run.groupControl(bob, 'warranty:');
-    expect(
-        [
-          for (final t in run.tester.widgetList<Text>(
-              find.descendant(of: w, matching: find.byType(Text))))
-            t.data,
-        ],
-        ['Forward to Fay?', 'You warrant that you know Carol personally.', 'Yes', 'No']);
-    expect(bob.unsent, isEmpty);
-    expect(fay.atoms, isNot(contains('item(speech($fromCarol, bob))')));
-    run.plain(bob);
-    await run.shoot(bob, 'gsnp-b-bob-forward.png');
-
-    // Bob taps Yes, which proposes forward(bob, fay, x) (GSNP:2, Forwarding): Fay holds the item signed again by Bob.  Nobody is asked.
-    await run.tap(bob, run.groupControl(bob, 'forward-yes:'));
-    const fromBob = 'speech($fromCarol, bob)';
-    expect(fay.atoms, contains('item($fromBob)'));
-    expect(fay.questions('approval'), isEmpty);
-
-    // (c) Fay's chat with Bob (GAI #5 Cowork, Code_inbox.md, 2026-10-19 22:29 UTC): she taps his row; the item "Flood on Main Street", "Author: Dan" and "via Eve, via Carol, via Bob", and Forward under it.
-    await run.tap(fay, run.name(fay, 'person:bob', 'Bob'));
-    expect(run.control(fay, 'chat:bob'), findsOneWidget);
-    await run.top(fay);
-    final forwarded = run.groupControl(fay, 'item:');
-    expect(forwarded, findsOneWidget);
-    expect(
-        [
-          for (final t in run.tester.widgetList<Text>(
-              find.descendant(of: forwarded, matching: find.byType(Text))))
-            t.data,
-        ],
-        [
-          'Flood on Main Street',
-          'Author: Dan',
-          'via Eve, via Carol, via Bob',
-          'Forward'
-        ]);
-    run.plain(fay);
-    await run.shoot(fay, 'gsnp-c-fay-chat.png');
+    // Forwarding (GSNP:2), and with it the figure's screens, waits on vGLP: GSNP's [Forward] names, beside its proposer, a person and the item x it forwards, which no field and no group fills (vGLP, Section 6.2, "The words a platform shows").
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 

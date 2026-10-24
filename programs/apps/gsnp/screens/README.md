@@ -10,6 +10,8 @@ bash tool/sim_screens.sh
 
 The script builds the bundled assets (`tool/sync_glp_assets.sh`), boots the simulator, sets its status bar, and runs the scenario there (`integration_test/apps_screens_test.dart`), one person's phone on the screen at a time; at each screen the host takes the simulator's screenshot, `xcrun simctl io <device> screenshot --mask=alpha`, and `tool/sim_shot.py` draws the bezel around it and writes it here, under the screen's name.  The same scenario runs headless in the suite, `flutter test test/apps_screens_test.dart`, the phones side by side in the test's view: it takes every act and checks every screen, and writes nothing.
 
+The three screens below were taken from the app as it was drawn before GSNP's contract carried pragmas, in words since moved out of the app; they are re-taken from the app compiled from GSNP's contract and pragmas once vGLP's paper places Forward, whose item no field and no group fills (`../README.md`, "The screens").
+
 | File | What it shows |
 |---|---|
 | `gsnp-a-bob-chat.png` | Bob's chat with Carol, the item "Flood on Main Street" with "Author: Dan" and "via Eve, via Carol", and Forward under it. |

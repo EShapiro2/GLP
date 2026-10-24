@@ -2432,7 +2432,7 @@ class _SocialTabState extends State<SocialTab> {
 
   // --- The apps of contracts with pragmas -----------------------------------
 
-  /// The tab of a platform compiled from a contract with pragmas, every word on it the contract's or one of the platform's four, yes, no, declined and unable (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; Section 8): the list the tab draws, [TabPlace.list], one of those the view names, its name the tab's; on a screen with no tabs every list, one under another.  A tab holds, in order: the notices of the acts drawn on it; the approvals the person made that are pending, of those acts, each its button and the persons it names; the buttons of the acts that name, beside the person proposing them, no person and no group, drawn on the tab of their contract, each with the fields the person fills, and a meeting's button with a field for the peer's key; and the rows of the list, each an atom of its predicate in the state, its item the first of its arguments that is a person or a group, showing the atoms of the state naming the item, and beside it the button of each act that names a person, where the item is a person, or a group, where it is a group ([_wordedRow]).  Where the tab is is the request's widget term's, `act(place(T, ...), W)` ([ActInfo]); no word of a contract is held here.
+  /// The tab of a platform compiled from a contract with pragmas, every word on it the contract's or one of the platform's four, yes, no, declined and unable (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; Section 8): the list the tab draws, [TabPlace.list], one of those the view names, its name the tab's; on a screen with no tabs every list, one under another.  A tab holds, in order: the notices of the acts drawn on it; the approvals the person made that are pending, of those acts, each its button and the persons it names; the buttons of the acts that name, beside the person proposing them, no person and no group, drawn on the tab of their contract, each with the fields the person fills, and a meeting's button with a field for the peer's key; and the rows of the list, each an atom of its predicate in the state, its item the first of its arguments that is a person, a group or a speech act, showing the atoms of the state naming the item, and beside it the button of each act that names a person, where the item is a person, or a group, where it is a group ([_wordedRow]).  Where the tab is is the request's widget term's, `act(place(T, ...), W)` ([ActInfo]); no word of a contract is held here.
   Widget _worded(BuildContext context, SocialState s) {
     final lists = s.lists!;
     final pred = widget.place?.list;
@@ -2559,7 +2559,7 @@ class _SocialTabState extends State<SocialTab> {
     );
   }
 
-  /// The rows of the list of [pred]: each atom of [pred] in the state, once, with the count of its copies, in the order of the state.
+  /// The rows of the list of [pred]: each atom of [pred] in the state, once, with the count of its copies, in the order of the state; its item the first of its arguments that is a person, a group or a speech act, an item of GSNP's `item(x)` its speech act (vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9: "an item's row its author and the agents that forwarded it").
   List<({GTerm atom, int count, GTerm? item})> _rows(SocialState s, String pred) {
     final rows = <({GTerm atom, int count, GTerm? item})>[];
     final at = <String, int>{};
@@ -2574,7 +2574,9 @@ class _SocialTabState extends State<SocialTab> {
       }
       GTerm? item;
       for (final x in xs) {
-        if (x is GAtom || SocialState._group(x) != null) {
+        if (x is GAtom ||
+            SocialState._group(x) != null ||
+            SpeechAct.of(x) != null) {
           item = x;
           break;
         }
@@ -2594,7 +2596,7 @@ class _SocialTabState extends State<SocialTab> {
     return xs.any((x) => formatTerm(x) == want || formatTerm(x) == whole);
   }
 
-  /// A row of a list: its item by name, the count of its copies where more than one, the atoms of the state naming the item, each by its other arguments (vGLP, Section 5.4, "The contract's words": "a row shows the atoms of the state naming its item, the view carrying the whole state"), and the buttons of the acts that name a person or a group beside the item ([_rowActs]).
+  /// A row of a list: its item by name, the count of its copies where more than one, the atoms of the state naming the item, each by its other arguments (vGLP, Section 5.4, "The contract's words": "a row shows the atoms of the state naming its item, the view carrying the whole state"), and the buttons of the acts that name a person or a group beside the item ([_rowActs]).  A speech act is drawn by its text, and under it its signers by name, its author and then each agent that forwarded it, in order (GSC, Section 3: "A speech act is an utterance or a speech act, signed by a person"; vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9).
   Widget _wordedRow(BuildContext context, SocialState s,
       ({GTerm atom, int count, GTerm? item}) r) {
     final item = r.item;
@@ -2603,6 +2605,10 @@ class _SocialTabState extends State<SocialTab> {
         ? _atomText(r.atom)
         : '${_named(item)}${r.count > 1 ? '  ${r.count}' : ''}';
     final shows = <String>[];
+    final signed = item == null ? null : SpeechAct.of(item);
+    if (signed != null) {
+      shows.add([for (final p in signed.signers) personName(p)].join(', '));
+    }
     if (item != null) {
       final whole = formatTerm(item);
       final g = SocialState._group(item);
@@ -2673,7 +2679,9 @@ class _SocialTabState extends State<SocialTab> {
       final a = o.acts[key];
       if (a == null) continue;
       if (g == null) {
-        if (a.persons.isNotEmpty && a.groups.isEmpty && !mine) acts.add((key, a));
+        if (item is GAtom && a.persons.isNotEmpty && a.groups.isEmpty && !mine) {
+          acts.add((key, a));
+        }
       } else if (a.groups.isNotEmpty) {
         final (j, _) = a.groups.first;
         if (j != a.me || formatTerm(g.$1) == formatTerm(me)) acts.add((key, a));
