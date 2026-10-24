@@ -5559,6 +5559,24 @@ rm11_u=$(echo "$rm11" | sed -n "s/.*U = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p
 check "RM11 the prompt's identity of merge/3 at [h1] is the program clause's" "^same$" "$([ -n "$rm11_t" ] && [ "$rm11_t" = "$rm11_u" ] && echo same)"
 check_not "RM11 no find_type errs at the prompt" "_find_type/[23]:" "$rm11"
 
+# With no program loaded, a goal posted at the prompt runs no module, and its
+# scope is the root's: find_type reads the root's declared table there.  Until
+# 2026-10-24 it erred "the calling goal's module carries no declared table".
+# The identities are those RM11 obtains with a program loaded.
+rm12=$("$REPL_RUN" <<HEREDOC
+find_type(now/1, V).
+find_type(merge/3, [h1], U).
+:quit
+HEREDOC
+2>&1)
+check "RM12 with no program loaded, find_type/2 at the prompt finds the root's now/1" "V = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm12"
+check "RM12 with no program loaded, find_type/3 at the prompt finds the root's merge/3" "U = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm12"
+check_not "RM12 no find_type errs at the prompt with no program loaded" "_find_type/[23]:" "$rm12"
+rm11_v=$(echo "$rm11" | sed -n "s/.*V = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+rm12_v=$(echo "$rm12" | sed -n "s/.*V = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+rm12_u=$(echo "$rm12" | sed -n "s/.*U = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+check "RM12 the identities are those obtained with a program loaded" "^same$" "$([ -n "$rm12_v" ] && [ "$rm12_v" = "$rm11_v" ] && [ "$rm12_u" = "$rm11_u" ] && echo same)"
+
 echo ""
 fi  # Section RM
 

@@ -293,6 +293,13 @@ class GlpEngine {
       _rootCode = GlpCompiler().compileProgram(linked.program,
           procDeclarations: linked.procDeclarations,
           typeEnv: linked.checkedEnv);
+      // The root's declared table, keyed as its code carries each procedure,
+      // `:p/n` ([_findTypeRef]): the table of the scope of a goal posted with
+      // no program loaded (module_kernels.dart, _callerTables).  Built on
+      // first use, as a module's is at its load.
+      TypeIdentityTables? rootTables;
+      _runtime.rootDeclaredTypes =
+          () => rootTables ??= linkedTypeIdentityTables([root], linked);
     } catch (e) {
       throw StateError(
           'root self.glp does not check and compile: $_rootSelfGlpPath\n  $e\n'
