@@ -1,5 +1,5 @@
 establish(Alice?) :
-    at Alice: not retired, +identity
+    at Alice: not identity, not retired, +identity
 
 meet(Alice?, Bob?) :
     at Alice: identity, not agent, not retired, +knows(Bob)
@@ -13,28 +13,24 @@ befriend(Alice?, Bob?) :
     at Alice: identity, knows(Bob), not agent, not retired, not friend(Bob), +friend(Bob)
     at Bob: identity, knows(Alice), not agent, not retired, not friend(Alice), +friend(Alice)
 
-unfriend_p(Alice?, Bob) :
+unfriend(Alice?, Bob) :
     at Alice: identity, not retired, not principal(Bob), not principal_of(Bob), -friend(Bob)
     at Bob: identity, -friend(Alice)
 
-unfriend_q(Alice, Bob?) :
-    at Alice: identity, -friend(Bob)
-    at Bob: identity, not retired, not principal(Alice), not principal_of(Alice), -friend(Alice)
-
 enter(Alice?, Bob?; x) :
-    at Alice: identity, item(x), not agent, not retired, +principal_of(Bob), +friend(Bob), +knows(Bob)
+    at Alice: identity, item(x), not agent, not retired, +principal_of(Bob), +friend(Bob), +knows(Bob), +agent_of(Bob, Alice, sgn(x, Alice))
     at Bob: not identity, not retired, +identity, +agent, +principal(Alice), +friend(Alice), +knows(Alice), +attestation(sgn(x, Alice))
 
 agent_meet(Alice?, Bob?, Carol?; y) :
     at Alice: identity, agent, principal(Carol), attestation(y), not retired, +knows(Bob)
     at Bob: identity, not agent, not retired, +knows(Alice), +agent_of(Alice, Carol, y)
-    at Carol: identity, principal_of(Alice), not retired
+    at Carol: identity, principal_of(Alice), agent_of(Alice, Carol, y), not retired
 
 agents_meet(Alice?, Bob?, Carol?, Dave?; y, z) :
     at Alice: identity, agent, principal(Carol), attestation(y), not retired, +knows(Bob), +agent_of(Bob, Dave, z)
     at Bob: identity, agent, principal(Dave), attestation(z), not retired, +knows(Alice), +agent_of(Alice, Carol, y)
-    at Carol: identity, principal_of(Alice), not retired
-    at Dave: identity, principal_of(Bob), not retired
+    at Carol: identity, principal_of(Alice), agent_of(Alice, Carol, y), not retired
+    at Dave: identity, principal_of(Bob), agent_of(Bob, Dave, z), not retired
 
 agent_befriend(Alice?, Bob?, Carol?) :
     at Alice: identity, agent, principal(Carol), knows(Bob), not retired, not friend(Bob), +friend(Bob)
@@ -58,11 +54,3 @@ retire(Alice?, Bob) :
 
 sign(Alice?; x) :
     at Alice: identity, not retired, +item(x), +authored(x)
-
-message(Alice?, Bob; x) :
-    at Alice: identity, authored(x), not retired
-    at Bob: identity, friend(Alice), +item(x)
-
-forward(Alice?, Bob; x) :
-    at Alice: identity, item(x), not authored(x), not retired
-    at Bob: identity, friend(Alice), +item(sgn(x, Alice))
