@@ -1162,18 +1162,38 @@ class ActInfo {
   final List<(int, String)> items;
   final List<int> keys;
   final List<Object> words;
+  /// The atoms of the proposer's state that fill the places no row fills, each its predicate and the place of each argument, 0 where it is none: GAI's agent_of(r, p, y) at the principal, its attestation y (GAI.glp at a336b30d).
+  final List<(String, List<int>)> held;
+
   const ActInfo(this.tab, this.me, this.persons, this.groups, this.items,
-      this.keys, this.words);
+      this.keys, this.words, [this.held = const []]);
+
+  /// The places the atoms of [held] fill.
+  Set<int> get heldPlaces => {
+        for (final (_, ks) in held)
+          for (final k in ks)
+            if (k > 0) k
+      };
 
   /// The place term [p], `place(T, M, Ps, Gs, Is, Ks, Ws)`; null where it is not one.
   static ActInfo? of(GTerm p) {
     final (f, xs0) = ctorArgs(p);
     if (f != 'place' || xs0.length != 7 || xs0[4] is! GList) return null;
     final its = <(int, String)>[];
+    final held = <(String, List<int>)>[];
     for (final it in (xs0[4] as GList).items) {
       final (itf, itxs) = ctorArgs(it);
-      if (itf != 'item' || itxs.length != 2 || itxs[0] is! GInt) return null;
-      its.add(((itxs[0] as GInt).value, displayText(itxs[1])));
+      if (itf == 'item' && itxs.length == 2 && itxs[0] is GInt) {
+        its.add(((itxs[0] as GInt).value, displayText(itxs[1])));
+      } else if (itf == 'atom' && itxs.length == 2 && itxs[1] is GList) {
+        final ks = [
+          for (final k in (itxs[1] as GList).items) k is GInt ? k.value : -1
+        ];
+        if (ks.contains(-1)) return null;
+        held.add((displayText(itxs[0]), ks));
+      } else {
+        return null;
+      }
     }
     final xs = [...xs0.take(4), ...xs0.skip(5)];
     int? n(GTerm t) => t is GInt ? t.value : null;
@@ -1206,7 +1226,7 @@ class ActInfo {
         return null;
       }
     }
-    return ActInfo(displayText(xs[0]), m, ps, gs, its, ks, ws);
+    return ActInfo(displayText(xs[0]), m, ps, gs, its, ks, ws, held);
   }
 
   /// Whether the act names, beside the person proposing it, a person, a group or an item.
@@ -2827,6 +2847,7 @@ class _SocialTabState extends State<SocialTab> {
       args[j - 1] ??= gg.$1;
       args[k - 1] = gg.$2;
     }
+    _derive(s, a, args);
     final its = a.itemPlaces;
     for (var i = 1; i <= n; i++) {
       if (args[i - 1] != null) continue;
@@ -2862,6 +2883,29 @@ class _SocialTabState extends State<SocialTab> {
     return GStruct(f, [for (final x in args) x!]);
   }
 
+  /// The places the atoms of [a]'s held patterns fill: for each, the first atom of the state of its predicate agreeing with [args] at the places filled, its arguments filling the rest.
+  static void _derive(SocialState s, ActInfo a, List<GTerm?> args) {
+    for (final (p, ks) in a.held) {
+      if (ks.every((k) => k == 0 || args[k - 1] != null)) continue;
+      for (final at in s.atoms) {
+        final (f, xs) = ctorArgs(at);
+        if (f != p || xs.length != ks.length) continue;
+        var ok = true;
+        for (var j = 0; j < ks.length && ok; j++) {
+          final k = ks[j];
+          if (k > 0 && args[k - 1] != null) {
+            ok = formatTerm(args[k - 1]!) == formatTerm(xs[j]);
+          }
+        }
+        if (!ok) continue;
+        for (var j = 0; j < ks.length; j++) {
+          if (ks[j] > 0) args[ks[j] - 1] ??= xs[j];
+        }
+        break;
+      }
+    }
+  }
+
   /// The composer of the act [key]: the text of its request form where it has one, a picker for each person, group and item place the row does not fill, a field for each place the person fills, named as its widget term names it, and its button; for an act that names no person, group or item, drawn on its contract's tab.
   Widget _actForm(BuildContext context, SocialState s, SocialAsk ask,
       RequestOffers o, String key, ActInfo a, GTerm? item, {String? pred}) {
@@ -2885,6 +2929,18 @@ class _SocialTabState extends State<SocialTab> {
         if (!filled.contains(k)) (k, p)
     ];
     final groupPlaces = {for (final (j, k) in a.groups) ...[j, k]};
+    // The places the proposer's state fills from a held atom, once the row has filled the rest.
+    {
+      final args = List<GTerm?>.filled(n, null);
+      args[a.me - 1] = me;
+      for (final e in fill.entries) {
+        args[e.key - 1] = e.value;
+      }
+      _derive(s, a, args);
+      for (var i = 1; i <= n; i++) {
+        if (args[i - 1] != null) filled.add(i);
+      }
+    }
     final fields = [
       for (var i = 1; i <= n; i++)
         if (!filled.contains(i) &&

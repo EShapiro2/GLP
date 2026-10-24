@@ -1392,7 +1392,49 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gai-b-alice-agents.png');
 
-    // The meeting of Alf and Bob, Alice proposing it (vGLP 110caf4, Section 6.2), and the screens after it wait on GAI and vGLP: agent_meet's attestation y, required at Alf, is held in no list of Alice's, so no row and no field fills it (Code_inbox.md, Code #14's report of this task).
+    // Agent meet (GnW:2, GAI:2): GAI's "[Agent meet]" beside Alf on Alice's AI agents tab, the button drawn at the principal's guarding role (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles, beside each row that fills its variable"); the row fills Alf, her machine fills the attestation from her record agent_of(alf, alice, y) (GAI.glp at a336b30d), and she picks Bob.  Alf's program answers yes; Bob is asked GAI's question "Alf, an AI agent, asks to meet you." and answers yes, recording Alf, its principal and its attestation.
+    const attestation = 'speech($code, alice)';
+    Future<void> agentAct(String f, String shot) async {
+      await run.list(alice, 'principal_of');
+      await run.tap(alice, run.control(alice, 'act:$f:alf'));
+      await run.tap(alice, run.control(alice, 'pick:$f:alf:2:bob'));
+      if (shot.isNotEmpty) {
+        run.plain(alice);
+        await run.shoot(alice, shot);
+      }
+      await run.tap(alice, run.control(alice, 'send:$f:alf'));
+    }
+
+    await agentAct('agent_meet', '');
+    await run.list(bob, 'principal_of');
+    await run.top(bob);
+    expect(run.on(bob, find.text('Alf, an AI agent, asks to meet you.')), findsOneWidget);
+    await run.answer(bob, 'yes');
+    expect(bob.atoms, contains('agent_of(alf, alice, $attestation)'));
+
+    // Agent befriend (GnW:2): the same, from Alice's AI agents tab.  (c) Alice's composer of the befriending, Bob picked; (d) Bob asked GAI's question "Alf, an AI agent, asks to befriend you.".
+    await agentAct('agent_befriend', 'gai-c-alice-asked.png');
+    await run.list(bob, 'principal_of');
+    await run.top(bob);
+    expect(run.on(bob, find.text('Alf, an AI agent, asks to befriend you.')), findsOneWidget);
+    run.plain(bob);
+    await run.shoot(bob, 'gai-d-bob-asked.png');
+    await run.answer(bob, 'yes');
+    expect(bob.atoms, contains('friend(alf)'));
+
+    // Alf's program signs an item and sends it to Bob (GSNP:1, GSN:1).  (e) Bob's Friends tab: Alf, his friend, its row showing his record of it, its principal and its code; (a) Bob's Items tab: the item Alf authored.
+    const summary = r"speech(utterance('Today\'s summary of the news'), alf)";
+    expect(bob.atoms, contains('item($summary)'));
+    await run.list(bob, 'friend');
+    await run.top(bob);
+    expect(run.control(bob, 'row:alf'), findsOneWidget);
+    run.plain(bob);
+    await run.shoot(bob, 'gai-e-bob-friends.png');
+    await run.list(bob, 'item');
+    await run.top(bob);
+    expect(run.control(bob, 'row:$summary'), findsOneWidget);
+    run.plain(bob);
+    await run.shoot(bob, 'gai-a-bob-chat-alf.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 
