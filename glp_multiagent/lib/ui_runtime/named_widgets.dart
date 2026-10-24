@@ -1158,6 +1158,16 @@ class ActInfo {
     return true;
   }
 
+  /// Whether the state [atoms] of the viewer [me] meets the act's own precondition at the proposer's role: holds the atoms the act requires there that name no other role or variable, and lacks those it forbids there that name none (vGLP 897d1ce, Section 6.2, "The words a platform shows": "such a form or button is drawn only where the viewer's state holds, at some guarding role of the act, the atoms the act requires there that name no other role or variable, and lacks those it forbids there that name none").
+  bool ownHolds(List<GTerm> atoms, GTerm me) {
+    final own = [
+      for (final c in conds)
+        if (c.args.every((x) => x is int && x == this.me)) c
+    ];
+    return ActInfo(tab, this.me, persons, groups, items, keys, words, held, own)
+        .holds(atoms, {this.me: me});
+  }
+
   /// Whether the act requires or deletes, at the proposer's role, an atom of [pred] naming a place of [places] (vGLP feda043, Section 6.2: "beside a row of a tab only where the act requires or deletes, at the viewer's role, the atom of that tab's predicate naming the row's item").
   bool requiresOf(String pred, Set<int> places) => conds.any((c) =>
       !c.forbids &&
@@ -2215,21 +2225,19 @@ class _SocialTabState extends State<SocialTab> {
       final f = k.substring(0, k.lastIndexOf('/'));
       final n = int.parse(k.substring(k.lastIndexOf('/') + 1));
       if (!onThis(f)) continue;
+      final all = o.allActs[k] ?? [first];
+      // Drawn only where the viewer's state meets the act's own precondition at some guarding role (vGLP 897d1ce, Section 6.2).
+      final cands = [for (final a in all) if (a.ownHolds(s.atoms, me)) a];
+      if (cands.isEmpty) continue;
       if (first.keys.isNotEmpty && n == 2) {
         out.add(_keyForm(context, s, ask, o, k, first));
         continue;
       }
-      final all = o.allActs[k] ?? [first];
       final others = {for (var i = 1; i <= n; i++) i};
-      ActInfo? pick;
-      for (final a in all) {
-        if (a.requiresOf(pred, {...others}..remove(a.me)) &&
-            a.holds(s.atoms, {a.me: me})) {
-          pick = a;
-          break;
-        }
-      }
-      pick ??= all.where((a) => a.holds(s.atoms, {a.me: me})).firstOrNull ?? first;
+      final pick = cands
+              .where((a) => a.requiresOf(pred, {...others}..remove(a.me)))
+              .firstOrNull ??
+          cands.first;
       final c = pick.namedCount(o.kinds[k] ?? const []);
       if (c == 0) {
         out.add(_actForm(context, s, ask, o, k, pick, null));
@@ -2848,9 +2856,17 @@ class _SocialTabState extends State<SocialTab> {
       for (final w in a.words)
         if (w is int) (at[w] == null ? '' : personName(at[w]!)) else w as String
     ].join();
+    // The atoms naming another role are checked as the person picks the places, as for a row (vGLP 897d1ce, Section 6.2): the request is proposed only where the viewer's state meets the act's precondition at their role under the places filled.
+    bool fits(ActInfo a2, GTerm? r) {
+      if (r == null) return false;
+      final xs = ctorArgs(r).$2;
+      return a2.holds(s.atoms, {for (var i = 0; i < xs.length; i++) i + 1: xs[i]});
+    }
+
     GTerm? chosen() {
       if (alts == null) {
-        return _request(s, o, key, a, me, fill, typed(), composer: composer);
+        final r = _request(s, o, key, a, me, fill, typed(), composer: composer);
+        return fits(a, r) ? r : null;
       }
       // The places picked in the form, each of which the schema proposed must have.
       final pickedAt = {
@@ -2871,7 +2887,7 @@ class _SocialTabState extends State<SocialTab> {
         }..remove(a2.me);
         if (!pickedAt.every(own.contains)) continue;
         final r = _request(s, o, k2, a2, me, fill, typed(), composer: composer);
-        if (r != null) return r;
+        if (fits(a2, r)) return r;
       }
       return null;
     }
