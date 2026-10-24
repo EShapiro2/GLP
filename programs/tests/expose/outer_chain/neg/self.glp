@@ -1,0 +1,3 @@
+%% lib/self.glp is not on the chain of this program, so its double/2 is not in this program's scope (TGLP modules.tex, Definition "Root, Scope"): refused.
+exported procedure run(Integer?, Integer).
+run(X, Y?) :- double(X?, Y).

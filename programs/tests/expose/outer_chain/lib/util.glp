@@ -1,0 +1,6 @@
+%% The exposed module: quad/2 calls double/2 of lib/self.glp twice, and quarter/2 calls half/2, which lib/self.glp exposes, twice.
+exported procedure quad(Integer?, Integer).
+quad(X, Y?) :- double(X?, Z), double(Z?, Y).
+
+exported procedure quarter(Integer?, Integer).
+quarter(X, Y?) :- half(X?, Z), half(Z?, Y).

@@ -1,0 +1,5 @@
+%% On the chain of lib/util.glp, and not on the chain of app/ or neg/: its double/2, and half/2, which it exposes from tools/half.glp, are in the scope of lib/util.glp and in neither program's.
+-expose(tools#half).
+
+procedure double(Integer?, Integer).
+double(X, Y?) :- Y := X? * 2.
