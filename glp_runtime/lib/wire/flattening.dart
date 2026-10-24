@@ -92,13 +92,9 @@ Uint8List hashOfPrint(String canonical) =>
   // checkedLinkedProgram type-checks and applies the five linking steps,
   // including step-5 DCE, so program.procedures is the reachable set.
   final linked = checkedLinkedProgram(modules, rootDir: projectDir);
-  // The program's type definitions, the root self.glp's among them.
-  final typeDefs = <String, TypeDef>{};
-  for (final mod in modules) {
-    for (final td in mod.ast.typeDefs) {
-      typeDefs.putIfAbsent(td.name, () => td);
-    }
-  }
+  // The program's type definitions, the root self.glp's among them, each name
+  // the one the entry module's scope resolves ([programTypeDefs]).
+  final typeDefs = programTypeDefs(modules, rootDir: projectDir);
   final print = canonicalPrint(
     program: linked.program,
     procDeclarations: linked.procDeclarations,
