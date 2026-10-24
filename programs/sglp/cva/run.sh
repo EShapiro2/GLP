@@ -18,7 +18,9 @@
 #                   declaration giving a number of agents; or census, where it
 #                   names a census, whose persons are the agents, keyed by
 #                   their keys;
-#   <until>         "<count> <unit>", the horizon, the unit singular or plural;
+#   <until>         "<count> <unit>", the horizon, the unit second, minute, hour,
+#                   day, week or year, singular or plural (Appendix B), any
+#                   other refused with exit 2;
 #   <seed>          the run's seed;
 #   <log>           the log, written as the run goes.
 #
@@ -62,6 +64,13 @@ if ! { [ "$N" = census ] || { [[ "$N" =~ ^[0-9]+$ ]] && [ "$N" -ge 1 ]; }; } || 
     echo "run.sh: <agents> is a positive integer or census, <seed> an integer, <until> \"<count> <unit>\"" >&2
     exit 2
 fi
+# The unit of the horizon: one of the paper's six, singular or plural (sGLP's
+# paper, Appendix B: second, minute, hour, day, week and year).
+case "$UNIT" in
+    second|seconds|minute|minutes|hour|hours|day|days|week|weeks|year|years) ;;
+    *) echo "run.sh: the unit of <until> is second, minute, hour, day, week or year, singular or plural, not $UNIT" >&2
+       exit 2 ;;
+esac
 for f in "$PLATFORM" "$PRINTED/profiles.glp" "$PRINTED/population.glp" "$HERE/self.glp.in" "$HERE/harness.glp.in"; do
     [ -f "$f" ] || { echo "run.sh: no file $f" >&2; exit 2; }
 done
