@@ -2,7 +2,7 @@
 ///
 /// A named widget is drawn over its construct's view, as the draw `draw(Id, named(W, D), V)` carries it, and takes the person's input through the grant of the question the view marks `input(P)` (bridge.dart).  The draw carries the name `W`, the default widget `D` of the type, and the view `V`: "It is drawn with the default widget of its type beside its name, from which it reads the type's constructors" (vGLP 92e6d3b, Section 6.2, the paragraph after Proposition "Default Widgets"; Section 6.3, the type `Widget`).  The construct family hands it `D` with the view, and the last value drawn on construct 0: "A declared widget is drawn also with the last value drawn on construct 0, and is drawn again when that value changes, so that a request form can show the state the program last wrote to its person" (vGLP e924f73, Section 6.2, the paragraph after Proposition "Default Widgets"; construct_family.dart, `_named`).  It grants the raw input the default widget of the type grants, so that the construct process forms the same answers from it (Definition "Construct Process").
 ///
-/// On a platform compiled from a contract with pragmas, GKK's, GSG's and GSN's, every word these widgets draw is the contract's or the program's: the view names the lists the app shows, the approval question carries the sentence the contract puts to the person, and the widget term of the request type the labels of its requests and fields (vGLP 1126f4f, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; `_approvalWorded`, `_SocialTabState._worded`), and no word of theirs is held here.  The words held below are those of the apps whose contracts carry no pragmas yet, GSNP's, GAI's, GC's and CSSN's, until their owners write them.
+/// On a platform compiled from a contract with pragmas, every word these widgets draw is the contract's, the program's, or one of the platform's four, yes, no, declined and unable: the view names the lists the app shows, the approval question carries the question the contract puts to the person, and the widget term of the request type the labels of its requests and fields and where the button of each is drawn, `act(place(...), W)` ([ActInfo]) (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; `_approvalWorded`, `_SocialTabState._worded`).  No word of a contract is held there, and where a control is drawn is read off the widget term and the view, not off a schema's or a predicate's name.  The words held below the worded path are those of the apps drawn before their contracts carried pragmas, until no app is drawn so.
 ///
 /// Three named widgets are here.  [lastState] and [socialMenu], below, draw the apps of GSC's contracts in their tabs, GSNP's items and the notices of attempts that close without committing among them, and, declared likewise by CSSN's app (programs/cssn/self.vglp), its persons each with what the state says of them and its composed requests.  The first is [approvalSentence], over the approval question of every canonical CVA platform vGLP's compiler prints (programs/vglp/cva/compiler; vGLP, Section 5.4, "The compilation"): `Approval ::= approval(Attempt, YesNo?)`, `Attempt ::= attempt(Peer, Integer, Integer, Class, Names)`, the attempt (i, k, pi, [t]_j, r) naming its request r, `Names ::= none ; request(Rho, Integer)` (vGLP f0acbc1, Definition "Attempt"), `YesNo ::= yes ; no`, each class an act schema applied to its arguments, each argument a `Peer` or a `Speech`, `Speech ::= speech(Utterance, Peer)`, `Utterance ::= utterance(String) ; Speech`.  It reads the class off the view and draws one sentence for it and two buttons labelled for it, in the words of GAI's task for the apps of GSC's contracts (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, item 3, its sentences as corrected at 11:35 UTC): `befriend(A, Me)`, "Alice asks to be your friend.", Accept and Decline; `join(A, Me, n)`, "Alice asks you to join the group friends.", Join and Decline; and, in GAI's app, `agent_befriend(R, Q, P)`, in the words of GAI's task for its figure (Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (b) and (c)), at the principal "Alf asks to befriend Bob." and "Approve?", and at the other party "Alf, an AI agent of Alice, asks to befriend you.", "Developer: Acme", read from the record of Alf that party holds, and "Befriend Alf?", with Yes and No; and `agent_meet(R, Q, P, Y)` likewise, "Alf asks to meet Bob." and "Approve?" at the principal, and "Alf, an AI agent of Alice, asks to meet you.", "Developer: Acme" and "Meet Alf?" at the other party.  And, in CSSN's app, `child_befriend(R, S, P, Q)`, in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC, (3) and (4)), at a parent "Alice asks that their child Carol and your child Dave befriend." and "Approve?", and at a child "Alice asks that you and Dave befriend, with Dave's parent Bob." and "Befriend Dave?", or, asked by the other child's parent, "Alice asks that you and their child Carol befriend." and "Befriend Carol?", with Yes and No (CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, items 1 and 5); and `enter(P, R)` and `enter_2(P, Q, R)`, at the child "Alice enters you as their child." and at the other parent "Bob asks to enter Dave as your child, with you.", each with "Approve?", Yes and No (the same, item 4); and CSSN's meetings of a child and a child's joining of a group, in the words CSSN gave (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 4; [ApprovalWording._cssnWorded]), GKK's meet and introduce in GKK's words in CSSN's app as in every app that extends GKK (GSC #5 Cowork, Code_inbox.md, 2026-10-20 20:21 UTC: "One wording serves every app that extends GKK").  And, in GC's app, `swap(A, Me, U, V)`, in the words of Currencies' task for its screens (Currencies #11 Cowork, Code_inbox.md, 2026-10-20 18:10 UTC, task 2, (b)), "Alice asks to swap an Alice-coin for a Bob-coin.", a coin drawn by its issuer's name as GC writes it, "Alice-coin" ([coinName]), with Yes and No, the answers of the platform's `YesNo`: the task takes the compiler's words where they differ from its own, Accept and Decline.  A class the task gives no words for is drawn by a sentence built from its schema and its persons, each speech act of the class under it, and the buttons Yes and No.  A person is shown by name, their key with its underscores as spaces and each word capitalised (the same task, its preamble, which capitalised the first letter; GAI #5 Cowork, Code_inbox.md, 2026-10-19 21:09 UTC, item 1: "The developer's key is acme_ltd, drawn \"Acme Ltd\"").
 library;
@@ -500,7 +500,12 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
       }
   ].join();
   final (af, axs) = ctorArgs(args[0]);
-  final cls = af == 'attempt' && axs.length == 5 ? axs[3] : null;
+  // The question Start raises asks of an attempt, attempt(I, N, K, C, R), of its class C; the one an arriving hello asks, hello(Q, N), of the meeting N (vGLP, Section 5.4, "The compilation").
+  final cls = af == 'attempt' && axs.length == 5
+      ? axs[3]
+      : af == 'hello' && axs.length == 2
+          ? axs[1]
+          : null;
   final (cf, cxs) = cls == null ? ('', const <GTerm>[]) : ctorArgs(cls);
   final sentence = pending
       ? '\u2026'
@@ -611,13 +616,20 @@ class SocialState {
   /// The lists the app shows, where the platform is compiled from a contract with pragmas: each its name and the predicate whose atoms in the machine state it lists, as the view carries them, `view(S, K, [tab(Name, P), ...])` (vGLP 1126f4f, Section 5.4, "The contract's words": "a list's name into the view the agent writes"); null where the view carries none, `view(S, K)`.
   final List<({String name, String predicate})>? lists;
 
+  /// The approvals the person made that are pending, as the view carries them, `view(S, K, A)` or `view(S, K, A, Ts)`: the requests by their names and the answers yes by their attempts (vGLP, Section 5.4, "The compilation": "the approvals A its person made that are pending, the requests by their names and the answers yes by their attempts").
+  final List<GTerm> pending;
+
   const SocialState(this.atoms, this.known,
-      [this.notices = const [], this.written = const [], this.lists]);
+      [this.notices = const [],
+      this.written = const [],
+      this.lists,
+      this.pending = const []]);
 
   /// The last view written on construct 0, and the notices written after it, read off [output], the value drawn on it: the elements of the stream so far, each written whole a view, `view(S, K)`, or a notice ([SocialNotice]).  The first of the pair is false where [output] is not a stream of views and notices; the second is null where no view is written whole yet.
   static (bool, SocialState?) read(GTerm? output) {
     if (output is! GList) return (false, null);
     List<GTerm>? atoms, known;
+    var pending = <GTerm>[];
     List<({String name, String predicate})>? lists;
     var notices = <SocialNotice>[];
     final written = <SocialNotice>[];
@@ -625,14 +637,18 @@ class SocialState {
       if (!_whole(e)) continue;
       final (f, xs) = ctorArgs(e);
       if (f == 'view' &&
-          (xs.length == 2 || (xs.length == 3 && xs[2] is GList)) &&
+          (xs.length == 2 ||
+              (xs.length == 3 && xs[2] is GList) ||
+              (xs.length == 4 && xs[2] is GList && xs[3] is GList)) &&
           xs[0] is GList &&
           xs[1] is GList) {
         atoms = (xs[0] as GList).items;
         known = (xs[1] as GList).items;
-        lists = xs.length == 3
+        // view(S, K, A), and, with pragmas, view(S, K, A, Ts): the approvals pending and the lists (vGLP, Section 5.4, "The compilation" and "The contract's words").
+        pending = xs.length >= 3 ? (xs[2] as GList).items : <GTerm>[];
+        lists = xs.length == 4
             ? [
-                for (final t in (xs[2] as GList).items)
+                for (final t in (xs[3] as GList).items)
                   if (ctorArgs(t) case (final tf, final ts)
                       when tf == 'tab' && ts.length == 2)
                     (name: displayText(ts[0]), predicate: displayText(ts[1])),
@@ -650,7 +666,7 @@ class SocialState {
       written.add(n);
     }
     if (atoms == null || known == null) return (true, null);
-    return (true, SocialState(atoms, known, notices, written, lists));
+    return (true, SocialState(atoms, known, notices, written, lists, pending));
   }
 
   /// Whether the program has written [t] whole: no position in it is marked pending.
@@ -856,20 +872,6 @@ const Set<String> groupClasses = {
 /// The classes of GC's coins, `mint`, `swap`, `pay` and `redeem` (GC:1 to GC:4, programs/currencies/coins/GC.glp): an approval question or a notice of one of them concerns the Coins tab.
 const Set<String> coinClasses = {'mint', 'swap', 'pay', 'redeem'};
 
-/// The predicate of the list a class's approval question or notice is drawn under, on the screen of a platform compiled from a contract with pragmas, whose tabs are the lists the view names ([SocialState.lists]): the family's layout ([_SocialTabState._worded]), GKK's classes under the list of `knows`, GSG's and the message of GSN:1 under that of `friend`, and a group's under that of `member`; the first list where the view names none of these.
-String? wordedListOf(String schema, List<({String name, String predicate})> lists) {
-  final want = switch (schema) {
-    'establish' || 'meet' || 'introduce' => 'knows',
-    'befriend' || 'unfriend' || 'message' => 'friend',
-    _ when groupClasses.contains(schema) => 'member',
-    _ => null,
-  };
-  for (final l in lists) {
-    if (l.predicate == want) return l.predicate;
-  }
-  return lists.isEmpty ? null : lists.first.predicate;
-}
-
 /// A notice the agent writes on its output when an approval its person made, by a request or by an answer yes, ends by a refusal: `refused(P, Q, D)`, `P` the part of the refused attempt, a term of its class, `Q` its refuser, and `D` the reason, `declined`, or `unable(Lacks, Has)`, the atoms the schema requires at the refuser that its state lacks and those it forbids that its state has, as the contract writes them: "a notice refused([t]_j, q, d): [t]_j the part of the refused attempt, q its refuser and d the reason, from the abort outcome, or from the vote where the agent's own vote no refused it"; "A vote unable of a compiled program carries the atoms the schema requires at the voter that its state lacks, and those it forbids that its state has, and the notice shows them" (vGLP f0acbc1, Section 5.4, "The compilation" and "Act schemas"; the types `Output ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason)` and `Reason ::= declined ; unable(List(Atom), List(Atom))`, programs/apps/<app>/platform.vglp and programs/cssn/platform.vglp).  "When a refusal ends an approval, the person who made it is told who refused the transaction and why, declined or unable" (Section 5.4, "Triggers"): the person told is any guard whose approval the refusal ends, the one who requested the transaction or one who answered yes, so the sentence does not take the person to have proposed it ([sentence]).  It is drawn as one sentence in the tab it concerns.
 class SocialNotice {
   /// The part of the refused attempt, a term of its class: `befriend(alice, bob)`.
@@ -903,6 +905,10 @@ class SocialNotice {
     if (d is GAtom && d.name == 'declined') {
       return SocialNotice(xs[0], xs[1], declined: true, reason: d);
     }
+    // A request dropped where the agent can carry out no part it names: refused(N, p, unable) (vGLP, Section 5.4, "The compilation").
+    if (d is GAtom && d.name == 'unable') {
+      return SocialNotice(xs[0], xs[1], reason: d);
+    }
     final (u, us) = ctorArgs(d);
     if (u == 'unable' && us.length == 2 && us[0] is GList && us[1] is GList) {
       return SocialNotice(xs[0], xs[1],
@@ -915,6 +921,9 @@ class SocialNotice {
 
   /// The schema of the part's class.
   String get schema => ctorArgs(part).$1;
+
+  /// The functor of a term: a part's schema.
+  static String _functor(GTerm t) => ctorArgs(t).$1;
 
   /// Whether the notice concerns the Groups tab.
   bool get concernsGroup => groupClasses.contains(schema);
@@ -1144,6 +1153,58 @@ class SocialNotice {
 }
 
 /// The requests a request question offers, read off the default widget `D` of its type, `Menu ::= menu(Key, List(Key), Request?)`: "It is drawn with the default widget of its type beside its name, from which it reads the type's constructors, so that a menu declared once lists the alternatives of the request type of each program it is declared for" (vGLP, Section 6.2, the paragraph after Proposition "Default Widgets").  The alternatives of the request type are `propose(P)`, `P` a term of Proposal naming a guarded part of a class, and `known(Q)` (vGLP, Section 5.4, "The compilation").
+/// Where the button of a request is drawn, as its widget term says, `act(place(T, M, Ps, Gs, Ks, Ws), W)` (vGLP, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person or a group is drawn beside each one the view lists, on whichever tab lists it, and the button of an act that names none on the tab of its contract"; bridge.dart, [actCtor]): the [tab] of its contract; the place [me] of the person proposing it; the places [persons] a person the view lists fills; the [groups] a group it lists fills, each the place of its leader and that of its name; the places [keys] a field for a key fills where the peer is not listed; and the text of its request form, [words], each a string or the place of a person.  Places count from 1.
+class ActInfo {
+  final String tab;
+  final int me;
+  final List<int> persons;
+  final List<(int, int)> groups;
+  final List<int> keys;
+  final List<Object> words;
+  const ActInfo(this.tab, this.me, this.persons, this.groups, this.keys,
+      this.words);
+
+  /// The place term [p], `place(T, M, Ps, Gs, Ks, Ws)`; null where it is not one.
+  static ActInfo? of(GTerm p) {
+    final (f, xs) = ctorArgs(p);
+    if (f != 'place' || xs.length != 6) return null;
+    int? n(GTerm t) => t is GInt ? t.value : null;
+    List<int>? ints(GTerm t) {
+      if (t is! GList) return null;
+      final r = [for (final x in t.items) n(x)];
+      return r.contains(null) ? null : [for (final i in r) i!];
+    }
+    final ps = ints(xs[2]), ks = ints(xs[4]), m = n(xs[1]);
+    if (ps == null || ks == null || m == null || xs[3] is! GList ||
+        xs[5] is! GList) {
+      return null;
+    }
+    final gs = <(int, int)>[];
+    for (final g in (xs[3] as GList).items) {
+      final (gf, gxs) = ctorArgs(g);
+      if (gf != 'group' || gxs.length != 2) return null;
+      final j = n(gxs[0]), k = n(gxs[1]);
+      if (j == null || k == null) return null;
+      gs.add((j, k));
+    }
+    final ws = <Object>[];
+    for (final w in (xs[5] as GList).items) {
+      final (wf, wxs) = ctorArgs(w);
+      if (wf == 'say' && wxs.length == 1) {
+        ws.add(displayText(wxs[0]));
+      } else if (wf == 'at' && wxs.length == 1 && n(wxs[0]) != null) {
+        ws.add(n(wxs[0])!);
+      } else {
+        return null;
+      }
+    }
+    return ActInfo(displayText(xs[0]), m, ps, gs, ks, ws);
+  }
+
+  /// Whether the act names, beside the person proposing it, a person or a group.
+  bool get namesOne => persons.isNotEmpty || groups.isNotEmpty;
+}
+
 class RequestOffers {
   /// The alternatives of Proposal, each its functor and arity, `befriend/2`.
   final Set<String> proposals;
@@ -1161,11 +1222,39 @@ class RequestOffers {
   final String? knownLabel;
   final String knownField;
 
+  /// Where the button of each alternative of Proposal is drawn, by its functor and arity, where the widget term says ([ActInfo]; `act(P, W)`, bridge.dart).
+  final Map<String, ActInfo> acts;
+
+  /// The kind of the field of each place of each alternative of Proposal, by its functor and arity, in order, read off its widget: `peer`, `number`, `text`, `speech` or `other`.
+  final Map<String, List<String>> kinds;
+
   const RequestOffers(this.proposals, this.known,
       {this.labels = const {},
       this.fields = const {},
       this.knownLabel,
-      this.knownField = 'Peer'});
+      this.knownField = 'Peer',
+      this.acts = const {},
+      this.kinds = const {}});
+
+  /// The alternative of Proposal of functor [f], its key `f/n`; null where there is none.
+  String? keyOf(String f) {
+    for (final k in proposals) {
+      if (k.substring(0, k.lastIndexOf('/')) == f) return k;
+    }
+    return null;
+  }
+
+  /// The tab the request of functor [f] is drawn on: the tab of its contract; null where the widget term does not say.
+  String? tabOf(String f) {
+    final k = keyOf(f);
+    return k == null ? null : acts[k]?.tab;
+  }
+
+  /// What the request of functor [f] is called: its label, or [f] where none is given.
+  String labelOf(String f) {
+    final k = keyOf(f);
+    return k == null ? f : labels[k] ?? f;
+  }
 
   bool has(String f, int n) => proposals.contains('$f/$n');
 
@@ -1189,6 +1278,8 @@ class RequestOffers {
     final proposals = <String>{};
     final labels = <String, String>{};
     final fields = <String, List<String>>{};
+    final acts = <String, ActInfo>{};
+    final kinds = <String, List<String>>{};
     var known = false;
     String? knownLabel;
     var knownField = 'Peer';
@@ -1214,6 +1305,7 @@ class RequestOffers {
           if (f == 'propose' && afs.items.length == 1) {
             for (final praw in _items(_fieldWidget(afs.items[0]))) {
               final pl = labelledWidget(praw)?.$1;
+              final pa = actWidget(praw)?.$1;
               final (pk, pws) = ctorArgs(_bare(praw));
               if (pk == 'form' && pws.length == 2 && pws[1] is GList) {
                 final key =
@@ -1221,6 +1313,13 @@ class RequestOffers {
                 proposals.add(key);
                 if (pl != null) labels[key] = pl;
                 fields[key] = names(pws[1] as GList);
+                kinds[key] = [
+                  for (final e in (pws[1] as GList).items) _kind(e)
+                ];
+                if (pa != null) {
+                  final a = ActInfo.of(pa);
+                  if (a != null) acts[key] = a;
+                }
               }
             }
           }
@@ -1231,7 +1330,22 @@ class RequestOffers {
         labels: labels,
         fields: fields,
         knownLabel: knownLabel,
-        knownField: knownField);
+        knownField: knownField,
+        acts: acts,
+        kinds: kinds);
+  }
+
+  /// The kind of a form's field, read off its widget: a peer field, a number field, a text field, the form of a speech act, or any other.
+  static String _kind(GTerm entry) {
+    final w = _fieldWidget(entry);
+    final (k, ws) = ctorArgs(w);
+    if (k == 'peer' && ws.isEmpty) return 'peer';
+    if (k == 'number' && ws.isEmpty) return 'number';
+    if (k == 'text' && ws.isEmpty) return 'text';
+    if (k == 'form' && ws.isNotEmpty && ctorArgs(ws[0]).$1 == 'speech') {
+      return 'speech';
+    }
+    return 'other';
   }
 
   /// The items of a menu as written, each with its label, or the widget itself.
@@ -1243,10 +1357,12 @@ class RequestOffers {
     return [w];
   }
 
-  /// [w] with a declaration's name and a recursive type's binding taken off its top.
+  /// [w] with a declaration's name, a request's place and a recursive type's binding taken off its top.
   static GTerm _bare(GTerm w) {
     final named = namedWidget(w);
     if (named != null) return _bare(named.$2);
+    final act = actWidget(w);
+    if (act != null) return _bare(act.$2);
     final labelled = labelledWidget(w);
     if (labelled != null) return _bare(labelled.$2);
     final (k, ws) = ctorArgs(w);
@@ -2316,309 +2432,203 @@ class _SocialTabState extends State<SocialTab> {
 
   // --- The apps of contracts with pragmas -----------------------------------
 
-  /// The tab of a platform compiled from a contract with pragmas, its words the contract's (vGLP 1126f4f, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; Section 8: "Every word on a screen is the contract's"): the list the tab draws, [TabPlace.list], one of those the view names, its name the tab's; on a screen with no tabs every list, one under another.  The controls are the request question's, each drawn by the label its widget term carries and each field by its name ([RequestOffers.label], [RequestOffers.field]), the name of the type where the term carries none.  Where a control sits is the family's layout (vGLP, Remark "Construct Families"), by the schema of its request and the predicate of the list: a person known and not met with the meeting of GKK:2, a contact who is not a friend with friendship, both under the list of `knows`, and the introduction of GKK:3 composed under it with the request `known(Q)`; a friend with the end of friendship under the list of `friend`, a friend's row opening the chat, its messages and the message of GSN:1; and the groups under the list of `member`, with GSN's acts on them.  No word of a contract is held here.
+  /// The tab of a platform compiled from a contract with pragmas, every word on it the contract's or one of the platform's four, yes, no, declined and unable (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; Section 8): the list the tab draws, [TabPlace.list], one of those the view names, its name the tab's; on a screen with no tabs every list, one under another.  A tab holds, in order: the notices of the acts drawn on it; the approvals the person made that are pending, of those acts, each its button and the persons it names; the buttons of the acts that name, beside the person proposing them, no person and no group, drawn on the tab of their contract, each with the fields the person fills, and a meeting's button with a field for the peer's key; and the rows of the list, each an atom of its predicate in the state, its item the first of its arguments that is a person or a group, showing the atoms of the state naming the item, and beside it the button of each act that names a person, where the item is a person, or a group, where it is a group ([_wordedRow]).  Where the tab is is the request's widget term's, `act(place(T, ...), W)` ([ActInfo]); no word of a contract is held here.
   Widget _worded(BuildContext context, SocialState s) {
     final lists = s.lists!;
     final pred = widget.place?.list;
     if (pred != null) {
-      return _wordedList(context, s, pred,
-          first: lists.isNotEmpty && lists.first.predicate == pred);
+      final l = lists.firstWhere((l) => l.predicate == pred,
+          orElse: () => lists.first);
+      return _wordedList(context, s, l,
+          first: lists.isNotEmpty && lists.first.predicate == l.predicate);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < lists.length; i++) ...[
           if (i > 0) const Divider(height: 32),
-          _wordedList(context, s, lists[i].predicate, first: i == 0),
+          _wordedList(context, s, lists[i], first: i == 0),
         ],
       ],
     );
   }
 
-  Widget _wordedList(BuildContext context, SocialState s, String pred,
+  Widget _wordedList(
+      BuildContext context, SocialState s, ({String name, String predicate}) l,
       {required bool first}) {
     final ask = _ask;
-    final head = [
-      if (first && ask != null) _name(context, ask.me),
-      ..._wordedNotices(s, pred),
-    ];
-    final body = switch (pred) {
-      'knows' => _wordedContacts(context, s),
-      'friend' => _wordedFriends(context, s),
-      'member' => _wordedGroups(context, s),
-      _ => [
-          for (final a in s.atoms)
-            if (ctorArgs(a) case (final f, final xs) when f == pred)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text([for (final x in xs) _named(x)].join(' ')),
-              ),
-        ],
-    };
-    if (pred == 'friend' && widget.place?.chat != null) {
-      return _wordedChat(context, s, widget.place!.chat!);
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [...head, ...body],
-    );
-  }
-
-  /// A person by name, a speech act by its text, and any other term as the program writes it.
-  static String _named(GTerm x) => SpeechAct.of(x)?.text ??
-      (x is GAtom ? personName(x) : displayText(x));
-
-  /// The notices of the list [pred], each one line, the latest first: the request of the refused attempt, by its label and its persons, its refuser and the reason the program writes, `declined` or `unable(Lacks, Has)` ([SocialNotice]).
-  List<Widget> _wordedNotices(SocialState s, String pred) {
-    final offers = _ask?.offers;
+    final o = ask?.offers;
     final lists = s.lists ?? const [];
-    return [
-      for (var i = s.notices.length - 1; i >= 0; i--)
-        if (wordedListOf(s.notices[i].schema, lists) == pred)
-          Container(
-            key: socialKey(_id, 'notice:$i'),
-            width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade50,
-              border: Border.all(color: Colors.amber.shade200),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(children: [
-              Icon(Icons.info_outline, size: 18, color: Colors.amber.shade900),
-              const SizedBox(width: 8),
-              Expanded(child: Text(_noticeText(s.notices[i], offers))),
-            ]),
-          ),
-    ];
-  }
-
-  static String _noticeText(SocialNotice n, RequestOffers? offers) {
-    final (f, xs) = ctorArgs(n.part);
-    final what = offers?.label(f, xs.length) ?? f;
-    final who = [
-      for (final x in xs)
-        if (x is! GList) _named(x)
-    ];
-    final reason = n.reason == null ? '' : displayText(n.reason!);
-    return '$what ${who.join(', ')} — ${personName(n.by)}: $reason';
-  }
-
-  /// The list of `knows`, the persons the person knows: their identity first, by the request of GKK:1; then each person the agent knows and each contact, a person not met with the meeting of GKK:2 and a contact who is not a friend with friendship; the introduction of GKK:3, composed of two contacts; and the request `known(Q)`.
-  List<Widget> _wordedContacts(BuildContext context, SocialState s) {
-    final ask = _ask;
-    final o = ask?.offers;
-    final me = ask?.me;
-    final persons = <GTerm>[];
-    final seen = <String>{if (me != null) formatTerm(me)};
-    for (final q in [...(ask == null ? <GTerm>[] : s.known), ...s.contacts]) {
-      if (seen.add(formatTerm(q))) persons.add(q);
+    final home = l.name;
+    // An act whose widget term names no tab, or one the view lists not, is drawn on the first.
+    bool onThis(String f) {
+      final t = o?.tabOf(f);
+      final known = t != null && lists.any((x) => x.name == t);
+      return known ? t == home : first;
     }
-    final contacts = [
-      for (final q in s.contacts)
-        if (me == null || formatTerm(q) != formatTerm(me)) q
-    ];
-    final c0 = _chosen['introduce:0'];
-    return [
-      if (!s.identity) ...[
-        if (ask != null && o != null && ask.can('establish', 1))
-          ElevatedButton(
-            key: socialKey(_id, 'join'),
-            onPressed: () => ask.propose(GStruct('establish', [ask.me])),
-            child: Text(o.label('establish', 1)),
-          ),
-      ] else ...[
-        for (final q in persons) _wordedPerson(context, s, q, contacts: true),
-        if (ask != null && o != null && ask.can('introduce', 3) &&
-            contacts.length >= 2)
-          _composer(
-            context,
-            ask,
-            kind: 'introduce',
-            composing: true,
-            slots: [
-              contacts,
-              [
-                for (final q in contacts)
-                  if (c0 == null || formatTerm(q) != formatTerm(c0)) q
-              ],
-            ],
-            pieces: [
-              o.field('introduce', 3, 2),
-              ' ',
-              0,
-              '   ',
-              o.field('introduce', 3, 3),
-              ' ',
-              1,
-            ],
-            button: o.label('introduce', 3),
-            request: (c) => GStruct('introduce', [ask.me, c[0], c[1]]),
-            sent: null,
-          ),
-      ],
-      if (ask != null && o != null && ask.at != null && o.known) ...[
-        const SizedBox(height: 16),
-        _entry(
-          field: 'add-field',
-          label: o.knownField,
-          button: 'add',
-          buttonText: o.knownName,
-          valid: (t) => _identifier.hasMatch(t),
-          onPressed: (t) => ask.grant(ask.at!, GStruct('known', [GAtom(t)])),
-        ),
-      ],
-    ];
-  }
 
-  /// A person's row: their initial and name, and the request the family puts on it ([_worded]); a friend's row opens the chat with them where the request type offers the message of GSN:1.
-  Widget _wordedPerson(BuildContext context, SocialState s, GTerm q,
-      {bool contacts = false, VoidCallback? onTap}) {
-    final ask = _ask;
-    final o = ask?.offers;
-    final k = formatTerm(q);
-    Widget? button;
-    if (ask != null && o != null) {
-      if (!contacts && s.isFriend(q) && ask.can('unfriend', 2)) {
-        button = OutlinedButton(
-          key: socialKey(_id, 'unfriend:$k'),
-          onPressed: () => ask.propose(GStruct('unfriend', [ask.me, q])),
-          child: Text(o.label('unfriend', 2)),
-        );
-      } else if (contacts && !s.isContact(q) && ask.can('meet', 2)) {
-        button = ElevatedButton(
-          key: socialKey(_id, 'meet:$k'),
-          onPressed: () => ask.propose(GStruct('meet', [ask.me, q])),
-          child: Text(o.label('meet', 2)),
-        );
-      } else if (contacts &&
-          s.isContact(q) &&
-          !s.isFriend(q) &&
-          ask.can('befriend', 2)) {
-        button = ElevatedButton(
-          key: socialKey(_id, 'befriend:$k'),
-          onPressed: () => ask.propose(GStruct('befriend', [ask.me, q])),
-          child: Text(o.label('befriend', 2)),
-        );
-      }
-    }
-    final last = onTap != null ? s.received(q) : const <GTerm>[];
-    return ListTile(
-      key: socialKey(_id, 'person:$k'),
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        radius: 16,
-        backgroundColor: Colors.green.shade100,
-        child: Text(personName(q).isEmpty ? '' : personName(q)[0],
-            style: const TextStyle(fontSize: 13)),
-      ),
-      title: Text(personName(q)),
-      subtitle: last.isEmpty
-          ? null
-          : Text(SpeechAct.of(last.last)?.text ?? displayText(last.last),
-              maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: button,
-      onTap: onTap,
-    );
-  }
-
-  /// The list of `friend`, the person's friends, each row with the end of friendship of GSG:2 and opening the chat with them.
-  List<Widget> _wordedFriends(BuildContext context, SocialState s) {
-    final ask = _ask;
-    final open = widget.place?.openChat;
-    final chats = (ask?.offers.has('message', 3) ?? false) || s.chats;
-    final me = _me;
-    return [
-      for (final q in s.friends)
-        if (me == null || formatTerm(q) != formatTerm(me))
-          _wordedPerson(context, s, q,
-              onTap: chats && open != null ? () => open(q) : null),
-    ];
-  }
-
-  /// The chat with the friend [q]: the messages the person received from them, and the message of GSN:1, its field named as the contract names it.
-  Widget _wordedChat(BuildContext context, SocialState s, GTerm q) {
-    final ask = _ask;
-    final o = ask?.offers;
-    final k = formatTerm(q);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          InkResponse(
-            key: socialKey(_id, 'back'),
-            onTap: () => widget.place?.openChat(null),
-            child: const Padding(
-              padding: EdgeInsets.fromLTRB(0, 8, 12, 8),
-              child: Icon(Icons.arrow_back),
-            ),
-          ),
-          Text(personName(q),
-              key: socialKey(_id, 'chat:$k'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-        ]),
-        const SizedBox(height: 4),
-        ..._wordedNotices(s, 'friend'),
-        for (final x in s.received(q)) _message(context, x),
-        if (ask != null && o != null && ask.can('message', 3)) ...[
-          const SizedBox(height: 12),
-          _entry(
-            field: 'chat-field:$k',
-            label: o.field('message', 3, 3),
-            button: 'send:$k',
-            buttonText: o.label('message', 3),
-            valid: (t) => t.isNotEmpty,
-            onPressed: (t) =>
-                ask.propose(GStruct('message', [ask.me, q, ask.say(t)])),
-          ),
-        ],
+        if (first && ask != null) _name(context, ask.me),
+        for (var i = s.notices.length - 1; i >= 0; i--)
+          if (onThis(SocialNotice._functor(s.notices[i].part)))
+            _wordedNotice(s.notices[i], i, o),
+        for (final a in s.pending)
+          if (onThis(_pendingFunctor(a))) _wordedPending(a, o),
+        if (ask != null && o != null)
+          for (final k in o.proposals)
+            if (o.acts[k] case final a?)
+              if (onThis(k.substring(0, k.lastIndexOf('/')))) ...[
+                if (!a.namesOne && a.keys.isEmpty)
+                  _actForm(context, s, ask, o, k, a, null),
+                if (a.keys.isNotEmpty) _keyForm(context, s, ask, o, k, a),
+              ],
+        for (final r in _rows(s, l.predicate)) _wordedRow(context, s, r),
       ],
     );
   }
 
-  /// The list of `member`, the groups the person is a member of: the group of GSN:2, its name as the contract names the field; and each group, its name, its leader, the members where the person leads it, its messages, and the acts of GSN:3 to GSN:5 on it.
-  List<Widget> _wordedGroups(BuildContext context, SocialState s) {
-    final ask = _ask;
-    final o = ask?.offers;
-    return [
-      if (ask != null && o != null && s.identity && ask.can('create', 2)) ...[
-        _entry(
-          field: 'group-field',
-          label: o.field('create', 2, 2),
-          button: 'create',
-          buttonText: o.label('create', 2),
-          valid: (t) => t.isNotEmpty,
-          onPressed: (t) =>
-              ask.propose(GStruct('create', [ask.me, ask.say(t)])),
-        ),
-        const SizedBox(height: 12),
-      ],
-      for (final g in s.groups(me: _me)) _wordedGroup(context, s, g),
-    ];
+  /// The functor of an approval pending: a request's name, or the class of an answer's attempt.
+  static String _pendingFunctor(GTerm a) {
+    final (f, xs) = ctorArgs(a);
+    if (f == 'attempt' && xs.length == 5) return ctorArgs(xs[3]).$1;
+    return f;
   }
 
-  Widget _wordedGroup(BuildContext context, SocialState s, SocialGroup g) {
-    final ask = _ask;
-    final o = ask?.offers;
-    final k = groupKey(g.leader, g.name);
-    final small = TextStyle(fontSize: 13, color: Colors.grey.shade700);
-    final leads = ask != null && formatTerm(ask.me) == formatTerm(g.leader);
-    final listed = {for (final m in g.members) formatTerm(m)};
-    final candidates = [
-      for (final f in s.friends)
-        if (!listed.contains(formatTerm(f))) f
-    ];
-    final post = leads ? 'post_own' : 'post';
-    final postArity = leads ? 3 : 4;
+  /// A term's words: a person by name, a speech act by its text, a group by its name and its leader's name, and any other term as the program writes it.
+  static String _named(GTerm x) {
+    final sa = SpeechAct.of(x);
+    if (sa != null) return sa.text;
+    final g = SocialState._group(x);
+    if (g != null) {
+      return '${SpeechAct.of(g.$2)?.text ?? displayText(g.$2)}, '
+          '${personName(g.$1)}';
+    }
+    return x is GAtom ? personName(x) : displayText(x);
+  }
+
+  /// An atom as the program writes it, its persons by name.
+  static String _atomText(GTerm a) {
+    final (f, xs) = ctorArgs(a);
+    if (xs.isEmpty) return f;
+    return '$f(${[for (final x in xs) _named(x)].join(', ')})';
+  }
+
+  /// A notice, one line: the refuser, the reason, declined or unable, and the act's button; where the reason is unable, the atoms the schema requires at the refuser that its state lacks and those it forbids that its state has (vGLP, Section 6.2, "The words a platform shows": "a notice as the refuser, the reason and the act's button --- "Bob declined Befriend" ... --- with, where the reason is unable, the atoms the schema requires at the refuser that its state lacks and those it forbids that its state has").
+  Widget _wordedNotice(SocialNotice n, int i, RequestOffers? o) {
+    final f = SocialNotice._functor(n.part);
+    final reason = n.declined ? 'declined' : 'unable';
+    final atoms = [for (final a in [...n.lacks, ...n.has]) _atomText(a)];
+    final text = '${personName(n.by)} $reason ${o?.labelOf(f) ?? f}'
+        '${atoms.isEmpty ? '' : ': ${atoms.join(', ')}'}';
     return Container(
-      key: socialKey(_id, 'group:$k'),
+      key: socialKey(_id, 'notice:$i'),
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        border: Border.all(color: Colors.amber.shade200),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(children: [
+        Icon(Icons.info_outline, size: 18, color: Colors.amber.shade900),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text)),
+      ]),
+    );
+  }
+
+  /// An approval pending, one line: its act's button and the persons and the speech acts it names but the person (vGLP, Section 5.4, "Triggers": "the person sees their pending approvals in the view").
+  Widget _wordedPending(GTerm a, RequestOffers? o) {
+    final (f0, xs0) = ctorArgs(a);
+    final term = f0 == 'attempt' && xs0.length == 5 ? xs0[3] : a;
+    final (f, xs) = ctorArgs(term);
+    final me = _me;
+    final named = [
+      for (final x in xs)
+        if (x is! GList && !(me != null && formatTerm(x) == formatTerm(me)))
+          _named(x)
+    ];
+    return Padding(
+      key: socialKey(_id, 'pending:${formatTerm(a)}'),
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(children: [
+        Icon(Icons.hourglass_empty, size: 16, color: Colors.grey.shade600),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text([o?.labelOf(f) ?? f, ...named].join(' '),
+              style: TextStyle(color: Colors.grey.shade700)),
+        ),
+      ]),
+    );
+  }
+
+  /// The rows of the list of [pred]: each atom of [pred] in the state, once, with the count of its copies, in the order of the state.
+  List<({GTerm atom, int count, GTerm? item})> _rows(SocialState s, String pred) {
+    final rows = <({GTerm atom, int count, GTerm? item})>[];
+    final at = <String, int>{};
+    for (final a in s.atoms) {
+      final (f, xs) = ctorArgs(a);
+      if (f != pred) continue;
+      final k = formatTerm(a);
+      final i = at[k];
+      if (i != null) {
+        rows[i] = (atom: rows[i].atom, count: rows[i].count + 1, item: rows[i].item);
+        continue;
+      }
+      GTerm? item;
+      for (final x in xs) {
+        if (x is GAtom || SocialState._group(x) != null) {
+          item = x;
+          break;
+        }
+      }
+      at[k] = rows.length;
+      rows.add((atom: a, count: 1, item: item));
+    }
+    return rows;
+  }
+
+  /// Whether the atom [a] names the item [item]: a person among its arguments; a group by its name, or by its community name, among them.
+  static bool _naming(GTerm a, GTerm item) {
+    final g = SocialState._group(item);
+    final want = formatTerm(g == null ? item : g.$2);
+    final whole = formatTerm(item);
+    final (_, xs) = ctorArgs(a);
+    return xs.any((x) => formatTerm(x) == want || formatTerm(x) == whole);
+  }
+
+  /// A row of a list: its item by name, the count of its copies where more than one, the atoms of the state naming the item, each by its other arguments (vGLP, Section 5.4, "The contract's words": "a row shows the atoms of the state naming its item, the view carrying the whole state"), and the buttons of the acts that name a person or a group beside the item ([_rowActs]).
+  Widget _wordedRow(BuildContext context, SocialState s,
+      ({GTerm atom, int count, GTerm? item}) r) {
+    final item = r.item;
+    final k = formatTerm(item ?? r.atom);
+    final title = item == null
+        ? _atomText(r.atom)
+        : '${_named(item)}${r.count > 1 ? '  ${r.count}' : ''}';
+    final shows = <String>[];
+    if (item != null) {
+      final whole = formatTerm(item);
+      final g = SocialState._group(item);
+      final part = g == null ? whole : formatTerm(g.$2);
+      for (final a in s.atoms) {
+        if (formatTerm(a) == formatTerm(r.atom) || !_naming(a, item)) continue;
+        final (_, xs) = ctorArgs(a);
+        final rest = [
+          for (final x in xs)
+            if (formatTerm(x) != whole && formatTerm(x) != part) _named(x)
+        ];
+        if (rest.isNotEmpty) shows.add(rest.join(', '));
+      }
+    }
+    final small = TextStyle(fontSize: 13, color: Colors.grey.shade700);
+    return Container(
+      key: socialKey(_id, 'row:$k'),
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(10),
@@ -2626,68 +2636,275 @@ class _SocialTabState extends State<SocialTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(g.title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          Text(personName(g.leader), style: small),
-          if (g.members.isNotEmpty)
-            Text(g.members.map(personName).join(', '), style: small),
-          const SizedBox(height: 4),
-          for (final x in g.messages) _message(context, x),
-          if (ask != null && o != null && ask.can(post, postArity)) ...[
-            const SizedBox(height: 8),
-            _entry(
-              field: 'post-field:$k',
-              label: o.field(post, postArity, postArity - 1),
-              button: 'post:$k',
-              buttonText: o.label(post, postArity),
-              valid: (t) => t.isNotEmpty,
-              onPressed: (t) => ask.propose(leads
-                  ? GStruct('post_own', [ask.me, ask.say(t), g.name])
-                  : GStruct('post', [ask.me, g.leader, ask.say(t), g.name])),
+          Row(children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.green.shade100,
+              child: Text(title.isEmpty ? '' : title[0],
+                  style: const TextStyle(fontSize: 12)),
             ),
-          ],
-          if (leads && o != null && ask.can('join', 3) &&
-              candidates.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              key: socialKey(_id, 'add-member:$k'),
-              spacing: 8,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(o.label('join', 3), style: small),
-                for (final q in candidates)
-                  ActionChip(
-                    key: socialKey(_id, 'join:$k:${formatTerm(q)}'),
-                    label: Text(personName(q)),
-                    onPressed: () =>
-                        ask.propose(GStruct('join', [ask.me, q, g.name])),
-                  ),
-              ],
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold)),
             ),
-          ],
-          if (leads && o != null && ask.can('close', 2)) ...[
-            const SizedBox(height: 8),
-            OutlinedButton(
-              key: socialKey(_id, 'close:$k'),
-              onPressed: () =>
-                  ask.propose(GStruct('close', [ask.me, g.name])),
-              child: Text(o.label('close', 2)),
+          ]),
+          for (final x in shows)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 36),
+              child: Text(x, style: small),
             ),
-          ],
-          if (ask != null && o != null && !leads && ask.can('leave', 3)) ...[
-            const SizedBox(height: 8),
-            OutlinedButton(
-              key: socialKey(_id, 'leave:$k'),
-              onPressed: () =>
-                  ask.propose(GStruct('leave', [g.leader, ask.me, g.name])),
-              child: Text(o.label('leave', 3)),
-            ),
-          ],
+          if (item != null) ..._rowActs(context, s, item, k),
         ],
+      ),
+    );
+  }
+
+  /// The act open in a row's composer, `f/n|item`; null where none is.
+  String? _openAct;
+
+  /// The buttons beside a row's item: of each act that names, beside the person proposing it, a person, where the item is a person and not the person themselves, the item filling the first place of a person; or a group, where the item is a group whose leader the act names at a place other than the proposer's, or one the person leads; and under them the composer of the act open, its fields and pickers.
+  List<Widget> _rowActs(BuildContext context, SocialState s, GTerm item, String k) {
+    final ask = _ask;
+    final o = ask?.offers;
+    if (ask == null || o == null || ask.at == null) return const [];
+    final me = ask.me;
+    final g = SocialState._group(item);
+    final mine = formatTerm(item) == formatTerm(me);
+    final acts = <(String, ActInfo)>[];
+    for (final key in o.proposals) {
+      final a = o.acts[key];
+      if (a == null) continue;
+      if (g == null) {
+        if (a.persons.isNotEmpty && a.groups.isEmpty && !mine) acts.add((key, a));
+      } else if (a.groups.isNotEmpty) {
+        final (j, _) = a.groups.first;
+        if (j != a.me || formatTerm(g.$1) == formatTerm(me)) acts.add((key, a));
+      }
+    }
+    if (acts.isEmpty) return const [];
+    final open = [
+      for (final (key, a) in acts)
+        if (_openAct == '$key|$k') (key, a)
+    ];
+    return [
+      const SizedBox(height: 6),
+      Wrap(spacing: 8, runSpacing: 4, children: [
+        for (final (key, a) in acts)
+          OutlinedButton(
+            key: socialKey(_id, 'act:${key.substring(0, key.lastIndexOf('/'))}:$k'),
+            onPressed: () {
+              final r = _request(s, o, key, a, me, item, const {});
+              if (r != null) {
+                ask.propose(r);
+              } else {
+                setState(() => _openAct = _openAct == '$key|$k' ? null : '$key|$k');
+              }
+            },
+            child: Text(o.label(key.substring(0, key.lastIndexOf('/')),
+                int.parse(key.substring(key.lastIndexOf('/') + 1)))),
+          ),
+      ]),
+      for (final (key, a) in open) _actForm(context, s, ask, o, key, a, item),
+    ];
+  }
+
+  /// The persons the person may pick for a place: those the lists of the view hold and those the agent knows, but the person themselves, each once.
+  List<GTerm> _pickable(SocialState s, GTerm me) {
+    final seen = <String>{formatTerm(me)};
+    final out = <GTerm>[];
+    for (final p in [
+      for (final a in s.atoms)
+        for (final x in ctorArgs(a).$2)
+          if (x is GAtom) x,
+      ...s.known,
+    ]) {
+      if (seen.add(formatTerm(p))) out.add(p);
+    }
+    return out;
+  }
+
+  /// The person picked for place [i] of the composer [c].
+  final Map<String, GTerm> _picked = {};
+
+  /// The request the act [key] proposes, its proposer the person, the item filling its first person place or its group, each other person picked, and each field read from what the person typed, [typed]; null where a place is not yet filled.
+  GTerm? _request(SocialState s, RequestOffers o, String key, ActInfo a,
+      GTerm me, GTerm? item, Map<int, String> typed,
+      {String composer = ''}) {
+    final f = key.substring(0, key.lastIndexOf('/'));
+    final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
+    final kinds = o.kinds[key] ?? const [];
+    final args = List<GTerm?>.filled(n, null);
+    args[a.me - 1] = me;
+    final g = item == null ? null : SocialState._group(item);
+    if (g != null && a.groups.isNotEmpty) {
+      final (j, kk) = a.groups.first;
+      args[j - 1] = g.$1;
+      args[kk - 1] = g.$2;
+    } else if (item != null && a.persons.isNotEmpty) {
+      args[a.persons.first - 1] = item;
+    }
+    for (var i = 1; i <= n; i++) {
+      if (args[i - 1] != null) continue;
+      if (a.persons.contains(i)) {
+        args[i - 1] = _picked['$composer:$i'];
+        continue;
+      }
+      final t = typed[i];
+      if (t == null || t.isEmpty) return null;
+      final kind = i - 1 < kinds.length ? kinds[i - 1] : 'other';
+      switch (kind) {
+        case 'number':
+          final v = int.tryParse(t);
+          if (v == null) return null;
+          args[i - 1] = GInt(v);
+        case 'peer':
+          if (!_identifier.hasMatch(t)) return null;
+          args[i - 1] = GAtom(t);
+        case 'speech':
+          args[i - 1] = GStruct('speech', [
+            GStruct('utterance', [GString(t)]),
+            me,
+          ]);
+        default:
+          args[i - 1] = GString(t);
+      }
+    }
+    if (args.contains(null)) return null;
+    return GStruct(f, [for (final x in args) x!]);
+  }
+
+  /// The composer of the act [key]: the text of its request form where it has one, a picker for each person place the item does not fill, a field for each place the person fills, named as its widget term names it, and its button; for an act that names no person and no group, drawn on its contract's tab.
+  Widget _actForm(BuildContext context, SocialState s, SocialAsk ask,
+      RequestOffers o, String key, ActInfo a, GTerm? item) {
+    final f = key.substring(0, key.lastIndexOf('/'));
+    final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
+    final ik = item == null ? '' : formatTerm(item);
+    final composer = '$f:$ik';
+    final me = ask.me;
+    final g = item == null ? null : SocialState._group(item);
+    final filled = <int>{a.me};
+    if (g != null && a.groups.isNotEmpty) {
+      filled.addAll([a.groups.first.$1, a.groups.first.$2]);
+    } else if (item != null && a.persons.isNotEmpty) {
+      filled.add(a.persons.first);
+    }
+    final picks = [
+      for (final i in a.persons)
+        if (!filled.contains(i)) i
+    ];
+    final fields = [
+      for (var i = 1; i <= n; i++)
+        if (!filled.contains(i) && !a.persons.contains(i)) i
+    ];
+    Map<int, String> typed() => {
+          for (final i in fields) i: _form('field:$composer:$i').text.trim()
+        };
+    final at = <int, GTerm>{a.me: me};
+    if (g != null && a.groups.isNotEmpty) {
+      at[a.groups.first.$1] = g.$1;
+    } else if (item != null && a.persons.isNotEmpty) {
+      at[a.persons.first] = item;
+    }
+    for (final i in picks) {
+      if (_picked['$composer:$i'] case final p?) at[i] = p;
+    }
+    final words = [
+      for (final w in a.words)
+        if (w is int) (at[w] == null ? '' : personName(at[w]!)) else w as String
+    ].join();
+    final r = _request(s, o, key, a, me, item, typed(), composer: composer);
+    return Container(
+      key: socialKey(_id, 'form:$composer'),
+      margin: const EdgeInsets.only(top: 6, bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (words.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(words),
+            ),
+          for (final i in picks)
+            Wrap(spacing: 6, runSpacing: 4, children: [
+              Text(o.field(f, n, i),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+              for (final p in _pickable(s, me))
+                if (item == null || formatTerm(p) != formatTerm(item))
+                  ChoiceChip(
+                    key: socialKey(_id, 'pick:$composer:$i:${formatTerm(p)}'),
+                    label: Text(personName(p)),
+                    selected: _picked['$composer:$i'] != null &&
+                        formatTerm(_picked['$composer:$i']!) == formatTerm(p),
+                    onSelected: (_) =>
+                        setState(() => _picked['$composer:$i'] = p),
+                  ),
+            ]),
+          for (final i in fields)
+            TextField(
+              key: socialKey(_id, 'field:$composer:$i'),
+              controller: _form('field:$composer:$i'),
+              decoration: InputDecoration(
+                  labelText: o.field(f, n, i), isDense: true),
+              keyboardType: (o.kinds[key] ?? const []).length >= i &&
+                      o.kinds[key]![i - 1] == 'number'
+                  ? TextInputType.number
+                  : TextInputType.text,
+              onChanged: (_) => setState(() {}),
+            ),
+          const SizedBox(height: 6),
+          ElevatedButton(
+            key: socialKey(_id, 'send:$composer'),
+            onPressed: r == null
+                ? null
+                : () {
+                    ask.propose(r);
+                    setState(() {
+                      for (final i in fields) {
+                        _form('field:$composer:$i').clear();
+                      }
+                      for (final i in picks) {
+                        _picked.remove('$composer:$i');
+                      }
+                      _openAct = null;
+                    });
+                  },
+            child: Text(o.label(f, n)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A meeting's button with a field for the peer's key, where the peer is not listed (vGLP, Section 6.2: "Meet with a peer not listed takes a field for the key"), named as the widget term names that place.
+  Widget _keyForm(BuildContext context, SocialState s, SocialAsk ask,
+      RequestOffers o, String key, ActInfo a) {
+    final f = key.substring(0, key.lastIndexOf('/'));
+    final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
+    final kp = a.keys.first;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: _entry(
+        field: 'key:$f',
+        label: o.field(f, n, kp),
+        button: 'key-send:$f',
+        buttonText: o.label(f, n),
+        valid: (t) =>
+            _identifier.hasMatch(t) && t != displayText(ask.me),
+        onPressed: (t) {
+          final args = <GTerm>[
+            for (var i = 1; i <= n; i++)
+              i == a.me
+                  ? ask.me
+                  : i == kp
+                      ? GAtom(t)
+                      : GAtom('')
+          ];
+          ask.propose(GStruct(f, args));
+        },
       ),
     );
   }

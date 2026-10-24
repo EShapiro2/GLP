@@ -117,21 +117,48 @@ const String namedCtor = 'named';
 /// in its entry, `field(L, W)`, `L` the name in place of the type's.
 const String labelCtor = 'label';
 
-/// The label `S` and the widget, or the button's constant, `W` of [w], where
-/// it is `label(S, W)`; null for any other term.
-(String, GTerm)? labelledWidget(GTerm w) {
+/// Where the button of a request is drawn, `act(P, W)`, `P` the term
+/// `place(T, M, Ps, Gs, Ks, Ws)`: the tab of its contract, the place of the
+/// person proposing it, the places a person the view lists fills, the groups
+/// a group it lists fills, the places a field for a key fills, and the text
+/// of its request form (vGLP, Section 6.2, "The words a platform shows";
+/// programs/self.glp, the type Widget; programs/vglp/cva/compiler/README.md,
+/// "The pragmas").  The compiler emits it around the widget of each request
+/// of a platform compiled from a contract with pragmas
+/// (`glp_runtime/lib/vglp/constructs.dart`, `_labelled`); a construct family
+/// that does not place buttons draws `W`.
+const String actCtor = 'act';
+
+/// The place `P` and the widget `W` of [w], where it is `act(P, W)`; null
+/// for any other term.
+(GTerm, GTerm)? actWidget(GTerm w) {
   final (k, ws) = ctorArgs(w);
+  if (k != actCtor || ws.length != 2) return null;
+  return (ws[0], ws[1]);
+}
+
+/// The label `S` and the widget, or the button's constant, `W` of [w], where
+/// it is `label(S, W)`, or `act(P, label(S, W))`; null for any other term.
+(String, GTerm)? labelledWidget(GTerm w) {
+  final a = actWidget(w);
+  final (k, ws) = ctorArgs(a == null ? w : a.$2);
   if (k != labelCtor || ws.length != 2) return null;
   return (displayText(ws[0]), ws[1]);
 }
 
-/// [w] with the labels at its top taken off.
+/// [w] with the labels and the places at its top taken off.
 GTerm unlabelled(GTerm w) {
   var cur = w;
-  for (var l = labelledWidget(cur); l != null; l = labelledWidget(cur)) {
+  while (true) {
+    final a = actWidget(cur);
+    if (a != null) {
+      cur = a.$2;
+      continue;
+    }
+    final l = labelledWidget(cur);
+    if (l == null) return cur;
     cur = l.$2;
   }
-  return cur;
 }
 
 /// What a button of the constant [c], or of `label(S, C)`, shows and what it
@@ -147,7 +174,7 @@ GTerm unlabelled(GTerm w) {
 /// form drawn by it is drawn when the person opens it.
 bool recursiveWidget(GTerm w) {
   final (k, ws) = ctorArgs(w);
-  if ((k == namedCtor || k == labelCtor) && ws.length == 2) {
+  if ((k == namedCtor || k == labelCtor || k == actCtor) && ws.length == 2) {
     return recursiveWidget(ws[1]);
   }
   return (k == recCtor && ws.length == 2) || (k == refCtor && ws.length == 1);

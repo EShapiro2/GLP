@@ -4,18 +4,19 @@
 %%
 %% The roles, by which the plays choose a script:
 %%   alice  looks at her request question; establishes her identity (GKK:1);
-%%          asks to know bob; once her agent knows him, asks to meet him in
-%%          person (GKK:2); once she knows him, mints an Alice-coin (GC:1);
-%%          once she holds it, asks bob to swap it for a Bob-coin, swap(alice,
-%%          bob, alice, bob) (GC:2); once she holds the Bob-coin, pays it to
-%%          bob, pay(alice, bob) (GC:3); looks again.
-%%   bob    establishes his identity; mints a Bob-coin; once he holds it, asks
-%%          to know alice; once his agent knows her, answers yes to her asking
-%%          to meet him in person, and yes to her asking to swap her Alice-coin
-%%          for his Bob-coin.  He mints before he answers the meeting, so that
-%%          he holds the Bob-coin when alice's swap reaches him: alice cannot
-%%          see his holdings, and the swap's start would otherwise race his
-%%          mint.
+%%          asks to meet bob in person (GKK:2), her request's hello asking
+%%          him; once she knows him, mints two Alice-coins (GC:1); once she
+%%          holds them, asks bob to swap them for three Bob-coins,
+%%          swap(alice, bob, alice, 2, bob, 3) (GC:2); once she holds the
+%%          Bob-coins, pays two of them to bob, pay(alice, bob, 2) (GC:3);
+%%          looks again.
+%%   bob    establishes his identity; mints three Bob-coins; once he holds
+%%          them, answers yes to alice asking to meet him in person, the
+%%          question her hello asks, and yes to her asking to swap her
+%%          Alice-coins for his Bob-coins.  He mints before he answers the
+%%          meeting, so that he holds the Bob-coins when alice's swap reaches
+%%          him: alice cannot see his holdings, and the swap's start would
+%%          otherwise race his mint.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
@@ -25,7 +26,7 @@ Last  ::= last(List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
 Holes ::= [] ; [Key? | Holes].
 Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
-Shown ::= shown(Integer, Path, Attempt).
+Shown ::= shown(Integer, Path, Asking).
 Shows ::= [] ; [Shown | Shows].
 PSt   ::= ps(Sess, List(Output), Shows, Steps).
 ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
@@ -37,16 +38,15 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
 procedure script(Constant?, Steps).
-script(alice, [look, own([A1], propose(establish(A1?))), req(known(bob)), wait(known(bob)),
+script(alice, [look, own([A1], propose(establish(A1?))), wait(holds(identity)),
                own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
-               own([A2], propose(mint(A2?))), wait(holds(coin(alice))),
-               own([A3, A4], propose(swap(A3?, bob, A4?, bob))), wait(holds(coin(bob))),
-               own([A5], propose(pay(A5?, bob))), wait(lacks(coin(bob))), look]).
+               own([A2], propose(mint(A2?, 2))), wait(has(coin(alice), 2)),
+               own([A3, A4], propose(swap(A3?, bob, A4?, 2, bob, 3))), wait(has(coin(bob), 3)),
+               own([A5], propose(pay(A5?, bob, 2))), wait(lacks(coin(alice))), look]).
 script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
-             own([B2], propose(mint(B2?))), wait(holds(coin(bob))),
-             req(known(alice)), wait(known(alice)),
+             own([B2], propose(mint(B2?, 3))), wait(has(coin(bob), 3)),
              approval(meet(alice, bob), yes),
-             approval(swap(alice, bob, alice, bob), yes)]).
+             approval(swap(alice, bob, alice, 2, bob, 3), yes)]).
 script(_, []) :- otherwise | true.
 
 %% The person.
@@ -60,7 +60,7 @@ person([draw(Id, _, menu_w(menu(Me, Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss)
     ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
     advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, approval_w(approval(At, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+person([draw(Id, _, approval_w(approval(At, _, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
     advance(ps(Se?, T?, [shown(Id?, P?, At?) | Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
@@ -143,7 +143,7 @@ procedure last_of(List(Output)?, Last).
 last_of(T, L?) :- last_view(T?, nolast, L).
 procedure last_view(List(Output)?, Last?, Last).
 last_view([], L, L?).
-last_view([view(S, K) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+last_view([view(S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
 last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
@@ -151,7 +151,7 @@ procedure notices_of(List(Output)?, List(Output)).
 notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(List(Output)?, List(Output)?, List(Output)).
 notices_after([], Ns, Ns?).
-notices_after([view(_, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
 procedure among_output(Output?, List(Output)?, YN).
 among_output(_, [], n).
@@ -206,6 +206,9 @@ find_approval1(K, [shown(Id, P, At) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [shown(Id, P, attempt(_, _, _, C, _)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(C?), ground(K?), K? =?= C? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [shown(Id, P, hello(_, N)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(N?), ground(K?), K? =?= N? |
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [S | Cs], Done, F?) :-
     otherwise | find_approval1(K?, Cs?, [S? | Done?], F).

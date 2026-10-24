@@ -20,7 +20,7 @@ Last  ::= last(List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
 Holes ::= [] ; [Key? | Holes].
 Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
-Shown ::= shown(Integer, Path, Attempt).
+Shown ::= shown(Integer, Path, Asking).
 Shows ::= [] ; [Shown | Shows].
 PSt   ::= ps(Sess, List(Output), Shows, Steps).
 ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
@@ -32,11 +32,9 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
 procedure script(Constant?, Steps).
-script(alice, [look, own([A1], propose(establish(A1?))), req(known(bob)), wait(known(bob)),
-               own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+script(alice, [look, own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
                own([A2], propose(befriend(A2?, bob))), look]).
-script(bob, [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(alice)),
-             approval(meet(alice, bob), yes),
+script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(meet(alice, bob), yes),
              approval(befriend(alice, bob), yes),
              wait(holds(friend(alice))),
              own([B2], propose(unfriend(B2?, alice)))]).
@@ -136,7 +134,7 @@ procedure last_of(List(Output)?, Last).
 last_of(T, L?) :- last_view(T?, nolast, L).
 procedure last_view(List(Output)?, Last?, Last).
 last_view([], L, L?).
-last_view([view(S, K, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+last_view([view(S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
 last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
@@ -144,7 +142,7 @@ procedure notices_of(List(Output)?, List(Output)).
 notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(List(Output)?, List(Output)?, List(Output)).
 notices_after([], Ns, Ns?).
-notices_after([view(_, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
 procedure among_output(Output?, List(Output)?, YN).
 among_output(_, [], n).
@@ -199,6 +197,9 @@ find_approval1(K, [shown(Id, P, At) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [shown(Id, P, attempt(_, _, _, C, _)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(C?), ground(K?), K? =?= C? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [shown(Id, P, hello(_, N)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(N?), ground(K?), K? =?= N? |
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [S | Cs], Done, F?) :-
     otherwise | find_approval1(K?, Cs?, [S? | Done?], F).

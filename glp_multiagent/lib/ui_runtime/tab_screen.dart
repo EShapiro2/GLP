@@ -1,6 +1,6 @@
 /// The screen of tabs of the grassroots app's construct family: the layout of the constructs of the apps of GSC's contracts, "one screen with tabs, Friends and, in GSN, Groups too, drawn from the person's state; the questions are drawn inside the tab they concern" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC).  "A question's type fixes a construct's semantic content --- what it shows, what it takes, and the answer each submission forms --- and nothing of its layout" (vGLP, Remark "Construct Families"), so the tabs are the family's layout, and no construct's content changes with them.
 ///
-/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  On a platform compiled from a contract with pragmas, GKK's, GSG's and GSN's, the tabs are the lists its view names, each named by the contract (vGLP 1126f4f, Section 5.4, "The contract's words"; `_TabScreenState._worded`).  Otherwise, for the apps whose contracts carry no pragmas yet, the tabs are Friends; where the request type offers `create(Me, N)`, the person is in a group, or a notice of a class of a group is written, Groups; in GAI's app, where the request type offers `enter(Me, R, X)` or the person is the principal of an AI agent, AI agents (GAI's paper, Figure "The GAI app": "her AI agents tab", Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (a)); and, in GC's app, where the request type offers `mint(Me)` (GC:1; `mint(p?)`, programs/currencies/coins/GC.glp), the person holds a coin, or an approval question or a notice of a class of the coins is drawn, Coins (Currencies #11 Cowork, Code_inbox.md, 2026-10-20 18:10 UTC, task 2); once drawn, Groups, AI agents and Coins stay.  Each tab holds, in order:
+/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  On a platform compiled from a contract with pragmas, the tabs are the lists its view names, each named by the contract, and each approval question is drawn at the top of the tab of its act's contract, as the request's widget term says (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; `_TabScreenState._worded`).  Otherwise, for the apps whose contracts carry no pragmas yet, the tabs are Friends; where the request type offers `create(Me, N)`, the person is in a group, or a notice of a class of a group is written, Groups; in GAI's app, where the request type offers `enter(Me, R, X)` or the person is the principal of an AI agent, AI agents (GAI's paper, Figure "The GAI app": "her AI agents tab", Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (a)); and, in GC's app, where the request type offers `mint(Me)` (GC:1; `mint(p?)`, programs/currencies/coins/GC.glp), the person holds a coin, or an approval question or a notice of a class of the coins is drawn, Coins (Currencies #11 Cowork, Code_inbox.md, 2026-10-20 18:10 UTC, task 2); once drawn, Groups, AI agents and Coins stay.  Each tab holds, in order:
 ///
 ///   1. the approval questions it concerns, at its top, each drawn by its widget: an approval of a class of a group ([groupClasses]) in Groups, of a class of the coins ([coinClasses]) in Coins, and every other in Friends;
 ///   2. in Friends, every other question that is neither an approval question nor the request question, by its widget;
@@ -153,10 +153,11 @@ bool _concernsGroup(OpenConstruct c) => groupClasses.contains(_classOf(c));
 /// Whether the approval question [c] concerns the coins: the class of its attempt is one of [coinClasses].
 bool _concernsCoin(OpenConstruct c) => coinClasses.contains(_classOf(c));
 
-/// The schema of the class of the attempt of the approval question [c], `approval(attempt(I, N, K, C, R), Q)`; empty where its view is not one.
+/// The schema of the class of the attempt of the approval question [c], `approval(attempt(I, N, K, C, R), Q)`, or of the meeting an arriving hello asks of, `approval(hello(Q, N), ...)` (vGLP, Section 5.4, "The compilation"); empty where its view is not one.
 String _classOf(OpenConstruct c) {
   final (_, args) = ctorArgs(c.view);
   final (af, xs) = ctorArgs(args[0]);
+  if (af == 'hello' && xs.length == 2) return ctorArgs(xs[1]).$1;
   if (af != 'attempt' || xs.length != 5) return '';
   return ctorArgs(xs[3]).$1;
 }
@@ -210,6 +211,9 @@ class TabScreen extends StatefulWidget {
 }
 
 class _TabScreenState extends State<TabScreen> {
+  /// The requests the last request question drawn offers, read off its widget term, where each request's button is drawn among them ([RequestOffers]); null before one is drawn.
+  RequestOffers? _offers;
+
   /// The friend whose chat is open in Friends.
   GTerm? _chat;
 
@@ -482,7 +486,7 @@ class _TabScreenState extends State<TabScreen> {
     );
   }
 
-  /// The screen of a platform compiled from a contract with pragmas: a tab for each list its view names, in their order, named by the contract (vGLP 1126f4f, Section 5.4, "The contract's words": "for each list the app shows, its name and what it lists"), each holding the approval questions it concerns at its top (`wordedListOf`), the other questions in the first, and the request question drawn in the tab, or construct 0 where none is open; the chat opened in the list of `friend`.
+  /// The screen of a platform compiled from a contract with pragmas: a tab for each list its view names, in their order, named by the contract (vGLP 1126f4f, Section 5.4, "The contract's words": "for each list the app shows, its name and what it lists"), each holding at its top the approval questions of the acts drawn on it, the tab of an act's contract as the request's widget term says (named_widgets.dart, `ActInfo`), the other questions in the first, and the request question drawn in the tab, or construct 0 where none is open.
   Widget _worded(
       List<({String name, String predicate})> lists,
       OpenConstruct? c0,
@@ -491,7 +495,16 @@ class _TabScreenState extends State<TabScreen> {
       List<OpenConstruct> others,
       GTerm? output) {
     final first = lists.first.predicate;
-    String listOf(OpenConstruct a) => wordedListOf(_classOf(a), lists) ?? first;
+    // The tab of an approval question is the tab of its act's contract, as the request's widget term says (named_widgets.dart, ActInfo); the first where it says none.
+    final d = request == null ? null : namedWidget(request.widget)?.$2;
+    if (d != null) _offers = RequestOffers.of(d);
+    String listOf(OpenConstruct a) {
+      final t = _offers?.tabOf(_classOf(a));
+      for (final l in lists) {
+        if (l.name == t) return l.predicate;
+      }
+      return first;
+    }
     final byState = c0 != null && _declared(c0) == lastStateName;
     Widget view(OpenConstruct c, {bool card = true}) => ConstructView(
           key: constructKey(c.id),
