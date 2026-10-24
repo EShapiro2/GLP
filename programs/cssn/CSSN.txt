@@ -19,4 +19,4 @@ Friendship of a child: [Child befriend] (Carol, Dave, Alice, Bob) Alice asks tha
 Coming of age: [Of age]
 Joining: [Child join] (Carol, Dave, Alice, Bob) Dave asks to join your group.  Carol asks you to join their group.  Carol asks that Dave join their group.  Carol asks that your child Dave join their group.
 Ending a relation: [Child unfriend] [Child leave] [Child close]
-Ending guardianship: [Retire]
+Retiring: [Retire]
