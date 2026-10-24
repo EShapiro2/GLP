@@ -1153,21 +1153,29 @@ class SocialNotice {
 }
 
 /// The requests a request question offers, read off the default widget `D` of its type, `Menu ::= menu(Key, List(Key), Request?)`: "It is drawn with the default widget of its type beside its name, from which it reads the type's constructors, so that a menu declared once lists the alternatives of the request type of each program it is declared for" (vGLP, Section 6.2, the paragraph after Proposition "Default Widgets").  The alternatives of the request type are `propose(P)`, `P` a term of Proposal naming a guarded part of a class, and `known(Q)` (vGLP, Section 5.4, "The compilation").
-/// Where the button of a request is drawn, as its widget term says, `act(place(T, M, Ps, Gs, Ks, Ws), W)` (vGLP, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person or a group is drawn beside each one the view lists, on whichever tab lists it, and the button of an act that names none on the tab of its contract"; bridge.dart, [actCtor]): the [tab] of its contract; the place [me] of the person proposing it; the places [persons] a person the view lists fills; the [groups] a group it lists fills, each the place of its leader and that of its name; the places [keys] a field for a key fills where the peer is not listed; and the text of its request form, [words], each a string or the place of a person.  Places count from 1.
+/// Where the button of a request is drawn, as its widget term says, `act(place(T, M, Ps, Gs, Is, Ks, Ws), W)` (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable, and the button of an act that names none on the tab of its contract"; bridge.dart, [actCtor]): the [tab] of its contract; the place [me] of the person proposing it; the places [persons] a person the view lists fills; the [groups] a group it lists fills, each the place of its leader and that of its name; the [items] a row of a list fills, each the place of its speech act and the predicate the list lists; the places [keys] a field for a key fills where the peer is not listed; and the text of its request form, [words], each a string or the place of a person.  Places count from 1.
 class ActInfo {
   final String tab;
   final int me;
   final List<int> persons;
   final List<(int, int)> groups;
+  final List<(int, String)> items;
   final List<int> keys;
   final List<Object> words;
-  const ActInfo(this.tab, this.me, this.persons, this.groups, this.keys,
-      this.words);
+  const ActInfo(this.tab, this.me, this.persons, this.groups, this.items,
+      this.keys, this.words);
 
-  /// The place term [p], `place(T, M, Ps, Gs, Ks, Ws)`; null where it is not one.
+  /// The place term [p], `place(T, M, Ps, Gs, Is, Ks, Ws)`; null where it is not one.
   static ActInfo? of(GTerm p) {
-    final (f, xs) = ctorArgs(p);
-    if (f != 'place' || xs.length != 6) return null;
+    final (f, xs0) = ctorArgs(p);
+    if (f != 'place' || xs0.length != 7 || xs0[4] is! GList) return null;
+    final its = <(int, String)>[];
+    for (final it in (xs0[4] as GList).items) {
+      final (itf, itxs) = ctorArgs(it);
+      if (itf != 'item' || itxs.length != 2 || itxs[0] is! GInt) return null;
+      its.add(((itxs[0] as GInt).value, displayText(itxs[1])));
+    }
+    final xs = [...xs0.take(4), ...xs0.skip(5)];
     int? n(GTerm t) => t is GInt ? t.value : null;
     List<int>? ints(GTerm t) {
       if (t is! GList) return null;
@@ -1198,11 +1206,15 @@ class ActInfo {
         return null;
       }
     }
-    return ActInfo(displayText(xs[0]), m, ps, gs, ks, ws);
+    return ActInfo(displayText(xs[0]), m, ps, gs, its, ks, ws);
   }
 
-  /// Whether the act names, beside the person proposing it, a person or a group.
-  bool get namesOne => persons.isNotEmpty || groups.isNotEmpty;
+  /// Whether the act names, beside the person proposing it, a person, a group or an item.
+  bool get namesOne =>
+      persons.isNotEmpty || groups.isNotEmpty || items.isNotEmpty;
+
+  /// The places an item fills.
+  Set<int> get itemPlaces => {for (final (k, _) in items) k};
 }
 
 class RequestOffers {
@@ -1225,6 +1237,9 @@ class RequestOffers {
   /// Where the button of each alternative of Proposal is drawn, by its functor and arity, where the widget term says ([ActInfo]; `act(P, W)`, bridge.dart).
   final Map<String, ActInfo> acts;
 
+  /// Every place the button of each alternative of Proposal is drawn at, one for each of its guarding roles, the first that of [acts] (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles, beside each row that fills its variable"; nested `act(P, W)`, bridge.dart).
+  final Map<String, List<ActInfo>> allActs;
+
   /// The kind of the field of each place of each alternative of Proposal, by its functor and arity, in order, read off its widget: `peer`, `number`, `text`, `speech` or `other`.
   final Map<String, List<String>> kinds;
 
@@ -1234,6 +1249,7 @@ class RequestOffers {
       this.knownLabel,
       this.knownField = 'Peer',
       this.acts = const {},
+      this.allActs = const {},
       this.kinds = const {}});
 
   /// The alternative of Proposal of functor [f], its key `f/n`; null where there is none.
@@ -1279,6 +1295,7 @@ class RequestOffers {
     final labels = <String, String>{};
     final fields = <String, List<String>>{};
     final acts = <String, ActInfo>{};
+    final allActs = <String, List<ActInfo>>{};
     final kinds = <String, List<String>>{};
     var known = false;
     String? knownLabel;
@@ -1305,7 +1322,6 @@ class RequestOffers {
           if (f == 'propose' && afs.items.length == 1) {
             for (final praw in _items(_fieldWidget(afs.items[0]))) {
               final pl = labelledWidget(praw)?.$1;
-              final pa = actWidget(praw)?.$1;
               final (pk, pws) = ctorArgs(_bare(praw));
               if (pk == 'form' && pws.length == 2 && pws[1] is GList) {
                 final key =
@@ -1316,9 +1332,12 @@ class RequestOffers {
                 kinds[key] = [
                   for (final e in (pws[1] as GList).items) _kind(e)
                 ];
-                if (pa != null) {
-                  final a = ActInfo.of(pa);
-                  if (a != null) acts[key] = a;
+                // The places of its guarding roles, nested, the first outermost.
+                for (var cur = actWidget(praw); cur != null; cur = actWidget(cur.$2)) {
+                  final a = ActInfo.of(cur.$1);
+                  if (a == null) continue;
+                  acts.putIfAbsent(key, () => a);
+                  (allActs[key] ??= []).add(a);
                 }
               }
             }
@@ -1332,6 +1351,7 @@ class RequestOffers {
         knownLabel: knownLabel,
         knownField: knownField,
         acts: acts,
+        allActs: allActs,
         kinds: kinds);
   }
 
@@ -2657,7 +2677,8 @@ class _SocialTabState extends State<SocialTab> {
               padding: const EdgeInsets.only(top: 4, left: 36),
               child: Text(x, style: small),
             ),
-          if (item != null) ..._rowActs(context, s, item, k),
+          if (item != null)
+            ..._rowActs(context, s, item, k, ctorArgs(r.atom).$1),
         ],
       ),
     );
@@ -2666,25 +2687,57 @@ class _SocialTabState extends State<SocialTab> {
   /// The act open in a row's composer, `f/n|item`; null where none is.
   String? _openAct;
 
-  /// The buttons beside a row's item: of each act that names, beside the person proposing it, a person, where the item is a person and not the person themselves, the item filling the first place of a person; or a group, where the item is a group whose leader the act names at a place other than the proposer's, or one the person leads; and under them the composer of the act open, its fields and pickers.
-  List<Widget> _rowActs(BuildContext context, SocialState s, GTerm item, String k) {
+  /// The places of the act [a] a row fills, by its item [item] of the list of [pred] (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable"): a group its leader's place and its name's; a speech act the place of an item the act names on that list; a person the act's first place of a person.
+  static Map<int, GTerm> _fill(ActInfo a, GTerm? item, String? pred) {
+    if (item == null) return const {};
+    final g = SocialState._group(item);
+    if (g != null) {
+      if (a.groups.isEmpty) return const {};
+      final (j, k) = a.groups.first;
+      return {j: g.$1, k: g.$2};
+    }
+    for (final (k, p) in a.items) {
+      if (p == pred) return {k: item};
+    }
+    if (SpeechAct.of(item) != null) return const {};
+    if (item is GAtom && a.persons.isNotEmpty) return {a.persons.first: item};
+    return const {};
+  }
+
+  /// The buttons beside a row's item: of each act that names, beside the person proposing it, a person, where the item is a person and not the person themselves, the item filling the first place of a person; a group, where the item is a group whose leader the act names at a place other than the proposer's, or one the person leads; or an item of the row's list, [pred], the row's speech act filling it; and under them the composer of the act open, its fields and pickers.
+  List<Widget> _rowActs(
+      BuildContext context, SocialState s, GTerm item, String k, String pred) {
     final ask = _ask;
     final o = ask?.offers;
     if (ask == null || o == null || ask.at == null) return const [];
     final me = ask.me;
     final g = SocialState._group(item);
     final mine = formatTerm(item) == formatTerm(me);
+    final speech = SpeechAct.of(item) != null;
     final acts = <(String, ActInfo)>[];
     for (final key in o.proposals) {
-      final a = o.acts[key];
-      if (a == null) continue;
-      if (g == null) {
-        if (item is GAtom && a.persons.isNotEmpty && a.groups.isEmpty && !mine) {
-          acts.add((key, a));
+      final places = o.allActs[key] ?? const <ActInfo>[];
+      if (places.isEmpty) continue;
+      // An act of several guarding roles is drawn on a row at the first of its places the row fills, by an item of the row's list (vGLP 110caf4, Section 6.2: "beside each row that fills its variable"); an act of one, at its place.
+      if (places.length > 1) {
+        final at = places.where((a) =>
+            g == null && a.items.any((x) => x.$2 == pred) && !mine);
+        if (at.isNotEmpty) acts.add((key, at.first));
+        continue;
+      }
+      final a = places.first;
+      if (g != null) {
+        if (a.groups.isNotEmpty) {
+          final (j, _) = a.groups.first;
+          if (j != a.me || formatTerm(g.$1) == formatTerm(me)) acts.add((key, a));
         }
-      } else if (a.groups.isNotEmpty) {
-        final (j, _) = a.groups.first;
-        if (j != a.me || formatTerm(g.$1) == formatTerm(me)) acts.add((key, a));
+      } else if (speech) {
+        if (a.items.any((x) => x.$2 == pred)) acts.add((key, a));
+      } else if (item is GAtom &&
+          a.persons.isNotEmpty &&
+          a.groups.isEmpty &&
+          !mine) {
+        acts.add((key, a));
       }
     }
     if (acts.isEmpty) return const [];
@@ -2699,7 +2752,7 @@ class _SocialTabState extends State<SocialTab> {
           OutlinedButton(
             key: socialKey(_id, 'act:${key.substring(0, key.lastIndexOf('/'))}:$k'),
             onPressed: () {
-              final r = _request(s, o, key, a, me, item, const {});
+              final r = _request(s, o, key, a, me, _fill(a, item, pred), const {});
               if (r != null) {
                 ask.propose(r);
               } else {
@@ -2710,7 +2763,8 @@ class _SocialTabState extends State<SocialTab> {
                 int.parse(key.substring(key.lastIndexOf('/') + 1)))),
           ),
       ]),
-      for (final (key, a) in open) _actForm(context, s, ask, o, key, a, item),
+      for (final (key, a) in open)
+        _actForm(context, s, ask, o, key, a, item, pred: pred),
     ];
   }
 
@@ -2729,29 +2783,46 @@ class _SocialTabState extends State<SocialTab> {
     return out;
   }
 
-  /// The person picked for place [i] of the composer [c].
+  /// The groups the person may pick for the group [j]: those the view lists, `member(G)`, whose leader is the person where the act names its leader at the proposer's place [me], and another where it does not.
+  List<GTerm> _pickableGroups(SocialState s, GTerm me, int j, int place) => [
+        for (final m in s._args('member', 1))
+          if (SocialState._group(m[0]) case (final a, _))
+            if ((formatTerm(a) == formatTerm(me)) == (j == place)) m[0]
+      ];
+
+  /// The items the person may pick for an item of the list of [pred]: the speech acts of its rows, each once.
+  List<GTerm> _pickableItems(SocialState s, String pred) => [
+        for (final r in _rows(s, pred))
+          if (r.item case final x? when SpeechAct.of(x) != null) x
+      ];
+
+  /// The person, the group or the item picked for place [i] of the composer [c].
   final Map<String, GTerm> _picked = {};
 
-  /// The request the act [key] proposes, its proposer the person, the item filling its first person place or its group, each other person picked, and each field read from what the person typed, [typed]; null where a place is not yet filled.
+  /// The request the act [key] proposes, its proposer the person, the places a row fills, [fill], each other person, group and item picked, and each field read from what the person typed, [typed]; null where a place is not yet filled.
   GTerm? _request(SocialState s, RequestOffers o, String key, ActInfo a,
-      GTerm me, GTerm? item, Map<int, String> typed,
+      GTerm me, Map<int, GTerm> fill, Map<int, String> typed,
       {String composer = ''}) {
     final f = key.substring(0, key.lastIndexOf('/'));
     final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
     final kinds = o.kinds[key] ?? const [];
     final args = List<GTerm?>.filled(n, null);
     args[a.me - 1] = me;
-    final g = item == null ? null : SocialState._group(item);
-    if (g != null && a.groups.isNotEmpty) {
-      final (j, kk) = a.groups.first;
-      args[j - 1] = g.$1;
-      args[kk - 1] = g.$2;
-    } else if (item != null && a.persons.isNotEmpty) {
-      args[a.persons.first - 1] = item;
+    for (final e in fill.entries) {
+      if (e.key >= 1 && e.key <= n) args[e.key - 1] = e.value;
     }
+    for (final (j, k) in a.groups) {
+      if (args[k - 1] != null) continue;
+      final gp = _picked['$composer:g$k'];
+      final gg = gp == null ? null : SocialState._group(gp);
+      if (gg == null) return null;
+      args[j - 1] ??= gg.$1;
+      args[k - 1] = gg.$2;
+    }
+    final its = a.itemPlaces;
     for (var i = 1; i <= n; i++) {
       if (args[i - 1] != null) continue;
-      if (a.persons.contains(i)) {
+      if (a.persons.contains(i) || its.contains(i)) {
         args[i - 1] = _picked['$composer:$i'];
         continue;
       }
@@ -2779,38 +2850,41 @@ class _SocialTabState extends State<SocialTab> {
     return GStruct(f, [for (final x in args) x!]);
   }
 
-  /// The composer of the act [key]: the text of its request form where it has one, a picker for each person place the item does not fill, a field for each place the person fills, named as its widget term names it, and its button; for an act that names no person and no group, drawn on its contract's tab.
+  /// The composer of the act [key]: the text of its request form where it has one, a picker for each person, group and item place the row does not fill, a field for each place the person fills, named as its widget term names it, and its button; for an act that names no person, group or item, drawn on its contract's tab.
   Widget _actForm(BuildContext context, SocialState s, SocialAsk ask,
-      RequestOffers o, String key, ActInfo a, GTerm? item) {
+      RequestOffers o, String key, ActInfo a, GTerm? item, {String? pred}) {
     final f = key.substring(0, key.lastIndexOf('/'));
     final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
     final ik = item == null ? '' : formatTerm(item);
     final composer = '$f:$ik';
     final me = ask.me;
-    final g = item == null ? null : SocialState._group(item);
-    final filled = <int>{a.me};
-    if (g != null && a.groups.isNotEmpty) {
-      filled.addAll([a.groups.first.$1, a.groups.first.$2]);
-    } else if (item != null && a.persons.isNotEmpty) {
-      filled.add(a.persons.first);
-    }
+    final fill = _fill(a, item, pred);
+    final filled = <int>{a.me, ...fill.keys};
     final picks = [
       for (final i in a.persons)
         if (!filled.contains(i)) i
     ];
+    final groupPicks = [
+      for (final (j, k) in a.groups)
+        if (!filled.contains(k)) (j, k)
+    ];
+    final itemPicks = [
+      for (final (k, p) in a.items)
+        if (!filled.contains(k)) (k, p)
+    ];
+    final groupPlaces = {for (final (j, k) in a.groups) ...[j, k]};
     final fields = [
       for (var i = 1; i <= n; i++)
-        if (!filled.contains(i) && !a.persons.contains(i)) i
+        if (!filled.contains(i) &&
+            !a.persons.contains(i) &&
+            !groupPlaces.contains(i) &&
+            !a.itemPlaces.contains(i))
+          i
     ];
     Map<int, String> typed() => {
           for (final i in fields) i: _form('field:$composer:$i').text.trim()
         };
-    final at = <int, GTerm>{a.me: me};
-    if (g != null && a.groups.isNotEmpty) {
-      at[a.groups.first.$1] = g.$1;
-    } else if (item != null && a.persons.isNotEmpty) {
-      at[a.persons.first] = item;
-    }
+    final at = <int, GTerm>{a.me: me, ...fill};
     for (final i in picks) {
       if (_picked['$composer:$i'] case final p?) at[i] = p;
     }
@@ -2818,7 +2892,10 @@ class _SocialTabState extends State<SocialTab> {
       for (final w in a.words)
         if (w is int) (at[w] == null ? '' : personName(at[w]!)) else w as String
     ].join();
-    final r = _request(s, o, key, a, me, item, typed(), composer: composer);
+    final r = _request(s, o, key, a, me, fill, typed(), composer: composer);
+    final small = TextStyle(fontSize: 13, color: Colors.grey.shade700);
+    bool picked(String k, GTerm x) =>
+        _picked[k] != null && formatTerm(_picked[k]!) == formatTerm(x);
     return Container(
       key: socialKey(_id, 'form:$composer'),
       margin: const EdgeInsets.only(top: 6, bottom: 6),
@@ -2832,18 +2909,40 @@ class _SocialTabState extends State<SocialTab> {
             ),
           for (final i in picks)
             Wrap(spacing: 6, runSpacing: 4, children: [
-              Text(o.field(f, n, i),
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+              Text(o.field(f, n, i), style: small),
               for (final p in _pickable(s, me))
                 if (item == null || formatTerm(p) != formatTerm(item))
                   ChoiceChip(
                     key: socialKey(_id, 'pick:$composer:$i:${formatTerm(p)}'),
                     label: Text(personName(p)),
-                    selected: _picked['$composer:$i'] != null &&
-                        formatTerm(_picked['$composer:$i']!) == formatTerm(p),
+                    selected: picked('$composer:$i', p),
                     onSelected: (_) =>
                         setState(() => _picked['$composer:$i'] = p),
                   ),
+            ]),
+          for (final (j, k) in groupPicks)
+            Wrap(spacing: 6, runSpacing: 4, children: [
+              Text(o.field(f, n, k), style: small),
+              for (final gt in _pickableGroups(s, me, j, a.me))
+                ChoiceChip(
+                  key: socialKey(_id, 'pick:$composer:g$k:${formatTerm(gt)}'),
+                  label: Text(_named(gt)),
+                  selected: picked('$composer:g$k', gt),
+                  onSelected: (_) =>
+                      setState(() => _picked['$composer:g$k'] = gt),
+                ),
+            ]),
+          for (final (k, p) in itemPicks)
+            Wrap(spacing: 6, runSpacing: 4, children: [
+              Text(o.field(f, n, k), style: small),
+              for (final x in _pickableItems(s, p))
+                ChoiceChip(
+                  key: socialKey(_id, 'pick:$composer:$k:${formatTerm(x)}'),
+                  label: Text(_named(x)),
+                  selected: picked('$composer:$k', x),
+                  onSelected: (_) =>
+                      setState(() => _picked['$composer:$k'] = x),
+                ),
             ]),
           for (final i in fields)
             TextField(
@@ -2870,6 +2969,12 @@ class _SocialTabState extends State<SocialTab> {
                       }
                       for (final i in picks) {
                         _picked.remove('$composer:$i');
+                      }
+                      for (final (_, k) in groupPicks) {
+                        _picked.remove('$composer:g$k');
+                      }
+                      for (final (k, _) in itemPicks) {
+                        _picked.remove('$composer:$k');
                       }
                       _openAct = null;
                     });

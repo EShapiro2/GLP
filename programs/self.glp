@@ -178,11 +178,13 @@ Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
 % label it is given, and the name of the type where it is given none").  The
 % widget of a request a platform compiled from a contract with pragmas
 % proposes carries also where its button is drawn, act(P, W), P the term
-% place(T, M, Ps, Gs, Ks, Ws): T the tab of its contract, M the place of the
+% place(T, M, Ps, Gs, Is, Ks, Ws): T the tab of its contract, M the place of the
 % person proposing it, Ps the places of the persons it names beside them,
 % which a person the view lists fills, Gs the groups it names, group(J, K),
 % the leader at place J and the group's name at place K, which a group the
-% view lists fills, Ks the places a field for a key fills where the peer is
+% view lists fills, Is the items it names, item(K, P), the speech act at
+% place K, which a row of the list of the predicate P fills (vGLP 932c710,
+% Section 6.2: "a person, a group or an item"), Ks the places a field for a key fills where the peer is
 % not listed, and Ws the text of its request form, each word say(S) or the
 % person at place I, at(I) (vGLP, Section 6.2, "The words a platform shows":
 % "The button of an act that names, beside the person proposing it, a person
@@ -203,8 +205,9 @@ Widget ::= button(ButtonValue) ; buttons(List(ButtonValue))
       ; act(ActPlace, Widget).
 WidgetField ::= field(String, Widget) ; question(String, Widget).
 ButtonValue ::= Constant ; [] ; label(String, ButtonValue).
-ActPlace ::= place(String, Integer, List(Integer), List(GroupAt), List(Integer), List(FormWord)).
+ActPlace ::= place(String, Integer, List(Integer), List(GroupAt), List(ItemAt), List(Integer), List(FormWord)).
 GroupAt ::= group(Integer, Integer).
+ItemAt ::= item(Integer, Constant).
 FormWord ::= say(String) ; at(Integer).
 
 % The channel to the social graph (GSG, 2026-10-13 11:57 UTC, Udi: approved;

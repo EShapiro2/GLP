@@ -11,12 +11,12 @@
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
 Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
-        ; refused(Class, Key, Reason) ; asked(Asked) ; asking.
+        ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
 Last  ::= last(List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
 Holes ::= [] ; [Key? | Holes].
 Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
-Shown ::= shown(Integer, Path, Attempt).
+Shown ::= shown(Integer, Path, Asking).
 Shows ::= [] ; [Shown | Shows].
 PSt   ::= ps(Sess, List(Output), Shows, Steps).
 ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
@@ -28,37 +28,30 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
 procedure script(Constant?, Steps).
-script(alice, [own([A1], propose(establish(A1?))), req(known(alf)), req(known(bob)),
-               wait(known(bob)), own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
-               wait(known(alf)),
-               own([A2, A3], propose(sign(A2?, speech(speech(utterance('The code of Alf'), acme_ltd), A3?)))),
-               wait(holds(item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)))),
-               own([A4, A5], propose(enter(A4?, alf, speech(speech(utterance('The code of Alf'), acme_ltd), A5?)))),
-               approval(agent_meet(alf, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), yes),
-               approval(agent_befriend(alf, bob, alice), yes),
+script(alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
+               own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+               own([A2, A3], propose(sign(A2?, speech(utterance('The code of Alf'), A3?)))),
+               wait(holds(item(speech(utterance('The code of Alf'), alice)))),
+               own([A4, A5], propose(enter(A4?, alf, speech(utterance('The code of Alf'), A5?)))),
+               wait(holds(principal_of(alf))),
+               own([A7], propose(agent_meet(alf, bob, A7?, speech(speech(utterance('The code of Alf'), alice), alice)))),
+               wait(holds(friend(alf))),
+               own([A8], propose(agent_befriend(alf, bob, A8?))),
                approval(befriend(bob, alice), yes),
                wait(holds(friend(bob))),
                own([A6], propose(retire(A6?, alf)))]).
-script(alf, [req(known(alice)),
-             approval(enter(alice, alf, speech(speech(utterance('The code of Alf'), acme_ltd), alice)), yes),
-             wait(holds(attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)))),
-             req(known(bob)),
-             wait(known(bob)),
-             own([R0], propose(agent_meet(R0?, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)))),
-             wait(holds(knows(bob))),
-             own([R1], propose(agent_befriend(R1?, bob, alice))),
-             wait(holds(friend(bob))),
-             own([R2, R3], propose(sign(R2?, speech(utterance('Today\'s summary of the news'), R3?)))),
-             wait(holds(authored(speech(utterance('Today\'s summary of the news'), alf)))),
-             own([R4, R5], propose(message(R4?, bob, speech(utterance('Today\'s summary of the news'), R5?))))]).
-script(bob, [own([B1], propose(establish(B1?))), req(known(alf)), req(known(alice)),
+script(alf, [approval(enter(alice, alf, speech(utterance('The code of Alf'), alice)), yes),
+             wait(holds(attestation(speech(speech(utterance('The code of Alf'), alice), alice)))),
+             approval(agent_meet(alf, bob, alice, speech(speech(utterance('The code of Alf'), alice), alice)), yes),
+             approval(agent_befriend(alf, bob, alice), yes)]).
+script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              approval(meet(alice, bob), yes),
-             approval(agent_meet(alf, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), yes),
+             approval(agent_meet(alf, bob, alice, speech(speech(utterance('The code of Alf'), alice), alice)), yes),
              approval(agent_befriend(alf, bob, alice), yes),
-             wait(holds(item(speech(utterance('Today\'s summary of the news'), alf)))),
+             wait(holds(friend(alf))),
              own([B2], propose(befriend(B2?, alice))),
              wait(holds(friend(alice))),
-             own([B3], propose(unfriend_p(B3?, alf)))]).
+             own([B3], propose(unfriend(B3?, alf)))]).
 script(_, []) :- otherwise | true.
 
 %% The person.
@@ -72,7 +65,7 @@ person([draw(Id, _, menu_w(menu(Me, Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss)
     ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
     advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, approval_w(approval(At, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+person([draw(Id, _, approval_w(approval(At, _, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
     advance(ps(Se?, T?, [shown(Id?, P?, At?) | Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
@@ -155,7 +148,7 @@ procedure last_of(List(Output)?, Last).
 last_of(T, L?) :- last_view(T?, nolast, L).
 procedure last_view(List(Output)?, Last?, Last).
 last_view([], L, L?).
-last_view([view(S, K) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+last_view([view(S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
 last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
@@ -163,7 +156,7 @@ procedure notices_of(List(Output)?, List(Output)).
 notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(List(Output)?, List(Output)?, List(Output)).
 notices_after([], Ns, Ns?).
-notices_after([view(_, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
 procedure among_output(Output?, List(Output)?, YN).
 among_output(_, [], n).
@@ -218,6 +211,9 @@ find_approval1(K, [shown(Id, P, At) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [shown(Id, P, attempt(_, _, _, C, _)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(C?), ground(K?), K? =?= C? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [shown(Id, P, hello(_, N)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(N?), ground(K?), K? =?= N? |
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [S | Cs], Done, F?) :-
     otherwise | find_approval1(K?, Cs?, [S? | Done?], F).

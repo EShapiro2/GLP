@@ -6,8 +6,8 @@
 %%   dan    establishes his identity (GKK:1); once it is established, meets eve by her key (GKK:2); once they know each other, offers her friendship (GSG:1); once they are friends, signs the item; once he sees himself its author, sends it to eve in a message.
 %%   eve    establishes her identity; answers yes to dan's asking to meet her and to his offer of friendship; once his message of the item has reached her, meets carol by her key, and once they know each other, offers carol friendship; once they are friends, forwards the item, signed by dan, to carol.
 %%   carol  establishes her identity; answers yes to eve's asking to meet her and to her offer of friendship; once eve's forward has reached her, meets bob by his key, and once they know each other, offers bob friendship; once they are friends, forwards the item, signed by dan and then by eve, to bob.
-%%   bob    establishes his identity; answers yes to carol's asking to meet him and to her offer of friendship; once her forward has reached him, holding the item signed by dan, eve and carol, meets fay by her key, and once they know each other, offers fay friendship.  He forwards the item to nobody.
-%%   fay    establishes her identity; answers yes to bob's asking to meet her and to his offer of friendship.
+%%   bob    establishes his identity; answers yes to carol's asking to meet him and to her offer of friendship; once her forward has reached him, holding the item signed by dan, eve and carol, meets fay by her key, and once they know each other, offers fay friendship; once they are friends, forwards the item to her (GSNP:2), nobody asked.
+%%   fay    establishes her identity; answers yes to bob's asking to meet her and to his offer of friendship; then holds the item signed by dan, eve, carol and bob.
 %% Each person who takes part in the item's passage offers their next friendship once the item has reached them, and so proposes nothing while an attempt that adds the item to their state is open.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
@@ -58,10 +58,47 @@ script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              approval(befriend(carol, bob), yes),
              wait(holds(item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)))),
              own([M4], propose(meet(M4?, fay))), wait(holds(knows(fay))),
-             own([B2], propose(befriend(B2?, fay)))]).
+             own([B2], propose(befriend(B2?, fay))),
+             wait(holds(friend(fay))),
+             own([B3], propose(forward(B3?, fay, speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol))))]).
 script(fay, [own([F1], propose(establish(F1?))), wait(holds(identity)),
              approval(meet(bob, fay), yes),
-             approval(befriend(bob, fay), yes)]).
+             approval(befriend(bob, fay), yes),
+             wait(holds(item(speech(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol), bob))))]).
+script(acme_ltd, [own([K1], propose(establish(K1?))), wait(holds(identity)),
+                  own([K2], propose(meet(K2?, alice))), wait(holds(knows(alice))),
+                  own([K3], propose(befriend(K3?, alice))), wait(holds(friend(alice))),
+                  own([K4, K5], propose(sign(K4?, speech(utterance('The code of Alf'), K5?)))),
+                  wait(holds(authored(speech(utterance('The code of Alf'), acme_ltd)))),
+                  own([K6, K7], propose(message(K6?, alice, speech(utterance('The code of Alf'), K7?))))]).
+script(alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
+               approval(meet(acme_ltd, alice), yes),
+               approval(befriend(acme_ltd, alice), yes),
+               own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+               wait(holds(item(speech(utterance('The code of Alf'), acme_ltd)))),
+               own([A2], propose(enter(A2?, alf, speech(utterance('The code of Alf'), acme_ltd)))),
+               wait(holds(principal_of(alf))),
+               own([A3], propose(agent_meet(alf, bob, A3?, speech(speech(utterance('The code of Alf'), acme_ltd), alice)))),
+               wait(holds(friend(alf))),
+               own([A4], propose(agent_befriend(alf, bob, A4?))),
+               approval(befriend(bob, alice), yes),
+               wait(holds(friend(bob))),
+               own([A5], propose(retire(A5?, alf)))]).
+script(alf, [approval(enter(alice, alf, speech(utterance('The code of Alf'), acme_ltd)), yes),
+             approval(agent_meet(alf, bob, alice, speech(speech(utterance('The code of Alf'), acme_ltd), alice)), yes),
+             approval(agent_befriend(alf, bob, alice), yes),
+             wait(holds(friend(bob))),
+             own([R1, R2], propose(sign(R1?, speech(utterance('Today\'s summary of the news'), R2?)))),
+             wait(holds(authored(speech(utterance('Today\'s summary of the news'), alf)))),
+             own([R3, R4], propose(message(R3?, bob, speech(utterance('Today\'s summary of the news'), R4?))))]).
+script(agents_bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                    approval(meet(alice, bob), yes),
+                    approval(agent_meet(alf, bob, alice, speech(speech(utterance('The code of Alf'), acme_ltd), alice)), yes),
+                    approval(agent_befriend(alf, bob, alice), yes),
+                    wait(holds(item(speech(utterance('Today\'s summary of the news'), alf)))),
+                    own([B2], propose(befriend(B2?, alice))),
+                    wait(holds(friend(alice))),
+                    own([B3], propose(unfriend(B3?, alf)))]).
 script(_, []) :- otherwise | true.
 
 %% The person.
