@@ -1,14 +1,14 @@
 /// Where an agent's local state is kept across the termination of its
 /// application (IGLP, Definition "Restart": "the local state s_p of p at
 /// restart is its local state at termination"; Implementation Notes,
-/// "Persistence": "The runtime keeps, beside the layer's queue, everything a
-/// restarted agent runs from").
+/// "Persistence": "In the meantime the runtime keeps it by a store the host
+/// gives it, beside the layer's queue").
 ///
 /// The embedding application gives the agent's host its store, as it gives
 /// the layer the file of its queue: a file the application names, or, in the
 /// simulation and the tests, the memory of the process that outlives the
-/// agent.  The host saves the state at the end of each event cycle and reads
-/// it at restart ([AgentRuntime]).
+/// agent.  The host saves the state in each event cycle, before the cycle's
+/// messages are handed to the layer, and reads it at restart ([AgentRuntime]).
 library;
 
 import 'dart:io';

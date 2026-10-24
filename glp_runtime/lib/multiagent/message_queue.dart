@@ -167,6 +167,24 @@ class MessageQueue {
   /// Whether some message is eligible for Send: unsent and not held
   /// (Definition madGLP Send).
   bool get hasSendable => all.any((m) => !m.held);
+
+  /// Take out of M_p every message eligible for Send, undelivered and not held, without sending it, and keep the held ones in order; the number taken out.  A host that goes back to a saved state whose undelivered messages it has since handed to the layer takes them out so (AgentRuntime._rollBack), and hands none of them over twice.
+  int removeSendable() {
+    var removed = 0;
+    for (final destination in destinations) {
+      final queue = _queuesByDestination[destination]!;
+      final held = queue.where((m) => m.held).toList();
+      removed += queue.length - held.length;
+      if (held.isEmpty) {
+        _queuesByDestination.remove(destination);
+      } else {
+        queue
+          ..clear()
+          ..addAll(held);
+      }
+    }
+    return removed;
+  }
   
   /// Peek at the next message for a destination without removing it
   /// 

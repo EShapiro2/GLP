@@ -140,23 +140,23 @@ void main() {
       expect(result, equals(BodyKernelResult.abort));
     });
 
-    test('neg/2 body kernel', () {
+    test('no _neg/2 body kernel: unary negation is no operator of Exp', () {
+      // TGLP 6858789 (appendix-root-self.tex) and GLP-Spec 5381f71 (the
+      // arithmetic kernels): Exp has no unary negation, and the negation of X
+      // is written 0 - X, '_sub'(0, X, Z).
       final rt = GlpRuntime();
+      expect(rt.bodyKernels.lookup('_neg', 2), isNull);
 
       final (xWriter, xReader) = rt.heap.allocateVariable();
       final (resultWriter, _) = rt.heap.allocateVariable();
-
-      rt.heap.bindVariableConst(xWriter, 42);
-
-      final kernel = rt.bodyKernels.lookup('_neg', 2);
-      final result = kernel!(rt, [
+      rt.heap.bindWriter(xWriter, ConstTerm(42));
+      final result = rt.bodyKernels.lookup('_sub', 3)!(rt, [
+        ConstTerm(0),
         VarRef(xReader),
         VarRef(resultWriter),
       ]);
       expect(result, equals(BodyKernelResult.success));
-
-      final value = rt.heap.getValue(resultWriter);
-      expect((value as ConstTerm).value, equals(-42));
+      expect((rt.heap.getValue(resultWriter) as ConstTerm).value, equals(-42));
     });
 
     test('sqrt_kernel/2 body kernel', () {
@@ -189,8 +189,8 @@ void main() {
       expect(rt.bodyKernels.has('_idiv', 3), isTrue);
       expect(rt.bodyKernels.has('_mod', 3), isTrue);
 
-      // Unary
-      expect(rt.bodyKernels.has('_neg', 2), isTrue);
+      // Unary: abs, and no negation (TGLP 6858789; GLP-Spec 5381f71)
+      expect(rt.bodyKernels.has('_neg', 2), isFalse);
       expect(rt.bodyKernels.has('_abs', 2), isTrue);
 
       // Math functions

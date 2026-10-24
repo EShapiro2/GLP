@@ -78,7 +78,6 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_div', 3, divKernel);
   registry.register('_idiv', 3, idivKernel);
   registry.register('_mod', 3, modKernel);
-  registry.register('_neg', 2, negKernel);
 
   // Math functions
   registry.register('_abs', 2, absKernel);
@@ -171,7 +170,6 @@ num? _evaluateArithmetic(GlpRuntime rt, StructTerm struct) {
     case '/': return args[1] == 0 ? null : args[0]! / args[1]!;
     case '//': return args[1] == 0 ? null : args[0]! ~/ args[1]!;
     case 'mod': return args[1] == 0 ? null : args[0]! % args[1]!;
-    case 'neg': return -args[0]!;
     default: return null;
   }
 }
@@ -292,19 +290,6 @@ BodyKernelResult modKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
   return _bindResult(rt, args[2], x % y);
-}
-
-BodyKernelResult negKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) {
-    print('[ABORT] neg/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
-  }
-  final x = _getNum(rt, args[0]);
-  if (x == null) {
-    print('[ABORT] neg/2: operand must be a number');
-    return BodyKernelResult.abort;
-  }
-  return _bindResult(rt, args[1], -x);
 }
 
 // ============================================================================

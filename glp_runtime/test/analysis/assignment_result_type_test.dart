@@ -1,11 +1,11 @@
 // glp_runtime/test/analysis/assignment_result_type_test.dart
 //
-// The type of the result of `:=` (TGLP typed-glp.tex, "Type checking of :=",
-// dbb09f4, restated in 2e39edb; Udi's ruling of 2026-10-02): "The root declares
-// the body kernel :=(Number, Exp?) ... A goal X := E is checked with the type of
-// X taken as Integer where E is an integer expression --- an integer literal, a
-// reader of type Integer, one of +, -, *, //, mod, unary - or abs over integer
-// expressions, or integer, round, floor or ceil over any expression --- and as
+// The type of the result of `:=` (TGLP typed-constant-readers.tex, "Type
+// checking of :=", 6858789): "The root declares the body kernel :=(Number,
+// Exp?) ... A goal X := E is checked with the type of X taken as Integer where
+// E is an integer expression --- an integer literal, a reader of type Integer,
+// one of +, -, *, //, mod or abs over integer expressions, or integer, round,
+// floor or ceil over any expression --- and as
 // Number otherwise, / and the remaining functions of Exp yielding a Number
 // whatever their operands; so N1 := N? + 1 with N an Integer types N1 as
 // Integer, which the monitor of Section [typed-glp-examples] needs."
@@ -58,14 +58,27 @@ void main() {
       expect(load('procedure one(Integer).\none(X?) :- X := 1.\n'), isTrue);
     });
 
-    test('+, -, *, // and mod over integer expressions, and unary minus', () {
+    test('+, -, *, // and mod over integer expressions, and 0 - A for the '
+        'negation of A', () {
       expect(
           load('procedure f(Integer?, Integer?, Integer).\n'
               'f(A, B, X?) :- X := A? * 2 - B? // 3 + A? mod 5.\n'),
           isTrue);
       expect(
-          load('procedure n(Integer?, Integer).\nn(A, X?) :- X := -A?.\n'),
+          load('procedure n(Integer?, Integer).\nn(A, X?) :- X := 0 - A?.\n'),
           isTrue);
+    });
+
+    test('unary minus is not in Exp: X := -A? does not parse (TGLP 6858789)',
+        () {
+      expect(
+          () => load(
+              'procedure n(Integer?, Integer).\nn(A, X?) :- X := -A?.\n'),
+          throwsA(predicate((e) => e.toString().contains(
+              'GLP has no unary minus: write 0 - X for the negation of X'))));
+      // neg/1 is no functor of Exp: X := neg(A?) is ill-typed.
+      refused('procedure n(Number?, Number).\nn(A, X?) :- X := neg(A?).\n',
+          'neg(A?) is not an Exp');
     });
 
     test('a result typed Integer is a reader of type Integer for another :=, '

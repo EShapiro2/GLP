@@ -70,8 +70,8 @@ class MadContext {
 
   /// Where the layer's place events go, where set: to the host, which
   /// delivers each in an event cycle of its own by [deliverPlaceEvent], so
-  /// that the cycle is saved and, where its save fails, run again (IGLP,
-  /// Remark "What Is Saved and When").  [declaration] is the declaration a
+  /// that the cycle is saved (IGLP, Implementation Notes, "Persistence") and,
+  /// where its save fails, taken again.  [declaration] is the declaration a
   /// refusal answers, null for an event; it is checked when the event is
   /// delivered.  Where it is not set, an event is delivered as it arrives.
   void Function(String place, PlaceEvent event, int? declaration)?
