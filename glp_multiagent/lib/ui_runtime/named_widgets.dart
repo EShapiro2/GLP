@@ -2484,7 +2484,15 @@ class _SocialTabState extends State<SocialTab> {
                   _actForm(context, s, ask, o, k, a, null),
                 if (a.keys.isNotEmpty) _keyForm(context, s, ask, o, k, a),
               ],
-        for (final r in _rows(s, l.predicate)) _wordedRow(context, s, r),
+        for (final r in _rows(s, l.predicate))
+          _wordedRow(context, s, r,
+              alone: _rows(s, l.predicate)
+                      .where((x) =>
+                          x.item != null &&
+                          r.item != null &&
+                          formatTerm(x.item!) == formatTerm(r.item!))
+                      .length <=
+                  1),
       ],
     );
   }
@@ -2598,9 +2606,11 @@ class _SocialTabState extends State<SocialTab> {
 
   /// A row of a list: its item by name, the count of its copies where more than one, the atoms of the state naming the item, each by its other arguments (vGLP, Section 5.4, "The contract's words": "a row shows the atoms of the state naming its item, the view carrying the whole state"), and the buttons of the acts that name a person or a group beside the item ([_rowActs]).  A speech act is drawn by its text, and under it its signers by name, its author and then each agent that forwarded it, in order (GSC, Section 3: "A speech act is an utterance or a speech act, signed by a person"; vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9).
   Widget _wordedRow(BuildContext context, SocialState s,
-      ({GTerm atom, int count, GTerm? item}) r) {
+      ({GTerm atom, int count, GTerm? item}) r,
+      {bool alone = true}) {
     final item = r.item;
-    final k = formatTerm(item ?? r.atom);
+    // A row is keyed by its item, or by its atom where another row of the list has the same item, as two bonds of one issuer of different maturities.
+    final k = formatTerm(alone ? (item ?? r.atom) : r.atom);
     final title = item == null
         ? _atomText(r.atom)
         : '${_named(item)}${r.count > 1 ? '  ${r.count}' : ''}';
@@ -2613,6 +2623,12 @@ class _SocialTabState extends State<SocialTab> {
       final whole = formatTerm(item);
       final g = SocialState._group(item);
       final part = g == null ? whole : formatTerm(g.$2);
+      // The row's own atom by its other arguments, as a bond's maturity, it being an atom of the state naming the item.
+      final own = [
+        for (final x in ctorArgs(r.atom).$2)
+          if (formatTerm(x) != whole && formatTerm(x) != part) _named(x)
+      ];
+      if (own.isNotEmpty) shows.add(own.join(', '));
       for (final a in s.atoms) {
         if (formatTerm(a) == formatTerm(r.atom) || !_naming(a, item)) continue;
         final (_, xs) = ctorArgs(a);
@@ -2688,30 +2704,162 @@ class _SocialTabState extends State<SocialTab> {
       }
     }
     if (acts.isEmpty) return const [];
+    // The schemas of one act share its button (GSC's ruling, Code_inbox.md, 2026-10-24 08:06 UTC; programs/vglp/cva/compiler/README.md, "The forms the papers leave open", 2): acts of one label drawn at the same places are one button, its composer the union of their fields ([_sharedForm]).
+    final groups = _shared(o, acts);
     final open = [
-      for (final (key, a) in acts)
-        if (_openAct == '$key|$k') (key, a)
+      for (final m in groups)
+        if (_openAct == '${_groupKey(o, m)}|$k') m
     ];
     return [
       const SizedBox(height: 6),
       Wrap(spacing: 8, runSpacing: 4, children: [
-        for (final (key, a) in acts)
+        for (final m in groups)
           OutlinedButton(
-            key: socialKey(_id, 'act:${key.substring(0, key.lastIndexOf('/'))}:$k'),
+            key: socialKey(_id, 'act:${_groupName(o, m)}:$k'),
             onPressed: () {
-              final r = _request(s, o, key, a, me, item, const {});
+              final r = m.length == 1
+                  ? _request(s, o, m.single.$1, m.single.$2, me, item, const {})
+                  : null;
               if (r != null) {
                 ask.propose(r);
               } else {
-                setState(() => _openAct = _openAct == '$key|$k' ? null : '$key|$k');
+                final gk = _groupKey(o, m);
+                setState(() => _openAct = _openAct == '$gk|$k' ? null : '$gk|$k');
               }
             },
-            child: Text(o.label(key.substring(0, key.lastIndexOf('/')),
-                int.parse(key.substring(key.lastIndexOf('/') + 1)))),
+            child: Text(o.label(m.first.$1.substring(0, m.first.$1.lastIndexOf('/')),
+                int.parse(m.first.$1.substring(m.first.$1.lastIndexOf('/') + 1)))),
           ),
       ]),
-      for (final (key, a) in open) _actForm(context, s, ask, o, key, a, item),
+      for (final m in open)
+        m.length == 1
+            ? _actForm(context, s, ask, o, m.single.$1, m.single.$2, item)
+            : _sharedForm(context, s, ask, o, m, item),
     ];
+  }
+
+  /// The acts [acts] in groups, in order, each the acts of one label drawn at the same places: the schemas of one act, which share its button.
+  static List<List<(String, ActInfo)>> _shared(
+      RequestOffers o, List<(String, ActInfo)> acts) {
+    final groups = <List<(String, ActInfo)>>[];
+    final at = <String, int>{};
+    for (final (key, a) in acts) {
+      final f = key.substring(0, key.lastIndexOf('/'));
+      final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
+      final label = o.labels[key];
+      final g = label == null
+          ? null
+          : '$label|${a.tab}|${a.me}|${a.persons}|${a.groups}|${a.keys}';
+      final i = g == null ? null : at[g];
+      if (i == null) {
+        if (g != null) at[g] = groups.length;
+        groups.add([(key, a)]);
+      } else {
+        groups[i].add((key, a));
+      }
+      assert(n >= 0 && f.isNotEmpty);
+    }
+    return groups;
+  }
+
+  /// The key of a group of acts in [_openAct]: its one act's, or the shared button's.
+  static String _groupKey(RequestOffers o, List<(String, ActInfo)> m) =>
+      m.length == 1 ? m.single.$1 : 'shared:${_groupName(o, m)}';
+
+  /// The name of a group of acts in a control's key: its one act's functor, or, for a shared button, the button's text in lower case, each space an underscore, the name its schemas bear before their suffix (README.md, ibid.).
+  static String _groupName(RequestOffers o, List<(String, ActInfo)> m) {
+    final f = m.first.$1.substring(0, m.first.$1.lastIndexOf('/'));
+    if (m.length == 1) return f;
+    final l = o.labels[m.first.$1] ?? f;
+    return l.toLowerCase().replaceAll(RegExp(r' +'), '_');
+  }
+
+  /// The composer of a shared button, the acts [m] of one label: a field for each name among the fields of its acts, each once, in the order of the pragma's fields; on its button, the act whose fields are those the person filled, each of its fields filled and every other left empty (GSC's ruling, ibid.: "an inapplicable field left empty"), proposed as [_actForm] proposes its act; the button disabled where no act is so filled.
+  Widget _sharedForm(BuildContext context, SocialState s, SocialAsk ask,
+      RequestOffers o, List<(String, ActInfo)> m, GTerm? item) {
+    final name = _groupName(o, m);
+    final ik = item == null ? '' : formatTerm(item);
+    final composer = '$name:$ik';
+    final me = ask.me;
+    // Each act's places the person fills, by the name of their field.
+    final named = <String, Map<String, int>>{};
+    final union = <String>[];
+    for (final (key, a) in m) {
+      final f = key.substring(0, key.lastIndexOf('/'));
+      final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
+      final filled = <int>{a.me};
+      if (item != null && a.persons.isNotEmpty) filled.add(a.persons.first);
+      final places = <String, int>{};
+      // Each name not yet held placed after the one before it in this act, as the pragma's fields are the union of the schemas' variables in head order (README.md, ibid.).
+      var after = -1;
+      for (var i = 1; i <= n; i++) {
+        if (filled.contains(i) || a.persons.contains(i)) continue;
+        final fn = o.field(f, n, i);
+        places[fn] = i;
+        final at = union.indexOf(fn);
+        if (at >= 0) {
+          after = at;
+        } else {
+          union.insert(after + 1, fn);
+          after++;
+        }
+      }
+      named[key] = places;
+    }
+    String typedOf(String fn) =>
+        _form('field:$composer:${union.indexOf(fn) + 1}').text.trim();
+    GTerm? chosen() {
+      for (final (key, a) in m) {
+        final places = named[key]!;
+        final fits = union.every((fn) =>
+            places.containsKey(fn) ? typedOf(fn).isNotEmpty : typedOf(fn).isEmpty);
+        if (!fits) continue;
+        final r = _request(s, o, key, a, me, item,
+            {for (final MapEntry(key: fn, value: i) in places.entries) i: typedOf(fn)},
+            composer: composer);
+        if (r != null) return r;
+      }
+      return null;
+    }
+
+    final r = chosen();
+    final first = m.first.$1;
+    final f0 = first.substring(0, first.lastIndexOf('/'));
+    final n0 = int.parse(first.substring(first.lastIndexOf('/') + 1));
+    return Container(
+      key: socialKey(_id, 'form:$composer'),
+      margin: const EdgeInsets.only(top: 6, bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var j = 1; j <= union.length; j++)
+            TextField(
+              key: socialKey(_id, 'field:$composer:$j'),
+              controller: _form('field:$composer:$j'),
+              decoration:
+                  InputDecoration(labelText: union[j - 1], isDense: true),
+              keyboardType: TextInputType.text,
+              onChanged: (_) => setState(() {}),
+            ),
+          const SizedBox(height: 6),
+          ElevatedButton(
+            key: socialKey(_id, 'send:$composer'),
+            onPressed: r == null
+                ? null
+                : () {
+                    ask.propose(r);
+                    setState(() {
+                      for (var j = 1; j <= union.length; j++) {
+                        _form('field:$composer:$j').clear();
+                      }
+                      _openAct = null;
+                    });
+                  },
+            child: Text(o.label(f0, n0)),
+          ),
+        ],
+      ),
+    );
   }
 
   /// The persons the person may pick for a place: those the lists of the view hold and those the agent knows, but the person themselves, each once.
