@@ -10,7 +10,7 @@ GAI: Accountable AI Agents
 3. ○ Accountability.  The developer of Alf is accountable for Alf's defects, and Alf's principal for operating it recklessly.
 4. ■ Retiring.  Alice retires their AI agent Alf by ending their friendship with it.
 Pragmas
-AI agents: the AI agents Alice is principal of.
+AI agents: those Alice is principal of.
 Guardianship: [Enter] <name> <code>
 Developer: [Sign] <code>
 Knowing and relations: [Agent meet] [Agents meet] Carol, an AI agent, asks to meet you.  [Agent befriend] [Agents befriend] Carol, an AI agent, asks to befriend you.
