@@ -3803,7 +3803,7 @@ for c in social_graph coins currency; do
     check "CVA approvals, $c: ... drawn by the widget last_state, which draws the last view written and the notices written after it" "^Stream(Output) =::= last_state\.$" "$cva_agent"
     check "CVA approvals, $c: on the answer propose(N) the dispatch takes a Request, holds the request, or drops it, a hello sent first where N names a meeting part with a peer neither known nor sent to" "^    dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr1, Out1, Ow, Approvals?, H?, St1?)\.$" "$cva_agent"
     check "CVA approvals, $c: ... a request held put up again, again(N), and taken, held or dropped as on its reading" "^step(again(N), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-$" "$cva_agent"
-    check "CVA approvals, $c: ... the Request of {[t]} to the agent itself, one(C0)" "^    self_cand(B?, I?, Id?, Cs),$" "$cva_agent"
+    check "CVA approvals, $c: ... the Request of {[t]} to the agent itself, one(C), C the term of the part the request names" "^    self_cand(B?, C?, Id?, Cs),$" "$cva_agent"
     check "CVA approvals, $c: ... the Request of rho_N to the opener of the guarded parts with an opener named N" "^    rho_cand(B?, N?, O?, Cs),$" "$cva_agent"
     check "CVA approvals, $c: ... the one taken least recently" "^    least_rcand(Xs?, Md?, X?, Y),$" "$cva_agent"
     check "CVA approvals, $c: Propose an own transaction, of a guarded part with no opener of the class of an approval pending at the agent" "^    guard_cands(St?, Csg, St1),$" "$cva_agent"
@@ -3858,7 +3858,7 @@ cva_proposal() { # cva_proposal <platform.vglp>: the alternatives of Proposal, o
     awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$1"
 }
 check "CVA request type: the social graph's, propose(Proposal) alone: the request known(Q) goes, a meeting with a peer whose key the person has being the cold call (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 1)" "^Request ::= propose(Proposal)\.$" "$(cat "$CVA/social_graph/platform.vglp")"
-check_not "CVA request type: ... no request known(Q) in any platform" "known(Peer)" "$(cat "$CVA"/*/platform.vglp)"
+check_not "CVA request type: ... no request known(Q) in any platform" "^Request ::=.*known(" "$(cat "$CVA"/*/platform.vglp)"
 check "CVA request type: the social graph proposes establish, meet, introduce, befriend and unfriend, GKK's and GSG's" "^establish(Peer) meet(Peer, Peer) introduce(Peer, Peer, Peer) befriend(Peer, Peer) unfriend(Peer, Peer) $" "$(cva_proposal "$CVA/social_graph/platform.vglp")"
 check "CVA request type: nudge proposes befriend, not the unguarded nudge" "^befriend(Peer, Peer) $" "$(cva_proposal "$CVA/nudge/platform.vglp")"
 check "CVA request type: gnudge proposes befriend and g, a guarded part of one class with the unguarded part of nudge, and not nudge" "^befriend(Peer, Peer) g(Peer, Peer) $" "$(cva_proposal "$CVA/gnudge/platform.vglp")"
