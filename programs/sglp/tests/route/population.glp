@@ -9,6 +9,14 @@ Ask ::= ask(Constant, Question).
 Question ::= none.
 Seat(X) ::= seat(Key, Stream(Ask)?, Stream(X)?).
 
+%% The one dimension, its one profile stub, printed one token a line as
+%% transform.glp prints a dimension, which run.sh reads for the draw's counts.
+Profiles ::= p(Dimension1).
+Dimension1
+::=
+stub
+.
+
 exported procedure cva_check(Integer?, Stream(Key)?, Constant).
 cva_check(_, _, yes).
 
@@ -18,8 +26,9 @@ cva_agents(_, _, Mon, Log, [p2, p1, p3], [seat(p2, A1, O1), seat(p1, A2, O2), se
     asks(A1?), asks(A2?), asks(A3?),
     screen(1, O1?, Mon?, Log?), screen(2, O2?, Mon?, Log?), screen(3, O3?, Mon?, Log?).
 
+Drawn ::= agent(Integer, Profiles).
 exported procedure cva_draw(Integer?, Stream(Key)?, Stream(_)).
-cva_draw(_, _, [agent(1, stub(none)), agent(2, stub(none)), agent(3, stub(none))]).
+cva_draw(_, _, [agent(1, p(stub)), agent(2, p(stub)), agent(3, p(stub))]).
 
 %% asks(As?): the agent's ask stream, read to its end.
 procedure asks(Stream(Ask)?).
