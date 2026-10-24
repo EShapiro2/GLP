@@ -68,7 +68,10 @@ sub visit {
     if (defined $ext) {
         (my $dir = $f) =~ s{/[^/]*$}{};
         my %named;
-        for my $n ($ext =~ /\b([A-Z][A-Za-z]*[A-Z])\b(?![\x27\x{2019}]s)/g) {
+        # The contracts it extends are named in the first sentence of the line, a file name such as GC.txt in it not a contract extended.
+        (my $first = $ext) =~ s/^% Extends:\s*//;
+        $first =~ s/\.\s.*$//;
+        for my $n ($first =~ /\b([A-Z][A-Za-z]*[A-Z])\b(?![\x27\x{2019}]s|\.\w)/g) {
             next if $named{$n}++;
             my $g = find_txt($n, $dir);
             visit($g) if defined $g;
@@ -132,53 +135,58 @@ for my $f (@order) {
         }
         if (!exists $clause{$title} && exists $xclause{$title}) { $clause{$title} = $xclause{$title}; $body{$title} = $xbody{$title} }
         exists $clause{$title} or die "pragmas.sh: $f: the pragma \"$title\" names no clause of $name or of a contract it extends\n";
-        my @buttons;
-        my $tail = $rest;
-        while ($tail =~ s/^\[([^\]]+)\]\s*//) { push @buttons, $1 }
-        @buttons or die "pragmas.sh: $f: the pragma \"$title\" has no button in brackets\n";
-        my @fields;
-        while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
-        my $said = "none";
-        if ($tail ne "") {
-            my (@names, %at);
-            for my $w ($body{$title} =~ /([A-Za-z]+)/g) {
-                next unless $is_name{$w};
-                next if exists $at{$w};
-                push @names, $w; $at{$w} = scalar @names;
-            }
-            my $alt = join("|", sort keys %is_name);
-            my @qs;
-            for my $q (split /(?<=[.!?])\s+/, $tail) {
-                my @words;
-                for my $p ($alt eq "" ? ($q) : (split /\b($alt)\b/, $q)) {
-                    next if $p eq "";
-                    if ($is_name{$p}) {
-                        exists $at{$p} or die "pragmas.sh: $f: the pragma \"$title\" names $p, whom its clause does not name\n";
-                        push @words, "person($at{$p})";
-                    }
-                    else { push @words, "text(" . q_string($p) . ")" }
+        my $group = $rest;
+        while ($group ne "") {
+            my @buttons;
+            my $tail = $group;
+            while ($tail =~ s/^\[([^\]]+)\]\s*//) { push @buttons, $1 }
+            @buttons or die "pragmas.sh: $f: the pragma \"$title\" has no button in brackets\n";
+            my @fields;
+            while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
+            # The words up to the next button in brackets are this group of buttons, the rest the next group: a line may carry several, each its buttons, its fields and its questions, as an Escrow line its [Deposit], [Release] and [Return].
+            $group = ($tail =~ s/\s*(\[.*)$//) ? $1 : "";
+            my $said = "none";
+            if ($tail ne "") {
+                my (@names, %at);
+                for my $w ($body{$title} =~ /([A-Za-z]+)/g) {
+                    next unless $is_name{$w};
+                    next if exists $at{$w};
+                    push @names, $w; $at{$w} = scalar @names;
                 }
-                push @qs, "[" . join(", ", @words) . "]";
+                my $alt = join("|", sort keys %is_name);
+                my @qs;
+                for my $q (split /(?<=[.!?])\s+/, $tail) {
+                    my @words;
+                    for my $p ($alt eq "" ? ($q) : (split /\b($alt)\b/, $q)) {
+                        next if $p eq "";
+                        if ($is_name{$p}) {
+                            exists $at{$p} or die "pragmas.sh: $f: the pragma \"$title\" names $p, whom its clause does not name\n";
+                            push @words, "person($at{$p})";
+                        }
+                        else { push @words, "text(" . q_string($p) . ")" }
+                    }
+                    push @qs, "[" . join(", ", @words) . "]";
+                }
+                $said = "said([" . join(", ", @qs) . "])";
             }
-            $said = "said([" . join(", ", @qs) . "])";
-        }
-        for my $button (@buttons) {
-            (my $act = lc $button) =~ s/ +/_/g;
-            my @real = realising($act);
-            if (@real == 1 && $real[0] eq $act) {
-                push @acts, "act(" . q_atom($act) . ", " . q_string($button) . ", ["
-                    . join(", ", map { q_string($_) } @fields) . "], $said, " . q_string($tab) . ")";
-                next;
-            }
-            # Several schemas realise the button: the fields name the union of their variables in head order, and each schema has the fields of its variables, in its order, a field of a variable it does not have left out (GSC, ibid.: "the fields the union of their variables in head order, an inapplicable field left empty").
-            my @u = union_vars(@real);
-            @fields <= @u or die "pragmas.sh: $f: the pragma \"$title\" names more fields than its schemas have variables\n";
-            my %name; @name{ @u[0 .. $#fields] } = @fields if @fields;
-            for my $s (@real) {
-                my @own = map { exists $name{$_} ? $name{$_} : "" } @{ $svars{$s} };
-                pop @own while @own && $own[-1] eq "";
-                push @acts, "act(" . q_atom($s) . ", " . q_string($button) . ", ["
-                    . join(", ", map { q_string($_) } @own) . "], $said, " . q_string($tab) . ")";
+            for my $button (@buttons) {
+                (my $act = lc $button) =~ s/ +/_/g;
+                my @real = realising($act);
+                if (@real == 1 && $real[0] eq $act) {
+                    push @acts, "act(" . q_atom($act) . ", " . q_string($button) . ", ["
+                        . join(", ", map { q_string($_) } @fields) . "], $said, " . q_string($tab) . ")";
+                    next;
+                }
+                # Several schemas realise the button: the fields name the union of their variables in head order, and each schema has the fields of its variables, in its order, a field of a variable it does not have left out (GSC, ibid.: "the fields the union of their variables in head order, an inapplicable field left empty").
+                my @u = union_vars(@real);
+                @fields <= @u or die "pragmas.sh: $f: the pragma \"$title\" names more fields than its schemas have variables\n";
+                my %name; @name{ @u[0 .. $#fields] } = @fields if @fields;
+                for my $s (@real) {
+                    my @own = map { exists $name{$_} ? $name{$_} : "" } @{ $svars{$s} };
+                    pop @own while @own && $own[-1] eq "";
+                    push @acts, "act(" . q_atom($s) . ", " . q_string($button) . ", ["
+                        . join(", ", map { q_string($_) } @own) . "], $said, " . q_string($tab) . ")";
+                }
             }
         }
     }
