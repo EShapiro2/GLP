@@ -411,8 +411,8 @@ procedure census_keys(Terms?, Terms).
 census_keys([run(W, _, _, _, _)], [key(W?, 2)]) :- string(W?) | true.
 census_keys(Rs, []) :- otherwise, ground(Rs?) | true.
 
-%% interactives(V?, Its): Its is it(T, M, Af) for each volitional procedure
-%% declaration of V, volitional(T, Qt, Af, D), its interactive type T, its
+%% interactives(V?, Its): Its is it(T, M, Af) for each interactive type of
+%% the volitional procedure declarations of V, volitional(T, Qt, Af, D), its interactive type T, its
 %% mode M, output where T is written T and input where it is written T?, and
 %% Af the functor the canonical compilation gives T, which the declaration
 %% carries, GLP having no string operation to make it of T's name (README.md,
@@ -420,18 +420,27 @@ census_keys(Rs, []) :- otherwise, ground(Rs?) | true.
 %% the constant the compiled program's asks carry for T, quoted, which the
 %% person process's clause matches (Definition "Person Process": the clause
 %% chooses by the ask's type constant; sGLP's answer of 2026-10-14 13:19 UTC).
+%% Each interactive type is taken once, however many volitional procedures
+%% are of it: Approval, of respond and greet, is one type of one functor,
+%% approval_w, with one person procedure, which answers both alternatives of
+%% its question by matching (Definitions "Dual, Person Procedure, Person
+%% Declaration", "Profile, Dimension" and "Person Process").
 procedure interactives(Terms?, Terms).
-interactives([], []).
-interactives([volitional(dual(T), _, Af, _)|Is], [it(T?, input, Af?)|Its?]) :- interactives(Is?, Its).
-interactives([volitional(T, _, Af, _)|Is], [it(T?, output, Af?)|Its?]) :-
-    otherwise, constant(T?) | interactives(Is?, Its).
-interactives([I|Is], Its?) :- otherwise, ground(I?) | interactives(Is?, Its).
+interactives(V, Its?) :- interactives0(V?, Its0), dedup(Its0?, Its).
+procedure interactives0(Terms?, Terms).
+interactives0([], []).
+interactives0([volitional(dual(T), _, Af, _)|Is], [it(T?, input, Af?)|Its?]) :- interactives0(Is?, Its).
+interactives0([volitional(T, _, Af, _)|Is], [it(T?, output, Af?)|Its?]) :-
+    otherwise, constant(T?) | interactives0(Is?, Its).
+interactives0([I|Is], Its?) :- otherwise, ground(I?) | interactives0(Is?, Its).
 procedure quoteds(Terms?, Terms).
-quoteds([], []).
-quoteds([volitional(dual(T), Qt, _, _)|Is], [o(T?, Qt?)|Qs?]) :- quoteds(Is?, Qs).
-quoteds([volitional(T, Qt, _, _)|Is], [o(T?, Qt?)|Qs?]) :-
-    otherwise, constant(T?) | quoteds(Is?, Qs).
-quoteds([I|Is], Qs?) :- otherwise, ground(I?) | quoteds(Is?, Qs).
+quoteds(V, Qs?) :- quoteds0(V?, Qs0), dedup(Qs0?, Qs).
+procedure quoteds0(Terms?, Terms).
+quoteds0([], []).
+quoteds0([volitional(dual(T), Qt, _, _)|Is], [o(T?, Qt?)|Qs?]) :- quoteds0(Is?, Qs).
+quoteds0([volitional(T, Qt, _, _)|Is], [o(T?, Qt?)|Qs?]) :-
+    otherwise, constant(T?) | quoteds0(Is?, Qs).
+quoteds0([I|Is], Qs?) :- otherwise, ground(I?) | quoteds0(Is?, Qs).
 
 %% binds(S?, Q?, Bs): Bs is b(Q, T, P) for each person declaration T =::= P of
 %% S, Q the profile it is in, none before the first profile.
