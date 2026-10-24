@@ -13,9 +13,9 @@ The script builds the bundled assets (`tool/sync_glp_assets.sh`), boots the simu
 | File | What it shows |
 |---|---|
 | `gc-a-alice-mint.png` | Alice mints (GC:1): her Coins tab, the tab of GC, once she has typed 2 into Mint's field, GC's "<amount>", and tapped Mint, GC's "[Mint]": a row for her coins, Alice, and their count, 2. |
-| `gc-b-bob-asked.png` | Alice asks Bob to swap (GC:2): Bob's Coins tab with GC's question "Alice asks to swap coins with you." and the answers yes and no at its top, and his row, Bob, 3. |
+| `gc-b-bob-asked.png` | Alice asks Bob to swap (GC:2): Bob's Coins tab with GC's question "Alice asks to swap coins with you.", under it the fields of the swap, each named by GC's words, issuer given: Alice, amount given: 2, issuer wanted: Bob, amount wanted: 3, and the answers yes and no, at its top; below, Mint and his row, Bob, 3. |
 | `gc-c-bob-holdings.png` | Bob's Coins tab once he has answered yes and the swap has committed: a row for the Alice-coins he holds, Alice, 2, with the buttons of the acts that name a person beside the proposer, Meet, Introduce, Swap, Pay and Redeem. |
-| `gc-d-alice-pay.png` | Alice pays two Bob-coins to Bob (GC:3): her Coins tab once she has tapped Pay on Bob's row and typed 2 into its field: one Bob-coin left, the row Bob. |
+| `gc-d-alice-pay.png` | Alice pays two Bob-coins to Bob (GC:3): her Coins tab once she has tapped Pay on Bob's row, typed 2 into its field and sent it: one Bob-coin left, the row Bob, 1, with the buttons of the acts that name a person. |
 
 ## The village market
 
