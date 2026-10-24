@@ -1581,11 +1581,13 @@ void appsScreens(Screens screens) {
     run.plain(eve);
 
     // Forwarding (GSNP:2): Forward, GSNP's "[Forward]", is drawn beside each item of the Items tab, the row filling the act's item (vGLP 932c710, Section 6.2: "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, ... the row filling the act's variable"); the person picks the friend it goes to and reads the warranty, "You warrant that you know personally the agent you received this from.", the text of its request form (Section 5.4, "The contract's words"), and taps Forward; nobody is asked.  Eve forwards it to Carol, and Carol to Bob.
+    // Forward names two beside its proposer, the friend and the item, so it is a form at the top of the Items tab, its places picked from the rows (vGLP feda043, Section 6.2: "an act that names two or more is a form at the top of the tab of its contract, its places picked from the rows").
     Future<void> forward(_Person p, String item, String to) async {
       await run.list(p, 'item');
-      await run.tap(p, run.control(p, 'act:forward:$item'));
-      await run.tap(p, run.control(p, 'pick:forward:$item:2:$to'));
-      await run.tap(p, run.control(p, 'send:forward:$item'));
+      await run.tap(p, run.control(p, 'top:forward'));
+      await run.tap(p, run.control(p, 'pick:forward::3:$item'));
+      await run.tap(p, run.control(p, 'pick:forward::2:$to'));
+      await run.tap(p, run.control(p, 'send:forward:'));
       expect(run.person(to).questions('approval'), isEmpty);
     }
 
@@ -1612,12 +1614,14 @@ void appsScreens(Screens screens) {
     await run.shoot(bob, 'gsnp-a-bob-chat.png');
 
     // (b) Bob forwards it to Fay, his friend: Forward beside the item, Fay picked, the warranty above the button.  The persons he may pick are drawn under the name of their place's type, Peer, no pragma naming a field for a person the act names beside the proposer that the view lists (vGLP, Section 6.2: "a construct family draws the label it is given, and the name of the type where it is given none").
-    await run.tap(bob, run.control(bob, 'act:forward:$byCarol'));
-    await run.tap(bob, run.control(bob, 'pick:forward:$byCarol:2:fay'));
+    await run.tap(bob, run.control(bob, 'top:forward'));
+    await run.tap(bob, run.control(bob, 'pick:forward::3:$byCarol'));
+    await run.tap(bob, run.control(bob, 'pick:forward::2:fay'));
     expect(run.on(bob, find.text('You warrant that you know personally the agent you received this from.')), findsOneWidget);
-    run.plain(bob, allow: const {'Peer'});
+    // The item picked is drawn under the name of its place's type, Speech, as a person under Peer (vGLP, Section 6.2: "the name of the type where it is given none").
+    run.plain(bob, allow: const {'Peer', 'Speech'});
     await run.shoot(bob, 'gsnp-b-bob-forward.png');
-    await run.tap(bob, run.control(bob, 'send:forward:$byCarol'));
+    await run.tap(bob, run.control(bob, 'send:forward:'));
     final byBob = 'speech($byCarol, bob)';
     expect(fay.atoms, contains('item($byBob)'));
     expect(fay.questions('approval'), isEmpty);
@@ -1669,10 +1673,12 @@ void appsScreens(Screens screens) {
     await run.meetByKey(alice, bob);
 
     // Guardianship (GnW:1, GAI:1, GAI:2): Enter, GAI's "[Enter] <name> <code>", beside the code on Alice's Items tab, the row filling the code (vGLP 932c710, Section 6.2), Alf's key typed into the field name; Alf's program answers yes, and Alice is its principal.
-    await run.list(alice, 'item');
-    await run.tap(alice, run.control(alice, 'act:enter:$code'));
-    await run.type(alice, run.control(alice, 'field:enter:$code:2'), 'alf');
-    await run.tap(alice, run.control(alice, 'send:enter:$code'));
+    // Enter names two beside its proposer, the AI agent by key and the code, so it is a form at the top of the AI agents tab, the tab of its contract, the code picked from her Items (vGLP feda043, Section 6.2).
+    await run.list(alice, 'principal_of');
+    await run.tap(alice, run.control(alice, 'top:enter'));
+    await run.tap(alice, run.control(alice, 'pick:enter::3:$code'));
+    await run.type(alice, run.control(alice, 'field:enter::2'), 'alf');
+    await run.tap(alice, run.control(alice, 'send:enter:'));
     expect(alice.atoms, containsAll(['principal_of(alf)', 'friend(alf)']));
 
     // (b) Alice's AI agents tab, "AI agents: those Alice is principal of.": Alf.
@@ -1685,15 +1691,18 @@ void appsScreens(Screens screens) {
     // Agent meet (GnW:2, GAI:2): GAI's "[Agent meet]" beside Alf on Alice's AI agents tab, the button drawn at the principal's guarding role (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles, beside each row that fills its variable"); the row fills Alf, her machine fills the attestation from her record agent_of(alf, alice, y) (GAI.glp at a336b30d), and she picks Bob.  Alf's program answers yes; Bob, the other agent, is asked GAI's question to that role, "Alf, an AI agent of Alice, asks to meet you." and answers yes, recording Alf, its principal and its attestation.
     const attestation = 'speech($code, alice)';
     Future<void> agentAct(String f, String shot) async {
+      // An act naming two beside its proposer, Alf and Bob, a form at the top of the AI agents tab (vGLP feda043, Section 6.2).
       await run.list(alice, 'principal_of');
-      await run.tap(alice, run.control(alice, 'act:$f:alf'));
-      await run.tap(alice, run.control(alice, 'pick:$f:alf:2:bob'));
+      await run.top(alice);
+      await run.tap(alice, run.control(alice, 'top:$f'));
+      await run.tap(alice, run.control(alice, 'pick:$f::1:alf'));
+      await run.tap(alice, run.control(alice, 'pick:$f::2:bob'));
       if (shot.isNotEmpty) {
         // The persons Alice may pick are drawn under the name of their place's type, Peer (vGLP, Section 6.2: "the name of the type where it is given none").
         run.plain(alice, allow: const {'Peer'});
         await run.shoot(alice, shot);
       }
-      await run.tap(alice, run.control(alice, 'send:$f:alf'));
+      await run.tap(alice, run.control(alice, 'send:$f:'));
     }
 
     await agentAct('agent_meet', '');
@@ -1725,6 +1734,10 @@ void appsScreens(Screens screens) {
     await run.list(bob, 'friend');
     await run.top(bob);
     expect(run.control(bob, 'row:alf'), findsOneWidget);
+    // Nothing beside Alf that his role forbids: Bob's agent_of(alf, alice, y) shows that Alf holds agent, which no schema deletes, and Meet and Befriend forbid it at Alf's role (vGLP 893d4ea, Section 6.2).
+    for (final f in ['meet', 'befriend', 'introduce']) {
+      expect(run.control(bob, 'act:$f:alf'), findsNothing, reason: f);
+    }
     run.plain(bob);
     await run.shoot(bob, 'gai-e-bob-friends.png');
     await run.list(bob, 'item');
@@ -2062,9 +2075,12 @@ void appsScreens(Screens screens) {
     expect(run.control(carol, 'row:bob'), findsNothing);
     expect(run.control(carol, 'act:unfriend:dave'), findsOneWidget);
     // The rows in the order of her state, the newest first: Dave, then Alice; Unfriend beside Dave, and not beside Alice, unfriend(p?, q) forbidding creator(q) at Carol's role (CSSN.glp; vGLP feda043, Section 6.2: "where the viewer's state holds the atoms the act requires at the viewer's role and lacks those it forbids there").
-    expect(run.texts(carol),
-        containsAllInOrder(['Friends', 'Dave', 'Unfriend', 'Alice']));
+    expect(run.texts(carol), containsAllInOrder(['Friends', 'Dave', 'Alice']));
     expect(run.control(carol, 'act:unfriend:alice'), findsNothing);
+    // Message beside each friend, message requiring friend of the other at the sender's role (CSSN.glp at 50ea651c).
+    for (final q in ['dave', 'alice']) {
+      expect(run.control(carol, 'act:message:$q'), findsOneWidget, reason: q);
+    }
     run.plain(carol);
     await run.shoot(carol, 'cssn-app-5.png');
     // Carol ends the friendship with Dave (GSG:2; unfriend(p?, q)), her own act, Unfriend beside Dave: nobody is asked.
