@@ -225,8 +225,9 @@ class _Run {
   _Person get alice => persons[0];
   _Person get bob => persons[1];
 
-  /// Whether the app's platform is compiled from a contract with pragmas, GKK's, GSG's and GSN's: every word on its screens is the contract's, its tabs the lists its view names (vGLP 1126f4f, Sections 5.4, 6.2 and 8).
-  bool get worded => const {'gkk', 'gsg', 'gsn', 'gsnp', 'gc'}.contains(app);
+  /// Whether the app's platform is compiled from a contract with pragmas, GKK's, GSG's, GSN's, GSNP's, GC's and CSSN's: every word on its screens is the contract's, its tabs the lists its view names (vGLP 1126f4f, Sections 5.4, 6.2 and 8).
+  bool get worded =>
+      const {'gkk', 'gsg', 'gsn', 'gsnp', 'gc', 'cssn'}.contains(app);
 
   /// The person [name] of the run.
   _Person person(String name) => persons.singleWhere((p) => p.name == name);
@@ -309,11 +310,11 @@ class _Run {
   List<String> scriptedSeen(String name) =>
       [for (final t in _drawn(seen[name]!)) formatTerm(t)];
 
-  /// The last view the scripted agent [name]'s person reports, `view(S, K)`: its atoms, each as its term.
+  /// The last view the scripted agent [name]'s person reports, `view(S, K, A, Ts)` (vGLP, Section 5.4, "The compilation" and "The contract's words"): its atoms, each as its term.
   List<String> scriptedAtoms(String name) {
     final views = [
       for (final t in _drawn(seen[name]!))
-        if (ctorArgs(t) case ('view', [GList(:final items), _])) items
+        if (ctorArgs(t) case ('view', [GList(:final items), ...])) items
     ];
     expect(views, isNotEmpty, reason: '$name: no view reported');
     return [for (final a in views.last) formatTerm(a)];
@@ -379,21 +380,29 @@ class _Run {
     await tester.pumpAndSettle();
   }
 
-  /// The last view on [name]'s phone, `view(S, Ks)`: a person's at their phone, as construct 0 draws it, and a scripted agent's, as its person reports it; null where none is written.
+  /// The last view on [name]'s phone, `view(S, Ks, A, Ts)`, the machine state, the persons known, the approvals pending and the lists (vGLP, Section 5.4, "The compilation" and "The contract's words"): a person's at their phone, as construct 0 draws it, and a scripted agent's, as its person reports it; null where none is written.
   GTerm? _lastView(String name) {
     if (seen[name] case final s?) {
       return [
         for (final t in _drawn(s))
-          if (ctorArgs(t) case ('view', [GList(), GList()])) t
+          if (ctorArgs(t) case ('view', [GList(), GList(), ...])) t
       ].lastOrNull;
     }
     final p = persons.where((q) => q.name == name).firstOrNull;
     final (ok, state) = SocialState.read(p?.ui.bridge.construct(0)?.view);
     if (!ok || state == null) return null;
-    return GStruct('view', [GList(state.atoms), GList(state.known)]);
+    return GStruct('view', [
+      GList(state.atoms),
+      GList(state.known),
+      GList(state.pending),
+      GList([
+        for (final l in state.lists ?? const <({String name, String predicate})>[])
+          GStruct('tab', [GString(l.name), GAtom(l.predicate)]),
+      ]),
+    ]);
   }
 
-  /// Hand each scripted parent in [watching] the last view on each child's phone they look at, `seen(K, view(S, Ks))`, where it changed since last handed; true where one was handed.
+  /// Hand each scripted parent in [watching] the last view on each child's phone they look at, `seen(K, view(S, Ks, A, Ts))`, where it changed since last handed; true where one was handed.
   bool _look() {
     var handed = false;
     for (final MapEntry(key: parent, value: children) in watching.entries) {

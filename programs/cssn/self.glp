@@ -1,5 +1,5 @@
 %% ---------------------------------------------------------------------------
-%% programs/cssn --- the child-safe social network (CSSN, Section 4): its program is the canonical CVA platform of its contract, CSSN.glp (Appendix B.2), compiled by vGLP's compiler with knows its introduction predicate (CSSN, Section 4.6, "The program"; vGLP, Section 5.4, "The compilation" and "Act schemas as local specifications"), platform.vglp, which compile.sh prints and the canonical compilation compiles to GLP when the directory loads; the mini-app entry miniapp/4 that wraps it (miniapp.glp, the same file as programs/apps/gsg/miniapp.glp); its scripted person (person.glp); and the plays, the village of Section 4.6, "Village Demonstration" (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it.  The person's questions are drawn by the widgets self.vglp beside it declares, approval_sentence for Approval and social_menu for Menu, in the words Udi gave for CSSN's Figure 3 (reported by CSSN #8 Cowork, Code_inbox.md, 2026-10-20 10:10 UTC), and the program's output by last_state, which the platform declares (CSSN, Section 4.6).
+%% programs/cssn --- the child-safe social network (CSSN, Section 4): its program is the canonical CVA platform of its contract, CSSN.glp (Appendix B.2), compiled by vGLP's compiler with knows its introduction predicate and with the contract's pragmas, CSSN.txt's lines after Pragmas and those of the contracts it extends (CSSN, Section 4.6, "The program"; vGLP, Section 5.4, "The compilation", "Act schemas as local specifications" and "The contract's words"), platform.vglp, which compile.sh prints and the canonical compilation compiles to GLP when the directory loads; the mini-app entry miniapp/4 that wraps it (miniapp.glp, the same file as programs/apps/gsg/miniapp.glp); its scripted person (person.glp); and the plays, the village of Section 4.6, "Village Demonstration" (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it.  The person's questions are drawn by the two widget declarations the compiler prints into the platform, approval_sentence for Approval and social_menu for Menu, carrying the contract's words, and the program's output by last_state (vGLP, Section 6.2, "The words a platform shows"), so every word the app shows is the contract's and the app writes no self.vglp.
 %%
 %% CSSN.txt and CSSN.glp, the contract's clauses and act schemas, are CSSN's Cowork's text (claude.md, "Sessions"); CSSN.glp is a module of this program, its types its own and none of its procedures exported.
 %%
@@ -38,9 +38,9 @@ Proposal  ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; parent_unfriend(Peer, Peer) ; parent_unfriend_2(Peer, Peer, Peer)
             ; child_join(Peer, Peer, Peer, Speech) ; child_join_2(Peer, Peer, Peer, Peer, Speech)
             ; child_leave(Peer, Peer, Peer, Speech) ; child_close(Peer, Peer, Speech).
-Request   ::= propose(Proposal) ; known(Peer).
+Request   ::= propose(Proposal).
 YesNo     ::= yes ; no.
-Reason    ::= declined ; unable(List(Atom), List(Atom)).
+Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote      ::= yes ; no(Reason).
 Decision  ::= commit ; abort(Peer, Reason) ; yield.
 Rho       ::= one(Class) ; rho(Proposal).
@@ -48,7 +48,7 @@ Names     ::= none ; request(Rho, Integer).
 Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
             ; yield(Attempt) ; request(Rho, Integer).
-Content   ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
 Atom      ::= identity ; retired ; knows(Peer) ; child ; friend(Peer) ; parent(Peer) ; parenting(Peer)
             ; received(Speech, Peer) ; member(CName) ; listed(Peer, Speech)
@@ -56,14 +56,18 @@ Atom      ::= identity ; retired ; knows(Peer) ; child ; friend(Peer) ; parent(P
             ; received_in(Speech, Peer, Speech) ; coparent(Peer) ; coparented.
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech).
-Output    ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval  ::= approval(Attempt, YesNo?).
+Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+Tab       ::= tab(String, Constant).
+Asking    ::= Attempt ; hello(Peer, Proposal).
+Approved  ::= Proposal.
+Approval  ::= approval(Asking, List(Word), YesNo?).
+Word      ::= text(String) ; person(Peer).
 Menu      ::= menu(Key, List(Key), Request?).
 Question  ::= menu_w(Menu) ; approval_w(Approval).
 Drawn     ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)    ::= ask(Constant, Q).
 
-%% What the scripted person reports, its screen (person.glp): each view the program writes, once, the machine state and the persons the agent knows, and each notice, refused(P, Q, D) (vGLP f0acbc1, Section 5.4, "The compilation"); the agent's own key and the persons a request question shows, where the script looks; each request it makes, did(R); and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
+%% What the scripted person reports, its screen (person.glp): each view the program writes, once, the machine state, the persons the agent knows, the approvals its person made that are pending and the tabs, and each notice, refused(N, Q, D), N the request name of the refused attempt's part (vGLP e286276, Section 5.4, "The compilation"); the agent's own key and the persons a request question shows, where the script looks; each request it makes, did(R); and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
 Asked     ::= Class ; Attempt.
 Seen      ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo) ; did(Request).
 %% A line of a child's screen, which a parent's scripted person reads as the parent looking at the child's phone (person.glp, the step at(K, C); plays.glp).
