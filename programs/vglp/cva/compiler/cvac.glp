@@ -965,13 +965,24 @@ procedure count_ints(Ints?, Integer).
 count_ints([], 0).
 count_ints([_|Xs], N?) :- count_ints(Xs?, M), N := M? + 1.
 
-%% The places of a schema's request name that a pragma's fields may name, in the order of its head: its variables, after the people in its roles, the places of its listed roles left out (proposal_alts: the request name is "the binding, its head with no extent"); a pragma's fields, in angle brackets, name them in order, the first field the first of them, as GC's swap(p?, q?; u, k, v, k') has its fields <issuer given> <amount given> <issuer wanted> <amount wanted> (programs/currencies/coins/GC.txt) and GSN's post(p?, a; x, n) its one field <text>, x; a variable no field names is filled from what the view lists, as GKK's introduce(p?, q?; c) has c, the person introduced.
+%% The places of a schema's request name that a pragma's fields may name, in the order of its head, the places of its listed roles left out (proposal_alts: the request name is "the binding, its head with no extent"): the peer of a meeting schema, a person the act names by key where the view does not list them (meeting_entry), and then the schema's variables after its roles; a pragma's fields, in angle brackets, name them in order, the first field the first of them (vGLP e286276, Section 5.4, "The contract's words": "in angle brackets each field the person fills in, in the order of the schema's variables after its roles, a person the act names by key among them"), as GC's swap(p?, q?; u, k, v, k') has its fields <issuer given> <amount given> <issuer wanted> <amount wanted> (programs/currencies/coins/GC.txt), GSN's post(p?, a; x, n) its one field <text>, x, and GKK's introduce(p?, q?; c) a field for c, the person introduced, and its meet(p?, q?) one for the peer q; a variable no field names is filled from what the view lists.
 procedure field_places(Args?, RoleSpecs?, Ints).
 field_places(Hd, Rs, Fp?) :- ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vs0),
     listed_ixs(Rs?, 1, Lis),
     drop_listed(Vs0?, Lis?, Vs),
-    field_places1(Vs?, 1, Fp).
+    field_places1(Vs?, 1, Fp0),
+    meeting_schema(Rs?, M),
+    peer_first(M?, Fp0?, Fp).
+%% The peer of a meeting schema first among the places its fields name: its place 2, the role other than its proposer's (meeting_entry).
+procedure peer_first(YesNo?, Ints?, Ints).
+peer_first(yes, Fp, [2|Fp?]).
+peer_first(no, Fp, Fp?).
+%% The places a pragma's fields name, but the peer of a meeting schema, which a person the view lists also fills (meeting_entry: "which a field for the key fills where the peer is not listed").
+procedure peer_out(YesNo?, Ints?, Ints).
+peer_out(yes, [2|Fp], Fp?).
+peer_out(yes, [], []).
+peer_out(no, Fp, Fp?).
 procedure field_places1(Args?, Integer?, Ints).
 field_places1([], _, []).
 field_places1([V|Vs], I, Fp?) :- integer(I?) |
@@ -1075,7 +1086,9 @@ act_entry(S, Hd, Rs, Fs, T, E?) :- ground(S?), ground(Hd?), ground(Rs?), ground(
     drop_listed(Vs0?, Lis?, Vs),
     field_places(Hd?, Rs?, Fp),
     count_strings(Fs?, NF),
-    take_ints(NF?, Fp?, Named),
+    take_ints(NF?, Fp?, Named0),
+    meeting_schema(Rs?, Mt),
+    peer_out(Mt?, Named0?, Named),
     first_guard(Rs?, 1, G),
     spec_args(Rs?, As),
     act_entry1(S?, T?, Vs?, Named?, G?, As?, E).
@@ -1144,7 +1157,7 @@ procedure a_named_person(Arg?, Integer?, Integer?, Ints?, Ints?, YesNo).
 a_named_person(role(_), I, M, _, Ld, B?) :- I? =\= M?, ground(Ld?) | mem(I?, Ld?, L), neg(L?, B).
 a_named_person(pvar(_), I, _, Nd, Ld, B?) :- ground(Nd?), ground(Ld?) | mem(I?, Nd?, F), mem(I?, Ld?, L), or(F?, L?, FL), neg(FL?, B).
 a_named_person(_, _, _, _, _, no) :- otherwise | true.
-%% meeting(F, I): F a meeting schema (meeting_schema), I the place of the role other than the proposer's, 2, its proposer at place 1 (vGLP, Section 6.2: "Meet with a peer not listed takes a field for the key").
+%% meeting(F, I): F a meeting schema (meeting_schema), I the place of the role other than the proposer's, 2, its proposer at place 1, which a field for the key fills where the peer is not listed, the first field of its pragma naming it (field_places; vGLP e286276, Section 5.4, "The contract's words": "a person the act names by key among them").
 procedure meeting_entry(Constant?, RoleSpecs?, Stream(_)).
 meeting_entry(S, Rs, L?) :- ground(S?), ground(Rs?) | meeting_schema(Rs?, M), meeting_entry1(M?, S?, L).
 procedure meeting_entry1(YesNo?, Constant?, Stream(_)).
