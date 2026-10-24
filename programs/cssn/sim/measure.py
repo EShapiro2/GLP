@@ -14,47 +14,63 @@
 # in seconds, the state at the end of the log being the state at it.
 #
 # The agents: agent a's key is the key its first menu shows as its own,
-# menu(Me, Ks, R); its role is the census's, read off the key the census gives
-# it, v<village>f<family>a<n> a parent and v<village>f<family>c<n> a child, or,
-# for a key of another form, a child where a view of the agent records it one.
+# menu(Me, Ks, R), or, for a child, which has no menu, the child of the enter
+# whose hello it answers, failing that its place in the census's order; its role
+# is the census's, read off the key, v<village>f<family>p<n> a parent and
+# v<village>f<family>c<n> a child, or, for a key of another form, a child where
+# a view of the agent records it one.  Written for the platform of
+# cascade/CSSN/2026-10-24 (any number of parents: enter, make_parent,
+# end_parent, of_age, retire; created, creator, parenting, made; the relay acts
+# child_meet and child_meet_2), whose view is view(As, Ks, Approved, Tabs) and
+# whose approval is approval(Asking, Words, YesNo), Asking an attempt
+# attempt(I, N, Rk, C, Names) or a meeting's hello(I, C), Words printing text(...)
+# unquoted.
 #
-# The commits: an agent's view, view(As, Ks), is its machine state As and the
+# The commits: an agent's view, view(As, Ks, ...), is its machine state As and the
 # persons it knows Ks (vGLP's canonical compilation writes it where the state
 # changes); a change of As from one view of an agent to its next is the agent's
 # effect in a committed transaction.  Each such change is matched to a request,
 # propose(C) answered to the menu of an agent I, whose schema (CSSN.glp, the
 # repository's copy of the contract) at C's binding has exactly that effect at
-# that agent's role; the transaction is committed once every participant whose
-# effect is not empty has shown it.  A change matched to no request is reported.
+# that agent's role, a listed role (cschema, crs(listed(J, P, Args), ...)) being
+# every agent X with P(X, Args) in the state of the agent at role J; the
+# transaction is committed once every participant whose effect is not empty has
+# shown it.  A change matched to no request is reported.
 #
 # The monitor (CSSN #6, item 1): at the commit of every act a parent guards ---
-# child_befriend, child_adult_befriend, child_unfriend, child_join, child_join_2,
-# child_leave, child_close, enter, enter_2, of_age, of_age_2, parent_unfriend,
-# parent_unfriend_2 --- it checks that each of its guards approved, the initiator
-# by the request and every other guard by an answer yes to the approval of an
-# attempt (I, N, C) of the initiator I, and that its precondition held: each
-# atom the schema requires at a role in the state of the agent at that role,
-# and each it forbids not, friend being reflexive, in the states the agents'
-# last views before the commit show.  Every exception is reported.
+# the children's schemas, enter, make_parent, end_parent, of_age, retire,
+# child_meet, child_meet_2, child_befriend, child_adult_befriend, child_unfriend,
+# child_join, child_join_2, child_leave, child_close --- it checks that each of
+# its guards approved, the initiator by the request and every other guard by an
+# answer yes, between the request and the commit, to an attempt (I, N, C) of
+# the initiator I or to its meeting's hello(I, C), and that its precondition
+# held: each atom the schema requires at a role in the state of the agent at
+# that role, and each it forbids not, friend and knows being reflexive, in the
+# states the agents' last views before the commit show.  Every exception is
+# reported.
 #
 # The measures (Section 5, items 2 to 4): the child friendships at the end of
-# each month, a month being the twelfth of a year of 365.25 days, 2,629,800 s,
+# each week and each month, a run that ends within one giving its state at the
+# horizon and the fraction covered, a month being the twelfth of a year of 365.25 days, 2,629,800 s,
 # as sGLP's reader of the social graph has it; the parents' requests for a
 # child friendship, child_befriend or child_adult_befriend, those that commit,
 # and the days from such a request to its commit; the approvals each parent
-# answers each month; the month by whose end the parents' friendship graph,
+# answers each month, the hellos of meetings among them; the month by whose end the parents' friendship graph,
 # and the children's, is one connected component; and the acquaintance graph at
 # the end of the run, the persons each agent's last view shows it knows.
 import sys, json, re
 from collections import Counter, defaultdict
 
 MONTH = 2629800.0
-MONITORED = ["child_befriend", "child_adult_befriend", "child_unfriend", "child_join", "child_join_2",
-             "child_leave", "child_close", "enter", "enter_2", "of_age", "of_age_2",
-             "parent_unfriend", "parent_unfriend_2"]
+WEEK = 604800.0
+# The acts a parent guards: the children's schemas of CSSN.glp at cascade/CSSN/2026-10-24 (any number of parents).
+MONITORED = ["enter", "make_parent", "end_parent", "of_age", "retire", "child_meet", "child_meet_2",
+             "child_befriend", "child_adult_befriend", "child_unfriend", "child_join", "child_join_2",
+             "child_leave", "child_close"]
 
 # ---- GLP terms as the log prints them ----------------------------------------
-TOK = re.compile(r"\s*(?:(\d+\.\d+(?:[eE][-+]?\d+)?|\d+)|('(?:[^'\\]|\\.)*')|([A-Za-z_][A-Za-z0-9_]*)|(.))")
+# A text(...) is the platform's words, printed unquoted, spaces and all (text( asks that )): read whole.
+TOK = re.compile(r"\s*(?:(?P<text>text\([^)]*\))|(?P<num>\d+\.\d+(?:[eE][-+]?\d+)?|\d+)|(?P<q>'(?:[^'\\]|\\.)*')|(?P<id>[A-Za-z_][A-Za-z0-9_]*)|(?P<p>.))")
 
 def tokens(s):
     out = []
@@ -64,10 +80,11 @@ def tokens(s):
         if not m:
             break
         pos = m.end()
-        if m.group(1): out.append(("num", m.group(1)))
-        elif m.group(2): out.append(("atom", m.group(2)[1:-1]))
-        elif m.group(3): out.append(("atom", m.group(3)))
-        elif m.group(4) and not m.group(4).isspace(): out.append(("p", m.group(4)))
+        if m.group("text"): out.append(("text", m.group("text")[5:-1]))
+        elif m.group("num"): out.append(("num", m.group("num")))
+        elif m.group("q"): out.append(("atom", m.group("q")[1:-1]))
+        elif m.group("id"): out.append(("atom", m.group("id")))
+        elif m.group("p") and not m.group("p").isspace(): out.append(("p", m.group("p")))
     return out
 
 class P:
@@ -78,6 +95,7 @@ class P:
         x = self.peek(); self.i += 1; return x
     def term(self):
         k, v = self.take()
+        if k == "text": return ("text", (v,))
         if k == "num": return float(v) if "." in v else int(v)
         if k == "atom":
             if self.peek() == ("p", "("):
@@ -113,6 +131,9 @@ def show(x):
     return str(x)
 
 # ---- The schemas of the contract (CSSN.glp) ----------------------------------
+# A cschema's listed role, crs(listed(J, Pred, Args), ...), is every agent X with Pred(X, Args) in the state of
+# the agent at role J (GSC, Appendix D.4).  A request names the class by its other roles in order, then the
+# schema's variables in the order of its second argument (the platform's binding_of and request_name).
 def schemas(path):
     text = open(path).read()
     text = "\n".join(l.split("%%")[0] if not l.lstrip().startswith("%") else "" for l in text.split("\n"))
@@ -124,34 +145,79 @@ def schemas(path):
         else: name, args, roles = t[1][0], t[1][1], t[1][3]
         rs = []
         for r in elems(roles):
+            listed = None
             if r[0] == "rs": g, adds, dels, req, forb = r[1]
-            else: g, adds, dels, req, forb = r[1][1:]
-            rs.append({"guarded": g == "guarded", "add": elems(adds), "del": elems(dels), "req": elems(req), "forb": elems(forb)})
+            else:
+                kind = r[1][0]
+                g, adds, dels, req, forb = r[1][1:]
+                if isinstance(kind, tuple) and kind[0] == "listed":
+                    listed = (kind[1][0], kind[1][1], elems(kind[1][2]))
+                else:
+                    listed = ("unsupported", kind, [])
+            rs.append({"guarded": g == "guarded", "add": elems(adds), "del": elems(dels), "req": elems(req),
+                       "forb": elems(forb), "listed": listed})
         out[name] = {"args": elems(args), "roles": rs}
     return out
 
-def subst(atom, binding):
-    # atom(friend, [role(2)]) at binding [k1, k2, ...] -> "friend(k2)"
+def env_of(sch, binding):
+    """The request's binding as {('role', i): agent, ('var', name): value}; None if it does not fit."""
+    fixed = [i for i, r in enumerate(sch["roles"]) if r["listed"] is None]
+    if len(binding) != len(fixed) + len(sch["args"]): return None
+    env = {}
+    for j, i in enumerate(fixed): env[("role", i + 1)] = binding[j]
+    for j, v in enumerate(sch["args"]): env[("var", v[1][0])] = binding[len(fixed) + j]
+    return env
+
+def subst_arg(a, env):
+    if isinstance(a, tuple) and a[0] == "role": return env.get(("role", a[1][0]))
+    if isinstance(a, tuple) and a[0] in ("pvar", "svar"): return env.get(("var", a[1][0]))
+    return None   # a name term (a group's community name): not read here
+
+def subst(atom, env):
+    # atom(friend, [role(2)]) at env {role 2: k2} -> "friend(k2)"
     name, args = atom[1]
     vals = []
     for a in elems(args):
-        if isinstance(a, tuple) and a[0] == "role": vals.append(binding[a[1][0] - 1])
-        else: return None   # a speech-act or name variable: not an agent schema
+        v = subst_arg(a, env)
+        if v is None: return None
+        vals.append(str(v))
     return name if not vals else "%s(%s)" % (name, ", ".join(vals))
 
-def effects(sch, binding):
-    """Per agent: (adds Counter, dels Counter), the join where one agent holds two roles."""
-    eff = defaultdict(lambda: [Counter(), Counter()])
+def participants(sch, binding, state):
+    """[(role index, agent, role spec)], a listed role expanded to every agent the state of its lister lists."""
+    env = env_of(sch, binding)
+    if env is None: return None, None
+    out = []
     for i, r in enumerate(sch["roles"]):
-        k = binding[i]
+        if r["listed"] is None:
+            out.append((i, env[("role", i + 1)], r)); continue
+        j, pred, largs = r["listed"]
+        if j == "unsupported": return None, None
+        lister = env.get(("role", j))
+        rest = [subst_arg(a, env) for a in largs]
+        if lister is None or any(v is None for v in rest): return None, None
+        suffix = "".join(", %s" % v for v in rest)
+        for atom, n in state.get(lister, Counter()).items():
+            if n > 0 and atom.startswith(pred + "(") and atom.endswith(suffix + ")"):
+                x = atom[len(pred) + 1:len(atom) - len(suffix) - 1]
+                if x and "," not in x: out.append((i, x, r))
+    return env, out
+
+def effects(sch, binding, state):
+    """Per agent: (adds Counter, dels Counter), the join where one agent holds two roles."""
+    env, parts = participants(sch, binding, state)
+    if parts is None: return None
+    eff = defaultdict(lambda: [Counter(), Counter()])
+    for i, k, r in parts:
+        e = eff[k]
         for a in r["add"]:
-            s = subst(a, binding)
+            s = subst(a, env)
             if s is None: return None
-            eff[k][0][s] += 1
+            e[0][s] += 1
         for a in r["del"]:
-            s = subst(a, binding)
+            s = subst(a, env)
             if s is None: return None
-            eff[k][1][s] += 1
+            e[1][s] += 1
     return {k: (v[0], v[1]) for k, v in eff.items()}
 
 def atom_str(a):
@@ -172,9 +238,10 @@ def read_log(path):
     return lines, clock
 
 def role_of_key(k):
-    m = re.match(r"^v(\d+)f(\d+)([ac])(\d+)$", k)
+    # v<village>f<family>p<n> a parent (a<n> on the platform of cascade/CSSN/2026-10-21-3), v<village>f<family>c<n> a child.
+    m = re.match(r"^v(\d+)f(\d+)([apc])(\d+)$", str(k))
     if not m: return None, None, None
-    return ("parent" if m.group(3) == "a" else "child"), int(m.group(1)), int(m.group(2))
+    return ("parent" if m.group(3) in "ap" else "child"), int(m.group(1)), int(m.group(2))
 
 def components(nodes, edges):
     par = {n: n for n in nodes}
@@ -203,6 +270,27 @@ def main():
     for t, a, ty, term in lines:
         if ty == "Menu" and a not in key_of:
             key_of[a] = parse(term)[1][0]
+    # An agent with no menu (a child of the census, which answers only approvals) is the child its creator's enter
+    # names: it answers the hello of enter(I, C) as C.  Failing that, it is keyed by its place in the census's order,
+    # a family's parents then its children, v<village>f<family>c<n> numbered from 1 after the family's last parent.
+    census_key = {}
+    seen = sorted({a for t, a, ty, term in lines if a}, key=lambda s: int(s) if str(s).isdigit() else 0)
+    fam, kid = None, 0
+    for a in seen:
+        if a in key_of:
+            m = re.match(r"(v\d+f\d+)p\d+$", str(key_of[a]))
+            if m and m.group(1) != fam: fam, kid = m.group(1), 0
+        elif fam is not None:
+            kid += 1; census_key[a] = "%sc%d" % (fam, kid)
+    key_mismatch = []
+    for t, a, ty, term in lines:
+        if ty == "Approval" and a not in key_of:
+            x = parse(term)[1][0]
+            if isinstance(x, tuple) and x[0] == "hello" and isinstance(x[1][1], tuple) and x[1][1][0] == "enter":
+                key_of[a] = str(x[1][1][1][1])
+    for a, kk in census_key.items():
+        if a not in key_of: key_of[a] = kk
+        elif key_of[a] != kk: key_mismatch.append((a, key_of[a], kk))
     agents = sorted(key_of)
     role = {key_of[a]: role_of_key(key_of[a])[0] for a in agents}
     village = {key_of[a]: role_of_key(key_of[a])[1] for a in agents}
@@ -223,6 +311,9 @@ def main():
     pending = defaultdict(list)                    # (I, C) -> requests not yet committed
     approvals = defaultdict(dict)                  # (I, N, C) -> {guard: (t, yes/no)}
     approvals_by_parent_month = Counter()
+    hellos_by_parent_month = Counter()
+    week_child_edges = {}
+    week_end_idx = 1
     open_commits = {}                              # id(request) -> {"need": set(agents), "snap": {...}, "t": t}
     commits = []
     exceptions = []
@@ -252,7 +343,10 @@ def main():
         return e
 
     def snapshot_months(upto_t):
-        nonlocal month_end_idx
+        nonlocal month_end_idx, week_end_idx
+        while week_end_idx * WEEK <= upto_t and week_end_idx <= 60:
+            week_child_edges[week_end_idx] = len(child_edges())
+            week_end_idx += 1
         while month_end_idx <= months and month_end_idx * MONTH <= upto_t:
             ce = child_edges(); pe = parent_edges()
             month_child_edges[month_end_idx] = len(ce)
@@ -260,22 +354,23 @@ def main():
             month_child_one[month_end_idx] = components(children, ce) == 1
             month_end_idx += 1
 
-    def holds(k, atom):
-        if atom == "friend(%s)" % k: return True
-        return state[k][atom] > 0
-
     def check_pre(cls, binding, snap):
+        # friend and knows are reflexive (CSSN.glp, reflexive([friend, knows], C)).
         sch = S[cls]; bad = []
-        for i, r in enumerate(sch["roles"]):
-            k = binding[i]
-            st = snap[k]
+        env, parts = participants(sch, binding, snap)
+        if parts is None: return ["the binding %s does not fit %s" % (binding, cls)]
+        for i, k, r in parts:
+            st = snap.get(k, Counter())
+            refl = ("friend(%s)" % k, "knows(%s)" % k)
             for a in r["req"]:
-                s = subst(a, binding)
-                if s == "friend(%s)" % k: continue
+                s = subst(a, env)
+                if s is None: bad.append("%s: %s not read" % (k, show(a))); continue
+                if s in refl: continue
                 if st[s] <= 0: bad.append("%s lacks %s" % (k, s))
             for a in r["forb"]:
-                s = subst(a, binding)
-                if s == "friend(%s)" % k or st[s] > 0: bad.append("%s holds %s" % (k, s))
+                s = subst(a, env)
+                if s is None: bad.append("%s: %s not read" % (k, show(a))); continue
+                if s in refl or st[s] > 0: bad.append("%s holds %s" % (k, s))
         return bad
 
     for idx, (t, a, ty, term) in enumerate(lines):
@@ -294,15 +389,23 @@ def main():
                 pending[(k, C)].append(r)
         elif ty == "Approval":
             x = parse(term)
-            at, yn = x[1]
-            I, N, Rk, c = at[1]
-            approvals[(str(I), N, show(c))][k] = (t, yn)
-            if role.get(k) == "parent":
-                approvals_by_parent_month[min(int(t // MONTH) + 1, months)] += 1
+            # approval(Asking, Words, YesNo) on the platform of cascade/CSSN/2026-10-24, Asking an attempt
+            # attempt(I, N, Rk, C, Names) or the hello of a meeting, hello(I, C), which names no attempt.
+            at, yn = x[1][0], x[1][-1]
+            if at[0] == "attempt":
+                I, N, Rk, c = at[1][:4]
+                approvals[(str(I), N, show(c))][k] = (t, yn)
+                if role.get(k) == "parent":
+                    approvals_by_parent_month[min(int(t // MONTH) + 1, months)] += 1
+            elif at[0] == "hello":
+                I, c = at[1][:2]
+                approvals[(str(I), "hello", show(c))][k] = (t, yn)
+                if role.get(k) == "parent":
+                    hellos_by_parent_month[min(int(t // MONTH) + 1, months)] += 1
         elif ty == "output":
             x = parse(term)
             if x[0] == "view":
-                As, Ks = x[1]
+                As, Ks = x[1][:2]   # view(As, Ks, Approved, Tabs) on the platform of cascade/CSSN/2026-10-24
                 new = Counter(atom_str(e) for e in elems(As))
                 knows[k] = set(str(e) for e in elems(Ks))
                 adds = new - state[k]; dels = state[k] - new
@@ -319,7 +422,7 @@ def main():
                         for (I, C), lst in pending.items():
                             for r in lst:
                                 if r["t"] > t or r["cls"] not in S: continue
-                                eff = effects(S[r["cls"]], r["binding"])
+                                eff = effects(S[r["cls"]], r["binding"], state)
                                 if eff is None or k not in eff: continue
                                 if eff[k] == (adds, dels):
                                     cands.append((r["t"], r, eff))
@@ -327,7 +430,7 @@ def main():
                             cands.sort(key=lambda z: z[0])
                             _, r, eff = cands[-1]   # the latest request before the change
                             need = {q for q, e in eff.items() if e[0] or e[1]}
-                            snap = {q: Counter(state[q]) for q in set(r["binding"])}
+                            snap = {q: Counter(v) for q, v in state.items()}
                             rid = id(r)
                             open_commits[rid] = {"req": r, "need": need, "eff": eff, "snap": snap, "t": t}
                             pending[(r["I"], r["C"])].remove(r)
@@ -344,17 +447,20 @@ def main():
                             if r["cls"] in MONITORED:
                                 sch = S[r["cls"]]
                                 guards = []
-                                for i2, ro in enumerate(sch["roles"]):
-                                    if ro["guarded"] and r["binding"][i2] not in guards: guards.append(r["binding"][i2])
+                                _, parts = participants(sch, r["binding"], oc["snap"])
+                                for i2, g, ro in (parts or []):
+                                    if ro["guarded"] and g not in guards: guards.append(g)
                                 others = [g for g in guards if g != r["I"]]
-                                ok_att = None
-                                if others:
-                                    for (I2, N2, C2), ans in approvals.items():
-                                        if I2 == r["I"] and C2 == r["C"] and all(g in ans and ans[g][1] == "yes" and ans[g][0] <= t for g in others):
-                                            ok_att = N2
+                                # Each other guard answered yes, between the request and the commit, to an attempt
+                                # (I, N, C) of the initiator or to the hello of its meeting, hello(I, C).
+                                missing = []
+                                for g in others:
+                                    if not any(I2 == r["I"] and C2 == r["C"] and g in ans and ans[g][1] == "yes" and r["t"] <= ans[g][0] <= t
+                                               for (I2, N2, C2), ans in approvals.items()):
+                                        missing.append(g)
                                 why = []
                                 if r["I"] not in guards: why.append("initiator %s is no guard" % r["I"])
-                                if others and ok_att is None: why.append("no attempt of %s with a yes of each of %s" % (r["I"], ", ".join(others)))
+                                if missing: why.append("no yes of %s to an attempt or hello of %s" % (", ".join(missing), r["I"]))
                                 why += check_pre(r["cls"], r["binding"], oc["snap"])
                                 if why:
                                     exceptions.append({"t": t, "class": r["C"], "why": why})
@@ -362,7 +468,21 @@ def main():
             elif x[0] in ("refused", "yielded"):
                 notices[x[0]] += 1
     # A run whose monitor stopped at its horizon ends in the state at the horizon.
-    snapshot_months(float(opt["--horizon"]) if "--horizon" in opt else (float("inf") if clock is None else clock + 1))
+    end_t = float(opt["--horizon"]) if "--horizon" in opt else (float("inf") if clock is None else clock + 1)
+    snapshot_months(end_t)
+    # A run shorter than its last month or week ends in it: that month's and that week's figures are the state at the
+    # horizon, and the fraction of it the run covered is reported.
+    partial_month = partial_week = None
+    if end_t != float("inf"):
+        if month_end_idx <= months and (month_end_idx - 1) * MONTH < end_t:
+            partial_month = round(end_t / MONTH - (month_end_idx - 1), 3)
+            ce = child_edges(); pe = parent_edges()
+            month_child_edges[month_end_idx] = len(ce)
+            month_parent_one[month_end_idx] = components(parents, pe) == 1
+            month_child_one[month_end_idx] = components(children, ce) == 1
+        if (week_end_idx - 1) * WEEK < end_t:
+            partial_week = round(end_t / WEEK - (week_end_idx - 1), 3)
+            week_child_edges[week_end_idx] = len(child_edges())
 
     # ---- The measures ----
     cb = [r for r in requests if role.get(r["I"]) == "parent" and r["cls"] in ("child_befriend", "child_adult_befriend")]
@@ -370,7 +490,8 @@ def main():
     days = [(r["commit"] - r["t"]) / 86400.0 for r in cbc]
     horizon = clock if clock is not None else (lines[-1][0] if lines else 0)
     nmonths = max(1, min(months, int(-(-horizon // MONTH))))
-    appr = [approvals_by_parent_month[m] / max(1, len(parents)) for m in range(1, nmonths + 1)]
+    appr = [(approvals_by_parent_month[m] + hellos_by_parent_month[m]) / max(1, len(parents)) for m in range(1, nmonths + 1)]
+    appr_att = [approvals_by_parent_month[m] / max(1, len(parents)) for m in range(1, nmonths + 1)]
     def first_one(d):
         for m in range(1, months + 1):
             if d.get(m): return m
@@ -396,6 +517,11 @@ def main():
         "days_to_commit_mean": (sum(days) / len(days)) if days else None,
         "days_to_commit_max": max(days) if days else None,
         "approvals_per_parent_month": appr,
+        "approvals_per_parent_month_attempts_only": appr_att,
+        "child_friendships_by_week": [week_child_edges.get(w) for w in range(1, len(week_child_edges) + 1)],
+        "last_week_partial": partial_week, "last_month_partial": partial_month,
+        "child_friendship_requests_by_class": dict(Counter(r["cls"] for r in requests if r["cls"] in ("child_befriend", "child_adult_befriend"))),
+        "key_census_mismatch": key_mismatch,
         "approvals_per_parent_month_mean": sum(appr) / len(appr) if appr else None,
         "child_friendships_by_month": [month_child_edges.get(m) for m in range(1, months + 1)],
         "child_friendships_end": len(child_edges()),
