@@ -69,10 +69,9 @@ const _cssnChildBefriend = "form(child_befriend, [field('Peer', shown), "
 const _childBefriendView = 'approval(attempt(alice, 4, 4, child_befriend('
     'carol, dave, alice, bob), none), input([2]))';
 
-/// CSSN's enter and enter_2, `enter(p?, r?)` and `enter_2(p?, q?, r?)`
+/// CSSN's enter_2, `enter_2(p?, q?, r?)`
 /// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints their
 /// Class.
-const _cssnEnter = "form(enter, [field('Peer', shown), field('Peer', shown)])";
 const _cssnEnter2 = "form(enter_2, [field('Peer', shown), "
     "field('Peer', shown), field('Peer', shown)])";
 
@@ -95,8 +94,7 @@ const _cssnChildJoin2 = "form(child_join_2, [field('Peer', shown), "
     "field('Peer', shown), field('Peer', shown), field('Peer', shown), "
     "field('Speech', $_speech)])";
 
-/// CSSN's classes these tests draw: child_befriend among them, by which the
-/// app is told CSSN's.
+/// CSSN's classes these tests draw.
 const _cssnClasses = [
   _meet,
   _introduce,
@@ -106,9 +104,6 @@ const _cssnClasses = [
   _cssnChildJoin,
   _cssnChildJoin2,
 ];
-
-/// The group kids_chat, led by Carol.
-const _kidsChat = 'speech(utterance(kids_chat), carol)';
 
 /// The last views of the agents asked: Bob, Dave's parent and Alice's friend;
 /// Carol, Alice's child; and Dave, Bob's child.
@@ -470,104 +465,31 @@ void main() {
   });
 
   testWidgets(
-      'child_befriend(R, S, P, Q) at the other child\'s parent: "Alice asks '
-      'that their child Carol and your child Dave befriend.", "Approve?", Yes '
-      'and No, granting what the default widget grants (CSSN #8 Cowork, '
-      'Code_inbox.md, 2026-10-20 13:13 UTC, item 1)', (tester) async {
+      'CSSN\'s acts on a platform compiled with no pragmas, whatever the view: '
+      'the sentence built from the class, Yes and No, granting what the '
+      'default widget grants; the construct family holds no words of CSSN\'s, '
+      'whose app is compiled from its contract\'s pragmas (claude.md, '
+      '"Sessions": "every word the app shows is in its contract")',
+      (tester) async {
     final s = _Screen(tester);
-    await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
-        output: _bobParentOutput);
-    expect(s.texts(), [
-      'Alice asks that their child Carol and your child Dave befriend.',
-      'Approve?',
-      'Yes',
-      'No',
-    ]);
+    for (final out in [_bobParentOutput, _carolOutput, _daveOutput, null]) {
+      await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
+          output: out);
+      expect(s.texts(), [
+        'Alice asks to child befriend Carol, Dave, Bob.',
+        'Yes',
+        'No',
+      ]);
+    }
     final (d, n) = await s.both(_defaultApproval([_cssnChildBefriend]),
         _childBefriendView, 'yes', 'Yes',
         output: _bobParentOutput);
     expect(d, 'input(1, [2], yes)');
     expect(n, d);
-  });
-
-  testWidgets(
-      'child_befriend at a child: "Alice asks that you and Dave befriend, '
-      'with Dave\'s parent Bob.", "Befriend Dave?"; at the other child, asked '
-      'by the other child\'s parent, "Alice asks that you and their child '
-      'Carol befriend.", "Befriend Carol?" (CSSN #8 Cowork, Code_inbox.md, '
-      '2026-10-20 13:13 UTC, item 5)', (tester) async {
-    final s = _Screen(tester);
-    await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
-        output: _carolOutput);
-    expect(s.texts(), [
-      "Alice asks that you and Dave befriend, with Dave's parent Bob.",
-      'Befriend Dave?',
-      'Yes',
-      'No',
-    ]);
-    await s.draw(_named([_cssnChildBefriend]), _childBefriendView,
-        output: _daveOutput);
-    expect(s.texts(), [
-      'Alice asks that you and their child Carol befriend.',
-      'Befriend Carol?',
-      'Yes',
-      'No',
-    ]);
-    // Asked by a person who is neither child's parent: both named.
-    await s.draw(
-        _named([_cssnChildBefriend]),
-        'approval(attempt(grace, 4, 4, child_befriend(carol, dave, alice, '
-        'bob), none), input([2]))',
-        output: _daveOutput);
-    expect(s.texts(), [
-      "Grace asks that you and Carol befriend, with Carol's parent Alice.",
-      'Befriend Carol?',
-      'Yes',
-      'No',
-    ]);
-  });
-
-  testWidgets(
-      'enter(P, R) at the child: "Alice enters you as their child.", '
-      '"Approve?", Yes and No, granting what the default widget grants '
-      '(CSSN #8 Cowork, Code_inbox.md, 2026-10-20 13:13 UTC, item 4)',
-      (tester) async {
-    final s = _Screen(tester);
-    const view =
-        'approval(attempt(alice, 2, 2, enter(alice, carol), none), input([2]))';
-    await s.draw(_named([_cssnEnter]), view, output: '[view([], [alice])]');
-    expect(s.texts(),
-        ['Alice enters you as their child.', 'Approve?', 'Yes', 'No']);
-    final (d, n) = await s.both(
-        _defaultApproval([_cssnEnter]), view, 'yes', 'Yes',
-        output: '[view([], [alice])]');
-    expect(d, 'input(1, [2], yes)');
-    expect(n, d);
-  });
-
-  testWidgets(
-      'enter_2(P, Q, R): at the other parent, "Bob asks to enter Dave as '
-      'your child, with you."; at the child, "Bob enters you as their '
-      'child."; each "Approve?", Yes and No (CSSN #8 Cowork, Code_inbox.md, '
-      '2026-10-20 13:13 UTC, item 4)', (tester) async {
-    final s = _Screen(tester);
-    const view = 'approval(attempt(bob, 3, 3, enter_2(bob, grace, dave), none), '
-        'input([2]))';
-    await s.draw(_named([_cssnEnter2]), view,
+    const enter2 = 'approval(attempt(bob, 3, 3, enter_2(bob, grace, dave), '
+        'none), input([2]))';
+    await s.draw(_named([_cssnEnter2]), enter2,
         output: '[view([friend(bob), identity], [bob, dave])]');
-    expect(s.texts(), [
-      'Bob asks to enter Dave as your child, with you.',
-      'Approve?',
-      'Yes',
-      'No'
-    ]);
-    await s.draw(_named([_cssnEnter2]), view,
-        output: '[view([], [bob, grace])]');
-    expect(s.texts(),
-        ['Bob enters you as their child.', 'Approve?', 'Yes', 'No']);
-    // No view drawn: whom it is asked is not told, and the sentence is
-    // built from the class.
-    await s.draw(_named([_cssnEnter2]), view);
     expect(s.texts(), ['Bob asks to enter 2 Grace, Dave.', 'Yes', 'No']);
   });
 
@@ -583,23 +505,15 @@ void main() {
     ]);
   });
 
-  test('what a CSSN state says of each person: child, parent, friend', () {
+  test('what a CSSN state holds of the person: their children and parents', () {
     final (_, alice) = SocialState.read(fixtureTerm(
         '[view([friend(bob), parenting(carol), friend(carol), identity], '
         '[bob, carol, dave])]'));
     expect(alice!.children.map(formatTerm), ['carol']);
     expect(alice.isChild, isFalse);
-    expect(alice.relationOf(const GAtom('carol')), 'your child');
-    expect(alice.relationOf(const GAtom('bob')), 'your friend');
-    expect(alice.relationOf(const GAtom('dave')), isNull);
     final (_, carol) = SocialState.read(fixtureTerm(_carolOutput));
     expect(carol!.isChild, isTrue);
     expect(carol.parents.map(formatTerm), ['alice']);
-    expect(carol.relationOf(const GAtom('alice')), 'your parent');
-    expect(carol.hasWards, isTrue);
-    final (_, gsg) = SocialState.read(
-        fixtureTerm('[view([friend(bob), identity], [bob])]'));
-    expect(gsg!.hasWards, isFalse);
   });
 
   test('the classes of the platform read off the default widget of Approval',
@@ -649,133 +563,6 @@ void main() {
     await s.draw(_named(gsc), introduce,
         output: '[view([knows(alice), identity], [alice, carol])]');
     expect(s.texts(), ['Alice introduces Carol to you.', 'Yes', 'No']);
-  });
-
-  testWidgets(
-      'child_meet(R, A, P): at the adult, "Alice asks that their child Carol '
-      'and you meet.", "Meet Carol?"; at the child, "Alice asks that you and '
-      'Frank meet.", "Meet Frank?" (CSSN #9 Cowork, Code_inbox.md, '
-      '2026-10-20 19:44 UTC, item 4)', (tester) async {
-    final s = _Screen(tester);
-    const view = 'approval(attempt(alice, 5, 5, child_meet(carol, frank, '
-        'alice), none), input([2]))';
-    await s.draw(_named(_cssnClasses), view,
-        output: '[view([knows(alice), identity], [alice, carol])]');
-    expect(s.texts(), [
-      'Alice asks that their child Carol and you meet.',
-      'Meet Carol?',
-      'Yes',
-      'No'
-    ]);
-    await s.draw(_named(_cssnClasses), view, output: _carolOutput);
-    expect(s.texts(),
-        ['Alice asks that you and Frank meet.', 'Meet Frank?', 'Yes', 'No']);
-    final (d, n) = await s.both(
-        _defaultApproval(_cssnClasses), view, 'yes', 'Yes',
-        output: _carolOutput);
-    expect(d, 'input(1, [2], yes)');
-    expect(n, d);
-  });
-
-  testWidgets(
-      'child_meet_2(R, S, P, Q): at the other parent, "Alice asks that their '
-      'child Carol and your child Dave meet.", "Approve?"; at a child, '
-      '"Alice asks that you and Dave meet, with Dave\'s parent Bob.", "Meet '
-      'Dave?", and at the other child "Alice asks that you and their child '
-      'Carol meet.", "Meet Carol?" (CSSN #9 Cowork, Code_inbox.md, '
-      '2026-10-20 19:44 UTC, item 4)', (tester) async {
-    final s = _Screen(tester);
-    const view = 'approval(attempt(alice, 6, 6, child_meet_2(carol, dave, '
-        'alice, bob), none), input([2]))';
-    await s.draw(_named(_cssnClasses), view, output: _bobParentOutput);
-    expect(s.texts(), [
-      'Alice asks that their child Carol and your child Dave meet.',
-      'Approve?',
-      'Yes',
-      'No'
-    ]);
-    await s.draw(_named(_cssnClasses), view, output: _carolOutput);
-    expect(s.texts(), [
-      "Alice asks that you and Dave meet, with Dave's parent Bob.",
-      'Meet Dave?',
-      'Yes',
-      'No'
-    ]);
-    await s.draw(_named(_cssnClasses), view, output: _daveOutput);
-    expect(s.texts(), [
-      'Alice asks that you and their child Carol meet.',
-      'Meet Carol?',
-      'Yes',
-      'No'
-    ]);
-  });
-
-  testWidgets(
-      'child_join(A, S, P, N): at the child, "Frank invites you to kids_chat, '
-      'with your parent Alice.", "Join?"; at the parent, "Frank invites your '
-      'child Carol to kids_chat.", "Approve?" (CSSN #9 Cowork, Code_inbox.md, '
-      '2026-10-20 19:44 UTC, item 4)', (tester) async {
-    final s = _Screen(tester);
-    const view = 'approval(attempt(frank, 7, 7, child_join(frank, carol, '
-        'alice, $_kidsChat), none), input([2]))';
-    await s.draw(_named(_cssnClasses), view, output: _carolOutput);
-    expect(s.texts(), [
-      'Frank invites you to kids_chat, with your parent Alice.',
-      'Join?',
-      'Yes',
-      'No'
-    ]);
-    await s.draw(_named(_cssnClasses), view,
-        output: '[view([friend(bob), parenting(carol), friend(carol), '
-            'identity], [bob, carol, frank])]');
-    expect(s.texts(), [
-      'Frank invites your child Carol to kids_chat.',
-      'Approve?',
-      'Yes',
-      'No'
-    ]);
-  });
-
-  testWidgets(
-      'child_join_2(R, S, P, Q, N): at the child invited, "Carol invites you '
-      'to kids_chat, with Carol\'s parent Alice and your parent Bob.", '
-      '"Join?"; at the leader\'s parent, "Your child Carol invites Dave, '
-      'Bob\'s child, to kids_chat."; at the invited child\'s parent, "Carol, '
-      'Alice\'s child, invites your child Dave to kids_chat."; each parent '
-      '"Approve?" (CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item '
-      '4)', (tester) async {
-    final s = _Screen(tester);
-    const view = 'approval(attempt(carol, 8, 8, child_join_2(carol, dave, '
-        'alice, bob, $_kidsChat), none), input([2]))';
-    await s.draw(_named(_cssnClasses), view, output: _daveOutput);
-    expect(s.texts(), [
-      "Carol invites you to kids_chat, with Carol's parent Alice and your "
-          'parent Bob.',
-      'Join?',
-      'Yes',
-      'No'
-    ]);
-    await s.draw(_named(_cssnClasses), view,
-        output: '[view([friend(bob), parenting(carol), friend(carol), '
-            'identity], [bob, carol, dave])]');
-    expect(s.texts(), [
-      "Your child Carol invites Dave, Bob's child, to kids_chat.",
-      'Approve?',
-      'Yes',
-      'No'
-    ]);
-    await s.draw(_named(_cssnClasses), view, output: _bobParentOutput);
-    expect(s.texts(), [
-      "Carol, Alice's child, invites your child Dave to kids_chat.",
-      'Approve?',
-      'Yes',
-      'No'
-    ]);
-    final (d, n) = await s.both(
-        _defaultApproval(_cssnClasses), view, 'yes', 'Yes',
-        output: _bobParentOutput);
-    expect(d, 'input(1, [2], yes)');
-    expect(n, d);
   });
 
   testWidgets(

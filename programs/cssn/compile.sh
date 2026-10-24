@@ -5,7 +5,7 @@
 #   bash programs/cssn/compile.sh <dir>      print into <dir>/platform.vglp
 #   bash programs/cssn/compile.sh --check    print into a scratch directory and compare
 #
-# The steps are cascade.sh's 1, 2 and 4: the contract, contract_named(cssn, C), from CSSN.glp; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/4, on the contract, its verdict and its introduction predicate, introduction_named(cssn, I) where CSSN.glp names one and no_introduction otherwise.  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
+# The steps are cascade.sh's 1, 2 and 4: the contract, contract_named(cssn, C), from CSSN.glp; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/5, on the contract, its verdict, its introduction predicate, introduction_named(cssn, I) where CSSN.glp names one and no_introduction otherwise, and its pragmas, the words its app shows, read from CSSN.txt and from the NAME.txt of the contracts it extends by programs/vglp/cva/compiler/pragmas.sh (vGLP, Section 5.4, "The contract's words"), as programs/apps/compile.sh reads each app's.  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
 #
 # Prints the verdict, the introduction predicate and, where it compiled, the file.  Exits 0 if the contract was compiled and, with --check, the file in place is what the compiler prints; 1 otherwise, the compiler's lines saying why; 2 on a bad argument.
 
@@ -51,6 +51,12 @@ if grep -q '^introduction_named(cssn,' "$SRC"; then
 fi
 echo "introduction: $INTRO"
 
+# Its pragmas, from CSSN.txt and those of the contracts it extends.
+if ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$HERE/CSSN.txt" "$CT" 2> "$WORK/pr.err"); then
+    echo "pragmas: not read: $(head -1 "$WORK/pr.err")"
+    exit 1
+fi
+
 # Its verdict.  The REPL stops a goal at 10000 reductions unless told otherwise; the checker takes more.
 printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
 repl "$WORK/v.in" "$WORK/v.out"
@@ -63,7 +69,7 @@ fi
 echo "verdict: $VT"
 
 # The compiler, on the contract, its verdict and its introduction predicate.
-printf '%s\n:limit 1000000000\ncompile(cssn, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$CT" "$VT" "$INTRO" > "$WORK/p.in"
+printf '%s\n:limit 1000000000\ncompile(cssn, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$CT" "$VT" "$INTRO" "$PR" > "$WORK/p.in"
 repl "$WORK/p.in" "$WORK/p.out"
 if ! awk '
     $0 == "%% compile begin" { on = 1; next }

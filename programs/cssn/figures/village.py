@@ -21,7 +21,7 @@ TITLES = {
     "dave": "Dave (Bob and Grace's child)",
     "eve": "Eve (Bob and Grace's child)",
 }
-ACTS = "1 Identities · 2 Adult friendships · 3 Child friendships · 4 Child-adult friendships · 5 kids_chat · 6 Study group · 7 Parents ending · 8 Coming of age"
+ACTS = "1 Coming into the contract · 2 Adult friendships · 3 Child friendships · 4 Child-adult friendships · 5 Child-managed group · 6 Adult-managed group · 7 Parents ending · 8 Coming of age"
 
 
 # --- GLP terms, as the REPL prints them ------------------------------------

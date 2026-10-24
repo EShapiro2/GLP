@@ -932,7 +932,7 @@ procedure field_fault(Integer?, Integer?, Constant?, Stream(_)).
 field_fault(NS, NF, _, []) :- NS? =< NF? | true.
 field_fault(NS, NF, S, [H?]) :- NS? > NF?, ground(S?) |
     H =.. ['%% a pragma names more fields than the schema has variables the person fills:', S?].
-%% A line with more questions than its act has guarding roles beyond the proposer's, an act of two guarding roles or more (GSC, Section 2, its first paragraph: "for each role whose will the act needs beyond the proposer's, in their order, the question the person in it is asked").
+%% A line whose questions are neither one nor one per guarding role of its act, an act of two guarding roles or more (vGLP 21fca00, Section 5.4, "The contract's words": "a line's questions are one per guarding role of the widest schema of its clause, in the order of the roles, none left out").
 procedure question_fault(Said?, RoleSpecs?, Constant?, Stream(_)).
 question_fault(none, _, _, []).
 question_fault(said(Qs), Rs, S, F?) :- ground(Qs?), ground(Rs?), ground(S?) |
@@ -944,9 +944,10 @@ count_questions([], 0).
 count_questions([_|Qs], N?) :- count_questions(Qs?, M), N := M? + 1.
 procedure question_fault1(Integer?, Integer?, Constant?, Stream(_)).
 question_fault1(_, 1, _, []).
-question_fault1(NQ, NG, _, []) :- NG? > 1, NQ? < NG? | true.
-question_fault1(NQ, NG, S, [H?]) :- NG? > 1, NQ? >= NG?, ground(S?) |
-    H =.. ['%% a pragma puts more questions than the act has guarding roles beyond the proposer\'s:', S?].
+question_fault1(1, NG, _, []) :- NG? > 1 | true.
+question_fault1(NQ, NG, _, []) :- NG? > 1, NQ? =:= NG? | true.
+question_fault1(NQ, NG, S, [H?]) :- NG? > 1, NQ? =\= 1, NQ? =\= NG?, ground(S?) |
+    H =.. ['%% a pragma\'s questions are neither one nor one per guarding role of the act:', S?].
 question_fault1(_, 0, _, []).
 procedure said_fault(Said?, Ints?, Constant?, Stream(_)).
 said_fault(none, _, _, []).
@@ -1366,10 +1367,15 @@ procedure schema_sentence0(Integer?, Args?, RoleSpecs?, Constant?, PSentences?, 
 schema_sentence0(1, _, _, _, _, []).
 schema_sentence0(N, Hd, Rs, S, Qs, L?) :- N? =\= 1, ground(Hd?), ground(Rs?), ground(Qs?) |
     guard_roles(Rs?, 1, Gr),
-    rest_ints(Gr?, Gr1),
+    count_questions(Qs?, NQ),
+    asked_roles(NQ?, Gr?, Ga),
     person_places(Hd?, Rs?, Pp),
     schema_vars(Rs?, Hd?, Vs),
-    schema_sentence1(Gr1?, Qs?, Pp?, Vs?, S?, L).
+    schema_sentence1(Ga?, Qs?, Pp?, Vs?, S?, L).
+%% The guarding roles a line's questions are put to: its one question to each guarding role beyond the first; its questions, one per guarding role, each to its own, in the order of the roles (vGLP 21fca00, Section 5.4, "The contract's words": "a line's questions are one per guarding role of the widest schema of its clause, in the order of the roles, none left out, since any guard may propose"), pragmas.sh having given each schema a line covers the questions of its own guarding roles.
+procedure asked_roles(Integer?, Ints?, Ints).
+asked_roles(1, Gr, Ga?) :- rest_ints(Gr?, Ga).
+asked_roles(NQ, Gr, Gr?) :- NQ? =\= 1 | true.
 %% The indices of the guarding roles, in order, from J.
 procedure guard_roles(RoleSpecs?, Integer?, Ints).
 guard_roles([], _, []).
