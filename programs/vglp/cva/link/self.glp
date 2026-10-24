@@ -12,7 +12,9 @@
 %%
 %% play_deadlock: Idit's deadlock, two initiators outside the intersection of
 %% their attempts' participants.  carol and dave each befriend alice and then
-%% bob.  alice proposes link(alice, carol, dave) and bob link(bob, carol,
+%% bob, befriend a meeting schema, by which they come to know each other: the
+%% request is the cold call, the hello, and the called person's yes their
+%% request of it (vGLP, Section 5.4, "The compilation").  alice proposes link(alice, carol, dave) and bob link(bob, carol,
 %% dave); the network delivers alice's start to carol first and bob's to dave
 %% first, so carol holds alice's attempt prepared and dave bob's, and each
 %% holds the other's start waiting: without wound-wait, neither ever votes.
@@ -22,7 +24,8 @@
 %% her attempt commits.  bob's attempt, yielding, ends no approval, so his machine proposes his link again, on his request still standing, with no question to his person: his retried attempt keeps the rank of the wounded one, and it commits once alice's has (vGLP f0acbc1, Section 3.2, "The protocol": "an attempt that yields ends none, and its initiator proposes it again").
 %%
 %% The network holds three starts, each until a message is delivered: alice's
-%% start to carol until carol's befriending of bob commits, so that carol is
+%% start to carol until the befriending of carol and bob commits, whichever of
+%% the two proposed the attempt that commits, so that carol is
 %% free when it arrives; alice's start to dave until bob's start to dave; and
 %% bob's start to carol until alice's start to carol.
 %%
@@ -32,9 +35,9 @@
 
 Class    ::= befriend(Peer, Peer) ; link(Peer, Peer, Peer).
 Proposal ::= befriend(Peer, Peer) ; link(Peer, Peer, Peer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -42,11 +45,13 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; linked(Peer, Peer) ; via(Peer, Peer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -60,27 +65,21 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 exported procedure play_deadlock(Stream(_), Stream(_), Stream(_), Stream(_),
     Stream(Sent(Cargo))).
 play_deadlock(LA?, LB?, LC?, LD?, N?) :-
-    quartet([req(known(carol)), req(known(dave)),
-             approval(befriend(carol, alice), yes),
+    quartet([approval(befriend(carol, alice), yes),
              approval(befriend(dave, alice), yes),
              wait(holds(friend(carol))),
              wait(holds(friend(dave))),
              own([A1], propose(link(A1?, carol, dave)))],
-            [req(known(carol)), req(known(dave)),
-             approval(befriend(carol, bob), yes),
+            [approval(befriend(carol, bob), yes),
              approval(befriend(dave, bob), yes),
              wait(holds(friend(carol))),
              wait(holds(friend(dave))),
              own([B1], propose(link(B1?, carol, dave)))],
-            [req(known(alice)), req(known(bob)), wait(known(alice)),
-             own([C1], propose(befriend(C1?, alice))),
+            [own([C1], propose(befriend(C1?, alice))),
              wait(holds(friend(alice))),
-             wait(known(bob)),
              own([C2], propose(befriend(C2?, bob)))],
-            [req(known(alice)), req(known(bob)), wait(known(alice)),
-             own([D1], propose(befriend(D1?, alice))),
+            [own([D1], propose(befriend(D1?, alice))),
              wait(holds(friend(alice))),
-             wait(known(bob)),
              own([D2], propose(befriend(D2?, bob)))],
             LA, LB, LC, LD, N).
 
@@ -147,6 +146,7 @@ hold_rule(msg(carol, cargo(bob, start(attempt(_, _, _, link(_, _, _), _)))), 3).
 hold_rule(_, 0) :- otherwise | true.
 procedure rel_rule(Net?, Integer).
 rel_rule(msg(bob, cargo(carol, outcome(attempt(_, _, _, befriend(carol, bob), _), commit))), 1).
+rel_rule(msg(carol, cargo(bob, outcome(attempt(_, _, _, befriend(carol, bob), _), commit))), 1).
 rel_rule(msg(dave, cargo(bob, start(attempt(_, _, _, link(_, _, _), _)))), 2).
 rel_rule(msg(carol, cargo(alice, start(attempt(_, _, _, link(_, _, _), _)))), 3).
 rel_rule(_, 0) :- otherwise | true.

@@ -9,6 +9,7 @@ library;
 
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
+import 'package:glp_runtime/runtime/saved_state.dart';
 import 'global_writers_table.dart';
 import 'imported_writer_records.dart';
 
@@ -53,6 +54,23 @@ class GlobalName {
 
   @override
   int get hashCode => Object.hash(type, agent, index);
+
+  /// Write this name into an agent's saved state.
+  void save(StateWriter w) {
+    w.boolean(isWriter);
+    w.str(agent);
+    w.uint(index);
+  }
+
+  /// A name [save] wrote.
+  static GlobalName restore(StateReader r) {
+    final isWriter = r.boolean();
+    final agent = r.str();
+    final index = r.uint();
+    return isWriter
+        ? GlobalName.writer(agent, index)
+        : GlobalName.reader(agent, index);
+  }
 }
 
 /// Information needed to spawn a global_send goal

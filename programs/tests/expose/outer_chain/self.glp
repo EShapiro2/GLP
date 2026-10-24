@@ -1,0 +1,2 @@
+%% An exposed module outside the program's tree is compiled in its own scope, and a call it makes to a procedure of a self.glp on its own chain resolves there (TGLP modules.tex, Compilation, first step).  lib/util.glp, which this layer exposes, calls double/2 of lib/self.glp and half/2, which lib/self.glp exposes; lib/self.glp is on the chain of lib/util.glp and not on the chain of app/ or neg/.  This layer exports nothing and is not a program; app/ and neg/ are.
+-expose(lib#util).

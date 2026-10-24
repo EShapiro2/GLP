@@ -1,0 +1,63 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract linear
+%% (../contracts.glp, contract_named(linear, C): start, refuel, and two
+%% unguarded schemas whose constraints are in GSC's form, "a conjunction of
+%% linear equalities and inequalities over its value variables and values"
+%% (GSC bcc1891, Definition "Schema with values")), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it.  climb(p ; t, t1) has the
+%% constraint t1 = t + 2 and t < 6, and mark(p ; t, m) the constraint
+%% 3m = t + 3; in each, t is local to p's role, bound by the level p holds,
+%% and the variable of the added atom is the value the equality gives once t
+%% is bound (vGLP, Section 5.4, "Act schemas as local specifications": "or the
+%% constraint gives the variable finitely many values once those are bound").
+%%
+%% play_linear: one agent, alice, her person scripted (../self.glp).  She
+%%   requests start, which adds started and level(0), and refuel(alice, 5),
+%%   five fuel.  Her machine then takes climb, an own transaction, at the
+%%   levels 0, 2 and 4, each deleting a fuel and level(t) and adding
+%%   level(t + 2), and not at 6, where t < 6 fails, two fuel left; and mark at
+%%   the levels at which 3m = t + 3 has a whole number m, adding marked(m) and
+%%   at no level between.  The run then suspends, none of its own
+%%   transactions holding.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= start(Peer) ; refuel(Peer, Integer) ; climb(Peer, Integer) ; mark(Peer, Integer).
+Proposal ::= start(Peer) ; refuel(Peer, Integer).
+Request  ::= propose(Proposal).
+YesNo    ::= yes ; no.
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Atom     ::= started ; level(Integer) ; fuel ; marked(Integer).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_linear(Stream(_)).
+play_linear(LA?) :-
+    platform # agent(alice, [], _, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [],
+           [own([A1], propose(start(A1?))), wait(holds(started)),
+            own([A2], propose(refuel(A2?, 5))), wait(holds(level(6)))]), LA).

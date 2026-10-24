@@ -178,12 +178,11 @@ redeem(T, Result?) :- wait_until(T?) | Result = done.
 
 *Arithmetic:*
 - `'_add'(X?, Y?, Z)` - Addition: Z = X + Y
-- `'_sub'(X?, Y?, Z)` - Subtraction: Z = X - Y
+- `'_sub'(X?, Y?, Z)` - Subtraction: Z = X - Y; the negation of X is 0 - X, `'_sub'(0, X?, Z)` (GLP-Spec 5381f71, TGLP 6858789)
 - `'_mul'(X?, Y?, Z)` - Multiplication: Z = X * Y
 - `'_div'(X?, Y?, Z)` - Division: Z = X / Y (float result)
 - `'_idiv'(X?, Y?, Z)` - Integer division: Z = X // Y
 - `'_mod'(X?, Y?, Z)` - Modulo: Z = X mod Y
-- `'_neg'(X?, Z)` - Unary negation: Z = -X
 
 *Math functions:*
 - `'_abs'(X?, Z)` - Absolute value

@@ -46,10 +46,13 @@
 %%   5.4, "Act schemas as local specifications"): the swaps' part, guarded by
 %%   alice and bob, and the two redeems', guarded by alice and by bob.  Her
 %%   machine proposes the part her request names, the swaps', which asks bob;
-%%   he answers yes and it commits.  She swaps again and requests the swap back
-%%   again; her machine now proposes her redeem's part, the one it has
-%%   proposed less recently (Section 5.4, "The compilation"), which asks
-%%   nobody, and bob's machine votes yes.
+%%   he answers yes and it commits.  She swaps again and then requests the
+%%   redemption, redeem(alice, bob, alice), a Bob-coin given back for an
+%%   Alice-coin bob holds: "on an own trigger the agent proposes, of the class
+%%   of a pending request, only the parts that request names" (vGLP, Section
+%%   5.4, "The compilation"; vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC,
+%%   item 4), so her machine proposes her redeem's part, guarded by her, which
+%%   asks nobody, and bob's machine votes yes.
 %% play_busy: each having minted 2 coins and swapped one coin for one,
 %%   alice requests a second swap and bob, asked, leaves his approval question
 %%   open, alice's machine holding her attempt prepared; bob requests paying
@@ -75,9 +78,9 @@ Class    ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
 Proposal ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
            ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -85,11 +88,13 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= identity ; knows(Peer) ; coin(Peer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -104,14 +109,12 @@ exported procedure play_pay_swap(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_pay_swap(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 2))), wait(has(coin(alice), 2)),
-          req(known(bob)), wait(known(bob)),
           own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
           own([A4, A5], propose(swap(A4?, bob, A5?, 2, bob, 3))),
           wait(has(coin(bob), 3)),
           own([A6], propose(pay(A6?, bob, 2)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint(B2?, 3))), wait(has(coin(bob), 3)),
-          req(known(alice)), wait(known(alice)),
           approval(meet(alice, bob), yes),
           approval(swap(alice, bob, alice, 2, bob, 3), yes)],
          LA, LB, N).
@@ -120,7 +123,7 @@ exported procedure play_redeem(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_redeem(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 1))), wait(holds(coin(alice))),
-          req(known(bob)), wait(known(bob)),
+          
           own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
           own([A4, A5], propose(swap(A4?, bob, A5?, 1, bob, 1))),
           wait(holds(coin(bob))),
@@ -128,10 +131,10 @@ play_redeem(LA?, LB?, N?) :-
           wait(holds(coin(alice))),
           own([A8, A9], propose(swap(A8?, bob, A9?, 1, bob, 1))),
           wait(holds(coin(bob))),
-          own([A10, A11], propose(swap(A10?, bob, bob, 1, A11?, 1)))],
+          own([A10, A11], propose(redeem(A10?, bob, A11?)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint(B2?, 1))), wait(holds(coin(bob))),
-          req(known(alice)), wait(known(alice)),
+          
           approval(meet(alice, bob), yes),
           approval(swap(alice, bob, alice, 1, bob, 1), yes),
           approval(swap(alice, bob, bob, 1, alice, 1), yes),
@@ -142,14 +145,12 @@ exported procedure play_busy(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_busy(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 2))), wait(has(coin(alice), 2)),
-          req(known(bob)), wait(known(bob)),
           own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
           own([A4, A5], propose(swap(A4?, bob, A5?, 1, bob, 1))),
           wait(holds(coin(bob))),
           own([A6, A7], propose(swap(A6?, bob, A7?, 1, bob, 1)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint(B2?, 2))), wait(has(coin(bob), 2)),
-          req(known(alice)), wait(known(alice)),
           approval(meet(alice, bob), yes),
           approval(swap(alice, bob, alice, 1, bob, 1), yes),
           wait(asked(swap(alice, bob, alice, 1, bob, 1))),
@@ -162,11 +163,11 @@ exported procedure play_declined(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_declined(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 1))), wait(holds(coin(alice))),
-          req(known(bob)), wait(known(bob)),
+          
           own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
           own([A4, A5], propose(swap(A4?, bob, A5?, 1, carol, 1)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          req(known(alice)), wait(known(alice)),
+          
           approval(meet(alice, bob), yes)],
          LA, LB, N).
 

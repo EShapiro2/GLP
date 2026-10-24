@@ -1,0 +1,86 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract days
+%% (../contracts.glp, contract_named(days, C): dawn and an unguarded advance
+%% that requires the day, today(d)), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it.  The contract requires the
+%% day, so its agent reads, merged with its triggers, a calendar, a stream of
+%% dates the device writes, one a day, and holds today(d), d the last date
+%% read, beside its app state; on each date it replaces today(d) and puts up
+%% again the starts and the requests it holds (vGLP, Section 5.4, "Act schemas
+%% as local specifications" and "The compilation").  The view does not show
+%% today(d), no atom of the machine state the platform mapping reads.
+%%
+%% play_days: one agent, alice, her person scripted (../self.glp), and a
+%%   calendar of three dates, 1, 2 and 3, each written once alice's view shows
+%%   the date before it, as a device writes one a day.  alice requests dawn,
+%%   which adds dated and date(0); on the date 1 her machine proposes
+%%   advance, an own transaction, and date(1) replaces date(0); then, on each
+%%   later date, once: advance(p) requires date(t) and today(d) with d > t,
+%%   so it is proposed once a day by the own-trigger Propose and not again
+%%   until the next date.  The run then suspends, the calendar ended.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= dawn(Peer) ; advance(Peer, Integer).
+Proposal ::= dawn(Peer).
+Request  ::= propose(Proposal).
+YesNo    ::= yes ; no.
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
+Vote     ::= yes ; no(Reason).
+Decision ::= commit ; abort(Peer, Reason) ; yield.
+Rho      ::= one(Class) ; rho(Proposal).
+Names    ::= none ; request(Rho, Integer).
+Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; request(Rho, Integer).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Atom     ::= dated ; date(Integer).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
+Menu     ::= menu(Key, List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Integer)?, Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_days(Stream(_)).
+play_days(LA?) :-
+    platform # agent(alice, [], _, TA, [1|Cal?], AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    tee(TA?, TA1, TA2),
+    to_person(MA?, TA1?),
+    clock(TA2?, 1, 3, Cal),
+    person(DA?, GA, ps(nosess, [], [], [own([A1], propose(dawn(A1?)))]), LA).
+
+%% The output twice: to the person, and to the calendar.
+procedure tee(Stream(Output)?, Stream(Output), Stream(Output)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+%% The calendar after its first date: once a view shows date(D), the date
+%% D + 1, until Max.
+procedure clock(Stream(Output)?, Integer?, Integer?, Stream(Integer)).
+clock(_, D, Max, []) :- D? >= Max? | true.
+clock([view(S, _, _)|Vs], D, Max, Cal?) :- D? < Max?, ground(S?) |
+    has_date(S?, D?, B),
+    clock1(B?, Vs?, D?, Max?, Cal).
+clock([_|Vs], D, Max, Cal?) :- otherwise | clock(Vs?, D?, Max?, Cal).
+procedure clock1(YN?, Stream(Output)?, Integer?, Integer?, Stream(Integer)).
+clock1(y, Vs, D, Max, [D1?|Cal?]) :- integer(D?) |
+    D1 := D? + 1,
+    D2 := D? + 1,
+    clock(Vs?, D2?, Max?, Cal).
+clock1(n, Vs, D, Max, Cal?) :- clock(Vs?, D?, Max?, Cal).
+procedure has_date(List(Atom)?, Integer?, YN).
+has_date([], _, n).
+has_date([date(E)|_], D, y) :- E? =:= D? | true.
+has_date([_|As], D, B?) :- otherwise | has_date(As?, D?, B).

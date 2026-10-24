@@ -52,9 +52,9 @@ Class    ::= befriend(Peer, Peer) ; adopt(Peer, Peer) ; create(Peer, Speech)
            ; join(Peer, Peer, Speech) ; child_close(Peer, Peer, List(Peer), Speech).
 Proposal ::= befriend(Peer, Peer) ; adopt(Peer, Peer) ; create(Peer, Speech)
            ; join(Peer, Peer, Speech) ; child_close(Peer, Peer, Speech).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -62,12 +62,14 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; parenting(Peer) ; parent(Peer) ; member(Peer, Speech)
            ; listed(Peer, Speech) ; closed(Speech).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -81,26 +83,20 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 exported procedure play_child_close(Stream(_), Stream(_), Stream(_), Stream(_),
     Stream(Sent(Cargo))).
 play_child_close(LA?, LB?, LC?, LD?, N?) :-
-    quartet([req(known(carol)), wait(known(carol)),
-             own([A1], propose(adopt(A1?, carol))),
+    quartet([own([A1], propose(adopt(A1?, carol))),
              wait(holds(parenting(carol))),
              own([A2], propose(child_close(carol, A2?, speech(utterance(club), carol))))],
-            [req(known(dave)), wait(known(dave)),
-             own([B1], propose(befriend(B1?, dave)))],
-            [req(known(alice)), wait(known(alice)),
-             approval(adopt(alice, carol), yes),
+            [own([B1], propose(befriend(B1?, dave)))],
+            [approval(adopt(alice, carol), yes),
              wait(holds(parent(alice))),
-             req(known(dave)), wait(known(dave)),
              own([C1], propose(befriend(C1?, dave))),
              wait(holds(friend(dave))),
              own([C2, C3], propose(create(C2?, speech(utterance(club), C3?)))),
              wait(holds(member(carol, speech(utterance(club), carol)))),
              own([C4, C5], propose(join(C4?, dave, speech(utterance(club), C5?))))],
-            [req(known(carol)), wait(known(carol)),
-             approval(befriend(carol, dave), yes),
+            [approval(befriend(carol, dave), yes),
              approval(join(carol, dave, speech(utterance(club), carol)), yes),
              wait(holds(member(carol, speech(utterance(club), carol)))),
-             req(known(bob)), wait(known(bob)),
              approval(befriend(bob, dave), yes)],
             LA, LB, LC, LD, N).
 

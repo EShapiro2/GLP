@@ -31,9 +31,9 @@
 
 Class    ::= befriend(Peer, Peer) ; greet(Peer, Peer) ; cheer(Peer).
 Proposal ::= befriend(Peer, Peer) ; greet(Peer, Peer) ; cheer(Peer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -41,11 +41,13 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; greeted ; greeting ; cheered.
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -59,9 +61,7 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 exported procedure play_friends(Stream(_), Stream(_), Stream(_),
     Stream(Sent(Cargo))).
 play_friends(LA?, LB?, LC?, N?) :-
-    trio([req(known(bob)), req(known(carol)),
-          wait(known(bob)), wait(known(carol)),
-          own([A1], propose(befriend(A1?, bob))),
+    trio([own([A1], propose(befriend(A1?, bob))),
           wait(holds(friend(bob))),
           own([A2], propose(befriend(A2?, carol))),
           wait(holds(friend(carol))),
@@ -75,12 +75,10 @@ play_friends(LA?, LB?, LC?, N?) :-
           wait(has(cheered, 2)),
           own([A9], propose(cheer(A9?))),
           own([A10], propose(greet(A10?, bob)))],
-         [req(known(alice)), wait(known(alice)),
-          approval(befriend(alice, bob), yes),
+         [approval(befriend(alice, bob), yes),
           wait(known(carol)),
           own([B1], propose(befriend(B1?, carol))), look],
-         [req(known(alice)), wait(known(alice)),
-          approval(befriend(alice, carol), yes),
+         [approval(befriend(alice, carol), yes),
           approval(befriend(bob, carol), yes)],
          LA, LB, LC, N).
 

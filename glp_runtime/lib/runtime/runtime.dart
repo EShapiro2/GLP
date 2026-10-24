@@ -5,7 +5,8 @@ import 'commit.dart';
 import 'fairness.dart';
 import 'body_kernels.dart';
 import 'place_streams.dart';
-import 'terms.dart' show Term;
+import 'saved_state.dart';
+import 'terms.dart' show Term, ModuleTerm;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/bytecode/runner.dart'
@@ -281,6 +282,15 @@ class GlpRuntime {
   /// Get the module VALUE a goal runs (its ModuleTerm), or null if unset.
   Object? getGoalModule(GoalId g) => _goalModules[g];
 
+  /// The root self.glp's declared type-identity table (TGLP, Implementation
+  /// Notes, "The tables"), keyed as the root's compiled code carries each
+  /// procedure, `:p/n`: the table of the caller's scope for a goal that runs
+  /// no module, one posted at the root with no program loaded, whose scope is
+  /// the root's.  `find_type` reads it there (module_kernels.dart).  Built on
+  /// first use by the engine that set it; null where none did.  Untyped, as
+  /// [ModuleTerm.declaredTypes] is.
+  Object? Function()? rootDeclaredTypes;
+
   void _enqueueAll(List<GoalRef> acts) {
     for (final a in acts) {
       enqueueReactivatedGoal(a);
@@ -303,6 +313,156 @@ class GlpRuntime {
   /// run: after 30 days of sGLP's social graph the map held 464,267 goals, 631
   /// of them suspended.
   void goalTaken(GoalRef goal) => _removeFromSuspended(goal);
+
+  // ===========================================================================
+  // The agent's saved state (IGLP, Definition "Restart"; Implementation Notes,
+  // "Persistence": "the resolvent with its goal identities and suspension
+  // sets")
+  // ===========================================================================
+
+  /// Write the resolvent and what the runtime holds of each goal: the goal-id
+  /// counter and the heap's serial counter; F, the failed goals, as text; the
+  /// queue A in order; each goal held, queued or suspended, with its argument
+  /// registers, its program and module and its tail budget; the suspended
+  /// goals S, by reader and by goal, in the order they suspended (the
+  /// suspension lists themselves are on the writer cells the state writes);
+  /// the goals waiting on a timer or on when_idle; and the declared places.
+  /// Written at the end of an event cycle, when no goal is being reduced.
+  void saveState(StateWriter w) {
+    w.uint(nextGoalId);
+    w.uint(heap.HP);
+    w.uint(failedGoals.length);
+    for (final f in failedGoals) {
+      w.str(f);
+    }
+    final queued = gq.items.toList();
+    w.uint(queued.length);
+    for (final g in queued) {
+      w.goalRef(g);
+    }
+    w.uint(_goalEnvs.length);
+    for (final MapEntry(key: id, value: env) in _goalEnvs.entries) {
+      w.uint(id);
+      w.uint(env.argBySlot.length);
+      for (final MapEntry(key: slot, value: arg) in env.argBySlot.entries) {
+        w.uint(slot);
+        w.term(arg);
+      }
+    }
+    w.uint(_goalPrograms.length);
+    for (final MapEntry(key: id, value: program) in _goalPrograms.entries) {
+      if (program != null && program is! String) {
+        throw StateError('goal $id runs a program keyed by '
+            '${program.runtimeType}, which has no saved form');
+      }
+      w.uint(id);
+      w.optStr(program as String?);
+    }
+    w.uint(_goalModules.length);
+    for (final MapEntry(key: id, value: module) in _goalModules.entries) {
+      if (module != null && module is! ModuleTerm) {
+        throw StateError('goal $id carries a module of kind '
+            '${module.runtimeType}, which has no saved form');
+      }
+      w.uint(id);
+      w.module(module as ModuleTerm?);
+    }
+    w.uint(_budgets.length);
+    for (final MapEntry(key: id, value: budget) in _budgets.entries) {
+      w.uint(id);
+      w.uint(budget);
+    }
+    w.uint(suspended.length);
+    for (final MapEntry(key: reader, value: goals) in suspended.entries) {
+      w.cell(reader);
+      w.uint(goals.length);
+      for (final g in goals) {
+        w.goalRef(g);
+      }
+    }
+    w.uint(_suspendedOn.length);
+    for (final MapEntry(key: goal, value: readers) in _suspendedOn.entries) {
+      w.goalRef(goal);
+      w.uint(readers.length);
+      for (final r in readers) {
+        w.cell(r);
+      }
+    }
+    w.uint(_waitReaders.length);
+    for (final MapEntry(key: id, value: reader) in _waitReaders.entries) {
+      w.uint(id);
+      w.cell(reader);
+    }
+    w.uint(_idleWaits.length);
+    for (final MapEntry(key: id, value: pair) in _idleWaits.entries) {
+      w.uint(id);
+      w.cell(pair.writer);
+      w.cell(pair.reader);
+    }
+    placeStreams.saveState(w);
+  }
+
+  /// Read back what [saveState] wrote, into this runtime, fresh from its
+  /// engine's construction: nothing queued, held or suspended.  A goal that
+  /// waits on a timer (wait/1, wait_until/1) is restored suspended on its
+  /// timer's reader; the timer itself did not survive the termination.
+  void restoreState(StateReader r) {
+    if (gq.length != 0 || _goalEnvs.isNotEmpty || suspended.isNotEmpty) {
+      throw StateError('an agent\'s state is restored into a runtime that '
+          'already holds goals');
+    }
+    nextGoalId = r.uint();
+    heap.HP = r.uint();
+    failedGoals
+      ..clear()
+      ..addAll([for (var i = r.uint(); i > 0; i--) r.str()]);
+    for (var i = r.uint(); i > 0; i--) {
+      gq.enqueue(r.goalRef());
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final id = r.uint();
+      final args = <int, Term>{};
+      for (var j = r.uint(); j > 0; j--) {
+        final slot = r.uint();
+        args[slot] = r.term();
+      }
+      _goalEnvs[id] = CallEnv(args: args);
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final id = r.uint();
+      _goalPrograms[id] = r.optStr();
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final id = r.uint();
+      _goalModules[id] = r.module();
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final id = r.uint();
+      _budgets[id] = r.uint();
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final reader = r.cell();
+      suspended[reader] = {for (var j = r.uint(); j > 0; j--) r.goalRef()};
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final goal = r.goalRef();
+      _suspendedOn[goal] = {for (var j = r.uint(); j > 0; j--) r.cell()};
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final id = r.uint();
+      _waitReaders[id] = r.cell();
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final id = r.uint();
+      final writer = r.cell();
+      _idleWaits[id] = (writer: writer, reader: r.cell());
+    }
+    placeStreams.restoreState(r);
+  }
+
+  /// The goals held, by id, and the program key each runs: what a restarted
+  /// agent's host makes runners for.
+  Map<GoalId, Object?> get goalPrograms => Map.unmodifiable(_goalPrograms);
 
   /// Remove a goal from every entry of [suspended] it is in: those of the
   /// readers it waits on, which [_suspendedOn] holds.

@@ -1,0 +1,6 @@
+%% Every clause of the linked program is type-checked, an alias clause of the fifth step at the declaration of its entry point (TGLP modules.tex, Compilation).  Two entry points of different types: succ/2 over Integer and count/2 over String.
+exported procedure succ(Integer?, Integer).
+succ(N, M?) :- M := N? + 1.
+
+exported procedure count(String?, Integer).
+count(_, 1).

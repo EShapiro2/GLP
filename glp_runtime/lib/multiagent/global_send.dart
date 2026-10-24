@@ -7,6 +7,7 @@
 library;
 
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
+import 'package:glp_runtime/runtime/saved_state.dart';
 
 import 'mad_helpers.dart';
 import 'global_writers_table.dart';
@@ -259,6 +260,43 @@ class GlobalSendRegistry {
 
   /// Number of pending goals (for testing)
   int get pendingCount => _goals.length;
+
+  /// Write the goals into the agent's saved state, in order of registration:
+  /// each with the reader it watches, its link's name, the holder it sends to
+  /// and the requesters recorded (IGLP, Implementation Notes, "Persistence";
+  /// Definition global_send Predicate puts the goal in the resolvent).
+  void saveState(StateWriter w) {
+    w.uint(_goals.length);
+    for (final MapEntry(key: key, value: goal) in _goals.entries) {
+      w.cell(key);
+      w.cell(goal.readerAddr);
+      goal.globalName.save(w);
+      w.str(goal.destination);
+      w.uint(goal.requesters.length);
+      for (final q in goal.requesters) {
+        w.str(q);
+      }
+    }
+  }
+
+  /// Read back what [saveState] wrote, into a registry fresh from
+  /// construction.  The goals' callbacks are the heap's, put back by the
+  /// agent's context ([MadContext.restoreState]).
+  void restoreState(StateReader r) {
+    _goals.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final key = r.cell();
+      final goal = GlobalSendGoal(
+        readerAddr: r.cell(),
+        globalName: GlobalName.restore(r),
+        destination: r.str(),
+      );
+      for (var j = r.uint(); j > 0; j--) {
+        goal.requesters.add(r.str());
+      }
+      _goals[key] = goal;
+    }
+  }
 
   /// Clear all pending goals (for testing)
   void clear() => _goals.clear();

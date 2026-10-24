@@ -1,18 +1,18 @@
 %% ---------------------------------------------------------------------------
 %% The play of the canonical CVA platform of vGLP's contract parts (../contracts.glp, contract_named(parts, C)), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform").  It runs two agents, alice and bob, their persons scripted and paced on their screens (../self.glp), and gives each person's log, the views with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries.
 %%
-%% tap(alice, bob) and pat(alice, bob) are one class of two parts, pat's requiring a coin at alice and at bob (vGLP c0bea08, Definition "Local Specification, Part, Opener"; Section 5.4, "Act schemas as local specifications").  "The request propose([t]_j) names the class by a part, and the agent proposes, among the parts of [t] it is ready for, the one it has proposed least recently, keeping the parts it has proposed in the order it last proposed them" (Section 5.4, "The compilation"); an attempt names its part, and each participant checks its precondition in that part (Definition "Proposing", Start).
+%% tap(alice, bob) and pat(alice, bob) are one class of two parts, pat's requiring a coin at alice and at bob (vGLP c0bea08, Definition "Local Specification, Part, Opener"; Section 5.4, "Act schemas as local specifications").  A request names its part: on propose(N) the agent takes "the Request of {[t]} to itself for each class [t] of a guarded part with no opener named N that it guards and is ready for", and drops the request "where the agent is free and none is enabled, with a notice refused(N, p, unable) where the agent is ready for no part named N that it guards or opens"; on an own trigger it proposes, "of the class of a pending request, only the parts that request names" (vGLP, Section 5.4, "The compilation"; vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 4).  An attempt names its part, and each participant checks its precondition in that part (Definition "Proposing", Start).
 %%
-%% play_parts: alice and bob come to know each other and befriend, attempt 2.  alice, holding no coin, requests pat(alice, bob), a Request of its class, her approval: she is ready for tap's part alone, and her machine proposes it, attempt 4, which commits, ending the approval.  She mints a coin, attempt 6, a class of one participant applied at its Propose.  She requests tap(alice, bob): ready for both parts, her machine proposes the part whose proposing class has waited longest, tap's, waiting since it was last taken, pat's found holding only now (vGLP f0acbc1, Section 5.4, "The compilation"), attempt 8, which commits.  She requests tap(alice, bob) again, and pat's part, waiting longer now, is proposed, attempt 10; bob, holding no coin, is outside the domain of his effect in pat's part, though inside it in tap's, and his machine votes no, unasked, unable, the coin his state lacks; the attempt aborts, bob its refuser, and her agent, tallying his no, ends her approval and writes the notice refused(pat(alice, bob), bob, unable([coin], [])), the attempt naming its part (vGLP f0acbc1, Section 5.4, "The compilation" and "Act schemas").  Seeing it on her screen, she requests pat(alice, bob), and tap's part, waiting longer, is proposed, attempt 12, which commits.
+%% play_parts: alice and bob come to know each other and befriend, attempt 2, befriend a meeting schema.  alice, holding no coin, requests pat(alice, bob): she is ready for no part named so, pat's requiring the coin, and her machine drops the request with the notice refused(pat(alice, bob), alice, unable), taking no number.  She requests tap(alice, bob), and her machine proposes tap's part, attempt 4, which commits.  She mints a coin, attempt 6, a class of one participant applied at its Propose.  She requests pat(alice, bob), now ready for pat's part, and her machine proposes it, attempt 8; bob, holding no coin, is outside the domain of his effect in pat's part, though inside it in tap's, and his machine votes no, unasked, unable, the coin his state lacks; the attempt aborts, bob its refuser, and her agent, tallying his no, ends her approval and writes the notice refused(pat(alice, bob), bob, unable([coin], [])), the attempt naming its part (vGLP f0acbc1, Section 5.4, "The compilation" and "Act schemas").  Seeing it on her screen, she requests tap(alice, bob), and tap's part is proposed, attempt 10, which commits.
 %%
 %% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
 Class    ::= befriend(Peer, Peer) ; mint(Peer) ; tap(Peer, Peer) ; pat(Peer, Peer).
 Proposal ::= befriend(Peer, Peer) ; mint(Peer) ; tap(Peer, Peer) ; pat(Peer, Peer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -20,11 +20,13 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; coin ; tapped(Peer) ; tapped_by(Peer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -37,21 +39,19 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_parts(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_parts(LA?, LB?, N?) :-
-    pair([req(known(bob)), wait(known(bob)),
-          own([A1], propose(befriend(A1?, bob))),
+    pair([own([A1], propose(befriend(A1?, bob))),
           wait(holds(friend(bob))),
           own([A2], propose(pat(A2?, bob))),
+          wait(refused(pat(alice, bob), alice, unable)),
+          own([A3], propose(tap(A3?, bob))),
           wait(holds(tapped(bob))),
-          own([A3], propose(mint(A3?))),
+          own([A4], propose(mint(A4?))),
           wait(holds(coin)),
-          own([A4], propose(tap(A4?, bob))),
-          wait(has(tapped(bob), 2)),
-          own([A5], propose(tap(A5?, bob))),
+          own([A5], propose(pat(A5?, bob))),
           wait(refused(pat(alice, bob), bob, unable([coin], []))),
-          own([A6], propose(pat(A6?, bob))),
-          wait(has(tapped(bob), 3))],
-         [req(known(alice)), wait(known(alice)),
-          approval(befriend(alice, bob), yes)],
+          own([A6], propose(tap(A6?, bob))),
+          wait(has(tapped(bob), 2))],
+         [approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks joined.

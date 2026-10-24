@@ -38,31 +38,31 @@
 %%
 %% play_bonds: alice establishes her identity and takes her first date, and
 %% her machine then advances her date on each own trigger, an unguarded part
-%% it opens, without end.  She mints a bond maturing at 40 while her date is
-%% below it, mint_bond(alice, 40, 1), gt(40, t) checked by her machine at her
+%% it opens, without end.  She mints a bond maturing at 10 while her date is
+%% below it, mint_bond(alice, 10, 1), gt(10, t) checked by her machine at her
 %% date.  She asks to mint a bond maturing at 0, mint_bond(alice, 0, 1), which
-%% gt(0, t) refuses at every date; what her machine does with the request is
-%% recorded and not asserted, vGLP's paper not yet saying whether a request
-%% whose guard is not ready is refused or not taken (Code #12's question 5 to
-%% vGLP, 2026-10-20 22:23 UTC).  She mints two coins, mint_coin(alice, 2), a
-%% multiplicity, and a bond maturing at 1000000, which her date never reaches.
-%% Bob establishes his identity, mints two coins, asks to know alice and to
-%% meet her in person, and she answers yes; he swaps a coin of his for each of
-%% her bonds, swap_cb, she answering yes.  He then asks to redeem each bond
-%% against a coin of alice's held by her, redeem_bc(bob, alice, d, alice).  Its
-%% class holds swap_cb(alice, bob, alice, 1, alice, d, 1), the same
-%% transaction, a part guarded by alice and bob beside redeem_bc's part
-%% guarded by bob, and bob's machine, ready for both, may propose either
-%% (vGLP, Definition "Proposing", Propose); his machine proposes the swap's
-%% part, the first of the class, and alice is asked: she answers no on the
-%% bond maturing at 1000000, and bob's screen shows refused(swap_cb(alice,
-%% bob, alice, 1, alice, 1000000, 1), alice, declined), and yes on the bond
-%% maturing at 40, which commits, bob holding coin(alice) and alice the bond.
-%% Which part a guard proposes is the compiled agent's choice, which the
-%% paper leaves open, and the checks hold neither (Code #13's finding to
-%% vGLP and Currencies).  The run does not suspend, alice's machine advancing
-%% her date without end, and is stopped at the REPL's :limit, its logs' tails
-%% unbound.
+%% gt(0, t) refuses at every date, and her screen shows refused(mint_bond(alice,
+%% 0, 1), alice, unable), the request dropped where her machine is free and
+%% ready for no part it names (vGLP, Section 5.4, "The compilation").  She
+%% mints two coins, mint_coin(alice, 2), a multiplicity, and a bond maturing
+%% at 1000000, which her date never reaches.  Bob establishes his identity,
+%% mints two coins and asks to meet alice, the cold call her yes answers; he
+%% swaps a coin of his for each of her bonds, swap_cb, she answering yes.  He
+%% then asks to redeem each bond against a coin of alice's held by her,
+%% redeem_bc(bob, alice, d, alice).  Its class holds swap_cb(alice, bob,
+%% alice, 1, alice, d, 1), the same transaction, a part guarded by alice and
+%% bob beside redeem_bc's part guarded by bob; "on an own trigger the agent
+%% proposes, of the class of a pending request, only the parts that request
+%% names" (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 4; vGLP,
+%% Section 5.4, "The compilation"), so bob's machine proposes the redeem part,
+%% and alice is not asked: her machine votes by its precondition, le(d, t) at
+%% her date.  On the bond maturing at 1000000 it votes no, and bob's screen
+%% shows refused(redeem_bc(bob, alice, 1000000, alice), alice, unable([], [])),
+%% the atoms it lacks and has none, the constraint failing; on the bond
+%% maturing at 10, her date past it, it votes yes, and the redemption commits,
+%% bob holding coin(alice) and alice the bond.  The run does not suspend,
+%% alice's machine advancing her date without end, and is stopped at the
+%% REPL's :limit, its logs' tails unbound.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -76,9 +76,9 @@ Proposal ::= establish(Peer) ; meet(Peer, Peer) ; dawn(Peer) ; mint_coin(Peer, I
            ; mint_bond(Peer, Integer, Integer)
            ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
            ; redeem_bc(Peer, Peer, Integer, Peer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -86,11 +86,13 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= identity ; knows(Peer) ; dated ; date(Integer) ; coin(Peer) ; bond(Peer, Integer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -105,27 +107,23 @@ exported procedure play_bonds(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_bonds(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(dawn(A2?))), wait(holds(dated)),
-          own([A3], propose(mint_bond(A3?, 40, 1))), wait(holds(bond(alice, 40))),
+          own([A3], propose(mint_bond(A3?, 10, 1))), wait(holds(bond(alice, 10))),
           own([A4], propose(mint_bond(A4?, 0, 1))),
           own([A5], propose(mint_coin(A5?, 2))), wait(has(coin(alice), 2)),
           own([A6], propose(mint_bond(A6?, 1000000, 1))), wait(holds(bond(alice, 1000000))),
-          req(known(bob)), wait(known(bob)),
           approval(meet(bob, alice), yes),
           approval(swap_cb(bob, alice, bob, 1, alice, 1000000, 1), yes),
-          approval(swap_cb(bob, alice, bob, 1, alice, 40, 1), yes),
-          approval(swap_cb(alice, bob, alice, 1, alice, 1000000, 1), no),
-          approval(swap_cb(alice, bob, alice, 1, alice, 40, 1), yes)],
+          approval(swap_cb(bob, alice, bob, 1, alice, 10, 1), yes)],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint_coin(B2?, 2))), wait(has(coin(bob), 2)),
-          req(known(alice)), wait(known(alice)),
           own([B3], propose(meet(B3?, alice))), wait(holds(knows(alice))),
           own([B4], propose(swap_cb(B4?, alice, bob, 1, alice, 1000000, 1))),
           wait(holds(bond(alice, 1000000))),
-          own([B5], propose(swap_cb(B5?, alice, bob, 1, alice, 40, 1))),
-          wait(holds(bond(alice, 40))),
+          own([B5], propose(swap_cb(B5?, alice, bob, 1, alice, 10, 1))),
+          wait(holds(bond(alice, 10))),
           own([B6], propose(redeem_bc(B6?, alice, 1000000, alice))),
-          wait(refused(swap_cb(alice, bob, alice, 1, alice, 1000000, 1), alice, declined)),
-          own([B7], propose(redeem_bc(B7?, alice, 40, alice))),
+          wait(refused(redeem_bc(bob, alice, 1000000, alice), alice, unable([], []))),
+          own([B7], propose(redeem_bc(B7?, alice, 10, alice))),
           wait(holds(coin(alice)))],
          LA, LB, N).
 

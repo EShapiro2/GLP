@@ -14,6 +14,7 @@
 library;
 
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
+import 'package:glp_runtime/runtime/saved_state.dart';
 
 /// A record `(Y, o, k, s)` marking the local writer [writerAddr] as the sending
 /// end of the link anchored by `_w(anchor, index)`, received from agent [sender].
@@ -113,6 +114,29 @@ class ImportedWriterRecords {
 
   /// Number of records held.
   int get count => _byWriter.length;
+
+  /// Write the records into the agent's saved state (IGLP, Implementation
+  /// Notes, "Persistence": "the imported-writer records").
+  void saveState(StateWriter w) {
+    w.uint(_byWriter.length);
+    for (final rec in _byWriter.values) {
+      w.cell(rec.writerAddr);
+      w.str(rec.anchor);
+      w.uint(rec.index);
+      w.str(rec.sender);
+    }
+  }
+
+  /// Read back what [saveState] wrote, into records fresh from construction.
+  void restoreState(StateReader r) {
+    _byWriter.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final writer = r.cell();
+      final anchor = r.str();
+      final index = r.uint();
+      add(writer, anchor, index, r.str());
+    }
+  }
 
   @override
   String toString() {

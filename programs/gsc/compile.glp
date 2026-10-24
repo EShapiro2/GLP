@@ -347,24 +347,70 @@ latex_guard([I|Is], T, ['\\text{guarded by } \\{'|R?]) :-
 
 % --- The constraint (GSC, Section 3.2; def:numbers) -------------------------
 % A proviso line of its own, after the forbidden atoms and before the guard,
-% none for the constraint true: gt(X, Y) as X > Y, le(X, Y) as X \le Y,
-% succ(X, Y) as Y = X + 1, and or(C1, C2) as C1 \lor C2, as GB's paper writes
-% its constraints (GB, Appendix A).
+% none for the constraint true: and as \land, eq as =, le as \le, lt as <,
+% ge as \ge, gt as >, and succ(X, Y) as Y = X + 1, as GB's paper writes its
+% constraints (GB, Appendix A); plus and minus as + and -, and a product as
+% \cdot, an operand that is a sum or a difference in parentheses where it
+% follows a minus or is a factor.
 
 procedure latex_constraint(Constraint?, Chunks?, Chunks).
 latex_constraint(true, T, ['\\top'|T?]).
-latex_constraint(gt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
-    latex_arg(Y?, T?, R1),
-    latex_arg(X?, ['>'|R1?], R).
+latex_constraint(and(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
+    latex_constraint(C2?, T?, R1),
+    latex_constraint(C1?, ['\\land'|R1?], R).
+latex_constraint(eq(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_cmp(X?, '=', Y?, T?, R).
 latex_constraint(le(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
-    latex_arg(Y?, T?, R1),
-    latex_arg(X?, ['\\le'|R1?], R).
+    latex_cmp(X?, '\\le', Y?, T?, R).
+latex_constraint(lt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_cmp(X?, '<', Y?, T?, R).
+latex_constraint(ge(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_cmp(X?, '\\ge', Y?, T?, R).
+latex_constraint(gt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_cmp(X?, '>', Y?, T?, R).
 latex_constraint(succ(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
     latex_arg(X?, ['+ 1'|T?], R1),
     latex_arg(Y?, ['='|R1?], R).
 latex_constraint(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     latex_constraint(C2?, T?, R1),
     latex_constraint(C1?, ['\\lor'|R1?], R).
+
+procedure latex_cmp(Expr?, Constant?, Expr?, Chunks?, Chunks).
+latex_cmp(X, Op, Y, T, R?) :- ground(X?), ground(Op?), ground(Y?), ground(T?) |
+    latex_expr(Y?, T?, R1),
+    latex_expr(X?, [Op?|R1?], R).
+
+procedure latex_expr(Expr?, Chunks?, Chunks).
+latex_expr(plus(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    latex_expr(B?, T?, R1),
+    latex_expr(A?, ['+'|R1?], R).
+latex_expr(minus(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    latex_operand(B?, T?, R1),
+    latex_expr(A?, ['-'|R1?], R).
+latex_expr(mul(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    latex_operand(B?, T?, R1),
+    latex_operand(A?, ['\\cdot'|R1?], R).
+latex_expr(num(X), T, R?) :- latex_arg(num(X?), T?, R).
+latex_expr(role(I), T, R?) :- latex_arg(role(I?), T?, R).
+latex_expr(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
+latex_expr(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).
+latex_expr(nterm(N), T, R?) :- latex_arg(nterm(N?), T?, R).
+latex_expr(sgn(Y, J), T, R?) :- latex_arg(sgn(Y?, J?), T?, R).
+
+% An operand in parentheses where it is a sum or a difference.
+procedure latex_operand(Expr?, Chunks?, Chunks).
+latex_operand(plus(A, B), T, ['('|R?]) :- ground(A?), ground(B?), ground(T?) |
+    latex_expr(plus(A?, B?), [')'|T?], R).
+latex_operand(minus(A, B), T, ['('|R?]) :- ground(A?), ground(B?), ground(T?) |
+    latex_expr(minus(A?, B?), [')'|T?], R).
+latex_operand(mul(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    latex_expr(mul(A?, B?), T?, R).
+latex_operand(num(X), T, R?) :- latex_arg(num(X?), T?, R).
+latex_operand(role(I), T, R?) :- latex_arg(role(I?), T?, R).
+latex_operand(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
+latex_operand(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).
+latex_operand(nterm(N), T, R?) :- latex_arg(nterm(N?), T?, R).
+latex_operand(sgn(Y, J), T, R?) :- latex_arg(sgn(Y?, J?), T?, R).
 
 procedure constraint_line(Constraint?, ChunkLists?, ChunkLists).
 constraint_line(true, T, T?).
@@ -1034,6 +1080,14 @@ malformed_lines([multiplicity_not_whole(S, I, _)|Fs], T,
     malformed_lines(Fs?, T?, R).
 malformed_lines([constraint_not_numeric(S, _)|Fs], T,
                 [S?, 'carries a constraint on an argument that is not a number;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([constraint_not_linear(S, _)|Fs], T,
+                [S?, 'carries a constraint that is not linear;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([constraint_not_conjunction(S, _)|Fs], T,
+                [S?, 'carries a constraint that is not a conjunction;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |

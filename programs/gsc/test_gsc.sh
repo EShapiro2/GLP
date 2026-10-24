@@ -1305,8 +1305,8 @@ check_eq "a contract declaring friend reflexive prints the declaration first" \
 # A value names no agent, so the conditions below do not concern it."  The
 # term form is Currencies' GB.glp: num(x), the value variable x or the
 # number x; times(num(k), A); nschema(Name, Vars,
-# Constraint, Roles) over gt, le, succ and or (README, "Writing a
-# contract").  GB, the bonds, is Currencies' (programs/currencies/bonds/
+# Constraint, Roles), the constraint a conjunction of linear equalities and
+# inequalities (def:numbers; README, "Writing a contract").  GB, the bonds, is Currencies' (programs/currencies/bonds/
 # GB.glp at 793a4ddf, GB extending GKK, twenty-one schemas): meet its
 # introductory act, unobstructed; every predicate of traceable provenance,
 # date naming no agent and coin and bond naming a role or an agent variable
@@ -1315,7 +1315,8 @@ check_eq "a contract declaring friend reflexive prints the declaration first" \
 # Alice requires.  So it is syntactically grassroots.  A binding sends a
 # value variable to a value and a multiplicity to a positive whole number,
 # and an introduction chooses its own values (def:binding-numbers; the
-# appendix "Values in Act Schemas"), so no answer is left open.
+# appendix "Values in Act Schemas"), and whether some choice meets the
+# clauses is decided exactly, the constraints being linear (linear.glp).
 echo "--- numbers (GSC, Section 3.2 and its appendix) ---"
 GBT=$(term "$GLP_DIR/programs/currencies/bonds/GB.glp" gb)
 check "GB's contract is read from programs/currencies/bonds/GB.glp, with numbers, a multiplicity and a constraint" \
@@ -1432,17 +1433,63 @@ check_eq "a multiplicity written as 0 is refused" \
          "V = malformed([multiplicity_not_whole(mint, 1, atom(coin, [role(1)]))])" "$(mmv 3)"
 check "and the message names the fault" \
       "mint at role 1 carries a multiplicity that is not a positive whole number;" "$(printf '%s\n' "$out" | tr '\n' ' ')"
-nm_mint_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\mathit{bond}(\Alice,d)\},\\&\text{provided}\mathit{identity},\mathit{date}(t)\inc_{\Alice},\\&\text{provided}d>t\lord\le0,\\&\text{guardedby}\{\Alice\}\end{align*}'
-check_eq "nm_bonds's mint compiles its constraint, or as \\lor" \
+nm_mint_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\mathit{bond}(\Alice,d)\},\\&\text{provided}\mathit{identity},\mathit{date}(t)\inc_{\Alice},\\&\text{provided}d>t\landd\let+30,\\&\text{guardedby}\{\Alice\}\end{align*}'
+check_eq "nm_bonds's mint compiles its constraint, a conjunction, and as \\land and a sum as +" \
          "$nm_mint_display" "$(compiled nm_bonds mint)"
 nm_mint_notation=$(cat <<'EOF'
-mint(Alice?; d, k, t) | d > t or d <= 0 :
+mint(Alice?; d, k, t) | d > t, d <= t + 30 :
     at Alice: identity, date(t), +k.bond(Alice, d)
 EOF
 )
 NMB=$(run "contract_named(nm_bonds, C)." | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
-check_eq "nm_bonds's mint prints its constraint after its head, or as or" \
+check_eq "nm_bonds's mint prints its constraint after its head, and as a comma" \
          "$nm_mint_notation" "$(notation "$NMB" | one_schema mint)"
+
+# Every case is decided exactly (linear.glp): whether some choice of the
+# introduction's values meets the clauses is whether a formula of linear
+# equalities and inequalities has a solution, the values rational and a
+# multiplicity a positive whole number, the bindings of a schema that would
+# add an atom the act forbids eliminated first.  nm_two_between's meet has
+# introductions only where 0 < x < y < 1, which no two values within one of
+# a number the contract writes, or halfway between two, satisfy.  nm_cover's
+# meet forbids date(x), which low adds where x <= 5 and high where x >= 5,
+# so at every introduction; nm_gap's high adds it where x >= 6, and an
+# introduction with 5 < x < 6 is unobstructed.  nm_evens's count adds
+# date(2j), j a multiplicity and so whole, and meet's multiplicity k forbids
+# date(k), so the introduction with k = 1 is unobstructed; nm_counts's count
+# adds date(j), every whole number, so none is.  nm_half's meet has the
+# multiplicity k with 2k = 3, which no whole number satisfies: no
+# introduction.  nm_joint's meet requires score(x), supplied where x >= 5,
+# and forbids date(x), added where x >= 5: each clause is met at some x, and
+# both at none.  A constraint that is not a conjunction of linear equalities
+# and inequalities is refused: nm_or's disjunction and nm_nonlinear's
+# product of two value variables.
+out=$(run "check_named(nm_two_between, V)." "check_named(nm_cover, V)." \
+          "check_named(nm_gap, V)." "check_named(nm_evens, V)." \
+          "check_named(nm_counts, V)." "check_named(nm_half, V)." \
+          "check_named(nm_joint, V)." "check_named(nm_or, V)." \
+          "check_named(nm_nonlinear, V)." "compile_named(nm_nonlinear).")
+lnv() { printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n "$1p"; }
+check_eq "two values of the introductory act, related, chosen strictly between two numbers the contract writes: syntactically grassroots" \
+         "V = syntactically_grassroots" "$(lnv 1)"
+check_eq "a value forbidden at the introductory act, added by one schema below 5 and by another above 5: obstructed at every introduction" \
+         "V = not_grassroots([obstructed(meet, 1, atom(date, [num(x)]), blocked_by(low, 1, atom(date, [num(t)])))])" "$(lnv 2)"
+check_eq "added below 5 and above 6, the introduction choosing a value between: syntactically grassroots" \
+         "V = syntactically_grassroots" "$(lnv 3)"
+check_eq "a multiplicity of the act forbidden as a date, added at the even whole numbers, the introduction choosing 1: syntactically grassroots" \
+         "V = syntactically_grassroots" "$(lnv 4)"
+check_eq "added at every whole number: obstructed at every introduction" \
+         "V = not_grassroots([obstructed(meet, 1, atom(date, [num(k)]), blocked_by(count, 1, atom(date, [num(t)])))])" "$(lnv 5)"
+check_eq "a multiplicity with 2k = 3, which no whole number satisfies: no introduction" \
+         "V = not_grassroots([no_introductory_act])" "$(lnv 6)"
+check_eq "each clause met at some value of the introduction, and both at none: obstructed jointly" \
+         "V = not_grassroots([obstructed_jointly(meet)])" "$(lnv 7)"
+check_eq "a constraint with a disjunction is refused" \
+         "V = malformed([constraint_not_conjunction(mint, or(gt(num(d), num(t)), le(num(d), num(0))))])" "$(lnv 8)"
+check_eq "a constraint with a product of two value variables is refused" \
+         "V = malformed([constraint_not_linear(mint, mul(num(d), num(k)))])" "$(lnv 9)"
+check "and it is not compiled, the fault named" \
+      "mint carries a constraint that is not linear;" "$(printf '%s\n' "$out" | tr '\n' ' ')"
 
 # The malformations the passage forbids, each refused (README, "The
 # verdicts"): a role that does not guard and changes nothing, numbers or no

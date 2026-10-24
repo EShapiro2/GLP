@@ -30,7 +30,9 @@
 %% refuel(bob, 2), adding two copies of fuel; his machine then takes step,
 %% an unguarded part he opens, once for each unit, each attempt asking nobody,
 %% his level 1 and then 2, and no more, the fuel spent.  Bob, at level 2, asks
-%% to know alice and to befriend her, and she answers yes.  Alice claims 3 of
+%% to befriend alice, befriend a meeting schema, so his request is the cold
+%% call, the hello, which asks her, and she answers yes, her request of it
+%% (vGLP, Section 5.4, "The compilation").  Alice claims 3 of
 %% bob, claim(alice, bob, 3): bob's machine votes no, his level 2 short of 3,
 %% unable, and alice's screen shows refused(claim(alice, bob, 3), bob,
 %% unable([], [])), bob's state holding every atom the schema requires there
@@ -45,9 +47,9 @@
 Class    ::= befriend(Peer, Peer) ; start(Peer) ; refuel(Peer, Integer) ; step(Peer, Integer)
            ; claim(Peer, Peer, Integer).
 Proposal ::= befriend(Peer, Peer) ; start(Peer) ; refuel(Peer, Integer) ; claim(Peer, Peer, Integer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -55,11 +57,13 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; started ; level(Integer) ; fuel ; claimed(Peer, Integer) ; honoured(Peer, Integer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -72,8 +76,7 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_numbers(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_numbers(LA?, LB?, N?) :-
-    pair([req(known(bob)), wait(known(bob)),
-          approval(befriend(bob, alice), yes),
+    pair([approval(befriend(bob, alice), yes),
           wait(holds(friend(bob))),
           own([A1], propose(claim(A1?, bob, 3))),
           wait(refused(claim(alice, bob, 3), bob, unable([], []))),
@@ -81,7 +84,6 @@ play_numbers(LA?, LB?, N?) :-
           wait(holds(claimed(bob, 2)))],
          [own([B1], propose(start(B1?))), wait(holds(started)),
           own([B2], propose(refuel(B2?, 2))), wait(holds(level(2))),
-          req(known(alice)), wait(known(alice)),
           own([B3], propose(befriend(B3?, alice))),
           wait(holds(honoured(alice, 2)))],
          LA, LB, N).

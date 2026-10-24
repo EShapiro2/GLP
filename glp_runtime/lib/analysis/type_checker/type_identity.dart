@@ -656,7 +656,7 @@ String opaqueInstanceIdentityHex(
         ProcDecl template, List<String> labels, TypeEnvironment env) =>
     hex(hashOfPrint(canonicalOpaqueInstancePrint(template, labels, env)));
 
-/// Why `find_type(P/N, H, Type)` assigns no identity
+/// Why `find_type(P/N, Hs, Type)` assigns no identity
 /// ([TypeIdentityTables.opaqueInstanceIdentity]).
 class OpaqueInstanceRefusal implements Exception {
   final String reason;
@@ -681,15 +681,12 @@ class OpaqueAlternativeError implements Exception {
 /// What a guest's exports record for an entry declared as the instance of a
 /// declaration D with type parameters X_1, ..., X_k at its types T_1, ...,
 /// T_k: [entry], the type identity of D⟨ι(T_1), ..., ι(T_k)⟩, and [types],
-/// ι(T_1), ..., ι(T_k) in the order of D's parameters (TGLP modules.tex,
-/// Dynamic Activation, "Opaque types": "A guest M whose entry is the template
-/// D's instance at its type T records in its exports, for its entry, the type
-/// identity of D⟨ι(T)⟩, and with it ι(T)").
-///
-/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: the papers
-/// define the record for a one-parameter template; a template of k
-/// parameters records the list of k identities, one per parameter in
-/// declaration order, a one-parameter template the list of one.
+/// the list ι(T_1), ..., ι(T_k) in the order of D's parameters (TGLP
+/// modules.tex, Dynamic Activation, "Opaque types": "A guest M records in its
+/// exports, for each entry that is a template D's instance at its types T̄,
+/// the type identity of D⟨ι(T̄)⟩, and with it the list ι(T̄)"; Implementation
+/// Notes, "The identity of an opaque instance": "the list ι(T̄), one identity
+/// per parameter in declaration order").
 class OpaqueEntry {
   final String entry;
   final List<String> types;
@@ -724,12 +721,11 @@ class OpaqueEntry {
 /// Each ι(T_i) is then taken in [entryEnv], where T_i is defined, and
 /// D⟨ι(T_1), ..., ι(T_k)⟩ in [templateEnv], where it need not be.
 ///
-/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: "Opaque
-/// types" defines the record for a template with one type parameter; a
-/// template with k records the k identities ([OpaqueEntry]).  A parameter
-/// that occurs in D only as a bare alternative of a type is bound to no type
-/// of [entry]'s, and one that occurs as an alternative at all has no opaque
-/// instance ([OpaqueAlternativeError]): neither has a record.
+/// A parameter that occurs in D only as a bare alternative of a type is bound
+/// to no type of [entry]'s, and one that occurs as an alternative at all has
+/// no opaque instance ([OpaqueAlternativeError]; Definition "Type Identity of
+/// a Type, Opaque Instance": "Where no X_i occurs as an alternative of a type
+/// definition"): neither has a record.
 OpaqueEntry? opaqueEntryOf({
   required ProcDecl entry,
   required TypeEnvironment entryEnv,
@@ -1203,8 +1199,9 @@ class _Pair {
 ///
 /// [opaque] is recorded beside [exported]: for each export that is a guest's
 /// entry, declared as the instance of a parameterised declaration D of an
-/// ancestor scope at its type T, the type identity of D⟨ι(T)⟩ and ι(T)
-/// ([OpaqueEntry]; TGLP modules.tex, Dynamic Activation, "Opaque types").  Its
+/// ancestor scope at its types T̄, the type identity of D⟨ι(T̄)⟩ and the list
+/// ι(T̄) ([OpaqueEntry]; TGLP modules.tex, Dynamic Activation, "Opaque
+/// types").  Its
 /// key is in [exported] too, at the entry's own identity, as before.
 class TypeIdentityTables {
   final Map<String, String> declared;
@@ -1242,16 +1239,14 @@ class TypeIdentityTables {
 
   /// The type identity of the opaque instance at [labels] of the
   /// parameterised declaration of [nameArity] in this scope: what
-  /// `find_type(P/N, Hs, Type)` yields (GLP-Spec appendix-guards, "Dynamic
-  /// activation"; TGLP modules.tex, Definition "Type Identity of a Type,
-  /// Opaque Instance").  Throws [OpaqueInstanceRefusal] where [nameArity] is
-  /// not declared in this scope, or its declaration has not one type
-  /// parameter for each label, or the instance has no identity
+  /// `find_type(P/N, Hs, Type)` yields, [labels] being Hs, "a list of type
+  /// identities, one per type parameter of the declaration in declaration
+  /// order" (GLP-Spec appendix-guards, "Dynamic activation"; TGLP
+  /// modules.tex, Definition "Type Identity of a Type, Opaque Instance").
+  /// Throws [OpaqueInstanceRefusal] where no parameterised declaration of
+  /// [nameArity] is in this scope, or "the length of Hs is not the number of
+  /// its type parameters", or the instance has no identity
   /// ([OpaqueAlternativeError]).
-  ///
-  /// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: [labels]
-  /// is the list of type identities, one per type parameter of the template
-  /// in declaration order, a one-parameter template's the list of one.
   String opaqueInstanceIdentity(String nameArity, List<String> labels) {
     final build = _scope;
     if (build == null) {
@@ -1264,15 +1259,15 @@ class TypeIdentityTables {
       if (declared.containsKey(nameArity) ||
           unresolved.contains(nameArity)) {
         throw OpaqueInstanceRefusal('$nameArity is declared in the caller\'s '
-            'scope with no type parameter, not ${labels.length}');
+            'scope with no type parameter, so it has no opaque instance');
       }
       throw OpaqueInstanceRefusal(
           '$nameArity is not declared in the caller\'s scope');
     }
     if (template.typeParams.length != labels.length) {
-      throw OpaqueInstanceRefusal('the declaration of $nameArity has '
-          '${template.typeParams.length} type parameters, and '
-          '${labels.length} type identities are given');
+      throw OpaqueInstanceRefusal('the length of the list of type '
+          'identities, ${labels.length}, is not the number of type parameters '
+          'of the declaration of $nameArity, ${template.typeParams.length}');
     }
     try {
       return opaqueInstanceIdentityHex(template, labels, scope);

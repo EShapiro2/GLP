@@ -84,14 +84,12 @@ Content ::= String ; Module.
 
 % Arithmetic expressions: the union of Number with the arithmetic operators and
 % functions of the catalogue, each over Exp (TGLP appendix-root-self.tex) --- the
-% binary +, -, *, /, //, mod and pow, unary negation (neg, as -X parses), and the
-% unary abs, sqrt, sin, cos, tan, asin, acos, atan, exp, ln, log, integer, real,
-% round, floor and ceil.  := evaluates an Exp, one clause per operator or
-% function, below.
+% binary +, -, *, /, //, mod and pow, and the unary abs, sqrt, sin, cos, tan,
+% asin, acos, atan, exp, ln, log, integer, real, round, floor and ceil.  :=
+% evaluates an Exp, one clause per operator or function, below.
 Exp ::= Number
       ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp)
       ; mod(Exp, Exp) ; pow(Exp, Exp)
-      ; neg(Exp)
       ; abs(Exp) ; sqrt(Exp) ; sin(Exp) ; cos(Exp) ; tan(Exp)
       ; asin(Exp) ; acos(Exp) ; atan(Exp) ; exp(Exp) ; ln(Exp) ; log(Exp)
       ; integer(Exp) ; real(Exp) ; round(Exp) ; floor(Exp) ; ceil(Exp).
@@ -189,7 +187,6 @@ procedure '_mul'(Number?, Number?, Number).
 procedure '_div'(Number?, Number?, Number).
 procedure '_idiv'(Number?, Number?, Integer).
 procedure '_mod'(Number?, Number?, Integer).
-procedure '_neg'(Number?, Number).
 
 % Math
 procedure '_abs'(Number?, Number).
@@ -397,15 +394,6 @@ Result? := X mod Y :-
   X1 := X?,
   Y1 := Y?,
   Result := X1? mod Y1?.
-
-% Unary negation
-Result? := -X :-
-  number(X?) |
-  '_neg'(X?, Result).
-Result? := -X :-
-  otherwise |
-  X1 := X?,
-  Result := -X1?.
 
 % Absolute value
 Result? := abs(X) :-

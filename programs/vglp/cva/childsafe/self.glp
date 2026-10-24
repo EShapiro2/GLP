@@ -11,13 +11,15 @@
 %% carries.
 %%
 %% play_childsafe: four agents, alice and bob parents, carol alice's child and
-%%   dave bob's.  alice enrols carol and bob dave, each child asked on its
-%%   approval question; bob then befriends alice, who is asked.  alice and dave each
-%%   request the other known, the Discover the initiator needs before it
-%%   proposes; alice proposes cbefriend(carol, dave, alice, bob), carol, dave
-%%   and bob are asked and answer yes, and it commits at all four.  Only
-%%   alice, of its four guards, knows every participant: carol knows alice
-%%   alone, and bob and dave each other and alice.  alice's Commit introduces
+%%   dave bob's.  alice enrols carol and bob dave, each child asked by the
+%%   approval question the hello carrying the enrolment asks, enrol a meeting
+%%   schema of the contract (vGLP, Section 5.4, "The compilation"); bob then
+%%   befriends alice, who is asked likewise.  alice befriends dave, dave asked
+%%   likewise, the meeting by which alice comes to know dave, the Discover the
+%%   initiator needs before it proposes; alice proposes cbefriend(carol, dave,
+%%   alice, bob), carol, dave and bob are asked and answer yes, and it commits
+%%   at all four.  Only alice, of its four guards, knows every participant:
+%%   carol knows alice alone, and bob and dave each other and alice.  alice's Commit introduces
 %%   every two of bob, carol and dave to each other, once per pair, and each
 %%   comes to know the others by the ihellos they exchange, bob and dave
 %%   knowing each other already (vGLP e2bc4f4, Definition "Deciding", Commit;
@@ -33,9 +35,9 @@ Class    ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
            ; cbefriend(Peer, Peer, Peer, Peer).
 Proposal ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
            ; cbefriend(Peer, Peer, Peer, Peer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -43,11 +45,13 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; child(Peer) ; parent(Peer) ; approved(Peer, Peer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -61,26 +65,22 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 exported procedure play_childsafe(Stream(_), Stream(_), Stream(_), Stream(_),
     Stream(Sent(Cargo))).
 play_childsafe(LA?, LB?, LC?, LD?, N?) :-
-    quartet([req(known(carol)), wait(known(carol)),
-             own([A1], propose(enrol(A1?, carol))),
+    quartet([own([A1], propose(enrol(A1?, carol))),
              wait(holds(child(carol))),
-             req(known(bob)),
              approval(befriend(bob, alice), yes),
              wait(holds(friend(bob))),
-             req(known(dave)), wait(known(dave)),
+             own([A0], propose(befriend(A0?, dave))),
+             wait(holds(friend(dave))),
              own([A2], propose(cbefriend(carol, dave, A2?, bob)))],
-            [req(known(dave)), wait(known(dave)),
-             own([B1], propose(enrol(B1?, dave))),
+            [own([B1], propose(enrol(B1?, dave))),
              wait(holds(child(dave))),
-             req(known(alice)), wait(known(alice)),
              own([B2], propose(befriend(B2?, alice))),
              wait(holds(friend(alice))),
              approval(cbefriend(carol, dave, alice, bob), yes)],
-            [req(known(alice)),
-             approval(enrol(alice, carol), yes),
+            [approval(enrol(alice, carol), yes),
              approval(cbefriend(carol, dave, alice, bob), yes)],
-            [req(known(bob)), req(known(alice)),
-             approval(enrol(bob, dave), yes),
+            [approval(enrol(bob, dave), yes),
+             approval(befriend(alice, dave), yes),
              approval(cbefriend(carol, dave, alice, bob), yes)],
             LA, LB, LC, LD, N).
 
