@@ -22,6 +22,20 @@ befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
 ;
+enter(Peer, Peer, Speech)
+;
+agent_meet(Peer, Peer, Peer, Speech)
+;
+agents_meet(Peer, Peer, Peer, Peer, Speech, Speech)
+;
+agent_befriend(Peer, Peer, Peer)
+;
+agents_befriend(Peer, Peer, Peer, Peer)
+;
+agent_unfriend(Peer, Peer, Peer)
+;
+retire(Peer, Peer)
+;
 sign(Peer, Speech)
 ;
 message(Peer, Peer, Speech)
@@ -60,6 +74,20 @@ befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
 ;
+enter(Peer, Peer, Speech)
+;
+agent_meet(Peer, Peer, Peer, Speech)
+;
+agents_meet(Peer, Peer, Peer, Peer, Speech, Speech)
+;
+agent_befriend(Peer, Peer, Peer)
+;
+agents_befriend(Peer, Peer, Peer, Peer)
+;
+agent_unfriend(Peer, Peer, Peer)
+;
+retire(Peer, Peer)
+;
 sign(Peer, Speech)
 ;
 message(Peer, Peer, Speech)
@@ -85,18 +113,32 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract's pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, and Gs the groups it names, group(J, K), the leader at place J and the group's name at place K, which a group the view lists fills; meeting(F, I) for a meeting schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").
 Approval =::= approval_sentence.
-Menu =::= social_menu([label(establish, "Establish"), act(establish, "Contacts", 1, [], []), label(meet, "Meet"), label(meet, 2, "person"), act(meet, "Contacts", 1, [2], []), meeting(meet, 2), label(introduce, "Introduce"), label(introduce, 3, "person"), act(introduce, "Contacts", 1, [2], []), label(befriend, "Befriend"), act(befriend, "Friends", 1, [2], []), label(unfriend, "Unfriend"), act(unfriend, "Friends", 1, [2], []), label(message, "Message"), label(message, 3, "text"), act(message, "Groups", 1, [2], []), label(create, "Create"), label(create, 2, "name"), act(create, "Groups", 1, [], []), label(join, "Join"), act(join, "Groups", 1, [2], [group(1, 3)]), label(leave, "Leave"), act(leave, "Groups", 2, [], [group(1, 3)]), label(close, "Close"), act(close, "Groups", 1, [], [group(1, 2)]), label(post, "Post"), label(post, 3, "text"), act(post, "Groups", 1, [], [group(2, 4)]), label(post_own, "Post own"), label(post_own, 2, "text"), act(post_own, "Groups", 1, [], [group(1, 3)]), label(sign, "Sign"), label(sign, 2, "text"), act(sign, "Items", 1, [], []), label(forward, "Forward"), act(forward, "Items", 1, [2], []), text(forward, [say("You warrant that you know personally the agent you received this from.")]), label(post_forward, "Post forward"), act(post_forward, "Items", 1, [], [group(2, 4)]), text(post_forward, [say("You warrant that you know personally the agent you received this from.")])])
+Menu =::= social_menu([label(establish, "Establish"), act(establish, "Contacts", 1, [], []), label(meet, "Meet"), label(meet, 2, "person"), act(meet, "Contacts", 1, [2], []), meeting(meet, 2), label(introduce, "Introduce"), label(introduce, 3, "person"), act(introduce, "Contacts", 1, [2], []), label(befriend, "Befriend"), act(befriend, "Friends", 1, [2], []), label(unfriend, "Unfriend"), act(unfriend, "Friends", 1, [2], []), label(message, "Message"), label(message, 3, "text"), act(message, "Groups", 1, [2], []), label(create, "Create"), label(create, 2, "name"), act(create, "Groups", 1, [], []), label(join, "Join"), act(join, "Groups", 1, [2], [group(1, 3)]), label(leave, "Leave"), act(leave, "Groups", 2, [], [group(1, 3)]), label(close, "Close"), act(close, "Groups", 1, [], [group(1, 2)]), label(post, "Post"), label(post, 3, "text"), act(post, "Groups", 1, [], [group(2, 4)]), label(post_own, "Post own"), label(post_own, 2, "text"), act(post_own, "Groups", 1, [], [group(1, 3)]), label(enter, "Enter"), label(enter, 2, "name"), label(enter, 3, "code"), act(enter, "AI agents", 1, [2], []), meeting(enter, 2), label(sign, "Sign"), label(sign, 2, "text"), act(sign, "AI agents", 1, [], []), label(agent_meet, "Agent meet"), act(agent_meet, "AI agents", 1, [2, 3], []), label(agents_meet, "Agents meet"), act(agents_meet, "AI agents", 1, [2, 3, 4], []), label(agent_befriend, "Agent befriend"), act(agent_befriend, "AI agents", 1, [2, 3], []), label(agents_befriend, "Agents befriend"), act(agents_befriend, "AI agents", 1, [2, 3, 4], []), label(agent_unfriend, "Agent unfriend"), act(agent_unfriend, "AI agents", 3, [1, 2], []), label(retire, "Retire"), act(retire, "AI agents", 1, [2], []), label(forward, "Forward"), act(forward, "Items", 1, [2], []), text(forward, [say("You warrant that you know personally the agent you received this from.")]), label(post_forward, "Post forward"), act(post_forward, "Items", 1, [], [group(2, 4)]), text(post_forward, [say("You warrant that you know personally the agent you received this from.")])])
 .
 
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(List(Atom), List(Key), List(Approved)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
 Atom ::=
 identity
 ;
+retired
+;
 knows(Peer)
+;
+agent
 ;
 friend(Peer)
 ;
+principal(Peer)
+;
+principal_of(Peer)
+;
+agent_of(Peer, Peer, Speech)
+;
 item(Speech)
+;
+attestation(Speech)
+;
+retired_of(Peer)
 ;
 authored(Speech)
 ;
@@ -114,11 +156,25 @@ delivered(Speech, Peer, Speech)
 procedure atom_of(GAtom?, Shown).
 atom_of(g(identity, []), shown(identity))
 .
+atom_of(g(retired, []), shown(retired))
+.
 atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
+.
+atom_of(g(agent, []), shown(agent))
 .
 atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
 .
+atom_of(g(principal, [p(V1)]), shown(principal(V1?)))
+.
+atom_of(g(principal_of, [p(V1)]), shown(principal_of(V1?)))
+.
+atom_of(g(agent_of, [p(V1), p(V2), s(V3)]), shown(agent_of(V1?, V2?, V3?)))
+.
 atom_of(g(item, [s(V1)]), shown(item(V1?)))
+.
+atom_of(g(attestation, [s(V1)]), shown(attestation(V1?)))
+.
+atom_of(g(retired_of, [p(V1)]), shown(retired_of(V1?)))
 .
 atom_of(g(authored, [s(V1)]), shown(authored(V1?)))
 .
@@ -135,41 +191,55 @@ atom_of(g(delivered, [s(V1), p(V2), s(V3)]), shown(delivered(V1?, V2?, V3?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, [svar(x)], [rs(guarded, [atom(item, [svar(x)]), atom(authored, [svar(x)])], [], [atom(identity, [])], [])]), schema(message, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)])], []), rs(unguarded, [atom(item, [svar(x)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(forward, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)])], [atom(authored, [svar(x)])]), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))])])]), schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(2, 1, listed, [svar(n)])]), schema(drop, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), schema(post_own, [svar(x), svar(n)], [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(1), n))])], [atom(posted, [svar(x), svar(n)])])]), schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]), schema(post_forward, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], [atom(authored, [svar(x)])]), rs(unguarded, [atom(posted, [sgn(x, 1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]), schema(deliver, [svar(y), svar(n)], [rs(unguarded, [atom(delivered, [svar(y), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(y), svar(n)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(authored, [svar(y)]), atom(delivered, [svar(y), role(2), svar(n)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]), schema(deliver_own, [svar(y), svar(n)], [rs(unguarded, [atom(delivered, [svar(y), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(y), svar(n)]), atom(authored, [svar(y)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(delivered, [svar(y), role(2), svar(n)])]), rs(unguarded, [atom(item, [svar(y)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(agent, []), atom(retired, [])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [atom(agent, []), atom(retired, [])])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], [atom(agent, []), atom(retired, [])]), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(agent, []), atom(retired, [])])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(agent, []), atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(agent, []), atom(retired, []), atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(retired, []), atom(principal, [role(2)]), atom(principal_of, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(enter, [svar(x)], [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)]), atom(knows, [role(2)]), atom(agent_of, [role(2), role(1), sgn(x, 1)])], [], [atom(identity, []), atom(item, [svar(x)])], [atom(agent, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(agent, []), atom(principal, [role(1)]), atom(friend, [role(1)]), atom(knows, [role(1)]), atom(attestation, [sgn(x, 1)])], [], [], [atom(identity, []), atom(retired, [])])]), schema(agent_meet, [svar(y)], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(3)]), atom(attestation, [svar(y)])], [atom(retired, [])]), rs(guarded, [atom(knows, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [], [atom(identity, [])], [atom(agent, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [atom(retired, [])])]), schema(agents_meet, [svar(y), svar(z)], [rs(guarded, [atom(knows, [role(2)]), atom(agent_of, [role(2), role(4), svar(z)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(3)]), atom(attestation, [svar(y)])], [atom(retired, [])]), rs(guarded, [atom(knows, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(4)]), atom(attestation, [svar(z)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(2)]), atom(agent_of, [role(2), role(4), svar(z)])], [atom(retired, [])])]), schema(agent_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(agent, []), atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])])]), schema(agents_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(2)])], [atom(retired, [])])]), schema(agent_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(principal, [role(3)])], [atom(principal, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])])]), schema(retire, [], [rs(guarded, [atom(retired_of, [role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(principal_of, [role(2)])], [atom(retired, [])]), rs(unguarded, [atom(retired, [])], [atom(friend, [role(1)])], [atom(identity, []), atom(agent, []), atom(principal, [role(1)])], [atom(retired, [])])]), schema(sign, [svar(x)], [rs(guarded, [atom(item, [svar(x)]), atom(authored, [svar(x)])], [], [atom(identity, [])], [atom(retired, [])])]), schema(message, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)])], [atom(retired, [])]), rs(unguarded, [atom(item, [svar(x)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(forward, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)])], [atom(authored, [svar(x)]), atom(retired, [])]), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(agent, []), atom(retired, []), atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], [atom(agent, []), atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(agent, []), atom(retired, []), atom(member, [nterm(ext(own(1), n))])])]), schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [atom(retired, [])])]), lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(2, 1, listed, [svar(n)])]), schema(drop, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]), schema(post_own, [svar(x), svar(n)], [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(1), n))])], [atom(retired, []), atom(posted, [svar(x), svar(n)])])]), schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], [atom(retired, [])]), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]), schema(post_forward, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], [atom(authored, [svar(x)]), atom(retired, [])]), rs(unguarded, [atom(posted, [sgn(x, 1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]), schema(deliver, [svar(y), svar(n)], [rs(unguarded, [atom(delivered, [svar(y), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(y), svar(n)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(authored, [svar(y)]), atom(delivered, [svar(y), role(2), svar(n)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]), schema(deliver_own, [svar(y), svar(n)], [rs(unguarded, [atom(delivered, [svar(y), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(y), svar(n)]), atom(authored, [svar(y)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(delivered, [svar(y), role(2), svar(n)])]), rs(unguarded, [atom(item, [svar(y)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
-schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]))
+schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])]))
 .
-schema_entry(meet, schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]))
+schema_entry(meet, schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(agent, []), atom(retired, [])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [atom(agent, []), atom(retired, [])])]))
 .
-schema_entry(introduce, schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(introduce, schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], [atom(agent, []), atom(retired, [])]), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(agent, []), atom(retired, [])])]))
 .
-schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]))
+schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(agent, []), atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(agent, []), atom(retired, []), atom(friend, [role(1)])])]))
 .
-schema_entry(unfriend, schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]))
+schema_entry(unfriend, schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(retired, []), atom(principal, [role(2)]), atom(principal_of, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]))
 .
-schema_entry(sign, schema(sign, [svar(x)], [rs(guarded, [atom(item, [svar(x)]), atom(authored, [svar(x)])], [], [atom(identity, [])], [])]))
+schema_entry(enter, schema(enter, [svar(x)], [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)]), atom(knows, [role(2)]), atom(agent_of, [role(2), role(1), sgn(x, 1)])], [], [atom(identity, []), atom(item, [svar(x)])], [atom(agent, []), atom(retired, [])]), rs(guarded, [atom(identity, []), atom(agent, []), atom(principal, [role(1)]), atom(friend, [role(1)]), atom(knows, [role(1)]), atom(attestation, [sgn(x, 1)])], [], [], [atom(identity, []), atom(retired, [])])]))
 .
-schema_entry(message, schema(message, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)])], []), rs(unguarded, [atom(item, [svar(x)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]))
+schema_entry(agent_meet, schema(agent_meet, [svar(y)], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(3)]), atom(attestation, [svar(y)])], [atom(retired, [])]), rs(guarded, [atom(knows, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [], [atom(identity, [])], [atom(agent, []), atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [atom(retired, [])])]))
 .
-schema_entry(forward, schema(forward, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)])], [atom(authored, [svar(x)])]), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]))
+schema_entry(agents_meet, schema(agents_meet, [svar(y), svar(z)], [rs(guarded, [atom(knows, [role(2)]), atom(agent_of, [role(2), role(4), svar(z)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(3)]), atom(attestation, [svar(y)])], [atom(retired, [])]), rs(guarded, [atom(knows, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(4)]), atom(attestation, [svar(z)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)]), atom(agent_of, [role(1), role(3), svar(y)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(2)]), atom(agent_of, [role(2), role(4), svar(z)])], [atom(retired, [])])]))
 .
-schema_entry(create, schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)])])]))
+schema_entry(agent_befriend, schema(agent_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(agent, []), atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])])]))
 .
-schema_entry(join, schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(member, [nterm(ext(own(1), n))])])]))
+schema_entry(agents_befriend, schema(agents_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(agent, []), atom(principal, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(2)])], [atom(retired, [])])]))
 .
-schema_entry(leave, schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]))
+schema_entry(agent_unfriend, schema(agent_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(principal, [role(3)])], [atom(principal, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])])]))
 .
-schema_entry(close, lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(2, 1, listed, [svar(n)])]))
+schema_entry(retire, schema(retire, [], [rs(guarded, [atom(retired_of, [role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(principal_of, [role(2)])], [atom(retired, [])]), rs(unguarded, [atom(retired, [])], [atom(friend, [role(1)])], [atom(identity, []), atom(agent, []), atom(principal, [role(1)])], [atom(retired, [])])]))
+.
+schema_entry(sign, schema(sign, [svar(x)], [rs(guarded, [atom(item, [svar(x)]), atom(authored, [svar(x)])], [], [atom(identity, [])], [atom(retired, [])])]))
+.
+schema_entry(message, schema(message, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)])], [atom(retired, [])]), rs(unguarded, [atom(item, [svar(x)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]))
+.
+schema_entry(forward, schema(forward, [svar(x)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)])], [atom(authored, [svar(x)]), atom(retired, [])]), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]))
+.
+schema_entry(create, schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(agent, []), atom(retired, []), atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)])])]))
+.
+schema_entry(join, schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], [atom(agent, []), atom(retired, [])]), rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(agent, []), atom(retired, []), atom(member, [nterm(ext(own(1), n))])])]))
+.
+schema_entry(leave, schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [atom(retired, [])])]))
+.
+schema_entry(close, lschema(close, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(identity, [])], [atom(retired, [])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])], [listing(2, 1, listed, [svar(n)])]))
 .
 schema_entry(drop, schema(drop, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]), rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]))
 .
-schema_entry(post_own, schema(post_own, [svar(x), svar(n)], [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(1), n))])], [atom(posted, [svar(x), svar(n)])])]))
+schema_entry(post_own, schema(post_own, [svar(x), svar(n)], [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(1), n))])], [atom(retired, []), atom(posted, [svar(x), svar(n)])])]))
 .
-schema_entry(post, schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]))
+schema_entry(post, schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(authored, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], [atom(retired, [])]), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]))
 .
-schema_entry(post_forward, schema(post_forward, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], [atom(authored, [svar(x)])]), rs(unguarded, [atom(posted, [sgn(x, 1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]))
+schema_entry(post_forward, schema(post_forward, [svar(x), svar(n)], [rs(guarded, [], [], [atom(identity, []), atom(item, [svar(x)]), atom(member, [nterm(ext(own(2), n))])], [atom(authored, [svar(x)]), atom(retired, [])]), rs(unguarded, [atom(posted, [sgn(x, 1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])], [])]))
 .
 schema_entry(deliver, schema(deliver, [svar(y), svar(n)], [rs(unguarded, [atom(delivered, [svar(y), role(2), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(posted, [svar(y), svar(n)]), atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])], [atom(authored, [svar(y)]), atom(delivered, [svar(y), role(2), svar(n)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]))
 .
@@ -198,6 +268,20 @@ binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V
 binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(unfriend(V1, V2), unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
+binding_of(enter(V1, V2, V3), enter, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?))])
+.
+binding_of(agent_meet(V1, V2, V3, V4), agent_meet, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(svar(y), s(V4?))])
+.
+binding_of(agents_meet(V1, V2, V3, V4, V5, V6), agents_meet, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(role(4), p(V4?)), b(svar(y), s(V5?)), b(svar(z), s(V6?))])
+.
+binding_of(agent_befriend(V1, V2, V3), agent_befriend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+.
+binding_of(agents_befriend(V1, V2, V3, V4), agents_befriend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(role(4), p(V4?))])
+.
+binding_of(agent_unfriend(V1, V2, V3), agent_unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+.
+binding_of(retire(V1, V2), retire, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(sign(V1, V2), sign, [b(role(1), p(V1?)), b(svar(x), s(V2?))])
 .
@@ -270,6 +354,98 @@ val_peer(role(1), B?, D?, V1)
 val_peer(role(2), B?, D?, V2)
 .
 class_of(unfriend, B, D, unfriend(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(enter, B, D, enter(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(x), B?, D?, V3)
+.
+class_of(agent_meet, B, D, agent_meet(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+,
+val_speech(svar(y), B?, D?, V4)
+.
+class_of(agents_meet, B, D, agents_meet(V1?, V2?, V3?, V4?, V5?, V6?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+,
+val_peer(role(4), B?, D?, V4)
+,
+val_speech(svar(y), B?, D?, V5)
+,
+val_speech(svar(z), B?, D?, V6)
+.
+class_of(agent_befriend, B, D, agent_befriend(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+.
+class_of(agents_befriend, B, D, agents_befriend(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+,
+val_peer(role(4), B?, D?, V4)
+.
+class_of(agent_unfriend, B, D, agent_unfriend(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+.
+class_of(retire, B, D, retire(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -451,6 +627,20 @@ name_class(befriend(V1, V2), _, befriend(V1?, V2?))
 .
 name_class(unfriend(V1, V2), _, unfriend(V1?, V2?))
 .
+name_class(enter(V1, V2, V3), _, enter(V1?, V2?, V3?))
+.
+name_class(agent_meet(V1, V2, V3, V4), _, agent_meet(V1?, V2?, V3?, V4?))
+.
+name_class(agents_meet(V1, V2, V3, V4, V5, V6), _, agents_meet(V1?, V2?, V3?, V4?, V5?, V6?))
+.
+name_class(agent_befriend(V1, V2, V3), _, agent_befriend(V1?, V2?, V3?))
+.
+name_class(agents_befriend(V1, V2, V3, V4), _, agents_befriend(V1?, V2?, V3?, V4?))
+.
+name_class(agent_unfriend(V1, V2, V3), _, agent_unfriend(V1?, V2?, V3?))
+.
+name_class(retire(V1, V2), _, retire(V1?, V2?))
+.
 name_class(sign(V1, V2), _, sign(V1?, V2?))
 .
 name_class(message(V1, V2, V3), _, message(V1?, V2?, V3?))
@@ -485,6 +675,20 @@ request_name(befriend(V1, V2), pname(befriend(V1?, V2?)))
 .
 request_name(unfriend(V1, V2), pname(unfriend(V1?, V2?)))
 .
+request_name(enter(V1, V2, V3), pname(enter(V1?, V2?, V3?)))
+.
+request_name(agent_meet(V1, V2, V3, V4), pname(agent_meet(V1?, V2?, V3?, V4?)))
+.
+request_name(agents_meet(V1, V2, V3, V4, V5, V6), pname(agents_meet(V1?, V2?, V3?, V4?, V5?, V6?)))
+.
+request_name(agent_befriend(V1, V2, V3), pname(agent_befriend(V1?, V2?, V3?)))
+.
+request_name(agents_befriend(V1, V2, V3, V4), pname(agents_befriend(V1?, V2?, V3?, V4?)))
+.
+request_name(agent_unfriend(V1, V2, V3), pname(agent_unfriend(V1?, V2?, V3?)))
+.
+request_name(retire(V1, V2), pname(retire(V1?, V2?)))
+.
 request_name(sign(V1, V2), pname(sign(V1?, V2?)))
 .
 request_name(message(V1, V2, V3), pname(message(V1?, V2?, V3?)))
@@ -509,7 +713,7 @@ request_name(_, nopname) :- otherwise | true.
 
 %% The lists the app shows, as the contract's pragmas give them, each its name and the predicate whose atoms it lists (vGLP, Section 5.4, "The contract's words").
 procedure tabs(List(Tab)).
-tabs([tab("Contacts", knows), tab("Friends", friend), tab("Groups", member), tab("Items", item)])
+tabs([tab("Contacts", knows), tab("Friends", friend), tab("Groups", member), tab("AI agents", principal), tab("Items", item)])
 .
 
 %% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer's that Me is in, its persons filled in from the binding C names; none, [], where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).
@@ -556,11 +760,61 @@ ground(Me?)
 |
 ask_of([q(V2?, [person(V1?), text(" asks you to join their group.")])], Me?, Ws)
 .
+sentence_of(agent_meet(V1, V2, _, _), Me, Ws?)
+:-
+ground(V2?)
+,
+ground(V1?)
+,
+ground(Me?)
+|
+ask_of([q(V2?, [person(V1?), text(", an AI agent, asks to meet you.")])], Me?, Ws)
+.
+sentence_of(agents_meet(V1, V2, _, _, _, _), Me, Ws?)
+:-
+ground(V2?)
+,
+ground(V1?)
+,
+ground(Me?)
+|
+ask_of([q(V2?, [person(V1?), text(", an AI agent, asks to meet you.")])], Me?, Ws)
+.
+sentence_of(agent_befriend(V1, V2, _), Me, Ws?)
+:-
+ground(V2?)
+,
+ground(V1?)
+,
+ground(Me?)
+|
+ask_of([q(V2?, [person(V1?), text(", an AI agent, asks to befriend you.")])], Me?, Ws)
+.
+sentence_of(agents_befriend(V1, V2, _, _), Me, Ws?)
+:-
+ground(V2?)
+,
+ground(V1?)
+,
+ground(Me?)
+|
+ask_of([q(V2?, [person(V1?), text(", an AI agent, asks to befriend you.")])], Me?, Ws)
+.
 sentence_of(_, _, []) :- otherwise | true.
 
 %% The peer a request name N of a meeting part names beside the agent Me, peer(Q), or none, nopeer: the meeting schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
 meeting_peer(meet(V1, V2), Me, P?)
+:-
+ground(V1?)
+,
+ground(V2?)
+,
+ground(Me?)
+|
+meet_other(V1?, V2?, Me?, P)
+.
+meeting_peer(enter(V1, V2, _), Me, P?)
 :-
 ground(V1?)
 ,

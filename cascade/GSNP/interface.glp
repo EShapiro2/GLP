@@ -7,10 +7,10 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), meet('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), sign('Peer', 'Speech'), message('Peer', 'Peer', 'Speech'), forward('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'List'('Peer'), 'Speech'), drop('Peer', 'Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), post_forward('Peer', 'Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Speech'), deliver_own('Peer', 'Peer', 'Speech', 'Speech')]),
-  type('Proposal', [establish('Peer'), meet('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), sign('Peer', 'Speech'), message('Peer', 'Peer', 'Speech'), forward('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), post_forward('Peer', 'Peer', 'Speech', 'Speech')]),
+  type('Class', [establish('Peer'), meet('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), enter('Peer', 'Peer', 'Speech'), agent_meet('Peer', 'Peer', 'Peer', 'Speech'), agents_meet('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Speech'), agent_befriend('Peer', 'Peer', 'Peer'), agents_befriend('Peer', 'Peer', 'Peer', 'Peer'), agent_unfriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer'), sign('Peer', 'Speech'), message('Peer', 'Peer', 'Speech'), forward('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'List'('Peer'), 'Speech'), drop('Peer', 'Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), post_forward('Peer', 'Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Speech'), deliver_own('Peer', 'Peer', 'Speech', 'Speech')]),
+  type('Proposal', [establish('Peer'), meet('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), enter('Peer', 'Peer', 'Speech'), agent_meet('Peer', 'Peer', 'Peer', 'Speech'), agents_meet('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Speech'), agent_befriend('Peer', 'Peer', 'Peer'), agents_befriend('Peer', 'Peer', 'Peer', 'Peer'), agent_unfriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer'), sign('Peer', 'Speech'), message('Peer', 'Peer', 'Speech'), forward('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), post_forward('Peer', 'Peer', 'Speech', 'Speech')]),
   type('Request', [propose('Proposal')]),
-  type('Atom', [identity, knows('Peer'), friend('Peer'), item('Speech'), authored('Speech'), member('CName'), listed('Peer', 'Speech'), closed('Speech'), posted('Speech', 'Speech'), delivered('Speech', 'Peer', 'Speech')]),
+  type('Atom', [identity, retired, knows('Peer'), agent, friend('Peer'), principal('Peer'), principal_of('Peer'), agent_of('Peer', 'Peer', 'Speech'), item('Speech'), attestation('Speech'), retired_of('Peer'), authored('Speech'), member('CName'), listed('Peer', 'Speech'), closed('Speech'), posted('Speech', 'Speech'), delivered('Speech', 'Peer', 'Speech')]),
   type('Peer', ['Key']),
   type('Speech', [speech('Utterance', 'Peer')]),
   type('Utterance', [utterance('String'), 'Speech']),
@@ -943,6 +943,13 @@ interface([
   compiled(form_utterance, 2),
   compiled(join_speech_speech_2, 3),
   compiled(form_speech, 2),
+  compiled(join_proposal_enter_3, 4),
+  compiled(join_proposal_agent_meet_4, 5),
+  compiled(join_proposal_agents_meet_6, 7),
+  compiled(join_proposal_agent_befriend_3, 4),
+  compiled(join_proposal_agents_befriend_4, 5),
+  compiled(join_proposal_agent_unfriend_3, 4),
+  compiled(join_proposal_retire_2, 3),
   compiled(join_proposal_sign_2, 3),
   compiled(join_proposal_message_3, 4),
   compiled(join_proposal_forward_3, 4),
