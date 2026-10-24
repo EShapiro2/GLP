@@ -9,8 +9,10 @@
 %% and the network's log of the cargoes it carries.  Each person's first request
 %% establishes their identity, establish(P) (GKK:1, Identity), a class of one
 %% participant guarded by them and applied at its Propose, every other role of
-%% the contract requiring identity; and the two meet in person, meet(p?, q?)
-%% (GKK:2, Meeting), alice proposing it and bob asked and answering yes, before
+%% the contract requiring identity; and the two meet, meet(p?, q?) (GKK:2,
+%% Meeting), a meeting schema, alice's request the cold call, the hello, on
+%% which bob is asked, his yes his request of it (vGLP, Section 5.4, "The
+%% compilation"), its two-phase commit then run with both approvals standing, before
 %% they befriend, befriend requiring knows of the other at each role (GSG:1;
 %% programs/gsc/GSG.glp, which extends GKK).  Where a person proposes a class that names
 %% their agent, the script holds a hole there and the person writes into it
@@ -27,10 +29,10 @@
 %%   bob, and bob's machine votes yes.
 %% play_refused: alice proposes befriending bob and bob answers no; the
 %%   else-branch records his no, his Vote, an own transaction, votes no, and the
-%%   attempt aborts at both, bob its refuser, declined; alice's agent, tallying his no, ends her approval, her request, and writes the notice refused(befriend(alice, bob), bob, declined) (vGLP f0acbc1, Section 5.4, "The compilation"); alice, seeing it on her screen, requests it again, attempt 6, her requests taking numbers as her attempts do; bob is asked again and answers yes, and it commits.
+%%   attempt aborts at both, bob its refuser, declined; alice's agent, tallying his no, ends her approval, her request, and writes the notice refused(befriend(alice, bob), bob, declined) (vGLP f0acbc1, Section 5.4, "The compilation"); alice, seeing it on her screen, requests it again, attempt 8, her requests taking numbers as her attempts do; bob is asked again and answers yes, and it commits.
 %% play_menu: alice's request questions show her agent's own key, alice, and
 %%   the persons it knows (vGLP 321127a, Section 5.4): the first, asked when
-%%   her agent starts, none; she makes bob known and, once he is, proposes
+%%   her agent starts, none; she meets bob and, once he is known, proposes
 %%   befriending him, and the request question asked on reading that request
 %%   shows bob.
 %%
