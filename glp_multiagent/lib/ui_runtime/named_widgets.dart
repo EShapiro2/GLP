@@ -616,7 +616,7 @@ class SocialState {
   /// The lists the app shows, where the platform is compiled from a contract with pragmas: each its name and the predicate whose atoms in the machine state it lists, as the view carries them, `view(S, K, [tab(Name, P), ...])` (vGLP 1126f4f, Section 5.4, "The contract's words": "a list's name into the view the agent writes"); null where the view carries none, `view(S, K)`.
   final List<({String name, String predicate})>? lists;
 
-  /// The approvals the person made that are pending, as the view carries them, `view(S, K, A)` or `view(S, K, A, Ts)`: the requests by their names and the answers yes by their attempts (vGLP, Section 5.4, "The compilation": "the approvals A its person made that are pending, the requests by their names and the answers yes by their attempts").
+  /// The approvals the person made that are pending, as the view carries them, `view(S, K, A)` or `view(S, K, A, Ts)`: each by its request name (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part").
   final List<GTerm> pending;
 
   const SocialState(this.atoms, this.known,
@@ -874,7 +874,7 @@ const Set<String> coinClasses = {'mint', 'swap', 'pay', 'redeem'};
 
 /// A notice the agent writes on its output when an approval its person made, by a request or by an answer yes, ends by a refusal: `refused(P, Q, D)`, `P` the part of the refused attempt, a term of its class, `Q` its refuser, and `D` the reason, `declined`, or `unable(Lacks, Has)`, the atoms the schema requires at the refuser that its state lacks and those it forbids that its state has, as the contract writes them: "a notice refused([t]_j, q, d): [t]_j the part of the refused attempt, q its refuser and d the reason, from the abort outcome, or from the vote where the agent's own vote no refused it"; "A vote unable of a compiled program carries the atoms the schema requires at the voter that its state lacks, and those it forbids that its state has, and the notice shows them" (vGLP f0acbc1, Section 5.4, "The compilation" and "Act schemas"; the types `Output ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason)` and `Reason ::= declined ; unable(List(Atom), List(Atom))`, programs/apps/<app>/platform.vglp and programs/cssn/platform.vglp).  "When a refusal ends an approval, the person who made it is told who refused the transaction and why, declined or unable" (Section 5.4, "Triggers"): the person told is any guard whose approval the refusal ends, the one who requested the transaction or one who answered yes, so the sentence does not take the person to have proposed it ([sentence]).  It is drawn as one sentence in the tab it concerns.
 class SocialNotice {
-  /// The part of the refused attempt, a term of its class: `befriend(alice, bob)`.
+  /// The request name of the part of the refused attempt, its schema-binding: `befriend(alice, bob)` (vGLP e286276, Section 5.4, "The compilation": "a notice refused(N, q, d): N the request name of the part of the refused attempt"); on a platform printed before it, the part's term.
   final GTerm part;
 
   /// The refuser, the participant whose vote no refused the attempt.
@@ -2489,12 +2489,8 @@ class _SocialTabState extends State<SocialTab> {
     );
   }
 
-  /// The functor of an approval pending: a request's name, or the class of an answer's attempt.
-  static String _pendingFunctor(GTerm a) {
-    final (f, xs) = ctorArgs(a);
-    if (f == 'attempt' && xs.length == 5) return ctorArgs(xs[3]).$1;
-    return f;
-  }
+  /// The functor of an approval pending, its request name (vGLP e286276, Section 5.4, "The compilation": "each by its request name, a request's own and an answer's that of its attempt's part").
+  static String _pendingFunctor(GTerm a) => ctorArgs(a).$1;
 
   /// A term's words: a person by name, a speech act by its text, a group by its name and its leader's name, and any other term as the program writes it.
   static String _named(GTerm x) {
@@ -2542,9 +2538,7 @@ class _SocialTabState extends State<SocialTab> {
 
   /// An approval pending, one line: its act's button and the persons and the speech acts it names but the person (vGLP, Section 5.4, "Triggers": "the person sees their pending approvals in the view").
   Widget _wordedPending(GTerm a, RequestOffers? o) {
-    final (f0, xs0) = ctorArgs(a);
-    final term = f0 == 'attempt' && xs0.length == 5 ? xs0[3] : a;
-    final (f, xs) = ctorArgs(term);
+    final (f, xs) = ctorArgs(a);
     final me = _me;
     final named = [
       for (final x in xs)
