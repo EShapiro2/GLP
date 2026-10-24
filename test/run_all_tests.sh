@@ -6994,6 +6994,47 @@ check_not "APPS gc on two smartphones: no event stopped at the cap" "did not qui
 apps_same "APPS gc on two smartphones: alice's lines" "[sg(connected(bob)), view([], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), menu(alice, []), view([], [], [establish(alice)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [meet(alice, bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [bob], [meet(alice, bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([knows(bob), identity], [bob], [mint(alice, 2)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(alice), coin(alice), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(alice), coin(alice), knows(bob), identity], [bob], [swap(alice, bob, alice, 2, bob, 3)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), menu(alice, [bob]), view([coin(bob), coin(bob), coin(bob), knows(bob), identity], [bob], [pay(alice, bob, 2)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)])]" "$(apps_person alice "$apps_gc_boot")"
 apps_same "APPS gc on two smartphones: bob's lines" "[sg(befriend(alice)), sg(connected(alice)), view([], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([], [], [establish(bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [mint(bob, 3)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(bob), identity], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), gave(meet(alice, bob), yes), view([coin(bob), coin(bob), coin(bob), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(bob), identity], [alice], [meet(alice, bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([knows(alice), coin(bob), coin(bob), coin(bob), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), gave(swap(alice, bob, alice, 2, bob, 3), yes), view([knows(alice), coin(bob), coin(bob), coin(bob), identity], [alice], [swap(alice, bob, alice, 2, bob, 3)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(alice), coin(alice), knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(alice), coin(alice), knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)])]" "$(apps_person bob "$apps_gc_boot")"
 
+# The village market of GB's paper, Section 7.1, on GB's app (play_village): six villagers and the escrow agent, nine conversations, the seven operations at the paper's amounts; diana's premature presentation of a frank-bond is refused by frank's machine, the bond not mature by his date; once frank's date is day 28 he redeems five diana-coins, the escrow agent releases charlie's deposit to him (GB:7, release_c, one schema with deposit_c: a request of either proposes the part, vGLP, Section 5.4), and diana redeems a matured frank-bond against a frank-coin he holds (GB:5).  Each villager's last view held: Frank 7 diana-coins, 10 eve-coins, 6 frank-bonds maturing at day 28 and 4 frank-coins.
+apps_gbv=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/apps/gb
+:limit 400000000
+play_village(A, B, C, D, E, F, G).
+:quit
+HEREDOC
+2>&1)
+check_not "APPS gb village: no failed play" "→ failed" "$apps_gbv"
+check_not "APPS gb village: no error" "Error" "$apps_gbv"
+check "APPS gb village: the run suspends, every operation taken" "→ suspended" "$apps_gbv"
+apps_gbv_last() { # apps_gbv_last <variable>: the last view of that villager, its state as a sorted multiset
+    echo "$apps_gbv" | sed -e 's/^\(GLP> \)*//' | grep "^$1 = " | grep -o 'view(\[[^]]*\]' | tail -1 | sed -e 's/^view(\[//' -e 's/\]$//' | tr -d ' ' | perl -ne 'chomp; my $d = 0; my $c = ""; for my $ch (split //) { if ($ch eq "," && $d == 0) { print "$c\n"; $c = ""; next } $d++ if $ch eq "("; $d-- if $ch eq ")"; $c .= $ch } print "$c\n" if $c ne ""' | LC_ALL=C sort | uniq -c | tr -s ' ' | tr '\n' ';'
+}
+check "APPS gb village: diana's premature presentation of a frank-bond is refused by frank, unable" "refused(redeem_bc(diana, frank, 28, frank), frank, unable(" "$apps_gbv"
+check "APPS gb village: the escrow agent releases the deposit to frank, who answers yes (GB:7)" "gave(release_c(escrow, frank, frank, 5), yes)" "$apps_gbv"
+apps_same "APPS gb village: frank's holdings, 7 diana-coins, 10 eve-coins, 6 frank-bonds maturing at day 28, 4 frank-coins" " 6 bond(frank,28); 7 coin(diana); 10 coin(eve); 4 coin(frank); 1 date(28); 1 dated; 1 identity; 1 knows(diana); 1 knows(escrow); 1 knows(eve);" "$(apps_gbv_last F)"
+apps_same "APPS gb village: the escrow agent holds nothing once it has released" " 1 date(30); 1 dated; 1 identity; 1 knows(charlie); 1 knows(frank);" "$(apps_gbv_last G)"
+apps_same "APPS gb village: diana's holdings" " 24 bond(bob,25); 12 bond(frank,28); 8 coin(diana); 1 coin(frank); 1 date(1); 1 dated; 1 identity; 1 knows(bob); 1 knows(frank);" "$(apps_gbv_last D)"
+
+# The village market of GC's paper, Appendix "Village Market Demonstration", on GC's app (play_village): the six villagers, seven conversations, the six operations at the paper's amounts, each villager's coins minted once; each villager's last view holds the holdings of the paper's Table 1 (Currencies #11 Cowork, Code_inbox.md, 2026-10-21 07:25 UTC, item 6).
+apps_gcv=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/apps/gc
+:limit 400000000
+play_village(A, B, C, D, E, F).
+:quit
+HEREDOC
+2>&1)
+check_not "APPS gc village: no failed play" "→ failed" "$apps_gcv"
+check_not "APPS gc village: no error" "Error" "$apps_gcv"
+check "APPS gc village: the run suspends, every operation taken" "→ suspended" "$apps_gcv"
+apps_gcv_last() { # apps_gcv_last <variable>: the last view of that villager, its coins as a sorted multiset
+    echo "$apps_gcv" | sed -e 's/^\(GLP> \)*//' | grep "^$1 = " | grep -o 'view(\[[^]]*\]' | tail -1 | sed -e 's/^view(\[//' -e 's/\]$//' | tr -d ' ' | tr ',' '\n' | grep '^coin(' | LC_ALL=C sort | uniq -c | tr -s ' ' | tr '\n' ';'
+}
+apps_same "APPS gc village: alice's holdings, 5 bob-coins, 8 alice-coins, 15 charlie-coins, 4 frank-coins" " 8 coin(alice); 5 coin(bob); 15 coin(charlie); 4 coin(frank);" "$(apps_gcv_last A)"
+apps_same "APPS gc village: bob's holdings, 10 alice-coins, 20 diana-coins" " 10 coin(alice); 20 coin(diana);" "$(apps_gcv_last B)"
+apps_same "APPS gc village: charlie's holdings, 10 alice-coins, 10 eve-coins, 6 charlie-coins, 5 frank-coins" " 10 coin(alice); 6 coin(charlie); 10 coin(eve); 5 coin(frank);" "$(apps_gcv_last C)"
+apps_same "APPS gc village: diana's holdings, 24 bob-coins, 13 frank-coins, 8 diana-coins" " 24 coin(bob); 8 coin(diana); 13 coin(frank);" "$(apps_gcv_last D)"
+apps_same "APPS gc village: eve's holdings, 4 charlie-coins, 1 frank-coin, 2 alice-coins, 10 bob-coins" " 2 coin(alice); 10 coin(bob); 4 coin(charlie); 1 coin(frank);" "$(apps_gcv_last E)"
+apps_same "APPS gc village: frank's holdings, 7 diana-coins, 10 eve-coins, 5 frank-coins" " 7 coin(diana); 10 coin(eve); 5 coin(frank);" "$(apps_gcv_last F)"
+
 echo ""
 
 fi  # Section APPS

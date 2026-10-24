@@ -21,8 +21,8 @@ GKK:1 is `establish`, GKK:2 `meet`, GKK:3 `introduce`.  GB:1 is `mint_coin(p? ; 
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GB, as printed, with the words of its pragmas and its two widget declarations, the request labels and placements its pragmas give |
 | `miniapp.glp` | `miniapp/4`: the agent, its dispatcher, and the agent's network over the conversations; the file of the other apps, but that it hands the agent the calendar, GB requiring the day |
-| `person.glp` | `miniapp_person/4`: the scripted person, by role, `alice`, `bob` or `carol` |
-| `plays.glp` | `play_bonds/3`, the mini-app with no super-app, the play writing the calendars |
+| `person.glp` | `miniapp_person/4`: the scripted person, by role, `alice`, `bob` or `carol`, and `market_alice` to `market_escrow`, the parties of the village market |
+| `plays.glp` | `play_bonds/3`, the mini-app with no super-app, the play writing the calendars, and `play_village/7`, the village market of GB's paper on it |
 | `self.glp` | the platform's types written again, and the exports |
 | `../compile.sh` | the check that each app's `platform.vglp` is what the compiler prints |
 | `screens/` | the screens of the app for GB's paper, and their README |
@@ -40,6 +40,12 @@ printf '../programs/apps/gb\n:limit 60000000\nplay_bonds(A, B, C).\n:quit\n' | b
 ```
 
 `play_bonds` runs three executions, alice's with a conversation with each of bob and carol.  Each establishes their identity and gets day 1, the first date of each calendar, as their date; alice meets bob and then carol; alice mints five Alice-coins and three Alice-bonds maturing at day 10, and bob four Bob-bonds maturing at day 5; alice asks bob for a loan, two Alice-coins for three Bob-bonds, `swap_cb(alice, bob, alice, 2, bob, 5, 3)`, and he answers yes; the play then writes day 5 on bob's calendar, and his date advances a day at a time to day 5, and, once his screen shows it, on alice's; alice redeems a matured Bob-bond against an Alice-coin bob holds, `redeem_bc(alice, bob, 5, alice)`, and nobody is asked; and alice deposits two Alice-coins with carol, `deposit_c(alice, carol, alice, 2)`, and carol answers yes.  The run then suspends.  The suite's Section APPS holds each person's screen.
+
+`play_village` runs the village market of GB's paper, Section 7.1, on the app: the six villagers and the escrow agent, under the roles `market_alice` to `market_escrow` (`person.glp`), nine conversations, one between each two who transact; the seven operations at the paper's amounts, and, once frank's date is day 28, diana's redemption of a matured frank-bond against a frank-coin he holds, her presentation of it before that day refused by his machine, the bond not mature by his date.  The play writes the calendars: day 1 on each; day 25 on bob's once he holds the diana-coins of his loan; day 28 on frank's once diana's screen shows her presentation refused; and day 30 on the escrow agent's once it holds the deposit, on which it releases the deposit to frank (GB:7).  Each party's last view holds the holdings of the paper's Table 1, held by Section APPS.
+
+```bash
+printf '../programs/apps/gb\n:limit 400000000\nplay_village(A, B, C, D, E, F, G).\n:quit\n' | bin/glpc
+```
 
 ## The screens
 

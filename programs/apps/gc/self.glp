@@ -61,3 +61,6 @@ miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, P
 imported procedure plays#play_coins(Stream(Seen), Stream(Seen)).
 exported procedure play_coins(Stream(Seen), Stream(Seen)).
 play_coins(A?, B?) :- plays # play_coins(A, B).
+imported procedure plays#play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+exported procedure play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_village(A?, B?, C?, D?, E?, F?) :- plays # play_village(A, B, C, D, E, F).
