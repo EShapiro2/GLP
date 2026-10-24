@@ -1,7 +1,7 @@
 %% ---------------------------------------------------------------------------
 %% GAI.glp --- GAI, Accountable AI Agents, GAI's contract (Coordination Appendix C), its clauses in GAI.txt beside this file, extending GnW (GnW.txt), with GSG and GKK (programs/gsc/GSG.txt, GKK.txt) and GSNP's signing, messaging and forwarding (GSNP.txt, GSNP.glp) beneath it, in the term form programs/gsc reads (its README, "Writing a contract").  This term is the one source of the schemas: a run of the cascade prints their notation from it as schemas.txt (cascade.sh, programs/gsc/notation.glp).  A schema's second argument lists its variables in the order of its head; a role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i), named by its index, role(1) the schema's first role; sgn(x, 1) is x signed over by the agent in role 1.
-%% Sixteen schemas over twelve predicates.  GKK's establish, meet and introduce and GSG's befriend and unfriend are for persons: agent is forbidden at both roles of meet, of introduce and of befriend, since a ward comes to know an agent, and enters a relation, by an act of both and of its guardian (GnW:2), and every act of an AI agent names its principal and carries its attestation (GAI:2).  unfriend carries no ? and stands for one schema per role, guarded at that role, unfriend_p and unfriend_q.  enter realises GnW:1 and GAI:1: the principal p holds x, the code signed by its developer, as an item, and adds at the AI agent the attestation sgn(x, p); the two become friends and know each other.  agent_meet and agents_meet realise GnW:2 for knowing, and agent_befriend and agents_befriend for friendship, each an act of the AI agent, the other agent and the principal of each AI agent among them; at a meeting the AI agent presents its attestation and the other agent records the AI agent, its principal and the attestation as agent_of(r, p, y) (GAI:2); a befriending requires that each knows the other, and an AI agent knows an agent only by a meeting, so its friend holds the record.  agent_unfriend realises GnW:3 and retire GAI:4, the one act ending the friendship of an AI agent and its principal, which ends the guardianship (GnW:3 and GnW:4); unfriend and agent_unfriend exclude that friendship.  GAI:3 describes no act.  A ward's membership of a group (GnW:2 with GSN:3) is not in this term.
-%% Every role requires identity, except the role of establish, which adds it, requires nothing and forbids nothing but retired, and the AI agent's role of enter, which forbids it and adds it.  retired is a leaving mark: every guarding role forbids it, no schema deletes it, and retire, which adds it, requires agent there.  The guardianship is (agent, identity, principal, principal_of), meet the introductory act, unobstructed but for agent, and agent_meet and agents_meet the relay acts, each requiring at an AI agent's role its attestation, an atom of a predicate h, which enter, the one schema adding agent, adds there and no schema deletes (GAI's paper, Appendix "Contracts with Wards").  The principal's roles in agent_meet, agents_meet, agent_befriend, agents_befriend and agent_unfriend change nothing.
+%% Thirteen schemas over twelve predicates.  GKK's establish, meet and introduce and GSG's befriend and unfriend are for persons: agent is forbidden at both roles of meet, of introduce and of befriend, since a ward comes to know an agent, and enters a relation, by an act of both and of its guardian (GnW:2), and every act of an AI agent names its principal and carries its attestation (GAI:2).  unfriend is one schema guarded in its first role, the friend ending the friendship, and is bound either way, as GSG.glp writes it.  enter realises GnW:1 and GAI:1: the principal p holds x, the code signed by its developer, as an item, and records the attestation sgn(x, p) at the AI agent and, as agent_of, at themselves, from which their machine fills a meeting's request (vGLP, locality; via Code #14, 2026-10-24); the two become friends and know each other.  agent_meet and agents_meet realise GnW:2 for knowing, and agent_befriend and agents_befriend for friendship, each an act of the AI agent, the other agent and the principal of each AI agent among them; at a meeting the AI agent presents its attestation and the other agent records the AI agent, its principal and the attestation as agent_of(r, p, y) (GAI:2); a befriending requires that each knows the other, and an AI agent knows an agent only by a meeting, so its friend holds the record.  agent_unfriend realises GnW:3 and retire GAI:4, the one act ending the friendship of an AI agent and its principal, which ends the guardianship (GnW:3 and GnW:4); unfriend and agent_unfriend exclude that friendship.  GAI:3 describes no act.  A ward's membership of a group (GnW:2 with GSN:3) is not in this term.
+%% Every role requires identity, except the role of establish, which adds it, requires nothing and forbids only the identity it adds (GKK:1, act once) and retired, and the AI agent's role of enter, which forbids it and adds it.  retired is a leaving mark: every guarding role forbids it, no schema deletes it, and retire, which adds it, requires agent there.  The guardianship is (agent, identity, principal, principal_of), meet the introductory act, unobstructed but for agent, and agent_meet and agents_meet the relay acts, each requiring at an AI agent's role its attestation, an atom of a predicate h, which enter, the one schema adding agent, adds there and no schema deletes (GAI's paper, Appendix "Contracts with Wards").  The principal's roles in agent_meet, agents_meet, agent_befriend, agents_befriend and agent_unfriend change nothing.
 %% The ? on an AI agent's role is taken by the AI agent's program, in enter as the program the principal set up, and after it under the principal's will, given once, on creating it (GAI's paper, Section 3.1).
 %% ---------------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ procedure contract_named(Constant?, Declared).
 contract_named(gai,
 %% GKK:1, Identity.
    [schema(establish, [],
-       [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])]),
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])]),
 %% GKK:2, Meeting, for two persons; an AI agent comes to know an agent by agent_meet or agents_meet (GnW:2).
     schema(meet, [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])],
@@ -55,19 +55,15 @@ contract_named(gai,
                     [atom(identity, []), atom(knows, [role(1)])],
                     [atom(agent, []), atom(retired, []), atom(friend, [role(1)])])]),
 %% GSG:2, Ending a friendship, by either friend, unless one is an AI agent of the other (GnW:3, GAI:4).
-    schema(unfriend_p, [],
+    schema(unfriend, [],
        [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])],
                     [atom(retired, []), atom(principal, [role(2)]),
                      atom(principal_of, [role(2)])]),
         rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
-    schema(unfriend_q, [],
-       [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []),
-        rs(guarded, [], [atom(friend, [role(1)])], [atom(identity, [])],
-                    [atom(retired, []), atom(principal, [role(1)]),
-                     atom(principal_of, [role(1)])])]),
 %% GnW:1 and GAI:1: a person creates an AI agent, attesting that it runs the code x signed by its developer, and is its principal and friend.
     schema(enter, [svar(x)],
-       [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)]), atom(knows, [role(2)])], [],
+       [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)]), atom(knows, [role(2)]),
+                     atom(agent_of, [role(2), role(1), sgn(x, 1)])], [],
                     [atom(identity, []), atom(item, [svar(x)])], [atom(agent, []), atom(retired, [])]),
         rs(guarded, [atom(identity, []), atom(agent, []), atom(principal, [role(1)]),
                      atom(friend, [role(1)]), atom(knows, [role(1)]), atom(attestation, [sgn(x, 1)])], [],
@@ -82,7 +78,8 @@ contract_named(gai,
                     [atom(identity, [])],
                     [atom(agent, []), atom(retired, [])]),
         rs(guarded, [], [],
-                    [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])])]),
+                    [atom(identity, []), atom(principal_of, [role(1)]),
+                     atom(agent_of, [role(1), role(3), svar(y)])], [atom(retired, [])])]),
 %% GnW:2, knowing, and GAI:2, for two AI agents and their principals.
     schema(agents_meet, [svar(y), svar(z)],
        [rs(guarded, [atom(knows, [role(2)]), atom(agent_of, [role(2), role(4), svar(z)])], [],
@@ -94,9 +91,11 @@ contract_named(gai,
                      atom(attestation, [svar(z)])],
                     [atom(retired, [])]),
         rs(guarded, [], [],
-                    [atom(identity, []), atom(principal_of, [role(1)])], [atom(retired, [])]),
+                    [atom(identity, []), atom(principal_of, [role(1)]),
+                     atom(agent_of, [role(1), role(3), svar(y)])], [atom(retired, [])]),
         rs(guarded, [], [],
-                    [atom(identity, []), atom(principal_of, [role(2)])], [atom(retired, [])])]),
+                    [atom(identity, []), atom(principal_of, [role(2)]),
+                     atom(agent_of, [role(2), role(4), svar(z)])], [atom(retired, [])])]),
 %% GnW:2, a relation: an AI agent and a person who know each other befriend by an act of both and of the principal.  The AI agent knows the person only by agent_meet, which recorded the attestation at the person (meet and introduce forbid agent at the role coming to know), so the person holds it.
     schema(agent_befriend, [],
        [rs(guarded, [atom(friend, [role(2)])], [],
@@ -137,19 +136,7 @@ contract_named(gai,
         rs(unguarded, [atom(retired, [])], [atom(friend, [role(1)])],
                       [atom(identity, []), atom(agent, []), atom(principal, [role(1)])],
                       [atom(retired, [])])]),
-%% GSNP:1, Authorship, and GSN:1, Message, for content the sender created; GSNP:2, Forwarding, for content received: as GSNP.glp has them, with retired forbidden at the acting role.
+%% GAI:1: Alice signs the code of Alf, signed by its developer, and holds it as an item, which enter requires; the messaging is GSNP's (GSNP.glp beside this file).
     schema(sign, [svar(x)],
        [rs(guarded, [atom(item, [svar(x)]), atom(authored, [svar(x)])], [],
-                    [atom(identity, [])], [atom(retired, [])])]),
-    schema(message, [svar(x)],
-       [rs(guarded,   [], [],
-                      [atom(identity, []), atom(authored, [svar(x)])],
-                      [atom(retired, [])]),
-        rs(unguarded, [atom(item, [svar(x)])], [],
-                      [atom(identity, []), atom(friend, [role(1)])], [])]),
-    schema(forward, [svar(x)],
-       [rs(guarded, [], [],
-                    [atom(identity, []), atom(item, [svar(x)])],
-                    [atom(authored, [svar(x)]), atom(retired, [])]),
-        rs(unguarded, [atom(item, [sgn(x, 1)])], [],
-                      [atom(identity, []), atom(friend, [role(1)])], [])])]).
+                    [atom(identity, [])], [atom(retired, [])])])]).
