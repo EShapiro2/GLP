@@ -13,8 +13,8 @@ CSSN: Child-Safe Social Network
 6. ■ A child's group.  Only a child may join a group Carol leads.
 Pragmas
 Children: the children Alice is parenting.
-Parents: [Enter] (Alice, Bob, Carol) <child> Bob asks that you both be Carol's parents.  Alice asks that you both be Carol's parents.  Alice asks to be your parent.
-Meeting of a child: [Child meet] (Carol, Dave, Alice, Bob) Alice asks that you and Dave meet.  Alice asks that you and Carol meet.  Bob asks that Carol and Dave meet.  Alice asks that Carol and your child Dave meet.
+Parents: [Enter] (Alice, Bob, Carol) <child> You are asked to be a parent of Carol.  Alice asks that you both be Carol's parents.  Alice asks to be your parent.
+Meeting of a child: [Child meet] (Carol, Dave, Alice, Bob) Alice asks that you and Dave meet.  Alice asks that you and Carol meet.  Your child Carol is asked to meet Dave.  Alice asks that Carol and your child Dave meet.
 Friendship of a child: [Child befriend] (Carol, Dave, Alice, Bob) Alice asks that you and Dave befriend.  Alice asks that you and Carol befriend.  Bob asks that Carol and Dave befriend.  Alice asks that Carol and your child Dave befriend.  [Child adult befriend] (Carol, Alice, Bob) Bob asks that you and Alice befriend.  Bob asks that you and Carol befriend.  Alice asks to befriend your child Carol.
 Coming of age: [Of age]
 Joining: [Child join] (Carol, Dave, Alice, Bob) Dave asks to join your group.  Carol asks you to join their group.  Carol asks that Dave join their group.  Carol asks that your child Dave join their group.
