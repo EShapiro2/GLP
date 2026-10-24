@@ -2500,9 +2500,17 @@ class _SocialTabState extends State<SocialTab> {
           for (final k in o.proposals)
             if (o.acts[k] case final a?)
               if (onThis(k.substring(0, k.lastIndexOf('/')))) ...[
-                if (!a.namesOne && a.keys.isEmpty)
+                // An act that names no person, group or item but the persons a field for a key names, as GAI's enter its AI agent, drawn as a form on its contract's tab.
+                if (a.groups.isEmpty &&
+                    a.items.isEmpty &&
+                    a.persons.every(a.keys.contains) &&
+                    !(a.keys.isNotEmpty &&
+                        int.parse(k.substring(k.lastIndexOf('/') + 1)) == 2))
                   _actForm(context, s, ask, o, k, a, null),
-                if (a.keys.isNotEmpty) _keyForm(context, s, ask, o, k, a),
+                // A meeting's key field where the meeting names nothing else; one that names more, as GAI's enter its code, is drawn beside the rows that fill it, its key a field of its composer.
+                if (a.keys.isNotEmpty &&
+                    int.parse(k.substring(k.lastIndexOf('/') + 1)) == 2)
+                  _keyForm(context, s, ask, o, k, a),
               ],
         for (final r in _rows(s, l.predicate)) _wordedRow(context, s, r),
       ],
@@ -2719,10 +2727,10 @@ class _SocialTabState extends State<SocialTab> {
       final places = o.allActs[key] ?? const <ActInfo>[];
       if (places.isEmpty) continue;
       // An act of several guarding roles is drawn on a row at the first of its places the row fills, by an item of the row's list (vGLP 110caf4, Section 6.2: "beside each row that fills its variable"); an act of one, at its place.
-      if (places.length > 1) {
-        final at = places.where((a) =>
-            g == null && a.items.any((x) => x.$2 == pred) && !mine);
-        if (at.isNotEmpty) acts.add((key, at.first));
+      final at = places.where((a) =>
+          g == null && a.items.any((x) => x.$2 == pred) && !mine);
+      if (places.length > 1 && at.isNotEmpty) {
+        acts.add((key, at.first));
         continue;
       }
       final a = places.first;
@@ -2822,13 +2830,17 @@ class _SocialTabState extends State<SocialTab> {
     final its = a.itemPlaces;
     for (var i = 1; i <= n; i++) {
       if (args[i - 1] != null) continue;
-      if (a.persons.contains(i) || its.contains(i)) {
+      if ((a.persons.contains(i) && !a.keys.contains(i)) || its.contains(i)) {
         args[i - 1] = _picked['$composer:$i'];
         continue;
       }
       final t = typed[i];
       if (t == null || t.isEmpty) return null;
-      final kind = i - 1 < kinds.length ? kinds[i - 1] : 'other';
+      final kind = a.keys.contains(i)
+          ? 'peer'
+          : i - 1 < kinds.length
+              ? kinds[i - 1]
+              : 'other';
       switch (kind) {
         case 'number':
           final v = int.tryParse(t);
@@ -2862,7 +2874,7 @@ class _SocialTabState extends State<SocialTab> {
     final filled = <int>{a.me, ...fill.keys};
     final picks = [
       for (final i in a.persons)
-        if (!filled.contains(i)) i
+        if (!filled.contains(i) && !a.keys.contains(i)) i
     ];
     final groupPicks = [
       for (final (j, k) in a.groups)
@@ -2876,7 +2888,7 @@ class _SocialTabState extends State<SocialTab> {
     final fields = [
       for (var i = 1; i <= n; i++)
         if (!filled.contains(i) &&
-            !a.persons.contains(i) &&
+            (!a.persons.contains(i) || a.keys.contains(i)) &&
             !groupPlaces.contains(i) &&
             !a.itemPlaces.contains(i))
           i
