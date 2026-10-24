@@ -26,9 +26,7 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 
 %% contract_named(gsnp, C): the contract, GSNP (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
-contract_named(gsnp, C): the contract.
-procedure contract_named(Constant?, Declared).
-contract_named(gai,
+contract_named(gsnp,
 %% GKK:1, Identity.
    [schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])]),
