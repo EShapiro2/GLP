@@ -214,7 +214,7 @@ check "the federation's contract, GFWC, is read from programs/federation/GFWC.gl
       "[schema(form, [], [rs(guarded, [atom(seat, [nterm(own(1))])]" "$FED"
 GAI=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
 check "GAI's contract is read from programs/gai/GAI.glp" \
-      "[schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])])" "$GAI"
+      "[schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])])" "$GAI"
 
 # The two worked contracts, GSNP certified in Section 7.1 and the currency
 # in Appendix B.4.  One goal per run, so that each verdict is read off its own
@@ -1307,12 +1307,14 @@ check_eq "a contract declaring friend reflexive prints the declaration first" \
 # number x; times(num(k), A); nschema(Name, Vars,
 # Constraint, Roles), the constraint a conjunction of linear equalities and
 # inequalities (def:numbers; README, "Writing a contract").  GB, the bonds, is Currencies' (programs/currencies/bonds/
-# GB.glp at 793a4ddf, GB extending GKK, twenty-one schemas): meet its
-# introductory act, unobstructed; every predicate of traceable provenance,
-# date naming no agent and coin and bond naming a role or an agent variable
-# the other role requires; every role of a schema of arity two guarding, or
-# the role graph joined by the knows(Bob) and the instrument of Bob that
-# Alice requires.  So it is syntactically grassroots.  A binding sends a
+# GB.glp at 18f28661, GB extending GKK, twelve schemas: GKK's three, mint
+# once for a coin and once for a bond, advance, swap, pay, redeem and the
+# three escrow transfers, over cent(u, d), an instrument issued by u and due
+# at d, a coin due at 0): meet its introductory act, unobstructed; every
+# predicate of traceable provenance, date naming no agent and cent naming a
+# role or an agent variable the other role requires; every role of a schema
+# of arity two guarding, or the role graph joined by the knows(Bob) and the
+# instrument of Bob that Alice requires.  So it is syntactically grassroots.  A binding sends a
 # value variable to a value and a multiplicity to a positive whole number,
 # and an introduction chooses its own values (def:binding-numbers; the
 # appendix "Values in Act Schemas"), and whether some choice meets the
@@ -1320,46 +1322,46 @@ check_eq "a contract declaring friend reflexive prints the declaration first" \
 echo "--- numbers (GSC, Section 3.2 and its appendix) ---"
 GBT=$(term "$GLP_DIR/programs/currencies/bonds/GB.glp" gb)
 check "GB's contract is read from programs/currencies/bonds/GB.glp, with numbers, a multiplicity and a constraint" \
-      "nschema(mint_bond, [num(d), num(k), num(t)], gt(num(d), num(t)), [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))]" "$GBT"
+      "nschema(mint_bond, [num(d), num(k), num(t)], gt(num(d), num(t)), [rs(guarded, [times(num(k), atom(cent, [role(1), num(d)]))]" "$GBT"
 out=$(run "check($GBT, V)." "traceable_preds($GBT, E)." "intro_acts($GBT, A).")
 check "GB is syntactically grassroots, the conditions not concerning its numbers" \
       "V = syntactically_grassroots" "$out"
 check "GB's predicates all have traceable provenance, date naming no agent" \
-      "E = [identity, knows, coin, bond, date]" "$out"
+      "E = [identity, knows, cent, date]" "$out"
 check "GB's introductory act is meet, unobstructed" \
       "A = [intro_act(meet, unobstructed)," "$out"
-check "GB's swap_cc, obstructed by the knows it requires, deletes k coins, k a positive whole number its introduction chooses, and no schema of arity one requiring nothing adds a coin" \
-      "intro_act(swap_cc, obstructed([obstructed(swap_cc, 1, atom(knows, [role(2)]), unobtainable), obstructed(swap_cc, 1, atom(coin, [pvar(u)]), unobtainable)," "$out"
+check "GB's swap, obstructed by the knows it requires, deletes k instruments, k a positive whole number its introduction chooses, and no schema of arity one requiring nothing adds an instrument" \
+      "intro_act(swap, obstructed([obstructed(swap, 1, atom(knows, [role(2)]), unobtainable), obstructed(swap, 1, atom(cent, [pvar(u), num(d)]), unobtainable)," "$out"
 # The displays of GB's schemas with numbers (GSC, Section 5, in the closest
 # form its notation gives: the constraint on a proviso line of its own, and a
 # multiplicity k\cdot A, as GB's paper writes it, a multiset with one
 # included in c, as def:compile writes a multiset).
-redeem_bc_display='\begin{align*}&c'"'"'_{\Alice}:=(c_{\Alice}\setminus\{\mathit{bond}(\Bob,d)\})\uplus\{\text{\textcent}(r)\},\qquadc'"'"'_{\Bob}:=(c_{\Bob}\setminus\{\text{\textcent}(r)\})\uplus\{\mathit{bond}(\Bob,d)\},\\&\text{provided}\mathit{identity},\mathit{knows}(\Bob),\mathit{bond}(\Bob,d)\inc_{\Alice}\text{and}\mathit{identity},\mathit{date}(t),\text{\textcent}(r)\inc_{\Bob},\\&\text{provided}d\let,\\&\text{guardedby}\{\Alice\}\end{align*}'
-check_eq "GB's redeem_bc compiles with its constraint on a proviso line of its own" \
-         "$redeem_bc_display" "$(compiled_in gb "$GBT" redeem_bc)"
-mint_bond_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\mathit{bond}(\Alice,d)\},\\&\text{provided}\mathit{identity},\mathit{date}(t)\inc_{\Alice},\\&\text{provided}d>t,\\&\text{guardedby}\{\Alice\}\end{align*}'
+redeem_display='\begin{align*}&c'"'"'_{\Alice}:=(c_{\Alice}\setminus\{\mathit{cent}(\Bob,d)\})\uplus\{\mathit{cent}(r,d1)\},\qquadc'"'"'_{\Bob}:=(c_{\Bob}\setminus\{\mathit{cent}(r,d1)\})\uplus\{\mathit{cent}(\Bob,d)\},\\&\text{provided}\mathit{identity},\mathit{knows}(\Bob),\mathit{cent}(\Bob,d)\inc_{\Alice}\text{and}\mathit{identity},\mathit{date}(t),\mathit{cent}(r,d1)\inc_{\Bob},\\&\text{provided}d\let,\\&\text{guardedby}\{\Alice\}\end{align*}'
+check_eq "GB's redeem compiles with its constraint on a proviso line of its own" \
+         "$redeem_display" "$(compiled_in gb "$GBT" redeem)"
+mint_bond_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\mathit{cent}(\Alice,d)\},\\&\text{provided}\mathit{identity},\mathit{date}(t)\inc_{\Alice},\\&\text{provided}d>t,\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "GB's mint_bond compiles with its multiplicity and its constraint" \
          "$mint_bond_display" "$(compiled_in gb "$GBT" mint_bond)"
-pay_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\setminus\{k\cdot\text{\textcent}(\Bob)\},\qquadc'"'"'_{\Bob}:=c_{\Bob}\uplus\{k\cdot\text{\textcent}(\Bob)\},\\&\text{provided}\{\mathit{identity},\mathit{knows}(\Bob),k\cdot\text{\textcent}(\Bob)\}\subseteqc_{\Alice}\text{and}\mathit{identity}\inc_{\Bob},\\&\text{guardedby}\{\Alice\}\end{align*}'
+pay_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\setminus\{k\cdot\mathit{cent}(\Bob,0)\},\qquadc'"'"'_{\Bob}:=c_{\Bob}\uplus\{k\cdot\mathit{cent}(\Bob,0)\},\\&\text{provided}\{\mathit{identity},\mathit{knows}(\Bob),k\cdot\mathit{cent}(\Bob,0)\}\subseteqc_{\Alice}\text{and}\mathit{identity}\inc_{\Bob},\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "GB's pay requires its k coins as def:compile writes a multiset, included in c" \
          "$pay_display" "$(compiled_in gb "$GBT" pay)"
 gb_notation=$(notation "$GBT")
 redeem_notation=$(cat <<'EOF'
-redeem_bc(Alice?, Bob; d, r, t) | d <= t :
-    at Alice: identity, knows(Bob), +coin(r), -bond(Bob, d)
-    at Bob: identity, date(t), +bond(Bob, d), -coin(r)
+redeem(Alice?, Bob; d, r, d1, t) | d <= t :
+    at Alice: identity, knows(Bob), +cent(r, d1), -cent(Bob, d)
+    at Bob: identity, date(t), +cent(Bob, d), -cent(r, d1)
 EOF
 )
-check_eq "GB's redeem_bc prints its constraint after its head" \
-         "$redeem_notation" "$(printf '%s\n' "$gb_notation" | one_schema redeem_bc)"
+check_eq "GB's redeem prints its constraint after its head" \
+         "$redeem_notation" "$(printf '%s\n' "$gb_notation" | one_schema redeem)"
 swap_notation=$(cat <<'EOF'
-swap_cb(Alice?, Bob?; u, k, v, d1, k1) :
-    at Alice: identity, knows(Bob), +k1.bond(v, d1), -k.coin(u)
-    at Bob: identity, knows(Alice), +k.coin(u), -k1.bond(v, d1)
+swap(Alice?, Bob?; u, d, k, v, d1, k1) :
+    at Alice: identity, knows(Bob), +k1.cent(v, d1), -k.cent(u, d)
+    at Bob: identity, knows(Alice), +k.cent(u, d), -k1.cent(v, d1)
 EOF
 )
-check_eq "GB's swap_cb prints its multiplicities, k.A" \
-         "$swap_notation" "$(printf '%s\n' "$gb_notation" | one_schema swap_cb)"
+check_eq "GB's swap prints its multiplicities, k.A" \
+         "$swap_notation" "$(printf '%s\n' "$gb_notation" | one_schema swap)"
 advance_notation=$(cat <<'EOF'
 advance(Alice; t, t1) | t1 = t + 1 :
     at Alice: identity, +date(t1), -date(t)
@@ -1367,7 +1369,7 @@ EOF
 )
 check_eq "GB's advance, guarded by no role, prints succ as t1 = t + 1" \
          "$advance_notation" "$(printf '%s\n' "$gb_notation" | one_schema advance)"
-check_eq "GB's twenty-one schemas print" "21" "$(printf '%s\n' "$gb_notation" | grep -c ' :$')"
+check_eq "GB's twelve schemas print" "12" "$(printf '%s\n' "$gb_notation" | grep -c ' :$')"
 
 # The checker's fixtures with values (contracts.glp, "Values").  nm_bonds
 # is syntactically grassroots.  def:unobstructed asks that an atom be added
@@ -1493,8 +1495,8 @@ check "and it is not compiled, the fault named" \
 
 # The malformations the passage forbids, each refused (README, "The
 # verdicts"): a role that does not guard and changes nothing, numbers or no
-# (def:schema; GB's mature of b9369200, which redeem_bc and redeem_bb
-# replace at 793a4ddf); a multiplicity on an atom required and not deleted,
+# (def:schema; GB's mature of b9369200, which GB's redemption replaces,
+# redeem since 18f28661); a multiplicity on an atom required and not deleted,
 # and on one forbidden, the passage admitting one on an atom added or
 # deleted; a multiplicity that is not a number; a constraint on an agent,
 # the passage admitting one on the value variables; an atom added with a
