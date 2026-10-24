@@ -1168,20 +1168,6 @@ class ActInfo {
         .holds(atoms, {this.me: me});
   }
 
-  /// Whether each person the form of the act names beside its proposer, but one a field names by key or a held atom fills, can be picked from the viewer's rows: the act requires, at the proposer's role, an atom naming that place, and the viewer's state [atoms] holds some atom of that predicate (vGLP 5e130c3, Section 6.2, "The words a platform shows": "for a form, only at a guarding role where the act requires an atom naming each other role the form names, and the viewer holds some atom of each such predicate, so that each place can be picked from the viewer's rows").
-  bool pickable(List<GTerm> atoms) {
-    final hp = heldPlaces.difference({...persons, ...itemPlaces, ...keys});
-    for (final k in persons) {
-      if (k == me || keys.contains(k) || hp.contains(k)) continue;
-      final ok = conds.any((c) =>
-          !c.forbids &&
-          c.args.contains(k) &&
-          atoms.any((a) => ctorArgs(a).$1 == c.pred));
-      if (!ok) return false;
-    }
-    return true;
-  }
-
   /// Whether the act requires or deletes, at the proposer's role, an atom of [pred] naming a place of [places] (vGLP feda043, Section 6.2: "beside a row of a tab only where the act requires or deletes, at the viewer's role, the atom of that tab's predicate naming the row's item").
   bool requiresOf(String pred, Set<int> places) => conds.any((c) =>
       !c.forbids &&
@@ -2247,10 +2233,10 @@ class _SocialTabState extends State<SocialTab> {
         out.add(_keyForm(context, s, ask, o, k, first));
         continue;
       }
-      // A form only at a guarding role whose places the viewer can pick from their rows (vGLP 5e130c3, Section 6.2); an act that names none is not a form.
+      // A form only at a guarding role where each of its places has someone to pick (vGLP 22:54 UTC, Section 6.2); an act that names none is not a form.
       final cands = [
         for (final a in owns)
-          if (a.namedCount(o.kinds[k] ?? const []) == 0 || a.pickable(s.atoms)) a
+          if (a.namedCount(o.kinds[k] ?? const []) == 0 || _placesPickable(s, a, me)) a
       ];
       if (cands.isEmpty) continue;
       final others = {for (var i = 1; i <= n; i++) i};
@@ -2697,19 +2683,25 @@ class _SocialTabState extends State<SocialTab> {
     );
   }
 
-  /// The persons the person may pick for a place: those the lists of the view hold and those the agent knows, but the person themselves, each once.
-  List<GTerm> _pickable(SocialState s, GTerm me) {
-    final seen = <String>{formatTerm(me)};
-    final out = <GTerm>[];
-    for (final p in [
-      for (final a in s.atoms)
-        for (final x in ctorArgs(a).$2)
-          if (x is GAtom) x,
-      ...s.known,
-    ]) {
-      if (seen.add(formatTerm(p))) out.add(p);
+  /// Whether each person place of the form of [a], but one a field names by key or a held atom fills, has someone to pick (vGLP, Section 6.2, Udi's approval of 2026-10-24 22:54 UTC: "each place of a form is picked from the rows of the tab whose predicate the act requires at the viewer's role naming that place, or, where it requires none, from the persons the viewer knows ...; a form is drawn only where each of its places has someone to pick").
+  bool _placesPickable(SocialState s, ActInfo a, GTerm me) {
+    final hp = a.heldPlaces.difference({...a.persons, ...a.itemPlaces, ...a.keys});
+    for (final k in a.persons) {
+      if (k == a.me || a.keys.contains(k) || hp.contains(k)) continue;
+      final preds = [for (final (kk, p) in a.items) if (kk == k) p];
+      final some = preds.isEmpty
+          ? _knownPickable(s, me).isNotEmpty
+          : preds.any((p) =>
+              _pickableItems(s, p, person: true, me: me).isNotEmpty);
+      if (!some) return false;
     }
-    return out;
+    return true;
+  }
+
+  /// The persons the viewer's agent knows, but the viewer, each once: whom a place of a form is picked from where the act requires, at the viewer's role, no atom of a tab's predicate naming it (ibid.).
+  List<GTerm> _knownPickable(SocialState s, GTerm me) {
+    final seen = <String>{formatTerm(me)};
+    return [for (final p in s.known) if (seen.add(formatTerm(p))) p];
   }
 
   /// The groups the person may pick for the group [j]: those the view lists, `member(G)`, whose leader is the person where the act names its leader at the proposer's place [me], and another where it does not.
@@ -2930,7 +2922,7 @@ class _SocialTabState extends State<SocialTab> {
           for (final i in picks)
             Wrap(spacing: 6, runSpacing: 4, children: [
               Text(o.field(f, n, i), style: small),
-              for (final p in _pickable(s, me))
+              for (final p in _knownPickable(s, me))
                 if (item == null || formatTerm(p) != formatTerm(item))
                   ChoiceChip(
                     key: socialKey(_id, 'pick:$composer:$i:${formatTerm(p)}'),
