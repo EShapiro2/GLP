@@ -380,9 +380,11 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
               for (final x in cxs)
                 if (SpeechAct.of(x) == null) personName(x)
             ].join(' ');
+  // A speech act drawn with its signers, innermost first, by name (vGLP 377aa37, Section 6.2, "The words a platform shows").
   final speech = [
     for (final x in cxs)
-      if (SpeechAct.of(x) case final a?) a.text
+      if (SpeechAct.of(x) case final a?)
+        '${a.text}\n${[for (final q in a.signers) personName(q)].join(', ')}'
   ];
   final buttons = _answers(dflt);
   final pAt = p == null ? null : [for (final i in p.items) (i as GInt).value];
@@ -994,9 +996,11 @@ class ActInfo {
   final List<Object> words;
   /// The atoms of the proposer's state that fill the places no row fills, each its predicate and the place of each argument, 0 where it is none: GAI's agent_of(r, p, y) at the principal, its attestation y (GAI.glp at a336b30d).
   final List<(String, List<int>)> held;
+  /// The precondition of the act at the proposer's role, each atom it requires or deletes there, and each it forbids, [forbids] true, by its predicate and each argument: the place [int] it is at, a group by the places of its leader and its name, `(int, int)`, or null, any (vGLP feda043, Section 6.2, "The words a platform shows": "where the viewer's state holds the atoms the act requires at the viewer's role and lacks those it forbids there"; `req(P, As)` and `forb(P, As)`, programs/self.glp).
+  final List<({bool forbids, String pred, List<Object?> args})> conds;
 
   const ActInfo(this.tab, this.me, this.persons, this.groups, this.items,
-      this.keys, this.words, [this.held = const []]);
+      this.keys, this.words, [this.held = const [], this.conds = const []]);
 
   /// The places the atoms of [held] fill.
   Set<int> get heldPlaces => {
@@ -1011,9 +1015,30 @@ class ActInfo {
     if (f != 'place' || xs0.length != 7 || xs0[4] is! GList) return null;
     final its = <(int, String)>[];
     final held = <(String, List<int>)>[];
+    final conds = <({bool forbids, String pred, List<Object?> args})>[];
     for (final it in (xs0[4] as GList).items) {
       final (itf, itxs) = ctorArgs(it);
-      if (itf == 'item' && itxs.length == 2 && itxs[0] is GInt) {
+      if ((itf == 'req' || itf == 'forb') &&
+          itxs.length == 2 &&
+          itxs[1] is GList) {
+        final args = <Object?>[];
+        for (final a in (itxs[1] as GList).items) {
+          final (af, axs) = ctorArgs(a);
+          if (af == 'at' && axs.length == 1 && axs[0] is GInt) {
+            args.add((axs[0] as GInt).value);
+          } else if (af == 'grp' &&
+              axs.length == 2 &&
+              axs[0] is GInt &&
+              axs[1] is GInt) {
+            args.add(((axs[0] as GInt).value, (axs[1] as GInt).value));
+          } else if (af == 'any' && axs.isEmpty) {
+            args.add(null);
+          } else {
+            return null;
+          }
+        }
+        conds.add((forbids: itf == 'forb', pred: displayText(itxs[0]), args: args));
+      } else if (itf == 'item' && itxs.length == 2 && itxs[0] is GInt) {
         its.add(((itxs[0] as GInt).value, displayText(itxs[1])));
       } else if (itf == 'atom' && itxs.length == 2 && itxs[1] is GList) {
         final ks = [
@@ -1056,7 +1081,7 @@ class ActInfo {
         return null;
       }
     }
-    return ActInfo(displayText(xs[0]), m, ps, gs, its, ks, ws, held);
+    return ActInfo(displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds);
   }
 
   /// Whether the act names, beside the person proposing it, a person, a group or an item.
@@ -1065,6 +1090,67 @@ class ActInfo {
 
   /// The places an item fills.
   Set<int> get itemPlaces => {for (final (k, _) in items) k};
+
+  /// How many persons, groups and items the act names beside the person proposing it: its persons, its items, each person a field names by key, [kinds] `peer`, and each group once, but those a held atom of the proposer's state fills (vGLP feda043, Section 6.2: "The button of an act that names, beside the person proposing it, one person, group or item ...; an act that names two or more is a form at the top of the tab of its contract").
+  int namedCount(List<String> kinds) {
+    final gp = {for (final (j, k) in groups) ...[j, k]};
+    final hp = heldPlaces;
+    final ps = <int>{
+      ...persons,
+      ...itemPlaces,
+      ...keys,
+      for (var i = 1; i <= kinds.length; i++)
+        if (kinds[i - 1] == 'peer') i,
+    }..removeAll({me, ...gp, ...hp});
+    return ps.length + groups.length;
+  }
+
+  /// Whether the state [atoms] meets the act's precondition at the proposer's role under the binding [at], its places filled: each atom it requires or deletes there held, a place not filled matching any argument, and each it forbids whose places are all filled lacking (vGLP feda043, Section 6.2).
+  bool holds(List<GTerm> atoms, Map<int, GTerm> at) {
+    bool matches(GTerm a, String pred, List<Object?> args) {
+      final (f, xs) = ctorArgs(a);
+      if (f != pred || xs.length != args.length) return false;
+      for (var j = 0; j < args.length; j++) {
+        final x = args[j];
+        if (x is int) {
+          final v = at[x];
+          if (v != null && formatTerm(v) != formatTerm(xs[j])) return false;
+        } else if (x is (int, int)) {
+          final l = at[x.$1], n = at[x.$2];
+          if (l == null || n == null) continue;
+          final g = SocialState._group(xs[j]);
+          if (g == null ||
+              formatTerm(g.$1) != formatTerm(l) ||
+              formatTerm(g.$2) != formatTerm(n)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    for (final c in conds) {
+      if (c.forbids) {
+        final bound = c.args.every((x) => x is int
+            ? at.containsKey(x)
+            : x is (int, int)
+                ? at.containsKey(x.$1) && at.containsKey(x.$2)
+                : false);
+        if (bound && atoms.any((a) => matches(a, c.pred, c.args))) return false;
+      } else if (!atoms.any((a) => matches(a, c.pred, c.args))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Whether the act requires or deletes, at the proposer's role, an atom of [pred] naming a place of [places] (vGLP feda043, Section 6.2: "beside a row of a tab only where the act requires or deletes, at the viewer's role, the atom of that tab's predicate naming the row's item").
+  bool requiresOf(String pred, Set<int> places) => conds.any((c) =>
+      !c.forbids &&
+      c.pred == pred &&
+      c.args.any((x) => x is int
+          ? places.contains(x)
+          : x is (int, int) && places.contains(x.$2)));
 }
 
 class RequestOffers {
@@ -2087,21 +2173,7 @@ class _SocialTabState extends State<SocialTab> {
         for (final a in s.pending)
           if (onThis(_pendingFunctor(a))) _wordedPending(a, o),
         if (ask != null && o != null)
-          for (final k in o.proposals)
-            if (o.acts[k] case final a?)
-              if (onThis(k.substring(0, k.lastIndexOf('/')))) ...[
-                // An act that names no person, group or item but the persons a field for a key names, as GAI's enter its AI agent, drawn as a form on its contract's tab.
-                if (a.groups.isEmpty &&
-                    a.items.isEmpty &&
-                    a.persons.every(a.keys.contains) &&
-                    !(a.keys.isNotEmpty &&
-                        int.parse(k.substring(k.lastIndexOf('/') + 1)) == 2))
-                  _actForm(context, s, ask, o, k, a, null),
-                // A meeting's key field where the meeting names nothing else; one that names more, as GAI's enter its code, is drawn beside the rows that fill it, its key a field of its composer.
-                if (a.keys.isNotEmpty &&
-                    int.parse(k.substring(k.lastIndexOf('/') + 1)) == 2)
-                  _keyForm(context, s, ask, o, k, a),
-              ],
+          ..._topActs(context, s, ask, o, l.predicate, onThis),
         for (final r in _rows(s, l.predicate))
           _wordedRow(context, s, r,
               counted: l.counted,
@@ -2116,8 +2188,86 @@ class _SocialTabState extends State<SocialTab> {
     );
   }
 
+  /// The acts drawn at the top of the tab of their contract (vGLP feda043, Section 6.2, "The words a platform shows": "an act that names two or more is a form at the top of the tab of its contract, its places picked from the rows; a button that covers several schemas is drawn once; and the button of an act that names none, or a meeting with a peer not listed, is drawn on the tab of its contract"): a meeting with its field for the peer's key; an act that names none, as its form; and the button of each act that names two or more, one for each label, which opens its form, its places picked.  The person proposes at the guarding role whose precondition their state meets, one requiring an atom of the tab's predicate [pred] first, and the first guarding role where none is met.
+  List<Widget> _topActs(BuildContext context, SocialState s, SocialAsk ask,
+      RequestOffers o, String pred, bool Function(String) onThis) {
+    final me = ask.me;
+    final out = <Widget>[];
+    final forms = <List<(String, ActInfo)>>[];
+    final byLabel = <String, int>{};
+    for (final k in o.proposals) {
+      final first = o.acts[k];
+      if (first == null) continue;
+      final f = k.substring(0, k.lastIndexOf('/'));
+      final n = int.parse(k.substring(k.lastIndexOf('/') + 1));
+      if (!onThis(f)) continue;
+      if (first.keys.isNotEmpty && n == 2) {
+        out.add(_keyForm(context, s, ask, o, k, first));
+        continue;
+      }
+      final all = o.allActs[k] ?? [first];
+      final others = {for (var i = 1; i <= n; i++) i};
+      ActInfo? pick;
+      for (final a in all) {
+        if (a.requiresOf(pred, {...others}..remove(a.me)) &&
+            a.holds(s.atoms, {a.me: me})) {
+          pick = a;
+          break;
+        }
+      }
+      pick ??= all.where((a) => a.holds(s.atoms, {a.me: me})).firstOrNull ?? first;
+      final c = pick.namedCount(o.kinds[k] ?? const []);
+      if (c == 0) {
+        out.add(_actForm(context, s, ask, o, k, pick, null));
+      } else if (c >= 2) {
+        final label = o.labels[k] ?? f;
+        final i = byLabel[label];
+        if (i == null) {
+          byLabel[label] = forms.length;
+          forms.add([(k, pick)]);
+        } else {
+          forms[i].add((k, pick));
+        }
+      }
+    }
+    if (forms.isEmpty) return out;
+    String nameOf(List<(String, ActInfo)> m) => _groupName(o, m);
+    return [
+      ...out,
+      Wrap(spacing: 8, runSpacing: 4, children: [
+        for (final m in forms)
+          OutlinedButton(
+            key: socialKey(_id, 'top:${nameOf(m)}'),
+            onPressed: () => setState(() => _openAct =
+                _openAct == 'top:${nameOf(m)}' ? null : 'top:${nameOf(m)}'),
+            child: Text(o.labelOf(
+                m.first.$1.substring(0, m.first.$1.lastIndexOf('/')))),
+          ),
+      ]),
+      for (final m in forms)
+        if (_openAct == 'top:${nameOf(m)}')
+          () {
+            // The widest of the schemas a button covers draws the form; on its button the narrowest whose places are those picked is proposed.
+            final sorted = [...m]..sort((x, y) =>
+                int.parse(x.$1.substring(x.$1.lastIndexOf('/') + 1))
+                    .compareTo(int.parse(y.$1.substring(y.$1.lastIndexOf('/') + 1))));
+            final (wk, wa) = sorted.last;
+            return _actForm(context, s, ask, o, wk, wa, null,
+                composerName: nameOf(m), alts: m.length > 1 ? sorted : null);
+          }(),
+      const SizedBox(height: 8),
+    ];
+  }
+
   /// The functor of an approval pending, its request name (vGLP e286276, Section 5.4, "The compilation": "each by its request name, a request's own and an answer's that of its attempt's part").
   static String _pendingFunctor(GTerm a) => ctorArgs(a).$1;
+
+  /// A term's words as [_named] draws them, a speech act with its signers, innermost first, by name (vGLP 377aa37, Section 6.2, "The words a platform shows": "a speech act, in a row, a question or a field, is drawn with its signers, innermost first, by the names the viewer's state holds for them").
+  static String _signed(GTerm x) {
+    final sa = SpeechAct.of(x);
+    if (sa == null) return _named(x);
+    return '${sa.text} (${[for (final p in sa.signers) personName(p)].join(', ')})';
+  }
 
   /// A term's words: a person by name, a speech act by its text, a group by its name and its leader's name, and any other term as the program writes it.
   static String _named(GTerm x) {
@@ -2170,7 +2320,7 @@ class _SocialTabState extends State<SocialTab> {
     final named = [
       for (final x in xs)
         if (x is! GList && !(me != null && formatTerm(x) == formatTerm(me)))
-          _named(x)
+          _signed(x)
     ];
     return Padding(
       key: socialKey(_id, 'pending:${formatTerm(a)}'),
@@ -2245,7 +2395,7 @@ class _SocialTabState extends State<SocialTab> {
       // The row's own atom by its other arguments, as a bond's maturity, it being an atom of the state naming the item.
       final own = [
         for (final x in ctorArgs(r.atom).$2)
-          if (formatTerm(x) != whole && formatTerm(x) != part) _named(x)
+          if (formatTerm(x) != whole && formatTerm(x) != part) _signed(x)
       ];
       if (own.isNotEmpty) shows.add(own.join(', '));
       for (final a in s.atoms) {
@@ -2253,7 +2403,7 @@ class _SocialTabState extends State<SocialTab> {
         final (_, xs) = ctorArgs(a);
         final rest = [
           for (final x in xs)
-            if (formatTerm(x) != whole && formatTerm(x) != part) _named(x)
+            if (formatTerm(x) != whole && formatTerm(x) != part) _signed(x)
         ];
         if (rest.isNotEmpty) shows.add(rest.join(', '));
       }
@@ -2331,28 +2481,19 @@ class _SocialTabState extends State<SocialTab> {
     final speech = SpeechAct.of(item) != null;
     final acts = <(String, ActInfo)>[];
     for (final key in o.proposals) {
-      final places = o.allActs[key] ?? const <ActInfo>[];
-      if (places.isEmpty) continue;
-      // An act of several guarding roles is drawn on a row at the first of its places the row fills, by an item of the row's list (vGLP 110caf4, Section 6.2: "beside each row that fills its variable"); an act of one, at its place.
-      final at = places.where((a) =>
-          g == null && a.items.any((x) => x.$2 == pred) && !mine);
-      if (places.length > 1 && at.isNotEmpty) {
-        acts.add((key, at.first));
-        continue;
-      }
-      final a = places.first;
-      if (g != null) {
-        if (a.groups.isNotEmpty) {
-          final (j, _) = a.groups.first;
-          if (j != a.me || formatTerm(g.$1) == formatTerm(me)) acts.add((key, a));
-        }
-      } else if (speech) {
-        if (a.items.any((x) => x.$2 == pred)) acts.add((key, a));
-      } else if (item is GAtom &&
-          a.persons.isNotEmpty &&
-          a.groups.isEmpty &&
-          !mine) {
+      final kinds = o.kinds[key] ?? const <String>[];
+      // At each of its guarding roles, an act that names one person, group or item beside its proposer, drawn beside the row where the act requires or deletes, at the viewer's role, the atom of this tab's predicate naming the row's item, and where the viewer's state meets its precondition there (vGLP feda043, Section 6.2, "The words a platform shows").
+      for (final a in o.allActs[key] ?? const <ActInfo>[]) {
+        if (a.namedCount(kinds) != 1 || mine) continue;
+        if (g != null && a.groups.isEmpty) continue;
+        if (g == null && speech && a.items.every((x) => x.$2 != pred)) continue;
+        if (g == null && !speech && item is! GAtom) continue;
+        final fill = _fill(a, item, pred);
+        if (fill.isEmpty || fill.containsKey(a.me)) continue;
+        if (!a.requiresOf(pred, fill.keys.toSet())) continue;
+        if (!a.holds(s.atoms, {a.me: me, ...fill})) continue;
         acts.add((key, a));
+        break;
       }
     }
     if (acts.isEmpty) return const [];
@@ -2401,9 +2542,8 @@ class _SocialTabState extends State<SocialTab> {
       final f = key.substring(0, key.lastIndexOf('/'));
       final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
       final label = o.labels[key];
-      final g = label == null
-          ? null
-          : '$label|${a.tab}|${a.me}|${a.persons}|${a.groups}|${a.keys}';
+      // A button that covers several schemas is drawn once (vGLP feda043, Section 6.2).
+      final g = label == null ? null : '$label|${a.tab}';
       final i = g == null ? null : at[g];
       if (i == null) {
         if (g != null) at[g] = groups.length;
@@ -2637,11 +2777,12 @@ class _SocialTabState extends State<SocialTab> {
 
   /// The composer of the act [key]: the text of its request form where it has one, a picker for each person, group and item place the row does not fill, a field for each place the person fills, named as its widget term names it, and its button; for an act that names no person, group or item, drawn on its contract's tab.
   Widget _actForm(BuildContext context, SocialState s, SocialAsk ask,
-      RequestOffers o, String key, ActInfo a, GTerm? item, {String? pred}) {
+      RequestOffers o, String key, ActInfo a, GTerm? item,
+      {String? pred, String? composerName, List<(String, ActInfo)>? alts}) {
     final f = key.substring(0, key.lastIndexOf('/'));
     final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
     final ik = item == null ? '' : formatTerm(item);
-    final composer = '$f:$ik';
+    final composer = '${composerName ?? f}:$ik';
     final me = ask.me;
     final fill = _fill(a, item, pred);
     final filled = <int>{a.me, ...fill.keys};
@@ -2693,7 +2834,35 @@ class _SocialTabState extends State<SocialTab> {
       for (final w in a.words)
         if (w is int) (at[w] == null ? '' : personName(at[w]!)) else w as String
     ].join();
-    final r = _request(s, o, key, a, me, fill, typed(), composer: composer);
+    GTerm? chosen() {
+      if (alts == null) {
+        return _request(s, o, key, a, me, fill, typed(), composer: composer);
+      }
+      // The places picked in the form, each of which the schema proposed must have.
+      final pickedAt = {
+        for (final i in [
+          ...picks,
+          for (final (k, _) in itemPicks) k,
+          for (final (_, k) in groupPicks) k,
+        ])
+          if (_picked['$composer:$i'] != null ||
+              _picked['$composer:g$i'] != null)
+            i
+      };
+      for (final (k2, a2) in alts) {
+        final own = <int>{
+          ...a2.persons,
+          ...a2.itemPlaces,
+          for (final (_, k) in a2.groups) k
+        }..remove(a2.me);
+        if (!pickedAt.every(own.contains)) continue;
+        final r = _request(s, o, k2, a2, me, fill, typed(), composer: composer);
+        if (r != null) return r;
+      }
+      return null;
+    }
+
+    final r = chosen();
     final small = TextStyle(fontSize: 13, color: Colors.grey.shade700);
     bool picked(String k, GTerm x) =>
         _picked[k] != null && formatTerm(_picked[k]!) == formatTerm(x);
@@ -2740,7 +2909,7 @@ class _SocialTabState extends State<SocialTab> {
                   person: a.persons.contains(k), me: me, item: item))
                 ChoiceChip(
                   key: socialKey(_id, 'pick:$composer:$k:${formatTerm(x)}'),
-                  label: Text(_named(x)),
+                  label: Text(_signed(x)),
                   selected: picked('$composer:$k', x),
                   onSelected: (_) =>
                       setState(() => _picked['$composer:$k'] = x),

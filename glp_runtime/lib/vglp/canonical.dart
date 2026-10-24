@@ -1631,6 +1631,27 @@ class DeclaredWidget {
         final ks = _ints(x.args[1]);
         if (ks == null) return null;
         is_.add('atom(${constantSource(pc)}, [${ks.join(', ')}])');
+      } else if (x.functor == 'req' || x.functor == 'forb') {
+        // The precondition of the act at the proposer's role (vGLP feda043, Section 6.2): each argument at(K), grp(J, K) or any.
+        final as_ = _items(x.args[1]);
+        if (as_ == null) return null;
+        final out = <String>[];
+        for (final a in as_) {
+          if (a is StructTerm && a.functor == 'at' && a.args.length == 1) {
+            final k = _int(a.args[0]);
+            if (k == null) return null;
+            out.add('at($k)');
+          } else if (a is StructTerm && a.functor == 'grp' && a.args.length == 2) {
+            final j = _int(a.args[0]), k = _int(a.args[1]);
+            if (j == null || k == null) return null;
+            out.add('grp($j, $k)');
+          } else if (_labelConstant(a) == 'any') {
+            out.add('any');
+          } else {
+            return null;
+          }
+        }
+        is_.add('${x.functor}(${constantSource(pc)}, [${out.join(', ')}])');
       } else {
         return null;
       }
