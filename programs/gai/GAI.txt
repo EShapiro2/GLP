@@ -12,7 +12,7 @@ GAI: Accountable AI Agents
 Pragmas
 AI agents: those Alice is principal of.
 Guardianship: [Enter] <name> <code>
-Developer: [Sign] <code>
+Developer: [Sign] <text>
 Knowing and relations: [Agent meet] [Agents meet] Carol, an AI agent, asks to meet you.  [Agent befriend] [Agents befriend] Carol, an AI agent, asks to befriend you.
 Ending a relation: [Agent unfriend]
 Retiring: [Retire]
