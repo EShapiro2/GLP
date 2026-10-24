@@ -1,0 +1,3 @@
+%% Exposed by lib/self.glp into the scope of lib/ and below.
+exported procedure half(Integer?, Integer).
+half(X, Y?) :- Y := X? // 2.

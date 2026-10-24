@@ -892,24 +892,6 @@ class AgentRuntime {
     updateStats();
   }
 
-  /// Handle legacy JSON message (backwards compatibility).
-  Future<void> onLegacyMessageReceived(String from, dynamic payload) async {
-    _output('[RECV from $from] $payload');
-    if (_netInput == null || _runtime == null) return;
-
-    final msgTerm = rt.StructTerm('msg', [
-      rt.ConstTerm(from.toLowerCase()),
-      rt.ConstTerm(agentId.toLowerCase()),
-      rt.ConstTerm(payload),
-    ]);
-
-    final activations = _netInput!.inject(msgTerm);
-    for (final goal in activations) {
-      _runtime!.gq.enqueue(goal);
-    }
-    await _runUntilQuiescent();
-  }
-
   Future<void> _sendMadPayload(String to, Uint8List payload) async {
     _log('SEND_MAD to $to (${payload.length} bytes)');
     await onSendMadMessage?.call(to, payload);
@@ -919,8 +901,8 @@ class AgentRuntime {
   // EXECUTION
   // =========================================================================
 
-  /// Run the scheduler until quiescent.
-  /// Returns the execution status name, or null if not initialized.
+  /// Run the scheduler until quiescent, within an event cycle, and return the
+  /// execution status name, or null if not initialized.
   ///
   /// Per agent-runtime-spec.md Section 3: one drain (run all runnable goals
   /// until quiescent), one flush (send all queued outbound messages) --- and
@@ -933,13 +915,14 @@ class AgentRuntime {
   /// with goals still queued — so the drain is [Scheduler.drainToQuiescence],
   /// which repeats it until the queue is empty. The cap left behind is
   /// [maxQuiescenceCycles], a net and not a budget, over the whole cycle.
-  Future<String?> runUntilQuiescent() async {
-    return _runUntilQuiescent();
-  }
-
-  Future<String?> _runUntilQuiescent() async => _runSync();
-
-  /// The run of [runUntilQuiescent], within an event cycle.  With [send] false, the run makes no Sends: its messages stay undelivered in M_p, for a cycle over a store to hand to the layer once the state holding them is saved ([_cycleSaving]).  [maxCycles], where given, bounds the goals of this run in place of [maxQuiescenceCycles].
+  ///
+  /// It is run only within an event cycle: "a message is handed to the layer
+  /// ... only from a state the store holds" (IGLP fcd6128, Implementation
+  /// Notes, "Persistence").  Until 2026-10-24 two public methods ran it
+  /// outside one, `runUntilQuiescent` and `onLegacyMessageReceived`, which
+  /// nothing called.
+  ///
+  /// With [send] false, the run makes no Sends: its messages stay undelivered in M_p, for a cycle over a store to hand to the layer once the state holding them is saved ([_cycleSaving]).  [maxCycles], where given, bounds the goals of this run in place of [maxQuiescenceCycles].
   String? _runSync({bool send = true, int? maxCycles}) {
     _log('RUN: start (GQ=${_runtime?.gq.length ?? 0})');
     if (_scheduler == null || _runtime == null) {

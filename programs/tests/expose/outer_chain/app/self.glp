@@ -1,0 +1,12 @@
+%% The program: calls the exposed quad/2 and quarter/2 by name, and defines a double/2 of its own, which quad/2 does not reach: run(1, Y) gives 4, fourth(8, Y) gives 2 and triple(1, Y) gives 3.
+exported procedure run(Integer?, Integer).
+run(X, Y?) :- quad(X?, Y).
+
+exported procedure fourth(Integer?, Integer).
+fourth(X, Y?) :- quarter(X?, Y).
+
+exported procedure triple(Integer?, Integer).
+triple(X, Y?) :- double(X?, Y).
+
+procedure double(Integer?, Integer).
+double(X, Y?) :- Y := X? * 3.
