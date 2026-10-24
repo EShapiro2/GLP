@@ -56,19 +56,19 @@ sign(Alice?; x) :
     at Alice: identity, not retired, +item(x), +authored(x)
 
 message(Alice?, Bob; x) :
-    at Alice: identity, authored(x), not retired
-    at Bob: identity, friend(Alice), +item(x)
+    at Alice: identity, authored(x), friend(Bob), not retired
+    at Bob: identity, +item(x)
 
 forward(Alice?, Bob; x) :
-    at Alice: identity, item(x), not authored(x), not retired
-    at Bob: identity, friend(Alice), +item(sgn(x, Alice))
+    at Alice: identity, item(x), friend(Bob), not authored(x), not retired
+    at Bob: identity, +item(sgn(x, Alice))
 
 create(Alice?; n) :
     at Alice: identity, not agent, not retired, not member(<Alice>.n), not closed(n), +member(<Alice>.n), +listed(Alice, n)
 
 join(Alice?, Bob?; n) :
     at Alice: identity, member(<Alice>.n), friend(Bob), not agent, not retired, +listed(Bob, n)
-    at Bob: identity, friend(Alice), not agent, not retired, not member(<Alice>.n), +member(<Alice>.n)
+    at Bob: identity, not agent, not retired, not member(<Alice>.n), +member(<Alice>.n)
 
 leave(Alice, Bob?; n) :
     at Alice: identity, -listed(Bob, n)
