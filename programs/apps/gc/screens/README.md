@@ -2,7 +2,7 @@
 
 The screens of the figure of GC's app in GSC's paper (Code_inbox.md, Currencies #11 Cowork, 2026-10-20 18:10 UTC, task 2, on GSC #5 Cowork's request of 13:29 UTC), in the figure's order: Alice's and Bob's phones as the construct family draws the app, the tab Coins, drawn from the last view the agent wrote (`../README.md`, "The screens").  Each file is one phone's screen taken on the iOS Simulator, an iPhone 16e, 390 by 844 points at 3 pixels a point, its status bar at 9:41 with full signal, Wi-Fi and battery, in the light theme, set in Roboto; the simulator's screenshot is the display alone, so it is framed as the phone, in a black bezel with rounded corners, 1080 by 2220 pixels on white, as the screens of GSG's app are (`../../gsg/screens/`).
 
-They are taken by `glp_multiagent/tool/sim_screens.sh`, which plays on the simulator the scenario of `glp_multiagent/test/apps_screens_test.dart`: it loads this app, runs its entry `miniapp/4` for Alice and for Bob over one conversation, and takes each person's acts by tapping and typing on the tabs' controls: each joins and adds the other by key, Alice asks to meet Bob in person and he answers Yes (GKK:1, GKK:2); each mints a coin (GC:1); Alice asks Bob to swap her Alice-coin for his Bob-coin, and he answers Yes (GC:2); and Alice pays the Bob-coin to Bob (GC:3).  From `glp_multiagent/`:
+They are taken by `glp_multiagent/tool/sim_screens.sh`, which plays on the simulator the scenario of `glp_multiagent/test/apps_screens_test.dart`: it loads this app, runs its entry `miniapp/4` for Alice and for Bob over one conversation, and takes each person's acts by tapping and typing on the tabs' controls: each establishes their identity, and Alice meets Bob by his key, the cold call he answers yes (GKK:1, GKK:2); Alice mints two Alice-coins and Bob three Bob-coins (GC:1); Alice asks Bob to swap her two Alice-coins for his three Bob-coins, and he answers yes (GC:2); and Alice pays two Bob-coins to Bob (GC:3).  From `glp_multiagent/`:
 
 ```bash
 bash tool/sim_screens.sh
@@ -12,7 +12,7 @@ The script builds the bundled assets (`tool/sync_glp_assets.sh`), boots the simu
 
 | File | What it shows |
 |---|---|
-| `gc-a-alice-mint.png` | Alice mints (GC:1): her Coins tab once she has tapped Mint, the button Mint and her holdings, one Alice-coin. |
-| `gc-b-bob-asked.png` | Alice asks Bob to swap (GC:2): Bob's Coins tab with the question "Alice asks to swap an Alice-coin for a Bob-coin." and the buttons Yes and No at its top, and his holdings, one Bob-coin. |
-| `gc-c-bob-holdings.png` | Bob's Coins tab once he has answered Yes and the swap has committed: his holdings, one Alice-coin, with Pay. |
-| `gc-d-alice-pay.png` | Alice pays the Bob-coin to Bob (GC:3): her Coins tab once she has tapped Pay on its row, "You asked to pay a Bob-coin to Bob." and her holdings, "No coins". |
+| `gc-a-alice-mint.png` | Alice mints (GC:1): her Coins tab, the tab of GC, once she has typed 2 into Mint's field, GC's "<amount>", and tapped Mint, GC's "[Mint]": a row for her coins, Alice, and their count, 2. |
+| `gc-b-bob-asked.png` | Alice asks Bob to swap (GC:2): Bob's Coins tab with GC's question "Alice asks to swap coins with you." and the answers yes and no at its top, and his row, Bob, 3. |
+| `gc-c-bob-holdings.png` | Bob's Coins tab once he has answered yes and the swap has committed: a row for the Alice-coins he holds, Alice, 2, with the buttons of the acts that name a person beside the proposer, Meet, Introduce, Swap, Pay and Redeem. |
+| `gc-d-alice-pay.png` | Alice pays two Bob-coins to Bob (GC:3): her Coins tab once she has tapped Pay on Bob's row and typed 2 into its field: one Bob-coin left, the row Bob. |
