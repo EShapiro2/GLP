@@ -20,6 +20,16 @@ identity
 \}
 ,\\
 &
+\text{provided } 
+\mathit{
+identity
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
 \text{guarded by } \{
 \Alice
 \}
@@ -188,6 +198,8 @@ c_
 }
  \uplus 
 \{
+k
+\cdot
 \text{\textcent}
 (
 \Alice
@@ -225,6 +237,8 @@ c'_
 }
  \setminus 
 \{
+k
+\cdot
 \text{\textcent}
 (
 u
@@ -232,6 +246,8 @@ u
 \}
 ) \uplus 
 \{
+k1
+\cdot
 \text{\textcent}
 (
 v
@@ -249,6 +265,8 @@ c'_
 }
  \setminus 
 \{
+k1
+\cdot
 \text{\textcent}
 (
 v
@@ -256,6 +274,8 @@ v
 \}
 ) \uplus 
 \{
+k
+\cdot
 \text{\textcent}
 (
 u
@@ -264,6 +284,7 @@ u
 ,\\
 &
 \text{provided } 
+\{
 \mathit{
 identity
 }
@@ -275,15 +296,19 @@ knows
 \Bob
 )
 ,
+k
+\cdot
 \text{\textcent}
 (
 u
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }
  \text{ and } 
+\{
 \mathit{
 identity
 }
@@ -295,11 +320,14 @@ knows
 \Alice
 )
 ,
+k1
+\cdot
 \text{\textcent}
 (
 v
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Bob
 }
@@ -327,6 +355,8 @@ c_
 }
  \setminus 
 \{
+k
+\cdot
 \text{\textcent}
 (
 \Bob
@@ -344,6 +374,8 @@ c_
 }
  \uplus 
 \{
+k
+\cdot
 \text{\textcent}
 (
 \Bob
@@ -352,6 +384,7 @@ c_
 ,\\
 &
 \text{provided } 
+\{
 \mathit{
 identity
 }
@@ -363,11 +396,14 @@ knows
 \Bob
 )
 ,
+k
+\cdot
 \text{\textcent}
 (
 \Bob
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }

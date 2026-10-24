@@ -1,5 +1,5 @@
 establish(Alice?) :
-    at Alice: +identity
+    at Alice: not identity, +identity
 
 meet(Alice?, Bob?) :
     at Alice: identity, +knows(Bob)
@@ -9,16 +9,16 @@ introduce(Alice?, Bob?; c) :
     at Alice: identity, knows(Bob), knows(c)
     at Bob: identity, knows(Alice), +knows(c)
 
-mint(Alice?) :
-    at Alice: identity, +coin(Alice)
+mint(Alice?; k) :
+    at Alice: identity, +k.coin(Alice)
 
-swap(Alice?, Bob?; u, v) :
-    at Alice: identity, knows(Bob), +coin(v), -coin(u)
-    at Bob: identity, knows(Alice), +coin(u), -coin(v)
+swap(Alice?, Bob?; u, k, v, k1) :
+    at Alice: identity, knows(Bob), +k1.coin(v), -k.coin(u)
+    at Bob: identity, knows(Alice), +k.coin(u), -k1.coin(v)
 
-pay(Alice?, Bob) :
-    at Alice: identity, knows(Bob), -coin(Bob)
-    at Bob: identity, +coin(Bob)
+pay(Alice?, Bob; k) :
+    at Alice: identity, knows(Bob), -k.coin(Bob)
+    at Bob: identity, +k.coin(Bob)
 
 redeem(Alice?, Bob; r) :
     at Alice: identity, knows(Bob), +coin(r), -coin(Bob)
