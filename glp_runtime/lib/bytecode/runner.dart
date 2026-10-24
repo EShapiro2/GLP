@@ -1097,12 +1097,13 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
   }
 
   // The number an arithmetic expression of type Exp evaluates to (the root
-  // self.glp): numbers, +, -, *, /, // and mod, unary negation (neg, as -X
-  // parses), pow and the sixteen unary functions, each as its kernel computes
-  // it --- "Arithmetic comparison guards evaluate their arguments as
-  // arithmetic expressions of type Exp" (GLP-Spec appendix-guards.tex,
-  // 026515d).  Null where an unbound reader blocks it ([blockedReaders]) or it
-  // has no value ([undefined]).
+  // self.glp): numbers, +, -, *, /, // and mod, pow and the sixteen unary
+  // functions, each as its kernel computes it --- "Arithmetic comparison
+  // guards evaluate their arguments as arithmetic expressions of type Exp"
+  // (GLP-Spec appendix-guards.tex, 026515d).  Null where an unbound reader
+  // blocks it ([blockedReaders]) or it has no value ([undefined]): a `-` of
+  // one argument among them, unary negation being no operator of Exp (TGLP
+  // 6858789, appendix-root-self.tex).
   num? evaluateNumeric(Object? v) {
     if (v is num) return v;
     if (v is ConstTerm && v.value is num) return v.value as num;
@@ -1146,17 +1147,11 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           if (a == null || b == null) return null;
           return a + b;
         case '-':
-          if (v.args.length == 1) {
-            // Unary minus
-            final a = evaluateNumeric(v.args[0]);
-            return a == null ? null : -a;
-          } else if (v.args.length == 2) {
-            final a = evaluateNumeric(v.args[0]);
-            final b = evaluateNumeric(v.args[1]);
-            if (a == null || b == null) return null;
-            return a - b;
-          }
-          return undefined();
+          if (v.args.length != 2) return undefined();
+          final a = evaluateNumeric(v.args[0]);
+          final b = evaluateNumeric(v.args[1]);
+          if (a == null || b == null) return null;
+          return a - b;
         case '*':
           if (v.args.length != 2) return undefined();
           final a = evaluateNumeric(v.args[0]);
@@ -1186,10 +1181,6 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           if (b != null && (b is! int || b == 0)) return undefined();
           if (a == null || b == null) return null;
           return v.functor == '//' ? a ~/ b : a % b;
-        case 'neg':
-          if (v.args.length != 1) return undefined();
-          final a = evaluateNumeric(v.args[0]);
-          return a == null ? null : -a;
         default:
           // pow and the sixteen unary functions of Exp, each as its kernel
           // computes it ([expFunction]): an argument outside the function's

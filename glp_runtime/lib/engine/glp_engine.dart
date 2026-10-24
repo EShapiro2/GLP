@@ -293,6 +293,13 @@ class GlpEngine {
       _rootCode = GlpCompiler().compileProgram(linked.program,
           procDeclarations: linked.procDeclarations,
           typeEnv: linked.checkedEnv);
+      // The root's declared table, keyed as its code carries each procedure,
+      // `:p/n` ([_findTypeRef]): the table of the scope of a goal posted with
+      // no program loaded (module_kernels.dart, _callerTables).  Built on
+      // first use, as a module's is at its load.
+      TypeIdentityTables? rootTables;
+      _runtime.rootDeclaredTypes =
+          () => rootTables ??= linkedTypeIdentityTables([root], linked);
     } catch (e) {
       throw StateError(
           'root self.glp does not check and compile: $_rootSelfGlpPath\n  $e\n'
@@ -616,6 +623,50 @@ class GlpEngine {
     return null;
   }
 
+  /// [goal] with the procedure reference P/N of a posted `find_type(P/N, T)`
+  /// or `find_type(P/N, Hs, T)` named as the goal names a call
+  /// ([_goalLabel]): an entry point of a loaded unit by its plain name, and a
+  /// declaration of the root under the empty path, the key under which the
+  /// module value's tables carry it (TGLP Implementation Notes, "The
+  /// tables").  "find_type assigns the type identity of a declaration in the
+  /// caller's scope" (TGLP modules.tex, "Dynamic Activation"), and the scope of
+  /// a posted goal, a module at the root, holds the root's declarations, as
+  /// the linker names them in a clause of a program ([_resolveProcedureRef],
+  /// program_linker.dart).  Until 2026-10-24 the reference stayed bare and the
+  /// kernel found no root declaration: find_type(now/1, T) at the prompt
+  /// after a load erred "not declared in the caller's scope".  Any other goal
+  /// is [goal] itself.
+  Atom _findTypeRef(Atom goal) {
+    if (goal.functor != 'find_type' ||
+        (goal.args.length != 2 && goal.args.length != 3)) {
+      return goal;
+    }
+    final ref = goal.args[0];
+    if (ref is! StructTerm || ref.functor != '/' || ref.args.length != 2) {
+      return goal;
+    }
+    final name = ref.args[0];
+    final arity = ref.args[1];
+    if (name is! ConstTerm || name.value is! String) return goal;
+    if (arity is! ConstTerm || arity.value is! int) return goal;
+    final plain = '${name.value}/${arity.value}';
+    if (_entryPoints().contains(plain)) return goal;
+    if (!_rootScope.procedures.containsKey(plain) &&
+        !_rootScope.paramProcDecls.containsKey(plain)) {
+      return goal;
+    }
+    final rooted = StructTerm(
+        '/',
+        [
+          ConstTerm(rootRenamed(name.value as String), name.line, name.column),
+          arity
+        ],
+        ref.line,
+        ref.column);
+    return Atom(goal.functor, [rooted, ...goal.args.skip(1)], goal.line,
+        goal.column);
+  }
+
   /// The name a file-less source is linked under: the name it was loaded
   /// under, its extension dropped --- a module at the root, whose path from
   /// the root is that name, never the root's own empty path.
@@ -852,6 +903,11 @@ class GlpEngine {
         throw GoalRefused('No clauses in goal');
       }
       goals = [ast.procedures[0].clauses[0].head];
+    }
+
+    // The P/N of a find_type goal named in the goal's scope ([_findTypeRef]).
+    for (var g = 0; g < goals.length; g++) {
+      goals[g] = _findTypeRef(goals[g]);
     }
 
     // Every conjunct is found, and every input is the goal's to read, before

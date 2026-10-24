@@ -93,7 +93,7 @@ delay(N/U, K, D?) :-
     seconds(U?, S),
     P := K? / 2147483647,
     L := ln(P?),
-    D := neg(L?) * S? / N?.
+    D := (0 - L?) * S? / N?.
 
 %% seconds(U?, S): S is the number of seconds in one U.
 procedure seconds(TimeUnit?, Integer).

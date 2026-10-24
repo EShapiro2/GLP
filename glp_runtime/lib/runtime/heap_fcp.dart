@@ -103,8 +103,12 @@ class HeapFCP {
   int HP = 0;
 
   /// Callbacks for external observation (Phase 0 I/O)
-  /// Keyed by the writer cell
-  final Map<HeapCell, void Function(Term)> _bindCallbacks = {};
+  /// Keyed by the writer cell.  Each carries the tag its registrar gave it,
+  /// by which the registrar makes it again for a restarted agent: a callback
+  /// is code, and the agent's saved state holds its tag and the cell it sits
+  /// on (IGLP, Implementation Notes, "Persistence"; [bindCallbackTags]).
+  final Map<HeapCell, ({void Function(Term) fn, HeapCell? tag})>
+      _bindCallbacks = {};
 
   // ==========================================================================
   // Variable Allocation (Section 3 of spec)
@@ -399,7 +403,7 @@ class HeapFCP {
     if (fireCallback) {
       final callback = _bindCallbacks.remove(writerAddr);
       if (callback != null) {
-        callback(value);
+        callback.fn(value);
       }
     }
 
@@ -433,7 +437,7 @@ class HeapFCP {
       final callback = _bindCallbacks.remove(addr);
       final value = getValue(addr);
       if (callback != null && value != null) {
-        callback(value);
+        callback.fn(value);
       }
     }
   }
@@ -446,7 +450,7 @@ class HeapFCP {
     if (callback != null) {
       final value = getValue(writerAddr);
       if (value != null) {
-        callback(value);
+        callback.fn(value);
       }
     }
   }
@@ -506,7 +510,7 @@ class HeapFCP {
       if (chainEnd is VarRef) {
         _bindCallbacks[chainEnd.addr] = callback;
       } else {
-        callback(chainEnd as Term);
+        callback.fn(chainEnd as Term);
       }
     }
 
@@ -639,8 +643,11 @@ class HeapFCP {
     return term;
   }
 
-  /// Register callback for when variable is bound
-  void onBind(HeapCell writerAddr, void Function(Term) callback) {
+  /// Register callback for when variable is bound.  [tag] names the
+  /// callback to its registrar, which makes it again from the tag for a
+  /// restarted agent ([bindCallbackTags], [restoreBindCallback]).
+  void onBind(HeapCell writerAddr, void Function(Term) callback,
+      {HeapCell? tag}) {
     if (isFullyBound(writerAddr)) {
       final value = getValue(writerAddr);
       if (value != null) {
@@ -648,7 +655,22 @@ class HeapFCP {
       }
       return;
     }
-    _bindCallbacks[writerAddr] = callback;
+    _bindCallbacks[writerAddr] = (fn: callback, tag: tag);
+  }
+
+  /// The registered callbacks, in order of registration: the cell each sits
+  /// on, and its tag, null for a callback registered with none.  The agent's
+  /// saved state holds them (IGLP, Implementation Notes, "Persistence").
+  Iterable<(HeapCell, HeapCell?)> get bindCallbackTags =>
+      _bindCallbacks.entries.map((e) => (e.key, e.value.tag));
+
+  /// Put back, on [at], the callback a restarted agent's registrar made from
+  /// [tag], where the saved state had it, bound or not: a callback whose cell
+  /// was bound to a reader whose chain has since been bound is fired at the
+  /// end of the next commit ([fireBoundCallbacks]), as it would have been.
+  void restoreBindCallback(
+      HeapCell at, void Function(Term) callback, HeapCell tag) {
+    _bindCallbacks[at] = (fn: callback, tag: tag);
   }
 
   /// Remove a registered callback

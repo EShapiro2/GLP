@@ -1,0 +1,23 @@
+%% find_type(P/N, Hs, Type) on the root's parameterised declarations, merge/3
+%% of one type parameter and miniapp/4 of two: Hs is a list of type
+%% identities, one per type parameter of the declaration in declaration order,
+%% and find_type/3 errs where the length of Hs is not the number of its type
+%% parameters (GLP-Spec appendix-guards, "Dynamic activation"; TGLP
+%% modules.tex, Definition "Type Identity of a Type, Opaque Instance").  The
+%% identities here are labels and no type's: the opaque instance prints each
+%% as it is given.
+
+exported procedure one(Constant).
+one(T?) :- find_type(merge/3, [h1], T).
+
+exported procedure two(Constant, Constant).
+two(T?, U?) :- find_type(miniapp/4, [h1, h2], T), find_type(miniapp/4, [h2, h1], U).
+
+exported procedure none(Constant).
+none(T?) :- find_type(merge/3, [], T).
+
+exported procedure short(Constant).
+short(T?) :- find_type(miniapp/4, [h1], T).
+
+exported procedure long(Constant).
+long(T?) :- find_type(merge/3, [h1, h2], T).

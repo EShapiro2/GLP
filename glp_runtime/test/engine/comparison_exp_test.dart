@@ -1,6 +1,6 @@
 /// An arithmetic comparison evaluates its arguments as expressions of type
-/// Exp: numbers, the operators +, -, *, /, // and mod, pow, unary negation,
-/// and the sixteen functions, each as its body kernel computes it; an argument
+/// Exp: numbers, the operators +, -, *, /, // and mod, pow, and the sixteen
+/// functions, each as its body kernel computes it; an argument
 /// outside a function's domain has no value, and the guard fails.
 ///
 /// GLP-Spec appendix-guards.tex (026515d): "Arithmetic comparison guards
@@ -77,7 +77,8 @@ eq_$f(X, L, yes) :- $f(X?) =:= L? | true.
 eq_$f(_, _, no) :- otherwise | true.
 ''';
 
-/// pow, unary negation, / and functions nested in expressions.
+/// pow, the negation of X written 0 - X, / and functions nested in
+/// expressions.
 const _rest = r'''
 procedure gt_pow(_?, _?, _?, Constant).
 gt_pow(X, Y, L, yes) :- pow(X?, Y?) > L? | true.
@@ -88,7 +89,7 @@ eq_pow(X, Y, L, yes) :- pow(X?, Y?) =:= L? | true.
 eq_pow(_, _, _, no) :- otherwise | true.
 
 procedure gt_neg(_?, _?, Constant).
-gt_neg(X, L, yes) :- -X? > L? | true.
+gt_neg(X, L, yes) :- 0 - X? > L? | true.
 gt_neg(_, _, no) :- otherwise | true.
 
 procedure gt_div(_?, _?, _?, Constant).
@@ -186,7 +187,7 @@ void main() {
     _runs(_rest, 'Y := pow(2, 10), eq_pow(2, 10, Y?, R)', _ok, r: 'yes');
   });
 
-  group('unary negation and /', () {
+  group('the negation of X, 0 - X, and /', () {
     _runs(_rest, 'gt_neg(-3, 1, R)', _ok, r: 'yes');
     _runs(_rest, 'gt_neg(3, 1, R)', _ok, r: 'no');
     _runs(_rest, 'gt_neg(Q?, 1, R)', _waits);

@@ -126,7 +126,6 @@ const Set<String> builtinProcedures = {
   '_div/3',
   '_idiv/3',
   '_mod/3',
-  '_neg/2',
   // Math
   '_abs/2',
   '_sqrt/2',

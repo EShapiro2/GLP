@@ -572,7 +572,7 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 
 **Note**: Prolog uses `=<` (not `<=`) for "less than or equal"
 
-**Operands**: arithmetic expressions of type `Exp` (the root `self.glp`; GLP-Spec appendix-guards.tex, 026515d) --- numbers, `+`, `-`, `*`, `/`, `//`, `mod` and `pow`, unary negation, and the sixteen functions `abs`, `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `exp`, `ln`, `log`, `integer`, `real`, `round`, `floor` and `ceil`, each as its body kernel computes it, `log` being `'_log10'`.  Until 2026-10-02 a function had no value in a guard, and `sqrt(X?) > 1` never succeeded (GLP #3 Cowork, 2026-10-02 20:58 UTC).
+**Operands**: arithmetic expressions of type `Exp` (the root `self.glp`; GLP-Spec appendix-guards.tex, 026515d; TGLP appendix-root-self.tex, 6858789) --- numbers, `+`, `-`, `*`, `/`, `//`, `mod` and `pow`, and the sixteen functions `abs`, `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `exp`, `ln`, `log`, `integer`, `real`, `round`, `floor` and `ceil`, each as its body kernel computes it, `log` being `'_log10'`.  Until 2026-10-02 a function had no value in a guard, and `sqrt(X?) > 1` never succeeded (GLP #3 Cowork, 2026-10-02 20:58 UTC).
 
 **Semantics**:
 - Success: Both X and Y bound to numbers AND condition holds

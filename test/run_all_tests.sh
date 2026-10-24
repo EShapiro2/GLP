@@ -1290,7 +1290,7 @@ check "operator names: mod a type alternative" "R36a = is_mod" "$a36"
 check "operator names: procedure a type alternative" "R36b = is_procedure" "$a36"
 check "operator names: + a type alternative" "R36c = is_plus" "$a36"
 check "operator names: mod still infix" "A36 = 1" "$a36"
-check "operator names: unary minus still neg" "B36 = -3" "$a36"
+check "operator names: 0 - 5 + 2 is -3, GLP having no unary minus" "B36 = -3" "$a36"
 check "operator names: + and * by precedence" "C36 = 14" "$a36"
 check "operator names: mod in a guard expression" "E36 = even" "$a36"
 check "operator names: X = mod at the prompt" "X36 = 'mod'" "$a36"
@@ -5520,6 +5520,69 @@ self_module(M), run(merged(Z), M?).
 HEREDOC
 2>&1)
 check "RM9 an activated module reaches a root-scope procedure in its body" "Z = \[a, b\]" "$rm9"
+
+# find_type(P/N, Hs, Type) (GLP-Spec appendix-guards, "Dynamic activation";
+# TGLP modules.tex, Definition "Type Identity of a Type, Opaque Instance"): Hs
+# is a list of type identities, one per type parameter of the caller's
+# parameterised declaration of P/N in declaration order, and find_type/3 errs
+# where the length of Hs is not the number of its type parameters.  The
+# fixture calls it on the root's merge/3, of one type parameter, and
+# miniapp/4, of two.
+rm10=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/find_type_list
+one(T).
+two(T, U).
+none(T).
+short(T).
+long(T).
+:quit
+HEREDOC
+2>&1)
+check "RM10 find_type/3 at one type parameter, a list of one" "T = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm10"
+check "RM10 find_type/3 at two type parameters, a list of two" "U = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm10"
+check "RM10 find_type/3 errs on an empty list for one type parameter" "_find_type/3: the length of the list of type identities, 0, is not the number of type parameters of the declaration of :merge/3, 1" "$rm10"
+check "RM10 find_type/3 errs on one identity for two type parameters" "_find_type/3: the length of the list of type identities, 1, is not the number of type parameters of the declaration of :miniapp/4, 2" "$rm10"
+check "RM10 find_type/3 errs on two identities for one type parameter" "_find_type/3: the length of the list of type identities, 2, is not the number of type parameters of the declaration of :merge/3, 1" "$rm10"
+
+# At the prompt after a load, a posted goal's P/N names a declaration of the
+# root as a clause of the program does: find_type "assigns the type identity
+# of a declaration in the caller's scope" (TGLP modules.tex, "Dynamic
+# Activation"), and the scope of a goal posted at the root holds the root's
+# declarations.  Until 2026-10-24 find_type(now/1, V) and find_type(merge/3,
+# [h1], U) erred there "not declared in the caller's scope".  U is the
+# identity one/1, a clause of the program, obtains for the same goal.
+rm11=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/find_type_list
+one(T).
+find_type(merge/3, [h1], U).
+find_type(now/1, V).
+:quit
+HEREDOC
+2>&1)
+check "RM11 find_type/3 at the prompt finds the root's merge/3" "U = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm11"
+check "RM11 find_type/2 at the prompt finds the root's now/1" "V = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm11"
+rm11_t=$(echo "$rm11" | sed -n "s/.*T = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+rm11_u=$(echo "$rm11" | sed -n "s/.*U = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+check "RM11 the prompt's identity of merge/3 at [h1] is the program clause's" "^same$" "$([ -n "$rm11_t" ] && [ "$rm11_t" = "$rm11_u" ] && echo same)"
+check_not "RM11 no find_type errs at the prompt" "_find_type/[23]:" "$rm11"
+
+# With no program loaded, a goal posted at the prompt runs no module, and its
+# scope is the root's: find_type reads the root's declared table there.  Until
+# 2026-10-24 it erred "the calling goal's module carries no declared table".
+# The identities are those RM11 obtains with a program loaded.
+rm12=$("$REPL_RUN" <<HEREDOC
+find_type(now/1, V).
+find_type(merge/3, [h1], U).
+:quit
+HEREDOC
+2>&1)
+check "RM12 with no program loaded, find_type/2 at the prompt finds the root's now/1" "V = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm12"
+check "RM12 with no program loaded, find_type/3 at the prompt finds the root's merge/3" "U = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm12"
+check_not "RM12 no find_type errs at the prompt with no program loaded" "_find_type/[23]:" "$rm12"
+rm11_v=$(echo "$rm11" | sed -n "s/.*V = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+rm12_v=$(echo "$rm12" | sed -n "s/.*V = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+rm12_u=$(echo "$rm12" | sed -n "s/.*U = '\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\}$/\1/p" | head -1)
+check "RM12 the identities are those obtained with a program loaded" "^same$" "$([ -n "$rm12_v" ] && [ "$rm12_v" = "$rm11_v" ] && [ "$rm12_u" = "$rm11_u" ] && echo same)"
 
 echo ""
 fi  # Section RM

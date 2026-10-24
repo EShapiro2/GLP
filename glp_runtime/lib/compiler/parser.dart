@@ -1368,7 +1368,7 @@ class Parser {
   /// expected, and how it reads there: 'functor' where "(" follows it,
   /// 'constant' where it has no operand --- an operand-ending token follows,
   /// or it is `mod` or `procedure`, a word that is no prefix operator ---
-  /// and null otherwise (a prefix minus, or no term at all).
+  /// and null otherwise (a minus before an operand, or no term at all).
   String? _operatorNameAt() {
     if (_isAtEnd() || !_operatorNames.contains(_peek().type)) return null;
     final next = _current + 1 < tokens.length
@@ -1381,12 +1381,12 @@ class Parser {
     return null;
   }
 
-  // Primary expression: variable, number, string, list, structure, parenthesized, unary minus
+  // Primary expression: variable, number, string, list, structure, parenthesized
   Term _parsePrimary() {
     // An operator name where a term is expected (see [_operatorNames]): the
     // functor of a compound term before "(", Exp ::= +(Exp?, Exp?) among them,
-    // checked before unary minus so -(X, Y) is a structure and not
-    // neg((X, Y)); otherwise, with no operand, the constant of its name.
+    // so -(X, Y) is a structure; otherwise, with no operand, the constant of
+    // its name.
     final operatorName = _operatorNameAt();
     if (operatorName == 'functor') {
       final functorToken = _advance();
@@ -1414,11 +1414,20 @@ class Parser {
       return ConstTerm(nameToken.lexeme, nameToken.line, nameToken.column);
     }
 
-    // Unary minus: -X becomes neg(X)
-    if (_match(TokenType.MINUS)) {
-      final minusToken = _previous();
-      final operand = _parsePrimary();
-      return StructTerm('neg', [operand], minusToken.line, minusToken.column);
+    // A minus before an operand: GLP has no unary minus.  Exp's operators are
+    // the binary +, -, *, /, //, mod and pow and the unary functions, and
+    // unary negation is none of them (TGLP 6858789, appendix-root-self.tex;
+    // GLP-Spec 5381f71, the arithmetic kernels), so -X is refused and the
+    // negation of X is written 0 - X.  A minus written directly before a
+    // digit is read by the lexer as the sign of a number literal, -3, and
+    // never reaches here.
+    if (_check(TokenType.MINUS)) {
+      throw CompileError(
+        'GLP has no unary minus: write 0 - X for the negation of X',
+        _peek().line,
+        _peek().column,
+        phase: 'parser'
+      );
     }
 
     // Variable or Reader - check for := assignment

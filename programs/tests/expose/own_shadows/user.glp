@@ -1,0 +1,3 @@
+%% A module of the exposing directory: its call of rate/2 is the self.glp's.
+exported procedure via(Integer).
+via(N?) :- rate(2, N).

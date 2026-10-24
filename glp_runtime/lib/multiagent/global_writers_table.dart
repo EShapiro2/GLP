@@ -8,6 +8,7 @@
 library;
 
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
+import 'package:glp_runtime/runtime/saved_state.dart';
 
 /// Entry created by Globalize (when exporting a writer)
 ///
@@ -293,6 +294,56 @@ class GlobalWritersTable {
 
   /// Number of LocalizeEntries currently in the table
   int get localizeEntryCount => _localizeEntries.length;
+
+  /// Write the table into the agent's saved state (IGLP, Implementation
+  /// Notes, "Persistence": "the global writers table with the serializer's set
+  /// of appended cold calls ... the global-name counter").
+  void saveState(StateWriter w) {
+    w.uint(_nextIndex);
+    w.optCell(_serializerWriterAddr);
+    w.uint(_serializerAppended.length);
+    for (final (sender, serial) in _serializerAppended) {
+      w.str(sender);
+      w.uint(serial);
+    }
+    w.uint(_globalizeEntries.length);
+    for (final MapEntry(key: index, value: e) in _globalizeEntries.entries) {
+      w.uint(index);
+      w.cell(e.writerAddr);
+      w.str(e.remoteAgent);
+    }
+    w.uint(_localizeEntries.length);
+    for (final e in _localizeEntries) {
+      w.cell(e.writerAddr);
+      w.str(e.remoteAgent);
+      w.uint(e.remoteIndex);
+    }
+  }
+
+  /// Read back what [saveState] wrote, into a table fresh from construction.
+  void restoreState(StateReader r) {
+    _nextIndex = r.uint();
+    _serializerWriterAddr = r.optCell();
+    _serializerAppended.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final sender = r.str();
+      _serializerAppended.add((sender, r.uint()));
+    }
+    _globalizeEntries.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final index = r.uint();
+      final writer = r.cell();
+      _globalizeEntries[index] =
+          GlobalizeEntry(writerAddr: writer, remoteAgent: r.str());
+    }
+    _localizeEntries.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final writer = r.cell();
+      final agent = r.str();
+      _localizeEntries.add(LocalizeEntry(
+          writerAddr: writer, remoteAgent: agent, remoteIndex: r.uint()));
+    }
+  }
 
   @override
   String toString() {

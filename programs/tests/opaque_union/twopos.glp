@@ -1,0 +1,21 @@
+%% The activating goal at a template of two type parameters, X and Y, both in
+%% the type of one position, Pair(X, Y): a variable of type Pair(Opaque,
+%% Opaque) stands there, each Opaque taken back to the opaque type the
+%% position has at it, labelled by the first and by the second identity of the
+%% list find_type/3 reads.  Loads (TGLP modules.tex, "Opaque types": "in a goal
+%% that run activates at an opaque instance at h_1, ..., h_k, a variable of
+%% type T° may stand at a position typed T, for a type T whose opaque types are
+%% labelled among h_1, ..., h_k").
+
+Pair(X, Y) ::= pair(X, Y, Integer).
+
+procedure(X, Y) entry(Pair(X, Y)?).
+entry(_).
+
+Inv ::= inv(Module, Pair(Opaque, Opaque)).
+
+procedure host(Inv?).
+host(inv(M, P)) :-
+    opaque_type(entry/1, M?, Hs),
+    find_type(entry/1, Hs?, T),
+    run(entry(P?), T?, M?).
