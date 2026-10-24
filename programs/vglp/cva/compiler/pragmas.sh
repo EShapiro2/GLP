@@ -12,7 +12,8 @@ exec perl -CSD -Mutf8 -e '
 use strict; use warnings;
 my ($top, $programs, $term) = @ARGV;
 # The schemas of the contract term, where it is given, each with the variables of its head after its roles, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).
-my (@snames, %svars);
+my (@snames, %svars, %preds);
+$preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
 if (defined $term && $term ne "") {
     while ($term =~ /\b[nc]?schema\((\w+), \[([^\]]*)\]/g) {
         my ($n, $a) = ($1, $2);
@@ -125,7 +126,21 @@ for my $f (@order) {
         if ($first) {
             $first = 0;
             my @w;
-            for my $w (map { lc } ($rest =~ /([A-Za-z0-9_]+)/g)) {
+            my @lw = map { lc } ($rest =~ /([A-Za-z0-9_]+)/g);
+            # A predicate whose name is two or three words of the line, an underscore read as a space, is named by them, and the words it covers name no other predicate, as "principal of" names principal_of and not principal (the proposal of Code #14 to vGLP, 2026-10-24, for GAI.txt, "those Alice is principal of").
+            my %covered;
+            for my $n (3, 2) {
+                for my $i (0 .. $#lw - $n + 1) {
+                    next if grep { $covered{$_} } $i .. $i + $n - 1;
+                    my $ph = join("_", @lw[$i .. $i + $n - 1]);
+                    next unless $preds{$ph};
+                    push @w, $ph;
+                    $covered{$_} = 1 for $i .. $i + $n - 1;
+                }
+            }
+            for my $i (0 .. $#lw) {
+                next if $covered{$i};
+                my $w = $lw[$i];
                 push @w, $w;
                 push @w, substr($w, 0, -1) if length($w) > 1 && $w =~ /s$/;
             }
