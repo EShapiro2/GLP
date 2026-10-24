@@ -44,9 +44,9 @@ Class    ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Proposal ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -54,12 +54,14 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= identity ; knows(Peer) ; friend(Peer).
-Output   ::= view(List(Atom), List(Key), List(Tab)) ; refused(Class, Key, Reason).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Class, Key, Reason).
 Tab      ::= tab(String, Constant).
-Approval ::= approval(Attempt, List(Word), YesNo?).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, List(Word), YesNo?).
 Word     ::= text(String) ; person(Peer).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -73,17 +75,15 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_befriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_befriend(LA?, LB?, N?) :-
-    pair([own([A1], propose(establish(A1?))), req(known(bob)), wait(known(bob)),
-          own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob)))],
-         [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(alice)),
-          approval(meet(alice, bob), yes),
+         [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(meet(alice, bob), yes),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
 exported procedure play_unfriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_unfriend(LA?, LB?, N?) :-
-    pair([own([A1], propose(establish(A1?))), req(known(bob)), wait(known(bob)),
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob))),
           wait(holds(friend(bob))),
@@ -91,7 +91,7 @@ play_unfriend(LA?, LB?, N?) :-
           own([A3], propose(befriend(A3?, bob))),
           wait(holds(friend(bob))),
           own([A4], propose(unfriend(A4?, bob)))],
-         [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(alice)),
+         [own([B1], propose(establish(B1?))), wait(holds(identity)),
           approval(meet(alice, bob), yes),
           approval(befriend(alice, bob), yes),
           wait(holds(friend(alice))),
@@ -101,24 +101,22 @@ play_unfriend(LA?, LB?, N?) :-
 
 exported procedure play_refused(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_refused(LA?, LB?, N?) :-
-    pair([own([A1], propose(establish(A1?))), req(known(bob)), wait(known(bob)),
-          own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob))),
           wait(refused(befriend(alice, bob), bob, declined)),
           own([A3], propose(befriend(A3?, bob)))],
-         [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(alice)),
-          approval(meet(alice, bob), yes),
+         [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(meet(alice, bob), yes),
           approval(befriend(alice, bob), no),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
 exported procedure play_menu(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_menu(LA?, LB?, N?) :-
-    pair([look, own([A1], propose(establish(A1?))), req(known(bob)), wait(known(bob)),
+    pair([look, own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob))),
           wait(holds(friend(bob))), look],
-         [own([B1], propose(establish(B1?))), req(known(alice)), wait(known(alice)),
+         [own([B1], propose(establish(B1?))), wait(holds(identity)),
           approval(meet(alice, bob), yes),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).

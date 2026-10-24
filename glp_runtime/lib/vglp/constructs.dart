@@ -2243,7 +2243,12 @@ class _Generator {
   /// in force gives [f], `label(S, W)`; [w] itself where it gives none.
   String _labelled(String f, String w) {
     final l = _labels?.ofConstructor(f);
-    return l == null ? w : 'label(${constantSource(l)}, $w)';
+    final lw = l == null ? w : 'label(${constantSource(l)}, $w)';
+    // Where the request's button is drawn, act(place(...), W), where the
+    // declaration says (vGLP, Section 6.2, "The words a platform shows";
+    // canonical.dart, ActPlace).
+    final a = _labels?.ofAct(f);
+    return a == null ? lw : 'act(${a.placeSource}, $lw)';
   }
 
   /// The name of the field at the place [i] of the constructor [f]: the

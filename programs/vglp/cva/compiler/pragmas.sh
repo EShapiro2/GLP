@@ -3,7 +3,7 @@
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
-# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The first line after "Pragmas" is a list, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is "Clause: [Button] ... <field> ... sentence", a button for each act of the clause a person proposes, and an act for each button, act(Schema, Button, Fields, Sentence), Schema the button's text in lower case, each space an underscore, the name of the schema it proposes ("a button for each act of it a person proposes, in brackets, each bearing its act's name", GSC 2991379, Section 2), the fields and the sentence of the line each act's, the clause being one of that title in the same NAME.txt, Sentence said(Words) or none, each word text(S) or person(I), Alice, Bob and Carol the persons 1, 2 and 3.  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
+# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The first line after "Pragmas" is a list, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is "Clause: [Button] ... <field> ... sentence", a button for each act of the clause a person proposes, and an act for each button, act(Schema, Button, Fields, Sentence), Schema the button's text in lower case, each space an underscore, the name of the schema it proposes ("a button for each act of it a person proposes, in brackets, each bearing its act's name", GSC 2991379, Section 2), the fields and the sentence of the line each act's, the clause being one of that title in the same NAME.txt, Sentence said(Questions) or none, each question a sentence of the line after its fields, the question put to the person in each role whose will the act needs beyond the proposer's, in their order (GSC, Section 2, its first paragraph: "for each role whose will the act needs beyond the proposer's, in their order, the question the person in it is asked"), each its words, each word text(S) or person(I), a name the person I-th among the names the line's clause uses, in the order they first occur in it, so that the head's persons, its roles then its agent variables, are named in order by the clause's names (vGLP, Section 5.4, "The contract's words": "A question names the roles of its schema by the names its clause uses, in the order of the roles"); a name is a word of a capital and lower-case letters that a clause of the contract, or of a contract it extends, writes within a sentence and not first in it, as Alice, Bob, Carol, Dave and Alf.  Each act carries, last, the name of the tab of its contract, the first line after "Pragmas" of the NAME.txt the act's line is in: act(Schema, Button, Fields, Sentence, Tab).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
 
 set -u
 [ $# -eq 1 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt>" >&2; exit 2; }
@@ -38,7 +38,7 @@ sub visit {
     if (defined $ext) {
         (my $dir = $f) =~ s{/[^/]*$}{};
         my %named;
-        for my $n ($ext =~ /\b([A-Z][A-Za-z]*[A-Z])\b/g) {
+        for my $n ($ext =~ /\b([A-Z][A-Za-z]*[A-Z])\b(?![\x27\x{2019}]s)/g) {
             next if $named{$n}++;
             my $g = find_txt($n, $dir);
             visit($g) if defined $g;
@@ -50,14 +50,27 @@ my @own = read_txt($top);
 unless (grep { $_ eq "Pragmas" } @own) { print "no_pragmas\n"; exit 0 }
 visit($top);
 my (@lists, @acts);
+# The names the clauses use: words of a capital and lower-case letters written within a sentence, not first in it.
+my %is_name;
+for my $f (@order) {
+    for my $x (read_txt($f)) {
+        last if $x eq "Pragmas";
+        next unless $x =~ /^\d+\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?[^.]+\.\s+(.*)$/;
+        for my $sen (split /(?<=[.!?;:])\s+/, $1) {
+            my @w = ($sen =~ /([A-Za-z]+)/g);
+            shift @w;
+            for my $w (@w) { $is_name{$w} = 1 if $w =~ /^[A-Z][a-z]+$/ }
+        }
+    }
+}
 for my $f (@order) {
     my @l = read_txt($f);
     (my $name = $f) =~ s{.*/}{}; $name =~ s/\.txt$//;
-    my %clause; my $after = 0; my $first = 1;
+    my %clause; my %body; my $after = 0; my $first = 1; my $tab = "";
     for my $x (@l) {
         next if $x =~ /^%/;
         if (!$after) {
-            if ($x =~ /^(\d+)\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?([^.]+)\./) { $clause{$2} = $1 }
+            if ($x =~ /^(\d+)\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?([^.]+)\.\s*(.*)$/) { $clause{$2} = $1; $body{$2} = $3 }
             $after = 1 if $x eq "Pragmas";
             next;
         }
@@ -72,6 +85,7 @@ for my $f (@order) {
                 push @w, substr($w, 0, -1) if length($w) > 1 && $w =~ /s$/;
             }
             push @lists, "list(" . q_string($title) . ", [" . join(", ", map { q_atom($_) } @w) . "])";
+            $tab = $title;
             next;
         }
         exists $clause{$title} or die "pragmas.sh: $f: the pragma \"$title\" names no clause of $name\n";
@@ -83,20 +97,32 @@ for my $f (@order) {
         while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
         my $said = "none";
         if ($tail ne "") {
-            my @words;
-            for my $p (split /\b(Alice|Bob|Carol)\b/, $tail) {
-                next if $p eq "";
-                if ($p eq "Alice") { push @words, "person(1)" }
-                elsif ($p eq "Bob") { push @words, "person(2)" }
-                elsif ($p eq "Carol") { push @words, "person(3)" }
-                else { push @words, "text(" . q_string($p) . ")" }
+            my (@names, %at);
+            for my $w ($body{$title} =~ /([A-Za-z]+)/g) {
+                next unless $is_name{$w};
+                next if exists $at{$w};
+                push @names, $w; $at{$w} = scalar @names;
             }
-            $said = "said([" . join(", ", @words) . "])";
+            my $alt = join("|", sort keys %is_name);
+            my @qs;
+            for my $q (split /(?<=[.!?])\s+/, $tail) {
+                my @words;
+                for my $p ($alt eq "" ? ($q) : (split /\b($alt)\b/, $q)) {
+                    next if $p eq "";
+                    if ($is_name{$p}) {
+                        exists $at{$p} or die "pragmas.sh: $f: the pragma \"$title\" names $p, whom its clause does not name\n";
+                        push @words, "person($at{$p})";
+                    }
+                    else { push @words, "text(" . q_string($p) . ")" }
+                }
+                push @qs, "[" . join(", ", @words) . "]";
+            }
+            $said = "said([" . join(", ", @qs) . "])";
         }
         for my $button (@buttons) {
             (my $act = lc $button) =~ s/ +/_/g;
             push @acts, "act(" . q_atom($act) . ", " . q_string($button) . ", ["
-                . join(", ", map { q_string($_) } @fields) . "], $said)";
+                . join(", ", map { q_string($_) } @fields) . "], $said, " . q_string($tab) . ")";
         }
     }
 }

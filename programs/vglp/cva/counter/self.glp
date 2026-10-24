@@ -10,9 +10,9 @@
 
 Class    ::= befriend(Peer, Peer) ; begin(Peer) ; count(Peer).
 Proposal ::= befriend(Peer, Peer) ; begin(Peer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -20,11 +20,13 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; counting ; tick.
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -38,11 +40,9 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 exported procedure play_counter(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_counter(LA?, LB?, N?) :-
     pair([own([A1], propose(begin(A1?))), wait(holds(tick)),
-          req(known(bob)), wait(known(bob)),
           approval(befriend(bob, alice), yes),
           wait(holds(friend(bob)))],
-         [req(known(alice)), wait(known(alice)),
-          own([B1], propose(befriend(B1?, alice))),
+         [own([B1], propose(befriend(B1?, alice))),
           wait(holds(friend(alice)))],
          LA, LB, N).
 

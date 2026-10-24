@@ -76,9 +76,9 @@ Proposal ::= establish(Peer) ; meet(Peer, Peer) ; dawn(Peer) ; mint_coin(Peer, I
            ; mint_bond(Peer, Integer, Integer)
            ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
            ; redeem_bc(Peer, Peer, Integer, Peer).
-Request  ::= propose(Proposal) ; known(Peer).
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable(List(Atom), List(Atom)).
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
@@ -86,11 +86,13 @@ Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= identity ; knows(Peer) ; dated ; date(Integer) ; coin(Peer) ; bond(Peer, Integer).
-Output   ::= view(List(Atom), List(Key)) ; refused(Class, Key, Reason).
-Approval ::= approval(Attempt, YesNo?).
+Approved ::= Proposal ; Attempt.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Asking   ::= Attempt ; hello(Peer, Proposal).
+Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -109,7 +111,6 @@ play_bonds(LA?, LB?, N?) :-
           own([A4], propose(mint_bond(A4?, 0, 1))),
           own([A5], propose(mint_coin(A5?, 2))), wait(has(coin(alice), 2)),
           own([A6], propose(mint_bond(A6?, 1000000, 1))), wait(holds(bond(alice, 1000000))),
-          req(known(bob)), wait(known(bob)),
           approval(meet(bob, alice), yes),
           approval(swap_cb(bob, alice, bob, 1, alice, 1000000, 1), yes),
           approval(swap_cb(bob, alice, bob, 1, alice, 40, 1), yes),
@@ -117,7 +118,6 @@ play_bonds(LA?, LB?, N?) :-
           approval(swap_cb(alice, bob, alice, 1, alice, 40, 1), yes)],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint_coin(B2?, 2))), wait(has(coin(bob), 2)),
-          req(known(alice)), wait(known(alice)),
           own([B3], propose(meet(B3?, alice))), wait(holds(knows(alice))),
           own([B4], propose(swap_cb(B4?, alice, bob, 1, alice, 1000000, 1))),
           wait(holds(bond(alice, 1000000))),

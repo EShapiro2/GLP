@@ -199,6 +199,13 @@
 %%                         at r[listed(*, n)]   -member(r, n)
 %%
 %% child_close's one guarding role is p, its listed role's base r its first role, and no other schema determines a transaction of its class, so the contract is a local specification (ibid.).  Its request name is child_close(r, p, n), whose parts, one for each list of the people r lists, have the opener r; the parent's Request of rho_N goes to the child's machine, which completes the list from its own listed atoms and proposes the part, naming the request.  wardclose/self.glp plays it.
+%%
+%% days is a contract that requires the day, so that a contract compiled here has an agent that reads a calendar, a stream of dates the device writes, and holds today(d), d the last date read, beside its app state, which no schema adds or deletes and which a schema requires and constrains a numeric variable by (vGLP, Section 5.4, "Act schemas as local specifications": "as GB's advance requires date(t) and today(d) with t<d ..., so that it is proposed once a day; what the first date is, the contract says"):
+%%
+%%   dawn(p?)      :  at p  not dated, +dated, +date(0)
+%%   advance(p)    :  at p  today(d), -date(t), +date(d), d > t
+%%
+%% The first date is 0.  advance is unguarded, opened by p, t local to p's role and d bound by the today(d) p's state holds, so it is proposed once a day by the own-trigger Propose: on a date d past the date p holds, and not again until the next.  days/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it, with the numbers act schemas allow (GSC 9231074, Section 3.2): num(X) the numeric variable X where X is a name and the number X where X is a number, times(K, A) the atom A with the multiplicity K, and nschema(Name, Vars, Constraint, Roles) a schema with a constraint on its numeric variables.
@@ -248,6 +255,7 @@ contract_named(wardclose, C?) :- wardclose(C).
 contract_named(numbers, C?) :- numbers(C).
 contract_named(bonds, C?) :- bonds(C).
 contract_named(intros, C?) :- intros(C).
+contract_named(days, C?) :- days(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -271,6 +279,7 @@ introduction_named(wardclose, no_introduction).
 introduction_named(numbers, no_introduction).
 introduction_named(bonds, no_introduction).
 introduction_named(intros, no_introduction).
+introduction_named(days, no_introduction).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -504,3 +513,9 @@ intros([schema(meet, [],
         schema(introduce, [pvar(c)],
           [rs(guarded, [], [], [atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
            rs(guarded, [atom(knows, [pvar(c)])], [], [atom(knows, [role(1)])], [])])]).
+
+procedure days(Contract).
+days([schema(dawn, [],
+        [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [], [atom(dated, [])])]),
+      nschema(advance, [num(t), num(d)], gt(num(d), num(t)),
+        [rs(unguarded, [atom(date, [num(d)])], [atom(date, [num(t)])], [atom(today, [num(d)])], [])])]).
