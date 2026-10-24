@@ -718,9 +718,11 @@ uo_other([schema(establish, [],
 % A value names no agent, so the conditions below do not concern it."  In
 % the term form of Currencies' GB.glp: num(x) a value variable, or a number
 % where x is one; times(num(k), A) the atom A with the multiplicity k;
-% nschema(Name, Vars, Constraint, Roles) a schema with a constraint, over
-% gt, le, succ and or.  A binding sends a value variable to a value, a
-% multiplicity to a positive whole number (def:binding-numbers).  The
+% nschema(Name, Vars, Constraint, Roles) a schema with a constraint, a
+% conjunction of linear equalities and inequalities (and, eq, le, lt, ge,
+% gt, succ, over plus, minus and a product by a number; self.glp).  A
+% binding sends a value variable to a value, a multiplicity to a positive
+% whole number (def:binding-numbers).  The
 % fixtures are the checker's and certify nothing of GB, Currencies'
 % (programs/currencies/bonds/GB.glp).
 %
@@ -738,7 +740,7 @@ ncontract_app([], T, T?).
 ncontract_app([S|Ss], T, [S?|R?]) :- ncontract_app(Ss?, T?, R).
 
 % --- a contract with numbers, syntactically grassroots ---------------------
-% mint(Alice?; d, k, t) | d > t or d <= 0 : identity, date(t), +k.bond(Alice, d)
+% mint(Alice?; d, k, t) | d > t, d <= t + 30 : identity, date(t), +k.bond(Alice, d)
 % advance(Alice; t, t1) | t1 = t + 1 :      identity, -date(t), +date(t1)
 % swap(Alice?, Bob?; u, d, k, v, d1, k1) :
 %     identity, knows(Bob), -k.bond(u, d), +k1.bond(v, d1)
@@ -754,7 +756,8 @@ procedure nm_bonds(NContract).
 nm_bonds(C?) :-
     nm_base(B),
     ncontract_app(B?,
-      [nschema(mint, [num(d), num(k), num(t)], or(gt(num(d), num(t)), le(num(d), num(0))),
+      [nschema(mint, [num(d), num(k), num(t)],
+               and(gt(num(d), num(t)), le(num(d), plus(num(t), num(30)))),
          [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
                       [atom(identity, []), atom(date, [num(t)])], [])]),
        nschema(advance, [num(t), num(t1)], succ(num(t), num(t1)),
@@ -958,6 +961,149 @@ nm_mult_zero([schema(establish, [],
     schema(mint, [],
        [rs(guarded, [times(num(0), atom(coin, [role(1)]))], [], [atom(identity, [])], [])])]).
 
+% --- two values of the introductory act, related ---------------------------
+% meet(Alice?, Bob?; x, y) | 0 < x, x < y, y < 1 :
+%     identity, +knows(Bob), +span(x, y)    identity, +knows(Alice)
+% The introduction chooses x and y with 0 < x < y < 1, which 1/4 and 3/4
+% satisfy: meet is an introductory act, unobstructed, and the contract is
+% syntactically grassroots.  No two of the values within one of a number the
+% contract writes, or halfway between two, satisfy the constraint: a search
+% of those values finds no introduction.
+procedure nm_two_between(NContract).
+nm_two_between([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    nschema(meet, [num(x), num(y)],
+       and(lt(num(0), num(x)), and(lt(num(x), num(y)), lt(num(y), num(1)))),
+       [rs(guarded, [atom(knows, [role(2)]), atom(span, [num(x), num(y)])], [],
+                    [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
+
+% --- a value forbidden, every choice of it added -------------------------
+% meet(Alice?, Bob?; x) : identity, +knows(Bob), not date(x)    identity, +knows(Alice)
+% low(Alice; t) | t <= 5 : identity, +date(t)
+% high(Alice; t) | t >= 5 : identity, +date(t)  (nm_cover)
+% high(Alice; t) | t >= 6 : identity, +date(t)  (nm_gap)
+% Under nm_cover a binding of low or of high adds date(x) at Alice, Bob in
+% no role, whatever x the introduction chooses: clause 2 of def:unobstructed
+% fails at every introduction, obstructed(meet, 1, date(x), blocked_by(low,
+% 1, date(t))), low being the first schema that adds it.  Under nm_gap the
+% introduction chooses x strictly between 5 and 6, which no binding adds:
+% syntactically grassroots.
+procedure nm_date_var_meet(NContract).
+nm_date_var_meet([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [num(x)],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(date, [num(x)])]),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    nschema(low, [num(t)], le(num(t), num(5)),
+       [rs(unguarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])]).
+
+procedure nm_cover(NContract).
+nm_cover(C?) :-
+    nm_date_var_meet(B),
+    ncontract_app(B?,
+      [nschema(high, [num(t)], ge(num(t), num(5)),
+         [rs(unguarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
+
+procedure nm_gap(NContract).
+nm_gap(C?) :-
+    nm_date_var_meet(B),
+    ncontract_app(B?,
+      [nschema(high, [num(t)], ge(num(t), num(6)),
+         [rs(unguarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
+
+% --- a multiplicity of the act forbidden, added at whole numbers ----------
+% meet(Alice?, Bob?; k) : identity, +knows(Bob), +k.badge, not date(k)
+%                         identity, +knows(Alice)
+% count(Alice; j, t) | t = 2 * j : identity, +j.tally, +date(t)  (nm_evens)
+% count(Alice; j, t) | t = j : identity, +j.tally, +date(t)      (nm_counts)
+% k is a multiplicity of meet, a positive whole number, and j of count.
+% Under nm_evens count adds date(t) at Alice for each even t of 2 or more,
+% and the introduction chooses k = 1: syntactically grassroots; were j a
+% rational, j = 1/2 would add date(1).  Under nm_counts count adds date(k)
+% for every k: obstructed(meet, 1, date(k), blocked_by(count, 1, date(t))).
+procedure nm_badge_meet(NContract).
+nm_badge_meet([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [num(k)],
+       [rs(guarded, [atom(knows, [role(2)]), times(num(k), atom(badge, []))], [],
+                    [atom(identity, [])], [atom(date, [num(k)])]),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
+
+procedure nm_evens(NContract).
+nm_evens(C?) :-
+    nm_badge_meet(B),
+    ncontract_app(B?,
+      [nschema(count, [num(j), num(t)], eq(num(t), mul(num(2), num(j))),
+         [rs(unguarded, [times(num(j), atom(tally, [])), atom(date, [num(t)])], [],
+                        [atom(identity, [])], [])])], C).
+
+procedure nm_counts(NContract).
+nm_counts(C?) :-
+    nm_badge_meet(B),
+    ncontract_app(B?,
+      [nschema(count, [num(j), num(t)], eq(num(t), num(j)),
+         [rs(unguarded, [times(num(j), atom(tally, [])), atom(date, [num(t)])], [],
+                        [atom(identity, [])], [])])], C).
+
+% --- a multiplicity no whole number meets ----------------------------------
+% meet(Alice?, Bob?; k) | 2 * k = 3 : identity, +knows(Bob), +k.badge
+%                                     identity, +knows(Alice)
+% k is a multiplicity, a positive whole number, and 2k = 3 has no whole
+% solution: meet has no introduction, and the contract none:
+% not_grassroots([no_introductory_act]).
+procedure nm_half(NContract).
+nm_half([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    nschema(meet, [num(k)], eq(mul(num(2), num(k)), num(3)),
+       [rs(guarded, [atom(knows, [role(2)]), times(num(k), atom(badge, []))], [],
+                    [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
+
+% --- each condition met at some value, not all at one ----------------------
+% meet(Alice?, Bob?; x) : identity, score(x), +knows(Bob), not date(x)
+%                         identity, +knows(Alice)
+% score(Alice?; k) | k >= 5 : +score(k)
+% set_date(Alice; t) | t >= 5 : identity, +date(t)
+% score supplies score(x) where x >= 5, and set_date adds date(x) there:
+% clause 1 holds at x >= 5 and clause 2 at x < 5, and no x meets both:
+% obstructed_jointly(meet).
+procedure nm_joint(NContract).
+nm_joint([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [num(x)],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(score, [num(x)])],
+                    [atom(date, [num(x)])]),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    nschema(score, [num(k)], ge(num(k), num(5)),
+       [rs(guarded, [atom(score, [num(k)])], [], [], [])]),
+    nschema(set_date, [num(t)], ge(num(t), num(5)),
+       [rs(unguarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])]).
+
+% --- negative: a disjunction -----------------------------------------------
+% mint(Alice?; d, k, t) | d > t or d <= 0 : identity, date(t), +k.bond(Alice, d)
+% A constraint is a conjunction (def:numbers):
+% constraint_not_conjunction(mint, or(gt(num(d), num(t)), le(num(d), num(0)))).
+procedure nm_or(NContract).
+nm_or(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [nschema(mint, [num(d), num(k), num(t)], or(gt(num(d), num(t)), le(num(d), num(0))),
+         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
+                      [atom(identity, []), atom(date, [num(t)])], [])])], C).
+
+% --- negative: a product of two value variables ----------------------------
+% mint(Alice?; d, k, t) | d * k <= t : identity, date(t), +k.bond(Alice, d)
+% A constraint is linear (def:numbers):
+% constraint_not_linear(mint, mul(num(d), num(k))).
+procedure nm_nonlinear(NContract).
+nm_nonlinear(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [nschema(mint, [num(d), num(k), num(t)], le(mul(num(d), num(k)), num(t)),
+         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
+                      [atom(identity, []), atom(date, [num(t)])], [])])], C).
+
 % --- negative: a role that reads a number and changes nothing --------------
 % mature(Alice?, Bob; d, t) | d <= t : identity, knows(Bob), -bond(Bob, d), +coin(Bob)
 %                                      identity, date(t)
@@ -1128,6 +1274,15 @@ contract(nm_once, C?) :- nm_once(C).
 contract(nm_mult_unsat, C?) :- nm_mult_unsat(C).
 contract(nm_mult_sat, C?) :- nm_mult_sat(C).
 contract(nm_mult_zero, C?) :- nm_mult_zero(C).
+contract(nm_two_between, C?) :- nm_two_between(C).
+contract(nm_cover, C?) :- nm_cover(C).
+contract(nm_gap, C?) :- nm_gap(C).
+contract(nm_evens, C?) :- nm_evens(C).
+contract(nm_counts, C?) :- nm_counts(C).
+contract(nm_half, C?) :- nm_half(C).
+contract(nm_joint, C?) :- nm_joint(C).
+contract(nm_or, C?) :- nm_or(C).
+contract(nm_nonlinear, C?) :- nm_nonlinear(C).
 contract(uo_twice, C?) :- uo_twice(C).
 contract(uo_twice_free, C?) :- uo_twice_free(C).
 contract(uo_other, C?) :- uo_other(C).

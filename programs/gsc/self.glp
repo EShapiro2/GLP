@@ -53,9 +53,9 @@ Atoms ::= [] ; [Atom | Atoms].
 % variables, which every binding satisfies, and an atom added or deleted may
 % carry a multiplicity, a count of copies and so a positive whole number"
 % (Section 3.2; def:numbers and def:binding-numbers in the appendix).  times(K, A) is the
-% atom A with the multiplicity K, K a value argument; a constraint is true,
-% gt(X, Y) (X > Y), le(X, Y) (X =< Y), succ(X, Y) (Y = X + 1) or or(C1, C2),
-% over value arguments, the term form of Currencies' GB.glp (b9369200).  A
+% atom A with the multiplicity K, K a value argument; a constraint is a
+% conjunction of linear equalities and inequalities over value arguments
+% (Constraint below), extending the term form of Currencies' GB.glp.  A
 % schema with a constraint is nschema(Name, Vars, Constraint, Roles), its
 % value variables listed in Vars with its other variables, in the order of
 % its head.  The contract as written is of the types N...; traceable
@@ -69,8 +69,21 @@ Atoms ::= [] ; [Atom | Atoms].
 % equality under that binding.
 Mult       ::= Atom ; times(Arg, Atom).
 Mults      ::= [] ; [Mult | Mults].
-Constraint ::= true ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg)
+% A constraint is "a conjunction of linear equalities and inequalities over
+% its value variables and values" (def:numbers): true, and(C1, C2), and
+% eq, le, lt, ge and gt of two expressions, X = Y, X =< Y, X < Y, X >= Y and
+% X > Y, with succ(X, Y), Y = X + 1, as Currencies' GB.glp writes it.  An
+% expression is a value argument, plus(X, Y), minus(X, Y) or mul(X, Y), the
+% last linear where X or Y has no value variable.  or(C1, C2) is read so
+% that a contract carrying it is refused, a disjunction being no conjunction
+% (constraint_not_conjunction, check.glp), and so is a product of two
+% expressions that each carry a value variable (constraint_not_linear).
+Constraint ::= true ; and(Constraint, Constraint)
+             ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
+             ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
              ; or(Constraint, Constraint).
+Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
+Exprs      ::= [] ; [Expr | Exprs].
 % A schema's constraint, and the value variables it uses as multiplicities,
 % which a binding sends to positive whole numbers (def:binding-numbers).
 NumCtx     ::= nc(Constraint, Args).
@@ -132,10 +145,11 @@ NDeclared  ::= NContract ; reflexive(Preds, NContract).
 % (def:binding).  undef marks a variable that a partial substitution leaves
 % unbound and occurs in no completed one.  nval(N) is the image of a value
 % argument that is the number N, or a value variable a binding sends to N;
-% nfree(X) is the image of the value variable X of the introductory act
-% before its introduction chooses the value (def:binding-numbers;
-% unobstructed.glp, try_vals), and a match that rests on it is maybe(S),
-% below.  A value names no agent (GSC, Section 3.2), so neither names anyone.
+% nfree(X) is the image of the value variable X of the introductory act,
+% whose value its introduction chooses (def:binding-numbers): a match that
+% meets it records the equation it rests on (Eqs, below), which the values
+% chosen must satisfy (unobstructed.glp).  A value names no agent (GSC,
+% Section 3.2), so neither names anyone.
 Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef
         ; nval(Constant) ; nfree(Constant).
 Vals  ::= [] ; [Val | Vals].
@@ -145,9 +159,11 @@ Bind     ::= bind(Arg, Val).
 Subst    ::= [] ; [Bind | Subst].
 Substs   ::= [] ; [Subst | Substs].
 Found    ::= bound(Val) ; free.
-% maybe(S): the atoms match under S if the introduction's values are chosen
-% so (nfree above).
-MatchRes ::= match(Subst) ; nomatch ; maybe(Subst).
+% match(S, E): the atoms match under S where the equations E between values
+% hold, each between two images of value arguments, nval or nfree.
+Eq       ::= eqv(Val, Val).
+Eqs      ::= [] ; [Eq | Eqs].
+MatchRes ::= match(Subst, Eqs) ; nomatch.
 
 % --- What clause 2 of def:unobstructed is decided against ------------------
 % The other party of the introduction, and the first unused name index.
@@ -162,19 +178,6 @@ Preds ::= [] ; [Constant | Preds].
 % predicate of an atom the introductory act forbids at a role.
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
         ; listed_role(Constant, Integer, Atom).
-% What def:unobstructed asks whose answer rests on a value of the
-% introductory act that its introduction chooses (def:binding-numbers), asked
-% before the values are chosen and settled when they are (unobstructed.glp,
-% try_vals), so that no verdict carries one: whether the schema of arity one
-% Schema adds an atom Psi equal to the atom required at some binding
-% satisfying its constraint (supplied_by(Schema, Psi)); whether the schema
-% Schema adds at its role Role an atom Psi equal to the atom forbidden at
-% some binding satisfying its constraint that clause 2 does not excuse
-% (added_by(Schema, Role, Psi)); and whether the atom is required at all,
-% its multiplicity a value variable of the introductory act and no schema
-% of arity one supplying it (multiplicity).
-Unsettled ::= supplied_by(Constant, Atom) ; added_by(Constant, Integer, Atom)
-            ; multiplicity.
 % What GAI's Definition Act schema requires of a signed term, and the atom
 % carrying one violates: it occurs in an atom not marked + (not_added), its
 % speech-act variable occurs in no atom its role requires (not_required), or
@@ -232,8 +235,9 @@ Fault ::= no_introductory_act
         ; multiplicity_not_numeric(Constant, Integer, Atom)
         ; multiplicity_not_whole(Constant, Integer, Atom)
         ; constraint_not_numeric(Constant, Arg)
-        ; unsettled(Constant, Integer, Atom, Unsettled)
-        ; unsettled_introduction(Constant).
+        ; constraint_not_linear(Constant, Expr)
+        ; constraint_not_conjunction(Constant, Constraint)
+        ; obstructed_jointly(Constant).
 Faults  ::= [] ; [Fault | Faults].
 
 % --- What an introduction with wards is made of (GAI, "Contracts with Wards")
@@ -296,27 +300,79 @@ IntroStatus ::= unobstructed ; obstructed(Faults).
 IntroAct    ::= intro_act(Constant, IntroStatus).
 IntroActs   ::= [] ; [IntroAct | IntroActs].
 
-% The answer to a question on values: yes, no, or unsettled where it rests on
-% a value of the introductory act not yet chosen (Unsettled above).  The
-% value of an argument under a binding: the number, the value variable of
-% another schema that the binding leaves free, or the unchosen value of the
-% introductory act (nfree).
-Tri     ::= yes ; no ; unsettled.
-NumV    ::= known(Constant) ; free(Arg) ; sym.
-% The search of an introduction's values (unobstructed.glp, try_vals): an
-% introduction meeting def:unobstructed (t_ok), the faults of the first that
-% does not (t_bad), or none at all (t_none); the act, its plain form, the
-% contract as written and plain, and its reflexive predicates (IntroCtx); and
-% the candidate values, every one and the positive whole ones (Cands).
+% What an introduction is decided by (unobstructed.glp): an introduction
+% meeting def:unobstructed (t_ok), the faults where none does (t_bad), or
+% none at all (t_none); the act, its plain form, the contract as written and
+% plain, and its reflexive predicates (IntroCtx); and each condition the
+% clauses put to its values, with the fault it is where no choice of them
+% meets it (Item): an atom required at a role, with the formula saying that
+% a schema of arity one supplies it; an atom forbidden at a role, with the
+% bindings of other schemas adding it (Blk, each the formula saying where
+% it adds it) and the formula saying that none does; or a fault the values
+% do not touch.
 Try      ::= t_ok ; t_bad(Faults) ; t_none.
 IntroCtx ::= ic(Schema, NSchema, NContract, Contract, Preds).
-Nums     ::= [] ; [Constant | Nums].
-Cands    ::= cands(Nums, Nums).
-Supply  ::= supplied ; unsupplied ; supply_unsettled(Constant, Atom).
-Block   ::= blocked(Constant, Integer, Atom) ; clear
-          ; block_unsettled(Constant, Integer, Atom).
+Blk      ::= blk(Constant, Integer, Atom, DNF).
+Blks     ::= [] ; [Blk | Blks].
+Item     ::= it_req(Integer, Atom, DNF) ; it_forb(Integer, Atom, Blks, DNF)
+           ; it_fault(Fault).
+Items    ::= [] ; [Item | Items].
+% How the value variables of another schema's binding are named: those of a
+% schema of arity one supplying the atom Is names, or those of a schema
+% whose bindings are eliminated (Name, below).  Two images are equal where
+% the atoms of a conjunction hold, or never (eqr_no).
+Tg       ::= tg_sv(Ints) ; tg_bv.
+EqR      ::= eqr(Conj) ; eqr_no.
 Cand    ::= none ; some(Faults).
 Missing ::= missing(Integer) ; all_reached.
+
+% --- Linear arithmetic over the values (linear.glp) ------------------------
+% A variable over the values: q(N) ranges over the rationals and z(N) over
+% the whole numbers, a multiplicity carrying its bound N >= 1 as an atom.
+% Its name: iv(X), the value variable X of the introductory act; sv(Is, X),
+% the value variable X of a schema of arity one supplying the atom Is names;
+% bv(X), the value variable X of a schema whose bindings are eliminated
+% (linear.glp, elim_block); and nv(X) and fv(X), the whole and the
+% fractional parts of the act's rational value X.  A linear form is
+% lin(Terms, C), the sum of each term's coefficient times its variable,
+% plus C, all whole numbers; an atom is geq(L), L >= 0, grt(L), L > 0,
+% equ(L), L = 0, or dvd(M, L), M divides L; a conjunction is a list of atoms
+% and a formula a list of conjunctions, their disjunction.
+Name      ::= iv(Constant) ; sv(Ints, Constant) ; bv(Constant) ; nv(Constant)
+            ; fv(Constant).
+Var       ::= q(Name) ; z(Name).
+Vars      ::= [] ; [Var | Vars].
+Term      ::= t(Var, Integer).
+Terms     ::= [] ; [Term | Terms].
+Lin       ::= lin(Terms, Integer).
+LAtom     ::= geq(Lin) ; grt(Lin) ; equ(Lin) ; dvd(Integer, Lin).
+Conj      ::= [] ; [LAtom | Conj].
+DNF       ::= [] ; [Conj | DNF].
+DNFs      ::= [] ; [DNF | DNFs].
+Constants ::= [] ; [Constant | Constants].
+% What linear.glp carries: a conjunction simplified, or false; the truth of
+% an atom, settled or open; an expression, the form divided by a positive
+% whole number, or none where it is not linear; the variables a constraint's
+% value variables are read as; an equation found, with the rest of its
+% conjunction; the kind of variable sought; a bound on V' = d.V of Cooper's
+% method, Sign.V' + t of its kind; a value of the ceiling, the floor or the
+% value of a sum of fractional parts, with the atoms that say so; and the
+% direction a bound is met from.
+CS        ::= cs(Conj) ; cs_false.
+LTv       ::= lt_true ; lt_false ; lt_open.
+Ex        ::= ex(Lin, Integer) ; ex_bad.
+VBind     ::= vb(Constant, Var).
+VEnv      ::= [] ; [VBind | VEnv].
+FoundEq   ::= fe(Lin, Conj) ; fe_none(Conj).
+VSel      ::= sel_q ; sel_z ; sel_bq ; sel_bz.
+VPick     ::= pick(Var) ; pick_none.
+BKind     ::= b_geq ; b_grt ; b_dvd(Integer).
+Bd        ::= bd(BKind, Integer, Lin).
+Bds       ::= [] ; [Bd | Bds].
+QKind     ::= ceil_case ; floor_case ; eq_case.
+QCase     ::= qc(Integer, Conj).
+QCases    ::= [] ; [QCase | QCases].
+Dir       ::= low ; up.
 
 % --- What def:grounded is decided against, for one schema ----------------
 % The bases of its roles, the bases of the arguments of the atoms of Phi_E it
@@ -653,134 +709,119 @@ binding_ok(sgn(_, _), _, _, _, no).
 % A value argument is matched by match_num, never here.
 binding_ok(num(_), _, _, _, no).
 
-procedure match_bind(Ans?, Arg?, Val?, Subst?, MatchRes).
-match_bind(yes, A, V, S, match([bind(A?, V?)|S?])).
-match_bind(no, _, _, _, nomatch).
+procedure match_bind(Ans?, Arg?, Val?, Subst?, Eqs?, MatchRes).
+match_bind(yes, A, V, S, E, match([bind(A?, V?)|S?], E?)).
+match_bind(no, _, _, _, _, nomatch).
 
-procedure val_same(Val?, Val?, Subst?, MatchRes).
-val_same(W, V, S, match(S?)) :- W? =?= V? | true.
-val_same(_, _, _, nomatch) :- otherwise | true.
+procedure val_same(Val?, Val?, Subst?, Eqs?, MatchRes).
+val_same(W, V, S, E, match(S?, E?)) :- W? =?= V? | true.
+val_same(_, _, _, _, nomatch) :- otherwise | true.
 
-procedure match_one1(Found?, Arg?, Val?, Subst?, RoleSpecs?, MatchRes).
-match_one1(free, A, V, S, Rs, R?) :- ground(A?), ground(V?), ground(S?), ground(Rs?) |
+procedure match_one1(Found?, Arg?, Val?, Subst?, Eqs?, RoleSpecs?, MatchRes).
+match_one1(free, A, V, S, E, Rs, R?) :-
+    ground(A?), ground(V?), ground(S?), ground(E?), ground(Rs?) |
     kind_ok(A?, V?, K),
     binding_ok(A?, V?, S?, Rs?, I),
     both_yes(K?, I?, Ok),
-    match_bind(Ok?, A?, V?, S?, R).
-match_one1(bound(W), _, V, S, _, R?) :- ground(W?), ground(V?), ground(S?) |
-    val_same(W?, V?, S?, R).
+    match_bind(Ok?, A?, V?, S?, E?, R).
+match_one1(bound(W), _, V, S, E, _, R?) :- ground(W?), ground(V?), ground(S?), ground(E?) |
+    val_same(W?, V?, S?, E?, R).
 
 % A signed term sgn(y, pi) matches a signed value by its two parts, the
 % speech-act variable against the speech act and the role against the person
 % (def:binding: beta(sgn(y, pi)) := (beta(y), beta(pi))), and matches no
 % person and no speech act: the speech acts of an introduction are taken
 % signed once (README, "One thing to know about the reading").
-procedure match_sgn(Constant?, Integer?, Val?, Subst?, RoleSpecs?, MatchRes).
-match_sgn(Y, J, signed(SV, PV), S, Rs, R?) :-
-    ground(Y?), integer(J?), ground(SV?), ground(PV?), ground(S?), ground(Rs?) |
-    match_one(svar(Y?), SV?, S?, Rs?, R1),
+procedure match_sgn(Constant?, Integer?, Val?, Subst?, Eqs?, RoleSpecs?, MatchRes).
+match_sgn(Y, J, signed(SV, PV), S, E, Rs, R?) :-
+    ground(Y?), integer(J?), ground(SV?), ground(PV?), ground(S?), ground(E?), ground(Rs?) |
+    match_one(svar(Y?), SV?, S?, E?, Rs?, R1),
     match_rest(R1?, [role(J?)], [PV?], Rs?, R).
-match_sgn(_, _, person(_), _, _, nomatch).
-match_sgn(_, _, speech(_), _, _, nomatch).
-match_sgn(_, _, undef, _, _, nomatch).
-match_sgn(_, _, nval(_), _, _, nomatch).
-match_sgn(_, _, nfree(_), _, _, nomatch).
+match_sgn(_, _, person(_), _, _, _, nomatch).
+match_sgn(_, _, speech(_), _, _, _, nomatch).
+match_sgn(_, _, undef, _, _, _, nomatch).
+match_sgn(_, _, nval(_), _, _, _, nomatch).
+match_sgn(_, _, nfree(_), _, _, _, nomatch).
 
 % A value argument num(X) matches a value by equality (def:unobstructed, at
 % a binding of its schema; def:binding-numbers): the number X matches the
 % number equal to it, and the value variable X is sent to the value it meets,
-% or matches it if the binding sends X to it already.  Against the unchosen
-% value of the introductory act (nfree) a number matches if the introduction
-% chooses it so, maybe(S); a value variable is sent to it.
-procedure match_num(Constant?, Val?, Subst?, MatchRes).
-match_num(X, V, S, R?) :- number(X?), ground(V?), ground(S?) | match_lit(X?, V?, S?, R).
-match_num(X, V, S, R?) :- otherwise, ground(X?), ground(V?), ground(S?) |
+% or matches it if the binding sends X to it already.  Where one side is a
+% value of the introductory act (nfree), whose value its introduction
+% chooses, the match holds where the two are equal, and records the
+% equation (eqv), which unobstructed.glp puts to the values.
+procedure match_num(Constant?, Val?, Subst?, Eqs?, MatchRes).
+match_num(X, V, S, E, R?) :- number(X?), ground(V?), ground(S?), ground(E?) |
+    match_lit(X?, V?, S?, E?, R).
+match_num(X, V, S, E, R?) :- otherwise, ground(X?), ground(V?), ground(S?), ground(E?) |
     subst_lookup(S?, num(X?), F),
-    match_nvar(F?, X?, V?, S?, R).
+    match_nvar(F?, X?, V?, S?, E?, R).
 
-procedure match_lit(Constant?, Val?, Subst?, MatchRes).
-match_lit(X, nval(N), S, R?) :- number(N?), ground(S?) | num_eq(X?, N?, S?, R).
-match_lit(_, nfree(_), S, maybe(S?)).
-match_lit(_, _, _, nomatch) :- otherwise | true.
+procedure match_lit(Constant?, Val?, Subst?, Eqs?, MatchRes).
+match_lit(X, nval(N), S, E, R?) :- number(N?), ground(S?), ground(E?) | num_eq(X?, N?, S?, E?, R).
+match_lit(X, nfree(Y), S, E, match(S?, [eqv(nval(X?), nfree(Y?))|E?])).
+match_lit(_, _, _, _, nomatch) :- otherwise | true.
 
-procedure num_eq(Constant?, Constant?, Subst?, MatchRes).
-num_eq(X, N, S, match(S?)) :- X? =:= N? | true.
-num_eq(_, _, _, nomatch) :- otherwise | true.
+procedure num_eq(Constant?, Constant?, Subst?, Eqs?, MatchRes).
+num_eq(X, N, S, E, match(S?, E?)) :- X? =:= N? | true.
+num_eq(_, _, _, _, nomatch) :- otherwise | true.
 
-procedure match_nvar(Found?, Constant?, Val?, Subst?, MatchRes).
-match_nvar(free, X, nval(N), S, match([bind(num(X?), nval(N?))|S?])).
-match_nvar(free, X, nfree(Y), S, match([bind(num(X?), nfree(Y?))|S?])).
-match_nvar(bound(W), _, V, S, R?) :- ground(W?), ground(V?), ground(S?) |
-    num_same(W?, V?, S?, R).
-match_nvar(_, _, _, _, nomatch) :- otherwise | true.
+procedure match_nvar(Found?, Constant?, Val?, Subst?, Eqs?, MatchRes).
+match_nvar(free, X, nval(N), S, E, match([bind(num(X?), nval(N?))|S?], E?)).
+match_nvar(free, X, nfree(Y), S, E, match([bind(num(X?), nfree(Y?))|S?], E?)).
+match_nvar(bound(W), _, V, S, E, R?) :- ground(W?), ground(V?), ground(S?), ground(E?) |
+    num_same(W?, V?, S?, E?, R).
+match_nvar(_, _, _, _, _, nomatch) :- otherwise | true.
 
-procedure num_same(Val?, Val?, Subst?, MatchRes).
-num_same(nval(M), nval(N), S, R?) :- number(M?), number(N?), ground(S?) | num_eq(M?, N?, S?, R).
-num_same(nfree(Z), nfree(Y), S, match(S?)) :- Z? =?= Y? | true.
-num_same(nval(_), nfree(_), S, maybe(S?)).
-num_same(nfree(_), nval(_), S, maybe(S?)).
-num_same(nfree(_), nfree(_), S, maybe(S?)) :- otherwise | true.
-num_same(_, _, _, nomatch) :- otherwise | true.
+procedure num_same(Val?, Val?, Subst?, Eqs?, MatchRes).
+num_same(nval(M), nval(N), S, E, R?) :- number(M?), number(N?), ground(S?), ground(E?) |
+    num_eq(M?, N?, S?, E?, R).
+num_same(nfree(Z), nfree(Y), S, E, match(S?, E?)) :- Z? =?= Y? | true.
+num_same(nval(M), nfree(Y), S, E, match(S?, [eqv(nval(M?), nfree(Y?))|E?])).
+num_same(nfree(Z), nval(N), S, E, match(S?, [eqv(nfree(Z?), nval(N?))|E?])).
+num_same(nfree(Z), nfree(Y), S, E, match(S?, [eqv(nfree(Z?), nfree(Y?))|E?])) :-
+    otherwise | true.
+num_same(_, _, _, _, nomatch) :- otherwise | true.
 
-procedure match_one(Arg?, Val?, Subst?, RoleSpecs?, MatchRes).
-match_one(sgn(Y, J), V, S, Rs, R?) :-
-    ground(Y?), integer(J?), ground(V?), ground(S?), ground(Rs?) |
-    match_sgn(Y?, J?, V?, S?, Rs?, R).
-match_one(num(X), V, S, _, R?) :- ground(X?), ground(V?), ground(S?) |
-    match_num(X?, V?, S?, R).
-match_one(A, V, S, Rs, R?) :- otherwise, ground(A?), ground(V?), ground(S?), ground(Rs?) |
+procedure match_one(Arg?, Val?, Subst?, Eqs?, RoleSpecs?, MatchRes).
+match_one(sgn(Y, J), V, S, E, Rs, R?) :-
+    ground(Y?), integer(J?), ground(V?), ground(S?), ground(E?), ground(Rs?) |
+    match_sgn(Y?, J?, V?, S?, E?, Rs?, R).
+match_one(num(X), V, S, E, _, R?) :- ground(X?), ground(V?), ground(S?), ground(E?) |
+    match_num(X?, V?, S?, E?, R).
+match_one(A, V, S, E, Rs, R?) :-
+    otherwise, ground(A?), ground(V?), ground(S?), ground(E?), ground(Rs?) |
     subst_lookup(S?, A?, F),
-    match_one1(F?, A?, V?, S?, Rs?, R).
+    match_one1(F?, A?, V?, S?, E?, Rs?, R).
 
 procedure match_rest(MatchRes?, Args?, Vals?, RoleSpecs?, MatchRes).
 match_rest(nomatch, _, _, _, nomatch).
-match_rest(match(S), As, Vs, Rs, R?) :- ground(S?), ground(As?), ground(Vs?), ground(Rs?) |
-    match_args(As?, Vs?, S?, Rs?, R).
-match_rest(maybe(S), As, Vs, Rs, R?) :- ground(S?), ground(As?), ground(Vs?), ground(Rs?) |
-    match_args(As?, Vs?, S?, Rs?, R1),
-    to_maybe(R1?, R).
+match_rest(match(S, E), As, Vs, Rs, R?) :-
+    ground(S?), ground(E?), ground(As?), ground(Vs?), ground(Rs?) |
+    match_args(As?, Vs?, S?, E?, Rs?, R).
 
-% A match resting on the introduction's choice of a number stays one.
-procedure to_maybe(MatchRes?, MatchRes).
-to_maybe(match(S), maybe(S?)).
-to_maybe(maybe(S), maybe(S?)).
-to_maybe(nomatch, nomatch).
-
-procedure match_args(Args?, Vals?, Subst?, RoleSpecs?, MatchRes).
-match_args([], [], S, _, match(S?)).
-match_args([], [_|_], _, _, nomatch).
-match_args([_|_], [], _, _, nomatch).
-match_args([A|As], [V|Vs], S, Rs, R?) :-
-    ground(A?), ground(V?), ground(As?), ground(Vs?), ground(S?), ground(Rs?) |
-    match_one(A?, V?, S?, Rs?, R1),
+procedure match_args(Args?, Vals?, Subst?, Eqs?, RoleSpecs?, MatchRes).
+match_args([], [], S, E, _, match(S?, E?)).
+match_args([], [_|_], _, _, _, nomatch).
+match_args([_|_], [], _, _, _, nomatch).
+match_args([A|As], [V|Vs], S, E, Rs, R?) :-
+    ground(A?), ground(V?), ground(As?), ground(Vs?), ground(S?), ground(E?), ground(Rs?) |
+    match_one(A?, V?, S?, E?, Rs?, R1),
     match_rest(R1?, As?, Vs?, Rs?, R).
 
-procedure match_atom(Atom?, GAtom?, RoleSpecs?, Subst?, MatchRes).
-match_atom(atom(P, As), gatom(Q, Vs), Rs, S, R?) :-
-    P? =?= Q?, ground(As?), ground(Vs?), ground(Rs?), ground(S?) |
-    match_args(As?, Vs?, S?, Rs?, R).
-match_atom(atom(_, _), gatom(_, _), _, _, nomatch) :- otherwise | true.
-
-% all_unsettled(Fs, R): every fault of Fs is one whose answer rests on a
-% value the introduction has not yet chosen (Unsettled above), so none of them
-% settles that the introduction fails; some_unsettled(Fs, R): some fault is.
-procedure all_unsettled(Faults?, Ans).
-all_unsettled([], yes).
-all_unsettled([unsettled(_, _, _, _)|Fs], R?) :- all_unsettled(Fs?, R).
-all_unsettled([unsettled_introduction(_)|Fs], R?) :- all_unsettled(Fs?, R).
-all_unsettled([_|_], no) :- otherwise | true.
+% match_atom(Psi, G, Rs, S, E, R): the match of Psi against G extending the
+% binding S and the equations E.
+procedure match_atom(Atom?, GAtom?, RoleSpecs?, Subst?, Eqs?, MatchRes).
+match_atom(atom(P, As), gatom(Q, Vs), Rs, S, E, R?) :-
+    P? =?= Q?, ground(As?), ground(Vs?), ground(Rs?), ground(S?), ground(E?) |
+    match_args(As?, Vs?, S?, E?, Rs?, R).
+match_atom(atom(_, _), gatom(_, _), _, _, _, nomatch) :- otherwise | true.
 
 % A positive whole number, the value of a multiplicity (def:numbers,
 % def:binding-numbers).
 procedure pos_whole(Constant?, Ans).
 pos_whole(X, yes) :- number(X?), X? >= 1, X? =:= floor(X?) | true.
 pos_whole(_, no) :- otherwise | true.
-
-procedure some_unsettled(Faults?, Ans).
-some_unsettled([], no).
-some_unsettled([unsettled(_, _, _, _)|_], yes).
-some_unsettled([unsettled_introduction(_)|_], yes).
-some_unsettled([_|Fs], R?) :- otherwise | some_unsettled(Fs?, R).
 
 % ---------------------------------------------------------------------------
 % The variables of a schema
@@ -1383,12 +1424,36 @@ n_is_guarding(RS, R?) :- ground(RS?) |
 % written.
 procedure constraint_args(Constraint?, Args?, Args).
 constraint_args(true, T, T?).
-constraint_args(gt(X, Y), T, [X?, Y?|T?]).
-constraint_args(le(X, Y), T, [X?, Y?|T?]).
+constraint_args(and(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
+    constraint_args(C2?, T?, R1),
+    constraint_args(C1?, R1?, R).
+constraint_args(eq(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
+constraint_args(le(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
+constraint_args(lt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
+constraint_args(ge(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
+constraint_args(gt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
 constraint_args(succ(X, Y), T, [X?, Y?|T?]).
 constraint_args(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     constraint_args(C2?, T?, R1),
     constraint_args(C1?, R1?, R).
+
+% The arguments an expression is made of.
+procedure expr_args(Expr?, Args?, Args).
+expr_args(plus(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
+expr_args(minus(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
+expr_args(mul(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
+expr_args(num(X), T, [num(X?)|T?]).
+expr_args(role(I), T, [role(I?)|T?]).
+expr_args(pvar(X), T, [pvar(X?)|T?]).
+expr_args(svar(X), T, [svar(X?)|T?]).
+expr_args(nterm(N), T, [nterm(N?)|T?]).
+expr_args(sgn(Y, J), T, [sgn(Y?, J?)|T?]).
+
+procedure exprs_args(Exprs?, Args?, Args).
+exprs_args([], T, T?).
+exprs_args([X|Xs], T, R?) :- ground(X?), ground(Xs?), ground(T?) |
+    exprs_args(Xs?, T?, R1),
+    expr_args(X?, R1?, R).
 
 procedure mults_margs(Mults?, Args?, Args).
 mults_margs([], T, T?).

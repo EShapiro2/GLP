@@ -1,0 +1,1115 @@
+% ---------------------------------------------------------------------------
+% Linear arithmetic over the values (GSC, the appendix "Values in Act
+% Schemas").  A schema's constraint "is a conjunction of linear equalities
+% and inequalities over its value variables and values" (def:numbers), and a
+% binding maps each value variable to a value "under which gamma holds and
+% every multiplicity of tau is a positive whole number" (def:binding-numbers).
+% The conditions "stay decidable, the constraints being linear" (ibid.); this
+% file decides them, exactly.
+%
+% A value variable a constraint compares ranges over the numbers, and one
+% used as a multiplicity over the positive whole numbers.  The values are a
+% countable set, a fractional amount among them (the appendix), and a linear
+% constraint with rational coefficients that some numbers satisfy is
+% satisfied by rational ones, so the numbers are taken to be the rationals:
+% q(N) is a variable over them, and z(N) one over the whole numbers, a
+% multiplicity carrying its bound N >= 1 as an atom of its own.
+%
+% A linear form is lin(Terms, C), the sum of each coefficient times its
+% variable plus C, every coefficient a whole number: a value the contract
+% writes as a number that is not whole is read as the exact fraction it is,
+% and a comparison is multiplied out by the denominators.  An atom is
+% geq(L), L >= 0; grt(L), L > 0; equ(L), L = 0; or dvd(M, L), M divides L,
+% over whole-number variables only.
+%
+% A conjunction has a solution (sat_conj): each rational variable is
+% eliminated by Fourier-Motzkin, which is exact over the rationals, and then
+% each whole-number variable by Cooper's method, exact over the integers;
+% what is left is ground and true or false.  A formula is in disjunctive
+% normal form, a list of conjunctions.
+%
+% The introductory act chooses its own values (the appendix, after
+% def:binding-numbers), and clause 2 of def:unobstructed asks that no schema
+% add, at any of its bindings, an atom the act forbids: a value of the act
+% is chosen so that no binding of another schema meets it, which is a
+% universal question inside an existential one.  elim_block answers the
+% inner one as a formula over the act's values: the other schema's rational
+% variables go by Fourier-Motzkin, which keeps the act's values as
+% parameters, and its whole-number ones by Cooper's method, where the least
+% whole number above a bound with a rational part needs that part's ceiling.
+% So each rational value x of the act is written n + f, n a whole number and
+% f a rational in [0, 1) (decomp_defs, lin_decomp): a bound's rational part
+% is then a sum over the f's, whose ceiling takes one of finitely many whole
+% values, each a case of its own.  The answer is a formula over the act's
+% values, the n's and the f's, which is negated and conjoined with the rest.
+% ---------------------------------------------------------------------------
+
+% --- whole numbers ---------------------------------------------------------
+
+procedure gcd(Integer?, Integer?, Integer).
+gcd(A, B, R?) :- integer(A?), integer(B?) |
+    X := abs(A?),
+    Y := abs(B?),
+    gcd1(X?, Y?, R).
+
+procedure gcd1(Integer?, Integer?, Integer).
+gcd1(A, B, A?) :- integer(B?), B? =:= 0 | true.
+gcd1(A, B, R?) :- integer(A?), integer(B?), B? > 0 |
+    C := A? mod B?,
+    gcd1(B?, C?, R).
+
+% The least common multiple of two positive whole numbers.
+procedure lcm(Integer?, Integer?, Integer).
+lcm(A, B, R?) :- integer(A?), integer(B?) |
+    gcd(A?, B?, G),
+    lcm1(A?, B?, G?, R).
+
+procedure lcm1(Integer?, Integer?, Integer?, Integer).
+lcm1(A, B, G, R?) :- integer(A?), integer(B?), integer(G?) |
+    R := (A? // G?) * B?.
+
+procedure sgn(Integer?, Integer).
+sgn(A, 1) :- A? > 0 | true.
+sgn(A, -1) :- A? < 0 | true.
+sgn(A, 0) :- A? =:= 0 | true.
+
+% --- linear forms ----------------------------------------------------------
+
+procedure terms_coef(Terms?, Var?, Integer).
+terms_coef([], _, 0).
+terms_coef([t(W, C)|_], V, C?) :- W? =?= V? | true.
+terms_coef([_|Ts], V, R?) :- otherwise | terms_coef(Ts?, V?, R).
+
+procedure lin_coef(Lin?, Var?, Integer).
+lin_coef(lin(Ts, _), V, R?) :- terms_coef(Ts?, V?, R).
+
+procedure new_term(Integer?, Var?, Terms?, Terms).
+new_term(C, _, Ts, Ts?) :- C? =:= 0 | true.
+new_term(C, V, Ts, [t(V?, C?)|Ts?]) :- integer(C?), C? =\= 0 | true.
+
+% C times V added to the terms.
+procedure terms_add1(Terms?, Var?, Integer?, Terms).
+terms_add1([], V, C, R?) :- ground(V?), integer(C?) | new_term(C?, V?, [], R).
+terms_add1([t(W, D)|Ts], V, C, R?) :-
+    ground(W?), ground(V?), W? =?= V?, integer(D?), integer(C?), ground(Ts?) |
+    E := D? + C?,
+    new_term(E?, W?, Ts?, R).
+terms_add1([T|Ts], V, C, [T?|R?]) :- otherwise | terms_add1(Ts?, V?, C?, R).
+
+procedure terms_add(Terms?, Terms?, Terms).
+terms_add([], Ts, Ts?).
+terms_add([t(V, C)|Us], Ts, R?) :- ground(V?), integer(C?), ground(Us?), ground(Ts?) |
+    terms_add1(Ts?, V?, C?, Ts1),
+    terms_add(Us?, Ts1?, R).
+
+procedure terms_scale(Terms?, Integer?, Terms).
+terms_scale([], _, []).
+terms_scale([t(V, C)|Ts], K, [t(V?, D?)|R?]) :- integer(C?), integer(K?), ground(Ts?) |
+    D := C? * K?,
+    terms_scale(Ts?, K?, R).
+
+procedure terms_drop(Terms?, Var?, Terms).
+terms_drop([], _, []).
+terms_drop([t(W, _)|Ts], V, Ts?) :- W? =?= V? | true.
+terms_drop([T|Ts], V, [T?|R?]) :- otherwise | terms_drop(Ts?, V?, R).
+
+procedure lin_add(Lin?, Lin?, Lin).
+lin_add(lin(T1, C1), lin(T2, C2), lin(T?, C?)) :-
+    ground(T1?), ground(T2?), integer(C1?), integer(C2?) |
+    terms_add(T1?, T2?, T),
+    C := C1? + C2?.
+
+procedure lin_scale(Lin?, Integer?, Lin).
+lin_scale(_, K, lin([], 0)) :- integer(K?), K? =:= 0 | true.
+lin_scale(lin(Ts, C), K, lin(T?, D?)) :-
+    integer(K?), K? =\= 0, ground(Ts?), integer(C?) |
+    terms_scale(Ts?, K?, T),
+    D := C? * K?.
+
+procedure lin_neg(Lin?, Lin).
+lin_neg(L, R?) :- ground(L?) | lin_scale(L?, -1, R).
+
+procedure lin_sub(Lin?, Lin?, Lin).
+lin_sub(A, B, R?) :- ground(A?), ground(B?) |
+    lin_neg(B?, NB),
+    lin_add(A?, NB?, R).
+
+% L plus the whole number K.
+procedure lin_plus(Lin?, Integer?, Lin).
+lin_plus(lin(Ts, C), K, lin(Ts?, D?)) :- integer(C?), integer(K?) | D := C? + K?.
+
+procedure lin_drop(Lin?, Var?, Lin).
+lin_drop(lin(Ts, C), V, lin(T?, C?)) :- terms_drop(Ts?, V?, T).
+
+% The terms over the whole-number variables with the constant, and the terms
+% over the rational ones.
+procedure lin_split(Lin?, Lin, Lin).
+lin_split(lin(Ts, C), lin(I?, C?), lin(Q?, 0)) :- ground(Ts?) | terms_split(Ts?, I, Q).
+
+procedure terms_split(Terms?, Terms, Terms).
+terms_split([], [], []).
+terms_split([t(z(N), K)|Ts], [t(z(N?), K?)|I?], Q?) :- terms_split(Ts?, I, Q).
+terms_split([t(q(N), K)|Ts], I?, [t(q(N?), K?)|Q?]) :- terms_split(Ts?, I, Q).
+
+procedure lin_has_terms(Lin?, Ans).
+lin_has_terms(lin([], _), no).
+lin_has_terms(lin([_|_], _), yes).
+
+% The sums of the negative and of the positive coefficients.
+procedure terms_range(Terms?, Integer?, Integer?, Integer, Integer).
+terms_range([], N, P, N?, P?).
+terms_range([t(_, K)|Ts], N, P, RN?, RP?) :- integer(K?), K? < 0, integer(N?), ground(Ts?) |
+    N1 := N? + K?,
+    terms_range(Ts?, N1?, P?, RN, RP).
+terms_range([t(_, K)|Ts], N, P, RN?, RP?) :- integer(K?), K? >= 0, integer(P?), ground(Ts?) |
+    P1 := P? + K?,
+    terms_range(Ts?, N?, P1?, RN, RP).
+
+procedure terms_gcd(Terms?, Integer?, Integer).
+terms_gcd([], G, G?).
+terms_gcd([t(_, C)|Ts], G, R?) :- integer(C?), integer(G?), ground(Ts?) |
+    gcd(C?, G?, G1),
+    terms_gcd(Ts?, G1?, R).
+
+procedure terms_div(Terms?, Integer?, Terms).
+terms_div([], _, []).
+terms_div([t(V, C)|Ts], G, [t(V?, D?)|R?]) :- integer(C?), integer(G?), ground(Ts?) |
+    D := C? // G?,
+    terms_div(Ts?, G?, R).
+
+% A form divided by the greatest common divisor of its coefficients and its
+% constant, which leaves each atom over it as it was.
+procedure lin_norm(Lin?, Lin).
+lin_norm(lin(Ts, C), R?) :- ground(Ts?), integer(C?) |
+    terms_gcd(Ts?, C?, G),
+    lin_norm1(G?, Ts?, C?, R).
+
+procedure lin_norm1(Integer?, Terms?, Integer?, Lin).
+lin_norm1(G, Ts, C, lin(Ts?, C?)) :- G? =< 1 | true.
+lin_norm1(G, Ts, C, lin(T?, D?)) :- integer(G?), G? > 1, ground(Ts?), integer(C?) |
+    terms_div(Ts?, G?, T),
+    D := C? // G?.
+
+% --- atoms -----------------------------------------------------------------
+
+procedure atom_lin(LAtom?, Lin).
+atom_lin(geq(L), L?).
+atom_lin(grt(L), L?).
+atom_lin(equ(L), L?).
+atom_lin(dvd(_, L), L?).
+
+% The atom of X's kind over the form N, a modulus multiplied by F.
+procedure atom_with(LAtom?, Lin?, Integer?, LAtom).
+atom_with(geq(_), N, _, geq(N?)).
+atom_with(grt(_), N, _, grt(N?)).
+atom_with(equ(_), N, _, equ(N?)).
+atom_with(dvd(M, _), N, F, dvd(P?, N?)) :- integer(M?), integer(F?) | P := M? * F?.
+
+procedure atom_norm(LAtom?, LAtom).
+atom_norm(geq(L), geq(R?)) :- ground(L?) | lin_norm(L?, R).
+atom_norm(grt(L), grt(R?)) :- ground(L?) | lin_norm(L?, R).
+atom_norm(equ(L), equ(R?)) :- ground(L?) | lin_norm(L?, R).
+atom_norm(dvd(M, lin(Ts, C)), R?) :- integer(M?), ground(Ts?), integer(C?) |
+    dvd_norm(M?, Ts?, C?, R).
+
+% M divides a constant C exactly where it divides C mod M; one divides all.
+procedure dvd_norm(Integer?, Terms?, Integer?, LAtom).
+dvd_norm(M, Ts, C, dvd(M?, lin(Ts?, D?))) :- integer(M?), M? > 1, integer(C?) | D := C? mod M?.
+dvd_norm(M, _, _, geq(lin([], 0))) :- M? =< 1 | true.
+
+procedure atom_tv(LAtom?, LTv).
+atom_tv(geq(lin([], C)), R?) :- integer(C?) | tv_ge(C?, R).
+atom_tv(grt(lin([], C)), R?) :- integer(C?) | tv_gt(C?, R).
+atom_tv(equ(lin([], C)), R?) :- integer(C?) | tv_eq(C?, R).
+atom_tv(dvd(M, lin([], C)), R?) :- integer(M?), integer(C?) | tv_dv(M?, C?, R).
+atom_tv(_, lt_open) :- otherwise | true.
+
+procedure tv_ge(Integer?, LTv).
+tv_ge(C, lt_true) :- C? >= 0 | true.
+tv_ge(C, lt_false) :- C? < 0 | true.
+
+procedure tv_gt(Integer?, LTv).
+tv_gt(C, lt_true) :- C? > 0 | true.
+tv_gt(C, lt_false) :- C? =< 0 | true.
+
+procedure tv_eq(Integer?, LTv).
+tv_eq(C, lt_true) :- C? =:= 0 | true.
+tv_eq(C, lt_false) :- C? =\= 0 | true.
+
+procedure tv_dv(Integer?, Integer?, LTv).
+tv_dv(M, C, lt_true) :- C? mod M? =:= 0 | true.
+tv_dv(M, C, lt_false) :- C? mod M? =\= 0 | true.
+
+% --- conjunctions and formulas ---------------------------------------------
+
+exported procedure conj_app(Conj?, Conj?, Conj).
+conj_app([], T, T?).
+conj_app([A|As], T, [A?|R?]) :- conj_app(As?, T?, R).
+
+exported procedure dnf_app(DNF?, DNF?, DNF).
+dnf_app([], T, T?).
+dnf_app([C|Cs], T, [C?|R?]) :- dnf_app(Cs?, T?, R).
+
+% Each atom normalised, the true ones dropped; false if one is false.
+procedure conj_simp(Conj?, CS).
+conj_simp([], cs([])).
+conj_simp([A|As], R?) :- ground(A?), ground(As?) |
+    atom_norm(A?, A1),
+    conj_simp(As?, R1),
+    conj_simp1(A1?, R1?, R).
+
+procedure conj_simp1(LAtom?, CS?, CS).
+conj_simp1(_, cs_false, cs_false).
+conj_simp1(A, cs(C), R?) :- ground(A?), ground(C?) |
+    atom_tv(A?, T),
+    conj_simp2(T?, A?, C?, R).
+
+procedure conj_simp2(LTv?, LAtom?, Conj?, CS).
+conj_simp2(lt_true, _, C, cs(C?)).
+conj_simp2(lt_false, _, _, cs_false).
+conj_simp2(lt_open, A, C, cs([A?|C?])).
+
+% The conjunctions of a formula simplified, the false ones dropped.
+procedure dnf_simp(DNF?, DNF).
+dnf_simp([], []).
+dnf_simp([C|Cs], R?) :- ground(C?), ground(Cs?) |
+    conj_simp(C?, S),
+    dnf_simp(Cs?, R1),
+    dnf_simp1(S?, R1?, R).
+
+procedure dnf_simp1(CS?, DNF?, DNF).
+dnf_simp1(cs_false, D, D?).
+dnf_simp1(cs(C), D, [C?|D?]).
+
+% The conjunction of two formulas.
+exported procedure dnf_and(DNF?, DNF?, DNF).
+dnf_and([], _, []).
+dnf_and([C|Cs], D, R?) :- ground(C?), ground(Cs?), ground(D?) |
+    conj_with(D?, C?, R1),
+    dnf_and(Cs?, D?, R2),
+    dnf_app(R1?, R2?, R).
+
+procedure conj_with(DNF?, Conj?, DNF).
+conj_with([], _, []).
+conj_with([K|Ks], C, R?) :- ground(K?), ground(Ks?), ground(C?) |
+    conj_app(C?, K?, C1),
+    conj_simp(C1?, S),
+    conj_with(Ks?, C?, R1),
+    dnf_simp1(S?, R1?, R).
+
+% The negation of a formula.
+exported procedure dnf_not(DNF?, DNF).
+dnf_not([], [[]]).
+dnf_not([C|Cs], R?) :- ground(C?), ground(Cs?) |
+    conj_not(C?, N1),
+    dnf_not(Cs?, N2),
+    dnf_and(N1?, N2?, R).
+
+procedure conj_not(Conj?, DNF).
+conj_not([], []).
+conj_not([A|As], R?) :- ground(A?), ground(As?) |
+    atom_not(A?, D1),
+    conj_not(As?, D2),
+    dnf_app(D1?, D2?, R).
+
+procedure atom_not(LAtom?, DNF).
+atom_not(geq(L), [[grt(N?)]]) :- ground(L?) | lin_neg(L?, N).
+atom_not(grt(L), [[geq(N?)]]) :- ground(L?) | lin_neg(L?, N).
+atom_not(equ(L), [[grt(L?)], [grt(N?)]]) :- ground(L?) | lin_neg(L?, N).
+atom_not(dvd(M, L), R?) :- integer(M?), ground(L?) | residues(1, M?, L?, R).
+
+% M does not divide L: it divides L - r for some r in 1 .. M - 1.
+procedure residues(Integer?, Integer?, Lin?, DNF).
+residues(K, M, _, []) :- K? >= M? | true.
+residues(K, M, L, [[dvd(M?, L1?)]|R?]) :- integer(K?), integer(M?), K? < M?, ground(L?) |
+    J := 0 - K?,
+    lin_plus(L?, J?, L1),
+    K1 := K? + 1,
+    residues(K1?, M?, L?, R).
+
+% --- the variables of a conjunction ----------------------------------------
+
+procedure vars_member(Vars?, Var?, Ans).
+vars_member([], _, no).
+vars_member([W|_], V, yes) :- W? =?= V? | true.
+vars_member([_|Ws], V, R?) :- otherwise | vars_member(Ws?, V?, R).
+
+procedure terms_vars(Terms?, Vars?, Vars).
+terms_vars([], Acc, Acc?).
+terms_vars([t(V, _)|Ts], Acc, R?) :- ground(V?), ground(Ts?), ground(Acc?) |
+    vars_member(Acc?, V?, M),
+    terms_vars1(M?, V?, Ts?, Acc?, R).
+
+procedure terms_vars1(Ans?, Var?, Terms?, Vars?, Vars).
+terms_vars1(yes, _, Ts, Acc, R?) :- terms_vars(Ts?, Acc?, R).
+terms_vars1(no, V, Ts, Acc, R?) :- terms_vars(Ts?, [V?|Acc?], R).
+
+procedure conj_vars(Conj?, Vars?, Vars).
+conj_vars([], Acc, Acc?).
+conj_vars([A|As], Acc, R?) :- ground(A?), ground(As?), ground(Acc?) |
+    atom_lin(A?, L),
+    lin_terms(L?, Ts),
+    terms_vars(Ts?, Acc?, Acc1),
+    conj_vars(As?, Acc1?, R).
+
+procedure lin_terms(Lin?, Terms).
+lin_terms(lin(Ts, _), Ts?).
+
+% A variable of the kind asked: a rational one (sel_q), a whole-number one
+% (sel_z), or one of the schema whose binding is eliminated (bv), rational
+% (sel_bq) or whole (sel_bz).
+procedure name_is_b(Name?, Ans).
+name_is_b(bv(_), yes).
+name_is_b(iv(_), no).
+name_is_b(sv(_, _), no).
+name_is_b(nv(_), no).
+name_is_b(fv(_), no).
+
+procedure var_is(Var?, VSel?, Ans).
+var_is(q(_), sel_q, yes).
+var_is(z(_), sel_q, no).
+var_is(z(_), sel_z, yes).
+var_is(q(_), sel_z, no).
+var_is(q(N), sel_bq, R?) :- ground(N?) | name_is_b(N?, R).
+var_is(z(_), sel_bq, no).
+var_is(z(N), sel_bz, R?) :- ground(N?) | name_is_b(N?, R).
+var_is(q(_), sel_bz, no).
+
+procedure pick_var(Vars?, VSel?, VPick).
+pick_var([], _, pick_none).
+pick_var([V|Vs], S, R?) :- ground(V?), ground(Vs?), ground(S?) |
+    var_is(V?, S?, A),
+    pick_var1(A?, V?, Vs?, S?, R).
+
+procedure pick_var1(Ans?, Var?, Vars?, VSel?, VPick).
+pick_var1(yes, V, _, _, pick(V?)).
+pick_var1(no, _, Vs, S, R?) :- pick_var(Vs?, S?, R).
+
+procedure filter_vars(Vars?, VSel?, Vars).
+filter_vars([], _, []).
+filter_vars([V|Vs], S, R?) :- ground(V?), ground(Vs?), ground(S?) |
+    var_is(V?, S?, A),
+    filter_vars(Vs?, S?, R1),
+    filter_vars1(A?, V?, R1?, R).
+
+procedure filter_vars1(Ans?, Var?, Vars?, Vars).
+filter_vars1(yes, V, Vs, [V?|Vs?]).
+filter_vars1(no, _, Vs, Vs?).
+
+% --- an equation that holds, used to eliminate a variable ------------------
+% find_eq(C, V, [], F): an equation of C in which V occurs, with the rest of
+% C, or none.
+procedure find_eq(Conj?, Var?, Conj?, FoundEq).
+find_eq([], _, Acc, fe_none(Acc?)).
+find_eq([A|As], V, Acc, R?) :- ground(A?), ground(As?), ground(V?), ground(Acc?) |
+    atom_lin(A?, L),
+    lin_coef(L?, V?, K),
+    find_eq1(A?, K?, As?, V?, Acc?, R).
+
+procedure find_eq1(LAtom?, Integer?, Conj?, Var?, Conj?, FoundEq).
+find_eq1(equ(L), K, As, _, Acc, fe(L?, C?)) :-
+    integer(K?), K? =\= 0, ground(As?), ground(Acc?) |
+    conj_app(Acc?, As?, C).
+find_eq1(A, _, As, V, Acc, R?) :- otherwise, ground(A?), ground(As?), ground(Acc?) |
+    find_eq(As?, V?, [A?|Acc?], R).
+
+% With the equation L, A.V + t = 0, holding, the atom X, whose coefficient
+% on V is C, is X multiplied by |A| less C.sign(A) times L, in which V does
+% not occur.
+procedure elim_by_eq(Integer?, LAtom?, Lin?, Integer?, LAtom).
+elim_by_eq(C, X, _, _, X?) :- C? =:= 0 | true.
+elim_by_eq(C, X, L, A, Y?) :-
+    integer(C?), C? =\= 0, ground(X?), ground(L?), integer(A?) |
+    AA := abs(A?),
+    sgn(A?, S),
+    elim_by_eq1(C?, X?, L?, AA?, S?, Y).
+
+procedure elim_by_eq1(Integer?, LAtom?, Lin?, Integer?, Integer?, LAtom).
+elim_by_eq1(C, X, L, AA, S, Y?) :-
+    integer(C?), ground(X?), ground(L?), integer(AA?), integer(S?) |
+    K := 0 - (S? * C?),
+    atom_lin(X?, M),
+    lin_scale(M?, AA?, M1),
+    lin_scale(L?, K?, L1),
+    lin_add(M1?, L1?, N),
+    atom_with(X?, N?, AA?, Y).
+
+procedure elim_all_by_eq(Conj?, Var?, Lin?, Integer?, Conj).
+elim_all_by_eq([], _, _, _, []).
+elim_all_by_eq([X|Xs], V, L, A, [Y?|R?]) :-
+    ground(X?), ground(Xs?), ground(V?), ground(L?), integer(A?) |
+    atom_lin(X?, M),
+    lin_coef(M?, V?, C),
+    elim_by_eq(C?, X?, L?, A?, Y),
+    elim_all_by_eq(Xs?, V?, L?, A?, R).
+
+% --- Fourier-Motzkin: a rational variable ----------------------------------
+% fm(V, C, S): C with the rational variable V eliminated, exact over the
+% rationals whatever the other variables are: by an equation in which V
+% occurs, if there is one, and otherwise each lower bound on V against each
+% upper bound.
+
+procedure fm(Var?, Conj?, CS).
+fm(V, C, R?) :- ground(V?), ground(C?) |
+    find_eq(C?, V?, [], F),
+    fm1(F?, V?, R).
+
+procedure fm1(FoundEq?, Var?, CS).
+fm1(fe(L, C), V, R?) :- ground(L?), ground(C?), ground(V?) |
+    lin_coef(L?, V?, A),
+    elim_all_by_eq(C?, V?, L?, A?, C1),
+    conj_simp(C1?, R).
+fm1(fe_none(C), V, R?) :- ground(C?), ground(V?) |
+    fm_part(C?, V?, [], [], [], Lo, Up, Ot),
+    fm_pairs(Lo?, Up?, V?, Ot?, C1),
+    conj_simp(C1?, R).
+
+procedure fm_part(Conj?, Var?, Conj?, Conj?, Conj?, Conj, Conj, Conj).
+fm_part([], _, Lo, Up, Ot, Lo?, Up?, Ot?).
+fm_part([X|Xs], V, Lo, Up, Ot, RL?, RU?, RO?) :-
+    ground(X?), ground(Xs?), ground(V?), ground(Lo?), ground(Up?), ground(Ot?) |
+    atom_lin(X?, M),
+    lin_coef(M?, V?, C),
+    fm_part1(C?, X?, Xs?, V?, Lo?, Up?, Ot?, RL, RU, RO).
+
+procedure fm_part1(Integer?, LAtom?, Conj?, Var?, Conj?, Conj?, Conj?, Conj, Conj, Conj).
+fm_part1(C, X, Xs, V, Lo, Up, Ot, RL?, RU?, RO?) :- C? =:= 0 |
+    fm_part(Xs?, V?, Lo?, Up?, [X?|Ot?], RL, RU, RO).
+fm_part1(C, X, Xs, V, Lo, Up, Ot, RL?, RU?, RO?) :- C? > 0 |
+    fm_part(Xs?, V?, [X?|Lo?], Up?, Ot?, RL, RU, RO).
+fm_part1(C, X, Xs, V, Lo, Up, Ot, RL?, RU?, RO?) :- C? < 0 |
+    fm_part(Xs?, V?, Lo?, [X?|Up?], Ot?, RL, RU, RO).
+
+procedure fm_pairs(Conj?, Conj?, Var?, Conj?, Conj).
+fm_pairs([], _, _, Acc, Acc?).
+fm_pairs([L|Ls], Ups, V, Acc, R?) :-
+    ground(L?), ground(Ls?), ground(Ups?), ground(V?), ground(Acc?) |
+    fm_with(Ups?, L?, V?, Acc?, Acc1),
+    fm_pairs(Ls?, Ups?, V?, Acc1?, R).
+
+procedure fm_with(Conj?, LAtom?, Var?, Conj?, Conj).
+fm_with([], _, _, Acc, Acc?).
+fm_with([U|Us], L, V, Acc, R?) :-
+    ground(U?), ground(Us?), ground(L?), ground(V?), ground(Acc?) |
+    fm_comb(L?, U?, V?, Y),
+    fm_with(Us?, L?, V?, [Y?|Acc?], R).
+
+% A lower bound A1.V + t1 >= 0 (or > 0) and an upper bound -A2.V + t2 >= 0
+% (or > 0) give A2.t1 + A1.t2 >= 0, strict where either is.
+procedure fm_comb(LAtom?, LAtom?, Var?, LAtom).
+fm_comb(L, U, V, Y?) :- ground(L?), ground(U?), ground(V?) |
+    atom_lin(L?, ML),
+    atom_lin(U?, MU),
+    strict_of(L?, U?, K),
+    fm_comb1(ML?, MU?, V?, K?, Y).
+
+procedure fm_comb1(Lin?, Lin?, Var?, LTv?, LAtom).
+fm_comb1(ML, MU, V, K, Y?) :- ground(ML?), ground(MU?), ground(V?), ground(K?) |
+    lin_coef(ML?, V?, A1),
+    lin_coef(MU?, V?, A2),
+    fm_comb2(ML?, MU?, A1?, A2?, K?, Y).
+
+procedure fm_comb2(Lin?, Lin?, Integer?, Integer?, LTv?, LAtom).
+fm_comb2(ML, MU, A1, A2, K, Y?) :-
+    ground(ML?), ground(MU?), integer(A1?), integer(A2?), ground(K?) |
+    B := 0 - A2?,
+    lin_scale(ML?, B?, X1),
+    lin_scale(MU?, A1?, X2),
+    lin_add(X1?, X2?, N),
+    kind_atom(K?, N?, Y).
+
+% lt_true where either bound is strict.
+procedure strict_of(LAtom?, LAtom?, LTv).
+strict_of(grt(_), _, lt_true).
+strict_of(geq(_), grt(_), lt_true).
+strict_of(geq(_), geq(_), lt_false).
+strict_of(L, U, lt_false) :- otherwise, ground(L?), ground(U?) | true.
+
+procedure kind_atom(LTv?, Lin?, LAtom).
+kind_atom(lt_true, N, grt(N?)).
+kind_atom(lt_false, N, geq(N?)).
+kind_atom(lt_open, N, geq(N?)).
+
+% --- Cooper's method: a whole-number variable ------------------------------
+% cooper(V, C, D): C with the whole-number variable V eliminated, as a
+% formula, exact over the integers whatever the other variables are; the
+% rational variables left in C are each in [0, 1) (decomp_defs).  By an
+% equation in which V occurs, if there is one: A.V + I + R = 0, I over the
+% whole-number variables and R over the rational ones, has a whole solution
+% V exactly where R is a whole number e and |A| divides I + e, for each e
+% R can be.  Otherwise V's coefficients are made one, d.V being V', which d
+% divides, and a solution, if there is one, is the least whole number
+% meeting some lower bound, plus j for some j below the least common
+% multiple D of the moduli (or the greatest meeting some upper bound, minus
+% j, where there is no lower bound; or j itself where there is neither).
+% The least whole number meeting V' >= I + R is I + ceil(R), and meeting V' >
+% I + R is I + floor(R) + 1: each value e of ceil(R) or floor(R) is a case,
+% with the atoms that say so.
+
+exported procedure cooper(Var?, Conj?, DNF).
+cooper(V, C, R?) :- ground(V?), ground(C?) |
+    split_on(C?, V?, With, Without),
+    cooper1(With?, Without?, V?, R).
+
+procedure split_on(Conj?, Var?, Conj, Conj).
+split_on([], _, [], []).
+split_on([X|Xs], V, W?, O?) :- ground(X?), ground(Xs?), ground(V?) |
+    atom_lin(X?, M),
+    lin_coef(M?, V?, C),
+    split_on(Xs?, V?, W1, O1),
+    split_on1(C?, X?, W1?, O1?, W, O).
+
+procedure split_on1(Integer?, LAtom?, Conj?, Conj?, Conj, Conj).
+split_on1(C, X, W, O, W?, [X?|O?]) :- C? =:= 0 | true.
+split_on1(C, X, W, O, [X?|W?], O?) :- C? =\= 0 | true.
+
+procedure cooper1(Conj?, Conj?, Var?, DNF).
+cooper1([], O, _, [O?]).
+cooper1([X|Xs], O, V, R?) :- ground(X?), ground(Xs?), ground(O?), ground(V?) |
+    find_eq([X?|Xs?], V?, [], F),
+    cooper2(F?, O?, V?, D),
+    dnf_simp(D?, R).
+
+procedure cooper2(FoundEq?, Conj?, Var?, DNF).
+cooper2(fe(L, W), O, V, R?) :- ground(L?), ground(W?), ground(O?), ground(V?) |
+    lin_coef(L?, V?, A),
+    lin_drop(L?, V?, T),
+    lin_split(T?, I, Q),
+    coop_eq(A?, Q?, I?, L?, W?, O?, V?, R).
+cooper2(fe_none(W), O, V, R?) :- ground(W?), ground(O?), ground(V?) |
+    coop_ineq(W?, O?, V?, R).
+
+% The equation A.V + I + R = 0, R the rational part Q, the rest W with V.
+procedure coop_eq(Integer?, Lin?, Lin?, Lin?, Conj?, Conj?, Var?, DNF).
+coop_eq(A, Q, I, L, W, O, V, R?) :-
+    integer(A?), ground(Q?), ground(I?), ground(L?), ground(W?), ground(O?), ground(V?) |
+    q_cases(Q?, eq_case, Cs),
+    coop_eq_cases(Cs?, A?, I?, W?, O?, V?, R).
+
+% Each case: R = e, so A.V + I + e = 0 holds, eliminating V from W, and |A|
+% divides I + e.
+procedure coop_eq_cases(QCases?, Integer?, Lin?, Conj?, Conj?, Var?, DNF).
+coop_eq_cases([], _, _, _, _, _, []).
+coop_eq_cases([qc(E, K)|Cs], A, I, W, O, V, [C?|R?]) :-
+    integer(E?), ground(K?), integer(A?), ground(I?), ground(W?), ground(O?), ground(V?) |
+    lin_plus(I?, E?, IE),
+    coop_eq_case(IE?, A?, K?, W?, O?, V?, C),
+    coop_eq_cases(Cs?, A?, I?, W?, O?, V?, R).
+
+procedure coop_eq_case(Lin?, Integer?, Conj?, Conj?, Conj?, Var?, Conj).
+coop_eq_case(IE, A, K, W, O, V, C?) :-
+    ground(IE?), integer(A?), ground(K?), ground(W?), ground(O?), ground(V?) |
+    AA := abs(A?),
+    lin_add(lin([t(V?, A?)], 0), IE?, Le),
+    elim_all_by_eq(W?, V?, Le?, A?, W1),
+    conj_app(K?, [dvd(AA?, IE?)|W1?], C1),
+    conj_app(C1?, O?, C).
+
+% The values e of ceil(R) (ceil_case), floor(R) (floor_case), or R itself,
+% where it is a whole number (eq_case), for R a sum over rational variables
+% each in [0, 1), each with the atoms that say so; R = 0 where it has no
+% term, one case with no atom.
+procedure q_cases(Lin?, QKind?, QCases).
+q_cases(lin([], _), _, [qc(0, [])]).
+q_cases(lin([T|Ts], _), K, R?) :- ground(T?), ground(Ts?), ground(K?) |
+    terms_range([T?|Ts?], 0, 0, N, P),
+    q_cases1(K?, lin([T?|Ts?], 0), N?, P?, R).
+
+procedure q_cases1(QKind?, Lin?, Integer?, Integer?, QCases).
+q_cases1(ceil_case, Q, N, P, R?) :- ground(Q?), integer(N?), integer(P?) |
+    q_enum(ceil_case, Q?, N?, P?, R).
+q_cases1(floor_case, Q, N, P, R?) :- ground(Q?), integer(N?), integer(P?) |
+    N1 := N? - 1,
+    q_enum(floor_case, Q?, N1?, P?, R).
+q_cases1(eq_case, Q, N, P, R?) :- ground(Q?), integer(N?), integer(P?) |
+    q_enum(eq_case, Q?, N?, P?, R).
+
+procedure q_enum(QKind?, Lin?, Integer?, Integer?, QCases).
+q_enum(_, _, E, P, []) :- E? > P? | true.
+q_enum(K, Q, E, P, [qc(E?, A?)|R?]) :-
+    ground(K?), ground(Q?), integer(E?), integer(P?), E? =< P? |
+    q_atoms(K?, Q?, E?, A),
+    E1 := E? + 1,
+    q_enum(K?, Q?, E1?, P?, R).
+
+% ceil(R) = e: e - R >= 0 and R - e + 1 > 0; floor(R) = e: R - e >= 0 and
+% e + 1 - R > 0; R = e.
+procedure q_atoms(QKind?, Lin?, Integer?, Conj).
+q_atoms(ceil_case, Q, E, [geq(A?), grt(B?)]) :- ground(Q?), integer(E?) |
+    lin_neg(Q?, NQ),
+    lin_plus(NQ?, E?, A),
+    E1 := 1 - E?,
+    lin_plus(Q?, E1?, B).
+q_atoms(floor_case, Q, E, [geq(A?), grt(B?)]) :- ground(Q?), integer(E?) |
+    NE := 0 - E?,
+    lin_plus(Q?, NE?, A),
+    lin_neg(Q?, NQ),
+    E1 := E? + 1,
+    lin_plus(NQ?, E1?, B).
+q_atoms(eq_case, Q, E, [equ(A?)]) :- ground(Q?), integer(E?) |
+    NE := 0 - E?,
+    lin_plus(Q?, NE?, A).
+
+% No equation: the bounds on V' = d.V, d the least common multiple of V's
+% coefficients, each bd(Kind, Sign, t) for Sign.V' + t of its kind.
+procedure coop_ineq(Conj?, Conj?, Var?, DNF).
+coop_ineq(W, O, V, R?) :- ground(W?), ground(O?), ground(V?) |
+    coefs_lcm(W?, V?, 1, D),
+    coop_ineq1(D?, W?, O?, V?, R).
+
+procedure coefs_lcm(Conj?, Var?, Integer?, Integer).
+coefs_lcm([], _, D, D?).
+coefs_lcm([X|Xs], V, D, R?) :- ground(X?), ground(Xs?), ground(V?), integer(D?) |
+    atom_lin(X?, M),
+    lin_coef(M?, V?, C),
+    coefs_lcm1(C?, Xs?, V?, D?, R).
+
+procedure coefs_lcm1(Integer?, Conj?, Var?, Integer?, Integer).
+coefs_lcm1(C, Xs, V, D, R?) :- integer(C?), integer(D?), ground(Xs?), ground(V?) |
+    AC := abs(C?),
+    lcm(AC?, D?, D1),
+    coefs_lcm(Xs?, V?, D1?, R).
+
+procedure coop_ineq1(Integer?, Conj?, Conj?, Var?, DNF).
+coop_ineq1(D, W, O, V, R?) :- integer(D?), ground(W?), ground(O?), ground(V?) |
+    to_bounds(W?, V?, D?, Bs0),
+    delta_bound(D?, Bs0?, Bs),
+    coop_bounds(Bs?, O?, R).
+
+procedure delta_bound(Integer?, Bds?, Bds).
+delta_bound(D, Bs, Bs?) :- D? =< 1 | true.
+delta_bound(D, Bs, [bd(b_dvd(D?), 1, lin([], 0))|Bs?]) :- integer(D?), D? > 1 | true.
+
+procedure to_bounds(Conj?, Var?, Integer?, Bds).
+to_bounds([], _, _, []).
+to_bounds([X|Xs], V, D, [B?|R?]) :- ground(X?), ground(Xs?), ground(V?), integer(D?) |
+    atom_lin(X?, M),
+    to_bound(X?, M?, V?, D?, B),
+    to_bounds(Xs?, V?, D?, R).
+
+procedure to_bound(LAtom?, Lin?, Var?, Integer?, Bd).
+to_bound(X, M, V, D, B?) :- ground(X?), ground(M?), ground(V?), integer(D?) |
+    lin_coef(M?, V?, C),
+    lin_drop(M?, V?, T),
+    to_bound1(X?, C?, T?, D?, B).
+
+procedure to_bound1(LAtom?, Integer?, Lin?, Integer?, Bd).
+to_bound1(X, C, T, D, B?) :- ground(X?), integer(C?), ground(T?), integer(D?) |
+    AC := abs(C?),
+    F := D? // AC?,
+    sgn(C?, S),
+    lin_scale(T?, F?, TF),
+    bound_kind(X?, F?, K),
+    mk_bd(K?, S?, TF?, B).
+
+procedure mk_bd(BKind?, Integer?, Lin?, Bd).
+mk_bd(K, S, T, bd(K?, S?, T?)).
+
+procedure bound_kind(LAtom?, Integer?, BKind).
+bound_kind(geq(_), _, b_geq).
+bound_kind(grt(_), _, b_grt).
+bound_kind(equ(_), _, b_geq).
+bound_kind(dvd(M, _), F, b_dvd(P?)) :- integer(M?), integer(F?) | P := M? * F?.
+
+% The bounds sorted: lower (Sign 1), upper (Sign -1), and the moduli's
+% least common multiple.
+procedure coop_bounds(Bds?, Conj?, DNF).
+coop_bounds(Bs, O, R?) :- ground(Bs?), ground(O?) |
+    bds_lows(Bs?, Lo),
+    bds_ups(Bs?, Up),
+    bds_mod(Bs?, 1, D),
+    coop_points(Lo?, Up?, D?, Bs?, O?, R).
+
+procedure bds_lows(Bds?, Bds).
+bds_lows([], []).
+bds_lows([bd(K, S, T)|Bs], R?) :- ground(K?), integer(S?), ground(T?), ground(Bs?) |
+    is_low(K?, S?, A),
+    bds_lows(Bs?, R1),
+    keep_bd(A?, bd(K?, S?, T?), R1?, R).
+
+procedure bds_ups(Bds?, Bds).
+bds_ups([], []).
+bds_ups([bd(K, S, T)|Bs], R?) :- ground(K?), integer(S?), ground(T?), ground(Bs?) |
+    NS := 0 - S?,
+    is_low(K?, NS?, A),
+    bds_ups(Bs?, R1),
+    keep_bd(A?, bd(K?, S?, T?), R1?, R).
+
+procedure is_low(BKind?, Integer?, Ans).
+is_low(b_dvd(_), _, no).
+is_low(b_geq, S, yes) :- S? > 0 | true.
+is_low(b_geq, S, no) :- S? =< 0 | true.
+is_low(b_grt, S, yes) :- S? > 0 | true.
+is_low(b_grt, S, no) :- S? =< 0 | true.
+
+procedure keep_bd(Ans?, Bd?, Bds?, Bds).
+keep_bd(yes, B, Bs, [B?|Bs?]).
+keep_bd(no, _, Bs, Bs?).
+
+procedure bds_mod(Bds?, Integer?, Integer).
+bds_mod([], D, D?).
+bds_mod([bd(b_dvd(M), _, _)|Bs], D, R?) :- integer(M?), integer(D?), ground(Bs?) |
+    lcm(M?, D?, D1),
+    bds_mod(Bs?, D1?, R).
+bds_mod([bd(b_geq, _, _)|Bs], D, R?) :- bds_mod(Bs?, D?, R).
+bds_mod([bd(b_grt, _, _)|Bs], D, R?) :- bds_mod(Bs?, D?, R).
+
+% The test points: from the lower bounds where there are any, from the upper
+% ones where there are none, and 0 .. D - 1 where there is neither.
+procedure coop_points(Bds?, Bds?, Integer?, Bds?, Conj?, DNF).
+coop_points([L|Ls], _, D, Bs, O, R?) :- ground(L?), ground(Ls?), integer(D?), ground(Bs?), ground(O?) |
+    lows_points([L?|Ls?], D?, Bs?, O?, R).
+coop_points([], [U|Us], D, Bs, O, R?) :- ground(U?), ground(Us?), integer(D?), ground(Bs?), ground(O?) |
+    ups_points([U?|Us?], D?, Bs?, O?, R).
+coop_points([], [], D, Bs, O, R?) :- integer(D?), ground(Bs?), ground(O?) |
+    step_points(0, D?, 1, lin([], 0), [], Bs?, O?, R).
+
+procedure lows_points(Bds?, Integer?, Bds?, Conj?, DNF).
+lows_points([], _, _, _, []).
+lows_points([bd(K, _, T)|Ls], D, Bs, O, R?) :-
+    ground(K?), ground(T?), ground(Ls?), integer(D?), ground(Bs?), ground(O?) |
+    lin_neg(T?, B),
+    lin_split(B?, I, Q),
+    low_cases(K?, Q?, Cs),
+    cases_points(Cs?, K?, low, I?, D?, Bs?, O?, R1),
+    lows_points(Ls?, D?, Bs?, O?, R2),
+    dnf_app(R1?, R2?, R).
+
+procedure ups_points(Bds?, Integer?, Bds?, Conj?, DNF).
+ups_points([], _, _, _, []).
+ups_points([bd(K, _, T)|Us], D, Bs, O, R?) :-
+    ground(K?), ground(T?), ground(Us?), integer(D?), ground(Bs?), ground(O?) |
+    lin_split(T?, I, Q),
+    up_cases(K?, Q?, Cs),
+    cases_points(Cs?, K?, up, I?, D?, Bs?, O?, R1),
+    ups_points(Us?, D?, Bs?, O?, R2),
+    dnf_app(R1?, R2?, R).
+
+% V' >= I + R: least I + ceil(R); V' > I + R: least I + floor(R) + 1.
+% V' <= I + R: greatest I + floor(R); V' < I + R: greatest I + ceil(R) - 1.
+procedure low_cases(BKind?, Lin?, QCases).
+low_cases(b_geq, Q, R?) :- q_cases(Q?, ceil_case, R).
+low_cases(b_grt, Q, R?) :- q_cases(Q?, floor_case, R).
+low_cases(b_dvd(_), _, []).
+
+procedure up_cases(BKind?, Lin?, QCases).
+up_cases(b_geq, Q, R?) :- q_cases(Q?, floor_case, R).
+up_cases(b_grt, Q, R?) :- q_cases(Q?, ceil_case, R).
+up_cases(b_dvd(_), _, []).
+
+procedure point_shift(BKind?, Dir?, Integer).
+point_shift(b_geq, low, 0).
+point_shift(b_grt, low, 1).
+point_shift(b_geq, up, 0).
+point_shift(b_grt, up, -1).
+point_shift(b_dvd(_), _, 0).
+
+procedure dir_step(Dir?, Integer).
+dir_step(low, 1).
+dir_step(up, -1).
+
+procedure cases_points(QCases?, BKind?, Dir?, Lin?, Integer?, Bds?, Conj?, DNF).
+cases_points([], _, _, _, _, _, _, []).
+cases_points([qc(E, A)|Cs], K, Dr, I, D, Bs, O, R?) :-
+    integer(E?), ground(A?), ground(K?), ground(Dr?), ground(I?), integer(D?), ground(Bs?),
+    ground(O?) |
+    point_shift(K?, Dr?, Sh),
+    dir_step(Dr?, St),
+    cases_points1(E?, Sh?, St?, A?, I?, D?, Bs?, O?, R1),
+    cases_points(Cs?, K?, Dr?, I?, D?, Bs?, O?, R2),
+    dnf_app(R1?, R2?, R).
+
+procedure cases_points1(Integer?, Integer?, Integer?, Conj?, Lin?, Integer?, Bds?, Conj?, DNF).
+cases_points1(E, Sh, St, A, I, D, Bs, O, R?) :-
+    integer(E?), integer(Sh?), integer(St?), ground(A?), ground(I?), integer(D?),
+    ground(Bs?), ground(O?) |
+    ES := E? + Sh?,
+    lin_plus(I?, ES?, P),
+    step_points(0, D?, St?, P?, A?, Bs?, O?, R).
+
+% The points P + St.j for j in 0 .. D - 1, each with the case's atoms A.
+procedure step_points(Integer?, Integer?, Integer?, Lin?, Conj?, Bds?, Conj?, DNF).
+step_points(J, D, _, _, _, _, _, []) :- J? >= D? | true.
+step_points(J, D, St, P, A, Bs, O, [C?|R?]) :-
+    integer(J?), integer(D?), J? < D?, integer(St?), ground(P?), ground(A?), ground(Bs?),
+    ground(O?) |
+    SJ := St? * J?,
+    lin_plus(P?, SJ?, PJ),
+    bds_at(Bs?, PJ?, C1),
+    conj_app(A?, C1?, C2),
+    conj_app(C2?, O?, C),
+    J1 := J? + 1,
+    step_points(J1?, D?, St?, P?, A?, Bs?, O?, R).
+
+% Each bound at V' = P: Sign.P + t.
+procedure bds_at(Bds?, Lin?, Conj).
+bds_at([], _, []).
+bds_at([bd(K, S, T)|Bs], P, [X?|R?]) :-
+    ground(K?), integer(S?), ground(T?), ground(Bs?), ground(P?) |
+    lin_scale(P?, S?, SP),
+    lin_add(SP?, T?, N),
+    bd_atom(K?, N?, X),
+    bds_at(Bs?, P?, R).
+
+procedure bd_atom(BKind?, Lin?, LAtom).
+bd_atom(b_geq, N, geq(N?)).
+bd_atom(b_grt, N, grt(N?)).
+bd_atom(b_dvd(M), N, dvd(M?, N?)).
+
+% --- satisfiability --------------------------------------------------------
+% sat_conj(C, A): some values of its variables, the rational ones rational
+% and the whole ones whole, satisfy every atom of C: the rational variables
+% eliminated first, then the whole ones.
+
+exported procedure sat_conj(Conj?, Ans).
+sat_conj(C, R?) :- ground(C?) |
+    conj_simp(C?, S),
+    sat_cs(S?, R).
+
+procedure sat_cs(CS?, Ans).
+sat_cs(cs_false, no).
+sat_cs(cs(C), R?) :- ground(C?) |
+    conj_vars(C?, [], Vs),
+    pick_var(Vs?, sel_q, P),
+    sat_q(P?, C?, R).
+
+procedure sat_q(VPick?, Conj?, Ans).
+sat_q(pick(V), C, R?) :- ground(V?), ground(C?) |
+    fm(V?, C?, S),
+    sat_cs(S?, R).
+sat_q(pick_none, C, R?) :- ground(C?) |
+    conj_vars(C?, [], Vs),
+    pick_var(Vs?, sel_z, P),
+    sat_z(P?, C?, R).
+
+procedure sat_z(VPick?, Conj?, Ans).
+sat_z(pick(V), C, R?) :- ground(V?), ground(C?) |
+    cooper(V?, C?, D),
+    sat_dnf(D?, R).
+sat_z(pick_none, _, yes).
+
+exported procedure sat_dnf(DNF?, Ans).
+sat_dnf([], no).
+sat_dnf([C|Cs], R?) :- ground(C?), ground(Cs?) |
+    sat_conj(C?, A),
+    sat_dnf1(A?, Cs?, R).
+
+procedure sat_dnf1(Ans?, DNF?, Ans).
+sat_dnf1(yes, _, yes).
+sat_dnf1(no, Cs, R?) :- sat_dnf(Cs?, R).
+
+% sat_prod(C, Ds, A): C conjoined with one conjunction of each formula of Ds
+% has a solution; the choices are tried in turn, a choice whose conjunction
+% with C has none dropped at once.
+exported procedure sat_prod(Conj?, DNFs?, Ans).
+sat_prod(C, [], R?) :- sat_conj(C?, R).
+sat_prod(C, [D|Ds], R?) :- ground(C?), ground(D?), ground(Ds?) |
+    sat_choose(D?, C?, Ds?, R).
+
+procedure sat_choose(DNF?, Conj?, DNFs?, Ans).
+sat_choose([], _, _, no).
+sat_choose([K|Ks], C, Ds, R?) :- ground(K?), ground(Ks?), ground(C?), ground(Ds?) |
+    conj_app(K?, C?, C1),
+    sat_pre(K?, C1?, Ds?, A),
+    sat_choose1(A?, Ks?, C?, Ds?, R).
+
+procedure sat_pre(Conj?, Conj?, DNFs?, Ans).
+sat_pre([], C, Ds, R?) :- sat_prod(C?, Ds?, R).
+sat_pre([_|_], C, Ds, R?) :- ground(C?), ground(Ds?) |
+    sat_conj(C?, A),
+    sat_pre1(A?, C?, Ds?, R).
+
+procedure sat_pre1(Ans?, Conj?, DNFs?, Ans).
+sat_pre1(no, _, _, no).
+sat_pre1(yes, C, Ds, R?) :- sat_prod(C?, Ds?, R).
+
+procedure sat_choose1(Ans?, DNF?, Conj?, DNFs?, Ans).
+sat_choose1(yes, _, _, _, yes).
+sat_choose1(no, Ks, C, Ds, R?) :- sat_choose(Ks?, C?, Ds?, R).
+
+% --- the bindings of another schema, as a formula over the act's values ----
+% elim_block(C, D): the conjunction C over the act's values (iv) and the
+% variables of another schema's binding (bv), the latter eliminated: D holds
+% of the act's values exactly where some binding satisfies C.  The act's
+% rational values are written n + f first (lin_decomp), so D is over the
+% act's whole values, the n's and the f's.
+
+exported procedure elim_block(Conj?, DNF).
+elim_block(C, R?) :- ground(C?) |
+    conj_decomp(C?, C1),
+    conj_simp(C1?, S),
+    elim_b(S?, R).
+
+procedure elim_b(CS?, DNF).
+elim_b(cs_false, []).
+elim_b(cs(C), R?) :- ground(C?) |
+    conj_vars(C?, [], Vs),
+    pick_var(Vs?, sel_bq, P),
+    elim_bq(P?, C?, R).
+
+procedure elim_bq(VPick?, Conj?, DNF).
+elim_bq(pick(V), C, R?) :- ground(V?), ground(C?) |
+    fm(V?, C?, S),
+    elim_b(S?, R).
+elim_bq(pick_none, C, R?) :- ground(C?) |
+    conj_vars(C?, [], Vs),
+    filter_vars(Vs?, sel_bz, Zs),
+    elim_bz(Zs?, [C?], R).
+
+procedure elim_bz(Vars?, DNF?, DNF).
+elim_bz([], D, D?).
+elim_bz([V|Vs], D, R?) :- ground(V?), ground(Vs?), ground(D?) |
+    cooper_dnf(V?, D?, D1),
+    elim_bz(Vs?, D1?, R).
+
+procedure cooper_dnf(Var?, DNF?, DNF).
+cooper_dnf(_, [], []).
+cooper_dnf(V, [C|Cs], R?) :- ground(V?), ground(C?), ground(Cs?) |
+    cooper(V?, C?, D1),
+    cooper_dnf(V?, Cs?, D2),
+    dnf_app(D1?, D2?, R).
+
+procedure conj_decomp(Conj?, Conj).
+conj_decomp([], []).
+conj_decomp([A|As], [B?|R?]) :- ground(A?), ground(As?) |
+    atom_lin(A?, L),
+    lin_decomp(L?, L1),
+    atom_with(A?, L1?, 1, B),
+    conj_decomp(As?, R).
+
+procedure lin_decomp(Lin?, Lin).
+lin_decomp(lin(Ts, C), lin(T?, C?)) :- ground(Ts?) | terms_decomp(Ts?, [], T).
+
+procedure terms_decomp(Terms?, Terms?, Terms).
+terms_decomp([], Acc, Acc?).
+terms_decomp([t(q(iv(X)), K)|Ts], Acc, R?) :-
+    ground(X?), integer(K?), ground(Ts?), ground(Acc?) |
+    terms_add1(Acc?, z(nv(X?)), K?, A1),
+    terms_add1(A1?, q(fv(X?)), K?, A2),
+    terms_decomp(Ts?, A2?, R).
+terms_decomp([t(V, K)|Ts], Acc, R?) :-
+    otherwise, ground(V?), integer(K?), ground(Ts?), ground(Acc?) |
+    terms_add1(Acc?, V?, K?, A1),
+    terms_decomp(Ts?, A1?, R).
+
+% decomp_defs(Xs, C): for each rational value x of the act, x = n + f with n
+% whole and 0 <= f < 1.
+exported procedure decomp_defs(Constants?, Conj).
+decomp_defs([], []).
+decomp_defs([X|Xs], [equ(lin([t(q(iv(X?)), 1), t(z(nv(X?)), -1), t(q(fv(X?)), -1)], 0)),
+                     geq(lin([t(q(fv(X?)), 1)], 0)),
+                     grt(lin([t(q(fv(X?)), -1)], 1))|R?]) :-
+    ground(X?), ground(Xs?) |
+    decomp_defs(Xs?, R).
+
+% --- the constraint of a schema, as atoms ----------------------------------
+% A value the contract writes is a number, read exactly: a whole one as it
+% is, and one that is not whole as the fraction N / 2^k it is.  An
+% expression is ex(L, D), the form L divided by D > 0; a product is linear
+% where one factor has no variable.  A constraint that is not a conjunction
+% of linear equalities and inequalities over value arguments is refused
+% before it is read (check.glp); were one read, it would be the false atom.
+
+exported procedure num_frac(Constant?, Integer, Integer).
+num_frac(X, N?, 1) :- integer(X?) | N := X? + 0.
+num_frac(X, N?, D?) :- otherwise, number(X?) | frac_loop(X?, 1, N, D).
+
+procedure frac_loop(Constant?, Integer?, Integer, Integer).
+frac_loop(X, P, N?, P?) :- number(X?), X? =:= floor(X?) | N := floor(X?).
+frac_loop(X, P, N?, D?) :- number(X?), X? =\= floor(X?), integer(P?) |
+    Y := X? * 2,
+    Q := P? * 2,
+    frac_loop(Y?, Q?, N, D).
+
+exported procedure ex_num(Constant?, Ex).
+ex_num(X, ex(lin([], N?), D?)) :- number(X?) | num_frac(X?, N, D).
+
+exported procedure ex_var(Var?, Ex).
+ex_var(V, ex(lin([t(V?, 1)], 0), 1)).
+
+procedure venv_lookup(VEnv?, Constant?, Ex).
+venv_lookup([], _, ex_bad).
+venv_lookup([vb(Y, V)|_], X, ex(lin([t(V?, 1)], 0), 1)) :- Y? =?= X? | true.
+venv_lookup([_|E], X, R?) :- otherwise | venv_lookup(E?, X?, R).
+
+procedure expr(Expr?, VEnv?, Ex).
+expr(num(X), _, R?) :- number(X?) | ex_num(X?, R).
+expr(num(X), E, R?) :- otherwise, ground(X?), ground(E?) | venv_lookup(E?, X?, R).
+expr(plus(A, B), E, R?) :- ground(A?), ground(B?), ground(E?) |
+    expr(A?, E?, XA),
+    expr(B?, E?, XB),
+    ex_add(XA?, XB?, 1, R).
+expr(minus(A, B), E, R?) :- ground(A?), ground(B?), ground(E?) |
+    expr(A?, E?, XA),
+    expr(B?, E?, XB),
+    ex_add(XA?, XB?, -1, R).
+expr(mul(A, B), E, R?) :- ground(A?), ground(B?), ground(E?) |
+    expr(A?, E?, XA),
+    expr(B?, E?, XB),
+    ex_mul(XA?, XB?, R).
+expr(X, _, ex_bad) :- otherwise, ground(X?) | true.
+
+% A + S.B, S one or minus one.
+procedure ex_add(Ex?, Ex?, Integer?, Ex).
+ex_add(ex(L1, D1), ex(L2, D2), S, ex(L?, D?)) :-
+    ground(L1?), integer(D1?), ground(L2?), integer(D2?), integer(S?) |
+    lin_scale(L1?, D2?, A),
+    K := S? * D1?,
+    lin_scale(L2?, K?, B),
+    lin_add(A?, B?, L),
+    D := D1? * D2?.
+ex_add(_, _, _, ex_bad) :- otherwise | true.
+
+procedure ex_mul(Ex?, Ex?, Ex).
+ex_mul(ex(lin([], C), D1), ex(L2, D2), ex(L?, D?)) :-
+    integer(C?), integer(D1?), ground(L2?), integer(D2?) |
+    lin_scale(L2?, C?, L),
+    D := D1? * D2?.
+ex_mul(ex(L1, D1), ex(lin([], C), D2), ex(L?, D?)) :-
+    otherwise, ground(L1?), integer(D1?), integer(C?), integer(D2?) |
+    lin_scale(L1?, C?, L),
+    D := D1? * D2?.
+ex_mul(_, _, ex_bad) :- otherwise | true.
+
+% ex_diff(X, Y, L): L is D_X.D_Y.(Y - X), which has the sign of Y - X.
+procedure ex_diff(Ex?, Ex?, Lin).
+ex_diff(ex(L1, D1), ex(L2, D2), L?) :-
+    ground(L1?), integer(D1?), ground(L2?), integer(D2?) |
+    lin_scale(L2?, D1?, A),
+    lin_scale(L1?, D2?, B),
+    lin_sub(A?, B?, L).
+ex_diff(_, _, lin([], -1)) :- otherwise | true.
+
+% X = Y, as an atom.
+exported procedure ex_eq(Ex?, Ex?, Conj).
+ex_eq(X, Y, [equ(L?)]) :- ground(X?), ground(Y?) | ex_diff(X?, Y?, L).
+
+procedure cmp_atoms(Constant?, Expr?, Expr?, VEnv?, Conj).
+cmp_atoms(Op, X, Y, E, R?) :- ground(Op?), ground(X?), ground(Y?), ground(E?) |
+    expr(X?, E?, XX),
+    expr(Y?, E?, XY),
+    cmp_atoms1(Op?, XX?, XY?, R).
+
+procedure cmp_atoms1(Constant?, Ex?, Ex?, Conj).
+cmp_atoms1(le, X, Y, [geq(L?)]) :- ground(X?), ground(Y?) | ex_diff(X?, Y?, L).
+cmp_atoms1(lt, X, Y, [grt(L?)]) :- ground(X?), ground(Y?) | ex_diff(X?, Y?, L).
+cmp_atoms1(ge, X, Y, [geq(L?)]) :- ground(X?), ground(Y?) | ex_diff(Y?, X?, L).
+cmp_atoms1(gt, X, Y, [grt(L?)]) :- ground(X?), ground(Y?) | ex_diff(Y?, X?, L).
+cmp_atoms1(eq, X, Y, [equ(L?)]) :- ground(X?), ground(Y?) | ex_diff(X?, Y?, L).
+
+% cons_conj(C, E, A): the atoms of the constraint C, its value variables
+% read through E.
+exported procedure cons_conj(Constraint?, VEnv?, Conj).
+cons_conj(true, _, []).
+cons_conj(and(A, B), E, R?) :- ground(A?), ground(B?), ground(E?) |
+    cons_conj(A?, E?, R1),
+    cons_conj(B?, E?, R2),
+    conj_app(R1?, R2?, R).
+cons_conj(eq(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(eq, X?, Y?, E?, R).
+cons_conj(le(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(le, X?, Y?, E?, R).
+cons_conj(lt(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(lt, X?, Y?, E?, R).
+cons_conj(ge(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(ge, X?, Y?, E?, R).
+cons_conj(gt(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(gt, X?, Y?, E?, R).
+cons_conj(succ(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) |
+    cmp_atoms(eq, plus(X?, num(1)), Y?, E?, R).
+cons_conj(or(_, _), _, [equ(lin([], 1))]).
