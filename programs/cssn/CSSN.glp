@@ -79,9 +79,9 @@ gsn_schemas([
        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
 %% GSN:1, Message.
     schema(message, [svar(x)],
-      [rs(guarded,   [], [], [atom(identity, [])], [atom(retired, [])]),
+      [rs(guarded,   [], [], [atom(identity, []), atom(friend, [role(2)])], [atom(retired, [])]),
        rs(unguarded, [atom(received, [svar(x), role(1)])], [],
-                     [atom(identity, []), atom(friend, [role(1)])], [])]),
+                     [atom(identity, [])], [])]),
 %% GSN:2, Group.
     schema(create, [svar(n)],
       [rs(guarded, [atom(member, [nterm(ext(own(1), n))]),
@@ -93,7 +93,7 @@ gsn_schemas([
                    [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])],
                    [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [],
-                   [atom(identity, []), atom(friend, [role(1)])],
+                   [atom(identity, [])],
                    [atom(child, []), atom(member, [nterm(ext(own(1), n))]), atom(retired, [])])]),
 %% GSN:4, Leaving: a member leaves; the leader leaving ends the group; a
 %% member who is not a friend of the leader is removed.
@@ -225,7 +225,7 @@ children_schemas([
                    [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])],
                    [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [],
-                   [atom(identity, []), atom(child, []), atom(friend, [role(1)])],
+                   [atom(identity, []), atom(child, [])],
                    [atom(member, [nterm(ext(own(1), n))]), atom(retired, [])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]),
@@ -234,7 +234,7 @@ children_schemas([
                    [atom(identity, []), atom(child, []), atom(member, [nterm(ext(own(1), n))]),
                     atom(friend, [role(2)])], [atom(retired, [])]),
        rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [],
-                   [atom(identity, []), atom(child, []), atom(friend, [role(1)])],
+                   [atom(identity, []), atom(child, [])],
                    [atom(member, [nterm(ext(own(1), n))]), atom(retired, [])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]),
