@@ -118,9 +118,10 @@ const String namedCtor = 'named';
 const String labelCtor = 'label';
 
 /// Where the button of a request is drawn, `act(P, W)`, `P` the term
-/// `place(T, M, Ps, Gs, Ks, Ws)`: the tab of its contract, the place of the
-/// person proposing it, the places a person the view lists fills, the groups
-/// a group it lists fills, the places a field for a key fills, and the text
+/// `place(T, M, Ps, Gs, Is, Ks, Ws)`: the tab of its contract, the place of
+/// the person proposing it, the places a person the view lists fills, the
+/// groups a group it lists fills, the items a row of a list fills, the
+/// places a field for a key fills, and the text
 /// of its request form (vGLP, Section 6.2, "The words a platform shows";
 /// programs/self.glp, the type Widget; programs/vglp/cva/compiler/README.md,
 /// "The pragmas").  The compiler emits it around the widget of each request
