@@ -101,7 +101,7 @@ for c in $CONTRACTS; do
     fi
     pr=no_pragmas
     if [ "$src" != "$HERE/contracts.glp" ] && [ -f "${src%.glp}.txt" ] \
-        && ! pr=$(bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" 2> "$WORK/$c.pr.err"); then
+        && ! pr=$(bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "$ct" 2> "$WORK/$c.pr.err"); then
         echo "missing $d: its pragmas were not read: $(head -1 "$WORK/$c.pr.err")" >> "$WORK/status"
         continue
     fi

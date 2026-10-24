@@ -6,11 +6,41 @@
 # prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The first line after "Pragmas" is a list, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is "Clause: [Button] ... <field> ... sentence", a button for each act of the clause a person proposes, and an act for each button, act(Schema, Button, Fields, Sentence), Schema the button's text in lower case, each space an underscore, the name of the schema it proposes ("a button for each act of it a person proposes, in brackets, each bearing its act's name", GSC 2991379, Section 2), the fields and the sentence of the line each act's, the clause being one of that title in the same NAME.txt or, where it has none, in the NAME.txt of a contract it extends, Sentence said(Questions) or none, each question a sentence of the line after its fields, the question put to the person in each role whose will the act needs beyond the proposer's, in their order (GSC, Section 2, its first paragraph: "for each role whose will the act needs beyond the proposer's, in their order, the question the person in it is asked"), each its words, each word text(S) or person(I), a name the person I-th among the names the line's clause uses, in the order they first occur in it, so that the head's persons, its roles then its agent variables, are named in order by the clause's names (vGLP, Section 5.4, "The contract's words": "A question names the roles of its schema by the names its clause uses, in the order of the roles"); a name is a word of a capital and lower-case letters that a clause of the contract, or of a contract it extends, writes within a sentence and not first in it, as Alice, Bob, Carol, Dave and Alf.  Each act carries, last, the name of the tab of its contract, the first line after "Pragmas" of the NAME.txt the act's line is in: act(Schema, Button, Fields, Sentence, Tab).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
 
 set -u
-[ $# -eq 1 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt>" >&2; exit 2; }
+[ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt> [<contract term>]" >&2; exit 2; }
 PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
 exec perl -CSD -Mutf8 -e '
 use strict; use warnings;
-my ($top, $programs) = @ARGV;
+my ($top, $programs, $term) = @ARGV;
+# The schemas of the contract term, where it is given, each with the variables of its head after its roles, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).
+my (@snames, %svars);
+if (defined $term && $term ne "") {
+    while ($term =~ /\b[nc]?schema\((\w+), \[([^\]]*)\]/g) {
+        my ($n, $a) = ($1, $2);
+        next if exists $svars{$n};
+        push @snames, $n;
+        $svars{$n} = [ $a =~ /\w+\((\w+)\)/g ];
+    }
+}
+# The schemas a button realises: its schema, the button in lower case, or, where the contract has none of that name, those named by it and a suffix after an underscore; the button alone where the term is not given or none is found.
+sub realising {
+    my ($act) = @_;
+    return ($act) if !@snames || exists $svars{$act};
+    my @r = grep { index($_, "${act}_") == 0 } @snames;
+    return @r ? @r : ($act);
+}
+# The union of the variables of the schemas, in head order: the variables of each schema merged in, each one not yet held placed after the one before it in that schema.
+sub union_vars {
+    my @u;
+    for my $s (@_) {
+        my $at = -1;
+        for my $v (@{ $svars{$s} }) {
+            my ($i) = grep { $u[$_] eq $v } 0 .. $#u;
+            if (defined $i) { $at = $i; next }
+            splice(@u, $at + 1, 0, $v); $at++;
+        }
+    }
+    return @u;
+}
 sub find_txt {
     my ($name, $beside) = @_;
     my $f = "$beside/$name.txt";
@@ -134,10 +164,24 @@ for my $f (@order) {
         }
         for my $button (@buttons) {
             (my $act = lc $button) =~ s/ +/_/g;
-            push @acts, "act(" . q_atom($act) . ", " . q_string($button) . ", ["
-                . join(", ", map { q_string($_) } @fields) . "], $said, " . q_string($tab) . ")";
+            my @real = realising($act);
+            if (@real == 1 && $real[0] eq $act) {
+                push @acts, "act(" . q_atom($act) . ", " . q_string($button) . ", ["
+                    . join(", ", map { q_string($_) } @fields) . "], $said, " . q_string($tab) . ")";
+                next;
+            }
+            # Several schemas realise the button: the fields name the union of their variables in head order, and each schema has the fields of its variables, in its order, a field of a variable it does not have left out (GSC, ibid.: "the fields the union of their variables in head order, an inapplicable field left empty").
+            my @u = union_vars(@real);
+            @fields <= @u or die "pragmas.sh: $f: the pragma \"$title\" names more fields than its schemas have variables\n";
+            my %name; @name{ @u[0 .. $#fields] } = @fields if @fields;
+            for my $s (@real) {
+                my @own = map { exists $name{$_} ? $name{$_} : "" } @{ $svars{$s} };
+                pop @own while @own && $own[-1] eq "";
+                push @acts, "act(" . q_atom($s) . ", " . q_string($button) . ", ["
+                    . join(", ", map { q_string($_) } @own) . "], $said, " . q_string($tab) . ")";
+            }
         }
     }
 }
 print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "])\n";
-' "$1" "$PROGRAMS"
+' "$1" "$PROGRAMS" "${2:-}"
