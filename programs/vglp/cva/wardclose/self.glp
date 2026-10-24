@@ -66,8 +66,8 @@ Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Pe
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; parenting(Peer) ; parent(Peer) ; member(Peer, Speech)
            ; listed(Peer, Speech) ; closed(Speech).
-Approved ::= Proposal ; Attempt.
-Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+Approved ::= Proposal.
+Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Approved, Key, Reason).
 Asking   ::= Attempt ; hello(Peer, Proposal).
 Approval ::= approval(Asking, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).

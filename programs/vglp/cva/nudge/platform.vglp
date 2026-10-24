@@ -119,7 +119,7 @@ meet_other(V1?, V2?, Me?, P)
 meeting_peer(_, _, nopeer) :- otherwise | true.
 
 %% ===========================================================================
-%% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, Menu, shows the agent's own key and the persons it knows and takes one request (vGLP 321127a, Section 5.4); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the request propose(N) the agent takes a Request, its person's approval, which stands until the transaction is taken or refused; its machine proposes, and proposes again an attempt that yields, with no further question to its person; and a machine that cannot carry out a transaction its person approved refuses it (vGLP f0acbc1, Section 5.4, "Triggers").  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(S, K), the machine state S of its app state and the persons K it knows, when it starts and whenever either changes, and the person's screen shows the last view written (vGLP b7e3517, Section 5.4, "The compilation"); and, when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused(Part, Q, D), Part the part of the refused attempt, Q its refuser and D the reason, declined or unable, from the abort outcome, or from its own vote where its own vote no refused the attempt (vGLP f0acbc1, Section 5.4, "The compilation").
+%% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, Menu, shows the agent's own key and the persons it knows and takes one request (vGLP 321127a, Section 5.4); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the request propose(N) the agent takes a Request, its person's approval, which stands until the transaction is taken or refused; its machine proposes, and proposes again an attempt that yields, with no further question to its person; and a machine that cannot carry out a transaction its person approved refuses it (vGLP f0acbc1, Section 5.4, "Triggers").  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(S, K, A), the machine state S of its app state, the persons K it knows and the approvals A its person made that are pending, each by its request name, when it starts and whenever any changes, and the person's screen shows the last view written; and, when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable, from the abort outcome, or from its own vote where its own vote no refused the attempt (vGLP e286276, Section 5.4, "The compilation").
 %% ===========================================================================
 
 %% An attempt (i, k, pi, [t]_j, r) (vGLP f0acbc1, Definition "Attempt"): its initiator, its number, its rank, its part, named by a term of Class, a schema-binding of the part, of the attempt's class (Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"), the part's guard set the people in the schema-binding's marked roles, and the request it names, request(Rho, K), where its part is guarded and has an opener, and none otherwise.  The cargoes (Definition "Cargo, App State, Question, Approval, Free, Ready") are its start; a vote on it, a vote no carrying its reason, declined or unable; its outcome, an abort carrying its refuser, the participant whose vote no refused it, with that vote's reason; a yield of it; and a request, request(Rho, K).  A message carries its sender and a cargo, a hello, an ihello, or an introduction, intro(P, Q), P's cargo intro(Q), which Commit and Introduce peers send (Definitions "CVA Platform", "Deciding" and "Introduction Rule, Introduce Peers").  A request is a set of classes (Definition "Local Specification, Part, Guard Set, Opener, Request"): one(C), the class of a guarded part with no opener that the agent guards, C the term naming the class at the agent, a request of the agent to itself; or rho(N), rho_N, the classes of the guarded parts with an opener named N, a request to their opener, the message of the Request carrying N (Section 5.4, "The compilation").  A vote unable of the compiled program carries the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (Section 5.4, "Act schemas").
@@ -198,10 +198,9 @@ NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
 GAtom     ::= g(Constant, Vals).
 GAtoms    ::= [] ; [GAtom | GAtoms].
-%% The program's output to its person is of the type of the views, view(S, K): S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it, and K the persons the agent knows, in the order of identifiers, so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(P, Q, D), P the term of the part of the refused attempt, Q its refuser and D the reason, declined, or unable(Lacks, Has), the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them: "when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused([t]_j, q, d)"; "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it" (vGLP f0acbc1, Section 5.4, "The compilation" and "Act schemas"; Definition "Widget Declaration").
-%% The view carries also the approvals the person made that are pending, the requests by their names and the answers yes by their attempts, view(S, K, A) (vGLP, Section 5.4, "The compilation": "the agent goal writes its view view(s, K, A), the machine state s of its app state, the persons K it knows and the approvals A its person made that are pending, the requests by their names and the answers yes by their attempts, when it starts and whenever any changes").
-Approved  ::= Proposal ; Attempt.
-Output    ::= view(List(Atom), List(Key), List(Approved)) ; refused(Class, Key, Reason).
+%% The program's output to its person is of the type of the views, view(S, K, A): S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it; K the persons the agent knows, in the order of identifiers; and A the approvals its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part, a term of Proposal, in which no Stream or List occurs (Definition "Effective Local Specification"), so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined, or unable(Lacks, Has), the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part"; "a notice refused(N, q, d): N the request name of the part of the refused attempt, q its refuser and d the reason"; "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it"; "Act schemas"; Definition "Widget Declaration").  A contract with no guarded part has no approvals, and its A is always empty: Approved is then Constant, of which it holds none.
+Approved  ::= Proposal.
+Output    ::= view(List(Atom), List(Key), List(Approved)) ; refused(Approved, Key, Reason).
 Shown     ::= shown(Atom) ; unshown.
 Stream(Output) =::= last_state.
 Bind      ::= b(Var, Val).
@@ -276,7 +275,7 @@ Pairs     ::= [] ; [Pair | Pairs].
 PKey      ::= key(WKey) ; nokey.
 Cond      ::= go(Info) ; drop.
 PCond     ::= pgo(Info, Class, Names) ; pdrop.
-RCond     ::= rgo(Rho, Peer) ; rdrop ; rhold(Proposal) ; rrefuse(Class).
+RCond     ::= rgo(Rho, Peer) ; rdrop ; rhold(Proposal) ; rrefuse(Proposal).
 RQ        ::= rq(RCands, YesNo, YesNo).
 RCand     ::= rc(Rho, Peer).
 RCands    ::= [] ; [RCand | RCands].
@@ -493,7 +492,7 @@ show_known(Q, St0, St, Thr?, Thr1, St?) :- ground(Q?), ground(St0?), ground(St?)
 procedure show_view(YesNo?, St?, Stream(Output), Stream(Output)?).
 show_view(no, _, Thr1?, Thr1).
 show_view(yes, St, [V?|Thr1?], Thr1) :- view_of(St?, V).
-%% The view at the agent state: its machine state, the contract's atoms; the persons it knows, in the order of identifiers; and the approvals its person made that are pending, in the order they were made.
+%% The view at the agent state: its machine state, the contract's atoms; the persons it knows, in the order of identifiers; and the approvals its person made that are pending, each by its request name, in the order they were made.
 procedure view_of(St?, Output).
 view_of(St, view(A?, Ks?, Ps?)) :- ground(St?) |
     st_ms(St?, S),
@@ -502,7 +501,7 @@ view_of(St, view(A?, Ks?, Ps?)) :- ground(St?) |
     st_app(St?, Ap),
     app_recs(Ap?, R),
     approvals_of(R?, Ps).
-%% The approvals pending in the record R, newest first: each request requested(Rho, K) not ended, by its name, and each answer yes answered(At, yes) not ended, by its attempt; given oldest first.
+%% The approvals pending in the record R, newest first: each request requested(Rho, K) not ended, by its name, and each answer yes answered(At, yes) not ended, by the request name of its attempt's part (request_name); given oldest first (vGLP e286276, Section 5.4, "The compilation": "each by its request name, a request's own and an answer's that of its attempt's part").
 procedure approvals_of(Recs?, List(Approved)).
 approvals_of(R, As?) :- ground(R?) | approvals1(R?, R?, [], As).
 procedure approvals1(Recs?, Recs?, List(Approved)?, List(Approved)).
@@ -514,7 +513,9 @@ approvals1([requested(Rr, K)|Rs], R, Acc, As?) :- ground(Rr?), integer(K?), grou
     approvals1(Rs?, R?, Acc1?, As).
 approvals1([answered(At, yes)|Rs], R, Acc, As?) :- ground(At?), ground(R?) |
     mem(ended(At?), R?, En),
-    keep_attempt(En?, At?, Acc?, Acc1),
+    attempt_class(At?, C),
+    request_name(C?, Pn),
+    keep_pname(En?, Pn?, Acc?, Acc1),
     approvals1(Rs?, R?, Acc1?, As).
 approvals1([_|Rs], R, Acc, As?) :- otherwise | approvals1(Rs?, R?, Acc?, As).
 procedure rho_name(Rho?, PName).
@@ -523,9 +524,6 @@ rho_name(rho(N), pname(N?)).
 procedure keep_pname(YesNo?, PName?, List(Approved)?, List(Approved)).
 keep_pname(no, pname(N), Acc, [N?|Acc?]).
 keep_pname(_, _, Acc, Acc?) :- otherwise | true.
-procedure keep_attempt(YesNo?, Attempt?, List(Approved)?, List(Approved)).
-keep_attempt(no, At, Acc, [At?|Acc?]).
-keep_attempt(yes, _, Acc, Acc?).
 procedure set_today(Integer?, App?, App).
 set_today(D, app(S, K, L, R), app([g(today, [n(D?)])|S1?], K?, L?, R?)) :- not_today(S?, S1).
 %% The machine state less the day, today(d).
@@ -545,14 +543,17 @@ procedure shown_cons(Shown?, List(Atom)?, List(Atom)).
 shown_cons(shown(A), As, [A?|As?]).
 shown_cons(unshown, As, As?).
 
-%% The notices a dispatch writes on the output, after the view it writes, if any (vGLP f0acbc1, Section 5.4, "The compilation": "when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused([t]_j, q, d): [t]_j the part of the refused attempt, q its refuser and d the reason, from the abort outcome, or from the vote where the agent's own vote no refused it").  The effects of the transactions that end an approval by a refusal give the notice, one for each such end: the Propose that refuses at once, a guard's vote no, by Start or by Vote, the Tally that records a no, and the Outcome of an abort (ended_notice).
+%% The notices a dispatch writes on the output, after the view it writes, if any (vGLP e286276, Section 5.4, "The compilation": "when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused(N, q, d): N the request name of the part of the refused attempt, q its refuser and d the reason, from the abort outcome, or from the vote where the agent's own vote no refused it").  The effects of the transactions that end an approval by a refusal give the notice, one for each such end: the Propose that refuses at once, a guard's vote no, by Start or by Vote, the Tally that records a no, and the Outcome of an abort (ended_notice).
 procedure put_notices(Outputs?, Stream(Output), Stream(Output)?).
 put_notices([], Thr1?, Thr1).
 put_notices([N|Ns], [N?|Thr?], Thr1) :- put_notices(Ns?, Thr, Thr1?).
-%% ended_notice(Ended?, Part?, Refuser?, Reason?, Notices): the notice refused(Part, Q, D) where an approval ended, and none where none did.
+%% ended_notice(Ended?, Part?, Refuser?, Reason?, Notices): the notice refused(N, Q, D), N the request name of the part (request_name), where an approval ended, and none where none did; a contract with no guarded part has no approvals, and none ends.
 procedure ended_notice(YesNo?, Class?, Peer?, Reason?, Outputs).
-ended_notice(yes, C, Q, D, [refused(C?, Q?, D?)]).
+ended_notice(yes, C, Q, D, Ns?) :- ground(C?) | request_name(C?, Pn), named_notice(Pn?, Q?, D?, Ns).
 ended_notice(no, _, _, _, []).
+procedure named_notice(PName?, Peer?, Reason?, Outputs).
+named_notice(pname(N), Q, D, [refused(N?, Q?, D?)]).
+named_notice(nopname, _, _, []).
 procedure some_peer(Peers?, YesNo).
 some_peer([], no).
 some_peer([_|_], yes).
@@ -599,7 +600,7 @@ request_cond0(C, N, St, Cd?, St2?) :- ground(C?), ground(N?), ground(St?) |
     st_class(C?, St?, R, St1),
     request_cond1(R?, N?, C?, St1?, Cd, St2).
 procedure request_cond1(ClassRes?, Proposal?, Class?, St?, RCond, St).
-request_cond1(nocls, _, C, St, rrefuse(C?), St?).
+request_cond1(nocls, N, _, St, rrefuse(N?), St?).
 request_cond1(cls(I), N, C, St, Cd?, St?) :- ground(I?), ground(N?), ground(C?), ground(St?) |
     term_part_of(I?, C?, Pr),
     request_cands(Pr?, I?, N?, C?, St?, Rq),
@@ -766,14 +767,14 @@ term_part_of1([pt(T, G, Op)|Ps], I, C, Pr?) :- ground(T?), ground(G?), ground(Op
 procedure term_part_of2(YesNo?, Part?, Parts?, Info?, Class?, PartRes).
 term_part_of2(yes, P, _, _, _, part(P?)).
 term_part_of2(no, _, Ps, I, C, Pr?) :- term_part_of1(Ps?, I?, C?, Pr).
-%% Of the candidate Requests, the one the agent has taken least recently: one never taken before one taken, and of those taken, the one taken longest ago, the requests the agent has made being in the order it last made them; ties to the first.  Where there is none: the request held, rhold(N), where the agent is not free for a class of its Request; and otherwise dropped, rdrop, or, where the agent is ready for no part named N that it guards or opens, dropped with the notice refused(C, p, unable), rrefuse(C), C the part N names at the agent (vGLP, Section 5.4, "The compilation": "where the agent is not free for a class of such a Request, it holds the request and puts it up again after every dispatch; and it drops the request where the agent is free and none is enabled, with a notice refused(N, p, unable) where the agent is ready for no part named N that it guards or opens").
+%% Of the candidate Requests, the one the agent has taken least recently: one never taken before one taken, and of those taken, the one taken longest ago, the requests the agent has made being in the order it last made them; ties to the first.  Where there is none: the request held, rhold(N), where the agent is not free for a class of its Request; and otherwise dropped, rdrop, or, where the agent is ready for no part named N that it guards or opens, dropped with the notice refused(N, p, unable), rrefuse(N) (vGLP e286276, Section 5.4, "The compilation": "where the agent is not free for a class of such a Request, it holds the request and puts it up again after every dispatch; and it drops the request where the agent is free and none is enabled, with a notice refused(N, p, unable) where the agent is ready for no part named N that it guards or opens").
 procedure pick_request(RQ?, Proposal?, Class?, Rhos?, RCond).
 pick_request(rq([X|Xs], _, _), _, _, Md, Cd?) :- ground(Md?) |
     least_rcand(Xs?, Md?, X?, Y),
     rcand_go(Y?, Cd).
 pick_request(rq([], yes, _), N, _, _, rhold(N?)).
 pick_request(rq([], no, yes), _, _, _, rdrop).
-pick_request(rq([], no, no), _, C, _, rrefuse(C?)).
+pick_request(rq([], no, no), N, _, _, rrefuse(N?)).
 procedure least_rcand(RCands?, Rhos?, RCand?, RCand).
 least_rcand([], _, Y, Y?).
 least_rcand([X|Xs], Md, Y, Z?) :- ground(X?), ground(Y?), ground(Md?) |
@@ -818,10 +819,10 @@ dispatch_request(rhold(N), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H,
     app(Rq1?, [N?], Rq2),
     set_reqs(St?, Rq2?, St1),
     next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
-dispatch_request(rrefuse(C), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
-    ground(C?), ground(St?) |
+dispatch_request(rrefuse(N), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+    ground(N?), ground(St?) |
     st_id(St?, Id),
-    next_n(Th?, no, Ap0?, [refused(C?, Id?, unable)], Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+    next_n(Th?, no, Ap0?, [refused(N?, Id?, unable)], Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
 %% Request rho to O: the agent's number one more, the new value the request's number K; requested(rho, K) recorded; the request noted last among those the agent has made; and, where O is not the agent, request(rho, K) sent to O (Definition "Proposing", Request).
 procedure request_effect(Rho?, Peer?, St?, Sends, St).
