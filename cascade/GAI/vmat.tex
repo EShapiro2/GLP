@@ -21,13 +21,20 @@ identity
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 retired
 }
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -375,7 +382,7 @@ friend
 \}
 \end{align*}
 \iffalse
-unfriend_p
+unfriend
 \fi
 \begin{align*}
 &
@@ -479,113 +486,6 @@ principal_of
 &
 \text{guarded by } \{
 \Alice
-\}
-\end{align*}
-\iffalse
-unfriend_q
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-friend
-}
-(
-\Bob
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-friend
-}
-(
-\Alice
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-retired
-}
-,
-\mathit{
-principal
-}
-(
-\Alice
-)
-,
-\mathit{
-principal_of
-}
-(
-\Alice
-)
-\}
- \cap c_
-{
-\Bob
-}
- = \emptyset
-,\\
-&
-\text{guarded by } \{
-\Bob
 \}
 \end{align*}
 \iffalse
@@ -623,6 +523,21 @@ knows
 }
 (
 \Bob
+)
+,
+\mathit{
+agent_of
+}
+(
+\Bob
+,
+\Alice
+,
+\mathrm{sgn}(
+x
+,
+\Alice
+)
 )
 \}
 , \qquad 
@@ -844,6 +759,17 @@ principal_of
 (
 \Alice
 )
+,
+\mathit{
+agent_of
+}
+(
+\Alice
+,
+\mathit{Carol}
+,
+y
+)
  \in c_
 {
 \mathit{Carol}
@@ -1040,6 +966,17 @@ principal_of
 (
 \Alice
 )
+,
+\mathit{
+agent_of
+}
+(
+\Alice
+,
+\mathit{Carol}
+,
+y
+)
  \in c_
 {
 \mathit{Carol}
@@ -1054,6 +991,17 @@ principal_of
 }
 (
 \Bob
+)
+,
+\mathit{
+agent_of
+}
+(
+\Bob
+,
+\mathit{Dave}
+,
+z
 )
  \in c_
 {
@@ -1801,182 +1749,6 @@ retired
 {
 \Alice
 }
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-message
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-item
-}
-(
-x
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-authored
-}
-(
-x
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-retired
-}
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-forward
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-item
-}
-(
-\mathrm{sgn}(
-x
-,
-\Alice
-)
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-item
-}
-(
-x
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-authored
-}
-(
-x
-)
-,
-\mathit{
-retired
-}
-\}
- \cap c_
-{
-\Alice
-}
- = \emptyset
 ,\\
 &
 \text{guarded by } \{

@@ -1,46 +1,81 @@
 establish(Alice?) :
-    at Alice: not identity, +identity
+    at Alice: not identity, not retired, +identity
 
 meet(Alice?, Bob?) :
-    at Alice: identity, +knows(Bob)
-    at Bob: identity, +knows(Alice)
+    at Alice: identity, not agent, not retired, +knows(Bob)
+    at Bob: identity, not agent, not retired, +knows(Alice)
 
 introduce(Alice?, Bob?; c) :
-    at Alice: identity, knows(Bob), knows(c)
-    at Bob: identity, knows(Alice), +knows(c)
+    at Alice: identity, knows(Bob), knows(c), not agent, not retired
+    at Bob: identity, knows(Alice), not agent, not retired, +knows(c)
 
 befriend(Alice?, Bob?) :
-    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
-    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
+    at Alice: identity, knows(Bob), not agent, not retired, not friend(Bob), +friend(Bob)
+    at Bob: identity, knows(Alice), not agent, not retired, not friend(Alice), +friend(Alice)
 
 unfriend(Alice?, Bob) :
-    at Alice: identity, -friend(Bob)
+    at Alice: identity, not retired, not principal(Bob), not principal_of(Bob), -friend(Bob)
     at Bob: identity, -friend(Alice)
 
+enter(Alice?, Bob?; x) :
+    at Alice: identity, item(x), not agent, not retired, +principal_of(Bob), +friend(Bob), +knows(Bob), +agent_of(Bob, Alice, sgn(x, Alice))
+    at Bob: not identity, not retired, +identity, +agent, +principal(Alice), +friend(Alice), +knows(Alice), +attestation(sgn(x, Alice))
+
+agent_meet(Alice?, Bob?, Carol?; y) :
+    at Alice: identity, agent, principal(Carol), attestation(y), not retired, +knows(Bob)
+    at Bob: identity, not agent, not retired, +knows(Alice), +agent_of(Alice, Carol, y)
+    at Carol: identity, principal_of(Alice), agent_of(Alice, Carol, y), not retired
+
+agents_meet(Alice?, Bob?, Carol?, Dave?; y, z) :
+    at Alice: identity, agent, principal(Carol), attestation(y), not retired, +knows(Bob), +agent_of(Bob, Dave, z)
+    at Bob: identity, agent, principal(Dave), attestation(z), not retired, +knows(Alice), +agent_of(Alice, Carol, y)
+    at Carol: identity, principal_of(Alice), agent_of(Alice, Carol, y), not retired
+    at Dave: identity, principal_of(Bob), agent_of(Bob, Dave, z), not retired
+
+agent_befriend(Alice?, Bob?, Carol?) :
+    at Alice: identity, agent, principal(Carol), knows(Bob), not retired, not friend(Bob), +friend(Bob)
+    at Bob: identity, knows(Alice), not agent, not retired, not friend(Alice), +friend(Alice)
+    at Carol: identity, principal_of(Alice), not retired
+
+agents_befriend(Alice?, Bob?, Carol?, Dave?) :
+    at Alice: identity, agent, principal(Carol), knows(Bob), not retired, not friend(Bob), +friend(Bob)
+    at Bob: identity, agent, principal(Dave), knows(Alice), not retired, not friend(Alice), +friend(Alice)
+    at Carol: identity, principal_of(Alice), not retired
+    at Dave: identity, principal_of(Bob), not retired
+
+agent_unfriend(Alice, Bob, Carol?) :
+    at Alice: identity, principal(Carol), not principal(Bob), -friend(Bob)
+    at Bob: identity, -friend(Alice)
+    at Carol: identity, principal_of(Alice), not retired
+
+retire(Alice?, Bob) :
+    at Alice: identity, principal_of(Bob), not retired, +retired_of(Bob), -friend(Bob)
+    at Bob: identity, agent, principal(Alice), not retired, +retired, -friend(Alice)
+
 sign(Alice?; x) :
-    at Alice: identity, +item(x), +authored(x)
+    at Alice: identity, not retired, +item(x), +authored(x)
 
 message(Alice?, Bob; x) :
-    at Alice: identity, authored(x)
+    at Alice: identity, authored(x), not retired
     at Bob: identity, friend(Alice), +item(x)
 
 forward(Alice?, Bob; x) :
-    at Alice: identity, item(x), not authored(x)
+    at Alice: identity, item(x), not authored(x), not retired
     at Bob: identity, friend(Alice), +item(sgn(x, Alice))
 
 create(Alice?; n) :
-    at Alice: identity, not member(<Alice>.n), not closed(n), +member(<Alice>.n), +listed(Alice, n)
+    at Alice: identity, not agent, not retired, not member(<Alice>.n), not closed(n), +member(<Alice>.n), +listed(Alice, n)
 
 join(Alice?, Bob?; n) :
-    at Alice: identity, member(<Alice>.n), friend(Bob), +listed(Bob, n)
-    at Bob: identity, friend(Alice), not member(<Alice>.n), +member(<Alice>.n)
+    at Alice: identity, member(<Alice>.n), friend(Bob), not agent, not retired, +listed(Bob, n)
+    at Bob: identity, friend(Alice), not agent, not retired, not member(<Alice>.n), +member(<Alice>.n)
 
 leave(Alice, Bob?; n) :
     at Alice: identity, -listed(Bob, n)
-    at Bob: identity, -member(<Alice>.n)
+    at Bob: identity, not retired, -member(<Alice>.n)
 
 close(Alice?, Alice[listed(*, n)]; n) :
-    at Alice: identity, +closed(n), -listed(Alice, n)
+    at Alice: identity, not retired, +closed(n), -listed(Alice, n)
     at Alice[listed(*, n)]: identity, -member(<Alice>.n)
 
 drop(Alice, Bob; n) :
@@ -48,14 +83,14 @@ drop(Alice, Bob; n) :
     at Bob: identity, -member(<Alice>.n)
 
 post_own(Alice?; x, n) :
-    at Alice: identity, item(x), member(<Alice>.n), not posted(x, n), +posted(x, n)
+    at Alice: identity, item(x), member(<Alice>.n), not retired, not posted(x, n), +posted(x, n)
 
 post(Alice?, Bob; x, n) :
-    at Alice: identity, authored(x), member(<Bob>.n)
+    at Alice: identity, authored(x), member(<Bob>.n), not retired
     at Bob: identity, member(<Bob>.n), listed(Alice, n), friend(Alice), +posted(x, n)
 
 post_forward(Alice?, Bob; x, n) :
-    at Alice: identity, item(x), member(<Bob>.n), not authored(x)
+    at Alice: identity, item(x), member(<Bob>.n), not authored(x), not retired
     at Bob: identity, member(<Bob>.n), listed(Alice, n), friend(Alice), +posted(sgn(x, Alice), n)
 
 deliver(Alice, Bob; y, n) :
