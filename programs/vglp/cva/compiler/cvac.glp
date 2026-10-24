@@ -81,14 +81,18 @@ compile2([L|Ls], _, _, _, _, _, _) :-
 procedure compile3(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
 compile3([], Nm, C, Rf, E, Nt, W) :- ground(C?), ground(Rf?), ground(W?) |
     local # proposable(C?, Rf?, Ps),
-    word_faults(W?, C?, Wf),
-    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, W?, Ps?).
+    compile3a(Ps?, Nm?, C?, Rf?, E?, Nt?, W?).
 compile3([F|Fs], Nm, _, _, _, _, _) :- ground(Nm?) |
     H =.. ['%% not compiled', Nm?],
     send_to_user(['%% compile begin', H?, F?|Fs1?]),
     lapp(Fs?, ['%% compile end'], Fs1).
 
-%% A contract whose words do not name its schemas is not compiled, with the lines saying why (word_faults).
+procedure compile3a(Preds?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
+compile3a(Ps, Nm, C, Rf, E, Nt, W) :- ground(Ps?), ground(C?), ground(W?) |
+    word_faults(W?, C?, Ps?, Wf),
+    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, W?, Ps?).
+
+%% A contract whose words do not name its schemas, or leave a guarded schema with no button, is not compiled, with the lines saying why (word_faults).
 procedure compile4(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?, Preds?).
 compile4([], Nm, C, Rf, E, Nt, W, Ps) :-
     module_lines(Nm?, C?, Rf?, E?, Nt?, W?, Ps?, Ls),
@@ -841,14 +845,17 @@ procedure has_pragmas(Words?, YesNo).
 has_pragmas(words(no_pragmas), no).
 has_pragmas(words(pragmas(_, _)), yes).
 
-%% A contract whose pragmas name what the contract does not hold is not compiled, with a line saying why: a list naming no predicate of the contract, or more than one; a button naming no schema of the contract, the button's text read in lower case being the schema's name ("each bearing its act's name", GSC 2991379, Section 2); a pragma naming more fields than its schema has variables the person fills; and a sentence naming a person, Alice, Bob or Carol, that its schema does not have.
-procedure word_faults(Words?, Contract?, Stream(_)).
-word_faults(words(no_pragmas), _, []).
-word_faults(words(pragmas(Ls, As)), C, F?) :- ground(Ls?), ground(As?), ground(C?) |
+%% A contract whose pragmas name what the contract does not hold is not compiled, with a line saying why: a list naming no predicate of the contract, or more than one; a button naming no schema of the contract, the button's text read in lower case being the schema's name ("each bearing its act's name", GSC 2991379, Section 2); a pragma naming more fields than its schema has variables the person fills; a sentence naming a person, Alice, Bob or Carol, that its schema does not have; and a guarded schema no button names (unnamed_lines).
+procedure word_faults(Words?, Contract?, Preds?, Stream(_)).
+word_faults(words(no_pragmas), _, _, []).
+word_faults(words(pragmas(Ls, As)), C, Ps, F?) :- ground(Ls?), ground(As?), ground(C?), ground(Ps?) |
     contract_preds(C?, Pr),
     list_faults(Ls?, Pr?, F1),
     act_faults(As?, C?, F2),
-    lapp(F1?, F2?, F).
+    act_names(As?, Ns),
+    unnamed_lines(Ps?, Ns?, F3),
+    lapp(F1?, F2?, F12),
+    lapp(F12?, F3?, F).
 
 %% The predicates of the contract's atoms, each once.
 procedure contract_preds(Contract?, Preds).
@@ -1025,23 +1032,30 @@ a_person(sgn(_, _), _, _, no).
 procedure widget_lines(Words?, Contract?, Preds?, Stream(_)).
 widget_lines(_, _, [], ['', '%% The widget declaration of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence; a contract with no guarded part has no request question.', 'Approval =::= approval_sentence.']).
 widget_lines(words(no_pragmas), _, [_|_], ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu.', 'Approval =::= approval_sentence.', 'Menu =::= social_menu.']).
-widget_lines(words(pragmas(_, As)), C, Ps, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract\'s pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, and Gs the groups it names, group(J, K), the leader at place J and the group\'s name at place K, which a group the view lists fills; meeting(F, I) for a meeting schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").', 'Approval =::= approval_sentence.', T?, '.'|Lu?]) :-
-    ground(As?), ground(C?), ground(Ps?) |
-    act_labels(As?, C?, Ps?, Lb),
-    T =.. ['Menu =::= social_menu', Lb?],
-    act_names(As?, Ns),
-    unnamed_lines(Ps?, Ns?, Lu).
-procedure act_labels(PActs?, Contract?, Preds?, Stream(_)).
-act_labels([], _, _, []).
-act_labels([act(N, B, Fs, Q, T)|As], C, Ps, L?) :- ground(N?), ground(B?), ground(Fs?), ground(Q?), ground(T?), ground(C?), ground(Ps?) |
-    schema_labels([N?], B?, Fs?, Q?, T?, C?, Ps?, L1),
-    act_labels(As?, C?, Ps?, L2),
+widget_lines(words(pragmas(Ls, As)), C, Ps, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract\'s pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs, Is), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, Gs the groups it names, group(J, K), the leader at place J and the group\'s name at place K, which a group the view lists fills, and Is the items it names, item(K, P), the speech act at place K, which a row of the list of the predicate P fills; meeting(F, I) for a meeting schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").', 'Approval =::= approval_sentence.', T?, '.']) :-
+    ground(Ls?), ground(As?), ground(C?), ground(Ps?) |
+    contract_preds(C?, Pr),
+    mult_preds(C?, Mp),
+    tab_terms(Ls?, Pr?, Mp?, Ts),
+    tab_preds(Ts?, Lp),
+    act_labels(As?, C?, Ps?, Lp?, Lb),
+    T =.. ['Menu =::= social_menu', Lb?].
+procedure act_labels(PActs?, Contract?, Preds?, Preds?, Stream(_)).
+act_labels([], _, _, _, []).
+act_labels([act(N, B, Fs, Q, T)|As], C, Ps, Lp, L?) :- ground(N?), ground(B?), ground(Fs?), ground(Q?), ground(T?), ground(C?), ground(Ps?), ground(Lp?) |
+    schema_labels([N?], B?, Fs?, Q?, T?, C?, Ps?, Lp?, L1),
+    act_labels(As?, C?, Ps?, Lp?, L2),
     lapp(L1?, L2?, L).
+%% The predicates the app's lists list.
+procedure tab_preds(Stream(_)?, Preds).
+tab_preds([], []).
+tab_preds([tab(_, P)|Ts], [P?|Ps?]) :- tab_preds(Ts?, Ps).
+tab_preds([tab(_, P, _)|Ts], [P?|Ps?]) :- tab_preds(Ts?, Ps).
 %% The schemas the buttons name.
 procedure act_names(PActs?, Preds).
 act_names([], []).
 act_names([act(N, _, _, _, _)|As], [N?|Ns?]) :- act_names(As?, Ns).
-%% A schema the request type proposes that no button names: said, in a line of the platform, and given no label, so that its request is drawn by its name ("A construct family draws the label it is given, and the name of the type where it is given none", vGLP, Section 6.2).
+%% A guarded schema no button names: "A guarded schema is proposed by a person, by its button, so the compiler requires a button for every guarded schema; an unguarded one is proposed by its opener's machine and has none" (vGLP 932c710, Section 5.4, "The contract's words").  The schemas the request type proposes are those naming guarded parts (local.glp, proposable).
 procedure unnamed_lines(Preds?, Preds?, Stream(_)).
 unnamed_lines([], _, []).
 unnamed_lines([P|Ps], Ns, L?) :- ground(P?), ground(Ns?) |
@@ -1052,35 +1066,36 @@ unnamed_lines([P|Ps], Ns, L?) :- ground(P?), ground(Ns?) |
 procedure unnamed_line(YesNo?, Constant?, Stream(_)).
 unnamed_line(yes, _, []).
 unnamed_line(no, P, [H?]) :- ground(P?) |
-    H =.. ['%% no button of the contract\'s pragmas names the request of the schema', P?].
-procedure schema_labels(Preds?, String?, Strings?, Said?, String?, Contract?, Preds?, Stream(_)).
-schema_labels([], _, _, _, _, _, _, []).
-schema_labels([S|Ss], B, Fs, Q, T, C, Ps, L?) :- ground(S?), ground(B?), ground(Fs?), ground(Q?), ground(T?), ground(C?), ground(Ps?) |
+    H =.. ['%% a guarded schema has no button in the contract\'s pragmas:', P?].
+procedure schema_labels(Preds?, String?, Strings?, Said?, String?, Contract?, Preds?, Preds?, Stream(_)).
+schema_labels([], _, _, _, _, _, _, _, []).
+schema_labels([S|Ss], B, Fs, Q, T, C, Ps, Lp, L?) :- ground(S?), ground(B?), ground(Fs?), ground(Q?), ground(T?), ground(C?), ground(Ps?), ground(Lp?) |
     mem(S?, Ps?, In),
     find_schema(S?, C?, Sf),
-    schema_labels1(In?, Sf?, S?, B?, Fs?, Q?, T?, L1),
-    schema_labels(Ss?, B?, Fs?, Q?, T?, C?, Ps?, L2),
+    schema_labels1(In?, Sf?, S?, B?, Fs?, Q?, T?, Lp?, L1),
+    schema_labels(Ss?, B?, Fs?, Q?, T?, C?, Ps?, Lp?, L2),
     lapp(L1?, L2?, L).
 %% The entries of a schema the request type proposes: its request's label, each place a field names, where its button is drawn (act_entry), whether it is a meeting schema, and the text of the request form of an act with one guarding role.
-procedure schema_labels1(YesNo?, SFound?, Constant?, String?, Strings?, Said?, String?, Stream(_)).
-schema_labels1(no, _, _, _, _, _, _, []).
-schema_labels1(yes, nosfound, _, _, _, _, _, []).
-schema_labels1(yes, sfound(Hd, Rs), S, B, Fs, Q, T, [label(S?, B?)|L?]) :- ground(Hd?), ground(Rs?), ground(S?), ground(Fs?), ground(Q?), ground(T?) |
+procedure schema_labels1(YesNo?, SFound?, Constant?, String?, Strings?, Said?, String?, Preds?, Stream(_)).
+schema_labels1(no, _, _, _, _, _, _, _, []).
+schema_labels1(yes, nosfound, _, _, _, _, _, _, []).
+schema_labels1(yes, sfound(Hd, Rs), S, B, Fs, Q, T, Lp, [label(S?, B?)|L?]) :- ground(Hd?), ground(Rs?), ground(S?), ground(Fs?), ground(Q?), ground(T?), ground(Lp?) |
     field_places(Hd?, Rs?, Fp),
     place_labels(Fp?, Fs?, S?, L1),
-    act_entry(S?, Hd?, Rs?, Fs?, T?, E),
+    act_entry(S?, Hd?, Rs?, Fs?, T?, Lp?, Le),
     meeting_entry(S?, Rs?, Lm),
     text_entry(S?, Hd?, Rs?, Q?, Lt),
-    lapp(L1?, [E?|Lm?], L2),
+    lapp(Le?, Lm?, Lem),
+    lapp(L1?, Lem?, L2),
     lapp(L2?, Lt?, L).
 procedure place_labels(Ints?, Strings?, Constant?, Stream(_)).
 place_labels(_, [], _, []).
 place_labels([], [_|_], _, []).
 place_labels([I|Is], [F|Fs], S, [label(S?, I?, F?)|L?]) :- ground(S?) | place_labels(Is?, Fs?, S?, L).
 
-%% Where a request's button is drawn (vGLP, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person or a group is drawn beside each one the view lists, on whichever tab lists it, and the button of an act that names none on the tab of its contract"): act(F, T, M, Ps, Gs), places of the request F's arguments, its schema's head less its listed roles: T the tab of its contract; M the place of the person proposing it, the first of its guarding roles; Gs the groups it names, group(J, K), for each name term <u>.y of its atoms, J the place of the role u and K that of the speech-act variable y, which no field names; and Ps the places of the persons it names beside the proposer that no field names and that lead no group it names, its other roles and its agent variables.
-procedure act_entry(Constant?, Args?, RoleSpecs?, Strings?, String?, _).
-act_entry(S, Hd, Rs, Fs, T, E?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Fs?), ground(T?) |
+%% Where a request's button is drawn (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable, and the button of an act that names none on the tab of its contract"): act(F, T, M, Ps, Gs, Is), places of the request F's arguments, its schema's head less its listed roles: T the tab of its contract; M the place of the person proposing it, an entry for each of its guarding roles; Gs the groups it names, group(J, K), for each name term <u>.y of its atoms, J the place of the role u and K that of the speech-act variable y, which no field names; Ps the places of the persons it names beside the proposer that no field names and that lead no group it names, its other roles and its agent variables; and Is the items it names, item(K, P), K the place of a speech-act variable y and P a predicate a list of the app lists, for each atom of P with y among its arguments that the schema requires at the proposer's role, so that a row of that list fills y (Section 5.4, "The contract's words": "A tab's list is the atoms of its predicate in the state").
+procedure act_entry(Constant?, Args?, RoleSpecs?, Strings?, String?, Preds?, Stream(_)).
+act_entry(S, Hd, Rs, Fs, T, Lp, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Fs?), ground(T?), ground(Lp?) |
     schema_vars(Rs?, Hd?, Vs0),
     listed_ixs(Rs?, 1, Lis),
     drop_listed(Vs0?, Lis?, Vs),
@@ -1089,20 +1104,123 @@ act_entry(S, Hd, Rs, Fs, T, E?) :- ground(S?), ground(Hd?), ground(Rs?), ground(
     take_ints(NF?, Fp?, Named0),
     meeting_schema(Rs?, Mt),
     peer_out(Mt?, Named0?, Named),
-    first_guard(Rs?, 1, G),
+    guard_roles(Rs?, 1, Gr),
     spec_args(Rs?, As),
-    act_entry1(S?, T?, Vs?, Named?, G?, As?, E).
-procedure act_entry1(Constant?, String?, Args?, Ints?, Integer?, Args?, _).
-act_entry1(S, T, Vs, Named, G, As, E?) :- ground(S?), ground(T?), ground(Vs?), ground(Named?), integer(G?), ground(As?) |
+    act_entries(Gr?, S?, T?, Vs?, Named?, As?, Rs?, Lp?, L).
+%% An entry for each guarding role, its person proposing the act (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles, beside each row that fills its variable").
+procedure act_entries(Ints?, Constant?, String?, Args?, Ints?, Args?, RoleSpecs?, Preds?, Stream(_)).
+act_entries([], _, _, _, _, _, _, _, []).
+act_entries([G|Gs], S, T, Vs, Named, As, Rs, Lp, [E?|L?]) :- integer(G?), ground(S?), ground(T?), ground(Vs?), ground(Named?), ground(As?), ground(Rs?), ground(Lp?) |
+    act_entry1(S?, T?, Vs?, Named?, G?, As?, Rs?, Lp?, E),
+    act_entries(Gs?, S?, T?, Vs?, Named?, As?, Rs?, Lp?, L).
+procedure act_entry1(Constant?, String?, Args?, Ints?, Integer?, Args?, RoleSpecs?, Preds?, _).
+act_entry1(S, T, Vs, Named, G, As, Rs, Lp, E?) :- ground(S?), ground(T?), ground(Vs?), ground(Named?), integer(G?), ground(As?), ground(Rs?), ground(Lp?) |
     place_of(role(G?), Vs?, 1, M),
     group_places(As?, Vs?, Named?, Gs0),
     dedup(Gs0?, Gs),
-    act_entry2(S?, T?, Vs?, Named?, M?, Gs?, E).
-procedure act_entry2(Constant?, String?, Args?, Ints?, Integer?, GroupPlaces?, _).
-act_entry2(S, T, Vs, Named, M, Gs, E?) :- ground(S?), ground(T?), ground(Vs?), ground(Named?), integer(M?), ground(Gs?) |
+    item_places(G?, Rs?, Vs?, Named?, Lp?, Is0),
+    dedup(Is0?, Is),
+    act_entry2(S?, T?, Vs?, Named?, M?, Gs?, Is?, E).
+procedure act_entry2(Constant?, String?, Args?, Ints?, Integer?, GroupPlaces?, ItemPlaces?, _).
+act_entry2(S, T, Vs, Named, M, Gs, Is, E?) :- ground(S?), ground(T?), ground(Vs?), ground(Named?), integer(M?), ground(Gs?), ground(Is?) |
     leaders(Gs?, Ld),
     person_places_of(Vs?, 1, M?, Named?, Ld?, Ps),
-    E =.. [act, S?, T?, M?, Ps?, Gs?].
+    E =.. [act, S?, T?, M?, Ps?, Gs?, Is?].
+%% The items a request names: item(K, P) for each atom of a listed predicate P that the schema requires at the role G, the proposer's, kept or deleted there, with the speech-act variable at place K among its arguments.
+ItemPlace ::= item(Integer, Constant) ; atom(Constant, Ints).
+ItemPlaces ::= [] ; [ItemPlace | ItemPlaces].
+procedure item_places(Integer?, RoleSpecs?, Args?, Ints?, Preds?, ItemPlaces).
+item_places(G, Rs, Vs, Nd, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Nd?), ground(Lp?) |
+    nth_rs(G?, Rs?, R),
+    required_atoms(R?, Rq),
+    item_atoms(Rq?, G?, Vs?, Lp?, Is0),
+    keyed_out(Is0?, Vs?, Nd?, Is).
+%% A person a field names is named by key, and no row fills it (vGLP, Section 5.4, "The contract's words": "in angle brackets each field ..., a person the act names by key among them"); a speech act a field names a row fills, the field's name labelling it.
+procedure keyed_out(ItemPlaces?, Args?, Ints?, ItemPlaces).
+keyed_out([], _, _, []).
+keyed_out([atom(P, Ks)|Is], Vs, Nd, R?) :- ground(Ks?), ground(Nd?), ground(Vs?) |
+    any_in(Ks?, Nd?, F),
+    keyed_out1(no, F?, atom(P?, Ks?), R1),
+    keyed_out(Is?, Vs?, Nd?, R2),
+    app(R1?, R2?, R).
+keyed_out([item(K, P)|Is], Vs, Nd, R?) :- ground(Vs?), ground(Nd?), integer(K?), ground(P?) |
+    nth_arg(K?, Vs?, A),
+    a_svar(A?, Sv),
+    mem(K?, Nd?, F),
+    keyed_out1(Sv?, F?, item(K?, P?), R1),
+    keyed_out(Is?, Vs?, Nd?, R2),
+    app(R1?, R2?, R).
+procedure a_svar(Arg?, YesNo).
+a_svar(svar(_), yes).
+a_svar(_, no) :- otherwise | true.
+procedure keyed_out1(YesNo?, YesNo?, ItemPlace?, ItemPlaces).
+keyed_out1(yes, _, I, [I?]).
+keyed_out1(no, no, I, [I?]).
+keyed_out1(no, yes, _, []).
+%% Whether a place of Ks is one a field names: a held atom fills no variable the person fills.
+procedure any_in(Ints?, Ints?, YesNo).
+any_in([], _, no).
+any_in([K|Ks], Nd, F?) :- integer(K?), ground(Nd?) | mem(K?, Nd?, F1), any_in1(F1?, Ks?, Nd?, F).
+procedure any_in1(YesNo?, Ints?, Ints?, YesNo).
+any_in1(yes, _, _, yes).
+any_in1(no, Ks, Nd, F?) :- any_in(Ks?, Nd?, F).
+procedure nth_rs(Integer?, RoleSpecs?, RoleSpecs).
+nth_rs(_, [], []).
+nth_rs(1, [R|_], [R?]).
+nth_rs(G, [_|Rs], R?) :- G? > 1 | G1 := G? - 1, nth_rs(G1?, Rs?, R).
+procedure required_atoms(RoleSpecs?, Atoms).
+required_atoms([], []).
+required_atoms([R|_], Rq?) :- ground(R?) | rs_lists(R?, _, M, K, _), app(K?, M?, Rq).
+procedure item_atoms(Atoms?, Integer?, Args?, Preds?, ItemPlaces).
+item_atoms([], _, _, _, []).
+item_atoms([atom(P, Xs)|As], G, Vs, Lp, Is?) :- ground(P?), ground(Xs?), integer(G?), ground(Vs?), ground(Lp?) |
+    mem(P?, Lp?, In),
+    item_args(In?, P?, Xs?, G?, Vs?, I1a),
+    held_pattern(In?, P?, Xs?, Vs?, I1b),
+    app(I1a?, I1b?, I1),
+    item_atoms(As?, G?, Vs?, Lp?, I2),
+    app(I1?, I2?, Is).
+item_atoms([times(_, A)|As], G, Vs, Lp, Is?) :- item_atoms([A?|As?], G?, Vs?, Lp?, Is).
+%% The places a row fills: a speech-act variable, a person in another role, or an agent variable, among the atom's arguments (vGLP 110caf4, Section 6.2: "beside each row that fills its variable").
+procedure item_args(YesNo?, Constant?, Args?, Integer?, Args?, ItemPlaces).
+item_args(no, _, _, _, _, []).
+item_args(yes, _, [], _, _, []).
+item_args(yes, P, [svar(Y)|Xs], G, Vs, Is?) :- ground(P?), ground(Y?), integer(G?), ground(Vs?) |
+    place_of(svar(Y?), Vs?, 1, K),
+    item_place(K?, P?, I1),
+    item_args(yes, P?, Xs?, G?, Vs?, I2),
+    app(I1?, I2?, Is).
+item_args(yes, P, [pvar(Y)|Xs], G, Vs, Is?) :- ground(P?), ground(Y?), integer(G?), ground(Vs?) |
+    place_of(pvar(Y?), Vs?, 1, K),
+    item_place(K?, P?, I1),
+    item_args(yes, P?, Xs?, G?, Vs?, I2),
+    app(I1?, I2?, Is).
+item_args(yes, P, [role(J)|Xs], G, Vs, Is?) :- J? =\= G?, ground(P?), ground(Vs?) |
+    place_of(role(J?), Vs?, 1, K),
+    item_place(K?, P?, I1),
+    item_args(yes, P?, Xs?, G?, Vs?, I2),
+    app(I1?, I2?, Is).
+item_args(yes, P, [_|Xs], G, Vs, Is?) :- otherwise, ground(P?), integer(G?), ground(Vs?) | item_args(yes, P?, Xs?, G?, Vs?, Is).
+%% An atom of a predicate no list lists, required at the proposer's role with a speech-act variable among its arguments: atom(P, Ks), Ks the place of each argument, 0 where it is none, so that the proposer's machine fills the variable from the atom of its state that agrees with the places filled (GAI.glp at a336b30d: agent_of(r, p, y) at the principal, "whose machine fills the request's attestation from it").
+procedure held_pattern(YesNo?, Constant?, Args?, Args?, ItemPlaces).
+held_pattern(yes, _, _, _, []).
+held_pattern(no, P, Xs, Vs, I?) :- ground(P?), ground(Xs?), ground(Vs?) |
+    arg_places(Xs?, Vs?, Ks),
+    has_svar(Xs?, Sv),
+    held_pattern1(Sv?, P?, Ks?, I).
+procedure held_pattern1(YesNo?, Constant?, Ints?, ItemPlaces).
+held_pattern1(yes, P, Ks, [atom(P?, Ks?)]).
+held_pattern1(no, _, _, []).
+procedure arg_places(Args?, Args?, Ints).
+arg_places([], _, []).
+arg_places([X|Xs], Vs, [K?|Ks?]) :- ground(X?), ground(Vs?) | place_of(X?, Vs?, 1, K), arg_places(Xs?, Vs?, Ks).
+procedure has_svar(Args?, YesNo).
+has_svar([], no).
+has_svar([svar(_)|_], yes).
+has_svar([_|Xs], B?) :- otherwise | has_svar(Xs?, B).
+procedure item_place(Integer?, Constant?, ItemPlaces).
+item_place(K, P, [item(K?, P?)]) :- K? > 0 | true.
+item_place(0, _, []).
 procedure take_ints(Integer?, Ints?, Ints).
 take_ints(0, _, []).
 take_ints(N, [], []) :- N? > 0 | true.
@@ -1302,8 +1420,10 @@ rest_ints([_|Is], Is?).
 %% After its sentence, a question shows each value of the binding it does not name, a person or a number, by the name of its field, named(F, P) or valued(F, K) (vGLP 110caf4, Section 5.4, "The contract's words": "and shows after it each value of the binding the question does not name, by the name of its field, so that the person sees the whole proposal"); a place no field of the pragma names is not shown.
 procedure schema_sentence1(Ints?, PSentences?, Ints?, Args?, Constant?, Strings?, Integer?, Stream(_)).
 schema_sentence1(Gr, Qs, Pp, Vs, S, Fs, Rn, [T?, ':-'|L?]) :- ground(Gr?), ground(Qs?), ground(Pp?), ground(Vs?), ground(S?), ground(Fs?), integer(Rn?) |
-    question_places(Gr?, Qs?, Pp?, Ns0),
-    schema_sentence1b(Ns0?, Gr?, Qs?, Pp?, Vs?, S?, Fs?, Rn?, T, L).
+    spread_questions(Gr?, Qs?, Q1),
+    spread_questions(Gr?, Qs?, Q2),
+    question_places(Gr?, Q1?, Pp?, Ns0),
+    schema_sentence1b(Ns0?, Gr?, Q2?, Pp?, Vs?, S?, Fs?, Rn?, T, L).
 procedure schema_sentence1b(Ints?, Ints?, PSentences?, Ints?, Args?, Constant?, Strings?, Integer?, _, Stream(_)).
 schema_sentence1b(Ns0, Gr, Qs, Pp, Vs, S, Fs, Rn, T?, L?) :- ground(Ns0?), ground(Vs?), ground(Fs?), integer(Rn?) |
     value_places(Vs?, 1, Rn?, Ns0?, Fs?, Vp),
@@ -1316,6 +1436,13 @@ schema_sentence1c(Vp, Ns0, Gr, Qs, Pp, Vs, S, T?, L?) :- ground(Vp?) |
     value_words(Vp?, Vw),
     question_terms(Gr?, Qs?, Pp?, Vw?, Qt),
     schema_sentence2(Ns?, Vs?, S?, Qt?, T, L).
+%% The clause's one question put to each guarding role other than the proposer's (vGLP 932c710, Section 5.4, "The contract's words": "a question into the approval question that Start raises at each guarding role other than the proposer's"; vGLP #20, Code_inbox.md, 2026-10-24 09:21 UTC: "the principal is asked the same question as the agent"): a line with one question gives it to each of those roles; a line with one for each, in their order, gives each its own (GSC, Section 2, its first paragraph).
+procedure spread_questions(Ints?, PSentences?, PSentences).
+spread_questions(Gr, [Q], Qs?) :- ground(Gr?), ground(Q?) | spread1(Gr?, Q?, Qs).
+spread_questions(_, Qs, Qs?) :- otherwise | true.
+procedure spread1(Ints?, PWords?, PSentences).
+spread1([], _, []).
+spread1([_|Gs], Q, [Q?|Qs?]) :- ground(Q?) | spread1(Gs?, Q?, Qs).
 procedure question_places(Ints?, PSentences?, Ints?, Ints).
 question_places([], _, _, []).
 question_places([_|_], [], _, []).

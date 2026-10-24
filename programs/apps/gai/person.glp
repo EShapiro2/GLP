@@ -2,21 +2,21 @@
 %%
 %% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(P, Q, D), P the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP f0acbc1, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
 %%
-%% The roles, by which the super-app's plays choose a script, are the agents of the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"), on GAI's contract on GKK, GAI.glp at GLP 9d736804: Alice and Bob, persons, and Alf, Alice's AI agent.  The script of alf is the AI agent's program, which takes the acts of the AI agent's role: "The principal's will is given once, when they create the AI agent; after that the AI agent acts on its own, and the principal takes part in each meeting of the AI agent and in each friendship it enters" (GAI's paper, Section 3.1).  The code of Alf is the speech act 'The code of Alf' signed by acme_ltd, its developer (GAI:1; Acme Ltd in the paper's Figure "The GAI app"), which alice signs and holds as her item k (GSNP:1); enter(p?, r? ; x) adds at alf its attestation y = sgn(k, alice), k signed over by alice, and knows of each at the other (GnW:1, GAI:1; programs/gai/GAI.glp).  The item is the speech act 'Today\'s summary of the news', signed by alf, its author (GSNP:1, Authorship), which alf sends to bob by message, carrying it as alf signed it (GSN:1; message(p?, q ; x) adds item(x) at q, programs/gai/GAI.glp):
-%%   alice  establishes her identity (GKK:1); asks to know alf and bob; once her agent knows bob, asks to meet him in person (GKK:2); once they know each other and her agent knows alf, signs the code of Alf (GSNP:1); once she holds it, enters her AI agent alf with it, becoming its principal and its friend and attesting that alf runs it (GnW:1, GAI:1, GAI:2); answers yes, as alf's principal, to alf and bob meeting (GnW:2, GAI:2), and then to alf befriending bob (GnW:2); answers yes to bob's offer of friendship (GSG:1); once they are friends, retires alf (GAI:4), which ends her friendship with it.
-%%   alf    asks to know alice; answers yes to being entered as her AI agent with the code she signed; once it holds its attestation, asks to know bob; once its agent knows him, proposes to meet him with alice its principal, presenting its attestation (agent_meet, GnW:2, GAI:2); once they know each other, proposes to befriend him with alice its principal (agent_befriend, GnW:2); once they are friends, signs the item (GSNP:1); once it holds the item as its author, sends it to bob by message (GSN:1).
-%%   bob    establishes his identity; asks to know alf and alice; answers yes to alice asking to meet him in person (GKK:2); answers yes to alf, an AI agent of alice, meeting him, which records at him alf, its principal alice and its attestation (agent_of(alf, alice, y), GAI:2), and then to alf befriending him (GnW:2), which requires that each knows the other, and alf knows bob only by that meeting (GAI's paper, Section 3.3, part 2); once alf's message has reached him, holding the item signed by alf, offers alice friendship (GSG:1); once they are friends, ends his friendship with alf (GSG:2; unfriend_p(p?, q), which requires at alf only identity).
-%% Bob offers Alice friendship once the item has reached him, and Alice retires Alf once she and Bob are friends, so that Alf signs and sends the item before it is retired: a retired AI agent takes no act (GnW:4), and sign and message forbid retired at the acting role (programs/gai/GAI.glp).  Bob ends his friendship with Alf once he and Alice are friends: his view does not show that Alf is retired, so his unfriend_p and Alice's retire, Alf a participant of both, are concurrent, and the platform takes them in turn (vGLP, Section 3.2, "The protocol").
+%% The roles, by which the super-app's plays choose a script, are the agents of the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"), on GAI's contract, programs/gai/GAI.glp, with its pragmas, GAI.txt: Alice and Bob, persons, and Alf, Alice's AI agent.  The script of alf is the AI agent's program, which takes the acts of the AI agent's role: "The principal's will is given once, when they create the AI agent; after that the AI agent acts on its own, and the principal takes part in each meeting of the AI agent and in each friendship it enters" (GAI's paper, Section 3.1).  The code of Alf is the speech act 'The code of Alf' signed by alice, who signs it on this contract, which has no message by which a developer sends it, and holds it as her item k (GAI:1; on the full platform Acme Ltd signs it and messages it to alice, ../gsnp/person.glp); enter(p?, r? ; x) adds at alf its attestation y = sgn(k, alice), k signed over by alice, at alice her record agent_of(alf, alice, y), and knows and friend of each at the other (GnW:1, GAI:1, GAI:2; programs/gai/GAI.glp).  The meeting and the befriending of alf and bob are proposed by alice, their principal, from her AI agents tab, her machine filling the attestation from her record (vGLP 110caf4, Section 6.2), and alf and bob are asked:
+%%   alice  establishes her identity (GKK:1); meets bob by his key, who answers yes (GKK:2); once they know each other, signs the code of Alf (GAI:1); once she holds it, enters her AI agent alf with it, becoming its principal and its friend and attesting that alf runs it (GnW:1, GAI:1, GAI:2); once she is its principal, proposes alf's meeting with bob (GnW:2, GAI:2; agent_meet) and then its befriending him (GnW:2; agent_befriend), the second held until the first has committed; answers yes to bob's offer of friendship (GSG:1); once they are friends, retires alf (GAI:4), which ends her friendship with it.
+%%   alf    answers yes to being entered as alice's AI agent with the code she signed; once it holds its attestation, answers yes to meeting bob and then to befriending him, each proposed by alice, its principal (GnW:2, GAI:2).
+%%   bob    establishes his identity; answers yes to alice asking to meet him (GKK:2); answers yes to alf, an AI agent of alice, meeting him, which records at him alf, its principal alice and its attestation (agent_of(alf, alice, y), GAI:2), and then to alf befriending him (GnW:2), which requires that each knows the other, and alf knows bob only by that meeting (GAI's paper, Section 3.3, part 2); once alf is his friend, offers alice friendship (GSG:1); once they are friends, ends his friendship with alf (GSG:2; unfriend(p?, q), which requires at alf only identity).
+%% Alice retires Alf once she and Bob are friends, and Bob ends his friendship with Alf once he and Alice are friends: his view does not show that Alf is retired, so his unfriend and Alice's retire, Alf a participant of both, are concurrent, and the platform takes them in turn (vGLP, Section 3.2, "The protocol").  The item of the paper's example, which Alf signs and sends to Bob, is GSNP's, the full platform (../gsnp/person.glp).
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
 Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
-        ; refused(Class, Key, Reason) ; asked(Asked) ; asking.
+        ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
 Last  ::= last(List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
 Holes ::= [] ; [Key? | Holes].
 Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
-Shown ::= shown(Integer, Path, Attempt).
+Shown ::= shown(Integer, Path, Asking).
 Shows ::= [] ; [Shown | Shows].
 PSt   ::= ps(Sess, List(Output), Shows, Steps).
 ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
@@ -28,37 +28,30 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
 procedure script(Constant?, Steps).
-script(alice, [own([A1], propose(establish(A1?))), req(known(alf)), req(known(bob)),
-               wait(known(bob)), own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
-               wait(known(alf)),
-               own([A2, A3], propose(sign(A2?, speech(speech(utterance('The code of Alf'), acme_ltd), A3?)))),
-               wait(holds(item(speech(speech(utterance('The code of Alf'), acme_ltd), alice)))),
-               own([A4, A5], propose(enter(A4?, alf, speech(speech(utterance('The code of Alf'), acme_ltd), A5?)))),
-               approval(agent_meet(alf, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), yes),
-               approval(agent_befriend(alf, bob, alice), yes),
+script(alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
+               own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+               own([A2, A3], propose(sign(A2?, speech(utterance('The code of Alf'), A3?)))),
+               wait(holds(item(speech(utterance('The code of Alf'), alice)))),
+               own([A4, A5], propose(enter(A4?, alf, speech(utterance('The code of Alf'), A5?)))),
+               wait(holds(principal_of(alf))),
+               own([A7], propose(agent_meet(alf, bob, A7?, speech(speech(utterance('The code of Alf'), alice), alice)))),
+               wait(holds(friend(alf))),
+               own([A8], propose(agent_befriend(alf, bob, A8?))),
                approval(befriend(bob, alice), yes),
                wait(holds(friend(bob))),
                own([A6], propose(retire(A6?, alf)))]).
-script(alf, [req(known(alice)),
-             approval(enter(alice, alf, speech(speech(utterance('The code of Alf'), acme_ltd), alice)), yes),
-             wait(holds(attestation(speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)))),
-             req(known(bob)),
-             wait(known(bob)),
-             own([R0], propose(agent_meet(R0?, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)))),
-             wait(holds(knows(bob))),
-             own([R1], propose(agent_befriend(R1?, bob, alice))),
-             wait(holds(friend(bob))),
-             own([R2, R3], propose(sign(R2?, speech(utterance('Today\'s summary of the news'), R3?)))),
-             wait(holds(authored(speech(utterance('Today\'s summary of the news'), alf)))),
-             own([R4, R5], propose(message(R4?, bob, speech(utterance('Today\'s summary of the news'), R5?))))]).
-script(bob, [own([B1], propose(establish(B1?))), req(known(alf)), req(known(alice)),
+script(alf, [approval(enter(alice, alf, speech(utterance('The code of Alf'), alice)), yes),
+             wait(holds(attestation(speech(speech(utterance('The code of Alf'), alice), alice)))),
+             approval(agent_meet(alf, bob, alice, speech(speech(utterance('The code of Alf'), alice), alice)), yes),
+             approval(agent_befriend(alf, bob, alice), yes)]).
+script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              approval(meet(alice, bob), yes),
-             approval(agent_meet(alf, bob, alice, speech(speech(speech(utterance('The code of Alf'), acme_ltd), alice), alice)), yes),
+             approval(agent_meet(alf, bob, alice, speech(speech(utterance('The code of Alf'), alice), alice)), yes),
              approval(agent_befriend(alf, bob, alice), yes),
-             wait(holds(item(speech(utterance('Today\'s summary of the news'), alf)))),
+             wait(holds(friend(alf))),
              own([B2], propose(befriend(B2?, alice))),
              wait(holds(friend(alice))),
-             own([B3], propose(unfriend_p(B3?, alf)))]).
+             own([B3], propose(unfriend(B3?, alf)))]).
 script(_, []) :- otherwise | true.
 
 %% The person.
@@ -72,7 +65,7 @@ person([draw(Id, _, menu_w(menu(Me, Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss)
     ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
     advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, approval_w(approval(At, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+person([draw(Id, _, approval_w(approval(At, _, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
     advance(ps(Se?, T?, [shown(Id?, P?, At?) | Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
@@ -155,7 +148,7 @@ procedure last_of(List(Output)?, Last).
 last_of(T, L?) :- last_view(T?, nolast, L).
 procedure last_view(List(Output)?, Last?, Last).
 last_view([], L, L?).
-last_view([view(S, K) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+last_view([view(S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
 last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
@@ -163,7 +156,7 @@ procedure notices_of(List(Output)?, List(Output)).
 notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(List(Output)?, List(Output)?, List(Output)).
 notices_after([], Ns, Ns?).
-notices_after([view(_, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
 procedure among_output(Output?, List(Output)?, YN).
 among_output(_, [], n).
@@ -218,6 +211,9 @@ find_approval1(K, [shown(Id, P, At) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [shown(Id, P, attempt(_, _, _, C, _)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(C?), ground(K?), K? =?= C? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [shown(Id, P, hello(_, N)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(N?), ground(K?), K? =?= N? |
     rev_shown(Done?, Cs?, Rest).
 find_approval1(K, [S | Cs], Done, F?) :-
     otherwise | find_approval1(K?, Cs?, [S? | Done?], F).

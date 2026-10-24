@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The screens of the apps' figures, programs/apps/{gkk,gsg,gsn,gsnp,gai,gc}/screens/,
+# The screens of the apps' figures, programs/apps/{gkk,gsg,gsn,gsnp,gc}/screens/,
 # and of CSSN's Figure 3, programs/cssn/figures/cssn-app-{1..6}.png, taken on
 # the iOS Simulator.  From glp_multiagent/, under the Mac's one run
 # lock (/Users/udi/Grassroots/tmp/glp-run.sh):

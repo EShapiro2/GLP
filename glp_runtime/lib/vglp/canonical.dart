@@ -1436,7 +1436,7 @@ String _widgetAtom(String right, int line, int column) {
       'A widget declaration "T =::= W" whose W, "$right", is not an atom '
       'naming a widget, nor one applied to the list of its labels, each '
       'label(F, S) or label(F, I, S), F a constructor, I a place of it and S '
-      'a string, and of the places of its requests, act(F, T, M, Ps, Gs), '
+      'a string, and of the places of its requests, act(F, T, M, Ps, Gs, Is), '
       'meeting(F, I) and text(F, Ws)', line, column, phase: 'parser');
 }
 
@@ -1460,7 +1460,7 @@ class DeclaredWidget {
   final Map<String, String> places;
 
   /// Where the button of each request is drawn, by its functor: the entries
-  /// `act(F, T, M, Ps, Gs)`, `meeting(F, I)` and `text(F, Ws)` vGLP's
+  /// `act(F, T, M, Ps, Gs, Is)`, `meeting(F, I)` and `text(F, Ws)` vGLP's
   /// compiler prints for a contract with pragmas (vGLP, Section 6.2, "The
   /// words a platform shows": "The button of an act that names, beside the
   /// person proposing it, a person or a group is drawn beside each one the
@@ -1468,7 +1468,7 @@ class DeclaredWidget {
   /// names none on the tab of its contract"; Section 5.4, "The contract's
   /// words": the question of an act with one guarding role "is text of its
   /// request form"; programs/vglp/cva/compiler/README.md, "The pragmas").
-  final Map<String, ActPlace> acts;
+  final Map<String, List<ActPlace>> acts;
 
   const DeclaredWidget(this.name,
       [this.constructors = const {},
@@ -1488,7 +1488,9 @@ class DeclaredWidget {
         'label(${constantSource(e.key.substring(0, e.key.lastIndexOf('/')))}, '
             '${e.key.substring(e.key.lastIndexOf('/') + 1)}, '
             '${constantSource(e.value)})',
-      for (final e in acts.entries) ...e.value.entries(e.key),
+      for (final e in acts.entries)
+        for (var i = 0; i < e.value.length; i++)
+          ...e.value[i].entries(e.key, act: true, rest: i == 0),
     ];
     return '${constantSource(name)}([${ls.join(', ')}])';
   }
@@ -1512,8 +1514,9 @@ class DeclaredWidget {
     if (t is! StructTerm || t.args.length != 1) return null;
     final constructors = <String, String>{};
     final places = <String, String>{};
-    final acts = <String, ActPlace>{};
-    ActPlace actOf(String f) => acts.putIfAbsent(f, ActPlace.new);
+    final acts = <String, List<ActPlace>>{};
+    final keysOf = <String, List<int>>{};
+    final wordsOf = <String, List<Object>>{};
     Term? cell = t.args.single;
     while (cell is ListTerm && !cell.isNil) {
       final l = cell.head;
@@ -1532,34 +1535,44 @@ class DeclaredWidget {
         } else {
           return null;
         }
-      } else if (l.functor == 'act' && l.args.length == 5) {
+      } else if (l.functor == 'act' && l.args.length == 6) {
         final tab = l.args[1];
         final m = _int(l.args[2]);
         final ps = _ints(l.args[3]);
         final gs = _groups(l.args[4]);
+        final is_ = _itemsAt(l.args[5]);
         if (tab is! ConstTerm || tab.value is! String || m == null ||
-            ps == null || gs == null) {
+            ps == null || gs == null || is_ == null) {
           return null;
         }
-        actOf(f)
+        (acts[f] ??= []).add(ActPlace()
           ..tab = tab.value as String
           ..me = m
           ..persons = ps
-          ..groups = gs;
+          ..groups = gs
+          ..items = is_);
       } else if (l.functor == 'meeting' && l.args.length == 2) {
         final i = _int(l.args[1]);
         if (i == null) return null;
-        actOf(f).keys = [...actOf(f).keys, i];
+        (keysOf[f] ??= []).add(i);
       } else if (l.functor == 'text' && l.args.length == 2) {
         final ws = _words(l.args[1]);
         if (ws == null) return null;
-        actOf(f).words = ws;
+        wordsOf[f] = ws;
       } else {
         return null;
       }
       cell = cell.tail;
     }
     if (cell is! ListTerm || !cell.isNil) return null;
+    // An act's meeting place and the text of its request form are the same at each guarding role it is drawn at.
+    for (final f in {...keysOf.keys, ...wordsOf.keys}) {
+      final ps = acts[f] ??= [ActPlace()];
+      for (final p in ps) {
+        p.keys = keysOf[f] ?? const [];
+        p.words = wordsOf[f] ?? const [];
+      }
+    }
     return DeclaredWidget(t.functor, constructors, places, acts);
   }
 
@@ -1599,6 +1612,32 @@ class DeclaredWidget {
     return gs;
   }
 
+  /// The items an act names, `item(K, P)`: the speech act at place K,
+  /// which a row of the list of the predicate P fills.
+  static List<String>? _itemsAt(Term t) {
+    final xs = _items(t);
+    if (xs == null) return null;
+    final is_ = <String>[];
+    for (final x in xs) {
+      if (x is! StructTerm || x.args.length != 2) return null;
+      final p = x.functor == 'item' ? x.args[1] : x.args[0];
+      final pc = _labelConstant(p);
+      if (pc == null) return null;
+      if (x.functor == 'item') {
+        final k = _int(x.args[0]);
+        if (k == null) return null;
+        is_.add('item($k, ${constantSource(pc)})');
+      } else if (x.functor == 'atom') {
+        final ks = _ints(x.args[1]);
+        if (ks == null) return null;
+        is_.add('atom(${constantSource(pc)}, [${ks.join(', ')}])');
+      } else {
+        return null;
+      }
+    }
+    return is_;
+  }
+
   static List<Object>? _words(Term t) {
     final xs = _items(t);
     if (xs == null) return null;
@@ -1635,7 +1674,8 @@ class DeclaredWidget {
 
   /// Where the button of the request [f] is drawn, or null where the
   /// declaration does not say.
-  ActPlace? ofAct(String f) => acts[f];
+  /// Where the button of the request [f] is drawn, one place for each of its guarding roles (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles"), or null where the declaration does not say.
+  List<ActPlace>? ofAct(String f) => acts[f];
 }
 
 /// Where the button of a request is drawn, as a declaration's entries for
@@ -1643,41 +1683,51 @@ class DeclaredWidget {
 /// programs/vglp/cva/compiler/README.md, "The pragmas"): the [tab] of its
 /// contract, the place [me] of the person proposing it, the places
 /// [persons] a person the view lists fills and the [groups] a group it lists
-/// fills, each the place of its leader and that of its name, the places
-/// [keys] a field for a key fills where the peer is not listed, and the
-/// [words] of the text of its request form, each a string or the place of a
-/// person.  Its widget term is `act(place(T, M, Ps, Gs, Ks, Ws), W)`, in the
-/// root's type `Widget` (programs/self.glp).
+/// fills, each the place of its leader and that of its name, the [items] a
+/// row of a list fills, each the place of its speech act and the predicate
+/// the list lists (vGLP 932c710, Section 6.2: "The button of an act that
+/// names, beside the person proposing it, a person, a group or an item is
+/// drawn beside each one the view lists, ... the row filling the act's
+/// variable"), the places [keys] a field for a key fills where the peer is
+/// not listed, and the [words] of the text of its request form, each a
+/// string or the place of a person.  Its widget term is
+/// `act(place(T, M, Ps, Gs, Is, Ks, Ws), W)`, in the root's type `Widget`
+/// (programs/self.glp).
 class ActPlace {
   String tab = '';
   int me = 0;
   List<int> persons = const [];
   List<(int, int)> groups = const [];
+  List<String> items = const [];
   List<int> keys = const [];
   List<Object> words = const [];
 
   ActPlace();
 
-  /// The declaration's entries for the request [f].
-  List<String> entries(String f) => [
-        if (me > 0)
+  /// The declaration's entries for the request [f]: its act entry, where [act], and its meeting and text entries, where [rest].
+  List<String> entries(String f, {bool act = true, bool rest = true}) => [
+        if (act && me > 0)
           'act(${constantSource(f)}, ${constantSource(tab)}, $me, '
               '[${persons.join(', ')}], '
-              '[${[for (final (j, k) in groups) 'group($j, $k)'].join(', ')}])',
-        for (final k in keys) 'meeting(${constantSource(f)}, $k)',
-        if (words.isNotEmpty) 'text(${constantSource(f)}, $_wordsSource)',
+              '[${[for (final (j, k) in groups) 'group($j, $k)'].join(', ')}], '
+              '$_itemsSource)',
+        if (rest) for (final k in keys) 'meeting(${constantSource(f)}, $k)',
+        if (rest && words.isNotEmpty)
+          'text(${constantSource(f)}, $_wordsSource)',
       ];
+
+  String get _itemsSource => '[${items.join(', ')}]';
 
   String get _wordsSource => '[${[
         for (final w in words)
           w is int ? 'at($w)' : 'say(${constantSource(w as String)})'
       ].join(', ')}]';
 
-  /// The term `place(T, M, Ps, Gs, Ks, Ws)` of the widget term.
+  /// The term `place(T, M, Ps, Gs, Is, Ks, Ws)` of the widget term.
   String get placeSource => 'place(${constantSource(tab)}, $me, '
       '[${persons.join(', ')}], '
       '[${[for (final (j, k) in groups) 'group($j, $k)'].join(', ')}], '
-      '[${keys.join(', ')}], $_wordsSource)';
+      '$_itemsSource, [${keys.join(', ')}], $_wordsSource)';
 }
 
 // ---------------------------------------------------------------------------

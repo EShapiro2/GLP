@@ -1,3 +1,0 @@
-%% The widget declarations of GAI's app (vGLP, Section 6.2, Definition "Widget Declaration"): the approval question of its platform, Approval, drawn by the construct family's approval_sentence, one sentence for the attempt's class and two buttons labelled for it; and its request question, Menu, drawn by the construct family's social_menu, with the last state on construct 0, in the app's tabs (glp_multiagent/lib/ui_runtime/named_widgets.dart and tab_screen.dart).  They are the app's, not the platform's: platform.vglp stays as vGLP's compiler prints it, with its own declaration for its output, Stream(Output) =::= last_state.
-Approval =::= approval_sentence.
-Menu =::= social_menu.
