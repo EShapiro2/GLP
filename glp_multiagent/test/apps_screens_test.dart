@@ -946,12 +946,12 @@ void appsScreens(Screens screens) {
     expect(bob.atoms,
         unorderedEquals(['identity', 'knows(alice)', 'knows(carol)']));
 
-    // (c) Bob's contacts once he has approved: a row for each atom of knows, Alice and Carol, each with the buttons of the acts that name a person, Meet and Introduce.
+    // (c) Bob's contacts once he has approved: a row for each atom of knows, in the order of his state, the newest first, Carol and then Alice, each with the buttons of the acts that name a person, Meet and Introduce.
     await run.top(bob);
     expect(run.control(bob, 'row:alice'), findsOneWidget);
     expect(run.control(bob, 'row:carol'), findsOneWidget);
     expect(run.control(bob, 'act:meet:alice'), findsOneWidget);
-    expect(run.texts(bob), containsAllInOrder(['Bob', 'Alice', 'Carol']));
+    expect(run.texts(bob), containsAllInOrder(['Bob', 'Carol', 'Alice']));
     run.plain(bob, allow: const {'Peer'});
     await run.shoot(bob, 'gkk-c-bob-contacts.png');
     run.finish();
