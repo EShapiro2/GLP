@@ -7,22 +7,103 @@
 Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
-Class     ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
-            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
-            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
-            ; leave(Peer, Peer, Speech) ; close(Peer, List(Peer), Speech) ; drop(Peer, Peer, Speech)
-            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
-            ; post_forward(Peer, Peer, Speech, Speech)
-            ; deliver(Peer, Peer, Speech, Speech) ; deliver_own(Peer, Peer, Speech, Speech).
-Proposal  ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
-            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; sign(Peer, Speech) ; message(Peer, Peer, Speech) ; forward(Peer, Peer, Speech)
-            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
-            ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
-            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
-            ; post_forward(Peer, Peer, Speech, Speech).
-Request   ::= propose(Proposal).
+Class ::=
+establish(Peer)
+;
+meet(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
+befriend(Peer, Peer)
+;
+unfriend(Peer, Peer)
+;
+enter(Peer, Peer, Speech)
+;
+agent_meet(Peer, Peer, Peer, Speech)
+;
+agents_meet(Peer, Peer, Peer, Peer, Speech, Speech)
+;
+agent_befriend(Peer, Peer, Peer)
+;
+agents_befriend(Peer, Peer, Peer, Peer)
+;
+agent_unfriend(Peer, Peer, Peer)
+;
+retire(Peer, Peer)
+;
+sign(Peer, Speech)
+;
+message(Peer, Peer, Speech)
+;
+forward(Peer, Peer, Speech)
+;
+create(Peer, Speech)
+;
+join(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
+;
+close(Peer, List(Peer), Speech)
+;
+drop(Peer, Peer, Speech)
+;
+post_own(Peer, Speech, Speech)
+;
+post(Peer, Peer, Speech, Speech)
+;
+post_forward(Peer, Peer, Speech, Speech)
+;
+deliver(Peer, Peer, Speech, Speech)
+;
+deliver_own(Peer, Peer, Speech, Speech)
+.
+Proposal ::=
+establish(Peer)
+;
+meet(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
+befriend(Peer, Peer)
+;
+unfriend(Peer, Peer)
+;
+enter(Peer, Peer, Speech)
+;
+agent_meet(Peer, Peer, Peer, Speech)
+;
+agents_meet(Peer, Peer, Peer, Peer, Speech, Speech)
+;
+agent_befriend(Peer, Peer, Peer)
+;
+agents_befriend(Peer, Peer, Peer, Peer)
+;
+agent_unfriend(Peer, Peer, Peer)
+;
+retire(Peer, Peer)
+;
+sign(Peer, Speech)
+;
+message(Peer, Peer, Speech)
+;
+forward(Peer, Peer, Speech)
+;
+create(Peer, Speech)
+;
+join(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
+;
+close(Peer, Speech)
+;
+post_own(Peer, Speech, Speech)
+;
+post(Peer, Peer, Speech, Speech)
+;
+post_forward(Peer, Peer, Speech, Speech)
+.
+Request ::= propose(Proposal).
 YesNo     ::= yes ; no.
 Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote      ::= yes ; no(Reason).
@@ -34,13 +115,47 @@ Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
             ; yield(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Atom      ::= identity ; knows(Peer) ; friend(Peer) ; item(Speech) ; authored(Speech) ; member(CName) ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech).
+Atom ::=
+identity
+;
+retired
+;
+knows(Peer)
+;
+agent
+;
+friend(Peer)
+;
+principal(Peer)
+;
+principal_of(Peer)
+;
+item(Speech)
+;
+attestation(Speech)
+;
+agent_of(Peer, Peer, Speech)
+;
+retired_of(Peer)
+;
+authored(Speech)
+;
+member(CName)
+;
+listed(Peer, Speech)
+;
+closed(Speech)
+;
+posted(Speech, Speech)
+;
+delivered(Speech, Peer, Speech)
+.
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech).
 Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab       ::= tab(String, Constant).
-Asking   ::= Attempt ; hello(Peer, Proposal).
-Approved ::= Proposal.
+Asking    ::= Attempt ; hello(Peer, Proposal).
+Approved  ::= Proposal.
 Approval  ::= approval(Asking, List(Word), YesNo?).
 Word      ::= text(String) ; person(Peer).
 Menu      ::= menu(Key, List(Key), Request?).
@@ -72,3 +187,7 @@ miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, P
 imported procedure plays#play_provenance(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 exported procedure play_provenance(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_provenance(D?, E?, C?, B?, F?) :- plays # play_provenance(D, E, C, B, F).
+
+imported procedure plays#play_agents(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+exported procedure play_agents(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_agents(K?, A?, R?, B?) :- plays # play_agents(K, A, R, B).

@@ -12,7 +12,8 @@ exec perl -CSD -Mutf8 -e '
 use strict; use warnings;
 my ($top, $programs, $term) = @ARGV;
 # The schemas of the contract term, where it is given, each with the variables of its head after its roles, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).
-my (@snames, %svars);
+my (@snames, %svars, %preds);
+$preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
 if (defined $term && $term ne "") {
     while ($term =~ /\b[nc]?schema\((\w+), \[([^\]]*)\]/g) {
         my ($n, $a) = ($1, $2);
@@ -125,9 +126,27 @@ for my $f (@order) {
         if ($first) {
             $first = 0;
             my @w;
-            for my $w (map { lc } ($rest =~ /([A-Za-z0-9_]+)/g)) {
-                push @w, $w;
-                push @w, substr($w, 0, -1) if length($w) > 1 && $w =~ /s$/;
+            my @lw = map { lc } ($rest =~ /([A-Za-z0-9_]+)/g);
+            # The predicate a tab lists is named by its name, an underscore read as a space, the longest such phrase in the line (vGLP 110caf4, Section 5.4, "The contract words"), a word also read without a final s, as "friends" names friend and "principal of" principal_of; the words of the line are given where the contract term is not.
+            my ($best, @found) = (0);
+            for my $i (0 .. $#lw) {
+                for my $n (1 .. 3) {
+                    last if $i + $n - 1 > $#lw;
+                    my @ws = @lw[$i .. $i + $n - 1];
+                    for my $ph (join("_", @ws), ($ws[-1] =~ /s$/ && length($ws[-1]) > 1) ? join("_", @ws[0 .. $#ws - 1], substr($ws[-1], 0, -1)) : ()) {
+                        next unless $preds{$ph};
+                        my $len = $n;
+                        if ($len > $best) { ($best, @found) = ($len, $ph) }
+                        elsif ($len == $best && !grep { $_ eq $ph } @found) { push @found, $ph }
+                    }
+                }
+            }
+            if (@found) { @w = @found }
+            else {
+                for my $w (@lw) {
+                    push @w, $w;
+                    push @w, substr($w, 0, -1) if length($w) > 1 && $w =~ /s$/;
+                }
             }
             push @lists, "list(" . q_string($title) . ", [" . join(", ", map { q_atom($_) } @w) . "])";
             $tab = $title;
@@ -191,5 +210,9 @@ for my $f (@order) {
         }
     }
 }
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "])\n";
+# A schema two lines name, of a contract and of one it extends, keeps the line of the contract that extends the other, read last, as the Authorship line of GSNP names sign after the Developer line of GAI.
+my (%last, @kept);
+for my $i (0 .. $#acts) { my ($n) = $acts[$i] =~ /^act\((\x27[^\x27]*\x27)/; $last{$n} = $i }
+for my $i (0 .. $#acts) { my ($n) = $acts[$i] =~ /^act\((\x27[^\x27]*\x27)/; push @kept, $acts[$i] if $last{$n} == $i }
+print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @kept) . "])\n";
 ' "$1" "$PROGRAMS" "${2:-}"
