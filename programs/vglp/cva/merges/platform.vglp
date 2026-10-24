@@ -220,7 +220,7 @@ Asking    ::= Attempt ; hello(Peer, Proposal).
 Approval  ::= approval(Asking, YesNo?).
 Menu      ::= menu(Key, List(Key), Request?).
 Close     ::= close.
-Trigger   ::= req(Request) ; again(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
+Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
 %% The peer a meeting part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract's meeting schemas).
 MeetPeer  ::= peer(Peer) ; nopeer.
 
@@ -415,7 +415,7 @@ procedure (Approval)*greet(Peer?, Proposal?, Stream(Trigger)).
 (approval(hello(Q?, N?), YN))*greet(Q, N, Out?) :- ground(Q?), ground(N?) |
     await_greet(N?, YN?, Out).
 procedure await_greet(Proposal?, YesNo?, Stream(Trigger)).
-await_greet(N, yes, [req(propose(N?))]).
+await_greet(N, yes, [greeted(N?)]).
 await_greet(_, no, []).
 
 %% ===========================================================================
@@ -451,6 +451,15 @@ step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     meet_hello(Mp?, N?, St?, Out, Out1?, Thr, Thr1?, St0),
     request_cond(N?, St0?, Cd, St1),
     dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr1, Out1, Ow, Approvals?, H?, St1?).
+%% The person's yes to the question an arriving hello asks, their request propose(N), read as any request, its hello sent back; no next request question is asked on it, being no answer to one (vGLP, Section 5.4, "The compilation": "the person's yes is their request propose(N) with Q, which the agent goal reads as any request"; the agent goal asks a request question "when it starts and the next when it reads the answer to the last").
+step(greeted(N), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+    ground(N?), ground(St?) |
+    st_app(St?, Ap0),
+    st_id(St?, Id),
+    meeting_peer(N?, Id?, Mp),
+    meet_hello(Mp?, N?, St?, Out, Out1?, Thr, Thr1?, St0),
+    request_cond(N?, St0?, Cd, St1),
+    dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, H?, St1?).
 %% A request of the person the agent held, put up again: read as the request, its hello sent and its next request question asked when it was first read (vGLP, Section 5.4, "The compilation": "it holds the request and puts it up again after every dispatch").
 step(again(N), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     ground(N?), ground(St?) |
