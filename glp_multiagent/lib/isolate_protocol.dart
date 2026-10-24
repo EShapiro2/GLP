@@ -237,7 +237,7 @@ Future<void> _runAgent(InitAgent init) async {
   }
 
   // Listen for commands. Each message is fully awaited before the next,
-  // preventing concurrent _runUntilQuiescent() calls.
+  // so no two event cycles of the agent run at once.
   await for (final msg in commandPort) {
     if (msg is StartAgent) {
       // Deferred start: initialize GLP now (all ports are registered).
