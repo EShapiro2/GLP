@@ -1468,7 +1468,7 @@ class DeclaredWidget {
   /// names none on the tab of its contract"; Section 5.4, "The contract's
   /// words": the question of an act with one guarding role "is text of its
   /// request form"; programs/vglp/cva/compiler/README.md, "The pragmas").
-  final Map<String, ActPlace> acts;
+  final Map<String, List<ActPlace>> acts;
 
   const DeclaredWidget(this.name,
       [this.constructors = const {},
@@ -1488,7 +1488,9 @@ class DeclaredWidget {
         'label(${constantSource(e.key.substring(0, e.key.lastIndexOf('/')))}, '
             '${e.key.substring(e.key.lastIndexOf('/') + 1)}, '
             '${constantSource(e.value)})',
-      for (final e in acts.entries) ...e.value.entries(e.key),
+      for (final e in acts.entries)
+        for (var i = 0; i < e.value.length; i++)
+          ...e.value[i].entries(e.key, act: true, rest: i == 0),
     ];
     return '${constantSource(name)}([${ls.join(', ')}])';
   }
@@ -1512,8 +1514,9 @@ class DeclaredWidget {
     if (t is! StructTerm || t.args.length != 1) return null;
     final constructors = <String, String>{};
     final places = <String, String>{};
-    final acts = <String, ActPlace>{};
-    ActPlace actOf(String f) => acts.putIfAbsent(f, ActPlace.new);
+    final acts = <String, List<ActPlace>>{};
+    final keysOf = <String, List<int>>{};
+    final wordsOf = <String, List<Object>>{};
     Term? cell = t.args.single;
     while (cell is ListTerm && !cell.isNil) {
       final l = cell.head;
@@ -1542,26 +1545,34 @@ class DeclaredWidget {
             ps == null || gs == null || is_ == null) {
           return null;
         }
-        actOf(f)
+        (acts[f] ??= []).add(ActPlace()
           ..tab = tab.value as String
           ..me = m
           ..persons = ps
           ..groups = gs
-          ..items = is_;
+          ..items = is_);
       } else if (l.functor == 'meeting' && l.args.length == 2) {
         final i = _int(l.args[1]);
         if (i == null) return null;
-        actOf(f).keys = [...actOf(f).keys, i];
+        (keysOf[f] ??= []).add(i);
       } else if (l.functor == 'text' && l.args.length == 2) {
         final ws = _words(l.args[1]);
         if (ws == null) return null;
-        actOf(f).words = ws;
+        wordsOf[f] = ws;
       } else {
         return null;
       }
       cell = cell.tail;
     }
     if (cell is! ListTerm || !cell.isNil) return null;
+    // An act's meeting place and the text of its request form are the same at each guarding role it is drawn at.
+    for (final f in {...keysOf.keys, ...wordsOf.keys}) {
+      final ps = acts[f] ??= [ActPlace()];
+      for (final p in ps) {
+        p.keys = keysOf[f] ?? const [];
+        p.words = wordsOf[f] ?? const [];
+      }
+    }
     return DeclaredWidget(t.functor, constructors, places, acts);
   }
 
@@ -1654,7 +1665,8 @@ class DeclaredWidget {
 
   /// Where the button of the request [f] is drawn, or null where the
   /// declaration does not say.
-  ActPlace? ofAct(String f) => acts[f];
+  /// Where the button of the request [f] is drawn, one place for each of its guarding roles (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles"), or null where the declaration does not say.
+  List<ActPlace>? ofAct(String f) => acts[f];
 }
 
 /// Where the button of a request is drawn, as a declaration's entries for
@@ -1683,15 +1695,16 @@ class ActPlace {
 
   ActPlace();
 
-  /// The declaration's entries for the request [f].
-  List<String> entries(String f) => [
-        if (me > 0)
+  /// The declaration's entries for the request [f]: its act entry, where [act], and its meeting and text entries, where [rest].
+  List<String> entries(String f, {bool act = true, bool rest = true}) => [
+        if (act && me > 0)
           'act(${constantSource(f)}, ${constantSource(tab)}, $me, '
               '[${persons.join(', ')}], '
               '[${[for (final (j, k) in groups) 'group($j, $k)'].join(', ')}], '
               '$_itemsSource)',
-        for (final k in keys) 'meeting(${constantSource(f)}, $k)',
-        if (words.isNotEmpty) 'text(${constantSource(f)}, $_wordsSource)',
+        if (rest) for (final k in keys) 'meeting(${constantSource(f)}, $k)',
+        if (rest && words.isNotEmpty)
+          'text(${constantSource(f)}, $_wordsSource)',
       ];
 
   String get _itemsSource => '[${[

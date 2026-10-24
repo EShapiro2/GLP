@@ -1080,19 +1080,20 @@ schema_labels1(yes, nosfound, _, _, _, _, _, _, []).
 schema_labels1(yes, sfound(Hd, Rs), S, B, Fs, Q, T, Lp, [label(S?, B?)|L?]) :- ground(Hd?), ground(Rs?), ground(S?), ground(Fs?), ground(Q?), ground(T?), ground(Lp?) |
     field_places(Hd?, Rs?, Fp),
     place_labels(Fp?, Fs?, S?, L1),
-    act_entry(S?, Hd?, Rs?, Fs?, T?, Lp?, E),
+    act_entry(S?, Hd?, Rs?, Fs?, T?, Lp?, Le),
     meeting_entry(S?, Rs?, Lm),
     text_entry(S?, Hd?, Rs?, Q?, Lt),
-    lapp(L1?, [E?|Lm?], L2),
+    lapp(Le?, Lm?, Lem),
+    lapp(L1?, Lem?, L2),
     lapp(L2?, Lt?, L).
 procedure place_labels(Ints?, Strings?, Constant?, Stream(_)).
 place_labels(_, [], _, []).
 place_labels([], [_|_], _, []).
 place_labels([I|Is], [F|Fs], S, [label(S?, I?, F?)|L?]) :- ground(S?) | place_labels(Is?, Fs?, S?, L).
 
-%% Where a request's button is drawn (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable, and the button of an act that names none on the tab of its contract"): act(F, T, M, Ps, Gs, Is), places of the request F's arguments, its schema's head less its listed roles: T the tab of its contract; M the place of the person proposing it, the first of its guarding roles; Gs the groups it names, group(J, K), for each name term <u>.y of its atoms, J the place of the role u and K that of the speech-act variable y, which no field names; Ps the places of the persons it names beside the proposer that no field names and that lead no group it names, its other roles and its agent variables; and Is the items it names, item(K, P), K the place of a speech-act variable y and P a predicate a list of the app lists, for each atom of P with y among its arguments that the schema requires at the proposer's role, so that a row of that list fills y (Section 5.4, "The contract's words": "A tab's list is the atoms of its predicate in the state").
-procedure act_entry(Constant?, Args?, RoleSpecs?, Strings?, String?, Preds?, _).
-act_entry(S, Hd, Rs, Fs, T, Lp, E?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Fs?), ground(T?), ground(Lp?) |
+%% Where a request's button is drawn (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable, and the button of an act that names none on the tab of its contract"): act(F, T, M, Ps, Gs, Is), places of the request F's arguments, its schema's head less its listed roles: T the tab of its contract; M the place of the person proposing it, an entry for each of its guarding roles; Gs the groups it names, group(J, K), for each name term <u>.y of its atoms, J the place of the role u and K that of the speech-act variable y, which no field names; Ps the places of the persons it names beside the proposer that no field names and that lead no group it names, its other roles and its agent variables; and Is the items it names, item(K, P), K the place of a speech-act variable y and P a predicate a list of the app lists, for each atom of P with y among its arguments that the schema requires at the proposer's role, so that a row of that list fills y (Section 5.4, "The contract's words": "A tab's list is the atoms of its predicate in the state").
+procedure act_entry(Constant?, Args?, RoleSpecs?, Strings?, String?, Preds?, Stream(_)).
+act_entry(S, Hd, Rs, Fs, T, Lp, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Fs?), ground(T?), ground(Lp?) |
     schema_vars(Rs?, Hd?, Vs0),
     listed_ixs(Rs?, 1, Lis),
     drop_listed(Vs0?, Lis?, Vs),
@@ -1101,9 +1102,15 @@ act_entry(S, Hd, Rs, Fs, T, Lp, E?) :- ground(S?), ground(Hd?), ground(Rs?), gro
     take_ints(NF?, Fp?, Named0),
     meeting_schema(Rs?, Mt),
     peer_out(Mt?, Named0?, Named),
-    first_guard(Rs?, 1, G),
+    guard_roles(Rs?, 1, Gr),
     spec_args(Rs?, As),
-    act_entry1(S?, T?, Vs?, Named?, G?, As?, Rs?, Lp?, E).
+    act_entries(Gr?, S?, T?, Vs?, Named?, As?, Rs?, Lp?, L).
+%% An entry for each guarding role, its person proposing the act (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles, beside each row that fills its variable").
+procedure act_entries(Ints?, Constant?, String?, Args?, Ints?, Args?, RoleSpecs?, Preds?, Stream(_)).
+act_entries([], _, _, _, _, _, _, _, []).
+act_entries([G|Gs], S, T, Vs, Named, As, Rs, Lp, [E?|L?]) :- integer(G?), ground(S?), ground(T?), ground(Vs?), ground(Named?), ground(As?), ground(Rs?), ground(Lp?) |
+    act_entry1(S?, T?, Vs?, Named?, G?, As?, Rs?, Lp?, E),
+    act_entries(Gs?, S?, T?, Vs?, Named?, As?, Rs?, Lp?, L).
 procedure act_entry1(Constant?, String?, Args?, Ints?, Integer?, Args?, RoleSpecs?, Preds?, _).
 act_entry1(S, T, Vs, Named, G, As, Rs, Lp, E?) :- ground(S?), ground(T?), ground(Vs?), ground(Named?), integer(G?), ground(As?), ground(Rs?), ground(Lp?) |
     place_of(role(G?), Vs?, 1, M),
@@ -1124,7 +1131,7 @@ procedure item_places(Integer?, RoleSpecs?, Args?, Preds?, ItemPlaces).
 item_places(G, Rs, Vs, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Lp?) |
     nth_rs(G?, Rs?, R),
     required_atoms(R?, Rq),
-    item_atoms(Rq?, Vs?, Lp?, Is).
+    item_atoms(Rq?, G?, Vs?, Lp?, Is).
 procedure nth_rs(Integer?, RoleSpecs?, RoleSpecs).
 nth_rs(_, [], []).
 nth_rs(1, [R|_], [R?]).
@@ -1132,23 +1139,34 @@ nth_rs(G, [_|Rs], R?) :- G? > 1 | G1 := G? - 1, nth_rs(G1?, Rs?, R).
 procedure required_atoms(RoleSpecs?, Atoms).
 required_atoms([], []).
 required_atoms([R|_], Rq?) :- ground(R?) | rs_lists(R?, _, M, K, _), app(K?, M?, Rq).
-procedure item_atoms(Atoms?, Args?, Preds?, ItemPlaces).
-item_atoms([], _, _, []).
-item_atoms([atom(P, Xs)|As], Vs, Lp, Is?) :- ground(P?), ground(Xs?), ground(Vs?), ground(Lp?) |
+procedure item_atoms(Atoms?, Integer?, Args?, Preds?, ItemPlaces).
+item_atoms([], _, _, _, []).
+item_atoms([atom(P, Xs)|As], G, Vs, Lp, Is?) :- ground(P?), ground(Xs?), integer(G?), ground(Vs?), ground(Lp?) |
     mem(P?, Lp?, In),
-    item_args(In?, P?, Xs?, Vs?, I1),
-    item_atoms(As?, Vs?, Lp?, I2),
+    item_args(In?, P?, Xs?, G?, Vs?, I1),
+    item_atoms(As?, G?, Vs?, Lp?, I2),
     app(I1?, I2?, Is).
-item_atoms([times(_, A)|As], Vs, Lp, Is?) :- item_atoms([A?|As?], Vs?, Lp?, Is).
-procedure item_args(YesNo?, Constant?, Args?, Args?, ItemPlaces).
-item_args(no, _, _, _, []).
-item_args(yes, _, [], _, []).
-item_args(yes, P, [svar(Y)|Xs], Vs, Is?) :- ground(P?), ground(Y?), ground(Vs?) |
+item_atoms([times(_, A)|As], G, Vs, Lp, Is?) :- item_atoms([A?|As?], G?, Vs?, Lp?, Is).
+%% The places a row fills: a speech-act variable, a person in another role, or an agent variable, among the atom's arguments (vGLP 110caf4, Section 6.2: "beside each row that fills its variable").
+procedure item_args(YesNo?, Constant?, Args?, Integer?, Args?, ItemPlaces).
+item_args(no, _, _, _, _, []).
+item_args(yes, _, [], _, _, []).
+item_args(yes, P, [svar(Y)|Xs], G, Vs, Is?) :- ground(P?), ground(Y?), integer(G?), ground(Vs?) |
     place_of(svar(Y?), Vs?, 1, K),
     item_place(K?, P?, I1),
-    item_args(yes, P?, Xs?, Vs?, I2),
+    item_args(yes, P?, Xs?, G?, Vs?, I2),
     app(I1?, I2?, Is).
-item_args(yes, P, [_|Xs], Vs, Is?) :- otherwise, ground(P?), ground(Vs?) | item_args(yes, P?, Xs?, Vs?, Is).
+item_args(yes, P, [pvar(Y)|Xs], G, Vs, Is?) :- ground(P?), ground(Y?), integer(G?), ground(Vs?) |
+    place_of(pvar(Y?), Vs?, 1, K),
+    item_place(K?, P?, I1),
+    item_args(yes, P?, Xs?, G?, Vs?, I2),
+    app(I1?, I2?, Is).
+item_args(yes, P, [role(J)|Xs], G, Vs, Is?) :- J? =\= G?, ground(P?), ground(Vs?) |
+    place_of(role(J?), Vs?, 1, K),
+    item_place(K?, P?, I1),
+    item_args(yes, P?, Xs?, G?, Vs?, I2),
+    app(I1?, I2?, Is).
+item_args(yes, P, [_|Xs], G, Vs, Is?) :- otherwise, ground(P?), integer(G?), ground(Vs?) | item_args(yes, P?, Xs?, G?, Vs?, Is).
 procedure item_place(Integer?, Constant?, ItemPlaces).
 item_place(K, P, [item(K?, P?)]) :- K? > 0 | true.
 item_place(0, _, []).

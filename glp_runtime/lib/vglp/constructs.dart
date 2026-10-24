@@ -176,7 +176,7 @@ import '../analysis/type_checker/type_ast.dart';
 import '../compiler/glp_printer.dart' show constantSource, functorNameSource;
 import 'mediator.dart' show typeSource;
 import 'dispatcher.dart' show widgetTypeName;
-import 'canonical.dart' show DeclaredWidget;
+import 'canonical.dart' show ActPlace, DeclaredWidget;
 
 /// The Definition an interactive type is refused by where it is not one.
 const _definition = 'vGLP, Definition "Volitional Procedure, Interactive Type"';
@@ -2247,8 +2247,12 @@ class _Generator {
     // Where the request's button is drawn, act(place(...), W), where the
     // declaration says (vGLP, Section 6.2, "The words a platform shows";
     // canonical.dart, ActPlace).
-    final a = _labels?.ofAct(f);
-    return a == null ? lw : 'act(${a.placeSource}, $lw)';
+    // One wrapper for each guarding role the act is drawn at, the first outermost (vGLP 110caf4, Section 6.2).
+    var w1 = lw;
+    for (final a in (_labels?.ofAct(f) ?? const <ActPlace>[]).reversed) {
+      w1 = 'act(${a.placeSource}, $w1)';
+    }
+    return w1;
   }
 
   /// The name of the field at the place [i] of the constructor [f]: the
