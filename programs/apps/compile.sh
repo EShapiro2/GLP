@@ -72,7 +72,7 @@ for app in $APPS; do
     fi
     # The contract's words: its pragmas, from its NAME.txt and those of the contracts it extends.
     pr=no_pragmas
-    if [ -f "${src%.glp}.txt" ] && ! pr=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${src%.glp}.txt" 2> "$WORK/pr.err"); then
+    if [ -f "${src%.glp}.txt" ] && ! pr=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${src%.glp}.txt" "$ct" 2> "$WORK/pr.err"); then
         echo "$app: its pragmas were not read: $(head -1 "$WORK/pr.err")"
         OK=0
         continue

@@ -219,7 +219,7 @@ fi
 # 5. The canonical platform, from programs/vglp/cva/compiler, with the
 # contract's words, its pragmas.
 PR=no_pragmas
-if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" 2> "$WORK/pr.err"); then
+if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$CT" 2> "$WORK/pr.err"); then
     say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
     exit 1
 fi
