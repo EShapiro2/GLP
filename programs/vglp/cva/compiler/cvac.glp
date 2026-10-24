@@ -1116,7 +1116,7 @@ act_entry1(S, T, Vs, Named, G, As, Rs, Lp, E?) :- ground(S?), ground(T?), ground
     place_of(role(G?), Vs?, 1, M),
     group_places(As?, Vs?, Named?, Gs0),
     dedup(Gs0?, Gs),
-    item_places(G?, Rs?, Vs?, Lp?, Is0),
+    item_places(G?, Rs?, Vs?, Named?, Lp?, Is0),
     dedup(Is0?, Is),
     act_entry2(S?, T?, Vs?, Named?, M?, Gs?, Is?, E).
 procedure act_entry2(Constant?, String?, Args?, Ints?, Integer?, GroupPlaces?, ItemPlaces?, _).
@@ -1127,11 +1127,29 @@ act_entry2(S, T, Vs, Named, M, Gs, Is, E?) :- ground(S?), ground(T?), ground(Vs?
 %% The items a request names: item(K, P) for each atom of a listed predicate P that the schema requires at the role G, the proposer's, kept or deleted there, with the speech-act variable at place K among its arguments.
 ItemPlace ::= item(Integer, Constant).
 ItemPlaces ::= [] ; [ItemPlace | ItemPlaces].
-procedure item_places(Integer?, RoleSpecs?, Args?, Preds?, ItemPlaces).
-item_places(G, Rs, Vs, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Lp?) |
+procedure item_places(Integer?, RoleSpecs?, Args?, Ints?, Preds?, ItemPlaces).
+item_places(G, Rs, Vs, Nd, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Nd?), ground(Lp?) |
     nth_rs(G?, Rs?, R),
     required_atoms(R?, Rq),
-    item_atoms(Rq?, G?, Vs?, Lp?, Is).
+    item_atoms(Rq?, G?, Vs?, Lp?, Is0),
+    keyed_out(Is0?, Vs?, Nd?, Is).
+%% A person a field names is named by key, and no row fills it (vGLP, Section 5.4, "The contract's words": "in angle brackets each field ..., a person the act names by key among them"); a speech act a field names a row fills, the field's name labelling it.
+procedure keyed_out(ItemPlaces?, Args?, Ints?, ItemPlaces).
+keyed_out([], _, _, []).
+keyed_out([item(K, P)|Is], Vs, Nd, R?) :- ground(Vs?), ground(Nd?), integer(K?), ground(P?) |
+    nth_arg(K?, Vs?, A),
+    a_svar(A?, Sv),
+    mem(K?, Nd?, F),
+    keyed_out1(Sv?, F?, item(K?, P?), R1),
+    keyed_out(Is?, Vs?, Nd?, R2),
+    app(R1?, R2?, R).
+procedure a_svar(Arg?, YesNo).
+a_svar(svar(_), yes).
+a_svar(_, no) :- otherwise | true.
+procedure keyed_out1(YesNo?, YesNo?, ItemPlace?, ItemPlaces).
+keyed_out1(yes, _, I, [I?]).
+keyed_out1(no, no, I, [I?]).
+keyed_out1(no, yes, _, []).
 procedure nth_rs(Integer?, RoleSpecs?, RoleSpecs).
 nth_rs(_, [], []).
 nth_rs(1, [R|_], [R?]).

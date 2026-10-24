@@ -210,5 +210,9 @@ for my $f (@order) {
         }
     }
 }
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "])\n";
+# A schema two lines name, of a contract and of one it extends, keeps the line of the contract that extends the other, read last, as the Authorship line of GSNP names sign after the Developer line of GAI.
+my (%last, @kept);
+for my $i (0 .. $#acts) { my ($n) = $acts[$i] =~ /^act\((\x27[^\x27]*\x27)/; $last{$n} = $i }
+for my $i (0 .. $#acts) { my ($n) = $acts[$i] =~ /^act\((\x27[^\x27]*\x27)/; push @kept, $acts[$i] if $last{$n} == $i }
+print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @kept) . "])\n";
 ' "$1" "$PROGRAMS" "${2:-}"
