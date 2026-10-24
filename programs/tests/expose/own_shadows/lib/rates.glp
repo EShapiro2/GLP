@@ -1,0 +1,6 @@
+%% The exposed module: rate/2 over its own Level.
+Level ::= low ; high.
+
+exported procedure rate(Level?, Integer).
+rate(low, 10).
+rate(high, 20).

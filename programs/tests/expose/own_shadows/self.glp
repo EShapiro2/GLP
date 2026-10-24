@@ -1,0 +1,12 @@
+%% A procedure the self.glp defines shadows one of the same name and arity it exposes (TGLP modules.tex, "The -expose directive").  This self.glp exposes lib/rates.glp, whose rate(Level?, Integer) gives 10 and 20, and defines rate(Integer?, Integer), which gives its argument plus 100: in this scope, and in the scope of user.glp beside it, rate/2 is this self.glp's, declared over Integer.  run(N) gives 101 and via_user(N) 102; were the exposed rate/2 in scope, both calls, with an Integer where it consumes a Level, would be refused.
+-expose(lib#rates).
+
+procedure rate(Integer?, Integer).
+rate(N, M?) :- M := N? + 100.
+
+exported procedure run(Integer).
+run(N?) :- rate(1, N).
+
+imported procedure user#via(Integer).
+exported procedure via_user(Integer).
+via_user(N?) :- user # via(N).
