@@ -11,14 +11,68 @@ PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
 exec perl -CSD -Mutf8 -e '
 use strict; use warnings;
 my ($top, $programs, $term) = @ARGV;
-# The schemas of the contract term, where it is given, each with the variables of its head after its roles, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).
+# The schemas of the contract term, where it is given, each with the variables of its head after its roles that the request names, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).  A numeric variable local to a role, one that occurs only in atoms the schema requires or deletes at that one role, and in the constraint, is not named by the request, and no field names it (vGLP, Section 5.4, "Act schemas as local specifications": "Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and a request names it, so the request form takes it"), as t, the date of the issuer, in the redeem_bc of GB.
+# The arguments of the term at the top level of the text $s, split at its commas outside brackets.
+sub top_args {
+    my ($s) = @_;
+    my (@a, $d, $cur); $d = 0; $cur = "";
+    for my $ch (split //, $s) {
+        if ($ch eq "," && $d == 0) { push @a, $cur; $cur = ""; next }
+        $d++ if $ch eq "(" || $ch eq "[";
+        $d-- if $ch eq ")" || $ch eq "]";
+        $cur .= $ch;
+    }
+    push @a, $cur if $cur =~ /\S/;
+    s/^\s+|\s+$//g for @a;
+    return @a;
+}
+# The text inside the brackets that open at position $i of $s, and the position after them.
+sub inside {
+    my ($s, $i) = @_;
+    my $d = 0;
+    for (my $j = $i; $j < length $s; $j++) {
+        my $ch = substr($s, $j, 1);
+        $d++ if $ch eq "(" || $ch eq "[";
+        $d-- if $ch eq ")" || $ch eq "]";
+        return (substr($s, $i + 1, $j - $i - 1), $j + 1) if $d == 0;
+    }
+    return ("", length $s);
+}
+# The numeric variables local to a role of the schema whose arguments are @args.
+sub local_nums {
+    my (@args) = @_;
+    my $roles = $args[-1];
+    $roles =~ s/^\[//; $roles =~ s/\]$//;
+    my (%at, %elsewhere);
+    my $r = 0;
+    for my $spec (top_args($roles)) {
+        $r++;
+        my ($f) = $spec =~ /^(c?rs)\(/ or next;
+        my ($body) = inside($spec, length $f);
+        my @p = top_args($body);
+        shift @p if $f eq "crs";
+        for my $k (0 .. $#p) {
+            for my $x ($p[$k] =~ /\bnum\((\w+)\)/g) {
+                if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 } else { $elsewhere{$x} = 1 }
+            }
+        }
+    }
+    return grep { !$elsewhere{$_} && keys %{ $at{$_} } == 1 } keys %at;
+}
 my (@snames, %svars);
 if (defined $term && $term ne "") {
-    while ($term =~ /\b[nc]?schema\((\w+), \[([^\]]*)\]/g) {
-        my ($n, $a) = ($1, $2);
-        next if exists $svars{$n};
+    while ($term =~ /\b([nc]?schema)\(/g) {
+        my $kw = $1;
+        my $open = pos($term) - 1;
+        my ($body, $end) = inside($term, $open);
+        pos($term) = $open + 1;
+        my @args = top_args($body);
+        my ($n, $a) = @args[0, 1];
+        next if !defined $a || exists $svars{$n};
         push @snames, $n;
-        $svars{$n} = [ $a =~ /\w+\((\w+)\)/g ];
+        my %local = map { $_ => 1 } local_nums(@args);
+        $a =~ s/^\[//; $a =~ s/\]$//;
+        $svars{$n} = [ grep { !($local{$_} && $a =~ /\bnum\(\Q$_\E\)/) } ($a =~ /\w+\((\w+)\)/g) ];
     }
 }
 # The schemas a button realises: its schema, the button in lower case, or, where the contract has none of that name, those named by it and a suffix after an underscore; the button alone where the term is not given or none is found.
