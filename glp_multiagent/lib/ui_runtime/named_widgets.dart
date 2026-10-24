@@ -1102,7 +1102,8 @@ class ActInfo {
   /// How many persons, groups and items the act names beside the person proposing it: its persons, its items, each person a field names by key, [kinds] `peer`, and each group once, but those a held atom of the proposer's state fills (vGLP feda043, Section 6.2: "The button of an act that names, beside the person proposing it, one person, group or item ...; an act that names two or more is a form at the top of the tab of its contract").
   int namedCount(List<String> kinds) {
     final gp = {for (final (j, k) in groups) ...[j, k]};
-    final hp = heldPlaces;
+    // A held atom fills the places no row and no field fills, as GAI's attestation; a place it names that a person or an item fills stays named.
+    final hp = heldPlaces.difference({...persons, ...itemPlaces, ...keys});
     final ps = <int>{
       ...persons,
       ...itemPlaces,
