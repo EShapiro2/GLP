@@ -1653,6 +1653,64 @@ TypeIdentityTables linkedTypeIdentityTables(
   return tables.withOpaque(opaque);
 }
 
+/// The type definitions of the program by their names in the source, the
+/// map the source identity's canonical print and an artefact's interface
+/// table are built over (glp_engine.dart, `_moduleValueOf`;
+/// wire/flattening.dart, [flattenProject]): each name the entry module's
+/// scope resolves is the definition of the scope that defines it there, and
+/// every other name of a module of the program, the first module's to define
+/// it.  The entry module is the one whose exports are the program's entry
+/// points (modules.tex, Compilation, fifth step): a directory program's
+/// `self.glp` at [rootDir], or the single module at [singleModulePath].
+///
+/// The exports are declared in the entry module's scope, so a type their
+/// declarations name is the one that scope resolves: two modules of a program
+/// may define one name, which step 3 renames apart and a map by name cannot
+/// hold, and a `self.glp` off the entry module's chain --- on the chain of an
+/// exposed module outside the program's tree, a module of the program since
+/// TGLP 47d62b2 --- is not in its scope.  Until 2026-10-24 the first module
+/// to define a name took it whatever its scope, and programs/sglp/self.glp's
+/// `Draw` displaced the root's `Draw(T)` in the interface of every program
+/// that names it, the coins mini-app among them; and a type lifted from a
+/// `self.glp` outside the tree was in no module of the program, so the
+/// interface of programs/tests/expose/own_scope/app carried no `Level`.
+Map<String, TypeDef> programTypeDefs(List<DiscoveredModule> modules,
+    {required String rootDir, String? singleModulePath}) {
+  final singleNorm =
+      singleModulePath == null ? null : _normPath(singleModulePath);
+  final rootNorm = _normPath(rootDir);
+  DiscoveredModule? entry;
+  for (final m in modules) {
+    final isEntry = singleNorm != null
+        ? _normPath(m.filePath) == singleNorm
+        : m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm;
+    if (isEntry) {
+      entry = m;
+      break;
+    }
+  }
+  final byName = {for (final m in modules) m.moduleName: m};
+  final out = <String, TypeDef>{};
+  if (entry != null) {
+    for (final e in _visibleTypeOwners(entry, modules).entries) {
+      final owner = byName[e.value];
+      if (owner == null) continue;
+      for (final td in owner.ast.typeDefs) {
+        if (td.name == e.key) {
+          out[e.key] = td;
+          break;
+        }
+      }
+    }
+  }
+  for (final mod in modules) {
+    for (final td in mod.ast.typeDefs) {
+      out.putIfAbsent(td.name, () => td);
+    }
+  }
+  return out;
+}
+
 /// An entry of a program declared, in the module whose exports are the
 /// program's entry points, as the instance at a type of a parameterised
 /// declaration of that module's ancestor scope of its key: the [entry]'s

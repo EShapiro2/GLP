@@ -98,6 +98,28 @@ void main() {
     expect(triple.bindings['Y'].toString(), 'Const(3)');
   });
 
+  test("the program's type definitions by name are those its entry module's "
+      'scope resolves', () {
+    // programs/sglp/self.glp, on the chain of the root's exposed sglp
+    // modules, is a module of the program and defines Draw; the root defines
+    // Draw(T), and the entry module, app/self.glp, sees the root's.
+    final dir = Directory('$fixture/app').absolute.path;
+    final modules = discover(dir);
+    expect(
+        modules.any((m) =>
+            m.moduleName == 'sglp' &&
+            m.ast.typeDefs.any((t) => t.name == 'Draw' && t.typeParams.isEmpty)),
+        isTrue);
+    final defs = programTypeDefs(modules, rootDir: dir);
+    expect(defs['Draw']!.typeParams, hasLength(1));
+    // A type lifted from a self.glp outside the tree is the program's:
+    // own_scope's Level, which lib/self.glp defines.
+    final own =
+        Directory('../programs/tests/expose/own_scope/app').absolute.path;
+    final ownDefs = programTypeDefs(discover(own), rootDir: own);
+    expect(ownDefs['Level']!.alternatives, hasLength(2));
+  });
+
   test("neg/, calling double/2, is refused: lib/self.glp is not on its "
       'chain', () {
     final engine = GlpEngine(rootSelfGlpPath: rootSelf);
