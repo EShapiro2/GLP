@@ -491,14 +491,24 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
   final pending = pendingAt(args[0]) != null || pendingAt(args[1]) != null;
   final theme = Theme.of(context);
   final words = args[1] is GList ? (args[1] as GList).items : const <GTerm>[];
+  // After the sentence, each value of the binding it does not name, by the name of its field, named(F, P) a person and valued(F, K) a number, one to a line (vGLP 110caf4, Section 5.4, "The contract's words": "and shows after it each value of the binding the question does not name, by the name of its field").
   final said = [
     for (final w in words)
       switch (ctorArgs(w)) {
         ('text', [final t]) => displayText(t),
         ('person', [final q]) => personName(q),
+        ('named', [_, _]) || ('valued', [_, _]) => '',
         _ => displayText(w),
       }
   ].join();
+  final values = [
+    for (final w in words)
+      switch (ctorArgs(w)) {
+        ('named', [final f, final q]) => '${displayText(f)}: ${personName(q)}',
+        ('valued', [final f, final k]) => '${displayText(f)}: ${displayText(k)}',
+        _ => null,
+      }
+  ].nonNulls.toList();
   final (af, axs) = ctorArgs(args[0]);
   // The question Start raises asks of an attempt, attempt(I, N, K, C, R), of its class C; the one an arriving hello asks, hello(Q, N), of the meeting N (vGLP, Section 5.4, "The compilation").
   final cls = af == 'attempt' && axs.length == 5
@@ -533,6 +543,12 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
     children: [
       Text(sentence,
           key: sentenceKey(construct.id), style: theme.textTheme.titleMedium),
+      if (!pending)
+        for (final v in values)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(v, style: theme.textTheme.bodyLarge),
+          ),
       for (final t in speech)
         Container(
           margin: const EdgeInsets.only(top: 8),
@@ -614,7 +630,7 @@ class SocialState {
   final List<SocialNotice> written;
 
   /// The lists the app shows, where the platform is compiled from a contract with pragmas: each its name and the predicate whose atoms in the machine state it lists, as the view carries them, `view(S, K, [tab(Name, P), ...])` (vGLP 1126f4f, Section 5.4, "The contract's words": "a list's name into the view the agent writes"); null where the view carries none, `view(S, K)`.
-  final List<({String name, String predicate})>? lists;
+  final List<({String name, String predicate, bool counted})>? lists;
 
   /// The approvals the person made that are pending, as the view carries them, `view(S, K, A)` or `view(S, K, A, Ts)`: each by its request name (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part").
   final List<GTerm> pending;
@@ -630,7 +646,7 @@ class SocialState {
     if (output is! GList) return (false, null);
     List<GTerm>? atoms, known;
     var pending = <GTerm>[];
-    List<({String name, String predicate})>? lists;
+    List<({String name, String predicate, bool counted})>? lists;
     var notices = <SocialNotice>[];
     final written = <SocialNotice>[];
     for (final e in output.items) {
@@ -650,8 +666,13 @@ class SocialState {
             ? [
                 for (final t in (xs[3] as GList).items)
                   if (ctorArgs(t) case (final tf, final ts)
-                      when tf == 'tab' && ts.length == 2)
-                    (name: displayText(ts[0]), predicate: displayText(ts[1])),
+                      when tf == 'tab' && (ts.length == 2 || ts.length == 3))
+                    (
+                      name: displayText(ts[0]),
+                      predicate: displayText(ts[1]),
+                      // tab(Name, P, counted): the contract adds or deletes P with a multiplicity, and a row shows its count (vGLP 110caf4, Section 5.4, "The contract's words").
+                      counted: ts.length == 3 && displayText(ts[2]) == 'counted'
+                    ),
               ]
             : null;
         // A notice is drawn until the next view is written: "which the
@@ -2454,7 +2475,7 @@ class _SocialTabState extends State<SocialTab> {
   }
 
   Widget _wordedList(
-      BuildContext context, SocialState s, ({String name, String predicate}) l,
+      BuildContext context, SocialState s, ({String name, String predicate, bool counted}) l,
       {required bool first}) {
     final ask = _ask;
     final o = ask?.offers;
@@ -2486,6 +2507,7 @@ class _SocialTabState extends State<SocialTab> {
               ],
         for (final r in _rows(s, l.predicate))
           _wordedRow(context, s, r,
+              counted: l.counted,
               alone: _rows(s, l.predicate)
                       .where((x) =>
                           x.item != null &&
@@ -2604,16 +2626,16 @@ class _SocialTabState extends State<SocialTab> {
     return xs.any((x) => formatTerm(x) == want || formatTerm(x) == whole);
   }
 
-  /// A row of a list: its item by name, the count of its copies where more than one, the atoms of the state naming the item, each by its other arguments (vGLP, Section 5.4, "The contract's words": "a row shows the atoms of the state naming its item, the view carrying the whole state"), and the buttons of the acts that name a person or a group beside the item ([_rowActs]).  A speech act is drawn by its text, and under it its signers by name, its author and then each agent that forwarded it, in order (GSC, Section 3: "A speech act is an utterance or a speech act, signed by a person"; vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9).
+  /// A row of a list: its item by name, the count of its copies where its list is counted, the contract adding or deleting its predicate with a multiplicity (vGLP 110caf4, Section 5.4, "The contract's words"), the atoms of the state naming the item, each by its other arguments (vGLP, Section 5.4, "The contract's words": "a row shows the atoms of the state naming its item, the view carrying the whole state"), and the buttons of the acts that name a person or a group beside the item ([_rowActs]).  A speech act is drawn by its text, and under it its signers by name, its author and then each agent that forwarded it, in order (GSC, Section 3: "A speech act is an utterance or a speech act, signed by a person"; vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9).
   Widget _wordedRow(BuildContext context, SocialState s,
       ({GTerm atom, int count, GTerm? item}) r,
-      {bool alone = true}) {
+      {bool alone = true, bool counted = false}) {
     final item = r.item;
     // A row is keyed by its item, or by its atom where another row of the list has the same item, as two bonds of one issuer of different maturities.
     final k = formatTerm(alone ? (item ?? r.atom) : r.atom);
     final title = item == null
         ? _atomText(r.atom)
-        : '${_named(item)}${r.count > 1 ? '  ${r.count}' : ''}';
+        : '${_named(item)}${counted ? '  ${r.count}' : ''}';
     final shows = <String>[];
     final signed = item == null ? null : SpeechAct.of(item);
     if (signed != null) {

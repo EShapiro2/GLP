@@ -488,7 +488,7 @@ class _TabScreenState extends State<TabScreen> {
 
   /// The screen of a platform compiled from a contract with pragmas: a tab for each list its view names, in their order, named by the contract (vGLP 1126f4f, Section 5.4, "The contract's words": "for each list the app shows, its name and what it lists"), each holding at its top the approval questions of the acts drawn on it, the tab of an act's contract as the request's widget term says (named_widgets.dart, `ActInfo`), the other questions in the first, and the request question drawn in the tab, or construct 0 where none is open.
   Widget _worded(
-      List<({String name, String predicate})> lists,
+      List<({String name, String predicate, bool counted})> lists,
       OpenConstruct? c0,
       OpenConstruct? request,
       List<OpenConstruct> approvals,
@@ -540,7 +540,7 @@ class _TabScreenState extends State<TabScreen> {
             ],
           ),
         );
-    Widget label(({String name, String predicate}) l) {
+    Widget label(({String name, String predicate, bool counted}) l) {
       final n = approvals
           .where((a) => listOf(a) == l.predicate && _open(a))
           .length;
