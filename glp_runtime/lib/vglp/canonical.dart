@@ -1631,7 +1631,7 @@ class DeclaredWidget {
         final ks = _ints(x.args[1]);
         if (ks == null) return null;
         is_.add('atom(${constantSource(pc)}, [${ks.join(', ')}])');
-      } else if (x.functor == 'req' || x.functor == 'forb') {
+      } else if (x.functor == 'req' || x.functor == 'forb' || x.functor == 'unless') {
         // The precondition of the act at the proposer's role (vGLP feda043, Section 6.2): each argument at(K), grp(J, K) or any.
         final as_ = _items(x.args[1]);
         if (as_ == null) return null;
