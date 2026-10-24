@@ -31,7 +31,8 @@ source([
    type('CsKeys', [ks('Key', 'Key', 'Key', 'Key', 'Key')]),
    type('CsPick', [pick('Key'), nothing]),
    type('CsKeys1', [['Key' | 'List'('Key')]]),
-   type('CsTodo', [establish, know('Key'), meet('Key'), enter1('Key', 'Key'), enter2('Key', 'Key', 'Key'), steady]),
+   type('CsTodo', [establish, meet('Key'), enter1('Key', 'Key'), mkp('Key', 'Key', 'Key'), steady]),
+   type('CsMk', [mk('Key', 'Key'), none]),
    type('CsPair', [acq('Key', 'Key')]),
 
    %% THE CENSUS.  cs_village1 draws one village of ten families, the run's (Udi, 2026-10-24: an hour at most); cs_villages four villages of ten families, cs_villages40 forty, for the cost
@@ -174,7 +175,7 @@ source([
    clause(cs_attr_families([var('_') | var('As')], var('Fs?')), [otherwise], [cs_attr_families(var('As?'), var('Fs'))]),
    decl(cs_last_view(dual('List'('Output')), 'List'('Atom'))),
    clause(cs_last_view([], []), [], []),
-   clause(cs_last_view([view(var('As'), var('_')) | var('_')], var('As?')), [], []),
+   clause(cs_last_view([view(var('As'), var('_'), var('_'), var('_')) | var('_')], var('As?')), [], []),
    clause(cs_last_view([var('_') | var('L')], var('As?')), [otherwise], [cs_last_view(var('L?'), var('As'))]),
    decl(cs_friends(dual('List'('Atom')), 'List'('Key'))),
    clause(cs_friends([], []), [], []),
@@ -186,7 +187,7 @@ source([
    clause(cs_parenting([var('_') | var('As')], var('Cs?')), [otherwise], [cs_parenting(var('As?'), var('Cs'))]),
    decl(cs_parents_in(dual('List'('Atom')), 'List'('Key'))),
    clause(cs_parents_in([], []), [], []),
-   clause(cs_parents_in([parent(var('P')) | var('As')], [var('P?') | var('Ps?')]), [], [cs_parents_in(var('As?'), var('Ps'))]),
+   clause(cs_parents_in([creator(var('P')) | var('As')], [var('P?') | var('Ps?')]), [], [cs_parents_in(var('As?'), var('Ps'))]),
    clause(cs_parents_in([var('_') | var('As')], var('Ps?')), [otherwise], [cs_parents_in(var('As?'), var('Ps'))]),
    decl(cs_all_parents(dual('List'('CsFam')), 'List'('Key'))),
    clause(cs_all_parents([], []), [], []),
@@ -214,7 +215,7 @@ source([
    %%   person local.  Menu =::= local_menu.
    %%   local_menu(menu(Me, Ks, R?), person(_, _, As), S) :- seen(L), cs_parent_menu(95, Me?, Ks?, As?, L?, S?, slot(R)).
    %%   person open.   Menu =::= open_menu.   (the same at 60)
-   %% A parent first establishes their identity, enters the key of each person they know from outside the app (known(Q), one drawn at random among those the menu does not yet list, since a key is listed only once both have entered each other's), then meets their co-parent and enters their children, and then proposes to meet each other adult so known,
+   %% A parent first establishes their identity, meets their co-parent, enters their children where they are the family's first parent, the children's creator, and makes the co-parent a parent of each, then proposes to meet each other adult they know from outside the app,
    %% one per menu, and enters each of their children not yet entered, the first parent of the family
    %% proposing the entering with the second; each of these answers comes after an hour on average.  Then
    %% the parent answers the menu 67 times a year on average: 52 in 67 an offer of friendship to a parent
@@ -238,9 +239,33 @@ source([
    decl(cs_parent_menu(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Output')), dual('Integer'), dual('Slot'('Request')))),
    clause(cs_parent_menu(var('Local'), var('Me'), var('Ks'), var('As'), var('L'), var('S'), slot(var('W?'))), [], [cs_last_view(var('L?'), var('Atoms')), cs_parent_menu1(var('Atoms?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('S?'), slot(var('W')))]),
    decl(cs_parent_menu1(dual('List'('Atom')), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_parent_menu1(var('Atoms'), var('Local'), var('Me'), var('Ks'), var('As'), var('S'), slot(var('W?'))), [ground(var('Atoms?')), ground(var('As?')), ground(var('Ks?'))], [cs_has_identity(var('Atoms?'), var('Id')), cs_attr_knows(var('As?'), var('Kn')), cs_parenting(var('Atoms?'), var('Entered')), cs_attr_children(var('As?'), var('Ch')), cs_attr_parents(var('As?'), var('Pa')), cs_knows_atoms(var('Atoms?'), var('Kw')), cs_parent_menu2(var('Ch?'), var('Entered?'), var('Kw?'), var('Id?'), var('Kn?'), var('Pa?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
+   clause(cs_parent_menu1(var('Atoms'), var('Local'), var('Me'), var('Ks'), var('As'), var('S'), slot(var('W?'))), [ground(var('Atoms?')), ground(var('As?')), ground(var('Me?'))], [cs_has_identity(var('Atoms?'), var('Id')), cs_attr_knows(var('As?'), var('Kn')), cs_attr_children(var('As?'), var('Ch')), cs_attr_parents(var('As?'), var('Pa')), cs_knows_atoms(var('Atoms?'), var('Kw')), cs_created(var('Atoms?'), var('Cr')), cs_parent_menu2(var('Ch?'), var('Cr?'), var('Kw?'), var('Id?'), var('Kn?'), var('Pa?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
    decl(cs_parent_menu2(dual('List'('Key')), dual('List'('Key')), dual('List'('Key')), dual('YesNo'), dual('List'('Key')), dual('List'('Key')), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_parent_menu2(var('Ch'), var('Entered'), var('Kw'), var('Id'), var('Kn'), var('Pa'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Ch?')), ground(var('Ks?')), ground(var('Kw?')), ground(var('Pa?'))], [cs_minus(var('Kn?'), var('Ks?'), var('Mis')), random(var('S?'), 2147483646, var('Sp'), var('S1')), cs_pick_or_nothing(var('Mis?'), var('Sp?'), var('Miss')), cs_first_missing(var('Ch?'), var('Entered?'), var('Un')), cs_minus(var('Ks?'), var('Ch?'), var('Adults')), cs_minus(var('Adults?'), var('Kw?'), var('Um')), random(var('S1?'), 2147483646, var('Su'), var('S2')), cs_pick_or_nothing(var('Um?'), var('Su?'), var('Unmet')), cs_pa_kw(var('Pa?'), var('Me?'), var('Kw?'), var('S2?'), var('CoU'), var('S3')), cs_todo_of(var('Id?'), var('Miss?'), var('CoU?'), var('Un?'), var('Unmet?'), var('Me?'), var('Pa?'), var('Todo')), cs_parent_do(var('Todo?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S3?'), slot(var('W')))]),
+   clause(cs_parent_menu2(var('Ch'), var('Cr'), var('Kw'), var('Id'), var('Kn'), var('Pa'), var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Ch?')), ground(var('Cr?')), ground(var('Kw?')), ground(var('Pa?')), ground(var('Me?')), ground(var('Atoms?'))], [cs_minus(var('Kn?'), var('Ch?'), var('Ad')), cs_minus(var('Ad?'), var('Kw?'), var('Um')), random(var('S?'), 2147483646, var('Su'), var('S1')), cs_pick_or_nothing(var('Um?'), var('Su?'), var('Unmet')), cs_pa_kw(var('Pa?'), var('Me?'), var('Kw?'), var('S1?'), var('CoU'), var('S2')), cs_is_creator(var('Pa?'), var('Me?'), var('IsC')), cs_dup_yn(var('IsC?'), var('IsC1'), var('IsC2')), cs_un(var('IsC1?'), var('Ch?'), var('Cr?'), var('Un')), cs_mk(var('IsC2?'), var('Pa?'), var('Cr?'), var('Atoms?'), var('Mk')), cs_todo_of(var('Id?'), var('CoU?'), var('Un?'), var('Mk?'), var('Unmet?'), var('Me?'), var('Todo')), cs_parent_do(var('Todo?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S2?'), slot(var('W')))]),
+   decl(cs_created(dual('List'('Atom')), 'List'('Key'))),
+   clause(cs_created([], []), [], []),
+   clause(cs_created([created(var('C')) | var('As')], [var('C?') | var('Cs?')]), [], [cs_created(var('As?'), var('Cs'))]),
+   clause(cs_created([var('_') | var('As')], var('Cs?')), [otherwise], [cs_created(var('As?'), var('Cs'))]),
+   decl(cs_made_for(dual('List'('Atom')), dual('Key'), 'List'('Key'))),
+   clause(cs_made_for([], var('_'), []), [], []),
+   clause(cs_made_for([made(var('B'), var('C')) | var('As')], var('P'), [var('C?') | var('Cs?')]), ['=?='(var('B?'), var('P?')), ground(var('P?'))], [cs_made_for(var('As?'), var('P?'), var('Cs'))]),
+   clause(cs_made_for([var('_') | var('As')], var('P'), var('Cs?')), [otherwise, ground(var('P?'))], [cs_made_for(var('As?'), var('P?'), var('Cs'))]),
+   decl(cs_is_creator(dual('List'('Key')), dual('Key'), 'YesNo')),
+   clause(cs_is_creator([], var('_'), no), [], []),
+   clause(cs_is_creator([var('P1') | var('_')], var('Me'), yes), ['=?='(var('P1?'), var('Me?')), ground(var('Me?'))], [true]),
+   clause(cs_is_creator([var('_') | var('_')], var('_'), no), [otherwise], [true]),
+   decl(cs_dup_yn(dual('YesNo'), 'YesNo', 'YesNo')),
+   clause(cs_dup_yn(yes, yes, yes), [], []),
+   clause(cs_dup_yn(no, no, no), [], []),
+   decl(cs_un(dual('YesNo'), dual('List'('Key')), dual('List'('Key')), 'CsPick')),
+   clause(cs_un(yes, var('Ch'), var('Cr'), var('Un?')), [], [cs_first_missing(var('Ch?'), var('Cr?'), var('Un'))]),
+   clause(cs_un(no, var('_'), var('_'), nothing), [], []),
+   decl(cs_mk(dual('YesNo'), dual('List'('Key')), dual('List'('Key')), dual('List'('Atom')), 'CsMk')),
+   clause(cs_mk(yes, [var('_'), var('P2')], var('Cr'), var('Atoms'), var('Mk?')), [ground(var('P2?'))], [cs_made_for(var('Atoms?'), var('P2?'), var('Md')), cs_first_missing(var('Cr?'), var('Md?'), var('C')), cs_mk1(var('C?'), var('P2?'), var('Mk'))]),
+   clause(cs_mk(var('_'), var('_'), var('_'), var('_'), none), [otherwise], [true]),
+   decl(cs_mk1(dual('CsPick'), dual('Key'), 'CsMk')),
+   clause(cs_mk1(pick(var('C')), var('P2'), mk(var('P2?'), var('C?'))), [], []),
+   clause(cs_mk1(nothing, var('_'), none), [], []),
    decl(cs_has_identity(dual('List'('Atom')), 'YesNo')),
    clause(cs_has_identity([], no), [], []),
    clause(cs_has_identity([identity | var('_')], yes), [], []),
@@ -251,22 +276,18 @@ source([
    clause(cs_knows_atoms([var('_') | var('As')], var('Qs?')), [otherwise], [cs_knows_atoms(var('As?'), var('Qs'))]),
    decl(cs_pa_kw(dual('List'('Key')), dual('Key'), dual('List'('Key')), dual('Integer'), 'CsPick', 'Integer')),
    clause(cs_pa_kw(var('Pa'), var('Me'), var('Kw'), var('S'), var('CoU?'), var('S1?')), [ground(var('Me?'))], [cs_without(var('Pa?'), var('Me?'), var('Co')), cs_minus(var('Co?'), var('Kw?'), var('Cm')), random(var('S?'), 2147483646, var('Sc'), var('S1')), cs_pick_or_nothing(var('Cm?'), var('Sc?'), var('CoU'))]),
-   decl(cs_todo_of(dual('YesNo'), dual('CsPick'), dual('CsPick'), dual('CsPick'), dual('CsPick'), dual('Key'), dual('List'('Key')), 'CsTodo')),
-   clause(cs_todo_of(no, var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), establish), [], []),
-   clause(cs_todo_of(yes, pick(var('Q')), var('_'), var('_'), var('_'), var('_'), var('_'), know(var('Q?'))), [], []),
-   clause(cs_todo_of(yes, nothing, pick(var('Q')), pick(var('_')), var('_'), var('_'), var('_'), meet(var('Q?'))), [], []),
-   clause(cs_todo_of(yes, nothing, nothing, pick(var('C')), var('_'), var('Me'), [var('_')], enter1(var('Me?'), var('C?'))), [], []),
-   clause(cs_todo_of(yes, nothing, nothing, pick(var('C')), var('_'), var('Me'), [var('P1'), var('P2')], enter2(var('Me?'), var('P2?'), var('C?'))), ['=?='(var('Me?'), var('P1?')), ground(var('Me?'))], [true]),
-   clause(cs_todo_of(yes, nothing, nothing, pick(var('_')), pick(var('Q')), var('_'), [var('_'), var('_')], meet(var('Q?'))), [otherwise], [true]),
-   clause(cs_todo_of(yes, nothing, nothing, pick(var('_')), nothing, var('_'), [var('_'), var('_')], steady), [otherwise], [true]),
-   clause(cs_todo_of(yes, nothing, var('_'), nothing, pick(var('Q')), var('_'), var('_'), meet(var('Q?'))), [], []),
-   clause(cs_todo_of(yes, nothing, var('_'), nothing, nothing, var('_'), var('_'), steady), [], []),
+   decl(cs_todo_of(dual('YesNo'), dual('CsPick'), dual('CsPick'), dual('CsMk'), dual('CsPick'), dual('Key'), 'CsTodo')),
+   clause(cs_todo_of(no, var('_'), var('_'), var('_'), var('_'), var('_'), establish), [], []),
+   clause(cs_todo_of(yes, pick(var('Q')), var('_'), var('_'), var('_'), var('_'), meet(var('Q?'))), [], []),
+   clause(cs_todo_of(yes, nothing, pick(var('C')), var('_'), var('_'), var('Me'), enter1(var('Me?'), var('C?'))), [], []),
+   clause(cs_todo_of(yes, nothing, nothing, mk(var('P2'), var('C')), var('_'), var('Me'), mkp(var('Me?'), var('P2?'), var('C?'))), [], []),
+   clause(cs_todo_of(yes, nothing, nothing, none, pick(var('Q')), var('_'), meet(var('Q?'))), [], []),
+   clause(cs_todo_of(yes, nothing, nothing, none, nothing, var('_'), steady), [], []),
    decl(cs_parent_do(dual('CsTodo'), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
    clause(cs_parent_do(establish, var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), propose(establish(var('Me?')))), rate(1, hour))]),
-   clause(cs_parent_do(know(var('Q')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), known(var('Q?'))), rate(1, hour))]),
    clause(cs_parent_do(meet(var('Q')), var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), propose(meet(var('Me?'), var('Q?')))), rate(1, hour))]),
    clause(cs_parent_do(enter1(var('Me'), var('C')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), propose(enter(var('Me?'), var('C?')))), rate(1, hour))]),
-   clause(cs_parent_do(enter2(var('Me'), var('Q'), var('C')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), propose(enter_2(var('Me?'), var('Q?'), var('C?')))), rate(1, hour))]),
+   clause(cs_parent_do(mkp(var('Me'), var('Q'), var('C')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), propose(make_parent(var('Me?'), var('Q?'), var('C?')))), rate(1, hour))]),
    clause(cs_parent_do(steady, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [random(var('S?'), 67, var('K'), var('S1')), rated(cs_parent_act(var('K?'), var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S1?'), slot(var('W'))), rate(67, year))]),
    decl(cs_request(dual('Slot'('Request')), dual('Request'))),
    %% cs_request(slot(W), R?): the request R as the menu's answer, after an hour on average where rated so.
@@ -280,7 +301,7 @@ source([
    clause(cs_parent_act(67, var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [], [cs_end_friendship(var('Local?'), var('Me?'), var('Ks?'), var('As?'), var('Atoms?'), var('S?'), slot(var('W')))]),
    %% cs_offer: an offer of friendship, propose(befriend(Me, Q)), Q a parent the agent knows who is not
    %% yet a friend, of the own village Local times in 100 and of another otherwise, from the other list
-   %% where the one drawn is empty, and known(Q0) for the first person known where both are empty.
+   %% where the one drawn is empty, and a meeting with the first person known where both are empty.
    decl(cs_offer(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
    clause(cs_offer(var('Local'), var('Me'), var('Ks'), var('As'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Me?')), ground(var('Ks?')), ground(var('As?'))], [cs_attr_families(var('As?'), var('All')), cs_attr_village(var('As?'), var('V')), cs_friends(var('Atoms?'), var('Fr')), cs_cands(var('All?'), var('V?'), var('Me?'), var('Ks?'), var('Fr?'), var('Vc'), var('Oc')), random(var('S?'), 100, var('D'), var('S1')), cs_offer_from(var('D?'), var('Local?'), var('Vc?'), var('Oc?'), var('Me?'), var('Ks?'), var('S1?'), slot(var('W')))]),
    decl(cs_cands(dual('List'('CsFam')), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('Key')), 'List'('Key'), 'List'('Key'))),
@@ -292,7 +313,7 @@ source([
    decl(cs_offer_to(dual('List'('Key')), dual('List'('Key')), dual('Key'), dual('List'('Key')), dual('Integer'), dual('Slot'('Request')))),
    clause(cs_offer_to([var('X') | var('Xs')], var('_'), var('Me'), var('_'), var('S'), slot(propose(befriend(var('Me?'), var('Q?'))))), [], [cs_pick([var('X?') | var('Xs?')], var('S?'), var('Q'), var('_'))]),
    clause(cs_offer_to([], [var('X') | var('Xs')], var('Me'), var('_'), var('S'), slot(propose(befriend(var('Me?'), var('Q?'))))), [], [cs_pick([var('X?') | var('Xs?')], var('S?'), var('Q'), var('_'))]),
-   clause(cs_offer_to([], [], var('_'), [var('Q0') | var('_')], var('_'), slot(known(var('Q0?')))), [], []),
+   clause(cs_offer_to([], [], var('Me'), [var('Q0') | var('_')], var('_'), slot(propose(meet(var('Me?'), var('Q0?'))))), [], []),
    %% cs_child_request: propose(child_befriend(R, Sc, Me, Q)), R a child of Me entered, Q a friend of Me who
    %% is a parent, Sc a child of Q, each drawn uniformly; an offer of friendship where there is none.
    decl(cs_child_request(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
@@ -342,25 +363,27 @@ source([
    %% a child's befriending an adult, approved 20 times in 100 by a strict parent and 80 by a permissive
    %% one; anything else approved.
    %%   person strict.  Approval =::= strict_approval.
-   %%   strict_approval(approval(attempt(_, _, _, enter_2(_, _, _), _), A?), _, _) :- cs_say(slot(A), yes).
-   %%   strict_approval(approval(attempt(_, _, _, C, _), A?), _, S) :- otherwise | cs_parent_answer(20, C?, S?, slot(A)) @ 1/day.
+   %%   strict_approval(approval(attempt(_, _, _, make_parent(_, _, _), _), _, A?), _, _) :- cs_say(slot(A), yes).
+   %%   strict_approval(approval(attempt(_, _, _, C, _), _, A?), _, S) :- otherwise | cs_parent_answer(20, C?, S?, slot(A)) @ 1/day.
    %%   person permissive.  (the same at 80)
 
    person(strict),
    binds('Approval', strict_approval),
    decl(strict_approval(dual('Approval'), dual('Person'), dual('Integer'))),
-   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), meet(var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), introduce(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_parent_answer(20, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
+   clause(strict_approval(approval(hello(var('_'), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), make_parent(var('_'), var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), meet(var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), introduce(var('_'), var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('_'), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_parent_answer(20, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
 
    person(permissive),
    binds('Approval', permissive_approval),
    decl(permissive_approval(dual('Approval'), dual('Person'), dual('Integer'))),
-   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), meet(var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), introduce(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_parent_answer(80, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
+   clause(permissive_approval(approval(hello(var('_'), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), make_parent(var('_'), var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), meet(var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), introduce(var('_'), var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('_'), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_parent_answer(80, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
    decl(cs_say(dual('Slot'('YesNo')), dual('YesNo'))),
    clause(cs_say(slot(var('V?')), var('V')), [], []),
    decl(cs_parent_answer(dual('Integer'), dual('Class'), dual('Integer'), dual('Slot'('YesNo')))),
@@ -375,16 +398,16 @@ source([
    clause(cs_yes_if(var('K'), var('P'), no), ['>'(var('K?'), var('P?'))], [true]),
 
    %% THE CHILDREN'S PROFILES.  A child has one dimension, the response, choosy or keen, which answers both
-   %% questions.  A child first enters the keys of their parents (known(Q)), each after an hour on average; then the child answers the menu once a
+   %% questions.  A child knows their parents by being entered and made their child; then the child answers the menu once a
    %% year on average, ending a friendship with a friend who is not a parent, and where there is none makes
    %% known a person known already.  Asked to approve their entering, a child approves at once; asked to
    %% approve a friendship or a joining, a choosy child approves 50 times in 100 and a keen one 90, after a
    %% day on average; anything else they approve.
    %%   person choosy.  Menu =::= child_menu.  Approval =::= choosy_approval.
    %%   child_menu(menu(Me, Ks, R?), person(_, _, As), S) :- seen(L), cs_child_menu(Me?, Ks?, As?, L?, S?, slot(R)).
-   %%   choosy_approval(approval(attempt(_, _, _, enter(_, _), _), A?), _, _) :- cs_say(slot(A), yes).  (and enter_2)
-   %%   choosy_approval(approval(attempt(_, _, _, enter_2(_, _, _), _), A?), _, _) :- cs_say(slot(A), yes).
-   %%   choosy_approval(approval(attempt(_, _, _, C, _), A?), _, S) :- otherwise | cs_child_answer(50, C?, S?, slot(A)) @ 1/day.
+   %%   choosy_approval(approval(attempt(_, _, _, enter(_, _), _), _, A?), _, _) :- cs_say(slot(A), yes).  (and make_parent, and a hello)
+   %%   choosy_approval(approval(attempt(_, _, _, make_parent(_, _, _), _), _, A?), _, _) :- cs_say(slot(A), yes).
+   %%   choosy_approval(approval(attempt(_, _, _, C, _), _, A?), _, S) :- otherwise | cs_child_answer(50, C?, S?, slot(A)) @ 1/day.
    %%   person keen.  (the same menu; the approval at 90)
 
    person(choosy),
@@ -393,27 +416,29 @@ source([
    decl(child_menu(dual('Menu'), dual('Person'), dual('Integer'))),
    clause(child_menu(menu(var('Me'), var('Ks'), var('R?')), person(var('_'), var('_'), var('As')), var('S')), [], [seen(var('L')), cs_child_menu(var('Me?'), var('Ks?'), var('As?'), var('L?'), var('S?'), slot(var('R')))]),
    decl(cs_child_menu(dual('Key'), dual('List'('Key')), dual('List'('CsAttr')), dual('List'('Output')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_child_menu(var('Me'), var('Ks'), var('As'), var('L'), var('S'), slot(var('W?'))), [ground(var('Ks?')), ground(var('As?'))], [cs_attr_parents(var('As?'), var('Pa')), cs_minus(var('Pa?'), var('Ks?'), var('Mis')), random(var('S?'), 2147483646, var('Sp'), var('S1')), cs_pick_or_nothing(var('Mis?'), var('Sp?'), var('Miss')), cs_last_view(var('L?'), var('Atoms')), cs_child_do(var('Miss?'), var('Me?'), var('Ks?'), var('Atoms?'), var('S1?'), slot(var('W')))]),
+   clause(cs_child_menu(var('Me'), var('Ks'), var('As'), var('L'), var('S'), slot(var('W?'))), [ground(var('Ks?')), ground(var('As?'))], [cs_last_view(var('L?'), var('Atoms')), cs_child_do(nothing, var('Me?'), var('Ks?'), var('Atoms?'), var('S?'), slot(var('W')))]),
    decl(cs_child_do(dual('CsPick'), dual('Key'), dual('List'('Key')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
-   clause(cs_child_do(pick(var('Q')), var('_'), var('_'), var('_'), var('_'), slot(var('W?'))), [], [rated(cs_request(slot(var('W')), known(var('Q?'))), rate(1, hour))]),
+   clause(cs_child_do(pick(var('_')), var('Me'), var('Ks'), var('Atoms'), var('S'), slot(var('W?'))), [], [rated(cs_child_act(var('Me?'), var('Ks?'), var('Atoms?'), var('S?'), slot(var('W'))), rate(1, year))]),
    clause(cs_child_do(nothing, var('Me'), var('Ks'), var('Atoms'), var('S'), slot(var('W?'))), [], [rated(cs_child_act(var('Me?'), var('Ks?'), var('Atoms?'), var('S?'), slot(var('W'))), rate(1, year))]),
    decl(cs_child_act(dual('Key'), dual('List'('Key')), dual('List'('Atom')), dual('Integer'), dual('Slot'('Request')))),
    clause(cs_child_act(var('Me'), var('Ks'), var('Atoms'), var('S'), slot(var('W?'))), [ground(var('Atoms?'))], [cs_friends(var('Atoms?'), var('Fr')), cs_parents_in(var('Atoms?'), var('Pa')), cs_minus(var('Fr?'), var('Pa?'), var('Fq')), cs_pick_or_nothing(var('Fq?'), var('S?'), var('Qp')), cs_child_act1(var('Qp?'), var('Me?'), var('Ks?'), slot(var('W')))]),
    decl(cs_child_act1(dual('CsPick'), dual('Key'), dual('List'('Key')), dual('Slot'('Request')))),
    clause(cs_child_act1(pick(var('Q')), var('Me'), var('_'), slot(propose(unfriend(var('Me?'), var('Q?'))))), [], []),
-   clause(cs_child_act1(nothing, var('_'), [var('Q0') | var('_')], slot(known(var('Q0?')))), [], []),
+   clause(cs_child_act1(nothing, var('Me'), [var('Q0') | var('_')], slot(propose(unfriend(var('Me?'), var('Q0?'))))), [], []),
    decl(choosy_approval(dual('Approval'), dual('Person'), dual('Integer'))),
-   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), enter(var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_child_answer(50, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
+   clause(choosy_approval(approval(hello(var('_'), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), enter(var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), make_parent(var('_'), var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('_'), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_child_answer(50, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
 
    person(keen),
    binds('Menu', child_menu),
    binds('Approval', keen_approval),
    decl(keen_approval(dual('Approval'), dual('Person'), dual('Integer'))),
-   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), enter(var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_child_answer(90, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
+   clause(keen_approval(approval(hello(var('_'), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), enter(var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), make_parent(var('_'), var('_'), var('_')), var('_')), var('_'), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('_'), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_child_answer(90, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
    decl(cs_child_answer(dual('Integer'), dual('Class'), dual('Integer'), dual('Slot'('YesNo')))),
    clause(cs_child_answer(var('P'), child_befriend(var('_'), var('_'), var('_'), var('_')), var('S'), slot(var('A?'))), [], [random(var('S?'), 100, var('K'), var('_')), cs_yes_if(var('K?'), var('P?'), var('A'))]),
    clause(cs_child_answer(var('P'), child_adult_befriend(var('_'), var('_'), var('_')), var('S'), slot(var('A?'))), [], [random(var('S?'), 100, var('K'), var('_')), cs_yes_if(var('K?'), var('P?'), var('A'))]),
