@@ -6650,7 +6650,8 @@ echo ""
 # The line, exactly, among the REPL's lines, its prompt stripped and an unbound tail written _.
 apps_line() {
     local name="$1" line="$2" out="$3"
-    if echo "$out" | sed -e 's/^\(GLP> \)*//' -e 's/| X[0-9]*\]$/| _]/' | grep -qFx -- "$line"; then
+    # The line is compared whole by awk: macOS's grep runs out of memory on a fixed-string line of some 5000 characters ("grep: out of memory", with the line as an argument and from a file alike), and the line of a play's screen is longer.
+    if echo "$out" | sed -e 's/^\(GLP> \)*//' -e 's/| X[0-9]*\]$/| _]/' | APPS_LINE="$line" awk 'BEGIN { want = ENVIRON["APPS_LINE"] } $0 == want { found = 1 } END { exit !found }'; then
         _check_pass "$name"
     else
         _check_fail "$name" "expected the line: $line"

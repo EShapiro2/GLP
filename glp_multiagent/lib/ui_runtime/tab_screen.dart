@@ -562,7 +562,14 @@ class _TabScreenState extends State<TabScreen> {
         children: [
           Material(
             color: Colors.white,
-            child: TabBar(tabs: [for (final l in lists) label(l)]),
+            // More than four lists do not fit a phone's width at the tab bar's default padding, and their names would break inside a word ("Contac ts"): the bar then scrolls, each name on one line, with a narrower padding.
+            child: lists.length > 4
+                ? TabBar(
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.center,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    tabs: [for (final l in lists) label(l)])
+                : TabBar(tabs: [for (final l in lists) label(l)]),
           ),
           Expanded(
             child: TabBarView(
