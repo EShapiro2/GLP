@@ -127,22 +127,26 @@ for my $f (@order) {
             $first = 0;
             my @w;
             my @lw = map { lc } ($rest =~ /([A-Za-z0-9_]+)/g);
-            # A predicate whose name is two or three words of the line, an underscore read as a space, is named by them, and the words it covers name no other predicate, as "principal of" names principal_of and not principal (the proposal of Code #14 to vGLP, 2026-10-24, for GAI.txt, "those Alice is principal of").
-            my %covered;
-            for my $n (3, 2) {
-                for my $i (0 .. $#lw - $n + 1) {
-                    next if grep { $covered{$_} } $i .. $i + $n - 1;
-                    my $ph = join("_", @lw[$i .. $i + $n - 1]);
-                    next unless $preds{$ph};
-                    push @w, $ph;
-                    $covered{$_} = 1 for $i .. $i + $n - 1;
+            # The predicate a tab lists is named by its name, an underscore read as a space, the longest such phrase in the line (vGLP 110caf4, Section 5.4, "The contract words"), a word also read without a final s, as "friends" names friend and "principal of" principal_of; the words of the line are given where the contract term is not.
+            my ($best, @found) = (0);
+            for my $i (0 .. $#lw) {
+                for my $n (1 .. 3) {
+                    last if $i + $n - 1 > $#lw;
+                    my @ws = @lw[$i .. $i + $n - 1];
+                    for my $ph (join("_", @ws), ($ws[-1] =~ /s$/ && length($ws[-1]) > 1) ? join("_", @ws[0 .. $#ws - 1], substr($ws[-1], 0, -1)) : ()) {
+                        next unless $preds{$ph};
+                        my $len = $n;
+                        if ($len > $best) { ($best, @found) = ($len, $ph) }
+                        elsif ($len == $best && !grep { $_ eq $ph } @found) { push @found, $ph }
+                    }
                 }
             }
-            for my $i (0 .. $#lw) {
-                next if $covered{$i};
-                my $w = $lw[$i];
-                push @w, $w;
-                push @w, substr($w, 0, -1) if length($w) > 1 && $w =~ /s$/;
+            if (@found) { @w = @found }
+            else {
+                for my $w (@lw) {
+                    push @w, $w;
+                    push @w, substr($w, 0, -1) if length($w) > 1 && $w =~ /s$/;
+                }
             }
             push @lists, "list(" . q_string($title) . ", [" . join(", ", map { q_atom($_) } @w) . "])";
             $tab = $title;
