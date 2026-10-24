@@ -188,7 +188,9 @@ Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
 % rest of Ks, or the precondition of the act at the proposer's role, req(P,
 % As) for an atom it requires or deletes there and forb(P, As) for one it
 % forbids, As the place of each argument, at(K), a group's, grp(J, K), or
-% any (vGLP feda043, Section 6.2) (vGLP 932c710,
+% any (vGLP feda043, Section 6.2), or unless(P, As), an atom of the viewer's
+% state from which the schemas prove that the person at a place holds an atom
+% the act forbids there (vGLP 893d4ea, Section 6.2) (vGLP 932c710,
 % Section 6.2: "a person, a group or an item"), Ks the places a field for a key fills where the peer is
 % not listed, and Ws the text of its request form, each word say(S) or the
 % person at place I, at(I) (vGLP, Section 6.2, "The words a platform shows":
@@ -213,7 +215,8 @@ ButtonValue ::= Constant ; [] ; label(String, ButtonValue).
 ActPlace ::= place(String, Integer, List(Integer), List(GroupAt), List(ItemAt), List(Integer), List(FormWord)).
 GroupAt ::= group(Integer, Integer).
 ItemAt ::= item(Integer, Constant) ; atom(Constant, List(Integer))
-      ; req(Constant, List(CondAt)) ; forb(Constant, List(CondAt)).
+      ; req(Constant, List(CondAt)) ; forb(Constant, List(CondAt))
+      ; unless(Constant, List(CondAt)).
 CondAt ::= at(Integer) ; grp(Integer, Integer) ; any.
 FormWord ::= say(String) ; at(Integer).
 

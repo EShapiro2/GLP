@@ -998,9 +998,12 @@ class ActInfo {
   final List<(String, List<int>)> held;
   /// The precondition of the act at the proposer's role, each atom it requires or deletes there, and each it forbids, [forbids] true, by its predicate and each argument: the place [int] it is at, a group by the places of its leader and its name, `(int, int)`, or null, any (vGLP feda043, Section 6.2, "The words a platform shows": "where the viewer's state holds the atoms the act requires at the viewer's role and lacks those it forbids there"; `req(P, As)` and `forb(P, As)`, programs/self.glp).
   final List<({bool forbids, String pred, List<Object?> args})> conds;
+  /// The atoms of the viewer's state from which the schemas prove that the person at a place holds an atom the act forbids there, `unless(P, As)` (vGLP 893d4ea, Section 6.2: "the viewer holding the first shows that x holds the second, and an act that forbids the second at x's role is not drawn beside x").
+  final List<({String pred, List<Object?> args})> unless;
 
   const ActInfo(this.tab, this.me, this.persons, this.groups, this.items,
-      this.keys, this.words, [this.held = const [], this.conds = const []]);
+      this.keys, this.words,
+      [this.held = const [], this.conds = const [], this.unless = const []]);
 
   /// The places the atoms of [held] fill.
   Set<int> get heldPlaces => {
@@ -1016,9 +1019,10 @@ class ActInfo {
     final its = <(int, String)>[];
     final held = <(String, List<int>)>[];
     final conds = <({bool forbids, String pred, List<Object?> args})>[];
+    final unless = <({String pred, List<Object?> args})>[];
     for (final it in (xs0[4] as GList).items) {
       final (itf, itxs) = ctorArgs(it);
-      if ((itf == 'req' || itf == 'forb') &&
+      if ((itf == 'req' || itf == 'forb' || itf == 'unless') &&
           itxs.length == 2 &&
           itxs[1] is GList) {
         final args = <Object?>[];
@@ -1037,7 +1041,11 @@ class ActInfo {
             return null;
           }
         }
-        conds.add((forbids: itf == 'forb', pred: displayText(itxs[0]), args: args));
+        if (itf == 'unless') {
+          unless.add((pred: displayText(itxs[0]), args: args));
+        } else {
+          conds.add((forbids: itf == 'forb', pred: displayText(itxs[0]), args: args));
+        }
       } else if (itf == 'item' && itxs.length == 2 && itxs[0] is GInt) {
         its.add(((itxs[0] as GInt).value, displayText(itxs[1])));
       } else if (itf == 'atom' && itxs.length == 2 && itxs[1] is GList) {
@@ -1081,7 +1089,7 @@ class ActInfo {
         return null;
       }
     }
-    return ActInfo(displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds);
+    return ActInfo(displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless);
   }
 
   /// Whether the act names, beside the person proposing it, a person, a group or an item.
@@ -1129,6 +1137,11 @@ class ActInfo {
       return true;
     }
 
+    for (final u in unless) {
+      final bound = u.args.every((x) => x is! int || at.containsKey(x)) &&
+          u.args.any((x) => x is int);
+      if (bound && atoms.any((a) => matches(a, u.pred, u.args))) return false;
+    }
     for (final c in conds) {
       if (c.forbids) {
         final bound = c.args.every((x) => x is int
