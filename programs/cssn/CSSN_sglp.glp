@@ -30,6 +30,7 @@ source([
    type('Person', [person('Key', 'Constant', 'List'('CsAttr'))]),
    type('CsKeys', [ks('Key', 'Key', 'Key', 'Key', 'Key')]),
    type('CsPick', [pick('Key'), nothing]),
+   type('CsKeys1', [['Key' | 'List'('Key')]]),
    type('CsTodo', [establish, know('Key'), enter1('Key', 'Key'), enter2('Key', 'Key', 'Key'), steady]),
    type('CsPair', [acq('Key', 'Key')]),
 
@@ -115,12 +116,19 @@ source([
    clause(cs_two([var('X')], var('S'), [var('X?')], var('S?')), [], []),
    clause(cs_two([var('X'), var('Y') | var('Xs')], var('S'), var('Two?'), var('S2?')), [ground(var('X?')), ground(var('Y?')), ground(var('Xs?'))], [cs_pick([var('X?'), var('Y?') | var('Xs?')], var('S?'), var('A'), var('S1')), cs_two1(var('A?'), [var('X?'), var('Y?') | var('Xs?')], var('S1?'), var('Two'), var('S2'))]),
    decl(cs_two1(dual('Key'), dual('List'('Key')), dual('Integer'), 'List'('Key'), 'Integer')),
-   clause(cs_two1(var('A'), var('Xs'), var('S'), [var('A?'), var('B?')], var('S1?')), [ground(var('A?'))], [cs_without(var('Xs?'), var('A?'), var('Rest')), cs_pick(var('Rest?'), var('S?'), var('B'), var('S1'))]),
-   decl(cs_pick(dual('List'('Key')), dual('Integer'), 'Key', 'Integer')),
-   clause(cs_pick(var('Xs'), var('S'), var('X?'), var('S1?')), [ground(var('Xs?'))], [length(var('Xs?'), var('N')), random(var('S?'), var('N?'), var('K'), var('S1')), cs_nth(var('K?'), var('Xs?'), var('X'))]),
-   decl(cs_nth(dual('Integer'), dual('List'('Key')), 'Key')),
-   clause(cs_nth(1, [var('X') | var('_')], var('X?')), [], []),
-   clause(cs_nth(var('K'), [var('_') | var('Xs')], var('X?')), ['>'(var('K?'), 1)], [':='(var('K1'), '-'(var('K?'), 1)), cs_nth(var('K1?'), var('Xs?'), var('X'))]),
+   clause(cs_two1(var('A'), var('Xs'), var('S'), var('Two?'), var('S1?')), [ground(var('A?'))], [cs_without(var('Xs?'), var('A?'), var('Rest')), cs_two2(var('Rest?'), var('A?'), var('S?'), var('Two'), var('S1'))]),
+   decl(cs_two2(dual('List'('Key')), dual('Key'), dual('Integer'), 'List'('Key'), 'Integer')),
+   clause(cs_two2([], var('A'), var('S'), [var('A?')], var('S?')), [], []),
+   clause(cs_two2([var('X') | var('Xs')], var('A'), var('S'), [var('A?'), var('B?')], var('S1?')), [], [cs_pick([var('X?') | var('Xs?')], var('S?'), var('B'), var('S1'))]),
+   decl(cs_pick(dual('CsKeys1'), dual('Integer'), 'Key', 'Integer')),
+   clause(cs_pick([var('X0') | var('Xs')], var('S'), var('X?'), var('S1?')), [ground(var('X0?')), ground(var('Xs?'))], [cs_length(var('Xs?'), var('N0')), ':='(var('N'), '+'(var('N0?'), 1)), random(var('S?'), var('N?'), var('K'), var('S1')), cs_nth(var('K?'), var('X0?'), var('Xs?'), var('X'))]),
+   decl(cs_length(dual('List'('Key')), 'Integer')),
+   clause(cs_length([], 0), [], []),
+   clause(cs_length([var('_') | var('Xs')], var('N?')), [], [cs_length(var('Xs?'), var('N1')), ':='(var('N'), '+'(var('N1?'), 1))]),
+   decl(cs_nth(dual('Integer'), dual('Key'), dual('List'('Key')), 'Key')),
+   clause(cs_nth(1, var('X0'), var('_'), var('X0?')), [], []),
+   clause(cs_nth(var('K'), var('_'), [var('X1') | var('Xs')], var('X?')), ['>'(var('K?'), 1)], [':='(var('K1'), '-'(var('K?'), 1)), cs_nth(var('K1?'), var('X1?'), var('Xs?'), var('X'))]),
+   clause(cs_nth(var('K'), var('X0'), [], var('X0?')), ['>'(var('K?'), 1)], [true]),
    decl(cs_without(dual('List'('Key')), dual('Key'), 'List'('Key'))),
    clause(cs_without([], var('_'), []), [], []),
    clause(cs_without([var('X') | var('Xs')], var('Y'), var('Zs?')), ['=?='(var('X?'), var('Y?')), ground(var('Y?'))], [cs_without(var('Xs?'), var('Y?'), var('Zs'))]),
@@ -143,18 +151,23 @@ source([
    %% cs_friends, cs_parenting and cs_parents_in read the friends, the children and the parents recorded
    %% in them; cs_pick_or_nothing draws from a list that may be empty.
    decl(cs_attr_knows(dual('List'('CsAttr')), 'List'('Key'))),
+   clause(cs_attr_knows([], []), [], []),
    clause(cs_attr_knows([knows(var('Kn')) | var('_')], var('Kn?')), [], []),
    clause(cs_attr_knows([var('_') | var('As')], var('Kn?')), [otherwise], [cs_attr_knows(var('As?'), var('Kn'))]),
    decl(cs_attr_children(dual('List'('CsAttr')), 'List'('Key'))),
+   clause(cs_attr_children([], []), [], []),
    clause(cs_attr_children([children(var('Ch')) | var('_')], var('Ch?')), [], []),
    clause(cs_attr_children([var('_') | var('As')], var('Ch?')), [otherwise], [cs_attr_children(var('As?'), var('Ch'))]),
    decl(cs_attr_parents(dual('List'('CsAttr')), 'List'('Key'))),
+   clause(cs_attr_parents([], []), [], []),
    clause(cs_attr_parents([parents(var('Pa')) | var('_')], var('Pa?')), [], []),
    clause(cs_attr_parents([var('_') | var('As')], var('Pa?')), [otherwise], [cs_attr_parents(var('As?'), var('Pa'))]),
    decl(cs_attr_village(dual('List'('CsAttr')), 'Integer')),
+   clause(cs_attr_village([], 0), [], []),
    clause(cs_attr_village([village(var('V')) | var('_')], var('V?')), [], []),
    clause(cs_attr_village([var('_') | var('As')], var('V?')), [otherwise], [cs_attr_village(var('As?'), var('V'))]),
    decl(cs_attr_families(dual('List'('CsAttr')), 'List'('CsFam'))),
+   clause(cs_attr_families([], []), [], []),
    clause(cs_attr_families([families(var('Fs')) | var('_')], var('Fs?')), [], []),
    clause(cs_attr_families([var('_') | var('As')], var('Fs?')), [otherwise], [cs_attr_families(var('As?'), var('Fs'))]),
    decl(cs_last_view(dual('List'('Output')), 'List'('Atom'))),
@@ -315,21 +328,21 @@ source([
    %% a child's befriending an adult, approved 20 times in 100 by a strict parent and 80 by a permissive
    %% one; anything else approved.
    %%   person strict.  Approval =::= strict_approval.
-   %%   strict_approval(approval(attempt(_, _, _, enter_2(_, _, _)), A?), _, _) :- cs_say(slot(A), yes).
-   %%   strict_approval(approval(attempt(_, _, _, C), A?), _, S) :- otherwise | cs_parent_answer(20, C?, S?, slot(A)) @ 1/day.
+   %%   strict_approval(approval(attempt(_, _, _, enter_2(_, _, _), _), A?), _, _) :- cs_say(slot(A), yes).
+   %%   strict_approval(approval(attempt(_, _, _, C, _), A?), _, S) :- otherwise | cs_parent_answer(20, C?, S?, slot(A)) @ 1/day.
    %%   person permissive.  (the same at 80)
 
    person(strict),
    binds('Approval', strict_approval),
    decl(strict_approval(dual('Approval'), dual('Person'), dual('Integer'))),
-   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_'))), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), var('C')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_parent_answer(20, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
+   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(strict_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_parent_answer(20, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
 
    person(permissive),
    binds('Approval', permissive_approval),
    decl(permissive_approval(dual('Approval'), dual('Person'), dual('Integer'))),
-   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_'))), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), var('C')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_parent_answer(80, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
+   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(permissive_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_parent_answer(80, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
    decl(cs_say(dual('Slot'('YesNo')), dual('YesNo'))),
    clause(cs_say(slot(var('V?')), var('V')), [], []),
    decl(cs_parent_answer(dual('Integer'), dual('Class'), dual('Integer'), dual('Slot'('YesNo')))),
@@ -351,9 +364,9 @@ source([
    %% day on average; anything else they approve.
    %%   person choosy.  Menu =::= child_menu.  Approval =::= choosy_approval.
    %%   child_menu(menu(Me, Ks, R?), person(_, _, As), S) :- seen(L), cs_child_menu(Me?, Ks?, As?, L?, S?, slot(R)).
-   %%   choosy_approval(approval(attempt(_, _, _, enter(_, _)), A?), _, _) :- cs_say(slot(A), yes).  (and enter_2)
-   %%   choosy_approval(approval(attempt(_, _, _, enter_2(_, _, _)), A?), _, _) :- cs_say(slot(A), yes).
-   %%   choosy_approval(approval(attempt(_, _, _, C), A?), _, S) :- otherwise | cs_child_answer(50, C?, S?, slot(A)) @ 1/day.
+   %%   choosy_approval(approval(attempt(_, _, _, enter(_, _), _), A?), _, _) :- cs_say(slot(A), yes).  (and enter_2)
+   %%   choosy_approval(approval(attempt(_, _, _, enter_2(_, _, _), _), A?), _, _) :- cs_say(slot(A), yes).
+   %%   choosy_approval(approval(attempt(_, _, _, C, _), A?), _, S) :- otherwise | cs_child_answer(50, C?, S?, slot(A)) @ 1/day.
    %%   person keen.  (the same menu; the approval at 90)
 
    person(choosy),
@@ -372,17 +385,17 @@ source([
    clause(cs_child_act1(pick(var('Q')), var('Me'), var('_'), slot(propose(unfriend(var('Me?'), var('Q?'))))), [], []),
    clause(cs_child_act1(nothing, var('_'), [var('Q0') | var('_')], slot(known(var('Q0?')))), [], []),
    decl(choosy_approval(dual('Approval'), dual('Person'), dual('Integer'))),
-   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), enter(var('_'), var('_'))), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_'))), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), var('C')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_child_answer(50, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
+   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), enter(var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(choosy_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_child_answer(50, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
 
    person(keen),
    binds('Menu', child_menu),
    binds('Approval', keen_approval),
    decl(keen_approval(dual('Approval'), dual('Person'), dual('Integer'))),
-   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), enter(var('_'), var('_'))), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_'))), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
-   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), var('C')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_child_answer(90, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
+   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), enter(var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), enter_2(var('_'), var('_'), var('_')), var('_')), var('A?')), var('_'), var('_')), [], [cs_say(slot(var('A')), yes)]),
+   clause(keen_approval(approval(attempt(var('_'), var('_'), var('_'), var('C'), var('_')), var('A?')), var('_'), var('S')), [otherwise], [rated(cs_child_answer(90, var('C?'), var('S?'), slot(var('A'))), rate(1, day))]),
    decl(cs_child_answer(dual('Integer'), dual('Class'), dual('Integer'), dual('Slot'('YesNo')))),
    clause(cs_child_answer(var('P'), child_befriend(var('_'), var('_'), var('_'), var('_')), var('S'), slot(var('A?'))), [], [random(var('S?'), 100, var('K'), var('_')), cs_yes_if(var('K?'), var('P?'), var('A'))]),
    clause(cs_child_answer(var('P'), child_adult_befriend(var('_'), var('_'), var('_')), var('S'), slot(var('A?'))), [], [random(var('S?'), 100, var('K'), var('_')), cs_yes_if(var('K?'), var('P?'), var('A'))]),
