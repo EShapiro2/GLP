@@ -2061,6 +2061,11 @@ void appsScreens(Screens screens) {
     await run.top(carol);
     expect(run.textsOf(carol, a),
         ['Alice asks that you and Dave befriend.', 'yes', 'no']);
+    // A child is shown no act whose own precondition at each of its guarding roles the child's state does not meet: Enter, Child unfriend, Child leave and Child close each forbid child there (vGLP 897d1ce, Section 6.2).
+    expect(run.control(carol, 'key-send:enter'), findsNothing);
+    for (final f in ['child_unfriend', 'child_leave', 'child_close']) {
+      expect(run.control(carol, 'top:$f'), findsNothing, reason: f);
+    }
     run.plain(carol);
     await run.shoot(carol, 'cssn-app-4.png');
     await run.answer(carol, 'yes');
