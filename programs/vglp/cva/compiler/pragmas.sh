@@ -73,13 +73,44 @@ if (defined $term && $term ne "") {
         my %local = map { $_ => 1 } local_nums(@args);
         $a =~ s/^\[//; $a =~ s/\]$//;
         $svars{$n} = [ grep { !($local{$_} && $a =~ /\bnum\(\Q$_\E\)/) } ($a =~ /\w+\((\w+)\)/g) ];
+        # The peer of a meeting schema is the first place a field names, as cvac.glp counts them (field_places, peer_first): a person the act names by key, as the field child of the enter schema of CSSN.
+        unshift @{ $svars{$n} }, "#peer" if meeting($args[-1]);
     }
 }
-# The schemas a button realises: its schema, the button in lower case, or, where the contract has none of that name, those named by it and a suffix after an underscore; the button alone where the term is not given or none is found.
+# Whether the roles of a schema, the text of its role list, make it a meeting schema: two party roles, both guarded, whose atoms required or deleted at each name neither the other role nor a name term built on it (cvac.glp, meeting_schema; vGLP, Section 5.4, "The compilation").
+sub meeting {
+    my ($roles) = @_;
+    $roles =~ s/^\[//; $roles =~ s/\]$//;
+    my @rs = top_args($roles);
+    return 0 unless @rs == 2;
+    for my $r (0, 1) {
+        my ($f) = $rs[$r] =~ /^(rs)\(/ or return 0;
+        my ($body) = inside($rs[$r], length $f);
+        my @p = top_args($body);
+        return 0 unless $p[0] eq "guarded";
+        my $o = 2 - $r;
+        return 0 if "$p[2] $p[3]" =~ /\b(?:role|own)\($o\)/;
+    }
+    return 1;
+}
+# The schemas a button realises (the ruling of GSC, Code_inbox.md, 2026-10-24 08:06 UTC: the button names the schemas bearing its name or its name with a suffix after an underscore): the schema of its name, the button in lower case, and every schema named by it and a suffix that no other button names exactly, as [Post own] names post_own and so [Post] does not; the button alone where the term is not given or none is found.
+my %seen; my @order;
+my %exact;
 sub realising {
     my ($act) = @_;
-    return ($act) if !@snames || exists $svars{$act};
-    my @r = grep { index($_, "${act}_") == 0 } @snames;
+    return ($act) if !@snames;
+    unless (%exact) {
+        $exact{""} = 1;
+        for my $f (@order) {
+            my $after = 0;
+            for my $x (read_txt($f)) {
+                $after = 1, next if $x eq "Pragmas";
+                next unless $after;
+                for my $b ($x =~ /\[([^\]]+)\]/g) { (my $e = lc $b) =~ s/ +/_/g; $exact{$e} = 1 }
+            }
+        }
+    }
+    my @r = grep { $_ eq $act || (index($_, "${act}_") == 0 && !$exact{$_}) } @snames;
     return @r ? @r : ($act);
 }
 # The union of the variables of the schemas, in head order: the variables of each schema merged in, each one not yet held placed after the one before it in that schema.
@@ -113,7 +144,6 @@ sub q_atom {   # a GLP quoted name holding the text $s
 sub q_string { # a quoted name holding the GLP source of the string $s
     my ($s) = @_; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; return q_atom("\"$s\"");
 }
-my %seen; my @order;
 sub visit {
     my ($f) = @_;
     return if $seen{$f}++;

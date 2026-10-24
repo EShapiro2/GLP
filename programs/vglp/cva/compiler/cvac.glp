@@ -1204,7 +1204,8 @@ procedure word_lines(Words?, Contract?, Stream(_)).
 word_lines(words(no_pragmas), _, []).
 word_lines(words(pragmas(Ls, As)), C, L?) :- ground(Ls?), ground(As?), ground(C?) |
     contract_preds(C?, Pr),
-    tab_terms(Ls?, Pr?, Ts),
+    mult_preds(C?, Mp),
+    tab_terms(Ls?, Pr?, Mp?, Ts),
     T =.. [tabs, Ts?],
     sentence_lines(As?, C?, Lsn),
     lapp(Lsn?, ['sentence_of(_, _, []) :- otherwise | true.'], Lsn1),
@@ -1216,44 +1217,76 @@ word_lines(words(pragmas(Ls, As)), C, L?) :- ground(Ls?), ground(As?), ground(C?
         '',
         '%% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer\'s that Me is in, its persons filled in from the binding C names; none, [], where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).',
         'procedure sentence_of(Class?, Peer?, List(Word)).'|Lsn1?], [], L).
-procedure tab_terms(PLists?, Preds?, Stream(_)).
-tab_terms([], _, []).
-tab_terms([list(N, Ws)|Ls], Pr, [tab(N?, P?)|Ts?]) :- ground(N?), ground(Ws?), ground(Pr?) |
+%% A tab is tab(Name, P), or tab(Name, P, counted) where the contract adds or deletes the predicate P with a multiplicity, so that its rows show their counts (vGLP 110caf4, Section 5.4, "The contract's words": "a row shows the atoms of the state naming its item, with its count where the contract adds or deletes the predicate with a multiplicity").
+procedure tab_terms(PLists?, Preds?, Preds?, Stream(_)).
+tab_terms([], _, _, []).
+tab_terms([list(N, Ws)|Ls], Pr, Mp, [T?|Ts?]) :- ground(N?), ground(Ws?), ground(Pr?), ground(Mp?) |
     listed_preds(Ws?, Pr?, Ms),
     first_pred(Ms?, P),
-    tab_terms(Ls?, Pr?, Ts).
+    tab_term(N?, P?, Mp?, T),
+    tab_terms(Ls?, Pr?, Mp?, Ts).
+procedure tab_term(String?, Constant?, Preds?, _).
+tab_term(N, P, Mp, T?) :- ground(P?), ground(Mp?) |
+    mem(P?, Mp?, C),
+    tab_term1(C?, N?, P?, T).
+procedure tab_term1(YesNo?, String?, Constant?, _).
+tab_term1(yes, N, P, tab(N?, P?, counted)).
+tab_term1(no, N, P, tab(N?, P?)).
+%% The predicates the contract adds or deletes with a multiplicity, times(K, A) in an atom list it adds or deletes at a role.
+procedure mult_preds(Contract?, Preds).
+mult_preds(C, Ps?) :- ground(C?) |
+    contract_changes(C?, As),
+    times_names(As?, Ns),
+    dedup(Ns?, Ps).
+procedure contract_changes(Contract?, Atoms).
+contract_changes([], []).
+contract_changes([schema(_, _, Rs)|Ss], As?) :- rs_changes(Rs?, A1), contract_changes(Ss?, A2), app(A1?, A2?, As).
+contract_changes([cschema(_, _, _, Rs)|Ss], As?) :- rs_changes(Rs?, A1), contract_changes(Ss?, A2), app(A1?, A2?, As).
+contract_changes([nschema(_, _, _, Rs)|Ss], As?) :- rs_changes(Rs?, A1), contract_changes(Ss?, A2), app(A1?, A2?, As).
+procedure rs_changes(RoleSpecs?, Atoms).
+rs_changes([], []).
+rs_changes([R|Rs], As?) :- ground(R?) |
+    rs_lists(R?, P, M, _, _),
+    rs_changes(Rs?, A3),
+    app(M?, A3?, A2),
+    app(P?, A2?, As).
+procedure times_names(Atoms?, Preds).
+times_names([], []).
+times_names([times(_, atom(F, _))|As], [F?|Ns?]) :- times_names(As?, Ns).
+times_names([_|As], Ns?) :- otherwise | times_names(As?, Ns).
 procedure first_pred(Preds?, Constant).
 first_pred([P|_], P?).
 first_pred([], none).
 procedure sentence_lines(PActs?, Contract?, Stream(_)).
 sentence_lines([], _, []).
 sentence_lines([act(_, _, _, none, _)|As], C, L?) :- sentence_lines(As?, C?, L).
-sentence_lines([act(N, _, _, said(Ws), _)|As], C, L?) :- ground(N?), ground(Ws?), ground(C?) |
-    schema_sentences([N?], Ws?, C?, L1),
+sentence_lines([act(N, _, Fs, said(Ws), _)|As], C, L?) :- ground(N?), ground(Ws?), ground(Fs?), ground(C?) |
+    schema_sentences([N?], Ws?, Fs?, C?, L1),
     sentence_lines(As?, C?, L2),
     lapp(L1?, L2?, L).
-procedure schema_sentences(Preds?, PSentences?, Contract?, Stream(_)).
-schema_sentences([], _, _, []).
-schema_sentences([S|Ss], Ws, C, L?) :- ground(S?), ground(Ws?), ground(C?) |
+procedure schema_sentences(Preds?, PSentences?, Strings?, Contract?, Stream(_)).
+schema_sentences([], _, _, _, []).
+schema_sentences([S|Ss], Ws, Fs, C, L?) :- ground(S?), ground(Ws?), ground(Fs?), ground(C?) |
     find_schema(S?, C?, Sf),
-    schema_sentence(Sf?, S?, Ws?, L1),
-    schema_sentences(Ss?, Ws?, C?, L2),
+    schema_sentence(Sf?, S?, Ws?, Fs?, L1),
+    schema_sentences(Ss?, Ws?, Fs?, C?, L2),
     lapp(L1?, L2?, L).
 %% sentence_of(s(V1, _, V3), Me, Ws?) :- ground(V1?), ground(V3?), ground(Me?) | said([V1?, V3?], Me?, [person(V1?), text(...), person(V3?), ...], Ws), each person the sentence names at the place of its class term that holds it, every other place _.
-procedure schema_sentence(SFound?, Constant?, PSentences?, Stream(_)).
-schema_sentence(nosfound, _, _, []).
-schema_sentence(sfound(Hd, Rs), S, Ws, L?) :- ground(Hd?), ground(Rs?) |
+procedure schema_sentence(SFound?, Constant?, PSentences?, Strings?, Stream(_)).
+schema_sentence(nosfound, _, _, _, []).
+schema_sentence(sfound(Hd, Rs), S, Ws, Fs, L?) :- ground(Hd?), ground(Rs?) |
     guard_count(Rs?, N),
-    schema_sentence0(N?, Hd?, Rs?, S?, Ws?, L).
+    schema_sentence0(N?, Hd?, Rs?, S?, Ws?, Fs?, L).
 %% An act with one guarding role puts its question to no other person: it is text of its request form (text_entry), and no sentence_of clause is printed for it (vGLP, Section 5.4, "The contract's words").
-procedure schema_sentence0(Integer?, Args?, RoleSpecs?, Constant?, PSentences?, Stream(_)).
-schema_sentence0(1, _, _, _, _, []).
-schema_sentence0(N, Hd, Rs, S, Qs, L?) :- N? =\= 1, ground(Hd?), ground(Rs?), ground(Qs?) |
+procedure schema_sentence0(Integer?, Args?, RoleSpecs?, Constant?, PSentences?, Strings?, Stream(_)).
+schema_sentence0(1, _, _, _, _, _, []).
+schema_sentence0(N, Hd, Rs, S, Qs, Fs, L?) :- N? =\= 1, ground(Hd?), ground(Rs?), ground(Qs?) |
     guard_roles(Rs?, 1, Gr),
     rest_ints(Gr?, Gr1),
     person_places(Hd?, Rs?, Pp),
     schema_vars(Rs?, Hd?, Vs),
-    schema_sentence1(Gr1?, Qs?, Pp?, Vs?, S?, L).
+    rs_count(Rs?, Rn),
+    schema_sentence1(Gr1?, Qs?, Pp?, Vs?, S?, Fs?, Rn?, L).
 %% The indices of the guarding roles, in order, from J.
 procedure guard_roles(RoleSpecs?, Integer?, Ints).
 guard_roles([], _, []).
@@ -1266,11 +1299,22 @@ procedure rest_ints(Ints?, Ints).
 rest_ints([], []).
 rest_ints([_|Is], Is?).
 %% sentence_of(s(V1, V2, _), Me, Ws?) :- ground(V1?), ground(V2?), ground(Me?) | ask_of([q(V2?, [person(V1?), text(...)]), ...], Me?, Ws): the question of each guarding role beyond the proposer's, the first, in their order, q(R, Words), R the person in that role, each person the question names at the place of the class term that holds it, every other place _; ask_of gives the words of the first whose role holds Me, and [] where none does (GSC, Section 2, its first paragraph: "for each role whose will the act needs beyond the proposer's, in their order, the question the person in it is asked").
-procedure schema_sentence1(Ints?, PSentences?, Ints?, Args?, Constant?, Stream(_)).
-schema_sentence1(Gr, Qs, Pp, Vs, S, [T?, ':-'|L?]) :- ground(Gr?), ground(Qs?), ground(Pp?), ground(Vs?), ground(S?) |
+%% After its sentence, a question shows each value of the binding it does not name, a person or a number, by the name of its field, named(F, P) or valued(F, K) (vGLP 110caf4, Section 5.4, "The contract's words": "and shows after it each value of the binding the question does not name, by the name of its field, so that the person sees the whole proposal"); a place no field of the pragma names is not shown.
+procedure schema_sentence1(Ints?, PSentences?, Ints?, Args?, Constant?, Strings?, Integer?, Stream(_)).
+schema_sentence1(Gr, Qs, Pp, Vs, S, Fs, Rn, [T?, ':-'|L?]) :- ground(Gr?), ground(Qs?), ground(Pp?), ground(Vs?), ground(S?), ground(Fs?), integer(Rn?) |
     question_places(Gr?, Qs?, Pp?, Ns0),
-    dedup(Ns0?, Ns),
-    question_terms(Gr?, Qs?, Pp?, Qt),
+    schema_sentence1b(Ns0?, Gr?, Qs?, Pp?, Vs?, S?, Fs?, Rn?, T, L).
+procedure schema_sentence1b(Ints?, Ints?, PSentences?, Ints?, Args?, Constant?, Strings?, Integer?, _, Stream(_)).
+schema_sentence1b(Ns0, Gr, Qs, Pp, Vs, S, Fs, Rn, T?, L?) :- ground(Ns0?), ground(Vs?), ground(Fs?), integer(Rn?) |
+    value_places(Vs?, 1, Rn?, Ns0?, Fs?, Vp),
+    schema_sentence1c(Vp?, Ns0?, Gr?, Qs?, Pp?, Vs?, S?, T, L).
+procedure schema_sentence1c(VPlaces?, Ints?, Ints?, PSentences?, Ints?, Args?, Constant?, _, Stream(_)).
+schema_sentence1c(Vp, Ns0, Gr, Qs, Pp, Vs, S, T?, L?) :- ground(Vp?) |
+    vplace_ints(Vp?, Vi),
+    app(Ns0?, Vi?, Ns1),
+    dedup(Ns1?, Ns),
+    value_words(Vp?, Vw),
+    question_terms(Gr?, Qs?, Pp?, Vw?, Qt),
     schema_sentence2(Ns?, Vs?, S?, Qt?, T, L).
 procedure question_places(Ints?, PSentences?, Ints?, Ints).
 question_places([], _, _, []).
@@ -1279,15 +1323,57 @@ question_places([G|Gs], [Q|Qs], Pp, Ns?) :- integer(G?), ground(Q?), ground(Pp?)
     said_places(Q?, Pp?, N1),
     question_places(Gs?, Qs?, Pp?, N2),
     app([G?|N1?], N2?, Ns).
-procedure question_terms(Ints?, PSentences?, Ints?, Stream(_)).
-question_terms([], _, _, []).
-question_terms([_|_], [], _, []).
-question_terms([G|Gs], [Q|Qs], Pp, [T?|Ts?]) :- integer(G?), ground(Q?), ground(Pp?) |
+procedure question_terms(Ints?, PSentences?, Ints?, Stream(_)?, Stream(_)).
+question_terms([], _, _, _, []).
+question_terms([_|_], [], _, _, []).
+question_terms([G|Gs], [Q|Qs], Pp, Vw, [T?|Ts?]) :- integer(G?), ground(Q?), ground(Pp?), ground(Vw?) |
     vname(G?, F),
     name_of(F?, _, R),
-    said_words(Q?, Pp?, Sw),
+    said_words(Q?, Pp?, Sw0),
+    lapp(Sw0?, Vw?, Sw),
     T =.. [q, R?, Sw?],
-    question_terms(Gs?, Qs?, Pp?, Ts).
+    question_terms(Gs?, Qs?, Pp?, Vw?, Ts).
+%% The places after the roles that the question does not name, each with the name of its field, the I-th place after the roles the I-th field, and the kind of its value: vp(I, F, named) of a person, vp(I, F, valued) of a number.
+procedure value_places(Args?, Integer?, Integer?, Ints?, Strings?, VPlaces).
+value_places([], _, _, _, _, []).
+value_places([A|As], I, Rn, Ns, Fs, Vp?) :- ground(A?), integer(I?), integer(Rn?), ground(Ns?), ground(Fs?) |
+    mem(I?, Ns?, In),
+    value_kind(A?, K),
+    J := I? - Rn?,
+    field_at(J?, Fs?, F),
+    value_place(In?, K?, F?, I?, Vp1),
+    I1 := I? + 1,
+    value_places(As?, I1?, Rn?, Ns?, Fs?, Vp2),
+    app(Vp1?, Vp2?, Vp).
+procedure value_kind(Arg?, Constant).
+value_kind(role(_), named).
+value_kind(pvar(_), named).
+value_kind(num(_), valued).
+value_kind(_, none) :- otherwise | true.
+procedure field_at(Integer?, Strings?, FieldAt).
+field_at(J, _, nofield) :- J? < 1 | true.
+field_at(1, [F|_], field(F?)).
+field_at(J, [_|Fs], R?) :- J? > 1 | J1 := J? - 1, field_at(J1?, Fs?, R).
+field_at(_, [], nofield).
+procedure value_place(YesNo?, Constant?, FieldAt?, Integer?, VPlaces).
+value_place(yes, _, _, _, []).
+value_place(no, _, nofield, _, []).
+value_place(no, none, field(_), _, []).
+value_place(no, named, field(F), I, Vp?) :- ground(F?) | nonempty_field(F?, named, I?, Vp).
+value_place(no, valued, field(F), I, Vp?) :- ground(F?) | nonempty_field(F?, valued, I?, Vp).
+procedure nonempty_field(String?, Constant?, Integer?, VPlaces).
+nonempty_field(F, _, _, []) :- F? =?= "" | true.
+nonempty_field(F, K, I, [vp(I?, F?, K?)]) :- otherwise | true.
+procedure vplace_ints(VPlaces?, Ints).
+vplace_ints([], []).
+vplace_ints([vp(I, _, _)|Vs], [I?|Is?]) :- vplace_ints(Vs?, Is).
+procedure value_words(VPlaces?, Stream(_)).
+value_words([], []).
+value_words([vp(I, F, K)|Vs], [W?|Ws?]) :- integer(I?), ground(F?), ground(K?) |
+    vname(I?, N),
+    name_of(N?, _, Q),
+    W =.. [K?, F?, Q?],
+    value_words(Vs?, Ws).
 procedure schema_sentence2(Ints?, Args?, Constant?, Stream(_)?, _, Stream(_)).
 schema_sentence2(Ns, Vs, S, Qt, T?, L?) :- ground(Ns?), ground(Vs?), ground(S?), ground(Qt?) |
     head_names(Vs?, 1, Ns?, Hn),

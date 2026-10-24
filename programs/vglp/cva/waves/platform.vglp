@@ -1443,24 +1443,24 @@ guard_cands1([ap(I, F)|Is], V, Cs?) :- ground(I?), ground(F?), ground(V?) |
     v_ms(V?, S),
     info_parts(I?, Pts),
     guarding_parts(Pts?, Id?, Ps0),
-    parts_of(F?, Ps0?, Ps),
+    approval_parts(F?, I?, Ps0?, Ps),
     may_propose(I?, V?, B),
     guard_parts_cands(B?, Ps?, I?, Id?, S?, Cs1),
     guard_cands1(Is?, V?, Cs2),
     app(Cs1?, Cs2?, Cs).
-%% The parts an approval proposes: of a request, those whose request name is that of the part the request named, its schema-binding (request_name); of an answer yes, all.
-procedure parts_of(PartsOf?, Classes?, Classes).
-parts_of(any_part, Ps, Ps?).
-parts_of(by_name(C), Ps, Ps1?) :- ground(C?) |
-    request_name(C?, N),
-    parts_named(Ps?, N?, Ps1).
-procedure parts_named(Classes?, PName?, Classes).
-parts_named([], _, []).
-parts_named([P|Ps], N, R?) :- ground(P?), ground(N?) |
-    request_name(P?, M),
-    same(M?, N?, B),
-    parts_named(Ps?, N?, R1),
-    keep_class(B?, P?, R1?, R).
+%% The parts an approval proposes: of a request, the part its schema-binding C determines, proposed by that schema-binding, where it is a part the agent guards; of an answer yes, all.  "A request names a schema-binding, and the part is the one that schema-binding determines, so where two schema-bindings determine one part a request of either proposes it, and where their guard sets differ they are two parts" (vGLP #20, Code_inbox.md, 2026-10-24 10:45 UTC; vGLP 110caf4, Section 5.4): the part is found by same_part, and not by the name of the first schema-binding that determines it, so that GB's release_c, one schema with deposit_c, is proposed as release_c.
+procedure approval_parts(PartsOf?, Info?, Classes?, Classes).
+approval_parts(any_part, _, Ps, Ps?).
+approval_parts(by_name(C), I, Ps, Ps1?) :- ground(C?), ground(I?) |
+    parts_named(Ps?, I?, C?, Ps1).
+procedure parts_named(Classes?, Info?, Class?, Classes).
+parts_named([], _, _, []).
+parts_named([P|Ps], I, C, R?) :- ground(P?), ground(I?), ground(C?) |
+    same_part(I?, C?, P?, B),
+    named_part(B?, Ps?, I?, C?, R).
+procedure named_part(YesNo?, Classes?, Info?, Class?, Classes).
+named_part(yes, _, _, C, [C?]).
+named_part(no, Ps, I, C, R?) :- parts_named(Ps?, I?, C?, R).
 procedure guard_parts_cands(YesNo?, Classes?, Info?, Peer?, GAtoms?, Cands).
 guard_parts_cands(no, _, _, _, _, []).
 guard_parts_cands(yes, Ps, I, Id, S, Cs?) :- ground(Ps?), ground(I?), ground(S?) |
