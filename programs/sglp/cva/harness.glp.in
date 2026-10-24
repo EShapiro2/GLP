@@ -36,7 +36,9 @@
 %% keys of agents 1..N are in the order of their numbers both ways, which the
 %% tree's comparisons, @<, take; where it names a census, the persons that
 %% census draws, Ks being empty, the keys their keys, in the census's order,
-%% which the tree takes as the order of the agents.  The run is refused where
+%% which need not be @<'s: the network sorts the keys and the seats together
+%% by @< before it builds the tree, so a message to a key reaches the agent of
+%% that key.  The run is refused where
 %% the census draws no person or a person of a role of no dimension (Section 3,
 %% after Definition "Well-Formed"): it takes no goal but the line refused.  The
 %% draws are the examples' (Appendix B): the monitor draws from the run's seed;
@@ -84,13 +86,20 @@ go(yes, B, Ks, C, U, Seed) :- integer(B?), ground(Ks?), number(C?), integer(Seed
 go(no, _, _, _, _, _) :- send_to_user([refused]).
 
 %% network(Ks?, Ss?): the network over the agents keyed Ks, and at each agent
-%% its initial goal on its seat of Ss.
+%% its initial goal on its seat of Ss.  The tree routes by @<, so it is built
+%% over the keys sorted by @< and the seats sorted with them, each agent's
+%% input stream kept with its key: a census's keys are in its own order, which
+%% need not be @<'s, and a message to the key K reaches the agent keyed K
+%% (GLP-Spec, the transaction Cold-call).  Keys p1..pN zero-padded are
+%% already in @< order, and sorting leaves them as they are.
 procedure network(Stream(Key)?, Stream(Seat(Output))?).
 network(Ks, Ss) :- ground(Ks?) |
+    sort_keys(Ks?, [], SKs),
+    sort_seats(Ss?, [], SSs),
     keys_length(Ks?, 0, N),
-    tree(1, N?, Ks?, Net?, Ins, []),
+    tree(1, N?, SKs?, Net?, Ins, []),
     mwm(Merges?, Net),
-    agents(Ss?, Ins?, Merges).
+    agents(SSs?, Ins?, Merges).
 
 %% agents(Ss?, Ins?, Merges): at each agent, its initial goal, agent/5 of the
 %% platform, with its key, its input stream of Ins, its output stream for
@@ -114,6 +123,35 @@ draw(Ks, Seed, D?) :- ground(Ks?), integer(Seed?) |
 procedure keys_length(Stream(Key)?, Integer?, Integer).
 keys_length([], A, A?).
 keys_length([_|Ks], A, N?) :- A1 := A? + 1, keys_length(Ks?, A1?, N).
+
+%% sort_keys(Ks?, Acc?, Sorted): Sorted is the keys of Ks inserted, in order,
+%% into Acc, sorted by @<; sort_seats(Ss?, Acc?, Sorted) the seats of Ss so,
+%% by their keys.  Each inserts a key or a seat before the first of Acc whose
+%% key it precedes or equals, so the two put keys and seats in one order.
+procedure sort_keys(Stream(Key)?, Stream(Key)?, Stream(Key)).
+sort_keys([K|Ks], Acc, Sorted?) :- insert_key(K?, Acc?, Acc1), sort_keys(Ks?, Acc1?, Sorted).
+sort_keys([], Acc, Acc?).
+
+procedure insert_key(Key?, Stream(Key)?, Stream(Key)).
+insert_key(K, [K1|Ks], [K1?|Out?]) :- ground(K?), ground(K1?), K1? @< K? |
+    insert_key(K?, Ks?, Out).
+insert_key(K, [K1|Ks], [K?, K1?|Ks?]) :- ground(K?), ground(K1?), K? @< K1? | true.
+insert_key(K, [K1|Ks], [K?, K1?|Ks?]) :- ground(K?), ground(K1?), K? =?= K1? | true.
+insert_key(K, [], [K?]).
+
+procedure sort_seats(Stream(Seat(Output))?, Stream(Seat(Output))?, Stream(Seat(Output))).
+sort_seats([S|Ss], Acc, Sorted?) :- insert_seat(S?, Acc?, Acc1), sort_seats(Ss?, Acc1?, Sorted).
+sort_seats([], Acc, Acc?).
+
+procedure insert_seat(Seat(Output)?, Stream(Seat(Output))?, Stream(Seat(Output))).
+insert_seat(seat(K, A?, T?), [seat(K1, A1?, T1?)|Ss], [seat(K1?, A1, T1)|Out?]) :-
+    ground(K?), ground(K1?), K1? @< K? |
+    insert_seat(seat(K?, A, T), Ss?, Out).
+insert_seat(seat(K, A?, T?), [seat(K1, A1?, T1?)|Ss], [seat(K?, A, T), seat(K1?, A1, T1)|Ss?]) :-
+    ground(K?), ground(K1?), K? @< K1? | true.
+insert_seat(seat(K, A?, T?), [seat(K1, A1?, T1?)|Ss], [seat(K?, A, T), seat(K1?, A1, T1)|Ss?]) :-
+    ground(K?), ground(K1?), K? =?= K1? | true.
+insert_seat(S, [], [S?]).
 
 %% nth_key(I?, Ks?, K): K is the I-th of Ks.
 procedure nth_key(Integer?, Stream(Key)?, Key).

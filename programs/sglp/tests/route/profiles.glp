@@ -1,0 +1,5 @@
+%% The profiles of the test of the harness's network (platform.glp beside
+%% it): none, the population of population.glp asking its persons nothing.
+
+exported procedure none(Constant?).
+none(_).

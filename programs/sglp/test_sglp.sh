@@ -236,7 +236,11 @@
 #       census over the platform, tests/cva/census_sglp.glp, two persons keyed
 #       by the platform's keys, a host of two dimensions and a guest of one,
 #       run with census for its agents (cva/run.sh), its draw, its menus showing
-#       each agent's person's key, and a record of it and its check.
+#       each agent's person's key, and a record of it and its check; and the
+#       network with a census whose keys are not in @<'s order (tests/route;
+#       sGLP #9, Code_inbox 2026-10-24 14:07 UTC): three agents keyed p2, p1
+#       and p3, each sending a message to each key, every message reaching
+#       the agent of its key (GLP-Spec, the transaction Cold-call).
 # (xix) the screen (tests/screen; sGLP's task of 2026-10-20 08:00 UTC, items 4,
 #       5 and 7): a program writing note(N1), N1 not ground until the person's
 #       first count, and note(9) after it; the person answering each count with
@@ -1200,6 +1204,22 @@ CREC=$(ls -d "$WORK"/simc/GSG/* 2>/dev/null | head -1)
     grep -q '^20260927.log: first day as recorded' "$WORK/cva_cchk.out"
 check "a record of the census's run (cva/record.sh), its agents census, its log the run's, and its check passing on it" $?
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_crec.out"
+
+# The network with a census whose keys are not in the order @< takes
+# (tests/route; sGLP #9, Code_inbox 2026-10-24 14:07 UTC; GLP-Spec, the
+# transaction Cold-call, which adds msg(q, X) to the input stream of the agent
+# q): a stub platform whose agents each send hi(K), K its key, to p2, p1 and
+# p3, and show got(To, From) for each message reaching their input stream; the
+# census p2, p1, p3, agents 1, 2 and 3 in its order.  Each agent shows the
+# three messages to its own key and no other.
+bash "$HERE/cva/run.sh" "$HERE/tests/route/platform.glp" "$HERE/tests/route" census '1 day' 1 "$WORK/route.log" > "$WORK/route.out" 2>&1
+st=$?
+awk -F'\t' 'NF == 4 && $3 == "output" { print $2, $4 }' "$WORK/route.log" | sort > "$WORK/route.got"
+[ "$st" -eq 0 ] &&
+    printf '%s\n' '1 got(p2, p1)' '1 got(p2, p2)' '1 got(p2, p3)' '2 got(p1, p1)' '2 got(p1, p2)' '2 got(p1, p3)' \
+        '3 got(p3, p1)' '3 got(p3, p2)' '3 got(p3, p3)' | sort | cmp -s - "$WORK/route.got"
+check "a census keyed p2, p1, p3, not in the order @< takes: every message reaches the agent of its key, agent 1 p2's three, agent 2 p1's and agent 3 p3's (GLP-Spec, Cold-call)" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/route.out"
 
 echo "--- (xix) the screen: seen before and after an element arrives, and the log's output lines"
 # tests/screen: the program writes note(N1), N1 its first count, not ground

@@ -1,0 +1,24 @@
+%% A platform of the test of the harness's network with a census whose keys
+%% are not in the order @< takes (test_sglp.sh, (xviii), tests/route; GLP-Spec, the
+%% transaction Cold-call: a message msg(q, X) is added to the network input
+%% stream of the agent q).  Each agent sends hi(K), K its own key, to each of
+%% the three keys of the census of population.glp beside it, p2, p1 and p3, and
+%% writes on the program's output to its person got(To, From) for each
+%% message msg(To, hi(From)) that reaches its input stream.
+
+Ask(Q) ::= ask(Constant, Q).
+Question ::= none.
+Peer ::= Key.
+Content ::= hi(Key).
+Net ::= msg(Peer, Content).
+Output ::= got(Key, Key).
+
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
+agent(K, In, [msg(p2, hi(K?)), msg(p1, hi(K?)), msg(p3, hi(K?))], Thr?, []) :- ground(K?) |
+    received(In?, Thr).
+
+%% received(In?, Thr): got(To, From) on Thr for each message msg(To, hi(From))
+%% of In.
+procedure received(Stream(Net)?, Stream(Output)).
+received([msg(To, hi(F))|In], [got(To?, F?)|Thr?]) :- received(In?, Thr).
+received([], []).
