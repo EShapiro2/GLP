@@ -394,13 +394,13 @@ source([
    %% the children all choosy; the three other mixes are all permissive, all keen, and both (Section 5,
    %% "The runs"), run with the shares exchanged, and the cost run names cs_villages40.
    %%   run cs_villages [ approach of parent ~ (local : 0.5 ; open : 0.5),
-   %%                     policy of parent ~ (strict : 1.0),
-   %%                     response of child ~ (choosy : 1.0) ]
+   %%                     policy of parent ~ (strict : 1.0 ; permissive : 0.0),
+   %%                     response of child ~ (choosy : 1.0 ; keen : 0.0) ]
    %%       until 1 year seed 1.
    run(cs_villages,
        [mix(approach, parent, [share(local, 0.5), share(open, 0.5)]),
-        mix(policy, parent, [share(strict, 1.0)]),
-        mix(response, child, [share(choosy, 1.0)])],
+        mix(policy, parent, [share(strict, 1.0), share(permissive, 0.0)]),
+        mix(response, child, [share(choosy, 1.0), share(keen, 0.0)])],
        1, year, 1),
 
    %% THE KEY TABLES: five keys per family, two parents' and three children's, for four villages and for forty.
