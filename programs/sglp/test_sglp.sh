@@ -1047,6 +1047,17 @@ check "the log: the readiness, then the first card, shown with the second only o
 grep '^entry(\|^clock(\|^As = ' "$WORK/steps.lines" | sed 's/^/        /'
 
 echo "--- (xviii) the harness of every canonical CVA platform"
+# The horizon's unit: one of the paper's six, singular or plural (sGLP's
+# paper, Appendix B); run.sh and record.sh refuse any other, month among them,
+# with exit 2 and the six named, before they read a file or run anything.
+bash "$HERE/cva/run.sh" "$WORK/none.glp" "$WORK/none" 2 "1 month" 1 "$WORK/none.log" > "$WORK/unit_run.out" 2>&1
+st=$?
+bash "$HERE/cva/record.sh" CSSN "$HERE/cva/run.sh" --cascade "$WORK/none" --until "1 month" --root "$WORK/unit_root" > "$WORK/unit_rec.out" 2>&1
+sr=$?
+[ "$st" -eq 2 ] && grep -q '^run.sh: the unit of <until> is second, minute, hour, day, week or year, singular or plural, not month$' "$WORK/unit_run.out" &&
+    [ "$sr" -eq 2 ] && grep -q '^record.sh: the unit of --until is second, minute, hour, day, week or year, singular or plural, not month$' "$WORK/unit_rec.out" &&
+    [ ! -e "$WORK/unit_root" ]
+check "a horizon in months is refused by run.sh and by record.sh with exit 2, naming the six units, and nothing made (sGLP's paper, Appendix B)" $?
 # The canonical platform of the social graph, as programs/vglp/cva/compile.sh
 # prints it, compiled to GLP by :emit in a scratch directory under
 # programs/tests, a container with no self.glp, as cascade.sh compiles it.
