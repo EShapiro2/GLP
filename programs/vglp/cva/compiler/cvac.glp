@@ -1136,7 +1136,11 @@ item_places(G, Rs, Vs, Nd, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), gr
 %% A person a field names is named by key, and no row fills it (vGLP, Section 5.4, "The contract's words": "in angle brackets each field ..., a person the act names by key among them"); a speech act a field names a row fills, the field's name labelling it.
 procedure keyed_out(ItemPlaces?, Args?, Ints?, ItemPlaces).
 keyed_out([], _, _, []).
-keyed_out([atom(P, Ks)|Is], Vs, Nd, [atom(P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
+keyed_out([atom(P, Ks)|Is], Vs, Nd, R?) :- ground(Ks?), ground(Nd?), ground(Vs?) |
+    any_in(Ks?, Nd?, F),
+    keyed_out1(no, F?, atom(P?, Ks?), R1),
+    keyed_out(Is?, Vs?, Nd?, R2),
+    app(R1?, R2?, R).
 keyed_out([item(K, P)|Is], Vs, Nd, R?) :- ground(Vs?), ground(Nd?), integer(K?), ground(P?) |
     nth_arg(K?, Vs?, A),
     a_svar(A?, Sv),
@@ -1151,6 +1155,13 @@ procedure keyed_out1(YesNo?, YesNo?, ItemPlace?, ItemPlaces).
 keyed_out1(yes, _, I, [I?]).
 keyed_out1(no, no, I, [I?]).
 keyed_out1(no, yes, _, []).
+%% Whether a place of Ks is one a field names: a held atom fills no variable the person fills.
+procedure any_in(Ints?, Ints?, YesNo).
+any_in([], _, no).
+any_in([K|Ks], Nd, F?) :- integer(K?), ground(Nd?) | mem(K?, Nd?, F1), any_in1(F1?, Ks?, Nd?, F).
+procedure any_in1(YesNo?, Ints?, Ints?, YesNo).
+any_in1(yes, _, _, yes).
+any_in1(no, Ks, Nd, F?) :- any_in(Ks?, Nd?, F).
 procedure nth_rs(Integer?, RoleSpecs?, RoleSpecs).
 nth_rs(_, [], []).
 nth_rs(1, [R|_], [R?]).
