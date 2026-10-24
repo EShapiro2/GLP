@@ -1261,9 +1261,9 @@ void appsScreens(Screens screens) {
       await run.befriend(run.person(p), run.person(q));
     }
 
-    // Authorship (GSNP:1): on his Items tab, the tab of GSNP, Dan types "Flood on Main Street" into Sign's field text, GSNP's "[Sign] <text>", and taps Sign, which proposes sign(dan, x), x the speech act he signs; he holds it, its author.
+    // Authorship (GSNP:1): on his AI agents tab, the tab of GAI, whose Developer line carries "[Sign] <text>" (GSNP.txt at a336b30d), Dan types "Flood on Main Street" into Sign's field text and taps Sign, which proposes sign(dan, x), x the speech act he signs; he holds it, its author.
     const flood = "speech(utterance('Flood on Main Street'), dan)";
-    await run.list(dan, 'item');
+    await run.list(dan, 'principal_of');
     await run.type(dan, run.control(dan, 'field:sign::2'), 'Flood on Main Street');
     await run.tap(dan, run.control(dan, 'send:sign:'));
     expect(dan.atoms, containsAll(['item($flood)', 'authored($flood)']));
@@ -1366,8 +1366,8 @@ void appsScreens(Screens screens) {
     await run.meetByKey(acme, alice);
     await run.befriend(acme, alice);
 
-    // Authorship (GSNP:1): on his Items tab Acme Ltd signs the code, GSNP's "[Sign] <text>"; and a message (GSN:1): Message beside Alice in his Friends tab carries it to her as he signed it.
-    await run.list(acme, 'item');
+    // Authorship (GSNP:1): on his AI agents tab, the tab of GAI, whose Developer line carries "[Sign] <text>", Acme Ltd signs the code; and a message (GSN:1): Message beside Alice in his Friends tab carries it to her as he signed it.
+    await run.list(acme, 'principal_of');
     await run.type(acme, run.control(acme, 'field:sign::2'), 'The code of Alf');
     await run.tap(acme, run.control(acme, 'send:sign:'));
     expect(acme.atoms, contains('authored($code)'));
