@@ -1,0 +1,82 @@
+establish(Alice?) :
+    at Alice: not identity, +identity
+
+meet(Alice?, Bob?) :
+    at Alice: identity, +knows(Bob)
+    at Bob: identity, +knows(Alice)
+
+introduce(Alice?, Bob?; c) :
+    at Alice: identity, knows(Bob), knows(c)
+    at Bob: identity, knows(Alice), +knows(c)
+
+mint_coin(Alice?; k) :
+    at Alice: identity, +k.coin(Alice)
+
+mint_bond(Alice?; d, k, t) | d > t :
+    at Alice: identity, date(t), +k.bond(Alice, d)
+
+first_date(Alice; d) :
+    at Alice: identity, today(d), not dated, +date(d), +dated
+
+advance(Alice; t, t1, d) | t1 = t + 1, t1 <= d :
+    at Alice: identity, today(d), +date(t1), -date(t)
+
+swap_cc(Alice?, Bob?; u, k, v, k1) :
+    at Alice: identity, knows(Bob), +k1.coin(v), -k.coin(u)
+    at Bob: identity, knows(Alice), +k.coin(u), -k1.coin(v)
+
+swap_cb(Alice?, Bob?; u, k, v, d1, k1) :
+    at Alice: identity, knows(Bob), +k1.bond(v, d1), -k.coin(u)
+    at Bob: identity, knows(Alice), +k.coin(u), -k1.bond(v, d1)
+
+swap_bc(Alice?, Bob?; u, d, k, v, k1) :
+    at Alice: identity, knows(Bob), +k1.coin(v), -k.bond(u, d)
+    at Bob: identity, knows(Alice), +k.bond(u, d), -k1.coin(v)
+
+swap_bb(Alice?, Bob?; u, d, k, v, d1, k1) :
+    at Alice: identity, knows(Bob), +k1.bond(v, d1), -k.bond(u, d)
+    at Bob: identity, knows(Alice), +k.bond(u, d), -k1.bond(v, d1)
+
+pay(Alice?, Bob; k) :
+    at Alice: identity, knows(Bob), -k.coin(Bob)
+    at Bob: identity, +k.coin(Bob)
+
+redeem_cc(Alice?, Bob; r) :
+    at Alice: identity, knows(Bob), +coin(r), -coin(Bob)
+    at Bob: identity, +coin(Bob), -coin(r)
+
+redeem_cb(Alice?, Bob; r, d1) :
+    at Alice: identity, knows(Bob), +bond(r, d1), -coin(Bob)
+    at Bob: identity, +coin(Bob), -bond(r, d1)
+
+redeem_bc(Alice?, Bob; d, r, t) | d <= t :
+    at Alice: identity, knows(Bob), +coin(r), -bond(Bob, d)
+    at Bob: identity, date(t), +bond(Bob, d), -coin(r)
+
+redeem_bb(Alice?, Bob; d, r, d1, t) | d <= t :
+    at Alice: identity, knows(Bob), +bond(r, d1), -bond(Bob, d)
+    at Bob: identity, date(t), +bond(Bob, d), -bond(r, d1)
+
+deposit_c(Alice?, Bob?; u, k) :
+    at Alice: identity, knows(Bob), -k.coin(u)
+    at Bob: identity, knows(Alice), +k.coin(u)
+
+deposit_b(Alice?, Bob?; u, d, k) :
+    at Alice: identity, knows(Bob), -k.bond(u, d)
+    at Bob: identity, knows(Alice), +k.bond(u, d)
+
+release_c(Alice?, Bob?; u, k) :
+    at Alice: identity, knows(Bob), -k.coin(u)
+    at Bob: identity, knows(Alice), +k.coin(u)
+
+release_b(Alice?, Bob?; u, d, k) :
+    at Alice: identity, knows(Bob), -k.bond(u, d)
+    at Bob: identity, knows(Alice), +k.bond(u, d)
+
+return_c(Alice?, Bob?; u, k) :
+    at Alice: identity, knows(Bob), -k.coin(u)
+    at Bob: identity, knows(Alice), +k.coin(u)
+
+return_b(Alice?, Bob?; u, d, k) :
+    at Alice: identity, knows(Bob), -k.bond(u, d)
+    at Bob: identity, knows(Alice), +k.bond(u, d)
