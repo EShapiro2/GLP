@@ -1614,17 +1614,26 @@ class DeclaredWidget {
 
   /// The items an act names, `item(K, P)`: the speech act at place K,
   /// which a row of the list of the predicate P fills.
-  static List<(int, String)>? _itemsAt(Term t) {
+  static List<String>? _itemsAt(Term t) {
     final xs = _items(t);
     if (xs == null) return null;
-    final is_ = <(int, String)>[];
+    final is_ = <String>[];
     for (final x in xs) {
-      if (x is! StructTerm || x.functor != 'item' || x.args.length != 2) {
+      if (x is! StructTerm || x.args.length != 2) return null;
+      final p = x.functor == 'item' ? x.args[1] : x.args[0];
+      final pc = _labelConstant(p);
+      if (pc == null) return null;
+      if (x.functor == 'item') {
+        final k = _int(x.args[0]);
+        if (k == null) return null;
+        is_.add('item($k, ${constantSource(pc)})');
+      } else if (x.functor == 'atom') {
+        final ks = _ints(x.args[1]);
+        if (ks == null) return null;
+        is_.add('atom(${constantSource(pc)}, [${ks.join(', ')}])');
+      } else {
         return null;
       }
-      final k = _int(x.args[0]), p = _labelConstant(x.args[1]);
-      if (k == null || p == null) return null;
-      is_.add((k, p));
     }
     return is_;
   }
@@ -1689,7 +1698,7 @@ class ActPlace {
   int me = 0;
   List<int> persons = const [];
   List<(int, int)> groups = const [];
-  List<(int, String)> items = const [];
+  List<String> items = const [];
   List<int> keys = const [];
   List<Object> words = const [];
 
@@ -1707,9 +1716,7 @@ class ActPlace {
           'text(${constantSource(f)}, $_wordsSource)',
       ];
 
-  String get _itemsSource => '[${[
-        for (final (k, p) in items) 'item($k, ${constantSource(p)})'
-      ].join(', ')}]';
+  String get _itemsSource => '[${items.join(', ')}]';
 
   String get _wordsSource => '[${[
         for (final w in words)

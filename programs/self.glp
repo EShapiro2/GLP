@@ -183,7 +183,9 @@ Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
 % which a person the view lists fills, Gs the groups it names, group(J, K),
 % the leader at place J and the group's name at place K, which a group the
 % view lists fills, Is the items it names, item(K, P), the speech act at
-% place K, which a row of the list of the predicate P fills (vGLP 932c710,
+% place K, which a row of the list of the predicate P fills, or atom(P, Ks),
+% an atom of the proposer's state agreeing at the places filled filling the
+% rest of Ks (vGLP 932c710,
 % Section 6.2: "a person, a group or an item"), Ks the places a field for a key fills where the peer is
 % not listed, and Ws the text of its request form, each word say(S) or the
 % person at place I, at(I) (vGLP, Section 6.2, "The words a platform shows":
@@ -207,7 +209,7 @@ WidgetField ::= field(String, Widget) ; question(String, Widget).
 ButtonValue ::= Constant ; [] ; label(String, ButtonValue).
 ActPlace ::= place(String, Integer, List(Integer), List(GroupAt), List(ItemAt), List(Integer), List(FormWord)).
 GroupAt ::= group(Integer, Integer).
-ItemAt ::= item(Integer, Constant).
+ItemAt ::= item(Integer, Constant) ; atom(Constant, List(Integer)).
 FormWord ::= say(String) ; at(Integer).
 
 % The channel to the social graph (GSG, 2026-10-13 11:57 UTC, Udi: approved;

@@ -1125,7 +1125,7 @@ act_entry2(S, T, Vs, Named, M, Gs, Is, E?) :- ground(S?), ground(T?), ground(Vs?
     person_places_of(Vs?, 1, M?, Named?, Ld?, Ps),
     E =.. [act, S?, T?, M?, Ps?, Gs?, Is?].
 %% The items a request names: item(K, P) for each atom of a listed predicate P that the schema requires at the role G, the proposer's, kept or deleted there, with the speech-act variable at place K among its arguments.
-ItemPlace ::= item(Integer, Constant).
+ItemPlace ::= item(Integer, Constant) ; atom(Constant, Ints).
 ItemPlaces ::= [] ; [ItemPlace | ItemPlaces].
 procedure item_places(Integer?, RoleSpecs?, Args?, Ints?, Preds?, ItemPlaces).
 item_places(G, Rs, Vs, Nd, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Nd?), ground(Lp?) |
@@ -1136,6 +1136,7 @@ item_places(G, Rs, Vs, Nd, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), gr
 %% A person a field names is named by key, and no row fills it (vGLP, Section 5.4, "The contract's words": "in angle brackets each field ..., a person the act names by key among them"); a speech act a field names a row fills, the field's name labelling it.
 procedure keyed_out(ItemPlaces?, Args?, Ints?, ItemPlaces).
 keyed_out([], _, _, []).
+keyed_out([atom(P, Ks)|Is], Vs, Nd, [atom(P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
 keyed_out([item(K, P)|Is], Vs, Nd, R?) :- ground(Vs?), ground(Nd?), integer(K?), ground(P?) |
     nth_arg(K?, Vs?, A),
     a_svar(A?, Sv),
@@ -1161,7 +1162,9 @@ procedure item_atoms(Atoms?, Integer?, Args?, Preds?, ItemPlaces).
 item_atoms([], _, _, _, []).
 item_atoms([atom(P, Xs)|As], G, Vs, Lp, Is?) :- ground(P?), ground(Xs?), integer(G?), ground(Vs?), ground(Lp?) |
     mem(P?, Lp?, In),
-    item_args(In?, P?, Xs?, G?, Vs?, I1),
+    item_args(In?, P?, Xs?, G?, Vs?, I1a),
+    held_pattern(In?, P?, Xs?, Vs?, I1b),
+    app(I1a?, I1b?, I1),
     item_atoms(As?, G?, Vs?, Lp?, I2),
     app(I1?, I2?, Is).
 item_atoms([times(_, A)|As], G, Vs, Lp, Is?) :- item_atoms([A?|As?], G?, Vs?, Lp?, Is).
@@ -1185,6 +1188,23 @@ item_args(yes, P, [role(J)|Xs], G, Vs, Is?) :- J? =\= G?, ground(P?), ground(Vs?
     item_args(yes, P?, Xs?, G?, Vs?, I2),
     app(I1?, I2?, Is).
 item_args(yes, P, [_|Xs], G, Vs, Is?) :- otherwise, ground(P?), integer(G?), ground(Vs?) | item_args(yes, P?, Xs?, G?, Vs?, Is).
+%% An atom of a predicate no list lists, required at the proposer's role with a speech-act variable among its arguments: atom(P, Ks), Ks the place of each argument, 0 where it is none, so that the proposer's machine fills the variable from the atom of its state that agrees with the places filled (GAI.glp at a336b30d: agent_of(r, p, y) at the principal, "whose machine fills the request's attestation from it").
+procedure held_pattern(YesNo?, Constant?, Args?, Args?, ItemPlaces).
+held_pattern(yes, _, _, _, []).
+held_pattern(no, P, Xs, Vs, I?) :- ground(P?), ground(Xs?), ground(Vs?) |
+    arg_places(Xs?, Vs?, Ks),
+    has_svar(Xs?, Sv),
+    held_pattern1(Sv?, P?, Ks?, I).
+procedure held_pattern1(YesNo?, Constant?, Ints?, ItemPlaces).
+held_pattern1(yes, P, Ks, [atom(P?, Ks?)]).
+held_pattern1(no, _, _, []).
+procedure arg_places(Args?, Args?, Ints).
+arg_places([], _, []).
+arg_places([X|Xs], Vs, [K?|Ks?]) :- ground(X?), ground(Vs?) | place_of(X?, Vs?, 1, K), arg_places(Xs?, Vs?, Ks).
+procedure has_svar(Args?, YesNo).
+has_svar([], no).
+has_svar([svar(_)|_], yes).
+has_svar([_|Xs], B?) :- otherwise | has_svar(Xs?, B).
 procedure item_place(Integer?, Constant?, ItemPlaces).
 item_place(K, P, [item(K?, P?)]) :- K? > 0 | true.
 item_place(0, _, []).
