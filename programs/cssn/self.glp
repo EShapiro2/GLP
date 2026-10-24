@@ -57,11 +57,11 @@ Atom      ::= identity ; retired ; knows(Peer) ; child ; friend(Peer) ; parent(P
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech).
 Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
-Tab       ::= tab(String, Constant).
+Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking    ::= Attempt ; hello(Peer, Proposal).
 Approved  ::= Proposal.
 Approval  ::= approval(Asking, List(Word), YesNo?).
-Word      ::= text(String) ; person(Peer).
+Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
 Menu      ::= menu(Key, List(Key), Request?).
 Question  ::= menu_w(Menu) ; approval_w(Approval).
 Drawn     ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
