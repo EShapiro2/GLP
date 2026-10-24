@@ -21,7 +21,7 @@
 #   O - Currencies Multi-Isolate Tests (dart test, one isolate per agent)
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
 #   GF - Grassroots federation records, transactions and platform (GFWC)
-#   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's and GC's
+#   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -6858,6 +6858,43 @@ check_not "APPS gc: no failed play" "→ failed" "$apps_gc"
 check_not "APPS gc: no error" "Error" "$apps_gc"
 check "APPS gc coins: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gc"
 check_not "APPS gc coins: ... and is not stopped at the limit" "capped" "$apps_gc"
+
+# GB's app, programs/apps/gb: the same host on GB's platform, Currencies' contract on GKK (programs/currencies/bonds/GB.glp and GB.txt; Currencies #11 Cowork, Code_inbox.md, 2026-10-20 19:57 UTC, task 2; Currencies #12 Cowork, 2026-10-23 22:31 UTC, point 4), its wrapper GSG's but that it hands the agent the calendar, GB requiring the day (vGLP, Section 5.4, "Act schemas as local specifications"); three executions, alice's with a conversation with each of bob and carol (play_bonds): each gets day 1 as their date (GB:2, first_date); alice meets bob and carol (GKK:2); alice mints Alice-coins and Alice-bonds, bob Bob-bonds (GB:1); alice asks bob for a loan, two Alice-coins for three Bob-bonds, and he answers yes (GB:3); bob's date advances to day 5 by his calendar (GB:2, advance); alice redeems a matured Bob-bond against an Alice-coin bob holds (GB:5); and alice deposits two Alice-coins with carol, who answers yes (GB:7).
+check "APPS gb: platform.vglp is what vGLP's compiler prints from GB.glp and GB.txt" "^gb/platform.vglp: as printed$" "$apps_print"
+check "APPS gb: the view names three tabs, one for each list line of the pragmas, GKK's Contacts and GB's Coins and Bonds (GSC, Section 2)" '^tabs(\[tab("Contacts", knows), tab("Coins", coin), tab("Bonds", bond)\])$' "$(grep '^tabs(' "$GLP_DIR/programs/apps/gb/platform.vglp")"
+check "APPS gb: Redeem's fields name the variables the request names, the issuer's date t, local to the issuer's role, left out (vGLP, Section 5.4)" 'label(redeem_bc, 3, "maturity given"), label(redeem_bc, 4, "issuer wanted"), act(redeem_bc' "$(grep '^Menu =::=' "$GLP_DIR/programs/apps/gb/platform.vglp")"
+check "APPS gb: the types written again hold coin(Peer), bond(Peer, Integer) and the date" "^Atom     ::= identity ; knows(Peer) ; coin(Peer) ; bond(Peer, Integer) ; date(Integer) ; dated\.$" "$(cat "$GLP_DIR/programs/apps/gb/self.glp")"
+apps_gb_wrap=$(diff "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$GLP_DIR/programs/apps/gb/miniapp.glp" | grep -c '^[<>]')
+if [ "$apps_gb_wrap" = 10 ]; then
+    _check_pass "APPS gb: miniapp.glp is GSG's app's but for the calendar, five lines"
+else
+    _check_fail "APPS gb: miniapp.glp is GSG's app's but for the calendar, five lines" "$apps_gb_wrap lines differ from programs/apps/gsg/miniapp.glp"
+fi
+APPS_ART=$(mktemp -d)
+apps_gb=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gb $APPS_ART
+$GLP_DIR/programs/apps/gb
+:limit 60000000
+play_bonds(A, B, C).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$APPS_ART"
+apps_gb_flat=$(echo "$apps_gb" | sed -e "s/, \[tab('Contacts', knows), tab('Coins', coin), tab('Bonds', bond)\])/)/g")
+check "APPS gb: the mini-app's artefact is certified" "gb.glpw --- certified under" "$apps_gb"
+check "APPS gb loads" "Loaded program: .*programs/apps/gb$" "$apps_gb"
+check_not "APPS gb: no failed play" "→ failed" "$apps_gb"
+check_not "APPS gb: no error" "Error" "$apps_gb"
+check "APPS gb bonds: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gb"
+check_not "APPS gb bonds: ... and is not stopped at the limit" "capped" "$apps_gb"
+check_not "APPS gb bonds: no attempt refused" "refused(" "$apps_gb"
+check "APPS gb bonds: each gets the first day of the calendar as their date, once (GB:2, first_date)" "C = \[view(\[\], \[\], \[\]), view(\[\], \[\], \[establish(carol)\]), view(\[identity\], \[\], \[\]), view(\[date(1), dated, identity\], \[\], \[\])" "$apps_gb_flat"
+check "APPS gb bonds: alice mints three Alice-bonds maturing at day 10, later than her date (GB:1)" "view(\[bond(alice, 10), bond(alice, 10), bond(alice, 10), coin(alice)" "$apps_gb_flat"
+check "APPS gb bonds: bob answers yes to the loan, two Alice-coins for three Bob-bonds maturing at day 5 (GB:3)" "gave(swap_cb(alice, bob, alice, 2, bob, 5, 3), yes)" "$apps_gb_flat"
+check "APPS gb bonds: bob's date advances a day at a time to day 5, the day his calendar gives (GB:2, advance)" "view(\[date(4), coin(alice), coin(alice), knows(alice), bond(bob, 5), dated, identity\], \[alice\], \[\]), view(\[date(5), coin(alice), coin(alice), knows(alice), bond(bob, 5), dated, identity\], \[alice\], \[\])" "$apps_gb_flat"
+check "APPS gb bonds: alice redeems a matured Bob-bond against an Alice-coin bob holds, and nobody is asked (GB:5)" "\[redeem_bc(alice, bob, 5, alice)\]), view(\[coin(alice), date(5), bond(bob, 5), bond(bob, 5)," "$apps_gb_flat"
+check "APPS gb bonds: ... and bob holds the bond presented and one Alice-coin" "view(\[bond(bob, 5), date(5), coin(alice), knows(alice), bond(bob, 5), dated, identity\], \[alice\], \[\])" "$apps_gb_flat"
+check "APPS gb bonds: carol answers yes to alice's deposit of two Alice-coins, and holds them (GB:7)" "gave(deposit_c(alice, carol, alice, 2), yes), view(\[knows(alice), date(1), dated, identity\], \[alice\], \[deposit_c(alice, carol, alice, 2)\]), view(\[coin(alice), coin(alice), knows(alice), date(1), dated, identity\], \[alice\], \[\])" "$apps_gb_flat"
 
 # Each app on two smartphones: the super-app of programs/social/graph/core on two isolates, each person with its own key pair, hosting the app from its certified artefact, gsg.glpw or gsn.glpw, which :artefact writes beside the super-app and load_file/2 reads there (programs/apps/gsg_boot.glp, gsn_boot.glp).  The two persons' lines interleave as the isolates run; each person's lines, their prefix stripped, are held exactly, in order: what the super-app told the person, sg(...), and the mini-app's screen, the steps of play_friends and play_network.
 # A boot prints each line an agent sends its person in GLP syntax, as the REPL prints a binding, a quoted constant quoted, so that the line reads back as the term: utterance('Flood on Main Street') (GLP #9 Cowork, Code_inbox 2026-10-20 09:22 UTC, item 4.2).
