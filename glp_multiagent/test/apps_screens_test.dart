@@ -1682,7 +1682,7 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gai-b-alice-agents.png');
 
-    // Agent meet (GnW:2, GAI:2): GAI's "[Agent meet]" beside Alf on Alice's AI agents tab, the button drawn at the principal's guarding role (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles, beside each row that fills its variable"); the row fills Alf, her machine fills the attestation from her record agent_of(alf, alice, y) (GAI.glp at a336b30d), and she picks Bob.  Alf's program answers yes; Bob is asked GAI's question "Alf, an AI agent, asks to meet you." and answers yes, recording Alf, its principal and its attestation.
+    // Agent meet (GnW:2, GAI:2): GAI's "[Agent meet]" beside Alf on Alice's AI agents tab, the button drawn at the principal's guarding role (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles, beside each row that fills its variable"); the row fills Alf, her machine fills the attestation from her record agent_of(alf, alice, y) (GAI.glp at a336b30d), and she picks Bob.  Alf's program answers yes; Bob, the other agent, is asked GAI's question to that role, "Alf, an AI agent of Alice, asks to meet you." and answers yes, recording Alf, its principal and its attestation.
     const attestation = 'speech($code, alice)';
     Future<void> agentAct(String f, String shot) async {
       await run.list(alice, 'principal_of');
@@ -1699,19 +1699,19 @@ void appsScreens(Screens screens) {
     await agentAct('agent_meet', '');
     await run.list(bob, 'principal_of');
     await run.top(bob);
-    expect(run.on(bob, find.text('Alf, an AI agent, asks to meet you.')), findsOneWidget);
+    expect(run.on(bob, find.text('Alf, an AI agent of Alice, asks to meet you.')), findsOneWidget);
     await run.answer(bob, 'yes');
     expect(bob.atoms, contains('agent_of(alf, alice, $attestation)'));
 
-    // Agent befriend (GnW:2): Alf's program proposes it once it knows Bob, pressing GAI's "[Agent befriend]", the button drawn at its guarding role (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles"; Code_inbox.md, GAI #8 Cowork, 2026-10-24 14:39 UTC: "Alf proposes agent_meet and agent_befriend, and Alice and Bob each answer on their phones"); its meeting with Bob Alice proposed, above, since a machine takes a proposal only where it knows every agent it sends to (vGLP, Section 4: "each is taken only where p knows every agent it sends a message to"), and Alf comes to know Bob by that meeting.  Alice and Bob are each asked GAI's question, "Alf, an AI agent, asks to befriend you.", the contract's one question for every guarding role (GAI.txt, "Knowing and relations").  (c) Alice asked, on her AI agents tab; (d) Bob asked.
+    // Agent befriend (GnW:2): Alf's program proposes it once it knows Bob, pressing GAI's "[Agent befriend]", the button drawn at its guarding role (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles"; Code_inbox.md, GAI #8 Cowork, 2026-10-24 14:39 UTC: "Alf proposes agent_meet and agent_befriend, and Alice and Bob each answer on their phones"); its meeting with Bob Alice proposed, above, since a machine takes a proposal only where it knows every agent it sends to (vGLP, Section 4: "each is taken only where p knows every agent it sends a message to"), and Alf comes to know Bob by that meeting.  Alice and Bob are each asked GAI's question to their role, one question for each guarding role in the order of the act's roles (GAI.txt, "Knowing and relations"; GAI #8 Cowork, 2026-10-24 18:11 UTC): Alice, the principal, "Alf asks to befriend Bob.", and Bob, the other agent, "Alf, an AI agent of Alice, asks to befriend you.".  (c) Alice asked, on her AI agents tab; (d) Bob asked.
     await run.list(alice, 'principal_of');
     await run.top(alice);
-    expect(run.on(alice, find.text('Alf, an AI agent, asks to befriend you.')), findsOneWidget);
+    expect(run.on(alice, find.text('Alf asks to befriend Bob.')), findsOneWidget);
     run.plain(alice);
     await run.shoot(alice, 'gai-c-alice-asked.png');
     await run.list(bob, 'principal_of');
     await run.top(bob);
-    expect(run.on(bob, find.text('Alf, an AI agent, asks to befriend you.')), findsOneWidget);
+    expect(run.on(bob, find.text('Alf, an AI agent of Alice, asks to befriend you.')), findsOneWidget);
     run.plain(bob);
     await run.shoot(bob, 'gai-d-bob-asked.png');
     await run.answer(alice, 'yes');
