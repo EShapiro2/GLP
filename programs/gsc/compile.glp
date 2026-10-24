@@ -93,12 +93,14 @@ latex_args([A, B|As], T, R?) :- ground(A?), ground(B?), ground(As?), ground(T?) 
     latex_arg(A?, [','|R1?], R).
 
 % --- Atoms -----------------------------------------------------------------
-% The paper writes the currency's predicate as the cent sign; every other
-% predicate is set in \mathit.  A predicate of arity zero carries no
-% parentheses.
+% The papers write the currencies' predicates, GC's coin and GB's cent, as
+% the cent sign, wherever they appear (Udi's ruling, reported by GSC,
+% Code_inbox.md, 2026-10-24 07:32 UTC); every other predicate is set in
+% \mathit.  A predicate of arity zero carries no parentheses.
 
 procedure latex_pred(Constant?, Chunks?, Chunks).
 latex_pred(P, T, ['\\text{\\textcent}'|T?]) :- P? =?= coin | true.
+latex_pred(P, T, ['\\text{\\textcent}'|T?]) :- P? =?= cent | true.
 latex_pred(P, T, ['\\mathit{', P?, '}'|T?]) :- otherwise, ground(P?) | true.
 
 procedure latex_atom(Atom?, Chunks?, Chunks).

@@ -1336,13 +1336,13 @@ check "GB's swap, obstructed by the knows it requires, deletes k instruments, k 
 # form its notation gives: the constraint on a proviso line of its own, and a
 # multiplicity k\cdot A, as GB's paper writes it, a multiset with one
 # included in c, as def:compile writes a multiset).
-redeem_display='\begin{align*}&c'"'"'_{\Alice}:=(c_{\Alice}\setminus\{\mathit{cent}(\Bob,d)\})\uplus\{\mathit{cent}(r,d1)\},\qquadc'"'"'_{\Bob}:=(c_{\Bob}\setminus\{\mathit{cent}(r,d1)\})\uplus\{\mathit{cent}(\Bob,d)\},\\&\text{provided}\mathit{identity},\mathit{knows}(\Bob),\mathit{cent}(\Bob,d)\inc_{\Alice}\text{and}\mathit{identity},\mathit{date}(t),\mathit{cent}(r,d1)\inc_{\Bob},\\&\text{provided}d\let,\\&\text{guardedby}\{\Alice\}\end{align*}'
+redeem_display='\begin{align*}&c'"'"'_{\Alice}:=(c_{\Alice}\setminus\{\text{\textcent}(\Bob,d)\})\uplus\{\text{\textcent}(r,d1)\},\qquadc'"'"'_{\Bob}:=(c_{\Bob}\setminus\{\text{\textcent}(r,d1)\})\uplus\{\text{\textcent}(\Bob,d)\},\\&\text{provided}\mathit{identity},\mathit{knows}(\Bob),\text{\textcent}(\Bob,d)\inc_{\Alice}\text{and}\mathit{identity},\mathit{date}(t),\text{\textcent}(r,d1)\inc_{\Bob},\\&\text{provided}d\let,\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "GB's redeem compiles with its constraint on a proviso line of its own" \
          "$redeem_display" "$(compiled_in gb "$GBT" redeem)"
-mint_bond_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\mathit{cent}(\Alice,d)\},\\&\text{provided}\mathit{identity},\mathit{date}(t)\inc_{\Alice},\\&\text{provided}d>t,\\&\text{guardedby}\{\Alice\}\end{align*}'
+mint_bond_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\text{\textcent}(\Alice,d)\},\\&\text{provided}\mathit{identity},\mathit{date}(t)\inc_{\Alice},\\&\text{provided}d>t,\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "GB's mint_bond compiles with its multiplicity and its constraint" \
          "$mint_bond_display" "$(compiled_in gb "$GBT" mint_bond)"
-pay_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\setminus\{k\cdot\mathit{cent}(\Bob,0)\},\qquadc'"'"'_{\Bob}:=c_{\Bob}\uplus\{k\cdot\mathit{cent}(\Bob,0)\},\\&\text{provided}\{\mathit{identity},\mathit{knows}(\Bob),k\cdot\mathit{cent}(\Bob,0)\}\subseteqc_{\Alice}\text{and}\mathit{identity}\inc_{\Bob},\\&\text{guardedby}\{\Alice\}\end{align*}'
+pay_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\setminus\{k\cdot\text{\textcent}(\Bob,0)\},\qquadc'"'"'_{\Bob}:=c_{\Bob}\uplus\{k\cdot\text{\textcent}(\Bob,0)\},\\&\text{provided}\{\mathit{identity},\mathit{knows}(\Bob),k\cdot\text{\textcent}(\Bob,0)\}\subseteqc_{\Alice}\text{and}\mathit{identity}\inc_{\Bob},\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "GB's pay requires its k coins as def:compile writes a multiset, included in c" \
          "$pay_display" "$(compiled_in gb "$GBT" pay)"
 gb_notation=$(notation "$GBT")
