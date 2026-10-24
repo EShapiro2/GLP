@@ -88,8 +88,8 @@ Fault     ::= no_introductory_act
             ; constraint_not_conjunction(Constant, Constraint)
             ; obstructed_jointly(Constant).
 Faults    ::= [] ; [Fault | Faults].
-%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_wards, of the same arguments, is the verdict on one with listed roles or name terms (def:sg-wards of CSSN's paper; programs/gsc/self.glp at GSC-unob3 f06db5dc).
-Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
+%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W, V) is the guardianship (m, iota, g, w, v) of Definition "Guardianship" (GAI, appendix "Contracts with Wards"); a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_wards, of the same arguments, is the verdict on one with listed roles or name terms (def:sg-wards of CSSN's paper; programs/gsc/self.glp at GSC-unob3 f06db5dc).
+Guardianship  ::= guardianship(Constant, Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Party     ::= ward(Integer, Constant, Integer) ; free(Integer).
 Parties   ::= [] ; [Party | Parties].

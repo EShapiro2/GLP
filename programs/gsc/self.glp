@@ -241,7 +241,7 @@ Fault ::= no_introductory_act
 Faults  ::= [] ; [Fault | Faults].
 
 % --- What an introduction with wards is made of (GAI, "Contracts with Wards")
-% guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of
+% guardianship(M, Iota, G, W, V) is the guardianship (m, iota, g, w, v) of
 % def:guardianship; a party of a relay act (def:relay) is a ward role,
 % ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is
 % named with its two parties.  An introduction with wards
@@ -250,7 +250,7 @@ Faults  ::= [] ; [Fault | Faults].
 % found: for each mark one with a free role, and for each pair of marks, in
 % the order of the set, one with a ward role of each; and the leaving marks
 % of the contract (def:leaving), in the order of its marks.
-Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
+Guardianship  ::= guardianship(Constant, Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Party  ::= ward(Integer, Constant, Integer) ; free(Integer).
 Parties ::= [] ; [Party | Parties].
