@@ -158,8 +158,12 @@ def request(me, r):
         return "Establishing my identity"
     if f == "enter":
         return "Entering %s as my child" % name(a[1])
-    if f == "enter_2":
-        return "Entering %s as our child, with %s" % (name(a[2]), name(a[1]))
+    if f == "make_parent":
+        return "Making %s a parent of %s" % (name(a[1]), name(a[2]))
+    if f == "end_parent":
+        return "Ending %s's parenthood of %s" % (name(a[1]), name(a[2]))
+    if f == "retire":
+        return "Retiring %s" % name(a[1])
     if f == "meet":
         return "Asking to meet %s" % name(a[1])
     if f == "introduce":
@@ -201,8 +205,8 @@ def request(me, r):
         return "Ending %s's membership of %s" % (name(a[1]), group(a[3]))
     if f == "child_close":
         return "Closing %s" % group(a[2])
-    if f in ("of_age", "of_age_2"):
-        return "Declaring %s of age" % name(a[-1])
+    if f == "of_age":
+        return "Declaring %s of age" % name(a[1])
     if f == "unfriend":
         return "Ending my friendship with %s" % name(a[1])
     return "Requesting %s" % f
@@ -214,10 +218,10 @@ def approval(me, k):
         f, a = a[3]
     if f == "enter":
         return "Approving my entering, with %s" % name(a[0]) if me == a[1][0] else "Approving %s's entering" % name(a[1])
-    if f == "enter_2":
+    if f == "make_parent":
         if me == a[2][0]:
-            return "Approving my entering, with %s and %s" % (name(a[0]), name(a[1]))
-        return "Approving %s's entering, with %s" % (name(a[2]), name(a[0]))
+            return "Approving %s as my parent" % name(a[1])
+        return "Agreeing to be %s's parent" % name(a[2])
     if f == "meet":
         return "Agreeing to meet %s" % name(a[0])
     if f == "introduce":
@@ -257,7 +261,7 @@ def changes(me, old, new):
             lines.append(("result", "No longer friends with %s" % name(a[0])))
         elif f == "parenting":
             lines.append(("result", "%s is no longer my child" % name(a[0])))
-        elif f == "parent":
+        elif f == "creator":
             lines.append(("result", "%s is no longer my parent" % name(a[0])))
         elif f == "member" and repr(a[0][1][1]) not in closed:
             lines.append(("result", "Left %s" % group(a[0][1][1])))
@@ -276,8 +280,10 @@ def changes(me, old, new):
             lines.append(("result", "Now friends with %s" % name(a[0])))
         elif f == "parenting":
             lines.append(("result", "%s is my child" % name(a[0])))
-        elif f == "parent":
-            lines.append(("result", "%s is my parent" % name(a[0])))
+        elif f == "creator":
+            lines.append(("result", "%s is my creator and parent" % name(a[0])))
+        elif f == "made":
+            lines.append(("result", "%s is a parent of %s" % (name(a[0]), name(a[1]))))
         elif f == "member":
             g = group(a[0][1][1])
             lines.append(("result", "Created %s" % g if a[0][1][0][1][0][0] == me else "Joined %s" % g))

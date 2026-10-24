@@ -1805,10 +1805,10 @@ void appsScreens(Screens screens) {
     await run.tap(alice, run.control(alice, 'key-send:enter'));
     expect(run.scriptedSeen('carol'), contains('gave(enter(alice, carol), yes)'));
     expect(alice.atoms, unorderedEquals(
-        ['identity', 'parenting(carol)', 'friend(carol)', 'knows(carol)']));
+        ['identity', 'created(carol)', 'parenting(carol)', 'friend(carol)', 'knows(carol)']));
     // Dave has entered with Bob the same way.
     expect(run.scriptedAtoms('bob'), unorderedEquals(
-        ['identity', 'parenting(dave)', 'friend(dave)', 'knows(dave)']));
+        ['identity', 'created(dave)', 'parenting(dave)', 'friend(dave)', 'knows(dave)']));
     // Alice and Bob meet (GKK:2): on her Contacts Alice types Bob's key into Meet's field, GKK's "<person>", and taps Meet; Bob's phone is asked GKK's question and answers yes.  Bob's agent then introduces Alice's and Dave's to each other, Bob knowing both, knows being the introduction predicate (CSSN, Section 4.6.1, "The program"), so Alice's agent knows Dave's, though her state does not.
     await run.list(alice, 'knows');
     await run.type(alice, run.control(alice, 'key:meet'), 'bob');
@@ -1907,10 +1907,10 @@ void appsScreens(Screens screens) {
     await run.tap(bob, run.control(bob, 'key-send:enter'));
     expect(run.scriptedSeen('dave'), contains('gave(enter(bob, dave), yes)'));
     expect(bob.atoms, unorderedEquals(
-        ['identity', 'parenting(dave)', 'friend(dave)', 'knows(dave)']));
+        ['identity', 'created(dave)', 'parenting(dave)', 'friend(dave)', 'knows(dave)']));
     // Carol has entered with Alice; Alice asks to meet Bob by his key (GKK:2): her request's hello asks Bob, at the top of his Contacts, GKK's question "Alice wishes that you know each other.", with yes and no; he taps yes.
     expect(run.scriptedAtoms('alice'), unorderedEquals(
-        ['identity', 'parenting(carol)', 'friend(carol)', 'knows(carol)']));
+        ['identity', 'created(carol)', 'parenting(carol)', 'friend(carol)', 'knows(carol)']));
     final h = bob.approval;
     expect(formatTerm(h.view),
         startsWith('approval(hello(alice, meet(alice, bob)), '));
@@ -2011,7 +2011,7 @@ void appsScreens(Screens screens) {
     expect(run.textsOf(carol, e), ['Alice asks to be your parent.', 'yes', 'no']);
     await run.answer(carol, 'yes');
     expect(carol.atoms, unorderedEquals(
-        ['identity', 'parent(alice)', 'child', 'friend(alice)', 'knows(alice)']));
+        ['identity', 'creator(alice)', 'child', 'friend(alice)', 'knows(alice)']));
     // Dave has entered with Bob, and Alice and Bob have met and befriended; Alice asks that Carol and Dave meet, with Bob (CSSN:2), and Carol is asked, on her Children tab, the question of the first child's role, "Alice asks that you and Dave meet.".  Bob and Dave have approved it; she taps yes.
     final m = carol.approval;
     expect(formatTerm(m.view),
@@ -2061,7 +2061,7 @@ void appsScreens(Screens screens) {
     expect(carol.questions('approval'), isEmpty);
     expect(carol.atoms, unorderedEquals([
       'identity',
-      'parent(alice)',
+      'creator(alice)',
       'child',
       'friend(alice)',
       'knows(alice)',
