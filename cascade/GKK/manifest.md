@@ -1,9 +1,9 @@
 # A run of the cascade on GKK
 
-- Contract: `GKK` (`gkk` to the checker), its owner's two files `programs/gsc/GKK.txt` and `programs/gsc/GKK.glp`, copied here as they stood at `a3199c6b`.
-- The paper: `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `442b014f`, for the paper's own record.
-- The tools: this repository at `a3199c6b` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP), programs/apps/gkk (the plays with scripted persons).
-- Run on 2026-10-24 08:53 UTC by `cascade.sh gkk`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GKK` (`gkk` to the checker), its owner's two files `programs/gsc/GKK.txt` and `programs/gsc/GKK.glp`, copied here as they stood at `c4e152d4`.
+- The paper: `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `7b9797f4`, for the paper's own record.
+- The tools: this repository at `c4e152d4` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP), programs/apps/gkk (the plays with scripted persons).
+- Run on 2026-10-24 15:38 UTC by `cascade.sh gkk`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
