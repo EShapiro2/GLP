@@ -1863,6 +1863,14 @@ void appsScreens(Screens screens) {
     await run.tap(alice, run.control(alice, 'act:child_befriend:carol'));
     await run.tap(alice, run.control(alice, 'pick:child_befriend:carol:2:dave'));
     await run.tap(alice, run.control(alice, 'pick:child_befriend:carol:4:bob'));
+    // Bob's place, q, a person of another role and an item of friend at Alice's role, act(child_befriend, "Children", 3, [1, 2, 4], [], [item(1, parenting), item(4, friend)]), is picked once, from the rows of her Friends, and drawn once: two pickers, s and q, each named Peer, and q offering Bob, her one friend, and neither Dave nor Carol (compiler README, item 6, item(K, P): "a person of another role ... at place K ... so that a row of that list fills it"; vGLP, Section 6.2).
+    final form = run.control(alice, 'form:child_befriend:carol');
+    expect(find.descendant(of: form, matching: find.text('Peer')),
+        findsNWidgets(2));
+    expect(run.control(alice, 'pick:child_befriend:carol:4:bob'), findsOneWidget);
+    for (final q in ['dave', 'carol', 'alice']) {
+      expect(run.control(alice, 'pick:child_befriend:carol:4:$q'), findsNothing);
+    }
     final send = run.control(alice, 'send:child_befriend:carol');
     expect(tester.widget<ElevatedButton>(send).onPressed, isNotNull);
     expect(alice.unsent, isEmpty);

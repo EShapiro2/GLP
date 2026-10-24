@@ -2537,11 +2537,21 @@ class _SocialTabState extends State<SocialTab> {
             if ((formatTerm(a) == formatTerm(me)) == (j == place)) m[0]
       ];
 
-  /// The items the person may pick for an item of the list of [pred]: the speech acts of its rows, each once.
-  List<GTerm> _pickableItems(SocialState s, String pred) => [
-        for (final r in _rows(s, pred))
-          if (r.item case final x? when SpeechAct.of(x) != null) x
-      ];
+  /// The items the person may pick for an item of the list of [pred]: at a place of a person, the persons of its rows, other than the person [me] and the row's item [item] filling the composer, so that a row of that list fills it (vGLP, Section 6.2; compiler README, item 6, `item(K, P)`: "a person of another role ... at place K ... so that a row of that list fills it"); at any other place, the speech acts of its rows; each once.
+  List<GTerm> _pickableItems(SocialState s, String pred,
+      {bool person = false, GTerm? me, GTerm? item}) {
+    final seen = <String>{
+      if (person && me != null) formatTerm(me),
+      if (person && item != null) formatTerm(item),
+    };
+    return [
+      for (final r in _rows(s, pred))
+        if (r.item case final x?
+            when (person ? x is GAtom : SpeechAct.of(x) != null) &&
+                seen.add(formatTerm(x)))
+          x
+    ];
+  }
 
   /// The person, the group or the item picked for place [i] of the composer [c].
   final Map<String, GTerm> _picked = {};
@@ -2637,7 +2647,11 @@ class _SocialTabState extends State<SocialTab> {
     final filled = <int>{a.me, ...fill.keys};
     final picks = [
       for (final i in a.persons)
-        if (!filled.contains(i) && !a.keys.contains(i)) i
+        if (!filled.contains(i) &&
+            !a.keys.contains(i) &&
+            // A person place that is an item of a list is picked once, from that list's rows, among the item pickers.
+            !a.itemPlaces.contains(i))
+          i
     ];
     final groupPicks = [
       for (final (j, k) in a.groups)
@@ -2672,7 +2686,7 @@ class _SocialTabState extends State<SocialTab> {
           for (final i in fields) i: _form('field:$composer:$i').text.trim()
         };
     final at = <int, GTerm>{a.me: me, ...fill};
-    for (final i in picks) {
+    for (final i in [for (final i in picks) i, for (final (k, _) in itemPicks) k]) {
       if (_picked['$composer:$i'] case final p?) at[i] = p;
     }
     final words = [
@@ -2722,7 +2736,8 @@ class _SocialTabState extends State<SocialTab> {
           for (final (k, p) in itemPicks)
             Wrap(spacing: 6, runSpacing: 4, children: [
               Text(o.field(f, n, k), style: small),
-              for (final x in _pickableItems(s, p))
+              for (final x in _pickableItems(s, p,
+                  person: a.persons.contains(k), me: me, item: item))
                 ChoiceChip(
                   key: socialKey(_id, 'pick:$composer:$k:${formatTerm(x)}'),
                   label: Text(_named(x)),
