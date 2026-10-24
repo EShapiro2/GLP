@@ -4470,11 +4470,12 @@ procedure vars_bound1(Found?, Vars?, Binding?, YesNo).
 vars_bound1(free, _, _, no).
 vars_bound1(found(_), Vs, B, R?) :- vars_bound(Vs?, B?, R).
 
-%% The bindings extending B under which every atom of As is one of Gs.
+%% The bindings extending B under which every atom of As is one of Gs, each once: the copies of an atom in a state match it in one way, so equal bindings from equal atoms are one (vGLP, Section 5.4, "Act schemas as local specifications": "with the local variables bound by them in one way").
 procedure match_all(SAtoms?, GAtoms?, Binding?, Bindings).
 match_all([], _, B, [B?]).
 match_all([A|As], Gs, B, R?) :- ground(Gs?) |
-    match_into(A?, Gs?, B?, Bs),
+    match_into(A?, Gs?, B?, Bs0),
+    dedup(Bs0?, Bs),
     match_all_each(Bs?, As?, Gs?, R).
 procedure match_all_each(Bindings?, SAtoms?, GAtoms?, Bindings).
 match_all_each([], _, _, []).
