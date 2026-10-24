@@ -1405,8 +1405,8 @@ schema_sentence0(N, Hd, Rs, S, Qs, Fs, L?) :- N? =\= 1, ground(Hd?), ground(Rs?)
     asked_roles(NQ?, Gr?, Ga),
     person_places(Hd?, Rs?, Pp),
     schema_vars(Rs?, Hd?, Vs),
-    rs_count(Rs?, Rn),
-    schema_sentence1(Ga?, Qs?, Pp?, Vs?, S?, Fs?, Rn?, L).
+    value_field_places(Hd?, Rs?, Fq),
+    schema_sentence1(Ga?, Qs?, Pp?, Vs?, S?, Fs?, Fq?, L).
 %% The guarding roles a line's questions are put to: its one question to each guarding role beyond the first; its questions, one per guarding role, each to its own, in the order of the roles (vGLP 21fca00, Section 5.4, "The contract's words": "a line's questions are one per guarding role of the widest schema of its clause, in the order of the roles, none left out, since any guard may propose"), pragmas.sh having given each schema a line covers the questions of its own guarding roles.
 procedure asked_roles(Integer?, Ints?, Ints).
 asked_roles(1, Gr, Ga?) :- rest_ints(Gr?, Ga).
@@ -1424,15 +1424,15 @@ rest_ints([], []).
 rest_ints([_|Is], Is?).
 %% sentence_of(s(V1, V2, _), Me, Ws?) :- ground(V1?), ground(V2?), ground(Me?) | ask_of([q(V2?, [person(V1?), text(...)]), ...], Me?, Ws): the question of each guarding role beyond the proposer's, the first, in their order, q(R, Words), R the person in that role, each person the question names at the place of the class term that holds it, every other place _; ask_of gives the words of the first whose role holds Me, and [] where none does (GSC, Section 2, its first paragraph: "for each role whose will the act needs beyond the proposer's, in their order, the question the person in it is asked").
 %% After its sentence, a question shows each value of the binding it does not name, a person or a number, by the name of its field, named(F, P) or valued(F, K) (vGLP 110caf4, Section 5.4, "The contract's words": "and shows after it each value of the binding the question does not name, by the name of its field, so that the person sees the whole proposal"); a place no field of the pragma names is not shown.
-procedure schema_sentence1(Ints?, PSentences?, Ints?, Args?, Constant?, Strings?, Integer?, Stream(_)).
-schema_sentence1(Gr, Qs, Pp, Vs, S, Fs, Rn, [T?, ':-'|L?]) :- ground(Gr?), ground(Qs?), ground(Pp?), ground(Vs?), ground(S?), ground(Fs?), integer(Rn?) |
+procedure schema_sentence1(Ints?, PSentences?, Ints?, Args?, Constant?, Strings?, Ints?, Stream(_)).
+schema_sentence1(Gr, Qs, Pp, Vs, S, Fs, Fq, [T?, ':-'|L?]) :- ground(Gr?), ground(Qs?), ground(Pp?), ground(Vs?), ground(S?), ground(Fs?), ground(Fq?) |
     spread_questions(Gr?, Qs?, Q1),
     spread_questions(Gr?, Qs?, Q2),
     question_places(Gr?, Q1?, Pp?, Ns0),
-    schema_sentence1b(Ns0?, Gr?, Q2?, Pp?, Vs?, S?, Fs?, Rn?, T, L).
-procedure schema_sentence1b(Ints?, Ints?, PSentences?, Ints?, Args?, Constant?, Strings?, Integer?, _, Stream(_)).
-schema_sentence1b(Ns0, Gr, Qs, Pp, Vs, S, Fs, Rn, T?, L?) :- ground(Ns0?), ground(Vs?), ground(Fs?), integer(Rn?) |
-    value_places(Vs?, 1, Rn?, Ns0?, Fs?, Vp),
+    schema_sentence1b(Ns0?, Gr?, Q2?, Pp?, Vs?, S?, Fs?, Fq?, T, L).
+procedure schema_sentence1b(Ints?, Ints?, PSentences?, Ints?, Args?, Constant?, Strings?, Ints?, _, Stream(_)).
+schema_sentence1b(Ns0, Gr, Qs, Pp, Vs, S, Fs, Fq, T?, L?) :- ground(Ns0?), ground(Vs?), ground(Fs?), ground(Fq?) |
+    value_places(Fq?, Fs?, Ns0?, Vs?, Vp),
     schema_sentence1c(Vp?, Ns0?, Gr?, Qs?, Pp?, Vs?, S?, T, L).
 procedure schema_sentence1c(VPlaces?, Ints?, Ints?, PSentences?, Ints?, Args?, Constant?, _, Stream(_)).
 schema_sentence1c(Vp, Ns0, Gr, Qs, Pp, Vs, S, T?, L?) :- ground(Vp?) |
@@ -1466,28 +1466,29 @@ question_terms([G|Gs], [Q|Qs], Pp, Vw, [T?|Ts?]) :- integer(G?), ground(Q?), gro
     lapp(Sw0?, Vw?, Sw),
     T =.. [q, R?, Sw?],
     question_terms(Gs?, Qs?, Pp?, Vw?, Ts).
-%% The places after the roles that the question does not name, each with the name of its field, the I-th place after the roles the I-th field, and the kind of its value: vp(I, F, named) of a person, vp(I, F, valued) of a number.
-procedure value_places(Args?, Integer?, Integer?, Ints?, Strings?, VPlaces).
-value_places([], _, _, _, _, []).
-value_places([A|As], I, Rn, Ns, Fs, Vp?) :- ground(A?), integer(I?), integer(Rn?), ground(Ns?), ground(Fs?) |
+%% The places of the class term the pragma's fields name, the k-th field the k-th of them, in the order field_places counts them, the peer of a meeting schema first and then the variables of the head a person fills, but numbered as the class term's places, its roles then its head, as the question's places are (said_places).
+procedure value_field_places(Args?, RoleSpecs?, Ints).
+value_field_places(Hd, Rs, Fq?) :- ground(Hd?), ground(Rs?) |
+    schema_vars(Rs?, Hd?, Vs),
+    field_places1(Vs?, 1, Fq0),
+    meeting_schema(Rs?, M),
+    peer_first(M?, Fq0?, Fq).
+%% The places the pragma's fields name that the question does not name, each with the name of its field and the kind of its value: vp(I, F, named) of a person, vp(I, F, valued) of a number; a field left empty, as an inapplicable field of a schema that shares its button, names no place.
+procedure value_places(Ints?, Strings?, Ints?, Args?, VPlaces).
+value_places([], _, _, _, []).
+value_places([_|_], [], _, _, []).
+value_places([I|Is], [F|Fs], Ns, Vs, Vp?) :- integer(I?), ground(F?), ground(Ns?), ground(Vs?) |
     mem(I?, Ns?, In),
+    nth_arg(I?, Vs?, A),
     value_kind(A?, K),
-    J := I? - Rn?,
-    field_at(J?, Fs?, F),
-    value_place(In?, K?, F?, I?, Vp1),
-    I1 := I? + 1,
-    value_places(As?, I1?, Rn?, Ns?, Fs?, Vp2),
+    value_place(In?, K?, field(F?), I?, Vp1),
+    value_places(Is?, Fs?, Ns?, Vs?, Vp2),
     app(Vp1?, Vp2?, Vp).
 procedure value_kind(Arg?, Constant).
 value_kind(role(_), named).
 value_kind(pvar(_), named).
 value_kind(num(_), valued).
 value_kind(_, none) :- otherwise | true.
-procedure field_at(Integer?, Strings?, FieldAt).
-field_at(J, _, nofield) :- J? < 1 | true.
-field_at(1, [F|_], field(F?)).
-field_at(J, [_|Fs], R?) :- J? > 1 | J1 := J? - 1, field_at(J1?, Fs?, R).
-field_at(_, [], nofield).
 procedure value_place(YesNo?, Constant?, FieldAt?, Integer?, VPlaces).
 value_place(yes, _, _, _, []).
 value_place(no, _, nofield, _, []).
