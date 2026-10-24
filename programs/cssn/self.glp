@@ -16,12 +16,11 @@ Class     ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; leave(Peer, Peer, Speech) ; close(Peer, List(Peer), Speech) ; drop(Peer, Peer, Speech)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
             ; deliver(Peer, Peer, Speech, Speech)
-            ; enter(Peer, Peer) ; enter_2(Peer, Peer, Peer)
-            ; of_age(Peer, Peer) ; of_age_2(Peer, Peer, Peer)
+            ; enter(Peer, Peer) ; make_parent(Peer, Peer, Peer) ; end_parent(Peer, Peer, Peer)
+            ; of_age(Peer, Peer, List(Peer)) ; retire(Peer, Peer, List(Peer))
             ; child_meet(Peer, Peer, Peer) ; child_meet_2(Peer, Peer, Peer, Peer)
             ; child_befriend(Peer, Peer, Peer, Peer) ; child_adult_befriend(Peer, Peer, Peer)
             ; child_unfriend(Peer, Peer, Peer)
-            ; parent_unfriend(Peer, Peer) ; parent_unfriend_2(Peer, Peer, Peer)
             ; child_join(Peer, Peer, Peer, Speech) ; child_join_2(Peer, Peer, Peer, Peer, Speech)
             ; child_leave(Peer, Peer, Peer, Speech) ; child_close(Peer, Peer, List(Peer), Speech).
 Proposal  ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
@@ -30,12 +29,11 @@ Proposal  ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
-            ; enter(Peer, Peer) ; enter_2(Peer, Peer, Peer)
-            ; of_age(Peer, Peer) ; of_age_2(Peer, Peer, Peer)
+            ; enter(Peer, Peer) ; make_parent(Peer, Peer, Peer) ; end_parent(Peer, Peer, Peer)
+            ; of_age(Peer, Peer) ; retire(Peer, Peer)
             ; child_meet(Peer, Peer, Peer) ; child_meet_2(Peer, Peer, Peer, Peer)
             ; child_befriend(Peer, Peer, Peer, Peer) ; child_adult_befriend(Peer, Peer, Peer)
             ; child_unfriend(Peer, Peer, Peer)
-            ; parent_unfriend(Peer, Peer) ; parent_unfriend_2(Peer, Peer, Peer)
             ; child_join(Peer, Peer, Peer, Speech) ; child_join_2(Peer, Peer, Peer, Peer, Speech)
             ; child_leave(Peer, Peer, Peer, Speech) ; child_close(Peer, Peer, Speech).
 Request   ::= propose(Proposal).
@@ -50,10 +48,10 @@ Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
             ; yield(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Atom      ::= identity ; retired ; knows(Peer) ; child ; friend(Peer) ; parent(Peer) ; parenting(Peer)
+Atom      ::= identity ; retired ; knows(Peer) ; child ; friend(Peer) ; creator(Peer) ; parenting(Peer)
             ; received(Speech, Peer) ; member(CName) ; listed(Peer, Speech)
             ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech)
-            ; received_in(Speech, Peer, Speech) ; coparent(Peer) ; coparented.
+            ; received_in(Speech, Peer, Speech) ; created(Peer) ; made(Peer, Peer).
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech).
 Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
