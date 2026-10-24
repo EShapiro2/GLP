@@ -137,6 +137,18 @@ while [ $# -gt 0 ]; do
     esac
 done
 [ -n "$CAS" ] && [ -f "$SRCF" ] || usage
+# The unit of --until: one of the paper's six, singular or plural (sGLP's
+# paper, Appendix B); run.sh refuses any other as well.
+if [ -n "$UNTIL" ]; then
+    read -r UC UU UX <<< "$UNTIL"
+    case "${UU:-}" in
+        second|seconds|minute|minutes|hour|hours|day|days|week|weeks|year|years) ;;
+        *) echo "record.sh: the unit of --until is second, minute, hour, day, week or year, singular or plural, not ${UU:-none}" >&2
+           exit 2 ;;
+    esac
+    [[ "$UC" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [ -z "${UX:-}" ] ||
+        { echo "record.sh: --until is '<count> <unit>'" >&2; exit 2; }
+fi
 [[ "$NAME" =~ ^[A-Z][A-Z0-9]*$ ]] || { echo "record.sh: a contract's name is a letter acronym, as GSG" >&2; exit 2; }
 if [ "$RECORD" = 1 ] && [ "$ROOT" != "$GLP_DIR/simulation" ]; then
     echo "record.sh: --record commits a record under simulation/ only" >&2; exit 2
