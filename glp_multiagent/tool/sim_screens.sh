@@ -4,7 +4,11 @@
 # the iOS Simulator.  From glp_multiagent/, under the Mac's one run
 # lock (/Users/udi/Grassroots/tmp/glp-run.sh):
 #
-#     bash tool/sim_screens.sh ["iPhone 16e"]
+#     bash tool/sim_screens.sh ["iPhone 16e" [name]]
+#
+# With a name, only the tests of the scenario whose names hold it are played,
+# flutter test's --plain-name, so that one figure's screens are taken again
+# and no other screen is rewritten.
 #
 # It builds the bundled GLP assets (tool/sync_glp_assets.sh), boots the
 # simulator, sets its status bar to 9:41, full Wi-Fi and signal and a full
@@ -22,6 +26,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."           # glp_multiagent/
 DEVICE="${1:-iPhone 16e}"
+NAME=("${@:2}")
+FILTER=()
+if [ "${#NAME[@]}" -gt 0 ]; then FILTER=(--plain-name "${NAME[0]}"); fi
 UDID=$(xcrun simctl list devices available \
   | grep -E "^ +$DEVICE \(" | head -1 \
   | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
@@ -62,7 +69,7 @@ for _ in $(seq 100); do
 done
 PORT=$(cat "$RAW/port")
 
-flutter test integration_test/apps_screens_test.dart -d "$UDID" \
+flutter test integration_test/apps_screens_test.dart -d "$UDID" ${FILTER[@]+"${FILTER[@]}"} \
   --dart-define=GLP_PROGRAMS="$PROGRAMS" \
   --dart-define=GLP_SHOTS="http://127.0.0.1:$PORT" \
   --dart-define=FLUTTER_ROOT="$FLUTTER_ROOT"
