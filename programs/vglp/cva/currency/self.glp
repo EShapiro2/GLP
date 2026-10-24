@@ -30,8 +30,10 @@
 %%
 %% Each play opens alike: each person establishes their identity and mints
 %% coins of their own, each a class of one participant, applied at once; each
-%% comes to know the other's agent; and alice requests meeting bob, who is
-%% asked and answers yes, and once it commits each knows the other.
+%% comes to know the other's agent by alice's request of meeting bob, a cold
+%% call, the hello, on which bob is asked and answers yes, his request of it
+%% (vGLP, Section 5.4, "The compilation"), and once it commits each knows the
+%% other.
 %%
 %% play_pay_swap: alice mints 2 coins and bob 3; alice requests swapping 2 of
 %%   hers for 3 of bob's, swap(alice, bob, alice, 2, bob, 3); bob is asked and
