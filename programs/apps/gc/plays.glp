@@ -11,3 +11,21 @@ play_coins(A?, B?) :-
     person # miniapp_person(alice, alice, ch(DA?, GA), A),
     run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA))], _), []), T?, M?),
     person # miniapp_person(bob, bob, ch(DB?, GB), B).
+
+%% play_village(A, B, C, D, E, F): the village market of GC's paper, Appendix "Village Market Demonstration", on the compiled app: alice, bob, charlie, diana, eve and frank, under the roles market_alice to market_frank (person.glp); seven conversations, one between each two who transact.  The six operations: symmetric mutual credit, alice with bob and with charlie 15 coins each, charlie with eve 10, eve with frank 10 (GC:2); asymmetric mutual credit, diana's 20 diana-coins for 24 bob-coins and her 15 for 18 frank-coins (GC:2); eve's portfolio swap with charlie, 5 frank-coins for 5 alice-coins (GC:2); the payments, bob to alice 5, eve to charlie 6, frank to diana 3, eve to alice 3, each in coins of the payee (GC:3); frank's redemption of 5 diana-coins, one at a time, each against a frank-coin diana holds (GC:4); and alice's sale of 10 bob-coins to eve for 4 frank-coins (GC:2).  Each villager's last view holds the holdings of the paper's Table 1.
+exported procedure play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_village(A?, B?, C?, D?, E?, F?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, DA), ch([conversation(bob, ch(BA?, AB)), conversation(charlie, ch(CA?, AC)), conversation(eve, ch(EA?, AE))], _), []), T?, M?),
+    person # miniapp_person(alice, market_alice, ch(DA?, GA), A),
+    run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA)), conversation(diana, ch(DB1?, BD))], _), []), T?, M?),
+    person # miniapp_person(bob, market_bob, ch(DB?, GB), B),
+    run(miniapp(charlie, ch(GC?, DC), ch([conversation(alice, ch(AC?, CA)), conversation(eve, ch(EC?, CE))], _), []), T?, M?),
+    person # miniapp_person(charlie, market_charlie, ch(DC?, GC), C),
+    run(miniapp(diana, ch(GD?, DD), ch([conversation(bob, ch(BD?, DB1)), conversation(frank, ch(FD?, DF))], _), []), T?, M?),
+    person # miniapp_person(diana, market_diana, ch(DD?, GD), D),
+    run(miniapp(eve, ch(GE?, DE), ch([conversation(alice, ch(AE?, EA)), conversation(charlie, ch(CE?, EC)), conversation(frank, ch(FE?, EF))], _), []), T?, M?),
+    person # miniapp_person(eve, market_eve, ch(DE?, GE), E),
+    run(miniapp(frank, ch(GF?, DF1), ch([conversation(diana, ch(DF?, FD)), conversation(eve, ch(EF?, FE))], _), []), T?, M?),
+    person # miniapp_person(frank, market_frank, ch(DF1?, GF), F).

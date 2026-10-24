@@ -259,3 +259,8 @@ procedure(X) remove_all(X?, Stream(X)?, Stream(X)).
 remove_all(_, [], []).
 remove_all(X, [Y|Ys], Zs?) :- X? =?= Y? | remove_all(X?, Ys?, Zs).
 remove_all(X, [Y|Ys], [Y?|Zs?]) :- otherwise | remove_all(X?, Ys?, Zs).
+
+%% A place of a class term a question does not name, shown after it by the name of its field: vp(I, F, named) of a person, vp(I, F, valued) of a number (cvac.glp, schema_sentence1).
+VPlace    ::= vp(Integer, String, Constant).
+VPlaces   ::= [] ; [VPlace | VPlaces].
+FieldAt   ::= field(String) ; nofield.

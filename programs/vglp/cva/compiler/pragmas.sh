@@ -3,7 +3,7 @@
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
-# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The first line after "Pragmas" is a list, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is "Clause: [Button] ... <field> ... sentence", a button for each act of the clause a person proposes, and an act for each button, act(Schema, Button, Fields, Sentence), Schema the button's text in lower case, each space an underscore, the name of the schema it proposes ("a button for each act of it a person proposes, in brackets, each bearing its act's name", GSC 2991379, Section 2), the fields and the sentence of the line each act's, the clause being one of that title in the same NAME.txt or, where it has none, in the NAME.txt of a contract it extends, Sentence said(Questions) or none, each question a sentence of the line after its fields, the question put to the person in each role whose will the act needs beyond the proposer's, in their order (GSC, Section 2, its first paragraph: "for each role whose will the act needs beyond the proposer's, in their order, the question the person in it is asked"), each its words, each word text(S) or person(I), a name the person I-th among the names the line's clause uses, in the order they first occur in it, so that the head's persons, its roles then its agent variables, are named in order by the clause's names (vGLP, Section 5.4, "The contract's words": "A question names the roles of its schema by the names its clause uses, in the order of the roles"); a name is a word of a capital and lower-case letters that a clause of the contract, or of a contract it extends, writes within a sentence and not first in it, as Alice, Bob, Carol, Dave and Alf.  Each act carries, last, the name of the tab of its contract, the first line after "Pragmas" of the NAME.txt the act's line is in: act(Schema, Button, Fields, Sentence, Tab).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
+# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is "Clause: [Button] ... <field> ... sentence", a button for each act of the clause a person proposes, and an act for each button, act(Schema, Button, Fields, Sentence), Schema the button's text in lower case, each space an underscore, the name of the schema it proposes ("a button for each act of it a person proposes, in brackets, each bearing its act's name", GSC 2991379, Section 2), the fields and the sentence of the line each act's, the clause being one of that title in the same NAME.txt or, where it has none, in the NAME.txt of a contract it extends, Sentence said(Questions) or none, each question a sentence of the line after its fields, the question put to the person in each role whose will the act needs beyond the proposer's, in their order (GSC, Section 2, its first paragraph: "for each role whose will the act needs beyond the proposer's, in their order, the question the person in it is asked"), each its words, each word text(S) or person(I), a name the person I-th among the names the line's clause uses, in the order they first occur in it, so that the head's persons, its roles then its agent variables, are named in order by the clause's names (vGLP, Section 5.4, "The contract's words": "A question names the roles of its schema by the names its clause uses, in the order of the roles"); a name is a word of a capital and lower-case letters that a clause of the contract, or of a contract it extends, writes within a sentence and not first in it, as Alice, Bob, Carol, Dave and Alf.  Each act carries, last, the name of the tab of its contract, the first line after "Pragmas" of the NAME.txt the act's line is in: act(Schema, Button, Fields, Sentence, Tab).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
 
 set -u
 [ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt> [<contract term>]" >&2; exit 2; }
@@ -11,15 +11,69 @@ PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
 exec perl -CSD -Mutf8 -e '
 use strict; use warnings;
 my ($top, $programs, $term) = @ARGV;
-# The schemas of the contract term, where it is given, each with the variables of its head after its roles, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).
+# The schemas of the contract term, where it is given, each with the variables of its head after its roles that the request names, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).  A numeric variable local to a role, one that occurs only in atoms the schema requires or deletes at that one role, and in the constraint, is not named by the request, and no field names it (vGLP, Section 5.4, "Act schemas as local specifications": "Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and a request names it, so the request form takes it"), as t, the date of the issuer, in the redeem_bc of GB.
+# The arguments of the term at the top level of the text $s, split at its commas outside brackets.
+sub top_args {
+    my ($s) = @_;
+    my (@a, $d, $cur); $d = 0; $cur = "";
+    for my $ch (split //, $s) {
+        if ($ch eq "," && $d == 0) { push @a, $cur; $cur = ""; next }
+        $d++ if $ch eq "(" || $ch eq "[";
+        $d-- if $ch eq ")" || $ch eq "]";
+        $cur .= $ch;
+    }
+    push @a, $cur if $cur =~ /\S/;
+    s/^\s+|\s+$//g for @a;
+    return @a;
+}
+# The text inside the brackets that open at position $i of $s, and the position after them.
+sub inside {
+    my ($s, $i) = @_;
+    my $d = 0;
+    for (my $j = $i; $j < length $s; $j++) {
+        my $ch = substr($s, $j, 1);
+        $d++ if $ch eq "(" || $ch eq "[";
+        $d-- if $ch eq ")" || $ch eq "]";
+        return (substr($s, $i + 1, $j - $i - 1), $j + 1) if $d == 0;
+    }
+    return ("", length $s);
+}
+# The numeric variables local to a role of the schema whose arguments are @args.
+sub local_nums {
+    my (@args) = @_;
+    my $roles = $args[-1];
+    $roles =~ s/^\[//; $roles =~ s/\]$//;
+    my (%at, %elsewhere);
+    my $r = 0;
+    for my $spec (top_args($roles)) {
+        $r++;
+        my ($f) = $spec =~ /^(c?rs)\(/ or next;
+        my ($body) = inside($spec, length $f);
+        my @p = top_args($body);
+        shift @p if $f eq "crs";
+        for my $k (0 .. $#p) {
+            for my $x ($p[$k] =~ /\bnum\((\w+)\)/g) {
+                if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 } else { $elsewhere{$x} = 1 }
+            }
+        }
+    }
+    return grep { !$elsewhere{$_} && keys %{ $at{$_} } == 1 } keys %at;
+}
 my (@snames, %svars, %preds);
 $preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
 if (defined $term && $term ne "") {
-    while ($term =~ /\b[nc]?schema\((\w+), \[([^\]]*)\]/g) {
-        my ($n, $a) = ($1, $2);
-        next if exists $svars{$n};
+    while ($term =~ /\b([nc]?schema)\(/g) {
+        my $kw = $1;
+        my $open = pos($term) - 1;
+        my ($body, $end) = inside($term, $open);
+        pos($term) = $open + 1;
+        my @args = top_args($body);
+        my ($n, $a) = @args[0, 1];
+        next if !defined $a || exists $svars{$n};
         push @snames, $n;
-        $svars{$n} = [ $a =~ /\w+\((\w+)\)/g ];
+        my %local = map { $_ => 1 } local_nums(@args);
+        $a =~ s/^\[//; $a =~ s/\]$//;
+        $svars{$n} = [ grep { !($local{$_} && $a =~ /\bnum\(\Q$_\E\)/) } ($a =~ /\w+\((\w+)\)/g) ];
     }
 }
 # The contract term read whole, for the roles of each schema: tparse gives a term as [functor, args] for a compound, ["[]", items] for a list, and [name] for a constant.
@@ -83,6 +137,7 @@ sub find_schemas {
 }
 if (defined $term && $term ne "") { $tsrc = $term; find_schemas(tparse()) }
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
+my %seen; my @order;
 my %named_by_button;
 sub realising {
     my ($act) = @_;
@@ -181,7 +236,6 @@ sub q_atom {   # a GLP quoted name holding the text $s
 sub q_string { # a quoted name holding the GLP source of the string $s
     my ($s) = @_; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; return q_atom("\"$s\"");
 }
-my %seen; my @order;
 sub visit {
     my ($f) = @_;
     return if $seen{$f}++;
@@ -241,7 +295,7 @@ for my $f (reverse @order) {
 for my $f (@order) {
     my @l = read_txt($f);
     (my $name = $f) =~ s{.*/}{}; $name =~ s/\.txt$//;
-    my %clause; my %body; my $after = 0; my $first = 1; my $tab = "";
+    my %clause; my %body; my $after = 0; my $first = 1; my $tabs = 1; my $tab = "";
     for my $x (@l) {
         next if $x =~ /^%/;
         if (!$after) {
@@ -252,8 +306,9 @@ for my $f (@order) {
         next if $x =~ /^\s*$/;
         my ($title, $rest) = $x =~ /^([^:]+):\s*(.*)$/
             or die "pragmas.sh: $f: a pragma with no title: $x\n";
-        if ($first) {
-            $first = 0;
+        # The pragmas open with one line for each tab of the app, each naming the tab and what it lists, before the clause lines (GSC, Section 2, its first paragraph, as GSC ruled, Code_inbox.md, 2026-10-24 09:40 UTC): every line before the first that names a clause is a tab, and the first of them is the tab of the contract, where its acts are drawn.
+        $tabs = 0 if $tabs && (exists $clause{$title} || exists $xclause{$title});
+        if ($tabs) {
             my @w;
             my @lw = map { lc } ($rest =~ /([A-Za-z0-9_]+)/g);
             # The predicate a tab lists is named by its name, an underscore read as a space, the longest such phrase in the line (vGLP 110caf4, Section 5.4, "The contract words"), a word also read without a final s, as "friends" names friend and "principal of" principal_of; the words of the line are given where the contract term is not.
@@ -278,7 +333,8 @@ for my $f (@order) {
                 }
             }
             push @lists, "list(" . q_string($title) . ", [" . join(", ", map { q_atom($_) } @w) . "])";
-            $tab = $title;
+            $tab = $title if $first;
+            $first = 0;
             next;
         }
         if (!exists $clause{$title} && exists $xclause{$title}) { $clause{$title} = $xclause{$title}; $body{$title} = $xbody{$title} }

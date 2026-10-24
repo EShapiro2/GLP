@@ -28,10 +28,10 @@ Net      ::= msg(Peer, Content).
 Atom     ::= identity ; knows(Peer) ; coin(Peer).
 Approved ::= Proposal.
 Output   ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
-Tab      ::= tab(String, Constant).
+Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking   ::= Attempt ; hello(Peer, Proposal).
 Approval ::= approval(Asking, List(Word), YesNo?).
-Word     ::= text(String) ; person(Peer).
+Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -61,3 +61,6 @@ miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, P
 imported procedure plays#play_coins(Stream(Seen), Stream(Seen)).
 exported procedure play_coins(Stream(Seen), Stream(Seen)).
 play_coins(A?, B?) :- plays # play_coins(A, B).
+imported procedure plays#play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+exported procedure play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_village(A?, B?, C?, D?, E?, F?) :- plays # play_village(A, B, C, D, E, F).

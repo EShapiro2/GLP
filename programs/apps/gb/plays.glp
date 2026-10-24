@@ -1,0 +1,96 @@
+%% plays.glp --- the GB mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for each two executions that transact, with the two ends of one root channel handed to them as their conversation, the play standing in for the social graph, as ../gc/plays.glp does.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  GB requires the day, so each execution is granted a calendar, a stream of dates (GSG, miniapp/4; vGLP, Section 5.4, "Act schemas as local specifications"), which on a device its clock writes and here the play writes: the first day, 1, on each calendar, and day 5 on bob's once his screen shows him holding Alice-coins, the loan taken, and on alice's once his screen shows his date at day 5, so that his bonds are mature by his date when she presents one (GB:5).  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.
+
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+
+%% play_bonds(A, B, C): alice, bob and carol, a conversation between alice and each of the other two.  Each establishes their identity (GKK:1, Identity) and gets the first day as their date (GB:2, Date, first_date); alice meets bob and carol (GKK:2, Meeting, an act of both); alice mints Alice-coins and Alice-bonds maturing at day 10, and bob Bob-bonds maturing at day 5 (GB:1, Minting); alice asks bob for a loan, two Alice-coins for three Bob-bonds, and he answers yes (GB:3, Swap, an act of both); bob's date advances to day 5 (GB:2, advance); alice redeems a matured Bob-bond against an Alice-coin bob holds (GB:5, Redemption, an act of alice); and alice deposits two Alice-coins with carol, the escrow agent, who answers yes (GB:7, Escrow).  These are the acts of the screens of GB's app (screens/).
+exported procedure play_bonds(Stream(Seen), Stream(Seen), Stream(Seen)).
+play_bonds(A?, B?, C?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, DA), ch([conversation(bob, ch(BA?, AB)), conversation(carol, ch(CA?, AC))], _), [1 | KA?]), T?, M?),
+    person # miniapp_person(alice, alice, ch(DA?, GA), A),
+    run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA))], _), [1 | KB?]), T?, M?),
+    person # miniapp_person(bob, bob, ch(DB?, GB), SB),
+    calendars(SB?, B, KB, KA, lend),
+    run(miniapp(carol, ch(GC?, DC), ch([conversation(alice, ch(AC?, CA))], _), [1]), T?, M?),
+    person # miniapp_person(carol, carol, ch(DC?, GC), C).
+
+%% The play's calendars: what bob's person reports, passed on whole, and day 5 written on bob's calendar once his last view holds an Alice-coin, the loan taken (the phase lend), and then on alice's once it holds his date at day 5 (the phase mature).
+Phase ::= lend ; mature ; done.
+
+procedure calendars(Stream(Seen)?, Stream(Seen), Stream(Integer), Stream(Integer), Phase?).
+calendars([X | Xs], [X? | Ys?], KB?, KA?, P) :-
+    ground(X?), ground(P?) |
+    turn(X?, P?, KB, KB1?, KA, KA1?, P1),
+    calendars(Xs?, Ys, KB1, KA1, P1?).
+calendars([], [], [], [], _).
+
+procedure turn(Seen?, Phase?, Stream(Integer), Stream(Integer)?, Stream(Integer), Stream(Integer)?, Phase).
+turn(view(S, _, _, _), P, KB?, KB1, KA?, KA1, P1?) :-
+    ground(S?), ground(P?) |
+    awaited(P?, W),
+    count_atom(W?, S?, N),
+    fire(N?, P?, KB, KB1?, KA, KA1?, P1).
+turn(_, P, KB1?, KB1, KA1?, KA1, P?) :- otherwise | true.
+
+%% The atom each phase waits for in bob's state; done waits for none.
+procedure awaited(Phase?, Atom).
+awaited(lend, coin(alice)).
+awaited(mature, date(5)).
+awaited(done, identity).
+
+procedure fire(Integer?, Phase?, Stream(Integer), Stream(Integer)?, Stream(Integer), Stream(Integer)?, Phase).
+fire(N, lend, [5 | KB1?], KB1, KA1?, KA1, mature) :- N? > 0 | true.
+fire(N, mature, KB1?, KB1, [5 | KA1?], KA1, done) :- N? > 0 | true.
+fire(_, P, KB1?, KB1, KA1?, KA1, P?) :- otherwise | true.
+
+procedure count_atom(Atom?, List(Atom)?, Integer).
+count_atom(_, [], 0).
+count_atom(X, [Y | Ys], N?) :- X? =?= Y? | count_atom(X?, Ys?, M), N := M? + 1.
+count_atom(X, [_ | Ys], N?) :- otherwise | count_atom(X?, Ys?, N).
+
+%% play_village(A, B, C, D, E, F, G): the village market of GB's paper, Section 7.1, on the compiled app: alice, bob, charlie, diana, eve and frank, the villagers, and escrow, the escrow agent, under the roles market_alice to market_escrow (person.glp); nine conversations, one between each two who transact.  The seven operations: symmetric mutual credit, alice with bob and with charlie 15 coins each, charlie with eve 10, eve with frank 10 (GB:3); the loans, diana's 20 diana-coins for 24 bob-bonds maturing at day 25, and her 15 for 18 frank-bonds maturing at day 28 (GB:3); the payments, bob to alice 5, eve to charlie 6, frank to diana 3, eve to alice 3, each in coins of the payee (GB:4); eve's portfolio swap with charlie, 5 frank-coins for 5 alice-coins (GB:3); charlie's deposit of 5 frank-coins with the escrow agent for frank, released to frank once the escrow agent's date is day 30 (GB:7); frank's redemption of 5 diana-coins, one at a time, each against a frank-bond diana holds (GB:5); and alice's sale of 10 bob-coins to eve for 4 frank-coins (GB:3).  What dates add, once, on frank's bonds: before frank's date is day 28, diana presents a frank-bond to redeem it against a frank-coin, and frank's machine refuses it, the bond not mature by his date; the play then writes day 28 on frank's calendar, and once he has redeemed his fifth diana-coin, after the escrow agent's release, diana redeems a matured frank-bond against a frank-coin he holds (GB:5).  The play writes the calendars: day 1 on each; day 25 on bob's once he holds the diana-coins of his loan; day 28 on frank's once diana's screen shows her presentation refused; and day 30 on the escrow agent's once it holds the deposit.
+exported procedure play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_village(A?, B?, C?, D?, E?, F?, G?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, DA), ch([conversation(bob, ch(BA?, AB)), conversation(charlie, ch(CA?, AC)), conversation(eve, ch(EA?, AE))], _), [1]), T?, M?),
+    person # miniapp_person(alice, market_alice, ch(DA?, GA), A),
+    run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA)), conversation(diana, ch(DB1?, BD))], _), [1 | KB?]), T?, M?),
+    person # miniapp_person(bob, market_bob, ch(DB?, GB), SB),
+    cal_when(SB?, B, holds(coin(diana)), 25, KB),
+    run(miniapp(charlie, ch(GC?, DC), ch([conversation(alice, ch(AC?, CA)), conversation(eve, ch(EC?, CE)), conversation(escrow, ch(XC?, CX))], _), [1]), T?, M?),
+    person # miniapp_person(charlie, market_charlie, ch(DC?, GC), C),
+    run(miniapp(diana, ch(GD?, DD), ch([conversation(bob, ch(BD?, DB1)), conversation(frank, ch(FD?, DF))], _), [1]), T?, M?),
+    person # miniapp_person(diana, market_diana, ch(DD?, GD), SD),
+    cal_when(SD?, D, refused_by(redeem_bc(diana, frank, 28, frank), frank), 28, KF),
+    run(miniapp(eve, ch(GE?, DE), ch([conversation(alice, ch(AE?, EA)), conversation(charlie, ch(CE?, EC)), conversation(frank, ch(FE?, EF))], _), [1]), T?, M?),
+    person # miniapp_person(eve, market_eve, ch(DE?, GE), E),
+    run(miniapp(frank, ch(GF?, DF1), ch([conversation(diana, ch(DF?, FD)), conversation(eve, ch(EF?, FE)), conversation(escrow, ch(XF?, FX))], _), [1 | KF?]), T?, M?),
+    person # miniapp_person(frank, market_frank, ch(DF1?, GF), F),
+    run(miniapp(escrow, ch(GX?, DX), ch([conversation(charlie, ch(CX?, XC)), conversation(frank, ch(FX?, XF))], _), [1 | KX?]), T?, M?),
+    person # miniapp_person(escrow, market_escrow, ch(DX?, GX), SX),
+    cal_when(SX?, G, holds(coin(frank)), 30, KX).
+
+%% cal_when(Xs, Ys, W, D, K): what a person reports, Xs, passed on whole as Ys, and the date D written on the calendar K once it shows W: an atom their last view holds, holds(A), or a notice of a refusal of their request P by Q, refused_by(P, Q), whatever its reason.
+When ::= holds(Atom) ; refused_by(Proposal, Key).
+
+procedure cal_when(Stream(Seen)?, Stream(Seen), When?, Integer?, Stream(Integer)).
+cal_when([X | Xs], [X? | Ys?], W, D, K?) :-
+    ground(X?), ground(W?) |
+    met(X?, W?, B),
+    cal_then(B?, Xs?, Ys, W?, D?, K).
+cal_when([], [], _, _, []).
+
+procedure cal_then(Integer?, Stream(Seen)?, Stream(Seen), When?, Integer?, Stream(Integer)).
+cal_then(0, Xs, Ys?, W, D, K?) :- cal_when(Xs?, Ys, W?, D?, K).
+cal_then(N, Xs, Ys?, _, D, [D?]) :- N? > 0 | pass(Xs?, Ys).
+
+procedure met(Seen?, When?, Integer).
+met(view(S, _, _, _), holds(A), N?) :- count_atom(A?, S?, N).
+met(refused(P, Q, _), refused_by(P1, Q1), 1) :- P? =?= P1?, Q? =?= Q1? | true.
+met(_, _, 0) :- otherwise | true.
+
+procedure pass(Stream(Seen)?, Stream(Seen)).
+pass([X | Xs], [X? | Ys?]) :- pass(Xs?, Ys).
+pass([], []).
