@@ -20,15 +20,15 @@ unfriend(Alice?, Bob) :
     at Bob: identity, -friend(Alice)
 
 message(Alice?, Bob; x) :
-    at Alice: identity, not retired
-    at Bob: identity, friend(Alice), +received(x, Alice)
+    at Alice: identity, friend(Bob), not retired
+    at Bob: identity, +received(x, Alice)
 
 create(Alice?; n) :
     at Alice: identity, not member(<Alice>.n), not closed(n), not retired, +member(<Alice>.n), +listed(Alice, n)
 
 join(Alice?, Bob?; n) :
     at Alice: identity, member(<Alice>.n), friend(Bob), not child, not retired, +listed(Bob, n)
-    at Bob: identity, friend(Alice), not child, not member(<Alice>.n), not retired, +member(<Alice>.n)
+    at Bob: identity, not child, not member(<Alice>.n), not retired, +member(<Alice>.n)
 
 leave(Alice, Bob?; n) :
     at Alice: identity, -listed(Bob, n)
@@ -105,12 +105,12 @@ child_unfriend(Alice, Bob, Carol?) :
 
 child_join(Alice?, Bob?, Carol?; n) :
     at Alice: identity, member(<Alice>.n), friend(Bob), not child, not retired, +listed(Bob, n)
-    at Bob: identity, child, friend(Alice), not member(<Alice>.n), not retired, +member(<Alice>.n)
+    at Bob: identity, child, not member(<Alice>.n), not retired, +member(<Alice>.n)
     at Carol: identity, parenting(Bob), not child, not retired
 
 child_join_2(Alice?, Bob?, Carol?, Dave?; n) :
     at Alice: identity, child, member(<Alice>.n), friend(Bob), not retired, +listed(Bob, n)
-    at Bob: identity, child, friend(Alice), not member(<Alice>.n), not retired, +member(<Alice>.n)
+    at Bob: identity, child, not member(<Alice>.n), not retired, +member(<Alice>.n)
     at Carol: identity, parenting(Alice), not child, not retired
     at Dave: identity, parenting(Bob), not child, not retired
 
