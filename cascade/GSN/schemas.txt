@@ -43,9 +43,9 @@ drop(Alice, Bob; n) :
 post_own(Alice?; x, n) :
     at Alice: identity, member(<Alice>.n), not posted(x, n), +posted(x, n)
 
-post(Alice?, Bob; x, n) :
-    at Alice: identity, member(<Bob>.n)
-    at Bob: identity, member(<Bob>.n), listed(Alice, n), friend(Alice), not posted(x, n), +posted(x, n)
+post(Bob?, Alice; x, n) :
+    at Bob: identity, member(<Alice>.n)
+    at Alice: identity, member(<Alice>.n), listed(Bob, n), friend(Bob), not posted(x, n), +posted(x, n)
 
 deliver(Alice, Bob; x, n) :
     at Alice: identity, member(<Alice>.n), posted(x, n), listed(Bob, n), friend(Bob), not delivered(x, Bob, n), +delivered(x, Bob, n)
