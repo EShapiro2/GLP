@@ -11,7 +11,12 @@
 %% know each other, and pay and redeem require knows(q) at p.  A matured
 %% bond is redeemed as a coin is (clause 5; Udi, 2026-10-20): redeem
 %% presents a coin or a bond mature by its issuer's date, and the issuer's
-%% role reads its own date and changes state.
+%% role reads its own date and changes state.  A coin or a bond carries
+%% its issuer's public key, so whoever holds one knows its issuer (GB,
+%% Section 3.1): swap, redeem, release and return add knows of the issuer
+%% of what a role receives at that role, and pay adds none, the payee
+%% receiving coins of their own issue (Udi, 2026-10-25, approving
+%% Currencies #13's answer to the review of 2026-10-24, item C12).
 %%
 %% The predicates are GKK's identity and knows and five of GB's own.
 %% coin(u) at p is a coin issued by u and held by p, the paper's cent(u, bot),
@@ -48,7 +53,7 @@
 %% the condition of an escrow (clause 7) are the escrow agreement's, held
 %% by the escrow agent, and name no role of a transfer (GB, Section 5).
 %% Written by Currencies #11 Cowork, 2026-10-20; rewritten by Currencies
-%% #12 Cowork, 2026-10-23, first_date and today added 2026-10-24, and coin and bond two predicates again the same day.
+%% #12 Cowork, 2026-10-23, first_date and today added 2026-10-24, and coin and bond two predicates again the same day; knows of the issuer at the receiving roles, Currencies #13 Cowork, 2026-10-25.
 %% ---------------------------------------------------------------------------
 
 NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
@@ -102,63 +107,63 @@ contract_named(gb,
 %% GB:2, Date: p's date advances to the next day, not past the day; no role guards it.
     nschema(advance, [num(t), num(t1), num(d)], and(succ(num(t), num(t1)), le(num(t1), num(d))),
        [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, []), atom(today, [num(d)])], [])]),
-%% GB:3, Swap: p and q, who know each other, swap k coins of u for k1 coins of v.
+%% GB:3, Swap: p and q, who know each other, swap k coins of u for k1 coins of v; each comes to know the issuer of what they receive.
     schema(swap_cc, [pvar(u), num(k), pvar(v), num(k1)],
-       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GB:3, Swap: k coins of u for k1 bonds of v maturing at d1.
     schema(swap_cb, [pvar(u), num(k), pvar(v), num(d1), num(k1)],
-       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GB:3, Swap: k bonds of u maturing at d for k1 coins of v.
     schema(swap_bc, [pvar(u), num(d), num(k), pvar(v), num(k1)],
-       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)]))], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)]))], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GB:3, Swap: k bonds of u maturing at d for k1 bonds of v maturing at d1.
     schema(swap_bb, [pvar(u), num(d), num(k), pvar(v), num(d1), num(k1)],
-       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)]))], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GB:4, Payment: p pays k q-coins to q, whom p knows.
     schema(pay, [num(k)],
        [rs(guarded, [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]),
-%% GB:5, Redemption: p redeems a q-coin against a coin of r held by q, whom p knows.
+%% GB:5, Redemption: p redeems a q-coin against a coin of r held by q, whom p knows; p comes to know r.
     schema(redeem_cc, [pvar(r)],
-       [rs(guarded, [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+       [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
 %% GB:5, Redemption: p redeems a q-coin against a bond of r maturing at d1 held by q.
     schema(redeem_cb, [pvar(r), num(d1)],
-       [rs(guarded, [atom(bond, [pvar(r), num(d1)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+       [rs(guarded, [atom(bond, [pvar(r), num(d1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(coin, [role(2)])], [atom(bond, [pvar(r), num(d1)])], [atom(identity, [])], [])]),
 %% GB:5, Redemption: p redeems a q-bond maturing at d, mature by q's date t, against a coin of r held by q.
     nschema(redeem_bc, [num(d), pvar(r), num(t)], le(num(d), num(t)),
-       [rs(guarded, [atom(coin, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
+       [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(date, [num(t)])], [])]),
 %% GB:5, Redemption: p redeems a matured q-bond maturing at d against a bond of r maturing at d1 held by q.
     nschema(redeem_bb, [num(d), pvar(r), num(d1), num(t)], le(num(d), num(t)),
-       [rs(guarded, [atom(bond, [pvar(r), num(d1)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
+       [rs(guarded, [atom(bond, [pvar(r), num(d1)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(bond, [pvar(r), num(d1)])], [atom(identity, []), atom(date, [num(t)])], [])]),
-%% GB:7, Escrow: p deposits k coins of u with the escrow agent e; they know each other.
+%% GB:7, Escrow: p deposits k coins of u with the escrow agent e; they know each other, and e comes to know u.
     schema(deposit_c, [pvar(u), num(k)],
        [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GB:7, Escrow: p deposits k bonds of u maturing at d with the escrow agent e; they know each other.
     schema(deposit_b, [pvar(u), num(d), num(k)],
        [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% GB:7, Escrow: e releases k coins of u to q; they know each other.
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GB:7, Escrow: e releases k coins of u to q; they know each other, and q comes to know u.
     schema(release_c, [pvar(u), num(k)],
        [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GB:7, Escrow: e releases k bonds of u maturing at d to q; they know each other.
     schema(release_b, [pvar(u), num(d), num(k)],
        [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% GB:7, Escrow: e returns k coins of u to the depositor p; they know each other.
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GB:7, Escrow: e returns k coins of u to the depositor p; they know each other, and p comes to know u.
     schema(return_c, [pvar(u), num(k)],
        [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GB:7, Escrow: e returns k bonds of u maturing at d to the depositor p; they know each other.
     schema(return_b, [pvar(u), num(d), num(k)],
        [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)]))], [], [atom(identity, []), atom(knows, [role(1)])], [])])]).
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])])]).
