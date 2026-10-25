@@ -1,0 +1,3396 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(given, cva_profiles)
+
+CsFam
+::=
+fam(Integer, List(Key), List(Key))
+.
+
+CsAttr
+::=
+village(Integer)
+;
+parents(List(Key))
+;
+children(List(Key))
+;
+knows(List(Key))
+;
+families(List(CsFam))
+.
+
+Person
+::=
+person(Key, Constant, List(CsAttr))
+.
+
+CsKeys
+::=
+ks(Key, Key, Key, Key, Key)
+.
+
+CsPick
+::=
+pick(Key)
+;
+nothing
+.
+
+CsKeys1
+::=
+[Key | List(Key)]
+.
+
+CsTodo
+::=
+establish
+;
+meet(Key)
+;
+enter1(Key, Key)
+;
+mkp(Key, Key, Key)
+;
+steady
+.
+
+CsMk
+::=
+mk(Key, Key)
+;
+none
+.
+
+CsPair
+::=
+acq(Key, Key)
+.
+procedure
+cs_villages
+(
+Integer?
+,
+List(Person)
+)
+.
+cs_villages(S, Ps?)
+:-
+cs_keys4(Ks)
+,
+cs_census(Ks?, S?, Ps)
+.
+exported procedure
+cs_village1
+(
+Integer?
+,
+List(Person)
+)
+.
+cs_village1(S, Ps?)
+:-
+cs_keys1(Ks)
+,
+cs_census(Ks?, S?, Ps)
+.
+procedure
+cs_villages40
+(
+Integer?
+,
+List(Person)
+)
+.
+cs_villages40(S, Ps?)
+:-
+cs_keys40(Ks)
+,
+cs_census(Ks?, S?, Ps)
+.
+procedure
+cs_census
+(
+List(CsKeys)
+?
+,
+Integer?
+,
+List(Person)
+)
+.
+cs_census(Ks, S, Ps?)
+:-
+cs_draw(Ks?, 1, 1, S?, Fs, S1)
+,
+cs_persons_all(Fs?, S1?, Ps)
+.
+procedure
+cs_persons_all
+(
+List(CsFam)
+?
+,
+Integer?
+,
+List(Person)
+)
+.
+cs_persons_all(Fs, S, Ps?)
+:-
+ground(Fs?)
+|
+cs_acq(Fs?, Fs?, S?, Pairs)
+,
+cs_persons_pairs(Fs?, Pairs?, Ps)
+.
+procedure
+cs_persons_pairs
+(
+List(CsFam)
+?
+,
+List(CsPair)
+?
+,
+List(Person)
+)
+.
+cs_persons_pairs(Fs, Pairs, Ps?)
+:-
+ground(Fs?)
+,
+ground(Pairs?)
+|
+cs_persons(Fs?, Fs?, Pairs?, Ps)
+.
+procedure
+cs_acq
+(
+List(CsFam)
+?
+,
+List(CsFam)
+?
+,
+Integer?
+,
+List(CsPair)
+)
+.
+cs_acq([], _, _, [])
+.
+cs_acq([fam(V, Pa, _) | Fs], All, S, Pairs?)
+:-
+ground(V?)
+,
+ground(All?)
+|
+cs_other_parents(All?, V?, Op)
+,
+cs_acq_parents(Pa?, Op?, S?, Pairs1, S1)
+,
+cs_acq(Fs?, All?, S1?, Pairs2)
+,
+cs_app_pairs(Pairs1?, Pairs2?, Pairs)
+.
+procedure
+cs_acq_parents
+(
+List(Key)
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+List(CsPair)
+,
+Integer
+)
+.
+cs_acq_parents([], _, S, [], S?)
+.
+cs_acq_parents([P | Pa], Op, S, Pairs?, S2?)
+:-
+ground(P?)
+,
+ground(Op?)
+|
+cs_two(Op?, S?, Ac, S1)
+,
+cs_pairs_of(P?, Ac?, Pairs1)
+,
+cs_acq_parents(Pa?, Op?, S1?, Pairs2, S2)
+,
+cs_app_pairs(Pairs1?, Pairs2?, Pairs)
+.
+procedure
+cs_pairs_of
+(
+Key
+?
+,
+List(Key)
+?
+,
+List(CsPair)
+)
+.
+cs_pairs_of(_, [], [])
+.
+cs_pairs_of(P, [A | As], [acq(P?, A?) | Pairs?])
+:-
+ground(P?)
+|
+cs_pairs_of(P?, As?, Pairs)
+.
+procedure
+cs_app_pairs
+(
+List(CsPair)
+?
+,
+List(CsPair)
+?
+,
+List(CsPair)
+)
+.
+cs_app_pairs([], Ys, Ys?)
+.
+cs_app_pairs([X | Xs], Ys, [X? | Zs?])
+:-
+cs_app_pairs(Xs?, Ys?, Zs)
+.
+procedure
+cs_acq_of
+(
+Key
+?
+,
+List(CsPair)
+?
+,
+List(Key)
+)
+.
+cs_acq_of(_, [], [])
+.
+cs_acq_of(P, [acq(P1, A) | Pairs], [A? | Ac?])
+:-
+'=?='(P?, P1?)
+,
+ground(P?)
+|
+cs_acq_of(P?, Pairs?, Ac)
+.
+cs_acq_of(P, [acq(B, P2) | Pairs], [B? | Ac?])
+:-
+'=?='(P?, P2?)
+,
+ground(P?)
+|
+cs_acq_of(P?, Pairs?, Ac)
+.
+cs_acq_of(P, [_ | Pairs], Ac?)
+:-
+otherwise
+|
+cs_acq_of(P?, Pairs?, Ac)
+.
+procedure
+cs_draw
+(
+List(CsKeys)
+?
+,
+Integer?
+,
+Integer?
+,
+Integer?
+,
+List(CsFam)
+,
+Integer
+)
+.
+cs_draw([], _, _, S, [], S?)
+.
+cs_draw([ks(P1, P2, C1, C2, C3) | Ks], V, F, S, [fam(V?, Pa?, Ch?) | Fs?], S3?)
+:-
+ground(V?)
+|
+random(S?, 100, K1, S1)
+,
+cs_parents(K1?, P1?, P2?, Pa)
+,
+random(S1?, 3, K2, S2)
+,
+cs_children(K2?, C1?, C2?, C3?, Ch)
+,
+cs_next(V?, F?, V1, F1)
+,
+cs_draw(Ks?, V1?, F1?, S2?, Fs, S3)
+.
+procedure
+cs_parents
+(
+Integer?
+,
+Key
+?
+,
+Key
+?
+,
+List(Key)
+)
+.
+cs_parents(K, P1, P2, [P1?, P2?])
+:-
+'=<'(K?, 70)
+|
+true
+.
+cs_parents(K, P1, _, [P1?])
+:-
+'>'(K?, 70)
+|
+true
+.
+procedure
+cs_children
+(
+Integer?
+,
+Key
+?
+,
+Key
+?
+,
+Key
+?
+,
+List(Key)
+)
+.
+cs_children(1, C1, _, _, [C1?])
+.
+cs_children(2, C1, C2, _, [C1?, C2?])
+.
+cs_children(3, C1, C2, C3, [C1?, C2?, C3?])
+.
+procedure
+cs_next
+(
+Integer?
+,
+Integer?
+,
+Integer
+,
+Integer
+)
+.
+cs_next(V, 10, V1?, 1)
+:-
+':='(V1, '+'(V?, 1))
+.
+cs_next(V, F, V?, F1?)
+:-
+'<'(F?, 10)
+|
+':='(F1, '+'(F?, 1))
+.
+procedure
+cs_persons
+(
+List(CsFam)
+?
+,
+List(CsFam)
+?
+,
+List(CsPair)
+?
+,
+List(Person)
+)
+.
+cs_persons([], _, _, [])
+.
+cs_persons([fam(V, Pa, Ch) | Fs], All, Pairs, Ps?)
+:-
+ground(V?)
+,
+ground(Pa?)
+,
+ground(Ch?)
+,
+ground(All?)
+,
+ground(Pairs?)
+|
+cs_parent_persons(Pa?, V?, Pa?, Ch?, All?, Pairs?, Ps1)
+,
+cs_child_persons(Ch?, V?, Pa?, Ps2)
+,
+cs_persons(Fs?, All?, Pairs?, Ps3)
+,
+cs_app_persons(Ps1?, Ps2?, Ps12)
+,
+cs_app_persons(Ps12?, Ps3?, Ps)
+.
+procedure
+cs_app_persons
+(
+List(Person)
+?
+,
+List(Person)
+?
+,
+List(Person)
+)
+.
+cs_app_persons([], Ys, Ys?)
+.
+cs_app_persons([X | Xs], Ys, [X? | Zs?])
+:-
+cs_app_persons(Xs?, Ys?, Zs)
+.
+procedure
+cs_parent_persons
+(
+List(Key)
+?
+,
+Integer?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+List(CsFam)
+?
+,
+List(CsPair)
+?
+,
+List(Person)
+)
+.
+cs_parent_persons([], _, _, _, _, _, [])
+.
+cs_parent_persons([P | Pa], V, Pa0, Ch, All, Pairs, [person(P?, parent, [village(V?), parents(Pa0?), children(Ch?), knows(Kn?), families(All?)]) | Ps?])
+:-
+ground(P?)
+,
+ground(V?)
+,
+ground(Pa0?)
+,
+ground(Ch?)
+,
+ground(All?)
+,
+ground(Pairs?)
+|
+cs_village_parents(All?, V?, P?, Vp)
+,
+cs_acq_of(P?, Pairs?, Ac)
+,
+cs_app(Vp?, Ac?, Kn1)
+,
+cs_app(Kn1?, Ch?, Kn)
+,
+cs_parent_persons(Pa?, V?, Pa0?, Ch?, All?, Pairs?, Ps)
+.
+procedure
+cs_child_persons
+(
+List(Key)
+?
+,
+Integer?
+,
+List(Key)
+?
+,
+List(Person)
+)
+.
+cs_child_persons([], _, _, [])
+.
+cs_child_persons([C | Ch], V, Pa, [person(C?, child, [village(V?), parents(Pa?), knows(Pa?)]) | Ps?])
+:-
+ground(V?)
+,
+ground(Pa?)
+|
+cs_child_persons(Ch?, V?, Pa?, Ps)
+.
+procedure
+cs_village_parents
+(
+List(CsFam)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+)
+.
+cs_village_parents([], _, _, [])
+.
+cs_village_parents([fam(V, Pa, _) | Fs], V0, Me, Vp?)
+:-
+'=?='(V?, V0?)
+,
+ground(V0?)
+,
+ground(Me?)
+|
+cs_without(Pa?, Me?, Pa1)
+,
+cs_village_parents(Fs?, V0?, Me?, Vp1)
+,
+cs_app(Pa1?, Vp1?, Vp)
+.
+cs_village_parents([fam(_, _, _) | Fs], V0, Me, Vp?)
+:-
+otherwise
+|
+cs_village_parents(Fs?, V0?, Me?, Vp)
+.
+procedure
+cs_other_parents
+(
+List(CsFam)
+?
+,
+Integer?
+,
+List(Key)
+)
+.
+cs_other_parents([], _, [])
+.
+cs_other_parents([fam(V, _, _) | Fs], V0, Op?)
+:-
+'=?='(V?, V0?)
+,
+ground(V0?)
+|
+cs_other_parents(Fs?, V0?, Op)
+.
+cs_other_parents([fam(_, Pa, _) | Fs], V0, Op?)
+:-
+otherwise
+|
+cs_other_parents(Fs?, V0?, Op1)
+,
+cs_app(Pa?, Op1?, Op)
+.
+procedure
+cs_app
+(
+List(Key)
+?
+,
+List(Key)
+?
+,
+List(Key)
+)
+.
+cs_app([], Ys, Ys?)
+.
+cs_app([X | Xs], Ys, [X? | Zs?])
+:-
+cs_app(Xs?, Ys?, Zs)
+.
+procedure
+cs_two
+(
+List(Key)
+?
+,
+Integer?
+,
+List(Key)
+,
+Integer
+)
+.
+cs_two([], S, [], S?)
+.
+cs_two([X], S, [X?], S?)
+.
+cs_two([X, Y | Xs], S, Two?, S2?)
+:-
+ground(X?)
+,
+ground(Y?)
+,
+ground(Xs?)
+|
+cs_pick([X?, Y? | Xs?], S?, A, S1)
+,
+cs_two1(A?, [X?, Y? | Xs?], S1?, Two, S2)
+.
+procedure
+cs_two1
+(
+Key
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+List(Key)
+,
+Integer
+)
+.
+cs_two1(A, Xs, S, Two?, S1?)
+:-
+ground(A?)
+|
+cs_without(Xs?, A?, Rest)
+,
+cs_two2(Rest?, A?, S?, Two, S1)
+.
+procedure
+cs_two2
+(
+List(Key)
+?
+,
+Key
+?
+,
+Integer?
+,
+List(Key)
+,
+Integer
+)
+.
+cs_two2([], A, S, [A?], S?)
+.
+cs_two2([X | Xs], A, S, [A?, B?], S1?)
+:-
+cs_pick([X? | Xs?], S?, B, S1)
+.
+procedure
+cs_pick
+(
+CsKeys1
+?
+,
+Integer?
+,
+Key
+,
+Integer
+)
+.
+cs_pick([X0 | Xs], S, X?, S1?)
+:-
+ground(X0?)
+,
+ground(Xs?)
+|
+cs_length(Xs?, N0)
+,
+':='(N, '+'(N0?, 1))
+,
+random(S?, N?, K, S1)
+,
+cs_nth(K?, X0?, Xs?, X)
+.
+procedure
+cs_length
+(
+List(Key)
+?
+,
+Integer
+)
+.
+cs_length([], 0)
+.
+cs_length([_ | Xs], N?)
+:-
+cs_length(Xs?, N1)
+,
+':='(N, '+'(N1?, 1))
+.
+procedure
+cs_nth
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+Key
+)
+.
+cs_nth(1, X0, _, X0?)
+.
+cs_nth(K, _, [X1 | Xs], X?)
+:-
+'>'(K?, 1)
+|
+':='(K1, '-'(K?, 1))
+,
+cs_nth(K1?, X1?, Xs?, X)
+.
+cs_nth(K, X0, [], X0?)
+:-
+'>'(K?, 1)
+|
+true
+.
+procedure
+cs_without
+(
+List(Key)
+?
+,
+Key
+?
+,
+List(Key)
+)
+.
+cs_without([], _, [])
+.
+cs_without([X | Xs], Y, Zs?)
+:-
+'=?='(X?, Y?)
+,
+ground(Y?)
+|
+cs_without(Xs?, Y?, Zs)
+.
+cs_without([X | Xs], Y, [X? | Zs?])
+:-
+otherwise
+,
+ground(Y?)
+|
+cs_without(Xs?, Y?, Zs)
+.
+procedure
+cs_minus
+(
+List(Key)
+?
+,
+List(Key)
+?
+,
+List(Key)
+)
+.
+cs_minus(Xs, [], Xs?)
+.
+cs_minus(Xs, [Y | Ys], Zs?)
+:-
+cs_without(Xs?, Y?, Xs1)
+,
+cs_minus(Xs1?, Ys?, Zs)
+.
+procedure
+cs_inter
+(
+List(Key)
+?
+,
+List(Key)
+?
+,
+List(Key)
+)
+.
+cs_inter([], _, [])
+.
+cs_inter([X | Xs], Ys, Zs?)
+:-
+ground(X?)
+,
+ground(Ys?)
+|
+cs_mem(X?, Ys?, In)
+,
+cs_inter1(In?, X?, Xs?, Ys?, Zs)
+.
+procedure
+cs_inter1
+(
+YesNo
+?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+List(Key)
+)
+.
+cs_inter1(yes, X, Xs, Ys, [X? | Zs?])
+:-
+cs_inter(Xs?, Ys?, Zs)
+.
+cs_inter1(no, _, Xs, Ys, Zs?)
+:-
+cs_inter(Xs?, Ys?, Zs)
+.
+procedure
+cs_mem
+(
+Key
+?
+,
+List(Key)
+?
+,
+YesNo
+)
+.
+cs_mem(_, [], no)
+.
+cs_mem(X, [Y | _], yes)
+:-
+'=?='(X?, Y?)
+|
+true
+.
+cs_mem(X, [_ | Ys], R?)
+:-
+otherwise
+|
+cs_mem(X?, Ys?, R)
+.
+procedure
+cs_attr_knows
+(
+List(CsAttr)
+?
+,
+List(Key)
+)
+.
+cs_attr_knows([], [])
+.
+cs_attr_knows([knows(Kn) | _], Kn?)
+.
+cs_attr_knows([_ | As], Kn?)
+:-
+otherwise
+|
+cs_attr_knows(As?, Kn)
+.
+procedure
+cs_attr_children
+(
+List(CsAttr)
+?
+,
+List(Key)
+)
+.
+cs_attr_children([], [])
+.
+cs_attr_children([children(Ch) | _], Ch?)
+.
+cs_attr_children([_ | As], Ch?)
+:-
+otherwise
+|
+cs_attr_children(As?, Ch)
+.
+procedure
+cs_attr_parents
+(
+List(CsAttr)
+?
+,
+List(Key)
+)
+.
+cs_attr_parents([], [])
+.
+cs_attr_parents([parents(Pa) | _], Pa?)
+.
+cs_attr_parents([_ | As], Pa?)
+:-
+otherwise
+|
+cs_attr_parents(As?, Pa)
+.
+procedure
+cs_attr_village
+(
+List(CsAttr)
+?
+,
+Integer
+)
+.
+cs_attr_village([], 0)
+.
+cs_attr_village([village(V) | _], V?)
+.
+cs_attr_village([_ | As], V?)
+:-
+otherwise
+|
+cs_attr_village(As?, V)
+.
+procedure
+cs_attr_families
+(
+List(CsAttr)
+?
+,
+List(CsFam)
+)
+.
+cs_attr_families([], [])
+.
+cs_attr_families([families(Fs) | _], Fs?)
+.
+cs_attr_families([_ | As], Fs?)
+:-
+otherwise
+|
+cs_attr_families(As?, Fs)
+.
+procedure
+cs_last_view
+(
+List(Output)
+?
+,
+List(Atom)
+)
+.
+cs_last_view([], [])
+.
+cs_last_view([view(As, _, _, _) | _], As?)
+.
+cs_last_view([_ | L], As?)
+:-
+otherwise
+|
+cs_last_view(L?, As)
+.
+procedure
+cs_friends
+(
+List(Atom)
+?
+,
+List(Key)
+)
+.
+cs_friends([], [])
+.
+cs_friends([friend(Q) | As], [Q? | Fs?])
+:-
+cs_friends(As?, Fs)
+.
+cs_friends([_ | As], Fs?)
+:-
+otherwise
+|
+cs_friends(As?, Fs)
+.
+procedure
+cs_parenting
+(
+List(Atom)
+?
+,
+List(Key)
+)
+.
+cs_parenting([], [])
+.
+cs_parenting([parenting(C) | As], [C? | Cs?])
+:-
+cs_parenting(As?, Cs)
+.
+cs_parenting([_ | As], Cs?)
+:-
+otherwise
+|
+cs_parenting(As?, Cs)
+.
+procedure
+cs_parents_in
+(
+List(Atom)
+?
+,
+List(Key)
+)
+.
+cs_parents_in([], [])
+.
+cs_parents_in([creator(P) | As], [P? | Ps?])
+:-
+cs_parents_in(As?, Ps)
+.
+cs_parents_in([_ | As], Ps?)
+:-
+otherwise
+|
+cs_parents_in(As?, Ps)
+.
+procedure
+cs_all_parents
+(
+List(CsFam)
+?
+,
+List(Key)
+)
+.
+cs_all_parents([], [])
+.
+cs_all_parents([fam(_, Pa, _) | Fs], Ps?)
+:-
+cs_all_parents(Fs?, Ps1)
+,
+cs_app(Pa?, Ps1?, Ps)
+.
+procedure
+cs_children_of
+(
+List(CsFam)
+?
+,
+Key
+?
+,
+List(Key)
+)
+.
+cs_children_of([], _, [])
+.
+cs_children_of([fam(_, Pa, Ch) | Fs], Q, Cs?)
+:-
+ground(Pa?)
+,
+ground(Q?)
+|
+cs_mem(Q?, Pa?, In)
+,
+cs_children_of1(In?, Ch?, Fs?, Q?, Cs)
+.
+procedure
+cs_children_of1
+(
+YesNo
+?
+,
+List(Key)
+?
+,
+List(CsFam)
+?
+,
+Key
+?
+,
+List(Key)
+)
+.
+cs_children_of1(yes, Ch, _, _, Ch?)
+.
+cs_children_of1(no, _, Fs, Q, Cs?)
+:-
+cs_children_of(Fs?, Q?, Cs)
+.
+procedure
+cs_first_missing
+(
+List(Key)
+?
+,
+List(Key)
+?
+,
+CsPick
+)
+.
+cs_first_missing([], _, nothing)
+.
+cs_first_missing([X | Xs], Ks, P?)
+:-
+ground(X?)
+,
+ground(Ks?)
+|
+cs_mem(X?, Ks?, In)
+,
+cs_first_missing1(In?, X?, Xs?, Ks?, P)
+.
+procedure
+cs_first_missing1
+(
+YesNo
+?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+CsPick
+)
+.
+cs_first_missing1(no, X, _, _, pick(X?))
+.
+cs_first_missing1(yes, _, Xs, Ks, P?)
+:-
+cs_first_missing(Xs?, Ks?, P)
+.
+procedure
+cs_pick_or_nothing
+(
+List(Key)
+?
+,
+Integer?
+,
+CsPick
+)
+.
+cs_pick_or_nothing([], _, nothing)
+.
+cs_pick_or_nothing([X | Xs], S, pick(Q?))
+:-
+cs_pick([X? | Xs?], S?, Q, _)
+.
+
+%% person(local)
+%% binds(Menu, local_menu)
+exported procedure
+local_menu
+(
+Menu
+?
+,
+Person
+?
+,
+Integer?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+local_menu(menu(Me, Ks, R?), person(_, _, As), S, Mon, Scr)
+:-
+stream_append(seen(L), Scr?, _)
+,
+cs_parent_menu(95, Me?, Ks?, As?, L?, S?, slot(R), Mon?)
+.
+
+%% person(open)
+%% binds(Menu, open_menu)
+exported procedure
+open_menu
+(
+Menu
+?
+,
+Person
+?
+,
+Integer?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+open_menu(menu(Me, Ks, R?), person(_, _, As), S, Mon, Scr)
+:-
+stream_append(seen(L), Scr?, _)
+,
+cs_parent_menu(60, Me?, Ks?, As?, L?, S?, slot(R), Mon?)
+.
+procedure
+cs_parent_menu
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Output)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+,
+MutualRef?
+)
+.
+cs_parent_menu(Local, Me, Ks, As, L, S, slot(W?), Mon)
+:-
+cs_last_view(L?, Atoms)
+,
+cs_parent_menu1(Atoms?, Local?, Me?, Ks?, As?, S?, slot(W), Mon?)
+.
+procedure
+cs_parent_menu1
+(
+List(Atom)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+,
+MutualRef?
+)
+.
+cs_parent_menu1(Atoms, Local, Me, Ks, As, S, slot(W?), Mon)
+:-
+ground(Atoms?)
+,
+ground(As?)
+,
+ground(Me?)
+|
+cs_has_identity(Atoms?, Id)
+,
+cs_attr_knows(As?, Kn)
+,
+cs_attr_children(As?, Ch)
+,
+cs_attr_parents(As?, Pa)
+,
+cs_knows_atoms(Atoms?, Kw)
+,
+cs_created(Atoms?, Cr)
+,
+cs_parent_menu2(Ch?, Cr?, Kw?, Id?, Kn?, Pa?, Local?, Me?, Ks?, As?, Atoms?, S?, slot(W), Mon?)
+.
+procedure
+cs_parent_menu2
+(
+List(Key)
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+YesNo
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+,
+MutualRef?
+)
+.
+cs_parent_menu2(Ch, Cr, Kw, Id, Kn, Pa, Local, Me, Ks, As, Atoms, S, slot(W?), Mon)
+:-
+ground(Ch?)
+,
+ground(Cr?)
+,
+ground(Kw?)
+,
+ground(Pa?)
+,
+ground(Me?)
+,
+ground(Atoms?)
+|
+cs_minus(Kn?, Ch?, Ad)
+,
+cs_minus(Ad?, Kw?, Um)
+,
+random(S?, 2147483646, Su, S1)
+,
+cs_pick_or_nothing(Um?, Su?, Unmet)
+,
+cs_pa_kw(Pa?, Me?, Kw?, S1?, CoU, S2)
+,
+cs_is_creator(Pa?, Me?, IsC)
+,
+cs_dup_yn(IsC?, IsC1, IsC2)
+,
+cs_un(IsC1?, Ch?, Cr?, Un)
+,
+cs_mk(IsC2?, Pa?, Cr?, Atoms?, Mk)
+,
+cs_todo_of(Id?, CoU?, Un?, Mk?, Unmet?, Me?, Todo)
+,
+cs_parent_do(Todo?, Local?, Me?, Ks?, As?, Atoms?, S2?, slot(W), Mon?)
+.
+procedure
+cs_created
+(
+List(Atom)
+?
+,
+List(Key)
+)
+.
+cs_created([], [])
+.
+cs_created([created(C) | As], [C? | Cs?])
+:-
+cs_created(As?, Cs)
+.
+cs_created([_ | As], Cs?)
+:-
+otherwise
+|
+cs_created(As?, Cs)
+.
+procedure
+cs_made_for
+(
+List(Atom)
+?
+,
+Key
+?
+,
+List(Key)
+)
+.
+cs_made_for([], _, [])
+.
+cs_made_for([made(B, C) | As], P, [C? | Cs?])
+:-
+'=?='(B?, P?)
+,
+ground(P?)
+|
+cs_made_for(As?, P?, Cs)
+.
+cs_made_for([_ | As], P, Cs?)
+:-
+otherwise
+,
+ground(P?)
+|
+cs_made_for(As?, P?, Cs)
+.
+procedure
+cs_is_creator
+(
+List(Key)
+?
+,
+Key
+?
+,
+YesNo
+)
+.
+cs_is_creator([], _, no)
+.
+cs_is_creator([P1 | _], Me, yes)
+:-
+'=?='(P1?, Me?)
+,
+ground(Me?)
+|
+true
+.
+cs_is_creator([_ | _], _, no)
+:-
+otherwise
+|
+true
+.
+procedure
+cs_dup_yn
+(
+YesNo
+?
+,
+YesNo
+,
+YesNo
+)
+.
+cs_dup_yn(yes, yes, yes)
+.
+cs_dup_yn(no, no, no)
+.
+procedure
+cs_un
+(
+YesNo
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+CsPick
+)
+.
+cs_un(yes, Ch, Cr, Un?)
+:-
+cs_first_missing(Ch?, Cr?, Un)
+.
+cs_un(no, _, _, nothing)
+.
+procedure
+cs_mk
+(
+YesNo
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+List(Atom)
+?
+,
+CsMk
+)
+.
+cs_mk(yes, [_, P2], Cr, Atoms, Mk?)
+:-
+ground(P2?)
+|
+cs_made_for(Atoms?, P2?, Md)
+,
+cs_first_missing(Cr?, Md?, C)
+,
+cs_mk1(C?, P2?, Mk)
+.
+cs_mk(_, _, _, _, none)
+:-
+otherwise
+|
+true
+.
+procedure
+cs_mk1
+(
+CsPick
+?
+,
+Key
+?
+,
+CsMk
+)
+.
+cs_mk1(pick(C), P2, mk(P2?, C?))
+.
+cs_mk1(nothing, _, none)
+.
+procedure
+cs_has_identity
+(
+List(Atom)
+?
+,
+YesNo
+)
+.
+cs_has_identity([], no)
+.
+cs_has_identity([identity | _], yes)
+.
+cs_has_identity([_ | As], R?)
+:-
+otherwise
+|
+cs_has_identity(As?, R)
+.
+procedure
+cs_knows_atoms
+(
+List(Atom)
+?
+,
+List(Key)
+)
+.
+cs_knows_atoms([], [])
+.
+cs_knows_atoms([knows(Q) | As], [Q? | Qs?])
+:-
+cs_knows_atoms(As?, Qs)
+.
+cs_knows_atoms([_ | As], Qs?)
+:-
+otherwise
+|
+cs_knows_atoms(As?, Qs)
+.
+procedure
+cs_pa_kw
+(
+List(Key)
+?
+,
+Key
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+CsPick
+,
+Integer
+)
+.
+cs_pa_kw(Pa, Me, Kw, S, CoU?, S1?)
+:-
+ground(Me?)
+|
+cs_without(Pa?, Me?, Co)
+,
+cs_minus(Co?, Kw?, Cm)
+,
+random(S?, 2147483646, Sc, S1)
+,
+cs_pick_or_nothing(Cm?, Sc?, CoU)
+.
+procedure
+cs_todo_of
+(
+YesNo
+?
+,
+CsPick
+?
+,
+CsPick
+?
+,
+CsMk
+?
+,
+CsPick
+?
+,
+Key
+?
+,
+CsTodo
+)
+.
+cs_todo_of(no, _, _, _, _, _, establish)
+.
+cs_todo_of(yes, pick(Q), _, _, _, _, meet(Q?))
+.
+cs_todo_of(yes, nothing, pick(C), _, _, Me, enter1(Me?, C?))
+.
+cs_todo_of(yes, nothing, nothing, mk(P2, C), _, Me, mkp(Me?, P2?, C?))
+.
+cs_todo_of(yes, nothing, nothing, none, pick(Q), _, meet(Q?))
+.
+cs_todo_of(yes, nothing, nothing, none, nothing, _, steady)
+.
+procedure
+cs_parent_do
+(
+CsTodo
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+,
+MutualRef?
+)
+.
+cs_parent_do(establish, _, Me, _, _, _, _, slot(W?), Mon)
+:-
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+cs_request(Tok?, slot(W), propose(establish(Me?)))
+.
+cs_parent_do(meet(Q), _, Me, _, _, _, _, slot(W?), Mon)
+:-
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+cs_request(Tok?, slot(W), propose(meet(Me?, Q?)))
+.
+cs_parent_do(enter1(Me, C), _, _, _, _, _, _, slot(W?), Mon)
+:-
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+cs_request(Tok?, slot(W), propose(enter(Me?, C?)))
+.
+cs_parent_do(mkp(Me, Q, C), _, _, _, _, _, _, slot(W?), Mon)
+:-
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+cs_request(Tok?, slot(W), propose(make_parent(Me?, Q?, C?)))
+.
+cs_parent_do(steady, Local, Me, Ks, As, Atoms, S, slot(W?), Mon)
+:-
+random(S?, 67, K, S1)
+,
+stream_append(rated('/'(67, year), Tok), Mon?, _)
+,
+cs_parent_act(Tok?, K?, Local?, Me?, Ks?, As?, Atoms?, S1?, slot(W))
+.
+procedure
+cs_request
+(
+Token?
+,
+Slot(Request)
+?
+,
+Request
+?
+)
+.
+cs_request(stop, _, _)
+.
+cs_request(go, slot(V?), V)
+.
+procedure
+cs_parent_act
+(
+Token?
+,
+Integer?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_parent_act(stop, _, _, _, _, _, _, _, _)
+.
+cs_parent_act(go, K, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+'=<'(K?, 45)
+|
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_parent_act(go, K, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+'>'(K?, 45)
+,
+'=<'(K?, 51)
+|
+cs_introduce(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_parent_act(go, K, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+'>'(K?, 51)
+,
+'=<'(K?, 57)
+|
+cs_cm_request(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_parent_act(go, K, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+'>'(K?, 57)
+,
+'=<'(K?, 63)
+|
+cs_child_request(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_parent_act(go, 64, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_child_meet_request(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_parent_act(go, 65, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_child_adult_request(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_parent_act(go, 66, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_end_child_friendship(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_parent_act(go, 67, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_end_friendship(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_offer
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_offer(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(Me?)
+,
+ground(Ks?)
+,
+ground(As?)
+|
+cs_attr_families(As?, All)
+,
+cs_attr_village(As?, V)
+,
+cs_friends(Atoms?, Fr)
+,
+cs_cands(All?, V?, Me?, Ks?, Fr?, Vc, Oc)
+,
+random(S?, 100, D, S1)
+,
+cs_offer_from(D?, Local?, Vc?, Oc?, Me?, Ks?, S1?, slot(W))
+.
+procedure
+cs_cands
+(
+List(CsFam)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+List(Key)
+,
+List(Key)
+)
+.
+cs_cands(All, V, Me, Ks, Fr, Vc?, Oc?)
+:-
+ground(All?)
+,
+ground(V?)
+,
+ground(Ks?)
+,
+ground(Fr?)
+|
+cs_village_parents(All?, V?, Me?, Vp)
+,
+cs_other_parents(All?, V?, Op)
+,
+cs_inter(Vp?, Ks?, Vk)
+,
+cs_minus(Vk?, Fr?, Vc)
+,
+cs_inter(Op?, Ks?, Ok)
+,
+cs_minus(Ok?, Fr?, Oc)
+.
+procedure
+cs_offer_from
+(
+Integer?
+,
+Integer?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+Key
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_offer_from(D, Local, Vc, Oc, Me, Ks, S, slot(W?))
+:-
+'=<'(D?, Local?)
+|
+cs_offer_to(Vc?, Oc?, Me?, Ks?, S?, slot(W))
+.
+cs_offer_from(D, Local, Vc, Oc, Me, Ks, S, slot(W?))
+:-
+'>'(D?, Local?)
+|
+cs_offer_to(Oc?, Vc?, Me?, Ks?, S?, slot(W))
+.
+procedure
+cs_offer_to
+(
+List(Key)
+?
+,
+List(Key)
+?
+,
+Key
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_offer_to([X | Xs], _, Me, _, S, slot(propose(befriend(Me?, Q?))))
+:-
+cs_pick([X? | Xs?], S?, Q, _)
+.
+cs_offer_to([], [X | Xs], Me, _, S, slot(propose(befriend(Me?, Q?))))
+:-
+cs_pick([X? | Xs?], S?, Q, _)
+.
+cs_offer_to([], [], Me, [Q0 | _], _, slot(propose(meet(Me?, Q0?))))
+.
+procedure
+cs_child_request
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_request(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(As?)
+,
+ground(Atoms?)
+|
+cs_parenting(Atoms?, Mine)
+,
+cs_friends(Atoms?, Fr)
+,
+cs_attr_families(As?, All)
+,
+cs_child_request0(All?, Mine?, Fr?, Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_child_request0
+(
+List(CsFam)
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_request0(All, Mine, Fr, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(All?)
+,
+ground(Me?)
+|
+cs_all_parents(All?, Ap)
+,
+cs_inter(Fr?, Ap?, Fp)
+,
+cs_without(Fp?, Me?, Fq)
+,
+random(S?, 2147483646, S1, S2)
+,
+random(S2?, 2147483646, S3, S4)
+,
+cs_pick_or_nothing(Mine?, S1?, Rp)
+,
+cs_pick_or_nothing(Fq?, S3?, Qp)
+,
+cs_child_request1(Rp?, Qp?, All?, Local?, Me?, Ks?, As?, Atoms?, S4?, slot(W))
+.
+procedure
+cs_child_request1
+(
+CsPick
+?
+,
+CsPick
+?
+,
+List(CsFam)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_request1(pick(R), pick(Q), All, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(Q?)
+|
+cs_children_of(All?, Q?, Cq)
+,
+random(S?, 2147483646, S1, S2)
+,
+cs_pick_or_nothing(Cq?, S1?, Sp)
+,
+cs_child_request2(Sp?, R?, Q?, Local?, Me?, Ks?, As?, Atoms?, S2?, slot(W))
+.
+cs_child_request1(nothing, _, _, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_child_request1(pick(_), nothing, _, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_child_request2
+(
+CsPick
+?
+,
+Key
+?
+,
+Key
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_request2(pick(Sc), R, Q, _, Me, _, _, _, _, slot(propose(child_befriend(R?, Sc?, Me?, Q?))))
+.
+cs_child_request2(nothing, _, _, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_cm_request
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_cm_request(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(As?)
+,
+ground(Atoms?)
+|
+cs_parenting(Atoms?, Mine)
+,
+cs_friends(Atoms?, Fr)
+,
+cs_attr_families(As?, All)
+,
+cs_cm_request0(All?, Mine?, Fr?, Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_cm_request0
+(
+List(CsFam)
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_cm_request0(All, Mine, Fr, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(All?)
+,
+ground(Me?)
+|
+cs_all_parents(All?, Ap)
+,
+cs_inter(Fr?, Ap?, Fp)
+,
+cs_without(Fp?, Me?, Fq)
+,
+random(S?, 2147483646, S1, S2)
+,
+random(S2?, 2147483646, S3, S4)
+,
+cs_pick_or_nothing(Mine?, S1?, Rp)
+,
+cs_pick_or_nothing(Fq?, S3?, Qp)
+,
+cs_cm_request1(Rp?, Qp?, All?, Local?, Me?, Ks?, As?, Atoms?, S4?, slot(W))
+.
+procedure
+cs_cm_request1
+(
+CsPick
+?
+,
+CsPick
+?
+,
+List(CsFam)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_cm_request1(pick(R), pick(Q), All, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(Q?)
+|
+cs_children_of(All?, Q?, Cq)
+,
+random(S?, 2147483646, S1, S2)
+,
+cs_pick_or_nothing(Cq?, S1?, Sp)
+,
+cs_cm_request2(Sp?, R?, Q?, Local?, Me?, Ks?, As?, Atoms?, S2?, slot(W))
+.
+cs_cm_request1(nothing, _, _, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_cm_request1(pick(_), nothing, _, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_cm_request2
+(
+CsPick
+?
+,
+Key
+?
+,
+Key
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_cm_request2(pick(Sc), R, Q, _, Me, _, _, _, _, slot(propose(child_meet_2(R?, Sc?, Me?, Q?))))
+.
+cs_cm_request2(nothing, _, _, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_introduce
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_introduce(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(As?)
+,
+ground(Atoms?)
+,
+ground(Me?)
+|
+cs_friends(Atoms?, Fr)
+,
+cs_attr_families(As?, All)
+,
+cs_all_parents(All?, Ap)
+,
+cs_inter(Fr?, Ap?, Fp)
+,
+cs_without(Fp?, Me?, Fq)
+,
+cs_two(Fq?, S?, Two, S1)
+,
+cs_introduce1(Two?, Local?, Me?, Ks?, As?, Atoms?, S1?, slot(W))
+.
+procedure
+cs_introduce1
+(
+List(Key)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_introduce1([Q, C], _, Me, _, _, _, _, slot(propose(introduce(Me?, Q?, C?))))
+.
+cs_introduce1(_, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+otherwise
+|
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_child_meet_request
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_meet_request(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(As?)
+,
+ground(Atoms?)
+|
+cs_parenting(Atoms?, Mine)
+,
+cs_friends(Atoms?, Fr)
+,
+cs_attr_families(As?, All)
+,
+cs_child_meet_request0(All?, Mine?, Fr?, Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_child_meet_request0
+(
+List(CsFam)
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_meet_request0(All, Mine, Fr, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(Me?)
+|
+cs_all_parents(All?, Ap)
+,
+cs_inter(Fr?, Ap?, Fp)
+,
+cs_without(Fp?, Me?, Fq)
+,
+random(S?, 2147483646, S1, S2)
+,
+random(S2?, 2147483646, S3, S4)
+,
+cs_pick_or_nothing(Mine?, S1?, Rp)
+,
+cs_pick_or_nothing(Fq?, S3?, Ap2)
+,
+cs_child_meet_request1(Rp?, Ap2?, Local?, Me?, Ks?, As?, Atoms?, S4?, slot(W))
+.
+procedure
+cs_child_meet_request1
+(
+CsPick
+?
+,
+CsPick
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_meet_request1(pick(R), pick(A), _, Me, _, _, _, _, slot(propose(child_meet(R?, A?, Me?))))
+.
+cs_child_meet_request1(nothing, _, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_child_meet_request1(pick(_), nothing, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_child_adult_request
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_adult_request(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(As?)
+,
+ground(Atoms?)
+|
+cs_parenting(Atoms?, Mine)
+,
+cs_friends(Atoms?, Fr)
+,
+cs_attr_families(As?, All)
+,
+cs_child_adult_request0(All?, Mine?, Fr?, Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_child_adult_request0
+(
+List(CsFam)
+?
+,
+List(Key)
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_adult_request0(All, Mine, Fr, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(Me?)
+|
+cs_all_parents(All?, Ap)
+,
+cs_inter(Fr?, Ap?, Fp)
+,
+cs_without(Fp?, Me?, Fq)
+,
+random(S?, 2147483646, S1, S2)
+,
+random(S2?, 2147483646, S3, S4)
+,
+cs_pick_or_nothing(Mine?, S1?, Rp)
+,
+cs_pick_or_nothing(Fq?, S3?, Ap2)
+,
+cs_child_adult_request1(Rp?, Ap2?, Local?, Me?, Ks?, As?, Atoms?, S4?, slot(W))
+.
+procedure
+cs_child_adult_request1
+(
+CsPick
+?
+,
+CsPick
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_adult_request1(pick(R), pick(A), _, Me, _, _, _, _, slot(propose(child_adult_befriend(R?, A?, Me?))))
+.
+cs_child_adult_request1(nothing, _, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_child_adult_request1(pick(_), nothing, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_end_child_friendship
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_end_child_friendship(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(As?)
+,
+ground(Atoms?)
+,
+ground(Ks?)
+|
+cs_parenting(Atoms?, Mine)
+,
+cs_attr_families(As?, All)
+,
+cs_all_children(All?, Ac)
+,
+cs_inter(Ks?, Ac?, Kc)
+,
+cs_end_child_friendship0(Mine?, Kc?, Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_end_child_friendship0
+(
+List(Key)
+?
+,
+List(Key)
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_end_child_friendship0(Mine, Kc, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(Mine?)
+|
+cs_minus(Kc?, Mine?, Others)
+,
+random(S?, 2147483646, S1, S2)
+,
+random(S2?, 2147483646, S3, S4)
+,
+cs_pick_or_nothing(Mine?, S1?, Rp)
+,
+cs_pick_or_nothing(Others?, S3?, Sp)
+,
+cs_end_child_friendship1(Rp?, Sp?, Local?, Me?, Ks?, As?, Atoms?, S4?, slot(W))
+.
+procedure
+cs_end_child_friendship1
+(
+CsPick
+?
+,
+CsPick
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_end_child_friendship1(pick(R), pick(Sc), _, Me, _, _, _, _, slot(propose(child_unfriend(R?, Sc?, Me?))))
+.
+cs_end_child_friendship1(nothing, _, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+cs_end_child_friendship1(pick(_), nothing, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure
+cs_all_children
+(
+List(CsFam)
+?
+,
+List(Key)
+)
+.
+cs_all_children([], [])
+.
+cs_all_children([fam(_, _, Ch) | Fs], Cs?)
+:-
+cs_all_children(Fs?, Cs1)
+,
+cs_app(Ch?, Cs1?, Cs)
+.
+procedure
+cs_end_friendship
+(
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_end_friendship(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(Me?)
+,
+ground(Atoms?)
+|
+cs_friends(Atoms?, Fr)
+,
+cs_parenting(Atoms?, Mine)
+,
+cs_minus(Fr?, Mine?, Fq)
+,
+random(S?, 2147483646, S1, S2)
+,
+cs_pick_or_nothing(Fq?, S1?, Qp)
+,
+cs_end_friendship1(Qp?, Local?, Me?, Ks?, As?, Atoms?, S2?, slot(W))
+.
+procedure
+cs_end_friendship1
+(
+CsPick
+?
+,
+Integer?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_end_friendship1(pick(Q), _, Me, _, _, _, _, slot(propose(unfriend(Me?, Q?))))
+.
+cs_end_friendship1(nothing, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+cs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+
+%% person(strict)
+%% binds(Approval, strict_approval)
+exported procedure
+strict_approval
+(
+Approval
+?
+,
+Person
+?
+,
+Integer?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+strict_approval(approval(hello(_, _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+strict_approval(approval(attempt(_, _, _, make_parent(_, _, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+strict_approval(approval(attempt(_, _, _, meet(_, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+strict_approval(approval(attempt(_, _, _, introduce(_, _, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+strict_approval(approval(attempt(_, _, _, C, _), _, A?), _, S, Mon, _)
+:-
+otherwise
+|
+stream_append(rated('/'(1, day), Tok), Mon?, _)
+,
+cs_parent_answer(Tok?, 20, C?, S?, slot(A))
+.
+
+%% person(permissive)
+%% binds(Approval, permissive_approval)
+exported procedure
+permissive_approval
+(
+Approval
+?
+,
+Person
+?
+,
+Integer?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+permissive_approval(approval(hello(_, _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+permissive_approval(approval(attempt(_, _, _, make_parent(_, _, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+permissive_approval(approval(attempt(_, _, _, meet(_, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+permissive_approval(approval(attempt(_, _, _, introduce(_, _, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+permissive_approval(approval(attempt(_, _, _, C, _), _, A?), _, S, Mon, _)
+:-
+otherwise
+|
+stream_append(rated('/'(1, day), Tok), Mon?, _)
+,
+cs_parent_answer(Tok?, 80, C?, S?, slot(A))
+.
+procedure
+cs_say
+(
+Slot(YesNo)
+?
+,
+YesNo
+?
+)
+.
+cs_say(slot(V?), V)
+.
+procedure
+cs_parent_answer
+(
+Token?
+,
+Integer?
+,
+Class
+?
+,
+Integer?
+,
+Slot(YesNo)
+?
+)
+.
+cs_parent_answer(stop, _, _, _, _)
+.
+cs_parent_answer(go, _, befriend(_, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, 90, A)
+.
+cs_parent_answer(go, P, child_befriend(_, _, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_parent_answer(go, P, child_meet_2(_, _, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_parent_answer(go, P, child_meet(_, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_parent_answer(go, P, child_adult_befriend(_, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_parent_answer(go, P, child_join(_, _, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_parent_answer(go, P, child_join_2(_, _, _, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_parent_answer(go, _, _, _, slot(yes))
+:-
+otherwise
+|
+true
+.
+procedure
+cs_yes_if
+(
+Integer?
+,
+Integer?
+,
+YesNo
+)
+.
+cs_yes_if(K, P, yes)
+:-
+'=<'(K?, P?)
+|
+true
+.
+cs_yes_if(K, P, no)
+:-
+'>'(K?, P?)
+|
+true
+.
+
+%% person(choosy)
+%% binds(Menu, child_menu)
+%% binds(Approval, choosy_approval)
+exported procedure
+child_menu
+(
+Menu
+?
+,
+Person
+?
+,
+Integer?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+child_menu(menu(Me, Ks, R?), person(_, _, As), S, Mon, Scr)
+:-
+stream_append(seen(L), Scr?, _)
+,
+cs_child_menu(Me?, Ks?, As?, L?, S?, slot(R), Mon?)
+.
+procedure
+cs_child_menu
+(
+Key
+?
+,
+List(Key)
+?
+,
+List(CsAttr)
+?
+,
+List(Output)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+,
+MutualRef?
+)
+.
+cs_child_menu(Me, Ks, As, L, S, slot(W?), Mon)
+:-
+ground(Ks?)
+,
+ground(As?)
+|
+cs_last_view(L?, Atoms)
+,
+cs_child_do(nothing, Me?, Ks?, Atoms?, S?, slot(W), Mon?)
+.
+procedure
+cs_child_do
+(
+CsPick
+?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+,
+MutualRef?
+)
+.
+cs_child_do(pick(_), Me, Ks, Atoms, S, slot(W?), Mon)
+:-
+stream_append(rated('/'(1, year), Tok), Mon?, _)
+,
+cs_child_act(Tok?, Me?, Ks?, Atoms?, S?, slot(W))
+.
+cs_child_do(nothing, Me, Ks, Atoms, S, slot(W?), Mon)
+:-
+stream_append(rated('/'(1, year), Tok), Mon?, _)
+,
+cs_child_act(Tok?, Me?, Ks?, Atoms?, S?, slot(W))
+.
+procedure
+cs_child_act
+(
+Token?
+,
+Key
+?
+,
+List(Key)
+?
+,
+List(Atom)
+?
+,
+Integer?
+,
+Slot(Request)
+?
+)
+.
+cs_child_act(stop, _, _, _, _, _)
+.
+cs_child_act(go, Me, Ks, Atoms, S, slot(W?))
+:-
+ground(Atoms?)
+|
+cs_friends(Atoms?, Fr)
+,
+cs_parents_in(Atoms?, Pa)
+,
+cs_minus(Fr?, Pa?, Fq)
+,
+cs_pick_or_nothing(Fq?, S?, Qp)
+,
+cs_child_act1(Qp?, Me?, Ks?, slot(W))
+.
+procedure
+cs_child_act1
+(
+CsPick
+?
+,
+Key
+?
+,
+List(Key)
+?
+,
+Slot(Request)
+?
+)
+.
+cs_child_act1(pick(Q), Me, _, slot(propose(unfriend(Me?, Q?))))
+.
+cs_child_act1(nothing, Me, [Q0 | _], slot(propose(unfriend(Me?, Q0?))))
+.
+exported procedure
+choosy_approval
+(
+Approval
+?
+,
+Person
+?
+,
+Integer?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+choosy_approval(approval(hello(_, _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+choosy_approval(approval(attempt(_, _, _, enter(_, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+choosy_approval(approval(attempt(_, _, _, make_parent(_, _, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+choosy_approval(approval(attempt(_, _, _, C, _), _, A?), _, S, Mon, _)
+:-
+otherwise
+|
+stream_append(rated('/'(1, day), Tok), Mon?, _)
+,
+cs_child_answer(Tok?, 50, C?, S?, slot(A))
+.
+
+%% person(keen)
+%% binds(Menu, child_menu)
+%% binds(Approval, keen_approval)
+exported procedure
+keen_approval
+(
+Approval
+?
+,
+Person
+?
+,
+Integer?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+keen_approval(approval(hello(_, _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+keen_approval(approval(attempt(_, _, _, enter(_, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+keen_approval(approval(attempt(_, _, _, make_parent(_, _, _), _), _, A?), _, _, _, _)
+:-
+cs_say(slot(A), yes)
+.
+keen_approval(approval(attempt(_, _, _, C, _), _, A?), _, S, Mon, _)
+:-
+otherwise
+|
+stream_append(rated('/'(1, day), Tok), Mon?, _)
+,
+cs_child_answer(Tok?, 90, C?, S?, slot(A))
+.
+procedure
+cs_child_answer
+(
+Token?
+,
+Integer?
+,
+Class
+?
+,
+Integer?
+,
+Slot(YesNo)
+?
+)
+.
+cs_child_answer(stop, _, _, _, _)
+.
+cs_child_answer(go, P, child_befriend(_, _, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_child_answer(go, P, child_meet_2(_, _, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_child_answer(go, P, child_meet(_, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_child_answer(go, P, child_adult_befriend(_, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_child_answer(go, P, child_join(_, _, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_child_answer(go, P, child_join_2(_, _, _, _, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+cs_yes_if(K?, P?, A)
+.
+cs_child_answer(go, _, _, _, slot(yes))
+:-
+otherwise
+|
+true
+.
+procedure
+cs_keys1
+(
+List(CsKeys)
+)
+.
+cs_keys1([ks(v1f01p1, v1f01p2, v1f01c1, v1f01c2, v1f01c3), ks(v1f02p1, v1f02p2, v1f02c1, v1f02c2, v1f02c3), ks(v1f03p1, v1f03p2, v1f03c1, v1f03c2, v1f03c3), ks(v1f04p1, v1f04p2, v1f04c1, v1f04c2, v1f04c3), ks(v1f05p1, v1f05p2, v1f05c1, v1f05c2, v1f05c3), ks(v1f06p1, v1f06p2, v1f06c1, v1f06c2, v1f06c3), ks(v1f07p1, v1f07p2, v1f07c1, v1f07c2, v1f07c3), ks(v1f08p1, v1f08p2, v1f08c1, v1f08c2, v1f08c3), ks(v1f09p1, v1f09p2, v1f09c1, v1f09c2, v1f09c3), ks(v1f10p1, v1f10p2, v1f10c1, v1f10c2, v1f10c3)])
+.
+procedure
+cs_keys4
+(
+List(CsKeys)
+)
+.
+cs_keys4([ks(v1f01p1, v1f01p2, v1f01c1, v1f01c2, v1f01c3), ks(v1f02p1, v1f02p2, v1f02c1, v1f02c2, v1f02c3), ks(v1f03p1, v1f03p2, v1f03c1, v1f03c2, v1f03c3), ks(v1f04p1, v1f04p2, v1f04c1, v1f04c2, v1f04c3), ks(v1f05p1, v1f05p2, v1f05c1, v1f05c2, v1f05c3), ks(v1f06p1, v1f06p2, v1f06c1, v1f06c2, v1f06c3), ks(v1f07p1, v1f07p2, v1f07c1, v1f07c2, v1f07c3), ks(v1f08p1, v1f08p2, v1f08c1, v1f08c2, v1f08c3), ks(v1f09p1, v1f09p2, v1f09c1, v1f09c2, v1f09c3), ks(v1f10p1, v1f10p2, v1f10c1, v1f10c2, v1f10c3), ks(v2f01p1, v2f01p2, v2f01c1, v2f01c2, v2f01c3), ks(v2f02p1, v2f02p2, v2f02c1, v2f02c2, v2f02c3), ks(v2f03p1, v2f03p2, v2f03c1, v2f03c2, v2f03c3), ks(v2f04p1, v2f04p2, v2f04c1, v2f04c2, v2f04c3), ks(v2f05p1, v2f05p2, v2f05c1, v2f05c2, v2f05c3), ks(v2f06p1, v2f06p2, v2f06c1, v2f06c2, v2f06c3), ks(v2f07p1, v2f07p2, v2f07c1, v2f07c2, v2f07c3), ks(v2f08p1, v2f08p2, v2f08c1, v2f08c2, v2f08c3), ks(v2f09p1, v2f09p2, v2f09c1, v2f09c2, v2f09c3), ks(v2f10p1, v2f10p2, v2f10c1, v2f10c2, v2f10c3), ks(v3f01p1, v3f01p2, v3f01c1, v3f01c2, v3f01c3), ks(v3f02p1, v3f02p2, v3f02c1, v3f02c2, v3f02c3), ks(v3f03p1, v3f03p2, v3f03c1, v3f03c2, v3f03c3), ks(v3f04p1, v3f04p2, v3f04c1, v3f04c2, v3f04c3), ks(v3f05p1, v3f05p2, v3f05c1, v3f05c2, v3f05c3), ks(v3f06p1, v3f06p2, v3f06c1, v3f06c2, v3f06c3), ks(v3f07p1, v3f07p2, v3f07c1, v3f07c2, v3f07c3), ks(v3f08p1, v3f08p2, v3f08c1, v3f08c2, v3f08c3), ks(v3f09p1, v3f09p2, v3f09c1, v3f09c2, v3f09c3), ks(v3f10p1, v3f10p2, v3f10c1, v3f10c2, v3f10c3), ks(v4f01p1, v4f01p2, v4f01c1, v4f01c2, v4f01c3), ks(v4f02p1, v4f02p2, v4f02c1, v4f02c2, v4f02c3), ks(v4f03p1, v4f03p2, v4f03c1, v4f03c2, v4f03c3), ks(v4f04p1, v4f04p2, v4f04c1, v4f04c2, v4f04c3), ks(v4f05p1, v4f05p2, v4f05c1, v4f05c2, v4f05c3), ks(v4f06p1, v4f06p2, v4f06c1, v4f06c2, v4f06c3), ks(v4f07p1, v4f07p2, v4f07c1, v4f07c2, v4f07c3), ks(v4f08p1, v4f08p2, v4f08c1, v4f08c2, v4f08c3), ks(v4f09p1, v4f09p2, v4f09c1, v4f09c2, v4f09c3), ks(v4f10p1, v4f10p2, v4f10c1, v4f10c2, v4f10c3)])
+.
+procedure
+cs_keys40
+(
+List(CsKeys)
+)
+.
+cs_keys40([ks(v01f01p1, v01f01p2, v01f01c1, v01f01c2, v01f01c3), ks(v01f02p1, v01f02p2, v01f02c1, v01f02c2, v01f02c3), ks(v01f03p1, v01f03p2, v01f03c1, v01f03c2, v01f03c3), ks(v01f04p1, v01f04p2, v01f04c1, v01f04c2, v01f04c3), ks(v01f05p1, v01f05p2, v01f05c1, v01f05c2, v01f05c3), ks(v01f06p1, v01f06p2, v01f06c1, v01f06c2, v01f06c3), ks(v01f07p1, v01f07p2, v01f07c1, v01f07c2, v01f07c3), ks(v01f08p1, v01f08p2, v01f08c1, v01f08c2, v01f08c3), ks(v01f09p1, v01f09p2, v01f09c1, v01f09c2, v01f09c3), ks(v01f10p1, v01f10p2, v01f10c1, v01f10c2, v01f10c3), ks(v02f01p1, v02f01p2, v02f01c1, v02f01c2, v02f01c3), ks(v02f02p1, v02f02p2, v02f02c1, v02f02c2, v02f02c3), ks(v02f03p1, v02f03p2, v02f03c1, v02f03c2, v02f03c3), ks(v02f04p1, v02f04p2, v02f04c1, v02f04c2, v02f04c3), ks(v02f05p1, v02f05p2, v02f05c1, v02f05c2, v02f05c3), ks(v02f06p1, v02f06p2, v02f06c1, v02f06c2, v02f06c3), ks(v02f07p1, v02f07p2, v02f07c1, v02f07c2, v02f07c3), ks(v02f08p1, v02f08p2, v02f08c1, v02f08c2, v02f08c3), ks(v02f09p1, v02f09p2, v02f09c1, v02f09c2, v02f09c3), ks(v02f10p1, v02f10p2, v02f10c1, v02f10c2, v02f10c3), ks(v03f01p1, v03f01p2, v03f01c1, v03f01c2, v03f01c3), ks(v03f02p1, v03f02p2, v03f02c1, v03f02c2, v03f02c3), ks(v03f03p1, v03f03p2, v03f03c1, v03f03c2, v03f03c3), ks(v03f04p1, v03f04p2, v03f04c1, v03f04c2, v03f04c3), ks(v03f05p1, v03f05p2, v03f05c1, v03f05c2, v03f05c3), ks(v03f06p1, v03f06p2, v03f06c1, v03f06c2, v03f06c3), ks(v03f07p1, v03f07p2, v03f07c1, v03f07c2, v03f07c3), ks(v03f08p1, v03f08p2, v03f08c1, v03f08c2, v03f08c3), ks(v03f09p1, v03f09p2, v03f09c1, v03f09c2, v03f09c3), ks(v03f10p1, v03f10p2, v03f10c1, v03f10c2, v03f10c3), ks(v04f01p1, v04f01p2, v04f01c1, v04f01c2, v04f01c3), ks(v04f02p1, v04f02p2, v04f02c1, v04f02c2, v04f02c3), ks(v04f03p1, v04f03p2, v04f03c1, v04f03c2, v04f03c3), ks(v04f04p1, v04f04p2, v04f04c1, v04f04c2, v04f04c3), ks(v04f05p1, v04f05p2, v04f05c1, v04f05c2, v04f05c3), ks(v04f06p1, v04f06p2, v04f06c1, v04f06c2, v04f06c3), ks(v04f07p1, v04f07p2, v04f07c1, v04f07c2, v04f07c3), ks(v04f08p1, v04f08p2, v04f08c1, v04f08c2, v04f08c3), ks(v04f09p1, v04f09p2, v04f09c1, v04f09c2, v04f09c3), ks(v04f10p1, v04f10p2, v04f10c1, v04f10c2, v04f10c3), ks(v05f01p1, v05f01p2, v05f01c1, v05f01c2, v05f01c3), ks(v05f02p1, v05f02p2, v05f02c1, v05f02c2, v05f02c3), ks(v05f03p1, v05f03p2, v05f03c1, v05f03c2, v05f03c3), ks(v05f04p1, v05f04p2, v05f04c1, v05f04c2, v05f04c3), ks(v05f05p1, v05f05p2, v05f05c1, v05f05c2, v05f05c3), ks(v05f06p1, v05f06p2, v05f06c1, v05f06c2, v05f06c3), ks(v05f07p1, v05f07p2, v05f07c1, v05f07c2, v05f07c3), ks(v05f08p1, v05f08p2, v05f08c1, v05f08c2, v05f08c3), ks(v05f09p1, v05f09p2, v05f09c1, v05f09c2, v05f09c3), ks(v05f10p1, v05f10p2, v05f10c1, v05f10c2, v05f10c3), ks(v06f01p1, v06f01p2, v06f01c1, v06f01c2, v06f01c3), ks(v06f02p1, v06f02p2, v06f02c1, v06f02c2, v06f02c3), ks(v06f03p1, v06f03p2, v06f03c1, v06f03c2, v06f03c3), ks(v06f04p1, v06f04p2, v06f04c1, v06f04c2, v06f04c3), ks(v06f05p1, v06f05p2, v06f05c1, v06f05c2, v06f05c3), ks(v06f06p1, v06f06p2, v06f06c1, v06f06c2, v06f06c3), ks(v06f07p1, v06f07p2, v06f07c1, v06f07c2, v06f07c3), ks(v06f08p1, v06f08p2, v06f08c1, v06f08c2, v06f08c3), ks(v06f09p1, v06f09p2, v06f09c1, v06f09c2, v06f09c3), ks(v06f10p1, v06f10p2, v06f10c1, v06f10c2, v06f10c3), ks(v07f01p1, v07f01p2, v07f01c1, v07f01c2, v07f01c3), ks(v07f02p1, v07f02p2, v07f02c1, v07f02c2, v07f02c3), ks(v07f03p1, v07f03p2, v07f03c1, v07f03c2, v07f03c3), ks(v07f04p1, v07f04p2, v07f04c1, v07f04c2, v07f04c3), ks(v07f05p1, v07f05p2, v07f05c1, v07f05c2, v07f05c3), ks(v07f06p1, v07f06p2, v07f06c1, v07f06c2, v07f06c3), ks(v07f07p1, v07f07p2, v07f07c1, v07f07c2, v07f07c3), ks(v07f08p1, v07f08p2, v07f08c1, v07f08c2, v07f08c3), ks(v07f09p1, v07f09p2, v07f09c1, v07f09c2, v07f09c3), ks(v07f10p1, v07f10p2, v07f10c1, v07f10c2, v07f10c3), ks(v08f01p1, v08f01p2, v08f01c1, v08f01c2, v08f01c3), ks(v08f02p1, v08f02p2, v08f02c1, v08f02c2, v08f02c3), ks(v08f03p1, v08f03p2, v08f03c1, v08f03c2, v08f03c3), ks(v08f04p1, v08f04p2, v08f04c1, v08f04c2, v08f04c3), ks(v08f05p1, v08f05p2, v08f05c1, v08f05c2, v08f05c3), ks(v08f06p1, v08f06p2, v08f06c1, v08f06c2, v08f06c3), ks(v08f07p1, v08f07p2, v08f07c1, v08f07c2, v08f07c3), ks(v08f08p1, v08f08p2, v08f08c1, v08f08c2, v08f08c3), ks(v08f09p1, v08f09p2, v08f09c1, v08f09c2, v08f09c3), ks(v08f10p1, v08f10p2, v08f10c1, v08f10c2, v08f10c3), ks(v09f01p1, v09f01p2, v09f01c1, v09f01c2, v09f01c3), ks(v09f02p1, v09f02p2, v09f02c1, v09f02c2, v09f02c3), ks(v09f03p1, v09f03p2, v09f03c1, v09f03c2, v09f03c3), ks(v09f04p1, v09f04p2, v09f04c1, v09f04c2, v09f04c3), ks(v09f05p1, v09f05p2, v09f05c1, v09f05c2, v09f05c3), ks(v09f06p1, v09f06p2, v09f06c1, v09f06c2, v09f06c3), ks(v09f07p1, v09f07p2, v09f07c1, v09f07c2, v09f07c3), ks(v09f08p1, v09f08p2, v09f08c1, v09f08c2, v09f08c3), ks(v09f09p1, v09f09p2, v09f09c1, v09f09c2, v09f09c3), ks(v09f10p1, v09f10p2, v09f10c1, v09f10c2, v09f10c3), ks(v10f01p1, v10f01p2, v10f01c1, v10f01c2, v10f01c3), ks(v10f02p1, v10f02p2, v10f02c1, v10f02c2, v10f02c3), ks(v10f03p1, v10f03p2, v10f03c1, v10f03c2, v10f03c3), ks(v10f04p1, v10f04p2, v10f04c1, v10f04c2, v10f04c3), ks(v10f05p1, v10f05p2, v10f05c1, v10f05c2, v10f05c3), ks(v10f06p1, v10f06p2, v10f06c1, v10f06c2, v10f06c3), ks(v10f07p1, v10f07p2, v10f07c1, v10f07c2, v10f07c3), ks(v10f08p1, v10f08p2, v10f08c1, v10f08c2, v10f08c3), ks(v10f09p1, v10f09p2, v10f09c1, v10f09c2, v10f09c3), ks(v10f10p1, v10f10p2, v10f10c1, v10f10c2, v10f10c3), ks(v11f01p1, v11f01p2, v11f01c1, v11f01c2, v11f01c3), ks(v11f02p1, v11f02p2, v11f02c1, v11f02c2, v11f02c3), ks(v11f03p1, v11f03p2, v11f03c1, v11f03c2, v11f03c3), ks(v11f04p1, v11f04p2, v11f04c1, v11f04c2, v11f04c3), ks(v11f05p1, v11f05p2, v11f05c1, v11f05c2, v11f05c3), ks(v11f06p1, v11f06p2, v11f06c1, v11f06c2, v11f06c3), ks(v11f07p1, v11f07p2, v11f07c1, v11f07c2, v11f07c3), ks(v11f08p1, v11f08p2, v11f08c1, v11f08c2, v11f08c3), ks(v11f09p1, v11f09p2, v11f09c1, v11f09c2, v11f09c3), ks(v11f10p1, v11f10p2, v11f10c1, v11f10c2, v11f10c3), ks(v12f01p1, v12f01p2, v12f01c1, v12f01c2, v12f01c3), ks(v12f02p1, v12f02p2, v12f02c1, v12f02c2, v12f02c3), ks(v12f03p1, v12f03p2, v12f03c1, v12f03c2, v12f03c3), ks(v12f04p1, v12f04p2, v12f04c1, v12f04c2, v12f04c3), ks(v12f05p1, v12f05p2, v12f05c1, v12f05c2, v12f05c3), ks(v12f06p1, v12f06p2, v12f06c1, v12f06c2, v12f06c3), ks(v12f07p1, v12f07p2, v12f07c1, v12f07c2, v12f07c3), ks(v12f08p1, v12f08p2, v12f08c1, v12f08c2, v12f08c3), ks(v12f09p1, v12f09p2, v12f09c1, v12f09c2, v12f09c3), ks(v12f10p1, v12f10p2, v12f10c1, v12f10c2, v12f10c3), ks(v13f01p1, v13f01p2, v13f01c1, v13f01c2, v13f01c3), ks(v13f02p1, v13f02p2, v13f02c1, v13f02c2, v13f02c3), ks(v13f03p1, v13f03p2, v13f03c1, v13f03c2, v13f03c3), ks(v13f04p1, v13f04p2, v13f04c1, v13f04c2, v13f04c3), ks(v13f05p1, v13f05p2, v13f05c1, v13f05c2, v13f05c3), ks(v13f06p1, v13f06p2, v13f06c1, v13f06c2, v13f06c3), ks(v13f07p1, v13f07p2, v13f07c1, v13f07c2, v13f07c3), ks(v13f08p1, v13f08p2, v13f08c1, v13f08c2, v13f08c3), ks(v13f09p1, v13f09p2, v13f09c1, v13f09c2, v13f09c3), ks(v13f10p1, v13f10p2, v13f10c1, v13f10c2, v13f10c3), ks(v14f01p1, v14f01p2, v14f01c1, v14f01c2, v14f01c3), ks(v14f02p1, v14f02p2, v14f02c1, v14f02c2, v14f02c3), ks(v14f03p1, v14f03p2, v14f03c1, v14f03c2, v14f03c3), ks(v14f04p1, v14f04p2, v14f04c1, v14f04c2, v14f04c3), ks(v14f05p1, v14f05p2, v14f05c1, v14f05c2, v14f05c3), ks(v14f06p1, v14f06p2, v14f06c1, v14f06c2, v14f06c3), ks(v14f07p1, v14f07p2, v14f07c1, v14f07c2, v14f07c3), ks(v14f08p1, v14f08p2, v14f08c1, v14f08c2, v14f08c3), ks(v14f09p1, v14f09p2, v14f09c1, v14f09c2, v14f09c3), ks(v14f10p1, v14f10p2, v14f10c1, v14f10c2, v14f10c3), ks(v15f01p1, v15f01p2, v15f01c1, v15f01c2, v15f01c3), ks(v15f02p1, v15f02p2, v15f02c1, v15f02c2, v15f02c3), ks(v15f03p1, v15f03p2, v15f03c1, v15f03c2, v15f03c3), ks(v15f04p1, v15f04p2, v15f04c1, v15f04c2, v15f04c3), ks(v15f05p1, v15f05p2, v15f05c1, v15f05c2, v15f05c3), ks(v15f06p1, v15f06p2, v15f06c1, v15f06c2, v15f06c3), ks(v15f07p1, v15f07p2, v15f07c1, v15f07c2, v15f07c3), ks(v15f08p1, v15f08p2, v15f08c1, v15f08c2, v15f08c3), ks(v15f09p1, v15f09p2, v15f09c1, v15f09c2, v15f09c3), ks(v15f10p1, v15f10p2, v15f10c1, v15f10c2, v15f10c3), ks(v16f01p1, v16f01p2, v16f01c1, v16f01c2, v16f01c3), ks(v16f02p1, v16f02p2, v16f02c1, v16f02c2, v16f02c3), ks(v16f03p1, v16f03p2, v16f03c1, v16f03c2, v16f03c3), ks(v16f04p1, v16f04p2, v16f04c1, v16f04c2, v16f04c3), ks(v16f05p1, v16f05p2, v16f05c1, v16f05c2, v16f05c3), ks(v16f06p1, v16f06p2, v16f06c1, v16f06c2, v16f06c3), ks(v16f07p1, v16f07p2, v16f07c1, v16f07c2, v16f07c3), ks(v16f08p1, v16f08p2, v16f08c1, v16f08c2, v16f08c3), ks(v16f09p1, v16f09p2, v16f09c1, v16f09c2, v16f09c3), ks(v16f10p1, v16f10p2, v16f10c1, v16f10c2, v16f10c3), ks(v17f01p1, v17f01p2, v17f01c1, v17f01c2, v17f01c3), ks(v17f02p1, v17f02p2, v17f02c1, v17f02c2, v17f02c3), ks(v17f03p1, v17f03p2, v17f03c1, v17f03c2, v17f03c3), ks(v17f04p1, v17f04p2, v17f04c1, v17f04c2, v17f04c3), ks(v17f05p1, v17f05p2, v17f05c1, v17f05c2, v17f05c3), ks(v17f06p1, v17f06p2, v17f06c1, v17f06c2, v17f06c3), ks(v17f07p1, v17f07p2, v17f07c1, v17f07c2, v17f07c3), ks(v17f08p1, v17f08p2, v17f08c1, v17f08c2, v17f08c3), ks(v17f09p1, v17f09p2, v17f09c1, v17f09c2, v17f09c3), ks(v17f10p1, v17f10p2, v17f10c1, v17f10c2, v17f10c3), ks(v18f01p1, v18f01p2, v18f01c1, v18f01c2, v18f01c3), ks(v18f02p1, v18f02p2, v18f02c1, v18f02c2, v18f02c3), ks(v18f03p1, v18f03p2, v18f03c1, v18f03c2, v18f03c3), ks(v18f04p1, v18f04p2, v18f04c1, v18f04c2, v18f04c3), ks(v18f05p1, v18f05p2, v18f05c1, v18f05c2, v18f05c3), ks(v18f06p1, v18f06p2, v18f06c1, v18f06c2, v18f06c3), ks(v18f07p1, v18f07p2, v18f07c1, v18f07c2, v18f07c3), ks(v18f08p1, v18f08p2, v18f08c1, v18f08c2, v18f08c3), ks(v18f09p1, v18f09p2, v18f09c1, v18f09c2, v18f09c3), ks(v18f10p1, v18f10p2, v18f10c1, v18f10c2, v18f10c3), ks(v19f01p1, v19f01p2, v19f01c1, v19f01c2, v19f01c3), ks(v19f02p1, v19f02p2, v19f02c1, v19f02c2, v19f02c3), ks(v19f03p1, v19f03p2, v19f03c1, v19f03c2, v19f03c3), ks(v19f04p1, v19f04p2, v19f04c1, v19f04c2, v19f04c3), ks(v19f05p1, v19f05p2, v19f05c1, v19f05c2, v19f05c3), ks(v19f06p1, v19f06p2, v19f06c1, v19f06c2, v19f06c3), ks(v19f07p1, v19f07p2, v19f07c1, v19f07c2, v19f07c3), ks(v19f08p1, v19f08p2, v19f08c1, v19f08c2, v19f08c3), ks(v19f09p1, v19f09p2, v19f09c1, v19f09c2, v19f09c3), ks(v19f10p1, v19f10p2, v19f10c1, v19f10c2, v19f10c3), ks(v20f01p1, v20f01p2, v20f01c1, v20f01c2, v20f01c3), ks(v20f02p1, v20f02p2, v20f02c1, v20f02c2, v20f02c3), ks(v20f03p1, v20f03p2, v20f03c1, v20f03c2, v20f03c3), ks(v20f04p1, v20f04p2, v20f04c1, v20f04c2, v20f04c3), ks(v20f05p1, v20f05p2, v20f05c1, v20f05c2, v20f05c3), ks(v20f06p1, v20f06p2, v20f06c1, v20f06c2, v20f06c3), ks(v20f07p1, v20f07p2, v20f07c1, v20f07c2, v20f07c3), ks(v20f08p1, v20f08p2, v20f08c1, v20f08c2, v20f08c3), ks(v20f09p1, v20f09p2, v20f09c1, v20f09c2, v20f09c3), ks(v20f10p1, v20f10p2, v20f10c1, v20f10c2, v20f10c3), ks(v21f01p1, v21f01p2, v21f01c1, v21f01c2, v21f01c3), ks(v21f02p1, v21f02p2, v21f02c1, v21f02c2, v21f02c3), ks(v21f03p1, v21f03p2, v21f03c1, v21f03c2, v21f03c3), ks(v21f04p1, v21f04p2, v21f04c1, v21f04c2, v21f04c3), ks(v21f05p1, v21f05p2, v21f05c1, v21f05c2, v21f05c3), ks(v21f06p1, v21f06p2, v21f06c1, v21f06c2, v21f06c3), ks(v21f07p1, v21f07p2, v21f07c1, v21f07c2, v21f07c3), ks(v21f08p1, v21f08p2, v21f08c1, v21f08c2, v21f08c3), ks(v21f09p1, v21f09p2, v21f09c1, v21f09c2, v21f09c3), ks(v21f10p1, v21f10p2, v21f10c1, v21f10c2, v21f10c3), ks(v22f01p1, v22f01p2, v22f01c1, v22f01c2, v22f01c3), ks(v22f02p1, v22f02p2, v22f02c1, v22f02c2, v22f02c3), ks(v22f03p1, v22f03p2, v22f03c1, v22f03c2, v22f03c3), ks(v22f04p1, v22f04p2, v22f04c1, v22f04c2, v22f04c3), ks(v22f05p1, v22f05p2, v22f05c1, v22f05c2, v22f05c3), ks(v22f06p1, v22f06p2, v22f06c1, v22f06c2, v22f06c3), ks(v22f07p1, v22f07p2, v22f07c1, v22f07c2, v22f07c3), ks(v22f08p1, v22f08p2, v22f08c1, v22f08c2, v22f08c3), ks(v22f09p1, v22f09p2, v22f09c1, v22f09c2, v22f09c3), ks(v22f10p1, v22f10p2, v22f10c1, v22f10c2, v22f10c3), ks(v23f01p1, v23f01p2, v23f01c1, v23f01c2, v23f01c3), ks(v23f02p1, v23f02p2, v23f02c1, v23f02c2, v23f02c3), ks(v23f03p1, v23f03p2, v23f03c1, v23f03c2, v23f03c3), ks(v23f04p1, v23f04p2, v23f04c1, v23f04c2, v23f04c3), ks(v23f05p1, v23f05p2, v23f05c1, v23f05c2, v23f05c3), ks(v23f06p1, v23f06p2, v23f06c1, v23f06c2, v23f06c3), ks(v23f07p1, v23f07p2, v23f07c1, v23f07c2, v23f07c3), ks(v23f08p1, v23f08p2, v23f08c1, v23f08c2, v23f08c3), ks(v23f09p1, v23f09p2, v23f09c1, v23f09c2, v23f09c3), ks(v23f10p1, v23f10p2, v23f10c1, v23f10c2, v23f10c3), ks(v24f01p1, v24f01p2, v24f01c1, v24f01c2, v24f01c3), ks(v24f02p1, v24f02p2, v24f02c1, v24f02c2, v24f02c3), ks(v24f03p1, v24f03p2, v24f03c1, v24f03c2, v24f03c3), ks(v24f04p1, v24f04p2, v24f04c1, v24f04c2, v24f04c3), ks(v24f05p1, v24f05p2, v24f05c1, v24f05c2, v24f05c3), ks(v24f06p1, v24f06p2, v24f06c1, v24f06c2, v24f06c3), ks(v24f07p1, v24f07p2, v24f07c1, v24f07c2, v24f07c3), ks(v24f08p1, v24f08p2, v24f08c1, v24f08c2, v24f08c3), ks(v24f09p1, v24f09p2, v24f09c1, v24f09c2, v24f09c3), ks(v24f10p1, v24f10p2, v24f10c1, v24f10c2, v24f10c3), ks(v25f01p1, v25f01p2, v25f01c1, v25f01c2, v25f01c3), ks(v25f02p1, v25f02p2, v25f02c1, v25f02c2, v25f02c3), ks(v25f03p1, v25f03p2, v25f03c1, v25f03c2, v25f03c3), ks(v25f04p1, v25f04p2, v25f04c1, v25f04c2, v25f04c3), ks(v25f05p1, v25f05p2, v25f05c1, v25f05c2, v25f05c3), ks(v25f06p1, v25f06p2, v25f06c1, v25f06c2, v25f06c3), ks(v25f07p1, v25f07p2, v25f07c1, v25f07c2, v25f07c3), ks(v25f08p1, v25f08p2, v25f08c1, v25f08c2, v25f08c3), ks(v25f09p1, v25f09p2, v25f09c1, v25f09c2, v25f09c3), ks(v25f10p1, v25f10p2, v25f10c1, v25f10c2, v25f10c3), ks(v26f01p1, v26f01p2, v26f01c1, v26f01c2, v26f01c3), ks(v26f02p1, v26f02p2, v26f02c1, v26f02c2, v26f02c3), ks(v26f03p1, v26f03p2, v26f03c1, v26f03c2, v26f03c3), ks(v26f04p1, v26f04p2, v26f04c1, v26f04c2, v26f04c3), ks(v26f05p1, v26f05p2, v26f05c1, v26f05c2, v26f05c3), ks(v26f06p1, v26f06p2, v26f06c1, v26f06c2, v26f06c3), ks(v26f07p1, v26f07p2, v26f07c1, v26f07c2, v26f07c3), ks(v26f08p1, v26f08p2, v26f08c1, v26f08c2, v26f08c3), ks(v26f09p1, v26f09p2, v26f09c1, v26f09c2, v26f09c3), ks(v26f10p1, v26f10p2, v26f10c1, v26f10c2, v26f10c3), ks(v27f01p1, v27f01p2, v27f01c1, v27f01c2, v27f01c3), ks(v27f02p1, v27f02p2, v27f02c1, v27f02c2, v27f02c3), ks(v27f03p1, v27f03p2, v27f03c1, v27f03c2, v27f03c3), ks(v27f04p1, v27f04p2, v27f04c1, v27f04c2, v27f04c3), ks(v27f05p1, v27f05p2, v27f05c1, v27f05c2, v27f05c3), ks(v27f06p1, v27f06p2, v27f06c1, v27f06c2, v27f06c3), ks(v27f07p1, v27f07p2, v27f07c1, v27f07c2, v27f07c3), ks(v27f08p1, v27f08p2, v27f08c1, v27f08c2, v27f08c3), ks(v27f09p1, v27f09p2, v27f09c1, v27f09c2, v27f09c3), ks(v27f10p1, v27f10p2, v27f10c1, v27f10c2, v27f10c3), ks(v28f01p1, v28f01p2, v28f01c1, v28f01c2, v28f01c3), ks(v28f02p1, v28f02p2, v28f02c1, v28f02c2, v28f02c3), ks(v28f03p1, v28f03p2, v28f03c1, v28f03c2, v28f03c3), ks(v28f04p1, v28f04p2, v28f04c1, v28f04c2, v28f04c3), ks(v28f05p1, v28f05p2, v28f05c1, v28f05c2, v28f05c3), ks(v28f06p1, v28f06p2, v28f06c1, v28f06c2, v28f06c3), ks(v28f07p1, v28f07p2, v28f07c1, v28f07c2, v28f07c3), ks(v28f08p1, v28f08p2, v28f08c1, v28f08c2, v28f08c3), ks(v28f09p1, v28f09p2, v28f09c1, v28f09c2, v28f09c3), ks(v28f10p1, v28f10p2, v28f10c1, v28f10c2, v28f10c3), ks(v29f01p1, v29f01p2, v29f01c1, v29f01c2, v29f01c3), ks(v29f02p1, v29f02p2, v29f02c1, v29f02c2, v29f02c3), ks(v29f03p1, v29f03p2, v29f03c1, v29f03c2, v29f03c3), ks(v29f04p1, v29f04p2, v29f04c1, v29f04c2, v29f04c3), ks(v29f05p1, v29f05p2, v29f05c1, v29f05c2, v29f05c3), ks(v29f06p1, v29f06p2, v29f06c1, v29f06c2, v29f06c3), ks(v29f07p1, v29f07p2, v29f07c1, v29f07c2, v29f07c3), ks(v29f08p1, v29f08p2, v29f08c1, v29f08c2, v29f08c3), ks(v29f09p1, v29f09p2, v29f09c1, v29f09c2, v29f09c3), ks(v29f10p1, v29f10p2, v29f10c1, v29f10c2, v29f10c3), ks(v30f01p1, v30f01p2, v30f01c1, v30f01c2, v30f01c3), ks(v30f02p1, v30f02p2, v30f02c1, v30f02c2, v30f02c3), ks(v30f03p1, v30f03p2, v30f03c1, v30f03c2, v30f03c3), ks(v30f04p1, v30f04p2, v30f04c1, v30f04c2, v30f04c3), ks(v30f05p1, v30f05p2, v30f05c1, v30f05c2, v30f05c3), ks(v30f06p1, v30f06p2, v30f06c1, v30f06c2, v30f06c3), ks(v30f07p1, v30f07p2, v30f07c1, v30f07c2, v30f07c3), ks(v30f08p1, v30f08p2, v30f08c1, v30f08c2, v30f08c3), ks(v30f09p1, v30f09p2, v30f09c1, v30f09c2, v30f09c3), ks(v30f10p1, v30f10p2, v30f10c1, v30f10c2, v30f10c3), ks(v31f01p1, v31f01p2, v31f01c1, v31f01c2, v31f01c3), ks(v31f02p1, v31f02p2, v31f02c1, v31f02c2, v31f02c3), ks(v31f03p1, v31f03p2, v31f03c1, v31f03c2, v31f03c3), ks(v31f04p1, v31f04p2, v31f04c1, v31f04c2, v31f04c3), ks(v31f05p1, v31f05p2, v31f05c1, v31f05c2, v31f05c3), ks(v31f06p1, v31f06p2, v31f06c1, v31f06c2, v31f06c3), ks(v31f07p1, v31f07p2, v31f07c1, v31f07c2, v31f07c3), ks(v31f08p1, v31f08p2, v31f08c1, v31f08c2, v31f08c3), ks(v31f09p1, v31f09p2, v31f09c1, v31f09c2, v31f09c3), ks(v31f10p1, v31f10p2, v31f10c1, v31f10c2, v31f10c3), ks(v32f01p1, v32f01p2, v32f01c1, v32f01c2, v32f01c3), ks(v32f02p1, v32f02p2, v32f02c1, v32f02c2, v32f02c3), ks(v32f03p1, v32f03p2, v32f03c1, v32f03c2, v32f03c3), ks(v32f04p1, v32f04p2, v32f04c1, v32f04c2, v32f04c3), ks(v32f05p1, v32f05p2, v32f05c1, v32f05c2, v32f05c3), ks(v32f06p1, v32f06p2, v32f06c1, v32f06c2, v32f06c3), ks(v32f07p1, v32f07p2, v32f07c1, v32f07c2, v32f07c3), ks(v32f08p1, v32f08p2, v32f08c1, v32f08c2, v32f08c3), ks(v32f09p1, v32f09p2, v32f09c1, v32f09c2, v32f09c3), ks(v32f10p1, v32f10p2, v32f10c1, v32f10c2, v32f10c3), ks(v33f01p1, v33f01p2, v33f01c1, v33f01c2, v33f01c3), ks(v33f02p1, v33f02p2, v33f02c1, v33f02c2, v33f02c3), ks(v33f03p1, v33f03p2, v33f03c1, v33f03c2, v33f03c3), ks(v33f04p1, v33f04p2, v33f04c1, v33f04c2, v33f04c3), ks(v33f05p1, v33f05p2, v33f05c1, v33f05c2, v33f05c3), ks(v33f06p1, v33f06p2, v33f06c1, v33f06c2, v33f06c3), ks(v33f07p1, v33f07p2, v33f07c1, v33f07c2, v33f07c3), ks(v33f08p1, v33f08p2, v33f08c1, v33f08c2, v33f08c3), ks(v33f09p1, v33f09p2, v33f09c1, v33f09c2, v33f09c3), ks(v33f10p1, v33f10p2, v33f10c1, v33f10c2, v33f10c3), ks(v34f01p1, v34f01p2, v34f01c1, v34f01c2, v34f01c3), ks(v34f02p1, v34f02p2, v34f02c1, v34f02c2, v34f02c3), ks(v34f03p1, v34f03p2, v34f03c1, v34f03c2, v34f03c3), ks(v34f04p1, v34f04p2, v34f04c1, v34f04c2, v34f04c3), ks(v34f05p1, v34f05p2, v34f05c1, v34f05c2, v34f05c3), ks(v34f06p1, v34f06p2, v34f06c1, v34f06c2, v34f06c3), ks(v34f07p1, v34f07p2, v34f07c1, v34f07c2, v34f07c3), ks(v34f08p1, v34f08p2, v34f08c1, v34f08c2, v34f08c3), ks(v34f09p1, v34f09p2, v34f09c1, v34f09c2, v34f09c3), ks(v34f10p1, v34f10p2, v34f10c1, v34f10c2, v34f10c3), ks(v35f01p1, v35f01p2, v35f01c1, v35f01c2, v35f01c3), ks(v35f02p1, v35f02p2, v35f02c1, v35f02c2, v35f02c3), ks(v35f03p1, v35f03p2, v35f03c1, v35f03c2, v35f03c3), ks(v35f04p1, v35f04p2, v35f04c1, v35f04c2, v35f04c3), ks(v35f05p1, v35f05p2, v35f05c1, v35f05c2, v35f05c3), ks(v35f06p1, v35f06p2, v35f06c1, v35f06c2, v35f06c3), ks(v35f07p1, v35f07p2, v35f07c1, v35f07c2, v35f07c3), ks(v35f08p1, v35f08p2, v35f08c1, v35f08c2, v35f08c3), ks(v35f09p1, v35f09p2, v35f09c1, v35f09c2, v35f09c3), ks(v35f10p1, v35f10p2, v35f10c1, v35f10c2, v35f10c3), ks(v36f01p1, v36f01p2, v36f01c1, v36f01c2, v36f01c3), ks(v36f02p1, v36f02p2, v36f02c1, v36f02c2, v36f02c3), ks(v36f03p1, v36f03p2, v36f03c1, v36f03c2, v36f03c3), ks(v36f04p1, v36f04p2, v36f04c1, v36f04c2, v36f04c3), ks(v36f05p1, v36f05p2, v36f05c1, v36f05c2, v36f05c3), ks(v36f06p1, v36f06p2, v36f06c1, v36f06c2, v36f06c3), ks(v36f07p1, v36f07p2, v36f07c1, v36f07c2, v36f07c3), ks(v36f08p1, v36f08p2, v36f08c1, v36f08c2, v36f08c3), ks(v36f09p1, v36f09p2, v36f09c1, v36f09c2, v36f09c3), ks(v36f10p1, v36f10p2, v36f10c1, v36f10c2, v36f10c3), ks(v37f01p1, v37f01p2, v37f01c1, v37f01c2, v37f01c3), ks(v37f02p1, v37f02p2, v37f02c1, v37f02c2, v37f02c3), ks(v37f03p1, v37f03p2, v37f03c1, v37f03c2, v37f03c3), ks(v37f04p1, v37f04p2, v37f04c1, v37f04c2, v37f04c3), ks(v37f05p1, v37f05p2, v37f05c1, v37f05c2, v37f05c3), ks(v37f06p1, v37f06p2, v37f06c1, v37f06c2, v37f06c3), ks(v37f07p1, v37f07p2, v37f07c1, v37f07c2, v37f07c3), ks(v37f08p1, v37f08p2, v37f08c1, v37f08c2, v37f08c3), ks(v37f09p1, v37f09p2, v37f09c1, v37f09c2, v37f09c3), ks(v37f10p1, v37f10p2, v37f10c1, v37f10c2, v37f10c3), ks(v38f01p1, v38f01p2, v38f01c1, v38f01c2, v38f01c3), ks(v38f02p1, v38f02p2, v38f02c1, v38f02c2, v38f02c3), ks(v38f03p1, v38f03p2, v38f03c1, v38f03c2, v38f03c3), ks(v38f04p1, v38f04p2, v38f04c1, v38f04c2, v38f04c3), ks(v38f05p1, v38f05p2, v38f05c1, v38f05c2, v38f05c3), ks(v38f06p1, v38f06p2, v38f06c1, v38f06c2, v38f06c3), ks(v38f07p1, v38f07p2, v38f07c1, v38f07c2, v38f07c3), ks(v38f08p1, v38f08p2, v38f08c1, v38f08c2, v38f08c3), ks(v38f09p1, v38f09p2, v38f09c1, v38f09c2, v38f09c3), ks(v38f10p1, v38f10p2, v38f10c1, v38f10c2, v38f10c3), ks(v39f01p1, v39f01p2, v39f01c1, v39f01c2, v39f01c3), ks(v39f02p1, v39f02p2, v39f02c1, v39f02c2, v39f02c3), ks(v39f03p1, v39f03p2, v39f03c1, v39f03c2, v39f03c3), ks(v39f04p1, v39f04p2, v39f04c1, v39f04c2, v39f04c3), ks(v39f05p1, v39f05p2, v39f05c1, v39f05c2, v39f05c3), ks(v39f06p1, v39f06p2, v39f06c1, v39f06c2, v39f06c3), ks(v39f07p1, v39f07p2, v39f07c1, v39f07c2, v39f07c3), ks(v39f08p1, v39f08p2, v39f08c1, v39f08c2, v39f08c3), ks(v39f09p1, v39f09p2, v39f09c1, v39f09c2, v39f09c3), ks(v39f10p1, v39f10p2, v39f10c1, v39f10c2, v39f10c3), ks(v40f01p1, v40f01p2, v40f01c1, v40f01c2, v40f01c3), ks(v40f02p1, v40f02p2, v40f02c1, v40f02c2, v40f02c3), ks(v40f03p1, v40f03p2, v40f03c1, v40f03c2, v40f03c3), ks(v40f04p1, v40f04p2, v40f04c1, v40f04c2, v40f04c3), ks(v40f05p1, v40f05p2, v40f05c1, v40f05c2, v40f05c3), ks(v40f06p1, v40f06p2, v40f06c1, v40f06c2, v40f06c3), ks(v40f07p1, v40f07p2, v40f07c1, v40f07c2, v40f07c3), ks(v40f08p1, v40f08p2, v40f08c1, v40f08c2, v40f08c3), ks(v40f09p1, v40f09p2, v40f09c1, v40f09c2, v40f09c3), ks(v40f10p1, v40f10p2, v40f10c1, v40f10c2, v40f10c3)])
+.

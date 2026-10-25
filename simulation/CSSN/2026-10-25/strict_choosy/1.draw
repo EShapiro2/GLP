@@ -1,0 +1,38 @@
+draw local 9 strict 17 choosy 20
+agent 1 local strict
+agent 2 open strict
+agent 3 choosy
+agent 4 open strict
+agent 5 choosy
+agent 6 open strict
+agent 7 local strict
+agent 8 choosy
+agent 9 choosy
+agent 10 choosy
+agent 11 local strict
+agent 12 local strict
+agent 13 choosy
+agent 14 local strict
+agent 15 choosy
+agent 16 open strict
+agent 17 local strict
+agent 18 choosy
+agent 19 choosy
+agent 20 local strict
+agent 21 local strict
+agent 22 choosy
+agent 23 choosy
+agent 24 choosy
+agent 25 open strict
+agent 26 choosy
+agent 27 choosy
+agent 28 choosy
+agent 29 open strict
+agent 30 open strict
+agent 31 choosy
+agent 32 choosy
+agent 33 choosy
+agent 34 open strict
+agent 35 local strict
+agent 36 choosy
+agent 37 choosy
