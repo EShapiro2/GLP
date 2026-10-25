@@ -1,0 +1,38 @@
+draw local 9 strict 17 choosy 0
+agent 1 local strict
+agent 2 open strict
+agent 3 keen
+agent 4 open strict
+agent 5 keen
+agent 6 open strict
+agent 7 local strict
+agent 8 keen
+agent 9 keen
+agent 10 keen
+agent 11 local strict
+agent 12 local strict
+agent 13 keen
+agent 14 local strict
+agent 15 keen
+agent 16 open strict
+agent 17 local strict
+agent 18 keen
+agent 19 keen
+agent 20 local strict
+agent 21 local strict
+agent 22 keen
+agent 23 keen
+agent 24 keen
+agent 25 open strict
+agent 26 keen
+agent 27 keen
+agent 28 keen
+agent 29 open strict
+agent 30 open strict
+agent 31 keen
+agent 32 keen
+agent 33 keen
+agent 34 open strict
+agent 35 local strict
+agent 36 keen
+agent 37 keen

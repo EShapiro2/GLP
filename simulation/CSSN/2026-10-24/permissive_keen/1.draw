@@ -1,0 +1,38 @@
+draw local 9 strict 0 choosy 0
+agent 1 local permissive
+agent 2 open permissive
+agent 3 keen
+agent 4 open permissive
+agent 5 keen
+agent 6 open permissive
+agent 7 local permissive
+agent 8 keen
+agent 9 keen
+agent 10 keen
+agent 11 local permissive
+agent 12 local permissive
+agent 13 keen
+agent 14 local permissive
+agent 15 keen
+agent 16 open permissive
+agent 17 local permissive
+agent 18 keen
+agent 19 keen
+agent 20 local permissive
+agent 21 local permissive
+agent 22 keen
+agent 23 keen
+agent 24 keen
+agent 25 open permissive
+agent 26 keen
+agent 27 keen
+agent 28 keen
+agent 29 open permissive
+agent 30 open permissive
+agent 31 keen
+agent 32 keen
+agent 33 keen
+agent 34 open permissive
+agent 35 local permissive
+agent 36 keen
+agent 37 keen
