@@ -891,27 +891,28 @@ void appsScreens(Screens screens) {
     expect(run.on(alice, find.byKey(listTabKey('friend'))), findsNothing);
     expect(run.on(alice, find.byKey(listTabKey('member'))), findsNothing);
 
-    // (a) Alice's Contacts before her identity is established: her name; Establish, GKK's "[Establish]", which names no one beside its proposer and is drawn on the tab of its contract; and Meet, GKK's "[Meet]", with the field for a peer's key, named by its type, Peer.
+    // (a) Alice's Contacts before her identity is established: her name; and Establish, GKK's "[Establish]", which names no entry and is drawn on the tab of its contract.  No Meet: "The button of an act that names no entry, and of a meeting with a peer not listed, is drawn on the tab of its contract, where the viewer's state holds the atoms the act requires at the proposer's role that name no other role or variable" (vGLP 516a0a2, Section 6.2), and meet requires identity at Alice's role.
     expect(run.control(alice, 'name'), findsOneWidget);
     expect(
         find.descendant(
             of: run.control(alice, 'send:establish:'),
             matching: find.text('Establish')),
         findsOneWidget);
-    expect(
-        find.descendant(
-            of: run.control(alice, 'key-send:meet'), matching: find.text('Meet')),
-        findsOneWidget);
-    // Meet's field for the peer's key, named GKK's "<person>" (vGLP e286276, Section 5.4, "The contract's words").
-    expect(
-        find.descendant(
-            of: run.control(alice, 'key:meet'), matching: find.text('person')),
-        findsOneWidget);
+    expect(run.control(alice, 'key-send:meet'), findsNothing);
     expect(alice.atoms, isEmpty);
     run.plain(alice);
     await run.shoot(alice, 'gkk-a-alice-identity.png');
     await run.join(alice);
     expect(alice.atoms, ['identity']);
+    // Once her identity is established, Meet, GKK's "[Meet]", with its field for the peer's key, GKK's "<person>" (Section 5.4, "The contract's words").
+    expect(
+        find.descendant(
+            of: run.control(alice, 'key-send:meet'), matching: find.text('Meet')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'key:meet'), matching: find.text('person')),
+        findsOneWidget);
     await run.join(bob);
     await run.join(carol);
 
@@ -922,7 +923,7 @@ void appsScreens(Screens screens) {
         unorderedEquals(['identity', 'knows(bob)', 'knows(carol)']));
     expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
 
-    // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Introduce, GKK's "[Introduce]", beside Bob in her Contacts, Bob filling the first person of introduce(p?, q? ; c); she types Carol's key into its field, GKK's "<person>", a person the act names by key (vGLP e286276, Section 5.4, "The contract's words"), and taps Introduce.
+    // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Introduce, GKK's "[Introduce]", in Bob's row of her Contacts, Bob taking the second role of introduce, with its field beside it, GKK's "<person>", Carol, introduce's agent variable c, a person the act names by key: "A button is drawn in the row of a tab's entry, whose person takes a role of the act, with the act's fields beside it" (vGLP 516a0a2, Section 6.2); "the fields are what the proposer fills besides, one for each other variable of the schema after its roles, in the schema's order, a person the act names by key among them" (Section 5.4, "The contract's words").  She types Carol's key and taps Introduce.
     await run.list(alice, 'knows');
     await run.tap(alice, run.control(alice, 'act:introduce:bob'));
     expect(
@@ -952,11 +953,13 @@ void appsScreens(Screens screens) {
     expect(bob.atoms,
         unorderedEquals(['identity', 'knows(alice)', 'knows(carol)']));
 
-    // (c) Bob's contacts once he has approved: a row for each atom of knows, in the order of his state, the newest first, Carol and then Alice, each with the buttons of the acts that name a person, Meet and Introduce.
+    // (c) Bob's contacts once he has approved: a row for each atom of knows, in the order of his state, the newest first, Carol and then Alice, each with Introduce, its field a key; Meet, which requires no atom of knows at his role, in no row: "A button is drawn in the row of a tab's entry, whose person takes a role of the act, ... in a row of the tab whose predicate the act requires or deletes at the proposer's role naming the entry" (vGLP 516a0a2, Section 6.2).
     await run.top(bob);
     expect(run.control(bob, 'row:alice'), findsOneWidget);
     expect(run.control(bob, 'row:carol'), findsOneWidget);
-    expect(run.control(bob, 'act:meet:alice'), findsOneWidget);
+    expect(run.control(bob, 'act:meet:alice'), findsNothing);
+    expect(run.control(bob, 'act:introduce:alice'), findsOneWidget);
+    expect(run.control(bob, 'act:introduce:carol'), findsOneWidget);
     expect(run.texts(bob), containsAllInOrder(['Bob', 'Carol', 'Alice']));
     run.plain(bob);
     await run.shoot(bob, 'gkk-c-bob-contacts.png');
@@ -976,12 +979,14 @@ void appsScreens(Screens screens) {
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
     expect(run.on(alice, find.byKey(listTabKey('member'))), findsNothing);
 
-    // Each establishes their identity (GKK:1), and Alice meets Bob by his key (GKK:2).  Bob's row in her Contacts then has the buttons of every act that names a person: Meet, Introduce, Befriend and Unfriend, GSG's "[Befriend]" and "[Unfriend]".
+    // Each establishes their identity (GKK:1), and Alice meets Bob by his key (GKK:2).  Bob's row in her Contacts then has the buttons of the acts that require knows of him at her role, Introduce, its field a key, and GSG's "[Befriend]"; not Meet, which requires no atom of knows, nor GSG's "[Unfriend]", which requires friend of him: "A button is drawn in the row of a tab's entry ... in a row of the tab whose predicate the act requires or deletes at the proposer's role naming the entry" (vGLP 516a0a2, Section 6.2).
     await run.join(alice);
     await run.join(bob);
     await run.meetByKey(alice, bob);
-    for (final f in ['meet', 'introduce', 'befriend', 'unfriend']) {
-      expect(run.control(alice, 'act:$f:bob'), findsOneWidget, reason: f);
+    expect(run.control(alice, 'act:befriend:bob'), findsOneWidget);
+    expect(run.control(alice, 'act:introduce:bob'), findsOneWidget);
+    for (final f in ['meet', 'unfriend']) {
+      expect(run.control(alice, 'act:$f:bob'), findsNothing, reason: f);
     }
 
     // (a) Alice taps Befriend beside Bob (GSG:1): Bob's Friends tab, the tab of GSG, GSG's question "Alice asks to be your friend." and yes and no at its top.
@@ -1048,9 +1053,11 @@ void appsScreens(Screens screens) {
     // (a) Bob's Friends tab: Alice's row shows the atoms of his state naming her, her message Hi Bob among them (vGLP, Section 5.4: "a row shows the atoms of the state naming its item").
     await run.list(bob, 'friend');
     await run.top(bob);
+    // The message is a speech act, drawn with its signer: "A speech act, in a row, a question or a field, is drawn with its signers, innermost first, by the names the viewer's state holds for them" (vGLP 516a0a2, Section 6.2).
     expect(
         find.descendant(
-            of: run.control(bob, 'row:alice'), matching: find.text('Hi Bob')),
+            of: run.control(bob, 'row:alice'),
+            matching: find.text('Hi Bob (Alice)')),
         findsOneWidget);
     run.plain(bob);
     await run.shoot(bob, 'gsn-a-bob-chat.png');
@@ -1079,7 +1086,8 @@ void appsScreens(Screens screens) {
     await run.list(bob, 'member');
     await run.top(bob);
     const asks = 'Alice asks you to join their group.';
-    expect(run.textsOf(bob, a), [asks, 'friends', 'yes', 'no']);
+    // The group's name, a speech act of Alice's, is drawn with its signer: "A speech act, in a row, a question or a field, is drawn with its signers" (vGLP 516a0a2, Section 6.2).
+    expect(run.textsOf(bob, a), [asks, 'friends\nAlice', 'yes', 'no']);
     run.plain(bob);
     await run.shoot(bob, 'gsn-b-bob-asked-to-join.png');
 
@@ -1109,7 +1117,7 @@ void appsScreens(Screens screens) {
           find.descendant(of: g, matching: find.byType(Text))))
         if (t.data != null) t.data!,
     ];
-    expect(inGroup, containsAllInOrder(['friends, Alice', 'Hi all, Alice']));
+    expect(inGroup, containsAllInOrder(['friends, Alice', 'Hi all (Bob), Alice']));
     expect(inGroup, contains('Leave'));
     run.plain(bob);
     await run.shoot(bob, 'gsn-c-bob-group.png');
@@ -1133,12 +1141,15 @@ void appsScreens(Screens screens) {
           find.descendant(of: ga, matching: find.byType(Text))))
         if (t.data != null) t.data!,
     ];
-    expect(inHers, containsAll(['Bob', 'Hi all', 'Welcome', 'Post own', 'Close']));
+    expect(inHers, containsAll(['Bob', 'Hi all (Bob)', 'Welcome (Alice)', 'Post own']));
+    // Close, GSN's "[Close]", names no entry of a tab, close requiring no atom of a tab's predicate at the leader's role, so it is drawn on the tab of its contract, its group picked: "The button of an act that names no entry ... is drawn on the tab of its contract" (vGLP 516a0a2, Section 6.2).  GSN.txt gives Close no field, so the group's place is drawn by the name of its type, Speech, which "no type name reaches a compiled app's screen" forbids: plain(alice) fails here until GSN.txt names it.
+    expect(run.control(alice, 'act:close:$friendsGroup'), findsNothing);
     run.plain(alice);
     await run.shoot(alice, 'gsn-d-alice-group.png');
 
-    // Alice closes the group (GSN:4: "when the leader leaves, the group ends"): Close beside the group proposes close(alice, n), its listed role every member she lists; Bob's machine votes unasked, and the group ends at both.
-    await run.tap(alice, run.control(alice, 'act:close:$friendsGroup'));
+    // Alice closes the group (GSN:4: "when the leader leaves, the group ends"): Close on her Groups tab, the group picked, proposes close(alice, n), its listed role every member she lists; Bob's machine votes unasked, and the group ends at both.
+    await run.tap(alice, run.control(alice, 'pick:close::g2:$friendsGroup'));
+    await run.tap(alice, run.control(alice, 'send:close:'));
     expect(bob.questions('approval'), isEmpty);
     expect(alice.atoms, isNot(contains('member($friendsGroup)')));
     expect(bob.atoms, isNot(contains('member($friendsGroup)')));

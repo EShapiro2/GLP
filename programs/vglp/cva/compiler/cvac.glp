@@ -1726,7 +1726,7 @@ value_field_places(Hd, Rs, Fq?) :- ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vs),
     listed_ixs(Rs?, 1, Lis),
     field_places2(Vs?, 1, Lis?, Fq).
-%% The places a field names that no picker fills: those with a field of a non-empty name that hold no person, a person place being picked from the persons the viewer knows under the field's name (vGLP 516a0a2, Section 6.2: "A field that takes a person offers the persons the viewer knows").
+%% The places a field names that no picker fills: those with a field of a non-empty name but a role, a role being picked from the persons the viewer knows under the field's name (vGLP 516a0a2, Section 6.2: "A field that takes a person offers the persons the viewer knows"), and an agent variable typed by key ("a person the act names by key among them", Section 5.4, "The contract's words").
 procedure named_places(Ints?, Strings?, Args?, Ints).
 named_places(_, [], _, []).
 named_places([], [_|_], _, []).
@@ -1740,7 +1740,6 @@ named_place(F, _, _, []) :- ground(F?), F? =?= '""' | true.
 named_place(_, A, I, N?) :- otherwise | named_place1(A?, I?, N).
 procedure named_place1(Arg?, Integer?, Ints).
 named_place1(role(_), _, []).
-named_place1(pvar(_), _, []).
 named_place1(A, I, [I?]) :- otherwise, ground(A?) | true.
 %% The places the pragma's fields name that the question does not name, each with the name of its field and the kind of its value: vp(I, F, named) of a person, vp(I, F, valued) of a number; a field left empty, as an inapplicable field of a schema that shares its button, names no place.
 procedure value_places(Ints?, Strings?, Ints?, Args?, VPlaces).

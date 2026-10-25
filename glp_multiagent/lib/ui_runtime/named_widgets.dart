@@ -2266,8 +2266,6 @@ class _SocialTabState extends State<SocialTab> {
       RequestOffers o, String pred, bool Function(String) onThis) {
     final me = ask.me;
     final out = <Widget>[];
-    final forms = <List<(String, ActInfo)>>[];
-    final byLabel = <String, int>{};
     for (final k in o.proposals) {
       final first = o.acts[k];
       if (first == null) continue;
@@ -2293,47 +2291,15 @@ class _SocialTabState extends State<SocialTab> {
               .where((a) => a.requiresOf(pred, {...others}..remove(a.me)))
               .firstOrNull ??
           cands.first;
+      // An act whose entry no row is, drawn on the tab of its contract; an act that names an entry is drawn in that entry's row, and no form is drawn at the top of a tab (vGLP 516a0a2, Section 6.2: "The button of an act that names no entry, and of a meeting with a peer not listed, is drawn on the tab of its contract").
       final c = pick.namedCount(o.kinds[k] ?? const []);
-      if (c == 0) {
+      final rowable = (s.lists ?? const []).any(
+          (l) => pick.requiresOf(l.predicate, {...others}..remove(pick.me)));
+      if (c == 0 || !rowable) {
         out.add(_actForm(context, s, ask, o, k, pick, null));
-      } else if (c >= 2) {
-        final label = o.labels[k] ?? f;
-        final i = byLabel[label];
-        if (i == null) {
-          byLabel[label] = forms.length;
-          forms.add([(k, pick)]);
-        } else {
-          forms[i].add((k, pick));
-        }
       }
     }
-    if (forms.isEmpty) return out;
-    String nameOf(List<(String, ActInfo)> m) => _groupName(o, m);
-    return [
-      ...out,
-      Wrap(spacing: 8, runSpacing: 4, children: [
-        for (final m in forms)
-          OutlinedButton(
-            key: socialKey(_id, 'top:${nameOf(m)}'),
-            onPressed: () => setState(() => _openAct =
-                _openAct == 'top:${nameOf(m)}' ? null : 'top:${nameOf(m)}'),
-            child: Text(o.labelOf(
-                m.first.$1.substring(0, m.first.$1.lastIndexOf('/')))),
-          ),
-      ]),
-      for (final m in forms)
-        if (_openAct == 'top:${nameOf(m)}')
-          () {
-            // The widest of the schemas a button covers draws the form; on its button the narrowest whose places are those picked is proposed.
-            final sorted = [...m]..sort((x, y) =>
-                int.parse(x.$1.substring(x.$1.lastIndexOf('/') + 1))
-                    .compareTo(int.parse(y.$1.substring(y.$1.lastIndexOf('/') + 1))));
-            final (wk, wa) = sorted.last;
-            return _actForm(context, s, ask, o, wk, wa, null,
-                composerName: nameOf(m), alts: m.length > 1 ? sorted : null);
-          }(),
-      const SizedBox(height: 8),
-    ];
+    return out;
   }
 
   /// The functor of an approval pending, its request name (vGLP e286276, Section 5.4, "The compilation": "each by its request name, a request's own and an answer's that of its attempt's part").
@@ -2559,16 +2525,21 @@ class _SocialTabState extends State<SocialTab> {
     final acts = <(String, ActInfo)>[];
     for (final key in o.proposals) {
       final kinds = o.kinds[key] ?? const <String>[];
-      // At each of its guarding roles, an act that names one person, group or item beside its proposer, drawn beside the row where the act requires or deletes, at the viewer's role, the atom of this tab's predicate naming the row's item, and where the viewer's state meets its precondition there (vGLP feda043, Section 6.2, "The words a platform shows").
+      // An act whose entry the row is, drawn in the row with its fields beside it, where the act requires or deletes, at the proposer's role, the atom of this tab's predicate naming the row's item, where the viewer's state meets its precondition there, and where each field that takes a person has someone to offer (vGLP 516a0a2, Section 6.2, "The words a platform shows": "A button is drawn in the row of a tab's entry, whose person takes a role of the act, with the act's fields beside it ...; the button is drawn only where each such field has someone to offer").
       for (final a in o.allActs[key] ?? const <ActInfo>[]) {
-        if (a.namedCount(kinds) != 1 || mine) continue;
+        if (a.namedCount(kinds) < 1 || mine) continue;
         if (g != null && a.groups.isEmpty) continue;
         if (g == null && speech && a.items.every((x) => x.$2 != pred)) continue;
         if (g == null && !speech && item is! GAtom) continue;
         final fill = _fill(a, item, pred);
-        if (fill.isEmpty || fill.containsKey(a.me)) continue;
+        // A row whose entry fills the proposer's own place is the proposer's own, as the group a leader leads (GSN:3, Join in the row of the group).
+        if (fill.isEmpty ||
+            (fill.containsKey(a.me) && formatTerm(fill[a.me]!) != formatTerm(me))) {
+          continue;
+        }
         if (!a.requiresOf(pred, fill.keys.toSet())) continue;
         if (!a.holds(s.atoms, {a.me: me, ...fill})) continue;
+        if (!_placesPickable(s, a, me, filled: fill)) continue;
         acts.add((key, a));
         break;
       }
@@ -2733,19 +2704,38 @@ class _SocialTabState extends State<SocialTab> {
   }
 
   /// Whether each person place of the form of [a], but one a field names by key or a held atom fills, has someone to pick (vGLP, Section 6.2, Udi's approval of 2026-10-24 22:54 UTC: "each place of a form is picked from the rows of the tab whose predicate the act requires at the viewer's role naming that place, or, where it requires none, from the persons the viewer knows ...; a form is drawn only where each of its places has someone to pick").
-  bool _placesPickable(SocialState s, ActInfo a, GTerm me) {
+  bool _placesPickable(SocialState s, ActInfo a, GTerm me,
+      {Map<int, GTerm> filled = const {}}) {
     final hp = a.heldPlaces.difference({...a.persons, ...a.itemPlaces, ...a.keys});
+    final taken = {for (final x in filled.values) formatTerm(x)};
     for (final k in a.persons) {
-      if (k == a.me || a.keys.contains(k) || hp.contains(k)) continue;
+      if (k == a.me || a.keys.contains(k) || hp.contains(k) || filled.containsKey(k)) continue;
       final preds = [for (final (kk, p) in a.items) if (kk == k) p];
       // Where the place's role requires an atom the schemas prove from the viewer's records, only a person so proved (vGLP 3ec07a2, Section 6.2).
+      // Distinct roles are bound to distinct persons: a field offers no person of the act's other places (vGLP 516a0a2, Section 6.2).
       final some = preds.isEmpty
-          ? _knownPickable(s, me).any((x) => a.provedAt(s.atoms, k, x))
-          : preds.any((p) => _pickableItems(s, p, person: true, me: me)
-              .any((x) => a.provedAt(s.atoms, k, x)));
+          ? _knownPickable(s, me).any((x) =>
+              !taken.contains(formatTerm(x)) && a.provedAt(s.atoms, k, x))
+          : preds.any((p) => _pickableItems(s, p, person: true, me: me).any(
+              (x) => !taken.contains(formatTerm(x)) && a.provedAt(s.atoms, k, x)));
       if (!some) return false;
     }
+    // A group a field takes offers the groups the viewer may pick, and the button is drawn only where it has one to offer (vGLP 516a0a2, Section 6.2: "the button is drawn only where each such field has someone to offer").
+    for (final (j, k) in a.groups) {
+      if (filled.containsKey(k)) continue;
+      if (_pickableGroups(s, me, j, a.me).isEmpty) return false;
+    }
     return true;
+  }
+
+  /// Whether [p] is picked at a place of the composer [composer] other than [i], distinct roles being bound to distinct persons: "A field that takes a person offers the persons the viewer knows ... other than the viewer and the persons of the act's other places, since distinct roles are bound to distinct persons" (vGLP 516a0a2, Section 6.2).
+  bool _pickedElsewhere(String composer, int i, GTerm p, List<int> places) {
+    for (final j in places) {
+      if (j == i) continue;
+      final q = _picked['$composer:$j'];
+      if (q != null && formatTerm(q) == formatTerm(p)) return true;
+    }
+    return false;
   }
 
   /// The persons the viewer's agent knows, but the viewer, each once: whom a place of a form is picked from where the act requires, at the viewer's role, no atom of a tab's predicate naming it (ibid.).
@@ -2974,6 +2964,7 @@ class _SocialTabState extends State<SocialTab> {
               Text(o.field(f, n, i), style: small),
               for (final p in _knownPickable(s, me))
                 if ((item == null || formatTerm(p) != formatTerm(item)) &&
+                    !_pickedElsewhere(composer, i, p, picks) &&
                     a.provedAt(s.atoms, i, p))
                   ChoiceChip(
                     key: socialKey(_id, 'pick:$composer:$i:${formatTerm(p)}'),
