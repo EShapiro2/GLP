@@ -1618,7 +1618,42 @@ class DeclaredWidget {
     final xs = _items(t);
     if (xs == null) return null;
     final is_ = <String>[];
+    // The places of an atom's arguments, at(K), grp(J, K) or any (vGLP feda043, Section 6.2).
+    List<String>? condArgs(Term t) {
+      final as_ = _items(t);
+      if (as_ == null) return null;
+      final out = <String>[];
+      for (final a in as_) {
+        if (a is StructTerm && a.functor == 'at' && a.args.length == 1) {
+          final k = _int(a.args[0]);
+          if (k == null) return null;
+          out.add('at($k)');
+        } else if (a is StructTerm && a.functor == 'grp' && a.args.length == 2) {
+          final j = _int(a.args[0]), k = _int(a.args[1]);
+          if (j == null || k == null) return null;
+          out.add('grp($j, $k)');
+        } else if (_labelConstant(a) == 'any') {
+          out.add('any');
+        } else {
+          return null;
+        }
+      }
+      return out;
+    }
+
     for (final x in xs) {
+      // What the schemas prove of the person at a place from the viewer's records, proved(Q, Ws, P, As): the place offers only a person so proved (vGLP 3ec07a2, Section 6.2, "The words a platform shows": "where the place's role requires an atom that the schemas prove of a person from the viewer's records, as above, only a person so proved is offered").
+      if (x is StructTerm && x.functor == 'proved' && x.args.length == 4) {
+        final q = _labelConstant(x.args[0]), pc = _labelConstant(x.args[2]);
+        final ws = _items(x.args[1]);
+        final as_ = condArgs(x.args[3]);
+        if (q == null || pc == null || ws == null || as_ == null) return null;
+        final wc = [for (final w in ws) _labelConstant(w)];
+        if (wc.contains(null)) return null;
+        is_.add('proved(${constantSource(q)}, [${[for (final w in wc) constantSource(w!)].join(', ')}], '
+            '${constantSource(pc)}, [${as_.join(', ')}])');
+        continue;
+      }
       if (x is! StructTerm || x.args.length != 2) return null;
       final p = x.functor == 'item' ? x.args[1] : x.args[0];
       final pc = _labelConstant(p);

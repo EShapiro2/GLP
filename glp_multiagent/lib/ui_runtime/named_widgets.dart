@@ -1000,10 +1000,15 @@ class ActInfo {
   final List<({bool forbids, String pred, List<Object?> args})> conds;
   /// The atoms of the viewer's state from which the schemas prove that the person at a place holds an atom the act forbids there, `unless(P, As)` (vGLP 893d4ea, Section 6.2: "the viewer holding the first shows that x holds the second, and an act that forbids the second at x's role is not drawn beside x").
   final List<({String pred, List<Object?> args})> unless;
+  /// The atoms of the viewer's state from which the schemas prove that the person at a place holds an atom its role requires, each with the atom it proves, [proves], `proved(Q, Ws, P, As)`: the place offers only a person for whom, for each such atom, the viewer holds an atom matching one of its entries (vGLP 3ec07a2, Section 6.2, "The words a platform shows": "where the place's role requires an atom that the schemas prove of a person from the viewer's records, as above, only a person so proved is offered").
+  final List<({String proves, String pred, List<Object?> args})> proved;
 
   const ActInfo(this.tab, this.me, this.persons, this.groups, this.items,
       this.keys, this.words,
-      [this.held = const [], this.conds = const [], this.unless = const []]);
+      [this.held = const [],
+      this.conds = const [],
+      this.unless = const [],
+      this.proved = const []]);
 
   /// The places the atoms of [held] fill.
   Set<int> get heldPlaces => {
@@ -1020,9 +1025,31 @@ class ActInfo {
     final held = <(String, List<int>)>[];
     final conds = <({bool forbids, String pred, List<Object?> args})>[];
     final unless = <({String pred, List<Object?> args})>[];
+    final proved = <({String proves, String pred, List<Object?> args})>[];
     for (final it in (xs0[4] as GList).items) {
       final (itf, itxs) = ctorArgs(it);
-      if ((itf == 'req' || itf == 'forb' || itf == 'unless') &&
+      if (itf == 'proved' &&
+          itxs.length == 4 &&
+          itxs[1] is GList &&
+          itxs[3] is GList) {
+        final args = <Object?>[];
+        for (final a in (itxs[3] as GList).items) {
+          final (af, axs) = ctorArgs(a);
+          if (af == 'at' && axs.length == 1 && axs[0] is GInt) {
+            args.add((axs[0] as GInt).value);
+          } else if (af == 'any' && axs.isEmpty) {
+            args.add(null);
+          } else {
+            return null;
+          }
+        }
+        final ws = [for (final w in (itxs[1] as GList).items) displayText(w)];
+        proved.add((
+          proves: '${displayText(itxs[0])}(${ws.join(',')})',
+          pred: displayText(itxs[2]),
+          args: args
+        ));
+      } else if ((itf == 'req' || itf == 'forb' || itf == 'unless') &&
           itxs.length == 2 &&
           itxs[1] is GList) {
         final args = <Object?>[];
@@ -1089,7 +1116,29 @@ class ActInfo {
         return null;
       }
     }
-    return ActInfo(displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless);
+    return ActInfo(
+        displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless, proved);
+  }
+
+  /// Whether the viewer's state [atoms] proves of [x], at the place [k], each atom the act requires at that place's role that the schemas prove from the viewer's records ([proved]): for each, the viewer holds an atom matching one of its entries with [x] at [k].
+  bool provedAt(List<GTerm> atoms, int k, GTerm x) {
+    final need = <String, List<({String pred, List<Object?> args})>>{};
+    for (final e in proved) {
+      if (e.args.contains(k)) {
+        (need[e.proves] ??= []).add((pred: e.pred, args: e.args));
+      }
+    }
+    bool matches(GTerm a, String pred, List<Object?> args) {
+      final (f, xs) = ctorArgs(a);
+      if (f != pred || xs.length != args.length) return false;
+      for (var j = 0; j < args.length; j++) {
+        if (args[j] == k && formatTerm(xs[j]) != formatTerm(x)) return false;
+      }
+      return true;
+    }
+
+    return need.values.every((es) =>
+        es.any((e) => atoms.any((a) => matches(a, e.pred, e.args))));
   }
 
   /// Whether the act names, beside the person proposing it, a person, a group or an item.
@@ -2689,10 +2738,11 @@ class _SocialTabState extends State<SocialTab> {
     for (final k in a.persons) {
       if (k == a.me || a.keys.contains(k) || hp.contains(k)) continue;
       final preds = [for (final (kk, p) in a.items) if (kk == k) p];
+      // Where the place's role requires an atom the schemas prove from the viewer's records, only a person so proved (vGLP 3ec07a2, Section 6.2).
       final some = preds.isEmpty
-          ? _knownPickable(s, me).isNotEmpty
-          : preds.any((p) =>
-              _pickableItems(s, p, person: true, me: me).isNotEmpty);
+          ? _knownPickable(s, me).any((x) => a.provedAt(s.atoms, k, x))
+          : preds.any((p) => _pickableItems(s, p, person: true, me: me)
+              .any((x) => a.provedAt(s.atoms, k, x)));
       if (!some) return false;
     }
     return true;
@@ -2923,7 +2973,8 @@ class _SocialTabState extends State<SocialTab> {
             Wrap(spacing: 6, runSpacing: 4, children: [
               Text(o.field(f, n, i), style: small),
               for (final p in _knownPickable(s, me))
-                if (item == null || formatTerm(p) != formatTerm(item))
+                if ((item == null || formatTerm(p) != formatTerm(item)) &&
+                    a.provedAt(s.atoms, i, p))
                   ChoiceChip(
                     key: socialKey(_id, 'pick:$composer:$i:${formatTerm(p)}'),
                     label: Text(personName(p)),
@@ -2949,6 +3000,7 @@ class _SocialTabState extends State<SocialTab> {
               Text(o.field(f, n, k), style: small),
               for (final x in _pickableItems(s, p,
                   person: a.persons.contains(k), me: me, item: item))
+                if (!a.persons.contains(k) || a.provedAt(s.atoms, k, x))
                 ChoiceChip(
                   key: socialKey(_id, 'pick:$composer:$k:${formatTerm(x)}'),
                   label: Text(_signed(x)),

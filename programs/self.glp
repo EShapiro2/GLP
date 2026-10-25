@@ -190,7 +190,10 @@ Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
 % forbids, As the place of each argument, at(K), a group's, grp(J, K), or
 % any (vGLP feda043, Section 6.2), or unless(P, As), an atom of the viewer's
 % state from which the schemas prove that the person at a place holds an atom
-% the act forbids there (vGLP 893d4ea, Section 6.2) (vGLP 932c710,
+% the act forbids there (vGLP 893d4ea, Section 6.2), or proved(Q, Ws, P, As),
+% an atom of the viewer's state from which the schemas prove that the person at
+% a place holds the atom Q(Ws) its role requires, the place offering only a
+% person so proved (vGLP 3ec07a2, Section 6.2) (vGLP 932c710,
 % Section 6.2: "a person, a group or an item"), Ks the places a field for a key fills where the peer is
 % not listed, and Ws the text of its request form, each word say(S) or the
 % person at place I, at(I) (vGLP, Section 6.2, "The words a platform shows":
@@ -216,7 +219,8 @@ ActPlace ::= place(String, Integer, List(Integer), List(GroupAt), List(ItemAt), 
 GroupAt ::= group(Integer, Integer).
 ItemAt ::= item(Integer, Constant) ; atom(Constant, List(Integer))
       ; req(Constant, List(CondAt)) ; forb(Constant, List(CondAt))
-      ; unless(Constant, List(CondAt)).
+      ; unless(Constant, List(CondAt))
+      ; proved(Constant, List(Constant), Constant, List(CondAt)).
 CondAt ::= at(Integer) ; grp(Integer, Integer) ; any.
 FormWord ::= say(String) ; at(Integer).
 
