@@ -11,7 +11,12 @@
 %% require that Alice knows Bob, and clause 2 that Bob knows Alice: the swap
 %% requires knows of the other at both roles, and pay and redeem require
 %% knows(q) at p (Udi, 2026-10-20, in chat with GSC #5 and Currencies #11).
-%% No role requires a friend.  Amounts are numbers, as act schemas allow
+%% No role requires a friend.  A coin carries its issuer's public key, so
+%% whoever holds one knows its issuer (GC, Section 2.1): swap and redeem add
+%% knows of the issuer of what a role receives at that role, and pay adds
+%% none, the payee receiving coins of their own issue (Udi, 2026-10-25,
+%% approving Currencies #13's answer to the review of 2026-10-24, C12).
+%% Amounts are numbers, as act schemas allow
 %% them (GSC, Section 3.2): mint mints k coins, a swap exchanges k coins for
 %% k1, and a payment pays k, the paper's multiplicities k and k' (GC,
 %% Appendix A); num(k) is a numeric variable, listed in Vars in the order of
@@ -33,7 +38,8 @@
 %% identity by Currencies #12, 2026-10-23.  The multiplicities k and k1 are
 %% positive whole numbers, as every multiplicity is (GSC, 2026-10-23: a
 %% multiplicity is a positive whole number, by what counting is), so the
-%% schemas carry no constraint on them.
+%% schemas carry no constraint on them.  Knows of the issuer at the
+%% receiving roles, Currencies #13 Cowork, 2026-10-25.
 %% ---------------------------------------------------------------------------
 
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
@@ -74,15 +80,15 @@ contract_named(gc,
 %% GC:1, Minting: p mints k p-coins.
     schema(mint, [num(k)],
        [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
-%% GC:2, Swap: p and q, who know each other, swap k u-coins of p's for k1 v-coins of q's.
+%% GC:2, Swap: p and q, who know each other, swap k u-coins of p's for k1 v-coins of q's; each comes to know the issuer of what they receive.
     schema(swap, [pvar(u), num(k), pvar(v), num(k1)],
-       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GC:3, Payment: p pays k q-coins to q, whom p knows.
     schema(pay, [num(k)],
        [rs(guarded,   [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]),
-%% GC:4, Redemption: p redeems a q-coin against an r-coin q holds, q whom p knows.
+%% GC:4, Redemption: p redeems a q-coin against an r-coin q holds, q whom p knows; p comes to know r.
     schema(redeem, [pvar(r)],
-       [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+       [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])])]).
