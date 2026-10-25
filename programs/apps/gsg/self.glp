@@ -7,9 +7,9 @@
 %% ---------------------------------------------------------------------------
 
 Peer     ::= Key.
-Class    ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+Class    ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
-Proposal ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.

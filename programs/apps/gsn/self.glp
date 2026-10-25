@@ -7,14 +7,14 @@
 Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
-Class     ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; message(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, List(Peer), Speech) ; drop(Peer, Peer, Speech)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
             ; deliver(Peer, Peer, Speech, Speech).
-Proposal  ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+Proposal  ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; message(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)

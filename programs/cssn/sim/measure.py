@@ -21,7 +21,7 @@
 # a view of the agent records it one.  Written for the platform of
 # cascade/CSSN/2026-10-24 (any number of parents: enter, make_parent,
 # end_parent, of_age, retire; created, creator, parenting, made; the relay acts
-# child_meet and child_meet_2), whose view is view(As, Ks, Approved, Tabs) and
+# child_acquaint and child_acquaint_2), whose view is view(As, Ks, Approved, Tabs) and
 # whose approval is approval(Asking, Words, YesNo), Asking an attempt
 # attempt(I, N, Rk, C, Names) or a meeting's hello(I, C), Words printing text(...)
 # unquoted.
@@ -39,7 +39,7 @@
 #
 # The monitor (CSSN #6, item 1): at the commit of every act a parent guards ---
 # the children's schemas, enter, make_parent, end_parent, of_age, retire,
-# child_meet, child_meet_2, child_befriend, child_adult_befriend, child_unfriend,
+# child_acquaint, child_acquaint_2, child_befriend, child_adult_befriend, child_unfriend,
 # child_join, child_join_2, child_leave, child_close --- it checks that each of
 # its guards approved, the initiator by the request and every other guard by an
 # answer yes, between the request and the commit, to an attempt (I, N, C) of
@@ -64,7 +64,7 @@ from collections import Counter, defaultdict
 MONTH = 2629800.0
 WEEK = 604800.0
 # The acts a parent guards: the children's schemas of CSSN.glp at cascade/CSSN/2026-10-24 (any number of parents).
-MONITORED = ["enter", "make_parent", "end_parent", "of_age", "retire", "child_meet", "child_meet_2",
+MONITORED = ["enter", "make_parent", "end_parent", "of_age", "retire", "child_acquaint", "child_acquaint_2",
              "child_befriend", "child_adult_befriend", "child_unfriend", "child_join", "child_join_2",
              "child_leave", "child_close"]
 
@@ -455,7 +455,7 @@ def main():
                                 others = [g for g in guards if g != r["I"]]
                                 # Each guard willed the part before the commit: it requested the part, or answered yes to
                                 # an attempt (I2, N, C) or a hello hello(I2, C) of the same part C, whoever's attempt that
-                                # was.  Where two guards request one part, as two parents a child's meeting, the attempt
+                                # was.  Where two guards request one part, as two parents a child's acquaintance, the attempt
                                 # that commits may be the second's, made on its yes to the first's attempt (vGLP, Section 5.4).
                                 missing = []
                                 for g in guards:

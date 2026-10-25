@@ -4,11 +4,11 @@
 %%
 %% The roles, by which the super-app's plays choose a script:
 %%   alice  looks at her request question; establishes her identity (GKK:1);
-%%          asks to know bob; once her agent knows him, proposes that they meet
-%%          in person (GKK:2); once she knows him, proposes that they become
+%%          asks to know bob; once her agent knows him, proposes that they come
+%%          to know each other (GKK:2); once she knows him, proposes that they become
 %%          friends (GSG:1); looks again.
 %%   bob    establishes his identity; asks to know alice; once his agent knows
-%%          her, answers yes to her asking to meet him in person, and then to
+%%          her, answers yes to her asking to come to know him, and then to
 %%          her offer of friendship; once he sees her his friend, ends the
 %%          friendship (GSG:2).
 %% Any other role has no script: its person reports the views and acts on nothing.
@@ -32,9 +32,9 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
 procedure script(Constant?, Steps).
-script(alice, [look, own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+script(alice, [look, own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
                own([A2], propose(befriend(A2?, bob))), look]).
-script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(meet(alice, bob), yes),
+script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(acquaint(alice, bob), yes),
              approval(befriend(alice, bob), yes),
              wait(holds(friend(alice))),
              own([B2], propose(unfriend(B2?, alice)))]).

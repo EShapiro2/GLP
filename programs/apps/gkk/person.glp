@@ -4,20 +4,20 @@
 %%
 %% The roles, by which the plays choose a script:
 %%   alice  looks at her request question; establishes her identity (GKK:1);
-%%          asks to know bob and carol; once her agent knows bob, asks to meet
-%%          him in person (GKK:2); once she knows him and her agent knows
-%%          carol, asks to meet her; once she knows carol, introduces carol to
-%%          bob (GKK:3); looks again.
+%%          asks to know bob and carol; once her agent knows bob, asks to
+%%          come to know him (GKK:2); once she knows him and her agent knows
+%%          carol, asks to come to know her; once she knows carol, introduces
+%%          carol to bob (GKK:3); looks again.
 %%   bob    establishes his identity; asks to know alice; once his agent knows
-%%          her, answers yes to her asking to meet him in person, and yes to
+%%          her, answers yes to her asking to come to know him, and yes to
 %%          her introducing carol to him; once his agent knows carol, which
 %%          alice's introduction at the commit and the ihello exchange bring
-%%          about, asks to meet her in person (GKK:2), and waits until he
-%%          holds knows(carol) twice, the introduction's and the meeting's.
+%%          about, asks to come to know her (GKK:2), and waits until he
+%%          holds knows(carol) twice, the introduction's and the acquaintance's.
 %%   carol  establishes her identity; asks to know alice; once her agent knows
-%%          her, answers yes to her asking to meet her in person; once her
+%%          her, answers yes to her asking to come to know her; once her
 %%          agent knows bob, by the same introduction, answers yes to his
-%%          asking to meet her in person.
+%%          asking to come to know her.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
@@ -39,15 +39,15 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
 procedure script(Constant?, Steps).
-script(alice, [look, own([A1], propose(establish(A1?))), wait(holds(identity)), own([A2], propose(meet(A2?, bob))), wait(holds(knows(bob))),
-               own([A3], propose(meet(A3?, carol))), wait(holds(knows(carol))),
+script(alice, [look, own([A1], propose(establish(A1?))), wait(holds(identity)), own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+               own([A3], propose(acquaint(A3?, carol))), wait(holds(knows(carol))),
                own([A4], propose(introduce(A4?, bob, carol))), look]).
-script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(meet(alice, bob), yes),
+script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(acquaint(alice, bob), yes),
              approval(introduce(alice, bob, carol), yes),
-             wait(known(carol)), own([B2], propose(meet(B2?, carol))),
+             wait(known(carol)), own([B2], propose(acquaint(B2?, carol))),
              wait(has(knows(carol), 2))]).
-script(carol, [own([C1], propose(establish(C1?))), wait(holds(identity)), approval(meet(alice, carol), yes),
-               wait(known(bob)), approval(meet(bob, carol), yes)]).
+script(carol, [own([C1], propose(establish(C1?))), wait(holds(identity)), approval(acquaint(alice, carol), yes),
+               wait(known(bob)), approval(acquaint(bob, carol), yes)]).
 script(_, []) :- otherwise | true.
 
 %% The person.
