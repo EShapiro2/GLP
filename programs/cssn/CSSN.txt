@@ -24,6 +24,9 @@ Meeting of a child: Alice [Child meet] <person> <person>
   Carol: Alice asks that you and Dave meet.
   Dave: Alice asks that you and Carol meet.
   Bob: Alice asks that Carol and your child Dave meet.
+  Alice [Child meet] <person>
+  Carol: Alice asks that you and Bob meet.
+  Bob: Alice asks that you and Carol meet.
 Friendship of a child: Alice [Child befriend] <person> <person>
   Carol: Alice asks that you and Dave befriend.
   Dave: Alice asks that you and Carol befriend.
