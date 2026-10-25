@@ -161,7 +161,7 @@ intro_act_bindings(Sc, R?) :- ground(Sc?) |
 
 
 
-% --- values (GSC, Section 3.2; the appendix "Values in Act Schemas") ------
+% --- values (GSC, Section 3.2; the appendix "Values in Speech Act Schemas") ------
 % A binding maps each value variable to a value, "under which gamma holds
 % and every multiplicity of tau is a positive whole number"
 % (def:binding-numbers), and an introduction chooses its own values (the
@@ -778,7 +778,7 @@ listed_faults([RS|Rs], I, Nm, C, R?) :-
 % An introduction is a binding of the introductory act (def:introduction):
 % intro_bindings enumerates the assignments of its agent and speech-act
 % variables, and for each the act's values are those the introduction
-% chooses (the appendix "Values in Act Schemas"), each bound to its image
+% chooses (the appendix "Values in Speech Act Schemas"), each bound to its image
 % nfree (sym_binds).  The binding satisfies the act's constraint and sends
 % each multiplicity to a positive whole number (def:binding-numbers): the
 % base conjunction, with the act's rational values written n + f

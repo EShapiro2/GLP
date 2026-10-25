@@ -11,12 +11,12 @@
 % The second conjunct is decided from the largest set of predicates having
 % traceable provenance, which traceable_of gives: the fault names the
 % predicates of the contract outside it, and volition is decided over that
-% set.  A schema may carry values (the appendix "Values in Act Schemas"):
+% set.  A schema may carry values (the appendix "Values in Speech Act Schemas"):
 % the first conjunct is decided on the contract as written, an introduction
 % choosing its own values (unobstructed.glp), and the other two on its plain
 % form, a value naming no agent.
 %
-% A schema is an act schema only when it is formed as def:role and
+% A schema is a speech act schema only when it is formed as def:role and
 % def:schema require: its name terms based on its agent roles, its listed
 % roles of its agent roles, +(i) and -(i) disjoint at every role, and
 % +(i) u -(i) nonempty at every role that is not a guarding role and at some
@@ -31,7 +31,7 @@
 % schema of it adds or deletes, at a role, the atom of a reflexive predicate
 % naming that role.  A contract in which one does is malformed too, the
 % verdict naming each such schema, role and atom.  So is a contract with a
-% schema whose signed term violates what GAI's Definition Act schema
+% schema whose signed term violates what GAI's Definition Speech act schema
 % requires of it -- that it occur only in an atom marked +, and that its
 % speech-act variable occur in an atom its role requires -- or whose role is
 % not an agent role.
@@ -294,8 +294,8 @@ refl_schemas([S|Ss], Rf, R?) :- ground(S?), ground(Ss?), ground(Rf?) |
     refl_schemas(Ss?, Rf?, F2),
     faults_app(F1?, F2?, R).
 
-% --- the signed terms of a schema (GAI, Definition Act schema) -------------
-% GAI's Definition Act schema requires of a signed term sgn(y, pi) that it
+% --- the signed terms of a schema (GAI, Definition Speech act schema) -------------
+% GAI's Definition Speech act schema requires of a signed term sgn(y, pi) that it
 % occur only in an atom marked +, and that its speech-act variable y occur in
 % an atom its role pi requires; and that pi be an agent role, as GSC
 % required of it until GSC 1a2a5f3 removed the signed term from GSC's
@@ -736,7 +736,7 @@ check(D, V?) :- ground(D?) |
     ndecl_reflexive(D?, Rf),
     check_ndecl(NC?, Rf?, [], V).
 
-% The verdict on a contract naming environment predicates Ev (GSC 25b6b3c, the appendix "Values in Act Schemas": "an unobstructed introductory act requires no environment atom, clause 1 of Definition unobstructed admitting only atoms a schema adds, and forbids none"): an introductory act requiring or forbidding an atom of one is obstructed (unobstructed.glp, intro_result_env).
+% The verdict on a contract naming environment predicates Ev (GSC 25b6b3c, the appendix "Values in Speech Act Schemas": "an unobstructed introductory act requires no environment atom, clause 1 of Definition unobstructed admitting only atoms a schema adds, and forbids none"): an introductory act requiring or forbidding an atom of one is obstructed (unobstructed.glp, intro_result_env).
 exported procedure check_env(NDeclared?, Preds?, Verdict).
 check_env(D, Ev, V?) :- ground(D?), ground(Ev?) |
     ndecl_schemas(D?, NC),

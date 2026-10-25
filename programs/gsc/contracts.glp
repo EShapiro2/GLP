@@ -26,7 +26,7 @@
 % role is named by its index, so role(1) is the schema's first role.  A
 % schema is schema(Name, Vars, Roles) or cschema(Name, Vars, [], Roles),
 % Vars its variables, pvar(X) and svar(Y), in the order of its head (GSC
-% 0228e79, Definition Act schema); the heads of the fixtures list them in
+% 0228e79, Definition Speech act schema); the heads of the fixtures list them in
 % the order of their first occurrence, or of the head in the comment above.
 % ---------------------------------------------------------------------------
 
@@ -581,7 +581,7 @@ sgn_listed([cschema(note, [svar(x), svar(n)], [],
 %   (listed_base);
 % note_l(a?, a[got(*, sgn(x, a))] ; x) :  item(x)    at a[got(*, sgn(x, a))]: +noted(x)
 %   a signed term among the arguments of a listed role, which occurs only in
-%   an atom marked + (Definition Act schema; listed_signed);
+%   an atom marked + (Definition Speech act schema; listed_signed);
 % close_h(a?, a[listed(*, m)] ; n) :  identity, +closed(n)
 %                                     at a[listed(*, m)]: identity, -member(<a>.n)
 %   m, an argument of the listed role, is a variable the head does not list
@@ -724,9 +724,9 @@ uo_other([schema(establish, [],
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
 
 % ===========================================================================
-% Values (GSC, Section 3.2, and the appendix Values in Act Schemas)
+% Values (GSC, Section 3.2, and the appendix Values in Speech Act Schemas)
 % ===========================================================================
-% "Act schemas allow values of any type: an argument of an atom may be a
+% "Speech act schemas allow values of any type: an argument of an atom may be a
 % value or a value variable, a schema may carry a constraint on its value
 % variables, which every binding satisfies, and an atom added or deleted may
 % carry a multiplicity, a count of copies and so a positive whole number ...
@@ -1483,9 +1483,9 @@ sgn_intro_plain([S?,
         rs(guarded, [atom(got, [svar(x)])], [], [atom(item, [svar(y)])], [])])]) :-
     sgn_sign(S).
 
-% --- negative: the signed term where GAI's Definition Act schema forbids it
+% --- negative: the signed term where GAI's Definition Speech act schema forbids it
 % Contracts of sign and forward, each with its signed term violating one of
-% the two requirements GAI's Definition Act schema makes of it, and refused
+% the two requirements GAI's Definition Speech act schema makes of it, and refused
 % as malformed
 % (check.glp, sgn_schemas): in sgn_not_added forward requires
 % item(sgn(x, Alice)) at Bob, an atom not marked +; in sgn_other_role it adds
