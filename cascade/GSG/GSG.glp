@@ -38,7 +38,7 @@ procedure contract_named(Constant?, Declared).
 contract_named(gsg,
    [schema(establish, ['Alice'], [],
        [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
-    schema(meet, ['Alice', 'Bob'], [],
+    schema(acquaint, ['Alice', 'Bob'], [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
     schema(introduce, ['Alice', 'Bob'], [pvar(c)],
