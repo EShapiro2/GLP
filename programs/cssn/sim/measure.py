@@ -310,6 +310,7 @@ def main():
     requests = []                                  # dicts: idx t I C cls binding committed
     pending = defaultdict(list)                    # (I, C) -> requests not yet committed
     approvals = defaultdict(dict)                  # (I, N, C) -> {guard: (t, yes/no)}
+    asked_at = defaultdict(list)                   # (initiator, part) -> the times it requested the part
     approvals_by_parent_month = Counter()
     hellos_by_parent_month = Counter()
     week_child_edges = {}
@@ -387,6 +388,7 @@ def main():
                 r = {"idx": idx, "t": t, "I": k, "C": C, "cls": cls, "binding": binding, "commit": None}
                 requests.append(r)
                 pending[(k, C)].append(r)
+                asked_at[(str(k), C)].append(t)
         elif ty == "Approval":
             x = parse(term)
             # approval(Asking, Words, YesNo) on the platform of cascade/CSSN/2026-10-24, Asking an attempt
@@ -451,16 +453,20 @@ def main():
                                 for i2, g, ro in (parts or []):
                                     if ro["guarded"] and g not in guards: guards.append(g)
                                 others = [g for g in guards if g != r["I"]]
-                                # Each other guard answered yes, between the request and the commit, to an attempt
-                                # (I, N, C) of the initiator or to the hello of its meeting, hello(I, C).
+                                # Each guard willed the part before the commit: it requested the part, or answered yes to
+                                # an attempt (I2, N, C) or a hello hello(I2, C) of the same part C, whoever's attempt that
+                                # was.  Where two guards request one part, as two parents a child's meeting, the attempt
+                                # that commits may be the second's, made on its yes to the first's attempt (vGLP, Section 5.4).
                                 missing = []
-                                for g in others:
-                                    if not any(I2 == r["I"] and C2 == r["C"] and g in ans and ans[g][1] == "yes" and r["t"] <= ans[g][0] <= t
-                                               for (I2, N2, C2), ans in approvals.items()):
+                                for g in guards:
+                                    requested = any(ta <= t for ta in asked_at[(str(g), r["C"])])
+                                    said_yes = any(C2 == r["C"] and g in ans and ans[g][1] == "yes" and ans[g][0] <= t
+                                                   for (I2, N2, C2), ans in approvals.items())
+                                    if not (requested or said_yes):
                                         missing.append(g)
                                 why = []
                                 if r["I"] not in guards: why.append("initiator %s is no guard" % r["I"])
-                                if missing: why.append("no yes of %s to an attempt or hello of %s" % (", ".join(missing), r["I"]))
+                                if missing: why.append("%s neither requested %s nor answered yes to an attempt or hello of it" % (", ".join(missing), r["C"]))
                                 why += check_pre(r["cls"], r["binding"], oc["snap"])
                                 if why:
                                     exceptions.append({"t": t, "class": r["C"], "why": why})
