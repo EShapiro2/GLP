@@ -477,7 +477,7 @@ cs18_schemas([schema(parent_child, [],
 % Listed roles and name terms (def:role, def:introduction, def:unobstructed,
 % def:grounded)
 % ===========================================================================
-% Variants of GSNP, a contract with the listed role of close, each with one
+% Variants of GSN, a contract with the listed role of close, each with one
 % schema more and failing one condition, or refused for a listed role
 % carrying the mark ?, and contracts that stand on their own, failing
 % def:introduction or clause 1 of def:unobstructed by a name term.
@@ -1304,8 +1304,9 @@ contract(uo_other, C?) :- uo_other(C).
 contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract
-% it changes, which test_gsc.sh reads from the owner's file: GSG's or GSNP's
-% for sg_* and sn_*, GKK's for gkk_* (sg_plain's for sg_tri_cschema, GSC's language admitting
+% it changes, which test_gsc.sh reads from GSC's file: GSG's or GSN's
+% for sg_* and sn_*, GKK's for gkk_*; sg_svar_loose, a variant of a contract
+% with items, which no contract of GSC's has, is not run there (sg_plain's for sg_tri_cschema, GSC's language admitting
 % no signed term).  An unknown name is the empty contract.
 exported procedure variant(Constant?, WContract?, WDeclared).
 variant(sg_imposed, S, C?) :- sg_imposed(S?, C).
