@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), meet('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), message('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'List'('Peer'), 'Speech'), drop('Peer', 'Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Speech'), enter('Peer', 'Peer'), make_parent('Peer', 'Peer', 'Peer'), end_parent('Peer', 'Peer', 'Peer'), of_age('Peer', 'Peer', 'List'('Peer')), retire('Peer', 'Peer', 'List'('Peer')), child_meet('Peer', 'Peer', 'Peer'), child_meet_2('Peer', 'Peer', 'Peer', 'Peer'), child_befriend('Peer', 'Peer', 'Peer', 'Peer'), child_adult_befriend('Peer', 'Peer', 'Peer'), child_unfriend('Peer', 'Peer', 'Peer'), child_join('Peer', 'Peer', 'Peer', 'Speech'), child_join_2('Peer', 'Peer', 'Peer', 'Peer', 'Speech'), child_leave('Peer', 'Peer', 'Peer', 'Speech'), child_close('Peer', 'Peer', 'List'('Peer'), 'Speech')]),
-  type('Proposal', [establish('Peer'), meet('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), message('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), enter('Peer', 'Peer'), make_parent('Peer', 'Peer', 'Peer'), end_parent('Peer', 'Peer', 'Peer'), of_age('Peer', 'Peer'), retire('Peer', 'Peer'), child_meet('Peer', 'Peer', 'Peer'), child_meet_2('Peer', 'Peer', 'Peer', 'Peer'), child_befriend('Peer', 'Peer', 'Peer', 'Peer'), child_adult_befriend('Peer', 'Peer', 'Peer'), child_unfriend('Peer', 'Peer', 'Peer'), child_join('Peer', 'Peer', 'Peer', 'Speech'), child_join_2('Peer', 'Peer', 'Peer', 'Peer', 'Speech'), child_leave('Peer', 'Peer', 'Peer', 'Speech'), child_close('Peer', 'Peer', 'Speech')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), message('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'List'('Peer'), 'Speech'), drop('Peer', 'Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Speech'), enter('Peer', 'Peer'), make_parent('Peer', 'Peer', 'Peer'), end_parent('Peer', 'Peer', 'Peer'), of_age('Peer', 'Peer', 'List'('Peer')), retire('Peer', 'Peer', 'List'('Peer')), child_acquaint('Peer', 'Peer', 'Peer'), child_acquaint_2('Peer', 'Peer', 'Peer', 'Peer'), child_befriend('Peer', 'Peer', 'Peer', 'Peer'), child_adult_befriend('Peer', 'Peer', 'Peer'), child_unfriend('Peer', 'Peer', 'Peer'), child_join('Peer', 'Peer', 'Peer', 'Speech'), child_join_2('Peer', 'Peer', 'Peer', 'Peer', 'Speech'), child_leave('Peer', 'Peer', 'Peer', 'Speech'), child_close('Peer', 'Peer', 'List'('Peer'), 'Speech')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), message('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), close('Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), enter('Peer', 'Peer'), make_parent('Peer', 'Peer', 'Peer'), end_parent('Peer', 'Peer', 'Peer'), of_age('Peer', 'Peer'), retire('Peer', 'Peer'), child_acquaint('Peer', 'Peer', 'Peer'), child_acquaint_2('Peer', 'Peer', 'Peer', 'Peer'), child_befriend('Peer', 'Peer', 'Peer', 'Peer'), child_adult_befriend('Peer', 'Peer', 'Peer'), child_unfriend('Peer', 'Peer', 'Peer'), child_join('Peer', 'Peer', 'Peer', 'Speech'), child_join_2('Peer', 'Peer', 'Peer', 'Peer', 'Speech'), child_leave('Peer', 'Peer', 'Peer', 'Speech'), child_close('Peer', 'Peer', 'Speech')]),
   type('Request', [propose('Proposal')]),
   type('Atom', [identity, retired, knows('Peer'), child, friend('Peer'), creator('Peer'), parenting('Peer'), received('Speech', 'Peer'), member('CName'), listed('Peer', 'Speech'), closed('Speech'), posted('Speech', 'Speech'), delivered('Speech', 'Peer', 'Speech'), received_in('Speech', 'Peer', 'Speech'), created('Peer'), made('Peer', 'Peer')]),
   type('Peer', ['Key']),
@@ -935,7 +935,7 @@ interface([
   compiled(output_draw, 4),
   compiled(output_add, 3),
   compiled(join_proposal_establish_1, 2),
-  compiled(join_proposal_meet_2, 3),
+  compiled(join_proposal_acquaint_2, 3),
   compiled(join_proposal_introduce_3, 4),
   compiled(join_proposal_befriend_2, 3),
   compiled(join_proposal_unfriend_2, 3),
@@ -956,8 +956,8 @@ interface([
   compiled(join_proposal_end_parent_3, 4),
   compiled(join_proposal_of_age_2, 3),
   compiled(join_proposal_retire_2, 3),
-  compiled(join_proposal_child_meet_3, 4),
-  compiled(join_proposal_child_meet_2_4, 5),
+  compiled(join_proposal_child_acquaint_3, 4),
+  compiled(join_proposal_child_acquaint_2_4, 5),
   compiled(join_proposal_child_befriend_4, 5),
   compiled(join_proposal_child_adult_befriend_3, 4),
   compiled(join_proposal_child_unfriend_3, 4),

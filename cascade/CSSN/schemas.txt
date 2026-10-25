@@ -3,7 +3,7 @@ Reflexive predicates: friend, knows
 establish(Alice?) :
     at Alice: not identity, not retired, +identity
 
-meet(Alice?, Bob?) :
+acquaint(Alice?, Bob?) :
     at Alice: identity, not child, not retired, +knows(Bob)
     at Bob: identity, not child, not retired, +knows(Alice)
 
@@ -76,12 +76,12 @@ retire(Alice?, Carol, Alice[made(*, Carol)]) :
     at Carol: identity, +retired, -child, -creator(Alice)
     at Alice[made(*, Carol)]: identity, not created(Carol), -parenting(Carol)
 
-child_meet(Carol?, Bob?, Alice?) :
+child_acquaint(Carol?, Bob?, Alice?) :
     at Carol: identity, child, not retired, +knows(Bob)
     at Bob: identity, not child, not retired, +knows(Carol)
     at Alice: identity, parenting(Carol), knows(Bob), not child, not retired
 
-child_meet_2(Carol?, Dave?, Alice?, one(Bob, Alice)?) :
+child_acquaint_2(Carol?, Dave?, Alice?, one(Bob, Alice)?) :
     at Carol: identity, child, not retired, +knows(Dave)
     at Dave: identity, child, not retired, +knows(Carol)
     at Alice: identity, parenting(Carol), knows(one(Bob, Alice)), not child, not retired
