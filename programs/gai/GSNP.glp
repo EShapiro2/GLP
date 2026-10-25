@@ -30,10 +30,10 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 procedure contract_named(Constant?, Declared).
 contract_named(gsnp,
 %% GKK:1, Identity.
-   [schema(establish, [],
+   [schema(establish, ['Alice'], [],
        [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])]),
-%% GKK:2, Meeting, for two persons; an AI agent comes to know an agent by agent_meet or agents_meet (GnW:2).
-    schema(meet, ['Alice', 'Bob'], [],
+%% GKK:2, Acquaintance, for two persons; an AI agent comes to know an agent by agent_acquaint or agents_acquaint (GnW:2).
+    schema(acquaint, ['Alice', 'Bob'], [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])],
                     [atom(agent, []), atom(retired, [])]),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])],
@@ -69,7 +69,7 @@ contract_named(gsnp,
                      atom(friend, [role(1)]), atom(knows, [role(1)]), atom(attestation, [sgn(x, 1)])], [],
                     [], [atom(identity, []), atom(retired, [])])]),
 %% GnW:2, knowing, and GAI:2: an AI agent and a person come to know each other by an act of both and of the principal, the person recording the AI agent, its principal and its attestation.
-    schema(agent_meet, ['Carol', 'Bob', 'Alice'], [svar(y)],
+    schema(agent_acquaint, ['Carol', 'Bob', 'Alice'], [svar(y)],
        [rs(guarded, [atom(knows, [role(2)])], [],
                     [atom(identity, []), atom(agent, []), atom(principal, [role(3)]),
                      atom(attestation, [svar(y)])],
@@ -81,7 +81,7 @@ contract_named(gsnp,
                     [atom(identity, []), atom(principal_of, [role(1)]),
                      atom(agent_of, [role(1), role(3), svar(y)])], [atom(retired, [])])]),
 %% GnW:2, knowing, and GAI:2, for two AI agents and their principals.
-    schema(agents_meet, ['Carol', 'Bob', 'Alice', one('Dave', 'Alice')], [svar(y), svar(z)],
+    schema(agents_acquaint, ['Carol', 'Bob', 'Alice', one('Dave', 'Alice')], [svar(y), svar(z)],
        [rs(guarded, [atom(knows, [role(2)]), atom(agent_of, [role(2), role(4), svar(z)])], [],
                     [atom(identity, []), atom(agent, []), atom(principal, [role(3)]),
                      atom(attestation, [svar(y)])],
@@ -96,7 +96,7 @@ contract_named(gsnp,
         rs(guarded, [], [],
                     [atom(identity, []), atom(principal_of, [role(2)]),
                      atom(agent_of, [role(2), role(4), svar(z)])], [atom(retired, [])])]),
-%% GnW:2, a relation: an AI agent and a person who know each other befriend by an act of both and of the principal.  The AI agent knows the person only by agent_meet, which recorded the attestation at the person (meet and introduce forbid agent at the role coming to know), so the person holds it.
+%% GnW:2, a relation: an AI agent and a person who know each other befriend by an act of both and of the principal.  The AI agent knows the person only by agent_acquaint, which recorded the attestation at the person (acquaint and introduce forbid agent at the role coming to know), so the person holds it.
     schema(agent_befriend, ['Carol', 'Bob', 'Alice'], [],
        [rs(guarded, [atom(friend, [role(2)])], [],
                     [atom(identity, []), atom(agent, []), atom(principal, [role(3)]),
