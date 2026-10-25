@@ -5,7 +5,7 @@
 %% act schemas allow (GSC, Section 3.2; GB, Appendix A).  The clauses are in
 %% GB.txt beside this file.  GB extends GKK, Grassroots Keys and Knowledge,
 %% GSC's (programs/gsc/GKK.glp), so the term holds GKK's three schemas,
-%% establish, meet and introduce; establish forbids the identity it adds
+%% establish, acquaint and introduce (GKK:2 Acquaintance since 2026-10-25); establish forbids the identity it adds
 %% (GKK:1, act once; Udi, 2026-10-23, to GSC #6), and every other role
 %% requires identity.  The parties to a swap and to each escrow transfer
 %% know each other, and pay and redeem require knows(q) at p.  A matured
@@ -29,8 +29,10 @@
 %% return twice (c, b), and mint twice (coin, bond); the schemas of one act
 %% share its button (GB.txt, Pragmas; asked of GSC, 2026-10-24).
 %% date(t) at p is p's date, dated that p has one, and today(d) at p is the
-%% day, which the platform writes from the device's calendar and no schema
-%% adds or deletes (vGLP, Section 5.4; Udi, 2026-10-24): first_date gives p
+%% day, an environment predicate of GSC's language, declared by
+%% environment([today], Contract) (GSC, 2026-10-25), which the platform
+%% writes from the device's calendar and no schema adds or deletes (vGLP,
+%% Section 5.4; Udi, 2026-10-24): first_date gives p
 %% the day as their date once, dated forbidding a second, and advance takes
 %% the date to the next day while the day is not past; so GB:2 is realised
 %% by two unguarded schemas and the calendar.  A numeric variable x is
@@ -82,16 +84,16 @@ Schema     ::= schema(Constant, Names, Args, RoleSpecs)
              ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
 Contract   ::= [] ; [Schema | Contract].
 Preds      ::= [] ; [Constant | Preds].
-Declared   ::= Contract ; reflexive(Preds, Contract).
+Declared   ::= Contract ; reflexive(Preds, Contract) ; environment(Preds, Contract).
 
 %% contract_named(gb, C): the contract, GB (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
-contract_named(gb,
+contract_named(gb, environment([today],
 %% GKK:1, Identity: act once, so establish forbids the identity it adds.
    [schema(establish, ['Alice'], [],
        [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
-%% GKK:2, Meeting.
-    schema(meet, ['Alice', 'Bob'], [],
+%% GKK:2, Acquaintance.
+    schema(acquaint, ['Alice', 'Bob'], [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
 %% GKK:3, Introduction: p, who knows q and c, introduces c to q, who knows p.
@@ -169,4 +171,4 @@ contract_named(gb,
 %% GB:7, Escrow: e returns k bonds of u maturing at d to the depositor p; they know each other.
     schema(return_b, ['Carol', 'Alice'], [pvar(u), num(d), num(k)],
        [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])])]).
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])])])).

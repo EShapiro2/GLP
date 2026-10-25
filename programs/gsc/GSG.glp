@@ -7,7 +7,7 @@
 %% other, and unfriend clause 2, Ending a friendship; every role but
 %% establish's requires identity (CSSN #5's fix, approved by Udi, 2026-10-18).  The notation of each schema is printed from the term by a run of the cascade (schemas.txt).
 %% A schema's second argument lists its variables in the order of its head
-%% (GSC, Definition Act schema; Udi, 2026-10-19, to GSC #4).
+%% (GSC, Definition Speech-act schema; Udi, 2026-10-19, to GSC #4).
 %%
 %% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
 %% and is named by its index, role(1) the schema's first role.

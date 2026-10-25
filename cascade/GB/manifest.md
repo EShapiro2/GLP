@@ -1,9 +1,9 @@
 # A run of the cascade on GB
 
-- Contract: `GB` (`gb` to the checker), its owner's two files `programs/currencies/bonds/GB.txt` and `programs/currencies/bonds/GB.glp`, copied here as they stood at `c3ed7757`.
-- The paper: `git@github.com:EShapiro2/Grassroots-Bonds.git` at `65a70453`, for the paper's own record.
-- The tools: this repository at `c3ed7757` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-10-25 10:25 UTC by `cascade.sh gb`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GB` (`gb` to the checker), its owner's two files `programs/currencies/bonds/GB.txt` and `programs/currencies/bonds/GB.glp`, copied here as they stood at `b8e07d3d`.
+- The paper: `git@github.com:EShapiro2/Grassroots-Bonds.git` at `0cab6909`, for the paper's own record.
+- The tools: this repository at `b8e07d3d` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-10-25 18:30 UTC by `cascade.sh gb`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
