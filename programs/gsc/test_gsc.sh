@@ -76,9 +76,13 @@ compiled_in() { # compiled_in <name> <term> <schema> ; the display of a contract
 echo "=== gsc: the syntactically-grassroots checker ==="
 
 # The contracts, each read from its owner's file: one copy, which GSC's
-# checker and vGLP's compiler load from there, each schema written
-# schema(Name, Vars, Roles) or cschema(Name, Vars, [], Roles), Vars its
-# variables in the order of its head (GSC 0228e79, Definition Act schema).
+# checker and vGLP's compiler load from there, each schema written with its
+# roles' names, schema(Name, Names, Vars, Roles) or cschema(Name, Names,
+# Vars, [], Roles), Names the names of its roles in order and Vars its
+# variables in the order of its head (GSC, Section 2 and Definition Speech
+# act schema; GKK.glp, GSG.glp and GSN.glp at GLP ec7c578c and 523bbe23).
+# The variants of a contract below write the schemas they add or change the
+# same way (contracts.glp, the header).
 # GKK, the base contract: establish, GKK:1, adds identity, requires nothing
 # and forbids the identity it adds (GKK:1, "act once", GSC b2bb8be; GKK.glp
 # at GLP 79db2fae), and every other role requires identity.  GSG, GSN and
@@ -89,8 +93,8 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 # provenance, with the listed role of close (GSC 8064cfb); GSGT is GSG, the
 # contract most variants below are made on.
 GKKT=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
-check "GKK's contract is read from programs/gsc/GKK.glp, establish forbidding the identity it adds, then meet and introduce" \
-      "[schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], " "$GKKT"
+check "GKK's contract is read from programs/gsc/GKK.glp, establish forbidding the identity it adds, then acquaint and introduce, each naming its roles" \
+      "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Alice', 'Bob'], [pvar(c)], " "$GKKT"
 GKK_SCHEMAS="${GKKT%]}"
 SG=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
 check "GSNP's contract, the network with provenance, is read from programs/gai/GSNP.glp, GKK's schemas first" \
@@ -203,10 +207,10 @@ CUR=$(term "$GLP_DIR/programs/currencies/coins/GC.glp" gc)
 check "the currency's contract, GC, is read from programs/currencies/coins/GC.glp, GKK's schemas first" \
       "$GKK_SCHEMAS" "$CUR"
 check "and its mint adds k coins of the minter's issue (Currencies 72cf826b)" \
-      "schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))]" "$CUR"
+      "schema(mint, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))]" "$CUR"
 CSSN=$(term "$GLP_DIR/programs/cssn/CSSN.glp" cssn)
 check "CSSN's contract is read from programs/cssn/CSSN.glp, friend and knows reflexive" \
-      "reflexive([friend, knows], [schema(establish, []," "$CSSN"
+      "reflexive([friend, knows], [schema(establish, ['Alice'], []," "$CSSN"
 check "and its close takes the listed role of the members the leader lists" \
       "crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [nterm(ext(own(1), n))])]" "$CSSN"
 FED=$(term "$GLP_DIR/programs/federation/GFWC.glp" gfwc)
@@ -214,7 +218,7 @@ check "the federation's contract, GFWC, is read from programs/federation/GFWC.gl
       "[schema(form, [], [rs(guarded, [atom(seat, [nterm(own(1))])]" "$FED"
 GAI=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
 check "GAI's contract is read from programs/gai/GAI.glp" \
-      "[schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])])" "$GAI"
+      "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])])" "$GAI"
 
 # The two worked contracts, GSNP certified in Section 7.1 and the currency
 # in Appendix B.4.  One goal per run, so that each verdict is read off its own
@@ -856,29 +860,30 @@ check_eq "create compiles with the freshness of the name it forms" \
 check_not "join, requiring member(<a>.n), asks no freshness of it" \
           "noatomof" "$(compiled_in gsnp "$SG" join)"
 
-# close(a?, a[listed(*, n)] ; n), Section 5.1's example of def:compile (GSC
-# ac7ad63), with the identity the paper leaves out and the extent the paper
-# calls L written out: the leader Alice lists herself, requiring
-# listed(Alice, n), so she is in the extent of the listed role, and her line
-# joins what both roles do, listed(Alice, n) and member(<Alice>.n) deleted
-# and closed(n) added; every other member q she lists deletes
+# close(Alice?, Alice[listed(*, n)]; n), Section 5.1's example of
+# def:compile (GSC f3e3f40), with the identity the paper leaves out and the
+# extent the paper calls L written out: the leader Alice lists herself,
+# requiring member(<Alice>.n) and listed(Alice, n) (GSN.glp at GLP
+# 51b72a13), so she is in the extent of the listed role, and her line joins
+# what both roles do, listed(Alice, n) and member(<Alice>.n) deleted and
+# closed(n) added; every other member q she lists deletes
 # member(<Alice>.n); the required atoms, the leader's and those of the
-# listed role, over its extent; no freshness line, member(<a>.n) being
-# required at the listed role; and the guard, the leader.  GSN's close is
-# GSNP's.
+# listed role, over its extent; no freshness line, member(<Alice>.n) being
+# required; and the guard, the leader.  GSN's close is the paper's, and
+# GSNP, which extends GSN, holds it whole.
 close_gsnp=$(cat <<'TEX' | squash
 \begin{align*}
 & c'_{\Alice} := (c_{\Alice} \setminus \{\mathit{listed}(\Alice,n),\mathit{member}(\langle\Alice\rangle\cdot n)\}) \uplus \{\mathit{closed}(n)\},\\
 & c'_q := c_q \setminus \{\mathit{member}(\langle\Alice\rangle\cdot n)\} \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)]),\ q \neq \Alice),\\
-& \text{provided } \mathit{identity},\mathit{listed}(\Alice,n) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{member}(\langle\Alice\rangle\cdot n) \in c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)])),\\
+& \text{provided } \mathit{identity},\mathit{member}(\langle\Alice\rangle\cdot n),\mathit{listed}(\Alice,n) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{member}(\langle\Alice\rangle\cdot n) \in c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)])),\\
 & \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
 )
-check_eq "close compiles a line per agent, the leader's joining what both her roles do, as Section 5.1 prints it" \
-         "$close_gsnp" "$(compiled_in gsnp "$SG" close)"
-check_eq "and GSN's close compiles to the same display" \
+check_eq "GSN's close compiles a line per agent, the leader's joining what both her roles do, as Section 5.1 prints it" \
          "$close_gsnp" "$(compiled_in gsn "$GSNT" close)"
+check_eq "and GSNP's close, GSN's held whole, compiles to the same display" \
+         "$close_gsnp" "$(compiled_in gsnp "$SG" close)"
 
 # CSSN's child_close(r, p?, r[listed(*, n)] ; n): the child Alice, the
 # leader, lists herself and is in the extent; whether the parent Bob is, the
@@ -1170,7 +1175,7 @@ no_record "$gai_rec_shared"  "agent_meet requires item(y) at the person, y in an
 # does not forbid agent, or that does not require identity, leaves agent no
 # guardianship.
 gai_v_unmarked=$(printf '%s' "$GAI" | sed -e 's/rs(guarded, \[atom(item, \[svar(x)\]), atom(authored, \[svar(x)\])\]/rs(guarded, [atom(item, [svar(x)]), atom(authored, [svar(x)]), atom(principal_of, [svar(x)])]/')
-gai_v_noiota=$(printf '%s' "$GAI" | sed -e 's/schema(establish, \[\], \[rs(guarded, \[atom(identity, \[\])\], \[\], \[\], \[atom(identity, \[\]), atom(retired, \[\])\])\])/schema(establish, [], [rs(guarded, [atom(identity, []), atom(principal_of, [role(1)])], [], [], [atom(identity, []), atom(agent, []), atom(retired, [])])])/')
+gai_v_noiota=$(printf '%s' "$GAI" | sed -e 's/schema(establish, \['\''Alice'\''\], \[\], \[rs(guarded, \[atom(identity, \[\])\], \[\], \[\], \[atom(identity, \[\]), atom(retired, \[\])\])\])/schema(establish, ['\''Alice'\''], [], [rs(guarded, [atom(identity, []), atom(principal_of, [role(1)])], [], [], [atom(identity, []), atom(agent, []), atom(retired, [])])])/')
 no_v() { # no_v <variant of GAI's term> <what it breaks>
   check_eq "$2: the variant differs from GAI's term" "differs" "$([ "$1" != "$GAI" ] && echo differs)"
   out=$(run "wards($1, W)." "guardianships($1, [agent], G).")
@@ -1203,7 +1208,7 @@ no_ward_role "$gai_relay_twov" "agent_meet's person's role requires principal_of
 # not forbid child, each leaves (child, identity, creator, created,
 # parenting) no guardianship, (child, identity, creator, created, created)
 # standing alone.
-cssn_v_unadded=$(printf '%s' "$CSSN" | sed -e 's/schema(enter, \[\], \[rs(guarded, \[atom(created, \[role(2)\]), atom(parenting, \[role(2)\]), /schema(enter, [], [rs(guarded, [atom(created, [role(2)]), /')
+cssn_v_unadded=$(printf '%s' "$CSSN" | sed -e 's/schema(enter, \['\''Alice'\'', '\''Carol'\''\], \[\], \[rs(guarded, \[atom(created, \[role(2)\]), atom(parenting, \[role(2)\]), /schema(enter, ['\''Alice'\'', '\''Carol'\''], [], [rs(guarded, [atom(created, [role(2)]), /')
 cssn_v_deleted=$(printf '%s' "$CSSN" | sed -e 's/rs(unguarded, \[\], \[atom(parenting, \[pvar(r)\])\], \[atom(identity, \[\])\], \[atom(created, \[pvar(r)\])\])/rs(unguarded, [], [atom(parenting, [pvar(r)])], [atom(identity, [])], [])/')
 cssn_v_unmarked=$(printf '%s' "$CSSN" | sed -e 's/\[atom(child, \[\]), atom(parenting, \[role(3)\]), atom(retired, \[\])\]/[atom(parenting, [role(3)]), atom(retired, [])]/')
 v_not_parenting() { # v_not_parenting <variant of CSSN's term> <what it breaks>
@@ -1311,10 +1316,10 @@ check "and it is not compiled, the message naming the faults" \
 # Section 3.2 displays, befriend(Alice?, Bob?) : identity, knows(Bob), not
 # friend(Bob), +friend(Bob)  identity, knows(Alice), not friend(Alice),
 # +friend(Alice), after GKK's establish, forbidding the identity it adds,
-# meet and introduce, each E_i on a line
+# acquaint and introduce, each E_i on a line
 # labelled by its role; GSN's close is Section 3.2's example of a listed
-# role (def:role), with the identity
-# the paper leaves out; GSNP's forward carries the signed term of GAI's
+# role (def:role), requiring the leader's membership (GSC f3e3f40), with
+# the identity the paper leaves out; GSNP's forward carries the signed term of GAI's
 # Definition Act schema; and sg_reflexive, GSG's variant, declares friend
 # reflexive.
 notation() { # notation <term> ; the text notation_contract prints, its tokens joined
@@ -1332,7 +1337,7 @@ gsg_notation=$(cat <<'EOF'
 establish(Alice?) :
     at Alice: not identity, +identity
 
-meet(Alice?, Bob?) :
+acquaint(Alice?, Bob?) :
     at Alice: identity, +knows(Bob)
     at Bob: identity, +knows(Alice)
 
@@ -1353,7 +1358,7 @@ check_eq "GSG's schemas print in the notation of def:schema, befriend as Section
          "$gsg_notation" "$(notation "$GSGT")"
 close_notation=$(cat <<'EOF'
 close(Alice?, Alice[listed(*, n)]; n) :
-    at Alice: identity, +closed(n), -listed(Alice, n)
+    at Alice: identity, member(<Alice>.n), +closed(n), -listed(Alice, n)
     at Alice[listed(*, n)]: identity, -member(<Alice>.n)
 EOF
 )
@@ -1396,7 +1401,7 @@ check_eq "a contract declaring friend reflexive prints the declaration first" \
 echo "--- numbers (GSC, Section 3.2 and its appendix) ---"
 GBT=$(term "$GLP_DIR/programs/currencies/bonds/GB.glp" gb)
 check "GB's contract is read from programs/currencies/bonds/GB.glp, with numbers, a multiplicity and a constraint" \
-      "nschema(mint_bond, [num(d), num(k), num(t)], gt(num(d), num(t)), [rs(guarded, [times(num(k), atom(cent, [role(1), num(d)]))]" "$GBT"
+      "nschema(mint_bond, ['Alice'], [num(d), num(k), num(t)], gt(num(d), num(t)), [rs(guarded, [times(num(k), atom(cent, [role(1), num(d)]))]" "$GBT"
 out=$(run "check($GBT, V)." "traceable_preds($GBT, E)." "intro_acts($GBT, A).")
 check "GB is syntactically grassroots, the conditions not concerning its numbers" \
       "V = syntactically_grassroots" "$out"

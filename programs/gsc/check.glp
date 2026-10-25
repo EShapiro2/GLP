@@ -63,7 +63,7 @@ imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
 imported procedure wards#leaving_for(Contract?, Preds?, Leavings).
 imported procedure wards#relay_h_for(Contract?, Preds?, Wards?, RelayHs).
 imported procedure contracts#contract(Constant?, NDeclared).
-imported procedure contracts#variant(Constant?, Contract?, Declared).
+imported procedure contracts#variant(Constant?, WContract?, WDeclared).
 
 procedure verdict(Faults?, Verdict).
 verdict([], syntactically_grassroots).
@@ -750,9 +750,10 @@ check_named(Nm, V?) :- ground(Nm?) |
 
 % A fixture that changes a contract in one place, by name and the contract it
 % changes (contracts.glp, variant/3).
-exported procedure check_variant(Constant?, Contract?, Verdict).
+exported procedure check_variant(Constant?, WContract?, Verdict).
 check_variant(Nm, B, V?) :- ground(Nm?), ground(B?) |
-    contracts # variant(Nm?, B?, D),
+    contracts # variant(Nm?, B?, W),
+    unnamed(W?, D),
     check(D?, V).
 
 % The predicates of traceable provenance, for inspection: the largest set
@@ -775,9 +776,10 @@ traceable_pd(D, E?) :- ground(D?) |
     decl_schemas(D?, C),
     traceable_in(C?, E).
 
-exported procedure traceable_variant(Constant?, Contract?, Preds).
+exported procedure traceable_variant(Constant?, WContract?, Preds).
 traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |
-    contracts # variant(Nm?, B?, D),
+    contracts # variant(Nm?, B?, W),
+    unnamed(W?, D),
     traceable_preds(D?, E).
 
 % The introductory acts of a contract, for inspection (def:introduction,
@@ -791,9 +793,10 @@ intro_acts(D, A?) :- ground(D?) |
     ndecl_reflexive(D?, Rf),
     unobstructed # intro_acts(NC?, Rf?, A).
 
-exported procedure intro_acts_variant(Constant?, Contract?, IntroActs).
+exported procedure intro_acts_variant(Constant?, WContract?, IntroActs).
 intro_acts_variant(Nm, B, A?) :- ground(Nm?), ground(B?) |
-    contracts # variant(Nm?, B?, D),
+    contracts # variant(Nm?, B?, W),
+    unnamed(W?, D),
     intro_acts(D?, A).
 
 % The introduction with wards (GAI's appendix "Contracts with Wards"), for
@@ -827,9 +830,10 @@ wards_of(Nm, W?) :- ground(Nm?) |
     contracts # contract(Nm?, D),
     wards(D?, W).
 
-exported procedure wards_variant(Constant?, Contract?, Wards).
+exported procedure wards_variant(Constant?, WContract?, Wards).
 wards_variant(Nm, B, W?) :- ground(Nm?), ground(B?) |
-    contracts # variant(Nm?, B?, D),
+    contracts # variant(Nm?, B?, WD),
+    unnamed(WD?, D),
     wards(D?, W).
 
 % The atoms the relay acts of the introduction with wards require at their ward roles as atoms of a predicate h, admitted by that alternative of clause 2 of def:relay and by no other (GSC 410a440), each h(Schema, Role, H), for inspection: [] where there is no introduction with wards.

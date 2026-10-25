@@ -1678,8 +1678,8 @@ imported procedure check#check_named(Constant?, Verdict).
 exported procedure check_named(Constant?, Verdict).
 check_named(Nm, V?) :- check # check_named(Nm?, V).
 
-imported procedure check#check_variant(Constant?, Contract?, Verdict).
-exported procedure check_variant(Constant?, Contract?, Verdict).
+imported procedure check#check_variant(Constant?, WContract?, Verdict).
+exported procedure check_variant(Constant?, WContract?, Verdict).
 check_variant(Nm, B, V?) :- check # check_variant(Nm?, B?, V).
 
 imported procedure check#traceable_of(Constant?, Preds).
@@ -1690,8 +1690,8 @@ imported procedure check#traceable_preds(NDeclared?, Preds).
 exported procedure traceable_preds(WDeclared?, Preds).
 traceable_preds(D, E?) :- unnamed(D?, D0), check # traceable_preds(D0?, E).
 
-imported procedure check#traceable_variant(Constant?, Contract?, Preds).
-exported procedure traceable_variant(Constant?, Contract?, Preds).
+imported procedure check#traceable_variant(Constant?, WContract?, Preds).
+exported procedure traceable_variant(Constant?, WContract?, Preds).
 traceable_variant(Nm, B, E?) :- check # traceable_variant(Nm?, B?, E).
 
 % The introductory acts of a contract, for inspection (def:introduction,
@@ -1700,8 +1700,8 @@ imported procedure check#intro_acts(NDeclared?, IntroActs).
 exported procedure intro_acts(WDeclared?, IntroActs).
 intro_acts(D, A?) :- unnamed(D?, D0), check # intro_acts(D0?, A).
 
-imported procedure check#intro_acts_variant(Constant?, Contract?, IntroActs).
-exported procedure intro_acts_variant(Constant?, Contract?, IntroActs).
+imported procedure check#intro_acts_variant(Constant?, WContract?, IntroActs).
+exported procedure intro_acts_variant(Constant?, WContract?, IntroActs).
 intro_acts_variant(Nm, B, A?) :- check # intro_acts_variant(Nm?, B?, A).
 
 % The introduction with wards (GAI, "Contracts with Wards"), for inspection:
@@ -1716,8 +1716,8 @@ imported procedure check#wards(NDeclared?, Wards).
 exported procedure wards(WDeclared?, Wards).
 wards(D, W?) :- unnamed(D?, D0), check # wards(D0?, W).
 
-imported procedure check#wards_variant(Constant?, Contract?, Wards).
-exported procedure wards_variant(Constant?, Contract?, Wards).
+imported procedure check#wards_variant(Constant?, WContract?, Wards).
+exported procedure wards_variant(Constant?, WContract?, Wards).
 wards_variant(Nm, B, W?) :- check # wards_variant(Nm?, B?, W).
 
 imported procedure check#guardianships(NDeclared?, Preds?, Guardianships).
@@ -1744,8 +1744,8 @@ imported procedure contracts#contract(Constant?, NDeclared).
 exported procedure contract_named(Constant?, NDeclared).
 contract_named(Nm, C?) :- contracts # contract(Nm?, C).
 
-imported procedure contracts#variant(Constant?, Contract?, Declared).
-exported procedure variant(Constant?, Contract?, Declared).
+imported procedure contracts#variant(Constant?, WContract?, WDeclared).
+exported procedure variant(Constant?, WContract?, WDeclared).
 variant(Nm, B, C?) :- contracts # variant(Nm?, B?, C).
 
 imported procedure compile#compile_named(Constant?).
@@ -1756,8 +1756,8 @@ imported procedure compile#compile_contract(Constant?, NDeclared?).
 exported procedure compile_contract(Constant?, WDeclared?).
 compile_contract(Nm, D) :- unnamed(D?, D0), compile # compile_contract(Nm?, D0?).
 
-imported procedure compile#compile_variant(Constant?, Contract?).
-exported procedure compile_variant(Constant?, Contract?).
+imported procedure compile#compile_variant(Constant?, WContract?).
+exported procedure compile_variant(Constant?, WContract?).
 compile_variant(Nm, B) :- compile # compile_variant(Nm?, B?).
 
 imported procedure compile#compile_schema(Constant?, Constant?).
@@ -1768,8 +1768,8 @@ imported procedure compile#compile_schema_in(Constant?, NDeclared?, Constant?).
 exported procedure compile_schema_in(Constant?, WDeclared?, Constant?).
 compile_schema_in(Nm, D, Sn) :- unnamed(D?, D0), compile # compile_schema_in(Nm?, D0?, Sn?).
 
-imported procedure compile#compile_schema_variant(Constant?, Contract?, Constant?).
-exported procedure compile_schema_variant(Constant?, Contract?, Constant?).
+imported procedure compile#compile_schema_variant(Constant?, WContract?, Constant?).
+exported procedure compile_schema_variant(Constant?, WContract?, Constant?).
 compile_schema_variant(Nm, B, Sn) :- compile # compile_schema_variant(Nm?, B?, Sn?).
 
 imported procedure notation#notation_contract(WDeclared?).
