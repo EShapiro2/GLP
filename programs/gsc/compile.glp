@@ -20,7 +20,7 @@
 % to a line.  A newline is whitespace to LaTeX, so the lines are the display
 % and are pasted as they stand.
 %
-% Act schemas allow numbers (GSC, Section 3.2; def:numbers): a numeric
+% Speech act schemas allow numbers (GSC, Section 3.2; def:numbers): a numeric
 % argument, a multiplicity on an atom added or deleted, and a constraint on
 % the value variables, which every binding satisfies.  def:compile applies
 % to a schema with values as written (the appendix "Values in Act
@@ -38,7 +38,7 @@
 
 imported procedure check#check(NDeclared?, Verdict).
 imported procedure contracts#contract(Constant?, NDeclared).
-imported procedure contracts#variant(Constant?, Contract?, Declared).
+imported procedure contracts#variant(Constant?, WContract?, WDeclared).
 
 procedure chunks_app(Chunks?, Chunks?, Chunks).
 chunks_app([], T, T?).
@@ -1131,9 +1131,10 @@ compile_contract(Nm, D) :- ground(Nm?), ground(D?) |
 
 % A fixture that changes a contract in one place, by name and the contract it
 % changes (contracts.glp, variant/3).
-exported procedure compile_variant(Constant?, Contract?).
+exported procedure compile_variant(Constant?, WContract?).
 compile_variant(Nm, B) :- ground(Nm?), ground(B?) |
-    contracts # variant(Nm?, B?, D),
+    contracts # variant(Nm?, B?, W),
+    unnamed(W?, D),
     compile_checked(Nm?, D?).
 
 procedure compile_s_on(Verdict?, Constant?, Constant?, NContract?).
@@ -1165,7 +1166,8 @@ exported procedure compile_schema_in(Constant?, NDeclared?, Constant?).
 compile_schema_in(Nm, D, Sn) :- ground(Nm?), ground(D?), ground(Sn?) |
     compile_s_checked(Nm?, Sn?, D?).
 
-exported procedure compile_schema_variant(Constant?, Contract?, Constant?).
+exported procedure compile_schema_variant(Constant?, WContract?, Constant?).
 compile_schema_variant(Nm, B, Sn) :- ground(Nm?), ground(B?), ground(Sn?) |
-    contracts # variant(Nm?, B?, D),
+    contracts # variant(Nm?, B?, W),
+    unnamed(W?, D),
     compile_s_checked(Nm?, Sn?, D?).

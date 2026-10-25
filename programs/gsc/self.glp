@@ -3,7 +3,7 @@
 %
 % Decides def:syntactically-grassroots of /Grassroots/GSC, Section 3, one
 % definition for a contract of agent roles and listed roles (GSC ac7ad63),
-% with the values of its appendix "Values in Act Schemas" (app:numbers).
+% with the values of its appendix "Values in Speech Act Schemas" (app:numbers).
 % The signed term, reflexive predicates and contracts with wards are GAI's
 % extension of the language (GAI's appendix "Contracts with Wards"; GSC
 % 83b951c and 1a2a5f3), held here for GAI.  The papers are the specification
@@ -37,7 +37,7 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % An argument is a role, named by its index in the schema, a party variable, a
 % speech-act variable, a name term or a signed term: sgn(Y, I) is the signed
 % term sgn(y, pi_I) of def:schema, the speech act y signed by the agent in
-% role I.  Act schemas allow numbers (GSC, Section 3.2, the paragraph after
+% role I.  Speech act schemas allow numbers (GSC, Section 3.2, the paragraph after
 % the example of def:schema, and def:numbers): num(X) is a value argument,
 % the value variable X where X is a name and the number X where X is a
 % number.
@@ -47,8 +47,8 @@ Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
 
-% --- The values act schemas allow (GSC, def:numbers) -----------------------
-% "Act schemas allow values of any type: an argument of an atom may be a
+% --- The values speech act schemas allow (GSC, def:numbers) -----------------------
+% "Speech act schemas allow values of any type: an argument of an atom may be a
 % value or a value variable, a schema may carry a constraint on its value
 % variables, which every binding satisfies, and an atom added or deleted may
 % carry a multiplicity, a count of copies and so a positive whole number"
@@ -124,7 +124,7 @@ Contract  ::= [] ; [Schema | Contract].
 % schemas.
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
-% The contract as written, with the values act schemas allow: a role's four
+% The contract as written, with the values speech act schemas allow: a role's four
 % multisets may carry multiplicities, which def:schema admits on an atom
 % added or deleted and check.glp refuses elsewhere (multiplicity_not_added),
 % and a schema may be written nschema, with a constraint.  A contract with no
@@ -147,7 +147,7 @@ NDeclared  ::= NContract ; reflexive(Preds, NContract).
 % named by its base; a schema written without them, as the owners' contracts
 % not yet rewritten write it, is read as before.  A contract may name its
 % environment predicates (GSC 25b6b3c, Section 3.2 and the appendix "Values
-% in Act Schemas": "whose atoms are over values, which the machine holds from
+% in Speech Act Schemas": "whose atoms are over values, which the machine holds from
 % startup and the platform keeps current, and which no schema adds or
 % deletes"), environment(Preds, Body), Body the contract with or without its
 % reflexive predicates.  The checker, the compiler to VMAT and the printer
@@ -249,7 +249,7 @@ Preds ::= [] ; [Constant | Preds].
 % predicate of an atom the introductory act forbids at a role.
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive ; environment
         ; listed_role(Constant, Integer, Atom).
-% What GAI's Definition Act schema requires of a signed term, and the atom
+% What GAI's Definition Speech act schema requires of a signed term, and the atom
 % carrying one violates: it occurs in an atom not marked + (not_added), its
 % speech-act variable occurs in no atom its role requires (not_required), or
 % its role is not an agent role (not_agent_role).
@@ -1253,7 +1253,7 @@ nth_base(Rs, I, B?) :- ground(Rs?), integer(I?) |
 
 % The bases of arguments (def:grounded at GSC 1934846): an agent role, an
 % agent variable and a name term have one; a value and a speech-act variable
-% have none, a value naming no agent (the appendix "Values in Act Schemas").
+% have none, a value naming no agent (the appendix "Values in Speech Act Schemas").
 procedure args_bases(Args?, Bases?, Bases).
 args_bases([], T, T?).
 args_bases([num(_)|As], T, R?) :- ground(As?), ground(T?) |
@@ -1678,8 +1678,8 @@ imported procedure check#check_named(Constant?, Verdict).
 exported procedure check_named(Constant?, Verdict).
 check_named(Nm, V?) :- check # check_named(Nm?, V).
 
-imported procedure check#check_variant(Constant?, Contract?, Verdict).
-exported procedure check_variant(Constant?, Contract?, Verdict).
+imported procedure check#check_variant(Constant?, WContract?, Verdict).
+exported procedure check_variant(Constant?, WContract?, Verdict).
 check_variant(Nm, B, V?) :- check # check_variant(Nm?, B?, V).
 
 imported procedure check#traceable_of(Constant?, Preds).
@@ -1690,8 +1690,8 @@ imported procedure check#traceable_preds(NDeclared?, Preds).
 exported procedure traceable_preds(WDeclared?, Preds).
 traceable_preds(D, E?) :- unnamed(D?, D0), check # traceable_preds(D0?, E).
 
-imported procedure check#traceable_variant(Constant?, Contract?, Preds).
-exported procedure traceable_variant(Constant?, Contract?, Preds).
+imported procedure check#traceable_variant(Constant?, WContract?, Preds).
+exported procedure traceable_variant(Constant?, WContract?, Preds).
 traceable_variant(Nm, B, E?) :- check # traceable_variant(Nm?, B?, E).
 
 % The introductory acts of a contract, for inspection (def:introduction,
@@ -1700,8 +1700,8 @@ imported procedure check#intro_acts(NDeclared?, IntroActs).
 exported procedure intro_acts(WDeclared?, IntroActs).
 intro_acts(D, A?) :- unnamed(D?, D0), check # intro_acts(D0?, A).
 
-imported procedure check#intro_acts_variant(Constant?, Contract?, IntroActs).
-exported procedure intro_acts_variant(Constant?, Contract?, IntroActs).
+imported procedure check#intro_acts_variant(Constant?, WContract?, IntroActs).
+exported procedure intro_acts_variant(Constant?, WContract?, IntroActs).
 intro_acts_variant(Nm, B, A?) :- check # intro_acts_variant(Nm?, B?, A).
 
 % The introduction with wards (GAI, "Contracts with Wards"), for inspection:
@@ -1716,8 +1716,8 @@ imported procedure check#wards(NDeclared?, Wards).
 exported procedure wards(WDeclared?, Wards).
 wards(D, W?) :- unnamed(D?, D0), check # wards(D0?, W).
 
-imported procedure check#wards_variant(Constant?, Contract?, Wards).
-exported procedure wards_variant(Constant?, Contract?, Wards).
+imported procedure check#wards_variant(Constant?, WContract?, Wards).
+exported procedure wards_variant(Constant?, WContract?, Wards).
 wards_variant(Nm, B, W?) :- check # wards_variant(Nm?, B?, W).
 
 imported procedure check#guardianships(NDeclared?, Preds?, Guardianships).
@@ -1744,8 +1744,8 @@ imported procedure contracts#contract(Constant?, NDeclared).
 exported procedure contract_named(Constant?, NDeclared).
 contract_named(Nm, C?) :- contracts # contract(Nm?, C).
 
-imported procedure contracts#variant(Constant?, Contract?, Declared).
-exported procedure variant(Constant?, Contract?, Declared).
+imported procedure contracts#variant(Constant?, WContract?, WDeclared).
+exported procedure variant(Constant?, WContract?, WDeclared).
 variant(Nm, B, C?) :- contracts # variant(Nm?, B?, C).
 
 imported procedure compile#compile_named(Constant?).
@@ -1756,8 +1756,8 @@ imported procedure compile#compile_contract(Constant?, NDeclared?).
 exported procedure compile_contract(Constant?, WDeclared?).
 compile_contract(Nm, D) :- unnamed(D?, D0), compile # compile_contract(Nm?, D0?).
 
-imported procedure compile#compile_variant(Constant?, Contract?).
-exported procedure compile_variant(Constant?, Contract?).
+imported procedure compile#compile_variant(Constant?, WContract?).
+exported procedure compile_variant(Constant?, WContract?).
 compile_variant(Nm, B) :- compile # compile_variant(Nm?, B?).
 
 imported procedure compile#compile_schema(Constant?, Constant?).
@@ -1768,8 +1768,8 @@ imported procedure compile#compile_schema_in(Constant?, NDeclared?, Constant?).
 exported procedure compile_schema_in(Constant?, WDeclared?, Constant?).
 compile_schema_in(Nm, D, Sn) :- unnamed(D?, D0), compile # compile_schema_in(Nm?, D0?, Sn?).
 
-imported procedure compile#compile_schema_variant(Constant?, Contract?, Constant?).
-exported procedure compile_schema_variant(Constant?, Contract?, Constant?).
+imported procedure compile#compile_schema_variant(Constant?, WContract?, Constant?).
+exported procedure compile_schema_variant(Constant?, WContract?, Constant?).
 compile_schema_variant(Nm, B, Sn) :- compile # compile_schema_variant(Nm?, B?, Sn?).
 
 imported procedure notation#notation_contract(WDeclared?).
