@@ -53,7 +53,7 @@
 % before.
 % ---------------------------------------------------------------------------
 
-imported procedure unobstructed#intro_result(NContract?, Preds?, Faults).
+imported procedure unobstructed#intro_result_env(NContract?, Preds?, Preds?, Faults).
 imported procedure unobstructed#intro_acts(NContract?, Preds?, IntroActs).
 imported procedure prov#traceable(Contract?, Preds).
 imported procedure prov#all_preds(Contract?, Preds).
@@ -75,20 +75,20 @@ procedure untraceable_faults(Preds?, Faults).
 untraceable_faults([], []).
 untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
 
-procedure check_contract(Contract?, NContract?, Preds?, Verdict).
-check_contract(C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
+procedure check_contract(Contract?, NContract?, Preds?, Preds?, Verdict).
+check_contract(C, NC, Rf, Ev, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(Ev?) |
     prov # traceable(C?, E),
-    contract_verdict(C?, NC?, Rf?, E?, V).
+    contract_verdict(C?, NC?, Rf?, Ev?, E?, V).
 
 % E is read by two conjuncts, so it is taken ground in a head of its own.
 % The first conjunct, def:unobstructed, is decided on the contract as
 % written, NC (unobstructed.glp), the other two on its plain form, C.
-procedure contract_verdict(Contract?, NContract?, Preds?, Preds?, Verdict).
-contract_verdict(C, NC, Rf, E, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(E?) |
+procedure contract_verdict(Contract?, NContract?, Preds?, Preds?, Preds?, Verdict).
+contract_verdict(C, NC, Rf, Ev, E, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(Ev?), ground(E?) |
     prov # all_preds(C?, Ps),
     preds_diff(Ps?, E?, Missing),
     untraceable_faults(Missing?, FT),
-    unobstructed # intro_result(NC?, Rf?, F1),
+    unobstructed # intro_result_env(NC?, Rf?, Ev?, F1),
     volition # volition_faults(C?, E?, F2),
     faults_app(FT?, F2?, F23),
     wards_verdict(F1?, F23?, C?, Rf?, V).
@@ -703,13 +703,13 @@ num_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % decided on the contract as written, the rest on its plain form (self.glp,
 % plain_decl), and so are traceable provenance and volition;
 % def:unobstructed is decided on the contract as written (unobstructed.glp).
-procedure check_formed(Faults?, Contract?, NContract?, Preds?, Verdict).
-check_formed([], C, NC, Rf, V?) :- ground(C?), ground(NC?), ground(Rf?) |
-    check_contract(C?, NC?, Rf?, V).
-check_formed([F|Fs], _, _, _, malformed([F?|Fs?])).
+procedure check_formed(Faults?, Contract?, NContract?, Preds?, Preds?, Verdict).
+check_formed([], C, NC, Rf, Ev, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(Ev?) |
+    check_contract(C?, NC?, Rf?, Ev?, V).
+check_formed([F|Fs], _, _, _, _, malformed([F?|Fs?])).
 
-procedure check_decl(Contract?, NContract?, Preds?, Faults?, Verdict).
-check_decl(C, NC, Rf, MHN, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(MHN?) |
+procedure check_decl(Contract?, NContract?, Preds?, Preds?, Faults?, Verdict).
+check_decl(C, NC, Rf, Ev, MHN, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(Ev?), ground(MHN?) |
     form_schemas(C?, M0),
     refl_schemas(C?, Rf?, M1),
     sgn_schemas(C?, M2),
@@ -720,21 +720,28 @@ check_decl(C, NC, Rf, MHN, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(M
     faults_app(MT?, ML0?, MT0),
     faults_app(MHN?, MT0?, MH0),
     faults_app(MH0?, M12?, M),
-    check_formed(M?, C?, NC?, Rf?, V).
+    check_formed(M?, C?, NC?, Rf?, Ev?, V).
 
-procedure check_ndecl(NContract?, Preds?, Verdict).
-check_ndecl(NC, Rf, V?) :- ground(NC?), ground(Rf?) |
+procedure check_ndecl(NContract?, Preds?, Preds?, Verdict).
+check_ndecl(NC, Rf, Ev, V?) :- ground(NC?), ground(Rf?), ground(Ev?) |
     plain_contract(NC?, C),
     head_schemas(NC?, MH),
     num_schemas(NC?, MN),
     faults_app(MH?, MN?, MHN),
-    check_decl(C?, NC?, Rf?, MHN?, V).
+    check_decl(C?, NC?, Rf?, Ev?, MHN?, V).
 
 exported procedure check(NDeclared?, Verdict).
 check(D, V?) :- ground(D?) |
     ndecl_schemas(D?, NC),
     ndecl_reflexive(D?, Rf),
-    check_ndecl(NC?, Rf?, V).
+    check_ndecl(NC?, Rf?, [], V).
+
+% The verdict on a contract naming environment predicates Ev (GSC 25b6b3c, the appendix "Values in Act Schemas": "an unobstructed introductory act requires no environment atom, clause 1 of Definition unobstructed admitting only atoms a schema adds, and forbids none"): an introductory act requiring or forbidding an atom of one is obstructed (unobstructed.glp, intro_result_env).
+exported procedure check_env(NDeclared?, Preds?, Verdict).
+check_env(D, Ev, V?) :- ground(D?), ground(Ev?) |
+    ndecl_schemas(D?, NC),
+    ndecl_reflexive(D?, Rf),
+    check_ndecl(NC?, Rf?, Ev?, V).
 
 exported procedure check_named(Constant?, Verdict).
 check_named(Nm, V?) :- ground(Nm?) |

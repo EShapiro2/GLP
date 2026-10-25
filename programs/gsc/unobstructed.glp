@@ -1007,6 +1007,67 @@ intro_result(NC, Rf, R?) :- ground(NC?), ground(Rf?) |
     plain_contract(NC?, C),
     intro_result1(NC?, C?, Rf?, R).
 
+% intro_result_env(NC, Rf, Ev, Faults): as intro_result, the contract naming
+% the environment predicates Ev (GSC 25b6b3c, the appendix "Values in Act
+% Schemas": "an unobstructed introductory act requires no environment atom,
+% clause 1 of Definition unobstructed admitting only atoms a schema adds, and
+% forbids none").  A schema requiring or forbidding at a role an atom of a
+% predicate of Ev is no candidate, and, where no candidate is unobstructed,
+% each such schema that has an introduction adds the fault obstructed(Nm, I,
+% A, environment) for each such atom A at its role I.
+exported procedure intro_result_env(NContract?, Preds?, Preds?, Faults).
+intro_result_env(NC, Rf, [], R?) :- ground(NC?), ground(Rf?) | intro_result(NC?, Rf?, R).
+intro_result_env(NC, Rf, [P|Ps], R?) :- ground(NC?), ground(Rf?), ground(P?), ground(Ps?) |
+    plain_contract(NC?, C),
+    env_split(NC?, [P?|Ps?], NCf, EF),
+    intro_scan(NCf?, NC?, C?, Rf?, none, R0),
+    env_faults(R0?, EF?, R).
+procedure env_faults(Faults?, Faults?, Faults).
+env_faults([], _, []).
+env_faults([F|Fs], EF, R?) :- ground(F?), ground(Fs?), ground(EF?) | faults_app([F?|Fs?], EF?, R).
+% The schemas touching no environment atom at a role they require or forbid it, and the faults of those that do and have an introduction.
+procedure env_split(NContract?, Preds?, NContract, Faults).
+env_split([], _, [], []).
+env_split([NS|NSs], Ev, NCf?, EF?) :- ground(NS?), ground(NSs?), ground(Ev?) |
+    plain_schema(NS?, S),
+    nsch_name(NS?, Nm),
+    nsch_roles(NS?, Rs),
+    env_roles(Rs?, 1, Nm?, Ev?, F1),
+    env_split(NSs?, Ev?, NCf1, EF1),
+    env_keep(F1?, NS?, S?, NCf1?, EF1?, NCf, EF).
+procedure env_keep(Faults?, NSchema?, Schema?, NContract?, Faults?, NContract, Faults).
+env_keep([], NS, _, NCf, EF, [NS?|NCf?], EF?).
+env_keep([F|Fs], _, S, NCf, EF, NCf?, EF2?) :- ground(F?), ground(Fs?), ground(S?), ground(EF?) |
+    intro_act_bindings(S?, Bs),
+    env_keep1(Bs?, [F?|Fs?], EF?, EF2).
+procedure env_keep1(Substs?, Faults?, Faults?, Faults).
+env_keep1([], _, EF, EF?).
+env_keep1([_|_], F, EF, R?) :- ground(F?), ground(EF?) | faults_app(F?, EF?, R).
+procedure env_roles(NRoleSpecs?, Integer?, Constant?, Preds?, Faults).
+env_roles([], _, _, _, []).
+env_roles([R|Rs], I, Nm, Ev, F?) :- ground(R?), integer(I?), ground(Nm?), ground(Ev?) |
+    nrs_kf(R?, K, N),
+    env_atoms(K?, I?, Nm?, Ev?, F1),
+    env_atoms(N?, I?, Nm?, Ev?, F2),
+    I1 := I? + 1,
+    env_roles(Rs?, I1?, Nm?, Ev?, F3),
+    faults_app(F1?, F2?, F12),
+    faults_app(F12?, F3?, F).
+procedure nrs_kf(NRoleSpec?, Mults, Mults).
+nrs_kf(rs(_, _, _, K, N), K?, N?).
+nrs_kf(crs(_, _, _, _, K, N), K?, N?).
+procedure env_atoms(Mults?, Integer?, Constant?, Preds?, Faults).
+env_atoms([], _, _, _, []).
+env_atoms([times(_, A)|As], I, Nm, Ev, F?) :- env_atoms([A?|As?], I?, Nm?, Ev?, F).
+env_atoms([atom(P, Xs)|As], I, Nm, Ev, F?) :- ground(P?), ground(Xs?), integer(I?), ground(Nm?), ground(Ev?) |
+    pred_member(P?, Ev?, B),
+    env_atom(B?, atom(P?, Xs?), I?, Nm?, F1),
+    env_atoms(As?, I?, Nm?, Ev?, F2),
+    faults_app(F1?, F2?, F).
+procedure env_atom(Ans?, Atom?, Integer?, Constant?, Faults).
+env_atom(yes, A, I, Nm, [obstructed(Nm?, I?, A?, environment)]).
+env_atom(no, _, _, _, []).
+
 % --- the introductory acts, for inspection ---------------------------------
 % Each schema of the contract that is an introductory act (def:introduction),
 % in the order of the contract: unobstructed where some introduction of it

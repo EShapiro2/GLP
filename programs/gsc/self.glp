@@ -138,6 +138,71 @@ NSchema    ::= schema(Constant, Args, NRoleSpecs)
 NContract  ::= [] ; [NSchema | NContract].
 NDeclared  ::= NContract ; reflexive(Preds, NContract).
 
+% The contract as its owner writes it (GSC 25b6b3c, Section 2: "A name in a
+% pragma is the schema's role of that name, the schemas naming their roles as
+% the clauses do"; GKK.glp, GSG.glp and GSN.glp at GLP ec7c578c): a schema's
+% head lists its roles by the clause's names, schema(Name, Names, Vars,
+% Roles), cschema(Name, Names, Vars, [], Roles) and nschema(Name, Names, Vars,
+% Constraint, Roles), Names the names of its roles in order, a listed role
+% named by its base; a schema written without them, as the owners' contracts
+% not yet rewritten write it, is read as before.  A contract may name its
+% environment predicates (GSC 25b6b3c, Section 3.2 and the appendix "Values
+% in Act Schemas": "whose atoms are over values, which the machine holds from
+% startup and the platform keeps current, and which no schema adds or
+% deletes"), environment(Preds, Body), Body the contract with or without its
+% reflexive predicates.  The checker, the compiler to VMAT and the printer
+% read it through unnamed/2, which drops the names and the environment
+% predicates, and env_preds/2, which gives the environment predicates; the
+% printer prints each role by its name (notation.glp).
+Names      ::= [] ; [Constant | Names].
+WSchema    ::= schema(Constant, Args, NRoleSpecs)
+             ; cschema(Constant, Args, Nil, NRoleSpecs)
+             ; nschema(Constant, Args, Constraint, NRoleSpecs)
+             ; schema(Constant, Names, Args, NRoleSpecs)
+             ; cschema(Constant, Names, Args, Nil, NRoleSpecs)
+             ; nschema(Constant, Names, Args, Constraint, NRoleSpecs).
+WContract  ::= [] ; [WSchema | WContract].
+WBody      ::= WContract ; reflexive(Preds, WContract).
+WDeclared  ::= WBody ; environment(Preds, WBody).
+
+% The contract as the checker reads it, its names and environment predicates
+% dropped.
+procedure unnamed(WDeclared?, NDeclared).
+unnamed([], []).
+unnamed([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
+unnamed(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Ss?) | unnamed_c(Ss?, C).
+unnamed(environment(_, B), D?) :- ground(B?) | unnamed_b(B?, D).
+procedure unnamed_b(WBody?, NDeclared).
+unnamed_b([], []).
+unnamed_b([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
+unnamed_b(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Ss?) | unnamed_c(Ss?, C).
+procedure unnamed_c(WContract?, NContract).
+unnamed_c([], []).
+unnamed_c([S|Ss], [S1?|Ss1?]) :- ground(S?), ground(Ss?) |
+    unnamed_s(S?, S1),
+    unnamed_c(Ss?, Ss1).
+procedure unnamed_s(WSchema?, NSchema).
+unnamed_s(schema(Nm, Vs, Rs), schema(Nm?, Vs?, Rs?)).
+unnamed_s(cschema(Nm, Vs, X, Rs), cschema(Nm?, Vs?, X?, Rs?)).
+unnamed_s(nschema(Nm, Vs, Cn, Rs), nschema(Nm?, Vs?, Cn?, Rs?)).
+unnamed_s(schema(Nm, _, Vs, Rs), schema(Nm?, Vs?, Rs?)).
+unnamed_s(cschema(Nm, _, Vs, X, Rs), cschema(Nm?, Vs?, X?, Rs?)).
+unnamed_s(nschema(Nm, _, Vs, Cn, Rs), nschema(Nm?, Vs?, Cn?, Rs?)).
+% The names of a schema's roles, [] where it is written without them.
+procedure wsch_names(WSchema?, Names).
+wsch_names(schema(_, _, _), []).
+wsch_names(cschema(_, _, _, _), []).
+wsch_names(nschema(_, _, _, _), []).
+wsch_names(schema(_, Ns, _, _), Ns?).
+wsch_names(cschema(_, Ns, _, _, _), Ns?).
+wsch_names(nschema(_, Ns, _, _, _), Ns?).
+% The environment predicates a contract names, [] where it names none.
+procedure env_preds(WDeclared?, Preds).
+env_preds([], []).
+env_preds([_|_], []).
+env_preds(reflexive(_, _), []).
+env_preds(environment(Ps, _), Ps?).
+
 % --- The image of a binding (def:schema, def:binding) ----------------------
 % People and speech acts are numbered; person(0) and person(1) are the two
 % the conditions quantify over.  signed(S, P) is the image of a signed term,
@@ -176,7 +241,7 @@ Preds ::= [] ; [Constant | Preds].
 % listed_role(Schema, Role, Atom) is the first part of clause 2 of
 % def:unobstructed: the listed role Role of Schema adds Atom, of the
 % predicate of an atom the introductory act forbids at a role.
-Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive
+Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive ; environment
         ; listed_role(Constant, Integer, Atom).
 % What GAI's Definition Act schema requires of a signed term, and the atom
 % carrying one violates: it occurs in an atom not marked + (not_added), its
@@ -1596,9 +1661,12 @@ agent_named([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % header); contracts.glp holds the checker's fixtures, by name, and its
 % variants of a contract, by name and the contract's term.
 
-imported procedure check#check(NDeclared?, Verdict).
-exported procedure check(NDeclared?, Verdict).
-check(C, V?) :- check # check(C?, V).
+imported procedure check#check_env(NDeclared?, Preds?, Verdict).
+exported procedure check(WDeclared?, Verdict).
+check(C, V?) :- ground(C?) |
+    unnamed(C?, D),
+    env_preds(C?, Ev),
+    check # check_env(D?, Ev?, V).
 
 imported procedure check#check_named(Constant?, Verdict).
 exported procedure check_named(Constant?, Verdict).
@@ -1613,8 +1681,8 @@ exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- check # traceable_of(Nm?, E).
 
 imported procedure check#traceable_preds(NDeclared?, Preds).
-exported procedure traceable_preds(NDeclared?, Preds).
-traceable_preds(D, E?) :- check # traceable_preds(D?, E).
+exported procedure traceable_preds(WDeclared?, Preds).
+traceable_preds(D, E?) :- unnamed(D?, D0), check # traceable_preds(D0?, E).
 
 imported procedure check#traceable_variant(Constant?, Contract?, Preds).
 exported procedure traceable_variant(Constant?, Contract?, Preds).
@@ -1623,8 +1691,8 @@ traceable_variant(Nm, B, E?) :- check # traceable_variant(Nm?, B?, E).
 % The introductory acts of a contract, for inspection (def:introduction,
 % def:unobstructed): each unobstructed, or obstructed with its faults.
 imported procedure check#intro_acts(NDeclared?, IntroActs).
-exported procedure intro_acts(NDeclared?, IntroActs).
-intro_acts(D, A?) :- check # intro_acts(D?, A).
+exported procedure intro_acts(WDeclared?, IntroActs).
+intro_acts(D, A?) :- unnamed(D?, D0), check # intro_acts(D0?, A).
 
 imported procedure check#intro_acts_variant(Constant?, Contract?, IntroActs).
 exported procedure intro_acts_variant(Constant?, Contract?, IntroActs).
@@ -1639,28 +1707,28 @@ exported procedure wards_of(Constant?, Wards).
 wards_of(Nm, W?) :- check # wards_of(Nm?, W).
 
 imported procedure check#wards(NDeclared?, Wards).
-exported procedure wards(NDeclared?, Wards).
-wards(D, W?) :- check # wards(D?, W).
+exported procedure wards(WDeclared?, Wards).
+wards(D, W?) :- unnamed(D?, D0), check # wards(D0?, W).
 
 imported procedure check#wards_variant(Constant?, Contract?, Wards).
 exported procedure wards_variant(Constant?, Contract?, Wards).
 wards_variant(Nm, B, W?) :- check # wards_variant(Nm?, B?, W).
 
 imported procedure check#guardianships(NDeclared?, Preds?, Guardianships).
-exported procedure guardianships(NDeclared?, Preds?, Guardianships).
-guardianships(D, M, G?) :- check # guardianships(D?, M?, G).
+exported procedure guardianships(WDeclared?, Preds?, Guardianships).
+guardianships(D, M, G?) :- unnamed(D?, D0), check # guardianships(D0?, M?, G).
 
 % The atoms the relay acts of the introduction with wards require at their ward roles as atoms of h, by clause 2 of def:relay and by none of its other alternatives (GSC 410a440), of a contract given as a term.
 imported procedure check#relay_h(NDeclared?, RelayHs).
-exported procedure relay_h(NDeclared?, RelayHs).
-relay_h(D, H?) :- check # relay_h(D?, H).
+exported procedure relay_h(WDeclared?, RelayHs).
+relay_h(D, H?) :- unnamed(D?, D0), check # relay_h(D0?, H).
 
 % The leaving marks of a contract for a set of marks (def:leaving), for each
 % choice of a guardianship of each mark, of a contract given as a term and
 % of a fixture by name.
 imported procedure check#leaving(NDeclared?, Preds?, Leavings).
-exported procedure leaving(NDeclared?, Preds?, Leavings).
-leaving(D, M, L?) :- check # leaving(D?, M?, L).
+exported procedure leaving(WDeclared?, Preds?, Leavings).
+leaving(D, M, L?) :- unnamed(D?, D0), check # leaving(D0?, M?, L).
 
 imported procedure check#leaving_of(Constant?, Preds?, Leavings).
 exported procedure leaving_of(Constant?, Preds?, Leavings).
@@ -1679,8 +1747,8 @@ exported procedure compile_named(Constant?).
 compile_named(Nm) :- compile # compile_named(Nm?).
 
 imported procedure compile#compile_contract(Constant?, NDeclared?).
-exported procedure compile_contract(Constant?, NDeclared?).
-compile_contract(Nm, D) :- compile # compile_contract(Nm?, D?).
+exported procedure compile_contract(Constant?, WDeclared?).
+compile_contract(Nm, D) :- unnamed(D?, D0), compile # compile_contract(Nm?, D0?).
 
 imported procedure compile#compile_variant(Constant?, Contract?).
 exported procedure compile_variant(Constant?, Contract?).
@@ -1691,13 +1759,13 @@ exported procedure compile_schema(Constant?, Constant?).
 compile_schema(Nm, Sn) :- compile # compile_schema(Nm?, Sn?).
 
 imported procedure compile#compile_schema_in(Constant?, NDeclared?, Constant?).
-exported procedure compile_schema_in(Constant?, NDeclared?, Constant?).
-compile_schema_in(Nm, D, Sn) :- compile # compile_schema_in(Nm?, D?, Sn?).
+exported procedure compile_schema_in(Constant?, WDeclared?, Constant?).
+compile_schema_in(Nm, D, Sn) :- unnamed(D?, D0), compile # compile_schema_in(Nm?, D0?, Sn?).
 
 imported procedure compile#compile_schema_variant(Constant?, Contract?, Constant?).
 exported procedure compile_schema_variant(Constant?, Contract?, Constant?).
 compile_schema_variant(Nm, B, Sn) :- compile # compile_schema_variant(Nm?, B?, Sn?).
 
-imported procedure notation#notation_contract(NDeclared?).
-exported procedure notation_contract(NDeclared?).
+imported procedure notation#notation_contract(WDeclared?).
+exported procedure notation_contract(WDeclared?).
 notation_contract(D) :- notation # notation_contract(D?).
