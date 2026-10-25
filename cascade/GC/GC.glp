@@ -31,7 +31,9 @@
 %% (Udi, 2026-10-20; Code #12 to Currencies, 13:45 UTC).  Each comment below
 %% names the clause a schema realises.  A role is rs(Guard, Add, Del, Keep,
 %% Forb), its +(i), -(i), =(i) and not(i), and is named by its index, role(1)
-%% the schema's first role; a schema's second argument lists its variables in
+%% the schema's first role, and by the clause's name in the schema's head,
+%% Names (GSC #8, 2026-10-25; Udi approving), so that a pragma's name maps
+%% to its role; a schema's second argument lists its variables in
 %% the order of its head; u, v, r and c are agent variables, pvar.
 %% Written by Currencies #11 Cowork, 2026-10-20, in place of the term of
 %% 2026-10-18 in GSC's old form, schema(Name, Roles); establish forbidding
@@ -58,7 +60,8 @@ RoleSpec  ::= rs(Guard, Mults, Mults, Atoms, Atoms)
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
-Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs).
+Names     ::= [] ; [Constant | Names].
+Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
@@ -67,28 +70,28 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 procedure contract_named(Constant?, Declared).
 contract_named(gc,
 %% GKK:1, Identity: act once, so establish forbids the identity it adds (Udi, 2026-10-23, to GSC #6).
-   [schema(establish, [],
+   [schema(establish, ['Alice'], [],
        [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
 %% GKK:2, Meeting.
-    schema(meet, [],
+    schema(meet, ['Alice', 'Bob'], [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
 %% GKK:3, Introduction: p, who knows q and c, introduces c to q, who knows p.
-    schema(introduce, [pvar(c)],
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
        [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
         rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GC:1, Minting: p mints k p-coins.
-    schema(mint, [num(k)],
+    schema(mint, ['Alice'], [num(k)],
        [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
 %% GC:2, Swap: p and q, who know each other, swap k u-coins of p's for k1 v-coins of q's; each comes to know the issuer of what they receive.
-    schema(swap, [pvar(u), num(k), pvar(v), num(k1)],
+    schema(swap, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(k1)],
        [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GC:3, Payment: p pays k q-coins to q, whom p knows.
-    schema(pay, [num(k)],
+    schema(pay, ['Alice', 'Bob'], [num(k)],
        [rs(guarded,   [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]),
 %% GC:4, Redemption: p redeems a q-coin against an r-coin q holds, q whom p knows; p comes to know r.
-    schema(redeem, [pvar(r)],
+    schema(redeem, ['Alice', 'Bob'], [pvar(r)],
        [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])])]).
