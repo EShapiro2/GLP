@@ -32,15 +32,7 @@
  "notices": {
   "refused": 1124
  },
- "monitor_exceptions": [
-  {
-   "t": 3303451.653350595,
-   "class": "child_meet_2(v1f03c2, v1f10c1, v1f03p2, v1f10p1)",
-   "why": [
-    "no yes of v1f03c2, v1f10c1 to an attempt or hello of v1f03p2"
-   ]
-  }
- ],
+ "monitor_exceptions": [],
  "unexplained_changes": [],
  "unexplained_count": 0,
  "open_commits_at_end": 0,
