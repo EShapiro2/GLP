@@ -9,8 +9,8 @@
 %% and the network's log of the cargoes it carries.  Each person's first request
 %% establishes their identity, establish(P) (GKK:1, Identity), a class of one
 %% participant guarded by them and applied at its Propose, every other role of
-%% the contract requiring identity; and the two meet, meet(p?, q?) (GKK:2,
-%% Meeting), a meeting schema, alice's request the cold call, the hello, on
+%% the contract requiring identity; and the two come to know each other, acquaint(p?, q?) (GKK:2,
+%% Acquaintance), a meeting schema, alice's request the cold call, the hello, on
 %% which bob is asked, his yes his request of it (vGLP, Section 5.4, "The
 %% compilation"), its two-phase commit then run with both approvals standing, before
 %% they befriend, befriend requiring knows of the other at each role (GSG:1;
@@ -32,7 +32,7 @@
 %%   attempt aborts at both, bob its refuser, declined; alice's agent, tallying his no, ends her approval, her request, and writes the notice refused(befriend(alice, bob), bob, declined) (vGLP f0acbc1, Section 5.4, "The compilation"); alice, seeing it on her screen, requests it again, attempt 8, her requests taking numbers as her attempts do; bob is asked again and answers yes, and it commits.
 %% play_menu: alice's request questions show her agent's own key, alice, and
 %%   the persons it knows (vGLP 321127a, Section 5.4): the first, asked when
-%%   her agent starts, none; she meets bob and, once he is known, proposes
+%%   her agent starts, none; she comes to know bob and, once he is known, proposes
 %%   befriending him, and the request question asked on reading that request
 %%   shows bob.
 %%
@@ -42,9 +42,9 @@
 
 Speech   ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
-Class    ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+Class    ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
-Proposal ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
@@ -77,16 +77,16 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_befriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_befriend(LA?, LB?, N?) :-
-    pair([own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob)))],
-         [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(meet(alice, bob), yes),
+         [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(acquaint(alice, bob), yes),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
 exported procedure play_unfriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_unfriend(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+          own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob))),
           wait(holds(friend(bob))),
           wait(lacks(friend(bob))),
@@ -94,7 +94,7 @@ play_unfriend(LA?, LB?, N?) :-
           wait(holds(friend(bob))),
           own([A4], propose(unfriend(A4?, bob)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          approval(meet(alice, bob), yes),
+          approval(acquaint(alice, bob), yes),
           approval(befriend(alice, bob), yes),
           wait(holds(friend(alice))),
           own([B2], propose(unfriend(B2?, alice))),
@@ -103,11 +103,11 @@ play_unfriend(LA?, LB?, N?) :-
 
 exported procedure play_refused(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_refused(LA?, LB?, N?) :-
-    pair([own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob))),
           wait(refused(befriend(alice, bob), bob, declined)),
           own([A3], propose(befriend(A3?, bob)))],
-         [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(meet(alice, bob), yes),
+         [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(acquaint(alice, bob), yes),
           approval(befriend(alice, bob), no),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
@@ -115,11 +115,11 @@ play_refused(LA?, LB?, N?) :-
 exported procedure play_menu(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_menu(LA?, LB?, N?) :-
     pair([look, own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
+          own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob))),
           wait(holds(friend(bob))), look],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          approval(meet(alice, bob), yes),
+          approval(acquaint(alice, bob), yes),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 

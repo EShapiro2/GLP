@@ -10,7 +10,7 @@ Utterance ::= utterance(String) ; Speech.
 Class ::=
 establish(Peer)
 ;
-meet(Peer, Peer)
+acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
@@ -20,9 +20,9 @@ unfriend(Peer, Peer)
 ;
 enter(Peer, Peer, Speech)
 ;
-agent_meet(Peer, Peer, Peer, Speech)
+agent_acquaint(Peer, Peer, Peer, Speech)
 ;
-agents_meet(Peer, Peer, Peer, Peer, Speech, Speech)
+agents_acquaint(Peer, Peer, Peer, Peer, Speech, Speech)
 ;
 agent_befriend(Peer, Peer, Peer)
 ;
@@ -37,7 +37,7 @@ sign(Peer, Speech)
 Proposal ::=
 establish(Peer)
 ;
-meet(Peer, Peer)
+acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
@@ -47,9 +47,9 @@ unfriend(Peer, Peer)
 ;
 enter(Peer, Peer, Speech)
 ;
-agent_meet(Peer, Peer, Peer, Speech)
+agent_acquaint(Peer, Peer, Peer, Speech)
 ;
-agents_meet(Peer, Peer, Peer, Peer, Speech, Speech)
+agents_acquaint(Peer, Peer, Peer, Peer, Speech, Speech)
 ;
 agent_befriend(Peer, Peer, Peer)
 ;
