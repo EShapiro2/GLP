@@ -4,7 +4,7 @@
 %% programs/gsc reads (its README, "Writing a contract").  The clauses are in
 %% GC.txt beside this file.  GC extends GKK, Grassroots Keys and Knowledge,
 %% GSC's (programs/gsc/GKK.glp; Udi, 2026-10-20), so the term holds GKK's
-%% three schemas, establish, meet and introduce, and four of its own over the
+%% three schemas, establish, acquaint and introduce (GKK:2 Acquaintance since 2026-10-25), and four of its own over the
 %% predicate coin: coin(u) in the state of p is a coin issued by u and held
 %% by p; the paper writes the predicate as the cent sign, which is not a GLP
 %% constant.  Every role but establish's requires identity.  Clauses 2 to 4
@@ -72,8 +72,8 @@ contract_named(gc,
 %% GKK:1, Identity: act once, so establish forbids the identity it adds (Udi, 2026-10-23, to GSC #6).
    [schema(establish, ['Alice'], [],
        [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
-%% GKK:2, Meeting.
-    schema(meet, ['Alice', 'Bob'], [],
+%% GKK:2, Acquaintance.
+    schema(acquaint, ['Alice', 'Bob'], [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
 %% GKK:3, Introduction: p, who knows q and c, introduces c to q, who knows p.
