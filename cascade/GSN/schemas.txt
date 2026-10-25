@@ -33,7 +33,7 @@ leave(Alice, Bob?; n) :
     at Bob: identity, -member(<Alice>.n)
 
 close(Alice?, Alice[listed(*, n)]; n) :
-    at Alice: identity, +closed(n), -listed(Alice, n)
+    at Alice: identity, member(<Alice>.n), +closed(n), -listed(Alice, n)
     at Alice[listed(*, n)]: identity, -member(<Alice>.n)
 
 drop(Alice, Bob; n) :
