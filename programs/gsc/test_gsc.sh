@@ -4,7 +4,7 @@
 #
 #   bash programs/gsc/test_gsc.sh
 #
-# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63), and GSNP, the social network with provenance, GAI's, carrying the signed term of GAI's extension of the language; the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp); CSSN's and GAI's contracts; each read from its owner's file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on GSNP and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, on GAI's changed in one place per condition of the record of clause 2 of def:relay, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSNP, failing a condition each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Speech act schema, printed from a contract's term (notation.glp); then the values speech act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: GB, the bonds, Currencies' (programs/currencies/bonds/GB.glp), its verdict, its displays and its notation, a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity a positive whole number at every binding --- and a fixture of each malformation the passage forbids.  The federation extension of speech act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20); GFWC's contract is still read from its owner's file.  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
+# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63), and GSNP, the social network with provenance, GAI's, carrying the signed term of GAI's extension of the language; the currency of Appendix B, which Appendix B.4 certifies (programs/currencies/coins/GC.glp); CSSN's and GAI's contracts; each read from its owner's file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the display of befriend in Section 5.1 and that of the swap in Appendix B.3; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on GSNP and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, on CSSN's and GAI's contracts, on GAI's changed in one place per condition of the record of clause 2 of def:relay, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSNP, failing a condition each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Speech-act schema, printed from a contract's term (notation.glp); then the values speech-act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech-Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: GB, the bonds, Currencies' (programs/currencies/bonds/GB.glp), its verdict, its displays and its notation, a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity a positive whole number at every binding --- and a fixture of each malformation the passage forbids.  The federation extension of speech-act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20); GFWC's contract is still read from its owner's file.  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -80,7 +80,7 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 # roles' names, schema(Name, Names, Vars, Roles) or cschema(Name, Names,
 # Vars, [], Roles), Names the names of its roles in order and Vars its
 # variables in the order of its head (GSC, Section 2 and Definition
-# Speech act schema; GKK.glp, GSG.glp and GSN.glp at GLP ec7c578c and 523bbe23).
+# Speech-act schema; GKK.glp, GSG.glp and GSN.glp at GLP ec7c578c and 523bbe23).
 # The variants of a contract below write the schemas they add or change the
 # same way (contracts.glp, the header).
 # GKK, the base contract: establish, GKK:1, adds identity, requires nothing
@@ -234,7 +234,7 @@ check "GAI's contract is read from programs/gai/GAI.glp" \
 # So it is syntactically grassroots, and its realisation volitionally
 # grassroots by Theorem "Grassroots realisation".  Its signed terms, in
 # forward, post_forward and deliver, are each of an agent role that requires
-# an atom carrying the speech act (GAI's Definition Speech act schema), deliver's of
+# an atom carrying the speech act (GAI's Definition Speech-act schema), deliver's of
 # a role that does not guard; forward's and post's role Alice guards and adds
 # and deletes nothing; so GSNP is not malformed.
 out=$(run "check($SG, V)." "traceable_preds($SG, E).")
@@ -748,7 +748,7 @@ check_not "and no display is printed for it" "begin{align" "$out"
 # posted(sgn(x, Bob), n) at the leader and deliver adding item(sgn(y, Alice))
 # at the member.  Section 7.1 certifies it, each signed term counting as its
 # two arguments, the speech act and the role (def:grounded; GAI's
-# Definition Speech act schema).
+# Definition Speech-act schema).
 out=$(run "check($SG, V)." "traceable_preds($SG, E).")
 check "GSNP, carrying signed terms in forward, post_forward and deliver, is syntactically grassroots" \
       "V = syntactically_grassroots" "$out"
@@ -944,7 +944,7 @@ check "and the message names the fault, in the words of def:schema" \
       "sign at role 1 carries a signed term whose speech-act variable occurs in no atom its role requires; check_named gives the faults." \
       "$(printf '%s' "$out" | tr '\n' ' ')"
 
-# GAI's Definition Speech act schema admits a signed term sgn(y, pi) for pi an
+# GAI's Definition Speech-act schema admits a signed term sgn(y, pi) for pi an
 # agent role, in a schema written as a cschema too: sgn_community, sign
 # written as a cschema, is admitted, and has no introductory act; sgn_listed
 # signs at a listed role and is refused.
@@ -1285,7 +1285,7 @@ check "a listed role adding and deleting nothing is refused" \
 
 # --- listed roles formed otherwise (def:role) ------------------------------
 # close_b's listed role is of itself, no agent role; note_l's carries a
-# signed term among its arguments, which GAI's Definition Speech act schema admits
+# signed term among its arguments, which GAI's Definition Speech-act schema admits
 # only in an atom marked +; close_h's has an argument m its head does not list: the
 # contract is malformed, each fault named, and it is not compiled.
 out=$(run 'check_named(ls_faults, V).' 'compile_named(ls_faults).')
@@ -1309,7 +1309,7 @@ check "and it is not compiled, the message naming the faults" \
 
 # --- the notation (def:schema, def:numbers) --------------------------------
 # notation_contract prints a contract's schemas from its term in the notation
-# of Definition Speech act schema, def:schema of Section 3.2, a token to a line,
+# of Definition Speech-act schema, def:schema of Section 3.2, a token to a line,
 # an empty line ending a line of the text
 # (notation.glp; README, "The notation"); cascade.sh joins the tokens into a
 # record's schemas.txt, as notation() does here.  GSG's befriend is the schema
@@ -1320,7 +1320,7 @@ check "and it is not compiled, the message naming the faults" \
 # labelled by its role; GSN's close is Section 3.2's example of a listed
 # role (def:role), requiring the leader's membership (GSC f3e3f40), with
 # the identity the paper leaves out; GSNP's forward carries the signed term of GAI's
-# Definition Speech act schema; and sg_reflexive, GSG's variant, declares friend
+# Definition Speech-act schema; and sg_reflexive, GSG's variant, declares friend
 # reflexive.
 notation() { # notation <term> ; the text notation_contract prints, its tokens joined
   run "notation_contract($1)." | sed -e 's/^\(GLP> \)*//' | perl -ne '
@@ -1370,14 +1370,14 @@ forward(Alice?, Bob; x) :
     at Bob: identity, friend(Alice), +item(sgn(x, Alice))
 EOF
 )
-check_eq "GSNP's forward prints with the signed term of GAI's Definition Speech act schema" \
+check_eq "GSNP's forward prints with the signed term of GAI's Definition Speech-act schema" \
          "$forward_notation" "$(notation "$SG" | one_schema forward)"
 REFL=$(run "variant(sg_reflexive, $GSGT, C)." | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
 check_eq "a contract declaring friend reflexive prints the declaration first" \
          "Reflexive predicates: friend" "$(notation "$REFL" | head -1)"
 
-# --- Values (GSC, Section 3.2 and the appendix "Values in Speech Act Schemas") -----
-# "Speech act schemas allow values of any type: an argument of an atom may be a
+# --- Values (GSC, Section 3.2 and the appendix "Values in Speech-Act Schemas") -----
+# "Speech-act schemas allow values of any type: an argument of an atom may be a
 # value or a value variable, a schema may carry a constraint on its value
 # variables, which every binding satisfies, and an atom added or deleted may
 # carry a multiplicity, a count of copies and so a positive whole number ...
@@ -1396,7 +1396,7 @@ check_eq "a contract declaring friend reflexive prints the declaration first" \
 # instrument of Bob that Alice requires.  So it is syntactically grassroots.  A binding sends a
 # value variable to a value and a multiplicity to a positive whole number,
 # and an introduction chooses its own values (def:binding-numbers; the
-# appendix "Values in Speech Act Schemas"), and whether some choice meets the
+# appendix "Values in Speech-Act Schemas"), and whether some choice meets the
 # clauses is decided exactly, the constraints being linear (linear.glp).
 echo "--- numbers (GSC, Section 3.2 and its appendix) ---"
 GBT=$(term "$GLP_DIR/programs/currencies/bonds/GB.glp" gb)
@@ -1462,7 +1462,7 @@ check_eq "GB's twelve schemas print" "12" "$(printf '%s\n' "$gb_notation" | grep
 # binding sending t to 0, under t <= 3, set_date having Bob in no role;
 # nm_forbid_excludes's set_date adds it at no binding, under t > 3.  A
 # value of the introductory act is the introduction's to choose (the
-# appendix "Values in Speech Act Schemas"): in nm_intro_var score adds score(n)
+# appendix "Values in Speech-Act Schemas"): in nm_intro_var score adds score(n)
 # whatever the value, and in nm_intro_var_bounded where it is above 3, which
 # the introduction chooses.  nm_blocked's advance adds date(0) where t is
 # -1, a value, under t1 = t + 1, Bob in no role: obstructed.  A multiplicity
