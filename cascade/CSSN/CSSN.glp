@@ -1,4 +1,5 @@
 %% ---------------------------------------------------------------------------
+%% 2026-10-25: the two parent roles of child_meet_2, child_befriend and child_join_2 may be one person, GnW:2's 'Alice and Dave possibly one person' (GLP fa95b06c), written one('Bob', 'Alice') in the head (GSC 316d875, on CSSN #12's proposal, Udi approving).  The term names its roles by the clause's words, schema(Name, Names, Vars, Roles), as GSC's three .glp do at GLP ec7c578c (Udi, to GSC #8; Code #16, 08:48 UTC): Alice and Bob adults, Carol and Dave children, the box's declaration; Carol's parent Alice, Dave's Bob (CSSN #12 Cowork).
 %% CSSN.glp --- the child-safe social network, CSSN's (Udi, 2026-10-18; Coordination, to_all 2026-10-18 19:23 UTC), in the term form programs/gsc reads (its README, "Writing a contract"), for programs/vglp/cva/compiler to compile into its canonical CVA platform (CSSN, Section 4.6.1, "The program"; Appendix C.5).  compile.sh beside this file has GSC's checker give its verdict and then runs the compiler on it.  The clauses are in CSSN.txt beside this file; CSSN extends GSN, GSC's, and through it GSG and GKK, GSC's, and GnW, Guardians 'n' Wards, GAI's (Udi, 2026-10-20; until then GSNP and Wards, GnW's name until that day), so the term holds GSN's fourteen schemas (programs/gsc/GSN.glp: GKK's establish, meet and introduce, GSG's befriend and unfriend, message and the seven of a group), with child forbidden at both roles of meet, at the role of introduce of the agent who comes to know (CSSN:2), at both roles of befriend and of join (the leader's by CSSN:6), and fifteen schemas for children, which realise GnW (CSSN, Appendix B.2; the tables in Appendix C.2, sections/artefact-schemas.tex).  Written by CSSN #5 Cowork, 2026-10-18; GSNP's schemas brought to GLP 88cb0c45 by CSSN #6 Cowork, 2026-10-19: a group is the community name <a>.n, and a schema's second argument lists its variables in the order of its head; close and child_close take the listed role a[listed(*, n)], every member the leader lists, as GSNP.glp's close does at GLP 542ec8ca (GSC, Appendices D.4 and F, at GSC 8064cfb), by CSSN #7 Cowork, 2026-10-19.  After GKK (Udi, 2026-10-20, to GSC #5; GSG.glp at GLP 883a7533), by CSSN #9 Cowork, 2026-10-20: meet, introduce and knows; befriend, child_befriend and child_adult_befriend requiring that the two know each other; enter and enter_2 adding knows between the parents and the child, and enter_2 requiring that the two parents know each other; and child_meet and child_meet_2, CSSN:2, Meeting of a child (Udi, 2026-10-20, approving CSSN #9's proposal): a child comes to know an agent only by an act of both and of a parent who knows the agent, two children by an act of both and of a parent of each, the parents knowing each other.
 %% Any number of parents (Udi, 2026-10-24, with CSSN #10 Cowork): the creator of a child, who enters them, makes an adult they know a parent (make_parent, an act of the three) and ends that parenthood (end_parent); the creator's declaration of age (of_age) and retiring (retire) end every guardianship through the listed role of every parent the creator made, the friendships remaining; the child records only its creator (creator), each parent their own parenthood (parenting), the creator the parents they made (made); enter_2, of_age_2, parent_unfriend, parent_unfriend_2, parent, coparent and coparented are gone; every child act's parent role requires parenting of the child, and its child role child.  Twenty-eight schemas over sixteen predicates.
 %%
@@ -22,7 +23,9 @@ RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
-Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs).
+Name      ::= Constant ; one(Constant, Constant).
+Names     ::= [] ; [Name | Names].
+Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
@@ -50,16 +53,16 @@ app([X|Xs], Ys, [X?|Zs?]) :- app(Xs?, Ys?, Zs).
 procedure gsn_schemas(Contract).
 gsn_schemas([
 %% GKK:1, Identity.
-    schema(establish, [],
+    schema(establish, ['Alice'], [],
       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, []), atom(retired, [])])]),
 %% GKK:2, Meeting, for two persons: a child comes to know an agent only by child_meet or child_meet_2 (CSSN:2).
-    schema(meet, [],
+    schema(meet, ['Alice', 'Bob'], [],
       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])],
                    [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])],
                    [atom(child, []), atom(retired, [])])]),
 %% GKK:3, Introduction: the agent who comes to know, role 2, is not a child (CSSN:2); the agent introduced, c, takes no part.
-    schema(introduce, [pvar(c)],
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
       [rs(guarded, [], [],
                    [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])],
                    [atom(retired, [])]),
@@ -67,28 +70,28 @@ gsn_schemas([
                    [atom(identity, []), atom(knows, [role(1)])],
                    [atom(child, []), atom(retired, [])])]),
 %% GSG:1, Friendship, for two persons who know each other.
-    schema(befriend, [],
+    schema(befriend, ['Alice', 'Bob'], [],
       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])],
                    [atom(child, []), atom(friend, [role(2)]), atom(retired, [])]),
        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])],
                    [atom(child, []), atom(friend, [role(1)]), atom(retired, [])])]),
 %% GSG:2, Ending a friendship, but for that of a parent and their child.
-    schema(unfriend, [],
+    schema(unfriend, ['Alice', 'Bob'], [],
       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])],
                      [atom(creator, [role(2)]), atom(parenting, [role(2)]), atom(retired, [])]),
        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
 %% GSN:1, Message.
-    schema(message, [svar(x)],
+    schema(message, ['Alice', 'Bob'], [svar(x)],
       [rs(guarded,   [], [], [atom(identity, []), atom(friend, [role(2)])], [atom(retired, [])]),
        rs(unguarded, [atom(received, [svar(x), role(1)])], [],
                      [atom(identity, [])], [])]),
 %% GSN:2, Group.
-    schema(create, [svar(n)],
+    schema(create, ['Alice'], [svar(n)],
       [rs(guarded, [atom(member, [nterm(ext(own(1), n))]),
                     atom(listed, [role(1), svar(n)])], [], [atom(identity, [])],
                    [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)]), atom(retired, [])])]),
 %% GSN:3, Joining, with CSSN:6, A child's group.
-    schema(join, [svar(n)],
+    schema(join, ['Alice', 'Bob'], [svar(n)],
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])],
                    [atom(child, []), atom(retired, [])]),
@@ -97,33 +100,33 @@ gsn_schemas([
                    [atom(child, []), atom(member, [nterm(ext(own(1), n))]), atom(retired, [])])]),
 %% GSN:4, Leaving: a member leaves; the leader leaving ends the group; a
 %% member who is not a friend of the leader is removed.
-    schema(leave, [svar(n)],
+    schema(leave, ['Alice', 'Bob'], [svar(n)],
       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
        rs(guarded,   [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [atom(retired, [])])]),
 %% The listed role is every member the leader lists, the leader among them,
 %% so closing a group ends every membership in one act (GSC, Appendix D.4).
-    cschema(close, [svar(n)], [],
+    cschema(close, ['Alice', 'Alice'], [svar(n)], [],
       [rs(guarded, [atom(closed, [svar(n)])],
                    [atom(listed, [role(1), svar(n)])], [atom(identity, [])], [atom(retired, [])]),
        crs(listed(1, listed, [svar(n)]), unguarded,
            [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-    schema(drop, [svar(n)],
+    schema(drop, ['Alice', 'Bob'], [svar(n)],
       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]),
        rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
 %% GSN:5, Group message: the leader's own, a member's sent to the leader, and
 %% the leader delivering it to every member.
-    schema(post_own, [svar(x), svar(n)],
+    schema(post_own, ['Alice'], [svar(x), svar(n)],
       [rs(guarded, [atom(posted, [svar(x), svar(n)])], [],
                    [atom(identity, []), atom(member, [nterm(ext(own(1), n))])],
                    [atom(posted, [svar(x), svar(n)]), atom(retired, [])])]),
-    schema(post, [svar(x), svar(n)],
+    schema(post, ['Bob', 'Alice'], [svar(x), svar(n)],
       [rs(guarded,   [], [],
                      [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], [atom(retired, [])]),
        rs(unguarded, [atom(posted, [svar(x), svar(n)])], [],
                      [atom(identity, []), atom(member, [nterm(ext(own(2), n))]),
                       atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])],
                      [atom(posted, [svar(x), svar(n)])])]),
-    schema(deliver, [svar(x), svar(n)],
+    schema(deliver, ['Alice', 'Bob'], [svar(x), svar(n)],
       [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [],
                      [atom(identity, []), atom(member, [nterm(ext(own(1), n))]),
                       atom(posted, [svar(x), svar(n)]),
@@ -135,14 +138,14 @@ gsn_schemas([
 %% The fifteen schemas for children, realising GnW with CSSN:1 to CSSN:4.
 procedure children_schemas(Contract).
 children_schemas([
-    schema(enter, [],
+    schema(enter, ['Alice', 'Carol'], [],
       [rs(guarded, [atom(created, [role(2)]), atom(parenting, [role(2)]),
                     atom(friend, [role(2)]), atom(knows, [role(2)])], [],
                    [atom(identity, [])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(identity, []), atom(child, []), atom(creator, [role(1)]),
                     atom(friend, [role(1)]), atom(knows, [role(1)])], [],
                    [], [atom(identity, []), atom(retired, [])])]),
-    schema(make_parent, [],
+    schema(make_parent, ['Alice', 'Bob', 'Carol'], [],
       [rs(guarded, [atom(made, [role(2), role(3)])], [],
                    [atom(identity, []), atom(created, [role(3)]), atom(knows, [role(2)])],
                    [atom(child, []), atom(made, [role(2), role(3)]), atom(retired, [])]),
@@ -152,26 +155,26 @@ children_schemas([
        rs(guarded, [atom(knows, [role(2)])], [],
                    [atom(identity, []), atom(child, []), atom(creator, [role(1)])],
                    [atom(retired, [])])]),
-    schema(end_parent, [pvar(r)],
+    schema(end_parent, ['Alice', 'Bob'], [pvar(r)],
       [rs(guarded, [], [atom(made, [role(2), pvar(r)])],
                    [atom(identity, []), atom(created, [pvar(r)])], [atom(retired, [])]),
        rs(unguarded, [], [atom(parenting, [pvar(r)])],
                      [atom(identity, [])], [atom(created, [pvar(r)])])]),
-    cschema(of_age, [], [],
+    cschema(of_age, ['Alice', 'Carol', 'Alice'], [], [],
       [rs(guarded, [], [atom(created, [role(2)]), atom(parenting, [role(2)])],
                    [atom(identity, [])], [atom(retired, [])]),
        rs(unguarded, [], [atom(child, []), atom(creator, [role(1)])],
                      [atom(identity, [])], []),
        crs(listed(1, made, [role(2)]), unguarded,
            [], [atom(parenting, [role(2)])], [atom(identity, [])], [atom(created, [role(2)])])]),
-    cschema(retire, [], [],
+    cschema(retire, ['Alice', 'Carol', 'Alice'], [], [],
       [rs(guarded, [], [atom(created, [role(2)]), atom(parenting, [role(2)])],
                    [atom(identity, [])], [atom(retired, [])]),
        rs(unguarded, [atom(retired, [])], [atom(child, []), atom(creator, [role(1)])],
                      [atom(identity, [])], []),
        crs(listed(1, made, [role(2)]), unguarded,
            [], [atom(parenting, [role(2)])], [atom(identity, [])], [atom(created, [role(2)])])]),
-    schema(child_meet, [],
+    schema(child_meet, ['Carol', 'Bob', 'Alice'], [],
       [rs(guarded, [atom(knows, [role(2)])], [],
                    [atom(identity, []), atom(child, [])], [atom(retired, [])]),
        rs(guarded, [atom(knows, [role(1)])], [],
@@ -179,7 +182,7 @@ children_schemas([
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)]), atom(knows, [role(2)])],
                    [atom(child, []), atom(retired, [])])]),
-    schema(child_meet_2, [],
+    schema(child_meet_2, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [],
       [rs(guarded, [atom(knows, [role(2)])], [],
                    [atom(identity, []), atom(child, [])], [atom(retired, [])]),
        rs(guarded, [atom(knows, [role(1)])], [],
@@ -190,7 +193,7 @@ children_schemas([
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(2)]), atom(knows, [role(3)])],
                    [atom(child, []), atom(retired, [])])]),
-    schema(child_befriend, [],
+    schema(child_befriend, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [],
       [rs(guarded, [atom(friend, [role(2)])], [],
                    [atom(identity, []), atom(child, []), atom(knows, [role(2)])],
                    [atom(friend, [role(2)]), atom(retired, [])]),
@@ -203,7 +206,7 @@ children_schemas([
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])],
                    [atom(child, []), atom(retired, [])])]),
-    schema(child_adult_befriend, [],
+    schema(child_adult_befriend, ['Carol', 'Bob', 'Alice'], [],
       [rs(guarded, [atom(friend, [role(2)])], [],
                    [atom(identity, []), atom(child, []), atom(knows, [role(2)])],
                    [atom(friend, [role(2)]), atom(retired, [])]),
@@ -213,14 +216,14 @@ children_schemas([
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
                    [atom(child, []), atom(retired, [])])]),
-    schema(child_unfriend, [],
+    schema(child_unfriend, ['Carol', 'Bob', 'Alice'], [],
       [rs(unguarded, [], [atom(friend, [role(2)])],
                      [atom(identity, []), atom(child, [])], []),
        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])],
                      [atom(parenting, [role(1)])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])])]),
-    schema(child_join, [svar(n)],
+    schema(child_join, ['Bob', 'Carol', 'Alice'], [svar(n)],
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])],
                    [atom(child, []), atom(retired, [])]),
@@ -229,7 +232,7 @@ children_schemas([
                    [atom(member, [nterm(ext(own(1), n))]), atom(retired, [])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]),
-    schema(child_join_2, [svar(n)],
+    schema(child_join_2, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [svar(n)],
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(child, []), atom(member, [nterm(ext(own(1), n))]),
                     atom(friend, [role(2)])], [atom(retired, [])]),
@@ -240,14 +243,14 @@ children_schemas([
                    [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]),
-    schema(child_leave, [svar(n)],
+    schema(child_leave, ['Bob', 'Carol', 'Alice'], [svar(n)],
       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])],
                      [atom(identity, [])], []),
        rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])],
                      [atom(identity, []), atom(child, [])], []),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]),
-    cschema(child_close, [svar(n)], [],
+    cschema(child_close, ['Carol', 'Alice', 'Carol'], [svar(n)], [],
       [rs(unguarded, [atom(closed, [svar(n)])],
                      [atom(listed, [role(1), svar(n)])],
                      [atom(identity, []), atom(child, [])], []),

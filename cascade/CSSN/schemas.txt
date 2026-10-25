@@ -45,17 +45,17 @@ drop(Alice, Bob; n) :
 post_own(Alice?; x, n) :
     at Alice: identity, member(<Alice>.n), not posted(x, n), not retired, +posted(x, n)
 
-post(Alice?, Bob; x, n) :
-    at Alice: identity, member(<Bob>.n), not retired
-    at Bob: identity, member(<Bob>.n), listed(Alice, n), friend(Alice), not posted(x, n), +posted(x, n)
+post(Bob?, Alice; x, n) :
+    at Bob: identity, member(<Alice>.n), not retired
+    at Alice: identity, member(<Alice>.n), listed(Bob, n), friend(Bob), not posted(x, n), +posted(x, n)
 
 deliver(Alice, Bob; x, n) :
     at Alice: identity, member(<Alice>.n), posted(x, n), listed(Bob, n), friend(Bob), not delivered(x, Bob, n), +delivered(x, Bob, n)
     at Bob: identity, member(<Alice>.n), +received_in(x, Alice, n)
 
-enter(Alice?, Bob?) :
-    at Alice: identity, not child, not retired, +created(Bob), +parenting(Bob), +friend(Bob), +knows(Bob)
-    at Bob: not identity, not retired, +identity, +child, +creator(Alice), +friend(Alice), +knows(Alice)
+enter(Alice?, Carol?) :
+    at Alice: identity, not child, not retired, +created(Carol), +parenting(Carol), +friend(Carol), +knows(Carol)
+    at Carol: not identity, not retired, +identity, +child, +creator(Alice), +friend(Alice), +knows(Alice)
 
 make_parent(Alice?, Bob?, Carol?) :
     at Alice: identity, created(Carol), knows(Bob), not child, not made(Bob, Carol), not retired, +made(Bob, Carol)
@@ -66,60 +66,60 @@ end_parent(Alice?, Bob; r) :
     at Alice: identity, created(r), not retired, -made(Bob, r)
     at Bob: identity, not created(r), -parenting(r)
 
-of_age(Alice?, Bob, Alice[made(*, Bob)]) :
-    at Alice: identity, not retired, -created(Bob), -parenting(Bob)
-    at Bob: identity, -child, -creator(Alice)
-    at Alice[made(*, Bob)]: identity, not created(Bob), -parenting(Bob)
+of_age(Alice?, Carol, Alice[made(*, Carol)]) :
+    at Alice: identity, not retired, -created(Carol), -parenting(Carol)
+    at Carol: identity, -child, -creator(Alice)
+    at Alice[made(*, Carol)]: identity, not created(Carol), -parenting(Carol)
 
-retire(Alice?, Bob, Alice[made(*, Bob)]) :
-    at Alice: identity, not retired, -created(Bob), -parenting(Bob)
-    at Bob: identity, +retired, -child, -creator(Alice)
-    at Alice[made(*, Bob)]: identity, not created(Bob), -parenting(Bob)
+retire(Alice?, Carol, Alice[made(*, Carol)]) :
+    at Alice: identity, not retired, -created(Carol), -parenting(Carol)
+    at Carol: identity, +retired, -child, -creator(Alice)
+    at Alice[made(*, Carol)]: identity, not created(Carol), -parenting(Carol)
 
-child_meet(Alice?, Bob?, Carol?) :
-    at Alice: identity, child, not retired, +knows(Bob)
-    at Bob: identity, not child, not retired, +knows(Alice)
-    at Carol: identity, parenting(Alice), knows(Bob), not child, not retired
+child_meet(Carol?, Bob?, Alice?) :
+    at Carol: identity, child, not retired, +knows(Bob)
+    at Bob: identity, not child, not retired, +knows(Carol)
+    at Alice: identity, parenting(Carol), knows(Bob), not child, not retired
 
-child_meet_2(Alice?, Bob?, Carol?, Dave?) :
-    at Alice: identity, child, not retired, +knows(Bob)
-    at Bob: identity, child, not retired, +knows(Alice)
-    at Carol: identity, parenting(Alice), knows(Dave), not child, not retired
-    at Dave: identity, parenting(Bob), knows(Carol), not child, not retired
+child_meet_2(Carol?, Dave?, Alice?, one(Bob, Alice)?) :
+    at Carol: identity, child, not retired, +knows(Dave)
+    at Dave: identity, child, not retired, +knows(Carol)
+    at Alice: identity, parenting(Carol), knows(one(Bob, Alice)), not child, not retired
+    at one(Bob, Alice): identity, parenting(Dave), knows(Alice), not child, not retired
 
-child_befriend(Alice?, Bob?, Carol?, Dave?) :
-    at Alice: identity, child, knows(Bob), not friend(Bob), not retired, +friend(Bob)
-    at Bob: identity, child, knows(Alice), not friend(Alice), not retired, +friend(Alice)
-    at Carol: identity, parenting(Alice), friend(Dave), not child, not retired
-    at Dave: identity, parenting(Bob), friend(Carol), not child, not retired
+child_befriend(Carol?, Dave?, Alice?, one(Bob, Alice)?) :
+    at Carol: identity, child, knows(Dave), not friend(Dave), not retired, +friend(Dave)
+    at Dave: identity, child, knows(Carol), not friend(Carol), not retired, +friend(Carol)
+    at Alice: identity, parenting(Carol), friend(one(Bob, Alice)), not child, not retired
+    at one(Bob, Alice): identity, parenting(Dave), friend(Alice), not child, not retired
 
-child_adult_befriend(Alice?, Bob?, Carol?) :
-    at Alice: identity, child, knows(Bob), not friend(Bob), not retired, +friend(Bob)
-    at Bob: identity, knows(Alice), not child, not friend(Alice), not retired, +friend(Alice)
-    at Carol: identity, parenting(Alice), friend(Bob), not child, not retired
+child_adult_befriend(Carol?, Bob?, Alice?) :
+    at Carol: identity, child, knows(Bob), not friend(Bob), not retired, +friend(Bob)
+    at Bob: identity, knows(Carol), not child, not friend(Carol), not retired, +friend(Carol)
+    at Alice: identity, parenting(Carol), friend(Bob), not child, not retired
 
-child_unfriend(Alice, Bob, Carol?) :
-    at Alice: identity, child, -friend(Bob)
-    at Bob: identity, not parenting(Alice), -friend(Alice)
-    at Carol: identity, parenting(Alice), not child, not retired
+child_unfriend(Carol, Bob, Alice?) :
+    at Carol: identity, child, -friend(Bob)
+    at Bob: identity, not parenting(Carol), -friend(Carol)
+    at Alice: identity, parenting(Carol), not child, not retired
 
-child_join(Alice?, Bob?, Carol?; n) :
-    at Alice: identity, member(<Alice>.n), friend(Bob), not child, not retired, +listed(Bob, n)
-    at Bob: identity, child, not member(<Alice>.n), not retired, +member(<Alice>.n)
-    at Carol: identity, parenting(Bob), not child, not retired
+child_join(Bob?, Carol?, Alice?; n) :
+    at Bob: identity, member(<Bob>.n), friend(Carol), not child, not retired, +listed(Carol, n)
+    at Carol: identity, child, not member(<Bob>.n), not retired, +member(<Bob>.n)
+    at Alice: identity, parenting(Carol), not child, not retired
 
-child_join_2(Alice?, Bob?, Carol?, Dave?; n) :
-    at Alice: identity, child, member(<Alice>.n), friend(Bob), not retired, +listed(Bob, n)
-    at Bob: identity, child, not member(<Alice>.n), not retired, +member(<Alice>.n)
-    at Carol: identity, parenting(Alice), not child, not retired
-    at Dave: identity, parenting(Bob), not child, not retired
+child_join_2(Carol?, Dave?, Alice?, one(Bob, Alice)?; n) :
+    at Carol: identity, child, member(<Carol>.n), friend(Dave), not retired, +listed(Dave, n)
+    at Dave: identity, child, not member(<Carol>.n), not retired, +member(<Carol>.n)
+    at Alice: identity, parenting(Carol), not child, not retired
+    at one(Bob, Alice): identity, parenting(Dave), not child, not retired
 
-child_leave(Alice, Bob, Carol?; n) :
-    at Alice: identity, -listed(Bob, n)
-    at Bob: identity, child, -member(<Alice>.n)
-    at Carol: identity, parenting(Bob), not child, not retired
+child_leave(Bob, Carol, Alice?; n) :
+    at Bob: identity, -listed(Carol, n)
+    at Carol: identity, child, -member(<Bob>.n)
+    at Alice: identity, parenting(Carol), not child, not retired
 
-child_close(Alice, Bob?, Alice[listed(*, n)]; n) :
-    at Alice: identity, child, +closed(n), -listed(Alice, n)
-    at Bob: identity, parenting(Alice), not child, not retired
-    at Alice[listed(*, n)]: identity, -member(<Alice>.n)
+child_close(Carol, Alice?, Carol[listed(*, n)]; n) :
+    at Carol: identity, child, +closed(n), -listed(Carol, n)
+    at Alice: identity, parenting(Carol), not child, not retired
+    at Carol[listed(*, n)]: identity, -member(<Carol>.n)
