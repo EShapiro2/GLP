@@ -14,7 +14,7 @@
 Class ::=
 establish(Peer)
 ;
-meet(Peer, Peer)
+acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 .
@@ -22,7 +22,7 @@ introduce(Peer, Peer, Peer)
 Proposal ::=
 establish(Peer)
 ;
-meet(Peer, Peer)
+acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 .
@@ -31,7 +31,7 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract's pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs, Is), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, Gs the groups it names, group(J, K), the leader at place J and the group's name at place K, which a group the view lists fills, and Is the items it names, item(K, P), the speech act at place K, which a row of the list of the predicate P fills; meeting(F, I) for a meeting schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").
 Approval =::= approval_sentence.
-Menu =::= social_menu([label(establish, "Establish"), act(establish, "Contacts", 1, [], [], [forb(identity, [])]), label(meet, "Meet"), label(meet, 2, "person"), act(meet, "Contacts", 1, [2], [], [req(identity, []), proved(identity, [], knows, [at(2)])]), meeting(meet, 2), label(introduce, "Introduce"), label(introduce, 3, "person"), act(introduce, "Contacts", 1, [2], [], [item(2, knows), req(identity, []), req(knows, [at(2)]), req(knows, [at(3)]), proved(identity, [], knows, [at(2)]), proved(knows, [v], knows, [at(2)])])])
+Menu =::= social_menu([label(establish, "Establish"), act(establish, "Contacts", 1, [], [], [forb(identity, [])]), label(acquaint, "Acquaint"), label(acquaint, 2, "person"), act(acquaint, "Contacts", 1, [2], [], [req(identity, []), proved(identity, [], knows, [at(2)])]), meeting(acquaint, 2), label(introduce, "Introduce"), label(introduce, 3, "person"), act(introduce, "Contacts", 1, [2], [], [item(2, knows), req(identity, []), req(knows, [at(2)]), req(knows, [at(3)]), proved(identity, [], knows, [at(2)]), proved(knows, [v], knows, [at(2)])])])
 .
 
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(List(Atom), List(Key), List(Approved)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
@@ -49,13 +49,13 @@ atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
 schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]))
 .
-schema_entry(meet, schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]))
+schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]))
 .
 schema_entry(introduce, schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
@@ -75,7 +75,7 @@ introduction_preds([])
 procedure binding_of(Class?, Constant, Binding).
 binding_of(establish(V1), establish, [b(role(1), p(V1?))])
 .
-binding_of(meet(V1, V2), meet, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+binding_of(acquaint(V1, V2), acquaint, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(c), p(V3?))])
 .
@@ -89,7 +89,7 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 .
-class_of(meet, B, D, meet(V1?, V2?))
+class_of(acquaint, B, D, acquaint(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -115,7 +115,7 @@ val_peer(pvar(c), B?, D?, V3)
 procedure name_class(Proposal?, GAtoms?, Class).
 name_class(establish(V1), _, establish(V1?))
 .
-name_class(meet(V1, V2), _, meet(V1?, V2?))
+name_class(acquaint(V1, V2), _, acquaint(V1?, V2?))
 .
 name_class(introduce(V1, V2, V3), _, introduce(V1?, V2?, V3?))
 .
@@ -123,7 +123,7 @@ name_class(introduce(V1, V2, V3), _, introduce(V1?, V2?, V3?))
 procedure request_name(Class?, PName).
 request_name(establish(V1), pname(establish(V1?)))
 .
-request_name(meet(V1, V2), pname(meet(V1?, V2?)))
+request_name(acquaint(V1, V2), pname(acquaint(V1?, V2?)))
 .
 request_name(introduce(V1, V2, V3), pname(introduce(V1?, V2?, V3?)))
 .
@@ -136,7 +136,7 @@ tabs([tab("Contacts", knows)])
 
 %% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer's that Me is in, its persons filled in from the binding C names; none, [], where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).
 procedure sentence_of(Class?, Peer?, List(Word)).
-sentence_of(meet(V1, V2), Me, Ws?)
+sentence_of(acquaint(V1, V2), Me, Ws?)
 :-
 ground(V2?)
 ,
@@ -162,7 +162,7 @@ sentence_of(_, _, []) :- otherwise | true.
 
 %% The peer a request name N of a meeting part names beside the agent Me, peer(Q), or none, nopeer: the meeting schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
-meeting_peer(meet(V1, V2), Me, P?)
+meeting_peer(acquaint(V1, V2), Me, P?)
 :-
 ground(V1?)
 ,
