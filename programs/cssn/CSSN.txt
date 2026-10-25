@@ -36,5 +36,8 @@ Joining: Carol [Child join] <person>
   Dave: Carol asks you to join their group.
   Alice: Carol asks that Dave join their group.
   Bob: Carol asks that your child Dave join their group.
+  Bob [Child join] <person>
+  Carol: Bob asks you to join their group.
+  Alice: Bob asks that Carol join their group.
 Ending a relation: Alice [Child unfriend] [Child leave] [Child close]
 Retiring: Alice [Retire]
