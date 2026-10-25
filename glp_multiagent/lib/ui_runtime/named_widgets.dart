@@ -1002,13 +1002,20 @@ class ActInfo {
   final List<({String pred, List<Object?> args})> unless;
   /// The atoms of the viewer's state from which the schemas prove that the person at a place holds an atom its role requires, each with the atom it proves, [proves], `proved(Q, Ws, P, As)`: the place offers only a person for whom, for each such atom, the viewer holds an atom matching one of its entries (vGLP 3ec07a2, Section 6.2, "The words a platform shows": "where the place's role requires an atom that the schemas prove of a person from the viewer's records, as above, only a person so proved is offered").
   final List<({String proves, String pred, List<Object?> args})> proved;
+  /// The pairs of places possibly one person, `same(K, J)`: a field offers that person for both (GSC 316d875, Section 2; vGLP, Section 6.2).
+  final List<(int, int)> same;
+
+  /// Whether the places [i] and [j] may hold one person.
+  bool mayShare(int i, int j) =>
+      same.any((p) => (p.$1 == i && p.$2 == j) || (p.$1 == j && p.$2 == i));
 
   const ActInfo(this.tab, this.me, this.persons, this.groups, this.items,
       this.keys, this.words,
       [this.held = const [],
       this.conds = const [],
       this.unless = const [],
-      this.proved = const []]);
+      this.proved = const [],
+      this.same = const []]);
 
   /// The places the atoms of [held] fill.
   Set<int> get heldPlaces => {
@@ -1026,9 +1033,12 @@ class ActInfo {
     final conds = <({bool forbids, String pred, List<Object?> args})>[];
     final unless = <({String pred, List<Object?> args})>[];
     final proved = <({String proves, String pred, List<Object?> args})>[];
+    final same = <(int, int)>[];
     for (final it in (xs0[4] as GList).items) {
       final (itf, itxs) = ctorArgs(it);
-      if (itf == 'proved' &&
+      if (itf == 'same' && itxs.length == 2 && itxs[0] is GInt && itxs[1] is GInt) {
+        same.add(((itxs[0] as GInt).value, (itxs[1] as GInt).value));
+      } else if (itf == 'proved' &&
           itxs.length == 4 &&
           itxs[1] is GList &&
           itxs[3] is GList) {
@@ -1117,7 +1127,7 @@ class ActInfo {
       }
     }
     return ActInfo(
-        displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless, proved);
+        displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless, proved, same);
   }
 
   /// Whether the viewer's state [atoms] proves of [x], at the place [k], each atom the act requires at that place's role that the schemas prove from the viewer's records ([proved]): for each, the viewer holds an atom matching one of its entries with [x] at [k].
@@ -2707,14 +2717,19 @@ class _SocialTabState extends State<SocialTab> {
   bool _placesPickable(SocialState s, ActInfo a, GTerm me,
       {Map<int, GTerm> filled = const {}}) {
     final hp = a.heldPlaces.difference({...a.persons, ...a.itemPlaces, ...a.keys});
-    final taken = {for (final x in filled.values) formatTerm(x)};
     for (final k in a.persons) {
       if (k == a.me || a.keys.contains(k) || hp.contains(k) || filled.containsKey(k)) continue;
+      // Distinct roles are bound to distinct persons, but two the clause says are possibly one person (GSC 316d875, Section 2; vGLP, Section 6.2).
+      final taken = {
+        for (final e in filled.entries)
+          if (!a.mayShare(k, e.key)) formatTerm(e.value)
+      };
+      final withMe = a.mayShare(k, a.me);
       final preds = [for (final (kk, p) in a.items) if (kk == k) p];
       // Where the place's role requires an atom the schemas prove from the viewer's records, only a person so proved (vGLP 3ec07a2, Section 6.2).
       // Distinct roles are bound to distinct persons: a field offers no person of the act's other places (vGLP 516a0a2, Section 6.2).
       final some = preds.isEmpty
-          ? _knownPickable(s, me).any((x) =>
+          ? [..._knownPickable(s, me), if (withMe) me].any((x) =>
               !taken.contains(formatTerm(x)) && a.provedAt(s.atoms, k, x))
           : preds.any((p) => _pickableItems(s, p, person: true, me: me).any(
               (x) => !taken.contains(formatTerm(x)) && a.provedAt(s.atoms, k, x)));
@@ -2729,9 +2744,9 @@ class _SocialTabState extends State<SocialTab> {
   }
 
   /// Whether [p] is picked at a place of the composer [composer] other than [i], distinct roles being bound to distinct persons: "A field that takes a person offers the persons the viewer knows ... other than the viewer and the persons of the act's other places, since distinct roles are bound to distinct persons" (vGLP 516a0a2, Section 6.2).
-  bool _pickedElsewhere(String composer, int i, GTerm p, List<int> places) {
+  bool _pickedElsewhere(String composer, int i, GTerm p, List<int> places, ActInfo a) {
     for (final j in places) {
-      if (j == i) continue;
+      if (j == i || a.mayShare(i, j)) continue;
       final q = _picked['$composer:$j'];
       if (q != null && formatTerm(q) == formatTerm(p)) return true;
     }
@@ -2962,9 +2977,9 @@ class _SocialTabState extends State<SocialTab> {
           for (final i in picks)
             Wrap(spacing: 6, runSpacing: 4, children: [
               Text(o.field(f, n, i), style: small),
-              for (final p in _knownPickable(s, me))
-                if ((item == null || formatTerm(p) != formatTerm(item)) &&
-                    !_pickedElsewhere(composer, i, p, picks) &&
+              for (final p in [..._knownPickable(s, me), if (a.mayShare(i, a.me)) me])
+                if ((item == null || formatTerm(p) != formatTerm(item) || a.items.any((x) => a.mayShare(i, x.$1))) &&
+                    !_pickedElsewhere(composer, i, p, picks, a) &&
                     a.provedAt(s.atoms, i, p))
                   ChoiceChip(
                     key: socialKey(_id, 'pick:$composer:$i:${formatTerm(p)}'),

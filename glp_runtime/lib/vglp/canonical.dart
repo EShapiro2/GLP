@@ -1654,6 +1654,13 @@ class DeclaredWidget {
             '${constantSource(pc)}, [${as_.join(', ')}])');
         continue;
       }
+      // Two places possibly one person, same(K, J) (GSC 316d875, Section 2).
+      if (x is StructTerm && x.functor == 'same' && x.args.length == 2) {
+        final k = _int(x.args[0]), j = _int(x.args[1]);
+        if (k == null || j == null) return null;
+        is_.add('same($k, $j)');
+        continue;
+      }
       if (x is! StructTerm || x.args.length != 2) return null;
       final p = x.functor == 'item' ? x.args[1] : x.args[0];
       final pc = _labelConstant(p);

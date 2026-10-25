@@ -1099,27 +1099,38 @@ act_entry(S, Hd, Rs, Fs, T, By, Lp, Rf, L?) :- ground(S?), ground(Hd?), ground(R
     named_places(Fp?, Fs?, Ws?, Named),
     guard_roles(Rs?, 1, Gr0),
     proposer_roles(By?, Gr0?, Gr),
+    same_places(By?, Sm),
     spec_args(Rs?, As),
-    act_entries(Gr?, S?, T?, Vs?, Named?, As?, Rs?, Lp?, Rf?, L).
+    act_entries(Gr?, S?, T?, Vs?, Named?, As?, Rs?, Lp?, Rf?, Sm?, L).
 %% The guarding roles at which the act is proposed, by(Gs), as pragmas.sh reads them, each one whose every other guarding role has a question (vGLP 3ec07a2, Section 5.4, "The contract's words": "A guarding role with no question is never asked, so an act is proposed only at a guarding role whose every other guarding role has a question"; Section 6.2, "The words a platform shows": "The request widget offers an act only where the person's machine can propose it, and at a guarding role at which the act is proposed"), the proposer a line in GSC's form names (GSC, Section 2, its first paragraph); each guarding role, any, where the scripts gave no contract term.
 procedure proposer_roles(Proposer?, Ints?, Ints).
 proposer_roles(any, Gr, Gr?).
 proposer_roles(by(Gs), _, Gs?).
+proposer_roles(by(Gs, _), _, Gs?).
+%% The pairs of places possibly one person (GSC 316d875, Section 2: "a clause that admits one person in both writes 'Alice and Bob, possibly one person'"), printed in each act entry, same(K, J), a field offering one person for both (vGLP, Section 6.2).
+procedure same_places(Proposer?, ItemPlaces).
+same_places(any, []).
+same_places(by(_), []).
+same_places(by(_, Ss), Is?) :- ground(Ss?) | sames_items(Ss?, Is).
+procedure sames_items(Sames?, ItemPlaces).
+sames_items([], []).
+sames_items([same(K, J)|Ss], [same(K?, J?)|Is?]) :- sames_items(Ss?, Is).
 %% An entry for each guarding role at which the act is proposed (proposer_roles), its person proposing the act (vGLP 3ec07a2, Section 6.2, "The words a platform shows": "The request widget offers an act only where the person's machine can propose it, and at a guarding role at which the act is proposed").
-procedure act_entries(Ints?, Constant?, String?, Args?, Ints?, Args?, RoleSpecs?, Preds?, DrawCtx?, Stream(_)).
-act_entries([], _, _, _, _, _, _, _, _, []).
-act_entries([G|Gs], S, T, Vs, Named, As, Rs, Lp, Rf, [E?|L?]) :- integer(G?), ground(S?), ground(T?), ground(Vs?), ground(Named?), ground(As?), ground(Rs?), ground(Lp?), ground(Rf?) |
-    act_entry1(S?, T?, Vs?, Named?, G?, As?, Rs?, Lp?, Rf?, E),
-    act_entries(Gs?, S?, T?, Vs?, Named?, As?, Rs?, Lp?, Rf?, L).
-procedure act_entry1(Constant?, String?, Args?, Ints?, Integer?, Args?, RoleSpecs?, Preds?, DrawCtx?, _).
-act_entry1(S, T, Vs, Named, G, As, Rs, Lp, Rf, E?) :- ground(S?), ground(T?), ground(Vs?), ground(Named?), integer(G?), ground(As?), ground(Rs?), ground(Lp?), ground(Rf?) |
+procedure act_entries(Ints?, Constant?, String?, Args?, Ints?, Args?, RoleSpecs?, Preds?, DrawCtx?, ItemPlaces?, Stream(_)).
+act_entries([], _, _, _, _, _, _, _, _, _, []).
+act_entries([G|Gs], S, T, Vs, Named, As, Rs, Lp, Rf, Sm, [E?|L?]) :- integer(G?), ground(S?), ground(T?), ground(Vs?), ground(Named?), ground(As?), ground(Rs?), ground(Lp?), ground(Rf?), ground(Sm?) |
+    act_entry1(S?, T?, Vs?, Named?, G?, As?, Rs?, Lp?, Rf?, Sm?, E),
+    act_entries(Gs?, S?, T?, Vs?, Named?, As?, Rs?, Lp?, Rf?, Sm?, L).
+procedure act_entry1(Constant?, String?, Args?, Ints?, Integer?, Args?, RoleSpecs?, Preds?, DrawCtx?, ItemPlaces?, _).
+act_entry1(S, T, Vs, Named, G, As, Rs, Lp, Rf, Sm, E?) :- ground(S?), ground(T?), ground(Vs?), ground(Named?), integer(G?), ground(As?), ground(Rs?), ground(Lp?), ground(Rf?), ground(Sm?) |
     place_of(role(G?), Vs?, 1, M),
     group_places(As?, Vs?, Named?, Gs0),
     dedup(Gs0?, Gs),
     item_places(G?, Rs?, Vs?, Named?, Lp?, Is0),
     dedup(Is0?, Is1),
     condition_places(G?, Rs?, Vs?, Rf?, Cs),
-    app(Is1?, Cs?, Is),
+    app(Is1?, Cs?, Is2),
+    app(Is2?, Sm?, Is),
     act_entry2(S?, T?, Vs?, Named?, M?, Gs?, Is?, E).
 procedure act_entry2(Constant?, String?, Args?, Ints?, Integer?, GroupPlaces?, ItemPlaces?, _).
 act_entry2(S, T, Vs, Named, M, Gs, Is, E?) :- ground(S?), ground(T?), ground(Vs?), ground(Named?), integer(M?), ground(Gs?), ground(Is?) |
@@ -1375,7 +1386,7 @@ proved_entry(no, _, _, _, _, _, []).
 proved_entry(yes, pat(Q, Ws), P, N, I, K, [proved(Q?, Ws?, P?, As?)]) :- K? > 0 | unless_args(1, N?, I?, K?, As).
 proved_entry(yes, _, _, _, _, 0, []).
 %% The items a request names: item(K, P) for each atom of a listed predicate P that the schema requires at the role G, the proposer's, kept or deleted there, with the speech-act variable at place K among its arguments.
-ItemPlace ::= item(Integer, Constant) ; atom(Constant, Ints) ; req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs).
+ItemPlace ::= item(Integer, Constant) ; atom(Constant, Ints) ; req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs) ; same(Integer, Integer).
 ItemPlaces ::= [] ; [ItemPlace | ItemPlaces].
 procedure item_places(Integer?, RoleSpecs?, Args?, Ints?, Preds?, ItemPlaces).
 item_places(G, Rs, Vs, Nd, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Nd?), ground(Lp?) |
@@ -1402,6 +1413,7 @@ keyed_out([req(P, Ks)|Is], Vs, Nd, [req(P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, Nd?
 keyed_out([forb(P, Ks)|Is], Vs, Nd, [forb(P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
 keyed_out([unless(P, Ks)|Is], Vs, Nd, [unless(P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
 keyed_out([proved(Q, Ws, P, Ks)|Is], Vs, Nd, [proved(Q?, Ws?, P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
+keyed_out([same(K, J)|Is], Vs, Nd, [same(K?, J?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
 procedure a_svar(Arg?, YesNo).
 a_svar(svar(_), yes).
 a_svar(_, no) :- otherwise | true.

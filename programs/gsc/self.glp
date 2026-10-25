@@ -154,7 +154,13 @@ NDeclared  ::= NContract ; reflexive(Preds, NContract).
 % read it through unnamed/2, which drops the names and the environment
 % predicates, and env_preds/2, which gives the environment predicates; the
 % printer prints each role by its name (notation.glp).
-Names      ::= [] ; [Constant | Names].
+% A name in the head is a role's name, or one(Name, Other), the role Name
+% possibly the person of the role Other (GSC 316d875, Section 2: "a clause
+% that admits one person in both writes 'Alice and Bob, possibly one
+% person'; the schema's head writes the second name as one('Bob', 'Alice')").
+RName     ::= Constant ; one(Constant, Constant).
+Names      ::= [] ; [RName | Names].
+RChunks     ::= [] ; [RName | RChunks].
 WSchema    ::= schema(Constant, Args, NRoleSpecs)
              ; cschema(Constant, Args, Nil, NRoleSpecs)
              ; nschema(Constant, Args, Constraint, NRoleSpecs)

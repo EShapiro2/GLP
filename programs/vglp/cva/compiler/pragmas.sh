@@ -117,7 +117,7 @@ sub tstr {   # a term written back, to compare arguments
     return $t->[0] . "(" . join(",", map { tstr($_) } @{ $t->[1] }) . ")";
 }
 # Each schema, its roles, $roles{S}, each { guarded, listed, comps }, comps its four lists of atoms, each [P, [args]], in the order of rs/5 (added, deleted, required, forbidden); its head, $head{S}, the variables after its roles; and the names of its roles, $rnames{S}, where its head names them (GSC 25b6b3c, Section 2: "the schemas naming their roles as the clauses do").
-my (%roles, %head, %rnames, %tabpred, @pending, %fitted, %covered);
+my (%roles, %head, %rnames, %ones, %tabpred, @pending, %fitted, %covered);
 sub find_schemas {
     my ($t) = @_;
     return if @$t == 1;
@@ -126,7 +126,19 @@ sub find_schemas {
         return if exists $roles{$n};
         my $named = ($t->[0] eq "schema" && @{ $t->[1] } == 4) || ($t->[0] ne "schema" && @{ $t->[1] } == 5);
         $head{$n} = $t->[1][$named ? 2 : 1][1];
-        if ($named) { $rnames{$n} = [ map { (my $x = $_->[0]) =~ s/^\x27|\x27$//g; $x } @{ $t->[1][1][1] } ] }
+        # A name is the role name, or one(Name, Other), the role Name possibly the person of the role Other (GSC 316d875, Section 2), read as Name.
+        if ($named) { $rnames{$n} = [ map { my $e = $_->[0] eq "one" ? $_->[1][0] : $_; (my $x = $e->[0]) =~ s/^\x27|\x27$//g; $x } @{ $t->[1][1][1] } ] }
+        # The roles the head marks possibly one person, one(Name, Other): $ones{S}, each [role, role of Other].
+        if ($named) {
+            my $i = 0;
+            for my $e (@{ $t->[1][1][1] }) {
+                $i++;
+                next unless $e->[0] eq "one";
+                (my $o = $e->[1][1][0]) =~ s/^\x27|\x27$//g;
+                my ($j) = grep { $rnames{$n}[$_ - 1] eq $o } 1 .. scalar @{ $rnames{$n} };
+                push @{ $ones{$n} }, [$i, $j] if defined $j;
+            }
+        }
         my @rs;
         for my $r (@{ $t->[1][-1][1] }) {
             my ($kind, $g, @c) = $r->[0] eq "crs" ? @{ $r->[1] } : (undef, @{ $r->[1] });
@@ -381,7 +393,10 @@ for my $f (@order) {
                             !exists $q{$pl} || @g == 1 or die "pragmas.sh: $f: the pragma \"$title\" asks $pr->{name}, the proposer of $S\n";
                             my @un = grep { $_ != $pl && !exists $q{$_} } @g;
                             !@un or die "pragmas.sh: $f: the pragma \"$title\" names no person in the guarding role " . join(", ", @un) . " of $S, who is then never asked\n";
-                            $by{$S} = "by([$pl])";
+                            # Two roles the clause says are possibly one person may be bound to one person, and a field offers that person for both places (GSC 316d875, Section 2; vGLP, Sections 5.4 and 6.2): same(K, J), K and J their places in the request, its listed roles left out.
+                            my %rplace; { my $k = 0; my $jj = 0; for my $r (@{ $roles{$S} }) { $jj++; next if $r->{listed}; $k++; $rplace{$jj} = $k } }
+                            my @same = map { "same($rplace{$_->[0]}, $rplace{$_->[1]})" } grep { exists $rplace{ $_->[0] } && exists $rplace{ $_->[1] } } @{ $ones{$S} // [] };
+                            $by{$S} = @same ? "by([$pl], [" . join(", ", @same) . "])" : "by([$pl])";
                             $plof{$S} = $pl;
                             $said{$S} = @g == 1
                                 ? (exists $q{$pl} ? "said([$q{$pl}])" : undef)

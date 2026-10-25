@@ -51,7 +51,9 @@ Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
 %% The contract as its owner writes it (programs/gsc/self.glp, WDeclared; GSC 25b6b3c, Section 2: "the schemas naming their roles as the clauses do"): a schema's head may list its roles' names, schema(Name, Names, Vars, Roles), cschema(Name, Names, Vars, Reaches, Roles) and nschema(Name, Names, Vars, Constraint, Roles), and a contract may name its environment predicates, environment(Preds, Body).  The compiler reads it with the names and the environment predicates dropped (unnamed): pragmas.sh maps a pragma's names to the roles before the compiler reads the pragmas, and the one environment predicate the compiler knows, today, it knows by its name (cvac.glp, the day).
-Names     ::= [] ; [Constant | Names].
+RName    ::= Constant ; one(Constant, Constant).
+Names     ::= [] ; [RName | Names].
+RChunks    ::= [] ; [RName | RChunks].
 WSchema   ::= schema(Constant, Args, RoleSpecs)
             ; cschema(Constant, Args, Reaches, RoleSpecs)
             ; nschema(Constant, Args, Constraint, RoleSpecs)
@@ -146,7 +148,9 @@ Strings   ::= [] ; [String | Strings].
 PList     ::= list(String, Strings).
 PLists    ::= [] ; [PList | PLists].
 PAct      ::= act(Constant, String, Strings, Said, String, Proposer).
-Proposer  ::= any ; by(Ints).
+Proposer  ::= any ; by(Ints) ; by(Ints, Sames).
+Same      ::= same(Integer, Integer).
+Sames     ::= [] ; [Same | Sames].
 PActs     ::= [] ; [PAct | PActs].
 Pragmas   ::= no_pragmas ; pragmas(PLists, PActs).
 

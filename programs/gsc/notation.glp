@@ -287,24 +287,24 @@ n_schema1(Vs, Rs, Cn, T, R?) :- ground(Vs?), ground(Rs?), ground(Cn?), ground(T?
 % A contract declaring predicates reflexive opens with them, then an empty
 % line.
 
-procedure n_preds(Preds?, Chunks?, Chunks).
+procedure n_preds(Preds?, RChunks?, RChunks).
 n_preds([], T, T?).
 n_preds([P], T, [P?|T?]).
 n_preds([P, Q|Ps], T, [P?, ', '|R?]) :- ground(Q?), ground(Ps?), ground(T?) |
     n_preds([Q?|Ps?], T?, R).
 
 % A schema as its owner writes it, its roles by their names.
-procedure n_wschema(WSchema?, Chunks?, Chunks).
+procedure n_wschema(WSchema?, RChunks?, RChunks).
 n_wschema(W, T, R?) :- ground(W?), ground(T?) |
     unnamed_s(W?, S),
     wsch_names(W?, Ns),
     n_schema(S?, [], R0),
     n_rename(R0?, Ns?, R1),
     capp(R1?, T?, R).
-procedure capp(Chunks?, Chunks?, Chunks).
+procedure capp(RChunks?, RChunks?, RChunks).
 capp([], T, T?).
 capp([C|Cs], T, [C?|R?]) :- capp(Cs?, T?, R).
-procedure n_rename(Chunks?, Names?, Chunks).
+procedure n_rename(Chunks?, Names?, RChunks).
 n_rename([], _, []).
 n_rename([C|Cs], Ns, [D?|Ds?]) :- ground(C?), ground(Ns?) |
     n_pos(C?, I),
@@ -316,15 +316,15 @@ n_pos('Bob', 2).
 n_pos('Carol', 3).
 n_pos('Dave', 4).
 n_pos(C, 0) :- otherwise, ground(C?) | true.
-procedure n_name(Integer?, Names?, Constant?, Constant).
+procedure n_name(Integer?, Names?, Constant?, RName).
 n_name(0, _, C, C?).
 n_name(I, Ns, C, D?) :- I? > 0, ground(Ns?) | nth_name(I?, Ns?, C?, D).
-procedure nth_name(Integer?, Names?, Constant?, Constant).
+procedure nth_name(Integer?, Names?, Constant?, RName).
 nth_name(_, [], C, C?).
 nth_name(1, [N|_], _, N?).
 nth_name(I, [_|Ns], C, D?) :- I? > 1 | I1 := I? - 1, nth_name(I1?, Ns?, C?, D).
 
-procedure n_wschemas(WContract?, Chunks?, Chunks).
+procedure n_wschemas(WContract?, RChunks?, RChunks).
 n_wschemas([], T, T?).
 n_wschemas([S], T, R?) :- ground(S?), ground(T?) | n_wschema(S?, T?, R).
 n_wschemas([S, S2|Ss], T, R?) :- ground(S?), ground(S2?), ground(Ss?), ground(T?) |
@@ -332,7 +332,7 @@ n_wschemas([S, S2|Ss], T, R?) :- ground(S?), ground(S2?), ground(Ss?), ground(T?
     n_wschema(S?, [''|R1?], R).
 
 % A contract naming environment predicates opens with them, as with reflexive ones, then an empty line.
-procedure n_body(WBody?, Chunks?, Chunks).
+procedure n_body(WBody?, RChunks?, RChunks).
 n_body([], T, T?).
 n_body([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
     n_wschemas([S?|Ss?], T?, R).
@@ -340,7 +340,7 @@ n_body(reflexive(Ps, Ss), T, ['Reflexive predicates: '|R?]) :-
     ground(Ps?), ground(Ss?), ground(T?) |
     n_wschemas(Ss?, T?, R2),
     n_preds(Ps?, ['', ''|R2?], R).
-procedure n_declared(WDeclared?, Chunks?, Chunks).
+procedure n_declared(WDeclared?, RChunks?, RChunks).
 n_declared([], T, T?).
 n_declared([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
     n_wschemas([S?|Ss?], T?, R).
