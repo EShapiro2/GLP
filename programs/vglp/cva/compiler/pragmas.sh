@@ -3,7 +3,7 @@
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
-# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words), Words the words of what it lists, in lower case, each also without a final s; every other line is "Clause: [Button] ... <field> ... sentence", a button for each act of the clause a person proposes, and an act for each button, act(Schema, Button, Fields, Sentence), Schema the button's text in lower case, each space an underscore, the name of the schema it proposes ("a button for each act of it a person proposes, in brackets, each bearing its act's name", GSC 2991379, Section 2), the fields and the sentence of the line each act's, the clause being one of that title in the same NAME.txt or, where it has none, in the NAME.txt of a contract it extends, Sentence said(Questions) or none, each question a sentence of the line after its fields, the question put to the person in each role whose will the act needs beyond the proposer's, in their order (GSC, Section 2, its first paragraph: "for each role whose will the act needs beyond the proposer's, in their order, the question the person in it is asked"), each its words, each word text(S) or person(I), a name the person I-th among the names the line's clause uses, in the order they first occur in it, so that the head's persons, its roles then its agent variables, are named in order by the clause's names (vGLP, Section 5.4, "The contract's words": "A question names the roles of its schema by the names its clause uses, in the order of the roles"); a name is a word of a capital and lower-case letters that a clause of the contract, or of a contract it extends, writes within a sentence and not first in it, as Alice, Bob, Carol, Dave and Alf.  Each act carries, last, the name of the tab of its contract, the first line after "Pragmas" of the NAME.txt the act's line is in: act(Schema, Button, Fields, Sentence, Tab).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
+# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words); every other line is a clause's, in GSC's form, its proposer, its buttons and fields, and its indented lines (README.md beside this file, 1), each act act(Schema, Button, Fields, Sentence, Tab, Proposer), Sentence said(Questions) or none, a question's words text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2), Proposer by([G]).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
 
 set -u
 [ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt> [<contract term>]" >&2; exit 2; }
@@ -68,7 +68,9 @@ if (defined $term && $term ne "") {
         my ($body, $end) = inside($term, $open);
         pos($term) = $open + 1;
         my @args = top_args($body);
-        my ($n, $a) = @args[0, 1];
+        # A schema whose head names its roles, schema(Name, Names, Vars, Roles), cschema(Name, Names, Vars, Reaches, Roles) or nschema(Name, Names, Vars, Constraint, Roles) (programs/gsc/README.md), carries its variables third.
+        my $named = ($kw eq "schema" && @args == 4) || ($kw ne "schema" && @args == 5);
+        my ($n, $a) = @args[0, $named ? 2 : 1];
         next if !defined $a || exists $svars{$n};
         push @snames, $n;
         my %local = map { $_ => 1 } local_nums(@args);
@@ -114,15 +116,17 @@ sub tstr {   # a term written back, to compare arguments
     return "[" . join(",", map { tstr($_) } @{ $t->[1] }) . "]" if $t->[0] eq "[]";
     return $t->[0] . "(" . join(",", map { tstr($_) } @{ $t->[1] }) . ")";
 }
-# Each schema, its roles, $roles{S}, each { guarded, listed, comps }, comps its four lists of atoms, each [P, [args]], in the order of rs/5 (added, deleted, required, forbidden); and its head, $head{S}, the variables after its roles.
-my (%roles, %head);
+# Each schema, its roles, $roles{S}, each { guarded, listed, comps }, comps its four lists of atoms, each [P, [args]], in the order of rs/5 (added, deleted, required, forbidden); its head, $head{S}, the variables after its roles; and the names of its roles, $rnames{S}, where its head names them (GSC 25b6b3c, Section 2: "the schemas naming their roles as the clauses do").
+my (%roles, %head, %rnames);
 sub find_schemas {
     my ($t) = @_;
     return if @$t == 1;
     if ($t->[0] =~ /^[nc]?schema$/ && @{ $t->[1][0] } == 1) {
         my $n = $t->[1][0][0];
         return if exists $roles{$n};
-        $head{$n} = $t->[1][1][1];
+        my $named = ($t->[0] eq "schema" && @{ $t->[1] } == 4) || ($t->[0] ne "schema" && @{ $t->[1] } == 5);
+        $head{$n} = $t->[1][$named ? 2 : 1][1];
+        if ($named) { $rnames{$n} = [ map { (my $x = $_->[0]) =~ s/^\x27|\x27$//g; $x } @{ $t->[1][1][1] } ] }
         my @rs;
         for my $r (@{ $t->[1][-1][1] }) {
             my ($kind, $g, @c) = $r->[0] eq "crs" ? @{ $r->[1] } : (undef, @{ $r->[1] });
@@ -186,38 +190,6 @@ sub person_places {
     return @pp;
 }
 sub guarding { my ($s) = @_; my $i = 0; my @g; for my $r (@{ $roles{$s} }) { $i++; push @g, $i if $r->{guarded} } return @g }
-# The roles of a schema S a line covers matched to those of the widest schema W of its buttons, whose roles the line names (vGLP 21fca00, Section 5.4, "The contract words": "each schema the line covers puts to each of its guarding roles other than the proposer’s the question of that role’s name"): the one-to-one map m of the roles of S into those of W that keeps the most atoms of S, an atom of a role r kept where the role m(r) of W has, in the same of its four lists, an atom of the same predicate whose arguments are those of the atom with each role(k) read as role(m(k)), and a role counted kept where m(r) is guarding and listed as r is; of two maps keeping as many, the first in role order.  No paper states the match; it is the compiler’s (README.md beside this file, 5).
-sub role_map {
-    my ($S, $W) = @_;
-    my @sr = @{ $roles{$S} }; my @wr = @{ $roles{$W} };
-    if ($S eq $W) { my @id = (1 .. scalar(@sr)); return @id }
-    my ($best, @bm, @m) = (-1);
-    my $score = sub {
-        my $sc = 0;
-        for my $r (0 .. $#sr) {
-            my $w = $wr[$m[$r] - 1];
-            $sc++ if $sr[$r]{guarded} == $w->{guarded} && $sr[$r]{listed} == $w->{listed};
-            for my $c (0 .. 3) {
-                ATOM: for my $a (@{ $sr[$r]{comps}[$c] }) {
-                    my $want = join("|", map { $_->[0] eq "role" && @$_ == 2 ? "role(" . ($m[$_->[1][0][0] - 1] // 0) . ")" : tstr($_) } @{ $a->[1] });
-                    for my $b (@{ $w->{comps}[$c] }) {
-                        next unless $b->[0] eq $a->[0] && join("|", map { tstr($_) } @{ $b->[1] }) eq $want;
-                        $sc++; next ATOM;
-                    }
-                }
-            }
-        }
-        return $sc;
-    };
-    my $go; $go = sub {
-        my ($k, %used) = @_;
-        if ($k > $#sr) { my $v = $score->(); if ($v > $best) { $best = $v; @bm = @m } return }
-        for my $j (1 .. scalar @wr) { next if $used{$j}; $m[$k] = $j; $go->($k + 1, %used, $j => 1) }
-    };
-    $go->(0);
-    @bm or die "pragmas.sh: the roles of $S are not matched to those of $W\n";
-    return @bm;
-}
 sub find_txt {
     my ($name, $beside) = @_;
     my $f = "$beside/$name.txt";
@@ -267,9 +239,18 @@ for my $f (@order) {
         while ($x =~ /\[([^\]]+)\]/g) { (my $a = lc $1) =~ s/ +/_/g; $named_by_button{$a} = 1 }
     }
 }
-# The names the clauses use: words of a capital and lower-case letters written within a sentence, not first in it.
+# The names: those the contract declares, on its line after the title and before clause 1, "Alice, Bob and Carol are persons." (Udi, 2026-10-25, to GSC #8; GKK.txt at GLP ec7c578c), the declaration being part of the contract the reader takes; and, of a contract that declares none, the words of a capital and lower-case letters its clauses write within a sentence, not first in it.
 my %is_name;
 for my $f (@order) {
+    my $declared = 0;
+    for my $x (read_txt($f)) {
+        next if $x =~ /^%/;
+        last if $x =~ /^\d+\./ || $x eq "Pragmas";
+        next unless $x =~ /^(.*)\s+(?:is|are)\s+(?:a\s+)?persons?\.\s*$/;
+        $declared = 1;
+        $is_name{$_} = 1 for ($1 =~ /\b([A-Z][a-z]+)\b/g);
+    }
+    next if $declared;
     for my $x (read_txt($f)) {
         last if $x eq "Pragmas";
         next unless $x =~ /^\d+\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?[^.]+\.\s+(.*)$/;
@@ -374,12 +355,9 @@ for my $f (@order) {
                     }
                 }
         };
-        # A pragma line (GSC be341e9, Section 2, its first paragraph; the guide, step 7; vGLP 8aa82f0, Section 5.4, "The contract words"): the line names the person who proposes, by the clause name for them, then a button for each act they propose and any field they fill; an indented line names another person who proposes, likewise, or a person asked, a colon and the question put to them.  "A button is offered only to the person named before it", by([G]), G the guarding role of that person; "the persons named before the questions are asked", each question put to the guarding role of the person it names, the proposer having []; and "a person no line names is never asked", so a guarding role of an act that the line names neither as its proposer nor as asked is a fault, the act needing that person and never asking them.  A name is the role the clause name denotes, the names a clause uses being the persons of the schema in the order they first occur in it (5 of README.md beside this file), but for the proposer of an act of one guarding role, who is in that role, a person proposing an act being one whose will it needs, as GSN:4 names Bob, a member, after no other name, and GSN:4 and GSN:5 name Alice, the leader, in no sentence.  A question naming the one guarding role of an act is text of its request form.
+        # A pragma line (GSC 25b6b3c, Section 2, its first paragraph; the guide, step 7; vGLP 8aa82f0, Section 5.4, "The contract words"): the line names the person who proposes, then a button for each act they propose and any field they fill; an indented line names another person who proposes, likewise, or a person asked, a colon and the question put to them, a question line belonging to the nearest button line above it.  "A name in a pragma is the schema role of that name, the schemas naming their roles as the clauses do" (GSC 25b6b3c, Section 2): each name is the role its schema term names so, $rnames{S}, and a name no role of the schema bears, in a question, is the agent variable of an act with one, as Carol of GKK:3 is c of introduce, filled by its field; any other is a fault.  "A button is offered only to the person named before it", by([G]), G the role of that person, which must be guarding; "the persons named before the questions are asked", each question put to the role of the person it names, the proposer having []; and "a person no line names is never asked", so a guarding role an act needs that the line names neither as its proposer nor as asked is a fault, the act never asking that person.  A question naming the one guarding role of an act is text of its request form.
         if ($rest !~ /^\[/) {
             my @parts = split /\x01/, $rest;
-            my (%at, @names);
-            for my $w ($body{$title} =~ /([A-Za-z]+)/g) { push @names, $w if $is_name{$w} && !$at{$w}++ }
-            my %rank; @rank{@names} = (1 .. scalar @names);
             my %nm = map { $_ => 1 } keys %is_name;
             my $alt = join("|", sort { length($b) <=> length($a) || $a cmp $b } keys %nm);
             my @props;
@@ -393,17 +371,13 @@ for my $f (@order) {
                 if ($p =~ /^\s+([A-Z][A-Za-z]*)\s+(\[.*)$/) { push @props, { name => $1, tail => $2, asked => [] }; next }
                 if ($p =~ /^\s+([A-Z][A-Za-z]*):\s*(\S.*)$/) {
                     my ($who, $q) = ($1, $2);
-                    exists $rank{$who} or die "pragmas.sh: $f: the pragma \"$title\" asks $who, whom its clause does not name\n";
+                    $nm{$who} or die "pragmas.sh: $f: the pragma \"$title\" asks $who, whom the contract does not name\n";
                     my @words;
                     for my $x (split /\b($alt)\b/, $q) {
                         next if $x eq "";
-                        if ($nm{$x}) {
-                            exists $rank{$x} or die "pragmas.sh: $f: the pragma \"$title\" names $x, whom its clause does not name\n";
-                            push @words, "person($rank{$x})";
-                        }
-                        else { push @words, "text(" . q_string($x) . ")" }
+                        push @words, $nm{$x} ? ["person", $x] : ["text", $x];
                     }
-                    push @{ $props[-1]{asked} }, [$who, "[" . join(", ", @words) . "]"];
+                    push @{ $props[-1]{asked} }, [$who, \@words];
                     next;
                 }
                 die "pragmas.sh: $f: the pragma \"$title\" has an indented line it cannot read: $p\n";
@@ -421,32 +395,36 @@ for my $f (@order) {
                     for my $button (@buttons) {
                         (my $a = lc $button) =~ s/ +/_/g;
                         for my $S (realising($a)) {
-                            my @asked = @{ $pr->{asked} };
-                            if (!exists $roles{$S}) {
-                                $said{$S} = "said([" . join(", ", map { $_->[1] } @asked) . "])" if @asked;
-                                next;
-                            }
+                            exists $roles{$S} or die "pragmas.sh: $f: the pragma \"$title\" names $S, which the contract term has not\n";
+                            exists $rnames{$S} or die "pragmas.sh: $f: the schema term of $S names no roles, and a name in a pragma is the schema role of that name (GSC, Section 2)\n";
                             my @g = guarding($S);
                             my @pp = person_places($S);
+                            my $nr = scalar @{ $roles{$S} };
+                            # The rank among the persons of S of the role each name bears, a listed role named by its base being no person.
+                            my %rk;
+                            for my $i (0 .. $#{ $rnames{$S} }) {
+                                my ($r) = grep { $pp[$_] == $i + 1 } 0 .. $#pp;
+                                $rk{ $rnames{$S}[$i] } //= $r + 1 if defined $r;
+                            }
+                            my @av = grep { $pp[$_] > $nr } 0 .. $#pp;
+                            my $rank = sub {
+                                my ($x) = @_;
+                                return $rk{$x} if exists $rk{$x};
+                                @av == 1 or die "pragmas.sh: $f: the pragma \"$title\" names $x, whom no role of $S bears, and $S has " . scalar(@av) . " agent variables\n";
+                                return $av[0] + 1;
+                            };
                             my %q;
-                            for my $x (@asked) {
-                                my $r = $rank{ $x->[0] };
-                                $r <= @pp or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0], whom $S has no role for\n";
-                                my $place = $pp[$r - 1];
+                            for my $x (@{ $pr->{asked} }) {
+                                exists $rk{ $x->[0] } or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0], whom no role of $S bears\n";
+                                my $place = $pp[ $rk{ $x->[0] } - 1 ];
                                 grep { $_ == $place } @g or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0], who is in no guarding role of $S\n";
                                 !exists $q{$place} or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0] twice\n";
-                                $q{$place} = $x->[1];
+                                $q{$place} = "[" . join(", ", map { $_->[0] eq "text" ? "text(" . q_string($_->[1]) . ")" : "person(" . $rank->($_->[1]) . ")" } @{ $x->[1] }) . "]";
                             }
-                            # The proposer: the guarding role of an act of one; otherwise the role the clause name denotes, which must be guarding.
-                            my $pl;
-                            if (@g == 1) { $pl = $g[0] }
-                            else {
-                                exists $rank{ $pr->{name} } && $rank{ $pr->{name} } <= @pp
-                                    or die "pragmas.sh: $f: the pragma \"$title\" names $pr->{name} as the proposer of $S, whom its clause does not name in a role of $S\n";
-                                $pl = $pp[ $rank{ $pr->{name} } - 1 ];
-                                grep { $_ == $pl } @g or die "pragmas.sh: $f: the pragma \"$title\" names $pr->{name} as the proposer of $S, who is in no guarding role of it\n";
-                                !exists $q{$pl} or die "pragmas.sh: $f: the pragma \"$title\" asks $pr->{name}, the proposer of $S\n";
-                            }
+                            exists $rk{ $pr->{name} } or die "pragmas.sh: $f: the pragma \"$title\" names $pr->{name} as the proposer of $S, whom no role of $S bears\n";
+                            my $pl = $pp[ $rk{ $pr->{name} } - 1 ];
+                            grep { $_ == $pl } @g or die "pragmas.sh: $f: the pragma \"$title\" names $pr->{name} as the proposer of $S, who is in no guarding role of it\n";
+                            !exists $q{$pl} || @g == 1 or die "pragmas.sh: $f: the pragma \"$title\" asks $pr->{name}, the proposer of $S\n";
                             my @un = grep { $_ != $pl && !exists $q{$_} } @g;
                             !@un or die "pragmas.sh: $f: the pragma \"$title\" names no person in the guarding role " . join(", ", @un) . " of $S, who is then never asked\n";
                             $by{$S} = "by([$pl])";
@@ -462,108 +440,6 @@ for my $f (@order) {
         }
         # A line whose buttons come first names no person before them, and "a button is offered only to the person named before it" (vGLP 8aa82f0, Section 5.4, "The contract words"): a fault, and the contract is not compiled.
         die "pragmas.sh: $f: the pragma \"$title\" names no person before its button, and a button is offered only to the person named before it\n";
-        my $group = $rest;
-        while ($group ne "") {
-            my @buttons;
-            my $tail = $group;
-            while ($tail =~ s/^\[([^\]]+)\]\s*//) { push @buttons, $1 }
-            @buttons or die "pragmas.sh: $f: the pragma \"$title\" has no button in brackets\n";
-            # The names of the roles, listed after the buttons where the names of the clause do not occur in the order of the roles (vGLP 21fca00, Section 5.4, "The contract words": "the line lists the roles’ names after its button, in the order of the roles").
-            my @listed_names;
-            @listed_names = split /\s*,\s*/, $1 if $tail =~ s/^\(([^)]*)\)\s*//;
-            my @fields;
-            while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
-            # The words up to the next button in brackets are this group of buttons, the rest the next group: a line may carry several, each its buttons, its fields and its questions, as an Escrow line its [Deposit], [Release] and [Return].
-            $group = ($tail =~ s/\s*(\[.*)$//) ? $1 : "";
-            # The questions, each its words, a name kept as the name: the persons of the widest schema of the buttons named by the names listed, or else by the names the clause uses, in the order they first occur in it (vGLP, Section 5.4, "The contract words": "A question names the roles of its schema by the names its clause uses, in the order of the roles").
-            my (@names, @qs);
-            if ($tail ne "") {
-                if (@listed_names) { @names = @listed_names }
-                else {
-                    my %at;
-                    for my $w ($body{$title} =~ /([A-Za-z]+)/g) { push @names, $w if $is_name{$w} && !$at{$w}++ }
-                }
-                my %nm = map { $_ => 1 } (keys %is_name, @names);
-                my $alt = join("|", sort { length($b) <=> length($a) || $a cmp $b } keys %nm);
-                for my $q (split /(?<=[.!?])\s+/, $tail) {
-                    my @words;
-                    for my $p (split /\b($alt)\b/, $q) {
-                        next if $p eq "";
-                        if ($nm{$p}) {
-                            grep { $_ eq $p } @names or die "pragmas.sh: $f: the pragma \"$title\" names $p, whom its clause does not name\n";
-                            push @words, ["person", $p];
-                        }
-                        else { push @words, ["text", $p] }
-                    }
-                    push @qs, \@words;
-                }
-            }
-            # The questions of each schema the buttons realise, said(Qs) in the order of its guarding roles: the line’s one question put to each guarding role; or its questions, one per guarding role of the widest schema of its buttons, the one with the most, in the order of the roles, none left out (vGLP 21fca00, Section 5.4, "The contract words": "a line’s questions are one per guarding role of the widest schema of its clause, in the order of the roles, none left out, since any guard may propose"), each schema putting to each of its guarding roles the question of the role of the widest schema its role is matched to (role_map); each name of a question the place among the persons of the schema that bears it, person(K); a question naming a person the schema has no role for is a fault.
-            my @group;
-            for my $button (@buttons) { (my $a = lc $button) =~ s/ +/_/g; push @group, realising($a) }
-            my %said;
-            my @known = grep { exists $roles{$_} } @group;
-            if (@qs && @known) {
-                my ($W) = sort { scalar(guarding($b)) <=> scalar(guarding($a)) } @known;
-                my @wg = guarding($W);
-                @qs == 1 || @qs == @wg
-                    or die "pragmas.sh: $f: the pragma \"$title\" puts " . scalar(@qs) . " questions, and its widest schema, $W, has " . scalar(@wg) . " guarding roles\n";
-                my @wpp = person_places($W);
-                my $nw = scalar @{ $roles{$W} };
-                my %wname; for my $i (0 .. $#wpp) { $wname{ $wpp[$i] } = $names[$i] if $i <= $#names }
-                my @wav; my $i = 0; for my $v (@{ $head{$W} }) { $i++; push @wav, $nw + $i if $v->[0] eq "pvar" }
-                for my $S (@known) {
-                    my @m = role_map($S, $W);
-                    my $ns = scalar @{ $roles{$S} };
-                    my @sav; my $j = 0; for my $v (@{ $head{$S} }) { $j++; push @sav, $ns + $j if $v->[0] eq "pvar" }
-                    my @spp = person_places($S);
-                    my %rank_of;
-                    for my $r (0 .. $#spp) {
-                        my $k = $spp[$r];
-                        my ($ai) = grep { $sav[$_] == $k } 0 .. $#sav;
-                        my $wk = $k <= $ns ? $m[$k - 1] : (defined $ai ? $wav[$ai] : undef);
-                        my $n = defined $wk ? $wname{$wk} : undef;
-                        $rank_of{$n} = $r + 1 if defined $n;
-                    }
-                    my $render = sub {
-                        my ($q) = @_;
-                        my @w;
-                        for my $x (@$q) {
-                            if ($x->[0] eq "text") { push @w, "text(" . q_string($x->[1]) . ")"; next }
-                            exists $rank_of{ $x->[1] } or die "pragmas.sh: $f: the pragma \"$title\" puts to a role of $S a question naming $x->[1], whom $S has no role for\n";
-                            push @w, "person($rank_of{ $x->[1] })";
-                        }
-                        return "[" . join(", ", @w) . "]";
-                    };
-                    my @out;
-                    if (@qs == 1) { @out = ($render->($qs[0])) }
-                    else {
-                        my %qi; @qi{@wg} = (0 .. $#wg);
-                        push @out, $render->($qs[ $qi{ $m[$_ - 1] } ]) for guarding($S);
-                    }
-                    $said{$S} = "said([" . join(", ", @out) . "])";
-                }
-            }
-            elsif (@qs) {
-                # No contract term: a name the K-th of the names, in order.
-                my %at; @at{@names} = (1 .. scalar @names);
-                my $sd = "said([" . join(", ", map { my $q = $_; "[" . join(", ", map { $_->[0] eq "text" ? "text(" . q_string($_->[1]) . ")" : "person($at{$_->[1]})" } @$q) . "]" } @qs) . "])";
-                $said{$_} = $sd for @group;
-            }
-            # The guarding roles at which each act is proposed, each one whose every other guarding role has a question (vGLP, Section 5.4, "The contract words": "A guarding role with no question is never asked, so an act is proposed only at a guarding role whose every other guarding role has a question"): the one question of the line put to each guarding role beyond the first, so the act is proposed at the first; or one question for each guarding role, so at each.
-            my %by;
-            for my $S (@group) {
-                next unless exists $roles{$S};
-                my @g = guarding($S);
-                next unless @g;
-                my %ask;
-                if (@qs == 1) { $ask{$_} = 1 for @g[1 .. $#g] } elsif (@qs) { $ask{$_} = 1 for @g }
-                my @p = grep { my $x = $_; !grep { $_ != $x && !$ask{$_} } @g } @g;
-                @p or die "pragmas.sh: $f: the pragma \"$title\" asks too few guarding roles of $S for any to propose it, an act being proposed only at a guarding role whose every other guarding role has a question\n";
-                $by{$S} = "by([" . join(", ", @p) . "])";
-            }
-            $emit->(\@buttons, \@fields, \%said, \%by);
-        }
     }
 }
 # A schema two lines name, of a contract and of one it extends, keeps the line of the contract that extends the other, read last, as the Authorship line of GSNP names sign after the Developer line of GAI.

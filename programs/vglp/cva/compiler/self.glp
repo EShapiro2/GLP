@@ -50,6 +50,38 @@ Schema    ::= schema(Constant, Args, RoleSpecs)
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
+%% The contract as its owner writes it (programs/gsc/self.glp, WDeclared; GSC 25b6b3c, Section 2: "the schemas naming their roles as the clauses do"): a schema's head may list its roles' names, schema(Name, Names, Vars, Roles), cschema(Name, Names, Vars, Reaches, Roles) and nschema(Name, Names, Vars, Constraint, Roles), and a contract may name its environment predicates, environment(Preds, Body).  The compiler reads it with the names and the environment predicates dropped (unnamed): pragmas.sh maps a pragma's names to the roles before the compiler reads the pragmas, and the one environment predicate the compiler knows, today, it knows by its name (cvac.glp, the day).
+Names     ::= [] ; [Constant | Names].
+WSchema   ::= schema(Constant, Args, RoleSpecs)
+            ; cschema(Constant, Args, Reaches, RoleSpecs)
+            ; nschema(Constant, Args, Constraint, RoleSpecs)
+            ; schema(Constant, Names, Args, RoleSpecs)
+            ; cschema(Constant, Names, Args, Reaches, RoleSpecs)
+            ; nschema(Constant, Names, Args, Constraint, RoleSpecs).
+WContract ::= [] ; [WSchema | WContract].
+WBody     ::= WContract ; reflexive(Preds, WContract).
+WDeclared ::= WBody ; environment(Preds, WBody).
+procedure unnamed(WDeclared?, Declared).
+unnamed([], []).
+unnamed([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
+unnamed(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Ss?) | unnamed_c(Ss?, C).
+unnamed(environment(_, B), D?) :- ground(B?) | unnamed_b(B?, D).
+procedure unnamed_b(WBody?, Declared).
+unnamed_b([], []).
+unnamed_b([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
+unnamed_b(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Ss?) | unnamed_c(Ss?, C).
+procedure unnamed_c(WContract?, Contract).
+unnamed_c([], []).
+unnamed_c([S|Ss], [S1?|Ss1?]) :- ground(S?), ground(Ss?) |
+    unnamed_s(S?, S1),
+    unnamed_c(Ss?, Ss1).
+procedure unnamed_s(WSchema?, Schema).
+unnamed_s(schema(Nm, Vs, Rs), schema(Nm?, Vs?, Rs?)).
+unnamed_s(cschema(Nm, Vs, X, Rs), cschema(Nm?, Vs?, X?, Rs?)).
+unnamed_s(nschema(Nm, Vs, Cn, Rs), nschema(Nm?, Vs?, Cn?, Rs?)).
+unnamed_s(schema(Nm, _, Vs, Rs), schema(Nm?, Vs?, Rs?)).
+unnamed_s(cschema(Nm, _, Vs, X, Rs), cschema(Nm?, Vs?, X?, Rs?)).
+unnamed_s(nschema(Nm, _, Vs, Cn, Rs), nschema(Nm?, Vs?, Cn?, Rs?)).
 
 %% Its checker's verdict, as programs/gsc/self.glp writes it (GSC, Section 3,
 %% Definition "Syntactically grassroots"; Appendix D.4, Definition
@@ -105,7 +137,7 @@ Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
 %% the paragraph on act schemas), given to compile/4.
 Intro     ::= no_introduction ; introduction(Constant).
 
-%% A contract's pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words"; GSC 2991379, Section 2, its first paragraph), as the scripts that run the compiler read them from the contract's .txt and from the .txt of every contract it extends (README.md beside this file, "The pragmas"): pragmas(Lists, Acts), or no_pragmas for a contract whose .txt has none.  A list, list(Name, Words), is a pragma's first line: the name of the list and the words of what it lists, each in lower case and, where it ends in s, also without it.  An act, act(Schema, Button, Fields, Sentence, Tab), is each other line: the schema its button names, the button's text in lower case, "a button for each act of it a person proposes, in brackets, each bearing its act's name" (GSC, ibid.); the button as it reads; the name of each field in angle brackets, in order; the sentence after them, said(Words), or none, each word of it text(S) or person(I), a name the I-th the line's clause uses, in the order of first use (vGLP, Section 5.4, "The contract's words": "A question names the roles of its schema by the names its clause uses, in the order of the roles"); the name of the tab of its contract, the first line of the pragmas of the NAME.txt it is in; and the guarding roles at which it is proposed, by(Gs), each one whose every other guarding role has a question (vGLP, Section 5.4, "The contract's words"), the one the line names as its proposer where it names one, as GSC's form writes it (GSC, Section 2, its first paragraph), the button offered there alone; any, each guarding role, where the scripts gave no contract term.  Every string is carried as its source text, quotes and all, since the printer writes a constant as it is and GLP has no string concatenation.
+%% A contract's pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words"; GSC 2991379, Section 2, its first paragraph), as the scripts that run the compiler read them from the contract's .txt and from the .txt of every contract it extends (README.md beside this file, "The pragmas"): pragmas(Lists, Acts), or no_pragmas for a contract whose .txt has none.  A list, list(Name, Words), is a pragma's first line: the name of the list and the words of what it lists, each in lower case and, where it ends in s, also without it.  An act, act(Schema, Button, Fields, Sentence, Tab), is each other line: the schema its button names, the button's text in lower case, "a button for each act of it a person proposes, in brackets, each bearing its act's name" (GSC, ibid.); the button as it reads; the name of each field in angle brackets, in order; the questions, said(Questions), or none, one for each guarding role, the proposer's [], each word text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2: "A name in a pragma is the schema's role of that name"); the name of the tab of its contract, the first line of the pragmas of the NAME.txt it is in; and the guarding roles at which it is proposed, by(Gs), each one whose every other guarding role has a question (vGLP, Section 5.4, "The contract's words"), the one the line names as its proposer where it names one, as GSC's form writes it (GSC, Section 2, its first paragraph), the button offered there alone; any, each guarding role, where the scripts gave no contract term.  Every string is carried as its source text, quotes and all, since the printer writes a constant as it is and GLP has no string concatenation.
 PWord     ::= text(String) ; person(Integer).
 PWords    ::= [] ; [PWord | PWords].
 PSentences ::= [] ; [PWords | PSentences].
@@ -119,15 +151,15 @@ PActs     ::= [] ; [PAct | PActs].
 Pragmas   ::= no_pragmas ; pragmas(PLists, PActs).
 
 imported procedure cvac#compile(Constant?, Declared?, Verdict?).
-exported procedure compile(Constant?, Declared?, Verdict?).
-compile(Nm, D, V) :- cvac # compile(Nm?, D?, V?).
+exported procedure compile(Constant?, WDeclared?, Verdict?).
+compile(Nm, D, V) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?).
 imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?).
-exported procedure compile(Constant?, Declared?, Verdict?, Intro?).
-compile(Nm, D, V, I) :- cvac # compile(Nm?, D?, V?, I?).
+exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?).
+compile(Nm, D, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
 %% compile(Name, Contract, Verdict, Intro, Pragmas): the same, with the contract's pragmas, so that the platform printed carries the contract's words (vGLP, Sections 5.4 and 6.2).
 imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?).
-exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?).
-compile(Nm, D, V, I, P) :- cvac # compile(Nm?, D?, V?, I?, P?).
+exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?, Pragmas?).
+compile(Nm, D, V, I, P) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?, P?).
 
 %% ---------------------------------------------------------------------------
 %% Shared by the modules of the compiler
