@@ -3736,13 +3736,13 @@ check "CVA compiler: unfriending, one class guarded by either party, compiled (s
 check "CVA compiler: unfriending whose first role forbids an atom, a transaction determined by the binding of one party first alone, compiled, two parts guarded by one party each (asym)" "%% the canonical CVA platform of the contract(asym)" "$cva_refuse"
 check_not "CVA compiler: ... no schema-binding named against it" "%% the schema-binding(unf(person(0), person(1)))" "$cva_refuse"
 
-# The contract's words (vGLP 932c710, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"): the clause's one question put to each guarding role other than the proposer's (trio); "the compiler requires a button for every guarded schema" (nobutton); and the button of an act that names an item, a speech act the proposer's role requires in an atom of a predicate the app lists, drawn beside each row of that list, act(F, T, M, Ps, Gs, Is), Is its items, item(K, P) (items).
+# The contract's words (vGLP 8aa82f0, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"): a question put to each guarding role other than the proposer's, the proposer, by([1]), named before the button, as pragmas.sh reads a line (trio); "the compiler requires a button for every guarded schema" (nobutton); and the button of an act that names an item, a speech act the proposer's role requires in an atom of a predicate the app lists, drawn beside each row of that list, act(F, T, M, Ps, Gs, Is), Is its items, item(K, P) (items).
 cva_words=$("$REPL_RUN" <<HEREDOC
 $CVA/compiler/
 :limit 200000000
-compile(trio, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x, xs])], [act(s, '"S"', [], said([[person(1), text('" asks."')]]), '"Xs"')])).
+compile(trio, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x, xs])], [act(s, '"S"', [], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Xs"', by([1]))])).
 compile(nobutton, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x, xs])], [])).
-compile(items, [schema(sign, [svar(y)], [rs(guarded, [atom(item, [svar(y)])], [], [], [])]), schema(fwd, [svar(y)], [rs(guarded, [], [], [atom(item, [svar(y)])], []), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Items"', [item, items])], [act(sign, '"Sign"', ['"text"'], none, '"Items"'), act(fwd, '"Forward"', [], none, '"Items"')])).
+compile(items, [schema(sign, [svar(y)], [rs(guarded, [atom(item, [svar(y)])], [], [], [])]), schema(fwd, [svar(y)], [rs(guarded, [], [], [atom(item, [svar(y)])], []), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Items"', [item, items])], [act(sign, '"Sign"', ['"text"'], none, '"Items"', by([1])), act(fwd, '"Forward"', [], none, '"Items"', by([1]))])).
 :quit
 HEREDOC
 2>&1)
