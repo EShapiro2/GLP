@@ -15,7 +15,7 @@ Pragmas
 Groups: the groups Alice is a member of.
 Message: Alice [Message] <text>
 Group: Alice [Create] <name>
-Joining: Alice [Join]
+Joining: Alice [Join] <person>
   Bob: Alice asks you to join their group.
 Leaving: Bob [Leave]
   Alice [Close]
