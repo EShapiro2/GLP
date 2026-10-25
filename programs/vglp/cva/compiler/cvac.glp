@@ -974,38 +974,28 @@ procedure count_ints(Ints?, Integer).
 count_ints([], 0).
 count_ints([_|Xs], N?) :- count_ints(Xs?, M), N := M? + 1.
 
-%% The places of a schema's request name that a pragma's fields may name, in the order of its head, the places of its listed roles left out (proposal_alts: the request name is "the binding, its head with no extent"): the peer of a meeting schema, a person the act names by key where the view does not list them (meeting_entry), and then the schema's variables after its roles; a pragma's fields, in angle brackets, name them in order, the first field the first of them (vGLP e286276, Section 5.4, "The contract's words": "in angle brackets each field the person fills in, in the order of the schema's variables after its roles, a person the act names by key among them"), as GC's swap(p?, q?; u, k, v, k') has its fields <issuer given> <amount given> <issuer wanted> <amount wanted> (programs/currencies/coins/GC.txt), GSN's post(p?, a; x, n) its one field <text>, x, and GKK's introduce(p?, q?; c) a field for c, the person introduced, and its meet(p?, q?) one for the peer q; a variable no field names is filled from what the view lists.
+%% The places of a schema's request name that a pragma's fields may name, in the order of its head, the places of its listed roles left out (proposal_alts: the request name is "the binding, its head with no extent"): its roles, then its variables a person or the state fills, a pragma's fields naming them, a field left empty naming none, as pragmas.sh aligns them: "a button is pressed in the row of a tab's entry, whose person takes a role of the act, and the fields are what the proposer fills besides" (vGLP 516a0a2, Section 5.4, "The contract's words"), so the proposer's place and the entry's are left empty, and a field names each other role, as GAI's Agent meet <person> names Bob, and each variable, as GC's swap its four; a place no field names is filled from what the view lists or from the proposer's state.
 procedure field_places(Args?, RoleSpecs?, Ints).
 field_places(Hd, Rs, Fp?) :- ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vs0),
     listed_ixs(Rs?, 1, Lis),
     drop_listed(Vs0?, Lis?, Vs),
-    field_places1(Vs?, 1, Fp0),
-    meeting_schema(Rs?, M),
-    peer_first(M?, Fp0?, Fp).
-%% The peer of a meeting schema first among the places its fields name: its place 2, the role other than its proposer's (meeting_entry).
-procedure peer_first(YesNo?, Ints?, Ints).
-peer_first(yes, Fp, [2|Fp?]).
-peer_first(no, Fp, Fp?).
-%% The places a pragma's fields name, but the peer of a meeting schema, which a person the view lists also fills (meeting_entry: "which a field for the key fills where the peer is not listed").
-procedure peer_out(YesNo?, Ints?, Ints).
-peer_out(yes, [2|Fp], Fp?).
-peer_out(yes, [], []).
-peer_out(no, Fp, Fp?).
-procedure field_places1(Args?, Integer?, Ints).
-field_places1([], _, []).
-field_places1([V|Vs], I, Fp?) :- integer(I?) |
+    field_places2(Vs?, 1, [], Fp).
+%% The places of the args Vs from I that a field may name: a role not in Lis, an agent, speech-act or numeric variable.
+procedure field_places2(Args?, Integer?, Ints?, Ints).
+field_places2([], _, _, []).
+field_places2([V|Vs], I, Lis, Fp?) :- integer(I?), ground(Lis?) |
     I1 := I? + 1,
-    filled(V?, F),
-    field_places1(Vs?, I1?, Fp1),
+    a_field(V?, I?, Lis?, F),
+    field_places2(Vs?, I1?, Lis?, Fp1),
     keep_int(F?, I?, Fp1?, Fp).
-procedure filled(Arg?, YesNo).
-filled(svar(_), yes).
-filled(num(_), yes).
-filled(role(_), no).
-filled(pvar(_), yes).
-filled(nterm(_), no).
-filled(sgn(_, _), no).
+procedure a_field(Arg?, Integer?, Ints?, YesNo).
+a_field(role(_), I, Lis, F?) :- ground(Lis?) | mem(I?, Lis?, In), neg(In?, F).
+a_field(pvar(_), _, _, yes).
+a_field(svar(_), _, _, yes).
+a_field(num(_), _, _, yes).
+a_field(nterm(_), _, _, no).
+a_field(sgn(_, _), _, _, no).
 procedure keep_int(YesNo?, Integer?, Ints?, Ints).
 keep_int(yes, I, Is, [I?|Is?]).
 keep_int(no, _, Is, Is?).
@@ -1093,19 +1083,20 @@ schema_labels1(yes, sfound(Hd, Rs), S, B, Fs, Q, T, By, Lp, Rf, [label(S?, B?)|L
 procedure place_labels(Ints?, Strings?, Constant?, Stream(_)).
 place_labels(_, [], _, []).
 place_labels([], [_|_], _, []).
-place_labels([I|Is], [F|Fs], S, [label(S?, I?, F?)|L?]) :- ground(S?) | place_labels(Is?, Fs?, S?, L).
+place_labels([_|Is], [F|Fs], S, L?) :- ground(F?), ground(S?), F? =?= '""' | place_labels(Is?, Fs?, S?, L).
+place_labels([I|Is], [F|Fs], S, [label(S?, I?, F?)|L?]) :- otherwise, ground(S?) | place_labels(Is?, Fs?, S?, L).
 
-%% Where a request's button is drawn (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable, and the button of an act that names none on the tab of its contract"): act(F, T, M, Ps, Gs, Is), places of the request F's arguments, its schema's head less its listed roles: T the tab of its contract; M the place of the person proposing it, an entry for each guarding role at which the act is proposed; Gs the groups it names, group(J, K), for each name term <u>.y of its atoms, J the place of the role u and K that of the speech-act variable y, which no field names; Ps the places of the persons it names beside the proposer that no field names and that lead no group it names, its other roles and its agent variables; and Is the items it names, item(K, P), K the place of a speech-act variable y and P a predicate a list of the app lists, for each atom of P with y among its arguments that the schema requires at the proposer's role, so that a row of that list fills y (Section 5.4, "The contract's words": "A tab's list is the atoms of its predicate in the state").
+%% Where a request's button is drawn (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable, and the button of an act that names none on the tab of its contract"): act(F, T, M, Ps, Gs, Is), places of the request F's arguments, its schema's head less its listed roles: T the tab of its contract; M the place of the person proposing it, an entry for each guarding role at which the act is proposed; Gs the groups it names, group(J, K), for each name term <u>.y of its atoms, J the place of the role u and K that of the speech-act variable y, which no field names; Ps the places of the persons it names beside the proposer that lead no group it names, its other roles and its agent variables, each picked from the persons the viewer knows under the name of its field (vGLP 516a0a2, Section 6.2: "A field that takes a person offers the persons the viewer knows"); and Is the items it names, item(K, P), K the place of a speech-act variable y and P a predicate a list of the app lists, for each atom of P with y among its arguments that the schema requires at the proposer's role, so that a row of that list fills y (Section 5.4, "The contract's words": "A tab's list is the atoms of its predicate in the state").
 procedure act_entry(Constant?, Args?, RoleSpecs?, Strings?, String?, Proposer?, Preds?, DrawCtx?, Stream(_)).
 act_entry(S, Hd, Rs, Fs, T, By, Lp, Rf, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Fs?), ground(T?), ground(By?), ground(Lp?), ground(Rf?) |
     schema_vars(Rs?, Hd?, Vs0),
     listed_ixs(Rs?, 1, Lis),
     drop_listed(Vs0?, Lis?, Vs),
+    schema_vars(Rs?, Hd?, Ws0),
+    listed_ixs(Rs?, 1, Lis2),
+    drop_listed(Ws0?, Lis2?, Ws),
     field_places(Hd?, Rs?, Fp),
-    count_strings(Fs?, NF),
-    take_ints(NF?, Fp?, Named0),
-    meeting_schema(Rs?, Mt),
-    peer_out(Mt?, Named0?, Named),
+    named_places(Fp?, Fs?, Ws?, Named),
     guard_roles(Rs?, 1, Gr0),
     proposer_roles(By?, Gr0?, Gr),
     spec_args(Rs?, As),
@@ -1482,10 +1473,6 @@ has_svar([_|Xs], B?) :- otherwise | has_svar(Xs?, B).
 procedure item_place(Integer?, Constant?, ItemPlaces).
 item_place(K, P, [item(K?, P?)]) :- K? > 0 | true.
 item_place(0, _, []).
-procedure take_ints(Integer?, Ints?, Ints).
-take_ints(0, _, []).
-take_ints(N, [], []) :- N? > 0 | true.
-take_ints(N, [I|Is], [I?|R?]) :- N? > 0 | N1 := N? - 1, take_ints(N1?, Is?, R).
 %% The index of the first guarding role, from J; 0 where there is none.
 procedure first_guard(RoleSpecs?, Integer?, Integer).
 first_guard([], _, 0).
@@ -1737,9 +1724,24 @@ question_terms([G|Gs], [Q|Qs], Pp, Vw, [T?|Ts?]) :- integer(G?), ground(Q?), gro
 procedure value_field_places(Args?, RoleSpecs?, Ints).
 value_field_places(Hd, Rs, Fq?) :- ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vs),
-    field_places1(Vs?, 1, Fq0),
-    meeting_schema(Rs?, M),
-    peer_first(M?, Fq0?, Fq).
+    listed_ixs(Rs?, 1, Lis),
+    field_places2(Vs?, 1, Lis?, Fq).
+%% The places a field names that no picker fills: those with a field of a non-empty name that hold no person, a person place being picked from the persons the viewer knows under the field's name (vGLP 516a0a2, Section 6.2: "A field that takes a person offers the persons the viewer knows").
+procedure named_places(Ints?, Strings?, Args?, Ints).
+named_places(_, [], _, []).
+named_places([], [_|_], _, []).
+named_places([I|Is], [F|Fs], Vs, N?) :- integer(I?), ground(F?), ground(Vs?) |
+    nth_arg(I?, Vs?, A),
+    named_place(F?, A?, I?, N1),
+    named_places(Is?, Fs?, Vs?, N2),
+    app(N1?, N2?, N).
+procedure named_place(String?, Arg?, Integer?, Ints).
+named_place(F, _, _, []) :- ground(F?), F? =?= '""' | true.
+named_place(_, A, I, N?) :- otherwise | named_place1(A?, I?, N).
+procedure named_place1(Arg?, Integer?, Ints).
+named_place1(role(_), _, []).
+named_place1(pvar(_), _, []).
+named_place1(A, I, [I?]) :- otherwise, ground(A?) | true.
 %% The places the pragma's fields name that the question does not name, each with the name of its field and the kind of its value: vp(I, F, named) of a person, vp(I, F, valued) of a number; a field left empty, as an inapplicable field of a schema that shares its button, names no place.
 procedure value_places(Ints?, Strings?, Ints?, Args?, VPlaces).
 value_places([], _, _, _, []).
@@ -1763,7 +1765,7 @@ value_place(no, none, field(_), _, []).
 value_place(no, named, field(F), I, Vp?) :- ground(F?) | nonempty_field(F?, named, I?, Vp).
 value_place(no, valued, field(F), I, Vp?) :- ground(F?) | nonempty_field(F?, valued, I?, Vp).
 procedure nonempty_field(String?, Constant?, Integer?, VPlaces).
-nonempty_field(F, _, _, []) :- F? =?= "" | true.
+nonempty_field(F, _, _, []) :- ground(F?), F? =?= '""' | true.
 nonempty_field(F, K, I, [vp(I?, F?, K?)]) :- otherwise | true.
 procedure vplace_ints(VPlaces?, Ints).
 vplace_ints([], []).
