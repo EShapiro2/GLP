@@ -1,7 +1,7 @@
 establish(Alice?) :
     at Alice: not identity, +identity
 
-meet(Alice?, Bob?) :
+acquaint(Alice?, Bob?) :
     at Alice: identity, +knows(Bob)
     at Bob: identity, +knows(Alice)
 

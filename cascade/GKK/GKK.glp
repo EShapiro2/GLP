@@ -3,7 +3,7 @@
 %% other contract extends (Udi, 2026-10-20, to GSC #5), in the term form
 %% programs/gsc reads (its README, "Writing a contract").  The clauses are in
 %% GKK.txt beside this file: establish is clause 1, Identity (GSG:1 until
-%% 2026-10-20), meet clause 2, Meeting, and introduce clause 3, Introduction;
+%% 2026-10-20), acquaint clause 2, Acquaintance, and introduce clause 3, Introduction;
 %% every role but establish's requires identity.  knows(q) in the state of p
 %% says that p holds q's public key; nothing deletes or forbids it, a second
 %% copy meaning the same.  The notation of each schema is printed from the term by a run of the cascade (schemas.txt).  A
@@ -39,7 +39,7 @@ procedure contract_named(Constant?, Declared).
 contract_named(gkk,
    [schema(establish, ['Alice'], [],
        [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
-    schema(meet, ['Alice', 'Bob'], [],
+    schema(acquaint, ['Alice', 'Bob'], [],
        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
     schema(introduce, ['Alice', 'Bob'], [pvar(c)],
