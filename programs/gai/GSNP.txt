@@ -11,7 +11,7 @@ Alice and Bob are agents.
 3. ○ Confidence.  Alice shall disclose content they received only by forwarding it.
 Pragmas
 Items: the items Alice holds.
-Message: Alice [Message] <person>
+Message: Alice [Message] <item>
 Group message: Bob [Post] <item>
   Alice [Post own] <item>
 Forwarding: Alice [Forward]
