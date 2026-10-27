@@ -20,20 +20,23 @@ unfriend(Alice?, Bob) :
 post(Alice?; x) :
     at Alice: identity, not feed(x), +feed(x)
 
-follow_author(Alice?, Bob) :
-    at Alice: identity, friend(Bob), not follows(Bob, Bob), +follows(Bob, Bob), +following(Bob)
+follow(Alice?; b) :
+    at Alice: identity, knows(b), not decided(b), +decided(b)
+
+friends_follow(Alice, Bob) :
+    at Alice: identity, friend(Bob), not following(Bob), +follows(Bob, Bob), +following(Bob)
     at Bob: identity, +follower(Alice, Bob)
 
-follow_through(Alice?, Carol; b) :
-    at Alice: identity, friend(Carol), not follows(b, Carol), +follows(b, Carol), +following(b)
+through_friend(Alice, Carol; b) :
+    at Alice: identity, decided(b), friend(Carol), not following(b), +follows(b, Carol), +following(b)
     at Carol: identity, following(b), +follower(Alice, b)
 
 unfollow(Alice?, Carol; b) :
-    at Alice: identity, -follows(b, Carol), -following(b)
+    at Alice: identity, -decided(b), -follows(b, Carol), -following(b)
     at Carol: identity, -follower(Alice, b)
 
-ask(Alice?, Carol; b) :
-    at Alice: identity, friend(Carol), knows(b)
+ask(Alice, Carol; b) :
+    at Alice: identity, decided(b), friend(Carol), not asked_of(Carol, b), +asked_of(Carol, b)
     at Carol: identity, +asked(Alice, b)
 
 answer_follows(Carol, Alice; b, x) :
