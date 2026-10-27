@@ -1,11 +1,11 @@
 % ---------------------------------------------------------------------------
-% The notation of a contract's speech act schemas, printed from its term: each schema
-% as Definition Speech act schema of /Grassroots/GSC writes it, def:schema of Section
+% The notation of a contract's speech-act schemas, printed from its term: each schema
+% as Definition Speech-act schema of /Grassroots/GSC writes it, def:schema of Section
 % 3.2, tau(pi_1, ..., pi_k; x_1, ..., x_m) followed by its marked multisets
 % E_1 ... E_k, a guarding role carrying ?; the listed role
 % pi[rho(*, u_2, ..., u_r)] and the name terms <u> and sigma.y as def:role
 % writes them; the signed term
-% sgn(y, pi) as GAI's Definition Speech act schema writes it, and the predicates a
+% sgn(y, pi) as GAI's Definition Speech-act schema writes it, and the predicates a
 % contract declares reflexive under the heading of GAI's paragraph "Reflexive
 % predicates" (GAI's appendix "Contracts with Wards").  The paper is the
 % specification and no definition of it is restated in this file.
@@ -30,7 +30,7 @@
 % empty token ends a line of the text, and the tokens between two empty ones
 % are that line.  cascade.sh joins them into schemas.txt.
 %
-% Speech act schemas allow numbers (GSC, Section 3.2, the paragraph after the
+% Speech-act schemas allow numbers (GSC, Section 3.2, the paragraph after the
 % example of def:schema), and they are printed as def:numbers writes a
 % schema with numbers, as GB's paper does (GB, Appendix A): a numeric
 % argument as its variable or its number, the value variables in the head

@@ -137,7 +137,7 @@ prov_arg1(B, _, RBs, QBs, R?) :- otherwise, ground(B?), ground(RBs?), ground(QBs
 procedure prov_c1(Arg?, Base?, Bases?, Bases?, Ans).
 prov_c1(svar(_), _, _, _, yes).
 % A value is no agent role, no agent variable and no name term, so the
-% definition asks nothing of it (the appendix "Values in Speech Act Schemas").
+% definition asks nothing of it (the appendix "Values in Speech-Act Schemas").
 prov_c1(num(_), _, _, _, yes).
 prov_c1(A, RB, RBs, QBs, R?) :-
     otherwise, ground(A?), ground(RB?), ground(RBs?), ground(QBs?) |

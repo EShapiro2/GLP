@@ -20,7 +20,7 @@
 % to a line.  A newline is whitespace to LaTeX, so the lines are the display
 % and are pasted as they stand.
 %
-% Speech act schemas allow numbers (GSC, Section 3.2; def:numbers): a numeric
+% Speech-act schemas allow numbers (GSC, Section 3.2; def:numbers): a numeric
 % argument, a multiplicity on an atom added or deleted, and a constraint on
 % the value variables, which every binding satisfies.  def:compile applies
 % to a schema with values as written (the appendix "Values in Act

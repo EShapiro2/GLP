@@ -2,18 +2,17 @@
 % Owner: GFF, pending Udi's ruling on the name and the owner (claude.md, "Sessions").  The paper, /Users/udi/Grassroots/GFF/main_CSSN.tex, prints it in its box and cites a clause as GFF:1.
 % Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK, Grassroots Keys and Knowledge, GSC's.  It cites GKK:1 to GKK:3, GSG:1 and GSG:2 whole and restates none.
 % Defines: feed, item, following, path.  Friend is defined with GSG; Alice, Bob and Carol are variables naming agents, Bob and Carol need not be distinct.
-% Last changed: 2026-10-27, written by GFF #1 Cowork from the discussion with Udi of 2026-10-27 (Udi's wording of clauses 1, 2 and 4); the pragmas are GFF #1's draft, for Udi's approval.
-% Schemas: GFF.glp beside this file, eleven over ten predicates: GKK's three, GSG's two, and GFF's six --- post; follow_author and follow_through, GFF:2's two forms, and unfollow; ask and its two answers; deliver_own and deliver_on, GFF:4's two forms --- the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Last changed: 2026-10-27 evening, GFF:3 with "Bob, whom Alice knows" and "a path to Bob" (Udi, 2026-10-27, approving GFF #1's proposal on Code #16's finding that asked was untraceable without it); the pragmas as vGLP 5.4 has them, on Code #16's four findings: no question line under [Ask], Carol answering by machine; [Follow] and [Ask] with one field, the row the other; the Feeds tab listing one predicate, follows.  Earlier that day: written by GFF #1 Cowork from the discussion with Udi (Udi's wording of clauses 1, 2 and 4).
+% Schemas: GFF.glp beside this file, fifteen over twelve predicates: GKK's three, GSG's two, and GFF's ten --- post; follow_author and follow_through, GFF:2's two forms, and unfollow; ask and its three answers, with an item's signatures, with the friend followed through, and that Carol does not follow; deliver_own and deliver_on, GFF:4's two forms --- the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GFF: Grassroots Feeds and Followers
 Alice, Bob and Carol are agents; Bob and Carol need not be distinct.
 1. ■ Feed.  Alice has a feed and may post to it an item, created or received.
 2. ■ Following.  Bob follows their own feed.  Alice, whose friend Carol follows Bob, may follow Bob through Carol, as well as end their following.
-3. ■ Follower discovery.  Alice may ask their friend Carol whether Carol follows Bob, and Carol answers with their path to Bob, as the signatures of the items they received show it, or that they do not.
+3. ■ Follower discovery.  Alice may ask their friend Carol whether Carol follows Bob, whom Alice knows, and Carol answers with a path to Bob, or that they do not.
 4. ■ Delivery.  Carol, who follows Bob, sends every item on this feed, after adding their signature, to every friend who follows Bob through Carol.
 Pragmas
-Feeds: the feeds Alice follows, and the one Alice follows each through.
+Feeds: the agents Alice follows, each with the friend Alice follows them through.
 Feed: Alice [Post] <item>
-Following: Alice [Follow] <person> <person>
+Following: Alice [Follow] <person>
   Alice [Unfollow]
-Follower discovery: Alice [Ask] <person> <person>
-  Carol: Alice asks whether you follow Bob.
+Follower discovery: Alice [Ask] <person>

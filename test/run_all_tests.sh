@@ -167,8 +167,6 @@ KNOWN_RED_CHECKS=(
     "SG two mini-apps on two smartphones: the currency's conversation opens"
     "SG two mini-apps on two smartphones: alice's swap settles"
     "SG two mini-apps on two smartphones: bob's swap settles"
-# GFWC's programs/federation/GFWC.glp is in GSC's old term form, schema(Name, Roles), which the checker no longer reads (GSC 0228e79: schema(Name, Vars, Roles)); GFWC is dormant (Udi, 2026-10-19), and its entry comes off when it writes its contract in the new form (Code #11, 2026-10-19).  GSC's checks of the federation extension of act schemas left programs/gsc with its code (GSC f3c4f43; Coordination #7, 2026-10-20), and their entries with them; the one check reading GFWC.glp stays.  Currencies' programs/currencies/coins/GC.glp is in GSC's current term form since 6499166c, and the checks of it pass but four of GSC's: three hold it to the contract before it extended GKK, mint its first schema, the coin the only predicate of traceable provenance and four displays, GSC's to bring to GC.glp as it stands, which branch GSC-gkk does under new names (e39d8e31), its merge taking these three entries off; and the fourth, the swap's display in GSC's paper, Appendix B.3, follows the paper since GSC 115fc8e, which prints it with the identity and the knows of the other that GC's swap requires, and its entry is off.
-    "GSC: the federation's contract, GFWC, is read from programs/federation/GFWC.glp"
 )
 KR_CHECKS=0
 
@@ -7635,11 +7633,12 @@ if _section GSC; then
 # Section GSC: The GSC checker and compiler (programs/gsc)
 # =============================================================================
 # programs/gsc decides whether a contract is syntactically grassroots and
-# compiles the schemas of one that is, against /Grassroots/GSC; a contract is
-# read from its owner's file (programs/gsc/GSN.glp,
-# programs/currencies/coins/GC.glp, programs/cssn/CSSN.glp,
-# programs/federation/GFWC.glp), one copy each, and the fixtures that
-# change one are programs/gsc/contracts.glp's variants of it.  Its checks
+# compiles the schemas of one that is, against /Grassroots/GSC; GSC's
+# contracts are read from their files (programs/gsc/GKK.glp, GSG.glp and
+# GSN.glp), one copy each, and the fixtures that change one are
+# programs/gsc/contracts.glp's variants of it.  Every other owner's contract
+# is checked and recorded from its own .glp by cascade.sh (Section CAS; GSC
+# #8, 2026-10-25 18:26 UTC).  Its checks
 # were written as programs/gsc/test_gsc.sh, which runs the same REPL binary
 # this suite does and prints one summary line.  The script stays the one place
 # those checks are written --- the paper's owner reads and runs it on its own,
