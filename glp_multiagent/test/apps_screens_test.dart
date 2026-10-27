@@ -1799,13 +1799,13 @@ void appsScreens(Screens screens) {
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 
-  // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GSG and GKK, which it extends (programs/gff/GFF.txt): three tabs, Contacts, Friends and Feeds, "Feeds: the agents Alice follows."; the buttons Post, Follow, Unfollow and Ask, GFF's "[Post] <item>", "[Follow] <person>", "[Unfollow]" and "[Ask] <person>".  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp; Code_inbox.md, GFF #1 Cowork, 2026-10-27 16:34 UTC, revised 17:21 UTC), each act a tap or a typed field, its screens those of GFF #1 Cowork's task of 2026-10-27 18:00 UTC, written to programs/apps/gff/screens/gff-app-<n>.png.
+  // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GSG and GKK, which it extends (programs/gff/GFF.txt at GLP 0a3d7997): four tabs, Contacts, Friends, Posts and Feeds, "Posts: the items Alice posted." and "Feeds: the agents Alice follows."; the buttons Post, Follow and Unfollow, GFF's "[Post] <item>", "[Follow]" and "[Unfollow]".  Friends follow each other by an act each machine takes, friends_follow; a person follows anyone else by one step, Follow, follow(Me, B), and the machine asks every friend and follows through a friend, through_friend and ask, unguarded.  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md), each act a tap or a picked or typed field, its screens those of GFF #1 Cowork's tasks of 2026-10-27 18:00, 18:55 and 20:25 UTC, written to programs/apps/gff/screens/gff-app-<n>.png.
   testWidgets(
       'GFF\'s app on five phones, the play of GFF\'s feeds and followers: '
-      '(1) Alice\'s Feeds after her two posts; (2) Carol\'s Follow in Bob\'s '
-      'row; (3) Carol\'s Feeds; (4) Eve\'s Feeds with the third item signed '
-      'by Alice, Bob, Carol and Dave; (5) Carol\'s Ask in Bob\'s row, '
-      'Alice picked; (6) Bob\'s Feeds after Carol ends her following', (tester) async {
+      '(2) Carol\'s Follow in Alice\'s row of her Contacts; (3) Carol\'s Feeds; '
+      '(4) Eve\'s Feeds with the third item signed by Alice, Bob, Carol and '
+      'Dave; (5) Dave\'s Feeds with Carol\'s path answer; (6) Unfollow in '
+      'Alice\'s row of Carol\'s Feeds, and (7) Carol\'s Feeds after it', (tester) async {
     final run = await _Run.start(tester, screens, 'gff',
         chain: const ['alice', 'bob', 'carol', 'dave', 'eve']);
     final alice = run.person('alice');
@@ -1813,11 +1813,11 @@ void appsScreens(Screens screens) {
     final carol = run.person('carol');
     final dave = run.person('dave');
     final eve = run.person('eve');
-    // Three tabs, the lists of GKK's, GSG's and GFF's pragmas: Contacts, Friends and Feeds.
+    // Four tabs, the lists of GKK's, GSG's and GFF's pragmas: Contacts, Friends, Posts and Feeds.
     expect(run.listNamed(alice, 'knows', 'Contacts'), findsOneWidget);
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
     expect(run.listNamed(alice, 'follows', 'Feeds'), findsOneWidget);
-    expect(run.on(alice, find.byKey(listTabKey('member'))), findsNothing);
+    expect(run.on(alice, find.text('Posts')), findsOneWidget);
 
     // The texts of [p]'s row [k], in order.
     List<String> rowTexts(_Person p, String k) => [
@@ -1826,62 +1826,32 @@ void appsScreens(Screens screens) {
             if (t.data != null && t.data!.length > 1) t.data!,
         ];
 
-    // The friendships of the play: Alice and Bob, Bob and Carol, Carol and Dave, Dave and Eve; each establishes their identity (GKK:1), the first of each two comes to know the second by their key, the second answering yes (GKK:2), and then befriends them, the second answering yes (GSG:1).
+    // The friendships of the play: Alice and Bob, Bob and Carol, Carol and Dave, Dave and Eve; each establishes their identity (GKK:1), the first of each two comes to know the second by their key, the second answering yes (GKK:2), and then befriends them, the second answering yes (GSG:1).  Friends follow each other (GFF:2, friends_follow), each machine taking it unasked.
     for (final p in run.persons) {
       await run.join(p);
     }
     for (final (p, q) in [(alice, bob), (bob, carol), (carol, dave), (dave, eve)]) {
       await run.meetByKey(p, q);
       await run.befriend(p, q);
+      expect(p.atoms, contains('follows(${q.name}, ${q.name})'));
+      expect(q.atoms, contains('follows(${p.name}, ${p.name})'));
     }
 
-    // [p] posts [text] (GFF:1): on their Feeds tab, the tab of GFF, Post's field item, GFF's "<item>", and Post, GFF's "[Post]", which proposes post(p, x), x the speech act they sign at its posting.
+    // [p] posts [text] (GFF:1): Post's field item, GFF's "<item>", and Post, GFF's "[Post]", on the tab of GFF, which proposes post(p, x), x the speech act they sign at its posting.
     String said(String text, String by) => "speech(utterance('$text'), $by)";
     Future<void> post(_Person p, String text) async {
-      await run.list(p, 'follows');
+      await run.list(p, 'item');
       await run.type(p, run.control(p, 'field:post::2'), text);
       await run.tap(p, run.control(p, 'send:post:'));
       expect(p.atoms, contains('feed(${said(text, p.name)})'));
     }
 
-    // (1) Alice posts two items, and her Feeds tab: at its top Post with its field item.
+    // Alice posts two items; Bob, her friend, follows her, and her machine delivers both to him as she signed them (GFF:4, deliver_own).  Screen (1), Alice's Posts tab with her two items, is not taken: the tab lists item, the predicate GFF.txt's line "Posts: the items Alice posted." names (vGLP, Section 5.4, "The contract's words": a tab lists "a predicate of the contract, named in the line by its name"), and her posts are feed(x); reported to Code, 2026-10-27.
     await post(alice, 'First item');
     await post(alice, 'Second item');
-    await run.list(alice, 'follows');
-    await run.top(alice);
-    expect(run.control(alice, 'field:post::2'), findsOneWidget);
-    expect(
-        find.descendant(
-            of: run.control(alice, 'send:post:'), matching: find.text('Post')),
-        findsOneWidget);
-    // Feeds lists the atoms of follows, and Alice follows no one: her items, feed(x) in her state, are on none of her tabs.
-    expect(run.texts(alice), containsAllInOrder(['Feeds', 'item', 'Post']));
-    expect(run.on(alice, find.text('First item')), findsNothing);
-    run.plain(alice);
-    await run.shoot(alice, 'gff-app-1.png');
-
-    // [p] follows the author [author] through their friend [through] (GFF:2): Follow, GFF's "[Follow] <person>", one button for follow_author and follow_through, in [through]'s row of their Friends tab; its field person left empty, follow_author(p, through), where [through] is the author, and the author's key typed into it otherwise, follow_through(p, through, author).  Nobody is asked: the friend's role is unguarded.
-    Future<void> follow(_Person p, String through, String author,
-        {String? shot}) async {
-      await run.list(p, 'friend');
-      await run.tap(p, run.control(p, 'act:follow:$through'));
-      expect(
-          find.descendant(
-              of: run.control(p, 'field:follow:$through:1'),
-              matching: find.text('person')),
-          findsOneWidget);
-      if (author != through) {
-        await run.type(p, run.control(p, 'field:follow:$through:1'), author);
-      }
-      if (shot != null) {
-        await run.foot(p, run.control(p, 'send:follow:$through'));
-        run.plain(p);
-        await run.shoot(p, shot);
-      }
-      await run.tap(p, run.control(p, 'send:follow:$through'));
-      expect(run.person(through).questions('approval'), isEmpty);
-      expect(p.atoms, containsAll(['follows($author, $through)', 'following($author)']));
-    }
+    final first = said('First item', 'alice');
+    final second = said('Second item', 'alice');
+    expect(bob.atoms, containsAll(['item($first, alice)', 'item($second, alice)']));
 
     // [p] introduces [author] to their friend [q] (GKK:3): Introduce in [q]'s row of their Contacts, the author picked into its field person among the persons [p] knows; [q] is asked GKK's question and answers yes.
     Future<void> introduce(_Person p, _Person q, String author) async {
@@ -1904,60 +1874,56 @@ void appsScreens(Screens screens) {
       expect(q.atoms, contains('knows($author)'));
     }
 
-    // [p] asks their friend [q] whether [q] follows [author] (GFF:3): Ask, GFF's "[Ask] <person>", in [q]'s row of their Friends tab, the author picked into its field person among the persons [p] knows, ask requiring knows(b) at Alice's role (vGLP acd3e74, Section 5.4, "The contract's words": "a variable is picked among the items the viewer holds where the proposer's role requires it held"); [q]'s machine answers, unasked.
-    Future<void> ask(_Person p, _Person q, String author, {String? shot}) async {
-      await run.list(p, 'friend');
-      await run.tap(p, run.control(p, 'act:ask:${q.name}'));
-      expect(run.control(p, 'field:ask:${q.name}:3'), findsNothing);
-      await run.tap(p, run.control(p, 'pick:ask:${q.name}:3:$author'));
+    // [p] decides to follow [author] (GFF:2, follow): Follow, GFF's "[Follow]", in [author]'s row of their Contacts, with no field; their machine asks every friend whether they follow [author] (GFF:3, ask) and follows [author] through a friend who does (through_friend), unasked.  Where [shot] is given, [p]'s Contacts are shot before the tap.
+    Future<void> follow(_Person p, String author, String through,
+        {String? shot}) async {
+      await run.list(p, 'knows');
+      await run.top(p);
+      final f = run.control(p, 'act:follow:$author');
+      expect(find.descendant(of: f, matching: find.text('Follow')), findsOneWidget);
       if (shot != null) {
-        await run.foot(p, run.control(p, 'send:ask:${q.name}'));
+        await run.reveal(p, f);
         run.plain(p);
         await run.shoot(p, shot);
       }
-      await run.tap(p, run.control(p, 'send:ask:${q.name}'));
-      expect(q.questions('approval'), isEmpty);
-      expect(
-          p.atoms.where((x) =>
-              x.startsWith('path($author, ${q.name}, ') ||
-              x.startsWith('path_through($author, ${q.name}, ')),
-          isNotEmpty,
-          reason: '${p.name}: no answer of ${q.name}');
+      await run.tap(p, f);
+      expect(p.atoms,
+          containsAll(['decided($author)', 'follows($author, $through)', 'following($author)']));
+      expect(p.atoms.where((x) => x.startsWith('path($author, $through, ')), isNotEmpty,
+          reason: '${p.name}: no path answer of $through');
     }
 
-    // Bob follows Alice (GFF:2, follow_author); her machine delivers both items to him, signed by her at their posting (GFF:4, deliver_own).
-    await follow(bob, 'alice', 'alice');
-    final first = said('First item', 'alice');
-    final second = said('Second item', 'alice');
-    expect(bob.atoms, containsAll(['item($first, alice)', 'item($second, alice)']));
-
-    // Bob introduces Alice to Carol (GKK:3), whom Carol must know to ask about her (GFF:3).
+    // Bob introduces Alice to Carol (GKK:3), whom Carol must know to decide to follow her.
     await introduce(bob, carol, 'alice');
 
-    // (5) Carol asks Bob whether he follows Alice (GFF:3): Ask in Bob's row, Alice picked; Bob's machine answers with a path, an item of Alice's feed he holds.
-    await ask(carol, bob, 'alice', shot: 'gff-app-5.png');
-
-    // (2) Carol follows Alice through Bob (GFF:2, follow_through): Follow in Bob's row, Alice's key typed into its field person; Bob's machine delivers the two items to her, signed by him (GFF:4, deliver_on).
-    await follow(carol, 'bob', 'alice', shot: 'gff-app-2.png');
+    // (2) Carol's Contacts: Follow in Alice's row.  She taps it; her machine follows Alice through Bob and asks Bob and Dave, Bob answering with a path, an item of Alice's feed he holds, and Dave that he does not follow her (GFF:3); Bob's machine delivers the two items to her, signed by him (GFF:4, deliver_on).
+    await follow(carol, 'alice', 'bob', shot: 'gff-app-2.png');
+    expect(carol.atoms, contains('does_not_follow(alice, dave)'));
     expect(carol.atoms, contains('item(speech($first, bob), alice)'));
 
-    // (3) Carol's Feeds tab: Alice, the agent she follows, with Bob, the friend she follows her through, and the items of Alice's feed she holds.
+    // (3) Carol's Feeds tab: Alice, the agent she follows, with Bob, the friend she follows her through, the items Bob delivered, each signed by Alice and Bob, Bob's answer, his path to Alice, and Dave's, that he does not follow her.
     await run.list(carol, 'follows');
     await run.top(carol);
-    expect(run.control(carol, 'row:alice'), findsOneWidget);
     expect(rowTexts(carol, 'alice').take(2), ['Alice', 'Bob']);
     expect(rowTexts(carol, 'alice'),
         containsAll(['First item (Alice, Bob)', 'Second item (Alice, Bob)']));
     run.plain(carol);
     await run.shoot(carol, 'gff-app-3.png');
 
-    // Carol introduces Alice to Dave; Dave asks Carol and follows Alice through her, and introduces her to Eve; Eve asks Dave and follows Alice through him.
+    // Carol introduces Alice to Dave, and Dave follows her through Carol; Dave introduces her to Eve, and Eve follows her through Dave.
     await introduce(carol, dave, 'alice');
-    await ask(dave, carol, 'alice');
-    await follow(dave, 'carol', 'alice');
+    await follow(dave, 'alice', 'carol');
+    expect(dave.atoms, contains('does_not_follow(alice, eve)'));
+
+    // (5) Dave's Feeds tab: Alice, with Carol, the friend he follows her through, and the answers to his asking: Carol's path to Alice, an item of Alice's signed by Alice and Bob, and Eve's, that she does not follow her.
+    await run.list(dave, 'follows');
+    await run.top(dave);
+    expect(rowTexts(dave, 'alice').take(2), ['Alice', 'Carol']);
+    run.plain(dave);
+    await run.shoot(dave, 'gff-app-5.png');
+
     await introduce(dave, eve, 'alice');
-    await ask(eve, dave, 'alice');
-    await follow(eve, 'dave', 'alice');
+    await follow(eve, 'alice', 'dave');
 
     // Alice posts a third item, which reaches Eve signed by Alice at its posting and by Bob, Carol and Dave on its way (GFF:4).
     await post(alice, 'Third item');
@@ -1968,43 +1934,39 @@ void appsScreens(Screens screens) {
     // (4) Eve's Feeds tab: Alice, followed through Dave, and the items of her feed, each with its signatures, Alice, Bob, Carol and Dave.
     await run.list(eve, 'follows');
     await run.top(eve);
-    expect(run.control(eve, 'row:alice'), findsOneWidget);
     expect(rowTexts(eve, 'alice').take(3),
         ['Alice', 'Dave', 'Third item (Alice, Bob, Carol, Dave)']);
     run.plain(eve);
     await run.shoot(eve, 'gff-app-4.png');
 
-    // Carol ends her following of Alice (GFF:2, unfollow): Unfollow, GFF's "[Unfollow]", in Alice's row of her Feeds tab, the row's atom follows(alice, bob) filling Alice and Bob (vGLP, Section 6.2, "The words a platform shows"); Bob's machine is not asked.
+    // (6) Carol's Feeds tab with Unfollow, GFF's "[Unfollow]", in Alice's row, the row's atom follows(alice, bob) filling Alice and Bob (vGLP, Section 6.2, "The words a platform shows").
     await run.list(carol, 'follows');
-    expect(
-        find.descendant(
-            of: run.control(carol, 'act:unfollow:alice'),
-            matching: find.text('Unfollow')),
-        findsOneWidget);
-    await run.tap(carol, run.control(carol, 'act:unfollow:alice'));
+    await run.top(carol);
+    final unfollow = run.control(carol, 'act:unfollow:alice');
+    expect(find.descendant(of: unfollow, matching: find.text('Unfollow')), findsOneWidget);
+    run.plain(carol);
+    await run.shoot(carol, 'gff-app-6.png');
+
+    // Carol ends her following of Alice (GFF:2, unfollow), which deletes her decision; Bob's machine is not asked.
+    await run.tap(carol, unfollow);
     expect(bob.questions('approval'), isEmpty);
-    expect(carol.atoms, isNot(contains('following(alice)')));
-    expect(carol.atoms, isNot(contains('follows(alice, bob)')));
+    for (final x in ['decided(alice)', 'following(alice)', 'follows(alice, bob)']) {
+      expect(carol.atoms, isNot(contains(x)), reason: x);
+    }
     expect(bob.atoms, isNot(contains('follower(carol, alice)')));
+
+    // (7) Carol's Feeds tab after it: Alice gone from it; Bob and Dave, her friends, whom she follows by friendship.
+    await run.top(carol);
     expect(run.control(carol, 'row:alice'), findsNothing);
+    run.plain(carol);
+    await run.shoot(carol, 'gff-app-7.png');
 
     // Alice posts a fourth item, which reaches Bob and not Carol, Dave or Eve.
     await post(alice, 'Fourth item');
-    final fourth = said('Fourth item', 'alice');
-    expect(bob.atoms, contains('item($fourth, alice)'));
+    expect(bob.atoms, contains('item(${said('Fourth item', 'alice')}, alice)'));
     for (final p in [carol, dave, eve]) {
       expect(p.atoms.where((x) => x.contains('Fourth item')), isEmpty, reason: p.name);
     }
-
-    // (6) Bob's Feeds tab after Carol ended her following: Alice's row, her four items, signed by her at their posting, and Carol no longer among her followers through Bob.
-    await run.list(bob, 'follows');
-    await run.top(bob);
-    final bobRow = rowTexts(bob, 'alice');
-    expect(bobRow.first, 'Alice');
-    expect(bobRow, contains('Fourth item (Alice)'));
-    expect(bobRow, isNot(contains('Carol')));
-    run.plain(bob);
-    await run.shoot(bob, 'gff-app-6.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 30)));
 
