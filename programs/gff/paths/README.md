@@ -1,6 +1,6 @@
 # Path lengths under GFF
 
-A graph-theoretic study of the length of the paths through which followers follow an author under GFF's Algorithms pragmas, on Kleinberg's grid: GFF #1's task to Code (`Code_inbox.md`, 2026-10-27 18:52 UTC, items 1 to 3; item 4 sent whole at 21:30 UTC), approved by Udi on 2026-10-27.  The contract is `../GFF.txt`; the paper is GFF's.
+A graph-theoretic study of the length of the paths through which followers follow an author under GFF's Algorithms pragmas, on Kleinberg's grid: GFF #1's task to Code (`Code_inbox.md`, 2026-10-27 18:52 UTC, items 1 to 3; item 4 sent whole at 21:30 UTC, its shortening rule changed at 21:40 UTC to shortening by the signatures of the items received), approved by Udi on 2026-10-27.  The contract is `../GFF.txt`; the paper is GFF's.
 
 ## How to run it
 
@@ -12,7 +12,7 @@ The run of all three q, five seeds each, took 16 seconds on Udi's Mac, sequentia
 
 ## Seeds
 
-Run (q, s), for q in 1, 2, 4 and s in 1 to 5, draws everything from one generator, Python's `random.Random(s)`: the graph, the numbers of followers, the followers, the order of deciding, and the order of each pass of shortening.  The same Python reproduces the run.
+Run (q, s), for q in 1, 2, 4 and s in 1 to 5, draws everything from one generator, Python's `random.Random(s)`: the graph, the numbers of followers, the followers, the order of deciding, and the order of each pass of the earlier shortening rule; shortening by signatures draws nothing.  The same Python reproduces the run.
 
 ## The graph
 
@@ -32,16 +32,24 @@ This is GFF's Algorithms pragma: "when Alice decides to follow Bob, Alice's mach
 
 All author-follower pairs decide in one random order, one at a time.  A decider who is a friend of the author already follows, at 1.  Any other decider follows through the friend with the shortest path to the author, at one more than that friend's length, ties going to the first such friend in the decider's list of friends.  A decider with no friend following waits, in a queue kept per author.  When a person comes to follow an author, every friend of theirs waiting on that author joins a first-in first-out queue, and each, taken from it, follows through their friend with the shortest path at that time; the queue runs out before the next decider in the order decides.  A follower's path length is fixed when they follow.
 
-## Path shortening, the second Algorithms pragma
+## Shortening by the signatures of the items received, the second Algorithms pragma
 
-After every decider has had their turn, repeatedly, a follower whose friend has a path to the author shorter by two or more than their own ends their following and follows through that friend, the one with the shortest path, ties as above.  A follower's path length is one more than that of the friend they follow through, so the lengths of all who follow through them, directly or through others, fall with theirs.  The followers are taken in a random order, a new one each pass, until a pass makes no change; the tables count the re-followings.  The waiting deciders stay waiting.
+This is GFF's Algorithms line Shortening: "when Alice receives an item of Bob's feed signed by a friend nearer to Bob than the friend Alice follows Bob through, Alice follows Bob through that friend instead (GFF:2)".  By GFF:4 an item the author posts reaches each follower along their following path, signed by the author, at position 0, and by each follower it passes, in order, the friend the follower follows through last.
+
+After every decider has had their turn, the author posts an item.  A follower who finds among the signers of the item they received a friend of theirs at a position nearer the author than the friend they follow through switches to that friend, the nearest such if there are several.  A switch takes effect for the next item only, the items being what a follower receives: all the switches of a pass are decided on the item of that pass, and then the author posts again, until a pass changes nothing.  The tables count the switches and the posts, the last post being the one on which no follower switches.
+
+No follower ever switches.  Every signer of the item a follower receives followed the author before that follower did, and was then a friend following, if a friend at all, when the follower chose the friend with the shortest path; so no signer who is a friend is nearer than the friend chosen.  The run confirms it for every q and seed: no switch, and one post per author.
+
+## The earlier shortening rule, for comparison
+
+This is item 4's rule as first sent.  After every decider has had their turn, repeatedly, a follower whose friend has a path to the author shorter by two or more than their own ends their following and follows through that friend, the one with the shortest path, ties as above.  A follower's path length is one more than that of the friend they follow through, so the lengths of all who follow through them, directly or through others, fall with theirs.  The followers are taken in a random order, a new one each pass, until a pass makes no change; the tables count the re-followings.  The waiting deciders stay waiting.
 
 ## The shortest-path trees, for comparison
 
 1. Over the followers' subgraph: the friendship graph restricted to the author and to those who follow the author at the end of the first following, being the deciders who followed and the author's friends.  A follower's path is their distance to the author in it.
 2. Over the whole friendship graph: a follower's path is their graph distance to the author, and its ratio is 1; the tables give the distance.
 
-Shortening stops only when no follower has a friend following at two or more less than their own length, so then every follower's length is one more than the least length among their friends who follow, which is their distance to the author in the followers' subgraph.  So the tables after shortening and for the tree over the followers' subgraph agree in every entry, as they do in the run.
+The earlier rule stops only when no follower has a friend following at two or more less than their own length, so then every follower's length is one more than the least length among their friends who follow, which is their distance to the author in the followers' subgraph.  So the tables after the earlier rule and for the tree over the followers' subgraph agree in every entry, as they do in the run.
 
 ## The measures
 
@@ -51,4 +59,4 @@ Over all author-follower pairs, in bins by the author's number of followers --- 
 2. its ratio to the graph distance between the follower and the author, by breadth-first search in the friendship graph: mean, median and max;
 3. the fraction of deciders still waiting, for the first following.
 
-Path length and ratio are over the deciders who follow; a waiting decider has neither.  The tables give these for the first following, after shortening, and for the two shortest-path trees, the five seeds pooled, and then a line per seed and bin.
+Path length and ratio are over the deciders who follow; a waiting decider has neither.  The tables give these for the first following, after shortening by signatures, after the earlier rule, and for the two shortest-path trees, the five seeds pooled, and then a line per seed and bin.

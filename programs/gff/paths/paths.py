@@ -43,8 +43,24 @@ follows through their friend with the shortest path then; the cascade runs out
 before the next decider in the order.  A follower's path length is fixed at
 the time they follow.
 
-PATH SHORTENING (item 4, a second Algorithms pragma).  After every decider has
-had their turn: repeatedly, a follower whose friend has a path to the author
+SHORTENING BY SIGNATURES (item 4, as GFF changed it, 2026-10-27 21:40 UTC;
+GFF.txt's Algorithms line Shortening).  An item the author posts reaches each
+follower along their following path (GFF:4), signed by the author, at position
+0, and by each follower it passes, in order, the friend the follower follows
+through last.  After every decider has had their turn, the author posts an
+item; a follower who finds among the signers of the item they received a
+friend of theirs at a position nearer the author than the friend they follow
+through switches to that friend, the nearest such if several.  All switches of
+a pass are decided on the item of that pass and take effect for the next item
+only; the author then posts again, until a pass changes nothing.  The tables
+count the switches and the posts.  Every signer of the item a follower receives
+followed before that follower did, and so was a friend following when the
+follower chose the friend with the shortest path; so after the first following
+no follower ever finds such a friend, and the run confirms it: no switch, one
+post per author.
+
+THE EARLIER SHORTENING RULE (item 4 as first sent, for comparison).  After
+every decider has had their turn: repeatedly, a follower whose friend has a path to the author
 shorter by two or more than their own ends their following and follows
 through that friend (the friend with the shortest path, ties as above); a
 follower's path length is one more than that of the friend they follow
@@ -70,7 +86,8 @@ who follow; a waiting decider has neither.
 
 SEEDS.  A run (q, s) draws everything from one generator, random.Random(s):
 graph, follower counts, followers, the order of deciding, the order of the
-shortening passes.  q in 1, 2, 4; s in 1 .. 5.
+passes of the earlier shortening rule (shortening by signatures draws nothing).
+q in 1, 2, 4; s in 1 .. 5.
 """
 
 import argparse
@@ -267,6 +284,55 @@ def run(args):
             waiting[b].add(f)
 
     first = [dict(depth[b]) for b in range(N)]
+    first_parent = [dict(parent[b]) for b in range(N)]
+
+    # Shortening by the signatures of the items received (item 4 as GFF
+    # changed it, 2026-10-27 21:40 UTC).
+    friend_sets = [set(a) for a in adj]
+    sig_depth, switches_by_author, posts_by_author = [], [0] * N, [0] * N
+    for b in range(N):
+        par = dict(first_parent[b])
+        dep = dict(first[b])
+        posts = 0
+        while True:
+            # The author posts an item; it reaches every follower along their
+            # following path, signed by the author (position 0) and by each
+            # follower it passes, in order, the friend followed through last.
+            posts += 1
+            moves = []
+            for f, p in par.items():
+                if p is None or p == b:
+                    continue
+                # the signers of the item f received: f's ancestors; the one
+                # nearest the author among them who is a friend of f
+                fs = friend_sets[f]
+                best = None
+                x = par[p]
+                while x is not None:
+                    if x in fs:
+                        best = x
+                    x = par[x]
+                if best is not None:
+                    moves.append((f, best))
+            if not moves:
+                break
+            # the switches take effect for the next item
+            for f, g in moves:
+                par[f] = g
+            switches_by_author[b] += len(moves)
+            ch = {}
+            for f, p in par.items():
+                if p is not None:
+                    ch.setdefault(p, []).append(f)
+            dep = {b: 0}
+            stack = [b]
+            while stack:
+                x = stack.pop()
+                for c in ch.get(x, ()):
+                    dep[c] = dep[x] + 1
+                    stack.append(c)
+        posts_by_author[b] = posts
+        sig_depth.append(dep)
 
     # Path shortening.
     children = []
@@ -309,11 +375,13 @@ def run(args):
 
     # Measures.
     res = {key: [[] for _ in BIN_LABELS] for key in
-           ("first", "rfirst", "short", "rshort", "sub", "rsub", "dist")}
+           ("first", "rfirst", "sig", "rsig", "short", "rshort", "sub", "rsub", "dist")}
     deciders = [0] * len(BIN_LABELS)
     waits = [0] * len(BIN_LABELS)
     authors = [0] * len(BIN_LABELS)
     refollows = [0] * len(BIN_LABELS)
+    switches = [0] * len(BIN_LABELS)
+    posts = [[] for _ in BIN_LABELS]
     for b in range(N):
         k = counts[b]
         bi = bin_of(k)
@@ -321,6 +389,8 @@ def run(args):
         deciders[bi] += k
         waits[bi] += len(waiting[b])
         refollows[bi] += refollow_by_author[b]
+        switches[bi] += switches_by_author[b]
+        posts[bi].append(posts_by_author[b])
         fol = [f for f in followers[b] if f in first[b]]
         if not fol:
             continue
@@ -331,6 +401,8 @@ def run(args):
             res["dist"][bi].append(g)
             res["first"][bi].append(first[b][f])
             res["rfirst"][bi].append(first[b][f] / g)
+            res["sig"][bi].append(sig_depth[b][f])
+            res["rsig"][bi].append(sig_depth[b][f] / g)
             res["short"][bi].append(depth[b][f])
             res["rshort"][bi].append(depth[b][f] / g)
             res["sub"][bi].append(sub[f])
@@ -339,6 +411,7 @@ def run(args):
     return {
         "q": q, "seed": seed, "res": res, "deciders": deciders,
         "waits": waits, "authors": authors, "refollows": refollows,
+        "switches": switches, "posts": posts,
         "passes": passes, "seconds": time.time() - t0,
         "pairs": len(pairs), "mean_degree": sum(degs) / len(degs),
     }
@@ -364,7 +437,8 @@ def hist(xs):
 
 MEASURES = [
     ("first", "rfirst", "First following (Algorithms pragma: shortest path through a friend who follows)"),
-    ("short", "rshort", "After path shortening"),
+    ("sig", "rsig", "After shortening by the signatures of the items received (item 4)"),
+    ("short", "rshort", "After the earlier shortening rule, a friend shorter by two or more (comparison)"),
     ("sub", "rsub", "Shortest-path tree over the followers' subgraph (the author and those following at the end of the first following)"),
 ]
 
@@ -382,6 +456,8 @@ def table(runs, lines, pooled_label):
     D = [sum(r["deciders"][bi] for r in runs) for bi in range(nb)]
     W = [sum(r["waits"][bi] for r in runs) for bi in range(nb)]
     R = [sum(r["refollows"][bi] for r in runs) for bi in range(nb)]
+    S = [sum(r["switches"][bi] for r in runs) for bi in range(nb)]
+    P = [[x for r in runs for x in r["posts"][bi]] for bi in range(nb)]
     for key, rkey, title in MEASURES:
         lines.append("### " + title + ", " + pooled_label)
         lines.append("")
@@ -390,6 +466,9 @@ def table(runs, lines, pooled_label):
         if key == "first":
             head += " waiting |"
             sep += "---:|"
+        if key == "sig":
+            head += " switches | posts per author mean | max |"
+            sep += "---:|---:|---:|"
         if key == "short":
             head += " re-followings |"
             sep += "---:|"
@@ -401,6 +480,8 @@ def table(runs, lines, pooled_label):
             row = "| {} | {} | {} | {} |".format(BIN_LABELS[bi], A[bi], D[bi], len(xs))
             if key == "first":
                 row += " {} |".format("{:.4f}".format(W[bi] / D[bi]) if D[bi] else "-")
+            if key == "sig":
+                row += " {} | {} | {} |".format(S[bi], *(("{:.2f}".format(sum(P[bi]) / len(P[bi])), max(P[bi])) if P[bi] else ("-", "-")))
             if key == "short":
                 row += " {} |".format(R[bi])
             row += " {} | {} | {} |".format(*stats(xs))
@@ -411,6 +492,9 @@ def table(runs, lines, pooled_label):
         row = "| all | {} | {} | {} |".format(sum(A), sum(D), len(xs))
         if key == "first":
             row += " {:.4f} |".format(sum(W) / sum(D))
+        if key == "sig":
+            allp = [x for bi in range(nb) for x in P[bi]]
+            row += " {} | {:.2f} | {} |".format(sum(S), sum(allp) / len(allp), max(allp))
         if key == "short":
             row += " {} |".format(sum(R))
         row += " {} | {} | {} |".format(*stats(xs))
@@ -440,7 +524,8 @@ def write_q(q, runs, outdir):
     lines.append("")
     lines += ["| followers | measure | length:count |", "|---|---|---|"]
     for bi in range(len(BIN_LABELS)):
-        for key, name in (("first", "first following"), ("short", "after shortening"),
+        for key, name in (("first", "first following"), ("sig", "after shortening by signatures"),
+                          ("short", "after the earlier rule"),
                           ("sub", "tree, followers' subgraph"), ("dist", "graph distance")):
             xs = merged(key, bi)
             if xs:
@@ -448,22 +533,24 @@ def write_q(q, runs, outdir):
     lines.append("")
     lines.append("## Per seed")
     lines.append("")
-    lines += ["| seed | followers | pairs | waiting | first: path mean / max, ratio mean / max | shortened: path mean / max, ratio mean / max | re-followings | tree over followers: path mean / max, ratio mean / max |",
-              "|---:|---|---:|---:|---|---|---:|---|"]
+    lines += ["| seed | followers | pairs | waiting | first: path mean / max, ratio mean / max | by signatures: path mean / max, ratio mean / max | switches | posts mean / max | earlier rule: path mean / max, ratio mean / max | re-followings | tree over followers: path mean / max, ratio mean / max |",
+              "|---:|---|---:|---:|---|---|---:|---|---|---:|---|"]
     for r in runs:
         for bi in range(len(BIN_LABELS)):
             if not r["deciders"][bi]:
                 continue
             cells = []
-            for key, rkey in (("first", "rfirst"), ("short", "rshort"), ("sub", "rsub")):
+            for key, rkey in (("first", "rfirst"), ("sig", "rsig"), ("short", "rshort"), ("sub", "rsub")):
                 pm, _, px = stats(r["res"][key][bi])
                 rm, _, rx = stats(r["res"][rkey][bi], True)
                 cells.append("{} / {}, {} / {}".format(pm, px, rm, rx))
-            lines.append("| {} | {} | {} | {:.4f} | {} | {} | {} | {} |".format(
+            ps = r["posts"][bi]
+            lines.append("| {} | {} | {} | {:.4f} | {} | {} | {} | {:.2f} / {} | {} | {} | {} |".format(
                 r["seed"], BIN_LABELS[bi], r["deciders"][bi], r["waits"][bi] / r["deciders"][bi],
-                cells[0], cells[1], r["refollows"][bi], cells[2]))
+                cells[0], cells[1], r["switches"][bi], sum(ps) / len(ps), max(ps),
+                cells[2], r["refollows"][bi], cells[3]))
     lines.append("")
-    lines += ["| seed | author-follower pairs | mean friends per person | shortening passes | run time (s) |",
+    lines += ["| seed | author-follower pairs | mean friends per person | passes of the earlier rule | run time (s) |",
               "|---:|---:|---:|---:|---:|"]
     for r in runs:
         lines.append("| {} | {} | {:.3f} | {} | {:.0f} |".format(
