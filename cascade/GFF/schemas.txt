@@ -1,0 +1,57 @@
+establish(Alice?) :
+    at Alice: not identity, +identity
+
+acquaint(Alice?, Bob?) :
+    at Alice: identity, +knows(Bob)
+    at Bob: identity, +knows(Alice)
+
+introduce(Alice?, Bob?; c) :
+    at Alice: identity, knows(Bob), knows(c)
+    at Bob: identity, knows(Alice), +knows(c)
+
+befriend(Alice?, Bob?) :
+    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
+    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
+
+unfriend(Alice?, Bob) :
+    at Alice: identity, -friend(Bob)
+    at Bob: identity, -friend(Alice)
+
+post(Alice?; x) :
+    at Alice: identity, not feed(x), +feed(x)
+
+follow_author(Alice?, Bob) :
+    at Alice: identity, friend(Bob), not follows(Bob, Bob), +follows(Bob, Bob), +following(Bob)
+    at Bob: identity, +follower(Alice, Bob)
+
+follow_through(Alice?, Carol; b) :
+    at Alice: identity, friend(Carol), not follows(b, Carol), +follows(b, Carol), +following(b)
+    at Carol: identity, following(b), +follower(Alice, b)
+
+unfollow(Alice?, Carol; b) :
+    at Alice: identity, -follows(b, Carol), -following(b)
+    at Carol: identity, -follower(Alice, b)
+
+ask(Alice?, Carol; b) :
+    at Alice: identity, friend(Carol), knows(b)
+    at Carol: identity, +asked(Alice, b)
+
+answer_follows(Carol, Alice; b, x) :
+    at Carol: identity, following(b), item(x, b), -asked(Alice, b)
+    at Alice: identity, +path(b, Carol, x)
+
+answer_follows_through(Carol, Alice; b, d) :
+    at Carol: identity, follows(b, d), -asked(Alice, b)
+    at Alice: identity, +path_through(b, Carol, d)
+
+answer_does_not_follow(Carol, Alice; b) :
+    at Carol: identity, not following(b), -asked(Alice, b)
+    at Alice: identity, +does_not_follow(b, Carol)
+
+deliver_own(Bob, Alice; x) :
+    at Bob: identity, feed(x), follower(Alice, Bob), friend(Alice), not sent(x, Alice), +sent(x, Alice)
+    at Alice: identity, +item(sgn(x, Bob), Bob)
+
+deliver_on(Carol, Alice; b, x) :
+    at Carol: identity, following(b), item(x, b), follower(Alice, b), friend(Alice), not sent(x, Alice), +sent(x, Alice)
+    at Alice: identity, +item(sgn(x, Carol), b)
