@@ -50,7 +50,7 @@ answer_does_not_follow(Carol, Alice; b) :
 
 deliver_own(Bob, Alice; x) :
     at Bob: identity, feed(x), follower(Alice, Bob), friend(Alice), not sent(x, Alice), +sent(x, Alice)
-    at Alice: identity, +item(sgn(x, Bob), Bob)
+    at Alice: identity, +item(x, Bob)
 
 deliver_on(Carol, Alice; b, x) :
     at Carol: identity, following(b), item(x, b), follower(Alice, b), friend(Alice), not sent(x, Alice), +sent(x, Alice)

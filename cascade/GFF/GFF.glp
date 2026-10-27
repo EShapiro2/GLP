@@ -111,12 +111,12 @@ contract_named(gff,
        [rs(unguarded, [], [atom(asked, [role(2), pvar(b)])],
                       [atom(identity, [])], [atom(following, [pvar(b)])]),
         rs(unguarded, [atom(does_not_follow, [pvar(b), role(1)])], [], [atom(identity, [])], [])]),
-%% GFF:4, Delivery.  Bob sends an item x of their feed, signed, to their friend Alice, who follows Bob through Bob.
+%% GFF:4, Delivery.  Bob sends an item x of their feed to their friend Alice, who follows Bob through Bob; x carries Bob's signature from its posting (GSC, Definition Compilation), so none is added (Udi, 2026-10-27, on Code #16's finding of a second signature).
     schema(deliver_own, ['Bob', 'Alice'], [svar(x)],
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
                       [atom(identity, []), atom(feed, [svar(x)]), atom(follower, [role(2), role(1)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)])]),
-        rs(unguarded, [atom(item, [sgn(x, 1), role(1)])], [], [atom(identity, [])], [])]),
+        rs(unguarded, [atom(item, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
 %% GFF:4, Delivery.  Carol, who follows b, sends an item x of b's feed they hold, signed, to their friend Alice, who follows b through Carol.
     schema(deliver_on, ['Carol', 'Alice'], [pvar(b), svar(x)],
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
