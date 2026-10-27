@@ -1386,7 +1386,7 @@ proved_entry(no, _, _, _, _, _, []).
 proved_entry(yes, pat(Q, Ws), P, N, I, K, [proved(Q?, Ws?, P?, As?)]) :- K? > 0 | unless_args(1, N?, I?, K?, As).
 proved_entry(yes, _, _, _, _, 0, []).
 %% The items a request names: item(K, P) for each atom of a listed predicate P that the schema requires at the role G, the proposer's, kept or deleted there, with the speech-act variable at place K among its arguments.
-ItemPlace ::= item(Integer, Constant) ; atom(Constant, Ints) ; req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs) ; same(Integer, Integer).
+ItemPlace ::= item(Integer, Constant) ; pick(Integer, Constant) ; atom(Constant, Ints) ; req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs) ; same(Integer, Integer).
 ItemPlaces ::= [] ; [ItemPlace | ItemPlaces].
 procedure item_places(Integer?, RoleSpecs?, Args?, Ints?, Preds?, ItemPlaces).
 item_places(G, Rs, Vs, Nd, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Nd?), ground(Lp?) |
@@ -1394,19 +1394,19 @@ item_places(G, Rs, Vs, Nd, Lp, Is?) :- integer(G?), ground(Rs?), ground(Vs?), gr
     required_atoms(R?, Rq),
     item_atoms(Rq?, G?, Vs?, Lp?, Is0),
     keyed_out(Is0?, Vs?, Nd?, Is).
-%% A person a field names is named by key, and no row fills it (vGLP, Section 5.4, "The contract's words": "in angle brackets each field ..., a person the act names by key among them"); a speech act a field names a row fills, the field's name labelling it.
+%% A variable the proposer's role requires held is picked among the items the viewer holds (vGLP acd3e74, Section 5.4, "The contract's words": "a variable is picked among the items the viewer holds where the proposer's role requires it held, and typed otherwise, an agent by key"): a speech-act variable, item(K, P), a row of the list of P filling it, whether or not a field names it; an agent variable a field names, pick(K, P), picked among the persons of the rows of the list of P under the name of its field, no row filling it; an agent variable or a role no field names, item(K, P); a role a field names, named by key, nothing.  A held atom fills no variable the person fills.
 procedure keyed_out(ItemPlaces?, Args?, Ints?, ItemPlaces).
 keyed_out([], _, _, []).
 keyed_out([atom(P, Ks)|Is], Vs, Nd, R?) :- ground(Ks?), ground(Nd?), ground(Vs?) |
     any_in(Ks?, Nd?, F),
-    keyed_out1(no, F?, atom(P?, Ks?), R1),
+    keyed_out1(F?, atom(P?, Ks?), R1),
     keyed_out(Is?, Vs?, Nd?, R2),
     app(R1?, R2?, R).
 keyed_out([item(K, P)|Is], Vs, Nd, R?) :- ground(Vs?), ground(Nd?), integer(K?), ground(P?) |
     nth_arg(K?, Vs?, A),
-    a_svar(A?, Sv),
+    arg_kind(A?, Ak),
     mem(K?, Nd?, F),
-    keyed_out1(Sv?, F?, item(K?, P?), R1),
+    pick_or_item(Ak?, F?, K?, P?, R1),
     keyed_out(Is?, Vs?, Nd?, R2),
     app(R1?, R2?, R).
 keyed_out([req(P, Ks)|Is], Vs, Nd, [req(P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
@@ -1414,13 +1414,23 @@ keyed_out([forb(P, Ks)|Is], Vs, Nd, [forb(P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, N
 keyed_out([unless(P, Ks)|Is], Vs, Nd, [unless(P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
 keyed_out([proved(Q, Ws, P, Ks)|Is], Vs, Nd, [proved(Q?, Ws?, P?, Ks?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
 keyed_out([same(K, J)|Is], Vs, Nd, [same(K?, J?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
-procedure a_svar(Arg?, YesNo).
-a_svar(svar(_), yes).
-a_svar(_, no) :- otherwise | true.
-procedure keyed_out1(YesNo?, YesNo?, ItemPlace?, ItemPlaces).
-keyed_out1(yes, _, I, [I?]).
-keyed_out1(no, no, I, [I?]).
-keyed_out1(no, yes, _, []).
+keyed_out([pick(K, P)|Is], Vs, Nd, [pick(K?, P?)|R?]) :- keyed_out(Is?, Vs?, Nd?, R).
+%% The kind of a place's argument: a speech-act variable, an agent variable, or a role.
+ArgKind ::= speech ; agent ; role.
+procedure arg_kind(Arg?, ArgKind).
+arg_kind(svar(_), speech).
+arg_kind(pvar(_), agent).
+arg_kind(_, role) :- otherwise | true.
+%% A speech-act variable stays an item; an agent variable a field names is picked, pick(K, P), and one no field names stays an item; a role a field names is named by key, and no row fills it.
+procedure pick_or_item(ArgKind?, YesNo?, Integer?, Constant?, ItemPlaces).
+pick_or_item(speech, _, K, P, [item(K?, P?)]).
+pick_or_item(agent, yes, K, P, [pick(K?, P?)]).
+pick_or_item(agent, no, K, P, [item(K?, P?)]).
+pick_or_item(role, no, K, P, [item(K?, P?)]).
+pick_or_item(role, yes, _, _, []).
+procedure keyed_out1(YesNo?, ItemPlace?, ItemPlaces).
+keyed_out1(no, I, [I?]).
+keyed_out1(yes, _, []).
 %% Whether a place of Ks is one a field names: a held atom fills no variable the person fills.
 procedure any_in(Ints?, Ints?, YesNo).
 any_in([], _, no).

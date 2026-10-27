@@ -1662,13 +1662,14 @@ class DeclaredWidget {
         continue;
       }
       if (x is! StructTerm || x.args.length != 2) return null;
-      final p = x.functor == 'item' ? x.args[1] : x.args[0];
+      final p = x.functor == 'item' || x.functor == 'pick' ? x.args[1] : x.args[0];
       final pc = _labelConstant(p);
       if (pc == null) return null;
-      if (x.functor == 'item') {
+      if (x.functor == 'item' || x.functor == 'pick') {
+        // pick(K, P): an agent variable a field names that the proposer's role requires held, picked among the persons of the rows of the list of P (vGLP acd3e74, Section 5.4, "The contract's words").
         final k = _int(x.args[0]);
         if (k == null) return null;
-        is_.add('item($k, ${constantSource(pc)})');
+        is_.add('${x.functor}($k, ${constantSource(pc)})');
       } else if (x.functor == 'atom') {
         final ks = _ints(x.args[1]);
         if (ks == null) return null;
