@@ -3,7 +3,7 @@
 % Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK, Grassroots Keys and Knowledge, GSC's.  It cites GKK:1 to GKK:3, GSG:1 and GSG:2 whole and restates none.
 % Defines: feed, item, following, path.  Friend is defined with GSG; Alice, Bob and Carol are variables naming agents, Bob and Carol need not be distinct.
 % Last changed: 2026-10-27, written by GFF #1 Cowork from the discussion with Udi of 2026-10-27 (Udi's wording of clauses 1, 2 and 4); the pragmas are GFF #1's draft, for Udi's approval.
-% Schemas: GFF.glp beside this file, to be written.
+% Schemas: GFF.glp beside this file, eleven over ten predicates: GKK's three, GSG's two, and GFF's six --- post; follow_author and follow_through, GFF:2's two forms, and unfollow; ask and its two answers; deliver_own and deliver_on, GFF:4's two forms --- the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GFF: Grassroots Feeds and Followers
 Alice, Bob and Carol are agents; Bob and Carol need not be distinct.
 1. ■ Feed.  Alice has a feed and may post to it an item, created or received.
