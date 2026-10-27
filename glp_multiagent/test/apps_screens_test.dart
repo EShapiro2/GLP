@@ -1799,10 +1799,10 @@ void appsScreens(Screens screens) {
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 
-  // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GSG and GKK, which it extends (programs/gff/GFF.txt at GLP 0a3d7997): four tabs, Contacts, Friends, Posts and Feeds, "Posts: the items Alice posted." and "Feeds: the agents Alice follows."; the buttons Post, Follow and Unfollow, GFF's "[Post] <item>", "[Follow]" and "[Unfollow]".  Friends follow each other by an act each machine takes, friends_follow; a person follows anyone else by one step, Follow, follow(Me, B), and the machine asks every friend and follows through a friend, through_friend and ask, unguarded.  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md), each act a tap or a picked or typed field, its screens those of GFF #1 Cowork's tasks of 2026-10-27 18:00, 18:55 and 20:25 UTC, written to programs/apps/gff/screens/gff-app-<n>.png.
+  // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GSG and GKK, which it extends (programs/gff/GFF.txt at GLP 0a3d7997): four tabs, Contacts, Friends, Posts and Feeds, "Posts: Alice's feed." (GFF.txt at GLP 56270cb6) and "Feeds: the agents Alice follows."; the buttons Post, Follow and Unfollow, GFF's "[Post] <item>", "[Follow]" and "[Unfollow]".  Friends follow each other by an act each machine takes, friends_follow; a person follows anyone else by one step, Follow, follow(Me, B), and the machine asks every friend and follows through a friend, through_friend and ask, unguarded.  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md), each act a tap or a picked or typed field, its screens those of GFF #1 Cowork's tasks of 2026-10-27 18:00, 18:55 and 20:25 UTC, written to programs/apps/gff/screens/gff-app-<n>.png.
   testWidgets(
       'GFF\'s app on five phones, the play of GFF\'s feeds and followers: '
-      '(2) Carol\'s Follow in Alice\'s row of her Contacts; (3) Carol\'s Feeds; '
+      '(1) Alice\'s Posts after her two posts; (2) Carol\'s Follow in Alice\'s row of her Contacts; (3) Carol\'s Feeds; '
       '(4) Eve\'s Feeds with the third item signed by Alice, Bob, Carol and '
       'Dave; (5) Dave\'s Feeds with Carol\'s path answer; (6) Unfollow in '
       'Alice\'s row of Carol\'s Feeds, and (7) Carol\'s Feeds after it', (tester) async {
@@ -1817,7 +1817,7 @@ void appsScreens(Screens screens) {
     expect(run.listNamed(alice, 'knows', 'Contacts'), findsOneWidget);
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
     expect(run.listNamed(alice, 'follows', 'Feeds'), findsOneWidget);
-    expect(run.on(alice, find.text('Posts')), findsOneWidget);
+    expect(run.listNamed(alice, 'feed', 'Posts'), findsOneWidget);
 
     // The texts of [p]'s row [k], in order.
     List<String> rowTexts(_Person p, String k) => [
@@ -1840,17 +1840,28 @@ void appsScreens(Screens screens) {
     // [p] posts [text] (GFF:1): Post's field item, GFF's "<item>", and Post, GFF's "[Post]", on the tab of GFF, which proposes post(p, x), x the speech act they sign at its posting.
     String said(String text, String by) => "speech(utterance('$text'), $by)";
     Future<void> post(_Person p, String text) async {
-      await run.list(p, 'item');
+      await run.list(p, 'feed');
       await run.type(p, run.control(p, 'field:post::2'), text);
       await run.tap(p, run.control(p, 'send:post:'));
       expect(p.atoms, contains('feed(${said(text, p.name)})'));
     }
 
-    // Alice posts two items; Bob, her friend, follows her, and her machine delivers both to him as she signed them (GFF:4, deliver_own).  Screen (1), Alice's Posts tab with her two items, is not taken: the tab lists item, the predicate GFF.txt's line "Posts: the items Alice posted." names (vGLP, Section 5.4, "The contract's words": a tab lists "a predicate of the contract, named in the line by its name"), and her posts are feed(x); reported to Code, 2026-10-27.
+    // Alice posts two items; Bob, her friend, follows her, and her machine delivers both to him as she signed them (GFF:4, deliver_own).
     await post(alice, 'First item');
     await post(alice, 'Second item');
     final first = said('First item', 'alice');
     final second = said('Second item', 'alice');
+
+    // (1) Alice's Posts tab, the tab of GFF, listing feed, "Posts: Alice's feed.": at its top Post with its field item, GFF's "[Post] <item>", and a row for each item she posted, its text and under it its signer, Alice.
+    await run.list(alice, 'feed');
+    await run.top(alice);
+    expect(run.control(alice, 'field:post::2'), findsOneWidget);
+    for (final x in [first, second]) {
+      expect(run.control(alice, 'row:$x'), findsOneWidget, reason: x);
+    }
+    expect(rowTexts(alice, first), contains('First item'));
+    run.plain(alice);
+    await run.shoot(alice, 'gff-app-1.png');
     expect(bob.atoms, containsAll(['item($first, alice)', 'item($second, alice)']));
 
     // [p] introduces [author] to their friend [q] (GKK:3): Introduce in [q]'s row of their Contacts, the author picked into its field person among the persons [p] knows; [q] is asked GKK's question and answers yes.
