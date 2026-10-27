@@ -6,7 +6,7 @@ imported procedure person#cued_person(Key?, Constant?, Steps?, Channel(PersonOut
 Want  ::= holds(Atom) ; lacks(Atom).
 Wants ::= [] ; [Want | Wants].
 
-%% play_feeds(A, B, C, D, E): GFF's play (Code_inbox.md, GFF #1 Cowork, 2026-10-27 16:34 UTC, with its revisions of 17:21 and 18:39 UTC), alice, bob, carol, dave and eve.  Each two friends meet and befriend; alice posts two items; bob decides to follow alice (GFF:2, decide_to_follow) and his machine follows her (follow_author) and asks his friends whether they follow her (GFF:3, ask); once both items have reached him he introduces her to carol (GKK:3); carol decides to follow alice, and her machine follows her through bob (follow_through) and asks her friends; once both items have reached her she introduces alice to dave; dave likewise through carol, and eve through dave (person.glp).  Once eve's screen shows that she follows alice, alice posts a third item, which reaches eve signed by alice, bob, carol and dave, once each (GFF:4); once eve's screen shows it, carol ends her following of alice; once carol's screen shows that she no longer follows alice, alice posts a fourth, which reaches bob and not carol, dave or eve.  Each "once" across two persons is the play's: a watcher on the one person's screen gives the other person the rest of their script, and passes the screen on unchanged.
+%% play_feeds(A, B, C, D, E): GFF's play (Code_inbox.md, GFF #1 Cowork, 2026-10-27 16:34 UTC, with its revisions of 17:21, 18:39, 19:2x and 20:25 UTC), alice, bob, carol, dave and eve.  Each two friends meet and befriend; alice posts two items; each two friends follow each other (GFF:2, friends_follow); once both items have reached him he introduces her to carol (GKK:3); carol decides to follow alice, and her machine follows her through bob (through_friend) and asks her friends; once both items have reached her she introduces alice to dave; dave likewise through carol, and eve through dave (person.glp).  Once eve's screen shows that she follows alice, alice posts a third item, which reaches eve signed by alice, bob, carol and dave, once each (GFF:4); once eve's screen shows it, carol ends her following of alice; once carol's screen shows that she no longer follows alice, alice posts a fourth, which reaches bob and not carol, dave or eve.  Each "once" across two persons is the play's: a watcher on the one person's screen gives the other person the rest of their script, and passes the screen on unchanged.
 exported procedure play_feeds(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_feeds(A?, B?, C?, D?, E?) :-
     self_module(M),
@@ -44,8 +44,8 @@ watch1(no, Xs, Ys?, W, Ws, Go, Out?) :- watch(Xs?, Ys, [W? | Ws?], Go?, Out).
 
 %% met(W, X, R): whether the screen's line X is a view whose machine state shows W.
 procedure met(Want?, Seen?, YesNo).
-met(holds(A), view(S, _, _), R?) :- ground(A?), ground(S?) | among_atom(A?, S?, R).
-met(lacks(A), view(S, _, _), R?) :- ground(A?), ground(S?) | among_atom(A?, S?, R1), flip_yn(R1?, R).
+met(holds(A), view(S, _, _, _), R?) :- ground(A?), ground(S?) | among_atom(A?, S?, R).
+met(lacks(A), view(S, _, _, _), R?) :- ground(A?), ground(S?) | among_atom(A?, S?, R1), flip_yn(R1?, R).
 met(_, _, no) :- otherwise | true.
 
 procedure among_atom(Atom?, List(Atom)?, YesNo).
