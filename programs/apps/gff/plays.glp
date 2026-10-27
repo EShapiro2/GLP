@@ -30,6 +30,26 @@ play_feeds(A?, B?, C?, D?, E?) :-
           [own([P3, P4], propose(post(P3?, speech(utterance('Fourth item'), P4?)))),
            wait(holds(feed(speech(utterance('Fourth item'), alice))))], TA2).
 
+%% play_choice(A, B, C, D, F, E): the play of the choice (Code #16's brief, 2026-10-27, on GFF #1 Cowork's mail of 20:25 UTC: "a play that shows the choice: Eve with two friends who follow Alice, one at two hops and one at four, following through the nearer"), alice, bob, carol, dave, frank and eve, over six conversations: alice's and bob's, alice's and carol's, carol's and dave's, dave's and frank's, bob's and eve's, and frank's and eve's.  Alice befriends bob and carol and posts one item; carol befriends dave, dave frank, and eve bob and frank; carol introduces alice to dave, who decides to follow her and follows her through carol, and dave introduces her to frank, who follows her through dave, so that the item reaches frank signed by alice, carol and dave (person.glp, the roles choice_alice to choice_eve).  Once frank's screen shows the item, bob introduces alice to eve, who decides to follow her; eve's machine asks bob and frank (GFF:3) and, once both have answered, follows alice through bob, whose path to her is two hops from eve, and not through frank, whose path is four (the Algorithms section of GFF.txt; chooser.glp).
+exported procedure play_choice(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_choice(A?, B?, C?, D?, F?, E?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, WA), ch([conversation(bob, ch(BA?, AB)), conversation(carol, ch(CA?, AC))], _), []), T?, M?),
+    person # cued_person(alice, choice_alice, [], ch(WA?, GA), A),
+    run(miniapp(bob, ch(GB?, WB), ch([conversation(alice, ch(AB?, BA)), conversation(eve, ch(EB?, BE))], _), []), T?, M?),
+    person # cued_person(bob, choice_bob, TB?, ch(WB?, GB), B),
+    run(miniapp(carol, ch(GC?, WC), ch([conversation(alice, ch(AC?, CA)), conversation(dave, ch(DC?, CD))], _), []), T?, M?),
+    person # cued_person(carol, choice_carol, [], ch(WC?, GC), C),
+    run(miniapp(dave, ch(GD?, WD), ch([conversation(carol, ch(CD?, DC)), conversation(frank, ch(FD?, DF))], _), []), T?, M?),
+    person # cued_person(dave, choice_dave, [], ch(WD?, GD), D),
+    run(miniapp(frank, ch(GF?, WF), ch([conversation(dave, ch(DF?, FD)), conversation(eve, ch(EF?, FE))], _), []), T?, M?),
+    person # cued_person(frank, choice_frank, [], ch(WF?, GF), F0),
+    run(miniapp(eve, ch(GE?, WE), ch([conversation(bob, ch(BE?, EB)), conversation(frank, ch(FE?, EF))], _), []), T?, M?),
+    person # cued_person(eve, choice_eve, [], ch(WE?, GE), E),
+    watch(F0?, F, [holds(item(speech(speech(speech(utterance('First item'), alice), carol), dave), alice))],
+          [own([B9], propose(introduce(B9?, eve, alice)))], TB).
+
 %% watch(Xs, Ys, Wants, Go, Out): Ys is the screen Xs, passed on unchanged; once its views have shown each of Wants in turn, Out is Go.
 procedure watch(Stream(Seen)?, Stream(Seen), Wants?, Steps?, Steps).
 watch(Xs, Ys?, [], Go, Go?) :- copy(Xs?, Ys).

@@ -75,3 +75,8 @@ miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, P
 imported procedure plays#play_feeds(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 exported procedure play_feeds(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_feeds(A?, B?, C?, D?, E?) :- plays # play_feeds(A, B, C, D, E).
+
+%% The play of the choice, Eve following Alice through the nearer of two friends (plays.glp; chooser.glp).
+imported procedure plays#play_choice(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+exported procedure play_choice(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_choice(A?, B?, C?, D?, F?, E?) :- plays # play_choice(A, B, C, D, F, E).

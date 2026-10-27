@@ -74,6 +74,53 @@ script(eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity)),
                 approval(introduce(dave, eve, alice), yes), wait(holds(knows(alice))),
                 own([E2], propose(follow(E2?, alice))), wait(holds(following(alice))),
                 wait(holds(item(speech(speech(speech(speech(utterance('Third item'), alice), bob), carol), dave), alice))) | T?]).
+%% The scripts of the play of the choice (plays.glp, play_choice), each role named for its person: alice, the author, befriends bob and carol and posts one item; carol befriends dave, and dave frank, a chain along which the item reaches frank signed by alice, carol and dave; eve befriends bob and frank; once frank holds the item, bob introduces alice to eve, who decides to follow her.  Eve's machine asks bob and frank (GFF:3); bob answers with a path of one signature, alice's, and frank with one of three, alice's, carol's and dave's; and her machine follows alice through bob, the friend with the shortest path to her (GFF:2; the Algorithms section of GFF.txt, chooser.glp).
+script(choice_alice, T, [own([A1], propose(establish(A1?))), wait(holds(identity)),
+                         own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+                         own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
+                         own([A4], propose(acquaint(A4?, carol))), wait(holds(knows(carol))),
+                         own([A5], propose(befriend(A5?, carol))), wait(holds(friend(carol))),
+                         own([A6, A7], propose(post(A6?, speech(utterance('First item'), A7?)))),
+                         wait(holds(feed(speech(utterance('First item'), alice)))) | T?]).
+script(choice_bob, T, [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                       approval(acquaint(alice, bob), yes),
+                       approval(befriend(alice, bob), yes),
+                       approval(acquaint(eve, bob), yes),
+                       approval(befriend(eve, bob), yes),
+                       wait(holds(item(speech(utterance('First item'), alice), alice))) | T?]).
+script(choice_carol, T, [own([C1], propose(establish(C1?))), wait(holds(identity)),
+                         approval(acquaint(alice, carol), yes),
+                         approval(befriend(alice, carol), yes),
+                         own([C2], propose(acquaint(C2?, dave))), wait(holds(knows(dave))),
+                         own([C3], propose(befriend(C3?, dave))), wait(holds(friend(dave))),
+                         wait(holds(item(speech(utterance('First item'), alice), alice))),
+                         own([C4], propose(introduce(C4?, dave, alice))) | T?]).
+script(choice_dave, T, [own([D1], propose(establish(D1?))), wait(holds(identity)),
+                        approval(acquaint(carol, dave), yes),
+                        approval(befriend(carol, dave), yes),
+                        own([D2], propose(acquaint(D2?, frank))), wait(holds(knows(frank))),
+                        own([D3], propose(befriend(D3?, frank))), wait(holds(friend(frank))),
+                        approval(introduce(carol, dave, alice), yes), wait(holds(knows(alice))),
+                        own([D4], propose(follow(D4?, alice))), wait(holds(following(alice))),
+                        wait(holds(item(speech(speech(utterance('First item'), alice), carol), alice))),
+                        own([D5], propose(introduce(D5?, frank, alice))) | T?]).
+script(choice_frank, T, [own([F1], propose(establish(F1?))), wait(holds(identity)),
+                         approval(acquaint(dave, frank), yes),
+                         approval(befriend(dave, frank), yes),
+                         approval(acquaint(eve, frank), yes),
+                         approval(befriend(eve, frank), yes),
+                         approval(introduce(dave, frank, alice), yes), wait(holds(knows(alice))),
+                         own([F2], propose(follow(F2?, alice))), wait(holds(following(alice))),
+                         wait(holds(item(speech(speech(speech(utterance('First item'), alice), carol), dave), alice))) | T?]).
+script(choice_eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity)),
+                       own([E2], propose(acquaint(E2?, bob))), wait(holds(knows(bob))),
+                       own([E3], propose(befriend(E3?, bob))), wait(holds(friend(bob))),
+                       own([E4], propose(acquaint(E4?, frank))), wait(holds(knows(frank))),
+                       own([E5], propose(befriend(E5?, frank))), wait(holds(friend(frank))),
+                       approval(introduce(bob, eve, alice), yes), wait(holds(knows(alice))),
+                       own([E6], propose(follow(E6?, alice))), wait(holds(following(alice))),
+                       wait(holds(follows(alice, bob))),
+                       wait(holds(item(speech(speech(utterance('First item'), alice), bob), alice))) | T?]).
 script(_, T, T?) :- otherwise | true.
 
 %% The person.
