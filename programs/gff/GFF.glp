@@ -81,10 +81,10 @@ contract_named(gff,
     schema(decide_to_follow, ['Alice'], [pvar(b)],
        [rs(guarded, [atom(decided, [pvar(b)])], [], [atom(identity, []), atom(knows, [pvar(b)])],
                     [atom(decided, [pvar(b)])])]),
-%% GFF:2, Following.  Alice, who decided to follow their friend Bob, follows Bob through Bob, who follows their own feed.
+%% GFF:2, Following.  Friends follow each other: Alice follows their friend Bob through Bob, who follows their own feed, with no decision (Udi, 2026-10-27).
     schema(follow_author, ['Alice', 'Bob'], [],
        [rs(unguarded, [atom(follows, [role(2), role(2)]), atom(following, [role(2)])], [],
-                      [atom(identity, []), atom(decided, [role(2)]), atom(friend, [role(2)])],
+                      [atom(identity, []), atom(friend, [role(2)])],
                       [atom(following, [role(2)])]),
         rs(unguarded, [atom(follower, [role(1), role(2)])], [], [atom(identity, [])], [])]),
 %% GFF:2, Following.  Alice, who decided to follow b and whose friend Carol follows b, follows b through Carol.
