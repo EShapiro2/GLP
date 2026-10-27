@@ -322,6 +322,8 @@ Subj      ::= sub(Info) ; pair ; prop(Info, Class, Names).
 Cand      ::= cand(WKey, Subj).
 Cands     ::= [] ; [Cand | Cands].
 Choice    ::= take(WKey, Subj) ; none.
+%% What the chooser returns (CHOOSER.md beside the compiler, "The seam"): the part of the Propose of an unguarded part to take, by its class term, or none yet.
+Chosen    ::= take(Class) ; none_yet.
 Pair      ::= pr(Peer, Peer).
 Pairs     ::= [] ; [Pair | Pairs].
 PKey      ::= key(WKey) ; nokey.
@@ -1358,24 +1360,72 @@ own_cond1a(St, Cs1, Csg, Csh, Ch?, St5?) :- ground(St?) |
     commit_cands_st(St2?, Cs3, St3),
     wound_cands0(St3?, Cs4, St4),
     intro_cands(St4?, Cs5, St6),
-    app(Cs1?, Csg?, Ca),
-    app(Ca?, Csh?, Cb),
+    app(Csg?, Csh?, Cb),
     app(Cb?, Cs2?, C12),
     app(C12?, Cs3?, C123),
     app(C123?, Cs4?, C1234),
     app(C1234?, Cs5?, Cs),
-    own_cond2(Cs?, St6?, Ch, St5).
-procedure own_cond2(Cands?, St?, Choice, St).
-own_cond2(Cs, St, Ch?, St2?) :- ground(St?) |
+    own_cond2(Cs1?, Cs?, St6?, Ch, St5).
+%% The chooser (programs/vglp/cva/compiler/CHOOSER.md, "The seam"; the experiment GFF-chooser): the Proposes of the unguarded parts the agent opens whose condition holds, Us, ordered by how long each has waited, the longest first, ties in the order they are opened (by_wait), are put to choose_part with the agent's machine state as the view shows it; of them the dispatch takes the one choose_part returns, or none (chosen_cand), and among it and the other own transactions whose condition holds, Cs, one of the class that has waited longest, as before.  The default choose_part returns the first, so the agent takes what it took before the experiment.
+procedure own_cond2(Cands?, Cands?, St?, Choice, St).
+own_cond2(Us, Cs, St, Ch?, St2?) :- ground(Us?), ground(Cs?), ground(St?) |
     st_waits(St?, W),
     st_app(St?, Ap),
     app_recs(Ap?, R),
     st_ix(St?, Ix),
     prune_waits(W?, R?, Ix?, W0),
     st_count(St?, D),
-    choose(Cs?, W0?, D?, Ch0, W1),
-    set_waits(St?, W1?, St1),
+    app(Us?, Cs?, All),
+    own_cond3(All?, W0?, D?, Us?, Cs?, St?, Ch, St2).
+procedure own_cond3(Cands?, Waits?, Integer?, Cands?, Cands?, St?, Choice, St).
+own_cond3(All, W0, D, Us, Cs, St, Ch?, St2?) :- ground(W0?), integer(D?), ground(St?) |
+    ensure_waits(All?, W0?, D?, W1),
+    own_cond4(W1?, D?, Us?, Cs?, St?, Ch, St2).
+procedure own_cond4(Waits?, Integer?, Cands?, Cands?, St?, Choice, St).
+own_cond4(W1, D, Us, Cs, St, Ch?, St2?) :- ground(W1?), integer(D?), ground(St?) |
+    by_wait(Us?, W1?, Os),
+    own_cond5(Os?, W1?, D?, Cs?, St?, Ch, St2).
+procedure own_cond5(Cands?, Waits?, Integer?, Cands?, St?, Choice, St).
+own_cond5(Os, W1, D, Cs, St, Ch?, St2?) :- ground(Os?), ground(St?) |
+    cand_parts(Os?, Ps),
+    st_ms(St?, S0),
+    atoms_of(S0?, S),
+    choose_part(Ps?, S?, Cp),
+    chosen_cand(Cp?, Os?, Ks),
+    app(Ks?, Cs?, Cs2),
+    choose1(Cs2?, W1?, D?, Ch0, W2),
+    set_waits(St?, W2?, St1),
     count_own(Ch0?, St1?, Ch, St2).
+%% The candidates in the order of how long each has waited, the longest first, ties in their order: each inserted before the first of those after it that began to wait no earlier.
+procedure by_wait(Cands?, Waits?, Cands).
+by_wait([], _, []).
+by_wait([C|Cs], W, Os?) :- ground(C?), ground(W?) |
+    by_wait(Cs?, W?, Os1),
+    cand_began(C?, W?, T),
+    ins_wait(T?, C?, Os1?, W?, Os).
+procedure ins_wait(Integer?, Cand?, Cands?, Waits?, Cands).
+ins_wait(_, C, [], _, [C?]).
+ins_wait(T, C, [E|Es], W, Os?) :- integer(T?), ground(E?), ground(W?) |
+    cand_began(E?, W?, T2),
+    ins_wait1(T2?, T?, C?, E?, Es?, W?, Os).
+procedure ins_wait1(Integer?, Integer?, Cand?, Cand?, Cands?, Waits?, Cands).
+ins_wait1(T2, T, C, E, Es, _, [C?, E?|Es?]) :- T2? >= T? | true.
+ins_wait1(T2, T, C, E, Es, W, [E?|Os?]) :- T2? < T? | ins_wait(T?, C?, Es?, W?, Os).
+procedure cand_began(Cand?, Waits?, Integer).
+cand_began(cand(K, _), W, T?) :- began_at(K?, W?, T).
+%% The parts of the Proposes of unguarded parts, each by its class term.
+procedure cand_parts(Cands?, List(Class)).
+cand_parts([], []).
+cand_parts([cand(op(P), _)|Cs], [P?|Ps?]) :- cand_parts(Cs?, Ps).
+cand_parts([_|Cs], Ps?) :- otherwise | cand_parts(Cs?, Ps).
+%% The candidate of the part the chooser returned, or none.
+procedure chosen_cand(Chosen?, Cands?, Cands).
+chosen_cand(none_yet, _, []).
+chosen_cand(take(P), Os, Ks?) :- ground(P?) | cand_with(P?, Os?, Ks).
+procedure cand_with(Class?, Cands?, Cands).
+cand_with(_, [], []).
+cand_with(P, [cand(op(Q), S)|_], [cand(op(Q?), S?)]) :- P? =?= Q? | true.
+cand_with(P, [_|Os], Ks?) :- otherwise | cand_with(P?, Os?, Ks).
 %% The own transaction taken, counted.
 procedure count_own(Choice?, St?, Choice, St).
 count_own(none, St, none, St?).
@@ -1921,10 +1971,6 @@ add_cls(nocls, Is, Is?).
 add_cls(cls(I), Is, Is1?) :- app(Is?, [I?], Is1).
 
 %% --- Choosing the instance of the class that has waited longest -----------
-procedure choose(Cands?, Waits?, Integer?, Choice, Waits).
-choose(Cs, W, D, Ch?, W2?) :- ground(Cs?), ground(W?), integer(D?) |
-    ensure_waits(Cs?, W?, D?, W1),
-    choose1(Cs?, W1?, D?, Ch, W2).
 procedure choose1(Cands?, Waits?, Integer?, Choice, Waits).
 choose1(Cs, W1, D, Ch?, W2?) :- ground(W1?), integer(D?) |
     pick(Cs?, W1?, Ch, Ky),
@@ -4866,3 +4912,8 @@ ms_meets([X|Xs], B, R?) :- ground(B?) | mem(X?, B?, R1), ms_meets1(R1?, Xs?, B?,
 procedure(X) ms_meets1(YesNo?, Stream(X)?, Stream(X)?, YesNo).
 ms_meets1(yes, _, _, yes).
 ms_meets1(no, Xs, B, R?) :- ms_meets(Xs?, B?, R).
+
+%% The chooser, the default: of the Proposes of the unguarded parts the agent opens whose condition holds, the longest waited first, the first (programs/vglp/cva/compiler/CHOOSER.md, "The seam").
+procedure choose_part(List(Class)?, List(Atom)?, Chosen).
+choose_part([], _, none_yet).
+choose_part([P|_], _, take(P?)).

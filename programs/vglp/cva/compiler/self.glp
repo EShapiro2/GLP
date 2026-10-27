@@ -153,6 +153,8 @@ Same      ::= same(Integer, Integer).
 Sames     ::= [] ; [Same | Sames].
 PActs     ::= [] ; [PAct | PActs].
 Pragmas   ::= no_pragmas ; pragmas(PLists, PActs).
+%% The pragmas as pragmas.sh prints them: algorithms(P) where the contract's NAME.txt has an Algorithms section, the %-lines after the pragmas the first of which begins '% Algorithms', whose chooser the app supplies (CHOOSER.md beside this file; the experiment GFF-chooser).
+PragmasIn ::= Pragmas ; algorithms(Pragmas).
 
 imported procedure cvac#compile(Constant?, Declared?, Verdict?).
 exported procedure compile(Constant?, WDeclared?, Verdict?).
@@ -161,8 +163,8 @@ imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?).
 exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?).
 compile(Nm, D, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
 %% compile(Name, Contract, Verdict, Intro, Pragmas): the same, with the contract's pragmas, so that the platform printed carries the contract's words (vGLP, Sections 5.4 and 6.2).
-imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?).
-exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?, Pragmas?).
+imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, PragmasIn?).
+exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?, PragmasIn?).
 compile(Nm, D, V, I, P) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?, P?).
 
 %% ---------------------------------------------------------------------------

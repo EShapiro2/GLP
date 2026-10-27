@@ -3,7 +3,7 @@
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
-# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words); every other line is a clause's, in GSC's form, its proposer, its buttons and fields, and its indented lines (README.md beside this file, 1), each act act(Schema, Button, Fields, Sentence, Tab, Proposer), Sentence said(Questions) or none, a question's words text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2), Proposer by([G]).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
+# prints pragmas(Lists, Acts), algorithms(pragmas(Lists, Acts)) for a contract whose own NAME.txt has an Algorithms section (CHOOSER.md beside this file), or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words); every other line is a clause's, in GSC's form, its proposer, its buttons and fields, and its indented lines (README.md beside this file, 1), each act act(Schema, Button, Fields, Sentence, Tab, Proposer), Sentence said(Questions) or none, a question's words text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2), Proposer by([G]).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
 
 set -u
 [ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt> [<contract term>]" >&2; exit 2; }
@@ -505,5 +505,9 @@ for my $pd (@pending) {
 my (%last, @kept);
 for my $i (0 .. $#acts) { my ($n) = $acts[$i] =~ /^act\((\x27[^\x27]*\x27)/; $last{$n} = $i }
 for my $i (0 .. $#acts) { my ($n) = $acts[$i] =~ /^act\((\x27[^\x27]*\x27)/; push @kept, $acts[$i] if $last{$n} == $i }
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @kept) . "])\n";
+# A contract whose own NAME.txt has an Algorithms section, the %-lines after the pragmas the first of which begins "% Algorithms", is printed algorithms(pragmas(Lists, Acts)): its platform calls the chooser its owner writes in the app, in place of the default (CHOOSER.md beside this file, "A contract\x27s Algorithms section"; the experiment GFF-chooser).
+my $alg = 0;
+if (open(my $fh, "<", $top)) { while (my $l = <$fh>) { $alg = 1 if $l =~ /^% Algorithms\b/ } close $fh }
+my $pr = "pragmas([" . join(", ", @lists) . "], [" . join(", ", @kept) . "])";
+print $alg ? "algorithms($pr)\n" : "$pr\n";
 ' "$1" "$PROGRAMS" "${2:-}"
