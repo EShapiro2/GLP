@@ -67,10 +67,20 @@
 #      simulation of the platform under sGLP is transformed against
 #      (programs/sglp/transform.sh --interface; sGLP's task of 2026-10-18
 #      20:50 UTC, item 1).
+#   6a. chooser.glp: where the contract has an Algorithms section, its
+#      platform calls the chooser its owner writes in the app, the module
+#      chooser (programs/vglp/cva/compiler/CHOOSER.md; the experiment
+#      GFF-chooser, on its branch): the app's chooser.glp, copied as it stands,
+#      which the emit and the run link with the platform.  An app with a
+#      chooser.glp whose platform calls none, or a platform that calls one
+#      where the app has none, is a fault, and nothing is written.
 #   7. run.log: the run of the platform with scripted persons, the plays vGLP
 #      or the owner keeps for it, each play's logs as the REPL prints
 #      them; the plays run the platform.vglp committed there, which the run
-#      requires to be the one this script printed.
+#      requires to be the one this script printed.  Where the record holds a
+#      chooser.glp, the plays run in a scratch copy of their directory with the
+#      record's platform.vglp and chooser.glp in place of their own, so that
+#      the run is of the record's artefacts.
 # and manifest.md, the index of the directory, naming the contract, its owner,
 # the paper's repository and commit, the GLP commit the tools were at, and
 # what each step gave.
@@ -135,7 +145,8 @@ done
 
 WORK=$(mktemp -d)
 EMIT="$GLP_DIR/programs/tests/cascade_emit/$NAME"
-trap 'rm -rf "$WORK" "$EMIT"' EXIT
+RUNDIR="$GLP_DIR/programs/tests/cascade_run/$NAME"
+trap 'rm -rf "$WORK" "$EMIT" "$RUNDIR"' EXIT
 # Every mode writes into the scratch directory; a run that gave every artefact
 # replaces the record whole at the end, so a run that fails leaves the record
 # as it was.
@@ -248,11 +259,28 @@ else
     say "platform.vglp: $(wc -l < "$OUT/platform.vglp" | tr -d ' ') lines"
 fi
 
+# 6a. The app's chooser, where the platform calls it (programs/vglp/cva/compiler/CHOOSER.md).
+CHOOSER=0
+CALLS=0; [ "$COMPILED" = 1 ] && grep -q '^imported procedure chooser#choose(' "$OUT/platform.vglp" && CALLS=1
+HAS=0; [ -n "$PLAYS" ] && [ -f "$PLAYS/chooser.glp" ] && HAS=1
+if [ "$CALLS" = 1 ] && [ "$HAS" = 1 ]; then
+    cp "$PLAYS/chooser.glp" "$OUT/chooser.glp" && CHOOSER=1
+    say "chooser.glp: the app's, $(wc -l < "$OUT/chooser.glp" | tr -d ' ') lines"
+elif [ "$CALLS" = 1 ]; then
+    say "the platform calls the app's chooser, and ${PLAYAT:-the plays} has no chooser.glp"
+    exit 1
+elif [ "$HAS" = 1 ]; then
+    say "$PLAYAT has a chooser.glp, and the platform calls none: $CTXT has no Algorithms section"
+    exit 1
+fi
+
 # 6. The platform compiled to GLP, by the REPL's :emit in a scratch directory
-# under programs/tests, a container with no self.glp, so the scope is the root's.
+# under programs/tests, a container with no self.glp, so the scope is the root's;
+# the app's chooser beside it, where the platform calls it.
 RUN=0
 if [ "$COMPILED" = 1 ]; then
     mkdir -p "$EMIT" && cp "$OUT/platform.vglp" "$EMIT/platform.vglp"
+    [ "$CHOOSER" = 1 ] && cp "$OUT/chooser.glp" "$EMIT/chooser.glp"
     printf ':emit %s\n:quit\n' "$EMIT" > "$WORK/e.in"
     repl "$WORK/e.in" "$WORK/e.out"
     if [ -f "$EMIT/platform.glp" ]; then
@@ -290,13 +318,24 @@ if [ "$COMPILED" = 1 ]; then
             NOTE+=("run: $PLAYS/self.glp exports no play")
             say "run: no play exported by the plays"
         else
-            { echo "$PLAYS/"; echo ":limit $PLAYLIMIT"; printf '%s\n' "$GOALS"; echo ':quit'; } > "$WORK/r.in"
+            # Where the record holds a chooser.glp, the plays run in a scratch copy of
+            # their directory under programs/tests, whose scope, as theirs, is the
+            # root's, with the record's platform.vglp and chooser.glp in place of their own.
+            RUNAT="$PLAYS"
+            if [ "$CHOOSER" = 1 ]; then
+                rm -rf "$RUNDIR" && mkdir -p "$RUNDIR" \
+                    && cp "$PLAYS"/*.glp "$RUNDIR"/ && cp "$OUT/platform.vglp" "$OUT/chooser.glp" "$RUNDIR"/ \
+                    || { say "the plays could not be copied to $RUNDIR"; exit 1; }
+                RUNAT="$RUNDIR"
+            fi
+            { echo "$RUNAT/"; echo ":limit $PLAYLIMIT"; printf '%s\n' "$GOALS"; echo ':quit'; } > "$WORK/r.in"
             repl "$WORK/r.in" "$WORK/r.out"
             # The plays' logs as the REPL prints them, less the limit's acknowledgement;
             # an unbound tail is printed as the heap's variable name, X<n>, which is
             # the printer's and not the run's, so it is written as _.
             awk '/^✓ Loaded program/ { on = 1; next } /^Goodbye!/ { on = 0 } /^Goal reduction limit set to/ { next } on' "$WORK/r.out" \
                 | perl -pe 's/\bX[0-9]+\b/_/g' > "$OUT/run.log"
+            [ "$CHOOSER" = 1 ] && rm -rf "$RUNDIR" "$GLP_DIR/programs/tests/cascade_run"
             RUN=1
             say "run.log: $(printf '%s\n' "$GOALS" | wc -l | tr -d ' ') plays, $(wc -l < "$OUT/run.log" | tr -d ' ') lines"
             if grep -qE '^(Error|✗)' "$OUT/run.log"; then say "run.log holds an error"; STATUS=1; fi
@@ -338,6 +377,9 @@ fi
         echo "| \`platform.vglp\` | the canonical CVA platform, as printed |"
         echo "| \`platform.glp\` | the platform compiled to GLP, as emitted |"
         echo "| \`interface.glp\` | the platform's interface in sGLP's term form, as programs/sglp/cva/interface.sh prints it |"
+        if [ "$CHOOSER" = 1 ]; then
+            echo "| \`chooser.glp\` | the app's chooser, \`$PLAYAT/chooser.glp\` at \`$(git -C "$GLP_DIR" log -1 --format=%h --abbrev=8 -- "$PLAYAT/chooser.glp" 2>/dev/null || echo unknown)\`, which the platform imports, chooser#choose, $CTXT having an Algorithms section (programs/vglp/cva/compiler/CHOOSER.md); the emit and the run link this copy |"
+        fi
         if [ "$RUN" = 1 ]; then
             echo "| \`run.log\` | the plays' logs: $(printf '%s\n' "$GOALS" | sed -e 's/(.*//' | tr '\n' ' ')|"
         else

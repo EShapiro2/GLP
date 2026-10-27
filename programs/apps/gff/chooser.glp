@@ -4,8 +4,25 @@
 %%
 %% An answer path_through(Bob, Carol, D), that Carol follows Bob through their friend D, names no path whose length Alice's state holds; this chooser takes the following through such a friend only where no friend answered with a path (README.md beside this file, "The chooser").
 
+%% The types of the platform the chooser is written against, platform.vglp's as GFF's contract prints them, written again here so that the module carries them, as the record of a run of the cascade holds it beside the platform with no self.glp (cascade.sh, chooser.glp); they agree with platform.vglp's and with self.glp's, as the import of choose/3 in platform.vglp requires.
+Peer      ::= Key.
+Speech    ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
+            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+            ; post(Peer, Speech) ; follow(Peer, Peer) ; friends_follow(Peer, Peer)
+            ; through_friend(Peer, Peer, Peer) ; unfollow(Peer, Peer, Peer) ; ask(Peer, Peer, Peer)
+            ; answer_follows(Peer, Peer, Peer, Speech) ; answer_follows_through(Peer, Peer, Peer, Peer)
+            ; answer_does_not_follow(Peer, Peer, Peer)
+            ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Speech).
+Atom      ::= identity ; knows(Peer) ; friend(Peer) ; feed(Speech) ; decided(Peer)
+            ; follows(Peer, Peer) ; following(Peer) ; follower(Peer, Peer) ; asked_of(Peer, Peer)
+            ; asked(Peer, Peer) ; item(Speech, Peer) ; path(Peer, Peer, Speech)
+            ; path_through(Peer, Peer, Peer) ; does_not_follow(Peer, Peer) ; sent(Speech, Peer).
+
 %% What the chooser returns: the part to take, by its class term, or none yet (CHOOSER.md, "The seam").
 Chosen ::= take(Class) ; none_yet.
+YesNo  ::= yes ; no.
 %% The fewest signatures on a path some friend answered with, or none.
 Best   ::= best(Integer) ; no_best.
 
