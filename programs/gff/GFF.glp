@@ -7,7 +7,7 @@
 %% /Grassroots/docs/act-schemas-guide.md; the notation of each schema is
 %% printed from the term by a run of the cascade (schemas.txt).
 %%
-%% Sixteen schemas over fourteen predicates: identity and knows, GKK's; friend,
+%% Eighteen schemas over fourteen predicates (path_broken and friendship_ended added, Udi, 2026-10-27, late): identity and knows, GKK's; friend,
 %% GSG's; and GFF's eleven: decided(b), at Alice, that Alice decided to follow b,
 %% the one willed act of GFF:2, which the unguarded acts of GFF:2 and GFF:3
 %% require, and asked_of(c, b), at Alice, that Alice's machine asked c about b,
@@ -94,6 +94,16 @@ contract_named(gff,
                       [atom(following, [pvar(b)])]),
         rs(unguarded, [atom(follower, [role(1), pvar(b)])], [],
                       [atom(identity, []), atom(following, [pvar(b)])], [])]),
+%% GFF:2, Following.  Alice's following of b through Carol ends when Carol ceases to follow b: an act of the two machines; Alice's decision stands.
+    schema(path_broken, ['Alice', 'Carol'], [pvar(b)],
+       [rs(unguarded, [], [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
+                      [atom(identity, [])], []),
+        rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [atom(following, [pvar(b)])])]),
+%% GFF:2, Following.  Alice's following of b through Carol ends when Carol ceases to be Alice's friend.
+    schema(friendship_ended, ['Alice', 'Carol'], [pvar(b)],
+       [rs(unguarded, [], [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
+                      [atom(identity, [])], [atom(friend, [role(2)])]),
+        rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
 %% GFF:2, Following.  Alice ends their following of b through Carol, and their decision.
     schema(unfollow, ['Alice', 'Carol'], [pvar(b)],
        [rs(guarded,   [], [atom(decided, [pvar(b)]), atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
