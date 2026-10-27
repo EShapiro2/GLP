@@ -9,15 +9,14 @@ Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
 Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; post(Peer, Speech) ; follow_author(Peer, Peer) ; follow_through(Peer, Peer, Peer)
-            ; unfollow(Peer, Peer, Peer) ; ask(Peer, Peer, Peer)
+            ; post(Peer, Speech) ; decide_to_follow(Peer, Peer) ; follow_author(Peer, Peer)
+            ; follow_through(Peer, Peer, Peer) ; unfollow(Peer, Peer, Peer) ; ask(Peer, Peer, Peer)
             ; answer_follows(Peer, Peer, Peer, Speech) ; answer_follows_through(Peer, Peer, Peer, Peer)
             ; answer_does_not_follow(Peer, Peer, Peer)
             ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Speech).
 Proposal  ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; post(Peer, Speech) ; follow_author(Peer, Peer) ; follow_through(Peer, Peer, Peer)
-            ; unfollow(Peer, Peer, Peer) ; ask(Peer, Peer, Peer).
+            ; post(Peer, Speech) ; decide_to_follow(Peer, Peer) ; unfollow(Peer, Peer, Peer).
 Request   ::= propose(Proposal).
 YesNo     ::= yes ; no.
 Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
@@ -30,16 +29,14 @@ Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
             ; yield(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Atom      ::= identity ; knows(Peer) ; friend(Peer) ; feed(Speech) ; follows(Peer, Peer)
-            ; following(Peer) ; follower(Peer, Peer) ; asked(Peer, Peer) ; item(Speech, Peer)
-            ; path(Peer, Peer, Speech) ; path_through(Peer, Peer, Peer) ; does_not_follow(Peer, Peer)
-            ; sent(Speech, Peer).
-Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
-Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
+Atom      ::= identity ; knows(Peer) ; friend(Peer) ; feed(Speech) ; decided(Peer)
+            ; follows(Peer, Peer) ; following(Peer) ; follower(Peer, Peer) ; asked_of(Peer, Peer)
+            ; asked(Peer, Peer) ; item(Speech, Peer) ; path(Peer, Peer, Speech)
+            ; path_through(Peer, Peer, Peer) ; does_not_follow(Peer, Peer) ; sent(Speech, Peer).
+Output    ::= view(List(Atom), List(Key), List(Approved)) ; refused(Approved, Key, Reason).
 Asking    ::= Attempt ; hello(Peer, Proposal).
 Approved  ::= Proposal.
-Approval  ::= approval(Asking, List(Word), YesNo?).
-Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
+Approval  ::= approval(Asking, YesNo?).
 Menu      ::= menu(Key, List(Key), Request?).
 Question  ::= menu_w(Menu) ; approval_w(Approval).
 Drawn     ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -49,10 +46,10 @@ Ask(Q)    ::= ask(Constant, Q).
 Asked     ::= Class ; Attempt.
 Seen      ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo).
 
-%% The scripted person's steps (person.glp), which the play also writes (plays.glp): req(R) grants the request R; own(Ks, R) grants R once the agent's own key is written into each hole of Ks; look reports the request question; wait(C) waits until the screen shows C; approval(K, A) answers A the approval question of K.  Of the conditions, heard(B, C) holds where the last view holds an answer of C to the question whether C follows B: path(B, C, X), path_through(B, C, D) or does_not_follow(B, C) (GFF:3).
+%% The scripted person's steps (person.glp), which the play also writes (plays.glp): req(R) grants the request R; own(Ks, R) grants R once the agent's own key is written into each hole of Ks; look reports the request question; wait(C) waits until the screen shows C; approval(K, A) answers A the approval question of K.
 Step      ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
 Cond      ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
-            ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking ; heard(Peer, Peer).
+            ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
 Steps     ::= [] ; [Step | Steps].
 Holes     ::= [] ; [Key? | Holes].
 

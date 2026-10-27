@@ -1,13 +1,14 @@
-%% person.glp --- the GFF mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp); and cued_person/5, the same person whose script ends in a tail the play gives, which the play binds once another person's screen shows what the play waits for (plays.glp).  It is ../gsnp/person.glp with GFF's scripts, the steps and the conditions being written in self.glp, and one condition more, heard(B, C).
+%% person.glp --- the GFF mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp); and cued_person/5, the same person whose script ends in a tail the play gives, which the play binds once another person's screen shows what the play waits for (plays.glp).  It is ../gsnp/person.glp with GFF's scripts, the steps and the conditions being written in self.glp.
 %%
 %% The person reads what the dispatcher draws on the person channel: the agent's request questions, each showing the agent's own key and the persons it knows and taking one request; the program's output, construct 0, drawn whole as it grows, on which the agent writes its view when it starts and whenever it changes, and its notices; and the approval questions Start raises (vGLP, Section 5.4, "The compilation").  The person's screen shows the last view written and the notices written after it.  Its script is a list of steps (self.glp, Step).  A script whose tail is not yet given stops there: the person takes no further step, and reads and reports nothing more, until the tail is given.
 %%
-%% The roles are the persons of GFF's play (Code_inbox.md, GFF #1 Cowork, 2026-10-27 16:34 UTC, and its revision of 17:21 UTC): Alice, Bob, Carol, Dave and Eve; the friendships Alice and Bob, Bob and Carol, Carol and Dave, Dave and Eve, each the first meeting the second by their key, the second answering yes to its hello, and then offering the second friendship, who answers yes (GKK:2, GSG:1).  The items are utterances signed by alice at their posting (GFF:1; GSC, Definition "Binding": admissible):
+%% The roles are the persons of GFF's play (Code_inbox.md, GFF #1 Cowork, 2026-10-27 16:34 UTC, and its revisions of 17:21 and 18:39 UTC): Alice, Bob, Carol, Dave and Eve; the friendships Alice and Bob, Bob and Carol, Carol and Dave, Dave and Eve, each the first meeting the second by their key, the second answering yes to its hello, and then offering the second friendship, who answers yes (GKK:2, GSG:1).  A person's one step of following is Follow, decide_to_follow (GFF:2); the asking and the following through a friend are unguarded acts, which the person's machine takes once they are enabled (GFF:2, GFF:3; vGLP, Section 5.4, "Triggers").  The items are utterances signed by alice at their posting (GFF:1; GSC, Definition "Binding": admissible):
 %%   alice  establishes her identity (GKK:1); meets bob and befriends him; posts the first item and the second (GFF:1); then her script ends in the play's tail.
-%%   bob    establishes his identity; answers yes to alice's meeting and friendship; meets carol and befriends her; follows alice (GFF:2, follow_author); once he follows her, introduces alice to carol (GKK:3), whom carol must know to ask about her (GFF:3).
-%%   carol  establishes her identity; answers yes to bob's meeting and friendship; meets dave and befriends him; answers yes to bob's introducing alice; once she knows alice, asks bob whether he follows alice (GFF:3); once bob's answer has reached her, follows alice through bob (GFF:2, follow_through); once she follows alice, introduces alice to dave; then her script ends in the play's tail.
-%%   dave   as carol, one friend further: answers yes to carol's meeting and friendship; meets eve and befriends her; answers yes to carol's introducing alice; asks carol; follows alice through carol; introduces alice to eve.
-%%   eve    establishes her identity; answers yes to dave's meeting and friendship and to his introducing alice; asks dave whether he follows alice; follows alice through dave; waits until the third item holds at her, signed by alice, bob, carol and dave.
+%%   bob    establishes his identity; answers yes to alice's meeting and friendship; meets carol and befriends her; decides to follow alice (GFF:2); once he follows her and both items have reached him, introduces alice to carol (GKK:3), whom carol must know to decide to follow her (GFF:2).
+%%   carol  establishes her identity; answers yes to bob's meeting and friendship; meets dave and befriends him; answers yes to bob's introducing alice; once she knows alice, decides to follow her; once she follows her and both items have reached her, introduces alice to dave; then her script ends in the play's tail.
+%%   dave   as carol, one friend further: answers yes to carol's meeting and friendship; meets eve and befriends her; answers yes to carol's introducing alice; decides to follow alice; once he follows her and both items have reached him, introduces alice to eve.
+%%   eve    establishes her identity; answers yes to dave's meeting and friendship and to his introducing alice; decides to follow alice; waits until the third item holds at her, signed by alice, bob, carol and dave.
+%% Each person introduces the next only once both items have reached them, so that no delivery to them is open while their introduction is: an attempt that yields is proposed again, and the person introduced is asked again, where their script answers once.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Last  ::= last(List(Atom), List(Key)) ; nolast.
@@ -43,7 +44,7 @@ script(bob, T, [own([B1], propose(establish(B1?))), wait(holds(identity)),
                 approval(befriend(alice, bob), yes),
                 own([B2], propose(acquaint(B2?, carol))), wait(holds(knows(carol))),
                 own([B3], propose(befriend(B3?, carol))), wait(holds(friend(carol))),
-                own([B4], propose(follow_author(B4?, alice))), wait(holds(following(alice))),
+                own([B4], propose(decide_to_follow(B4?, alice))), wait(holds(following(alice))),
                 wait(holds(item(speech(utterance('First item'), alice), alice))),
                 wait(holds(item(speech(utterance('Second item'), alice), alice))),
                 own([B5], propose(introduce(B5?, carol, alice))) | T?]).
@@ -53,24 +54,25 @@ script(carol, T, [own([C1], propose(establish(C1?))), wait(holds(identity)),
                   own([C2], propose(acquaint(C2?, dave))), wait(holds(knows(dave))),
                   own([C3], propose(befriend(C3?, dave))), wait(holds(friend(dave))),
                   approval(introduce(bob, carol, alice), yes), wait(holds(knows(alice))),
-                  own([C4], propose(ask(C4?, bob, alice))), wait(heard(alice, bob)),
-                  own([C5], propose(follow_through(C5?, bob, alice))), wait(holds(following(alice))),
-                  own([C6], propose(introduce(C6?, dave, alice))) | T?]).
+                  own([C4], propose(decide_to_follow(C4?, alice))), wait(holds(following(alice))),
+                  wait(holds(item(speech(speech(utterance('First item'), alice), bob), alice))),
+                  wait(holds(item(speech(speech(utterance('Second item'), alice), bob), alice))),
+                  own([C5], propose(introduce(C5?, dave, alice))) | T?]).
 script(dave, T, [own([D1], propose(establish(D1?))), wait(holds(identity)),
                  approval(acquaint(carol, dave), yes),
                  approval(befriend(carol, dave), yes),
                  own([D2], propose(acquaint(D2?, eve))), wait(holds(knows(eve))),
                  own([D3], propose(befriend(D3?, eve))), wait(holds(friend(eve))),
                  approval(introduce(carol, dave, alice), yes), wait(holds(knows(alice))),
-                 own([D4], propose(ask(D4?, carol, alice))), wait(heard(alice, carol)),
-                 own([D5], propose(follow_through(D5?, carol, alice))), wait(holds(following(alice))),
-                 own([D6], propose(introduce(D6?, eve, alice))) | T?]).
+                 own([D4], propose(decide_to_follow(D4?, alice))), wait(holds(following(alice))),
+                 wait(holds(item(speech(speech(speech(utterance('First item'), alice), bob), carol), alice))),
+                 wait(holds(item(speech(speech(speech(utterance('Second item'), alice), bob), carol), alice))),
+                 own([D5], propose(introduce(D5?, eve, alice))) | T?]).
 script(eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity)),
                 approval(acquaint(dave, eve), yes),
                 approval(befriend(dave, eve), yes),
                 approval(introduce(dave, eve, alice), yes), wait(holds(knows(alice))),
-                own([E2], propose(ask(E2?, dave, alice))), wait(heard(alice, dave)),
-                own([E3], propose(follow_through(E3?, dave, alice))), wait(holds(following(alice))),
+                own([E2], propose(decide_to_follow(E2?, alice))), wait(holds(following(alice))),
                 wait(holds(item(speech(speech(speech(speech(utterance('Third item'), alice), bob), carol), dave), alice))) | T?]).
 script(_, T, T?) :- otherwise | true.
 
@@ -85,7 +87,7 @@ person([draw(Id, _, menu_w(menu(Me, Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss)
     ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
     advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, approval_w(approval(At, _, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+person([draw(Id, _, approval_w(approval(At, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
     advance(ps(Se?, T?, [shown(Id?, P?, At?) | Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
@@ -162,28 +164,13 @@ shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
     found_yn(F?, B).
 shows(asking, sess(_, _, _, _), _, _, y).
 shows(asking, nosess, _, _, n).
-shows(heard(B, C), _, T, _, R?) :- ground(B?), ground(C?), ground(T?) |
-    last_of(T?, L),
-    heard_in(B?, C?, L?, R).
-
-%% heard_in(B, C, L, R): whether the last view L holds an answer of C to the question whether C follows B (GFF:3): path(B, C, X), path_through(B, C, D) or does_not_follow(B, C).
-procedure heard_in(Peer?, Peer?, Last?, YN).
-heard_in(B, C, last(S, _), R?) :- heard_atoms(B?, C?, S?, R).
-heard_in(_, _, nolast, n).
-
-procedure heard_atoms(Peer?, Peer?, List(Atom)?, YN).
-heard_atoms(_, _, [], n).
-heard_atoms(B, C, [path(B1, C1, _) | _], y) :- B? =?= B1?, C? =?= C1? | true.
-heard_atoms(B, C, [path_through(B1, C1, _) | _], y) :- B? =?= B1?, C? =?= C1? | true.
-heard_atoms(B, C, [does_not_follow(B1, C1) | _], y) :- B? =?= B1?, C? =?= C1? | true.
-heard_atoms(B, C, [_ | As], R?) :- otherwise | heard_atoms(B?, C?, As?, R).
 
 %% The last view written, or none: the output holds the views and the notices.
 procedure last_of(List(Output)?, Last).
 last_of(T, L?) :- last_view(T?, nolast, L).
 procedure last_view(List(Output)?, Last?, Last).
 last_view([], L, L?).
-last_view([view(S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+last_view([view(S, K, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
 last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
@@ -191,7 +178,7 @@ procedure notices_of(List(Output)?, List(Output)).
 notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(List(Output)?, List(Output)?, List(Output)).
 notices_after([], Ns, Ns?).
-notices_after([view(_, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
 procedure among_output(Output?, List(Output)?, YN).
 among_output(_, [], n).
