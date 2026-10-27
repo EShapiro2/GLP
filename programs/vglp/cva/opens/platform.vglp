@@ -180,7 +180,7 @@ request_name(rmark(V1, V2), pname(rmark(V1?, V2?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
-%% The peer a request name N of a meeting part names beside the agent Me, peer(Q), or none, nopeer: the meeting schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
+%% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
 meeting_peer(befriend(V1, V2), Me, P?)
 :-
@@ -218,16 +218,16 @@ Names     ::= none ; request(Rho, Integer).
 Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
             ; yield(Attempt) ; request(Rho, Integer).
-%% A hello carries the request name N of the meeting part its sender requested, hello(P, N), P the sender (vGLP, Section 5.4, "The compilation": "On the request propose(N), N the request name of a meeting part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N"); a contract with no guarded part has no meeting part, and its agents send no hello.
+%% A hello carries the request name N of the acquaintance part its sender requested, hello(P, N), P the sender (vGLP, Section 5.4, "The compilation": "On the request propose(N), N the request name of an acquaintance part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N"); a contract with no guarded part has no acquaintance part, and its agents send no hello.
 Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-%% An approval question asks of an attempt, the question Start raises, or of the meeting a hello carries, hello(Q, N), Q its sender and N the request name of the meeting part (vGLP, Section 5.4, "The compilation": an arriving hello from Q "asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no").
+%% An approval question asks of an attempt, the question Start raises, or of the acquaintance a hello carries, hello(Q, N), Q its sender and N the request name of the acquaintance part (vGLP, Section 5.4, "The compilation": an arriving hello from Q "asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no").
 Asking    ::= Attempt ; hello(Peer, Proposal).
 Approval  ::= approval(Asking, YesNo?).
 Menu      ::= menu(Key, List(Key), Request?).
 Close     ::= close.
 Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
-%% The peer a meeting part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract's meeting schemas).
+%% The peer an acquaintance part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract's acquaintance schemas).
 MeetPeer  ::= peer(Peer) ; nopeer.
 
 %% The contract, as programs/gsc writes it: a schema's roles, each rs(Guard,
@@ -415,7 +415,7 @@ await(At, yes, _, [answered(At?, yes)]).
 await(At, no, _, [answered(At?, no)]).
 await(_, _, close, []).
 
-%% The approval question an arriving hello from Q asks: the clause of the meeting part N that hello carries, with its pragma, showing Q and taking yes or no; the person's yes is their request propose(N), which the agent goal reads as any request, and their no does nothing (vGLP, Section 5.4, "The compilation").
+%% The approval question an arriving hello from Q asks: the clause of the acquaintance part N that hello carries, with its pragma, showing Q and taking yes or no; the person's yes is their request propose(N), which the agent goal reads as any request, and their no does nothing (vGLP, Section 5.4, "The compilation").
 procedure (Approval)*greet(Peer?, Proposal?, Stream(Trigger)).
 (approval(hello(Q?, N?), YN))*greet(Q, N, Out?) :- ground(Q?), ground(N?) |
     await_greet(N?, YN?, Out).
@@ -941,7 +941,7 @@ dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St
 
 
 %% --- Discover: the hellos ---------------------------------------------------
-%% A peer is known once hello has been sent to it and received from it.  On the request propose(N), N the request name of a meeting part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N and records Q as sent to, unless Q is known or already sent to (meet_hello).  On an arriving hello from Q it records Q as received from and, unless it has sent Q a hello, asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no: the person's yes is their request propose(N) with Q, which the agent goal reads as any request, and on their no it does nothing (greet_unless).  Where a peer becomes known the agent goal writes the new view on the output (vGLP, Section 5.4, "The compilation").  A contract with no guarded part has no meeting part, and its agents send no hello.
+%% A peer is known once hello has been sent to it and received from it.  On the request propose(N), N the request name of an acquaintance part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N and records Q as sent to, unless Q is known or already sent to (meet_hello).  On an arriving hello from Q it records Q as received from and, unless it has sent Q a hello, asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no: the person's yes is their request propose(N) with Q, which the agent goal reads as any request, and on their no it does nothing (greet_unless).  Where a peer becomes known the agent goal writes the new view on the output (vGLP, Section 5.4, "The compilation").  A contract with no guarded part has no acquaintance part, and its agents send no hello.
 procedure meet_hello(MeetPeer?, Proposal?, St?, Stream(Net), Stream(Net)?,
     Stream(Output), Stream(Output)?, St).
 meet_hello(nopeer, _, St, Out1?, Out1, Thr1?, Thr1, St?).
@@ -959,7 +959,7 @@ meet_hello1(no, Q, N, St, [msg(Q?, hello(Id?, N?))|Out1?], Out1, Thr?, Thr1, St2
     st_id(St?, Id),
     add_sent(Q?, St?, St1),
     show_known(Q?, St?, St1?, Thr, Thr1?, St2).
-%% The peer of a meeting part whose two roles hold A and B, beside the agent Me (meeting_peer): the other, where Me holds one of them and another person the other; none otherwise.
+%% The peer of an acquaintance part whose two roles hold A and B, beside the agent Me (meeting_peer): the other, where Me holds one of them and another person the other; none otherwise.
 procedure meet_other(Peer?, Peer?, Peer?, MeetPeer).
 meet_other(A, B, Me, P?) :- ground(A?), ground(B?), ground(Me?) |
     same(A?, Me?, SA),
@@ -991,7 +991,7 @@ dispatch_hello(yes, P, N, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, 
     next(Th?, no, Ap0?, Ls?, In?, Ans1, Thr1, Out, Ow, Approvals?, H?, St3?).
 dispatch_hello(no, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-%% The approval question of the meeting a hello from P carries, N, asked unless the agent has sent P a hello, its answers joining the agent goal's input; with pragmas, with the sentence of the clause of N, Me the agent, as sentence_of gives it for the class N names at its machine state.
+%% The approval question of the acquaintance a hello from P carries, N, asked unless the agent has sent P a hello, its answers joining the agent goal's input; with pragmas, with the sentence of the clause of N, Me the agent, as sentence_of gives it for the class N names at its machine state.
 procedure greet_unless(YesNo?, Peer?, Proposal?, St?, Stream(Trigger), Stream(Trigger)?, St).
 greet_unless(yes, _, _, St, Ans1?, Ans1, St?).
 greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?) |
