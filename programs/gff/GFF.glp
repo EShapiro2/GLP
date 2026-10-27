@@ -24,11 +24,11 @@
 %% do not (GFF:3; "a path to Bob", Udi, 2026-10-27, the form of the answer
 %% being representation); item(x, b), at a follower, an item x of b's feed,
 %% signed by every agent it passed through, and sent(x, a), at the sender, that
-%% x was sent to a (GFF:4).  GFF:2 is two schemas, follow_friend, by friendship,
-%% and follow_through, and GFF:4 two, deliver_own, the author's, and
+%% x was sent to a (GFF:4).  GFF:2 is two schemas, friends_follow, by friendship,
+%% and through_friend, and GFF:4 two, deliver_own, the author's, and
 %% deliver_on; GFF:3 is ask and the three answers, all unguarded; which enabled following is taken is the algorithm pragma's, the friend with the shortest path (GFF.txt, Pragmas for GFF, Algorithms).  ask requires knows(b) at
 %% Alice, "Bob, whom Alice knows" (Udi, 2026-10-27, on Code #16's finding
-%% that asked was untraceable without it).  follow_through's Carol requires
+%% that asked was untraceable without it).  through_friend's Carol requires
 %% following(b), "whose friend Carol follows Bob" (Code #16, 2026-10-27: a
 %% variable of a schema occurs in an atom added or deleted, vGLP 5.4).
 %%
@@ -78,17 +78,17 @@ contract_named(gff,
     schema(post, ['Alice'], [svar(x)],
        [rs(guarded, [atom(feed, [svar(x)])], [], [atom(identity, [])], [atom(feed, [svar(x)])])]),
 %% GFF:2, Following.  Alice, who knows b, decides to follow b: the one willed act, which the unguarded acts below require.
-    schema(decide_to_follow, ['Alice'], [pvar(b)],
+    schema(follow, ['Alice'], [pvar(b)],
        [rs(guarded, [atom(decided, [pvar(b)])], [], [atom(identity, []), atom(knows, [pvar(b)])],
                     [atom(decided, [pvar(b)])])]),
 %% GFF:2, Following.  Friends follow each other: Alice follows their friend Bob, recorded as follows(Bob, Bob), through Bob, and Bob records Alice as a follower (Udi, 2026-10-27).
-    schema(follow_friend, ['Alice', 'Bob'], [],
+    schema(friends_follow, ['Alice', 'Bob'], [],
        [rs(unguarded, [atom(follows, [role(2), role(2)]), atom(following, [role(2)])], [],
                       [atom(identity, []), atom(friend, [role(2)])],
                       [atom(following, [role(2)])]),
         rs(unguarded, [atom(follower, [role(1), role(2)])], [], [atom(identity, [])], [])]),
 %% GFF:2, Following.  Alice, who decided to follow b and whose friend Carol follows b, follows b through Carol.
-    schema(follow_through, ['Alice', 'Carol'], [pvar(b)],
+    schema(through_friend, ['Alice', 'Carol'], [pvar(b)],
        [rs(unguarded, [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])], [],
                       [atom(identity, []), atom(decided, [pvar(b)]), atom(friend, [role(2)])],
                       [atom(following, [pvar(b)])]),
