@@ -11,7 +11,7 @@ Alice, Bob and Carol are agents.
 3. ■ Follower discovery.  Alice, who decided to follow Bob, asks their friend Carol whether Carol follows Bob, and Carol answers with a path to Bob, or that they do not.
 4. ■ Delivery.  Bob sends every item they post to every friend; Carol, who follows Bob, sends every item on Bob's feed, after adding their signature, to every friend who follows Bob through Carol.
 Pragmas
-Posts: the items Alice posted.
+Posts: Alice's feed.
 Feeds: the agents Alice follows.
 Feed: Alice [Post] <item>
 Following: Alice [Follow]
