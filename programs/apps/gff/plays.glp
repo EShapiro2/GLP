@@ -1,0 +1,62 @@
+%% plays.glp --- the GFF mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for five executions, with the two ends of each of four root channels handed to them as their conversations, alice's and bob's, bob's and carol's, carol's and dave's, and dave's and eve's, the play standing in for the social graph, as ../gsnp/plays.glp does.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.
+
+imported procedure person#cued_person(Key?, Constant?, Steps?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+
+%% What the play waits for on a person's screen before it gives another person the next steps of their script: a view whose machine state holds the atom, or lacks it.
+Want  ::= holds(Atom) ; lacks(Atom).
+Wants ::= [] ; [Want | Wants].
+
+%% play_feeds(A, B, C, D, E): GFF's play (Code_inbox.md, GFF #1 Cowork, 2026-10-27 16:34 UTC, with its revision of 17:21 UTC adding the introductions), alice, bob, carol, dave and eve.  Each two friends meet and befriend; alice posts two items; bob follows alice (GFF:2, follow_author) and introduces her to carol (GKK:3); carol asks bob whether he follows alice (GFF:3), has his answer, follows alice through bob (GFF:2, follow_through) and introduces her to dave; dave likewise through carol, and eve through dave (person.glp).  Once eve's screen shows that she follows alice, alice posts a third item, which reaches eve signed by alice, bob, carol and dave (GFF:4); once eve's screen shows it, carol ends her following of alice; once carol's screen shows that she no longer follows alice, alice posts a fourth, which reaches bob and not dave or eve.  Each "once" is the play's: a watcher on the one person's screen gives the other person the rest of their script, and passes the screen on unchanged.
+exported procedure play_feeds(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_feeds(A?, B?, C?, D?, E?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, WA), ch([conversation(bob, ch(BA?, AB))], _), []), T?, M?),
+    person # cued_person(alice, alice, TA?, ch(WA?, GA), A),
+    run(miniapp(bob, ch(GB?, WB), ch([conversation(alice, ch(AB?, BA)), conversation(carol, ch(CB?, BC))], _), []), T?, M?),
+    person # cued_person(bob, bob, [], ch(WB?, GB), B),
+    run(miniapp(carol, ch(GC?, WC), ch([conversation(bob, ch(BC?, CB)), conversation(dave, ch(DC?, CD))], _), []), T?, M?),
+    person # cued_person(carol, carol, TC?, ch(WC?, GC), C0),
+    run(miniapp(dave, ch(GD?, WD), ch([conversation(carol, ch(CD?, DC)), conversation(eve, ch(ED?, DE))], _), []), T?, M?),
+    person # cued_person(dave, dave, [], ch(WD?, GD), D),
+    run(miniapp(eve, ch(GE?, WE), ch([conversation(dave, ch(DE?, ED))], _), []), T?, M?),
+    person # cued_person(eve, eve, [], ch(WE?, GE), E0),
+    watch(E0?, E1, [holds(following(alice))],
+          [own([P1, P2], propose(post(P1?, speech(utterance('Third item'), P2?)))),
+           wait(holds(feed(speech(utterance('Third item'), alice)))) | TA2?], TA),
+    watch(E1?, E, [holds(item(speech(speech(speech(speech(speech(utterance('Third item'), alice), alice), bob), carol), dave), alice))],
+          [own([C9], propose(unfollow(C9?, bob, alice))), wait(lacks(following(alice)))], TC),
+    watch(C0?, C, [holds(following(alice)), lacks(following(alice))],
+          [own([P3, P4], propose(post(P3?, speech(utterance('Fourth item'), P4?)))),
+           wait(holds(feed(speech(utterance('Fourth item'), alice))))], TA2).
+
+%% watch(Xs, Ys, Wants, Go, Out): Ys is the screen Xs, passed on unchanged; once its views have shown each of Wants in turn, Out is Go.
+procedure watch(Stream(Seen)?, Stream(Seen), Wants?, Steps?, Steps).
+watch(Xs, Ys?, [], Go, Go?) :- copy(Xs?, Ys).
+watch([X | Xs], [X? | Ys?], [W | Ws], Go, Out?) :-
+    ground(X?), ground(W?) |
+    met(W?, X?, R),
+    watch1(R?, Xs?, Ys, W?, Ws?, Go?, Out).
+
+procedure watch1(YesNo?, Stream(Seen)?, Stream(Seen), Want?, Wants?, Steps?, Steps).
+watch1(yes, Xs, Ys?, _, Ws, Go, Out?) :- watch(Xs?, Ys, Ws?, Go?, Out).
+watch1(no, Xs, Ys?, W, Ws, Go, Out?) :- watch(Xs?, Ys, [W? | Ws?], Go?, Out).
+
+%% met(W, X, R): whether the screen's line X is a view whose machine state shows W.
+procedure met(Want?, Seen?, YesNo).
+met(holds(A), view(S, _, _, _), R?) :- ground(A?), ground(S?) | among_atom(A?, S?, R).
+met(lacks(A), view(S, _, _, _), R?) :- ground(A?), ground(S?) | among_atom(A?, S?, R1), flip_yn(R1?, R).
+met(_, _, no) :- otherwise | true.
+
+procedure among_atom(Atom?, List(Atom)?, YesNo).
+among_atom(_, [], no).
+among_atom(A, [B | _], yes) :- A? =?= B? | true.
+among_atom(A, [_ | Bs], R?) :- otherwise | among_atom(A?, Bs?, R).
+
+procedure flip_yn(YesNo?, YesNo).
+flip_yn(yes, no).
+flip_yn(no, yes).
+
+procedure copy(Stream(Seen)?, Stream(Seen)).
+copy([X | Xs], [X? | Ys?]) :- copy(Xs?, Ys).
+copy([], []).
