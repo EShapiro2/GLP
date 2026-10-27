@@ -1,4 +1,4 @@
-/// The screens of GSC's three apps, GSG's, GSN's and GSNP's (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), of GAI's (`programs/apps/gai`) and of GC's (`programs/apps/gc`), each person's phone as the bridge draws it, written to PNG files for GAI's paper and GSC's (`programs/apps/<app>/screens/`; GAI's figures from GSNP's app, the full platform); and of CSSN's mini-app (`programs/cssn`), for CSSN's paper (`programs/cssn/figures/`), below.
+/// The screens of GSC's three apps, GSG's, GSN's and GSNP's (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), of GAI's (`programs/apps/gai`), of GC's (`programs/apps/gc`) and of GFF's (`programs/apps/gff`), each person's phone as the bridge draws it, written to PNG files for GAI's paper and GSC's (`programs/apps/<app>/screens/`; GAI's figures from GSNP's app, the full platform); and of CSSN's mini-app (`programs/cssn`), for CSSN's paper (`programs/cssn/figures/`), below.
 ///
 /// Each app's directory is a certified program: the canonical CVA platform of its contract, `platform.vglp`, compiled to GLP when the directory loads (vGLP, Section 6.3), and the mini-app's entry `miniapp/4` (`miniapp.glp`), which runs the platform's agent with the person's key and its dispatcher on the agent's asks.  The engine loads the directory and posts the entry for alice and bob over one conversation, as the plays of each directory do (`plays.glp`); for GSNP's app for dan, eve, carol, bob and fay, over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay, the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), and again for acme_ltd, alice, alf and bob, over four conversations, the play of GAI's Figure "The GAI app" on the full platform (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC), alf scripted by the app's person (`programs/apps/gsnp/person.glp`), its script the AI agent's program, and the three persons at their phones; and for GAI's app for alice, alf and bob, over three conversations, to alice's entering alf, no screen of which goes in GAI's paper.  Each person's channel is `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"): the host hands each person's bridge every term of `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant the bridge returns, `input(Id, P, R)`.
 ///
@@ -247,7 +247,7 @@ class _Run {
   _Person get bob => persons[1];
 
   /// Whether the app's platform is compiled from a contract with pragmas, GKK's, GSG's, GSN's, GSNP's, GAI's, GC's, GB's and CSSN's: every word on its screens is the contract's, its tabs the lists its view names (vGLP 1126f4f, Sections 5.4, 6.2 and 8).
-  bool get worded => const {'gkk', 'gsg', 'gsn', 'gsnp', 'gai', 'gc', 'gb', 'cssn'}
+  bool get worded => const {'gkk', 'gsg', 'gsn', 'gsnp', 'gai', 'gc', 'gb', 'gff', 'cssn'}
       .contains(app);
 
   /// The person [name] of the run.
@@ -1796,6 +1796,178 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
+
+  // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GSG and GKK, which it extends (programs/gff/GFF.txt): three tabs, Contacts, Friends and Feeds, "Feeds: the agents Alice follows."; the buttons Post, Follow, Unfollow and Ask, GFF's "[Post] <item>", "[Follow] <person>", "[Unfollow]" and "[Ask] <person>".  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp; Code_inbox.md, GFF #1 Cowork, 2026-10-27 16:34 UTC, revised 17:21 UTC), each act a tap or a typed field, its screens those of GFF #1 Cowork's task of 2026-10-27 18:00 UTC, written to programs/apps/gff/screens/gff-app-<n>.png.
+  testWidgets(
+      'GFF\'s app on five phones, the play of GFF\'s feeds and followers: '
+      '(1) Alice\'s Feeds after her two posts; (2) Carol\'s Follow in Bob\'s '
+      'row; (3) Carol\'s Feeds; (4) Eve\'s Feeds with the third item signed '
+      'by Alice, Bob, Carol and Dave', (tester) async {
+    final run = await _Run.start(tester, screens, 'gff',
+        chain: const ['alice', 'bob', 'carol', 'dave', 'eve']);
+    final alice = run.person('alice');
+    final bob = run.person('bob');
+    final carol = run.person('carol');
+    final dave = run.person('dave');
+    final eve = run.person('eve');
+    // Three tabs, the lists of GKK's, GSG's and GFF's pragmas: Contacts, Friends and Feeds.
+    expect(run.listNamed(alice, 'knows', 'Contacts'), findsOneWidget);
+    expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
+    expect(run.listNamed(alice, 'follows', 'Feeds'), findsOneWidget);
+    expect(run.on(alice, find.byKey(listTabKey('member'))), findsNothing);
+
+    // The texts of [p]'s row [k], in order.
+    List<String> rowTexts(_Person p, String k) => [
+          for (final t in run.tester.widgetList<Text>(find.descendant(
+              of: run.control(p, 'row:$k'), matching: find.byType(Text))))
+            if (t.data != null && t.data!.length > 1) t.data!,
+        ];
+
+    // The friendships of the play: Alice and Bob, Bob and Carol, Carol and Dave, Dave and Eve; each establishes their identity (GKK:1), the first of each two comes to know the second by their key, the second answering yes (GKK:2), and then befriends them, the second answering yes (GSG:1).
+    for (final p in run.persons) {
+      await run.join(p);
+    }
+    for (final (p, q) in [(alice, bob), (bob, carol), (carol, dave), (dave, eve)]) {
+      await run.meetByKey(p, q);
+      await run.befriend(p, q);
+    }
+
+    // [p] posts [text] (GFF:1): on their Feeds tab, the tab of GFF, Post's field item, GFF's "<item>", and Post, GFF's "[Post]", which proposes post(p, x), x the speech act they sign at its posting.
+    String said(String text, String by) => "speech(utterance('$text'), $by)";
+    Future<void> post(_Person p, String text) async {
+      await run.list(p, 'follows');
+      await run.type(p, run.control(p, 'field:post::2'), text);
+      await run.tap(p, run.control(p, 'send:post:'));
+      expect(p.atoms, contains('feed(${said(text, p.name)})'));
+    }
+
+    // (1) Alice posts two items, and her Feeds tab: at its top Post with its field item.
+    await post(alice, 'First item');
+    await post(alice, 'Second item');
+    await run.list(alice, 'follows');
+    await run.top(alice);
+    expect(run.control(alice, 'field:post::2'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'send:post:'), matching: find.text('Post')),
+        findsOneWidget);
+    // Feeds lists the atoms of follows, and Alice follows no one: her items, feed(x) in her state, are on none of her tabs.
+    expect(run.texts(alice), containsAllInOrder(['Feeds', 'item', 'Post']));
+    expect(run.on(alice, find.text('First item')), findsNothing);
+    run.plain(alice);
+    await run.shoot(alice, 'gff-app-1.png');
+
+    // [p] follows the author [author] through their friend [through] (GFF:2): Follow, GFF's "[Follow] <person>", one button for follow_author and follow_through, in [through]'s row of their Friends tab; its field person left empty, follow_author(p, through), where [through] is the author, and the author's key typed into it otherwise, follow_through(p, through, author).  Nobody is asked: the friend's role is unguarded.
+    Future<void> follow(_Person p, String through, String author,
+        {String? shot}) async {
+      await run.list(p, 'friend');
+      await run.tap(p, run.control(p, 'act:follow:$through'));
+      expect(
+          find.descendant(
+              of: run.control(p, 'field:follow:$through:1'),
+              matching: find.text('person')),
+          findsOneWidget);
+      if (author != through) {
+        await run.type(p, run.control(p, 'field:follow:$through:1'), author);
+      }
+      if (shot != null) {
+        await run.foot(p, run.control(p, 'send:follow:$through'));
+        run.plain(p);
+        await run.shoot(p, shot);
+      }
+      await run.tap(p, run.control(p, 'send:follow:$through'));
+      expect(run.person(through).questions('approval'), isEmpty);
+      expect(p.atoms, containsAll(['follows($author, $through)', 'following($author)']));
+    }
+
+    // [p] introduces [author] to their friend [q] (GKK:3): Introduce in [q]'s row of their Contacts, the author picked or typed into its field person; [q] is asked GKK's question and answers yes.
+    Future<void> introduce(_Person p, _Person q, String author) async {
+      await run.list(p, 'knows');
+      await run.tap(p, run.control(p, 'act:introduce:${q.name}'));
+      await run.type(p, run.control(p, 'field:introduce:${q.name}:3'), author);
+      await run.tap(p, run.control(p, 'send:introduce:${q.name}'));
+      final a = q.approval;
+      expect(formatTerm(a.view),
+          contains(', introduce(${p.name}, ${q.name}, $author), none), '));
+      await run.list(q, 'knows');
+      await run.top(q);
+      expect(run.textsOf(q, a), [
+        '${personName(GAtom(p.name))} asks to introduce ${personName(GAtom(author))} to you.',
+        'yes',
+        'no'
+      ]);
+      run.plain(q);
+      await run.answer(q, 'yes');
+      expect(q.atoms, contains('knows($author)'));
+    }
+
+    // [p] asks their friend [q] whether [q] follows [author] (GFF:3): Ask, GFF's "[Ask] <person>", in [q]'s row of their Friends tab, the author's key typed into its field person; [q]'s machine answers, unasked.  The app draws the field typed, where vGLP, Section 5.4, "The contract's words", has a variable that the proposer's role requires held, as ask requires knows(b) at Alice's, picked among the items the viewer holds: screen (5), the author picked, is not taken; reported to Code, 2026-10-27.
+    Future<void> ask(_Person p, _Person q, String author) async {
+      await run.list(p, 'friend');
+      await run.tap(p, run.control(p, 'act:ask:${q.name}'));
+      await run.type(p, run.control(p, 'field:ask:${q.name}:3'), author);
+      await run.tap(p, run.control(p, 'send:ask:${q.name}'));
+      expect(q.questions('approval'), isEmpty);
+      expect(
+          p.atoms.where((x) =>
+              x.startsWith('path($author, ${q.name}, ') ||
+              x.startsWith('path_through($author, ${q.name}, ')),
+          isNotEmpty,
+          reason: '${p.name}: no answer of ${q.name}');
+    }
+
+    // Bob follows Alice (GFF:2, follow_author); her machine delivers both items to him, signed by her at their posting (GFF:4, deliver_own).
+    await follow(bob, 'alice', 'alice');
+    final first = said('First item', 'alice');
+    final second = said('Second item', 'alice');
+    expect(bob.atoms, containsAll(['item($first, alice)', 'item($second, alice)']));
+
+    // Bob introduces Alice to Carol (GKK:3), whom Carol must know to ask about her (GFF:3).
+    await introduce(bob, carol, 'alice');
+
+    // Carol asks Bob whether he follows Alice (GFF:3): Ask in Bob's row; Bob's machine answers with a path, an item of Alice's feed he holds.
+    await ask(carol, bob, 'alice');
+
+    // (2) Carol follows Alice through Bob (GFF:2, follow_through): Follow in Bob's row, Alice's key typed into its field person; Bob's machine delivers the two items to her, signed by him (GFF:4, deliver_on).
+    await follow(carol, 'bob', 'alice', shot: 'gff-app-2.png');
+    expect(carol.atoms, contains('item(speech($first, bob), alice)'));
+
+    // (3) Carol's Feeds tab: Alice, the agent she follows, with Bob, the friend she follows her through, and the items of Alice's feed she holds.
+    await run.list(carol, 'follows');
+    await run.top(carol);
+    expect(run.control(carol, 'row:alice'), findsOneWidget);
+    expect(rowTexts(carol, 'alice').take(2), ['Alice', 'Bob']);
+    expect(rowTexts(carol, 'alice'),
+        containsAll(['First item (Alice, Bob)', 'Second item (Alice, Bob)']));
+    run.plain(carol);
+    await run.shoot(carol, 'gff-app-3.png');
+
+    // Carol introduces Alice to Dave; Dave asks Carol and follows Alice through her, and introduces her to Eve; Eve asks Dave and follows Alice through him.
+    await introduce(carol, dave, 'alice');
+    await ask(dave, carol, 'alice');
+    await follow(dave, 'carol', 'alice');
+    await introduce(dave, eve, 'alice');
+    await ask(eve, dave, 'alice');
+    await follow(eve, 'dave', 'alice');
+
+    // Alice posts a third item, which reaches Eve signed by Alice at its posting and by Bob, Carol and Dave on its way (GFF:4).
+    await post(alice, 'Third item');
+    final third = said('Third item', 'alice');
+    expect(eve.atoms,
+        contains('item(speech(speech(speech($third, bob), carol), dave), alice)'));
+
+    // (4) Eve's Feeds tab: Alice, followed through Dave, and the items of her feed, each with its signatures, Alice, Bob, Carol and Dave.
+    await run.list(eve, 'follows');
+    await run.top(eve);
+    expect(run.control(eve, 'row:alice'), findsOneWidget);
+    expect(rowTexts(eve, 'alice').take(3),
+        ['Alice', 'Dave', 'Third item (Alice, Bob, Carol, Dave)']);
+    run.plain(eve);
+    await run.shoot(eve, 'gff-app-4.png');
+
+    // Carol's ending of her following of Alice (GFF:2, unfollow), Alice's fourth item, and Bob's Feeds tab after it, screen (6), are not played: no Unfollow, GFF's "[Unfollow]", is drawn on Carol's phone, though her state holds follows(alice, bob) and following(alice), which unfollow requires at her role (vGLP, Section 6.2, "The words a platform shows"); reported to Code, 2026-10-27.
+    run.finish();
+  }, timeout: const Timeout(Duration(minutes: 30)));
 
   // CSSN's app is compiled from its contract and its pragmas, CSSN.txt and those of the contracts it extends, GKK, GSG, GSN and GnW (programs/cssn/CSSN.txt; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, "Children: the children Alice is parenting."; each button the label in brackets, Enter, Child acquaint, Child befriend, Child adult befriend, Of age, Child join, Child unfriend, Child leave, Child close and Parent unfriend; each question the sentence of the role asked, "Alice asks that Carol and your child Dave befriend."; and the answers yes and no.  Enter is a meeting schema, enter(p?, r?): a parent types the child's key into its field, CSSN's "<child>", and the request's hello asks the child's phone the question of the child's role, "Alice asks to be your parent." (Section 5.4, "The compilation").  The scenario is CSSN's Figure 3's (CSSN, Section 4.6, "In the Grassroots App").
   testWidgets(
