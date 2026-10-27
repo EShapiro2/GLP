@@ -3,7 +3,7 @@
 %
 % Decides def:syntactically-grassroots of /Grassroots/GSC, Section 3, one
 % definition for a contract of agent roles and listed roles (GSC ac7ad63),
-% with the values of its appendix "Values in Speech Act Schemas" (app:numbers).
+% with the values of its appendix "Values in Speech-Act Schemas" (app:numbers).
 % The signed term, reflexive predicates and contracts with wards are GAI's
 % extension of the language (GAI's appendix "Contracts with Wards"; GSC
 % 83b951c and 1a2a5f3), held here for GAI.  The papers are the specification
@@ -37,7 +37,7 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % An argument is a role, named by its index in the schema, a party variable, a
 % speech-act variable, a name term or a signed term: sgn(Y, I) is the signed
 % term sgn(y, pi_I) of def:schema, the speech act y signed by the agent in
-% role I.  Speech act schemas allow numbers (GSC, Section 3.2, the paragraph after
+% role I.  Speech-act schemas allow numbers (GSC, Section 3.2, the paragraph after
 % the example of def:schema, and def:numbers): num(X) is a value argument,
 % the value variable X where X is a name and the number X where X is a
 % number.
@@ -47,8 +47,8 @@ Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
 
-% --- The values speech act schemas allow (GSC, def:numbers) -----------------------
-% "Speech act schemas allow values of any type: an argument of an atom may be a
+% --- The values speech-act schemas allow (GSC, def:numbers) -----------------------
+% "Speech-act schemas allow values of any type: an argument of an atom may be a
 % value or a value variable, a schema may carry a constraint on its value
 % variables, which every binding satisfies, and an atom added or deleted may
 % carry a multiplicity, a count of copies and so a positive whole number"
@@ -124,7 +124,7 @@ Contract  ::= [] ; [Schema | Contract].
 % schemas.
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
-% The contract as written, with the values speech act schemas allow: a role's four
+% The contract as written, with the values speech-act schemas allow: a role's four
 % multisets may carry multiplicities, which def:schema admits on an atom
 % added or deleted and check.glp refuses elsewhere (multiplicity_not_added),
 % and a schema may be written nschema, with a constraint.  A contract with no
@@ -147,7 +147,7 @@ NDeclared  ::= NContract ; reflexive(Preds, NContract).
 % named by its base; a schema written without them, as the owners' contracts
 % not yet rewritten write it, is read as before.  A contract may name its
 % environment predicates (GSC 25b6b3c, Section 3.2 and the appendix "Values
-% in Speech Act Schemas": "whose atoms are over values, which the machine holds from
+% in Speech-Act Schemas": "whose atoms are over values, which the machine holds from
 % startup and the platform keeps current, and which no schema adds or
 % deletes"), environment(Preds, Body), Body the contract with or without its
 % reflexive predicates.  The checker, the compiler to VMAT and the printer
@@ -249,7 +249,7 @@ Preds ::= [] ; [Constant | Preds].
 % predicate of an atom the introductory act forbids at a role.
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive ; environment
         ; listed_role(Constant, Integer, Atom).
-% What GAI's Definition Speech act schema requires of a signed term, and the atom
+% What GAI's Definition Speech-act schema requires of a signed term, and the atom
 % carrying one violates: it occurs in an atom not marked + (not_added), its
 % speech-act variable occurs in no atom its role requires (not_required), or
 % its role is not an agent role (not_agent_role).
@@ -1253,7 +1253,7 @@ nth_base(Rs, I, B?) :- ground(Rs?), integer(I?) |
 
 % The bases of arguments (def:grounded at GSC 1934846): an agent role, an
 % agent variable and a name term have one; a value and a speech-act variable
-% have none, a value naming no agent (the appendix "Values in Speech Act Schemas").
+% have none, a value naming no agent (the appendix "Values in Speech-Act Schemas").
 procedure args_bases(Args?, Bases?, Bases).
 args_bases([], T, T?).
 args_bases([num(_)|As], T, R?) :- ground(As?), ground(T?) |

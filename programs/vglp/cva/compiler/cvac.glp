@@ -1024,7 +1024,7 @@ a_person(sgn(_, _), _, _, no).
 procedure widget_lines(Words?, Contract?, Preds?, DrawCtx?, Stream(_)).
 widget_lines(_, _, [], _, ['', '%% The widget declaration of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence; a contract with no guarded part has no request question.', 'Approval =::= approval_sentence.']).
 widget_lines(words(no_pragmas), _, [_|_], _, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu.', 'Approval =::= approval_sentence.', 'Menu =::= social_menu.']).
-widget_lines(words(pragmas(Ls, As)), C, Ps, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract\'s pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs, Is), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, Gs the groups it names, group(J, K), the leader at place J and the group\'s name at place K, which a group the view lists fills, and Is the items it names, item(K, P), the speech act at place K, which a row of the list of the predicate P fills; meeting(F, I) for a meeting schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").', 'Approval =::= approval_sentence.', T?, '.']) :-
+widget_lines(words(pragmas(Ls, As)), C, Ps, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract\'s pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs, Is), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, Gs the groups it names, group(J, K), the leader at place J and the group\'s name at place K, which a group the view lists fills, and Is the items it names, item(K, P), the speech act at place K, which a row of the list of the predicate P fills; meeting(F, I) for an acquaintance schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").', 'Approval =::= approval_sentence.', T?, '.']) :-
     ground(Ls?), ground(As?), ground(C?), ground(Ps?), ground(Rf?) |
     contract_preds(C?, Pr),
     mult_preds(C?, Mp),
@@ -1067,7 +1067,7 @@ schema_labels([S|Ss], B, Fs, Q, T, By, C, Ps, Lp, Rf, L?) :- ground(S?), ground(
     schema_labels1(In?, Sf?, S?, B?, Fs?, Q?, T?, By?, Lp?, Rf?, L1),
     schema_labels(Ss?, B?, Fs?, Q?, T?, By?, C?, Ps?, Lp?, Rf?, L2),
     lapp(L1?, L2?, L).
-%% The entries of a schema the request type proposes: its request's label, each place a field names, where its button is drawn (act_entry), whether it is a meeting schema, and the text of the request form of an act with one guarding role.
+%% The entries of a schema the request type proposes: its request's label, each place a field names, where its button is drawn (act_entry), whether it is an acquaintance schema, and the text of the request form of an act with one guarding role.
 procedure schema_labels1(YesNo?, SFound?, Constant?, String?, Strings?, Said?, String?, Proposer?, Preds?, DrawCtx?, Stream(_)).
 schema_labels1(no, _, _, _, _, _, _, _, _, _, []).
 schema_labels1(yes, nosfound, _, _, _, _, _, _, _, _, []).
@@ -1535,7 +1535,7 @@ procedure a_named_person(Arg?, Integer?, Integer?, Ints?, Ints?, YesNo).
 a_named_person(role(_), I, M, _, Ld, B?) :- I? =\= M?, ground(Ld?) | mem(I?, Ld?, L), neg(L?, B).
 a_named_person(pvar(_), I, _, Nd, Ld, B?) :- ground(Nd?), ground(Ld?) | mem(I?, Nd?, F), mem(I?, Ld?, L), or(F?, L?, FL), neg(FL?, B).
 a_named_person(_, _, _, _, _, no) :- otherwise | true.
-%% meeting(F, I): F a meeting schema (meeting_schema), I the place of the role other than the proposer's, 2, its proposer at place 1, which a field for the key fills where the peer is not listed, the first field of its pragma naming it (field_places; vGLP e286276, Section 5.4, "The contract's words": "a person the act names by key among them").
+%% meeting(F, I): F an acquaintance schema (meeting_schema), I the place of the role other than the proposer's, 2, its proposer at place 1, which a field for the key fills where the peer is not listed, the first field of its pragma naming it (field_places; vGLP e286276, Section 5.4, "The contract's words": "a person the act names by key among them").
 procedure meeting_entry(Constant?, RoleSpecs?, Stream(_)).
 meeting_entry(S, Rs, L?) :- ground(S?), ground(Rs?) | meeting_schema(Rs?, M), meeting_entry1(M?, S?, L).
 procedure meeting_entry1(YesNo?, Constant?, Stream(_)).
@@ -1732,7 +1732,7 @@ question_terms([G|Gs], [Q|Qs], Pp, Vw, [T?|Ts?]) :- integer(G?), ground(Q?), gro
     lapp(Sw0?, Vw?, Sw),
     T =.. [q, R?, Sw?],
     question_terms(Gs?, Qs?, Pp?, Vw?, Ts).
-%% The places of the class term the pragma's fields name, the k-th field the k-th of them, in the order field_places counts them, the peer of a meeting schema first and then the variables of the head a person fills, but numbered as the class term's places, its roles then its head, as the question's places are (said_places).
+%% The places of the class term the pragma's fields name, the k-th field the k-th of them, in the order field_places counts them, the peer of an acquaintance schema first and then the variables of the head a person fills, but numbered as the class term's places, its roles then its head, as the question's places are (said_places).
 procedure value_field_places(Args?, RoleSpecs?, Ints).
 value_field_places(Hd, Rs, Fq?) :- ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vs),
@@ -1840,15 +1840,15 @@ said_words([person(K)|Ws], Pp, [person(Q?)|Xs?]) :- ground(Pp?) |
     name_of(F?, _, Q),
     said_words(Ws?, Pp?, Xs).
 
-%% --- Meeting --------------------------------------------------------------
-%% The meeting schemas, whose parts are the meeting parts of the compilation (vGLP, Section 5.4, "The compilation": "The compilation is given, with the specification, its meeting parts: guarded parts with two guards and no opener by which two agents come to know each other, for a contract the parts of a meeting schema, one with two roles, both guarding, that requires at neither role an atom naming the other, as GKK's meet"): a schema of two party roles, each guarding, whose atoms required or deleted at each role name neither the other role nor a name term built on it.  meeting_peer(N, Me, P), printed where the request type proposes a schema: P the peer a request name N of a meeting part names beside the agent Me, peer(Q), the person in its other role, where Me is in one of its two roles and another person in the other; nopeer otherwise, and for every other request name.
+%% --- Acquaintance --------------------------------------------------------------
+%% The acquaintance schemas, whose parts are the acquaintance parts of the compilation (vGLP, Section 5.4, "The compilation": "The compilation is given, with the specification, its acquaintance parts: guarded parts with two guards and no opener by which two agents come to know each other, for a contract the parts of an acquaintance schema, one with two roles, both guarding, that requires at neither role an atom naming the other, as GKK's meet"): a schema of two party roles, each guarding, whose atoms required or deleted at each role name neither the other role nor a name term built on it.  meeting_peer(N, Me, P), printed where the request type proposes a schema: P the peer a request name N of an acquaintance part names beside the agent Me, peer(Q), the person in its other role, where Me is in one of its two roles and another person in the other; nopeer otherwise, and for every other request name.
 procedure meeting_lines(Contract?, Preds?, Stream(_)).
 meeting_lines(_, [], []).
 meeting_lines(C, [P|Ps], L?) :- ground(C?), ground(P?), ground(Ps?) |
     meeting_clauses(C?, [P?|Ps?], Lc),
     lapp(Lc?, ['meeting_peer(_, _, nopeer) :- otherwise | true.'], Lc1),
     lapp(['',
-        '%% The peer a request name N of a meeting part names beside the agent Me, peer(Q), or none, nopeer: the meeting schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").',
+        '%% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").',
         'procedure meeting_peer(Proposal?, Peer?, MeetPeer).'|Lc1?], [], L).
 procedure meeting_clauses(Contract?, Preds?, Stream(_)).
 meeting_clauses([], _, []).
@@ -1861,7 +1861,7 @@ meeting_clauses([schema(S, Hd, Rs)|Ss], Ps, L?) :- ground(S?), ground(Hd?), grou
     lapp(L1?, L2?, L).
 meeting_clauses([cschema(_, _, _, _)|Ss], Ps, L?) :- meeting_clauses(Ss?, Ps?, L).
 meeting_clauses([nschema(_, _, _, _)|Ss], Ps, L?) :- meeting_clauses(Ss?, Ps?, L).
-%% Whether a schema is a meeting schema: two party roles, both guarding, and the atoms each requires or deletes naming not the other.
+%% Whether a schema is an acquaintance schema: two party roles, both guarding, and the atoms each requires or deletes naming not the other.
 procedure meeting_schema(RoleSpecs?, YesNo).
 meeting_schema([rs(G1, _, D1, K1, _), rs(G2, _, D2, K2, _)], B?) :-
     ground(G1?), ground(D1?), ground(K1?), ground(G2?), ground(D2?), ground(K2?) |

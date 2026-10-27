@@ -5,7 +5,7 @@
 %% Platform"; Section 5.4, "The compilation").  The compiler prints it, one
 %% line to a constant, after what it prints from the contract; GLP has no
 %% string concatenation, so the text is carried as its lines.  It is GLP
-%% source, the module the compiler prints being self-contained.  A line pragma_only(L) is printed only for a contract carrying pragmas, the words its app shows, and a line plain_only(L) only for one carrying none, in place of the pragma_only(L) beside it (vGLP, Section 5.4, "The contract's words"; cvac.glp, shared_lines).  A line guarded_only(L) is printed only for a contract with a guarded part: the request type has the alternative propose([t]_j) for each guarded part [t]_j (vGLP, Section 5.4, "The compilation"), so a contract with none has no request type and its agent asks no request question, and a clause on the request propose([t]_j), on a request rho_N of the guarded parts with an opener named N, or on a hello, which carries the request name of a meeting part, would not be well-typed (cvac.glp, request_parts); a line unguarded_only(L) is printed only for a contract with none, in place of the one guarded_only(L) beside it (vGLP f0acbc1, Definition "Local Specification, Part, Guard Set, Opener, Request": a request is of the guarded parts).  A line day_only(L) is printed only for a contract that requires the day, today(d) (vGLP, Section 5.4, "Act schemas as local specifications"), whose agent reads a calendar, and a line dayless_only(L) only for one that does not.  The marks nest: pragma_only(guarded_only(L)) is printed for a contract carrying pragmas and with a guarded part.
+%% source, the module the compiler prints being self-contained.  A line pragma_only(L) is printed only for a contract carrying pragmas, the words its app shows, and a line plain_only(L) only for one carrying none, in place of the pragma_only(L) beside it (vGLP, Section 5.4, "The contract's words"; cvac.glp, shared_lines).  A line guarded_only(L) is printed only for a contract with a guarded part: the request type has the alternative propose([t]_j) for each guarded part [t]_j (vGLP, Section 5.4, "The compilation"), so a contract with none has no request type and its agent asks no request question, and a clause on the request propose([t]_j), on a request rho_N of the guarded parts with an opener named N, or on a hello, which carries the request name of an acquaintance part, would not be well-typed (cvac.glp, request_parts); a line unguarded_only(L) is printed only for a contract with none, in place of the one guarded_only(L) beside it (vGLP f0acbc1, Definition "Local Specification, Part, Guard Set, Opener, Request": a request is of the guarded parts).  A line day_only(L) is printed only for a contract that requires the day, today(d) (vGLP, Section 5.4, "Act schemas as local specifications"), whose agent reads a calendar, and a line dayless_only(L) only for one that does not.  The marks nest: pragma_only(guarded_only(L)) is printed for a contract carrying pragmas and with a guarded part.
 
 Line  ::= String ; guarded_only(Line) ; unguarded_only(Line)
         ; pragma_only(Line) ; plain_only(Line) ; day_only(Line) ; dayless_only(Line).
@@ -38,11 +38,11 @@ fixed_text([
     'Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).',
     'Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)',
     '            ; yield(Attempt) ; request(Rho, Integer).',
-    '%% A hello carries the request name N of the meeting part its sender requested, hello(P, N), P the sender (vGLP, Section 5.4, "The compilation": "On the request propose(N), N the request name of a meeting part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N"); a contract with no guarded part has no meeting part, and its agents send no hello.',
+    '%% A hello carries the request name N of the acquaintance part its sender requested, hello(P, N), P the sender (vGLP, Section 5.4, "The compilation": "On the request propose(N), N the request name of an acquaintance part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N"); a contract with no guarded part has no acquaintance part, and its agents send no hello.',
     guarded_only('Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).'),
     unguarded_only('Content   ::= ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).'),
     'Net       ::= msg(Peer, Content).',
-    '%% An approval question asks of an attempt, the question Start raises, or of the meeting a hello carries, hello(Q, N), Q its sender and N the request name of the meeting part (vGLP, Section 5.4, "The compilation": an arriving hello from Q "asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no").',
+    '%% An approval question asks of an attempt, the question Start raises, or of the acquaintance a hello carries, hello(Q, N), Q its sender and N the request name of the acquaintance part (vGLP, Section 5.4, "The compilation": an arriving hello from Q "asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no").',
     guarded_only('Asking    ::= Attempt ; hello(Peer, Proposal).'),
     unguarded_only('Asking    ::= Attempt.'),
     plain_only('Approval  ::= approval(Asking, YesNo?).'),
@@ -55,7 +55,7 @@ fixed_text([
     'Close     ::= close.',
     guarded_only('Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).'),
     unguarded_only('Trigger   ::= net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).'),
-    '%% The peer a meeting part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract\'s meeting schemas).',
+    '%% The peer an acquaintance part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract\'s acquaintance schemas).',
     'MeetPeer  ::= peer(Peer) ; nopeer.',
     '',
     '%% The contract, as programs/gsc writes it: a schema\'s roles, each rs(Guard,',
@@ -267,7 +267,7 @@ fixed_text([
     'await(At, no, _, [answered(At?, no)]).',
     'await(_, _, close, []).',
     '',
-    '%% The approval question an arriving hello from Q asks: the clause of the meeting part N that hello carries, with its pragma, showing Q and taking yes or no; the person\'s yes is their request propose(N), which the agent goal reads as any request, and their no does nothing (vGLP, Section 5.4, "The compilation").',
+    '%% The approval question an arriving hello from Q asks: the clause of the acquaintance part N that hello carries, with its pragma, showing Q and taking yes or no; the person\'s yes is their request propose(N), which the agent goal reads as any request, and their no does nothing (vGLP, Section 5.4, "The compilation").',
     plain_only(guarded_only('procedure (Approval)*greet(Peer?, Proposal?, Stream(Trigger)).')),
     plain_only(guarded_only('(approval(hello(Q?, N?), YN))*greet(Q, N, Out?) :- ground(Q?), ground(N?) |')),
     pragma_only(guarded_only('procedure (Approval)*greet(Peer?, Proposal?, List(Word)?, Stream(Trigger)).')),
@@ -803,7 +803,7 @@ fixed_text([
     pragma_only('ask_of([_|Qs], Me, Ws?) :- otherwise | ask_of(Qs?, Me?, Ws).'),
     '',
     '%% --- Discover: the hellos ---------------------------------------------------',
-    '%% A peer is known once hello has been sent to it and received from it.  On the request propose(N), N the request name of a meeting part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N and records Q as sent to, unless Q is known or already sent to (meet_hello).  On an arriving hello from Q it records Q as received from and, unless it has sent Q a hello, asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no: the person\'s yes is their request propose(N) with Q, which the agent goal reads as any request, and on their no it does nothing (greet_unless).  Where a peer becomes known the agent goal writes the new view on the output (vGLP, Section 5.4, "The compilation").  A contract with no guarded part has no meeting part, and its agents send no hello.',
+    '%% A peer is known once hello has been sent to it and received from it.  On the request propose(N), N the request name of an acquaintance part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N and records Q as sent to, unless Q is known or already sent to (meet_hello).  On an arriving hello from Q it records Q as received from and, unless it has sent Q a hello, asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no: the person\'s yes is their request propose(N) with Q, which the agent goal reads as any request, and on their no it does nothing (greet_unless).  Where a peer becomes known the agent goal writes the new view on the output (vGLP, Section 5.4, "The compilation").  A contract with no guarded part has no acquaintance part, and its agents send no hello.',
     guarded_only('procedure meet_hello(MeetPeer?, Proposal?, St?, Stream(Net), Stream(Net)?,'),
     guarded_only('    Stream(Output), Stream(Output)?, St).'),
     guarded_only('meet_hello(nopeer, _, St, Out1?, Out1, Thr1?, Thr1, St?).'),
@@ -821,7 +821,7 @@ fixed_text([
     guarded_only('    st_id(St?, Id),'),
     guarded_only('    add_sent(Q?, St?, St1),'),
     guarded_only('    show_known(Q?, St?, St1?, Thr, Thr1?, St2).'),
-    '%% The peer of a meeting part whose two roles hold A and B, beside the agent Me (meeting_peer): the other, where Me holds one of them and another person the other; none otherwise.',
+    '%% The peer of an acquaintance part whose two roles hold A and B, beside the agent Me (meeting_peer): the other, where Me holds one of them and another person the other; none otherwise.',
     guarded_only('procedure meet_other(Peer?, Peer?, Peer?, MeetPeer).'),
     guarded_only('meet_other(A, B, Me, P?) :- ground(A?), ground(B?), ground(Me?) |'),
     guarded_only('    same(A?, Me?, SA),'),
@@ -853,7 +853,7 @@ fixed_text([
     guarded_only('    next(Th?, no, Ap0?, Ls?, In?, Ans1, Thr1, Out, Ow, Approvals?, H?, St3?).'),
     guarded_only('dispatch_hello(no, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-'),
     guarded_only('    next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).'),
-    '%% The approval question of the meeting a hello from P carries, N, asked unless the agent has sent P a hello, its answers joining the agent goal\'s input; with pragmas, with the sentence of the clause of N, Me the agent, as sentence_of gives it for the class N names at its machine state.',
+    '%% The approval question of the acquaintance a hello from P carries, N, asked unless the agent has sent P a hello, its answers joining the agent goal\'s input; with pragmas, with the sentence of the clause of N, Me the agent, as sentence_of gives it for the class N names at its machine state.',
     guarded_only('procedure greet_unless(YesNo?, Peer?, Proposal?, St?, Stream(Trigger), Stream(Trigger)?, St).'),
     guarded_only('greet_unless(yes, _, _, St, Ans1?, Ans1, St?).'),
     plain_only(guarded_only('greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?) |')),
