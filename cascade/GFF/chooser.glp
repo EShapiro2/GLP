@@ -1,0 +1,118 @@
+%% chooser.glp --- GFF's chooser, the module chooser of GFF's app, which the platform's agent calls on each own trigger with the Proposes of the unguarded parts it opens whose condition holds, the longest waited first, and its machine state as its view shows it (programs/vglp/cva/compiler/CHOOSER.md, "The seam" and "A contract's Algorithms section"; the experiment GFF-chooser, approved by Udi on 2026-10-27, reported by GFF #1 Cowork, Code_inbox.md, 2026-10-27 20:25 UTC).
+%%
+%% Written from the Algorithms section of GFF's pragmas, programs/gff/GFF.txt at GLP 0a3d7997: "Following: when Alice decides to follow Bob, Alice's machine asks every friend whether they follow Bob (GFF:3) and follows Bob through the friend with the shortest path to Bob (GFF:2)."  The asking is GFF's ask, which the agent takes as the default would.  The following through a friend, through_friend(Alice, Carol, Bob), is taken once every friend of Alice has answered whether they follow Bob --- path(Bob, Carol, X), path_through(Bob, Carol, D) or does_not_follow(Bob, Carol) in Alice's state --- and only with a friend whose answer is a path of the fewest signatures, a path being the signatures on the item X of Bob's feed that Carol holds, Bob's at its posting and one for each agent it passed through (GFF:4).  Every other part is taken as the default takes it: of the parts, the first that the chooser does not hold back.
+%%
+%% An answer path_through(Bob, Carol, D), that Carol follows Bob through their friend D, names no path whose length Alice's state holds; this chooser takes the following through such a friend only where no friend answered with a path (README.md beside this file, "The chooser").
+
+%% The types of the platform the chooser is written against, platform.vglp's as GFF's contract prints them, written again here so that the module carries them, as the record of a run of the cascade holds it beside the platform with no self.glp (cascade.sh, chooser.glp); they agree with platform.vglp's and with self.glp's, as the import of choose/3 in platform.vglp requires.
+Peer      ::= Key.
+Speech    ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
+            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+            ; post(Peer, Speech) ; follow(Peer, Peer) ; friends_follow(Peer, Peer)
+            ; through_friend(Peer, Peer, Peer) ; unfollow(Peer, Peer, Peer) ; ask(Peer, Peer, Peer)
+            ; answer_follows(Peer, Peer, Peer, Speech) ; answer_follows_through(Peer, Peer, Peer, Peer)
+            ; answer_does_not_follow(Peer, Peer, Peer)
+            ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Speech).
+Atom      ::= identity ; knows(Peer) ; friend(Peer) ; feed(Speech) ; decided(Peer)
+            ; follows(Peer, Peer) ; following(Peer) ; follower(Peer, Peer) ; asked_of(Peer, Peer)
+            ; asked(Peer, Peer) ; item(Speech, Peer) ; path(Peer, Peer, Speech)
+            ; path_through(Peer, Peer, Peer) ; does_not_follow(Peer, Peer) ; sent(Speech, Peer).
+
+%% What the chooser returns: the part to take, by its class term, or none yet (CHOOSER.md, "The seam").
+Chosen ::= take(Class) ; none_yet.
+YesNo  ::= yes ; no.
+%% The fewest signatures on a path some friend answered with, or none.
+Best   ::= best(Integer) ; no_best.
+
+exported procedure choose(List(Class)?, List(Atom)?, Chosen).
+choose([], _, none_yet).
+choose([P | Ps], S, C?) :-
+    ground(P?), ground(S?) |
+    allowed(P?, S?, A),
+    choose1(A?, P?, Ps?, S?, C).
+
+procedure choose1(YesNo?, Class?, List(Class)?, List(Atom)?, Chosen).
+choose1(yes, P, _, _, take(P?)).
+choose1(no, _, Ps, S, C?) :- choose(Ps?, S?, C).
+
+%% Whether the part may be taken now: a following of Bob through the friend Carol once every friend has answered and Carol's answer is a shortest path; every other part at once.
+procedure allowed(Class?, List(Atom)?, YesNo).
+allowed(through_friend(_, C, B), S, A?) :-
+    ground(C?), ground(B?), ground(S?) |
+    all_answered(S?, S?, B?, R),
+    best_path(S?, B?, no_best, Bt),
+    allowed1(R?, Bt?, C?, B?, S?, A).
+allowed(_, _, yes) :- otherwise | true.
+
+procedure allowed1(YesNo?, Best?, Peer?, Peer?, List(Atom)?, YesNo).
+allowed1(no, _, _, _, _, no).
+allowed1(yes, best(N), C, B, S, A?) :-
+    integer(N?), ground(C?), ground(B?) |
+    has_path(S?, B?, C?, N?, A).
+allowed1(yes, no_best, C, B, S, A?) :-
+    ground(C?), ground(B?) |
+    has_through(S?, B?, C?, A).
+
+%% all_answered(As, S, B, R): every friend F among the atoms As has answered whether they follow B, by an atom of the state S.
+procedure all_answered(List(Atom)?, List(Atom)?, Peer?, YesNo).
+all_answered([], _, _, yes).
+all_answered([friend(F) | As], S, B, R?) :-
+    ground(F?), ground(S?), ground(B?) |
+    answered(S?, B?, F?, R1),
+    all_answered1(R1?, As?, S?, B?, R).
+all_answered([_ | As], S, B, R?) :- otherwise | all_answered(As?, S?, B?, R).
+
+procedure all_answered1(YesNo?, List(Atom)?, List(Atom)?, Peer?, YesNo).
+all_answered1(no, _, _, _, no).
+all_answered1(yes, As, S, B, R?) :- all_answered(As?, S?, B?, R).
+
+%% answered(S, B, F, R): the state S holds F's answer whether they follow B.
+procedure answered(List(Atom)?, Peer?, Peer?, YesNo).
+answered([], _, _, no).
+answered([path(B1, F1, _) | _], B, F, yes) :- B1? =?= B?, F1? =?= F? | true.
+answered([path_through(B1, F1, _) | _], B, F, yes) :- B1? =?= B?, F1? =?= F? | true.
+answered([does_not_follow(B1, F1) | _], B, F, yes) :- B1? =?= B?, F1? =?= F? | true.
+answered([_ | As], B, F, R?) :- otherwise | answered(As?, B?, F?, R).
+
+%% best_path(S, B, Bt0, Bt): the fewest signatures on a path to B that a friend answered with, path(B, F, X).
+procedure best_path(List(Atom)?, Peer?, Best?, Best).
+best_path([], _, Bt, Bt?).
+best_path([path(B1, _, X) | As], B, Bt0, Bt?) :-
+    B1? =?= B?, ground(X?), ground(B?) |
+    sigs(X?, N),
+    fewer(N?, Bt0?, Bt1),
+    best_path(As?, B?, Bt1?, Bt).
+best_path([_ | As], B, Bt0, Bt?) :- otherwise | best_path(As?, B?, Bt0?, Bt).
+
+procedure fewer(Integer?, Best?, Best).
+fewer(N, no_best, best(N?)).
+fewer(N, best(M), best(N?)) :- N? < M? | true.
+fewer(N, best(M), best(M?)) :- N? >= M? | true.
+
+%% The signatures on an item: its author's, given at its posting, and one for each agent it passed through.
+procedure sigs(Speech?, Integer).
+sigs(speech(utterance(_), _), 1).
+sigs(speech(speech(U, Q), _), N?) :-
+    sigs(speech(U?, Q?), N1),
+    N := N1? + 1.
+
+%% has_path(S, B, C, N, A): C answered with a path to B of N signatures.
+procedure has_path(List(Atom)?, Peer?, Peer?, Integer?, YesNo).
+has_path([], _, _, _, no).
+has_path([path(B1, C1, X) | As], B, C, N, A?) :-
+    B1? =?= B?, C1? =?= C?, ground(X?), ground(As?), integer(N?) |
+    sigs(X?, M),
+    has_path1(M?, N?, As?, B?, C?, A).
+has_path([_ | As], B, C, N, A?) :- otherwise | has_path(As?, B?, C?, N?, A).
+
+procedure has_path1(Integer?, Integer?, List(Atom)?, Peer?, Peer?, YesNo).
+has_path1(M, N, _, _, _, yes) :- M? =:= N? | true.
+has_path1(M, N, As, B, C, A?) :- M? =\= N? | has_path(As?, B?, C?, N?, A).
+
+%% has_through(S, B, C, A): C answered that they follow B through a friend of theirs.
+procedure has_through(List(Atom)?, Peer?, Peer?, YesNo).
+has_through([], _, _, no).
+has_through([path_through(B1, C1, _) | _], B, C, yes) :- B1? =?= B?, C1? =?= C? | true.
+has_through([_ | As], B, C, A?) :- otherwise | has_through(As?, B?, C?, A).
