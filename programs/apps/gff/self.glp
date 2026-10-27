@@ -10,7 +10,8 @@ Utterance ::= utterance(String) ; Speech.
 Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; post(Peer, Speech) ; follow(Peer, Peer) ; friends_follow(Peer, Peer)
-            ; through_friend(Peer, Peer, Peer) ; unfollow(Peer, Peer, Peer) ; ask(Peer, Peer, Peer)
+            ; through_friend(Peer, Peer, Peer) ; path_broken(Peer, Peer, Peer)
+            ; friendship_ended(Peer, Peer, Peer) ; unfollow(Peer, Peer, Peer) ; ask(Peer, Peer, Peer)
             ; answer_follows(Peer, Peer, Peer, Speech) ; answer_follows_through(Peer, Peer, Peer, Peer)
             ; answer_does_not_follow(Peer, Peer, Peer)
             ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Speech).
