@@ -44,8 +44,8 @@ script(bob, T, [own([B1], propose(establish(B1?))), wait(holds(identity)),
                 own([B2], propose(acquaint(B2?, carol))), wait(holds(knows(carol))),
                 own([B3], propose(befriend(B3?, carol))), wait(holds(friend(carol))),
                 own([B4], propose(follow_author(B4?, alice))), wait(holds(following(alice))),
-                wait(holds(item(speech(speech(utterance('First item'), alice), alice), alice))),
-                wait(holds(item(speech(speech(utterance('Second item'), alice), alice), alice))),
+                wait(holds(item(speech(utterance('First item'), alice), alice))),
+                wait(holds(item(speech(utterance('Second item'), alice), alice))),
                 own([B5], propose(introduce(B5?, carol, alice))) | T?]).
 script(carol, T, [own([C1], propose(establish(C1?))), wait(holds(identity)),
                   approval(acquaint(bob, carol), yes),
@@ -71,7 +71,7 @@ script(eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity)),
                 approval(introduce(dave, eve, alice), yes), wait(holds(knows(alice))),
                 own([E2], propose(ask(E2?, dave, alice))), wait(heard(alice, dave)),
                 own([E3], propose(follow_through(E3?, dave, alice))), wait(holds(following(alice))),
-                wait(holds(item(speech(speech(speech(speech(speech(utterance('Third item'), alice), alice), bob), carol), dave), alice))) | T?]).
+                wait(holds(item(speech(speech(speech(speech(utterance('Third item'), alice), bob), carol), dave), alice))) | T?]).
 script(_, T, T?) :- otherwise | true.
 
 %% The person.

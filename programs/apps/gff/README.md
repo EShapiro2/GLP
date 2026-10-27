@@ -35,11 +35,11 @@ printf '../programs/apps/gff\n:limit 30000000\nplay_feeds(A, B, C, D, E).\n:quit
 
 1. Each establishes their identity (GKK:1); in alice and bob, bob and carol, carol and dave, and dave and eve, the first meets the second by their key, the second answering yes to its hello, and then offers the second friendship, who answers yes (GKK:2, GSG:1).
 2. Alice posts two items (GFF:1).  Each is an utterance she signs at its posting.
-3. Bob follows alice (GFF:2, follow_author).  Alice's machine delivers both items to him (GFF:4, deliver_own), each signed again by alice.
+3. Bob follows alice (GFF:2, follow_author).  Alice's machine delivers both items to him (GFF:4, deliver_own), as she signed them at their posting.
 4. Once both items have reached him, bob introduces alice to carol (GKK:3), whom carol must know to ask about her (GFF:3).
 5. Carol asks bob whether he follows alice (GFF:3, ask); bob's machine answers with a path, an item of alice's feed he holds (answer_follows); carol follows alice through bob (GFF:2, follow_through); bob's machine delivers the two items to her, signed by bob (deliver_on); carol introduces alice to dave.
 6. Dave likewise, through carol, and eve through dave.
-7. Once eve's screen shows that she follows alice, alice posts a third item, which reaches eve signed by alice at its posting and by alice, bob, carol and dave on its way: `item(speech(speech(speech(speech(speech(utterance('Third item'), alice), alice), bob), carol), dave), alice)`.
+7. Once eve's screen shows that she follows alice, alice posts a third item, which reaches eve signed by alice at its posting and by bob, carol and dave on its way: `item(speech(speech(speech(speech(utterance('Third item'), alice), bob), carol), dave), alice)`.
 8. Once eve's screen shows the third item, carol ends her following of alice (GFF:2, unfollow).
 9. Once carol's screen shows that she no longer follows alice, alice posts a fourth item, which reaches bob and not carol, dave or eve.
 
