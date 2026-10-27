@@ -924,15 +924,12 @@ void appsScreens(Screens screens) {
         unorderedEquals(['identity', 'knows(bob)', 'knows(carol)']));
     expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
 
-    // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Introduce, GKK's "[Introduce]", in Bob's row of her Contacts, Bob taking the second role of introduce, with its field beside it, GKK's "<person>", Carol, introduce's agent variable c, a person the act names by key: "A button is drawn in the row of a tab's entry, whose person takes a role of the act, with the act's fields beside it" (vGLP 516a0a2, Section 6.2); "the fields are what the proposer fills besides, one for each other variable of the schema after its roles, in the schema's order, a person the act names by key among them" (Section 5.4, "The contract's words").  She types Carol's key and taps Introduce.
+    // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Introduce, GKK's "[Introduce]", in Bob's row of her Contacts, Bob taking the second role of introduce, with its field beside it, GKK's "<person>", Carol, introduce's agent variable c, which Alice's role requires held, knows(c), so it is picked among the persons she knows: "A button is drawn in the row of a tab's entry, a person who takes a role of the act or an item the act names, with the act's fields beside it" (vGLP, Section 6.2); "a variable is picked among the items the viewer holds where the proposer's role requires it held" (vGLP acd3e74, Section 5.4, "The contract's words").  She picks Carol and taps Introduce.
     await run.list(alice, 'knows');
     await run.tap(alice, run.control(alice, 'act:introduce:bob'));
-    expect(
-        find.descendant(
-            of: run.control(alice, 'field:introduce:bob:3'),
-            matching: find.text('person')),
-        findsOneWidget);
-    await run.type(alice, run.control(alice, 'field:introduce:bob:3'), 'carol');
+    expect(run.on(alice, find.text('person')), findsWidgets);
+    expect(run.control(alice, 'field:introduce:bob:3'), findsNothing);
+    await run.tap(alice, run.control(alice, 'pick:introduce:bob:3:carol'));
     expect(
         find.descendant(
             of: run.control(alice, 'send:introduce:bob'),
@@ -1198,7 +1195,9 @@ void appsScreens(Screens screens) {
     // Alice asks Bob to swap (GC:2): Swap, GC's "[Swap]", beside Bob in her Contacts, its fields GC's "<issuer given> <amount given> <issuer wanted> <amount wanted>": alice, 2, bob, 3; which proposes swap(alice, bob, alice, 2, bob, 3), in the order of swap's head, swap(p?, q? ; u, k, v, k') (programs/currencies/coins/GC.glp).
     await run.list(alice, 'knows');
     await run.tap(alice, run.control(alice, 'act:swap:bob'));
-    for (final (i, v) in [(3, 'alice'), (4, '2'), (5, 'bob'), (6, '3')]) {
+    // The issuer given, a variable swap requires held at Alice's role, coin(u), is picked among the issuers of the coins she holds (vGLP acd3e74, Section 5.4, "The contract's words"); the rest are typed.
+    await run.tap(alice, run.control(alice, 'pick:swap:bob:3:alice'));
+    for (final (i, v) in [(4, '2'), (5, 'bob'), (6, '3')]) {
       await run.type(alice, run.control(alice, 'field:swap:bob:$i'), v);
     }
     await run.tap(alice, run.control(alice, 'send:swap:bob'));
@@ -1304,7 +1303,9 @@ void appsScreens(Screens screens) {
     // Alice asks Bob for a loan (GB:3): Swap, GB's "[Swap]", one button for the four schemas swap_cc to swap_bb, beside Bob in her Contacts, its fields GB's "<issuer given> <maturity given> <amount given> <issuer wanted> <maturity wanted> <amount wanted>": alice, none, 2, bob, 5, 3, the maturity given left empty for a coin; which proposes swap_cb(alice, bob, alice, 2, bob, 5, 3).
     await run.list(alice, 'knows');
     await run.tap(alice, run.control(alice, 'act:swap:bob'));
-    for (final (i, v) in [(1, 'alice'), (3, '2'), (4, 'bob'), (5, '5'), (6, '3')]) {
+    // The issuer given, a variable each swap requires held at Alice's role, is picked among the issuers of the coins and the bonds she holds (vGLP acd3e74, Section 5.4, "The contract's words"); the rest are typed.
+    await run.tap(alice, run.control(alice, 'pick:swap:bob:1:alice'));
+    for (final (i, v) in [(3, '2'), (4, 'bob'), (5, '5'), (6, '3')]) {
       await run.type(alice, run.control(alice, 'field:swap:bob:$i'), v);
     }
     await run.tap(alice, run.control(alice, 'send:swap:bob'));
@@ -1351,7 +1352,7 @@ void appsScreens(Screens screens) {
     // Alice deposits two Alice-coins with Carol (GB:7): Deposit, GB's "[Deposit] <issuer> <maturity> <amount>", beside Carol in her Contacts, alice, none, 2; which proposes deposit_c(alice, carol, alice, 2).
     await run.list(alice, 'knows');
     await run.tap(alice, run.control(alice, 'act:deposit:carol'));
-    await run.type(alice, run.control(alice, 'field:deposit:carol:1'), 'alice');
+    await run.tap(alice, run.control(alice, 'pick:deposit:carol:1:alice'));
     await run.type(alice, run.control(alice, 'field:deposit:carol:3'), '2');
     await run.tap(alice, run.control(alice, 'send:deposit:carol'));
 
@@ -1415,7 +1416,8 @@ void appsScreens(Screens screens) {
       final (pu, pw, qu, qw) = (held(p, u), held(p, w), held(q, u), held(q, w));
       await run.list(v[p]!, 'knows');
       await run.tap(v[p]!, run.control(v[p]!, 'act:swap:$q'));
-      for (final (i, x) in [(3, u), (4, '$k'), (5, w), (6, '$k1')]) {
+      await run.tap(v[p]!, run.control(v[p]!, 'pick:swap:$q:3:$u'));
+      for (final (i, x) in [(4, '$k'), (5, w), (6, '$k1')]) {
         await run.type(v[p]!, run.control(v[p]!, 'field:swap:$q:$i'), x);
       }
       await run.tap(v[p]!, run.control(v[p]!, 'send:swap:$q'));
@@ -1802,7 +1804,8 @@ void appsScreens(Screens screens) {
       'GFF\'s app on five phones, the play of GFF\'s feeds and followers: '
       '(1) Alice\'s Feeds after her two posts; (2) Carol\'s Follow in Bob\'s '
       'row; (3) Carol\'s Feeds; (4) Eve\'s Feeds with the third item signed '
-      'by Alice, Bob, Carol and Dave', (tester) async {
+      'by Alice, Bob, Carol and Dave; (5) Carol\'s Ask in Bob\'s row, '
+      'Alice picked; (6) Bob\'s Feeds after Carol ends her following', (tester) async {
     final run = await _Run.start(tester, screens, 'gff',
         chain: const ['alice', 'bob', 'carol', 'dave', 'eve']);
     final alice = run.person('alice');
@@ -1880,11 +1883,11 @@ void appsScreens(Screens screens) {
       expect(p.atoms, containsAll(['follows($author, $through)', 'following($author)']));
     }
 
-    // [p] introduces [author] to their friend [q] (GKK:3): Introduce in [q]'s row of their Contacts, the author picked or typed into its field person; [q] is asked GKK's question and answers yes.
+    // [p] introduces [author] to their friend [q] (GKK:3): Introduce in [q]'s row of their Contacts, the author picked into its field person among the persons [p] knows; [q] is asked GKK's question and answers yes.
     Future<void> introduce(_Person p, _Person q, String author) async {
       await run.list(p, 'knows');
       await run.tap(p, run.control(p, 'act:introduce:${q.name}'));
-      await run.type(p, run.control(p, 'field:introduce:${q.name}:3'), author);
+      await run.tap(p, run.control(p, 'pick:introduce:${q.name}:3:$author'));
       await run.tap(p, run.control(p, 'send:introduce:${q.name}'));
       final a = q.approval;
       expect(formatTerm(a.view),
@@ -1901,11 +1904,17 @@ void appsScreens(Screens screens) {
       expect(q.atoms, contains('knows($author)'));
     }
 
-    // [p] asks their friend [q] whether [q] follows [author] (GFF:3): Ask, GFF's "[Ask] <person>", in [q]'s row of their Friends tab, the author's key typed into its field person; [q]'s machine answers, unasked.  The app draws the field typed, where vGLP, Section 5.4, "The contract's words", has a variable that the proposer's role requires held, as ask requires knows(b) at Alice's, picked among the items the viewer holds: screen (5), the author picked, is not taken; reported to Code, 2026-10-27.
-    Future<void> ask(_Person p, _Person q, String author) async {
+    // [p] asks their friend [q] whether [q] follows [author] (GFF:3): Ask, GFF's "[Ask] <person>", in [q]'s row of their Friends tab, the author picked into its field person among the persons [p] knows, ask requiring knows(b) at Alice's role (vGLP acd3e74, Section 5.4, "The contract's words": "a variable is picked among the items the viewer holds where the proposer's role requires it held"); [q]'s machine answers, unasked.
+    Future<void> ask(_Person p, _Person q, String author, {String? shot}) async {
       await run.list(p, 'friend');
       await run.tap(p, run.control(p, 'act:ask:${q.name}'));
-      await run.type(p, run.control(p, 'field:ask:${q.name}:3'), author);
+      expect(run.control(p, 'field:ask:${q.name}:3'), findsNothing);
+      await run.tap(p, run.control(p, 'pick:ask:${q.name}:3:$author'));
+      if (shot != null) {
+        await run.foot(p, run.control(p, 'send:ask:${q.name}'));
+        run.plain(p);
+        await run.shoot(p, shot);
+      }
       await run.tap(p, run.control(p, 'send:ask:${q.name}'));
       expect(q.questions('approval'), isEmpty);
       expect(
@@ -1925,8 +1934,8 @@ void appsScreens(Screens screens) {
     // Bob introduces Alice to Carol (GKK:3), whom Carol must know to ask about her (GFF:3).
     await introduce(bob, carol, 'alice');
 
-    // Carol asks Bob whether he follows Alice (GFF:3): Ask in Bob's row; Bob's machine answers with a path, an item of Alice's feed he holds.
-    await ask(carol, bob, 'alice');
+    // (5) Carol asks Bob whether he follows Alice (GFF:3): Ask in Bob's row, Alice picked; Bob's machine answers with a path, an item of Alice's feed he holds.
+    await ask(carol, bob, 'alice', shot: 'gff-app-5.png');
 
     // (2) Carol follows Alice through Bob (GFF:2, follow_through): Follow in Bob's row, Alice's key typed into its field person; Bob's machine delivers the two items to her, signed by him (GFF:4, deliver_on).
     await follow(carol, 'bob', 'alice', shot: 'gff-app-2.png');
@@ -1965,7 +1974,37 @@ void appsScreens(Screens screens) {
     run.plain(eve);
     await run.shoot(eve, 'gff-app-4.png');
 
-    // Carol's ending of her following of Alice (GFF:2, unfollow), Alice's fourth item, and Bob's Feeds tab after it, screen (6), are not played: no Unfollow, GFF's "[Unfollow]", is drawn on Carol's phone, though her state holds follows(alice, bob) and following(alice), which unfollow requires at her role (vGLP, Section 6.2, "The words a platform shows"); reported to Code, 2026-10-27.
+    // Carol ends her following of Alice (GFF:2, unfollow): Unfollow, GFF's "[Unfollow]", in Alice's row of her Feeds tab, the row's atom follows(alice, bob) filling Alice and Bob (vGLP, Section 6.2, "The words a platform shows"); Bob's machine is not asked.
+    await run.list(carol, 'follows');
+    expect(
+        find.descendant(
+            of: run.control(carol, 'act:unfollow:alice'),
+            matching: find.text('Unfollow')),
+        findsOneWidget);
+    await run.tap(carol, run.control(carol, 'act:unfollow:alice'));
+    expect(bob.questions('approval'), isEmpty);
+    expect(carol.atoms, isNot(contains('following(alice)')));
+    expect(carol.atoms, isNot(contains('follows(alice, bob)')));
+    expect(bob.atoms, isNot(contains('follower(carol, alice)')));
+    expect(run.control(carol, 'row:alice'), findsNothing);
+
+    // Alice posts a fourth item, which reaches Bob and not Carol, Dave or Eve.
+    await post(alice, 'Fourth item');
+    final fourth = said('Fourth item', 'alice');
+    expect(bob.atoms, contains('item($fourth, alice)'));
+    for (final p in [carol, dave, eve]) {
+      expect(p.atoms.where((x) => x.contains('Fourth item')), isEmpty, reason: p.name);
+    }
+
+    // (6) Bob's Feeds tab after Carol ended her following: Alice's row, her four items, signed by her at their posting, and Carol no longer among her followers through Bob.
+    await run.list(bob, 'follows');
+    await run.top(bob);
+    final bobRow = rowTexts(bob, 'alice');
+    expect(bobRow.first, 'Alice');
+    expect(bobRow, contains('Fourth item (Alice)'));
+    expect(bobRow, isNot(contains('Carol')));
+    run.plain(bob);
+    await run.shoot(bob, 'gff-app-6.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 30)));
 
