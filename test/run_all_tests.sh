@@ -7752,20 +7752,22 @@ if _section CAS; then
 # files, NAME.txt (NAME.md until its owner converts it) and NAME.glp, the
 # schemas in GSC's notation printed from the term (schemas.txt), the checker's
 # verdict, the VMAT form, the canonical platform as .vglp and as .glp, the
-# platform's interface in sGLP's term form, and its run with vGLP's scripted
-# persons, with a manifest.
+# platform's interface in sGLP's term form, the app's chooser where the
+# platform calls it (chooser.glp; programs/vglp/cva/compiler/CHOOSER.md, the
+# experiment GFF-chooser), and its run with vGLP's scripted persons, with a
+# manifest.
 # This section re-runs cascade.sh --check on every recorded contract and holds
 # the committed artefacts to what the tools print now; a contract with no
 # record is not run.
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai; do
+for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai gff; do
     cas_n=$(printf '%s' "$cas_c" | tr a-z A-Z)
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
-    for cas_f in "$cas_n.txt" "$cas_n.md" "$cas_n.glp" schemas.txt verdict.txt vmat.tex platform.vglp platform.glp interface.glp run.log; do
+    for cas_f in "$cas_n.txt" "$cas_n.md" "$cas_n.glp" schemas.txt verdict.txt vmat.tex platform.vglp platform.glp interface.glp chooser.glp run.log; do
         [ -f "$GLP_DIR/$cas_o/$cas_f" ] || continue
         check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
     done
