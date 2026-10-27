@@ -1004,6 +1004,8 @@ class ActInfo {
   final List<({String proves, String pred, List<Object?> args})> proved;
   /// The pairs of places possibly one person, `same(K, J)`: a field offers that person for both (GSC 316d875, Section 2; vGLP, Section 6.2).
   final List<(int, int)> same;
+  /// The agent variables a field names that the proposer's role requires held, `pick(K, P)`: each picked among the persons of the rows of the list of `P`, under the name of its field, no row filling it (vGLP acd3e74, Section 5.4, "The contract's words": "a variable is picked among the items the viewer holds where the proposer's role requires it held, and typed otherwise, an agent by key"; programs/vglp/cva/compiler, keyed_out).
+  final List<(int, String)> picks;
 
   /// Whether the places [i] and [j] may hold one person.
   bool mayShare(int i, int j) =>
@@ -1015,7 +1017,11 @@ class ActInfo {
       this.conds = const [],
       this.unless = const [],
       this.proved = const [],
-      this.same = const []]);
+      this.same = const [],
+      this.picks = const []]);
+
+  /// The places a person picks among the persons of a list's rows ([picks]).
+  Set<int> get pickPlaces => {for (final (k, _) in picks) k};
 
   /// The places the atoms of [held] fill.
   Set<int> get heldPlaces => {
@@ -1034,9 +1040,12 @@ class ActInfo {
     final unless = <({String pred, List<Object?> args})>[];
     final proved = <({String proves, String pred, List<Object?> args})>[];
     final same = <(int, int)>[];
+    final picks = <(int, String)>[];
     for (final it in (xs0[4] as GList).items) {
       final (itf, itxs) = ctorArgs(it);
-      if (itf == 'same' && itxs.length == 2 && itxs[0] is GInt && itxs[1] is GInt) {
+      if (itf == 'pick' && itxs.length == 2 && itxs[0] is GInt) {
+        picks.add(((itxs[0] as GInt).value, displayText(itxs[1])));
+      } else if (itf == 'same' && itxs.length == 2 && itxs[0] is GInt && itxs[1] is GInt) {
         same.add(((itxs[0] as GInt).value, (itxs[1] as GInt).value));
       } else if (itf == 'proved' &&
           itxs.length == 4 &&
@@ -1127,7 +1136,7 @@ class ActInfo {
       }
     }
     return ActInfo(
-        displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless, proved, same);
+        displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless, proved, same, picks);
   }
 
   /// Whether the viewer's state [atoms] proves of [x], at the place [k], each atom the act requires at that place's role that the schemas prove from the viewer's records ([proved]): for each, the viewer holds an atom matching one of its entries with [x] at [k].
@@ -2496,7 +2505,7 @@ class _SocialTabState extends State<SocialTab> {
               child: Text(x, style: small),
             ),
           if (item != null)
-            ..._rowActs(context, s, item, k, ctorArgs(r.atom).$1),
+            ..._rowActs(context, s, item, k, ctorArgs(r.atom).$1, atom: r.atom),
         ],
       ),
     );
@@ -2522,9 +2531,39 @@ class _SocialTabState extends State<SocialTab> {
     return const {};
   }
 
+  /// The places of the act [a] a row fills ([_fill]), and each person place of [a] that an atom its precondition requires at the proposer's role names, filled from the row's own atom [atom], where that atom agrees with the places the row fills: the row's atom is an atom the viewer's state holds naming the row's item, so the button is drawn where the state holds what the act requires (vGLP, Section 6.2, "The words a platform shows": "A button is drawn in the row of a tab's entry ... only where the viewer's state holds the atoms the act requires at the proposer's role"), as GFF's unfollow(Alice, Carol, b) in the row of follows(b, Carol), Carol filled from it.
+  static Map<int, GTerm> _fillRow(
+      ActInfo a, GTerm? item, String? pred, GTerm? atom) {
+    final fill = _fill(a, item, pred);
+    if (atom == null || fill.isEmpty) return fill;
+    final (f, xs) = ctorArgs(atom);
+    if (f != pred) return fill;
+    final out = {...fill};
+    for (final c in a.conds) {
+      if (c.forbids || c.pred != f || c.args.length != xs.length) continue;
+      var agrees = true, names = false;
+      for (var j = 0; j < xs.length; j++) {
+        final x = c.args[j];
+        if (x is int && fill.containsKey(x)) {
+          names = true;
+          if (formatTerm(fill[x]!) != formatTerm(xs[j])) agrees = false;
+        }
+      }
+      if (!agrees || !names) continue;
+      for (var j = 0; j < xs.length; j++) {
+        final x = c.args[j];
+        if (x is int && !out.containsKey(x) && a.persons.contains(x)) {
+          out[x] = xs[j];
+        }
+      }
+    }
+    return out;
+  }
+
   /// The buttons beside a row's item: of each act that names, beside the person proposing it, a person, where the item is a person and not the person themselves, the item filling the first place of a person; a group, where the item is a group whose leader the act names at a place other than the proposer's, or one the person leads; or an item of the row's list, [pred], the row's speech act filling it; and under them the composer of the act open, its fields and pickers.
   List<Widget> _rowActs(
-      BuildContext context, SocialState s, GTerm item, String k, String pred) {
+      BuildContext context, SocialState s, GTerm item, String k, String pred,
+      {GTerm? atom}) {
     final ask = _ask;
     final o = ask?.offers;
     if (ask == null || o == null || ask.at == null) return const [];
@@ -2541,7 +2580,7 @@ class _SocialTabState extends State<SocialTab> {
         if (g != null && a.groups.isEmpty) continue;
         if (g == null && speech && a.items.every((x) => x.$2 != pred)) continue;
         if (g == null && !speech && item is! GAtom) continue;
-        final fill = _fill(a, item, pred);
+        final fill = _fillRow(a, item, pred, atom);
         // A row whose entry fills the proposer's own place is the proposer's own, as the group a leader leads (GSN:3, Join in the row of the group).
         if (fill.isEmpty ||
             (fill.containsKey(a.me) && formatTerm(fill[a.me]!) != formatTerm(me))) {
@@ -2570,7 +2609,7 @@ class _SocialTabState extends State<SocialTab> {
             onPressed: () {
               final r = m.length == 1
                   ? _request(s, o, m.single.$1, m.single.$2, me,
-                      _fill(m.single.$2, item, pred), const {})
+                      _fillRow(m.single.$2, item, pred, atom), const {})
                   : null;
               if (r != null) {
                 ask.propose(r);
@@ -2586,8 +2625,8 @@ class _SocialTabState extends State<SocialTab> {
       for (final m in open)
         m.length == 1
             ? _actForm(context, s, ask, o, m.single.$1, m.single.$2, item,
-                pred: pred)
-            : _sharedForm(context, s, ask, o, m, item, pred: pred),
+                pred: pred, atom: atom)
+            : _sharedForm(context, s, ask, o, m, item, pred: pred, atom: atom),
     ];
   }
 
@@ -2628,7 +2667,8 @@ class _SocialTabState extends State<SocialTab> {
 
   /// The composer of a shared button, the acts [m] of one label: a field for each name among the fields of its acts, each once, in the order of the pragma's fields; on its button, the act whose fields are those the person filled, each of its fields filled and every other left empty (GSC's ruling, ibid.: "an inapplicable field left empty"), proposed as [_actForm] proposes its act; the button disabled where no act is so filled.
   Widget _sharedForm(BuildContext context, SocialState s, SocialAsk ask,
-      RequestOffers o, List<(String, ActInfo)> m, GTerm? item, {String? pred}) {
+      RequestOffers o, List<(String, ActInfo)> m, GTerm? item,
+      {String? pred, GTerm? atom}) {
     final name = _groupName(o, m);
     final ik = item == null ? '' : formatTerm(item);
     final composer = '$name:$ik';
@@ -2636,10 +2676,13 @@ class _SocialTabState extends State<SocialTab> {
     // Each act's places the person fills, by the name of their field.
     final named = <String, Map<String, int>>{};
     final union = <String>[];
+    // Each name a pick names in every act that has it, with the predicates of the lists it is picked from ([ActInfo.picks]).
+    final pickFrom = <String, Set<String>>{};
+    final notPick = <String>{};
     for (final (key, a) in m) {
       final f = key.substring(0, key.lastIndexOf('/'));
       final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
-      final filled = <int>{a.me, ..._fill(a, item, pred).keys};
+      final filled = <int>{a.me, ..._fillRow(a, item, pred, atom).keys};
       final places = <String, int>{};
       // Each name not yet held placed after the one before it in this act, as the pragma's fields are the union of the schemas' variables in head order (README.md, ibid.).
       var after = -1;
@@ -2647,6 +2690,12 @@ class _SocialTabState extends State<SocialTab> {
         if (filled.contains(i) || a.persons.contains(i)) continue;
         final fn = o.field(f, n, i);
         places[fn] = i;
+        final ps = [for (final (k, p) in a.picks) if (k == i) p];
+        if (ps.isEmpty) {
+          notPick.add(fn);
+        } else {
+          (pickFrom[fn] ??= {}).addAll(ps);
+        }
         final at = union.indexOf(fn);
         if (at >= 0) {
           after = at;
@@ -2657,17 +2706,26 @@ class _SocialTabState extends State<SocialTab> {
       }
       named[key] = places;
     }
+    bool picked(String fn) =>
+        pickFrom.containsKey(fn) && !notPick.contains(fn);
     String typedOf(String fn) =>
         _form('field:$composer:${union.indexOf(fn) + 1}').text.trim();
+    GTerm? pickOf(String fn) => _picked['$composer:${union.indexOf(fn) + 1}'];
+    bool given(String fn) =>
+        picked(fn) ? pickOf(fn) != null : typedOf(fn).isNotEmpty;
     GTerm? chosen() {
       for (final (key, a) in m) {
         final places = named[key]!;
-        final fits = union.every((fn) =>
-            places.containsKey(fn) ? typedOf(fn).isNotEmpty : typedOf(fn).isEmpty);
+        final fits = union.every(
+            (fn) => places.containsKey(fn) ? given(fn) : !given(fn));
         if (!fits) continue;
-        final r = _request(s, o, key, a, me, _fill(a, item, pred),
-            {for (final MapEntry(key: fn, value: i) in places.entries) i: typedOf(fn)},
-            composer: composer);
+        final r = _request(s, o, key, a, me, _fillRow(a, item, pred, atom), {
+          for (final MapEntry(key: fn, value: i) in places.entries)
+            if (!picked(fn)) i: typedOf(fn)
+        }, composer: composer, picks: {
+          for (final MapEntry(key: fn, value: i) in places.entries)
+            if (picked(fn) && pickOf(fn) != null) i: pickOf(fn)!
+        });
         if (r != null) return r;
       }
       return null;
@@ -2684,14 +2742,34 @@ class _SocialTabState extends State<SocialTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var j = 1; j <= union.length; j++)
-            TextField(
-              key: socialKey(_id, 'field:$composer:$j'),
-              controller: _form('field:$composer:$j'),
-              decoration:
-                  InputDecoration(labelText: union[j - 1], isDense: true),
-              keyboardType: TextInputType.text,
-              onChanged: (_) => setState(() {}),
-            ),
+            if (picked(union[j - 1]))
+              // A variable picked among the persons of the rows of the lists its acts require it held in (vGLP acd3e74, Section 5.4, "The contract's words").
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                Text(union[j - 1],
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                for (final x in {
+                  for (final p in pickFrom[union[j - 1]]!)
+                    for (final x in _pickableItems(s, p, person: true))
+                      formatTerm(x): x
+                }.values)
+                  ChoiceChip(
+                    key: socialKey(_id, 'pick:$composer:$j:${formatTerm(x)}'),
+                    label: Text(personName(x)),
+                    selected: _picked['$composer:$j'] != null &&
+                        formatTerm(_picked['$composer:$j']!) == formatTerm(x),
+                    onSelected: (_) =>
+                        setState(() => _picked['$composer:$j'] = x),
+                  ),
+              ])
+            else
+              TextField(
+                key: socialKey(_id, 'field:$composer:$j'),
+                controller: _form('field:$composer:$j'),
+                decoration:
+                    InputDecoration(labelText: union[j - 1], isDense: true),
+                keyboardType: TextInputType.text,
+                onChanged: (_) => setState(() {}),
+              ),
           const SizedBox(height: 6),
           ElevatedButton(
             key: socialKey(_id, 'send:$composer'),
@@ -2702,6 +2780,7 @@ class _SocialTabState extends State<SocialTab> {
                     setState(() {
                       for (var j = 1; j <= union.length; j++) {
                         _form('field:$composer:$j').clear();
+                        _picked.remove('$composer:$j');
                       }
                       _openAct = null;
                     });
@@ -2788,7 +2867,7 @@ class _SocialTabState extends State<SocialTab> {
   /// The request the act [key] proposes, its proposer the person, the places a row fills, [fill], each other person, group and item picked, and each field read from what the person typed, [typed]; null where a place is not yet filled.
   GTerm? _request(SocialState s, RequestOffers o, String key, ActInfo a,
       GTerm me, Map<int, GTerm> fill, Map<int, String> typed,
-      {String composer = ''}) {
+      {String composer = '', Map<int, GTerm> picks = const {}}) {
     final f = key.substring(0, key.lastIndexOf('/'));
     final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
     final kinds = o.kinds[key] ?? const [];
@@ -2807,10 +2886,13 @@ class _SocialTabState extends State<SocialTab> {
     }
     _derive(s, a, args);
     final its = a.itemPlaces;
+    final pks = a.pickPlaces;
     for (var i = 1; i <= n; i++) {
       if (args[i - 1] != null) continue;
-      if ((a.persons.contains(i) && !a.keys.contains(i)) || its.contains(i)) {
-        args[i - 1] = _picked['$composer:$i'];
+      if ((a.persons.contains(i) && !a.keys.contains(i)) ||
+          its.contains(i) ||
+          pks.contains(i)) {
+        args[i - 1] = picks[i] ?? _picked['$composer:$i'];
         continue;
       }
       final t = typed[i];
@@ -2867,13 +2949,16 @@ class _SocialTabState extends State<SocialTab> {
   /// The composer of the act [key]: the text of its request form where it has one, a picker for each person, group and item place the row does not fill, a field for each place the person fills, named as its widget term names it, and its button; for an act that names no person, group or item, drawn on its contract's tab.
   Widget _actForm(BuildContext context, SocialState s, SocialAsk ask,
       RequestOffers o, String key, ActInfo a, GTerm? item,
-      {String? pred, String? composerName, List<(String, ActInfo)>? alts}) {
+      {String? pred,
+      String? composerName,
+      List<(String, ActInfo)>? alts,
+      GTerm? atom}) {
     final f = key.substring(0, key.lastIndexOf('/'));
     final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
     final ik = item == null ? '' : formatTerm(item);
     final composer = '${composerName ?? f}:$ik';
     final me = ask.me;
-    final fill = _fill(a, item, pred);
+    final fill = _fillRow(a, item, pred, atom);
     final filled = <int>{a.me, ...fill.keys};
     final picks = [
       for (final i in a.persons)
@@ -2889,6 +2974,11 @@ class _SocialTabState extends State<SocialTab> {
     ];
     final itemPicks = [
       for (final (k, p) in a.items)
+        if (!filled.contains(k)) (k, p)
+    ];
+    // The agent variables a field names that the proposer's role requires held, each picked among the persons of the rows of its list (vGLP acd3e74, Section 5.4, "The contract's words").
+    final varPicks = [
+      for (final (k, p) in a.picks)
         if (!filled.contains(k)) (k, p)
     ];
     final groupPlaces = {for (final (j, k) in a.groups) ...[j, k]};
@@ -2909,14 +2999,19 @@ class _SocialTabState extends State<SocialTab> {
         if (!filled.contains(i) &&
             (!a.persons.contains(i) || a.keys.contains(i)) &&
             !groupPlaces.contains(i) &&
-            !a.itemPlaces.contains(i))
+            !a.itemPlaces.contains(i) &&
+            !a.pickPlaces.contains(i))
           i
     ];
     Map<int, String> typed() => {
           for (final i in fields) i: _form('field:$composer:$i').text.trim()
         };
     final at = <int, GTerm>{a.me: me, ...fill};
-    for (final i in [for (final i in picks) i, for (final (k, _) in itemPicks) k]) {
+    for (final i in [
+      for (final i in picks) i,
+      for (final (k, _) in itemPicks) k,
+      for (final (k, _) in varPicks) k
+    ]) {
       if (_picked['$composer:$i'] case final p?) at[i] = p;
     }
     final words = [
@@ -2940,6 +3035,7 @@ class _SocialTabState extends State<SocialTab> {
         for (final i in [
           ...picks,
           for (final (k, _) in itemPicks) k,
+          for (final (k, _) in varPicks) k,
           for (final (_, k) in groupPicks) k,
         ])
           if (_picked['$composer:$i'] != null ||
@@ -2950,6 +3046,7 @@ class _SocialTabState extends State<SocialTab> {
         final own = <int>{
           ...a2.persons,
           ...a2.itemPlaces,
+          ...a2.pickPlaces,
           for (final (_, k) in a2.groups) k
         }..remove(a2.me);
         if (!pickedAt.every(own.contains)) continue;
@@ -3015,6 +3112,18 @@ class _SocialTabState extends State<SocialTab> {
                       setState(() => _picked['$composer:$k'] = x),
                 ),
             ]),
+          for (final (k, p) in varPicks)
+            Wrap(spacing: 6, runSpacing: 4, children: [
+              Text(o.field(f, n, k), style: small),
+              for (final x in _pickableItems(s, p, person: true))
+                ChoiceChip(
+                  key: socialKey(_id, 'pick:$composer:$k:${formatTerm(x)}'),
+                  label: Text(personName(x)),
+                  selected: picked('$composer:$k', x),
+                  onSelected: (_) =>
+                      setState(() => _picked['$composer:$k'] = x),
+                ),
+            ]),
           for (final i in fields)
             TextField(
               key: socialKey(_id, 'field:$composer:$i'),
@@ -3045,6 +3154,9 @@ class _SocialTabState extends State<SocialTab> {
                         _picked.remove('$composer:g$k');
                       }
                       for (final (k, _) in itemPicks) {
+                        _picked.remove('$composer:$k');
+                      }
+                      for (final (k, _) in varPicks) {
                         _picked.remove('$composer:$k');
                       }
                       _openAct = null;

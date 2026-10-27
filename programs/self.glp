@@ -219,7 +219,7 @@ WidgetField ::= field(String, Widget) ; question(String, Widget).
 ButtonValue ::= Constant ; [] ; label(String, ButtonValue).
 ActPlace ::= place(String, Integer, List(Integer), List(GroupAt), List(ItemAt), List(Integer), List(FormWord)).
 GroupAt ::= group(Integer, Integer).
-ItemAt ::= item(Integer, Constant) ; atom(Constant, List(Integer))
+ItemAt ::= item(Integer, Constant) ; pick(Integer, Constant) ; atom(Constant, List(Integer))
       ; req(Constant, List(CondAt)) ; forb(Constant, List(CondAt))
       ; unless(Constant, List(CondAt))
       ; proved(Constant, List(Constant), Constant, List(CondAt))
