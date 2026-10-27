@@ -24,8 +24,8 @@
 %% do not (GFF:3; "a path to Bob", Udi, 2026-10-27, the form of the answer
 %% being representation); item(x, b), at a follower, an item x of b's feed,
 %% signed by every agent it passed through, and sent(x, a), at the sender, that
-%% x was sent to a (GFF:4).  GFF:2 is two schemas, follow_author, Carol being
-%% Bob, and follow_through, and GFF:4 two, deliver_own, Carol being Bob, and
+%% x was sent to a (GFF:4).  GFF:2 is two schemas, follow_friend, by friendship,
+%% and follow_through, and GFF:4 two, deliver_own, the author's, and
 %% deliver_on; GFF:3 is ask and the three answers, all unguarded; which enabled following is taken is the algorithm pragma's, the friend with the shortest path (GFF.txt, Pragmas for GFF, Algorithms).  ask requires knows(b) at
 %% Alice, "Bob, whom Alice knows" (Udi, 2026-10-27, on Code #16's finding
 %% that asked was untraceable without it).  follow_through's Carol requires
@@ -81,8 +81,8 @@ contract_named(gff,
     schema(decide_to_follow, ['Alice'], [pvar(b)],
        [rs(guarded, [atom(decided, [pvar(b)])], [], [atom(identity, []), atom(knows, [pvar(b)])],
                     [atom(decided, [pvar(b)])])]),
-%% GFF:2, Following.  Friends follow each other: Alice follows their friend Bob through Bob, who follows their own feed, with no decision (Udi, 2026-10-27).
-    schema(follow_author, ['Alice', 'Bob'], [],
+%% GFF:2, Following.  Friends follow each other: Alice follows their friend Bob, recorded as follows(Bob, Bob), through Bob, and Bob records Alice as a follower (Udi, 2026-10-27).
+    schema(follow_friend, ['Alice', 'Bob'], [],
        [rs(unguarded, [atom(follows, [role(2), role(2)]), atom(following, [role(2)])], [],
                       [atom(identity, []), atom(friend, [role(2)])],
                       [atom(following, [role(2)])]),
@@ -120,7 +120,7 @@ contract_named(gff,
        [rs(unguarded, [], [atom(asked, [role(2), pvar(b)])],
                       [atom(identity, [])], [atom(following, [pvar(b)])]),
         rs(unguarded, [atom(does_not_follow, [pvar(b), role(1)])], [], [atom(identity, [])], [])]),
-%% GFF:4, Delivery.  Bob sends an item x of their feed to their friend Alice, who follows Bob through Bob; x carries Bob's signature from its posting (GSC, Definition Compilation), so none is added (Udi, 2026-10-27, on Code #16's finding of a second signature).
+%% GFF:4, Delivery.  Bob sends an item x they posted to their friend Alice, who follows Bob by friendship, recorded as follower(Alice, Bob) at Bob; x carries Bob's signature from its posting (GSC, Definition Compilation), so none is added (Udi, 2026-10-27, on Code #16's finding of a second signature).
     schema(deliver_own, ['Bob', 'Alice'], [svar(x)],
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
                       [atom(identity, []), atom(feed, [svar(x)]), atom(follower, [role(2), role(1)]), atom(friend, [role(2)])],
