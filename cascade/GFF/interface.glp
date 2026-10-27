@@ -7,10 +7,10 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), post('Peer', 'Speech'), follow_author('Peer', 'Peer'), follow_through('Peer', 'Peer', 'Peer'), unfollow('Peer', 'Peer', 'Peer'), ask('Peer', 'Peer', 'Peer'), answer_follows('Peer', 'Peer', 'Peer', 'Speech'), answer_follows_through('Peer', 'Peer', 'Peer', 'Peer'), answer_does_not_follow('Peer', 'Peer', 'Peer'), deliver_own('Peer', 'Peer', 'Speech'), deliver_on('Peer', 'Peer', 'Peer', 'Speech')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), post('Peer', 'Speech'), follow_author('Peer', 'Peer'), follow_through('Peer', 'Peer', 'Peer'), unfollow('Peer', 'Peer', 'Peer'), ask('Peer', 'Peer', 'Peer')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), post('Peer', 'Speech'), follow('Peer', 'Peer'), friends_follow('Peer', 'Peer'), through_friend('Peer', 'Peer', 'Peer'), unfollow('Peer', 'Peer', 'Peer'), ask('Peer', 'Peer', 'Peer'), answer_follows('Peer', 'Peer', 'Peer', 'Speech'), answer_follows_through('Peer', 'Peer', 'Peer', 'Peer'), answer_does_not_follow('Peer', 'Peer', 'Peer'), deliver_own('Peer', 'Peer', 'Speech'), deliver_on('Peer', 'Peer', 'Peer', 'Speech')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), post('Peer', 'Speech'), follow('Peer', 'Peer'), unfollow('Peer', 'Peer', 'Peer')]),
   type('Request', [propose('Proposal')]),
-  type('Atom', [identity, knows('Peer'), friend('Peer'), feed('Speech'), follows('Peer', 'Peer'), following('Peer'), follower('Peer', 'Peer'), asked('Peer', 'Peer'), item('Speech', 'Peer'), path('Peer', 'Peer', 'Speech'), path_through('Peer', 'Peer', 'Peer'), does_not_follow('Peer', 'Peer'), sent('Speech', 'Peer')]),
+  type('Atom', [identity, knows('Peer'), friend('Peer'), feed('Speech'), decided('Peer'), follows('Peer', 'Peer'), following('Peer'), follower('Peer', 'Peer'), asked_of('Peer', 'Peer'), asked('Peer', 'Peer'), item('Speech', 'Peer'), path('Peer', 'Peer', 'Speech'), path_through('Peer', 'Peer', 'Peer'), does_not_follow('Peer', 'Peer'), sent('Speech', 'Peer')]),
   type('Peer', ['Key']),
   type('Speech', [speech('Utterance', 'Peer')]),
   type('Utterance', [utterance('String'), 'Speech']),
@@ -945,10 +945,8 @@ interface([
   compiled(join_speech_speech_2, 3),
   compiled(form_speech, 2),
   compiled(join_proposal_post_2, 3),
-  compiled(join_proposal_follow_author_2, 3),
-  compiled(join_proposal_follow_through_3, 4),
+  compiled(join_proposal_follow_2, 3),
   compiled(join_proposal_unfollow_3, 4),
-  compiled(join_proposal_ask_3, 4),
   compiled(form_proposal, 2),
   compiled(join_request_propose_1, 2),
   compiled(form_request, 2),
