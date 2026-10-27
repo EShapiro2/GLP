@@ -247,7 +247,7 @@ request_name(unfollow(V1, V2, V3), pname(unfollow(V1?, V2?, V3?))).
 request_name(_, nopname) :- otherwise | true.
 
 procedure tabs(List(Tab)).
-tabs([tab('Contacts', knows), tab('Friends', friend), tab('Posts', item), tab('Feeds', follows)]).
+tabs([tab('Contacts', knows), tab('Friends', friend), tab('Posts', feed), tab('Feeds', follows)]).
 
 procedure sentence_of(Class?, Peer?, List(Word)).
 sentence_of(acquaint(V1, V2), Me, Ws?) :- ground(V2?), ground(V1?), ground(Me?) | ask_of([q(V2?, [person(V1?), text(' wishes that you know each other.')])], Me?, Ws).
