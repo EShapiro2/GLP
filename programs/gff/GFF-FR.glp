@@ -77,12 +77,12 @@ contract_named(gff_fr,
 %% GFF:1, Feed.  Alice posts an item x to their feed; x is a speech act Alice signs (GKK:4).
     schema(post, ['Alice'], [svar(x)],
        [rs(guarded, [atom(feed, [svar(x)])], [], [atom(identity, [])], [atom(feed, [svar(x)])])]),
-%% GFF:2, Following Volition.  Alice, who knows b but is not their friend, wants to follow b: the willed act.
-    schema(want, ['Alice'], [pvar(b)],
+%% GFF:2, Following Volition.  Alice, who knows b but is not their friend, wants to follow b: the willed act, follow, the button [Follow].
+    schema(follow, ['Alice'], [pvar(b)],
        [rs(guarded, [atom(wants, [pvar(b)])], [], [atom(identity, []), atom(knows, [pvar(b)])],
                     [atom(friend, [pvar(b)]), atom(wants, [pvar(b)])])]),
-%% GFF:2, Following Volition.  Alice ceases to want to follow b: the willed act.
-    schema(cease_want, ['Alice'], [pvar(b)],
+%% GFF:2, Following Volition.  Alice ceases to want to follow b: the willed act, unfollow, the button [Unfollow].
+    schema(unfollow, ['Alice'], [pvar(b)],
        [rs(guarded, [], [atom(wants, [pvar(b)])], [atom(identity, [])], [])]),
 %% GFF:2, Following Volition.  Friends follow each other: an act of the two machines.
     schema(friends_follow, ['Alice', 'Bob'], [],
@@ -96,14 +96,14 @@ contract_named(gff_fr,
                       [atom(identity, [])], [atom(friend, [role(2)])]),
         rs(unguarded, [], [atom(friend_follower, [role(1)])], [atom(identity, [])], [])]),
 %% GFF:3, Following via Friend.  Alice, who wants to follow b, follows b through their friend Carol that follows b: the machines' act, taken as the Algorithms pragma says; it allows several friends at once.
-    schema(follow_through, ['Alice', 'Carol'], [pvar(b)],
+    schema(via_friend, ['Alice', 'Carol'], [pvar(b)],
        [rs(unguarded, [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])], [],
                       [atom(identity, []), atom(wants, [pvar(b)]), atom(friend, [role(2)])],
                       [atom(follows, [pvar(b), role(2)])]),
         rs(unguarded, [atom(follower, [role(1), pvar(b)])], [],
                       [atom(identity, []), atom(following, [pvar(b)])], [])]),
-%% GFF:4, Unfollowing.  Alice, who follows b through Carol and no longer wants to follow b, ceases following b through Carol: the machines' act.
-    schema(unfollow, ['Alice', 'Carol'], [pvar(b)],
+%% GFF:4, Unfollowing.  Alice, who follows b through Carol and no longer wants to follow b, ceases following b through Carol: the machines' act, cease_via (the willed acts, follow and unfollow, bear the buttons' names).
+    schema(cease_via, ['Alice', 'Carol'], [pvar(b)],
        [rs(unguarded, [], [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
                       [atom(identity, [])], [atom(wants, [pvar(b)])]),
         rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
@@ -138,11 +138,11 @@ contract_named(gff_fr,
     schema(update_ceased, ['Carol', 'Alice'], [pvar(b)],
        [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], [atom(following, [pvar(b)])]),
         rs(unguarded, [], [atom(friend_follows, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF-FR:2, Redundant forwarding.  Alice, who follows b through Carol and through Dave and holds an item x of b's feed from Carol and not from Dave, forwards it to Dave: a sending, the machines' act.
-    schema(redundant_forward, ['Alice', 'Dave'], [pvar(b), pvar(c), svar(x), svar(y)],
+%% GFF-FR:2, Redundant forwarding.  Alice, who follows b through two friends, Dave among them, and holds an item x of b's feed not from Dave, forwards it to Dave: a sending, the machines' act.  'Through Carol and through Dave' is following(b) twice at Alice with follows(b, Dave); Carol is named by from(x, c) in the clause and not in the schema, which the compiler would refuse (Code #16, 2026-10-28).
+    schema(redundant_forward, ['Alice', 'Dave'], [pvar(b), svar(x), svar(y)],
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
-                      [atom(identity, []), atom(follows, [pvar(b), pvar(c)]), atom(follows, [pvar(b), role(2)]),
-                       atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y)]), atom(from, [svar(x), pvar(c)])],
+                      [atom(identity, []), atom(following, [pvar(b)]), atom(following, [pvar(b)]), atom(follows, [pvar(b), role(2)]),
+                       atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y)])],
                       [atom(from, [svar(x), role(2)]), atom(sent, [svar(x), role(2)])]),
         rs(received, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1)]), atom(from, [svar(x), role(1)])], [],
                       [atom(identity, [])], [])])]).
