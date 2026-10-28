@@ -121,6 +121,7 @@ contract_named(gff,
         rs(unguarded, [atom(friend_follows, [role(1), pvar(b)])], [], [atom(identity, [])],
                       [atom(friend_follows, [role(1), pvar(b)])])]),
 %% GFF:5, Updating.  Carol updates their friend Alice that Carol no longer follows b.
+%% Carol names b by knowing b (GKK:2), which is never undone, so the act is effective with no record of whom Carol told (Code #16, 2026-10-28 08:12 UTC).
     schema(update_ceased, ['Carol', 'Alice'], [pvar(b)],
-       [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)])], [atom(following, [pvar(b)])]),
+       [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], [atom(following, [pvar(b)])]),
         rs(unguarded, [], [atom(friend_follows, [role(1), pvar(b)])], [atom(identity, [])], [])])]).
