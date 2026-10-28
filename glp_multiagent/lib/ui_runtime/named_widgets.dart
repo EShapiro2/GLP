@@ -2469,6 +2469,8 @@ class _SocialTabState extends State<SocialTab> {
           for (final x in xs)
             if (formatTerm(x) != whole && formatTerm(x) != part) x
         ];
+        // A path of an item, path(x, y, c), is drawn under its item, not as a line of its own.
+        if (xs.length >= 2 && SpeechAct.of(xs[0]) != null && SpeechAct.of(xs[1]) != null) continue;
         final held = others.where((x) => SpeechAct.of(x) != null).toList();
         if (held.length == 1 && others.length == 1) {
           final x = held.single;
@@ -2524,14 +2526,14 @@ class _SocialTabState extends State<SocialTab> {
     );
   }
 
-  /// The paths of the item [x]: each speech act [y] that an atom of the state of two arguments pairs with [x], `path(x, y)`, once, in the order of the state (the experiment GFF-chooser; CHOOSER.md, "For vGLP, 6.2").
+  /// The paths of the item [x]: each speech act [y] that an atom of the state pairs with [x] as its second argument, `path(x, y, c)`, c the friend it came from, once, in the order of the state (the experiment GFF-chooser; CHOOSER.md, "For vGLP, 6.2").
   static List<SpeechAct> _pathsOf(SocialState s, GTerm x) {
     final want = formatTerm(x);
     final seen = <String>{};
     return [
       for (final a in s.atoms)
         if (ctorArgs(a) case (_, final xs)
-            when xs.length == 2 &&
+            when xs.length >= 2 &&
                 formatTerm(xs[0]) == want &&
                 SpeechAct.of(xs[1]) != null &&
                 seen.add(formatTerm(xs[1])))
