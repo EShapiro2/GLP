@@ -262,7 +262,7 @@ fi
 # 6a. The app's chooser, where the platform calls it (programs/vglp/cva/compiler/CHOOSER.md).
 CHOOSER=0
 CALLS=0; [ "$COMPILED" = 1 ] && grep -q '^imported procedure chooser#choose(' "$OUT/platform.vglp" && CALLS=1
-HAS=0; [ -n "$PLAYS" ] && [ -f "$PLAYS/chooser.glp" ] && HAS=1
+HAS=0; [ "$COMPILED" = 1 ] && [ -n "$PLAYS" ] && [ -f "$PLAYS/chooser.glp" ] && HAS=1
 if [ "$CALLS" = 1 ] && [ "$HAS" = 1 ]; then
     cp "$PLAYS/chooser.glp" "$OUT/chooser.glp" && CHOOSER=1
     say "chooser.glp: the app's, $(wc -l < "$OUT/chooser.glp" | tr -d ' ') lines"
