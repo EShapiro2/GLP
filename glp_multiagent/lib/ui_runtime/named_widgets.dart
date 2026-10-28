@@ -2460,13 +2460,26 @@ class _SocialTabState extends State<SocialTab> {
           if (formatTerm(x) != whole && formatTerm(x) != part) _signed(x)
       ];
       if (own.isNotEmpty) shows.add(own.join(', '));
+      // An item an atom names beside the entry is shown once, however many atoms name it, and under it the signatures of each of its paths: the signers of each speech act an atom of the state pairs with it, as path(x, y) (the experiment GFF-chooser; programs/vglp/cva/compiler/CHOOSER.md, "For vGLP, 6.2").
+      final seenItems = <String>{};
       for (final a in s.atoms) {
         if (formatTerm(a) == formatTerm(r.atom) || !_naming(a, item)) continue;
         final (_, xs) = ctorArgs(a);
-        final rest = [
+        final others = [
           for (final x in xs)
-            if (formatTerm(x) != whole && formatTerm(x) != part) _signed(x)
+            if (formatTerm(x) != whole && formatTerm(x) != part) x
         ];
+        final held = others.where((x) => SpeechAct.of(x) != null).toList();
+        if (held.length == 1 && others.length == 1) {
+          final x = held.single;
+          if (!seenItems.add(formatTerm(x))) continue;
+          shows.add(_named(x));
+          for (final y in _pathsOf(s, x)) {
+            shows.add('    ${[for (final p in y.signers) personName(p)].join(', ')}');
+          }
+          continue;
+        }
+        final rest = [for (final x in others) _signed(x)];
         if (rest.isNotEmpty) shows.add(rest.join(', '));
       }
     }
@@ -2509,6 +2522,21 @@ class _SocialTabState extends State<SocialTab> {
         ],
       ),
     );
+  }
+
+  /// The paths of the item [x]: each speech act [y] that an atom of the state of two arguments pairs with [x], `path(x, y)`, once, in the order of the state (the experiment GFF-chooser; CHOOSER.md, "For vGLP, 6.2").
+  static List<SpeechAct> _pathsOf(SocialState s, GTerm x) {
+    final want = formatTerm(x);
+    final seen = <String>{};
+    return [
+      for (final a in s.atoms)
+        if (ctorArgs(a) case (_, final xs)
+            when xs.length == 2 &&
+                formatTerm(xs[0]) == want &&
+                SpeechAct.of(xs[1]) != null &&
+                seen.add(formatTerm(xs[1])))
+          SpeechAct.of(xs[1])!
+    ];
   }
 
   /// The act open in a row's composer, `f/n|item`; null where none is.

@@ -84,7 +84,7 @@ GFF also marks a schema's second role received (Udi, 2026-10-28, reported by GFF
 
 ## For VMAT
 
-VMAT gains CVA's send and receive, lifted, CVA being a special case of VMAT (Udi, 2026-10-28, reported by GFF #1 Cowork).  A sending, a schema of two roles whose second carries the mark received, compiles to two transactions, each guarded by none (programs/gsc/compile.glp lines 949 to 1020, `latex_sending`):
+VMAT gains CVA's send and receive, lifted, CVA being a special case of VMAT (Udi, 2026-10-28, reported by GFF #1 Cowork).  A sending, a schema of two roles whose second carries the mark received, compiles to two transactions, each guarded by none (programs/gsc/compile.glp lines 959 to 1019, `latex_sending`):
 
 1. The sender's, at Alice: the assignment of the first role, its proviso and also that Alice knows Bob, `\mathit{knows}(\Bob) \in c_{\Alice}`, and the line "sends ⟨x, ...⟩ to Bob", the act being the binding of the schema's variables.
 
@@ -106,5 +106,5 @@ A received role is realised by CVA's send and a receive, with no two-phase commi
 
 What Section 6.2 would say: a tab's pragma line is what the tab lists, up to its first semicolon; after it, the line may say what a row shows under its entry.  A row shows under its entry the atoms of the state naming the entry by other predicates, each by its other arguments; an item such an atom names is shown once, however many atoms name it, and under it the signatures of each of its paths, the signers of each speech act an atom of the state pairs with it, as `path(x, y)`.  GFF's Feeds line, "the agents Alice follows; under an agent followed, the friend Alice follows them through, the friends who follow them, and the items of their feed, each once, the signatures of each of its paths under it", so lists `follows`, and a row `follows(Bob, Carol)` shows Carol, each `friend_follows(D, Bob)` by D, and each item of Bob's feed, `item(x, Bob)`, once, with under it each `path(x, y)` by the signers of y.  `from(x, c)` names x and no entry, so no row shows it.  Posts lists `feed`, Alice's own items, as before.
 
-On the branch: programs/vglp/cva/compiler/pragmas.sh reads a tab's predicate from the part of its line before the first semicolon (`$listed`, line 284); glp_multiagent/lib/ui_runtime/named_widgets.dart, `_wordedRow` (lines 2460 to 2485) and `_pathsOf` (line 2528), draw an item once with its paths under it.  A row is still one atom of the tab's predicate, so an agent followed through two friends has two rows, each showing the same items.
+On the branch: programs/vglp/cva/compiler/pragmas.sh reads a tab's predicate from the part of its line before the first semicolon (`$listed`, line 286); glp_multiagent/lib/ui_runtime/named_widgets.dart, `_wordedRow` (lines 2461 to 2485) and `_pathsOf` (line 2528), draw an item once with its paths under it.  A row is still one atom of the tab's predicate, so an agent followed through two friends has two rows, each showing the same items.
 

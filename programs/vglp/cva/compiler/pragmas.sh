@@ -282,7 +282,9 @@ for my $f (@order) {
         if ($tabs) {
             $rest !~ /\x01/ or die "pragmas.sh: $f: the tab \"$title\" has an indented line\n";
             my @w;
-            my @lw = map { lc } ($rest =~ /([A-Za-z0-9_]+)/g);
+            # What the tab lists is the part of the line before its first semicolon; after it the line says what a row shows under its entry, which the drawing shows by vGLP 6.2 as the branch GFF-chooser reads it: the atoms of the state naming the entry, each item once with the signatures of each of its paths under it (CHOOSER.md beside this file, "For vGLP, 6.2").
+            (my $listed = $rest) =~ s/;.*$//;
+            my @lw = map { lc } ($listed =~ /([A-Za-z0-9_]+)/g);
             # The predicate a tab lists is named by its name, an underscore read as a space, the longest such phrase in the line (vGLP 110caf4, Section 5.4, "The contract words"), a word also read without a final s, as "friends" names friend and "principal of" principal_of; the words of the line are given where the contract term is not.
             my ($best, @found) = (0);
             for my $i (0 .. $#lw) {
