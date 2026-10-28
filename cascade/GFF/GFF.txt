@@ -14,7 +14,7 @@ Alice, Bob and Carol are agents.
 5. ■ Updating.  Every so often, Carol updates their friend Alice whom Carol follows.
 Pragmas
 Posts: Alice's feed.
-Feeds: the agents Alice follows.
+Feeds: the agents Alice follows; under an agent followed, the friend Alice follows them through, the friends who follow them, and the items of their feed, each once, the signatures of each of its paths under it.
 Feed: Alice [Post] <item>
 Following: Alice [Follow] <person>
 Unfollow: Alice [Unfollow]

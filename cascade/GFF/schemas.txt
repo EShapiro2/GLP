@@ -44,11 +44,11 @@ unfollow(Alice?, Carol; b) :
     at Alice: identity, -follows(b, Carol), -following(b)
     at Carol: identity, -follower(Alice, b)
 
-deliver_own(Bob, Alice; x) :
+deliver_own(Bob, received Alice; x) :
     at Bob: identity, feed(x), friend_follower(Alice), friend(Alice), not sent(x, Alice), +sent(x, Alice)
     at Alice: identity, +item(x, Bob), +path(x, x), +from(x, Bob)
 
-deliver_on(Carol, Alice; b, x, y) :
+deliver_on(Carol, received Alice; b, x, y) :
     at Carol: identity, following(b), item(x, b), path(x, y), follower(Alice, b), friend(Alice), not sent(x, Alice), not from(x, Alice), +sent(x, Alice)
     at Alice: identity, +item(x, b), +path(x, sgn(y, Carol)), +from(x, Carol)
 

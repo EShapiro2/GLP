@@ -1092,7 +1092,72 @@ x
 \Bob
 )
 \}
-, \qquad 
+,\\
+&
+\text{provided } 
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+identity
+}
+,
+\mathit{
+feed
+}
+(
+x
+)
+,
+\mathit{
+friend_follower
+}
+(
+\Bob
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+sent
+}
+(
+x
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{sends } 
+langle 
+x
+ angle
+ \text{ to } \Bob
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\begin{align*}
+&
 c'_
 {
 \Bob
@@ -1133,58 +1198,11 @@ x
 \}
 ,\\
 &
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-feed
-}
-(
+\text{on } 
+langle 
 x
-)
-,
-\mathit{
-friend_follower
-}
-(
-\Bob
-)
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-sent
-}
-(
-x
-,
-\Bob
-)
- \notin c_
-{
-\Alice
-}
+ angle
+ \text{ received from } \Alice
 ,\\
 &
 \text{guarded by } \emptyset
@@ -1214,52 +1232,16 @@ x
 \Bob
 )
 \}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-item
-}
-(
-x
-,
-b
-)
-,
-\mathit{
-path
-}
-(
-x
-,
-\mathrm{sgn}(
-y
-,
-\Alice
-)
-)
-,
-\mathit{
-from
-}
-(
-x
-,
-\Alice
-)
-\}
 ,\\
 &
 \text{provided } 
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
 \mathit{
 identity
 }
@@ -1308,14 +1290,6 @@ friend
 {
 \Alice
 }
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
 ,\\
 &
 \text{provided } 
@@ -1343,6 +1317,76 @@ x
 \Alice
 }
  = \emptyset
+,\\
+&
+\text{sends } 
+langle 
+b
+,
+x
+,
+y
+ angle
+ \text{ to } \Bob
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\begin{align*}
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+x
+,
+b
+)
+,
+\mathit{
+path
+}
+(
+x
+,
+\mathrm{sgn}(
+y
+,
+\Alice
+)
+)
+,
+\mathit{
+from
+}
+(
+x
+,
+\Alice
+)
+\}
+,\\
+&
+\text{on } 
+langle 
+b
+,
+x
+,
+y
+ angle
+ \text{ received from } \Alice
 ,\\
 &
 \text{guarded by } \emptyset
