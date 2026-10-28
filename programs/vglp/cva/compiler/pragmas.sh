@@ -506,8 +506,9 @@ my (%last, @kept);
 for my $i (0 .. $#acts) { my ($n) = $acts[$i] =~ /^act\((\x27[^\x27]*\x27)/; $last{$n} = $i }
 for my $i (0 .. $#acts) { my ($n) = $acts[$i] =~ /^act\((\x27[^\x27]*\x27)/; push @kept, $acts[$i] if $last{$n} == $i }
 # A contract whose own NAME.txt has an Algorithms section, the %-lines after the pragmas the first of which begins "% Algorithms", is printed algorithms(pragmas(Lists, Acts)): its platform calls the chooser its owner writes in the app, in place of the default (CHOOSER.md beside this file, "A contract\x27s Algorithms section"; the experiment GFF-chooser).
+# A contract extending one with an Algorithms section takes it, as it takes the clauses it extends: the section is looked for in its own NAME.txt and in those it extends (CHOOSER.md beside this file, "A contract\x27s Algorithms section"; GFF1, extending GFF, on the branch GFF-chooser).
 my $alg = 0;
-if (open(my $fh, "<", $top)) { while (my $l = <$fh>) { $alg = 1 if $l =~ /^% Algorithms\b/ } close $fh }
+for my $f (@order) { if (open(my $fh, "<", $f)) { while (my $l = <$fh>) { $alg = 1 if $l =~ /^% Algorithms\b/ } close $fh } }
 my $pr = "pragmas([" . join(", ", @lists) . "], [" . join(", ", @kept) . "])";
 print $alg ? "algorithms($pr)\n" : "$pr\n";
 ' "$1" "$PROGRAMS" "${2:-}"

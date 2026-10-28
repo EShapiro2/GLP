@@ -34,7 +34,7 @@ A contract's pragmas have two sections, UI and Algorithms (GFF's box 'Pragmas fo
 
 The Algorithms section is not compiled.  The contract's owner writes a chooser from it, in GLP, in the app: programs/apps/<app>/chooser.glp, the module chooser, exporting choose/3 at the types above.  A realisation of a contract is its compiled platform with a chooser: the owner's, where the contract has an Algorithms section, and the default, where it has none.
 
-In NAME.txt the Algorithms section is the %-lines after the pragmas, the first of them beginning '% Algorithms', until GSC's paper writes the pragmas in two sections (GFF.txt at 0a3d7997).  The reader of the pragmas, pragmas.sh, notes the section, and the compiler then prints the platform calling the app's chooser in place of the default.
+In NAME.txt the Algorithms section is the %-lines after the pragmas, the first of them beginning '% Algorithms', until GSC's paper writes the pragmas in two sections (GFF.txt at 0a3d7997).  The reader of the pragmas, pragmas.sh, notes the section, and the compiler then prints the platform calling the app's chooser in place of the default.  A contract extending one with an Algorithms section takes the section, as it takes the clauses it extends: GFF1, which extends GFF, is compiled calling its app's chooser.
 
 ## What changes in vGLP's paper
 
