@@ -1908,7 +1908,7 @@ void appsScreens(Screens screens) {
     // (2) Carol's Contacts: Follow in Alice's row.  She taps it, and her machine follows Alice through Bob; Bob's machine forwards the two items to her, signed by him (GFF:4, deliver_on).
     await follow(carol, 'alice', 'bob', shot: 'gff-app-2.png');
     expect(carol.atoms, contains('item($first, alice)'));
-    expect(carol.atoms, contains('path($first, speech($first, bob))'));
+    expect(carol.atoms, contains('path($first, speech($first, bob), bob)'));
 
     // (3) Carol's Feeds tab after she followed Alice: Alice's row, under it Bob, the friend she follows Alice through and who follows her, and the two items, each with the signatures of its path, Alice and Bob.
     await run.list(carol, 'wants');
@@ -1947,7 +1947,7 @@ void appsScreens(Screens screens) {
     final third = said('Third item', 'alice');
     expect(eve.atoms, containsAll([
       'item($third, alice)',
-      'path($third, speech(speech(speech($third, bob), carol), dave))'
+      'path($third, speech(speech(speech($third, bob), carol), dave), dave)'
     ]));
 
     // (4) Eve's Feeds tab: Alice's row, under it Dave, the friend she follows Alice through, and the items of Alice's feed, the third with the signatures of its path, Alice, Bob, Carol and Dave.
