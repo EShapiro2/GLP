@@ -1,0 +1,71 @@
+establish(Alice?) :
+    at Alice: not identity, +identity
+
+acquaint(Alice?, Bob?) :
+    at Alice: identity, +knows(Bob)
+    at Bob: identity, +knows(Alice)
+
+introduce(Alice?, Bob?; c) :
+    at Alice: identity, knows(Bob), knows(c)
+    at Bob: identity, knows(Alice), +knows(c)
+
+befriend(Alice?, Bob?) :
+    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
+    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
+
+unfriend(Alice?, Bob) :
+    at Alice: identity, -friend(Bob)
+    at Bob: identity, -friend(Alice)
+
+post(Alice?; x) :
+    at Alice: identity, not feed(x), +feed(x)
+
+follow(Alice?; b) :
+    at Alice: identity, knows(b), not friend(b), not wants(b), +wants(b)
+
+unfollow(Alice?; b) :
+    at Alice: identity, -wants(b)
+
+friends_follow(Alice, Bob) :
+    at Alice: identity, friend(Bob), not follows_friend(Bob), +follows_friend(Bob), +following(Bob)
+    at Bob: identity, +friend_follower(Alice)
+
+friend_following_ended(Alice, Bob) :
+    at Alice: identity, not friend(Bob), -follows_friend(Bob), -following(Bob)
+    at Bob: identity, -friend_follower(Alice)
+
+via_friend(Alice, Carol; b) :
+    at Alice: identity, wants(b), friend(Carol), not follows(b, Carol), +follows(b, Carol), +following(b)
+    at Carol: identity, following(b), +follower(Alice, b)
+
+cease_via(Alice, Carol; b) :
+    at Alice: identity, not wants(b), -follows(b, Carol), -following(b)
+    at Carol: identity, -follower(Alice, b)
+
+path_broken(Carol, Alice; b) :
+    at Carol: identity, not following(b), -follower(Alice, b)
+    at Alice: identity, -follows(b, Carol), -following(b)
+
+friendship_ended(Alice, Carol; b) :
+    at Alice: identity, not friend(Carol), -follows(b, Carol), -following(b)
+    at Carol: identity, -follower(Alice, b)
+
+deliver_own(Bob, received Alice; x) :
+    at Bob: identity, feed(x), friend_follower(Alice), friend(Alice), not sent(x, Alice), +sent(x, Alice)
+    at Alice: identity, +item(x, Bob), +path(x, x), +from(x, Bob)
+
+deliver_on(Carol, received Alice; b, x, y) | Alice did not sign y :
+    at Carol: identity, following(b), item(x, b), path(x, y), follower(Alice, b), friend(Alice), not sent(x, Alice), +sent(x, Alice)
+    at Alice: identity, +item(x, b), +path(x, sgn(y, Carol)), +from(x, Carol)
+
+every so often update(Carol, Alice; b) :
+    at Carol: identity, friend(Alice), following(b)
+    at Alice: identity, not friend_follows(Carol, b), +friend_follows(Carol, b)
+
+every so often update_ceased(Carol, Alice; b) :
+    at Carol: identity, friend(Alice), knows(b), not following(b)
+    at Alice: identity, -friend_follows(Carol, b)
+
+redundant_forward(Alice, received Dave; b, x, y) | Dave did not sign y :
+    at Alice: identity, following(b), following(b), follows(b, Dave), item(x, b), path(x, y), not from(x, Dave), not sent(x, Dave), +sent(x, Dave)
+    at Dave: identity, +item(x, b), +path(x, sgn(y, Alice)), +from(x, Alice)
