@@ -40,7 +40,7 @@ Rho      ::= one(Class) ; rho(Proposal).
 Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
-           ; yield(Attempt) ; request(Rho, Integer).
+           ; yield(Attempt) ; request(Rho, Integer) ; given(Class).
 Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; greeted ; greeting ; cheered.

@@ -35,7 +35,6 @@
 #   gfwc        GFWC  GFWC        programs/federation       ---
 #   gai         GAI   GAI         programs/gai              ---
 #   gff         GFF   GFF         programs/gff              programs/apps/gff (GFF's, the app's plays)
-#   gff1        GFF1  GFF         programs/gff              programs/apps/gff1 (GFF's, the app's plays)
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -131,9 +130,7 @@ case "$NAME" in
     gai)  FILE=GAI;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
     gff)  FILE=GFF;  OWNER="programs/gff";              PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR=""
           PLAYAT="programs/apps/gff"; PLAYLIMIT=30000000 ;;   # the five persons' play, the same limit as Section APPS's
-    gff1) FILE=GFF1; OWNER="programs/gff";              PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR=""
-          PLAYAT="programs/apps/gff1"; PLAYLIMIT=30000000 ;;   # GFF's second contract, its own app, its platform having redundant_forward beside GFF's
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff gff1" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
