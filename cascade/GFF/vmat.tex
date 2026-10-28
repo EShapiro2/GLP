@@ -421,6 +421,121 @@ x
 \}
 \end{align*}
 \iffalse
+follow
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+wants
+}
+(
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+friend
+}
+(
+b
+)
+,
+\mathit{
+wants
+}
+(
+b
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+unfollow
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+wants
+}
+(
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+wants
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
 friends_follow
 \fi
 \begin{align*}
@@ -617,7 +732,7 @@ friend
 \text{guarded by } \emptyset
 \end{align*}
 \iffalse
-follow_through
+via_friend
 \fi
 \begin{align*}
 &
@@ -677,7 +792,7 @@ identity
 }
 ,
 \mathit{
-knows
+wants
 }
 (
 b
@@ -711,13 +826,81 @@ b
 ,\\
 &
 \text{provided } 
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+cease_via
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
 \{
 \mathit{
-friend
+follows
+}
+(
+b
+,
+\Bob
+)
+,
+\mathit{
+following
 }
 (
 b
 )
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
 ,
 \mathit{
 follows
@@ -727,17 +910,50 @@ b
 ,
 \Bob
 )
-\}
- \cap c_
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
 {
 \Alice
 }
- = \emptyset
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+ \in c_
+{
+\Bob
+}
 ,\\
 &
-\text{guarded by } \{
+\text{provided } 
+\mathit{
+wants
+}
+(
+b
+)
+ \notin c_
+{
 \Alice
-\}
+}
+,\\
+&
+\text{guarded by } \emptyset
 \end{align*}
 \iffalse
 path_broken
@@ -966,108 +1182,6 @@ friend
 \text{guarded by } \emptyset
 \end{align*}
 \iffalse
-unfollow
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-follows
-}
-(
-b
-,
-\Bob
-)
-,
-\mathit{
-following
-}
-(
-b
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-follower
-}
-(
-\Alice
-,
-b
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-follows
-}
-(
-b
-,
-\Bob
-)
-,
-\mathit{
-following
-}
-(
-b
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-follower
-}
-(
-\Alice
-,
-b
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
 deliver_own
 \fi
 \begin{align*}
@@ -1293,7 +1407,6 @@ friend
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 sent
 }
@@ -1302,21 +1415,10 @@ x
 ,
 \Bob
 )
-,
-\mathit{
-from
-}
-(
-x
-,
-\Bob
-)
-\}
- \cap c_
+ \notin c_
 {
 \Alice
 }
- = \emptyset
 ,\\
 &
 \text{sends } 
@@ -1328,6 +1430,12 @@ x
 y
  angle
  \text{ to } \Bob
+,\\
+&
+\text{provided } 
+\Bob
+\text{ did not sign }
+y
 ,\\
 &
 \text{guarded by } \emptyset
