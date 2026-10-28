@@ -21,6 +21,6 @@ Feed: Alice [Post] <item>
 Following Volition: Alice [Follow]
   Alice [Unfollow]
 % Algorithms (the second section of the paper's box 'Pragmas for GFF', GFF's experiment, kept out of vGLP's reader as %-lines until GSC's paper takes a two-section form; Code #16, 2026-10-27 18:49 UTC):
-% Following via Friend: when Alice wants to follow Bob, Alice's machine follows Bob through the first friend known to follow Bob, and through no other while that following stands; when Alice ceases to want, it ceases every following of Bob (GFF:3).
+% Following via Friend: when Alice wants to follow Bob, Alice's machine follows Bob through the first friend known to follow Bob not through Alice, and through no other while that following stands; when Alice ceases to want, it ceases every following of Bob (GFF:3).
 % Updating: Carol updates a friend whenever Carol comes to follow or ceases to follow an agent, and a new friend upon befriending (GFF:5).
 % The names GFF-PS and GFF-FR of the extensions are Udi's ruling (2026-10-28), letters and not numbers; the checker's atoms are gff_ps and gff_fr.
