@@ -223,9 +223,17 @@ inert_fault(yes, _, _, _, T, T?).
 procedure role_inert(RoleSpec?, Constant?, Integer?, Faults?, Faults).
 role_inert(RS, Nm, I, T, R?) :-
     ground(RS?), ground(Nm?), integer(I?), ground(T?) |
-    is_guarding(RS?, G),
+    is_guarding(RS?, G0),
+    is_often(RS?, O),
+    either(G0?, O?, G),
     role_changes(RS?, C),
     inert_fault(G?, C?, Nm?, I?, T?, R).
+
+% A role marked every_so_often may add and delete nothing, as a guarding role
+% may (the experiment GFF-chooser; CHOOSER.md, "For GSC").
+procedure either(Ans?, Ans?, Ans).
+either(yes, _, yes).
+either(no, B, B?).
 
 procedure form_roles(RoleSpecs?, Integer?, Constant?, Faults).
 form_roles([], _, _, []).
@@ -430,6 +438,7 @@ listed_signed_fault([_|_], Nm, J, T, [listed_signed(Nm?, J?)|T?]).
 
 procedure listed_guard_fault(Guard?, Constant?, Integer?, Faults?, Faults).
 listed_guard_fault(unguarded, _, _, T, T?).
+listed_guard_fault(every_so_often, Nm, J, T, [listed_often(Nm?, J?)|T?]).
 listed_guard_fault(guarded, Nm, J, T, [listed_guarded(Nm?, J?)|T?]).
 
 procedure listed_role_faults(RoleSpec?, Integer?, RoleSpecs?, Constant?, Faults?, Faults).

@@ -267,12 +267,35 @@ n_role_lines([RS|Rs], I, T, ['    at '|R?]) :-
     n_role_term(RS?, I?, [':'|R1?], R).
 
 procedure n_schema(NSchema?, Chunks?, Chunks).
-n_schema(Sc, T, [Nm?, '('|R?]) :- ground(Sc?), ground(T?) |
+n_schema(Sc, T, R?) :- ground(Sc?), ground(T?) |
     nsch_name(Sc?, Nm),
     nsch_vars(Sc?, Vs),
     nsch_roles(Sc?, Rs),
     nsch_constraint(Sc?, Cn),
-    n_schema1(Vs?, Rs?, Cn?, T?, R).
+    n_schema0(Nm?, Vs?, Rs?, Cn?, T?, R).
+
+% A schema one of whose roles carries the mark every_so_often is printed with
+% "every so often" before its head (the experiment GFF-chooser; CHOOSER.md,
+% "For GSC").
+procedure n_schema0(Constant?, Args?, NRoleSpecs?, Constraint?, Chunks?, Chunks).
+n_schema0(Nm, Vs, Rs, Cn, T, R?) :- ground(Nm?), ground(Rs?) |
+    n_schema1(Vs?, Rs?, Cn?, T?, R1),
+    n_any_often(Rs?, O),
+    n_often(O?, [Nm?, '('|R1?], R).
+
+procedure n_any_often(NRoleSpecs?, Ans).
+n_any_often([], no).
+n_any_often([RS|Rs], R?) :- ground(RS?) |
+    n_is_often(RS?, O),
+    n_any_often1(O?, Rs?, R).
+
+procedure n_any_often1(Ans?, NRoleSpecs?, Ans).
+n_any_often1(yes, _, yes).
+n_any_often1(no, Rs, R?) :- n_any_often(Rs?, R).
+
+procedure n_often(Ans?, Chunks?, Chunks).
+n_often(yes, T, ['every so often '|T?]).
+n_often(no, T, T?).
 
 procedure n_schema1(Args?, NRoleSpecs?, Constraint?, Chunks?, Chunks).
 n_schema1(Vs, Rs, Cn, T, R?) :- ground(Vs?), ground(Rs?), ground(Cn?), ground(T?) |

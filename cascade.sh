@@ -199,7 +199,8 @@ if [ $? -ne 0 ] || [ ! -s "$OUT/schemas.txt" ]; then
 fi
 # A head ends "... :", after its constraint where it has one (GSC, Section
 # 3.2; programs/gsc/notation.glp).
-say "schemas.txt: $(grep -cE '^[a-z_0-9]*\(.*\)( \| .*)? :$' "$OUT/schemas.txt") schemas"
+# a head marked every so often is printed with those words before it (programs/gsc/notation.glp; CHOOSER.md, "For GSC").
+say "schemas.txt: $(grep -cE '^(every so often )?[a-z_0-9]*\(.*\)( \| .*)? :$' "$OUT/schemas.txt") schemas"
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
 printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"

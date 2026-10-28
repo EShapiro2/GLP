@@ -285,7 +285,7 @@ Vars      ::= [] ; [Var | Vars].
 %% An atom a schema adds or deletes may carry a multiplicity, times(K, A), K a number or a numeric variable, for that many copies of A (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications").
 SAtom     ::= atom(Constant, Vars) ; times(Var, SAtom).
 SAtoms    ::= [] ; [SAtom | SAtoms].
-Guard     ::= guarded ; unguarded.
+Guard     ::= guarded ; unguarded ; every_so_often.
 RoleSpec  ::= rs(Guard, SAtoms, SAtoms, SAtoms, SAtoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 %% A schema's second argument is its variables, in the order of its head (GSC 0228e79, Definition "Act schema"; programs/gsc/README.md, "Writing a contract").
@@ -375,7 +375,8 @@ Trie      ::= nil ; t(Tags, Trie, Trie).
 Attempts  ::= [] ; [Attempt | Attempts].
 %% The pairs the introduction rule gives the agent that it has not introduced, computed where its friends change and not on every own trigger (Code #12's change 4, vGLP #18 Cowork, Code_inbox.md 2026-10-20 12:03 UTC): ic(S, Ns, Pend), the machine state S they were computed at, the persons Ns its introduction predicates name there, in the order of identifiers, and the pairs of Ns not recorded introduced, Pend, in the order Introduce peers forms them; a pair recorded introduced leaves Pend.
 IC        ::= ic(GAtoms, Peers, Pairs).
-Ix        ::= ix(Trie, Attempts, Recs, IC).
+%% The fifth field of the index: the every_so_often parts the agent has committed, newest first, each once, which the chooser is given (CHOOSER.md beside the compiler, "The seam"; the experiment GFF-chooser).
+Ix        ::= ix(Trie, Attempts, Recs, IC, List(Class)).
 Fate      ::= keep ; move ; intro.
 %% The parts of the agent state a condition tests (Code #12's change 3, vGLP #18 Cowork, Code_inbox.md 2026-10-20 12:03 UTC: "a condition reads only the parts of the state it tests"): the agent's identifier, its machine state, the lock, the live record, the starts it holds waiting and the hellos and ihellos sent and received, kn(Sent, Received, ISent, IReceived).  A condition taken for each record, pair, participant, start held or class reads these, and not the whole state; the classes it needs it reads from the state, which it gives back.
 Kn        ::= kn(Peers, Peers, Peers, Peers).
@@ -425,7 +426,7 @@ agent(Id, NetIn, Out?, [view([], [], [], Ts?)|Thr?]) :- ground(Id?) |
     merge(M1?, Ans?, M2),
     merge(M2?, [own|Ow?], In),
     agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [],
-        st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
+        st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], []), []), [])).
 
 %% A request question: the agent's own key, its identifier, the persons the
 %% agent knows, in the order of identifiers, and the person's one request,
@@ -1474,7 +1475,9 @@ own_cond5(Os, W1, D, Cs, St, Ch?, St2?) :- ground(Os?), ground(St?) |
     cand_parts(Os?, Ps),
     st_ms(St?, S0),
     atoms_of(S0?, S),
-    choose_part(Ps?, S?, Cp),
+    st_ix(St?, Ix),
+    ix_often(Ix?, Of),
+    choose_part(Ps?, S?, Of?, Cp),
     chosen_cand(Cp?, Os?, Ks),
     app(Ks?, Cs?, Cs2),
     choose1(Cs2?, W1?, D?, Ch0, W2),
@@ -1847,7 +1850,7 @@ intro_cands(St, Cs?, St1?) :- ground(St?) |
     intro_known(Ix1?, Kn?, Cs, Ix2),
     set_ix(St?, Ix2?, St1).
 procedure intro_pend(Ix?, Peer?, GAtoms?, Ix).
-intro_pend(ix(Tr, Wl, In, ic(S0, Ns0, Pe)), Id, S, ix(Tr?, Wl?, In1?, Ic?)) :- ground(S?), ground(S0?) |
+intro_pend(ix(Tr, Wl, In, ic(S0, Ns0, Pe), Of), Id, S, ix(Tr?, Wl?, In1?, Ic?, Of?)) :- ground(S?), ground(S0?) |
     same(S?, S0?, Sm),
     intro_pend1(Sm?, S?, Ns0?, Pe?, Id?, In?, Ic, In1).
 procedure intro_pend1(YesNo?, GAtoms?, Peers?, Pairs?, Peer?, Recs?, IC, Recs).
@@ -1878,7 +1881,7 @@ keep_pair(yes, _, Pe, Pe?).
 keep_pair(no, P, Pe, [P?|Pe?]).
 %% The pairs pending both known, put up, the pairs given back.
 procedure intro_known(Ix?, Kn?, Cands, Ix).
-intro_known(ix(Tr, Wl, In, ic(S, Ns, Pe)), Kn, Cs?, ix(Tr?, Wl?, In?, ic(S?, Ns?, Pe1?))) :-
+intro_known(ix(Tr, Wl, In, ic(S, Ns, Pe), Of), Kn, Cs?, ix(Tr?, Wl?, In?, ic(S?, Ns?, Pe1?), Of?)) :-
     intro_keep(Pe?, Kn?, Cs, Pe1).
 procedure named_by(Preds?, GAtoms?, Peer?, Peers).
 named_by(_, [], _, []).
@@ -1926,16 +1929,16 @@ prune_wait(no, X, Ws, [X?|Ws?]).
 prune_wait(yes, _, Ws, Ws?).
 procedure dead_key(WKey?, Recs?, Ix?, YesNo).
 dead_key(op(_), _, _, no).
-dead_key(vt(A), R, ix(Tr, _, _, _), D?) :- ground(A?), ground(R?) |
+dead_key(vt(A), R, ix(Tr, _, _, _, _), D?) :- ground(A?), ground(R?) |
     has_vote(A?, R?, V),
     rec_closed(A?, R?, Tr?, Cl),
     or(V?, Cl?, D).
-dead_key(cm(A), R, ix(Tr, _, _, _), D?) :- rec_closed(A?, R?, Tr?, D).
-dead_key(wd(_, B), R, ix(Tr, _, _, _), D?) :- ground(B?), ground(R?) |
+dead_key(cm(A), R, ix(Tr, _, _, _, _), D?) :- rec_closed(A?, R?, Tr?, D).
+dead_key(wd(_, B), R, ix(Tr, _, _, _, _), D?) :- ground(B?), ground(R?) |
     rec_closed(B?, R?, Tr?, Cl),
     mem(yielded(B?), R?, Yd),
     or(Cl?, Yd?, D).
-dead_key(ip(Q, R1), R, ix(_, _, In, _), D?) :- ground(Q?), ground(R1?) |
+dead_key(ip(Q, R1), R, ix(_, _, In, _, _), D?) :- ground(Q?), ground(R1?) |
     mem(introduced(Q?, R1?), R?, D1),
     mem(introduced(Q?, R1?), In?, D2),
     or(D1?, D2?, D).
@@ -2121,7 +2124,7 @@ propose_effect(I, P, Nm, St, Ss?, Ns?, St1?) :- ground(I?), ground(P?), ground(N
     propose_app(Dm?, I?, attempt(Id?, K1?, Pi?, P?, Nm?), St0?, Ss, Ns, St1).
 %% The rank of the attempt: that of the agent's last attempt of the part P where it recorded that one wounded, and its number K1 otherwise (Definition "Proposing", Propose).  The index holds the agent's own attempts recorded wounded that are the last it proposed of their parts (spend); the one of the part P, if any, is the last of P, and leaves the index, the attempt proposed now being the last of P.
 procedure rank_of(Info?, Class?, Ix?, Integer?, Integer, Ix).
-rank_of(I, P, ix(Tr, Wl, In, Ic), K1, Pi?, ix(Tr?, Wl1?, In?, Ic?)) :- integer(K1?) |
+rank_of(I, P, ix(Tr, Wl, In, Ic, Of), K1, Pi?, ix(Tr?, Wl1?, In?, Ic?, Of?)) :- integer(K1?) |
     wl_take(Wl?, I?, P?, Wl1, L),
     rank_of1(L?, K1?, Pi).
 procedure rank_of1(Last?, Integer?, Integer).
@@ -2385,7 +2388,37 @@ commit_effect(I, At, St, Ss?, Ms?, St2?) :- ground(I?), ground(At?), ground(St?)
     set_app(St?, Ap2?, St1),
     st_held(St?, Hd),
     drop_held_class(Hd?, I?, Id?, Hd1),
-    set_held(St1?, Hd1?, St2).
+    set_held(St1?, Hd1?, St1a),
+    attempt_class(At?, P1),
+    note_often(P1?, St1a?, St2).
+%% An every_so_often part committed at the agent, its initiator, is noted in the index, at the front of those noted, each once (CHOOSER.md beside the compiler, "The seam"; the experiment GFF-chooser): a part is every_so_often where a role of its schema carries the mark.
+procedure note_often(Class?, St?, St).
+note_often(P, St, St1?) :- ground(P?), ground(St?) |
+    binding_of(P?, Nm, _),
+    schema_entry(Nm?, S),
+    schema_often(S?, O),
+    note_often1(O?, P?, St?, St1).
+procedure note_often1(YesNo?, Class?, St?, St).
+note_often1(no, _, St, St?).
+note_often1(yes, P, St, St1?) :- ground(P?), ground(St?) |
+    st_ix(St?, Ix),
+    ix_note(Ix?, P?, Ix1),
+    set_ix(St?, Ix1?, St1).
+procedure ix_note(Ix?, Class?, Ix).
+ix_note(ix(Tr, Wl, In, Ic, Of), P, ix(Tr?, Wl?, In?, Ic?, [P?|Of1?])) :- ground(P?) | drop_class(P?, Of?, Of1).
+procedure ix_often(Ix?, List(Class)).
+ix_often(ix(_, _, _, _, Of), Of?).
+procedure drop_class(Class?, List(Class)?, List(Class)).
+drop_class(_, [], []).
+drop_class(P, [Q|Qs], Qs1?) :- P? =?= Q? | drop_class(P?, Qs?, Qs1).
+drop_class(P, [Q|Qs], [Q?|Qs1?]) :- otherwise | drop_class(P?, Qs?, Qs1).
+procedure schema_often(Schema?, YesNo).
+schema_often(schema(_, _, Rs), O?) :- specs_often(Rs?, O).
+schema_often(lschema(_, _, Rs, _), O?) :- specs_often(Rs?, O).
+procedure specs_often(RoleSpecs?, YesNo).
+specs_often([], no).
+specs_often([rs(every_so_often, _, _, _, _)|_], yes).
+specs_often([_|Rs], O?) :- otherwise | specs_often(Rs?, O).
 %% The pairs of the participants of the attempt other than the agent, those of its class (Definition "Attempt"), each pr(Q, R), Q preceding R in the order of identifiers, as Introduce peers forms its pairs (intro_cands).
 procedure commit_pairs(Info?, Peer?, Pairs).
 commit_pairs(I, Id, Ps?) :- ground(I?) |
@@ -2774,7 +2807,7 @@ spend_app(app(S, K, L, R), Ix, Id, app(S?, K?, L?, R1?), Ix2?, Ms?) :- ground(R?
     spend_ix(R?, R?, Id?, Ix?, Ix1),
     spend_app1(R?, Cl?, Ea?, Ix1?, R1, Ms, Ix2).
 procedure spend_app1(Recs?, Attempts?, Recs?, Ix?, Recs, Recs, Ix).
-spend_app1(R, Cl, Ea, ix(Tr, Wl, In, ic(S0, Ns0, Pe)), R1?, Ms?, ix(Tr1?, Wl?, In1?, ic(S0?, Ns0?, Pe1?))) :-
+spend_app1(R, Cl, Ea, ix(Tr, Wl, In, ic(S0, Ns0, Pe), Of), R1?, Ms?, ix(Tr1?, Wl?, In1?, ic(S0?, Ns0?, Pe1?), Of?)) :-
     spend_split(R?, Cl?, Ea?, Tr?, R1, Ms, Is, Tr1),
     intros_out(Is?, Pe?, Pe1, Is1),
     app(Is1?, In?, In1).
@@ -2798,7 +2831,7 @@ ends_of([_|Rs], Es?) :- otherwise | ends_of(Rs?, Es).
 %% The index of the attempts closed and the requests ended, and of the agent's own attempts closed wounded.
 procedure spend_ix(Recs?, Recs?, Peer?, Ix?, Ix).
 spend_ix([], _, _, Ix, Ix?).
-spend_ix([closed(A)|Rs], R, Id, ix(Tr, Wl, In, Ic), Ix1?) :- ground(A?), ground(R?), ground(Id?) |
+spend_ix([closed(A)|Rs], R, Id, ix(Tr, Wl, In, Ic, Of), Ix1?) :- ground(A?), ground(R?), ground(Id?) |
     attempt_id(A?, I),
     attempt_k(A?, K),
     trie_put(K?, a(I?), Tr?, Tr1),
@@ -2807,10 +2840,10 @@ spend_ix([closed(A)|Rs], R, Id, ix(Tr, Wl, In, Ic), Ix1?) :- ground(A?), ground(
     mem(wounded(A?), R?, Wd),
     and(Own?, Wd?, W),
     wl_add(W?, A?, Wl?, Wl1),
-    spend_ix(Rs?, R?, Id?, ix(Tr1?, Wl1?, In?, Ic?), Ix1).
-spend_ix([ended(Rr, K)|Rs], R, Id, ix(Tr, Wl, In, Ic), Ix1?) :- ground(Rr?), integer(K?) |
+    spend_ix(Rs?, R?, Id?, ix(Tr1?, Wl1?, In?, Ic?, Of?), Ix1).
+spend_ix([ended(Rr, K)|Rs], R, Id, ix(Tr, Wl, In, Ic, Of), Ix1?) :- ground(Rr?), integer(K?) |
     trie_put(K?, r(Rr?), Tr?, Tr1),
-    spend_ix(Rs?, R?, Id?, ix(Tr1?, Wl?, In?, Ic?), Ix1).
+    spend_ix(Rs?, R?, Id?, ix(Tr1?, Wl?, In?, Ic?, Of?), Ix1).
 spend_ix([_|Rs], R, Id, Ix, Ix1?) :- otherwise | spend_ix(Rs?, R?, Id?, Ix?, Ix1).
 procedure wl_add(YesNo?, Attempt?, Attempts?, Attempts).
 wl_add(yes, A, Wl, [A?|Wl?]).
@@ -2898,7 +2931,7 @@ rec_closed(A, R, Tr, B?) :- ground(A?) |
     trie_has(K?, a(I?), Tr?, B2),
     or(B1?, B2?, B).
 procedure st_closed(Attempt?, St?, YesNo).
-st_closed(A, st(_, app(_, _, _, R), _, _, _, _, _, _, _, _, _, _, ix(Tr, _, _, _), _), B?) :-
+st_closed(A, st(_, app(_, _, _, R), _, _, _, _, _, _, _, _, _, _, ix(Tr, _, _, _, _), _), B?) :-
     rec_closed(A?, R?, Tr?, B).
 %% The same, the trie given back.
 procedure trie_closed(Attempt?, Recs?, Trie?, YesNo, Trie).
@@ -2911,7 +2944,7 @@ trie_closed(A, R, Tr, B?, Tr1?) :- ground(A?) |
 %% Of the request an attempt names: whether the agent made it, requested(Rho, K) recorded, and whether it has ended it, ended(Rho, K) recorded; no and no where it names none.
 procedure st_req(Attempt?, St?, YesNo, YesNo).
 st_req(attempt(_, _, _, _, none), _, no, no).
-st_req(attempt(_, _, _, _, request(Rr, K)), st(_, app(_, _, _, R), _, _, _, _, _, _, _, _, _, _, ix(Tr, _, _, _), _), B?, E?) :-
+st_req(attempt(_, _, _, _, request(Rr, K)), st(_, app(_, _, _, R), _, _, _, _, _, _, _, _, _, _, ix(Tr, _, _, _, _), _), B?, E?) :-
     ground(Rr?), integer(K?) |
     req_scan(R?, Rr?, K?, no, no, B1, E1),
     trie_has(K?, r(Rr?), Tr?, T),
@@ -2928,12 +2961,12 @@ req_scan([ended(R1, K1)|Rs], Rr, K, B, _, B1?, E1?) :- R1? =?= Rr?, K1? =:= K? |
 req_scan([_|Rs], Rr, K, B, E, B1?, E1?) :- otherwise | req_scan(Rs?, Rr?, K?, B?, E?, B1, E1).
 %% Whether introduced(Q, R) is recorded: in the live record, or in the index.
 procedure st_introduced(Peer?, Peer?, St?, YesNo).
-st_introduced(Q, R, st(_, app(_, _, _, Rc), _, _, _, _, _, _, _, _, _, _, ix(_, _, In, _), _), B?) :- ground(Q?), ground(R?) |
+st_introduced(Q, R, st(_, app(_, _, _, Rc), _, _, _, _, _, _, _, _, _, _, ix(_, _, In, _, _), _), B?) :- ground(Q?), ground(R?) |
     mem(introduced(Q?, R?), Rc?, B1),
     mem(introduced(Q?, R?), In?, B2),
     or(B1?, B2?, B).
 procedure ix_intros(Ix?, Recs).
-ix_intros(ix(_, _, In, _), In?).
+ix_intros(ix(_, _, In, _, _), In?).
 
 %% ===========================================================================
 %% Conditions, over the app state (Definitions "Cargo, App State, Question,
@@ -3650,6 +3683,9 @@ guard_roles([rs(guarded, _, _, _, _)|Rs], I, [I?|Is?]) :- integer(I?) |
 guard_roles([rs(unguarded, _, _, _, _)|Rs], I, Is?) :- integer(I?) |
     I1 := I? + 1,
     guard_roles(Rs?, I1?, Is).
+guard_roles([rs(every_so_often, _, _, _, _)|Rs], I, Is?) :- integer(I?) |
+    I1 := I? + 1,
+    guard_roles(Rs?, I1?, Is).
 procedure persons_of(Ints?, Binding?, Peers).
 persons_of([], _, []).
 persons_of([I|Is], B, [P?|Ps?]) :- ground(B?) |
@@ -3964,6 +4000,7 @@ opens_guarded1(lschema(_, _, Rs, [listing(_, Bi, _, _)|_]), B?) :- ground(Rs?), 
     spec_unguarded(R?, B).
 procedure spec_unguarded(RoleSpec?, YesNo).
 spec_unguarded(rs(unguarded, _, _, _, _), yes).
+spec_unguarded(rs(every_so_often, _, _, _, _), yes).
 spec_unguarded(rs(guarded, _, _, _, _), no).
 %% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo.
 procedure part_opener(Peers?, Peers?, Peers?, Opener).
@@ -4850,7 +4887,7 @@ st_ix(st(_, _, _, _, _, _, _, _, _, _, _, _, Ix, _), Ix?).
 procedure set_ix(St?, Ix?, St).
 set_ix(st(Id, Ap, D, Se, Rc, ISe, IRc, W, Ca, Pd, Pr, Hd, _, Rq), Ix, st(Id?, Ap?, D?, Se?, Rc?, ISe?, IRc?, W?, Ca?, Pd?, Pr?, Hd?, Ix?, Rq?)).
 procedure st_trie(St?, Trie).
-st_trie(st(_, _, _, _, _, _, _, _, _, _, _, _, ix(Tr, _, _, _), _), Tr?).
+st_trie(st(_, _, _, _, _, _, _, _, _, _, _, _, ix(Tr, _, _, _, _), _), Tr?).
 procedure st_kn(St?, Kn).
 st_kn(st(_, _, _, Se, Rc, ISe, IRc, _, _, _, _, _, _, _), kn(Se?, Rc?, ISe?, IRc?)).
 %% The parts of the state a condition tests (V).
@@ -4998,6 +5035,6 @@ ms_meets1(yes, _, _, yes).
 ms_meets1(no, Xs, B, R?) :- ms_meets(Xs?, B?, R).
 
 %% The chooser, the default: of the Proposes of the unguarded parts the agent opens whose condition holds, the longest waited first, the first (programs/vglp/cva/compiler/CHOOSER.md, "The seam").
-procedure choose_part(List(Class)?, List(Atom)?, Chosen).
-choose_part([], _, none_yet).
-choose_part([P|_], _, take(P?)).
+procedure choose_part(List(Class)?, List(Atom)?, List(Class)?, Chosen).
+choose_part([], _, _, none_yet).
+choose_part([P|_], _, _, take(P?)).

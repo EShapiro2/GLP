@@ -28,7 +28,8 @@ Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
-Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+%% every_so_often: the mark of a role whose act recurs, no guard (CHOOSER.md beside this file, "For GSC"; the experiment GFF-chooser).
+Guard     ::= guarded ; unguarded ; guarded_at(Constant) ; every_so_often.
 %% listed(I, Rho, Args) is the listed role pi_I[rho(*, u_2, ..., u_r)] of the agent role pi_I, its base, Args its arguments u_2, ..., u_r (GSC 8064cfb, Appendix D, Definition "Role"; programs/gsc/self.glp at GLP 96908b2d).
 RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
             ; listed(Integer, Constant, Args).
@@ -114,6 +115,7 @@ Fault     ::= no_introductory_act
             ; listed_base(Constant, Integer)
             ; listed_signed(Constant, Integer)
             ; listed_guarded(Constant, Integer)
+            ; listed_often(Constant, Integer)
             ; multiplicity_not_added(Constant, Integer, Atom)
             ; multiplicity_not_numeric(Constant, Integer, Atom)
             ; multiplicity_not_whole(Constant, Integer, Atom)
@@ -182,9 +184,11 @@ procedure rs_guarded(RoleSpec?, YesNo).
 rs_guarded(rs(guarded, _, _, _, _), yes).
 rs_guarded(rs(guarded_at(_), _, _, _, _), yes).
 rs_guarded(rs(unguarded, _, _, _, _), no).
+rs_guarded(rs(every_so_often, _, _, _, _), no).
 rs_guarded(crs(_, guarded, _, _, _, _), yes).
 rs_guarded(crs(_, guarded_at(_), _, _, _, _), yes).
 rs_guarded(crs(_, unguarded, _, _, _, _), no).
+rs_guarded(crs(_, every_so_often, _, _, _, _), no).
 
 %% The variables of a schema in the order of its head, tau(pi_1, ..., pi_k ; x_1, ..., x_m): its roles, role(1) to role(K), then the variables its head lists, Hd, in that order (GSC 0228e79, Definition "Act schema"; vGLP #15 Cowork to Code, 2026-10-19 13:34 UTC, item 2: the compiler takes the order of a class's arguments "from the schema's head as GSC's term form gives it").  GSC's checker refuses a schema whose head is not its variables, malformed(Faults), and the compiler compiles no contract so refused.
 procedure schema_vars(RoleSpecs?, Args?, Args).

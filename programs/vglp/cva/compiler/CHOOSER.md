@@ -24,7 +24,9 @@ The default chooser returns the first part, and none_yet where there is none.  T
 
 A chooser restricts which enabled Propose of an unguarded part is taken, and when.  Every transaction the agent takes is a transaction of the canonical platform whose condition holds.
 
-The chooser's types, in the platform's terms: `Chosen ::= take(Class) ; none_yet.` and `procedure choose(List(Class)?, List(Atom)?, Chosen).`
+The chooser sees the state at each call and keeps nothing between calls, so it cannot tell from the state whether an act that changes nothing at its opener was taken since the state last changed.  The seam therefore also gives it the every_so_often parts the agent has committed as their initiator, newest first, each once, a part committed again moving to the front; the agent keeps them in its index and notes a part when its Commit takes it (text.glp, note_often).  A part is every_so_often where a role of its schema carries the mark every_so_often (below, "For GSC"); it is put up to the chooser as an unguarded part is, and taken only when the chooser returns it.  The default chooser takes it as any other part, the first.  A part of one participant, applied at its Propose, is not noted.
+
+The chooser's types, in the platform's terms: `Chosen ::= take(Class) ; none_yet.` and `procedure choose(List(Class)?, List(Atom)?, List(Class)?, Chosen).`, the third argument the every_so_often parts committed.
 
 ## A contract's Algorithms section
 
@@ -55,3 +57,18 @@ In NAME.txt the Algorithms section is the %-lines after the pragmas, the first o
 3. The reading of the UI pragmas, the widget declarations, the view, and the drawing (Section 6.2, "Widgets"; the construct family).
 
 4. The canonical compilation of vGLP into GLP (Section 6.3).
+
+## For GSC
+
+GFF marks a role whose act recurs, "Every so often, Carol updates their friend Alice" (GFF:5; Udi, 2026-10-28, reported by GFF #1 Cowork): the role's guard kind is every_so_often in place of unguarded.  On the branch GFF-chooser, GSC's checker and printer take the mark as follows, for GSC to put in its paper or to refuse.
+
+1. programs/gsc/self.glp line 106: `Guard ::= guarded ; unguarded ; every_so_often.`; line 1130, `guard_marked(every_so_often, no)`: the mark is no guard; lines 1132 to 1145, `often_marked/2`, `is_often/2` and `n_is_often/2`; line 306, the fault `listed_often(Schema, Role)`.
+
+2. programs/gsc/check.glp lines 224 to 236: a role marked every_so_often may add and delete nothing, as a guarding role may, so changes_nothing is not raised for it (`role_inert`, `either/3`); line 441: a listed role carrying the mark is the fault listed_often, as a listed role carrying ? is listed_guarded.
+
+3. programs/gsc/compile.glp line 1068: the line printed for listed_often.
+
+4. programs/gsc/notation.glp lines 268 to 298: a schema a role of which carries the mark is printed with "every so often" before its head, as `every so often update(Carol, Alice; b) :`.
+
+vGLP's compiler on the branch takes the mark as no guard (self.glp lines 32, 187 and 191; cvac.glp line 1907; text.glp lines 74, 3508 and 3825), refuses a contract with listed_often as it does one with listed_guarded (cvac.glp line 152), and keeps the every_so_often parts committed for the chooser (text.glp lines 166, 1299 to 1300 and 2212 to 2242).  cascade.sh counts a head marked every so often among the schemas.
+

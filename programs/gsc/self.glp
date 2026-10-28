@@ -102,7 +102,8 @@ Bases ::= [] ; [Base | Bases].
 % listed role pi_I[rho(*, u_2, ..., u_r)] of the agent role pi_I, Args its
 % arguments u_2, ..., u_r (GSC 8064cfb); its Guard is unguarded, and a listed
 % role carrying ? is refused (listed_guarded).
-Guard     ::= guarded ; unguarded.
+% every_so_often (the experiment GFF-chooser, on its branch; GFF's clause 5, "Every so often, Carol updates their friend Alice", Udi, 2026-10-28): the mark of a role whose act recurs, which is no guard and may add and delete nothing (programs/vglp/cva/compiler/CHOOSER.md, "For GSC").
+Guard     ::= guarded ; unguarded ; every_so_often.
 RoleKind  ::= listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
@@ -302,6 +303,7 @@ Fault ::= no_introductory_act
         ; listed_base(Constant, Integer)
         ; listed_signed(Constant, Integer)
         ; listed_guarded(Constant, Integer)
+        ; listed_often(Constant, Integer)
         ; multiplicity_not_added(Constant, Integer, Atom)
         ; multiplicity_not_numeric(Constant, Integer, Atom)
         ; multiplicity_not_whole(Constant, Integer, Atom)
@@ -1125,6 +1127,23 @@ nth_rs([_|Xs], I, R?) :- I? > 1, integer(I?), ground(Xs?) |
 procedure guard_marked(Guard?, Ans).
 guard_marked(guarded, yes).
 guard_marked(unguarded, no).
+guard_marked(every_so_often, no).
+
+% Whether a role carries the mark every_so_often (CHOOSER.md, "For GSC").
+procedure often_marked(Guard?, Ans).
+often_marked(every_so_often, yes).
+often_marked(guarded, no).
+often_marked(unguarded, no).
+
+procedure is_often(RoleSpec?, Ans).
+is_often(RS, R?) :- ground(RS?) |
+    rs_guard(RS?, G),
+    often_marked(G?, R).
+
+procedure n_is_often(NRoleSpec?, Ans).
+n_is_often(RS, R?) :- ground(RS?) |
+    nrs_guard(RS?, G),
+    often_marked(G?, R).
 
 % ---------------------------------------------------------------------------
 % Reflexive predicates (GAI's appendix "Contracts with Wards")

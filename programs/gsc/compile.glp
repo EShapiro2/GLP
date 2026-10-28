@@ -1065,6 +1065,11 @@ malformed_lines([listed_guarded(S, I)|Fs], T,
                  'has a listed role carrying the mark ?, which only an agent role may carry;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+malformed_lines([listed_often(S, I)|Fs], T,
+                [S?, 'at role', I?,
+                 'has a listed role carrying the mark every so often, which only an agent role may carry;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
 malformed_lines([multiplicity_not_added(S, I, _)|Fs], T,
                 [S?, 'at role', I?,
                  'carries a multiplicity on an atom it neither adds nor deletes;'|R?]) :-
