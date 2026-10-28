@@ -2,13 +2,10 @@
 %%
 %% The person reads what the dispatcher draws on the person channel: the agent's request questions, each showing the agent's own key and the persons it knows and taking one request; the program's output, construct 0, drawn whole as it grows, on which the agent writes its view when it starts and whenever it changes, and its notices; and the approval questions Start raises (vGLP, Section 5.4, "The compilation").  The person's screen shows the last view written and the notices written after it.  Its script is a list of steps (self.glp, Step).  A script whose tail is not yet given stops there: the person takes no further step, and reads and reports nothing more, until the tail is given.
 %%
-%% The roles are the persons of GFF's play (Code_inbox.md, GFF #1 Cowork, 2026-10-27 16:34 UTC, and its revisions of 17:21, 18:39, 19:2x and 20:25 UTC): Alice, Bob, Carol, Dave and Eve; the friendships Alice and Bob, Bob and Carol, Carol and Dave, Dave and Eve, each the first meeting the second by their key, the second answering yes to its hello, and then offering the second friendship, who answers yes (GKK:2, GSG:1).  Friends follow each other, by an unguarded act each machine takes once they are friends (GFF:2, friends_follow); a person's one step of following another is Follow, follow (GFF:2); the asking and the following through a friend are unguarded acts, which the person's machine takes once they are enabled (GFF:2, GFF:3; vGLP, Section 5.4, "Triggers").  The items are utterances signed by alice at their posting (GFF:1; GSC, Definition "Binding": admissible):
-%%   alice  establishes her identity (GKK:1); meets bob and befriends him; posts the first item and the second (GFF:1); then her script ends in the play's tail.
-%%   bob    establishes his identity; answers yes to alice's meeting and friendship, by which the two follow each other (GFF:2, friends_follow); meets carol and befriends her; once he follows alice and both items have reached him, introduces alice to carol (GKK:3), whom carol must know to decide to follow her (GFF:2).
-%%   carol  establishes her identity; answers yes to bob's meeting and friendship; meets dave and befriends him; answers yes to bob's introducing alice; once she knows alice, decides to follow her; once she follows her and both items have reached her, introduces alice to dave; then her script ends in the play's tail.
-%%   dave   as carol, one friend further: answers yes to carol's meeting and friendship; meets eve and befriends her; answers yes to carol's introducing alice; decides to follow alice; once he follows her and both items have reached him, introduces alice to eve.
-%%   eve    establishes her identity; answers yes to dave's meeting and friendship and to his introducing alice; decides to follow alice; waits until the third item holds at her, signed by alice, bob, carol and dave.
-%% Each person introduces the next only once both items have reached them, so that no delivery to them is open while their introduction is: an attempt that yields is proposed again, and the person introduced is asked again, where their script answers once.
+%% The roles are the persons of GFF's two plays (plays.glp; GFF #1 Cowork, Code_inbox.md, 2026-10-28 06:14 UTC, on the branch GFF-chooser).  Friends follow each other, by an act each machine takes once they are friends (GFF:2, friends_follow); a person follows a non-friend through a friend who follows them by their Follow, follow_through (GFF:2), and ceases by their Unfollow (GFF:3); a friend's machine updates them every so often that it follows an agent, friend_follows (GFF:5, update, update_ceased, as GFF's chooser schedules them, chooser.glp).  The items are utterances signed by alice at their posting (GFF:1; GKK:4).
+%%   play_feeds: alice befriends bob, bob carol, carol dave and dave eve, each the first meeting the second by their key and offering them friendship, each answering yes (GKK:2, GSG:1); alice posts two items.  Once bob follows alice and both items have reached him, he introduces alice to carol (GKK:3); once bob's update that he follows alice has reached her, carol follows alice through bob; once both items have reached her signed by bob, she introduces alice to dave, who likewise follows through carol, and dave introduces her to eve, who follows through dave.
+%%   play_choice: the roles choice_alice to choice_eve: alice befriends bob and carol and posts one item; carol befriends dave, dave frank, and eve bob and frank; carol introduces alice to dave, who follows her through carol once carol's update has reached him; dave introduces her to frank, who follows through dave; eve, introduced to alice by bob, follows her through bob and through frank once their updates have reached her, holds the item from each, and ceases her following through frank.
+%% Each person introduces the next only once the items have reached them, so that no delivery to them is open while their introduction is: an attempt that yields is proposed again, and the person introduced is asked again, where their script answers once.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Last  ::= last(List(Atom), List(Key)) ; nolast.
@@ -54,7 +51,8 @@ script(carol, T, [own([C1], propose(establish(C1?))), wait(holds(identity)),
                   own([C2], propose(acquaint(C2?, dave))), wait(holds(knows(dave))),
                   own([C3], propose(befriend(C3?, dave))), wait(holds(friend(dave))),
                   approval(introduce(bob, carol, alice), yes), wait(holds(knows(alice))),
-                  own([C4], propose(follow(C4?, alice))), wait(holds(following(alice))),
+                  wait(holds(friend_follows(bob, alice))),
+                  own([C4], propose(follow_through(C4?, bob, alice))), wait(holds(follows(alice, bob))),
                   wait(holds(item(speech(speech(utterance('First item'), alice), bob), alice))),
                   wait(holds(item(speech(speech(utterance('Second item'), alice), bob), alice))),
                   own([C5], propose(introduce(C5?, dave, alice))) | T?]).
@@ -64,7 +62,8 @@ script(dave, T, [own([D1], propose(establish(D1?))), wait(holds(identity)),
                  own([D2], propose(acquaint(D2?, eve))), wait(holds(knows(eve))),
                  own([D3], propose(befriend(D3?, eve))), wait(holds(friend(eve))),
                  approval(introduce(carol, dave, alice), yes), wait(holds(knows(alice))),
-                 own([D4], propose(follow(D4?, alice))), wait(holds(following(alice))),
+                 wait(holds(friend_follows(carol, alice))),
+                 own([D4], propose(follow_through(D4?, carol, alice))), wait(holds(follows(alice, carol))),
                  wait(holds(item(speech(speech(speech(utterance('First item'), alice), bob), carol), alice))),
                  wait(holds(item(speech(speech(speech(utterance('Second item'), alice), bob), carol), alice))),
                  own([D5], propose(introduce(D5?, eve, alice))) | T?]).
@@ -72,9 +71,8 @@ script(eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity)),
                 approval(acquaint(dave, eve), yes),
                 approval(befriend(dave, eve), yes),
                 approval(introduce(dave, eve, alice), yes), wait(holds(knows(alice))),
-                own([E2], propose(follow(E2?, alice))), wait(holds(following(alice))),
-                wait(holds(item(speech(speech(speech(speech(utterance('Third item'), alice), bob), carol), dave), alice))) | T?]).
-%% The scripts of the play of the choice (plays.glp, play_choice), each role named for its person: alice, the author, befriends bob and carol and posts one item; carol befriends dave, and dave frank, a chain along which the item reaches frank signed by alice, carol and dave; eve befriends bob and frank; once frank holds the item, bob introduces alice to eve, who decides to follow her.  Eve's machine asks bob and frank (GFF:3); bob answers with a path of one signature, alice's, and frank with one of three, alice's, carol's and dave's; and her machine follows alice through bob, the friend with the shortest path to her (GFF:2; the Algorithms section of GFF.txt, chooser.glp).
+                wait(holds(friend_follows(dave, alice))),
+                own([E2], propose(follow_through(E2?, dave, alice))), wait(holds(follows(alice, dave))) | T?]).
 script(choice_alice, T, [own([A1], propose(establish(A1?))), wait(holds(identity)),
                          own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
                          own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
@@ -101,7 +99,8 @@ script(choice_dave, T, [own([D1], propose(establish(D1?))), wait(holds(identity)
                         own([D2], propose(acquaint(D2?, frank))), wait(holds(knows(frank))),
                         own([D3], propose(befriend(D3?, frank))), wait(holds(friend(frank))),
                         approval(introduce(carol, dave, alice), yes), wait(holds(knows(alice))),
-                        own([D4], propose(follow(D4?, alice))), wait(holds(following(alice))),
+                        wait(holds(friend_follows(carol, alice))),
+                        own([D4], propose(follow_through(D4?, carol, alice))), wait(holds(follows(alice, carol))),
                         wait(holds(item(speech(speech(utterance('First item'), alice), carol), alice))),
                         own([D5], propose(introduce(D5?, frank, alice))) | T?]).
 script(choice_frank, T, [own([F1], propose(establish(F1?))), wait(holds(identity)),
@@ -110,7 +109,8 @@ script(choice_frank, T, [own([F1], propose(establish(F1?))), wait(holds(identity
                          approval(acquaint(eve, frank), yes),
                          approval(befriend(eve, frank), yes),
                          approval(introduce(dave, frank, alice), yes), wait(holds(knows(alice))),
-                         own([F2], propose(follow(F2?, alice))), wait(holds(following(alice))),
+                         wait(holds(friend_follows(dave, alice))),
+                         own([F2], propose(follow_through(F2?, dave, alice))), wait(holds(follows(alice, dave))),
                          wait(holds(item(speech(speech(speech(utterance('First item'), alice), carol), dave), alice))) | T?]).
 script(choice_eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity)),
                        own([E2], propose(acquaint(E2?, bob))), wait(holds(knows(bob))),
@@ -118,9 +118,13 @@ script(choice_eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity))
                        own([E4], propose(acquaint(E4?, frank))), wait(holds(knows(frank))),
                        own([E5], propose(befriend(E5?, frank))), wait(holds(friend(frank))),
                        approval(introduce(bob, eve, alice), yes), wait(holds(knows(alice))),
-                       own([E6], propose(follow(E6?, alice))), wait(holds(following(alice))),
-                       wait(holds(follows(alice, bob))),
-                       wait(holds(item(speech(speech(utterance('First item'), alice), bob), alice))) | T?]).
+                       wait(holds(friend_follows(bob, alice))),
+                       wait(holds(friend_follows(frank, alice))),
+                       own([E6], propose(follow_through(E6?, bob, alice))), wait(holds(follows(alice, bob))),
+                       own([E7], propose(follow_through(E7?, frank, alice))), wait(holds(follows(alice, frank))),
+                       wait(holds(item(speech(speech(utterance('First item'), alice), bob), alice))),
+                       wait(holds(item(speech(speech(speech(speech(utterance('First item'), alice), carol), dave), frank), alice))),
+                       own([E8], propose(unfollow(E8?, frank, alice))), wait(lacks(follows(alice, frank))) | T?]).
 script(_, T, T?) :- otherwise | true.
 
 %% The person.
