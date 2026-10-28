@@ -7,6 +7,6 @@
 GFF-FR: Fault-Resilient Feeds and Followers
 Alice, Bob, Carol and Dave are agents.
 1. ■ Redundant following.  Alice, who follows Bob through Carol, also follows Bob through their friend Dave that follows Bob.
-2. ■ Redundant forwarding.  Alice, who follows Bob through Carol and through Dave and received an item of Bob's feed from Carol and not from Dave, forwards it to Dave.
+2. ■ Redundant forwarding.  Alice, who follows Bob through Carol and through Dave and received from Carol an item of Bob's feed not signed by Dave, forwards it to Dave.
 Pragmas
 % Algorithms: Redundant following: when Alice wants to follow Bob, Alice's machine follows Bob through two friends known to follow Bob, when there are two (GFF-FR:1); Redundant forwarding is taken whenever such an item arrives (GFF-FR:2).
