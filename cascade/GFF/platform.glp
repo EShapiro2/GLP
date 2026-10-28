@@ -2044,7 +2044,14 @@ cache_find1(yes, I, _, _, _, _, cls(I?)).
 cache_find1(no, _, Rs, B, Ps, Is, R?) :- cache_find(Rs?, B?, Ps?, Is?, R).
 
 procedure new_info(Class?, Deltas?, Peer?, Info).
-new_info(C, Ps, Id, I?) :- ground(Ps?) | contract_schemas(Ss), reflexive_preds(Rf), mates_of(Ss?, Ps?, Ms0), dedup_mates(Ms0?, Ms1), deltas_peers(Ps?, Q), new_info0(C?, Ps?, Ms1?, Q?, Rf?, Id?, I).
+new_info(C, Ps, Id, I?) :- ground(Ps?), ground(C?) | contract_schemas(Ss), reflexive_preds(Rf), mates_of(Ss?, Ps?, Ms0), own_mate(C?, Ps?, Mc), app(Mc?, Ms0?, Ms00), dedup_mates(Ms00?, Ms1), deltas_peers(Ps?, Q), new_info0(C?, Ps?, Ms1?, Q?, Rf?, Id?, I).
+
+procedure own_mate(Class?, Deltas?, Mates).
+own_mate(C, Ps, M?) :- ground(C?), ground(Ps?) | binding_of(C?, Nm, B), schema_entry(Nm?, S), own_mate1(S?, Nm?, B?, Ps?, M).
+
+procedure own_mate1(Schema?, Constant?, Binding?, Deltas?, Mates).
+own_mate1(schema(_, _, Rs), Nm, B, Ps, M?) :- mates_check([B?], Nm?, Rs?, Ps?, M).
+own_mate1(lschema(_, _, _, _), _, _, _, []).
 
 procedure new_info0(Class?, Deltas?, Mates?, Peers?, Preds?, Peer?, Info).
 new_info0(C, Ps, Ms1, Q, Rf, Id, I?) :- ground(C?), ground(Q?), ground(Rf?) | live_mates(Ms1?, Q?, Rf?, Ms2), binding_of(C?, Nm, B), class_mates(Nm?, B?, Ms2?, Q?, Rf?, Ms), new_info1(C?, Ps?, Ms?, Id?, I).

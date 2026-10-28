@@ -618,6 +618,8 @@ interface([
   compiled(cache_find, 5),
   compiled(cache_find1, 7),
   compiled(new_info, 4),
+  compiled(own_mate, 3),
+  compiled(own_mate1, 5),
   compiled(new_info0, 7),
   compiled(new_info1, 5),
   compiled(info_q, 2),
