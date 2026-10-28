@@ -35,7 +35,7 @@ Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
-Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+Guard     ::= guarded ; unguarded ; every_so_often ; guarded_at(Constant).
 RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
@@ -115,12 +115,12 @@ contract_named(gff,
                        atom(follower, [role(2), pvar(b)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)])]),
         rs(unguarded, [atom(item, [sgn(x, 1), pvar(b)])], [], [atom(identity, [])], [])]),
-%% GFF:5, Updating.  Carol updates their friend Alice that Carol follows b: an act of the machines, 'every so often'; Carol's role changes nothing, which the checker allows on this branch for an unguarded act (Udi, 2026-10-28: the checker is relaxed, and the implementation optimises when).
+%% GFF:5, Updating.  'Every so often, Carol updates their friend Alice' that Carol follows b: an act of the machines; Carol's role is marked every_so_often, the mark of the clause, which lets a role change nothing --- the act recurs, and how often is the implementation's (Udi, 2026-10-28; a construct of the language on this branch, proposed to GSC).
     schema(update, ['Carol', 'Alice'], [pvar(b)],
-       [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(following, [pvar(b)])], []),
+       [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(following, [pvar(b)])], []),
         rs(unguarded, [atom(friend_follows, [role(1), pvar(b)])], [], [atom(identity, [])],
                       [atom(friend_follows, [role(1), pvar(b)])])]),
 %% GFF:5, Updating.  Carol updates their friend Alice that Carol no longer follows b.
     schema(update_ceased, ['Carol', 'Alice'], [pvar(b)],
-       [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)])], [atom(following, [pvar(b)])]),
+       [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)])], [atom(following, [pvar(b)])]),
         rs(unguarded, [], [atom(friend_follows, [role(1), pvar(b)])], [atom(identity, [])], [])])]).
