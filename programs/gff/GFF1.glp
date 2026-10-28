@@ -19,7 +19,7 @@ Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
-Guard     ::= guarded ; unguarded ; every_so_often ; guarded_at(Constant).
+Guard     ::= guarded ; unguarded ; every_so_often ; received ; guarded_at(Constant).
 RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
@@ -91,14 +91,14 @@ contract_named(gff1,
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
                       [atom(identity, []), atom(feed, [svar(x)]), atom(friend_follower, [role(2)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)])]),
-        rs(unguarded, [atom(item, [svar(x), role(1)]), atom(path, [svar(x), svar(x)]), atom(from, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
+        rs(received, [atom(item, [svar(x), role(1)]), atom(path, [svar(x), svar(x)]), atom(from, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
 %% GFF:4, Delivery.  Carol, who follows b, forwards an item x of b's feed they hold, signed over (GKK:4), to their friend Alice, who follows b through Carol, and not back to the friend it came from.  An item is held as its identity, x, the author's signed act, with path(x, y), y the signatures over x along the path it came by, and from(x, c), the friend it came from (Udi, 2026-10-28); so x is sent to each friend once however many paths it came by.
     schema(deliver_on, ['Carol', 'Alice'], [pvar(b), svar(x), svar(y)],
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
                       [atom(identity, []), atom(following, [pvar(b)]), atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y)]),
                        atom(follower, [role(2), pvar(b)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)]), atom(from, [svar(x), role(2)])]),
-        rs(unguarded, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1)]), atom(from, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
+        rs(received, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1)]), atom(from, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
 %% GFF:5, Updating.  'Every so often, Carol updates their friend Alice' that Carol follows b: an act of the machines; Carol's role is marked every_so_often, the mark of the clause, which lets a role change nothing --- the act recurs, and how often is the implementation's (Udi, 2026-10-28; a construct of the language on this branch, proposed to GSC).
     schema(update, ['Carol', 'Alice'], [pvar(b)],
        [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(following, [pvar(b)])], []),
@@ -115,5 +115,5 @@ contract_named(gff1,
                       [atom(identity, []), atom(follows, [pvar(b), pvar(c)]), atom(follows, [pvar(b), role(2)]),
                        atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y)]), atom(from, [svar(x), pvar(c)])],
                       [atom(from, [svar(x), role(2)]), atom(sent, [svar(x), role(2)])]),
-        rs(unguarded, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1)]), atom(from, [svar(x), role(1)])], [],
-                      [atom(identity, []), atom(following, [pvar(b)])], [])])]).
+        rs(received, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1)]), atom(from, [svar(x), role(1)])], [],
+                      [atom(identity, [])], [])])]).
