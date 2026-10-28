@@ -74,3 +74,64 @@ Over all author-follower pairs, in bins by the author's number of followers --- 
 3. the fraction of deciders still waiting, for the first following.
 
 Path length and ratio are over the deciders who follow; a waiting decider has neither.  The tables give these, for discovery one, two and three hops deep, for the first following, after shortening by re-asking, after the earlier rule, and for the two shortest-path trees, and, one hop deep, after shortening by signatures, the five seeds pooled, and then a line per seed and bin.
+
+# timed.py: GFF, GFF-PS and GFF-FR in time
+
+A second script, for GFF #1's task of 2026-10-28 10:52 UTC (Udi approving): to compare GFF, GFF-PS and GFF-FR, with the same grid, seeds and authors as `paths.py`, now with time and with faults.  The contracts are `programs/gff/GFF.txt`, `GFF-PS.txt` and `GFF-FR.txt` as they stand on the branch GFF-chooser at `df374e36`, their clauses and Algorithms lines.
+
+## How to run it
+
+    cd programs/gff/paths && /usr/bin/python3 timed.py
+
+Options: `--q 1 2 4`, `--seeds 1 2 3 4 5`, `--n 100`, `--K 5000`, `--faults 0 0.00001 0.0001`, `--down 1000`, `--scenarios GFF GFF-PS GFF-FR-random GFF-FR-far`, `--out <directory>`.  It writes `tables/timed-q<q>-f<fault rate>.md`, one table per q and fault rate.  The grid is not scaled down: the run is at n = 100.
+
+The run of all three q, five seeds each, the four scenarios at each of the three fault rates, took 1004 seconds on Udi's Mac, sequentially: 44 to 93 seconds a seed, 3 to 10 seconds a scenario at a fault rate.  Each table gives the run time of each scenario over the five seeds.
+
+## The graph, the authors and the seeds
+
+They are those of `paths.py`: `timed.py` draws them with its functions from `random.Random(s)` in the same order, so for the same q and s the grid, the friendships, the authors and their followers are the same.  From the same generator it then draws the order of arrivals, the posting offsets, and one integer from which are seeded the faults, one generator per fault rate, and each scenario's own choices, one generator per scenario.  Every scenario of a run therefore has the same arrivals, the same posting times and, at a fault rate, the same faults.
+
+## Time
+
+The steps are discrete.  The friendships, those of the grid and the long-range ones, and the following requests, a decided follower coming to want to follow their author (GFF:2), are put in one random order, interleaved, and one arrives at each step.  Each author posts an item every K = 5000 steps, at an offset of their own drawn uniformly in 0 to K - 1; with 80,000 to 150,000 arrivals, an author posts about 20 to 30 items while the graph grows.  A message --- an item, an update, a request to follow through a friend or to cease --- sent at one step is received at the next: a message takes one step per hand.  A friendship takes effect between the two at once; what each machine does on it is done by that machine.  The run ends 2K steps after the last arrival, and the items posted up to K steps after the last arrival are measured, each having had at least K steps to arrive.
+
+## GFF
+
+1. Friends follow each other (GFF:2), and the author sends every item they post to every friend (GFF:5).
+2. Updating (GFF:6 and its Algorithms line): Carol updates every friend whenever Carol comes to follow an agent, by friendship or through a friend, and a new friend upon befriending, with the list of all Carol follows.  An update is a message.  Alice's machine learns from the updates which friends follow whom, in the order the updates arrive.
+3. Following via Friend (GFF:3 and its Algorithms line): when Alice wants to follow Bob, Alice's machine follows Bob through the first friend known to follow Bob, and through no other while that following stands.  With no friend known to follow, Alice waits, and follows when an update tells her of one.  Alice follows through Carol by a message to Carol, after which Carol forwards Bob's items to Alice (GFF:5).  Alice comes to follow Bob, and updates her friends, when she sends it.
+4. A follower who becomes a friend of the author ceases every following of the author through a friend and follows by friendship.  The mail and the contract leave it open; GFF:2 confines wanting to follow through a friend to one who is not a friend.
+5. No one ceases to want to follow, so Unfollowing (GFF:4) is not exercised, and no following rests on a friend who has ceased to follow.
+6. An item carries the signatures of its path, the author's first (GKK:4 on GFF-chooser).  The hands an item took to reach a follower are the signatures on the first copy the follower received.
+
+## GFF-PS
+
+GFF-PS:1 and its Algorithms line, on arrival: Alice, who follows Bob through Carol and receives an item of Bob's feed signed by a friend Dave, follows Bob through Dave instead, by a message to each of the two.  With several such friends, Alice takes the one nearest the author on the item's path; the contract leaves which one open.  Under GFF Alice receives Bob's items only through Carol, so every signer is nearer Bob than Carol, and a switch never makes a cycle.
+
+## GFF-FR
+
+GFF-FR:1 and its Algorithms line: Alice's machine follows Bob through two friends known to follow Bob when there are two, and through the one when there is one, adding a second when another becomes known.  Two variants of the choice, as the mail asks:
+
+1. random: the two chosen uniformly at random among the friends known to follow;
+2. far apart: the two whose paths to Bob share the fewest agents, the author not counted, and with one already followed through, the one whose path shares the fewest with its path.  A path is the chain of first followings from the friend to Bob at the time.  This is the simulator's knowledge: the contract gives Alice no means to learn a friend's path before items arrive, and the mail does not say how she learns it.
+
+GFF-FR:2 and its Algorithms line, on arrival: Alice, who follows Bob through Carol and Dave and receives an item first from Carol, forwards it to Dave.
+
+## Comparison 3, GFF-PS and GFF-FR together: not run
+
+The two contracts together do not say what Alice does.  Under GFF-FR:2, Alice receives items from a friend Eve who follows Bob through Alice: Eve, following through Carol and Alice and receiving an item first from Carol, forwards it to Alice, signed by Eve.  GFF-PS:1 then has Alice follow Bob through Eve instead, which is a cycle; once Alice's other following is replaced in the same way, Alice and Eve receive nothing of Bob's.  GFF-PS:1 also does not say which of Alice's two followings Dave replaces.  The fix is GFF's to make in GFF-PS:1, for example "signed by their friend Dave, nearer to Bob than Carol, through whom the item arrived"; the script runs comparison 3 once the clause says it.
+
+## Faults
+
+Each agent, independently, stays up for a stretch drawn as ceil(Exp(mean 1/F)) steps and then goes down for ceil(Exp(mean D)) steps, F being the fault rate per agent per step and D the mean down stretch, here D = 1000 and F = 0, 0.00001 and 0.0001, about 0%, 1% and 9% of agent-steps down.  A down agent takes nothing: the messages sent to it, and the arrivals concerning it, are kept and taken, in the order sent, when it comes back.  A down author does not post.  Faults are applied to every scenario; comparison 2 is GFF against GFF-FR at the fault rates above 0, and comparison 1 is GFF against GFF-PS at 0, the tables giving every scenario at every rate.
+
+## The measures
+
+They are per item, by the author's number of decided followers in powers of ten as in `paths.py`, pooled over the seeds.  An item's followers are the decided followers who want to follow the author and follow them, by friendship or through a friend, when it is posted; the waiting fraction is of those who want to follow at posting and do not.  Over an item's followers:
+
+1. the share reached by the end of the run;
+2. the hands the first copy took to reach each;
+3. the steps it took, which the mail does not ask for and which show the faults, hands being unchanged by a delay;
+4. the messages of the item sent, to friends and forwarders as well as to the followers, over the followers reached, the items reaching none left out.
+
+For GFF and GFF-PS without faults: the hands against the distance in the friendship graph as it stands at posting, which is the tree of shortest paths over the whole graph, and against the distance in the subgraph of the author and all following the author at posting, which is the tree over the followers; the same by the fifth of the arrivals in which the item was posted; and the switches.  The tables also give, per scenario, the update messages and the messages to follow through or cease to follow through a friend.
