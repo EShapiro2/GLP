@@ -717,6 +717,8 @@ shape_faults(lt(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_fa
 shape_faults(ge(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_faults([X?, Y?], Nm?, [], R).
 shape_faults(gt(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_faults([X?, Y?], Nm?, [], R).
 shape_faults(succ(_, _), _, []).
+shape_faults(signed(_, _), _, []).
+shape_faults(unsigned(_, _), _, []).
 
 procedure num_schemas(NContract?, Faults).
 num_schemas([], []).

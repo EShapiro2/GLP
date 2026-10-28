@@ -43,7 +43,7 @@ Reaches   ::= [] ; [Reach | Reaches].
 %% A schema with a constraint on its numeric variables is nschema(Name, Vars, Constraint, Roles), the constraint "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"), as programs/gsc/self.glp writes it at GSC-unob3 62fb0342: true, and(C1, C2), and eq, le, lt, ge and gt of two expressions, X = Y, X =< Y, X < Y, X >= Y and X > Y, with succ(X, Y), Y = X + 1; an expression a numeric argument, plus(X, Y), minus(X, Y) or mul(X, Y); or(C1, C2) is in the type, a contract carrying it being refused by the checker, malformed(constraint_not_conjunction(...)).
 Constraint ::= true ; and(Constraint, Constraint)
              ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
-             ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
+             ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg) ; signed(Arg, Arg) ; unsigned(Arg, Arg)
              ; or(Constraint, Constraint).
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 Schema    ::= schema(Constant, Args, RoleSpecs)
@@ -246,6 +246,8 @@ con_args(lt(X, Y), A?) :- exprs_args(X?, Y?, A).
 con_args(ge(X, Y), A?) :- exprs_args(X?, Y?, A).
 con_args(gt(X, Y), A?) :- exprs_args(X?, Y?, A).
 con_args(succ(X, Y), [X?, Y?]).
+con_args(signed(X, Y), [X?, Y?]).
+con_args(unsigned(X, Y), [X?, Y?]).
 con_args(or(C1, C2), A?) :- con_args(C1?, A1), con_args(C2?, A2), app(A1?, A2?, A).
 procedure exprs_args(Expr?, Expr?, Args).
 exprs_args(X, Y, A?) :- expr_args(X?, A1), expr_args(Y?, A2), app(A1?, A2?, A).

@@ -1113,3 +1113,6 @@ cons_conj(gt(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(gt,
 cons_conj(succ(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) |
     cmp_atoms(eq, plus(X?, num(1)), Y?, E?, R).
 cons_conj(or(_, _), _, [equ(lin([], 1))]).
+% signed and unsigned name no number, and the checker drops them as true (CHOOSER.md, "For GSC").
+cons_conj(signed(_, _), _, []).
+cons_conj(unsigned(_, _), _, []).

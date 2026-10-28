@@ -189,7 +189,7 @@ ListTuples ::= [] ; [PeerLists | ListTuples].
 Schemas   ::= [] ; [Schema | Schemas].
 Preds     ::= [] ; [Constant | Preds].
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): an argument of an atom may be a number or a numeric variable, num(X), the number X where X is a number and the variable X otherwise; a schema may carry a constraint on its numeric variables, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"), as programs/gsc writes it: true, and(C1, C2), eq, le, lt, ge and gt of two expressions (X = Y, X =< Y, X < Y, X >= Y, X > Y), succ(X, Y) (Y = X + 1) and or(C1, C2); an expression is a numeric argument, plus(X, Y), minus(X, Y) or mul(X, Y).  The values are whole numbers, Integer, the realisation's type (GSC, ibid.: "Which types the values have --- numbers, strings, dates --- is the realisation's").  schema_numeric(Name, numeric(C, Ls, R)), which the compiler prints from the contract, gives a schema's constraint C, its variables local to a role, Ls, and the role whose local variables the constraint names, at(I), or every where it names none: "a constraint is local to the role whose local variables it names, and to every role where it names none, which each checks" (ibid.).
-Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint).
+Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; signed(Var, Var) ; unsigned(Var, Var).
 Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 CRole     ::= every ; at(Integer).
 Numeric   ::= numeric(Constraint, Vars, CRole).
@@ -4614,6 +4614,20 @@ con_holds(ge(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?,
 con_holds(gt(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_gt(A?, C?, R).
 con_holds(succ(X, Y), B, R?) :- ground(B?) | num_of(X?, B?, A), num_of(Y?, B?, C), num_succ(A?, C?, R).
 con_holds(or(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), or(R1?, R2?, R).
+%% signed(X, Y), that the agent X signed the speech act Y, and unsigned(X, Y), that X did not, read off Y's signatories, in order, the signers of the nesting speech(..., P) (GKK:4; deliver_on signs over by sgn(y, 1); CHOOSER.md beside the compiler, "For vGLP"); where the binding leaves either unbound, it holds not.
+con_holds(signed(X, Y), B, R?) :- ground(B?) | lookup(X?, B?, Fx), lookup(Y?, B?, Fy), signed_found(Fx?, Fy?, R).
+con_holds(unsigned(X, Y), B, R?) :- ground(B?) | lookup(X?, B?, Fx), lookup(Y?, B?, Fy), unsigned_found(Fx?, Fy?, R).
+procedure signed_found(Found?, Found?, YesNo).
+signed_found(found(p(P)), found(s(S)), R?) :- ground(P?), ground(S?) | signatory(P?, S?, R).
+signed_found(_, _, no) :- otherwise | true.
+procedure unsigned_found(Found?, Found?, YesNo).
+unsigned_found(found(p(P)), found(s(S)), R?) :- ground(P?), ground(S?) | signatory(P?, S?, R0), neg(R0?, R).
+unsigned_found(_, _, no) :- otherwise | true.
+%% Whether P is among the signatories of the speech act: its author, who signed its utterance, and each agent that signed it over.
+procedure signatory(Peer?, Speech?, YesNo).
+signatory(P, speech(_, Q), yes) :- P? =?= Q? | true.
+signatory(P, speech(utterance(_), _), no) :- otherwise | true.
+signatory(P, speech(speech(U, Q1), _), R?) :- otherwise | signatory(P?, speech(U?, Q1?), R).
 %% The value of an expression under the binding, num_is(K), or no_num where a number it names is not bound.
 procedure expr_val(Expr?, Binding?, NumRes).
 expr_val(plus(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(plus, A?, C?, R).
@@ -4696,6 +4710,8 @@ con_ext1(succ(X, Y), B, Bs?) :- ground(B?), ground(X?), ground(Y?) |
     num_of(X?, B?, A),
     num_of(Y?, B?, C),
     succ_ext(A?, C?, X?, Y?, B?, Bs).
+con_ext1(signed(_, _), B, [B?]).
+con_ext1(unsigned(_, _), B, [B?]).
 con_ext1(or(C1, C2), B, Bs?) :- ground(B?) |
     con_ext1(C1?, B?, Bs1),
     con_ext1(C2?, B?, Bs2),

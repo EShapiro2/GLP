@@ -376,6 +376,13 @@ latex_constraint(succ(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
 latex_constraint(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     latex_constraint(C2?, T?, R1),
     latex_constraint(C1?, ['\\lor'|R1?], R).
+% signed(X, Y) as "X signed Y", unsigned(X, Y) as "X did not sign Y" (CHOOSER.md, "For VMAT").
+latex_constraint(signed(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_arg(Y?, T?, R1),
+    latex_arg(X?, ['\\text{ signed }'|R1?], R).
+latex_constraint(unsigned(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_arg(Y?, T?, R1),
+    latex_arg(X?, ['\\text{ did not sign }'|R1?], R).
 
 procedure latex_cmp(Expr?, Constant?, Expr?, Chunks?, Chunks).
 latex_cmp(X, Op, Y, T, R?) :- ground(X?), ground(Op?), ground(Y?), ground(T?) |

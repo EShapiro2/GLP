@@ -82,6 +82,14 @@ GFF also marks a schema's second role received (Udi, 2026-10-28, reported by GFF
 
 8. programs/gsc/compile.glp line 1138: the line printed for received_form.
 
+GFF's constraints `signed(X, Y)`, that the agent X signed the speech act Y, and `unsigned(X, Y)`, that X did not (Udi, 2026-10-28, reported by GFF #1 Cowork: a speech act carries its signatories, in order, which whoever holds it sees, GKK:4), stand in an nschema's constraint beside the linear ones.  On the branch:
+
+9. programs/gsc/self.glp lines 85 and 86: `Constraint` gains `signed(Arg, Arg) ; unsigned(Arg, Arg)`; lines 1545 and 1546, they name no value, so the numeric check takes no argument from them.
+
+10. programs/gsc/check.glp lines 720 and 721: no shape fault; programs/gsc/linear.glp lines 1117 and 1118: the checker drops them as true, as it drops the linear constraints for its conditions.
+
+11. programs/gsc/notation.glp lines 222 to 228: printed "Alice did not sign y" and "Dave signed y"; programs/gsc/compile.glp lines 379 to 385, in VMAT's proviso the same words.
+
 ## For VMAT
 
 VMAT gains CVA's send and receive, lifted, CVA being a special case of VMAT (Udi, 2026-10-28, reported by GFF #1 Cowork).  A sending, a schema of two roles whose second carries the mark received, compiles to two transactions, each guarded by none (programs/gsc/compile.glp lines 959 to 1019, `latex_sending`):
@@ -101,6 +109,8 @@ A received role is realised by CVA's send and a receive, with no two-phase commi
 2. The recipient takes the arriving `given(C)` in, where its state is in the domain of its effect in the part, and applies the effect, CVA's receive; otherwise it drops it (text.glp line 930, `message_cond(given(_), ...)`; line 1112, `dispatch_message(mgiven, ...)`; `receive_effect`).
 
 3. `Cargo` gains `given(Class)` (text.glp line 40); the mark is no guard everywhere the compiler reads a guard (compiler self.glp lines 33, 190 and 195; cvac.glp line 1909; text.glp line 75, `guard_roles`, `spec_unguarded`), and received_form refuses a contract (cvac.glp line 153).
+
+4. `signed(X, Y)` and `unsigned(X, Y)` are evaluated on the schema-binding when the platform binds the schema, as a constraint is (text.glp line 88, `Constraint`; lines 4568 to 4583, `con_holds`, `signed_found`, `signatory`; line 4663, `con_ext1`; compiler self.glp line 46 and lines 249 and 250; local.glp lines 135 and 136).  The platform reads the signatories of y from its nesting: `speech(utterance(t), a)` is signed by its author a, and each `speech(y', q)` around it by q, as deliver_on builds a path by `sgn(y, 1)`, the forwarder signing over; so `signatory(P, Y)` holds where P is the outermost signer or a signatory of the speech act inside.  Where the binding leaves X or Y unbound, the constraint does not hold.
 
 ## For vGLP, 6.2
 

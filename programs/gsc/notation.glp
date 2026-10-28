@@ -219,6 +219,13 @@ n_constraint(succ(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
 n_constraint(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     n_constraint(C2?, T?, R1),
     n_constraint(C1?, [' or '|R1?], R).
+% signed(X, Y) as "X signed Y", unsigned(X, Y) as "X did not sign Y" (CHOOSER.md, "For GSC").
+n_constraint(signed(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    n_arg(Y?, T?, R1),
+    n_arg(X?, [' signed '|R1?], R).
+n_constraint(unsigned(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    n_arg(Y?, T?, R1),
+    n_arg(X?, [' did not sign '|R1?], R).
 
 procedure n_cmp(Expr?, Constant?, Expr?, Chunks?, Chunks).
 n_cmp(X, Op, Y, T, R?) :- ground(X?), ground(Op?), ground(Y?), ground(T?) |

@@ -132,6 +132,8 @@ con_det(le(_, _), _, []).
 con_det(lt(_, _), _, []).
 con_det(ge(_, _), _, []).
 con_det(gt(_, _), _, []).
+con_det(signed(_, _), _, []).
+con_det(unsigned(_, _), _, []).
 con_det(succ(X, Y), Bd, D?) :- ground(Bd?), ground(X?), ground(Y?) |
     bound_arg(X?, Bd?, BX),
     bound_arg(Y?, Bd?, BY),

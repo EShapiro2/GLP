@@ -81,7 +81,9 @@ Mults      ::= [] ; [Mult | Mults].
 Constraint ::= true ; and(Constraint, Constraint)
              ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
              ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
-             ; or(Constraint, Constraint).
+             ; or(Constraint, Constraint)
+             ; signed(Arg, Arg) ; unsigned(Arg, Arg).
+% signed(X, Y), that the agent X signed the speech act Y, and unsigned(X, Y), that X did not (the experiment GFF-chooser; Udi, 2026-10-28, reported by GFF #1 Cowork: a speech act carries its signatories, in order, which whoever holds it sees, GKK:4): read beside the linear constraints, dropped by the checker as they are, and evaluated by the realisation when it binds the schema (CHOOSER.md, "For GSC").
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 Exprs      ::= [] ; [Expr | Exprs].
 % A schema's constraint, and the value variables it uses as multiplicities,
@@ -1539,6 +1541,9 @@ constraint_args(lt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_a
 constraint_args(ge(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
 constraint_args(gt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
 constraint_args(succ(X, Y), T, [X?, Y?|T?]).
+% signed and unsigned name an agent and a speech act, no value, so they give the numeric check no argument (CHOOSER.md, "For GSC").
+constraint_args(signed(_, _), T, T?).
+constraint_args(unsigned(_, _), T, T?).
 constraint_args(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     constraint_args(C2?, T?, R1),
     constraint_args(C1?, R1?, R).
