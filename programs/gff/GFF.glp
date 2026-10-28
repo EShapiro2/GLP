@@ -8,9 +8,12 @@
 %% printed from the term by a run of the cascade (schemas.txt).
 %%
 %% 2026-10-28, on the branch GFF-chooser, the contract in Udi's words.
-%% Fifteen schemas over ten predicates: identity and knows, GKK's; friend,
-%% GSG's; and GFF's seven: feed(x), at Alice, an item x posted to Alice's feed
-%% (GFF:1); follows_friend(b), at Alice, that Alice follows their friend b,
+%% Fifteen schemas over eleven predicates: identity and knows, GKK's; friend,
+%% GSG's; and GFF's eight: feed(x), at Alice, an item x posted to Alice's feed
+%% (GFF:1); follows_friend(b), at Alice, that Alice follows their friend b, and
+%% friend_follower(a), at b, that their friend a follows them (an atom of its
+%% own, so that the ending of a path never matches a friend's following; Code
+%% #16, 2026-10-28 09:17 UTC),
 %% follows(b, c), that Alice follows b through their friend c, following(b),
 %% once for each of these, and follower(a, b), at Carol, that a follows b
 %% through Carol (GFF:2); friend_follows(c, b), at Alice, Carol's update that
@@ -74,12 +77,12 @@ contract_named(gff,
        [rs(unguarded, [atom(follows_friend, [role(2)]), atom(following, [role(2)])], [],
                       [atom(identity, []), atom(friend, [role(2)])],
                       [atom(follows_friend, [role(2)])]),
-        rs(unguarded, [atom(follower, [role(1), role(2)])], [], [atom(identity, [])], [])]),
+        rs(unguarded, [atom(friend_follower, [role(1)])], [], [atom(identity, [])], [])]),
 %% GFF:2, Following.  A friend's following ends with the friendship.
     schema(friend_following_ended, ['Alice', 'Bob'], [],
        [rs(unguarded, [], [atom(follows_friend, [role(2)]), atom(following, [role(2)])],
                       [atom(identity, [])], [atom(friend, [role(2)])]),
-        rs(unguarded, [], [atom(follower, [role(1), role(2)])], [atom(identity, [])], [])]),
+        rs(unguarded, [], [atom(friend_follower, [role(1)])], [atom(identity, [])], [])]),
 %% GFF:2, Following.  Alice, who knows b but is not their friend, follows b through their friend Carol that follows b: Alice's act.
     schema(follow_through, ['Alice', 'Carol'], [pvar(b)],
        [rs(guarded,   [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])], [],
@@ -105,7 +108,7 @@ contract_named(gff,
 %% GFF:4, Delivery.  Bob sends an item x they posted to their friend Alice, who follows Bob by friendship; x carries Bob's signature from its posting (GKK:4).
     schema(deliver_own, ['Bob', 'Alice'], [svar(x)],
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
-                      [atom(identity, []), atom(feed, [svar(x)]), atom(follower, [role(2), role(1)]), atom(friend, [role(2)])],
+                      [atom(identity, []), atom(feed, [svar(x)]), atom(friend_follower, [role(2)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)])]),
         rs(unguarded, [atom(item, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
 %% GFF:4, Delivery.  Carol, who follows b, forwards an item x of b's feed they hold, signed over (GKK:4), to their friend Alice, who follows b through Carol.
