@@ -1,0 +1,101 @@
+%% chooser.glp --- the chooser of GFF-PS's app, the module chooser, which the platform's agent calls on each own trigger with the Proposes of the unguarded parts it opens whose condition holds, the longest waited first, its machine state as its view shows it, and the every_so_often parts it has committed as their initiator, newest first, each once (programs/vglp/cva/compiler/CHOOSER.md, "The seam"; the experiment GFF-chooser, approved by Udi on 2026-10-27, reported by GFF #1 Cowork).
+%%
+%% Written from the Algorithms section of GFF-PS's pragmas and of GFF's, which it extends, on the branch GFF-chooser.  Following via Friend: when Alice wants to follow Bob, Alice's machine follows Bob through the first friend known to follow Bob not through Alice, and through no other while that following stands, not through Alice; via_friend(Alice, Carol, Bob) is taken where Carol is known to follow Bob, friend_follows(Carol, Bob), and does not follow Bob through Alice, follower(Carol, Bob) not in Alice's state, and Alice follows Bob through fewer than 1 friend, follows(Bob, _); held otherwise.  Updating: update(Carol, Alice, b) is taken where the newer of update and update_ceased of Carol to Alice about b among the parts committed is not update, a new friend having neither, and update_ceased(Carol, Alice, b) where it is; each held otherwise.  Every other part is taken as the default takes it: of the parts, the first that the chooser does not hold.
+
+%% The types of the platform the chooser is written against, platform.vglp's, written again here so that the module carries them, as the record of a run of the cascade holds it beside the platform with no self.glp (cascade.sh); they agree with platform.vglp's and with self.glp's, as the import of choose/4 in platform.vglp requires.
+Peer      ::= Key.
+Speech    ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
+            ; befriend(Peer, Peer) ; unfriend(Peer, Peer) ; post(Peer, Speech) ; follow(Peer, Peer)
+            ; unfollow(Peer, Peer) ; friends_follow(Peer, Peer) ; friend_following_ended(Peer, Peer)
+            ; via_friend(Peer, Peer, Peer) ; cease_via(Peer, Peer, Peer)
+            ; path_broken(Peer, Peer, Peer) ; friendship_ended(Peer, Peer, Peer)
+            ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Peer, Speech, Speech)
+            ; update(Peer, Peer, Peer) ; update_ceased(Peer, Peer, Peer)
+            ; switch(Peer, Peer, Peer, Peer, Speech, Speech).
+Atom      ::= identity ; knows(Peer) ; friend(Peer) ; feed(Speech) ; wants(Peer)
+            ; follows_friend(Peer) ; following(Peer) ; friend_follower(Peer) ; follows(Peer, Peer)
+            ; follower(Peer, Peer) ; sent(Speech, Peer) ; item(Speech, Peer)
+            ; path(Speech, Speech, Peer) ; friend_follows(Peer, Peer).
+YesNo     ::= yes ; no.
+
+%% What the chooser returns: the part to take, by its class term, or none yet (CHOOSER.md, "The seam").
+Chosen    ::= take(Class) ; none_yet.
+%% What Carol last told Alice about b, by the parts committed: that Carol follows b, that Carol does not, or nothing.
+Told      ::= told_follows ; told_ceased ; told_nothing.
+
+exported procedure choose(List(Class)?, List(Atom)?, List(Class)?, Chosen).
+choose([], _, _, none_yet).
+choose([P | Ps], S, Of, C?) :-
+    ground(P?), ground(S?), ground(Of?) |
+    allowed(P?, S?, Of?, A),
+    choose1(A?, P?, Ps?, S?, Of?, C).
+
+procedure choose1(YesNo?, Class?, List(Class)?, List(Atom)?, List(Class)?, Chosen).
+choose1(yes, P, _, _, _, take(P?)).
+choose1(no, _, Ps, S, Of, C?) :- choose(Ps?, S?, Of?, C).
+
+%% Whether the part may be taken now.
+procedure allowed(Class?, List(Atom)?, List(Class)?, YesNo).
+allowed(via_friend(_, C, B), S, _, R?) :-
+    ground(C?), ground(B?), ground(S?) |
+    known_to_follow(S?, C?, B?, K0),
+    through_me(S?, C?, B?, M),
+    not_through(K0?, M?, K),
+    followings(S?, B?, 0, N),
+    allowed_via(K?, N?, R).
+allowed(update(_, A, B), _, Of, R?) :-
+    ground(A?), ground(B?) |
+    told(Of?, A?, B?, T),
+    due_follows(T?, R).
+allowed(update_ceased(_, A, B), _, Of, R?) :-
+    ground(A?), ground(B?) |
+    told(Of?, A?, B?, T),
+    due_ceased(T?, R).
+allowed(_, _, _, yes) :- otherwise | true.
+
+procedure allowed_via(YesNo?, Integer?, YesNo).
+allowed_via(yes, N, yes) :- N? < 1 | true.
+allowed_via(yes, N, no) :- N? >= 1 | true.
+allowed_via(no, _, no).
+
+%% known_to_follow(S, C, B, K): the state holds friend_follows(C, B).
+procedure known_to_follow(List(Atom)?, Peer?, Peer?, YesNo).
+known_to_follow([], _, _, no).
+known_to_follow([friend_follows(C1, B1) | _], C, B, yes) :- C1? =?= C?, B1? =?= B? | true.
+known_to_follow([_ | S], C, B, K?) :- otherwise | known_to_follow(S?, C?, B?, K).
+
+%% through_me(S, C, B, M): C follows B through Alice, follower(C, B) in Alice's state.
+procedure through_me(List(Atom)?, Peer?, Peer?, YesNo).
+through_me([], _, _, no).
+through_me([follower(C1, B1) | _], C, B, yes) :- C1? =?= C?, B1? =?= B? | true.
+through_me([_ | S], C, B, M?) :- otherwise | through_me(S?, C?, B?, M).
+
+%% A friend known to follow Bob and not through Alice.
+procedure not_through(YesNo?, YesNo?, YesNo).
+not_through(yes, no, yes).
+not_through(_, _, no) :- otherwise | true.
+
+%% followings(S, B, N0, N): N0 and the number of followings of B through a friend, follows(B, _), the state holds.
+procedure followings(List(Atom)?, Peer?, Integer?, Integer).
+followings([], _, N, N?).
+followings([follows(B1, _) | S], B, N0, N?) :- B1? =?= B?, integer(N0?) | N1 := N0? + 1, followings(S?, B?, N1?, N).
+followings([_ | S], B, N0, N?) :- otherwise | followings(S?, B?, N0?, N).
+
+procedure due_follows(Told?, YesNo).
+due_follows(told_follows, no).
+due_follows(told_ceased, yes).
+due_follows(told_nothing, yes).
+
+procedure due_ceased(Told?, YesNo).
+due_ceased(told_follows, yes).
+due_ceased(told_ceased, no).
+due_ceased(told_nothing, no).
+
+%% told(Of, A, B, T): the newer of update(_, A, B) and update_ceased(_, A, B) among the parts committed, newest first.
+procedure told(List(Class)?, Peer?, Peer?, Told).
+told([], _, _, told_nothing).
+told([update(_, A1, B1) | _], A, B, told_follows) :- A1? =?= A?, B1? =?= B? | true.
+told([update_ceased(_, A1, B1) | _], A, B, told_ceased) :- A1? =?= A?, B1? =?= B? | true.
+told([_ | Of], A, B, T?) :- otherwise | told(Of?, A?, B?, T).

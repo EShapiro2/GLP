@@ -1,0 +1,1860 @@
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+c
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+c
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+post
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+feed
+}
+(
+x
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+feed
+}
+(
+x
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+follow
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+wants
+}
+(
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+friend
+}
+(
+b
+)
+,
+\mathit{
+wants
+}
+(
+b
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+unfollow
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+wants
+}
+(
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+wants
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+friends_follow
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+follows_friend
+}
+(
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend_follower
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+follows_friend
+}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+friend_following_ended
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+follows_friend
+}
+(
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend_follower
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+follows_friend
+}
+(
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend_follower
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+via_friend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+wants
+}
+(
+b
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+cease_via
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+wants
+}
+(
+b
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+path_broken
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+follower
+}
+(
+\Bob
+,
+b
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+follows
+}
+(
+b
+,
+\Alice
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+follower
+}
+(
+\Bob
+,
+b
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+follows
+}
+(
+b
+,
+\Alice
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+following
+}
+(
+b
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+friendship_ended
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+deliver_own
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+sent
+}
+(
+x
+,
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+identity
+}
+,
+\mathit{
+feed
+}
+(
+x
+)
+,
+\mathit{
+friend_follower
+}
+(
+\Bob
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+sent
+}
+(
+x
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{sends } 
+langle 
+x
+ angle
+ \text{ to } \Bob
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\begin{align*}
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+x
+,
+\Alice
+)
+,
+\mathit{
+path
+}
+(
+x
+,
+x
+,
+\Alice
+)
+\}
+,\\
+&
+\text{on } 
+langle 
+x
+ angle
+ \text{ received from } \Alice
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+deliver_on
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+sent
+}
+(
+x
+,
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+identity
+}
+,
+\mathit{
+following
+}
+(
+b
+)
+,
+\mathit{
+item
+}
+(
+x
+,
+b
+)
+,
+\mathit{
+path
+}
+(
+x
+,
+y
+,
+c
+)
+,
+\mathit{
+follower
+}
+(
+\Bob
+,
+b
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+sent
+}
+(
+x
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{sends } 
+langle 
+b
+,
+c
+,
+x
+,
+y
+ angle
+ \text{ to } \Bob
+,\\
+&
+\text{provided } 
+\Bob
+\text{ did not sign }
+y
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\begin{align*}
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+x
+,
+b
+)
+,
+\mathit{
+path
+}
+(
+x
+,
+\mathrm{sgn}(
+y
+,
+\Alice
+)
+,
+\Alice
+)
+\}
+,\\
+&
+\text{on } 
+langle 
+b
+,
+c
+,
+x
+,
+y
+ angle
+ \text{ received from } \Alice
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+update
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend_follows
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend_follows
+}
+(
+\Alice
+,
+b
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+update_ceased
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend_follows
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend_follows
+}
+(
+\Alice
+,
+b
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+following
+}
+(
+b
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+switch
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+follows
+}
+(
+b
+,
+\mathit{Carol}
+)
+\}
+) \uplus 
+\{
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \setminus 
+\{
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+wants
+}
+(
+b
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+item
+}
+(
+x
+,
+b
+)
+,
+\mathit{
+path
+}
+(
+x
+,
+y
+,
+\mathit{Carol}
+)
+,
+\mathit{
+follows
+}
+(
+b
+,
+\mathit{Carol}
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\Bob
+\text{ signed }
+y
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
