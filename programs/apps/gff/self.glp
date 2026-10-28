@@ -12,7 +12,7 @@ Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Pee
             ; friends_follow(Peer, Peer) ; friend_following_ended(Peer, Peer)
             ; follow_through(Peer, Peer, Peer) ; path_broken(Peer, Peer, Peer)
             ; friendship_ended(Peer, Peer, Peer) ; unfollow(Peer, Peer, Peer)
-            ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Speech)
+            ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Speech, Speech)
             ; update(Peer, Peer, Peer) ; update_ceased(Peer, Peer, Peer).
 Proposal  ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; befriend(Peer, Peer) ; unfriend(Peer, Peer) ; post(Peer, Speech)
@@ -30,8 +30,9 @@ Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
 Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
 Atom      ::= identity ; knows(Peer) ; friend(Peer) ; feed(Speech) ; follows_friend(Peer)
-            ; following(Peer) ; follower(Peer, Peer) ; follows(Peer, Peer) ; sent(Speech, Peer)
-            ; item(Speech, Peer) ; friend_follows(Peer, Peer).
+            ; following(Peer) ; friend_follower(Peer) ; follows(Peer, Peer) ; follower(Peer, Peer)
+            ; sent(Speech, Peer) ; item(Speech, Peer) ; path(Speech, Speech) ; from(Speech, Peer)
+            ; friend_follows(Peer, Peer).
 Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking    ::= Attempt ; hello(Peer, Proposal).

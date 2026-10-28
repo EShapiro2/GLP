@@ -11,11 +11,12 @@ Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Pee
             ; friends_follow(Peer, Peer) ; friend_following_ended(Peer, Peer)
             ; follow_through(Peer, Peer, Peer) ; path_broken(Peer, Peer, Peer)
             ; friendship_ended(Peer, Peer, Peer) ; unfollow(Peer, Peer, Peer)
-            ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Speech)
+            ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Speech, Speech)
             ; update(Peer, Peer, Peer) ; update_ceased(Peer, Peer, Peer).
 Atom      ::= identity ; knows(Peer) ; friend(Peer) ; feed(Speech) ; follows_friend(Peer)
-            ; following(Peer) ; follower(Peer, Peer) ; follows(Peer, Peer) ; sent(Speech, Peer)
-            ; item(Speech, Peer) ; friend_follows(Peer, Peer).
+            ; following(Peer) ; friend_follower(Peer) ; follows(Peer, Peer) ; follower(Peer, Peer)
+            ; sent(Speech, Peer) ; item(Speech, Peer) ; path(Speech, Speech) ; from(Speech, Peer)
+            ; friend_follows(Peer, Peer).
 YesNo     ::= yes ; no.
 
 %% What the chooser returns: the part to take, by its class term, or none yet (CHOOSER.md, "The seam").

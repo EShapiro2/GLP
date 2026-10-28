@@ -24,7 +24,7 @@ play_feeds(A?, B?, C?, D?, E?) :-
     watch(E0?, E1, [holds(following(alice))],
           [own([P1, P2], propose(post(P1?, speech(utterance('Third item'), P2?)))),
            wait(holds(feed(speech(utterance('Third item'), alice))))], TA),
-    watch(E1?, E, [holds(item(speech(speech(speech(speech(utterance('Third item'), alice), bob), carol), dave), alice))],
+    watch(E1?, E, [holds(path(speech(utterance('Third item'), alice), speech(speech(speech(speech(utterance('Third item'), alice), bob), carol), dave)))],
           [own([C9], propose(unfollow(C9?, bob, alice))), wait(lacks(following(alice)))], TC).
 
 %% play_choice(A, B, C, D, F, E): GFF's second play (GFF #1 Cowork, Code_inbox.md, 2026-10-28 06:14 UTC), alice, bob, carol, dave, frank and eve, over six conversations: alice's and bob's, alice's and carol's, carol's and dave's, dave's and frank's, bob's and eve's, and frank's and eve's.  Alice befriends bob and carol and posts one item; carol befriends dave, dave frank, and eve bob and frank; carol introduces alice to dave, who follows her through carol once carol's update has reached him; dave introduces her to frank, who follows through dave, so that the item reaches frank signed by alice, carol and dave (person.glp, the roles choice_alice to choice_eve).  Once frank's screen shows the item, bob introduces alice to eve.  Told by bob's and frank's updates that each follows alice (GFF:5), eve follows alice through bob and through frank (GFF:2), holds the item from each, forwarded by bob and by carol, dave and frank, and ceases her following through frank (GFF:3).
@@ -44,7 +44,7 @@ play_choice(A?, B?, C?, D?, F?, E?) :-
     person # cued_person(frank, choice_frank, [], ch(WF?, GF), F0),
     run(miniapp(eve, ch(GE?, WE), ch([conversation(bob, ch(BE?, EB)), conversation(frank, ch(FE?, EF))], _), []), T?, M?),
     person # cued_person(eve, choice_eve, [], ch(WE?, GE), E),
-    watch(F0?, F, [holds(item(speech(speech(speech(utterance('First item'), alice), carol), dave), alice))],
+    watch(F0?, F, [holds(path(speech(utterance('First item'), alice), speech(speech(speech(utterance('First item'), alice), carol), dave)))],
           [own([B9], propose(introduce(B9?, eve, alice)))], TB).
 
 %% watch(Xs, Ys, Wants, Go, Out): Ys is the screen Xs, passed on unchanged; once its views have shown each of Wants in turn, Out is Go.
