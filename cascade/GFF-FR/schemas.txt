@@ -52,11 +52,11 @@ friendship_ended(Alice, Carol; b) :
 
 deliver_own(Bob, received Alice; x) :
     at Bob: identity, feed(x), friend_follower(Alice), friend(Alice), not sent(x, Alice), +sent(x, Alice)
-    at Alice: identity, +item(x, Bob), +path(x, x), +from(x, Bob)
+    at Alice: identity, +item(x, Bob), +path(x, x, Bob)
 
-deliver_on(Carol, received Alice; b, x, y) | Alice did not sign y :
-    at Carol: identity, following(b), item(x, b), path(x, y), follower(Alice, b), friend(Alice), not sent(x, Alice), +sent(x, Alice)
-    at Alice: identity, +item(x, b), +path(x, sgn(y, Carol)), +from(x, Carol)
+deliver_on(Carol, received Alice; b, c, x, y) | Alice did not sign y :
+    at Carol: identity, following(b), item(x, b), path(x, y, c), follower(Alice, b), friend(Alice), not sent(x, Alice), +sent(x, Alice)
+    at Alice: identity, +item(x, b), +path(x, sgn(y, Carol), Carol)
 
 every so often update(Carol, Alice; b) :
     at Carol: identity, friend(Alice), following(b)
@@ -66,6 +66,6 @@ every so often update_ceased(Carol, Alice; b) :
     at Carol: identity, friend(Alice), knows(b), not following(b)
     at Alice: identity, -friend_follows(Carol, b)
 
-redundant_forward(Alice, received Dave; b, x, y) | Dave did not sign y :
-    at Alice: identity, following(b), following(b), follows(b, Dave), item(x, b), path(x, y), not from(x, Dave), not sent(x, Dave), +sent(x, Dave)
-    at Dave: identity, +item(x, b), +path(x, sgn(y, Alice)), +from(x, Alice)
+redundant_forward(Alice, received Dave; b, c, x, y) | Dave did not sign y :
+    at Alice: identity, following(b), following(b), follows(b, Dave), item(x, b), path(x, y, c), not sent(x, Dave), +sent(x, Dave)
+    at Dave: identity, +item(x, b), +path(x, sgn(y, Alice), Alice)

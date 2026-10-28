@@ -17,9 +17,10 @@
 %% following(b), once for each following of b, and follower(a, b), at Carol,
 %% that a follows b through Carol (GFF:3); friend_follows(c, b), at Alice,
 %% Carol's update that Carol follows b (GFF:5); item(x, b), at a follower, an
-%% item x of b's feed, its identity, the act its author signed, with path(x, y),
-%% y the signatures over x along a path it came by, one for each path, and
-%% from(x, c), the friend it came from, and sent(x, a), at the sender, that x
+%% item x of b's feed, its identity, the act its author signed, with path(x, y, c),
+%% y the signatures over x along a path it came by and c the friend it came by
+%% that path from, one for each path (tied, so that Shortening reads the signatures of
+%% the path from the friend it leaves; Code's play, 2026-10-28), and sent(x, a), at the sender, that x
 %% was sent to a (GFF:4).  GKK:4, Signing, describes no act of its own.
 %%
 %% Three marks of this branch, GFF's proposals to the language (Udi,
@@ -123,14 +124,14 @@ contract_named(gff_fr,
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
                       [atom(identity, []), atom(feed, [svar(x)]), atom(friend_follower, [role(2)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)])]),
-        rs(received, [atom(item, [svar(x), role(1)]), atom(path, [svar(x), svar(x)]), atom(from, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
+        rs(received, [atom(item, [svar(x), role(1)]), atom(path, [svar(x), svar(x), role(1)])], [], [atom(identity, [])], [])]),
 %% GFF:4, Delivery.  'Carol forwards to Alice who follows Bob through Carol every item on Bob's feed not signed by Alice': a sending, signed over (GKK:4), with the constraint unsigned(Alice, y), 'Alice did not sign y', which the language gives (GKK:4, second half); x is sent to each friend once however many paths it came by.
-    nschema(deliver_on, ['Carol', 'Alice'], [pvar(b), svar(x), svar(y)], unsigned(role(2), svar(y)),
+    nschema(deliver_on, ['Carol', 'Alice'], [pvar(b), pvar(c), svar(x), svar(y)], unsigned(role(2), svar(y)),
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
-                      [atom(identity, []), atom(following, [pvar(b)]), atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y)]),
+                      [atom(identity, []), atom(following, [pvar(b)]), atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y), pvar(c)]),
                        atom(follower, [role(2), pvar(b)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)])]),
-        rs(received, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1)]), atom(from, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
+        rs(received, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1), role(1)])], [], [atom(identity, [])], [])]),
 %% GFF:5, Updating.  'Every so often, Carol updates their friend Alice' that Carol follows b, and that Carol no longer does; Carol's role is marked every_so_often.  Carol names b by knowing b (GKK:2), which is never undone.
     schema(update, ['Carol', 'Alice'], [pvar(b)],
        [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(following, [pvar(b)])], []),
@@ -139,11 +140,11 @@ contract_named(gff_fr,
     schema(update_ceased, ['Carol', 'Alice'], [pvar(b)],
        [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], [atom(following, [pvar(b)])]),
         rs(unguarded, [], [atom(friend_follows, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF-FR:2, Redundant forwarding.  Alice, who follows b through two friends, Dave among them, and holds an item x of b's feed not from Dave, forwards it to Dave: a sending, the machines' act.  'Through Carol and through Dave' is following(b) twice at Alice with follows(b, Dave); Carol is named by from(x, c) in the clause and not in the schema, which the compiler would refuse (Code #16, 2026-10-28).
-    nschema(redundant_forward, ['Alice', 'Dave'], [pvar(b), svar(x), svar(y)], unsigned(role(2), svar(y)),
+%% GFF-FR:2, Redundant forwarding.  Alice, who follows b through two friends, Dave among them, and received from Carol an item x of b's feed not signed by Dave, forwards it to Dave: a sending, the machines' act.  'Through Carol and through Dave' is following(b) twice at Alice with follows(b, Dave); Carol is c of path(x, y, c), bound from Alice's state (the relaxed rule, 2026-10-28); 'not signed by Dave' is the constraint.
+    nschema(redundant_forward, ['Alice', 'Dave'], [pvar(b), pvar(c), svar(x), svar(y)], unsigned(role(2), svar(y)),
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
                       [atom(identity, []), atom(following, [pvar(b)]), atom(following, [pvar(b)]), atom(follows, [pvar(b), role(2)]),
-                       atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y)])],
-                      [atom(from, [svar(x), role(2)]), atom(sent, [svar(x), role(2)])]),
-        rs(received, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1)]), atom(from, [svar(x), role(1)])], [],
+                       atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y), pvar(c)])],
+                      [atom(sent, [svar(x), role(2)])]),
+        rs(received, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1), role(1)])], [],
                       [atom(identity, [])], [])])]).
