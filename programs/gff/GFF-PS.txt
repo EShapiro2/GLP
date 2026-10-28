@@ -1,0 +1,11 @@
+% GFF-PS: Grassroots Feeds and Followers with Path Shortening --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GFF (Udi, 2026-10-28).  Named by letters and not a number, since GFF's extensions are not ordered (Udi, 2026-10-28).  The paper prints it in its box in the section on path shortening and cites its clause as GFF-PS:1.
+% Extends: GFF, Grassroots Feeds and Followers, GFF's (beside this file), and through it GSG and GKK, GSC's.  It cites their clauses whole and restates none.
+% Defines: shortening.  Alice, Bob, Carol and Dave are variables naming distinct agents.
+% Last changed: 2026-10-28, written by GFF #1 Cowork from the discussion with Udi: a friend who signed an item on Alice's path is nearer to Bob than the friend Alice follows Bob through, so Alice's machine follows Bob through that friend instead; the study of paths found that under shortest-path choice this switched no one, and that re-asking brought the paths to the tree of shortest paths; here the person's choice and the changes of the graph make it apply.
+% Schemas: GFF-PS.glp beside this file, GFF's seventeen and switch, the machines' act of GFF-PS:1; the realisation records at the receiver signed(x, d) for each agent d whose signature a path of x carries, a record of the sending beside path and from, which the schema requires (GFF #1, 2026-10-28, to be settled with GSC).
+GFF-PS: Grassroots Feeds and Followers with Path Shortening
+Alice, Bob, Carol and Dave are agents.
+1. ■ Shortening.  Alice, who follows Bob through Carol and received an item of Bob's feed signed by their friend Dave, follows Bob through Dave instead.
+Pragmas
+% Algorithms: Shortening is taken whenever such an item arrives (GFF-PS:1).
