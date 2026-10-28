@@ -1,0 +1,78 @@
+%% ---------------------------------------------------------------------------
+%% programs/apps/gff_fr --- the app of GFF-FR, Fault-Resilient Feeds and Followers, which extends GFF; as ../gff, the app of GFF (GFF's contract, programs/gff/GFF.txt and GFF.glp; Coordination Appendix C), which extends GSG, and through it GKK, as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its act schemas: the canonical CVA platform vGLP's compiler prints from them, platform.vglp (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), compiled to GLP by the canonical compilation when the directory loads (vGLP, Section 6.3, "The canonical compilation").  It is the host of ../gsg and ../gsnp on GFF's platform: the same entry miniapp/4 (miniapp.glp, the same file), a scripted person (person.glp) and the play that activates it by run/3, five executions over four conversations, with no super-app (plays.glp).
+%%
+%% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module, as every hand-written module importing a compiled procedure restates them today (../gsg/self.glp).  The compiled module's own definitions shadow these within it, and the two must agree.
+%% ---------------------------------------------------------------------------
+
+Peer      ::= Key.
+Speech    ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
+Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
+            ; befriend(Peer, Peer) ; unfriend(Peer, Peer) ; post(Peer, Speech) ; follow(Peer, Peer)
+            ; unfollow(Peer, Peer) ; friends_follow(Peer, Peer) ; friend_following_ended(Peer, Peer)
+            ; via_friend(Peer, Peer, Peer) ; cease_via(Peer, Peer, Peer)
+            ; path_broken(Peer, Peer, Peer) ; friendship_ended(Peer, Peer, Peer)
+            ; deliver_own(Peer, Peer, Speech) ; deliver_on(Peer, Peer, Peer, Speech, Speech)
+            ; update(Peer, Peer, Peer) ; update_ceased(Peer, Peer, Peer)
+            ; redundant_forward(Peer, Peer, Peer, Speech, Speech).
+Proposal  ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
+            ; befriend(Peer, Peer) ; unfriend(Peer, Peer) ; post(Peer, Speech) ; follow(Peer, Peer)
+            ; unfollow(Peer, Peer).
+Request   ::= propose(Proposal).
+YesNo     ::= yes ; no.
+Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
+Vote      ::= yes ; no(Reason).
+Decision  ::= commit ; abort(Peer, Reason) ; yield.
+Rho       ::= one(Class) ; rho(Proposal).
+Names     ::= none ; request(Rho, Integer).
+Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
+            ; yield(Attempt) ; request(Rho, Integer) ; given(Class).
+Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net       ::= msg(Peer, Content).
+Atom      ::= identity ; knows(Peer) ; friend(Peer) ; feed(Speech) ; wants(Peer)
+            ; follows_friend(Peer) ; following(Peer) ; friend_follower(Peer) ; follows(Peer, Peer)
+            ; follower(Peer, Peer) ; sent(Speech, Peer) ; item(Speech, Peer) ; path(Speech, Speech)
+            ; from(Speech, Peer) ; friend_follows(Peer, Peer).
+Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
+Asking    ::= Attempt ; hello(Peer, Proposal).
+Approved  ::= Proposal.
+Approval  ::= approval(Asking, List(Word), YesNo?).
+Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
+Menu      ::= menu(Key, List(Key), Request?).
+Question  ::= menu_w(Menu) ; approval_w(Approval).
+Drawn     ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)    ::= ask(Constant, Q).
+
+%% What the mini-app's scripted person reports, its screen (person.glp): each view the program writes, once, and each notice; the agent's own key and the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
+Asked     ::= Class ; Attempt.
+Seen      ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo).
+
+%% The scripted person's steps (person.glp), which the play also writes (plays.glp): req(R) grants the request R; own(Ks, R) grants R once the agent's own key is written into each hole of Ks; look reports the request question; wait(C) waits until the screen shows C; approval(K, A) answers A the approval question of K.
+Step      ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
+Cond      ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
+            ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
+Steps     ::= [] ; [Step | Steps].
+Holes     ::= [] ; [Key? | Holes].
+
+%% The network of the platform over the conversations (miniapp.glp), as in ../gsg/self.glp.
+NetEvent  ::= opened(Key, RootChannel(Net)) ; sent(Net).
+Route     ::= route(Key, Stream(Net)?).
+Routes    ::= [] ; [Route | Routes].
+Sending   ::= went ; held(Net).
+
+%% The mini-app's entry, the instance of the root's entry template miniapp/4 (programs/self.glp) at the mini-app's two types, Drawn and Net.
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
+miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+
+%% The scripted person, the instance of the root's second template miniapp_person/4 at Drawn and at Seen.
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+
+%% The play with no super-app (plays.glp).
+imported procedure plays#play_resilient(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+exported procedure play_resilient(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_resilient(A?, B?, C?, D?, E?) :- plays # play_resilient(A, B, C, D, E).
