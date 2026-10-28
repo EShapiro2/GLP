@@ -20,41 +20,42 @@ unfriend(Alice?, Bob) :
 post(Alice?; x) :
     at Alice: identity, not feed(x), +feed(x)
 
-follow(Alice?; b) :
-    at Alice: identity, knows(b), not decided(b), +decided(b)
-
 friends_follow(Alice, Bob) :
-    at Alice: identity, friend(Bob), not following(Bob), +follows(Bob, Bob), +following(Bob)
-    at Bob: identity, +follower(Alice, Bob)
+    at Alice: identity, friend(Bob), not follows_friend(Bob), +follows_friend(Bob), +following(Bob)
+    at Bob: identity, +friend_follower(Alice)
 
-through_friend(Alice, Carol; b) :
-    at Alice: identity, decided(b), friend(Carol), not following(b), +follows(b, Carol), +following(b)
+friend_following_ended(Alice, Bob) :
+    at Alice: identity, not friend(Bob), -follows_friend(Bob), -following(Bob)
+    at Bob: identity, -friend_follower(Alice)
+
+follow_through(Alice?, Carol; b) :
+    at Alice: identity, knows(b), friend(Carol), not friend(b), not follows(b, Carol), +follows(b, Carol), +following(b)
     at Carol: identity, following(b), +follower(Alice, b)
 
-unfollow(Alice?, Carol; b) :
-    at Alice: identity, -decided(b), -follows(b, Carol), -following(b)
+path_broken(Carol, Alice; b) :
+    at Carol: identity, not following(b), -follower(Alice, b)
+    at Alice: identity, -follows(b, Carol), -following(b)
+
+friendship_ended(Alice, Carol; b) :
+    at Alice: identity, not friend(Carol), -follows(b, Carol), -following(b)
     at Carol: identity, -follower(Alice, b)
 
-ask(Alice, Carol; b) :
-    at Alice: identity, decided(b), friend(Carol), not asked_of(Carol, b), +asked_of(Carol, b)
-    at Carol: identity, +asked(Alice, b)
-
-answer_follows(Carol, Alice; b, x) :
-    at Carol: identity, following(b), item(x, b), -asked(Alice, b)
-    at Alice: identity, +path(b, Carol, x)
-
-answer_follows_through(Carol, Alice; b, d) :
-    at Carol: identity, follows(b, d), -asked(Alice, b)
-    at Alice: identity, +path_through(b, Carol, d)
-
-answer_does_not_follow(Carol, Alice; b) :
-    at Carol: identity, not following(b), -asked(Alice, b)
-    at Alice: identity, +does_not_follow(b, Carol)
+unfollow(Alice?, Carol; b) :
+    at Alice: identity, -follows(b, Carol), -following(b)
+    at Carol: identity, -follower(Alice, b)
 
 deliver_own(Bob, Alice; x) :
-    at Bob: identity, feed(x), follower(Alice, Bob), friend(Alice), not sent(x, Alice), +sent(x, Alice)
-    at Alice: identity, +item(x, Bob)
+    at Bob: identity, feed(x), friend_follower(Alice), friend(Alice), not sent(x, Alice), +sent(x, Alice)
+    at Alice: identity, +item(x, Bob), +path(x, x), +from(x, Bob)
 
-deliver_on(Carol, Alice; b, x) :
-    at Carol: identity, following(b), item(x, b), follower(Alice, b), friend(Alice), not sent(x, Alice), +sent(x, Alice)
-    at Alice: identity, +item(sgn(x, Carol), b)
+deliver_on(Carol, Alice; b, x, y) :
+    at Carol: identity, following(b), item(x, b), path(x, y), follower(Alice, b), friend(Alice), not sent(x, Alice), not from(x, Alice), +sent(x, Alice)
+    at Alice: identity, +item(x, b), +path(x, sgn(y, Carol)), +from(x, Carol)
+
+every so often update(Carol, Alice; b) :
+    at Carol: identity, friend(Alice), following(b)
+    at Alice: identity, not friend_follows(Carol, b), +friend_follows(Carol, b)
+
+every so often update_ceased(Carol, Alice; b) :
+    at Carol: identity, friend(Alice), knows(b), not following(b)
+    at Alice: identity, -friend_follows(Carol, b)

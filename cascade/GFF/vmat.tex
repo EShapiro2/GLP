@@ -421,65 +421,6 @@ x
 \}
 \end{align*}
 \iffalse
-follow
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-decided
-}
-(
-b
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-b
-)
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-\mathit{
-decided
-}
-(
-b
-)
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
 friends_follow
 \fi
 \begin{align*}
@@ -496,11 +437,9 @@ c_
  \uplus 
 \{
 \mathit{
-follows
+follows_friend
 }
 (
-\Bob
-,
 \Bob
 )
 ,
@@ -524,12 +463,10 @@ c_
  \uplus 
 \{
 \mathit{
-follower
+friend_follower
 }
 (
 \Alice
-,
-\Bob
 )
 \}
 ,\\
@@ -561,7 +498,7 @@ identity
 &
 \text{provided } 
 \mathit{
-following
+follows_friend
 }
 (
 \Bob
@@ -575,7 +512,112 @@ following
 \text{guarded by } \emptyset
 \end{align*}
 \iffalse
-through_friend
+friend_following_ended
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+follows_friend
+}
+(
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend_follower
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+follows_friend
+}
+(
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend_follower
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+follow_through
 \fi
 \begin{align*}
 &
@@ -635,7 +677,7 @@ identity
 }
 ,
 \mathit{
-decided
+knows
 }
 (
 b
@@ -669,11 +711,251 @@ b
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+friend
+}
+(
+b
+)
+,
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+path_broken
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+follower
+}
+(
+\Bob
+,
+b
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+follows
+}
+(
+b
+,
+\Alice
+)
+,
 \mathit{
 following
 }
 (
 b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+follower
+}
+(
+\Bob
+,
+b
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+follows
+}
+(
+b
+,
+\Alice
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+following
+}
+(
+b
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+friendship_ended
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+follows
+}
+(
+b
+,
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+follower
+}
+(
+\Alice
+,
+b
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\Bob
 )
  \notin c_
 {
@@ -700,13 +982,6 @@ c_
  \setminus 
 \{
 \mathit{
-decided
-}
-(
-b
-)
-,
-\mathit{
 follows
 }
 (
@@ -749,13 +1024,6 @@ b
 \mathit{
 identity
 }
-,
-\mathit{
-decided
-}
-(
-b
-)
 ,
 \mathit{
 follows
@@ -798,376 +1066,6 @@ b
 \text{guarded by } \{
 \Alice
 \}
-\end{align*}
-\iffalse
-ask
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-asked_of
-}
-(
-\Bob
-,
-b
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-asked
-}
-(
-\Alice
-,
-b
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-decided
-}
-(
-b
-)
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-asked_of
-}
-(
-\Bob
-,
-b
-)
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \emptyset
-\end{align*}
-\iffalse
-answer_follows
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-asked
-}
-(
-\Bob
-,
-b
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-path
-}
-(
-b
-,
-\Alice
-,
-x
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-following
-}
-(
-b
-)
-,
-\mathit{
-item
-}
-(
-x
-,
-b
-)
-,
-\mathit{
-asked
-}
-(
-\Bob
-,
-b
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \emptyset
-\end{align*}
-\iffalse
-answer_follows_through
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-asked
-}
-(
-\Bob
-,
-b
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-path_through
-}
-(
-b
-,
-\Alice
-,
-d
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-follows
-}
-(
-b
-,
-d
-)
-,
-\mathit{
-asked
-}
-(
-\Bob
-,
-b
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \emptyset
-\end{align*}
-\iffalse
-answer_does_not_follow
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-asked
-}
-(
-\Bob
-,
-b
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-does_not_follow
-}
-(
-b
-,
-\Alice
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-asked
-}
-(
-\Bob
-,
-b
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-following
-}
-(
-b
-)
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \emptyset
 \end{align*}
 \iffalse
 deliver_own
@@ -1214,6 +1112,24 @@ x
 ,
 \Alice
 )
+,
+\mathit{
+path
+}
+(
+x
+,
+x
+)
+,
+\mathit{
+from
+}
+(
+x
+,
+\Alice
+)
 \}
 ,\\
 &
@@ -1230,12 +1146,10 @@ x
 )
 ,
 \mathit{
-follower
+friend_follower
 }
 (
 \Bob
-,
-\Alice
 )
 ,
 \mathit{
@@ -1316,13 +1230,31 @@ c_
 item
 }
 (
-\mathrm{sgn}(
 x
+,
+b
+)
+,
+\mathit{
+path
+}
+(
+x
+,
+\mathrm{sgn}(
+y
 ,
 \Alice
 )
+)
 ,
-b
+\mathit{
+from
+}
+(
+x
+,
+\Alice
 )
 \}
 ,\\
@@ -1346,6 +1278,15 @@ item
 x
 ,
 b
+)
+,
+\mathit{
+path
+}
+(
+x
+,
+y
 )
 ,
 \mathit{
@@ -1378,6 +1319,7 @@ identity
 ,\\
 &
 \text{provided } 
+\{
 \mathit{
 sent
 }
@@ -1385,6 +1327,196 @@ sent
 x
 ,
 \Bob
+)
+,
+\mathit{
+from
+}
+(
+x
+,
+\Bob
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+update
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend_follows
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+following
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend_follows
+}
+(
+\Alice
+,
+b
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+update_ceased
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend_follows
+}
+(
+\Alice
+,
+b
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+b
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend_follows
+}
+(
+\Alice
+,
+b
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+following
+}
+(
+b
 )
  \notin c_
 {
