@@ -7,7 +7,7 @@
 %% /Grassroots/docs/act-schemas-guide.md; the notation of each schema is
 %% printed from the term by a run of the cascade (schemas.txt).
 %%
-%% Eighteen schemas over fourteen predicates (path_broken and friendship_ended added, Udi, 2026-10-27, late): identity and knows, GKK's; friend,
+%% Twenty-one schemas over fourteen predicates (2026-10-28: follows_friend(b), at Alice, that Alice follows their friend b, in place of follows(b, b), so that path_broken touches no friend's following, with friend_following_ended; asked_of gone, ask re-askable and rationed by the chooser; answer_follows_friend; and switch, the act of Shortening --- on Code #16's three findings of 2026-10-27 21:46 UTC; Udi, 2026-10-28): identity and knows, GKK's; friend,
 %% GSG's; and GFF's eleven: decided(b), at Alice, that Alice decided to follow b,
 %% the one willed act of GFF:2, which the unguarded acts of GFF:2 and GFF:3
 %% require, and asked_of(c, b), at Alice, that Alice's machine asked c about b,
@@ -83,10 +83,15 @@ contract_named(gff,
                     [atom(decided, [pvar(b)])])]),
 %% GFF:2, Following.  Friends follow each other: Alice follows their friend Bob, recorded as follows(Bob, Bob), through Bob, and Bob records Alice as a follower (Udi, 2026-10-27).
     schema(friends_follow, ['Alice', 'Bob'], [],
-       [rs(unguarded, [atom(follows, [role(2), role(2)]), atom(following, [role(2)])], [],
+       [rs(unguarded, [atom(follows_friend, [role(2)]), atom(following, [role(2)])], [],
                       [atom(identity, []), atom(friend, [role(2)])],
                       [atom(following, [role(2)])]),
         rs(unguarded, [atom(follower, [role(1), role(2)])], [], [atom(identity, [])], [])]),
+%% GFF:2, Following.  A friend's following ends with the friendship: an act of the two machines.
+    schema(friend_following_ended, ['Alice', 'Bob'], [],
+       [rs(unguarded, [], [atom(follows_friend, [role(2)]), atom(following, [role(2)])],
+                      [atom(identity, [])], [atom(friend, [role(2)])]),
+        rs(unguarded, [], [atom(follower, [role(1), role(2)])], [atom(identity, [])], [])]),
 %% GFF:2, Following.  Alice, who decided to follow b and whose friend Carol follows b, follows b through Carol.
     schema(through_friend, ['Alice', 'Carol'], [pvar(b)],
        [rs(unguarded, [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])], [],
@@ -109,11 +114,17 @@ contract_named(gff,
        [rs(guarded,   [], [atom(decided, [pvar(b)]), atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
                       [atom(identity, [])], []),
         rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF:3, Follower discovery.  Alice, who decided to follow b, asks their friend Carol whether Carol follows b, once.
+%% GFF:2, Following.  Alice, who decided to follow b and follows b through Carol, follows b through their friend Dave, who follows b, instead: the act Shortening takes (Algorithms).
+    schema(switch, ['Alice', 'Dave', 'Carol'], [pvar(b)],
+       [rs(unguarded, [atom(follows, [pvar(b), role(2)])], [atom(follows, [pvar(b), role(3)])],
+                      [atom(identity, []), atom(decided, [pvar(b)]), atom(friend, [role(2)]), atom(following, [pvar(b)])], []),
+        rs(unguarded, [atom(follower, [role(1), pvar(b)])], [], [atom(identity, []), atom(following, [pvar(b)])], []),
+        rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
+%% GFF:3, Follower discovery.  Alice, who decided to follow b, asks their friend Carol whether Carol follows b; enabled whenever no question of hers waits at Carol, and the chooser rations it, now and then (Algorithms, Shortening).
     schema(ask, ['Alice', 'Carol'], [pvar(b)],
-       [rs(unguarded, [atom(asked_of, [role(2), pvar(b)])], [],
+       [rs(unguarded, [], [],
                       [atom(identity, []), atom(decided, [pvar(b)]), atom(friend, [role(2)])],
-                      [atom(asked_of, [role(2), pvar(b)])]),
+                      [atom(asked, [role(1), pvar(b)])]),
         rs(unguarded, [atom(asked, [role(1), pvar(b)])], [], [atom(identity, [])], [])]),
 %% GFF:3, Follower discovery.  Carol answers Alice with a path to b: an item x of b's feed they hold.
     schema(answer_follows, ['Carol', 'Alice'], [pvar(b), svar(x)],
@@ -125,6 +136,11 @@ contract_named(gff,
        [rs(unguarded, [], [atom(asked, [role(2), pvar(b)])],
                       [atom(identity, []), atom(follows, [pvar(b), pvar(d)])], []),
         rs(unguarded, [atom(path_through, [pvar(b), role(1), pvar(d)])], [], [atom(identity, [])], [])]),
+%% GFF:3, Follower discovery.  Carol, b's friend, answers Alice with the path of length one, through b.
+    schema(answer_follows_friend, ['Carol', 'Alice'], [pvar(b)],
+       [rs(unguarded, [], [atom(asked, [role(2), pvar(b)])],
+                      [atom(identity, []), atom(follows_friend, [pvar(b)])], []),
+        rs(unguarded, [atom(path_through, [pvar(b), role(1), pvar(b)])], [], [atom(identity, [])], [])]),
 %% GFF:3, Follower discovery.  Carol answers Alice that they do not follow b.
     schema(answer_does_not_follow, ['Carol', 'Alice'], [pvar(b)],
        [rs(unguarded, [], [atom(asked, [role(2), pvar(b)])],
