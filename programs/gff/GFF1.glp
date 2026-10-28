@@ -108,7 +108,7 @@ contract_named(gff1,
 %% Carol names b by knowing b (GKK:2), which is never undone, so the act is effective with no record of whom Carol told (Code #16, 2026-10-28 08:12 UTC).
     schema(update_ceased, ['Carol', 'Alice'], [pvar(b)],
        [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], [atom(following, [pvar(b)])]),
-        rs(unguarded, [], [atom(friend_follows, [role(1), pvar(b)])], [atom(identity, [])], [])])]),
+        rs(unguarded, [], [atom(friend_follows, [role(1), pvar(b)])], [atom(identity, [])], [])]),
 %% GFF1:2, Redundant forwarding.  Alice, who follows b through Carol and through Dave and holds an item x of b's feed from Carol and not from Dave, forwards it to Dave.
     schema(redundant_forward, ['Alice', 'Dave'], [pvar(b), pvar(c), svar(x), svar(y)],
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
