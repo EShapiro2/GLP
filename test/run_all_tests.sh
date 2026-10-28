@@ -7761,8 +7761,9 @@ if _section CAS; then
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai gff; do
-    cas_n=$(printf '%s' "$cas_c" | tr a-z A-Z)
+for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai gff gff_ps gff_fr; do
+    # The record's name is the contract's, its letters in upper case and an underscore of the checker's atom a hyphen of the name, as GFF-PS's of gff_ps (Udi, 2026-10-28).
+    cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
