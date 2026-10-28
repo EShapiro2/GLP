@@ -124,8 +124,8 @@ contract_named(gff_fr,
                       [atom(identity, []), atom(feed, [svar(x)]), atom(friend_follower, [role(2)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)])]),
         rs(received, [atom(item, [svar(x), role(1)]), atom(path, [svar(x), svar(x)]), atom(from, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
-%% GFF:4, Delivery.  'Carol forwards to Dave who follows Bob through Carol every item on Bob's feed not signed by Dave': a sending, signed over (GKK:4), with the constraint unsigned(Dave, y), 'Dave did not sign y', which the language gives (GKK:4, second half); x is sent to each friend once however many paths it came by.
-    nschema(deliver_on, ['Carol', 'Dave'], [pvar(b), svar(x), svar(y)], unsigned(role(2), svar(y)),
+%% GFF:4, Delivery.  'Carol forwards to Alice who follows Bob through Carol every item on Bob's feed not signed by Alice': a sending, signed over (GKK:4), with the constraint unsigned(Alice, y), 'Alice did not sign y', which the language gives (GKK:4, second half); x is sent to each friend once however many paths it came by.
+    nschema(deliver_on, ['Carol', 'Alice'], [pvar(b), svar(x), svar(y)], unsigned(role(2), svar(y)),
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
                       [atom(identity, []), atom(following, [pvar(b)]), atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y)]),
                        atom(follower, [role(2), pvar(b)]), atom(friend, [role(2)])],
