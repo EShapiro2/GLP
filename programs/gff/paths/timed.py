@@ -46,11 +46,20 @@ THE MACHINES (GFF and its Algorithms lines).
 - Signing (GKK:4 on GFF-chooser): an item carries the signatures of its path,
   the author's first; hands are the number of signatures on the copy received.
 
-GFF-PS (GFF-PS:1, Algorithms: on arrival).  Alice, who follows Bob through
-Carol and receives an item of Bob's feed signed by a friend Dave, follows Bob
-through Dave instead (a message to each of the two); with several such friends,
-the one nearest the author on the item's path.  Under GFF alone Alice receives
-Bob's items only through Carol, so every signer is nearer Bob than Carol.
+DELIVERY (GFF:4 as GFF revised it, 2026-10-28 12:10 UTC): an item is never sent
+to one who signed it: Carol forwards to Alice, who follows Bob through Carol,
+every item of Bob's feed not signed by Alice, and redundant forwarding
+likewise.
+
+GFF-PS (GFF-PS:1 as revised, Algorithms: on arrival).  Alice, who received via
+Carol, through whom she follows Bob, an item of Bob's feed signed by Alice's
+friend Dave, follows Bob through Dave instead of via Carol (a message to each
+of the two); with several such friends, the one nearest the author on the
+item's path.  If Alice already follows through Dave (under GFF-FR), the
+following via Carol ends, and GFF-FR's Algorithms line adds a second known
+friend, other than Carol (else Carol is taken again and left again on every
+item that comes via Carol signed by Dave).  An item received from a friend Alice does not follow through
+(redundant forwarding) switches nothing.
 
 GFF-FR (GFF-FR:1-2, Algorithms).  Alice's machine follows Bob through two
 friends known to follow Bob when there are two, and through one when there is
@@ -62,7 +71,7 @@ path being the chain of first followings from the friend to Bob at the time
 before items arrive).  Redundant forwarding: Alice, who follows Bob through
 Carol and Dave and receives an item first from Carol, forwards it to Dave.
 
-GFF-PS WITH GFF-FR (comparison 3) is not run: see README.md, "Comparison 3".
+GFF-PS WITH GFF-FR (comparison 3): both rules together, random and far apart.
 
 FAULTS.  Each agent, independently, goes down after a stretch of steps drawn
 as ceil(Exp(mean 1/F)) up, and stays down for ceil(Exp(mean D)) steps, F the
@@ -101,7 +110,7 @@ from collections import Counter, defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from paths import build_graph, draw_followers, bin_of, BIN_LABELS  # noqa: E402
 
-SCENARIOS = ("GFF", "GFF-PS", "GFF-FR-random", "GFF-FR-far")
+SCENARIOS = ("GFF", "GFF-PS", "GFF-FR-random", "GFF-FR-far", "GFF-PS-FR-random", "GFF-PS-FR-far")
 
 
 def down_intervals(rng, N, F, D, horizon):
@@ -124,9 +133,9 @@ def down_intervals(rng, N, F, D, horizon):
 
 def simulate(n, N, adj_full, followers, counts, events, offsets, K, down,
              scenario, srng, measure_trees):
-    ps = scenario == "GFF-PS"
-    fr = scenario.startswith("GFF-FR")
-    far = scenario == "GFF-FR-far"
+    ps = "PS" in scenario
+    fr = "FR" in scenario
+    far = scenario.endswith("far")
     target = 2 if fr else 1
 
     future = [set() for _ in range(N)]  # authors each agent will want
@@ -211,13 +220,13 @@ def simulate(n, N, adj_full, followers, counts, events, offsets, K, down,
             through[b].add(a)
             come_to_follow(t, a, b)
 
-    def act(t, a, b):
+    def act(t, a, b, exclude=None):
         """a wants b and is not b's friend: follow through known friends."""
         lst = parents[a].get(b, [])
         need = target - len(lst)
         if need <= 0:
             return
-        cands = [c for c in known[a].get(b, ()) if c not in lst and c in adj[a]]
+        cands = [c for c in known[a].get(b, ()) if c not in lst and c in adj[a] and c != exclude]
         if not cands:
             return
         if not fr:
@@ -258,26 +267,40 @@ def simulate(n, N, adj_full, followers, counts, events, offsets, K, down,
                 if a in it[2] and a not in it[3]:
                     it[3][a] = (len(path), t - it[1])
                 newpath = path + (a,)
+                signers = set(newpath)
+                # an item is never sent to one who signed it (GFF:4, GFF-FR:2)
                 for x in subs[a].get(b, ()):
-                    send(t + 1, x, ("I", iid, a, newpath))
-                    it[4] += 1
+                    if x not in signers:
+                        send(t + 1, x, ("I", iid, a, newpath))
+                        it[4] += 1
                 if fr:
                     lst = parents[a].get(b)
                     if lst and len(lst) == 2 and sender in lst:
                         other = lst[1] if lst[0] == sender else lst[0]
-                        send(t + 1, other, ("I", iid, a, newpath))
-                        it[4] += 1
+                        if other not in signers:
+                            send(t + 1, other, ("I", iid, a, newpath))
+                            it[4] += 1
             if ps:
+                # GFF-PS:1: received via Carol, a following of a, an item
+                # signed by a's friend Dave: follow b through Dave instead of
+                # via Carol; Dave the friend signer nearest the author
                 lst = parents[a].get(b)
-                if lst:
-                    cur = lst[0]
+                if lst and sender in lst:
                     for d in path[1:]:
-                        if d != cur and d in adj[a]:
-                            lst[0] = d
-                            send(t + 1, cur, ("X", a, b))
-                            send(t + 1, d, ("S", a, b))
-                            ctl_msgs += 2
+                        if d != sender and d in adj[a]:
+                            i = lst.index(sender)
+                            send(t + 1, sender, ("X", a, b))
+                            ctl_msgs += 1
+                            if d in lst:
+                                del lst[i]
+                            else:
+                                lst[i] = d
+                                send(t + 1, d, ("S", a, b))
+                                ctl_msgs += 1
                             switches[b] += 1
+                            if fr and len(lst) < target:
+                                # the friend just left is not taken again
+                                act(t, a, b, exclude=sender)
                             break
         elif kind == "U":
             _, c, b = msg

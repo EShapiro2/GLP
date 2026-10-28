@@ -77,15 +77,17 @@ Path length and ratio are over the deciders who follow; a waiting decider has ne
 
 # timed.py: GFF, GFF-PS and GFF-FR in time
 
-A second script, for GFF #1's task of 2026-10-28 10:52 UTC (Udi approving): to compare GFF, GFF-PS and GFF-FR, with the same grid, seeds and authors as `paths.py`, now with time and with faults.  The contracts are `programs/gff/GFF.txt`, `GFF-PS.txt` and `GFF-FR.txt` as they stand on the branch GFF-chooser at `df374e36`, their clauses and Algorithms lines.
+A second script, for GFF #1's task of 2026-10-28 10:52 UTC (Udi approving): to compare GFF, GFF-PS and GFF-FR, with the same grid, seeds and authors as `paths.py`, now with time and with faults.  The contracts are `programs/gff/GFF.txt`, `GFF-PS.txt` and `GFF-FR.txt` on the branch GFF-chooser, their clauses and Algorithms lines, with GFF's revision of 12:10 UTC: an item is never sent to one who signed it, in Delivery (GFF:4 at `be482941`) and in redundant forwarding, and GFF-PS:1 switching the following through which the item arrived.
+
+The tables are of that rule throughout.  Against the earlier tables of `timed.py` (`0c42baba`): GFF is unchanged, its followings forming a tree, so that no item ever went to a signer.  GFF-FR sends fewer messages, an item no longer being forwarded, directly or redundantly, to one who signed it; the other measures are unchanged.  GFF-PS is unchanged without faults and changes a little with them, since a late item that comes via a following Alice has already left now switches nothing.
 
 ## How to run it
 
     cd programs/gff/paths && /usr/bin/python3 timed.py
 
-Options: `--q 1 2 4`, `--seeds 1 2 3 4 5`, `--n 100`, `--K 5000`, `--faults 0 0.00001 0.0001`, `--down 1000`, `--scenarios GFF GFF-PS GFF-FR-random GFF-FR-far`, `--out <directory>`.  It writes `tables/timed-q<q>-f<fault rate>.md`, one table per q and fault rate.  The grid is not scaled down: the run is at n = 100.
+Options: `--q 1 2 4`, `--seeds 1 2 3 4 5`, `--n 100`, `--K 5000`, `--faults 0 0.00001 0.0001`, `--down 1000`, `--scenarios GFF GFF-PS GFF-FR-random GFF-FR-far GFF-PS-FR-random GFF-PS-FR-far`, `--out <directory>`.  It writes `tables/timed-q<q>-f<fault rate>.md`, one table per q and fault rate.  The grid is not scaled down: the run is at n = 100.
 
-The run of all three q, five seeds each, the four scenarios at each of the three fault rates, took 1004 seconds on Udi's Mac, sequentially: 44 to 93 seconds a seed, 3 to 10 seconds a scenario at a fault rate.  Each table gives the run time of each scenario over the five seeds.
+The run of all three q, five seeds each, the six scenarios at each of the three fault rates, took 2386 seconds on Udi's Mac, sequentially, with other runs beside it: 70 to 268 seconds a seed, 3 to 58 seconds a scenario at a fault rate.  Each table gives the run time of each scenario over the five seeds.
 
 ## The graph, the authors and the seeds
 
@@ -99,14 +101,15 @@ The steps are discrete.  The friendships, those of the grid and the long-range o
 
 1. Friends follow each other (GFF:2), and the author sends every item they post to every friend (GFF:5).
 2. Updating (GFF:6 and its Algorithms line): Carol updates every friend whenever Carol comes to follow an agent, by friendship or through a friend, and a new friend upon befriending, with the list of all Carol follows.  An update is a message.  Alice's machine learns from the updates which friends follow whom, in the order the updates arrive.
-3. Following via Friend (GFF:3 and its Algorithms line): when Alice wants to follow Bob, Alice's machine follows Bob through the first friend known to follow Bob, and through no other while that following stands.  With no friend known to follow, Alice waits, and follows when an update tells her of one.  Alice follows through Carol by a message to Carol, after which Carol forwards Bob's items to Alice (GFF:5).  Alice comes to follow Bob, and updates her friends, when she sends it.
-4. A follower who becomes a friend of the author ceases every following of the author through a friend and follows by friendship.  The mail and the contract leave it open; GFF:2 confines wanting to follow through a friend to one who is not a friend.
-5. No one ceases to want to follow, so Unfollowing (GFF:4) is not exercised, and no following rests on a friend who has ceased to follow.
-6. An item carries the signatures of its path, the author's first (GKK:4 on GFF-chooser).  The hands an item took to reach a follower are the signatures on the first copy the follower received.
+3. Delivery (GFF:4): the author sends every item to every friend; Carol forwards to Alice, who follows Bob through Carol, every item of Bob's feed not signed by Alice.  An item is never sent to one who signed it.
+4. Following via Friend (GFF:3 and its Algorithms line): when Alice wants to follow Bob, Alice's machine follows Bob through the first friend known to follow Bob, and through no other while that following stands.  With no friend known to follow, Alice waits, and follows when an update tells her of one.  Alice follows through Carol by a message to Carol, after which Carol forwards Bob's items to Alice (GFF:5).  Alice comes to follow Bob, and updates her friends, when she sends it.
+5. A follower who becomes a friend of the author ceases every following of the author through a friend and follows by friendship.  The mail and the contract leave it open; GFF:2 confines wanting to follow through a friend to one who is not a friend.
+6. No one ceases to want to follow, so Unfollowing (GFF:4) is not exercised, and no following rests on a friend who has ceased to follow.
+7. An item carries the signatures of its path, the author's first (GKK:4 on GFF-chooser).  The hands an item took to reach a follower are the signatures on the first copy the follower received.
 
 ## GFF-PS
 
-GFF-PS:1 and its Algorithms line, on arrival: Alice, who follows Bob through Carol and receives an item of Bob's feed signed by a friend Dave, follows Bob through Dave instead, by a message to each of the two.  With several such friends, Alice takes the one nearest the author on the item's path; the contract leaves which one open.  Under GFF Alice receives Bob's items only through Carol, so every signer is nearer Bob than Carol, and a switch never makes a cycle.
+GFF-PS:1 and its Algorithms line, on arrival: "Alice, who received via Carol an item of Bob's feed signed by Alice's friend Dave, follows Bob through Dave instead of via Carol", by a message to each of the two.  Carol is one Alice follows Bob through, the item having come by that following; an item that came from a friend Alice does not follow through, by redundant forwarding, switches nothing.  With several such friends, Alice takes the one nearest the author on the item's path; the contract leaves which one open.  Under GFF alone Alice receives Bob's items only through Carol, so every signer is nearer Bob than Carol.
 
 ## GFF-FR
 
@@ -115,11 +118,11 @@ GFF-FR:1 and its Algorithms line: Alice's machine follows Bob through two friend
 1. random: the two chosen uniformly at random among the friends known to follow;
 2. far apart: the two whose paths to Bob share the fewest agents, the author not counted, and with one already followed through, the one whose path shares the fewest with its path.  A path is the chain of first followings from the friend to Bob at the time.  This is the simulator's knowledge: the contract gives Alice no means to learn a friend's path before items arrive, and the mail does not say how she learns it.
 
-GFF-FR:2 and its Algorithms line, on arrival: Alice, who follows Bob through Carol and Dave and receives an item first from Carol, forwards it to Dave.
+GFF-FR:2 and its Algorithms line, on arrival: Alice, who follows Bob through Carol and Dave and receives an item first from Carol, forwards it to Dave, unless Dave signed it.
 
-## Comparison 3, GFF-PS and GFF-FR together: not run
+## Comparison 3, GFF-PS and GFF-FR together
 
-The two contracts together do not say what Alice does.  Under GFF-FR:2, Alice receives items from a friend Eve who follows Bob through Alice: Eve, following through Carol and Alice and receiving an item first from Carol, forwards it to Alice, signed by Eve.  GFF-PS:1 then has Alice follow Bob through Eve instead, which is a cycle; once Alice's other following is replaced in the same way, Alice and Eve receive nothing of Bob's.  GFF-PS:1 also does not say which of Alice's two followings Dave replaces.  The fix is GFF's to make in GFF-PS:1, for example "signed by their friend Dave, nearer to Bob than Carol, through whom the item arrived"; the script runs comparison 3 once the clause says it.
+Both rules at once, with GFF-FR's random and far-apart choices.  GFF-PS:1 replaces the following through which the item arrived.  If Alice already follows Bob through Dave, the following via Carol ends and Alice is left with one; GFF-FR's Algorithms line then adds a second known friend, other than Carol.  The contracts leave open whether Carol may be taken again; if she may, Alice takes Carol again and leaves her again on every item that comes via Carol signed by Dave.  Before GFF's revision this comparison was not run: an item forwarded redundantly by Eve, who follows Bob through Alice, came to Alice signed by Eve, and GFF-PS:1 had Alice follow through Eve, a cycle; Delivery now sends no item to one who signed it, and Shortening names the following it replaces.
 
 ## Faults
 

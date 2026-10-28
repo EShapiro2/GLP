@@ -35,7 +35,7 @@ The same by the fifth of the arrivals in which the item was posted (the fifth in
 | 4 | 6.316 | 5.818 | 54.000 | 4.962 | 4.429 | 54.000 |
 | 5 | 7.063 | 6.500 | 54.000 | 6.046 | 5.375 | 54.000 |
 
-Update messages 1805088, messages to follow through or cease to follow through a friend 102934; run time 25 s over 5 seeds.
+Update messages 1805088, messages to follow through or cease to follow through a friend 102934; run time 21 s over 5 seeds.
 
 ## GFF-PS
 
@@ -68,30 +68,56 @@ The same by the fifth of the arrivals in which the item was posted (the fifth in
 | 4 | 5.859 | 5.364 | 53.500 | 4.578 | 4.091 | 53.500 |
 | 5 | 6.271 | 5.778 | 50.000 | 5.302 | 4.714 | 50.000 |
 
-Update messages 1805088, messages to follow through or cease to follow through a friend 114014; run time 23 s over 5 seeds.
+Update messages 1805088, messages to follow through or cease to follow through a friend 114014; run time 22 s over 5 seeds.
 
 ## GFF-FR-random
 
 | followers | items | waiting | share reached | hands mean | median | max | steps mean | median | max | messages per follower reached | switches |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1-9 | 1008151 | 0.9983 | 1.0000 | 1.82 | 2 | 2 | 1.82 | 2 | 2 | 6.25 | 0 |
-| 10-99 | 61687 | 0.9983 | 1.0000 | 1.81 | 2 | 3 | 1.81 | 2 | 3 | 5.90 | 0 |
-| 100-999 | 6251 | 0.9980 | 1.0000 | 1.85 | 2 | 5 | 1.85 | 2 | 5 | 4.35 | 0 |
-| 1000-9999 | 837 | 0.5510 | 1.0000 | 15.07 | 14 | 90 | 15.07 | 14 | 90 | 2.69 | 0 |
+| 10-99 | 61687 | 0.9983 | 1.0000 | 1.81 | 2 | 3 | 1.81 | 2 | 3 | 5.89 | 0 |
+| 100-999 | 6251 | 0.9980 | 1.0000 | 1.85 | 2 | 5 | 1.85 | 2 | 5 | 4.29 | 0 |
+| 1000-9999 | 837 | 0.5510 | 1.0000 | 15.07 | 14 | 90 | 15.07 | 14 | 90 | 2.12 | 0 |
 | 10000 | 0 | - | - | - | - | - | - | - | - | - | 0 |
-| all | 1076926 | 0.8230 | 1.0000 | 14.99 | 13 | 90 | 14.99 | 13 | 90 | 2.70 | 0 |
+| all | 1076926 | 0.8230 | 1.0000 | 14.99 | 13 | 90 | 14.99 | 13 | 90 | 2.14 | 0 |
 
-Update messages 1805088, messages to follow through or cease to follow through a friend 199434; run time 24 s over 5 seeds.
+Update messages 1805088, messages to follow through or cease to follow through a friend 199434; run time 21 s over 5 seeds.
 
 ## GFF-FR-far
 
 | followers | items | waiting | share reached | hands mean | median | max | steps mean | median | max | messages per follower reached | switches |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1-9 | 1008151 | 0.9983 | 1.0000 | 1.82 | 2 | 2 | 1.82 | 2 | 2 | 6.25 | 0 |
-| 10-99 | 61687 | 0.9983 | 1.0000 | 1.81 | 2 | 3 | 1.81 | 2 | 3 | 5.90 | 0 |
-| 100-999 | 6251 | 0.9980 | 1.0000 | 1.85 | 2 | 5 | 1.85 | 2 | 5 | 4.35 | 0 |
-| 1000-9999 | 837 | 0.5510 | 1.0000 | 14.44 | 13 | 90 | 14.44 | 13 | 90 | 2.69 | 0 |
+| 10-99 | 61687 | 0.9983 | 1.0000 | 1.81 | 2 | 3 | 1.81 | 2 | 3 | 5.89 | 0 |
+| 100-999 | 6251 | 0.9980 | 1.0000 | 1.85 | 2 | 5 | 1.85 | 2 | 5 | 4.29 | 0 |
+| 1000-9999 | 837 | 0.5510 | 1.0000 | 14.44 | 13 | 90 | 14.44 | 13 | 90 | 2.13 | 0 |
 | 10000 | 0 | - | - | - | - | - | - | - | - | - | 0 |
-| all | 1076926 | 0.8230 | 1.0000 | 14.36 | 13 | 90 | 14.36 | 13 | 90 | 2.70 | 0 |
+| all | 1076926 | 0.8230 | 1.0000 | 14.36 | 13 | 90 | 14.36 | 13 | 90 | 2.15 | 0 |
 
-Update messages 1805088, messages to follow through or cease to follow through a friend 199434; run time 25 s over 5 seeds.
+Update messages 1805088, messages to follow through or cease to follow through a friend 199434; run time 24 s over 5 seeds.
+
+## GFF-PS-FR-random
+
+| followers | items | waiting | share reached | hands mean | median | max | steps mean | median | max | messages per follower reached | switches |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1-9 | 1008151 | 0.9983 | 1.0000 | 1.82 | 2 | 2 | 1.82 | 2 | 2 | 6.25 | 0 |
+| 10-99 | 61687 | 0.9983 | 1.0000 | 1.81 | 2 | 3 | 1.81 | 2 | 3 | 5.89 | 0 |
+| 100-999 | 6251 | 0.9980 | 1.0000 | 1.85 | 2 | 5 | 1.85 | 2 | 5 | 4.29 | 2 |
+| 1000-9999 | 837 | 0.5510 | 1.0000 | 13.90 | 12 | 90 | 13.90 | 12 | 90 | 2.14 | 31249 |
+| 10000 | 0 | - | - | - | - | - | - | - | - | - | 0 |
+| all | 1076926 | 0.8230 | 1.0000 | 13.82 | 12 | 90 | 13.82 | 12 | 90 | 2.16 | 31251 |
+
+Update messages 1805088, messages to follow through or cease to follow through a friend 261139; run time 25 s over 5 seeds.
+
+## GFF-PS-FR-far
+
+| followers | items | waiting | share reached | hands mean | median | max | steps mean | median | max | messages per follower reached | switches |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1-9 | 1008151 | 0.9983 | 1.0000 | 1.82 | 2 | 2 | 1.82 | 2 | 2 | 6.25 | 0 |
+| 10-99 | 61687 | 0.9983 | 1.0000 | 1.81 | 2 | 3 | 1.81 | 2 | 3 | 5.89 | 0 |
+| 100-999 | 6251 | 0.9980 | 1.0000 | 1.85 | 2 | 5 | 1.85 | 2 | 5 | 4.29 | 2 |
+| 1000-9999 | 837 | 0.5510 | 1.0000 | 13.47 | 12 | 90 | 13.47 | 12 | 90 | 2.15 | 29864 |
+| 10000 | 0 | - | - | - | - | - | - | - | - | - | 0 |
+| all | 1076926 | 0.8230 | 1.0000 | 13.40 | 12 | 90 | 13.40 | 12 | 90 | 2.17 | 29866 |
+
+Update messages 1805088, messages to follow through or cease to follow through a friend 258357; run time 122 s over 5 seeds.
