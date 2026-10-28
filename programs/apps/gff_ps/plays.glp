@@ -1,0 +1,71 @@
+%% plays.glp --- the GFF-PS mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; for six executions, with the two ends of each of seven root channels handed to them as their conversations, the play standing in for the social graph, as ../gff/plays.glp does.  The persons are scripted (person.glp), each under its role, and the play returns their screens.
+
+imported procedure person#cued_person(Key?, Constant?, Steps?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+
+%% What the play waits for on a person's screen before it gives another person the next steps of their script: a view whose machine state holds the atom, or lacks it.
+Want  ::= holds(Atom) ; lacks(Atom).
+Wants ::= [] ; [Want | Wants].
+
+%% play_shortening(A, B, C, D, F, E): GFF-PS's play (Code #16's proposal, GFF #1 Cowork taking it with Udi's agreement, Code_inbox.md, 2026-10-28 13:05 UTC), alice, bob, carol, dave, frank and eve, over seven conversations: alice's with bob and with carol, carol's with dave, dave's with frank, frank's with eve, and, later used, eve's with bob and bob's with dave.  Dave follows alice through carol, frank through dave, and eve through frank, three hops, along alice, carol, dave and frank.  Eve befriends bob, alice's friend; bob's update tells her he follows alice, and nothing switches.  Alice posts an item, which reaches eve along alice, carol, dave and frank.  Bob befriends dave, and dave ends his friendship with carol (GSG:2), so that his following through carol ends (GFF:2, friendship_ended) and his machine follows alice through bob (GFF:3, via_friend), the first friend known to follow her not through dave.  Alice posts a second item, which reaches eve via frank along alice, bob, dave and frank, signed by eve's friend bob, and eve's machine follows alice through bob in place of frank (GFF-PS:1, switch).
+exported procedure play_shortening(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_shortening(A?, B?, C?, D?, F?, E?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, WA), ch([conversation(bob, ch(BA?, AB)), conversation(carol, ch(CA?, AC))], _), []), T?, M?),
+    person # cued_person(alice, s_alice, TA?, ch(WA?, GA), A),
+    run(miniapp(bob, ch(GB?, WB), ch([conversation(alice, ch(AB?, BA)), conversation(eve, ch(EB?, BE)), conversation(dave, ch(DB?, BD))], _), []), T?, M?),
+    person # cued_person(bob, s_bob, TB?, ch(WB?, GB), B),
+    run(miniapp(carol, ch(GC?, WC), ch([conversation(alice, ch(AC?, CA)), conversation(dave, ch(DC?, CD))], _), []), T?, M?),
+    person # cued_person(carol, s_carol, [], ch(WC?, GC), C),
+    run(miniapp(dave, ch(GD?, WD), ch([conversation(carol, ch(CD?, DC)), conversation(frank, ch(FD?, DF)), conversation(bob, ch(BD?, DB))], _), []), T?, M?),
+    person # cued_person(dave, s_dave, TD?, ch(WD?, GD), D0),
+    run(miniapp(frank, ch(GF?, WF), ch([conversation(dave, ch(DF?, FD)), conversation(eve, ch(EF?, FE))], _), []), T?, M?),
+    person # cued_person(frank, s_frank, [], ch(WF?, GF), F),
+    run(miniapp(eve, ch(GE?, WE), ch([conversation(frank, ch(FE?, EF)), conversation(bob, ch(BE?, EB))], _), []), T?, M?),
+    person # cued_person(eve, s_eve, [], ch(WE?, GE), E0),
+    watch(E0?, E1, [holds(friend_follows(bob, alice))],
+          [own([P1, P2], propose(post(P1?, speech(utterance('First item'), P2?)))),
+           wait(holds(feed(speech(utterance('First item'), alice)))) | TA2?], TA),
+    watch(E1?, E2, [holds(item(speech(utterance('First item'), alice), alice))],
+          [own([B5], propose(acquaint(B5?, dave))), wait(holds(knows(dave))),
+           own([B6], propose(befriend(B6?, dave))), wait(holds(friend(dave)))], TB),
+    watch(E2?, E, [holds(item(speech(utterance('First item'), alice), alice))],
+          [approval(acquaint(bob, dave), yes),
+           approval(befriend(bob, dave), yes),
+           wait(holds(friend_follows(bob, alice))),
+           own([D9], propose(unfriend(D9?, carol))), wait(lacks(friend(carol))),
+           wait(holds(follows(alice, bob)))], TD),
+    watch(D0?, D, [holds(follows(alice, bob))],
+          [own([P3, P4], propose(post(P3?, speech(utterance('Second item'), P4?)))),
+           wait(holds(feed(speech(utterance('Second item'), alice))))], TA2).
+
+%% watch(Xs, Ys, Wants, Go, Out): Ys is the screen Xs, passed on unchanged; once its views have shown each of Wants in turn, Out is Go.
+procedure watch(Stream(Seen)?, Stream(Seen), Wants?, Steps?, Steps).
+watch(Xs, Ys?, [], Go, Go?) :- copy(Xs?, Ys).
+watch([X | Xs], [X? | Ys?], [W | Ws], Go, Out?) :-
+    ground(X?), ground(W?) |
+    met(W?, X?, R),
+    watch1(R?, Xs?, Ys, W?, Ws?, Go?, Out).
+
+procedure watch1(YesNo?, Stream(Seen)?, Stream(Seen), Want?, Wants?, Steps?, Steps).
+watch1(yes, Xs, Ys?, _, Ws, Go, Out?) :- watch(Xs?, Ys, Ws?, Go?, Out).
+watch1(no, Xs, Ys?, W, Ws, Go, Out?) :- watch(Xs?, Ys, [W? | Ws?], Go?, Out).
+
+%% met(W, X, R): whether the screen's line X is a view whose machine state shows W.
+procedure met(Want?, Seen?, YesNo).
+met(holds(A), view(S, _, _, _), R?) :- ground(A?), ground(S?) | among_atom(A?, S?, R).
+met(lacks(A), view(S, _, _, _), R?) :- ground(A?), ground(S?) | among_atom(A?, S?, R1), flip_yn(R1?, R).
+met(_, _, no) :- otherwise | true.
+
+procedure among_atom(Atom?, List(Atom)?, YesNo).
+among_atom(_, [], no).
+among_atom(A, [B | _], yes) :- A? =?= B? | true.
+among_atom(A, [_ | Bs], R?) :- otherwise | among_atom(A?, Bs?, R).
+
+procedure flip_yn(YesNo?, YesNo).
+flip_yn(yes, no).
+flip_yn(no, yes).
+
+procedure copy(Stream(Seen)?, Stream(Seen)).
+copy([X | Xs], [X? | Ys?]) :- copy(Xs?, Ys).
+copy([], []).

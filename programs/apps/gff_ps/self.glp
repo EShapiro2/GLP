@@ -71,3 +71,8 @@ miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+
+%% The play with no super-app (plays.glp).
+imported procedure plays#play_shortening(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+exported procedure play_shortening(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_shortening(A?, B?, C?, D?, F?, E?) :- plays # play_shortening(A, B, C, D, F, E).

@@ -1,13 +1,9 @@
-%% person.glp --- the GFF mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp); and cued_person/5, the same person whose script ends in a tail the play gives, which the play binds once another person's screen shows what the play waits for (plays.glp).  It is ../gsnp/person.glp with GFF's scripts, the steps and the conditions being written in self.glp.
+%% person.glp --- the GFF-PS mini-app's scripted person, ../gff/person.glp with GFF-PS's scripts;: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp); and cued_person/5, the same person whose script ends in a tail the play gives, which the play binds once another person's screen shows what the play waits for (plays.glp).  It is ../gsnp/person.glp with GFF's scripts, the steps and the conditions being written in self.glp.
 %%
 %% The person reads what the dispatcher draws on the person channel: the agent's request questions, each showing the agent's own key and the persons it knows and taking one request; the program's output, construct 0, drawn whole as it grows, on which the agent writes its view when it starts and whenever it changes, and its notices; and the approval questions Start raises (vGLP, Section 5.4, "The compilation").  The person's screen shows the last view written and the notices written after it.  Its script is a list of steps (self.glp, Step).  A script whose tail is not yet given stops there: the person takes no further step, and reads and reports nothing more, until the tail is given.
 %%
-%% The roles are the persons of GFF's two plays (plays.glp; GFF #1 Cowork, Code_inbox.md, 2026-10-28 06:14 UTC, on the branch GFF-chooser).  Friends follow each other, by an act each machine takes once they are friends (GFF:2, friends_follow); a person follows a non-friend through a friend who follows them by their Follow, follow_through (GFF:2), and ceases by their Unfollow (GFF:3); a friend's machine updates them every so often that it follows an agent, friend_follows (GFF:5, update, update_ceased, as GFF's chooser schedules them, chooser.glp).  The items are utterances signed by alice at their posting (GFF:1; GKK:4).
-%%   play_feeds: alice befriends bob, bob carol, carol dave and dave eve, each the first meeting the second by their key and offering them friendship, each answering yes (GKK:2, GSG:1); alice posts two items.  Once bob follows alice and both items have reached him, he introduces alice to carol (GKK:3); once bob's update that he follows alice has reached her, carol follows alice through bob; once both items have reached her signed by bob, she introduces alice to dave, who likewise follows through carol, and dave introduces her to eve, who follows through dave.
-%%   play_choice: the roles choice_alice to choice_eve: alice befriends bob and carol and posts one item; carol befriends dave, dave frank, and eve bob and frank; carol introduces alice to dave, who follows her through carol once carol's update has reached him; dave introduces her to frank, who follows through dave; eve, introduced to alice by bob, follows her through bob and through frank once their updates have reached her, holds the item from each, and ceases her following through frank.
-%% Each person introduces the next only once the items have reached them, so that no delivery to them is open while their introduction is: an attempt that yields is proposed again, and the person introduced is asked again, where their script answers once.
+%% The roles are the persons of GFF-PS's play, play_shortening (plays.glp), whose scripts are below.  Friends follow each other, by an act each machine takes once they are friends (GFF:2, friends_follow); a person's Follow is their want to follow, and their machine follows through a friend known to follow, as GFF-PS's chooser takes it (chooser.glp); a friend's machine updates them every so often that it follows an agent (GFF:5); and the machine follows through a nearer friend in place of the one it follows through, when an item arrives signed by that friend (GFF-PS:1, switch).
 %% Any other role has no script: its person reports the views and acts on nothing.
-
 Last  ::= last(List(Atom), List(Key)) ; nolast.
 Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
 Shown ::= shown(Integer, Path, Asking).
@@ -27,102 +23,51 @@ cued_person(_, Role, Tail, ch(Ds, Gs?), S?) :-
     script(Role?, Tail?, Ss),
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
-%% script(Role, Tail, Steps): the steps of Role, ending in Tail.
+%% script(Role, Tail, Steps): the steps of Role, ending in Tail.  The roles of play_shortening (plays.glp): s_alice befriends bob and carol, then her script ends in the play's tail, her two posts; s_bob answers yes to alice and to eve, then his script ends in the play's tail, his befriending dave; s_carol answers yes to alice, befriends dave and introduces alice to him; s_dave answers yes to carol and to her introducing alice, presses Follow once carol's update has reached him, befriends frank and introduces alice to him, then his script ends in the play's tail; s_frank likewise, one friend further, introducing alice to eve; s_eve answers yes to frank and to his introducing alice, presses Follow once frank's update has reached her, and befriends bob.
 procedure script(Constant?, Steps?, Steps).
-script(alice, T, [own([A1], propose(establish(A1?))), wait(holds(identity)),
-                  own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
-                  own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
-                  own([A4, A5], propose(post(A4?, speech(utterance('First item'), A5?)))),
-                  wait(holds(feed(speech(utterance('First item'), alice)))),
-                  own([A6, A7], propose(post(A6?, speech(utterance('Second item'), A7?)))),
-                  wait(holds(feed(speech(utterance('Second item'), alice)))) | T?]).
-script(bob, T, [own([B1], propose(establish(B1?))), wait(holds(identity)),
-                approval(acquaint(alice, bob), yes),
-                approval(befriend(alice, bob), yes),
-                own([B2], propose(acquaint(B2?, carol))), wait(holds(knows(carol))),
-                own([B3], propose(befriend(B3?, carol))), wait(holds(friend(carol))),
-                wait(holds(following(alice))),
-                wait(holds(path(speech(utterance('First item'), alice), speech(utterance('First item'), alice)))),
-                wait(holds(path(speech(utterance('Second item'), alice), speech(utterance('Second item'), alice)))),
-                own([B4], propose(introduce(B4?, carol, alice))) | T?]).
-script(carol, T, [own([C1], propose(establish(C1?))), wait(holds(identity)),
-                  approval(acquaint(bob, carol), yes),
-                  approval(befriend(bob, carol), yes),
-                  own([C2], propose(acquaint(C2?, dave))), wait(holds(knows(dave))),
-                  own([C3], propose(befriend(C3?, dave))), wait(holds(friend(dave))),
-                  approval(introduce(bob, carol, alice), yes), wait(holds(knows(alice))),
-                  wait(holds(friend_follows(bob, alice))),
-                  own([C4], propose(follow(C4?, alice))), wait(holds(follows(alice, bob))),
-                  wait(holds(path(speech(utterance('First item'), alice), speech(speech(utterance('First item'), alice), bob)))),
-                  wait(holds(path(speech(utterance('Second item'), alice), speech(speech(utterance('Second item'), alice), bob)))),
-                  own([C5], propose(introduce(C5?, dave, alice))) | T?]).
-script(dave, T, [own([D1], propose(establish(D1?))), wait(holds(identity)),
-                 approval(acquaint(carol, dave), yes),
-                 approval(befriend(carol, dave), yes),
-                 own([D2], propose(acquaint(D2?, eve))), wait(holds(knows(eve))),
-                 own([D3], propose(befriend(D3?, eve))), wait(holds(friend(eve))),
-                 approval(introduce(carol, dave, alice), yes), wait(holds(knows(alice))),
-                 wait(holds(friend_follows(carol, alice))),
-                 own([D4], propose(follow(D4?, alice))), wait(holds(follows(alice, carol))),
-                 wait(holds(path(speech(utterance('First item'), alice), speech(speech(speech(utterance('First item'), alice), bob), carol)))),
-                 wait(holds(path(speech(utterance('Second item'), alice), speech(speech(speech(utterance('Second item'), alice), bob), carol)))),
-                 own([D5], propose(introduce(D5?, eve, alice))) | T?]).
-script(eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity)),
-                approval(acquaint(dave, eve), yes),
-                approval(befriend(dave, eve), yes),
-                approval(introduce(dave, eve, alice), yes), wait(holds(knows(alice))),
-                wait(holds(friend_follows(dave, alice))),
-                own([E2], propose(follow(E2?, alice))), wait(holds(follows(alice, dave))) | T?]).
-script(choice_alice, T, [own([A1], propose(establish(A1?))), wait(holds(identity)),
-                         own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
-                         own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
-                         own([A4], propose(acquaint(A4?, carol))), wait(holds(knows(carol))),
-                         own([A5], propose(befriend(A5?, carol))), wait(holds(friend(carol))),
-                         own([A6, A7], propose(post(A6?, speech(utterance('First item'), A7?)))),
-                         wait(holds(feed(speech(utterance('First item'), alice)))) | T?]).
-script(choice_bob, T, [own([B1], propose(establish(B1?))), wait(holds(identity)),
-                       approval(acquaint(alice, bob), yes),
-                       approval(befriend(alice, bob), yes),
-                       approval(acquaint(eve, bob), yes),
-                       approval(befriend(eve, bob), yes),
-                       wait(holds(path(speech(utterance('First item'), alice), speech(utterance('First item'), alice)))) | T?]).
-script(choice_carol, T, [own([C1], propose(establish(C1?))), wait(holds(identity)),
-                         approval(acquaint(alice, carol), yes),
-                         approval(befriend(alice, carol), yes),
-                         own([C2], propose(acquaint(C2?, dave))), wait(holds(knows(dave))),
-                         own([C3], propose(befriend(C3?, dave))), wait(holds(friend(dave))),
-                         wait(holds(path(speech(utterance('First item'), alice), speech(utterance('First item'), alice)))),
-                         own([C4], propose(introduce(C4?, dave, alice))) | T?]).
-script(choice_dave, T, [own([D1], propose(establish(D1?))), wait(holds(identity)),
-                        approval(acquaint(carol, dave), yes),
-                        approval(befriend(carol, dave), yes),
-                        own([D2], propose(acquaint(D2?, frank))), wait(holds(knows(frank))),
-                        own([D3], propose(befriend(D3?, frank))), wait(holds(friend(frank))),
-                        approval(introduce(carol, dave, alice), yes), wait(holds(knows(alice))),
-                        wait(holds(friend_follows(carol, alice))),
-                        own([D4], propose(follow(D4?, alice))), wait(holds(follows(alice, carol))),
-                        wait(holds(path(speech(utterance('First item'), alice), speech(speech(utterance('First item'), alice), carol)))),
-                        own([D5], propose(introduce(D5?, frank, alice))) | T?]).
-script(choice_frank, T, [own([F1], propose(establish(F1?))), wait(holds(identity)),
-                         approval(acquaint(dave, frank), yes),
-                         approval(befriend(dave, frank), yes),
-                         approval(acquaint(eve, frank), yes),
-                         approval(befriend(eve, frank), yes),
-                         approval(introduce(dave, frank, alice), yes), wait(holds(knows(alice))),
-                         wait(holds(friend_follows(dave, alice))),
-                         own([F2], propose(follow(F2?, alice))), wait(holds(follows(alice, dave))),
-                         wait(holds(path(speech(utterance('First item'), alice), speech(speech(speech(utterance('First item'), alice), carol), dave)))) | T?]).
-script(choice_eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity)),
-                       own([E2], propose(acquaint(E2?, bob))), wait(holds(knows(bob))),
-                       own([E3], propose(befriend(E3?, bob))), wait(holds(friend(bob))),
-                       own([E4], propose(acquaint(E4?, frank))), wait(holds(knows(frank))),
-                       own([E5], propose(befriend(E5?, frank))), wait(holds(friend(frank))),
-                       approval(introduce(bob, eve, alice), yes), wait(holds(knows(alice))),
-                       wait(holds(friend_follows(bob, alice))),
-                       wait(holds(friend_follows(frank, alice))),
-                       own([E6], propose(follow(E6?, alice))), wait(holds(following(alice))),
-                       wait(holds(item(speech(utterance('First item'), alice), alice))),
-                       own([E7], propose(unfollow(E7?, alice))), wait(lacks(following(alice))) | T?]).
+script(s_alice, T, [own([A1], propose(establish(A1?))), wait(holds(identity)),
+                    own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+                    own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
+                    own([A4], propose(acquaint(A4?, carol))), wait(holds(knows(carol))),
+                    own([A5], propose(befriend(A5?, carol))), wait(holds(friend(carol))) | T?]).
+script(s_bob, T, [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                  approval(acquaint(alice, bob), yes),
+                  approval(befriend(alice, bob), yes),
+                  approval(acquaint(eve, bob), yes),
+                  approval(befriend(eve, bob), yes) | T?]).
+script(s_carol, T, [own([C1], propose(establish(C1?))), wait(holds(identity)),
+                    approval(acquaint(alice, carol), yes),
+                    approval(befriend(alice, carol), yes),
+                    own([C2], propose(acquaint(C2?, dave))), wait(holds(knows(dave))),
+                    own([C3], propose(befriend(C3?, dave))), wait(holds(friend(dave))),
+                    wait(holds(follows_friend(alice))),
+                    own([C4], propose(introduce(C4?, dave, alice))) | T?]).
+script(s_dave, T, [own([D1], propose(establish(D1?))), wait(holds(identity)),
+                   approval(acquaint(carol, dave), yes),
+                   approval(befriend(carol, dave), yes),
+                   approval(introduce(carol, dave, alice), yes), wait(holds(knows(alice))),
+                   wait(holds(friend_follows(carol, alice))),
+                   own([D2], propose(follow(D2?, alice))), wait(holds(follows(alice, carol))),
+                   own([D3], propose(acquaint(D3?, frank))), wait(holds(knows(frank))),
+                   own([D4], propose(befriend(D4?, frank))), wait(holds(friend(frank))),
+                   own([D5], propose(introduce(D5?, frank, alice))) | T?]).
+script(s_frank, T, [own([F1], propose(establish(F1?))), wait(holds(identity)),
+                    approval(acquaint(dave, frank), yes),
+                    approval(befriend(dave, frank), yes),
+                    approval(introduce(dave, frank, alice), yes), wait(holds(knows(alice))),
+                    wait(holds(friend_follows(dave, alice))),
+                    own([F2], propose(follow(F2?, alice))), wait(holds(follows(alice, dave))),
+                    own([F3], propose(acquaint(F3?, eve))), wait(holds(knows(eve))),
+                    own([F4], propose(befriend(F4?, eve))), wait(holds(friend(eve))),
+                    own([F5], propose(introduce(F5?, eve, alice))) | T?]).
+script(s_eve, T, [own([E1], propose(establish(E1?))), wait(holds(identity)),
+                  approval(acquaint(frank, eve), yes),
+                  approval(befriend(frank, eve), yes),
+                  approval(introduce(frank, eve, alice), yes), wait(holds(knows(alice))),
+                  wait(holds(friend_follows(frank, alice))),
+                  own([E2], propose(follow(E2?, alice))), wait(holds(follows(alice, frank))),
+                  own([E3], propose(acquaint(E3?, bob))), wait(holds(knows(bob))),
+                  own([E4], propose(befriend(E4?, bob))), wait(holds(friend(bob))) | T?]).
 script(_, T, T?) :- otherwise | true.
 
 %% The person.

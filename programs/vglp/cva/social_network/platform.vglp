@@ -3751,13 +3751,24 @@ cache_find1(no, _, Rs, B, Ps, Is, R?) :- cache_find(Rs?, B?, Ps?, Is?, R).
 
 %% A new entry, for the class of the term C at the agent Id: the schema-bindings of the participants and atoms Ps that determine a transaction (mates_of, live_mates), and among them the class of C's schema-binding, those a chain of links joins to it (class_mates), with the parts they determine (info_parts_of).
 procedure new_info(Class?, Deltas?, Peer?, Info).
-new_info(C, Ps, Id, I?) :- ground(Ps?) |
+new_info(C, Ps, Id, I?) :- ground(Ps?), ground(C?) |
     contract_schemas(Ss),
     reflexive_preds(Rf),
     mates_of(Ss?, Ps?, Ms0),
-    dedup_mates(Ms0?, Ms1),
+    own_mate(C?, Ps?, Mc),
+    app(Mc?, Ms0?, Ms00),
+    dedup_mates(Ms00?, Ms1),
     deltas_peers(Ps?, Q),
     new_info0(C?, Ps?, Ms1?, Q?, Rf?, Id?, I).
+%% The schema-binding of the class term C itself is among the class's schema-bindings: a variable the opener requires and no atom changes is bound by C and by no matching of the class's atoms, as GFF-PS's switch looks at an item and its path (CHOOSER.md beside the compiler, "For vGLP", 5; the experiment GFF-chooser).
+procedure own_mate(Class?, Deltas?, Mates).
+own_mate(C, Ps, M?) :- ground(C?), ground(Ps?) |
+    binding_of(C?, Nm, B),
+    schema_entry(Nm?, S),
+    own_mate1(S?, Nm?, B?, Ps?, M).
+procedure own_mate1(Schema?, Constant?, Binding?, Deltas?, Mates).
+own_mate1(schema(_, _, Rs), Nm, B, Ps, M?) :- mates_check([B?], Nm?, Rs?, Ps?, M).
+own_mate1(lschema(_, _, _, _), _, _, _, []).
 procedure new_info0(Class?, Deltas?, Mates?, Peers?, Preds?, Peer?, Info).
 new_info0(C, Ps, Ms1, Q, Rf, Id, I?) :- ground(C?), ground(Q?), ground(Rf?) |
     live_mates(Ms1?, Q?, Rf?, Ms2),
