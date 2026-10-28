@@ -150,6 +150,7 @@ realisable([listed_base(_, _)|_], no).
 realisable([listed_signed(_, _)|_], no).
 realisable([listed_guarded(_, _)|_], no).
 realisable([listed_often(_, _)|_], no).
+realisable([received_form(_, _)|_], no).
 realisable([multiplicity_not_added(_, _, _)|_], no).
 realisable([multiplicity_not_numeric(_, _, _)|_], no).
 realisable([multiplicity_not_whole(_, _, _)|_], no).
@@ -1905,6 +1906,7 @@ guarding(guarded, yes).
 guarding(guarded_at(_), yes).
 guarding(unguarded, no).
 guarding(every_so_often, no).
+guarding(received, no).
 %% Whether an atom of the list names the role J: an argument role(J), a name term built on it, or a speech act signed by its person.
 procedure names_role(Atoms?, Integer?, YesNo).
 names_role(As, J, B?) :- ground(As?) |

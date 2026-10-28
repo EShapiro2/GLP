@@ -243,8 +243,27 @@ form_roles([RS|Rs], I, Nm, R?) :-
     rs_del(RS?, M),
     I1 := I? + 1,
     form_roles(Rs?, I1?, Nm?, R1),
-    role_inert(RS?, Nm?, I?, R1?, R2),
+    role_inert(RS?, Nm?, I?, R1?, R2a),
+    received_fault(RS?, Nm?, I?, R2a?, R2),
     overlap_faults(P?, M?, Nm?, I?, R2?, R).
+
+% A role marked received is the second role, requires nothing but identity,
+% deletes nothing and forbids nothing, and only adds (Udi, 2026-10-28, reported
+% by GFF #1 Cowork; CHOOSER.md, "For GSC"); a role marked received otherwise is
+% the fault received_form(Schema, Role).
+procedure received_fault(RoleSpec?, Constant?, Integer?, Faults?, Faults).
+received_fault(rs(received, _, M, K, F), Nm, I, T, R?) :- ground(M?), ground(K?), ground(F?), integer(I?) |
+    received_ok(I?, M?, K?, F?, Ok),
+    received_fault1(Ok?, Nm?, I?, T?, R).
+received_fault(_, _, _, T, T?) :- otherwise | true.
+
+procedure received_ok(Integer?, Atoms?, Atoms?, Atoms?, Ans).
+received_ok(2, [], [atom(identity, [])], [], yes).
+received_ok(_, _, _, _, no) :- otherwise | true.
+
+procedure received_fault1(Ans?, Constant?, Integer?, Faults?, Faults).
+received_fault1(yes, _, _, T, T?).
+received_fault1(no, Nm, I, T, [received_form(Nm?, I?)|T?]).
 
 % Some role adds or deletes an atom.
 procedure schema_change_fault(Ans?, Constant?, Faults).
@@ -439,6 +458,7 @@ listed_signed_fault([_|_], Nm, J, T, [listed_signed(Nm?, J?)|T?]).
 procedure listed_guard_fault(Guard?, Constant?, Integer?, Faults?, Faults).
 listed_guard_fault(unguarded, _, _, T, T?).
 listed_guard_fault(every_so_often, Nm, J, T, [listed_often(Nm?, J?)|T?]).
+listed_guard_fault(received, Nm, J, T, [received_form(Nm?, J?)|T?]).
 listed_guard_fault(guarded, Nm, J, T, [listed_guarded(Nm?, J?)|T?]).
 
 procedure listed_role_faults(RoleSpec?, Integer?, RoleSpecs?, Constant?, Faults?, Faults).

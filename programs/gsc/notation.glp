@@ -171,7 +171,15 @@ procedure n_head_role(NRoleSpec?, Integer?, Chunks?, Chunks).
 n_head_role(RS, I, T, R?) :- ground(RS?), integer(I?), ground(T?) |
     n_is_guarding(RS?, G),
     n_mark(G?, T?, T1),
-    n_role_term(RS?, I?, T1?, R).
+    n_is_received(RS?, Rc),
+    n_role_term(RS?, I?, T1?, R0),
+    n_received(Rc?, R0?, R).
+
+% A role carrying the mark received is printed "received" before its name
+% (the experiment GFF-chooser; CHOOSER.md, "For GSC").
+procedure n_received(Ans?, Chunks?, Chunks).
+n_received(yes, T, ['received '|T?]).
+n_received(no, T, T?).
 
 procedure n_head_roles(NRoleSpecs?, Integer?, Chunks?, Chunks).
 n_head_roles([], _, T, T?).

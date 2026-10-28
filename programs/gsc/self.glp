@@ -103,7 +103,8 @@ Bases ::= [] ; [Base | Bases].
 % arguments u_2, ..., u_r (GSC 8064cfb); its Guard is unguarded, and a listed
 % role carrying ? is refused (listed_guarded).
 % every_so_often (the experiment GFF-chooser, on its branch; GFF's clause 5, "Every so often, Carol updates their friend Alice", Udi, 2026-10-28): the mark of a role whose act recurs, which is no guard and may add and delete nothing (programs/vglp/cva/compiler/CHOOSER.md, "For GSC").
-Guard     ::= guarded ; unguarded ; every_so_often.
+% received (the experiment GFF-chooser; Udi, 2026-10-28, reported by GFF #1 Cowork): the mark of a schema's second role that receives what the first sends, requiring nothing but identity and only adding; no guard, and unguarded for the three conditions of def:syntactically-grassroots (CHOOSER.md, "For GSC").
+Guard     ::= guarded ; unguarded ; every_so_often ; received.
 RoleKind  ::= listed(Integer, Constant, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
@@ -304,6 +305,7 @@ Fault ::= no_introductory_act
         ; listed_signed(Constant, Integer)
         ; listed_guarded(Constant, Integer)
         ; listed_often(Constant, Integer)
+        ; received_form(Constant, Integer)
         ; multiplicity_not_added(Constant, Integer, Atom)
         ; multiplicity_not_numeric(Constant, Integer, Atom)
         ; multiplicity_not_whole(Constant, Integer, Atom)
@@ -1128,12 +1130,26 @@ procedure guard_marked(Guard?, Ans).
 guard_marked(guarded, yes).
 guard_marked(unguarded, no).
 guard_marked(every_so_often, no).
+guard_marked(received, no).
 
 % Whether a role carries the mark every_so_often (CHOOSER.md, "For GSC").
 procedure often_marked(Guard?, Ans).
 often_marked(every_so_often, yes).
 often_marked(guarded, no).
 often_marked(unguarded, no).
+often_marked(received, no).
+
+% Whether a role carries the mark received (CHOOSER.md, "For GSC").
+procedure received_marked(Guard?, Ans).
+received_marked(received, yes).
+received_marked(guarded, no).
+received_marked(unguarded, no).
+received_marked(every_so_often, no).
+
+procedure n_is_received(NRoleSpec?, Ans).
+n_is_received(RS, R?) :- ground(RS?) |
+    nrs_guard(RS?, G),
+    received_marked(G?, R).
 
 procedure is_often(RoleSpec?, Ans).
 is_often(RS, R?) :- ground(RS?) |

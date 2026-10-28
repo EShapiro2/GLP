@@ -945,8 +945,78 @@ latex_schema1(no, Sc, T, R?) :- ground(Sc?), ground(T?) | latex_schema_app(Sc?, 
 
 procedure latex_schema(Ans?, NSchema?, Chunks?, Chunks).
 latex_schema(_, Sc, T, R?) :- ground(Sc?), ground(T?) |
+    nsch_roles(Sc?, Rs),
+    sending_roles(Rs?, Sd),
+    latex_schema0(Sd?, Sc?, T?, R).
+
+procedure latex_schema0(Ans?, NSchema?, Chunks?, Chunks).
+latex_schema0(no, Sc, T, R?) :- ground(Sc?), ground(T?) |
     s3_form(Sc?, A),
     latex_schema1(A?, Sc?, T?, R).
+latex_schema0(yes, Sc, T, R?) :- ground(Sc?), ground(T?) |
+    latex_sending(Sc?, T?, R).
+
+% --- A sending (the experiment GFF-chooser; Udi, 2026-10-28, reported by GFF
+% #1 Cowork; programs/vglp/cva/compiler/CHOOSER.md, "For VMAT") ------------
+% A schema of two roles whose second carries the mark received compiles to
+% two transactions, CVA's send and receive lifted: the sender's, at \Alice,
+% its assignment and proviso those of the first role and the proviso also
+% that \Alice knows \Bob, and its last line that it sends the act, the
+% binding of the schema's variables, to \Bob; and the recipient's, at \Bob,
+% taking the act in from \Alice and adding what the second role adds.  Each
+% is guarded by none.
+
+procedure sending_roles(NRoleSpecs?, Ans).
+sending_roles([_, rs(received, _, _, _, _)], yes).
+sending_roles(_, no) :- otherwise | true.
+
+procedure sending_pair(NRoleSpecs?, NRoleSpec, NRoleSpec).
+sending_pair([R1, R2], R1?, R2?).
+sending_pair(_, rs(unguarded, [], [], [], []), rs(unguarded, [], [], [], [])) :- otherwise | true.
+
+% The first role with knows(\Bob) among its required atoms.
+procedure knowing_sender(NRoleSpec?, NRoleSpec).
+knowing_sender(rs(G, A, D, K, F), rs(G?, A?, D?, [atom(knows, [role(2)])|K?], F?)).
+knowing_sender(crs(C, G, A, D, K, F), crs(C?, G?, A?, D?, K?, F?)).
+
+% The act sent: the binding of the schema's variables, \langle x,y\rangle.
+procedure act_chunks(Args?, Chunks?, Chunks).
+act_chunks(Vs, T, ['\langle '|R?]) :- ground(Vs?), ground(T?) |
+    latex_args(Vs?, [' \rangle'|T?], R).
+
+procedure latex_sending(NSchema?, Chunks?, Chunks).
+latex_sending(Sc, T, R?) :- ground(Sc?), ground(T?) |
+    nsch_roles(Sc?, Rs),
+    sending_pair(Rs?, R1, R2),
+    nsch_vars(Sc?, Vs),
+    nsch_constraint(Sc?, Cn),
+    latex_sending1(R1?, R2?, Vs?, Cn?, T?, R).
+
+procedure latex_sending1(NRoleSpec?, NRoleSpec?, Args?, Constraint?, Chunks?, Chunks).
+latex_sending1(R1, R2, Vs, Cn, T, ['\\begin{align*}'|R?]) :-
+    ground(R1?), ground(R2?), ground(Vs?), ground(Cn?), ground(T?) |
+    knowing_sender(R1?, R1k),
+    latex_sender(R1k?, Vs?, Cn?, ['\\end{align*}', '\\begin{align*}'|Rr?], R),
+    latex_recipient(R2?, Vs?, ['\\end{align*}'|T?], Rr).
+
+procedure latex_sender(NRoleSpec?, Args?, Constraint?, Chunks?, Chunks).
+latex_sender(R1, Vs, Cn, T, R?) :- ground(R1?), ground(Vs?), ground(Cn?), ground(T?) |
+    latex_guard([], [], GL),
+    constraint_line(Cn?, [GL?], LC),
+    act_chunks(Vs?, [' \\text{ to } \\Bob'], Ac),
+    forb_conjs([R1?], 1, [], Fs),
+    provided_line(Fs?, [['\\text{sends } '|Ac?]|LC?], L3),
+    req_conjs([R1?], 1, [], Qs),
+    provided_line(Qs?, L3?, L2),
+    latex_update(R1?, 1, [], A),
+    join_lines([A?|L2?], T?, R).
+
+procedure latex_recipient(NRoleSpec?, Args?, Chunks?, Chunks).
+latex_recipient(R2, Vs, T, R?) :- ground(R2?), ground(Vs?), ground(T?) |
+    latex_guard([], [], GL),
+    act_chunks(Vs?, [' \\text{ received from } \\Alice'], Ac),
+    latex_update(R2?, 2, [], A),
+    join_lines([A?, ['\\text{on } '|Ac?], GL?], T?, R).
 
 % A schema's name is no part of its compiled form, so it is carried in a
 % conditional TeX skips, and the whole output is pasted as it stands.
@@ -1063,6 +1133,11 @@ malformed_lines([listed_signed(S, I)|Fs], T,
 malformed_lines([listed_guarded(S, I)|Fs], T,
                 [S?, 'at role', I?,
                  'has a listed role carrying the mark ?, which only an agent role may carry;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([received_form(S, I)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries the mark received, which only a second role requiring nothing but identity and only adding may carry;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([listed_often(S, I)|Fs], T,

@@ -72,3 +72,39 @@ GFF marks a role whose act recurs, "Every so often, Carol updates their friend A
 
 vGLP's compiler on the branch takes the mark as no guard (self.glp lines 32, 187 and 191; cvac.glp line 1907; text.glp lines 74, 3508 and 3825), refuses a contract with listed_often as it does one with listed_guarded (cvac.glp line 152), and keeps the every_so_often parts committed for the chooser (text.glp lines 166, 1299 to 1300 and 2212 to 2242).  cascade.sh counts a head marked every so often among the schemas.
 
+GFF also marks a schema's second role received (Udi, 2026-10-28, reported by GFF #1 Cowork): a delivery is a sending, one act of the clause and one schema, whose second role requires nothing but identity and only adds.  On the branch GSC's checker and printer take it as follows.
+
+5. programs/gsc/self.glp line 107: `Guard ::= guarded ; unguarded ; every_so_often ; received.`, the mark no guard (`guard_marked(received, no)`), so the three conditions of def:syntactically-grassroots take a received role as unguarded; `received_marked/2` and `n_is_received/2`; line 308, the fault `received_form(Schema, Role)`.
+
+6. programs/gsc/check.glp lines 247 to 266: a role marked received is the second role, requires `identity` alone, deletes nothing and forbids nothing, and otherwise is the fault received_form (`received_fault/5`); line 461, a listed role carrying the mark is that fault too.
+
+7. programs/gsc/notation.glp lines 170 to 182: the role is printed `received` before its name, as `deliver_own(Bob, received Alice; x) :`.
+
+8. programs/gsc/compile.glp line 1138: the line printed for received_form.
+
+## For VMAT
+
+VMAT gains CVA's send and receive, lifted, CVA being a special case of VMAT (Udi, 2026-10-28, reported by GFF #1 Cowork).  A sending, a schema of two roles whose second carries the mark received, compiles to two transactions, each guarded by none (programs/gsc/compile.glp lines 949 to 1020, `latex_sending`):
+
+1. The sender's, at Alice: the assignment of the first role, its proviso and also that Alice knows Bob, `\mathit{knows}(\Bob) \in c_{\Alice}`, and the line "sends ⟨x, ...⟩ to Bob", the act being the binding of the schema's variables.
+
+2. The recipient's, at Bob: "on ⟨x, ...⟩ received from Alice", and the assignment of the second role, which only adds.
+
+A recipient that is down holds no sender: the sender's transaction is unary.
+
+## For vGLP
+
+A received role is realised by CVA's send and a receive, with no two-phase commit (vGLP, Section 3.1, Definition "App Transaction, Effect": an app transaction adds messages to known peers to its outbox and deletes the messages it has read from its inbox; Definition "CVA Platform", Communicate).  On the branch:
+
+1. The class of a sending is the sender's alone: its Propose, by the opener, the sender, applies the sender's effect at once, as for a class of one participant, and sends the recipient the cargo `given(C)`, C the class term (text.glp lines 1972 to 2015, `propose_app`, `sending_class`, `given_to`); Propose's condition still requires that the sender know every other participant, here the recipient.
+
+2. The recipient takes the arriving `given(C)` in, where its state is in the domain of its effect in the part, and applies the effect, CVA's receive; otherwise it drops it (text.glp line 930, `message_cond(given(_), ...)`; line 1112, `dispatch_message(mgiven, ...)`; `receive_effect`).
+
+3. `Cargo` gains `given(Class)` (text.glp line 40); the mark is no guard everywhere the compiler reads a guard (compiler self.glp lines 33, 190 and 195; cvac.glp line 1909; text.glp line 75, `guard_roles`, `spec_unguarded`), and received_form refuses a contract (cvac.glp line 153).
+
+## For vGLP, 6.2
+
+What Section 6.2 would say: a tab's pragma line is what the tab lists, up to its first semicolon; after it, the line may say what a row shows under its entry.  A row shows under its entry the atoms of the state naming the entry by other predicates, each by its other arguments; an item such an atom names is shown once, however many atoms name it, and under it the signatures of each of its paths, the signers of each speech act an atom of the state pairs with it, as `path(x, y)`.  GFF's Feeds line, "the agents Alice follows; under an agent followed, the friend Alice follows them through, the friends who follow them, and the items of their feed, each once, the signatures of each of its paths under it", so lists `follows`, and a row `follows(Bob, Carol)` shows Carol, each `friend_follows(D, Bob)` by D, and each item of Bob's feed, `item(x, Bob)`, once, with under it each `path(x, y)` by the signers of y.  `from(x, c)` names x and no entry, so no row shows it.  Posts lists `feed`, Alice's own items, as before.
+
+On the branch: programs/vglp/cva/compiler/pragmas.sh reads a tab's predicate from the part of its line before the first semicolon (`$listed`, line 284); glp_multiagent/lib/ui_runtime/named_widgets.dart, `_wordedRow` (lines 2460 to 2485) and `_pathsOf` (line 2528), draw an item once with its paths under it.  A row is still one atom of the tab's predicate, so an agent followed through two friends has two rows, each showing the same items.
+
