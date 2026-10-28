@@ -4622,7 +4622,7 @@ unsigned_found(_, _, no) :- otherwise | true.
 %% Whether P is among the signatories of the speech act: its author, who signed its utterance, and each agent that signed it over.
 procedure signatory(Peer?, Speech?, YesNo).
 signatory(P, speech(_, Q), yes) :- P? =?= Q? | true.
-signatory(P, speech(utterance(_), _), no) :- otherwise | true.
+signatory(_, speech(utterance(_), _), no) :- otherwise | true.
 signatory(P, speech(speech(U, Q1), _), R?) :- otherwise | signatory(P?, speech(U?, Q1?), R).
 %% The value of an expression under the binding, num_is(K), or no_num where a number it names is not bound.
 procedure expr_val(Expr?, Binding?, NumRes).
