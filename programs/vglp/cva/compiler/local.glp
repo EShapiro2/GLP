@@ -276,7 +276,9 @@ free_lines(Nm, Rs, Lv, L?) :- ground(Nm?), ground(Rs?) |
     kept_forbidden_args(Rs?, Kf0),
     flat_args(Kf0?, Kf1),
     variables_of(Kf1?, Kf2),
-    args_minus(Kf2?, Lv?, Kf),
+    first_kept_vars(Rs?, Fk),
+    args_minus(Kf2?, Fk?, Kf3),
+    args_minus(Kf3?, Lv?, Kf),
     changed_args(Rs?, Ch0),
     flat_args(Ch0?, Ch),
     first_absent(Kf?, Ch?, F),
@@ -287,6 +289,14 @@ free_lines1([V|_], Nm, ['%% it is not effective (vGLP, Section 5.4, the paragrap
         '%% the schema occurs in an atom it requires or forbids and in no atom it deletes or adds:',
         T?]) :-
     ground(Nm?), ground(V?) | T =.. ['%% the schema and the variable', Nm?, V?].
+%% The variables of the atoms the schema's first role requires, its opener's: a variable that occurs there and in no atom the schema deletes or adds is bound from the opener's state when it opens the schema, and only looked at, as GFF-PS's switch looks at the item x and its path y (Udi, 2026-10-28, reported by GFF #1 Cowork: "a value that occurs only in atoms required or in the constraint is allowed"; the experiment GFF-chooser; CHOOSER.md beside this file, "For vGLP").
+procedure first_kept_vars(RoleSpecs?, Args).
+first_kept_vars([], []).
+first_kept_vars([R|_], Vs?) :- ground(R?) |
+    rs_lists(R?, _, _, K, _),
+    atoms_args(K?, A1),
+    flat_args(A1?, A2),
+    variables_of(A2?, Vs).
 %% The arguments of the atoms a schema requires or forbids, the listing atoms rho(q, u_2, ..., u_r) the base person of a listed role requires among them (vGLP f5f1644, Section 5.4, the paragraph on act schemas: "for p the person in the base of a listed role, p lists in d_p exactly the people of that role in L").
 procedure kept_forbidden_args(RoleSpecs?, Args).
 kept_forbidden_args([], []).
