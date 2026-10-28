@@ -1,0 +1,13 @@
+% GFF1: Fault-Resilient Feeds and Followers --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GFF (Udi, 2026-10-28: GFF's second contract, GFF the first and GFF1 the second).  The paper, /Users/udi/Grassroots/GFF/main_CSSN.tex, prints it in its box in the section on fault-resilient feeds and cites a clause as GFF1:1.
+% Extends: GFF, Grassroots Feeds and Followers, GFF's (beside this file), and through it GSG and GKK, GSC's.  It cites their clauses whole and restates none.
+% Defines: redundant following, redundant forwarding.  Feed, item, following and path are defined with GFF; Alice, Bob, Carol and Dave are variables naming distinct agents.
+% Last changed: 2026-10-28, written by GFF #1 Cowork from the discussion with Udi of 2026-10-28, on the branch GFF-chooser: 'Redundant forwarding' Udi's title.  The redundancy of the paths --- far apart, or whatever serves --- is the implementation's, given by the chooser or by the person's choice of friends (Udi, 2026-10-28).
+% Schemas: GFF1.glp beside this file, sixteen over thirteen predicates: GFF's fifteen and redundant_forward.
+GFF1: Fault-Resilient Feeds and Followers
+Alice, Bob, Carol and Dave are agents.
+1. ■ Redundant following.  Alice, who follows Bob through Carol, may also follow Bob through their friend Dave that follows Bob.
+2. ■ Redundant forwarding.  Alice, who follows Bob through Carol and through Dave and received an item of Bob's feed from Carol and not from Dave, forwards it to Dave.
+Pragmas
+Feeds: the agents Alice follows.
+Redundant following: Alice [Follow] <person>

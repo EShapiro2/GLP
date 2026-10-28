@@ -1,0 +1,119 @@
+%% ---------------------------------------------------------------------------
+%% GFF1.glp --- the contract of fault-resilient feeds, GFF's (Udi, 2026-10-28:
+%% GFF's second contract, named GFF1), in the term form programs/gsc reads.
+%% GFF1 extends GFF (GFF.glp beside this file), so the term holds GFF's
+%% fifteen schemas; the clauses are in GFF1.txt beside this file.  Sixteen
+%% schemas over thirteen predicates: GFF1:1, Redundant following, is GFF:2's
+%% follow_through, which already lets Alice follow b through several friends,
+%% and has no schema of its own; GFF1:2, Redundant forwarding, is
+%% redundant_forward, unguarded: Alice, who follows b through Carol and
+%% through Dave and holds an item x of b's feed from Carol and not from Dave,
+%% sends it to Dave, signed over, who then holds it with its path and forwards
+%% it on (GFF:4), and not back to Alice.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; every_so_often ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Names     ::= [] ; [Constant | Names].
+Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(gff1, C): the contract, GFF1 (Coordination Appendix C): GFF's fifteen schemas as GFF.glp has them, and redundant_forward.
+procedure contract_named(Constant?, Declared).
+contract_named(gff1,
+   [%% GKK:1 to GKK:3 and GSG:1, GSG:2, as GSG.glp has them.
+    schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(befriend, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
+    schema(unfriend, ['Alice', 'Bob'], [],
+       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+%% GFF:1, Feed.  Alice posts an item x to their feed; x is a speech act Alice signs (GKK:4).
+    schema(post, ['Alice'], [svar(x)],
+       [rs(guarded, [atom(feed, [svar(x)])], [], [atom(identity, [])], [atom(feed, [svar(x)])])]),
+%% GFF:2, Following.  Friends follow each other: an act of the two machines.
+    schema(friends_follow, ['Alice', 'Bob'], [],
+       [rs(unguarded, [atom(follows_friend, [role(2)]), atom(following, [role(2)])], [],
+                      [atom(identity, []), atom(friend, [role(2)])],
+                      [atom(follows_friend, [role(2)])]),
+        rs(unguarded, [atom(friend_follower, [role(1)])], [], [atom(identity, [])], [])]),
+%% GFF:2, Following.  A friend's following ends with the friendship.
+    schema(friend_following_ended, ['Alice', 'Bob'], [],
+       [rs(unguarded, [], [atom(follows_friend, [role(2)]), atom(following, [role(2)])],
+                      [atom(identity, [])], [atom(friend, [role(2)])]),
+        rs(unguarded, [], [atom(friend_follower, [role(1)])], [atom(identity, [])], [])]),
+%% GFF:2, Following.  Alice, who knows b but is not their friend, follows b through their friend Carol that follows b: Alice's act.
+    schema(follow_through, ['Alice', 'Carol'], [pvar(b)],
+       [rs(guarded,   [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])], [],
+                      [atom(identity, []), atom(knows, [pvar(b)]), atom(friend, [role(2)])],
+                      [atom(friend, [pvar(b)]), atom(follows, [pvar(b), role(2)])]),
+        rs(unguarded, [atom(follower, [role(1), pvar(b)])], [],
+                      [atom(identity, []), atom(following, [pvar(b)])], [])]),
+%% GFF:2, Following.  Alice's following of b through Carol ends when Carol ceases to follow b; Carol opens it, being the one who knows (Code #16, 2026-10-28).
+    schema(path_broken, ['Carol', 'Alice'], [pvar(b)],
+       [rs(unguarded, [], [atom(follower, [role(2), pvar(b)])], [atom(identity, [])], [atom(following, [pvar(b)])]),
+        rs(unguarded, [], [atom(follows, [pvar(b), role(1)]), atom(following, [pvar(b)])],
+                      [atom(identity, [])], [])]),
+%% GFF:2, Following.  Alice's following of b through Carol ends when Carol ceases to be Alice's friend.
+    schema(friendship_ended, ['Alice', 'Carol'], [pvar(b)],
+       [rs(unguarded, [], [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
+                      [atom(identity, [])], [atom(friend, [role(2)])]),
+        rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
+%% GFF:3, Unfollow.  Alice ceases following b through Carol: Alice's act, one per following.
+    schema(unfollow, ['Alice', 'Carol'], [pvar(b)],
+       [rs(guarded,   [], [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
+                      [atom(identity, [])], []),
+        rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
+%% GFF:4, Delivery.  Bob sends an item x they posted to their friend Alice, who follows Bob by friendship; x carries Bob's signature from its posting (GKK:4).
+    schema(deliver_own, ['Bob', 'Alice'], [svar(x)],
+       [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
+                      [atom(identity, []), atom(feed, [svar(x)]), atom(friend_follower, [role(2)]), atom(friend, [role(2)])],
+                      [atom(sent, [svar(x), role(2)])]),
+        rs(unguarded, [atom(item, [svar(x), role(1)]), atom(path, [svar(x), svar(x)]), atom(from, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
+%% GFF:4, Delivery.  Carol, who follows b, forwards an item x of b's feed they hold, signed over (GKK:4), to their friend Alice, who follows b through Carol, and not back to the friend it came from.  An item is held as its identity, x, the author's signed act, with path(x, y), y the signatures over x along the path it came by, and from(x, c), the friend it came from (Udi, 2026-10-28); so x is sent to each friend once however many paths it came by.
+    schema(deliver_on, ['Carol', 'Alice'], [pvar(b), svar(x), svar(y)],
+       [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
+                      [atom(identity, []), atom(following, [pvar(b)]), atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y)]),
+                       atom(follower, [role(2), pvar(b)]), atom(friend, [role(2)])],
+                      [atom(sent, [svar(x), role(2)]), atom(from, [svar(x), role(2)])]),
+        rs(unguarded, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1)]), atom(from, [svar(x), role(1)])], [], [atom(identity, [])], [])]),
+%% GFF:5, Updating.  'Every so often, Carol updates their friend Alice' that Carol follows b: an act of the machines; Carol's role is marked every_so_often, the mark of the clause, which lets a role change nothing --- the act recurs, and how often is the implementation's (Udi, 2026-10-28; a construct of the language on this branch, proposed to GSC).
+    schema(update, ['Carol', 'Alice'], [pvar(b)],
+       [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(following, [pvar(b)])], []),
+        rs(unguarded, [atom(friend_follows, [role(1), pvar(b)])], [], [atom(identity, [])],
+                      [atom(friend_follows, [role(1), pvar(b)])])]),
+%% GFF:5, Updating.  Carol updates their friend Alice that Carol no longer follows b.
+%% Carol names b by knowing b (GKK:2), which is never undone, so the act is effective with no record of whom Carol told (Code #16, 2026-10-28 08:12 UTC).
+    schema(update_ceased, ['Carol', 'Alice'], [pvar(b)],
+       [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], [atom(following, [pvar(b)])]),
+        rs(unguarded, [], [atom(friend_follows, [role(1), pvar(b)])], [atom(identity, [])], [])])]),
+%% GFF1:2, Redundant forwarding.  Alice, who follows b through Carol and through Dave and holds an item x of b's feed from Carol and not from Dave, forwards it to Dave.
+    schema(redundant_forward, ['Alice', 'Dave'], [pvar(b), pvar(c), svar(x), svar(y)],
+       [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
+                      [atom(identity, []), atom(follows, [pvar(b), pvar(c)]), atom(follows, [pvar(b), role(2)]),
+                       atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y)]), atom(from, [svar(x), pvar(c)])],
+                      [atom(from, [svar(x), role(2)]), atom(sent, [svar(x), role(2)])]),
+        rs(unguarded, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1)]), atom(from, [svar(x), role(1)])], [],
+                      [atom(identity, []), atom(following, [pvar(b)])], [])])]).
