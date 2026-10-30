@@ -724,6 +724,109 @@ uo_other([schema(establish, [],
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])]).
 
 % ===========================================================================
+% Cleared atoms (GSC, Definitions Speech-act schema, Binding and Compilation,
+% Unobstructed clause 1; GSC 327e035)
+% ===========================================================================
+% "A cleared atom deletes every atom of the agent's state that it matches,
+% and requires none" (Section 3.2): an atom marked - with the wildcard among
+% its arguments, any, or in place of the speech-act variable of a name term
+% among them, ext_any(Sigma) for Sigma.*, as GSN's unfriend writes it
+% (GSN.glp).  Each fixture below adds a schema to GSN, or changes GKK's
+% establish, as its owner writes it.
+
+% --- negative: a cleared atom puts no edge in the role graph ---------------
+% shun(Alice?, Bob) :  identity, -listed(Bob, *)    identity, -member(<Alice>.*), -note
+% The role graph joins two roles when one requires an atom of traceable
+% provenance an argument of which has the base of the other (def:volition),
+% and the atoms a role requires are =(i) u -(i), a cleared atom requiring
+% none (def:schema).  Alice's listed(Bob, *) and Bob's member(<Alice>.*) name
+% the other role and are cleared, so nothing joins the two roles; Bob does
+% not guard, so volition fails at shun, naming its two roles.
+procedure cl_no_edge(WContract?, WContract).
+cl_no_edge(S, C?) :-
+    wcontract_app(S?,
+      [schema(shun, ['Alice', 'Bob'], [],
+         [rs(guarded,   [], [atom(listed, [role(2), any])], [atom(identity, [])], []),
+          rs(unguarded, [], [atom(member, [nterm(ext_any(own(1)))]), atom(note, [])],
+                        [atom(identity, [])], [])])], C).
+
+% shun(Alice?, Bob; n) :  identity, -listed(Bob, n)    identity, -member(<Alice>.*), -note
+% The same with Alice deleting listed(Bob, n), which she then requires, an
+% atom of traceable provenance naming Bob: the role graph joins the two
+% roles, and the contract is syntactically grassroots.
+procedure cl_edge(WContract?, WContract).
+cl_edge(S, C?) :-
+    wcontract_app(S?,
+      [schema(shun, ['Alice', 'Bob'], [svar(n)],
+         [rs(guarded,   [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
+          rs(unguarded, [], [atom(member, [nterm(ext_any(own(1)))]), atom(note, [])],
+                        [atom(identity, [])], [])])], C).
+
+% --- negative: a cleared atom is no change a role makes ---------------------
+% purge(Alice?, Bob) :  identity, friend(Bob), -listed(Bob, *)    identity, -member(<Alice>.*)
+% def:schema requires +(i) u -(i) nonempty at every role that is not a
+% guarding role and at some role, -(i) the atoms marked - with no wildcard.
+% Bob does not guard and only clears, and neither role adds or deletes an
+% atom, so the contract is malformed: changes_nothing(purge, 2) and
+% no_role_changes(purge).
+procedure cl_inert(WContract?, WContract).
+cl_inert(S, C?) :-
+    wcontract_app(S?,
+      [schema(purge, ['Alice', 'Bob'], [],
+         [rs(guarded,   [], [atom(listed, [role(2), any])],
+                        [atom(identity, []), atom(friend, [role(2)])], []),
+          rs(unguarded, [], [atom(member, [nterm(ext_any(own(1)))])],
+                        [atom(identity, [])], [])])], C).
+
+% --- negative: an atom added that a cleared atom of its role matches -------
+% relist(Alice?; n) :  identity, -listed(Alice, *), -member(<Alice>.*),
+%                      +listed(Alice, n), +member(<Alice>.n)
+% def:schema requires that no atom of +(i) be obtained from an atom of *(i)
+% by replacing its wildcards; each atom relist adds is, so the contract is
+% malformed, each named with its schema and role.
+procedure cl_added(WContract?, WContract).
+cl_added(S, C?) :-
+    wcontract_app(S?,
+      [schema(relist, ['Alice'], [svar(n)],
+         [rs(guarded, [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])],
+                      [atom(listed, [role(1), any]), atom(member, [nterm(ext_any(own(1)))])],
+                      [atom(identity, [])], [])])], C).
+
+% --- negative: the wildcard outside an atom marked - -----------------------
+% peek(Alice?) :  identity, listed(Alice, *), not member(<Alice>.*), +seen(*)
+% sweep(Alice?, Alice[listed(*, *)]) :  identity, +swept
+%     at Alice[listed(*, *)]: identity, -note, -member(<Alice>.*)
+% Only an atom marked - may have the wildcard (def:schema), and the
+% arguments of a listed role are arguments of its schema (def:role), so the
+% contract is malformed: the listed role of sweep, and each atom of peek
+% carrying the wildcard, named.
+procedure cl_wild(WContract?, WContract).
+cl_wild(S, C?) :-
+    wcontract_app(S?,
+      [schema(peek, ['Alice'], [],
+         [rs(guarded, [atom(seen, [any])], [],
+                      [atom(identity, []), atom(listed, [role(1), any])],
+                      [atom(member, [nterm(ext_any(own(1)))])])]),
+       cschema(sweep, ['Alice', 'Alice'], [], [],
+         [rs(guarded, [atom(swept, [])], [], [atom(identity, [])], []),
+          crs(listed(1, listed, [any]), unguarded,
+              [], [atom(note, []), atom(member, [nterm(ext_any(own(1)))])],
+              [atom(identity, [])], [])])], C).
+
+% --- negative: a schema of arity one that clears supplies nothing (clause 1)
+% establish(Alice?) :  not identity, +identity, -note(*)
+% Clause 1 of def:unobstructed asks that an atom the introductory act
+% requires be added by a schema of arity one that "requires and clears
+% nothing".  GKK's establish changed to clear note(*) adds identity and
+% clears, so nothing supplies the identity acquaint requires at each role:
+% acquaint is obstructed, and GKK has no unobstructed introductory act.
+procedure gkk_establish_clears(WContract?, WContract).
+gkk_establish_clears(S, C?) :-
+    schema_set(establish,
+      schema(establish, ['Alice'], [],
+        [rs(guarded, [atom(identity, [])], [atom(note, [any])], [], [atom(identity, [])])]), S?, C).
+
+% ===========================================================================
 % Values (GSC, Section 3.2, and the appendix Values in Speech-Act Schemas)
 % ===========================================================================
 % "Speech-act schemas allow values of any type: an argument of an atom may be a
@@ -1305,7 +1408,7 @@ contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract
 % it changes, which test_gsc.sh reads from GSC's file: GSG's or GSN's
-% for sg_* and sn_*, GKK's for gkk_*; sg_svar_loose, a variant of a contract
+% for sg_* and sn_*, GKK's for gkk_*, GSN's for cl_*; sg_svar_loose, a variant of a contract
 % with items, which no contract of GSC's has, is not run there (sg_plain's for sg_tri_cschema, GSC's language admitting
 % no signed term).  An unknown name is the empty contract.
 exported procedure variant(Constant?, WContract?, WDeclared).
@@ -1331,6 +1434,12 @@ variant(sn_listed_inert, S, C?) :- sn_listed_inert(S?, C).
 variant(gkk_intro_joined, S, C?) :- gkk_intro_joined(S?, C).
 variant(gkk_intro_unjoined, S, C?) :- gkk_intro_unjoined(S?, C).
 variant(gkk_intro_loose, S, C?) :- gkk_intro_loose(S?, C).
+variant(gkk_establish_clears, S, C?) :- gkk_establish_clears(S?, C).
+variant(cl_no_edge, S, C?) :- cl_no_edge(S?, C).
+variant(cl_edge, S, C?) :- cl_edge(S?, C).
+variant(cl_inert, S, C?) :- cl_inert(S?, C).
+variant(cl_added, S, C?) :- cl_added(S?, C).
+variant(cl_wild, S, C?) :- cl_wild(S?, C).
 variant(_, _, []) :- otherwise | true.
 
 % --- the speech-act variables of def:grounded -----------------------------
