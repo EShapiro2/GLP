@@ -814,9 +814,9 @@ check "and child alone keeps one" \
 check "and there is no introduction with wards" \
       "W = no_introduction_with_wards" "$out"
 
-# The atom of h of clause 2 of def:relay, on wd_attest: wd2 with the AI agent's attestation, enter_agent adding attestation(sgn(x, p)) at the agent, the one schema adding agent, and no schema deleting one, and every relay act with a ward role of agent requiring attestation(y) there, y in no other atom it requires.  Clause 2 at GAI 14a8427 admits an atom of h only where every schema that adds the mark adds besides, at the guardian, its record, an atom of h' whose arguments are the two roles and the arguments of the atom of h; enter_agent adds none, so clause 2 admits no attestation, the relay acts with a ward role of agent fail, and wd_attest has no introduction with wards.  GAI's own contract, which adds the record, is certified below, with variants of it, each failing one condition of the record.
+# The atom of h of clause 2 of def:relay, on wd_attest: wd2 with the AI agent's attestation, enter_agent adding attestation(sgn(x, p)) at the agent, the one schema adding agent, and no schema deleting one, and every relay act with a ward role of agent requiring attestation(y) there, y in no other atom it requires.  Clause 2 at GAI 11d7133 admits an atom of h only where every schema that adds v(rho) at a role, v principal_of here, adds there the record h'(rho, args), and adds the atom of h at rho or requires the record at a role requiring w(rho); enter_agent adds no record, so clause 2 admits no attestation, the relay acts with a ward role of agent fail, and wd_attest has no introduction with wards.  wr below adds the record at every guardian and is certified.
 out=$(run 'check_named(wd_attest, V).' 'wards_of(wd_attest, W).' 'contract_named(wd_attest, C), relay_h(C?, H).')
-check "wd_attest, enter_agent adding no record of the attestation at the principal, has no introduction with wards (def:relay, clause 2, GAI 14a8427)" \
+check "wd_attest, enter_agent adding no record of the attestation at the principal, has no introduction with wards (def:relay, clause 2, GAI 11d7133)" \
       "W = no_introduction_with_wards" "$out"
 check "and no atom of h" "H = []" "$out"
 out=$(run 'check_named(wd2, V).' 'contract_named(wd2, C), relay_h(C?, H).')
@@ -901,6 +901,54 @@ check "a listed role adding a leaving mark fails clause 2 of def:sg-wards" \
 check "and the verdict names the listed role, by clause 2 of def:unobstructed" \
       "obstructed(enter, 1, atom(retired, []), listed_role(gather, 2, atom(retired, [])))" "$out"
 check_not "and it is not syntactically grassroots with wards" "syntactically_grassroots_with_wards" "$out"
+
+# --- contracts with wards at GAI 11d7133 (sections/wards.tex) ----------------
+# A schema deletes an atom at a role if the atom is marked - there or matches
+# a cleared atom there; clause 1 of def:guardianship asks that no schema add
+# or delete a mark in M at more than one role; and clause 2 of def:relay
+# admits, in a relay act with two ward roles, e of the other ward role at the
+# guardian role of one (GnW:4), and an atom of h at a ward role only where
+# every schema adding v(rho) at a role adds there the record h'(rho, args),
+# and adds the atom of h at rho or requires the record at a role requiring
+# w(rho).  A leaving mark, a mark, has no argument, and a cleared atom
+# carries the wildcard as one, so no cleared atom deletes a leaving mark.
+out=$(run 'check_named(wd_ward_e, V).')
+check "wd_ward_e: each parent of child_befriend requires friend of the other child, e of the other ward role (def:relay, clause 2, GnW:4): grassroots with wards" \
+      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [])" \
+      "$out"
+no_wards wd_ward_e_own         "a parent of child_befriend requires friend of their own child, e of no other ward role (def:relay, clause 2)"
+no_wards wd_relay_guard_clears "a parent of child_befriend clears friend(*), deleting an atom naming the other guardian role (def:relay, clause 1)"
+no_guardianship wd_twins       "twins adds child at two roles (def:guardianship, clause 1)"
+no_guardianship wd_clear_g     "drop clears parent(*), deleting atoms of g and no child, and parent(r) at r and no parenting(r) (def:guardianship, clauses 3 and 4)"
+
+# wr: AI agents, every guardian holding the record of the agent's
+# attestation, added by enter_agent at the creator and by make_guardian at
+# the guardian it makes, who copies it from the creator.
+wr_found="introduction_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])"
+out=$(run 'check_named(wr, V).' 'wards_of(wr, W).' 'contract_named(wr, C), relay_h(C?, H).')
+check "wr: the record at every guardian, the attestation an atom of h: grassroots with wards" \
+      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])" \
+      "$out"
+check "wards_of gives its introduction with wards" "W = $wr_found" "$out"
+check "relay_h names the attestation at each ward role" \
+      "H = [h(agent_person_befriend, 1, attestation), h(agents_befriend, 1, attestation), h(agents_befriend, 2, attestation)]" "$out"
+out=$(run 'contract_named(wr, C), guardianships(C?, [agent], G).')
+check "wr: guardian_of a v of a guardianship for agent" \
+      "guardianship(agent, identity, principal, principal_of, guardian_of)" "$out"
+
+no_record() { # no_record <fixture> <what it breaks>
+  out=$(run "check_named($1, V)." "wards_of($1, W)." "contract_named($1, C), relay_h(C?, H).")
+  check "$1: $2, so no introduction with wards" "W = no_introduction_with_wards" "$out"
+  check "$1: and no atom of h" "H = []" "$out"
+  check "$1: and the verdict is Section 3's" "V = not_grassroots([obstructed(befriend, " "$out"
+}
+no_record wr_rec_creator    "make_guardian adds guardian_of(r) and no record at the guardian (def:relay, clause 2)"
+no_record wr_rec_unrequired "make_guardian adds the record at the guardian, adding no attestation at r and requiring the record at no role requiring principal_of(r) (def:relay, clause 2)"
+no_record wr_clear_h        "wipe clears attestation(*), deleting atoms of h (def:relay, clause 2)"
+no_record wr_clear_v        "quit clears guardian_of(*) and deletes or forbids no principal_of (def:guardianship, clause 5)"
+out=$(run 'contract_named(wr_clear_v, C), guardianships(C?, [agent], G).')
+check "wr_clear_v: guardian_of is a v of no guardianship for agent" \
+      "G = [guardianship(agent, identity, principal, principal_of, principal_of)]" "$out"
 
 # --- listed roles and name terms (def:role, def:introduction, def:unobstructed)
 # GSN with one schema more, each failing one condition, and two contracts
