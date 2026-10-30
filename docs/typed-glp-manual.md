@@ -1003,7 +1003,7 @@ Every local imprecise type definition should be replaced by a parameterized inst
 
 Two categories of code may retain `_` and `_?`:
 
-1. **System builtins** in `self.glp` that genuinely accept any term: `ground(_?)`, `=(_?, _)`, `=?=(_?, _?)`, `=..(_, Stream(_)?)`, `compound(_?)`, etc.  These are implemented by the runtime and have no meaningful type restriction.
+1. **System builtins** in the root `self.glp`, declared there with no clauses, the guards and body kernels the runtime implements, which accept any term: `ground(_?)`, `=(_?, _)`, `=?=(_?, _?)`, `compound(_?)`, etc.  A system predicate defined by GLP clauses, as `=..` is (GLP-Spec, "System predicates and body kernels"), is not a builtin and follows the discipline.
 
 2. **Meta-interpreters** that manipulate arbitrary terms (goals, clause representations), and only those on section TY's list today.  Types like `DumpList ::= [] ; [_ | DumpList].` or `Chain ::= chain(Stream(_)?, Stream(_)).` stay until they are typed; a new meta-interpreter is written without `_`.  Whether TGLP gives a meta-program's arbitrary term a type other than `_` is the GLP paper's question.
 
