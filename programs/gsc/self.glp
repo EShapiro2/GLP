@@ -34,7 +34,8 @@
 % An atom marked - may have the wildcard * among its arguments, or in place
 % of the speech-act variable of a name term among them (def:schema, GSC
 % 327e035): any is the wildcard as an argument, and ext_any(Sigma) the name
-% term Sigma.* (GSN.glp).  Such an atom is a cleared atom, of *(i): it
+% term Sigma.*, which def:role admits in a cleared atom (Definition Name
+% term, GSC 14c921c; GSN.glp).  Such an atom is a cleared atom, of *(i): it
 % deletes every atom of the agent's state that it matches and requires none
 % (def:schema, def:binding, def:compile's K_p).  The term form writes it
 % among a role's deleted atoms; rs_del below gives -(i), the deleted atoms
@@ -291,7 +292,10 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % multiplicity a positive whole number or a value variable, so one that is
 % no value argument is a fault multiplicity_not_numeric(Schema, Role, Atom),
 % and one that is a number and no positive whole number a fault
-% multiplicity_not_whole(Schema, Role, Atom); and a
+% multiplicity_not_whole(Schema, Role, Atom); a multiplicity only on an atom
+% marked + or - with no wildcard (def:numbers, GSC 593e8a7), so one on an
+% atom carrying the wildcard, a cleared atom, is a fault
+% multiplicity_wildcard(Schema, Role, Atom); and a
 % constraint on the schema's value variables, so an argument of the
 % constraint that is no value argument is a fault
 % constraint_not_numeric(Schema, Arg).  A value variable is a variable of
@@ -326,6 +330,7 @@ Fault ::= no_introductory_act
         ; multiplicity_not_added(Constant, Integer, Atom)
         ; multiplicity_not_numeric(Constant, Integer, Atom)
         ; multiplicity_not_whole(Constant, Integer, Atom)
+        ; multiplicity_wildcard(Constant, Integer, Atom)
         ; constraint_not_numeric(Constant, Arg)
         ; constraint_not_linear(Constant, Expr)
         ; constraint_not_conjunction(Constant, Constraint)

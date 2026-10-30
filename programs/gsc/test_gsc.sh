@@ -1307,6 +1307,14 @@ check "the wildcard outside an atom marked - is refused, in a listed role's argu
       "V = malformed([listed_wildcard(sweep, 2), wildcard(peek, 1, atom(seen, [any])), wildcard(peek, 1, atom(listed, [role(1), any])), wildcard(peek, 1, atom(member, [nterm(ext_any(own(1)))]))])" "$out"
 check "and it is not compiled, the faults named" \
       "peek at role 1 carries the wildcard in an atom not marked -;" "$(printf '%s' "$out" | tr '\n' ' ')"
+# "An atom marked + or -, with no wildcard, may carry a multiplicity"
+# (def:numbers, GSC 593e8a7), so a cleared atom carries none; seen(*), added,
+# carries the wildcard besides (def:schema).
+out=$(run "check_variant(cl_mult, $GSNT, V)." "compile_variant(cl_mult, $GSNT).")
+check "a multiplicity on an atom with the wildcard is refused, on the cleared atoms and on an atom added, each named" \
+      "V = malformed([multiplicity_wildcard(drop, 1, atom(seen, [any])), multiplicity_wildcard(drop, 1, atom(listed, [role(1), any])), multiplicity_wildcard(drop, 1, atom(member, [nterm(ext_any(own(1)))])), wildcard(drop, 1, atom(seen, [any]))])" "$out"
+check "and it is not compiled, the fault named" \
+      "drop at role 1 carries a multiplicity on an atom with the wildcard;" "$(printf '%s' "$out" | tr '\n' ' ')"
 # Clause 1 of def:unobstructed: the schema of arity one adding an atom the
 # introductory act requires "requires and clears nothing".  GKK's establish
 # clearing note(*) besides supplies no identity, so acquaint is obstructed.

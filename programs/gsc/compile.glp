@@ -1192,6 +1192,11 @@ malformed_lines([multiplicity_not_whole(S, I, _)|Fs], T,
                  'carries a multiplicity that is not a positive whole number;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+malformed_lines([multiplicity_wildcard(S, I, _)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a multiplicity on an atom with the wildcard;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
 malformed_lines([constraint_not_numeric(S, _)|Fs], T,
                 [S?, 'carries a constraint on an argument that is not a number;'|R?]) :-
     ground(Fs?), ground(T?) |

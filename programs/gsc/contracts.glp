@@ -813,6 +813,22 @@ cl_wild(S, C?) :-
               [], [atom(note, []), atom(member, [nterm(ext_any(own(1)))])],
               [atom(identity, [])], [])])], C).
 
+% --- negative: a multiplicity on an atom with the wildcard ------------------
+% drop(Alice?; k) :  identity, -k.listed(Alice, *), -k.member(<Alice>.*), +k.seen(*), +note
+% "An atom marked + or -, with no wildcard, may carry a multiplicity"
+% (def:numbers, GSC 593e8a7), so a cleared atom carries none: the contract is
+% malformed, each atom carrying a multiplicity and the wildcard named with
+% its schema and role, and seen(*), added, carrying the wildcard besides
+% (def:schema).
+procedure cl_mult(WContract?, WContract).
+cl_mult(S, C?) :-
+    wcontract_app(S?,
+      [schema(drop, ['Alice'], [num(k)],
+         [rs(guarded, [times(num(k), atom(seen, [any])), atom(note, [])],
+                      [times(num(k), atom(listed, [role(1), any])),
+                       times(num(k), atom(member, [nterm(ext_any(own(1)))]))],
+                      [atom(identity, [])], [])])], C).
+
 % --- negative: a schema of arity one that clears supplies nothing (clause 1)
 % establish(Alice?) :  not identity, +identity, -note(*)
 % Clause 1 of def:unobstructed asks that an atom the introductory act
@@ -1450,6 +1466,7 @@ variant(cl_edge, S, C?) :- cl_edge(S?, C).
 variant(cl_inert, S, C?) :- cl_inert(S?, C).
 variant(cl_added, S, C?) :- cl_added(S?, C).
 variant(cl_wild, S, C?) :- cl_wild(S?, C).
+variant(cl_mult, S, C?) :- cl_mult(S?, C).
 variant(_, _, []) :- otherwise | true.
 
 % --- the speech-act variables of def:grounded -----------------------------

@@ -593,8 +593,12 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % satisfies, and an atom added or deleted may carry a multiplicity, a count
 % of copies and so a positive whole number" (Section 3.2; def:numbers).  Each
 % atom carrying a multiplicity that a role requires or forbids and neither
-% adds nor deletes is a fault multiplicity_not_added(Schema, Role, Atom); each
-% multiplicity that is no value argument a fault
+% adds nor deletes is a fault multiplicity_not_added(Schema, Role, Atom).  "An
+% atom marked + or -, with no wildcard, may carry a multiplicity"
+% (def:numbers, GSC 593e8a7), so a cleared atom carries none: each atom
+% carrying a multiplicity and the wildcard is a fault
+% multiplicity_wildcard(Schema, Role, Atom).  Of the multiplicities an atom
+% may carry, each that is no value argument is a fault
 % multiplicity_not_numeric(Schema, Role, Atom); and each argument of the
 % constraint that is no value argument a fault constraint_not_numeric(Schema,
 % Arg).  A value argument is num(X), a value variable or a number.  The
@@ -637,6 +641,24 @@ procedure mult_whole_fault(Ans?, Atom?, Constant?, Integer?, Faults?, Faults).
 mult_whole_fault(yes, _, _, _, T, T?).
 mult_whole_fault(no, A, Nm, I, T, [multiplicity_not_whole(Nm?, I?, A?)|T?]).
 
+% A multiplicity on an atom carrying the wildcard, Mults the atoms a role
+% adds or deletes that carry it (mults_cleared).
+procedure mults_wild(Mults?, Constant?, Integer?, Faults?, Faults).
+mults_wild([], _, _, T, T?).
+mults_wild([atom(_, _)|Ms], Nm, I, T, R?) :-
+    ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_wild(Ms?, Nm?, I?, T?, R).
+mults_wild([times(_, A)|Ms], Nm, I, T, [multiplicity_wildcard(Nm?, I?, A?)|R?]) :-
+    ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_wild(Ms?, Nm?, I?, T?, R).
+
+% The atoms a role adds or deletes, Mults, those carrying the wildcard and
+% the others.
+procedure mults_wild_split(Mults?, Mults, Mults).
+mults_wild_split(Ms, W?, N?) :- ground(Ms?) |
+    mults_cleared(Ms?, yes, W),
+    mults_cleared(Ms?, no, N).
+
 % A multiplicity on an atom a role requires or forbids only.
 procedure mults_unadded(Mults?, Constant?, Integer?, Faults?, Faults).
 mults_unadded([], _, _, T, T?).
@@ -656,10 +678,12 @@ num_roles([RS|Rs], I, Nm, R?) :- ground(RS?), ground(Rs?), integer(I?), ground(N
     nrs_forb(RS?, N),
     mults_app(P?, M?, PM),
     mults_app(K?, N?, KN),
+    mults_wild_split(PM?, W, PM1),
     I1 := I? + 1,
     num_roles(Rs?, I1?, Nm?, R1),
     mults_unadded(KN?, Nm?, I?, R1?, R2),
-    mults_numeric(PM?, Nm?, I?, R2?, R).
+    mults_wild(W?, Nm?, I?, R2?, R3),
+    mults_numeric(PM1?, Nm?, I?, R3?, R).
 
 procedure cons_num_fault(Ans?, Arg?, Constant?, Faults?, Faults).
 cons_num_fault(yes, _, _, T, T?).
