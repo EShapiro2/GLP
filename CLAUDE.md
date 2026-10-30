@@ -11,9 +11,10 @@ Code, at session start:
 1. `/Grassroots/docs/claude.md`, then `/Grassroots/docs/writing-style-guide.md` and `/Grassroots/docs/claudese.md`, in full (`claude.md`, "Sessions").
 2. `/Grassroots/Code/CLAUDE.md`.
 3. This file.
-4. `to_all_inbox.md`, then `Code_inbox.md` from its last receipt forward --- and again between tasks, being the one worker that does not wait to be told (`claude.md`, "Mail").
+4. `docs/typed-glp-manual.md` §18, the typing discipline: no new GLP code untyped or with open types, hand-written or printed (Udi, 2026-10-24; `claude.md`, "Code"; Coordination #9, 2026-10-25).
+5. `to_all_inbox.md`, then `Code_inbox.md` from its last receipt forward --- and again between tasks, being the one worker that does not wait to be told (`claude.md`, "Mail").
 
-A subagent, at the start of its task: the same 1 to 3 with the owning project's `CLAUDE.md` at 2, then the sections of the owning paper its task names.  It reads no inbox and leaves no receipt, having none.
+A subagent, at the start of its task: the same 1 to 4 with the owning project's `CLAUDE.md` at 2, then the sections of the owning paper its task names.  🔴 Every brief Code writes names §18, and every GLP procedure a subagent writes or a tool of its task prints has a declaration with no `_` or `_?`; section TY of the suite fails otherwise.  It reads no inbox and leaves no receipt, having none.
 
 On demand, named by the task: `docs/DISCIPLINE.md` (development discipline), `docs/typed-glp-manual.md` (typed GLP), `docs/glp-cheat-sheet.md` ("GLP is NOT Prolog"), Coordination Appendix B (ownership), the reference specifications listed at the end.
 

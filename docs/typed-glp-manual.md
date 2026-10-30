@@ -981,7 +981,9 @@ TGLP's Definition "Instantiation" (`TGLP/sections/parameterized-types.tex`, `def
 
 ### 18.1 The Discipline
 
-As a project discipline, we do not use `_` or `_?` in type definitions or procedure declarations.  All type definitions use concrete types or type parameters; all procedure declarations use concrete or parameterized types.
+As a project discipline, every procedure has a declaration, and we do not use `_` or `_?` in type definitions or procedure declarations.  All type definitions use concrete types or type parameters; all procedure declarations use concrete or parameterized types.
+
+🔴 **No new GLP code is written untyped, or with open types** (Udi, 2026-10-24; `claude.md`, "Code").  A procedure is untyped when it has no declaration; an open type is `_` or `_?` in a type definition or a procedure declaration.  The discipline binds code written by hand and code a compiler or a transformation prints alike, as the platforms in `cascade/`; an open type a tool prints is a fault of that tool, for its owner to fix from its paper.  Section TY of `test/run_all_tests.sh` fails on every untyped procedure and every open type outside the exceptions of §18.3, except those on its list, the ones in the repository on 2026-10-30; the list only shrinks, and an entry that is fixed is deleted from it in the same commit.
 
 The GLP language continues to support `_` and `_?` as primitive types.  The discipline is a coding standard, not a language restriction.
 
@@ -1003,7 +1005,7 @@ Two categories of code may retain `_` and `_?`:
 
 1. **System builtins** in `self.glp` that genuinely accept any term: `ground(_?)`, `=(_?, _)`, `=?=(_?, _?)`, `=..(_, Stream(_)?)`, `compound(_?)`, etc.  These are implemented by the runtime and have no meaningful type restriction.
 
-2. **Meta-interpreters** that manipulate arbitrary terms (goals, clause representations).  Types like `DumpList ::= [] ; [_ | DumpList].` or `Chain ::= chain(Stream(_)?, Stream(_)).` are acceptable with a comment explaining why.  Meta-interpreter typing is deferred to future work.
+2. **Meta-interpreters** that manipulate arbitrary terms (goals, clause representations), and only those on section TY's list today.  Types like `DumpList ::= [] ; [_ | DumpList].` or `Chain ::= chain(Stream(_)?, Stream(_)).` stay until they are typed; a new meta-interpreter is written without `_`.  Whether TGLP gives a meta-program's arbitrary term a type other than `_` is the GLP paper's question.
 
 ### 18.4 `-mode(system)` Does Not Exempt From Type Checking
 
