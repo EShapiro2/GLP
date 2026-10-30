@@ -15,14 +15,18 @@
 %% leader, the role a, and n: its community name <a>.n (GSC, Appendix D),
 %% and close takes the listed role a[listed(*, n)], every member the leader
 %% lists (GSC, Appendix D.4); remove is the leader ending Bob's membership,
-%% GSN:3 (Udi, 2026-10-30, Coordination Appendix E, to GSC #9).  The groups follow CSSN's (programs/cssn/CSSN.glp),
+%% GSN:3 (Udi, 2026-10-30, Coordination Appendix E, to GSC #9).  GSN's unfriend
+%% replaces GSG's: its deleted atoms with the wildcard any, or ext_any(N) for <N>.*,
+%% are cleared atoms (GSC, Definition Speech-act schema), deleting every atom
+%% they match and requiring none, so ending a friendship ends every membership
+%% between the two; drop is gone (Udi, 2026-10-30, to GSC #9, on EC6).  The groups follow CSSN's (programs/cssn/CSSN.glp),
 %% without children and without items.
 %% ---------------------------------------------------------------------------
 
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
-            ; ext(NameTerm, Constant).
+            ; ext(NameTerm, Constant) ; ext_any(NameTerm).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer).
+            ; sgn(Constant, Integer) ; any.
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -55,8 +59,10 @@ contract_named(gsn,
        [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
         rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
     schema(unfriend, ['Alice', 'Bob'], [],
-       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
-        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+       [rs(guarded,   [], [atom(friend, [role(2)]), atom(listed, [role(2), any]),
+                           atom(member, [nterm(ext_any(own(2)))])], [atom(identity, [])], []),
+        rs(unguarded, [], [atom(friend, [role(1)]), atom(listed, [role(1), any]),
+                           atom(member, [nterm(ext_any(own(1)))])], [atom(identity, [])], [])]),
     schema(message, ['Alice', 'Bob'], [svar(x)],
        [rs(guarded,   [], [], [atom(identity, []), atom(friend, [role(2)])], []),
         rs(unguarded, [atom(received, [svar(x), role(1)])], [],
@@ -82,9 +88,6 @@ contract_named(gsn,
                     [atom(listed, [role(1), svar(n)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], []),
         crs(listed(1, listed, [svar(n)]), unguarded,
             [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-    schema(drop, ['Alice', 'Bob'], [svar(n)],
-       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], [atom(friend, [role(2)])]),
-        rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
     schema(post_own, ['Alice'], [svar(x), svar(n)],
        [rs(guarded, [atom(posted, [svar(x), svar(n)])], [],
                     [atom(identity, []), atom(member, [nterm(ext(own(1), n))])],
