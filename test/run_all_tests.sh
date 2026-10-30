@@ -22,6 +22,7 @@
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
 #   GF - Grassroots federation records, transactions and platform (GFWC)
 #   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
+#   TY - The tight typing discipline: no untyped procedure and no open type off test/OPEN_TYPES
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -64,8 +65,8 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF"
-FAST_SECTIONS="A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF"
+FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
 RUN_WANTED=" "
@@ -215,6 +216,57 @@ check_not() {
         _check_pass "$name"
     fi
 }
+
+if _section TY; then
+# =============================================================================
+# Section TY: The tight typing discipline (test/check_typing.py, test/OPEN_TYPES)
+# =============================================================================
+# NO NEW GLP CODE IS WRITTEN UNTYPED, OR WITH OPEN TYPES (Udi, 2026-10-24;
+# claude.md, "Code"; Coordination #9's task 1, Code_inbox 2026-10-25 05:28
+# UTC).  check_typing.py prints every procedure with clauses and no
+# declaration in its module, and every `_` or `_?` in a type definition or a
+# procedure declaration, over every .glp and .vglp file git tracks, hand-written
+# and printed alike, the root self.glp's clause-less declarations (the guard
+# predicates and body kernels the runtime implements) excepted.  test/OPEN_TYPES
+# lists those there on 2026-10-30.  A finding not on the list is a failure; so is
+# an entry no longer found (the rot guard, as KNOWN_RED's): the list only
+# shrinks, and an entry is deleted in the commit that types it.
+echo "=== Section TY: The tight typing discipline ==="
+echo ""
+
+TY_OUT=$(python3 "$SCRIPT_DIR/check_typing.py" "$GLP_DIR" 2>&1) && TY_STATUS=0 || TY_STATUS=$?
+if [ "$TY_STATUS" -ne 0 ]; then
+    echo "  FAIL: TY: test/check_typing.py exited $TY_STATUS, so the discipline was not checked"
+    printf '%s\n' "$TY_OUT" | tail -5 | sed 's/^/        /'
+    FAIL=$((FAIL + 1))
+else
+    TY_FOUND=$(printf '%s\n' "$TY_OUT" | grep -v '^$' | LC_ALL=C sort -u) || true
+    TY_LIST=$(grep -v -e '^#' -e '^$' "$SCRIPT_DIR/OPEN_TYPES" | LC_ALL=C sort -u) || true
+    TY_NEW=$(LC_ALL=C comm -23 <(printf '%s\n' "$TY_FOUND") <(printf '%s\n' "$TY_LIST") | grep -v '^$') || true
+    TY_GONE=$(LC_ALL=C comm -13 <(printf '%s\n' "$TY_FOUND") <(printf '%s\n' "$TY_LIST") | grep -v '^$') || true
+    if [ -z "$TY_NEW" ]; then
+        _check_pass "TY: every untyped procedure and open type is on test/OPEN_TYPES"
+    else
+        while IFS= read -r ty_l; do
+            echo "  FAIL: TY: not on test/OPEN_TYPES, so new: $ty_l"
+            FAIL=$((FAIL + 1))
+        done <<< "$TY_NEW"
+    fi
+    if [ -z "$TY_GONE" ]; then
+        _check_pass "TY: every entry of test/OPEN_TYPES is still found"
+    else
+        while IFS= read -r ty_l; do
+            echo "  FAIL: TY: no longer found, so delete it from test/OPEN_TYPES: $ty_l"
+            FAIL=$((FAIL + 1))
+        done <<< "$TY_GONE"
+    fi
+    TY_N=$(printf '%s\n' "$TY_LIST" | grep -c .) || true
+    echo "  test/OPEN_TYPES: $TY_N entries ($(printf '%s\n' "$TY_LIST" | grep -c $'\tuntyped\t') untyped, $(printf '%s\n' "$TY_LIST" | grep -c $'\topen-decl\t') open-decl, $(printf '%s\n' "$TY_LIST" | grep -c $'\topen-type\t') open-type)"
+fi
+
+echo ""
+
+fi  # Section TY
 
 if _section A; then
 # =============================================================================
