@@ -3,7 +3,7 @@
 % Extends: GSN, Grassroots Social Network, GSC's (programs/gsc), and GAI, Accountable AI Agents, GAI's (beside this file), and through them GnW, GSG and GKK, so the platform is that of GAI's paper, Section 4.  It cites their clauses whole and restates none.
 % Defines: item, content signed by its author and, when sent on, by each agent that sent it on, in order; and the signed terms of the language, GAI's paper, Appendix "Contracts with Wards".  Alice and Bob are agents, variables naming distinct agents.
 % Last changed: 2026-10-30, Udi's revision in Coordination Appendix E (Coordination #11, to_all 10:18 UTC): one clause, Provenance, attested (Udi, 13:10 local, to GAI #10: Alice can remove the signatures with other software, so it cannot be enforced); the pragmas to it and to GSN's clause names, Messaging and Group messaging (GAI #10).  Earlier versions are in git.
-% Schemas: GSNP.glp beside this file, twenty-eight over twenty predicates: GAI.glp's sixteen, with unfriend clearing every membership between the two, message, forward, and GSN's groups carrying items; the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Schemas: GSNP.glp beside this file, twenty-nine over twenty predicates: GAI.glp's seventeen, with unfriend clearing every membership between the two, message, forward, and GSN's groups carrying items; the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GSNP: Grassroots Social Network with Provenance
 Alice and Bob are agents.
 1. ◆ Provenance.  Alice, who received an item from a friend, may send the item to their friend Bob after adding their signature to the signatures the item has; Bob can see the list of signatures in the received item.
