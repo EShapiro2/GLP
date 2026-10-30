@@ -3,6 +3,7 @@
 % Extends: GSN, Grassroots Social Network, GSC's (programs/gsc), and through it GSG and GKK, GSC's; and GnW, Guardians 'n' Wards, GAI's (programs/gai), its wards children and their guardians parents.  It cites their clauses whole and restates none.
 % Defines: parent, a guardian of a child's ward; the definition stands before the box in the paper.
 % Last changed: 2026-10-30, to Udi's revision of the contracts in Coordination Appendix E (Udi, 2026-10-30; Coordination #11, to_all 10:18 UTC), with CSSN #13's changes that Udi approved: clause 1 opens with 'Only', clause 2 without its last phrase, which GnW:4 covers, clause 4 undertaken, and clause 5, a child's messages, since GKK, GSG and GSN apply only to persons (Udi, 2026-10-30, to GAI #10); the pragmas follow GnW as agreed with GAI that day (GAI #10, CSSN_inbox 11:37 UTC; CSSN #13's changes 2 to 6, GAI_inbox 11:29 to 11:48 UTC).  The history before this is in git.
+% 2026-10-30, later: GnW:2 in Udi's wording (GAI fce54cd), a made parent may resign and stay the child's friend, the button [Resign] (CSSN #13 Cowork).
 % Schemas: CSSN.glp beside this file, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 CSSN: Child-Safe Social Network
 Alice and Bob are adults, Carol and Dave children.
@@ -18,7 +19,7 @@ Parent: Alice [Enter] <child>
 Joint guardianship: Alice [Make parent] <person>
   Bob: Alice asks you to be a parent of Carol.
   Alice [End parent]
-  Bob [Parent unfriend]
+  Bob [Resign] [Parent unfriend]
 Ward and person: Alice [Child acquaint] <person>
   Carol: Alice wishes that you and Bob know each other.
   Bob: Alice wishes that you and Carol know each other.
