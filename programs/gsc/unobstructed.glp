@@ -283,7 +283,9 @@ sch_vvars(NSc, R?) :- ground(NSc?) |
 
 % --- clause 1 of def:unobstructed -----------------------------------------
 % The atom is added by a schema of arity one, guarded in its role, with no
-% name term, requiring nothing, and forbidding nothing or only that atom,
+% name term, requiring and clearing nothing (GSC 327e035: its role's atoms
+% marked -, -(i) and the cleared atoms *(i), and its unmarked atoms are
+% none), and forbidding nothing or only that atom,
 % which the introductory act then requires once at its role, at a binding
 % sending its role to the person in question: an atom the schema adds
 % equals the atom there, and so does each atom it forbids.  Its role is

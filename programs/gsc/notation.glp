@@ -15,7 +15,9 @@
 % full stop for its centred dot and * for its asterisk.  Each E_i is on a line
 % of its own, labelled by its role, as Section 3.3's table labels its columns
 % "at Alice" and "at Bob"; within it the unmarked atoms come first, then those
-% marked not, +, and -, the order of the paper's displays.  Roles one to four
+% marked not, +, and -, the order of the paper's displays, a cleared atom
+% among those marked -, its wildcard printed *, as Section 3.3 writes
+% unfriend's -listed(Bob, *) and -member(<Bob>.*).  Roles one to four
 % are named as compile.glp names them, Alice, Bob, Carol and Dave, and a role
 % beyond the fourth p_i; a variable is written as it is named.  A schema whose
 % head names its roles, schema(Name, Names, Vars, Roles) (programs/gsc
@@ -62,6 +64,11 @@ n_nt(own(I), T, ['<'|R?]) :- integer(I?), ground(T?) |
 n_nt(own_var(X), T, ['<', X?, '>'|T?]).
 n_nt(ext(S, Y), T, R?) :- ground(S?), ground(Y?), ground(T?) |
     n_nt(S?, ['.', Y?|T?], R).
+% Sigma.*, the wildcard in place of the speech-act variable of a name term
+% in a cleared atom (def:schema, GSC 327e035), as Section 3.3 writes
+% unfriend's member(<Bob>.*).
+n_nt(ext_any(S), T, R?) :- ground(S?), ground(T?) |
+    n_nt(S?, ['.', '*'|T?], R).
 
 procedure n_arg(Arg?, Chunks?, Chunks).
 n_arg(role(I), T, R?) :- integer(I?), ground(T?) | n_role(I?, T?, R).
@@ -72,6 +79,9 @@ n_arg(sgn(X, J), T, ['sgn(', X?, ', '|R?]) :-
     ground(X?), integer(J?), ground(T?) |
     n_role(J?, [')'|T?], R).
 n_arg(num(X), T, [X?|T?]).
+% The wildcard of a cleared atom, as Section 3.3 writes unfriend's
+% listed(Bob, *).
+n_arg(any, T, ['*'|T?]).
 
 procedure n_args(Args?, Chunks?, Chunks).
 n_args([], T, T?).
@@ -139,7 +149,7 @@ n_e(RS, T, R?) :- ground(RS?), ground(T?) |
     nrs_keep(RS?, K),
     nrs_forb(RS?, F),
     nrs_add(RS?, P),
-    nrs_del(RS?, M),
+    nrs_marked_del(RS?, M),
     n_marks(M?, del, [], L3),
     n_marks(P?, add, L3?, L2),
     n_marks(F?, forb, L2?, L1),
@@ -233,6 +243,7 @@ n_expr(pvar(X), T, R?) :- n_arg(pvar(X?), T?, R).
 n_expr(svar(X), T, R?) :- n_arg(svar(X?), T?, R).
 n_expr(nterm(N), T, R?) :- n_arg(nterm(N?), T?, R).
 n_expr(sgn(Y, J), T, R?) :- n_arg(sgn(Y?, J?), T?, R).
+n_expr(any, T, R?) :- n_arg(any, T?, R).
 
 procedure n_operand(Expr?, Chunks?, Chunks).
 n_operand(plus(A, B), T, ['('|R?]) :- ground(A?), ground(B?), ground(T?) |
@@ -247,6 +258,7 @@ n_operand(pvar(X), T, R?) :- n_arg(pvar(X?), T?, R).
 n_operand(svar(X), T, R?) :- n_arg(svar(X?), T?, R).
 n_operand(nterm(N), T, R?) :- n_arg(nterm(N?), T?, R).
 n_operand(sgn(Y, J), T, R?) :- n_arg(sgn(Y?, J?), T?, R).
+n_operand(any, T, R?) :- n_arg(any, T?, R).
 
 procedure n_head_constraint(Constraint?, Chunks?, Chunks).
 n_head_constraint(true, T, T?).

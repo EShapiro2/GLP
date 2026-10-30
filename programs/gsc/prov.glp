@@ -13,7 +13,7 @@
 % 1934846, a value having no base), and prov_c2s the second, on every
 % speech-act variable that is an argument of the atom or occurs in a name
 % term among its arguments.  The atoms psi are those required at an agent
-% role.
+% role, =(i) u -(i), a cleared atom requiring none (def:schema, GSC 327e035).
 % ---------------------------------------------------------------------------
 
 % ---------------------------------------------------------------------------
@@ -25,11 +25,12 @@ atoms_preds([], T, T?).
 atoms_preds([atom(Q, _)|Xs], T, [Q?|R?]) :- ground(Xs?), ground(T?) |
     atoms_preds(Xs?, T?, R).
 
+% A cleared atom's predicate occurs in the contract too (def:schema).
 procedure roles_preds(RoleSpecs?, Preds?, Preds).
 roles_preds([], T, T?).
 roles_preds([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
     rs_add(RS?, P),
-    rs_del(RS?, M),
+    rs_marked_del(RS?, M),
     rs_keep(RS?, K),
     rs_forb(RS?, N),
     roles_preds(Rs?, T?, R1),

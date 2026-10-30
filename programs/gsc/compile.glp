@@ -72,6 +72,11 @@ latex_nt(own(I), T, ['\\langle'|R?]) :- integer(I?), ground(T?) |
 latex_nt(own_var(X), T, ['\\langle', X?, '\\rangle'|T?]).
 latex_nt(ext(S, Y), T, R?) :- ground(S?), ground(Y?), ground(T?) |
     latex_nt(S?, ['\\cdot', Y?|T?], R).
+% sigma.*, the wildcard in place of a name term's speech-act variable in a
+% cleared atom, as Section 3.3 writes unfriend's
+% \mathit{member}(\langle\Bob\rangle\cdot\ast) (def:schema, GSC 327e035).
+latex_nt(ext_any(S), T, R?) :- ground(S?), ground(T?) |
+    latex_nt(S?, ['\\cdot', '\\ast'|T?], R).
 
 % A signed term is written \mathrm{sgn}(x,\Alice), as Section 3.3 writes it.
 procedure latex_arg(Arg?, Chunks?, Chunks).
@@ -84,6 +89,9 @@ latex_arg(sgn(X, J), T, ['\\mathrm{sgn}(', X?, ','|R?]) :-
     latex_role(J?, [')'|T?], R).
 % A value argument, the value variable as it is named or the number.
 latex_arg(num(X), T, [X?|T?]).
+% The wildcard of a cleared atom, \ast, as Section 3.3 writes unfriend's
+% \mathit{listed}(\Bob,\ast).
+latex_arg(any, T, ['\\ast'|T?]).
 
 procedure latex_args(Args?, Chunks?, Chunks).
 latex_args([], T, T?).
@@ -190,8 +198,70 @@ latex_update_at(RS, Sep, S, T, ['c\'_'|R?]) :-
     ground(RS?), ground(Sep?), ground(S?), ground(T?) |
     nrs_add(RS?, Add),
     nrs_del(RS?, Del),
-    update_rhs(Add?, Del?, Sep?, S?, T?, R1),
+    nrs_clear(RS?, Clr),
+    update_rhs_k(Add?, Del?, Clr?, Sep?, S?, T?, R1),
     chunks_app(S?, [' := '|R1?], R).
+
+% --- The cleared atoms of a role: K_S (def:compile, GSC 327e035) ----------
+% Where the roles whose extents hold the agent S clear an atom, def:compile
+% assigns c'_S := ((c_S \ -) \ K_S) u +, K_S holding every atom of c_S, with
+% its multiplicity, that matches a cleared atom of those roles; an empty
+% half is left out as above.  The display then says which atoms K_S holds,
+% on a line of its own after the assignment, in the words of def:compile,
+% "K_p holds every atom of d_p, with its multiplicity, that matches", the
+% cleared atoms joined by "or", the side condition of the assignment after
+% it.  The displays of Section 5.1 leave out the proviso that what is
+% added at an agent is disjoint from what is deleted there, and the
+% compiler leaves it out with K_S in it too (README, "The compiler").
+procedure update_rhs_k(Mults?, Mults?, Mults?, Constant?, Chunks?, Chunks?, Chunks).
+update_rhs_k(Add, Del, [], Sep, S, T, R?) :-
+    ground(Add?), ground(Del?), ground(Sep?), ground(S?), ground(T?) |
+    update_rhs(Add?, Del?, Sep?, S?, T?, R).
+update_rhs_k(Add, Del, [C|Cs], Sep, S, T, R?) :-
+    ground(Add?), ground(Del?), ground(C?), ground(Cs?), ground(Sep?), ground(S?), ground(T?) |
+    is_empty(Add?, AE),
+    is_empty(Del?, DE),
+    k_rhs(AE?, DE?, Add?, Del?, Sep?, S?, T?, R).
+
+% The minuend of K_S: c_S, or (c_S \ -) where the roles delete an atom.
+procedure k_inner(Ans?, Mults?, Constant?, Chunks?, Chunks?, Chunks).
+k_inner(yes, _, _, S, T, ['c_'|R?]) :- ground(S?), ground(T?) |
+    chunks_app(S?, [' \\setminus K_'|S1?], R),
+    chunks_app(S?, T?, S1).
+k_inner(no, Del, Sep, S, T, ['(c_'|R?]) :-
+    ground(Del?), ground(Sep?), ground(S?), ground(T?) |
+    chunks_app(S?, T?, S1),
+    latex_set(Del?, Sep?, [') \\setminus K_'|S1?], R1),
+    chunks_app(S?, [' \\setminus '|R1?], R).
+
+procedure k_rhs(Ans?, Ans?, Mults?, Mults?, Constant?, Chunks?, Chunks?, Chunks).
+k_rhs(yes, DE, _, Del, Sep, S, T, R?) :-
+    ground(DE?), ground(Del?), ground(Sep?), ground(S?), ground(T?) |
+    k_inner(DE?, Del?, Sep?, S?, T?, R).
+k_rhs(no, DE, Add, Del, Sep, S, T, ['('|R?]) :-
+    ground(DE?), ground(Add?), ground(Del?), ground(Sep?), ground(S?), ground(T?) |
+    latex_set(Add?, Sep?, T?, R1),
+    k_inner(DE?, Del?, Sep?, S?, [') \\uplus '|R1?], R).
+
+% The line saying which atoms K_S holds, with the side condition Sd; none
+% where the roles clear nothing.
+procedure k_line(Mults?, Chunks?, Chunks?, ChunkLists?, ChunkLists).
+k_line([], _, _, T, T?).
+k_line([C|Cs], S, Sd, T, [L?|T?]) :- ground(C?), ground(Cs?), ground(S?), ground(Sd?), ground(T?) |
+    latex_atoms([C?|Cs?], ' \\text{ or } ', Sd?, L1),
+    chunks_app(S?, [' \\text{, with its multiplicity, that matches } '|L1?], L2),
+    chunks_app(S?, [' \\text{ holds every atom of } c_'|L2?], L3),
+    chunks_app(['\\text{where } K_'], L3?, L).
+
+% The K_S lines of the roles of the short form, in role order.
+procedure k_lines_s3(NRoleSpecs?, Integer?, ChunkLists?, ChunkLists).
+k_lines_s3([], _, T, T?).
+k_lines_s3([RS|Rs], I, T, R?) :- ground(RS?), ground(Rs?), integer(I?), ground(T?) |
+    I1 := I? + 1,
+    k_lines_s3(Rs?, I1?, T?, R1),
+    latex_sub(I?, S),
+    nrs_clear(RS?, C),
+    k_line(C?, S?, [], R1?, R).
 
 procedure update_rhs(Mults?, Mults?, Constant?, Chunks?, Chunks?, Chunks).
 update_rhs(Add, Del, Sep, S, T, R?) :-
@@ -398,6 +468,7 @@ latex_expr(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
 latex_expr(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).
 latex_expr(nterm(N), T, R?) :- latex_arg(nterm(N?), T?, R).
 latex_expr(sgn(Y, J), T, R?) :- latex_arg(sgn(Y?, J?), T?, R).
+latex_expr(any, T, R?) :- latex_arg(any, T?, R).
 
 % An operand in parentheses where it is a sum or a difference.
 procedure latex_operand(Expr?, Chunks?, Chunks).
@@ -413,6 +484,7 @@ latex_operand(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
 latex_operand(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).
 latex_operand(nterm(N), T, R?) :- latex_arg(nterm(N?), T?, R).
 latex_operand(sgn(Y, J), T, R?) :- latex_arg(sgn(Y?, J?), T?, R).
+latex_operand(any, T, R?) :- latex_arg(any, T?, R).
 
 procedure constraint_line(Constraint?, ChunkLists?, ChunkLists).
 constraint_line(true, T, T?).
@@ -443,8 +515,9 @@ latex_s3_roles(Rs, Cn, T, R?) :- ground(Rs?), ground(Cn?), ground(T?) |
     provided_line(Fs?, LC?, L3),
     req_conjs(Rs?, 1, [], Qs),
     provided_line(Qs?, L3?, L2),
+    k_lines_s3(Rs?, 1, L2?, LK),
     latex_updates(Rs?, 1, [], A),
-    join_lines([A?|L2?], ['\\end{align*}'|T?], R).
+    join_lines([A?|LK?], ['\\end{align*}'|T?], R).
 
 % --- The display of a schema in the general form (def:compile) ------------
 % A line per agent, as def:compile's display has it and Section 5.1 prints
@@ -593,17 +666,37 @@ join_roles([I|Is], Rs, A, D, RA?, RD?) :-
     nth_nrs(Rs?, I?, RS),
     join_one(RS?, Is?, Rs?, A?, D?, RA, RD).
 
-% c'_S := (c_S \ D) u A, with the side condition T after it.
-procedure latex_assign(Mults?, Mults?, Chunks?, Chunks?, Chunks).
-latex_assign(Add, Del, S, T, ['c\'_'|R?]) :-
-    ground(Add?), ground(Del?), ground(S?), ground(T?) |
-    update_rhs(Add?, Del?, ',', S?, T?, R1),
-    chunks_app(S?, [' := '|R1?], R).
+% The join of what the roles Is clear (def:compile, K_p): the cleared atoms
+% of each, in role order, each once.
+procedure join_clear(Ints?, NRoleSpecs?, Mults?, Mults).
+join_clear([], _, C, C?).
+join_clear([I|Is], Rs, C, R?) :- integer(I?), ground(Is?), ground(Rs?), ground(C?) |
+    nth_nrs(Rs?, I?, RS),
+    nrs_clear(RS?, K),
+    mults_union(C?, K?, C1),
+    join_clear(Is?, Rs?, C1?, R).
 
-procedure assign_joined(Ints?, NRoleSpecs?, Chunks?, Chunks?, Chunks).
-assign_joined(Is, Rs, S, T, R?) :- ground(Is?), ground(Rs?), ground(S?), ground(T?) |
+% The assignment line of the agent S, joining what the roles Is do there,
+% with the side condition Sd, and the line saying which atoms K_S holds
+% where they clear an atom; T the lines after them.
+procedure assign_joined(Ints?, NRoleSpecs?, Chunks?, Chunks?, ChunkLists?, ChunkLists).
+assign_joined(Is, Rs, S, Sd, T, R?) :-
+    ground(Is?), ground(Rs?), ground(S?), ground(Sd?), ground(T?) |
     join_roles(Is?, Rs?, [], [], A, D),
-    latex_assign(A?, D?, S?, T?, R).
+    join_clear(Is?, Rs?, [], C),
+    assign_k_lines(A?, D?, C?, S?, Sd?, T?, R).
+
+procedure assign_k_lines(Mults?, Mults?, Mults?, Chunks?, Chunks?, ChunkLists?, ChunkLists).
+assign_k_lines(A, D, C, S, Sd, T, [L?|R?]) :-
+    ground(A?), ground(D?), ground(C?), ground(S?), ground(Sd?), ground(T?) |
+    latex_assign_k(A?, D?, C?, S?, Sd?, L),
+    k_line(C?, S?, Sd?, T?, R).
+
+procedure latex_assign_k(Mults?, Mults?, Mults?, Chunks?, Chunks?, Chunks).
+latex_assign_k(Add, Del, Clr, S, T, ['c\'_'|R?]) :-
+    ground(Add?), ground(Del?), ground(Clr?), ground(S?), ground(T?) |
+    update_rhs_k(Add?, Del?, Clr?, ',', S?, T?, R1),
+    chunks_app(S?, [' := '|R1?], R).
 
 % \mathrm{ext}_c(pi) of the listed role L.
 procedure ext_of(Integer?, NRoleSpecs?, Chunks?, Chunks).
@@ -645,15 +738,15 @@ mem_rel(no, [' \\notin ']).
 % roles U its schema does not say whether hold it.
 procedure agent_case_lines(IntLists?, Integer?, Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists).
 agent_case_lines([], _, _, _, _, T, T?).
-agent_case_lines([S|Ss], A, K, U, Rs, T, [L?|R?]) :-
+agent_case_lines([S|Ss], A, K, U, Rs, T, R?) :-
     ground(S?), ground(Ss?), integer(A?), ground(K?), ground(U?), ground(Rs?), ground(T?) |
     latex_role(A?, [], W),
     mem_items(U?, S?, W?, Rs?, [], Its),
     side(Its?, Sd),
     ints_app(K?, S?, KS),
     latex_sub(A?, Sub),
-    assign_joined([A?|KS?], Rs?, Sub?, Sd?, L),
-    agent_case_lines(Ss?, A?, K?, U?, Rs?, T?, R).
+    agent_case_lines(Ss?, A?, K?, U?, Rs?, T?, R1),
+    assign_joined([A?|KS?], Rs?, Sub?, Sd?, R1?, R).
 
 procedure agent_lines1(Ints?, Ints?, Integer?, Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists).
 agent_lines1(K, U, A, As, Ls, Rs, T, R?) :-
@@ -695,13 +788,13 @@ procedure q_lines1(IntLists?, Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists
 q_lines1([], _, _, _, T, T?).
 q_lines1([[]|Ss], Ls, X, Rs, T, R?) :- ground(Ss?), ground(Ls?), ground(X?), ground(Rs?), ground(T?) |
     q_lines1(Ss?, Ls?, X?, Rs?, T?, R).
-q_lines1([[I|Is]|Ss], Ls, X, Rs, T, [L?|R?]) :-
+q_lines1([[I|Is]|Ss], Ls, X, Rs, T, R?) :-
     integer(I?), ground(Is?), ground(Ss?), ground(Ls?), ground(X?), ground(Rs?), ground(T?) |
     neq_items(X?, [], Ne),
     mem_items(Ls?, [I?|Is?], ['q'], Rs?, Ne?, Its),
     side(Its?, Sd),
-    assign_joined([I?|Is?], Rs?, ['q'], Sd?, L),
-    q_lines1(Ss?, Ls?, X?, Rs?, T?, R).
+    q_lines1(Ss?, Ls?, X?, Rs?, T?, R1),
+    assign_joined([I?|Is?], Rs?, ['q'], Sd?, R1?, R).
 
 procedure q_lines(Ints?, Ints?, NRoleSpecs?, ChunkLists?, ChunkLists).
 q_lines(Ls, As, Rs, T, R?) :- ground(Ls?), ground(As?), ground(Rs?), ground(T?) |
@@ -808,6 +901,10 @@ procedure ext_within(NameTerm?, NameTerms?, NameTerms).
 ext_within(ext(S, Y), T, [ext(S?, Y?)|R?]) :- ground(S?), ground(Y?), ground(T?) |
     ext_within(S?, T?, R).
 ext_within(own(_), T, T?).
+% sigma.* is no name term sigma.y, its wildcard being no speech-act
+% variable, and the freshness def:compile asks is of a name term sigma.y; a
+% name term within sigma is one.
+ext_within(ext_any(S), T, R?) :- ground(S?), ground(T?) | ext_within(S?, T?, R).
 ext_within(own_var(_), T, T?).
 
 procedure ext_terms(NameTerms?, NameTerms?, NameTerms).
@@ -1023,6 +1120,21 @@ malformed_lines([signed(S, I, _, not_agent_role)|Fs], T,
 malformed_lines([added_and_deleted(S, I, _)|Fs], T,
                 [S?, 'at role', I?,
                  'adds and deletes the same atom;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([added_and_cleared(S, I, _)|Fs], T,
+                [S?, 'at role', I?,
+                 'adds an atom that one of its cleared atoms matches;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([wildcard(S, I, _)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries the wildcard in an atom not marked -;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([listed_wildcard(S, I)|Fs], T,
+                [S?, 'at role', I?,
+                 'has a listed role with the wildcard among its arguments;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([changes_nothing(S, I)|Fs], T,

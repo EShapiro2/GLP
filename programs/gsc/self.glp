@@ -30,8 +30,17 @@
 % schema, and ext(Sigma, Y) is Sigma.y.  own_var(X), <x> for an agent
 % variable x, is read and is no name term of def:role: a contract carrying
 % one is refused (name_term_base, check.glp).
+%
+% An atom marked - may have the wildcard * among its arguments, or in place
+% of the speech-act variable of a name term among them (def:schema, GSC
+% 327e035): any is the wildcard as an argument, and ext_any(Sigma) the name
+% term Sigma.* (GSN.glp).  Such an atom is a cleared atom, of *(i): it
+% deletes every atom of the agent's state that it matches and requires none
+% (def:schema, def:binding, def:compile's K_p).  The term form writes it
+% among a role's deleted atoms; rs_del below gives -(i), the deleted atoms
+% with no wildcard, and rs_clear *(i).
 NameTerm  ::= own(Integer) ; own_var(Constant)
-            ; ext(NameTerm, Constant).
+            ; ext(NameTerm, Constant) ; ext_any(NameTerm).
 NameTerms ::= [] ; [NameTerm | NameTerms].
 
 % An argument is a role, named by its index in the schema, a party variable, a
@@ -42,7 +51,7 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % the value variable X where X is a name and the number X where X is a
 % number.
 Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-        ; sgn(Constant, Integer) ; num(Constant).
+        ; sgn(Constant, Integer) ; num(Constant) ; any.
 Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
@@ -92,7 +101,10 @@ NumCtx     ::= nc(Constraint, Args).
 % def:grounded).
 % A value argument names no agent, and its base, b_num, is the base of no
 % role (GSC, Section 3.2); prov.glp and volition.glp pass it by.
-Base  ::= b_role(Integer) ; b_pvar(Constant) ; b_svar(Constant) ; b_num.
+% The wildcard is no agent role, variable or name term, and has no base
+% either (def:grounded, def:schema), b_any; it occurs only in a cleared
+% atom, which no condition reads.
+Base  ::= b_role(Integer) ; b_pvar(Constant) ; b_svar(Constant) ; b_num ; b_any.
 Bases ::= [] ; [Base | Bases].
 
 % rs(Guard, Add, Del, Keep, Forb) holds an agent role's four multisets in the
@@ -285,7 +297,13 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % constraint_not_numeric(Schema, Arg).  A value variable is a variable of
 % the schema, listed in its head like the others (not_in_head,
 % head_repeated), and a number in the head is no variable
-% (head_not_variable).
+% (head_not_variable).  What def:schema requires of a cleared atom (GSC
+% 327e035): the wildcard only in an atom marked -, so an atom marked +, not
+% or unmarked carrying it is a fault wildcard(Schema, Role, Atom), and a
+% listed role carrying it among its arguments, which are arguments of the
+% schema (def:role), a fault listed_wildcard(Schema, Role); and no atom of
+% +(i) obtained from an atom of *(i) by replacing its wildcards, so each such
+% atom added is a fault added_and_cleared(Schema, Role, Atom).
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
         ; untraceable(Preds)
@@ -293,6 +311,9 @@ Fault ::= no_introductory_act
         ; reflexive(Constant, Integer, Atom)
         ; signed(Constant, Integer, Atom, SgnCause)
         ; added_and_deleted(Constant, Integer, Atom)
+        ; added_and_cleared(Constant, Integer, Atom)
+        ; wildcard(Constant, Integer, Atom)
+        ; listed_wildcard(Constant, Integer)
         ; changes_nothing(Constant, Integer)
         ; no_role_changes(Constant)
         ; head_not_variable(Constant, Arg)
@@ -686,6 +707,9 @@ kind_ok(num(_), person(_), no).
 kind_ok(num(_), speech(_), no).
 kind_ok(num(_), signed(_, _), no).
 kind_ok(num(_), undef, no).
+% The wildcard occurs only in a cleared atom, which is matched by
+% matches_cleared and never against a binding's image here.
+kind_ok(any, _, no).
 
 % subst_role_at(S, V, R): S sends a role to V.  Clause 2 of def:unobstructed
 % asks it of the other party.
@@ -735,11 +759,13 @@ atoms_member([], _, no).
 atoms_member([A|_], B, yes) :- A? =?= B? | true.
 atoms_member([_|As], B, R?) :- otherwise | atoms_member(As?, B?, R).
 
-% role_names(RS, J, R): the role adds or deletes an atom naming role J.
+% role_names(RS, J, R): the role adds or deletes an atom naming role J.  A
+% cleared atom naming J, as unfriend's listed(Bob, *) at Alice, deletes every
+% atom it matches (def:schema), each naming J, so it counts as deleting one.
 procedure role_names(RoleSpec?, Integer?, Ans).
 role_names(RS, J, R?) :- ground(RS?), integer(J?) |
     rs_add(RS?, P),
-    rs_del(RS?, M),
+    rs_marked_del(RS?, M),
     names_role(P?, J?, A1),
     names_role(M?, J?, A2),
     or_yes(A1?, A2?, R).
@@ -779,6 +805,7 @@ binding_ok(nterm(_), _, _, _, yes).
 binding_ok(sgn(_, _), _, _, _, no).
 % A value argument is matched by match_num, never here.
 binding_ok(num(_), _, _, _, no).
+binding_ok(any, _, _, _, no).
 
 procedure match_bind(Ans?, Arg?, Val?, Subst?, Eqs?, MatchRes).
 match_bind(yes, A, V, S, E, match([bind(A?, V?)|S?], E?)).
@@ -908,7 +935,7 @@ procedure rolespecs_args(RoleSpecs?, Args?, Args).
 rolespecs_args([], T, T?).
 rolespecs_args([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
     rs_add(RS?, P),
-    rs_del(RS?, M),
+    rs_marked_del(RS?, M),
     rs_keep(RS?, K),
     rs_forb(RS?, N),
     rolespecs_args(Rs?, T?, R1),
@@ -927,6 +954,7 @@ procedure nt_pvars(NameTerm?, Args).
 nt_pvars(own(_), []).
 nt_pvars(own_var(X), [pvar(X?)]).
 nt_pvars(ext(S, _), R?) :- ground(S?) | nt_pvars(S?, R).
+nt_pvars(ext_any(S), R?) :- ground(S?) | nt_pvars(S?, R).
 
 procedure nt_svars(NameTerm?, Args).
 nt_svars(own(_), []).
@@ -934,6 +962,8 @@ nt_svars(own_var(_), []).
 nt_svars(ext(S, Y), R?) :- ground(S?), ground(Y?) |
     nt_svars(S?, R1),
     args_app(R1?, [svar(Y?)], R).
+% The wildcard in place of the speech-act variable of Sigma.* is no variable.
+nt_svars(ext_any(S), R?) :- ground(S?) | nt_svars(S?, R).
 
 % A signed term sgn(y, pi) carries the speech-act variable y and no party
 % variable (def:schema).
@@ -944,6 +974,7 @@ filter_pvars([role(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([svar(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([sgn(_, _)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([num(_)|As], R?) :- filter_pvars(As?, R).
+filter_pvars([any|As], R?) :- filter_pvars(As?, R).
 filter_pvars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_pvars(S?, Ps),
     filter_pvars(As?, R1),
@@ -956,6 +987,7 @@ filter_svars([role(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([pvar(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([sgn(Y, _)|As], [svar(Y?)|R?]) :- filter_svars(As?, R).
 filter_svars([num(_)|As], R?) :- filter_svars(As?, R).
+filter_svars([any|As], R?) :- filter_svars(As?, R).
 filter_svars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_svars(S?, Ss),
     filter_svars(As?, R1),
@@ -1017,6 +1049,7 @@ fresh_val(svar(_), N, speech(N?)).
 fresh_val(nterm(_), _, undef).
 fresh_val(sgn(_, _), _, undef).
 fresh_val(num(X), _, nfree(X?)).
+fresh_val(any, _, undef).
 
 procedure complete1(Found?, Arg?, Args?, Subst?, Integer?, Subst).
 complete1(bound(_), _, As, S, N, R?) :- ground(As?), ground(S?), integer(N?) |
@@ -1196,9 +1229,111 @@ procedure rs_add(RoleSpec?, Atoms).
 rs_add(rs(_, P, _, _, _), P?).
 rs_add(crs(_, _, P, _, _, _), P?).
 
+% A role's atoms marked -, as the term form writes them: -(i), those with no
+% wildcard, and *(i), its cleared atoms, those with one (def:schema, GSC
+% 327e035).
+procedure rs_marked_del(RoleSpec?, Atoms).
+rs_marked_del(rs(_, _, M, _, _), M?).
+rs_marked_del(crs(_, _, _, M, _, _), M?).
+
+% -(i): the atoms the role deletes, marked - with no wildcard.
 procedure rs_del(RoleSpec?, Atoms).
-rs_del(rs(_, _, M, _, _), M?).
-rs_del(crs(_, _, _, M, _, _), M?).
+rs_del(RS, R?) :- ground(RS?) |
+    rs_marked_del(RS?, M),
+    atoms_cleared(M?, no, R).
+
+% *(i): the role's cleared atoms, marked - with a wildcard.
+procedure rs_clear(RoleSpec?, Atoms).
+rs_clear(RS, R?) :- ground(RS?) |
+    rs_marked_del(RS?, M),
+    atoms_cleared(M?, yes, R).
+
+% Whether an atom carries the wildcard: among its arguments, or in place of
+% the speech-act variable of a name term among them (def:schema).
+procedure nt_wild(NameTerm?, Ans).
+nt_wild(own(_), no).
+nt_wild(own_var(_), no).
+nt_wild(ext(S, _), R?) :- ground(S?) | nt_wild(S?, R).
+nt_wild(ext_any(_), yes).
+
+procedure arg_wild(Arg?, Ans).
+arg_wild(any, yes).
+arg_wild(nterm(S), R?) :- ground(S?) | nt_wild(S?, R).
+arg_wild(A, no) :- otherwise, ground(A?) | true.
+
+procedure args_wild1(Ans?, Args?, Ans).
+args_wild1(yes, _, yes).
+args_wild1(no, As, R?) :- ground(As?) | args_wild(As?, R).
+
+procedure args_wild(Args?, Ans).
+args_wild([], no).
+args_wild([A|As], R?) :- ground(A?), ground(As?) |
+    arg_wild(A?, W),
+    args_wild1(W?, As?, R).
+
+procedure atom_wild(Atom?, Ans).
+atom_wild(atom(_, As), R?) :- ground(As?) | args_wild(As?, R).
+
+% atoms_cleared(Phis, W, R): the atoms of Phis carrying the wildcard (W = yes)
+% or not carrying it (W = no), in order.
+procedure atoms_cleared1(Ans?, Ans?, Atom?, Atoms?, Atoms).
+atoms_cleared1(B, W, A, Xs, [A?|R?]) :- B? =?= W?, ground(Xs?) |
+    atoms_cleared(Xs?, W?, R).
+atoms_cleared1(_, W, _, Xs, R?) :- otherwise, ground(W?), ground(Xs?) |
+    atoms_cleared(Xs?, W?, R).
+
+procedure atoms_cleared(Atoms?, Ans?, Atoms).
+atoms_cleared([], _, []).
+atoms_cleared([A|Xs], W, R?) :- ground(A?), ground(Xs?), ground(W?) |
+    atom_wild(A?, B),
+    atoms_cleared1(B?, W?, A?, Xs?, R).
+
+% matches_cleared(Phi, Psi, R): the atom Phi is obtained from the cleared atom
+% Psi by replacing its wildcards, each by an argument, a speech-act variable
+% where the wildcard is in a name term (def:schema, def:binding).
+procedure nt_wild_match(NameTerm?, NameTerm?, Ans).
+nt_wild_match(ext_any(S), ext(T, _), R?) :- ground(S?), ground(T?) |
+    nt_wild_match(S?, T?, R).
+nt_wild_match(ext(S, Y), ext(T, Z), R?) :- Y? =?= Z?, ground(S?), ground(T?) |
+    nt_wild_match(S?, T?, R).
+nt_wild_match(S, T, yes) :- otherwise, S? =?= T? | true.
+nt_wild_match(_, _, no) :- otherwise | true.
+
+procedure arg_wild_match(Arg?, Arg?, Ans).
+arg_wild_match(any, _, yes).
+arg_wild_match(nterm(S), nterm(T), R?) :- ground(S?), ground(T?) |
+    nt_wild_match(S?, T?, R).
+arg_wild_match(A, B, yes) :- otherwise, A? =?= B? | true.
+arg_wild_match(_, _, no) :- otherwise | true.
+
+procedure args_wild_match1(Ans?, Args?, Args?, Ans).
+args_wild_match1(no, _, _, no).
+args_wild_match1(yes, Ps, As, R?) :- ground(Ps?), ground(As?) |
+    args_wild_match(Ps?, As?, R).
+
+procedure args_wild_match(Args?, Args?, Ans).
+args_wild_match([], [], yes).
+args_wild_match([P|Ps], [A|As], R?) :- ground(P?), ground(Ps?), ground(A?), ground(As?) |
+    arg_wild_match(P?, A?, M),
+    args_wild_match1(M?, Ps?, As?, R).
+args_wild_match(_, _, no) :- otherwise | true.
+
+procedure matches_cleared(Atom?, Atom?, Ans).
+matches_cleared(atom(P, As), atom(Q, Bs), R?) :-
+    P? =?= Q?, ground(As?), ground(Bs?) |
+    args_wild_match(Bs?, As?, R).
+matches_cleared(_, _, no) :- otherwise | true.
+
+% matches_some_cleared(Phi, Psis, R): Phi is obtained from some atom of Psis.
+procedure matches_some1(Ans?, Atom?, Atoms?, Ans).
+matches_some1(yes, _, _, yes).
+matches_some1(no, A, Cs, R?) :- ground(A?), ground(Cs?) | matches_some_cleared(A?, Cs?, R).
+
+procedure matches_some_cleared(Atom?, Atoms?, Ans).
+matches_some_cleared(_, [], no).
+matches_some_cleared(A, [C|Cs], R?) :- ground(A?), ground(C?), ground(Cs?) |
+    matches_cleared(A?, C?, M),
+    matches_some1(M?, A?, Cs?, R).
 
 procedure rs_keep(RoleSpec?, Atoms).
 rs_keep(rs(_, _, _, K, _), K?).
@@ -1208,7 +1343,8 @@ procedure rs_forb(RoleSpec?, Atoms).
 rs_forb(rs(_, _, _, _, N), N?).
 rs_forb(crs(_, _, _, _, _, N), N?).
 
-% The atoms a role requires: =(i) u -(i) (def:schema).
+% The atoms a role requires: =(i) u -(i) (def:schema), a cleared atom
+% requiring none.
 procedure rs_req(RoleSpec?, Atoms).
 rs_req(RS, R?) :- ground(RS?) |
     rs_del(RS?, M),
@@ -1228,6 +1364,9 @@ procedure nt_base(NameTerm?, Base).
 nt_base(own(I), b_role(I?)).
 nt_base(own_var(X), b_pvar(X?)).
 nt_base(ext(S, _), B?) :- ground(S?) | nt_base(S?, B).
+% <pi>.* in a cleared atom is a name term with its speech-act variable
+% replaced by the wildcard (def:schema), its base that of <pi>.
+nt_base(ext_any(S), B?) :- ground(S?) | nt_base(S?, B).
 
 procedure arg_base(Arg?, Base).
 arg_base(role(I), b_role(I?)).
@@ -1239,6 +1378,7 @@ arg_base(nterm(S), B?) :- ground(S?) | nt_base(S?, B).
 % filter_svars gives y.
 arg_base(sgn(_, J), b_role(J?)).
 arg_base(num(_), b_num).
+arg_base(any, b_any).
 
 procedure role_base(RoleSpec?, Integer?, Base).
 role_base(rs(_, _, _, _, _), I, b_role(I?)).
@@ -1259,6 +1399,8 @@ args_bases([], T, T?).
 args_bases([num(_)|As], T, R?) :- ground(As?), ground(T?) |
     args_bases(As?, T?, R).
 args_bases([svar(_)|As], T, R?) :- ground(As?), ground(T?) |
+    args_bases(As?, T?, R).
+args_bases([any|As], T, R?) :- ground(As?), ground(T?) |
     args_bases(As?, T?, R).
 args_bases([A|As], T, [B?|R?]) :- otherwise, ground(A?), ground(As?), ground(T?) |
     arg_base(A?, B),
@@ -1463,9 +1605,37 @@ procedure nrs_add(NRoleSpec?, Mults).
 nrs_add(rs(_, P, _, _, _), P?).
 nrs_add(crs(_, _, P, _, _, _), P?).
 
+% A role's atoms marked -, as written: -(i), those with no wildcard, and
+% *(i), its cleared atoms (def:schema, GSC 327e035).
+procedure nrs_marked_del(NRoleSpec?, Mults).
+nrs_marked_del(rs(_, _, M, _, _), M?).
+nrs_marked_del(crs(_, _, _, M, _, _), M?).
+
 procedure nrs_del(NRoleSpec?, Mults).
-nrs_del(rs(_, _, M, _, _), M?).
-nrs_del(crs(_, _, _, M, _, _), M?).
+nrs_del(RS, R?) :- ground(RS?) |
+    nrs_marked_del(RS?, M),
+    mults_cleared(M?, no, R).
+
+procedure nrs_clear(NRoleSpec?, Mults).
+nrs_clear(RS, R?) :- ground(RS?) |
+    nrs_marked_del(RS?, M),
+    mults_cleared(M?, yes, R).
+
+procedure mult_wild(Mult?, Ans).
+mult_wild(atom(P, As), R?) :- ground(P?), ground(As?) | atom_wild(atom(P?, As?), R).
+mult_wild(times(_, A), R?) :- ground(A?) | atom_wild(A?, R).
+
+procedure mults_cleared1(Ans?, Ans?, Mult?, Mults?, Mults).
+mults_cleared1(B, W, A, Xs, [A?|R?]) :- B? =?= W?, ground(Xs?) |
+    mults_cleared(Xs?, W?, R).
+mults_cleared1(_, W, _, Xs, R?) :- otherwise, ground(W?), ground(Xs?) |
+    mults_cleared(Xs?, W?, R).
+
+procedure mults_cleared(Mults?, Ans?, Mults).
+mults_cleared([], _, []).
+mults_cleared([A|Xs], W, R?) :- ground(A?), ground(Xs?), ground(W?) |
+    mult_wild(A?, B),
+    mults_cleared1(B?, W?, A?, Xs?, R).
 
 procedure nrs_keep(NRoleSpec?, Mults).
 nrs_keep(rs(_, _, _, K, _), K?).
@@ -1519,6 +1689,7 @@ expr_args(pvar(X), T, [pvar(X?)|T?]).
 expr_args(svar(X), T, [svar(X?)|T?]).
 expr_args(nterm(N), T, [nterm(N?)|T?]).
 expr_args(sgn(Y, J), T, [sgn(Y?, J?)|T?]).
+expr_args(any, T, [any|T?]).
 
 procedure exprs_args(Exprs?, Args?, Args).
 exprs_args([], T, T?).
@@ -1535,7 +1706,7 @@ procedure nroles_margs(NRoleSpecs?, Args?, Args).
 nroles_margs([], T, T?).
 nroles_margs([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
     nrs_add(RS?, P),
-    nrs_del(RS?, M),
+    nrs_marked_del(RS?, M),
     nrs_keep(RS?, K),
     nrs_forb(RS?, N),
     nroles_margs(Rs?, T?, R1),
