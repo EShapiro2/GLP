@@ -14,7 +14,8 @@
 %% n, a group's name, are speech-act variables, svar.  A group is named by its
 %% leader, the role a, and n: its community name <a>.n (GSC, Appendix D),
 %% and close takes the listed role a[listed(*, n)], every member the leader
-%% lists (GSC, Appendix D.4).  The groups follow CSSN's (programs/cssn/CSSN.glp),
+%% lists (GSC, Appendix D.4); remove is the leader ending Bob's membership,
+%% GSN:3 (Udi, 2026-10-30, Coordination Appendix E, to GSC #9).  The groups follow CSSN's (programs/cssn/CSSN.glp),
 %% without children and without items.
 %% ---------------------------------------------------------------------------
 
@@ -73,6 +74,9 @@ contract_named(gsn,
     schema(leave, ['Alice', 'Bob'], [svar(n)],
        [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
         rs(guarded,   [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
+    schema(remove, ['Alice', 'Bob'], [svar(n)],
+       [rs(guarded,   [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
+        rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
     cschema(close, ['Alice', 'Alice'], [svar(n)], [],
        [rs(guarded, [atom(closed, [svar(n)])],
                     [atom(listed, [role(1), svar(n)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], []),
