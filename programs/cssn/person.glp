@@ -12,7 +12,7 @@
 %%   5. Child-managed group.  Once carol is friends with dave, eve and frank, she creates kids_chat (GSN:2) and invites dave and then eve, alice, bob and the child answering yes (child_join_2(r?, s?, p?, q? ; n)); carol posts 'Welcome everyone!' (GSN:5; post_own(a? ; x, n)), and her agent delivers it to every member she lists who is her friend (deliver(a, q ; x, n)); dave, having it, posts 'Thanks Carol!' to carol (post(p?, a ; x, n)), whose agent delivers it likewise; eve, having dave's, posts 'Hi all!'; and, once her own has come back to her, leaves the group (GSN:4; leave(a, q? ; n)).
 %%   6. Adult-managed group.  Once frank is friends with dave and carol, he creates study and invites dave and then carol, bob and alice, the child's parents, and the child answering yes (child_join(a?, s?, p? ; n)); frank posts 'Welcome to the study group'; dave, once he has it and eve's post to kids_chat, posts 'Hi from Dave!' to frank; carol, once she has dave's, has delivered eve's post and eve has left kids_chat, posts 'Hi from Carol!' to frank.  Each child answers its invitation to the study group once its own requests in kids_chat are made, and bob answers dave's once dave's post to kids_chat has come back to dave.
 %%   7. Parents ending.  Once dave's phone shows carol's post to the study group, grace ends dave's friendship with carol (GnW:3; child_unfriend(r, s, p?)), and carol's agent drops dave from kids_chat, his leader no longer his friend (GSN:4, drop); once dave's phone shows him out of kids_chat, bob ends dave's membership of the study group (child_leave(a, s, p? ; n)).  Once carol's phone shows dave out of kids_chat, alice closes it, child_close(r, p?, r[listed(*, n)] ; n): her request child_close(carol, alice, n) is a Request of rho_N to carol's machine, the opener of its parts, which completes the list from its listed atoms and proposes the close, naming the request, alice's machine voting yes, unasked (vGLP f0acbc1, Section 3.2, Definitions "Local Specification, Part, Guard Set, Opener, Request" and "Proposing"; Section 5.4, "Act schemas as local specifications").
-%%   8. Coming of age.  Once dave's phone shows him out of the study group, bob, eve's creator, declares eve of age (CSSN:4; of_age(p?, r, p[made(*, r)])), which ends bob's and grace's guardianship of eve, grace being the parent of eve bob made; eve, an adult, comes to know frank and befriends him, with no parent among the guards (GKK:2, GSG:1).
+%%   8. Coming of age.  Once dave's phone shows him out of the study group, bob, eve's creator, declares eve of age (CSSN:4; of_age(p?, r, r[guarded_by(*)])), which ends bob's and grace's guardianship of eve, grace being the parent of eve bob made; eve, an adult, comes to know frank and befriends him, with no parent among the guards (GKK:2, GSG:1).
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; at(Key, Cond) ; approval(Asked, YesNo).
@@ -82,9 +82,9 @@ script(alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
 script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              own([B2], propose(acquaint(B2?, grace))), wait(holds(knows(grace))),
              own([B3], propose(enter(B3?, dave))), wait(holds(parenting(dave))),
-             own([B3a], propose(make_parent(B3a?, grace, dave))), wait(holds(made(grace, dave))),
+             own([B3a], propose(make_parent(B3a?, grace, dave))), at(dave, holds(guarded_by(grace))),
              own([B4], propose(enter(B4?, eve))), wait(holds(parenting(eve))),
-             own([B4a], propose(make_parent(B4a?, grace, eve))), wait(holds(made(grace, eve))),
+             own([B4a], propose(make_parent(B4a?, grace, eve))), at(eve, holds(guarded_by(grace))),
              approval(acquaint(alice, bob), yes), wait(holds(knows(alice))),
              own([B5], propose(acquaint(B5?, frank))), wait(holds(knows(frank))),
              approval(befriend(alice, bob), yes), wait(holds(friend(alice))),
@@ -111,7 +111,7 @@ script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              at(dave, lacks(friend(carol))),
              at(dave, lacks(member(dot(community(carol), speech(utterance(kids_chat), carol))))),
              own([B15], propose(child_leave(frank, dave, B15?, speech(utterance(study), frank)))), at(dave, lacks(member(dot(community(frank), speech(utterance(study), frank))))),
-             own([B16], propose(of_age(B16?, eve))), wait(lacks(parenting(eve)))]).
+             own([B16], propose(of_age(eve, B16?))), wait(lacks(parenting(eve)))]).
 script(grace, [own([G1], propose(establish(G1?))), wait(holds(identity)),
                approval(acquaint(bob, grace), yes),
                approval(make_parent(bob, grace, dave), yes),

@@ -147,6 +147,7 @@ const Set<String> builtinProcedures = {
   // Time and random
   '_now/1',
   '_random/4',
+  '_split_random_seed/3',
   // MWM (Mutual Write Merge)
   '_allocate_mutual_reference/2',
   '_stream_append/3',

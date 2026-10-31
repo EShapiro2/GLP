@@ -1,0 +1,90 @@
+% Regression: split_random_seed/3 (GLP-ICLP appendix-guards, "Splitting a
+% seed").  split_random_seed(Seed, S1, S2) assigns S1 and S2 two seeds
+% determined by Seed, such that the draws from Seed, from S1 and from S2 are
+% independent streams; a computation that draws from several seeds made by
+% splitting one seed reproduces exactly from that seed.
+%
+% The covering test of GLP #11's task (Code_inbox 2026-10-31 15:20 UTC): from
+% one seed, the three streams of random/4 draws from Seed, S1 and S2 differ from
+% one another and from any shift of one another over the first hundred draws,
+% and a second run from the same seed reproduces them.
+
+Streams ::= streams(Stream(Integer), Stream(Integer), Stream(Integer)).
+Firsts ::= firsts(Integer, Integer, Integer).
+Answer ::= yes ; no.
+
+% draws(Seed, K, Vs): Vs is the first K draws of random/4 from Seed, threading
+% NextSeed, each with bound 2147483646, the largest random/4 makes distinct.
+procedure draws(Integer?, Integer?, Stream(Integer)).
+draws(_, 0, []).
+draws(S, K, [V?|Vs?]) :- K? > 0 |
+  random(S?, 2147483646, V, S1),
+  K1 := K? - 1,
+  draws(S1?, K1?, Vs).
+
+% three(Seed, T): T holds the first hundred draws from Seed, S1 and S2.
+procedure three(Integer?, Streams).
+three(Seed, streams(A?, B?, C?)) :- integer(Seed?) |
+  split_random_seed(Seed?, S1, S2),
+  draws(Seed?, 100, A),
+  draws(S1?, 100, B),
+  draws(S2?, 100, C).
+
+% agrees(A, B, M): M is 1 if A and B agree over their overlap, else 0.
+procedure agrees(Stream(Integer)?, Stream(Integer)?, Integer).
+agrees([], _, 1).
+agrees([_|_], [], 1).
+agrees([X|Xs], [Y|Ys], M?) :- X? =:= Y? | agrees(Xs?, Ys?, M).
+agrees([X|_], [Y|_], 0) :- X? =\= Y? | true.
+
+% shifts(A, B, N): N is the number of shifts k of B, k = 0 up to the length of
+% B less one, at which B from its k-th draw on agrees with A over their overlap.
+procedure shifts(Stream(Integer)?, Stream(Integer)?, Integer).
+shifts(_, [], 0).
+shifts(A, [X|Bs], N?) :- ground(A?), ground(Bs?) |
+  agrees(A?, [X?|Bs?], M),
+  shifts(A?, Bs?, N1),
+  N := M? + N1?.
+
+% shifted(Seed, N): N is the number of shifts, over the six ordered pairs of
+% the three streams, at which one agrees with another; 0 when they differ from
+% one another and from any shift of one another.
+procedure shifted(Integer?, Integer).
+shifted(Seed, N?) :- three(Seed?, T), count(T?, N).
+
+procedure count(Streams?, Integer).
+count(streams(A, B, C), N?) :- ground(A?), ground(B?), ground(C?) |
+  shifts(A?, B?, N1), shifts(B?, A?, N2),
+  shifts(A?, C?, N3), shifts(C?, A?, N4),
+  shifts(B?, C?, N5), shifts(C?, B?, N6),
+  N := N1? + N2? + N3? + N4? + N5? + N6?.
+
+% reproduces(Seed, R): R is yes if a second run from Seed gives the same three
+% streams as the first.
+procedure reproduces(Integer?, Answer).
+reproduces(Seed, R?) :- integer(Seed?) |
+  three(Seed?, T1),
+  three(Seed?, T2),
+  same(T1?, T2?, R).
+
+procedure same(Streams?, Streams?, Answer).
+same(T1, T2, yes) :- ground(T1?), ground(T2?), T1? =?= T2? | true.
+same(T1, T2, no) :- ground(T1?), ground(T2?), T1? =?\= T2? | true.
+
+% firsts(Seed, F): F is the first draw from each of Seed, S1 and S2.
+procedure firsts(Integer?, Firsts).
+firsts(Seed, firsts(A?, B?, C?)) :- integer(Seed?) |
+  split_random_seed(Seed?, S1, S2),
+  random(Seed?, 2147483646, A, _),
+  random(S1?, 2147483646, B, _),
+  random(S2?, 2147483646, C, _).
+
+% control(Seed, N): N is the number of shifts at which the stream from Seed's
+% next seed agrees with the stream from Seed: 1, at shift 1, so that the 0 of
+% shifted/2 is a finding and not a check that cannot fail.
+procedure control(Integer?, Integer).
+control(Seed, N?) :- integer(Seed?) |
+  random(Seed?, 2147483646, _, S1),
+  draws(Seed?, 100, A),
+  draws(S1?, 100, B),
+  shifts(B?, A?, N).

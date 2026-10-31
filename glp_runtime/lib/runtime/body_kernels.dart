@@ -106,6 +106,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Time operations
   registry.register('_now', 1, nowKernel);
   registry.register('_random', 4, randomKernel);
+  registry.register('_split_random_seed', 3, splitRandomSeedKernel);
 
   // MutualRef operations (O(1) stream append)
   registry.register('_allocate_mutual_reference', 2, mutualRefKernel);
@@ -621,6 +622,42 @@ BodyKernelResult randomKernel(GlpRuntime rt, List<Object?> args) {
   final r1 = bindResult(rt, args[2], value);
   if (r1 != BodyKernelResult.success) return r1;
   return bindResult(rt, args[3], nextSeed);
+}
+
+/// `'_split_random_seed'(Seed?, S1, S2)` — two seeds from one (GLP-ICLP
+/// appendix-guards §"Splitting a seed"). Binds S1 and S2 to two seeds
+/// determined by Seed, such that the draws from Seed, from S1 and from S2 are
+/// independent streams. The paper names a splittable generator, such as
+/// SplitMix, as what implements it: S1 and S2 are the first two outputs of
+/// SplitMix64 (Steele, Lea and Flood 2014, with Vigna's published constants)
+/// started from state Seed, in 64-bit two's-complement arithmetic. The guard
+/// integer(Seed?) guarantees a ground integer, so the check below is defensive.
+BodyKernelResult splitRandomSeedKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] split_random_seed/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final seed = _getNum(rt, args[0]);
+  if (seed == null || seed is! int) {
+    print('[ABORT] split_random_seed/3: Seed must be an integer');
+    return BodyKernelResult.abort;
+  }
+  final int s1 = _splitMix64(seed + _splitMixGamma);
+  final int s2 = _splitMix64(seed + 2 * _splitMixGamma);
+  final r1 = bindResult(rt, args[1], s1);
+  if (r1 != BodyKernelResult.success) return r1;
+  return bindResult(rt, args[2], s2);
+}
+
+/// SplitMix64's increment, the golden-ratio constant 0x9E3779B97F4A7C15.
+const int _splitMixGamma = 0x9E3779B97F4A7C15;
+
+/// SplitMix64's output function (mix64), applied to a state: Dart's native
+/// int is 64-bit two's complement and its `*` wraps, as the generator needs.
+int _splitMix64(int z) {
+  z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9;
+  z = (z ^ (z >>> 27)) * 0x94D049BB133111EB;
+  return z ^ (z >>> 31);
 }
 
 // ============================================================================

@@ -2,7 +2,7 @@
 
 imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
-%% play_provenance(D, E, C, B, F): the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), dan, eve, carol, bob and fay, with a conversation between the executions of each two of them who become friends.  On GSNP's contract and pragmas, programs/gai/GSNP.glp and GSNP.txt.  Each establishes their identity (GKK:1, Identity); in dan and eve, eve and carol, carol and bob, and bob and fay, the first meets the second by their key, the second answering yes to its hello (GKK:2, Meeting), and then offers the second friendship, who answers yes (GSG:1, Friendship); dan signs the item 'Flood on Main Street' (GSNP:1, Authorship) and sends it to eve in a message, who holds it as he signed it (GSN:1, Message); eve forwards it to carol, and carol forwards it to bob (GSNP:2, Forwarding), who holds it signed by dan, then by eve, then by carol.
+%% play_provenance(D, E, C, B, F): the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), dan, eve, carol, bob and fay, with a conversation between the executions of each two of them who become friends.  On GSNP's contract and pragmas, programs/gai/GSNP.glp and GSNP.txt.  Each establishes their identity (GKK:1, Identity); in dan and eve, eve and carol, carol and bob, and bob and fay, the first comes to know the second by their key, the second answering yes to its hello (GKK:2, Acquaintance), and then offers the second friendship, who answers yes (GSG:1, Friendship); dan signs the item 'Flood on Main Street' (GSNP:1, Authorship) and sends it to eve in a message, who holds it as he signed it (GSN:1, Message); eve forwards it to carol, and carol forwards it to bob (GSNP:2, Forwarding), who holds it signed by dan, then by eve, then by carol.
 exported procedure play_provenance(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_provenance(D?, E?, C?, B?, F?) :-
     self_module(M),
@@ -18,7 +18,7 @@ play_provenance(D?, E?, C?, B?, F?) :-
     run(miniapp(fay, ch(GF?, WF), ch([conversation(bob, ch(BF?, FB))], _), []), T?, M?),
     person # miniapp_person(fay, fay, ch(WF?, GF), F).
 
-%% play_agents(K, A, R, B): the play of GAI's Figure "The GAI app" and of the AI agent's item of Figure "The GSNP app" on the full platform (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC): acme_ltd, the developer, alice, alf, her AI agent, and bob; a conversation between acme_ltd and alice, alice and alf, alice and bob, and alf and bob.  Acme Ltd establishes their identity, meets and befriends Alice, signs Alf's code and sends it to her by message; Alice enters Alf with it; Alice, the principal, proposes Alf's meeting with Bob, Alf and Bob approving; Alf proposes its befriending him, Alice and Bob approving (GAI #8 Cowork, Code_inbox.md, 2026-10-24 14:39 UTC); Alf signs an item and sends it to Bob; Bob and Alice become friends; Alice retires Alf and Bob ends his friendship with it (person.glp, the roles acme_ltd, alice, alf and agents_bob).
+%% play_agents(K, A, R, B): the play of GAI's Figure "The GAI app" and of the AI agent's item of its Figure "The GSNP app" on the full platform, in the order of the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"; Code_inbox.md, GAI #10 Cowork, 2026-10-31 12:54 and 14:14 UTC), with Acme Ltd's signing of Alf's code before it: acme_ltd, the developer, alice, alf, her AI agent, and bob; a conversation between acme_ltd and alice, alice and alf, alice and bob, and alf and bob.  Acme Ltd establishes their identity, comes to know and befriends Alice, signs Alf's code and sends it to her in a message (GKK:1, GKK:2, GSG:1, GAI:1, GSN:1); Alice and Bob establish their identities, come to know each other and befriend (GKK:1, GKK:2, GSG:1); Alice signs her attestation y and enters Alf with it (GAI:2, GnW:1); Alice proposes Alf's acquaintance with Bob, Alf and Bob answering yes, Bob recording Alf with y (GnW:3, GAI:2; agent_acquaint), and then its befriending him, Alf and Bob answering yes (GnW:3; agent_befriend); Alf signs an item and sends it to Bob (GSNP:1, GSN:1); and Alice retires Alf, which ends its friendships, nobody asked (GnW:5; retire), with no unfriend (person.glp, the roles acme_ltd, alice, alf and agents_bob).  Nothing on Alice's screen changes when Alf's item reaches Bob, so the play, standing in for the two persons as it stands in for the social graph, orders her Retire after it: her request to retire reaches her agent once Bob's screen shows him holding the item (hold and told, below), as in the screens test she taps Retire once it does (glp_multiagent/test/apps_screens_test.dart).
 exported procedure play_agents(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_agents(K?, A?, R?, B?) :-
     self_module(M),
@@ -26,8 +26,55 @@ play_agents(K?, A?, R?, B?) :-
     run(miniapp(acme_ltd, ch(GK?, WK), ch([conversation(alice, ch(AK?, KA))], _), []), T?, M?),
     person # miniapp_person(acme_ltd, acme_ltd, ch(WK?, GK), K),
     run(miniapp(alice, ch(GA?, WA), ch([conversation(acme_ltd, ch(KA?, AK)), conversation(alf, ch(RA?, AR)), conversation(bob, ch(BA?, AB))], _), []), T?, M?),
-    person # miniapp_person(alice, alice, ch(WA?, GA), A),
+    person # miniapp_person(alice, alice, ch(WA?, GA0), A),
+    hold(GA0?, Told?, GA),
     run(miniapp(alf, ch(GR?, WR), ch([conversation(alice, ch(AR?, RA)), conversation(bob, ch(BR?, RB))], _), []), T?, M?),
     person # miniapp_person(alf, alf, ch(WR?, GR), R),
     run(miniapp(bob, ch(GB?, WB), ch([conversation(alf, ch(RB?, BR)), conversation(alice, ch(AB?, BA))], _), []), T?, M?),
-    person # miniapp_person(bob, agents_bob, ch(WB?, GB), B).
+    person # miniapp_person(bob, agents_bob, ch(WB?, GB), B0),
+    told(B0?, speech(utterance('Today\'s summary of the news'), alf), B, Told).
+
+Cue     ::= told ; ended.
+Holding ::= holding ; not_holding.
+
+%% hold(Gs, C, Gs1): Alice's grants passed on to her agent as she makes them, but her request to retire held until the cue C, told, or ended where Bob's screen ends without the item.
+procedure hold(PersonIn(Drawn)?, Cue?, PersonIn(Drawn)).
+hold([G | Gs], C, Gs1?) :- ground(G?) |
+    retiring(G?, H),
+    hold1(H?, G?, Gs?, C?, Gs1).
+
+procedure hold1(Holding?, Input(Drawn)?, PersonIn(Drawn)?, Cue?, PersonIn(Drawn)).
+hold1(holding, G, Gs, told, [G? | Gs1?]) :- pass(Gs?, Gs1).
+hold1(holding, G, Gs, ended, [G? | Gs1?]) :- pass(Gs?, Gs1).
+hold1(not_holding, G, Gs, C, [G? | Gs1?]) :- hold(Gs?, C?, Gs1).
+
+procedure retiring(Input(Drawn)?, Holding).
+retiring(input(_, _, propose(retire(_, _))), holding).
+retiring(_, not_holding) :- otherwise | true.
+
+procedure pass(PersonIn(Drawn)?, PersonIn(Drawn)).
+pass([G | Gs], [G? | Gs1?]) :- pass(Gs?, Gs1).
+
+%% told(Ss, X, Ss1, C): Bob's screen Ss passed on whole as Ss1, and the cue C given once a view on it shows him holding the item X, or the cue ended where the screen ends before.
+procedure told(Stream(Seen)?, Speech?, Stream(Seen), Cue).
+told([S | Ss], X, [S? | Ss1?], C?) :- ground(S?), ground(X?) |
+    holding(S?, X?, H),
+    told1(H?, Ss?, X?, Ss1, C).
+told([], _, [], ended).
+
+procedure told1(Holding?, Stream(Seen)?, Speech?, Stream(Seen), Cue).
+told1(holding, Ss, _, Ss1?, told) :- seen(Ss?, Ss1).
+told1(not_holding, Ss, X, Ss1?, C?) :- told(Ss?, X?, Ss1, C).
+
+procedure holding(Seen?, Speech?, Holding).
+holding(view(As, _, _, _), X, H?) :- ground(As?), ground(X?) | held(item(X?), As?, H).
+holding(_, _, not_holding) :- otherwise | true.
+
+procedure held(Atom?, List(Atom)?, Holding).
+held(_, [], not_holding).
+held(A, [B | _], holding) :- A? =?= B? | true.
+held(A, [_ | Bs], H?) :- otherwise | held(A?, Bs?, H).
+
+procedure seen(Stream(Seen)?, Stream(Seen)).
+seen([S | Ss], [S? | Ss1?]) :- seen(Ss?, Ss1).
+seen([], []).

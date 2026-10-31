@@ -33,9 +33,10 @@ merge(Peer, Speech, Speech)
 
 Request ::= propose(Proposal).
 
-%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family's approval_sentence, and its request question by its social_menu.
+%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract's pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs, Is), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, Gs the groups it names, group(J, K), the leader at place J and the group's name at place K, which a group the view lists fills, and Is the items it names, item(K, P), the speech act at place K, which a row of the list of the predicate P fills; meeting(F, I) for an acquaintance schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").
 Approval =::= approval_sentence.
-Menu =::= social_menu.
+Menu =::= social_menu([label(befriend, "Befriend"), act(befriend, "Friends", 1, [2], [], [forb(friend, [at(2)]), unless(friend, [at(2)]), unless(listed, [at(2), any])]), meeting(befriend, 2), label(create, "Create"), act(create, "Friends", 1, [], [], [forb(leads, [at(2)])]), label(join, "Join"), act(join, "Friends", 1, [2], [], [atom(leads, [3]), item(2, friend), req(leads, [at(3)]), req(friend, [at(2)]), proved(friend, [v], friend, [at(2)]), proved(friend, [v], listed, [at(2), any])]), label(merge, "Merge"), act(merge, "Friends", 1, [], [], [atom(leads, [2]), atom(leads, [3]), req(leads, [at(2)]), req(leads, [at(3)])])])
+.
 
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(List(Atom), List(Key), List(Approved)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
 Atom ::=
@@ -174,6 +175,35 @@ request_name(merge(V1, _, _, V4, V5), pname(merge(V1?, V4?, V5?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
+%% The lists the app shows, as the contract's pragmas give them, each its name and the predicate whose atoms it lists (vGLP, Section 5.4, "The contract's words").
+procedure tabs(List(Tab)).
+tabs([tab("Friends", friend)])
+.
+
+%% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer's that Me is in, its persons filled in from the binding C names; none, [], where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).
+procedure sentence_of(Class?, Peer?, List(Word)).
+sentence_of(befriend(V1, V2), Me, Ws?)
+:-
+ground(V2?)
+,
+ground(V1?)
+,
+ground(Me?)
+|
+ask_of([q(V2?, [person(V1?), text(" asks.")])], Me?, Ws)
+.
+sentence_of(join(V1, V2, _), Me, Ws?)
+:-
+ground(V2?)
+,
+ground(V1?)
+,
+ground(Me?)
+|
+ask_of([q(V2?, [person(V1?), text(" asks.")])], Me?, Ws)
+.
+sentence_of(_, _, []) :- otherwise | true.
+
 %% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
 meeting_peer(befriend(V1, V2), Me, P?)
@@ -217,7 +247,11 @@ Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(P
 Net       ::= msg(Peer, Content).
 %% An approval question asks of an attempt, the question Start raises, or of the acquaintance a hello carries, hello(Q, N), Q its sender and N the request name of the acquaintance part (vGLP, Section 5.4, "The compilation": an arriving hello from Q "asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no").
 Asking    ::= Attempt ; hello(Peer, Proposal).
-Approval  ::= approval(Asking, YesNo?).
+%% The approval question of a contract with pragmas carries the sentence the contract puts to the guarding role, which the platform writes, its roles and variables filled in from the binding of the attempt it asks about, each word text(S), as the contract writes it, or person(P), a person the sentence names (vGLP, Section 6.2, "The words a platform shows": "A sentence put to a guarding role names the roles and the variables of the attempt, so the platform writes it into the approval question, and its widget draws it as it draws any output of the program"; Section 5.4, "The contract's words").
+Approval  ::= approval(Asking, List(Word), YesNo?).
+Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
+%% The question of a guarding role beyond the proposer's, q(R, Words), R the person in that role (sentence_of; GSC, Section 2, its first paragraph).
+RoleAsk   ::= q(Peer, List(Word)).
 Menu      ::= menu(Key, List(Key), Request?).
 Close     ::= close.
 Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
@@ -272,7 +306,9 @@ GAtom     ::= g(Constant, Vals).
 GAtoms    ::= [] ; [GAtom | GAtoms].
 %% The program's output to its person is of the type of the views, view(S, K, A): S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it; K the persons the agent knows, in the order of identifiers; and A the approvals its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part, a term of Proposal, in which no Stream or List occurs (Definition "Effective Local Specification"), so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined, or unable(Lacks, Has), the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part"; "a notice refused(N, q, d): N the request name of the part of the refused attempt, q its refuser and d the reason"; "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it"; "Act schemas"; Definition "Widget Declaration").  A contract with no guarded part has no approvals, and its A is always empty: Approved is then Constant, of which it holds none.
 Approved  ::= Proposal.
-Output    ::= view(List(Atom), List(Key), List(Approved)) ; refused(Approved, Key, Reason).
+%% The view of a contract with pragmas carries also the lists its app shows, each tab(Name, P), its name and the predicate P whose atoms in the machine state it lists, as the contract's pragmas give them, or tab(Name, P, counted) where the contract adds or deletes P with a multiplicity, its rows showing their counts (vGLP 110caf4, Section 5.4) (vGLP, Section 5.4, "The contract's words": "a tab's name and what it lists into the view the agent writes"), view(S, K, A, Ts).
+Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Shown     ::= shown(Atom) ; unshown.
 Stream(Output) =::= last_state.
 Bind      ::= b(Var, Val).
@@ -367,7 +403,8 @@ ApprovalRes ::= approval_for(Attempt) ; noapproval.
 %% When it starts, its view is written on the output: the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
 %% Where the contract requires the day, the agent reads also the calendar, a stream of dates the device writes, one a day, merged with its triggers (vGLP, Section 5.4, "The compilation": "the fair merge ... of the answers to its request questions, the messages arriving on the network, the answers to its approval questions, its own triggers and, where the contract requires the day, the calendar").
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
-agent(Id, NetIn, Out?, [view([], [], [])|Thr?]) :- ground(Id?) |
+agent(Id, NetIn, Out?, [view([], [], [], Ts?)|Thr?]) :- ground(Id?) |
+    tabs(Ts),
     request(Id?, [], Rq),
     tag_net(NetIn?, Nt),
     merge(Rq?, Nt?, M1),
@@ -403,8 +440,9 @@ tag_net([], []).
 %% question is no longer pending, as when Outcome closes the attempt first; the
 %% responder then reduces without the answer, dropping the person's reader on
 %% it.
-procedure (Approval)*respond(Attempt?, Close?, Stream(Trigger)).
-(approval(At?, YN))*respond(At, Cl, Out?) :- ground(At?) |
+%% With pragmas, the question shows also the sentence the contract puts to the agent's role, as sentence_of gives it for the attempt's part (vGLP, Section 6.2, "The words a platform shows").
+procedure (Approval)*respond(Attempt?, List(Word)?, Close?, Stream(Trigger)).
+(approval(At?, Ws?, YN))*respond(At, Ws, Cl, Out?) :- ground(At?) |
     await(At?, YN?, Cl?, Out).
 procedure await(Attempt?, YesNo?, Close?, Stream(Trigger)).
 await(At, yes, _, [answered(At?, yes)]).
@@ -412,8 +450,8 @@ await(At, no, _, [answered(At?, no)]).
 await(_, _, close, []).
 
 %% The approval question an arriving hello from Q asks: the clause of the acquaintance part N that hello carries, with its pragma, showing Q and taking yes or no; the person's yes is their request propose(N), which the agent goal reads as any request, and their no does nothing (vGLP, Section 5.4, "The compilation").
-procedure (Approval)*greet(Peer?, Proposal?, Stream(Trigger)).
-(approval(hello(Q?, N?), YN))*greet(Q, N, Out?) :- ground(Q?), ground(N?) |
+procedure (Approval)*greet(Peer?, Proposal?, List(Word)?, Stream(Trigger)).
+(approval(hello(Q?, N?), Ws?, YN))*greet(Q, N, Ws, Out?) :- ground(Q?), ground(N?) |
     await_greet(N?, YN?, Out).
 procedure await_greet(Proposal?, YesNo?, Stream(Trigger)).
 await_greet(N, yes, [greeted(N?)]).
@@ -566,7 +604,8 @@ show_view(no, _, Thr1?, Thr1).
 show_view(yes, St, [V?|Thr1?], Thr1) :- view_of(St?, V).
 %% The view at the agent state: its machine state, the contract's atoms; the persons it knows, in the order of identifiers; and the approvals its person made that are pending, each by its request name, in the order they were made.
 procedure view_of(St?, Output).
-view_of(St, view(A?, Ks?, Ps?)) :- ground(St?) |
+view_of(St, view(A?, Ks?, Ps?, Ts?)) :- ground(St?) |
+    tabs(Ts),
     st_ms(St?, S),
     atoms_of(S?, A),
     st_known(St?, Ks),
@@ -935,6 +974,11 @@ dispatch_propose(pgo(I, P, Nm), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approval
 dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
+%% The words of the first question whose role holds the agent Me, and none, [], where none does.
+procedure ask_of(List(RoleAsk)?, Peer?, List(Word)).
+ask_of([], _, []).
+ask_of([q(P, Ws)|_], Me, Ws?) :- P? =?= Me? | true.
+ask_of([_|Qs], Me, Ws?) :- otherwise | ask_of(Qs?, Me?, Ws).
 
 %% --- Discover: the hellos ---------------------------------------------------
 %% A peer is known once hello has been sent to it and received from it.  On the request propose(N), N the request name of an acquaintance part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N and records Q as sent to, unless Q is known or already sent to (meet_hello).  On an arriving hello from Q it records Q as received from and, unless it has sent Q a hello, asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no: the person's yes is their request propose(N) with Q, which the agent goal reads as any request, and on their no it does nothing (greet_unless).  Where a peer becomes known the agent goal writes the new view on the output (vGLP, Section 5.4, "The compilation").  A contract with no guarded part has no acquaintance part, and its agents send no hello.
@@ -990,8 +1034,12 @@ dispatch_hello(no, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, S
 %% The approval question of the acquaintance a hello from P carries, N, asked unless the agent has sent P a hello, its answers joining the agent goal's input; with pragmas, with the sentence of the clause of N, Me the agent, as sentence_of gives it for the class N names at its machine state.
 procedure greet_unless(YesNo?, Peer?, Proposal?, St?, Stream(Trigger), Stream(Trigger)?, St).
 greet_unless(yes, _, _, St, Ans1?, Ans1, St?).
-greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?) |
-    greet(P?, N?, R),
+greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?), ground(St?) |
+    st_id(St?, Me),
+    st_ms(St?, S),
+    name_class(N?, S?, C),
+    sentence_of(C?, Me?, Ws),
+    greet(P?, N?, Ws?, R),
     merge(R?, Ans1?, Ans).
 
 %% --- Introduce: the ihellos --------------------------------------------------
@@ -1239,12 +1287,13 @@ dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approv
     next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?,
         Thr?, Out?, Ow?, Approvals, H, St) :-
-    ground(At?) |
+    ground(At?), ground(St?) |
+    st_id(St?, Me),
     drop_pend(deferred(M?), St?, St0),
     start_effect(I?, At?, St0?, Ss, Cr, Ns, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?),
+    spawn(Cr?, Me?, Approvals?, Approvals1, Ans, Ans1?),
     next_n(Th?, yes, Ap0?, Ns?, Ls?, In?, Ans1, Thr, Out1, Ow, Approvals1?, H?, St2?).
 dispatch_message(mgo(I), _, F, vote(At, V), Th, Ap0, Ls, In, Ans?,
         Thr?, Out?, Ow?, Approvals, H, St) :-
@@ -1285,11 +1334,14 @@ hold_once1(yes, _, Hd, Hd?).
 hold_once1(no, X, Hd, Hd1?) :- app(Hd?, [X?], Hd1).
 
 %% Start raises the approval question, whose answers join the agent goal's input.
-procedure spawn(ApprovalRes?, OpenApprovals?, OpenApprovals, Stream(Trigger),
+%% With pragmas, the question carries the sentence the contract puts to the agent's role, Me the agent, as sentence_of gives it for the part of the attempt (vGLP, Section 6.2, "The words a platform shows").
+procedure spawn(ApprovalRes?, Peer?, OpenApprovals?, OpenApprovals, Stream(Trigger),
     Stream(Trigger)?).
-spawn(noapproval, Cs, Cs?, Ans?, Ans).
-spawn(approval_for(At), Cs, [oc(At?, Cl)|Cs?], Ans?, Ans1) :- ground(At?) |
-    respond(At?, Cl?, R),
+spawn(noapproval, _, Cs, Cs?, Ans?, Ans).
+spawn(approval_for(At), Me, Cs, [oc(At?, Cl)|Cs?], Ans?, Ans1) :- ground(At?) |
+    attempt_class(At?, C),
+    sentence_of(C?, Me?, Ws),
+    respond(At?, Ws?, Cl?, R),
     merge(R?, Ans1?, Ans).
 
 %% --- Answer, on the person's answer to the approval question Start raises ---------------

@@ -825,7 +825,7 @@ befriend(P, R?) :- ground(P?) | responder # offer_from(P?, R).
     });
   });
 
-  group('(iii) the old syntax keeps its old compilation', () {
+  group('(iii) the old syntax is refused', () {
     final sources = _vglpSources(Directory(_programs));
 
     // Each source in the tree is asked what it is, and none is named or
@@ -856,8 +856,22 @@ befriend(P, R?) :- ground(P?) | responder # offer_from(P?, R).
     // IGLP's one-clause fixture, which is now in the paper's syntax (GLP,
     // 2026-10-11 12:59 UTC, "03:24"); each old source is now found by what
     // it is, as above.
-    test('an old source with no mediator to compile against is refused, not '
-        'compiled by the new compilation', () {
+    // Until 2026-10-31 an old source compiled by the old compilation where
+    // the generic mediator was there to compile against, and was refused
+    // where it was not; the old compilation is deleted (vGLP #22's task,
+    // Code_inbox 2026-10-31 15:20 UTC), and an old source is refused always,
+    // the one written here and any in the tree.
+    test('an old source is refused, not compiled by the canonical '
+        'compilation', () {
+      const old = '''
+Decision ::= yes ; no.
+procedure respond(Constant?, Decision).
+*(Answer=yes, From?)
+respond(From, Answer?) :- ground(From?) | true.
+''';
+      expect(_holdsVolitionGuard(old), isTrue);
+      expect(isPaperSyntaxSource(old), isFalse);
+      expect(() => compileVglpSource(old), throwsA(isA<StateError>()));
       for (final f in sources) {
         final text = f.readAsStringSync();
         if (!_holdsVolitionGuard(text)) continue;

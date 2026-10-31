@@ -27,7 +27,7 @@ import '../analysis/type_checker/param_expansion.dart'
     show UndefinedDeclarationTypeError, buildAbstractInstance;
 import '../analysis/type_checker/program_dfa.dart' show UnknownTypeError;
 import '../runtime/module_hierarchy.dart';
-import '../vglp/mediator.dart';
+import '../vglp/dispatcher.dart' show DispatcherSource;
 import '../vglp/canonical.dart'
     show
         CanonicalContext,
@@ -35,7 +35,6 @@ import '../vglp/canonical.dart'
         checkWritersAtOutputs,
         compileCanonical,
         extractWidgetDeclarations,
-        isPaperSyntaxSource,
         volitionalRecord;
 import '../vglp/program_compilation.dart';
 
@@ -735,10 +734,8 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
 /// directory whose program is written in vGLP alone has no such file, and its
 /// sources compile and run.
 ///
-/// A source in the paper's syntax compiles by the canonical compilation of
-/// vGLP at 16b3b54; one in the old syntax keeps its old compilation against
-/// the generic mediator, and is not compiled where the mediator is missing, as
-/// before (compileVglpSource).
+/// A source in the paper's syntax, or one that reaches a question, compiles by
+/// the canonical compilation; any other is refused (compileVglpSource).
 void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs,
     {VglpProgram? program, Map<String, Module> layers = const {}}) {
@@ -755,7 +752,7 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
   }).toList();
   if (vglpFiles.isEmpty) return;
 
-  final mediator = _mediatorSource(programsDir);
+  final dispatcher = _dispatcherSource(programsDir);
   final texts = {for (final f in vglpFiles) f.path: f.readAsStringSync()};
   final nameRoot = _nameRoot(programsDir, root.path);
 
@@ -764,9 +761,6 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
       : _sourceTypes(program, root, programsDir, rootSelfGlpPath, rs, layers);
   for (final file in vglpFiles) {
     final text = texts[file.path]!;
-    final paper =
-        isPaperSyntaxSource(text) || (program?.reaches(file.path) ?? false);
-    if (!paper && mediator == null) continue;
 
     final ancestorScope = _vglpScope(
         file, modules, root, programsDir, rootSelfGlpPath, rs, layers);
@@ -774,7 +768,8 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     final String compiledSource;
     try {
       compiledSource = compileVglpSource(text,
-          mediator: mediator,
+          dispatcher: dispatcher,
+          programsDir: programsDir,
           scope: ancestorScope,
           path: file.path,
           reachingOf: program?.readerFor(file.path),
@@ -811,13 +806,13 @@ TypeEnvironment _vglpScope(File file, List<DiscoveredModule> modules,
       modules.where((m) => m.exposingDir != null).toList());
 }
 
-/// The generic mediator source, `programs/vglp/`, which the compilation
-/// instantiates into every compiled program.
-MediatorSource? _mediatorSource(String? programsDir) {
+/// The dispatcher's generic source, `programs/vglp/dispatcher.glp`, which the
+/// canonical compilation emits into every compiled program, or null where the
+/// tree has none.
+DispatcherSource? _dispatcherSource(String? programsDir) {
   if (programsDir == null) return null;
-  final dir = '$programsDir${Platform.pathSeparator}vglp';
-  if (!Directory(dir).existsSync()) return null;
-  return MediatorSource.fromDirectory(dir);
+  return DispatcherSource.inDirectory(
+      '$programsDir${Platform.pathSeparator}vglp');
 }
 
 /// Discover a single self-contained module as a one-module program (modules.tex
@@ -3340,10 +3335,7 @@ List<String> emitVglpSources(String rootDir,
     void Function(String message)? onSkip}) {
   final root = Directory(rootDir).absolute;
   final programsDir = File(rootSelfGlpPath).parent.absolute.path;
-  // A source in the old syntax compiles against the generic mediator, and
-  // emitCompiledVglp refuses it where the mediator is missing; one in the
-  // paper's syntax needs none.
-  final mediator = _mediatorSource(programsDir);
+  final dispatcher = _dispatcherSource(programsDir);
 
   final rs = _rootScopeOf(rootSelfGlpPath);
   final program = _vglpProgramOf(root, programsDir);
@@ -3359,7 +3351,9 @@ List<String> emitVglpSources(String rootDir,
   final resolveIn = program == null
       ? null
       : _sourceTypes(program, root, programsDir, rootSelfGlpPath, rs, layers);
-  final written = emitCompiledVglp(root.path, mediator,
+  final written = emitCompiledVglp(root.path,
+      dispatcher: dispatcher,
+      programsDir: programsDir,
       scopeFor: scopeFor,
       contextFor: program == null
           ? null
