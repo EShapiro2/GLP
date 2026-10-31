@@ -945,7 +945,7 @@ no_record() { # no_record <fixture> <what it breaks>
 no_record wr_rec_creator    "make_guardian adds guardian_of(r) and no record at the guardian (def:relay, clause 2)"
 no_record wr_rec_unrequired "make_guardian adds the record at the guardian, adding no attestation at r and requiring the record at no role requiring principal_of(r) (def:relay, clause 2)"
 no_record wr_clear_h        "wipe clears attestation(*), deleting atoms of h (def:relay, clause 2)"
-no_record wr_clear_v        "quit clears guardian_of(*) and deletes or forbids no principal_of (def:guardianship, clause 5)"
+no_record wr_clear_v        "quit clears guardian_of(*), an atom of v (def:guardianship, clause 1, GAI e4d935c)"
 out=$(run 'contract_named(wr_clear_v, C), guardianships(C?, [agent], G).')
 check "wr_clear_v: guardian_of is a v of no guardianship for agent" \
       "G = [guardianship(agent, identity, principal, principal_of, principal_of)]" "$out"
@@ -966,6 +966,25 @@ check "wr_rec_third: enter_agent adds guardian_of(r) at a third role with no rec
       "$out"
 check "wr_rec_third: relay_h names the attestation at each ward role" \
       "H = [h(agent_person_befriend, 1, attestation), h(agents_befriend, 1, attestation), h(agents_befriend, 2, attestation)]" "$out"
+
+# At GAI e4d935c (sections/wards.tex): clause 1 of def:guardianship asks
+# that no schema clear an atom of g, of w or of v; and clause 5 that a
+# schema deleting, at a role, v(u) for a role or an agent variable u delete
+# or forbid w(u) there.
+no_record wr_quit "quit(q?) clears guardian_of(*), an atom of v, and adds resigned, deleting v(u) for no role and no agent variable u (def:guardianship, clause 1)"
+out=$(run 'contract_named(wr_quit, C), guardianships(C?, [agent], G).')
+check "wr_quit: guardian_of is a v of no guardianship for agent" \
+      "G = [guardianship(agent, identity, principal, principal_of, principal_of)]" "$out"
+out=$(run 'check_named(wr_release, V).')
+check "wr_release: release deletes guardian_of(x), x an agent variable, and forbids principal_of(x) (def:guardianship, clause 5): grassroots with wards as wr is" \
+      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])" \
+      "$out"
+no_record wr_release_kept "release deletes guardian_of(x), x an agent variable, and neither deletes nor forbids principal_of(x) (def:guardianship, clause 5)"
+out=$(run 'contract_named(wr_release_kept, C), guardianships(C?, [agent], G).')
+check_not "wr_release_kept: guardian_of is no v of a guardianship for agent whose w is principal_of" \
+      "guardianship(agent, identity, principal, principal_of, guardian_of)" "$out"
+check "wr_release_kept: ... principal_of the v of the one whose w it is" \
+      "guardianship(agent, identity, principal, principal_of, principal_of)" "$out"
 
 # --- listed roles and name terms (def:role, def:introduction, def:unobstructed)
 # GSN with one schema more, each failing one condition, and two contracts

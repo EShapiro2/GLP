@@ -1,6 +1,6 @@
 /// The screens of GSC's three apps, GSG's, GSN's and GSNP's (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), of GAI's (`programs/apps/gai`), of GC's (`programs/apps/gc`) and of GFF's (`programs/apps/gff`), each person's phone as the bridge draws it, written to PNG files for GAI's paper and GSC's (`programs/apps/<app>/screens/`; GAI's figures from GSNP's app, the full platform); and of CSSN's mini-app (`programs/cssn`), for CSSN's paper (`programs/cssn/figures/`), below.
 ///
-/// Each app's directory is a certified program: the canonical CVA platform of its contract, `platform.vglp`, compiled to GLP when the directory loads (vGLP, Section 6.3), and the mini-app's entry `miniapp/4` (`miniapp.glp`), which runs the platform's agent with the person's key and its dispatcher on the agent's asks.  The engine loads the directory and posts the entry for alice and bob over one conversation, as the plays of each directory do (`plays.glp`); for GSNP's app for dan, eve, carol, bob and fay, over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay, the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), and again for acme_ltd, alice, alf and bob, over four conversations, the play of GAI's Figure "The GAI app" on the full platform (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC), alf scripted by the app's person (`programs/apps/gsnp/person.glp`), its script the AI agent's program, and the three persons at their phones; and for GAI's app for alice, alf and bob, over three conversations, to alice's entering alf, no screen of which goes in GAI's paper.  Each person's channel is `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"): the host hands each person's bridge every term of `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant the bridge returns, `input(Id, P, R)`.
+/// Each app's directory is a certified program: the canonical CVA platform of its contract, `platform.vglp`, compiled to GLP when the directory loads (vGLP, Section 6.3), and the mini-app's entry `miniapp/4` (`miniapp.glp`), which runs the platform's agent with the person's key and its dispatcher on the agent's asks.  The engine loads the directory and posts the entry for alice and bob over one conversation, as the plays of each directory do (`plays.glp`); for GSNP's app for dan, eve, carol, bob and fay, over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay, the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), and again for acme_ltd, alice, alf and bob, over four conversations, the play of GAI's Figure "The GAI app" on the full platform (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC), alf scripted by the app's person (`programs/apps/gsnp/person.glp`), its script the AI agent's program, and the three persons at their phones; and for GAI's app for alice, alf and bob, over three conversations, the example of GAI's paper in its order, from their identities to alice's retiring alf, no screen of which goes in GAI's paper.  Each person's channel is `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"): the host hands each person's bridge every term of `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant the bridge returns, `input(Id, P, R)`.
 ///
 /// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The platform declares `Menu =::= social_menu` and `Approval =::= approval_sentence.` (`programs/apps/<app>/platform.vglp`, as vGLP's compiler prints it; GSNP's, GAI's and GC's apps declare them again in their `self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and, where it offers `mint`, Coins, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  GKK's, GSG's and GSN's apps are compiled from contracts with pragmas, and their tabs are the lists the view names, each word on them the contract's (vGLP 1126f4f, Sections 5.4, 6.2 and 8).  Every act of a person at a phone is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `listTabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest; a scripted agent's acts are its scripted person's, as in the app's plays.  No term is hand-fed to the bridge or to the program.
 ///
@@ -1763,39 +1763,77 @@ void appsScreens(Screens screens) {
   }, timeout: const Timeout(Duration(minutes: 20)));
 
   testWidgets(
-      'GAI\'s app, compiled from GAI\'s contract and pragmas: Alice signing '
-      'the code of Alf on her AI agents tab and entering Alf with it, Alf\'s '
-      'program scripted', (tester) async {
-    // GAI's app (programs/apps/gai), compiled from GAI.glp and GAI.txt with the pragmas of GnW, GSG and GKK: three tabs, Contacts, Friends and AI agents; no screen of it goes in GAI's paper (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC).
+      'GAI\'s app, compiled from GAI\'s contract and pragmas: the example of '
+      'GAI\'s paper in its order, Alice creating Alf with her attestation, '
+      'proposing its acquaintance with Bob and its befriending him, and '
+      'retiring it, Alf\'s program scripted', (tester) async {
+    // GAI's app (programs/apps/gai), compiled from GAI.glp and GAI.txt with the pragmas of GnW, GSG and GKK: three tabs, Contacts, Friends and AI agents, "AI agents: the AI agents Alice is a guardian of."; no screen of it goes in GAI's paper (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC).  The play is the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"; GAI at e4d935c), as play_agents of programs/apps/gai plays it (GAI #10 Cowork, Code_inbox.md, 2026-10-31 12:54 UTC): Establish Alice and Bob; Acquaint; Befriend; Alice signs the attestation y; Enter Alf with y; Agent acquaint Alf and Bob, Alice willing; Agent befriend Alf and Bob, Alice willing; and Retire Alf, which ends Alf's friendships.  Alf's item, which it signs and sends to Bob, is GSNP's, the full platform, below; there is no unfriend.
     final run = await _Run.start(tester, screens, 'gai',
         chain: const ['alice', 'alf', 'bob'],
         pairs: const [('alice', 'alf'), ('alf', 'bob'), ('bob', 'alice')],
         scripted: const {'alf'});
     final alice = run.person('alice');
     final bob = run.person('bob');
-    const code = "speech(utterance('The code of Alf'), alice)";
+    const y = "speech(utterance('Alf runs code signed by Acme Ltd'), alice)";
     expect(run.listNamed(alice, 'knows', 'Contacts'), findsOneWidget);
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
-    expect(run.listNamed(alice, 'principal_of', 'AI agents'), findsOneWidget);
+    expect(run.listNamed(alice, 'guardian_of', 'AI agents'), findsOneWidget);
+    // Establish (GKK:1), Acquaint (GKK:2) and Befriend (GSG:1), Alice proposing and Bob answering yes.
     for (final p in [alice, bob]) {
       await run.join(p);
     }
     await run.meetByKey(alice, bob);
+    await run.befriend(alice, bob);
 
-    // Developer (GAI:1): GAI's "[Sign] <code>" on the AI agents tab; Alice signs the code, its developer.
-    await run.list(alice, 'principal_of');
-    await run.type(alice, run.control(alice, 'field:sign::2'), 'The code of Alf');
+    // Alice signs her attestation y (GAI:2): GAI's "Alice [Sign] <text>" on the AI agents tab, the text typed.
+    await run.list(alice, 'guardian_of');
+    await run.type(alice, run.control(alice, 'field:sign::2'), 'Alf runs code signed by Acme Ltd');
     await run.tap(alice, run.control(alice, 'send:sign:'));
-    expect(alice.atoms, contains('item($code)'));
+    expect(alice.atoms, containsAll(['item($y)', 'authored($y)']));
 
-    // Guardianship (GnW:1): GAI's "[Enter] <name> <code>", its fields typed, GAI listing no item; Alf's program answers yes.
+    // Enter Alf with y (GnW:1, GAI:2): GAI's "Alice [Enter] <name>", a form at the top of the AI agents tab, the tab of its contract, naming no row's entry (vGLP, Section 6.2), Alf's key typed into the field name, y filled from the item Alice authored, a held atom filling the place no row and no field fills (vGLP, Section 6.2); Alf's program answers yes, and Alice is its principal, a guardian and its friend, holding the record agent_of(alf, y).
+    await run.list(alice, 'guardian_of');
     await run.type(alice, run.control(alice, 'field:enter::2'), 'alf');
-    await run.type(alice, run.control(alice, 'field:enter::3'), 'The code of Alf');
     await run.tap(alice, run.control(alice, 'send:enter:'));
-    expect(alice.atoms, containsAll(['principal_of(alf)', 'friend(alf)']));
+    expect(alice.atoms, containsAll(['principal_of(alf)', 'guardian_of(alf)', 'friend(alf)', 'agent_of(alf, $y)']));
+    await run.list(alice, 'guardian_of');
     await run.top(alice);
     expect(run.control(alice, 'row:alf'), findsOneWidget);
-    run.plain(alice);
+    // End guardian's form names the AI agent at a place its pragma gives no field name, drawn under the name of its type, Peer (vGLP, Section 6.2: "the name of the type where it is given none").
+    run.plain(alice, allow: const {'Peer'});
+
+    // An act of Alf's knowing and relations, proposed by Alice, its guardian (GAI.txt, "Ward and person: Alice [Agent acquaint] <person>" and "Alice [Agent befriend] <person>"): its button in Alf's row of her AI agents tab, the row filling Alf (vGLP, Section 6.2: "an act that names an entry is drawn in that entry's row"), which opens its form, Bob picked, her machine filling y from her record; Alf's program answers yes, and Bob is asked GAI's question to his role and answers yes.
+    Future<void> agentAct(String f, String asked) async {
+      await run.list(alice, 'guardian_of');
+      await run.top(alice);
+      await run.tap(alice, run.control(alice, 'act:$f:alf'));
+      await run.tap(alice, run.control(alice, 'pick:$f:alf:2:bob'));
+      await run.tap(alice, run.control(alice, 'send:$f:alf'));
+      await run.list(bob, 'guardian_of');
+      await run.top(bob);
+      expect(run.on(bob, find.text(asked)), findsOneWidget);
+      // Bob, holding no item he authored, sees Enter's attestation as a field and End guardian's AI agent, places their pragmas name no field for, under the names of their types, Speech and Peer (vGLP, Section 6.2: "the name of the type where it is given none").
+      run.plain(bob, allow: const {'Peer', 'Speech'});
+      await run.answer(bob, 'yes');
+    }
+
+    // Agent acquaint Alf and Bob, Alice willing (GnW:3, GAI:2): Bob records Alf with y.
+    await agentAct('agent_acquaint', 'Alice asks that you come to know their AI agent Alf.');
+    expect(bob.atoms, containsAll(['knows(alf)', 'agent_of(alf, $y)']));
+    // Agent befriend Alf and Bob, Alice willing (GnW:3).
+    await agentAct('agent_befriend', 'Alice asks that you and their AI agent Alf befriend.');
+    expect(bob.atoms, contains('friend(alf)'));
+
+    // Retire Alf (GnW:5): GAI's "Alice [Retire]" in Alf's row of her Friends tab, retire requiring friend(alf) at her (vGLP, Section 6.2), the row filling Alf; Alf and Bob, in retire's listed role Carol[friend(*)], are asked nothing, and Alf's friendships with Alice and with Bob end, Alice holding retired_of(alf).
+    await run.list(alice, 'friend');
+    await run.top(alice);
+    await run.tap(alice, run.control(alice, 'act:retire:alf'));
+    expect(alice.atoms, contains('retired_of(alf)'));
+    expect(alice.atoms, isNot(contains('friend(alf)')));
+    expect(bob.atoms, isNot(contains('friend(alf)')));
+    expect(bob.atoms, containsAll(['friend(alice)', 'agent_of(alf, $y)']));
+    expect(bob.questions('approval'), isEmpty);
+    run.plain(alice, allow: const {'Peer'});
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 
