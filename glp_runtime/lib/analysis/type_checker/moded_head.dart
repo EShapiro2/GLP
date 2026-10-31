@@ -2,7 +2,6 @@
 //
 // Moded head construction for GLP type checking.
 // Specification: TGLP (Moded-Types), sections/well-typing.tex Definition "Moded Head"
-// Paper Reference: Definition 5.5 (moded head)
 //
 // Constructs a moded head H' from a clause head H and a procedure declaration.
 // The moded head is used for well-typing checks.
@@ -16,9 +15,9 @@ import '../../compiler/ast.dart' as ast;
 // Public Functions
 // =============================================================================
 
-// Counter for generating unique anonymous variable names
-// Bug 4 fix: Each occurrence of _ must be treated as a fresh, independent variable
-// Paper Remark 3.1: "Each occurrence [of _] denotes a fresh writer"
+// Counter for generating unique anonymous variable names.  Each occurrence of
+// _ must be treated as a fresh, independent variable (TGLP "Anonymous
+// variables": "Each occurrence [of _] denotes a fresh writer").
 int _anonVarCounter = 0;
 
 /// Reset the anonymous variable counter.
@@ -46,7 +45,8 @@ ModedVariable _modedVariable(ast.VarTerm term, Mode mode) => ModedVariable(
     isReader: term.isReader,
     structuralMode: mode);
 
-/// Constructs a moded head H' from clause head H per Definition 5.5.
+/// Constructs a moded head H' from clause head H (TGLP, Definition "Moded
+/// Head").
 ///
 /// Given a head H, a moded head H' is obtained by:
 /// 1. Constructing an I/O-moded term corresponding to H, then
@@ -68,7 +68,9 @@ ModedVariable _modedVariable(ast.VarTerm term, Mode mode) => ModedVariable(
 /// - All variables are unconditionally flipped (X ↔ X?)
 ///
 /// Throws [ArityMismatchError] if head arity doesn't match declaration.
-/// Throws [InvalidHeadError] if head is not a compound term.
+/// Throws [InvalidHeadError] on an argument term of a kind it does not
+/// build: not a variable, a structure, a list, a constant or an anonymous
+/// variable.
 ModedTerm modedHead(ast.Goal head, ProcDecl decl, {TypeEnvironment? typeEnv}) {
   // Reset counter for each clause to ensure unique names within the clause
   resetAnonVarCounter();
@@ -82,8 +84,8 @@ ModedTerm modedHead(ast.Goal head, ProcDecl decl, {TypeEnvironment? typeEnv}) {
   // Step 1: Build I/O moded term (root mode = consume)
   final ioTerm = _buildIOModedTerm(head, decl, Mode.consume, typeEnv);
 
-  // Step 2: Ensure each variable's form matches its position's mode
-  return _ensureVariablesMatchModes(ioTerm);
+  // Step 2: Replace each variable by its paired variable
+  return _complementVariables(ioTerm);
 }
 
 /// Constructs a produced moded term from a body atom.
@@ -148,9 +150,9 @@ ModedTerm _buildIOModedTerm(ast.Goal term, ProcDecl decl, Mode parentMode, TypeE
 /// for each subterm position using mode involution.
 /// Variables preserve their reader/writer status (flip happens later if needed).
 ///
-/// FIX: When expectedType is a wildcard (_ or _?), we don't recurse with
+/// When expectedType is a wildcard (_ or _?), we don't recurse with
 /// type-driven mode computation. Instead, all subterms inherit the wildcard's
-/// mode uniformly. This implements Definition 5.5 (wildcard positions).
+/// mode uniformly (Definition "Moded Head" at a wildcard position).
 ///
 /// A list is walked along its spine in a loop, each element built by a
 /// recursive call, so the depth used is the nesting of the term's elements and
@@ -188,16 +190,16 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, T
 /// variable, a structure, the empty list, a constant, an anonymous variable,
 /// or any term at a wildcard or unknown type.
 ModedTerm _buildModedNonCell(ast.Term term, Mode mode, TypeExpr? expectedType, TypeEnvironment? typeEnv) {
-  // FIX: When type is wildcard (_ or _?) OR unknown (null), don't use type-driven mode computation.
+  // When type is wildcard (_ or _?) OR unknown (null), don't use type-driven mode computation.
   // Wildcards accept any term at this position - all subterms inherit the same mode.
   // Unknown types (null) occur when we can't resolve the type definition.
-  // This handles Definition 5.5: type path ends at wildcard.
+  // This is Definition "Moded Head" where the type path ends at a wildcard.
   if (expectedType == null || expectedType is PrimitiveModeAlt) {
     return _buildOpaqueModedTerm(term, mode);
   }
 
   if (term is ast.VarTerm) {
-    // Variable: pass structural mode from context (per moded-term v0.6)
+    // Variable: pass structural mode from context
     return _modedVariable(term, mode);
   }
 
@@ -260,16 +262,11 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
   }
 
   // Resolve type reference to get the type definition
-  String? typeName;
-  bool isDual = false;
-  if (expectedType is TypeRef) {
-    typeName = expectedType.name;
-    isDual = expectedType.isInput;
-  }
-
-  if (typeName == null) {
+  if (expectedType is! TypeRef) {
     return defaultModes;
   }
+  final typeName = expectedType.name;
+  final isDual = expectedType.isInput;
 
   // The matching structure alternative, among the type's own alternatives
   // and, through each alternative that is a type name S or S?, among S's
@@ -277,39 +274,40 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
   for (final (alt, flip) in _alternativesOf(typeName, typeEnv)) {
     if (alt is StructAlt && alt.functor == functor && alt.arity == arity) {
       // Found matching constructor - compute combined modes for each arg
-      final result = <(Mode, TypeExpr?)>[];
-      for (final argType in alt.args) {
-        var embeddedMode = _getEmbeddedMode(argType);
-        if (flip) embeddedMode = embeddedMode.flip;
-        // Combine with parent mode via involution
-        final combinedMode = combineMode(parentMode, embeddedMode);
-        // For dual types, flip the subterm type for DFA leaf checking
-        final subtermType = (isDual != flip) ? _dualType(argType) : argType;
-        result.add((combinedMode, subtermType));
-      }
-      return result;
+      return _argumentModes(alt.args, parentMode, isDual, flip);
     }
 
     // Handle DiffList: \ operator
     if (alt is DiffListAlt && functor == r'\' && arity == 2) {
-      var contentMode = _getEmbeddedMode(alt.content);
-      var holeMode = _getEmbeddedMode(alt.hole);
-      if (flip) {
-        contentMode = contentMode.flip;
-        holeMode = holeMode.flip;
-      }
-      final contentCombined = combineMode(parentMode, contentMode);
-      final holeCombined = combineMode(parentMode, holeMode);
-      final contentType = (isDual != flip) ? _dualType(alt.content) : alt.content;
-      final holeType = (isDual != flip) ? _dualType(alt.hole) : alt.hole;
-      return [
-        (contentCombined, contentType),
-        (holeCombined, holeType),
-      ];
+      return _argumentModes([alt.content, alt.hole], parentMode, isDual, flip);
     }
   }
 
   return defaultModes;
+}
+
+/// The mode and type of each subterm position of an alternative with the
+/// argument types [args], read at [parentMode] in a type whose reference is
+/// dual where [isDual], the alternative reached through an odd number of
+/// complemented type-name alternatives where [flip] ([_alternativesOf]).
+///
+/// Uses mode involution: combinedMode = parentMode ⊕ embeddedMode, where ⊕
+/// is XOR-like: same modes → produce, different → consume.  For dual types
+/// (T?), uses algorithmic complementation: modes are flipped and target
+/// types are dualized.
+List<(Mode, TypeExpr?)> _argumentModes(
+    List<TypeExpr> args, Mode parentMode, bool isDual, bool flip) {
+  final result = <(Mode, TypeExpr?)>[];
+  for (final argType in args) {
+    var embeddedMode = _getEmbeddedMode(argType);
+    if (flip) embeddedMode = embeddedMode.flip;
+    // Combine with parent mode via involution
+    final combinedMode = combineMode(parentMode, embeddedMode);
+    // For dual types, flip the subterm type for DFA leaf checking
+    final subtermType = (isDual != flip) ? _dualType(argType) : argType;
+    result.add((combinedMode, subtermType));
+  }
+  return result;
 }
 
 /// The alternatives of the type [typeName], each with whether it is reached
@@ -362,39 +360,19 @@ List<(TypeExpr, bool)> _alternativesOf(String typeName, TypeEnvironment typeEnv)
     return defaultResult;
   }
 
-  String? typeName;
-  bool isDual = false;
-  if (expectedType is TypeRef) {
-    typeName = expectedType.name;
-    isDual = expectedType.isInput;
-  }
-
-  if (typeName == null) {
+  if (expectedType is! TypeRef) {
     return defaultResult;
   }
+  final typeName = expectedType.name;
+  final isDual = expectedType.isInput;
 
   // Find ListConsAlt among the type's alternatives, through each that is a
   // type name ([_alternativesOf]).
   for (final (alt, flip) in _alternativesOf(typeName, typeEnv)) {
     if (alt is ListConsAlt) {
-      var headEmbeddedMode = _getEmbeddedMode(alt.head);
-      var tailEmbeddedMode = _getEmbeddedMode(alt.tail);
-      if (flip) {
-        headEmbeddedMode = headEmbeddedMode.flip;
-        tailEmbeddedMode = tailEmbeddedMode.flip;
-      }
-      // Combine with parent mode via involution
-      final headMode = combineMode(parentMode, headEmbeddedMode);
-      final tailMode = combineMode(parentMode, tailEmbeddedMode);
-
-      // For dual types, flip the subterm types for DFA leaf checking
-      final headType = (isDual != flip) ? _dualType(alt.head) : alt.head;
-      final tailType = (isDual != flip) ? _dualType(alt.tail) : alt.tail;
-
-      return (
-        (headMode, headType),
-        (tailMode, tailType),
-      );
+      final modes =
+          _argumentModes([alt.head, alt.tail], parentMode, isDual, flip);
+      return (modes[0], modes[1]);
     }
   }
 
@@ -440,9 +418,9 @@ TypeExpr _dualType(TypeExpr expr) {
 /// and all its subterms inherit the same mode from the wildcard position.
 /// Variables are still collected so they can be type-checked for complementarity.
 ///
-/// This implements Definition 5.5: when the type path ends at a wildcard,
-/// the term at that position is accepted without examining its internal structure
-/// against any type definition.
+/// This implements Definition "Moded Head" where the type path ends at a
+/// wildcard: the term at that position is accepted without examining its
+/// internal structure against any type definition.
 ///
 /// A list is walked along its spine in a loop, each element by a recursive
 /// call, in the order the recursion took them ([_buildModedSubterm]).
@@ -494,8 +472,8 @@ ModedTerm _buildOpaqueNonCell(ast.Term term, Mode mode) {
 
 /// Complement all variables in the moded term.
 ///
-/// Per Definition 5.5 step 2: Replace each variable with its paired variable.
-/// This is unconditional - every variable is complemented.
+/// Definition "Moded Head", step 2: replace each variable with its paired
+/// variable.  This is unconditional - every variable is complemented.
 ///
 /// This reflects the semantic inversion of head variables:
 /// - Head writers become readers in the moded head (bound BY the goal)
@@ -503,15 +481,15 @@ ModedTerm _buildOpaqueNonCell(ast.Term term, Mode mode) {
 ///
 /// A list is walked along its spine in a loop and its elements by recursive
 /// calls ([_buildModedSubterm]).
-ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
+ModedTerm _complementVariables(ModedTerm term) {
   final cells = <ModedCompound>[];
   final heads = <ModedTerm>[];
   while (term is ModedCompound && term.isListCons) {
     cells.add(term);
-    heads.add(_ensureVariablesMatchModes(term.args[0]));
+    heads.add(_complementVariables(term.args[0]));
     term = term.args[1];
   }
-  var adjusted = _ensureNonCellMatchesModes(term);
+  var adjusted = _complementNonCell(term);
   for (var i = cells.length - 1; i >= 0; i--) {
     final cell = cells[i];
     adjusted = ModedCompound(
@@ -520,10 +498,10 @@ ModedTerm _ensureVariablesMatchModes(ModedTerm term) {
   return adjusted;
 }
 
-/// [_ensureVariablesMatchModes] of a term that is not a list cell.
-ModedTerm _ensureNonCellMatchesModes(ModedTerm term) {
+/// [_complementVariables] of a term that is not a list cell.
+ModedTerm _complementNonCell(ModedTerm term) {
   if (term is ModedCompound) {
-    final adjustedArgs = term.args.map(_ensureVariablesMatchModes).toList();
+    final adjustedArgs = term.args.map(_complementVariables).toList();
     return ModedCompound(term.mode, term.functor, term.arity, adjustedArgs);
   }
 

@@ -29,16 +29,10 @@ void validateClauseHead(Atom head) {
 }
 
 /// Validates a term in clause body context: an anonymous reader is refused,
-/// by the same remark.  `_` (anonymous writer) is allowed.
+/// by the same remark.  `_` (anonymous writer) is allowed.  A guard is
+/// type-checked as part of the body (TGLP "Type checking of guards"), so a
+/// guard's argument is validated by this too.
 void validateClauseBody(Term term) {
-  _checkAnonymousReader(term);
-}
-
-/// Validates a term in guard context.
-///
-/// A guard is type-checked as part of the body (TGLP "Type checking of
-/// guards"), so an anonymous reader is refused there too.
-void validateGuard(Term term) {
   _checkAnonymousReader(term);
 }
 

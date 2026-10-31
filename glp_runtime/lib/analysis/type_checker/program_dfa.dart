@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/program_dfa.dart
 //
-// ProgramDFA implementation per spec: docs/modules/type-dfa.md v0.9
-// Paper Reference: Section 4.1 (lines 19-24, 47-53), Definition 4.3 (lines 283-298)
+// Specification: TGLP appendix-type-automaton.tex (the type automaton of a
+// program) and well-typing.tex, Definition "Consistent Paths".
 
 import 'type_ast.dart';
 import 'mode.dart';
@@ -42,7 +42,7 @@ class DFAState {
   final String baseName;
   final bool isDual;
   final bool isFinal;
-  final bool isProcedure;  // Fix 3.1: distinguish procedure states
+  final bool isProcedure;  // distinguishes procedure states
 
   DFAState(this.baseName, {
     required this.isDual,
@@ -126,7 +126,7 @@ class DFAState {
   /// variable is consistent with it (Definition "Consistent Paths").
   bool get isOpaqueUnion => baseName == TypeRef.opaqueUnion;
 
-  // Fix 3.2: Computed properties for type classification
+  // Computed properties for type classification
   /// True for the primitive types: `_`, Integer, Real, String, Module, MutualRef.
   /// `Number` and `Constant` are NOT primitive — they are unions defined in the
   /// root `self.glp` (TGLP sec:type-declarations), so they behave
@@ -191,10 +191,6 @@ class TransitionLabel {
     return TransitionLabel._(constantLabel(value), 0, 0, null, value);
   }
 
-  /// Returns a dual label with flipped mode
-  TransitionLabel get dual =>
-      TransitionLabel._(symbol, arity, argIndex, mode?.flip, constant);
-
   @override
   String toString() {
     if (arity == 0) return symbol;
@@ -240,17 +236,56 @@ class Automaton {
   /// Get all transitions (for iteration by coverage checker).
   Map<(DFAState, TransitionLabel), DFAState> get transitions => _transitions;
 
-  /// Create dual automaton by flipping all states and modes.
-  Automaton get dual {
-    final newTransitions = <(DFAState, TransitionLabel), DFAState>{};
+  /// The target of the transition from [from] with [symbol], [arity] and
+  /// [argIndex], whatever its mode; null where there is none.
+  DFAState? transitionIgnoringMode(
+      DFAState from, String symbol, int arity, int argIndex) {
     for (final entry in _transitions.entries) {
-      final (fromState, label) = entry.key;
-      final toState = entry.value;
-      newTransitions[(fromState.dual, label.dual)] =
-          toState.dual;
+      final (f, l) = entry.key;
+      if (f == from &&
+          l.symbol == symbol &&
+          l.arity == arity &&
+          l.argIndex == argIndex) {
+        return entry.value;
+      }
     }
-    return Automaton(startState.dual, newTransitions,
-        acceptedPrimitives: acceptedPrimitives);
+    return null;
+  }
+}
+
+/// What [forEachReachableOutputState] does after visiting a state: goes on
+/// to the states below it, skips them, or stops the walk.
+enum WalkStep { descend, skip, stop }
+
+/// Visits [visit] on each output state reachable from [start] in [dfa]
+/// through the transitions of the automata, a dual state taken as its output
+/// state, each state once, depth first; [visit] says whether to go on below
+/// the state, to skip what is below it, or to stop the walk.
+void forEachReachableOutputState(
+    DFAState start, ProgramDFA dfa, WalkStep Function(DFAState) visit) {
+  final seen = <String>{};
+  final stack = <DFAState>[start];
+  while (stack.isNotEmpty) {
+    var x = stack.removeLast();
+    if (x.isDual) {
+      final o = dfa.states[x.baseName];
+      if (o == null) continue;
+      x = o;
+    }
+    if (!seen.add(x.name)) continue;
+    switch (visit(x)) {
+      case WalkStep.stop:
+        return;
+      case WalkStep.skip:
+        continue;
+      case WalkStep.descend:
+        break;
+    }
+    final autom = dfa.automata[x.name];
+    if (autom == null) continue;
+    for (final e in autom.transitions.entries) {
+      if (e.key.$1 == x) stack.add(e.value);
+    }
   }
 }
 
@@ -305,16 +340,10 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   // Create system states (complement pairs)
   states['_'] = DFAState('_', isDual: false, isFinal: true);
   states['_?'] = DFAState('_', isDual: true, isFinal: true);
-  states['Integer'] = DFAState('Integer', isDual: false, isFinal: false);
-  states['Integer?'] = DFAState('Integer', isDual: true, isFinal: false);
-  states['Real'] = DFAState('Real', isDual: false, isFinal: false);
-  states['Real?'] = DFAState('Real', isDual: true, isFinal: false);
-  states['String'] = DFAState('String', isDual: false, isFinal: false);
-  states['String?'] = DFAState('String', isDual: true, isFinal: false);
-  states['Module'] = DFAState('Module', isDual: false, isFinal: false);
-  states['Module?'] = DFAState('Module', isDual: true, isFinal: false);
-  states['MutualRef'] = DFAState('MutualRef', isDual: false, isFinal: false);
-  states['MutualRef?'] = DFAState('MutualRef', isDual: true, isFinal: false);
+  for (final name in _primitiveStateNames) {
+    states[name] = DFAState(name, isDual: false, isFinal: false);
+    states['$name?'] = DFAState(name, isDual: true, isFinal: false);
+  }
   states['_FINAL_'] = DFAState('_FINAL_', isDual: false, isFinal: true);
   // `Opaque`, the union of all opaque types: a state with no outgoing
   // transitions (TGLP parameterized-types.tex, Definition "Opaque Type").
@@ -323,19 +352,15 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   states['${TypeRef.opaqueUnion}?'] =
       DFAState(TypeRef.opaqueUnion, isDual: true, isFinal: false);
 
-  // Create automata for system types
+  // Create automata for system types.  A primitive type's automaton has no
+  // explicit transitions (conceptually, infinitely many to _FINAL_): its
+  // constants are handled in leaf consistency.
   automata['_'] = _finalAutomaton(states['_']!);
   automata['_?'] = _finalAutomaton(states['_?']!);
-  automata['Integer'] = _primitiveTypeAutomaton(states['Integer']!, states['_FINAL_']!);
-  automata['Integer?'] = _primitiveTypeAutomaton(states['Integer?']!, states['_FINAL_']!);
-  automata['Real'] = _primitiveTypeAutomaton(states['Real']!, states['_FINAL_']!);
-  automata['Real?'] = _primitiveTypeAutomaton(states['Real?']!, states['_FINAL_']!);
-  automata['String'] = _primitiveTypeAutomaton(states['String']!, states['_FINAL_']!);
-  automata['String?'] = _primitiveTypeAutomaton(states['String?']!, states['_FINAL_']!);
-  automata['Module'] = _primitiveTypeAutomaton(states['Module']!, states['_FINAL_']!);
-  automata['Module?'] = _primitiveTypeAutomaton(states['Module?']!, states['_FINAL_']!);
-  automata['MutualRef'] = _primitiveTypeAutomaton(states['MutualRef']!, states['_FINAL_']!);
-  automata['MutualRef?'] = _primitiveTypeAutomaton(states['MutualRef?']!, states['_FINAL_']!);
+  for (final name in _primitiveStateNames) {
+    automata[name] = _finalAutomaton(states[name]!);
+    automata['$name?'] = _finalAutomaton(states['$name?']!);
+  }
   automata[TypeRef.opaqueUnion] = _finalAutomaton(states[TypeRef.opaqueUnion]!);
   automata['${TypeRef.opaqueUnion}?'] =
       _finalAutomaton(states['${TypeRef.opaqueUnion}?']!);
@@ -381,6 +406,16 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   return ProgramDFA(states, automata);
 }
 
+/// The primitive types with a state pair of their own in every program DFA,
+/// in the order the pairs are created ([buildProgramDFA]).
+const List<String> _primitiveStateNames = [
+  'Integer',
+  'Real',
+  'String',
+  'Module',
+  'MutualRef',
+];
+
 /// Add one monomorphic type definition to an existing [dfa], in place.
 ///
 /// Parameterised-type expansion (TGLP parameterized-types.tex
@@ -397,16 +432,8 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
 /// no-op.  [types] must already carry [typeDef] under its own name, so a
 /// self-referential alternative and [primitiveClosure] resolve.
 void addTypeToProgramDFA(
-    ProgramDFA dfa, TypeDef typeDef, Map<String, TypeDef> types) {
-  final typeName = typeDef.name;
-  if (dfa.automata.containsKey(typeName)) return;
-  dfa.states[typeName] = DFAState(typeName, isDual: false, isFinal: false);
-  dfa.states['$typeName?'] = DFAState(typeName, isDual: true, isFinal: false);
-  dfa.automata[typeName] =
-      _buildTypeAutomaton(typeDef, dfa.states, types, isDual: false);
-  dfa.automata['$typeName?'] =
-      _buildTypeAutomaton(typeDef, dfa.states, types, isDual: true);
-}
+        ProgramDFA dfa, TypeDef typeDef, Map<String, TypeDef> types) =>
+    addTypesToProgramDFA(dfa, [typeDef], types);
 
 /// Add several monomorphic type definitions to an existing [dfa], in place,
 /// where they may refer to one another --- `Stream<Box<Msg>>` and `Box<Msg>`,
@@ -437,12 +464,6 @@ void addTypesToProgramDFA(
 
 /// Create a final automaton (no transitions).
 Automaton _finalAutomaton(DFAState state) {
-  return Automaton(state, {});
-}
-
-/// Create a primitive type automaton (conceptual infinite transitions to _FINAL_).
-Automaton _primitiveTypeAutomaton(DFAState state, DFAState finalState) {
-  // No explicit transitions - handled specially in leaf consistency
   return Automaton(state, {});
 }
 
@@ -507,6 +528,20 @@ void _addTypeTransitions(
   Map<String, TypeDef> types = const {},
   Set<String> inherited = const {},
 }) {
+  // The transition for argument [argIndex] (1-based) of [arity] of the
+  // constructor [functor], of type [argType]: its mode as the type writes it
+  // at the context mode, complemented if building the complement automaton.
+  void addArg(String functor, int arity, int argIndex, TypeExpr argType) {
+    var argMode = _modeOf(argType, contextMode);
+    if (isDual) {
+      argMode = argMode.flip;
+    }
+    final label =
+        TransitionLabel.functor(functor, arity, argIndex, mode: argMode);
+    transitions[(fromState, label)] =
+        _resolveTypeExpr(argType, states, isDual);
+  }
+
   if (alt is ConstantAlt) {
     final label = TransitionLabel.constant(alt.value);
     transitions[(fromState, label)] = states['_FINAL_']!;
@@ -515,49 +550,15 @@ void _addTypeTransitions(
     final label = TransitionLabel.constant(nil);
     transitions[(fromState, label)] = states['_FINAL_']!;
   } else if (alt is ListConsAlt) {
-    var headMode = _modeOf(alt.head, contextMode);
-    var tailMode = _modeOf(alt.tail, contextMode);
-
-    // Apply complement to modes if building complement automaton
-    if (isDual) {
-      headMode = headMode.flip;
-      tailMode = tailMode.flip;
-    }
-
-    final headLabel = TransitionLabel.functor('[|]', 2, 1, mode: headMode);
-    final tailLabel = TransitionLabel.functor('[|]', 2, 2, mode: tailMode);
-
-    transitions[(fromState, headLabel)] =
-        _resolveTypeExpr(alt.head, states, isDual);
-    transitions[(fromState, tailLabel)] =
-        _resolveTypeExpr(alt.tail, states, isDual);
+    addArg('[|]', 2, 1, alt.head);
+    addArg('[|]', 2, 2, alt.tail);
   } else if (alt is StructAlt) {
     for (var i = 0; i < alt.args.length; i++) {
-      final argType = alt.args[i];
-      var argMode = _modeOf(argType, contextMode);
-      if (isDual) {
-        argMode = argMode.flip;
-      }
-      final label =
-          TransitionLabel.functor(alt.functor, alt.args.length, i + 1, mode: argMode);
-      transitions[(fromState, label)] =
-          _resolveTypeExpr(argType, states, isDual);
+      addArg(alt.functor, alt.args.length, i + 1, alt.args[i]);
     }
   } else if (alt is DiffListAlt) {
-    var contentMode = _modeOf(alt.content, contextMode);
-    var holeMode = _modeOf(alt.hole, contextMode);
-    if (isDual) {
-      contentMode = contentMode.flip;
-      holeMode = holeMode.flip;
-    }
-
-    final contentLabel = TransitionLabel.functor('\\', 2, 1, mode: contentMode);
-    final holeLabel = TransitionLabel.functor('\\', 2, 2, mode: holeMode);
-
-    transitions[(fromState, contentLabel)] =
-        _resolveTypeExpr(alt.content, states, isDual);
-    transitions[(fromState, holeLabel)] =
-        _resolveTypeExpr(alt.hole, states, isDual);
+    addArg('\\', 2, 1, alt.content);
+    addArg('\\', 2, 2, alt.hole);
   } else if (alt is TypeRef && !alt.isParameterized) {
     // "If A_j references another type S or S?: transitions are inherited from
     // S or S? respectively" (TGLP appendix sec:type-automaton, Type definition
@@ -601,22 +602,8 @@ DFAState _resolveTypeExpr(
     // XOR with automaton complement flag
     final finalIsComplement = baseIsComplement != isDual; // XOR
 
-    if (typeExpr.name == 'Integer') {
-      return finalIsComplement ? states['Integer?']! : states['Integer']!;
-    }
-    if (typeExpr.name == 'Real') {
-      return finalIsComplement ? states['Real?']! : states['Real']!;
-    }
-    if (typeExpr.name == 'String') {
-      return finalIsComplement ? states['String?']! : states['String']!;
-    }
-    if (typeExpr.name == 'Module') {
-      return finalIsComplement ? states['Module?']! : states['Module']!;
-    }
-    if (typeExpr.name == 'MutualRef') {
-      return finalIsComplement ? states['MutualRef?']! : states['MutualRef']!;
-    }
-
+    // A primitive type's state pair is in every program DFA
+    // ([buildProgramDFA]), so it is found as any other type's is.
     final targetName = typeExpr.name;
     final targetState = finalIsComplement ? states['$targetName?'] : states[targetName];
     if (targetState == null) {
@@ -769,12 +756,11 @@ bool _isConstantTypeNamed(
 }
 
 // ============================================================================
-// Leaf Consistency Checking (Definition 4.3)
+// Leaf Consistency Checking (TGLP, Definition "Consistent Paths")
 // ============================================================================
 
 /// Represents a leaf term in a term path.
 class LeafTerm {
-  final String? name; // Variable name, or null for constants
   final bool isVariable;
   final bool isReader; // Only meaningful if isVariable
   final Mode? mode; // Mode at this position
@@ -784,7 +770,6 @@ class LeafTerm {
   final bool isString; // True if value is a string
 
   LeafTerm._({
-    this.name,
     required this.isVariable,
     this.isReader = false,
     this.mode,
@@ -796,12 +781,12 @@ class LeafTerm {
 
   /// Create a writer variable leaf.
   factory LeafTerm.writer(String name, {required Mode mode}) {
-    return LeafTerm._(name: name, isVariable: true, isReader: false, mode: mode);
+    return LeafTerm._(isVariable: true, isReader: false, mode: mode);
   }
 
   /// Create a reader variable leaf.
   factory LeafTerm.reader(String name, {required Mode mode}) {
-    return LeafTerm._(name: name, isVariable: true, isReader: true, mode: mode);
+    return LeafTerm._(isVariable: true, isReader: true, mode: mode);
   }
 
   /// Create an integer constant leaf.
@@ -847,7 +832,7 @@ class LeafConsistencyResult {
         type = null;
 }
 
-/// Check leaf consistency per Definition 4.3.
+/// Check leaf consistency (TGLP, Definition "Consistent Paths").
 ///
 /// Implements the simplified algorithm using Mode Correspondence Property:
 /// - For variables: check path's structural mode matches variable's implicit mode
@@ -881,26 +866,15 @@ LeafConsistencyResult checkLeafConsistency(
     return LeafConsistencyResult.consistent(state);
   }
 
-  // Case 2b: At primitive type state (Integer, Real, Number, String)
-  if (state.isIntegerType) {
-    if (leaf.isInteger) {
+  // Case 2b: At primitive type state (Integer, Real, String): the constant's
+  // kind is the type ([primitiveOfConstant]).
+  final primitive = primitiveOfConstant(leaf.value);
+  if (state.isIntegerType || state.isRealType || state.isStringType) {
+    if (primitive == state.baseName) {
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
     }
-    return LeafConsistencyResult.inconsistent('Integer type requires integer literal');
-  }
-
-  if (state.isRealType) {
-    if (leaf.isReal) {
-      return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-    }
-    return LeafConsistencyResult.inconsistent('Real type requires real literal');
-  }
-
-  if (state.isStringType) {
-    if (leaf.isString) {
-      return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-    }
-    return LeafConsistencyResult.inconsistent('String type requires string literal');
+    return LeafConsistencyResult.inconsistent(
+        '${state.baseName} type requires ${state.baseName.toLowerCase()} literal');
   }
 
   // Row 8 of the consistency table: a module term matches Module.  A module
@@ -930,7 +904,7 @@ LeafConsistencyResult checkLeafConsistency(
   }
 
   // Case 2c: At wildcard state
-  // Per spec v0.6: _ accepts any produced term (mode ↑), _? accepts any consumed term (mode ↓)
+  // _ accepts any produced term (mode ↑), _? accepts any consumed term (mode ↓)
   if (state.isProducedWildcard) {
     if (leaf.mode == Mode.produce) {
       return LeafConsistencyResult.consistent(state);
@@ -962,14 +936,8 @@ LeafConsistencyResult checkLeafConsistency(
       // (consistency table rows 4-6).  `Number ::= Integer ; Real.` accepts a
       // numeric literal; `Constant ::= Number ; String ; Module.` accepts any
       // of them — and, since `[]` is a String, an empty-list literal too.
-      final primitives = automaton.acceptedPrimitives;
-      if (leaf.isInteger && primitives.contains('Integer')) {
-        return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-      }
-      if (leaf.isReal && primitives.contains('Real')) {
-        return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-      }
-      if (leaf.isString && primitives.contains('String')) {
+      if (primitive != null &&
+          automaton.acceptedPrimitives.contains(primitive)) {
         return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
       }
     }
