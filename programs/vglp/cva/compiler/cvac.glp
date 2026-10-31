@@ -17,7 +17,7 @@
 %% constant whose name is the variable's, V1, V1?, from vname/3.
 
 Line  ::= String ; guarded_only(Line) ; unguarded_only(Line)
-        ; pragma_only(Line) ; plain_only(Line) ; day_only(Line) ; dayless_only(Line).
+        ; day_only(Line) ; dayless_only(Line).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, NumInfos?, Stream(_)).
@@ -35,11 +35,14 @@ compile(Nm, D, V) :- compile_intro(Nm?, D?, V?, no_introduction, words(no_pragma
 %% no_introduction.
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?).
 compile(Nm, D, V, I) :- compile_intro(Nm?, D?, V?, I?, words(no_pragmas)).
-%% compile(Name, Contract, Verdict, Intro, Pragmas): the same, for a contract carrying pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words": "The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type, a sentence into the approval question that Start raises, and a list's name into the view the agent writes"; Section 6.2, "The words a platform shows").  Each act a pragma proposes is the schema its button names: "a button for each act of it a person proposes, in brackets, each bearing its act's name" (GSC 2991379, Section 2, its first paragraph).  A contract with no pragmas, no_pragmas, is compiled as by compile/4, but for the two widget declarations every platform carries.
+%% compile(Name, Contract, Verdict, Intro, Pragmas): the same, for a contract carrying pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words": "The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type, a sentence into the approval question that Start raises, and a list's name into the view the agent writes"; Section 6.2, "The words a platform shows").  Each act a pragma proposes is the schema its button names: "a button for each act of it a person proposes, in brackets, each bearing its act's name" (GSC 2991379, Section 2, its first paragraph).  A contract with no pragmas, no_pragmas, as compile/3 and compile/4 give it, is checked and not printed (compile3a).
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?).
 compile(Nm, D, V, I, P) :- compile_intro(Nm?, D?, V?, I?, words(P?)).
 %% The contract's words, its pragmas, carried through the compiler whole.
 Words ::= words(Pragmas).
+%% The words of a contract carrying pragmas, the only contract the compiler prints a platform from (compile3a; vGLP, Section 5.4, "The contract's words"), which every procedure past compile3a takes.
+Worded ::= words(Given).
+Given  ::= pragmas(PLists, PActs).
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): each schema's constraint, its local variables and the role whose local variables the constraint names, the table Nt (local.glp, num_info_of); the contract compiled is its plain form (plain_contract), each schema's head less its local variables, which "the schema-binding does not bind", so that a class term names the schema-binding: its roles and its other variables, "bound by the schema-binding, as a speech-act variable is", in the order of the head.
 procedure compile_intro(Constant?, Declared?, Verdict?, Intro?, Words?).
 compile_intro(Nm, D, V, I, W) :- ground(D?), ground(I?) |
@@ -87,13 +90,19 @@ compile3([F|Fs], Nm, _, _, _, _, _) :- ground(Nm?) |
     send_to_user(['%% compile begin', H?, F?|Fs1?]),
     lapp(Fs?, ['%% compile end'], Fs1).
 
+%% A contract that passes the checks and carries no pragmas is refused, with the line saying why: "Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words").  compile/3 and compile/4, which give no pragmas, so check a contract and print no platform.
 procedure compile3a(Preds?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
-compile3a(Ps, Nm, C, Rf, E, Nt, W) :- ground(Ps?), ground(C?), ground(W?) |
-    word_faults(W?, C?, Ps?, Wf),
-    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, W?, Ps?).
+compile3a(_, Nm, _, _, _, _, words(no_pragmas)) :- ground(Nm?) |
+    H =.. ['%% not compiled, having no pragmas', Nm?],
+    send_to_user(['%% compile begin', H?,
+        '%% it passes the checks, its verdict, local and effective, and has no pragmas, the words its app shows: the compiler prints a platform only from a contract with pragmas, and refuses one with none (vGLP, Section 5.4, "The contract\'s words").',
+        '%% compile end']).
+compile3a(Ps, Nm, C, Rf, E, Nt, words(pragmas(Ls, As))) :- ground(Ps?), ground(C?), ground(Ls?), ground(As?) |
+    word_faults(words(pragmas(Ls?, As?)), C?, Ps?, Wf),
+    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, words(pragmas(Ls?, As?)), Ps?).
 
 %% A contract whose words do not name its schemas, or leave a guarded schema with no button, is not compiled, with the lines saying why (word_faults).
-procedure compile4(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?, Preds?).
+procedure compile4(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Worded?, Preds?).
 compile4([], Nm, C, Rf, E, Nt, W, Ps) :-
     module_lines(Nm?, C?, Rf?, E?, Nt?, W?, Ps?, Ls),
     send_to_user(['%% compile begin'|Ls?]).
@@ -287,13 +296,16 @@ count_args([], 0).
 count_args([_|As], N?) :- count_args(As?, M), N := M? + 1.
 
 %% --- The module ------------------------------------------------------------
-procedure module_lines(Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?, Preds?, Stream(_)).
+procedure module_lines(Constant?, Contract?, Preds?, Preds?, NumInfos?, Worded?, Preds?, Stream(_)).
 module_lines(Nm, C, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(E?), ground(Nt?), ground(W?), ground(Ps?) |
     H =.. ['%% the canonical CVA platform of the contract', Nm?],
     class_lines(C?, L1),
     text # fixed_text(Fx),
-    has_pragmas(W?, Pm),
-    request_parts(C?, Ps?, Pm?, Fx?, Lr0, Fx1),
+    proposal_alts(C?, Ps?, Pa),
+    request_lines(Pa?, Lr0),
+    any_name(Ps?, Gd),
+    day_required(C?, Dy),
+    shared_lines(Fx?, Gd?, Dy?, Fx1),
     proved_rules(C?, Rl),
     widget_lines(W?, C?, Ps?, ctx(Rf?, Rl?), Lw),
     lapp(Lr0?, Lw?, Lr),
@@ -403,19 +415,12 @@ var_types([any|Vs], Ts?) :- var_types(Vs?, Ts).
 %% A numeric variable the schema-binding binds, a number in the class term and in the request, so the request form takes it, a number field (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "a request names it, so the request form takes it").
 var_types([num(_)|Vs], ['Integer'|Ts?]) :- var_types(Vs?, Ts).
 
-%% The request type: Proposal ::= the alternatives of the schemas whose terms name guarded parts (local.glp, proposable), separated by ;, and Request ::= propose(Proposal), "of a type with the alternative propose(N) for the request name N of each guarded part" (vGLP, Section 5.4, "The compilation"); where there are none, no request type, and the shared text's lines guarded_only(L), its request question and its clauses on the request propose([t]_j) and on a hello, are not printed.
-procedure request_parts(Contract?, Preds?, YesNo?, Lines?, Stream(_), Stream(_)).
-request_parts(C, Ps, Pm, Fx, Lr?, Fx1?) :- ground(C?), ground(Ps?) |
-    proposal_alts(C?, Ps?, As),
-    request_lines(As?, Lr),
-    any_name(Ps?, G),
-    day_required(C?, D),
-    shared_lines(Fx?, G?, Pm?, D?, Fx1).
 %% Whether the contract requires the day: a schema requires the atom today(d) at a role (vGLP, Section 5.4, "Act schemas as local specifications": "A contract may require the day: the compiled agent reads, with its triggers, a calendar, a stream of dates the device writes, one a day, and holds today(d), d the last date read, beside its app state, which no schema adds or deletes and which a schema may require at a role").
 procedure day_required(Contract?, YesNo).
 day_required(C, D?) :- ground(C?) |
     contract_preds(C?, Pr),
     mem(today, Pr?, D).
+%% The request type: Proposal ::= the alternatives of the schemas whose terms name guarded parts (local.glp, proposable), separated by ;, and Request ::= propose(Proposal), "of a type with the alternative propose(N) for the request name N of each guarded part" (vGLP, Section 5.4, "The compilation"); where there are none, no request type, and the shared text's lines guarded_only(L), its request question and its clauses on the request propose([t]_j) and on a hello, are not printed.
 procedure proposal_alts(Contract?, Preds?, Stream(_)).
 proposal_alts([], _, []).
 proposal_alts([schema(S, Hd, Rs)|Ss], Ps, As?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Ps?) |
@@ -442,22 +447,18 @@ alts_rest([A|As], Tl, [';', A?|L?]) :- alts_rest(As?, Tl?, L).
 procedure any_name(Preds?, YesNo).
 any_name([], no).
 any_name([_|_], yes).
-%% The shared text's lines, a line guarded_only(L) printed as L where the contract has a guarded part and left out where it has none, and a line unguarded_only(L) the other way about; a line pragma_only(L) printed as L where the contract carries pragmas and left out where it carries none, and a line plain_only(L) the other way about (vGLP, Section 5.4, "The contract's words": the sentence goes "into the approval question that Start raises, and a list's name into the view the agent writes").
-procedure shared_lines(Lines?, YesNo?, YesNo?, YesNo?, Stream(_)).
-shared_lines([], _, _, _, []).
-shared_lines([guarded_only(L)|Ls], yes, P, D, Ls1?) :- shared_lines([L?|Ls?], yes, P?, D?, Ls1).
-shared_lines([guarded_only(_)|Ls], no, P, D, Ls1?) :- shared_lines(Ls?, no, P?, D?, Ls1).
-shared_lines([unguarded_only(_)|Ls], yes, P, D, Ls1?) :- shared_lines(Ls?, yes, P?, D?, Ls1).
-shared_lines([unguarded_only(L)|Ls], no, P, D, Ls1?) :- shared_lines([L?|Ls?], no, P?, D?, Ls1).
-shared_lines([pragma_only(L)|Ls], G, yes, D, Ls1?) :- shared_lines([L?|Ls?], G?, yes, D?, Ls1).
-shared_lines([pragma_only(_)|Ls], G, no, D, Ls1?) :- shared_lines(Ls?, G?, no, D?, Ls1).
-shared_lines([plain_only(_)|Ls], G, yes, D, Ls1?) :- shared_lines(Ls?, G?, yes, D?, Ls1).
-shared_lines([plain_only(L)|Ls], G, no, D, Ls1?) :- shared_lines([L?|Ls?], G?, no, D?, Ls1).
-shared_lines([day_only(L)|Ls], G, P, yes, Ls1?) :- shared_lines([L?|Ls?], G?, P?, yes, Ls1).
-shared_lines([day_only(_)|Ls], G, P, no, Ls1?) :- shared_lines(Ls?, G?, P?, no, Ls1).
-shared_lines([dayless_only(_)|Ls], G, P, yes, Ls1?) :- shared_lines(Ls?, G?, P?, yes, Ls1).
-shared_lines([dayless_only(L)|Ls], G, P, no, Ls1?) :- shared_lines([L?|Ls?], G?, P?, no, Ls1).
-shared_lines([L|Ls], G, P, D, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, P?, D?, Ls1).
+%% The shared text's lines, a line guarded_only(L) printed as L where the contract has a guarded part and left out where it has none, and a line unguarded_only(L) the other way about; a line day_only(L) printed as L where the contract requires the day and left out where it does not, and a line dayless_only(L) the other way about.  The compiler prints a platform only from a contract with pragmas (vGLP, Section 5.4, "The contract's words"), so the shared text is that of such a platform, and no line of it is kept or left out by its pragmas.
+procedure shared_lines(Lines?, YesNo?, YesNo?, Lines).
+shared_lines([], _, _, []).
+shared_lines([guarded_only(L)|Ls], yes, D, Ls1?) :- shared_lines([L?|Ls?], yes, D?, Ls1).
+shared_lines([guarded_only(_)|Ls], no, D, Ls1?) :- shared_lines(Ls?, no, D?, Ls1).
+shared_lines([unguarded_only(_)|Ls], yes, D, Ls1?) :- shared_lines(Ls?, yes, D?, Ls1).
+shared_lines([unguarded_only(L)|Ls], no, D, Ls1?) :- shared_lines([L?|Ls?], no, D?, Ls1).
+shared_lines([day_only(L)|Ls], G, yes, Ls1?) :- shared_lines([L?|Ls?], G?, yes, Ls1).
+shared_lines([day_only(_)|Ls], G, no, Ls1?) :- shared_lines(Ls?, G?, no, Ls1).
+shared_lines([dayless_only(_)|Ls], G, yes, Ls1?) :- shared_lines(Ls?, G?, yes, Ls1).
+shared_lines([dayless_only(L)|Ls], G, no, Ls1?) :- shared_lines([L?|Ls?], G?, no, Ls1).
+shared_lines([L|Ls], G, D, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, D?, Ls1).
 
 %% The type of the machine states, List(Atom), in the type of the views, Output ::= view(List(Atom), List(Key)) in the shared text (vGLP b7e3517, Section 5.4, "The compilation": "the compilation defines Output as the type of the views", a view being view(s, K), "the machine state s of its app state and the persons K it knows"): a machine state is a multiset of the contract's atoms, written as a list, and Atom is the union of the contract's predicates at their argument types: an argument is of the type Peer, a person, where the schemas write a role, a party variable or a name term, and of the type Speech, a speech act, where they write a speech-act variable or a signed term; Atom has one alternative for each predicate and argument types the schemas write it with, in order of first occurrence.  The agent holds an atom as g(Name, Vals), each value p(Peer) or s(Speech), and writes it on the output as the contract writes it: atom_of(g(friend, [p(V1)]), shown(friend(V1?))), one clause per alternative.
 Kind  ::= peer ; speech ; name ; num.
@@ -853,13 +854,8 @@ request_name_decl([X|Xs], ['', 'procedure request_name(Class?, PName).', X?|Xs1?
 %% --- The contract's words ---------------------------------------------------
 %% vGLP, Section 5.4, "The contract's words": "Beside its clauses and its schemas a contract carries the words its app shows, its pragmas: for each schema, the label of the request that proposes its act and a name for each field the person fills in, and, for each guarding role, the sentence put to that role's agent and its two answers; and, for each list the app shows, its name and what it lists.  A sentence names the roles and the variables of its schema, which the platform fills in from the binding of the attempt it asks about.  The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type (Section 6.2), a sentence into the approval question that Start raises, and a list's name into the view the agent writes."  GSC, Section 2, its first paragraph: "the first line names a tab of the app and what it lists, and each other line names a clause, then the button proposing its act, in brackets, any field the person fills, in angle brackets, and, where the act needs another person's will, the question that person is then asked."  The forms the papers leave open, and the forms chosen here, are in README.md beside this file.
 
-procedure has_pragmas(Words?, YesNo).
-has_pragmas(words(no_pragmas), no).
-has_pragmas(words(pragmas(_, _)), yes).
-
 %% A contract whose pragmas name what the contract does not hold is not compiled, with a line saying why: a list naming no predicate of the contract, or more than one; a button naming no schema of the contract, the button's text read in lower case being the schema's name ("each bearing its act's name", GSC 2991379, Section 2); a pragma naming more fields than its schema has variables the person fills; a sentence naming a person, Alice, Bob or Carol, that its schema does not have; and a guarded schema no button names (unnamed_lines).
-procedure word_faults(Words?, Contract?, Preds?, Stream(_)).
-word_faults(words(no_pragmas), _, _, []).
+procedure word_faults(Worded?, Contract?, Preds?, Stream(_)).
 word_faults(words(pragmas(Ls, As)), C, Ps, F?) :- ground(Ls?), ground(As?), ground(C?), ground(Ps?) |
     contract_preds(C?, Pr),
     list_faults(Ls?, Pr?, F1),
@@ -1034,9 +1030,8 @@ a_person(sgn(_, _), _, _, no).
 a_person(any, _, _, no).
 
 %% The two widget declarations every platform carries (vGLP, Section 6.2, "The words a platform shows"; Section 8: "with the two widget declarations (Definition Widget Declaration) the compiler prints, a sentence with two buttons for an approval question and a menu for the request question"), so that no app writes a self.vglp: the approval question drawn by the construct family's approval_sentence, the request question by its social_menu.  With pragmas, the request type's declaration carries the labels the contract gives: label(F, S), the request whose name is a schema-binding of F labelled S, the button in brackets; and label(F, I, S), the I-th place of that request, a field the person fills, named S, the name in angle brackets.  The approval question's two answers are given by no pragma, so its declaration carries no label, and the construct family draws the name of each (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").
-procedure widget_lines(Words?, Contract?, Preds?, DrawCtx?, Stream(_)).
+procedure widget_lines(Worded?, Contract?, Preds?, DrawCtx?, Stream(_)).
 widget_lines(_, _, [], _, ['', '%% The widget declaration of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence; a contract with no guarded part has no request question.', 'Approval =::= approval_sentence.']).
-widget_lines(words(no_pragmas), _, [_|_], _, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu.', 'Approval =::= approval_sentence.', 'Menu =::= social_menu.']).
 widget_lines(words(pragmas(Ls, As)), C, Ps, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract\'s pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs, Is), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, Gs the groups it names, group(J, K), the leader at place J and the group\'s name at place K, which a group the view lists fills, and Is the items it names, item(K, P), the speech act at place K, which a row of the list of the predicate P fills; meeting(F, I) for an acquaintance schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").', 'Approval =::= approval_sentence.', T?, '.']) :-
     ground(Ls?), ground(As?), ground(C?), ground(Ps?), ground(Rf?) |
     contract_preds(C?, Pr),
@@ -1605,8 +1600,7 @@ nth_arg(K, [_|As], A?) :- K? > 1 | K1 := K? - 1, nth_arg(K1?, As?, A).
 nth_arg(_, [], role(0)).
 
 %% The lists and the sentences, printed for a contract with pragmas: tabs(Ts), the lists its app shows, tab(Name, P), P the predicate whose atoms the list holds; and sentence_of(C, Me, Ws), the sentence the contract puts to the agent Me on an attempt of the part C, its roles and variables filled in from the binding C names, or [] where it puts none: where the pragma of C's clause has no sentence, or where the sentence names Me, the sentence being put to the guarding roles whose persons it does not name (README.md beside this file, "The pragmas").
-procedure word_lines(Words?, Contract?, Stream(_)).
-word_lines(words(no_pragmas), _, []).
+procedure word_lines(Worded?, Contract?, Stream(_)).
 word_lines(words(pragmas(Ls, As)), C, L?) :- ground(Ls?), ground(As?), ground(C?) |
     contract_preds(C?, Pr),
     mult_preds(C?, Mp),

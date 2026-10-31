@@ -174,7 +174,8 @@
 import '../compiler/error.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../compiler/glp_printer.dart' show constantSource, functorNameSource;
-import 'type_source.dart';
+import 'mediator.dart' show typeSource;
+import 'type_walk.dart';
 import 'dispatcher.dart'
     show
         drawTypeName,

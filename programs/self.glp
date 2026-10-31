@@ -359,6 +359,7 @@ procedure '_tuple_to_list'(_?, Stream(_)).
 % Time and random
 procedure '_now'(Integer).
 procedure '_random'(Integer?, Integer?, Integer, Integer).
+procedure '_split_random_seed'(Integer?, Integer, Integer).
 
 % MWM (Mutual Write Merge)
 procedure(X) '_allocate_mutual_reference'(MutualRef, Stream(X)).
@@ -747,6 +748,18 @@ procedure random(Integer?, Integer?, Integer, Integer).
 random(Seed, N, Value?, NextSeed?) :-
   integer(Seed?), integer(N?), N? >= 1 |
   '_random'(Seed?, N?, Value, NextSeed).
+
+% =============================================================================
+% SPLITTING A SEED (split_random_seed/3)
+% =============================================================================
+% split_random_seed(Seed, S1, S2): S1 and S2 are two seeds determined by Seed,
+% such that the draws from Seed, from S1 and from S2 are independent streams; a
+% splittable generator implements it.  A body goal, not a guard (GLP-ICLP
+% appendix-guards §"Splitting a seed").
+procedure split_random_seed(Integer?, Integer, Integer).
+split_random_seed(Seed, S1?, S2?) :-
+  integer(Seed?) |
+  '_split_random_seed'(Seed?, S1, S2).
 
 % =============================================================================
 % UNIV (=../2, ..=/2)

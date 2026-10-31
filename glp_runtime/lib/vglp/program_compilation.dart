@@ -1,22 +1,16 @@
 // glp_runtime/lib/vglp/program_compilation.dart
 //
-// The compilation of a vGLP source as a whole.  compileVglpSource compiles
-// the text of a `.vglp` source to the text of its GLP module, by the
-// canonical compilation of a source in the paper's syntax (canonical.dart);
-// emitCompiledVglp writes that text beside each source of a tree; the widget
-// declarations in scope of a source are read from the self.vglp beside each
-// self.glp of its chain (scopeWidgetDeclarations, readSelfVglp); and
-// VglpProgram reads every vGLP source of a program before any module of it is
-// compiled, for the questions of the linked program and the procedures of
-// each source that reach one.
-// Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation",
-// and sections/parts/canonical-compilation.tex.
+// A `.vglp` source to the text of its GLP module, by the canonical
+// compilation (canonical.dart), and the emission of that text beside the
+// source; the widget declarations of a source's scope, read from the
+// self.vglp beside each self.glp; and the program a tree's `.vglp` sources
+// make, which procedures reach a question.
+// Spec: vGLP, Section 6, "The Implementation: Compiling vGLP onto GLP", and
+// Appendix "The Canonical Compilation".
 //
-// A source in the old syntax, with volition guards `*(...)`, compiles by the
-// old compilation, compileProgram, against the generic mediator
-// (clause_compilation.dart, types.dart, mediator.dart), the agent and the
-// mediator emitted as one self-contained module; it is kept pending vGLP's
-// ruling on its retirement.
+// The old compilation, against a generic mediator, which the paper replaced
+// by the dispatcher and the construct processes on 2026-09-23, is deleted
+// (vGLP #22's task, Code_inbox 2026-10-31 15:20 UTC); git holds it.
 
 import 'dart:io';
 
@@ -24,165 +18,23 @@ import '../compiler/ast.dart' as ast;
 import '../compiler/error.dart';
 import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
-import '../compiler/glp_printer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import 'package:path/path.dart' as ppath;
 
 import '../runtime/module_hierarchy.dart' show discoverSelfChain, hasSelfGlp;
 import 'canonical.dart';
-import 'clause_compilation.dart';
-import 'mediator.dart';
-import 'types.dart';
+import 'dispatcher.dart' show DispatcherSource;
 
 export 'canonical.dart' show compiledHeader;
-
-/// The compiled program: one GLP module's source text, and the pieces it was
-/// built from, for tests to inspect.
-class CompiledProgram {
-  final String source;
-  final CompiledTypes types;
-  final List<CompiledProcedure> procedures;
-
-  CompiledProgram(this.source, this.types, this.procedures);
-}
-
-/// Compile a vGLP module against the generic mediator source.
-///
-/// [scope] is the module's ancestor scope as the loader built it — the root
-/// scope, the ancestor `self.glp` chain, and whatever an ancestor `-expose`s.
-/// A .vglp source calls procedures none of its own declarations names, and an
-/// answer writer may be typed by one of them, so the loader supplies this.
-/// [ancestors] is the same thing for a caller with no loader.
-CompiledProgram compileProgram(ast.Module module, MediatorSource mediator,
-    {List<ast.Module> ancestors = const [], TypeEnvironment? scope}) {
-  final types = compileTypes(module, ancestors: ancestors, scope: scope);
-  final med = instantiate(mediator);
-
-  final declsByKey = <String, ProcDecl>{
-    for (final d in module.procDeclarations) d.key: d
-  };
-  final compiledDecls = <String, ProcDecl>{
-    for (final d in types.procDecls) d.key: d
-  };
-  final defined = <String>{
-    for (final p in module.procedures) '${p.name}/${p.arity}'
-  };
-  final slotCounts = <String, int>{
-    for (final p in module.procedures)
-      '${p.name}/${p.arity}':
-          p.clauses.where((c) => c.isVolitionGuarded).length
-  };
-
-  final compiled = <CompiledProcedure>[];
-  for (final p in module.procedures) {
-    final decl = declsByKey['${p.name}/${p.arity}'];
-    if (decl == null) {
-      throw StateError(
-          'The procedure ${p.name}/${p.arity} has no declaration.  The '
-          'compilation is typed at both ends and cannot compile an undeclared '
-          'procedure: the ask clause passes each argument of the head by mode '
-          '(Definition "Canonical Compilation").');
-    }
-    compiled.add(compileProcedure(p,
-        decl: decl,
-        isProcedureOfM: (n, a) => defined.contains('$n/$a'),
-        clauseName: (proc, j) => '${proc.name}_$j',
-        slotCountOf: (n, a) => slotCounts['$n/$a'] ?? 0));
-  }
-
-  final pending = pendingTableClauses(
-      module.procedures, (proc, j) => '${proc.name}_$j');
-
-  return CompiledProgram(
-      _emit(module, types, med, compiled, compiledDecls, pending),
-      types,
-      compiled);
-}
-
-String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
-    List<CompiledProcedure> compiled, Map<String, ProcDecl> compiledDecls,
-    PendingTableClauses pending) {
-  final b = StringBuffer();
-  final printer = GlpPrinter();
-
-  b.write(compiledHeader);
-  b.writeln();
-
-  b.writeln('%% --- the source\'s own types ---');
-  for (final td in module.typeDefs) {
-    b.writeln(printTypeDef(td));
-  }
-  b.writeln();
-
-  b.writeln('%% --- the types the compilation adds ---');
-  for (final td in types.typeDefs) {
-    b.writeln(printTypeDef(td));
-  }
-  b.writeln();
-
-  b.writeln('%% --- the mediator\'s vocabulary, instantiated ---');
-  for (final td in med.typeDefs) {
-    b.writeln(printTypeDef(td));
-  }
-  b.writeln();
-
-  if (module.displayDecls.isNotEmpty) {
-    b.writeln('%% --- the display declarations, carried through ---');
-    for (final d in module.displayDecls) {
-      b.writeln(printDisplayDecl(d));
-    }
-    b.writeln();
-  }
-
-  b.writeln('%% --- the compiled agent ---');
-  for (final cp in compiled) {
-    final decl = compiledDecls['${cp.name}/${cp.arity}'];
-    if (decl != null) b.writeln(printProcDecl(decl));
-    for (final c in cp.clauses) {
-      b.writeln(printer.printClause(c));
-    }
-    b.writeln();
-  }
-
-  b.writeln('%% --- the mediator, and the pending table with the program\'s '
-      'clauses ahead of the search clauses ---');
-  final medDecls = <String, ProcDecl>{for (final d in med.procDecls) d.key: d};
-  for (final p in med.procedures) {
-    final decl = medDecls['${p.name}/${p.arity}'];
-    if (decl != null) b.writeln(printProcDecl(decl));
-    // The pending table's answer and close clauses are the program's, one per
-    // volition-guarded clause; the mediator source carries the search clauses
-    // that follow them (Definition "Canonical Compilation").
-    final own = p.name == 'answer' && p.arity == 4
-        ? pending.answer
-        : p.name == 'close' && p.arity == 3
-            ? pending.close
-            : const <ast.Clause>[];
-    for (final c in own) {
-      b.writeln(printer.printClause(c));
-    }
-    for (final c in p.clauses) {
-      b.writeln(printer.printClause(c));
-    }
-    b.writeln();
-  }
-
-  return b.toString();
-}
 
 /// Compile the text of a `.vglp` source to the text of its GLP module.
 ///
 /// A source in the paper's syntax --- `procedure (T)*p(...)`, `(A)*p(...)` ---
-/// compiles by the canonical compilation of vGLP at db03e2d (canonical.dart),
-/// against the dispatcher's generic source in the [mediator]'s directory and
-/// in its [scope].  A source in the old syntax, with volition guards `*(...)`,
-/// keeps its old compilation, against the generic [mediator], kept pending
-/// vGLP's ruling on its retirement; it has none to compile against where
-/// [mediator] is null.  A source in the paper's syntax at
-/// [path] is compiled with the widget declarations of its scope, read from
-/// the self.vglp beside each self.glp from the root down
-/// (scopeWidgetDeclarations), the root being the parent of the [mediator]'s
-/// directory, programs/.
+/// compiles by the canonical compilation (canonical.dart), against the
+/// [dispatcher]'s generic source, programs/vglp/dispatcher.glp, and in its
+/// [scope].  A source in the paper's syntax at [path] is compiled with the
+/// widget declarations of its scope, read from the self.vglp beside each
+/// self.glp from the root, [programsDir], down (scopeWidgetDeclarations).
 ///
 /// "A procedure that reaches a question is exported, imported and shared as
 /// any procedure is, with its ask stream added" (vGLP at a89a751,
@@ -194,8 +46,13 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
 /// scope, is compiled by the canonical compilation, as one in the paper's
 /// syntax is.  [context] is the linked program the source is a module of
 /// ([CanonicalContext]), where the loader compiles it.
+///
+/// A source that is in no syntax of the paper and reaches no question --- one
+/// in the old syntax, with volition guards `*(...)`, which the paper replaced
+/// on 2026-09-23 --- is refused: no compilation of it is defined.
 String compileVglpSource(String text,
-    {MediatorSource? mediator,
+    {DispatcherSource? dispatcher,
+    String? programsDir,
     TypeEnvironment? scope,
     String? path,
     ReachingReader? reachingOf,
@@ -208,25 +65,21 @@ String compileVglpSource(String text,
                   scopeReaching: context?.scopeReaching ?? const {}) ??
               const {})
           .isNotEmpty) {
-    final dir = mediator?.directory;
     final layer = context?.layer ?? false;
     return compileCanonical(text,
-            dispatcher: layer ? null : mediator?.dispatcher,
+            dispatcher: layer ? null : dispatcher,
             scope: scope,
-            scopeWidgets: path != null && dir != null
-                ? scopeWidgetDeclarations(path, Directory(dir).parent.path)
+            scopeWidgets: path != null && programsDir != null
+                ? scopeWidgetDeclarations(path, programsDir)
                 : const {},
             reachingOf: reader,
             context: context)
         .source;
   }
-  if (mediator == null) {
-    throw StateError('${path ?? 'The source'} is in the old syntax, and the '
-        'generic mediator source it compiles against is missing');
-  }
-  final module =
-      Parser(Lexer(text).tokenize(), vglp: true).parseModule();
-  return compileProgram(module, mediator, scope: scope).source;
+  throw StateError('${path ?? 'The source'} is not in the paper\'s syntax and '
+      'reaches no question: a source in the old syntax, with volition guards '
+      '*(...), is not compiled (vGLP, Section 6, "The Implementation: '
+      'Compiling vGLP onto GLP")');
 }
 
 /// The procedures that reach a question of the module [module] that the
@@ -268,12 +121,15 @@ Map<String, String>? _reachingBeside(String importer, String module) {
 /// left alone and reported: switching a deployed program onto its compiled
 /// agent is its own change.
 ///
+/// [dispatcher] and [programsDir] are as compileVglpSource takes them.
 /// [contextFor] and [readerFor] give, where the loader knows the program, the
 /// linked program each source is a module of and the procedures of the
 /// modules it imports from that reach a question, as the load gives them, so
 /// that the text written is the one the load compiles.
-List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
-    {required TypeEnvironment Function(String vglpPath) scopeFor,
+List<String> emitCompiledVglp(String rootDir,
+    {DispatcherSource? dispatcher,
+    String? programsDir,
+    required TypeEnvironment Function(String vglpPath) scopeFor,
     CanonicalContext? Function(String vglpPath)? contextFor,
     ReachingReader? Function(String vglpPath)? readerFor,
     void Function(String message)? onSkip}) {
@@ -309,9 +165,10 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
 
     final text = file.readAsStringSync();
     existing.writeAsStringSync(compileVglpSource(text,
-        mediator: mediator,
-        // The old compilation reads types off the checker in this scope; the
-        // canonical compilation builds the construct processes from it.
+        dispatcher: dispatcher,
+        programsDir: programsDir,
+        // The canonical compilation builds the construct processes from the
+        // types of this scope.
         scope: scopeFor(file.path),
         path: file.path,
         reachingOf: readerFor?.call(file.path),

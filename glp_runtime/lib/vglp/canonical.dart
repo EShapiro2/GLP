@@ -132,7 +132,8 @@ import '../analysis/type_checker/type_ast.dart'
 import 'constructs.dart';
 import 'dispatcher.dart';
 import 'terms.dart';
-import 'type_source.dart';
+import 'mediator.dart' show printTypeDef, typeSource;
+import 'type_walk.dart';
 
 /// The functor of the ask a goal of a volitional procedure sends on its ask
 /// stream, ask(T, t(X)) (vGLP, Definition "Canonical Compilation").
