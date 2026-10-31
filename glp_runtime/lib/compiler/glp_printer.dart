@@ -212,7 +212,7 @@ class GlpPrinter {
     }
 
     if (term is ConstTerm) {
-      return _printConstValue(term.value);
+      return term.toString();  // [constantSource]
     }
 
     if (term is ListTerm) {
@@ -225,14 +225,6 @@ class GlpPrinter {
 
     // Fallback
     return term.toString();
-  }
-
-  /// Print a constant value ([constantSource]).
-  String _printConstValue(Object? value) {
-    if (value == null) {
-      return 'null';
-    }
-    return constantSource(value);
   }
 
   /// Print a list term
@@ -291,16 +283,16 @@ class GlpPrinter {
     return '${functorNameSource(struct.functor)}(${struct.args.map(printTerm).join(', ')})';
   }
 
+  /// The infix operators, printed infix in a clause head or a goal.
+  static const Set<String> _infixOps = {
+    ':=', '=', '\\=', '=..',
+    '+', '-', '*', '/', '//', 'mod',
+    '<', '>', '=<', '>=', '=:=', '=\\=',
+    '=?=', '=?\\=',
+  };
+
   /// Check if a functor is an infix operator
-  bool _isInfixOperator(String functor) {
-    const infixOps = {
-      ':=', '=', '\\=', '=..',
-      '+', '-', '*', '/', '//', 'mod',
-      '<', '>', '=<', '>=', '=:=', '=\\=',
-      '=?=', '=?\\=',
-    };
-    return infixOps.contains(functor);
-  }
+  bool _isInfixOperator(String functor) => _infixOps.contains(functor);
 
   /// The operators the reader reads infix where a term is expected
   /// (parser.dart, `_isOperator`), `#` and the backslash apart, which print
@@ -312,11 +304,11 @@ class GlpPrinter {
     '<', '>', '=<', '>=', '=:=', '=\\=',
   };
 
+  /// The infix guard predicates.
+  static const Set<String> _infixGuards = {
+    '<', '>', '=<', '>=', '=:=', '=\\=', '=?=', '=?\\=',
+  };
+
   /// Check if a guard predicate is infix
-  bool _isInfixGuardOperator(String predicate) {
-    const infixGuards = {
-      '<', '>', '=<', '>=', '=:=', '=\\=', '=?=', '=?\\=',
-    };
-    return infixGuards.contains(predicate);
-  }
+  bool _isInfixGuardOperator(String predicate) => _infixGuards.contains(predicate);
 }

@@ -96,9 +96,8 @@ class VarRef implements Term {
 
   VarRef(this.addr);
 
-  // NOTE: isReader and varId computed properties have been REMOVED: the
-  // cell's tag gives its polarity (IGLP app:in-heap, Variable pairs). Use
-  // heap.isReader(addr) to check type and the cell as the identifier.
+  // The cell's tag gives its polarity (IGLP app:in-heap, Variable pairs):
+  // heap.isReader(addr) checks it, and the cell is the identifier.
 
   @override
   String toString() => 'Var@$addr';

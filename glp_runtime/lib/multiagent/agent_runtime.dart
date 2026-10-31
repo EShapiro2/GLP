@@ -48,7 +48,7 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/runtime/saved_state.dart';
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
-import 'package:glp_runtime/wire/codec.dart' show WireWriter;
+import 'package:glp_runtime/wire/codec.dart' show WireWriter, bytesEqual;
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
@@ -161,11 +161,6 @@ class AgentRuntime {
   /// A cycle is being taken, or one is scheduled to be.
   bool _pumping = false;
 
-  /// The agent's networking layer (seam spec §3-4): outgoing via [send],
-  /// incoming via [GlpNetwork.onMessageReceived]: the one given, or the
-  /// simulation's, which forwards to the coordinator through
-  /// [onSendMadMessage].
-  GlpNetwork? _network;
   GlpRuntime? _runtime;
   MadContext? _ctx;
   Scheduler? _scheduler;
@@ -178,9 +173,6 @@ class AgentRuntime {
   int heapVars = 0;
   int wpSize = 0;
   int mpSize = 0;
-
-  // Enable GLP trace output
-  bool glpTraceEnabled = true;
 
   /// The safety net on one event's reduction: how many goals it may run before
   /// the runtime declares the program non-quiescent and stops. It is not a
@@ -368,7 +360,8 @@ class AgentRuntime {
       _output('< ${formatGroundTerm(term)}');
     };
 
-    // Networking seam (spec §3-4): route outgoing/incoming through the
+    // Networking seam (IGLP, Implementation Notes, "Networking Seam"): route
+    // outgoing/incoming through the
     // agent's GlpNetwork instead of serializing OutboundMessages directly ---
     // the one given, or, where none is, the simulation's.  The wire carries
     // the opaque payload bytes only (no MessageType).
@@ -411,7 +404,8 @@ class AgentRuntime {
     // goal's shape, not its name.  The goal holds the readers of the two
     // input streams, and the host their writers: the person's, to inject
     // the person's acts, and the network's, the index-0 serializer entry
-    // (Spec Section 4.1: permanent entry mapping _r(p, 0) to local writer).
+    // (IGLP Definition Index-0 Serializer: permanent entry mapping _r(p, 0)
+    // to local writer).
     final goalName = goalLabel.split('/').first;
     final goalArity = int.parse(goalLabel.split('/').last);
     final takesUserIn = goalArity == extraArgs.length + 3;
@@ -468,7 +462,7 @@ class AgentRuntime {
       throw StateError('the saved state is agent ${r.agentName}\'s, and this '
           'agent is $name');
     }
-    if (!_sameBytes(r.agentKey, _kp!.pub.bytes)) {
+    if (!bytesEqual(r.agentKey, _kp!.pub.bytes)) {
       throw StateError('the saved state is of the agent of key '
           '${PubKey(r.agentKey).hex}, and this agent runs under '
           '${_kp!.pub.hex}: an agent has one key, which survives the '
@@ -476,7 +470,7 @@ class AgentRuntime {
     }
     final image = codeImageFromProgram(engine.combinedProgram);
     final identity = _codeIdentity(image);
-    if (!_sameBytes(r.programIdentity, identity)) {
+    if (!bytesEqual(r.programIdentity, identity)) {
       throw StateError('the saved state is of another program than $program '
           'compiles to: the program counters of its goals index other code');
     }
@@ -531,14 +525,6 @@ class AgentRuntime {
     }
     w.bytes(image.code);
     return Uint8List.fromList(crypto.sha256.convert(w.toBytes()).bytes);
-  }
-
-  static bool _sameBytes(List<int> a, List<int> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
   }
 
   // =========================================================================
@@ -616,23 +602,36 @@ class AgentRuntime {
     }
   }
 
-  /// Take [step] --- the event applied, or a run after a hand-over --- and save the state it leaves: the status of the step's run, and the number of goals it ran.  Where the save fails, the agent goes back to the state saved before the step ([_rollBack]) and takes it again, and says so in [again].  A state that cannot be written is a fault of the runtime, not a failed save, and ends the cycle with the error.
+  /// Take [step] --- the event applied, or a run after a hand-over --- and save the state it leaves: the status of the step's run, and the number of goals it ran.  Where the save fails, the agent goes back to the state saved before the step ([_rollBack]) and takes it again, and says so in [again].
   Future<(String?, int)> _stepAndSave(
       AgentStateStore store, String? Function() step, String again) async {
-    while (true) {
+    String? status;
+    var goals = 0;
+    await _saveUntilKept(store, () {
       final before = goalCount;
-      final status = step();
-      final goals = goalCount - before;
-      final state = _snapshot();
+      status = step();
+      goals = goalCount - before;
+      return _snapshot();
+    }, (e) {
+      _log('SAVE FAILED: $e; $again from the state saved before it');
+      _output('[ERROR] the agent\'s state was not saved: $e; $again');
+      _rollBack();
+    });
+    return (status, goals);
+  }
+
+  /// Save in [store] the state [state] makes, and hold it as the state last saved, its messages not yet handed over ([_lastSaved]).  Where the save fails, [failed] takes the error --- it says so, and puts the agent where the state is to be made from --- and the state is made and saved again, until it is kept.  A state that cannot be written is a fault of the runtime, not a failed save, and ends the cycle with the error.
+  Future<void> _saveUntilKept(AgentStateStore store,
+      Uint8List Function() state, void Function(Object e) failed) async {
+    while (true) {
+      final bytes = state();
       try {
-        await store.save(state);
-        _lastSaved = state;
+        await store.save(bytes);
+        _lastSaved = bytes;
         _lastSavedHandedOver = false;
-        return (status, goals);
+        return;
       } catch (e) {
-        _log('SAVE FAILED: $e; $again from the state saved before it');
-        _output('[ERROR] the agent\'s state was not saved: $e; $again');
-        _rollBack();
+        failed(e);
       }
     }
   }
@@ -648,18 +647,11 @@ class AgentRuntime {
   /// Save the state after the last hand-over of a cycle, which holds the messages handed over delivered, so that a restart from it does not hand them over again.  Where the save fails it is made again: the state is the one the agent holds, and nothing of the cycle is to be taken again.
   Future<void> _saveHandedOver(AgentStateStore store) async {
     final state = _snapshot();
-    while (true) {
-      try {
-        await store.save(state);
-        _lastSaved = state;
-        _lastSavedHandedOver = false;
-        return;
-      } catch (e) {
-        _log('SAVE FAILED: $e; the state after the hand-over is saved again');
-        _output('[ERROR] the agent\'s state was not saved: $e; it is saved '
-            'again');
-      }
-    }
+    await _saveUntilKept(store, () => state, (e) {
+      _log('SAVE FAILED: $e; the state after the hand-over is saved again');
+      _output('[ERROR] the agent\'s state was not saved: $e; it is saved '
+          'again');
+    });
   }
 
   /// Go back to the state saved before the step in progress: the engine made again and the state read back, or, before any state was saved, a fresh engine for the boot.  Where the messages that state holds undelivered have been handed to the layer since it was saved, they are taken out of M_p, so that none is handed over twice.
@@ -694,14 +686,10 @@ class AgentRuntime {
         }
         updateStats();
       case _Input(:final act):
-        final input = _userInput;
-        if (input == null) {
-          _log('USER_INPUT: $goalLabel takes no person stream; the act is '
-              'dropped');
-          return null;
-        }
+        // The act was submitted by [injectUserInput], which drops it where
+        // the entry takes no person stream.
         try {
-          final activations = input.inject(act);
+          final activations = _userInput!.inject(act);
           _log('USER_INPUT: ${activations.length} activations');
           for (final goal in activations) {
             _runtime!.gq.enqueue(goal);
@@ -746,7 +734,6 @@ class AgentRuntime {
   /// "Event-driven execution": "On each event the agent binds what the event
   /// delivers, reduces until quiescent ... and then performs its Sends").
   void _bindGivenNetwork(GlpNetwork network) {
-    _network = network;
     _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
 
     // Outgoing: the destination's name is its key.  A destination that is no
@@ -798,15 +785,14 @@ class AgentRuntime {
       sendToRouter: (toId, payload) =>
           _sendMadPayload(toId, Uint8List.fromList(payload)),
     );
-    _network = network;
     _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
 
-    // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
+    // Outgoing: ctx.onMessageReady(destId, msg) → network.send.
     _ctx!.onMessageReady = (destination, msg) async {
       network.send(_pkFor(destination), Uint8List.fromList(msg.payload));
     };
 
-    // Incoming (spec §4): dispatch on the message kind byte (value/request/
+    // Incoming: dispatch on the message kind byte (value/request/
     // acknowledgement) via the MadContext receive entry point.  The sender is
     // the agent the directory names by the key the layer authenticated; a key
     // it names no agent by is a fault --- the layer authenticates every
@@ -866,8 +852,9 @@ class AgentRuntime {
   // NETWORK MESSAGES
   // =========================================================================
 
-  /// Handle an incoming madGLP message (seam §4): the opaque payload bytes are
-  /// surfaced to the networking layer, which deserializes and dispatches them.
+  /// Handle an incoming madGLP message (IGLP, Implementation Notes,
+  /// "Networking Seam"): the opaque payload bytes are surfaced to the
+  /// networking layer, which deserializes and dispatches them.
   /// The simulation's delivery, which its coordinator makes; a given network
   /// delivers its own messages, and a delivery here is refused.  Completes
   /// when the message's cycle is complete --- saved, where the agent has a
@@ -882,8 +869,7 @@ class AgentRuntime {
           'delivers its messages; a coordinator delivers none');
     }
 
-    final network = _network;
-    if (_runtime == null || _ctx == null || network == null) {
+    if (_runtime == null || _ctx == null) {
       _log('MAD_RECV: ERROR - runtime/ctx/network is null');
       return;
     }
@@ -939,9 +925,9 @@ class AgentRuntime {
           ? _scheduler!.drainAndSend(
               () => messagesFlushed += _ctx!.flushMessages(),
               maxCycles: limit,
-              debug: glpTraceEnabled)
+              debug: true)
           : _scheduler!
-              .drainToQuiescence(maxCycles: limit, debug: glpTraceEnabled);
+              .drainToQuiescence(maxCycles: limit, debug: true);
       _log('RUN: status=${result.status}, goals=${result.goalsRun}');
       goalCount += result.goalsRun;
 
@@ -973,23 +959,6 @@ class AgentRuntime {
   // =========================================================================
   // TERM UTILITIES
   // =========================================================================
-
-  rt.Term derefTerm(rt.Term term) {
-    if (_runtime == null) return term;
-
-    if (term is rt.VarRef) {
-      final value = _runtime!.heap.getValue(term.addr);
-      if (value != null && value is! rt.VarRef) {
-        return derefTerm(value);
-      }
-      return term;
-    }
-    if (term is rt.StructTerm) {
-      final derefArgs = term.args.map(derefTerm).toList();
-      return rt.StructTerm(term.functor, derefArgs);
-    }
-    return term;
-  }
 
   String formatTerm(rt.Term term) {
     if (term is rt.ConstTerm) {

@@ -1,14 +1,14 @@
-/// GLP instruction encoding (D3 wire format, §4).
+/// GLP instruction encoding.
 ///
 /// Normative source: the IGLP paper appendix `app:code-format`,
 /// §cf-instructions. An encoded instruction is a u8 opcode followed by its
 /// operands in the order the opcode table lists. Instruction *semantics* are the
 /// companion GLP paper's; this assigns bytes.
 ///
-/// Operand kinds (§4.1):
+/// Operand kinds:
 ///  - polarity: u8 (0 writer, 1 reader)
 ///  - varIndex/argSlot/arity/count/slots/regIndex: clen
-///  - constant: the §3.1 constant payload (u8 tag + payload)
+///  - constant: the constant payload (u8 tag + payload)
 ///  - functor:  string
 ///  - proc:     clen index into the artefact's symbol table (a compiled
 ///              procedure, or a codeless kernel/builtin-guard bound by name)
@@ -17,7 +17,7 @@
 /// Symbol references on the wire are table indices, never names; clause targets
 /// are procedure-relative instruction indices. Assembly `Label`s do not exist on
 /// the wire — [encodeCode] strips them and resolves the indices. The caller
-/// supplies the name<->index maps (the artefact's symbol table in S4; bijective
+/// supplies the name<->index maps (the artefact's symbol table; bijective
 /// stubs in tests).
 library;
 
@@ -25,7 +25,7 @@ import 'dart:typed_data';
 import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/wire/codec.dart';
 
-/// §4.2 opcode bytes.
+/// The opcode bytes.
 class Opcode {
   static const int clauseTry = 0x01;
   static const int clauseNext = 0x02;

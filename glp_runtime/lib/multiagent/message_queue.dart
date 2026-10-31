@@ -69,14 +69,12 @@ class OutboundMessage {
   }
 }
 
-/// Message Queue (M_p) for managing outbound messages
+/// Message Queue (M_p): the outgoing messages, in a FIFO queue per
+/// destination, each with its held mark ([OutboundMessage.held]).
 /// 
-/// Maintains FIFO ordering per destination and ensures at-most-once delivery.
-/// 
-/// Properties:
-/// - FIFO per destination: Messages to same agent delivered in order
-/// - At-most-once: Each message delivered at most once
-/// - Eventual delivery: All queued messages eventually delivered (assuming connectivity)
+/// [poll] takes a destination's oldest sendable message, passing over the
+/// held ones, which stay in place until authorisation clears their mark or a
+/// refusal removes them ([remove]).
 class MessageQueue {
   /// Queues indexed by destination agent ID
   final Map<String, Queue<OutboundMessage>> _queuesByDestination = {};
@@ -112,13 +110,8 @@ class MessageQueue {
     } else {
       // Some held message is at the head; take the first sendable one behind
       // it, preserving order among sendable messages.
-      final rest = queue.toList();
-      final idx = rest.indexWhere((m) => !m.held);
-      if (idx < 0) return null;
-      message = rest.removeAt(idx);
-      queue
-        ..clear()
-        ..addAll(rest);
+      message = _takeFirst(queue, (m) => !m.held);
+      if (message == null) return null;
     }
 
     // Clean up empty queue
@@ -144,11 +137,7 @@ class MessageQueue {
   /// Remove [message] from M_p wherever it sits. Used when a link is refused.
   bool remove(OutboundMessage message) {
     for (final entry in _queuesByDestination.entries) {
-      final rest = entry.value.toList();
-      if (rest.remove(message)) {
-        entry.value
-          ..clear()
-          ..addAll(rest);
+      if (_takeFirst(entry.value, (m) => m == message) != null) {
         if (entry.value.isEmpty) {
           _queuesByDestination.remove(entry.key);
         }
@@ -156,6 +145,21 @@ class MessageQueue {
       }
     }
     return false;
+  }
+
+  /// Take out of [queue] the first message satisfying [test], keeping the
+  /// others in order, and return it; null, and [queue] unchanged, where none
+  /// does.
+  static OutboundMessage? _takeFirst(
+      Queue<OutboundMessage> queue, bool Function(OutboundMessage) test) {
+    final rest = queue.toList();
+    final idx = rest.indexWhere(test);
+    if (idx < 0) return null;
+    final taken = rest.removeAt(idx);
+    queue
+      ..clear()
+      ..addAll(rest);
+    return taken;
   }
 
   /// Number of held messages across all destinations.
@@ -186,23 +190,6 @@ class MessageQueue {
     return removed;
   }
   
-  /// Peek at the next message for a destination without removing it
-  /// 
-  /// Returns null if no messages are queued for this destination.
-  OutboundMessage? peek(String destination) {
-    final queue = _queuesByDestination[destination];
-    if (queue == null || queue.isEmpty) {
-      return null;
-    }
-    return queue.first;
-  }
-  
-  /// Get the number of messages queued for a destination
-  int countFor(String destination) {
-    final queue = _queuesByDestination[destination];
-    return queue?.length ?? 0;
-  }
-  
   /// Get all destinations that have queued messages
   List<String> get destinations {
     return _queuesByDestination.keys.toList();
@@ -213,20 +200,10 @@ class MessageQueue {
     return _queuesByDestination.isEmpty;
   }
   
-  /// Check if queue has messages
-  bool get isNotEmpty {
-    return _queuesByDestination.isNotEmpty;
-  }
-  
   /// Total number of messages across all destinations
   int get totalLength {
     return _queuesByDestination.values
         .fold(0, (sum, queue) => sum + queue.length);
-  }
-  
-  /// Clear all messages for all destinations
-  void clear() {
-    _queuesByDestination.clear();
   }
 
   /// Write the outgoing messages into the agent's saved state, by destination
@@ -279,37 +256,6 @@ class MessageQueue {
     }
   }
   
-  /// Clear all messages for a specific destination
-  void clearFor(String destination) {
-    _queuesByDestination.remove(destination);
-  }
-  
-  /// Get all messages for a destination (without removing them)
-  /// 
-  /// Returns an empty list if no messages are queued.
-  List<OutboundMessage> peekAll(String destination) {
-    final queue = _queuesByDestination[destination];
-    if (queue == null) {
-      return [];
-    }
-    return List.unmodifiable(queue);
-  }
-  
-  /// Poll all messages for a destination
-  /// 
-  /// Returns an empty list if no messages are queued.
-  /// Removes all messages from the queue.
-  List<OutboundMessage> pollAll(String destination) {
-    final queue = _queuesByDestination[destination];
-    if (queue == null || queue.isEmpty) {
-      return [];
-    }
-    
-    final messages = List<OutboundMessage>.from(queue);
-    _queuesByDestination.remove(destination);
-    return messages;
-  }
-  
   @override
   String toString() {
     if (isEmpty) {
@@ -318,7 +264,7 @@ class MessageQueue {
     
     final buffer = StringBuffer('MessageQueue:\n');
     for (final destination in destinations) {
-      final count = countFor(destination);
+      final count = _queuesByDestination[destination]!.length;
       buffer.writeln('  $destination: $count message(s)');
     }
     return buffer.toString();

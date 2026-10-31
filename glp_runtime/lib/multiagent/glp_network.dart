@@ -28,6 +28,8 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:glp_runtime/wire/codec.dart' show bytesEqual;
+
 /// The underlay a peer is reachable over: GNA, "Networking API": "An Underlay
 /// is one of PAN, LAN or WAN; a peer may be reachable over more than one
 /// underlay at a time."  Until 2026-10-11 the interface had a transport, ble
@@ -90,14 +92,8 @@ class PubKey {
   }
 
   @override
-  bool operator ==(Object other) {
-    if (other is! PubKey) return false;
-    if (bytes.length != other.bytes.length) return false;
-    for (var i = 0; i < bytes.length; i++) {
-      if (bytes[i] != other.bytes[i]) return false;
-    }
-    return true;
-  }
+  bool operator ==(Object other) =>
+      other is PubKey && bytesEqual(bytes, other.bytes);
 
   @override
   int get hashCode => Object.hashAll(bytes);

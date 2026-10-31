@@ -55,9 +55,6 @@ class HeapCell {
   /// by its serial number.
   @override
   String toString() => '$id';
-
-  bool get hasValue => tag == CellTag.ValueTag;
-  bool get hasSuspensions => content is WriterContent && (content as WriterContent).suspensions != null;
 }
 
 /// Pointer to another cell (heap address)
@@ -72,8 +69,8 @@ class Pointer {
 
 /// Compound content for unbound writer with suspensions.
 ///
-/// Per spec v3.2 Section 2.3: When suspensions are added to an unbound writer,
-/// the reader pointer is preserved in this compound structure.
+/// When suspensions are added to an unbound writer, the reader pointer is
+/// preserved in this compound structure (IGLP app:in-heap, Suspension).
 /// This enables readerForWriter() to work even when suspensions are present.
 class WriterContent {
   final HeapCell readerAddr;  // Pointer to paired reader (preserved)
@@ -102,7 +99,7 @@ class HeapFCP {
   /// of cells allocated so far.  No cell is found by it.
   int HP = 0;
 
-  /// Callbacks for external observation (Phase 0 I/O)
+  /// Callbacks for external observation of a writer's binding.
   /// Keyed by the writer cell.  Each carries the tag its registrar gave it,
   /// by which the registrar makes it again for a restarted agent: a callback
   /// is code, and the agent's saved state holds its tag and the cell it sits
@@ -111,13 +108,13 @@ class HeapFCP {
       _bindCallbacks = {};
 
   // ==========================================================================
-  // Variable Allocation (Section 3 of spec)
+  // Variable Allocation (IGLP app:in-heap, Variable pairs)
   // ==========================================================================
 
   /// Allocate a fresh local variable
   /// Returns (writerAddr, readerAddr) tuple
   ///
-  /// Per spec v3.2 Section 3.1 (FCP pattern):
+  /// The FCP pattern (IGLP app:in-heap, Variable pairs):
   /// - Writer cell: Pointer to reader (bidirectional)
   /// - Reader cell: Pointer to writer
   /// Both cells point to each other enabling navigation without arithmetic.
@@ -153,13 +150,11 @@ class HeapFCP {
   bool isValue(HeapCell addr) => addr.tag == CellTag.ValueTag;
 
   // ==========================================================================
-  // Pointer Navigation (Section 7 of spec)
+  // Pointer Navigation (IGLP app:in-heap, Variable pairs)
   // ==========================================================================
 
-  /// Get writer address from reader address by following pointer
-  /// Try to get writer address from a reader address.
-  ///
-  /// Per spec Section 7.1: Follow the reader's pointer to get the writer.
+  /// Try to get the writer address from a reader address, by following the
+  /// reader's pointer (IGLP app:in-heap, Variable pairs).
   ///
   /// **Returns:**
   /// - the writer for a reader (cell.content is Pointer)
@@ -178,7 +173,8 @@ class HeapFCP {
 
   /// Find the paired reader for an unbound writer (FCP pattern).
   ///
-  /// Per spec v3.2 Section 7.2: Follow the writer's pointer to find its paired reader.
+  /// Follow the writer's pointer to find its paired reader (IGLP app:in-heap,
+  /// Variable pairs).
   /// Returns null if writer is bound (pointer no longer points to paired reader).
   ///
   /// For code that needs the reader address regardless of binding state,
@@ -216,7 +212,8 @@ class HeapFCP {
   /// Get the paired reader address for a writer (works for bound and unbound).
   ///
   /// Recovered from [HeapCell.pairedReader] (recorded at allocation, survives
-  /// binding) — no `reader = writer + 1` arithmetic (known-issues Issue 9 fix).
+  /// binding) — no `reader = writer + 1` arithmetic (IGLP app:in-heap, Variable
+  /// pairs: no address arithmetic relates the two ends of a pair).
   /// Falls back to the bidirectional pointer for any writer without one;
   /// throws if neither yields a reader, rather than guessing.
   HeapCell pairedReaderAddr(HeapCell writerAddr) {
@@ -233,7 +230,7 @@ class HeapFCP {
   }
 
   // ==========================================================================
-  // Dereferencing (Section 4 of spec)
+  // Dereferencing (IGLP app:in-heap, Dereferencing)
   // ==========================================================================
 
   /// Dereference a cell: follow its chain to the end, a value or an unbound
@@ -279,7 +276,7 @@ class HeapFCP {
 
       final cell = current;
 
-      // Per spec Section 4.5: WxW detection during deref
+      // WxW detection during deref (IGLP app:in-heap, Dereferencing)
       // If we followed a pointer from a writer and landed on another writer, that's a violation
       if (previousTag == CellTag.WrtTag && cell.tag == CellTag.WrtTag) {
         throw StateError('SRSW violation: writer at $previous points to writer at $current');
@@ -357,12 +354,12 @@ class HeapFCP {
   }
 
   // ==========================================================================
-  // Binding (Section 5 of spec)
+  // Binding (IGLP app:in-heap, Binding)
   // ==========================================================================
 
   /// Bind a writer to a ground term value
   ///
-  /// Per spec Section 5.1:
+  /// IGLP app:in-heap, Binding:
   /// - Changes writer tag to ValueTag
   /// - Stores value as content
   /// - Activates any suspensions on the writer
@@ -433,12 +430,7 @@ class HeapFCP {
   void fireBoundCallbacks() {
     if (_bindCallbacks.isEmpty) return;
     for (final addr in _bindCallbacks.keys.toList()) {
-      if (!isFullyBound(addr)) continue;
-      final callback = _bindCallbacks.remove(addr);
-      final value = getValue(addr);
-      if (callback != null && value != null) {
-        callback.fn(value);
-      }
+      if (isFullyBound(addr)) firePendingCallback(addr);
     }
   }
 
@@ -457,7 +449,7 @@ class HeapFCP {
 
   /// Bind a writer to another variable (via its reader)
   ///
-  /// Per spec Section 5.3 (v3.5):
+  /// IGLP app:in-heap, Binding:
   /// - Stores Pointer(readerAddr) in writer cell
   /// - Suspensions go where dereferencing the reader leads: forwarded to the
   ///   final unbound writer of the chain; activated when the chain already
@@ -484,7 +476,7 @@ class HeapFCP {
     final chainEnd = derefAddr(readerAddr);
 
     // Route this writer's suspensions to wherever the chain leads
-    // (spec Section 5.3 v3.5). One-hop forwarding is wrong on both ends: the
+    // (IGLP app:in-heap, Binding). One-hop forwarding is wrong on both ends: the
     // one-hop writer may itself be chain-bound onward, and a chain that
     // already ends in a value must activate, not forward.
     final wcontent = writerCell.content;
@@ -519,19 +511,19 @@ class HeapFCP {
 
   /// Bind writer to writer (WxW violation)
   ///
-  /// Per spec Section 5.2: This is forbidden and should throw
+  /// Forbidden (IGLP app:in-heap, Binding): throws.
   void bindWriterToWriter(HeapCell w1, HeapCell w2) {
     throw StateError('WxW violation: cannot bind writer $w1 to writer $w2');
   }
 
   // ==========================================================================
-  // Suspension (Section 6 of spec)
+  // Suspension (IGLP app:in-heap, Suspension)
   // ==========================================================================
 
   /// Add a suspension to a writer cell
   ///
-  /// Per spec v3.2 Section 6.1: Suspensions are stored on writer cells using
-  /// WriterContent to preserve the reader pointer.
+  /// Suspensions are stored on writer cells (IGLP app:in-heap, Suspension),
+  /// using WriterContent to preserve the reader pointer.
   void suspendOnWriter(HeapCell writerAddr, SuspensionRecord record) {
     final cell = writerAddr;
     if (cell.tag != CellTag.WrtTag) {
@@ -539,24 +531,34 @@ class HeapFCP {
     }
 
     final node = SuspensionListNode(record);
+    if (!_pushSuspension(cell, node)) {
+      throw StateError(
+          'suspendOnWriter: unexpected content ${cell.content} at $writerAddr');
+    }
+  }
 
-    // FCP pattern: preserve reader pointer using WriterContent
+  /// Put [node] at the head of [cell]'s suspension list: a writer holding a
+  /// [WriterContent] gets it there; one holding a [Pointer], unbound with no
+  /// suspension yet, is given a [WriterContent] that preserves its reader
+  /// pointer.  False, and nothing done, for a cell holding neither.
+  static bool _pushSuspension(HeapCell cell, SuspensionListNode node) {
     final c = cell.content;
     if (c is WriterContent) {
-      // Already has WriterContent - add to suspension list
       node.next = c.suspensions;
       c.suspensions = node;
-    } else if (c is Pointer) {
-      // First suspension: convert Pointer to WriterContent
-      cell.content = WriterContent(c.targetAddr, node);
-    } else {
-      throw StateError('suspendOnWriter: unexpected content $c at $writerAddr');
+      return true;
     }
+    if (c is Pointer) {
+      cell.content = WriterContent(c.targetAddr, node);
+      return true;
+    }
+    return false;
   }
 
   /// Add a suspension via a reader (finds writer and adds there)
   ///
-  /// Per spec Section 6.1: Find the reader's writer and add suspension there
+  /// Find the reader's writer and add the suspension there (IGLP app:in-heap,
+  /// Suspension).
   void suspendOnReader(HeapCell readerAddr, SuspensionRecord record) {
     final cell = readerAddr;
     final c = cell.content;
@@ -570,25 +572,15 @@ class HeapFCP {
 
   /// Forward suspensions from one writer to another
   ///
-  /// Per spec v3.2: Target writer uses WriterContent to preserve reader pointer.
+  /// The target writer uses WriterContent to preserve its reader pointer.
   void _forwardSuspensions(SuspensionListNode? list, HeapCell targetWriterAddr) {
     var current = list;
     while (current != null) {
       if (current.armed) {
-        // Create new node sharing the same record
+        // Create new node sharing the same record; a bound target takes
+        // none ([_pushSuspension] false).
         final newNode = SuspensionListNode(current.record);
-        final targetCell = targetWriterAddr;
-        final tc = targetCell.content;
-
-        if (tc is WriterContent) {
-          // Target already has WriterContent - add to its suspension list
-          newNode.next = tc.suspensions;
-          tc.suspensions = newNode;
-        } else if (tc is Pointer) {
-          // Target is unbound with no suspensions - create WriterContent
-          targetCell.content = WriterContent(tc.targetAddr, newNode);
-        }
-        // Ignore other cases (e.g., bound targets)
+        _pushSuspension(targetWriterAddr, newNode);
       }
       current = current.next;
     }
@@ -679,7 +671,7 @@ class HeapFCP {
   }
 
   // ==========================================================================
-  // Compatibility Methods (for gradual migration of callers)
+  // Compatibility Methods: aliases of the methods above, which the tests call
   // ==========================================================================
 
   /// Bind variable to a term (compatibility wrapper)
@@ -689,8 +681,8 @@ class HeapFCP {
       if (isReader(value.addr)) {
         return bindWriterToReader(writerAddr, value.addr);
       } else if (isWriter(value.addr)) {
-        bindWriterToWriter(writerAddr, value.addr);  // Will throw
-        return [];
+        throw StateError(
+            'WxW violation: cannot bind writer $writerAddr to writer ${value.addr}');
       }
     }
     return bindWriter(writerAddr, value);
@@ -768,34 +760,13 @@ class HeapFCP {
     return null;
   }
 
-  /// Legacy: Get suspension list (now on writer via WriterContent)
-  SuspensionListNode? getSuspensions(HeapCell writerAddr) {
-    final c = writerAddr.content;
-    if (c is WriterContent) {
-      return c.suspensions;
-    }
-    return null;
-  }
-
-  /// Legacy: Add suspension (now on writer via WriterContent)
-  void addSuspension(HeapCell writerAddr, SuspensionListNode node) {
-    final cell = writerAddr;
-    final c = cell.content;
-    if (c is WriterContent) {
-      node.next = c.suspensions;
-      c.suspensions = node;
-    } else if (c is Pointer) {
-      cell.content = WriterContent(c.targetAddr, node);
-    }
-  }
-
   // ==========================================================================
-  // Term Storage Helper (for Heap-Only Argument Registers per spec v2.16.3)
+  // Term Storage Helper (for Heap-Only Argument Registers)
   // ==========================================================================
 
   /// Store a Term on the heap and return the cell holding it.
   ///
-  /// Per spec Section 1.1 (Heap-Only Requirement):
+  /// The heap-only requirement on argument registers (IGLP app:in-heap):
   /// All data passed through argument registers MUST be heap-allocated.
   /// Direct ConstTerm and StructTerm objects are NOT permitted in CallEnv.
   ///

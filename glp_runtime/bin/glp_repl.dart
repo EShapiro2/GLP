@@ -122,7 +122,7 @@ void main() async {
       }
       try {
         final compiler = GlpEngine(
-            rootSelfGlpPath: rootSelfGlpPath, identity: engine.identity);
+            rootSelfGlpPath: engine.rootSelfGlpPath, identity: engine.identity);
         compiler.loadProgram(progDir);
         final module = compiler.appModule!;
         final artefact = module.artefact as Artefact;
@@ -418,10 +418,8 @@ void _printHelp() {
 /// shown `X<n>`, `X<n>?` for a reader.  Until 2026-10-04 a constant was shown
 /// unquoted, as send_to_user/1 shows it to the person, which stays as it is
 /// (body_kernels.dart, `formatGroundTerm`): `'G'` was shown `G`, a variable.
-String _formatTerm(rt.Term? term, [GlpEngine? engine]) {
-  if (term == null) return '[]';
+String _formatTerm(rt.Term term, GlpEngine engine) {
   if (term is rt.VarRef) return term.toString();
-  if (engine == null) return formatTerm(term);
   final heap = engine.runtime.heap;
   return formatTerm(term,
       deref: (v) => heap.dereference(v),

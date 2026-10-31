@@ -89,6 +89,82 @@ class Parser {
 
   /// Parse tokens into a Module AST (includes declarations)
   Module parseModule() {
+    final directives = _parseDirectives();
+
+    // Parse type definitions, procedure declarations, and clauses in order.
+    // The rules of TGLP (typed-glp.tex, the typed program):
+    // - Type definitions can appear anywhere before first use
+    // - Procedure declarations must appear immediately before the first clause
+    // - All clauses for a procedure must be contiguous
+    final items = _ModuleItems();
+
+    while (!_isAtEnd()) {
+      if (!vglp) _refuseVolitionalSyntax();
+
+      // A procedure declaration: 'procedure ...', 'exported procedure ...' or
+      // 'imported procedure ...', a name after the keyword and its parameter
+      // list ([_atProcDeclaration]); any other item beginning `procedure` is a
+      // clause of the procedure of that name.
+      final isProcedureDecl = _atProcDeclaration();
+
+      if (_atDisplayDecl()) {
+        // A display declaration is a declaration, not a clause, so it does not
+        // break the run of clauses a pending procedure declaration is waiting
+        // for; it may stand anywhere a type definition may.
+        items.displayDecls.add(_parseDisplayDecl());
+      } else if (isProcedureDecl) {
+        _parseProcDeclarationItem(items);
+      } else if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+        // Might be a type definition (TypeName ::= ...) or a clause head
+        final startPos = _current;
+        final token = _peek();
+
+        // Look ahead to see if this is a type definition (has ::=)
+        if (_isTypeDefinition()) {
+          _parseTypeDefItem(items, token);
+        } else {
+          // It's a clause - parse the procedure
+          _current = startPos;
+          _addProcedure(items, _parseProcedure());
+        }
+      } else if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE) ||
+          (vglp && (_check(TokenType.STAR) || _check(TokenType.LPAREN)))) {
+        // Clause starting with an atom (procedure name), `procedure` among
+        // them where no declaration begins there, or, in a .vglp source, with
+        // the interactive term `(A)*` of a clause of a volitional procedure or
+        // the volition guard `*(...)` preceding one.
+        _addProcedure(items, _parseProcedure());
+      } else {
+        // Unexpected token
+        throw CompileError(
+          'Unexpected token: ${_peek().lexeme}',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
+    }
+
+    // Check for dangling procedure declaration at end of file
+    final pending = items.pendingProcDecl;
+    if (pending != null) _requireClausesOf(pending);
+
+    return Module(
+      typeDefs: items.typeDefs,
+      procDeclarations: items.procDeclarations,
+      procedures: items.procedures,
+      compileMode: directives.compileMode,
+      exposes: directives.exposes,
+      displayDecls: items.displayDecls,
+      volitionalDeclarations: items.volitionalDecls,
+      line: 1,
+      column: 1,
+    );
+  }
+
+  /// The directives at the start of the file, `-mode(system).` and
+  /// `-expose(M).`: the compile mode and the exposed module paths.
+  ({CompileMode compileMode, List<String> exposes}) _parseDirectives() {
     CompileMode compileMode = CompileMode.user;  // default: user mode
     final exposes = <String>[];  // `-expose(M).` module paths
 
@@ -166,216 +242,117 @@ class Parser {
       }
     }
 
-    // Parse type definitions, procedure declarations, and clauses in order.
-    // New rules (per typed-program.md):
-    // - Type definitions can appear anywhere before first use
-    // - Procedure declarations must appear immediately before the first clause
-    // - All clauses for a procedure must be contiguous
-    final typeDefs = <TypeDef>[];
-    final procDeclarations = <ProcDecl>[];
-    final procedures = <Procedure>[];
-    final displayDecls = <DisplayDecl>[];
-    final volitionalDecls = <VolitionalDeclaration>[];
 
-    // Track pending procedure declaration (waiting for its first clause)
-    ProcDecl? pendingProcDecl;
-    // Whether the pending declaration is a volitional procedure's.
-    var pendingVolitional = false;
-    // Track which procedures we've seen clauses for (signature -> first Procedure)
-    final seenProcedures = <String, Procedure>{};
+    return (compileMode: compileMode, exposes: exposes);
+  }
 
-    while (!_isAtEnd()) {
-      if (!vglp) _refuseVolitionalSyntax();
+  /// Whether the pending declaration [pending] must be followed by clauses:
+  /// a builtin's or an imported one's needs none.
+  static bool _needsClauses(ProcDecl pending) {
+    final pendingSig = '${pending.name}/${pending.argTypes.length}';
+    return !builtinProcedures.contains(pendingSig) && !pending.imported;
+  }
 
-      // A procedure declaration: 'procedure ...', 'exported procedure ...' or
-      // 'imported procedure ...', a name after the keyword and its parameter
-      // list ([_atProcDeclaration]); any other item beginning `procedure` is a
-      // clause of the procedure of that name.
-      final isProcedureDecl = _atProcDeclaration();
-
-      if (_atDisplayDecl()) {
-        // A display declaration is a declaration, not a clause, so it does not
-        // break the run of clauses a pending procedure declaration is waiting
-        // for; it may stand anywhere a type definition may.
-        displayDecls.add(_parseDisplayDecl());
-      } else if (isProcedureDecl) {
-        // Procedure declaration (possibly exported or imported)
-        if (pendingProcDecl != null) {
-          // Check if the pending declaration is for a builtin or imported (no clauses needed)
-          final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
-          if (!builtinProcedures.contains(pendingSig) && !pendingProcDecl.imported) {
-            throw CompileError(
-              'Procedure declaration for "${pendingProcDecl.name}" has no clauses.\n'
-              '  A procedure declaration must be immediately followed by its clauses.',
-              pendingProcDecl.line,
-              pendingProcDecl.column,
-              phase: 'parser'
-            );
-          }
-          // Builtin or imported - clear pending without error
-          pendingProcDecl = null;
-        }
-        final volitional = vglp && _interactiveDeclarationAt(_current) != null;
-        final decl = _parseProcDeclaration();
-        procDeclarations.add(decl);
-        if (volitional) volitionalDecls.add(VolitionalDeclaration(decl));
-        // Imported procedures are declaration-only — no clauses expected
-        if (!decl.imported) {
-          pendingProcDecl = decl;
-          pendingVolitional = volitional;
-        }
-      } else if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
-        // Might be a type definition (TypeName ::= ...) or a clause head
-        final startPos = _current;
-        final token = _peek();
-
-        // Look ahead to see if this is a type definition (has ::=)
-        if (_isTypeDefinition()) {
-          // Type definition
-          if (pendingProcDecl != null) {
-            // Check if the pending declaration is for a builtin or imported (no clauses needed)
-            final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
-            if (!builtinProcedures.contains(pendingSig) && !pendingProcDecl.imported) {
-              throw CompileError(
-                'Type definition cannot appear between procedure declaration and its clauses.\n'
-                '  Procedure "${pendingProcDecl.name}" declared at line ${pendingProcDecl.line} needs clauses.',
-                token.line,
-                token.column,
-                phase: 'parser'
-              );
-            }
-            // Builtin or imported - clear pending without error
-            pendingProcDecl = null;
-          }
-          typeDefs.add(_parseTypeDef());
-        } else {
-          // It's a clause - parse the procedure
-          _current = startPos;
-          final proc = _parseProcedure();
-          final sig = '${proc.name}/${proc.arity}';
-          var declaredVolitional = false;
-
-          // Check if this matches pending declaration
-          if (pendingProcDecl != null) {
-            final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
-            if (sig == pendingSig) {
-              // This clause matches the pending declaration - good
-              pendingProcDecl = null;
-              declaredVolitional = pendingVolitional;
-            } else if (builtinProcedures.contains(pendingSig)) {
-              // Pending was a builtin (no clauses needed) - clear it
-              pendingProcDecl = null;
-            } else {
-              throw CompileError(
-                'Clause for "$sig" appears between procedure declaration and clauses for "$pendingSig".\n'
-                '  Procedure declaration at line ${pendingProcDecl.line} must be immediately followed by its clauses.',
-                proc.line,
-                proc.column,
-                phase: 'parser'
-              );
-            }
-          }
-          _checkInteractiveTerms(proc, declaredVolitional);
-
-          // Check for non-contiguous clauses
-          if (seenProcedures.containsKey(sig)) {
-            final first = seenProcedures[sig]!;
-            throw CompileError(
-              'Non-contiguous clauses for "$sig".\n'
-              '  First group at line ${first.line}, second group at line ${proc.line}.\n'
-              '  All clauses for a predicate must be together in the source file.',
-              proc.line,
-              proc.column,
-              phase: 'parser'
-            );
-          }
-
-          seenProcedures[sig] = proc;
-          procedures.add(proc);
-        }
-      } else if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE) ||
-          (vglp && (_check(TokenType.STAR) || _check(TokenType.LPAREN)))) {
-        // Clause starting with an atom (procedure name), `procedure` among
-        // them where no declaration begins there, or, in a .vglp source, with
-        // the interactive term `(A)*` of a clause of a volitional procedure or
-        // the volition guard `*(...)` preceding one.
-        final proc = _parseProcedure();
-        final sig = '${proc.name}/${proc.arity}';
-        var declaredVolitional = false;
-
-        // Check if this matches pending declaration
-        if (pendingProcDecl != null) {
-          final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
-          if (sig == pendingSig) {
-            // This clause matches the pending declaration - good
-            pendingProcDecl = null;
-            declaredVolitional = pendingVolitional;
-          } else if (builtinProcedures.contains(pendingSig)) {
-            // Pending was a builtin (no clauses needed) - clear it
-            pendingProcDecl = null;
-          } else {
-            throw CompileError(
-              'Clause for "$sig" appears between procedure declaration and clauses for "$pendingSig".\n'
-              '  Procedure declaration at line ${pendingProcDecl.line} must be immediately followed by its clauses.',
-              proc.line,
-              proc.column,
-              phase: 'parser'
-            );
-          }
-        }
-        _checkInteractiveTerms(proc, declaredVolitional);
-
-        // Check for non-contiguous clauses
-        if (seenProcedures.containsKey(sig)) {
-          final first = seenProcedures[sig]!;
-          throw CompileError(
-            'Non-contiguous clauses for "$sig".\n'
-            '  First group at line ${first.line}, second group at line ${proc.line}.\n'
-            '  All clauses for a predicate must be together in the source file.',
-            proc.line,
-            proc.column,
-            phase: 'parser'
-          );
-        }
-
-        seenProcedures[sig] = proc;
-        procedures.add(proc);
-      } else {
-        // Unexpected token
-        throw CompileError(
-          'Unexpected token: ${_peek().lexeme}',
-          _peek().line,
-          _peek().column,
-          phase: 'parser'
-        );
-      }
-    }
-
-    // Check for dangling procedure declaration at end of file
-    if (pendingProcDecl != null) {
-      final pendingSig = '${pendingProcDecl.name}/${pendingProcDecl.argTypes.length}';
-      if (!builtinProcedures.contains(pendingSig) && !pendingProcDecl.imported) {
-        throw CompileError(
-          'Procedure declaration for "${pendingProcDecl.name}" has no clauses.\n'
-          '  A procedure declaration must be immediately followed by its clauses.',
-          pendingProcDecl.line,
-          pendingProcDecl.column,
-          phase: 'parser'
-        );
-      }
-    }
-
-    return Module(
-      typeDefs: typeDefs,
-      procDeclarations: procDeclarations,
-      procedures: procedures,
-      compileMode: compileMode,
-      exposes: exposes,
-      displayDecls: displayDecls,
-      volitionalDeclarations: volitionalDecls,
-      line: 1,
-      column: 1,
+  /// Refuses the pending declaration [pending] where its clauses do not
+  /// follow it ([_needsClauses]).
+  void _requireClausesOf(ProcDecl pending) {
+    if (!_needsClauses(pending)) return;
+    throw CompileError(
+      'Procedure declaration for "${pending.name}" has no clauses.\n'
+      '  A procedure declaration must be immediately followed by its clauses.',
+      pending.line,
+      pending.column,
+      phase: 'parser'
     );
+  }
+
+  /// A procedure declaration (possibly exported or imported), the pending
+  /// declaration's clauses required first.
+  void _parseProcDeclarationItem(_ModuleItems items) {
+    final pending = items.pendingProcDecl;
+    if (pending != null) {
+      // Check if the pending declaration is for a builtin or imported (no clauses needed)
+      _requireClausesOf(pending);
+      // Builtin or imported - clear pending without error
+      items.pendingProcDecl = null;
+    }
+    final volitional = vglp && _interactiveDeclarationAt(_current) != null;
+    final decl = _parseProcDeclaration();
+    items.procDeclarations.add(decl);
+    if (volitional) items.volitionalDecls.add(VolitionalDeclaration(decl));
+    // Imported procedures are declaration-only — no clauses expected
+    if (!decl.imported) {
+      items.pendingProcDecl = decl;
+      items.pendingVolitional = volitional;
+    }
+  }
+
+  /// A type definition beginning at [token], refused between a pending
+  /// declaration and its clauses.
+  void _parseTypeDefItem(_ModuleItems items, Token token) {
+    final pending = items.pendingProcDecl;
+    if (pending != null) {
+      // Check if the pending declaration is for a builtin or imported (no clauses needed)
+      if (_needsClauses(pending)) {
+        throw CompileError(
+          'Type definition cannot appear between procedure declaration and its clauses.\n'
+          '  Procedure "${pending.name}" declared at line ${pending.line} needs clauses.',
+          token.line,
+          token.column,
+          phase: 'parser'
+        );
+      }
+      // Builtin or imported - clear pending without error
+      items.pendingProcDecl = null;
+    }
+    items.typeDefs.add(_parseTypeDef());
+  }
+
+  /// A procedure read from its clauses: matched against the pending
+  /// declaration, its interactive terms checked, its clauses required
+  /// contiguous with no earlier group of its signature.
+  void _addProcedure(_ModuleItems items, Procedure proc) {
+    final sig = '${proc.name}/${proc.arity}';
+    var declaredVolitional = false;
+
+    // Check if this matches pending declaration
+    final pending = items.pendingProcDecl;
+    if (pending != null) {
+      final pendingSig = '${pending.name}/${pending.argTypes.length}';
+      if (sig == pendingSig) {
+        // This clause matches the pending declaration - good
+        items.pendingProcDecl = null;
+        declaredVolitional = items.pendingVolitional;
+      } else if (builtinProcedures.contains(pendingSig)) {
+        // Pending was a builtin (no clauses needed) - clear it
+        items.pendingProcDecl = null;
+      } else {
+        throw CompileError(
+          'Clause for "$sig" appears between procedure declaration and clauses for "$pendingSig".\n'
+          '  Procedure declaration at line ${pending.line} must be immediately followed by its clauses.',
+          proc.line,
+          proc.column,
+          phase: 'parser'
+        );
+      }
+    }
+    _checkInteractiveTerms(proc, declaredVolitional);
+
+    // Check for non-contiguous clauses
+    if (items.seenProcedures.containsKey(sig)) {
+      final first = items.seenProcedures[sig]!;
+      throw CompileError(
+        'Non-contiguous clauses for "$sig".\n'
+        '  First group at line ${first.line}, second group at line ${proc.line}.\n'
+        '  All clauses for a predicate must be together in the source file.',
+        proc.line,
+        proc.column,
+        phase: 'parser'
+      );
+    }
+
+    items.seenProcedures[sig] = proc;
+    items.procedures.add(proc);
   }
 
   /// The clauses of [proc] against its declaration, [volitional] where it is
@@ -495,13 +472,6 @@ class Parser {
       }
     }
   }
-
-  /// Parse hierarchical module name (e.g., utils.list)
-  // _parseModuleName removed: the -module directive is no longer supported
-  // (a module's name is its file/directory path from the program root).
-
-  // _parseProcRefList, _parseProcRef, _parseAtomList removed in Phase 1.
-  // These were only used for -export([...]) and -import([...]) syntax.
 
   // Procedure: one or more clauses with same head functor/arity
   Procedure _parseProcedure() {
@@ -882,7 +852,7 @@ class Parser {
     // Check for :- (clause with guards/body)
     if (_match(TokenType.IMPLIES)) {
       // Parse everything before | as guards (or body if no |)
-      final predicates = <dynamic>[];
+      final predicates = <Goal>[];
 
       predicates.add(_parseGoalOrGuard());
 
@@ -906,7 +876,7 @@ class Parser {
         }
       } else {
         // No | separator, so everything was body goals
-        body = predicates.cast<Goal>();
+        body = predicates;
       }
     }
 
@@ -949,7 +919,7 @@ class Parser {
   }
 
   // Parse a predicate that could be either a guard or a goal
-  dynamic _parseGoalOrGuard() {
+  Goal _parseGoalOrGuard() {
     // `~` begins no GLP construct.  A guard is a conjunction of guard
     // predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and guard
     // negation is not part of the language (GLP-Spec 98913b4), so `~G` is
@@ -981,8 +951,8 @@ class Parser {
         final secondGoal = _parseGoalOrGuard();
         _consume(TokenType.RPAREN, 'Expected ")" after disjunction');
         // Return as ';'(Goal1, Goal2) - need to convert goals to terms
-        final firstTerm = _goalToTerm(firstGoal);
-        final secondTerm = _goalToTerm(secondGoal);
+        final firstTerm = goalToTerm(firstGoal);
+        final secondTerm = goalToTerm(secondGoal);
         return Goal(';', [firstTerm, secondTerm], startToken.line, startToken.column);
       } else {
         // Parenthesized single goal
@@ -1114,14 +1084,6 @@ class Parser {
       _peek().column,
       phase: 'parser'
     );
-  }
-
-  // Convert a Goal to a Term representation (for disjunction)
-  Term _goalToTerm(dynamic goal) {
-    if (goal is Goal) {
-      return StructTerm(goal.functor, goal.args, goal.line, goal.column);
-    }
-    throw CompileError('Expected goal', 0, 0, phase: 'parser');
   }
 
   // Atom: functor(arg1, arg2, ...) or Var := Expr or Var =.. Expr (for clause heads)
@@ -1319,7 +1281,7 @@ class Parser {
            !_isElseBranchStar()) {
       final op = _advance();
       final right = _parseExpression(_precedence(op) + 1);
-      left = StructTerm(_operatorFunctor(op), [left, right], op.line, op.column);
+      left = StructTerm(op.lexeme, [left, right], op.line, op.column);
     }
 
     return left;
@@ -1403,14 +1365,7 @@ class Parser {
     }
     if (operatorName == 'constant') {
       final nameToken = _advance();
-      if (_check(TokenType.QUESTION)) {
-        throw CompileError(
-          'Reader mark "?" can only be applied to variables, not constants like "${nameToken.lexeme}"',
-          _peek().line,
-          _peek().column,
-          phase: 'parser'
-        );
-      }
+      _refuseReaderMarkOn('constants like "${nameToken.lexeme}"');
       return ConstTerm(nameToken.lexeme, nameToken.line, nameToken.column);
     }
 
@@ -1456,14 +1411,7 @@ class Parser {
     if (_check(TokenType.NUMBER)) {
       final token = _advance();
       // Check for invalid reader mark on number
-      if (_check(TokenType.QUESTION)) {
-        throw CompileError(
-          'Reader mark "?" can only be applied to variables, not numbers',
-          _peek().line,
-          _peek().column,
-          phase: 'parser'
-        );
-      }
+      _refuseReaderMarkOn('numbers');
       return ConstTerm(token.literal, token.line, token.column);
     }
 
@@ -1477,14 +1425,7 @@ class Parser {
     if (_check(TokenType.STRING)) {
       final token = _advance();
       // Check for invalid reader mark on string
-      if (_check(TokenType.QUESTION)) {
-        throw CompileError(
-          'Reader mark "?" can only be applied to variables, not strings',
-          _peek().line,
-          _peek().column,
-          phase: 'parser'
-        );
-      }
+      _refuseReaderMarkOn('strings');
       return ConstTerm(token.literal, token.line, token.column);
     }
 
@@ -1545,26 +1486,12 @@ class Parser {
         _consume(TokenType.RPAREN, 'Expected ")" after structure arguments');
 
         // Check for invalid reader mark on structure
-        if (_check(TokenType.QUESTION)) {
-          throw CompileError(
-            'Reader mark "?" can only be applied to variables, not structures like ${functorToken.lexeme}(...)',
-            _peek().line,
-            _peek().column,
-            phase: 'parser'
-          );
-        }
+        _refuseReaderMarkOn('structures like ${functorToken.lexeme}(...)');
 
         return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
       } else {
         // Constant atom - check for invalid reader mark
-        if (_check(TokenType.QUESTION)) {
-          throw CompileError(
-            'Reader mark "?" can only be applied to variables, not constants like "${functorToken.lexeme}"',
-            _peek().line,
-            _peek().column,
-            phase: 'parser'
-          );
-        }
+        _refuseReaderMarkOn('constants like "${functorToken.lexeme}"');
         return ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
       }
     }
@@ -1632,25 +1559,13 @@ class Parser {
   /// `(I? + 3) =:= 0`, `((I? mod 3)) > 1` or `(X? * 2) + 1 < Y?`.  A
   /// parenthesised goal, `(G)` or `(G1 ; G2)`, is followed by none of those.
   bool _parenthesisedOperand() {
-    var depth = 0;
-    for (var i = _current; i < tokens.length; i++) {
-      final t = tokens[i].type;
-      if (t == TokenType.EOF) return false;
-      if (t == TokenType.LPAREN) {
-        depth++;
-      } else if (t == TokenType.RPAREN) {
-        depth--;
-        if (depth == 0) {
-          if (i + 1 >= tokens.length) return false;
-          final start = _current;
-          _current = i + 1;
-          final operand = _continuesAsInfixGuard(_peek());
-          _current = start;
-          return operand;
-        }
-      }
-    }
-    return false;
+    final close = _closingParen(_current);
+    if (close < 0 || close + 1 >= tokens.length) return false;
+    final start = _current;
+    _current = close + 1;
+    final operand = _continuesAsInfixGuard(_peek());
+    _current = start;
+    return operand;
   }
 
   // Get operator precedence
@@ -1681,49 +1596,6 @@ class Parser {
     }
   }
 
-  // Get operator functor name for AST
-  String _operatorFunctor(Token op) {
-    switch (op.type) {
-      case TokenType.PLUS:
-        return '+';
-      case TokenType.MINUS:
-        return '-';
-      case TokenType.STAR:
-        return '*';
-      case TokenType.SLASH:
-        return '/';
-      case TokenType.SLASH_SLASH:
-        return '//';
-      case TokenType.MOD:
-        return 'mod';
-      case TokenType.LESS:
-        return '<';
-      case TokenType.GREATER:
-        return '>';
-      case TokenType.LESS_EQUAL:
-        return '=<';
-      case TokenType.GREATER_EQUAL:
-        return '>=';
-      case TokenType.EQUALS:
-        return '=';
-      case TokenType.ARITH_EQUAL:
-        return '=:=';
-      case TokenType.ARITH_NOT_EQUAL:
-        return '=\\=';
-      case TokenType.HASH:
-        return '#';
-      case TokenType.BACKSLASH:
-        return '\\';
-      default:
-        throw CompileError(
-          'Unknown operator: ${op.type}',
-          op.line,
-          op.column,
-          phase: 'parser'
-        );
-    }
-  }
-
   // List: [], [H|T], [X], [X,Y,Z], [X,Y,Z|T]
   Term _parseList() {
     final bracketToken = _consume(TokenType.LBRACKET, 'Expected "["');
@@ -1731,14 +1603,7 @@ class Parser {
     // Empty list []
     if (_match(TokenType.RBRACKET)) {
       // Check for invalid reader mark on list
-      if (_check(TokenType.QUESTION)) {
-        throw CompileError(
-          'Reader mark "?" can only be applied to variables, not lists',
-          _peek().line,
-          _peek().column,
-          phase: 'parser'
-        );
-      }
+      _refuseReaderMarkOn('lists');
       return ListTerm(null, null, bracketToken.line, bracketToken.column);
     }
 
@@ -1759,14 +1624,7 @@ class Parser {
       _consume(TokenType.RBRACKET, 'Expected "]" after list tail');
 
       // Check for invalid reader mark on list
-      if (_check(TokenType.QUESTION)) {
-        throw CompileError(
-          'Reader mark "?" can only be applied to variables, not lists',
-          _peek().line,
-          _peek().column,
-          phase: 'parser'
-        );
-      }
+      _refuseReaderMarkOn('lists');
 
       // Build right-associative list: [X,Y,Z|T] -> [X|[Y|[Z|T]]]
       Term result = tail;
@@ -1779,14 +1637,7 @@ class Parser {
     _consume(TokenType.RBRACKET, 'Expected "]" after list elements');
 
     // Check for invalid reader mark on list
-    if (_check(TokenType.QUESTION)) {
-      throw CompileError(
-        'Reader mark "?" can only be applied to variables, not lists',
-        _peek().line,
-        _peek().column,
-        phase: 'parser'
-      );
-    }
+    _refuseReaderMarkOn('lists');
 
     // Build right-associative list: [X, Y, Z] -> [X|[Y|[Z|[]]]]
     Term result = ListTerm(null, null, bracketToken.line, bracketToken.column); // []
@@ -1795,6 +1646,19 @@ class Parser {
     }
 
     return result;
+  }
+
+  /// Refuses a reader mark `?` at the current position, after [what], which
+  /// is no variable: the mark is a variable's (GLP-Spec glp.tex, Definition
+  /// "GLP Variables").
+  void _refuseReaderMarkOn(String what) {
+    if (!_check(TokenType.QUESTION)) return;
+    throw CompileError(
+      'Reader mark "?" can only be applied to variables, not $what',
+      _peek().line,
+      _peek().column,
+      phase: 'parser'
+    );
   }
 
   // Helper methods
@@ -1844,13 +1708,12 @@ class Parser {
 
       // Skip optional type parameters: (X, Y, ...)
       if (_check(TokenType.LPAREN)) {
-        _advance(); // consume (
-        int depth = 1;
-        while (!_isAtEnd() && depth > 0) {
-          if (_check(TokenType.LPAREN)) depth++;
-          if (_check(TokenType.RPAREN)) depth--;
-          _advance();
+        final close = _closingParen(_current);
+        if (close < 0) {
+          _current = saved;  // unmatched: no `::=` follows
+          return false;
         }
+        _current = close + 1;
       }
       _match(TokenType.QUESTION);  // `T(X)?`, refused by [_parseTypeDef]
 
@@ -1926,7 +1789,9 @@ class Parser {
   }
 
   /// Parse a single type alternative using unified term parsing.
-  /// Per spec (type-conversion.md): Parse as Term, then convert to TypeExpr.
+  /// A type alternative is written in term syntax (TGLP typed-glp.tex, "Type
+  /// Declarations": BNF rules whose alternatives are terms), so it is read as
+  /// a term and then converted to a TypeExpr ([termToTypeExpr]).
   ///
   /// A `?` marks a type name only ([_markedTypeAltPrimary]); after a
   /// structure, a list or a parenthesised term it marks no type name and is
@@ -1950,7 +1815,7 @@ class Parser {
     while (_isOperator(_peek()) && _precedence(_peek()) >= minPrecedence) {
       final op = _advance();
       final right = _parseTypeAltExpression(_precedence(op) + 1);
-      left = StructTerm(_operatorFunctor(op), [left, right], op.line, op.column);
+      left = StructTerm(op.lexeme, [left, right], op.line, op.column);
     }
 
     return left;
@@ -2261,14 +2126,9 @@ class Parser {
     }
     i++;
     if (i < tokens.length && tokens[i].type == TokenType.LPAREN) {
-      var depth = 0;
-      for (; i < tokens.length; i++) {
-        final t = tokens[i].type;
-        if (t == TokenType.EOF) return false;
-        if (t == TokenType.LPAREN) depth++;
-        if (t == TokenType.RPAREN && --depth == 0) break;
-      }
-      i++;
+      final close = _closingParen(i);
+      if (close < 0) return false;
+      i = close + 1;
     }
     if (i + 1 >= tokens.length ||
         !_procedureNameTokens.contains(tokens[i].type)) {
@@ -2365,33 +2225,7 @@ class Parser {
     // Procedure name can be atom or operator (<, >, =<, >=, =:=, =\=, =?=, =?\=, =, @<),
     // or `procedure`, a name after the keyword like any other.
     Token nameToken;
-    if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.LESS)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.GREATER)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.LESS_EQUAL)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.GREATER_EQUAL)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.ARITH_EQUAL)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.ARITH_NOT_EQUAL)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.GROUND_EQUAL)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.GROUND_NOT_EQUAL)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.AT_LESS)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.EQUALS)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.UNIV)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.UNIV_DECOMPOSE)) {
-      nameToken = _advance();
-    } else if (_check(TokenType.ASSIGN)) {
+    if (_procedureNameTokens.contains(_peek().type)) {
       nameToken = _advance();
     } else {
       throw CompileError(
@@ -2517,4 +2351,21 @@ class Parser {
       phase: 'parser',
     );
   }
+}
+
+/// What [Parser.parseModule] collects as it reads a module's items in order,
+/// with the procedure declaration waiting for its first clause.
+class _ModuleItems {
+  final typeDefs = <TypeDef>[];
+  final procDeclarations = <ProcDecl>[];
+  final procedures = <Procedure>[];
+  final displayDecls = <DisplayDecl>[];
+  final volitionalDecls = <VolitionalDeclaration>[];
+
+  // Track pending procedure declaration (waiting for its first clause)
+  ProcDecl? pendingProcDecl;
+  // Whether the pending declaration is a volitional procedure's.
+  var pendingVolitional = false;
+  // Track which procedures we've seen clauses for (signature -> first Procedure)
+  final seenProcedures = <String, Procedure>{};
 }

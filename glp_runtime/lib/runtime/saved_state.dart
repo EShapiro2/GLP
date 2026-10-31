@@ -193,7 +193,6 @@ class StateWriter {
 
   void u8(int v) => _roots.u8(v);
   void uint(int v) => _roots.uint(v);
-  void sint(int v) => _roots.sint(v);
   void boolean(bool v) => _roots.u8(v ? 1 : 0);
   void str(String s) => _roots.str(s);
   void optStr(String? s) {
@@ -212,11 +211,6 @@ class StateWriter {
   }
 
   void term(Term t) => _term(_roots, t);
-
-  void optTerm(Term? t) {
-    boolean(t != null);
-    if (t != null) term(t);
-  }
 
   void goalRef(GoalRef g) {
     _roots.uint(g.id);
@@ -618,7 +612,6 @@ class StateReader {
 
   int u8() => _in.u8();
   int uint() => _in.uint();
-  int sint() => _in.sint();
   bool boolean() => _in.u8() == 1;
   String str() => _in.str();
   String? optStr() => boolean() ? str() : null;
@@ -626,7 +619,6 @@ class StateReader {
   HeapCell cell() => _cellOf(_in.uint());
   HeapCell? optCell() => boolean() ? cell() : null;
   Term term() => _term();
-  Term? optTerm() => boolean() ? term() : null;
   GoalRef goalRef() => GoalRef(_in.uint(), _in.uint());
 
   ModuleTerm? module() {

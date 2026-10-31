@@ -32,38 +32,10 @@ class VariableInfo {
   // Register assignment (filled during analysis)
   int? registerIndex;
 
-  // For readers: the paired writer name
-  String? pairedWriter;
-
-  // Variable classification
-  bool isTemporary = false;  // X register (doesn't cross calls)
-  bool isPermanent = false;  // Y register (survives across calls)
-
   VariableInfo(this.name, this.isWriter);
 
   /// Check if this variable is anonymous (name starts with _)
   bool get isAnonymous => name.startsWith('_');
-
-  bool get isSRSWValid {
-    // Anonymous variables (names starting with _) are exempt from SRSW
-    // They denote fresh writers with no paired reader
-    if (isAnonymous) return true;
-
-    // Revised SRSW: Each variable must have exactly one writer AND at least one reader
-    // Exception: Ground guard allows multiple reader occurrences
-
-    // Must have exactly one writer occurrence
-    if (writerOccurrences != 1) return false;
-
-    // Must have at least one reader occurrence
-    if (readerOccurrences == 0) return false;
-
-    // Multiple readers allowed only with ground guard (checked in verifySRSW)
-    // This property doesn't have access to ground info, so we allow it here
-    // and verifySRSW will enforce the ground guard requirement
-
-    return true;
-  }
 
   @override
   String toString() => 'VariableInfo($name, writer×$writerOccurrences, reader×$readerOccurrences, reg=$registerIndex)';
@@ -246,7 +218,9 @@ class VariableTable {
       }
 
       // Each variable must have at least one reader
-      // Guard occurrences always count toward SRSW pairing (per spec Section 1.3, Remark 1)
+      // Guard occurrences count toward SRSW pairing (GLP-Spec glp.tex, Remark
+      // "Guards and SRSW": a reader X? in a guard is paired to the writer X in
+      // the head)
       // A reader may appear once in guard AND once in body (two total allowed without groundness)
       if (info.readerOccurrences == 0 && info.writerOccurrences > 0) {
         final line = info.firstOccurrence?.line ?? 0;
@@ -257,30 +231,6 @@ class VariableTable {
     }
 
     return violations;
-  }
-
-  /// Legacy method - throws on first violation (for backwards compatibility)
-  void verifySRSW() {
-    final violations = collectSRSWViolations();
-    if (violations.isNotEmpty) {
-      // Find first violation's line for the error location
-      final firstVar = _vars.values.firstWhere(
-        (v) {
-          if (v.writerOccurrences > 1 && !allowsMultipleWriters(v.name)) return true;
-          if (v.readerOccurrences > 1 && !allowsMultipleReaders(v.name)) return true;
-          if (v.writerOccurrences == 0) return true;
-          if (v.readerOccurrences == 0 && v.writerOccurrences > 0) return true;
-          return false;
-        },
-        orElse: () => _vars.values.first,
-      );
-      throw CompileError(
-        'SRSW violation: ${violations.first.replaceFirst(RegExp(r'^Line \d+: '), '')}',
-        firstVar.firstOccurrence?.line ?? 0,
-        firstVar.firstOccurrence?.column ?? 0,
-        phase: 'analyzer'
-      );
-    }
   }
 
   List<VariableInfo> getAllVars() => _vars.values.toList();
@@ -304,10 +254,6 @@ class AnnotatedProcedure {
   final String name;
   final int arity;
   final List<AnnotatedClause> clauses;
-
-  // Code generation metadata (filled during codegen)
-  int? entryPC;         // κ (kappa) - entry point for this procedure
-  String? entryLabel;   // e.g., "merge/3"
 
   AnnotatedProcedure(this.ast, this.name, this.arity, this.clauses);
 
@@ -383,8 +329,7 @@ class Analyzer {
     // SRSW already validated, so skip SRSW checking here
     final annotatedProcs = <AnnotatedProcedure>[];
     for (final proc in transformed.procedures) {
-      final (annotatedProc, _) = _analyzeProcedureCollectingErrors(proc, skipSRSW: true);
-      annotatedProcs.add(annotatedProc);
+      annotatedProcs.add(_annotateProcedure(proc));
     }
 
     return AnnotatedProgram(transformed, annotatedProcs);
@@ -432,24 +377,8 @@ class Analyzer {
     final allViolations = <String>[];
 
     for (final clause in proc.clauses) {
-      final varTable = VariableTable();
-
-      // Analyze head
-      _analyzeAtom(clause.head, varTable);
-
-      // Analyze guards (if present) - THIS IS KEY: guard readers ARE counted
-      if (clause.guards != null && clause.guards!.isNotEmpty) {
-        for (final guard in clause.guards!) {
-          _analyzeGuard(guard, varTable);
-        }
-      }
-
-      // Analyze body (if present)
-      if (clause.body != null && clause.body!.isNotEmpty) {
-        for (final goal in clause.body!) {
-          _analyzeGoal(goal, varTable);
-        }
-      }
+      // Guard readers ARE counted ([_tableOf]).
+      final varTable = _tableOf(clause);
 
       // Collect SRSW violations
       final violations = _srswViolations(clause, varTable);
@@ -473,55 +402,50 @@ class Analyzer {
     return violations;
   }
 
-  /// Analyze procedure and collect SRSW violations instead of throwing
-  (AnnotatedProcedure, List<String>) _analyzeProcedureCollectingErrors(Procedure proc, {bool skipSRSW = false}) {
+  /// Annotate a procedure's clauses: each clause's variable table with its
+  /// registers assigned.  The program's SRSW was validated before partial
+  /// evaluation, so none is checked here.
+  AnnotatedProcedure _annotateProcedure(Procedure proc) {
     final annotatedClauses = <AnnotatedClause>[];
-    final allViolations = <String>[];
 
     for (final clause in proc.clauses) {
-      final (annotatedClause, violations) = _analyzeClauseCollectingErrors(
-        clause, proc.name, proc.arity, skipSRSW: skipSRSW);
-      annotatedClauses.add(annotatedClause);
-      allViolations.addAll(violations);
+      final varTable = _tableOf(clause);
+      final hasGuards = clause.guards != null && clause.guards!.isNotEmpty;
+      final hasBody = clause.body != null && clause.body!.isNotEmpty;
+
+      // Assign register indices
+      _assignRegisters(varTable);
+
+      annotatedClauses.add(
+          AnnotatedClause(clause, varTable, hasGuards: hasGuards, hasBody: hasBody));
     }
 
-    return (AnnotatedProcedure(proc, proc.name, proc.arity, annotatedClauses), allViolations);
+    return AnnotatedProcedure(proc, proc.name, proc.arity, annotatedClauses);
   }
 
-  /// Analyze clause and collect SRSW violations instead of throwing
-  /// [skipSRSW]: if true, skip SRSW validation (the program's was validated
-  /// before partial evaluation)
-  (AnnotatedClause, List<String>) _analyzeClauseCollectingErrors(
-      Clause clause, String procName, int procArity, {bool skipSRSW = false}) {
+  /// The variable table of [clause]: its head, its guards and its body
+  /// walked in that order, every occurrence recorded.
+  VariableTable _tableOf(Clause clause) {
     final varTable = VariableTable();
 
     // Analyze head
     _analyzeAtom(clause.head, varTable);
 
     // Analyze guards (if present)
-    final hasGuards = clause.guards != null && clause.guards!.isNotEmpty;
-    if (hasGuards) {
+    if (clause.guards != null && clause.guards!.isNotEmpty) {
       for (final guard in clause.guards!) {
         _analyzeGuard(guard, varTable);
       }
     }
 
     // Analyze body (if present)
-    final hasBody = clause.body != null && clause.body!.isNotEmpty;
-    if (hasBody) {
+    if (clause.body != null && clause.body!.isNotEmpty) {
       for (final goal in clause.body!) {
         _analyzeGoal(goal, varTable);
       }
     }
 
-    // Collect SRSW violations (unless skipped for auto-generated clauses)
-    final violations = skipSRSW ? <String>[] : _srswViolations(clause, varTable);
-    final contextViolations = violations.map((v) => '$procName/$procArity: $v').toList();
-
-    // Assign register indices (even if there are violations, for partial analysis)
-    _assignRegisters(varTable);
-
-    return (AnnotatedClause(clause, varTable, hasGuards: hasGuards, hasBody: hasBody), contextViolations);
+    return varTable;
   }
 
   /// Analyze a clause head.
@@ -542,6 +466,13 @@ class Analyzer {
   static const _invalidInGuardPosition = {
     'true',   // true is body-only, not a guard
   };
+
+  // The type-checking guards whose success implies the argument is ground
+  // ([_analyzeGuard]).
+  static const _typeCheckOps = ['number', 'integer', 'real', 'string', 'constant'];
+
+  // The comparison guards, which ground both operands ([_analyzeGuard]).
+  static const _comparisonOps = ['<', '>', '=<', '>=', '=:=', '=\\=', '@<'];
 
   void _analyzeGuard(Guard guard, VariableTable varTable) {
     // Reject body-only constructs in guard position
@@ -573,9 +504,7 @@ class Analyzer {
     // and are not guards: removed from the runtime on 2026-10-01 (GLP, approved
     // by Udi), with this table and the partial evaluator.  `real` is "Ground:
     // yes" since GLP-Spec 12be29b (GLP #3 Cowork, 2026-10-02 22:19 UTC).
-    // Note: var/nonvar removed (don't guarantee groundness), float removed (not implemented)
-    final typeCheckOps = ['number', 'integer', 'real', 'string', 'constant'];
-    if (typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
+    if (_typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
         // Mark X grounded: X and X? may occur more than once.
@@ -617,8 +546,7 @@ class Analyzer {
     // Per spec: comparison guards require both operands to be bound numeric values,
     // which means they're ground. This allows multiple reader occurrences.
     // Arguments may be complex arithmetic expressions, so extract all reader variables.
-    final comparisonOps = ['<', '>', '=<', '>=', '=:=', '=\\=', '@<'];
-    if (comparisonOps.contains(guard.predicate) && guard.args.length == 2) {
+    if (_comparisonOps.contains(guard.predicate) && guard.args.length == 2) {
       for (final arg in guard.args) {
         _extractAndMarkGroundedVars(arg, varTable);
       }
@@ -724,9 +652,6 @@ class Analyzer {
     int nextIndex = 0;
 
     for (final info in varTable.getAllVars()) {
-      // For now, all variables are temporaries (X registers)
-      // TODO: Analyze variable lifetimes to distinguish X vs Y registers
-      info.isTemporary = true;
       info.registerIndex = nextIndex++;
     }
   }

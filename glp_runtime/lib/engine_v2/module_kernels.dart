@@ -15,10 +15,9 @@
 // CodeImage/ByteRunner without an import cycle. `GlpEngine` registers it via
 // [registerModuleKernels].
 
-import 'dart:typed_data';
-
 import '../runtime/runtime.dart';
-import '../runtime/body_kernels.dart' show BodyKernelResult;
+import '../runtime/body_kernels.dart'
+    show BodyKernelResult, bindResult, bytesToHex, kernelAbort;
 import '../runtime/terms.dart';
 import '../runtime/machine_state.dart' show GoalRef;
 import '../wire/artefact.dart' show Artefact;
@@ -55,16 +54,10 @@ Object? _deref(GlpRuntime rt, Object? term) {
   return term;
 }
 
-/// Lowercase hex of a hash — used to key a module's runner by its compiled
-/// identity, so equal compiled modules share one runner.
-String _hex(Uint8List bytes) =>
-    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-
 /// `_run(Goal, Module)`/2 — module-as-value, consumer half. See the library note.
 BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] _run/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _run/2: expected 2 arguments, got ${args.length}');
   }
   return _activate(rt, '_run/2', args[0], args[1]);
 }
@@ -79,17 +72,15 @@ BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
 /// run time (TGLP §Dynamic Activation).
 BodyKernelResult runTypedKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] _run/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _run/3: expected 3 arguments, got ${args.length}');
   }
   final type = _deref(rt, args[1]);
   final String? required = type is ConstTerm && type.value is String
       ? type.value as String
       : (type is String ? type : null);
   if (required == null) {
-    print('[ABORT] _run/3: second argument is not a type identity '
+    return kernelAbort('[ABORT] _run/3: second argument is not a type identity '
         '(a ground string), got $type');
-    return BodyKernelResult.abort;
   }
   return _activate(rt, '_run/3', args[0], args[2], requiredType: required);
 }
@@ -116,13 +107,11 @@ BodyKernelResult _activate(
     {String? requiredType}) {
   final module = _deref(rt, moduleArg);
   if (module is! ModuleTerm) {
-    print('[ABORT] $kernel: module argument is not a module value');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] $kernel: module argument is not a module value');
   }
   final artefact = module.artefact;
   if (artefact is! Artefact) {
-    print('[ABORT] $kernel: module carries no artefact');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] $kernel: module carries no artefact');
   }
 
   // The certificate is verified before the code runs: the loader "computes
@@ -139,8 +128,7 @@ BodyKernelResult _activate(
   // here looked at the certificate.
   final refusal = artefact.certificateRefusal;
   if (refusal != null) {
-    print('[ABORT] $kernel: module ${module.name} is not activated: $refusal');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] $kernel: module ${module.name} is not activated: $refusal');
   }
 
   // The boot goal: a term boot(A, ...) — or a bare constant for arity 0.
@@ -154,8 +142,7 @@ BodyKernelResult _activate(
     functor = goal.value.toString();
     bootArgs = const [];
   } else {
-    print('[ABORT] $kernel: first argument is not a goal');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] $kernel: first argument is not a goal');
   }
 
   // One ByteRunner per distinct compiled module, keyed by its compiled
@@ -165,7 +152,7 @@ BodyKernelResult _activate(
   // the key) to the module's code via rt.runners.  Until 2026-10-02 the key was
   // the source identity h(M), so two compilations of one source --- two
   // compilers, two instruction-set versions --- shared the first one's code.
-  final key = 'module:${_hex(artefact.compiledIdentity)}';
+  final key = 'module:${bytesToHex(artefact.compiledIdentity)}';
   final cached = rt.runners[key];
   final CodeImage image = cached is ByteRunner
       ? cached.image
@@ -177,14 +164,12 @@ BodyKernelResult _activate(
   // activation). Export check, not entry-point resolution: a compiled but
   // non-exported internal procedure is not runnable from outside.
   if (!image.exportAliases.contains(sig)) {
-    print('[ABORT] $kernel: $sig is not exported by module ${module.name}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] $kernel: $sig is not exported by module ${module.name}');
   }
   final entry = image.entryOffsetOf(sig);
   if (entry == null) {
-    print(
+    return kernelAbort(
         '[ABORT] $kernel: exported $sig has no entry point in module ${module.name}');
-    return BodyKernelResult.abort;
   }
 
   // The exports record for an entry its own identity, and, for a guest's
@@ -197,22 +182,20 @@ BodyKernelResult _activate(
     final recorded = tables.exported[sig];
     final opaque = tables.opaque[sig]?.entry;
     if (recorded == null && opaque == null) {
-      print('[ABORT] $kernel: the exports of module ${module.name} record no '
+      return kernelAbort('[ABORT] $kernel: the exports of module ${module.name} record no '
           'type identity for $sig');
-      return BodyKernelResult.abort;
     }
     if (recorded != requiredType && opaque != requiredType) {
-      print('[ABORT] $kernel: type identity mismatch for $sig in module '
+      return kernelAbort('[ABORT] $kernel: type identity mismatch for $sig in module '
           '${module.name}: required $requiredType, exports record '
           '${[recorded, opaque].whereType<String>().join(' and ')}');
-      return BodyKernelResult.abort;
     }
   }
 
   rt.runners.putIfAbsent(key, () => ByteRunner(image));
 
-  // A goal's argument registers hold variables (runtime specification
-  // v2.16.3 §1.1: "CallEnv arguments must be VarRefs"): a ground argument of
+  // A goal's argument registers hold variables (IGLP app:in-heap: a register
+  // holds a cell, so a CallEnv argument is a VarRef): a ground argument of
   // the posted goal --- run(entry([], Out), T, M) --- is put in a fresh
   // variable bound to it, its reader in the register, as the engine sets up
   // the arguments of an initial goal (glp_engine.dart, _setupArgument).  Until
@@ -249,30 +232,18 @@ BodyKernelResult _activate(
 /// there, and where it is parameterised, which has no identity.
 BodyKernelResult findTypeKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] _find_type/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _find_type/2: expected 2 arguments, got ${args.length}');
   }
-  final ref = _deref(rt, args[0]);
-  String? name;
-  int? arity;
-  if (ref is StructTerm && ref.functor == '/' && ref.args.length == 2) {
-    final n = _deref(rt, ref.args[0]);
-    final a = _deref(rt, ref.args[1]);
-    if (n is ConstTerm && n.value is String) name = n.value as String;
-    if (a is ConstTerm && a.value is int) arity = a.value as int;
+  final key = _procedureKey(rt, args[0]);
+  if (key == null) {
+    return kernelAbort('[ABORT] _find_type/2: first argument is not a procedure reference '
+        'P/N, got ${_deref(rt, args[0])}');
   }
-  if (name == null || arity == null) {
-    print('[ABORT] _find_type/2: first argument is not a procedure reference '
-        'P/N, got $ref');
-    return BodyKernelResult.abort;
-  }
-  final key = '$name/$arity';
 
   final tables = _callerTables(rt);
   if (tables is! TypeIdentityTables) {
-    print('[ABORT] _find_type/2: the calling goal\'s module carries no '
+    return kernelAbort('[ABORT] _find_type/2: the calling goal\'s module carries no '
         'declared table, so $key is not declared in the caller\'s scope');
-    return BodyKernelResult.abort;
   }
   final identity = tables.declared[key];
   if (identity == null) {
@@ -285,7 +256,7 @@ BodyKernelResult findTypeKernel(GlpRuntime rt, List<Object?> args) {
     }
     return BodyKernelResult.abort;
   }
-  return _bind(rt, args[1], ConstTerm(identity));
+  return bindResult(rt, args[1], ConstTerm(identity), kernel: '_find_type/2');
 }
 
 /// The declared table of the caller's scope (TGLP, Implementation Notes,
@@ -357,35 +328,30 @@ List<String>? _identities(GlpRuntime rt, Object? arg) {
 /// for `_find_type`/2.
 BodyKernelResult findTypeOpaqueKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] _find_type/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _find_type/3: expected 3 arguments, got ${args.length}');
   }
   final key = _procedureKey(rt, args[0]);
   if (key == null) {
-    print('[ABORT] _find_type/3: first argument is not a procedure reference '
+    return kernelAbort('[ABORT] _find_type/3: first argument is not a procedure reference '
         'P/N, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
   final labels = _identities(rt, args[1]);
   if (labels == null) {
-    print('[ABORT] _find_type/3: second argument is not a list of type '
+    return kernelAbort('[ABORT] _find_type/3: second argument is not a list of type '
         'identities (ground strings), got ${_deref(rt, args[1])}');
-    return BodyKernelResult.abort;
   }
   final tables = _callerTables(rt);
   if (tables is! TypeIdentityTables) {
-    print('[ABORT] _find_type/3: the calling goal\'s module carries no '
+    return kernelAbort('[ABORT] _find_type/3: the calling goal\'s module carries no '
         'declared table, so $key is not declared in the caller\'s scope');
-    return BodyKernelResult.abort;
   }
   final String identity;
   try {
     identity = tables.opaqueInstanceIdentity(key, labels);
   } on OpaqueInstanceRefusal catch (e) {
-    print('[ABORT] _find_type/3: $e');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _find_type/3: $e');
   }
-  return _bind(rt, args[2], ConstTerm(identity), '_find_type/3');
+  return bindResult(rt, args[2], ConstTerm(identity), kernel: '_find_type/3');
 }
 
 /// `_opaque_type(P/N, Module, Hs)`/3, `'_opaque_type'(_?, Module?,
@@ -399,48 +365,29 @@ BodyKernelResult findTypeOpaqueKernel(GlpRuntime rt, List<Object?> args) {
 /// cached on the module value, as `_run`/3's is.
 BodyKernelResult opaqueTypeKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] _opaque_type/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _opaque_type/3: expected 3 arguments, got ${args.length}');
   }
   final key = _procedureKey(rt, args[0]);
   if (key == null) {
-    print('[ABORT] _opaque_type/3: first argument is not a procedure '
+    return kernelAbort('[ABORT] _opaque_type/3: first argument is not a procedure '
         'reference P/N, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
   final module = _deref(rt, args[1]);
   if (module is! ModuleTerm) {
-    print('[ABORT] _opaque_type/3: second argument is not a module value');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _opaque_type/3: second argument is not a module value');
   }
   final artefact = module.artefact;
   if (artefact is! Artefact) {
-    print('[ABORT] _opaque_type/3: module carries no artefact');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _opaque_type/3: module carries no artefact');
   }
   final record = _exportedTables(module, artefact).opaque[key];
   if (record == null) {
-    print('[ABORT] _opaque_type/3: the exports of module ${module.name} '
+    return kernelAbort('[ABORT] _opaque_type/3: the exports of module ${module.name} '
         'record $key as the instance of no parameterised declaration');
-    return BodyKernelResult.abort;
   }
   Term list = ConstTerm(nil);
   for (final t in record.types.reversed) {
     list = StructTerm('.', [ConstTerm(t), list]);
   }
-  return _bind(rt, args[2], list, '_opaque_type/3');
-}
-
-/// Bind the writer at [outputArg] to [value], enqueueing the goals the binding
-/// wakes — the module kernels' copy of body_kernels.dart's binding idiom.
-BodyKernelResult _bind(GlpRuntime rt, Object? outputArg, Term value,
-    [String kernel = '_find_type/2']) {
-  if (outputArg is VarRef && rt.heap.isWriter(outputArg.addr)) {
-    for (final act in rt.heap.bindVariable(outputArg.addr, value)) {
-      rt.gq.enqueue(act);
-    }
-    return BodyKernelResult.success;
-  }
-  print('[ABORT] $kernel: output argument is not a writer');
-  return BodyKernelResult.abort;
+  return bindResult(rt, args[2], list, kernel: '_opaque_type/3');
 }

@@ -72,13 +72,13 @@ class GlobalWritersTable {
   /// Agent ID that owns this table
   final String agentId;
 
-  /// Single counter for index allocation (spec Section 3.2)
+  /// Single counter for index allocation (IGLP: the global-name counter)
   /// Shared across both Globalize and Localize operations.
   /// Index 0 is reserved for the serializer, so counter starts at 1.
   /// Indices are never reused.
   int _nextIndex = 1;
 
-  /// Serializer entry at index 0 (spec Section 4.1)
+  /// Serializer entry at index 0 (IGLP Definition Index-0 Serializer)
   /// Maps to the local writer for the network input stream.
   /// This entry is permanent - never removed.
   HeapCell? _serializerWriterAddr;
@@ -110,9 +110,9 @@ class GlobalWritersTable {
   /// This entry is never removed - it receives cold-call messages from
   /// any agent via `_w(agentId, 0)`.
   ///
-  /// Spec Section 4.1: "At boot time, each agent p creates a permanent entry
-  /// at index 0 mapping `_r(p, 0)` to the local writer N_p for p's network
-  /// input stream."
+  /// IGLP Definition Index-0 Serializer: "At boot time, each agent p creates
+  /// a permanent entry at index 0 mapping `_r(p, 0)` to the local writer N_p
+  /// for p's network input stream."
   void initializeSerializerEntry(HeapCell netInWriterAddr) {
     if (_serializerWriterAddr != null) {
       throw StateError('Serializer entry already initialized');
@@ -130,8 +130,9 @@ class GlobalWritersTable {
   /// Called by Receive transaction after binding the current writer
   /// to extend the network input stream.
   ///
-  /// Spec Section 8.3: "Assign N_q := [T_q↓ | N'_q] where N'_q is a fresh
-  /// writer. Update the entry to `(N'_q, *)` at index 0."
+  /// IGLP, madGLP Receive Transaction, Serializer case: "Assign N_q := [T_q↓ |
+  /// N'_q] where N'_q is a fresh writer. Update the entry to `(N'_q, *)` at
+  /// index 0."
   void updateSerializerWriter(HeapCell newWriterAddr) {
     if (_serializerWriterAddr == null) {
       throw StateError('Cannot update serializer: not initialized');
@@ -191,7 +192,8 @@ class GlobalWritersTable {
   ///
   /// Throws [ArgumentError] if duplicate (remoteAgent, remoteIndex) exists.
   void addLocalizeEntry(HeapCell writerAddr, String remoteAgent, int remoteIndex) {
-    // Check for duplicates (spec Section 12: Entry Lifecycle invariant)
+    // Check for duplicates (IGLP, the entry lifecycle: one entry per (agent,
+    // index), indices never reused)
     final existing = findByRemote(remoteAgent, remoteIndex);
     if (existing != null) {
       throw ArgumentError(
@@ -254,7 +256,7 @@ class GlobalWritersTable {
   void removeGlobalizeEntry(int index) {
     if (index == 0) {
       // Serializer entry is permanent - cannot be removed
-      // Spec Section 4.1: "This entry is never removed."
+      // IGLP Definition Index-0 Serializer: "This entry is never removed."
       return;
     }
     _globalizeEntries.remove(index);
@@ -278,8 +280,8 @@ class GlobalWritersTable {
   /// - Allocate index i for use in `_r(p, i)`
   /// - No entry is created (outgoing link handled by global_send)
   ///
-  /// Spec Section 5.1: "No entry is created—the global_send goal handles
-  /// outgoing communication."
+  /// IGLP Definition Globalize, reader case: "No entry is created—the
+  /// global_send goal handles outgoing communication."
   ///
   /// Returns the allocated index.
   int allocateIndex() {

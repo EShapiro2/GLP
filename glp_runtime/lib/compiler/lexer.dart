@@ -217,11 +217,6 @@ class Lexer {
 
   /// Scan number (integer or float)
   Token _number(int start, int line, int column) {
-    // Handle negative sign
-    if (source[start] == '-') {
-      _current = start + 1;
-    }
-
     while (_isDigit(_peek())) {
       _advance();
     }
