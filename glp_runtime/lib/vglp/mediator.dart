@@ -24,7 +24,10 @@ import '../compiler/ast.dart' as ast;
 import '../compiler/glp_printer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import 'dispatcher.dart';
+import 'type_source.dart';
 import 'types.dart';
+
+export 'type_source.dart' show printProcDecl, printTypeDef, typeSource;
 
 /// The generic mediator source, read from [directory] — `programs/vglp/` in the
 /// tree.  Its `self.glp` carries the vocabulary and its `med.glp` the clauses.
@@ -137,102 +140,22 @@ InstantiatedMediator instantiate(MediatorSource source) {
 /// arguments of a reference to one of the vocabulary's own parameterised
 /// types, which the instantiation makes monomorphic.
 TypeExpr _bindExpr(
-    TypeExpr e, Map<String, String> binding, Set<String> instantiated) {
-  if (e is TypeRef) {
-    final name = binding[e.name] ?? e.name;
-    return TypeRef(name, e.line, e.column,
-        isInput: e.isInput,
-        typeArgs: instantiated.contains(e.name)
-            ? const []
-            : [for (final a in e.typeArgs) _bindExpr(a, binding, instantiated)]);
-  }
-  if (e is StructAlt) {
-    return StructAlt(e.functor,
-        [for (final a in e.args) _bindExpr(a, binding, instantiated)],
-        e.line, e.column);
-  }
-  if (e is ListConsAlt) {
-    return ListConsAlt(_bindExpr(e.head, binding, instantiated),
-        _bindExpr(e.tail, binding, instantiated), e.line, e.column);
-  }
-  if (e is DiffListAlt) {
-    return DiffListAlt(_bindExpr(e.content, binding, instantiated),
-        _bindExpr(e.hole, binding, instantiated), e.line, e.column);
-  }
-  return e;
-}
-
-/// A type expression as GLP source.  A type read off the checker's environment
-/// may carry an EXPANDED name, `Stream<Coin>`, which is the environment's
-/// internal name for an instantiation and is not source syntax; it is printed
-/// as the instantiation it stands for, `Stream(Coin)`.  A constant alternative
-/// and a functor are printed by GLP's printer (glp_printer.dart,
-/// [constantSource] and [functorNameSource]), a string in its one canonical
-/// print (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax").
-String typeSource(TypeExpr e) {
-  if (e is TypeRef) {
-    final name = _sourceName(e.name);
-    final args = e.typeArgs.isEmpty
-        ? ''
-        : '(${e.typeArgs.map(typeSource).join(', ')})';
-    return e.isInput ? '$name$args?' : '$name$args';
-  }
-  if (e is ConstantAlt) return constantSource(e.value);
-  if (e is StructAlt) {
-    return '${functorNameSource(e.functor)}'
-        '(${e.args.map(typeSource).join(', ')})';
-  }
-  if (e is ListConsAlt) {
-    return '[${typeSource(e.head)} | ${typeSource(e.tail)}]';
-  }
-  if (e is DiffListAlt) {
-    return '${typeSource(e.content)} \\ ${typeSource(e.hole)}';
-  }
-  return e.toString();
-}
-
-/// `Stream<Coin>` to `Stream(Coin)`, nested instantiations included.
-String _sourceName(String name) {
-  final lt = name.indexOf('<');
-  if (lt < 0 || !name.endsWith('>')) return name;
-  final inner = name.substring(lt + 1, name.length - 1);
-  final args = <String>[];
-  var depth = 0;
-  var start = 0;
-  for (var i = 0; i < inner.length; i++) {
-    final c = inner[i];
-    if (c == '<' || c == '(') depth++;
-    if (c == '>' || c == ')') depth--;
-    if (c == ',' && depth == 0) {
-      args.add(inner.substring(start, i).trim());
-      start = i + 1;
-    }
-  }
-  args.add(inner.substring(start).trim());
-  return '${name.substring(0, lt)}(${args.map(_sourceName).join(', ')})';
-}
+        TypeExpr e, Map<String, String> binding, Set<String> instantiated) =>
+    mapTypeRefs(e, (r) {
+      final name = binding[r.name] ?? r.name;
+      return TypeRef(name, r.line, r.column,
+          isInput: r.isInput,
+          typeArgs: instantiated.contains(r.name)
+              ? const []
+              : [
+                  for (final a in r.typeArgs)
+                    _bindExpr(a, binding, instantiated)
+                ]);
+    });
 
 // ---------------------------------------------------------------------------
 // Printing
 // ---------------------------------------------------------------------------
-
-/// A procedure declaration as GLP source.  `exported` is kept: a compiled
-/// program's entry point is what the root self.glp exports, and the mediator's
-/// `med` is spliced into the initial goal rather than called across a module
-/// boundary, but the flag costs nothing and keeps the emitted source the shape
-/// the generic one had.
-String printProcDecl(ProcDecl d) {
-  final prefix = d.exported ? 'exported ' : (d.imported ? 'imported ' : '');
-  final params = d.typeParams.isEmpty ? '' : '(${d.typeParams.join(', ')})';
-  return '${prefix}procedure$params ${d.name}'
-      '(${d.argTypes.map(typeSource).join(', ')}).';
-}
-
-/// A type definition as GLP source.
-String printTypeDef(TypeDef d) {
-  final params = d.typeParams.isEmpty ? '' : '(${d.typeParams.join(', ')})';
-  return '${d.name}$params ::= ${d.alternatives.map(typeSource).join(' ; ')}.';
-}
 
 /// A display declaration as GLP source, carried into the compiled program
 /// (vGLP, Definition "Display Declaration, Default Display"), every name and

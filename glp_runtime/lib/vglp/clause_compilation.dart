@@ -27,6 +27,7 @@
 
 import '../compiler/ast.dart';
 import '../analysis/type_checker/type_ast.dart' show ProcDecl;
+import 'terms.dart';
 
 /// The name a compiled procedure's added mediator argument carries, and the
 /// stem of the slot arguments.  Both are made fresh against the clause's own
@@ -51,8 +52,6 @@ class CompiledProcedure {
   final List<Clause> volitionGuarded;
 
   CompiledProcedure(this.name, this.arity, this.clauses, this.volitionGuarded);
-
-  int get slotCount => volitionGuarded.length;
 }
 
 /// Compile one procedure of M (vGLP, Definition "Canonical Compilation").
@@ -75,7 +74,7 @@ CompiledProcedure compileProcedure(
   var slotNumber = 0;
   for (final c in proc.clauses) {
     if (!c.isVolitionGuarded) {
-      out.add(_compileOrdinary(c, proc, m,
+      out.add(_compileOrdinary(c, m,
           isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
       continue;
     }
@@ -84,13 +83,13 @@ CompiledProcedure compileProcedure(
     final name = clauseName(proc, j);
     // In the order of the Definition: the answer clause, the else clause where
     // C has an else-branch, and the ask clause.
-    out.add(_compileAnswer(c, proc, m, j, name,
+    out.add(_compileAnswer(c, m, j, name,
         isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
     if (c.elseBranch != null) {
-      out.add(_compileElse(c, proc, m, j,
+      out.add(_compileElse(c, m, j,
           isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
     }
-    out.add(_compileAsk(c, proc, decl, m, j, name));
+    out.add(_compileAsk(c, decl, m, j, name));
   }
 
   return CompiledProcedure(proc.name, proc.arity + 1 + m, out, volitionGuarded);
@@ -180,25 +179,51 @@ PendingTableClauses pendingTableClauses(
 /// procedure has no volition-guarded clause the chain is empty and the
 /// identity on the channel, so it is omitted and Med carried straight
 /// through: the Definition's formula with m = 0, one reduction fewer.
-Clause _compileOrdinary(Clause c, Procedure proc, int m,
-    {required bool Function(String, int) isProcedureOfM,
+Clause _compileOrdinary(Clause c, int m,
+        {required bool Function(String, int) isProcedureOfM,
+        required int Function(String, int) slotCountOf}) =>
+    _compiled(c, m,
+        head: c.head,
+        guards: c.guards,
+        sourceBody: c.body ?? const <Goal>[],
+        isProcedureOfM: isProcedureOfM,
+        slotCountOf: slotCountOf);
+
+/// The skeleton of the ordinary, the answer and the else clause: [head] and
+/// [guards] extended over the mediator channel and the slots, the slot at
+/// [exposed], from 0, standing as [exposedArg] in the head and the other
+/// slots passed through as writers and aborted, and [sourceBody] given its
+/// branch of the channel; no slot is exposed where [exposed] is -1.
+Clause _compiled(Clause c, int m,
+    {required Atom head,
+    required List<Guard>? guards,
+    required List<Goal> sourceBody,
+    int exposed = -1,
+    Term? exposedArg,
+    required bool Function(String, int) isProcedureOfM,
     required int Function(String, int) slotCountOf}) {
-  final names = _NameSource(c);
+  final names = FreshNames(c);
   final med = names.fresh(_medStem);
   final slots = List.generate(m, (k) => names.fresh('$_slotStem${k + 1}'));
 
-  final sourceBody = c.body ?? const <Goal>[];
+  final slotArgs = <Term>[
+    for (var k = 0; k < m; k++) k == exposed ? exposedArg! : _w(slots[k])
+  ];
+  final passed = [
+    for (var k = 0; k < m; k++) if (k != exposed) slots[k]
+  ];
+
   final bodyTakes = _bodyTakesChannel(sourceBody, isProcedureOfM);
 
-  final head = _extendHead(c.head, _medHead(med, c, slots.isNotEmpty || bodyTakes),
-      slots.map((s) => _w(s)).toList());
+  final extended = _extendHead(
+      head, _medHead(med, c, passed.isNotEmpty || bodyTakes), slotArgs);
   final body = <Goal>[];
-  final medIn = _abortsInto(body, slots, med, names, c, consumed: bodyTakes);
+  final medIn = _abortsInto(body, passed, med, names, c, consumed: bodyTakes);
   body.addAll(_compileBody(sourceBody, medIn, names,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
-  return Clause(head,
-      guards: c.guards, body: _nonEmpty(body, c), line: c.line, column: c.column);
+  return Clause(extended,
+      guards: guards, body: _nonEmpty(body, c), line: c.line, column: c.column);
 }
 
 /// The answer clause of the j-th volition-guarded clause: the person answered,
@@ -206,40 +231,22 @@ Clause _compileOrdinary(Clause c, Procedure proc, int m,
 ///
 ///     H'(Med, ..., ask(then(xs(X1, ..., Xi)), _), ...) :- G |
 ///         aborts([<the other slots>], Med?, Med1), B'
-Clause _compileAnswer(Clause c, Procedure proc, int m, int j, String name,
-    {required bool Function(String, int) isProcedureOfM,
-    required int Function(String, int) slotCountOf}) {
-  final names = _NameSource(c);
-  final med = names.fresh(_medStem);
-  final slots = List.generate(m, (k) => names.fresh('$_slotStem${k + 1}'));
-
-  final slotArgs = <Term>[];
-  for (var k = 0; k < m; k++) {
-    slotArgs.add(k == j - 1
-        ? _ask(_then(_xs(c.volitionGuard!, c, name)), _anon(c))
-        : _w(slots[k]));
-  }
-  // The exposed slot is a pattern, not a variable, so it is not among the slots
-  // aborted: its own ask is the one just answered, and the mediator has
-  // consumed its entry.  "The answer and else clauses expose slot S_j and pass
-  // the other slots through" (Definition "Canonical Compilation").
-  final passed = [
-    for (var k = 0; k < m; k++) if (k != j - 1) slots[k]
-  ];
-
-  final sourceBody = c.body ?? const <Goal>[];
-  final bodyTakes = _bodyTakesChannel(sourceBody, isProcedureOfM);
-
-  final head = _extendHead(
-      c.head, _medHead(med, c, passed.isNotEmpty || bodyTakes), slotArgs);
-  final body = <Goal>[];
-  final medIn = _abortsInto(body, passed, med, names, c, consumed: bodyTakes);
-  body.addAll(_compileBody(sourceBody, medIn, names,
-      isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
-
-  return Clause(head,
-      guards: c.guards, body: _nonEmpty(body, c), line: c.line, column: c.column);
-}
+///
+/// The exposed slot is a pattern, not a variable, so it is not among the slots
+/// aborted: its own ask is the one just answered, and the mediator has
+/// consumed its entry.  "The answer and else clauses expose slot S_j and pass
+/// the other slots through" (Definition "Canonical Compilation").
+Clause _compileAnswer(Clause c, int m, int j, String name,
+        {required bool Function(String, int) isProcedureOfM,
+        required int Function(String, int) slotCountOf}) =>
+    _compiled(c, m,
+        head: c.head,
+        guards: c.guards,
+        sourceBody: c.body ?? const <Goal>[],
+        exposed: j - 1,
+        exposedArg: _ask(_then(_xs(c.volitionGuard!, c, name)), _anon(c)),
+        isProcedureOfM: isProcedureOfM,
+        slotCountOf: slotCountOf);
 
 /// The else clause: the person declined the ask, selecting the else-branch.
 ///
@@ -252,26 +259,11 @@ Clause _compileAnswer(Clause c, Procedure proc, int m, int j, String name,
 /// it wherever the clause builds its output from the person's answer, which is
 /// the ordinary case, and the else clause binds no answer — so a head left
 /// unsubstituted emits a reader nothing can ever bind, and the goal consuming
-/// that output suspends for ever.  It was invisible while a timer selected the
-/// else-branch, because no play reduced an else clause (vGLP Cowork,
-/// 2026-09-15).
-Clause _compileElse(Clause c, Procedure proc, int m, int j,
+/// that output suspends for ever.
+Clause _compileElse(Clause c, int m, int j,
     {required bool Function(String, int) isProcedureOfM,
     required int Function(String, int) slotCountOf}) {
-  final names = _NameSource(c);
-  final med = names.fresh(_medStem);
-  final slots = List.generate(m, (k) => names.fresh('$_slotStem${k + 1}'));
   final subst = _elseSubstitution(c);
-
-  final slotArgs = <Term>[];
-  for (var k = 0; k < m; k++) {
-    slotArgs.add(k == j - 1
-        ? _ask(ConstTerm('else', c.line, c.column), _anon(c))
-        : _w(slots[k]));
-  }
-  final passed = [
-    for (var k = 0; k < m; k++) if (k != j - 1) slots[k]
-  ];
 
   // H[T']: the else answer stands in place of every answer reader in the head
   // as well as in the guard and the body (Definition "Canonical Compilation").
@@ -289,17 +281,14 @@ Clause _compileElse(Clause c, Procedure proc, int m, int j,
           g.line, g.column)
   ];
 
-  final bodyTakes = _bodyTakesChannel(elseBody, isProcedureOfM);
-  final head = _extendHead(
-      substHead, _medHead(med, c, passed.isNotEmpty || bodyTakes), slotArgs);
-
-  final body = <Goal>[];
-  final medIn = _abortsInto(body, passed, med, names, c, consumed: bodyTakes);
-  body.addAll(_compileBody(elseBody, medIn, names,
-      isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
-
-  return Clause(head,
-      guards: guards, body: _nonEmpty(body, c), line: c.line, column: c.column);
+  return _compiled(c, m,
+      head: substHead,
+      guards: guards,
+      sourceBody: elseBody,
+      exposed: j - 1,
+      exposedArg: _ask(ConstTerm('else', c.line, c.column), _anon(c)),
+      isProcedureOfM: isProcedureOfM,
+      slotCountOf: slotCountOf);
 }
 
 /// The ask clause: the goal reaches the clause with the slot empty, poses the
@@ -321,9 +310,8 @@ Clause _compileElse(Clause c, Procedure proc, int m, int j,
 /// the re-posed goal is given the pattern's reader image; at an OUTPUT position
 /// the head takes a fresh reader and the re-posed goal the paired writer, which
 /// is GLP's own way of delegating an output to a body goal.
-Clause _compileAsk(Clause c, Procedure proc, ProcDecl decl, int m, int j,
-    String clauseName) {
-  final names = _NameSource(c);
+Clause _compileAsk(Clause c, ProcDecl decl, int m, int j, String clauseName) {
+  final names = FreshNames(c);
   final med = names.fresh(_medStem);
   final med1 = names.fresh('${_medStem}1');
   final reply = names.fresh(_replyStem);
@@ -407,7 +395,7 @@ Clause _compileAsk(Clause c, Procedure proc, ProcDecl decl, int m, int j,
 /// The split is `med_split/3`, whose two branches' message streams merge into
 /// the parent's — the "standard stream technique" the Definition uses without
 /// comment.  For r such goals it emits r-1 splits, chained.
-List<Goal> _compileBody(List<Goal> body, String? med, _NameSource names,
+List<Goal> _compileBody(List<Goal> body, String? med, FreshNames names,
     {required bool Function(String, int) isProcedureOfM,
     required int Function(String, int) slotCountOf}) {
   final indices = <int>[];
@@ -483,7 +471,7 @@ List<Goal> _nonEmpty(List<Goal> body, Clause c) =>
 /// no paired reader (TGLP, "SRSW Relaxations"), where a named `Med1` would be
 /// a writer the clause never reads and the clause would violate SRSW.
 String? _abortsInto(List<Goal> body, List<String> slots, String med,
-    _NameSource names, Clause c, {required bool consumed}) {
+    FreshNames names, Clause c, {required bool consumed}) {
   if (slots.isEmpty) return consumed ? med : null;
   final med1 = consumed ? names.fresh('${_medStem}1') : null;
   var from = med;
@@ -509,7 +497,7 @@ bool _bodyTakesChannel(
 /// reads it — in the abort chain or in a body goal — and the anonymous writer
 /// `_` where it reads it nowhere, that being GLP's writer with no paired
 /// reader (TGLP, "SRSW Relaxations").  A named writer there is a writer with
-/// no reader, which is the SRSW violation the compilation emitted until now.
+/// no reader, an SRSW violation.
 Term _medHead(String med, Clause c, bool isRead) =>
     isRead ? _w(med) : _anon(c);
 
@@ -560,7 +548,7 @@ Term _readerImage(Term t) {
 
 /// Give every anonymous writer of a head input pattern a name, so that the
 /// re-posed goal can rebuild the pattern from readers.
-Term _nameAnonymous(Term t, _NameSource names) {
+Term _nameAnonymous(Term t, FreshNames names) {
   if (t is UnderscoreTerm && !t.isReader) {
     return _w(names.fresh('V'));
   }
@@ -588,20 +576,13 @@ Set<String> _answerWriterNames(VolitionGuard g) => {
 List<Guard> _contextGuards(Clause c, Set<String> answerWriters) {
   final out = <Guard>[];
   for (final g in c.guards ?? const <Guard>[]) {
-    if (g.args.any((t) => _readsAny(t, answerWriters))) continue;
+    if (g.args.any((t) => variableOccurs(
+        t, (v) => v.isReader && answerWriters.contains(v.name)))) {
+      continue;
+    }
     out.add(g);
   }
   return out;
-}
-
-bool _readsAny(Term t, Set<String> names) {
-  if (t is VarTerm) return t.isReader && names.contains(t.name);
-  if (t is StructTerm) return t.args.any((a) => _readsAny(a, names));
-  if (t is ListTerm) {
-    return (t.head != null && _readsAny(t.head!, names)) ||
-        (t.tail != null && _readsAny(t.tail!, names));
-  }
-  return false;
 }
 
 /// The substitution putting the else answer T'_l in place of X_l?, at the named
@@ -632,61 +613,4 @@ Term _substTerm(Term t, Map<String, Term> subst) {
         t.tail == null ? null : _substTerm(t.tail!, subst), t.line, t.column);
   }
   return t;
-}
-
-// ---------------------------------------------------------------------------
-// Fresh names
-// ---------------------------------------------------------------------------
-
-/// Names the compilation adds are made fresh against the clause's own
-/// variables, so that a program using `Med` or `S1` itself still compiles.
-class _NameSource {
-  final Set<String> _taken = {};
-
-  _NameSource(Clause c) {
-    void scanTerm(Term t) {
-      if (t is VarTerm) _taken.add(t.name);
-      if (t is StructTerm) t.args.forEach(scanTerm);
-      if (t is ListTerm) {
-        if (t.head != null) scanTerm(t.head!);
-        if (t.tail != null) scanTerm(t.tail!);
-      }
-    }
-
-    c.head.args.forEach(scanTerm);
-    for (final g in c.guards ?? const <Guard>[]) {
-      g.args.forEach(scanTerm);
-    }
-    for (final g in c.body ?? const <Goal>[]) {
-      g.args.forEach(scanTerm);
-    }
-    if (c.elseBranch != null) {
-      for (final g in c.elseBranch!.body) {
-        g.args.forEach(scanTerm);
-      }
-      c.elseBranch!.answer.forEach(scanTerm);
-    }
-    if (c.volitionGuard != null) {
-      for (final q in c.volitionGuard!.question) {
-        if (q.writer != null) _taken.add(q.writer!.name);
-        if (q.value != null) scanTerm(q.value!);
-      }
-      for (final v in c.volitionGuard!.context) {
-        _taken.add(v.name);
-      }
-    }
-  }
-
-  String fresh(String stem) {
-    if (!_taken.contains(stem)) {
-      _taken.add(stem);
-      return stem;
-    }
-    var n = 1;
-    while (_taken.contains('$stem$n')) {
-      n++;
-    }
-    _taken.add('$stem$n');
-    return '$stem$n';
-  }
 }

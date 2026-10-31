@@ -174,8 +174,14 @@
 import '../compiler/error.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../compiler/glp_printer.dart' show constantSource, functorNameSource;
-import 'mediator.dart' show typeSource;
-import 'dispatcher.dart' show widgetTypeName;
+import 'type_source.dart';
+import 'dispatcher.dart'
+    show
+        drawTypeName,
+        inputTypeName,
+        pathTypeName,
+        personChannelTypeName,
+        widgetTypeName;
 import 'canonical.dart' show ActPlace, DeclaredWidget;
 
 /// The Definition an interactive type is refused by where it is not one.
@@ -259,13 +265,14 @@ class GenericNames {
   /// compilation forms; and the types at T the construct processes name:
   /// Draw(T), Input(T), Inputs(T), Path and PersonChannel(T) as applied.
   final String drawn;
-  final String drawType;
-  final String inputType;
   final String inputsType;
-  final String pathType;
-  final String personChannelType;
   final String spawnType;
   final String askType;
+
+  String get drawType => '$drawTypeName($drawn)';
+  String get inputType => '$inputTypeName($drawn)';
+  String get pathType => pathTypeName;
+  String get personChannelType => '$personChannelTypeName($drawn)';
 
   GenericNames(
       {required this.dispatch,
@@ -287,11 +294,7 @@ class GenericNames {
       required this.formedType,
       required this.doneType,
       required this.drawn,
-      required this.drawType,
-      required this.inputType,
       required this.inputsType,
-      required this.pathType,
-      required this.personChannelType,
       required this.spawnType,
       required this.askType})
       : _leafFormers = {
@@ -437,41 +440,61 @@ TypeExpr _unmoded(TypeExpr t) {
 
 /// [t] with each parameter in [m] replaced, the mode of the occurrence and
 /// that of the argument composed.
-TypeExpr _subst(TypeExpr t, Map<String, TypeExpr> m) {
-  if (t is TypeRef) {
-    final r = m[t.name];
-    if (r != null && t.typeArgs.isEmpty) {
-      if (!t.isInput) return r;
-      if (r is TypeRef) {
-        return TypeRef(r.name, r.line, r.column,
-            isInput: !r.isInput, typeArgs: r.typeArgs);
+TypeExpr _subst(TypeExpr t, Map<String, TypeExpr> m) => mapTypeRefs(t, (ref) {
+      final r = m[ref.name];
+      if (r != null && ref.typeArgs.isEmpty) {
+        if (!ref.isInput) return r;
+        if (r is TypeRef) {
+          return TypeRef(r.name, r.line, r.column,
+              isInput: !r.isInput, typeArgs: r.typeArgs);
+        }
+        if (r is PrimitiveModeAlt) {
+          return PrimitiveModeAlt(!r.isInput, r.line, r.column);
+        }
+        return r;
       }
-      if (r is PrimitiveModeAlt) {
-        return PrimitiveModeAlt(!r.isInput, r.line, r.column);
-      }
-      return r;
-    }
-    return TypeRef(t.name, t.line, t.column,
-        isInput: t.isInput,
-        typeArgs: [for (final a in t.typeArgs) _subst(a, m)]);
-  }
-  if (t is StructAlt) {
-    return StructAlt(t.functor, [for (final a in t.args) _subst(a, m)],
-        t.line, t.column);
-  }
-  if (t is ListConsAlt) {
-    return ListConsAlt(_subst(t.head, m), _subst(t.tail, m), t.line, t.column);
-  }
-  if (t is DiffListAlt) {
-    return DiffListAlt(
-        _subst(t.content, m), _subst(t.hole, m), t.line, t.column);
-  }
-  return t;
-}
+      return TypeRef(ref.name, ref.line, ref.column,
+          isInput: ref.isInput,
+          typeArgs: [for (final a in ref.typeArgs) _subst(a, m)]);
+    });
 
 // ---------------------------------------------------------------------------
 // The generator
 // ---------------------------------------------------------------------------
+
+/// What a clause over the arguments of an alternative accumulates, argument
+/// by argument (open_N, [_Generator._open]; present_N,
+/// [_Generator._presentStruct]): the [goals] and [guards] of its body, the
+/// Done of each argument holding a question ([dones]), the grants chained
+/// through those arguments ([gsIn] the stream the next one takes, [nextGs]
+/// the one it passes on) and how many times the clause reads its position P
+/// ([pathReads]).
+class _Arguments {
+  final goals = <String>[];
+  final guards = <String>[];
+  final dones = <String>[];
+  var gsIn = 'Gs';
+  var pathReads = 0;
+  var _g = 0;
+
+  /// The grant stream an argument passes on, the next one's [gsIn].
+  String nextGs() => 'Gs${++_g}';
+
+  /// The head's Done: that of the one argument holding a question, or Done,
+  /// with [allDone] over all of them added to the goals.
+  String doneHead(String allDone) {
+    if (dones.length == 1) return '${dones.single}?';
+    goals.add('$allDone([${dones.map((d) => '$d?').join(', ')}], Done)');
+    return 'Done?';
+  }
+
+  /// The clause's guard, `ground(P?)` first where P is read more than once,
+  /// with the bar; empty where there is none.
+  String guardPrefix() {
+    if (pathReads > 1) guards.insert(0, 'ground(P?)');
+    return guards.isEmpty ? '' : '${guards.join(', ')} | ';
+  }
+}
 
 class _Generator {
   final GenericNames gen;
@@ -565,11 +588,18 @@ class _Generator {
       final root = _Node(t.type, t.readerMode, t.params.toSet());
       _checkInteractive(t, root);
       declared = t.widgets ?? sourceDeclared;
-      final w = _typeWidget(t, root);
-      widgets[t.written] = w;
-      hook.writeln(_constructClause(t, root, w));
-      drawnAlts.add('${t.functor}(${_drawnOf(root)})');
-      declared = sourceDeclared;
+      try {
+        // The widget of the type: the one in scope where its volitional
+        // procedure is declared.
+        final w = _widget(root, {});
+        widgets[t.written] = w;
+        hook.writeln(_constructClause(t, root, w));
+        // The views its construct draws, each under the functor of its ask,
+        // typed _ (the head comment, "The drawn value under each functor").
+        drawnAlts.add('${t.functor}(_)');
+      } finally {
+        declared = sourceDeclared;
+      }
     }
     if (outputWidget != null) {
       widgets[outputTypeName] = outputWidget;
@@ -652,38 +682,8 @@ class _Generator {
   /// The terms each alternative of [n]'s type covers, for telling whether
   /// two alternatives of a union overlap: a primitive by its kind, a
   /// constant by its value, a structure by its functor and arity.
-  Set<String> _covers(_Node n) {
-    final out = <String>{};
-    for (final a in _nodeAlts(n)) {
-      if (a is _ConstAlt) {
-        out.add('c:${constantSource(a.value)}');
-      } else if (a is _StructAlt) {
-        out.add('f:${a.functor}/${a.args.length}');
-      } else if (a is _NilAlt) {
-        out.add('[]');
-      } else if (a is _ConsAlt) {
-        out.add('.');
-      } else if (a is _LeafAlt) {
-        switch (a.leaf) {
-          case _Leaf.integer:
-            out.add('integer');
-          case _Leaf.real:
-            out.add('real');
-          case _Leaf.number:
-            out.addAll(['integer', 'real']);
-          case _Leaf.string:
-            out.add('string');
-          case _Leaf.module:
-            out.add('module');
-          case _Leaf.constant:
-            out.addAll(['integer', 'real', 'string', 'module']);
-          default:
-            out.add('any');
-        }
-      }
-    }
-    return out;
-  }
+  Set<String> _covers(_Node n) =>
+      {for (final a in _nodeAlts(n)) ..._altCovers(a)};
 
   /// The grants' raw inputs as alternatives of T: the type of each question,
   /// or its element type where it is a stream or a list, and the end
@@ -847,10 +847,6 @@ class _Generator {
     }
   }
 
-  /// The drawn type of the interactive type whose root is [root]: the type
-  /// of the views its construct draws, each under the functor of its ask.
-  String _drawnOf(_Node root) => '_';
-
   /// The widget the program's output is drawn by: a thread whose elements
   /// are drawn by the widget of Output, `thread(W)`, or `thread` where W is
   /// `shown`; `named(W', D)`, D that thread, where a declaration names the
@@ -897,10 +893,6 @@ class _Generator {
     final d = w == 'shown' ? 'thread' : 'thread($w)';
     return dw == null ? d : 'named(${constantSource(dw.name)}, $d)';
   }
-
-  /// The widget of interactive type [t], whose root is [root]: the one in
-  /// scope where its volitional procedure is declared.
-  String _typeWidget(InteractiveType t, _Node root) => _widget(root, {});
 
   // --- the construct clause -------------------------------------------------
 
@@ -1617,60 +1609,50 @@ class _Generator {
       final kids = _children(n, a);
       if (!kids.any((k) => _isNestedSeq(n, k) || _holdsNested(k))) continue;
       final head = <String>[], xs = <String>[], views = <String>[];
-      final goals = <String>[], guards = <String>[], dones = <String>[];
-      var gsIn = 'Gs';
-      var g = 0;
-      var pathReads = 0;
+      final acc = _Arguments();
       for (var i = 0; i < kids.length; i++) {
         final k = kids[i];
         final idx = i + 1;
         if (_isNestedSeq(n, k)) {
           final y = 'Y$idx', m = 'M$idx', q = 'Q$idx', d = 'D$idx';
-          final gsOut = 'Gs${++g}';
+          final gsOut = acc.nextGs();
           head.add('_');
           xs.add('$y?');
           views.add('input($m?)');
-          goals
+          acc.goals
             ..add('${gen.path}(P?, $idx, $m)')
             ..add('${gen.path}(P?, $idx, $q)')
-            ..add('${_answer(k)}($q?, $y, $gsIn?, $gsOut, $d)');
-          pathReads += 2;
-          gsIn = gsOut;
-          dones.add(d);
+            ..add('${_answer(k)}($q?, $y, ${acc.gsIn}?, $gsOut, $d)');
+          acc.pathReads += 2;
+          acc.gsIn = gsOut;
+          acc.dones.add(d);
         } else if (_holdsNested(k)) {
           final h = 'H$idx', x = 'X$idx', v = 'V$idx', q = 'Q$idx';
           final d = 'D$idx';
-          final gsOut = 'Gs${++g}';
+          final gsOut = acc.nextGs();
           head.add(h);
           xs.add('$x?');
           views.add('$v?');
           final open = _open(k);
-          goals
+          acc.goals
             ..add('${gen.path}(P?, $idx, $q)')
-            ..add('$open($h?, $q?, $x, $gsIn?, $gsOut, $v, $d)');
-          pathReads += 1;
-          gsIn = gsOut;
-          dones.add(d);
+            ..add('$open($h?, $q?, $x, ${acc.gsIn}?, $gsOut, $v, $d)');
+          acc.pathReads += 1;
+          acc.gsIn = gsOut;
+          acc.dones.add(d);
         } else {
           final h = 'H$idx';
           head.add(h);
           xs.add('$h?');
           views.add('$h?');
-          guards.add('ground($h?)');
+          acc.guards.add('ground($h?)');
         }
       }
-      if (pathReads > 1) guards.insert(0, 'ground(P?)');
-      String doneHead;
-      if (dones.length == 1) {
-        doneHead = '${dones.single}?';
-      } else {
-        doneHead = 'Done?';
-        goals.add(
-            '${gen.allDone}([${dones.map((d) => '$d?').join(', ')}], Done)');
-      }
-      final g0 = guards.isEmpty ? '' : '${guards.join(', ')} | ';
+      final doneHead = acc.doneHead(gen.allDone);
+      final g0 = acc.guardPrefix();
       clauses.add('$name(${_apply(a, head)}, P, ${_apply(a, xs)}, Gs, '
-          '$gsIn?, ${_apply(a, views)}, $doneHead) :- $g0${goals.join(', ')}.');
+          '${acc.gsIn}?, ${_apply(a, views)}, $doneHead) :- '
+          '$g0${acc.goals.join(', ')}.');
     }
     _out.writeln('procedure$p $name($t?, ${gen.pathType}?, $t, $gs?, $gs, _, '
         '${gen.doneType}).');
@@ -2019,19 +2001,14 @@ class _Generator {
           '${gen.shown}(P?, ${_apply(a, [for (final h in hs) '$h?'])}, Vs).';
     }
     final head = <String>[];
-    final goals = <String>[];
-    final guards = <String>[];
     final views = <String>[];
-    final dones = <String>[];
-    var gsIn = 'Gs';
-    var g = 0;
     // The position of the argument i of this alternative is the node's own,
     // P, with i at its end: a question's is read twice, for its mark in the
     // view and for its answer_N, and a position the program writes once, for
     // its present_N, its shown/3 or its thread/3, each drawing it pending
     // until it is written.  P is ground, so where it is read more than once
     // the clause guards on it.
-    var pathReads = 0;
+    final acc = _Arguments();
     // A structure of questions alone, none holding a stream or a list, has
     // one view; any other is drawn again as its arguments are.
     final direct = kids.every((k) => k.person && !_holdsNested(k));
@@ -2042,21 +2019,21 @@ class _Generator {
       if (k.person) {
         _checkPersonWritable(k, it);
         head.add('$h?');
-        final gsOut = 'Gs${++g}';
+        final gsOut = acc.nextGs();
         final d = 'D${i + 1}';
         final m = 'M$idx', q = 'Q$idx';
         // A question holding a stream or a list inside a form the person
         // writes is drawn again once answered, that one open under it.
         final nested = _holdsNested(k);
         final w = 'W$idx';
-        goals
+        acc.goals
           ..add('${gen.path}(P?, $idx, $m)')
           ..add('${gen.path}(P?, $idx, $q)')
-          ..add('${_answer(k)}($q?, $h, $gsIn?, $gsOut'
+          ..add('${_answer(k)}($q?, $h, ${acc.gsIn}?, $gsOut'
               '${nested ? ', $w' : ''}, $d)');
-        pathReads += 2;
-        gsIn = gsOut;
-        dones.add(d);
+        acc.pathReads += 2;
+        acc.gsIn = gsOut;
+        acc.dones.add(d);
         views.add(direct
             ? 'input($m?)'
             : nested
@@ -2069,53 +2046,45 @@ class _Generator {
         head.add(h);
         final q = 'Q$idx';
         final shows = _streamElement(k) != null ? gen.thread : gen.shown;
-        goals
+        acc.goals
           ..add('${gen.path}(P?, $idx, $q)')
           ..add('$shows($q?, $h?, V$idx)');
-        pathReads += 1;
+        acc.pathReads += 1;
         views.add('V$idx?');
       } else {
         head.add(h);
-        final gsOut = 'Gs${++g}';
+        final gsOut = acc.nextGs();
         final d = 'D${i + 1}';
         final q = 'Q$idx';
-        goals
+        acc.goals
           ..add('${gen.path}(P?, $idx, $q)')
-          ..add('${_present(k, it)}($q?, $h?, $gsIn?, $gsOut, V${i + 1}, $d)');
-        pathReads += 1;
-        gsIn = gsOut;
-        dones.add(d);
+          ..add('${_present(k, it)}($q?, $h?, ${acc.gsIn}?, $gsOut, '
+              'V${i + 1}, $d)');
+        acc.pathReads += 1;
+        acc.gsIn = gsOut;
+        acc.dones.add(d);
         views.add('V${i + 1}?');
       }
     }
-    if (pathReads > 1) guards.insert(0, 'ground(P?)');
     final pattern = _apply(a, head);
-    final gsHead = gsIn == 'Gs' ? 'Gs?' : '$gsIn?';
-    String doneHead;
-    if (dones.isEmpty) {
-      doneHead = 'done';
-    } else if (dones.length == 1) {
-      doneHead = '${dones.single}?';
-    } else {
-      doneHead = 'Done?';
-      goals.add('${gen.allDone}([${dones.map((d) => '$d?').join(', ')}], Done)');
-    }
+    final gsHead = acc.gsIn == 'Gs' ? 'Gs?' : '${acc.gsIn}?';
+    final doneHead = acc.dones.isEmpty ? 'done' : acc.doneHead(gen.allDone);
     String vsHead;
     if (direct) {
       vsHead = '[${_apply(a, views)}]';
     } else {
       final start = _combiner(n, a, kids);
-      goals.add('$start(${views.join(', ')}, Vs)');
+      acc.goals.add('$start(${views.join(', ')}, Vs)');
       vsHead = 'Vs?';
     }
-    final g0 = guards.isEmpty ? '' : '${guards.join(', ')} | ';
-    final body = goals.isEmpty
-        ? (guards.isEmpty ? '' : ' :- $g0' 'true')
-        : ' :- $g0${goals.join(', ')}';
+    final g0 = acc.guardPrefix();
+    final body = acc.goals.isEmpty
+        ? (acc.guards.isEmpty ? '' : ' :- $g0' 'true')
+        : ' :- $g0${acc.goals.join(', ')}';
     // An alternative holding a question reads its position, for the
     // question's mark or for the present_N, shown/3 or thread/3 of the
     // argument holding it.
-    final at = pathReads == 0 ? '_' : 'P';
+    final at = acc.pathReads == 0 ? '_' : 'P';
     return '$name($at, $pattern, Gs, $gsHead, $vsHead, $doneHead)$body.';
   }
 

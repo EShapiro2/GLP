@@ -32,6 +32,8 @@ import '../compiler/glp_printer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 import '../analysis/type_checker/param_expansion.dart';
+import 'terms.dart';
+import 'type_source.dart';
 
 /// The names a compiled program gives its answer type, its escrow type and
 /// its context type.
@@ -256,9 +258,7 @@ TypeEnvironment _environmentOf(ast.Module module, List<ast.Module> ancestors,
 /// "The empty list is a String, hence a Constant"): `3` an Integer, `2.5` a
 /// Real, `yes` and `"yes"` alike a String, and `[]` a String; and a compound
 /// term takes the primitive type `_`, since it has no declared one.  (`Any`
-/// is the checker's internal name and is not source syntax.)  Until
-/// 2026-10-10 a string was typed by its spelling, `"yes"` a String and `yes`
-/// a Constant.
+/// is the checker's internal name and is not source syntax.)
 TypeExpr _typeOfValue(ast.Term value, ast.Clause c) {
   final kind = _kindOf(value);
   if (kind != null) return TypeRef(kind, c.line, c.column);
@@ -299,10 +299,8 @@ String? _kindOf(ast.Term t) {
 /// accept it, and the variable takes the type of its position in them.  The
 /// head and the monomorphic goals are tried first, so that a variable with an
 /// occurrence at a declared position is typed by it and never by a shape.
-TypeExpr _typeOfVariable(String? variable, ast.Clause c, TypeEnvironment env,
+TypeExpr _typeOfVariable(String variable, ast.Clause c, TypeEnvironment env,
     String clauseName, {Set<String> visiting = const {}}) {
-  if (variable == null) return TypeRef('Any', c.line, c.column);
-
   final headDecl = env.getProcedure(c.head.functor, c.head.arity);
   if (headDecl != null) {
     for (var k = 0; k < c.head.args.length && k < headDecl.argTypes.length;
@@ -416,7 +414,7 @@ TypeExpr? _walk(ast.Term term, TypeExpr type, String variable,
   }
 
   if (atParameter) {
-    if (!_mentions(term, variable)) return null;
+    if (!variableOccurs(term, (v) => v.name == variable)) return null;
     return _typeByShape(term, variable, env, clauseName);
   }
 
@@ -544,17 +542,6 @@ bool _accepts(ast.Term term, TypeExpr type, TypeEnvironment env, int depth) {
   return false;
 }
 
-/// Whether [variable] occurs in [term].
-bool _mentions(ast.Term term, String variable) {
-  if (term is ast.VarTerm) return term.name == variable;
-  if (term is ast.StructTerm) return term.args.any((a) => _mentions(a, variable));
-  if (term is ast.ListTerm) {
-    return (term.head != null && _mentions(term.head!, variable)) ||
-        (term.tail != null && _mentions(term.tail!, variable));
-  }
-  return false;
-}
-
 /// The alternatives a type expression offers, following one named type.  A
 /// reference to a parameterised type, `Stream(FriendMsg)`, offers the
 /// template's alternatives with its arguments in place of the parameters ---
@@ -585,33 +572,19 @@ String _expandedName(TypeRef t) => t.typeArgs.isEmpty
     : '${t.name}<${t.typeArgs.map((a) => a is TypeRef ? _expandedName(a) : a.toString()).join(', ')}>';
 
 /// [e] with the type parameters in [subst] replaced.
-TypeExpr _subst(TypeExpr e, Map<String, TypeExpr> subst) {
-  if (e is TypeRef) {
-    final bound = subst[e.name];
-    if (bound != null && e.typeArgs.isEmpty) {
-      return bound is TypeRef
-          ? TypeRef(bound.name, e.line, e.column,
-              isInput: e.isInput, typeArgs: bound.typeArgs)
-          : bound;
-    }
-    return TypeRef(e.name, e.line, e.column,
-        isInput: e.isInput,
-        typeArgs: [for (final a in e.typeArgs) _subst(a, subst)]);
-  }
-  if (e is StructAlt) {
-    return StructAlt(e.functor, [for (final a in e.args) _subst(a, subst)],
-        e.line, e.column);
-  }
-  if (e is ListConsAlt) {
-    return ListConsAlt(
-        _subst(e.head, subst), _subst(e.tail, subst), e.line, e.column);
-  }
-  if (e is DiffListAlt) {
-    return DiffListAlt(
-        _subst(e.content, subst), _subst(e.hole, subst), e.line, e.column);
-  }
-  return e;
-}
+TypeExpr _subst(TypeExpr e, Map<String, TypeExpr> subst) =>
+    mapTypeRefs(e, (r) {
+      final bound = subst[r.name];
+      if (bound != null && r.typeArgs.isEmpty) {
+        return bound is TypeRef
+            ? TypeRef(bound.name, r.line, r.column,
+                isInput: r.isInput, typeArgs: bound.typeArgs)
+            : bound;
+      }
+      return TypeRef(r.name, r.line, r.column,
+          isInput: r.isInput,
+          typeArgs: [for (final a in r.typeArgs) _subst(a, subst)]);
+    });
 
 /// The type at a position, without its mode: the answer's type is the type of
 /// the value, and the ask carries it in one direction only.

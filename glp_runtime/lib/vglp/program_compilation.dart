@@ -1,19 +1,22 @@
 // glp_runtime/lib/vglp/program_compilation.dart
 //
-// The canonical compilation as a whole: a vGLP module becomes one
-// self-contained GLP module.
-// Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation".
+// The compilation of a vGLP source as a whole.  compileVglpSource compiles
+// the text of a `.vglp` source to the text of its GLP module, by the
+// canonical compilation of a source in the paper's syntax (canonical.dart);
+// emitCompiledVglp writes that text beside each source of a tree; the widget
+// declarations in scope of a source are read from the self.vglp beside each
+// self.glp of its chain (scopeWidgetDeclarations, readSelfVglp); and
+// VglpProgram reads every vGLP source of a program before any module of it is
+// compiled, for the questions of the linked program and the procedures of
+// each source that reach one.
+// Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation",
+// and sections/parts/canonical-compilation.tex.
 //
-// ⌈M⌉ is the compiled procedures "together with the mediator", so the mediator
-// is part of the compiled program and not a library it imports — which the module system forces anyway, a module path resolving from
-// the program root downward.
-//
-// The emission is ONE FILE.  The mediator's vocabulary types the compiled
-// agent's own slots and channel, and a GLP module cannot see the types of
-// another module below it in the tree — only of one above.  Emitting the agent
-// and the mediator together is what makes the compiled module self-contained,
-// and it is why the compiled program needs nothing of programs/vglp/ at run
-// time.
+// A source in the old syntax, with volition guards `*(...)`, compiles by the
+// old compilation, compileProgram, against the generic mediator
+// (clause_compilation.dart, types.dart, mediator.dart), the agent and the
+// mediator emitted as one self-contained module; it is kept pending vGLP's
+// ruling on its retirement.
 
 import 'dart:io';
 
@@ -31,12 +34,7 @@ import 'clause_compilation.dart';
 import 'mediator.dart';
 import 'types.dart';
 
-/// The first line of every emitted module, by which the emitter tells its own
-/// output from a hand-written module it must not overwrite.
-const compiledHeader =
-    '%% Compiled from vGLP by the canonical compilation\n'
-    '%% (vGLP, Definition "Canonical Compilation").  Do not edit: edit\n'
-    '%% the .vglp source and compile again.\n';
+export 'canonical.dart' show compiledHeader;
 
 /// The compiled program: one GLP module's source text, and the pieces it was
 /// built from, for tests to inspect.
@@ -178,9 +176,9 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
 /// compiles by the canonical compilation of vGLP at db03e2d (canonical.dart),
 /// against the dispatcher's generic source in the [mediator]'s directory and
 /// in its [scope].  A source in the old syntax, with volition guards `*(...)`,
-/// keeps its old compilation, against the generic [mediator], until its owner
-/// ports it (vGLP's code task of 2026-10-01, item 6); it has none to compile
-/// against where [mediator] is null.  A source in the paper's syntax at
+/// keeps its old compilation, against the generic [mediator], kept pending
+/// vGLP's ruling on its retirement; it has none to compile against where
+/// [mediator] is null.  A source in the paper's syntax at
 /// [path] is compiled with the widget declarations of its scope, read from
 /// the self.vglp beside each self.glp from the root down
 /// (scopeWidgetDeclarations), the root being the parent of the [mediator]'s
@@ -483,9 +481,8 @@ class VglpProgram {
     }
     final sig = '${g.functor}/${g.args.length}';
     final isLayer = layers.contains(key);
-    var d = _norm(dir);
     var first = true;
-    while (true) {
+    for (final d in _directoriesFrom(_norm(dir))) {
       if (_selfGlpDefines(d, sig)) return null;
       final layer = _norm(ppath.join(d, selfVglp));
       if (!(first && isLayer) &&
@@ -494,8 +491,20 @@ class VglpProgram {
         return (layer, sig);
       }
       first = false;
-      if (programsDir == null || d == programsDir) return null;
-      if (!ppath.isWithin(programsDir!, d)) return null;
+    }
+    return null;
+  }
+
+  /// The directories of the scope chain from [dir] upward: [dir], then its
+  /// parent and so on while within the device's root, [programsDir], up to
+  /// the root itself; [dir] alone where there is no root or [dir] is not
+  /// within it.
+  Iterable<String> _directoriesFrom(String dir) sync* {
+    var d = dir;
+    while (true) {
+      yield d;
+      if (programsDir == null || d == programsDir) return;
+      if (!ppath.isWithin(programsDir!, d)) return;
       d = ppath.dirname(d);
     }
   }
@@ -578,11 +587,11 @@ class VglpProgram {
         for (final s in [...layers, ...modules])
           for (var i = 0; i < fronts[s]!.interactive.length; i++)
             ProgramInteractive(
-                fronts[s]!.interactive[i].$1,
-                fronts[s]!.interactive[i].$2,
-                fronts[s]!.interactive[i].$3,
-                fronts[s]!.interactive[i].$4,
-                fronts[s]!.interactive[i].$5,
+                fronts[s]!.interactive[i].type,
+                fronts[s]!.interactive[i].readerMode,
+                fronts[s]!.interactive[i].params,
+                fronts[s]!.interactive[i].line,
+                fronts[s]!.interactive[i].column,
                 (name) => resolveIn(s, name),
                 source: s,
                 functor: stems[(s, i)],
@@ -618,8 +627,8 @@ class VglpProgram {
       for (var i = 0; i < f.volitional.length; i++) {
         final t = f.interactive[i];
         _declaredIn[(s, i)] = s;
-        out[(s, i)] = questionFunctorStemBy(
-            t.$1, t.$2, (name) => _nameInFunctor(s, name, t.$3));
+        out[(s, i)] = questionFunctorStemBy(t.type, t.readerMode,
+            (name) => _nameInFunctor(s, name, t.params));
       }
     }
     for (final s in [...layers, ...modules]) {
@@ -648,8 +657,8 @@ class VglpProgram {
         if (at >= 0) _declaredIn[(s, i)] = target!.$1;
         out[(s, i)] = at >= 0
             ? out[(target!.$1, at)]!
-            : questionFunctorStemBy(
-                t.$1, t.$2, (name) => _nameInFunctor(s, name, t.$3));
+            : questionFunctorStemBy(t.type, t.readerMode,
+                (name) => _nameInFunctor(s, name, t.params));
       }
     }
     return out;
@@ -711,17 +720,14 @@ class VglpProgram {
           final f = fronts[s]!;
           for (var i = 0; i < f.volitional.length; i++) {
             final t = f.interactive[i];
-            if (_typeNamesIn(t.$1).contains(name) && !t.$3.contains(name)) {
+            if (typeNamesOf(t.type).contains(name) &&
+                !t.params.contains(name)) {
               out.add(definerOf(s, name));
             }
           }
         }
         return out;
       });
-
-  static Set<String> _typeNamesIn(TypeExpr t) => t is TypeRef
-      ? {t.name, for (final a in t.typeArgs) ..._typeNamesIn(a)}
-      : const {};
 
   /// The module whose definition the type name [name] denotes in the scope
   /// of the source at [source], as a key: the source itself, by its path,
@@ -736,8 +742,7 @@ class VglpProgram {
     if (fronts[key]?.types.containsKey(name) ?? false) {
       return isLayer ? ppath.dirname(key) : key;
     }
-    var d = ppath.dirname(key);
-    while (true) {
+    for (final d in _directoriesFrom(ppath.dirname(key))) {
       final layer = _norm(ppath.join(d, selfVglp));
       if (layer != key &&
           layers.contains(layer) &&
@@ -745,10 +750,8 @@ class VglpProgram {
         return d;
       }
       if (_selfGlpTypes(d).contains(name)) return d;
-      if (programsDir == null || d == programsDir) return null;
-      if (!ppath.isWithin(programsDir!, d)) return null;
-      d = ppath.dirname(d);
     }
+    return null;
   }
 
   /// The name of the module [definerOf] gives as [key]: a module file's,
