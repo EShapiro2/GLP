@@ -3,7 +3,7 @@
 %% (../contracts.glp, contract_named(bonds, C)), platform.vglp, which
 %% programs/vglp/cva/compile.sh prints from it: GB's mint_bond, advance and
 %% redeem_bc, as Currencies' programs/currencies/bonds/GB.glp writes them,
-%% with GKK's establish and meet, GB's mint_coin and swap_cb, and dawn, which
+%% with GKK's establish and acquaint, GB's mint_coin and swap_cb, and dawn, which
 %% gives a person their first date, date(0), GB naming no act that does
 %% (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18
 %% Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, item 3: "GB: d, k and
@@ -14,7 +14,7 @@
 %% numeric ones:
 %%
 %%   establish(p?)                  :  at p  +identity
-%%   meet(p?, q?)                   :  at p  identity, +knows(q)
+%%   acquaint(p?, q?)               :  at p  identity, +knows(q)
 %%                                     at q  identity, +knows(p)
 %%   dawn(p?)                       :  at p  identity, not dated, +dated, +date(0)
 %%   mint_coin(p? ; k)              :  at p  identity, +k coin(p)
@@ -46,7 +46,7 @@
 %% ready for no part it names (vGLP, Section 5.4, "The compilation").  She
 %% mints two coins, mint_coin(alice, 2), a multiplicity, and a bond maturing
 %% at 1000000, which her date never reaches.  Bob establishes his identity,
-%% mints two coins and asks to meet alice, the cold call her yes answers; he
+%% mints two coins and asks to come to know alice, the cold call her yes answers; he
 %% swaps a coin of his for each of her bonds, swap_cb, she answering yes.  He
 %% then asks to redeem each bond against a coin of alice's held by her,
 %% redeem_bc(bob, alice, d, alice).  Its class holds swap_cb(alice, bob,
@@ -68,11 +68,11 @@
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
-Class    ::= establish(Peer) ; meet(Peer, Peer) ; dawn(Peer) ; mint_coin(Peer, Integer)
+Class    ::= establish(Peer) ; acquaint(Peer, Peer) ; dawn(Peer) ; mint_coin(Peer, Integer)
            ; mint_bond(Peer, Integer, Integer) ; advance(Peer, Integer)
            ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
            ; redeem_bc(Peer, Peer, Integer, Peer).
-Proposal ::= establish(Peer) ; meet(Peer, Peer) ; dawn(Peer) ; mint_coin(Peer, Integer)
+Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; dawn(Peer) ; mint_coin(Peer, Integer)
            ; mint_bond(Peer, Integer, Integer)
            ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
            ; redeem_bc(Peer, Peer, Integer, Peer).
@@ -90,9 +90,11 @@ Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Pe
 Net      ::= msg(Peer, Content).
 Atom     ::= identity ; knows(Peer) ; dated ; date(Integer) ; coin(Peer) ; bond(Peer, Integer).
 Approved ::= Proposal.
-Output   ::= view(List(Atom), List(Key), List(Approved)) ; refused(Approved, Key, Reason).
+Output   ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking   ::= Attempt ; hello(Peer, Proposal).
-Approval ::= approval(Asking, YesNo?).
+Approval ::= approval(Asking, List(Word), YesNo?).
+Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
@@ -111,12 +113,12 @@ play_bonds(LA?, LB?, N?) :-
           own([A4], propose(mint_bond(A4?, 0, 1))),
           own([A5], propose(mint_coin(A5?, 2))), wait(has(coin(alice), 2)),
           own([A6], propose(mint_bond(A6?, 1000000, 1))), wait(holds(bond(alice, 1000000))),
-          approval(meet(bob, alice), yes),
+          approval(acquaint(bob, alice), yes),
           approval(swap_cb(bob, alice, bob, 1, alice, 1000000, 1), yes),
           approval(swap_cb(bob, alice, bob, 1, alice, 10, 1), yes)],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint_coin(B2?, 2))), wait(has(coin(bob), 2)),
-          own([B3], propose(meet(B3?, alice))), wait(holds(knows(alice))),
+          own([B3], propose(acquaint(B3?, alice))), wait(holds(knows(alice))),
           own([B4], propose(swap_cb(B4?, alice, bob, 1, alice, 1000000, 1))),
           wait(holds(bond(alice, 1000000))),
           own([B5], propose(swap_cb(B5?, alice, bob, 1, alice, 10, 1))),

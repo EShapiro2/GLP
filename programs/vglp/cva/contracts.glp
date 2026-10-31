@@ -295,6 +295,98 @@ introduction_named(intros, no_introduction).
 introduction_named(days, no_introduction).
 introduction_named(linear, no_introduction).
 
+%% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  These are test code, and their words the compiler's fixtures, not a contract's.
+PWord      ::= text(String) ; person(Integer).
+PWords     ::= [] ; [PWord | PWords].
+PSentences ::= [] ; [PWords | PSentences].
+Said       ::= none ; said(PSentences).
+Strings    ::= [] ; [String | Strings].
+Ints       ::= [] ; [Integer | Ints].
+PList      ::= list(String, Preds).
+PLists     ::= [] ; [PList | PLists].
+PAct       ::= act(Constant, String, Strings, Said, String, Proposer).
+Proposer   ::= by(Ints).
+PActs      ::= [] ; [PAct | PActs].
+Pragmas    ::= pragmas(PLists, PActs).
+
+procedure pragmas_named(Constant?, Pragmas).
+pragmas_named(nudge, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
+pragmas_named(introduce, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(introduce, '"Introduce"', [], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
+pragmas_named(gnudge, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(g, '"G"', [], none, '"Friends"', by([1]))])).
+pragmas_named(childsafe, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(enrol, '"Enrol"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(cbefriend, '"Cbefriend"', [], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
+pragmas_named(link, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(link, '"Link"', [], none, '"Friends"', by([1]))])).
+pragmas_named(friends, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(greet, '"Greet"', [], none, '"Friends"', by([1])),
+     act(cheer, '"Cheer"', [], none, '"Friends"', by([1]))])).
+pragmas_named(waves, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(wave, '"Wave"', [], none, '"Friends"', by([1])),
+     act(hail, '"Hail"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
+pragmas_named(parts, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(mint, '"Mint"', [], none, '"Friends"', by([1])),
+     act(tap, '"Tap"', [], none, '"Friends"', by([1])),
+     act(pat, '"Pat"', [], none, '"Friends"', by([1]))])).
+pragmas_named(opens, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(mark, '"Mark"', [], none, '"Friends"', by([1])),
+     act(rmark, '"Rmark"', [], none, '"Friends"', by([1]))])).
+pragmas_named(groups, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(create, '"Create"', [], none, '"Friends"', by([1])),
+     act(join, '"Join"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(close, '"Close"', [], none, '"Friends"', by([1]))])).
+pragmas_named(counter, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(begin, '"Begin"', [], none, '"Friends"', by([1]))])).
+pragmas_named(merges, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(create, '"Create"', [], none, '"Friends"', by([1])),
+     act(join, '"Join"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(merge, '"Merge"', [], none, '"Friends"', by([1]))])).
+pragmas_named(coins, pragmas([list('"Coins"', [coin])],
+    [act(mint, '"Mint"', [], none, '"Coins"', by([1])),
+     act(swap, '"Swap"', [], said([[], [person(1), text('" asks."')]]), '"Coins"', by([1])),
+     act(pay, '"Pay"', [], none, '"Coins"', by([1]))])).
+pragmas_named(wardclose, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(adopt, '"Adopt"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(create, '"Create"', [], none, '"Friends"', by([1])),
+     act(join, '"Join"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(child_close, '"Child close"', [], none, '"Friends"', by([2]))])).
+pragmas_named(numbers, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(start, '"Start"', [], none, '"Friends"', by([1])),
+     act(refuel, '"Refuel"', [], none, '"Friends"', by([1])),
+     act(claim, '"Claim"', [], none, '"Friends"', by([1]))])).
+pragmas_named(bonds, pragmas([list('"Contacts"', [knows])],
+    [act(establish, '"Establish"', [], none, '"Contacts"', by([1])),
+     act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(dawn, '"Dawn"', [], none, '"Contacts"', by([1])),
+     act(mint_coin, '"Mint coin"', [], none, '"Contacts"', by([1])),
+     act(mint_bond, '"Mint bond"', [], none, '"Contacts"', by([1])),
+     act(swap_cb, '"Swap cb"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(redeem_bc, '"Redeem bc"', [], none, '"Contacts"', by([1]))])).
+pragmas_named(intros, pragmas([list('"Contacts"', [knows])],
+    [act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(introduce, '"Introduce"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1]))])).
+pragmas_named(days, pragmas([list('"Dates"', [date])],
+    [act(dawn, '"Dawn"', [], none, '"Dates"', by([1]))])).
+pragmas_named(linear, pragmas([list('"Levels"', [level])],
+    [act(start, '"Start"', [], none, '"Levels"', by([1])),
+     act(refuel, '"Refuel"', [], none, '"Levels"', by([1]))])).
+
 procedure nudge(Contract).
 nudge([schema(befriend, [],
          [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
@@ -502,7 +594,7 @@ numbers([schema(befriend, [],
 procedure bonds(Contract).
 bonds([schema(establish, [],
          [rs(guarded, [atom(identity, [])], [], [], [])]),
-       schema(meet, [],
+       schema(acquaint, [],
          [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
           rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
        schema(dawn, [],
@@ -521,7 +613,7 @@ bonds([schema(establish, [],
           rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(date, [num(t)])], [])])]).
 
 procedure intros(Contract).
-intros([schema(meet, [],
+intros([schema(acquaint, [],
           [rs(guarded, [atom(knows, [role(2)])], [], [], []),
            rs(guarded, [atom(knows, [role(1)])], [], [], [])]),
         schema(introduce, [pvar(c)],
