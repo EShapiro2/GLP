@@ -1394,6 +1394,9 @@ contract(wr_rec_creator, C?) :- wr_rec_creator(C).
 contract(wr_rec_unrequired, C?) :- wr_rec_unrequired(C).
 contract(wr_clear_h, C?) :- wr_clear_h(C).
 contract(wr_clear_v, C?) :- wr_clear_v(C).
+contract(wr_clear_w, C?) :- wr_clear_w(C).
+contract(wr_rec_h_added, C?) :- wr_rec_h_added(C).
+contract(wr_rec_third, C?) :- wr_rec_third(C).
 contract(ls_faults, C?) :- ls_faults(C).
 contract(nn_tag, C?) :- nn_tag(C).
 contract(nn_tag_loose, C?) :- nn_tag_loose(C).
@@ -2503,10 +2506,8 @@ wd_twins(C?) :-
                 rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
                              atom(friend, [role(1)])], [], [], [atom(identity, [])])])], C).
 
-% wd_clear_g: drop(r?) deletes note and clears parent(*), deleting every
-% atom of g at r: a cleared atom deletes what it matches (GAI 11d7133), so
-% drop deletes atoms of g and no child (clause 3) and parent(r) at r and no
-% parenting(r) there (clause 4): child has no guardianship.
+% wd_clear_g: drop(r?) deletes note and clears parent(*), an atom of g,
+% which clause 1 forbids (GAI a81e827): child has no guardianship.
 procedure wd_clear_g(Declared).
 wd_clear_g(C?) :-
     wd_establish(E), wd_enter(N), wd_of_age(O), wd_befriend(B),
@@ -2530,8 +2531,11 @@ wd_clear_g(C?) :-
 % requiring guardian_of of its ward and the record, each ward role the
 % attestation, and each guardian of agents_befriend friend of the other
 % agent (GnW:4).  The guardianship for agent is (agent, identity, principal,
-% principal_of, guardian_of), and the record h'(r, args) is added by every
-% schema adding guardian_of(r) (def:relay, clause 2, GAI 11d7133).
+% principal_of, guardian_of); the record h'(r, args) is added by
+% enter_agent, which adds agent at r, where it adds principal_of(r), and by
+% make_guardian, which adds guardian_of(r) and not agent, where it adds
+% guardian_of(r), requiring it where it requires principal_of(r) (def:relay,
+% clause 2, GAI a81e827).
 procedure wr_enter_agent(Schema).
 wr_enter_agent(schema(enter_agent, [svar(x)],
     [rs(guarded, [atom(principal_of, [role(2)]), atom(guardian_of, [role(2)]),
@@ -2542,17 +2546,20 @@ wr_enter_agent(schema(enter_agent, [svar(x)],
                  [atom(identity, [])])])).
 
 % make_guardian with Vs its variables, Rq the record p requires and Ad the
-% record q adds.
-procedure wr_make_guardian(Args?, Atoms?, Atoms?, Schema).
-wr_make_guardian(Vs, Rq, Ad, schema(make_guardian, Vs?,
+% record q adds; wr_make_guardian_at with A3 added besides at r.
+procedure wr_make_guardian_at(Args?, Atoms?, Atoms?, Atoms?, Schema).
+wr_make_guardian_at(Vs, Rq, Ad, A3, schema(make_guardian, Vs?,
     [rs(guarded, [], [],
                  [atom(identity, []), atom(principal_of, [role(3)]), atom(friend, [role(2)])|Rq?],
                  [atom(agent, [])]),
      rs(guarded, [atom(guardian_of, [role(3)]), atom(friend, [role(3)])|Ad?], [],
                  [atom(identity, []), atom(friend, [role(1)])],
                  [atom(agent, []), atom(friend, [role(3)])]),
-     rs(unguarded, [atom(friend, [role(2)])], [],
+     rs(unguarded, [atom(friend, [role(2)])|A3?], [],
                    [atom(identity, []), atom(agent, [])], [atom(friend, [role(2)])])])).
+
+procedure wr_make_guardian(Args?, Atoms?, Atoms?, Schema).
+wr_make_guardian(Vs, Rq, Ad, S?) :- wr_make_guardian_at(Vs?, Rq?, Ad?, [], S).
 
 procedure wr_befriend(Schema).
 wr_befriend(schema(befriend, [],
@@ -2587,14 +2594,20 @@ wr_agents(schema(agents_befriend, [svar(y), svar(z)],
                  [atom(agent, [])])])).
 
 % wr_with(MakeGuardian, Rest, C): the contract with its make_guardian and
-% the schemas Rest besides.
-procedure wr_with(Schema?, Contract?, Declared).
-wr_with(G, Rest, reflexive([friend], [E?, S?, B?, N?, G?|C?])) :- ground(G?), ground(Rest?) |
-    wd_establish(E), wa_sign(S), wr_befriend(B), wr_enter_agent(N),
+% the schemas Rest besides; wr_with_enter the same with its enter_agent.
+procedure wr_with_enter(Schema?, Schema?, Contract?, Declared).
+wr_with_enter(N, G, Rest, reflexive([friend], [E?, S?, B?, N?, G?|C?])) :-
+    ground(N?), ground(G?), ground(Rest?) |
+    wd_establish(E), wa_sign(S), wr_befriend(B),
     wd_unfriends(U),
     wr_agent_person(AP), wr_agents(AA),
     contract_app([AP?, AA?], Rest?, R),
     contract_app(U?, R?, C).
+
+procedure wr_with(Schema?, Contract?, Declared).
+wr_with(G, Rest, C?) :- ground(G?), ground(Rest?) |
+    wr_enter_agent(N),
+    wr_with_enter(N?, G?, Rest?, C).
 
 procedure wr(Declared).
 wr(C?) :-
@@ -2603,17 +2616,16 @@ wr(C?) :-
     wr_with(G?, [], C).
 
 % wr_rec_creator: make_guardian adds no record at the new guardian, which
-% clause 2 asks of every schema adding guardian_of(r), not only of the
-% creator's: the attestation is admitted as no atom of h, and there is no
+% clause 2 asks of every schema adding guardian_of(r) and not agent at r: the attestation is admitted as no atom of h, and there is no
 % introduction with wards.
 procedure wr_rec_creator(Declared).
 wr_rec_creator(C?) :-
     wr_make_guardian([svar(y)], [atom(agent_of, [role(3), svar(y)])], [], G),
     wr_with(G?, [], C).
 
-% wr_rec_unrequired: make_guardian adds the record at q, but neither adds the
-% attestation at r nor requires the record at a role requiring
-% principal_of(r): no introduction with wards.
+% wr_rec_unrequired: make_guardian adds the record at q, but does not
+% require the record at a role requiring principal_of(r): no introduction
+% with wards.
 procedure wr_rec_unrequired(Declared).
 wr_rec_unrequired(C?) :-
     wr_make_guardian([svar(y)], [], [atom(agent_of, [role(3), svar(y)])], G),
@@ -2641,3 +2653,58 @@ wr_clear_v(C?) :-
                    [rs(guarded, [], [atom(friend, [role(2)]), atom(guardian_of, [any])],
                                 [atom(identity, [])], [atom(agent, [])]),
                     rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])])], C).
+
+% --- contracts with wards at GAI a81e827 (sections/wards.tex) ---------------
+% Clause 1 of def:guardianship: no schema clears an atom of g or of w; and
+% clause 2 of def:relay: every schema that adds m at a role rho adds there an
+% atom of h and adds its record h'(rho, args) at the role at which it adds
+% w(rho), and every other schema that adds v(rho) at a role requires a record
+% h'(rho, ...) at a role at which it requires w(rho) and adds that record
+% where it adds v(rho).  Each fixture changes wr in one place.
+
+% wr_clear_w: drop(r?) deletes agent and principal(r) and clears
+% principal_of(*), clearing an atom of w, which clause 1 forbids: agent has
+% no guardianship, and there is no introduction with wards.  Clauses 3 and 4
+% hold of it: it deletes agent and one atom of principal at its one role,
+% and principal(r) at r with principal_of(r), which principal_of(*) matches.
+procedure wr_clear_w(Declared).
+wr_clear_w(C?) :-
+    wr_make_guardian([svar(y)], [atom(agent_of, [role(3), svar(y)])],
+                     [atom(agent_of, [role(3), svar(y)])], G),
+    wr_with(G?, [schema(drop, [],
+                   [rs(guarded, [],
+                       [atom(agent, []), atom(principal, [role(1)]), atom(principal_of, [any])],
+                       [atom(identity, [])], [])])], C).
+
+% wr_rec_h_added: make_guardian adds the attestation attestation(y) at r and
+% the record agent_of(r, y) at q, and requires no record: it adds no agent,
+% so it requires a record at a role requiring principal_of(r), which it does
+% not, and there is no introduction with wards.
+procedure wr_rec_h_added(Declared).
+wr_rec_h_added(C?) :-
+    wr_make_guardian_at([svar(y)], [], [atom(agent_of, [role(3), svar(y)])],
+                        [atom(attestation, [svar(y)])], G),
+    wr_with(G?, [], C).
+
+% wr_rec_third: enter_agent(p?, r?, s? ; x) makes s a guardian of r besides,
+% adding guardian_of(r) at s, who has identity and is no AI agent, and no
+% record: enter_agent adds agent at r, and adds the record at p, where it
+% adds principal_of(r), so clause 2 asks nothing more of it, and the
+% contract is grassroots with wards as wr is.
+procedure wr_enter_third(Schema).
+wr_enter_third(schema(enter_agent, [svar(x)],
+    [rs(guarded, [atom(principal_of, [role(2)]), atom(guardian_of, [role(2)]),
+                  atom(friend, [role(2)]), atom(agent_of, [role(2), sgn(x, 1)])], [],
+                 [atom(identity, []), atom(item, [svar(x)])], [atom(agent, [])]),
+     rs(guarded, [atom(identity, []), atom(principal, [role(1)]), atom(agent, []),
+                  atom(friend, [role(1)]), atom(attestation, [sgn(x, 1)])], [], [],
+                 [atom(identity, [])]),
+     rs(guarded, [atom(guardian_of, [role(2)])], [], [atom(identity, [])],
+                 [atom(agent, [])])])).
+
+procedure wr_rec_third(Declared).
+wr_rec_third(C?) :-
+    wr_make_guardian([svar(y)], [atom(agent_of, [role(3), svar(y)])],
+                     [atom(agent_of, [role(3), svar(y)])], G),
+    wr_enter_third(N),
+    wr_with_enter(N?, G?, [], C).
