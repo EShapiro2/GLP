@@ -1,7 +1,9 @@
+Reflexive predicates: friend, knows
+
 establish(Alice?) :
     at Alice: not identity, not retired, +identity
 
-meet(Alice?, Bob?) :
+acquaint(Alice?, Bob?) :
     at Alice: identity, not agent, not retired, +knows(Bob)
     at Bob: identity, not agent, not retired, +knows(Alice)
 
@@ -14,43 +16,63 @@ befriend(Alice?, Bob?) :
     at Bob: identity, knows(Alice), not agent, not retired, not friend(Alice), +friend(Alice)
 
 unfriend(Alice?, Bob) :
-    at Alice: identity, not retired, not principal(Bob), not principal_of(Bob), -friend(Bob)
+    at Alice: identity, not retired, not principal(Bob), not guarded_by(Bob), not principal_of(Bob), not guardian_of(Bob), -friend(Bob)
     at Bob: identity, -friend(Alice)
 
-enter(Alice?, Bob?; x) :
-    at Alice: identity, item(x), not agent, not retired, +principal_of(Bob), +friend(Bob), +knows(Bob), +agent_of(Bob, Alice, sgn(x, Alice))
-    at Bob: not identity, not retired, +identity, +agent, +principal(Alice), +friend(Alice), +knows(Alice), +attestation(sgn(x, Alice))
+enter(Alice?, Carol?; y) :
+    at Alice: identity, authored(y), not agent, not retired, +principal_of(Carol), +guardian_of(Carol), +friend(Carol), +knows(Carol), +agent_of(Carol, y)
+    at Carol: not identity, not retired, +identity, +agent, +principal(Alice), +friend(Alice), +knows(Alice), +attestation(y)
 
-agent_meet(Alice?, Bob?, Carol?; y) :
-    at Alice: identity, agent, principal(Carol), attestation(y), not retired, +knows(Bob)
-    at Bob: identity, not agent, not retired, +knows(Alice), +agent_of(Alice, Carol, y)
-    at Carol: identity, principal_of(Alice), agent_of(Alice, Carol, y), not retired
+make_guardian(Alice?, Bob?, Carol; y) :
+    at Alice: identity, principal_of(Carol), friend(Bob), agent_of(Carol, y), not retired
+    at Bob: identity, not agent, not retired, not guardian_of(Carol), +guardian_of(Carol), +friend(Carol), +agent_of(Carol, y)
+    at Carol: identity, agent, not friend(Bob), +guarded_by(Bob), +friend(Bob)
 
-agents_meet(Alice?, Bob?, Carol?, Dave?; y, z) :
-    at Alice: identity, agent, principal(Carol), attestation(y), not retired, +knows(Bob), +agent_of(Bob, Dave, z)
-    at Bob: identity, agent, principal(Dave), attestation(z), not retired, +knows(Alice), +agent_of(Alice, Carol, y)
-    at Carol: identity, principal_of(Alice), agent_of(Alice, Carol, y), not retired
-    at Dave: identity, principal_of(Bob), agent_of(Bob, Dave, z), not retired
+end_guardian(Alice?, Bob, Carol) :
+    at Alice: identity, principal_of(Carol), not retired
+    at Bob: identity, not principal_of(Carol), -guardian_of(Carol)
+    at Carol: identity, -guarded_by(Bob)
 
-agent_befriend(Alice?, Bob?, Carol?) :
-    at Alice: identity, agent, principal(Carol), knows(Bob), not retired, not friend(Bob), +friend(Bob)
-    at Bob: identity, knows(Alice), not agent, not retired, not friend(Alice), +friend(Alice)
-    at Carol: identity, principal_of(Alice), not retired
+resign(Bob?, Carol) :
+    at Bob: identity, not retired, not principal_of(Carol), -guardian_of(Carol)
+    at Carol: identity, -guarded_by(Bob)
 
-agents_befriend(Alice?, Bob?, Carol?, Dave?) :
-    at Alice: identity, agent, principal(Carol), knows(Bob), not retired, not friend(Bob), +friend(Bob)
-    at Bob: identity, agent, principal(Dave), knows(Alice), not retired, not friend(Alice), +friend(Alice)
-    at Carol: identity, principal_of(Alice), not retired
-    at Dave: identity, principal_of(Bob), not retired
+guardian_unfriend(Bob?, Carol) :
+    at Bob: identity, not retired, not principal_of(Carol), -friend(Carol), -guardian_of(Carol)
+    at Carol: identity, -friend(Bob), -guarded_by(Bob)
 
-agent_unfriend(Alice, Bob, Carol?) :
-    at Alice: identity, principal(Carol), not principal(Bob), -friend(Bob)
-    at Bob: identity, -friend(Alice)
-    at Carol: identity, principal_of(Alice), not retired
+agent_acquaint(Carol?, Bob?, Alice?; y) :
+    at Carol: identity, agent, attestation(y), not retired, +knows(Bob)
+    at Bob: identity, not agent, not retired, +knows(Carol), +agent_of(Carol, y)
+    at Alice: identity, guardian_of(Carol), agent_of(Carol, y), knows(Bob), not agent, not retired
 
-retire(Alice?, Bob) :
-    at Alice: identity, principal_of(Bob), not retired, +retired_of(Bob), -friend(Bob)
-    at Bob: identity, agent, principal(Alice), not retired, +retired, -friend(Alice)
+agent_befriend(Carol?, Bob?, Alice?) :
+    at Carol: identity, agent, knows(Bob), not retired, not friend(Bob), +friend(Bob)
+    at Bob: identity, knows(Carol), not agent, not retired, not friend(Carol), +friend(Carol)
+    at Alice: identity, guardian_of(Carol), friend(Bob), not agent, not retired
+
+agent_unfriend(Carol, Bob, Alice?) :
+    at Carol: identity, not principal(Bob), not guarded_by(Bob), -friend(Bob)
+    at Bob: identity, -friend(Carol)
+    at Alice: identity, guardian_of(Carol), not agent, not retired
+
+agents_acquaint(Carol?, Dave?, Alice?, one(Bob, Alice)?; y, z) :
+    at Carol: identity, agent, attestation(y), not retired, +knows(Dave), +agent_of(Dave, z)
+    at Dave: identity, agent, attestation(z), not retired, +knows(Carol), +agent_of(Carol, y)
+    at Alice: identity, guardian_of(Carol), agent_of(Carol, y), knows(Dave), knows(one(Bob, Alice)), not agent, not retired
+    at one(Bob, Alice): identity, guardian_of(Dave), agent_of(Dave, z), not agent, not retired
+
+agents_befriend(Carol?, Dave?, Alice?, one(Bob, Alice)?) :
+    at Carol: identity, agent, knows(Dave), not retired, not friend(Dave), +friend(Dave)
+    at Dave: identity, agent, knows(Carol), not retired, not friend(Carol), +friend(Carol)
+    at Alice: identity, guardian_of(Carol), knows(Dave), friend(one(Bob, Alice)), not agent, not retired
+    at one(Bob, Alice): identity, guardian_of(Dave), not agent, not retired
+
+retire(Carol, Alice?, Carol[friend(*)], Carol[guarded_by(*)]) :
+    at Carol: identity, agent, principal(Alice), not retired, +retired, -friend(*), -guarded_by(*)
+    at Alice: identity, principal_of(Carol), not retired, +retired_of(Carol), -friend(Carol)
+    at Carol[friend(*)]: identity, -friend(Carol)
+    at Carol[guarded_by(*)]: identity, not principal_of(Carol), -guardian_of(Carol)
 
 sign(Alice?; x) :
     at Alice: identity, not retired, +item(x), +authored(x)
