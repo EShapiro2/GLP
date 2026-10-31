@@ -1,6 +1,6 @@
 % ---------------------------------------------------------------------------
 % Contracts with wards: GAI's appendix "Contracts with Wards",
-% /Grassroots/GAI, sections/wards.tex at GAI a81e827, which carries what GSC's Appendix F
+% /Grassroots/GAI, sections/wards.tex at GAI e4d935c, which carries what GSC's Appendix F
 % did until GSC 83b951c removed it; and, for an agent-named contract with
 % wards, def:sg-wards of CSSN's paper, /Grassroots/CSSN,
 % sections/appendix-schemas.tex.  The papers are the specification and no
@@ -306,8 +306,8 @@ adds_with_iota([S|Ss], Mk, Io, R?) :- ground(S?), ground(Ss?), ground(Mk?), grou
     adds_with_iota(Ss?, Mk?, Io?, A2),
     both_yes(A1?, A2?, R).
 
-% Clause 1, last part (GAI a81e827): no schema clears an atom of g or of w,
-% a cleared atom being one marked - with the wildcard (rs_clear).
+% Clause 1, last part (GAI e4d935c): no schema clears an atom of g, of w or
+% of v, a cleared atom being one marked - with the wildcard (rs_clear).
 procedure roles_never_clear(RoleSpecs?, Constant?, Ans).
 roles_never_clear([], _, yes).
 roles_never_clear([RS|Rs], P, R?) :- ground(RS?), ground(Rs?), ground(P?) |
@@ -455,18 +455,15 @@ g_deleted_ok([S|Ss], G, W, R?) :- ground(S?), ground(Ss?), ground(G?), ground(W?
     g_deleted_ok(Ss?, G?, W?, A2),
     both_yes(A1?, A2?, R).
 
-% Clause 5: a schema that adds w(rho) at a role adds v(rho) there; a schema
-% that adds v(rho) at a role requires iota there and forbids every mark in M
-% there; and a schema that deletes v(rho) at a role deletes or forbids w(rho)
-% there, as GAI 11d7133 writes it.  GAI a81e827 has u, a role or an agent
-% variable, for rho in the last part, which a cleared v(*) does not meet:
-% it deletes v(x) of every agent x, and w(x) of an agent outside the act
-% stays (Lemma Wards and guardians); this part waits on GAI.  v may be w,
-% and then the first and the last part hold of themselves.  An atom of v the role deletes is one marked - or a cleared
-% one, v(*) deleting v(rho) for every rho; w(rho) is deleted where it is
-% marked - or a cleared atom matches it (deletes_at), so a cleared v(*) asks
-% for a cleared atom of w matching w(*), no finite set of atoms forbidden
-% holding every w(rho).
+% Clause 5 (GAI e4d935c): a schema that adds w(rho) at a role adds v(rho)
+% there; a schema that adds v(rho) at a role requires iota there and forbids
+% every mark in M there; and a schema that deletes, at a role, v(u) for a
+% role or an agent variable u deletes or forbids w(u) there.  No schema
+% clears an atom of v or of w (clause 1, never_cleared), so the atoms of v a
+% role deletes are those marked - there, u being their argument, role(I) or
+% pvar(X), and w(u) is deleted where it is marked - (deletes_at) or
+% forbidden.  v may be w, and then the first and the last part hold of
+% themselves.
 procedure w_adds_v(Atoms?, Atoms?, Constant?, Constant?, Ans).
 w_adds_v([], _, _, _, yes).
 w_adds_v([atom(Q, As)|Xs], P, W, V, R?) :-
@@ -522,7 +519,7 @@ roles_v_ok([RS|Rs], M, Io, W, V, R?) :-
     rs_add(RS?, P),
     rs_req(RS?, Req),
     rs_forb(RS?, N),
-    rs_deletes(RS?, D),
+    rs_del(RS?, D),
     v_at(P?, Req?, N?, D?, RS?, M?, Io?, W?, V?, A1),
     roles_v_ok(Rs?, M?, Io?, W?, V?, A2),
     both_yes(A1?, A2?, R).
@@ -539,7 +536,7 @@ v_ok([S|Ss], M, Io, W, V, R?) :-
 % --- the candidates of a mark --------------------------------------------
 % The iotas with clauses 1 (first part) and 2, the gs with clauses 1 (last
 % part) and 3, for each iota and g the ws with clauses 1 (last part) and 4,
-% and for each w the vs with clause 5; clause 1's second part is a condition
+% and for each w the vs with clauses 1 (last part) and 5; clause 1's second part is a condition
 % on M alone and is decided once per set (one_mark_added).
 
 procedure iotas_ok1(Ans?, Constant?, Preds?, Contract?, Constant?, Preds).
@@ -587,7 +584,9 @@ vs_ok(_, [], _, _, _, _, _, T, T?).
 vs_ok(C, [V|Vs], M, Mk, Io, G, W, T, R?) :-
     ground(C?), ground(V?), ground(Vs?), ground(M?), ground(Mk?), ground(Io?), ground(G?),
     ground(W?), ground(T?) |
-    v_ok(C?, M?, Io?, W?, V?, A),
+    never_cleared(C?, V?, A0),
+    v_ok(C?, M?, Io?, W?, V?, A5),
+    both_yes(A0?, A5?, A),
     vs_ok1(A?, V?, Vs?, C?, M?, Mk?, Io?, G?, W?, T?, R).
 
 procedure ws_ok1(Ans?, Constant?, Preds?, Contract?, Preds?, Preds?, Constant?, Constant?,
