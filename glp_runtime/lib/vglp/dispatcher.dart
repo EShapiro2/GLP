@@ -11,9 +11,8 @@
 // The canonical compilation of M consists, besides M's clauses so extended
 // and the asking clauses, of "the construct process of T" for each interactive
 // type T and "the dispatcher".  Both are GLP written once, in programs/vglp/,
-// and emitted into every compiled program, as the mediator of the old design
-// was: a module path resolves from the program root downward, so a compiled
-// program cannot name programs/vglp/ (mediator.dart).
+// and emitted into every compiled program: a module path resolves from the
+// program root downward, so a compiled program cannot name programs/vglp/.
 //
 // The generic source is a module that loads and type-checks by itself: it is
 // parameterised in the program's questions, Q of Ask(Q), Spawn(Q),

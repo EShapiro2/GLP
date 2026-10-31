@@ -1,193 +1,23 @@
 // glp_runtime/test/vglp/program_compilation_test.dart
 //
-// The canonical compilation end to end: a vGLP module to one self-contained
-// GLP module.
-// Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation".
+// The deployed vGLP sources and IGLP's linker fixture: each parses as vGLP,
+// and the fixture's committed modules are what :emit prints.  The tests of
+// the old compilation, compileProgram against the generic mediator, went with
+// it (vGLP #22's task, Code_inbox 2026-10-31 15:20 UTC).
+// Spec: vGLP, Section 6, "The Implementation: Compiling vGLP onto GLP".
 
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:glp_runtime/compiler/ast.dart' show ConstTerm;
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
-import 'package:glp_runtime/vglp/mediator.dart';
-import 'package:glp_runtime/vglp/program_compilation.dart';
-import 'package:glp_runtime/analysis/type_checker/type_ast.dart'
-    show TypeEnvironment;
-import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 
 const _programs = '../programs';
 
 void main() {
-  // The scope of a module directly under the root, programs/self.glp its one
-  // layer, passed in.
+  // The root self.glp, the root of the scope :emit compiles in.
   final rootSelfGlp = File('$_programs/self.glp');
-  final TypeEnvironment? scope =
-      rootSelfGlp.existsSync() ? rootScope(rootSelfGlp.absolute.path) : null;
-
-  final mediator = MediatorSource.fromDirectory('$_programs/vglp');
-
-  CompiledProgram compile(String source) => compileProgram(
-      Parser(Lexer(source).tokenize(), vglp: true).parseModule(), mediator,
-      scope: scope);
-
-  group('one self-contained module', () {
-    const src = '''
-IntroChannel   ::= Channel(Stream(Constant), Stream(Constant)).
-Response       ::= accept(IntroChannel) ; no.
-Decision       ::= yes ; no.
-ColdCallAnswer ::= response(Response?).
-UserContent    ::= response(Response).
-UserInMsg      ::= msg(Constant, Constant, UserContent)
-                 ; decision(Decision, Constant, ColdCallAnswer).
-UserInStream   ::= [] ; [UserInMsg | UserInStream].
-ColdCallOffer  ::= offer(Constant).
-
-procedure respond(ColdCallOffer?, Response, UserInStream).
-*(Answer=yes, From?)
-respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
-    ground(From?) | true
-*(no) true.
-*(Answer=no, From?)
-respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
-    ground(From?) | true.
-''';
-
-    test('it carries the source types, the added types and the mediator\'s',
-        () {
-      final out = compile(src).source;
-      expect(out, contains('UserInStream ::='));       // the source's own
-      expect(out, contains('Xs_respond_1 ::= xs_respond_1(Decision).'));  // added
-      expect(out, contains('Answer ::= Xs_respond_1 ; Xs_respond_2.'));
-      expect(out, contains('Reply_respond_1 ::= then(Xs_respond_1) ; else.'));
-      expect(out, contains('Reply_respond_2 ::= then(Xs_respond_2).'));
-      expect(out, contains('Escrow ::= esc_respond_1(Reply_respond_1?) ; '
-          'esc_respond_2(Reply_respond_2?).'));
-      expect(out, contains(                                             // instantiated
-          'UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).'));
-    });
-
-    test('no type parameter survives the emission', () {
-      final out = compile(src).source;
-      expect(out, isNot(contains('(A)')));
-      expect(out, isNot(contains('(A, E, X)')));
-      expect(out, isNot(contains('(E, X)')));
-      expect(out, isNot(contains('PendingList(E)')));
-    });
-
-    test('every compiled procedure is declared immediately above its clauses',
-        () {
-      final out = compile(src).source;
-      final lines = out.split('\n');
-      final declLine =
-          lines.indexWhere((l) => l.startsWith('procedure respond('));
-      expect(declLine, greaterThan(-1));
-      expect(lines[declLine + 1], startsWith('respond('));
-    });
-
-    test('the mediator comes with it, clauses and declarations', () {
-      final out = compile(src).source;
-      for (final p in ['med', 'answer', 'close', 'drop', 'med_split']) {
-        expect(out, contains('procedure $p('), reason: '$p is missing');
-      }
-      // abort/3 stays generic in the slot's reply type.
-      expect(out, contains('procedure(R) abort('));
-      // The timer and the deadline went on 2026-09-15 (Udi), so no compiled
-      // program carries them.
-      expect(out, isNot(contains('procedure timer(')));
-      expect(out, isNot(contains('procedure deadline(')));
-    });
-
-    test('the pending table\'s program clauses come ahead of the search clauses',
-        () {
-      final out = compile(src).source;
-      final own = out.indexOf('answer(ReqId, xs_respond_1(X1), ');
-      final search = out.indexOf('otherwise | answer(');
-      expect(own, greaterThan(-1));
-      expect(search, greaterThan(own));
-      expect(out, contains('answer(ReqId, xs_respond_2(X1), '));
-      // close only for the clause with an else-branch
-      expect(out, contains('close(ReqId, [pending(Id, esc_respond_1(R?)) | Ps], Ps?)'));
-      expect(out, isNot(contains('esc_respond_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = else')));
-    });
-
-    test('the slots are typed by their clauses\' reply types', () {
-      final out = compile(src).source;
-      expect(out, contains('Slot(Reply_respond_1)?, Slot(Reply_respond_2)?)'));
-      expect(out, contains('Slot(R) ::= none ; ask(R, ReqId).'));
-    });
-
-    test('the emitted module parses back as GLP', () {
-      final out = compile(src).source;
-      final back = Parser(Lexer(out).tokenize()).parseModule();
-      expect(back.procedures, isNotEmpty);
-      // Nothing volition-guarded survives: GLP is vGLP without volition guards.
-      for (final p in back.procedures) {
-        for (final c in p.clauses) {
-          expect(c.isVolitionGuarded, isFalse);
-        }
-      }
-    });
-
-    test('display declarations are carried through unchanged', () {
-      // Carried through in the one canonical print of GLP's printer
-      // (glp_printer.dart): 'x' and "x" are two spellings of one string, the
-      // double-quoted form read and never printed, a string single-quoted and
-      // bare where the lexer reads it so (GLP-Spec appendix-lp.tex, Definition
-      // "Logic Programs Syntax"; vGLP #5 Cowork, 2026-10-07 20:01 UTC, item
-      // 2).  Until 2026-10-10 a string literal kept its double quotes,
-      // label("Mint").
-      final out = compile('''
-$src
-display respond *(Answer=yes, From?) : panel(inbox), label("Mint"), transient.
-''');
-      expect(out.source, contains('display respond'));
-      expect(out.source, contains("label('Mint')"));
-      expect(out.source, isNot(contains('"Mint"')));
-      expect(out.source, contains('panel(inbox)'));
-      expect(out.source, contains('*(Answer=yes, From?)'));
-      expect(out.source, isNot(contains('"inbox"')));
-      expect(out.source, isNot(contains('"yes"')));
-      // The other spelling of the one string compiles to the same text.
-      expect(
-          compile('''
-$src
-display respond *(Answer=yes, From?) : panel(inbox), label('Mint'), transient.
-''').source,
-          out.source);
-    });
-
-    test('a string \'"x"\' round-trips through the compiler', () {
-      // '"x"' is the three-character string, the reader keeping the
-      // characters as written, and another value than "x" and 'x', the
-      // one-character string (GLP-Spec appendix-lp.tex, Definition "Logic
-      // Programs Syntax"): the compiled program prints it '"x"', and that
-      // text reads back as the same three characters, in a clause and in a
-      // display declaration alike.
-      final out = compile('''
-$src
-procedure tag(String).
-tag('"x"').
-tag("x").
-display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
-''').source;
-      // tag/1 gains the mediator channel ahead of its own argument.
-      expect(out, contains('tag(_, \'"x"\') :- true.'));
-      expect(out, contains('tag(_, x) :- true.'));
-      expect(out, contains('label(\'"x"\')'));
-      final back = Parser(Lexer(out).tokenize()).parseModule();
-      final tags = back.procedures.singleWhere((p) => p.name == 'tag');
-      expect([
-        for (final c in tags.clauses) (c.head.args.last as ConstTerm).value
-      ], ['"x"', 'x']);
-      final label = back.displayDecls.single.items
-          .singleWhere((i) => i.name == 'label')
-          .args
-          .single as ConstTerm;
-      expect(label.value, '"x"');
-    });
-  });
 
   group('the deployed sources', () {
     // Five are asked here, and a list written from memory misses one:
