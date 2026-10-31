@@ -1,7 +1,6 @@
 // lib/analysis/type_checker/type_identity.dart
 //
-// Type identity for dynamic activation (TGLP, modules.tex §Dynamic Activation;
-// plan step 1 of /Grassroots/docs/typed-dynamic-activation-plan.md).
+// Type identity for dynamic activation (TGLP, modules.tex §Dynamic Activation).
 //
 // The type identity of a procedure declaration is the hash of its full type
 // automaton in canonical minimised form, with every type the signature
@@ -257,23 +256,19 @@ class _Expansion {
   }
 
   void expand(ProcDecl decl) {
-    final work = <_State>[_State.proc];
     transitions[_State.proc] = _procTransitions(decl);
-    work.addAll(transitions[_State.proc]!.values);
-
-    while (work.isNotEmpty) {
-      final s = work.removeLast();
-      if (transitions.containsKey(s)) continue;
-      final t = _transitionsOf(s);
-      transitions[s] = t;
-      work.addAll(t.values);
-    }
+    _expandWork([_State.proc, ...transitions[_State.proc]!.values]);
   }
 
   /// The sub-automaton reachable from [start], a type's state: the expansion
   /// step of the type identity of a type.
   void expandFrom(_State start) {
-    final work = <_State>[start];
+    _expandWork([start]);
+  }
+
+  /// The transitions of each state of [work], and of every state they reach,
+  /// the last of [work] taken first.
+  void _expandWork(List<_State> work) {
     while (work.isNotEmpty) {
       final s = work.removeLast();
       if (transitions.containsKey(s)) continue;
@@ -862,12 +857,43 @@ const _instancePrefix = '#instance:';
   required Map<String, TypeDef> exportedTypes,
   Set<String> exportedParams = const {},
 }) {
-  final ie = _Expansion(importedTypes, holes: importedParams)..expand(imported);
-  final ee = _Expansion(exportedTypes, holes: exportedParams)..expand(exported);
+  return _Agreement(
+    imported: imported,
+    importedTypes: importedTypes,
+    importedParams: importedParams,
+    exported: exported,
+    exportedTypes: exportedTypes,
+    exportedParams: exportedParams,
+  ).run();
+}
+
+/// The walk of [_agreement]: the two expansions, the binding of the export's
+/// parameters it finds, and the instances of the parameters bound as bare
+/// alternatives, each closure of the walk a method.
+class _Agreement {
+  final _Expansion ie;
+  final _Expansion ee;
+  final Set<String> importedParams;
+  final Set<String> exportedParams;
 
   // The export's parameters, each bound to a state of the import at the
   // produced view.
   final theta = <String, _State>{};
+
+  // The instance of a parameter that occurs only as a bare alternative, as a
+  // state of the import of its own, `#instance:X`, viewed at the produced
+  // mode.  The name is no type name, so it collides with none.
+  final instances = <String, _View>{};
+
+  _Agreement({
+    required ProcDecl imported,
+    required Map<String, TypeDef> importedTypes,
+    this.importedParams = const {},
+    required ProcDecl exported,
+    required Map<String, TypeDef> exportedTypes,
+    this.exportedParams = const {},
+  })  : ie = _Expansion(importedTypes, holes: importedParams)..expand(imported),
+        ee = _Expansion(exportedTypes, holes: exportedParams)..expand(exported);
 
   _State? flip(_State s, bool d) {
     if (!d) return s;
@@ -900,12 +926,6 @@ const _instancePrefix = '#instance:';
   bool isImportAbstract(_State s) =>
       s.kind == _Kind.type && importedParams.contains(s.name);
 
-  // The instance of a parameter that occurs only as a bare alternative, as a
-  // state of the import of its own, `#instance:X`, viewed at the produced
-  // mode.  The name is no type name, so it collides with none.
-  const instancePrefix = _instancePrefix;
-  final instances = <String, _View>{};
-
   _State flipTarget(_State s) => flip(s, true) ?? s;
   String flipLabel(String l) => l.endsWith(':up')
       ? '${l.substring(0, l.length - 3)}:down'
@@ -924,7 +944,7 @@ const _instancePrefix = '#instance:';
   // A state of the import: its class, with its own abstract type or those it
   // inlines, and its transitions.
   _View importView(_State s) {
-    if (s.kind == _Kind.type && s.name.startsWith(instancePrefix)) {
+    if (s.kind == _Kind.type && s.name.startsWith(_instancePrefix)) {
       return flipView(instances[s.name]!, s.dual);
     }
     final marks = <String>{
@@ -988,8 +1008,8 @@ const _instancePrefix = '#instance:';
       case _Kind.opaque:
         return 'the opaque type ${s.name}';
       case _Kind.type:
-        if (s.name.startsWith(instancePrefix)) {
-          final x = s.name.substring(instancePrefix.length);
+        if (s.name.startsWith(_instancePrefix)) {
+          final x = s.name.substring(_instancePrefix.length);
           return 'the instance of ${x.substring(abstractTypePrefix.length)}$q';
         }
         final name = s.name.startsWith(abstractTypePrefix)
@@ -1009,140 +1029,142 @@ const _instancePrefix = '#instance:';
     return int.parse(procLabel.substring(at + 1, colon));
   }
 
-  final queue = <_Pair>[
-    _Pair(_Side(true, _State.proc), _Side(false, _State.proc), 0, const [])
-  ];
-  final seen = <(_Side, _Side)>{};
-  var deferred = <_Pair>[];
+  (DeclarationDisagreement?, Map<String, _State>) run() {
+    final queue = <_Pair>[
+      _Pair(_Side(true, _State.proc), _Side(false, _State.proc), 0, const [])
+    ];
+    final seen = <(_Side, _Side)>{};
+    var deferred = <_Pair>[];
 
-  // Breadth first, the arguments in order, so the disagreement reported is at
-  // the first argument and the shortest path where there is one.
-  var next = 0;
-  while (true) {
-    while (next < queue.length) {
-      final p = queue[next++];
-      var a = p.export;
-      final b = p.import;
-      var exportDesc = describe(a);
+    // Breadth first, the arguments in order, so the disagreement reported is at
+    // the first argument and the shortest path where there is one.
+    var next = 0;
+    while (true) {
+      while (next < queue.length) {
+        final p = queue[next++];
+        var a = p.export;
+        final b = p.import;
+        var exportDesc = describe(a);
 
-      // The export's parameter here is instantiated to the import's state.
-      if (isExportParam(a)) {
-        final bound = theta[a.state.name];
-        if (bound == null) {
-          final instance = flip(b.state, a.state.dual);
-          if (instance == null) {
-            return (DeclarationDisagreement(p.argument,
-                'the import has ${describe(b)}${at(p.path)} where the export '
-                'has its parameter ${describe(a)}'), theta);
+        // The export's parameter here is instantiated to the import's state.
+        if (isExportParam(a)) {
+          final bound = theta[a.state.name];
+          if (bound == null) {
+            final instance = flip(b.state, a.state.dual);
+            if (instance == null) {
+              return (DeclarationDisagreement(p.argument,
+                  'the import has ${describe(b)}${at(p.path)} where the export '
+                  'has its parameter ${describe(a)}'), theta);
+            }
+            theta[a.state.name] = instance;
+            continue;
           }
-          theta[a.state.name] = instance;
+          a = _Side(false, flip(bound, a.state.dual)!);
+          exportDesc = 'its parameter $exportDesc, instantiated to ${describe(a)}';
+        }
+        if (!seen.add((a, b))) continue;
+
+        final va = view(a);
+        final vb = view(b)!;
+        if (va == null) {
+          // A parameter the export inlines here is not bound yet.  Its
+          // instance can only add transitions, so the export's own are walked
+          // now; the state waits for the rest.
+          final own = ee.of(a.state);
+          for (final l in own.keys.toList()..sort()) {
+            final t = vb.out[l];
+            if (t == null) {
+              return (DeclarationDisagreement(p.argument,
+                  'the import has ${describe(b)}${at(p.path)} where the export '
+                  'has $exportDesc, and they differ in their transitions --- '
+                  'only the export\'s has $l'), theta);
+            }
+            queue.add(_Pair(_Side(true, own[l]!), t, p.argument, [...p.path, l]));
+          }
+          deferred.add(_Pair(a, b, p.argument, p.path));
           continue;
         }
-        a = _Side(false, flip(bound, a.state.dual)!);
-        exportDesc = 'its parameter $exportDesc, instantiated to ${describe(a)}';
-      }
-      if (!seen.add((a, b))) continue;
 
-      final va = view(a);
-      final vb = view(b)!;
-      if (va == null) {
-        // A parameter the export inlines here is not bound yet.  Its
-        // instance can only add transitions, so the export's own are walked
-        // now; the state waits for the rest.
-        final own = ee.of(a.state);
-        for (final l in own.keys.toList()..sort()) {
-          final t = vb.out[l];
-          if (t == null) {
-            return (DeclarationDisagreement(p.argument,
-                'the import has ${describe(b)}${at(p.path)} where the export '
-                'has $exportDesc, and they differ in their transitions --- '
-                'only the export\'s has $l'), theta);
-          }
-          queue.add(_Pair(_Side(true, own[l]!), t, p.argument, [...p.path, l]));
-        }
-        deferred.add(_Pair(a, b, p.argument, p.path));
-        continue;
-      }
-
-      if (p.argument == 0) {
-        // The declaration's own state: the two must have the same arguments
-        // at the same modes.
-        final la = va.out.keys.toSet(), lb = vb.out.keys.toSet();
-        if (!_sameSet(la, lb)) {
-          final ia = {for (final l in la) argOf(l): l};
-          final ib = {for (final l in lb) argOf(l): l};
-          for (var i = 1; i <= ia.length; i++) {
-            if (ia[i] != ib[i]) {
-              final ma = ia[i]!.endsWith(':down') ? 'consumed (?)' : 'produced';
-              final mb = ib[i]!.endsWith(':down') ? 'consumed (?)' : 'produced';
-              return (DeclarationDisagreement(i,
-                  'the import declares it $mb where the export declares it $ma'), theta);
+        if (p.argument == 0) {
+          // The declaration's own state: the two must have the same arguments
+          // at the same modes.
+          final la = va.out.keys.toSet(), lb = vb.out.keys.toSet();
+          if (!_sameSet(la, lb)) {
+            final ia = {for (final l in la) argOf(l): l};
+            final ib = {for (final l in lb) argOf(l): l};
+            for (var i = 1; i <= ia.length; i++) {
+              if (ia[i] != ib[i]) {
+                final ma = ia[i]!.endsWith(':down') ? 'consumed (?)' : 'produced';
+                final mb = ib[i]!.endsWith(':down') ? 'consumed (?)' : 'produced';
+                return (DeclarationDisagreement(i,
+                    'the import declares it $mb where the export declares it $ma'), theta);
+              }
             }
           }
+          for (final l in la.toList()..sort((x, y) => argOf(x) - argOf(y))) {
+            queue.add(_Pair(va.out[l]!, vb.out[l]!, argOf(l), const []));
+          }
+          continue;
         }
-        for (final l in la.toList()..sort((x, y) => argOf(x) - argOf(y))) {
-          queue.add(_Pair(va.out[l]!, vb.out[l]!, argOf(l), const []));
-        }
-        continue;
-      }
 
-      if (va.cls != vb.cls || !_sameSet(va.marks, vb.marks)) {
-        return (DeclarationDisagreement(p.argument,
-            'the import has ${describe(b)}${at(p.path)} where the export has '
-            '$exportDesc'), theta);
-      }
-      final la = va.out.keys.toSet(), lb = vb.out.keys.toSet();
-      if (!_sameSet(la, lb)) {
-        final onlyI = (lb.difference(la).toList()..sort()).join(', ');
-        final onlyE = (la.difference(lb).toList()..sort()).join(', ');
-        return (DeclarationDisagreement(p.argument,
-            'the import has ${describe(b)}${at(p.path)} where the export has '
-            '$exportDesc, and they differ in their transitions'
-            '${onlyI.isEmpty ? '' : ' --- only the import\'s has $onlyI'}'
-            '${onlyE.isEmpty ? '' : ' --- only the export\'s has $onlyE'}'), theta);
-      }
-      for (final l in la.toList()..sort()) {
-        queue.add(_Pair(va.out[l]!, vb.out[l]!, p.argument, [...p.path, l]));
-      }
-    }
-    if (deferred.isEmpty) return (null, theta);
-    // A parameter the export inlines as a bare alternative waits for its
-    // binding at another position.
-    var retry = deferred.where((p) => view(p.export) != null).toList();
-    if (retry.isEmpty) {
-      // It occurs nowhere else: bind it as an instantiation would, to what
-      // the import's states have in common at every place it is inlined,
-      // each viewed at the produced mode (see above).
-      final places = <String, List<_View>>{};
-      for (final p in deferred) {
-        for (final h in ee.inlinedHoles[p.export.state] ?? const {}) {
-          if (theta.containsKey(h.$1)) continue;
-          (places[h.$1] ??= []).add(flipView(view(p.import)!, h.$2));
+        if (va.cls != vb.cls || !_sameSet(va.marks, vb.marks)) {
+          return (DeclarationDisagreement(p.argument,
+              'the import has ${describe(b)}${at(p.path)} where the export has '
+              '$exportDesc'), theta);
+        }
+        final la = va.out.keys.toSet(), lb = vb.out.keys.toSet();
+        if (!_sameSet(la, lb)) {
+          final onlyI = (lb.difference(la).toList()..sort()).join(', ');
+          final onlyE = (la.difference(lb).toList()..sort()).join(', ');
+          return (DeclarationDisagreement(p.argument,
+              'the import has ${describe(b)}${at(p.path)} where the export has '
+              '$exportDesc, and they differ in their transitions'
+              '${onlyI.isEmpty ? '' : ' --- only the import\'s has $onlyI'}'
+              '${onlyE.isEmpty ? '' : ' --- only the export\'s has $onlyE'}'), theta);
+        }
+        for (final l in la.toList()..sort()) {
+          queue.add(_Pair(va.out[l]!, vb.out[l]!, p.argument, [...p.path, l]));
         }
       }
-      for (final e in places.entries) {
-        final first = e.value.first;
-        final rest = e.value.skip(1);
-        final name = '$instancePrefix${e.key}';
-        instances[name] = _View(
-          '${_initialClass(_State.type(name, false))}',
-          {
-            for (final m in first.marks)
-              if (rest.every((v) => v.marks.contains(m))) m,
-          },
-          {
-            for (final l in first.out.entries)
-              if (rest.every((v) => v.out.containsKey(l.key))) l.key: l.value,
-          },
-        );
-        theta[e.key] = _State.type(name, false);
+      if (deferred.isEmpty) return (null, theta);
+      // A parameter the export inlines as a bare alternative waits for its
+      // binding at another position.
+      var retry = deferred.where((p) => view(p.export) != null).toList();
+      if (retry.isEmpty) {
+        // It occurs nowhere else: bind it as an instantiation would, to what
+        // the import's states have in common at every place it is inlined,
+        // each viewed at the produced mode (see above).
+        final places = <String, List<_View>>{};
+        for (final p in deferred) {
+          for (final h in ee.inlinedHoles[p.export.state] ?? const {}) {
+            if (theta.containsKey(h.$1)) continue;
+            (places[h.$1] ??= []).add(flipView(view(p.import)!, h.$2));
+          }
+        }
+        for (final e in places.entries) {
+          final first = e.value.first;
+          final rest = e.value.skip(1);
+          final name = '$_instancePrefix${e.key}';
+          instances[name] = _View(
+            '${_initialClass(_State.type(name, false))}',
+            {
+              for (final m in first.marks)
+                if (rest.every((v) => v.marks.contains(m))) m,
+            },
+            {
+              for (final l in first.out.entries)
+                if (rest.every((v) => v.out.containsKey(l.key))) l.key: l.value,
+            },
+          );
+          theta[e.key] = _State.type(name, false);
+        }
+        retry = deferred;
       }
-      retry = deferred;
-    }
-    deferred = deferred.where((p) => !retry.contains(p)).toList();
-    for (final p in retry) {
-      seen.remove((p.export, p.import));
-      queue.add(p);
+      deferred = deferred.where((p) => !retry.contains(p)).toList();
+      for (final p in retry) {
+        seen.remove((p.export, p.import));
+        queue.add(p);
+      }
     }
   }
 }
@@ -1187,7 +1209,7 @@ class _Pair {
 // The two tables
 // =============================================================================
 
-/// The type-identity tables of a compiled module (plan step 1, deliverable 4).
+/// The type-identity tables of a compiled module.
 ///
 /// [declared] is what `find_type(P/N, Type)` reads: every procedure declared in
 /// the module's scope, keyed `p/n`.  [exported] is the table a `Module` value

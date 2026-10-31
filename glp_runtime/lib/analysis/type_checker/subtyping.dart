@@ -3,7 +3,6 @@
 // Subtyping for GLP output types.
 // Specification: TGLP (Moded-Types), sections/well-typing.tex §Subtyping;
 // algorithm in sections/appendix-implementation-notes.tex §Subtype Checking
-// Paper Reference: Section 4.6, Definition 4.7 (Subtyping)
 //
 // A <: B iff every simple prefix of A is accepted by B,
 // and at mode inversion points the direction reverses (contravariance).
@@ -23,8 +22,6 @@ import 'program_dfa.dart';
 /// (well_typed_clause.dart, `_noInstantiationReason`); a true result promises
 /// nothing about any one binding.  Empty by default, which is the relation of
 /// TGLP well-typing.tex Definition "Subtyping" itself.
-///
-/// Paper Reference: Definition 4.7 (Subtyping)
 bool isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
     {Set<String> open = const {}}) {
   return _isSubtype(stateA, stateB, dfa, <String>{}, open, null);
@@ -198,33 +195,20 @@ bool _reachesOpaque(DFAState s, ProgramDFA dfa) {
   final memo = _reachesOpaqueMemo[dfa] ??= <String, bool>{};
   final known = memo[s.name];
   if (known != null) return known;
-  final seen = <String>{};
-  final stack = <DFAState>[s];
   var found = false;
-  while (stack.isNotEmpty && !found) {
-    var x = stack.removeLast();
-    if (x.isDual) {
-      final o = dfa.states[x.baseName];
-      if (o == null) continue;
-      x = o;
-    }
-    if (!seen.add(x.name)) continue;
+  forEachReachableOutputState(s, dfa, (x) {
     if (x.isOpaqueUnion) {
       found = true;
-      break;
+      return WalkStep.stop;
     }
     final m = memo[x.name];
     if (m == true) {
       found = true;
-      break;
+      return WalkStep.stop;
     }
-    if (m == false) continue;
-    final autom = dfa.automata[x.name];
-    if (autom == null) continue;
-    for (final e in autom.transitions.entries) {
-      if (e.key.$1 == x) stack.add(e.value);
-    }
-  }
+    if (m == false) return WalkStep.skip;
+    return WalkStep.descend;
+  });
   memo[s.name] = found;
   return found;
 }
@@ -234,11 +218,9 @@ final Expando<Map<String, bool>> _reachesOpaqueMemo = Expando();
 /// Core coinductive subtyping algorithm: Definition "Subtyping"'s two
 /// conditions, each pair below compared by [_isSubtype], the relation the
 /// extension by T <: T° completes.
-///
-/// Spec section 4.1: isSubtype(stateA, stateB, dfa, visited)
 bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
     Set<String> visited, Set<String> open, _OpaqueAs? as) {
-  // Coinductive: if we've already assumed this pair, succeed (spec 4.5)
+  // Coinductive: if we've already assumed this pair, succeed
   final pairKey =
       '${stateA.name}:${stateB.name}${as == null ? '' : ':${as.onLeft}'}';
   if (visited.contains(pairKey)) return true;
@@ -293,7 +275,7 @@ bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
     return stateA.baseName == stateB.baseName;
   }
 
-  // Wildcard/final handling (spec 4.4)
+  // Wildcard/final handling
   // At a prefix endpoint `_` matches only `_` (Definition "Prefix Acceptance"),
   // so `_` is top: every output type is below it, and it is below nothing else.
   // _FINAL_ is treated as equivalent to _ for subtyping.
@@ -325,7 +307,7 @@ bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
   // S"), and every transition its start state has of its own is a constant of
   // that primitive ("a constant matches String"), an integer or real literal
   // alternative of `Integer` or `Real` as the defined-type case below reads it
-  // ([_primitiveOfConstant]).  So `Key ::= String.` is below `String`, as
+  // ([primitiveOfConstant]).  So `Key ::= String.` is below `String`, as
   // `String` is below it by the case above, and `Ack ::= ok ; error.` is below
   // `String` as it is below `Key`: the two have one automaton, and the relation
   // is decided by the automata, not by whether the supertype is named a
@@ -362,7 +344,7 @@ bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
     return accepts;
   }
 
-  // User-defined types: check transitions (spec 4.1)
+  // User-defined types: check transitions
   final automA = dfa.getAutomaton(stateA.name);
   final automB = dfa.getAutomaton(stateB.name);
 
@@ -383,7 +365,8 @@ bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
     // At a position a parameter not yet bound reaches, the mode is the
     // binding's, input or output, so there the label is matched without it.
     if (targetB == null && open.isNotEmpty) {
-      final other = _transitionIgnoringMode(automB, stateB, label);
+      final other = automB.transitionIgnoringMode(
+          stateB, label.symbol, label.arity, label.argIndex);
       if (other != null &&
           (open.contains(targetA.baseName) || open.contains(other.baseName))) {
         continue;
@@ -415,7 +398,7 @@ bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
       continue;
     }
 
-    // Check target compatibility (spec 4.2)
+    // Check target compatibility
     if (!_checkTargetSubtype(targetA, targetB, dfa, visited, open, as)) {
       return false;
     }
@@ -424,23 +407,7 @@ bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
   return true;
 }
 
-/// The target of [automaton]'s transition from [from] with [label]'s functor,
-/// arity and argument position, whatever its mode; null where there is none.
-DFAState? _transitionIgnoringMode(
-    Automaton automaton, DFAState from, TransitionLabel label) {
-  for (final entry in automaton.transitions.entries) {
-    final (f, l) = entry.key;
-    if (f == from &&
-        l.symbol == label.symbol &&
-        l.arity == label.arity &&
-        l.argIndex == label.argIndex) {
-      return entry.value;
-    }
-  }
-  return null;
-}
-
-/// Target compatibility check (spec section 4.2).
+/// Target compatibility check.
 ///
 /// Handles covariance for output positions and contravariance at mode inversions.
 bool _checkTargetSubtype(DFAState targetA, DFAState targetB, ProgramDFA dfa,

@@ -1,14 +1,15 @@
 // lib/analysis/type_checker/moded_term.dart
 //
 // Moded terms for GLP type checking.
-// Specification: docs/modules/moded-term.md v0.5
-// Paper Reference: Definition 4.2 (Moded Term, Complement), lines 179-211
+// Specification: TGLP, Definition "Moded Term" (a moded term and its
+// complement).
 //
 // A moded term is a GLP term with mode annotations (↓ consume, ↑ produce)
 // on non-variable subterms. Variables have implicit mode based on
 // reader/writer status.
 
 import 'mode.dart';
+import 'type_ast.dart' show listEquals;
 import '../../runtime/terms.dart' show Nil, nil;
 
 // =============================================================================
@@ -17,8 +18,8 @@ import '../../runtime/terms.dart' show Nil, nil;
 
 /// A moded term: a GLP term with mode annotations.
 ///
-/// Per Definition 4.2: A moded term T' corresponding to a GLP term T is the
-/// result of adding a mode annotation (either ↓ consume or ↑ produce) to T
+/// TGLP, Definition "Moded Term": A moded term T' corresponding to a GLP term
+/// T is the result of adding a mode annotation (either ↓ consume or ↑ produce) to T
 /// and to every non-variable subterm of T.
 abstract class ModedTerm {
   /// The mode annotation of this term
@@ -70,7 +71,7 @@ class ModedCompound extends ModedTerm {
       mode == other.mode &&
       functor == other.functor &&
       arity == other.arity &&
-      _listEquals(args, other.args);
+      listEquals(args, other.args);
 
   @override
   int get hashCode => Object.hash(mode, functor, arity, Object.hashAll(args));
@@ -150,7 +151,7 @@ bool sameConstant(Object? a, Object? b) =>
 
 /// A variable (reader or writer) with structural mode annotation.
 ///
-/// Per Remark 4.1 (Structural Mode vs. Variable Mode):
+/// TGLP's remark on structural mode against variable mode:
 /// - Structural mode: inherited from enclosing type context (stored)
 /// - Implicit mode: determined by reader/writer form (computed)
 ///
@@ -180,17 +181,6 @@ class ModedVariable extends ModedTerm {
   /// Structural mode (used in path traversal for automaton lookup)
   @override
   Mode get mode => _structuralMode;
-
-  /// Implicit mode based on reader/writer form
-  Mode get implicitMode => isReader ? Mode.consume : Mode.produce;
-
-  /// Whether this variable is mode-consistent (for well-typing)
-  /// Note: This is a convenience property. The authoritative mode consistency
-  /// check is in Definition 4.3 (Consistent Paths) / well-typed-term module.
-  bool get isModeConsistent => implicitMode == _structuralMode;
-
-  /// Whether this is a writer
-  bool get isWriter => !isReader;
 
   @override
   T accept<T>(ModedTermVisitor<T> visitor) => visitor.visitVariable(this);
@@ -244,17 +234,8 @@ class ModedPath {
   /// The steps from the root to the leaf.
   List<PathStep> get steps => _steps ??= _last!.steps();
 
-  /// The root step (first step in path)
-  PathStep get root => steps.first;
-
   /// The leaf step (last step in path)
   PathStep get leaf => steps.last;
-
-  /// Whether this path starts with consume mode (input path)
-  bool get isInputPath => root.mode == Mode.consume;
-
-  /// Whether this path starts with produce mode (output path)
-  bool get isOutputPath => root.mode == Mode.produce;
 
   /// Path length (number of steps)
   int get length => steps.length;
@@ -266,7 +247,7 @@ class ModedPath {
 
   @override
   bool operator ==(Object other) =>
-      other is ModedPath && _listEquals(steps, other.steps);
+      other is ModedPath && listEquals(steps, other.steps);
 
   @override
   int get hashCode => Object.hashAll(steps);
@@ -333,9 +314,6 @@ class PathStep {
     this.value,
   });
 
-  /// Whether this is a writer variable
-  bool get isWriter => isVariable && !isReader;
-
   @override
   String toString() {
     final modeStr = mode == Mode.consume ? '↓' : '↑';
@@ -355,140 +333,6 @@ class PathStep {
   @override
   int get hashCode =>
       Object.hash(symbol, argIndex, mode, isVariable, isReader, value);
-}
-
-// =============================================================================
-// Classification Methods (isConsumed, isProduced, isIO)
-// Spec: moded-term.md v0.5
-// =============================================================================
-
-/// Returns true if all mode annotations in t are consume (↓).
-///
-/// Per spec: Returns true iff every non-variable subterm has mode = Mode.consume
-bool isConsumed(ModedTerm t) {
-  return t.accept(_IsConsumedVisitor());
-}
-
-class _IsConsumedVisitor implements ModedTermVisitor<bool> {
-  @override
-  bool visitCompound(ModedCompound term) {
-    if (term.mode != Mode.consume) return false;
-    return term.args.every((arg) => arg.accept(this));
-  }
-
-  @override
-  bool visitConstant(ModedConstant term) {
-    return term.mode == Mode.consume;
-  }
-
-  @override
-  bool visitVariable(ModedVariable term) {
-    // Variables have implicit mode based on reader/writer status
-    return term.mode == Mode.consume;
-  }
-}
-
-/// Returns true if all mode annotations in t are produce (↑).
-///
-/// Per spec: Returns true iff every non-variable subterm has mode = Mode.produce
-bool isProduced(ModedTerm t) {
-  return t.accept(_IsProducedVisitor());
-}
-
-class _IsProducedVisitor implements ModedTermVisitor<bool> {
-  @override
-  bool visitCompound(ModedCompound term) {
-    if (term.mode != Mode.produce) return false;
-    return term.args.every((arg) => arg.accept(this));
-  }
-
-  @override
-  bool visitConstant(ModedConstant term) {
-    return term.mode == Mode.produce;
-  }
-
-  @override
-  bool visitVariable(ModedVariable term) {
-    // Variables have implicit mode based on reader/writer status
-    return term.mode == Mode.produce;
-  }
-}
-
-/// Returns true if t is an I/O moded term.
-///
-/// An I/O moded term has:
-/// - Root mode is consume (↓)
-/// - On every path from root to leaf, mode transitions only in the
-///   direction ↓ → ↑ (never ↑ → ↓)
-///
-/// Per spec algorithm:
-/// ```
-/// isIO(t):
-///   if t.mode != Mode.consume:
-///     return false
-///   return allPathsValidIO(t, Mode.consume)
-/// ```
-bool isIO(ModedTerm t) {
-  if (t.mode != Mode.consume) return false;
-  return _allPathsValidIO(t, Mode.consume);
-}
-
-/// Helper: Check all paths have valid I/O mode transitions.
-///
-/// Valid transitions: ↓ → ↓, ↓ → ↑, ↑ → ↑
-/// Invalid transitions: ↑ → ↓ (flipping back from produce to consume)
-bool _allPathsValidIO(ModedTerm t, Mode parentMode) {
-  final currentMode = t.mode;
-
-  // Check valid transition: only ↓→↑ allowed, not ↑→↓
-  if (parentMode == Mode.produce && currentMode == Mode.consume) {
-    return false; // Invalid: flipped back from ↑ to ↓
-  }
-
-  if (t is ModedCompound) {
-    return t.args.every((arg) => _allPathsValidIO(arg, currentMode));
-  }
-
-  // Leaf reached (constant or variable)
-  return true;
-}
-
-// =============================================================================
-// Dual Operation
-// =============================================================================
-
-/// Constructs the dual of a moded term per Definition 5.1.
-///
-/// The dual T? is obtained by:
-/// 1. Flipping every mode annotation (↓ ↔ ↑)
-/// 2. Replacing every variable by its paired variable (X ↔ X?)
-///
-/// The dual operation is an involution: dual(dual(t)) == t
-ModedTerm dual(ModedTerm t) {
-  return t.accept(_DualVisitor());
-}
-
-class _DualVisitor implements ModedTermVisitor<ModedTerm> {
-  @override
-  ModedTerm visitCompound(ModedCompound term) {
-    return ModedCompound(
-      term.mode.flip,
-      term.functor,
-      term.arity,
-      term.args.map((arg) => dual(arg)).toList(),
-    );
-  }
-
-  @override
-  ModedTerm visitConstant(ModedConstant term) {
-    return ModedConstant(term.mode.flip, term.value);
-  }
-
-  @override
-  ModedTerm visitVariable(ModedVariable term) {
-    // Flip both reader/writer and structural mode
-    return ModedVariable(term.name, isReader: !term.isReader, structuralMode: term.mode.flip);
-  }
 }
 
 // =============================================================================
@@ -551,17 +395,4 @@ String _symbolOf(ModedTerm t) {
     return t.isReader ? '${t.name}?' : t.name;
   }
   throw ArgumentError('Unknown moded term type: $t');
-}
-
-// =============================================================================
-// Utility
-// =============================================================================
-
-/// Compare two lists for equality
-bool _listEquals<T>(List<T> a, List<T> b) {
-  if (a.length != b.length) return false;
-  for (int i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }

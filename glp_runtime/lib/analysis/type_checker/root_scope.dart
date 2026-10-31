@@ -5,13 +5,9 @@
 // A module may redefine any of them: the root self.glp is shadowable like any
 // other scope (TGLP appendix-root-self.tex).
 //
-// Specification: docs/modules/type-environment.md
-// Paper Reference: Section 8 (Root scope)
-
-/// The root scope source — now empty.
-/// All type definitions, procedure declarations, and unit clauses
-/// live in programs/self.glp and are loaded via the scope chain.
-const String rootScopeTypes = '';
+// Specification: TGLP appendix-root-self.tex (the root scope).  All type
+// definitions, procedure declarations and unit clauses live in
+// programs/self.glp and are loaded via the scope chain.
 
 /// Names of the primitive types and the root self.glp's basic types.  A union
 /// of them is a type definition and not a union alias, and a union alias keeps

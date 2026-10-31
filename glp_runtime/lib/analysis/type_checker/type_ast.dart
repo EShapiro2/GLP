@@ -5,14 +5,6 @@
 
 import '../../compiler/ast.dart' as ast show Clause;
 
-/// Classification of types by mode structure
-/// Per spec (type-environment.md): Types are classified based on internal complementation
-enum TypeClassification {
-  output,      // No complementation in definition (pure output structure)
-  input,       // Complement of an output type (not directly defined)
-  interactive  // Contains internal complementation (_? or T? in alternatives)
-}
-
 /// Base class for type expressions
 abstract class TypeExpr {
   final int line;
@@ -33,17 +25,6 @@ extension ProcArgTypeExpr on TypeExpr {
     if (this is PrimitiveModeAlt) return (this as PrimitiveModeAlt).isInput;
     return false;
   }
-
-  /// The type name for named types, or null for primitives.
-  /// - TypeRef → the name
-  /// - PrimitiveModeAlt → null
-  String? get typeName {
-    if (this is TypeRef) return (this as TypeRef).name;
-    return null;
-  }
-
-  /// Whether this is a primitive type (_ or _?)
-  bool get isPrimitive => this is PrimitiveModeAlt;
 }
 
 /// Reference to a named type: Nat, List, Number, String, Any
@@ -59,8 +40,8 @@ class TypeRef extends TypeExpr {
 
   bool get isParameterized => typeArgs.isNotEmpty;
 
-  /// Mode dual operator per Definition 5.1
-  /// Returns a new TypeRef with inverted mode
+  /// The dual of this reference: the same type with its mode inverted (TGLP,
+  /// the dual of a type).  Returns a new TypeRef with inverted mode
   TypeRef dual() => TypeRef(name, line, column, isInput: !isInput, typeArgs: typeArgs);
 
   @override
@@ -100,23 +81,62 @@ class TypeRef extends TypeExpr {
   /// not one of these.
   static const constantPrimitives = {'Integer', 'Real', 'String', 'Module'};
 
-  bool get isBuiltin => builtins.contains(name);
-
   @override
   bool operator ==(Object other) =>
       other is TypeRef && other.name == name && other.isInput == isInput &&
-      _listEquals(other.typeArgs, typeArgs);
+      listEquals(other.typeArgs, typeArgs);
 
   @override
   int get hashCode => Object.hash(name, isInput, Object.hashAll(typeArgs));
+}
 
-  static bool _listEquals(List<TypeExpr> a, List<TypeExpr> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
+/// Whether [a] and [b] have the same elements in the same order, by `==`.
+bool listEquals<T>(List<T> a, List<T> b) {
+  if (a.length != b.length) return false;
+  for (int i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
   }
+  return true;
+}
+
+/// [expr] rebuilt with [leaf] applied to each node that is not a structure, a
+/// list cell or a difference list: a type reference, a wildcard, a constant
+/// or the empty list.  A structure, a list cell and a difference list are
+/// rebuilt at their own positions over their rewritten arguments; a type
+/// reference is handed to [leaf] with its type arguments as they are, so a
+/// walker that descends into them does so itself.
+TypeExpr mapTypeExpr(TypeExpr expr, TypeExpr Function(TypeExpr) leaf) {
+  if (expr is StructAlt) {
+    return StructAlt(
+        expr.functor,
+        [for (final a in expr.args) mapTypeExpr(a, leaf)],
+        expr.line,
+        expr.column);
+  }
+  if (expr is ListConsAlt) {
+    return ListConsAlt(mapTypeExpr(expr.head, leaf),
+        mapTypeExpr(expr.tail, leaf), expr.line, expr.column);
+  }
+  if (expr is DiffListAlt) {
+    return DiffListAlt(mapTypeExpr(expr.content, leaf),
+        mapTypeExpr(expr.hole, leaf), expr.line, expr.column);
+  }
+  return leaf(expr);
+}
+
+/// Whether [pred] holds of some node of [expr] that is not a structure, a
+/// list cell or a difference list, those being walked into their arguments
+/// in order; a type reference is handed to [pred] with its type arguments as
+/// they are ([mapTypeExpr]).
+bool anyTypeExpr(TypeExpr expr, bool Function(TypeExpr) pred) {
+  if (expr is StructAlt) return expr.args.any((a) => anyTypeExpr(a, pred));
+  if (expr is ListConsAlt) {
+    return anyTypeExpr(expr.head, pred) || anyTypeExpr(expr.tail, pred);
+  }
+  if (expr is DiffListAlt) {
+    return anyTypeExpr(expr.content, pred) || anyTypeExpr(expr.hole, pred);
+  }
+  return pred(expr);
 }
 
 /// A constant alternative in a type: 0, [], foo
@@ -197,36 +217,13 @@ class TypeDef {
 
   bool get isParameterized => typeParams.isNotEmpty;
 
-  /// Classify this type based on mode structure
-  /// Per spec (type-environment.md v0.5):
-  /// - output: no complementation in any alternative
-  /// - interactive: contains internal complementation (_? or T?)
-  TypeClassification get classification {
-    for (final alt in alternatives) {
-      if (_containsComplement(alt)) {
-        return TypeClassification.interactive;
-      }
-    }
-    return TypeClassification.output;
-  }
-
-  /// Check if a type expression contains any complementation
-  static bool _containsComplement(TypeExpr expr) {
-    if (expr is TypeRef && expr.isInput) return true;
-    if (expr is PrimitiveModeAlt && expr.isInput) return true;
-
-    if (expr is ListConsAlt) {
-      return _containsComplement(expr.head) || _containsComplement(expr.tail);
-    }
-    if (expr is StructAlt) {
-      return expr.args.any(_containsComplement);
-    }
-    if (expr is DiffListAlt) {
-      return _containsComplement(expr.content) || _containsComplement(expr.hole);
-    }
-
-    return false;
-  }
+  /// This definition with [f] applied to each alternative, under [name]
+  /// where one is given and its own name otherwise; its parameters and
+  /// position kept.
+  TypeDef mapAlternatives(TypeExpr Function(TypeExpr) f, {String? name}) =>
+      TypeDef(name ?? this.name, [for (final alt in alternatives) f(alt)],
+          line, column,
+          typeParams: typeParams);
 
   @override
   String toString() => '$name ::= ${alternatives.join(' ; ')}.';
@@ -274,13 +271,19 @@ class ProcDecl {
     return false;
   }
 
-  /// Get the base type name for argument at index i
-  /// Returns null for primitive types (_ or _?)
-  String? getTypeName(int i) {
-    final arg = argTypes[i];
-    if (arg is TypeRef) return arg.name;
-    return null;  // Primitive types have no name
-  }
+  /// This declaration with [f] applied to each argument type, everything
+  /// else kept.
+  ProcDecl mapArgTypes(TypeExpr Function(TypeExpr) f) => ProcDecl(
+        name,
+        [for (final t in argTypes) f(t)],
+        line,
+        column,
+        typeParams: typeParams,
+        isBuiltin: isBuiltin,
+        exported: exported,
+        imported: imported,
+        modulePath: modulePath,
+      );
 
   /// The visibility prefix for this declaration
   String get _visibilityPrefix {
@@ -303,34 +306,20 @@ class ProcDecl {
 /// of a reference and in its type arguments, through every constructor. A
 /// name in [typeParams] is a type parameter, names no type and is left alone.
 TypeExpr renameTypeRefs(
-    TypeExpr expr, Map<String, String> rename, Set<String> typeParams) {
-  if (expr is TypeRef) {
-    final args = [
-      for (final a in expr.typeArgs) renameTypeRefs(a, rename, typeParams)
-    ];
-    final name = typeParams.contains(expr.name)
-        ? expr.name
-        : (rename[expr.name] ?? expr.name);
-    return TypeRef(name, expr.line, expr.column,
-        isInput: expr.isInput, typeArgs: args);
-  }
-  if (expr is StructAlt) {
-    return StructAlt(
-        expr.functor,
-        [for (final a in expr.args) renameTypeRefs(a, rename, typeParams)],
-        expr.line,
-        expr.column);
-  }
-  if (expr is ListConsAlt) {
-    return ListConsAlt(renameTypeRefs(expr.head, rename, typeParams),
-        renameTypeRefs(expr.tail, rename, typeParams), expr.line, expr.column);
-  }
-  if (expr is DiffListAlt) {
-    return DiffListAlt(renameTypeRefs(expr.content, rename, typeParams),
-        renameTypeRefs(expr.hole, rename, typeParams), expr.line, expr.column);
-  }
-  return expr; // ConstantAlt, ListNilAlt, PrimitiveModeAlt: no type name
-}
+        TypeExpr expr, Map<String, String> rename, Set<String> typeParams) =>
+    mapTypeExpr(expr, (e) {
+      if (e is TypeRef) {
+        final args = [
+          for (final a in e.typeArgs) renameTypeRefs(a, rename, typeParams)
+        ];
+        final name = typeParams.contains(e.name)
+            ? e.name
+            : (rename[e.name] ?? e.name);
+        return TypeRef(name, e.line, e.column,
+            isInput: e.isInput, typeArgs: args);
+      }
+      return e; // ConstantAlt, ListNilAlt, PrimitiveModeAlt: no type name
+    });
 
 /// Whether two type definitions are the same text: the same parameters and
 /// the same alternatives in order, positions aside.
@@ -409,7 +398,7 @@ class TypeEnvironment {
   final Map<String, TypeDef> types;
   final Map<String, ProcDecl> procedures;  // keyed by "name/arity"
   /// Parameterized procedure declaration templates, keyed by "name/arity".
-  /// Used for call-site type parameter inference (Case B).
+  /// Used for call-site type parameter inference.
   final Map<String, ProcDecl> paramProcDecls;
   /// Parameterized type templates from root scope/ancestors.
   /// Passed to downstream expansions so they can expand references
@@ -562,29 +551,14 @@ class TypeEnvironment {
   static TypeDef _renameTypeDef(TypeDef td, Map<String, String> rename) {
     if (rename.isEmpty) return td;
     final params = td.typeParams.toSet();
-    return TypeDef(
-      rename[td.name] ?? td.name,
-      [for (final alt in td.alternatives) renameTypeRefs(alt, rename, params)],
-      td.line,
-      td.column,
-      typeParams: td.typeParams,
-    );
+    return td.mapAlternatives((alt) => renameTypeRefs(alt, rename, params),
+        name: rename[td.name] ?? td.name);
   }
 
   static ProcDecl _renameProcDecl(ProcDecl d, Map<String, String> rename) {
     if (rename.isEmpty) return d;
     final params = d.typeParams.toSet();
-    return ProcDecl(
-      d.name,
-      [for (final t in d.argTypes) renameTypeRefs(t, rename, params)],
-      d.line,
-      d.column,
-      typeParams: d.typeParams,
-      isBuiltin: d.isBuiltin,
-      exported: d.exported,
-      imported: d.imported,
-      modulePath: d.modulePath,
-    );
+    return d.mapArgTypes((t) => renameTypeRefs(t, rename, params));
   }
   
   /// Look up a type definition

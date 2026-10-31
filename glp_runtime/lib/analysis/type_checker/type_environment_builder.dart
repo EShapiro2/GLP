@@ -4,7 +4,8 @@
 // Merges its definitions over the scope passed in, validates.
 // Resolves type aliases at preprocessing time.
 //
-// Specification: docs/modules/type-environment.md v0.8
+// Specification: TGLP, the scope a module is checked in (Definition "Root,
+// Scope") and its appendix "Type Aliases".
 
 import 'type_ast.dart';
 import 'root_scope.dart';
@@ -76,8 +77,8 @@ TypeEnvironment buildTypeEnvironment(ast.Module module,
   // Build user environment WITHOUT resolving aliases yet.  A bare type-name
   // alternative is checked for determinism against what it names in the
   // module or in its scope.
-  final userEnv = _buildEnvironmentFromModule(module,
-      resolveAliasesNow: false, scopeTypes: baseEnv.types);
+  final userEnv =
+      _buildEnvironmentFromModule(module, scopeTypes: baseEnv.types);
 
   // Merge: base first, then user, which shadows any definition of the base
   final merged = baseEnv.merge(userEnv);
@@ -89,10 +90,10 @@ TypeEnvironment buildTypeEnvironment(ast.Module module,
     ...merged.typeTemplates,
     ...typeTemplates,
   };
-  // Innermost-first shadowing (spec §3.2/§3.3): a module-local MONOMORPHIC
-  // procedure shadows an inherited parameterized template of the same key — so
-  // the template must not survive in paramProcDecls (else call-site inference,
-  // Case B, would fire for calls the local definition resolves).  A module's
+  // Innermost-first shadowing: a module-local MONOMORPHIC procedure shadows
+  // an inherited parameterized template of the same key — so the template
+  // must not survive in paramProcDecls (else call-site inference would fire
+  // for calls the local definition resolves).  A module's
   // OWN parameterized procedure keeps its template (it is in userEnv's
   // paramProcDecls).  This is the defining-module dual of the exposed-scope
   // shadowing in the program linker.
@@ -119,7 +120,6 @@ TypeEnvironment buildTypeEnvironment(ast.Module module,
 /// Build TypeEnvironment from Module's type definitions and procedure declarations
 TypeEnvironment _buildEnvironmentFromModule(
   ast.Module module, {
-  required bool resolveAliasesNow,
   Map<String, TypeDef> scopeTypes = const {},
 }) {
   final types = <String, TypeDef>{};
@@ -128,7 +128,7 @@ TypeEnvironment _buildEnvironmentFromModule(
 
   // Add type definitions (including aliases - will be resolved later)
   for (final typeDef in module.typeDefs) {
-    // Note: Aliases are allowed (v0.7) - determinism check skipped for them
+    // Aliases are allowed; the determinism check is skipped for them.
     if (!_isTypeAlias(typeDef)) {
       _checkDeterminism(typeDef, {...scopeTypes, ...types});
     }
@@ -161,21 +161,7 @@ TypeEnvironment _buildEnvironmentFromModule(
     paramProcDecls[paramDecl.qualifiedKey] = paramDecl;
   }
 
-  // Resolve aliases (preprocessing step per v0.8 spec) - only if requested
-  if (resolveAliasesNow) {
-    _resolveAliases(types, procedures);
-  }
-
   return TypeEnvironment(types, procedures, paramProcDecls: paramProcDecls);
-}
-
-/// Extract all clauses from a Module's procedures
-List<ast.Clause> extractClauses(ast.Module module) {
-  final clauses = <ast.Clause>[];
-  for (final proc in module.procedures) {
-    clauses.addAll(proc.clauses);
-  }
-  return clauses;
 }
 
 /// Check if a type definition is a simple alias (single type reference)
@@ -214,7 +200,6 @@ bool _isSimpleAlias(TypeDef def) {
 
 /// Check if a type definition is a union alias (multiple type references to defined types)
 ///
-/// Per spec (type-environment.md v0.8):
 /// Union aliases have multiple alternatives, all of which are TypeRefs to
 /// user-defined types (not predefined primitives):
 /// - Msg ::= NetMsg ; UserMsg.   (union of two user-defined message types)
@@ -245,7 +230,6 @@ bool _isTypeAlias(TypeDef def) {
 
 /// Resolve type aliases at preprocessing time.
 ///
-/// Per spec (type-environment.md v0.8):
 /// - Simple aliases are resolved transitively and replaced everywhere
 /// - Union aliases are expanded by collecting alternatives from referenced types
 /// - Circular alias chains are detected and rejected
@@ -374,7 +358,9 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
 
       // Collect alternatives from the target type, applying complement if needed
       for (final targetAlt in targetDef.alternatives) {
-        expandedAlts.add(_applyComplementToAlt(targetAlt, ref.isInput, def.line, def.column));
+        expandedAlts.add(ref.isInput
+            ? _complementAlt(targetAlt, def.line, def.column)
+            : targetAlt);
       }
     }
 
@@ -392,72 +378,29 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
       .where((e) => !simpleAliases.containsKey(e.key))
       .toList();
 
+  TypeExpr replace(TypeExpr e) => _replaceAliasReferences(e, resolved);
   for (final entry in nonSimpleAliasTypes) {
-    final newAlternatives = <TypeExpr>[];
-    for (final alt in entry.value.alternatives) {
-      newAlternatives.add(_replaceAliasReferences(alt, resolved));
-    }
-    types[entry.key] = TypeDef(
-      entry.value.name,
-      newAlternatives,
-      entry.value.line,
-      entry.value.column,
-    );
+    types[entry.key] = entry.value.mapAlternatives(replace);
   }
 
   // Step 4b: Replace simple alias references in the parameterised type
   // templates, which survive this environment and are expanded later.
   if (typeTemplates != null) {
     for (final entry in typeTemplates.entries.toList()) {
-      final newAlternatives = entry.value.alternatives
-          .map((alt) => _replaceAliasReferences(alt, resolved))
-          .toList();
-      typeTemplates[entry.key] = TypeDef(
-        entry.value.name,
-        newAlternatives,
-        entry.value.line,
-        entry.value.column,
-        typeParams: entry.value.typeParams,
-      );
+      typeTemplates[entry.key] = entry.value.mapAlternatives(replace);
     }
   }
 
   // Step 5: Replace alias references in procedure declarations
   for (final entry in procedures.entries.toList()) {
-    final newArgTypes = <TypeExpr>[];
-    for (final argType in entry.value.argTypes) {
-      newArgTypes.add(_replaceAliasReferences(argType, resolved));
-    }
-    procedures[entry.key] = ProcDecl(
-      entry.value.name,
-      newArgTypes,
-      entry.value.line,
-      entry.value.column,
-      isBuiltin: entry.value.isBuiltin,
-      exported: entry.value.exported,
-      imported: entry.value.imported,
-      modulePath: entry.value.modulePath,
-    );
+    procedures[entry.key] = entry.value.mapArgTypes(replace);
   }
 
   // Step 5b: Same for the parameterised procedure declarations, which survive
   // this environment and are instantiated later.
   if (paramProcDecls != null) {
     for (final entry in paramProcDecls.entries.toList()) {
-      final newArgTypes = entry.value.argTypes
-          .map((argType) => _replaceAliasReferences(argType, resolved))
-          .toList();
-      paramProcDecls[entry.key] = ProcDecl(
-        entry.value.name,
-        newArgTypes,
-        entry.value.line,
-        entry.value.column,
-        typeParams: entry.value.typeParams,
-        isBuiltin: entry.value.isBuiltin,
-        exported: entry.value.exported,
-        imported: entry.value.imported,
-        modulePath: entry.value.modulePath,
-      );
+      paramProcDecls[entry.key] = entry.value.mapArgTypes(replace);
     }
   }
 
@@ -483,35 +426,32 @@ TypeExpr _applyComplement(TypeExpr expr, bool applyComplement, int line, int col
 
 /// Apply complement to all type references within a type alternative.
 /// Used for union alias expansion when the reference is complemented (e.g., Msg ::= NetMsg?).
-TypeExpr _applyComplementToAlt(TypeExpr alt, bool applyComplement, int line, int column) {
-  if (!applyComplement) return alt;
-
-  if (alt is TypeRef) {
-    return TypeRef(alt.name, line, column, isInput: !alt.isInput);
-  } else if (alt is PrimitiveModeAlt) {
-    return PrimitiveModeAlt(!alt.isInput, line, column);
+/// Every node of the result is placed at [line], [column].
+TypeExpr _complementAlt(TypeExpr alt, int line, int column) {
+  if (alt is TypeRef || alt is PrimitiveModeAlt) {
+    return _applyComplement(alt, true, line, column);
   } else if (alt is ConstantAlt) {
     return alt;  // Constants don't have modes
   } else if (alt is ListNilAlt) {
     return alt;  // [] doesn't have modes
   } else if (alt is ListConsAlt) {
     return ListConsAlt(
-      _applyComplementToAlt(alt.head, true, line, column),
-      _applyComplementToAlt(alt.tail, true, line, column),
+      _complementAlt(alt.head, line, column),
+      _complementAlt(alt.tail, line, column),
       line,
       column,
     );
   } else if (alt is StructAlt) {
     return StructAlt(
       alt.functor,
-      alt.args.map((a) => _applyComplementToAlt(a, true, line, column)).toList(),
+      alt.args.map((a) => _complementAlt(a, line, column)).toList(),
       line,
       column,
     );
   } else if (alt is DiffListAlt) {
     return DiffListAlt(
-      _applyComplementToAlt(alt.content, true, line, column),
-      _applyComplementToAlt(alt.hole, true, line, column),
+      _complementAlt(alt.content, line, column),
+      _complementAlt(alt.hole, line, column),
       line,
       column,
     );
@@ -520,71 +460,34 @@ TypeExpr _applyComplementToAlt(TypeExpr alt, bool applyComplement, int line, int
 }
 
 /// Replace alias references in a TypeExpr recursively.
-TypeExpr _replaceAliasReferences(TypeExpr expr, Map<String, TypeExpr> resolved) {
-  if (expr is TypeRef) {
-    final resolvedTarget = resolved[expr.name];
-    if (resolvedTarget != null) {
-      // Replace with resolved target, applying complement if needed
-      return _applyComplement(resolvedTarget, expr.isInput, expr.line, expr.column);
-    }
-    if (expr.typeArgs.isEmpty) return expr; // Not an alias, keep as-is
-    // A still-parameterised reference — `Stream(Agent)` in a type template,
-    // which expansion has not yet reached. Its arguments may name aliases.
-    // (In `types` and `procedures` expansion has already replaced every
-    // parameterised reference by its expanded name, so typeArgs is empty there
-    // and this is a no-op.)
-    return TypeRef(expr.name, expr.line, expr.column,
-        isInput: expr.isInput,
-        typeArgs: expr.typeArgs
-            .map((a) => _replaceAliasReferences(a, resolved))
-            .toList());
-  }
-
-  if (expr is PrimitiveModeAlt) {
-    return expr;  // Primitives don't reference other types
-  }
-
-  if (expr is ConstantAlt) {
-    return expr;  // Constants don't reference other types
-  }
-
-  if (expr is ListNilAlt) {
-    return expr;  // Empty list doesn't reference other types
-  }
-
-  if (expr is ListConsAlt) {
-    return ListConsAlt(
-      _replaceAliasReferences(expr.head, resolved),
-      _replaceAliasReferences(expr.tail, resolved),
-      expr.line,
-      expr.column,
-    );
-  }
-
-  if (expr is StructAlt) {
-    return StructAlt(
-      expr.functor,
-      expr.args.map((a) => _replaceAliasReferences(a, resolved)).toList(),
-      expr.line,
-      expr.column,
-    );
-  }
-
-  if (expr is DiffListAlt) {
-    return DiffListAlt(
-      _replaceAliasReferences(expr.content, resolved),
-      _replaceAliasReferences(expr.hole, resolved),
-      expr.line,
-      expr.column,
-    );
-  }
-
-  return expr;  // Unknown type, return as-is
-}
+TypeExpr _replaceAliasReferences(
+        TypeExpr expr, Map<String, TypeExpr> resolved) =>
+    mapTypeExpr(expr, (e) {
+      if (e is TypeRef) {
+        final resolvedTarget = resolved[e.name];
+        if (resolvedTarget != null) {
+          // Replace with resolved target, applying complement if needed
+          return _applyComplement(resolvedTarget, e.isInput, e.line, e.column);
+        }
+        if (e.typeArgs.isEmpty) return e; // Not an alias, keep as-is
+        // A still-parameterised reference — `Stream(Agent)` in a type
+        // template, which expansion has not yet reached. Its arguments may
+        // name aliases.  (In `types` and `procedures` expansion has already
+        // replaced every parameterised reference by its expanded name, so
+        // typeArgs is empty there and this is a no-op.)
+        return TypeRef(e.name, e.line, e.column,
+            isInput: e.isInput,
+            typeArgs: e.typeArgs
+                .map((a) => _replaceAliasReferences(a, resolved))
+                .toList());
+      }
+      // PrimitiveModeAlt, ConstantAlt, ListNilAlt: no reference to another
+      // type.
+      return e;
+    });
 
 /// Check if type alternatives are deterministic (distinguishable)
 ///
-/// Per spec (type-environment.md v0.5):
 /// Type definitions must be deterministic: alternatives must be distinguishable
 /// by their top-level functor or, for primitive types, by disjoint type membership.
 ///
@@ -603,6 +506,15 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
   final primitives = <String>{};    // primitives reached by bare type-name alternatives
   bool hasWildcard = false;
 
+  // Claim the functor [key] for an alternative, refused with [message] where
+  // an earlier alternative claimed it.
+  void claim(String key, String message) {
+    if (functors.contains(key)) {
+      throw NonDeterministicTypeError(message, def.line, def.column);
+    }
+    functors.add(key);
+  }
+
   for (final alt in def.alternatives) {
     if (alt is ConstantAlt) {
       // Keyed by kind and value ([constantLabel]): `0 ; '0'` are two
@@ -616,37 +528,17 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
       constants.add(key);
 
     } else if (alt is ListNilAlt) {
-      if (functors.contains('[]/0')) {
-        throw NonDeterministicTypeError(
-          'Duplicate [] alternative in ${def.name}',
-          def.line, def.column);
-      }
-      functors.add('[]/0');
+      claim('[]/0', 'Duplicate [] alternative in ${def.name}');
 
     } else if (alt is ListConsAlt) {
-      if (functors.contains('[|]/2')) {
-        throw NonDeterministicTypeError(
-          'Duplicate [|] alternative in ${def.name}',
-          def.line, def.column);
-      }
-      functors.add('[|]/2');
+      claim('[|]/2', 'Duplicate [|] alternative in ${def.name}');
 
     } else if (alt is StructAlt) {
       final key = '${alt.functor}/${alt.args.length}';
-      if (functors.contains(key)) {
-        throw NonDeterministicTypeError(
-          'Duplicate functor alternative: $key in ${def.name}',
-          def.line, def.column);
-      }
-      functors.add(key);
+      claim(key, 'Duplicate functor alternative: $key in ${def.name}');
 
     } else if (alt is DiffListAlt) {
-      if (functors.contains('\\/2')) {
-        throw NonDeterministicTypeError(
-          'Duplicate \\ alternative in ${def.name}',
-          def.line, def.column);
-      }
-      functors.add('\\/2');
+      claim('\\/2', 'Duplicate \\ alternative in ${def.name}');
 
     } else if (alt is PrimitiveModeAlt) {
       // _ or _? - wildcards overlap with everything

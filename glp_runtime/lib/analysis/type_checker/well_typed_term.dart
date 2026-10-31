@@ -2,7 +2,6 @@
 //
 // Well-typed moded term checking for GLP type system.
 // Specification: TGLP (Moded-Types), sections/well-typing.tex Definition "Well-Typed Moded Term"
-// Paper Reference: Definition 5.4 (Well-Typed Moded Term)
 //
 // Determines when a moded term is well-typed by an automaton by checking path
 // consistency via automaton traversal.
@@ -44,12 +43,6 @@ class WellTypedResult {
     this.repeats = const {},
   });
 
-  /// Every occurrence of [key], its first and its [repeats].
-  List<VariableTypeInfo> occurrencesOf(String key) => [
-        if (variableTypes[key] != null) variableTypes[key]!,
-        ...?repeats[key],
-      ];
-
   factory WellTypedResult.success(Map<String, VariableTypeInfo> variableTypes) {
     return WellTypedResult(
       isWellTyped: true,
@@ -65,6 +58,18 @@ class WellTypedResult {
       variableTypes: variableTypes ?? {},
       errors: errors,
     );
+  }
+
+  /// The failure of one inconsistent path of a single root step, [symbol] at
+  /// the root in produce mode, for [reason]: what a term that cannot be
+  /// built or checked at all is refused by.
+  factory WellTypedResult.failureAt(String symbol, String reason) {
+    return WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(symbol: symbol, argIndex: 0, mode: Mode.produce)]),
+        reason,
+      ),
+    ]);
   }
 }
 
@@ -170,7 +175,8 @@ class PathCheckResult {
 
 /// Check if a moded term is well-typed by an automaton.
 ///
-/// Per Definition 4.5: A moded term T is well-typed by a GLP type D if:
+/// TGLP, Definition "Well-Typed Moded Term": a moded term T is well-typed by
+/// a GLP type D if:
 /// 1. For each term path x ∈ paths(T) there is a consistent path in the automaton
 /// 2. For every pair of variables in T, their types are complementary
 ///
@@ -227,13 +233,14 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
   );
 }
 
-/// Check if a single moded path is consistent with the automaton.
+/// Each path of [term] with its result, in the order [paths] gives the
+/// paths, computed in one walk of [term] and with no set of paths built.
 ///
-/// Per Definition 4.3: A moded path is consistent with the automaton if:
-/// 1. Structure matches: each non-leaf step corresponds to valid transition
-/// 2. Leaf consistency: variable/constant at leaf matches DFA state
-///
-/// Fix 4.1: Switches automata at type boundaries when entering user-defined types
+/// A path is consistent with the automaton (TGLP, Definition "Consistent
+/// Paths") if each non-leaf step is a transition of the automaton --- the
+/// automaton switching to the type's own at a type boundary --- and the
+/// variable or constant at the leaf is consistent with the state reached
+/// ([checkLeafConsistency]).
 ///
 /// [open] names base types that stand for type parameters left open
 /// (well_typed_clause.dart, a call checked with its callee's parameters open:
@@ -242,96 +249,6 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
 /// map could bind the parameter to a type admitting it, and a variable at one
 /// is typed by it.  Empty by default, which is Definition "Consistent Paths"
 /// itself.
-PathCheckResult checkPathAgainstAutomaton(
-  ModedPath path,
-  Automaton automaton,
-  ProgramDFA dfa, {
-  Set<String> open = const {},
-}) {
-  var state = automaton.startState;
-  var currentAutomaton = automaton;  // Track current automaton for type switching
-
-  // At an open parameter, the subterm at step [i] holds whatever it is.
-  PathCheckResult? atOpen(int i) {
-    if (open.isEmpty || !open.contains(state.baseName)) return null;
-    final leaf = path.leaf;
-    if (i == path.length - 1 && leaf.isVariable) {
-      return PathCheckResult.consistent(VariableTypeInfo(
-        typeState: state,
-        mode: leaf.isReader ? Mode.consume : Mode.produce,
-        isReader: leaf.isReader,
-      ));
-    }
-    return PathCheckResult.consistent();
-  }
-
-  // Handle single-step paths (just a variable or constant at root)
-  if (path.length == 1) {
-    return atOpen(0) ?? _checkLeafConsistencyForPath(path.leaf, state, dfa);
-  }
-
-  // Traverse path, following automaton transitions
-  for (int i = 0; i < path.length - 1; i++) {
-    final opened = atOpen(i);
-    if (opened != null) return opened;
-    final step = path.steps[i];
-    final nextStep = path.steps[i + 1];
-
-    // Build transition label from path step
-    final label = _buildTransitionLabel(step, nextStep);
-
-    // Try to follow transition
-    final nextState = currentAutomaton.transition(state, label);
-
-    if (nextState == null) {
-      // Case 3 (Type path shorter - wildcard in type): Per Definition 4.5 v0.7
-      // When at a wildcard state with no outgoing transition, check ONLY the
-      // structural mode at this position. The remainder of the term path beyond
-      // the wildcard is NOT examined - the wildcard accepts the entire subterm.
-      if (state.isWildcard) {
-        // The structural mode at position |y| is nextStep.mode (the mode at
-        // the first position beyond where the type path can follow)
-        final structuralModeAtWildcard = nextStep.mode;
-        final expectedMode = state.isDual ? Mode.consume : Mode.produce;
-        
-        if (structuralModeAtWildcard == expectedMode) {
-          // Mode matches - wildcard accepts entire subterm, path is consistent.
-          // We don't record variable assignments here because the variables
-          // inside the wildcard-accepted subterm are handled separately.
-          return PathCheckResult.consistent();
-        }
-        
-        // Mode mismatch at wildcard position
-        return PathCheckResult.inconsistent(
-            'Mode mismatch at wildcard ${state.name}: expected ${expectedMode == Mode.consume ? "↓" : "↑"}, got ${structuralModeAtWildcard == Mode.consume ? "↓" : "↑"}');
-      }
-      
-      return PathCheckResult.inconsistent(
-          'No transition for $label from state ${state.name}');
-    }
-
-    // Fix 4.1: Switch automata at type boundaries
-    // When entering a user-defined type, switch to that type's automaton
-    if (nextState.isUserDefinedType && nextState.baseName != state.baseName) {
-      try {
-        currentAutomaton = dfa.getAutomaton(nextState.name);
-      } catch (e) {
-        return PathCheckResult.inconsistent(
-            'Cannot get automaton for type ${nextState.name}');
-      }
-    }
-
-    state = nextState;
-  }
-
-  // Check leaf consistency
-  return atOpen(path.length - 1) ??
-      _checkLeafConsistencyForPath(path.leaf, state, dfa);
-}
-
-/// Each path of [term] with the result [checkPathAgainstAutomaton] gives for
-/// it, in the order [paths] gives the paths, computed in one walk of [term]
-/// and with no set of paths built.
 ///
 /// [visit] is called once for each path with the path's leaf step, its
 /// result, and a function that gives the path ([ModedPath.ending]), whose
@@ -369,8 +286,8 @@ void forEachCheckedPath(
     final step = link.step;
 
     if (node is! ModedCompound) {
-      // The path ends here: its leaf ([checkPathAgainstAutomaton], the leaf
-      // check, at an open parameter or against the state reached).
+      // The path ends here: its leaf, at an open parameter or against the
+      // state reached.
       visit(
           step,
           settled ??
@@ -399,7 +316,7 @@ void forEachCheckedPath(
   }
 }
 
-/// [checkPathAgainstAutomaton]'s result at an open parameter: at the state
+/// The result at an open parameter ([forEachCheckedPath]): at the state
 /// [state] of a vertex whose step is [step], the result of every path through
 /// it, or null where [state] is not one of the [open] parameters.  At the leaf
 /// a variable is typed by the parameter.
@@ -416,9 +333,9 @@ PathCheckResult? _atOpenParameter(DFAState state, PathStep step,
   return PathCheckResult.consistent();
 }
 
-/// One step of [checkPathAgainstAutomaton]'s traversal, from the vertex of
-/// [step] at [state] in [currentAutomaton] to its argument of [nextStep]: the
-/// state and automaton reached there, or, where the step settles the result of
+/// One step of [forEachCheckedPath]'s traversal, from the vertex of [step]
+/// at [state] in [currentAutomaton] to its argument of [nextStep]: the state
+/// and automaton reached there, or, where the step settles the result of
 /// every path through that argument, that result.
 (DFAState?, Automaton, PathCheckResult?) _stepAlong(
   PathStep step,
@@ -434,8 +351,10 @@ PathCheckResult? _atOpenParameter(DFAState state, PathStep step,
   final nextState = currentAutomaton.transition(state, label);
 
   if (nextState == null) {
-    // Case 3 (Type path shorter - wildcard in type), as in
-    // [checkPathAgainstAutomaton].
+    // Case 3 (type path shorter: a wildcard in the type).  At a wildcard
+    // state with no outgoing transition only the structural mode at this
+    // position is checked; the rest of the term path beyond the wildcard is
+    // not examined, the wildcard accepting the whole subterm.
     if (state.isWildcard) {
       final structuralModeAtWildcard = nextStep.mode;
       final expectedMode = state.isDual ? Mode.consume : Mode.produce;
@@ -460,7 +379,8 @@ PathCheckResult? _atOpenParameter(DFAState state, PathStep step,
     );
   }
 
-  // Fix 4.1: Switch automata at type boundaries
+  // Switch automata at type boundaries: when entering a user-defined type,
+  // switch to that type's automaton.
   if (nextState.isUserDefinedType && nextState.baseName != state.baseName) {
     try {
       return (nextState, dfa.getAutomaton(nextState.name), null);
@@ -544,7 +464,7 @@ LeafTerm _pathStepToLeafTerm(PathStep step) {
       return LeafTerm.writer(step.symbol, mode: step.mode);
     }
   } else {
-    // Constant - pass structural mode for wildcard checking (spec v0.6)
+    // Constant - pass structural mode for wildcard checking
     final value = step.value;
     if (value is int) return LeafTerm.integerConstant(value, mode: step.mode);
     if (value is double) return LeafTerm.realConstant(value, mode: step.mode);
@@ -569,8 +489,7 @@ String _variableKey(PathStep leaf) {
   return leaf.symbol;
 }
 
-/// Check duality of variable pairs
-/// Per spec v0.4: uses DFAState.baseName and isDual
+/// Check duality of variable pairs: uses DFAState.baseName and isDual
 List<NonDualError> _checkDuality(
     Map<String, VariableTypeInfo> variableTypes, ProgramDFA dfa) {
   final errors = <NonDualError>[];
