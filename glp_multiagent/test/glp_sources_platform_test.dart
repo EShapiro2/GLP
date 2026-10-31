@@ -93,7 +93,7 @@ void main() {
     // directories GlpPaths names --- read from the repository as discovery
     // reads a program: every .glp of the tree, the self.glp of each directory
     // from the root down to it (TGLP modules.tex, Compilation, first step),
-    // and a .vglp no .glp stands beside, with the vGLP mediator source; and
+    // and a .vglp no .glp stands beside, with the dispatcher's generic source; and
     // nothing else.  Until 2026-10-07 the loader and the script each listed
     // the files, and both lacked programs/social/graph/ui/self.glp (GSG,
     // gap abe6081f).
@@ -128,9 +128,7 @@ void main() {
       }
     }
     if (vglp) {
-      for (final m in ['self', 'med', 'dispatcher']) {
-        expected.add('programs/vglp/$m.glp');
-      }
+      expected.add('programs/vglp/dispatcher.glp');
     }
     final sources = bundled.keys.where((p) => !p.endsWith('.glpw')).toSet();
     expect(sources, contains('programs/social/graph/ui/self.glp'));
