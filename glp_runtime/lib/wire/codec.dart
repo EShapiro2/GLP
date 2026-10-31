@@ -84,7 +84,7 @@ class WBlob extends WireConst {
   WBlob(this.value);
   @override
   bool operator ==(Object other) =>
-      other is WBlob && _bytesEqual(other.value, value);
+      other is WBlob && bytesEqual(other.value, value);
   @override
   int get hashCode => Object.hashAll(value);
 }
@@ -96,7 +96,7 @@ class WModule extends WireConst {
   WModule(this.artefactBytes);
   @override
   bool operator ==(Object other) =>
-      other is WModule && _bytesEqual(other.artefactBytes, artefactBytes);
+      other is WModule && bytesEqual(other.artefactBytes, artefactBytes);
   @override
   int get hashCode => Object.hashAll(artefactBytes);
 }
@@ -140,7 +140,7 @@ class WVar extends WireTerm {
       other is WVar &&
       other.isReader == isReader &&
       other.index == index &&
-      _bytesEqual(other.agent, agent);
+      bytesEqual(other.agent, agent);
   @override
   int get hashCode => Object.hash(isReader, index, Object.hashAll(agent));
 }
@@ -227,7 +227,7 @@ class WireAssignment {
       other.gIndex == gIndex &&
       other.serial == serial &&
       other.value == value &&
-      _bytesEqual(other.gAgent, gAgent);
+      bytesEqual(other.gAgent, gAgent);
   @override
   int get hashCode =>
       Object.hash(gIsReader, gIndex, serial, value, Object.hashAll(gAgent));
@@ -276,7 +276,7 @@ class WireRequestMessage extends WireMessage {
   bool operator ==(Object other) =>
       other is WireRequestMessage &&
       other.index == index &&
-      _bytesEqual(other.agent, agent);
+      bytesEqual(other.agent, agent);
   @override
   int get hashCode => Object.hash(index, Object.hashAll(agent));
 }
@@ -297,7 +297,7 @@ class WireAckMessage extends WireMessage {
   bool operator ==(Object other) =>
       other is WireAckMessage &&
       other.index == index &&
-      _bytesEqual(other.agent, agent);
+      bytesEqual(other.agent, agent);
   @override
   int get hashCode => Object.hash(index, Object.hashAll(agent));
 }
@@ -314,7 +314,9 @@ class WireFormatException implements Exception {
 // Primitive writer (§cf-primitives)
 // ============================================================================
 
-/// Big-endian, shortest-form primitive encoder.
+/// Primitive encoder: u8 one byte; i64 and f64 eight bytes, little-endian;
+/// clen a big-endian compact length in its shortest form; string and bytes
+/// clen-prefixed; hash 32 raw bytes.
 class WireWriter {
   final BytesBuilder _b = BytesBuilder(copy: false);
 
@@ -381,8 +383,9 @@ class WireWriter {
 // Primitive reader (§cf-primitives)
 // ============================================================================
 
-/// Big-endian primitive decoder. Rejects longer-than-necessary clen forms
-/// (one value, one encoding).
+/// Primitive decoder, the inverse of [WireWriter]: i64 and f64 little-endian,
+/// clen big-endian. Rejects longer-than-necessary clen forms (one value, one
+/// encoding).
 class WireReader {
   final Uint8List data;
   int _off;
@@ -480,7 +483,7 @@ class WireReader {
 }
 
 // ============================================================================
-// Constant payload (§cf-terms) — reused by instruction operands (§4.1)
+// Constant payload (§cf-terms) — reused by instruction operands
 // ============================================================================
 
 /// Write a constant payload: u8 constant tag, then its payload. No leading
@@ -781,7 +784,8 @@ WireMessage decodeMessageFromBytes(Uint8List b) {
 int _f64Bits(double v) =>
     (ByteData(8)..setFloat64(0, v, Endian.big)).getInt64(0, Endian.big);
 
-bool _bytesEqual(List<int> a, List<int> b) {
+/// Whether [a] and [b] are the same bytes.
+bool bytesEqual(List<int> a, List<int> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
     if (a[i] != b[i]) return false;

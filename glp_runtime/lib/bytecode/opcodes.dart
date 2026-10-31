@@ -13,13 +13,13 @@ class Commit implements Op {}
 
 /// clause_next: Unified instruction for clause failure/suspension
 /// Unions Si into U as needed, then discards σ̂w and jumps to the next clause.
-/// From spec 2.2: "discard σ̂w; jump to label of Cj"
+/// IGLP: discard σ̂w and jump to the label of the next clause.
 class ClauseNext implements Op {
   final LabelName label;
   ClauseNext(this.label);
 }
 
-/// no_more_clauses: All clauses exhausted without success (spec 2.5)
+/// no_more_clauses: All clauses exhausted without success
 /// Behavior: If suspension set non-empty, suspend goal; otherwise mark as permanently failed
 class NoMoreClauses implements Op {}
 
@@ -77,7 +77,7 @@ class PutBoundNil implements Op {
   PutBoundNil(this.argSlot);
 }
 
-// ===== v2.16 HEAD instructions (encode clause patterns) =====
+// ===== HEAD instructions (encode clause patterns) =====
 /// Match constant c with argument at argSlot
 /// Behavior: Writer(w) → σ̂w[w]=c; Reader(r) → Si+={r}; Ground(t) → check t==c
 class HeadConstant implements Op {
@@ -131,7 +131,6 @@ class Otherwise implements Op {}
 
 /// Push: Save current structure processing state before entering nested structure
 /// Stores (S, mode, currentStructure) triple in clause variable Xi
-/// Following FCP AM design for nested structure handling
 class Push implements Op {
   final int regIndex;  // Xi register to store state
   Push(this.regIndex);
@@ -152,7 +151,6 @@ class Pop implements Op {
 }
 
 /// UnifyStructure: Process nested structure at current S position
-/// Following FCP AM's unify_compound instruction
 /// Matches/creates structure at args[S], then enters that structure for processing
 class UnifyStructure implements Op {
   final String functor;
@@ -213,7 +211,8 @@ class GroundEqual implements Op {
 }
 
 /// Spawn new goal for procedure P with arguments in A1-An
-/// Non-tail call: saves continuation and schedules new goal
+/// Non-tail call: the byte loop enqueues a new goal at the callee's entry
+/// with the argument registers as its arguments, and goes on with the body
 class Spawn implements Op {
   final LabelName procedureLabel;  // procedure entry label
   final int arity;                  // number of arguments
@@ -221,7 +220,9 @@ class Spawn implements Op {
 }
 
 /// Tail call to procedure P with arguments in A1-An
-/// Reuses current goal frame, implements fair scheduling via tail recursion budget
+/// The byte loop continues this goal at the callee's entry with the argument
+/// registers as its arguments; when the goal's tail budget is spent it
+/// re-enqueues the goal there and yields
 class Requeue implements Op {
   final LabelName procedureLabel;  // procedure entry label
   final int arity;                  // number of arguments
@@ -248,7 +249,7 @@ class Halt implements Op {}
 
 // ============================================================================
 // Variable instructions: one instruction serves writer and reader alike, its
-// isReader flag the polarity operand of IGLP's opcode table; and unknown.
+// isReader flag the polarity operand of IGLP's opcode table.
 // ============================================================================
 
 // ============================================================================

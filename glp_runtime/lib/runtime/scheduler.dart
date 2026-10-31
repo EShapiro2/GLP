@@ -274,7 +274,7 @@ class Scheduler {
   /// Reduce goals from the queue, at most [maxCycles] of them.  Their number
   /// is the result's [DrainResult.goalsRun]; [goalIds], when given, has the
   /// id of each appended as it is taken.
-  DrainResult drainWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false, List<int>? goalIds}) {
+  DrainResult drainWithStatus({int maxCycles = 1000, bool debug = false, bool debugOutput = false, List<int>? goalIds}) {
     // Track suspended goals by ID, each with the means to its text.
     final suspendedGoals = <int, String Function()>{};
     var cycles = 0;
@@ -334,7 +334,6 @@ class Scheduler {
         env: env,
         goalHead: goalStr,
         goalProcName: procName,
-        showBindings: showBindings,
         debugOutput: debugOutput,
         termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
         onReduction: debug
@@ -452,7 +451,7 @@ class Scheduler {
   /// with its queue non-empty, and its caller reports that. F is cumulative
   /// across the drains this call makes, so a goal that failed in any of them
   /// fails the whole, whatever the last drain returned.
-  DrainResult drainToQuiescence({int maxCycles = 1000000, int chunk = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
+  DrainResult drainToQuiescence({int maxCycles = 1000000, int chunk = 1000, bool debug = false, bool debugOutput = false}) {
     var run = 0;
     final failedAtEntry = rt.failedGoals.length;
     var last = DrainResult(0, ExecutionStatus.succeeded, const []);
@@ -462,7 +461,6 @@ class Scheduler {
       final result = drainWithStatus(
         maxCycles: chunk < left ? chunk : left,
         debug: debug,
-        showBindings: showBindings,
         debugOutput: debugOutput,
       );
       run += result.goalsRun;
@@ -535,7 +533,7 @@ class Scheduler {
   /// for the agents.  The REPL's goal in madGLP mode is drained so
   /// (GlpEngine.runGoal); until 2026-10-02 it made no Sends, and a goal there
   /// waiting on when_idle waited for as long as a message sat in the outbox.
-  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false, List<int>? goalIds, void Function()? send}) async {
+  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool debugOutput = false, List<int>? goalIds, void Function()? send}) async {
     final failedAtEntry = rt.failedGoals.length;
     var totalCycles = 0;
     ExecutionStatus lastStatus = ExecutionStatus.succeeded;
@@ -547,7 +545,6 @@ class Scheduler {
       final result = drainWithStatus(
         maxCycles: maxCycles - totalCycles,
         debug: debug,
-        showBindings: showBindings,
         debugOutput: debugOutput,
         goalIds: goalIds,
       );

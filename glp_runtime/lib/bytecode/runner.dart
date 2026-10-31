@@ -11,17 +11,15 @@ import 'package:glp_runtime/engine_v2/step_outcome.dart';
 
 enum RunResult { terminated, suspended, yielded }
 
-/// A runner that executes one goal's [RunnerContext] to a [RunResult]. The
-/// scheduler holds runners behind this interface so a goal can be driven by the
-/// direct byte loop (`ByteRunner` in `engine_v2/interp.dart`) — the PC in
-/// `cx.kappa` interpreted as a byte offset into the code section.
+/// A runner that executes one goal's [RunnerContext] to a [RunResult]: the
+/// byte loop, `ByteRunner` in `engine_v2/interp.dart`, which interprets the PC
+/// in `cx.kappa` as a byte offset into its code section.  The scheduler holds a
+/// goal's runner behind this interface.
 abstract interface class GoalRunner {
-  void run(RunnerContext cx);
   RunResult runWithStatus(RunnerContext cx);
 
-  /// The procedure name (signature) whose entry is at program-counter [pc], or
-  /// null if none — used by the scheduler for trace display. The PC is an
-  /// instruction index for the object runner, a byte offset for the byte runner.
+  /// The procedure name (signature) whose entry is at program-counter [pc], a
+  /// byte offset, or null if none — used by the scheduler for trace display.
   String? procNameForPc(int pc);
 }
 
@@ -34,8 +32,6 @@ enum GuardResult {
   failure,  // Guard failed, try next clause
   suspend,  // Guard blocked on unbound readers (already added to cx.Si)
 }
-
-typedef LabelName = String;
 
 class BytecodeProgram {
   final List<Op> ops;  // The instruction objects (opcodes.dart), labels among them
@@ -59,44 +55,10 @@ class BytecodeProgram {
     final mergedOps = [...other.ops, ...ops];
     return BytecodeProgram(mergedOps);
   }
-
-  /// Generate human-readable disassembly of bytecode
-  String toDisassembly() {
-    final buffer = StringBuffer();
-    for (var i = 0; i < ops.length; i++) {
-      buffer.writeln('PC $i: ${_instructionToString(ops[i])}');
-    }
-    return buffer.toString();
-  }
-
-  String _instructionToString(dynamic op) {
-    // PutVariable (the critical one for debugging)
-    if (op is PutVariable) {
-      final mode = op.isReader ? 'reader' : 'writer';
-      return 'PutVariable(X${op.varIndex} → A${op.argSlot}, $mode)';
-    }
-
-    // The other variable instructions
-    if (op is HeadVariable) {
-      final mode = op.isReader ? 'reader' : 'writer';
-      return 'HeadVariable(X${op.varIndex}, $mode)';
-    }
-    if (op is UnifyVariable) {
-      final mode = op.isReader ? 'reader' : 'writer';
-      return 'UnifyVariable(X${op.varIndex}, $mode)';
-    }
-    if (op is SetVariable) {
-      final mode = op.isReader ? 'reader' : 'writer';
-      return 'SetVariable(X${op.varIndex}, $mode)';
-    }
-
-    // Fallback: use toString()
-    return op.toString();
-  }
 }
 
 /// Goal-call environment: maps arg slots to heterogeneous Terms (VarRef, ConstTerm, StructTerm).
-/// Per spec v2.16 section 1.1: argument registers hold Terms, not just variable IDs.
+/// IGLP: argument registers hold Terms, not just variable IDs.
 class CallEnv {
   final Map<int, Term> argBySlot;
 
@@ -125,12 +87,6 @@ class EnvironmentFrame {
     required this.continuationPointer,
     required int size,
   }) : permanentVars = List.filled(size, null);
-
-  /// Get permanent variable Yi (1-indexed)
-  Object? getY(int index) => permanentVars[index - 1];
-
-  /// Set permanent variable Yi (1-indexed)
-  void setY(int index, Object? value) => permanentVars[index - 1] = value;
 }
 
 /// Parent context for nested structure building
@@ -306,7 +262,7 @@ class RunnerContext {
   final List<_ParentContext> parentStack = [];
 
   // Argument registers for goal calls (A1, A2, ..., An)
-  // Per spec v2.16 section 1.1: heterogeneous term storage
+  // IGLP: heterogeneous term storage
   final Map<int, Term> argSlots = {};  // argSlot → Term (VarRef, ConstTerm, StructTerm)
 
   // Guard argument building mode (for pre-commit structure building)
@@ -354,7 +310,6 @@ class RunnerContext {
   }
 
   // Control trace output
-  final bool showBindings;
   final bool debugOutput;
 
   // Custom term formatter for consistent variable naming
@@ -368,7 +323,6 @@ class RunnerContext {
     this.goalHead,
     this.goalProcName,
     this.onReduction,
-    this.showBindings = true,
     this.debugOutput = false,
     this.termFormatter,
   }) : env = env ?? CallEnv();
@@ -393,8 +347,7 @@ class RunnerContext {
 }
 
 
-// Pure helpers relocated from the former BytecodeRunner class (object loop,
-// removed). They operate only on RunnerContext and are shared by OpExecutors.
+// Pure helpers over RunnerContext, shared by OpExecutors.
 
 HeapCell _finalUnboundVar(RunnerContext cx, HeapCell addr) {
   // derefAddr follows the entire chain automatically
@@ -409,7 +362,6 @@ HeapCell _finalUnboundVar(RunnerContext cx, HeapCell addr) {
 
     // Per GLP semantics: goals suspend on READERS, not writers
     // If the final unbound var is a writer, return its paired reader
-    // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
     final readerAddr = isWriter ? cx.rt.heap.pairedReaderAddr(finalAddr) : finalAddr;
     if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Final var: $finalAddr (${isWriter ? "writer" : "reader"}), returning reader: $readerAddr');
     return readerAddr;
@@ -422,10 +374,39 @@ HeapCell _finalUnboundVar(RunnerContext cx, HeapCell addr) {
 
 Term? _getArg(RunnerContext cx, int slot) {
   final arg = cx.env.arg(slot);
-  // Per spec v2.16.3 Section 1.1: CallEnv arguments must be VarRefs
+  // CallEnv arguments are VarRefs (IGLP: an argument register holds a term's
+  // reference).
   assert(arg == null || arg is VarRef,
          'CallEnv arguments must be VarRefs, got ${arg.runtimeType}');
   return arg;
+}
+
+/// [value], what a bound goal writer holds, with the chain of bound readers
+/// and writers it may start followed to its end: the value the chain reaches,
+/// or the first unbound variable on it (an unbound reader, or an unbound
+/// writer), as `head_constant` and `head_structure` read a bound goal writer.
+Object? _followBoundChain(RunnerContext cx, Object? value) {
+  while (value is VarRef) {
+    if (cx.rt.heap.isReader(value.addr)) {
+      if (cx.rt.heap.isReaderBound(value.addr)) {
+        final readerValue = cx.rt.heap.getReaderValue(value.addr);
+        if (readerValue != null) {
+          value = readerValue;
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    } else {
+      if (cx.rt.heap.isWriterBound(value.addr)) {
+        value = cx.rt.heap.valueOfWriter(value.addr);
+      } else {
+        break;
+      }
+    }
+  }
+  return value;
 }
 
 /// A ground value at an argument position: a constant, a structure, or an
@@ -499,16 +480,18 @@ StepOutcome _matchRepeatedWriter(
     return StepOutcome.nextClause;
   }
   if (readers.isEmpty) return StepOutcome.advance;
-  return _undecidedMember(cx, readers) == GuardResult.failure
-      ? StepOutcome.nextClause
-      : StepOutcome.advance;
+  return _guardUndecided(cx, readers);
 }
 
 /// [term] with the bindings of its variables followed, the tentative ones
-/// (σ̂w) before the heap's: a value, or the unbound variable a chain ends at,
-/// as [_decideGroundEquality] resolves a term ([_UnboundVariable]: the writer
-/// cell, whether the occurrence met is a reader, and the reader a suspension
-/// waits on).
+/// (σ̂w) before the heap's: a value, or the unbound variable a chain ends at
+/// ([_UnboundVariable]: the writer cell, whether the occurrence met is a
+/// reader, and the reader a suspension waits on).  An unbound variable of this
+/// heap has its writer cell at the chain's end, and the occurrence met is a
+/// writer only where it is that cell itself: a reader cell, or a bound writer,
+/// whose chain ends there met a reader.  A constant stays in its ConstTerm, so
+/// that what this gives is given back unchanged, and no number is taken for a
+/// variable's address.
 Object? _resolveTentative(RunnerContext cx, Object? term) {
   final heap = cx.rt.heap;
   var t = term;
@@ -834,7 +817,7 @@ VarRef _unknownPlaceholder(RunnerContext cx, int varIndex, bool isReader) {
 
         if (cx.rt.heap.isReaderBound(readerAddr)) {
           final boundValue = cx.rt.heap.getReaderValue(readerAddr);
-          // CRITICAL FIX: Recursively dereference the bound value
+          // Recursively dereference the bound value
           return dereference(boundValue);
         } else {
           // Unbound reader - track it
@@ -853,7 +836,7 @@ VarRef _unknownPlaceholder(RunnerContext cx, int varIndex, bool isReader) {
         // Check heap
         if (cx.rt.heap.isFullyBound(writerAddr)) {
           final boundValue = cx.rt.heap.getValue(writerAddr);
-          // CRITICAL FIX: Recursively dereference the bound value
+          // Recursively dereference the bound value
           return dereference(boundValue);
         } else {
           // Unbound writer - can't evaluate
@@ -865,7 +848,7 @@ VarRef _unknownPlaceholder(RunnerContext cx, int varIndex, bool isReader) {
       // Guards like =:= will evaluate explicitly using evaluateNumeric
       return t;
     } else if (t is ConstTerm) {
-      // CRITICAL FIX: Unwrap ConstTerm to get primitive value
+      // Unwrap ConstTerm to get primitive value
       return t.value;
     } else if (t is HeapCell) {
       // Bare int represents a variable addr - check sigmaHat first, then heap
@@ -901,9 +884,14 @@ VarRef _unknownPlaceholder(RunnerContext cx, int varIndex, bool isReader) {
 /// suspended c1(X?, 3), where the same guards swapped failed it (GLP #3
 /// Cowork, 2026-10-02 08:40 UTC, G).
 StepOutcome _guardUndecided(RunnerContext cx, Iterable<HeapCell> readers) =>
-    _undecidedMember(cx, readers) == GuardResult.failure
-        ? StepOutcome.nextClause
-        : StepOutcome.advance;
+    _guardStep(_undecidedMember(cx, readers));
+
+/// The step a guard member's decision is: a failure leaves the clause, and
+/// a success, or a suspension whose readers are in Si, goes on to the next
+/// member.
+StepOutcome _guardStep(GuardResult decision) => decision == GuardResult.failure
+    ? StepOutcome.nextClause
+    : StepOutcome.advance;
 
 /// A guard member that does not succeed, where some instance of it under a
 /// readers substitution would (GLP-Spec glp.tex, Guards): it suspends, or it
@@ -1063,12 +1051,63 @@ int _compareCharacterCodes(String a, String b) {
   }
 }
 
-GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
-  // Extract values from any remaining ConstTerms
-  Object? getValue(Object? v) {
-    if (v is ConstTerm) return v.value;
-    return v;
+/// The time guards' suspension (`wait/1`, `wait_until/1`): the goal suspends
+/// on a reader the runtime binds when a timer of [milliseconds] fires, and
+/// succeeds when it is re-tried after that.  A goal that already waits keeps
+/// suspending on its reader until the timer has fired.
+GuardResult _waitOnTimer(RunnerContext cx, num milliseconds) {
+  // Check if this goal already has a pending wait
+  final existingReader = cx.rt.getWaitReader(cx.goalId);
+  if (existingReader != null) {
+    // Goal resumed after suspension - check if timer fired
+    if (cx.rt.heap.isFullyBound(existingReader)) {
+      // Timer fired, reader is bound - clear state and succeed
+      cx.rt.clearWaitState(cx.goalId);
+      return GuardResult.success;
+    } else {
+      // Timer hasn't fired yet - keep suspending on same reader
+      cx.Si.add(existingReader);
+      return GuardResult.suspend;
+    }
   }
+
+  // First call - create fresh reader/writer pair for timer notification
+  final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+
+  // Store wait state for this goal
+  cx.rt.setWaitReader(cx.goalId, readerAddr);
+
+  // Track pending timer
+  cx.rt.incrementPendingTimers();
+
+  // Start timer that binds writer when it fires
+  Timer(Duration(milliseconds: milliseconds.toInt()), () {
+    // Bind writer to 0 (any value works)
+    final reactivated = cx.rt.heap.bindWriterConst(writerAddr, 0);
+    // Enqueue reactivated goals and clean up suspended map
+    for (final goalRef in reactivated) {
+      cx.rt.enqueueReactivatedGoal(goalRef);
+    }
+    // Decrement pending timer count
+    cx.rt.decrementPendingTimers();
+  });
+
+  // Suspend on the timer's reader, which the runtime binds: it is no
+  // reader of the guard's argument ([_guardUndecided] decides those).
+  // Until 2026-10-02 the reader went to U and the guard reported failure,
+  // U telling the clause's suspension from a failure.
+  cx.Si.add(readerAddr);
+  return GuardResult.suspend;
+}
+
+/// The evaluation of a guard's operands in [_evaluateGuard], and what it met
+/// on the way: the unbound readers that blocked it ([blockedReaders]), whether
+/// an operand has no value under any readers substitution
+/// ([undefinedInEveryInstance]), and whether an argument of `@<` is bound to a
+/// term that is no constant ([noConstant]).  One per guard evaluated.
+class _GuardOperands {
+  final RunnerContext cx;
+  _GuardOperands(this.cx);
 
   // Unbound readers that blocked arithmetic/constant evaluation of a guard
   // operand (readers nested inside expression structures — the top-level
@@ -1201,13 +1240,56 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
     return undefined();
   }
 
+  // Set where an argument is bound to a term that is no constant.
+  var noConstant = false;
+  // The constant an argument is, as the order takes it: a number (num), a
+  // string (String) or the empty list ([Nil]); null where it is not yet
+  // known (its reader recorded) or is no constant.
+  Object? evalConst(dynamic v) {
+    if (v == null) return null;
+    if (v is ConstTerm) return evalConst(v.value);
+    if (v is String || v is num || v is Nil) return v;
+    if (v is VarRef) {
+      if (cx.rt.heap.isReader(v.addr)) {
+        final writerAddr = cx.rt.heap.tryWriterForReader(v.addr);
+        if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+          return evalConst(cx.sigmaHat[writerAddr]);
+        }
+        if (!cx.rt.heap.isReaderBound(v.addr)) {
+          blockedReaders.add(v.addr);
+          return null;
+        }
+        return evalConst(cx.rt.heap.getReaderValue(v.addr));
+      }
+      if (cx.sigmaHat.containsKey(v.addr)) {
+        return evalConst(cx.sigmaHat[v.addr]);
+      }
+      final deref = cx.rt.heap.getValue(v.addr);
+      return deref == null ? null : evalConst(deref);
+    }
+    noConstant = true;
+    return null;
+  }
+}
+
+GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
+  // Extract values from any remaining ConstTerms
+  Object? getValue(Object? v) {
+    if (v is ConstTerm) return v.value;
+    return v;
+  }
+
+  final operands = _GuardOperands(cx);
+
   // A guard operand failed to evaluate: undecided if unbound readers blocked
   // the evaluation (guards-reference: comparison guards suspend on unbound
   // reader operands), suspending on the goal's and failing on one the clause
   // alone holds ([_undecidedMember]); fail otherwise (bound but non-numeric —
   // a type error).
   GuardResult blockedOrFail() {
-    if (blockedReaders.isNotEmpty) return _undecidedMember(cx, blockedReaders);
+    if (operands.blockedReaders.isNotEmpty) {
+      return _undecidedMember(cx, operands.blockedReaders);
+    }
     return GuardResult.failure;
   }
 
@@ -1215,61 +1297,30 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
   // no value under any readers substitution ([undefinedInEveryInstance]),
   // whatever readers blocked the other, and is otherwise as above.
   GuardResult comparisonBlockedOrFail() =>
-      undefinedInEveryInstance ? GuardResult.failure : blockedOrFail();
+      operands.undefinedInEveryInstance ? GuardResult.failure : blockedOrFail();
 
   switch (predicateName) {
-    // Comparison guards (with arithmetic expression support)
+    // The arithmetic comparison guards ([_arithmeticComparisons]): both
+    // operands evaluated, left first, and compared by the operator.
     case '<':
-      if (args.length < 2) return GuardResult.failure;
-      final a = evaluateNumeric(args[0]);
-      final b = evaluateNumeric(args[1]);
-      if (a != null && b != null) {
-        return a < b ? GuardResult.success : GuardResult.failure;
-      }
-      return comparisonBlockedOrFail();
-
     case '>':
-      if (args.length < 2) return GuardResult.failure;
-      final a = evaluateNumeric(args[0]);
-      final b = evaluateNumeric(args[1]);
-      if (a != null && b != null) {
-        return a > b ? GuardResult.success : GuardResult.failure;
-      }
-      return comparisonBlockedOrFail();
-
     case '=<':
-      if (args.length < 2) return GuardResult.failure;
-      final a = evaluateNumeric(args[0]);
-      final b = evaluateNumeric(args[1]);
-      if (a != null && b != null) {
-        return a <= b ? GuardResult.success : GuardResult.failure;
-      }
-      return comparisonBlockedOrFail();
-
     case '>=':
-      if (args.length < 2) return GuardResult.failure;
-      final a = evaluateNumeric(args[0]);
-      final b = evaluateNumeric(args[1]);
-      if (a != null && b != null) {
-        return a >= b ? GuardResult.success : GuardResult.failure;
-      }
-      return comparisonBlockedOrFail();
-
     case '=:=':
-      if (args.length < 2) return GuardResult.failure;
-      final a = evaluateNumeric(args[0]);
-      final b = evaluateNumeric(args[1]);
-      if (a != null && b != null) {
-        return a == b ? GuardResult.success : GuardResult.failure;
-      }
-      return comparisonBlockedOrFail();
-
     case '=\\=':
       if (args.length < 2) return GuardResult.failure;
-      final a = evaluateNumeric(args[0]);
-      final b = evaluateNumeric(args[1]);
+      final a = operands.evaluateNumeric(args[0]);
+      final b = operands.evaluateNumeric(args[1]);
       if (a != null && b != null) {
-        return a != b ? GuardResult.success : GuardResult.failure;
+        final holds = switch (predicateName) {
+          '<' => a < b,
+          '>' => a > b,
+          '=<' => a <= b,
+          '>=' => a >= b,
+          '=:=' => a == b,
+          _ => a != b,
+        };
+        return holds ? GuardResult.success : GuardResult.failure;
       }
       return comparisonBlockedOrFail();
 
@@ -1285,44 +1336,14 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
     // on X?.
     case '@<':
       if (args.length < 2) return GuardResult.failure;
-      // Set where an argument is bound to a term that is no constant.
-      var noConstant = false;
-      // The constant an argument is, as the order takes it: a number (num), a
-      // string (String) or the empty list ([Nil]); null where it is not yet
-      // known (its reader recorded) or is no constant.
-      Object? evalConst(dynamic v) {
-        if (v == null) return null;
-        if (v is ConstTerm) return evalConst(v.value);
-        if (v is String || v is num || v is Nil) return v;
-        if (v is VarRef) {
-          if (cx.rt.heap.isReader(v.addr)) {
-            final writerAddr = cx.rt.heap.tryWriterForReader(v.addr);
-            if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-              return evalConst(cx.sigmaHat[writerAddr]);
-            }
-            if (!cx.rt.heap.isReaderBound(v.addr)) {
-              blockedReaders.add(v.addr);
-              return null;
-            }
-            return evalConst(cx.rt.heap.getReaderValue(v.addr));
-          }
-          if (cx.sigmaHat.containsKey(v.addr)) {
-            return evalConst(cx.sigmaHat[v.addr]);
-          }
-          final deref = cx.rt.heap.getValue(v.addr);
-          return deref == null ? null : evalConst(deref);
-        }
-        noConstant = true;
-        return null;
-      }
-      final lc = evalConst(args[0]);
-      final rc = evalConst(args[1]);
+      final lc = operands.evalConst(args[0]);
+      final rc = operands.evalConst(args[1]);
       if (lc != null && rc != null) {
         return _precedesInStandardOrder(lc, rc)
             ? GuardResult.success
             : GuardResult.failure;
       }
-      if (noConstant) return GuardResult.failure;
+      if (operands.noConstant) return GuardResult.failure;
       return blockedOrFail();
 
     // Type guards
@@ -1358,7 +1379,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       return GuardResult.success;
 
     case 'integer':
-      // Per spec 19.4.3: Test if Xi is an integer
+      // Test if Xi is an integer
       if (args.isEmpty) return GuardResult.failure;
       final val = getValue(args[0]);
       return (val is int) ? GuardResult.success : GuardResult.failure;
@@ -1515,8 +1536,6 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       // Dereferenced to a non-variable (ground term) → FAILURE
       return GuardResult.failure;
 
-    // Note: duplicate 'unknown' case removed - the first one handles it
-
     // Control guards
     case 'otherwise':
       // Unreachable: execGuard routes a generic call of otherwise/0 to
@@ -1536,52 +1555,10 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       //   Timer fires → binds writer → ROQ reactivates goal
       // IMPORTANT: On resume, check if timer has already fired (avoid infinite loop)
       if (args.isEmpty) return GuardResult.failure;
-      final duration = evaluateNumeric(args[0]);
+      final duration = operands.evaluateNumeric(args[0]);
       if (duration == null) return blockedOrFail();
       if (duration <= 0) return GuardResult.success;
-
-      // Check if this goal already has a pending wait
-      final existingReader = cx.rt.getWaitReader(cx.goalId);
-      if (existingReader != null) {
-        // Goal resumed after suspension - check if timer fired
-        if (cx.rt.heap.isFullyBound(existingReader)) {
-          // Timer fired, reader is bound - clear state and succeed
-          cx.rt.clearWaitState(cx.goalId);
-          return GuardResult.success;
-        } else {
-          // Timer hasn't fired yet - keep suspending on same reader
-          cx.Si.add(existingReader);
-          return GuardResult.suspend;
-        }
-      }
-
-      // First call - create fresh reader/writer pair for timer notification
-      final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-
-      // Store wait state for this goal
-      cx.rt.setWaitReader(cx.goalId, readerAddr);
-
-      // Track pending timer
-      cx.rt.incrementPendingTimers();
-
-      // Start timer that binds writer when it fires
-      Timer(Duration(milliseconds: duration.toInt()), () {
-        // Bind writer to 0 (any value works)
-        final reactivated = cx.rt.heap.bindWriterConst(writerAddr, 0);
-        // Enqueue reactivated goals and clean up suspended map
-        for (final goalRef in reactivated) {
-          cx.rt.enqueueReactivatedGoal(goalRef);
-        }
-        // Decrement pending timer count
-        cx.rt.decrementPendingTimers();
-      });
-
-      // Suspend on the timer's reader, which the runtime binds: it is no
-      // reader of the guard's argument ([_guardUndecided] decides those).
-      // Until 2026-10-02 the reader went to U and the guard reported failure,
-      // U telling the clause's suspension from a failure.
-      cx.Si.add(readerAddr);
-      return GuardResult.suspend;
+      return _waitOnTimer(cx, duration);
 
     case 'wait_until':
       // wait_until(Timestamp) - Suspend until absolute time has passed
@@ -1591,41 +1568,14 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       // - current time >= Timestamp: succeed
       // - current time < Timestamp: suspend until time passes (timer-based)
       if (args.isEmpty) return GuardResult.failure;
-      final timestamp = evaluateNumeric(args[0]);
+      final timestamp = operands.evaluateNumeric(args[0]);
       if (timestamp == null) return blockedOrFail();
       final now = DateTime.now().millisecondsSinceEpoch;
       if (now >= timestamp) return GuardResult.success;
 
       // Time hasn't arrived yet — use timer-based suspension (same as wait)
       final remaining = timestamp.toInt() - now;
-
-      // Check if this goal already has a pending wait_until
-      final existingReaderWU = cx.rt.getWaitReader(cx.goalId);
-      if (existingReaderWU != null) {
-        if (cx.rt.heap.isFullyBound(existingReaderWU)) {
-          cx.rt.clearWaitState(cx.goalId);
-          return GuardResult.success;
-        } else {
-          cx.Si.add(existingReaderWU);
-          return GuardResult.suspend;
-        }
-      }
-
-      // First call — create fresh reader/writer pair for timer notification
-      final (writerAddrWU, readerAddrWU) = cx.rt.heap.allocateVariable();
-      cx.rt.setWaitReader(cx.goalId, readerAddrWU);
-      cx.rt.incrementPendingTimers();
-
-      Timer(Duration(milliseconds: remaining), () {
-        final reactivated = cx.rt.heap.bindWriterConst(writerAddrWU, 0);
-        for (final goalRef in reactivated) {
-          cx.rt.enqueueReactivatedGoal(goalRef);
-        }
-        cx.rt.decrementPendingTimers();
-      });
-
-      cx.Si.add(readerAddrWU);
-      return GuardResult.suspend;
+      return _waitOnTimer(cx, remaining);
 
     case 'when_idle':
       // GLP-Spec appendix-guards.tex (e3a8d52), the time guards: "when_idle
@@ -1764,7 +1714,6 @@ Object? _equalityOperand(Object? value) =>
 /// equality.
 (_GroundEquality, Set<HeapCell>) _decideGroundEquality(
     Object? left, Object? right, RunnerContext cx) {
-  final heap = cx.rt.heap;
   const never = (_GroundEquality.never, <HeapCell>{});
 
   // The unbound readers met, by key, each with the address suspended on.
@@ -1778,49 +1727,14 @@ Object? _equalityOperand(Object? value) =>
   // The compound values assigned to readers, scanned once the two unify.
   final assignedCompounds = <(HeapCell, Object?)>[];
 
-  // [term] with the bindings of its variables followed, tentative (σ̂w) before
-  // the heap: a value, or the unbound variable a chain ends at.  A constant
-  // stays in its ConstTerm, so that what this gives is given back unchanged,
-  // and no number is taken for a variable's address.
-  Object? resolve(Object? term) {
-    var t = term;
-    final seen = <HeapCell>{};
-    while (true) {
-      final HeapCell? addr = t is VarRef ? t.addr : (t is HeapCell ? t : null);
-      if (addr == null) return t;
-      final isReaderCell = heap.isReader(addr);
-      if (!seen.add(addr)) return _UnboundVariable(addr, isReaderCell, addr);
-      final writerAddr = isReaderCell ? heap.tryWriterForReader(addr) : addr;
-      if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-        t = cx.sigmaHat[writerAddr];
-        continue;
-      }
-      final end = heap.derefAddr(addr);
-      if (end is VarRef) {
-        // An unbound variable of this heap, its writer cell at the chain's end.
-        // The occurrence met is a writer only where it is that cell itself: a
-        // reader cell, or a bound writer, whose chain ends there met a reader.
-        final v = end.addr;
-        if (v != addr && cx.sigmaHat.containsKey(v)) {
-          t = cx.sigmaHat[v];
-          continue;
-        }
-        if (v == addr) return _UnboundVariable(v, false, addr);
-        return _UnboundVariable(
-            v, true, isReaderCell ? addr : heap.pairedReaderAddr(v));
-      }
-      return end;
-    }
-  }
-
-  // [term] resolved ([resolve]), and an unbound reader the assignments above
-  // give a value or an alias followed to what it stands for.
+  // [term] resolved ([_resolveTentative]), and an unbound reader the
+  // assignments above give a value or an alias followed to what it stands for.
   Object? resolveAssigned(Object? term) {
-    var value = resolve(term);
+    var value = _resolveTentative(cx, term);
     while (value is _UnboundVariable &&
         value.isReader &&
         assigned.containsKey(value.key)) {
-      value = resolve(assigned[value.key]);
+      value = _resolveTentative(cx, assigned[value.key]);
     }
     return value;
   }
@@ -1893,7 +1807,7 @@ Object? _equalityOperand(Object? value) =>
     final terms = <Object?>[value];
     final visited = <Object>{};
     while (terms.isNotEmpty) {
-      final v = resolve(terms.removeLast());
+      final v = _resolveTentative(cx, terms.removeLast());
       if (v is MutualRefTerm) return false;
       if (v is _UnboundVariable) {
         if (!assignable(v)) return false;
@@ -2070,25 +1984,142 @@ void _completeGuardStructure(RunnerContext cx) {
   }
 }
 
-/// PC-agnostic opcode semantics, shared by the object loop (`runWithStatus`)
-/// and the direct byte loop (`engine_v2/interp.dart`). Each method holds one
-/// opcode's semantics ONCE and returns a [StepOutcome] the caller maps to its
-/// own PC world (instruction index vs byte offset). It lives in this library so
-/// it can reach the private clause/structure state types; cx-only helpers
-/// migrate here arm by arm (B3a). PC/clause routing (`_findNextClauseTry`,
-/// `_softFailToNextClause`) stays in the drivers.
-///
-/// Extraction is incremental and behaviour-identical: each converted arm keeps
-/// the object loop's outcome unchanged. See `GLP-bc/docs/bytecode-exec-design.md`.
+/// The opcode semantics, PC-agnostic: the byte loop (`ByteRunner`,
+/// `engine_v2/interp.dart`) decodes an instruction's operands and calls the
+/// method for its opcode, which returns a [StepOutcome] the loop maps to a
+/// byte-offset PC.  Each method holds one opcode's semantics once.  The mixin
+/// lives in this library so it can reach the private clause and structure
+/// state types; the routing from an outcome to the next instruction or clause
+/// (`_applyNextClauseByte`, `nextClauseByte`) is the loop's.
+/// The writer a body structure being built is bound to when complete, held
+/// in `clauseVars[-1]` as a bare cell or a VarRef; null where none is held.
+HeapCell? _structureTargetWriter(RunnerContext cx) {
+  final targetValue = cx.clauseVars[-1];
+  if (targetValue is VarRef) return targetValue.addr;
+  if (targetValue is HeapCell) return targetValue;
+  return null;
+}
+
+/// A body structure [struct] whose last position has just been filled: its
+/// target writer [targetWriterAddr] ([_structureTargetWriter]) is bound to it,
+/// and the structure placed where it goes.  Nested in a parent waiting on
+/// [RunnerContext.parentStack], its reader fills the parent's next position,
+/// and each parent completed in turn is bound and placed the same way; the
+/// outermost has its reader stored in the target argument slot,
+/// `clauseVars[-2]`, where [storeWhenNoParent] (`unify_variable` stores it
+/// whenever there is no parent, `set_variable` only for a writer occurrence
+/// with a target writer, and `set_constant` never).  The traversal state is
+/// then the parent's, or reset.
+void _completeBodyStructure(RunnerContext cx, StructTerm struct,
+    HeapCell? targetWriterAddr, {required bool storeWhenNoParent}) {
+  if (targetWriterAddr != null) {
+    final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
+    for (final a in acts) {
+      cx.rt.gq.enqueue(a);
+    }
+  }
+
+  // Handle parent structure restoration - pop from stack
+  if (cx.parentStack.isNotEmpty && targetWriterAddr != null) {
+    final nestedWriterAddr = targetWriterAddr;
+    final parent = cx.parentStack.removeLast();
+    final parentWriterId = parent.writerId;
+
+    if (parent.structure is StructTerm) {
+      final parentStruct = parent.structure as StructTerm;
+      parentStruct.args[parent.s] = VarRef(cx.rt.heap.pairedReaderAddr(nestedWriterAddr));  // reader addr
+    }
+
+    cx.currentStructure = parent.structure;
+    cx.S = parent.s + 1;
+    cx.mode = parent.mode;
+    cx.clauseVars[-1] = parentWriterId;
+
+    // Check if parent is now complete - and recursively complete ancestors
+    while (cx.currentStructure is StructTerm) {
+      final parentStruct = cx.currentStructure as StructTerm;
+      final currentWriterId = cx.clauseVars[-1];
+      final currentWriterAddrInt = currentWriterId is VarRef ? currentWriterId.addr : (currentWriterId is HeapCell ? currentWriterId : null);
+
+      if (cx.S >= parentStruct.args.length && currentWriterAddrInt != null) {
+        final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
+        for (final a in acts) {
+          cx.rt.gq.enqueue(a);
+        }
+
+        // Check for more ancestors
+        if (cx.parentStack.isNotEmpty) {
+          final ancestor = cx.parentStack.removeLast();
+          if (ancestor.structure is StructTerm) {
+            final ancestorStruct = ancestor.structure as StructTerm;
+            ancestorStruct.args[ancestor.s] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));  // reader addr
+          }
+          cx.currentStructure = ancestor.structure;
+          cx.S = ancestor.s + 1;
+          cx.mode = ancestor.mode;
+          cx.clauseVars[-1] = ancestor.writerId;
+        } else {
+          // No more ancestors - store in argSlots and reset
+          final parentTargetSlot = cx.clauseVars[-2];
+          if (parentTargetSlot is int && parentTargetSlot >= 0) {
+            cx.argSlots[parentTargetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));  // reader addr
+            cx.clauseVars.remove(-2);
+          }
+          cx.currentStructure = null;
+          cx.mode = UnifyMode.read;
+          cx.S = 0;
+          cx.clauseVars.remove(-1);
+          break;
+        }
+      } else {
+        // Parent not complete yet, stop
+        break;
+      }
+    }
+  } else {
+    // No parent - store in argSlots, where this instruction does, and reset
+    if (storeWhenNoParent) {
+      final targetSlot = cx.clauseVars[-2];
+      if (targetSlot is int && targetSlot >= 0) {
+        cx.argSlots[targetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(targetWriterAddr!));  // reader addr
+        cx.clauseVars.remove(-2);
+      }
+    }
+    cx.currentStructure = null;
+    cx.mode = UnifyMode.read;
+    cx.S = 0;
+    cx.clauseVars.remove(-1);
+  }
+}
+
+/// Enter [value], the goal's structure a head pattern matched by functor and
+/// arity, in READ mode: the pattern under it is matched against its arguments.
+StepOutcome _readStructure(RunnerContext cx, StructTerm value) {
+  cx.currentStructure = value;
+  cx.mode = UnifyMode.read;
+  cx.S = 0;
+  return StepOutcome.advance;
+}
+
+/// Assign the unbound goal writer [writerAddr] a tentative structure of
+/// [functor]/[arity] in σ̂w, and enter it in WRITE mode: the pattern under it
+/// fills its positions.
+StepOutcome _buildTentativeStructure(
+    RunnerContext cx, HeapCell writerAddr, String functor, int arity) {
+  final struct = _TentativeStruct(functor, arity, List.filled(arity, null));
+  cx.sigmaHat[writerAddr] = struct;
+  cx.currentStructure = struct;
+  cx.mode = UnifyMode.write;
+  cx.S = 0;
+  return StepOutcome.advance;
+}
+
 mixin OpExecutors {
   /// `clause_try` (0x01): reset clause-local state for a fresh clause attempt.
   StepOutcome execClauseTry(RunnerContext cx) {
     cx.clearClause();
     return StepOutcome.advance;
   }
-
-  /// `nop` (0x07): no operation.
-  StepOutcome execNop() => StepOutcome.advance;
 
   /// `halt` (0x06): terminate the goal.
   StepOutcome execHalt() => StepOutcome.halt;
@@ -2129,30 +2160,19 @@ mixin OpExecutors {
 
   /// `put_nil` (0x32): in BODY, place a fresh variable bound to `[]` in argSlot.
   StepOutcome execPutNil(RunnerContext cx, int argSlot) {
-    if (cx.inBody) {
-      final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-      cx.rt.heap.bindWriterConst(writerAddr, nil);
-      cx.argSlots[argSlot] = VarRef(readerAddr);
-    }
+    if (cx.inBody) execPutConstant(cx, nil, argSlot);
     return StepOutcome.advance;
   }
 
   /// `put_bound_const` (0x39): place a fresh variable bound to [value] in argSlot
-  /// (passing a constant as an argument).
-  StepOutcome execPutBoundConst(RunnerContext cx, Object? value, int argSlot) {
-    final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-    cx.rt.heap.bindWriterConst(writerAddr, value);
-    cx.argSlots[argSlot] = VarRef(readerAddr);
-    return StepOutcome.advance;
-  }
+  /// (passing a constant as an argument), as `put_constant` does.
+  StepOutcome execPutBoundConst(RunnerContext cx, Object? value, int argSlot) =>
+      execPutConstant(cx, value, argSlot);
 
-  /// `put_bound_nil` (0x3A): place a fresh variable bound to `[]` in argSlot.
-  StepOutcome execPutBoundNil(RunnerContext cx, int argSlot) {
-    final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-    cx.rt.heap.bindWriterConst(writerAddr, nil);
-    cx.argSlots[argSlot] = VarRef(readerAddr);
-    return StepOutcome.advance;
-  }
+  /// `put_bound_nil` (0x3A): place a fresh variable bound to `[]` in argSlot, as
+  /// `put_constant` does.
+  StepOutcome execPutBoundNil(RunnerContext cx, int argSlot) =>
+      execPutConstant(cx, nil, argSlot);
 
   /// `put_list` (0x33): in BODY, begin building a `[H|T]` structure into argSlot's
   /// writer; subsequent Set* instructions fill the two positions.
@@ -2585,15 +2605,16 @@ mixin OpExecutors {
     if (leftValue == null || rightValue == null) return StepOutcome.nextClause;
     // A suspension's readers are in cx.Si ([_groundEqualityGuard]), and the
     // next member is tried as after a success ([_guardUndecided]).
-    return _groundEqualityGuard('=?=', _guardReaderOperand(cx, leftValue),
-                _guardReaderOperand(cx, rightValue), cx) ==
-            GuardResult.failure
-        ? StepOutcome.nextClause
-        : StepOutcome.advance;
+    return _guardStep(_groundEqualityGuard('=?=',
+        _guardReaderOperand(cx, leftValue), _guardReaderOperand(cx, rightValue),
+        cx));
   }
 
   /// `unknown` (0x43): succeed iff the clause variable is currently unbound (no
   /// σ̂w tentative binding and not heap-bound). A dispatch test; never suspends.
+  /// Codegen emits no `unknown` instruction (codegen.dart compiles the guard
+  /// `unknown/1` to a generic guard call): it is reached from artefacts and
+  /// hand-assembled tests.
   StepOutcome execUnknown(RunnerContext cx, int varIndex) {
     // An unknown variable ([RunnerContext.unknownVars]) stands for any term,
     // some making the guard succeed and some not: undecided, passed by.
@@ -2668,13 +2689,11 @@ mixin OpExecutors {
 
     // A suspension's readers are already in cx.Si (_evaluateGuard added them),
     // and the next member is tried as after a success ([_guardUndecided]).
-    return _evaluateGuard(predicateName, args, cx) == GuardResult.failure
-        ? StepOutcome.nextClause
-        : StepOutcome.advance;
+    return _guardStep(_evaluateGuard(predicateName, args, cx));
   }
 
   /// `head_nil` (0x11): match `[]` against the arg (or a clause var when
-  /// argSlot ≥ 10). Two-phase: an unbound writer is tentatively bound to nil in
+  /// argSlot is no argument position of the goal). Two-phase: an unbound writer is tentatively bound to nil in
   /// σ̂w (advance); an unbound reader is added to Si (advance — resolved at
   /// commit); a bound non-nil / structure mismatches (nextClause).
   StepOutcome execHeadNil(RunnerContext cx, int argSlot) {
@@ -2761,8 +2780,6 @@ mixin OpExecutors {
       } else {
         if (value is ConstTerm && value.value == nil) {
           // match
-        } else if (value is StructTerm) {
-          return StepOutcome.nextClause;
         } else {
           return StepOutcome.nextClause;
         }
@@ -2884,27 +2901,8 @@ mixin OpExecutors {
 
     if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
       if (cx.rt.heap.isWriterBound(arg.addr)) {
-        var value = cx.rt.heap.valueOfWriter(arg.addr);
-        while (value is VarRef) {
-          if (cx.rt.heap.isReader(value.addr)) {
-            if (cx.rt.heap.isReaderBound(value.addr)) {
-              final readerValue = cx.rt.heap.getReaderValue(value.addr);
-              if (readerValue != null) {
-                value = readerValue;
-              } else {
-                break;
-              }
-            } else {
-              break;
-            }
-          } else {
-            if (cx.rt.heap.isWriterBound(value.addr)) {
-              value = cx.rt.heap.valueOfWriter(value.addr);
-            } else {
-              break;
-            }
-          }
-        }
+        final value =
+            _followBoundChain(cx, cx.rt.heap.valueOfWriter(arg.addr));
 
         if (value is VarRef) {
           if (cx.rt.heap.isReader(value.addr)) {
@@ -2930,9 +2928,7 @@ mixin OpExecutors {
         final value = deref;
         if (value is ConstTerm && value.value != opValue) {
           return StepOutcome.nextClause;
-        } else if (value is StructTerm && opValue != null) {
-          return StepOutcome.nextClause;
-        } else if (value is StructTerm && opValue == null) {
+        } else if (value is StructTerm) {
           return StepOutcome.nextClause;
         }
       }
@@ -2965,50 +2961,24 @@ mixin OpExecutors {
         return StepOutcome.nextClause;
       }
 
-      if (clauseVarValue is HeapCell) {
-        final wid = clauseVarValue;
+      // The variable holds a writer, as a bare cell or a VarRef.
+      final HeapCell? wid = clauseVarValue is HeapCell
+          ? clauseVarValue
+          : (clauseVarValue is VarRef &&
+                  cx.rt.heap.isWriter(clauseVarValue.addr)
+              ? clauseVarValue.addr
+              : null);
+      if (wid != null) {
         if (cx.rt.heap.isWriterBound(wid)) {
           final value = cx.rt.heap.valueOfWriter(wid);
           if (value is StructTerm &&
               value.functor == functor &&
               value.args.length == arity) {
-            cx.currentStructure = value;
-            cx.mode = UnifyMode.read;
-            cx.S = 0;
-            return StepOutcome.advance;
+            return _readStructure(cx, value);
           }
           return StepOutcome.nextClause;
         } else {
-          final struct =
-              _TentativeStruct(functor, arity, List.filled(arity, null));
-          cx.sigmaHat[wid] = struct;
-          cx.currentStructure = struct;
-          cx.mode = UnifyMode.write;
-          cx.S = 0;
-          return StepOutcome.advance;
-        }
-      } else if (clauseVarValue is VarRef &&
-          cx.rt.heap.isWriter(clauseVarValue.addr)) {
-        final wid = clauseVarValue.addr;
-        if (cx.rt.heap.isWriterBound(wid)) {
-          final value = cx.rt.heap.valueOfWriter(wid);
-          if (value is StructTerm &&
-              value.functor == functor &&
-              value.args.length == arity) {
-            cx.currentStructure = value;
-            cx.mode = UnifyMode.read;
-            cx.S = 0;
-            return StepOutcome.advance;
-          }
-          return StepOutcome.nextClause;
-        } else {
-          final struct =
-              _TentativeStruct(functor, arity, List.filled(arity, null));
-          cx.sigmaHat[wid] = struct;
-          cx.currentStructure = struct;
-          cx.mode = UnifyMode.write;
-          cx.S = 0;
-          return StepOutcome.advance;
+          return _buildTentativeStructure(cx, wid, functor, arity);
         }
       } else if (clauseVarValue is VarRef &&
           cx.rt.heap.isReader(clauseVarValue.addr)) {
@@ -3027,20 +2997,14 @@ mixin OpExecutors {
         if (value is StructTerm &&
             value.functor == functor &&
             value.args.length == arity) {
-          cx.currentStructure = value;
-          cx.mode = UnifyMode.read;
-          cx.S = 0;
-          return StepOutcome.advance;
+          return _readStructure(cx, value);
         } else {
           return StepOutcome.nextClause;
         }
       } else if (clauseVarValue is StructTerm) {
         if (clauseVarValue.functor == functor &&
             clauseVarValue.args.length == arity) {
-          cx.currentStructure = clauseVarValue;
-          cx.mode = UnifyMode.read;
-          cx.S = 0;
-          return StepOutcome.advance;
+          return _readStructure(cx, clauseVarValue);
         } else {
           return StepOutcome.nextClause;
         }
@@ -3053,28 +3017,8 @@ mixin OpExecutors {
 
     if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
       if (cx.rt.heap.isWriterBound(arg.addr)) {
-        var value = cx.rt.heap.valueOfWriter(arg.addr);
-
-        while (value is VarRef) {
-          if (cx.rt.heap.isReader(value.addr)) {
-            if (cx.rt.heap.isReaderBound(value.addr)) {
-              final readerValue = cx.rt.heap.getReaderValue(value.addr);
-              if (readerValue != null) {
-                value = readerValue;
-              } else {
-                break;
-              }
-            } else {
-              break;
-            }
-          } else {
-            if (cx.rt.heap.isWriterBound(value.addr)) {
-              value = cx.rt.heap.valueOfWriter(value.addr);
-            } else {
-              break;
-            }
-          }
-        }
+        final value =
+            _followBoundChain(cx, cx.rt.heap.valueOfWriter(arg.addr));
 
         if (value is VarRef) {
           if (cx.rt.heap.isReader(value.addr)) {
@@ -3082,31 +3026,17 @@ mixin OpExecutors {
             _skipSubterm(cx);
             return StepOutcome.advance;
           } else {
-            final struct =
-                _TentativeStruct(functor, arity, List.filled(arity, null));
-            cx.sigmaHat[arg.addr] = struct;
-            cx.currentStructure = struct;
-            cx.mode = UnifyMode.write;
-            cx.S = 0;
-            return StepOutcome.advance;
+            return _buildTentativeStructure(cx, arg.addr, functor, arity);
           }
         } else if (value is StructTerm &&
             value.functor == functor &&
             value.args.length == arity) {
-          cx.currentStructure = value;
-          cx.mode = UnifyMode.read;
-          cx.S = 0;
-          return StepOutcome.advance;
+          return _readStructure(cx, value);
         } else {
           return StepOutcome.nextClause;
         }
       }
-      final struct = _TentativeStruct(functor, arity, List.filled(arity, null));
-      cx.sigmaHat[arg.addr] = struct;
-      cx.currentStructure = struct;
-      cx.mode = UnifyMode.write;
-      cx.S = 0;
-      return StepOutcome.advance;
+      return _buildTentativeStructure(cx, arg.addr, functor, arity);
     }
 
     if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
@@ -3124,10 +3054,7 @@ mixin OpExecutors {
       if (value is StructTerm &&
           value.functor == functor &&
           value.args.length == arity) {
-        cx.currentStructure = value;
-        cx.mode = UnifyMode.read;
-        cx.S = 0;
-        return StepOutcome.advance;
+        return _readStructure(cx, value);
       } else {
         return StepOutcome.nextClause;
       }
@@ -3138,10 +3065,7 @@ mixin OpExecutors {
       if (value is StructTerm &&
           value.functor == functor &&
           value.args.length == arity) {
-        cx.currentStructure = value;
-        cx.mode = UnifyMode.read;
-        cx.S = 0;
-        return StepOutcome.advance;
+        return _readStructure(cx, value);
       } else {
         return StepOutcome.nextClause;
       }
@@ -3259,412 +3183,346 @@ mixin OpExecutors {
 
   /// `unify_variable` (variable at the current S subterm). WRITE mode places
   /// the clause var (fresh or existing, mode-adjusted) into the structure being
-  /// built, completing/popping nested structures on the parent stack. READ mode
-  /// unifies it with the subterm per the reader/writer match rules.  An unknown
-  /// variable ([RunnerContext.unknownVars]) is given no value by any of these.
+  /// built --- a tentative one in the head ([_unifyVariableWriteHead]), or a
+  /// body or guard-argument one ([_unifyVariableWriteBody]), completing/popping
+  /// nested structures on the parent stack. READ mode unifies it with the
+  /// subterm per the reader/writer match rules ([_unifyVariableRead]).  An
+  /// unknown variable ([RunnerContext.unknownVars]) is given no value by any
+  /// of these.
   StepOutcome execUnifyVariable(
       RunnerContext cx, int varIndex, bool isReaderMode) {
+    if (cx.mode == UnifyMode.write) {
+      // WRITE mode: Add variable to structure being built
+      if (cx.currentStructure is _TentativeStruct) {
+        _unifyVariableWriteHead(cx, varIndex, isReaderMode);
+      } else if (cx.currentStructure is StructTerm) {
+        _unifyVariableWriteBody(cx, varIndex, isReaderMode);
+      }
+      return StepOutcome.advance;
+    }
+    return _unifyVariableRead(cx, varIndex, isReaderMode);
+  }
 
-        if (cx.mode == UnifyMode.write) {
-          // WRITE mode: Add variable to structure being built
-          if (cx.currentStructure is _TentativeStruct) {
-            // HEAD phase tentative structure
-            final struct = cx.currentStructure as _TentativeStruct;
-            final clauseVarValue = cx.clauseVars[varIndex];
+  /// [execUnifyVariable] in WRITE mode over a tentative structure
+  /// ([_TentativeStruct]), the HEAD phase: the clause var is placed at S, a
+  /// first occurrence given a fresh variable and a term held for a reader
+  /// occurrence given a fresh variable tentatively bound to it (σ̂w).
+  void _unifyVariableWriteHead(
+      RunnerContext cx, int varIndex, bool isReaderMode) {
+    // HEAD phase tentative structure
+    final struct = cx.currentStructure as _TentativeStruct;
+    final clauseVarValue = cx.clauseVars[varIndex];
 
+    if (cx.isUnknown(varIndex)) {
+      // An unknown variable placed in a structure built for a goal
+      // writer: it stays unknown, the slot holding the variable that
+      // stands for it, which the clause does not keep --- the clause
+      // cannot commit.  It was given a fresh variable here as at a
+      // first occurrence, and a guard over it then failed on an
+      // unbound writer instead of being undecided (f1(same(To),
+      // out(To?)) :- ground(To?)).
+      struct.args[cx.S] =
+          _unknownPlaceholder(cx, varIndex, isReaderMode);
+    } else if (clauseVarValue is VarRef) {
+      // Subsequent use: clauseVarValue holds an addr
+      final addr = clauseVarValue.addr;
+
+      // A VarRef may point to a value cell (ground value)
+      if (cx.rt.heap.isValue(addr)) {
+        // VarRef points to ground value - dereference and use
+        final groundValue = cx.rt.heap.getValue(addr);
+        if (groundValue != null) {
+          if (isReaderMode) {
+            // Reader mode with ground term: create fresh var, bind tentatively
+            final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+            cx.sigmaHat[writerAddr] = groundValue;
+            struct.args[cx.S] = VarRef(readerAddr);
+          } else {
+            // Writer mode: use ground term directly
+            struct.args[cx.S] = groundValue;
+          }
+        } else {
+          struct.args[cx.S] = clauseVarValue;
+        }
+      } else if (isReaderMode && cx.rt.heap.isWriter(addr)) {
+        struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(addr));  // reader addr
+      } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
+        struct.args[cx.S] = VarRef(cx.rt.heap.tryWriterForReader(addr)!);  // writer addr
+      } else {
+        struct.args[cx.S] = VarRef(addr);  // mode already matches
+      }
+    } else if (clauseVarValue is HeapCell) {
+      // Bare writer addr - create VarRef with appropriate mode
+      if (isReaderMode) {
+        struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(clauseVarValue));  // reader addr
+      } else {
+        struct.args[cx.S] = VarRef(clauseVarValue);  // writer addr
+      }
+    } else if (clauseVarValue is Term) {
+      if (isReaderMode) {
+        // Reader mode with ground term: create fresh var, bind tentatively
+        final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+        cx.sigmaHat[writerAddr] = clauseVarValue;
+        struct.args[cx.S] = VarRef(readerAddr);
+      } else {
+        // Writer mode: use ground term directly
+        struct.args[cx.S] = clauseVarValue;
+      }
+    } else if (clauseVarValue is _TentativeStruct) {
+      // Nested tentative structure
+      struct.args[cx.S] = clauseVarValue;
+    } else if (clauseVarValue == null) {
+      // First occurrence - allocate fresh variable
+      final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+      // Store WRITER in clauseVars (base variable)
+      cx.clauseVars[varIndex] = VarRef(writerAddr);
+      // Store with requested mode in structure
+      struct.args[cx.S] = VarRef(isReaderMode ? readerAddr : writerAddr);
+    } else {
+      // Fallback: use _ClauseVar placeholder
+      struct.args[cx.S] = _ClauseVar(varIndex, isWriter: !isReaderMode);
+    }
+    cx.S++;
+  }
+
+  /// [execUnifyVariable] in WRITE mode over a heap structure ([StructTerm]),
+  /// the BODY phase or a guard's argument: the clause var is placed at S, a
+  /// first occurrence given a fresh variable and a term held for a reader
+  /// occurrence given a fresh variable bound to it, and the structure completed
+  /// when its last position is filled.
+  void _unifyVariableWriteBody(
+      RunnerContext cx, int varIndex, bool isReaderMode) {
+    // BODY phase structure building
+    final struct = cx.currentStructure as StructTerm;
+    final clauseVarValue = cx.clauseVars[varIndex];
+
+    if (!cx.inBody && cx.isUnknown(varIndex)) {
+      // A guard argument's structure holding an unknown variable
+      // ([RunnerContext.unknownVars]): the variable that stands for
+      // it, any term, which the guard's decision meets
+      // ([_undecidedMember]); the variable stays unknown.
+      struct.args[cx.S] =
+          _unknownPlaceholder(cx, varIndex, isReaderMode);
+    } else if (clauseVarValue is VarRef) {
+      // Subsequent use: clauseVarValue holds an addr
+      final addr = clauseVarValue.addr;
+
+      // A VarRef may point to a value cell (ground value)
+      if (cx.rt.heap.isValue(addr)) {
+        // VarRef points to ground value - dereference and use
+        final groundValue = cx.rt.heap.getValue(addr);
+        if (groundValue != null) {
+          if (isReaderMode) {
+            // Reader mode with ground term: create fresh var, bind it
+            final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+            cx.rt.heap.bindVariable(writerAddr, groundValue);
+            struct.args[cx.S] = VarRef(readerAddr);
+          } else {
+            // Writer mode: use ground term directly
+            struct.args[cx.S] = groundValue;
+          }
+        } else {
+          struct.args[cx.S] = clauseVarValue;
+        }
+      } else if (isReaderMode && cx.rt.heap.isWriter(addr)) {
+        struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(addr));  // reader addr
+      } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
+        struct.args[cx.S] = VarRef(cx.rt.heap.tryWriterForReader(addr)!);  // writer addr
+      } else {
+        struct.args[cx.S] = VarRef(addr);  // mode matches
+      }
+    } else if (clauseVarValue is HeapCell) {
+      // Bare writer addr - create VarRef with requested mode
+      if (isReaderMode) {
+        struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(clauseVarValue));  // reader addr
+      } else {
+        struct.args[cx.S] = VarRef(clauseVarValue);  // writer addr
+      }
+    } else if (clauseVarValue is Term) {
+      if (isReaderMode) {
+        // Reader mode with ground term: create fresh var, bind it
+        final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+        cx.rt.heap.bindVariable(writerAddr, clauseVarValue);
+        struct.args[cx.S] = VarRef(readerAddr);
+      } else {
+        // Writer mode: use ground term directly
+        struct.args[cx.S] = clauseVarValue;
+      }
+    } else if (clauseVarValue == null) {
+      // First occurrence - allocate fresh variable
+      final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+      cx.clauseVars[varIndex] = VarRef(writerAddr);
+      struct.args[cx.S] = VarRef(isReaderMode ? readerAddr : writerAddr);
+    }
+    cx.S++;
+
+    // Check if structure is complete
+    if (cx.S >= struct.args.length) {
+      // Check if we're in guard argument building mode (pre-commit)
+      if (cx.guardArgSlot != null) {
+        // Guard argument mode: a term for the guard call alone, placed
+        // in its parent or its argument slot, no heap binding
+        // ([_completeGuardStructure]).
+        _completeGuardStructure(cx);
+      } else {
+        // BODY phase: bind to heap writer, and store the reader of the
+        // outermost structure in the target arg slot
+        // ([_completeBodyStructure]).
+        _completeBodyStructure(cx, struct, _structureTargetWriter(cx),
+            storeWhenNoParent: true);
+      }
+    }
+  }
+
+  /// [execUnifyVariable] in READ mode: the clause var against the goal's
+  /// subterm at S, by the reader/writer match rules.
+  StepOutcome _unifyVariableRead(
+      RunnerContext cx, int varIndex, bool isReaderMode) {
+    if (cx.currentStructure is _SkippedSubterm) {
+      // Under a suspended goal reader: nothing to match.  A writer
+      // occurrence of a variable with no value yet makes it unknown
+      // ([RunnerContext.unknownVars]); a reader occurrence gives no
+      // value and leaves the variable as it is, to take its value from
+      // its writer occurrence --- marked unknown here, a variable met
+      // only as a reader stayed unknown and a guard over it was passed
+      // by, so a clause that fails suspended.
+      if (!isReaderMode && _hasNoValue(cx, varIndex)) {
+        cx.unknownVars.add(varIndex);
+      }
+      return StepOutcome.advance;
+    }
+    if (cx.currentStructure is StructTerm) {
+      final struct = cx.currentStructure as StructTerm;
+      if (cx.S < struct.args.length) {
+        var value = struct.args[cx.S];
+
+        // Dereference a VarRef pointing to a value cell
+        if (value is VarRef && cx.rt.heap.isValue(value.addr)) {
+          value = cx.rt.heap.getValue(value.addr)!;
+        }
+
+        final existingValue = cx.clauseVars[varIndex];
+
+        if (isReaderMode) {
+          // UnifyReader READ mode logic: the head has a reader at this
+          // subterm.  An unbound goal writer is assigned it; a goal
+          // reader and a goal term fail (appendix-term-matching.tex,
+          // column "Reader X2?"; see _isUnboundWriterCell).
+          if (value is! VarRef || !_isUnboundWriterCell(cx, value.addr)) {
+            return StepOutcome.nextClause;
+          } else {
+            // Query has writer, clause expects reader
             if (cx.isUnknown(varIndex)) {
-              // An unknown variable placed in a structure built for a goal
-              // writer: it stays unknown, the slot holding the variable that
-              // stands for it, which the clause does not keep --- the clause
-              // cannot commit.  It was given a fresh variable here as at a
-              // first occurrence, and a guard over it then failed on an
-              // unbound writer instead of being undecided (f1(same(To),
-              // out(To?)) :- ground(To?)).
-              struct.args[cx.S] =
-                  _unknownPlaceholder(cx, varIndex, isReaderMode);
-            } else if (clauseVarValue is VarRef) {
-              // Subsequent use: clauseVarValue holds an addr
-              final addr = clauseVarValue.addr;
-
-              // Per spec v2.16.3: Check if VarRef points to ValueTag (ground value)
-              if (cx.rt.heap.isValue(addr)) {
-                // VarRef points to ground value - dereference and use
-                final groundValue = cx.rt.heap.getValue(addr);
-                if (groundValue != null) {
-                  if (isReaderMode) {
-                    // Reader mode with ground term: create fresh var, bind tentatively
-                    final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-                    cx.sigmaHat[writerAddr] = groundValue;
-                    struct.args[cx.S] = VarRef(readerAddr);
-                  } else {
-                    // Writer mode: use ground term directly
-                    struct.args[cx.S] = groundValue;
-                  }
-                } else {
-                  struct.args[cx.S] = clauseVarValue;
-                }
-              } else if (isReaderMode && cx.rt.heap.isWriter(addr)) {
-                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(addr));  // reader addr
-              } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
-                // Per spec v3.2: use tryWriterForReader() instead of -1 arithmetic
-                struct.args[cx.S] = VarRef(cx.rt.heap.tryWriterForReader(addr)!);  // writer addr
-              } else {
-                struct.args[cx.S] = VarRef(addr);  // mode already matches
+              // The goal writer would be assigned the reader of an
+              // unknown variable: no fail, and nothing the clause keeps.
+              // It was stored here as at a first occurrence, and a guard
+              // over the variable then failed on the goal's unbound
+              // writer instead of being undecided.
+              cx.S++;
+            } else if (existingValue != null) {
+              // Xi already allocated from previous writer occurrence
+              // Bind query writer to existing value
+              if (_isGroundValue(existingValue)) {
+                // Ground value - bind writer directly to it
+                cx.sigmaHat[value.addr] = existingValue;
+              } else if (existingValue is VarRef) {
+                // Existing VarRef - bind writer to reader of it
+                final addr = existingValue.addr;
+                final readerAddr = cx.rt.heap.isWriter(addr) ? cx.rt.heap.pairedReaderAddr(addr) : addr;
+                cx.sigmaHat[value.addr] = VarRef(readerAddr);
+              } else if (existingValue is HeapCell) {
+                // Bare writer addr - bind writer to reader of it
+                cx.sigmaHat[value.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existingValue));  // reader addr
               }
-            } else if (clauseVarValue is HeapCell) {
-              // Bare writer addr - create VarRef with appropriate mode
-              if (isReaderMode) {
-                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(clauseVarValue));  // reader addr
-              } else {
-                struct.args[cx.S] = VarRef(clauseVarValue);  // writer addr
-              }
-            } else if (clauseVarValue is Term) {
-              if (isReaderMode) {
-                // Reader mode with ground term: create fresh var, bind tentatively
-                final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-                cx.sigmaHat[writerAddr] = clauseVarValue;
-                struct.args[cx.S] = VarRef(readerAddr);
-              } else {
-                // Writer mode: use ground term directly
-                struct.args[cx.S] = clauseVarValue;
-              }
-            } else if (clauseVarValue is _TentativeStruct) {
-              // Nested tentative structure
-              struct.args[cx.S] = clauseVarValue;
-            } else if (clauseVarValue == null) {
-              // First occurrence - allocate fresh variable
-              final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-              // Store WRITER in clauseVars (base variable)
-              cx.clauseVars[varIndex] = VarRef(writerAddr);
-              // Store with requested mode in structure
-              struct.args[cx.S] = VarRef(isReaderMode ? readerAddr : writerAddr);
+              cx.S++;
             } else {
-              // Fallback: use _ClauseVar placeholder
-              struct.args[cx.S] = _ClauseVar(varIndex, isWriter: !isReaderMode);
-            }
-            cx.S++;
-
-          } else if (cx.currentStructure is StructTerm) {
-            // BODY phase structure building
-            final struct = cx.currentStructure as StructTerm;
-            final clauseVarValue = cx.clauseVars[varIndex];
-
-            if (!cx.inBody && cx.isUnknown(varIndex)) {
-              // A guard argument's structure holding an unknown variable
-              // ([RunnerContext.unknownVars]): the variable that stands for
-              // it, any term, which the guard's decision meets
-              // ([_undecidedMember]); the variable stays unknown.
-              struct.args[cx.S] =
-                  _unknownPlaceholder(cx, varIndex, isReaderMode);
-            } else if (clauseVarValue is VarRef) {
-              // Subsequent use: clauseVarValue holds an addr
-              final addr = clauseVarValue.addr;
-
-              // Per spec v2.16.3: Check if VarRef points to ValueTag (ground value)
-              if (cx.rt.heap.isValue(addr)) {
-                // VarRef points to ground value - dereference and use
-                final groundValue = cx.rt.heap.getValue(addr);
-                if (groundValue != null) {
-                  if (isReaderMode) {
-                    // Reader mode with ground term: create fresh var, bind it
-                    final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-                    cx.rt.heap.bindVariable(writerAddr, groundValue);
-                    struct.args[cx.S] = VarRef(readerAddr);
-                  } else {
-                    // Writer mode: use ground term directly
-                    struct.args[cx.S] = groundValue;
-                  }
-                } else {
-                  struct.args[cx.S] = clauseVarValue;
-                }
-              } else if (isReaderMode && cx.rt.heap.isWriter(addr)) {
-                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(addr));  // reader addr
-              } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
-                // Per spec v3.2: use tryWriterForReader() instead of -1 arithmetic
-                struct.args[cx.S] = VarRef(cx.rt.heap.tryWriterForReader(addr)!);  // writer addr
-              } else {
-                struct.args[cx.S] = VarRef(addr);  // mode matches
-              }
-            } else if (clauseVarValue is HeapCell) {
-              // Bare writer addr - create VarRef with requested mode
-              if (isReaderMode) {
-                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(clauseVarValue));  // reader addr
-              } else {
-                struct.args[cx.S] = VarRef(clauseVarValue);  // writer addr
-              }
-            } else if (clauseVarValue is Term) {
-              if (isReaderMode) {
-                // Reader mode with ground term: create fresh var, bind it
-                final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-                cx.rt.heap.bindVariable(writerAddr, clauseVarValue);
-                struct.args[cx.S] = VarRef(readerAddr);
-              } else {
-                // Writer mode: use ground term directly
-                struct.args[cx.S] = clauseVarValue;
-              }
-            } else if (clauseVarValue == null) {
-              // First occurrence - allocate fresh variable
-              final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-              cx.clauseVars[varIndex] = VarRef(writerAddr);
-              struct.args[cx.S] = VarRef(isReaderMode ? readerAddr : writerAddr);
-            }
-            cx.S++;
-
-            // Check if structure is complete
-            if (cx.S >= struct.args.length) {
-              // Check if we're in guard argument building mode (pre-commit)
-              if (cx.guardArgSlot != null) {
-                // Guard argument mode: a term for the guard call alone, placed
-                // in its parent or its argument slot, no heap binding
-                // ([_completeGuardStructure]).
-                _completeGuardStructure(cx);
-              } else {
-                // BODY phase: bind to heap writer
-                final targetValue = cx.clauseVars[-1];
-                HeapCell? targetWriterAddr;
-                if (targetValue is VarRef) {
-                  targetWriterAddr = targetValue.addr;
-                } else if (targetValue is HeapCell) {
-                  targetWriterAddr = targetValue;
-                }
-
-                if (targetWriterAddr != null) {
-                  final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
-                  for (final a in acts) {
-                    cx.rt.gq.enqueue(a);
-                  }
-                }
-
-                // Handle parent structure restoration - pop from stack
-                if (cx.parentStack.isNotEmpty && targetWriterAddr != null) {
-                  final nestedWriterAddr = targetWriterAddr;
-                  final parent = cx.parentStack.removeLast();
-                  final parentWriterId = parent.writerId;
-
-                  if (parent.structure is StructTerm) {
-                    final parentStruct = parent.structure as StructTerm;
-                    // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                    parentStruct.args[parent.s] = VarRef(cx.rt.heap.pairedReaderAddr(nestedWriterAddr));  // reader addr
-                  }
-
-                  cx.currentStructure = parent.structure;
-                  cx.S = parent.s + 1;
-                  cx.mode = parent.mode;
-                  cx.clauseVars[-1] = parentWriterId;
-
-                  // Check if parent is now complete - and recursively complete ancestors
-                  while (cx.currentStructure is StructTerm) {
-                    final parentStruct = cx.currentStructure as StructTerm;
-                    final currentWriterId = cx.clauseVars[-1];
-                    final currentWriterAddrInt = currentWriterId is VarRef ? currentWriterId.addr : (currentWriterId is HeapCell ? currentWriterId : null);
-
-                    if (cx.S >= parentStruct.args.length && currentWriterAddrInt != null) {
-                      final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
-                      for (final a in acts) {
-                        cx.rt.gq.enqueue(a);
-                      }
-
-                      // Check for more ancestors
-                      if (cx.parentStack.isNotEmpty) {
-                        final ancestor = cx.parentStack.removeLast();
-                        if (ancestor.structure is StructTerm) {
-                          final ancestorStruct = ancestor.structure as StructTerm;
-                          // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                          ancestorStruct.args[ancestor.s] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));  // reader addr
-                        }
-                        cx.currentStructure = ancestor.structure;
-                        cx.S = ancestor.s + 1;
-                        cx.mode = ancestor.mode;
-                        cx.clauseVars[-1] = ancestor.writerId;
-                      } else {
-                        // No more ancestors - store in argSlots and reset
-                        final parentTargetSlot = cx.clauseVars[-2];
-                        if (parentTargetSlot is int && parentTargetSlot >= 0) {
-                          // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                          cx.argSlots[parentTargetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));  // reader addr
-                          cx.clauseVars.remove(-2);
-                        }
-                        cx.currentStructure = null;
-                        cx.mode = UnifyMode.read;
-                        cx.S = 0;
-                        cx.clauseVars.remove(-1);
-                        break;
-                      }
-                    } else {
-                      // Parent not complete yet, stop
-                      break;
-                    }
-                  }
-                } else {
-                  // No parent - store in argSlots and reset
-                  final targetSlot = cx.clauseVars[-2];
-                  if (targetSlot is int && targetSlot >= 0) {
-                    // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                    cx.argSlots[targetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(targetWriterAddr!));  // reader addr
-                    cx.clauseVars.remove(-2);
-                  }
-                  cx.currentStructure = null;
-                  cx.mode = UnifyMode.read;
-                  cx.S = 0;
-                  cx.clauseVars.remove(-1);
-                }
-              }
+              // First occurrence: head reader receives goal writer
+              // Store the goal's writer directly - clause can write to it (output stream)
+              // or read from it when bound. No indirection needed.
+              // This is consistent with GetVariable reader mode.
+              cx.clauseVars[varIndex] = value.addr;
+              cx.S++;
             }
           }
         } else {
-          // READ mode: Unify with value at S position
-          if (cx.currentStructure is _SkippedSubterm) {
-            // Under a suspended goal reader: nothing to match.  A writer
-            // occurrence of a variable with no value yet makes it unknown
-            // ([RunnerContext.unknownVars]); a reader occurrence gives no
-            // value and leaves the variable as it is, to take its value from
-            // its writer occurrence --- marked unknown here, a variable met
-            // only as a reader stayed unknown and a guard over it was passed
-            // by, so a clause that fails suspended.
-            if (!isReaderMode && _hasNoValue(cx, varIndex)) {
-              cx.unknownVars.add(varIndex);
-            }
-            return StepOutcome.advance;
+          // UnifyWriter READ mode logic: the head has a writer at this
+          // subterm.  A repeated head writer
+          // ([RunnerContext.repeatedHeadWriters]) is undecided where the
+          // variable is unknown, matched against the value an earlier
+          // occurrence gave it as the writer mgu matches it
+          // ([_matchRepeatedWriter]), and given a goal writer it meets
+          // first as its value.  Any other head writer fails at a goal
+          // writer, whatever the variable (appendix-term-matching.tex,
+          // row "Writer X1", column "Writer X2"; see _isGoalWriter).
+          // The placement after `pop` of a structure built for a goal
+          // writer meets that writer assigned, and is passed.
+          final repeated = cx.repeatedHeadWriters.contains(varIndex);
+          if (!repeated && _isGoalWriter(cx, value)) {
+            return StepOutcome.nextClause;
           }
-          if (cx.currentStructure is StructTerm) {
-            final struct = cx.currentStructure as StructTerm;
-            if (cx.S < struct.args.length) {
-              var value = struct.args[cx.S];
+          if (cx.isUnknown(varIndex)) {
+            // A later writer occurrence of an unknown variable: what it
+            // meets is matched against a value not yet there, so it is
+            // undecided, and gives the variable no value.
+            cx.S++;
+          } else if (repeated && existingValue != null) {
+            final outcome =
+                _matchRepeatedWriter(cx, existingValue, value);
+            if (outcome != StepOutcome.advance) return outcome;
+            cx.S++;
+          } else if (repeated && _isGoalWriter(cx, value)) {
+            cx.clauseVars[varIndex] = value;
+            cx.S++;
+          } else if (existingValue is HeapCell || (existingValue is VarRef && cx.rt.heap.isWriter(existingValue.addr))) {
+            // Clause variable is a fresh variable addr from previous UnifyReader
+            final clauseVarAddr = existingValue is HeapCell ? existingValue : (existingValue as VarRef).addr;
 
-              // Per spec v2.16.3: Dereference VarRef pointing to value cell
-              if (value is VarRef && cx.rt.heap.isValue(value.addr)) {
-                value = cx.rt.heap.getValue(value.addr)!;
+            if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
+              // Query has writer - check for WxW violation
+              final clauseVarBound = cx.rt.heap.isWriterBound(clauseVarAddr);
+              final queryVarBound = cx.rt.heap.isWriterBound(value.addr);
+              if (!clauseVarBound && !queryVarBound) {
+                return StepOutcome.nextClause;
               }
-
-              final existingValue = cx.clauseVars[varIndex];
-
-              if (isReaderMode) {
-                // UnifyReader READ mode logic: the head has a reader at this
-                // subterm.  An unbound goal writer is assigned it; a goal
-                // reader and a goal term fail (appendix-term-matching.tex,
-                // column "Reader X2?"; see _isUnboundWriterCell).
-                if (value is! VarRef || !_isUnboundWriterCell(cx, value.addr)) {
-                  return StepOutcome.nextClause;
-                } else {
-                  // Query has writer, clause expects reader
-                  if (cx.isUnknown(varIndex)) {
-                    // The goal writer would be assigned the reader of an
-                    // unknown variable: no fail, and nothing the clause keeps.
-                    // It was stored here as at a first occurrence, and a guard
-                    // over the variable then failed on the goal's unbound
-                    // writer instead of being undecided.
-                    cx.S++;
-                  } else if (existingValue != null) {
-                    // Xi already allocated from previous writer occurrence
-                    // Bind query writer to existing value (per spec 8.2)
-                    if (_isGroundValue(existingValue)) {
-                      // Ground value - bind writer directly to it
-                      cx.sigmaHat[value.addr] = existingValue;
-                    } else if (existingValue is VarRef) {
-                      // Existing VarRef - bind writer to reader of it
-                      final addr = existingValue.addr;
-                      // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                      final readerAddr = cx.rt.heap.isWriter(addr) ? cx.rt.heap.pairedReaderAddr(addr) : addr;
-                      cx.sigmaHat[value.addr] = VarRef(readerAddr);
-                    } else if (existingValue is HeapCell) {
-                      // Bare writer addr - bind writer to reader of it
-                      // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                      cx.sigmaHat[value.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existingValue));  // reader addr
-                    }
-                    cx.S++;
-                  } else {
-                    // First occurrence: head reader receives goal writer
-                    // Store the goal's writer directly - clause can write to it (output stream)
-                    // or read from it when bound. No indirection needed.
-                    // This is consistent with GetVariable reader mode (line 1877).
-                    cx.clauseVars[varIndex] = value.addr;
-                    cx.S++;
-                  }
-                }
+              cx.sigmaHat[clauseVarAddr] = value;
+              cx.S++;
+            } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
+              cx.sigmaHat[clauseVarAddr] = value;
+              cx.S++;
+            } else if (_isGroundValue(value)) {
+              cx.sigmaHat[clauseVarAddr] = value;
+              cx.S++;
+            } else {
+              return StepOutcome.nextClause;
+            }
+          } else if (existingValue != null) {
+            // Clause variable already bound - advance
+            cx.S++;
+          } else {
+            // First occurrence - store the value
+            if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
+              cx.clauseVars[varIndex] = value;
+              cx.S++;
+            } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
+              final rid = value.addr;
+              // Use abstraction methods for imported reader support
+              if (cx.rt.heap.isReaderBound(rid)) {
+                final readerValue = cx.rt.heap.getReaderValue(rid);
+                cx.clauseVars[varIndex] = readerValue;
               } else {
-                // UnifyWriter READ mode logic: the head has a writer at this
-                // subterm.  A repeated head writer
-                // ([RunnerContext.repeatedHeadWriters]) is undecided where the
-                // variable is unknown, matched against the value an earlier
-                // occurrence gave it as the writer mgu matches it
-                // ([_matchRepeatedWriter]), and given a goal writer it meets
-                // first as its value.  Any other head writer fails at a goal
-                // writer, whatever the variable (appendix-term-matching.tex,
-                // row "Writer X1", column "Writer X2"; see _isGoalWriter).
-                // The placement after `pop` of a structure built for a goal
-                // writer meets that writer assigned, and is passed.
-                final repeated = cx.repeatedHeadWriters.contains(varIndex);
-                if (!repeated && _isGoalWriter(cx, value)) {
-                  return StepOutcome.nextClause;
-                }
-                if (cx.isUnknown(varIndex)) {
-                  // A later writer occurrence of an unknown variable: what it
-                  // meets is matched against a value not yet there, so it is
-                  // undecided, and gives the variable no value.
-                  cx.S++;
-                } else if (repeated && existingValue != null) {
-                  final outcome =
-                      _matchRepeatedWriter(cx, existingValue, value);
-                  if (outcome != StepOutcome.advance) return outcome;
-                  cx.S++;
-                } else if (repeated && _isGoalWriter(cx, value)) {
-                  cx.clauseVars[varIndex] = value;
-                  cx.S++;
-                } else if (existingValue is HeapCell || (existingValue is VarRef && cx.rt.heap.isWriter(existingValue.addr))) {
-                  // Clause variable is a fresh variable addr from previous UnifyReader
-                  final clauseVarAddr = existingValue is HeapCell ? existingValue : (existingValue as VarRef).addr;
-
-                  if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
-                    // Query has writer - check for WxW violation
-                    final clauseVarBound = cx.rt.heap.isWriterBound(clauseVarAddr);
-                    final queryVarBound = cx.rt.heap.isWriterBound(value.addr);
-                    if (!clauseVarBound && !queryVarBound) {
-                      return StepOutcome.nextClause;
-                    }
-                    cx.sigmaHat[clauseVarAddr] = value;
-                    cx.S++;
-                  } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
-                    cx.sigmaHat[clauseVarAddr] = value;
-                    cx.S++;
-                  } else if (_isGroundValue(value)) {
-                    cx.sigmaHat[clauseVarAddr] = value;
-                    cx.S++;
-                  } else {
-                    return StepOutcome.nextClause;
-                  }
-                } else if (existingValue != null) {
-                  // Clause variable already bound - advance
-                  cx.S++;
-                } else {
-                  // First occurrence - store the value
-                  if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
-                    cx.clauseVars[varIndex] = value;
-                    cx.S++;
-                  } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
-                    final rid = value.addr;
-                    // Use abstraction methods for imported reader support
-                    if (cx.rt.heap.isReaderBound(rid)) {
-                      final readerValue = cx.rt.heap.getReaderValue(rid);
-                      cx.clauseVars[varIndex] = readerValue;
-                    } else {
-                      cx.clauseVars[varIndex] = value;
-                    }
-                    cx.S++;
-                  } else if (_isGroundValue(value)) {
-                    cx.clauseVars[varIndex] = value;
-                    cx.S++;
-                  } else {
-                    return StepOutcome.nextClause;
-                  }
-                }
+                cx.clauseVars[varIndex] = value;
               }
+              cx.S++;
+            } else if (_isGroundValue(value)) {
+              cx.clauseVars[varIndex] = value;
+              cx.S++;
+            } else {
+              return StepOutcome.nextClause;
             }
           }
         }
+      }
+    }
     return StepOutcome.advance;
   }
 
@@ -3674,77 +3532,63 @@ mixin OpExecutors {
   /// pattern under it). WRITE mode: create the nested tentative struct in the
   /// parent and descend into it.
   StepOutcome execUnifyStructure(RunnerContext cx, String functor, int arity) {
-        if (cx.mode == UnifyMode.read) {
-          // READ mode: Match structure at args[S]
-          if (cx.currentStructure is StructTerm) {
-            final parent = cx.currentStructure as StructTerm;
-            if (cx.S < parent.args.length) {
-              Object? value = parent.args[cx.S];
+    if (cx.mode == UnifyMode.read) {
+      // READ mode: Match structure at args[S]
+      if (cx.currentStructure is StructTerm) {
+        final parent = cx.currentStructure as StructTerm;
+        if (cx.S < parent.args.length) {
+          Object? value = parent.args[cx.S];
 
-              // CRITICAL FIX: Dereference if it's a variable reference
-              // This handles metainterpreter/reduce cases where nested structures
-              // come through variable bindings
-              if (value is VarRef) {
-                final addr = value.addr;
-                // Check sigma-hat first (tentative bindings)
-                if (cx.sigmaHat.containsKey(addr)) {
-                  value = cx.sigmaHat[addr];
-                }
-                // Then check heap bindings
-                else if (cx.rt.heap.isBound(addr)) {
-                  final boundValue = cx.rt.heap.getValue(addr);
-                  value = boundValue;
-                }
-                else {
-                }
-              }
-
-              if (value is StructTerm && value.functor == functor && value.args.length == arity) {
-                // Match! Enter this structure
-                cx.currentStructure = value;
-                cx.S = 0;
-              } else if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
-                // Mode conversion: unbound writer where structure expected
-                // Following HeadStructure behavior (spec 6.1 line 254)
-                // Switch to WRITE mode and build the structure
-
-                // Create tentative structure
-                final nested = _TentativeStruct(functor, arity, List.filled(arity, null));
-
-                // Record binding in σ̂w (writer will be bound to this structure at commit)
-                // Store as Object? to avoid type issues (will be converted to StructTerm at commit)
-                cx.sigmaHat[value.addr] = nested;
-
-                // Switch to WRITE mode
-                cx.mode = UnifyMode.write;
-
-                // Enter the nested structure
-                cx.currentStructure = nested;
-                cx.S = 0;
-              } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
-                // Unbound reader where structure expected: suspend on it and
-                // skip the pattern under it, matching the rest of the head
-                // (appendix-term-matching.tex: "suspend on X1?"; a fail
-                // anywhere is a fail).  Until 2026-10-02 the clause was
-                // abandoned here, so a later mismatch was never seen.
-                cx.Si.add(value.addr);
-                _skipSubterm(cx);
-              } else {
-                // Mismatch - fail to next clause
-                return StepOutcome.nextClause;
-              }
+          // Dereference if it's a variable reference
+          // This handles metainterpreter/reduce cases where nested structures
+          // come through variable bindings
+          if (value is VarRef) {
+            final addr = value.addr;
+            // Check sigma-hat first (tentative bindings)
+            if (cx.sigmaHat.containsKey(addr)) {
+              value = cx.sigmaHat[addr];
+            }
+            // Then check heap bindings
+            else if (cx.rt.heap.isBound(addr)) {
+              final boundValue = cx.rt.heap.getValue(addr);
+              value = boundValue;
             }
           }
-        } else {
-          // WRITE mode: Create nested structure at args[S]
-          if (cx.currentStructure is _TentativeStruct) {
-            final parent = cx.currentStructure as _TentativeStruct;
-            final nested = _TentativeStruct(functor, arity, List.filled(arity, null));
-            parent.args[cx.S] = nested;
-            cx.currentStructure = nested;
+
+          if (value is StructTerm && value.functor == functor && value.args.length == arity) {
+            // Match! Enter this structure
+            cx.currentStructure = value;
             cx.S = 0;
+          } else if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
+            // Mode conversion: unbound writer where structure expected.
+            // Following HeadStructure behavior, switch to WRITE mode and
+            // build the structure: the writer is assigned a tentative
+            // structure in σ̂w, bound at commit, and entered.
+            return _buildTentativeStructure(cx, value.addr, functor, arity);
+          } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
+            // Unbound reader where structure expected: suspend on it and
+            // skip the pattern under it, matching the rest of the head
+            // (appendix-term-matching.tex: "suspend on X1?"; a fail
+            // anywhere is a fail).  Until 2026-10-02 the clause was
+            // abandoned here, so a later mismatch was never seen.
+            cx.Si.add(value.addr);
+            _skipSubterm(cx);
+          } else {
+            // Mismatch - fail to next clause
+            return StepOutcome.nextClause;
           }
         }
+      }
+    } else {
+      // WRITE mode: Create nested structure at args[S]
+      if (cx.currentStructure is _TentativeStruct) {
+        final parent = cx.currentStructure as _TentativeStruct;
+        final nested = _TentativeStruct(functor, arity, List.filled(arity, null));
+        parent.args[cx.S] = nested;
+        cx.currentStructure = nested;
+        cx.S = 0;
+      }
+    }
     return StepOutcome.advance;
   }
 
@@ -3763,152 +3607,132 @@ mixin OpExecutors {
       return StepOutcome.nextClause;
     }
 
-        if (!isReaderMode) {
-          if (cx.repeatedHeadWriters.contains(varIndex)) {
-            // A repeated head writer ([RunnerContext.repeatedHeadWriters]):
-            // an unknown variable is undecided here, whatever it meets; a
-            // variable an earlier occurrence gave a value is matched against
-            // it ([_matchRepeatedWriter]); a goal writer met first is the
-            // variable's value, assigned what a later occurrence meets.
-            if (cx.isUnknown(varIndex)) return StepOutcome.advance;
-            final earlier = cx.clauseVars[varIndex];
-            if (earlier != null) {
-              return _matchRepeatedWriter(cx, earlier, arg);
-            }
-            if (_isGoalWriter(cx, arg)) {
-              cx.clauseVars[varIndex] = arg;
-              return StepOutcome.advance;
-            }
-          } else {
-            // A goal writer against a head writer fails, whatever the
-            // variable (appendix-term-matching.tex, row "Writer X1", column
-            // "Writer X2"; see _isGoalWriter).
-            if (_isGoalWriter(cx, arg)) return StepOutcome.nextClause;
-            // A later writer occurrence of an unknown variable: what it meets
-            // is matched against a value not yet there, so it is undecided,
-            // and gives the variable no value.
-            if (cx.isUnknown(varIndex)) return StepOutcome.advance;
-          }
-          // GetWriterVariable logic: Load argument into clause WRITER variable
-          // IMPORTANT: Check if clauseVars[varIndex] already has a writer from
-          // an earlier occurrence (e.g., inside a structure via UnifyVariable).
-          // If so, bind that writer to the argument value via sigmaHat.
-          final existing = cx.clauseVars[varIndex];
+    if (!isReaderMode) {
+      if (cx.repeatedHeadWriters.contains(varIndex)) {
+        // A repeated head writer ([RunnerContext.repeatedHeadWriters]):
+        // an unknown variable is undecided here, whatever it meets; a
+        // variable an earlier occurrence gave a value is matched against
+        // it ([_matchRepeatedWriter]); a goal writer met first is the
+        // variable's value, assigned what a later occurrence meets.
+        if (cx.isUnknown(varIndex)) return StepOutcome.advance;
+        final earlier = cx.clauseVars[varIndex];
+        if (earlier != null) {
+          return _matchRepeatedWriter(cx, earlier, arg);
+        }
+        if (_isGoalWriter(cx, arg)) {
+          cx.clauseVars[varIndex] = arg;
+          return StepOutcome.advance;
+        }
+      } else {
+        // A goal writer against a head writer fails, whatever the
+        // variable (appendix-term-matching.tex, row "Writer X1", column
+        // "Writer X2"; see _isGoalWriter).
+        if (_isGoalWriter(cx, arg)) return StepOutcome.nextClause;
+        // A later writer occurrence of an unknown variable: what it meets
+        // is matched against a value not yet there, so it is undecided,
+        // and gives the variable no value.
+        if (cx.isUnknown(varIndex)) return StepOutcome.advance;
+      }
+      // GetWriterVariable logic: Load argument into clause WRITER variable
+      // IMPORTANT: Check if clauseVars[varIndex] already has a writer from
+      // an earlier occurrence (e.g., inside a structure via UnifyVariable).
+      // If so, bind that writer to the argument value via sigmaHat.
+      final existing = cx.clauseVars[varIndex];
 
-          if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
-              // Both are writers - bind arg writer to existing writer's reader
-              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-              cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing.addr));  // reader addr
-            } else if (existing is HeapCell) {
-              // existing is bare writer addr - bind arg to reader of it
-              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-              cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing));  // reader addr
-            } else {
-              // First occurrence: goal writer vs head writer
-              // Store the goal's writer reference - clause can bind through it
-              if (cx.rt.heap.isWriterBound(arg.addr)) {
-                // Goal writer already bound - use its value
-                final boundValue = cx.rt.heap.valueOfWriter(arg.addr);
-                cx.clauseVars[varIndex] = boundValue;
-              } else {
-                // Goal writer unbound - store writer ref, clause can bind it later
-                cx.clauseVars[varIndex] = arg;
-              }
-            }
-          } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-            // Use abstraction methods that work for both local and imported readers
-            if (cx.rt.heap.isReaderBound(arg.addr)) {
-              final value = cx.rt.heap.getReaderValue(arg.addr);
-              if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
-                cx.sigmaHat[existing.addr] = value;
-              } else if (existing is HeapCell) {
-                cx.sigmaHat[existing] = value;
-              } else {
-                cx.clauseVars[varIndex] = value;
-              }
-            } else {
-              // Reader is unbound - but clause expects a writer (isReaderMode=false)
-              // Per spec: Goal reader X? vs Head writer V → V receives X? (the reader reference)
-              // Store the reader reference itself, not just the underlying writer addr
-              if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
-                // Already have a writer from earlier occurrence - bind it to goal's reader
-                cx.sigmaHat[existing.addr] = arg;  // arg is the reader VarRef
-              } else if (existing is HeapCell) {
-                cx.sigmaHat[existing] = arg;
-              } else {
-                // First occurrence - store the reader reference
-                cx.clauseVars[varIndex] = arg;  // Store reader VarRef, not wid
-              }
-            }
-          } else if (arg is ConstTerm) {
-            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
-              // Already have a writer from earlier occurrence - bind it
-              cx.sigmaHat[existing.addr] = arg;
-            } else if (existing is HeapCell) {
-              // Bare writer addr - bind it
-              cx.sigmaHat[existing] = arg;
-            } else {
-              cx.clauseVars[varIndex] = arg;
-            }
-          } else if (arg is StructTerm) {
-            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
-              cx.sigmaHat[existing.addr] = arg;
-            } else if (existing is HeapCell) {
-              cx.sigmaHat[existing] = arg;
-            } else {
-              cx.clauseVars[varIndex] = arg;
-            }
-          } else {
-            // Handle other Term types (e.g., MutualRefTerm)
-            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
-              cx.sigmaHat[existing.addr] = arg;
-            } else if (existing is HeapCell) {
-              cx.sigmaHat[existing] = arg;
-            } else {
-              cx.clauseVars[varIndex] = arg;
-            }
-          }
+      if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
+        if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
+          // Both are writers - bind arg writer to existing writer's reader
+          cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing.addr));  // reader addr
+        } else if (existing is HeapCell) {
+          // existing is bare writer addr - bind arg to reader of it
+          cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing));  // reader addr
         } else {
-          // GetReaderVariable logic: the head has a reader here.  An unbound
-          // goal writer is assigned it; a goal reader and a goal term fail
-          // (appendix-term-matching.tex, column "Reader X2?"; see
-          // _isUnboundWriterCell).
-          final existing = cx.clauseVars[varIndex];
-
-          if (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr)) {
-            return StepOutcome.nextClause;
-          }
-          // Goal writer → head reader (clause observes goal's variable)
-          if (cx.isUnknown(varIndex)) {
-            // The goal writer would be assigned the reader of an unknown
-            // variable: no fail, and nothing the clause keeps.  It was stored
-            // here as at a first occurrence, and a guard over the variable
-            // then failed on the goal's unbound writer instead of being
-            // undecided (f7(same(To), To?) :- ground(To?)).
-          } else if (existing != null) {
-            // clauseVars already has a value (from earlier occurrence like UnifyVariable)
-            // Bind the writer arg to the READER of that value
-            // BUG FIX: When existing is a writer VarRef, convert to reader
-            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
-              // existing is a writer - bind to its reader
-              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-              cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing.addr));  // reader addr
-            } else if (existing is HeapCell) {
-              // existing is bare writer addr - bind to reader of it
-              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-              cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing));  // reader addr
-            } else {
-              // existing is already a reader or a term - use as-is
-              cx.sigmaHat[arg.addr] = existing;
-            }
+          // First occurrence: goal writer vs head writer
+          // Store the goal's writer reference - clause can bind through it
+          if (cx.rt.heap.isWriterBound(arg.addr)) {
+            // Goal writer already bound - use its value
+            final boundValue = cx.rt.heap.valueOfWriter(arg.addr);
+            cx.clauseVars[varIndex] = boundValue;
           } else {
-            // First occurrence: head reader observes goal writer
-            // Store the goal's writer addr so clause can read through it
-            // No sigmaHat binding needed - goal owns the writer
-            cx.clauseVars[varIndex] = arg.addr;
+            // Goal writer unbound - store writer ref, clause can bind it later
+            cx.clauseVars[varIndex] = arg;
           }
         }
+      } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
+        // Use abstraction methods that work for both local and imported readers
+        if (cx.rt.heap.isReaderBound(arg.addr)) {
+          final value = cx.rt.heap.getReaderValue(arg.addr);
+          if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
+            cx.sigmaHat[existing.addr] = value;
+          } else if (existing is HeapCell) {
+            cx.sigmaHat[existing] = value;
+          } else {
+            cx.clauseVars[varIndex] = value;
+          }
+        } else {
+          // Reader is unbound - but clause expects a writer (isReaderMode=false)
+          // Per spec: Goal reader X? vs Head writer V → V receives X? (the reader reference)
+          // Store the reader reference itself, not just the underlying writer addr
+          if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
+            // Already have a writer from earlier occurrence - bind it to goal's reader
+            cx.sigmaHat[existing.addr] = arg;  // arg is the reader VarRef
+          } else if (existing is HeapCell) {
+            cx.sigmaHat[existing] = arg;
+          } else {
+            // First occurrence - store the reader reference
+            cx.clauseVars[varIndex] = arg;  // Store reader VarRef, not wid
+          }
+        }
+      } else {
+        // A constant, a structure, or any other Term (a MutualRefTerm):
+        // the writer an earlier occurrence gave the variable is bound to
+        // it, and otherwise it is the variable's first value.
+        if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
+          cx.sigmaHat[existing.addr] = arg;
+        } else if (existing is HeapCell) {
+          cx.sigmaHat[existing] = arg;
+        } else {
+          cx.clauseVars[varIndex] = arg;
+        }
+      }
+    } else {
+      // GetReaderVariable logic: the head has a reader here.  An unbound
+      // goal writer is assigned it; a goal reader and a goal term fail
+      // (appendix-term-matching.tex, column "Reader X2?"; see
+      // _isUnboundWriterCell).
+      final existing = cx.clauseVars[varIndex];
+
+      if (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr)) {
+        return StepOutcome.nextClause;
+      }
+      // Goal writer → head reader (clause observes goal's variable)
+      if (cx.isUnknown(varIndex)) {
+        // The goal writer would be assigned the reader of an unknown
+        // variable: no fail, and nothing the clause keeps.  It was stored
+        // here as at a first occurrence, and a guard over the variable
+        // then failed on the goal's unbound writer instead of being
+        // undecided (f7(same(To), To?) :- ground(To?)).
+      } else if (existing != null) {
+        // clauseVars already has a value (from earlier occurrence like UnifyVariable)
+        // Bind the writer arg to the READER of that value
+        // When existing is a writer VarRef, convert to reader
+        if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
+          // existing is a writer - bind to its reader
+          cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing.addr));  // reader addr
+        } else if (existing is HeapCell) {
+          // existing is bare writer addr - bind to reader of it
+          cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing));  // reader addr
+        } else {
+          // existing is already a reader or a term - use as-is
+          cx.sigmaHat[arg.addr] = existing;
+        }
+      } else {
+        // First occurrence: head reader observes goal writer
+        // Store the goal's writer addr so clause can read through it
+        // No sigmaHat binding needed - goal owns the writer
+        cx.clauseVars[varIndex] = arg.addr;
+      }
+    }
     return StepOutcome.advance;
   }
 
@@ -3923,174 +3747,171 @@ mixin OpExecutors {
   StepOutcome execGetValue(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
 
-        final arg = _getArg(cx, argSlot);
-        if (arg == null) {
-          return StepOutcome.nextClause;
+    final arg = _getArg(cx, argSlot);
+    if (arg == null) {
+      return StepOutcome.nextClause;
+    }
+
+    // A repeated head writer ([RunnerContext.repeatedHeadWriters]):
+    // undecided where the variable is unknown, and otherwise matched
+    // against the value an earlier occurrence gave it, as the writer mgu
+    // matches it ([_matchRepeatedWriter]).
+    if (!isReaderMode && cx.repeatedHeadWriters.contains(varIndex)) {
+      if (cx.isUnknown(varIndex)) return StepOutcome.advance;
+      final earlier = cx.clauseVars[varIndex];
+      if (earlier == null) return StepOutcome.nextClause;
+      return _matchRepeatedWriter(cx, earlier, arg);
+    }
+
+    // A goal writer against a head writer fails, whatever the variable,
+    // unknown or not (appendix-term-matching.tex, row "Writer X1",
+    // column "Writer X2"; see _isGoalWriter).
+    if (!isReaderMode && _isGoalWriter(cx, arg)) {
+      return StepOutcome.nextClause;
+    }
+
+    if (cx.isUnknown(varIndex)) {
+      // The variable is unknown: nothing to match it with, so this
+      // occurrence fails only where the table fails it whatever the
+      // variable --- a head reader against a goal reader or term
+      // (appendix-term-matching.tex, column "Reader X2?"), and a head
+      // writer against a goal writer, above.
+      if (isReaderMode &&
+          (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr))) {
+        return StepOutcome.nextClause;
+      }
+      return StepOutcome.advance;
+    }
+
+    var storedValue = cx.clauseVars[varIndex];
+    if (storedValue == null) return StepOutcome.nextClause;
+
+    if (!isReaderMode) {
+      // GetWriterValue logic: Unify argument with clause WRITER variable
+      // storedValue is already the writer addr (or term)
+
+      // Whether a bound goal writer's value [argValue] matches [stored],
+      // the value the variable holds: constants by value, structures by
+      // functor and arity, anything else by equality.
+      bool matches(Object? argValue, Object? stored) {
+        if (argValue is ConstTerm && stored is ConstTerm) {
+          return argValue.value == stored.value;
+        } else if (argValue is StructTerm && stored is StructTerm) {
+          return argValue.functor == stored.functor &&
+              argValue.args.length == stored.args.length;
+        } else {
+          return argValue == stored;
         }
+      }
 
-        // A repeated head writer ([RunnerContext.repeatedHeadWriters]):
-        // undecided where the variable is unknown, and otherwise matched
-        // against the value an earlier occurrence gave it, as the writer mgu
-        // matches it ([_matchRepeatedWriter]).
-        if (!isReaderMode && cx.repeatedHeadWriters.contains(varIndex)) {
-          if (cx.isUnknown(varIndex)) return StepOutcome.advance;
-          final earlier = cx.clauseVars[varIndex];
-          if (earlier == null) return StepOutcome.nextClause;
-          return _matchRepeatedWriter(cx, earlier, arg);
-        }
-
-        // A goal writer against a head writer fails, whatever the variable,
-        // unknown or not (appendix-term-matching.tex, row "Writer X1",
-        // column "Writer X2"; see _isGoalWriter).
-        if (!isReaderMode && _isGoalWriter(cx, arg)) {
-          return StepOutcome.nextClause;
-        }
-
-        if (cx.isUnknown(varIndex)) {
-          // The variable is unknown: nothing to match it with, so this
-          // occurrence fails only where the table fails it whatever the
-          // variable --- a head reader against a goal reader or term
-          // (appendix-term-matching.tex, column "Reader X2?"), and a head
-          // writer against a goal writer, above.
-          if (isReaderMode &&
-              (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr))) {
-            return StepOutcome.nextClause;
-          }
-          return StepOutcome.advance;
-        }
-
-        var storedValue = cx.clauseVars[varIndex];
-        if (storedValue == null) return StepOutcome.nextClause;
-
-        if (!isReaderMode) {
-          // GetWriterValue logic: Unify argument with clause WRITER variable
-          // storedValue is already the writer addr (or term)
-
-          if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-            final argBound = cx.rt.heap.isWriterBound(arg.addr);
-            if (argBound) {
-              final argValue = cx.rt.heap.valueOfWriter(arg.addr);
-              if (storedValue is HeapCell) {
-                final storedBound = cx.rt.heap.isWriterBound(storedValue);
-                if (storedBound) {
-                  final storedVal = cx.rt.heap.valueOfWriter(storedValue);
-                  bool match = false;
-                  if (argValue is ConstTerm && storedVal is ConstTerm) {
-                    match = argValue.value == storedVal.value;
-                  } else if (argValue is StructTerm && storedVal is StructTerm) {
-                    match = argValue.functor == storedVal.functor && argValue.args.length == storedVal.args.length;
-                  } else {
-                    match = argValue == storedVal;
-                  }
-                  if (!match) {
-                    return StepOutcome.nextClause;
-                  }
-                } else {
-                  cx.sigmaHat[storedValue] = argValue;
-                }
-              } else if (storedValue is Term) {
-                bool match = false;
-                if (argValue is ConstTerm && storedValue is ConstTerm) {
-                  match = argValue.value == storedValue.value;
-                } else if (argValue is StructTerm && storedValue is StructTerm) {
-                  match = argValue.functor == storedValue.functor && argValue.args.length == storedValue.args.length;
-                } else {
-                  match = argValue == storedValue;
-                }
-                if (!match) {
-                  return StepOutcome.nextClause;
-                }
-              }
-            } else {
-              if (storedValue is HeapCell) {
-                final freshVarBinding = cx.sigmaHat[storedValue];
-                if (freshVarBinding != null) {
-                  cx.sigmaHat[arg.addr] = freshVarBinding;
-                } else if (arg.addr != storedValue) {
-                  return StepOutcome.nextClause;
-                }
-              } else if (storedValue is Term) {
-                cx.sigmaHat[arg.addr] = storedValue;
-              }
-            }
-          } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-            final rid = arg.addr;
-            // Use abstraction methods for imported reader support
-            if (cx.rt.heap.isReaderBound(rid)) {
-              final readerValue = cx.rt.heap.getReaderValue(rid);
-              if (storedValue is HeapCell) {
-                cx.sigmaHat[storedValue] = readerValue;
-              } else if (storedValue != readerValue) {
+      if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
+        final argBound = cx.rt.heap.isWriterBound(arg.addr);
+        if (argBound) {
+          final argValue = cx.rt.heap.valueOfWriter(arg.addr);
+          if (storedValue is HeapCell) {
+            final storedBound = cx.rt.heap.isWriterBound(storedValue);
+            if (storedBound) {
+              final storedVal = cx.rt.heap.valueOfWriter(storedValue);
+              if (!matches(argValue, storedVal)) {
                 return StepOutcome.nextClause;
               }
             } else {
-              // Reader is unbound - alias storedValue to reader.  A reader
-              // cell always points to its writer (heap_fcp.dart: a reader is
-              // made with a Pointer and only a writer is rewritten), so the
-              // writer is there.  The null branch, for an "imported reader"
-              // with no local writer, which the heap has not represented
-              // since VariableEntry went (ae141816), went on 2026-10-07.
-              final wid = cx.rt.heap.tryWriterForReader(rid)!;
-              if (storedValue is HeapCell) {
-                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                cx.sigmaHat[storedValue] = VarRef(cx.rt.heap.pairedReaderAddr(wid));  // reader addr
-              }
+              cx.sigmaHat[storedValue] = argValue;
             }
-          } else if (arg is ConstTerm) {
-            if (storedValue is HeapCell) {
-              cx.sigmaHat[storedValue] = arg;
-            } else if (storedValue is ConstTerm && storedValue.value != arg.value) {
-              return StepOutcome.nextClause;
-            }
-          } else if (arg is StructTerm) {
-            if (storedValue is HeapCell) {
-              cx.sigmaHat[storedValue] = arg;
-            } else if (storedValue is StructTerm && storedValue.functor != arg.functor) {
+          } else if (storedValue is Term) {
+            if (!matches(argValue, storedValue)) {
               return StepOutcome.nextClause;
             }
           }
         } else {
-          // GetReaderValue logic: the head has a reader here, whose variable an
-          // earlier head argument holds.  An unbound goal writer is assigned
-          // the reader; a goal reader and a goal term fail, whatever the
-          // earlier argument bound the variable to: `q(X, X?)` fails on
-          // `q(1, 2)` and on `q(1, 1)` alike (appendix-term-matching.tex,
-          // column "Reader X2?"; see _isUnboundWriterCell).
-          if (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr)) {
-            return StepOutcome.nextClause;
-          }
-          // Goal has writer, head has reader - bind goal writer to stored value
-          if (storedValue is VarRef) {
-            // storedValue is a reader/writer reference - bind goal writer to it.
-            //
-            // The clause variable is held by its WRITER address whenever an
-            // earlier head argument bound it as a writer — `g(_, r(D?), D,
-            // D?)` reaches this reader occurrence with `D` already stored as
-            // its writer. A writer is never bound to a writer (the writer mgu
-            // binds writers to terms and to readers), and what a reader
-            // occurrence denotes is the variable's READER: pair it across.
-            // Reported by Currencies Code, 2026-09-03, as "the engine binds an
-            // output term's reader to a fresh writer when the variable is bound
-            // by a later head argument"; the commit's WxW check caught it as
-            // `WxW violation in commit`.
-            cx.sigmaHat[arg.addr] = cx.rt.heap.isWriter(storedValue.addr)
-                ? VarRef(cx.rt.heap.pairedReaderAddr(storedValue.addr))
-                : storedValue;
-          } else if (storedValue is HeapCell) {
-            // storedValue is a reader addr - use abstraction methods for imported reader support
-            if (cx.rt.heap.isReaderBound(storedValue)) {
-              final readerValue = cx.rt.heap.getReaderValue(storedValue);
-              cx.sigmaHat[arg.addr] = readerValue;
-            } else {
-              // Suspend on it and match the rest of the head (a fail anywhere
-              // is a fail).  Until 2026-10-02 the clause was abandoned here,
-              // so a later mismatch was never seen.
-              cx.Si.add(storedValue);
+          if (storedValue is HeapCell) {
+            final freshVarBinding = cx.sigmaHat[storedValue];
+            if (freshVarBinding != null) {
+              cx.sigmaHat[arg.addr] = freshVarBinding;
+            } else if (arg.addr != storedValue) {
+              return StepOutcome.nextClause;
             }
           } else if (storedValue is Term) {
             cx.sigmaHat[arg.addr] = storedValue;
           }
         }
+      } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
+        final rid = arg.addr;
+        // Use abstraction methods for imported reader support
+        if (cx.rt.heap.isReaderBound(rid)) {
+          final readerValue = cx.rt.heap.getReaderValue(rid);
+          if (storedValue is HeapCell) {
+            cx.sigmaHat[storedValue] = readerValue;
+          } else if (storedValue != readerValue) {
+            return StepOutcome.nextClause;
+          }
+        } else {
+          // Reader is unbound - alias storedValue to reader.  A reader
+          // cell always points to its writer (heap_fcp.dart: a reader is
+          // made with a Pointer and only a writer is rewritten), so the
+          // writer is there.  The null branch, for an "imported reader"
+          // with no local writer, which the heap has not represented
+          // since VariableEntry went (ae141816), went on 2026-10-07.
+          final wid = cx.rt.heap.tryWriterForReader(rid)!;
+          if (storedValue is HeapCell) {
+            cx.sigmaHat[storedValue] = VarRef(cx.rt.heap.pairedReaderAddr(wid));  // reader addr
+          }
+        }
+      } else if (arg is ConstTerm) {
+        if (storedValue is HeapCell) {
+          cx.sigmaHat[storedValue] = arg;
+        } else if (storedValue is ConstTerm && storedValue.value != arg.value) {
+          return StepOutcome.nextClause;
+        }
+      } else if (arg is StructTerm) {
+        if (storedValue is HeapCell) {
+          cx.sigmaHat[storedValue] = arg;
+        } else if (storedValue is StructTerm && storedValue.functor != arg.functor) {
+          return StepOutcome.nextClause;
+        }
+      }
+    } else {
+      // GetReaderValue logic: the head has a reader here, whose variable an
+      // earlier head argument holds.  An unbound goal writer is assigned
+      // the reader; a goal reader and a goal term fail, whatever the
+      // earlier argument bound the variable to: `q(X, X?)` fails on
+      // `q(1, 2)` and on `q(1, 1)` alike (appendix-term-matching.tex,
+      // column "Reader X2?"; see _isUnboundWriterCell).
+      if (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr)) {
+        return StepOutcome.nextClause;
+      }
+      // Goal has writer, head has reader - bind goal writer to stored value
+      if (storedValue is VarRef) {
+        // storedValue is a reader/writer reference - bind goal writer to it.
+        //
+        // The clause variable is held by its WRITER address whenever an
+        // earlier head argument bound it as a writer — `g(_, r(D?), D,
+        // D?)` reaches this reader occurrence with `D` already stored as
+        // its writer. A writer is never bound to a writer (the writer mgu
+        // binds writers to terms and to readers), and what a reader
+        // occurrence denotes is the variable's READER: pair it across.
+        // Reported by Currencies Code, 2026-09-03, as "the engine binds an
+        // output term's reader to a fresh writer when the variable is bound
+        // by a later head argument"; the commit's WxW check caught it as
+        // `WxW violation in commit`.
+        cx.sigmaHat[arg.addr] = cx.rt.heap.isWriter(storedValue.addr)
+            ? VarRef(cx.rt.heap.pairedReaderAddr(storedValue.addr))
+            : storedValue;
+      } else if (storedValue is HeapCell) {
+        // storedValue is a reader addr - use abstraction methods for imported reader support
+        if (cx.rt.heap.isReaderBound(storedValue)) {
+          final readerValue = cx.rt.heap.getReaderValue(storedValue);
+          cx.sigmaHat[arg.addr] = readerValue;
+        } else {
+          // Suspend on it and match the rest of the head (a fail anywhere
+          // is a fail).  Until 2026-10-02 the clause was abandoned here,
+          // so a later mismatch was never seen.
+          cx.Si.add(storedValue);
+        }
+      } else if (storedValue is Term) {
+        cx.sigmaHat[arg.addr] = storedValue;
+      }
+    }
     return StepOutcome.advance;
   }
 
@@ -4102,146 +3923,55 @@ mixin OpExecutors {
   /// `unify_variable` fills the argument's own positions there
   /// ([OpExecutors.execPutStructure]); until 2026-10-02 it did nothing there.
   StepOutcome execSetVariable(RunnerContext cx, int varIndex, bool isReaderMode) {
-        if (!cx.inBody &&
-            cx.guardArgSlot != null &&
-            cx.mode == UnifyMode.write &&
-            cx.currentStructure is StructTerm) {
-          return execUnifyVariable(cx, varIndex, isReaderMode);
+    if (!cx.inBody &&
+        cx.guardArgSlot != null &&
+        cx.mode == UnifyMode.write &&
+        cx.currentStructure is StructTerm) {
+      return execUnifyVariable(cx, varIndex, isReaderMode);
+    }
+
+    if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
+      // Check what value exists in clause variables
+      final existingValue = cx.clauseVars[varIndex];
+      final struct = cx.currentStructure as StructTerm;
+
+      if (existingValue is VarRef) {
+        // VarRef: use its addr with appropriate mode
+        final addr = existingValue.addr;
+        if (isReaderMode && cx.rt.heap.isWriter(addr)) {
+          struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(addr));  // reader addr
+        } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
+          struct.args[cx.S] = VarRef(cx.rt.heap.tryWriterForReader(addr)!);  // writer addr
+        } else {
+          struct.args[cx.S] = VarRef(addr);  // mode matches
         }
-
-        if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
-          // Check what value exists in clause variables
-          final existingValue = cx.clauseVars[varIndex];
-          final struct = cx.currentStructure as StructTerm;
-          // DEBUG: trace clauseVars for accept_intro Ch variable
-
-          if (existingValue is VarRef) {
-            // VarRef: use its addr with appropriate mode
-            final addr = existingValue.addr;
-            if (isReaderMode && cx.rt.heap.isWriter(addr)) {
-              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-              struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(addr));  // reader addr
-            } else if (!isReaderMode && cx.rt.heap.isReader(addr)) {
-              // Per spec v3.2: use tryWriterForReader() instead of -1 arithmetic
-              struct.args[cx.S] = VarRef(cx.rt.heap.tryWriterForReader(addr)!);  // writer addr
-            } else {
-              struct.args[cx.S] = VarRef(addr);  // mode matches
-            }
-          } else if (existingValue is HeapCell) {
-            // Legacy: bare writer addr
-            if (isReaderMode) {
-              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-              struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(existingValue));  // reader addr
-            } else {
-              struct.args[cx.S] = VarRef(existingValue);  // writer addr
-            }
-          } else if (existingValue is Term) {
-            // Term (ConstTerm, StructTerm, etc.): embed directly in structure
-            struct.args[cx.S] = existingValue;
-          } else {
-            // Uninitialized: allocate new variable
-            final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-            cx.clauseVars[varIndex] = VarRef(writerAddr);
-            struct.args[cx.S] = VarRef(isReaderMode ? readerAddr : writerAddr);
-          }
-          cx.S++;
-
-          // Check if structure is complete
-          if (cx.S >= struct.args.length) {
-            final targetValue = cx.clauseVars[-1];
-            HeapCell? targetWriterAddr;
-            if (targetValue is VarRef) {
-              targetWriterAddr = targetValue.addr;
-            } else if (targetValue is HeapCell) {
-              targetWriterAddr = targetValue;
-            }
-
-            if (targetWriterAddr != null) {
-              final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
-              for (final a in acts) {
-                cx.rt.gq.enqueue(a);
-              }
-
-              // SetWriter-specific: Store VarRef in argSlots ONLY if no parent
-              // (nested structures should not store until outermost is complete)
-              if (!isReaderMode && cx.parentStack.isEmpty) {
-                final targetSlot = cx.clauseVars[-2];
-                if (targetSlot is int && targetSlot >= 0) {
-                  // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                  cx.argSlots[targetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(targetWriterAddr));  // reader addr
-                  cx.clauseVars.remove(-2);
-                }
-              }
-            }
-
-            // Handle parent structure restoration - pop from stack
-            if (cx.parentStack.isNotEmpty && targetWriterAddr is HeapCell) {
-              final nestedWriterAddr = targetWriterAddr;
-              final parent = cx.parentStack.removeLast();
-
-              if (parent.structure is StructTerm) {
-                final parentStruct = parent.structure as StructTerm;
-                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                parentStruct.args[parent.s] = VarRef(cx.rt.heap.pairedReaderAddr(nestedWriterAddr));  // reader addr
-              }
-
-              cx.currentStructure = parent.structure;
-              cx.S = parent.s + 1;
-              cx.mode = parent.mode;
-              cx.clauseVars[-1] = parent.writerId;
-
-              // Check if parent is now complete - and recursively complete ancestors
-              while (cx.currentStructure is StructTerm) {
-                final parentStruct = cx.currentStructure as StructTerm;
-                final currentWriterAddr = cx.clauseVars[-1];
-                final currentWriterAddrInt = currentWriterAddr is VarRef ? currentWriterAddr.addr : (currentWriterAddr is HeapCell ? currentWriterAddr : null);
-
-                if (cx.S >= parentStruct.args.length && currentWriterAddrInt != null) {
-                  // bindWriterStruct returns activations directly
-                  final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
-                  for (final a in acts) {
-                    cx.rt.gq.enqueue(a);
-                  }
-
-                  // Check for more ancestors
-                  if (cx.parentStack.isNotEmpty) {
-                    final ancestor = cx.parentStack.removeLast();
-                    if (ancestor.structure is StructTerm) {
-                      final ancestorStruct = ancestor.structure as StructTerm;
-                      // Use reader address (writer + 1) for structure args
-                      ancestorStruct.args[ancestor.s] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));
-                    }
-                    cx.currentStructure = ancestor.structure;
-                    cx.S = ancestor.s + 1;
-                    cx.mode = ancestor.mode;
-                    cx.clauseVars[-1] = ancestor.writerId;
-                  } else {
-                    // No more ancestors - store in argSlots and reset
-                    final parentTargetSlot = cx.clauseVars[-2];
-                    if (parentTargetSlot is int && parentTargetSlot >= 0) {
-                      // Use reader address (writer + 1) for argSlots
-                      cx.argSlots[parentTargetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));
-                      cx.clauseVars.remove(-2);
-                    }
-                    cx.currentStructure = null;
-                    cx.mode = UnifyMode.read;
-                    cx.S = 0;
-                    cx.clauseVars.remove(-1);
-                    break;
-                  }
-                } else {
-                  // Parent not complete yet, stop
-                  break;
-                }
-              }
-            } else {
-              cx.currentStructure = null;
-              cx.mode = UnifyMode.read;
-              cx.S = 0;
-              cx.clauseVars.remove(-1);
-            }
-          }
+      } else if (existingValue is HeapCell) {
+        // Bare writer addr
+        if (isReaderMode) {
+          struct.args[cx.S] = VarRef(cx.rt.heap.pairedReaderAddr(existingValue));  // reader addr
+        } else {
+          struct.args[cx.S] = VarRef(existingValue);  // writer addr
         }
+      } else if (existingValue is Term) {
+        // Term (ConstTerm, StructTerm, etc.): embed directly in structure
+        struct.args[cx.S] = existingValue;
+      } else {
+        // Uninitialized: allocate new variable
+        final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+        cx.clauseVars[varIndex] = VarRef(writerAddr);
+        struct.args[cx.S] = VarRef(isReaderMode ? readerAddr : writerAddr);
+      }
+      cx.S++;
+
+      // Check if structure is complete
+      if (cx.S >= struct.args.length) {
+        final targetWriterAddr = _structureTargetWriter(cx);
+        // SetWriter-specific: Store VarRef in argSlots ONLY if no parent
+        // (nested structures should not store until outermost is complete)
+        _completeBodyStructure(cx, struct, targetWriterAddr,
+            storeWhenNoParent: !isReaderMode && targetWriterAddr != null);
+      }
+    }
     return StepOutcome.advance;
   }
 
@@ -4251,90 +3981,90 @@ mixin OpExecutors {
   /// needed so every CallEnv argument is a VarRef.
   StepOutcome execPutVariable(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
-        // A guard's argument (before commit) that is an unknown variable
-        // ([RunnerContext.unknownVars]): the slot gets the variable that
-        // stands for it, any term, which the guard's decision meets
-        // ([_undecidedMember]) and the clause does not keep, so the variable
-        // stays unknown.
-        if (!cx.inBody && cx.isUnknown(varIndex)) {
-          cx.argSlots[argSlot] =
-              _unknownPlaceholder(cx, varIndex, isReaderMode);
-          return StepOutcome.advance;
-        }
-        final value = cx.clauseVars[varIndex];
+    // A guard's argument (before commit) that is an unknown variable
+    // ([RunnerContext.unknownVars]): the slot gets the variable that
+    // stands for it, any term, which the guard's decision meets
+    // ([_undecidedMember]) and the clause does not keep, so the variable
+    // stays unknown.
+    if (!cx.inBody && cx.isUnknown(varIndex)) {
+      cx.argSlots[argSlot] =
+          _unknownPlaceholder(cx, varIndex, isReaderMode);
+      return StepOutcome.advance;
+    }
+    final value = cx.clauseVars[varIndex];
 
-        if (value is VarRef) {
-          // Already a VarRef - determine writer addr and store with appropriate mode
-          final addr = value.addr;
-          final isWriter = cx.rt.heap.isWriter(addr);
-          final isReader = cx.rt.heap.isReader(addr);
+    if (value is VarRef) {
+      // Already a VarRef - determine writer addr and store with appropriate mode
+      final addr = value.addr;
+      final isWriter = cx.rt.heap.isWriter(addr);
+      final isReader = cx.rt.heap.isReader(addr);
 
-          if (!isWriter && !isReader) {
-            // Bound to ground value (ValueTag) - store on heap and pass VarRef
-            // Per spec v2.16.3 Section 1.1: CallEnv arguments must be VarRefs
-            final groundValue = cx.rt.heap.getValue(addr);
-            if (groundValue != null) {
-              // Store value on heap and return VarRef
-              final heapAddr = cx.rt.heap.storeTermOnHeap(groundValue);
-              cx.argSlots[argSlot] = VarRef(heapAddr);
-            } else {
-              cx.argSlots[argSlot] = value;  // Fallback: already VarRef
-            }
-          } else {
-            // Writer or reader
-            if (isWriter) {
-              final writerAddr = addr;
-              cx.argSlots[argSlot] = VarRef(isReaderMode ? cx.rt.heap.pairedReaderAddr(writerAddr) : writerAddr);
-            } else {
-              // A reader: its writer, which a reader cell always points to
-              // (the "imported reader" null branch went on 2026-10-07, as
-              // above), used by mode.
-              final writerAddr = cx.rt.heap.tryWriterForReader(addr)!;
-              cx.argSlots[argSlot] = VarRef(isReaderMode ? cx.rt.heap.pairedReaderAddr(writerAddr) : writerAddr);
-            }
-          }
-        } else if (value is HeapCell) {
-          // Legacy: bare int ID (assumed to be writer addr)
-          cx.argSlots[argSlot] = VarRef(isReaderMode ? cx.rt.heap.pairedReaderAddr(value) : value);
-        } else if (value is _ClauseVar && !isReaderMode) {
-          // Placeholder (PutWriter only) - allocate fresh variable
-          final (writerAddr, _) = cx.rt.heap.allocateVariable();
-          cx.argSlots[argSlot] = VarRef(writerAddr);
-          cx.clauseVars[varIndex] = VarRef(writerAddr);
-        } else if (value is StructTerm) {
-          // A structure the head gave the variable: a fresh variable bound to
-          // it, its reader passed.  A writer occurrence reaches here too, the
-          // variable's writer occurring in the head and again in the body
-          // under a guard whose success implies its reader ground (GLP-Spec
-          // glp.tex, Remark "Guards and SRSW", 831f315), the body goal being
-          // given the term (Definition "GLP Goal/Clause Reduction": the body
-          // under the writer mgu); until 2026-10-12 it was refused here.
-          final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-          cx.rt.heap.bindWriterStruct(writerAddr, value.functor, value.args);
-          cx.argSlots[argSlot] = VarRef(readerAddr);
-        } else if (value is ConstTerm) {
-          // A constant the head gave the variable, in either mode, as a
-          // structure above.
-          final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-          cx.rt.heap.bindWriterConst(writerAddr, value.value);
-          cx.argSlots[argSlot] = VarRef(readerAddr);
-        } else if (value == null) {
-          // First occurrence - allocate fresh variable
-          final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-          cx.clauseVars[varIndex] = VarRef(writerAddr);
-          cx.argSlots[argSlot] = VarRef(isReaderMode ? readerAddr : writerAddr);
-        } else if (value is Term) {
-          // Ground term (e.g., MutualRefTerm) - store on heap and pass VarRef,
-          // in either mode, as a structure above.
-          // Per spec v2.16.3 Section 1.1: CallEnv arguments must be VarRefs
-          final heapAddr = cx.rt.heap.storeTermOnHeap(value);
+      if (!isWriter && !isReader) {
+        // Bound to ground value (ValueTag) - store on heap and pass VarRef
+        // CallEnv arguments are VarRefs (IGLP)
+        final groundValue = cx.rt.heap.getValue(addr);
+        if (groundValue != null) {
+          // Store value on heap and return VarRef
+          final heapAddr = cx.rt.heap.storeTermOnHeap(groundValue);
           cx.argSlots[argSlot] = VarRef(heapAddr);
         } else {
-          // No case above places this value: a fault of the compiled code.
-          // Until 2026-10-02 it printed a warning and went on.
-          throw StateError('put_variable: unexpected clause value $value '
-              '(reader mode: $isReaderMode)');
+          cx.argSlots[argSlot] = value;  // Fallback: already VarRef
         }
+      } else {
+        // Writer or reader
+        if (isWriter) {
+          final writerAddr = addr;
+          cx.argSlots[argSlot] = VarRef(isReaderMode ? cx.rt.heap.pairedReaderAddr(writerAddr) : writerAddr);
+        } else {
+          // A reader: its writer, which a reader cell always points to
+          // (the "imported reader" null branch went on 2026-10-07, as
+          // above), used by mode.
+          final writerAddr = cx.rt.heap.tryWriterForReader(addr)!;
+          cx.argSlots[argSlot] = VarRef(isReaderMode ? cx.rt.heap.pairedReaderAddr(writerAddr) : writerAddr);
+        }
+      }
+    } else if (value is HeapCell) {
+      // Bare writer addr
+      cx.argSlots[argSlot] = VarRef(isReaderMode ? cx.rt.heap.pairedReaderAddr(value) : value);
+    } else if (value is _ClauseVar && !isReaderMode) {
+      // Placeholder (PutWriter only) - allocate fresh variable
+      final (writerAddr, _) = cx.rt.heap.allocateVariable();
+      cx.argSlots[argSlot] = VarRef(writerAddr);
+      cx.clauseVars[varIndex] = VarRef(writerAddr);
+    } else if (value is StructTerm) {
+      // A structure the head gave the variable: a fresh variable bound to
+      // it, its reader passed.  A writer occurrence reaches here too, the
+      // variable's writer occurring in the head and again in the body
+      // under a guard whose success implies its reader ground (GLP-Spec
+      // glp.tex, Remark "Guards and SRSW", 831f315), the body goal being
+      // given the term (Definition "GLP Goal/Clause Reduction": the body
+      // under the writer mgu); until 2026-10-12 it was refused here.
+      final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+      cx.rt.heap.bindWriterStruct(writerAddr, value.functor, value.args);
+      cx.argSlots[argSlot] = VarRef(readerAddr);
+    } else if (value is ConstTerm) {
+      // A constant the head gave the variable, in either mode, as a
+      // structure above.
+      final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+      cx.rt.heap.bindWriterConst(writerAddr, value.value);
+      cx.argSlots[argSlot] = VarRef(readerAddr);
+    } else if (value == null) {
+      // First occurrence - allocate fresh variable
+      final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+      cx.clauseVars[varIndex] = VarRef(writerAddr);
+      cx.argSlots[argSlot] = VarRef(isReaderMode ? readerAddr : writerAddr);
+    } else if (value is Term) {
+      // Ground term (e.g., MutualRefTerm) - store on heap and pass VarRef,
+      // in either mode, as a structure above.
+      // CallEnv arguments are VarRefs (IGLP)
+      final heapAddr = cx.rt.heap.storeTermOnHeap(value);
+      cx.argSlots[argSlot] = VarRef(heapAddr);
+    } else {
+      // No case above places this value: a fault of the compiled code.
+      // Until 2026-10-02 it printed a warning and went on.
+      throw StateError('put_variable: unexpected clause value $value '
+          '(reader mode: $isReaderMode)');
+    }
     return StepOutcome.advance;
   }
 
@@ -4345,101 +4075,27 @@ mixin OpExecutors {
   /// `unify_constant` fills the argument's own positions there
   /// ([OpExecutors.execPutStructure]); until 2026-10-02 it did nothing there.
   StepOutcome execSetConstant(RunnerContext cx, Object? opValue) {
-        if (!cx.inBody &&
-            cx.guardArgSlot != null &&
-            cx.mode == UnifyMode.write &&
-            cx.currentStructure is StructTerm) {
-          return execUnifyConstant(cx, opValue);
-        }
-        if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
-          // Store ConstTerm in current structure at position S
-          final struct = cx.currentStructure as StructTerm;
-          struct.args[cx.S] = ConstTerm(opValue);
-          cx.S++; // Move to next position
+    if (!cx.inBody &&
+        cx.guardArgSlot != null &&
+        cx.mode == UnifyMode.write &&
+        cx.currentStructure is StructTerm) {
+      return execUnifyConstant(cx, opValue);
+    }
+    if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
+      // Store ConstTerm in current structure at position S
+      final struct = cx.currentStructure as StructTerm;
+      struct.args[cx.S] = ConstTerm(opValue);
+      cx.S++; // Move to next position
 
-          // Check if structure is complete (all arguments filled)
-          if (cx.S >= struct.args.length) {
-            // Structure complete - bind the target writer (stored at clauseVars[-1])
-            final targetWriterAddr = cx.clauseVars[-1];
-            // Extract int from VarRef if needed
-            final targetWriterAddrInt = targetWriterAddr is VarRef ? targetWriterAddr.addr : (targetWriterAddr is HeapCell ? targetWriterAddr : null);
-            if (targetWriterAddrInt != null) {
-              // Bind the writer to the completed structure (returns activations)
-              final acts = cx.rt.heap.bindWriterStruct(targetWriterAddrInt, struct.functor, struct.args);
-              for (final a in acts) {
-                cx.rt.gq.enqueue(a);
-              }
-            }
-
-            // Handle parent structure restoration (nested structures) - pop from stack
-            if (cx.parentStack.isNotEmpty && targetWriterAddrInt != null) {
-              final nestedWriterAddr = targetWriterAddrInt;
-              final parent = cx.parentStack.removeLast();
-
-              if (parent.structure is StructTerm) {
-                final parentStruct = parent.structure as StructTerm;
-                // Use reader address (writer + 1)
-                parentStruct.args[parent.s] = VarRef(cx.rt.heap.pairedReaderAddr(nestedWriterAddr));
-              }
-
-              cx.currentStructure = parent.structure;
-              cx.S = parent.s + 1;
-              cx.mode = parent.mode;
-              cx.clauseVars[-1] = parent.writerId;
-
-              // Check if parent is now complete - and recursively complete ancestors
-              while (cx.currentStructure is StructTerm) {
-                final parentStruct = cx.currentStructure as StructTerm;
-                final currentWriterAddr = cx.clauseVars[-1];
-                final currentWriterAddrInt = currentWriterAddr is VarRef ? currentWriterAddr.addr : (currentWriterAddr is HeapCell ? currentWriterAddr : null);
-
-                if (cx.S >= parentStruct.args.length && currentWriterAddrInt != null) {
-                  // bindWriterStruct returns activations directly
-                  final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
-                  for (final a in acts) {
-                    cx.rt.gq.enqueue(a);
-                  }
-
-                  // Check for more ancestors
-                  if (cx.parentStack.isNotEmpty) {
-                    final ancestor = cx.parentStack.removeLast();
-                    if (ancestor.structure is StructTerm) {
-                      final ancestorStruct = ancestor.structure as StructTerm;
-                      // Use reader address (writer + 1)
-                      ancestorStruct.args[ancestor.s] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));
-                    }
-                    cx.currentStructure = ancestor.structure;
-                    cx.S = ancestor.s + 1;
-                    cx.mode = ancestor.mode;
-                    cx.clauseVars[-1] = ancestor.writerId;
-                  } else {
-                    // No more ancestors - store in argSlots and reset
-                    final parentTargetSlot = cx.clauseVars[-2];
-                    if (parentTargetSlot is int && parentTargetSlot >= 0) {
-                      // Use reader address (writer + 1)
-                      cx.argSlots[parentTargetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));
-                      cx.clauseVars.remove(-2);
-                    }
-                    cx.currentStructure = null;
-                    cx.mode = UnifyMode.read;
-                    cx.S = 0;
-                    cx.clauseVars.remove(-1);
-                    break;
-                  }
-                } else {
-                  // Parent not complete yet, stop
-                  break;
-                }
-              }
-            } else {
-              // No parent - reset structure building state
-              cx.currentStructure = null;
-              cx.mode = UnifyMode.read;
-              cx.S = 0;
-              cx.clauseVars.remove(-1); // Clear the marker
-            }
-          }
-        }
+      // Check if structure is complete (all arguments filled)
+      if (cx.S >= struct.args.length) {
+        // Structure complete - bind the target writer (stored at
+        // clauseVars[-1]) and restore or complete the parents; set_constant
+        // stores nothing in argSlots ([_completeBodyStructure]).
+        _completeBodyStructure(cx, struct, _structureTargetWriter(cx),
+            storeWhenNoParent: false);
+      }
+    }
     return StepOutcome.advance;
   }
 

@@ -801,7 +801,6 @@ class GlpEngine {
       final result = await posted.scheduler.drainAsyncWithStatus(
         maxCycles: maxCycles,
         debug: debugTrace,
-        showBindings: false,
         debugOutput: debugOutput,
         send: _sends,
       );

@@ -135,10 +135,6 @@ class ByteRunner with OpExecutors implements GoalRunner {
     return nextClauseByte(opStart);
   }
 
-  void run(RunnerContext cx) {
-    runWithStatus(cx);
-  }
-
   /// The signature of the first compiled symbol at each entry offset, made
   /// once: [procNameForPc] is asked for every goal the scheduler takes, and
   /// walked the symbol table each time until 2026-10-02.

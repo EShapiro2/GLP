@@ -1,17 +1,12 @@
-/// The result of executing one instruction, PC-agnostic (B3).
+/// The result of executing one instruction, PC-agnostic.
 ///
 /// Each opcode's semantics live once, in `OpExecutors` (in `bytecode/runner.dart`,
 /// which holds the private clause/structure state types they touch). An executor
-/// returns a [StepOutcome] instead of mutating a program counter, so the two
-/// drivers can map it to their own PC world:
-///  - the object loop (`runWithStatus`) maps to an instruction-index PC over
-///    `BytecodeProgram.ops`;
-///  - the byte loop (`engine_v2/interp.dart`) maps to a byte-offset PC over the
-///    `CodeImage` code section.
-///
-/// This keeps one source of opcode semantics shared by both, with no second
-/// in-memory instruction form — the byte loop decodes operands inline (FCP
-/// style) and calls the same executor.
+/// returns a [StepOutcome] instead of mutating a program counter, and the byte
+/// loop (`ByteRunner`, `engine_v2/interp.dart`) maps it to a byte-offset PC over
+/// the `CodeImage` code section: it decodes the operands inline from the code
+/// bytes and calls the executor, so there is no second in-memory instruction
+/// form.
 library;
 
 /// What the driver must do after an instruction's executor runs.
@@ -20,8 +15,8 @@ enum StepKind {
   advance,
 
   /// Soft-fail the current clause: merge Si into U, clear clause state, and go
-  /// to the next clause (object loop: `_findNextClauseTry`; byte loop: scan to
-  /// the next `clause_try` byte offset).
+  /// to the next clause (the byte loop's `_applyNextClauseByte`, which finds
+  /// the next clause-control byte offset).
   nextClause,
 
   /// `commit`: apply the tentative writer bindings and enter the body.
@@ -42,8 +37,8 @@ enum StepKind {
   /// reduction occurred).
   failed,
 
-  /// `spawn`: enqueue a new goal for [procIndex] (a `CodeImage` symbol index in
-  /// the byte loop / a label in the object loop) with [arity].
+  /// `spawn`: enqueue a new goal for [procIndex] (a `CodeImage` symbol index)
+  /// with [arity].
   spawn,
 
   /// `requeue`: the bounded-tail continuation — continue this goal at [procIndex]
@@ -58,8 +53,8 @@ enum StepKind {
 class StepOutcome {
   final StepKind kind;
 
-  /// For [StepKind.spawn] / [StepKind.requeue]: the callee's symbol index
-  /// (byte loop) or resolved via label (object loop), and its arity.
+  /// For [StepKind.spawn] / [StepKind.requeue]: the callee's `CodeImage`
+  /// symbol index, and its arity.
   final int? procIndex;
   final int? arity;
 

@@ -276,7 +276,7 @@ class Artefact {
   String? get certificateRefusal {
     final cert = certificate;
     if (cert.isRefused) return _noCertificate;
-    if (!_bytesEqual(compiledIdentityOfBody(bodyBytes()), cert.hBin)) {
+    if (!bytesEqual(compiledIdentityOfBody(bodyBytes()), cert.hBin)) {
       return _bodyMismatch;
     }
     if (!cert.verifies()) return _signatureFails;
@@ -302,8 +302,6 @@ class Artefact {
 
   /// Serialize the body (§Program Artefact, sections 1–4).
   Uint8List bodyBytes() {
-    int procIndexOf(String sig) => _indexOfSignature(sig);
-
     // Encode each compiled body and record its (offset, length) in the code
     // section (concatenated compiled bodies, in symbol-table order).
     final codeBuf = BytesBuilder(copy: false);
@@ -316,7 +314,7 @@ class Artefact {
         lengths.add(0);
         continue;
       }
-      final body = encodeCode(s.ops, procIndexOf: procIndexOf);
+      final body = encodeCode(s.ops, procIndexOf: _indexOfSignature);
       offsets.add(cursor);
       lengths.add(body.length);
       codeBuf.add(body);
@@ -528,7 +526,7 @@ class Artefact {
     } catch (e) {
       return (artefact: art, refusal: 'it is not an artefact: ${_why(e)}');
     }
-    if (!_bytesEqual(id, cert.hBin)) {
+    if (!bytesEqual(id, cert.hBin)) {
       return (artefact: art, refusal: _bodyMismatch);
     }
     if (!cert.verifies()) return (artefact: art, refusal: _signatureFails);
@@ -680,9 +678,6 @@ class LoadedModule {
     required this.exportAliases,
     required this.exportedTypes,
   });
-
-  /// The compiled identity, under the loader's former name for it.
-  Uint8List get artefactId => compiledIdentity;
 }
 
 /// The artefact loader (§Loader): verifies the certificate and versions,
@@ -703,19 +698,15 @@ class ArtefactLoader {
   LoadedModule load(
     Uint8List artefactBytes, {
     required Uint8List offeredHM,
-    Set<int> supportedWireVersions = const {wireFormatVersion},
     Set<String> supportedIsaVersions = runtimeIsaVersions,
   }) {
     final art = Artefact.fromBytes(artefactBytes); // checks magic + wire version
-    if (!supportedWireVersions.contains(wireFormatVersion)) {
-      throw WireFormatException('unsupported wire-format version');
-    }
     // 1. The compiled identity, computed here and compared with the
     //    certificate's; the certificate's signature; the source identity
     //    against the offer.
     final id = Artefact.compiledIdentityOf(artefactBytes);
     final cert = art.certificate;
-    if (!_bytesEqual(id, cert.hBin)) {
+    if (!bytesEqual(id, cert.hBin)) {
       throw WireFormatException(
           'compiled identity mismatch: the body does not hash to the '
           'certificate\'s compiled identity');
@@ -727,7 +718,7 @@ class ArtefactLoader {
       throw WireFormatException(
           'certificate signature does not verify under the key it carries');
     }
-    if (!_bytesEqual(cert.hSrc, offeredHM)) {
+    if (!bytesEqual(cert.hSrc, offeredHM)) {
       throw WireFormatException('h(M) mismatch with the adoption offer');
     }
     // Refuse an unsupported instruction-set version: the last check of step
@@ -769,14 +760,6 @@ class ArtefactLoader {
     _byId[key] = m;
     return m;
   }
-}
-
-bool _bytesEqual(List<int> a, List<int> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }
 
 String _hex(List<int> b) {

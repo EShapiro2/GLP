@@ -1,4 +1,4 @@
-/// Deterministic flattening + source identity h(M) (D3 wire format, §6).
+/// Deterministic flattening + source identity h(M).
 ///
 /// Normative source: the IGLP paper appendix `app:code-format`, §cf-flattening.
 /// The flattened source of a project — the preimage of h(M) — is the canonical
@@ -31,7 +31,7 @@ import 'package:glp_runtime/compiler/glp_printer.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 
-/// The canonical print of a linked, pruned program (§6).
+/// The canonical print of a linked, pruned program.
 String canonicalPrint({
   required Program program,
   required List<ProcDecl> procDeclarations,
