@@ -1,4 +1,4 @@
-/// Direct bytecode execution — the byte interpreter (B3b/B3c).
+/// Direct bytecode execution — the byte interpreter.
 ///
 /// Goal (IGLP `app:code-format`): execute the §cf code-format byte string
 /// DIRECTLY. [ByteRunner] is the FCP-style fetch/decode/dispatch loop over a
@@ -41,14 +41,14 @@ import 'package:glp_runtime/engine_v2/step_outcome.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
+import 'package:glp_runtime/runtime/scheduler.dart' show formatGoalText;
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart';
 
 /// Flatten an object [BytecodeProgram] to a §cf artefact and reload it as a
-/// [CodeImage] for direct byte execution — the bridge that lets the engine run
-/// the same compiled program through the byte loop behind the sandbox flag.
-/// (B6 makes the compiler emit the artefact directly, retiring this round-trip.)
+/// [CodeImage] for direct byte execution: how the engine runs a compiled
+/// program through the byte loop (GlpEngine._post).
 CodeImage codeImageFromProgram(BytecodeProgram prog,
     {String moduleName = 'main'}) {
   final artefact = Artefact.fromCompiled(
@@ -62,15 +62,15 @@ CodeImage codeImageFromProgram(BytecodeProgram prog,
   return CodeImage.fromArtefactBytes(artefact.toBytes());
 }
 
-/// Executes a [CodeImage] directly over its code bytes, reusing the object
-/// runner's [OpExecutors] for every per-opcode semantic.
+/// Executes a [CodeImage] directly over its code bytes, calling [OpExecutors]
+/// for every per-opcode semantic.
 class ByteRunner with OpExecutors implements GoalRunner {
   final CodeImage image;
 
   /// Byte offsets of every clause-control opcode (`clause_try`/`clause_next`/
-  /// `no_more_clauses`) in the code section, ascending — the byte analogue of
-  /// the object runner scanning `prog.ops` for the next clause boundary. Built
-  /// once by a length-aware decode pass over the whole code section.
+  /// `no_more_clauses`) in the code section, ascending: where the next clause
+  /// boundary is found.  Built once by a length-aware decode pass over the
+  /// whole code section.
   late final List<int> _controlOffsets = _scanControlOffsets();
 
   ByteRunner(this.image);
@@ -446,12 +446,22 @@ class ByteRunner with OpExecutors implements GoalRunner {
     // which gives the goal new arguments.
     var indexedSlot = -1;
     Object? indexedValue;
+    // The byte offset of the instruction being executed, and of the one after
+    // its operands.
+    var opStart = 0;
+    var after = 0;
+    // Where the loop goes on after an executor's outcome: the next clause
+    // where it soft-failed this one ([_applyNextClauseByte]), the next
+    // instruction otherwise.
+    int route(StepOutcome o) => o.kind == StepKind.nextClause
+        ? _applyNextClauseByte(cx, opStart)
+        : after;
 
     while (pc < code.length) {
-      final opStart = pc;
+      opStart = pc;
       final ins = decoded[pc] ??= _decodeAt(pc);
       // Byte offset of the next instruction (after this opcode's operands).
-      final after = ins.next;
+      after = ins.next;
 
       switch (ins.op) {
         // ===== Clause control =====
@@ -473,23 +483,13 @@ class ByteRunner with OpExecutors implements GoalRunner {
           pc = after;
           continue;
 
-        case Opcode.clauseNext:
-          // Dead in current codegen (no ClauseNext emitted); the byte-offset
-          // ctarget jump is a later slice. Reaching it signals stale codegen.
-          throw StateError(
-              'clause_next byte execution not yet implemented (B3c slice)');
-
         case Opcode.noMoreClauses:
           return execNoMoreClauses(cx).kind == StepKind.suspended
               ? RunResult.suspended
               : RunResult.terminated;
 
         case Opcode.commit:
-          if (execCommit(cx).kind == StepKind.nextClause) {
-            pc = _applyNextClauseByte(cx, opStart);
-            continue;
-          }
-          pc = after;
+          pc = route(execCommit(cx));
           continue;
 
         case Opcode.proceed:
@@ -505,11 +505,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
           continue;
 
         case Opcode.otherwise:
-          if (execOtherwise(cx).kind == StepKind.nextClause) {
-            pc = _applyNextClauseByte(cx, opStart);
-            continue;
-          }
-          pc = after;
+          pc = route(execOtherwise(cx));
           continue;
 
         // ===== Structure traversal control =====
@@ -525,128 +521,50 @@ class ByteRunner with OpExecutors implements GoalRunner {
 
         // ===== HEAD matching =====
         case Opcode.headConstant:
-          {
-            final o = execHeadConstant(cx, _k(ins.k), ins.a);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execHeadConstant(cx, _k(ins.k), ins.a));
+          continue;
 
         case Opcode.headNil:
-          {
-            final o = execHeadNil(cx, ins.a);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execHeadNil(cx, ins.a));
+          continue;
 
         case Opcode.headStructure:
-          {
-            final o =
-                execHeadStructure(cx, ins.k as String, ins.a, ins.b);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execHeadStructure(cx, ins.k as String, ins.a, ins.b));
+          continue;
 
         case Opcode.headList:
-          {
-            final o = execHeadList(cx, ins.a);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execHeadList(cx, ins.a));
+          continue;
 
         case Opcode.headVariable:
-          {
-            final o = execHeadVariable(cx, ins.a, ins.pol);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execHeadVariable(cx, ins.a, ins.pol));
+          continue;
 
         case Opcode.getVariable:
-          {
-            final o = execGetVariable(cx, ins.a, ins.b, ins.pol);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execGetVariable(cx, ins.a, ins.b, ins.pol));
+          continue;
 
         case Opcode.getValue:
-          {
-            final o = execGetValue(cx, ins.a, ins.b, ins.pol);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execGetValue(cx, ins.a, ins.b, ins.pol));
+          continue;
 
         // ===== Structure subterm matching =====
         case Opcode.unifyVariable:
-          {
-            final o = execUnifyVariable(cx, ins.a, ins.pol);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execUnifyVariable(cx, ins.a, ins.pol));
+          continue;
 
         case Opcode.unifyConstant:
-          {
-            final o = execUnifyConstant(cx, _k(ins.k));
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execUnifyConstant(cx, _k(ins.k)));
+          continue;
 
         case Opcode.unifyVoid:
-          {
-            // A goal writer at a head `_` fails ([OpExecutors.execUnifyVoid]).
-            final o = execUnifyVoid(cx, ins.a);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          // A goal writer at a head `_` fails ([OpExecutors.execUnifyVoid]).
+          pc = route(execUnifyVoid(cx, ins.a));
+          continue;
 
         case Opcode.unifyStructure:
-          {
-            final o = execUnifyStructure(cx, ins.k as String, ins.a);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execUnifyStructure(cx, ins.k as String, ins.a));
+          continue;
 
         // ===== BODY argument setup =====
         case Opcode.putVariable:
@@ -706,66 +624,28 @@ class ByteRunner with OpExecutors implements GoalRunner {
 
         // ===== Guards =====
         case Opcode.guard:
-          {
-            if (execGuard(cx, ins.k as String, ins.a).kind ==
-                StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execGuard(cx, ins.k as String, ins.a));
+          continue;
 
         case Opcode.ground:
-          {
-            if (execGround(cx, ins.a).kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execGround(cx, ins.a));
+          continue;
 
         case Opcode.known:
-          {
-            if (execKnown(cx, ins.a).kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execKnown(cx, ins.a));
+          continue;
 
         case Opcode.unknown:
-          {
-            final o = execUnknown(cx, ins.a);
-            if (o.kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execUnknown(cx, ins.a));
+          continue;
 
         case Opcode.noReaders:
-          {
-            if (execNoReaders(cx, ins.a).kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execNoReaders(cx, ins.a));
+          continue;
 
         case Opcode.groundEqual:
-          {
-            if (execGroundEqual(cx, ins.a, ins.b).kind == StepKind.nextClause) {
-              pc = _applyNextClauseByte(cx, opStart);
-              continue;
-            }
-            pc = after;
-            continue;
-          }
+          pc = route(execGroundEqual(cx, ins.a, ins.b));
+          continue;
 
         // ===== Goal spawning / control =====
         case Opcode.spawn:
@@ -797,9 +677,9 @@ class ByteRunner with OpExecutors implements GoalRunner {
     return RunResult.terminated;
   }
 
-  /// Spawn a body goal. Mirrors the object runner's `Spawn` arm but resolves the
-  /// `proc` symbol index to a CALLEE ENTRY BYTE OFFSET via [CodeImage], and
-  /// enqueues a `GoalRef` carrying that byte offset. Returns a [RunResult] only
+  /// Spawn a body goal: resolve the `proc` symbol index to the callee's entry
+  /// byte offset via [CodeImage], and enqueue a `GoalRef` carrying that byte
+  /// offset. Returns a [RunResult] only
   /// on a terminal outcome (kernel abort or unresolved symbol); otherwise null
   /// (advance).
   RunResult? _spawn(RunnerContext cx, int procIndex, int arity) {
@@ -808,8 +688,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
     final symbol = image.symbolAt(procIndex);
 
     if (!symbol.compiled) {
-      // Codeless symbol — a runtime body kernel bound by name (same fallback as
-      // the object Spawn handler).
+      // Codeless symbol — a runtime body kernel bound by name.
       final kernel = cx.rt.bodyKernels.lookup(symbol.name, arity);
       if (kernel != null) {
         final args = <Object?>[];
@@ -823,15 +702,6 @@ class ByteRunner with OpExecutors implements GoalRunner {
         if (result == BodyKernelResult.abort) {
           print('ERROR: Body kernel ${symbol.name}/$arity aborted');
           return RunResult.terminated;
-        }
-        if (result == BodyKernelResult.fail) {
-          // The predicate does not hold of its arguments: the goal fails and
-          // joins F, exactly as a spawned goal with no procedure does below.
-          final call = _callText(symbol.name, arity, cx);
-          cx.rt.failedGoals.add(call);
-          print('ERROR: goal failed: $call');
-          cx.argSlots.clear();
-          return null;
         }
         cx.argSlots.clear();
         return null;
@@ -871,22 +741,14 @@ class ByteRunner with OpExecutors implements GoalRunner {
 
     // Format the spawned goal for the reduction trace, where the run keeps one.
     if (cx.tracing) {
-      final args = <String>[];
-      for (var i = 0; i < 10; i++) {
-        final term = newEnv.arg(i);
-        if (term == null) break;
-        args.add(cx.termFormatter != null
-            ? cx.termFormatter!(term)
-            : term.toString());
-      }
-      cx.spawnedGoals.add(
-          args.isEmpty ? symbol.name : '${symbol.name}(${args.join(', ')})');
+      cx.spawnedGoals.add(formatGoalText(symbol.name, newEnv.arg, (term) =>
+          cx.termFormatter != null ? cx.termFormatter!(term) : term.toString()));
     }
 
     cx.rt.setGoalEnv(newGoalId, newEnv);
 
     // Inherit the parent's program key so the scheduler routes the child to the
-    // same (byte) runner (mirrors the object Spawn handler).
+    // same runner.
     final parentProgram = cx.rt.getGoalProgram(cx.goalId);
     if (parentProgram != null) {
       cx.rt.setGoalProgram(newGoalId, parentProgram);
@@ -915,8 +777,8 @@ class ByteRunner with OpExecutors implements GoalRunner {
     return args.isEmpty ? '$name/$arity' : '$name(${args.join(', ')})';
   }
 
-  /// Tail call (`Requeue`). Mirrors the object runner's `Requeue` arm but jumps
-  /// to the callee's entry BYTE OFFSET. Returns `(result, nextPc)`: a non-null
+  /// Tail call (`Requeue`): jump to the callee's entry byte offset. Returns
+  /// `(result, nextPc)`: a non-null
   /// `result` is terminal (`yielded` on a fairness yield, `terminated` on an
   /// unresolved symbol); a non-null `nextPc` is the byte offset to continue the
   /// in-line tail call from; both null means advance.
@@ -937,16 +799,10 @@ class ByteRunner with OpExecutors implements GoalRunner {
     final tracing = cx.tracing;
     String? newHeadGoalStr;
     if (tracing) {
-      final args = <String>[];
-      for (var i = 0; i < 10; i++) {
-        final term = cx.argSlots[i];
-        if (term == null) break;
-        args.add(cx.termFormatter != null
-            ? cx.termFormatter!(term)
-            : term.toString());
-      }
-      newHeadGoalStr =
-          args.isEmpty ? symbol.name : '${symbol.name}(${args.join(', ')})';
+      newHeadGoalStr = formatGoalText(symbol.name, (i) => cx.argSlots[i],
+          (term) => cx.termFormatter != null
+              ? cx.termFormatter!(term)
+              : term.toString());
       cx.spawnedGoals.add(newHeadGoalStr);
 
       final body = cx.spawnedGoals.join(', ');

@@ -1,12 +1,10 @@
 /// GLP Engine - Embeddable GLP Execution Core
 ///
-/// Extracted from glp_repl.dart to provide a single, reusable implementation
-/// for running GLP programs. Used by:
-/// - REPL (CLI wrapper)
-/// - IsolateManager (madGLP agent isolates)
-/// - Tests
-///
-/// This is the ONE way to run GLP programs.
+/// The one implementation of loading and running GLP programs: a runtime, a
+/// compiler and the root self.glp, which checks, links and compiles a source
+/// handed to it, posts a goal to the machine and runs it.  Used by the REPL
+/// (bin/glp_repl.dart), the madGLP hosts (multiagent/agent_runtime.dart,
+/// multiagent/isolate_manager.dart) and the tests.
 library;
 
 import 'dart:io';
@@ -150,26 +148,14 @@ class _UnitEntryPoints {
 /// Module info for tracking loaded modules
 class ModuleInfo {
   final String name;
-  final BytecodeProgram program;
-  final bool hasExports;
-  final Set<String> exportedLabels;  // e.g., {'append/3', 'member/2'}
 
-  /// True when the source has no `-module(...)` directive.
-  /// Top-level programs (boot files, user programs) have all labels visible.
-  /// Only explicitly declared modules have export-boundary filtering.
-  final bool isTopLevel;
-
-  ModuleInfo({required this.name, required this.program, required this.hasExports, this.exportedLabels = const {}, this.isTopLevel = false});
+  ModuleInfo({required this.name});
 }
 
 /// GLP Engine - the embeddable core for running GLP programs
 class GlpEngine {
   final GlpCompiler _compiler = GlpCompiler();
   final GlpRuntime _runtime = GlpRuntime();
-
-  /// Module VALUE per loaded unit — its artefact (h(M) + code) as the heap
-  /// `Module` constant, built at load.
-  final Map<String, rt.ModuleTerm> _loadedModuleValues = {};
 
   /// The loaded app's module value — what a REPL goal carries. Root self.glp is
   /// not an app, so it never sets this.
@@ -179,7 +165,6 @@ class GlpEngine {
   /// `Module` constant `self_module` returns. Null if no app unit is loaded.
   rt.ModuleTerm? get appModule => _appModule;
   final Map<String, BytecodeProgram> _loadedPrograms = {};
-  final Map<String, ModuleInfo> _loadedModules = {};
 
   /// The entry points of each unit the engine holds, by the name it was
   /// loaded under, with the scope they were declared in: what a source handed
@@ -203,8 +188,9 @@ class GlpEngine {
   /// named from (TGLP modules.tex, Compilation, third step; [modulePathName]).
   String get _rootDir => File(_rootSelfGlpPath).parent.absolute.path;
 
-  /// For madGLP: the MadContext for this engine
-  MadContext? madContext;
+  /// For madGLP: the MadContext for this engine, the runtime's
+  /// ([GlpRuntime.madContext]), set by [enableMadGLP].
+  MadContext? get madContext => _runtime.madContext;
 
   /// The person's identity the runtime holds (Secure GLP §Assumptions: `sign`
   /// succeeds only under a key whose private half the runtime holds for its
@@ -221,14 +207,14 @@ class GlpEngine {
   Map<String, BytecodeProgram> get loadedPrograms =>
       Map.unmodifiable(_loadedPrograms);
 
-  /// Constructor - registers standard predicates and loads root self.glp.
-  ///
-  /// [rootSelfGlpPath] is the absolute path to programs/self.glp.
-  /// Loading root self.glp is not optional — it's part of engine initialization.
   /// The absolute path to programs/self.glp, for callers that build a scope of
   /// their own — the vGLP emitter does.
   String get rootSelfGlpPath => _rootSelfGlpPath;
 
+  /// Constructor - registers standard predicates and loads root self.glp.
+  ///
+  /// [rootSelfGlpPath] is the absolute path to programs/self.glp.
+  /// Loading root self.glp is not optional — it's part of engine initialization.
   GlpEngine({required String rootSelfGlpPath, PersonIdentity? identity}) {
     _rootSelfGlpPath = rootSelfGlpPath;
     _runtime.identity = identity ?? PersonIdentity.generate();
@@ -256,7 +242,6 @@ class GlpEngine {
   void clear() {
     // Clear everything but the root, linked once at construction.
     _loadedPrograms.clear();
-    _loadedModules.clear();
     _unitEntryPoints.clear();
   }
 
@@ -290,7 +275,7 @@ class GlpEngine {
     }
     try {
       final linked = checkedRootProgram(root);
-      _rootCode = GlpCompiler().compileProgram(linked.program,
+      _rootCode = _compiler.compileProgram(linked.program,
           procDeclarations: linked.procDeclarations,
           typeEnv: linked.checkedEnv);
       // The root's declared table, keyed as its code carries each procedure,
@@ -539,12 +524,10 @@ class GlpEngine {
     _refuseRedefinitionByLaterLoad(name, program);
     _loadedPrograms[name] = program;
     if (moduleValue != null) {
-      _loadedModuleValues[name] = moduleValue;
       _appModule = moduleValue;
     }
 
-    final moduleInfo = _extractModuleInfo(source, program, name);
-    _loadedModules[moduleInfo.name] = moduleInfo;
+    final moduleInfo = _extractModuleInfo(name);
 
     // Its entry points, every procedure it defines, declared in the scope it
     // was checked in ([scope]), which is what a goal posted to it is checked
@@ -761,7 +744,6 @@ class GlpEngine {
     final moduleValue =
         _moduleValueOf(_baseName(programDir), program, linked, modules,
             directory: Directory(programDir).absolute.path);
-    _loadedModuleValues['__program__'] = moduleValue;
     _appModule = moduleValue;
 
     // Its entry points, the exports of its self.glp, declared in the scope
@@ -810,7 +792,7 @@ class GlpEngine {
       for (final entry in posted.variables.entries) {
         final varName = entry.key;
         final writerId = entry.value;
-        if (_runtime.heap.isBound(writerId)) {
+        if (_runtime.heap.isFullyBound(writerId)) {
           final varRef = rt.VarRef(writerId);
           bindings[varName] = _runtime.heap.dereference(varRef);
         } else {
@@ -936,7 +918,6 @@ class GlpEngine {
     ];
     final scheduler =
         Scheduler(rt: _runtime, runners: {'main': ByteRunner(image)});
-    scheduler.resetDisplayNumbering();
 
     final queryVarWriters = <String, HeapCell>{};
     final varNameToId = <String, HeapCell>{};
@@ -966,13 +947,8 @@ class GlpEngine {
       final args = goals[g].args;
       final argSlots = <int, rt.Term>{};
       for (int i = 0; i < args.length; i++) {
-        if (conjunction) {
-          _setupConjunctionArg(
-              _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
-        } else {
-          _setupArgument(
-              _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
-        }
+        _setupArgument(
+            _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
       }
 
       // Each goal's id is the runtime's next, as every goal's is.
@@ -1041,9 +1017,7 @@ class GlpEngine {
   /// to the network") and global_send/3 (IGLP Definition "global_send
   /// Predicate") --- are the root self.glp's, loaded at construction.
   void enableMadGLP({required String agentId}) {
-    madContext = MadContext(agentId: agentId, runtime: _runtime);
-    // Make madContext accessible from body kernels via runtime
-    _runtime.madContext = madContext;
+    _runtime.madContext = MadContext(agentId: agentId, runtime: _runtime);
   }
 
   /// In madGLP mode, the Sends that end a goal's run (IGLP, Definition madGLP
@@ -1415,34 +1389,14 @@ class GlpEngine {
         name: moduleName, declaredTypes: declaredTypes, directory: directory);
   }
 
-  ModuleInfo _extractModuleInfo(
-      String source, BytecodeProgram program, String filename) {
+  ModuleInfo _extractModuleInfo(String filename) {
     // A module's name is its path from the root (TGLP modules.tex,
     // Compilation, third step; [modulePathName]): a self.glp's is its
     // directory's.  A source with no file keeps the name it was loaded under.
-    // Every loaded module is top-level — a single-module program exports all
-    // its procedures (modules.tex sec:static-linking).
     final String name = File(filename).existsSync()
         ? modulePathName(filename, _rootDir)
         : _moduleNameFromFilename(filename);
-    const isTopLevel = true;
-
-    // Detect exported procedures from `exported procedure` declarations.
-    // Extract functor names, then find matching labels in the compiled program.
-    final exportedLabels = <String>{};
-    final exportPattern = RegExp(r'exported\s+procedure\s+(\w+)\s*\(');
-    for (final match in exportPattern.allMatches(source)) {
-      final functor = match.group(1)!;
-      // Find the label with this functor (functor/arity format)
-      for (final label in program.labels.keys) {
-        if (label.startsWith('$functor/')) {
-          exportedLabels.add(label);
-        }
-      }
-    }
-    final hasExports = exportedLabels.isNotEmpty;
-
-    return ModuleInfo(name: name, program: program, hasExports: hasExports, exportedLabels: exportedLabels, isTopLevel: isTopLevel);
+    return ModuleInfo(name: name);
   }
 
   String _moduleNameFromFilename(String filename) {
@@ -1497,75 +1451,21 @@ class GlpEngine {
       final listValue =
           _buildListTerm(runtime, arg, queryVarWriters, varNameToId);
       if (listValue is rt.ConstTerm) {
-        runtime.heap.bindWriterConst(writerId, listValue.value);
+        runtime.heap.bindVariableConst(writerId, listValue.value);
       } else if (listValue is rt.StructTerm) {
-        runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
+        runtime.heap.bindVariableStruct(writerId, listValue.functor, listValue.args);
       }
       argSlots[argSlot] = rt.VarRef(readerId);
     } else if (arg is ConstTerm) {
       final (writerId, readerId) = runtime.heap.allocateVariable();
-      runtime.heap.bindWriterConst(writerId, arg.value);
+      runtime.heap.bindVariableConst(writerId, arg.value);
       argSlots[argSlot] = rt.VarRef(readerId);
     } else if (arg is StructTerm) {
       final (writerId, readerId) = runtime.heap.allocateVariable();
       final structValue =
           _buildStructTerm(runtime, arg, queryVarWriters, varNameToId)
               as rt.StructTerm;
-      runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
-      argSlots[argSlot] = rt.VarRef(readerId);
-    } else {
-      throw Exception('Unsupported argument type: ${arg.runtimeType}');
-    }
-  }
-
-  void _setupConjunctionArg(
-    GlpRuntime runtime,
-    Term arg,
-    int argSlot,
-    Map<int, rt.Term> argSlots,
-    Map<String, HeapCell> queryVarWriters,
-    Map<String, HeapCell> varNameToId,
-  ) {
-    if (arg is VarTerm) {
-      final baseName = arg.name;
-      final existingId = varNameToId[baseName];
-
-      if (existingId != null) {
-        argSlots[argSlot] = rt.VarRef(
-            arg.isReader ? runtime.heap.pairedReaderAddr(existingId) : existingId);
-      } else {
-        final (writerId, readerId) = runtime.heap.allocateVariable();
-        varNameToId[baseName] = writerId;
-
-        // A goal variable is reported whichever occurrence meets it first,
-        // writer or reader: the outcome of the run gives every variable of
-        // the initial goal its value (GLP-Spec glp.tex, Definition "cGLP
-        // Proper Run, Outcome"), read at its writer.  One met only as a
-        // reader is never bound and is reported unbound.
-        queryVarWriters[baseName] = writerId;
-
-        argSlots[argSlot] = rt.VarRef(arg.isReader ? readerId : writerId);
-      }
-    } else if (arg is ListTerm) {
-      final (writerId, readerId) = runtime.heap.allocateVariable();
-      final listValue =
-          _buildListTermForConj(runtime, arg, queryVarWriters, varNameToId);
-      if (listValue is rt.ConstTerm) {
-        runtime.heap.bindWriterConst(writerId, listValue.value);
-      } else if (listValue is rt.StructTerm) {
-        runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
-      }
-      argSlots[argSlot] = rt.VarRef(readerId);
-    } else if (arg is ConstTerm) {
-      final (writerId, readerId) = runtime.heap.allocateVariable();
-      runtime.heap.bindWriterConst(writerId, arg.value);
-      argSlots[argSlot] = rt.VarRef(readerId);
-    } else if (arg is StructTerm) {
-      final (writerId, readerId) = runtime.heap.allocateVariable();
-      final structValue =
-          _buildStructTermForConj(runtime, arg, queryVarWriters, varNameToId)
-              as rt.StructTerm;
-      runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
+      runtime.heap.bindVariableStruct(writerId, structValue.functor, structValue.args);
       argSlots[argSlot] = rt.VarRef(readerId);
     } else {
       throw Exception('Unsupported argument type: ${arg.runtimeType}');
@@ -1583,7 +1483,7 @@ class GlpEngine {
     for (final arg in struct.args) {
       if (arg is ConstTerm) {
         final (writerId, readerId) = runtime.heap.allocateVariable();
-        runtime.heap.bindWriterConst(writerId, arg.value);
+        runtime.heap.bindVariableConst(writerId, arg.value);
         argTerms.add(rt.VarRef(readerId));
       } else if (arg is VarTerm) {
         final baseName = arg.name;
@@ -1603,14 +1503,14 @@ class GlpEngine {
       } else if (arg is ListTerm) {
         if (arg.isNil) {
           final (writerId, readerId) = runtime.heap.allocateVariable();
-          runtime.heap.bindWriterConst(writerId, rt.nil);
+          runtime.heap.bindVariableConst(writerId, rt.nil);
           argTerms.add(rt.VarRef(readerId));
         } else {
           final (writerId, readerId) = runtime.heap.allocateVariable();
           final listValue =
               _buildListTerm(runtime, arg, queryVarWriters, varNameToId)
                   as rt.StructTerm;
-          runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
+          runtime.heap.bindVariableStruct(writerId, listValue.functor, listValue.args);
           argTerms.add(rt.VarRef(readerId));
         }
       } else if (arg is StructTerm) {
@@ -1618,7 +1518,7 @@ class GlpEngine {
         final structValue =
             _buildStructTerm(runtime, arg, queryVarWriters, varNameToId)
                 as rt.StructTerm;
-        runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
+        runtime.heap.bindVariableStruct(writerId, structValue.functor, structValue.args);
         argTerms.add(rt.VarRef(readerId));
       } else if (arg is UnderscoreTerm) {
         argTerms.add(_anonymousWriter(runtime, arg));
@@ -1644,64 +1544,6 @@ class GlpEngine {
     }
     final (writerId, _) = runtime.heap.allocateVariable();
     return rt.VarRef(writerId);
-  }
-
-  rt.Term _buildStructTermForConj(
-    GlpRuntime runtime,
-    StructTerm struct,
-    Map<String, HeapCell> queryVarWriters,
-    Map<String, HeapCell> varNameToId,
-  ) {
-    final argTerms = <rt.Term>[];
-
-    for (final arg in struct.args) {
-      if (arg is ConstTerm) {
-        final (writerId, readerId) = runtime.heap.allocateVariable();
-        runtime.heap.bindWriterConst(writerId, arg.value);
-        argTerms.add(rt.VarRef(readerId));
-      } else if (arg is VarTerm) {
-        final baseName = arg.name;
-        final existingId = varNameToId[baseName];
-
-        if (existingId != null) {
-          argTerms.add(rt.VarRef(arg.isReader
-              ? runtime.heap.pairedReaderAddr(existingId)
-              : existingId));
-        } else {
-          final (writerId, readerId) = runtime.heap.allocateVariable();
-          varNameToId[baseName] = writerId;
-          // Reported whichever occurrence meets it first (_setupArgument).
-          queryVarWriters[baseName] = writerId;
-          argTerms.add(arg.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId));
-        }
-      } else if (arg is ListTerm) {
-        if (arg.isNil) {
-          final (writerId, readerId) = runtime.heap.allocateVariable();
-          runtime.heap.bindWriterConst(writerId, rt.nil);
-          argTerms.add(rt.VarRef(readerId));
-        } else {
-          final (writerId, readerId) = runtime.heap.allocateVariable();
-          final listValue =
-              _buildListTermForConj(runtime, arg, queryVarWriters, varNameToId)
-                  as rt.StructTerm;
-          runtime.heap.bindWriterStruct(writerId, listValue.functor, listValue.args);
-          argTerms.add(rt.VarRef(readerId));
-        }
-      } else if (arg is StructTerm) {
-        final (writerId, readerId) = runtime.heap.allocateVariable();
-        final structValue =
-            _buildStructTermForConj(runtime, arg, queryVarWriters, varNameToId)
-                as rt.StructTerm;
-        runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
-        argTerms.add(rt.VarRef(readerId));
-      } else if (arg is UnderscoreTerm) {
-        argTerms.add(_anonymousWriter(runtime, arg));
-      } else {
-        throw Exception('Unsupported struct argument type: ${arg.runtimeType}');
-      }
-    }
-
-    return rt.StructTerm(struct.functor, argTerms);
   }
 
   rt.Term _buildListTerm(
@@ -1767,93 +1609,6 @@ class GlpEngine {
         tailTerm = rt.ConstTerm(tail.value);
       } else if (tail is StructTerm) {
         tailTerm = _buildStructTerm(runtime, tail, queryVarWriters, varNameToId);
-      } else if (tail is UnderscoreTerm) {
-        tailTerm = _anonymousWriter(runtime, tail);
-      } else {
-        throw Exception('Unsupported list tail type: ${tail.runtimeType}');
-      }
-      return tailTerm;
-    }
-
-    // The list along its spine, in a loop, and each element by recursion,
-    // as the checker walks it: a list of any length is built in constant
-    // stack depth (TGLP well-typing.tex, Definition "Well-Typed Clause",
-    // puts no bound on a term's size; GLP #9 Cowork, 2026-10-20 09:22 UTC,
-    // item 3).  The elements are built first to last and the tail after
-    // them, so the variables are allocated in the order they are written.
-    final elements = <rt.Term>[];
-    Term? rest = list;
-    while (rest is ListTerm && !rest.isNil) {
-      elements.add(element(rest.head));
-      rest = rest.tail;
-    }
-    var built = rest is ListTerm ? rt.ConstTerm(rt.nil) as rt.Term : ending(rest);
-    for (var i = elements.length - 1; i >= 0; i--) {
-      built = rt.StructTerm('.', [elements[i], built]);
-    }
-    return built;
-  }
-
-  rt.Term _buildListTermForConj(
-    GlpRuntime runtime,
-    ListTerm list,
-    Map<String, HeapCell> queryVarWriters,
-    Map<String, HeapCell> varNameToId,
-  ) {
-    // An element of the list.
-    rt.Term element(Term? head) {
-      rt.Term headTerm;
-      if (head is ConstTerm) {
-        headTerm = rt.ConstTerm(head.value);
-      } else if (head is VarTerm) {
-        final baseName = head.name;
-        final existingId = varNameToId[baseName];
-        if (existingId != null) {
-          headTerm = rt.VarRef(head.isReader
-              ? runtime.heap.pairedReaderAddr(existingId)
-              : existingId);
-        } else {
-          final (writerId, readerId) = runtime.heap.allocateVariable();
-          varNameToId[baseName] = writerId;
-          // Reported whichever occurrence meets it first (_setupArgument).
-          queryVarWriters[baseName] = writerId;
-          headTerm = head.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
-        }
-      } else if (head is ListTerm) {
-        headTerm = _buildListTermForConj(runtime, head, queryVarWriters, varNameToId);
-      } else if (head is StructTerm) {
-        headTerm =
-            _buildStructTermForConj(runtime, head, queryVarWriters, varNameToId);
-      } else if (head is UnderscoreTerm) {
-        headTerm = _anonymousWriter(runtime, head);
-      } else {
-        throw Exception('Unsupported list head type: ${head.runtimeType}');
-      }
-      return headTerm;
-    }
-
-    // The tail as written ([_buildListTerm]).
-    rt.Term ending(Term? tail) {
-      rt.Term tailTerm;
-      if (tail is VarTerm) {
-        final baseName = tail.name;
-        final existingId = varNameToId[baseName];
-        if (existingId != null) {
-          tailTerm = rt.VarRef(tail.isReader
-              ? runtime.heap.pairedReaderAddr(existingId)
-              : existingId);
-        } else {
-          final (writerId, readerId) = runtime.heap.allocateVariable();
-          varNameToId[baseName] = writerId;
-          // Reported whichever occurrence meets it first (_setupArgument).
-          queryVarWriters[baseName] = writerId;
-          tailTerm = tail.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
-        }
-      } else if (tail is ConstTerm) {
-        tailTerm = rt.ConstTerm(tail.value);
-      } else if (tail is StructTerm) {
-        tailTerm =
-            _buildStructTermForConj(runtime, tail, queryVarWriters, varNameToId);
       } else if (tail is UnderscoreTerm) {
         tailTerm = _anonymousWriter(runtime, tail);
       } else {

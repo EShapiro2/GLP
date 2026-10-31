@@ -38,12 +38,12 @@ class CommitOps {
       // Skip null values (writer declared but not bound in HEAD)
       if (value == null) continue;
 
-      // Handle VarRef per spec Section 5.3:
+      // Handle VarRef (IGLP app:in-heap, Binding):
       // - If reader address: use bindWriterToReader directly (no deref)
       // - If writer address: deref to get bound value, or error if unbound
       if (value is VarRef) {
         if (heap.isReader(value.addr)) {
-          // Bind writer to another variable via reader - per spec Section 5.3
+          // Bind writer to another variable via reader (IGLP app:in-heap, Binding)
           final acts = heap.bindWriterToReader(varId, value.addr);
           activations.addAll(acts);
           continue;

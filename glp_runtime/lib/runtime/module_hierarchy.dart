@@ -1,12 +1,8 @@
 /// Module hierarchy: self.glp chain discovery and type scope assembly.
 ///
-/// Implements GLP module scoping per docs/modules/glp-module-system-spec.md:
-/// - Directory-based hierarchy (Section 2)
-/// - Implicit ancestor scoping (Section 3.1)
-/// - Shadowing (Section 3.2)
-/// - Sibling isolation (Section 3.3)
-///
-/// Specification: docs/modules/glp-module-system-spec.md Sections 2-3
+/// Implements GLP module scoping as TGLP's module system defines it
+/// (modules.tex, "Scope construction"): the directory-based hierarchy,
+/// implicit ancestor scoping, shadowing and sibling isolation.
 
 import 'dart:io';
 import 'package:path/path.dart' as ppath;
@@ -153,7 +149,7 @@ String selfGlpSource(String path) =>
 ///   directory — so intermediate ancestor `self.glp` files between the load
 ///   point and `programs/` are included. The root `programs/self.glp` itself is
 ///   NOT collected here (it is realised by the root-scope mechanism). When null,
-///   the legacy bound applies: the walk stops at `rootDir` (inclusive).  A
+///   the walk stops at `rootDir` (inclusive).  A
 ///   target outside [programsDir] has an empty chain here; the program it
 ///   belongs to is refused before its chain is asked for ([requireUnderRoot]).
 ///
@@ -166,7 +162,7 @@ List<String> discoverSelfChain({
   // Normalize paths
   final root = Directory(rootDir).absolute.path;
   final target = File(targetFile).absolute.path;
-  final targetName = target.split(Platform.pathSeparator).last;
+  final targetName = ppath.basename(target);
 
   // Determine the starting directory for the walk.
   // If the target IS self.glp, start from its parent (don't include itself).
@@ -208,7 +204,7 @@ List<String> discoverSelfChain({
       if (currentNorm == programsNorm) break;
       if (!ppath.isWithin(programsNorm, currentNorm)) break;
     } else {
-      // Legacy bound: stop once we have gone above rootDir.
+      // No programsDir: stop once we have gone above rootDir.
       if (currentNorm != rootNorm && !ppath.isWithin(rootNorm, currentNorm)) {
         break;
       }
@@ -216,12 +212,11 @@ List<String> discoverSelfChain({
 
     // A virtual self.glp ([isVirtualSelfGlp]) is a link of the chain as one
     // on disc is.
-    final selfGlp = File('$currentDir${Platform.pathSeparator}self.glp');
     if (hasSelfGlp(currentDir)) {
-      chain.add(selfGlp.absolute.path);
+      chain.add(ppath.join(currentDir, 'self.glp'));
     }
 
-    // Legacy inclusive stop at rootDir (only when not extending to programsDir).
+    // The inclusive stop at rootDir (only when not extending to programsDir).
     if (programsNorm == null && currentNorm == rootNorm) break;
 
     final parent = Directory(currentDir).parent.path;

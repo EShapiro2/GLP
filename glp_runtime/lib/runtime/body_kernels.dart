@@ -3,7 +3,8 @@
 /// Body kernels are runtime-implemented predicates that:
 /// - Execute inline (not spawned as separate goals)
 /// - Have two-valued semantics (success or abort)
-/// - Are only accessible to system predicates (assign.glp)
+/// - Are only accessible to system predicates (GLP-Spec appendix-guards,
+///   "Naming and admission of body kernels")
 /// - Expect all preconditions met (guards should verify before calling)
 ///
 /// Per IGLP app:in-heap, Variable pairs (the cell's tag gives its polarity):
@@ -38,14 +39,6 @@ enum BodyKernelResult {
 
   /// Kernel aborted - fatal error (e.g., type error, unbound reader)
   abort,
-
-  /// The predicate the kernel realises does not hold of its arguments: the
-  /// goal fails, as a goal with no matching clause does, and the computation
-  /// goes on (IGLP: a reduction succeeds, suspends, or fails). No kernel
-  /// returns it at present: `'_signature'/2` answers `unsigned` on a term that
-  /// is not a verified signed term, since a predicate that failed on a forgery
-  /// could not refuse one and carry on.
-  fail,
 }
 
 /// Body kernel function signature
@@ -53,6 +46,12 @@ typedef BodyKernel = BodyKernelResult Function(
   GlpRuntime rt,
   List<Object?> args,
 );
+
+/// A kernel's abort: [message] printed and [BodyKernelResult.abort] returned.
+BodyKernelResult kernelAbort(String message) {
+  print(message);
+  return BodyKernelResult.abort;
+}
 
 /// Registry of body kernels
 class BodyKernelRegistry {
@@ -174,8 +173,10 @@ num? _evaluateArithmetic(GlpRuntime rt, StructTerm struct) {
   }
 }
 
-/// Helper to bind result to output writer
-BodyKernelResult _bindResult(GlpRuntime rt, Object? outputArg, Object value) {
+/// Helper to bind result to output writer.  An abort names [kernel], the
+/// module kernels giving their own name ([registerModuleKernels]).
+BodyKernelResult bindResult(GlpRuntime rt, Object? outputArg, Object value,
+    {String kernel = 'Body kernel'}) {
   if (outputArg is VarRef && rt.heap.isWriter(outputArg.addr)) {
     final List<GoalRef> activations;
     if (value is Term) {
@@ -188,8 +189,7 @@ BodyKernelResult _bindResult(GlpRuntime rt, Object? outputArg, Object value) {
     }
     return BodyKernelResult.success;
   }
-  print('[ABORT] Body kernel: output argument is not a writer');
-  return BodyKernelResult.abort;
+  return kernelAbort('[ABORT] $kernel: output argument is not a writer');
 }
 
 // ============================================================================
@@ -198,98 +198,83 @@ BodyKernelResult _bindResult(GlpRuntime rt, Object? outputArg, Object value) {
 
 BodyKernelResult addKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] add/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] add/3: expected 3 arguments, got ${args.length}');
   }
   final x = _getNum(rt, args[0]);
   final y = _getNum(rt, args[1]);
   if (x == null || y == null) {
-    print('[ABORT] add/3: operands must be numbers');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] add/3: operands must be numbers');
   }
-  return _bindResult(rt, args[2], x + y);
+  return bindResult(rt, args[2], x + y);
 }
 
 BodyKernelResult subKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] sub/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] sub/3: expected 3 arguments, got ${args.length}');
   }
   final x = _getNum(rt, args[0]);
   final y = _getNum(rt, args[1]);
   if (x == null || y == null) {
-    print('[ABORT] sub/3: operands must be numbers');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] sub/3: operands must be numbers');
   }
-  return _bindResult(rt, args[2], x - y);
+  return bindResult(rt, args[2], x - y);
 }
 
 BodyKernelResult mulKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] mul/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] mul/3: expected 3 arguments, got ${args.length}');
   }
   final x = _getNum(rt, args[0]);
   final y = _getNum(rt, args[1]);
   if (x == null || y == null) {
-    print('[ABORT] mul/3: operands must be numbers');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] mul/3: operands must be numbers');
   }
-  return _bindResult(rt, args[2], x * y);
+  return bindResult(rt, args[2], x * y);
 }
 
 BodyKernelResult divKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] div/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] div/3: expected 3 arguments, got ${args.length}');
   }
   final x = _getNum(rt, args[0]);
   final y = _getNum(rt, args[1]);
   if (x == null || y == null) {
-    print('[ABORT] div/3: operands must be numbers');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] div/3: operands must be numbers');
   }
   if (y == 0) {
-    print('[ABORT] div/3: division by zero');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] div/3: division by zero');
   }
-  return _bindResult(rt, args[2], x / y);
+  return bindResult(rt, args[2], x / y);
 }
 
 BodyKernelResult idivKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] idiv/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] idiv/3: expected 3 arguments, got ${args.length}');
   }
   final x = _getNum(rt, args[0]);
   final y = _getNum(rt, args[1]);
   if (x == null || y == null || x is! int || y is! int) {
-    print('[ABORT] idiv/3: operands must be integers');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] idiv/3: operands must be integers');
   }
   if (y == 0) {
-    print('[ABORT] idiv/3: division by zero');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] idiv/3: division by zero');
   }
-  return _bindResult(rt, args[2], x ~/ y);
+  return bindResult(rt, args[2], x ~/ y);
 }
 
 BodyKernelResult modKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] mod/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] mod/3: expected 3 arguments, got ${args.length}');
   }
   final x = _getNum(rt, args[0]);
   final y = _getNum(rt, args[1]);
   if (x == null || y == null || x is! int || y is! int) {
-    print('[ABORT] mod/3: operands must be integers');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] mod/3: operands must be integers');
   }
   if (y == 0) {
-    print('[ABORT] mod/3: modulo by zero');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] mod/3: modulo by zero');
   }
-  return _bindResult(rt, args[2], x % y);
+  return bindResult(rt, args[2], x % y);
 }
 
 // ============================================================================
@@ -371,7 +356,7 @@ BodyKernelResult _functionKernel(
   }
   final value = expFunction(functor, xs);
   if (value == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[arity], value);
+  return bindResult(rt, args[arity], value);
 }
 
 // ============================================================================
@@ -461,18 +446,9 @@ Object? _deref(GlpRuntime rt, Object? term) {
 ///
 /// Public for the `global_send` callback ([MadContext]), which sends the value as `'_send'` does ([sendKernel]): a reader whose writer is assigned is its value, not a variable of the term sent (IGLP Implementation Notes, "Dereferencing" and "The global_send goal").
 Term deepDeref(GlpRuntime rt, Term term) {
-  // The term itself dereferenced: its value, or the unbound variable it is.
-  Term follow(Term t) {
-    var current = t;
-    while (current is VarRef) {
-      final val = rt.heap.getValue(current.addr);
-      if (val == null) return current; // Unbound variable
-      current = val;
-    }
-    return current;
-  }
-
-  final root = follow(term);
+  // The term itself dereferenced ([_deref]): its value, or the unbound
+  // variable it is.
+  final root = _deref(rt, term) as Term;
   if (root is! StructTerm) return root; // ConstTerm or unbound VarRef
   // Each frame: a structure, and its arguments dereferenced so far.
   final frames = <(StructTerm, List<Term>)>[(root, <Term>[])];
@@ -490,7 +466,7 @@ Term deepDeref(GlpRuntime rt, Term term) {
       built = copy;
       continue;
     }
-    final next = follow(source.args[args.length]);
+    final next = _deref(rt, source.args[args.length]) as Term;
     if (next is StructTerm) {
       frames.add((next, <Term>[]));
     } else {
@@ -531,16 +507,14 @@ List<Object?>? _glpListToDartList(GlpRuntime rt, Object? list) {
 
 BodyKernelResult listToTupleKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] list_to_tuple/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] list_to_tuple/2: expected 2 arguments, got ${args.length}');
   }
 
   final listArg = _deref(rt, args[0]);
   final items = _glpListToDartList(rt, listArg);
 
   if (items == null || items.isEmpty) {
-    print('[ABORT] list_to_tuple/2: first argument must be a non-empty list');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] list_to_tuple/2: first argument must be a non-empty list');
   }
 
   final functorTerm = items[0];
@@ -552,8 +526,7 @@ BodyKernelResult listToTupleKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   if (functor == null) {
-    print('[ABORT] list_to_tuple/2: first element must be an atom (functor)');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] list_to_tuple/2: first element must be an atom (functor)');
   }
 
   final structArgs = <Term>[];
@@ -563,20 +536,18 @@ BodyKernelResult listToTupleKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   final tuple = StructTerm(functor, structArgs);
-  return _bindResult(rt, args[1], tuple);
+  return bindResult(rt, args[1], tuple);
 }
 
 BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] tuple_to_list/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] tuple_to_list/2: expected 2 arguments, got ${args.length}');
   }
 
   final tupleArg = _deref(rt, args[0]);
 
   if (tupleArg is! StructTerm) {
-    print('[ABORT] tuple_to_list/2: first argument must be a structure');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] tuple_to_list/2: first argument must be a structure');
   }
 
   final items = <Object?>[ConstTerm(tupleArg.functor)];
@@ -585,7 +556,7 @@ BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   final list = _dartListToGlpList(items);
-  return _bindResult(rt, args[1], list);
+  return bindResult(rt, args[1], list);
 }
 
 // ============================================================================
@@ -594,11 +565,10 @@ BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
 
 BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] now/1: expected 1 argument, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] now/1: expected 1 argument, got ${args.length}');
   }
   final currentTime = DateTime.now().millisecondsSinceEpoch;
-  return _bindResult(rt, args[0], currentTime);
+  return bindResult(rt, args[0], currentTime);
 }
 
 /// `_self_module`/1 — module-as-value, producer half; the kernel behind the
@@ -611,16 +581,14 @@ BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
 /// no input. The inverse of `_run`/2.
 BodyKernelResult selfModuleKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] _self_module/1: expected 1 argument, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _self_module/1: expected 1 argument, got ${args.length}');
   }
   final goalId = rt.currentGoalId;
   final module = goalId == null ? null : rt.getGoalModule(goalId);
   if (module == null) {
-    print('[ABORT] _self_module/1: calling goal carries no module value');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _self_module/1: calling goal carries no module value');
   }
-  return _bindResult(rt, args[0], module);
+  return bindResult(rt, args[0], module);
 }
 
 /// `'_random'(Seed?, N?, Value, NextSeed)` — seeded random integer (GLP-ICLP
@@ -634,18 +602,15 @@ BodyKernelResult selfModuleKernel(GlpRuntime rt, List<Object?> args) {
 /// ground integer inputs with N ≥ 1, so the checks below are defensive.
 BodyKernelResult randomKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 4) {
-    print('[ABORT] random/4: expected 4 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] random/4: expected 4 arguments, got ${args.length}');
   }
   final seed = _getNum(rt, args[0]);
   final n = _getNum(rt, args[1]);
   if (seed == null || n == null || seed is! int || n is! int) {
-    print('[ABORT] random/4: Seed and N must be integers');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] random/4: Seed and N must be integers');
   }
   if (n < 1) {
-    print('[ABORT] random/4: bound N must be >= 1');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] random/4: bound N must be >= 1');
   }
   const int m = 2147483647; // 2^31 - 1
   const int a = 16807;
@@ -653,9 +618,9 @@ BodyKernelResult randomKernel(GlpRuntime rt, List<Object?> args) {
   if (s <= 0) s += m; // normalise into [1, m-1]; 0 would trap MINSTD at 0
   final int nextSeed = (a * s) % m;
   final int value = 1 + (nextSeed % n);
-  final r1 = _bindResult(rt, args[2], value);
+  final r1 = bindResult(rt, args[2], value);
   if (r1 != BodyKernelResult.success) return r1;
-  return _bindResult(rt, args[3], nextSeed);
+  return bindResult(rt, args[3], nextSeed);
 }
 
 // ============================================================================
@@ -664,42 +629,36 @@ BodyKernelResult randomKernel(GlpRuntime rt, List<Object?> args) {
 
 BodyKernelResult mutualRefKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] allocate_mutual_reference/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] allocate_mutual_reference/2: expected 2 arguments, got ${args.length}');
   }
 
   final output = _deref(rt, args[1]);
   if (output is! VarRef || !rt.heap.isWriter(output.addr)) {
-    print('[ABORT] allocate_mutual_reference/2: second argument must be an unbound writer');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] allocate_mutual_reference/2: second argument must be an unbound writer');
   }
 
   if (rt.heap.isFullyBound(output.addr)) {
-    print('[ABORT] allocate_mutual_reference/2: writer @${output.addr} is already bound');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] allocate_mutual_reference/2: writer @${output.addr} is already bound');
   }
 
   final mutualRef = MutualRefTerm(output.addr);
-  return _bindResult(rt, args[0], mutualRef);
+  return bindResult(rt, args[0], mutualRef);
 }
 
 BodyKernelResult streamAppendKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] kernel_stream_append/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] kernel_stream_append/3: expected 3 arguments, got ${args.length}');
   }
 
   final refArg = _deref(rt, args[0]);
   if (refArg is! MutualRefTerm) {
-    print('[ABORT] kernel_stream_append/3: first argument must be a MutualRef');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] kernel_stream_append/3: first argument must be a MutualRef');
   }
 
   final currentWriterAddr = refArg.currentWriterAddr;
 
   if (rt.heap.isFullyBound(currentWriterAddr)) {
-    print('[ABORT] kernel_stream_append/3: MutualRef points to already-bound writer @$currentWriterAddr');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] kernel_stream_append/3: MutualRef points to already-bound writer @$currentWriterAddr');
   }
 
   final value = _deref(rt, args[1]);
@@ -721,26 +680,23 @@ BodyKernelResult streamAppendKernel(GlpRuntime rt, List<Object?> args) {
   // Update MutualRef to point to the new tail's writer
   refArg.currentWriterAddr = newTailWriter;
 
-  return _bindResult(rt, args[2], refArg);
+  return bindResult(rt, args[2], refArg);
 }
 
 BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] kernel_close_mutual_reference/1: expected 1 argument, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] kernel_close_mutual_reference/1: expected 1 argument, got ${args.length}');
   }
 
   final refArg = _deref(rt, args[0]);
   if (refArg is! MutualRefTerm) {
-    print('[ABORT] kernel_close_mutual_reference/1: argument must be a MutualRef');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] kernel_close_mutual_reference/1: argument must be a MutualRef');
   }
 
   final currentWriterAddr = refArg.currentWriterAddr;
 
   if (rt.heap.isFullyBound(currentWriterAddr)) {
-    print('[ABORT] kernel_close_mutual_reference/1: MutualRef points to already-bound writer @$currentWriterAddr');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] kernel_close_mutual_reference/1: MutualRef points to already-bound writer @$currentWriterAddr');
   }
 
   final activations = rt.heap.bindVariable(currentWriterAddr, ConstTerm(nil));
@@ -772,15 +728,13 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
 /// The global name G determines the routing and message format.
 BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] \'_send\'/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_send\'/3: expected 3 arguments, got ${args.length}');
   }
 
   // Get MadContext from runtime
   final ctx = rt.madContext;
-  if (ctx == null || ctx is! MadContext) {
-    print('[ABORT] \'_send\'/3: not in madGLP mode (no MadContext)');
-    return BodyKernelResult.abort;
+  if (ctx == null) {
+    return kernelAbort('[ABORT] \'_send\'/3: not in madGLP mode (no MadContext)');
   }
 
   // Get term T (first argument)
@@ -792,19 +746,16 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
   // Get global name G (second argument) - should be _w(Agent, Index) or _r(Agent, Index)
   final globalNameArg = _deref(rt, args[1]);
   if (globalNameArg is! StructTerm) {
-    print('[ABORT] \'_send\'/3: second argument (G) must be a struct _w/2 or _r/2, got ${globalNameArg.runtimeType}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_send\'/3: second argument (G) must be a struct _w/2 or _r/2, got ${globalNameArg.runtimeType}');
   }
 
   // Parse the global name structure
   final functor = globalNameArg.functor;
   if (functor != '\'_w\'' && functor != '\'_r\'' && functor != '_w' && functor != '_r') {
-    print('[ABORT] \'_send\'/3: global name must be _w/2 or _r/2, got $functor');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_send\'/3: global name must be _w/2 or _r/2, got $functor');
   }
   if (globalNameArg.args.length != 2) {
-    print('[ABORT] \'_send\'/3: global name must have 2 arguments, got ${globalNameArg.args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_send\'/3: global name must have 2 arguments, got ${globalNameArg.args.length}');
   }
 
   // Extract agent from global name (first arg of _w/_r)
@@ -816,8 +767,7 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
     gnAgent = gnAgentArg;
   }
   if (gnAgent == null) {
-    print('[ABORT] \'_send\'/3: global name agent must be an atom, got $gnAgentArg');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_send\'/3: global name agent must be an atom, got $gnAgentArg');
   }
 
   // Extract index from global name (second arg of _w/_r)
@@ -829,8 +779,7 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
     gnIndex = (gnIndexArg.value as num).toInt();
   }
   if (gnIndex == null) {
-    print('[ABORT] \'_send\'/3: global name index must be a number, got $gnIndexArg');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_send\'/3: global name index must be a number, got $gnIndexArg');
   }
 
   // Get destination agent Q (third argument)
@@ -842,8 +791,7 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
     destAgent = destArg;
   }
   if (destAgent == null) {
-    print('[ABORT] \'_send\'/3: third argument (Q) must be an atom (destination agent), got $destArg');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_send\'/3: third argument (Q) must be an atom (destination agent), got $destArg');
   }
 
   // Determine if this is a writer or reader global name
@@ -868,20 +816,17 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
 /// performed. On refuse it drops the link. A refusal is accepted in every case.
 BodyKernelResult authoriseLinkKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] \'_authorise_link\'/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_authorise_link\'/2: expected 2 arguments, got ${args.length}');
   }
   final ctx = rt.madContext;
   if (ctx is! MadContext) {
-    print('[ABORT] \'_authorise_link\'/2: not in madGLP mode (no MadContext)');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_authorise_link\'/2: not in madGLP mode (no MadContext)');
   }
 
   final gn = _parseGroundGlobalName(rt, args[0]);
   if (gn == null) {
-    print('[ABORT] \'_authorise_link\'/2: first argument (L) must be '
+    return kernelAbort('[ABORT] \'_authorise_link\'/2: first argument (L) must be '
         "'_r'(P, I) or '_w'(P, I), got ${_deref(rt, args[0])}");
-    return BodyKernelResult.abort;
   }
 
   final answerArg = _deref(rt, args[1]);
@@ -892,9 +837,8 @@ BodyKernelResult authoriseLinkKernel(GlpRuntime rt, List<Object?> args) {
     answer = answerArg;
   }
   if (answer != 'authorise' && answer != 'refuse') {
-    print('[ABORT] \'_authorise_link\'/2: second argument (A) must be '
+    return kernelAbort('[ABORT] \'_authorise_link\'/2: second argument (A) must be '
         'authorise or refuse, got $answerArg');
-    return BodyKernelResult.abort;
   }
 
   ctx.answerLink(gn, answer == 'authorise');
@@ -935,7 +879,8 @@ GlobalName? _parseGroundGlobalName(GlpRuntime rt, Object? arg) {
       : GlobalName.reader(agent, index);
 }
 
-String _bytesToHex(List<int> bytes) {
+/// Lowercase hex of [bytes].
+String bytesToHex(List<int> bytes) {
   final sb = StringBuffer();
   for (final b in bytes) {
     sb.write((b & 0xff).toRadixString(16).padLeft(2, '0'));
@@ -961,8 +906,6 @@ String _bytesToHex(List<int> bytes) {
 // source identity of the signing instance's module and the ground term. The
 // signature is over those encoded bytes. The runtime supplies HSrc from the
 // calling goal's module value; the caller cannot choose it.
-
-String _hexOf(List<int> bytes) => _bytesToHex(bytes);
 
 Uint8List? _bytesOfHex(String hex) {
   if (hex.length.isOdd) return null;
@@ -990,12 +933,11 @@ PersonIdentity? _personIdentity(GlpRuntime rt, String kernel) {
 /// assigned the same one.
 BodyKernelResult selfKeyKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] _self_key/1: expected 1 argument, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _self_key/1: expected 1 argument, got ${args.length}');
   }
   final id = _personIdentity(rt, '_self_key/1');
   if (id == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[0], ConstTerm(id.pub.hex));
+  return bindResult(rt, args[0], ConstTerm(id.pub.hex));
 }
 
 /// '_sign'(T?, Key?, SignedTerm) — bind SignedTerm to the signed term of the
@@ -1005,31 +947,27 @@ BodyKernelResult selfKeyKernel(GlpRuntime rt, List<Object?> args) {
 /// here and not by the caller.
 BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] _sign/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _sign/3: expected 3 arguments, got ${args.length}');
   }
   final id = _personIdentity(rt, '_sign/3');
   if (id == null) return BodyKernelResult.abort;
 
   final key = _groundString(rt, args[1]);
   if (key == null) {
-    print('[ABORT] _sign/3: second argument (Key) must be a ground key, got '
+    return kernelAbort('[ABORT] _sign/3: second argument (Key) must be a ground key, got '
         '${_deref(rt, args[1])}');
-    return BodyKernelResult.abort;
   }
   if (key != id.pub.hex) {
-    print('[ABORT] _sign/3: the runtime holds no private key for $key; it '
+    return kernelAbort('[ABORT] _sign/3: the runtime holds no private key for $key; it '
         'signs only under ${id.pub.hex}, its own person\'s');
-    return BodyKernelResult.abort;
   }
 
   final goalId = rt.currentGoalId;
   final module = goalId == null ? null : rt.getGoalModule(goalId);
   final artefact = module is ModuleTerm ? module.artefact : null;
   if (artefact is! Artefact) {
-    print('[ABORT] _sign/3: the calling goal carries no module value, so the '
+    return kernelAbort('[ABORT] _sign/3: the calling goal carries no module value, so the '
         'signature has no module identity');
-    return BodyKernelResult.abort;
   }
   final hSrc = artefact.hM;
 
@@ -1038,8 +976,7 @@ BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
   try {
     wired = PayloadCodec.termToWire(term);
   } catch (e) {
-    print('[ABORT] _sign/3: term is not ground: $e');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _sign/3: term is not ground: $e');
   }
   final content =
       encodeTermToBytes(WStruct('sig', [WConst(WBlob(hSrc)), wired]));
@@ -1049,7 +986,7 @@ BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
   w.bytes(id.pub.bytes);
   w.bytes(signature);
   final signed = Uint8List.fromList([...w.toBytes(), ...content]);
-  return _bindResult(rt, args[2], ConstTerm(_hexOf(signed)));
+  return bindResult(rt, args[2], ConstTerm(bytesToHex(signed)));
 }
 
 /// '_signature'(S?, Signature) — take a signed term apart and report what it
@@ -1066,15 +1003,13 @@ BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
 /// first argument that is not known — as the other kernels do.
 BodyKernelResult signatureKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] _signature/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _signature/2: expected 2 arguments, got ${args.length}');
   }
   final s = _deref(rt, args[0]);
   if (s == null || s is VarRef) {
-    print('[ABORT] _signature/2: first argument is not known');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _signature/2: first argument is not known');
   }
-  return _bindResult(rt, args[1], _signatureOf(s));
+  return bindResult(rt, args[1], _signatureOf(s));
 }
 
 /// The constant `unsigned`: the Signature of what is not a verified signed term.
@@ -1120,7 +1055,7 @@ Term _signatureOf(Object s) {
   }
   if (!PersonIdentity.verify(signer, content, signature)) return _unsigned;
   return StructTerm(
-      'signed', [ConstTerm(signer.hex), ConstTerm(_hexOf(hSrc)), term]);
+      'signed', [ConstTerm(signer.hex), ConstTerm(bytesToHex(hSrc)), term]);
 }
 
 /// '_decompose_module'(Module?, Key, Hash, Hash) — take a module value apart:
@@ -1131,31 +1066,27 @@ Term _signatureOf(Object s) {
 /// A module refused a certificate has no compiler's key to give: an error.
 BodyKernelResult decomposeModuleKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 4) {
-    print('[ABORT] _decompose_module/4: expected 4 arguments, got '
+    return kernelAbort('[ABORT] _decompose_module/4: expected 4 arguments, got '
         '${args.length}');
-    return BodyKernelResult.abort;
   }
   final module = _deref(rt, args[0]);
   if (module is! ModuleTerm) {
-    print('[ABORT] _decompose_module/4: first argument is not a module value');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _decompose_module/4: first argument is not a module value');
   }
   final artefact = module.artefact;
   if (artefact is! Artefact) {
-    print('[ABORT] _decompose_module/4: module carries no artefact');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _decompose_module/4: module carries no artefact');
   }
   final cert = artefact.certificate;
   if (cert.isRefused) {
-    print('[ABORT] _decompose_module/4: module ${module.name} carries no '
+    return kernelAbort('[ABORT] _decompose_module/4: module ${module.name} carries no '
         'certificate (it was refused one, or no one compiled it for a person)');
-    return BodyKernelResult.abort;
   }
-  final r1 = _bindResult(rt, args[1], ConstTerm(_hexOf(cert.agent)));
+  final r1 = bindResult(rt, args[1], ConstTerm(bytesToHex(cert.agent)));
   if (r1 != BodyKernelResult.success) return r1;
-  final r2 = _bindResult(rt, args[2], ConstTerm(_hexOf(cert.hSrc)));
+  final r2 = bindResult(rt, args[2], ConstTerm(bytesToHex(cert.hSrc)));
   if (r2 != BodyKernelResult.success) return r2;
-  return _bindResult(rt, args[3], ConstTerm(_hexOf(cert.hBin)));
+  return bindResult(rt, args[3], ConstTerm(bytesToHex(cert.hBin)));
 }
 
 // =============================================================================
@@ -1174,36 +1105,31 @@ BodyKernelResult decomposeModuleKernel(GlpRuntime rt, List<Object?> args) {
 /// no file.
 BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] _load_file/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _load_file/2: expected 2 arguments, got ${args.length}');
   }
   final name = _groundString(rt, args[0]);
   if (name == null) {
-    print('[ABORT] _load_file/2: first argument (Name) must be a ground '
+    return kernelAbort('[ABORT] _load_file/2: first argument (Name) must be a ground '
         'string, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
   final goalId = rt.currentGoalId;
   final module = goalId == null ? null : rt.getGoalModule(goalId);
   final dir = module is ModuleTerm ? module.directory : null;
   if (dir == null) {
-    print('[ABORT] _load_file/2: the calling goal\'s module has no directory '
+    return kernelAbort('[ABORT] _load_file/2: the calling goal\'s module has no directory '
         'to resolve $name in (a module that arrived as a value has none)');
-    return BodyKernelResult.abort;
   }
   if (name.isEmpty ||
       name.startsWith('/') ||
       name.split('/').any((seg) => seg == '..' || seg.isEmpty)) {
-    print('[ABORT] _load_file/2: $name is not resolved within the calling '
+    return kernelAbort('[ABORT] _load_file/2: $name is not resolved within the calling '
         'module\'s directory: a name is relative to it, has no absolute form, '
         'and does not leave it');
-    return BodyKernelResult.abort;
   }
   final file = File('$dir/$name');
   if (!file.existsSync()) {
-    print('[ABORT] _load_file/2: no file $name in the calling module\'s '
+    return kernelAbort('[ABORT] _load_file/2: no file $name in the calling module\'s '
         'directory $dir');
-    return BodyKernelResult.abort;
   }
   final String base;
   final String resolved;
@@ -1211,22 +1137,20 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
     base = Directory(dir).resolveSymbolicLinksSync();
     resolved = file.resolveSymbolicLinksSync();
   } catch (e) {
-    print('[ABORT] _load_file/2: cannot resolve $name: $e');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] _load_file/2: cannot resolve $name: $e');
   }
   if (!resolved.startsWith('$base${Platform.pathSeparator}')) {
-    print('[ABORT] _load_file/2: $name is not resolved within the calling '
+    return kernelAbort('[ABORT] _load_file/2: $name is not resolved within the calling '
         'module\'s directory: it leaves $dir');
-    return BodyKernelResult.abort;
   }
 
   final bytes = file.readAsBytesSync();
   final artefact = Artefact.certifiedFromBytes(bytes);
   if (artefact != null) {
-    return _bindResult(
+    return bindResult(
         rt, args[1], ModuleTerm(artefact, name: artefact.moduleName));
   }
-  return _bindResult(
+  return bindResult(
       rt, args[1], ConstTerm(utf8.decode(bytes, allowMalformed: true)));
 }
 
@@ -1293,37 +1217,33 @@ String? _groundString(GlpRuntime rt, Object? arg) {
 /// ("One interface", 6ba0329).
 BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] \'_peer_address\'/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_peer_address\'/2: expected 2 arguments, got ${args.length}');
   }
 
   final name = _groundString(rt, args[0]);
   if (name == null) {
-    print('[ABORT] \'_peer_address\'/2: first argument (P) must be a ground '
+    return kernelAbort('[ABORT] \'_peer_address\'/2: first argument (P) must be a ground '
         'constant naming a peer, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
 
   final seam = _seamLayer(rt);
-  if (seam == null) return _bindResult(rt, args[1], ConstTerm('none'));
+  if (seam == null) return bindResult(rt, args[1], ConstTerm('none'));
 
   final PubKey pk;
   try {
     pk = PubKey.fromHex(name);
   } catch (e) {
-    print('[ABORT] \'_peer_address\'/2: peer name $name is not a 64-character '
+    return kernelAbort('[ABORT] \'_peer_address\'/2: peer name $name is not a 64-character '
         'hex public key: $e');
-    return BodyKernelResult.abort;
   }
 
   final String? address;
   try {
     address = seam.network.observedPeerAddress(pk);
   } on UnsupportedError catch (e) {
-    print('[ABORT] \'_peer_address\'/2: ${e.message}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_peer_address\'/2: ${e.message}');
   }
-  return _bindResult(
+  return bindResult(
       rt,
       args[1],
       address == null
@@ -1335,15 +1255,13 @@ BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
 /// layer is bound it returns having done nothing ("One interface", 6ba0329).
 BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] \'_punch_udp\'/1: expected 1 argument, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_punch_udp\'/1: expected 1 argument, got ${args.length}');
   }
 
   final address = _groundString(rt, args[0]);
   if (address == null) {
-    print('[ABORT] \'_punch_udp\'/1: argument (A) must be a ground constant '
+    return kernelAbort('[ABORT] \'_punch_udp\'/1: argument (A) must be a ground constant '
         'address, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
 
   final seam = _seamLayer(rt);
@@ -1352,8 +1270,7 @@ BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
   try {
     seam.network.punchUdp(address);
   } on UnsupportedError catch (e) {
-    print('[ABORT] \'_punch_udp\'/1: ${e.message}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_punch_udp\'/1: ${e.message}');
   }
   return BodyKernelResult.success;
 }
@@ -1372,27 +1289,23 @@ BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
 /// a writer no one held, never closed.
 BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
-    print('[ABORT] \'_place_declare\'/3: expected 3 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_place_declare\'/3: expected 3 arguments, got ${args.length}');
   }
 
   final place = _groundString(rt, args[0]);
   if (place == null) {
-    print('[ABORT] \'_place_declare\'/3: first argument (P) must be a ground '
+    return kernelAbort('[ABORT] \'_place_declare\'/3: first argument (P) must be a ground '
         'constant naming a place, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
   final radius = _getNum(rt, args[1]);
   if (radius == null) {
-    print('[ABORT] \'_place_declare\'/3: second argument (R) must be a ground '
+    return kernelAbort('[ABORT] \'_place_declare\'/3: second argument (R) must be a ground '
         'number of metres, got ${_deref(rt, args[1])}');
-    return BodyKernelResult.abort;
   }
 
   final stream = _deref(rt, args[2]);
   if (stream is! VarRef || !rt.heap.isWriter(stream.addr)) {
-    print('[ABORT] \'_place_declare\'/3: third argument (E) must be a writer');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_place_declare\'/3: third argument (E) must be a writer');
   }
 
   final seam = _seamLayer(rt);
@@ -1405,8 +1318,7 @@ BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
   try {
     seam.ctx.declarePlace(place, radius.toDouble(), stream.addr);
   } on UnsupportedError catch (e) {
-    print('[ABORT] \'_place_declare\'/3: ${e.message}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_place_declare\'/3: ${e.message}');
   }
   return BodyKernelResult.success;
 }
@@ -1417,15 +1329,13 @@ BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
 /// ("One interface", 6ba0329; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
 BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] \'_place_remove\'/1: expected 1 argument, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_place_remove\'/1: expected 1 argument, got ${args.length}');
   }
 
   final place = _groundString(rt, args[0]);
   if (place == null) {
-    print('[ABORT] \'_place_remove\'/1: argument (P) must be a ground constant '
+    return kernelAbort('[ABORT] \'_place_remove\'/1: argument (P) must be a ground constant '
         'naming a place, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
 
   final seam = _seamLayer(rt);
@@ -1437,8 +1347,7 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
   try {
     seam.ctx.removePlace(place);
   } on UnsupportedError catch (e) {
-    print('[ABORT] \'_place_remove\'/1: ${e.message}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_place_remove\'/1: ${e.message}');
   }
   return BodyKernelResult.success;
 }
@@ -1455,8 +1364,7 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
 /// done nothing ("One interface", 6ba0329).
 BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] \'_trust_declare\'/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_trust_declare\'/2: expected 2 arguments, got ${args.length}');
   }
 
   final underlay = switch (_groundString(rt, args[0])) {
@@ -1465,9 +1373,8 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
     _ => null,
   };
   if (underlay == null) {
-    print('[ABORT] \'_trust_declare\'/2: first argument (U) must be pan or '
+    return kernelAbort('[ABORT] \'_trust_declare\'/2: first argument (U) must be pan or '
         'lan, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
   final level = switch (_groundString(rt, args[1])) {
     'open' => TrustLevel.open,
@@ -1475,9 +1382,8 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
     _ => null,
   };
   if (level == null) {
-    print('[ABORT] \'_trust_declare\'/2: second argument (L) must be open or '
+    return kernelAbort('[ABORT] \'_trust_declare\'/2: second argument (L) must be open or '
         'closed, got ${_deref(rt, args[1])}');
-    return BodyKernelResult.abort;
   }
 
   final seam = _seamLayer(rt);
@@ -1486,8 +1392,7 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
   try {
     seam.network.setTrustLevel(underlay, level);
   } on UnsupportedError catch (e) {
-    print('[ABORT] \'_trust_declare\'/2: ${e.message}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_trust_declare\'/2: ${e.message}');
   }
   return BodyKernelResult.success;
 }
@@ -1520,15 +1425,13 @@ PubKey? _peerKey(GlpNetwork network, String name) {
 /// it returns having done nothing ("One interface", 6ba0329).
 BodyKernelResult peerDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] \'_peer_declare\'/1: expected 1 argument, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_peer_declare\'/1: expected 1 argument, got ${args.length}');
   }
 
   final name = _groundString(rt, args[0]);
   if (name == null) {
-    print('[ABORT] \'_peer_declare\'/1: argument (P) must be a ground constant '
+    return kernelAbort('[ABORT] \'_peer_declare\'/1: argument (P) must be a ground constant '
         'naming a peer, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
 
   final seam = _seamLayer(rt);
@@ -1536,16 +1439,14 @@ BodyKernelResult peerDeclareKernel(GlpRuntime rt, List<Object?> args) {
 
   final pk = _peerKey(seam.network, name);
   if (pk == null) {
-    print('[ABORT] \'_peer_declare\'/1: $name names no peer: neither a '
+    return kernelAbort('[ABORT] \'_peer_declare\'/1: $name names no peer: neither a '
         '64-character hex public key nor an agent the layer names');
-    return BodyKernelResult.abort;
   }
 
   try {
     seam.network.putKnownPeer(pk);
   } on UnsupportedError catch (e) {
-    print('[ABORT] \'_peer_declare\'/1: ${e.message}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_peer_declare\'/1: ${e.message}');
   }
   return BodyKernelResult.success;
 }
@@ -1562,21 +1463,18 @@ BodyKernelResult peerDeclareKernel(GlpRuntime rt, List<Object?> args) {
 /// done nothing ("One interface", 6ba0329).
 BodyKernelResult addressDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] \'_address_declare\'/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_address_declare\'/2: expected 2 arguments, got ${args.length}');
   }
 
   final name = _groundString(rt, args[0]);
   if (name == null) {
-    print('[ABORT] \'_address_declare\'/2: first argument (P) must be a ground '
+    return kernelAbort('[ABORT] \'_address_declare\'/2: first argument (P) must be a ground '
         'constant naming a peer, got ${_deref(rt, args[0])}');
-    return BodyKernelResult.abort;
   }
   final address = _groundString(rt, args[1]);
   if (address == null) {
-    print('[ABORT] \'_address_declare\'/2: second argument (A) must be a '
+    return kernelAbort('[ABORT] \'_address_declare\'/2: second argument (A) must be a '
         'ground constant address, got ${_deref(rt, args[1])}');
-    return BodyKernelResult.abort;
   }
 
   final seam = _seamLayer(rt);
@@ -1584,16 +1482,14 @@ BodyKernelResult addressDeclareKernel(GlpRuntime rt, List<Object?> args) {
 
   final pk = _peerKey(seam.network, name);
   if (pk == null) {
-    print('[ABORT] \'_address_declare\'/2: $name names no peer: neither a '
+    return kernelAbort('[ABORT] \'_address_declare\'/2: $name names no peer: neither a '
         '64-character hex public key nor an agent the layer names');
-    return BodyKernelResult.abort;
   }
 
   try {
     seam.network.putPeerAddress(pk, address);
   } on UnsupportedError catch (e) {
-    print('[ABORT] \'_address_declare\'/2: ${e.message}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_address_declare\'/2: ${e.message}');
   }
   return BodyKernelResult.success;
 }
@@ -1614,8 +1510,7 @@ BodyKernelResult addressDeclareKernel(GlpRuntime rt, List<Object?> args) {
 /// screen read the line back.
 BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] \'_output\'/1: expected 1 argument, got ${args.length}');
-    return BodyKernelResult.abort;
+    return kernelAbort('[ABORT] \'_output\'/1: expected 1 argument, got ${args.length}');
   }
 
   final term = deepDeref(rt, args[0] as Term);

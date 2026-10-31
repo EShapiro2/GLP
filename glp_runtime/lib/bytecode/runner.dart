@@ -399,8 +399,8 @@ Object? _followBoundChain(RunnerContext cx, Object? value) {
         break;
       }
     } else {
-      if (cx.rt.heap.isWriterBound(value.addr)) {
-        value = cx.rt.heap.valueOfWriter(value.addr);
+      if (cx.rt.heap.isFullyBound(value.addr)) {
+        value = cx.rt.heap.getValue(value.addr);
       } else {
         break;
       }
@@ -1083,7 +1083,7 @@ GuardResult _waitOnTimer(RunnerContext cx, num milliseconds) {
   // Start timer that binds writer when it fires
   Timer(Duration(milliseconds: milliseconds.toInt()), () {
     // Bind writer to 0 (any value works)
-    final reactivated = cx.rt.heap.bindWriterConst(writerAddr, 0);
+    final reactivated = cx.rt.heap.bindVariableConst(writerAddr, 0);
     // Enqueue reactivated goals and clean up suspended map
     for (final goalRef in reactivated) {
       cx.rt.enqueueReactivatedGoal(goalRef);
@@ -2013,7 +2013,7 @@ HeapCell? _structureTargetWriter(RunnerContext cx) {
 void _completeBodyStructure(RunnerContext cx, StructTerm struct,
     HeapCell? targetWriterAddr, {required bool storeWhenNoParent}) {
   if (targetWriterAddr != null) {
-    final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
+    final acts = cx.rt.heap.bindVariableStruct(targetWriterAddr, struct.functor, struct.args);
     for (final a in acts) {
       cx.rt.gq.enqueue(a);
     }
@@ -2042,7 +2042,7 @@ void _completeBodyStructure(RunnerContext cx, StructTerm struct,
       final currentWriterAddrInt = currentWriterId is VarRef ? currentWriterId.addr : (currentWriterId is HeapCell ? currentWriterId : null);
 
       if (cx.S >= parentStruct.args.length && currentWriterAddrInt != null) {
-        final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
+        final acts = cx.rt.heap.bindVariableStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
         for (final a in acts) {
           cx.rt.gq.enqueue(a);
         }
@@ -2306,7 +2306,7 @@ mixin OpExecutors {
   /// `put_constant` (0x31): place a fresh variable bound to [value] in argSlot.
   StepOutcome execPutConstant(RunnerContext cx, Object? value, int argSlot) {
     final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-    cx.rt.heap.bindWriterConst(writerAddr, value);
+    cx.rt.heap.bindVariableConst(writerAddr, value);
     cx.argSlots[argSlot] = VarRef(readerAddr);
     return StepOutcome.advance;
   }
@@ -2622,7 +2622,7 @@ mixin OpExecutors {
     final term = cx.clauseVars[varIndex];
     if (term is VarRef) {
       if (cx.sigmaHat.containsKey(term.addr)) return StepOutcome.nextClause;
-      if (cx.rt.heap.isBound(term.addr)) return StepOutcome.nextClause;
+      if (cx.rt.heap.isFullyBound(term.addr)) return StepOutcome.nextClause;
       return StepOutcome.advance; // unbound → unknown → succeed
     }
     return StepOutcome.nextClause; // non-variable is known
@@ -2900,9 +2900,9 @@ mixin OpExecutors {
     if (arg == null) return StepOutcome.advance;
 
     if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-      if (cx.rt.heap.isWriterBound(arg.addr)) {
+      if (cx.rt.heap.isFullyBound(arg.addr)) {
         final value =
-            _followBoundChain(cx, cx.rt.heap.valueOfWriter(arg.addr));
+            _followBoundChain(cx, cx.rt.heap.getValue(arg.addr));
 
         if (value is VarRef) {
           if (cx.rt.heap.isReader(value.addr)) {
@@ -2969,8 +2969,8 @@ mixin OpExecutors {
               ? clauseVarValue.addr
               : null);
       if (wid != null) {
-        if (cx.rt.heap.isWriterBound(wid)) {
-          final value = cx.rt.heap.valueOfWriter(wid);
+        if (cx.rt.heap.isFullyBound(wid)) {
+          final value = cx.rt.heap.getValue(wid);
           if (value is StructTerm &&
               value.functor == functor &&
               value.args.length == arity) {
@@ -3016,9 +3016,9 @@ mixin OpExecutors {
     }
 
     if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-      if (cx.rt.heap.isWriterBound(arg.addr)) {
+      if (cx.rt.heap.isFullyBound(arg.addr)) {
         final value =
-            _followBoundChain(cx, cx.rt.heap.valueOfWriter(arg.addr));
+            _followBoundChain(cx, cx.rt.heap.getValue(arg.addr));
 
         if (value is VarRef) {
           if (cx.rt.heap.isReader(value.addr)) {
@@ -3097,7 +3097,7 @@ mixin OpExecutors {
                 termArgs.add(ConstTerm(arg));
               }
             }
-            cx.rt.heap.bindWriterStruct(targetWriterId, struct.functor, termArgs);
+            cx.rt.heap.bindVariableStruct(targetWriterId, struct.functor, termArgs);
 
             cx.currentStructure = null;
             cx.mode = UnifyMode.read;
@@ -3117,7 +3117,7 @@ mixin OpExecutors {
             final targetWriterId = cx.clauseVars[-1];
             if (targetWriterId is HeapCell) {
               cx.rt.heap
-                  .bindWriterStruct(targetWriterId, struct.functor, struct.args);
+                  .bindVariableStruct(targetWriterId, struct.functor, struct.args);
 
               final targetSlot = cx.clauseVars[-2];
               if (targetSlot is int && targetSlot >= 0) {
@@ -3144,8 +3144,8 @@ mixin OpExecutors {
             cx.S++;
           } else if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
             final wid = value.addr;
-            if (cx.rt.heap.isWriterBound(wid)) {
-              final boundValue = cx.rt.heap.valueOfWriter(wid);
+            if (cx.rt.heap.isFullyBound(wid)) {
+              final boundValue = cx.rt.heap.getValue(wid);
               if (boundValue is ConstTerm && boundValue.value == opValue) {
                 cx.S++;
               } else {
@@ -3479,8 +3479,8 @@ mixin OpExecutors {
 
             if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
               // Query has writer - check for WxW violation
-              final clauseVarBound = cx.rt.heap.isWriterBound(clauseVarAddr);
-              final queryVarBound = cx.rt.heap.isWriterBound(value.addr);
+              final clauseVarBound = cx.rt.heap.isFullyBound(clauseVarAddr);
+              final queryVarBound = cx.rt.heap.isFullyBound(value.addr);
               if (!clauseVarBound && !queryVarBound) {
                 return StepOutcome.nextClause;
               }
@@ -3549,7 +3549,7 @@ mixin OpExecutors {
               value = cx.sigmaHat[addr];
             }
             // Then check heap bindings
-            else if (cx.rt.heap.isBound(addr)) {
+            else if (cx.rt.heap.isFullyBound(addr)) {
               final boundValue = cx.rt.heap.getValue(addr);
               value = boundValue;
             }
@@ -3649,9 +3649,9 @@ mixin OpExecutors {
         } else {
           // First occurrence: goal writer vs head writer
           // Store the goal's writer reference - clause can bind through it
-          if (cx.rt.heap.isWriterBound(arg.addr)) {
+          if (cx.rt.heap.isFullyBound(arg.addr)) {
             // Goal writer already bound - use its value
-            final boundValue = cx.rt.heap.valueOfWriter(arg.addr);
+            final boundValue = cx.rt.heap.getValue(arg.addr);
             cx.clauseVars[varIndex] = boundValue;
           } else {
             // Goal writer unbound - store writer ref, clause can bind it later
@@ -3805,13 +3805,13 @@ mixin OpExecutors {
       }
 
       if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-        final argBound = cx.rt.heap.isWriterBound(arg.addr);
+        final argBound = cx.rt.heap.isFullyBound(arg.addr);
         if (argBound) {
-          final argValue = cx.rt.heap.valueOfWriter(arg.addr);
+          final argValue = cx.rt.heap.getValue(arg.addr);
           if (storedValue is HeapCell) {
-            final storedBound = cx.rt.heap.isWriterBound(storedValue);
+            final storedBound = cx.rt.heap.isFullyBound(storedValue);
             if (storedBound) {
-              final storedVal = cx.rt.heap.valueOfWriter(storedValue);
+              final storedVal = cx.rt.heap.getValue(storedValue);
               if (!matches(argValue, storedVal)) {
                 return StepOutcome.nextClause;
               }
@@ -4040,13 +4040,13 @@ mixin OpExecutors {
       // given the term (Definition "GLP Goal/Clause Reduction": the body
       // under the writer mgu); until 2026-10-12 it was refused here.
       final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-      cx.rt.heap.bindWriterStruct(writerAddr, value.functor, value.args);
+      cx.rt.heap.bindVariableStruct(writerAddr, value.functor, value.args);
       cx.argSlots[argSlot] = VarRef(readerAddr);
     } else if (value is ConstTerm) {
       // A constant the head gave the variable, in either mode, as a
       // structure above.
       final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-      cx.rt.heap.bindWriterConst(writerAddr, value.value);
+      cx.rt.heap.bindVariableConst(writerAddr, value.value);
       cx.argSlots[argSlot] = VarRef(readerAddr);
     } else if (value == null) {
       // First occurrence - allocate fresh variable

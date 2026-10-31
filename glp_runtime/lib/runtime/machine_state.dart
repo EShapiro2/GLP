@@ -3,8 +3,6 @@ import 'package:collection/collection.dart';
 /// Identifier types (opaque ints for now).
 typedef GoalId = int;
 typedef Pc = int;        // program counter
-typedef ReaderId = int;  // RO identity (queue owner)
-typedef WriterId = int;  // WR identity
 
 /// A reference to a goal scheduled to run at a PC.
 class GoalRef {

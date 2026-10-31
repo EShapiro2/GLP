@@ -22,7 +22,7 @@ class DrainResult {
   /// wants the ids hands the drain a list for them ([Scheduler.drain]).
   final int goalsRun;
   final ExecutionStatus status;
-  final Set<HeapCell> blockingReaders;  // the readers causing suspension (per spec 8.4)
+  final Set<HeapCell> blockingReaders;  // the readers causing suspension
 
   final List<String> Function() _suspendedGoals;
 
@@ -60,7 +60,6 @@ class Scheduler {
 
   /// Set query variable names (call before draining)
   void setQueryVarNames(Map<String, HeapCell> varWriters) {
-    _queryVarNames.clear();
     for (final entry in varWriters.entries) {
       _queryVarNames[entry.value] = entry.key;
     }
@@ -71,7 +70,8 @@ class Scheduler {
   String _getVarDisplayName(HeapCell addr) {
     // For readers, try to find writer's name first
     if (rt.heap.isReader(addr)) {
-      // Use tryWriterForReader for imported reader support (returns null instead of throwing)
+      // tryWriterForReader returns null, instead of throwing, for a cell that
+      // is no reader
       final writerAddr = rt.heap.tryWriterForReader(addr);
       if (writerAddr != null && _queryVarNames.containsKey(writerAddr)) {
         return _queryVarNames[writerAddr]!;
@@ -224,43 +224,15 @@ class Scheduler {
     return out.toString();
   }
 
-  String _formatGoal(int goalId, String procName, CallEnv? env) {
+  String _formatGoal(String procName, CallEnv? env) {
     if (env == null) return procName;
-
-    // Extract arguments from environment
-    final args = <String>[];
-    for (int i = 0; i < 10; i++) {
-      final arg = env.arg(i);
-      if (arg != null) {
-        args.add(_formatTerm(arg));
-      } else {
-        break;
-      }
-    }
-
-    if (args.isEmpty) return procName;
-    return '$procName(${args.join(', ')})';
+    return formatGoalText(procName, env.arg, _formatTerm);
   }
 
-  /// Format a binding for display: "X = value" or "X1 = value"
-  String formatBinding(HeapCell varId, dynamic value) {
-    final name = _getVarDisplayName(varId);
-    String valueStr;
-    if (value is Term) {
-      valueStr = _formatTerm(value, markReaders: false);
-    } else if (value is String) {
-      valueStr = value;
-    } else if (value == null || value == nil) {
-      valueStr = '[]';
-    } else {
-      valueStr = value.toString();
-    }
-    // Clean up Const(...) wrapper if present
-    if (valueStr.startsWith('Const(') && valueStr.endsWith(')')) {
-      valueStr = valueStr.substring(6, valueStr.length - 1);
-    }
-    return '$name = $valueStr';
-  }
+  /// [text] with the `/arity` suffix dropped from each procedure name,
+  /// standard GLP syntax for the trace and the suspended list.
+  static String _stripArity(String text) =>
+      text.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
 
   /// Send trace output to traceSink if set, otherwise to print().
   void _trace(String line) {
@@ -316,10 +288,7 @@ class Scheduler {
       // a caller reads it.  Until 2026-10-02 every goal was formatted before
       // its reduction, traced or not, so a reduction cost time in the size of
       // its goal's terms (d43543ee, 2025-11-09).
-      final goalStr = debug ? _formatGoal(act.id, procName, env) : null;
-
-      // Check if this is a query wrapper goal (skip display)
-      final isQueryWrapper = procName.startsWith('query__');
+      final goalStr = debug ? _formatGoal(procName, env) : null;
 
       // Create context, with the reduction callback for the trace when the
       // drain is traced.  Whether the goal reduced is the context's [reduced],
@@ -338,14 +307,9 @@ class Scheduler {
         termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
         onReduction: debug
             ? (goalId, head, body) {
-                // Skip query wrapper goals
-                if (head.contains('query__')) return;
                 // Print reduction when it occurs (at Commit)
-                // Strip /arity suffix from procedure names for standard GLP syntax
-                final cleanHead = head.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-                final cleanBody = body.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
                 // No goal ID prefix - clean output
-                _trace('$cleanHead :- $cleanBody');
+                _trace('${_stripArity(head)} :- ${_stripArity(body)}');
               }
             : null,
       );
@@ -362,19 +326,17 @@ class Scheduler {
         // when the suspended list is read.
         suspendedGoals[act.id] = goalStr != null
             ? () => goalStr
-            : () => _formatGoal(act.id, procName, env);
+            : () => _formatGoal(procName, env);
         // Show suspension if debug and no reduction
-        if (debug && !hadReduction && !isQueryWrapper) {
-          final cleanGoal = goalStr!.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-          _trace('$cleanGoal → suspended');
+        if (debug && !hadReduction) {
+          _trace('${_stripArity(goalStr!)} → suspended');
         }
       } else if (result == RunResult.terminated) {
         // Goal terminated - check if it reduced (success) or just terminated (failure)
-        if (!hadReduction && !isQueryWrapper) {
+        if (!hadReduction) {
           // Terminated without reduction = failed.
           if (debug) {
-            final cleanGoal = goalStr!.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-            _trace('$cleanGoal → failed');
+            _trace('${_stripArity(goalStr!)} → failed');
           }
           // Fail, per the dGLP and madGLP Reduce transactions: Q' = Q_r,
           // S' = S, F' = F ∪ {A}. The queue has already advanced — the goal was
@@ -384,7 +346,7 @@ class Scheduler {
           // keeps reducing; F alone decides the run's status, below.  A goal
           // that failed made no binding, so its text now is its text before
           // the run.
-          rt.failedGoals.add(goalStr ?? _formatGoal(act.id, procName, env));
+          rt.failedGoals.add(goalStr ?? _formatGoal(procName, env));
           suspendedGoals.remove(act.id);
         } else {
           // Goal terminated successfully (with reduction) - remove from suspended list
@@ -426,11 +388,10 @@ class Scheduler {
       status = ExecutionStatus.succeeded;
     }
 
-    List<String> suspendedList() => suspendedGoals.values.map((g) =>
-      g().replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
-    ).toList();
+    List<String> suspendedList() =>
+        suspendedGoals.values.map((g) => _stripArity(g())).toList();
 
-    // Per spec section 8.4: collect blocking readers from runtime's suspended set
+    // Collect blocking readers from runtime's suspended set
     // rt.suspended maps reader addr -> Set<GoalRef> of goals blocked on that reader
     final blockingReaders = status == ExecutionStatus.suspended
         ? rt.suspended.keys.toSet()
@@ -470,15 +431,22 @@ class Scheduler {
       // work it will not hand over — and looping on it would never end.
       if (result.goalsRun == 0) break;
     }
+    return _cumulativeResult(run, failedAtEntry, last);
+  }
 
+  /// The result of a run made of several drains, the last of them [last]:
+  /// [run] goals tried; capped while the queue holds a goal or a goal waits
+  /// on when_idle on an idle machine, failed where F has grown since
+  /// [failedAtEntry], and otherwise the last drain's status; the last
+  /// drain's suspended goals and blocking readers.
+  DrainResult _cumulativeResult(int run, int failedAtEntry, DrainResult last) {
     final status = rt.gq.length > 0 || (rt.hasIdleWaits && rt.isIdle)
         ? ExecutionStatus.capped
         : (rt.failedGoals.length > failedAtEntry
             ? ExecutionStatus.failed
             : last.status);
-    final lastResult = last;
-    return DrainResult.deferred(run, status, () => lastResult.suspendedGoals,
-        lastResult.blockingReaders);
+    return DrainResult.deferred(
+        run, status, () => last.suspendedGoals, last.blockingReaders);
   }
 
   /// One event's cycle at a madGLP agent (IGLP, Implementation Notes,
@@ -511,15 +479,7 @@ class Scheduler {
       if (!(rt.hasIdleWaits && rt.isIdle)) break;
       if (run >= maxCycles) break;
     }
-
-    final status = rt.gq.length > 0 || (rt.hasIdleWaits && rt.isIdle)
-        ? ExecutionStatus.capped
-        : (rt.failedGoals.length > failedAtEntry
-            ? ExecutionStatus.failed
-            : last.status);
-    final lastResult = last;
-    return DrainResult.deferred(run, status, () => lastResult.suspendedGoals,
-        lastResult.blockingReaders);
+    return _cumulativeResult(run, failedAtEntry, last);
   }
 
   /// Async drain that waits for pending timers to fire.  [goalIds], when
@@ -590,6 +550,22 @@ class Scheduler {
         : lastStatus;
     return DrainResult.deferred(totalCycles, status, lastSuspended, lastBlockingReaders);
   }
+}
+
+/// The text of a goal, `name(arg, ...)`, or `name` where it has no
+/// arguments: its argument slots from 0 up, [argAt] giving each, null at the
+/// first slot it does not hold, and [format] writing each.  The trace and
+/// the suspended list write a goal so (Scheduler), and the byte loop a goal
+/// it spawns or tail-calls (ByteRunner).
+String formatGoalText(
+    String name, Term? Function(int slot) argAt, String Function(Term) format) {
+  final args = <String>[];
+  for (var i = 0; i < 10; i++) {
+    final arg = argAt(i);
+    if (arg == null) break;
+    args.add(format(arg));
+  }
+  return args.isEmpty ? name : '$name(${args.join(', ')})';
 }
 
 /// The tail of a list cell whose element [Scheduler._formatTerm] has just

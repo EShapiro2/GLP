@@ -1,8 +1,6 @@
 import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspend_ops.dart';
-import 'commit.dart';
-import 'fairness.dart';
 import 'body_kernels.dart';
 import 'place_streams.dart';
 import 'saved_state.dart';
@@ -17,10 +15,9 @@ class GlpRuntime {
   final GoalQueue gq;
   final BodyKernelRegistry bodyKernels;
 
-  /// Shared runners map: program key → GoalRunner (object or byte loop).
-  /// Used by the Scheduler to find the runner for a goal's program.
-  /// Runtime-registered runners (extension point; used by `run/2` to route a
-  /// launched goal to its module's ByteRunner).
+  /// The runtime-registered runners, by program key: the Scheduler falls back
+  /// to this map for a goal whose program key its own map does not hold, which
+  /// is how `run/2` routes a launched goal to its module's ByteRunner.
   final Map<Object?, GoalRunner> runners = {};
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};
@@ -53,8 +50,8 @@ class GlpRuntime {
   // When goal resumes, we check if this reader is bound (timer fired)
   final Map<int, HeapCell> _waitReaders = <int, HeapCell>{};
 
-  // Suspension tracking for scheduler-IRMA integration (spec section 8.4)
-  // Maps reader varId -> Set<GoalRef> of goals blocked on that reader
+  // Suspension tracking: the goals blocked on each reader, the suspended set
+  // S by reader (IGLP dglp.tex, Definition "dGLP Transition System")
   // Updated by suspendGoalFCP, cleared when goals reactivate
   final Map<HeapCell, Set<GoalRef>> suspended = <HeapCell, Set<GoalRef>>{};
 
@@ -75,7 +72,7 @@ class GlpRuntime {
 
   // madGLP context (set when running in multiagent mode)
   // Used by '_cold_send' kernel to access globalization infrastructure
-  Object? madContext;
+  MadContext? madContext;
 
   /// The declared places and their event streams (place_streams.dart): the
   /// runtime's bookkeeping behind place_declare/3 and place_remove/1, kept
@@ -99,15 +96,6 @@ class GlpRuntime {
   /// it printed.
   void Function(Term term)? outputTermCallback;
   void Function(String)? outputCallback;
-
-  /// Check if a goal has a pending wait and if the timer has fired
-  /// Returns null if no wait state, true if timer fired, false if still waiting
-  bool? checkWaitState(int goalId) {
-    final readerId = _waitReaders[goalId];
-    if (readerId == null) return null;
-    // Check if the writer has been bound (timer fired)
-    return heap.isFullyBound(readerId);
-  }
 
   /// Clear wait state for a goal (after timer completes)
   void clearWaitState(int goalId) {
@@ -177,7 +165,7 @@ class GlpRuntime {
     while (_idleWaits.isNotEmpty) {
       final goalId = _idleWaits.keys.first;
       final w = _idleWaits.remove(goalId)!;
-      final reactivated = heap.bindWriterConst(w.writer, 0);
+      final reactivated = heap.bindVariableConst(w.writer, 0);
       for (final goalRef in reactivated) {
         enqueueReactivatedGoal(goalRef);
       }
@@ -198,24 +186,13 @@ class GlpRuntime {
     return registry;
   }
 
-  /// Commit writer bindings using FCP-exact semantics
-  /// sigmaHat: Map from varId to tentative value
-  List<GoalRef> commitSigmaHat(Map<HeapCell, Object?> sigmaHat) {
-    final acts = CommitOps.applySigmaHatFCP(
-      heap: heap,
-      sigmaHat: sigmaHat,
-    );
-    _enqueueAll(acts);
-    return acts;
-  }
-
   /// Suspend goal using FCP-exact shared suspension records
   void suspendGoalFCP({
     required int goalId,
     required int kappa,
     required Set<HeapCell> readerVarIds,
   }) {
-    // Track which readers have this goal suspended (spec section 8.4)
+    // Track which readers have this goal suspended
     final goalRef = GoalRef(goalId, kappa);
     for (final readerId in readerVarIds) {
       suspended.putIfAbsent(readerId, () => <GoalRef>{}).add(goalRef);
@@ -232,11 +209,14 @@ class GlpRuntime {
     );
   }
 
+  /// One tail reduction of goal [g] spends one of its tail budget: true at
+  /// zero, when the scheduler yields and the budget is reset to
+  /// [tailRecursionBudgetInit].
   bool tailReduce(GoalId g) {
     final current = _budgets[g] ?? tailRecursionBudgetInit;
-    final next = nextTailBudget(current);
+    final next = (current <= 0) ? 0 : current - 1;
     if (next == 0) {
-      _budgets[g] = resetTailBudget();
+      _budgets[g] = tailRecursionBudgetInit;
       return true;
     } else {
       _budgets[g] = next;
@@ -290,12 +270,6 @@ class GlpRuntime {
   /// first use by the engine that set it; null where none did.  Untyped, as
   /// [ModuleTerm.declaredTypes] is.
   Object? Function()? rootDeclaredTypes;
-
-  void _enqueueAll(List<GoalRef> acts) {
-    for (final a in acts) {
-      enqueueReactivatedGoal(a);
-    }
-  }
 
   /// Enqueue a reactivated goal and clean up from suspended map
   /// Use this instead of gq.enqueue() when reactivating suspended goals

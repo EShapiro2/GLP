@@ -19,14 +19,8 @@ enum StepKind {
   /// the next clause-control byte offset).
   nextClause,
 
-  /// `commit`: apply the tentative writer bindings and enter the body.
-  commit,
-
   /// `proceed`: the goal's clause body is launched / the goal terminates.
   proceed,
-
-  /// `no_more_clauses`: suspend the goal on U if non-empty, else fail it.
-  noMoreClauses,
 
   /// The goal suspended (drivers return `RunResult.suspended`). The executor has
   /// already recorded the suspension on its blocking readers.
@@ -37,14 +31,6 @@ enum StepKind {
   /// reduction occurred).
   failed,
 
-  /// `spawn`: enqueue a new goal for [procIndex] (a `CodeImage` symbol index)
-  /// with [arity].
-  spawn,
-
-  /// `requeue`: the bounded-tail continuation — continue this goal at [procIndex]
-  /// with [arity], under the b-bounded tail discipline.
-  requeue,
-
   /// `halt`: stop the goal.
   halt,
 }
@@ -53,28 +39,15 @@ enum StepKind {
 class StepOutcome {
   final StepKind kind;
 
-  /// For [StepKind.spawn] / [StepKind.requeue]: the callee's `CodeImage`
-  /// symbol index, and its arity.
-  final int? procIndex;
-  final int? arity;
-
-  const StepOutcome._(this.kind, {this.procIndex, this.arity});
+  const StepOutcome._(this.kind);
 
   static const StepOutcome advance = StepOutcome._(StepKind.advance);
   static const StepOutcome nextClause = StepOutcome._(StepKind.nextClause);
-  static const StepOutcome commit = StepOutcome._(StepKind.commit);
   static const StepOutcome proceed = StepOutcome._(StepKind.proceed);
-  static const StepOutcome noMoreClauses = StepOutcome._(StepKind.noMoreClauses);
   static const StepOutcome suspended = StepOutcome._(StepKind.suspended);
   static const StepOutcome failed = StepOutcome._(StepKind.failed);
   static const StepOutcome halt = StepOutcome._(StepKind.halt);
 
-  static StepOutcome spawn(int procIndex, int arity) =>
-      StepOutcome._(StepKind.spawn, procIndex: procIndex, arity: arity);
-  static StepOutcome requeue(int procIndex, int arity) =>
-      StepOutcome._(StepKind.requeue, procIndex: procIndex, arity: arity);
-
   @override
-  String toString() => 'StepOutcome(${kind.name}'
-      '${procIndex != null ? ', proc=$procIndex/$arity' : ''})';
+  String toString() => 'StepOutcome(${kind.name})';
 }

@@ -1,8 +1,8 @@
-/// Direct bytecode execution — the loaded code image (B2).
+/// Direct bytecode execution — the loaded code image.
 ///
 /// Goal (IGLP `app:code-format`): the engine executes the §cf code-format byte
 /// string DIRECTLY. This is the loaded, in-memory form the byte interpreter
-/// (B3, `interp.dart`) runs over: the artefact's code section as a raw byte
+/// (`interp.dart`) runs over: the artefact's code section as a raw byte
 /// array addressed by a byte program counter, plus the symbol table mapping a
 /// `proc` index (and a procedure signature) to its entry byte offset, length,
 /// and kind (compiled vs codeless kernel/guard).
