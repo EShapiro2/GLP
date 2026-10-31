@@ -22,9 +22,12 @@
 # checker's verdict on it, check/2; and one on the compiler calls
 # compile(Name, Contract, Verdict, Intro, Pragmas), the contract's pragmas,
 # the words its app shows, read from the NAME.txt beside its owner's file and
-# those of the contracts it extends by compiler/pragmas.sh, or no_pragmas for
-# contracts.glp, each act the schema its button names (vGLP, Section 5.4,
-# "The contract's words"; GSC, Section 2), and writes what it prints between
+# those of the contracts it extends by compiler/pragmas.sh, or, for
+# contracts.glp, the term beside each, pragmas_named/2, each act the schema
+# its button names (vGLP, Section 5.4, "The contract's words"; GSC, Section
+# 2); a contract with no pragmas, no_pragmas, the compiler refuses ("the
+# compiler prints a platform only from a contract with pragmas, and refuses
+# one with none", vGLP ffcb093, ibid.).  It writes what it prints between
 # its lines "%% compile begin" and "%% compile end" to the contract's
 # platform.vglp.  A contract a step fails on is named, and its platform.vglp
 # is left as it is.  The compiled modules are committed beside their plays,
@@ -100,7 +103,14 @@ for c in $CONTRACTS; do
         it=$(grep -E '^I = ' "$WORK/$c.i.out" | head -1 | sed -e 's/^I = //')
     fi
     pr=no_pragmas
-    if [ "$src" != "$HERE/contracts.glp" ] && [ -f "${src%.glp}.txt" ] \
+    if [ "$src" = "$HERE/contracts.glp" ]; then
+        # vGLP's contracts carry their pragmas as a term beside them,
+        # pragmas_named/2, the form pragmas.sh prints from a NAME.txt.
+        printf '%s\npragmas_named(%s, P).\n:quit\n' "$src" "$c" > "$WORK/pn.in"
+        repl "$WORK/pn.in" "$WORK/$c.pn.out"
+        pr=$(grep -E '^P = ' "$WORK/$c.pn.out" | head -1 | sed -e 's/^P = //')
+        [ -n "$pr" ] || pr=no_pragmas
+    elif [ -f "${src%.glp}.txt" ] \
         && ! pr=$(bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "$ct" 2> "$WORK/$c.pr.err"); then
         echo "missing $d: its pragmas were not read: $(head -1 "$WORK/$c.pr.err")" >> "$WORK/status"
         continue

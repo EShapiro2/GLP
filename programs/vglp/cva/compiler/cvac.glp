@@ -35,7 +35,7 @@ compile(Nm, D, V) :- compile_intro(Nm?, D?, V?, no_introduction, words(no_pragma
 %% no_introduction.
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?).
 compile(Nm, D, V, I) :- compile_intro(Nm?, D?, V?, I?, words(no_pragmas)).
-%% compile(Name, Contract, Verdict, Intro, Pragmas): the same, for a contract carrying pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words": "The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type, a sentence into the approval question that Start raises, and a list's name into the view the agent writes"; Section 6.2, "The words a platform shows").  Each act a pragma proposes is the schema its button names: "a button for each act of it a person proposes, in brackets, each bearing its act's name" (GSC 2991379, Section 2, its first paragraph).  A contract with no pragmas, no_pragmas, is compiled as by compile/4, but for the two widget declarations every platform carries.
+%% compile(Name, Contract, Verdict, Intro, Pragmas): the same, for a contract carrying pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words": "The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type, a sentence into the approval question that Start raises, and a list's name into the view the agent writes"; Section 6.2, "The words a platform shows").  Each act a pragma proposes is the schema its button names: "a button for each act of it a person proposes, in brackets, each bearing its act's name" (GSC 2991379, Section 2, its first paragraph).  A contract with no pragmas, no_pragmas, as compile/3 and compile/4 give it, is checked and not printed (compile3a).
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?).
 compile(Nm, D, V, I, P) :- compile_intro(Nm?, D?, V?, I?, words(P?)).
 %% The contract's words, its pragmas, carried through the compiler whole.
@@ -87,10 +87,16 @@ compile3([F|Fs], Nm, _, _, _, _, _) :- ground(Nm?) |
     send_to_user(['%% compile begin', H?, F?|Fs1?]),
     lapp(Fs?, ['%% compile end'], Fs1).
 
+%% A contract that passes the checks and carries no pragmas is refused, with the line saying why: "Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words").  compile/3 and compile/4, which give no pragmas, so check a contract and print no platform.
 procedure compile3a(Preds?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
-compile3a(Ps, Nm, C, Rf, E, Nt, W) :- ground(Ps?), ground(C?), ground(W?) |
-    word_faults(W?, C?, Ps?, Wf),
-    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, W?, Ps?).
+compile3a(_, Nm, _, _, _, _, words(no_pragmas)) :- ground(Nm?) |
+    H =.. ['%% not compiled, having no pragmas', Nm?],
+    send_to_user(['%% compile begin', H?,
+        '%% it passes the checks, its verdict, local and effective, and has no pragmas, the words its app shows: the compiler prints a platform only from a contract with pragmas, and refuses one with none (vGLP, Section 5.4, "The contract\'s words").',
+        '%% compile end']).
+compile3a(Ps, Nm, C, Rf, E, Nt, words(pragmas(Ls, As))) :- ground(Ps?), ground(C?), ground(Ls?), ground(As?) |
+    word_faults(words(pragmas(Ls?, As?)), C?, Ps?, Wf),
+    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, words(pragmas(Ls?, As?)), Ps?).
 
 %% A contract whose words do not name its schemas, or leave a guarded schema with no button, is not compiled, with the lines saying why (word_faults).
 procedure compile4(Stream(_)?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?, Preds?).
