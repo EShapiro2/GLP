@@ -16,7 +16,7 @@ Messaging: Alice [Message] <text>
 Group: Alice [Create] <name> [Close]
 Joining and Leaving: Alice [Join] <person>
   Bob: Alice asks you to join their group.
-  Alice [Remove]
+  Alice [Remove] <person>
   Bob [Leave]
 Group messaging: Bob [Post] <text>
   Alice [Post own] <text>
