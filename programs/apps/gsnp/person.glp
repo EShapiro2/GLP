@@ -1,24 +1,24 @@
 %% person.glp --- the GSNP mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsnp_boot.glp); the play of this directory calls it beside the entry (plays.glp).  It is GSN's app's person (../gsn/person.glp) with GSNP's scripts.
 %%
-%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered; and done(K, N) where the approval K, by its request name, has stood pending in a view and then not in the next at least N times, the person seeing their pending approvals in the view (vGLP, Section 5.4, "Triggers": "the person sees their pending approvals in the view"), so that a person whose own state the act does not change, a guardian proposing an act of their AI agent, sees it end.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
 %%
-%% The roles, by which the super-app's plays choose a script, are the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): "Dan, Eve, Carol, Bob and Fay; the friendships Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay; Dan writes "Flood on Main Street" and sends it to Eve; Eve forwards it to Carol; Carol forwards it to Bob."  On GSNP's contract on GKK, programs/gai/GSNP.glp, the first of each two meets the second by their key, a cold call, the second answering yes to its hello, before befriending, befriend requiring that the two know each other (GKK:2, GSG:1).  The item is the speech act 'Flood on Main Street', signed by dan, its author (GSNP:1, Authorship), whose message carries it as he signed it, and each forward signs it again (GSNP:2, Forwarding):
+%% The roles, by which the super-app's plays choose a script, are the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): "Dan, Eve, Carol, Bob and Fay; the friendships Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay; Dan writes "Flood on Main Street" and sends it to Eve; Eve forwards it to Carol; Carol forwards it to Bob."  On GSNP's contract on GKK, programs/gai/GSNP.glp, the first of each two comes to know the second by their key, a cold call, the second answering yes to its hello, before befriending, befriend requiring that the two know each other (GKK:2, GSG:1).  The item is the speech act 'Flood on Main Street', signed by dan, its author (GSNP:1, Authorship), whose message carries it as he signed it, and each forward signs it again (GSNP:2, Forwarding):
 %%   dan    establishes his identity (GKK:1); once it is established, comes to know eve by her key (GKK:2); once they know each other, offers her friendship (GSG:1); once they are friends, signs the item; once he sees himself its author, sends it to eve in a message.
 %%   eve    establishes her identity; answers yes to dan's asking to come to know her and to his offer of friendship; once his message of the item has reached her, comes to know carol by her key, and once they know each other, offers carol friendship; once they are friends, forwards the item, signed by dan, to carol.
 %%   carol  establishes her identity; answers yes to eve's asking to come to know her and to her offer of friendship; once eve's forward has reached her, comes to know bob by his key, and once they know each other, offers bob friendship; once they are friends, forwards the item, signed by dan and then by eve, to bob.
 %%   bob    establishes his identity; answers yes to carol's asking to come to know him and to her offer of friendship; once her forward has reached him, holding the item signed by dan, eve and carol, comes to know fay by her key, and once they know each other, offers fay friendship; once they are friends, forwards the item to her (GSNP:2), nobody asked.
 %%   fay    establishes her identity; answers yes to bob's asking to come to know her and to his offer of friendship; then holds the item signed by dan, eve, carol and bob.
 %% Each person who takes part in the item's passage offers their next friendship once the item has reached them, and so proposes nothing while an attempt that adds the item to their state is open.
-%% The roles of the play of GAI's Figure "The GAI app" on the full platform (plays.glp, play_agents; Code_inbox.md, GAI #8 Cowork, 2026-10-24 10:47 UTC) are acme_ltd, the developer, alice, alf, her AI agent, and agents_bob, bob's second script.  The code of Alf is the speech act 'The code of Alf' signed by acme_ltd (GAI:1), which alice holds once acme_ltd's message of it has reached her, and enter(p?, r? ; x) adds at alf its attestation sgn(k, alice), the code signed over by alice, and at alice her record agent_of(alf, alice, y) (GnW:1, GAI:1, GAI:2; GSNP.glp); alf's meeting with bob is proposed by alice, its principal, her machine filling the attestation from her record, alf and bob asked, since a machine takes a proposal only where it knows every agent it sends to (vGLP, Section 4, "each is taken only where p knows every agent it sends a message to") and alf comes to know bob by this meeting; and alf's befriending bob is proposed by alf, its program pressing the button drawn at its guarding role (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles"), alice, its principal, and bob asked, each on their phone (Code_inbox.md, GAI #8 Cowork, 2026-10-24 14:39 UTC):
-%%   acme_ltd  establishes their identity (GKK:1); meets alice by her key (GKK:2) and, once they know each other, offers her friendship (GSG:1); once they are friends, signs the code of Alf (GSNP:1, GAI:1); once they hold it as its author, send it to alice in a message (GSN:1).
-%%   alice     establishes her identity; answers yes to acme_ltd's asking to meet her and to their offer of friendship; meets bob by his key; once the code has reached her, enters her AI agent alf with it (GnW:1, GAI:1, GAI:2); once she is its principal, proposes alf's meeting with bob (GnW:2, GAI:2; agent_acquaint); answers yes to alf's befriending him (GnW:2; agent_befriend); answers yes to bob's offer of friendship (GSG:1); once they are friends, retires alf (GAI:4).
-%%   alf       answers yes to being entered as alice's AI agent; answers yes to meeting bob (GnW:2, GAI:2; agent_acquaint); once it knows bob, proposes befriending him (GnW:2; agent_befriend); once bob is its friend, signs the item 'Today\'s summary of the news' (GSNP:1); once it holds it as its author, sends it to bob in a message (GSN:1).
-%%   agents_bob  bob establishes his identity; answers yes to alice asking to meet him (GKK:2), to alf, an AI agent of alice, meeting him, which records at him alf, its principal and its attestation (GAI:2), and to alf befriending him (GnW:2); once alf's message of the item has reached him, offers alice friendship (GSG:1); once they are friends, ends his friendship with alf (GSG:2).
+%% The roles of the play of GAI's Figure "The GAI app" on the full platform (plays.glp, play_agents) are acme_ltd, the developer, alice, alf, her AI agent, and agents_bob, bob's second script, in the order of the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"; Code_inbox.md, GAI #10 Cowork, 2026-10-31 12:54 and 14:14 UTC), with Acme Ltd's signing of Alf's code before it.  The code of Alf is the speech act 'The code of Alf' signed by acme_ltd, its developer (GAI:1), which alice holds once acme_ltd's message of it has reached her; alice's attestation y is the speech act 'Alf runs code signed by Acme Ltd' she signs (GAI:2), and enter(p?, r? ; y), requiring authored(y) at alice, adds at alf its attestation y and at alice her record agent_of(alf, y) (GnW:1, GAI:2; GSNP.glp); alf's acquaintance with bob and its befriending him are proposed by alice, its guardian, her machine filling y from her record, alf and bob asked (GnW:3, GAI:2); and alice's retiring alf ends its friendships, nobody asked (GnW:5; retire):
+%%   acme_ltd  establishes their identity (GKK:1); comes to know alice by her key (GKK:2) and, once they know each other, offers her friendship (GSG:1); once they are friends, signs the code of Alf (GAI:1; sign); once they hold it as its author, send it to alice in a message (GSN:1).
+%%   alice     establishes her identity; answers yes to acme_ltd's asking to come to know her and to their offer of friendship; once the code has reached her, comes to know bob by his key and, once they know each other, offers him friendship (GKK:2, GSG:1); once they are friends, signs y (GAI:2) and, once she holds it as its author, enters her AI agent alf with it (GnW:1); once she is its principal, proposes alf's acquaintance with bob (GnW:3, GAI:2; agent_acquaint), and once it is done alf's befriending him (GnW:3; agent_befriend); and once that is done retires alf (GnW:5; retire), the play holding her request until bob's screen shows alf's item (plays.glp).
+%%   alf       answers yes to being entered as alice's AI agent with y, then to its acquaintance with bob, and then to its befriending him, each proposed by alice; once bob is its friend, signs the item 'Today\'s summary of the news' (GSNP:1, GAI:1; sign) and, once it holds it as its author, sends it to bob in a message (GSN:1).
+%%   agents_bob  bob establishes his identity; answers yes to alice asking to come to know him and to her offer of friendship; answers yes to alf, an AI agent of alice, coming to know him, which records at him agent_of(alf, y) (GAI:2), and then to alf befriending him (GnW:3); and then holds alf's item.  The play has no unfriend: Retire ends alf's friendships (GnW:5; the paper's Table, its last row).
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
 Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
-        ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
+        ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking ; done(Approved, Integer).
 Last  ::= last(List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
 Holes ::= [] ; [Key? | Holes].
@@ -79,31 +79,30 @@ script(acme_ltd, [own([K1], propose(establish(K1?))), wait(holds(identity)),
 script(alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
                approval(acquaint(acme_ltd, alice), yes),
                approval(befriend(acme_ltd, alice), yes),
-               own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
                wait(holds(item(speech(utterance('The code of Alf'), acme_ltd)))),
-               own([A2], propose(enter(A2?, alf, speech(utterance('The code of Alf'), acme_ltd)))),
+               own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+               own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
+               own([A4, A5], propose(sign(A4?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?)))),
+               wait(holds(authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)))),
+               own([A6, A7], propose(enter(A6?, alf, speech(utterance('Alf runs code signed by Acme Ltd'), A7?)))),
                wait(holds(principal_of(alf))),
-               own([A3], propose(agent_acquaint(alf, bob, A3?, speech(speech(utterance('The code of Alf'), acme_ltd), alice)))),
-               approval(agent_befriend(alf, bob, alice), yes),
-               approval(befriend(bob, alice), yes),
-               wait(holds(friend(bob))),
-               own([A5], propose(retire(A5?, alf)))]).
-script(alf, [approval(enter(alice, alf, speech(utterance('The code of Alf'), acme_ltd)), yes),
-             approval(agent_acquaint(alf, bob, alice, speech(speech(utterance('The code of Alf'), acme_ltd), alice)), yes),
-             wait(holds(knows(bob))),
-             own([R6], propose(agent_befriend(R6?, bob, alice))),
+               own([A8], propose(agent_acquaint(alf, bob, A8?, speech(utterance('Alf runs code signed by Acme Ltd'), alice)))),
+               wait(done(agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), 1)),
+               own([A9], propose(agent_befriend(alf, bob, A9?))),
+               wait(done(agent_befriend(alf, bob, alice), 1)),
+               own([A10], propose(retire(alf, A10?)))]).
+script(alf, [approval(enter(alice, alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), yes),
+             approval(agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), yes),
+             approval(agent_befriend(alf, bob, alice), yes),
              wait(holds(friend(bob))),
              own([R1, R2], propose(sign(R1?, speech(utterance('Today\'s summary of the news'), R2?)))),
              wait(holds(authored(speech(utterance('Today\'s summary of the news'), alf)))),
              own([R3, R4], propose(message(R3?, bob, speech(utterance('Today\'s summary of the news'), R4?))))]).
 script(agents_bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
                     approval(acquaint(alice, bob), yes),
-                    approval(agent_acquaint(alf, bob, alice, speech(speech(utterance('The code of Alf'), acme_ltd), alice)), yes),
-                    approval(agent_befriend(alf, bob, alice), yes),
-                    wait(holds(item(speech(utterance('Today\'s summary of the news'), alf)))),
-                    own([B2], propose(befriend(B2?, alice))),
-                    wait(holds(friend(alice))),
-                    own([B3], propose(unfriend(B3?, alf)))]).
+                    approval(befriend(alice, bob), yes),
+                    approval(agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), yes),
+                    approval(agent_befriend(alf, bob, alice), yes)]).
 script(_, []) :- otherwise | true.
 
 %% The person.
@@ -192,6 +191,9 @@ shows(refused(P, Q, D), _, T, _, B?) :- ground(P?), ground(Q?), ground(D?), grou
 shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
     find_approval(K?, Cs?, F),
     found_yn(F?, B).
+shows(done(K, N), _, T, _, B?) :- ground(K?), ground(T?) |
+    ended(K?, T?, n, 0, M),
+    at_least(M?, N?, B).
 shows(asking, sess(_, _, _, _), _, _, y).
 shows(asking, nosess, _, _, n).
 
@@ -236,6 +238,26 @@ count(X, [_ | Ys], N?) :- otherwise | count(X?, Ys?, N).
 procedure at_least(Integer?, Integer?, YN).
 at_least(N, K, y) :- N? >= K? | true.
 at_least(N, K, n) :- N? < K? | true.
+
+%% ended(K, T, W, C, M): M is C and the number of times the approval K stands pending in a view of the output T and not in the next view, W whether it stood pending in the view before T.
+procedure ended(Approved?, List(Output)?, YN?, Integer?, Integer).
+ended(_, [], _, C, C?).
+ended(K, [view(_, _, Ps, _) | Xs], W, C, M?) :- ground(K?), ground(Ps?) |
+    among_approved(K?, Ps?, P),
+    fell(W?, P?, C?, C1),
+    ended(K?, Xs?, P?, C1?, M).
+ended(K, [_ | Xs], W, C, M?) :- otherwise | ended(K?, Xs?, W?, C?, M).
+
+%% fell(W, P, C, C1): C1 is C, and one more where the approval stood pending in the view before, W, and not in this one, P.
+procedure fell(YN?, YN?, Integer?, Integer).
+fell(y, n, C, C1?) :- C1 := C? + 1.
+fell(y, y, C, C?).
+fell(n, _, C, C?).
+
+procedure among_approved(Approved?, List(Approved)?, YN).
+among_approved(_, [], n).
+among_approved(X, [Y | _], y) :- X? =?= Y? | true.
+among_approved(X, [_ | Ys], B?) :- otherwise | among_approved(X?, Ys?, B).
 
 procedure flip(YN?, YN).
 flip(y, n).
