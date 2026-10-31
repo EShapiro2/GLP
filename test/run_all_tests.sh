@@ -1275,6 +1275,36 @@ check "random single draw next seed" "NS = 705894" "$a33"
 check "random threaded triple reproduces" "R = rt(808, 250, 74)" "$a33"
 check "random N<1 fails at guard" "→ failed" "$a33"
 
+# --- A33a: Splitting a seed (split_random_seed/3, GLP-ICLP appendix-guards) ---
+# From one seed, the three streams of random/4 draws from Seed, S1 and S2 differ
+# from one another and from any shift of one another over the first hundred
+# draws (shifted counts the agreeing shifts over the six ordered pairs; control
+# shows a shift is counted), and a second run from the same seed reproduces
+# them (reproduces, and the split and first draws pinned twice).
+echo "--- A33a: Splitting a seed ---"
+a33a=$("$REPL_RUN" <<HEREDOC
+$TYPED/split_random_test.glp
+split_random_seed(42, S1, S2).
+shifted(42, N).
+shifted(7, N7).
+control(42, C).
+reproduces(42, R).
+firsts(42, F).
+split_random_seed(42, T1, T2).
+firsts(42, G).
+:quit
+HEREDOC
+2>&1)
+check "split_random_seed S1" "S1 = -4767286540954276203" "$a33a"
+check "split_random_seed S2" "S2 = 2949826092126892291" "$a33a"
+check "split streams unshifted (42)" "N = 0" "$a33a"
+check "split streams unshifted (7)" "N7 = 0" "$a33a"
+check "split shift control" "C = 1" "$a33a"
+check "split second run reproduces" "R = yes" "$a33a"
+check "split first draws" "F = firsts(705895, 2145617533, 1051972607)" "$a33a"
+check "split second split reproduces" "T1 = -4767286540954276203" "$a33a"
+check "split second first draws reproduce" "G = firsts(705895, 2145617533, 1051972607)" "$a33a"
+
 # --- A34: Ackermann on Peano numerals (book/recursive/arithmetic_trees) ---
 # Clause 3's guard was compound(M?), ground(M?): compound refused M = 0, so
 # ackermann(s(0), s(0), A) failed, and every goal that reaches it with it.
