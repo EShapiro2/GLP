@@ -27,8 +27,8 @@ Menu ::= menu(Key, List(Key), Request?).
 Close ::= close.
 Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
 MeetPeer ::= peer(Peer) ; nopeer.
-Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant).
-NTerm ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant).
+Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any.
+NTerm ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm).
 Vars ::= [] ; [Var | Vars].
 SAtom ::= atom(Constant, Vars) ; times(Var, SAtom).
 SAtoms ::= [] ; [SAtom | SAtoms].
@@ -48,8 +48,8 @@ CRole ::= every ; at(Integer).
 Numeric ::= numeric(Constraint, Vars, CRole).
 NumRes ::= num_is(Integer) ; no_num.
 LNorm ::= norm(Binding) ; badnorm.
-CName ::= community(Peer) ; dot(CName, Speech).
-Val ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; lv(Constant, Constant).
+CName ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
+Val ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; lv(Constant, Constant) ; any.
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals ::= [] ; [Val | Vals].
 GAtom ::= g(Constant, Vals).
@@ -1325,10 +1325,12 @@ val_names(s(speech(_, Q)), C, B?) :- same(Q?, C?, B).
 val_names(c(N), C, B?) :- cname_base(N?, Q), same(Q?, C?, B).
 val_names(n(_), _, no).
 val_names(lv(_, _), _, no).
+val_names(any, _, no).
 
 procedure cname_base(CName?, Peer).
 cname_base(community(Q), Q?).
 cname_base(dot(N, _), Q?) :- cname_base(N?, Q).
+cname_base(dot_any(N), Q?) :- cname_base(N?, Q).
 
 procedure commit_app(Info?, Attempt?, Peer?, App?, Sends, App).
 commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, R1?)) :- ground(I?), ground(At?), ground(Id?) | attempt_class(At?, P), apply_part(P?, Id?, S?, S1), info_q(I?, Q), tell(Q?, Id?, outcome(At?, commit), Ss), end_approvals(I?, Id?, [closed(At?) | R?], R1, _).
@@ -1842,8 +1844,72 @@ procedure apply_part(Class?, Peer?, GAtoms?, GAtoms).
 apply_part(P, Id, S, S1?) :- ground(P?), ground(Id?), ground(S?) | term_spec(P?, Nm, Rs, Bn), reflexive_preds(Rf), hat(Rf?, Id?, S?, Sh), dom_bindings(Nm?, Rs?, Bn?, Id?, Sh?, Bs), term_spec(P?, _, Rs2, Bn2), apply_with(Bs?, Rs2?, Bn2?, Id?, S?, S1).
 
 procedure apply_with(Bindings?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms).
-apply_with([B | _], Rs, _, Id, S, S1?) :- ground(Rs?), ground(B?), ground(Id?) | specs_at(Rs?, 1, B?, Id?, RsP), joins(RsP?, B?, D, A), ms_diff(S?, D?, S0), app(A?, S0?, S1).
-apply_with([], Rs, Bn, Id, S, S1?) :- ground(Rs?), ground(Bn?), ground(Id?) | specs_at(Rs?, 1, Bn?, Id?, RsP), joins(RsP?, Bn?, D, A), ms_diff(S?, D?, S0), app(A?, S0?, S1).
+apply_with([B | _], Rs, _, Id, S, S1?) :- ground(Rs?), ground(B?), ground(Id?) | specs_at(Rs?, 1, B?, Id?, RsP), joins(RsP?, B?, D, A), clear_split(D?, Dp, Ks), ms_diff(S?, Dp?, S0a), clear_out(S0a?, Ks?, S0), app(A?, S0?, S1).
+apply_with([], Rs, Bn, Id, S, S1?) :- ground(Rs?), ground(Bn?), ground(Id?) | specs_at(Rs?, 1, Bn?, Id?, RsP), joins(RsP?, Bn?, D, A), clear_split(D?, Dp, Ks), ms_diff(S?, Dp?, S0a), clear_out(S0a?, Ks?, S0), app(A?, S0?, S1).
+
+procedure clear_split(GAtoms?, GAtoms, GAtoms).
+clear_split([], [], []).
+clear_split([G | Gs], D?, K?) :- ground(G?) | g_wild(G?, W), clear_split(Gs?, D1, K1), clear_put(W?, G?, D1?, K1?, D, K).
+
+procedure clear_put(YesNo?, GAtom?, GAtoms?, GAtoms?, GAtoms, GAtoms).
+clear_put(yes, G, D, K, D?, [G? | K?]).
+clear_put(no, G, D, K, [G? | D?], K?).
+
+procedure g_wild(GAtom?, YesNo).
+g_wild(g(_, Xs), W?) :- vals_wild(Xs?, W).
+
+procedure vals_wild(Vals?, YesNo).
+vals_wild([], no).
+vals_wild([any | _], yes).
+vals_wild([c(C) | Xs], W?) :- cn_wild(C?, W1), vals_wild1(W1?, Xs?, W).
+vals_wild([X | Xs], W?) :- otherwise, ground(X?) | vals_wild(Xs?, W).
+
+procedure vals_wild1(YesNo?, Vals?, YesNo).
+vals_wild1(yes, _, yes).
+vals_wild1(no, Xs, W?) :- vals_wild(Xs?, W).
+
+procedure cn_wild(CName?, YesNo).
+cn_wild(community(_), no).
+cn_wild(dot(C, _), W?) :- cn_wild(C?, W).
+cn_wild(dot_any(_), yes).
+
+procedure clear_out(GAtoms?, GAtoms?, GAtoms).
+clear_out(S, [], S?).
+clear_out([], [_ | _], []).
+clear_out([G | Gs], [K | Ks], R?) :- ground(G?), ground(K?), ground(Ks?) | g_cleared(G?, [K? | Ks?], M), neg(M?, Keep), clear_out(Gs?, [K? | Ks?], R1), keep_g(Keep?, G?, R1?, R).
+
+procedure g_cleared(GAtom?, GAtoms?, YesNo).
+g_cleared(_, [], no).
+g_cleared(G, [K | Ks], M?) :- ground(G?), ground(K?) | g_matches(K?, G?, M1), g_cleared1(M1?, G?, Ks?, M).
+
+procedure g_cleared1(YesNo?, GAtom?, GAtoms?, YesNo).
+g_cleared1(yes, _, _, yes).
+g_cleared1(no, G, Ks, M?) :- g_cleared(G?, Ks?, M).
+
+procedure g_matches(GAtom?, GAtom?, YesNo).
+g_matches(g(P, Ks), g(Q, Xs), M?) :- (P? =?= Q?) | gm_vals(Ks?, Xs?, M).
+g_matches(_, _, no) :- otherwise | true.
+
+procedure gm_vals(Vals?, Vals?, YesNo).
+gm_vals([], [], yes).
+gm_vals([], [_ | _], no).
+gm_vals([_ | _], [], no).
+gm_vals([K | Ks], [X | Xs], M?) :- ground(K?), ground(X?) | gm_val(K?, X?, M1), gm_vals1(M1?, Ks?, Xs?, M).
+
+procedure gm_vals1(YesNo?, Vals?, Vals?, YesNo).
+gm_vals1(no, _, _, no).
+gm_vals1(yes, Ks, Xs, M?) :- gm_vals(Ks?, Xs?, M).
+
+procedure gm_val(Val?, Val?, YesNo).
+gm_val(any, _, yes).
+gm_val(c(K), c(C), M?) :- gm_cname(K?, C?, M).
+gm_val(K, X, M?) :- otherwise | same(K?, X?, M).
+
+procedure gm_cname(CName?, CName?, YesNo).
+gm_cname(dot_any(K), dot(C, _), M?) :- gm_cname(K?, C?, M).
+gm_cname(dot(K, S), dot(C, T), M?) :- (S? =?= T?) | gm_cname(K?, C?, M).
+gm_cname(community(P), community(Q), yes) :- (P? =?= Q?) | true.
+gm_cname(_, _, no) :- otherwise | true.
 
 procedure delta_at(Deltas?, Peer?, GAtoms, GAtoms).
 delta_at([], _, [], []).
@@ -2027,6 +2093,7 @@ adm_var(pvar(_), _, _, _, yes).
 adm_var(nterm(_), _, _, _, yes).
 adm_var(sgn(_, _), _, _, _, yes).
 adm_var(num(_), _, _, _, yes).
+adm_var(any, _, _, _, yes).
 
 procedure adm_var1(YesNo?, Found?, Peers?, YesNo).
 adm_var1(yes, _, _, yes).
@@ -2036,6 +2103,7 @@ adm_var1(no, found(c(_)), _, no).
 adm_var1(no, found(n(_)), _, no).
 adm_var1(no, found(lv(_, _)), _, no).
 adm_var1(no, free, _, no).
+adm_var1(no, found(any), _, no).
 
 procedure adds_of(RoleSpecs?, SAtoms).
 adds_of([], []).
@@ -2196,6 +2264,7 @@ is_lv(p(_), no).
 is_lv(s(_), no).
 is_lv(c(_), no).
 is_lv(n(_), no).
+is_lv(any, no).
 
 procedure locals_put(Vars?, Constant?, Binding?, Binding).
 locals_put([], _, B, B?).
@@ -2543,7 +2612,35 @@ procedure rs_del(RoleSpec?, SAtoms).
 rs_del(rs(_, _, D, _, _), D?).
 
 procedure rs_req(RoleSpec?, SAtoms).
-rs_req(rs(_, _, D, K, _), R?) :- app(K?, D?, R).
+rs_req(rs(_, _, D, K, _), R?) :- uncleared(D?, D1), app(K?, D1?, R).
+
+procedure uncleared(SAtoms?, SAtoms).
+uncleared([], []).
+uncleared([A | As], R?) :- ground(A?) | s_cleared(A?, C), uncleared(As?, R1), keep_s(C?, A?, R1?, R).
+
+procedure keep_s(YesNo?, SAtom?, SAtoms?, SAtoms).
+keep_s(yes, _, R, R?).
+keep_s(no, A, R, [A? | R?]).
+
+procedure s_cleared(SAtom?, YesNo).
+s_cleared(atom(_, Vs), C?) :- vars_wild(Vs?, C).
+s_cleared(times(_, A), C?) :- s_cleared(A?, C).
+
+procedure vars_wild(Vars?, YesNo).
+vars_wild([], no).
+vars_wild([any | _], yes).
+vars_wild([nterm(N) | Vs], C?) :- snt_wild(N?, C1), vars_wild1(C1?, Vs?, C).
+vars_wild([V | Vs], C?) :- otherwise, ground(V?) | vars_wild(Vs?, C).
+
+procedure vars_wild1(YesNo?, Vars?, YesNo).
+vars_wild1(yes, _, yes).
+vars_wild1(no, Vs, C?) :- vars_wild(Vs?, C).
+
+procedure snt_wild(NTerm?, YesNo).
+snt_wild(own(_), no).
+snt_wild(own_var(_), no).
+snt_wild(ext(N, _), C?) :- snt_wild(N?, C).
+snt_wild(ext_any(_), yes).
 
 procedure rs_forb(RoleSpec?, SAtoms).
 rs_forb(rs(_, _, _, _, F), F?).
@@ -2558,6 +2655,7 @@ found_peer(found(c(_)), unbound).
 found_peer(found(n(_)), unbound).
 found_peer(found(lv(_, _)), unbound).
 found_peer(free, unbound).
+found_peer(found(any), unbound).
 
 procedure lookup(Var?, Binding?, Found).
 lookup(_, [], free).
@@ -2586,17 +2684,20 @@ img_args([], _, []).
 img_args([sgn(Y, I) | Vs], B, [X? | Xs?]) :- ground(B?), ground(Y?), ground(I?) | lookup(svar(Y?), B?, F), role_person(I?, B?, P), img_sgn(F?, P?, X), img_args(Vs?, B?, Xs).
 img_args([nterm(N) | Vs], B, [c(C?) | Xs?]) :- ground(B?), ground(N?) | nt_img(N?, B?, C), img_args(Vs?, B?, Xs).
 img_args([num(X) | Vs], B, [n(N?) | Xs?]) :- integer(X?) | N := X?, img_args(Vs?, B?, Xs).
+img_args([any | Vs], B, [any | Xs?]) :- img_args(Vs?, B?, Xs).
 img_args([V | Vs], B, [X? | Xs?]) :- otherwise, ground(B?) | lookup(V?, B?, F), img_val(F?, X), img_args(Vs?, B?, Xs).
 
 procedure nt_img(NTerm?, Binding?, CName).
 nt_img(own(I), B, community(P?)) :- role_person(I?, B?, P).
 nt_img(own_var(X), B, community(P?)) :- val_peer(pvar(X?), B?, unbound, P).
+nt_img(ext_any(N), B, dot_any(C?)) :- nt_img(N?, B?, C).
 nt_img(ext(N, Y), B, dot(C?, S?)) :- ground(B?) | nt_img(N?, B?, C), val_speech(svar(Y?), B?, unbound, S).
 
 procedure nt_vars(NTerm?, Vars).
 nt_vars(own(I), [role(I?)]).
 nt_vars(own_var(X), [pvar(X?)]).
 nt_vars(ext(N, Y), Vs?) :- nt_vars(N?, Vs0), app(Vs0?, [svar(Y?)], Vs).
+nt_vars(ext_any(N), Vs?) :- nt_vars(N?, Vs).
 
 procedure flat_names(Vars?, Vars).
 flat_names([], []).
@@ -2653,11 +2754,16 @@ match_args([_ | _], [], _, nomatch).
 match_args([sgn(Y, I) | Vs], [X | Xs], B, R?) :- ground(Y?), ground(I?), ground(X?), ground(B?) | sgn_parts(X?, Ps), match_sgn(Ps?, Y?, I?, Vs?, Xs?, B?, R).
 match_args([nterm(N) | Vs], [X | Xs], B, R?) :- ground(N?), ground(X?), ground(B?) | name_parts(N?, X?, Ps), match_name(Ps?, Vs?, Xs?, B?, R).
 match_args([num(X) | Vs], [Y | Ys], B, R?) :- integer(X?), ground(Y?), ground(B?) | lit_val(X?, Y?, E), lit_then(E?, Vs?, Ys?, B?, R).
+match_args([any | Vs], [X | Xs], B, R?) :- ground(X?), ground(B?) | any_val(X?, E), lit_then(E?, Vs?, Xs?, B?, R).
 match_args([V | Vs], [X | Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B?) | lookup(V?, B?, F), kind_ok(V?, X?, K), match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
 
 procedure lit_val(Integer?, Val?, YesNo).
 lit_val(X, n(K), yes) :- (X? =:= K?) | true.
 lit_val(_, _, no) :- otherwise | true.
+
+procedure any_val(Val?, YesNo).
+any_val(any, yes).
+any_val(_, no) :- otherwise | true.
 
 procedure lit_then(YesNo?, Vars?, Vals?, Binding?, Match).
 lit_then(yes, Vs, Ys, B, R?) :- match_args(Vs?, Ys?, B?, R).
@@ -2682,11 +2788,13 @@ name_parts(_, p(_), noparts).
 name_parts(_, s(_), noparts).
 name_parts(_, n(_), noparts).
 name_parts(_, lv(_, _), noparts).
+name_parts(_, any, noparts).
 
 procedure nt_parts(NTerm?, CName?, NameParts).
 nt_parts(own(I), community(P), parts([role(I?)], [p(P?)])).
 nt_parts(own_var(X), community(P), parts([pvar(X?)], [p(P?)])).
 nt_parts(ext(N, Y), dot(C, S), Ps?) :- nt_parts(N?, C?, Ps0), nt_more(Ps0?, Y?, S?, Ps).
+nt_parts(ext_any(N), dot_any(C), Ps?) :- nt_parts(N?, C?, Ps).
 nt_parts(_, _, noparts) :- otherwise | true.
 
 procedure nt_more(NameParts?, Constant?, Speech?, NameParts).
@@ -2704,6 +2812,7 @@ sgn_parts(p(_), unsigned).
 sgn_parts(c(_), unsigned).
 sgn_parts(n(_), unsigned).
 sgn_parts(lv(_, _), unsigned).
+sgn_parts(any, unsigned).
 
 procedure match_sgn(SgnParts?, Constant?, Integer?, Vars?, Vals?, Binding?, Match).
 match_sgn(signed(S, P), Y, I, Vs, Xs, B, R?) :- match_args([svar(Y?), role(I?) | Vs?], [S?, p(P?) | Xs?], B?, R).
@@ -2742,6 +2851,8 @@ kind_ok(svar(_), n(_), no).
 kind_ok(svar(_), lv(_, _), no).
 kind_ok(sgn(_, _), n(_), no).
 kind_ok(sgn(_, _), lv(_, _), no).
+kind_ok(any, _, no).
+kind_ok(V, any, no) :- ground(V?) | true.
 
 procedure val_peer(Var?, Binding?, Peer?, Peer).
 val_peer(V, B, D, P?) :- lookup(V?, B?, F), val_peer1(F?, D?, P).
@@ -2753,6 +2864,7 @@ val_peer1(found(c(_)), D, D?).
 val_peer1(found(n(_)), D, D?).
 val_peer1(found(lv(_, _)), D, D?).
 val_peer1(free, D, D?).
+val_peer1(found(any), D, D?).
 
 procedure val_speech(Var?, Binding?, Peer?, Speech).
 val_speech(V, B, D, S?) :- lookup(V?, B?, F), val_speech1(F?, D?, S).
@@ -2764,6 +2876,7 @@ val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(found(n(_)), D, speech(utterance(none), D?)).
 val_speech1(found(lv(_, _)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
+val_speech1(found(any), D, speech(utterance(none), D?)).
 
 procedure num_of(Var?, Binding?, NumRes).
 num_of(num(X), _, num_is(N?)) :- integer(X?) | N := X?.
@@ -2776,6 +2889,7 @@ num_found(found(s(_)), no_num).
 num_found(found(c(_)), no_num).
 num_found(found(lv(_, _)), no_num).
 num_found(free, no_num).
+num_found(found(any), no_num).
 
 procedure val_num(Var?, Binding?, Integer).
 val_num(V, B, K?) :- num_of(V?, B?, R), num_val(R?, K).
@@ -2805,6 +2919,7 @@ expr_val(pvar(_), _, no_num).
 expr_val(svar(_), _, no_num).
 expr_val(sgn(_, _), _, no_num).
 expr_val(nterm(_), _, no_num).
+expr_val(any, _, no_num).
 
 procedure num_op(Constant?, NumRes?, NumRes?, NumRes).
 num_op(plus, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := (A? + C?).
@@ -2907,6 +3022,7 @@ expr_free(pvar(_), _, F0, F0?).
 expr_free(svar(_), _, F0, F0?).
 expr_free(sgn(_, _), _, F0, F0?).
 expr_free(nterm(_), _, F0, F0?).
+expr_free(any, _, F0, F0?).
 
 procedure leaf_free1(NumRes?, Var?, Vars?, Vars).
 leaf_free1(num_is(_), _, F0, F0?).
