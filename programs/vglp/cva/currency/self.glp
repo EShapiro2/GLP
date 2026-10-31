@@ -7,7 +7,8 @@
 %% f0acbc1, Section 3.2, "The protocol" and Definitions "Proposing" to
 %% "Deciding"; Section 5.4, "Triggers" and "The compilation").  GC extends GKK,
 %% so each person first establishes their identity, which every other role
-%% requires, and alice and bob meet, each then knowing the other, before
+%% requires, and alice and bob come to know each other by GKK:2,
+%% Acquaintance, acquaint(p?, q?), before
 %% they swap, pay or redeem (GC:2 to GC:4).  Each play runs two agents, alice
 %% and bob, their persons scripted and paced on their screens (../self.glp), and
 %% gives each person's log, the views and the notices, with gave(K, A) where
@@ -30,7 +31,7 @@
 %%
 %% Each play opens alike: each person establishes their identity and mints
 %% coins of their own, each a class of one participant, applied at once; each
-%% comes to know the other's agent by alice's request of meeting bob, a cold
+%% comes to know the other's agent by alice's request acquaint(alice, bob), a cold
 %% call, the hello, on which bob is asked and answers yes, his request of it
 %% (vGLP, Section 5.4, "The compilation"), and once it commits each knows the
 %% other.
@@ -74,10 +75,10 @@
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
-Class    ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+Class    ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
            ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
-Proposal ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
+Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
            ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
 Request  ::= propose(Proposal).
@@ -113,13 +114,13 @@ exported procedure play_pay_swap(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_pay_swap(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 2))), wait(has(coin(alice), 2)),
-          own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
+          own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
           own([A4, A5], propose(swap(A4?, bob, A5?, 2, bob, 3))),
           wait(has(coin(bob), 3)),
           own([A6], propose(pay(A6?, bob, 2)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint(B2?, 3))), wait(has(coin(bob), 3)),
-          approval(meet(alice, bob), yes),
+          approval(acquaint(alice, bob), yes),
           approval(swap(alice, bob, alice, 2, bob, 3), yes)],
          LA, LB, N).
 
@@ -128,7 +129,7 @@ play_redeem(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 1))), wait(holds(coin(alice))),
           
-          own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
+          own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
           own([A4, A5], propose(swap(A4?, bob, A5?, 1, bob, 1))),
           wait(holds(coin(bob))),
           own([A6, A7], propose(swap(A6?, bob, bob, 1, A7?, 1))),
@@ -139,7 +140,7 @@ play_redeem(LA?, LB?, N?) :-
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint(B2?, 1))), wait(holds(coin(bob))),
           
-          approval(meet(alice, bob), yes),
+          approval(acquaint(alice, bob), yes),
           approval(swap(alice, bob, alice, 1, bob, 1), yes),
           approval(swap(alice, bob, bob, 1, alice, 1), yes),
           approval(swap(alice, bob, alice, 1, bob, 1), yes)],
@@ -149,13 +150,13 @@ exported procedure play_busy(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_busy(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 2))), wait(has(coin(alice), 2)),
-          own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
+          own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
           own([A4, A5], propose(swap(A4?, bob, A5?, 1, bob, 1))),
           wait(holds(coin(bob))),
           own([A6, A7], propose(swap(A6?, bob, A7?, 1, bob, 1)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(mint(B2?, 2))), wait(has(coin(bob), 2)),
-          approval(meet(alice, bob), yes),
+          approval(acquaint(alice, bob), yes),
           approval(swap(alice, bob, alice, 1, bob, 1), yes),
           wait(asked(swap(alice, bob, alice, 1, bob, 1))),
           own([B3], propose(pay(B3?, alice, 1))),
@@ -168,11 +169,11 @@ play_declined(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 1))), wait(holds(coin(alice))),
           
-          own([A3], propose(meet(A3?, bob))), wait(holds(knows(bob))),
+          own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
           own([A4, A5], propose(swap(A4?, bob, A5?, 1, carol, 1)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           
-          approval(meet(alice, bob), yes)],
+          approval(acquaint(alice, bob), yes)],
          LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks
