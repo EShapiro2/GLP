@@ -55,6 +55,27 @@ class GlobalName {
   @override
   int get hashCode => Object.hash(type, agent, index);
 
+  /// The name the 2-ary structure [t] presents, `'_w'(P, I)` or `'_r'(P, I)`
+  /// with constant arguments; null for any other structure.
+  static GlobalName? fromStruct(StructTerm t) {
+    if ((t.functor != '_w' && t.functor != '_r') || t.args.length != 2) {
+      return null;
+    }
+    final agentArg = t.args[0];
+    final indexArg = t.args[1];
+    if (agentArg is! ConstTerm || indexArg is! ConstTerm) return null;
+    final agent = agentArg.value as String;
+    final index = (indexArg.value as num).toInt();
+    return t.functor == '_w'
+        ? GlobalName.writer(agent, index)
+        : GlobalName.reader(agent, index);
+  }
+
+  /// This name as the 2-ary structure a program sees, `'_w'(P, I)` or
+  /// `'_r'(P, I)`, functor giving polarity, first argument the anchor.
+  StructTerm toStruct() =>
+      StructTerm(isWriter ? '_w' : '_r', [ConstTerm(agent), ConstTerm(index)]);
+
   /// Write this name into an agent's saved state.
   void save(StateWriter w) {
     w.boolean(isWriter);
@@ -79,7 +100,9 @@ class GlobalName {
 ///
 /// See: IGLP Definition global_send Predicate (app:global-send)
 class GlobalSendSpawn {
-  /// Address of the reader to watch (the ? end of the variable pair)
+  /// The writer address of the pair whose reader the goal watches: the key
+  /// `heap.onBind` fires under when the writer is bound (see [globalize],
+  /// [localize]).
   final HeapCell readerAddr;
 
   /// Global name identifying the link
@@ -124,9 +147,6 @@ class TermVar {
         readerAddr = addr;
 
   bool get isWriter => !isReader;
-
-  /// Get the paired reader address
-  HeapCell get pairedReaderAddr => readerAddr;
 
   @override
   String toString() => isReader
@@ -423,11 +443,7 @@ Term _substituteGlobalNames(Term term, Map<HeapCell, GlobalName> mapping) =>
     _rebuild(term, (t) {
       if (t is VarRef) {
         final gn = mapping[t.addr];
-        if (gn != null) {
-          final functor = gn.isWriter ? '_w' : '_r';
-          return StructTerm(
-              functor, [ConstTerm(gn.agent), ConstTerm(gn.index)]);
-        }
+        if (gn != null) return gn.toStruct();
         return t;
       }
       return t is StructTerm ? null : t; // ConstTerm unchanged
@@ -483,15 +499,9 @@ List<GlobalName> extractGlobalNames(Term term) {
     final t = pending.removeLast();
     if (t is! StructTerm) continue;
     if ((t.functor == '_w' || t.functor == '_r') && t.args.length == 2) {
-      final agentArg = t.args[0];
-      final indexArg = t.args[1];
-      if (agentArg is ConstTerm && indexArg is ConstTerm) {
-        final agent = agentArg.value as String;
-        final index = (indexArg.value as num).toInt();
-        result.add(t.functor == '_w'
-            ? GlobalName.writer(agent, index)
-            : GlobalName.reader(agent, index));
-      }
+      // A name-shaped structure is a leaf, a name or not.
+      final gn = GlobalName.fromStruct(t);
+      if (gn != null) result.add(gn);
     } else {
       // The first argument is met next, so it goes on the stack last.
       for (var i = t.args.length - 1; i >= 0; i--) {
@@ -511,30 +521,24 @@ Term localizeTermWithResult(
   List<GlobalName> globalNames,
   LocalizeResult result,
 ) {
-  final globalNameToLocal = <String, HeapCell>{};
+  final globalNameToLocal = <GlobalName, HeapCell>{};
   for (var i = 0; i < globalNames.length; i++) {
-    final gn = globalNames[i];
     final pair = result.freshPairs[i];
     final useReader = result.useReader[i];
-    globalNameToLocal['${gn.type.name}:${gn.agent}:${gn.index}'] =
+    globalNameToLocal[globalNames[i]] =
         useReader ? pair.readerAddr : pair.writerAddr;
   }
   return _substituteLocalVars(term, globalNameToLocal);
 }
 
-Term _substituteLocalVars(Term term, Map<String, HeapCell> mapping) =>
+Term _substituteLocalVars(Term term, Map<GlobalName, HeapCell> mapping) =>
     _rebuild(term, (t) {
       if (t is! StructTerm) return t;
-      if ((t.functor == '_w' || t.functor == '_r') && t.args.length == 2) {
-        final agentArg = t.args[0];
-        final indexArg = t.args[1];
-        if (agentArg is ConstTerm && indexArg is ConstTerm) {
-          final type = t.functor == '_w' ? 'writer' : 'reader';
-          final key = '$type:${agentArg.value}:${indexArg.value}';
-          final localAddr = mapping[key];
-          if (localAddr != null) {
-            return VarRef(localAddr);
-          }
+      final gn = GlobalName.fromStruct(t);
+      if (gn != null) {
+        final localAddr = mapping[gn];
+        if (localAddr != null) {
+          return VarRef(localAddr);
         }
       }
       return null; // a structure, rebuilt over its arguments

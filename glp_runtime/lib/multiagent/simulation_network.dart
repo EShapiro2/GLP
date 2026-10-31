@@ -52,8 +52,6 @@ class NetworkDirectory {
 
   /// All registered public keys.
   Iterable<PubKey> get keys => _idToPk.values;
-
-  int get length => _idToPk.length;
 }
 
 /// Generate a fresh Ed25519 key pair (synchronous).
@@ -78,10 +76,8 @@ class _PendingDelivery {
   final String toId;
   final Uint8List payload;
   final String messageId;
-  final Underlay underlay;
 
-  _PendingDelivery(
-      this.fromId, this.toId, this.payload, this.messageId, this.underlay);
+  _PendingDelivery(this.fromId, this.toId, this.payload, this.messageId);
 }
 
 /// The simulation router (main isolate).
@@ -200,7 +196,7 @@ class SimulationRouter {
   }
 
   /// Fire the post-boot connectivity: every ordered adjacent pair connects and
-  /// is discovered (spec §3, "Once all agents have booted…").
+  /// is discovered, once all agents have booted.
   void bootComplete() {
     final ids = directory.ids.toList();
     for (final a in ids) {
@@ -219,31 +215,28 @@ class SimulationRouter {
   /// queue and flush (in order) on [restore].
   void cut(String a, String b) {
     _cutPairs.add(_pair(a, b));
-    final pkA = directory.pkOf(a);
-    final pkB = directory.pkOf(b);
-    if (pkB != null) {
-      onConnectivity?.call(
-          a, pkB, Underlay.pan, ConnectivityEvent.disconnected);
-    }
-    if (pkA != null) {
-      onConnectivity?.call(
-          b, pkA, Underlay.pan, ConnectivityEvent.disconnected);
-    }
+    _emitBoth(a, b, ConnectivityEvent.disconnected);
   }
 
   /// Reverse [cut]: fires connect on both sides and flushes queued messages in
   /// order (fair delivery).
   void restore(String a, String b) {
     _cutPairs.remove(_pair(a, b));
+    _emitBoth(a, b, ConnectivityEvent.connected);
+    _flush(a, b, reverse: false);
+  }
+
+  /// Emit [event] to each of [a] and [b] about the other, where the other's
+  /// key is in the directory: to [a] first.
+  void _emitBoth(String a, String b, ConnectivityEvent event) {
     final pkA = directory.pkOf(a);
     final pkB = directory.pkOf(b);
     if (pkB != null) {
-      onConnectivity?.call(a, pkB, Underlay.pan, ConnectivityEvent.connected);
+      onConnectivity?.call(a, pkB, Underlay.pan, event);
     }
     if (pkA != null) {
-      onConnectivity?.call(b, pkA, Underlay.pan, ConnectivityEvent.connected);
+      onConnectivity?.call(b, pkA, Underlay.pan, event);
     }
-    _flush(a, b, reverse: false);
   }
 
   /// Invisible delay: peers stay reachable, no callbacks; queued deliveries are
@@ -253,7 +246,8 @@ class SimulationRouter {
   }
 
   /// Release a [holdDelivery], flushing queued messages in REVERSE order — the
-  /// reverse-order test hook for Issue 7 (spec §3, §7.3).
+  /// reverse-order test hook for Issue 7 (IGLP app:in-networking, Early
+  /// messages).
   void releaseDelivery(String a, String b) {
     _heldPairs.remove(_pair(a, b));
     _flush(a, b, reverse: true);
@@ -297,7 +291,7 @@ class SimulationRouter {
     if (_cutPairs.contains(pairKey) || _heldPairs.contains(pairKey)) {
       _queues
           .putIfAbsent('$fromId>$toId', () => [])
-          .add(_PendingDelivery(fromId, toId, payload, messageId, Underlay.pan));
+          .add(_PendingDelivery(fromId, toId, payload, messageId));
       return;
     }
 
@@ -314,13 +308,13 @@ class SimulationRouter {
       for (final p in pending) {
         final pairKey = _pair(p.fromId, p.toId);
         if (_cutPairs.contains(pairKey) || _heldPairs.contains(pairKey)) {
-          // Still blocked by the other control: re-queue and stop this dir.
+          // Still blocked by the other control: re-queue and go on.
           _queues.putIfAbsent(dir, () => []).add(p);
           continue;
         }
         final fromPk = directory.pkOf(p.fromId);
         if (fromPk == null) continue;
-        onDeliver?.call(p.toId, fromPk, p.payload, p.messageId, p.underlay);
+        onDeliver?.call(p.toId, fromPk, p.payload, p.messageId, Underlay.pan);
       }
     }
   }
