@@ -4,8 +4,8 @@
 /// independently, then produces a single flat Program AST where all
 /// inter-module calls are resolved to renamed local procedures.
 ///
-/// Specification: docs/modules/glp-project-compilation-spec.md
-/// Plan: docs/modules/project-compilation-implementation-plan.md
+/// Specification: TGLP modules.tex, the module system (Compilation, steps
+/// 1--5).
 library;
 
 import 'dart:io';
@@ -148,7 +148,7 @@ DiscoveredModule? rootModuleOf(String? rootSelfGlpPath) {
   if (rootSelfGlpPath == null) return null;
   final file = File(rootSelfGlpPath);
   if (!file.existsSync()) return null;
-  final module = Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
+  final module = _parseFile(file.path);
   enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
   return DiscoveredModule(
     filePath: file.path,
@@ -313,7 +313,7 @@ VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
   }
   final held = [
     for (final l in layers)
-      if (_holdsAt(l)) l
+      if (selfVglpHoldsAt(l)) l
   ]..sort((a, b) {
       final d = _depth(ppath.dirname(a)).compareTo(_depth(ppath.dirname(b)));
       return d != 0 ? d : a.compareTo(b);
@@ -346,10 +346,6 @@ void _refuseRootSelfVglp(String path) {
       'sections/parts/canonical-compilation.tex)',
       1, 1, phase: 'analyzer');
 }
-
-/// Whether the self.vglp at [path] holds a procedure, a declaration or a
-/// type: one of widget declarations alone is no layer.
-bool _holdsAt(String path) => selfVglpHoldsAt(path);
 
 /// Compile each self.vglp layer of [program], outermost first, by the
 /// canonical compilation, its questions the program's, with neither
@@ -691,13 +687,7 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
     final filename = file.path.split(Platform.pathSeparator).last;
 
     // Parse the module
-    final source = filename == 'self.glp'
-        ? selfGlpSource(file.path)
-        : file.readAsStringSync();
-    final lexer = Lexer(source);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    var module = parser.parseModule();
+    var module = _parseFile(file.path);
 
     // Enforce "Admission to the Primitive Layer" (Rule A / Rule B) at load time.
     enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
@@ -853,8 +843,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   if (programsDir != null) requireUnderRoot(filePath, programsDir);
   final rs = rootScope ?? _rootScopeOf(rootSelfGlpPath);
 
-  final module =
-      Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
+  final module = _parseFile(file.path);
   enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
 
   final dir = file.parent.absolute.path;
@@ -879,8 +868,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   final ownSelf = File('$dir${Platform.pathSeparator}self.glp');
   if (file.path.split(Platform.pathSeparator).last != 'self.glp' &&
       ownSelf.existsSync()) {
-    final selfModule =
-        Parser(Lexer(ownSelf.readAsStringSync()).tokenize()).parseModule();
+    final selfModule = _parseFile(ownSelf.path);
     final selfChain = discoverSelfChain(
         targetFile: ownSelf.absolute.path, rootDir: dir, programsDir: programsDir);
     modules.add(DiscoveredModule(
@@ -916,8 +904,7 @@ void _addAncestorContextAndExposes(
     {Map<String, Module> layers = const {}}) {
   if (programsDir != null) {
     for (final selfPath in _ancestorSelfGlpFiles(rootAbsPath, programsDir)) {
-      var selfModule =
-          Parser(Lexer(selfGlpSource(selfPath)).tokenize()).parseModule();
+      var selfModule = _parseFile(selfPath);
       final layer = layers[_normPath(File(selfPath).parent.path)];
       if (layer != null) {
         selfModule = _withLayer(selfModule, layer, selfPath,
@@ -963,6 +950,18 @@ String _normPath(String p) {
 bool _dirUnder(String childDir, String ancestorDir) =>
     childDir == ancestorDir ||
     childDir.startsWith('$ancestorDir${Platform.pathSeparator}');
+
+/// Whether [m] is the `self.glp` of the program's root directory, normalised
+/// as [rootNorm] ([_normPath]): a directory program's entry module, whose
+/// exports are its entry points.
+bool _isRootSelfGlp(DiscoveredModule m, String rootNorm) =>
+    m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm;
+
+/// Whether [mod]'s procedures keep their bare names in the linked program:
+/// the loaded module of a single-module program, [singleNorm] its normalised
+/// path, and null for a directory program.
+bool _keepsBareNames(DiscoveredModule mod, String? singleNorm) =>
+    singleNorm != null && _normPath(mod.filePath) == singleNorm;
 
 /// Resolve `-expose` directives among [modules] (mutates the list).
 ///
@@ -1014,7 +1013,7 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
         programsDir: programsDir)) {
       final norm = _normPath(self);
       if (modules.any((m) => _normPath(m.filePath) == norm)) continue;
-      var ast = Parser(Lexer(selfGlpSource(self)).tokenize()).parseModule();
+      var ast = _parseFile(self);
       final layer = layers[_normPath(File(self).parent.path)];
       if (layer != null) {
         ast = _withLayer(
@@ -1048,8 +1047,7 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
             '  from -expose($path) in ${exposer.filePath}');
       }
 
-      final exposedAst =
-          Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
+      final exposedAst = _parseFile(file.path);
       final exposedName = modulePathName(file.path, nameRoot);
 
       // Collision: exported sigs unique among modules exposed at this level.
@@ -1372,7 +1370,7 @@ void checkModulesIndependently(List<DiscoveredModule> modules,
   final singleNorm =
       singleModulePath != null ? _normPath(singleModulePath) : null;
   for (final mod in modules) {
-    final keepBare = singleNorm != null && _normPath(mod.filePath) == singleNorm;
+    final keepBare = _keepsBareNames(mod, singleNorm);
     Analyzer().checkSRSWAndGuards(
       Program(mod.ast.procedures, mod.ast.line, mod.ast.column),
       typeEnv: buildModuleTypeEnvironment(mod.ast,
@@ -1686,7 +1684,7 @@ Map<String, TypeDef> programTypeDefs(List<DiscoveredModule> modules,
   for (final m in modules) {
     final isEntry = singleNorm != null
         ? _normPath(m.filePath) == singleNorm
-        : m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm;
+        : _isRootSelfGlp(m, rootNorm);
     if (isEntry) {
       entry = m;
       break;
@@ -1765,7 +1763,7 @@ Map<String, EntryTemplate> entryTemplatesOf(List<DiscoveredModule> modules,
   for (final m in modules) {
     final isEntryModule = singleNorm != null
         ? _normPath(m.filePath) == singleNorm
-        : m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm;
+        : _isRootSelfGlp(m, rootNorm);
     if (!isEntryModule) continue;
     TypeEnvironment? env;
     for (final d in m.ast.procDeclarations) {
@@ -2011,8 +2009,7 @@ LinkResult linkProgram(List<DiscoveredModule> modules,
 /// of its root-level modules for its entry points.
 void _requireProgramSelfGlp(List<DiscoveredModule> modules, String rootDir) {
   final rootNorm = _normPath(rootDir);
-  final hasSelf = modules.any((m) =>
-      m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm);
+  final hasSelf = modules.any((m) => _isRootSelfGlp(m, rootNorm));
   if (hasSelf) return;
   throw Exception(
       'Not a program: $rootDir has no self.glp. A program is a directory '
@@ -2056,10 +2053,8 @@ void _requireEntryPoints(
   if (hasEntryPoint) return;
 
   final rootNorm = _normPath(rootDir);
-  final rootSelfPath = modules
-      .firstWhere((m) =>
-          m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
-      .filePath;
+  final rootSelfPath =
+      modules.firstWhere((m) => _isRootSelfGlp(m, rootNorm)).filePath;
   final cause = '$rootSelfPath exports no procedure';
 
   throw Exception(
@@ -2099,8 +2094,42 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // Step 4 for types: the scope each module's type references resolve in.
   final typeOwners = typeOwnersByModule(modules);
 
-  // The procedure registry: module name (its path from the root) → the
-  // signatures of the procedures it defines.
+  final registry = _procedureRegistry(modules);
+  final ancestorSelfProcs = _ancestorSelfProcedures(modules, outerEntryPoints);
+
+  // The loaded module of a single-module program keeps its procedures under
+  // their bare names: they are the program's entry points, "called by plain
+  // name by a goal posted at the root" (modules.tex §Static Linking), so the
+  // bare name is a plain-name handle on the real head — no forwarder clause,
+  // whose flat arguments cannot carry a structured-mode term's nested holes.
+  // Every SCOPE module (ancestor self.glp, own-dir self.glp, exposed module) is
+  // still renamed to M:p, so its internal calls resolve to its OWN procedures
+  // and the bare loaded module never hijacks an ancestor's same-named call.
+  final singleNorm =
+      singleModulePath != null ? _normPath(singleModulePath) : null;
+
+  final allProcedures =
+      _renamedProcedures(modules, registry, ancestorSelfProcs, singleNorm);
+
+  final (declIndex, declIndexFile) = _declarationIndex(modules);
+
+  final (aliasDecls, aliasCheckedDecls) = _entryPointAliases(
+      modules, rootDir, singleNorm, typeOwners, declIndex, declIndexFile,
+      allProcedures);
+
+  final (allDecls, checkedDecls) =
+      _linkedDeclarations(modules, registry, singleNorm, typeOwners);
+
+  allDecls.addAll(aliasDecls);
+  checkedDecls.addAll(aliasCheckedDecls);
+
+  return LinkResult(Program(allProcedures, 0, 0), allDecls,
+      checkedDeclarations: checkedDecls);
+}
+
+/// The procedure registry: module name (its path from the root) → the
+/// signatures of the procedures it defines.
+Map<String, Set<String>> _procedureRegistry(List<DiscoveredModule> modules) {
   final registry = <String, Set<String>>{};
   for (final mod in modules) {
     final sigs = <String>{};
@@ -2109,9 +2138,15 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
     }
     registry[mod.moduleName] = sigs;
   }
+  return registry;
+}
 
-  // Build ancestor self.glp procedure map for each module.
-  // Maps module name → { sig → ancestorModuleName } (inner-most ancestor wins).
+/// The ancestor self.glp procedure map for each module: module name →
+/// { sig → ancestorModuleName } (inner-most ancestor wins).  An entry point
+/// of a program the engine holds ([outerEntryPoints]) is nearer than the
+/// root for a file-less source, and is left out.
+Map<String, Map<String, String>> _ancestorSelfProcedures(
+    List<DiscoveredModule> modules, Set<String> outerEntryPoints) {
   final selfGlpModules = modules.where((m) => m.isSelfGlp).toList();
   final ancestorSelfProcs = <String, Map<String, String>>{};
 
@@ -2165,19 +2200,20 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 
     ancestorSelfProcs[mod.moduleName] = procs;
   }
+  return ancestorSelfProcs;
+}
 
+/// Steps 3 and 4 for procedures: every procedure of every module renamed
+/// `M:p/n` --- the loaded module's own kept bare, [singleNorm] its normalised
+/// path --- and every call in its clauses resolved in its scope
+/// ([_resolveGoal], [_resolveGuard]); a cross-module call that resolves to
+/// nothing rejects the program.
+List<Procedure> _renamedProcedures(
+    List<DiscoveredModule> modules,
+    Map<String, Set<String>> registry,
+    Map<String, Map<String, String>> ancestorSelfProcs,
+    String? singleNorm) {
   final allProcedures = <Procedure>[];
-
-  // The loaded module of a single-module program keeps its procedures under
-  // their bare names: they are the program's entry points, "called by plain
-  // name by a goal posted at the root" (modules.tex §Static Linking), so the
-  // bare name is a plain-name handle on the real head — no forwarder clause,
-  // whose flat arguments cannot carry a structured-mode term's nested holes.
-  // Every SCOPE module (ancestor self.glp, own-dir self.glp, exposed module) is
-  // still renamed to M:p, so its internal calls resolve to its OWN procedures
-  // and the bare loaded module never hijacks an ancestor's same-named call.
-  final singleNorm =
-      singleModulePath != null ? _normPath(singleModulePath) : null;
 
   // Step 4's cross-module calls, resolved from the caller's directory, and
   // the calls that resolve to nothing, every one of them reported together.
@@ -2188,8 +2224,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   for (final mod in modules) {
     final localSigs = registry[mod.moduleName]!;
     final modAncestorProcs = ancestorSelfProcs[mod.moduleName] ?? {};
-    final keepBare =
-        singleNorm != null && _normPath(mod.filePath) == singleNorm;
+    final keepBare = _keepsBareNames(mod, singleNorm);
     String remote(RemoteGoal g) => resolver.resolve(mod, g);
 
     for (final proc in mod.ast.procedures) {
@@ -2252,9 +2287,14 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // directory, or a procedure its module does not export, does not resolve,
   // and the program is rejected (modules.tex, Compilation, fourth step).
   resolver.throwIfUnresolved();
+  return allProcedures;
+}
 
-  // Build a program-wide procedure declaration index for mode-aware aliases.
-  // Maps 'name/arity' → ProcDecl, collecting from all modules' non-imported decls.
+/// A program-wide procedure declaration index for mode-aware aliases,
+/// 'name/arity' → ProcDecl, collected from all modules' non-imported decls,
+/// with the file each indexed declaration came from.
+(Map<String, ProcDecl>, Map<String, String>) _declarationIndex(
+    List<DiscoveredModule> modules) {
   final declIndex = <String, ProcDecl>{};
   // The file each indexed declaration came from, so its types resolve in ITS
   // scope rather than the aliasing module's.
@@ -2269,7 +2309,20 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
       declIndexFile[sig] = mod.filePath;
     }
   }
+  return (declIndex, declIndexFile);
+}
 
+/// The entry-point aliases of a directory program, each added to
+/// [allProcedures], and their declarations --- in source type names, and
+/// with every type resolved in the declaring file's scope.
+(List<ProcDecl>, List<ProcDecl>) _entryPointAliases(
+    List<DiscoveredModule> modules,
+    String rootDir,
+    String? singleNorm,
+    Map<String, Map<String, String>> typeOwners,
+    Map<String, ProcDecl> declIndex,
+    Map<String, String> declIndexFile,
+    List<Procedure> allProcedures) {
   // Generate entry-point aliases (modules.tex sec:static-linking step 5,
   // §External access). For a DIRECTORY program, the entry points are the
   // EXPORTED procedures of the ROOT self.glp — the self.glp at the loaded
@@ -2286,10 +2339,8 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   final aliasCheckedDecls = <ProcDecl>[];
   if (singleNorm == null) {
     final rootNorm = _normPath(rootDir);
-    final rootSelfMods = modules
-        .where((m) =>
-            m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
-        .toList();
+    final rootSelfMods =
+        modules.where((m) => _isRootSelfGlp(m, rootNorm)).toList();
 
     final aliasedSigs = <String, String>{}; // sig → owning module (conflict check)
     for (final mod in rootSelfMods) {
@@ -2346,7 +2397,16 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
       }
     }
   }
+  return (aliasDecls, aliasCheckedDecls);
+}
 
+/// The linked declarations of every module, renamed with their procedures:
+/// in source type names, and with every type resolved (step 4 for types).
+(List<ProcDecl>, List<ProcDecl>) _linkedDeclarations(
+    List<DiscoveredModule> modules,
+    Map<String, Set<String>> registry,
+    String? singleNorm,
+    Map<String, Map<String, String>> typeOwners) {
   // Collect and rename proc declarations for SRSW relaxation. The loaded
   // module's declarations stay bare, matching its bare procedures.
   //
@@ -2363,8 +2423,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   final checkedDecls = <ProcDecl>[];
   final codelessSeen = <String>{};
   for (final mod in modules) {
-    final keepBare =
-        singleNorm != null && _normPath(mod.filePath) == singleNorm;
+    final keepBare = _keepsBareNames(mod, singleNorm);
     final owners = typeOwners[mod.filePath]!;
     final defined = registry[mod.moduleName]!;
     for (final decl in mod.ast.procDeclarations) {
@@ -2402,12 +2461,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
       ));
     }
   }
-
-  allDecls.addAll(aliasDecls);
-  checkedDecls.addAll(aliasCheckedDecls);
-
-  return LinkResult(Program(allProcedures, 0, 0), allDecls,
-      checkedDeclarations: checkedDecls);
+  return (allDecls, checkedDecls);
 }
 
 /// Dead-code elimination: the linker's step 5 (modules.tex sec:static-linking).
@@ -3185,7 +3239,7 @@ List<DiscoveredModule> _ancestorSelfGlps(
     }
   }
   int depth(DiscoveredModule s) =>
-      ppath.split(_normPath(File(s.filePath).parent.path)).length;
+      _depth(_normPath(File(s.filePath).parent.path));
   ancestors.sort((a, b) => depth(b).compareTo(depth(a)));
   // The root self.glp is the outermost link of every module's chain, d_1,
   // whatever directory the module's program sits in (TGLP modules.tex: "The
@@ -3266,9 +3320,6 @@ TypeExpr _renameTypeExpr(
   }
   return expr; // ConstantAlt, ListNilAlt, PrimitiveModeAlt: no type name
 }
-
-// Ancestor-scope assembly lives in module_hierarchy.dart (buildAncestorScope)
-// — the one shared implementation; no linker-local copy.
 
 /// Write the compiled GLP beside each `.vglp` source under [rootDir].
 ///

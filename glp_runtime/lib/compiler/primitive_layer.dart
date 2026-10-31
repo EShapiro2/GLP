@@ -122,19 +122,13 @@ void _checkNoReservedNames(Module module) {
   }
 }
 
-/// A goal's called name, through the wrappers that hide it: `RemoteGoal`'s own
-/// functor is `#` and `SpawnGoal`'s is `@`, so checking the wrapper alone would
-/// miss `m # '_add'(...)` and `'_add'(...)@a`.
+/// A goal's called name, through the wrappers that hide it ([calledGoals]):
+/// `RemoteGoal`'s own functor is `#` and `SpawnGoal`'s is `@`, so checking the
+/// wrapper alone would miss `m # '_add'(...)` and `'_add'(...)@a`.
 void _checkGoal(Goal goal) {
-  if (goal is RemoteGoal) {
-    _checkGoal(goal.goal);
-    return;
+  for (final g in calledGoals(goal)) {
+    _checkName(g.functor, g.line, g.column, 'calls');
   }
-  if (goal is SpawnGoal) {
-    _checkGoal(goal.innerGoal);
-    return;
-  }
-  _checkName(goal.functor, goal.line, goal.column, 'calls');
 }
 
 /// True if [name] is admitted only to the primitive layer. An unquoted name

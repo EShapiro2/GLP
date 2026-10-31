@@ -491,7 +491,7 @@ class PartialEvaluator {
         if (subst.containsKey(writerName)) {
           // Check structural compatibility
           final existing = subst[writerName]!;
-          final compatResult = _checkCompatible(existing, unitArg, subst, suspSet);
+          final compatResult = _checkCompatible(existing, unitArg);
           if (compatResult != null) return compatResult;
         } else {
           subst[writerName] = unitArg;
@@ -588,12 +588,7 @@ class PartialEvaluator {
   }
 
   /// Check if two terms are structurally compatible
-  UnifyResult? _checkCompatible(
-    Term existing,
-    Term newTerm,
-    Map<String, Term> subst,
-    Set<String> suspSet
-  ) {
+  UnifyResult? _checkCompatible(Term existing, Term newTerm) {
     // Simple structural check
     if (existing is ConstTerm && newTerm is ConstTerm) {
       if (existing.value != newTerm.value) {

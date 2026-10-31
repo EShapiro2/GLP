@@ -5,29 +5,18 @@ import 'package:glp_runtime/runtime/terms.dart' as rt show nil;
 import 'ast.dart';
 import 'analyzer.dart';
 import 'error.dart';
-import 'result.dart';
 
 /// Code generation context
 class CodeGenContext {
   // Bytecode accumulator: the instruction objects, labels among them
   final List<bc.Op> instructions = [];
 
-  // Label management
-  final Map<String, int> labels = {};
-  final List<String> pendingLabels = [];  // Labels waiting to be placed
-
   // Temporary variable allocation
   int nextTempVar = 10;  // Start temps at 10 to avoid collision with argument registers
-  final Map<String, int> tempAllocation = {};
 
   // Current procedure context
   String? currentProcedure;
   int currentClauseIndex = 0;
-
-  // Phase tracking
-  bool inHead = false;
-  bool inGuard = false;
-  bool inBody = false;
 
   // Track variables seen in head (for GetVariable vs GetValue)
   final Set<String> seenHeadVars = {};
@@ -39,8 +28,6 @@ class CodeGenContext {
   }
 
   void emitLabel(String label) {
-    // Record label position in map
-    labels[label] = currentPC;
     // Emit the Label instruction
     instructions.add(bc.Label(label));
   }
@@ -57,43 +44,22 @@ class CodeGenContext {
     // argSlot an unbounded clen, not a 0..9 register.
     final base = variableCount > argCount ? variableCount : argCount;
     nextTempVar = base > 10 ? base : 10;
-    tempAllocation.clear();
   }
 }
 
 /// Code generator - transforms annotated AST to bytecode
 class CodeGenerator {
   BytecodeProgram generate(AnnotatedProgram program) {
-    final result = generateWithMetadata(program);
-    return result.program;
-  }
-
-  CompilationResult generateWithMetadata(AnnotatedProgram program) {
     final ctx = CodeGenContext();
-    final variableMap = <String, int>{};
 
     // Generate code for each procedure
     for (final proc in program.procedures) {
       _generateProcedure(proc, ctx);
-
-      // Collect variable mappings from the first procedure (for goals)
-      // This captures variables used in queries like "merge([1,2,3], [a,b], Xs)."
-      if (proc == program.procedures.first) {
-        for (final clause in proc.clauses) {
-          for (final varInfo in clause.varTable.getAllVars()) {
-            if (varInfo.registerIndex != null) {
-              variableMap[varInfo.name] = varInfo.registerIndex!;
-            }
-          }
-        }
-      }
     }
 
     // Build final bytecode program using runner's BytecodeProgram
     // It will auto-index labels from Label instructions
-    final bytecode = BytecodeProgram(ctx.instructions);
-
-    return CompilationResult(bytecode, variableMap);
+    return BytecodeProgram(ctx.instructions);
   }
 
   void _generateProcedure(AnnotatedProcedure proc, CodeGenContext ctx) {
@@ -102,10 +68,6 @@ class CodeGenerator {
     // Entry label: "p/1", "merge/3", etc.
     final entryLabel = proc.signature;
     ctx.emitLabel(entryLabel);
-
-    // Record entry PC (κ)
-    proc.entryPC = ctx.currentPC;
-    proc.entryLabel = entryLabel;
 
     // Generate each clause
     for (int i = 0; i < proc.clauses.length; i++) {
@@ -138,17 +100,10 @@ class CodeGenerator {
     ctx.emit(bc.ClauseTry());
 
     // HEAD PHASE
-    ctx.inHead = true;
-    ctx.inGuard = false;
-    ctx.inBody = false;
-
     _generateHead(clause.ast.head, clause.varTable, ctx);
 
     // GUARD PHASE (if present)
     if (clause.hasGuards && clause.ast.guards != null) {
-      ctx.inHead = false;
-      ctx.inGuard = true;
-
       for (final guard in clause.ast.guards!) {
         _generateGuard(guard, clause.varTable, ctx);
       }
@@ -158,10 +113,6 @@ class CodeGenerator {
     ctx.emit(bc.Commit());  // Apply σ̂w, enter BODY phase
 
     // BODY PHASE
-    ctx.inHead = false;
-    ctx.inGuard = false;
-    ctx.inBody = true;
-
     if (clause.hasBody && clause.ast.body != null) {
       // SPECIAL CASE: Body is just "true" - treat like a fact (no spawn)
       if (clause.ast.body!.length == 1 &&
@@ -211,7 +162,7 @@ class CodeGenerator {
       final regIndex = varInfo.registerIndex!;
 
       // Check if this is the first occurrence in the head
-      final baseVarName = term.name.endsWith('?') ? term.name.substring(0, term.name.length - 1) : term.name;
+      final baseVarName = term.name;
       final isFirstOccurrence = !ctx.seenHeadVars.contains(baseVarName);
 
       if (isFirstOccurrence) {
@@ -237,12 +188,12 @@ class CodeGenerator {
 
         // Process head element
         if (term.head != null) {
-          _generateStructureElement(term.head!, varTable, ctx, inHead: true);
+          _generateStructureElement(term.head!, varTable, ctx);
         }
 
         // Process tail element
         if (term.tail != null) {
-          _generateStructureElement(term.tail!, varTable, ctx, inHead: true);
+          _generateStructureElement(term.tail!, varTable, ctx);
         }
       }
 
@@ -261,9 +212,9 @@ class CodeGenerator {
       ctx.emit(bc.HeadStructure(term.functor, term.arity, argSlot));
 
       // FCP AM: Process ALL arguments inline using Push/Pop for nested structures
-      // _generateStructureElement already has correct Push/Pop logic (lines 335-361)
+      // (_generateStructureElement has the Push/Pop logic)
       for (final subArg in term.args) {
-        _generateStructureElement(subArg, varTable, ctx, inHead: true);
+        _generateStructureElement(subArg, varTable, ctx);
       }
 
     } else if (term is UnderscoreTerm) {
@@ -296,8 +247,8 @@ class CodeGenerator {
     }
   }
 
-  void _generateStructureElement(Term term, VariableTable varTable, CodeGenContext ctx, {required bool inHead}) {
-    // Called during structure traversal (S register in use)
+  void _generateStructureElement(Term term, VariableTable varTable, CodeGenContext ctx) {
+    // Called during head structure traversal (S register in use)
     term = _anonymousAsUnderscore(term);
 
     if (term is VarTerm) {
@@ -331,50 +282,31 @@ class CodeGenerator {
         Term? t = term;
         while (t is ListTerm && !t.isNil) {
           final reg = ctx.allocateTemp();
-          if (inHead) {
-            ctx.emit(bc.Push(reg));
-            ctx.emit(bc.UnifyStructure('.', 2));
-          } else {
-            // WRITE mode (BODY): building nested structure within argument structure
-            ctx.emit(bc.PutStructure('.', 2, reg));
-          }
+          ctx.emit(bc.Push(reg));
+          ctx.emit(bc.UnifyStructure('.', 2));
           cellRegs.add(reg);
-          if (t.head != null) _generateStructureElement(t.head!, varTable, ctx, inHead: inHead);
+          if (t.head != null) _generateStructureElement(t.head!, varTable, ctx);
           t = t.tail;
         }
-        if (t != null) _generateStructureElement(t, varTable, ctx, inHead: inHead);
+        if (t != null) _generateStructureElement(t, varTable, ctx);
         for (final reg in cellRegs.reversed) {
-          if (inHead) {
-            ctx.emit(bc.Pop(reg));
-            // FCP AM: After Pop, must place nested structure at S and increment
-            ctx.emit(bc.UnifyVariable(reg, isReader: false));
-          } else {
-            ctx.emit(bc.UnifyVariable(reg, isReader: false));
-          }
+          ctx.emit(bc.Pop(reg));
+          // FCP AM: After Pop, must place nested structure at S and increment
+          ctx.emit(bc.UnifyVariable(reg, isReader: false));
         }
       }
 
     } else if (term is StructTerm) {
       // Nested structure: use Push/UnifyStructure/Pop pattern (FCP AM design)
-      if (inHead) {
-        final saveReg = ctx.allocateTemp();
-        ctx.emit(bc.Push(saveReg));
-        ctx.emit(bc.UnifyStructure(term.functor, term.arity));
-        for (final subArg in term.args) {
-          _generateStructureElement(subArg, varTable, ctx, inHead: true);
-        }
-        ctx.emit(bc.Pop(saveReg));
-        // FCP AM: After Pop, must place nested structure at S and increment
-        ctx.emit(bc.UnifyVariable(saveReg, isReader: false));
-      } else {
-        // WRITE mode
-        final tempReg = ctx.allocateTemp();
-        ctx.emit(bc.PutStructure(term.functor, term.arity, tempReg));
-        for (final subArg in term.args) {
-          _generateStructureElement(subArg, varTable, ctx, inHead: inHead);
-        }
-        ctx.emit(bc.UnifyVariable(tempReg, isReader: false));
+      final saveReg = ctx.allocateTemp();
+      ctx.emit(bc.Push(saveReg));
+      ctx.emit(bc.UnifyStructure(term.functor, term.arity));
+      for (final subArg in term.args) {
+        _generateStructureElement(subArg, varTable, ctx);
       }
+      ctx.emit(bc.Pop(saveReg));
+      // FCP AM: After Pop, must place nested structure at S and increment
+      ctx.emit(bc.UnifyVariable(saveReg, isReader: false));
 
     } else if (term is UnderscoreTerm) {
       _refuseAnonymousReader(term);
@@ -383,39 +315,37 @@ class CodeGenerator {
     }
   }
 
+  /// A guard `name/1` on a variable of the clause, compiled to the
+  /// instruction [instruction] gives for the variable's register: emitted,
+  /// and true; false where [guard] is not such a guard.
+  bool _emitVariableGuard(Guard guard, String name, VariableTable varTable,
+      CodeGenContext ctx, bc.Op Function(int register) instruction) {
+    if (guard.predicate == name && guard.args.length == 1) {
+      final arg = guard.args[0];
+      if (arg is VarTerm) {
+        final varInfo = varTable.getVar(arg.name);
+        if (varInfo != null) {
+          ctx.emit(instruction(varInfo.registerIndex!));
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   void _generateGuard(Guard guard, VariableTable varTable, CodeGenContext ctx) {
     // Special built-in guards
-    if (guard.predicate == 'ground' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        final varInfo = varTable.getVar(arg.name);
-        if (varInfo != null) {
-          ctx.emit(bc.Ground(varInfo.registerIndex!));
-          return;
-        }
-      }
+    if (_emitVariableGuard(guard, 'ground', varTable, ctx, (r) => bc.Ground(r))) {
+      return;
     }
 
-    if (guard.predicate == 'known' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        final varInfo = varTable.getVar(arg.name);
-        if (varInfo != null) {
-          ctx.emit(bc.Known(varInfo.registerIndex!));
-          return;
-        }
-      }
+    if (_emitVariableGuard(guard, 'known', varTable, ctx, (r) => bc.Known(r))) {
+      return;
     }
 
-    if (guard.predicate == 'no_readers' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        final varInfo = varTable.getVar(arg.name);
-        if (varInfo != null) {
-          ctx.emit(bc.NoReaders(varInfo.registerIndex!));
-          return;
-        }
-      }
+    if (_emitVariableGuard(
+        guard, 'no_readers', varTable, ctx, (r) => bc.NoReaders(r))) {
+      return;
     }
 
     if (guard.predicate == 'otherwise' && guard.args.isEmpty) {
@@ -507,7 +437,7 @@ class CodeGenerator {
         _generatePutArgument(goal.args[j], j, varTable, ctx);
       }
 
-      // ALWAYS spawn (tail recursion removed - all goals spawned)
+      // Every goal is spawned
       final procedureLabel = '${goal.functor}/${goal.arity}';  // Full signature
       ctx.emit(bc.Spawn(procedureLabel, goal.arity));
     }
@@ -584,31 +514,43 @@ class CodeGenerator {
         // (§cf-primitives). Building structurally keeps every *Constant operand
         // atomic so the code-format artefact can encode it. Pattern: [H|T]
         // becomes '.'(H, T).
-        ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
-
-        // Process head element
-        if (term.head != null) {
-          _generateStructureElementInBody(term.head!, varTable, ctx);
-        }
-
-        // Process tail element - may be another list or a variable
-        if (term.tail != null) {
-          _generateListTailInBody(term.tail!, varTable, ctx);
-        }
+        _generateNestedCompoundInBody(term, varTable, ctx);
       }
 
     } else if (term is StructTerm) {
       // Nested structure in BODY - need to handle both ground and non-ground
-      // Start building the nested structure
-      ctx.emit(bc.PutStructure(term.functor, term.arity, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
-
-      // Process each argument using SetWriter/SetReader for variables
-      for (final arg in term.args) {
-        _generateStructureElementInBody(arg, varTable, ctx);
-      }
+      _generateNestedCompoundInBody(term, varTable, ctx);
 
     } else if (term is UnderscoreTerm) {
       ctx.emit(bc.UnifyVoid(count: 1));
+    }
+  }
+
+  // A non-empty list or a structure nested in a body structure: built in a
+  // temp register, its elements by _generateStructureElementInBody (SetWriter/
+  // SetReader for variables) and a list's tail by _generateListTailInBody.
+  void _generateNestedCompoundInBody(Term term, VariableTable varTable, CodeGenContext ctx) {
+    if (term is ListTerm) {
+      // Non-empty list: build as cons cell '.'(head, tail)
+      ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style)
+
+      // Process head element
+      if (term.head != null) {
+        _generateStructureElementInBody(term.head!, varTable, ctx);
+      }
+
+      // Process tail element - may be another list or a variable
+      if (term.tail != null) {
+        _generateListTailInBody(term.tail!, varTable, ctx);
+      }
+    } else if (term is StructTerm) {
+      // Start building the nested structure
+      ctx.emit(bc.PutStructure(term.functor, term.arity, ctx.allocateTemp())); // nested: temp register (FCP-style)
+
+      // Process each argument recursively
+      for (final arg in term.args) {
+        _generateStructureElementInBody(arg, varTable, ctx);
+      }
     }
   }
 
@@ -636,28 +578,12 @@ class CodeGenerator {
       if (term.isNil) {
         ctx.emit(bc.SetConstant(rt.nil));
       } else {
-        // Non-empty nested list: build as cons cell '.'(head, tail)
-        ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
-
-        // Process head element
-        if (term.head != null) {
-          _generateStructureElementInBody(term.head!, varTable, ctx);
-        }
-
-        // Process tail element
-        if (term.tail != null) {
-          _generateListTailInBody(term.tail!, varTable, ctx);
-        }
+        _generateNestedCompoundInBody(term, varTable, ctx);
       }
 
     } else if (term is StructTerm) {
       // Nested structure - build recursively
-      ctx.emit(bc.PutStructure(term.functor, term.arity, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
-
-      // Process each argument recursively
-      for (final arg in term.args) {
-        _generateStructureElementInBody(arg, varTable, ctx);
-      }
+      _generateNestedCompoundInBody(term, varTable, ctx);
 
     } else if (term is UnderscoreTerm) {
       // Anonymous variable in structure
@@ -675,7 +601,7 @@ class CodeGenerator {
     Term? t = term;
     while (t is ListTerm && !t.isNil) {
       // Tail is another list: build nested cons cell
-      ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
+      ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style)
 
       // Process head of nested list
       if (t.head != null) {

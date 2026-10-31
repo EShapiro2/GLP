@@ -4,11 +4,15 @@ import '../analysis/type_checker/type_ast.dart'
     show TypeDef, TypeExpr, ProcDecl;
 import 'glp_printer.dart' show constantSource;
 
-/// Compilation mode: controls compiler restrictions
+/// Compilation mode: the module's admission to the primitive layer
+/// (primitive_layer.dart; TGLP appendix-root-self.tex, app:system-mode).
 enum CompileMode {
-  /// User mode (default): underscore-prefixed constants are rejected
+  /// User mode (default): the module neither defines nor calls a procedure
+  /// whose name is a quoted underscore-prefixed constant (Rule B); the prefix
+  /// is unrestricted as data.
   user,
-  /// System mode: underscore-prefixed constants are allowed
+  /// System mode, declared by `-mode(system)`: admitted to the root self.glp
+  /// and to modules under `programs/system/` alone (Rule A).
   system,
 }
 
@@ -274,6 +278,23 @@ class Goal extends AstNode {
   String toString() => '$functor(${args.join(", ")})';
 }
 
+/// The goal [g] calls, through the wrappers that hide it: a [SpawnGoal]'s
+/// inner goal and a [RemoteGoal]'s goal, unwrapped in turn, and [g] itself
+/// where it is neither.
+Iterable<Goal> calledGoals(Goal g) sync* {
+  if (g is SpawnGoal) {
+    yield* calledGoals(g.innerGoal);
+  } else if (g is RemoteGoal) {
+    yield* calledGoals(g.goal);
+  } else {
+    yield g;
+  }
+}
+
+/// [g] as a term, for storage in a wrapper goal's arguments or in a
+/// disjunction: the structure of its functor and arguments.
+Term goalToTerm(Goal g) => StructTerm(g.functor, g.args, g.line, g.column);
+
 // Guard: pure test in guard section
 class Guard extends AstNode {
   final String predicate;
@@ -378,12 +399,10 @@ class UnderscoreTerm extends Term {
 // ============================================================================
 // Module System AST Nodes
 // ============================================================================
-
-// ModuleDeclaration removed: the -module(name) directive is no longer
-// supported. A module's name is its file/directory path from the program root.
-
-// ExportDeclaration, ImportDeclaration, and ProcRef removed in Phase 1.
-// Visibility is now declared per-procedure via 'exported procedure'.
+//
+// A module's source names it nowhere: its name is its file/directory path
+// from the program root ([Module]).  Visibility is declared per procedure,
+// `exported procedure` and `imported procedure` (type_ast.dart, ProcDecl).
 
 /// Remote goal: Module # Goal
 /// Used for cross-module procedure calls.  The module is named, a child
@@ -394,38 +413,27 @@ class RemoteGoal extends Goal {
   final Goal goal;
 
   RemoteGoal(this.module, this.goal, int line, int column)
-      : super('#', [module, _goalToTerm(goal)], line, column);
+      : super('#', [module, goalToTerm(goal)], line, column);
 
   /// The module's name.
   String get staticModuleName => module.value as String;
 
   @override
   String toString() => '$module # $goal';
-
-  /// Convert a Goal to a StructTerm for storage in args
-  static Term _goalToTerm(Goal g) {
-    return StructTerm(g.functor, g.args, g.line, g.column);
-  }
 }
 
-/// Spawn goal: Goal@AgentId
-/// Used for isolate spawning in boot clauses
-/// In dGLP mode: the @AgentId annotation is ignored, goal runs in single isolate
-/// In madGLP mode: the goal is spawned in a separate isolate named AgentId
+/// Spawn goal: Goal@AgentId, written in boot clauses.  The code generator
+/// compiles it as its inner goal, the agent annotation dropped
+/// (codegen.dart, `_generateBody`); the printer writes it back as written.
 class SpawnGoal extends Goal {
   final Goal innerGoal;
   final String agentId;
 
   SpawnGoal(this.innerGoal, this.agentId, int line, int column)
-      : super('@', [_goalToTerm(innerGoal), ConstTerm(agentId, line, column)], line, column);
+      : super('@', [goalToTerm(innerGoal), ConstTerm(agentId, line, column)], line, column);
 
   @override
   String toString() => '$innerGoal@$agentId';
-
-  /// Convert a Goal to a StructTerm for storage in args
-  static Term _goalToTerm(Goal g) {
-    return StructTerm(g.functor, g.args, g.line, g.column);
-  }
 }
 
 // ============================================================================

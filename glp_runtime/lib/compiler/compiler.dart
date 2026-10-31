@@ -3,8 +3,6 @@ import 'parser.dart';
 import 'analyzer.dart';
 import 'codegen.dart';
 import 'error.dart';
-import 'token.dart';
-import 'result.dart';
 import 'ast.dart' show Program;
 import '../analysis/type_checker/type_ast.dart' show ProcDecl, TypeEnvironment;
 import '../analysis/type_checker/type_checker.dart' show buildModuleTypeEnvironment;
@@ -12,7 +10,6 @@ import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
 
 // Re-export for users of this module
 export 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
-export 'result.dart' show CompilationResult;
 
 /// Main GLP compiler
 ///
@@ -28,30 +25,7 @@ export 'result.dart' show CompilationResult;
 /// of this compiler gets no switch that would let a compiled object go
 /// unchecked.
 class GlpCompiler {
-  final Lexer Function(String) _createLexer;
-  final Parser Function(List<Token>) _createParser;
-  final Analyzer Function() _createAnalyzer;
-  final CodeGenerator Function() _createCodegen;
-
-  GlpCompiler({
-    Lexer Function(String)? createLexer,
-    Parser Function(List<Token>)? createParser,
-    Analyzer Function()? createAnalyzer,
-    CodeGenerator Function()? createCodegen,
-  })  : _createLexer = createLexer ?? ((source) => Lexer(source)),
-        _createParser = createParser ?? ((tokens) => Parser(tokens)),
-        _createAnalyzer = createAnalyzer ?? (() => Analyzer()),
-        _createCodegen = createCodegen ?? (() => CodeGenerator());
-
-  /// Compile GLP source to bytecode program
-  BytecodeProgram compile(String source,
-      {TypeEnvironment? typeEnv, TypeEnvironment? ancestorScope}) {
-    final result = compileWithMetadata(source,
-        typeEnv: typeEnv, ancestorScope: ancestorScope);
-    return result.program;
-  }
-
-  /// Compile GLP source to bytecode program with variable metadata.
+  /// Compile GLP source to bytecode program.
   ///
   /// [typeEnv] is the scope the source was type-checked in.  The SRSW
   /// relaxations of a typed program are decided on the type each occurrence has
@@ -62,16 +36,15 @@ class GlpCompiler {
   /// primitives alone where none is (TGLP Definition "Root, Scope", Π): the
   /// root self.glp, compiled on its own, is checked in that.  Until 2026-10-04
   /// the default was a root scope set once for the whole process.
-  CompilationResult compileWithMetadata(String source,
+  BytecodeProgram compile(String source,
       {TypeEnvironment? typeEnv, TypeEnvironment? ancestorScope}) {
     try {
       // Phase 1: Lexical analysis
-      // Note: Main lexer now handles type declarations (::= and procedure)
-      final lexer = _createLexer(source);
+      final lexer = Lexer(source);
       final tokens = lexer.tokenize();
 
       // Phase 2: Syntax analysis (use parseModule to get module info)
-      final parser = _createParser(tokens);
+      final parser = Parser(tokens);
       final module = parser.parseModule();
 
       // Convert Module to Program for analyzer
@@ -79,7 +52,7 @@ class GlpCompiler {
 
       // Phase 3: Semantic analysis.  Pass proc declarations for type-based SRSW
       // relaxation.
-      final analyzer = _createAnalyzer();
+      final analyzer = Analyzer();
       final annotatedAst = analyzer.analyze(
         ast,
         procDeclarations: module.procDeclarations,
@@ -88,10 +61,8 @@ class GlpCompiler {
       );
 
       // Phase 4: Code generation
-      final codegen = _createCodegen();
-      final result = codegen.generateWithMetadata(annotatedAst);
-
-      return result;
+      final codegen = CodeGenerator();
+      return codegen.generate(annotatedAst);
     } on CompileError catch (e) {
       // Rethrow with source context, and with the error's category.  The
       // category's name was passed as the phase until 2026-10-02 ('lexical',
@@ -120,17 +91,14 @@ class GlpCompiler {
   /// program was compiled and run with no SRSW check at all.
   BytecodeProgram compileProgram(Program ast,
       {List<ProcDecl>? procDeclarations, TypeEnvironment? typeEnv}) {
-    final analyzer = _createAnalyzer();
+    final analyzer = Analyzer();
     final annotated = analyzer.analyze(
       ast,
       procDeclarations: procDeclarations ?? [],
       typeEnv: typeEnv,
     );
 
-    final codegen = _createCodegen();
-    return codegen.generateWithMetadata(annotated).program;
+    final codegen = CodeGenerator();
+    return codegen.generate(annotated);
   }
-
-  /// Generate _select/1 dispatch table from exported procedure declarations.
-  ///
 }

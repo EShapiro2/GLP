@@ -64,17 +64,7 @@ const Set<String> privilegedPredicates = {
 /// dynamic remote goals.
 Iterable<Goal> _bodyGoals(Clause c) sync* {
   for (final g in c.body ?? const <Goal>[]) {
-    yield* _flatten(g);
-  }
-}
-
-Iterable<Goal> _flatten(Goal g) sync* {
-  if (g is SpawnGoal) {
-    yield* _flatten(g.innerGoal);
-  } else if (g is RemoteGoal) {
-    yield* _flatten(g.goal);
-  } else {
-    yield g;
+    yield* calledGoals(g);
   }
 }
 
