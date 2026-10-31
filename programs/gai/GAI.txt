@@ -14,7 +14,7 @@ Creation: Alice [Enter] <name>
   Carol: Alice asks to be your principal.
 Joint guardianship: Alice [Make guardian] <person>
   Bob: Alice asks you to be a guardian of their AI agent Carol.
-  Alice [End guardianship] <person>
+  Alice [End guardian] <person>
   Bob [Resign] [Guardian unfriend]
 Ward and person: Alice [Agent acquaint] <person>
   Carol: Alice asks that you come to know Bob.
