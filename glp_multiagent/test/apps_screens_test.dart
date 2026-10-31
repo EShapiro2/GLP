@@ -614,15 +614,15 @@ class _Run {
     expect(p.state.identity, isTrue, reason: '${p.name}: no identity');
   }
 
-  /// [p] asks to come to know [q] by [act], GKK's acquaint or the meet of a contract that still names GKK:2 so, whose key they type into its field for a peer not listed, Peer (vGLP, Section 6.2: "Meet with a peer not listed takes a field for the key"), and taps its button, GKK's "[Acquaint]": their request's hello asks [q], at the top of [q]'s Contacts, GKK's question "Alice wishes that you know each other.", with yes and no; [q] taps yes, their request of the same acquaintance, and the two-phase commit runs with both approvals standing, neither asked again (vGLP, Section 5.4, "The compilation").  Each then knows the other, `knows(Q)`.  Where [shot] is given, [q]'s phone is shot asked.
-  Future<void> meetByKey(_Person p, _Person q, {String? shot, String act = 'acquaint'}) async {
+  /// [p] asks to come to know [q] by acquaint, GKK's Acquaintance (GKK:2), typing [q]'s key into its field, GKK's "<person>", on the tab of GKK, Contacts, as for an acquaintance with a peer not listed (vGLP, Section 6.2: "The button of an act that names no entry, and of an acquaintance with a peer not listed, is drawn on the tab of its contract"), and taps its button, GKK's "[Acquaint]": their request's hello asks [q], at the top of [q]'s Contacts, GKK's question "Alice wishes that you know each other.", with yes and no; [q] taps yes, their request of the same acquaintance, and the two-phase commit runs with both approvals standing, neither asked again (vGLP, Section 5.4, "The compilation").  Each then knows the other, `knows(Q)`.  Where [shot] is given, [q]'s phone is shot asked.
+  Future<void> meetByKey(_Person p, _Person q, {String? shot}) async {
     await list(p, 'knows');
     await list(q, 'knows');
-    await type(p, control(p, 'key:$act'), q.name);
-    await tap(p, control(p, 'key-send:$act'));
+    await type(p, control(p, 'key:acquaint'), q.name);
+    await tap(p, control(p, 'key-send:acquaint'));
     final a = q.approval;
     expect(formatTerm(a.view),
-        startsWith('approval(hello(${p.name}, $act(${p.name}, ${q.name})), '));
+        startsWith('approval(hello(${p.name}, acquaint(${p.name}, ${q.name})), '));
     await top(q);
     final asks = '${personName(GAtom(p.name))} wishes that you know each other.';
     expect(textsOf(q, a), [asks, 'yes', 'no']);
@@ -1095,7 +1095,7 @@ void appsScreens(Screens screens) {
     expect(bob.atoms, contains('member($friendsGroup)'));
     expect(alice.atoms, contains('listed(bob, $friends)'));
 
-    // A group message (GSN:5): Post, GSN's "[Post]", beside the group in Bob's Groups, its field text, GSN's "<text>": he types Hi all and taps Post, which proposes post(bob, alice, x, n), in the order of post's head, post(p?, a ; x, n) (programs/gsc/GSN.glp).  Alice, its leader, is not asked; her agent opens the delivery and delivers the message to Bob.
+    // A group message (GSN:4): Post, GSN's "[Post]", beside the group in Bob's Groups, its field text, GSN's "<text>": he types Hi all and taps Post, which proposes post(bob, alice, x, n), in the order of post's head, post(p?, a ; x, n) (programs/gsc/GSN.glp).  Alice, its leader, is not asked; her agent opens the delivery and delivers the message to Bob.
     await run.list(bob, 'member');
     await run.tap(bob, run.control(bob, 'act:post:$friendsGroup'));
     await run.type(bob, run.control(bob, 'field:post:$friendsGroup:3'), 'Hi all');
@@ -1120,7 +1120,7 @@ void appsScreens(Screens screens) {
     run.plain(bob);
     await run.shoot(bob, 'gsn-c-bob-group.png');
 
-    // The leader's own message (GSN:5): Post own, GSN's "[Post own] <text>", beside the group in Alice's Groups; she types Welcome and taps Post own, which proposes post_own(alice, x, n); her agent delivers it to Bob, unasked.
+    // The leader's own message (GSN:4): Post own, GSN's "[Post own] <text>", beside the group in Alice's Groups; she types Welcome and taps Post own, which proposes post_own(alice, x, n); her agent delivers it to Bob, unasked.
     await run.list(alice, 'member');
     await run.tap(alice, run.control(alice, 'act:post_own:$friendsGroup'));
     await run.type(
@@ -1139,15 +1139,14 @@ void appsScreens(Screens screens) {
           find.descendant(of: ga, matching: find.byType(Text))))
         if (t.data != null) t.data!,
     ];
-    expect(inHers, containsAll(['Bob', 'Hi all (Bob)', 'Welcome (Alice)', 'Post own']));
-    // Close, GSN's "[Close]", names no entry of a tab, close requiring no atom of a tab's predicate at the leader's role, so it is drawn on the tab of its contract, its group picked: "The button of an act that names no entry ... is drawn on the tab of its contract" (vGLP 516a0a2, Section 6.2).  GSN.txt gives Close no field, so the group's place is drawn by the name of its type, Speech, which "no type name reaches a compiled app's screen" forbids: plain(alice) fails here until GSN.txt names it.
-    expect(run.control(alice, 'act:close:$friendsGroup'), findsNothing);
+    // Close, GSN's "[Close]", in the group's row: close requires member of the group at the leader's role, so its button is drawn in the row of the tab of member, the row filling the group, and GSN.txt gives it no field: "A button is drawn in the row of a tab's entry, a person who takes a role of the act or an item the act names, ... in a row of the tab whose predicate the act requires or deletes at the proposer's role naming the entry" (vGLP ffcb093, Section 6.2).
+    expect(inHers, containsAll(['Bob', 'Hi all (Bob)', 'Welcome (Alice)', 'Post own', 'Close']));
+    expect(run.control(alice, 'act:close:$friendsGroup'), findsOneWidget);
     run.plain(alice);
     await run.shoot(alice, 'gsn-d-alice-group.png');
 
-    // Alice closes the group (GSN:4: "when the leader leaves, the group ends"): Close on her Groups tab, the group picked, proposes close(alice, n), its listed role every member she lists; Bob's machine votes unasked, and the group ends at both.
-    await run.tap(alice, run.control(alice, 'pick:close::g2:$friendsGroup'));
-    await run.tap(alice, run.control(alice, 'send:close:'));
+    // Alice closes the group by leaving it (GSN:2): Close in the group's row proposes close(alice, n), its listed role every member she lists; Bob's machine votes unasked, and the group ends at both.
+    await run.tap(alice, run.control(alice, 'act:close:$friendsGroup'));
     expect(bob.questions('approval'), isEmpty);
     expect(alice.atoms, isNot(contains('member($friendsGroup)')));
     expect(bob.atoms, isNot(contains('member($friendsGroup)')));
@@ -1171,10 +1170,10 @@ void appsScreens(Screens screens) {
     expect(run.listNamed(alice, 'coin', 'Coins'), findsOneWidget);
     expect(run.on(alice, find.byKey(listTabKey('friend'))), findsNothing);
 
-    // Each establishes their identity (GKK:1), and Alice meets Bob by his key (GKK:2).
+    // Each establishes their identity (GKK:1), and Alice comes to know Bob by his key (GKK:2), Acquaint.
     await run.join(alice);
     await run.join(bob);
-    await run.meetByKey(alice, bob, act: 'meet');
+    await run.meetByKey(alice, bob);
 
     // (a) Alice mints (GC:1): on her Coins tab, the tab of GC, she types 2 into Mint's field amount, GC's "<amount>", and taps Mint, GC's "[Mint]", which proposes mint(alice, 2); a row for her coins, Alice, and their count.
     await run.list(alice, 'coin');
@@ -1257,7 +1256,7 @@ void appsScreens(Screens screens) {
       'asked to lend, two Alice-coins for three Bob-bonds maturing at day 5; '
       'Alice redeems a matured Bob-bond against an Alice-coin Bob holds; and '
       'Carol, the escrow agent, asked to accept Alice\'s deposit', (tester) async {
-    // GB's app (programs/apps/gb), compiled down the cascade from GB.glp (programs/currencies/bonds/GB.glp) and its pragmas, GB.txt, the tasks of Currencies (Code_inbox.md, 2026-10-20 19:57 and 20:27 UTC, 2026-10-23 22:31 UTC, point 4): each establishes their identity (GKK:1) and gets the first day as their date, from the calendar (GB:2, first_date); Alice meets Bob and Carol (GKK:2); (a) Alice mints bonds maturing at day 10 (GB:1); Alice asks Bob for a loan, her coins for his bonds of larger face value maturing later, and (b) Bob is asked and answers yes (GB:3); Bob's date advances to day 5, the calendar giving the day (GB:2, advance); (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (GB:5); and (d) Carol, the escrow agent, is asked to accept Alice's deposit of two Alice-coins, and answers yes (GB:7).
+    // GB's app (programs/apps/gb), compiled down the cascade from GB.glp (programs/currencies/bonds/GB.glp) and its pragmas, GB.txt, the tasks of Currencies (Code_inbox.md, 2026-10-20 19:57 and 20:27 UTC, 2026-10-23 22:31 UTC, point 4): each establishes their identity (GKK:1) and gets the first day as their date, from the calendar (GB:2, first_date); Alice comes to know Bob and Carol, Acquaint (GKK:2); (a) Alice mints bonds maturing at day 10 (GB:1); Alice asks Bob for a loan, her coins for his bonds of larger face value maturing later, and (b) Bob is asked and answers yes (GB:3); Bob's date advances to day 5, the calendar giving the day (GB:2, advance); (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (GB:5); and (d) Carol, the escrow agent, is asked to accept Alice's deposit of two Alice-coins, and answers yes (GB:7).
     final run = await _Run.start(tester, screens, 'gb',
         chain: const ['alice', 'bob', 'carol'],
         pairs: const [('alice', 'bob'), ('alice', 'carol')],
@@ -1275,8 +1274,8 @@ void appsScreens(Screens screens) {
       await run.join(p);
       expect(p.atoms, contains('date(1)'));
     }
-    await run.meetByKey(alice, bob, act: 'meet');
-    await run.meetByKey(alice, carol, act: 'meet');
+    await run.meetByKey(alice, bob);
+    await run.meetByKey(alice, carol);
 
     // Alice mints five Alice-coins (GB:1): on her Coins tab, the tab of GB, Mint coin, GB's "[Mint coin] <amount>".
     await run.list(alice, 'coin');
@@ -1382,7 +1381,7 @@ void appsScreens(Screens screens) {
       'phones: the six operations of its Appendix, each act a tap, and each '
       'phone\'s Coins tab at the end, holding Table 1\'s holdings',
       (tester) async {
-    // The village market of GC's paper (Appendix "Village Market Demonstration", programs/currencies/coins/village.glp's script) on GC's app, programs/apps/gc (Currencies #11 Cowork, Code_inbox.md, 2026-10-21 07:25 UTC, item 6; Currencies #12 Cowork, 2026-10-23 22:31 UTC, point 3): Alice the baker, Bob the farmer, Charlie the carpenter, Diana the doctor, Eve the teacher and Frank the fisherman, each at their phone, a conversation between each two who transact, seven in all.  Each establishes their identity (GKK:1) and meets those they transact with (GKK:2); each mints their coins, 30, 39, 25, 35, 20 and 28 (GC:1), the coins of each issuer the six operations need; then the six operations, each an act of the contract: symmetric mutual credit, Alice with Bob and with Charlie 15 coins each, Charlie with Eve 10, Eve with Frank 10 (GC:2); asymmetric mutual credit, Diana's 20 diana-coins for 24 bob-coins and her 15 for 18 frank-coins (GC:2); Eve's portfolio swap, 5 frank-coins to Charlie for 5 alice-coins (GC:2); the payments, Bob to Alice 5, Eve to Charlie 6, Frank to Diana 3, Eve to Alice 3, each in coins of the payee (GC:3); Frank's redemption of 5 diana-coins, one at a time, each against a frank-coin Diana holds (GC:4); and Alice's sale of 10 bob-coins to Eve for 4 frank-coins (GC:2).  At the end each phone's Coins tab lists the holdings of GC's Table 1, a row for each issuer with its count, and is shot: the six phones of GC's Figure fig:village-screens.
+    // The village market of GC's paper (Appendix "Village Market Demonstration", programs/currencies/coins/village.glp's script) on GC's app, programs/apps/gc (Currencies #11 Cowork, Code_inbox.md, 2026-10-21 07:25 UTC, item 6; Currencies #12 Cowork, 2026-10-23 22:31 UTC, point 3): Alice the baker, Bob the farmer, Charlie the carpenter, Diana the doctor, Eve the teacher and Frank the fisherman, each at their phone, a conversation between each two who transact, seven in all.  Each establishes their identity (GKK:1) and comes to know those they transact with, Acquaint (GKK:2); each mints their coins, 30, 39, 25, 35, 20 and 28 (GC:1), the coins of each issuer the six operations need; then the six operations, each an act of the contract: symmetric mutual credit, Alice with Bob and with Charlie 15 coins each, Charlie with Eve 10, Eve with Frank 10 (GC:2); asymmetric mutual credit, Diana's 20 diana-coins for 24 bob-coins and her 15 for 18 frank-coins (GC:2); Eve's portfolio swap, 5 frank-coins to Charlie for 5 alice-coins (GC:2); the payments, Bob to Alice 5, Eve to Charlie 6, Frank to Diana 3, Eve to Alice 3, each in coins of the payee (GC:3); Frank's redemption of 5 diana-coins, one at a time, each against a frank-coin Diana holds (GC:4); and Alice's sale of 10 bob-coins to Eve for 4 frank-coins (GC:2).  At the end each phone's Coins tab lists the holdings of GC's Table 1, a row for each issuer with its count, and is shot: the six phones of GC's Figure fig:village-screens.
     const chain = ['alice', 'bob', 'charlie', 'diana', 'eve', 'frank'];
     const pairs = [
       ('alice', 'bob'),
@@ -1467,12 +1466,12 @@ void appsScreens(Screens screens) {
           reason: '$p redeems a $q-coin against an $r-coin');
     }
 
-    // Each establishes their identity (GKK:1), and each two who transact meet, the first by the other's key (GKK:2).
+    // Each establishes their identity (GKK:1), and each two who transact come to know each other, the first by the other's key, Acquaint (GKK:2).
     for (final p in chain) {
       await run.join(v[p]!);
     }
     for (final (p, q) in pairs) {
-      await run.meetByKey(v[p]!, v[q]!, act: 'meet');
+      await run.meetByKey(v[p]!, v[q]!);
     }
 
     // Each mints their coins (GC:1): the coins of each issuer held across the six at the end are the coins they minted, 30 alice-coins, 39 bob-coins, 25 charlie-coins, 35 diana-coins, 20 eve-coins and 28 frank-coins (GC's paper, Appendix "Village Market Demonstration").
