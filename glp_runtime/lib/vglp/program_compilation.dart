@@ -285,11 +285,13 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
   }
 
   final written = <String>[];
+  // In the order of their paths, the same on every file system.
   final sources = root
       .listSync(recursive: true)
       .whereType<File>()
       .where((f) => f.path.endsWith('.vglp'))
-      .toList();
+      .toList()
+    ..sort((a, b) => a.path.compareTo(b.path));
 
   for (final file in sources) {
     // A self.vglp is no module: its widget declarations are those of its

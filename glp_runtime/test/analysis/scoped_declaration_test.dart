@@ -26,7 +26,6 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';

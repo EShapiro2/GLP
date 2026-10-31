@@ -5,7 +5,7 @@ import 'codegen.dart';
 import 'error.dart';
 import 'token.dart';
 import 'result.dart';
-import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm;
+import 'ast.dart' show Program;
 import '../analysis/type_checker/type_ast.dart' show ProcDecl, TypeEnvironment;
 import '../analysis/type_checker/type_checker.dart' show buildModuleTypeEnvironment;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;

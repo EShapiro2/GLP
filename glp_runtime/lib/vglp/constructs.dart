@@ -2363,9 +2363,6 @@ class _Generator {
   /// the declaration writes it, a string as itself.
   static String _constKey(Object? c) => c is String ? c : '$c';
 
-  bool _altHasQuestion(_Node n, _Alt a) =>
-      _children(n, a).any(_hasQuestion);
-
   String _leafWidget(_Leaf l) {
     switch (l) {
       case _Leaf.string:

@@ -74,11 +74,13 @@ void main() {
       // Three pass the type check and are refused for SRSW at a named clause:
       // P99's faults, routed to P99 through Integration on 2026-10-12 (P99 is
       // dormant).  This assertion flips when P99 fixes them, and each is then
-      // to load with the four above.
+      // to load with the four above.  The clause named is the first fault in
+      // the order of the modules' paths (program_linker.dart, _listFiles):
+      // graphs has one in p81 and one in p84, misc one in p91 and one in p92.
       for (final (name, words) in const [
         ('btrees', 'p99/btrees/p60:pairsplits/4: Line 66: Variable "M" has no reader'),
-        ('graphs', 'p99/graphs/p84:better/3: Line 44: Variable "X2" has no reader'),
-        ('misc', 'p99/misc/p92:getnum/3: Line 118: Variable "K" has no reader'),
+        ('graphs', 'p99/graphs/p81:expand/2: Line 19: Variable "Es" has no reader'),
+        ('misc', 'p99/misc/p91:kt/6: Line 17: Variable "N" has no reader'),
       ]) {
         final dir = Directory('../programs/p99/$name').absolute.path;
         final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);

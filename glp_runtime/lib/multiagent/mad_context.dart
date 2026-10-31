@@ -10,7 +10,6 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart' show deepDeref;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
-import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/saved_state.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
@@ -306,7 +305,7 @@ class MadContext {
       held: holdValue,
     ));
     if (holdValue) {
-      _reportPendingLink(result.globalName, record!.sender);
+      _reportPendingLink(result.globalName, record.sender);
     }
 
     // The requesters recorded among the link's holders before the value was

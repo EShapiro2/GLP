@@ -25,9 +25,6 @@ void main() {
     ast.ListTerm nil() => ast.ListTerm(null, null, 0, 0);
     ast.ListTerm cons(ast.Term h, ast.Term t) => ast.ListTerm(h, t, 0, 0);
 
-    // Helper to build constants
-    ast.ConstTerm constTerm(Object v) => ast.ConstTerm(v, 0, 0);
-
     group('basic construction', () {
       test('merge head: merge([X|Xs], Ys, [X?|Zs?])', () {
         // Type: procedure merge(Stream?, Stream?, Stream).

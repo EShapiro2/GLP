@@ -1,6 +1,5 @@
 import 'machine_state.dart';
 import 'heap_fcp.dart';
-import 'suspension.dart';
 import 'terms.dart';
 
 class CommitOps {
@@ -98,38 +97,5 @@ class CommitOps {
     heap.fireBoundCallbacks();
 
     return activations;
-  }
-
-  /// Walk suspension list and activate armed records
-  static void _walkAndActivate(SuspensionListNode? list, List<GoalRef> acts) {
-    var current = list;
-
-    while (current != null) {
-      if (current.armed) {
-        acts.add(GoalRef(current.goalId!, current.resumePC));
-        current.record.disarm();
-      }
-      current = current.next;
-    }
-  }
-
-  /// Forward suspension list to target writer
-  /// 
-  /// Per IGLP app:in-heap (Suspension):
-  /// Suspensions are stored on writer cells
-  static void _forwardSuspensions(HeapFCP heap, SuspensionListNode? list, HeapCell targetWriterAddr) {
-    var current = list;
-
-    while (current != null) {
-      if (current.armed) {
-        final newNode = SuspensionListNode(current.record);
-        final targetCell = targetWriterAddr;
-        if (targetCell.content is SuspensionListNode) {
-          newNode.next = targetCell.content as SuspensionListNode;
-        }
-        targetCell.content = newNode;
-      }
-      current = current.next;
-    }
   }
 }

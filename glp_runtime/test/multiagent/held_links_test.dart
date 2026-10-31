@@ -16,7 +16,7 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
-import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 typedef _Msg = ({String from, String to, List<int> payload});
 

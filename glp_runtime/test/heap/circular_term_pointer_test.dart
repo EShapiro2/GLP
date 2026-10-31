@@ -13,7 +13,6 @@ library;
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
-import 'package:glp_runtime/runtime/heap_fcp.dart';
 
 void main() {
   group('Circular Term Handling - Pointer Architecture', () {

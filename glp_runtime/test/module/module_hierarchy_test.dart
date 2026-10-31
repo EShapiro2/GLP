@@ -3,7 +3,6 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/ast.dart';
-import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 
 void main() {

@@ -11,7 +11,6 @@ import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
-import 'package:glp_runtime/multiagent/global_send.dart';
 
 void main() {
   group('Receive Transaction', () {

@@ -775,25 +775,6 @@ class TypeChecker {
     return result;
   }
 
-  /// Check if any clause accepts the given label at the argument position
-  bool _clauseAcceptsLabel(List<ast.Clause> clauses, int argIndex, String labelStr) {
-    for (final clause in clauses) {
-      final acceptedLabels = wtc.getAcceptedLabels(clause, argIndex, typeEnv);
-
-      // null means wildcard (variable) - accepts anything
-      if (acceptedLabels == null) {
-        return true;
-      }
-
-      // Check if clause explicitly matches this label
-      if (_labelsMatch(acceptedLabels, labelStr)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   /// Check if any of the accepted labels match the DFA transition label
   bool _labelsMatch(Set<String> acceptedLabels, String labelStr) {
     // Direct match
