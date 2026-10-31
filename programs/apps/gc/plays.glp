@@ -2,7 +2,7 @@
 
 imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
-%% play_coins(A, B): alice and bob, one conversation between their two executions.  Each establishes their identity (GKK:1, Identity), and bob mints a Bob-coin (GC:1, Minting); each asks to know the other; alice asks to meet bob in person, he answers yes, and each then knows the other (GKK:2, Meeting, an act of both); alice mints an Alice-coin (GC:1) and asks bob to swap it for his Bob-coin, swap(alice, bob, alice, bob), and he answers yes (GC:2, Swap, an act of both); and alice pays the Bob-coin to bob, pay(alice, bob), which asks nobody (GC:3, Payment, an act of alice).  These are the acts of the screens of GC's app (screens/), bob minting before the meeting (person.glp).
+%% play_coins(A, B): alice and bob, one conversation between their two executions.  Each establishes their identity (GKK:1, Identity), and bob mints a Bob-coin (GC:1, Minting); each asks to know the other; alice asks that they come to know each other, he answers yes, and each then knows the other (GKK:2, Acquaintance, an act of both); alice mints an Alice-coin (GC:1) and asks bob to swap it for his Bob-coin, swap(alice, bob, alice, bob), and he answers yes (GC:2, Swap, an act of both); and alice pays the Bob-coin to bob, pay(alice, bob), which asks nobody (GC:3, Payment, an act of alice).  These are the acts of the screens of GC's app (screens/), bob minting before the acquaintance (person.glp).
 exported procedure play_coins(Stream(Seen), Stream(Seen)).
 play_coins(A?, B?) :-
     self_module(M),

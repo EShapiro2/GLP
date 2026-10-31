@@ -7,19 +7,62 @@
 Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
-Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
-            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; message(Peer, Peer, Speech)
-            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
-            ; leave(Peer, Peer, Speech) ; close(Peer, List(Peer), Speech) ; drop(Peer, Peer, Speech)
-            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
-            ; deliver(Peer, Peer, Speech, Speech).
-Proposal  ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
-            ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; message(Peer, Peer, Speech)
-            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
-            ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
-            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech).
+Class ::=
+establish(Peer)
+;
+acquaint(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
+befriend(Peer, Peer)
+;
+unfriend(Peer, Peer)
+;
+message(Peer, Peer, Speech)
+;
+create(Peer, Speech)
+;
+join(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
+;
+remove(Peer, Peer, Speech)
+;
+close(Peer, List(Peer), Speech)
+;
+post_own(Peer, Speech, Speech)
+;
+post(Peer, Peer, Speech, Speech)
+;
+deliver(Peer, Peer, Speech, Speech)
+.
+Proposal ::=
+establish(Peer)
+;
+acquaint(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
+befriend(Peer, Peer)
+;
+unfriend(Peer, Peer)
+;
+message(Peer, Peer, Speech)
+;
+create(Peer, Speech)
+;
+join(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
+;
+remove(Peer, Peer, Speech)
+;
+close(Peer, Speech)
+;
+post_own(Peer, Speech, Speech)
+;
+post(Peer, Peer, Speech, Speech)
+.
 Request   ::= propose(Proposal).
 YesNo     ::= yes ; no.
 Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
@@ -34,7 +77,7 @@ Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(P
 Net       ::= msg(Peer, Content).
 Atom      ::= identity ; knows(Peer) ; friend(Peer) ; received(Speech, Peer) ; member(CName) ; listed(Peer, Speech) ; closed(Speech) ; posted(Speech, Speech) ; delivered(Speech, Peer, Speech) ; received_in(Speech, Peer, Speech).
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
-CName     ::= community(Peer) ; dot(CName, Speech).
+CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
 Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking   ::= Attempt ; hello(Peer, Proposal).
