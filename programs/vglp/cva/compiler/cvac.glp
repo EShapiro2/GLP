@@ -217,6 +217,7 @@ nt_nvar(own(_), no).
 nt_nvar(own_var(_), no).
 nt_nvar(nvar(_), yes).
 nt_nvar(ext(T, _), B?) :- nt_nvar(T?, B).
+nt_nvar(ext_any(T), B?) :- nt_nvar(T?, B).
 procedure flag_lines(Flags?, Constant?, Stream(_)).
 flag_lines(f(R, S, N), Nm, L?) :- ground(Nm?) |
     flag_line(R?, '%% it has reach conditions, which vGLP Section 5.4 does not take.', L1),
@@ -371,6 +372,8 @@ var_types_l([pvar(_)|Vs], Lis, ['Peer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([svar(_)|Vs], Lis, ['Speech'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([nterm(_)|Vs], Lis, ['Peer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([sgn(_, _)|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
+%% The wildcard of a cleared atom is no variable of a schema (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
+var_types_l([any|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([num(_)|Vs], Lis, ['Integer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 procedure role_type(YesNo?, Constant).
 role_type(yes, 'List(Peer)').
@@ -395,6 +398,8 @@ var_types([nterm(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
 %% A signed term is no variable of a schema (schema_vars); the clause covers
 %% the type.
 var_types([sgn(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
+%% The wildcard is no variable of a schema; the clause covers the type.
+var_types([any|Vs], Ts?) :- var_types(Vs?, Ts).
 %% A numeric variable the schema-binding binds, a number in the class term and in the request, so the request form takes it, a number field (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "a request names it, so the request form takes it").
 var_types([num(_)|Vs], ['Integer'|Ts?]) :- var_types(Vs?, Ts).
 
@@ -480,10 +485,12 @@ contract_atoms([], []).
 contract_atoms([schema(_, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
 contract_atoms([cschema(_, _, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
 contract_atoms([nschema(_, _, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
+%% A cleared atom, which carries the wildcard, is no atom of a state: it stands for the atoms of the state it matches (vGLP f8127b1, Section 5.4, "Act schemas as local specifications"), which other atoms of the contract write, so the type Atom takes the role's deleted atoms less its cleared ones (uncleared).
 procedure rs_atoms(RoleSpecs?, Atoms).
 rs_atoms([], []).
 rs_atoms([R|Rs], As?) :- ground(R?) |
-    rs_lists(R?, P, M, K, N),
+    rs_lists(R?, P, M0, K, N),
+    uncleared(M0?, M),
     rs_atoms(Rs?, A5),
     app(N?, A5?, A4),
     app(K?, A4?, A3),
@@ -501,6 +508,8 @@ arg_kinds([nterm(_)|Xs], [name|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([svar(_)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([sgn(_, _)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([num(_)|Xs], [num|Ks?]) :- arg_kinds(Xs?, Ks).
+%% The wildcard is in no atom of a state, a cleared atom being none (rs_atoms); the clause covers the type and is never reached.
+arg_kinds([any|Xs], Ks?) :- arg_kinds(Xs?, Ks).
 %% Atom ::= the alternatives, separated by ;, each the predicate applied to its argument types, a predicate of no argument a constant.
 procedure atom_alts(Sigs?, Stream(_)).
 atom_alts([], ['.']).
@@ -671,6 +680,8 @@ val_goal(num(X), N, G?) :- ground(X?), ground(N?) | G =.. [val_num, num(X?), 'B?
 %% A signed term is no variable of a schema (schema_vars); the clause covers
 %% the type.
 val_goal(sgn(_, _), N, G?) :- ground(N?) | G =.. [val_peer, unnamed, 'B?', 'D?', N?].
+%% The wildcard is no variable of a schema; the clause covers the type.
+val_goal(any, N, G?) :- ground(N?) | G =.. [val_peer, unnamed, 'B?', 'D?', N?].
 
 procedure vname(Integer?, Found).
 vname(1, named('V1', 'V1?')).
@@ -996,6 +1007,7 @@ a_field(svar(_), _, _, yes).
 a_field(num(_), _, _, yes).
 a_field(nterm(_), _, _, no).
 a_field(sgn(_, _), _, _, no).
+a_field(any, _, _, no).
 procedure keep_int(YesNo?, Integer?, Ints?, Ints).
 keep_int(yes, I, Is, [I?|Is?]).
 keep_int(no, _, Is, Is?).
@@ -1019,6 +1031,7 @@ a_person(svar(_), _, _, no).
 a_person(num(_), _, _, no).
 a_person(nterm(_), _, _, no).
 a_person(sgn(_, _), _, _, no).
+a_person(any, _, _, no).
 
 %% The two widget declarations every platform carries (vGLP, Section 6.2, "The words a platform shows"; Section 8: "with the two widget declarations (Definition Widget Declaration) the compiler prints, a sentence with two buttons for an approval question and a menu for the request question"), so that no app writes a self.vglp: the approval question drawn by the construct family's approval_sentence, the request question by its social_menu.  With pragmas, the request type's declaration carries the labels the contract gives: label(F, S), the request whose name is a schema-binding of F labelled S, the button in brackets; and label(F, I, S), the I-th place of that request, a field the person fills, named S, the name in angle brackets.  The approval question's two answers are given by no pragma, so its declaration carries no label, and the construct family draws the name of each (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").
 procedure widget_lines(Words?, Contract?, Preds?, DrawCtx?, Stream(_)).
@@ -1151,7 +1164,8 @@ condition_places(G, Rs, Vs, ctx(Rf, Rl), Cs?) :- integer(G?), ground(Rs?), groun
 procedure condition_places1(RoleSpecs?, Integer?, Args?, Preds?, ItemPlaces).
 condition_places1([], _, _, _, []).
 condition_places1([R|_], G, Vs, Rf, Cs?) :- ground(R?), integer(G?), ground(Vs?), ground(Rf?) |
-    rs_lists(R?, _, M, K, N),
+    rs_lists(R?, _, M0, K, N),
+    uncleared(M0?, M),
     app(K?, M?, Rq),
     cond_atoms(Rq?, req, G?, Vs?, Rf?, C1),
     cond_atoms(N?, forb, G?, Vs?, Rf?, C2),
@@ -1272,7 +1286,8 @@ arg_occs([_|Xs], I, P, N, All, Ri, D, Os?) :- otherwise, integer(I?) |
 procedure role_pats(RoleSpecs?, Integer?, Integer?, Preds?, Pats).
 role_pats([], _, _, _, []).
 role_pats([R|_], Sx, Ri, D, Pats?) :- ground(R?), integer(Sx?), integer(Ri?), ground(D?) |
-    rs_lists(R?, P, M, K, _),
+    rs_lists(R?, P, M0, K, _),
+    uncleared(M0?, M),
     app(K?, M?, A1),
     app(A1?, P?, A),
     atom_pats(A?, Sx?, Ri?, D?, Pats).
@@ -1369,7 +1384,8 @@ proved_places([R|Rs], Sx, G, Vs, Rl, Us?) :- ground(R?), integer(Sx?), integer(G
 procedure proved_role(RoleSpec?, Integer?, Integer?, Args?, Rules?, ItemPlaces).
 proved_role(_, Sx, G, _, _, []) :- integer(Sx?), integer(G?), Sx? =:= G? | true.
 proved_role(R, Sx, G, Vs, Rl, Us?) :- otherwise, ground(R?), integer(Sx?), integer(G?), ground(Vs?), ground(Rl?) |
-    rs_lists(R?, _, M, K, _),
+    rs_lists(R?, _, M0, K, _),
+    uncleared(M0?, M),
     app(K?, M?, A),
     forb_pats(A?, Sx?, G?, Fs),
     place_of(role(Sx?), Vs?, 1, Kp),
@@ -1444,7 +1460,8 @@ nth_rs(1, [R|_], [R?]).
 nth_rs(G, [_|Rs], R?) :- G? > 1 | G1 := G? - 1, nth_rs(G1?, Rs?, R).
 procedure required_atoms(RoleSpecs?, Atoms).
 required_atoms([], []).
-required_atoms([R|_], Rq?) :- ground(R?) | rs_lists(R?, _, M, K, _), app(K?, M?, Rq).
+%% A cleared atom is deleted and not required (vGLP f8127b1, Section 5.4; uncleared).
+required_atoms([R|_], Rq?) :- ground(R?) | rs_lists(R?, _, M0, K, _), uncleared(M0?, M), app(K?, M?, Rq).
 procedure item_atoms(Atoms?, Integer?, Args?, Preds?, ItemPlaces).
 item_atoms([], _, _, _, []).
 item_atoms([atom(P, Xs)|As], G, Vs, Lp, Is?) :- ground(P?), ground(Xs?), integer(G?), ground(Vs?), ground(Lp?) |
@@ -1877,8 +1894,10 @@ meeting_schema([rs(G1, _, D1, K1, _), rs(G2, _, D2, K2, _)], B?) :-
     ground(G1?), ground(D1?), ground(K1?), ground(G2?), ground(D2?), ground(K2?) |
     guarding(G1?, B1),
     guarding(G2?, B2),
-    app(K1?, D1?, R1),
-    app(K2?, D2?, R2),
+    uncleared(D1?, U1),
+    uncleared(D2?, U2),
+    app(K1?, U1?, R1),
+    app(K2?, U2?, R2),
     names_role(R1?, 2, N1),
     names_role(R2?, 1, N2),
     or(N1?, N2?, N),
@@ -1911,6 +1930,7 @@ arg_names(_, _, no) :- otherwise | true.
 procedure nt_names(NameTerm?, Integer?, YesNo).
 nt_names(own(I), J, yes) :- I? =:= J? | true.
 nt_names(ext(T, _), J, B?) :- nt_names(T?, J?, B).
+nt_names(ext_any(T), J, B?) :- nt_names(T?, J?, B).
 nt_names(_, _, no) :- otherwise | true.
 %% meeting_peer(S(V1, V2, _, ...), Me, P?) :- ground(V1?), ground(V2?), ground(Me?) | meet_other(V1?, V2?, Me?, P): the two roles at the first two places of the request name, its head beginning with its roles.
 procedure meeting_clause(YesNo?, Constant?, Args?, RoleSpecs?, Stream(_)).

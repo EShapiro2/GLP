@@ -180,6 +180,8 @@ lin_coef(pvar(_), _, 0).
 lin_coef(svar(_), _, 0).
 lin_coef(nterm(_), _, 0).
 lin_coef(sgn(_, _), _, 0).
+%% The wildcard is in no constraint (GSC 327e035: it occurs only in a cleared atom); the clause covers the type.
+lin_coef(any, _, 0).
 procedure same_arg_coef(Arg?, Arg?, Number).
 same_arg_coef(A, V, 1) :- A? =?= V? | true.
 same_arg_coef(_, _, 0) :- otherwise | true.
@@ -306,11 +308,13 @@ variables_of([svar(X)|As], [svar(X?)|R?]) :- variables_of(As?, R).
 variables_of([role(_)|As], R?) :- variables_of(As?, R).
 variables_of([nterm(_)|As], R?) :- variables_of(As?, R).
 variables_of([sgn(_, _)|As], R?) :- variables_of(As?, R).
+variables_of([any|As], R?) :- variables_of(As?, R).
 %% The arguments with each signed term sgn(y, i) taken as its variable y and
-%% its role i, which it names.
+%% its role i, which it names; the wildcard of a cleared atom is no variable and names nothing, and is left out (vGLP f8127b1, Section 5.4, "Act schemas as local specifications").
 procedure flat_args(Args?, Args).
 flat_args([], []).
 flat_args([sgn(Y, I)|As], [svar(Y?), role(I?)|R?]) :- flat_args(As?, R).
+flat_args([any|As], R?) :- flat_args(As?, R).
 flat_args([nterm(N)|As], R?) :- nt_flat(N?, Ws), flat_args(As?, R1), app(Ws?, R1?, R).
 flat_args([A|As], [A?|R?]) :- otherwise | flat_args(As?, R).
 %% The variables of a name term, its base, a role or an agent variable, and its speech-act variables: "a variable inside a signed term or a name term included" (vGLP c649c0d, Section 5.4, the paragraph on act schemas), and its base named by it.
@@ -319,6 +323,7 @@ nt_flat(own(I), [role(I?)]).
 nt_flat(own_var(X), [pvar(X?)]).
 nt_flat(nvar(_), []).
 nt_flat(ext(N, Y), R?) :- nt_flat(N?, R1), app(R1?, [svar(Y?)], R).
+nt_flat(ext_any(N), R?) :- nt_flat(N?, R).
 %% The first argument of the first list absent from the second; none, [].
 procedure first_absent(Args?, Args?, Args).
 first_absent([], _, []).
@@ -434,7 +439,8 @@ listed_lines2(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph
 procedure first_required_args(RoleSpecs?, Args).
 first_required_args([], []).
 first_required_args([R|_], As?) :- ground(R?) |
-    rs_lists(R?, _, M, K, _),
+    rs_lists(R?, _, M0, K, _),
+    uncleared(M0?, M),
     atoms_args(K?, A1),
     atoms_args(M?, A2),
     app(A1?, A2?, As).
@@ -526,7 +532,7 @@ procedure own_reflexive_in1(YesNo?, GAs?, Integer?, Preds?, YesNo).
 own_reflexive_in1(yes, _, _, _, yes).
 own_reflexive_in1(no, As, P, Rf, B?) :- own_reflexive_in(As?, P?, Rf?, B).
 
-%% The atoms required (=(i) and -(i)) at the roles sent to P, joined, less
+%% The atoms required (=(i) and -(i), a cleared atom deleted and not required, uncleared) at the roles sent to P, joined, less
 %% those of a reflexive predicate naming P, which hold at every person of that
 %% person (vGLP, Section 5.4, the paragraph on act schemas); and those
 %% forbidden there.
@@ -546,7 +552,8 @@ drop_own_reflexive([A|As], P, Rf, [A?|R?]) :- otherwise | drop_own_reflexive(As?
 procedure reqs_join(RoleSpecs?, Binding?, GAs?, GAs).
 reqs_join([], _, Acc, Acc?).
 reqs_join([R|Rs], B, Acc, Out?) :- ground(R?), ground(B?) |
-    rs_lists(R?, _, M, K, _),
+    rs_lists(R?, _, M0, K, _),
+    uncleared(M0?, M),
     img_atoms(K?, B?, G1),
     img_atoms(M?, B?, G2),
     app(G1?, G2?, G),
@@ -586,6 +593,7 @@ person_vars([svar(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([nterm(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([sgn(_, _)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([num(_)|Vs], R?) :- person_vars(Vs?, R).
+person_vars([any|Vs], R?) :- person_vars(Vs?, R).
 procedure speech_vars(Args?, Args).
 speech_vars([], []).
 speech_vars([svar(X)|Vs], [svar(X?)|R?]) :- speech_vars(Vs?, R).
@@ -594,6 +602,7 @@ speech_vars([pvar(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([nterm(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([sgn(_, _)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([num(_)|Vs], R?) :- speech_vars(Vs?, R).
+speech_vars([any|Vs], R?) :- speech_vars(Vs?, R).
 
 %% rgs(Vs, N, B, Bs): every extension of B sending Vs to people, person(N)
 %% being the first not yet used.
@@ -846,6 +855,8 @@ adm_var(nterm(_), _, _, _, yes).
 adm_var(sgn(_, _), _, _, _, yes).
 %% A number names no agent, so admissibility does not concern it (GSC, Section 3.2).
 adm_var(num(_), _, _, _, yes).
+%% The wildcard is in no added atom (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
+adm_var(any, _, _, _, yes).
 procedure adm_var1(YesNo?, Found?, Ints?, YesNo).
 adm_var1(yes, _, _, yes).
 adm_var1(no, found(sp(_, S)), Gp, R?) :- mem(S?, Gp?, R).
@@ -860,7 +871,8 @@ added_atoms([R|Rs], A?) :- ground(R?) | rs_lists(R?, P, _, _, _), added_atoms(Rs
 procedure required_atoms(RoleSpecs?, Atoms).
 required_atoms([], []).
 required_atoms([R|Rs], A?) :- ground(R?) |
-    rs_lists(R?, _, M, K, _),
+    rs_lists(R?, _, M0, K, _),
+    uncleared(M0?, M),
     required_atoms(Rs?, A1),
     app(M?, A1?, A2),
     app(K?, A2?, A).
@@ -911,6 +923,8 @@ nt_val(ext(N, Y), B, cdot(C?, V?)) :- ground(B?) |
     nt_val(N?, B?, C),
     lookup(svar(Y?), B?, F),
     val_or_free(F?, svar(Y?), V).
+%% The name term N.* of a cleared atom: the wildcard stands for itself, free_var(any), as it does as an argument (img_args), so that a cleared atom's image is the atom with its wildcards, which matches only itself (match_arg).
+nt_val(ext_any(N), B, cdot(C?, free_var(any))) :- nt_val(N?, B?, C).
 %% The image of a signed term sgn(y, i): the speech act bound to y, signed by the person in role i (GSC, Definition "Binding": beta(sgn(y, pi)) := (beta(y), beta(pi))).  Every binding taken here sends y to a speech act (canon_bindings), so the second clause covers the type and is never reached.
 procedure img_sgn(Found?, Integer?, Arg?, Val).
 img_sgn(found(sp(U, S)), P, _, sp(sp(U?, S?), P?)).
@@ -1275,6 +1289,8 @@ match_arg(sgn(Y, I), sp(sp(U, S), P), B, R?) :- ground(U?), ground(B?) |
     match_arg(svar(Y?), sp(U?, S?), B?, R1),
     match_then(R1?, role(I?), person(P?), R).
 match_arg(nterm(N), V, B, R?) :- ground(N?), ground(V?), ground(B?) | match_nt(N?, V?, B?, R).
+%% The wildcard of a cleared atom matches the wildcard of a cleared atom's image, free_var(any), and nothing else, and binds nothing.
+match_arg(any, V, B, R?) :- ground(V?) | wild_val(V?, B?, R).
 match_arg(A, V, B, R?) :- otherwise, ground(A?), ground(V?), ground(B?) |
     lookup(A?, B?, F),
     kind_fits(A?, V?, K),
@@ -1286,7 +1302,11 @@ procedure match_nt(NameTerm?, Val?, Binding?, MRes).
 match_nt(own(I), cn(V), B, R?) :- match_arg(role(I?), V?, B?, R).
 match_nt(own_var(X), cn(V), B, R?) :- match_arg(pvar(X?), V?, B?, R).
 match_nt(ext(N, Y), cdot(C, V), B, R?) :- match_nt(N?, C?, B?, R1), match_then(R1?, svar(Y?), V?, R).
+match_nt(ext_any(N), cdot(C, V), B, R?) :- match_nt(N?, C?, B?, R1), match_then(R1?, any, V?, R).
 match_nt(_, _, _, mno) :- otherwise | true.
+procedure wild_val(Val?, Binding?, MRes).
+wild_val(free_var(any), B, mok(B?)).
+wild_val(_, _, mno) :- otherwise | true.
 procedure match_one(Found?, YesNo?, Arg?, Val?, Binding?, MRes).
 match_one(found(W), _, _, V, B, mok(B?)) :- W? =?= V? | true.
 match_one(found(_), _, _, _, _, mno) :- otherwise | true.

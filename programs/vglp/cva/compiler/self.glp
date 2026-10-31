@@ -20,11 +20,12 @@
 %% (GSC, Definition "Binding"; vGLP, Section 5.4, "Act schemas as local
 %% specifications"), a speech act being an utterance or a speech act, signed;
 %% local.glp decides the contract over it and the printed text computes it.
+%% A cleared atom (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "A schema may mark an atom it deletes as cleared, with the wildcard * among its arguments or as the speech act of a name term: the act deletes every atom of the state that it matches, and requires none"), as programs/gsc/self.glp writes it among a role's deleted atoms (GSC 327e035, Definition "Speech-act schema"): any is the wildcard as an argument, and ext_any(N) the name term N.*, the wildcard as its speech act.
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
-            ; ext(NameTerm, Constant).
+            ; ext(NameTerm, Constant) ; ext_any(NameTerm).
 %% Act schemas allow numbers (GSC 9231074, Section 3.2; vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an argument of an atom may be a number or a numeric variable, a schema may carry a constraint on its numeric variables, and an atom it adds or deletes may carry a multiplicity, a number or a numeric variable, for that many copies of it"): num(X) is the numeric variable X where X is a name and the number X where X is a number, and times(K, A) is the atom A with the multiplicity K, as programs/gsc/self.glp writes them.
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer) ; num(Constant).
+            ; sgn(Constant, Integer) ; num(Constant) ; any.
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -176,6 +177,35 @@ procedure rs_lists(RoleSpec?, Atoms, Atoms, Atoms, Atoms).
 rs_lists(rs(_, P, M, K, N), P?, M?, K?, N?).
 rs_lists(crs(_, _, P, M, K, N), P?, M?, K?, N?).
 
+%% A role's deleted atoms less its cleared ones: a cleared atom is deleted and not required (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "the act deletes every atom of the state that it matches, and requires none"), so the atoms a role requires are those it keeps and these, GSC's =(i) u -(i) (GSC 327e035, Definition "Speech-act schema", -(i) the atoms marked - with no wildcard).
+procedure uncleared(Atoms?, Atoms).
+uncleared([], []).
+uncleared([A|As], R?) :- ground(A?) |
+    cleared(A?, C),
+    uncleared(As?, R1),
+    keep_atom(C?, A?, R1?, R).
+procedure keep_atom(YesNo?, Atom?, Atoms?, Atoms).
+keep_atom(yes, _, R, R?).
+keep_atom(no, A, R, [A?|R?]).
+%% Whether an atom is cleared: the wildcard among its arguments, or as the speech act of a name term among them.
+procedure cleared(Atom?, YesNo).
+cleared(atom(_, As), C?) :- args_wild(As?, C).
+cleared(times(_, A), C?) :- cleared(A?, C).
+procedure args_wild(Args?, YesNo).
+args_wild([], no).
+args_wild([any|_], yes).
+args_wild([nterm(N)|As], C?) :- nt_wild(N?, C1), args_wild1(C1?, As?, C).
+args_wild([A|As], C?) :- otherwise, ground(A?) | args_wild(As?, C).
+procedure args_wild1(YesNo?, Args?, YesNo).
+args_wild1(yes, _, yes).
+args_wild1(no, As, C?) :- args_wild(As?, C).
+procedure nt_wild(NameTerm?, YesNo).
+nt_wild(own(_), no).
+nt_wild(own_var(_), no).
+nt_wild(nvar(_), no).
+nt_wild(ext(N, _), C?) :- nt_wild(N?, C).
+nt_wild(ext_any(_), yes).
+
 procedure rs_guarded(RoleSpec?, YesNo).
 rs_guarded(rs(guarded, _, _, _, _), yes).
 rs_guarded(rs(guarded_at(_), _, _, _, _), yes).
@@ -226,6 +256,7 @@ is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
 is_nvar(nterm(_), no).
 is_nvar(sgn(_, _), no).
+is_nvar(any, no).
 %% The numeric arguments a constraint names, those of its expressions included.
 procedure con_args(Constraint?, Args).
 con_args(true, []).
@@ -250,6 +281,8 @@ expr_args(pvar(X), [pvar(X?)]).
 expr_args(svar(X), [svar(X?)]).
 expr_args(nterm(N), [nterm(N?)]).
 expr_args(sgn(Y, J), [sgn(Y?, J?)]).
+%% The wildcard is in no constraint (GSC 327e035: it occurs only in a cleared atom); the clause covers the type.
+expr_args(any, [any]).
 
 %% A schema's listed roles (GSC 8064cfb, Appendix D, Definition "Role"; vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"): their indices, from 1, in the order of the roles (listed_ixs); each with its index, its base, the index of its agent role, its predicate rho and its arguments u_2, ..., u_r, listing(I, Base, Rho, Args), in the order of the roles (listed_all); their bases (listed_bases); and the arguments of a role that are no arguments of its atoms, a listed role's (kind_args).  "the listed roles of a schema have one base" (ibid.), which local.glp decides.
 Listing  ::= listing(Integer, Integer, Constant, Args).
