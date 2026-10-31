@@ -9,7 +9,7 @@
 # discovery reads a program: every .glp file of the program's directory tree,
 # together with the self.glp of each directory from the root down to it (TGLP
 # modules.tex, Compilation, first step), and a .vglp where no .glp stands
-# beside it, with the vGLP mediator source it is compiled with
+# beside it, with the dispatcher's generic source it is compiled with
 # (program_linker.dart, _addVglpModules).  No file is named here, so none
 # drifts from the tree.  Until 2026-10-07 this script and lib/glp_sources.dart
 # each listed the files, and both lacked what the trees had gained since:
@@ -55,9 +55,9 @@ for t in $TREES; do
     stage "$f"
   done < <(cd "$SRC" && find "$t" -type f \( -name '*.glp' -o -name '*.vglp' \) | sort)
 done
-# A .vglp is compiled with the generic mediator source, programs/vglp/.
+# A .vglp is compiled with the dispatcher's generic source, programs/vglp/dispatcher.glp.
 if [ -n "$(find "$DST" -name '*.vglp')" ]; then
-  for f in self med dispatcher; do stage "vglp/$f.glp"; done
+  stage vglp/dispatcher.glp
 fi
 
 # The certified mini-apps the super-app installs reach the phone as artefacts,
