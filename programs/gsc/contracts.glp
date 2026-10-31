@@ -1397,6 +1397,9 @@ contract(wr_clear_v, C?) :- wr_clear_v(C).
 contract(wr_clear_w, C?) :- wr_clear_w(C).
 contract(wr_rec_h_added, C?) :- wr_rec_h_added(C).
 contract(wr_rec_third, C?) :- wr_rec_third(C).
+contract(wr_quit, C?) :- wr_quit(C).
+contract(wr_release, C?) :- wr_release(C).
+contract(wr_release_kept, C?) :- wr_release_kept(C).
 contract(ls_faults, C?) :- ls_faults(C).
 contract(nn_tag, C?) :- nn_tag(C).
 contract(nn_tag_loose, C?) :- nn_tag_loose(C).
@@ -2708,3 +2711,45 @@ wr_rec_third(C?) :-
                      [atom(agent_of, [role(3), svar(y)])], G),
     wr_enter_third(N),
     wr_with_enter(N?, G?, [], C).
+
+% --- contracts with wards at GAI e4d935c (sections/wards.tex) ---------------
+% Clause 1 of def:guardianship: no schema clears an atom of g, of w or of v;
+% and clause 5: a schema that deletes, at a role, v(u) for a role or an
+% agent variable u deletes or forbids w(u) there.  Each fixture changes wr
+% in one place.
+
+% wr_quit: quit(q?) has q clear guardian_of(*), an atom of v, which clause 1
+% forbids, and add resigned, a cleared atom being no change a role makes; it
+% deletes v(u) for no role and no agent variable u, so clause 5 asks nothing
+% of it: guardian_of is a v of no guardianship for agent, and there is no
+% introduction with wards.
+procedure wr_quit(Declared).
+wr_quit(C?) :-
+    wr_make_guardian([svar(y)], [atom(agent_of, [role(3), svar(y)])],
+                     [atom(agent_of, [role(3), svar(y)])], G),
+    wr_with(G?, [schema(quit, [],
+                   [rs(guarded, [atom(resigned, [])], [atom(guardian_of, [any])],
+                                [atom(identity, [])], [atom(agent, [])])])], C).
+
+% wr_release_at(F, C): wr with release(q? ; x), q deleting guardian_of(x),
+% x an agent variable, and forbidding F.
+procedure wr_release_at(Atoms?, Declared).
+wr_release_at(F, C?) :- ground(F?) |
+    wr_make_guardian([svar(y)], [atom(agent_of, [role(3), svar(y)])],
+                     [atom(agent_of, [role(3), svar(y)])], G),
+    wr_with(G?, [schema(release, [pvar(x)],
+                   [rs(guarded, [], [atom(guardian_of, [pvar(x)])],
+                                [atom(identity, [])], [atom(agent, [])|F?])])], C).
+
+% wr_release: release deletes guardian_of(x), v(u) for the agent variable u
+% = x, and forbids principal_of(x), w(u) (clause 5): grassroots with wards
+% as wr is.
+procedure wr_release(Declared).
+wr_release(C?) :- wr_release_at([atom(principal_of, [pvar(x)])], C).
+
+% wr_release_kept: release deletes guardian_of(x) and neither deletes nor
+% forbids principal_of(x) (clause 5): guardian_of is no v of a guardianship
+% for agent whose w is principal_of, and there is no introduction with
+% wards.
+procedure wr_release_kept(Declared).
+wr_release_kept(C?) :- wr_release_at([], C).

@@ -2220,7 +2220,7 @@ class _SocialTabState extends State<SocialTab> {
 
   // --- The apps of contracts with pragmas -----------------------------------
 
-  /// The tab of a platform compiled from a contract with pragmas, every word on it the contract's or one of the platform's four, yes, no, declined and unable (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; Section 8): the list the tab draws, [TabPlace.list], one of those the view names, its name the tab's; on a screen with no tabs every list, one under another.  A tab holds, in order: the notices of the acts drawn on it; the approvals the person made that are pending, of those acts, each its button and the persons it names; the buttons of the acts that name, beside the person proposing them, no person and no group, drawn on the tab of their contract, each with the fields the person fills, and a meeting's button with a field for the peer's key; and the rows of the list, each an atom of its predicate in the state, its item the first of its arguments that is a person, a group or a speech act, showing the atoms of the state naming the item, and beside it the button of each act that names a person, where the item is a person, or a group, where it is a group ([_wordedRow]).  Where the tab is is the request's widget term's, `act(place(T, ...), W)` ([ActInfo]); no word of a contract is held here.
+  /// The tab of a platform compiled from a contract with pragmas, every word on it the contract's or one of the platform's four, yes, no, declined and unable (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; Section 8): the list the tab draws, [TabPlace.list], one of those the view names, its name the tab's; on a screen with no tabs every list, one under another.  A tab holds, in order: the notices of the acts drawn on it; the approvals the person made that are pending, of those acts, each its button and the persons it names; the buttons of the acts that name, beside the person proposing them, no person and no group, drawn on the tab of their contract, each with the fields the person fills, and a meeting's button with a field for the peer's key; and the rows of the list, one per item, an atom's item being its first argument, each carrying the atoms of its predicate whose item it is and showing the atoms of the state naming the item, and beside it the button of each act that names a person, where the item is a person, or a group, where it is a group ([_wordedRow]).  Where the tab is is the request's widget term's, `act(place(T, ...), W)` ([ActInfo]); no word of a contract is held here.
   Widget _worded(BuildContext context, SocialState s) {
     final lists = s.lists!;
     final pred = widget.place?.list;
@@ -2267,15 +2267,7 @@ class _SocialTabState extends State<SocialTab> {
         if (ask != null && o != null)
           ..._topActs(context, s, ask, o, l.predicate, onThis),
         for (final r in _rows(s, l.predicate))
-          _wordedRow(context, s, r,
-              counted: l.counted,
-              alone: _rows(s, l.predicate)
-                      .where((x) =>
-                          x.item != null &&
-                          r.item != null &&
-                          formatTerm(x.item!) == formatTerm(r.item!))
-                      .length <=
-                  1),
+          _wordedRow(context, s, r, counted: l.counted),
       ],
     );
   }
@@ -2398,30 +2390,30 @@ class _SocialTabState extends State<SocialTab> {
     );
   }
 
-  /// The rows of the list of [pred]: each atom of [pred] in the state, once, with the count of its copies, in the order of the state; its item the first of its arguments that is a person, a group or a speech act, an item of GSNP's `item(x)` its speech act (vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9: "an item's row its author and the agents that forwarded it").
-  List<({GTerm atom, int count, GTerm? item})> _rows(SocialState s, String pred) {
-    final rows = <({GTerm atom, int count, GTerm? item})>[];
+  /// The rows of the list of [pred]: one row per item, an atom's item being its first argument, in the order the items first appear in the state; a row carries every atom of [pred] in the state whose item it is, each once with the count of its copies, in the order of the state; an atom of no argument is its own row (vGLP 5b4859a, Section 5.4, "The contract's words": "The tab lists the atoms of that predicate in the state, one row per item, an atom's item being its first argument; a row shows the atoms of the state naming its item, with its count where the contract adds or deletes the predicate with a multiplicity"; GLP #11 Cowork, Code_inbox.md, 2026-10-31 14:21 UTC).
+  List<({GTerm? item, List<({GTerm atom, int count})> atoms})> _rows(
+      SocialState s, String pred) {
+    final rows = <({GTerm? item, List<({GTerm atom, int count})> atoms})>[];
     final at = <String, int>{};
     for (final a in s.atoms) {
       final (f, xs) = ctorArgs(a);
       if (f != pred) continue;
-      final k = formatTerm(a);
-      final i = at[k];
-      if (i != null) {
-        rows[i] = (atom: rows[i].atom, count: rows[i].count + 1, item: rows[i].item);
+      final GTerm? item = xs.isEmpty ? null : xs.first;
+      final rk = formatTerm(item ?? a);
+      final i = at[rk];
+      if (i == null) {
+        at[rk] = rows.length;
+        rows.add((item: item, atoms: [(atom: a, count: 1)]));
         continue;
       }
-      GTerm? item;
-      for (final x in xs) {
-        if (x is GAtom ||
-            SocialState._group(x) != null ||
-            SpeechAct.of(x) != null) {
-          item = x;
-          break;
-        }
+      final atoms = rows[i].atoms;
+      final k = formatTerm(a);
+      final j = atoms.indexWhere((x) => formatTerm(x.atom) == k);
+      if (j < 0) {
+        atoms.add((atom: a, count: 1));
+      } else {
+        atoms[j] = (atom: atoms[j].atom, count: atoms[j].count + 1);
       }
-      at[k] = rows.length;
-      rows.add((atom: a, count: 1, item: item));
     }
     return rows;
   }
@@ -2435,16 +2427,17 @@ class _SocialTabState extends State<SocialTab> {
     return xs.any((x) => formatTerm(x) == want || formatTerm(x) == whole);
   }
 
-  /// A row of a list: its item by name, the count of its copies where its list is counted, the contract adding or deleting its predicate with a multiplicity (vGLP 110caf4, Section 5.4, "The contract's words"), the atoms of the state naming the item, each by its other arguments (vGLP, Section 5.4, "The contract's words": "a row shows the atoms of the state naming its item, the view carrying the whole state"), and the buttons of the acts that name a person or a group beside the item ([_rowActs]).  A speech act is drawn by its text, and under it its signers by name, its author and then each agent that forwarded it, in order (GSC, Section 3: "A speech act is an utterance or a speech act, signed by a person"; vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9).
+  /// A row of a list, one per item: its item by name; each atom of the list's predicate whose item it is, by its other arguments, with the count of its copies where its list is counted, the contract adding or deleting its predicate with a multiplicity, the count beside the item where the row carries one atom (vGLP 5b4859a, Section 5.4, "The contract's words": "one row per item, an atom's item being its first argument; a row shows the atoms of the state naming its item, with its count where the contract adds or deletes the predicate with a multiplicity"; GLP #11 Cowork, Code_inbox.md, 2026-10-31 14:21 UTC); the other atoms of the state naming the item, each by its other arguments (ibid., "the view carrying the whole state"); and the buttons of the acts that name a person or a group beside the item ([_rowActs]).  A speech act is drawn by its text, and under it its signers by name, its author and then each agent that forwarded it, in order (GSC, Section 3: "A speech act is an utterance or a speech act, signed by a person"; vGLP #20, Code_inbox.md, 2026-10-23 23:08 UTC, item 9).
   Widget _wordedRow(BuildContext context, SocialState s,
-      ({GTerm atom, int count, GTerm? item}) r,
-      {bool alone = true, bool counted = false}) {
+      ({GTerm? item, List<({GTerm atom, int count})> atoms}) r,
+      {bool counted = false}) {
     final item = r.item;
-    // A row is keyed by its item, or by its atom where another row of the list has the same item, as two bonds of one issuer of different maturities.
-    final k = formatTerm(alone ? (item ?? r.atom) : r.atom);
+    final one = r.atoms.length == 1 ? r.atoms.single : null;
+    // A row is keyed by its item, one row per item; an atom of no argument by itself.
+    final k = formatTerm(item ?? r.atoms.first.atom);
     final title = item == null
-        ? _atomText(r.atom)
-        : '${_named(item)}${counted ? '  ${r.count}' : ''}';
+        ? _atomText(r.atoms.first.atom)
+        : '${_named(item)}${counted && one != null ? '  ${one.count}' : ''}';
     final shows = <String>[];
     final signed = item == null ? null : SpeechAct.of(item);
     if (signed != null) {
@@ -2454,14 +2447,19 @@ class _SocialTabState extends State<SocialTab> {
       final whole = formatTerm(item);
       final g = SocialState._group(item);
       final part = g == null ? whole : formatTerm(g.$2);
-      // The row's own atom by its other arguments, as a bond's maturity, it being an atom of the state naming the item.
-      final own = [
-        for (final x in ctorArgs(r.atom).$2)
-          if (formatTerm(x) != whole && formatTerm(x) != part) _signed(x)
-      ];
-      if (own.isNotEmpty) shows.add(own.join(', '));
+      // The row's own atoms by their other arguments, as a bond's maturity, each an atom of the state naming the item; where the row carries several, each with its count.
+      for (final x in r.atoms) {
+        final own = [
+          for (final y in ctorArgs(x.atom).$2.skip(1))
+            if (formatTerm(y) != whole && formatTerm(y) != part) _signed(y)
+        ];
+        final n = counted && one == null ? '${x.count}' : '';
+        final line = [own.join(', '), n].where((t) => t.isNotEmpty).join('  ');
+        if (line.isNotEmpty) shows.add(line);
+      }
+      final mine = {for (final x in r.atoms) formatTerm(x.atom)};
       for (final a in s.atoms) {
-        if (formatTerm(a) == formatTerm(r.atom) || !_naming(a, item)) continue;
+        if (mine.contains(formatTerm(a)) || !_naming(a, item)) continue;
         final (_, xs) = ctorArgs(a);
         final rest = [
           for (final x in xs)
@@ -2505,7 +2503,9 @@ class _SocialTabState extends State<SocialTab> {
               child: Text(x, style: small),
             ),
           if (item != null)
-            ..._rowActs(context, s, item, k, ctorArgs(r.atom).$1, atom: r.atom),
+            // The row's own atom fills the places an act's precondition names, where the row carries one; where it carries several, the row's item alone ([_fillRow]).
+            ..._rowActs(context, s, item, k, ctorArgs(r.atoms.first.atom).$1,
+                atom: one?.atom),
         ],
       ),
     );
