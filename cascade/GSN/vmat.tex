@@ -298,7 +298,7 @@ c'_
 \Alice
 }
  := 
-c_
+(c_
 {
 \Alice
 }
@@ -311,13 +311,48 @@ friend
 \Bob
 )
 \}
-, \qquad 
+) \setminus K_
+{
+\Alice
+}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+listed
+}
+(
+\Bob
+,
+\ast
+)
+ \text{ or } 
+\mathit{
+member
+}
+(
+\langle
+\Bob
+\rangle
+\cdot
+\ast
+)
+,\\
+&
 c'_
 {
 \Bob
 }
  := 
-c_
+(c_
 {
 \Bob
 }
@@ -330,6 +365,40 @@ friend
 \Alice
 )
 \}
+) \setminus K_
+{
+\Bob
+}
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+listed
+}
+(
+\Alice
+,
+\ast
+)
+ \text{ or } 
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+\ast
+)
 ,\\
 &
 \text{provided } 
@@ -726,6 +795,99 @@ n
 \}
 \end{align*}
 \iffalse
+remove
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
 close
 \fi
 \begin{align*}
@@ -878,110 +1040,6 @@ n
 \text{guarded by } \{
 \Alice
 \}
-\end{align*}
-\iffalse
-drop
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-listed
-}
-(
-\Bob
-,
-n
-)
-\}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-listed
-}
-(
-\Bob
-,
-n
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-friend
-}
-(
-\Bob
-)
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \emptyset
 \end{align*}
 \iffalse
 post_own
