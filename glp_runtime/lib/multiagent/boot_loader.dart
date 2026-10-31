@@ -54,8 +54,10 @@ class BootConfig {
   /// The full source code (original, including boot clause)
   final String fullSource;
 
-  /// Source code with boot clause stripped (for GLP compilation)
-  /// The boot clause contains @ which the GLP parser doesn't understand.
+  /// Source code with the boot declaration and clause blanked out (for GLP
+  /// compilation).  The parser reads the clause's `G@p` goals as [SpawnGoal]s,
+  /// from which [BootLoader] takes the [directives]; the rest of the file
+  /// compiles as an ordinary module.
   final String source;
 
   /// Optional program directory for static linking.
@@ -66,8 +68,8 @@ class BootConfig {
   /// Absolute path to programs/self.glp
   String rootSelfGlpPath;
 
-  /// The boot file's path, where it was loaded from one ([BootLoader.loadFile])
-  /// or the caller knows it. The boot source is checked in the linked
+  /// The boot file's path, where the caller knows it. The boot source is
+  /// checked in the linked
   /// program's entry points and the boot file's ancestor chain of self.glp
   /// declarations (IGLP, Implementation Notes, "The scope a boot source is
   /// checked in", 8aafd09), and the chain is discovered from this path;
@@ -127,12 +129,6 @@ class BootLoader {
       fullSource: source,
       source: _blankOut(source, tokens, [declaration, clause]),
     );
-  }
-
-  /// Load from file path (convenience method)
-  BootConfig loadFile(String filePath) {
-    final file = _readFile(filePath);
-    return load(file)..bootPath = filePath;
   }
 
   /// The tokens `procedure boot .`, as (first, last) indices.
@@ -279,13 +275,6 @@ class BootLoader {
     }
     out.write(source.substring(at));
     return out.toString();
-  }
-
-  /// Read file contents (platform-specific)
-  String _readFile(String filePath) {
-    // This will be implemented differently for different platforms
-    // For now, we assume dart:io is available
-    throw UnimplementedError('Use load(source) directly or implement file reading');
   }
 }
 

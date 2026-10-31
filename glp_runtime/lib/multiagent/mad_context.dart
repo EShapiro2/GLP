@@ -25,6 +25,13 @@ import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 /// Callback for delivering messages to other agents
 typedef MessageDeliveryCallback = void Function(String destination, OutboundMessage message);
 
+/// A pending reader-name value ([MadContext._pendingReaderValues]).
+typedef _PendingReaderValue = ({
+  List<int> payload,
+  String destination,
+  List<GlobalName> nestedReaderNames
+});
+
 /// madGLP Agent Context
 ///
 /// Wraps a GlpRuntime with W_p and M_p for multiagent operation.
@@ -75,13 +82,6 @@ class MadContext {
   /// delivered.  Where it is not set, an event is delivered as it arrives.
   void Function(String place, PlaceEvent event, int? declaration)?
       placeEventSink;
-
-  /// The canonical bytes e(T) of a ground term T, which a signature signs and
-  /// a verifier checks (IGLP code-format-fragment.tex, "Signed and Hashed
-  /// Content"). It throws on a variable, and the bytes are agent-independent,
-  /// so they match across agents.
-  List<int> canonicalSerialize(Term groundTerm) =>
-      PayloadCodec.serializeAgentMessage(groundTerm);
 
   /// Optional trace sink for MAD infrastructure output.
   /// When set, MAD debug output goes through this callback instead of print().
@@ -226,7 +226,7 @@ class MadContext {
   }
 
   // =========================================================================
-  // madGLP global_send Mechanism (Phase 3)
+  // madGLP global_send Mechanism
   // =========================================================================
 
   /// Fire global_send goal if one is watching this writer's reader
@@ -388,7 +388,8 @@ class MadContext {
   /// Register global_send goals from GlobalSendSpawn info
   ///
   /// Called after globalize() or localize() to register any spawned goals.
-  /// Per spec Section 4: global_send(T, G, Q) fires when T (the reader) becomes
+  /// Per IGLP Definition global_send Predicate: global_send(T, G, Q) fires
+  /// when T (the reader) becomes
   /// known, i.e., when the paired writer is bound. We register both the goal in
   /// the GlobalSendRegistry and an onBind callback on the heap so that
   /// onWriterBound is called when the writer is assigned.
@@ -456,12 +457,12 @@ class MadContext {
   }
 
   // =========================================================================
-  // madGLP Receive Transaction (Phase 4)
+  // madGLP Receive Transaction
   // =========================================================================
 
   /// Handle incoming madGLP assignment message
   ///
-  /// Per spec Section 8.3, handles three cases:
+  /// Per IGLP Definition madGLP Receive Transaction, handles three cases:
   ///
   /// **Case `_w(p, 0) := [T | _w(p,0)]` (Serializer)**: Cold-call to our network input.
   /// **Case `_w(p, i) := T` with i > 0**: We globalized writer Y, find entry (Y, q) at index i.
@@ -545,7 +546,7 @@ class MadContext {
     }
 
     // Localize the content: replace global names with local variables
-    // Per spec Section 8.3: "Localize T↑ by q to get T_q↓"
+    // Per IGLP, madGLP Receive Transaction: "Localize T↑ by q to get T_q↓"
     final globalNames = extractGlobalNames(content);
     if (globalNames.isNotEmpty) {
       _trace('[MAD $agentId] _handleSerializerAssignment: found ${globalNames.length} global names to localize');
@@ -599,19 +600,25 @@ class MadContext {
     final (freshWriter, freshReader) = runtime.heap.allocateVariable();
     _trace('[MAD $agentId] _appendToNetworkInput: fresh stream continuation ($freshWriter,$freshReader)');
 
-    // Build the list cell [content | freshReader] and extend the stream
+    // Build the list cell [content | freshReader] and extend the stream,
+    // reactivating the goals suspended on it
     final listCell = StructTerm('.', [content, VarRef(freshReader)]);
-    final activations = runtime.heap.bindVariable(currentWriter, listCell);
-    _trace('[MAD $agentId] _appendToNetworkInput: bound stream, ${activations.length} activations');
+    final activations = _bindAndReactivate(currentWriter, listCell);
+    _trace('[MAD $agentId] _appendToNetworkInput: bound stream, $activations activations');
 
     // Update the serializer entry to point to the fresh writer (permanent entry)
     wp.updateSerializerWriter(freshWriter);
     _trace('[MAD $agentId] _appendToNetworkInput: updated serializer entry to writer=$freshWriter');
+  }
 
-    // Reactivate suspended goals waiting on the network input stream
+  /// Bind [writer] to [value] and reactivate the goals the binding wakes; the
+  /// number of them.
+  int _bindAndReactivate(HeapCell writer, Term value) {
+    final activations = runtime.heap.bindVariable(writer, value);
     for (final act in activations) {
       runtime.enqueueReactivatedGoal(act);
     }
+    return activations.length;
   }
 
   // ===========================================================================
@@ -625,9 +632,6 @@ class MadContext {
 
   /// Whether [place] is declared at this agent.
   bool hasDeclaredPlace(String place) => runtime.placeStreams.isDeclared(place);
-
-  /// Names of the places declared at this agent.
-  Iterable<String> get declaredPlaces => runtime.placeStreams.places;
 
   /// Declare [place] with radius [radiusMetres], its event stream growing from
   /// [streamWriterAddr] — the writer of the `E` of `place_declare(P, R, E)`.
@@ -744,9 +748,7 @@ class MadContext {
   /// 2-ary structures `'_r'(P, I)` and `'_w'(P, I)`, functor giving polarity,
   /// first argument the anchor. This is the form a program sees — not the wire
   /// form, which stands in the place of a variable.
-  static Term groundGlobalName(GlobalName gn) => StructTerm(
-      gn.isWriter ? '_w' : '_r',
-      [ConstTerm(gn.agent), ConstTerm(gn.index)]);
+  static Term groundGlobalName(GlobalName gn) => gn.toStruct();
 
   /// Reports produced by the transaction in progress, appended to the network
   /// input stream when it completes (see [_reportPendingLink]).
@@ -856,34 +858,13 @@ class MadContext {
     _trace('[MAD $agentId] _handleWriterAssignment: globalize-writer entry, writerAddr=$writerAddr');
 
     // Localize the value: replace global names with local variables
-    // Per spec Section 8.3: "Localize T↑ by p to get T_p↓"
-    Term localizedValue = value;
-    final globalNames = extractGlobalNames(value);
-    if (globalNames.isNotEmpty) {
-      _trace('[MAD $agentId] _handleWriterAssignment: localizing ${globalNames.length} nested global names');
-      final localizeResult = localize(
-        globalNames: globalNames,
-        localAgent: agentId,
-        fromAgent: fromAgent,
-        table: wp,
-        records: up,
-        freshAddrAllocator: () => runtime.heap.allocateVariable(),
-      );
-      registerGlobalSendSpawns(localizeResult.spawns);
-      _deliverHeldReaderAssignments(globalNames);
-      _queueLocalizeRequests(localizeResult, fromAgent);
-      localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
-      _trace('[MAD $agentId] _handleWriterAssignment: localized value = $localizedValue');
-    }
+    // Per IGLP, madGLP Receive Transaction: "Localize T↑ by p to get T_p↓"
+    final localizedValue =
+        _localizeNested(value, fromAgent, '_handleWriterAssignment');
 
-    // Bind the writer with localized value
-    final activations = runtime.heap.bindVariable(writerAddr, localizedValue);
-    _trace('[MAD $agentId] _handleWriterAssignment: bound writer, ${activations.length} activations');
-
-    // Reactivate suspended goals
-    for (final act in activations) {
-      runtime.enqueueReactivatedGoal(act);
-    }
+    // Bind the writer with localized value, reactivating suspended goals
+    final activations = _bindAndReactivate(writerAddr, localizedValue);
+    _trace('[MAD $agentId] _handleWriterAssignment: bound writer, $activations activations');
 
     // Remove the entry
     wp.removeGlobalizeEntry(globalName.index);
@@ -894,7 +875,8 @@ class MadContext {
   ///
   /// We are agent q. We localized _r(p, i), creating LocalizeEntry (Z_q, p, i).
   /// Now p's gs fires and sends _r(p, i) := T to us. Search by (p, i).
-  /// Per spec Section 8.3: "Agent q searches for entry (X_q, p, i)."
+  /// Per IGLP, madGLP Receive Transaction, Reader case: "Agent q searches for
+  /// entry (X_q, p, i)."
   void _handleReaderAssignment(GlobalName globalName, Term value, String fromAgent) {
     final entry = wp.findByRemote(globalName.agent, globalName.index);
     if (entry == null) {
@@ -914,7 +896,7 @@ class MadContext {
             'applied before — a repeat, dropped');
         return;
       }
-      // Issue 7 / spec §8.3 (Early Messages): the assignment arrived before its
+      // Issue 7 / IGLP app:in-networking, Early messages: the assignment arrived before its
       // LocalizeEntry exists (possible under any non-FIFO transport). Hold it,
       // keyed by (remoteAgent, remoteIndex); localize() delivers it when it
       // creates the matching entry. Do not throw — the message is not dropped.
@@ -928,34 +910,13 @@ class MadContext {
     _trace('[MAD $agentId] _handleReaderAssignment: localize-reader entry, writerAddr=${entry.writerAddr}');
 
     // Localize the value: replace global names with local variables
-    // Per spec Section 8.3: "Localize T↑ by q to get T_q↓"
-    Term localizedValue = value;
-    final globalNames = extractGlobalNames(value);
-    if (globalNames.isNotEmpty) {
-      _trace('[MAD $agentId] _handleReaderAssignment: localizing ${globalNames.length} nested global names');
-      final localizeResult = localize(
-        globalNames: globalNames,
-        localAgent: agentId,
-        fromAgent: fromAgent,
-        table: wp,
-        records: up,
-        freshAddrAllocator: () => runtime.heap.allocateVariable(),
-      );
-      registerGlobalSendSpawns(localizeResult.spawns);
-      _deliverHeldReaderAssignments(globalNames);
-      _queueLocalizeRequests(localizeResult, fromAgent);
-      localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
-      _trace('[MAD $agentId] _handleReaderAssignment: localized value = $localizedValue');
-    }
+    // Per IGLP, madGLP Receive Transaction: "Localize T↑ by q to get T_q↓"
+    final localizedValue =
+        _localizeNested(value, fromAgent, '_handleReaderAssignment');
 
-    // Bind the writer with localized value
-    final activations = runtime.heap.bindVariable(entry.writerAddr, localizedValue);
-    _trace('[MAD $agentId] _handleReaderAssignment: bound writer, ${activations.length} activations');
-
-    // Reactivate suspended goals
-    for (final act in activations) {
-      runtime.enqueueReactivatedGoal(act);
-    }
+    // Bind the writer with localized value, reactivating suspended goals
+    final activations = _bindAndReactivate(entry.writerAddr, localizedValue);
+    _trace('[MAD $agentId] _handleReaderAssignment: bound writer, $activations activations');
 
     // Remove the entry
     wp.removeLocalizeEntry(globalName.agent, globalName.index);
@@ -974,9 +935,37 @@ class MadContext {
         'to $fromAgent');
   }
 
+  /// The value [value] of an assignment from [fromAgent] with its nested
+  /// global names localized (Definition Localize): the entries and records
+  /// made and the spawned goals registered, an assignment that arrived early
+  /// for any of the names delivered, the requests the forwarded names call
+  /// for queued, and the names replaced by the fresh variables.  [handler]
+  /// names the Receive case, for the trace.  A value carrying no global name
+  /// is returned as it is.
+  Term _localizeNested(Term value, String fromAgent, String handler) {
+    final globalNames = extractGlobalNames(value);
+    if (globalNames.isEmpty) return value;
+    _trace('[MAD $agentId] $handler: localizing ${globalNames.length} nested global names');
+    final localizeResult = localize(
+      globalNames: globalNames,
+      localAgent: agentId,
+      fromAgent: fromAgent,
+      table: wp,
+      records: up,
+      freshAddrAllocator: () => runtime.heap.allocateVariable(),
+    );
+    registerGlobalSendSpawns(localizeResult.spawns);
+    _deliverHeldReaderAssignments(globalNames);
+    _queueLocalizeRequests(localizeResult, fromAgent);
+    final localizedValue =
+        localizeTermWithResult(value, globalNames, localizeResult);
+    _trace('[MAD $agentId] $handler: localized value = $localizedValue');
+    return localizedValue;
+  }
+
   /// Deliver any held `_r` assignments whose `LocalizeEntry` was just created.
   ///
-  /// Issue 7 / spec §8.3: after `localize()` creates LocalizeEntries for the
+  /// Issue 7 / IGLP app:in-networking, Early messages: after `localize()` creates LocalizeEntries for the
   /// given global names, check the hold table for each `_r(p, i)` name and
   /// process any assignment that arrived before the entry existed. Delivering
   /// re-enters `_handleReaderAssignment`, which now finds the entry; nested
@@ -1188,16 +1177,7 @@ class MadContext {
       // pending, p addresses it to s as well" (§app:requests-acks). The copy
       // sent to a past holder is dropped there as stale; the value stays
       // pending until the current holder's acknowledgement arrives.
-      _pendingReaderValues[key] = (
-        payload: pending.payload,
-        destination: fromAgent,
-        nestedReaderNames: pending.nestedReaderNames,
-      );
-      mp.add(OutboundMessage(
-        destination: fromAgent,
-        type: MessageType.assignment,
-        payload: pending.payload,
-      ));
+      _addressPendingTo(key, pending, fromAgent);
       _trace('[MAD $agentId] handleRequest: pending $globalName addressed '
           'to $fromAgent as well');
       return;
@@ -1253,19 +1233,27 @@ class MadContext {
     final key = (globalName.agent, globalName.index);
     final pending = _pendingReaderValues[key];
     if (pending != null && pending.destination != holder) {
-      _pendingReaderValues[key] = (
-        payload: pending.payload,
-        destination: holder,
-        nestedReaderNames: pending.nestedReaderNames,
-      );
-      mp.add(OutboundMessage(
-        destination: holder,
-        type: MessageType.assignment,
-        payload: pending.payload,
-      ));
+      _addressPendingTo(key, pending, holder);
       _trace('[MAD $agentId] pending $globalName re-addressed to holder '
           '$holder');
     }
+  }
+
+  /// Address the pending value [pending] of the reader-name link [key] to
+  /// [holder]: it is recorded as the value's destination, and the value is
+  /// queued to it, unsent.
+  void _addressPendingTo((String, int) key, _PendingReaderValue pending,
+      String holder) {
+    _pendingReaderValues[key] = (
+      payload: pending.payload,
+      destination: holder,
+      nestedReaderNames: pending.nestedReaderNames,
+    );
+    mp.add(OutboundMessage(
+      destination: holder,
+      type: MessageType.assignment,
+      payload: pending.payload,
+    ));
   }
 
   // =========================================================================
@@ -1571,47 +1559,10 @@ class MadContext {
       _pendingReaderValues.containsKey((anchorAgent, index));
 
   // =========================================================================
-  // Export/Import Operations (for Flutter app compatibility)
-  // =========================================================================
-
-  /// Export a term for sending to another agent
-  ///
-  /// Extracts variables and registers them in W_p as needed.
-  /// For madGLP, this prepares the term for serialization by setting up
-  /// onBind callbacks for writers so assignments can be routed.
-  void exportTerm(Term term) {
-    final vars = <TermVar>[];
-    _extractTermVars(term, vars);
-
-    // Register onBind callbacks for any writers in the term
-    for (final v in vars) {
-      if (v.isWriter) {
-        // Set up callback so when this writer is bound, we can route the assignment
-        _watch(v.addr);
-        _trace('[MAD $agentId] exportTerm: registered callback for writer ${v.addr}');
-      }
-    }
-  }
-
-  /// Process suspension - in madGLP, blocking readers don't trigger immediate requests
-  ///
-  /// The madGLP model is push-based: assignments are sent when writers are bound,
-  /// not when readers request. However, for compatibility with the UI, we log
-  /// blocking readers.
-  void processSuspension(Set<HeapCell> blockingReaders) {
-    // In madGLP, suspension means we're waiting for assignments to arrive
-    // The push model means we don't send read requests - we just wait
-    for (final readerId in blockingReaders) {
-      _trace('[MAD $agentId] processSuspension: waiting for assignment to reader $readerId');
-    }
-    // No explicit request messages needed in madGLP push model
-  }
-
-  // =========================================================================
   // Unified Send ('_send' builtin implementation)
   // =========================================================================
 
-  /// Unified send operation per spec Section 11.5
+  /// Unified send operation per IGLP, Definition "madGLP Send Transaction"
   ///
   /// The `'_send'(T, G, Q)` builtin behavior depends on whether G is a serializer
   /// address (index 0) or a normal global name (index > 0):
@@ -1657,7 +1608,8 @@ class MadContext {
     _dropForwardedWriterGoals(globalizeResult);
 
     // For globalize-writer entries: NO onBind is registered here.
-    // Per spec Section 5.1: when Y is a writer, p creates an entry (Y, q) and
+    // Per IGLP Definition Globalize, writer case: when Y is a writer, p
+    // creates an entry (Y, q) and
     // waits for the assignment to arrive. The global_send goal is spawned at q
     // (by localize), not at p. Agent p does not send anything for _w entries.
 

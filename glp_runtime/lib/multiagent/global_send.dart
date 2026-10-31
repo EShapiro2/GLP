@@ -21,7 +21,9 @@ import 'imported_writer_records.dart';
 ///
 /// See: IGLP Definition global_send Predicate
 class GlobalSendGoal {
-  /// Address of the reader to watch
+  /// The writer address of the pair whose reader the goal watches: the key
+  /// the registry and `heap.onBind` hold the goal under, which fires when the
+  /// writer is bound.
   final HeapCell readerAddr;
 
   /// Global name identifying the link (_w(p,i) or _r(p,i))
@@ -145,13 +147,19 @@ class GlobalSendRegistry {
   /// occurs in V" — the destination consulted at send time is per-link
   /// runtime state.  A request records its requester by [recordRequester].
   bool redirectGoal(GlobalName globalName, String newHolder) {
-    for (final goal in _goals.values) {
-      if (goal.globalName == globalName) {
-        goal.destination = newHolder;
-        return true;
-      }
+    final goal = _entryForLink(globalName)?.value;
+    if (goal == null) return false;
+    goal.destination = newHolder;
+    return true;
+  }
+
+  /// The registry's entry of the not-yet-fired goal for the link [globalName],
+  /// the first registered where there are several; null where there is none.
+  MapEntry<HeapCell, GlobalSendGoal>? _entryForLink(GlobalName globalName) {
+    for (final entry in _goals.entries) {
+      if (entry.value.globalName == globalName) return entry;
     }
-    return false;
+    return null;
   }
 
   /// Record the authorised [requester] among the holders of the link
@@ -162,16 +170,13 @@ class GlobalSendRegistry {
   /// production, so an earlier requester recorded before it still receives
   /// the value.  Returns false when no goal matches.
   bool recordRequester(GlobalName globalName, String requester) {
-    for (final goal in _goals.values) {
-      if (goal.globalName == globalName) {
-        goal.destination = requester;
-        if (!goal.requesters.contains(requester)) {
-          goal.requesters.add(requester);
-        }
-        return true;
-      }
+    final goal = _entryForLink(globalName)?.value;
+    if (goal == null) return false;
+    goal.destination = requester;
+    if (!goal.requesters.contains(requester)) {
+      goal.requesters.add(requester);
     }
-    return false;
+    return true;
   }
 
   /// Get the goal watching this reader address (if any)
@@ -182,19 +187,15 @@ class GlobalSendRegistry {
   /// With a pending value, this distinguishes a live link from a closed one:
   /// a request matching neither is stale and is dropped rather than held.
   bool hasGoalForLink(GlobalName globalName) =>
-      _goals.values.any((g) => g.globalName == globalName);
+      _entryForLink(globalName) != null;
 
   /// Remove the goal for the link [globalName], if any, and return it.
   ///
   /// Used when a link is refused: `'_authorise_link'` releases "the link's
   /// entry, record, and global_send goal at p".
   GlobalSendGoal? removeGoalForLink(GlobalName globalName) {
-    for (final entry in _goals.entries) {
-      if (entry.value.globalName == globalName) {
-        return _goals.remove(entry.key);
-      }
-    }
-    return null;
+    final entry = _entryForLink(globalName);
+    return entry == null ? null : _goals.remove(entry.key);
   }
 
   /// Remove the goal watching this reader address, if any.
@@ -217,9 +218,10 @@ class GlobalSendRegistry {
   ///
   /// Returns null if no goal was watching this writer.
   ///
-  /// Spec Section 12 (Goal Atomicity): The globalization and message creation
-  /// must happen atomically. New goals for nested variables must be registered
-  /// before the current operation completes.
+  /// Goal atomicity (IGLP: the goal fires at the end of a commit): The
+  /// globalization and message creation must happen atomically. New goals
+  /// for nested variables must be registered before the current operation
+  /// completes.
   GlobalSendFiredResult? onWriterBound({
     required HeapCell writerAddr,
     required Object? value,
@@ -227,7 +229,6 @@ class GlobalSendRegistry {
     required ImportedWriterRecords records,
     required List<TermVar> Function(Object?) extractVariables,
   }) {
-    // The writer and reader share the same address in our model
     final goal = _goals.remove(writerAddr);
     if (goal == null) return null;
 
@@ -297,9 +298,6 @@ class GlobalSendRegistry {
       _goals[key] = goal;
     }
   }
-
-  /// Clear all pending goals (for testing)
-  void clear() => _goals.clear();
 
   @override
   String toString() {
