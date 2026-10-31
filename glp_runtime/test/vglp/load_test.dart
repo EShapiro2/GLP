@@ -2,7 +2,14 @@
 //
 // Loading a directory that holds .vglp sources: the loader compiles them and
 // they join the program as modules.
-// Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation".
+// Spec: vGLP, Section 6, "The Implementation: Compiling vGLP onto GLP", and
+// Appendix "The Canonical Compilation".
+//
+// Until 2026-10-31 the fixture's responder was in the old syntax, compiled by
+// the old compilation against the generic mediator; the old compilation is
+// deleted (vGLP #22's task, Code_inbox 2026-10-31 15:20 UTC), the responder
+// is the one of Section 3 in the paper's syntax, and the two tests of the
+// well-typedness of the old compilation's slots and else-branch went with it.
 //
 // The fixture is written under programs/ and removed again, because a program
 // must live there: ancestor self.glp collection walks up only as far as the
@@ -42,27 +49,26 @@ void main() {
       '${fixture.path.split('/').last}/$module';
 
   const selfGlp = '''
-Decision      ::= yes ; no.
-Offer         ::= offer(Constant).
-Answered      ::= answered(Decision, Constant).
-AnswerStream  ::= [] ; [Answered | AnswerStream].
+Peer     ::= Constant.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+YesNo    ::= yes ; no.
+Card     ::= card(Peer, YesNo?).
 
-imported procedure responder#respond(Offer?, AnswerStream).
-exported procedure respond(Offer?, AnswerStream).
-respond(O, As?) :- responder # respond(O?, As).
+exported procedure ping(Constant).
+ping(a).
 ''';
 
+  // The responder of Section 3: the person sees who offers and answers yes or
+  // no, and the program accepts or refuses.
   const responderVglp = '''
-procedure respond(Offer?, AnswerStream).
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
 
-*(Answer=yes, From?)
-respond(offer(From), [answered(Answer?, From?)]) :-
-    ground(From?) | true
-*(no) true.
-
-*(Answer=no, From?)
-respond(offer(From), [answered(Answer?, From?)]) :-
-    ground(From?) | true.
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
 ''';
 
   group('a .vglp source with no .glp of its name', () {
@@ -86,19 +92,15 @@ respond(offer(From), [answered(Answer?, From?)]) :-
       final m = discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp)
           .firstWhere((m) => m.moduleName == inFixture('responder'));
 
-      // No volition guard survives: GLP is vGLP without volition-guarded
-      // clauses (Definition "GLP, maGLP, cGLP").
+      // No volitional procedure survives: GLP is vGLP without them.
       for (final p in m.ast.procedures) {
-        for (final c in p.clauses) {
-          expect(c.isVolitionGuarded, isFalse);
-        }
+        expect(p.isVolitional, isFalse, reason: '${p.name}/${p.arity}');
       }
-      // The mediator came with it, and the compiled respond gained the channel
-      // and its two slots.
-      expect(m.ast.procedures.map((p) => p.name), contains('med'));
-      final respond =
-          m.ast.procedures.firstWhere((p) => p.name == 'respond');
-      expect(respond.arity, 2 + 1 + 2);
+      // The dispatcher came with it, and respond gained its ask stream: its
+      // asking clause is respond/3.
+      final sigs = m.ast.procedures.map((p) => '${p.name}/${p.arity}');
+      expect(sigs, containsAll(['dispatch/3', 'respond/3']));
+      expect(sigs, isNot(contains('respond/2')));
     });
 
     test('it gets the exposed scope its sibling modules get', () {
@@ -123,52 +125,6 @@ respond(offer(From), [answered(Answer?, From?)]) :-
         expect(declares(compiled, sig), isTrue,
             reason: '$sig should reach the compiled module too');
       }
-    });
-  });
-
-  group('the compiled program is well-typed', () {
-    // The linked program's type-check, input coverage included.  A procedure
-    // with one volition-guarded clause and no ordinary clause is the case the
-    // otherwise clause exists for: without it the slot position accepts only
-    // its own clause's answer, and coverage rejects the procedure.
-    const oneClauseVglp = '''
-procedure respond(Offer?, AnswerStream).
-
-*(Answer=yes, From?)
-respond(offer(From), [answered(Answer?, From?)]) :-
-    ground(From?) | true
-*(no) true.
-''';
-
-    // The program's entry point is a procedure of its own: a caller of the
-    // compiled responder would have to import its COMPILED signature, channel
-    // and slots included, which is a play's business and not this test's.
-    const typesSelfGlp = '''
-Decision      ::= yes ; no.
-Offer         ::= offer(Constant).
-Answered      ::= answered(Decision, Constant).
-AnswerStream  ::= [] ; [Answered | AnswerStream].
-
-exported procedure ping(Constant).
-ping(a).
-''';
-
-    test('with one volition-guarded clause and no ordinary clause', () {
-      write('self.glp', typesSelfGlp);
-      write('responder.vglp', oneClauseVglp);
-      final modules =
-          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
-      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
-          returnsNormally);
-    });
-
-    test('with two', () {
-      write('self.glp', typesSelfGlp);
-      write('responder.vglp', responderVglp);
-      final modules =
-          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
-      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
-          returnsNormally);
     });
   });
 
@@ -337,8 +293,8 @@ decide(no, From, refuse(From?)).
       write('self.glp', selfGlp);
       write('responder.vglp', responderVglp);
       write('responder.glp', '''
-procedure respond(Offer?, AnswerStream).
-respond(offer(From), [answered(no, From?)]) :- ground(From?) | true.
+exported procedure respond(Offer?, Response).
+respond(offer(From), refuse(From?)) :- ground(From?) | true.
 ''');
 
       final modules =
@@ -364,8 +320,8 @@ respond(offer(From), [answered(no, From?)]) :- ground(From?) | true.
 
       final emitted = File(written.single).readAsStringSync();
       expect(emitted, startsWith(compiledHeader));
-      expect(emitted, contains('procedure med('));
-      expect(emitted, isNot(contains('*(')));
+      expect(emitted, contains('dispatch('));
+      expect(emitted, isNot(contains(')*respond(')));
     });
 
     test('it re-emits its own output', () {
@@ -380,30 +336,30 @@ respond(offer(From), [answered(no, From?)]) :- ground(From?) | true.
 
     test('it compiles in the scope the loader gives, exposes included', () {
       // The root self.glp exposes social/graph/routing; a .vglp source calls
-      // send_net and types its answer writer by the message's shape at the
-      // router's M position.  :emit must see the same scope as the load, or
-      // it fails on a source the load compiles.
+      // send_net, and its interactive type is defined in its scope, the
+      // self.glp beside it, from which the compilation builds its construct
+      // process.  :emit must see the same scope as the load, or it fails on a
+      // source the load compiles.
       write('self.glp', '''
 Note      ::= msg(Key, Constant).
 Ent       ::= net_output(Stream(Note)).
-Decision  ::= yes ; no.
 Offer     ::= offer(Constant).
-imported procedure greeter#greet(Offer?, Stream(Ent)?, Stream(Ent)).
-exported procedure greet(Offer?, Stream(Ent)?, Stream(Ent)).
-greet(O, Outs, Outs1?) :- greeter # greet(O?, Outs?, Outs1).
+Target    ::= target(Constant, Key?).
+exported procedure ping(Constant).
+ping(a).
 ''');
       write('greeter.vglp', '''
-procedure greet(Offer?, Stream(Ent)?, Stream(Ent)).
-*(Target)
-greet(offer(From), Outs, Outs1?) :-
+exported procedure (Target)*greet(Offer?, Stream(Ent)?, Stream(Ent)).
+(target(From?, To))*greet(offer(From), Outs, Outs1?) :-
     ground(From?) |
-    send_net(msg(Target?, From?), Outs?, Outs1).
+    send_net(msg(To?, From?), Outs?, Outs1).
 ''');
       final written = emitVglpSources(fixture.path,
           rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
       expect(written, hasLength(1));
       final emitted = File(written.single).readAsStringSync();
-      expect(emitted, contains('Xs_greet_1 ::= xs_greet_1(Key).'));
+      expect(emitted, contains('Question ::= target_w(Target).'));
+      expect(emitted, contains('send_net('));
       // And the load compiles the same source.
       final m = discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp)
           .firstWhere((m) => m.moduleName == inFixture('greeter'));
@@ -414,8 +370,8 @@ greet(offer(From), Outs, Outs1?) :-
       write('self.glp', selfGlp);
       write('responder.vglp', responderVglp);
       const handWritten = '''
-procedure respond(Offer?, AnswerStream).
-respond(offer(From), [answered(no, From?)]) :- ground(From?) | true.
+exported procedure respond(Offer?, Response).
+respond(offer(From), refuse(From?)) :- ground(From?) | true.
 ''';
       write('responder.glp', handWritten);
 

@@ -1757,7 +1757,6 @@ programs/vglp/cva/compiler/cvac.glp	open-decl	request_lines/2
 programs/vglp/cva/compiler/cvac.glp	open-decl	request_name_decl/2
 programs/vglp/cva/compiler/cvac.glp	open-decl	request_name_lines/3
 programs/vglp/cva/compiler/cvac.glp	open-decl	request_name_lines1/5
-programs/vglp/cva/compiler/cvac.glp	open-decl	request_parts/6
 programs/vglp/cva/compiler/cvac.glp	open-decl	role_lines/3
 programs/vglp/cva/compiler/cvac.glp	open-decl	said_fault/4
 programs/vglp/cva/compiler/cvac.glp	open-decl	said_fault0/4
@@ -1777,7 +1776,6 @@ programs/vglp/cva/compiler/cvac.glp	open-decl	schema_sentence1c/9
 programs/vglp/cva/compiler/cvac.glp	open-decl	schema_sentence2/6
 programs/vglp/cva/compiler/cvac.glp	open-decl	schema_sentences/5
 programs/vglp/cva/compiler/cvac.glp	open-decl	sentence_lines/3
-programs/vglp/cva/compiler/cvac.glp	open-decl	shared_lines/5
 programs/vglp/cva/compiler/cvac.glp	open-decl	sig_alt/2
 programs/vglp/cva/compiler/cvac.glp	open-decl	tab_preds/2
 programs/vglp/cva/compiler/cvac.glp	open-decl	tab_term/4
