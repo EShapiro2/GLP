@@ -266,11 +266,16 @@ List<DiscoveredModule> discoverProgram(String rootDir,
 /// canonical-compilation.tex): one holding anything else --- a procedure, a
 /// declaration, a type, a clause, or text the front end does not read --- is
 /// refused, naming the rule ([_refuseRootSelfVglp]).
+/// The files of a tree, in the order of their paths, the same on every file
+/// system: the modules are discovered, compiled and checked in this order,
+/// and a refusal names the first fault of it.
+List<File> _listFiles(Directory root) =>
+    root.listSync(recursive: true).whereType<File>().toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+
 VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
   if (!root.existsSync()) return null;
-  final files = root
-      .listSync(recursive: true)
-      .whereType<File>()
+  final files = _listFiles(root)
       .where((f) => f.path.endsWith('.vglp'))
       .toList();
   final programsNorm = programsDir == null ? null : _normPath(programsDir);
@@ -668,7 +673,7 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
   // Recursively find all .glp files, and the virtual self.glp of each
   // directory of the tree that has one ([isVirtualSelfGlp]): a module of the
   // program as one on disc is, the self.vglp's layer joining it.
-  final listed = root.listSync(recursive: true).whereType<File>().toList();
+  final listed = _listFiles(root);
   final glpFiles = [
     ...listed.where((f) => f.path.endsWith('.glp')),
     for (final f in listed)
@@ -747,9 +752,7 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
 void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs,
     {VglpProgram? program, Map<String, Module> layers = const {}}) {
-  final vglpFiles = root
-      .listSync(recursive: true)
-      .whereType<File>()
+  final vglpFiles = _listFiles(root)
       .where((f) => f.path.endsWith('.vglp'))
       .where((f) {
     final filename = f.path.split(Platform.pathSeparator).last;

@@ -74,7 +74,6 @@ class VariableTable {
   final Map<String, VariableInfo> _vars = {};
 
   // Track guard context
-  bool _hasGroundGuard = false;
   final Set<String> _groundedVars = {};
 
   // The variables a groundness-implying guard grounds at an occurrence of the
@@ -474,16 +473,6 @@ class Analyzer {
     return violations;
   }
 
-  AnnotatedProcedure _analyzeProcedure(Procedure proc) {
-    final annotatedClauses = <AnnotatedClause>[];
-
-    for (final clause in proc.clauses) {
-      annotatedClauses.add(_analyzeClause(clause));
-    }
-
-    return AnnotatedProcedure(proc, proc.name, proc.arity, annotatedClauses);
-  }
-
   /// Analyze procedure and collect SRSW violations instead of throwing
   (AnnotatedProcedure, List<String>) _analyzeProcedureCollectingErrors(Procedure proc, {bool skipSRSW = false}) {
     final annotatedClauses = <AnnotatedClause>[];
@@ -497,37 +486,6 @@ class Analyzer {
     }
 
     return (AnnotatedProcedure(proc, proc.name, proc.arity, annotatedClauses), allViolations);
-  }
-
-  AnnotatedClause _analyzeClause(Clause clause) {
-    final varTable = VariableTable();
-
-    // Analyze head
-    _analyzeAtom(clause.head, varTable);
-
-    // Analyze guards (if present)
-    final hasGuards = clause.guards != null && clause.guards!.isNotEmpty;
-    if (hasGuards) {
-      for (final guard in clause.guards!) {
-        _analyzeGuard(guard, varTable);
-      }
-    }
-
-    // Analyze body (if present)
-    final hasBody = clause.body != null && clause.body!.isNotEmpty;
-    if (hasBody) {
-      for (final goal in clause.body!) {
-        _analyzeGoal(goal, varTable);
-      }
-    }
-
-    // Verify SRSW constraint - all GLP code must satisfy SRSW
-    varTable.verifySRSW();
-
-    // Assign register indices
-    _assignRegisters(varTable);
-
-    return AnnotatedClause(clause, varTable, hasGuards: hasGuards, hasBody: hasBody);
   }
 
   /// Analyze clause and collect SRSW violations instead of throwing

@@ -2,14 +2,13 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/suspend_ops.dart';
-import 'package:glp_runtime/runtime/heap_fcp.dart';
 import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 
 void main() {
   test('On wake, activation pc equals kappa (restart at clause 1)', () {
     final rt = GlpRuntime();
-    final heap = rt.heap as HeapFCP;
+    final heap = rt.heap;
 
     const GoalId g = 77;
     const Pc kappa = 1;

@@ -27,7 +27,6 @@ import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
-import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 /// Message types for inter-isolate communication
@@ -185,9 +184,9 @@ void bobIsolate(SendPort mainPort) async {
         dest,
         msg.payload,
         msg.type,
-        globalNameAgent: globalNameToSend!.agent,
-        globalNameIndex: globalNameToSend!.index,
-        globalNameIsWriter: globalNameToSend!.isWriter,
+        globalNameAgent: globalNameToSend.agent,
+        globalNameIndex: globalNameToSend.index,
+        globalNameIsWriter: globalNameToSend.isWriter,
       ));
     }
   };
@@ -234,10 +233,10 @@ void bobIsolate(SendPort mainPort) async {
       print('[BOB] Binding response to "pong"');
 
       // Bind the response
-      runtime.heap.bindVariable(importedWriterAddr!, ConstTerm('pong'));
+      runtime.heap.bindVariable(importedWriterAddr, ConstTerm('pong'));
 
       // This triggers the global_send goal
-      ctx.onWriterBound(importedWriterAddr!, ConstTerm('pong'));
+      ctx.onWriterBound(importedWriterAddr, ConstTerm('pong'));
       ctx.flushMessages();
 
       mainPort.send(Done('bob', true));

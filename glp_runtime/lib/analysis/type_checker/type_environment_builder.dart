@@ -229,7 +229,7 @@ bool _isUnionAlias(TypeDef def) {
   for (final alt in def.alternatives) {
     if (alt is! TypeRef) return false;
     // If it references a predefined type, it's not a union alias
-    final typeName = (alt as TypeRef).name;
+    final typeName = (alt).name;
     if (isPredefinedType(typeName)) {
       return false;
     }

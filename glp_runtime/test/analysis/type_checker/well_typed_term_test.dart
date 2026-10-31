@@ -20,9 +20,6 @@ void main() {
     DFAState wildcardConsume() => state('_', isDual: true, isFinal: true);
     DFAState integerState({bool isDual = false}) =>
         state('Integer', isDual: isDual, isFinal: true);
-    DFAState streamState({bool isDual = false}) =>
-        state('Stream', isDual: isDual, isFinal: false);
-    DFAState finalState() => state('_FINAL_', isDual: false, isFinal: true);
 
     group('constant at primitive type position', () {
       test('integer constant at Integer type is well-typed', () {

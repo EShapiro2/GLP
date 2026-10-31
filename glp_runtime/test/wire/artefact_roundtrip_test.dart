@@ -28,7 +28,7 @@ Set<String> _entrySigs(List<Object> ops) => {
     };
 
 int _nonInternalCount(List<Object> ops) =>
-    ops.where((op) => op is! Label || _isEntry((op as Label).name)).length;
+    ops.where((op) => op is! Label || _isEntry((op).name)).length;
 
 void _checkProgram(String name, String source) {
   test('$name: artefact round-trips and reconstructs faithfully', () {

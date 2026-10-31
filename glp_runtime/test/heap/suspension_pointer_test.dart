@@ -14,14 +14,14 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/suspension.dart';
-import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, HeapFCP, Pointer, SuspensionListNode, WriterContent;
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, Pointer, WriterContent;
 import 'package:glp_runtime/runtime/terms.dart';
 
 void main() {
   group('Suspension and Reactivation - Pointer Architecture', () {
     test('On wake, activation pc equals kappa (restart at clause 1)', () {
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       const GoalId g = 77;
       const Pc kappa = 1;
@@ -48,7 +48,7 @@ void main() {
 
     test('Multiple suspensions on same variable all activate', () {
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       final (writerAddr, readerAddr) = heap.allocateVariable();
 
@@ -72,7 +72,7 @@ void main() {
 
     test('Disarmed suspensions do not activate', () {
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       final (writerAddr, readerAddr) = heap.allocateVariable();
 
@@ -94,7 +94,7 @@ void main() {
 
     test('Suspension forwarding when binding to another variable', () {
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       final (w1, r1) = heap.allocateVariable();
       final (w2, r2) = heap.allocateVariable();
@@ -122,7 +122,7 @@ void main() {
 
     test('Chain of variable bindings forwards suspensions correctly', () {
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       final (w1, r1) = heap.allocateVariable();
       final (w2, r2) = heap.allocateVariable();
@@ -151,7 +151,7 @@ void main() {
       // The escrow-lookup idiom commits W1 := R2 where W2 already holds the
       // stored value; the suspension on W1 must activate, not be dropped.
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       final (w1, r1) = heap.allocateVariable();
       final (w2, r2) = heap.allocateVariable();
@@ -173,7 +173,7 @@ void main() {
       // W2 is already chain-bound to R3 when W1 is bound to R2; W1's
       // suspension must land on W3 (the chain's end), so binding W3 wakes it.
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       final (w1, r1) = heap.allocateVariable();
       final (w2, r2) = heap.allocateVariable();
@@ -194,7 +194,7 @@ void main() {
 
     test('suspendOnWriter adds directly to writer cell', () {
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       final (writerAddr, _) = heap.allocateVariable();
 
@@ -209,7 +209,7 @@ void main() {
 
     test('suspendOnReader follows pointer to find writer', () {
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       final (writerAddr, readerAddr) = heap.allocateVariable();
 
@@ -254,7 +254,7 @@ void main() {
   group('CommitOps Equivalent - Pointer Architecture', () {
     test('applySigmaHat binds multiple variables and collects activations', () {
       final rt = GlpRuntime();
-      final heap = rt.heap as HeapFCP;
+      final heap = rt.heap;
 
       // Allocate several variables
       final (w1, r1) = heap.allocateVariable();

@@ -466,7 +466,7 @@ Term deepDeref(GlpRuntime rt, Term term) {
     var current = t;
     while (current is VarRef) {
       final val = rt.heap.getValue(current.addr);
-      if (val == null || val is! Term) return current; // Unbound variable
+      if (val == null) return current; // Unbound variable
       current = val;
     }
     return current;
@@ -788,10 +788,6 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
   // _deref only follows top-level VarRefs, leaving nested structure args as VarRefs.
   // This causes serialization bugs where msg(bob, intro(alice, X)) becomes msg(VarRef, VarRef).
   final termArg = deepDeref(rt, args[0] as Term);
-  if (termArg is! Term) {
-    print('[ABORT] \'_send\'/3: first argument (T) must be a term, got ${termArg.runtimeType}');
-    return BodyKernelResult.abort;
-  }
 
   // Get global name G (second argument) - should be _w(Agent, Index) or _r(Agent, Index)
   final globalNameArg = _deref(rt, args[1]);

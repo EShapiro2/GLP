@@ -13,7 +13,6 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/suspension.dart';
-import 'package:glp_runtime/runtime/machine_state.dart';
 
 void main() {
   group('bindWriter - Ground Values', () {
@@ -129,7 +128,7 @@ void main() {
       final heap = HeapFCP();
       final (w1, r1) = heap.allocateVariable();
       final (w2, r2) = heap.allocateVariable();
-      final (w3, _) = heap.allocateVariable();
+      heap.allocateVariable();
 
       // w1 -> r2 -> w2 -> r3 -> w3
       // But wait, we can only bind writer to reader, so:
@@ -151,7 +150,7 @@ void main() {
       final (w1, r1) = heap.allocateVariable();
       final (w2, r2) = heap.allocateVariable();
       final (w3, r3) = heap.allocateVariable();
-      final (w4, _) = heap.allocateVariable();
+      heap.allocateVariable();
 
       // Build chain: w1 -> r2, w2 -> r3, w3 -> r4 (conceptually)
       // Actually: w1 -> r2, w2 -> r3, w3 -> value
@@ -169,7 +168,7 @@ void main() {
       final heap = HeapFCP();
       final (w1, r1) = heap.allocateVariable();
       final (w2, r2) = heap.allocateVariable();
-      final (w3, _) = heap.allocateVariable();
+      heap.allocateVariable();
 
       heap.bindWriterToReader(w1, r2);
       heap.bindWriterToReader(w2, r2); // w2 also points to r2? No, that's wrong

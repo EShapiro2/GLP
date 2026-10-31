@@ -1502,18 +1502,7 @@ String getFullTypeName(TypeExpr typeExpr) {
 // Internal Functions
 // =============================================================================
 
-/// Check head well-typing by checking each argument against its declared type's automaton
-WellTypedResult _checkHead(
-  TypedClause clause,
-  ProcDecl procDecl,
-  ProgramDFA dfa,
-  TypeEnvironment env,
-) {
-  final (result, _) = _checkHeadWithTerm(clause, procDecl, dfa, env);
-  return result;
-}
-
-/// Check head well-typing and return the constructed moded term
+/// Check head well-typing, each argument against its declared type's automaton, and return the constructed moded term
 /// Fix 5.1: Returns both result and moded term
 (WellTypedResult, ModedTerm?) _checkHeadWithTerm(
   TypedClause clause,
@@ -1537,20 +1526,6 @@ WellTypedResult _checkHead(
       ),
     ]), null);
   }
-}
-
-/// Check body atom well-typing
-WellTypedResult _checkBodyAtom(
-  ast.Goal atom,
-  int atomIndex,
-  ProgramDFA dfa,
-  TypeEnvironment env, {
-  Map<String, VariableTypeInfo>? callerVarTypes,
-  InstantiationCollector? collector,
-}) {
-  final (result, _) = _checkBodyAtomWithTerm(atom, atomIndex, dfa, env,
-      callerVarTypes: callerVarTypes, collector: collector);
-  return result;
 }
 
 /// Check body atom well-typing and return the constructed moded term
@@ -1903,7 +1878,7 @@ WellTypedResult _checkArgumentModes(
   final pathParts = <String>[];
   ast.Goal innerGoal = remote;
   while (innerGoal is ast.RemoteGoal) {
-    final rg = innerGoal as ast.RemoteGoal;
+    final rg = innerGoal;
     pathParts.add(rg.staticModuleName);
     innerGoal = rg.goal;
   }

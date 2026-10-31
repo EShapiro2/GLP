@@ -6,8 +6,6 @@
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart';
-import 'package:glp_runtime/analysis/type_checker/well_typed_term.dart';
-import 'package:glp_runtime/analysis/type_checker/moded_term.dart';
 import 'package:glp_runtime/analysis/type_checker/mode.dart';
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';

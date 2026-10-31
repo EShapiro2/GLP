@@ -1964,17 +1964,6 @@ GuardResult _groundEqualityGuard(
 }
 
 
-/// Helper class to represent argument information
-class _ArgInfo {
-  final HeapCell? writerId;
-  final HeapCell? readerId;
-
-  _ArgInfo({this.writerId, this.readerId});
-
-  bool get isWriter => writerId != null;
-  bool get isReader => readerId != null;
-}
-
 /// Tentative structure during HEAD phase (before commit)
 class _TentativeStruct {
   final String functor;
@@ -1996,17 +1985,6 @@ class _ClauseVar {
 
   @override
   String toString() => isWriter ? 'W$varIndex' : 'R$varIndex';
-}
-
-/// Helper to represent list structures
-class _ListStruct {
-  final Object? head;
-  final Object? tail;
-
-  _ListStruct(this.head, this.tail);
-
-  @override
-  String toString() => '[$head|$tail]';
 }
 
 /// Helper to save/restore structure processing state for Push/Pop
@@ -3708,7 +3686,6 @@ mixin OpExecutors {
               // come through variable bindings
               if (value is VarRef) {
                 final addr = value.addr;
-                final isReaderVar = cx.rt.heap.isReader(addr);
                 // Check sigma-hat first (tentative bindings)
                 if (cx.sigmaHat.containsKey(addr)) {
                   value = cx.sigmaHat[addr];
@@ -3882,7 +3859,7 @@ mixin OpExecutors {
             } else {
               cx.clauseVars[varIndex] = arg;
             }
-          } else if (arg is Term) {
+          } else {
             // Handle other Term types (e.g., MutualRefTerm)
             if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
               cx.sigmaHat[existing.addr] = arg;
@@ -4201,8 +4178,6 @@ mixin OpExecutors {
             if (cx.parentStack.isNotEmpty && targetWriterAddr is HeapCell) {
               final nestedWriterAddr = targetWriterAddr;
               final parent = cx.parentStack.removeLast();
-              final parentWriterId = parent.writerId;
-              final parentWriterAddrInt = parentWriterId is VarRef ? parentWriterId.addr : (parentWriterId is HeapCell ? parentWriterId : null);
 
               if (parent.structure is StructTerm) {
                 final parentStruct = parent.structure as StructTerm;
@@ -4213,7 +4188,7 @@ mixin OpExecutors {
               cx.currentStructure = parent.structure;
               cx.S = parent.s + 1;
               cx.mode = parent.mode;
-              cx.clauseVars[-1] = parentWriterId;
+              cx.clauseVars[-1] = parent.writerId;
 
               // Check if parent is now complete - and recursively complete ancestors
               while (cx.currentStructure is StructTerm) {
@@ -4400,9 +4375,6 @@ mixin OpExecutors {
             if (cx.parentStack.isNotEmpty && targetWriterAddrInt != null) {
               final nestedWriterAddr = targetWriterAddrInt;
               final parent = cx.parentStack.removeLast();
-              final parentWriterAddr = parent.writerId;
-              // Extract int from parentWriterAddr if it's a VarRef
-              final parentWriterAddrInt = parentWriterAddr is VarRef ? parentWriterAddr.addr : (parentWriterAddr is HeapCell ? parentWriterAddr : null);
 
               if (parent.structure is StructTerm) {
                 final parentStruct = parent.structure as StructTerm;
@@ -4413,7 +4385,7 @@ mixin OpExecutors {
               cx.currentStructure = parent.structure;
               cx.S = parent.s + 1;
               cx.mode = parent.mode;
-              cx.clauseVars[-1] = parentWriterAddr;
+              cx.clauseVars[-1] = parent.writerId;
 
               // Check if parent is now complete - and recursively complete ancestors
               while (cx.currentStructure is StructTerm) {
