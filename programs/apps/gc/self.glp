@@ -7,12 +7,36 @@
 %% ---------------------------------------------------------------------------
 
 Peer     ::= Key.
-Class    ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
-           ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
-Proposal ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
-           ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
+Class ::=
+establish(Peer)
+;
+acquaint(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
+mint(Peer, Integer)
+;
+swap(Peer, Peer, Peer, Integer, Peer, Integer)
+;
+pay(Peer, Peer, Integer)
+;
+redeem(Peer, Peer, Peer)
+.
+Proposal ::=
+establish(Peer)
+;
+acquaint(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
+mint(Peer, Integer)
+;
+swap(Peer, Peer, Peer, Integer, Peer, Integer)
+;
+pay(Peer, Peer, Integer)
+;
+redeem(Peer, Peer, Peer)
+.
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).

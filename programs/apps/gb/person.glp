@@ -4,7 +4,7 @@
 %%
 %% The roles, by which the plays choose a script:
 %%   alice  looks at her request question; establishes her identity (GKK:1);
-%%          asks to meet bob in person, and then carol (GKK:2), each request's
+%%          asks to come to know bob, and then carol (GKK:2), each request's
 %%          hello asking the other; once her date is the first day, the play's
 %%          calendar giving it (GB:2), mints five Alice-coins and three
 %%          Alice-bonds maturing at day 10 (GB:1); once she holds them, asks
@@ -18,12 +18,12 @@
 %%          deposit_c(alice, carol, alice, 2) (GB:7); looks again.
 %%   bob    establishes his identity; once his date is the first day, mints
 %%          four Bob-bonds maturing at day 5 (GB:1); once he holds them,
-%%          answers yes to alice asking to meet him in person, the question
+%%          answers yes to alice asking that they come to know each other, the question
 %%          her hello asks, and yes to her asking for the loan.  He mints
-%%          before he answers the meeting, so that he holds the Bob-bonds when
+%%          before he answers the acquaintance, so that he holds the Bob-bonds when
 %%          alice's swap reaches him.
-%%   carol  establishes her identity; answers yes to alice asking to meet her
-%%          in person, and yes to her asking to deposit two Alice-coins with
+%%   carol  establishes her identity; answers yes to alice asking that they come to
+%%          know each other, and yes to her asking to deposit two Alice-coins with
 %%          her.
 %%   market_alice to market_escrow  the villagers and the escrow agent of
 %%          the village market (play_village), their scripts below.
@@ -49,8 +49,8 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
 
 procedure script(Constant?, Steps).
 script(alice, [look, own([A1], propose(establish(A1?))), wait(holds(identity)),
-               own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
-               own([M2], propose(meet(M2?, carol))), wait(holds(knows(carol))),
+               own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
+               own([M2], propose(acquaint(M2?, carol))), wait(holds(knows(carol))),
                wait(holds(date(1))),
                own([A2], propose(mint_coin(A2?, 5))), wait(has(coin(alice), 5)),
                own([A3], propose(mint_bond(A3?, 10, 3))), wait(has(bond(alice, 10), 3)),
@@ -61,17 +61,17 @@ script(alice, [look, own([A1], propose(establish(A1?))), wait(holds(identity)),
 script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              wait(holds(date(1))),
              own([B2], propose(mint_bond(B2?, 5, 4))), wait(has(bond(bob, 5), 4)),
-             approval(meet(alice, bob), yes),
+             approval(acquaint(alice, bob), yes),
              approval(swap_cb(alice, bob, alice, 2, bob, 5, 3), yes)]).
 script(carol, [own([C1], propose(establish(C1?))), wait(holds(identity)),
-               approval(meet(alice, carol), yes),
+               approval(acquaint(alice, carol), yes),
                approval(deposit_c(alice, carol, alice, 2), yes)]).
-%% The village market of GB's paper, Section 7.1, on the compiled app (play_village, plays.glp): six villagers and an escrow agent, each script its villager's acts of the seven operations, after each has minted, got the first day as their date and met those they transact with (GKK:2), each meeting willed by both.  Each waits on its own screen, so that a request is made once what it needs of its proposer holds; what it needs of the other party holds by the order of the scripts, each party minting before it answers a meeting.
+%% The village market of GB's paper, Section 7.1, on the compiled app (play_village, plays.glp): six villagers and an escrow agent, each script its villager's acts of the seven operations, after each has minted, got the first day as their date and come to know those they transact with (GKK:2), each acquaintance willed by both.  Each waits on its own screen, so that a request is made once what it needs of its proposer holds; what it needs of the other party holds by the order of the scripts, each party minting before it answers an acquaintance.
 script(market_alice, [own([A1], propose(establish(A1?))), wait(holds(identity)), wait(holds(dated)),
         own([A2], propose(mint_coin(A2?, 30))), wait(has(coin(alice), 30)),
-        own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
-        own([M2], propose(meet(M2?, charlie))), wait(holds(knows(charlie))),
-        own([M3], propose(meet(M3?, eve))), wait(holds(knows(eve))),
+        own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
+        own([M2], propose(acquaint(M2?, charlie))), wait(holds(knows(charlie))),
+        own([M3], propose(acquaint(M3?, eve))), wait(holds(knows(eve))),
         own([A3, A4], propose(swap_cc(A3?, bob, A4?, 15, bob, 15))), wait(has(coin(bob), 15)),
         own([A5, A6], propose(swap_cc(A5?, charlie, A6?, 15, charlie, 15))), wait(has(coin(charlie), 15)),
         wait(has(coin(alice), 8)),
@@ -79,16 +79,16 @@ script(market_alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
 script(market_bob, [own([B1], propose(establish(B1?))), wait(holds(identity)), wait(holds(dated)),
         own([B2], propose(mint_coin(B2?, 15))), wait(has(coin(bob), 15)),
         own([B3], propose(mint_bond(B3?, 25, 24))), wait(has(bond(bob, 25), 24)),
-        approval(meet(alice, bob), yes), approval(meet(diana, bob), yes),
+        approval(acquaint(alice, bob), yes), approval(acquaint(diana, bob), yes),
         approval(swap_cc(alice, bob, alice, 15, bob, 15), yes),
         approval(swap_cb(diana, bob, diana, 20, bob, 25, 24), yes),
         wait(has(coin(alice), 15)),
         own([B4], propose(pay(B4?, alice, 5))), wait(lacks(coin(alice), 11)), look]).
 script(market_charlie, [own([C1], propose(establish(C1?))), wait(holds(identity)), wait(holds(dated)),
         own([C2], propose(mint_coin(C2?, 25))), wait(has(coin(charlie), 25)),
-        approval(meet(alice, charlie), yes),
-        own([M1], propose(meet(M1?, eve))), wait(holds(knows(eve))),
-        own([M2], propose(meet(M2?, escrow))), wait(holds(knows(escrow))),
+        approval(acquaint(alice, charlie), yes),
+        own([M1], propose(acquaint(M1?, eve))), wait(holds(knows(eve))),
+        own([M2], propose(acquaint(M2?, escrow))), wait(holds(knows(escrow))),
         approval(swap_cc(alice, charlie, alice, 15, charlie, 15), yes),
         own([C3, C4], propose(swap_cc(C3?, eve, C4?, 10, eve, 10))), wait(has(coin(eve), 10)),
         approval(swap_cc(eve, charlie, frank, 5, alice, 5), yes),
@@ -96,8 +96,8 @@ script(market_charlie, [own([C1], propose(establish(C1?))), wait(holds(identity)
         own([C5], propose(deposit_c(C5?, escrow, frank, 5))), wait(lacks(coin(frank))), look]).
 script(market_diana, [own([D1], propose(establish(D1?))), wait(holds(identity)), wait(holds(dated)),
         own([D2], propose(mint_coin(D2?, 35))), wait(has(coin(diana), 35)),
-        own([M1], propose(meet(M1?, bob))), wait(holds(knows(bob))),
-        own([M2], propose(meet(M2?, frank))), wait(holds(knows(frank))),
+        own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
+        own([M2], propose(acquaint(M2?, frank))), wait(holds(knows(frank))),
         own([D3, D4], propose(swap_cb(D3?, bob, D4?, 20, bob, 25, 24))), wait(has(bond(bob, 25), 24)),
         own([D5, D6], propose(swap_cb(D5?, frank, D6?, 15, frank, 28, 18))), wait(has(bond(frank, 28), 18)),
         wait(has(coin(diana), 3)),
@@ -106,8 +106,8 @@ script(market_diana, [own([D1], propose(establish(D1?))), wait(holds(identity)),
         own([D8], propose(redeem_bc(D8?, frank, 28, frank))), wait(lacks(bond(frank, 28), 13)), look]).
 script(market_eve, [own([E1], propose(establish(E1?))), wait(holds(identity)), wait(holds(dated)),
         own([E2], propose(mint_coin(E2?, 20))), wait(has(coin(eve), 20)),
-        approval(meet(alice, eve), yes), approval(meet(charlie, eve), yes),
-        own([M1], propose(meet(M1?, frank))), wait(holds(knows(frank))),
+        approval(acquaint(alice, eve), yes), approval(acquaint(charlie, eve), yes),
+        own([M1], propose(acquaint(M1?, frank))), wait(holds(knows(frank))),
         approval(swap_cc(charlie, eve, charlie, 10, eve, 10), yes),
         own([E3, E4], propose(swap_cc(E3?, frank, E4?, 10, frank, 10))), wait(has(coin(frank), 10)),
         own([E5], propose(pay(E5?, charlie, 6))), wait(lacks(coin(charlie), 5)),
@@ -117,7 +117,7 @@ script(market_eve, [own([E1], propose(establish(E1?))), wait(holds(identity)), w
 script(market_frank, [own([F1], propose(establish(F1?))), wait(holds(identity)), wait(holds(dated)),
         own([F2], propose(mint_coin(F2?, 10))), wait(has(coin(frank), 10)),
         own([F3], propose(mint_bond(F3?, 28, 18))), wait(has(bond(frank, 28), 18)),
-        approval(meet(diana, frank), yes), approval(meet(eve, frank), yes), approval(meet(escrow, frank), yes),
+        approval(acquaint(diana, frank), yes), approval(acquaint(eve, frank), yes), approval(acquaint(escrow, frank), yes),
         approval(swap_cb(diana, frank, diana, 15, frank, 28, 18), yes),
         approval(swap_cc(eve, frank, eve, 10, frank, 10), yes),
         wait(has(coin(diana), 15)),
@@ -130,8 +130,8 @@ script(market_frank, [own([F1], propose(establish(F1?))), wait(holds(identity)),
         approval(release_c(escrow, frank, frank, 5), yes), wait(has(coin(frank), 5)),
         own([F9], propose(redeem_cb(F9?, diana, frank, 28))), wait(lacks(coin(diana), 8)), look]).
 script(market_escrow, [own([G1], propose(establish(G1?))), wait(holds(identity)), wait(holds(dated)),
-        approval(meet(charlie, escrow), yes),
-        own([M1], propose(meet(M1?, frank))), wait(holds(knows(frank))),
+        approval(acquaint(charlie, escrow), yes),
+        own([M1], propose(acquaint(M1?, frank))), wait(holds(knows(frank))),
         approval(deposit_c(charlie, escrow, frank, 5), yes), wait(has(coin(frank), 5)),
         wait(holds(date(30))),
         own([G2], propose(release_c(G2?, frank, frank, 5))), wait(lacks(coin(frank))), look]).

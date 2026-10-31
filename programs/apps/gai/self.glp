@@ -20,17 +20,25 @@ unfriend(Peer, Peer)
 ;
 enter(Peer, Peer, Speech)
 ;
-agent_acquaint(Peer, Peer, Peer, Speech)
+make_guardian(Peer, Peer, Peer, Speech)
 ;
-agents_acquaint(Peer, Peer, Peer, Peer, Speech, Speech)
+end_guardian(Peer, Peer, Peer)
+;
+resign(Peer, Peer)
+;
+guardian_unfriend(Peer, Peer)
+;
+agent_acquaint(Peer, Peer, Peer, Speech)
 ;
 agent_befriend(Peer, Peer, Peer)
 ;
-agents_befriend(Peer, Peer, Peer, Peer)
-;
 agent_unfriend(Peer, Peer, Peer)
 ;
-retire(Peer, Peer)
+agents_acquaint(Peer, Peer, Peer, Peer, Speech, Speech)
+;
+agents_befriend(Peer, Peer, Peer, Peer)
+;
+retire(Peer, Peer, List(Peer), List(Peer))
 ;
 sign(Peer, Speech)
 .
@@ -47,15 +55,23 @@ unfriend(Peer, Peer)
 ;
 enter(Peer, Peer, Speech)
 ;
-agent_acquaint(Peer, Peer, Peer, Speech)
+make_guardian(Peer, Peer, Peer, Speech)
 ;
-agents_acquaint(Peer, Peer, Peer, Peer, Speech, Speech)
+end_guardian(Peer, Peer, Peer)
+;
+resign(Peer, Peer)
+;
+guardian_unfriend(Peer, Peer)
+;
+agent_acquaint(Peer, Peer, Peer, Speech)
 ;
 agent_befriend(Peer, Peer, Peer)
 ;
-agents_befriend(Peer, Peer, Peer, Peer)
-;
 agent_unfriend(Peer, Peer, Peer)
+;
+agents_acquaint(Peer, Peer, Peer, Peer, Speech, Speech)
+;
+agents_befriend(Peer, Peer, Peer, Peer)
 ;
 retire(Peer, Peer)
 ;
@@ -86,17 +102,21 @@ friend(Peer)
 ;
 principal(Peer)
 ;
+guarded_by(Peer)
+;
 principal_of(Peer)
 ;
-item(Speech)
+guardian_of(Peer)
+;
+agent_of(Peer, Speech)
+;
+authored(Speech)
 ;
 attestation(Speech)
 ;
-agent_of(Peer, Peer, Speech)
-;
 retired_of(Peer)
 ;
-authored(Speech)
+item(Speech)
 .
 Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).

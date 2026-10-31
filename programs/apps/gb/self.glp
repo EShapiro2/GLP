@@ -7,25 +7,92 @@
 %% ---------------------------------------------------------------------------
 
 Peer     ::= Key.
-Class    ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint_coin(Peer, Integer) ; mint_bond(Peer, Integer, Integer)
-           ; first_date(Peer, Integer) ; advance(Peer, Integer)
-           ; swap_cc(Peer, Peer, Peer, Integer, Peer, Integer) ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
-           ; swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer) ; swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
-           ; pay(Peer, Peer, Integer)
-           ; redeem_cc(Peer, Peer, Peer) ; redeem_cb(Peer, Peer, Peer, Integer) ; redeem_bc(Peer, Peer, Integer, Peer) ; redeem_bb(Peer, Peer, Integer, Peer, Integer)
-           ; deposit_c(Peer, Peer, Peer, Integer) ; deposit_b(Peer, Peer, Peer, Integer, Integer)
-           ; release_c(Peer, Peer, Peer, Integer) ; release_b(Peer, Peer, Peer, Integer, Integer)
-           ; return_c(Peer, Peer, Peer, Integer) ; return_b(Peer, Peer, Peer, Integer, Integer).
-Proposal ::= establish(Peer) ; meet(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint_coin(Peer, Integer) ; mint_bond(Peer, Integer, Integer)
-           ; swap_cc(Peer, Peer, Peer, Integer, Peer, Integer) ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
-           ; swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer) ; swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
-           ; pay(Peer, Peer, Integer)
-           ; redeem_cc(Peer, Peer, Peer) ; redeem_cb(Peer, Peer, Peer, Integer) ; redeem_bc(Peer, Peer, Integer, Peer) ; redeem_bb(Peer, Peer, Integer, Peer, Integer)
-           ; deposit_c(Peer, Peer, Peer, Integer) ; deposit_b(Peer, Peer, Peer, Integer, Integer)
-           ; release_c(Peer, Peer, Peer, Integer) ; release_b(Peer, Peer, Peer, Integer, Integer)
-           ; return_c(Peer, Peer, Peer, Integer) ; return_b(Peer, Peer, Peer, Integer, Integer).
+Class ::=
+establish(Peer)
+;
+acquaint(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
+mint_coin(Peer, Integer)
+;
+mint_bond(Peer, Integer, Integer)
+;
+first_date(Peer, Integer)
+;
+advance(Peer, Integer)
+;
+swap_cc(Peer, Peer, Peer, Integer, Peer, Integer)
+;
+swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
+;
+swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer)
+;
+swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
+;
+pay(Peer, Peer, Integer)
+;
+redeem_cc(Peer, Peer, Peer)
+;
+redeem_cb(Peer, Peer, Peer, Integer)
+;
+redeem_bc(Peer, Peer, Integer, Peer)
+;
+redeem_bb(Peer, Peer, Integer, Peer, Integer)
+;
+deposit_c(Peer, Peer, Peer, Integer)
+;
+deposit_b(Peer, Peer, Peer, Integer, Integer)
+;
+release_c(Peer, Peer, Peer, Integer)
+;
+release_b(Peer, Peer, Peer, Integer, Integer)
+;
+return_c(Peer, Peer, Peer, Integer)
+;
+return_b(Peer, Peer, Peer, Integer, Integer)
+.
+Proposal ::=
+establish(Peer)
+;
+acquaint(Peer, Peer)
+;
+introduce(Peer, Peer, Peer)
+;
+mint_coin(Peer, Integer)
+;
+mint_bond(Peer, Integer, Integer)
+;
+swap_cc(Peer, Peer, Peer, Integer, Peer, Integer)
+;
+swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
+;
+swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer)
+;
+swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
+;
+pay(Peer, Peer, Integer)
+;
+redeem_cc(Peer, Peer, Peer)
+;
+redeem_cb(Peer, Peer, Peer, Integer)
+;
+redeem_bc(Peer, Peer, Integer, Peer)
+;
+redeem_bb(Peer, Peer, Integer, Peer, Integer)
+;
+deposit_c(Peer, Peer, Peer, Integer)
+;
+deposit_b(Peer, Peer, Peer, Integer, Integer)
+;
+release_c(Peer, Peer, Peer, Integer)
+;
+release_b(Peer, Peer, Peer, Integer, Integer)
+;
+return_c(Peer, Peer, Peer, Integer)
+;
+return_b(Peer, Peer, Peer, Integer, Integer)
+.
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
