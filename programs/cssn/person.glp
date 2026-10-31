@@ -5,14 +5,14 @@
 %% The agent drops a request whose condition does not hold when it reads it, the agent not free, not clear or not knowing every other participant (vGLP, Section 5.4, "Triggers"; Definition "Proposing"), and the person sees neither the agent's lock nor its inbox.  So each script makes a request where the person's screen, or the screen of the child the parent looks at, shows that what the request follows is done; and a parent answers a child's invitation to a second group once the child's own requests in the first are made, so that no answer of theirs holds them while an attempt of the first group waits on them.
 %%
 %% The roles are the seven agents of the village of CSSN, Section 4.6.3, "Village Demonstration": the adults alice, bob, grace and frank, and the children carol, alice's, and dave and eve, bob's and grace's.  Its group kids_chat is named by carol, its leader, speech(utterance(kids_chat), carol), and frank's study group by frank, speech(utterance(study), frank).  CSSN extends GSN, with no signing (CSSN.txt): the content of a message is the speech act speech(utterance(T), P) of its author P, which its recipient holds as received(x, p), p the friend who sent it (GSN:1), and a member of the group n led by a as received_in(x, a, n), once a delivers it (GSN:5).  The agents come to know each other at the level of the machines by the hello of a meeting schema's request, acquaint and enter, which carries the request to the peer named by key and asks the peer's person (vGLP, Section 5.4, "The compilation"), and by an introduction, of the contract's introduction rule, knows its introduction predicate, or of Commit.  The contract's meetings and introductions record knowing at the level of the contract, knows(q).  The acts, in the paper's numbering:
-%%   1. Coming into the contract.  alice, bob, grace and frank establish their identities (GKK:1) and come to know each other (GKK:2; acquaint(p?, q?)): alice and bob, alice requesting; bob and grace, and bob and frank, bob requesting; alice enters carol, carol's phone answering yes (GnW:1, CSSN:1; enter(p?, r?)); bob enters dave and then eve, each child's phone answering yes, bob holding both phones, and makes grace a parent of each, grace and the child answering yes, bob knowing grace (CSSN:1; make_parent(p?, q?, r?)).
+%%   1. Coming into the contract.  alice, bob, grace and frank establish their identities (GKK:1) and come to know each other (GKK:2; acquaint(p?, q?)): alice and bob, alice requesting; bob and grace, and bob and frank, bob requesting; alice enters carol, carol's phone answering yes (GnW:1, CSSN:1; enter(p?, r?)); bob enters dave and then eve, each child's phone answering yes, bob holding both phones, and makes grace a parent of each, an act of bob and grace, grace answering yes and nobody else asked, bob befriending grace (CSSN:1; make_parent(p?, q?, r?)).
 %%   2. Adult friendships.  alice befriends bob (GSG:1); alice sends bob 'Hello Bob' in a message (GSN:1; message(p?, q ; x)); once it has reached him, bob befriends frank; bob introduces alice to frank, an act of bob and frank, and frank to alice, an act of bob and alice (GKK:3; introduce(p?, q? ; c)), the paper's two introductions, bob requesting each and frank and alice approving; and alice, once she knows frank, befriends frank, who knows her.
 %%   3. Child acquaintances and friendships (GnW:2, CSSN:2 and CSSN:3; child_acquaint_2(r?, s?, p?, q?), child_befriend(r?, s?, p?, q?)).  alice requests that carol and dave come to know each other, naming bob, and bob, carol and dave answer yes; once carol's phone shows that she knows dave, alice requests that they befriend, and the three answer yes; once dave's phone shows carol his friend, bob requests that dave and eve come to know each other and then befriend, naming himself twice, the sibling case, and dave and eve answer yes; once carol's phone shows that her agent knows eve's, introduced to hers by dave's agent once dave knows both, alice requests that carol and eve come to know each other and then befriend, naming bob, and bob, carol and eve answer yes.  bob answers alice's requests on carol and eve before he looks at dave's phone for dave and eve's friendship, so that an attempt of alice's that pre-empts his does not wait on it.
 %%   4. Child-adult acquaintances and friendships (CSSN:2 and CSSN:3; child_acquaint(r?, a?, p?), child_adult_befriend(r?, a?, p?)).  Once carol's phone shows eve her friend, alice requests that carol and frank come to know each other and then befriend; once eve's phone shows carol her friend, bob requests that dave and frank come to know each other and then befriend; frank and the child answer yes.  bob answers carol's invitations of dave and eve to kids_chat before he looks at dave's phone for dave and frank's friendship, for the same reason.
-%%   5. Child-managed group.  Once carol is friends with dave, eve and frank, she creates kids_chat (GSN:2) and invites dave and then eve, alice, bob and the child answering yes (child_join_2(r?, s?, p?, q? ; n)); carol posts 'Welcome everyone!' (GSN:5; post_own(a? ; x, n)), and her agent delivers it to every member she lists who is her friend (deliver(a, q ; x, n)); dave, having it, posts 'Thanks Carol!' to carol (post(p?, a ; x, n)), whose agent delivers it likewise; eve, having dave's, posts 'Hi all!'; and, once her own has come back to her, leaves the group (GSN:4; leave(a, q? ; n)).
+%%   5. Child-managed group.  Once carol is friends with dave, eve and frank, she creates kids_chat (CSSN:2) and invites dave and then eve, alice, bob and the child answering yes (child_join_2(r?, s?, p?, q? ; n)); carol posts 'Welcome everyone!' (GSN:5; post_own(a? ; x, n)), and her agent delivers it to every member she lists who is her friend (deliver(a, q ; x, n)); dave, having it, posts 'Thanks Carol!' to carol (post(p?, a ; x, n)), whose agent delivers it likewise; eve, having dave's, posts 'Hi all!'; and, once her own has come back to her, leaves the group (GSN:4; leave(a, q? ; n)).
 %%   6. Adult-managed group.  Once frank is friends with dave and carol, he creates study and invites dave and then carol, bob and alice, the child's parents, and the child answering yes (child_join(a?, s?, p? ; n)); frank posts 'Welcome to the study group'; dave, once he has it and eve's post to kids_chat, posts 'Hi from Dave!' to frank; carol, once she has dave's, has delivered eve's post and eve has left kids_chat, posts 'Hi from Carol!' to frank.  Each child answers its invitation to the study group once its own requests in kids_chat are made, and bob answers dave's once dave's post to kids_chat has come back to dave.
 %%   7. Parents ending.  Once dave's phone shows carol's post to the study group, grace ends dave's friendship with carol (GnW:3; child_unfriend(r, s, p?)), and carol's agent drops dave from kids_chat, his leader no longer his friend (GSN:4, drop); once dave's phone shows him out of kids_chat, bob ends dave's membership of the study group (child_leave(a, s, p? ; n)).  Once carol's phone shows dave out of kids_chat, alice closes it, child_close(r, p?, r[listed(*, n)] ; n): her request child_close(carol, alice, n) is a Request of rho_N to carol's machine, the opener of its parts, which completes the list from its listed atoms and proposes the close, naming the request, alice's machine voting yes, unasked (vGLP f0acbc1, Section 3.2, Definitions "Local Specification, Part, Guard Set, Opener, Request" and "Proposing"; Section 5.4, "Act schemas as local specifications").
-%%   8. Coming of age.  Once dave's phone shows him out of the study group, bob, eve's creator, declares eve of age (CSSN:4; of_age(p?, r, r[guarded_by(*)])), which ends bob's and grace's guardianship of eve, grace being the parent of eve bob made; eve, an adult, comes to know frank and befriends him, with no parent among the guards (GKK:2, GSG:1).
+%%   8. Coming of age.  Once dave's phone shows him out of the study group, bob, eve's creator, declares eve of age (CSSN:4; of_age(r, p?, r[guarded_by(*)])), which ends bob's and grace's guardianship of eve, grace being the parent of eve bob made; eve, an adult, comes to know frank and befriends him, with no parent among the guards (GKK:2, GSG:1).
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; at(Key, Cond) ; approval(Asked, YesNo).
@@ -73,6 +73,7 @@ script(alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
                own([A11], propose(child_befriend(carol, eve, A11?, bob))), at(carol, holds(friend(eve))),
                own([A12], propose(child_acquaint(carol, frank, A12?))), at(carol, holds(knows(frank))),
                own([A13], propose(child_adult_befriend(carol, frank, A13?))), at(carol, holds(friend(frank))),
+               approval(child_create(carol, alice, speech(utterance(kids_chat), carol)), yes),
                approval(child_join_2(carol, dave, alice, bob, speech(utterance(kids_chat), carol)), yes),
                approval(child_join_2(carol, eve, alice, bob, speech(utterance(kids_chat), carol)), yes),
                approval(child_join(frank, carol, alice, speech(utterance(study), frank)), yes),
@@ -81,6 +82,7 @@ script(alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
                at(carol, holds(closed(speech(utterance(kids_chat), carol))))]).
 script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              own([B2], propose(acquaint(B2?, grace))), wait(holds(knows(grace))),
+             own([B2b], propose(befriend(B2b?, grace))), wait(holds(friend(grace))),
              own([B3], propose(enter(B3?, dave))), wait(holds(parenting(dave))),
              own([B3a], propose(make_parent(B3a?, grace, dave))), at(dave, holds(guarded_by(grace))),
              own([B4], propose(enter(B4?, eve))), wait(holds(parenting(eve))),
@@ -114,6 +116,7 @@ script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
              own([B16], propose(of_age(eve, B16?))), wait(lacks(parenting(eve)))]).
 script(grace, [own([G1], propose(establish(G1?))), wait(holds(identity)),
                approval(acquaint(bob, grace), yes),
+               approval(befriend(bob, grace), yes),
                approval(make_parent(bob, grace, dave), yes),
                approval(make_parent(bob, grace, eve), yes),
                at(dave, holds(received_in(speech(utterance('Hi from Carol!'), carol), frank, speech(utterance(study), frank)))),
@@ -145,7 +148,7 @@ script(carol, [approval(enter(alice, carol), yes),
                approval(child_adult_befriend(carol, frank, alice), yes),
                wait(holds(friend(dave))), wait(holds(friend(eve))), wait(holds(friend(frank))),
                wait(known(dave)), wait(known(eve)),
-               own([C1, C2], propose(create(C1?, speech(utterance(kids_chat), C2?)))),
+               own([C1, C2], propose(child_create(C1?, alice, speech(utterance(kids_chat), C2?)))),
                wait(holds(member(dot(community(carol), speech(utterance(kids_chat), carol))))),
                own([C3, C4], propose(child_join_2(C3?, dave, alice, bob, speech(utterance(kids_chat), C4?)))), wait(holds(listed(dave, speech(utterance(kids_chat), carol)))),
                own([C5, C6], propose(child_join_2(C5?, eve, alice, bob, speech(utterance(kids_chat), C6?)))), wait(holds(listed(eve, speech(utterance(kids_chat), carol)))),
@@ -158,7 +161,6 @@ script(carol, [approval(enter(alice, carol), yes),
                wait(lacks(listed(eve, speech(utterance(kids_chat), carol)))),
                own([C10, C11], propose(post(C10?, frank, speech(utterance('Hi from Carol!'), C11?), speech(utterance(study), frank)))), wait(holds(received_in(speech(utterance('Hi from Carol!'), carol), frank, speech(utterance(study), frank))))]).
 script(dave, [approval(enter(bob, dave), yes),
-              approval(make_parent(bob, grace, dave), yes),
               approval(child_acquaint_2(carol, dave, alice, bob), yes),
               approval(child_befriend(carol, dave, alice, bob), yes),
               approval(child_acquaint_2(dave, eve, bob, bob), yes),
@@ -173,7 +175,6 @@ script(dave, [approval(enter(bob, dave), yes),
               wait(holds(received_in(speech(utterance('Hi all!'), eve), carol, speech(utterance(kids_chat), carol)))),
               own([D3, D4], propose(post(D3?, frank, speech(utterance('Hi from Dave!'), D4?), speech(utterance(study), frank)))), wait(holds(received_in(speech(utterance('Hi from Dave!'), dave), frank, speech(utterance(study), frank))))]).
 script(eve, [approval(enter(bob, eve), yes),
-             approval(make_parent(bob, grace, eve), yes),
              approval(child_acquaint_2(dave, eve, bob, bob), yes),
              approval(child_befriend(dave, eve, bob, bob), yes),
              approval(child_acquaint_2(carol, eve, alice, bob), yes),
