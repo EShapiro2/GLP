@@ -1,0 +1,11 @@
+% GFF-PS: Grassroots Feeds and Followers with Path Shortening --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GFF (Udi, 2026-10-28).  Named by letters and not a number, since GFF's extensions are not ordered (Udi, 2026-10-28).  The paper prints it in its box in the section on path shortening and cites its clause as GFF-PS:1.
+% Extends: GFF, Grassroots Feeds and Followers, GFF's (beside this file), and through it GSG and GKK, GSC's.  It cites their clauses whole and restates none.
+% Defines: shortening.  Alice, Bob, Carol and Dave are variables naming distinct agents.
+% Last changed: 2026-10-28 afternoon, the clause in Udi's words; GFF:4 now keeps an item from one who signed it, which with GFF-FR's redundant forwarding kept an item from coming round to Alice from a friend downstream, and Shortening from following them (Code #16, 11:21 UTC).  Earlier: written by GFF #1 Cowork from the discussion with Udi: a friend who signed an item on Alice's path is nearer to Bob than the friend Alice follows Bob through, so Alice's machine follows Bob through that friend instead; the study of paths found that under shortest-path choice this switched no one, and that re-asking brought the paths to the tree of shortest paths; here the person's choice and the changes of the graph make it apply.
+% Schemas: GFF-PS.glp beside this file, GFF's seventeen and switch, the machines' act of GFF-PS:1, an nschema whose constraint is signed(Dave, y), 'Dave signed y': a speech act carries its signatories (GKK:4, second half), and a constraint may say who signed one, beside GSC's linear constraints (Udi, 2026-10-28); no record of signers at the receiver.
+GFF-PS: Grassroots Feeds and Followers with Path Shortening
+Alice, Bob, Carol and Dave are agents.
+1. ■ Shortening.  Alice, who received via Carol an item of Bob's feed signed by Alice's friend Dave, follows Bob through Dave instead of via Carol.
+Pragmas
+% Algorithms: Shortening is taken whenever such an item arrives (GFF-PS:1).

@@ -3,34 +3,35 @@
 %% Appendix C; Udi, 2026-10-27), in the term form programs/gsc reads (its
 %% README, "Writing a contract").  GFF extends GSG (programs/gsc/GSG.glp), so
 %% the term holds GKK's three schemas and GSG's two; the clauses are in GFF.txt
-%% beside this file.  Written by GFF #1 Cowork, 2026-10-27, by
-%% /Grassroots/docs/act-schemas-guide.md; the notation of each schema is
+%% beside this file.  Written by GFF #1 Cowork by
+%% /Grassroots/docs/speech-act-schemas-guide.md; the notation of each schema is
 %% printed from the term by a run of the cascade (schemas.txt).
 %%
-%% Twenty-four schemas over sixteen predicates, today an environment predicate (2026-10-28, on Code #16's two gaps of 04:45 UTC: ask in four forms, asking once a day per friend by today(d) and asked_on, recording asked_of while the question waits and deleting the friend's earlier answer; each answer deletes asked_of) (2026-10-28: follows_friend(b), at Alice, that Alice follows their friend b, in place of follows(b, b), so that path_broken touches no friend's following, with friend_following_ended; asked_of gone, ask re-askable and rationed by the chooser; answer_follows_friend; and switch, the act of Shortening --- on Code #16's three findings of 2026-10-27 21:46 UTC; Udi, 2026-10-28): identity and knows, GKK's; friend,
-%% GSG's; and GFF's eleven: decided(b), at Alice, that Alice decided to follow b,
-%% the one willed act of GFF:2, which the unguarded acts of GFF:2 and GFF:3
-%% require, and asked_of(c, b), at Alice, that Alice's machine asked c about b,
-%% so that it asks once (Udi, 2026-10-27, 'one will implies the others'); feed(x), at Alice, an item x posted to Alice's feed
-%% (GFF:1); follows(b, c), at Alice, that Alice follows b through c, and
-%% following(b), that Alice follows b (GFF:2; the two are added and deleted
-%% together, the second for the answer that Carol does not follow Bob, which
-%% forbids it); follower(a, b), at Carol, that a follows b through Carol
-%% (GFF:2); asked(a, b), at Carol, that a asked whether Carol follows b;
-%% path(b, c, x), at Alice, Carol's answer that they follow b, with an item x
-%% of b's feed whose signatures are a path to b, path_through(b, c, d), the
-%% same answer by the friend d Carol follows b through, the one answer Carol
-%% can give while holding no item of b's feed, and does_not_follow(b, c), Carol's answer that they
-%% do not (GFF:3; "a path to Bob", Udi, 2026-10-27, the form of the answer
-%% being representation); item(x, b), at a follower, an item x of b's feed,
-%% signed by every agent it passed through, and sent(x, a), at the sender, that
-%% x was sent to a (GFF:4).  GFF:2 is two schemas, friends_follow, by friendship,
-%% and through_friend, and GFF:4 two, deliver_own, the author's, and
-%% deliver_on; GFF:3 is ask and the three answers, all unguarded; which enabled following is taken is the algorithm pragma's, the friend with the shortest path (GFF.txt, Pragmas for GFF, Algorithms).  ask requires knows(b) at
-%% Alice, "Bob, whom Alice knows" (Udi, 2026-10-27, on Code #16's finding
-%% that asked was untraceable without it).  through_friend's Carol requires
-%% following(b), "whose friend Carol follows Bob" (Code #16, 2026-10-27: a
-%% variable of a schema occurs in an atom added or deleted, vGLP 5.4).
+%% 2026-10-28 midday, on the branch GFF-chooser, the contract in Udi's words.
+%% Seventeen schemas over fifteen predicates: identity and knows, GKK's;
+%% friend, GSG's; and GFF's twelve: feed(x), at Alice, an item x posted to
+%% Alice's feed (GFF:1); wants(b), at Alice, that Alice wants to follow b
+%% (GFF:2, the willed act); follows_friend(b), at Alice, that Alice follows
+%% their friend b, and friend_follower(a), at b, that their friend a follows
+%% them; follows(b, c), at Alice, that Alice follows b through their friend c,
+%% following(b), once for each following of b, and follower(a, b), at Carol,
+%% that a follows b through Carol (GFF:3); friend_follows(c, b), at Alice,
+%% Carol's update that Carol follows b (GFF:5); item(x, b), at a follower, an
+%% item x of b's feed, its identity, the act its author signed, with path(x, y, c),
+%% y the signatures over x along a path it came by and c the friend it came by
+%% that path from, one for each path (tied, so that Shortening reads the signatures of
+%% the path from the friend it leaves; Code's play, 2026-10-28), and sent(x, a), at the sender, that x
+%% was sent to a (GFF:4).  GKK:4, Signing, describes no act of its own.
+%%
+%% Three marks of this branch, GFF's proposals to the language (Udi,
+%% 2026-10-28): every_so_often, on a role of an act whose clause opens so, which
+%% may change nothing, the act recurring, how often the implementation's;
+%% received, on the receiving role of a sending, requiring nothing but identity
+%% and only adding, the schema compiling to two VMAT transactions, the sender's,
+%% which requires the sender to know the recipient and sends, by CVA's send
+%% lifted to VMAT, and the recipient's, which takes the message in --- so a
+%% recipient who is down holds no sender; and, with them, the Algorithms
+%% section of the pragmas, which says when the machines' acts are taken.
 %%
 %% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
 %% and is named by its index, role(1) the schema's first role.
@@ -38,12 +39,12 @@
 
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
-Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; num(Constant) ; nterm(NameTerm)
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
             ; sgn(Constant, Integer).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
-Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+Guard     ::= guarded ; unguarded ; every_so_often ; received ; guarded_at(Constant).
 RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
@@ -51,14 +52,15 @@ RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
 Reaches   ::= [] ; [Reach | Reaches].
 Names     ::= [] ; [Constant | Names].
-Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Constraint ::= true ; and(Constraint, Constraint) ; signed(Arg, Arg) ; unsigned(Arg, Arg).
+Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; nschema(Constant, Names, Args, Constraint, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
-Declared  ::= Contract ; reflexive(Preds, Contract) ; environment(Preds, Contract).
+Declared  ::= Contract ; reflexive(Preds, Contract).
 
 %% contract_named(gff, C): the contract, GFF (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
-contract_named(gff, environment([today],
+contract_named(gff,
    [%% GKK:1 to GKK:3 and GSG:1, GSG:2, as GSG.glp has them.
     schema(establish, ['Alice'], [],
        [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
@@ -74,103 +76,67 @@ contract_named(gff, environment([today],
     schema(unfriend, ['Alice', 'Bob'], [],
        [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
         rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
-%% GFF:1, Feed.  Alice posts an item x to their feed.
+%% GFF:1, Feed.  Alice posts an item x to their feed; x is a speech act Alice signs (GKK:4).
     schema(post, ['Alice'], [svar(x)],
        [rs(guarded, [atom(feed, [svar(x)])], [], [atom(identity, [])], [atom(feed, [svar(x)])])]),
-%% GFF:2, Following.  Alice, who knows b, decides to follow b: the one willed act, which the unguarded acts below require.
+%% GFF:2, Following Volition.  Alice, who knows b but is not their friend, wants to follow b: the willed act, follow, the button [Follow].
     schema(follow, ['Alice'], [pvar(b)],
-       [rs(guarded, [atom(decided, [pvar(b)])], [], [atom(identity, []), atom(knows, [pvar(b)])],
-                    [atom(decided, [pvar(b)])])]),
-%% GFF:2, Following.  Friends follow each other: Alice follows their friend Bob, recorded as follows(Bob, Bob), through Bob, and Bob records Alice as a follower (Udi, 2026-10-27).
+       [rs(guarded, [atom(wants, [pvar(b)])], [], [atom(identity, []), atom(knows, [pvar(b)])],
+                    [atom(friend, [pvar(b)]), atom(wants, [pvar(b)])])]),
+%% GFF:2, Following Volition.  Alice ceases to want to follow b: the willed act, unfollow, the button [Unfollow].
+    schema(unfollow, ['Alice'], [pvar(b)],
+       [rs(guarded, [], [atom(wants, [pvar(b)])], [atom(identity, [])], [])]),
+%% GFF:2, Following Volition.  Friends follow each other: an act of the two machines.
     schema(friends_follow, ['Alice', 'Bob'], [],
        [rs(unguarded, [atom(follows_friend, [role(2)]), atom(following, [role(2)])], [],
                       [atom(identity, []), atom(friend, [role(2)])],
-                      [atom(following, [role(2)])]),
-        rs(unguarded, [atom(follower, [role(1), role(2)])], [], [atom(identity, [])], [])]),
-%% GFF:2, Following.  A friend's following ends with the friendship: an act of the two machines.
+                      [atom(follows_friend, [role(2)])]),
+        rs(unguarded, [atom(friend_follower, [role(1)])], [], [atom(identity, [])], [])]),
+%% GFF:2, Following Volition.  A friend's following ends with the friendship.
     schema(friend_following_ended, ['Alice', 'Bob'], [],
        [rs(unguarded, [], [atom(follows_friend, [role(2)]), atom(following, [role(2)])],
                       [atom(identity, [])], [atom(friend, [role(2)])]),
-        rs(unguarded, [], [atom(follower, [role(1), role(2)])], [atom(identity, [])], [])]),
-%% GFF:2, Following.  Alice, who decided to follow b and whose friend Carol follows b, follows b through Carol.
-    schema(through_friend, ['Alice', 'Carol'], [pvar(b)],
+        rs(unguarded, [], [atom(friend_follower, [role(1)])], [atom(identity, [])], [])]),
+%% GFF:3, Following via Friend.  Alice, who wants to follow b, follows b through their friend Carol that follows b: the machines' act, taken as the Algorithms pragma says; it allows several friends at once.
+    schema(via_friend, ['Alice', 'Carol'], [pvar(b)],
        [rs(unguarded, [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])], [],
-                      [atom(identity, []), atom(decided, [pvar(b)]), atom(friend, [role(2)])],
-                      [atom(following, [pvar(b)])]),
+                      [atom(identity, []), atom(wants, [pvar(b)]), atom(friend, [role(2)])],
+                      [atom(follows, [pvar(b), role(2)])]),
         rs(unguarded, [atom(follower, [role(1), pvar(b)])], [],
                       [atom(identity, []), atom(following, [pvar(b)])], [])]),
-%% GFF:2, Following.  Alice's following of b through Carol ends when Carol ceases to follow b: an act of the two machines; Alice's decision stands.
-    schema(path_broken, ['Alice', 'Carol'], [pvar(b)],
+%% GFF:3, Following via Friend.  'When Alice wants': Alice, who follows b through Carol and no longer wants to follow b, ceases following b through Carol, the machines' act, cease_via, with no clause of its own (Udi, 2026-10-28).
+    schema(cease_via, ['Alice', 'Carol'], [pvar(b)],
        [rs(unguarded, [], [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
-                      [atom(identity, [])], []),
-        rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [atom(following, [pvar(b)])])]),
-%% GFF:2, Following.  Alice's following of b through Carol ends when Carol ceases to be Alice's friend.
+                      [atom(identity, [])], [atom(wants, [pvar(b)])]),
+        rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
+%% GFF:3, Following via Friend.  Alice's following of b through Carol ends when Carol ceases to follow b; Carol opens it, being the one who knows (Code #16, 2026-10-28).
+    schema(path_broken, ['Carol', 'Alice'], [pvar(b)],
+       [rs(unguarded, [], [atom(follower, [role(2), pvar(b)])], [atom(identity, [])], [atom(following, [pvar(b)])]),
+        rs(unguarded, [], [atom(follows, [pvar(b), role(1)]), atom(following, [pvar(b)])],
+                      [atom(identity, [])], [])]),
+%% GFF:3, Following via Friend.  Alice's following of b through Carol ends when Carol ceases to be Alice's friend.
     schema(friendship_ended, ['Alice', 'Carol'], [pvar(b)],
        [rs(unguarded, [], [atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
                       [atom(identity, [])], [atom(friend, [role(2)])]),
         rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF:2, Following.  Alice ends their following of b through Carol, and their decision.
-    schema(unfollow, ['Alice', 'Carol'], [pvar(b)],
-       [rs(guarded,   [], [atom(decided, [pvar(b)]), atom(follows, [pvar(b), role(2)]), atom(following, [pvar(b)])],
-                      [atom(identity, [])], []),
-        rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF:2, Following.  Alice, who decided to follow b and follows b through Carol, follows b through their friend Dave, who follows b, instead: the act Shortening takes (Algorithms).
-    schema(switch, ['Alice', 'Dave', 'Carol'], [pvar(b)],
-       [rs(unguarded, [atom(follows, [pvar(b), role(2)])], [atom(follows, [pvar(b), role(3)])],
-                      [atom(identity, []), atom(decided, [pvar(b)]), atom(friend, [role(2)]), atom(following, [pvar(b)])], []),
-        rs(unguarded, [atom(follower, [role(1), pvar(b)])], [], [atom(identity, []), atom(following, [pvar(b)])], []),
-        rs(unguarded, [], [atom(follower, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF:3, Follower discovery.  Alice, who decided to follow b, asks their friend Carol whether Carol follows b: once a day per friend, today(d) an environment predicate, asked_on(Carol, b, d) the record; asked_of(Carol, b) at Alice while the question waits, which the answer deletes; and the earlier answer of Carol's about b, if any, deleted by the asking, so that at most one answer of each friend about b stands at Alice and it is current (Code #16, 2026-10-28 04:45 UTC; four forms, by what the earlier answer was).
-    schema(ask, ['Alice', 'Carol'], [pvar(b), num(d)],
-       [rs(unguarded, [atom(asked_of, [role(2), pvar(b)]), atom(asked_on, [role(2), pvar(b), num(d)])], [],
-                      [atom(identity, []), atom(decided, [pvar(b)]), atom(friend, [role(2)]), atom(today, [num(d)])],
-                      [atom(asked_of, [role(2), pvar(b)]), atom(asked_on, [role(2), pvar(b), num(d)])]),
-        rs(unguarded, [atom(asked, [role(1), pvar(b)])], [], [atom(identity, [])], [])]),
-    schema(ask_after_path, ['Alice', 'Carol'], [pvar(b), num(d), svar(x)],
-       [rs(unguarded, [atom(asked_of, [role(2), pvar(b)]), atom(asked_on, [role(2), pvar(b), num(d)])], [atom(path, [pvar(b), role(2), svar(x)])],
-                      [atom(identity, []), atom(decided, [pvar(b)]), atom(friend, [role(2)]), atom(today, [num(d)])],
-                      [atom(asked_of, [role(2), pvar(b)]), atom(asked_on, [role(2), pvar(b), num(d)])]),
-        rs(unguarded, [atom(asked, [role(1), pvar(b)])], [], [atom(identity, [])], [])]),
-    schema(ask_after_path_through, ['Alice', 'Carol'], [pvar(b), num(d), pvar(e)],
-       [rs(unguarded, [atom(asked_of, [role(2), pvar(b)]), atom(asked_on, [role(2), pvar(b), num(d)])], [atom(path_through, [pvar(b), role(2), pvar(e)])],
-                      [atom(identity, []), atom(decided, [pvar(b)]), atom(friend, [role(2)]), atom(today, [num(d)])],
-                      [atom(asked_of, [role(2), pvar(b)]), atom(asked_on, [role(2), pvar(b), num(d)])]),
-        rs(unguarded, [atom(asked, [role(1), pvar(b)])], [], [atom(identity, [])], [])]),
-    schema(ask_after_no, ['Alice', 'Carol'], [pvar(b), num(d)],
-       [rs(unguarded, [atom(asked_of, [role(2), pvar(b)]), atom(asked_on, [role(2), pvar(b), num(d)])], [atom(does_not_follow, [pvar(b), role(2)])],
-                      [atom(identity, []), atom(decided, [pvar(b)]), atom(friend, [role(2)]), atom(today, [num(d)])],
-                      [atom(asked_of, [role(2), pvar(b)]), atom(asked_on, [role(2), pvar(b), num(d)])]),
-        rs(unguarded, [atom(asked, [role(1), pvar(b)])], [], [atom(identity, [])], [])]),
-%% GFF:3, Follower discovery.  Carol answers Alice with a path to b: an item x of b's feed they hold.
-    schema(answer_follows, ['Carol', 'Alice'], [pvar(b), svar(x)],
-       [rs(unguarded, [], [atom(asked, [role(2), pvar(b)])],
-                      [atom(identity, []), atom(following, [pvar(b)]), atom(item, [svar(x), pvar(b)])], []),
-        rs(unguarded, [atom(path, [pvar(b), role(1), svar(x)])], [], [atom(identity, [])], [])]),
-%% GFF:3, Follower discovery.  Carol answers Alice with the friend d they follow b through.
-    schema(answer_follows_through, ['Carol', 'Alice'], [pvar(b), pvar(d)],
-       [rs(unguarded, [], [atom(asked, [role(2), pvar(b)])],
-                      [atom(identity, []), atom(follows, [pvar(b), pvar(d)])], []),
-        rs(unguarded, [atom(path_through, [pvar(b), role(1), pvar(d)])], [atom(asked_of, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF:3, Follower discovery.  Carol, b's friend, answers Alice with the path of length one, through b.
-    schema(answer_follows_friend, ['Carol', 'Alice'], [pvar(b)],
-       [rs(unguarded, [], [atom(asked, [role(2), pvar(b)])],
-                      [atom(identity, []), atom(follows_friend, [pvar(b)])], []),
-        rs(unguarded, [atom(path_through, [pvar(b), role(1), pvar(b)])], [atom(asked_of, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF:3, Follower discovery.  Carol answers Alice that they do not follow b.
-    schema(answer_does_not_follow, ['Carol', 'Alice'], [pvar(b)],
-       [rs(unguarded, [], [atom(asked, [role(2), pvar(b)])],
-                      [atom(identity, [])], [atom(following, [pvar(b)])]),
-        rs(unguarded, [atom(does_not_follow, [pvar(b), role(1)])], [atom(asked_of, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF:4, Delivery.  Bob sends an item x they posted to their friend Alice, who follows Bob by friendship, recorded as follower(Alice, Bob) at Bob; x carries Bob's signature from its posting (GSC, Definition Compilation), so none is added (Udi, 2026-10-27, on Code #16's finding of a second signature).
+%% GFF:4, Delivery.  Bob sends an item x they posted to their friend Alice, who follows Bob by friendship; a sending; x carries Bob's signature from its posting (GKK:4).
     schema(deliver_own, ['Bob', 'Alice'], [svar(x)],
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
-                      [atom(identity, []), atom(feed, [svar(x)]), atom(follower, [role(2), role(1)]), atom(friend, [role(2)])],
+                      [atom(identity, []), atom(feed, [svar(x)]), atom(friend_follower, [role(2)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)])]),
-        rs(unguarded, [atom(item, [svar(x), role(1)])], [atom(asked_of, [role(1), pvar(b)])], [atom(identity, [])], [])]),
-%% GFF:4, Delivery.  Carol, who follows b, sends an item x of b's feed they hold, signed, to their friend Alice, who follows b through Carol.
-    schema(deliver_on, ['Carol', 'Alice'], [pvar(b), svar(x)],
+        rs(received, [atom(item, [svar(x), role(1)]), atom(path, [svar(x), svar(x), role(1)])], [], [atom(identity, [])], [])]),
+%% GFF:4, Delivery.  'Carol forwards to Alice who follows Bob through Carol every item on Bob's feed not signed by Alice': a sending, signed over (GKK:4), with the constraint unsigned(Alice, y), 'Alice did not sign y', which the language gives (GKK:4, second half); x is sent to each friend once however many paths it came by.
+    nschema(deliver_on, ['Carol', 'Alice'], [pvar(b), pvar(c), svar(x), svar(y)], unsigned(role(2), svar(y)),
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
-                      [atom(identity, []), atom(following, [pvar(b)]), atom(item, [svar(x), pvar(b)]),
+                      [atom(identity, []), atom(following, [pvar(b)]), atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), svar(y), pvar(c)]),
                        atom(follower, [role(2), pvar(b)]), atom(friend, [role(2)])],
                       [atom(sent, [svar(x), role(2)])]),
-        rs(unguarded, [atom(item, [sgn(x, 1), pvar(b)])], [], [atom(identity, [])], [])])])).
+        rs(received, [atom(item, [svar(x), pvar(b)]), atom(path, [svar(x), sgn(y, 1), role(1)])], [], [atom(identity, [])], [])]),
+%% GFF:5, Updating.  'Every so often, Carol updates their friend Alice' that Carol follows b, and that Carol no longer does; Carol's role is marked every_so_often.  Carol names b by knowing b (GKK:2), which is never undone.
+    schema(update, ['Carol', 'Alice'], [pvar(b)],
+       [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(following, [pvar(b)])], []),
+        rs(unguarded, [atom(friend_follows, [role(1), pvar(b)])], [], [atom(identity, [])],
+                      [atom(friend_follows, [role(1), pvar(b)])])]),
+    schema(update_ceased, ['Carol', 'Alice'], [pvar(b)],
+       [rs(every_so_often, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], [atom(following, [pvar(b)])]),
+        rs(unguarded, [], [atom(friend_follows, [role(1), pvar(b)])], [atom(identity, [])], [])])]).
