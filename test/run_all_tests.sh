@@ -1280,9 +1280,9 @@ HEREDOC
 check "random single draw value" "V = 4" "$a33"
 check "random single draw next seed" "NS = -7046029254386353089" "$a33"
 check "random threaded triple reproduces" "R = rt(230, 507, 4)" "$a33"
-check "random cover seed 0" "C0 = cover(100, [3, 6, 4, 5, 4])" "$a33"
-check "random cover seed 2147483647" "C1 = cover(100, [5, 6, 6, 5, 5])" "$a33"
-check "random cover seed -1" "C2 = cover(100, [3, 5, 5, 3, 4])" "$a33"
+check "random cover seed 0" "C0 = cover(100, \[3, 6, 4, 5, 4\])" "$a33"
+check "random cover seed 2147483647" "C1 = cover(100, \[5, 6, 6, 5, 5\])" "$a33"
+check "random cover seed -1" "C2 = cover(100, \[3, 5, 5, 3, 4\])" "$a33"
 check "random N<1 fails at guard" "→ failed" "$a33"
 
 # --- A33a: Splitting a seed (split_random_seed/3, GLP-ICLP appendix-guards) ---
