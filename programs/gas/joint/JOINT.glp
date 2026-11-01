@@ -1,0 +1,78 @@
+%% ---------------------------------------------------------------------------
+%% JOINT.glp --- Joint Accounts (Nimrod Talmon with Claude, 2026-10-31), in the
+%% term form programs/gsc reads.  The clauses are in JOINT.txt beside this
+%% file.  JOINT extends GC, so the term holds their schemas first,
+%% as their own files give them, and then JOINT's own; tools/contracts.py in
+%% the grassroots-contracts repository (github.com/nimrodtalmon/grassroots-contracts)
+%% writes it.
+%% ---------------------------------------------------------------------------
+
+NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+             ; ext(NameTerm, Constant).
+Arg        ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+             ; sgn(Constant, Integer) ; num(Constant).
+Args       ::= [] ; [Arg | Args].
+Atom       ::= atom(Constant, Args).
+Atoms      ::= [] ; [Atom | Atoms].
+Mult       ::= Atom ; times(Arg, Atom).
+Mults      ::= [] ; [Mult | Mults].
+Guard      ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind   ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+             ; listed(Integer, Constant, Args).
+RoleSpec   ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+             ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
+RoleSpecs  ::= [] ; [RoleSpec | RoleSpecs].
+Constraint ::= true ; and(Constraint, Constraint)
+             ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg).
+Reach      ::= reach(NameTerm, Constant, NameTerm).
+Reaches    ::= [] ; [Reach | Reaches].
+Names      ::= [] ; [Constant | Names].
+Schema     ::= schema(Constant, Names, Args, RoleSpecs)
+             ; nschema(Constant, Names, Args, Constraint, RoleSpecs)
+             ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract   ::= [] ; [Schema | Contract].
+Preds      ::= [] ; [Constant | Preds].
+Declared   ::= Contract ; reflexive(Preds, Contract) ; environment(Preds, Contract).
+
+%% contract_named(joint, C): the contract, JOINT.
+procedure contract_named(Constant?, Declared).
+contract_named(joint,
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(mint, ['Alice'], [num(k)],
+       [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
+    schema(swap, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(pay, ['Alice', 'Bob'], [num(k)],
+       [rs(guarded,   [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]),
+    schema(redeem, ['Alice', 'Bob'], [pvar(r)],
+       [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+%% JOINT:1, Opening: the account <Alice>.n, held by both.
+    schema(open_account, ['Alice', 'Bob'], [svar(n)],
+       [rs(guarded, [atom(account, [nterm(ext(own(1), n))]), atom(partner, [role(2), svar(n)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(account, [nterm(ext(own(1), n))])]),
+        rs(guarded, [atom(account, [nterm(ext(own(1), n))]), atom(partner, [role(1), svar(n)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% JOINT:2, Depositing, by the opener.
+    schema(deposit_opener, ['Alice', 'Bob'], [pvar(u), num(k), svar(n)],
+       [rs(guarded, [times(num(k), atom(joint, [pvar(u), nterm(ext(own(1), n))]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(account, [nterm(ext(own(1), n))]), atom(partner, [role(2), svar(n)])], []),
+        rs(unguarded, [times(num(k), atom(joint, [pvar(u), nterm(ext(own(1), n))])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(account, [nterm(ext(own(1), n))])], [])]),
+%% JOINT:2, Depositing, by the partner, Bob being the opener.
+    schema(deposit_partner, ['Alice', 'Bob'], [pvar(u), num(k), svar(n)],
+       [rs(guarded, [times(num(k), atom(joint, [pvar(u), nterm(ext(own(2), n))]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(account, [nterm(ext(own(2), n))])], []),
+        rs(unguarded, [times(num(k), atom(joint, [pvar(u), nterm(ext(own(2), n))])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(account, [nterm(ext(own(2), n))]), atom(partner, [role(1), svar(n)])], [])]),
+%% JOINT:3, Withdrawing to the opener, by an act of both.
+    schema(withdraw_opener, ['Alice', 'Bob'], [pvar(u), num(k), svar(n)],
+       [rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k), atom(joint, [pvar(u), nterm(ext(own(1), n))]))], [atom(identity, []), atom(account, [nterm(ext(own(1), n))]), atom(partner, [role(2), svar(n)])], []),
+        rs(guarded, [], [times(num(k), atom(joint, [pvar(u), nterm(ext(own(1), n))]))], [atom(identity, []), atom(account, [nterm(ext(own(1), n))])], [])]),
+%% JOINT:3, Withdrawing to the partner, Bob being the opener, by an act of both.
+    schema(withdraw_partner, ['Alice', 'Bob'], [pvar(u), num(k), svar(n)],
+       [rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k), atom(joint, [pvar(u), nterm(ext(own(2), n))]))], [atom(identity, []), atom(account, [nterm(ext(own(2), n))])], []),
+        rs(guarded, [], [times(num(k), atom(joint, [pvar(u), nterm(ext(own(2), n))]))], [atom(identity, []), atom(account, [nterm(ext(own(2), n))]), atom(partner, [role(1), svar(n)])], [])])]).
