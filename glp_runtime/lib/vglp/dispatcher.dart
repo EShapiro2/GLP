@@ -32,6 +32,7 @@ import '../compiler/ast.dart' as ast;
 import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
 import '../analysis/type_checker/type_ast.dart';
+import 'type_walk.dart';
 
 /// The generic source's types the compilation names: the asks on the ask
 /// stream, Ask(Q); the spawns of the construct processes, Spawn(Q, T); and a
@@ -217,26 +218,11 @@ Set<String> reachableGeneric(DispatcherSource source, Iterable<String> roots) {
   return seen;
 }
 
-TypeExpr _retype(TypeExpr e, Map<String, String> typeNames) {
-  if (e is TypeRef) {
-    return TypeRef(typeNames[e.name] ?? e.name, e.line, e.column,
-        isInput: e.isInput,
-        typeArgs: [for (final a in e.typeArgs) _retype(a, typeNames)]);
-  }
-  if (e is StructAlt) {
-    return StructAlt(e.functor, [for (final a in e.args) _retype(a, typeNames)],
-        e.line, e.column);
-  }
-  if (e is ListConsAlt) {
-    return ListConsAlt(_retype(e.head, typeNames), _retype(e.tail, typeNames),
-        e.line, e.column);
-  }
-  if (e is DiffListAlt) {
-    return DiffListAlt(_retype(e.content, typeNames),
-        _retype(e.hole, typeNames), e.line, e.column);
-  }
-  return e;
-}
+TypeExpr _retype(TypeExpr e, Map<String, String> typeNames) => mapTypeRefs(
+    e,
+    (r) => TypeRef(typeNames[r.name] ?? r.name, r.line, r.column,
+        isInput: r.isInput,
+        typeArgs: [for (final a in r.typeArgs) _retype(a, typeNames)]));
 
 ast.Clause _renameClause(ast.Clause c, Map<String, String> names) {
   ast.Goal rename(ast.Goal g) => names.containsKey(g.functor) &&
