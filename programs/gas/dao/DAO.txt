@@ -1,0 +1,27 @@
+% DAO: Grassroots DAO --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md: a group that decides by proposals and votes.
+% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none.
+% Defines: DAO, steward, member, proposal, vote.  A DAO is named by its steward, as a group by its leader (GSN).  Clause 6 is enforced: the steward's agent keeps the number of members and a tally of each proposal's votes, and the steward can decide a proposal only on a majority; every vote is delivered to every member.
+% Schemas: DAO.glp beside this file.
+DAO: Grassroots DAO
+Alice and Bob are persons.  DAO extends GKK.
+1. ■ Founding.  Alice may found a DAO under a name of their own not used before; Alice is its steward and first member.
+2. ■ Joining.  Alice, the steward of a DAO, may admit Bob, whom they know and who is not yet a member, by an act of both.
+3. ■ Proposing.  A member of a DAO may make a proposal to it, each proposal once; its steward records it and delivers it to every member but the steward, the proposer included.
+4. ■ Voting.  A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote and delivers it to every member but the steward.
+5. ■ Deciding.  The steward may decide a proposal, passed or rejected, once; the steward delivers the decision to every member but the steward.
+6. ■ Majority.  The steward decides a proposal only once more than half of the DAO's members at that time have voted the same way on it, and passes it exactly when they voted for it.
+Pragmas
+DAOs: the DAOs Alice is a member of.
+Proposals: the proposals Alice sees.
+For: the yes votes Alice has seen.
+Against: the no votes Alice has seen.
+Passed: the passed proposals Alice knows.
+Founding: Alice [Found] <name>
+Joining: Alice [Admit] <person>
+  Bob: Alice invites you to their DAO.
+Proposing: Bob [Propose] <proposal>
+  Alice [Propose own] <proposal>
+Voting: Bob [Vote for] <proposal> [Vote against] <proposal>
+  Alice [Vote own for] <proposal> [Vote own against] <proposal>
+Deciding: Alice [Pass] <proposal> [Reject] <proposal>
