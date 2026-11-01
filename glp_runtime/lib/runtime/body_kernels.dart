@@ -57,13 +57,17 @@ BodyKernelResult kernelAbort(String message) {
 class BodyKernelRegistry {
   final Map<String, BodyKernel> _kernels = {};
 
+  /// The kernels by name and then arity, for a lookup that builds no string.
+  final Map<String, Map<int, BodyKernel>> _byName = {};
+
   void register(String name, int arity, BodyKernel kernel) {
     _kernels['$name/$arity'] = kernel;
+    (_byName[name] ??= <int, BodyKernel>{})[arity] = kernel;
   }
 
-  BodyKernel? lookup(String name, int arity) => _kernels['$name/$arity'];
+  BodyKernel? lookup(String name, int arity) => _byName[name]?[arity];
 
-  bool has(String name, int arity) => _kernels.containsKey('$name/$arity');
+  bool has(String name, int arity) => lookup(name, arity) != null;
 
   Iterable<String> get names => _kernels.keys;
 }
