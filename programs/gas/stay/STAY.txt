@@ -1,0 +1,21 @@
+% STAY: Grassroots Stays --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
+% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds).  Through it it extends GKK; it cites their clauses whole and restates none.
+% Defines: place; stay, stay(x, a, d) at the guest; guest, guest(b, x, d, k) at the host, k the price; review; a night is a day of GB's calendar.
+% Schemas: STAY.glp beside this file, written by tools/contracts.py.
+STAY: Grassroots Stays
+Alice and Bob are persons.  STAY extends GB.
+1. ◆ Hosting.  Alice, who can host guests at a place, may list it under a name not among their places.
+2. ■ Booking.  Bob, who knows Alice, and Alice may jointly decide that Bob stays at a place of Alice's on a night later than Alice's date, for a price Bob pays in Alice-coins; a place is booked at most once a night.
+3. ■ Cancelling.  Before the night, by Alice's date, Alice may cancel a stay, paying Bob back its whole price in Alice-coins; Bob is not asked.
+4. ■ Reviewing.  Once the night has come, by Bob's date, Bob may review their stay, once; Alice keeps the review and is not asked.
+Pragmas
+Places: the places Alice hosts.
+Stays: the stays Alice has.
+Guests: the guests Alice hosts.
+Reviews: the reviews Alice received.
+Hosting: Alice [List place] <place>
+Booking: Bob [Book] <place> <night> <amount>
+  Alice: Bob asks to stay at your place.
+Cancelling: Alice [Cancel]
+Reviewing: Bob [Review] <review>
