@@ -1113,3 +1113,8 @@ cons_conj(gt(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(gt,
 cons_conj(succ(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) |
     cmp_atoms(eq, plus(X?, num(1)), Y?, E?, R).
 cons_conj(or(_, _), _, [equ(lin([], 1))]).
+% A signing condition is read by no condition of def:syntactically-grassroots
+% (GSC, the appendix "Values in Speech-Act Schemas", after
+% def:binding-numbers), and is taken as true.
+cons_conj(signed(_, _), _, []).
+cons_conj(unsigned(_, _), _, []).

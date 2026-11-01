@@ -1139,11 +1139,33 @@ void appsScreens(Screens screens) {
           find.descendant(of: ga, matching: find.byType(Text))))
         if (t.data != null) t.data!,
     ];
-    // Close, GSN's "[Close]", in the group's row: close requires member of the group at the leader's role, so its button is drawn in the row of the tab of member, the row filling the group, and GSN.txt gives it no field: "A button is drawn in the row of a tab's entry, a person who takes a role of the act or an item the act names, ... in a row of the tab whose predicate the act requires or deletes at the proposer's role naming the entry" (vGLP ffcb093, Section 6.2).
-    expect(inHers, containsAll(['Bob', 'Hi all (Bob)', 'Welcome (Alice)', 'Post own', 'Close']));
+    // Close, GSN's "[Close]", and Remove, GSN's "Alice [Remove] <person>", in the group's row: close requires member of the group at the leader's role and remove deletes listed(b, n) there, each an atom naming the group by n, so each button is drawn in the group's row, the row filling the group: "a button is drawn ... in the row of an entry that an atom the act requires or deletes at the proposer's role names, whatever the atom's predicate, a group <a>.n being named by n, so that GSN's Remove is drawn in the group's row as Join is" (vGLP 6e9f71d, Section 6.2).
+    expect(inHers, containsAll(['Bob', 'Hi all (Bob)', 'Welcome (Alice)', 'Post own', 'Close', 'Remove']));
     expect(run.control(alice, 'act:close:$friendsGroup'), findsOneWidget);
+    expect(run.control(alice, 'act:remove:$friendsGroup'), findsOneWidget);
     run.plain(alice);
     await run.shoot(alice, 'gsn-d-alice-group.png');
+
+    // Join and Remove, each with the field person, GSN's "Alice [Join] <person>" and "Alice [Remove] <person>", are not drawn in Bob's row of her Friends tab, though join requires friend(b) and remove deletes listed(b, n) at her role, each naming Bob: the field person names Bob's place, and the one place the fields do not name is the group's: "only in the row of an entry that fills the one place of the act its pragma's fields do not name, so that Remove, with the field person, is not drawn in a person's row" (vGLP b4022ce, Section 6.2).  Message, whose field names its text, is drawn there.
+    await run.list(alice, 'friend');
+    expect(run.control(alice, 'row:bob'), findsOneWidget);
+    expect(run.control(alice, 'act:message:bob'), findsOneWidget);
+    expect(run.control(alice, 'act:join:bob'), findsNothing);
+    expect(run.control(alice, 'act:remove:bob'), findsNothing);
+    await run.list(alice, 'member');
+
+    // Remove's form in the group's row: the group filled by the row, its one field person, GSN's "<person>", offering Bob, whom she lists in it, and not herself; no field is drawn for the group, and the request is formed once Bob is picked, listed(bob, n) held, the field not filled from the state's listed atoms.
+    await run.tap(alice, run.control(alice, 'act:remove:$friendsGroup'));
+    expect(run.control(alice, 'pick:remove:$friendsGroup:2:bob'), findsOneWidget);
+    expect(run.control(alice, 'pick:remove:$friendsGroup:2:alice'), findsNothing);
+    run.plain(alice);
+    ElevatedButton sendRemove() => run.tester.widget<ElevatedButton>(
+        run.control(alice, 'send:remove:$friendsGroup'));
+    expect(sendRemove().onPressed, isNull);
+    await run.tap(alice, run.control(alice, 'pick:remove:$friendsGroup:2:bob'));
+    expect(sendRemove().onPressed, isNotNull);
+    await run.tap(alice, run.control(alice, 'act:remove:$friendsGroup'));
+    expect(run.control(alice, 'send:remove:$friendsGroup'), findsNothing);
 
     // Alice closes the group by leaving it (GSN:2): Close in the group's row proposes close(alice, n), its listed role every member she lists; Bob's machine votes unasked, and the group ends at both.
     await run.tap(alice, run.control(alice, 'act:close:$friendsGroup'));

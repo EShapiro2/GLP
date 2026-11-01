@@ -1006,6 +1006,8 @@ class ActInfo {
   final List<(int, int)> same;
   /// The agent variables a field names that the proposer's role requires held, `pick(K, P)`: each picked among the persons of the rows of the list of `P`, under the name of its field, no row filling it (vGLP acd3e74, Section 5.4, "The contract's words": "a variable is picked among the items the viewer holds where the proposer's role requires it held, and typed otherwise, an agent by key"; programs/vglp/cva/compiler, keyed_out).
   final List<(int, String)> picks;
+  /// The places the act's pragma's fields name, `field(K)`: no row fills them, a button being drawn "only in the row of an entry that fills the one place of the act its pragma's fields do not name, so that Remove, with the field person, is not drawn in a person's row" (vGLP b4022ce, Section 6.2, "The words a platform shows").
+  final List<int> fields;
 
   /// Whether the places [i] and [j] may hold one person.
   bool mayShare(int i, int j) =>
@@ -1018,7 +1020,8 @@ class ActInfo {
       this.unless = const [],
       this.proved = const [],
       this.same = const [],
-      this.picks = const []]);
+      this.picks = const [],
+      this.fields = const []]);
 
   /// The places a person picks among the persons of a list's rows ([picks]).
   Set<int> get pickPlaces => {for (final (k, _) in picks) k};
@@ -1041,9 +1044,12 @@ class ActInfo {
     final proved = <({String proves, String pred, List<Object?> args})>[];
     final same = <(int, int)>[];
     final picks = <(int, String)>[];
+    final fields = <int>[];
     for (final it in (xs0[4] as GList).items) {
       final (itf, itxs) = ctorArgs(it);
-      if (itf == 'pick' && itxs.length == 2 && itxs[0] is GInt) {
+      if (itf == 'field' && itxs.length == 1 && itxs[0] is GInt) {
+        fields.add((itxs[0] as GInt).value);
+      } else if (itf == 'pick' && itxs.length == 2 && itxs[0] is GInt) {
         picks.add(((itxs[0] as GInt).value, displayText(itxs[1])));
       } else if (itf == 'same' && itxs.length == 2 && itxs[0] is GInt && itxs[1] is GInt) {
         same.add(((itxs[0] as GInt).value, (itxs[1] as GInt).value));
@@ -1136,7 +1142,7 @@ class ActInfo {
       }
     }
     return ActInfo(
-        displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless, proved, same, picks);
+        displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless, proved, same, picks, fields);
   }
 
   /// Whether the viewer's state [atoms] proves of [x], at the place [k], each atom the act requires at that place's role that the schemas prove from the viewer's records ([proved]): for each, the viewer holds an atom matching one of its entries with [x] at [k].
@@ -1236,13 +1242,41 @@ class ActInfo {
         .holds(atoms, {this.me: me});
   }
 
-  /// Whether the act requires or deletes, at the proposer's role, an atom of [pred] naming a place of [places] (vGLP feda043, Section 6.2: "beside a row of a tab only where the act requires or deletes, at the viewer's role, the atom of that tab's predicate naming the row's item").
+  /// Whether the act requires or deletes, at the proposer's role, an atom of [pred] naming a place of [places], by which the guarding role a form at the top of a tab is proposed at is chosen; where a button is drawn is [namesEntry]'s (vGLP feda043, Section 6.2: "beside a row of a tab only where the act requires or deletes, at the viewer's role, the atom of that tab's predicate naming the row's item").
   bool requiresOf(String pred, Set<int> places) => conds.any((c) =>
       !c.forbids &&
       c.pred == pred &&
       c.args.any((x) => x is int
           ? places.contains(x)
           : x is (int, int) && places.contains(x.$2)));
+
+  /// Whether an atom the act requires or deletes at the proposer's role, whatever its predicate, names an entry at a place of [places], a group by its name's place (vGLP 6e9f71d, Section 6.2, "The words a platform shows": "in the row of an entry that an atom the act requires or deletes at the proposer's role names, whatever the atom's predicate, a group <a>.n being named by n, so that GSN's Remove is drawn in the group's row as Join is").
+  bool namesEntry(Set<int> places) => conds.any((c) =>
+      !c.forbids &&
+      c.args.any((x) => x is int
+          ? places.contains(x)
+          : x is (int, int) && places.contains(x.$2)));
+
+  /// The place of a person a row's entry fills ([_SocialTabState._fill]): the act's first place of a person that no field of its pragma names; null where every one is named (vGLP b4022ce, Section 6.2, "The words a platform shows": "only in the row of an entry that fills the one place of the act its pragma's fields do not name").
+  int? get rowPerson => persons.where((k) => !fields.contains(k)).firstOrNull;
+
+  /// The places a row's entry fills ([_SocialTabState._fill]): an item of a list, the act's place of a person a row fills ([rowPerson]), and a group's name, but the proposer's and those its pragma's fields name (vGLP b4022ce, Section 6.2).
+  Set<int> get entryPlaces => {
+        ...itemPlaces,
+        if (rowPerson != null) rowPerson!,
+        for (final (_, k) in groups) k,
+      }
+        ..remove(me)
+        ..removeAll(fields);
+
+  /// The places the person fills, by a row, a picker or a field: a person but one named by key, a group's leader and name, an item and an agent variable picked; a held atom fills none of them ([held]; programs/vglp/cva/compiler/README.md, item 6: "A held atom fills no variable the person fills").
+  Set<int> get personFilled => {
+        for (final k in persons)
+          if (!keys.contains(k)) k,
+        for (final (j, k) in groups) ...[j, k],
+        ...itemPlaces,
+        ...pickPlaces,
+      };
 }
 
 class RequestOffers {
@@ -2303,9 +2337,10 @@ class _SocialTabState extends State<SocialTab> {
               .firstOrNull ??
           cands.first;
       // An act whose entry no row is, drawn on the tab of its contract; an act that names an entry is drawn in that entry's row, and no form is drawn at the top of a tab (vGLP 516a0a2, Section 6.2: "The button of an act that names no entry, and of a meeting with a peer not listed, is drawn on the tab of its contract").
+      // An act names an entry where an atom it requires or deletes at the proposer's role names, whatever the atom's predicate, a place a row's entry fills, a group by its name (vGLP 6e9f71d, Section 6.2).
       final c = pick.namedCount(o.kinds[k] ?? const []);
-      final rowable = (s.lists ?? const []).any(
-          (l) => pick.requiresOf(l.predicate, {...others}..remove(pick.me)));
+      final rowable = (s.lists ?? const []).isNotEmpty &&
+          pick.namesEntry(pick.entryPlaces);
       if (c == 0 || !rowable) {
         out.add(_actForm(context, s, ask, o, k, pick, null));
       }
@@ -2514,7 +2549,7 @@ class _SocialTabState extends State<SocialTab> {
   /// The act open in a row's composer, `f/n|item`; null where none is.
   String? _openAct;
 
-  /// The places of the act [a] a row fills, by its item [item] of the list of [pred] (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable"): a group its leader's place and its name's; a speech act the place of an item the act names on that list; a person the act's first place of a person.
+  /// The places of the act [a] a row fills, by its item [item] of the list of [pred] (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable"): a group its leader's place and its name's; a speech act the place of an item the act names on that list; a person the act's first place of a person; each but a place a field of the act's pragma names (vGLP b4022ce, Section 6.2: "only in the row of an entry that fills the one place of the act its pragma's fields do not name, so that Remove, with the field person, is not drawn in a person's row").
   static Map<int, GTerm> _fill(ActInfo a, GTerm? item, String? pred) {
     if (item == null) return const {};
     final g = SocialState._group(item);
@@ -2524,10 +2559,11 @@ class _SocialTabState extends State<SocialTab> {
       return {j: g.$1, k: g.$2};
     }
     for (final (k, p) in a.items) {
-      if (p == pred) return {k: item};
+      if (p == pred && !a.fields.contains(k)) return {k: item};
     }
     if (SpeechAct.of(item) != null) return const {};
-    if (item is GAtom && a.persons.isNotEmpty) return {a.persons.first: item};
+    final k = a.rowPerson;
+    if (item is GAtom && k != null) return {k: item};
     return const {};
   }
 
@@ -2574,7 +2610,7 @@ class _SocialTabState extends State<SocialTab> {
     final acts = <(String, ActInfo)>[];
     for (final key in o.proposals) {
       final kinds = o.kinds[key] ?? const <String>[];
-      // An act whose entry the row is, drawn in the row with its fields beside it, where the act requires or deletes, at the proposer's role, the atom of this tab's predicate naming the row's item, where the viewer's state meets its precondition there, and where each field that takes a person has someone to offer (vGLP 516a0a2, Section 6.2, "The words a platform shows": "A button is drawn in the row of a tab's entry, whose person takes a role of the act, with the act's fields beside it ...; the button is drawn only where each such field has someone to offer").
+      // An act whose entry the row is, drawn in the row with its fields beside it, where the act requires or deletes, at the proposer's role, an atom naming the row's entry, whatever its predicate (vGLP 6e9f71d), where the viewer's state meets its precondition there, and where each field that takes a person has someone to offer (vGLP 516a0a2, Section 6.2, "The words a platform shows": "A button is drawn in the row of a tab's entry, whose person takes a role of the act, with the act's fields beside it ...; the button is drawn only where each such field has someone to offer").
       for (final a in o.allActs[key] ?? const <ActInfo>[]) {
         if (a.namedCount(kinds) < 1 || mine) continue;
         if (g != null && a.groups.isEmpty) continue;
@@ -2586,7 +2622,11 @@ class _SocialTabState extends State<SocialTab> {
             (fill.containsKey(a.me) && formatTerm(fill[a.me]!) != formatTerm(me))) {
           continue;
         }
-        if (!a.requiresOf(pred, fill.keys.toSet())) continue;
+        // In the row of an entry that an atom the act requires or deletes at the proposer's role names, whatever the atom's predicate, a group <a>.n being named by n (vGLP 6e9f71d, Section 6.2): the place the row's entry fills, a group's its name's.
+        final entry = g != null
+            ? {a.groups.first.$2}
+            : _fill(a, item, pred).keys.toSet();
+        if (!a.namesEntry(entry)) continue;
         if (!a.holds(s.atoms, {a.me: me, ...fill})) continue;
         if (!_placesPickable(s, a, me, filled: fill)) continue;
         acts.add((key, a));
@@ -2884,17 +2924,21 @@ class _SocialTabState extends State<SocialTab> {
       args[j - 1] ??= gg.$1;
       args[k - 1] = gg.$2;
     }
-    _derive(s, a, args);
     final its = a.itemPlaces;
     final pks = a.pickPlaces;
+    bool pickedPlace(int i) =>
+        (a.persons.contains(i) && !a.keys.contains(i)) ||
+        its.contains(i) ||
+        pks.contains(i);
+    // The places the person picks, before the held atoms fill the rest: a held atom fills no place the person fills ([_derive]).
     for (var i = 1; i <= n; i++) {
-      if (args[i - 1] != null) continue;
-      if ((a.persons.contains(i) && !a.keys.contains(i)) ||
-          its.contains(i) ||
-          pks.contains(i)) {
+      if (args[i - 1] == null && pickedPlace(i)) {
         args[i - 1] = picks[i] ?? _picked['$composer:$i'];
-        continue;
       }
+    }
+    _derive(s, a, args);
+    for (var i = 1; i <= n; i++) {
+      if (args[i - 1] != null || pickedPlace(i)) continue;
       final t = typed[i];
       if (t == null || t.isEmpty) return null;
       final kind = a.keys.contains(i)
@@ -2923,10 +2967,11 @@ class _SocialTabState extends State<SocialTab> {
     return GStruct(f, [for (final x in args) x!]);
   }
 
-  /// The places the atoms of [a]'s held patterns fill: for each, the first atom of the state of its predicate agreeing with [args] at the places filled, its arguments filling the rest.
+  /// The places the atoms of [a]'s held patterns fill: for each, the first atom of the state of its predicate agreeing with [args] at the places filled, its arguments filling the rest but a place the person fills, by a row, a picker or a field ([ActInfo.personFilled]; programs/vglp/cva/compiler/README.md, item 6: "A held atom fills no variable the person fills"), as GSN's remove(a?, b ; n), whose listed(b, n) the leader holds, Bob picked and the group filled by its row.
   static void _derive(SocialState s, ActInfo a, List<GTerm?> args) {
+    final own = a.personFilled;
     for (final (p, ks) in a.held) {
-      if (ks.every((k) => k == 0 || args[k - 1] != null)) continue;
+      if (ks.every((k) => k == 0 || own.contains(k) || args[k - 1] != null)) continue;
       for (final at in s.atoms) {
         final (f, xs) = ctorArgs(at);
         if (f != p || xs.length != ks.length) continue;
@@ -2939,7 +2984,7 @@ class _SocialTabState extends State<SocialTab> {
         }
         if (!ok) continue;
         for (var j = 0; j < ks.length; j++) {
-          if (ks[j] > 0) args[ks[j] - 1] ??= xs[j];
+          if (ks[j] > 0 && !own.contains(ks[j])) args[ks[j] - 1] ??= xs[j];
         }
         break;
       }

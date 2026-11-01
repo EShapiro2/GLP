@@ -2564,7 +2564,7 @@ k_shows "CSSN village act 3: alice requests that carol and dave come to know eac
 k_shows "CSSN village act 3: ... and bob approves" B "gave(child_acquaint_2(carol, dave, alice, bob), yes)"
 k_shows "CSSN village act 3: ... and carol" C "gave(child_acquaint_2(carol, dave, alice, bob), yes)"
 k_shows "CSSN village act 3: ... and dave" D "gave(child_acquaint_2(carol, dave, alice, bob), yes)"
-k_shows "CSSN village act 3: ... after which he knows carol" D "view([knows(carol), knows(grace), identity, child, creator(bob)"
+k_holds "CSSN village act 3: dave knows carol by their child acquaintance" D "knows(carol)"
 k_shows "CSSN village act 3: alice then proposes that carol and dave befriend, naming bob" A "did(propose(child_befriend(carol, dave, alice, bob)))"
 k_shows "CSSN village act 3: ... and bob approves" B "gave(child_befriend(carol, dave, alice, bob), yes)"
 k_shows "CSSN village act 3: carol and dave are friends" C "friend(dave)"
@@ -7844,7 +7844,7 @@ if _section CAS; then
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai; do
+for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai agora; do
     cas_n=$(printf '%s' "$cas_c" | tr a-z A-Z)
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue

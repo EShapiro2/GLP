@@ -1885,6 +1885,17 @@ class _Entries {
         p.words = wordsOf[f] ?? const [];
       }
     }
+    // The places of each act its pragma's fields name, label(F, I, S), at each guarding role it is drawn at (vGLP b4022ce, Section 6.2: "only in the row of an entry that fills the one place of the act its pragma's fields do not name").
+    for (final e in acts.entries) {
+      final fs = [
+        for (final k in places.keys)
+          if (k.substring(0, k.lastIndexOf('/')) == e.key)
+            int.parse(k.substring(k.lastIndexOf('/') + 1))
+      ]..sort();
+      for (final p in e.value) {
+        p.fields = fs;
+      }
+    }
     return DeclaredWidget(name, constructors, places, acts);
   }
 }
@@ -1900,10 +1911,13 @@ class _Entries {
 /// names, beside the person proposing it, a person, a group or an item is
 /// drawn beside each one the view lists, ... the row filling the act's
 /// variable"), the places [keys] a field for a key fills where the peer is
-/// not listed, and the [words] of the text of its request form, each a
-/// string or the place of a person.  Its widget term is
-/// `act(place(T, M, Ps, Gs, Is, Ks, Ws), W)`, in the root's type `Widget`
-/// (programs/self.glp).
+/// not listed, the [words] of the text of its request form, each a
+/// string or the place of a person, and the places [fields] its pragma's
+/// fields name, the declaration's `label(F, I, S)`, each `field(I)` among
+/// the items of the widget term (vGLP b4022ce, Section 6.2: "only in the row
+/// of an entry that fills the one place of the act its pragma's fields do not
+/// name").  Its widget term is `act(place(T, M, Ps, Gs, Is, Ks, Ws), W)`, in
+/// the root's type `Widget` (programs/self.glp).
 class ActPlace {
   String tab = '';
   int me = 0;
@@ -1912,6 +1926,7 @@ class ActPlace {
   List<String> items = const [];
   List<int> keys = const [];
   List<Object> words = const [];
+  List<int> fields = const [];
 
   ActPlace();
 
@@ -1938,7 +1953,8 @@ class ActPlace {
   String get placeSource => 'place(${constantSource(tab)}, $me, '
       '[${persons.join(', ')}], '
       '[${[for (final (j, k) in groups) 'group($j, $k)'].join(', ')}], '
-      '$_itemsSource, [${keys.join(', ')}], $_wordsSource)';
+      '[${[...items, for (final k in fields) 'field($k)'].join(', ')}], '
+      '[${keys.join(', ')}], $_wordsSource)';
 }
 
 // ---------------------------------------------------------------------------

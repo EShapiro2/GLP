@@ -88,10 +88,12 @@ Mults      ::= [] ; [Mult | Mults].
 % that a contract carrying it is refused, a disjunction being no conjunction
 % (constraint_not_conjunction, check.glp), and so is a product of two
 % expressions that each carry a value variable (constraint_not_linear).
+% signed(U, Y) and unsigned(U, Y) are the signing conditions signed(u, y) and unsigned(u, y), u an agent role or agent variable and y a speech-act variable of the schema (def:numbers, GSC 10fcc92): U is role(I), I an agent role of the schema, or pvar(X), and Y is svar(Y), each variable listed in the head; any other U is a fault signing_not_agent(Schema, U) and any other Y a fault signing_not_speech_act(Schema, Y) (check.glp).  The conditions of def:syntactically-grassroots read no signing condition (the appendix, after def:binding-numbers), so the checker takes each as true.
 Constraint ::= true ; and(Constraint, Constraint)
              ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
              ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
-             ; or(Constraint, Constraint).
+             ; or(Constraint, Constraint)
+             ; signed(Arg, Arg) ; unsigned(Arg, Arg).
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 Exprs      ::= [] ; [Expr | Exprs].
 % A schema's constraint, and the value variables it uses as multiplicities,
@@ -307,7 +309,12 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % listed role carrying it among its arguments, which are arguments of the
 % schema (def:role), a fault listed_wildcard(Schema, Role); and no atom of
 % +(i) obtained from an atom of *(i) by replacing its wildcards, so each such
-% atom added is a fault added_and_cleared(Schema, Role, Atom).
+% atom added is a fault added_and_cleared(Schema, Role, Atom).  What
+% def:numbers requires of a signing condition signed(u, y) or unsigned(u, y)
+% (GSC 10fcc92): u an agent role or agent variable, so any other u is a fault
+% signing_not_agent(Schema, U); and y a speech-act variable, so any other y is
+% a fault signing_not_speech_act(Schema, Y); a variable among them that the
+% head does not list is a fault not_in_head(Schema, Var).
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
         ; untraceable(Preds)
@@ -334,6 +341,8 @@ Fault ::= no_introductory_act
         ; constraint_not_numeric(Constant, Arg)
         ; constraint_not_linear(Constant, Expr)
         ; constraint_not_conjunction(Constant, Constraint)
+        ; signing_not_agent(Constant, Arg)
+        ; signing_not_speech_act(Constant, Arg)
         ; obstructed_jointly(Constant).
 Faults  ::= [] ; [Fault | Faults].
 
@@ -1666,8 +1675,9 @@ n_is_guarding(RS, R?) :- ground(RS?) |
     nrs_guard(RS?, G),
     guard_marked(G?, R).
 
-% The arguments of a constraint, and the multiplicities among a multiset as
-% written.
+% The arguments of a constraint's linear equalities and inequalities, and the
+% multiplicities among a multiset as written.  A signing condition is over an
+% agent and a speech act, not over values, and gives none.
 procedure constraint_args(Constraint?, Args?, Args).
 constraint_args(true, T, T?).
 constraint_args(and(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
@@ -1682,6 +1692,35 @@ constraint_args(succ(X, Y), T, [X?, Y?|T?]).
 constraint_args(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     constraint_args(C2?, T?, R1),
     constraint_args(C1?, R1?, R).
+constraint_args(signed(_, _), T, T?).
+constraint_args(unsigned(_, _), T, T?).
+
+% The agent and speech-act variables among the arguments of signing
+% conditions.
+procedure sargs_vars(Args?, Args).
+sargs_vars(Ss, R?) :- ground(Ss?) |
+    filter_pvars(Ss?, Ps),
+    filter_svars(Ss?, Ys),
+    args_app(Ps?, Ys?, R).
+
+% The arguments of a constraint's signing conditions, u and y of each
+% signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92).
+procedure constraint_sargs(Constraint?, Args?, Args).
+constraint_sargs(true, T, T?).
+constraint_sargs(and(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
+    constraint_sargs(C2?, T?, R1),
+    constraint_sargs(C1?, R1?, R).
+constraint_sargs(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
+    constraint_sargs(C2?, T?, R1),
+    constraint_sargs(C1?, R1?, R).
+constraint_sargs(eq(_, _), T, T?).
+constraint_sargs(le(_, _), T, T?).
+constraint_sargs(lt(_, _), T, T?).
+constraint_sargs(ge(_, _), T, T?).
+constraint_sargs(gt(_, _), T, T?).
+constraint_sargs(succ(_, _), T, T?).
+constraint_sargs(signed(U, Y), T, [U?, Y?|T?]).
+constraint_sargs(unsigned(U, Y), T, [U?, Y?|T?]).
 
 % The arguments an expression is made of.
 procedure expr_args(Expr?, Args?, Args).
@@ -1721,8 +1760,9 @@ nroles_margs([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
     mults_margs(P?, R4?, R).
 
 % The variables occurring in a schema as written: its agent and speech-act
-% variables (sch_occ_vars of its plain form), then its value variables, in
-% its atoms, its multiplicities and its constraint.
+% variables (sch_occ_vars of its plain form), then those of its signing
+% conditions that its atoms do not carry, then its value variables, in its
+% atoms, its multiplicities and its constraint.
 procedure nsch_occ_vars(NSchema?, Args).
 nsch_occ_vars(NSc, R?) :- ground(NSc?) |
     plain_schema(NSc?, Sc),
@@ -1732,7 +1772,11 @@ nsch_occ_vars(NSc, R?) :- ground(NSc?) |
 
 procedure nsch_occ_vars1(Schema?, NRoleSpecs?, Constraint?, Args).
 nsch_occ_vars1(Sc, NRs, Cn, R?) :- ground(Sc?), ground(NRs?), ground(Cn?) |
-    sch_occ_vars(Sc?, PS),
+    sch_occ_vars(Sc?, PS0),
+    constraint_sargs(Cn?, [], Ss),
+    sargs_vars(Ss?, SV),
+    args_app(PS0?, SV?, PSV),
+    args_dedup(PSV?, PS),
     schema_args(Sc?, As),
     nroles_margs(NRs?, [], Ms),
     constraint_args(Cn?, [], Cs),
