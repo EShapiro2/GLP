@@ -1,0 +1,162 @@
+%% ---------------------------------------------------------------------------
+%% FDAO.glp --- Funded DAO (Nimrod Talmon with Claude, 2026-10-31), in the
+%% term form programs/gsc reads.  The clauses are in FDAO.txt beside this
+%% file.  FDAO extends DAO and GB, so the term holds their schemas first,
+%% as their own files give them, and then FDAO's own; tools/contracts.py in
+%% the grassroots-contracts repository (github.com/nimrodtalmon/grassroots-contracts)
+%% writes it.
+%% ---------------------------------------------------------------------------
+
+NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+             ; ext(NameTerm, Constant).
+Arg        ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+             ; sgn(Constant, Integer) ; num(Constant).
+Args       ::= [] ; [Arg | Args].
+Atom       ::= atom(Constant, Args).
+Atoms      ::= [] ; [Atom | Atoms].
+Mult       ::= Atom ; times(Arg, Atom).
+Mults      ::= [] ; [Mult | Mults].
+Guard      ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind   ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+             ; listed(Integer, Constant, Args).
+RoleSpec   ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+             ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
+RoleSpecs  ::= [] ; [RoleSpec | RoleSpecs].
+Constraint ::= true ; and(Constraint, Constraint)
+             ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg).
+Reach      ::= reach(NameTerm, Constant, NameTerm).
+Reaches    ::= [] ; [Reach | Reaches].
+Names      ::= [] ; [Constant | Names].
+Schema     ::= schema(Constant, Names, Args, RoleSpecs)
+             ; nschema(Constant, Names, Args, Constraint, RoleSpecs)
+             ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract   ::= [] ; [Schema | Contract].
+Preds      ::= [] ; [Constant | Preds].
+Declared   ::= Contract ; reflexive(Preds, Contract) ; environment(Preds, Contract).
+
+%% contract_named(fdao, C): the contract, FDAO.
+procedure contract_named(Constant?, Declared).
+contract_named(fdao, environment([today],
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(found, ['Alice'], [svar(n)],
+       [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(seats, [svar(n), num(1)])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))])])]),
+    schema(admit, ['Alice', 'Bob'], [svar(n)],
+       [rs(guarded, [atom(listed, [role(2), svar(n)]), atom(unseated, [svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(knows, [role(2)])], []),
+        rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))])])]),
+    nschema(seat, ['Alice'], [svar(n), num(m), num(m1)], succ(num(m), num(m1)),
+       [rs(unguarded, [atom(seats, [svar(n), num(m1)])], [atom(unseated, [svar(n)]), atom(seats, [svar(n), num(m)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [])]),
+    schema(propose, ['Bob', 'Alice'], [svar(x), svar(n)],
+       [rs(guarded, [], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], []),
+        rs(unguarded, [atom(proposal, [svar(x), role(1), nterm(ext(own(2), n))]), atom(for_tally, [svar(x), role(1), svar(n), num(0)]), atom(against_tally, [svar(x), role(1), svar(n), num(0)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(2), svar(n)]), atom(listed, [role(1), svar(n)])], [atom(proposal, [svar(x), role(1), nterm(ext(own(2), n))])])]),
+    schema(propose_own, ['Alice'], [svar(x), svar(n)],
+       [rs(guarded, [atom(proposal, [svar(x), role(1), nterm(ext(own(1), n))]), atom(for_tally, [svar(x), role(1), svar(n), num(0)]), atom(against_tally, [svar(x), role(1), svar(n), num(0)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [atom(proposal, [svar(x), role(1), nterm(ext(own(1), n))])])]),
+    schema(deliver_proposal, ['Alice', 'Bob'], [svar(x), pvar(o), svar(n)],
+       [rs(unguarded, [atom(sent, [role(2), svar(x), pvar(o), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(sent, [role(2), svar(x), pvar(o), svar(n)])]),
+        rs(unguarded, [atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+    schema(deliver_own_proposal, ['Alice', 'Bob'], [svar(x), svar(n)],
+       [rs(unguarded, [atom(sent, [role(2), svar(x), role(1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), role(1), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(sent, [role(2), svar(x), role(1), svar(n)])]),
+        rs(unguarded, [atom(proposal, [svar(x), role(1), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+    schema(vote_for, ['Bob', 'Alice'], [svar(x), pvar(o), svar(n)],
+       [rs(guarded, [atom(voted, [svar(x), pvar(o), nterm(ext(own(2), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(2), n))])], [atom(voted, [svar(x), pvar(o), nterm(ext(own(2), n))])]),
+        rs(unguarded, [atom(yes_vote, [svar(x), pvar(o), role(1), nterm(ext(own(2), n))]), atom(counted, [svar(x), pvar(o), role(1), svar(n)]), times(num(2), atom(for_ballot, [svar(x), pvar(o), svar(n)]))], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(2), svar(n)]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(2), n))])], [atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(decided, [svar(x), pvar(o), nterm(ext(own(2), n))])])]),
+    schema(vote_own_for, ['Alice'], [svar(x), pvar(o), svar(n)],
+       [rs(guarded, [atom(yes_vote, [svar(x), pvar(o), role(1), nterm(ext(own(1), n))]), atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(voted, [svar(x), pvar(o), nterm(ext(own(1), n))]), times(num(2), atom(for_ballot, [svar(x), pvar(o), svar(n)]))], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))])], [atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(voted, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])])]),
+    nschema(tally_for, ['Alice'], [svar(x), pvar(o), svar(n), num(a), num(a1)], succ(num(a), num(a1)),
+       [rs(unguarded, [atom(for_tally, [svar(x), pvar(o), svar(n), num(a1)])], [atom(for_ballot, [svar(x), pvar(o), svar(n)]), atom(for_tally, [svar(x), pvar(o), svar(n), num(a)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [])]),
+    schema(deliver_yes_vote, ['Alice', 'Bob'], [svar(x), pvar(o), pvar(v), svar(n)],
+       [rs(unguarded, [atom(relayed, [role(2), svar(x), pvar(o), pvar(v), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(yes_vote, [svar(x), pvar(o), pvar(v), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(relayed, [role(2), svar(x), pvar(o), pvar(v), svar(n)])]),
+        rs(unguarded, [atom(yes_vote, [svar(x), pvar(o), pvar(v), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+    schema(vote_against, ['Bob', 'Alice'], [svar(x), pvar(o), svar(n)],
+       [rs(guarded, [atom(voted, [svar(x), pvar(o), nterm(ext(own(2), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(2), n))])], [atom(voted, [svar(x), pvar(o), nterm(ext(own(2), n))])]),
+        rs(unguarded, [atom(no_vote, [svar(x), pvar(o), role(1), nterm(ext(own(2), n))]), atom(counted, [svar(x), pvar(o), role(1), svar(n)]), times(num(2), atom(against_ballot, [svar(x), pvar(o), svar(n)]))], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(2), svar(n)]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(2), n))])], [atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(decided, [svar(x), pvar(o), nterm(ext(own(2), n))])])]),
+    schema(vote_own_against, ['Alice'], [svar(x), pvar(o), svar(n)],
+       [rs(guarded, [atom(no_vote, [svar(x), pvar(o), role(1), nterm(ext(own(1), n))]), atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(voted, [svar(x), pvar(o), nterm(ext(own(1), n))]), times(num(2), atom(against_ballot, [svar(x), pvar(o), svar(n)]))], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))])], [atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(voted, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])])]),
+    nschema(tally_against, ['Alice'], [svar(x), pvar(o), svar(n), num(a), num(a1)], succ(num(a), num(a1)),
+       [rs(unguarded, [atom(against_tally, [svar(x), pvar(o), svar(n), num(a1)])], [atom(against_ballot, [svar(x), pvar(o), svar(n)]), atom(against_tally, [svar(x), pvar(o), svar(n), num(a)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [])]),
+    schema(deliver_no_vote, ['Alice', 'Bob'], [svar(x), pvar(o), pvar(v), svar(n)],
+       [rs(unguarded, [atom(relayed, [role(2), svar(x), pvar(o), pvar(v), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(no_vote, [svar(x), pvar(o), pvar(v), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(relayed, [role(2), svar(x), pvar(o), pvar(v), svar(n)])]),
+        rs(unguarded, [atom(no_vote, [svar(x), pvar(o), pvar(v), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+    nschema(pass, ['Alice'], [svar(x), pvar(o), svar(n), num(c), num(m)], gt(num(c), num(m)),
+       [rs(guarded, [atom(passed_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(for_tally, [svar(x), pvar(o), svar(n), num(c)]), atom(seats, [svar(n), num(m)])], [atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(unseated, [svar(n)])])]),
+    schema(deliver_pass, ['Alice', 'Bob'], [svar(x), pvar(o), svar(n)],
+       [rs(unguarded, [atom(told, [role(2), svar(x), pvar(o), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(passed_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(told, [role(2), svar(x), pvar(o), svar(n)])]),
+        rs(unguarded, [atom(passed_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+    nschema(reject, ['Alice'], [svar(x), pvar(o), svar(n), num(c), num(m)], gt(num(c), num(m)),
+       [rs(guarded, [atom(rejected_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(against_tally, [svar(x), pvar(o), svar(n), num(c)]), atom(seats, [svar(n), num(m)])], [atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(unseated, [svar(n)])])]),
+    schema(deliver_reject, ['Alice', 'Bob'], [svar(x), pvar(o), svar(n)],
+       [rs(unguarded, [atom(told, [role(2), svar(x), pvar(o), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(rejected_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(told, [role(2), svar(x), pvar(o), svar(n)])]),
+        rs(unguarded, [atom(rejected_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+    schema(mint_coin, ['Alice'], [num(k)],
+       [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
+    nschema(mint_bond, ['Alice'], [num(d), num(k), num(t)], gt(num(d), num(t)),
+       [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]),
+    schema(first_date, ['Alice'], [num(d)],
+       [rs(unguarded, [atom(date, [num(d)]), atom(dated, [])], [], [atom(identity, []), atom(today, [num(d)])], [atom(dated, [])])]),
+    nschema(advance, ['Alice'], [num(t), num(t1), num(d)], and(succ(num(t), num(t1)), le(num(t1), num(d))),
+       [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, []), atom(today, [num(d)])], [])]),
+    schema(swap_cc, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(swap_cb, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(d1), num(k1)],
+       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(swap_bc, ['Alice', 'Bob'], [pvar(u), num(d), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(swap_bb, ['Alice', 'Bob'], [pvar(u), num(d), num(k), pvar(v), num(d1), num(k1)],
+       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(pay, ['Alice', 'Bob'], [num(k)],
+       [rs(guarded, [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]),
+    schema(redeem_cc, ['Alice', 'Bob'], [pvar(r)],
+       [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+    schema(redeem_cb, ['Alice', 'Bob'], [pvar(r), num(d1)],
+       [rs(guarded, [atom(bond, [pvar(r), num(d1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(bond, [pvar(r), num(d1)])], [atom(identity, [])], [])]),
+    nschema(redeem_bc, ['Alice', 'Bob'], [num(d), pvar(r), num(t)], le(num(d), num(t)),
+       [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(date, [num(t)])], [])]),
+    nschema(redeem_bb, ['Alice', 'Bob'], [num(d), pvar(r), num(d1), num(t)], le(num(d), num(t)),
+       [rs(guarded, [atom(bond, [pvar(r), num(d1)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(bond, [pvar(r), num(d1)])], [atom(identity, []), atom(date, [num(t)])], [])]),
+    schema(deposit_c, ['Alice', 'Carol'], [pvar(u), num(k)],
+       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(deposit_b, ['Alice', 'Carol'], [pvar(u), num(d), num(k)],
+       [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(release_c, ['Carol', 'Bob'], [pvar(u), num(k)],
+       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(release_b, ['Carol', 'Bob'], [pvar(u), num(d), num(k)],
+       [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(return_c, ['Carol', 'Alice'], [pvar(u), num(k)],
+       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(return_b, ['Carol', 'Alice'], [pvar(u), num(d), num(k)],
+       [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% FDAO:1, Funding: Bob gives k coins of u to the DAO, kept by its steward Alice.
+    schema(fund, ['Bob', 'Alice'], [pvar(u), num(k), svar(n)],
+       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], []),
+        rs(unguarded, [times(num(k), atom(dao_coin, [pvar(u), svar(n)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(2), svar(n)]), atom(listed, [role(1), svar(n)])], [])]),
+%% FDAO:1, the steward gives coins of its own.
+    schema(fund_own, ['Alice'], [pvar(u), num(k), svar(n)],
+       [rs(guarded, [times(num(k), atom(dao_coin, [pvar(u), svar(n)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [])]),
+%% FDAO:2, Granting: the steward pays the proposer of a passed proposal, once.
+    schema(grant, ['Alice', 'Bob'], [svar(x), pvar(u), num(k), svar(n)],
+       [rs(guarded, [atom(granted, [svar(x), role(2), svar(n)])], [times(num(k), atom(dao_coin, [pvar(u), svar(n)]))], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(passed_proposal, [svar(x), role(2), nterm(ext(own(1), n))])], [atom(granted, [svar(x), role(2), svar(n)])]),
+        rs(unguarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, [])], [])]),
+%% FDAO:2, a grant to a passed proposal of the steward's own.
+    schema(grant_own, ['Alice'], [svar(x), pvar(u), num(k), svar(n)],
+       [rs(guarded, [atom(granted, [svar(x), role(1), svar(n)]), times(num(k), atom(coin, [pvar(u)]))], [times(num(k), atom(dao_coin, [pvar(u), svar(n)]))], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(passed_proposal, [svar(x), role(1), nterm(ext(own(1), n))])], [atom(granted, [svar(x), role(1), svar(n)])])])])).
