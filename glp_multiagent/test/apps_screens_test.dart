@@ -1146,6 +1146,14 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gsn-d-alice-group.png');
 
+    // Join and Remove, each with the field person, GSN's "Alice [Join] <person>" and "Alice [Remove] <person>", are not drawn in Bob's row of her Friends tab, though join requires friend(b) and remove deletes listed(b, n) at her role, each naming Bob: the field person names Bob's place, and the one place the fields do not name is the group's: "only in the row of an entry that fills the one place of the act its pragma's fields do not name, so that Remove, with the field person, is not drawn in a person's row" (vGLP b4022ce, Section 6.2).  Message, whose field names its text, is drawn there.
+    await run.list(alice, 'friend');
+    expect(run.control(alice, 'row:bob'), findsOneWidget);
+    expect(run.control(alice, 'act:message:bob'), findsOneWidget);
+    expect(run.control(alice, 'act:join:bob'), findsNothing);
+    expect(run.control(alice, 'act:remove:bob'), findsNothing);
+    await run.list(alice, 'member');
+
     // Remove's form in the group's row: the group filled by the row, its one field person, GSN's "<person>", offering Bob, whom she lists in it, and not herself; no field is drawn for the group, and the request is formed once Bob is picked, listed(bob, n) held, the field not filled from the state's listed atoms.
     await run.tap(alice, run.control(alice, 'act:remove:$friendsGroup'));
     expect(run.control(alice, 'pick:remove:$friendsGroup:2:bob'), findsOneWidget);
