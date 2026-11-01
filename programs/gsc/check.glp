@@ -606,7 +606,8 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % value variables and values" (def:numbers): a disjunction in it is a fault
 % constraint_not_conjunction(Schema, Or), and a product of two expressions
 % each carrying a value variable a fault constraint_not_linear(Schema,
-% Product).
+% Product).  A signing condition of the constraint is decided below
+% (signing_faults).
 
 procedure is_num(Arg?, Ans).
 is_num(num(_), yes).
@@ -709,7 +710,9 @@ num_schema1(Nm, Rs, Cn, R?) :- ground(Nm?), ground(Rs?), ground(Cn?) |
     constraint_args(Cn?, [], As),
     cons_faults(As?, Nm?, F2),
     shape_faults(Cn?, Nm?, F3),
-    faults_app(F2?, F3?, F23),
+    signing_faults(Cn?, Rs?, Nm?, [], F4),
+    faults_app(F3?, F4?, F34),
+    faults_app(F2?, F34?, F23),
     faults_app(F1?, F23?, R).
 
 % A value variable occurs in the expression.
@@ -771,6 +774,73 @@ shape_faults(lt(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_fa
 shape_faults(ge(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_faults([X?, Y?], Nm?, [], R).
 shape_faults(gt(X, Y), Nm, R?) :- ground(X?), ground(Y?), ground(Nm?) | exprs_faults([X?, Y?], Nm?, [], R).
 shape_faults(succ(_, _), _, []).
+shape_faults(signed(_, _), _, []).
+shape_faults(unsigned(_, _), _, []).
+
+% --- the signing conditions of a constraint (def:numbers, GSC 10fcc92) ------
+% "signing conditions signed(u, y) and unsigned(u, y), u an agent role or
+% agent variable and y a speech-act variable of the schema" (def:numbers).
+% Each u that is neither role(I), I an agent role of the schema, nor pvar(X)
+% is a fault signing_not_agent(Schema, U), and each y that is not svar(Y) a
+% fault signing_not_speech_act(Schema, Y); a variable among them that the
+% head does not list is not_in_head (head_schema).  No condition of
+% def:syntactically-grassroots reads a signing condition (the appendix,
+% after def:binding-numbers): linear.glp takes each as true.
+
+% The I-th role of a schema as written is an agent role.
+procedure nrs_agent_at(NRoleSpecs?, Integer?, Ans).
+nrs_agent_at([rs(_, _, _, _, _)|_], I, yes) :- I? =:= 1 | true.
+nrs_agent_at([crs(_, _, _, _, _, _)|_], I, no) :- I? =:= 1 | true.
+nrs_agent_at([_|Rs], I, R?) :- I? > 1, integer(I?), ground(Rs?) |
+    I1 := I? - 1,
+    nrs_agent_at(Rs?, I1?, R).
+nrs_agent_at(_, _, no) :- otherwise | true.
+
+% u is an agent role of the schema or an agent variable.
+procedure sign_agent(Arg?, NRoleSpecs?, Ans).
+sign_agent(pvar(_), _, yes).
+sign_agent(role(I), Rs, R?) :- integer(I?), ground(Rs?) | nrs_agent_at(Rs?, I?, R).
+sign_agent(A, _, no) :- otherwise, ground(A?) | true.
+
+% y is a speech-act variable.
+procedure sign_speech_act(Arg?, Ans).
+sign_speech_act(svar(_), yes).
+sign_speech_act(A, no) :- otherwise, ground(A?) | true.
+
+procedure sign_agent_fault(Ans?, Arg?, Constant?, Faults?, Faults).
+sign_agent_fault(yes, _, _, T, T?).
+sign_agent_fault(no, U, Nm, T, [signing_not_agent(Nm?, U?)|T?]).
+
+procedure sign_speech_act_fault(Ans?, Arg?, Constant?, Faults?, Faults).
+sign_speech_act_fault(yes, _, _, T, T?).
+sign_speech_act_fault(no, Y, Nm, T, [signing_not_speech_act(Nm?, Y?)|T?]).
+
+procedure sign_cond_faults(Arg?, Arg?, NRoleSpecs?, Constant?, Faults?, Faults).
+sign_cond_faults(U, Y, Rs, Nm, T, R?) :-
+    ground(U?), ground(Y?), ground(Rs?), ground(Nm?), ground(T?) |
+    sign_agent(U?, Rs?, A),
+    sign_speech_act(Y?, B),
+    sign_speech_act_fault(B?, Y?, Nm?, T?, R1),
+    sign_agent_fault(A?, U?, Nm?, R1?, R).
+
+procedure signing_faults(Constraint?, NRoleSpecs?, Constant?, Faults?, Faults).
+signing_faults(true, _, _, T, T?).
+signing_faults(and(A, B), Rs, Nm, T, R?) :-
+    ground(A?), ground(B?), ground(Rs?), ground(Nm?), ground(T?) |
+    signing_faults(B?, Rs?, Nm?, T?, R1),
+    signing_faults(A?, Rs?, Nm?, R1?, R).
+signing_faults(or(A, B), Rs, Nm, T, R?) :-
+    ground(A?), ground(B?), ground(Rs?), ground(Nm?), ground(T?) |
+    signing_faults(B?, Rs?, Nm?, T?, R1),
+    signing_faults(A?, Rs?, Nm?, R1?, R).
+signing_faults(eq(_, _), _, _, T, T?).
+signing_faults(le(_, _), _, _, T, T?).
+signing_faults(lt(_, _), _, _, T, T?).
+signing_faults(ge(_, _), _, _, T, T?).
+signing_faults(gt(_, _), _, _, T, T?).
+signing_faults(succ(_, _), _, _, T, T?).
+signing_faults(signed(U, Y), Rs, Nm, T, R?) :- sign_cond_faults(U?, Y?, Rs?, Nm?, T?, R).
+signing_faults(unsigned(U, Y), Rs, Nm, T, R?) :- sign_cond_faults(U?, Y?, Rs?, Nm?, T?, R).
 
 procedure num_schemas(NContract?, Faults).
 num_schemas([], []).

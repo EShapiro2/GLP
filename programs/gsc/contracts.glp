@@ -1238,6 +1238,101 @@ nm_nonlinear(C?) :-
          [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
                       [atom(identity, []), atom(date, [num(t)])], [])])], C).
 
+% --- signing conditions (def:numbers, GSC 10fcc92) --------------------------
+% A constraint may hold signing conditions signed(u, y) and unsigned(u, y),
+% u an agent role or agent variable and y a speech-act variable of the
+% schema, which no condition of def:syntactically-grassroots reads; so each
+% fixture with them has the verdict of the same fixture without them.
+%
+% deliver(Alice?, Bob; x) :  identity, knows(Bob), +sent(x, Bob)
+%                            identity, knows(Alice), +item(x, Alice)
+% syntactically grassroots (sig_plain); with the constraint
+% unsigned(Bob, x), signed(Alice, x) the same (sig_conds).
+procedure sig_deliver_roles(NRoleSpecs).
+sig_deliver_roles(
+   [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                  [atom(identity, []), atom(knows, [role(2)])], []),
+    rs(unguarded, [atom(item, [svar(x), role(1)])], [],
+                  [atom(identity, []), atom(knows, [role(1)])], [])]).
+
+procedure sig_plain(NContract).
+sig_plain(C?) :-
+    nm_base(B),
+    sig_deliver_roles(Rs),
+    ncontract_app(B?, [schema(deliver, [svar(x)], Rs?)], C).
+
+procedure sig_conds(NContract).
+sig_conds(C?) :-
+    nm_base(B),
+    sig_deliver_roles(Rs),
+    ncontract_app(B?,
+      [nschema(deliver, [svar(x)],
+         and(unsigned(role(2), svar(x)), signed(role(1), svar(x))), Rs?)], C).
+
+% deliver with neither role requiring a knows atom: Bob does not guard and
+% no atom a role requires names the other, so volition fails at deliver
+% (sig_novol); with the constraint signed(Alice, x), the same
+% (sig_novol_conds).
+procedure sig_novol_roles(NRoleSpecs).
+sig_novol_roles(
+   [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(identity, [])], []),
+    rs(unguarded, [atom(item, [svar(x), role(1)])], [], [atom(identity, [])], [])]).
+
+procedure sig_novol(NContract).
+sig_novol(C?) :-
+    nm_base(B),
+    sig_novol_roles(Rs),
+    ncontract_app(B?, [schema(deliver, [svar(x)], Rs?)], C).
+
+procedure sig_novol_conds(NContract).
+sig_novol_conds(C?) :-
+    nm_base(B),
+    sig_novol_roles(Rs),
+    ncontract_app(B?,
+      [nschema(deliver, [svar(x)], signed(role(1), svar(x)), Rs?)], C).
+
+% nm_blocked's advance with an agent variable a and a speech-act variable x
+% in its head and the constraint t1 = t + 1, unsigned(a, x): the linear part
+% is decided as before, the signing condition read by no condition, so meet
+% is obstructed by advance as in nm_blocked.
+procedure sig_blocked(NContract).
+sig_blocked([schema(establish, [],
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(meet, [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(date, [num(0)])]),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    nschema(advance, [num(t), num(t1), pvar(a), svar(x)],
+       and(succ(num(t), num(t1)), unsigned(pvar(a), svar(x))),
+       [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])])]).
+
+% --- negative: signing conditions not formed as def:numbers says ------------
+% deliver(Alice?, Bob; x, c, k) | signed(x, x), unsigned(Pi_3, c),
+%     signed(k, Bob), signed(z, w) : as sig_conds
+% x is no agent role or agent variable, the schema has no third role, c is
+% no speech-act variable, k is a value and Bob no speech-act variable, and z
+% and w are not in the head: not_in_head(deliver, pvar(z)),
+% not_in_head(deliver, svar(w)), signing_not_agent(deliver, svar(x)),
+% signing_not_agent(deliver, role(3)), signing_not_speech_act(deliver,
+% pvar(c)), signing_not_agent(deliver, num(k)),
+% signing_not_speech_act(deliver, role(2)).
+% close(Alice?, Alice[listed(*, n)]; n) | signed(Alice[listed(*, n)], n) :
+%     identity, -listed(Alice, n), +closed(n)    identity, -member(<Alice>.n)
+% the listed role is no agent role: signing_not_agent(close, role(2)).
+procedure sig_malformed(NContract).
+sig_malformed(C?) :-
+    nm_base(B),
+    sig_deliver_roles(Rs),
+    ncontract_app(B?,
+      [nschema(deliver, [svar(x), pvar(c), num(k)],
+         and(signed(svar(x), svar(x)),
+             and(unsigned(role(3), pvar(c)),
+                 and(signed(num(k), role(2)), signed(pvar(z), svar(w))))), Rs?),
+       nschema(close, [svar(n)], signed(role(2), svar(n)),
+         [rs(guarded, [atom(closed, [svar(n)])],
+                      [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []),
+          crs(listed(1, listed, [svar(n)]), unguarded,
+              [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])])], C).
+
 % --- negative: a role that reads a number and changes nothing --------------
 % mature(Alice?, Bob; d, t) | d <= t : identity, knows(Bob), -bond(Bob, d), +coin(Bob)
 %                                      identity, date(t)
@@ -1433,6 +1528,12 @@ contract(nm_half, C?) :- nm_half(C).
 contract(nm_joint, C?) :- nm_joint(C).
 contract(nm_or, C?) :- nm_or(C).
 contract(nm_nonlinear, C?) :- nm_nonlinear(C).
+contract(sig_plain, C?) :- sig_plain(C).
+contract(sig_conds, C?) :- sig_conds(C).
+contract(sig_novol, C?) :- sig_novol(C).
+contract(sig_novol_conds, C?) :- sig_novol_conds(C).
+contract(sig_blocked, C?) :- sig_blocked(C).
+contract(sig_malformed, C?) :- sig_malformed(C).
 contract(uo_twice, C?) :- uo_twice(C).
 contract(uo_twice_free, C?) :- uo_twice_free(C).
 contract(uo_other, C?) :- uo_other(C).

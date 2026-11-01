@@ -446,6 +446,14 @@ latex_constraint(succ(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
 latex_constraint(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     latex_constraint(C2?, T?, R1),
     latex_constraint(C1?, ['\\lor'|R1?], R).
+% A signing condition as def:numbers writes it, \mathrm{signed}(u,y) and
+% \mathrm{unsigned}(u,y) (GSC 10fcc92).
+latex_constraint(signed(U, Y), T, ['\\mathrm{signed}('|R?]) :- ground(U?), ground(Y?), ground(T?) |
+    latex_arg(Y?, [')'|T?], R1),
+    latex_arg(U?, [','|R1?], R).
+latex_constraint(unsigned(U, Y), T, ['\\mathrm{unsigned}('|R?]) :- ground(U?), ground(Y?), ground(T?) |
+    latex_arg(Y?, [')'|T?], R1),
+    latex_arg(U?, [','|R1?], R).
 
 procedure latex_cmp(Expr?, Constant?, Expr?, Chunks?, Chunks).
 latex_cmp(X, Op, Y, T, R?) :- ground(X?), ground(Op?), ground(Y?), ground(T?) |
@@ -1207,6 +1215,14 @@ malformed_lines([constraint_not_linear(S, _)|Fs], T,
     malformed_lines(Fs?, T?, R).
 malformed_lines([constraint_not_conjunction(S, _)|Fs], T,
                 [S?, 'carries a constraint that is not a conjunction;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([signing_not_agent(S, _)|Fs], T,
+                [S?, 'carries a signing condition whose signer is not an agent role or an agent variable;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([signing_not_speech_act(S, _)|Fs], T,
+                [S?, 'carries a signing condition on what is not a speech-act variable;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |

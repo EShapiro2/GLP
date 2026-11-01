@@ -221,6 +221,14 @@ n_constraint(succ(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
 n_constraint(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     n_constraint(C2?, T?, R1),
     n_constraint(C1?, [' or '|R1?], R).
+% A signing condition as def:numbers writes it, signed(u, y) and
+% unsigned(u, y) (GSC 10fcc92).
+n_constraint(signed(U, Y), T, ['signed('|R?]) :- ground(U?), ground(Y?), ground(T?) |
+    n_arg(Y?, [')'|T?], R1),
+    n_arg(U?, [', '|R1?], R).
+n_constraint(unsigned(U, Y), T, ['unsigned('|R?]) :- ground(U?), ground(Y?), ground(T?) |
+    n_arg(Y?, [')'|T?], R1),
+    n_arg(U?, [', '|R1?], R).
 
 procedure n_cmp(Expr?, Constant?, Expr?, Chunks?, Chunks).
 n_cmp(X, Op, Y, T, R?) :- ground(X?), ground(Op?), ground(Y?), ground(T?) |
