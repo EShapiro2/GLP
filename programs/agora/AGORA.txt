@@ -1,0 +1,34 @@
+% AGORA: Grassroots Barter --- an experimental contract by Nimrod Talmon with Claude; version 2, 2026-10-31, over GB; the keeper's own wall and posts added the same day.  Outside the owners' process.
+% Owner: Talmon.  No paper.
+% Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds), and through it GKK.  It cites their clauses whole and restates none.
+% Defines: item, a one-of-a-kind thing named by its maker; Alice-item, an item Alice made; instrument, a coin, a bond or an item; market, keeper, member, wall.  Whoever holds a Bob-item knows Bob, as a holder of a Bob-coin knows Bob.
+% Schemas: AGORA.glp beside this file.  Clause 6 is realised by the barter schemas (an item for an item, a coin or a bond, and back) and the item escrow schemas, GB's swap and escrow with an item in place of a coin or a bond.  A member who sees an offer and does not yet know its poster's acquaintance first meets them (GKK:2): GB's swap asks that the two know each other.
+AGORA: Grassroots Barter
+Alice, Bob and Carol are persons.  AGORA extends GB.  An instrument is a coin, a bond or an item.
+1. ■ Making.  Alice may make an Alice-item, one of a kind, which they then hold.
+2. ■ Market.  Alice may open a market under a name of their own not used before; Alice is its keeper and first member.
+3. ■ Joining.  Alice, the keeper of a market, may admit Bob, whom they know, by an act of both; Bob thereby agrees to come to know whoever posts to the market.
+4. ■ Posting.  Bob, a member of a market, may post to its wall an item they hold at the time, or something they want, each at most once, and so may Alice, its keeper; the keeper sees every post on their own wall and delivers it to every other member, the poster included, who thereby knows its poster.
+5. ■ Withdrawal.  Bob may withdraw a post of theirs; Alice, the keeper, removes it from their own wall and from the wall of every member it was delivered to, and Bob may not post it to that market again.
+6. ■ Trading.  GB's swap and escrow apply to items as to coins and bonds; a post is not withdrawn when its item is traded.
+Pragmas
+Items: the items Alice holds.
+Markets: the markets Alice is a member of.
+Offers: the wall offers Alice sees.
+Wants: the wall wants Alice sees.
+Making: Alice [Make] <item>
+Market: Alice [Open] <market>
+Joining: Alice [Admit] <person>
+  Bob: Alice invites you to their market.
+Posting: Bob [Offer] <maker> <item> [Want] <description>
+  Alice [Offer own] <maker> <item> [Want own] <description>
+Withdrawal: Bob [Withdraw] <post>
+  Alice [Withdraw own offer] <post> [Withdraw own want] <post>
+Trading: Alice [Barter] <maker given> <item given> <maturity given> <amount given> <maker wanted> <item wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to trade with you.
+  Alice [Deposit item] <maker> <item>
+  Carol: Alice asks to deposit an item with you.
+  Carol [Release item] <maker> <item>
+  Bob: Carol asks to release an item to you.
+  Carol [Return item] <maker> <item>
+  Alice: Carol asks to return an item to you.
