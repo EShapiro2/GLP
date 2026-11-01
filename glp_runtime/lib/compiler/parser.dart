@@ -186,7 +186,7 @@ class Parser {
           // -mode(system). declaration (GLP-Spec appendix-guards.tex, Naming and
           // admission of body kernels; TGLP app:system-mode), the one mode
           // declaration: a module without it is a user module.
-          _consume(TokenType.LPAREN, 'Expected "(" after mode');
+          _consumeFunctorParen(keyword, 'Expected "(" after mode');
           if (!_check(TokenType.ATOM)) {
             throw CompileError(
               'Expected "system" in mode declaration',
@@ -213,7 +213,7 @@ class Parser {
         case 'expose':
           // -expose(a#b#c). — lift module file <self.glp dir>/a/b/c.glp's
           // exported procedures into this directory's scope.
-          _consume(TokenType.LPAREN, 'Expected "(" after expose');
+          _consumeFunctorParen(keyword, 'Expected "(" after expose');
           if (!_check(TokenType.ATOM)) {
             throw CompileError('Expected a module path in -expose(...)',
                 _peek().line, _peek().column, phase: 'parser');
@@ -785,7 +785,7 @@ class Parser {
     } else {
       // Message form: display m : ...  — m a term, possibly with arguments.
       final args = <Term>[];
-      if (_match(TokenType.LPAREN)) {
+      if (_matchFunctorParen(nameToken)) {
         if (!_check(TokenType.RPAREN)) {
           args.add(_parseTerm());
           while (_match(TokenType.COMMA)) {
@@ -805,7 +805,7 @@ class Parser {
     do {
       final itemToken = _consume(TokenType.ATOM, 'Expected a display item');
       final itemArgs = <Term>[];
-      if (_match(TokenType.LPAREN)) {
+      if (_matchFunctorParen(itemToken)) {
         if (!_check(TokenType.RPAREN)) {
           itemArgs.add(_parseTerm());
           while (_match(TokenType.COMMA)) {
@@ -1001,7 +1001,7 @@ class Parser {
       final functorToken = _consumePredicateName();
       final args = <Term>[];
 
-      if (_match(TokenType.LPAREN)) {
+      if (_matchFunctorParen(functorToken)) {
         if (!_check(TokenType.RPAREN)) {
           args.add(_parseTerm());
 
@@ -1124,7 +1124,7 @@ class Parser {
     final functorToken = _consumePredicateName();
     final args = <Term>[];
 
-    if (_match(TokenType.LPAREN)) {
+    if (_matchFunctorParen(functorToken)) {
       if (!_check(TokenType.RPAREN)) {
         args.add(_parseTerm());
 
@@ -1219,7 +1219,7 @@ class Parser {
     final functorToken = _consumePredicateName();
     final args = <Term>[];
 
-    if (_match(TokenType.LPAREN)) {
+    if (_matchFunctorParen(functorToken)) {
       if (!_check(TokenType.RPAREN)) {
         args.add(_parseTerm());
 
@@ -1336,7 +1336,10 @@ class Parser {
     final next = _current + 1 < tokens.length
         ? tokens[_current + 1].type
         : TokenType.EOF;
-    if (next == TokenType.LPAREN) return 'functor';
+    if (next == TokenType.LPAREN) {
+      _refuseLayoutBeforeFunctorParen(_peek(), tokens[_current + 1]);
+      return 'functor';
+    }
     final t = _peek().type;
     if (t == TokenType.MOD || t == TokenType.PROCEDURE) return 'constant';
     if (_endsOperand.contains(next)) return 'constant';
@@ -1472,7 +1475,7 @@ class Parser {
       final functorToken = _advance();
 
       // Structure with arguments
-      if (_match(TokenType.LPAREN)) {
+      if (_matchFunctorParen(functorToken)) {
         final args = <Term>[];
 
         if (!_check(TokenType.RPAREN)) {
@@ -1661,6 +1664,66 @@ class Parser {
     );
   }
 
+  /// Matches the "(" that opens the arguments of [functor], the token just
+  /// read: a functor and its opening parenthesis are written with nothing
+  /// between them, and the reader refuses a program that puts white space or
+  /// a line break there (GLP-Spec ef7c2cb, appendix-guards.tex, "Predefined
+  /// types").  A "(" after layout is refused, never read as another "(".
+  /// Until 2026-11-02 `p (X)` and `p\n(X)` were read as `p(X)`.
+  bool _matchFunctorParen(Token functor) {
+    if (!_check(TokenType.LPAREN)) return false;
+    _refuseLayoutBeforeFunctorParen(functor);
+    _advance();
+    return true;
+  }
+
+  /// [_matchFunctorParen], with [message] where no "(" follows [functor].
+  Token _consumeFunctorParen(Token functor, String message) {
+    if (!_matchFunctorParen(functor)) {
+      throw CompileError(message, _peek().line, _peek().column, phase: 'parser');
+    }
+    return _previous();
+  }
+
+  /// Refuses the "(" at the current position, or [next], if layout stands
+  /// between it and [functor] ([_matchFunctorParen]).
+  void _refuseLayoutBeforeFunctorParen(Token functor, [Token? next]) {
+    final paren = next ?? _peek();
+    if (paren.type != TokenType.LPAREN || !paren.spaceBefore) return;
+    final where = paren.line == functor.line ? '' : ' (line ${functor.line})';
+    throw CompileError(
+      'White space or a line break stands between the functor '
+      '"${functor.lexeme}"$where and its "(": a functor and its opening '
+      'parenthesis are written with nothing between them (GLP-Spec, '
+      'appendix-guards.tex, "Predefined types")',
+      paren.line,
+      paren.column,
+      phase: 'parser',
+    );
+  }
+
+  /// Matches the `?` of the type just read, [type] as written: a type and
+  /// its `?` are written with nothing between them, and the reader refuses a
+  /// program that puts white space or a line break there (GLP-Spec ef7c2cb,
+  /// appendix-guards.tex, "Predefined types").  Until 2026-11-02 `T ?` and
+  /// `T\n?` were read as `T?`.
+  bool _matchTypeMark(String type) {
+    if (!_check(TokenType.QUESTION)) return false;
+    final q = _peek();
+    if (q.spaceBefore) {
+      throw CompileError(
+        'White space or a line break stands between the type "$type" and its '
+        '"?": a type and its "?" are written with nothing between them '
+        '(GLP-Spec, appendix-guards.tex, "Predefined types")',
+        q.line,
+        q.column,
+        phase: 'parser',
+      );
+    }
+    _advance();
+    return true;
+  }
+
   // Helper methods
   bool _match(TokenType type) {
     if (_check(type)) {
@@ -1758,7 +1821,7 @@ class Parser {
 
     // Parse optional type parameters: (X, Y, ...)
     final typeParams = <String>[];
-    if (_match(TokenType.LPAREN)) {
+    if (_matchFunctorParen(typeNameToken)) {
       final firstParam = _consume(TokenType.VARIABLE, 'Expected type parameter name');
       typeParams.add(firstParam.lexeme);
       while (_match(TokenType.COMMA)) {
@@ -1821,9 +1884,12 @@ class Parser {
     return left;
   }
 
-  /// [term], a primary of a type alternative, with the `?` standing apart
-  /// after it read: `T ?` is `T?`, the dual of the type T, as a procedure
-  /// declaration reads it ([_parseProcArgType]).  `?` is the complementation
+  /// [term], a primary of a type alternative, with a `?` after it read.  A
+  /// type and its `?` are written with nothing between them, and the reader
+  /// refuses a program that puts white space or a line break there (GLP-Spec
+  /// ef7c2cb, appendix-guards.tex, "Predefined types"), so `T ?` is refused
+  /// ([_matchTypeMark]); until 2026-11-02 it was read as `T?`, the dual of
+  /// the type T.  `T?` itself is one reader token.  `?` is the complementation
   /// operator on a type (TGLP typed-glp.tex, "Type Declarations": "GLP types
   /// are specified using BNF rules with the complementation operator ?", and
   /// "its dual (for example Stream?) is an input type"), so after anything
@@ -1834,6 +1900,7 @@ class Parser {
   /// `Q ::= f(R ?).` was read as `f(R)`.
   Term _markedTypeAltPrimary(Term term) {
     while (_check(TokenType.QUESTION)) {
+      if (term is VarTerm && !term.isReader) _matchTypeMark(term.name);
       final q = _advance();
       if (term is VarTerm && !term.isReader) {
         term = VarTerm(term.name, true, term.line, term.column);
@@ -1935,7 +2002,7 @@ class Parser {
         _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
       final token = _advance();
       final isReader = token.type == TokenType.READER;
-      _advance(); // consume (
+      _consumeFunctorParen(token, 'Expected "(" after the type name');
       final args = <Term>[];
       if (!_check(TokenType.RPAREN)) {
         args.add(_parseTypeAltExpression());
@@ -1944,7 +2011,7 @@ class Parser {
         }
       }
       _consume(TokenType.RPAREN, 'Expected ")" after type arguments');
-      final trailingQ = _match(TokenType.QUESTION);
+      final trailingQ = _matchTypeMark('${token.lexeme}(...)');
       final effectiveName = (isReader || trailingQ) ? '${token.lexeme}?' : token.lexeme;
       return TypeRefTerm(effectiveName, args, token.line, token.column);
     }
@@ -1959,7 +2026,7 @@ class Parser {
     // Underscore (anonymous variable) - can have reader mark: _ or _?
     if (_match(TokenType.UNDERSCORE)) {
       final token = _previous();
-      final isReader = _match(TokenType.QUESTION);
+      final isReader = _matchTypeMark('_');
       return UnderscoreTerm(token.line, token.column, isReader: isReader);
     }
 
@@ -2012,7 +2079,7 @@ class Parser {
     if (_check(TokenType.ATOM)) {
       final functorToken = _advance();
 
-      if (_match(TokenType.LPAREN)) {
+      if (_matchFunctorParen(functorToken)) {
         final args = <Term>[];
         if (!_check(TokenType.RPAREN)) {
           args.add(_parseTypeAltExpression());
@@ -2266,7 +2333,7 @@ class Parser {
     // procedure play_introduction().  (valid - nullary with explicit parens)
     // procedure double(Number?, Number). (valid - with args)
     final argTypes = <TypeExpr>[];
-    if (_match(TokenType.LPAREN)) {
+    if (_matchFunctorParen(_previous())) {
       // Parse argument types if not empty
       if (!_check(TokenType.RPAREN)) {
         argTypes.add(_parseProcArgType());
@@ -2297,7 +2364,7 @@ class Parser {
 
     // Primitive: _ or _?
     if (_match(TokenType.UNDERSCORE)) {
-      final isInput = _match(TokenType.QUESTION);
+      final isInput = _matchTypeMark('_');
       return PrimitiveModeAlt(isInput, line, column);
     }
 
@@ -2313,7 +2380,7 @@ class Parser {
       // Now parse the final type name (must be VARIABLE or READER)
       if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
         final typeToken = _advance();
-        final isInput = typeToken.type == TokenType.READER || _match(TokenType.QUESTION);
+        final isInput = typeToken.type == TokenType.READER || _matchTypeMark(typeToken.lexeme);
         final qualifiedName = '${pathParts.join('#')}#${typeToken.lexeme}';
         return TypeRef(qualifiedName, line, column, isInput: isInput);
       }
@@ -2332,7 +2399,7 @@ class Parser {
 
       // Parse optional type arguments: (Type1, Type2, ...)
       final typeArgs = <TypeExpr>[];
-      if (_match(TokenType.LPAREN)) {
+      if (_matchFunctorParen(token)) {
         typeArgs.add(_parseProcArgType());  // recursive — supports nested parameterized types
         while (_match(TokenType.COMMA)) {
           typeArgs.add(_parseProcArgType());
@@ -2340,7 +2407,7 @@ class Parser {
         _consume(TokenType.RPAREN, 'Expected ")" after type arguments');
       }
 
-      final isInput = token.type == TokenType.READER || _match(TokenType.QUESTION);
+      final isInput = token.type == TokenType.READER || _matchTypeMark(typeArgs.isEmpty ? baseName : '$baseName(...)');
       return TypeRef(baseName, line, column, isInput: isInput, typeArgs: typeArgs);
     }
 

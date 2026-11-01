@@ -72,7 +72,24 @@ class Token {
   final int column;
   final Object? literal;  // For NUMBER, STRING
 
-  Token(this.type, this.lexeme, this.line, this.column, [this.literal]);
+  /// Whether layout --- white space, a line break or a comment --- stands
+  /// between this token and the one before it.  A functor and its opening
+  /// parenthesis, and a type and its `?`, are written with nothing between
+  /// them, and the reader refuses a program that puts white space or a line
+  /// break there (GLP-Spec ef7c2cb, appendix-guards.tex, "Predefined types");
+  /// the parser reads this to refuse it.  A token made by a program and not
+  /// read from a source has none.
+  final bool spaceBefore;
+
+  Token(this.type, this.lexeme, this.line, this.column, [this.literal])
+      : spaceBefore = false;
+
+  Token.read(this.type, this.lexeme, this.line, this.column, this.literal,
+      this.spaceBefore);
+
+  /// This token, with [spaceBefore] as given.
+  Token withSpaceBefore(bool spaceBefore) =>
+      Token.read(type, lexeme, line, column, literal, spaceBefore);
 
   @override
   String toString() {
