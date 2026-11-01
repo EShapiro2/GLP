@@ -17,6 +17,7 @@ import 'package:glp_runtime/compiler/primitive_layer.dart';
 import 'package:glp_runtime/compiler/error.dart' show CompileError;
 import 'package:glp_runtime/bytecode/opcodes.dart' show Op;
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine_v2/code_image.dart' show CodeImage;
 import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/engine_v2/module_kernels.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
@@ -166,6 +167,19 @@ class GlpEngine {
   rt.ModuleTerm? get appModule => _appModule;
   final Map<String, BytecodeProgram> _loadedPrograms = {};
 
+  /// The loaded units and the root as one program ([combinedProgram]), its
+  /// code image and the runner over it, built once per load set: a posted
+  /// goal reuses them until the next load or [clear] ([_programsChanged]).
+  BytecodeProgram? _combined;
+  CodeImage? _image;
+  ByteRunner? _runner;
+
+  void _programsChanged() {
+    _combined = null;
+    _image = null;
+    _runner = null;
+  }
+
   /// The entry points of each unit the engine holds, by the name it was
   /// loaded under, with the scope they were declared in: what a source handed
   /// over to the engine sees of the units it holds ([scope], [scopeFor]), and
@@ -243,6 +257,7 @@ class GlpEngine {
     // Clear everything but the root, linked once at construction.
     _loadedPrograms.clear();
     _unitEntryPoints.clear();
+    _programsChanged();
   }
 
   /// The root self.glp linked as a program of its own and compiled
@@ -523,6 +538,7 @@ class GlpEngine {
     }
     _refuseRedefinitionByLaterLoad(name, program);
     _loadedPrograms[name] = program;
+    _programsChanged();
     if (moduleValue != null) {
       _appModule = moduleValue;
     }
@@ -738,6 +754,7 @@ class GlpEngine {
     );
     _refuseRedefinitionByLaterLoad('__program__', program);
     _loadedPrograms['__program__'] = program;
+    _programsChanged();
 
     // The program's module value — its artefact (h(M) + code): the value
     // `self_module` returns and a friend adopts.
@@ -906,18 +923,20 @@ class GlpEngine {
     }
     _requireInputs(goals, inputs);
 
-    // One CodeImage + ByteRunner for the whole goal; each conjunct's entry is
-    // a byte offset into it.  The caller has the labels from the image's own
-    // program, so an unresolved offset is an internal invariant violation
-    // between the object labels and the image symbols, not a user error.
-    final image = codeImageFromProgram(program);
+    // One CodeImage + ByteRunner for the whole goal, the load set's, built
+    // at its first goal and kept until the next load ([_programsChanged]);
+    // each conjunct's entry is a byte offset into it.  The caller has the
+    // labels from the image's own program, so an unresolved offset is an
+    // internal invariant violation between the object labels and the image
+    // symbols, not a user error.
+    final image = _image ??= codeImageFromProgram(program);
+    final runner = _runner ??= ByteRunner(image);
     final entries = [
       for (final l in labels)
         image.entryOffsetOf(l) ??
             (throw StateError('no compiled byte entry for $l'))
     ];
-    final scheduler =
-        Scheduler(rt: _runtime, runners: {'main': ByteRunner(image)});
+    final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
 
     final queryVarWriters = <String, HeapCell>{};
     final varNameToId = <String, HeapCell>{};
@@ -1050,12 +1069,14 @@ class GlpEngine {
   /// `labels` unfiltered.  Until 2026-10-04 the root self.glp was compiled
   /// here, last, as a fallback for every bare name a unit left unresolved.
   BytecodeProgram get combinedProgram {
+    final cached = _combined;
+    if (cached != null) return cached;
     final allOps = <Op>[];
     for (final entry in _loadedPrograms.entries) {
       allOps.addAll(entry.value.ops);
     }
     allOps.addAll(_rootCode.ops);
-    return BytecodeProgram(allOps);
+    return _combined = BytecodeProgram(allOps);
   }
 
   // ============ Private Methods ============

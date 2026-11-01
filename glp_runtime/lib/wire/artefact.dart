@@ -109,7 +109,8 @@ class ArtefactSymbol {
       : compiled = false,
         ops = const [];
 
-  String get signature => '$name/$arity';
+  /// `name/arity`, built once.
+  late final String signature = '$name/$arity';
 }
 
 /// The certificate that follows an artefact's body (§Program Artefact): the
@@ -293,12 +294,15 @@ class Artefact {
   static const String _signatureFails =
       "its certificate's signature does not verify under the key it carries";
 
-  int _indexOfSignature(String sig) {
-    for (var i = 0; i < symbols.length; i++) {
-      if (symbols[i].signature == sig) return i;
-    }
-    throw WireFormatException('symbol not in table: $sig');
-  }
+  /// The index of each signature in [symbols], the first where a signature
+  /// recurs, built once ([_indexOfSignature]).
+  late final Map<String, int> _signatureIndex = {
+    for (var i = symbols.length - 1; i >= 0; i--) symbols[i].signature: i
+  };
+
+  int _indexOfSignature(String sig) =>
+      _signatureIndex[sig] ??
+      (throw WireFormatException('symbol not in table: $sig'));
 
   /// Serialize the body (§Program Artefact, sections 1–4).
   Uint8List bodyBytes() {
