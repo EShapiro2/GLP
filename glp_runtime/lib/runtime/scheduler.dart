@@ -273,8 +273,9 @@ class Scheduler {
       // map, whichever way it was woken (GlpRuntime.goalTaken).
       rt.goalTaken(act);
       goalIds?.add(act.id);
-      final env = rt.getGoalEnv(act.id);
-      final program = rt.getGoalProgram(act.id);
+      final record = rt.goalRecordOf(act.id);
+      final env = record?.env;
+      final program = record?.program;
       var runner = runners[program];
       // Fall back to rt.runners (runtime-registered runners, if any)
       runner ??= rt.runners[program];

@@ -42,6 +42,13 @@ class HeapCell {
   /// reader and a value cell.
   HeapCell? pairedReader;
 
+  /// The one [VarRef] to this cell that a dereference returns ([HeapFCP.derefAddr]):
+  /// a VarRef is the cell it names and nothing else (its == is the cell's
+  /// identity), so one serves every dereference, where until 2026-11-01 each
+  /// made its own.
+  VarRef? _ref;
+  VarRef get ref => _ref ??= VarRef(this);
+
   HeapCell(this.content, this.tag, this.id);
 
   /// A cell is itself and no other: identity, hashed by its [id].
@@ -302,7 +309,7 @@ class HeapFCP {
             // Unbound writer with suspensions - return VarRef to this address,
             // the starting writer pointed at the last reader passed
             _compress(startAddr, previous);
-            return VarRef(current);
+            return current.ref;
           }
           // Case 2: Pointer - check if bidirectional (unbound) or chain (bound)
           if (content is Pointer) {
@@ -315,7 +322,7 @@ class HeapFCP {
                 // This is an unbound variable; the starting writer is
                 // pointed at the last reader passed
                 _compress(startAddr, previous);
-                return VarRef(current);
+                return current.ref;
               }
             }
             // Bound to another cell - follow the pointer
@@ -384,11 +391,14 @@ class HeapFCP {
       throw StateError('bindWriter called on non-writer cell at $writerAddr (tag: ${cell.tag})');
     }
 
-    final activations = <GoalRef>[];
+    // The goals this binding wakes; most writers have none suspended on them,
+    // and those return the one empty list.
+    var activations = const <GoalRef>[];
 
     // Save and process suspensions before overwriting (FCP pattern: check WriterContent)
     final c = cell.content;
-    if (c is WriterContent) {
+    if (c is WriterContent && c.suspensions != null) {
+      activations = <GoalRef>[];
       _walkAndActivate(c.suspensions, activations);
     }
 
