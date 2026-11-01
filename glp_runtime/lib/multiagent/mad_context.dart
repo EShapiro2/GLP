@@ -20,7 +20,8 @@ import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/wire/codec.dart'
     show wireMsgKindValue, wireMsgKindRequest, wireMsgKindAcknowledgement;
 import 'package:glp_runtime/wire/artefact.dart' show ModuleRefusal;
-import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
+import 'package:glp_runtime/wire/payload_codec.dart'
+    show GlobalNameRefusal, PayloadCodec;
 
 /// Callback for delivering messages to other agents
 typedef MessageDeliveryCallback = void Function(String destination, OutboundMessage message);
@@ -1047,6 +1048,12 @@ class MadContext {
   /// The sender is told nothing, IGLP having no message for it: a reader-name
   /// value stays pending there, unacknowledged (Definition "madGLP Local
   /// State").
+  ///
+  /// A value message carrying a global name whose index is not a non-negative
+  /// integer is refused at receipt in the same way, the refusal naming the
+  /// name: "An index is a non-negative integer, and the reader refuses a
+  /// global name whose index is anything else" (IGLP code-format-fragment.tex,
+  /// Terms, tag 2).
   void handleIncomingPayload({
     required List<int> payload,
     required String fromAgent,
@@ -1061,6 +1068,10 @@ class MadContext {
         try {
           received = PayloadCodec.deserializeValuePayload(payload);
         } on ModuleRefusal catch (refusal) {
+          print('[REFUSED] $agentId: a message from $fromAgent is refused at '
+              'receipt: ${refusal.message}');
+          return;
+        } on GlobalNameRefusal catch (refusal) {
           print('[REFUSED] $agentId: a message from $fromAgent is refused at '
               'receipt: ${refusal.message}');
           return;

@@ -98,6 +98,10 @@ class PayloadCodec {
   /// delivered as text" (GLP #3 Cowork, 2026-10-02 20:58 UTC).  Until
   /// 2026-10-02 any module a message carried decoded to a Module value.
   ///
+  /// A global name the message carries whose index is not a non-negative
+  /// integer leaves the payload no message in the same way, and
+  /// [GlobalNameRefusal] is thrown, naming the name ([_wireToTerm]).
+  ///
   /// A serializer message's serial is not returned; the Receive transaction
   /// takes it from [deserializeValuePayload].
   static (GlobalName, Term) deserializeGlobalSendPayload(List<int> payload) {
@@ -122,7 +126,7 @@ class PayloadCodec {
         : GlobalName.writer(agent, a.gIndex);
     return (
       name: globalName,
-      value: _wireToTerm(a.value, certify: true),
+      value: _wireToTerm(a.value, receipt: true),
       serial: a.serial,
     );
   }
@@ -217,12 +221,21 @@ class PayloadCodec {
   /// structure over its arguments mapped left to right; until 2026-10-02 it
   /// recursed once a structure argument and overflowed the Dart stack on a
   /// long list.
-  static Term wireToTerm(WireTerm w) => _wireToTerm(w, certify: false);
+  static Term wireToTerm(WireTerm w) => _wireToTerm(w, receipt: false);
 
-  /// [wireToTerm], each module constant's artefact certified where [certify]
-  /// ([deserializeGlobalSendPayload]).
-  static Term _wireToTerm(WireTerm w, {required bool certify}) {
-    if (w is! WStruct) return _leafToTerm(w, certify: certify);
+  /// [wireToTerm]; where [receipt], the decoding of a received message
+  /// ([deserializeValuePayload]), each module constant's artefact certified
+  /// and each global name's index checked.
+  ///
+  /// "An index is a non-negative integer, and the reader refuses a global
+  /// name whose index is anything else" (IGLP code-format-fragment.tex,
+  /// Terms, tag 2).  A tag-2 variable's index is a clen, so only a global name
+  /// that travelled as the 2-ary structure `_w(P, I)` or `_r(P, I)` can carry
+  /// another: the payload is then no message, and [GlobalNameRefusal] is
+  /// thrown, naming the name.  Until 2026-11-02 such a name was taken with its
+  /// index truncated, `_w(p, 2.0)` as `_w(p, 2)`.
+  static Term _wireToTerm(WireTerm w, {required bool receipt}) {
+    if (w is! WStruct) return _leafToTerm(w, certify: receipt);
     // Each frame: a structure, and its arguments mapped so far.
     final frames = <(WStruct, List<Term>)>[(w, <Term>[])];
     Term? mapped; // the structure just mapped, for its parent
@@ -235,6 +248,7 @@ class PayloadCodec {
       if (args.length == source.args.length) {
         frames.removeLast();
         final t = StructTerm(source.functor, args);
+        if (receipt) _checkGlobalNameIndex(t);
         if (frames.isEmpty) return t;
         mapped = t;
         continue;
@@ -243,9 +257,22 @@ class PayloadCodec {
       if (arg is WStruct) {
         frames.add((arg, <Term>[]));
       } else {
-        args.add(_leafToTerm(arg, certify: certify));
+        args.add(_leafToTerm(arg, certify: receipt));
       }
     }
+  }
+
+  /// Refuse [t] where it is a global name, the 2-ary structure `_w(P, I)` or
+  /// `_r(P, I)`, whose index I is not a non-negative integer.
+  static void _checkGlobalNameIndex(StructTerm t) {
+    if ((t.functor != '_w' && t.functor != '_r') || t.args.length != 2) return;
+    final index = t.args[1];
+    if (index is ConstTerm && index.value is int && (index.value as int) >= 0) {
+      return;
+    }
+    String shown(Term a) => a is ConstTerm ? '${a.value}' : '$a';
+    throw GlobalNameRefusal(
+        '${t.functor}(${shown(t.args[0])}, ${shown(index)})', shown(index));
   }
 
   /// [wireToTerm] of a constant or a variable; a module's artefact certified
@@ -339,4 +366,22 @@ class PayloadCodec {
 
   static Uint8List _asUint8(List<int> b) =>
       b is Uint8List ? b : Uint8List.fromList(b);
+}
+
+/// A received message is refused: a global name it carries has an index that
+/// is not a non-negative integer (IGLP code-format-fragment.tex, Terms, tag 2:
+/// "the reader refuses a global name whose index is anything else").
+class GlobalNameRefusal extends WireFormatException {
+  /// The global name, as `_w(p, 2.0)`.
+  final String name;
+
+  /// Its index, as `2.0`.
+  final String index;
+
+  GlobalNameRefusal(this.name, this.index)
+      : super('global name $name has index $index, '
+            'which is not a non-negative integer');
+
+  @override
+  String toString() => 'GlobalNameRefusal: $message';
 }
