@@ -1,0 +1,56 @@
+# Rendering a Grassroots Social Contract as Speech-Act Schemas --- a Guide
+
+An evolving guide, written by GSC #7 Cowork at Udi's request (2026-10-24), held in Coordination's directory at his word.  It defines nothing: speech-act schemas, bindings, the compilation and the three conditions are defined in the GSC paper, `/Grassroots/GSC/main.tex`, Sections 3 and 5 and Appendix "Values in Act Schemas", and where this guide and the paper differ, the paper is right and this guide is fixed.  It holds the method, the rules of practice and examples, good and bad, each bad one a fault found and corrected.  Add to it whenever a contract teaches something.
+
+## The one rule
+
+The schemas capture the contract: each act a clause describes is a schema, and each schema says what its clause says, no more and no less.  A schema is judged by whether it renders its clause, never by whether it allows the right acts: two schemas can allow the same acts and one of them still misrender the clause.
+
+## Method
+
+1. Read the clause and list the acts it describes.  A clause that describes no act --- an accountability, a personal acquaintance, a price kept --- gets no schema; its legal modality says what the realisation does with it (GSC, Section 8).
+2. For each act, name its roles from the clause's own names, Alice first, in the order the clause names them.
+3. Mark with ? every role whose person must will the act, from the clause's words: "may decide" one, "may jointly decide" and "by an act of both" each named, "by their own act" the one.  A role the clause does not make will the act carries no ?; an act no one wills, such as delivery or removal, carries none at all.
+4. For each role, write what the clause requires of that person (required atoms), forbids (forbidden atoms), and changes (atoms added and deleted).  Take each phrase of the clause and put it at the role of the person it is about.
+5. Read the schema back as English, role by role, and compare it with the clause phrase by phrase.  Every phrase of the clause must be in the schema, and every atom of the schema must come from a phrase of the clause or from a clause the contract extends.
+6. Run the checker (`programs/gsc`, task to Code) and read its verdict against the paper's three conditions.  A failing condition is a fault in the rendering or in the clause, never a reason to bend the schema.
+7. Write the pragmas: a line per tab, naming it and what it lists; then, for each clause, a line naming it, the person who proposes, a button for each act they propose, bearing the act's name, and any field they fill in angle brackets; an indented line for each other proposer, written the same way; and an indented line for each other person asked, their name, a colon, the question (GSC, Section 2; Udi, 2026-10-25).  As GKK's Acquaintance: `Acquaintance: Alice [Acquaint] <person>` and, indented, `Bob: Alice wishes that you know each other.`  A button is pressed in the row of a tab's entry, a person or a group, which takes a place of the act; the fields are what the proposer fills besides, so Introduction has one field, Carol, Bob being the row.  A question line belongs to the nearest button line above it: where a proposer's acts ask questions, each act takes a line, as GAI's `Alice [Agent meet]` then `Carol: ...`, then `Alice [Agent befriend]` then `Carol: ...`; buttons share a line only when no question follows (Udi, 2026-10-25).  A name in a pragma is the schema's role of that name: name the schema's roles as the clause does, Alice, Bob, Carol, in the term's head, `schema(post, ['Bob', 'Alice'], [svar(x), svar(n)], ...)` (Udi, 2026-10-25).  The contract opens, inside its box and before clause 1, with the declaration of its names, `Alice, Bob and Carol are persons.`, which the schemas and the pragmas take their names from; a contract whose names differ in kind says so there, as `Alice and Bob are adults, Carol and Dave children.` (Udi, 2026-10-25, on CSSN's proposal).  Two names are two persons; a clause that admits one person in both writes `Alice and Bob, possibly one person`, and the schema's head writes the second name as `one('Bob', 'Alice')`, admitted only where neither role adds or deletes an atom naming the other (Udi, 2026-10-25, on CSSN's proposal, for siblings under one parent).  A schema may require an atom of an environment predicate, which the platform keeps current and no schema adds or deletes, as GB's today (GSC, Appendix Values in Speech-Act Schemas).
+
+## Rules of practice
+
+- **Put each requirement at the person it is about.**  "their friend Bob" is about Alice's friends, so friend(Bob) at Alice.
+- **Add no requirement the clause does not state.**  A requirement that holds anyway, because another clause keeps it true, is still not the clause's.
+- **The extended contract's clauses come whole.**  Every role but establish's requires identity (GKK:1); a contract that extends GKK requires it without restating the clause.
+- **A clause whose acts differ in form becomes several schemas**, named by the act and a suffix, as swap_cc and swap_bc of one [Swap] button; the clause and its button stay one.
+- **Say what can be, never what is excluded** (claudese.md): a condition, a precondition or a forbidden atom states what must hold; a list of what is ruled out is never complete.
+- **No new construct for convenience.**  ? is the one guard and the one mode; a construct enters the language only when the paper says why (Udi, 2026-10-18).
+- **Representation lies beneath the schemas.**  How a holding is split into atoms is the realisation's, not a clause's act (Udi, 2026-10-24).
+- **A cleared atom deletes every copy of a form.**  An atom marked $-$ with the wildcard $*$ among its arguments, or for the speech act of a name term, is cleared: it deletes every atom of the state it matches and requires none (GSC, Definition Speech-act schema; Udi, 2026-10-30).  Use it where a clause ends every relation of a kind at once: GSN's unfriend clears listed(Bob, *) and member(<Bob>.*) at Alice, so a friendship ending ends every membership between the two.  In the term form the wildcard is any, and <N>.* is ext_any(N).  A cleared atom puts no edge in the role graph, being required nowhere, and counts as no change of state.
+- **One modality a clause.**  A clause takes one (GSC, Section 8), and a clause whose parts differ takes the weakest (Udi, 2026-10-23, reported by CSSN #10).
+
+## Good examples
+
+- **befriend**, GSG:1, "Alice and Bob, who know each other personally and are not friends, may jointly decide to become friends by an act of both": both roles guarded ("jointly decide", "by an act of both"); each requires knows of the other ("know each other") and forbids friend of the other ("are not friends"); each adds friend of the other.  "personally" describes no act and is attested.
+- **unfriend**, GSG:2, "Alice may end their friendship with Bob by their own act": Alice guarded; the friendship deleted at both, so a friendship never ends for one person only.
+- **introduce**, GKK:3: "If Alice and Bob know each other and Alice knows Carol" is knows(Bob) and knows(c) at Alice and knows(Alice) at Bob; "Bob knows Carol" is +knows(c) at Bob, Carol the agent variable c.
+- **close**, GSN:2, "Alice may close the group by leaving it": one act of the leader and every member the leader lists, by a listed role, so no member is left out.
+
+## Bad examples, found and fixed
+
+- **message**, GSN:1, "Alice may send a message to their friend Bob" (fixed 2026-10-24, on vGLP #20's finding).  The schema required friend(Alice) at Bob and nothing at Alice.  It allowed the right acts, friendships being held at both sides, but it said that Alice is Bob's friend where the clause says Bob is Alice's.  Fixed: friend(Bob) at Alice, nothing of friendship at Bob.  Lesson: the first rule and the first rule of practice.
+- **join**, GSN:3, "Alice, the leader of a group, may add their friend Bob to it": the schema also required friend(Alice) at Bob, which no clause says (fixed the same evening).  Lesson: add no requirement the clause does not state.
+- **dated coins**: GB's term wrote a coin with a date, cent(u, d).  A dated instrument is a bond; a coin has no date (Udi, 2026-10-24).  Lesson: the predicates carry the contract's own words for its things.
+- **"an unguarded schema signs nothing"** (2026-10-18): a schema does not sign; a person does.  Lesson: name the person in every sentence about a schema.
+
+## Pitfalls
+
+- Checking a schema by its runs.  The runs can be right and the rendering wrong; compare phrase by phrase (Method 5).
+- Copying a schema from a contract that extends or is extended: a copy keeps the fault of the original.  When a schema of GSN is fixed, CSSN's and GAI's copies follow, and the owner tells them.
+- Making a role guarding because the act is "important to" its person.  A role is guarding when the clause makes that person will the act.
+- An act that relates a person to themselves through two roles: a binding sends two roles to one agent only when neither names the other (GSC, Definition Binding).
+- Numbers in conditions: a value names no agent and has no base, so the conditions do not read it (GSC, Appendix Values); a multiplicity counts copies and is a positive whole number.
+- Whole against fractional coins and typed speech-act schemas are Currencies' to resolve (Udi, 2026-10-24); until then the examples take coins whole.
+
+## Owners
+
+The contract's owner writes its schemas, from its paper, and tasks Code to check and run them (claude.md, "Sessions").  This guide is for every owner; GSC answers questions on it, the speech-act-schema language being GSC's.
