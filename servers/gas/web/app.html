@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grassroots app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f5f7;--ink:#1d1d1f;--mute:#6e6e73;--faint:#a1a1a6;--line:#e5e5ea;--blue:#0a7aff;
+  --alice:#ff7a59;--bob:#30b0a0;--carol:#9b6dd8;--dave:#f2b233;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer}
+a{color:inherit;text-decoration:none}
+header{position:sticky;top:0;z-index:5;background:rgba(245,245,247,.85);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid rgba(0,0,0,.06)}
+.hin{max-width:1400px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.back{color:var(--blue);font-size:14px;white-space:nowrap}
+.ttl{display:flex;align-items:center;gap:10px}
+.ticon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.ttl b{font-size:16px;letter-spacing:-.01em;display:block;line-height:1.2}
+.ttl small{color:var(--mute);font-size:12px}
+.sp{flex:1}
+.status{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:500;padding:5px 12px;border-radius:999px;background:#e8f8ee;color:#1c7c3f}
+.status.busy{background:#fff4d9;color:#8a5a00}
+.status.bad{background:#fde8e6;color:#a32b1c}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.status.busy .dot{animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.hb{border:none;background:rgba(118,118,128,.12);color:var(--blue);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13px}
+.hb:hover{background:rgba(118,118,128,.2)}
+.day{font-size:13px;color:var(--mute);display:flex;align-items:center;gap:8px}
+#banner{max-width:1400px;margin:14px auto 0;padding:0 22px}
+#banner .in{background:#fff;border-radius:14px;padding:12px 16px;box-shadow:0 1px 2px rgba(0,0,0,.04);color:#3a3a3c;font-size:14px;display:flex;gap:10px;align-items:center}
+.spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:rot .8s linear infinite;flex:none}
+@keyframes rot{to{transform:rotate(360deg)}}
+main{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;padding:20px 22px;align-items:start}
+.phone{background:#111;border-radius:42px;padding:10px;box-shadow:0 0 0 1.5px #3a3a3c,0 18px 40px rgba(0,0,0,.18)}
+.scr{background:#f2f2f7;border-radius:33px;overflow:hidden;min-height:560px;display:flex;flex-direction:column;position:relative}
+.sbar{height:34px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-weight:600;font-size:12.5px}
+.isl{width:88px;height:24px;background:#111;border-radius:14px;position:absolute;left:50%;top:7px;transform:translateX(-50%)}
+.nav{padding:4px 16px 10px;display:flex;align-items:center;gap:10px}
+.av{width:38px;height:38px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:none}
+.nav .nm{font-weight:700;font-size:20px;letter-spacing:-.02em;text-transform:capitalize;line-height:1.1}
+.nav .st{font-size:12px;color:var(--mute)}
+.now{padding:0 12px}
+.ask{background:#fff;border-radius:14px;padding:12px 12px 10px;margin:4px 0 8px;font-size:13.5px;box-shadow:0 2px 10px rgba(0,0,0,.08);border-left:3px solid var(--blue)}
+.ask .btns{display:flex;gap:8px;margin-top:9px}
+.ask button{flex:1;border:none;border-radius:10px;padding:7px 0;font-weight:600}
+.yes{background:var(--blue);color:#fff}.no{background:rgba(118,118,128,.14);color:#d70015}
+.pend{display:flex;gap:8px;align-items:center;background:#fff;border-radius:12px;padding:8px 10px;margin:4px 0 8px;font-size:12.5px;color:#3a3a3c}
+.pend .spin{width:13px;height:13px}
+.note{background:#fde8e6;color:#8c1d10;border-radius:12px;padding:8px 10px;margin:4px 0 8px;font-size:12.5px}
+.seg{margin:2px 12px 0;background:rgba(118,118,128,.12);border-radius:9px;padding:2px;display:flex;flex-wrap:wrap;gap:2px}
+.seg button{flex:1;border:none;background:none;border-radius:7px;padding:5px 6px;font-size:12px;font-weight:500;color:#3a3a3c;white-space:nowrap}
+.seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+.list{margin:10px 12px 0;background:#fff;border-radius:12px;list-style:none;padding:0;overflow:hidden}
+.list li{padding:9px 12px;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;align-items:center;gap:8px}
+.list li:last-child{border-bottom:none}
+.list .mini{width:22px;height:22px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.empty{margin:10px 12px 0;color:var(--faint);font-size:13px;text-align:center;padding:14px;background:#fff;border-radius:12px}
+.acts{margin-top:auto;padding:12px}
+.acts .lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:0 4px 6px}
+.ab{border:none;background:#fff;color:var(--blue);border-radius:999px;padding:6px 13px;margin:0 6px 7px 0;font-size:13px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.ab:hover{background:#eaf3ff}
+.ab:disabled{color:var(--faint);background:rgba(255,255,255,.6);box-shadow:none;cursor:default}
+.form{background:#fff;border-radius:14px;padding:12px;margin-top:4px;box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.form b{font-size:14px}
+.form label{display:block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:9px 0 3px}
+.form select,.form input{width:100%;font:inherit;font-size:14px;padding:7px 9px;border:none;border-radius:9px;background:rgba(118,118,128,.12);outline:none}
+.form input:focus,.form select:focus{box-shadow:0 0 0 3px rgba(10,122,255,.25)}
+.form .go{margin-top:11px;width:100%;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:8px;font-weight:600}
+details.raw{padding:0 14px 12px}
+details.raw summary{cursor:pointer;font-size:11.5px;color:var(--faint)}
+details.raw pre{font:11px var(--mono);white-space:pre-wrap;color:var(--mute);margin:6px 0 0}
+#who{display:none;gap:6px;padding:12px 22px 0;overflow-x:auto}
+#who button{border:none;background:#fff;border-radius:999px;padding:6px 14px;text-transform:capitalize;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+#who button.on{background:var(--ink);color:#fff}
+#net{max-width:1400px;margin:0 auto;padding:0 22px 40px}
+#net summary{cursor:pointer;color:var(--blue);font-size:13.5px}
+#netlog{font:11.5px var(--mono);white-space:pre-wrap;background:#1d1d1f;color:#e5e5ea;border-radius:12px;padding:12px;max-height:260px;overflow:auto;margin-top:8px}
+.nope{max-width:520px;margin:12vh auto;text-align:center;padding:0 20px}
+.nope h1{font-size:26px;letter-spacing:-.02em}
+.nope p{color:var(--mute)}
+@media (max-width:1150px){main{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){main{grid-template-columns:1fr}#who{display:flex}.phone{display:none}.phone.sel{display:block}}
+</style>
+</head>
+<body>
+<header><div class="hin">
+  <a class="back" id="back" href="./">‹ Contracts</a>
+  <div class="ttl"><div class="ticon" id="ticon"></div><div><b id="title">…</b><small>Live · four people, each with their own agent</small></div></div>
+  <a class="back" id="about" href="./">About this contract</a>
+  <span class="sp"></span>
+  <span class="day" id="day"></span>
+  <span class="status busy" id="status"><span class="dot"></span><span id="stxt">connecting…</span></span>
+  <button class="hb" id="reset">Start over</button>
+</div></header>
+<div id="banner"></div>
+<div id="who"></div>
+<main id="phones"></main>
+<section id="net"><details><summary>What passed between the agents on the network</summary><div id="netlog"></div></details></section>
+<script src="data.js"></script>
+<script>
+const C = (new URLSearchParams(location.search).get('c') || '').toLowerCase();
+const PERSONS = ['alice','bob','carol','dave'];
+const FAM = {identity: ['#5b8def', '#3a64c4'], social: ['#34c3ae', '#169482'], care: ['#a98be3', '#7552c4'], money: ['#f6c25a', '#e0911c'], mobility: ['#f79a78', '#dc5d3c'], governance: ['#7b8cff', '#4a54d6'], sharing: ['#f78fb3', '#d6407c']};
+const META = (window.DATA ? window.DATA.contracts : []).find(c => c.id.toLowerCase() === C);
+let SPEC = null, ST = null, VER = -1, SEL = 'alice';
+const ui = {}; PERSONS.forEach(p => ui[p] = {tab: null, form: null});
+const used = {};
+const $ = s => document.querySelector(s);
+const S = (f, ...a) => ({f, a});
+const isS = (t, f) => t && typeof t === 'object' && !Array.isArray(t) && t.f === f;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
+const mini = p => `<span class="mini" style="background:var(--${p})">${p[0].toUpperCase()}</span>`;
+function show(t){
+  if (Array.isArray(t)) return t.map(show).join(', ');
+  if (t && typeof t === 'object' && 'f' in t){
+    if (t.f === 'speech' && isS(t.a[0], 'utterance')) return '“' + t.a[0].a[0] + '”';
+    if (t.f === 'speech') return show(t.a[0]) + ' via ' + cap(t.a[1]);
+    if (t.f === 'dot' && isS(t.a[0], 'community')) return show(t.a[1]) + ' (' + cap(t.a[0].a[0]) + "'s)";
+    if (t.f === 'community') return cap(t.a[0]) + "'s";
+    if (t.f === 'sgn') return show(t.a[0]) + ' ✍ ' + cap(t.a[1]);
+    return t.f.replace(/_/g, ' ') + '(' + t.a.map(show).join(', ') + ')';
+  }
+  return PERSONS.includes(t) ? cap(t) : String(t);
+}
+const BASE = location.pathname.replace(/\/[^/]*$/, '');  // '' at the site root, '/glp' under a sub-path
+const api = p => `${BASE}/api/${C}/${p}`;
+
+function screen(p){
+  const cs = (ST && ST.persons[p]) || {};
+  let view = null, notes = [], menu = null, asks = [];
+  for (const [id, v] of Object.entries(cs)){
+    if (isS(v, 'output')){ for (const x of v.a[0]){ if (isS(x, 'view')){ view = x; notes = []; } else if (x && x.f) notes.push(x); } }
+    else if (isS(v, 'menu_w')){ const m = v.a[0]; if (!used[p+':'+id]) menu = {id: +id, path: m.a[2].a[0]}; }
+    else if (isS(v, 'approval_w')){ const ap = v.a[0]; if (!used[p+':'+id]) asks.push({id: +id, path: ap.a[ap.a.length-1].a[0], at: ap.a[0], words: ap.a[1]}); }
+  }
+  const atoms = view ? view.a[0] : [], pending = view ? view.a[2] : [], tabs = view ? view.a[3] : [];
+  return {view, notes, menu, asks, atoms, pending, tabs, identity: atoms.includes('identity')};
+}
+function words(ws){
+  if (!Array.isArray(ws)) return '';
+  return ws.map(w => isS(w,'text') ? esc(w.a[0]) : isS(w,'person') ? '<b>'+esc(cap(w.a[0]))+'</b>'
+    : isS(w,'named') ? ' · '+esc(w.a[0])+': <b>'+esc(show(w.a[1]))+'</b>' : isS(w,'valued') ? ' · '+esc(w.a[0])+': '+esc(w.a[1]) : esc(show(w))).join('');
+}
+async function act(p, id, path, value){
+  used[p+':'+id] = true; if (ST) ST.status = 'working'; render();
+  await fetch(api('act'), {method:'POST', body: JSON.stringify({person: p, id, path, value})});
+}
+
+/* variants of one button (swap_cc, swap_cb, barter_ic, …): fields named by kind and side */
+const KIND = {c: 'coin', b: 'bond', i: 'item'};
+const suffix = prop => { const m = prop.name.match(/_([cbi]{1,2})$/); return m ? m[1] : null; };
+function variantLabel(prop, i){
+  const sx = suffix(prop); if (!sx || !SPEC.proposals.some(y => y !== prop && y.label === prop.label)) return null;
+  const peers = prop.args.map((t, k) => t === 'Peer' && k + 1 > 2 ? k + 1 : null).filter(Boolean);
+  if (!peers.length) return null;
+  const sides = sx.length === 2 ? [[peers[0], 'given', sx[0]], [peers[1] || 99, 'wanted', sx[1]]] : [[peers[0], '', sx[0]]];
+  const side = [...sides].reverse().find(sd => i >= sd[0]); if (!side) return null;
+  const kind = KIND[side[2]], off = i - side[0];
+  const w = off === 0 ? (kind === 'item' ? 'maker' : 'issuer') : kind === 'item' ? 'item' : kind === 'bond' ? (off === 1 ? 'maturity' : 'amount') : 'amount';
+  return (w + ' ' + side[1]).trim();
+}
+const variantName = prop => { const sx = suffix(prop); return sx ? (sx.length === 2 ? `${KIND[sx[0]]} for ${KIND[sx[1]]}` : KIND[sx[0]]) : prop.name.replace(/_/g, ' '); };
+
+/* the acts a person can propose, from the platform's menu declaration */
+const fn = a => typeof a === 'string' ? a : a.f;
+const argsOf = a => typeof a === 'string' ? [] : a.a;
+function enabled(prop, s){
+  const a = prop.act; if (!a) return true;
+  for (const [f, args] of a.req) if (!args.length && !s.atoms.includes(f)) return false;
+  for (const [f, args] of a.forb) if (!args.length && s.atoms.includes(f)) return false;
+  return true;
+}
+function optionsFor(prop, i, s, p){
+  const a = prop.act || {persons:[], groups:[], items:[], picks:[]};
+  const type = prop.args[i-1];
+  const src = [...a.items, ...a.picks].find(x => x[0] === i);
+  if (src){
+    const out = [];
+    s.atoms.filter(t => fn(t) === src[1]).forEach(t => {
+      const v = argsOf(t).find(x => type === 'Peer' ? typeof x === 'string' : (typeof x === 'object' && !Array.isArray(x)));
+      if (v !== undefined && !out.some(o => JSON.stringify(o) === JSON.stringify(v))) out.push(v);
+    });
+    return out;
+  }
+  if (type === 'Peer') return PERSONS.filter(q => q !== p);
+  return null;
+}
+// the contract's field names, in order, belong to the places a person types or picks freely:
+// not the proposer, not a person the act names, not a group's places
+function fieldLabels(prop){
+  const a = prop.act || {me: 1, groups: [], persons: []};
+  const free = prop.args.map((t, k) => k + 1).filter(i => i !== (a.me || 1) && !(a.persons || []).includes(i) && !(a.groups || []).some(g => g[0] === i || g[1] === i));
+  const names = Object.keys(prop.fields).map(Number).sort((x, y) => x - y).map(k => prop.fields[k]);
+  if (names.length !== free.length) return prop.fields;
+  const out = {}; free.forEach((i, j) => out[i] = names[j]); return out;
+}
+function formFields(prop, s, p){
+  const a = prop.act || {me: 1, groups: []};
+  const out = [];
+  prop = {...prop, fields: fieldLabels(prop)};
+  const me = a.me || 1;
+  // a group the act names: its leader at place g[0] and its name at g[1], filled together from a group the person is in
+  for (const g of (a.groups || [])){
+    const gp = ((a.req || []).find(([f, args]) => (args || []).some(x => isS(x, 'grp') && x.a[0] === g[0] && x.a[1] === g[1])) || ['member'])[0];
+    let opts = s.atoms.filter(t => fn(t) === gp).map(t => t.a[0]).filter(cn => isS(cn, 'dot') && isS(cn.a[0], 'community'));
+    if (g[0] === me) opts = opts.filter(cn => cn.a[0].a[0] === p);
+    out.push({i: g[1], g, kind: 'group', label: g[0] === me ? 'your group' : 'group', opts});
+  }
+  // two neighbouring places filled from one row of the same list (an item's maker and the item): one field
+  const srcOf = i => [...(a.items || []), ...(a.picks || [])].find(x => x[0] === i);
+  const inGroup = j => (a.groups || []).some(x => x[0] === j || x[1] === j);
+  const paired = new Set();
+  prop.args.forEach((type, k) => {
+    const i = k + 1, s1 = srcOf(i), s2 = srcOf(i + 1);
+    if (i === me || i + 1 === me || inGroup(i) || inGroup(i + 1) || !s1 || !s2 || s1[1] !== s2[1] || paired.has(i)) return;
+    const rows = s.atoms.filter(t => fn(t) === s1[1] && argsOf(t).length >= 2).map(t => t.a);
+    const opts = rows.filter((r, j) => rows.findIndex(q => JSON.stringify(q) === JSON.stringify(r)) === j);
+    // the row's other values fill the act's other places of their kind that nothing else fills
+    const kindOf = v => typeof v === 'number' ? 'Integer' : typeof v === 'string' ? 'Peer' : 'Speech';
+    const extra = [];
+    if (opts.length) opts[0].slice(2).forEach((v, j) => {
+      const q = prop.args.findIndex((t, k) => k + 1 !== me && k + 1 !== i && k + 1 !== i + 1 && !srcOf(k + 1) && !inGroup(k + 1) && !paired.has(k + 1) && !extra.some(e => e[1] === k + 1) && t === kindOf(v));
+      if (q >= 0) extra.push([j + 2, q + 1]);
+    });
+    extra.forEach(e => paired.add(e[1]));
+    const label = (variantLabel(prop, i + 1) || prop.fields[i + 1] || prop.fields[i] || s1[1].replace(/^wall_|^sent_/, '').replace(/_/g, ' ')).replace(/^(amount|item) /, 'item ');
+    out.push({i, pair: true, kind: 'pick', label, extra, opts: opts.map(r => ({pair: r}))});
+    paired.add(i); paired.add(i + 1);
+  });
+  prop.args.forEach((type, k) => {
+    const i = k + 1;
+    if (paired.has(i) || i === me || (a.groups || []).some(x => x[0] === i || x[1] === i)) return;
+    let label = variantLabel(prop, i) || prop.fields[i] || (type === 'Peer' ? 'person' : type === 'Integer' ? 'number' : type === 'Speech' ? 'text' : type);
+    if (type === 'Peer' && (a.persons || []).includes(i) && !/maker|issuer|delegate|guest|host|person/.test(label)) label = 'person';
+    let opts = optionsFor(prop, i, s, p);
+    // a maker or an issuer may well be the person themselves
+    if (opts && type === 'Peer' && !srcOf(i) && /maker|issuer|post/.test(label)) opts = [p, ...opts.filter(q => q !== p)];
+    const prevPeer = out.find(o => o.i === i - 1 && /maker|issuer|post/.test(o.label));
+    if (!opts && type === 'Speech' && prevPeer && /^(text|post)$/.test(label)) { out.push({i, kind: 'text', label: 'item'}); return; }
+    if (opts) out.push({i, kind: 'pick', label, opts});
+    else if (type === 'Integer') out.push({i, kind: 'num', label});
+    else out.push({i, kind: 'text', label});
+  });
+  return out;
+}
+function build(prop, p, vals){
+  const a = prop.act || {me: 1, groups: []};
+  const args = prop.args.map(() => null);
+  args[(a.me || 1) - 1] = p;
+  for (const f of vals){
+    if (f.kind === 'group'){ const cn = f.v; args[f.g[0]-1] = cn.a[0].a[0]; args[f.g[1]-1] = cn.a[1]; }
+    else if (f.pair){
+      // the row's two values go to the two places by kind: a person to a person's place
+      let [a0, a1] = f.v.pair;
+      const isP = v => typeof v === 'string';
+      if ((prop.args[f.i-1] === 'Peer') !== isP(a0)) [a0, a1] = [a1, a0];
+      args[f.i-1] = a0; args[f.i] = a1;
+      for (const [j, q] of (f.extra || [])) args[q-1] = f.v.pair[j];
+    }
+    else if (f.kind === 'num') args[f.i-1] = parseInt(f.v, 10);
+    else if (f.kind === 'text'){
+      // an item is named by its maker: a text right after a person field is spoken by that person;
+      // a text the person already holds is used as it is held
+      const prev = vals.find(g => g.i === f.i - 1 && typeof g.v === 'string' && PERSONS.includes(g.v));
+      const who = prev && (/maker|post|issuer/.test(prev.label) || /place|thing|item/.test(f.label)) ? prev.v : null;
+      const known = (KNOWN[p] || []).filter(k => k.a[0].a && k.a[0].a[0] === f.v);
+      args[f.i-1] = known.find(k => !who || k.a[1] === who) || S('speech', S('utterance', f.v), who || p);
+    }
+    else args[f.i-1] = f.v;
+  }
+  if (args.some(x => x === null || (typeof x === 'number' && isNaN(x)) || x === '')) return null;
+  return S('propose', S(prop.name, ...args));
+}
+
+/* ---- drawing ---- */
+const pairText = ([a, b, ...rest]) => (PERSONS.includes(a) ? `${show(b)} · ${cap(a)}` : PERSONS.includes(b) ? `${show(a)} · ${cap(b)}` : `${show(a)} · ${show(b)}`) + rest.map(r => ' · ' + show(r)).join('');
+const KNOWN = {};
+function speeches(t, out = []){
+  if (Array.isArray(t)) t.forEach(x => speeches(x, out));
+  else if (t && typeof t === 'object' && t.f){
+    if (t.f === 'speech' && isS(t.a[0], 'utterance')){ if (!out.some(o => JSON.stringify(o) === JSON.stringify(t))) out.push(t); }
+    else t.a.forEach(x => speeches(x, out));
+  }
+  return out;
+}
+const mmss = n => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+let startedAt = null;
+function header(){
+  if (!ST) return;
+  const st = $('#status'), working = ST.status === 'working', ready = ST.status === 'ready', failed = ST.status.startsWith('failed');
+  st.className = 'status' + (ready ? '' : failed ? ' bad' : ' busy');
+  $('#stxt').textContent = ready ? 'Ready' : working ? 'Agents working…' : failed ? 'Failed to start' : 'Starting…';
+  $('#day').innerHTML = ST.day !== undefined ? `Day ${ST.day} <button class="hb" id="nextday">Next day ›</button>` : '';
+  if ($('#nextday')) $('#nextday').onclick = () => fetch(api('day'), {method: 'POST'});
+  if (ST.status === 'starting'){
+    if (startedAt === null) startedAt = Date.now() - (ST.since || 0) * 1000;
+    const secs = Math.round((Date.now() - startedAt) / 1000);
+    $('#banner').innerHTML = `<div class="in"><span class="spin"></span><span>Starting the four agents: the server loads the compiled platform. On the free server this takes a minute or two. <b>${mmss(secs)}</b></span></div>`;
+  } else if (failed){
+    $('#banner').innerHTML = `<div class="in">Could not start: ${esc(ST.status.slice(8))}</div>`;
+  } else if (ready && !PERSONS.some(p => screen(p).identity)){
+    $('#banner').innerHTML = `<div class="in">👋 Everyone starts with no identity. Tap <b>Establish</b> on a phone, then meet each other. Each tap is a real act of the compiled platform, so give it a moment.</div>`;
+  } else $('#banner').innerHTML = '';
+}
+setInterval(() => { if (ST && ST.status === 'starting') header(); }, 1000);
+function render(){
+  if (!ST || !SPEC) return;
+  header();
+  const focus = document.activeElement && document.activeElement.id;
+  $('#phones').innerHTML = '';
+  PERSONS.forEach(p => $('#phones').appendChild(phone(p)));
+  $('#who').innerHTML = PERSONS.map(p => `<button class="${p===SEL?'on':''}" data-who="${p}">${p}</button>`).join('');
+  $('#who').querySelectorAll('button').forEach(b => b.onclick = () => { SEL = b.dataset.who; render(); });
+  $('#netlog').textContent = (ST.net || []).map(show).join('\n') || '—';
+  if (focus && document.getElementById(focus)) document.getElementById(focus).focus();
+}
+function phone(p){
+  const s = screen(p), d = document.createElement('div');
+  d.className = 'phone' + (p === SEL ? ' sel' : '');
+  const tabs = s.tabs.map(t => ({label: t.a[0], pred: t.a[1], counted: t.a.length > 2}));
+  if (!ui[p].tab || !tabs.some(t => t.label === ui[p].tab)) ui[p].tab = tabs[0] && tabs[0].label;
+  const tab = tabs.find(t => t.label === ui[p].tab);
+  let h = `<div class="scr"><div class="isl"></div><div class="sbar"><span>9:41</span><span>● ● ●</span></div>
+    <div class="nav"><div class="av" style="background:var(--${p})">${p[0].toUpperCase()}</div>
+    <div><div class="nm">${p}</div><div class="st">${s.view ? (s.identity ? '🔑 identity established' : 'no identity yet') : 'starting…'}</div></div></div>`;
+  h += '<div class="now">';
+  for (const a of s.asks) h += `<div class="ask">${words(a.words) || esc(show(a.at))}<div class="btns">
+      <button class="no" data-ans="no" data-id="${a.id}" data-path='${JSON.stringify(a.path)}'>Decline</button>
+      <button class="yes" data-ans="yes" data-id="${a.id}" data-path='${JSON.stringify(a.path)}'>Accept</button></div></div>`;
+  for (const c of s.pending) h += `<div class="pend"><span class="spin"></span>${esc(show(c))}</div>`;
+  for (const n of s.notes) h += `<div class="note">${isS(n,'refused') ? `Not done: ${esc(show(n.a[0]))} (${esc(show(n.a[2]))})` : esc(show(n))}</div>`;
+  h += '</div>';
+  if (tabs.length){
+    h += `<div class="seg">${tabs.map(t => `<button data-tab="${esc(t.label)}" class="${t.label === ui[p].tab ? 'on' : ''}">${esc(t.label)}</button>`).join('')}</div>`;
+    let rows = s.atoms.filter(a => fn(a) === tab.pred).map(a => {
+      const args = argsOf(a); const who = args.find(x => PERSONS.includes(x));
+      return {txt: args.map(show).join(' · ') || tab.pred, who};
+    });
+    if (tab.counted){ const m = {}; rows.forEach(r => { const k = r.txt; m[k] = m[k] || {...r, n: 0}; m[k].n++; }); rows = Object.values(m).map(r => ({...r, txt: `${r.n} × ${r.txt}`})); }
+    const uniq = []; rows.forEach(r => { if (!uniq.some(u => u.txt === r.txt)) uniq.push(r); });
+    h += uniq.length ? `<ul class="list">${uniq.map(r => `<li>${r.who ? mini(r.who) : ''}${esc(r.txt)}</li>`).join('')}</ul>` : `<div class="empty">Nothing here yet</div>`;
+  }
+  const props = SPEC.proposals.filter(x => !x.act || x.act.tab === ui[p].tab || (!s.identity && x.name === 'establish'));
+  const seen = new Set();
+  h += `<div class="acts"><div class="lbl">${s.menu ? 'Actions' : 'Your agent is busy…'}</div>`;
+  for (const x of props){
+    if (seen.has(x.label)) continue; seen.add(x.label);
+    const any = SPEC.proposals.filter(y => y.label === x.label).some(y => enabled(y, s));
+    h += `<button class="ab" data-prop="${x.name}" ${s.menu && any ? '' : 'disabled'}>${esc(x.label)}</button>`;
+  }
+  const f = ui[p].form && SPEC.proposals.find(x => x.name === ui[p].form);
+  if (f && s.menu){
+    const fields = formFields(f, s, p);
+    const vars = SPEC.proposals.filter(y => y.label === f.label);
+    h += `<div class="form"><b>${esc(f.label)}</b>` + (vars.length > 1 ? `<label>Kind</label><select data-variant="1">${vars.map(v => `<option value="${v.name}" ${v.name === f.name ? 'selected' : ''}>${esc(variantName(v))}</option>`).join('')}</select>` : '') + fields.map(fl => {
+      const id = `${p}-${f.name}-${fl.i}`;
+      if (fl.kind === 'group' || fl.kind === 'pick') return `<label>${esc(fl.label)}</label><select id="${id}">${fl.opts.map((o, j) => `<option value="${j}">${esc(o && o.pair ? pairText(o.pair) : show(o))}</option>`).join('') || '<option value="">None yet</option>'}</select>`;
+      return `<label>${esc(fl.label)}</label><input id="${id}" ${fl.kind === 'num' ? 'type="number" value="1"' : `placeholder="Type…" list="dl-${p}"`}>`;
+    }).join('') + `<button class="go" data-go="${f.name}">Propose</button></div>`;
+  }
+  KNOWN[p] = speeches(s.atoms);
+  h += `<datalist id="dl-${p}">${[...new Set(KNOWN[p].map(k => k.a[0].a[0]))].map(t => `<option value="${esc(t)}">`).join('')}</datalist>`;
+  h += `</div><details class="raw"><summary>Machine state</summary><pre>${esc(s.atoms.map(show).join('\n') || '—')}</pre></details></div>`;
+  d.innerHTML = h;
+  d.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { ui[p].tab = b.dataset.tab; ui[p].form = null; render(); });
+  d.querySelectorAll('[data-ans]').forEach(b => b.onclick = () => act(p, +b.dataset.id, JSON.parse(b.dataset.path), b.dataset.ans));
+  d.querySelectorAll('[data-prop]').forEach(b => b.onclick = () => {
+    let x = SPEC.proposals.find(y => y.name === b.dataset.prop);
+    x = SPEC.proposals.filter(y => y.label === x.label).find(y => enabled(y, s)) || x;
+    if (!formFields(x, s, p).length && SPEC.proposals.filter(y => y.label === x.label).length === 1){
+      const v = build(x, p, []); if (v && s.menu){ ui[p].form = null; act(p, s.menu.id, s.menu.path, v); } return;
+    }
+    const open = ui[p].form && SPEC.proposals.find(y => y.name === ui[p].form);
+    ui[p].form = open && open.label === x.label ? null : x.name; render();
+  });
+  d.querySelectorAll('[data-variant]').forEach(e => e.onchange = () => { ui[p].form = e.value; render(); });
+  d.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+    const x = SPEC.proposals.find(y => y.name === b.dataset.go);
+    const vals = formFields(x, s, p).map(fl => {
+      const e = document.getElementById(`${p}-${x.name}-${fl.i}`);
+      return {...fl, v: (fl.kind === 'group' || fl.kind === 'pick') ? (e.value === '' ? null : fl.opts[+e.value]) : e.value.trim()};
+    });
+    if (vals.some(v => v.v === null || v.v === '')) return;
+    const v = build(x, p, vals); if (!v) return;
+    ui[p].form = null; act(p, s.menu.id, s.menu.path, v);
+  });
+  return d;
+}
+async function poll(){
+  for (;;){
+    try {
+      const r = await fetch(api('state') + '?since=' + VER);
+      if (!r.ok) throw new Error(r.status);
+      const st = await r.json();
+      if (st.version !== VER || st.status !== (ST && ST.status)){ ST = st; VER = st.version; render(); }
+    } catch (e){
+      $('#status').className = 'status busy'; $('#stxt').textContent = 'Waking the server…';
+      $('#banner').innerHTML = `<div class="in"><span class="spin"></span><span>The free server sleeps when nobody uses it; waking it takes about a minute.</span></div>`;
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+}
+$('#reset').onclick = async () => { $('#stxt').textContent = 'Starting over…'; startedAt = null; await fetch(api('reset'), {method: 'POST'}); VER = -1; for (const k in used) delete used[k]; };
+
+if (META){
+  document.title = `${META.title} · live`;
+  $('#title').textContent = META.title;
+  $('#ticon').textContent = META.icon;
+  $('#ticon').style.background = `linear-gradient(160deg, ${FAM[META.family][0]}, ${FAM[META.family][1]})`;
+  $('#about').href = './#' + META.id;
+}
+fetch(`specs/${C}.json`).then(r => { if (!r.ok) throw 0; return r.json(); }).then(s => {
+  SPEC = s; if (!META) $('#title').textContent = `${s.id}: ${s.title}`; poll();
+}).catch(() => {
+  document.querySelector('header .sp').nextElementSibling.remove();
+  $('#status').remove(); $('#reset').remove(); $('#net').remove(); document.querySelector('.ttl small').remove();
+  $('#phones').outerHTML = `<div class="nope"><h1>${META ? esc(META.title) + ' has no app yet' : 'No such app'}</h1>
+    <p>${META ? 'This contract has not been compiled yet, so there is nothing to run. Its text is on the contract page.' : 'There is no live app by that name.'}</p>
+    <p><a style="color:var(--blue)" href="./${META ? '#' + META.id : ''}">‹ Back to the contracts</a></p></div>`;
+});
+</script>
+</body>
+</html>

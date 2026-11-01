@@ -1,0 +1,97 @@
+{
+ "GKK": [
+  "🔑",
+  "identity",
+  "Who you are and who you know: a key of your own, meeting people, introducing them."
+ ],
+ "GSG": [
+  "🤝",
+  "social",
+  "Friends: become friends by agreeing, and end a friendship."
+ ],
+ "GSN": [
+  "💬",
+  "social",
+  "Messages and groups among friends."
+ ],
+ "GnW": [
+  "🛡️",
+  "care",
+  "Wards: agents a person creates and looks after, who act only through their guardians."
+ ],
+ "GAI": [
+  "🤖",
+  "care",
+  "AI agents with an accountable developer and an accountable owner."
+ ],
+ "GSNP": [
+  "✍️",
+  "social",
+  "Forwarding with provenance: every forward adds a signature you can see."
+ ],
+ "CSSN": [
+  "🧒",
+  "care",
+  "A social network safe for children: parents, kids-only groups, coming of age."
+ ],
+ "GC": [
+  "🪙",
+  "money",
+  "Personal currencies: everyone can issue their own coins."
+ ],
+ "GB": [
+  "📜",
+  "money",
+  "Bonds with maturity dates, and escrow, on top of coins."
+ ],
+ "GFF": [
+  "📰",
+  "social",
+  "Feeds and followers, delivered from friend to friend."
+ ],
+ "LBM": [
+  "🚗",
+  "mobility",
+  "Ride sharing: tell a friend where you are and agree on a ride."
+ ],
+ "AGORA": [
+  "🧺",
+  "money",
+  "Barter: make things, post them on a market wall, trade them."
+ ],
+ "FDAO": [
+  "🏦",
+  "governance",
+  "A DAO with a treasury: members chip in coins, and passed proposals get funded."
+ ],
+ "STAY": [
+  "🏡",
+  "sharing",
+  "Short stays, like Airbnb: list a place, book a night, cancel with a refund, review."
+ ],
+ "LIB": [
+  "📚",
+  "sharing",
+  "Lend and borrow things: a thing goes back to its owner's shelf, never further."
+ ],
+ "LDAO": [
+  "🌊",
+  "governance",
+  "A DAO with liquid democracy: give your vote to a delegate, take it back any time."
+ ],
+ "JOINT": [
+  "💳",
+  "money",
+  "A joint account: either partner pays in; money leaves only when both agree."
+ ],
+ "REC": [
+  "⭐",
+  "social",
+  "Recommendations: vouch for someone, let them show it around, take it back."
+ ],
+ "DAO": [
+  "🗳️",
+  "governance",
+  "A DAO: members make proposals, vote for or against, and the steward decides."
+ ]
+}

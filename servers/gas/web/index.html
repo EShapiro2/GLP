@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grassroots Contracts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f5f7; --card:#fff; --ink:#1d1d1f; --mute:#6e6e73; --faint:#a1a1a6; --line:#e5e5ea;
+  --blue:#0a7aff; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font:inherit}
+header{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.82);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid rgba(0,0,0,.06)}
+.hin{max-width:1120px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:16px}
+.logo{font-weight:700;font-size:16px;letter-spacing:-.01em;cursor:pointer;display:flex;align-items:center;gap:9px}
+.logo .mark{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 200deg,#4f7bd9,#2bb3a0,#9b7bd4,#f0b54a,#4f7bd9)}
+.search{margin-left:auto;position:relative}
+.search input{width:min(300px,46vw);padding:8px 12px 8px 32px;border:none;border-radius:10px;background:rgba(118,118,128,.12);font:inherit;font-size:14px;outline:none}
+.search input:focus{background:#fff;box-shadow:0 0 0 3px rgba(10,122,255,.25)}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.5}
+main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
+/* home */
+.hero h1{font-size:clamp(30px,4.4vw,44px);letter-spacing:-.025em;line-height:1.08;margin:8px 0 10px;font-weight:800}
+.hero p{color:var(--mute);font-size:17px;max-width:640px;margin:0 0 26px}
+.sh{display:flex;align-items:baseline;justify-content:space-between;margin:34px 0 12px}
+.sh h2{font-size:22px;letter-spacing:-.015em;margin:0;font-weight:700}
+.sh span{color:var(--mute);font-size:14px}
+.card{background:var(--card);border-radius:20px;box-shadow:var(--shadow)}
+#mapcard{position:relative;overflow:hidden;padding:6px}
+#graph{display:block;width:100%;height:auto}
+.node{cursor:pointer}
+.node rect.bg{filter:drop-shadow(0 3px 6px rgba(0,0,0,.12));transition:transform .15s}
+.node:hover rect.bg{filter:drop-shadow(0 6px 12px rgba(0,0,0,.18)) brightness(1.05)}
+.node text{font:600 14px Inter,sans-serif;fill:#fff}
+.node .ic{font-size:15px}
+.node.dim{opacity:.15}
+.node.hit rect.bg{stroke:#1d1d1f;stroke-width:2.5}
+.edge{stroke:#c7c7cc;stroke-width:1.5;fill:none}
+.edge.dim{opacity:.1}
+#tip{position:absolute;pointer-events:none;background:rgba(29,29,31,.92);color:#fff;border-radius:12px;padding:9px 12px;font-size:13px;max-width:260px;opacity:0;transition:opacity .12s;z-index:3;backdrop-filter:blur(8px)}
+#tip b{display:block;font-size:14px;margin-bottom:2px}
+.grp{margin-top:12px}
+.tog{display:flex;align-items:center;gap:14px;width:100%;border:none;text-align:left;cursor:pointer;padding:14px 18px;background:var(--card);border-radius:20px;box-shadow:var(--shadow);transition:box-shadow .15s}
+.tog:hover{box-shadow:0 1px 2px rgba(0,0,0,.05),0 10px 26px rgba(0,0,0,.08)}
+.tog h2{font-size:19px;letter-spacing:-.01em;margin:0;font-weight:700;flex:none}
+.tog .minis{display:flex;gap:6px;flex:1;min-width:0;overflow:hidden;justify-content:flex-end}
+.tog .mini{flex:none;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.tog .cnt{color:var(--mute);font-size:14px;flex:none}
+.tog .chev{flex:none;color:var(--faint);font-size:20px;line-height:1;transition:transform .2s}
+.grp.open .tog{border-radius:20px 20px 0 0;box-shadow:none;border-bottom:1px solid var(--line)}
+.grp.open .tog .chev{transform:rotate(90deg)}
+.grp.open .tog .minis{visibility:hidden}
+.grp .shelf{display:none;border-radius:0 0 20px 20px}
+.grp.open .shelf{display:grid}
+.grp.open{border-radius:20px;box-shadow:var(--shadow)}
+.grp.open .tog,.grp.open .shelf{box-shadow:none}
+.hoodbar{display:flex;align-items:center;gap:12px;width:100%;border:none;text-align:left;cursor:pointer;margin-top:16px;padding:16px 20px;background:var(--card);border-radius:20px;box-shadow:var(--shadow)}
+.hoodbar:hover{box-shadow:0 1px 2px rgba(0,0,0,.05),0 10px 26px rgba(0,0,0,.08)}
+.hoodbar .hi{flex:none;width:38px;height:38px;border-radius:11px;background:#1d1d1f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px}
+.hoodbar b{display:block;font-size:16px}
+.hoodbar small{color:var(--mute);font-size:13.5px}
+.hoodbar .chev{margin-left:auto;color:var(--faint);font-size:20px;transition:transform .2s}
+.hoodbar.on .chev{transform:rotate(90deg)}
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:0 28px;padding:6px 20px}
+.app{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.app:last-child,.app.lastrow{border-bottom:none}
+.app.dim{opacity:.25}
+.icon{flex:none;width:64px;height:64px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:31px;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.08),0 2px 6px rgba(0,0,0,.08)}
+.app .t{flex:1;min-width:0}
+.app .nm{font-weight:600;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .ab{color:var(--mute);font-size:13.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pill{flex:none;border:none;border-radius:999px;padding:6px 16px;font-weight:700;font-size:13px;letter-spacing:.02em;background:rgba(118,118,128,.12);color:var(--blue);cursor:pointer;text-transform:uppercase}
+.pill:hover{background:rgba(118,118,128,.2)}
+.pill.ghost{background:none;color:var(--mute)}.pill.ghost:hover{background:rgba(118,118,128,.12)}
+.pill.off{color:var(--faint);cursor:default;background:rgba(118,118,128,.08)}
+/* contract page */
+#view{display:none}
+.zoomin{animation:zoomin .3s ease}
+@keyframes zoomin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.crumbs{color:var(--blue);font-size:14px;cursor:pointer;margin-bottom:18px;display:inline-block}
+.prod{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.prod .icon{width:128px;height:128px;border-radius:29px;font-size:64px}
+.prod h1{margin:0;font-size:clamp(26px,3.6vw,34px);letter-spacing:-.02em;line-height:1.1;font-weight:800}
+.prod .sub{color:var(--mute);font-size:16px;margin:6px 0 14px;max-width:560px}
+.prod .acts{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:none;border-radius:999px;padding:9px 22px;font-weight:700;font-size:14.5px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn.blue{background:var(--blue);color:#fff}
+.btn.blue:hover{background:#0068e0}
+.btn.grey{background:rgba(118,118,128,.12);color:var(--blue)}
+.btn.grey:hover{background:rgba(118,118,128,.2)}
+.btn:disabled{background:rgba(118,118,128,.1);color:var(--faint);cursor:default}
+.stats{display:flex;margin:26px 0 8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;overflow-x:auto}
+.stat{flex:1;min-width:110px;text-align:center;padding:0 10px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:none}
+.stat .k{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--faint);text-transform:uppercase}
+.stat .v{font-size:19px;font-weight:700;color:#3a3a3c;margin-top:2px;white-space:nowrap}
+.stat .v a{color:var(--blue);cursor:pointer}
+.stat .s{font-size:12px;color:var(--mute)}
+.sec{margin-top:30px}
+.sec .sh{margin:0 0 10px}
+.q{width:20px;height:20px;border-radius:50%;border:none;background:rgba(118,118,128,.14);color:var(--mute);font:700 12px Inter,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;margin-left:8px;vertical-align:middle}
+.q:hover{background:var(--blue);color:#fff}
+.rules{padding:20px 24px}
+.pre{color:var(--mute);font-style:italic;margin-bottom:6px}
+ol.cl{padding:0;margin:0;list-style:none}
+ol.cl li{display:grid;grid-template-columns:24px 22px 1fr;gap:2px;padding:10px 0;border-bottom:1px solid var(--line)}
+ol.cl li:last-child{border-bottom:none}
+ol.cl .n{color:var(--faint);font-weight:600}
+ol.cl b{font-weight:600}
+.note{color:var(--mute);font-size:14px;margin:0 0 8px}
+.small{font-size:13px;color:var(--faint)}
+/* the hood */
+#hood{display:none}
+.stack{position:relative;padding-left:34px}
+.stack::before{content:"";position:absolute;left:13px;top:18px;bottom:18px;width:2px;background:var(--line)}
+.layer{position:relative;margin-bottom:14px;padding:16px 20px}
+.layer .num{position:absolute;left:-34px;top:15px;width:28px;height:28px;border-radius:50%;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px var(--bg)}
+.layer h3{margin:0;font-size:16px;font-weight:700;display:flex;align-items:center}
+.layer .sum{color:var(--mute);font-size:14px;margin:3px 0 0}
+.layer details{margin-top:10px}
+.layer summary{cursor:pointer;font-size:14px;color:var(--blue);font-weight:500;list-style:none}
+.layer summary::-webkit-details-marker{display:none}
+.code{font:12px/1.55 var(--mono);background:#1d1d1f;color:#e5e5ea;border-radius:12px;padding:14px 16px;max-height:460px;overflow:auto;white-space:pre;margin-top:10px}
+.code a{color:#64b5ff}
+.verdict{font:13px var(--mono);background:#e8f8ee;color:#1c7c3f;border-radius:8px;padding:5px 10px;display:inline-block;word-break:break-word;margin-top:8px}
+.schema{border:1px solid var(--line);border-radius:12px;margin:8px 0;background:#fff;overflow:hidden}
+.schema summary{padding:9px 14px;font:12.5px var(--mono);list-style:none;display:flex;gap:8px;color:var(--ink);cursor:pointer}
+.schema summary::-webkit-details-marker{display:none}
+.schema summary .fr{margin-left:auto;font:600 11px Inter,sans-serif;color:var(--faint)}
+.schema .say{padding:0 14px 8px;font-size:13.5px;color:var(--mute)}
+table.roles{border-collapse:collapse;width:100%;font-size:13px}
+table.roles th,table.roles td{border-top:1px solid var(--line);padding:7px 14px;text-align:left;vertical-align:top}
+table.roles th{font-weight:600;color:var(--faint);font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+table.roles td.r{font-family:var(--mono);white-space:nowrap}
+.atom{font:12px var(--mono);display:inline-block;padding:1px 7px;border-radius:6px;margin:1px 2px}
+.a-need{background:#eef1f8}.a-not{background:#fbecec;text-decoration:line-through;text-decoration-color:#c0392b}
+.a-add{background:#e8f8ee}.a-del{background:#fdf0e3}
+.more{font-size:14px;color:var(--blue);cursor:pointer;margin:8px 0 0}
+/* popup */
+#pop{position:fixed;inset:0;background:rgba(0,0,0,.25);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:30;padding:20px}
+#pop .card{max-width:500px;padding:22px 24px;animation:zoomin .2s ease}
+#pop h4{margin:0 0 8px;font-size:18px;letter-spacing:-.01em}
+#pop p{margin:7px 0;font-size:15px;color:#3a3a3c}
+#pop code{font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:5px}
+#pop .x{float:right;border:none;background:rgba(118,118,128,.12);width:26px;height:26px;border-radius:50%;cursor:pointer;color:var(--mute)}
+@media (max-width:640px){.app .pill.ghost{display:none}.shelf{grid-template-columns:minmax(0,1fr);padding:6px 16px}.prod .icon{width:96px;height:96px;font-size:48px;border-radius:22px}
+  .tog{padding:14px 16px}.tog .minis{display:none}.tog .cnt{margin-left:auto}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);row-gap:12px}.stat{min-width:0}.stat:nth-child(3){border-right:none}
+  .sh{flex-wrap:wrap;gap:2px 12px}
+  table.roles,table.roles tbody,table.roles tr,table.roles td{display:block;width:100%}
+  table.roles tr:first-child{display:none}
+  table.roles tr{border-top:1px solid var(--line);padding:8px 14px}
+  table.roles td{border:none;padding:3px 0}
+  table.roles td[data-k]:not(:empty)::before{content:attr(data-k);display:block;font-weight:600;color:var(--faint);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+  table.roles td[data-k]:empty{display:none}}
+</style>
+</head>
+<body>
+<header><div class="hin">
+  <div class="logo" id="home"><span class="mark"></span>Grassroots Contracts</div>
+  <div class="search"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" stroke="#000" stroke-width="2.4" fill="none"/><path d="M15.5 15.5L21 21" stroke="#000" stroke-width="2.4" stroke-linecap="round"/></svg><input id="q" placeholder="Search" autocomplete="off"></div>
+</div></header>
+<main>
+  <section id="top">
+    <div class="hero">
+      <h1>Social contracts that run.</h1>
+      <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement. Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up.</p>
+      <a class="btn grey" href="how.html" style="margin:-10px 0 26px">How it works&nbsp;→</a>
+    </div>
+    <div id="shelves"></div>
+    <div class="sh"><h2>How they fit together</h2><span>arrows point to what a contract builds on</span></div>
+    <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
+  </section>
+  <section id="view"></section>
+</main>
+<div id="pop"><div class="card"><button class="x" id="popx">✕</button><div id="popc"></div></div></div>
+<script src="data.js"></script>
+<script>
+const D = window.DATA, C = {};
+D.contracts.forEach(c => C[c.id] = c);
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+const FAM = {identity: ['#5b8def', '#3a64c4', 'Identity'], social: ['#34c3ae', '#169482', 'Social'],
+  care: ['#a98be3', '#7552c4', 'Care'], money: ['#f6c25a', '#e0911c', 'Money'], mobility: ['#f79a78', '#dc5d3c', 'Mobility'], governance: ['#7b8cff', '#4a54d6', 'Governance'], sharing: ['#f78fb3', '#d6407c', 'Sharing']};
+const grad = c => `linear-gradient(160deg, ${FAM[c.family][0]}, ${FAM[c.family][1]})`;
+// Served by a live server (Render, the lab server, localhost): the app is next to this page.
+// Served as a static copy (GitHub Pages, a local file): the app is on Render.
+const LIVE = '';
+const appUrl = c => `${LIVE}app.html?c=${c.id.toLowerCase()}`;
+const icon = (c, cls = '') => `<div class="icon ${cls}" style="background:${grad(c)}">${c.icon}</div>`;
+const openBtn = (c, cls = 'pill') => c.live
+  ? `<a class="${cls}" href="${appUrl(c)}" target="_blank" rel="noopener" data-stop="1">Open</a>`
+  : `<span class="${cls} off" title="Not compiled yet">Soon</span>`;
+
+/* ---------- help ---------- */
+const HELP = {
+  contract: ['What is a contract?', `<p>A few plain rules about what people may do with each other. Alice, Bob and Carol stand for any people.</p>
+    <p><b>■ Enforced</b>: the app makes it so; nobody can break it.<br><b>◆ Attested</b>: you state it is true, and sign it.<br><b>○ Undertaken</b>: a promise you make; the app cannot check it.</p>
+    <p>A contract builds on the ones it extends: everything they allow is allowed here too.</p>`],
+  hood: ['Under the hood', `<p>Nobody writes the app by hand. A chain of programs, the <i>cascade</i>, translates the English contract step by step into the code each person's device runs. Each layer is generated from the one above it.</p>`],
+  acts: ['Speech acts', `<p>Each rule becomes one or more <b>speech acts</b>: who takes part, what each must already have, and what each gains or loses.</p>
+    <p><b>?</b> after a role: the act happens only if that person wants it. A role without it is affected without being asked.</p>
+    <p>Small letters (x, n, k, …) are values chosen when acting. <code>&lt;Alice&gt;.n</code> is a name n in Alice's own namespace, such as her group; <code>Alice[listed(*, n)]</code> is everyone Alice lists for n; <code>k.coin(u)</code> is k coins of u.</p>`],
+  check: ['The grassroots check', `<p>A program checks that the contract can grow from the bottom up: some act can start everything from nothing; every fact a person holds traces back to an act that created it; and every act is joined to a person who wants it.</p>`],
+  vmat: ['Transactions', `<p>Each speech act becomes an atomic transaction among its parties: it happens at all of them or at none, and only with the will of those who must agree.</p>`],
+  platform: ['The platform', `<p>What each person's agent runs: the transactions, carried out by a two-phase commit that the proposing person's agent coordinates, written in vGLP.</p>`],
+  glp: ['GLP', `<p>The same platform compiled to GLP, the logic programming language the agents run.</p>`],
+  app: ['The app', `<p>Four people, Alice, Bob, Carol and Dave, each with an agent running the compiled platform, live on a server. Each tap is a real act of the platform, so it takes a moment.</p>`],
+};
+function help(k){ $('#popc').innerHTML = `<h4>${HELP[k][0]}</h4>${HELP[k][1]}`; $('#pop').style.display = 'flex'; }
+$('#popx').onclick = () => $('#pop').style.display = 'none';
+$('#pop').onclick = e => { if (e.target.id === 'pop') $('#pop').style.display = 'none'; };
+const Q = k => `<button class="q" data-help="${k}" title="What is this?">?</button>`;
+document.addEventListener('click', e => { const b = e.target.closest('[data-help]'); if (b){ e.stopPropagation(); help(b.dataset.help); } }, true);
+
+/* ---------- map ---------- */
+const POS = {GKK:[560,0], DAO:[150,1], REC:[350,1], GSG:[560,1], GC:[910,1],
+  LDAO:[60,2], GSN:[380,2], GAI:[540,2], GFF:[700,2], GB:[880,2], JOINT:[1050,2],
+  FDAO:[190,3], CSSN:[330,3], GSNP:[470,3], AGORA:[740,3], STAY:[900,3], LIB:[1060,3]};
+function drawGraph(){
+  const W = 1120, rowH = 90, nw = 104, nh = 42, top = 36;
+  const xy = id => ({x: POS[id][0], y: top + POS[id][1]*rowH});
+  const H = top + 3*rowH + 36;
+  let s = '<defs>' + Object.entries(FAM).map(([k, v]) => `<linearGradient id="g-${k}" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${v[0]}"/><stop offset="1" stop-color="${v[1]}"/></linearGradient>`).join('') +
+    `<marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c7c7cc"/></marker></defs>`;
+  D.contracts.forEach(c => c.extends.forEach(p => { const a = xy(c.id), b = xy(p), y1 = a.y - nh/2, y2 = b.y + nh/2 + 4, my = (y1 + y2) / 2;
+    s += `<path class="edge" d="M${a.x},${y1} C${a.x},${my} ${b.x},${my} ${b.x},${y2}" marker-end="url(#ar)"/>`; }));
+  D.contracts.forEach(c => { const p = xy(c.id);
+    s += `<g class="node" data-id="${c.id}" transform="translate(${p.x - nw/2},${p.y - nh/2})">
+      <rect class="bg" width="${nw}" height="${nh}" rx="13" fill="url(#g-${c.family})"/>
+      <text class="ic" x="14" y="27">${c.icon}</text><text x="${nw/2 + 12}" y="26" text-anchor="middle">${c.id}</text></g>`; });
+  const g = $('#graph'); g.setAttribute('viewBox', `0 0 ${W} ${H}`); g.innerHTML = s;
+  const tip = $('#tip'), wrap = $('#mapcard');
+  g.querySelectorAll('.node').forEach(n => {
+    const c = C[n.dataset.id];
+    n.onclick = () => go(c.id);
+    n.onmousemove = e => { const r = wrap.getBoundingClientRect();
+      tip.innerHTML = `<b>${esc(c.title)}</b>${esc(c.about)}`; tip.style.opacity = 1;
+      tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 270)) + 'px'; tip.style.top = (e.clientY - r.top + 14) + 'px'; };
+    n.onmouseleave = () => tip.style.opacity = 0;
+  });
+}
+const GROUPS = [['Identity & social', ['identity', 'social']], ['Children & AI agents', ['care']], ['Money & trade', ['money']], ['Deciding together', ['governance']], ['Sharing', ['sharing', 'mobility']]];
+const OPEN = new Set();
+function drawShelves(){
+  $('#shelves').innerHTML = `<div class="sh"><h2>Contracts</h2><span>${D.contracts.length} contracts, each with a live app</span></div>` + GROUPS.map(([title, fams], i) => {
+    const cs = D.contracts.filter(c => fams.includes(c.family));
+    return `<div class="grp${OPEN.has(i) ? ' open' : ''}" data-g="${i}"><button class="tog" aria-expanded="${OPEN.has(i)}"><h2>${title}</h2>
+        <span class="minis">${cs.map(c => `<span class="mini" style="background:${grad(c)}">${c.icon}</span>`).join('')}</span>
+        <span class="cnt">${cs.length}</span><span class="chev">›</span></button>
+      <div class="card shelf">${cs.map(c => `<div class="app" data-id="${c.id}">${icon(c)}
+        <div class="t"><div class="nm">${esc(c.title)}</div><div class="ab">${esc(c.about)}</div></div><a class="pill ghost" href="#${c.id}">About</a>${openBtn(c)}</div>`).join('')}</div></div>`;
+  }).join('');
+  document.querySelectorAll('.grp').forEach(g => g.querySelector('.tog').onclick = () => {
+    const i = +g.dataset.g; OPEN.has(i) ? OPEN.delete(i) : OPEN.add(i);
+    g.classList.toggle('open', OPEN.has(i)); g.querySelector('.tog').setAttribute('aria-expanded', OPEN.has(i)); lastRows(); });
+  lastRows();
+  document.querySelectorAll('.app').forEach(a => a.onclick = e => { if (!e.target.closest('[data-stop]')) go(a.dataset.id); });
+  doSearch();
+}
+function lastRows(){
+  document.querySelectorAll('.grp.open .shelf').forEach(sh => { const a = [...sh.children], cols = getComputedStyle(sh).gridTemplateColumns.split(' ').length;
+    a.forEach(x => x.classList.remove('lastrow')); a.slice(a.length - (a.length % cols || cols)).forEach(x => x.classList.add('lastrow')); });
+}
+
+/* ---------- search ---------- */
+function doSearch(){
+  const q = $('#q').value.trim().toLowerCase();
+  const hit = c => !q || [c.id, c.title, c.about, ...c.clauses.map(x => x.name + ' ' + x.text)].join(' ').toLowerCase().includes(q);
+  document.querySelectorAll('.node').forEach(n => { const h = hit(C[n.dataset.id]); n.classList.toggle('dim', !h); n.classList.toggle('hit', !!q && h); });
+  document.querySelectorAll('.edge').forEach(e => e.classList.toggle('dim', !!q));
+  document.querySelectorAll('.app').forEach(a => a.classList.toggle('dim', !hit(C[a.dataset.id])));
+  document.querySelectorAll('.grp').forEach(g => { const any = [...g.querySelectorAll('.app')].some(a => !a.classList.contains('dim'));
+    g.style.display = q && !any ? 'none' : ''; g.classList.toggle('open', q ? any : OPEN.has(+g.dataset.g)); });
+  lastRows();
+}
+$('#q').addEventListener('input', () => { if (C[location.hash.slice(1).split('-')[0]]) go(null); doSearch(); });
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter'){ const a = document.querySelector('.app:not(.dim)'); if (a) go(a.dataset.id); } });
+
+/* ---------- routing ---------- */
+function go(id, hood){ location.hash = id ? `#${id}${hood ? '-hood' : ''}` : '#contracts'; }
+$('#home').onclick = () => { $('#q').value = ''; doSearch(); go(null); };
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('#pop').style.display === 'flex'){ $('#pop').style.display = 'none'; return; }
+  if (document.activeElement.tagName !== 'INPUT') go(null);
+});
+let LAST = null;
+window.addEventListener('hashchange', route);
+function route(){
+  const [id, part] = location.hash.slice(1).split('-');
+  if (!C[id]){ LAST = null; $('#view').style.display = 'none'; $('#top').style.display = ''; lastRows(); return; }
+  $('#top').style.display = 'none';
+  const v = $('#view'); v.style.display = 'block'; v.classList.remove('zoomin'); void v.offsetWidth; v.classList.add('zoomin');
+  const y = window.scrollY;
+  page(C[id], part === 'hood');
+  if (id !== LAST) window.scrollTo(0, 0); else if (part !== 'hood') window.scrollTo(0, y);
+  LAST = id;
+}
+
+/* ---------- a contract ---------- */
+function page(c, hood){
+  const kids = D.contracts.filter(k => k.extends.includes(c.id));
+  const own = c.schemas.filter(s => s.from === c.id).length;
+  const link = id => `<a data-go="${id}">${id}</a>`;
+  $('#view').innerHTML = `
+    <span class="crumbs" data-go="">‹ All contracts</span>
+    <div class="prod">${icon(c)}
+      <div><h1>${esc(c.title)}</h1><div class="sub">${esc(c.about)}</div>
+      <div class="acts"><a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a></div></div></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Rules</div><div class="v">${c.clauses.length}</div><div class="s">in English</div></div>
+      <div class="stat"><div class="k">Speech acts</div><div class="v">${c.schemas.length ? own : '–'}</div><div class="s">${c.schemas.length ? 'of its own' : 'not compiled'}</div></div>
+      <div class="stat"><div class="k">Builds on</div><div class="v">${c.extends.length ? c.extends.map(link).join(', ') : '–'}</div><div class="s">${c.extends.length ? 'contract' + (c.extends.length > 1 ? 's' : '') : 'the base'}</div></div>
+      <div class="stat"><div class="k">Used by</div><div class="v">${kids.length ? kids.map(k => link(k.id)).join(', ') : '–'}</div><div class="s">${kids.length ? 'contract' + (kids.length > 1 ? 's' : '') : 'none yet'}</div></div>
+      <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(c.id)}</div></div>
+    </div>
+    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2></div>
+      <div class="card rules">
+      ${c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
+      <div class="pre">${esc(c.preamble)}</div>
+      <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}.</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
+      </div>
+      ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
+      <button class="hoodbar${hood ? ' on' : ''}" id="hoodbtn"><span class="hi">⚙︎</span><span><b>Under the hood</b><small>From the English text to the code the app runs, layer by layer</small></span><span class="chev">›</span></button>
+    </div>
+    <div id="hood" class="sec"></div>`;
+  $('#view').querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go || null));
+  $('#hoodbtn').onclick = () => go(c.id, !hood);
+  if (hood){ $('#hood').style.display = 'block'; hoodHtml(c); setTimeout(() => $('#hood').scrollIntoView({behavior:'smooth', block:'start'}), 60); }
+}
+
+function hoodHtml(c){
+  const own = c.schemas.filter(s => s.from === c.id), inh = c.schemas.filter(s => s.from !== c.id);
+  const L = c.layers, col = FAM[c.family][1];
+  const n = i => `<span class="num" style="background:${col}">${i}</span>`;
+  const codeLayer = (i, key, title, sum) => L[key] ? `<div class="card layer">${n(i)}<h3>${title}${Q(key)}</h3>
+      <p class="sum">${sum}</p><details data-file="${L[key].file}"><summary>Show the code · ${L[key].lines.toLocaleString()} lines</summary><div class="code">Loading…</div></details></div>` : '';
+  $('#hood').innerHTML = `
+    <div class="sh"><h2>Under the hood${Q('hood')}</h2><span>from the English text to the running app</span></div>
+    <div class="stack">
+    <div class="card layer">${n(1)}<h3>The contract, in English${Q('contract')}</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.join(' and ') : ''}, above.</p></div>
+    <div class="card layer">${n(2)}<h3>Speech acts${Q('acts')}</h3>
+      <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => s.from))].join(', ')}` : ''}.</p>
+      ${own.map((s, i) => schemaHtml(s, i < 2)).join('')}
+      ${inh.length ? `<p class="more" id="mt">Show the ${inh.length} inherited acts</p><div id="inh" style="display:none">${inh.map(s => schemaHtml(s, false)).join('')}</div>` : ''}
+    </div>
+    <div class="card layer">${n(3)}<h3>Grassroots check${Q('check')}</h3><p class="sum">The checker's verdict on the speech acts:</p><span class="verdict">${esc(c.verdict)}</span></div>
+    ${codeLayer(4, 'vmat', 'Transactions', 'Each act as an atomic, volition-guarded transaction among its parties.')}
+    ${codeLayer(5, 'platform', 'Platform, in vGLP', "What each person's agent runs: the transactions and the protocol that carries them out.")}
+    ${codeLayer(6, 'glp', 'Platform, in GLP', 'The same, compiled to the language the agents execute.')}
+    <div class="card layer">${n(7)}<h3>The app${Q('app')}</h3><p class="sum">Four people, each with an agent running the compiled platform, live.</p>
+      ${c.live ? `<div style="margin-top:10px"><a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a></div>` : ''}</div>
+    </div>
+    <p class="small">The layers come from a run of the cascade on the GLP repository at ${esc(D.glpCommit[0].slice(0, 8))} (${esc(D.glpCommit[1])}); the code may lag the text above.</p>`;
+  const mt = $('#mt'); if (mt) mt.onclick = () => { const d = $('#inh'), o = d.style.display === 'none'; d.style.display = o ? '' : 'none'; mt.textContent = (o ? 'Hide' : 'Show') + ` the ${inh.length} inherited acts`; };
+  document.querySelectorAll('details[data-file]').forEach(d => d.addEventListener('toggle', async () => {
+    d.querySelector('summary').textContent = (d.open ? 'Hide' : 'Show') + d.querySelector('summary').textContent.slice(4);
+    if (!d.open || d.dataset.done) return; d.dataset.done = 1;
+    const gh = `https://github.com/EShapiro2/GLP/blob/${D.glpCommit[0]}/${d.dataset.file.replace(/^stack\//, 'cascade/')}`;
+    try { const r = await fetch(d.dataset.file); if (!r.ok) throw 0; d.querySelector('.code').textContent = await r.text(); }
+    catch (e){ d.querySelector('.code').innerHTML = `Not available here: <a href="${gh}" target="_blank" rel="noopener">open it on GitHub ↗</a>`; }
+  }));
+}
+function schemaHtml(s, open){
+  const willing = s.parties.filter(p => p.endsWith('?')).map(p => p.slice(0, -1));
+  const say = `${s.parties.length === 1 ? 'One person' : s.parties.length + ' roles'}; ${willing.length ? 'needs the will of ' + willing.join(' and ') : 'nobody is asked'}${s.vars.length ? '; values: ' + s.vars.join(', ') : ''}${s.constraint ? '; only if ' + s.constraint : ''}.`;
+  const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
+  return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.head)}</span><span class="fr">${s.from}</span></summary>
+    <div class="say">${esc(say)}</div>
+    <table class="roles"><tr><th>At</th><th>Needs · must not have</th><th>Gets</th><th>Loses</th></tr>
+    ${s.roles.map(r => `<tr><td class="r">${esc(r.role)}</td><td data-k="Needs · must not have">${at(r.need,'need')}${at(r.not,'not')}</td><td data-k="Gets">${at(r.add,'add')}</td><td data-k="Loses">${at(r.del,'del')}</td></tr>`).join('')}</table></details>`;
+}
+
+drawGraph(); drawShelves(); route();
+window.addEventListener('resize', () => { if ($('#top').style.display !== 'none') drawShelves(); });
+</script>
+</body>
+</html>

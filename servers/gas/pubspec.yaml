@@ -1,0 +1,8 @@
+name: gas_server
+description: GAS, the GLP app store - the live server of the grassroots contracts, four persons each.
+publish_to: none
+environment:
+  sdk: ^3.9.4
+dependencies:
+  glp_runtime:
+    path: ../../glp_runtime
