@@ -22,8 +22,8 @@ import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 const int _draws = 100;
 
-/// The bound of each draw: the largest random/4 can make distinct, so that a
-/// coincidence of values is a coincidence of the generator's states.
+/// The bound of each draw: large, so that two streams agree at a draw only
+/// with a chance of one in about 2^31.
 const int _bound = 2147483646;
 
 int _out(GlpRuntime rt, HeapCell writer) {

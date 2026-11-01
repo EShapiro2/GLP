@@ -14,7 +14,7 @@ Firsts ::= firsts(Integer, Integer, Integer).
 Answer ::= yes ; no.
 
 % draws(Seed, K, Vs): Vs is the first K draws of random/4 from Seed, threading
-% NextSeed, each with bound 2147483646, the largest random/4 makes distinct.
+% NextSeed, each with bound 2147483646.
 procedure draws(Integer?, Integer?, Stream(Integer)).
 draws(_, 0, []).
 draws(S, K, [V?|Vs?]) :- K? > 0 |
