@@ -1006,6 +1006,8 @@ class ActInfo {
   final List<(int, int)> same;
   /// The agent variables a field names that the proposer's role requires held, `pick(K, P)`: each picked among the persons of the rows of the list of `P`, under the name of its field, no row filling it (vGLP acd3e74, Section 5.4, "The contract's words": "a variable is picked among the items the viewer holds where the proposer's role requires it held, and typed otherwise, an agent by key"; programs/vglp/cva/compiler, keyed_out).
   final List<(int, String)> picks;
+  /// The places the act's pragma's fields name, `field(K)`: no row fills them, a button being drawn "only in the row of an entry that fills the one place of the act its pragma's fields do not name, so that Remove, with the field person, is not drawn in a person's row" (vGLP b4022ce, Section 6.2, "The words a platform shows").
+  final List<int> fields;
 
   /// Whether the places [i] and [j] may hold one person.
   bool mayShare(int i, int j) =>
@@ -1018,7 +1020,8 @@ class ActInfo {
       this.unless = const [],
       this.proved = const [],
       this.same = const [],
-      this.picks = const []]);
+      this.picks = const [],
+      this.fields = const []]);
 
   /// The places a person picks among the persons of a list's rows ([picks]).
   Set<int> get pickPlaces => {for (final (k, _) in picks) k};
@@ -1041,9 +1044,12 @@ class ActInfo {
     final proved = <({String proves, String pred, List<Object?> args})>[];
     final same = <(int, int)>[];
     final picks = <(int, String)>[];
+    final fields = <int>[];
     for (final it in (xs0[4] as GList).items) {
       final (itf, itxs) = ctorArgs(it);
-      if (itf == 'pick' && itxs.length == 2 && itxs[0] is GInt) {
+      if (itf == 'field' && itxs.length == 1 && itxs[0] is GInt) {
+        fields.add((itxs[0] as GInt).value);
+      } else if (itf == 'pick' && itxs.length == 2 && itxs[0] is GInt) {
         picks.add(((itxs[0] as GInt).value, displayText(itxs[1])));
       } else if (itf == 'same' && itxs.length == 2 && itxs[0] is GInt && itxs[1] is GInt) {
         same.add(((itxs[0] as GInt).value, (itxs[1] as GInt).value));
@@ -1136,7 +1142,7 @@ class ActInfo {
       }
     }
     return ActInfo(
-        displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless, proved, same, picks);
+        displayText(xs[0]), m, ps, gs, its, ks, ws, held, conds, unless, proved, same, picks, fields);
   }
 
   /// Whether the viewer's state [atoms] proves of [x], at the place [k], each atom the act requires at that place's role that the schemas prove from the viewer's records ([proved]): for each, the viewer holds an atom matching one of its entries with [x] at [k].
@@ -1251,12 +1257,17 @@ class ActInfo {
           ? places.contains(x)
           : x is (int, int) && places.contains(x.$2)));
 
-  /// The places a row's entry fills ([_SocialTabState._fill]): an item of a list, the act's first place of a person, and a group's name, but the proposer's.
+  /// The place of a person a row's entry fills ([_SocialTabState._fill]): the act's first place of a person that no field of its pragma names; null where every one is named (vGLP b4022ce, Section 6.2, "The words a platform shows": "only in the row of an entry that fills the one place of the act its pragma's fields do not name").
+  int? get rowPerson => persons.where((k) => !fields.contains(k)).firstOrNull;
+
+  /// The places a row's entry fills ([_SocialTabState._fill]): an item of a list, the act's place of a person a row fills ([rowPerson]), and a group's name, but the proposer's and those its pragma's fields name (vGLP b4022ce, Section 6.2).
   Set<int> get entryPlaces => {
         ...itemPlaces,
-        if (persons.isNotEmpty) persons.first,
+        if (rowPerson != null) rowPerson!,
         for (final (_, k) in groups) k,
-      }..remove(me);
+      }
+        ..remove(me)
+        ..removeAll(fields);
 
   /// The places the person fills, by a row, a picker or a field: a person but one named by key, a group's leader and name, an item and an agent variable picked; a held atom fills none of them ([held]; programs/vglp/cva/compiler/README.md, item 6: "A held atom fills no variable the person fills").
   Set<int> get personFilled => {
@@ -2538,7 +2549,7 @@ class _SocialTabState extends State<SocialTab> {
   /// The act open in a row's composer, `f/n|item`; null where none is.
   String? _openAct;
 
-  /// The places of the act [a] a row fills, by its item [item] of the list of [pred] (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable"): a group its leader's place and its name's; a speech act the place of an item the act names on that list; a person the act's first place of a person.
+  /// The places of the act [a] a row fills, by its item [item] of the list of [pred] (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable"): a group its leader's place and its name's; a speech act the place of an item the act names on that list; a person the act's first place of a person; each but a place a field of the act's pragma names (vGLP b4022ce, Section 6.2: "only in the row of an entry that fills the one place of the act its pragma's fields do not name, so that Remove, with the field person, is not drawn in a person's row").
   static Map<int, GTerm> _fill(ActInfo a, GTerm? item, String? pred) {
     if (item == null) return const {};
     final g = SocialState._group(item);
@@ -2548,10 +2559,11 @@ class _SocialTabState extends State<SocialTab> {
       return {j: g.$1, k: g.$2};
     }
     for (final (k, p) in a.items) {
-      if (p == pred) return {k: item};
+      if (p == pred && !a.fields.contains(k)) return {k: item};
     }
     if (SpeechAct.of(item) != null) return const {};
-    if (item is GAtom && a.persons.isNotEmpty) return {a.persons.first: item};
+    final k = a.rowPerson;
+    if (item is GAtom && k != null) return {k: item};
     return const {};
   }
 

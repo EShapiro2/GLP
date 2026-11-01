@@ -195,7 +195,9 @@ Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
 % a place holds the atom Q(Ws) its role requires, the place offering only a
 % person so proved (vGLP 3ec07a2, Section 6.2), or same(K, J), the places K
 % and J possibly one person, a field offering that person for both (GSC
-% 316d875, Section 2) (vGLP 932c710,
+% 316d875, Section 2), or field(K), the place K a field of its pragma names,
+% which no row fills (vGLP b4022ce, Section 6.2: "only in the row of an entry
+% that fills the one place of the act its pragma's fields do not name") (vGLP 932c710,
 % Section 6.2: "a person, a group or an item"), Ks the places a field for a key fills where the peer is
 % not listed, and Ws the text of its request form, each word say(S) or the
 % person at place I, at(I) (vGLP, Section 6.2, "The words a platform shows":
@@ -223,7 +225,7 @@ ItemAt ::= item(Integer, Constant) ; pick(Integer, Constant) ; atom(Constant, Li
       ; req(Constant, List(CondAt)) ; forb(Constant, List(CondAt))
       ; unless(Constant, List(CondAt))
       ; proved(Constant, List(Constant), Constant, List(CondAt))
-      ; same(Integer, Integer).
+      ; same(Integer, Integer) ; field(Integer).
 CondAt ::= at(Integer) ; grp(Integer, Integer) ; any.
 FormWord ::= say(String) ; at(Integer).
 
