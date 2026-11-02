@@ -277,6 +277,13 @@ class IsolateManager {
   /// Awaiting [settle]; completed when the system is quiescent.
   Completer<void>? _settle;
 
+  /// Awaiting [boot]; completed when every agent is ready, and failed when one
+  /// cannot be: it reports that it could not initialise, it faults, or its
+  /// isolate exits before it is ready.  So a boot ends on an event in every
+  /// case and never needs a clock to end it (IGLP, Implementation Notes,
+  /// "Event-driven execution": "there is no clock and no polling").
+  Completer<void>? _booting;
+
   /// Faults reported by agents, newest last. A non-empty list means at least one
   /// agent threw while handling a message.
   final List<String> _faults = [];
@@ -338,19 +345,29 @@ class IsolateManager {
   /// it has run, too long and every run pays for the worst machine. [timeout] is
   /// a backstop for a system that never settles — it throws rather than passing
   /// quietly, since a play that cannot settle is a failure and not a slow pass.
+  /// A null [timeout] waits for quiescence and for nothing else: every way the
+  /// wait can end without it is an event --- an agent's fault, its isolate's
+  /// uncaught error or exit owing work --- so a caller whose verdict must not
+  /// depend on how loaded the machine is passes null (IGLP-coop, 2026-11-02:
+  /// the plays of multiagent_glp_test.dart, under load, outran a wall clock
+  /// while their agents were still being booted).
   ///
   /// Over given layers it waits for the work the manager handed out, each
   /// agent's [Start]: the layers deliver the agents' traffic themselves, and a
   /// host does not see a message in flight on a real network (IGLP,
   /// "Event-driven execution": "Agents do not detect or report termination").
   Future<void> settle(
-      {Duration timeout = const Duration(seconds: 30)}) async {
+      {Duration? timeout = const Duration(seconds: 30)}) async {
     if (_faults.isNotEmpty) {
       throw StateError('an agent faulted before settling: ${_faults.first}');
     }
     if (_quiescent) return;
     final c = Completer<void>();
     _settle = c;
+    if (timeout == null) {
+      await c.future;
+      return;
+    }
     await c.future.timeout(timeout, onTimeout: () {
       _settle = null;
       final outstanding = <String>[];
@@ -363,7 +380,8 @@ class IsolateManager {
     });
   }
 
-  /// Record that [agentId] faulted, and fail any pending [settle] with it.
+  /// Record that [agentId] faulted, and fail any pending [settle] and any
+  /// pending [boot] with it.
   ///
   /// Surfaced at once rather than left to time out: the fault is the diagnosis,
   /// and a timeout thirty seconds later is not.
@@ -375,12 +393,26 @@ class IsolateManager {
       _settle = null;
       s.completeError(StateError('agent $agentId faulted: $error'));
     }
+    _failBoot(StateError('agent $agentId faulted: $error'));
+  }
+
+  /// Fail a pending [boot] with [error].
+  void _failBoot(Object error) {
+    final b = _booting;
+    if (b != null && !b.isCompleted) b.completeError(error);
   }
 
   /// [agentId]'s isolate has exited. An exit while the agent still owes work is
-  /// the hang: that work can no longer be reported, so it is a fault. An exit
-  /// owing nothing is teardown and is ignored.
+  /// the hang: that work can no longer be reported, so it is a fault; so is an
+  /// exit during a boot before the agent is ready, since its Ready can no
+  /// longer come. An exit owing nothing after the boot is teardown and is
+  /// ignored.
   void _noteIsolateExit(String agentId) {
+    final b = _booting;
+    if (b != null && !b.isCompleted && !_agentPorts.containsKey(agentId)) {
+      _recordFault(agentId, 'isolate exited before it was ready');
+      return;
+    }
     final owed = (_workSent[agentId] ?? 0) - (_workDone[agentId] ?? 0);
     if (owed <= 0) return;
     _recordFault(agentId, 'isolate exited owing $owed unit(s) of work');
@@ -397,6 +429,11 @@ class IsolateManager {
   Future<void> boot(BootConfig config, {TraceConfig traceConfig = TraceConfig.off}) async {
     _traceConfig = traceConfig;
     final readyCompleter = Completer<void>();
+    _booting = readyCompleter;
+    // A failure can be reported while a later agent's isolate is still being
+    // spawned, before this boot awaits the completer below; marked handled
+    // here, it reaches the await and not the zone as an uncaught error.
+    readyCompleter.future.ignore();
     var readyCount = 0;
     final expectedCount = config.directives.length;
 
@@ -516,7 +553,11 @@ class IsolateManager {
     }
 
     // Wait for all agents to be ready
-    await readyCompleter.future;
+    try {
+      await readyCompleter.future;
+    } finally {
+      _booting = null;
+    }
   }
 
   /// Harness control: visible disconnection of a pair (IGLP app:in-networking,
