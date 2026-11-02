@@ -962,6 +962,7 @@ class Parser {
     }
 
     // Check for assignment (Var := Expr) or univ (Var =.. Expr)
+    _refuseLayoutAfterVariableHere();
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final varToken = _peek();
       final isReader = varToken.type == TokenType.READER;
@@ -1088,6 +1089,7 @@ class Parser {
 
   // Atom: functor(arg1, arg2, ...) or Var := Expr or Var =.. Expr (for clause heads)
   Atom _parseAtom() {
+    _refuseLayoutAfterVariableHere();
     // Check for := or =.. pattern: Var := Expr or Var =.. Expr or _ := Expr
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER) || _check(TokenType.UNDERSCORE)) {
       final varToken = _advance();
@@ -1178,6 +1180,7 @@ class Parser {
   // Goal: same as Atom, or assignment (Var := Expr) or univ (Var =.. Expr)
   // Also handles remote goals: Module # Goal
   Goal _parseGoal() {
+    _refuseLayoutAfterVariableHere();
     // Check for assignment or univ: Var := Expr or Var =.. Expr
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final varToken = _advance();
@@ -1392,6 +1395,7 @@ class Parser {
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final token = _advance();
       final isReader = token.type == TokenType.READER;
+      if (!isReader) _refuseLayoutBeforeVariableMark(token);
 
       // Check for := assignment (Var := Expr)
       if (_match(TokenType.ASSIGN)) {
@@ -1403,9 +1407,11 @@ class Parser {
       return VarTerm(token.lexeme, isReader, token.line, token.column);
     }
 
-    // Underscore (anonymous variable) - can have reader mark: _ or _?
+    // Underscore (anonymous variable) - can have reader mark: _ or _?,
+    // the "?" written with nothing before it ([_refuseLayoutBeforeVariableMark]).
     if (_match(TokenType.UNDERSCORE)) {
       final token = _previous();
+      _refuseLayoutBeforeVariableMark(token);
       final isReader = _match(TokenType.QUESTION);
       return UnderscoreTerm(token.line, token.column, isReader: isReader);
     }
@@ -1722,6 +1728,39 @@ class Parser {
     }
     _advance();
     return true;
+  }
+
+  /// Refuses a `?` after [variable], the variable or `_` at the current
+  /// position or just read, when white space or a line break stands between
+  /// them: a variable and its `?` are written with nothing between them, and
+  /// the reader refuses a program that puts white space or a line break there
+  /// (GLP-Spec 14b5691, appendix-guards.tex, "Predefined types").  `X?` is one
+  /// reader token, and `_?` the token `_` with a `?` directly after it.  Until
+  /// 2026-11-02 `_ ?` and `_\n?` were read as the anonymous reader `_?`, and
+  /// `X ?` was refused only by whatever error the stray `?` met.
+  void _refuseLayoutBeforeVariableMark(Token variable, [int? at]) {
+    final i = at ?? _current;
+    if (i >= tokens.length) return;
+    final q = tokens[i];
+    if (q.type != TokenType.QUESTION || !q.spaceBefore) return;
+    final name = variable.type == TokenType.UNDERSCORE ? '_' : variable.lexeme;
+    final where = q.line == variable.line ? '' : ' (line ${variable.line})';
+    throw CompileError(
+      'White space or a line break stands between the variable "$name"$where '
+      'and its "?": a variable and its "?" are written with nothing between '
+      'them (GLP-Spec, appendix-guards.tex, "Predefined types")',
+      q.line,
+      q.column,
+      phase: 'parser',
+    );
+  }
+
+  /// [_refuseLayoutBeforeVariableMark] for the token at the current position,
+  /// when it is a variable or `_`, before it is read.
+  void _refuseLayoutAfterVariableHere() {
+    if (_check(TokenType.VARIABLE) || _check(TokenType.UNDERSCORE)) {
+      _refuseLayoutBeforeVariableMark(_peek(), _current + 1);
+    }
   }
 
   // Helper methods

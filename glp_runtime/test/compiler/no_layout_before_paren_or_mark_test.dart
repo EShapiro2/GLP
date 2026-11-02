@@ -6,6 +6,11 @@
 // "Predefined types"; GLP #11 Cowork, 2026-11-01 22:33 UTC).  The refusal names
 // the line of the "(" or the "?".  Until 2026-11-02 `p (X)`, `p\n(X)`,
 // `Integer ?` and `Integer\n?` were read as `p(X)` and `Integer?`.
+//
+// "A type or a variable and its ?" (GLP-Spec 14b5691, appendix-guards.tex,
+// "Predefined types"; GLP #11 Cowork, 2026-11-02 07:39 UTC): the reader refuses
+// `_ ?` as it refuses `X ?`.  Until 2026-11-02 `_ ?` was read as the anonymous
+// reader `_?`, and `X ?` was refused only by whatever error the stray `?` met.
 
 import 'dart:io';
 
@@ -33,6 +38,8 @@ void _parses(String source) {
 const _functorRule =
     'a functor and its opening parenthesis are written with nothing between them';
 const _markRule = 'a type and its "?" are written with nothing between them';
+const _variableMarkRule =
+    'a variable and its "?" are written with nothing between them';
 
 /// [source] with [gap] at the one place marked `^`, and with nothing there.
 (String, String) _at(String source, String gap) =>
@@ -134,6 +141,67 @@ void main() {
     }
   });
 
+  group('layout between a variable and its "?" is refused', () {
+    for (final (what, source, variable) in [
+      ('a variable in a clause head', 'p(X^?).', 'X'),
+      ('_ in a clause head', 'p(_^?).', '_'),
+      ('a variable in a goal argument', 'p(X) :- q(X^?).\nq(_).', 'X'),
+      ('_ in a goal argument', 'p :- q(_^?).\nq(_).', '_'),
+      ('a variable named with an underscore', 'p :- q(_Y^?).\nq(_).', '_Y'),
+      ('a variable in a structure', 'p(X) :- q(f(a, X^?)).\nq(_).', 'X'),
+      ('_ in a structure', 'p :- q(f(_^?)).\nq(_).', '_'),
+      ('a variable as a list tail', 'p(X) :- q([a|X^?]).\nq(_).', 'X'),
+      ('_ as a list element', 'p :- q([_^?]).\nq(_).', '_'),
+      ('a variable in an expression',
+          'p(X, Y) :- Y := X^? + 1.', 'X'),
+      ('a variable before :=', 'p(X, Y) :- Y^? := X? + 1.', 'Y'),
+      ('a variable before =', 'p(X, Y) :- X^? = Y.', 'X'),
+      ('a variable in a guard', 'p(X) :- X^? > 0 | true.', 'X'),
+      ('a variable heading a clause', 'X^? := 1.', 'X'),
+    ]) {
+      for (final (gap, kind) in [
+        ('\n', 'a line break'),
+        (' ', 'a space'),
+        ('\t', 'a tab'),
+        ('/* c */', 'a comment'),
+      ]) {
+        test('$what, $kind', () {
+          final (spaced, joined) = _at(source, gap);
+          final e = _refusal(spaced);
+          expect(e.category, ErrorCategory.syntax, reason: '$e');
+          expect(e.message, contains(_variableMarkRule), reason: '$e');
+          expect(e.message, contains('the variable "$variable"'),
+              reason: '$e');
+          final (line, column) = _position(source, gap);
+          expect((e.line, e.column), (line, column), reason: '$e');
+          if (what != 'a variable heading a clause') _parses(joined);
+        });
+      }
+    }
+
+    test('_ ? refused', () {
+      final e = _refusal('p :- q(_ ?).\nq(_).');
+      expect(e.message, contains(_variableMarkRule));
+      expect(e.message, contains('the variable "_"'));
+      expect((e.line, e.column), (1, 10));
+      _parses('p :- q(_?).\nq(_).');
+    });
+
+    test('X ? refused alike', () {
+      final e = _refusal('p(X) :- q(X ?).\nq(_).');
+      expect(e.message, contains(_variableMarkRule));
+      expect(e.message, contains('the variable "X"'));
+      expect((e.line, e.column), (1, 13));
+    });
+
+    test('the refusal names the variable\'s line where the "?" is on the next',
+        () {
+      final e = _refusal('p :- q(_\n?).\nq(_).');
+      expect(e.line, 2);
+      expect(e.message, contains('"_" (line 1)'));
+    });
+  });
+
   group('a program with layout there does not load', () {
     late GlpEngine engine;
     setUp(() => engine = GlpEngine(
@@ -156,6 +224,14 @@ void main() {
       ('a newline between a type and its "?"',
           'procedure p(Integer\n?, Integer).\np(X, Y?) :- Y := X? + 1.\n',
           _markRule, 2),
+      ('a newline between a variable and its "?"',
+          'procedure p(Integer?, Integer).\np(X, Y\n?) :- Y := X? + 1.\n',
+          _variableMarkRule, 3),
+      ('a space between _ and its "?"',
+          'procedure p(Integer?, Integer).\n'
+          'p(X, Y?) :- Y := X? + 1, q(_ ?).\n'
+          'procedure q(Integer?).\nq(_).\n',
+          _variableMarkRule, 2),
     ]) {
       test('$what: refused, naming line $line', () {
         expect(
