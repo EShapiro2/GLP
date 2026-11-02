@@ -27,11 +27,10 @@ import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
 /// Bob closes his PAN and reports each caller he hears; alice tells dave her
 /// key, dave hands it to bob, who declares it by peer_declare, and dave then
-/// relays the go to alice and carol, who each call bob.  An agent has no key
-/// at boot (IGLP, Implementation Notes, "Boot"), so bob declares alice by the
-/// key her first call of self_key/1 made, which reaches him in a message.
-/// Until 2026-11-02 bob declared alice by her name at his start, her key made
-/// by the boot harness before the agents ran.
+/// relays the go to alice and carol, who each call bob.  Bob declares alice by
+/// the key self_key/1 assigns her, made at her spawn (IGLP, Implementation
+/// Notes, "Boot"), which reaches him in a message.  Until 2026-11-02 bob
+/// declared alice by her name at his start.
 const _boot = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob, agent(ch(_?, _), ch(_?, _))@dave, say(dave, ch(_?, _))@dave, agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@carol, say(carol, ch(_?, _))@carol.
@@ -39,7 +38,7 @@ boot :- agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob, agent(ch(_?, _
 PdMsg ::= go ; ready ; declared ; key(Key) ; declare(Key) ; hello(Constant).
 
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(PdMsg)), Stream(NetMsg(PdMsg)))?).
-agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 procedure start(Stream(Constant)?, Stream(NetMsg(PdMsg))?).
 start([P | _], N) :- agent_init(P?, N?).
 start([], _).

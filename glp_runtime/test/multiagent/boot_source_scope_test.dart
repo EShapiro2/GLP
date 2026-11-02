@@ -69,7 +69,7 @@ const _bootClause = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice.
 exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
 start([alice | _], N) :- agent_init(alice, N?).
 start(_, _) :- otherwise | true.

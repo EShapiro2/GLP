@@ -214,14 +214,6 @@ class GlpEngine {
   /// otherwise (glpc, the suite), where the paper names no key.
   PersonIdentity get identity => _runtime.identity!;
 
-  /// The key this engine's compiler certifies modules with: the person's
-  /// where the identity is given at construction or generated there, and,
-  /// for an agent of a boot, which has no key at boot ([GlpRuntime.persona]),
-  /// a key of the engine's own, generated at construction: the compiler is
-  /// the machine's, and the agent's key is made later, at its first call of
-  /// self_key/1.
-  late final PersonIdentity compilerIdentity;
-
   /// Access to the runtime (for madGLP integration)
   GlpRuntime get runtime => _runtime;
 
@@ -237,23 +229,9 @@ class GlpEngine {
   ///
   /// [rootSelfGlpPath] is the absolute path to programs/self.glp.
   /// Loading root self.glp is not optional — it's part of engine initialization.
-  ///
-  /// [persona], given for an agent of a boot, is the agent's name p in the
-  /// boot clause: the agent has no key at boot, and its key pair is made at
-  /// its first call of self_key/1 (GLP-Spec appendix-guards.tex, "Identity
-  /// and signature"; IGLP, Implementation Notes, "Boot").
-  GlpEngine(
-      {required String rootSelfGlpPath,
-      PersonIdentity? identity,
-      String? persona}) {
+  GlpEngine({required String rootSelfGlpPath, PersonIdentity? identity}) {
     _rootSelfGlpPath = rootSelfGlpPath;
-    if (persona != null) {
-      _runtime.persona = persona;
-      compilerIdentity = identity ?? PersonIdentity.generate();
-    } else {
-      _runtime.identity = identity ?? PersonIdentity.generate();
-      compilerIdentity = _runtime.identity!;
-    }
+    _runtime.identity = identity ?? PersonIdentity.generate();
 
     // Nothing is set for the process: every check, partial evaluation and
     // compilation below is given its scope (module_hierarchy.dart,
@@ -1409,7 +1387,7 @@ class GlpEngine {
       typeDefsText: interfaceTypeDefsText(
           exportDecls: exportDecls, typeDefs: interfaceTypeDefs),
       exports: exports,
-      signer: offending.isEmpty ? compilerIdentity : null,
+      signer: offending.isEmpty ? identity : null,
     );
     // The module's declared type-identity table (TGLP §Dynamic Activation and
     // Implementation Notes, "The tables"): every procedure declared in the

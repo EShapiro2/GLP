@@ -208,12 +208,6 @@ class MadContext {
   /// Returns the number of messages flushed.
   int flushMessages() {
     if (onMessageReady == null) return 0;
-    // Nothing is sent on the network before the agent's key exists: the
-    // messages stay in M_p, undelivered, until its first call of self_key/1
-    // makes it (GLP-Spec appendix-guards.tex, "Identity and signature"; IGLP,
-    // Implementation Notes, "Boot").  An agent of a boot is one whose
-    // runtime holds its persona ([GlpRuntime.persona]).
-    if (runtime.identity == null && runtime.persona != null) return 0;
 
     int count = 0;
     final destinations = List<String>.from(mp.destinations);

@@ -137,28 +137,11 @@ class SimulationRouter {
 
   /// Register an agent's identity, both its trust levels Closed (paper, Trust
   /// levels: "until set, both levels are Closed").
-  ///
-  /// An agent of a boot is registered when its key is made, at its first call
-  /// of self_key/1 (IGLP, Implementation Notes, "Boot"): a message sent to it
-  /// before then has waited ([routeSend]) and is routed now, in the order sent,
-  /// delivery being fair (IGLP, Remark "Message Delivery").
   void register(String id, PubKey pk) {
     directory.register(id, pk);
     _trust.putIfAbsent(id, _closed);
     _contacted.putIfAbsent(id, () => <String>{});
-    final waiting = _awaitingKey.remove(id);
-    if (waiting == null) return;
-    for (final w in waiting) {
-      routeSend(w.fromId, w.toId, w.payload);
-    }
   }
-
-  /// The messages sent to an agent whose key is not yet made, by its id, in
-  /// the order sent.
-  final Map<String, List<_PendingDelivery>> _awaitingKey = {};
-
-  /// Whether a message to [id] waits for its key ([register]).
-  bool awaitsKey(String id) => _awaitingKey.containsKey(id);
 
   static Map<ProximityUnderlay, TrustLevel> _closed() =>
       {for (final u in ProximityUnderlay.values) u: TrustLevel.closed};
@@ -279,14 +262,7 @@ class SimulationRouter {
 
     final fromPk = directory.pkOf(fromId);
     final toPk = directory.pkOf(toId);
-    if (fromPk == null) return; // a sender with no key: drop
-    if (toPk == null) {
-      // A destination whose key is not yet made waits for it ([register]).
-      _awaitingKey
-          .putIfAbsent(toId, () => [])
-          .add(_PendingDelivery(fromId, toId, payload, ''));
-      return;
-    }
+    if (fromPk == null || toPk == null) return; // unknown peer: drop
 
     if (!isAdjacent(fromId, toId)) return; // unreachable: drop
 

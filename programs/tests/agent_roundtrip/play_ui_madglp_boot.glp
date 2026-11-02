@@ -31,9 +31,9 @@ boot :-
     agent(ch(_?, _), ch(_?, _))@charlie,
     say(charlie, ch(_?, _))@charlie.
 
-%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network.
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input, the agent's key having been made at its spawn.
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(NetInStream, Stream(NetMsg(NetColdCall)))?).
-agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 
 %% The agent's program, by the name its person tells it.
 procedure start(Stream(Constant)?, NetInStream?).

@@ -186,6 +186,19 @@ boot :-
             () => loader.load('procedure boot.\nboot :- agent(ch(_?, _), '
                 'ch(_?, _))@a, say(X, ch(_?, _))@a.\n'),
             refused('is not ground'));
+        // Two channel arguments: the person has one channel (IGLP 8bec699,
+        // Implementation Notes, "Boot": "whose one channel argument, written
+        // ch(_?,_), is the person's end of p's person channel, its other
+        // arguments ground").
+        expect(
+            () => loader.load('procedure boot.\nboot :- agent(ch(_?, _), '
+                'ch(_?, _))@a, say(ch(_?, _), ch(_?, _))@a.\n'),
+            refused('this goal has 2'));
+        // A channel of the wrong polarity is no ch(_?,_), and not ground.
+        expect(
+            () => loader.load('procedure boot.\nboot :- agent(ch(_?, _), '
+                'ch(_?, _))@a, say(a, ch(_, _?))@a.\n'),
+            refused('this goal has 0'));
       });
 
       test('a goal that is no G@p is refused', () {

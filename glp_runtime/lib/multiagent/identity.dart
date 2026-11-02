@@ -49,16 +49,15 @@ class PersonIdentity {
         Uint8List.fromList(priv.bytes));
   }
 
-  /// The agent's key pair, made at its first call of self_key/1 (GLP-Spec
-  /// appendix-guards.tex, "Identity and signature": "An agent has no key at
-  /// boot: the runtime makes the agent's key pair at the agent's first call
-  /// of self_key/1, from a seed drawn from outside the program"), from the
-  /// seed IGLP names: "the clock, the device's hardware identifiers and the
-  /// persona's name, which is the agent's name p in the boot clause, combined
-  /// by exclusive or" (IGLP, Implementation Notes, "Boot").  Each of the three
-  /// is hashed to 32 bytes with SHA-256, and the seed is the exclusive or of
-  /// the three hashes.  The clock is the microseconds since the epoch; the
-  /// hardware identifiers are those [hardwareIdentifiers] reads.
+  /// The agent's key pair, made when the runtime spawns the agent, before
+  /// anything is compiled or sent (GLP-Spec appendix-guards.tex, "Identity
+  /// and signature"), from the seed IGLP names: "the SHA-256 of the clock,
+  /// the device's hardware identifiers and the persona's name, which is the
+  /// agent's name p in the boot clause, combined by exclusive or" (IGLP,
+  /// Implementation Notes, "Boot").  Each of the three is hashed to 32 bytes
+  /// with SHA-256, and the seed is the exclusive or of the three hashes.  The
+  /// clock is the microseconds since the epoch; the hardware identifiers are
+  /// those [hardwareIdentifiers] reads.
   factory PersonIdentity.forPersona(String persona) {
     final parts = [
       '${DateTime.now().microsecondsSinceEpoch}',

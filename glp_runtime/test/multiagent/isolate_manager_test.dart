@@ -54,6 +54,46 @@ agent(ch(_, []), ch(_, [])).
       // Test verifies boot + start don't crash with trivial goals
     }, timeout: Timeout(Duration(seconds: 10)));
 
+    test("each agent's key pair is made at its spawn, and self_key/1 assigns "
+        "it", () async {
+      // IGLP, Implementation Notes, "Boot": "When the runtime spawns an
+      // agent, before anything is compiled or sent, it makes the agent's key
+      // pair ... it is the key the networking layer holds for the agent";
+      // GLP-Spec appendix-guards.tex, "Identity and signature": "self_key(Key)
+      // assigns Key the agent's public key".  Each agent tells its person the
+      // key self_key/1 assigns it.
+      final source = '''
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob.
+
+KeyReport ::= self(Key).
+
+exported procedure agent(Channel(Stream(Constant), Stream(KeyReport))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, [self(K?)]), ch(_, [])) :- self_key(K).
+''';
+      final config = BootLoader().load(source);
+      config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
+
+      await manager.boot(config);
+      // The keys exist before the agents run, and are the agents' own.
+      final alice = manager.keyOf('alice');
+      final bob = manager.keyOf('bob');
+      expect(alice, isNotNull);
+      expect(bob, isNotNull);
+      expect(alice, isNot(equals(bob)));
+
+      manager.start();
+      await manager.settle();
+      expect(manager.faults, isEmpty);
+      for (final (agent, key) in [('alice', alice!), ('bob', bob!)]) {
+        expect(manager.outputOf(agent),
+            equals(['self(${key.hex})']),
+            reason: '$agent: self_key/1 assigns the key made at its spawn');
+      }
+    }, timeout: Timeout(Duration(seconds: 30)));
+
     test('runs full play with actor scripts (no UI)', () async {
       final source = _readGlpFile('play_madglp_boot.glp');
       if (source == null) return;

@@ -27,7 +27,7 @@ const _boot = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
 exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
 start([alice | _], N) :- agent_init(alice, N?).
 start([bob | _], N) :- agent_init(bob, N?).
@@ -53,13 +53,13 @@ void main() {
     config.rootSelfGlpPath = _rootSelf;
 
     await manager.boot(config);
-    // Before the agents run: bob has no key (IGLP, Implementation Notes,
-    // "Boot": "An agent has no key at boot"), and the router holds no level
-    // for him.  Once his first call of self_key/1 makes his key, the boot
-    // harness sets the PAN level Open for the plays, and he then declares his
-    // own.  Until 2026-11-02 the harness made his key and set the level at boot.
-    expect(manager.keyOf('bob'), isNull);
-    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.closed);
+    // Before the agents run: bob's key, made at his spawn (IGLP,
+    // Implementation Notes, "Boot": "When the runtime spawns an agent, before
+    // anything is compiled or sent, it makes the agent's key pair"), the boot
+    // harness's PAN level Open for the plays, and LAN Closed, as no level is
+    // set for it.
+    expect(manager.keyOf('bob'), isNotNull);
+    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.open);
     expect(manager.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.closed);
 
     manager.start();

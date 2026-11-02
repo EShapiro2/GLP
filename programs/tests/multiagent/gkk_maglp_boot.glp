@@ -2,7 +2,7 @@
 %%
 %% The boot clause names, at each agent, the person scripted in GLP, a second goal P@p, which the runtime runs on p's person channel in the person's place, its writes being the person's input (IGLP, Implementation Notes, "Boot").  Alice's person writes call(bob): what the person writes may name any agent, and this is how an agent learns of an agent it has not met (GLP-Spec maglp.tex, after Definition "Multiagent GLP").  Alice's agent then makes a conversation and cold-calls bob with it, msg(bob, conv(Ka, Kb, Ch)) on its network output (the Cold-call transaction): Ka its key, Kb a writer for bob's key, and Ch bob's end of the conversation's root channel.  Bob's agent reads it on its network input, assigns Kb its key, and each agent runs the mini-app with its key and the conversation with the other, as the social graph hands a mini-app its conversations (programs/apps/gkk/miniapp.glp).
 %%
-%% Each agent's key is made at its first call of self_key/1 (GLP-Spec appendix-guards.tex, "Identity and signature"), and nothing is sent on the network before it exists.  Each person establishes their identity by the key the request question shows (GKK:1, Identity); alice asks to know the person her agent knows over the conversation, bob, by his key (GKK:2, Acquaintance), and bob answers yes; each person then reports the person the agent knows, knows(Key).
+%% Each agent's key pair is made when the runtime spawns the agent, before anything is compiled or sent (GLP-Spec appendix-guards.tex, "Identity and signature"), and self_key/1 assigns its public key.  Each person establishes their identity by the key the request question shows (GKK:1, Identity); alice asks to know the person her agent knows over the conversation, bob, by his key (GKK:2, Acquaintance), and bob answers yes; each person then reports the person the agent knows, knows(Key).
 
 MaIn     ::= call(Key) ; input(Integer, Path, Drawn).
 MaIns    ::= [MaIn | MaIns].
@@ -31,7 +31,7 @@ boot :-
 %% The agent
 %% =============================================================================
 
-%% The agent: its key, made by self_key/1; the person's input split into the agents the person names and the grants on the mini-app's questions; a conversation for each agent the person names, which the agent cold-calls with it, and, once that agent's key comes back, the conversation opened and the person told the key, called(Q, Kq); a conversation for each cold call that reaches it; and the mini-app over the person channel and the conversations, what it draws for the person merged with what the agent tells the person.
+%% The agent: its key, which self_key/1 assigns; the person's input split into the agents the person names and the grants on the mini-app's questions; a conversation for each agent the person names, which the agent cold-calls with it, and, once that agent's key comes back, the conversation opened and the person told the key, called(Q, Kq); a conversation for each cold call that reaches it; and the mini-app over the person channel and the conversations, what it draws for the person merged with what the agent tells the person.
 exported procedure agent(Channel(MaIns, MaOuts)?, Channel(Stream(NetMsg(MaConv)), Stream(NetMsg(MaConv)))?).
 agent(ch(PIn, POut?), ch(NIn, NOut?)) :-
     self_key(K),

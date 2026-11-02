@@ -6070,7 +6070,7 @@ check_not "MB5 linkprobe14 nothing passes on a held link neither side authorises
 
 rm -f "$LP_DIR"/runprobe/*.glpw
 
-# MB6: GKK's app as maGLP (GLP #11 Cowork, 2026-11-01 22:25 UTC; GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot").  alice and bob, each in an isolate of its own, each started from agent(ch(_?,_),ch(_?,_)), each with the person scripted in GLP the boot clause names at it; alice's person names bob, her agent cold-calls bob with a conversation, msg(bob, conv(Ka, Kb, Ch)), and each agent runs programs/apps/gkk's mini-app over it.  Each agent's key is made at its first call of self_key/1; each person establishes their identity by it (GKK:1), alice asks to know bob by the key her agent was told and bob answers yes (GKK:2), and each then knows the other: alice's knows/1 names bob's key, and bob's names alice's.
+# MB6: GKK's app as maGLP (GLP #11 Cowork, 2026-11-01 22:25 UTC; GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot").  alice and bob, each in an isolate of its own, each started from agent(ch(_?,_),ch(_?,_)), each with the person scripted in GLP the boot clause names at it; alice's person names bob, her agent cold-calls bob with a conversation, msg(bob, conv(Ka, Kb, Ch)), and each agent runs programs/apps/gkk's mini-app over it.  Each agent's key pair is made at its spawn (GLP-Spec b4ecfaa, appendix-guards.tex, self_key/1; IGLP 8bec699, Boot) and self_key/1 assigns it; each person establishes their identity by it (GKK:1), alice asks to know bob by the key her agent was told and bob answers yes (GKK:2), and each then knows the other: alice's knows/1 names bob's key, and bob's names alice's.
 mb6=$("$REPL_RUN" <<HEREDOC
 :boot $GLP_DIR/programs/tests/multiagent/gkk_maglp_boot.glp $GLP_DIR/programs/apps/gkk
 :quit
@@ -6080,7 +6080,7 @@ HEREDOC
 mb6_ka=$(echo "$mb6" | sed -n "s/^.*\[alice\] key('\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\})$/\1/p" | head -1)
 mb6_kb=$(echo "$mb6" | sed -n "s/^.*\[bob\] key('\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\})$/\1/p" | head -1)
 check "MB6 GKK as maGLP: the boot settles with two agents" "Boot settled: 2 agents" "$mb6"
-check "MB6 alice's key is made at her first self_key/1 and she establishes her identity by it" "\[alice\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$mb6"
+check "MB6 alice establishes her identity by the key made at her spawn" "\[alice\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$mb6"
 check "MB6 bob's key likewise" "\[bob\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$mb6"
 check "MB6 alice knows bob, by his key" "\[alice\] knows('\{0,1\}${mb6_kb:-none}'\{0,1\})$" "$mb6"
 check "MB6 bob knows alice, by her key" "\[bob\] knows('\{0,1\}${mb6_ka:-none}'\{0,1\})$" "$mb6"

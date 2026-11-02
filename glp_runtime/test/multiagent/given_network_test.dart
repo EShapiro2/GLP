@@ -356,7 +356,7 @@ void main() {
 
   // IsolateManager boots a simulation alone (IGLP, Implementation Notes,
   // "Boot": "A boot is for a simulation; a deployed agent is booted by its
-  // application"), its agents having no key at boot: until 2026-11-02 it also
+  // application"), each agent's key made at its spawn: until 2026-11-02 it also
   // ran agents over given layers, each named in the boot clause by a key made
   // before the boot, and three tests here held that.  A deployed agent over a
   // given layer is AgentRuntime's, above.

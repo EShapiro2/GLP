@@ -120,26 +120,13 @@ class GlpRuntime {
   /// whether a networking layer is bound or none is.
   late final PlaceStreams placeStreams = PlaceStreams(this);
 
-  /// The person's identity this runtime holds: the key `self_key/1` answers
-  /// and `sign/3` signs under.  Set by the engine at construction
-  /// (multiagent/identity.dart), except for an agent of a boot, which has no
-  /// key at boot: its runtime holds [persona], and the key is made at the
-  /// agent's first call of self_key/1 (GLP-Spec appendix-guards.tex,
-  /// "Identity and signature"; IGLP, Implementation Notes, "Boot").
+  /// The person's identity this runtime holds: the key `self_key/1` answers,
+  /// `sign/3` signs under, and the compiler certifies modules with. Set by the
+  /// engine at construction (multiagent/identity.dart); for an agent, the key
+  /// pair the runtime makes when it spawns the agent, before anything is
+  /// compiled or sent (GLP-Spec appendix-guards.tex, "Identity and
+  /// signature"; IGLP, Implementation Notes, "Boot").
   PersonIdentity? identity;
-
-  /// The persona's name of an agent of a boot, its name p in the boot clause,
-  /// from which, with the clock and the device's hardware identifiers, the
-  /// agent's key pair is made at its first call of self_key/1
-  /// ([PersonIdentity.forPersona]); null where the identity is given at
-  /// construction.
-  String? persona;
-
-  /// Told of the agent's key pair when its first call of self_key/1 makes it:
-  /// the host gives it to the networking layer, which holds it and
-  /// authenticates the agent's messages by it (IGLP, Implementation Notes,
-  /// "Boot").
-  void Function(PersonIdentity identity)? onKeyMade;
 
   /// The person send_to_user/1 emits to, the '_output'/1 kernel's two ends
   /// (GLP-Spec appendix-guards.tex, "Output to the person": send_to_user(
