@@ -15,7 +15,7 @@ library;
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking_glue/headless_glp_network.dart';
+import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:sodium/sodium_sumo.dart';
 
 import 'helpers/headless_boot.dart';

@@ -291,7 +291,7 @@ class HeadlessBootProcesses {
       });
       p.stderr.transform(utf8.decoder).listen((s) => all.add('stderr: $s'));
     }
-    final waiting = const Duration(seconds: 90);
+    const waiting = Duration(seconds: 90);
     for (final spec in agents) {
       await ready[spec.id]!.future.timeout(waiting,
           onTimeout: () => throw TimeoutException(
