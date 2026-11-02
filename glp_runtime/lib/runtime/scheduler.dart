@@ -47,6 +47,24 @@ class Scheduler {
   /// failures) goes through this callback instead of print().
   void Function(String)? traceSink;
 
+  /// The runner contexts of this scheduler, reused run after run as the FCP
+  /// machine's worker state is: a drain takes one for each goal it runs and
+  /// gives it back after ([RunnerContext.reset]).  More than one only where a
+  /// run drains within a run.
+  final List<RunnerContext> _contexts = <RunnerContext>[];
+
+  RunnerContext _takeContext() => _contexts.isNotEmpty
+      ? _contexts.removeLast()
+      : RunnerContext(rt: rt, goalId: 0, kappa: 0);
+
+  void _returnContext(RunnerContext cx) => _contexts.add(cx);
+
+  /// The term formatter every run's context carries: one closure for the
+  /// scheduler, not one per goal.
+  late final String Function(Term, {bool markReaders}) _termFormatter =
+      (term, {bool markReaders = true}) =>
+          _formatTerm(term, markReaders: markReaders);
+
   Scheduler({required this.rt, GoalRunner? runner, Map<Object?, GoalRunner>? runners, this.traceSink})
       : runners = runners ?? (runner != null ? {null: runner} : {});
 
@@ -253,6 +271,15 @@ class Scheduler {
     // F at entry: a goal that failed in an earlier drain has already been
     // counted, so only what this drain adds bears on its status.
     final failedAtEntry = rt.failedGoals.length;
+    // The reduction callback for the trace, when the drain is traced: one for
+    // the drain, not one per goal.
+    final onReduction = debug
+        ? (int goalId, String head, String body) {
+            // Print reduction when it occurs (at Commit)
+            // No goal ID prefix - clean output
+            _trace('${_stripArity(head)} :- ${_stripArity(body)}');
+          }
+        : null;
 
     while (cycles < maxCycles) {
       // when_idle (GLP-Spec appendix-guards.tex, e3a8d52; IGLP eadadcd,
@@ -297,28 +324,23 @@ class Scheduler {
       // callback that recorded it, which is why the callback was always set
       // and every goal was formatted for it (the bug of 2026-01-31, a goal
       // that reduced read as failed when the callback was not set).
-      final cx = RunnerContext(
-        rt: rt,
+      final cx = _takeContext();
+      cx.reset(
         goalId: act.id,
         kappa: act.pc,
         env: env,
         goalHead: goalStr,
         goalProcName: procName,
         debugOutput: debugOutput,
-        termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
-        onReduction: debug
-            ? (goalId, head, body) {
-                // Print reduction when it occurs (at Commit)
-                // No goal ID prefix - clean output
-                _trace('${_stripArity(head)} :- ${_stripArity(body)}');
-              }
-            : null,
+        termFormatter: _termFormatter,
+        onReduction: onReduction,
       );
       final result = runner.runWithStatus(cx);
 
       // Track if reduction occurred; a goal that reduced leaves the suspended
       // list.
       final hadReduction = cx.reduced;
+      _returnContext(cx);
       if (hadReduction) suspendedGoals.remove(act.id);
 
       // Track suspended goals (always, not just in debug mode)
