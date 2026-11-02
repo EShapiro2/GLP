@@ -8,9 +8,25 @@
 
 procedure boot.
 boot :-
-    gai_phone(alice, _)@alice,
-    gai_phone(alf, _)@alf,
-    gai_phone(bob, _)@bob.
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@alf,
+    say(alf, ch(_?, _))@alf,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, ch(_?, _))@bob.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's smartphone, gai_phone/2, on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network (GLP-Spec appendix-guards.tex, "Identity and signature").
+exported procedure agent(Channel(Stream(Key), Stream(Key))?, Channel(NetInStream, NetOutStream)?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+
+%% The agent's smartphone, by the name its person tells it.
+procedure start(Stream(Key)?, NetInStream?).
+start([P | _], N) :- gai_phone(P?, N?).
+start(_, _) :- otherwise | true.
+
+%% The person at each agent: it tells the agent its name, and reads nothing.
+exported procedure say(Key?, Channel(Stream(Key), Stream(Key))?).
+say(P, ch(_, [P?])).
 
 %% One smartphone: the super-app's agent on the isolate's network, the mini-app read from its artefact beside the program and installed, and the agent's acts on its super-app, given the agent before it in the ring alice, alf, bob, whose invitation it accepts, the agent after it, whom it connects to and invites, and whether it connects first.
 procedure gai_phone(Key?, NetInStream?).
