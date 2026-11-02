@@ -184,7 +184,7 @@ void main() {
       expect('$g0', '_w(bob, 0)');
       final c = cell as StructTerm;
       expect(_elements(c.args[0]).length, _n);
-      expect('${c.args[1]}', '_w(Const(bob),Const(0))');
+      expect('${c.args[1]}', '_w(bob, 0)');
     });
   });
 
@@ -194,7 +194,7 @@ void main() {
       Term names = ConstTerm(nil);
       for (var i = _n; i >= 1; i--) {
         names = StructTerm('.', [
-          StructTerm('_r', [ConstTerm('alice'), ConstTerm(i)]),
+          GlobalName.reader('alice', i).toTerm(),
           names
         ]);
       }

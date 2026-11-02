@@ -1049,11 +1049,14 @@ class MadContext {
   /// value stays pending there, unacknowledged (Definition "madGLP Local
   /// State").
   ///
-  /// A value message carrying a global name whose index is not a non-negative
-  /// integer is refused at receipt in the same way, the refusal naming the
-  /// name: "An index is a non-negative integer, and the reader refuses a
-  /// global name whose index is anything else" (IGLP code-format-fragment.tex,
-  /// Terms, tag 2).
+  /// A message --- a value, a request or an acknowledgement --- carrying a
+  /// global name whose agent is not an atom is refused at receipt in the same
+  /// way, the refusal naming the name: "An agent is an atom and an index is a
+  /// non-negative integer, and the reader refuses a global name whose agent or
+  /// index is anything else" (IGLP code-format-fragment.tex, Terms, tag 2).
+  /// The name is a tag-2 variable, or the name the message is addressed to;
+  /// a structure `'_w'(P, I)` the message carries is a program's term and
+  /// arrives as the structure (IGLP madglp-spec.tex:17, at IGLP 1e01638).
   void handleIncomingPayload({
     required List<int> payload,
     required String fromAgent,
@@ -1081,11 +1084,20 @@ class MadContext {
             value: received.value,
             fromAgent: fromAgent,
             serial: received.serial);
-      case wireMsgKindRequest:
-        handleRequest(
-            PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
-      case wireMsgKindAcknowledgement:
-        handleAck(PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
+      case wireMsgKindRequest || wireMsgKindAcknowledgement:
+        final GlobalName name;
+        try {
+          name = PayloadCodec.decodeRequestOrAckPayload(payload);
+        } on GlobalNameRefusal catch (refusal) {
+          print('[REFUSED] $agentId: a message from $fromAgent is refused at '
+              'receipt: ${refusal.message}');
+          return;
+        }
+        if (payload[0] == wireMsgKindRequest) {
+          handleRequest(name, fromAgent);
+        } else {
+          handleAck(name, fromAgent);
+        }
       default:
         throw FormatException(
             'unknown madGLP message kind: ${payload[0]}');
