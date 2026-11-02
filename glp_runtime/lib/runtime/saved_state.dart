@@ -43,9 +43,13 @@ class SavedStateFormatException implements Exception {
   String toString() => 'SavedStateFormatException: $message';
 }
 
-/// The four magic bytes, `GLPS`, and the format version.
+/// The four magic bytes, `GLPS`, and the format version.  Version 2
+/// (2026-11-02) writes a global name in the place of a variable, a
+/// [GlobalNameTerm] in a held assignment's value, under a term tag of its own;
+/// version 1 wrote it as the structure `'_w'(p, i)`, which no longer stands
+/// for a name, so a version-1 state is not read.
 const List<int> savedStateMagic = [0x47, 0x4C, 0x50, 0x53];
-const int savedStateVersion = 1;
+const int savedStateVersion = 2;
 
 // Term tags.
 const int _tVar = 0;
@@ -53,6 +57,7 @@ const int _tConst = 1;
 const int _tStruct = 2;
 const int _tMutualRef = 3;
 const int _tModule = 4;
+const int _tGlobalName = 5;
 
 // Constant tags.
 const int _cNil = 0;
@@ -267,6 +272,11 @@ class StateWriter {
       } else if (x is ModuleTerm) {
         o.u8(_tModule);
         o.uint(_moduleIndex(x));
+      } else if (x is GlobalNameTerm) {
+        o.u8(_tGlobalName);
+        o.u8(x.isReader ? 1 : 0);
+        o.str(x.agent);
+        o.uint(x.index);
       } else {
         throw StateError('a term of kind ${x.runtimeType} has no saved form');
       }
@@ -575,6 +585,9 @@ class StateReader {
             throw SavedStateFormatException('module constant $i is not saved');
           }
           done = _modules[i];
+        case _tGlobalName:
+          done = GlobalNameTerm(
+              isReader: _in.u8() == 1, agent: _in.str(), index: _in.uint());
         default:
           throw SavedStateFormatException('a term has the bad tag $tag');
       }
