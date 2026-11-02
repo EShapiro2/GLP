@@ -56,7 +56,10 @@ class GlobalName {
   int get hashCode => Object.hash(type, agent, index);
 
   /// The name the 2-ary structure [t] presents, `'_w'(P, I)` or `'_r'(P, I)`
-  /// with constant arguments; null for any other structure.
+  /// with constant arguments, I a non-negative integer; null for any other
+  /// structure.  "An index is a non-negative integer" (IGLP
+  /// code-format-fragment.tex, Terms, tag 2); until 2026-11-02 an index such
+  /// as 2.0 was truncated to 2.
   static GlobalName? fromStruct(StructTerm t) {
     if ((t.functor != '_w' && t.functor != '_r') || t.args.length != 2) {
       return null;
@@ -64,8 +67,10 @@ class GlobalName {
     final agentArg = t.args[0];
     final indexArg = t.args[1];
     if (agentArg is! ConstTerm || indexArg is! ConstTerm) return null;
+    final indexValue = indexArg.value;
+    if (indexValue is! int || indexValue < 0) return null;
     final agent = agentArg.value as String;
-    final index = (indexArg.value as num).toInt();
+    final index = indexValue;
     return t.functor == '_w'
         ? GlobalName.writer(agent, index)
         : GlobalName.reader(agent, index);

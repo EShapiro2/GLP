@@ -1259,20 +1259,30 @@ check "pf clause-4 shape (walk)" "R3 = 6" "$a32"
 check "p67 pt1 chain (gst)" "T = gt(a, gt(b, gnil, gnil), gt(c, gnil, gnil))" "$a32"
 
 # --- A33: Seeded random (random/4, GLP-ICLP appendix-guards) ---
-# Value in [1,N]; NextSeed a function of Seed alone; threading reproduces
-# exactly (rthree draws three, threading NextSeed); N < 1 fails at the guard.
+# SplitMix64 (GLP-ICLP-2026 2fc437f).  Value in [1,N]; NextSeed a function of
+# Seed alone; threading reproduces exactly (rthree draws three, threading
+# NextSeed); N < 1 fails at the guard.  cover is GLP #11's covering test
+# (Code_inbox 2026-11-01 07:26 UTC): from 0, 2147483647 and -1, a hundred draws
+# with bound 6 all in [1, 6], and the three streams differ.  The pinned values
+# were computed from the paper's sentences in Python, independently of the code.
 echo "--- A33: Seeded random ---"
 a33=$("$REPL_RUN" <<HEREDOC
 $TYPED/random_test.glp
 random(42, 6, V, NS).
 rthree(1, R).
+cover(0, C0).
+cover(2147483647, C1).
+cover(-1, C2).
 random(42, 0, VBad, NSBad).
 :quit
 HEREDOC
 2>&1)
-check "random single draw value" "V = 1" "$a33"
-check "random single draw next seed" "NS = 705894" "$a33"
-check "random threaded triple reproduces" "R = rt(808, 250, 74)" "$a33"
+check "random single draw value" "V = 4" "$a33"
+check "random single draw next seed" "NS = -7046029254386353089" "$a33"
+check "random threaded triple reproduces" "R = rt(230, 507, 4)" "$a33"
+check "random cover seed 0" "C0 = cover(100, \[3, 6, 4, 5, 4\])" "$a33"
+check "random cover seed 2147483647" "C1 = cover(100, \[5, 6, 6, 5, 5\])" "$a33"
+check "random cover seed -1" "C2 = cover(100, \[3, 5, 5, 3, 4\])" "$a33"
 check "random N<1 fails at guard" "→ failed" "$a33"
 
 # --- A33a: Splitting a seed (split_random_seed/3, GLP-ICLP appendix-guards) ---
@@ -1295,15 +1305,15 @@ firsts(42, G).
 :quit
 HEREDOC
 2>&1)
-check "split_random_seed S1" "S1 = -4767286540954276203" "$a33a"
-check "split_random_seed S2" "S2 = 2949826092126892291" "$a33a"
+check "split_random_seed S1" "S1 = 3250621881602310087" "$a33a"
+check "split_random_seed S2" "S2 = 540350159304224772" "$a33a"
 check "split streams unshifted (42)" "N = 0" "$a33a"
 check "split streams unshifted (7)" "N7 = 0" "$a33a"
 check "split shift control" "C = 1" "$a33a"
 check "split second run reproduces" "R = yes" "$a33a"
-check "split first draws" "F = firsts(705895, 2145617533, 1051972607)" "$a33a"
-check "split second split reproduces" "T1 = -4767286540954276203" "$a33a"
-check "split second first draws reproduce" "G = firsts(705895, 2145617533, 1051972607)" "$a33a"
+check "split first draws" "F = firsts(745971022, 1039421601, 1816191086)" "$a33a"
+check "split second split reproduces" "T1 = 3250621881602310087" "$a33a"
+check "split second first draws reproduce" "G = firsts(745971022, 1039421601, 1816191086)" "$a33a"
 
 # --- A34: Ackermann on Peano numerals (book/recursive/arithmetic_trees) ---
 # Clause 3's guard was compound(M?), ground(M?): compound refused M = 0, so
@@ -7910,7 +7920,7 @@ poll_run(5, As).
 HEREDOC
 2>&1)
 check "sglp outside: the program loads" "Loaded program" "$sglp_out_run"
-check "sglp outside: the person answers each poll, logged with the monitor's clock" "entry(14916.00387843316, 1, Poll, poll(2, yes))" "$sglp_out_run"
+check "sglp outside: the person answers each poll, logged with the monitor's clock" "entry(31906.575869147167, 1, Poll, poll(2, yes))" "$sglp_out_run"
 check "sglp outside: the program reads the five answers" "As = \[yes, yes, yes, yes, yes\]" "$sglp_out_run"
 
 # The simulations of canonical CVA platforms under sGLP, each a record of its

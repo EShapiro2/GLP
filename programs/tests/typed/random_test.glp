@@ -1,4 +1,5 @@
-% Regression: seeded random system predicate random/4 (GLP-ICLP appendix-guards).
+% Regression: seeded random system predicate random/4 (GLP-ICLP appendix-guards),
+% SplitMix64 (GLP-ICLP-2026 2fc437f).
 % random(Seed, N, Value, NextSeed): 1 =< Value =< N; NextSeed a function of Seed
 % alone; threading NextSeed reproduces exactly from an initial seed.
 
@@ -10,3 +11,41 @@ rthree(Seed, rt(V1?, V2?, V3?)) :-
   random(Seed?, 1000, V1, S1),
   random(S1?, 1000, V2, S2),
   random(S2?, 1000, V3, _).
+
+% The covering test of GLP #11's task (Code_inbox 2026-11-01 07:26 UTC): random/4
+% from seed 0, from 2147483647 and from -1 each gives draws in [1, N] over a
+% hundred steps, and the three streams differ.
+
+Cover ::= cover(Integer, Stream(Integer)).
+
+% inrange(Seed, N, K, C): C is the number of the first K draws from Seed with
+% bound N, threading NextSeed, that lie in [1, N].
+procedure inrange(Integer?, Integer?, Integer?, Integer).
+inrange(_, _, 0, 0).
+inrange(S, N, K, C?) :- integer(N?), K? > 0 |
+  random(S?, N?, V, S1),
+  K1 := K? - 1,
+  inrange(S1?, N?, K1?, C1),
+  in1(V?, N?, B),
+  C := B? + C1?.
+
+% in1(V, N, B): B is 1 if 1 =< V =< N, else 0.
+procedure in1(Integer?, Integer?, Integer).
+in1(V, N, 1) :- V? >= 1, V? =< N? | true.
+in1(V, _, 0) :- V? < 1 | true.
+in1(V, N, 0) :- V? > N? | true.
+
+% firstk(Seed, N, K, Vs): Vs is the first K draws from Seed with bound N.
+procedure firstk(Integer?, Integer?, Integer?, Stream(Integer)).
+firstk(_, _, 0, []).
+firstk(S, N, K, [V?|Vs?]) :- integer(N?), K? > 0 |
+  random(S?, N?, V, S1),
+  K1 := K? - 1,
+  firstk(S1?, N?, K1?, Vs).
+
+% cover(Seed, C): C holds the number of the first hundred draws from Seed with
+% bound 6 that lie in [1, 6], and the first five of those draws.
+procedure cover(Integer?, Cover).
+cover(Seed, cover(C?, Vs?)) :- integer(Seed?) |
+  inrange(Seed?, 6, 100, C),
+  firstk(Seed?, 6, 5, Vs).
