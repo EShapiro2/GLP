@@ -10,8 +10,11 @@
 %% glp_multiagent/test/headless_boot_test.dart, in one process and in one
 %% process per agent.
 
-%% What a caller asks: a writer the callee assigns.
-Ask ::= ask(String).
+%% What a caller asks: a writer the callee assigns.  The `?` at the type
+%% position is where a writer travels inside a value (programs/tests/
+%% mad_w_probe.glp: "A `?` at a type position is where a writer travels inside
+%% a value").
+Ask ::= ask(String?).
 
 imported procedure agents#caller_init(Key?, Key?, Stream(NetMsg(Ask))?).
 imported procedure agents#callee_init(Key?, Stream(NetMsg(Ask))?).
