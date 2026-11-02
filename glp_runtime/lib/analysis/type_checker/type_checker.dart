@@ -1622,6 +1622,7 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
         {...inst.env.procedures, inst.monoDecl.key: inst.monoDecl},
         paramProcDecls: inst.env.paramProcDecls,
         typeTemplates: inst.env.typeTemplates,
+        base: inst.env,
       );
 
       // This instantiation is on the current cycle: a recursive (self or mutual)

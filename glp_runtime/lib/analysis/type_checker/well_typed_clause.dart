@@ -2878,6 +2878,7 @@ _Probe? _probeOf(ProcDecl template, TypeEnvironment env) {
           paramProcDecls: env.paramProcDecls,
           typeTemplates: env.typeTemplates,
           typeOrigins: env.typeOrigins,
+          base: env,
         )),
         paramOf,
         types);
@@ -3989,6 +3990,7 @@ Map<String, List<String>> _calleeFixedTypes(ProcDecl template,
       paramProcDecls: env.paramProcDecls,
       typeTemplates: env.typeTemplates,
       typeOrigins: env.typeOrigins,
+      base: env,
     );
     return (decl, declEnv, buildProgramDFA(declEnv));
   } on UnknownTypeError {

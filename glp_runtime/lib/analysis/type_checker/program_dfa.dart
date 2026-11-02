@@ -3,6 +3,7 @@
 // Specification: TGLP appendix-type-automaton.tex (the type automaton of a
 // program) and well-typing.tex, Definition "Consistent Paths".
 
+import 'dart:collection' show MapBase;
 import 'type_ast.dart';
 import 'mode.dart';
 import 'param_expansion.dart' show abstractTypePrefix, runOpaqueTypePrefix;
@@ -330,10 +331,123 @@ class UnknownTypeError extends Error {
   String toString() => 'UnknownTypeError: $typeName at line $line, column $column';
 }
 
+/// The program DFA built for each environment, by the environment: one
+/// build per environment object, where until 2026-11-01 every TypeChecker
+/// constructed over it, every probe of a call and every inferred declaration
+/// built the whole DFA again --- 1,780 builds of some 300 types each for
+/// the GSN app's load.  The DFA tracks the environment: what grows the one
+/// grows the other (addTypesToProgramDFA, meet.dart, well_typed_clause.dart
+/// _grownBy).
+final Expando<ProgramDFA> _dfaOfEnvironment = Expando('programDfa');
+
 /// Build the complete program DFA from the type environment.
 ///
-/// Implements spec algorithm: buildProgramDFA(env)
+/// Implements spec algorithm: buildProgramDFA(env).  The DFA of an
+/// environment is built once ([_dfaOfEnvironment]); an environment that
+/// extends another ([TypeEnvironment.base]) gets a layer over its base's DFA
+/// ([_extendedDfa]), where the base's states and automata are those objects
+/// and the added types and declarations alone are built, unless it redefines
+/// a type of its base, when it is built whole.
 ProgramDFA buildProgramDFA(TypeEnvironment env) {
+  final cached = _dfaOfEnvironment[env];
+  if (cached != null) return cached;
+  final dfa = _extendedDfa(env) ?? _wholeDfa(env);
+  _dfaOfEnvironment[env] = dfa;
+  return dfa;
+}
+
+/// The DFA of [env] as a layer over its base's: null where [env] has no base
+/// or defines a type of its base's name as another definition.  The layer
+/// sees the base's states and automata as they are at this moment, and not
+/// what the base's DFA is later grown by, as a DFA built whole would not.
+ProgramDFA? _extendedDfa(TypeEnvironment env) {
+  final base = env.base;
+  if (base == null) return null;
+  final extraTypes = <String, TypeDef>{};
+  for (final e in env.types.entries) {
+    final inBase = base.types[e.key];
+    if (inBase == null) {
+      extraTypes[e.key] = e.value;
+    } else if (!identical(inBase, e.value)) {
+      return null;
+    }
+  }
+  final ownProcs = <String, ProcDecl>{};
+  for (final e in env.procedures.entries) {
+    if (!identical(base.procedures[e.key], e.value)) ownProcs[e.key] = e.value;
+  }
+  final baseDfa = buildProgramDFA(base);
+  final states = _LayeredMap<DFAState>(baseDfa.states);
+  final automata = _LayeredMap<Automaton>(baseDfa.automata);
+  for (final typeName in extraTypes.keys) {
+    states[typeName] = DFAState(typeName, isDual: false, isFinal: false);
+    states['$typeName?'] = DFAState(typeName, isDual: true, isFinal: false);
+  }
+  for (final entry in extraTypes.entries) {
+    automata[entry.key] =
+        _buildTypeAutomaton(entry.value, states, env.types, isDual: false);
+    automata['${entry.key}?'] =
+        _buildTypeAutomaton(entry.value, states, env.types, isDual: true);
+  }
+  for (final key in ownProcs.keys) {
+    states[key] = DFAState(key, isDual: false, isFinal: false, isProcedure: true);
+  }
+  for (final entry in ownProcs.entries) {
+    automata[entry.key] = _buildProcedureAutomaton(entry.value, states);
+  }
+  return ProgramDFA(states, automata);
+}
+
+/// A map over a base map: the base's entries as they were when this map was
+/// made ([_visible]), beneath this map's own, which shadow them and take
+/// every write.
+class _LayeredMap<V> extends MapBase<String, V> {
+  final Map<String, V> _base;
+  final Set<String> _visible;
+  final Map<String, V> _own = {};
+
+  _LayeredMap(this._base) : _visible = _base.keys.toSet();
+
+  @override
+  V? operator [](Object? key) {
+    final own = _own[key];
+    if (own != null) return own;
+    return _visible.contains(key) ? _base[key] : null;
+  }
+
+  @override
+  void operator []=(String key, V value) {
+    _own[key] = value;
+  }
+
+  @override
+  bool containsKey(Object? key) =>
+      _own.containsKey(key) || _visible.contains(key);
+
+  @override
+  Iterable<String> get keys sync* {
+    for (final k in _base.keys) {
+      if (_visible.contains(k) && !_own.containsKey(k)) yield k;
+    }
+    yield* _own.keys;
+  }
+
+  @override
+  V? remove(Object? key) {
+    final removed = _own.remove(key);
+    if (_visible.remove(key)) return removed ?? _base[key];
+    return removed;
+  }
+
+  @override
+  void clear() {
+    _own.clear();
+    _visible.clear();
+  }
+}
+
+/// The whole DFA of [env], every state and automaton built.
+ProgramDFA _wholeDfa(TypeEnvironment env) {
   final states = <String, DFAState>{};
   final automata = <String, Automaton>{};
 
