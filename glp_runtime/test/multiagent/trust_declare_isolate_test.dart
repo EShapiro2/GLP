@@ -25,7 +25,15 @@ import 'package:glp_runtime/multiagent/isolate_manager.dart';
 /// Two agents: bob declares PAN closed and LAN open, alice declares nothing.
 const _boot = '''
 procedure boot.
-boot :- agent_init(alice, _)@alice, agent_init(bob, _)@bob.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- agent_init(alice, N?).
+start([bob | _], N) :- agent_init(bob, N?).
+start(_, _) :- otherwise | true.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
 
 procedure agent_init(_?, _?).
 agent_init(bob, _) :- trust_declare(pan, closed), trust_declare(lan, open).
@@ -45,9 +53,13 @@ void main() {
     config.rootSelfGlpPath = _rootSelf;
 
     await manager.boot(config);
-    // Before the agents run: the boot harness's PAN level Open for the plays,
-    // and LAN Closed, as no level is set for it.
-    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.open);
+    // Before the agents run: bob has no key (IGLP, Implementation Notes,
+    // "Boot": "An agent has no key at boot"), and the router holds no level
+    // for him.  Once his first call of self_key/1 makes his key, the boot
+    // harness sets the PAN level Open for the plays, and he then declares his
+    // own.  Until 2026-11-02 the harness made his key and set the level at boot.
+    expect(manager.keyOf('bob'), isNull);
+    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.closed);
     expect(manager.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.closed);
 
     manager.start();

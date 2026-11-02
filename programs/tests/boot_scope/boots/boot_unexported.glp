@@ -3,10 +3,24 @@
 %% not export: the check refuses the call, naming it, and nothing runs.
 
 procedure boot.
-boot :- client(alice, _)@alice.
-
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, ch(_?, _))@alice.
 procedure client(Constant?, Stream(_)?).
 client(_, _) :- helper(secret(3), N), report(N?).
 
 procedure report(Integer?).
 report(N) :- send_to_user([total(N?)]).
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+
+%% The agent's program, by the name its person tells it.
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- client(alice, N?).
+start(_, _) :- otherwise | true.
+
+%% The person at each agent: it tells the agent its name, and reads nothing.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).

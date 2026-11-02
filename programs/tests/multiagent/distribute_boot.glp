@@ -13,6 +13,24 @@
 
 procedure boot.
 boot :-
-    producer_init(producer, _)@producer,
-    consumer1_init(consumer1, _)@consumer1,
-    consumer2_init(consumer2, _)@consumer2.
+    agent(ch(_?, _), ch(_?, _))@producer,
+    say(producer, ch(_?, _))@producer,
+    agent(ch(_?, _), ch(_?, _))@consumer1,
+    say(consumer1, ch(_?, _))@consumer1,
+    agent(ch(_?, _), ch(_?, _))@consumer2,
+    say(consumer2, ch(_?, _))@consumer2.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+
+%% The agent's program, by the name its person tells it.
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([producer | _], N) :- producer_init(producer, N?).
+start([consumer1 | _], N) :- consumer1_init(consumer1, N?).
+start([consumer2 | _], N) :- consumer2_init(consumer2, N?).
+start(_, _) :- otherwise | true.
+
+%% The person at each agent: it tells the agent its name, and reads nothing.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).

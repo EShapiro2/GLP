@@ -1,3 +1,9 @@
+/// The boot clause (IGLP, Implementation Notes, "Boot"): each body goal
+/// `agent(ch(_?,_),ch(_?,_))@p` declares the agent p, every agent's initial
+/// goal being the same (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and
+/// a second goal `P@p` names the person scripted in GLP at p.  Until
+/// 2026-11-02 a boot clause's goals were `G(p, ..., _)@p`, each agent's own
+/// entry, and these tests held that form.
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 
@@ -10,57 +16,53 @@ void main() {
     });
 
     group('valid boot files', () {
-      test('parses three-agent boot clause', () {
+      test('parses three agents, each with a scripted person', () {
         final source = '''
 procedure boot.
 boot :-
-    agent_init(alice, _)@alice,
-    agent_init(bob, _)@bob,
-    agent_init(charlie, _)@charlie.
-
-procedure agent_init(_?, Channel?).
-agent_init(Id, Ch) :- true.
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, ch(_?, _))@bob,
+    agent(ch(_?, _), ch(_?, _))@charlie,
+    say(charlie, ch(_?, _))@charlie.
 ''';
 
         final config = loader.load(source);
 
-        expect(config.directives.length, equals(3));
-        expect(config.directives[0].agentId, equals('alice'));
-        expect(config.directives[0].goalFunctor, equals('agent_init'));
-        expect(config.directives[1].agentId, equals('bob'));
-        expect(config.directives[1].goalFunctor, equals('agent_init'));
-        expect(config.directives[2].agentId, equals('charlie'));
-        expect(config.directives[2].goalFunctor, equals('agent_init'));
+        expect(config.directives.map((d) => d.agentId).toList(),
+            equals(['alice', 'bob', 'charlie']));
+        for (final d in config.directives) {
+          expect(d.person!.functor, equals('say'));
+          expect(d.person!.text('O', 'I'), equals('say(${d.agentId}, ch(O?, I))'));
+        }
       });
 
-      test('parses two-agent boot with different functors', () {
+      test('an agent with no scripted person', () {
         final source = '''
 procedure boot.
-boot :-
-    ping_agent(alice, _)@alice,
-    pong_agent(bob, _)@bob.
-''';
-
-        final config = loader.load(source);
-
-        expect(config.directives.length, equals(2));
-        expect(config.directives[0].agentId, equals('alice'));
-        expect(config.directives[0].goalFunctor, equals('ping_agent'));
-        expect(config.directives[1].agentId, equals('bob'));
-        expect(config.directives[1].goalFunctor, equals('pong_agent'));
-      });
-
-      test('parses single-agent boot', () {
-        final source = '''
-procedure boot.
-boot :- agent(solo, _)@solo.
+boot :- agent(ch(_?, _), ch(_?, _))@solo.
 ''';
 
         final config = loader.load(source);
 
         expect(config.directives.length, equals(1));
         expect(config.directives[0].agentId, equals('solo'));
-        expect(config.directives[0].goalFunctor, equals('agent'));
+        expect(config.directives[0].person, isNull);
+      });
+
+      test('the scripted person takes ground arguments around its channel', () {
+        final source = '''
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    person(caller(bob), ch(_?, _), [1, two])@alice.
+''';
+
+        final person = loader.load(source).directives.single.person!;
+        expect(person.channelIndex, equals(1));
+        expect(person.text('O', 'I'),
+            equals('person(caller(bob), ch(O?, I), [1|[two|[]]])'));
       });
 
       test('handles comments in source', () {
@@ -70,8 +72,8 @@ procedure boot.
 %% Another comment
 boot :-
     %% Comment in middle
-    agent_init(alice, _)@alice,
-    agent_init(bob, _)@bob.
+    agent(ch(_?, _), ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob.
 
 %% More comments
 procedure agent_init(_?, Channel?).
@@ -79,27 +81,25 @@ procedure agent_init(_?, Channel?).
 
         final config = loader.load(source);
 
-        expect(config.directives.length, equals(2));
-        expect(config.directives[0].agentId, equals('alice'));
-        expect(config.directives[1].agentId, equals('bob'));
+        expect(config.directives.map((d) => d.agentId).toList(),
+            equals(['alice', 'bob']));
       });
 
       test('handles flexible whitespace', () {
         final source = '''
 procedure  boot .
-boot:-agent_init( alice , _ ) @ alice.
+boot:-agent( ch( _? , _ ) , ch(_?,_) ) @ alice.
 ''';
 
         final config = loader.load(source);
 
-        expect(config.directives.length, equals(1));
-        expect(config.directives[0].agentId, equals('alice'));
+        expect(config.directives.single.agentId, equals('alice'));
       });
 
       test('preserves full source and strips boot clause', () {
         final source = '''
 procedure boot.
-boot :- agent(a, _)@a.
+boot :- agent(ch(_?, _), ch(_?, _))@a.
 
 procedure agent(_?, Channel?).
 agent(Id, Ch) :- true.
@@ -118,19 +118,12 @@ agent(Id, Ch) :- true.
     });
 
     group('error cases', () {
-      test('throws if no procedure boot declaration', () {
-        final source = '''
-boot :- agent(a, _)@a.
-''';
+      Matcher refused(String text) => throwsA(isA<BootLoaderException>()
+          .having((e) => e.message, 'message', contains(text)));
 
-        expect(
-          () => loader.load(source),
-          throwsA(isA<BootLoaderException>().having(
-            (e) => e.message,
-            'message',
-            contains('First procedure must be boot/0'),
-          )),
-        );
+      test('throws if no procedure boot declaration', () {
+        expect(() => loader.load('boot :- agent(ch(_?, _), ch(_?, _))@a.\n'),
+            refused('First procedure must be boot/0'));
       });
 
       test('throws if no boot clause', () {
@@ -140,98 +133,72 @@ procedure boot.
 procedure agent(_?, Channel?).
 agent(Id, Ch) :- true.
 ''';
-
-        expect(
-          () => loader.load(source),
-          throwsA(isA<BootLoaderException>().having(
-            (e) => e.message,
-            'message',
-            contains('Could not find boot clause'),
-          )),
-        );
+        expect(() => loader.load(source), refused('Could not find boot clause'));
       });
 
-      test('throws if agent ID mismatch', () {
+      test('an agent goal other than agent(ch(_?,_),ch(_?,_)) is refused', () {
         final source = '''
 procedure boot.
-boot :- agent(alice, _)@bob.
+boot :- agent(ch(_, _), ch(_?, _))@alice.
 ''';
-
-        expect(
-          () => loader.load(source),
-          throwsA(isA<BootLoaderException>().having(
-            (e) => e.message,
-            'message',
-            contains('Agent ID mismatch'),
-          )),
-        );
+        expect(() => loader.load(source),
+            refused("every agent's initial goal is agent(ch(_?,_),ch(_?,_))"));
       });
 
       test('throws if duplicate agent IDs', () {
         final source = '''
 procedure boot.
 boot :-
-    agent(alice, _)@alice,
-    other_agent(alice, _)@alice.
+    agent(ch(_?, _), ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@alice.
 ''';
+        expect(() => loader.load(source), refused('Duplicate agent ID: alice'));
+      });
 
+      test('two scripted persons at one agent are refused', () {
+        final source = '''
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(a, ch(_?, _))@alice,
+    say(b, ch(_?, _))@alice.
+''';
+        expect(() => loader.load(source), refused('has a scripted person already'));
+      });
+
+      test('a scripted person at an agent the clause does not declare is refused',
+          () {
+        final source = '''
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(b, ch(_?, _))@bob.
+''';
+        expect(() => loader.load(source), refused('declares no agent bob'));
+      });
+
+      test('a scripted person needs one channel argument, the rest ground', () {
         expect(
-          () => loader.load(source),
-          throwsA(isA<BootLoaderException>().having(
-            (e) => e.message,
-            'message',
-            contains('Duplicate agent ID: alice'),
-          )),
-        );
+            () => loader.load('procedure boot.\nboot :- agent(ch(_?, _), '
+                'ch(_?, _))@a, say(a, _)@a.\n'),
+            refused('this goal has 0'));
+        expect(
+            () => loader.load('procedure boot.\nboot :- agent(ch(_?, _), '
+                'ch(_?, _))@a, say(X, ch(_?, _))@a.\n'),
+            refused('is not ground'));
+      });
+
+      test('a goal that is no G@p is refused', () {
+        final source = '''
+procedure boot.
+boot :- agent(ch(_?, _), ch(_?, _))@a, true.
+''';
+        expect(() => loader.load(source), refused('is no goal G@p'));
       });
 
       test('throws if no spawn directives in boot', () {
-        final source = '''
-procedure boot.
-boot :- true.
-''';
-
-        expect(
-          () => loader.load(source),
-          throwsA(isA<BootLoaderException>().having(
-            (e) => e.message,
-            'message',
-            contains('no spawn directives'),
-          )),
-        );
-      });
-    });
-
-    group('real file content', () {
-      test('parses play_alice_bob_charlie_actor_boot.glp content', () {
-        // Simulating the actual file content
-        final source = '''
-%% play_alice_bob_charlie_actor_boot.glp - Actor-driven test with ui_agent layer
-
-procedure boot.
-boot :-
-    agent_init(alice, _)@alice,
-    agent_init(bob, _)@bob,
-    agent_init(charlie, _)@charlie.
-
-%% TYPE DEFINITIONS
-Response ::= accept(Channel) ; no.
-
-procedure agent_init(Constant?, Channel).
-agent_init(Id, ch(NetOut?, NetIn)) :-
-    ground(Id?), new_channel(ch(UserIn, UserOut?), ActorCh) |
-    ui_agent_actor(Id?, ActorCh?),
-    merge(UserIn?, NetIn?, In),
-    agent(Id?, In?, [output('_user', UserOut), output('_net', NetOut)]).
-''';
-
-        final config = loader.load(source);
-
-        expect(config.directives.length, equals(3));
-        expect(config.directives.map((d) => d.agentId).toList(),
-            equals(['alice', 'bob', 'charlie']));
-        expect(config.directives.every((d) => d.goalFunctor == 'agent_init'),
-            isTrue);
+        expect(() => loader.load('procedure boot.\nboot :- true.\n'),
+            refused('is no goal G@p'));
       });
     });
   });

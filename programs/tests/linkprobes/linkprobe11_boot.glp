@@ -1,5 +1,21 @@
 %% linkprobe11_boot.glp --- see linkprobe11/self.glp.
 procedure boot.
 boot :-
-    alice_init(alice, _)@alice,
-    bob_init(bob, _)@bob.
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, ch(_?, _))@bob.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+
+%% The agent's program, by the name its person tells it.
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- alice_init(alice, N?).
+start([bob | _], N) :- bob_init(bob, N?).
+start(_, _) :- otherwise | true.
+
+%% The person at each agent: it tells the agent its name, and reads nothing.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).

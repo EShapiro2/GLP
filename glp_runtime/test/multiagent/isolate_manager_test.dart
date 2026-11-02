@@ -33,12 +33,12 @@ void main() {
       final source = '''
 procedure boot.
 boot :-
-    agent_init(alice, _)@alice,
-    agent_init(bob, _)@bob,
-    agent_init(charlie, _)@charlie.
+    agent(ch(_?, _), ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    agent(ch(_?, _), ch(_?, _))@charlie.
 
-procedure agent_init(_?, _?).
-agent_init(_, _) :- true.
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])).
 ''';
 
       final loader = BootLoader();
@@ -68,11 +68,11 @@ agent_init(_, _) :- true.
       // plays cannot be one program.
       config.programDir = File('$_fixtureDir/play_madglp').absolute.path;
 
-      // Should parse correctly with agent_init goal (actors spawned internally)
+      // Every agent's goal is agent/2, its person say/2 telling it its name
       expect(config.directives.length, equals(3));
       expect(config.directives.map((d) => d.agentId).toList(),
           equals(['alice', 'bob', 'charlie']));
-      expect(config.directives.every((d) => d.goalFunctor == 'agent_init'),
+      expect(config.directives.every((d) => d.person?.functor == 'say'),
           isTrue);
 
       await manager.boot(config,
@@ -100,11 +100,11 @@ agent_init(_, _) :- true.
       config.programDir =
           File('$_fixtureDir/play_ui_madglp').absolute.path;
 
-      // Should parse correctly with agent_init goal
+      // Every agent's goal is agent/2, its person say/2 telling it its name
       expect(config.directives.length, equals(3));
       expect(config.directives.map((d) => d.agentId).toList(),
           equals(['alice', 'bob', 'charlie']));
-      expect(config.directives.every((d) => d.goalFunctor == 'agent_init'),
+      expect(config.directives.every((d) => d.person?.functor == 'say'),
           isTrue);
 
       await manager.boot(config,

@@ -15,5 +15,21 @@
 
 procedure boot.
 boot :-
-    agent1_init(agent1, _)@agent1,
-    agent2_init(agent2, _)@agent2.
+    agent(ch(_?, _), ch(_?, _))@agent1,
+    say(agent1, ch(_?, _))@agent1,
+    agent(ch(_?, _), ch(_?, _))@agent2,
+    say(agent2, ch(_?, _))@agent2.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+
+%% The agent's program, by the name its person tells it.
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([agent1 | _], N) :- agent1_init(agent1, N?).
+start([agent2 | _], N) :- agent2_init(agent2, N?).
+start(_, _) :- otherwise | true.
+
+%% The person at each agent: it tells the agent its name, and reads nothing.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
