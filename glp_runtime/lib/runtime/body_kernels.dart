@@ -597,13 +597,13 @@ BodyKernelResult selfModuleKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 /// `'_random'(Seed?, N?, Value, NextSeed)` — seeded random integer (GLP-ICLP
-/// appendix-guards §"Seeded random numbers"). Binds Value to a pseudo-random
-/// integer 1 ≤ Value ≤ N and NextSeed to the next draw's seed. NextSeed is a
-/// function of Seed alone, Value of Seed and N, so threading NextSeed from each
-/// draw into the next reproduces exactly from an initial seed. The generator is
-/// the Park–Miller "minimal standard" LCG (MINSTD): NextSeed = (16807 × s) mod
-/// (2³¹−1), with s the seed normalised into [1, 2³¹−2] so no integer seed traps.
-/// The system-predicate guard integer(Seed?), integer(N?), N? >= 1 guarantees
+/// appendix-guards, "Seeded random numbers"). The generator is SplitMix64
+/// (Steele, Lea and Flood 2014, Figure 16), in 64-bit arithmetic modulo 2^64:
+/// a seed is a 64-bit integer and every 64-bit integer is a seed; NextSeed is
+/// Seed plus the increment 0x9E3779B97F4A7C15; Value is one plus the mix of
+/// NextSeed, taken as an unsigned 64-bit integer, modulo N. Dart's int is the
+/// paper's Integer, 64-bit two's complement with wrapping `+` and `*`. The
+/// system-predicate guard integer(Seed?), integer(N?), N? >= 1 guarantees
 /// ground integer inputs with N ≥ 1, so the checks below are defensive.
 BodyKernelResult randomKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 4) {
@@ -617,25 +617,18 @@ BodyKernelResult randomKernel(GlpRuntime rt, List<Object?> args) {
   if (n < 1) {
     return kernelAbort('[ABORT] random/4: bound N must be >= 1');
   }
-  const int m = 2147483647; // 2^31 - 1
-  const int a = 16807;
-  var s = seed % m;
-  if (s <= 0) s += m; // normalise into [1, m-1]; 0 would trap MINSTD at 0
-  final int nextSeed = (a * s) % m;
-  final int value = 1 + (nextSeed % n);
+  final int nextSeed = seed + _splitMixIncrement;
+  final int value = 1 + _unsignedRemainder(_mix64(nextSeed), n);
   final r1 = bindResult(rt, args[2], value);
   if (r1 != BodyKernelResult.success) return r1;
   return bindResult(rt, args[3], nextSeed);
 }
 
 /// `'_split_random_seed'(Seed?, S1, S2)` — two seeds from one (GLP-ICLP
-/// appendix-guards §"Splitting a seed"). Binds S1 and S2 to two seeds
-/// determined by Seed, such that the draws from Seed, from S1 and from S2 are
-/// independent streams. The paper names a splittable generator, such as
-/// SplitMix, as what implements it: S1 and S2 are the first two outputs of
-/// SplitMix64 (Steele, Lea and Flood 2014, with Vigna's published constants)
-/// started from state Seed, in 64-bit two's-complement arithmetic. The guard
-/// integer(Seed?) guarantees a ground integer, so the check below is defensive.
+/// appendix-guards, "Splitting a seed"): S1 is the mix of Seed plus the
+/// increment, and S2 the mix of Seed plus twice the increment, the increment
+/// and the mix those of random/4. The guard integer(Seed?) guarantees a ground
+/// integer, so the check below is defensive.
 BodyKernelResult splitRandomSeedKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] split_random_seed/3: expected 3 arguments, got ${args.length}');
@@ -646,23 +639,40 @@ BodyKernelResult splitRandomSeedKernel(GlpRuntime rt, List<Object?> args) {
     print('[ABORT] split_random_seed/3: Seed must be an integer');
     return BodyKernelResult.abort;
   }
-  final int s1 = _splitMix64(seed + _splitMixGamma);
-  final int s2 = _splitMix64(seed + 2 * _splitMixGamma);
+  final int s1 = _mix64(seed + _splitMixIncrement);
+  final int s2 = _mix64(seed + 2 * _splitMixIncrement);
   final r1 = bindResult(rt, args[1], s1);
   if (r1 != BodyKernelResult.success) return r1;
   return bindResult(rt, args[2], s2);
 }
 
-/// SplitMix64's increment, the golden-ratio constant 0x9E3779B97F4A7C15.
-const int _splitMixGamma = 0x9E3779B97F4A7C15;
+/// SplitMix64's increment, GOLDEN_GAMMA of the source's Figure 16.
+const int _splitMixIncrement = 0x9E3779B97F4A7C15;
 
-/// SplitMix64's output function (mix64), applied to a state: Dart's native
-/// int is 64-bit two's complement and its `*` wraps, as the generator needs.
-int _splitMix64(int z) {
-  z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9;
-  z = (z ^ (z >>> 27)) * 0x94D049BB133111EB;
-  return z ^ (z >>> 31);
+/// The source's mix64 (Figure 16): z = (z xor (z >>> 33)) * 0xFF51AFD7ED558CCD;
+/// z = (z xor (z >>> 33)) * 0xC4CEB9FE1A85EC53; z xor (z >>> 33), with >>> the
+/// unsigned shift. Dart's `>>>` is the unsigned shift and its `*` wraps modulo
+/// 2^64.
+int _mix64(int z) {
+  z = (z ^ (z >>> 33)) * 0xFF51AFD7ED558CCD;
+  z = (z ^ (z >>> 33)) * 0xC4CEB9FE1A85EC53;
+  return z ^ (z >>> 33);
 }
+
+/// The remainder of [x], taken as an unsigned 64-bit integer, divided by
+/// [n] ≥ 1. A non-negative [x] is its own unsigned value; a negative [x]
+/// stands for x + 2^64, whose remainder is computed from the quotient of
+/// x >>> 1, which is non-negative, as in Java's Long.remainderUnsigned.
+int _unsignedRemainder(int x, int n) {
+  if (x >= 0) return x % n;
+  final int q = ((x >>> 1) ~/ n) << 1;
+  final int r = x - q * n; // the true remainder, or it plus n; below 2n < 2^64
+  return _unsignedLess(r, n) ? r : r - n;
+}
+
+/// Whether [a] < [b] as unsigned 64-bit integers.
+bool _unsignedLess(int a, int b) =>
+    (a ^ 0x8000000000000000) < (b ^ 0x8000000000000000);
 
 // ============================================================================
 // MUTUAL REFERENCE KERNELS (O(1) Stream Append)

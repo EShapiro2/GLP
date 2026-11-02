@@ -55,21 +55,16 @@ class GlobalName {
   @override
   int get hashCode => Object.hash(type, agent, index);
 
-  /// The name the 2-ary structure [t] presents, `'_w'(P, I)` or `'_r'(P, I)`
-  /// with constant arguments; null for any other structure.
-  static GlobalName? fromStruct(StructTerm t) {
-    if ((t.functor != '_w' && t.functor != '_r') || t.args.length != 2) {
-      return null;
-    }
-    final agentArg = t.args[0];
-    final indexArg = t.args[1];
-    if (agentArg is! ConstTerm || indexArg is! ConstTerm) return null;
-    final agent = agentArg.value as String;
-    final index = (indexArg.value as num).toInt();
-    return t.functor == '_w'
-        ? GlobalName.writer(agent, index)
-        : GlobalName.reader(agent, index);
-  }
+  /// The name [t] stands for, a global name in the place of a variable.  A
+  /// structure `'_w'(P, I)` or `'_r'(P, I)` presents no such name: it is a
+  /// program's term (IGLP madglp-spec.tex:17, at IGLP 1e01638).
+  static GlobalName fromTerm(GlobalNameTerm t) => t.isReader
+      ? GlobalName.reader(t.agent, t.index)
+      : GlobalName.writer(t.agent, t.index);
+
+  /// This name in the place of a variable, as Globalize puts it in T↑.
+  GlobalNameTerm toTerm() =>
+      GlobalNameTerm(isReader: isReader, agent: agent, index: index);
 
   /// This name as the 2-ary structure a program sees, `'_w'(P, I)` or
   /// `'_r'(P, I)`, functor giving polarity, first argument the anchor.
@@ -425,8 +420,9 @@ LocalizeResult localize({
 /// Transform a term by replacing variables with their global names
 ///
 /// Takes the original term and the GlobalizeResult from globalize().
-/// Returns a new term with VarRefs replaced by StructTerms representing
-/// global names (_w(agent, index) or _r(agent, index)).
+/// Returns a new term with VarRefs replaced by [GlobalNameTerm]s, the global
+/// names `_w(agent, index)` and `_r(agent, index)` in the place of variables;
+/// a structure, a program's `'_w'(P, I)` among them, stays a structure.
 Term globalizeTermWithResult(
   Term term,
   List<TermVar> variables,
@@ -443,7 +439,7 @@ Term _substituteGlobalNames(Term term, Map<HeapCell, GlobalName> mapping) =>
     _rebuild(term, (t) {
       if (t is VarRef) {
         final gn = mapping[t.addr];
-        if (gn != null) return gn.toStruct();
+        if (gn != null) return gn.toTerm();
         return t;
       }
       return t is StructTerm ? null : t; // ConstTerm unchanged
@@ -484,9 +480,13 @@ Term _rebuild(Term term, Term? Function(Term) leafOf) {
   }
 }
 
-/// Extract global name structures from a term
+/// Extract the global names from a term
 ///
-/// Finds all _w(agent, index) and _r(agent, index) structures in the term.
+/// Finds every [GlobalNameTerm], each a global name in the place of a
+/// variable; a structure `'_w'(P, I)` or `'_r'(P, I)` is a program's term and
+/// no name, and its arguments are searched as any structure's are (IGLP
+/// madglp-spec.tex:17, at IGLP 1e01638: "only a variable is encoded as a
+/// global name").  Until 2026-11-02 such a structure was taken for a name.
 /// Returns the list of GlobalNames in order of occurrence: depth first and
 /// left to right, the order Localize takes them in (Definition Localize: "For
 /// each global name in T_p↑").  The walk keeps a stack of its own; until
@@ -497,12 +497,9 @@ List<GlobalName> extractGlobalNames(Term term) {
   final pending = <Term>[term];
   while (pending.isNotEmpty) {
     final t = pending.removeLast();
-    if (t is! StructTerm) continue;
-    if ((t.functor == '_w' || t.functor == '_r') && t.args.length == 2) {
-      // A name-shaped structure is a leaf, a name or not.
-      final gn = GlobalName.fromStruct(t);
-      if (gn != null) result.add(gn);
-    } else {
+    if (t is GlobalNameTerm) {
+      result.add(GlobalName.fromTerm(t));
+    } else if (t is StructTerm) {
       // The first argument is met next, so it goes on the stack last.
       for (var i = t.args.length - 1; i >= 0; i--) {
         pending.add(t.args[i]);
@@ -515,7 +512,7 @@ List<GlobalName> extractGlobalNames(Term term) {
 /// Transform a term by replacing global names with local variables
 ///
 /// Takes the globalized term and the LocalizeResult from localize().
-/// Returns a new term with global name structures replaced by VarRefs.
+/// Returns a new term with its [GlobalNameTerm]s replaced by VarRefs.
 Term localizeTermWithResult(
   Term term,
   List<GlobalName> globalNames,
@@ -533,13 +530,9 @@ Term localizeTermWithResult(
 
 Term _substituteLocalVars(Term term, Map<GlobalName, HeapCell> mapping) =>
     _rebuild(term, (t) {
-      if (t is! StructTerm) return t;
-      final gn = GlobalName.fromStruct(t);
-      if (gn != null) {
-        final localAddr = mapping[gn];
-        if (localAddr != null) {
-          return VarRef(localAddr);
-        }
+      if (t is GlobalNameTerm) {
+        final localAddr = mapping[GlobalName.fromTerm(t)];
+        return localAddr != null ? VarRef(localAddr) : t;
       }
-      return null; // a structure, rebuilt over its arguments
+      return t is StructTerm ? null : t; // a structure, rebuilt over its arguments
     });

@@ -20,7 +20,8 @@ import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/wire/codec.dart'
     show wireMsgKindValue, wireMsgKindRequest, wireMsgKindAcknowledgement;
 import 'package:glp_runtime/wire/artefact.dart' show ModuleRefusal;
-import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
+import 'package:glp_runtime/wire/payload_codec.dart'
+    show GlobalNameRefusal, PayloadCodec;
 
 /// Callback for delivering messages to other agents
 typedef MessageDeliveryCallback = void Function(String destination, OutboundMessage message);
@@ -1047,6 +1048,15 @@ class MadContext {
   /// The sender is told nothing, IGLP having no message for it: a reader-name
   /// value stays pending there, unacknowledged (Definition "madGLP Local
   /// State").
+  ///
+  /// A message --- a value, a request or an acknowledgement --- carrying a
+  /// global name whose agent is not an atom is refused at receipt in the same
+  /// way, the refusal naming the name: "An agent is an atom and an index is a
+  /// non-negative integer, and the reader refuses a global name whose agent or
+  /// index is anything else" (IGLP code-format-fragment.tex, Terms, tag 2).
+  /// The name is a tag-2 variable, or the name the message is addressed to;
+  /// a structure `'_w'(P, I)` the message carries is a program's term and
+  /// arrives as the structure (IGLP madglp-spec.tex:17, at IGLP 1e01638).
   void handleIncomingPayload({
     required List<int> payload,
     required String fromAgent,
@@ -1064,17 +1074,30 @@ class MadContext {
           print('[REFUSED] $agentId: a message from $fromAgent is refused at '
               'receipt: ${refusal.message}');
           return;
+        } on GlobalNameRefusal catch (refusal) {
+          print('[REFUSED] $agentId: a message from $fromAgent is refused at '
+              'receipt: ${refusal.message}');
+          return;
         }
         handleMadAssignment(
             globalName: received.name,
             value: received.value,
             fromAgent: fromAgent,
             serial: received.serial);
-      case wireMsgKindRequest:
-        handleRequest(
-            PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
-      case wireMsgKindAcknowledgement:
-        handleAck(PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
+      case wireMsgKindRequest || wireMsgKindAcknowledgement:
+        final GlobalName name;
+        try {
+          name = PayloadCodec.decodeRequestOrAckPayload(payload);
+        } on GlobalNameRefusal catch (refusal) {
+          print('[REFUSED] $agentId: a message from $fromAgent is refused at '
+              'receipt: ${refusal.message}');
+          return;
+        }
+        if (payload[0] == wireMsgKindRequest) {
+          handleRequest(name, fromAgent);
+        } else {
+          handleAck(name, fromAgent);
+        }
       default:
         throw FormatException(
             'unknown madGLP message kind: ${payload[0]}');
