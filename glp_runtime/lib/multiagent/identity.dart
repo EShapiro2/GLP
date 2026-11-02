@@ -17,8 +17,11 @@
 /// as `SimulationNetworkClient` uses).
 library;
 
+import 'dart:convert' show utf8;
+import 'dart:io' show Platform, Process;
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:ed25519_edwards/ed25519_edwards.dart' as ed;
 
 import 'glp_network.dart' show PubKey;
@@ -37,6 +40,69 @@ class PersonIdentity {
     final kp = ed.generateKey();
     return PersonIdentity(PubKey.fromList(kp.publicKey.bytes),
         Uint8List.fromList(kp.privateKey.bytes));
+  }
+
+  /// The key pair of the Ed25519 seed [seed], 32 bytes.
+  factory PersonIdentity.fromSeed(Uint8List seed) {
+    final priv = ed.newKeyFromSeed(seed);
+    return PersonIdentity(PubKey.fromList(ed.public(priv).bytes),
+        Uint8List.fromList(priv.bytes));
+  }
+
+  /// The agent's key pair, made at its first call of self_key/1 (GLP-Spec
+  /// appendix-guards.tex, "Identity and signature": "An agent has no key at
+  /// boot: the runtime makes the agent's key pair at the agent's first call
+  /// of self_key/1, from a seed drawn from outside the program"), from the
+  /// seed IGLP names: "the clock, the device's hardware identifiers and the
+  /// persona's name, which is the agent's name p in the boot clause, combined
+  /// by exclusive or" (IGLP, Implementation Notes, "Boot").  Each of the three
+  /// is hashed to 32 bytes with SHA-256, and the seed is the exclusive or of
+  /// the three hashes.  The clock is the microseconds since the epoch; the
+  /// hardware identifiers are those [hardwareIdentifiers] reads.
+  factory PersonIdentity.forPersona(String persona) {
+    final parts = [
+      '${DateTime.now().microsecondsSinceEpoch}',
+      hardwareIdentifiers(),
+      persona,
+    ];
+    final seed = Uint8List(32);
+    for (final part in parts) {
+      final h = crypto.sha256.convert(utf8.encode(part)).bytes;
+      for (var i = 0; i < 32; i++) {
+        seed[i] ^= h[i];
+      }
+    }
+    return PersonIdentity.fromSeed(seed);
+  }
+
+  /// The device's hardware identifiers, read once per process: on macOS the
+  /// platform UUID the firmware reports (`IOPlatformUUID`), and everywhere
+  /// the host's name, the operating system and its version, and the number
+  /// of processors, which is what a process can read where no hardware UUID
+  /// is open to it.
+  static String hardwareIdentifiers() => _hardware ??= _readHardware();
+  static String? _hardware;
+
+  static String _readHardware() {
+    final ids = <String>[];
+    if (Platform.isMacOS) {
+      try {
+        final r = Process.runSync(
+            'ioreg', ['-rd1', '-c', 'IOPlatformExpertDevice']);
+        final m = RegExp(r'"IOPlatformUUID" = "([^"]+)"')
+            .firstMatch('${r.stdout}');
+        if (m != null) ids.add(m.group(1)!);
+      } on Object {
+        // No platform UUID is open to the process: the rest stand.
+      }
+    }
+    ids.addAll([
+      Platform.localHostname,
+      Platform.operatingSystem,
+      Platform.operatingSystemVersion,
+      '${Platform.numberOfProcessors}',
+    ]);
+    return ids.join('|');
   }
 
   /// The pair as a networking layer is instantiated with it

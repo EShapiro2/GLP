@@ -6,13 +6,14 @@
 ///
 /// Termination is external: the caller shuts down isolates when done.
 ///
-/// The network: the manager runs its agents over the layers it is given, one
-/// per agent ([AgentLayer]), and builds the simulation's --- its router and a
-/// client in each isolate --- only when it is given none (IGLP, Implementation
-/// Notes, "Networking Seam", One interface: "transport integration is a
-/// backend swap").  Over given layers an agent is named by its key (IGLP,
-/// Remark "Agent Names"), so the boot program names it so.  Until 2026-10-12
-/// the manager built the simulation's, always.
+/// The network is the simulation's --- its router and a client in each
+/// isolate: "A boot is for a simulation; a deployed agent is booted by its
+/// application" (IGLP, Implementation Notes, "Boot"), as AgentRuntime boots
+/// one over the layer it is given.  An agent has no key at boot: its key is
+/// made at its first call of self_key/1, its client is made with it, and the
+/// router knows the agent from then on; nothing is sent before it.  Until
+/// 2026-11-02 the manager also ran agents over given layers, each named in
+/// the boot clause by a key made before the boot.
 ///
 /// See: IGLP app:in-execution (Agent Execution and Boot).
 
@@ -44,6 +45,25 @@ class Ready extends IsolateMessage {
 
 /// Signal to start execution
 class Start extends IsolateMessage {}
+
+/// Agent → manager: the agent's key pair is made, at its first call of
+/// self_key/1 (IGLP, Implementation Notes, "Boot"); the router knows the
+/// agent by its public key from then on.
+class KeyMade extends IsolateMessage {
+  final String agentId;
+  final PubKey pk;
+  KeyMade(this.agentId, this.pk);
+}
+
+/// Manager → agent: an entry of the simulation's directory, an agent's name
+/// and its key, published to every agent's client when the key is made
+/// (IGLP, "Simulation realisation": the router owns "the identifier--key
+/// directory").
+class DirectoryEntry extends IsolateMessage {
+  final String agentId;
+  final PubKey pk;
+  DirectoryEntry(this.agentId, this.pk);
+}
 
 /// Agent → router: an outbound send. The wire carries opaque payload bytes
 /// only, no MessageType (IGLP app:in-networking, The contract; Payloads).
@@ -145,33 +165,6 @@ class AgentInitFailed extends IsolateMessage {
   AgentInitFailed(this.agentId, this.error);
 }
 
-/// An agent's networking layer, given to an [IsolateManager] to run the agent
-/// over: the agent's key pair, and how the agent's isolate opens the layer.
-///
-/// The layer is the agent's (GNA, "Instantiation": "The layer is created once
-/// per agent"), and it is opened in the agent's own isolate, where its events
-/// are the agent's (IGLP, Implementation Notes, "Event-driven execution":
-/// "Each agent runs in its own isolate and is event-driven"): an instance
-/// holds sockets and callbacks, which no port carries to another isolate, so
-/// the manager is given how to open it rather than the instance.
-class AgentLayer {
-  /// The agent's Ed25519 key pair, the layer's.  Its public key is the agent's
-  /// name (IGLP, Remark "Agent Names"); the engine holds the pair as the
-  /// person's identity, so the certificate its compiler writes, self_key/1
-  /// and sign/3 are under it.
-  final ({PubKey pub, Uint8List priv}) keyPair;
-
-  /// Opens the agent's layer, instantiated with [keyPair] (GNA, "Identity").
-  /// Called once, in the agent's isolate, before the agent is reported ready;
-  /// sent there, so it must be sendable.
-  final Future<GlpNetwork> Function() open;
-
-  const AgentLayer({required this.keyPair, required this.open});
-
-  /// The agent's name: its key, as 64 lowercase hex characters.
-  String get name => keyPair.pub.hex;
-}
-
 /// Trace configuration for multi-agent tracing
 class TraceConfig {
   /// Enable GLP-level trace (reductions, suspensions, failures)
@@ -187,10 +180,12 @@ class TraceConfig {
 
 /// Configuration passed to agent isolate
 class AgentConfig {
+  /// The agent's name p in the boot clause, the persona's name its key is
+  /// made from (IGLP, Implementation Notes, "Boot").
   final String agentId;
-  final String goalFunctor;
-  final int goalArity; // Arity of the goal (e.g., 2, 3, 4)
-  final List<String> goalConstantArgs; // Constant args between agentId and netIn
+
+  /// The person scripted in GLP at the agent, or null.
+  final PersonGoal? person;
   final String programSource;
   final String? programDir; // Optional program directory for static linking
   final String rootSelfGlpPath; // Absolute path to programs/self.glp
@@ -198,33 +193,14 @@ class AgentConfig {
   final SendPort mainPort;
   final TraceConfig traceConfig;
 
-  /// This agent's Ed25519 key pair: its identity is its public key, held with
-  /// its private key by the networking layer (IGLP app:in-networking, The
-  /// contract). The agent's GlpNetwork is instantiated with it (GNA,
-  /// "Identity").
-  final ({PubKey pub, Uint8List priv}) keyPair;
-
-  /// The simulation's shared identifier–key directory, published to every
-  /// adapter; null over a given layer, which names agents by key.
-  final NetworkDirectory? directory;
-
-  /// Opens the agent's given layer ([AgentLayer.open]); null in the
-  /// simulation, whose client the isolate builds over [directory].
-  final Future<GlpNetwork> Function()? openNetwork;
-
   AgentConfig({
     required this.agentId,
-    required this.goalFunctor,
-    this.goalArity = 2,
-    this.goalConstantArgs = const [],
+    this.person,
     required this.programSource,
     this.programDir,
     required this.rootSelfGlpPath,
     this.bootPath,
     required this.mainPort,
-    required this.keyPair,
-    required this.directory,
-    this.openNetwork,
     this.traceConfig = const TraceConfig(),
   });
 }
@@ -237,33 +213,19 @@ class IsolateManager {
   final Map<String, SendPort> _agentPorts = {};
   final ReceivePort _mainPort = ReceivePort();
 
-  /// The layers the manager was given, by agent name, or null, and the
-  /// manager builds the simulation's.
-  final Map<String, AgentLayer>? _layers;
-
   /// The simulation router: owns the directory, adjacency, trust, queues, and
   /// messageId assignment, and routes all inter-agent traffic (IGLP
-  /// app:in-networking, Simulation realisation).  Built only where the manager
-  /// was given no layers; over given layers each agent's traffic is its
-  /// layer's.
-  final SimulationRouter? _router;
+  /// app:in-networking, Simulation realisation).
+  final SimulationRouter _router = SimulationRouter();
 
-  /// A manager over the layers [layers], one per agent it is to boot, each
-  /// agent named by its layer's key; or, given none, over the simulation's.
-  IsolateManager({List<AgentLayer>? layers})
-      : _layers = layers == null ? null : {for (final l in layers) l.name: l},
-        _router = layers == null ? SimulationRouter() : null;
+  /// Each agent's public key, once its first call of self_key/1 has made it.
+  final Map<String, PubKey> _keys = {};
 
-  /// The simulation's router, for its harness controls; refused over given
-  /// layers, where no router routes.
-  SimulationRouter _simulation(String control) {
-    final router = _router;
-    if (router == null) {
-      throw StateError('$control is a control of the simulation\'s router, '
-          'and this manager runs over given layers');
-    }
-    return router;
-  }
+  /// [agentId]'s public key, or null while it has none (IGLP, Implementation
+  /// Notes, "Boot": "An agent has no key at boot").
+  PubKey? keyOf(String agentId) => _keys[agentId];
+
+  SimulationRouter _simulation(String control) => _router;
 
   /// Trace configuration (set via boot)
   TraceConfig _traceConfig = TraceConfig.off;
@@ -338,11 +300,7 @@ class IsolateManager {
   /// it has run, too long and every run pays for the worst machine. [timeout] is
   /// a backstop for a system that never settles — it throws rather than passing
   /// quietly, since a play that cannot settle is a failure and not a slow pass.
-  ///
-  /// Over given layers it waits for the work the manager handed out, each
-  /// agent's [Start]: the layers deliver the agents' traffic themselves, and a
-  /// host does not see a message in flight on a real network (IGLP,
-  /// "Event-driven execution": "Agents do not detect or report termination").
+
   Future<void> settle(
       {Duration timeout = const Duration(seconds: 30)}) async {
     if (_faults.isNotEmpty) {
@@ -400,62 +358,32 @@ class IsolateManager {
     var readyCount = 0;
     final expectedCount = config.directives.length;
 
-    final keyPairs = <String, ({PubKey pub, Uint8List priv})>{};
     final router = _router;
-    final layers = _layers;
-    if (layers != null) {
-      // 1. Over given layers each agent is the layer's: its key pair is the
-      //    layer's, and its name the key, which the boot program names it by
-      //    (IGLP, Remark "Agent Names"; "Boot": "each body goal G@p directs the
-      //    runtime to spawn an isolate for agent p").  No key is made up for
-      //    an agent the manager holds no layer for.
-      for (final directive in config.directives) {
-        final layer = layers[directive.agentId];
-        if (layer == null) {
-          throw StateError('agent ${directive.agentId} has no layer: over a '
-              'given network an agent is named by its key (IGLP, Remark '
-              '"Agent Names"), and the manager was given the layers of '
-              '${layers.keys.join(', ')}');
-        }
-        keyPairs[directive.agentId] = layer.keyPair;
+    // An agent has no key at boot (IGLP, Implementation Notes, "Boot"): the
+    // router knows it once its first call of self_key/1 has made its key
+    // ([KeyMade]), and holds a message to it until then
+    // ([SimulationRouter.register]).
+    //
+    // The router delivers to the destination agent's isolate port --- the
+    // seam's simulation transport.  The sender is the agent the directory
+    // names by the key the router authenticated; a key it names no agent by
+    // is a fault --- the layer authenticates every sender --- and the message
+    // is dropped and reported (GLP #3 Cowork, 2026-10-11 12:59 UTC, "01:05").
+    router.onDeliver = (toId, fromPk, payload, messageId, t) {
+      final port = _agentPorts[toId];
+      if (port == null) {
+        print('[IsolateManager] WARNING: Unknown destination $toId');
+        return;
       }
-    } else {
-      // 1. Generate an Ed25519 key pair per agent and populate the directory
-      //    (IGLP app:in-networking, Simulation realisation). The boot harness
-      //    sets the PAN level Open for the plays, the underlay of every
-      //    simulated encounter; an agent's own trust_declare/2 sets its levels
-      //    after ([RouterTrust]).
-      for (final directive in config.directives) {
-        final kp = generateKeyPair();
-        keyPairs[directive.agentId] = kp;
-        router!.register(directive.agentId, kp.pub);
-        router.setTrustLevel(
-            directive.agentId, ProximityUnderlay.pan, TrustLevel.open);
+      final fromId = router.directory.idOf(fromPk);
+      if (fromId == null) {
+        _recordFault(toId, 'a message from ${fromPk.hex}, a key the '
+            'directory names no agent by, is dropped');
+        return;
       }
-
-      // 2. The router delivers to the destination agent's isolate port — the
-      //    seam's simulation transport.  The sender is the agent the directory
-      //    names by the key the router authenticated; a key it names no agent
-      //    by is a fault --- the layer authenticates every sender --- and the
-      //    message is dropped and reported (GLP #3 Cowork, 2026-10-11 12:59
-      //    UTC, "01:05").  Until 2026-10-12 such a sender was named '?', and
-      //    the message delivered.
-      router!.onDeliver = (toId, fromPk, payload, messageId, t) {
-        final port = _agentPorts[toId];
-        if (port == null) {
-          print('[IsolateManager] WARNING: Unknown destination $toId');
-          return;
-        }
-        final fromId = router.directory.idOf(fromPk);
-        if (fromId == null) {
-          _recordFault(toId, 'a message from ${fromPk.hex}, a key the '
-              'directory names no agent by, is dropped');
-          return;
-        }
-        _noteWorkSent(toId);
-        port.send(Deliver(fromId, payload, messageId));
-      };
-    }
+      _noteWorkSent(toId);
+      port.send(Deliver(fromId, payload, messageId));
+    };
 
     // Single listener for all messages
     _mainPort.listen((msg) {
@@ -479,21 +407,16 @@ class IsolateManager {
       _handleMessage(msg);
     });
 
-    // 3. Spawn isolates with the key pair and the complete directory.
+    // Spawn an isolate per agent, with no key.
     for (final directive in config.directives) {
       final agentConfig = AgentConfig(
         agentId: directive.agentId,
-        goalFunctor: directive.goalFunctor,
-        goalArity: directive.goalArity,
-        goalConstantArgs: directive.constantArgs,
+        person: directive.person,
         programSource: config.source,
         programDir: config.programDir,
         rootSelfGlpPath: config.rootSelfGlpPath,
         bootPath: config.bootPath,
         mainPort: _mainPort.sendPort,
-        keyPair: keyPairs[directive.agentId]!,
-        directory: router?.directory,
-        openNetwork: layers?[directive.agentId]!.open,
         traceConfig: traceConfig,
       );
 
@@ -579,18 +502,27 @@ class IsolateManager {
     } else if (msg is AgentOutput) {
       _outputs.putIfAbsent(msg.agentId, () => []).add(msg.line);
 
+    } else if (msg is KeyMade) {
+      _keyMade(msg.agentId, msg.pk);
+
     } else if (msg is RouterSend || msg is RouterTrust ||
         msg is RouterKnownPeer) {
-      // The simulation client's traffic to its router; an agent over a given
-      // layer sends none.
-      final router = _router;
-      if (router == null) {
-        print('[IsolateManager] ERROR: $msg reached a manager over given '
-            'layers, which has no router');
-        return;
-      }
-      _handleRouterMessage(router, msg);
+      _handleRouterMessage(_router, msg);
     }
+  }
+
+  /// [agentId]'s key is made: every agent's client is told the directory
+  /// entry before any message from it reaches them, the boot harness sets the
+  /// PAN level Open, the underlay of every simulated encounter, and the router
+  /// registers the agent, routing what waited for its key.
+  void _keyMade(String agentId, PubKey pk) {
+    _log('$agentId made its key ${pk.hex}');
+    _keys[agentId] = pk;
+    for (final port in _agentPorts.values) {
+      port.send(DirectoryEntry(agentId, pk));
+    }
+    _router.setTrustLevel(agentId, ProximityUnderlay.pan, TrustLevel.open);
+    _router.register(agentId, pk);
   }
 
   /// A simulation client's traffic to the router: a send, a trust level, a
@@ -630,10 +562,12 @@ class IsolateManager {
 /// Uses GlpEngine - the ONE way to run GLP programs.
 ///
 /// Event-driven execution: drain+flush on Start and on each incoming NetworkMsg.
-/// Its steps, each a function below: the engine made, the program loaded, the
-/// goal posted, the serializer entry made, the network bound --- the given
-/// layer or the simulation's client ---, the output and the tracing wired,
-/// and the event loop.  A step that fails reports the failure to the manager
+/// Its steps, each a function below: the engine made, with no key, the
+/// program loaded, the agent's goal posted with its scripted person or the
+/// runtime's rendering of its output to the person, the serializer entry
+/// made, the output and the tracing wired, and the event loop.  The network
+/// is bound when the agent's first call of self_key/1 makes its key
+/// ([_bindSimulation]).  A step that fails reports the failure to the manager
 /// ([AgentInitFailed]) and the isolate returns.
 void _agentIsolateEntry(AgentConfig config) async {
   final agentId = config.agentId;
@@ -664,23 +598,22 @@ void _agentIsolateEntry(AgentConfig config) async {
   void runEvent() =>
       _drainAndSend(scheduler, ctx.flushMessages, agentId, engine.debugTrace);
 
-  // Networking seam (IGLP, Implementation Notes, "Networking Seam"): the
-  // agent talks to a GlpNetwork, not the
-  // mainPort directly --- the layer it was given, or, where it was given none,
-  // the simulation's client.
-  final open = config.openNetwork;
-  final directory = config.directory;
-  final layerEvents = _LayerEvents(config);
+  // The simulation's directory as this agent's client knows it: each agent's
+  // key as the manager publishes it when the key is made ([DirectoryEntry]).
+  final directory = NetworkDirectory();
 
-  final GlpNetwork network;
-  if (open != null) {
-    final given =
-        await _bindGivenLayer(config, ctx, open, layerEvents, runEvent, log);
-    if (given == null) return;
-    network = given;
-  } else {
-    network = _bindSimulation(config, ctx, directory!, log);
-  }
+  // The networking seam (IGLP, Implementation Notes, "Networking Seam"): the
+  // agent talks to a GlpNetwork, the simulation's client, which is made with
+  // the agent's key when its first call of self_key/1 makes it --- the key
+  // the networking layer holds for the agent (IGLP, Implementation Notes,
+  // "Boot") --- and the manager is told, so that the router knows the agent.
+  // Until then no layer is bound, and nothing is sent.
+  GlpNetwork? network;
+  runtime.onKeyMade = (identity) {
+    directory.register(agentId, identity.pub);
+    network = _bindSimulation(config, ctx, directory, identity, log);
+    config.mainPort.send(KeyMade(agentId, identity.pub));
+  };
 
   log('Network input ready: writer=$netInWriter');
 
@@ -691,20 +624,18 @@ void _agentIsolateEntry(AgentConfig config) async {
   config.mainPort.send(Ready(agentId, receivePort.sendPort));
 
   await _eventLoop(
-      receivePort, config, network, directory, layerEvents, runEvent, log);
+      receivePort, config, () => network, directory, runEvent, log);
 }
 
-/// The agent's engine, in madGLP mode.
+/// The agent's engine, in madGLP mode, with no key: the agent's key pair is
+/// made at its first call of self_key/1, from the clock, the device's
+/// hardware identifiers and the persona's name, the agent's name p in the
+/// boot clause (IGLP, Implementation Notes, "Boot").  The load refuses a
+/// program that does not typecheck: this isolate ran with the checker's
+/// errors printed as warnings until 2026-09-18.
 GlpEngine _makeEngine(AgentConfig config) {
-  // Create GlpEngine — the ONE way to run GLP programs.
-  // The engine holds the agent's key pair as the person's identity from
-  // construction, so the certificate its compiler writes, self_key/1 and
-  // sign/3 are under the key the networking layer below is given.
-  // The load refuses a program that does not typecheck: this isolate ran with
-  // the checker's errors printed as warnings until 2026-09-18.
   final engine = GlpEngine(
-      rootSelfGlpPath: config.rootSelfGlpPath,
-      identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv));
+      rootSelfGlpPath: config.rootSelfGlpPath, persona: config.agentId);
 
   // Enable madGLP mode (creates the MadContext)
   engine.enableMadGLP(agentId: config.agentId);
@@ -754,47 +685,51 @@ bool _loadProgram(
 
 /// Post the agent's goal on [engine]; null where it is refused, the refusal
 /// reported to the manager.
+///
+/// Every agent's initial goal is `agent(ch(_?,_),ch(_?,_))` (GLP-Spec
+/// maglp.tex, Definition "Multiagent GLP"), the first channel to the person
+/// and the second to the network.  "The runtime holds the writer of the
+/// first channel's reader for the person's input, renders the first
+/// channel's output to the person, holds the writer of the second channel's
+/// reader as the index-0 serializer entry, and takes the second channel's
+/// output as the agent's network output" (IGLP, Implementation Notes,
+/// "Boot").  So the goal is posted as
+///
+///   agent(ch(PIn?, POut), ch(NetIn?, NetOut)), send_to_user(POut?),
+///   send_to_net(NetOut?)
+///
+/// the runtime holding PIn's writer and NetIn's: send_to_user/1 renders the
+/// output to the person, and send_to_net/1 sends each message of the network
+/// output to the agent it names (IGLP, Remark "Network Output Processing":
+/// "Each agent spawns a send_to_net goal to process its network output
+/// stream").  Where the boot clause names a scripted person P at the agent,
+/// "the runtime runs P on p's person channel in the person's place, its writes
+/// being the person's input": P is posted with the channel ch(POut?, PIn) in
+/// place of send_to_user(POut?), and the runtime holds no writer of the
+/// person's input.  The goal is posted by the engine's one posting call,
+/// which checks it as a body goal before it runs (TGLP modules.tex,
+/// "Type-Compatible Attestation Between Agents") and refuses it where it does
+/// not check or names no entry point; the agent then fails to initialise,
+/// naming the refusal.
 PostedGoal? _postGoal(
     GlpEngine engine, AgentConfig config, void Function(String) log) {
   final agentId = config.agentId;
-  // The agent's goal G, posted with the network-input reader as its last
-  // argument (IGLP, Implementation Notes, "Boot"), the agent's id first and
-  // the spawn directive's constants between them:
-  //   Arity 2: agent_init(agentId, netIn)
-  //   Arity 3: child_init(agentId, playNum, netIn)
-  //   Arity 4: parent_init(agentId, childName, playNum, netIn)
-  // It is posted by the engine's one posting call, which checks it as a body
-  // goal before it runs (TGLP modules.tex, "Type-Compatible Attestation
-  // Between Agents": the initial goal posted to the runtime, "at boot or
-  // interactively", "is type-checked before execution as a body goal") and
-  // refuses it where it does not check or names no entry point; the agent
-  // then fails to initialise, naming the refusal.  Until 2026-10-04 it was
-  // put on the queue here, by its label, unchecked.  The goal carries the
-  // program's module value, as every posted goal does: self_module/1 returns
-  // it, sign/3 puts its source identity into a signed term, and every goal
-  // spawned from it inherits it.
-  final arity = config.goalArity;
-  final goalLabel = '${config.goalFunctor}/$arity';
-  final goalArgs = [
-    glpConstantText(agentId),
-    for (final c in config.goalConstantArgs)
-      int.tryParse(c)?.toString() ?? glpConstantText(c),
-    'NetIn?',
+  final person = config.person;
+  final goals = [
+    'agent(ch(PIn?, POut), ch(NetIn?, NetOut))',
+    person == null ? 'send_to_user(POut?)' : person.text('POut', 'PIn'),
+    'send_to_net(NetOut?)',
   ];
   final PostedGoal posted;
   try {
-    if (goalArgs.length != arity) {
-      throw GoalRefused('$goalLabel takes $arity arguments, and the spawn '
-          'directive gives ${goalArgs.length}');
-    }
-    posted = engine.postGoal('${config.goalFunctor}(${goalArgs.join(', ')})',
-        inputs: const ['NetIn']);
+    posted = engine.postGoal(goals.join(', '),
+        inputs: [if (person == null) 'PIn', 'NetIn']);
   } catch (e) {
-    print('[$agentId] ERROR: Goal $goalLabel refused: $e');  // Always print errors
-    config.mainPort.send(AgentInitFailed(agentId, 'Goal $goalLabel refused: $e'));
+    print('[$agentId] ERROR: Goal agent/2 refused: $e');  // Always print errors
+    config.mainPort.send(AgentInitFailed(agentId, 'Goal agent/2 refused: $e'));
     return null;
   }
-  log('Posted ${config.goalFunctor}/$arity');
+  log('Posted ${goals.join(', ')}');
   return posted;
 }
 
@@ -813,121 +748,13 @@ HeapCell _initializeSerializerEntry(
   return netInWriter;
 }
 
-/// The events a given layer delivers to an agent --- a message, a place event
-/// --- each the agent's own, and followed by a run and the Sends it makes
-/// (IGLP, Implementation Notes, "Event-driven execution").  One is taken once
-/// the code that delivered it has returned, since a layer may deliver from
-/// inside a call the runtime made of it and a transaction or a run is never
-/// started inside another; and one delivered before the manager starts the
-/// agent is held until it does, so that the agent runs nothing before
-/// [Start].  A throw is reported as the agent's fault.
-class _LayerEvents {
-  final AgentConfig config;
-  var started = false;
-  final held = <void Function()>[];
-
-  _LayerEvents(this.config);
-
-  /// Take [event] now, reporting a throw as the agent's fault.
-  void take(void Function() event) {
-    try {
-      event();
-    } catch (e, st) {
-      print('[${config.agentId}] ERROR: uncaught while taking a layer event: $e');
-      print(st);
-      config.mainPort.send(AgentFaulted(config.agentId, '$e'));
-    }
-  }
-
-  /// [event] delivered: held until the agent is started, or taken once the
-  /// code that delivered it has returned.
-  void deliver(void Function() event) {
-    if (!started) {
-      held.add(event);
-      return;
-    }
-    scheduleMicrotask(() => take(event));
-  }
-
-  /// The agent is started: the events held are taken, in order.
-  void start() {
-    started = true;
-    for (final event in held) {
-      take(event);
-    }
-    held.clear();
-  }
-}
-
-/// Open the layer the agent was given and bind it: the seam predicates, the
-/// outgoing messages, and the incoming messages and place events, each a
-/// layer event ([_LayerEvents]) followed by [runEvent].  Null where the layer
-/// fails to open or has another key, the failure reported to the manager.
-Future<GlpNetwork?> _bindGivenLayer(
-    AgentConfig config,
-    MadContext ctx,
-    Future<GlpNetwork> Function() open,
-    _LayerEvents layerEvents,
-    void Function() runEvent,
-    void Function(String) log) async {
-  final agentId = config.agentId;
-  // A given layer, opened here, in the agent's isolate, where its events
-  // are the agent's.  Its key is the agent's: the one the agent is named by
-  // and the engine holds as the person's identity.
-  final GlpNetwork network;
-  try {
-    network = await open();
-    if (network.getIdentity() != config.keyPair.pub) {
-      throw StateError('the layer opened for $agentId has the key '
-          '${network.getIdentity().hex}: an agent has one key, its name');
-    }
-  } catch (e, st) {
-    print('[$agentId] ERROR: init failed opening its layer: $e');
-    config.mainPort.send(AgentInitFailed(agentId, '$e\n$st'));
-    return null;
-  }
-  // Back the seam predicates (IGLP Definition Seam Predicates).
-  ctx.network = network;
-
-  // Outgoing: the destination's name is its key (IGLP, Remark "Agent
-  // Names").  A destination that is no key names no agent over the layer,
-  // and its message is not sent.
-  ctx.onMessageReady = (destId, msg) {
-    final PubKey pk;
-    try {
-      pk = PubKey.fromHex(destId);
-    } on Object catch (e) {
-      print('[$agentId] ERROR: a message to $destId, which is no key and '
-          'so names no agent over the network, is not sent: $e');
-      return;
-    }
-    log('Sending to $destId (${msg.payload.length}B)');
-    network.send(pk, Uint8List.fromList(msg.payload));
-  };
-
-  // Incoming: the Receive transaction, from the sender the layer
-  // authenticated, named by its key (IGLP, The contract: "the sender
-  // authenticated by the layer"), then a run and the Sends it makes.
-  network.onMessageReceived = (senderPk, payload, messageId, underlay) {
-    layerEvents.deliver(() {
-      log('Incoming payload from ${senderPk.hex} over ${underlay.name} '
-          '(${payload.length}B)');
-      ctx.handleIncomingPayload(payload: payload, fromAgent: senderPk.hex);
-      runEvent();
-    });
-  };
-
-  // A place event the layer reports binds the place's stream
-  // (MadContext.deliverPlaceEvent); the run follows it.
-  ctx.onPlaceEventDelivered = () => layerEvents.deliver(runEvent);
-  return network;
-}
-
-/// Build the simulation's client over [directory] and bind it: the seam
-/// predicates, the outgoing messages, and the incoming messages, whose run
-/// the event loop makes ([_eventLoop], Deliver).
+/// The simulation's client, made with the agent's key pair [identity] when its
+/// first call of self_key/1 makes it, and bound: the seam predicates, the
+/// outgoing messages, and the incoming messages, whose run the event loop
+/// makes ([_eventLoop], Deliver).
 GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
-    NetworkDirectory directory, void Function(String) log) {
+    NetworkDirectory directory, PersonIdentity identity,
+    void Function(String) log) {
   final agentId = config.agentId;
   // The simulation: the client forwards sends to the router (main isolate)
   // over the existing port; deliveries arrive as Deliver messages and fire
@@ -935,7 +762,7 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
   final simulation = SimulationNetworkClient(
     selfId: agentId,
     directory: directory,
-    keyPair: config.keyPair,
+    keyPair: identity.keyPair,
     sendToRouter: (toId, payload) =>
         config.mainPort.send(RouterSend(agentId, toId, payload)),
     // The agent's trust declarations and known peers reach the router,
@@ -950,14 +777,17 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
   // Back the seam predicates (IGLP Definition Seam Predicates).
   ctx.network = network;
 
-  // Outgoing: ctx.onMessageReady(destId, msg) → network.send.
+  // Outgoing: the destination's key, where its key is made, through the
+  // client; and, where it is not yet, by its name to the router, which holds
+  // the message until the destination's key is made
+  // ([SimulationRouter.register]).
   ctx.onMessageReady = (destId, msg) {
     final pk = directory.pkOf(destId);
+    log('Sending to $destId (${msg.payload.length}B)');
     if (pk == null) {
-      print('[$agentId] ERROR: unknown destination $destId');  // Always print errors
+      config.mainPort.send(RouterSend(agentId, destId, msg.payload));
       return;
     }
-    log('Sending to $destId (${msg.payload.length}B)');
     network.send(pk, Uint8List.fromList(msg.payload));
   };
 
@@ -966,8 +796,7 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
   // the agent the directory names by the key the router authenticated; a
   // key it names no agent by is a fault --- the layer authenticates every
   // sender --- and the message is dropped and reported (GLP #3 Cowork,
-  // 2026-10-11 12:59 UTC, "01:05").  Until 2026-10-12 such a sender was
-  // named '?', and the message received.
+  // 2026-10-11 12:59 UTC, "01:05").
   network.onMessageReceived = (senderPk, payload, messageId, underlay) {
     final fromId = directory.idOf(senderPk);
     if (fromId == null) {
@@ -1028,13 +857,13 @@ void _wireTracing(
 }
 
 /// The agent's event loop over [receivePort]: [Start], and the simulation
-/// router's [Deliver]s, each one unit of work, answered with [AgentIdle].
+/// router's [Deliver]s, each one unit of work, answered with [AgentIdle]; and
+/// the directory's entries ([DirectoryEntry]).
 Future<void> _eventLoop(
     ReceivePort receivePort,
     AgentConfig config,
-    GlpNetwork network,
-    NetworkDirectory? directory,
-    _LayerEvents layerEvents,
+    GlpNetwork? Function() network,
+    NetworkDirectory directory,
     void Function() runEvent,
     void Function(String) log) async {
   final agentId = config.agentId;
@@ -1042,18 +871,21 @@ Future<void> _eventLoop(
   await for (final msg in receivePort) {
     try {
     if (msg is Start) {
-      // Initial drain+flush: kicks off the agent's goal; then the events a
-      // given layer delivered before it, in order.
+      // Initial drain+flush: kicks off the agent's goal.
       runEvent();
-      layerEvents.start();
       config.mainPort.send(AgentIdle(agentId));
 
+    } else if (msg is DirectoryEntry) {
+      directory.register(msg.agentId, msg.pk);
+
     } else if (msg is Deliver) {
-      // The simulation router's delivery.
+      // The simulation router's delivery, to an agent whose key is made: the
+      // router holds a message to an agent until then.
       log('Received delivery from ${msg.fromId} (id=${msg.messageId})');
-      final senderPk = directory?.pkOf(msg.fromId);
-      if (senderPk != null) {
-        network.onMessageReceived?.call(
+      final senderPk = directory.pkOf(msg.fromId);
+      final n = network();
+      if (senderPk != null && n != null) {
+        n.onMessageReceived?.call(
           senderPk,
           Uint8List.fromList(msg.payload),
           msg.messageId,
