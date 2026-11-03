@@ -5,6 +5,10 @@
 %% Types: from self.glp (ancestor scoping)
 %%
 %% Cross-module dependencies declared via imported procedures.
+%%
+%% Each play is given the keys of its agents by the goal that starts it: no
+%% clause here names a peer by an atom, an agent being its public key and a
+%% readable name a variable standing for a key (IGLP, Remark "Agent Names").
 
 %% Exported entry points (project-compilation spec §3.4: only exported
 %% root-level procedures alias). Each `exported procedure` declaration sits
@@ -26,28 +30,31 @@ imported procedure core#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 %% Initiator: alice (friend of bob) unfriends bob.  Expect the teardown message
 %% msg(alice, bob, unfriend) written to the friend channel, and nothing to alice's
 %% own user output (one-way: the initiator does not notify itself).
-exported procedure play_unfriend_send.
-play_unfriend_send :-
-    core # agent(alice, [msg(person, alice, unfriend(bob))], [],
-                  [friend_output(bob, ToBob), user_output(AliceOut)]),
+exported procedure play_unfriend_send(Key?, Key?).
+play_unfriend_send(A, B) :-
+    ground(A?), ground(B?) |
+    core # agent(A?, [msg(person, A?, unfriend(B?))], [],
+                  [friend_output(B?, ToBob), user_output(AliceOut)]),
     send_to_user(ToBob?),
     send_to_user(AliceOut?).
 
 %% Recipient: bob (friend of alice) receives an unfriend.  Expect bob to tear down
 %% his side and notify the user msg(agent, person, unfriended(alice)).
-exported procedure play_unfriend_recv.
-play_unfriend_recv :-
-    core # agent(bob, [], [msg(alice, bob, unfriend)],
-                  [friend_output(alice, _), user_output(BobOut)]),
+exported procedure play_unfriend_recv(Key?, Key?).
+play_unfriend_recv(A, B) :-
+    ground(A?), ground(B?) |
+    core # agent(B?, [], [msg(A?, B?, unfriend)],
+                  [friend_output(A?, _), user_output(BobOut)]),
     send_to_user(BobOut?).
 
 %% Idempotent: alice unfriends carol, who is not a friend.  send_friend and
 %% close_friend are no-ops; nothing is written and the friend(bob) entry is
 %% untouched.  Covers simultaneous unfriend (the second arrival finds no edge).
-exported procedure play_unfriend_absent.
-play_unfriend_absent :-
-    core # agent(alice, [msg(person, alice, unfriend(carol))], [],
-                  [friend_output(bob, _), user_output(AliceOut)]),
+exported procedure play_unfriend_absent(Key?, Key?, Key?).
+play_unfriend_absent(A, B, C) :-
+    ground(A?) |
+    core # agent(A?, [msg(person, A?, unfriend(C?))], [],
+                  [friend_output(B?, _), user_output(AliceOut)]),
     send_to_user(AliceOut?).
 
 %% =============================================================================
@@ -70,10 +77,11 @@ report_intro(Tag, []) :-
 
 %% Both introduced parties are friends of alice: the introduction goes out on
 %% both friend channels, each tagged with the other's identity.
-exported procedure play_introduce_both.
-play_introduce_both :-
-    core # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
-                  [friend_output(bob, ToBob), friend_output(carol, ToCarol),
+exported procedure play_introduce_both(Key?, Key?, Key?).
+play_introduce_both(A, B, C) :-
+    ground(A?), ground(B?), ground(C?) |
+    core # agent(A?, [msg(person, A?, introduce(B?, C?))], [],
+                  [friend_output(B?, ToBob), friend_output(C?, ToCarol),
                    user_output(AliceOut)]),
     report_intro(to_bob, ToBob?),
     report_intro(to_carol, ToCarol?),
@@ -82,37 +90,41 @@ play_introduce_both :-
 %% Only bob is a friend: "the mutual friend vouches for the identities of both,
 %% having a friend channel to each", so no introduction is made and nothing is
 %% written on bob's channel.
-exported procedure play_introduce_one.
-play_introduce_one :-
-    core # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
-                  [friend_output(bob, ToBob), user_output(AliceOut)]),
+exported procedure play_introduce_one(Key?, Key?, Key?).
+play_introduce_one(A, B, C) :-
+    ground(A?), ground(B?) |
+    core # agent(A?, [msg(person, A?, introduce(B?, C?))], [],
+                  [friend_output(B?, ToBob), user_output(AliceOut)]),
     report_intro(to_bob, ToBob?),
     send_to_user(AliceOut?).
 
 %% Only carol is a friend: the same, and nothing is written on carol's channel.
-exported procedure play_introduce_other.
-play_introduce_other :-
-    core # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
-                  [friend_output(carol, ToCarol), user_output(AliceOut)]),
+exported procedure play_introduce_other(Key?, Key?, Key?).
+play_introduce_other(A, B, C) :-
+    ground(A?), ground(C?) |
+    core # agent(A?, [msg(person, A?, introduce(B?, C?))], [],
+                  [friend_output(C?, ToCarol), user_output(AliceOut)]),
     report_intro(to_carol, ToCarol?),
     send_to_user(AliceOut?).
 
 %% Neither is a friend: no introduction, and dave's channel is untouched.
-exported procedure play_introduce_neither.
-play_introduce_neither :-
-    core # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
-                  [friend_output(dave, ToDave), user_output(AliceOut)]),
+exported procedure play_introduce_neither(Key?, Key?, Key?, Key?).
+play_introduce_neither(A, B, C, D) :-
+    ground(A?) |
+    core # agent(A?, [msg(person, A?, introduce(B?, C?))], [],
+                  [friend_output(D?, ToDave), user_output(AliceOut)]),
     report_intro(to_dave, ToDave?),
     send_to_user(AliceOut?).
 
 %% A friend asks to be introduced to the anchor of a held name and the person
 %% consents (Section 5.2, the warm call's introduction): the requester and the
 %% anchor are both alice's friends, so the introduction goes out on both.
-exported procedure play_request_intro_both.
-play_request_intro_both :-
-    core # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
-                  [msg(bob, alice, request_intro(carol))],
-                  [friend_output(bob, ToBob), friend_output(carol, ToCarol),
+exported procedure play_request_intro_both(Key?, Key?, Key?).
+play_request_intro_both(A, B, C) :-
+    ground(A?), ground(B?), ground(C?) |
+    core # agent(A?, [msg(person, A?, allow_intro(B?, C?))],
+                  [msg(B?, A?, request_intro(C?))],
+                  [friend_output(B?, ToBob), friend_output(C?, ToCarol),
                    user_output(AliceOut)]),
     report_intro(req_to_bob, ToBob?),
     report_intro(req_to_carol, ToCarol?),
@@ -120,19 +132,21 @@ play_request_intro_both :-
 
 %% The requester is not alice's friend: alice has no friend channel to him, so
 %% the request is not taken up and the consent introduces nobody.
-exported procedure play_request_intro_stranger.
-play_request_intro_stranger :-
-    core # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
-                  [msg(bob, alice, request_intro(carol))],
-                  [friend_output(carol, ToCarol), user_output(AliceOut)]),
+exported procedure play_request_intro_stranger(Key?, Key?, Key?).
+play_request_intro_stranger(A, B, C) :-
+    ground(A?), ground(B?), ground(C?) |
+    core # agent(A?, [msg(person, A?, allow_intro(B?, C?))],
+                  [msg(B?, A?, request_intro(C?))],
+                  [friend_output(C?, ToCarol), user_output(AliceOut)]),
     report_intro(req_to_carol, ToCarol?),
     send_to_user(AliceOut?).
 
 %% The anchor is not alice's friend: the same, from the other side.
-exported procedure play_request_intro_no_anchor.
-play_request_intro_no_anchor :-
-    core # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
-                  [msg(bob, alice, request_intro(carol))],
-                  [friend_output(bob, ToBob), user_output(AliceOut)]),
+exported procedure play_request_intro_no_anchor(Key?, Key?, Key?).
+play_request_intro_no_anchor(A, B, C) :-
+    ground(A?), ground(B?) |
+    core # agent(A?, [msg(person, A?, allow_intro(B?, C?))],
+                  [msg(B?, A?, request_intro(C?))],
+                  [friend_output(B?, ToBob), user_output(AliceOut)]),
     report_intro(req_to_bob, ToBob?),
     send_to_user(AliceOut?).

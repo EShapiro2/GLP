@@ -93,7 +93,6 @@ void main() {
           agentId: 'alice',
           program: File(file).absolute.path,
           rootSelfGlpPath: _rootSelf,
-          goalLabel: 'agent_init/2',
         ).initialize();
 
     test('SRSW: a reader occurring twice', () async {

@@ -515,10 +515,7 @@ programs/currencies/coins/currency/person.glp	open-type	OpenOffer
 programs/currencies/coins/currency/plays.glp	open-decl	person#person/5
 programs/currencies/coins/currency/self.glp	open-decl	person#person/5
 programs/currencies/coins/currency/self.glp	open-decl	person/5
-programs/currencies/coins/play_ui.glp	open-decl	coins_ui/3
 programs/currencies/coins/play_ui.glp	open-decl	currency#person/5
-programs/currencies/coins/self.glp	open-decl	coins_ui/3
-programs/currencies/coins/self.glp	open-decl	play_ui#coins_ui/3
 programs/currencies/coins/self.glp	open-type	Drawn
 programs/currencies/coins/self.glp	open-type	Event
 programs/currencies/coins/village.glp	open-decl	currency#person/5
@@ -564,9 +561,6 @@ programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	thread_c
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	thread_tail/3
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-type	Drawn
 programs/currencies/sovereign/play_ui.glp	open-decl	denominated#person/7
-programs/currencies/sovereign/play_ui.glp	open-decl	sovereign_ui/3
-programs/currencies/sovereign/self.glp	open-decl	play_ui#sovereign_ui/3
-programs/currencies/sovereign/self.glp	open-decl	sovereign_ui/3
 programs/currencies/sovereign/self.glp	open-type	Drawn
 programs/currencies/sovereign/self.glp	open-type	Event
 programs/currencies/sovereign/village.glp	open-decl	denominated#person/7
@@ -900,14 +894,10 @@ programs/social/graph/core/home.glp	open-decl	thread_tail/3
 programs/social/graph/core/home.glp	open-type	Drawn
 programs/social/graph/core/self.glp	open-decl	answering/4
 programs/social/graph/core/self.glp	open-decl	hold_output/1
-programs/social/graph/core/self.glp	open-decl	play_attest/4
 programs/social/graph/core/self.glp	open-decl	play_home/5
 programs/social/graph/core/self.glp	open-decl	show_notices/2
-programs/social/graph/core/self.glp	open-decl	superapp_plays#play_attest/4
 programs/social/graph/core/self.glp	open-decl	yes_person/2
 programs/social/graph/core/self.glp	open-type	HomeDrawn
-programs/social/graph/core/superapp_plays.glp	open-decl	attested/4
-programs/social/graph/core/superapp_plays.glp	open-decl	play_attest/4
 programs/tests/agent_roundtrip/channel.glp	open-decl	receive/3
 programs/tests/agent_roundtrip/channel.glp	open-decl	send/3
 programs/tests/agent_roundtrip/play_madglp/agents.glp	open-decl	actor/2
@@ -1162,9 +1152,7 @@ programs/tests/mad_two_crossings/self.glp	open-decl	agents#alice_init/2
 programs/tests/mad_two_crossings/self.glp	open-decl	agents#bob_init/2
 programs/tests/mad_two_crossings/self.glp	open-decl	alice_init/2
 programs/tests/mad_two_crossings/self.glp	open-decl	bob_init/2
-programs/tests/mad_w_clean.glp	open-decl	agent_init/3
 programs/tests/mad_w_clean.glp	open-decl	drop/1
-programs/tests/mad_w_probe.glp	open-decl	agent_init/3
 programs/tests/mad_w_probe.glp	open-decl	drop/1
 programs/tests/moded_types/invalid/universal/any_list_cons.glp	open-decl	test2/1
 programs/tests/moded_types/invalid/universal/any_mixed_clauses.glp	open-decl	mixed/2
@@ -1325,9 +1313,6 @@ programs/tests/param_abstract_linked/self.glp	open-decl	run/1
 programs/tests/param_unchecked/code.glp	open-decl	run/1
 programs/tests/param_unchecked/self.glp	open-decl	code#run/1
 programs/tests/param_unchecked/self.glp	open-decl	run/1
-programs/tests/post_goal/echo_agent.glp	open-decl	agent_init/3
-programs/tests/post_goal/exposed/agent.glp	open-decl	agent_init/3
-programs/tests/post_goal/integer_id_agent.glp	open-decl	agent_init/2
 programs/tests/primitive_named_type/code.glp	open-type	Msg
 programs/tests/root_check/compose.glp	open-decl	compose/1
 programs/tests/root_check/univ_typing_root.glp	open-decl	..=/2

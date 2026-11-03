@@ -7,6 +7,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:sodium/sodium_sumo.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -376,26 +377,35 @@ removed :- remove(rendezvous('${serverKey.hex}')).
   }, timeout: Timeout.none);
 
   group('two runtimes over two headless layers in two processes', () {
-    // The agents' one program: the caller cold-calls the callee, naming it by
-    // the key its host passes, with a writer; the callee assigns the writer,
-    // and the assignment crosses back.  Written under the root, programs/
+    // The agents' one program: each agent started from agent(ch(_?,_),
+    // ch(_?,_)), every agent's initial goal (IGLP, Implementation Notes,
+    // "Boot"); the caller's person names the callee by its key, call(Key), and
+    // the caller cold-calls it with a writer; the callee's person tells its
+    // agent to answer, and the callee assigns the writer, and the assignment
+    // crosses back.  Written under the root, programs/
     // (TGLP modules.tex, "Scope construction": "A program lies at or below the
     // root"), as glp_runtime's agent_runtime_test.dart writes its play.
     const play = r'''
-procedure caller_init(_?, Key?, _?).
-caller_init(_, Callee, _) :-
+PlayIn  ::= call(Key) ; answer.
+PlayOut ::= answered(Constant) ; called(Key).
+PlayMsg ::= ask(Constant?).
+
+exported procedure agent(Channel(Stream(PlayIn), Stream(PlayOut))?, Channel(Stream(NetMsg(PlayMsg)), Stream(NetMsg(PlayMsg)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+
+procedure start(Stream(PlayIn)?, Stream(NetMsg(PlayMsg))?).
+start([call(Callee) | _], _) :- ground(Callee?) |
     send_to_net([msg(Callee?, ask(Answer))]),
     answered(Answer?).
-
-procedure answered(_?).
-answered(forty_two) :- send_to_user([answered(forty_two)]).
-
-procedure callee_init(_?, _?).
-callee_init(_, [msg(Me, ask(A?)) | _]) :-
+start([answer | _], [msg(Me, ask(A?)) | _]) :-
     send_to_user([called(Me?)]),
     answer(A).
+start([], _).
 
-procedure answer(_).
+procedure answered(Constant?).
+answered(forty_two) :- send_to_user([answered(forty_two)]).
+
+procedure answer(Constant).
 answer(forty_two).
 ''';
 
@@ -431,7 +441,7 @@ answer(forty_two).
         _hex(calleeSeed),
         rootSelfGlpPath,
         program,
-        'callee_init/2',
+        'answer',
         caller.hex,
       ]);
       addTearDown(() async {
@@ -475,8 +485,6 @@ answer(forty_two).
         agentId: 'caller',
         program: program,
         rootSelfGlpPath: rootSelfGlpPath,
-        goalLabel: 'caller_init/3',
-        extraArgs: [callee.hex],
         keyPair: (pub: caller, priv: callerPriv),
         network: network,
       );
@@ -506,6 +514,9 @@ answer(forty_two).
         receivedFrom.add(sender.hex);
         deliver(sender, payload, messageId, underlay);
       };
+      // The caller's person names the callee by its key.
+      await host.injectUserInput(
+          rt.StructTerm('call', [rt.ConstTerm(callee.hex)]));
 
       // The cold call crosses: the callee's program receives it on its
       // network input, addressed to its own name.

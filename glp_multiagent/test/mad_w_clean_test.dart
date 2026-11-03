@@ -18,6 +18,8 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:glp_multiagent/ui_runtime/term.dart';
+
 import 'isolate_agents.dart';
 import 'programs_dir.dart';
 
@@ -36,6 +38,13 @@ void main() {
     await agents.ready();
     agents.start('alice');
     agents.start('bob');
+    // Each person's first act tells the agent its role and the keys of the
+    // peers it knows, the agent started from agent(ch(_?,_),ch(_?,_))
+    // (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP 670d36a,
+    // Implementation Notes, "Boot", and Remark "Agent Names").
+    agents.input('alice', const GStruct(
+        'init', [GAtom('alice'), GList([GAtom('bob')])]));
+    agents.input('bob', const GStruct('init', [GAtom('bob'), GList([])]));
 
     // Both reports, and then quiescence: bob_producer and bob_consumer are
     // concurrent and the order they reach the output is not fixed, and the

@@ -33,11 +33,20 @@ import 'package:test/test.dart';
 /// which cold-calls b again when it passes, and waiter/1, which waits on
 /// sender/1's assignment and then on when_idle.  b_init/2 reads the first
 /// message on its network input and sends nothing back.
-/// The directory [_madFile] is written in, for the length of the run.
+/// The directory [_madFiles] are written in, for the length of the run.
 late Directory _madDir;
 
-/// [_mad] as a module file.
-late String _madFile;
+/// [_mad] as a module file for each agent, a, b and c, with the agent/2 its
+/// AgentRuntime starts it from, every agent's initial goal (GLP-Spec
+/// maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes,
+/// "Boot": "a deployed agent is spawned by its application with the same
+/// initial goal"), calling that agent's a_init/2, b_init/2 or c_init/2.
+final Map<String, String> _madFiles = {};
+
+String _agentClause(String id) => '''
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(_, []), ch(N, [])) :- ${id}_init($id, N?).
+''';
 
 const String _mad = r'''
 Go ::= go.
@@ -61,17 +70,16 @@ procedure b_init(_?, _?).
 b_init(_, [msg(_, M) | _]) :- send_to_user([got(M?)]).
 ''';
 
-/// An agent of [_mad] started at [goal], what it sends to its person and
+/// An agent of [_mad] started at [id]'s init, what it sends to its person and
 /// its Sends recorded in [events] in the order they happen --- `out <line>`
 /// and `send <destination>` --- and its messages kept in [sent], delivered to
 /// no one unless the test delivers them.  No message reaches it from outside.
-AgentRuntime _agent(String id, String goal, List<String> events,
+AgentRuntime _agent(String id, List<String> events,
     List<(String, Uint8List)> sent) {
   final agent = AgentRuntime(
     agentId: id,
-    program: _madFile,
+    program: _madFiles[id]!,
     rootSelfGlpPath: File('../programs/self.glp').absolute.path,
-    goalLabel: goal,
   );
   agent.onOutput = (line) {
     if (line.startsWith('< ')) events.add('out ${line.substring(2)}');
@@ -118,8 +126,11 @@ void main() {
     // 2026-10-03 it was written to the system's temporary directory, outside the
     // root, and the single-file path checked the module alone.
     _madDir = Directory('../programs/tests').createTempSync('glp_when_idle_');
-    _madFile = '${_madDir.path}/agents.glp';
-    File(_madFile).writeAsStringSync(_mad);
+    for (final id in ['a', 'b', 'c']) {
+      final file = '${_madDir.path}/agent_$id.glp';
+      File(file).writeAsStringSync(_mad + _agentClause(id));
+      _madFiles[id] = file;
+    }
   });
   tearDownAll(() => _madDir.deleteSync(recursive: true));
 
@@ -219,12 +230,12 @@ void main() {
       // next incoming message when nothing re-drained after the flush.
       final events = <String>[];
       final sent = <(String, Uint8List)>[];
-      await _agent('a', 'a_init/2', events, sent).initialize();
+      await _agent('a', events, sent).initialize();
       expect(events, ['send b', 'out idle']);
 
       // The message a sent is b's, and b reads it.
       final bEvents = <String>[];
-      final b = _agent('b', 'b_init/2', bEvents, <(String, Uint8List)>[]);
+      final b = _agent('b', bEvents, <(String, Uint8List)>[]);
       await b.initialize();
       expect(sent.map((s) => s.$1), ['b']);
       await b.onMadMessageReceived('a', sent.single.$2);
@@ -239,7 +250,7 @@ void main() {
       // that second message is sent too, the same event's third drain.
       final events = <String>[];
       final sent = <(String, Uint8List)>[];
-      await _agent('c', 'c_init/2', events, sent).initialize();
+      await _agent('c', events, sent).initialize();
       expect(events, ['send b', 'out sender', 'send b', 'out waiter']);
     });
 

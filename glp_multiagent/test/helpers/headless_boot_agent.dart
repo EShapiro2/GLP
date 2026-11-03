@@ -4,8 +4,7 @@
 /// `HeadlessBootProcesses` (headless_boot.dart); after glue's
 /// test/helpers/glp_adapter_agent.dart.
 ///
-///   dart <kernel> <persona> <root-self.glp> <program> <goal-label>
-///       [<boot-file>]
+///   dart <kernel> <persona> <root-self.glp> <program> [<boot-file>]
 ///
 /// where <kernel> is this file compiled once, before any agent starts
 /// (headless_boot.dart, `HeadlessAgentProgram`).
@@ -17,9 +16,11 @@
 /// input: `PEER <key-hex> <address>` puts a peer in the layer's known-peer
 /// set, since the headless layer answers no unsolicited WAN contact from a
 /// key outside it (GNA Section 2.7), and gives it the peer's address; `GO
-/// <json>` boots the agent, the JSON holding `extraArgs`, the entry form's
-/// constant arguments, and `person`, the boot form's person goal (`functor`,
-/// `args`, `channelIndex`) or null, after which it prints `INIT`.  `OUT
+/// <json>` boots the agent on the one initial goal, `agent(ch(_?,_),
+/// ch(_?,_))`, the JSON holding `act`, the person's first act (`functor`,
+/// `args`) or null, which the host injects once the agent is initialised, and
+/// `person`, the boot form's person goal (`functor`, `args`, `channelIndex`)
+/// or null, after which it prints `INIT`.  `OUT
 /// <line>` is each element the agent sends its person, as its transcript
 /// shows it.  Ends when its standard input closes.
 library;
@@ -36,16 +37,15 @@ import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
-import 'headless_boot.dart' show identityOfPersona, senderOfReceipt;
+import 'headless_boot.dart' show actTerm, identityOfPersona, senderOfReceipt;
 
 Future<void> main(List<String> args) async {
   final persona = args[0];
   final rootSelfGlpPath = args[1];
   final program = args[2];
-  final goalLabel = args[3];
   // The boot file, in the boot form: its own module is loaded on top of the
   // program, in the file's scope (headless_boot.dart, HeadlessBootFile).
-  final bootPath = args.length > 4 ? args[4] : null;
+  final bootPath = args.length > 3 ? args[3] : null;
   final bootSource = bootPath == null
       ? null
       : BootLoader().load(File(bootPath).readAsStringSync()).source;
@@ -83,8 +83,6 @@ Future<void> main(List<String> args) async {
         agentId: persona,
         program: program,
         rootSelfGlpPath: rootSelfGlpPath,
-        goalLabel: goalLabel,
-        extraArgs: (go['extraArgs'] as List).cast<String>(),
         person: person == null
             ? null
             : PersonGoal(person['functor'] as String,
@@ -109,6 +107,11 @@ Future<void> main(List<String> args) async {
         if (sender != null) stdout.writeln('RECV $sender');
       };
       await agent!.initialize();
+      final act = go['act'] as Map<String, dynamic>?;
+      if (act != null) {
+        await agent!.injectUserInput(actTerm(act['functor'] as String,
+            (act['args'] as List).cast<String>()));
+      }
       stdout.writeln('INIT');
     }
   }, onDone: () => done.complete());

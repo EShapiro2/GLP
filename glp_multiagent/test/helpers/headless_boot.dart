@@ -8,7 +8,10 @@
 /// swap").  In one process ([HeadlessBoot]) and in one process per agent
 /// ([HeadlessBootProcesses], whose agents are headless_boot_agent.dart).
 ///
-/// Two entry forms, the host's two (`AgentRuntime`):
+/// One initial goal, every agent's, `agent(ch(_?,_), ch(_?,_))` (IGLP,
+/// Implementation Notes, "Boot": "a deployed agent is spawned by its
+/// application with the same initial goal"), the host's one path
+/// (`AgentRuntime`); the agent's person is one of two:
 ///
 /// - The boot form (IGLP, Implementation Notes, "Boot"): a boot file's
 ///   directives, `agent(ch(_?,_), ch(_?,_))@p` with the person goal `P@p`,
@@ -21,10 +24,12 @@
 ///   name among them, a variable standing for a key, is given that agent's
 ///   key, as a text constant ([personOf]); the simulation routes the names
 ///   as atoms instead.
-/// - The entry form, `name(Me, extras..., NetIn)`, of the pattern test
-///   agent_runtime_headless_test.dart: the constant arguments are the spec's
-///   texts, or another agent's key where the spec names that agent by
-///   [PeerKey].
+/// - The person's first act, [PersonAct], as the pattern test
+///   agent_runtime_headless_test.dart gives it: the host injects it once the
+///   agent is initialised, its arguments the spec's texts, or another agent's
+///   key where the spec names that agent by [PeerKey] (IGLP, Implementation
+///   Notes, "Boot": "An agent learns the keys of its peers from its
+///   person").
 ///
 /// Order: every layer starts, so that every port is known; every agent is
 /// given every other's key and address; then the agents are initialised in
@@ -41,12 +46,13 @@ import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:sodium/sodium_sumo.dart';
 
-/// Another agent's key, by that agent's id, as a constant argument of the
-/// entry form.
+/// Another agent's key, by that agent's id, as an argument of a person's
+/// first act ([PersonAct]).
 class PeerKey {
   final String id;
   const PeerKey(this.id);
@@ -54,16 +60,12 @@ class PeerKey {
 
 /// One agent of a boot: its id (the persona's name, the host's handle and
 /// the tag of its lines); in the boot form its person goal, [person], as the
-/// boot file has it; in the entry form its entry goal and the constant
-/// arguments between its own name and the network input, each a [String] or
-/// a [PeerKey].
+/// boot file has it; otherwise its person's first act, [firstAct].
 class HeadlessAgentSpec {
   final String id;
-  final String goalLabel;
-  final List<Object> extraArgs;
+  final PersonAct? firstAct;
   final PersonGoal? person;
-  const HeadlessAgentSpec(this.id, this.goalLabel,
-      {this.extraArgs = const [], this.person});
+  const HeadlessAgentSpec(this.id, {this.firstAct, this.person});
 
   bool get bootForm => person != null;
 
@@ -81,7 +83,7 @@ class HeadlessAgentSpec {
     return HeadlessBootFile(
       [
         for (final d in config.directives)
-          HeadlessAgentSpec(d.agentId, 'agent/2',
+          HeadlessAgentSpec(d.agentId,
               person: d.person ??
                   (throw ArgumentError('$bootPath: agent ${d.agentId} has '
                       'no person goal, and the boot over the real layer '
@@ -176,16 +178,30 @@ class AgentLines {
   }
 }
 
-/// The constant arguments of [spec]'s entry form as texts: a [PeerKey] is
-/// that agent's key.
+/// A person's first act: a constant, or a structure whose arguments are
+/// text constants, each a [String] or another agent's key by [PeerKey].
+class PersonAct {
+  final String functor;
+  final List<Object> args;
+  const PersonAct(this.functor, [this.args = const []]);
+}
+
+/// The arguments of [spec]'s first act as texts: a [PeerKey] is that agent's
+/// key.
 List<String> resolveArgs(HeadlessAgentSpec spec, Map<String, String> keyOf) => [
-      for (final a in spec.extraArgs)
+      for (final a in spec.firstAct?.args ?? const <Object>[])
         a is PeerKey
             ? (keyOf[a.id] ??
                 (throw ArgumentError(
                     '${spec.id}: no agent ${a.id} in this boot')))
             : a as String,
     ];
+
+/// The person's first act as the term the host injects: the functor alone,
+/// or the functor over its arguments' texts.
+rt.Term actTerm(String functor, List<String> args) => args.isEmpty
+    ? rt.ConstTerm(functor)
+    : rt.StructTerm(functor, [for (final a in args) rt.ConstTerm(a)]);
 
 /// The person goal of [spec]'s boot form over the real layer: every agent id
 /// of the boot among its ground arguments, a readable name standing for a
@@ -291,8 +307,6 @@ class HeadlessBoot {
         agentId: spec.id,
         program: program,
         rootSelfGlpPath: rootSelfGlpPath,
-        goalLabel: spec.goalLabel,
-        extraArgs: spec.bootForm ? const [] : resolveArgs(spec, keyOf),
         person: spec.bootForm ? personOf(spec, keyOf) : null,
         bootSource: bootFile?.source,
         bootPath: bootFile?.path,
@@ -333,6 +347,11 @@ class HeadlessBoot {
     }
     for (final spec in agents) {
       await hosts[spec.id]!.initialize();
+      final act = spec.firstAct;
+      if (act != null) {
+        await hosts[spec.id]!
+            .injectUserInput(actTerm(act.functor, resolveArgs(spec, keyOf)));
+      }
     }
     return HeadlessBoot._(agents, keyOf, hosts, layers, outputs, received);
   }
@@ -475,7 +494,6 @@ class HeadlessBootProcesses {
           id,
           rootSelfGlpPath,
           program,
-          spec.goalLabel,
           if (bootFile != null) bootFile.path,
         ]);
         processes[id] = p;
@@ -521,7 +539,12 @@ class HeadlessBootProcesses {
       for (final spec in agents) {
         final person = spec.bootForm ? personOf(spec, keyOf) : null;
         processes[spec.id]!.stdin.writeln('GO ${json.encode({
-              'extraArgs': spec.bootForm ? const [] : resolveArgs(spec, keyOf),
+              'act': spec.firstAct == null
+                  ? null
+                  : {
+                      'functor': spec.firstAct!.functor,
+                      'args': resolveArgs(spec, keyOf),
+                    },
               'person': person == null
                   ? null
                   : {

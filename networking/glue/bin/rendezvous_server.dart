@@ -52,6 +52,7 @@ import 'dart:typed_data';
 import 'package:args/args.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:grassroots_networking_core/src/headless/identity_file.dart';
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
@@ -119,8 +120,6 @@ Future<void> main(List<String> argv) async {
     agentId: 'rendezvous',
     program: args['program'] as String,
     rootSelfGlpPath: args['root-self'] as String,
-    goalLabel: 'rv_server/3',
-    extraArgs: [args['graph'] as String],
     keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
     network: network,
   );
@@ -136,6 +135,11 @@ Future<void> main(List<String> argv) async {
   // The agent is bound to its layer before the layer starts, so that no
   // message the layer delivers finds no agent.
   await agent.initialize();
+  // The agent is started from agent(ch(_?,_),ch(_?,_)), every agent's initial
+  // goal (IGLP, Implementation Notes, "Boot": "a deployed agent is spawned by
+  // its application with the same initial goal"); its person's first act is
+  // the social graph's source identity, the one it admits attestations under.
+  await agent.injectUserInput(rt.ConstTerm(args['graph'] as String));
   if (!await layer.start()) {
     stderr.writeln('could not bind UDP port $port');
     exit(1);

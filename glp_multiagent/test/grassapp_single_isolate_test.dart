@@ -24,6 +24,10 @@ void main() {
     await agents.spawn('Bob', _program, '$_programs/self.glp',
         deferStart: false);
     await agents.until('Bob initialised', () => agents.started.contains('Bob'));
+    // The person's first act tells the agent its name, the agent started from
+    // agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent
+    // GLP"; IGLP, Implementation Notes, "Boot").
+    agents.input('Bob', const GAtom('bob'));
 
     await agents.until('the befriend(alice) card',
         () => agents.has('Bob', 'befriend(alice, req(1))'));

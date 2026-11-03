@@ -79,8 +79,8 @@ FriendAct ::= attest(Key)
 FriendActs ::= [] ; [FriendAct | FriendActs].
 SignalReply ::= punch(String) ; rejected.
 
-procedure friend_init(Key?, FriendActs?, _?).
-friend_init(Me, UserIn, _) :- acts(Me?, UserIn?).
+exported procedure agent(Channel(FriendActs, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
 
 procedure acts(Key?, FriendActs?).
 acts(Me, [attest(F) | In]) :- ground(Me?) |
@@ -191,7 +191,6 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
         agentId: id,
         program: friendPath,
         rootSelfGlpPath: rootSelfGlpPath,
-        goalLabel: 'friend_init/3',
         keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
         network: HeadlessGlpNetwork(layer),
       );

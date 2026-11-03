@@ -78,3 +78,18 @@ cards_init(_, Gs, _) :-
     widgets # cards(MCh?, Asks),
     widgets # dispatch(Asks?, ch(Gs?, Ds), MCh),
     send_to_user(Ds?).
+
+%% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec
+%% maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot":
+%% "a deployed agent is spawned by its application with the same initial
+%% goal"): the person's first act names the entry the agent runs, and the
+%% person's acts after it are that entry's input.
+Selected ::= [Constant | PersonIn(Drawn)].
+
+exported procedure agent(Channel(Selected, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch([E | Gs], []), ch(N, [])) :- start(E?, Gs?, N?).
+
+procedure start(Constant?, PersonIn(Drawn)?, Stream(NetMsg(Constant))?).
+start(inputs_init, Gs, N) :- inputs_init(bob, Gs?, N?).
+start(forms_init, Gs, N) :- forms_init(bob, Gs?, N?).
+start(cards_init, Gs, N) :- cards_init(bob, Gs?, N?).

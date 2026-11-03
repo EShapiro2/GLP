@@ -3,7 +3,7 @@
 %% name of an agent p is its public key"; Implementation Notes, "Networking
 %% Seam", One interface: "transport integration is a backend swap").  One
 %% callee and any number of callers: each caller cold-calls the callee, naming
-%% it by the key its host passes, with a writer, and the callee assigns every
+%% it by the key its person names, with a writer, and the callee assigns every
 %% writer it is asked for.  The play of glp_multiagent/test/
 %% agent_runtime_headless_test.dart, over a program directory and N agents
 %% (Code #22's rung 3, 2026-11-02 07:37 UTC).  Run by
@@ -24,3 +24,19 @@ caller_init(Me, Callee, In) :- agents # caller_init(Me?, Callee?, In?).
 
 exported procedure callee_init(Key?, Stream(NetMsg(Ask))?).
 callee_init(Me, In) :- agents # callee_init(Me?, In?).
+
+%% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec
+%% maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot":
+%% "a deployed agent is spawned by its application with the same initial
+%% goal"): the person's first act names the agent's part, a caller with the
+%% callee's key its person knows ("An agent learns the keys of its peers from
+%% its person") or the callee; self_key/1 gives the agent its own key.
+Part ::= caller(Key) ; callee.
+
+exported procedure agent(Channel(Stream(Part), Stream(Constant))?, Channel(Stream(NetMsg(Ask)), Stream(NetMsg(Ask)))?).
+agent(ch(In, []), ch(N, [])) :- self_key(Me), start(Me?, In?, N?).
+
+procedure start(Key?, Stream(Part)?, Stream(NetMsg(Ask))?).
+start(Me, [caller(K) | _], N) :- caller_init(Me?, K?, N?).
+start(Me, [callee | _], N) :- callee_init(Me?, N?).
+start(_, [], _).

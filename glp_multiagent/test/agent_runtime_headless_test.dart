@@ -22,29 +22,41 @@ import 'package:cryptography/cryptography.dart' show Ed25519;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:sodium/sodium_sumo.dart';
 
 import 'programs_dir.dart';
 
-/// GNA's adapter test's play: the caller cold-calls the callee, naming it by
-/// the key its host passes, with a writer; the callee assigns the writer.
+/// GNA's adapter test's play: each agent started from
+/// agent(ch(_?,_),ch(_?,_)), every agent's initial goal (GLP-Spec maglp.tex,
+/// Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot": "a
+/// deployed agent is spawned by its application with the same initial
+/// goal"), the caller's person naming the callee by its key, call(Key), and
+/// the callee's telling its agent to answer; the caller cold-calls the callee
+/// with a writer, and the callee assigns the writer.
 const String _play = r'''
-procedure caller_init(_?, Key?, _?).
-caller_init(_, Callee, _) :-
+GnIn  ::= call(Key) ; answer.
+GnOut ::= answered(Constant) ; called(Key).
+GnMsg ::= ask(Constant?).
+
+exported procedure agent(Channel(Stream(GnIn), Stream(GnOut))?, Channel(Stream(NetMsg(GnMsg)), Stream(NetMsg(GnMsg)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+
+procedure start(Stream(GnIn)?, Stream(NetMsg(GnMsg))?).
+start([call(Callee) | _], _) :- ground(Callee?) |
     send_to_net([msg(Callee?, ask(Answer))]),
     answered(Answer?).
-
-procedure answered(_?).
-answered(forty_two) :- send_to_user([answered(forty_two)]).
-
-procedure callee_init(_?, _?).
-callee_init(_, [msg(Me, ask(A?)) | _]) :-
+start([answer | _], [msg(Me, ask(A?)) | _]) :-
     send_to_user([called(Me?)]),
     answer(A).
+start([], _).
 
-procedure answer(_).
+procedure answered(Constant?).
+answered(forty_two) :- send_to_user([answered(forty_two)]).
+
+procedure answer(Constant).
 answer(forty_two).
 ''';
 
@@ -135,7 +147,6 @@ void main() {
       agentId: 'callee',
       program: play,
       rootSelfGlpPath: root,
-      goalLabel: 'callee_init/2',
       keyPair: calleeKp,
       network: calleeNet,
     );
@@ -143,8 +154,6 @@ void main() {
       agentId: 'caller',
       program: play,
       rootSelfGlpPath: root,
-      goalLabel: 'caller_init/3',
-      extraArgs: [calleeKp.pub.hex],
       keyPair: callerKp,
       network: callerNet,
     );
@@ -164,11 +173,15 @@ void main() {
     // and is given the callee's key and address, before the caller runs and
     // sends.
     await callee.initialize();
+    await callee.injectUserInput(rt.ConstTerm('answer'));
     expect(await calleeLayer.start(), isTrue);
     expect(await callerLayer.start(), isTrue);
     callerNet.putKnownPeer(calleeKp.pub);
     callerNet.putPeerAddress(calleeKp.pub, '127.0.0.1:${calleeLayer.boundPort}');
     await caller.initialize();
+    // The caller's person names the callee, by its key.
+    await caller.injectUserInput(
+        rt.StructTerm('call', [rt.ConstTerm(calleeKp.pub.hex)]));
 
     // The cold call crosses: the callee's program receives it on its network
     // input, addressed to its own name, its key.

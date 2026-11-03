@@ -5,9 +5,9 @@
 /// and in one process per agent (test/helpers/headless_boot.dart; Code #22's
 /// rung 3, 2026-11-02 07:37 UTC and 2026-11-03 09:06 UTC).
 ///
-/// 1. The entry form: programs/tests/mad_keyed, one callee and N-1 callers,
-///    each caller cold-calling the callee, named by the key its host passes,
-///    with a writer the callee assigns.
+/// 1. The person's first act: programs/tests/mad_keyed, one callee and N-1
+///    callers, each caller's person naming the callee by its key, the caller
+///    cold-calling it with a writer the callee assigns.
 /// 2. The boot form: the madGLP probes Section MB of test/run_all_tests.sh
 ///    runs under the simulation --- MB1 mad_held_links, MB3
 ///    mad_stream_writer, MB4 mad_two_crossings, MB5's link probes --- each
@@ -138,10 +138,10 @@ void main() {
   /// One callee and [callers] callers, the callee first: it waits, and is
   /// bound before any caller's cold call is sent.
   List<HeadlessAgentSpec> keyedAgents(int callers) => [
-        const HeadlessAgentSpec('callee', 'callee_init/2'),
+        const HeadlessAgentSpec('callee', firstAct: PersonAct('callee')),
         for (var i = 1; i <= callers; i++)
-          HeadlessAgentSpec('caller$i', 'caller_init/3',
-              extraArgs: const [PeerKey('callee')]),
+          HeadlessAgentSpec('caller$i',
+              firstAct: const PersonAct('caller', [PeerKey('callee')])),
       ];
 
   /// Whether [line], an agent's transcript line, matches [pattern] with the
@@ -202,7 +202,7 @@ void main() {
 
   group('one process', () {
     test(
-        'the entry form: three agents named by their keys, two cold calls '
+        'the first act: three agents named by their keys, two cold calls '
         'cross to the callee and two assignments cross back', () async {
       if (sodiumUnavailable != null) {
         markTestSkipped(sodiumUnavailable!);
@@ -298,7 +298,7 @@ void main() {
       final missing = '$programs/tests/no_such_dir_boot.glp';
       await expectLater(
           HeadlessBootProcesses.start(
-            agents: const [HeadlessAgentSpec('alice', 'agent/2')],
+            agents: const [HeadlessAgentSpec('alice')],
             program: '$programs/tests/no_such_dir',
             rootSelfGlpPath: root,
             agent: agent,
@@ -325,7 +325,7 @@ void main() {
     }, timeout: Timeout.none);
 
     test(
-        'the entry form: the same three agents in three processes, the cold '
+        'the first act: the same three agents in three processes, the cold '
         'calls and the assignments crossing between them', () async {
       if (sodiumUnavailable != null) {
         markTestSkipped(sodiumUnavailable!);

@@ -3,12 +3,12 @@
 /// act willed through the construct the Dart bridge draws for the question
 /// of `home.vglp`, on the real social-graph agent.
 ///
-/// The whole path runs: `programs/social/graph/core` at `superapp_ui/3` ---
+/// The whole path runs: `programs/social/graph/core` at `superapp_ui/4` ---
 /// the super-app's bridge entry (`programs/social/graph/core/home_ui.glp`),
 /// alice's agent with its person interface, `home/3` and its dispatcher, on
 /// the person channel `ch(Grants?, Draws)` of vGLP's Definition "Person
-/// Channel, Person Writer, GLP with Persons, Grant", and bob's agent,
-/// scripted, across a crossbar.  The compiled program's dispatcher draws each
+/// Channel, Person Writer, GLP with Persons, Grant", and the agent of bob,
+/// the one peer whose key she knows, scripted, on the network between them.  The compiled program's dispatcher draws each
 /// construct, `draw(Id, W, V)`; the bridge draws it as the default widget of
 /// its interactive type (Definition "Widget Declaration, Default Widget"),
 /// and alice's submissions on it go back as her grants, `input(Id, P, R)`
@@ -20,7 +20,7 @@
 /// The same renderer and the same shell as the currency mini-app's screen; the
 /// only thing that differs is the program, and the manifest of what its agent
 /// tells its person.  The engine loads the super-app's program and posts
-/// `superapp_ui(alice, Grants?, [])` through its posting call, which checks
+/// `superapp_ui(alice, [bob], Grants?, [])` through its posting call, which checks
 /// the goal as every posted goal is checked (GlpEngine.postGoal); alice's
 /// grants go into `Grants` through the injector the call returns, and what
 /// `send_to_user/1` sends her is read off the runtime's output.
@@ -132,7 +132,7 @@ void main() {
     final engine = GlpEngine(rootSelfGlpPath: '$repo/self.glp');
     engine.runtime.outputTermCallback = (t) => notifies.add(screenTermOf(t));
     expect(engine.loadProgram(core), isTrue);
-    final play = engine.postGoal('superapp_ui(alice, Grants?, [])',
+    final play = engine.postGoal('superapp_ui(alice, [bob], Grants?, [])',
         inputs: ['Grants']);
     final grants = play.inputs['Grants']!;
 

@@ -66,6 +66,16 @@ procedure agent_init(_?, _?).
 agent_init(_, _) :- shared_double(1, _).
 ''';
 
+/// The agent/2 an AgentRuntime starts its agent from, every agent's initial
+/// goal (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP,
+/// Implementation Notes, "Boot": "a deployed agent is spawned by its
+/// application with the same initial goal"), calling the source's
+/// agent_init/2.
+const _agentClause = '''
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(_, []), ch(N, [])) :- agent_init(alice, N?).
+''';
+
 const _bootClause = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice.
@@ -322,9 +332,9 @@ void main() {
         () async {
       final agent = AgentRuntime(
         agentId: 'alice',
-        program: _moduleFile(dir, 'calls_send_to_net', _callsSendToNet),
+        program: _moduleFile(
+            dir, 'calls_send_to_net', _agentClause + _callsSendToNet),
         rootSelfGlpPath: _rootSelf,
-        goalLabel: 'agent_init/2',
       );
       await agent.initialize();
       expect(agent.initialized, isTrue);
@@ -334,9 +344,9 @@ void main() {
         () async {
       final agent = AgentRuntime(
         agentId: 'alice',
-        program: _moduleFile(dir, 'calls_nothing', _callsNothing),
+        program:
+            _moduleFile(dir, 'calls_nothing', _agentClause + _callsNothing),
         rootSelfGlpPath: _rootSelf,
-        goalLabel: 'agent_init/2',
       );
       await expectLater(
         agent.initialize(),

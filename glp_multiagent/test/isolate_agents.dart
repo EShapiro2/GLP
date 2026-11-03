@@ -41,9 +41,9 @@ class IsolateAgents {
     _reply.listen(_take);
   }
 
-  /// Spawn [id] running [program] under the root [rootSelf].  Its readiness is owed, and, without [deferStart], its start, which it makes at once.
+  /// Spawn [id] running [program] under the root [rootSelf].  Its readiness is owed, and, without [deferStart], its start, which it makes at once; with [entry], the application's first act at the agent's first start, `<entry>(Me, [])` (InitAgent.entry).
   Future<void> spawn(String id, String program, String rootSelf,
-      {bool deferStart = true, String goalLabel = 'agent_init/3'}) async {
+      {bool deferStart = true, String? entry}) async {
     out[id] = [];
     notes[id] = [];
     logs[id] = [];
@@ -60,7 +60,7 @@ class IsolateAgents {
         rootSelfGlpPath: rootSelf,
         replyPort: _reply.sendPort,
         deferStart: deferStart,
-        goalLabel: goalLabel,
+        entry: entry,
       ),
       onError: events.sendPort,
       onExit: events.sendPort,

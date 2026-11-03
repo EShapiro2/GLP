@@ -20,21 +20,23 @@
 procedure boot.
 boot :-
     agent(ch(_?, _), ch(_?, _))@alice,
-    say(alice, cssn, ch(_?, _))@alice,
+    say(alice, cssn_invite, [bob], ch(_?, _))@alice,
     agent(ch(_?, _), ch(_?, _))@bob,
-    say(bob, cssn, ch(_?, _))@bob.
+    say(bob, cssn_consent, [alice], ch(_?, _))@bob.
 
-%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/3, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name and its mode, by which agent/2 starts the super-app's play sg_init/3 on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network (GLP-Spec appendix-guards.tex, "Identity and signature").
-BootSays ::= sg(Key, Constant).
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel
+%% first and the network channel second (GLP-Spec maglp.tex, Definition
+%% "Multiagent GLP"), which the program, graph/core, answers: a boot defines
+%% no agent/2, and the person goal's first act names the entry the program
+%% starts (IGLP 0e1c9e0, Implementation Notes, "Boot").  The person scripted
+%% at each agent, say/4, run on its person channel in the person's place,
+%% tells the agent the entry, sg_init/4, with its own key, its mode and the
+%% keys of the peers it knows, its ground arguments, alice and bob being the
+%% atoms that stand for the keys in a simulation ("An agent learns the keys of
+%% its peers from its person"; Remark "Agent Names"), and reads nothing.
+SayAct ::= sg_init(Key, Constant, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
 
-exported procedure agent(Channel(Stream(BootSays), Stream(BootSays))?, Channel(NetInStream, NetOutStream)?).
-agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
-
-%% The super-app's play, by the name and the mode the person tells the agent.
-procedure start(Stream(BootSays)?, NetInStream?).
-start([sg(P, M) | _], N) :- sg_init(P?, M?, N?).
-start(_, _) :- otherwise | true.
-
-%% The person at each agent: it tells the agent its name and its mode, and reads nothing.
-exported procedure say(Key?, Constant?, Channel(Stream(BootSays), Stream(BootSays))?).
-say(P, M, ch(_, [sg(P?, M?)])).
+exported procedure say(Key?, Constant?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(P, M, Qs, ch(_, [sg_init(P?, M?, Qs?)])).

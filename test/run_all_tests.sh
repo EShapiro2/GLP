@@ -2308,7 +2308,7 @@ echo "--- Unfriend (play_unfriend_send/recv/absent) ---"
 
 g_uf_send=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_unfriend_send.
+play_unfriend_send(alice, bob).
 :quit
 HEREDOC
 2>&1)
@@ -2317,7 +2317,7 @@ check "SG unfriend_send teardown on friend channel" "msg(alice, bob, unfriend)" 
 
 g_uf_recv=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_unfriend_recv.
+play_unfriend_recv(alice, bob).
 :quit
 HEREDOC
 2>&1)
@@ -2326,7 +2326,7 @@ check "SG unfriend_recv notifies user" "unfriended(alice)" "$g_uf_recv"
 
 g_uf_abs=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_unfriend_absent.
+play_unfriend_absent(alice, bob, carol).
 :quit
 HEREDOC
 2>&1)
@@ -2346,13 +2346,13 @@ echo "--- Introduction: both parties must be friends (play_introduce_*) ---"
 
 g_intro=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_introduce_both.
-play_introduce_one.
-play_introduce_other.
-play_introduce_neither.
-play_request_intro_both.
-play_request_intro_stranger.
-play_request_intro_no_anchor.
+play_introduce_both(alice, bob, carol).
+play_introduce_one(alice, bob, carol).
+play_introduce_other(alice, bob, carol).
+play_introduce_neither(alice, bob, carol, dave).
+play_request_intro_both(alice, bob, carol).
+play_request_intro_stranger(alice, bob, carol).
+play_request_intro_no_anchor(alice, bob, carol).
 :quit
 HEREDOC
 2>&1)
@@ -3334,8 +3334,10 @@ check "Sovereign market: the four parties outside the sovereign layer are unmove
 
 echo "--- The live-person harness (sovereign_ui): the central bank on the app's screen ---"
 
-# The entry the app starts and the Dart bridge runs, sovereign_ui/3
-# (programs/currencies/sovereign/play_ui.glp), with no grant: its person
+# The entry the agent's initial goal starts on the person's first act,
+# sovereign_ui/4 (programs/currencies/sovereign/play_ui.glp), given the central
+# bank's key and its two peers' by readable names (IGLP, Remark "Agent
+# Names"), with no grant: its person
 # stream is open and stays so, as a person channel never closes (vGLP,
 # Definition "Person Channel, Person Writer, GLP with Persons, Grant";
 # PersonIn ::= [_ | PersonIn]).  The central bank's request form --- the
@@ -3350,7 +3352,7 @@ echo "--- The live-person harness (sovereign_ui): the central bank on the app's 
 n4_ui=$("$REPL_RUN" <<HEREDOC
 $SOV
 :limit 50000000
-sovereign_ui(cb, G?, []).
+sovereign_ui(cb, [diana, frank], G?, []).
 :quit
 HEREDOC
 2>&1)
@@ -6530,18 +6532,18 @@ $SG_CORE
 :limit 5000000
 play_load("cssn.glpw", K1, Key1).
 play_load("currency.glpw", K2, Key2).
-play_install("cssn.glpw", cssn, I1).
-play_install("currency.glpw", currency, I2).
-play_install("pingapp.glpw", ping, I3).
-play_forged_cert(I4).
-play_forged_invite(F1).
-play_forged_join(F2).
-play_forged_root(F3).
-play_attest(S, K, H, T).
-play_invite(A, B).
-play_invite_declined(A2, B2).
-play_invite_timed(Ms).
-play_coins(C1, C2).
+play_install(alice, "cssn.glpw", cssn, I1).
+play_install(alice, "currency.glpw", currency, I2).
+play_install(alice, "pingapp.glpw", ping, I3).
+play_forged_cert(alice, I4).
+play_forged_invite(alice, bob, F1).
+play_forged_join(alice, bob, F2).
+play_forged_root(alice, bob, F3).
+play_attest(alice, bob, S, K, H, T).
+play_invite(alice, bob, A, B).
+play_invite_declined(alice, bob, A2, B2).
+play_invite_timed(alice, bob, Ms).
+play_coins(alice, bob, C1, C2).
 :quit
 HEREDOC
 2>&1)
@@ -6578,7 +6580,7 @@ check_not "SG super-app no failed play" "→ failed" "$sg_core"
 sg_naf=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
-play_not_a_friend(A, B).
+play_not_a_friend(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
@@ -6592,7 +6594,7 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # default widget of a stream of a union of tuples, a menu of the four forms
 # kept open; a Connect granted on it reaches the agent, whose notice
 # connected(bob) arrives on the same channel, merged with the draws
-# (superapp_ui/3, alice with a scripted bob).  A friend's request to connect
+# (superapp_ui/4, alice with a scripted peer for each key she knows, here bob).  A friend's request to connect
 # raises respond_friend's card, the friend shown, and the person's yes on it
 # is their decision, with the pending value passed back as it came (home.glp
 # with its dispatcher and a scripted person who grants on the card once it is
@@ -6604,7 +6606,7 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 sg_home=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
-superapp_ui(alice, [input(1, [], connect(bob)) | G?], []).
+superapp_ui(alice, [bob], [input(1, [], connect(bob)) | G?], []).
 play_home(alice, yes, [msg(agent, person, befriend(bob, error))], C, L).
 play_home(alice, yes, [msg(agent, person, befriend_intro(carol, bob, error))], CI, LI).
 play_home(alice, no, [msg(agent, person, befriend_intro(carol, bob, error))], CN, LN).
@@ -6628,7 +6630,7 @@ sg_cs=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
-play_cssn(N1, N2).
+play_cssn(alice, bob, N1, N2).
 :quit
 HEREDOC
 2>&1)
@@ -6647,7 +6649,7 @@ sg_two=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
-play_both(A, B, C, D).
+play_both(alice, bob, A, B, C, D).
 :quit
 HEREDOC
 2>&1)
@@ -6741,7 +6743,7 @@ sg_reinvite=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/social/graph/endapp $SG_CORE
 $SG_CORE
 :limit 5000000
-play_reinvite(A, B).
+play_reinvite(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
@@ -6765,7 +6767,7 @@ sg_sovereign=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/currencies/sovereign/denominated $SG_CORE
 $SG_CORE
 :limit 5000000
-play_sovereign(A, B).
+play_sovereign(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
@@ -8208,15 +8210,11 @@ if _section QD || _section QF; then
 # hand-written sources gave way to its compiled platform and IGLP's tests took
 # their old tree as the fixture programs/tests/linker_tree (GLP #9, IGLP-fixture).
 #
-# GLP (IGLP layer), 2026-09-24: the sovereign screen.  Currencies' b2367233 gave
-# the denominated mini-app twelve request clauses where it had seven, for SGC's
-# contract, and lib/manifests/sovereign_ui.dart still describes seven forms and
-# the old model.  The manifest is the image of the display declarations, and its
-# twelve forms and their labels are GLP's to write.  SGC shows no screen, so this
-# does not hold SGC.
-KNOWN_RED=(
-    "glp_multiagent/test/sovereign_screen_test.dart: the sovereign mini-app: the central bank boots, its seven forms stand, it mints and opens the credit line through its screen, and the play runs on to the chain redemption and the fiat payment"
-)
+# The sovereign screen's entry, red from 2026-09-24, went on 2026-11-03, when
+# sovereign_screen_test was rewritten on the bridge model as coins_screen_test
+# is, its agent started by agent/2 on the person's first act (GLP #11,
+# Code_inbox 2026-11-03 18:03 UTC, item 2).  The list is empty.
+KNOWN_RED=()
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="
 echo "  (raw output and json reports in $SUITE_RUN_DIR: q_dart.txt, q_dart.json, q_flutter.txt, q_flutter.json)"

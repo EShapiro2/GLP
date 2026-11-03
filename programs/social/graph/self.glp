@@ -301,48 +301,68 @@ PendingList  ::= [] ; [PendingEntry | PendingList].
 %% The root self.glp exports each program entry by forwarding to boot, so an
 %% external goal calls it by plain name. boot.glp is unchanged.
 %% =============================================================================
-imported procedure boot#play_unfriend_send.
-exported procedure play_unfriend_send.
-play_unfriend_send :- boot # play_unfriend_send.
+imported procedure boot#play_unfriend_send(Key?, Key?).
+exported procedure play_unfriend_send(Key?, Key?).
+play_unfriend_send(A, B) :- boot # play_unfriend_send(A?, B?).
 
-imported procedure boot#play_unfriend_recv.
-exported procedure play_unfriend_recv.
-play_unfriend_recv :- boot # play_unfriend_recv.
+imported procedure boot#play_unfriend_recv(Key?, Key?).
+exported procedure play_unfriend_recv(Key?, Key?).
+play_unfriend_recv(A, B) :- boot # play_unfriend_recv(A?, B?).
 
-imported procedure boot#play_unfriend_absent.
-exported procedure play_unfriend_absent.
-play_unfriend_absent :- boot # play_unfriend_absent.
+imported procedure boot#play_unfriend_absent(Key?, Key?, Key?).
+exported procedure play_unfriend_absent(Key?, Key?, Key?).
+play_unfriend_absent(A, B, C) :- boot # play_unfriend_absent(A?, B?, C?).
 
-imported procedure boot#play_introduce_both.
-exported procedure play_introduce_both.
-play_introduce_both :- boot # play_introduce_both.
+imported procedure boot#play_introduce_both(Key?, Key?, Key?).
+exported procedure play_introduce_both(Key?, Key?, Key?).
+play_introduce_both(A, B, C) :- boot # play_introduce_both(A?, B?, C?).
 
-imported procedure boot#play_introduce_one.
-exported procedure play_introduce_one.
-play_introduce_one :- boot # play_introduce_one.
+imported procedure boot#play_introduce_one(Key?, Key?, Key?).
+exported procedure play_introduce_one(Key?, Key?, Key?).
+play_introduce_one(A, B, C) :- boot # play_introduce_one(A?, B?, C?).
 
-imported procedure boot#play_introduce_other.
-exported procedure play_introduce_other.
-play_introduce_other :- boot # play_introduce_other.
+imported procedure boot#play_introduce_other(Key?, Key?, Key?).
+exported procedure play_introduce_other(Key?, Key?, Key?).
+play_introduce_other(A, B, C) :- boot # play_introduce_other(A?, B?, C?).
 
-imported procedure boot#play_introduce_neither.
-exported procedure play_introduce_neither.
-play_introduce_neither :- boot # play_introduce_neither.
+imported procedure boot#play_introduce_neither(Key?, Key?, Key?, Key?).
+exported procedure play_introduce_neither(Key?, Key?, Key?, Key?).
+play_introduce_neither(A, B, C, D) :- boot # play_introduce_neither(A?, B?, C?, D?).
 
-imported procedure boot#play_request_intro_both.
-exported procedure play_request_intro_both.
-play_request_intro_both :- boot # play_request_intro_both.
+imported procedure boot#play_request_intro_both(Key?, Key?, Key?).
+exported procedure play_request_intro_both(Key?, Key?, Key?).
+play_request_intro_both(A, B, C) :- boot # play_request_intro_both(A?, B?, C?).
 
-imported procedure boot#play_request_intro_stranger.
-exported procedure play_request_intro_stranger.
-play_request_intro_stranger :- boot # play_request_intro_stranger.
+imported procedure boot#play_request_intro_stranger(Key?, Key?, Key?).
+exported procedure play_request_intro_stranger(Key?, Key?, Key?).
+play_request_intro_stranger(A, B, C) :- boot # play_request_intro_stranger(A?, B?, C?).
 
-imported procedure boot#play_request_intro_no_anchor.
-exported procedure play_request_intro_no_anchor.
-play_request_intro_no_anchor :- boot # play_request_intro_no_anchor.
+imported procedure boot#play_request_intro_no_anchor(Key?, Key?, Key?).
+exported procedure play_request_intro_no_anchor(Key?, Key?, Key?).
+play_request_intro_no_anchor(A, B, C) :- boot # play_request_intro_no_anchor(A?, B?, C?).
 
-%% Live-UI boot (play_ui_boot.glp, a UIVE UI module): the Dart bridge enters
-%% the program at agent_init/3.
-imported procedure play_ui_boot#agent_init(Constant?, UserCmdStream?, NetInStream?).
-exported procedure agent_init(Constant?, UserCmdStream?, NetInStream?).
-agent_init(Id, UserIn, NetIn) :- play_ui_boot # agent_init(Id?, UserIn?, NetIn?).
+%% The keys a person tells their agent in their first act, their own and
+%% those of the peers they know (IGLP, Implementation Notes, "Boot": "An
+%% agent learns the keys of its peers from its person"; Remark "Agent
+%% Names").
+Told ::= told(Key, List(Key)).
+
+%% Live-UI boot (play_ui_boot.glp, a UIVE UI module).  The agent's initial
+%% goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex,
+%% Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot": "a
+%% deployed agent is spawned by its application with the same initial goal
+%% and its key made the same way, the person being the person"): self_key/1
+%% first makes the agent's key, before which nothing is sent on the network
+%% (GLP-Spec appendix-guards.tex, "Identity and signature"); the person's
+%% first act tells the agent its key and the keys of the peers the person
+%% knows, and the person's acts after it are the agent's input, by which
+%% agent/2 starts the scenario, play_ui_boot.glp's scenario/4, on the network
+%% input.
+ScenarioIn ::= [Told | UserCmdStream].
+imported procedure play_ui_boot#scenario(Key?, List(Key)?, UserCmdStream?, NetInStream?).
+exported procedure agent(Channel(ScenarioIn, Stream(Constant))?, Channel(NetInStream, NetOutStream)?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), scenario_start(In?, N?).
+
+%% The scenario, by the keys the person tells the agent.
+procedure scenario_start(ScenarioIn?, NetInStream?).
+scenario_start([told(P, Qs) | Cs], N) :- play_ui_boot # scenario(P?, Qs?, Cs?, N?).

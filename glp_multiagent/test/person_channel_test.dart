@@ -123,8 +123,13 @@ void main() {
     agents.onNote = (_, t) => ui.handle(t);
     await agents.spawn('bob', '$programs/tests/vglp/bridge',
         '$programs/self.glp',
-        deferStart: false, goalLabel: 'inputs_init/3');
+        deferStart: false);
     await agents.until('bob initialised', () => agents.started.contains('bob'));
+    // The person's first act names the entry the fixture's agent/2 runs
+    // (programs/tests/vglp/bridge/self.glp), the agent started from
+    // agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent
+    // GLP"; IGLP, Implementation Notes, "Boot").
+    agents.input('bob', const GAtom('inputs_init'));
 
     // The fixture's seven questions are drawn, the text field among them.
     await agents.until('a text field drawn',

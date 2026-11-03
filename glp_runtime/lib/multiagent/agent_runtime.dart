@@ -6,10 +6,15 @@
 /// Boot: GlpEngine loads the root scope, enableMadGLP creates the MadContext,
 /// and the agent's one program is loaded --- a program is one
 /// compiled value (GSG, Section 4, "Compiled programs as values"), and several
-/// sources are not co-loaded into one engine.  The entry goal [goalLabel] is
-/// then posted with the agent's id, the person's input stream where the entry
-/// takes one, and the network input stream, by the engine's one posting call,
-/// which checks it ([GlpEngine.postGoal]).  The person's acts arrive as
+/// sources are not co-loaded into one engine.  The agent's initial goal is
+/// then posted, `agent(ch(_?,_),ch(_?,_))`, every agent's, the first channel
+/// to the person and the second to the network (GLP-Spec maglp.tex,
+/// Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot": "a
+/// deployed agent is spawned by its application with the same initial goal
+/// and its key made the same way, the person being the person"), by the
+/// engine's one posting call, which checks it ([GlpEngine.postGoal]).  Until
+/// 2026-11-03 the host posted an entry goal its caller named, with the
+/// agent's id and constants of the caller's.  The person's acts arrive as
 /// ground terms and never as text (GSG, Appendix "The Prototype's Screens",
 /// and Section 3, "What the super-app grants a mini-app", (ib)).  Network
 /// output goes through send_to_net → the _send/3 kernel → MadContext; output to
@@ -60,8 +65,9 @@ import 'package:glp_runtime/multiagent/boot_loader.dart' show PersonGoal;
 /// Agent runtime encapsulating GLP execution, madGLP context, and I/O.
 ///
 /// Usage:
-/// 1. Create with the agent's id and the path of its one program, and with
-///    the agent's [GlpNetwork] and key pair where it runs over a given one
+/// 1. Create with the agent's id and the path of its one program, which
+///    defines agent/2, and with the agent's [GlpNetwork] and key pair where it
+///    runs over a given one
 /// 2. Set callbacks: onUserOutput, onOutput, onLog, onSendMadMessage
 /// 3. Call initialize() to compile and start
 /// 4. Call injectUserInput(act) with each of the person's acts, a ground term
@@ -81,21 +87,13 @@ class AgentRuntime {
 
   final String rootSelfGlpPath;
 
-  /// Entry-point goal label, e.g. 'agent_init/3', 'agent_init_play/3',
-  /// 'parent_init/4', 'child_init/3'.
-  final String goalLabel;
-
-  /// Extra arguments inserted between Id (arg 0) and NetIn (last arg).
-  /// For example, ['carol', '4'] for parent_init(alice, carol, 4, NetIn).
-  final List<String> extraArgs;
-
-  /// The person scripted in GLP at this agent, where the agent is booted in
-  /// the boot form: the entry goal is then `agent(ch(_?,_), ch(_?,_))` with
-  /// the person goal on the person's channel and `send_to_net` on the
-  /// network's (IGLP, Implementation Notes, "Boot": "a deployed agent is
-  /// spawned by its application with the same initial goal"), as the
-  /// simulation's isolate posts it, and [goalLabel] and [extraArgs] are not
-  /// read.  Null for the entry form `name(Me, extras..., NetIn)`.
+  /// The person scripted in GLP at this agent, where the agent is booted by a
+  /// boot file: the person goal is posted on the agent's person channel, in
+  /// place of the host's injector and send_to_user/1, beside the one initial
+  /// goal `agent(ch(_?,_), ch(_?,_))` (IGLP, Implementation Notes, "Boot":
+  /// "the runtime runs P there in the person's place, its writes being the
+  /// person's input"), as the simulation's isolate posts it.  Null where the
+  /// person is the person, whose acts the host injects.
   final PersonGoal? person;
 
   /// The boot file's own module, in the boot form: the boot source with its
@@ -132,9 +130,11 @@ class AgentRuntime {
   void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
 
-  /// This agent's Ed25519 key pair. Provided by the coordinator, or generated
-  /// --- the runtime without a layer generates the person's key itself (IGLP,
-  /// "One interface").  Over a given network it is the layer's, which holds
+  /// This agent's Ed25519 key pair.  Provided by the coordinator, or made when
+  /// the host spawns the agent, before anything is compiled or sent, from the
+  /// SHA-256 of the clock, the device's hardware identifiers and the persona's
+  /// name, [agentId], combined by exclusive or (IGLP, Implementation Notes,
+  /// "Boot").  Over a given network it is the layer's, which holds
   /// it (IGLP, The contract: "an agent's identity is its public key, held with
   /// its private key by the networking layer"), and must be provided.
   final ({PubKey pub, Uint8List priv})? keyPair;
@@ -205,8 +205,6 @@ class AgentRuntime {
     required this.agentId,
     required this.program,
     required this.rootSelfGlpPath,
-    this.goalLabel = 'agent_init/3',
-    this.extraArgs = const [],
     this.person,
     this.bootSource,
     this.bootPath,
@@ -237,7 +235,7 @@ class AgentRuntime {
   /// over a given network (IGLP, Remark "Agent Names"), and [agentId] in the
   /// simulation, whose agent names are symbolic --- "symbolic agent names are
   /// the simulation realisation's choice".  It is the anchor of every global
-  /// name the agent creates and the first argument of its entry goal.
+  /// name the agent creates.
   String get name =>
       givenNetwork?.getIdentity().hex ?? agentId.toLowerCase();
 
@@ -277,6 +275,17 @@ class AgentRuntime {
   }
 
   bool get initialized => _initialized;
+
+  /// The agent's public key, once [initialize] has made or been given it.
+  PubKey? get publicKey => _kp?.pub;
+
+  /// Whether [initialize] booted the agent afresh, its first start, and did
+  /// not restore it from the state its [stateStore] holds (IGLP,
+  /// Implementation Notes, "Boot": "At the agent's first start the
+  /// application sends on the person channel the act that starts its
+  /// program").
+  bool get firstStart => _firstStart;
+  bool _firstStart = false;
   GlpRuntime? get runtime => _runtime;
   MadContext? get ctx => _ctx;
 
@@ -305,11 +314,14 @@ class AgentRuntime {
   /// Start the agent: where its [stateStore] holds a saved state, go on from it (IGLP, Definition "Restart": "the local state s_p of p at restart is its local state at termination"; Implementation Notes, "Persistence": "a restart resumes from the state the store holds"), the restart's cycle handing to the layer the messages that state holds undelivered ([_Resume]); otherwise boot it, the initial start being its first event cycle.
   Future<void> initialize() async {
     _log('INIT: Starting');
-    // The agent's key pair: provided by the coordinator, or generated. The
-    // engine holds it as the person's identity from construction — so the
-    // certificate its compiler writes, self_key/1 and sign/3 are all under it —
-    // and the networking layer below is given the same pair.
-    _kp = keyPair ?? generateKeyPair();
+    // The agent's key pair: provided by the coordinator, or made now, at the
+    // agent's spawn, before anything is compiled or sent, from the SHA-256 of
+    // the clock, the device's hardware identifiers and the persona's name
+    // (IGLP, Implementation Notes, "Boot").  The engine holds it as the
+    // person's identity from construction --- so the certificate its compiler
+    // writes, self_key/1 and sign/3 are all under it --- and the networking
+    // layer below is given the same pair.
+    _kp = keyPair ?? PersonIdentity.forPersona(agentId).keyPair;
 
     final saved = await stateStore?.load();
     _setUp();
@@ -326,6 +338,7 @@ class AgentRuntime {
       return;
     }
     await _submit(const _Boot());
+    _firstStart = true;
     _initialized = true;
     updateStats();
   }
@@ -412,60 +425,45 @@ class AgentRuntime {
     final engine = _engine!;
     final selfName = name;
 
-    // The entry goal, posted by the engine's one posting call, which checks
-    // it as a body goal against the program's declarations before it runs
-    // (TGLP modules.tex, "Type-Compatible Attestation Between Agents": the
-    // initial goal posted to the runtime "is type-checked before execution
-    // as a body goal") and refuses it, throwing, where it does not check or
-    // names no entry point.  Until 2026-10-04 it was put on the queue here,
-    // by its label, unchecked.
+    // The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_))
+    // (GLP-Spec maglp.tex, Definition "Multiagent GLP"), posted as
     //
-    // Its arguments: the agent's id first and the network input last
-    // (IGLP, Implementation Notes, "Boot": the runtime provides "only that
-    // reader"), the extra constants between them, and before them the
-    // person's input stream where the entry takes one --- an arity-3 entry
-    // with no extra constants (agent_init/3, scenario_init/3: Id, UserIn,
-    // NetIn).  The plays' actors (actor_init/4: Id, Role, Target, NetIn) and the
-    // parent/child entries take constants there instead.  Decided by the
-    // goal's shape, not its name.  The goal holds the readers of the two
-    // input streams, and the host their writers: the person's, to inject
-    // the person's acts, and the network's, the index-0 serializer entry
-    // (IGLP Definition Index-0 Serializer: permanent entry mapping _r(p, 0)
-    // to local writer).
-    final String goalText;
-    final List<String> inputs;
-    final String started;
+    //   agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)), send_to_user(UserOut?),
+    //   send_to_net(NetOut?)
+    //
+    // "The runtime holds the writer of the first channel's reader for the
+    // person's input, renders the first channel's output to the person, holds
+    // the writer of the second channel's reader as the index-0 serializer
+    // entry, and takes the second channel's output as the agent's network
+    // output" (IGLP, Implementation Notes, "Boot"; "a deployed agent is
+    // spawned by its application with the same initial goal").  The host
+    // holds UserIn's writer, to inject the person's acts, and NetIn's, the
+    // index-0 serializer entry (IGLP Definition Index-0 Serializer);
+    // send_to_user/1 renders the output to the person ([onUserOutput]), and
+    // send_to_net/1 sends each message of the network output to the agent it
+    // names (IGLP, Remark "Network Output Processing").  The engine's one
+    // posting call checks the goal as a body goal against the program's
+    // declarations before it runs (TGLP modules.tex, "Type-Compatible
+    // Attestation Between Agents") and refuses it, throwing, where the
+    // program defines no agent/2 or the goal does not check.  Until
+    // 2026-11-03 the host posted an entry goal its caller named, with the
+    // agent's id first and constants of the caller's.
+    //
+    // Where the agent is booted with a person scripted in GLP, [person], the
+    // person goal holds the person channel's two ends in the host's place:
+    // it reads the agent's output to the person and writes the person's
+    // input, and the host holds the network's writer only (IGLP,
+    // Implementation Notes, "Boot": "the runtime runs P there in the
+    // person's place, its writes being the person's input").  One initial
+    // goal either way.
     final personGoal = person;
-    if (personGoal != null) {
-      // The boot form, as IsolateManager posts it for a simulation.
-      goalText = [
-        'agent(ch(PIn?, POut), ch(NetIn?, NetOut))',
-        personGoal.text('POut', 'PIn'),
-        'send_to_net(NetOut?)',
-      ].join(', ');
-      inputs = const ['NetIn'];
-      started = goalText;
-    } else {
-      final goalName = goalLabel.split('/').first;
-      final goalArity = int.parse(goalLabel.split('/').last);
-      final takesUserIn = goalArity == extraArgs.length + 3;
-      final goalArgs = [
-        glpConstantText(selfName),
-        if (takesUserIn) 'UserIn?',
-        for (final extra in extraArgs)
-          int.tryParse(extra)?.toString() ?? glpConstantText(extra),
-        'NetIn?',
-      ];
-      if (goalArgs.length != goalArity) {
-        throw StateError('$goalLabel takes $goalArity arguments, and the agent '
-            'has ${goalArgs.length} for it: its id, '
-            '${extraArgs.length} extra and the network input');
-      }
-      goalText = '$goalName(${goalArgs.join(', ')})';
-      inputs = [if (takesUserIn) 'UserIn', 'NetIn'];
-      started = '$goalName(${[selfName, ...extraArgs, 'NetIn'].join(', ')})';
-    }
-    final posted = engine.postGoal(goalText, inputs: inputs);
+    final goalText = personGoal == null
+        ? 'agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)), '
+            'send_to_user(UserOut?), send_to_net(NetOut?)'
+        : 'agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)), '
+            '${personGoal.text('UserOut', 'UserIn')}, send_to_net(NetOut?)';
+    final posted = engine.postGoal(goalText,
+        inputs: personGoal == null ? const ['UserIn', 'NetIn'] : const ['NetIn']);
     _log('INIT: posted $goalText');
 
     final netInWriter = posted.inputs['NetIn']!.currentWriterId;
@@ -473,8 +471,7 @@ class AgentRuntime {
     _log('INIT: Serializer entry initialized, netIn=$netInWriter');
 
     // The person's input stream (Dart injects ground terms), and the network
-    // input stream (receives from MadContext).  An entry that takes no person
-    // stream is given none, and the person's acts have nowhere to go.
+    // input stream (receives from MadContext).
     _userInput = posted.inputs['UserIn'];
     _netInput = posted.inputs['NetIn'];
 
@@ -486,7 +483,8 @@ class AgentRuntime {
     }
     _programIdentity = _codeIdentity(main.image);
 
-    _output('[GOAL] Started $started');
+    _output('[GOAL] Started agent(ch(_?,_),ch(_?,_)) at $selfName'
+        '${person == null ? '' : ', its person ${person!.functor}'}');
     _log('INIT: GQ length before initial run: ${_runtime!.gq.length}');
   }
 
@@ -926,7 +924,7 @@ class AgentRuntime {
       return;
     }
     if (_userInput == null) {
-      _log('USER_INPUT: $goalLabel takes no person stream; the act is dropped');
+      _log('USER_INPUT: the agent holds no person stream; the act is dropped');
       return;
     }
 

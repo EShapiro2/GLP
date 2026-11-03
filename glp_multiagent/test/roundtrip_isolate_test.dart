@@ -39,6 +39,11 @@ void main() {
     await agents.ready();
     agents.start('alice');
     agents.start('bob');
+    // Each person's first act tells the agent its name, the agent started
+    // from agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition
+    // "Multiagent GLP"; IGLP, Implementation Notes, "Boot").
+    agents.input('alice', const GAtom('alice'));
+    agents.input('bob', const GAtom('bob'));
     await agents.until('both initialized',
         () => agents.started.containsAll(['alice', 'bob']));
 
