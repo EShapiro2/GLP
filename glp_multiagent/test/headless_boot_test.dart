@@ -178,12 +178,13 @@ void main() {
 
   /// linkprobe14's check (Section MB, MB5), once alice has received carol's
   /// message and alice's greeting has reached bob or carol: [received] the
-  /// senders' keys of what each agent was delivered, [strip] an output line's
-  /// transcript mark.
+  /// senders' keys of what each agent was delivered, [sent] whether an output
+  /// line is an element sent to the person, [strip] its transcript mark.
   Future<void> holdLinkprobe14(
       Map<String, String> keyOf,
       Map<String, AgentLines> outputs,
       Map<String, AgentLines> received,
+      bool Function(String) sent,
       String Function(String) strip) async {
     await received['alice']!.first((k) => k == keyOf['carol']);
     await Future.any([
@@ -193,7 +194,7 @@ void main() {
     expect(received['alice']!.lines, isNot(contains(keyOf['bob'])),
         reason: 'no message from bob reaches alice on the held link');
     final fromCarol = patternOf(r'saw\(hello_from\({bob}\)\)', keyOf);
-    for (final l in outputs['alice']!.lines.map(strip)) {
+    for (final l in outputs['alice']!.lines.where(sent).map(strip)) {
       expect(fromCarol.hasMatch(l), isTrue,
           reason: 'what alice sees is bob\'s greeting, from carol: $l');
     }
@@ -272,7 +273,7 @@ void main() {
           rootSelfGlpPath: root, sodium: sodium!, queueDir: queues.path);
       addTearDown(boot.dispose);
       await holdLinkprobe14(boot.keyOf, boot.outputs, boot.received,
-          (l) => l.startsWith('< ') ? l.substring(2) : l);
+          (l) => l.startsWith('< '), (l) => l.substring(2));
     }, timeout: Timeout.none);
   });
 
@@ -376,7 +377,8 @@ void main() {
       final boot = await HeadlessBootProcesses.ofBootFile(f,
           rootSelfGlpPath: root, agent: agent);
       addTearDown(boot.dispose);
-      await holdLinkprobe14(boot.keyOf, boot.outputs, boot.received, (l) => l);
+      await holdLinkprobe14(
+          boot.keyOf, boot.outputs, boot.received, (_) => true, (l) => l);
     }, timeout: Timeout.none);
   });
 }
