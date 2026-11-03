@@ -229,6 +229,7 @@ Future<void> main(List<String> args) async {
   root = Platform.environment['GLP_ROOT'] ?? Directory(here).parent.parent.path;
   worldsDir = Platform.environment['WORLDS_DIR'] ?? '$root/programs/vglp/cva/gas_worlds';
   final port = int.parse(Platform.environment['PORT'] ?? '8080');
+  final host = Platform.environment['HOST'] ?? '0.0.0.0';
   final webDir = Platform.environment['WEB_DIR'] ?? '$here/build/www';
   contracts = Directory(worldsDir)
       .listSync()
@@ -245,7 +246,7 @@ Future<void> main(List<String> args) async {
       return drop;
     });
   });
-  final server = await HttpServer.bind(InternetAddress.anyIPv4, port);
+  final server = await HttpServer.bind(host, port);
   stdout.writeln('live server on $port: ${contracts.join(', ')}');
   await for (final req in server) {
     unawaited(handle(req, webDir));

@@ -4,7 +4,11 @@ A site that shows the grassroots contracts of this repository, how the cascade t
 
 ## Build and run
 
-From this directory, with Python 3 and Dart:
+With Python 3 and Dart, from any directory:
+
+    servers/gas/run.sh
+
+which is, from this directory:
 
     python3 -I tools/build.py      # the worlds and the site, from cascade/ and programs/
     dart pub get
@@ -25,4 +29,20 @@ Then open http://localhost:8080/. A contract's world starts on its first visit, 
 
 ## Environment
 
-`PORT` (default 8080), `MAX_WORLDS` (default 3), and, to run from elsewhere, `GLP_ROOT` (the repository), `WORLDS_DIR` and `WEB_DIR`.
+`PORT` (default 8080), `HOST` (default 0.0.0.0; 127.0.0.1 behind a proxy), `MAX_WORLDS` (default 3), and, to run from elsewhere, `GLP_ROOT` (the repository), `WORLDS_DIR` and `WEB_DIR`.
+
+## A server of its own
+
+`deploy/` holds what a Linux server needs to run GAS from a clone of this repository: `gas.service`, the systemd unit, and `Caddyfile`, Caddy in front for TLS and the public name. On a fresh server, with Git, Python 3, Dart (https://dart.dev/get-dart) and Caddy (https://caddyserver.com/docs/install) installed:
+
+    sudo useradd --system --home-dir /var/lib/gas --create-home gas
+    sudo git clone --depth 1 https://github.com/EShapiro2/GLP /srv/glp
+    sudo chown -R gas:gas /srv/glp
+    sudo cp /srv/glp/servers/gas/deploy/gas.service /etc/systemd/system/
+    sudo systemctl daemon-reload && sudo systemctl enable --now gas
+    sudo cp /srv/glp/servers/gas/deploy/Caddyfile /etc/caddy/Caddyfile   # then put the server's name in it
+    sudo systemctl reload caddy
+
+To take this repository's latest contracts and code:
+
+    sudo -u gas git -C /srv/glp pull && sudo systemctl restart gas
