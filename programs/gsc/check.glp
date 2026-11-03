@@ -58,7 +58,7 @@ imported procedure unobstructed#intro_result_env(NContract?, Preds?, Preds?, Fau
 imported procedure unobstructed#intro_acts(NContract?, Preds?, IntroActs).
 imported procedure prov#traceable(Contract?, Preds).
 imported procedure prov#all_preds(Contract?, Preds).
-imported procedure volition#volition_faults(Contract?, Preds?, Faults).
+imported procedure volition#volition_faults(Contract?, NContract?, Preds?, Faults).
 imported procedure wards#wards(Contract?, Preds?, Wards).
 imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
 imported procedure wards#leaving_for(Contract?, Preds?, Leavings).
@@ -90,7 +90,7 @@ contract_verdict(C, NC, Rf, Ev, E, V?) :- ground(C?), ground(NC?), ground(Rf?), 
     preds_diff(Ps?, E?, Missing),
     untraceable_faults(Missing?, FT),
     unobstructed # intro_result_env(NC?, Rf?, Ev?, F1),
-    volition # volition_faults(C?, E?, F2),
+    volition # volition_faults(C?, NC?, E?, F2),
     faults_app(FT?, F2?, F23),
     wards_verdict(F1?, F23?, C?, Rf?, V).
 
