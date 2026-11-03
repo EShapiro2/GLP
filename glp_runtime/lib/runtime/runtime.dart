@@ -372,8 +372,8 @@ class GlpRuntime {
     for (final g in withEnv) {
       final env = g.env!;
       w.uint(g.id);
-      w.uint(env.argBySlot.length);
-      for (final MapEntry(key: slot, value: arg) in env.argBySlot.entries) {
+      w.uint(env.length);
+      for (final MapEntry(key: slot, value: arg) in env.entries) {
         w.uint(slot);
         w.term(arg);
       }

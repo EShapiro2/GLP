@@ -433,11 +433,21 @@ class TypeEnvironment {
           if (e.value.clauses[e.key] != null) e.key: e.value.clauses[e.key]!
       };
 
+  /// The environment this one extends, where it was made as that one's
+  /// types and declarations with a few more --- the probe of a call, the
+  /// instantiation of a parameterised procedure, a declaration inferred in
+  /// abstract types --- so that its program DFA is built as a layer over the
+  /// base's, the added types and declarations alone built anew
+  /// (program_dfa.dart, buildProgramDFA).  Null for an environment built
+  /// from a module.
+  final TypeEnvironment? base;
+
   TypeEnvironment(this.types, this.procedures, {
       Map<String, ProcDecl>? paramProcDecls,
       this.typeTemplates = const {},
       this.typeOrigins = const {},
       this.scopeLayers = const {},
+      this.base,
   }) : paramProcDecls = paramProcDecls ?? {};
 
   /// This environment with maps of its own, its layers shared: a scope one
