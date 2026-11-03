@@ -460,19 +460,22 @@ num_eqr(_, _, eqr_no) :- otherwise | true.
 % forbidden one at that party, a value by equality, and a match is a binding
 % adding it where the binding satisfies the schema's constraint and sends
 % each multiplicity to a positive whole number.  A binding adding it that the
-% clause does not excuse is a block.  excused/4 is the clause's two tests,
+% clause does not excuse is a block.  excused/5 is the clause's two tests,
 % both read off the completed binding, values naming no one: the other
-% party of the introduction holds a role, and the multiset added at the
-% role in question names it.  A block is blk(Schema, Role, Psi, D), D the
+% party of the introduction holds a role that is not a reading role (GSC
+% 0380a8a, def:schema), and the multiset added at the role in question
+% names it.  A block is blk(Schema, Role, Psi, D), D the
 % formula over the act's values saying where some binding of Schema adds
 % Psi at Role (linear.glp, elim_block); one with D false is none.
 
 procedure ctx_parts(Ctx?, Val, Integer).
 ctx_parts(ctx(O, N), O?, N?).
 
-procedure excused(Subst?, Mults?, Val?, Ans).
-excused(S, Plus, O, R?) :- ground(S?), ground(Plus?), ground(O?) |
-    subst_role_at(S?, O?, A1),
+procedure excused(Subst?, Schema?, Mults?, Val?, Ans).
+excused(S, Sc, Plus, O, R?) :- ground(S?), ground(Sc?), ground(Plus?), ground(O?) |
+    roles_at(S?, O?, Js),
+    sch_roles(Sc?, Rs),
+    some_not_reading(Js?, Rs?, A1),
     plain_mults(Plus?, PA),
     atoms_name(PA?, S?, O?, A2),
     both_yes(A1?, A2?, R).
@@ -500,7 +503,7 @@ block_mr(match(S, E), Psi, Plus, J, Sc, Nm, NSc, Cx, PwI, R?) :-
     ground(Nm?), ground(NSc?), ground(Cx?), ground(PwI?) |
     ctx_parts(Cx?, O, N),
     complete(Sc?, S?, N?, S1),
-    excused(S1?, Plus?, O?, A),
+    excused(S1?, Sc?, Plus?, O?, A),
     block_unexcused(A?, S?, E?, Psi?, J?, Nm?, NSc?, PwI?, R).
 
 procedure plus_blocks(Mults?, Mults?, Integer?, Schema?, RoleSpecs?, Constant?, NSchema?, Ctx?, GAtom?, Val?, Args?, Blks).
