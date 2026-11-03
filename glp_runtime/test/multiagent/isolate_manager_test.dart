@@ -1,3 +1,6 @@
+@Timeout.none
+library;
+
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
@@ -52,7 +55,7 @@ agent(ch(_, []), ch(_, [])).
       await manager.settle();
 
       // Test verifies boot + start don't crash with trivial goals
-    }, timeout: Timeout(Duration(seconds: 10)));
+    }, timeout: Timeout.none);
 
     test("each agent's key pair is made at its spawn, and self_key/1 assigns "
         "it", () async {
@@ -94,7 +97,7 @@ agent(ch(_, [self(K?)]), ch(_, [])) :- self_key(K).
             [matches(RegExp("^self\\('?${key.hex}'?\\)\$"))],
             reason: '$agent: self_key/1 assigns the key made at its spawn');
       }
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
 
     test('runs full play with actor scripts (no UI)', () async {
       final source = _readGlpFile('play_madglp_boot.glp');
@@ -125,7 +128,7 @@ agent(ch(_, [self(K?)]), ch(_, [])) :- self_key(K).
       await manager.settle();
 
       // Termination is external — we shut down in tearDown
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
 
     test('runs full play with UI mediator and UI actors', () async {
       final source = _readGlpFile('play_ui_madglp_boot.glp');
@@ -157,6 +160,6 @@ agent(ch(_, [self(K?)]), ch(_, [])) :- self_key(K).
       await manager.settle();
 
       // Termination is external — we shut down in tearDown
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
   });
 }

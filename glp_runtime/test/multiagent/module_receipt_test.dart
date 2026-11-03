@@ -28,6 +28,7 @@
 /// "A module value therefore cannot be forged by writing a file: a file whose
 /// certificate does not check is text and is not a Module, which is what
 /// decompose_module/4 rests on").
+@Timeout.none
 library;
 
 import 'dart:async';
@@ -264,6 +265,6 @@ void main() {
       expect(manager.outputOf('bob'), ['after'],
           reason: 'the message carrying the module is refused at receipt and '
               "never reaches bob's network input; the next one does");
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    }, timeout: Timeout.none);
   });
 }

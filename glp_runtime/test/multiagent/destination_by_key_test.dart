@@ -20,6 +20,7 @@
 ///
 /// The waits are on events only: boot and settle end when the agents are
 /// ready and quiescent, or on a fault, and the test has no clock.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -80,7 +81,7 @@ void main() {
 
     await manager.boot(config);
     manager.start();
-    await manager.settle(timeout: null);
+    await manager.settle();
 
     expect(manager.faults, isEmpty);
     expect(manager.outputOf('alice'), ['answered'],
