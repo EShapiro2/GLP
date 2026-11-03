@@ -2,9 +2,10 @@
 
 %% alice ships bob her own module value, refused a certificate, then after.
 exported procedure alice_init(_?, _?).
-alice_init(_, _) :-
+alice_init(keys(_, [Bob]), _) :-
+    ground(Bob?) |
     self_module(M),
-    send_to_net([msg(bob, ship(M?)), msg(bob, after)]).
+    send_to_net([msg(Bob?, ship(M?)), msg(Bob?, after)]).
 
 %% bob reports each message he receives: a module, or the atom after.
 exported procedure bob_init(_?, _?).

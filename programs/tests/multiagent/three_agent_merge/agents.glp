@@ -16,16 +16,16 @@ merge(Xs, [], Xs?).
 %% =============================================================================
 
 exported procedure producer1_init(_?, _?).
-producer1_init(_, _) :-
-    send_to_net([msg(merger, xs([1,2,3]))]).
+producer1_init(keys(_, [Merger]), _) :-
+    send_to_net([msg(Merger?, xs([1,2,3]))]).
 
 %% =============================================================================
 %% AGENT2: Producer2 - sends [a,b,c] to merger
 %% =============================================================================
 
 exported procedure producer2_init(_?, _?).
-producer2_init(_, _) :-
-    send_to_net([msg(merger, ys([a,b,c]))]).
+producer2_init(keys(_, [Merger]), _) :-
+    send_to_net([msg(Merger?, ys([a,b,c]))]).
 
 %% =============================================================================
 %% MERGER: Receives first message, extracts data, merges with local list

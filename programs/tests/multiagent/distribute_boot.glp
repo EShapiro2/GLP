@@ -14,23 +14,25 @@
 procedure boot.
 boot :-
     agent(ch(_?, _), ch(_?, _))@producer,
-    say(producer, ch(_?, _))@producer,
+    say(producer_init, producer, [consumer1, consumer2], ch(_?, _))@producer,
     agent(ch(_?, _), ch(_?, _))@consumer1,
-    say(consumer1, ch(_?, _))@consumer1,
+    say(consumer1_init, consumer1, [], ch(_?, _))@consumer1,
     agent(ch(_?, _), ch(_?, _))@consumer2,
-    say(consumer2, ch(_?, _))@consumer2.
+    say(consumer2_init, consumer2, [], ch(_?, _))@consumer2.
 
-%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input, the agent's key having been made at its spawn.
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/4, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its role, its own key and the keys of the peers its person knows, its ground arguments, by which agent/2 starts the agent's program on the network input; an agent is its public key, and alice or bob here is a variable standing for one (IGLP 670d36a, Remark "Agent Names"), the agent's key having been made at its spawn.
+exported procedure(X) agent(Channel(Stream(PersonSays), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
 agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 
-%% The agent's program, by the name its person tells it.
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
-start([producer | _], N) :- producer_init(producer, N?).
-start([consumer1 | _], N) :- consumer1_init(consumer1, N?).
-start([consumer2 | _], N) :- consumer2_init(consumer2, N?).
+%% The agent's program, by the role its person tells it, with its own key and its peers' keys, keys(Me, Ps).
+procedure(X) start(Stream(PersonSays)?, Stream(NetMsg(X))?).
+start([init(producer_init, Me, Ps) | _], N) :- producer_init(keys(Me?, Ps?), N?).
+start([init(consumer1_init, Me, Ps) | _], N) :- consumer1_init(keys(Me?, Ps?), N?).
+start([init(consumer2_init, Me, Ps) | _], N) :- consumer2_init(keys(Me?, Ps?), N?).
 start(_, _) :- otherwise | true.
 
-%% The person at each agent: it tells the agent its name, and reads nothing.
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
+%% The person at each agent: it tells the agent its role, its key and the keys of the peers it knows, its ground arguments, and reads nothing.
+PersonSays ::= init(Constant, Key, List(Key)).
+
+exported procedure say(Constant?, Key?, List(Key)?, Channel(Stream(Constant), Stream(PersonSays))?).
+say(R, Me, Ps, ch(_, [init(R?, Me?, Ps?)])).
