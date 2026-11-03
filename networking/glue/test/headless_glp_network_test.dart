@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:sodium/sodium_sumo.dart';
@@ -209,9 +210,11 @@ void main() {
 
     test(
         'no proximity underlay and no location service: getPeers is empty, '
-        'setTrustLevel and the places are refused as unsupported', () {
-      // GNA, 2026-10-11, the adapter's Q1; Section "Instantiation", Location
-      // service: "none on a headless server".
+        'a trust declaration finds no sub-object and does nothing, and the '
+        'places are refused as unsupported', () {
+      // GNA §2.2: "a call on an underlay the layer does not run finds no
+      // sub-object"; §2.7: a headless server "refuses declarePlace and
+      // removePlace".
       if (sodiumUnavailable != null) {
         markTestSkipped(sodiumUnavailable!);
         return;
@@ -223,13 +226,40 @@ void main() {
       expect(
           () => network.setTrustLevel(
               glp.ProximityUnderlay.pan, glp.TrustLevel.open),
-          throwsUnsupportedError);
+          returnsNormally);
       expect(
           () => network.setTrustLevel(
               glp.ProximityUnderlay.lan, glp.TrustLevel.closed),
-          throwsUnsupportedError);
+          returnsNormally);
       expect(() => network.declarePlace('home', 50), throwsUnsupportedError);
       expect(() => network.removePlace('home'), throwsUnsupportedError);
+    });
+
+    test(
+        'declare(trust(lan, open)) on the layer, which runs no LAN, returns, '
+        'and the program runs on', () async {
+      // GNA §2.2: a trust declaration for an underlay the layer does not run
+      // finds no sub-object, and does nothing (GNA task O (f)).
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      final out = <String>[];
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../../programs/self.glp').absolute.path);
+      engine.enableMadGLP(agentId: 'alice');
+      engine.runtime.outputCallback = out.add;
+      engine.madContext!.network = network;
+      engine.loadSource('''
+procedure go.
+go :- declare(trust(lan, open)), declared.
+procedure declared.
+declared :- send_to_user([running]).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue,
+          reason: 'the declaration returns, and aborts nothing');
+      expect(out, ['running'], reason: 'the program runs on');
     });
   });
 

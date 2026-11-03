@@ -26,9 +26,11 @@
 /// The profile has no proximity underlay and no location service (GNA,
 /// Section "Instantiation": "Location service ... none on a headless server"),
 /// so `getPeers` is empty, there being no proximity underlay to find a nearby
-/// agent on, and `setTrustLevel` and the place functions are refused as
-/// unsupported, throwing [UnsupportedError] (GNA, 2026-10-11, the adapter's
-/// Q1): the layer's `pan` and `lan` sub-objects are null (GNA §2.2).  Every
+/// agent on; `setTrustLevel` does nothing, since "a call on an underlay the
+/// layer does not run finds no sub-object" (GNA §2.2), the layer's `pan` and
+/// `lan` sub-objects being null; and the place functions are refused as
+/// unsupported, throwing [UnsupportedError], since a headless layer "refuses
+/// declarePlace and removePlace" (GNA §2.7).  Every
 /// other function of the API the layer has (GNA, 2026-10-11, Task C), and
 /// passes straight through, the WAN functions to the layer's `wan`
 /// sub-object.  A callback the layer has no event for --- onPeerDiscovered,
@@ -167,9 +169,10 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
   void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)?
       onPeerDiscovered;
 
+  /// `declare(trust(U, L))`: the profile runs no proximity underlay, so the
+  /// declaration finds no sub-object and does nothing (GNA §2.2).
   @override
-  void setTrustLevel(glp.ProximityUnderlay underlay, glp.TrustLevel level) =>
-      _absent('setTrustLevel', 'it has no proximity underlay');
+  void setTrustLevel(glp.ProximityUnderlay underlay, glp.TrustLevel level) {}
 
   // --- WAN ---
 

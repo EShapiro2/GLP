@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:redux/redux.dart';
 import 'package:sodium/sodium_sumo.dart';
@@ -103,10 +105,15 @@ void main() {
 
   Future<GrassrootsNetwork> layerFor(GrassrootsIdentity self,
           {PlaceGeofenceBackend? backend,
-          OutboundQueueStore? queueStore}) async =>
+          OutboundQueueStore? queueStore,
+          Set<Underlay> underlays = const {
+            Underlay.pan,
+            Underlay.lan,
+            Underlay.wan
+          }}) async =>
       GrassrootsNetwork(
         identity: self,
-        underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+        underlays: underlays,
         store: Store<AppState>(appReducer, initialState: const AppState()),
         sodium: sodium,
         placeGeofenceBackend: backend,
@@ -282,6 +289,43 @@ void main() {
     expect(network.observedPeerAddress(peer), isNull,
         reason: 'the dial-book address is no observed one');
     expect(layer.wan!.observedPeerAddress(peer.bytes), isNull);
+
+    await layer.dispose();
+  });
+
+  test(
+      'declare(trust(lan, open)) on a layer that runs no LAN returns, and the '
+      'program runs on', () async {
+    // GNA §2.2: "a call on an underlay the layer does not run finds no
+    // sub-object"; a trust declaration for it does nothing (GNA task O (f)).
+    final layer = await layerFor(await identity(),
+        underlays: const {Underlay.pan, Underlay.wan});
+    expect(layer.lan, isNull);
+    final network = GrassrootsGlpNetwork(layer);
+    expect(
+        () => network.setTrustLevel(
+            glp.ProximityUnderlay.lan, glp.TrustLevel.open),
+        returnsNormally);
+    expect(layer.store.state.settings.trustLevelOf(ProximityUnderlay.pan),
+        ColdCallTrustLevel.closed,
+        reason: 'the PAN level stands as it was');
+
+    final out = <String>[];
+    final engine = GlpEngine(
+        rootSelfGlpPath: File('../../programs/self.glp').absolute.path);
+    engine.enableMadGLP(agentId: 'alice');
+    engine.runtime.outputCallback = out.add;
+    engine.madContext!.network = network;
+    engine.loadSource('''
+procedure go.
+go :- declare(trust(lan, open)), declared.
+procedure declared.
+declared :- send_to_user([running]).
+''');
+    final result = await engine.runGoal('go');
+    expect(result.succeeded, isTrue,
+        reason: 'the declaration returns, and aborts nothing');
+    expect(out, ['running'], reason: 'the program runs on');
 
     await layer.dispose();
   });

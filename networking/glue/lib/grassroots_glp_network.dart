@@ -33,10 +33,12 @@
 /// `declare(trust(U, L))` takes, so this glue maps `declare(trust(pan|lan, Level))`
 /// to that sub-object's `setTrustLevel(Level)`; `getPeers` gathers both
 /// proximity sub-objects' peers, and `onPeerDiscovered` the discoveries of
-/// both.  A function of an underlay the layer does not run finds no
-/// sub-object and throws [UnsupportedError], as the runtime's interface has
-/// a realisation do for a function it does not provide; a callback of such an
-/// underlay is held and never fires.
+/// both.  A trust declaration for an underlay the layer does not run finds
+/// no sub-object and does nothing (GNA §2.2).  Any other function of an
+/// underlay the layer does not run finds no sub-object and throws
+/// [UnsupportedError], as the runtime's interface has a realisation do for a
+/// function it does not provide; a callback of such an underlay is held and
+/// never fires.
 library;
 
 import 'dart:async';
@@ -200,11 +202,13 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
     }
   }
 
-  /// `declare(trust(pan|lan, Level))`: that sub-object's `setTrustLevel`.
+  /// `declare(trust(pan|lan, Level))`: that sub-object's `setTrustLevel`;
+  /// for an underlay the layer does not run it finds no sub-object, and does
+  /// nothing (GNA §2.2).
   @override
   void setTrustLevel(glp.ProximityUnderlay underlay, glp.TrustLevel level) {
-    final proximity = _proximity(underlay) ??
-        _absent('setTrustLevel', underlay.name.toUpperCase());
+    final proximity = _proximity(underlay);
+    if (proximity == null) return;
     unawaited(proximity
         .setTrustLevel(ColdCallTrustLevel.values.byName(level.name)));
   }
