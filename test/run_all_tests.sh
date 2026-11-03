@@ -23,6 +23,7 @@
 #   GF - Grassroots federation records, transactions and platform (GFWC)
 #   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
 #   TY - The tight typing discipline: no untyped procedure and no open type off test/OPEN_TYPES
+#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -65,7 +66,7 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET"
 FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
@@ -8227,6 +8228,90 @@ fi
 echo ""
 
 fi  # Section Q
+
+if _section NET; then
+# =============================================================================
+# Section NET: networking's own tests (GNA)
+# =============================================================================
+#
+# networking/ is GNA's code, three packages each with its own tests, which the
+# suite did not run until 2026-11-03 (Code #22): the Flutter package in
+# networking/ by `flutter test`; the glue in networking/glue by `flutter test`,
+# since it depends on the Flutter package and has flutter_test and no
+# package:test, so `dart test` refuses it; and the pure-Dart core in
+# networking/core by `dart test`.  Each runs from its own directory, as
+# networking/README.md says.  The conventions are Section Q's: each runner's
+# raw output kept in /Users/udi/Grassroots/tmp/ (suite_net_flutter.txt,
+# suite_net_glue.txt, suite_net_core.txt), each failing test printed as a FAIL
+# line "networking/<package>/test/<file>: <test name>" and counted, the passed
+# count added to the totals, a missing runner a hard failure, and a runner that
+# exits non-zero naming no failing test a hard failure, since it did not run its
+# tests.  The section has no known-red list: a red test fails it.
+echo "=== Section NET: networking's own tests (GNA) ==="
+echo ""
+
+NET_RAW_DIR="/Users/udi/Grassroots/tmp"
+mkdir -p "$NET_RAW_DIR" 2>/dev/null || true
+NET_PASSED=0
+NET_FAILED=0
+
+# _net_run <name> <directory under networking/> <runner>: runs the runner's
+# tests in that directory and adds to NET_PASSED and NET_FAILED.
+_net_run() {
+    local name="$1" sub="$2" runner="$3"
+    local dir="$GLP_DIR/networking${sub:+/$sub}"
+    local rel="networking${sub:+/$sub}"
+    local raw="$NET_RAW_DIR/suite_net_$name.txt"
+    local result status clean passed fails
+    if ! command -v "$runner" >/dev/null 2>&1; then
+        echo "  FAIL: $runner is not on PATH, so $rel/test/ cannot run"
+        echo "$runner is not on PATH, so $rel/test/ did not run" > "$raw" 2>/dev/null \
+            || echo "  ($runner test's output could not be written to $raw)"
+        NET_FAILED=$((NET_FAILED + 1))
+        return
+    fi
+    result=$(cd "$dir" && "$runner" test 2>&1) && status=0 || status=$?
+    printf '%s\n' "$result" > "$raw" 2>/dev/null \
+        || echo "  ($runner test's output could not be written to $raw)"
+    clean=$(printf '%s' "$result" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
+    passed=$(printf '%s' "$clean" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
+    passed=${passed:-0}
+    # `flutter test` prints absolute paths and `dart test` package-relative
+    # ones; both are normalised to the path from the repository root.
+    fails=$(printf '%s' "$clean" \
+        | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
+        | sed 's/ \[E\]$//' \
+        | sed "s|^.*/$rel/test/|$rel/test/|; s|^test/|$rel/test/|" \
+        | sort -u) || true
+    if [ "$status" -ne 0 ] && [ -z "$fails" ]; then
+        echo "  FAIL: $runner test exited $status in $rel naming no failing test, so $rel/test/ did not run"
+        printf '%s\n' "$clean" | tail -5 | sed 's/^/        /'
+        NET_FAILED=$((NET_FAILED + 1))
+    fi
+    if [ -n "$fails" ]; then
+        while IFS= read -r failure; do
+            [ -z "$failure" ] && continue
+            echo "  FAIL: $failure"
+            NET_FAILED=$((NET_FAILED + 1))
+        done <<< "$fails"
+    fi
+    echo "  $rel: $passed passed ($runner test; output in $raw)"
+    NET_PASSED=$((NET_PASSED + passed))
+}
+
+_net_run flutter "" flutter
+_net_run glue glue flutter
+_net_run core core dart
+
+PASS=$((PASS + NET_PASSED))
+FAIL=$((FAIL + NET_FAILED))
+if [ $NET_FAILED -eq 0 ]; then
+    echo "  PASS: All $NET_PASSED networking tests passed"
+fi
+
+echo ""
+
+fi  # Section NET
 
 # =============================================================================
 # SUMMARY
