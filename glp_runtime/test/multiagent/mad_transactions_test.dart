@@ -152,9 +152,9 @@ void main() {
       // 2) Carrier cold-call (serializer, index 0) whose content is _r(p, 5):
       //    localize() creates LocalizeEntry (Z_q, p, 5) and immediately delivers
       //    the held assignment, binding Z_q to 42.
-      final content = StructTerm('_r', [ConstTerm('p'), ConstTerm(5)]);
+      final content = GlobalName.reader('p', 5).toTerm();
       final carrier = StructTerm(
-          '.', [content, StructTerm('_w', [ConstTerm('q'), ConstTerm(0)])]);
+          '.', [content, GlobalName.writer('q', 0).toTerm()]);
       ctx.handleMadAssignment(
         globalName: GlobalName.writer('q', 0),
         value: carrier,
@@ -187,7 +187,7 @@ void main() {
       ctx.wp.initializeSerializerEntry(netW);
 
       Term cell(Term content) => StructTerm(
-          '.', [content, StructTerm('_w', [ConstTerm('q'), ConstTerm(0)])]);
+          '.', [content, GlobalName.writer('q', 0).toTerm()]);
       void receive(Term content, String from, int serial) =>
           ctx.handleMadAssignment(
             globalName: GlobalName.writer('q', 0),
@@ -209,14 +209,14 @@ void main() {
       }
 
       // A cold call carrying a reader: localized, appended, its pair in D_q.
-      receive(StructTerm('_r', [ConstTerm('p'), ConstTerm(1)]), 'p', 2);
+      receive(GlobalName.reader('p', 1).toTerm(), 'p', 2);
       expect(ctx.wp.localizeEntryCount, 1);
       final writerAfterFirst = ctx.wp.serializerWriterAddr;
       expect(ctx.wp.serializerHasAppended('p', 2), isTrue);
 
       // The same message again: dropped and nothing changes — no second
       // entry, no second element, the entry's writer where it was.
-      receive(StructTerm('_r', [ConstTerm('p'), ConstTerm(1)]), 'p', 2);
+      receive(GlobalName.reader('p', 1).toTerm(), 'p', 2);
       expect(ctx.wp.localizeEntryCount, 1);
       expect(ctx.wp.serializerWriterAddr, writerAfterFirst);
       expect(ctx.wp.serializerAppendedCount, 1);

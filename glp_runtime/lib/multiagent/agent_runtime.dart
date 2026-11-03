@@ -336,14 +336,7 @@ class AgentRuntime {
     if (FileSystemEntity.isDirectorySync(program)) {
       _log('INIT: Loading program from $program');
       engine.loadProgram(program);
-      // Diagnostic: check key labels
-      final linked = engine.combinedProgram;
-      final keyLabels = ['parent_init/4', 'child_init/3', 'agent/4', 'ui_mediator/5', 'merge/3', 'tee/3'];
-      for (final key in keyLabels) {
-        final pc = linked.labels[key];
-        _log('INIT: Label $key -> ${pc != null ? "PC=$pc" : "NOT FOUND"}');
-      }
-      _log('INIT: Program loaded via program linking ($program), ${linked.labels.length} labels');
+      _log('INIT: Program loaded via program linking ($program)');
     } else {
       engine.loadFile(program);
       _log('INIT: Program loaded from the module $program');

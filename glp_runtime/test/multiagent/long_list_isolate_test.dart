@@ -30,7 +30,15 @@ String get _rootSelf => File('../programs/self.glp').absolute.path;
 /// it is n, n - 1, ..., 1, element by element, and shows the person `ok`.
 const String _boot = '''
 procedure boot.
-boot :- alice_init(alice, _)@alice, bob_init(bob, _)@bob.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- alice_init(alice, N?).
+start([bob | _], N) :- bob_init(bob, N?).
+start(_, _) :- otherwise | true.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
 
 procedure alice_init(_?, _?).
 alice_init(_, _) :- gen($_n, Xs, D), ship(D?, Xs?).

@@ -7,8 +7,8 @@
 %% =============================================================================
 
 exported procedure agent1_init(_?, _?).
-agent1_init(_, _) :-
-    send_to_net([msg(agent2, numbers([1,2,3]))]).
+agent1_init(keys(_, [Agent2]), _) :-
+    send_to_net([msg(Agent2?, numbers([1,2,3]))]).
 
 %% =============================================================================
 %% AGENT2: Sends letters, receives numbers
@@ -16,5 +16,5 @@ agent1_init(_, _) :-
 %% =============================================================================
 
 exported procedure agent2_init(_?, _?).
-agent2_init(_, _) :-
-    send_to_net([msg(agent1, letters([a,b,c]))]).
+agent2_init(keys(_, [Agent1]), _) :-
+    send_to_net([msg(Agent1?, letters([a,b,c]))]).

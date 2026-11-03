@@ -194,3 +194,44 @@ class ModuleTerm implements Term {
   @override
   String toString() => 'Module($name)';
 }
+
+/// A global name in the place of a variable: the runtime's form of a variable
+/// in a term that crosses agents, between its globalization by the sender and
+/// its localization by the receiver (IGLP Definitions Globalize and Localize).
+/// It is the code format's tag-2 variable, polarity, agent and index (IGLP
+/// code-format-fragment.tex, Terms, tag 2), and it never stands for a variable
+/// in a resolvent (IGLP madglp-spec.tex, Global Variable Names).
+///
+/// It is no structure.  "A ground structure `_w(P, I)` or `_r(P, I)` that a
+/// program puts in a message is a term, encoded as a structure and arriving
+/// as one ...; only a variable is encoded as a global name" (IGLP
+/// madglp-spec.tex:17, at IGLP 1e01638).  So a program's ground `'_w'(p, 2)`,
+/// a [StructTerm], is never taken for this name.  Until 2026-11-02 the
+/// globalized variable was the structure `'_w'(p, i)` itself, and a program's
+/// structure of that form was sent as a tag-2 variable and localized.
+class GlobalNameTerm implements Term {
+  /// The polarity: a reader `_r(p, i)`, or a writer `_w(p, i)`.
+  final bool isReader;
+
+  /// The allocating agent p, the link's anchor.
+  final String agent;
+
+  /// The index i, allocated by p.
+  final int index;
+
+  GlobalNameTerm(
+      {required this.isReader, required this.agent, required this.index});
+
+  @override
+  String toString() => isReader ? '_r($agent, $index)' : '_w($agent, $index)';
+
+  @override
+  bool operator ==(Object other) =>
+      other is GlobalNameTerm &&
+      other.isReader == isReader &&
+      other.agent == agent &&
+      other.index == index;
+
+  @override
+  int get hashCode => Object.hash(isReader, agent, index);
+}

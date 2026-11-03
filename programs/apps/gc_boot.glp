@@ -10,64 +10,84 @@
 
 procedure boot.
 boot :-
-    gc_phone(alice, _)@alice,
-    gc_phone(bob, _)@bob.
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, bob, ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, alice, ch(_?, _))@bob.
 
-%% One smartphone: the super-app's agent on the isolate's network, the mini-app read from its artefact beside the program and installed, and the person's acts by role.
-procedure gc_phone(Key?, NetInStream?).
-gc_phone(alice, NetIn) :-
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/3, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name and then the key of the one peer the person knows, its two ground arguments, alice and bob being the atoms that stand for the two keys in a simulation (IGLP, Implementation Notes, "Boot": "An agent learns the keys of its peers from its person"; Remark "Agent Names"); by these agent/2 starts the agent's smartphone, gc_phone/3, on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network (GLP-Spec appendix-guards.tex, "Identity and signature").
+exported procedure agent(Channel(Stream(Key), Stream(Key))?, Channel(NetInStream, NetOutStream)?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+
+%% The agent's smartphone, by the name and the peer its person tells it.
+procedure start(Stream(Key)?, NetInStream?).
+start([P, Q | _], N) :- gc_phone(P?, Q?, N?).
+start(_, _) :- otherwise | true.
+
+%% The person at each agent: it tells the agent its name and the key of the peer it knows, and reads nothing.
+exported procedure say(Key?, Key?, Channel(Stream(Key), Stream(Key))?).
+say(P, Q, ch(_, [P?, Q?])).
+
+%% One smartphone: the super-app's agent on the isolate's network, the mini-app read from its artefact beside the program and installed, and the person's acts by role, toward the peer Q the person named.
+procedure gc_phone(Key?, Key?, NetInStream?).
+gc_phone(alice, Q, NetIn) :-
     agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
     load_file("gc.glpw", C),
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
-    alice_gc(C?, CK?, CSig?, AppEnd?, Out?, In),
+    alice_gc(Q?, C?, CK?, CSig?, AppEnd?, Out?, In),
     miniapp_person_run(C?, alice, alice, PersonEnd?, Screen),
     send_to_user(Screen?).
-gc_phone(bob, NetIn) :-
+gc_phone(bob, Q, NetIn) :-
     agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
     load_file("gc.glpw", C),
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
-    bob_gc(C?, CK?, CSig?, AppEnd?, Out?, In),
+    bob_gc(Q?, C?, CK?, CSig?, AppEnd?, Out?, In),
     miniapp_person_run(C?, bob, bob, PersonEnd?, Screen),
     send_to_user(Screen?).
 
-%% alice's acts on her super-app: trust the compiler's key, install the mini-app with her end of its person channel, connect to bob, and once connected invite him to the mini-app.
-procedure alice_gc(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
-alice_gc(C, CK, CSig, AppEnd, Outs,
+%% alice's acts on her super-app: trust the compiler's key, install the mini-app with her end of its person channel, connect to the peer Q, bob, and once connected invite Q to the mini-app.
+procedure alice_gc(Key?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
+alice_gc(Q, C, CK, CSig, AppEnd, Outs,
          [msg(person, alice, trust(CK?)),
           msg(person, alice, install(gc, C?, CSig?, AppEnd?)),
-          msg(person, alice, connect(bob)) | Cmds?]) :-
-    alice_gc_run(Outs?, Cmds).
+          msg(person, alice, connect(Q?)) | Cmds?]) :-
+    ground(Q?) |
+    alice_gc_run(Q?, Outs?, Cmds).
 
-procedure alice_gc_run(AgentToUserStream?, UserInStream).
-alice_gc_run([msg(agent, person, connected(bob)) | Outs],
-             [msg(person, alice, invite(gc, bob)) | Cmds?]) :-
-    send_to_user([sg(connected(bob))]),
-    alice_gc_run(Outs?, Cmds).
-alice_gc_run([_ | Outs], Cmds?) :- otherwise | alice_gc_run(Outs?, Cmds).
-alice_gc_run([], []).
+procedure alice_gc_run(Key?, AgentToUserStream?, UserInStream).
+alice_gc_run(Q, [msg(agent, person, connected(Q1)) | Outs],
+             [msg(person, alice, invite(gc, Q?)) | Cmds?]) :-
+    Q1? =?= Q? |
+    send_to_user([sg(connected(Q1?))]),
+    alice_gc_run(Q?, Outs?, Cmds).
+alice_gc_run(Q, [_ | Outs], Cmds?) :- otherwise | alice_gc_run(Q?, Outs?, Cmds).
+alice_gc_run(_, [], []).
 
-%% bob's acts on his: trust the compiler's key, install the mini-app with his end of its person channel, consent in advance to alice's invitation to it, and consent to alice's request to connect.
-procedure bob_gc(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
-bob_gc(C, CK, CSig, AppEnd, Outs,
+%% bob's acts on his: trust the compiler's key, install the mini-app with his end of its person channel, consent in advance to the invitation of the peer Q, alice, to it, and consent to Q's request to connect.
+procedure bob_gc(Key?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
+bob_gc(Q, C, CK, CSig, AppEnd, Outs,
        [msg(person, bob, trust(CK?)),
         msg(person, bob, install(gc, C?, CSig?, AppEnd?)),
-        msg(person, bob, accept_invite(gc, alice)) | Cmds?]) :-
-    bob_gc_run(Outs?, Cmds).
+        msg(person, bob, accept_invite(gc, Q?)) | Cmds?]) :-
+    ground(Q?) |
+    bob_gc_run(Q?, Outs?, Cmds).
 
-procedure bob_gc_run(AgentToUserStream?, UserInStream).
-bob_gc_run([msg(agent, person, befriend(alice, P)) | Outs],
-           [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
-    send_to_user([sg(befriend(alice))]),
-    bob_gc_run(Outs?, Cmds).
-bob_gc_run([msg(agent, person, connected(alice)) | Outs], Cmds?) :-
-    send_to_user([sg(connected(alice))]),
-    bob_gc_run(Outs?, Cmds).
-bob_gc_run([_ | Outs], Cmds?) :- otherwise | bob_gc_run(Outs?, Cmds).
-bob_gc_run([], []).
+procedure bob_gc_run(Key?, AgentToUserStream?, UserInStream).
+bob_gc_run(Q, [msg(agent, person, befriend(Q1, P)) | Outs],
+           [msg(person, bob, decision(yes, Q?, P?)) | Cmds?]) :-
+    Q1? =?= Q? |
+    send_to_user([sg(befriend(Q1?))]),
+    bob_gc_run(Q?, Outs?, Cmds).
+bob_gc_run(Q, [msg(agent, person, connected(Q1)) | Outs], Cmds?) :-
+    Q1? =?= Q? |
+    send_to_user([sg(connected(Q1?))]),
+    bob_gc_run(Q?, Outs?, Cmds).
+bob_gc_run(Q, [_ | Outs], Cmds?) :- otherwise | bob_gc_run(Q?, Outs?, Cmds).
+bob_gc_run(_, [], []).
 
 %% The creator's certification, signed here over the mini-app's source identity, the contract's seven act schemas, establish, acquaint, introduce, mint, swap, pay and redeem (programs/currencies/coins/GC.glp), and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
 procedure certified(Content?, String, String).

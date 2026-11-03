@@ -18,8 +18,8 @@ Outer ::= chan(MidChannel) ; ping.
 OuterStream ::= [] ; [Outer | OuterStream].
 
 exported procedure alice_init(_?, _?).
-alice_init(_, _) :-
-    send_to_net([msg(bob, stream(S?))]),
+alice_init(keys(_, [Bob]), _) :-
+    send_to_net([msg(Bob?, stream(S?))]),
     new_channel(MidMine, MidTheirs),
     fill_outer(S, MidTheirs?),
     new_channel(RootMine, RootTheirs),

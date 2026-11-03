@@ -6,8 +6,8 @@
 %% =============================================================================
 
 exported procedure producer_init(_?, _?).
-producer_init(_, _) :-
-    send_to_net([msg(consumer1, data([1,2,3])), msg(consumer2, data([1,2,3]))]).
+producer_init(keys(_, [Consumer1, Consumer2]), _) :-
+    send_to_net([msg(Consumer1?, data([1,2,3])), msg(Consumer2?, data([1,2,3]))]).
 
 %% =============================================================================
 %% CONSUMER1: Receives and wraps data

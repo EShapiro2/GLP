@@ -20,10 +20,10 @@
 % def:schema require: its name terms based on its agent roles, its listed
 % roles of its agent roles, +(i) and -(i) disjoint at every role, no atom
 % of +(i) obtained from a cleared atom of *(i) by replacing its wildcards,
-% the wildcard only in an atom marked -, and +(i) u -(i) nonempty at every
-% role that is not a guarding role and at some role, a guarding role being
-% one that may add and delete nothing (def:schema and the sentence after its
-% example; GSC 327e035); and only an agent role carries the mark ?.  A contract with a schema formed otherwise is malformed: it is
+% the wildcard only in an atom marked -, and +(i) u -(i) nonempty at some
+% role, a role that is not a guarding role and adds and deletes nothing
+% being a reading role, which def:volition decides (def:schema; GSC 327e035
+% and 0380a8a); and only an agent role carries the mark ?.  A contract with a schema formed otherwise is malformed: it is
 % refused, its verdict malformed(Faults), and no condition is decided for
 % it.
 %
@@ -172,15 +172,16 @@ nt_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % --- the form of a schema (def:schema) -------------------------------------
 % def:schema requires that +(i) and -(i) be disjoint, that no atom of +(i)
 % be obtained from an atom of *(i) by replacing its wildcards, and that
-% +(i) u -(i) be nonempty at every role that is not a guarding role and at
-% some role, -(i) the atoms marked - with no wildcard and *(i) the cleared
-% atoms, marked - with one (GSC 327e035), so a cleared atom is no change a
-% role makes there.  Each atom a role both adds and deletes is a fault
-% added_and_deleted(Schema, Role, Atom); each atom a role adds that one of
-% its cleared atoms matches a fault added_and_cleared(Schema, Role, Atom);
-% each role that is not a guarding role and adds and deletes nothing a fault
-% changes_nothing(Schema, Role); and a schema adding and deleting nothing at
-% every role a fault no_role_changes(Schema), one per requirement violated.
+% +(i) u -(i) be nonempty at some role, -(i) the atoms marked - with no
+% wildcard and *(i) the cleared atoms, marked - with one (GSC 327e035), so a
+% cleared atom is no change a role makes there.  Each atom a role both adds
+% and deletes is a fault added_and_deleted(Schema, Role, Atom); each atom a
+% role adds that one of its cleared atoms matches a fault
+% added_and_cleared(Schema, Role, Atom); and a schema adding and deleting
+% nothing at every role a fault no_role_changes(Schema), one per requirement
+% violated.  A role that is not a guarding role and adds and deletes nothing
+% is a reading role (GSC 0380a8a), which def:schema admits and def:volition
+% decides (volition.glp).
 % Only an atom marked - may carry the wildcard (def:schema), so each atom a
 % role adds, requires unmarked or forbids carrying it is a fault
 % wildcard(Schema, Role, Atom).
@@ -220,21 +221,6 @@ overlap_faults([A|As], M, Nm, I, T, R?) :-
     atoms_member(M?, A?, In),
     overlap_faults(As?, M?, Nm?, I?, T?, R1),
     overlap_fault(In?, A?, Nm?, I?, R1?, R).
-
-% A role that is not guarding (first argument no) and adds and deletes
-% nothing (second argument no).
-procedure inert_fault(Ans?, Ans?, Constant?, Integer?, Faults?, Faults).
-inert_fault(no, no, Nm, I, T, [changes_nothing(Nm?, I?)|T?]).
-inert_fault(no, yes, _, _, T, T?).
-inert_fault(yes, _, _, _, T, T?).
-
-% The requirement on +(i) u -(i) at a role.
-procedure role_inert(RoleSpec?, Constant?, Integer?, Faults?, Faults).
-role_inert(RS, Nm, I, T, R?) :-
-    ground(RS?), ground(Nm?), integer(I?), ground(T?) |
-    is_guarding(RS?, G),
-    role_changes(RS?, C),
-    inert_fault(G?, C?, Nm?, I?, T?, R).
 
 % Each atom of Plus obtained from an atom of Clear by replacing its
 % wildcards.
@@ -284,8 +270,7 @@ form_role(P, RS, Nm, I, T, R?) :-
     rs_forb(RS?, N),
     atoms_app(K?, N?, KN),
     atoms_app(P?, KN?, PKN),
-    role_inert(RS?, Nm?, I?, T?, R2),
-    wild_faults(PKN?, Nm?, I?, R2?, R3),
+    wild_faults(PKN?, Nm?, I?, T?, R3),
     cleared_faults(P?, C?, Nm?, I?, R3?, R4),
     overlap_faults(P?, M?, Nm?, I?, R4?, R).
 
