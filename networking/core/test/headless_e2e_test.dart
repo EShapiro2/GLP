@@ -68,9 +68,11 @@ void main() {
     service.putKnownPeer(pusher.identity.publicKey);
 
     final delivered = <(Uint8List sender, String payload)>[];
+    final firstDelivered = Completer<void>();
     final serviceConnected = <String>[];
     service.onMessageReceived = (sender, payload, messageId, underlay) {
       delivered.add((sender, utf8.decode(payload)));
+      if (!firstDelivered.isCompleted) firstDelivered.complete();
     };
     service.onPeerConnected = (pk, underlay, _) {
       serviceConnected.add(_hex(pk));
@@ -96,12 +98,9 @@ void main() {
     );
     expect(messageId, isNotNull);
 
-    await pusherLinked.future.timeout(const Duration(seconds: 15));
-    // Delivery follows the session; poll briefly for the router to surface it.
-    final deadline = DateTime.now().add(const Duration(seconds: 10));
-    while (delivered.isEmpty && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
+    await pusherLinked.future;
+    // Delivery follows the session.
+    await firstDelivered.future;
     expect(delivered, hasLength(1));
     expect(_hex(delivered.single.$1), _hex(pusher.identity.publicKey));
     expect(delivered.single.$2, 'gpw/area-push/1 payload');
@@ -131,7 +130,7 @@ void main() {
     // Revocation: removeKnownPeer withdraws the pusher.
     service.removeKnownPeer(pusher.identity.publicKey);
     expect(service.isPeerReachable(pusher.identity.publicKey), isFalse);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test('a pre-registered initiator is admitted', () async {
     if (sodiumUnavailable != null) {
@@ -170,11 +169,8 @@ void main() {
       service.identity.publicKey,
       Uint8List.fromList(utf8.encode('registered call')),
     );
-    expect(
-      await delivered.future.timeout(const Duration(seconds: 15)),
-      'registered call',
-    );
-  }, timeout: const Timeout(Duration(minutes: 2)));
+    expect(await delivered.future, 'registered call');
+  }, timeout: Timeout.none);
 
   test('file-backed known peers persist across instances', () async {
     final dir = await Directory.systemTemp.createTemp('known-peers');

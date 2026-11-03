@@ -105,14 +105,9 @@ void main() {
 
     // B runs to completion while A's fragment is still being dropped. If a
     // lost fragment could delay a message it does not belong to, this would
-    // time out — that is the whole assertion, and it has no clock in it.
-    await bDone.future.timeout(
-      const Duration(seconds: 10),
-      onTimeout: () => fail(
-        'the clean message never completed while a fragment of the other was '
-        'lost: a lost fragment delayed a message it does not belong to',
-      ),
-    );
+    // never complete, and the suite's watchdog would end it — that is the
+    // whole assertion, and it has no clock in it.
+    await bDone.future;
 
     // A cannot have completed: the fragment it is missing has never been
     // acknowledged. Asserted before healing, so it is a fact and not a race.
@@ -125,9 +120,9 @@ void main() {
     // Heal the carrier: A now completes, which is the other half of "delays
     // only its own message" — delayed, not failed.
     healed = true;
-    await aDone.future.timeout(const Duration(seconds: 10));
+    await aDone.future;
     expect(aCompleted, isTrue);
-  });
+  }, timeout: Timeout.none);
 
   test('a whole-message ack settles all outstanding fragments', () async {
     late MessageTransportSender sender;
@@ -145,8 +140,8 @@ void main() {
     // No per-fragment acks arrive; a delivery ACK settles the message.
     Timer(const Duration(milliseconds: 20),
         () => sender.handleMessageAck(id));
-    expect(await done.timeout(const Duration(seconds: 5)), isTrue);
-  });
+    expect(await done, isTrue);
+  }, timeout: Timeout.none);
 
   test('abandonPeer fails outstanding messages so fair delivery re-queues',
       () async {
@@ -161,8 +156,8 @@ void main() {
     final done =
         sender.sendMessage(peer, id, Uint8List.fromList(List.filled(500, 1)));
     sender.abandonPeer(peer);
-    expect(await done.timeout(const Duration(seconds: 5)), isFalse);
-  });
+    expect(await done, isFalse);
+  }, timeout: Timeout.none);
 
   group('backoff schedule', () {
     // The exponential backoff used to be `initialBackoff * (1 << (attempts -

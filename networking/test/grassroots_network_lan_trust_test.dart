@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show InternetAddress;
 
@@ -14,11 +15,8 @@ import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
-
-/// Hermetic host candidates (see the glare test).
-Future<List<InternetAddress>> _loopbackHostAddresses() async =>
-    [InternetAddress.loopbackIPv4];
 
 /// Unsolicited inbound IP contact from outside the agent's own local network
 /// is governed by no trust level (spec §Trust levels): it is refused unless
@@ -62,6 +60,10 @@ void main() {
     );
   }
 
+  /// Each node's host-address reader, which tells when its candidates are
+  /// read.
+  final hostReaders = Expando<LoopbackHostReader>();
+
   Future<(GrassrootsNetwork, Store<AppState>)> startNode(
     GrassrootsIdentity id, {
     Set<Underlay> underlays = const {Underlay.lan, Underlay.wan},
@@ -70,12 +72,13 @@ void main() {
       appReducer,
       initialState: const AppState(),
     );
+    final hosts = LoopbackHostReader();
     final network = GrassrootsNetwork(
       identity: id,
       underlays: underlays,
       store: store,
       sodium: sodium,
-      localHostAddressReader: _loopbackHostAddresses,
+      localHostAddressReader: hosts.call,
       config: const GrassrootsNetworkConfig(
         // The heartbeat tick re-reads the attached local network, which would
         // replace the prefixes these tests inject. Long enough that no tick
@@ -84,6 +87,7 @@ void main() {
         announceInterval: Duration(minutes: 30),
       ),
     );
+    hostReaders[network] = hosts;
     expect(await network.initialize(), isTrue,
         reason: 'UDP must initialize on loopback');
     // The layer reads the attached local network once at construction, in
@@ -91,11 +95,7 @@ void main() {
     // them overwritten by the machine's real ones, so wait for it: a machine
     // with any non-loopback interface reports a fingerprint, and one with none
     // reads nothing that would overwrite the injection.
-    final readBy = DateTime.now().add(const Duration(seconds: 5));
-    while (store.state.localNetwork.networkId == null &&
-        DateTime.now().isBefore(readBy)) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
+    await stateWhere(store, (s) => s.localNetwork.networkId != null);
     return (network, store);
   }
 
@@ -106,11 +106,7 @@ void main() {
   /// none. The host candidates are read asynchronously at UDP init, so wait
   /// for them.
   Future<String?> listeningAddress(GrassrootsNetwork network) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (network.debugLocalCandidates().isEmpty &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await hostReaders[network]!.read;
     final candidates = network.debugLocalCandidates();
     return candidates.isEmpty ? null : candidates.first;
   }
@@ -124,9 +120,13 @@ void main() {
 
   /// An unknown caller dials the receiver and sends. Returns whether the
   /// receiver answered — completed a session with a key it does not know.
+  /// Where the test expects an answer ([answers]), the wait is on the
+  /// receiver holding the caller reachable; where it expects none, no event
+  /// shows a refusal, and the wait is a fixed span.
   Future<bool> unknownCallerAnswered({
     required ColdCallTrustLevel lanLevel,
     required LocalNetwork receiverLocalNetwork,
+    required bool answers,
   }) async {
     final callerId = await identityFromSeed(0x61);
     final receiverId = await identityFromSeed(0x62);
@@ -156,10 +156,11 @@ void main() {
       Uint8List.fromList(utf8.encode('lan cold call')),
     );
 
-    final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (!receiver.isPeerReachable(callerId.publicKey) &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+    if (answers) {
+      await stateWhere(receiverStore,
+          (_) => receiver.isPeerReachable(callerId.publicKey));
+    } else {
+      await Future<void>.delayed(const Duration(seconds: 12));
     }
     final answered = receiver.isPeerReachable(callerId.publicKey);
 
@@ -178,10 +179,11 @@ void main() {
       await unknownCallerAnswered(
         lanLevel: ColdCallTrustLevel.open,
         receiverLocalNetwork: loopbackIsLocal,
+        answers: true,
       ),
       isTrue,
     );
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test('LAN Open does not answer a caller from outside every local prefix',
       () async {
@@ -192,10 +194,11 @@ void main() {
       await unknownCallerAnswered(
         lanLevel: ColdCallTrustLevel.open,
         receiverLocalNetwork: elsewhereIsLocal,
+        answers: false,
       ),
       isFalse,
     );
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test('LAN Closed does not answer an unknown caller on the local network',
       () async {
@@ -203,10 +206,11 @@ void main() {
       await unknownCallerAnswered(
         lanLevel: ColdCallTrustLevel.closed,
         receiverLocalNetwork: loopbackIsLocal,
+        answers: false,
       ),
       isFalse,
     );
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test(
       'over the WAN an unknown key is refused at the contact gate, and a key '
@@ -234,26 +238,32 @@ void main() {
     receiverStore.dispatch(LocalNetworkChangedAction(elsewhereIsLocal));
     receiver.putKnownPeer(knownId.publicKey);
 
+    /// Whether the receiver answers [caller]: where the test expects it
+    /// ([answers]), the wait is on the receiver holding the caller
+    /// reachable; where it expects no answer, no event shows the refusal,
+    /// and the wait is a fixed span.
     Future<bool> answered(GrassrootsNetwork caller, Uint8List callerKey,
-        {required int seconds}) async {
+        {required bool answers}) async {
       caller.wan!.putPeerAddress(receiverId.publicKey, receiverAddress!);
       await caller.send(
           receiverId.publicKey, Uint8List.fromList(utf8.encode('wan call')));
-      final deadline = DateTime.now().add(Duration(seconds: seconds));
-      while (!receiver.isPeerReachable(callerKey) &&
-          DateTime.now().isBefore(deadline)) {
-        await Future<void>.delayed(const Duration(milliseconds: 200));
+      if (answers) {
+        await stateWhere(
+            receiverStore, (_) => receiver.isPeerReachable(callerKey));
+      } else {
+        await Future<void>.delayed(const Duration(seconds: 6));
       }
       return receiver.isPeerReachable(callerKey);
     }
 
-    expect(await answered(stranger, strangerId.publicKey, seconds: 6), isFalse,
+    expect(await answered(stranger, strangerId.publicKey, answers: false),
+        isFalse,
         reason: 'an unknown key');
-    expect(await answered(known, knownId.publicKey, seconds: 12), isTrue,
+    expect(await answered(known, knownId.publicKey, answers: true), isTrue,
         reason: 'a key given by putKnownPeer');
     expect(receiver.peerUnderlays(knownId.publicKey), [Underlay.wan]);
     expect(receiver.isPeerReachable(strangerId.publicKey), isFalse);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test('the BLE level does not open the IP path', () async {
     // The two levels are independent, and the medium of discovery is the key:
@@ -297,7 +307,7 @@ void main() {
     expect(receiverStore.state.localNetwork.network, loopbackIsLocal,
         reason: 'the caller was inside a local prefix throughout, so only the '
             'LAN level being Closed can have refused it');
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   /// A known caller dials the receiver and sends. Returns what the receiver
   /// reported of the caller: the underlays of its connects, of its received
@@ -343,11 +353,14 @@ void main() {
     final connected = <Underlay>[];
     final received = <Underlay>[];
     final discovered = <ProximityUnderlay>[];
+    final firstReceived = Completer<void>();
     receiver.onPeerConnected = (pk, underlay, application) {
       if (hexOf(pk) == callerHex) connected.add(underlay);
     };
     receiver.onMessageReceived = (sender, payload, messageId, underlay) {
-      if (hexOf(sender) == callerHex) received.add(underlay);
+      if (hexOf(sender) != callerHex) return;
+      received.add(underlay);
+      if (!firstReceived.isCompleted) firstReceived.complete();
     };
     for (final underlay in ProximityUnderlay.values) {
       final proximity =
@@ -363,11 +376,12 @@ void main() {
       Uint8List.fromList(utf8.encode('which underlay')),
     );
 
-    final deadline = DateTime.now()
-        .add(Duration(seconds: expectDelivery ? 12 : 6));
-    while ((received.isEmpty || !expectDelivery) &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+    // Where delivery is expected, the wait is on it; where it is not, no
+    // event shows the refusal, and the wait is a fixed span.
+    if (expectDelivery) {
+      await firstReceived.future;
+    } else {
+      await Future<void>.delayed(const Duration(seconds: 6));
     }
     if (expectDelivery) {
       expect(received, isNotEmpty,
@@ -412,7 +426,7 @@ void main() {
     // it at the source address of its session.
     expect(report.nearby, [ProximityUnderlay.lan]);
     expect(report.observed, report.callerAddress);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test(
       'a UDP session with a peer outside every local prefix is WAN, and WAN '
@@ -428,7 +442,7 @@ void main() {
     // GNA, 2026-10-11, Task C: a WAN peer is not nearby, and is observed.
     expect(report.nearby, isEmpty);
     expect(report.observed, report.callerAddress);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   // GNA, 2026-10-11, Q1: "an IP session's underlay is lan when LAN runs and
   // the address is local, else wan when WAN runs, else no session".
@@ -445,7 +459,7 @@ void main() {
     expect(report.received, everyElement(Underlay.wan));
     expect(report.discovered, isEmpty);
     expect(report.reachable, [Underlay.wan]);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test(
       'a layer running the LAN alone holds no session with a peer outside '
@@ -462,7 +476,7 @@ void main() {
     expect(report.reachable, isEmpty);
     expect(report.nearby, isEmpty);
     expect(report.observed, isNull);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test(
       'a layer running the LAN alone takes a peer within a local prefix as '
@@ -475,7 +489,7 @@ void main() {
     expect(report.connected, [Underlay.lan]);
     expect(report.received, everyElement(Underlay.lan));
     expect(report.reachable, [Underlay.lan]);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 }
 
 String hexOf(Uint8List bytes) =>

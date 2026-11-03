@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show InternetAddress;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
@@ -17,11 +16,8 @@ import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
-
-/// Hermetic host candidates (see the glare test).
-Future<List<InternetAddress>> _loopbackHostAddresses() async =>
-    [InternetAddress.loopbackIPv4];
 
 /// Fair delivery across the termination of the application (GNA §2.10,
 /// Networking Assumptions: "Messages to temporarily-unreachable peers are
@@ -66,38 +62,41 @@ void main() {
     );
   }
 
+  /// Each node's host-address reader (hermetic: see the glare test), which
+  /// tells when its candidates are read.
+  final hostReaders = Expando<LoopbackHostReader>();
+
   /// A layer with the default store of its queue, the application's
-  /// SharedPreferences.
-  Future<GrassrootsNetwork> startNode(GrassrootsIdentity id) async {
+  /// SharedPreferences.  [onAction] sees each action its store is
+  /// dispatched, before the reducer.
+  Future<GrassrootsNetwork> startNode(GrassrootsIdentity id,
+      {void Function(dynamic action)? onAction}) async {
+    final hosts = LoopbackHostReader();
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
-      store: Store<AppState>(appReducer, initialState: const AppState()),
+      store: Store<AppState>(appReducer,
+          initialState: const AppState(),
+          middleware: [
+            (store, action, next) {
+              onAction?.call(action);
+              next(action);
+            },
+          ]),
       sodium: sodium,
-      localHostAddressReader: _loopbackHostAddresses,
+      localHostAddressReader: hosts.call,
       config: const GrassrootsNetworkConfig(
         announceInterval: Duration(seconds: 2),
       ),
     );
+    hostReaders[network] = hosts;
     expect(await network.initialize(), isTrue);
     return network;
   }
 
   Future<String> listeningAddress(GrassrootsNetwork network) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (network.debugLocalCandidates().isEmpty &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await hostReaders[network]!.read;
     return network.debugLocalCandidates().first;
-  }
-
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 20}) async {
-    final deadline = DateTime.now().add(Duration(seconds: seconds));
-    while (!predicate() && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-    return predicate();
   }
 
   Future<List<OutboundQueueEntry>> savedQueue(GrassrootsIdentity id) async {
@@ -133,14 +132,26 @@ void main() {
     // The recipient comes up, and a new layer with the same identity and
     // store reads the queue back.
     final recipient = await startNode(recipientId);
-    final second = await startNode(senderId);
+    // The recipient's acknowledgement, as the layer dispatches it.
+    final acknowledged = Completer<void>();
+    final second = await startNode(senderId, onAction: (action) {
+      if (action is MessageDeliveredAction &&
+          action.messageId == messageId &&
+          !acknowledged.isCompleted) {
+        acknowledged.complete();
+      }
+    });
+    var secondDisposed = false;
     addTearDown(() async {
-      await second.dispose();
+      if (!secondDisposed) await second.dispose();
       await recipient.dispose();
     });
     final received = <(String, String, String)>[];
-    recipient.onMessageReceived = (sender, payload, id, underlay) =>
-        received.add((hex(sender), utf8.decode(payload), id));
+    final firstReceived = Completer<void>();
+    recipient.onMessageReceived = (sender, payload, id, underlay) {
+      received.add((hex(sender), utf8.decode(payload), id));
+      if (!firstReceived.isCompleted) firstReceived.complete();
+    };
     expect(second.queuedMessageCount, 1,
         reason: 'the saved queue is read back when the layer starts');
     expect(
@@ -153,7 +164,8 @@ void main() {
     recipient.wan!.putPeerAddress(senderId.publicKey, await listeningAddress(second));
     await recipient.reconnectKnownPeers(reason: 'test');
 
-    expect(await waitFor(() => received.isNotEmpty, seconds: 30), isTrue,
+    await firstReceived.future;
+    expect(received, isNotEmpty,
         reason: 'the restored queue is delivered once the peer is reachable');
     expect(received.first,
         (hex(senderId.publicKey), 'queued before termination', messageId));
@@ -161,16 +173,15 @@ void main() {
         received.every((r) => r.$2 == 'queued before termination'), isTrue,
         reason: 'a duplicate is allowed; nothing else is delivered');
 
-    // Removed once acknowledged.
-    final clock = Stopwatch()..start();
-    var left = await savedQueue(senderId);
-    while (left.isNotEmpty && clock.elapsed < const Duration(seconds: 15)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-      left = await savedQueue(senderId);
-    }
+    // Removed once acknowledged: the acknowledgement arrives, and the layer's
+    // disposal waits for every save of the queue begun so far.
+    await acknowledged.future;
+    await second.dispose();
+    secondDisposed = true;
+    final left = await savedQueue(senderId);
     expect(left, isEmpty,
         reason: 'an acknowledged message is removed from the saved queue');
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test(
       'a layer started with a restored queue delivers it to a recipient that '
@@ -193,8 +204,11 @@ void main() {
     final recipient = await startNode(recipientId);
     recipient.putKnownPeer(senderId.publicKey);
     final received = <(String, String, String)>[];
-    recipient.onMessageReceived = (sender, payload, id, underlay) =>
-        received.add((hex(sender), utf8.decode(payload), id));
+    final firstReceived = Completer<void>();
+    recipient.onMessageReceived = (sender, payload, id, underlay) {
+      received.add((hex(sender), utf8.decode(payload), id));
+      if (!firstReceived.isCompleted) firstReceived.complete();
+    };
     expect(recipient.store.state.knownPeers.dialBook, isEmpty);
 
     // A new layer with the same identity and store reads the queue back and
@@ -208,12 +222,13 @@ void main() {
     second.wan!
         .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
 
-    expect(await waitFor(() => received.isNotEmpty, seconds: 30), isTrue,
+    await firstReceived.future;
+    expect(received, isNotEmpty,
         reason: 'the heartbeat dials the unreachable known peer, and its '
             'reachability drains the restored queue');
     expect(received.first,
         (hex(senderId.publicKey), 'restored and swept', messageId));
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test(
       'a message delivered and not acknowledged is delivered again after a '
@@ -313,7 +328,7 @@ void main() {
           underlays: const {Underlay.lan, Underlay.wan},
           store: Store<AppState>(appReducer, initialState: const AppState()),
           sodium: sodium,
-          localHostAddressReader: _loopbackHostAddresses,
+          localHostAddressReader: LoopbackHostReader().call,
           outboundQueueStore: store,
         );
 

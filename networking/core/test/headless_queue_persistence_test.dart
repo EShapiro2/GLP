@@ -9,6 +9,8 @@ import 'package:test/test.dart';
 
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
+import 'helpers/event_waits.dart';
+
 /// Fair delivery across the termination of the application (GNA §2.10,
 /// Networking Assumptions: "Messages to temporarily-unreachable peers are
 /// queued and delivered when connectivity is restored; the queue survives the
@@ -61,14 +63,6 @@ void main() {
     return port;
   }
 
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 15}) async {
-    final clock = Stopwatch()..start();
-    while (!predicate() && clock.elapsed < Duration(seconds: seconds)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-    return predicate();
-  }
-
   test(
       'a message queued to an unreachable peer survives the layer, and is '
       'delivered by a new layer with the same identity and store once the '
@@ -83,16 +77,17 @@ void main() {
     final port = await freePort();
     final recipientAddress = '127.0.0.1:$port';
 
-    HeadlessGrassrootsNetwork senderLayer() => HeadlessGrassrootsNetwork(
+    HeadlessGrassrootsNetwork senderLayer(OutboundQueueStore queue) =>
+        HeadlessGrassrootsNetwork(
           identity: senderId,
           sodium: sodium!,
           knownPeersStore: FileKnownPeersStore(knownPeersFile),
-          outboundQueueStore: FileOutboundQueueStore(queueFile),
+          outboundQueueStore: queue,
         );
 
     // The first layer: the recipient's address is known, and nothing
     // listens there.
-    final first = senderLayer();
+    final first = senderLayer(FileOutboundQueueStore(queueFile));
     expect(await first.start(), isTrue);
     first.wan.putPeerAddress(recipientId.publicKey, recipientAddress);
     final messageId = await first.send(
@@ -124,33 +119,30 @@ void main() {
 
     // A new layer with the same identity and stores: the heartbeat replays
     // the queue, dialing the recipient at its recorded address.
-    final second = senderLayer();
+    final secondQueue = WatchedQueueStore(FileOutboundQueueStore(queueFile));
+    final second = senderLayer(secondQueue);
     addTearDown(second.dispose);
     expect(await second.start(), isTrue);
 
-    expect(await waitFor(() => received.isNotEmpty, seconds: 45), isTrue,
-        reason: 'the restored queue is delivered once the peer is reachable');
+    // The restored queue is delivered once the peer is reachable.
+    await until([recipient], () => received.isNotEmpty);
     expect(received.first,
         (senderHex, 'queued before termination', messageId));
     expect(
         received.every((r) => r.$2 == 'queued before termination'), isTrue,
         reason: 'a duplicate is allowed; nothing else is delivered');
 
-    // Removed once acknowledged.
-    final stopwatch = Stopwatch()..start();
-    var left = await FileOutboundQueueStore(queueFile).load(senderHex);
-    while (left.isNotEmpty && stopwatch.elapsed < const Duration(seconds: 15)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-      left = await FileOutboundQueueStore(queueFile).load(senderHex);
-    }
+    // Removed once acknowledged: the save that removes it, then the file.
+    await secondQueue.untilSaved(senderHex, (entries) => entries.isEmpty);
+    final left = await FileOutboundQueueStore(queueFile).load(senderHex);
     expect(left, isEmpty,
         reason: 'an acknowledged message is removed from the saved queue');
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test('a message delivered while the peer is reachable is saved until its '
       'acknowledgment, and removed then', () async {
     if (skip()) return;
-    final store = MemoryOutboundQueueStore();
+    final store = WatchedQueueStore(MemoryOutboundQueueStore());
     final senderId = await identityFromSeed(0x63);
     final recipientId = await identityFromSeed(0x64);
     final sender = HeadlessGrassrootsNetwork(
@@ -181,13 +173,12 @@ void main() {
     expect((await store.load(_hex(senderId.publicKey))).map((e) => e.messageId),
         [id],
         reason: 'the message is saved before send returns');
-    expect(await waitFor(() => received.contains('one')), isTrue);
-    expect(
-        await _eventually(
-            () async => (await store.load(_hex(senderId.publicKey))).isEmpty),
-        isTrue,
+    await until([recipient], () => received.contains('one'));
+    await store.untilSaved(
+        _hex(senderId.publicKey), (entries) => entries.isEmpty);
+    expect(await store.load(_hex(senderId.publicKey)), isEmpty,
         reason: 'an acknowledged message is removed from the saved queue');
-  }, timeout: const Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout.none);
 
   test(
       'a message delivered and not acknowledged is delivered again after a '
@@ -415,16 +406,6 @@ void main() {
           throwsFormatException);
     });
   });
-}
-
-Future<bool> _eventually(Future<bool> Function() predicate,
-    {int seconds = 15}) async {
-  final clock = Stopwatch()..start();
-  while (clock.elapsed < Duration(seconds: seconds)) {
-    if (await predicate()) return true;
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-  }
-  return predicate();
 }
 
 String _hex(Uint8List bytes) =>

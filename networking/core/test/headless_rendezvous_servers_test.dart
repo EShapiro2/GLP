@@ -8,6 +8,8 @@ import 'package:test/test.dart';
 
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
+import 'helpers/event_waits.dart';
+
 /// The rendezvous servers GLP declares while the layer runs, in the headless
 /// profile (GNA §4.2, Rendezvous servers: "The rendezvous servers the layer
 /// connects to are those GLP has declared, each by its public key and its
@@ -96,14 +98,6 @@ void main() {
     return (layer, events);
   }
 
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 20}) async {
-    final clock = Stopwatch()..start();
-    while (!predicate() && clock.elapsed < Duration(seconds: seconds)) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    return predicate();
-  }
-
   test('a server declared after start is connected and reported unattested',
       () async {
     if (skipped()) return;
@@ -115,10 +109,9 @@ void main() {
     layer.wan.putRendezvousServer(
         server.identity.publicKey, '127.0.0.1:${server.boundPort}');
 
-    expect(
-        await waitFor(() => layer.isPeerReachable(server.identity.publicKey)),
-        isTrue,
-        reason: 'the layer connects to the server GLP declared');
+    // The layer connects to the server GLP declared.
+    await until(
+        [layer], () => layer.isPeerReachable(server.identity.publicKey));
     expect(events, ['connected $serverHex wan null'],
         reason: 'reported over the WAN, unattested (GNA §6, "Unattested")');
     expect(await serverReported, _hex(layer.identity.publicKey),
@@ -127,7 +120,7 @@ void main() {
     expect(serverSaw, [_hex(layer.identity.publicKey)]);
     expect(layer.store.state.knownPeers.known.containsKey(serverHex), isFalse,
         reason: 'a declared rendezvous server is not a known peer');
-  });
+  }, timeout: Timeout.none);
 
   test('a second declaration replaces its address', () async {
     if (skipped()) return;
@@ -144,13 +137,12 @@ void main() {
     final address = '127.0.0.1:${server.boundPort}';
     layer.wan.putRendezvousServer(server.identity.publicKey, address);
 
-    expect(
-        await waitFor(() => layer.isPeerReachable(server.identity.publicKey)),
-        isTrue,
-        reason: 'the layer dials the address declared last');
+    // The layer dials the address declared last.
+    await until(
+        [layer], () => layer.isPeerReachable(server.identity.publicKey));
     expect(layer.wan.observedPeerAddress(server.identity.publicKey), address);
     expect(events, ['connected ${_hex(server.identity.publicKey)} wan null']);
-  });
+  }, timeout: Timeout.none);
 
   test(
       "a removed server's session ends and it is not dialed again, and "
@@ -161,9 +153,8 @@ void main() {
     final serverHex = _hex(server.identity.publicKey);
     layer.wan.putRendezvousServer(
         server.identity.publicKey, '127.0.0.1:${server.boundPort}');
-    expect(
-        await waitFor(() => layer.isPeerReachable(server.identity.publicKey)),
-        isTrue);
+    await until(
+        [layer], () => layer.isPeerReachable(server.identity.publicKey));
 
     // A key not declared: nothing happens.
     layer.wan.removeRendezvousServer((await identityFromSeed(0xa7)).publicKey);
@@ -187,7 +178,7 @@ void main() {
         reason: 'the server saw the one session, and no other after it');
     expect(events,
         ['connected $serverHex wan null', 'disconnected $serverHex wan']);
-  }, timeout: const Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout.none);
 
   test('a declaration with an unparseable address is refused', () async {
     if (skipped()) return;

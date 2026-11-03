@@ -435,12 +435,9 @@ answer(forty_two).
         caller.hex,
       ]);
       addTearDown(() async {
+        // Its stdin closed, the child exits.
         await child.stdin.close();
-        await child.exitCode.timeout(const Duration(seconds: 20),
-            onTimeout: () {
-          child.kill();
-          return -1;
-        });
+        await child.exitCode;
       });
       final childLines = <String>[];
       final childLine = StreamController<String>.broadcast();
@@ -453,15 +450,13 @@ answer(forty_two).
       });
       final childErr = StringBuffer();
       child.stderr.transform(utf8.decoder).listen(childErr.write);
+      addTearDown(() => printOnFailure('the callee process said '
+          '${childLines.join(' | ')}; stderr: $childErr'));
       Future<String> fromChild(bool Function(String) test) {
         for (final l in childLines) {
           if (test(l)) return Future.value(l);
         }
-        return childLine.stream.firstWhere(test).timeout(
-            const Duration(seconds: 90),
-            onTimeout: () => throw TimeoutException(
-                'the callee process said ${childLines.join(' | ')}; '
-                'stderr: $childErr'));
+        return childLine.stream.firstWhere(test);
       }
 
       final ready = (await fromChild((l) => l.startsWith('READY '))).split(' ');
@@ -487,7 +482,11 @@ answer(forty_two).
       );
       addTearDown(host.dispose);
       final transcript = <String>[];
-      host.onOutput = transcript.add;
+      final transcriptLine = StreamController<String>.broadcast();
+      host.onOutput = (l) {
+        transcript.add(l);
+        transcriptLine.add(l);
+      };
       final connected = <String>[];
       host.onPeerConnected = (pk, underlay, attested) =>
           connected.add('${pk.hex} $underlay $attested');
@@ -518,8 +517,8 @@ answer(forty_two).
 
       // The assignment crosses back: the caller's writer, assigned by the
       // callee, reaches the caller's program.
-      final answered =
-          await _line(transcript, (l) => l.startsWith('< answered('));
+      final answered = await _line(
+          transcript, transcriptLine.stream, (l) => l.startsWith('< answered('));
       expect(answered, contains('forty_two'));
       expect(receivedFrom, contains(callee.hex),
           reason: 'the assignment arrived through the adapter');
@@ -529,7 +528,7 @@ answer(forty_two).
       // "Unattested": a headless server has no attestation to offer).
       expect(connected, contains('${callee.hex} ${glp.Underlay.wan} null'));
       await fromChild((l) => l == 'CONNECTED ${caller.hex} wan null');
-    }, timeout: const Timeout(Duration(minutes: 3)));
+    }, timeout: Timeout.none);
   });
 }
 
@@ -551,19 +550,14 @@ class _FailingQueueStore implements OutboundQueueStore {
       throw const FileSystemException('the disc is full');
 }
 
-/// The first line of [lines] that [test] accepts, waiting up to 90 seconds
-/// for it to come.
-Future<String> _line(List<String> lines, bool Function(String) test) async {
-  final deadline = DateTime.now().add(const Duration(seconds: 90));
-  while (true) {
-    for (final l in lines) {
-      if (test(l)) return l;
-    }
-    if (DateTime.now().isAfter(deadline)) {
-      throw TimeoutException('no line came: ${lines.join(' | ')}');
-    }
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+/// The first line of [lines], or of the lines still to come on [more], that
+/// [test] accepts.
+Future<String> _line(
+    List<String> lines, Stream<String> more, bool Function(String) test) {
+  for (final l in lines) {
+    if (test(l)) return Future.value(l);
   }
+  return more.firstWhere(test);
 }
 
 /// The Dart that runs the second process.  The test runs under

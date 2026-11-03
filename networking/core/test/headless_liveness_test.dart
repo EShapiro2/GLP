@@ -7,6 +7,8 @@ import 'package:test/test.dart';
 
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
+import 'helpers/event_waits.dart';
+
 /// The headless profile's liveness and address-change recovery (GNA §2.5,
 /// ANNOUNCE and Liveness; §4.2, Address-change recovery): ANNOUNCE on every
 /// live session on the heartbeat; a session silent for two intervals torn
@@ -48,25 +50,13 @@ void main() {
     return layer;
   }
 
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 15}) async {
-    final clock = Stopwatch()..start();
-    while (!predicate() && clock.elapsed < Duration(seconds: seconds)) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    return predicate();
-  }
-
   /// [a] and [b] know each other, [a] with [b]'s address, and are connected.
   Future<void> connect(
       HeadlessGrassrootsNetwork a, HeadlessGrassrootsNetwork b) async {
     b.putKnownPeer(a.identity.publicKey);
     a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
     await a.send(b.identity.publicKey, Uint8List.fromList([1]));
-    expect(
-        await waitFor(() =>
-            a.isPeerReachable(b.identity.publicKey) &&
-            b.isPeerReachable(a.identity.publicKey)),
-        isTrue);
+    await untilBothReachable(a, b);
   }
 
   bool skip() {
@@ -94,14 +84,17 @@ void main() {
     expect(await a.start(), isTrue);
     expect(a.boundPort, isNot(oldPort), reason: 'the address changed');
 
+    final clock = Stopwatch()..start();
     await a.send(b.identity.publicKey, Uint8List.fromList([2]));
-    expect(await waitFor(() => got.contains(2), seconds: 15), isTrue,
-        reason: 'delivered well inside the two intervals liveness waits');
+    await until([b], () => got.contains(2));
+    expect(clock.elapsed,
+        lessThan(HeadlessGrassrootsNetwork.heartbeatInterval * 2),
+        reason: 'delivered inside the two intervals liveness waits');
     expect(atB, ['up', 'down', 'up'],
         reason: 'the stale session reset, then the fresh one attested');
     expect(b.wan.observedPeerAddress(a.identity.publicKey),
         '127.0.0.1:${a.boundPort}');
-  }, timeout: const Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout.none);
 
   test(
       'the heartbeat sweep re-initiates the moved agent\'s connection to its '
@@ -115,15 +108,9 @@ void main() {
     expect(await a.start(), isTrue);
     expect(a.isPeerReachable(b.identity.publicKey), isFalse);
 
-    expect(
-        await waitFor(
-            () =>
-                a.isPeerReachable(b.identity.publicKey) &&
-                b.isPeerReachable(a.identity.publicKey),
-            seconds: 30),
-        isTrue,
-        reason: 'within a heartbeat interval or two');
-  }, timeout: const Timeout(Duration(minutes: 1)));
+    // Within a heartbeat interval or two.
+    await untilBothReachable(a, b);
+  }, timeout: Timeout.none);
 
   for (final (first, second) in [(0xc9, 0xca), (0xcb, 0xcc)]) {
     test(
@@ -135,16 +122,9 @@ void main() {
       final b = await node(second);
       a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
       b.wan.putPeerAddress(a.identity.publicKey, '127.0.0.1:${a.boundPort}');
-      expect(
-          await waitFor(
-              () =>
-                  a.isPeerReachable(b.identity.publicKey) &&
-                  b.isPeerReachable(a.identity.publicKey),
-              seconds: 40),
-          isTrue,
-          reason: 'simultaneous reconnection settles on the deterministic '
-              'initiator');
-    }, timeout: const Timeout(Duration(minutes: 1)));
+      // Simultaneous reconnection settles on the deterministic initiator.
+      await untilBothReachable(a, b);
+    }, timeout: Timeout.none);
   }
 
   test(
@@ -160,12 +140,12 @@ void main() {
     // b goes silent: its layer stops, sending nothing.
     await b.stop();
     final clock = Stopwatch()..start();
-    expect(await waitFor(() => atA.contains('down'), seconds: 45), isTrue);
+    await until([a], () => atA.contains('down'));
     expect(a.isPeerReachable(b.identity.publicKey), isFalse);
     expect(clock.elapsed,
         greaterThan(HeadlessGrassrootsNetwork.heartbeatInterval),
         reason: 'not before the silence has lasted');
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test('a live idle session is kept by the heartbeat\'s ANNOUNCE', () async {
     if (skip()) return;
@@ -179,5 +159,5 @@ void main() {
     expect(events, isEmpty);
     expect(a.isPeerReachable(b.identity.publicKey), isTrue);
     expect(b.isPeerReachable(a.identity.publicKey), isTrue);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 }

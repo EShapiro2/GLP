@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show InternetAddress;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
@@ -12,14 +12,9 @@ import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
-
-/// Hermetic host candidates: the node's own address is loopback, so peers dial
-/// exactly where it listens. The real reader enumerates the machine's
-/// interfaces, which a test must not depend on.
-Future<List<InternetAddress>> _loopbackHostAddresses() async =>
-    [InternetAddress.loopbackIPv4];
 
 /// Handshake glare at the coordinator level, per the paper's Wire mechanics
 /// note: over IP the phone coordinator may initiate Noise from both ends —
@@ -28,7 +23,10 @@ Future<List<InternetAddress>> _loopbackHostAddresses() async =>
 /// the session manager's deterministic rule (smaller key keeps the
 /// initiator role), serialized per pair (spec §Session Establishment: one
 /// handshake per medium per pair). Two full [GrassrootsNetwork] instances
-/// talk over loopback UDP, hermetically ([_loopbackHostAddresses]);
+/// talk over loopback UDP, hermetically ([LoopbackHostReader]: the node's own
+/// address is loopback, so peers dial exactly where it listens; the real
+/// reader enumerates the machine's interfaces, which a test must not depend
+/// on);
 /// both key orderings of the app-level sender.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -64,23 +62,29 @@ void main() {
   String hexOf(Uint8List pk) =>
       pk.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
+  /// Each node's host-address reader, which tells when its candidates are
+  /// read.
+  final hostReaders = Expando<LoopbackHostReader>();
+
   Future<GrassrootsNetwork> startNode(GrassrootsIdentity id) async {
     final store = Store<AppState>(
       appReducer,
       initialState: const AppState(),
     );
+    final hosts = LoopbackHostReader();
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
       store: store,
       sodium: sodium,
-      localHostAddressReader: _loopbackHostAddresses,
+      localHostAddressReader: hosts.call,
       config: const GrassrootsNetworkConfig(
         // Short heartbeat so the non-dialing side's reconnect sweep fires
         // within the test window.
         announceInterval: Duration(seconds: 2),
       ),
     );
+    hostReaders[network] = hosts;
     expect(await network.initialize(), isTrue,
         reason: 'UDP must initialize on loopback');
     return network;
@@ -93,11 +97,7 @@ void main() {
   /// none. The host candidates are read asynchronously at UDP init, so wait
   /// for them.
   Future<String?> listeningAddress(GrassrootsNetwork network) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (network.debugLocalCandidates().isEmpty &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await hostReaders[network]!.read;
     final candidates = network.debugLocalCandidates();
     return candidates.isEmpty ? null : candidates.first;
   }
@@ -130,9 +130,11 @@ void main() {
     final recipientAddress = recipientLoopback!;
 
     final delivered = <String>[];
+    final firstDelivered = Completer<void>();
     recipient.onMessageReceived = (senderPk, payload, messageId, underlay) {
       expect(hexOf(senderPk), hexOf(senderId.publicKey));
       delivered.add(utf8.decode(payload));
+      if (!firstDelivered.isCompleted) firstDelivered.complete();
     };
 
     // Closed trust both ways (the default); each side supplies the other's
@@ -148,10 +150,7 @@ void main() {
     );
     expect(messageId, isNotNull);
 
-    final deadline = DateTime.now().add(const Duration(seconds: 30));
-    while (delivered.isEmpty && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await firstDelivered.future;
     expect(delivered, ['coordinator glare payload'],
         reason: 'glare must converge to an established session and deliver');
     expect(sender.isPeerReachable(recipientId.publicKey), isTrue);
@@ -164,7 +163,7 @@ void main() {
     // crosses the acceptor's announce-triggered one.
     await runGlareCase(
         senderSeed: 0x11, recipientSeed: 0x22, senderKeySmaller: false);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test('glare converges when the sender key is smaller', () async {
     // 0x33 → 17cb…, 0x44 → d759…: sender smaller — the sender dials,
@@ -172,5 +171,5 @@ void main() {
     // initiation crosses it.
     await runGlareCase(
         senderSeed: 0x33, recipientSeed: 0x44, senderKeySmaller: true);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 }

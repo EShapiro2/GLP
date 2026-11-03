@@ -69,9 +69,11 @@ void main() {
     });
 
     final delivered = <String>[];
+    final firstDelivered = Completer<void>();
     acceptor.onMessageReceived = (sender, payload, messageId, underlay) {
       expect(_hex(sender), _hex(dialerId.publicKey));
       delivered.add(utf8.decode(payload));
+      if (!firstDelivered.isCompleted) firstDelivered.complete();
     };
 
     expect(await acceptor.start(), isTrue);
@@ -102,11 +104,8 @@ void main() {
       isTrue,
     );
 
-    final deadline = DateTime.now().add(const Duration(seconds: 10));
-    while ((delivered.isEmpty || !dialer.ackedMessageIds.contains(messageId)) &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
+    await firstDelivered.future;
+    await dialer.untilAcked(messageId);
     expect(delivered, ['glare payload']);
     expect(dialer.ackedMessageIds, contains(messageId));
     expect(acceptor.isPeerReachable(dialerId.publicKey), isTrue);
@@ -121,7 +120,7 @@ void main() {
     // layer's first message.
     await runGlareCase(
         dialerSeed: 0x11, acceptorSeed: 0x22, dialerKeySmaller: false);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test('glare converges when the dialer key is smaller', () async {
     if (sodiumUnavailable != null) {
@@ -132,7 +131,7 @@ void main() {
     // dialer's.
     await runGlareCase(
         dialerSeed: 0x33, acceptorSeed: 0x44, dialerKeySmaller: true);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 }
 
 /// A WAN agent's UDP wiring reduced to its dial path, built from the same
@@ -195,8 +194,18 @@ class _CrossingDialer {
         return null;
       }
     };
-    router.onAckReceived = ackedMessageIds.add;
+    router.onAckReceived = (messageId) {
+      ackedMessageIds.add(messageId);
+      _acks.putIfAbsent(messageId, Completer<void>.new);
+      if (!_acks[messageId]!.isCompleted) _acks[messageId]!.complete();
+    };
   }
+
+  final Map<String, Completer<void>> _acks = {};
+
+  /// Completes once the acknowledgement of [messageId] has arrived.
+  Future<void> untilAcked(String messageId) =>
+      _acks.putIfAbsent(messageId, Completer<void>.new).future;
 
   final GrassrootsIdentity identity;
   final SodiumSumo sodium;

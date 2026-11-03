@@ -8,6 +8,8 @@ import 'package:sodium/sodium_sumo.dart';
 import 'package:test/test.dart';
 
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
+
+import 'helpers/event_waits.dart';
 import 'package:grassroots_networking_core/src/transport/hole_punch_service.dart';
 
 /// The headless profile brought to the API's list for the WAN underlay (GNA,
@@ -59,14 +61,6 @@ void main() {
     return layer;
   }
 
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 15}) async {
-    final clock = Stopwatch()..start();
-    while (!predicate() && clock.elapsed < Duration(seconds: seconds)) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    return predicate();
-  }
-
   /// [a] dials [b] and both report the other reachable.
   Future<void> connect(
     HeadlessGrassrootsNetwork a,
@@ -75,11 +69,7 @@ void main() {
     b.putKnownPeer(a.identity.publicKey);
     a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
     await a.send(b.identity.publicKey, Uint8List.fromList([1]));
-    expect(
-        await waitFor(() =>
-            a.isPeerReachable(b.identity.publicKey) &&
-            b.isPeerReachable(a.identity.publicKey)),
-        isTrue);
+    await untilBothReachable(a, b);
   }
 
   void skipWithoutSodium() {
@@ -124,7 +114,7 @@ void main() {
 
     expect(a.peerUnderlays(stranger.publicKey), isEmpty);
     expect(a.wan.observedPeerAddress(stranger.publicKey), isNull);
-  });
+  }, timeout: Timeout.none);
 
   test('punchUdp sends punch datagrams toward the address', () async {
     skipWithoutSodium();
@@ -143,10 +133,10 @@ void main() {
     });
 
     a.wan.punchUdp('127.0.0.1:${target.port}');
-    final packet = await punched.future.timeout(const Duration(seconds: 5));
+    final packet = await punched.future;
     expect(packet.senderPubkey, a.identity.publicKey);
     expect(() => a.wan.punchUdp('nowhere'), throwsArgumentError);
-  });
+  }, timeout: Timeout.none);
 
   test(
       'networkIdentity is the attached local network\'s fingerprint, '
@@ -188,21 +178,24 @@ void main() {
   });
 
   group('the WAN contact gate (GNA §2.5, §2.7)', () {
-    /// [caller] dials [receiver] over the WAN and sends; whether [receiver]
-    /// answered, both sides reporting the other reachable.
-    Future<bool> answered(
+    /// [caller] dials [receiver] over the WAN and sends.
+    Future<void> dial(
       HeadlessGrassrootsNetwork caller,
-      HeadlessGrassrootsNetwork receiver, {
-      int seconds = 6,
-    }) async {
+      HeadlessGrassrootsNetwork receiver,
+    ) async {
       caller.wan.putPeerAddress(
           receiver.identity.publicKey, '127.0.0.1:${receiver.boundPort}');
       await caller.send(receiver.identity.publicKey, Uint8List.fromList([9]));
-      return waitFor(
-          () =>
-              receiver.isPeerReachable(caller.identity.publicKey) &&
-              caller.isPeerReachable(receiver.identity.publicKey),
-          seconds: seconds);
+    }
+
+    /// [caller] dials [receiver], and [receiver] answers: both sides report
+    /// the other reachable.
+    Future<void> answered(
+      HeadlessGrassrootsNetwork caller,
+      HeadlessGrassrootsNetwork receiver,
+    ) async {
+      await dial(caller, receiver);
+      await untilBothReachable(caller, receiver);
     }
 
     test('an unknown key is refused', () async {
@@ -210,9 +203,14 @@ void main() {
       if (sodiumUnavailable != null) return;
       final receiver = await node(0xc1);
       final stranger = await node(0xc2);
-      expect(await answered(stranger, receiver), isFalse);
+      await dial(stranger, receiver);
+      await Future<void>.delayed(const Duration(seconds: 6));
+      expect(
+          receiver.isPeerReachable(stranger.identity.publicKey) &&
+              stranger.isPeerReachable(receiver.identity.publicKey),
+          isFalse);
       expect(receiver.isPeerReachable(stranger.identity.publicKey), isFalse);
-    }, timeout: const Timeout(Duration(minutes: 1)));
+    });
 
     test('a key given by putKnownPeer is answered', () async {
       skipWithoutSodium();
@@ -220,9 +218,9 @@ void main() {
       final receiver = await node(0xc3);
       final caller = await node(0xc4);
       receiver.putKnownPeer(caller.identity.publicKey);
-      expect(await answered(caller, receiver, seconds: 15), isTrue);
+      await answered(caller, receiver);
       expect(receiver.peerUnderlays(caller.identity.publicKey), [Underlay.wan]);
-    }, timeout: const Timeout(Duration(minutes: 1)));
+    }, timeout: Timeout.none);
 
     test('a layer marked as a rendezvous server answers both', () async {
       skipWithoutSodium();
@@ -234,17 +232,16 @@ void main() {
       final stranger = await node(0xc6);
       final known = await node(0xc7);
       server.putKnownPeer(known.identity.publicKey);
-      expect(await answered(stranger, server, seconds: 15), isTrue,
-          reason: 'an unknown key');
-      expect(await answered(known, server, seconds: 15), isTrue,
-          reason: 'a key given by putKnownPeer');
+      // An unknown key, and a key given by putKnownPeer.
+      await answered(stranger, server);
+      await answered(known, server);
       expect(
           server.store.state.knownPeers.known
               .containsKey(_hex(stranger.identity.publicKey)),
           isFalse,
           reason: 'the stranger is answered as a rendezvous server answers, '
               'not by becoming known');
-    }, timeout: const Timeout(Duration(minutes: 1)));
+    }, timeout: Timeout.none);
   });
 }
 
