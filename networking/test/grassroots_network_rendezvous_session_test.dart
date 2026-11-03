@@ -108,10 +108,13 @@ void main() {
     return port;
   }
 
-  /// A headless rendezvous server, started, and the keys of the agents it
-  /// reports connected.
-  Future<(HeadlessGrassrootsNetwork, List<String>)> headlessServer(
-      int fill) async {
+  /// A headless rendezvous server, started; the keys of the agents it
+  /// reports connected; and the first of them, once the server reports it.
+  /// The server reports an agent once its own session and attestation
+  /// exchange with it have completed (GNA §2.3, §2.6), an event of its own
+  /// that the agent's report of the server does not imply.
+  Future<(HeadlessGrassrootsNetwork, List<String>, Future<String>)>
+      headlessServer(int fill) async {
     final port = await deadPort();
     final server = HeadlessGrassrootsNetwork(
       outboundQueueStore: MemoryOutboundQueueStore(),
@@ -123,9 +126,13 @@ void main() {
     );
     addTearDown(server.dispose);
     final connected = <String>[];
-    server.onPeerConnected = (pk, underlay, _) => connected.add(hex(pk));
+    final first = Completer<String>();
+    server.onPeerConnected = (pk, underlay, _) {
+      connected.add(hex(pk));
+      if (!first.isCompleted) first.complete(hex(pk));
+    };
     expect(await server.start(), isTrue);
-    return (server, connected);
+    return (server, connected, first.future);
   }
 
   /// A Flutter-profile layer running the WAN, started with no rendezvous
@@ -166,7 +173,7 @@ void main() {
       () {
     test('a server declared after start is connected and reported unattested',
         () async {
-      final (server, serverSaw) = await headlessServer(0x95);
+      final (server, serverSaw, serverReported) = await headlessServer(0x95);
       final (node, events) = await startBare(await identityFromSeed(0x96));
       final serverPk = server.identity.publicKey;
       expect(node.isPeerReachable(serverPk), isFalse);
@@ -178,11 +185,14 @@ void main() {
       expect(events, ['connected ${hex(serverPk)} wan null'],
           reason: 'reported over the WAN, unattested (GNA §6, "Unattested")');
       expect(node.peerUnderlays(serverPk), [Underlay.wan]);
+      expect(await serverReported, hex(node.identity.publicKey),
+          reason: 'the server reports the node once its own session and '
+              'attestation exchange have completed (GNA §2.6)');
       expect(serverSaw, [hex(node.identity.publicKey)]);
     }, timeout: const Timeout(Duration(minutes: 1)));
 
     test('a second declaration replaces its address', () async {
-      final (server, _) = await headlessServer(0x97);
+      final (server, _, _) = await headlessServer(0x97);
       final (node, events) = await startBare(await identityFromSeed(0x98));
       final serverPk = server.identity.publicKey;
 
@@ -204,7 +214,7 @@ void main() {
     test(
         "a removed server's session ends and it is not dialed again, and "
         'removing a key not declared does nothing', () async {
-      final (server, serverSaw) = await headlessServer(0x99);
+      final (server, serverSaw, _) = await headlessServer(0x99);
       final (node, events) = await startBare(await identityFromSeed(0x9a));
       final serverPk = server.identity.publicKey;
       node.wan!.putRendezvousServer(serverPk, '127.0.0.1:${server.boundPort}');

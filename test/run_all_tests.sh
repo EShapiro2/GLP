@@ -23,6 +23,7 @@
 #   GF - Grassroots federation records, transactions and platform (GFWC)
 #   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
 #   TY - The tight typing discipline: no untyped procedure and no open type off test/OPEN_TYPES
+#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -65,7 +66,7 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET"
 FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
@@ -6807,7 +6808,7 @@ APPS_ART=$(mktemp -d)
 apps_gsg=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gsg $APPS_ART
 $GLP_DIR/programs/apps/gsg
-play_held(In, ToBob, ToCarol).
+play_held(alice, bob, carol, In, ToBob, ToCarol).
 :limit 600000
 play_friends(A, B).
 :quit
@@ -7155,6 +7156,24 @@ apps_person_sg() { # apps_person_sg <person> <output>: the person's super-app li
 apps_person_screen() { # apps_person_screen <person> <output>: the person's mini-app screen, every other line of theirs, in order, as a list
     echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "sg(") != 1 { s = s (n++ ? ", " : "") substr($0, length(p) + 1) } END { print "[" s "]" }'
 }
+
+# GKK's app on three smartphones (programs/apps/gkk_boot.glp): the super-app of programs/social/graph/core on three isolates, each person with its own key pair, hosting the base mini-app from its certified artefact gkk.glpw.  alice connects to bob and to carol, invites each once connected, and once both are her friends introduces them to each other in the social graph, the cards answered by the scripted home; carol invites bob once connected to him; and play_keys's steps run over the three conversations.  Each person's mini-app screen is held to the screen play_keys holds for them, exactly, in order; their super-app lines, sg(connected(...)), are held in either order, the isolates running in either.
+apps_gkk_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gkk $APPS_CORE
+:boot $GLP_DIR/programs/apps/gkk_boot.glp $APPS_CORE
+:quit
+HEREDOC
+2>&1)
+rm -f "$APPS_CORE/gkk.glpw"
+check "APPS gkk on three smartphones: the mini-app's artefact is certified" "gkk.glpw --- certified under" "$apps_gkk_boot"
+check "APPS gkk on three smartphones: the boot settles" "Boot settled: 3 agents (alice, bob, carol)" "$apps_gkk_boot"
+check_not "APPS gkk on three smartphones: no event stopped at the cap" "did not quiesce" "$apps_gkk_boot"
+apps_same_either "APPS gkk on three smartphones: alice's super-app lines" "[sg(connected(bob)), sg(connected(carol))]" "[sg(connected(carol)), sg(connected(bob))]" "$(apps_person_sg alice "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: bob's super-app lines" "[sg(connected(alice)), sg(connected(carol))]" "$(apps_person_sg bob "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: carol's super-app lines" "[sg(connected(alice)), sg(connected(bob))]" "$(apps_person_sg carol "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: alice's screen is play_keys's" "[view([], [], [], [tab('Contacts', knows)]), menu(alice, []), view([], [], [establish(alice)], [tab('Contacts', knows)]), view([identity], [], [], [tab('Contacts', knows)]), view([identity], [], [acquaint(alice, bob)], [tab('Contacts', knows)]), view([identity], [bob], [acquaint(alice, bob)], [tab('Contacts', knows)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows)]), view([knows(bob), identity], [bob], [acquaint(alice, carol)], [tab('Contacts', knows)]), view([knows(bob), identity], [bob, carol], [acquaint(alice, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(bob), identity], [bob, carol], [], [tab('Contacts', knows)]), menu(alice, [bob, carol]), view([knows(carol), knows(bob), identity], [bob, carol], [introduce(alice, bob, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(bob), identity], [bob, carol], [], [tab('Contacts', knows)])]" "$(apps_person_screen alice "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: bob's screen is play_keys's" "[view([], [], [], [tab('Contacts', knows)]), view([], [], [establish(bob)], [tab('Contacts', knows)]), view([identity], [], [], [tab('Contacts', knows)]), gave(acquaint(alice, bob), yes), view([identity], [alice], [], [tab('Contacts', knows)]), view([identity], [alice], [acquaint(alice, bob)], [tab('Contacts', knows)]), view([knows(alice), identity], [alice], [], [tab('Contacts', knows)]), gave(introduce(alice, bob, carol), yes), view([knows(alice), identity], [alice], [introduce(alice, bob, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(alice), identity], [alice], [], [tab('Contacts', knows)]), view([knows(carol), knows(alice), identity], [alice, carol], [], [tab('Contacts', knows)]), view([knows(carol), knows(alice), identity], [alice, carol], [acquaint(bob, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(carol), knows(alice), identity], [alice, carol], [], [tab('Contacts', knows)])]" "$(apps_person_screen bob "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: carol's screen is play_keys's" "[view([], [], [], [tab('Contacts', knows)]), view([], [], [establish(carol)], [tab('Contacts', knows)]), view([identity], [], [], [tab('Contacts', knows)]), gave(acquaint(alice, carol), yes), view([identity], [alice], [], [tab('Contacts', knows)]), view([identity], [alice], [acquaint(alice, carol)], [tab('Contacts', knows)]), view([knows(alice), identity], [alice], [], [tab('Contacts', knows)]), view([knows(alice), identity], [alice, bob], [], [tab('Contacts', knows)]), gave(acquaint(bob, carol), yes), view([knows(alice), identity], [alice, bob], [acquaint(bob, carol)], [tab('Contacts', knows)]), view([knows(bob), knows(alice), identity], [alice, bob], [], [tab('Contacts', knows)])]" "$(apps_person_screen carol "$apps_gkk_boot")"
 apps_gsnp_boot=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gsnp $APPS_CORE
 :boot $GLP_DIR/programs/apps/gsnp_boot.glp $APPS_CORE
@@ -7960,6 +7979,107 @@ echo ""
 
 fi  # Section SGLP
 
+# The watchdog (Code #22's authorisation, 2026-11-03; IGLP-coop), Section Q's
+# and Section NET's.  A test's verdict does not depend on how loaded the
+# machine is: each runner runs with
+# --ignore-timeouts, so no test has a clock of its own, and the tests that run
+# agents wait on events alone (IsolateManager.boot and settle,
+# glp_multiagent/test/isolate_agents.dart).  Until 2026-11-03 every test had a
+# clock, its own or the runner's thirty seconds, and under load tests failed
+# that were merely slow: in the full suite on main 8ff18057, the night of
+# 2026-11-02, mad_w_clean_test.dart and the GC village test of
+# apps_screens_test.dart failed and each passed alone.  What a clock caught was
+# a run that never ends; the watchdog catches it instead.  A runner still
+# running after GLP_Q_BOUND seconds (three hours unless set) is killed, with
+# every process it started, and each test it was in when killed is reported
+# "did not finish", named by its file and its name as the json reporter
+# recorded it (testStart with no testDone), and counted as a failure.
+Q_BOUND="${GLP_Q_BOUND:-10800}"
+
+# _q_names_in_progress <json> <dir>: the tests the json reporter's file records
+# as started and not done, one "<file>: <test name>" per line, the file as
+# KNOWN_RED carries it, relative to <dir>'s package root with its prefix.
+_q_names_in_progress() {
+    python3 - "$1" "$2" <<'PYEOF'
+import json, sys
+path, prefix = sys.argv[1], sys.argv[2]
+suites, tests, done = {}, {}, set()
+try:
+    lines = open(path).read().splitlines()
+except OSError:
+    lines = []
+for line in lines:
+    try:
+        e = json.loads(line)
+    except ValueError:
+        continue
+    t = e.get('type')
+    if t == 'suite':
+        suites[e['suite']['id']] = e['suite'].get('path') or '?'
+    elif t == 'testStart':
+        tests[e['test']['id']] = (e['test']['suiteID'], e['test']['name'])
+    elif t == 'testDone':
+        done.add(e['testID'])
+for tid, (sid, name) in tests.items():
+    if tid in done:
+        continue
+    file = suites.get(sid, '?')
+    i = file.find('/test/')
+    if file.startswith('/') and i >= 0:
+        file = file[i + 1:]
+    print(prefix + file + ': ' + name)
+PYEOF
+}
+
+# _q_run <dir> <json> <out> <prefix> <runner...>: run the runner in <dir>, its
+# output in <out>, with no test clock and with the json reporter writing
+# <json>, as a process group of its own, killed whole once it outlives Q_BOUND.
+# Sets Q_RUN_STATUS, its exit status; Q_RUN_DNF, 1 where it was killed; and
+# Q_RUN_IN, the tests it was in, read before the kill, since a runner told to
+# stop records each test it is in as done, flutter test's as an error "did not
+# complete".
+_q_run() {
+    local dir="$1" json="$2" out="$3" prefix="$4"
+    shift 4
+    rm -f "$json"
+    ( cd "$dir" && exec perl -e 'setpgrp(0, 0); exec @ARGV or die "exec: $!\n"' \
+        "$@" --ignore-timeouts --file-reporter "json:$json" ) > "$out" 2>&1 &
+    local pid=$! waited=0
+    Q_RUN_DNF=0
+    Q_RUN_IN=""
+    while kill -0 "$pid" 2>/dev/null; do
+        if [ "$waited" -ge "$Q_BOUND" ]; then
+            Q_RUN_DNF=1
+            Q_RUN_IN=$(_q_names_in_progress "$json" "$prefix") || true
+            kill -TERM -- "-$pid" 2>/dev/null || true
+            sleep 10
+            kill -KILL -- "-$pid" 2>/dev/null || true
+            break
+        fi
+        sleep 5
+        waited=$((waited + 5))
+    done
+    wait "$pid" 2>/dev/null && Q_RUN_STATUS=0 || Q_RUN_STATUS=$?
+}
+
+# _q_report_dnf <runner>: the runner _q_run last ran, killed by the watchdog,
+# each test it was in reported "did not finish"; Q_DNF_COUNT, their number,
+# is the caller's to count as failures.
+_q_report_dnf() {
+    local names="$Q_RUN_IN"
+    Q_DNF_COUNT=0
+    if [ -z "$names" ]; then
+        echo "  FAIL: $1 did not finish within $Q_BOUND s, in no test the json reporter recorded as started"
+        Q_DNF_COUNT=1
+        return
+    fi
+    while IFS= read -r t; do
+        [ -z "$t" ] && continue
+        echo "  FAIL: did not finish within $Q_BOUND s: $t"
+        Q_DNF_COUNT=$((Q_DNF_COUNT + 1))
+    done <<< "$names"
+}
+
 if _section QD || _section QF; then
 # =============================================================================
 # Section Q: Dart unit tests (whole tree)
@@ -8085,104 +8205,6 @@ Q_RAW_DART="$Q_RAW_DIR/suite_q_dart.txt"
 Q_RAW_FLUTTER="$Q_RAW_DIR/suite_q_flutter.txt"
 mkdir -p "$Q_RAW_DIR" 2>/dev/null || true
 
-# The watchdog (Code #22's authorisation, 2026-11-03; IGLP-coop).  A test's
-# verdict does not depend on how loaded the machine is: each runner runs with
-# --ignore-timeouts, so no test has a clock of its own, and the tests that run
-# agents wait on events alone (IsolateManager.boot and settle,
-# glp_multiagent/test/isolate_agents.dart).  Until 2026-11-03 every test had a
-# clock, its own or the runner's thirty seconds, and under load tests failed
-# that were merely slow: in the full suite on main 8ff18057, the night of
-# 2026-11-02, mad_w_clean_test.dart and the GC village test of
-# apps_screens_test.dart failed and each passed alone.  What a clock caught was
-# a run that never ends; the watchdog catches it instead.  A runner still
-# running after GLP_Q_BOUND seconds (three hours unless set) is killed, with
-# every process it started, and each test it was in when killed is reported
-# "did not finish", named by its file and its name as the json reporter
-# recorded it (testStart with no testDone), and counted as a failure.
-Q_BOUND="${GLP_Q_BOUND:-10800}"
-
-# _q_names_in_progress <json> <dir>: the tests the json reporter's file records
-# as started and not done, one "<file>: <test name>" per line, the file as
-# KNOWN_RED carries it, relative to <dir>'s package root with its prefix.
-_q_names_in_progress() {
-    python3 - "$1" "$2" <<'PYEOF'
-import json, sys
-path, prefix = sys.argv[1], sys.argv[2]
-suites, tests, done = {}, {}, set()
-try:
-    lines = open(path).read().splitlines()
-except OSError:
-    lines = []
-for line in lines:
-    try:
-        e = json.loads(line)
-    except ValueError:
-        continue
-    t = e.get('type')
-    if t == 'suite':
-        suites[e['suite']['id']] = e['suite'].get('path') or '?'
-    elif t == 'testStart':
-        tests[e['test']['id']] = (e['test']['suiteID'], e['test']['name'])
-    elif t == 'testDone':
-        done.add(e['testID'])
-for tid, (sid, name) in tests.items():
-    if tid in done:
-        continue
-    file = suites.get(sid, '?')
-    i = file.find('/test/')
-    if file.startswith('/') and i >= 0:
-        file = file[i + 1:]
-    print(prefix + file + ': ' + name)
-PYEOF
-}
-
-# _q_run <dir> <json> <out> <prefix> <runner...>: run the runner in <dir>, its
-# output in <out>, with no test clock and with the json reporter writing
-# <json>, as a process group of its own, killed whole once it outlives Q_BOUND.
-# Sets Q_RUN_STATUS, its exit status; Q_RUN_DNF, 1 where it was killed; and
-# Q_RUN_IN, the tests it was in, read before the kill, since a runner told to
-# stop records each test it is in as done, flutter test's as an error "did not
-# complete".
-_q_run() {
-    local dir="$1" json="$2" out="$3" prefix="$4"
-    shift 4
-    rm -f "$json"
-    ( cd "$dir" && exec perl -e 'setpgrp(0, 0); exec @ARGV or die "exec: $!\n"' \
-        "$@" --ignore-timeouts --file-reporter "json:$json" ) > "$out" 2>&1 &
-    local pid=$! waited=0
-    Q_RUN_DNF=0
-    Q_RUN_IN=""
-    while kill -0 "$pid" 2>/dev/null; do
-        if [ "$waited" -ge "$Q_BOUND" ]; then
-            Q_RUN_DNF=1
-            Q_RUN_IN=$(_q_names_in_progress "$json" "$prefix") || true
-            kill -TERM -- "-$pid" 2>/dev/null || true
-            sleep 10
-            kill -KILL -- "-$pid" 2>/dev/null || true
-            break
-        fi
-        sleep 5
-        waited=$((waited + 5))
-    done
-    wait "$pid" 2>/dev/null && Q_RUN_STATUS=0 || Q_RUN_STATUS=$?
-}
-
-# _q_report_dnf <runner>: the runner _q_run last ran, killed by the watchdog,
-# each test it was in reported "did not finish" and counted as a failure.
-_q_report_dnf() {
-    local names="$Q_RUN_IN"
-    if [ -z "$names" ]; then
-        echo "  FAIL: $1 did not finish within $Q_BOUND s, in no test the json reporter recorded as started"
-        FAIL=$((FAIL + 1))
-        return
-    fi
-    while IFS= read -r t; do
-        [ -z "$t" ] && continue
-        echo "  FAIL: did not finish within $Q_BOUND s: $t"
-        FAIL=$((FAIL + 1))
-    done <<< "$names"
-}
-
 Q_DNF_DART=0
 Q_DNF_FLUTTER=0
 if _section QD; then
@@ -8192,6 +8214,7 @@ Q_DNF_DART=$Q_RUN_DNF
 DART_TREE_RESULT=$(cat "$Q_RAW_DART" 2>/dev/null) || DART_TREE_RESULT=""
 if [ "$Q_DNF_DART" = 1 ]; then
     _q_report_dnf "dart test"
+    FAIL=$((FAIL + Q_DNF_COUNT))
 fi
 else
     DART_TREE_RESULT=""
@@ -8237,6 +8260,7 @@ else
     MA_RESULT=$(cat "$Q_RAW_FLUTTER" 2>/dev/null) || MA_RESULT=""
     if [ "$Q_DNF_FLUTTER" = 1 ]; then
         _q_report_dnf "flutter test"
+        FAIL=$((FAIL + Q_DNF_COUNT))
     fi
     MA_CLEAN=$(printf '%s' "$MA_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
 
@@ -8341,6 +8365,98 @@ fi
 echo ""
 
 fi  # Section Q
+
+if _section NET; then
+# =============================================================================
+# Section NET: networking's own tests (GNA)
+# =============================================================================
+#
+# networking/ is GNA's code, three packages each with its own tests, which the
+# suite did not run until 2026-11-03 (Code #22): the Flutter package in
+# networking/ by `flutter test`; the glue in networking/glue by `flutter test`,
+# since it depends on the Flutter package and has flutter_test and no
+# package:test, so `dart test` refuses it; and the pure-Dart core in
+# networking/core by `dart test`.  Each runs from its own directory, as
+# networking/README.md says.  The conventions are Section Q's: each runner's
+# raw output kept in /Users/udi/Grassroots/tmp/ (suite_net_flutter.txt,
+# suite_net_glue.txt, suite_net_core.txt), each failing test printed as a FAIL
+# line "networking/<package>/test/<file>: <test name>" and counted, the passed
+# count added to the totals, a missing runner a hard failure, and a runner that
+# exits non-zero naming no failing test a hard failure, since it did not run its
+# tests.  The section has no known-red list: a red test fails it.
+echo "=== Section NET: networking's own tests (GNA) ==="
+echo ""
+
+NET_RAW_DIR="/Users/udi/Grassroots/tmp"
+mkdir -p "$NET_RAW_DIR" 2>/dev/null || true
+NET_PASSED=0
+NET_FAILED=0
+
+# _net_run <name> <directory under networking/> <runner>: runs the runner's
+# tests in that directory and adds to NET_PASSED and NET_FAILED.
+_net_run() {
+    local name="$1" sub="$2" runner="$3"
+    local dir="$GLP_DIR/networking${sub:+/$sub}"
+    local rel="networking${sub:+/$sub}"
+    local raw="$NET_RAW_DIR/suite_net_$name.txt"
+    local result status clean passed fails dnf
+    if ! command -v "$runner" >/dev/null 2>&1; then
+        echo "  FAIL: $runner is not on PATH, so $rel/test/ cannot run"
+        echo "$runner is not on PATH, so $rel/test/ did not run" > "$raw" 2>/dev/null \
+            || echo "  ($runner test's output could not be written to $raw)"
+        NET_FAILED=$((NET_FAILED + 1))
+        return
+    fi
+    # Under the watchdog, as Section Q's runners are: no test clock, and a run
+    # not finished within Q_BOUND reported by the tests it was in.
+    _q_run "$dir" "$NET_RAW_DIR/suite_net_$name.json" "$raw" "$rel/" "$runner" test
+    status=$Q_RUN_STATUS
+    dnf=$Q_RUN_DNF
+    result=$(cat "$raw" 2>/dev/null) || result=""
+    if [ "$dnf" = 1 ]; then
+        _q_report_dnf "$runner test in $rel"
+        NET_FAILED=$((NET_FAILED + Q_DNF_COUNT))
+    fi
+    clean=$(printf '%s' "$result" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
+    passed=$(printf '%s' "$clean" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
+    passed=${passed:-0}
+    # `flutter test` prints absolute paths and `dart test` package-relative
+    # ones; both are normalised to the path from the repository root.
+    fails=$(printf '%s' "$clean" \
+        | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
+        | sed 's/ \[E\]$//' \
+        | sed "s|^.*/$rel/test/|$rel/test/|; s|^test/|$rel/test/|" \
+        | { if [ "$dnf" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
+        | sort -u) || true
+    if [ "$status" -ne 0 ] && [ -z "$fails" ] && [ "$dnf" = 0 ]; then
+        echo "  FAIL: $runner test exited $status in $rel naming no failing test, so $rel/test/ did not run"
+        printf '%s\n' "$clean" | tail -5 | sed 's/^/        /'
+        NET_FAILED=$((NET_FAILED + 1))
+    fi
+    if [ -n "$fails" ]; then
+        while IFS= read -r failure; do
+            [ -z "$failure" ] && continue
+            echo "  FAIL: $failure"
+            NET_FAILED=$((NET_FAILED + 1))
+        done <<< "$fails"
+    fi
+    echo "  $rel: $passed passed ($runner test; output in $raw)"
+    NET_PASSED=$((NET_PASSED + passed))
+}
+
+_net_run flutter "" flutter
+_net_run glue glue flutter
+_net_run core core dart
+
+PASS=$((PASS + NET_PASSED))
+FAIL=$((FAIL + NET_FAILED))
+if [ $NET_FAILED -eq 0 ]; then
+    echo "  PASS: All $NET_PASSED networking tests passed"
+fi
+
+echo ""
+
+fi  # Section NET
 
 # =============================================================================
 # SUMMARY

@@ -62,6 +62,18 @@ class MadContext {
   /// Optional callback for message delivery (set by coordinator)
   MessageDeliveryCallback? onMessageReady;
 
+  /// The seam's resolution of a destination to the one agent it names, set
+  /// by a simulation's binding: "a destination, in a global name or in a
+  /// message, is a key or a readable name standing for one, and the seam
+  /// resolves both to the one agent" (IGLP 4f84612, Implementation Notes,
+  /// "Simulation realisation").  [send] resolves the agent of the global name
+  /// and the destination by it before Globalize, so that the link records,
+  /// the message queue and the held-link test each name the agent once,
+  /// however the program named it.  A name it does not resolve is kept as
+  /// the program gave it.  Over a given network it is not set: there the
+  /// destination is the key ([AgentRuntime]).
+  String? Function(String name)? resolveAgent;
+
   /// The agent's networking layer (set at boot). Backs the seam predicates
   /// (IGLP Definition "Seam Predicates"); `sign/3` and `signature/2` sign and
   /// verify under the runtime's person identity, not through the layer.
@@ -1602,6 +1614,13 @@ class MadContext {
   /// 1. Globalizes term T for remote agent Q
   /// 2. Adds message `(G := T↑, Q)` to M_p — content sent directly
   void send(Term term, bool isWriter, String gnAgent, int gnIndex, String destAgent) {
+    // The global name's agent and the destination, each a key or a readable
+    // name standing for one, resolved to the one agent ([resolveAgent]).
+    final resolve = resolveAgent;
+    if (resolve != null) {
+      gnAgent = resolve(gnAgent) ?? gnAgent;
+      destAgent = resolve(destAgent) ?? destAgent;
+    }
     _trace('[MAD $agentId] send: term=$term, isWriter=$isWriter, gnAgent=$gnAgent, gnIndex=$gnIndex, dest=$destAgent');
 
     // Extract variables from the term for globalization

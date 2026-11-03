@@ -805,6 +805,12 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
   // Back the seam predicates (IGLP Definition Seam Predicates).
   ctx.network = network;
 
+  // A destination, in a global name or in a message, is a key or a readable
+  // name standing for one, and the seam resolves both to the one agent (IGLP
+  // 4f84612, Implementation Notes, "Simulation realisation"): here by the
+  // directory, to the agent's id, before the Send records anything.
+  ctx.resolveAgent = directory.agentNamed;
+
   // Outgoing: ctx.onMessageReady(destId, msg) → network.send.
   ctx.onMessageReady = (destId, msg) {
     final pk = directory.pkOf(destId);

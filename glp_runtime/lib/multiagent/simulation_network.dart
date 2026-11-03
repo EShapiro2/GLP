@@ -27,10 +27,13 @@ import 'glp_network.dart';
 
 /// A bidirectional symbolic-identifier ⇄ public-key directory.
 ///
-/// Global names and GLP programs keep symbolic identifiers; the directory
-/// resolves them to keys at the seam (IGLP, "Simulation realisation": "agent
-/// identifiers in global names remain symbolic and are resolved to keys at the
-/// seam"; Remark "Agent Names").
+/// An agent is its public key, and a readable name is a variable standing for
+/// one (IGLP, Remark "Agent Names"); "a destination, in a global name or in a
+/// message, is a key or a readable name standing for one, and the seam
+/// resolves both to the one agent" (IGLP 4f84612, Implementation Notes,
+/// "Simulation realisation").  The directory holds each agent of the
+/// simulation by its readable name, its id, and its key, and resolves either
+/// to the other ([agentNamed], [pkOf], [idOf]).
 class NetworkDirectory {
   final Map<String, PubKey> _idToPk = {};
   final Map<String, String> _hexToId = {};
@@ -46,6 +49,19 @@ class NetworkDirectory {
 
   /// The symbolic id for public key [pk], or null if unknown.
   String? idOf(PubKey pk) => _hexToId[pk.hex];
+
+  /// The one agent a destination [name] names, by its symbolic id, or null
+  /// where it names none: [name] is the agent's readable name or its key, 64
+  /// hex characters as self_key/1 answers it.  "A readable name stands for a
+  /// key (Remark Agent Names), so a destination, in a global name or in a
+  /// message, is a key or a readable name standing for one, and the seam
+  /// resolves both to the one agent" (IGLP 4f84612, Implementation Notes,
+  /// "Simulation realisation").
+  String? agentNamed(String name) {
+    if (_idToPk.containsKey(name)) return name;
+    if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(name)) return null;
+    return _hexToId[name.toLowerCase()];
+  }
 
   /// All registered symbolic ids.
   Iterable<String> get ids => _idToPk.keys;
