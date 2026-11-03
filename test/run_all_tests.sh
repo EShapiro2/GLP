@@ -6453,7 +6453,7 @@ check_not "SG spm no failed play" "→ failed" "$sg_spm"
 # person) and loads as text, which the super-app does not install.  Each
 # mini-app is the instance of the root's entry template miniapp/4 at its own
 # type, activated at the template's opaque instance, and each person of a
-# mini-app is its own scripted person, the second template miniapp_person/4's
+# mini-app is its own scripted person, the second template miniapp_person/5's
 # instance, the plays holding every screen at Opaque (GSG 2026-10-13 10:29
 # and 18:52 UTC).  The
 # artefacts are written in the session that runs the plays: a certificate is
