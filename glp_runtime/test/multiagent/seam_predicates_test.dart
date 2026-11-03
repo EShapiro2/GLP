@@ -491,6 +491,28 @@ go :- declare(place(home, 100, _)), remove(place(home)).
       expect(network.removed, ['home']);
     });
 
+    test("a place's name reaches the layer as the constant's printed form",
+        () async {
+      // IGLP 0e1c9e0, Implementation Notes, "The contract": "The runtime
+      // gives the layer a place's name, a constant, as its printed form";
+      // GLP-Spec appendix-guards: place(Constant, Number,
+      // Stream(PlaceEvent)?).  Until 2026-11-03 a number aborted at run time.
+      final out = <String>[];
+      final network = _SeamNetwork();
+      final engine = _engine(out, network);
+      engine.loadSource('''
+procedure go.
+go :- declare(place(7, 100, _)), declare(place('7', 50, _)),
+    remove(place(7)), remove(place('7')).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue);
+      expect(network.declared, [('7', 100.0), ("'7'", 50.0)],
+          reason: 'declare(place(7, 100, E)) reaches declarePlace with "7"; '
+              "'7' is another constant, and another place");
+      expect(network.removed, ['7', "'7'"]);
+    });
+
     test("declare(trust(U, L)) sets each underlay's level at the layer", () async {
       final out = <String>[];
       final network = _SeamNetwork();

@@ -1451,12 +1451,20 @@ BodyKernelResult _declareTrust(GlpRuntime rt, List<Term> a) {
       who, what, () => seam.network.setTrustLevel(underlay, level));
 }
 
+/// The name the layer is given for the place a ground constant [arg] names: the constant's printed form, as [formatTerm] prints it, `home` for home and `7` for 7 (IGLP 0e1c9e0, Implementation Notes, "The contract": "The runtime gives the layer a place's name, a constant, as its printed form"; GLP-Spec appendix-guards, "Networking seam": `place(Constant, Number, Stream(PlaceEvent)?)`).  The printed form reads back as the constant, so two constants are two places, 7 and '7' among them.  Null where [arg] is not a ground constant.  Until 2026-11-03 the name was taken only from an atom or a string, and declare(place(7, 100, E)) checked and then aborted.
+String? _placeName(GlpRuntime rt, Object? arg) {
+  final v = _deref(rt, arg);
+  if (v is ConstTerm) return formatTerm(v);
+  if (v is String) return constantSource(v);
+  return null;
+}
+
 /// `declare(place(P, R, E))`: declare place P of radius R about this agent's location at the time of the call, and grow this agent's own event stream for P from E's writer.  The stream is fed serializer-fashion and closes only on `remove(place(P))` or a superseding declaration (IGLP, madglp-spec.tex, after Definition "Seam Predicates").
 ///
 /// Where no layer is bound, E is assigned `[unobservable | E']` and nothing more is reported ("One interface", 6ba0329): no event and no `observable` ever follows.  The declaration stands in the runtime's bookkeeping ([GlpRuntime.placeStreams]) as it does with a layer, so its removal or a further declaration closes the stream, E' assigned `[]` (GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
 BodyKernelResult _declarePlace(GlpRuntime rt, List<Term> a) {
   const who = "'_declare'/1", what = 'place(P, R, E)';
-  final place = _groundString(rt, a[0]);
+  final place = _placeName(rt, a[0]);
   if (place == null) {
     return kernelAbort('[ABORT] $who: $what: the place (P) must be a ground '
         'constant, got ${_deref(rt, a[0])}');
@@ -1498,7 +1506,7 @@ BodyKernelResult _removeRendezvous(GlpRuntime rt, List<Term> a) {
 /// `remove(place(P))`: end the declaration of place P, closing its stream; does nothing where P is not declared.  Where no layer is bound it closes the stream all the same, the runtime's bookkeeping, and tells no layer ("One interface", 6ba0329; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
 BodyKernelResult _removePlace(GlpRuntime rt, List<Term> a) {
   const who = "'_remove'/1", what = 'place(P)';
-  final place = _groundString(rt, a[0]);
+  final place = _placeName(rt, a[0]);
   if (place == null) {
     return kernelAbort('[ABORT] $who: $what: the place (P) must be a ground '
         'constant, got ${_deref(rt, a[0])}');
