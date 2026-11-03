@@ -9,6 +9,7 @@
 /// with the goal p(a, Y), r(Y?).  The writer mgu is {X := a, Y := f(X?)}: the body receives X's value, q(a), and Y's value with X's applied, f(a), is communicated to r.  q receives a and r receives f(a), q and r at one agent, and at two.
 ///
 /// At two, the value alice sends bob on the link of Y? is f(a), in one message, and no later delivery carries a: the value of a Send is $T^\uparrow$ (IGLP 405a2d8, madglp-spec.tex, Definition "madGLP Send Transaction", Reader case), and T here is f(a).  Bob applies it once, removes the entry and acknowledges; the acknowledgement releases the pending value at alice, closing the link; and a repeat of the value is dropped (the same Definition, Reader and Acknowledgement cases; Remark "Message Delivery").
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -177,10 +178,10 @@ void main() {
       config.rootSelfGlpPath = _rootSelf;
       await manager.boot(config);
       manager.start();
-      await manager.settle(timeout: const Duration(seconds: 30));
+      await manager.settle();
       expect(manager.faults, isEmpty);
       expect(manager.outputOf('alice').toSet(), {'q(a)', 'r(f(a))'});
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    }, timeout: Timeout.none);
 
     test('q at alice and r at bob: q receives a and r receives f(a)',
         () async {
@@ -188,11 +189,11 @@ void main() {
       config.rootSelfGlpPath = _rootSelf;
       await manager.boot(config);
       manager.start();
-      await manager.settle(timeout: const Duration(seconds: 30));
+      await manager.settle();
       expect(manager.faults, isEmpty);
       expect(manager.outputOf('alice'), ['q(a)']);
       expect(manager.outputOf('bob'), ['r(f(a))']);
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    }, timeout: Timeout.none);
 
     test('a assigned at bob, q at alice and r at bob: q receives a and r '
         'receives f(a)', () async {
@@ -200,10 +201,10 @@ void main() {
       config.rootSelfGlpPath = _rootSelf;
       await manager.boot(config);
       manager.start();
-      await manager.settle(timeout: const Duration(seconds: 30));
+      await manager.settle();
       expect(manager.faults, isEmpty);
       expect(manager.outputOf('alice'), ['q(a)']);
       expect(manager.outputOf('bob'), ['r(f(a))']);
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    }, timeout: Timeout.none);
   });
 }

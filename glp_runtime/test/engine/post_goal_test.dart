@@ -15,6 +15,7 @@
 /// [GlpEngine.runGoal], which checked, handed the caller no writer.
 ///
 /// Fixtures: programs/tests/post_goal/.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -246,6 +247,6 @@ ${File('$_dir/integer_id_agent.glp').readAsStringSync()}''');
               s.contains('not well-typed');
         }, 'the agent reports the refused goal, so boot fails fast')),
       );
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
   });
 }

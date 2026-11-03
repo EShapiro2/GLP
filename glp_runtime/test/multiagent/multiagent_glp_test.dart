@@ -9,6 +9,9 @@
 /// Original IRMA tests: lib/multiagent/archive-irma-2026-01-30/tests/
 /// Converted GLP programs: programs/tests/multiagent/
 
+@Timeout.none
+library;
+
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
@@ -90,7 +93,7 @@ void main() {
       // loading their programs: "coop stream" failed in the suite on main
       // 94aa2bee, and under five concurrent runs its boot alone took six
       // seconds where alone it takes under one (IGLP-coop).
-      await manager.settle(timeout: null);
+      await manager.settle();
 
       // Termination is external — shutdown happens in tearDown
     }

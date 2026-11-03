@@ -13,6 +13,7 @@
 /// the boot harness set (isolate_manager.dart), so a level an agent declared
 /// governed nothing.  These tests run the declaration from GLP in an agent's
 /// isolate and read the level the router then holds.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -62,5 +63,5 @@ void main() {
         reason: 'alice declared nothing: the boot level stands');
     expect(manager.trustLevelOf('alice', ProximityUnderlay.lan),
         TrustLevel.closed);
-  }, timeout: Timeout(Duration(seconds: 60)));
+  }, timeout: Timeout.none);
 }

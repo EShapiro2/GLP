@@ -312,6 +312,39 @@ class IsolateManager {
   List<String> outputOf(String agentId) =>
       List.unmodifiable(_outputs[agentId] ?? const []);
 
+  /// Those waiting in [outputWhere]: the agent, the test, and the completer.
+  final List<(String, bool Function(String), Completer<String>)> _lineWaits =
+      [];
+
+  /// The first line [agentId] sends to its person that [test] accepts: one
+  /// already sent, or the next to arrive.  It fails on an agent's fault, as
+  /// [settle] does, and waits on no clock: over given layers, where [settle]
+  /// sees no message in flight (IGLP, "Event-driven execution": "Agents do not
+  /// detect or report termination"), the line is the event a harness waits
+  /// for.
+  Future<String> outputWhere(String agentId, bool Function(String) test) {
+    for (final l in _outputs[agentId] ?? const <String>[]) {
+      if (test(l)) return Future.value(l);
+    }
+    if (_faults.isNotEmpty) {
+      return Future.error(
+          StateError('an agent faulted before the line: ${_faults.first}'));
+    }
+    final c = Completer<String>();
+    _lineWaits.add((agentId, test, c));
+    return c.future;
+  }
+
+  void _noteOutput(String agentId, String line) {
+    _outputs.putIfAbsent(agentId, () => []).add(line);
+    _lineWaits.removeWhere((w) {
+      final (id, test, c) = w;
+      if (id != agentId || !test(line)) return false;
+      c.complete(line);
+      return true;
+    });
+  }
+
   /// Whether every agent has finished every unit of work handed to it.
   ///
   /// A message parked in the router (a pair under [cut] or [holdDelivery]) was
@@ -343,21 +376,22 @@ class IsolateManager {
   /// This is the condition the plays actually wait for. It replaces a fixed
   /// wall-clock delay, which is a guess: too short and the play is judged before
   /// it has run, too long and every run pays for the worst machine. [timeout] is
-  /// a backstop for a system that never settles — it throws rather than passing
-  /// quietly, since a play that cannot settle is a failure and not a slow pass.
-  /// A null [timeout] waits for quiescence and for nothing else: every way the
-  /// wait can end without it is an event --- an agent's fault, its isolate's
-  /// uncaught error or exit owing work --- so a caller whose verdict must not
-  /// depend on how loaded the machine is passes null (IGLP-coop, 2026-11-02:
-  /// the plays of multiagent_glp_test.dart, under load, outran a wall clock
-  /// while their agents were still being booted).
+  /// a backstop a caller may give for a system that never settles, which then
+  /// throws rather than passing quietly.  Given none, the default, settle waits
+  /// for quiescence and for nothing else: every way the wait can end without
+  /// it is an event --- an agent's fault, its isolate's uncaught error or exit
+  /// owing work --- so its verdict does not depend on how loaded the machine
+  /// is (IGLP-coop, 2026-11-02: under load the tests' plays outran their wall
+  /// clocks while their agents were still being booted).  A run that never
+  /// settles is the suite's watchdog's to report (test/run_all_tests.sh,
+  /// Section Q).
   ///
   /// Over given layers it waits for the work the manager handed out, each
   /// agent's [Start]: the layers deliver the agents' traffic themselves, and a
   /// host does not see a message in flight on a real network (IGLP,
   /// "Event-driven execution": "Agents do not detect or report termination").
   Future<void> settle(
-      {Duration? timeout = const Duration(seconds: 30)}) async {
+      {Duration? timeout}) async {
     if (_faults.isNotEmpty) {
       throw StateError('an agent faulted before settling: ${_faults.first}');
     }
@@ -394,6 +428,10 @@ class IsolateManager {
       s.completeError(StateError('agent $agentId faulted: $error'));
     }
     _failBoot(StateError('agent $agentId faulted: $error'));
+    for (final (_, _, c) in _lineWaits) {
+      c.completeError(StateError('agent $agentId faulted: $error'));
+    }
+    _lineWaits.clear();
   }
 
   /// Fail a pending [boot] with [error].
@@ -618,7 +656,7 @@ class IsolateManager {
       _recordFault(msg.agentId, msg.error);
 
     } else if (msg is AgentOutput) {
-      _outputs.putIfAbsent(msg.agentId, () => []).add(msg.line);
+      _noteOutput(msg.agentId, msg.line);
 
     } else if (msg is RouterSend || msg is RouterTrust ||
         msg is RouterKnownPeer) {

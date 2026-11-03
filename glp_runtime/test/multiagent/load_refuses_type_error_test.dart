@@ -7,6 +7,7 @@
 /// — `multiagent/isolate_manager.dart` and `multiagent/agent_runtime.dart` — set
 /// it off, so every agent isolate ran its program unchecked. The flag is gone;
 /// these tests hold the refusal on that path.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -95,7 +96,7 @@ void main() {
               s.contains('Type checking failed');
         }, 'the agent reports the type-check failure, so boot fails fast')),
       );
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
 
     test('boot succeeds on the corrected program', () async {
       final config = BootLoader().load(_bootClause + _wellTyped);
@@ -104,6 +105,6 @@ void main() {
       await manager.boot(config);
       manager.start();
       await manager.settle();
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
   });
 }

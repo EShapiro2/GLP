@@ -12,6 +12,7 @@
 /// - On the iOS Simulator, an iPhone 16e, 390 by 844 points at 3 pixels a point: `integration_test/apps_screens_test.dart` plays this scenario with this file's [appsScreens], one person's phone on the screen at a time, and at each screen asks the host to take the simulator's screenshot, which the host frames as the phone and writes to `programs/apps/<app>/screens/`, and CSSN's to `programs/cssn/figures/` (`tool/sim_screens.sh`, `tool/sim_shot.py`).  Those are the PNG files of GAI's figures and of CSSN's Figure 3.  From `glp_multiagent/`:
 ///
 ///     bash tool/sim_screens.sh
+@Timeout.none
 library;
 
 import 'dart:convert';
@@ -962,7 +963,7 @@ void appsScreens(Screens screens) {
     run.plain(bob);
     await run.shoot(bob, 'gkk-c-bob-contacts.png');
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GSG\'s app on two phones: Bob asked to be Alice\'s friend; Alice\'s '
@@ -1015,7 +1016,7 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gsg-c-alice-ended.png');
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GSN\'s app on two phones: Bob\'s Friends with Alice\'s message, Bob '
@@ -1175,7 +1176,7 @@ void appsScreens(Screens screens) {
     expect(alice.atoms, contains('closed($friends)'));
 
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GC\'s app on two phones: Alice\'s Coins tab once she mints two '
@@ -1271,7 +1272,7 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gc-d-alice-pay.png');
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GB\'s app on three phones: Alice mints bonds maturing at day 10; Bob '
@@ -1396,7 +1397,7 @@ void appsScreens(Screens screens) {
     expect(carol.atoms.where((x) => x == 'coin(alice)'), hasLength(2));
     expect(alice.atoms.where((x) => x == 'coin(alice)'), hasLength(2));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'The village market of GC\'s paper on GC\'s app, six villagers at their '
@@ -1559,7 +1560,7 @@ void appsScreens(Screens screens) {
       await run.shoot(v[p]!, 'gc-village-$p.png');
     }
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 30)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GSNP\'s app on five phones, the play of GAI\'s GSNP figure, compiled '
@@ -1668,7 +1669,7 @@ void appsScreens(Screens screens) {
     run.plain(fay);
     await run.shoot(fay, 'gsnp-c-fay-chat.png');
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GSNP\'s app, the play of GAI\'s Figure "The GAI app" on the full '
@@ -1805,7 +1806,7 @@ void appsScreens(Screens screens) {
     expect(bob.questions('approval'), isEmpty);
     expect(run.scriptedAtoms('alf'), contains('retired'));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GAI\'s app, compiled from GAI\'s contract and pragmas: the example of '
@@ -1880,7 +1881,7 @@ void appsScreens(Screens screens) {
     expect(bob.questions('approval'), isEmpty);
     run.plain(alice, allow: const {'Peer'});
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GSG and GKK, which it extends (programs/gff/GFF.txt at GLP 0a3d7997): four tabs, Contacts, Friends, Posts and Feeds, "Posts: Alice's feed." (GFF.txt at GLP 56270cb6) and "Feeds: the agents Alice follows."; the buttons Post, Follow and Unfollow, GFF's "[Post] <item>", "[Follow]" and "[Unfollow]".  Friends follow each other by an act each machine takes, friends_follow; a person follows anyone else by one step, Follow, follow(Me, B), and the machine asks every friend and follows through a friend, through_friend and ask, unguarded.  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md), each act a tap or a picked or typed field, its screens those of GFF #1 Cowork's tasks of 2026-10-27 18:00, 18:55 and 20:25 UTC, written to programs/apps/gff/screens/gff-app-<n>.png.
   testWidgets(
@@ -2062,7 +2063,7 @@ void appsScreens(Screens screens) {
       expect(p.atoms.where((x) => x.contains('Fourth item')), isEmpty, reason: p.name);
     }
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 30)));
+  }, timeout: Timeout.none);
 
   // CSSN's app is compiled from its contract and its pragmas, CSSN.txt and those of the contracts it extends, GKK, GSG, GSN and GnW (programs/cssn/CSSN.txt; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, "Children: the children Alice is parenting."; each button the label in brackets, Enter, Child acquaint, Child befriend, Child adult befriend, Of age, Child join, Child unfriend, Child leave, Child close and Parent unfriend; each question the sentence of the role asked, "Alice asks that Carol and your child Dave befriend."; and the answers yes and no.  Enter is a meeting schema, enter(p?, r?): a parent types the child's key into its field, CSSN's "<child>", and the request's hello asks the child's phone the question of the child's role, "Alice asks to be your parent." (Section 5.4, "The compilation").  The scenario is CSSN's Figure 3's (CSSN, Section 4.6, "In the Grassroots App").
   testWidgets(
@@ -2192,7 +2193,7 @@ void appsScreens(Screens screens) {
     expect(run.scriptedAtoms('carol'), isNot(contains('friend(dave)')));
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Bob at his phone: '
@@ -2293,7 +2294,7 @@ void appsScreens(Screens screens) {
     expect(run.scriptedAtoms('dave'), unorderedEquals(
         ['identity', 'friend(bob)', 'knows(bob)', 'knows(carol)']));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Carol at her '
@@ -2381,5 +2382,5 @@ void appsScreens(Screens screens) {
     expect(run.control(carol, 'row:dave'), findsNothing);
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 }

@@ -15,6 +15,7 @@
 /// as an uncaught error and not boot's caller.  The multiagent plays wait on
 /// boot and on quiescence and on no clock (multiagent_glp_test.dart), which
 /// is sound only when every way a boot can end is an event (IGLP-coop).
+@Timeout.none
 library;
 
 import 'dart:io';

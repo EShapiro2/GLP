@@ -16,6 +16,7 @@
 /// port his send to dave follows them on, so both are in force before either
 /// call is routed.  Bob contacts neither caller, so neither call is answered
 /// for his having contacted its sender.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -71,5 +72,5 @@ void main() {
     expect(manager.outputOf('bob'), ['alice'],
         reason: 'alice, whom bob declared, is answered; carol, whom he did '
             'not, is not');
-  }, timeout: Timeout(Duration(seconds: 60)));
+  }, timeout: Timeout.none);
 }

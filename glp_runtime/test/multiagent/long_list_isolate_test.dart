@@ -11,6 +11,7 @@
 /// thousands of elements overflowed the Dart stack before it left the sender
 /// (Integration #4 Code, 2026-10-02 19:05 UTC, E4; GLP #3 Cowork, 2026-10-02
 /// 20:58 UTC, "19:05" Q3).
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -111,11 +112,11 @@ void main() {
       config.rootSelfGlpPath = _rootSelf;
       await manager.boot(config);
       manager.start();
-      await manager.settle(timeout: const Duration(seconds: 120));
+      await manager.settle();
 
       expect(manager.faults, isEmpty);
       expect(manager.outputOf('bob'), ['ok'],
           reason: "bob's check met 50,000, 49,999, ..., 1 and then []");
-    }, timeout: const Timeout(Duration(seconds: 180)));
+    }, timeout: Timeout.none);
   });
 }

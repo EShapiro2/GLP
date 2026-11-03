@@ -19,6 +19,9 @@
 /// 6. Alice receives assignment, binds her Resp writer
 /// 7. Test verifies Alice's Resp? == "pong"
 
+@Timeout.none
+library;
+
 import 'dart:async';
 import 'dart:isolate';
 import 'package:test/test.dart';
@@ -298,20 +301,33 @@ void main() {
         }
       });
 
+      // An isolate's uncaught error and its exit reach these ports, not the
+      // router: each ends the wait, as a Done does, so the wait is on events
+      // alone and on no clock.  Until 2026-11-02 it was a ten-second timeout,
+      // whose verdict depended on how loaded the machine was (IGLP-coop).
+      final isolateEvents = ReceivePort();
+      isolateEvents.listen((e) {
+        if (completer.isCompleted) return;
+        completer.completeError(StateError(e is List
+            ? 'an agent isolate threw: ${e.first}'
+            : 'an agent isolate exited before both agents reported'));
+      });
+
       // Spawn isolates
       print('[MAIN] Spawning Alice isolate');
-      await Isolate.spawn(aliceIsolate, mainReceivePort.sendPort);
+      await Isolate.spawn(aliceIsolate, mainReceivePort.sendPort,
+          onError: isolateEvents.sendPort, onExit: isolateEvents.sendPort);
 
       print('[MAIN] Spawning Bob isolate');
-      await Isolate.spawn(bobIsolate, mainReceivePort.sendPort);
+      await Isolate.spawn(bobIsolate, mainReceivePort.sendPort,
+          onError: isolateEvents.sendPort, onExit: isolateEvents.sendPort);
 
-      // Wait for completion with timeout
-      await completer.future.timeout(
-        Duration(seconds: 10),
-        onTimeout: () {
-          fail('Test timed out waiting for agents to complete');
-        },
-      );
+      // Wait until both agents report.
+      try {
+        await completer.future;
+      } finally {
+        isolateEvents.close();
+      }
 
       // Verify results
       expect(bobResult?.success, isTrue, reason: 'Bob should complete successfully');

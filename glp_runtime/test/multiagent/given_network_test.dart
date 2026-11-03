@@ -15,6 +15,7 @@
 /// crosses back.  The networks are fakes that carry payloads between keys:
 /// `AgentRuntime`'s in one isolate, `IsolateManager`'s through a hub, each
 /// opened in its agent's isolate.
+@Timeout.none
 library;
 
 import 'dart:async';
@@ -258,20 +259,43 @@ AgentLayer _layerOver(_KeyPair keyPair, SendPort hub) => AgentLayer(
       open: () async => _PortNetwork._(keyPair.pub, hub),
     );
 
-/// The first line [lines] yields that [test] accepts, polling until
-/// [timeout].
-Future<String> _eventually(Iterable<String> Function() lines,
-    bool Function(String) test,
-    {Duration timeout = const Duration(seconds: 60)}) async {
-  final deadline = DateTime.now().add(timeout);
-  while (true) {
-    for (final l in lines()) {
-      if (test(l)) return l;
+/// An agent's transcript, AgentRuntime.onOutput's lines, which a test waits
+/// on line by line: on the event, a line's arrival, and on no clock.  Until
+/// 2026-11-02 a test polled the lines every 50 ms until a deadline of sixty
+/// seconds, so its verdict depended on how loaded the machine was (IGLP-coop).
+/// A line the agent reports as an error, `[ERROR] ...`, fails every wait.
+class _Lines extends Iterable<String> {
+  final List<String> _lines = [];
+  final List<(bool Function(String), Completer<String>)> _waits = [];
+
+  @override
+  Iterator<String> get iterator => _lines.iterator;
+
+  void add(String line) {
+    _lines.add(line);
+    if (line.startsWith('[ERROR]')) {
+      for (final (_, c) in _waits) {
+        c.completeError(StateError('the agent reported an error: $line'));
+      }
+      _waits.clear();
+      return;
     }
-    if (DateTime.now().isAfter(deadline)) {
-      throw TimeoutException('no line came; the lines: ${lines().join(' | ')}');
+    _waits.removeWhere((w) {
+      final (test, c) = w;
+      if (!test(line)) return false;
+      c.complete(line);
+      return true;
+    });
+  }
+
+  /// The first line [test] accepts: one already written, or the next.
+  Future<String> lineWhere(bool Function(String) test) {
+    for (final l in _lines) {
+      if (test(l)) return Future.value(l);
     }
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    final c = Completer<String>();
+    _waits.add((test, c));
+    return c.future;
   }
 }
 
@@ -320,7 +344,7 @@ void main() {
         keyPair: calleeKp,
         network: _WireNetwork(calleeKp, wire),
       );
-      final out = <String, List<String>>{'caller': [], 'callee': []};
+      final out = {'caller': _Lines(), 'callee': _Lines()};
       caller.onOutput = out['caller']!.add;
       callee.onOutput = out['callee']!.add;
       // A given network delivers its own messages: the coordinator's channel
@@ -338,14 +362,14 @@ void main() {
 
       // The cold call crosses: the callee's program receives it on its
       // network input, addressed to its own name, its key.
-      final called = await _eventually(
-          () => out['callee']!, (l) => l.startsWith('< called('));
+      final called =
+          await out['callee']!.lineWhere((l) => l.startsWith('< called('));
       expect(called, contains(calleeKp.pub.hex));
 
       // The assignment crosses back: the caller's writer, assigned by the
       // callee, reaches the caller's program.
-      final answered = await _eventually(
-          () => out['caller']!, (l) => l.startsWith('< answered('));
+      final answered =
+          await out['caller']!.lineWhere((l) => l.startsWith('< answered('));
       expect(answered, contains('forty_two'));
 
       expect(wire.carried, contains('${callerKp.pub.hex} > ${calleeKp.pub.hex}'),
@@ -388,7 +412,7 @@ void main() {
         keyPair: kp,
         network: network,
       );
-      final out = <String>[];
+      final out = _Lines();
       agent.onOutput = out.add;
       await agent.initialize();
       expect(network.declared, ['home']);
@@ -396,8 +420,7 @@ void main() {
       // The layer reports the entry; the run that follows it reduces the
       // goal suspended on the place's stream, with no other event.
       network.onPlaceEvent!('home', PlaceEvent.entered);
-      expect(await _eventually(() => out, (l) => l.startsWith('< ')),
-          '< entered');
+      expect(await out.lineWhere((l) => l.startsWith('< ')), '< entered');
     });
 
     test('the agent\'s key pair is the layer\'s', () {
@@ -499,11 +522,11 @@ $_play''');
       await manager.boot(config);
       manager.start();
 
-      final called = await _eventually(
-          () => manager.outputOf(callee), (l) => l.contains('called('));
+      final called =
+          await manager.outputWhere(callee, (l) => l.contains('called('));
       expect(called, contains(callee));
-      final answered = await _eventually(
-          () => manager.outputOf(caller), (l) => l.contains('answered('));
+      final answered =
+          await manager.outputWhere(caller, (l) => l.contains('answered('));
       expect(answered, contains('forty_two'));
 
       expect(hub.carried, contains('$caller > $callee'),
@@ -511,7 +534,7 @@ $_play''');
       expect(hub.carried, contains('$callee > $caller'),
           reason: 'the assignment left through the callee\'s layer');
       expect(manager.faults, isEmpty);
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: Timeout.none);
 
     test('an agent the manager holds no layer for is refused, and no key is '
         'made up for it', () async {

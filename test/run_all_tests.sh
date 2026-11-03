@@ -8069,10 +8069,115 @@ Q_RAW_DIR="/Users/udi/Grassroots/tmp"
 Q_RAW_DART="$Q_RAW_DIR/suite_q_dart.txt"
 Q_RAW_FLUTTER="$Q_RAW_DIR/suite_q_flutter.txt"
 mkdir -p "$Q_RAW_DIR" 2>/dev/null || true
+
+# The watchdog (Code #22's authorisation, 2026-11-03; IGLP-coop).  A test's
+# verdict does not depend on how loaded the machine is: each runner runs with
+# --ignore-timeouts, so no test has a clock of its own, and the tests that run
+# agents wait on events alone (IsolateManager.boot and settle,
+# glp_multiagent/test/isolate_agents.dart).  Until 2026-11-03 every test had a
+# clock, its own or the runner's thirty seconds, and under load tests failed
+# that were merely slow: in the full suite on main 8ff18057, the night of
+# 2026-11-02, mad_w_clean_test.dart and the GC village test of
+# apps_screens_test.dart failed and each passed alone.  What a clock caught was
+# a run that never ends; the watchdog catches it instead.  A runner still
+# running after GLP_Q_BOUND seconds (three hours unless set) is killed, with
+# every process it started, and each test it was in when killed is reported
+# "did not finish", named by its file and its name as the json reporter
+# recorded it (testStart with no testDone), and counted as a failure.
+Q_BOUND="${GLP_Q_BOUND:-10800}"
+
+# _q_names_in_progress <json> <dir>: the tests the json reporter's file records
+# as started and not done, one "<file>: <test name>" per line, the file as
+# KNOWN_RED carries it, relative to <dir>'s package root with its prefix.
+_q_names_in_progress() {
+    python3 - "$1" "$2" <<'PYEOF'
+import json, sys
+path, prefix = sys.argv[1], sys.argv[2]
+suites, tests, done = {}, {}, set()
+try:
+    lines = open(path).read().splitlines()
+except OSError:
+    lines = []
+for line in lines:
+    try:
+        e = json.loads(line)
+    except ValueError:
+        continue
+    t = e.get('type')
+    if t == 'suite':
+        suites[e['suite']['id']] = e['suite'].get('path') or '?'
+    elif t == 'testStart':
+        tests[e['test']['id']] = (e['test']['suiteID'], e['test']['name'])
+    elif t == 'testDone':
+        done.add(e['testID'])
+for tid, (sid, name) in tests.items():
+    if tid in done:
+        continue
+    file = suites.get(sid, '?')
+    i = file.find('/test/')
+    if file.startswith('/') and i >= 0:
+        file = file[i + 1:]
+    print(prefix + file + ': ' + name)
+PYEOF
+}
+
+# _q_run <dir> <json> <out> <prefix> <runner...>: run the runner in <dir>, its
+# output in <out>, with no test clock and with the json reporter writing
+# <json>, as a process group of its own, killed whole once it outlives Q_BOUND.
+# Sets Q_RUN_STATUS, its exit status; Q_RUN_DNF, 1 where it was killed; and
+# Q_RUN_IN, the tests it was in, read before the kill, since a runner told to
+# stop records each test it is in as done, flutter test's as an error "did not
+# complete".
+_q_run() {
+    local dir="$1" json="$2" out="$3" prefix="$4"
+    shift 4
+    rm -f "$json"
+    ( cd "$dir" && exec perl -e 'setpgrp(0, 0); exec @ARGV or die "exec: $!\n"' \
+        "$@" --ignore-timeouts --file-reporter "json:$json" ) > "$out" 2>&1 &
+    local pid=$! waited=0
+    Q_RUN_DNF=0
+    Q_RUN_IN=""
+    while kill -0 "$pid" 2>/dev/null; do
+        if [ "$waited" -ge "$Q_BOUND" ]; then
+            Q_RUN_DNF=1
+            Q_RUN_IN=$(_q_names_in_progress "$json" "$prefix") || true
+            kill -TERM -- "-$pid" 2>/dev/null || true
+            sleep 10
+            kill -KILL -- "-$pid" 2>/dev/null || true
+            break
+        fi
+        sleep 5
+        waited=$((waited + 5))
+    done
+    wait "$pid" 2>/dev/null && Q_RUN_STATUS=0 || Q_RUN_STATUS=$?
+}
+
+# _q_report_dnf <runner>: the runner _q_run last ran, killed by the watchdog,
+# each test it was in reported "did not finish" and counted as a failure.
+_q_report_dnf() {
+    local names="$Q_RUN_IN"
+    if [ -z "$names" ]; then
+        echo "  FAIL: $1 did not finish within $Q_BOUND s, in no test the json reporter recorded as started"
+        FAIL=$((FAIL + 1))
+        return
+    fi
+    while IFS= read -r t; do
+        [ -z "$t" ] && continue
+        echo "  FAIL: did not finish within $Q_BOUND s: $t"
+        FAIL=$((FAIL + 1))
+    done <<< "$names"
+}
+
+Q_DNF_DART=0
+Q_DNF_FLUTTER=0
 if _section QD; then
-DART_TREE_RESULT=$(cd "$GLP_RUNTIME" && "$DART" test 2>&1) && DART_TREE_STATUS=0 || DART_TREE_STATUS=$?
-printf '%s\n' "$DART_TREE_RESULT" > "$Q_RAW_DART" 2>/dev/null \
-    || echo "  (dart test's output could not be written to $Q_RAW_DART)"
+_q_run "$GLP_RUNTIME" "$Q_RAW_DIR/suite_q_dart.json" "$Q_RAW_DART" "" "$DART" test
+DART_TREE_STATUS=$Q_RUN_STATUS
+Q_DNF_DART=$Q_RUN_DNF
+DART_TREE_RESULT=$(cat "$Q_RAW_DART" 2>/dev/null) || DART_TREE_RESULT=""
+if [ "$Q_DNF_DART" = 1 ]; then
+    _q_report_dnf "dart test"
+fi
 else
     DART_TREE_RESULT=""
     DART_TREE_STATUS=0
@@ -8086,9 +8191,12 @@ DART_TREE_PASSED=${DART_TREE_PASSED:-0}
 
 # Failing tests, one "<file>: <test name>" per line.  grep exits 1 when the
 # tree is fully green, which is the good case, so this is guarded too.
+# A test the watchdog stopped is reported once, above, as one that did not
+# finish, and not again as the runner's error "did not complete".
 DART_TREE_FAILS=$(printf '%s' "$DART_TREE_CLEAN" \
     | grep -oE 'test/[A-Za-z0-9_/]+\.dart: .*\[E\]' \
     | sed 's/ \[E\]$//' \
+    | { if [ "$Q_DNF_DART" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
     | sort -u) || true
 
 # glp_multiagent, the other half of the tree.  It is a Flutter package, so it
@@ -8108,9 +8216,13 @@ elif ! command -v flutter >/dev/null 2>&1; then
     echo "flutter is not on PATH, so glp_multiagent/test/ did not run" > "$Q_RAW_FLUTTER" 2>/dev/null \
         || echo "  (flutter test's output could not be written to $Q_RAW_FLUTTER)"
 else
-    MA_RESULT=$(cd "$GLP_DIR/glp_multiagent" && flutter test 2>&1) && MA_STATUS=0 || MA_STATUS=$?
-    printf '%s\n' "$MA_RESULT" > "$Q_RAW_FLUTTER" 2>/dev/null \
-        || echo "  (flutter test's output could not be written to $Q_RAW_FLUTTER)"
+    _q_run "$GLP_DIR/glp_multiagent" "$Q_RAW_DIR/suite_q_flutter.json" "$Q_RAW_FLUTTER" "glp_multiagent/" flutter test
+    MA_STATUS=$Q_RUN_STATUS
+    Q_DNF_FLUTTER=$Q_RUN_DNF
+    MA_RESULT=$(cat "$Q_RAW_FLUTTER" 2>/dev/null) || MA_RESULT=""
+    if [ "$Q_DNF_FLUTTER" = 1 ]; then
+        _q_report_dnf "flutter test"
+    fi
     MA_CLEAN=$(printf '%s' "$MA_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
 
     MA_PASSED=$(printf '%s' "$MA_CLEAN" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
@@ -8123,6 +8235,7 @@ else
         | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
         | sed 's/ \[E\]$//' \
         | sed 's|^.*/glp_multiagent/test/|glp_multiagent/test/|' \
+        | { if [ "$Q_DNF_FLUTTER" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
         | sort -u) || true
 fi
 
@@ -8135,12 +8248,12 @@ fi
 # `flutter test` still prints partial counts before dying at "Failed to build
 # asset bundle", which scored the tree 744 instead of 804 and still reported
 # ALL TESTS PASSED (worktree against main, 2026-09-16).
-if [ "${DART_TREE_STATUS:-0}" -ne 0 ] && [ -z "$DART_TREE_FAILS" ]; then
+if [ "${DART_TREE_STATUS:-0}" -ne 0 ] && [ -z "$DART_TREE_FAILS" ] && [ "$Q_DNF_DART" = 0 ]; then
     echo "  FAIL: dart test exited $DART_TREE_STATUS naming no failing test, so glp_runtime/test/ did not run"
     printf '%s\n' "$DART_TREE_CLEAN" | tail -5 | sed 's/^/        /'
     FAIL=$((FAIL + 1))
 fi
-if [ "${MA_STATUS:-0}" -ne 0 ] && [ -z "$MA_FAILS" ]; then
+if [ "${MA_STATUS:-0}" -ne 0 ] && [ -z "$MA_FAILS" ] && [ "$Q_DNF_FLUTTER" = 0 ]; then
     echo "  FAIL: flutter test exited $MA_STATUS naming no failing test, so glp_multiagent/test/ did not run"
     printf '%s\n' "$MA_CLEAN" | tail -5 | sed 's/^/        /'
     FAIL=$((FAIL + 1))
@@ -8182,12 +8295,13 @@ fi
 # list.  Leaving it would turn the list into a standing exception that silently
 # covers a future regression in the same test.
 # An entry of the half not run is neither red nor a rot: glp_multiagent's are
-# QF's, the rest QD's.
+# QF's, the rest QD's; nor is an entry of a half the watchdog killed, whose
+# tests after the kill did not run.
 Q_STALE=0
 for known in "${KNOWN_RED[@]}"; do
     case "$known" in
-        glp_multiagent/*) _section QF || continue ;;
-        *)                _section QD || continue ;;
+        glp_multiagent/*) _section QF && [ "$Q_DNF_FLUTTER" = 0 ] || continue ;;
+        *)                _section QD && [ "$Q_DNF_DART" = 0 ] || continue ;;
     esac
     if ! printf '%s\n' "$DART_TREE_FAILS" | grep -qxF "$known"; then
         echo "  FAIL: known-red entry now PASSES — remove it from KNOWN_RED:"
