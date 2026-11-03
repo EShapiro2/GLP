@@ -1344,7 +1344,7 @@ class GrassrootsNetwork {
       _rendezvousServers[pubkeyHex];
 
   /// Declare the rendezvous server holding [pubkey] at [address] (GNA §4.2,
-  /// `putRendezvousServer(pk, address)`, behind `rendezvous_declare/2`): add
+  /// `putRendezvousServer(pk, address)`, behind `declare(rendezvous(P, A))`): add
   /// it to the servers the layer connects to, or, for a key declared before,
   /// replace its address.  A session standing with the server is kept; where
   /// none stands, a path toward the replaced address is dropped, so that the
@@ -1368,7 +1368,7 @@ class GrassrootsNetwork {
 
   /// Remove the rendezvous server holding [pubkey] from those the layer
   /// connects to, and end the layer's session with it (GNA §4.2,
-  /// `removeRendezvousServer(pk)`, behind `rendezvous_remove/1`); a key not
+  /// `removeRendezvousServer(pk)`, behind `remove(rendezvous(P))`); a key not
   /// declared does nothing.  The heartbeat dials it no more.
   void _removeRendezvousServer(Uint8List pubkey) {
     final removed = _rendezvousServers.remove(_pubkeyToHex(pubkey));
@@ -2167,7 +2167,7 @@ class GrassrootsNetwork {
 
   /// Called for each event of a place still declared. Spec: `onPlaceEvent(cb)`.
   /// The runtime routes each onto the stream that place's
-  /// `place_declare(Place?, Radius?, Events)` bound.
+  /// `declare(place(Place?, Radius?, Events))` bound.
   ///
   /// Carries `entered` and `exited` as the platform reports crossings,
   /// `unobservable` when the platform stops reporting them, and `observable`

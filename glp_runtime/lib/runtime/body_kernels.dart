@@ -133,11 +133,8 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Networking seam kernels (Definition Seam Predicates)
   registry.register('_peer_address', 2, peerAddressKernel);
   registry.register('_punch_udp', 1, punchUdpKernel);
-  registry.register('_place_declare', 3, placeDeclareKernel);
-  registry.register('_place_remove', 1, placeRemoveKernel);
-  registry.register('_trust_declare', 2, trustDeclareKernel);
-  registry.register('_peer_declare', 1, peerDeclareKernel);
-  registry.register('_address_declare', 2, addressDeclareKernel);
+  registry.register('_declare', 1, declareKernel);
+  registry.register('_remove', 1, removeKernel);
 
   // Module-as-value: producer half. (`_run`/2 — the consumer — is registered by
   // the engine from engine_v2/module_kernels.dart, where CodeImage is in scope.)
@@ -1209,33 +1206,11 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 // NETWORKING SEAM KERNELS (Definition Seam Predicates)
 // =============================================================================
 //
-// The seven kernels behind the seven seam predicates (IGLP, Definition "Seam
-// Predicates"): peer_address/2, punch_udp/1, place_declare/3, place_remove/1,
-// trust_declare/2, and peer_declare/1 and address_declare/2 over
-// GlpNetwork.putKnownPeer and putPeerAddress, the last two since 2026-10-11
-// (GLP-Spec 6e9c276, IGLP c2292b9). Each reaches the networking layer through
-// MadContext.network, a GlpNetwork; the layer functions are
-// GLP-Networking-API's, specified with the seam contract. Their effects lie outside the madGLP transition system, as
-// sign's and self_module's do.
+// The four kernels behind the four seam predicates (IGLP, Definition "Seam Predicates", 3b736bb; GLP-Spec appendix-guards, "Networking seam", 1ce0263): peer_address/2, punch_udp/1, declare/1 and remove/1, '_declare' and '_remove' taking each alternative of Declaration and Removal to the layer function behind it.  They replace, since 2026-11-03, the five kernels of place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2.  Each reaches the networking layer through MadContext.network, a GlpNetwork; the layer functions are GLP-Networking-API's, specified with the seam contract.  Their effects lie outside the madGLP transition system, as sign's and self_module's do.
 //
-// Each GLP wrapper gates its arguments on ground/1, so they are ground here.
-// A realization that does not provide the function throws UnsupportedError,
-// which is a violated precondition and so an abort.
+// Each GLP clause gates its arguments on ground/1, all but a place's stream, so they are ground here.  A realization that does not provide the function throws UnsupportedError, which is a violated precondition and so an abort.
 //
-// Where no layer is bound at all --- the REPL, a test run without the
-// simulation --- the kernel stands in for a layer that observes nothing and
-// does nothing, and none aborts for want of a layer (IGLP
-// appendix-implementation-notes.tex, "One interface", 6ba0329):
-// "peer_address assigns none, place_declare assigns its stream unobservable
-// and nothing more, and the other seam predicates return having done nothing".
-// Until 2026-10-10 each aborted there, "not in madGLP mode (no MadContext)" or
-// "no GlpNetwork bound to this agent".  An argument the predicate does not
-// take is still a violated precondition and an abort, layer or none.  A
-// place's stream is the runtime's bookkeeping and not the layer's, so with no
-// layer place_remove and a further declaration still close it (IGLP
-// madglp-spec.tex, "closed, its tail assigned [], in exactly two cases:
-// place_remove, and a further declaration of the same place"; GLP, 2026-10-11
-// 12:59 UTC, "23:12" (a)): only the reporting is absent.
+// Where no layer is bound at all --- the REPL, a test run without the simulation --- the kernel stands in for a layer that observes nothing and does nothing, and none aborts for want of a layer (IGLP appendix-implementation-notes.tex, "One interface"): "peer_address assigns none, a place declaration records the place and assigns its stream unobservable, the stream closed by its removal or a further declaration as ever, the closing being the runtime's and not the layer's, and the other seam predicates return having done nothing".  An argument the predicate does not take is still a violated precondition and an abort, layer or none.
 
 /// The [MadContext] and the [GlpNetwork] bound to it, or null where no layer
 /// is bound at all: no MadContext, or one with no GlpNetwork.
@@ -1326,128 +1301,6 @@ BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
   return BodyKernelResult.success;
 }
 
-/// '_place_declare'(P?, R?, E) — declare place P of radius R about this agent's
-/// location at the time of the call, and grow this agent's own event stream for
-/// P from E's writer. The stream is fed serializer-fashion and closes only on
-/// place_remove or a superseding declaration.
-///
-/// Where no layer is bound, E is assigned `[unobservable | E']` and nothing
-/// more is reported ("One interface", 6ba0329): no event and no `observable`
-/// ever follows.  The declaration stands in the runtime's bookkeeping
-/// ([GlpRuntime.placeStreams]) as it does with a layer, so place_remove or a
-/// further declaration closes the stream, E' assigned `[]` (GLP, 2026-10-11
-/// 12:59 UTC, "23:12" (a)).  Until 2026-10-12 nothing was recorded, and E' was
-/// a writer no one held, never closed.
-BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 3) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: expected 3 arguments, got ${args.length}');
-  }
-
-  final place = _groundString(rt, args[0]);
-  if (place == null) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: first argument (P) must be a ground '
-        'constant naming a place, got ${_deref(rt, args[0])}');
-  }
-  final radius = _getNum(rt, args[1]);
-  if (radius == null) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: second argument (R) must be a ground '
-        'number of metres, got ${_deref(rt, args[1])}');
-  }
-
-  final stream = _deref(rt, args[2]);
-  if (stream is! VarRef || !rt.heap.isWriter(stream.addr)) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: third argument (E) must be a writer');
-  }
-
-  final seam = _seamLayer(rt);
-  if (seam == null) {
-    rt.placeStreams.declare(place, stream.addr);
-    rt.placeStreams.deliver(place, ConstTerm('unobservable'));
-    return BodyKernelResult.success;
-  }
-
-  try {
-    seam.ctx.declarePlace(place, radius.toDouble(), stream.addr);
-  } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: ${e.message}');
-  }
-  return BodyKernelResult.success;
-}
-
-/// '_place_remove'(P?) — end the declaration of place P, closing its stream.
-/// Does nothing where P is not declared.  Where no layer is bound it closes
-/// the stream all the same, the runtime's bookkeeping, and tells no layer
-/// ("One interface", 6ba0329; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
-BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 1) {
-    return kernelAbort('[ABORT] \'_place_remove\'/1: expected 1 argument, got ${args.length}');
-  }
-
-  final place = _groundString(rt, args[0]);
-  if (place == null) {
-    return kernelAbort('[ABORT] \'_place_remove\'/1: argument (P) must be a ground constant '
-        'naming a place, got ${_deref(rt, args[0])}');
-  }
-
-  final seam = _seamLayer(rt);
-  if (seam == null) {
-    rt.placeStreams.close(place);
-    return BodyKernelResult.success;
-  }
-
-  try {
-    seam.ctx.removePlace(place);
-  } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_place_remove\'/1: ${e.message}');
-  }
-  return BodyKernelResult.success;
-}
-
-/// '_trust_declare'(U?, L?) — set the cold-call trust level of proximity
-/// underlay U, pan or lan, to L, open or closed, and assign nothing (IGLP,
-/// Definition Seam Predicates, 477c586; GLP-Spec appendix-guards, "Proximity
-/// trust", e0b32d7: "Underlay is pan (Bluetooth Low Energy) or lan (the local
-/// network) and Level is open or closed.  Both underlays stand at closed until
-/// declared, a later declaration of an underlay replaces the level then
-/// standing").  An underlay or level the layer does not have is a violated
-/// precondition, and so an abort.  Until 2026-10-09 the first argument was a
-/// proximity medium, ble or lan.  Where no layer is bound it returns having
-/// done nothing ("One interface", 6ba0329).
-BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) {
-    return kernelAbort('[ABORT] \'_trust_declare\'/2: expected 2 arguments, got ${args.length}');
-  }
-
-  final underlay = switch (_groundString(rt, args[0])) {
-    'pan' => ProximityUnderlay.pan,
-    'lan' => ProximityUnderlay.lan,
-    _ => null,
-  };
-  if (underlay == null) {
-    return kernelAbort('[ABORT] \'_trust_declare\'/2: first argument (U) must be pan or '
-        'lan, got ${_deref(rt, args[0])}');
-  }
-  final level = switch (_groundString(rt, args[1])) {
-    'open' => TrustLevel.open,
-    'closed' => TrustLevel.closed,
-    _ => null,
-  };
-  if (level == null) {
-    return kernelAbort('[ABORT] \'_trust_declare\'/2: second argument (L) must be open or '
-        'closed, got ${_deref(rt, args[1])}');
-  }
-
-  final seam = _seamLayer(rt);
-  if (seam == null) return BodyKernelResult.success;
-
-  try {
-    seam.network.setTrustLevel(underlay, level);
-  } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_trust_declare\'/2: ${e.message}');
-  }
-  return BodyKernelResult.success;
-}
-
 /// The key of the peer a program names in a seam predicate's `Key` argument
 /// [name], or null where [name] names none.  Over a real network an agent's
 /// name is its public key (IGLP, Remark "Agent Names"), presented as 64 hex
@@ -1465,84 +1318,197 @@ PubKey? _peerKey(GlpNetwork network, String name) {
   return PubKey.fromHex(name);
 }
 
-/// '_peer_declare'(P?) — give the layer the public key P of a peer the program
-/// knows, `putKnownPeer(pk)`, and return nothing (IGLP, Definition "Seam
-/// Predicates": "peer_declare gives the layer the public key P of a peer the
-/// program knows"; GLP-Spec appendix-guards, the row '_peer_declare'(Key?) and
-/// "Known peers").  The known-peer set is what Closed trust recognises (GNA,
-/// "Known Peers"); in the simulation the router answers a first contact from a
-/// declared peer under closed ("Simulation realisation").  A P that names no
-/// peer is a violated precondition, and so an abort.  Where no layer is bound
-/// it returns having done nothing ("One interface", 6ba0329).
-BodyKernelResult peerDeclareKernel(GlpRuntime rt, List<Object?> args) {
+/// '_declare'(D?) — make the declaration D to the networking layer or the platform, and assign nothing but a place's stream (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String) ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?)`; IGLP, Definition "Seam Predicates", 3b736bb).  Each alternative reaches the layer function behind it (GNA, Sections 2.4, 3 and 4.2): `peer(P)` [GlpNetwork.putKnownPeer], `address(P, A)` [GlpNetwork.putPeerAddress], `rendezvous(P, A)` [GlpNetwork.putRendezvousServer], `trust(U, L)` [GlpNetwork.setTrustLevel], and `place(P, R, E)` [GlpNetwork.declarePlace] through [MadContext.declarePlace], which grows E.  A term no alternative of Declaration matches is a violated precondition, and so an abort; the type checker refuses it in a program.  Where no layer is bound the declaration returns having done nothing, but for a place, whose stream is the runtime's ("One interface", 6ba0329).
+BodyKernelResult declareKernel(GlpRuntime rt, List<Object?> args) {
+  const who = "'_declare'/1";
   if (args.length != 1) {
-    return kernelAbort('[ABORT] \'_peer_declare\'/1: expected 1 argument, got ${args.length}');
+    return kernelAbort('[ABORT] $who: expected 1 argument, got ${args.length}');
   }
+  final d = _deref(rt, args[0]);
+  final a = d is StructTerm ? d.args : const <Term>[];
+  final form = d is StructTerm ? '${d.functor}/${a.length}' : null;
+  switch (form) {
+    case 'peer/1':
+      return _declarePeer(rt, a);
+    case 'address/2':
+      return _declareAddress(rt, a);
+    case 'rendezvous/2':
+      return _declareRendezvous(rt, a);
+    case 'trust/2':
+      return _declareTrust(rt, a);
+    case 'place/3':
+      return _declarePlace(rt, a);
+  }
+  return kernelAbort('[ABORT] $who: argument (D) must be a Declaration --- '
+      'peer(P), address(P, A), rendezvous(P, A), trust(U, L) or place(P, R, E) '
+      '--- got $d');
+}
 
-  final name = _groundString(rt, args[0]);
+/// '_remove'(R?) — end the declaration R, and assign nothing (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant)`; IGLP, Definition "Seam Predicates", 3b736bb): `peer(P)` [GlpNetwork.removeKnownPeer], `rendezvous(P)` [GlpNetwork.removeRendezvousServer], and `place(P)` [GlpNetwork.removePlace] through [MadContext.removePlace], which closes its stream.  A term no alternative of Removal matches is a violated precondition, and so an abort.  Where no layer is bound it returns having done nothing, but for a place, whose stream it closes all the same ("One interface", 6ba0329).
+BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
+  const who = "'_remove'/1";
+  if (args.length != 1) {
+    return kernelAbort('[ABORT] $who: expected 1 argument, got ${args.length}');
+  }
+  final r = _deref(rt, args[0]);
+  final a = r is StructTerm ? r.args : const <Term>[];
+  final form = r is StructTerm ? '${r.functor}/${a.length}' : null;
+  switch (form) {
+    case 'peer/1':
+      return _removePeer(rt, a);
+    case 'rendezvous/1':
+      return _removeRendezvous(rt, a);
+    case 'place/1':
+      return _removePlace(rt, a);
+  }
+  return kernelAbort('[ABORT] $who: argument (R) must be a Removal --- '
+      'peer(P), rendezvous(P) or place(P) --- got $r');
+}
+
+/// Call the layer function [call] with the layer bound to [rt] and the key a ground [arg] names in it, for the alternative [what] of [who].  It returns having done nothing where no layer is bound; an [arg] that is not a ground constant, or that names no peer, is a violated precondition, and so an abort.
+BodyKernelResult _peerCall(GlpRuntime rt, String who, String what, Object? arg,
+    void Function(GlpNetwork network, PubKey pk) call) {
+  final name = _groundString(rt, arg);
   if (name == null) {
-    return kernelAbort('[ABORT] \'_peer_declare\'/1: argument (P) must be a ground constant '
-        'naming a peer, got ${_deref(rt, args[0])}');
+    return kernelAbort('[ABORT] $who: $what: the key (P) must be a ground '
+        'constant naming a peer, got ${_deref(rt, arg)}');
   }
-
   final seam = _seamLayer(rt);
   if (seam == null) return BodyKernelResult.success;
-
   final pk = _peerKey(seam.network, name);
   if (pk == null) {
-    return kernelAbort('[ABORT] \'_peer_declare\'/1: $name names no peer: neither a '
+    return kernelAbort('[ABORT] $who: $what: $name names no peer: neither a '
         '64-character hex public key nor an agent the layer names');
   }
+  return _layerCall(who, what, () => call(seam.network, pk));
+}
 
+/// Run the layer function [call], an [UnsupportedError] from it an abort of [who] and [what].
+BodyKernelResult _layerCall(String who, String what, void Function() call) {
   try {
-    seam.network.putKnownPeer(pk);
+    call();
   } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_peer_declare\'/1: ${e.message}');
+    return kernelAbort('[ABORT] $who: $what: ${e.message}');
   }
   return BodyKernelResult.success;
 }
 
-/// '_address_declare'(P?, A?) — give the layer the address A at which peer P
-/// is reached, `putPeerAddress(pk, address)`, and return nothing (IGLP,
-/// Definition "Seam Predicates": "address_declare the address A at which peer
-/// P is reached"; GLP-Spec appendix-guards, the row '_address_declare'(Key?,
-/// String?) and "Known peers").  The layer records it with the known peer
-/// (GNA, "Connectivity and Address"); the simulation realisation takes it to
-/// no effect, "the effect of address_declare/2" not being provided
-/// ("Simulation realisation").  A P that names no peer is a violated
-/// precondition, and so an abort.  Where no layer is bound it returns having
-/// done nothing ("One interface", 6ba0329).
-BodyKernelResult addressDeclareKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: expected 2 arguments, got ${args.length}');
-  }
+/// `declare(peer(P))`: give the layer the public key P of a peer the program knows, `putKnownPeer(pk)` (GLP-Spec appendix-guards, "Networking seam": "peer(P) gives the networking layer the public key P of a peer the program knows").  The known-peer set is what Closed trust recognises (GNA, "Known Peers"); in the simulation the router answers a first contact from a declared peer under closed ("Simulation realisation").
+BodyKernelResult _declarePeer(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'peer(P)';
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.putKnownPeer(pk));
+}
 
-  final name = _groundString(rt, args[0]);
-  if (name == null) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: first argument (P) must be a ground '
-        'constant naming a peer, got ${_deref(rt, args[0])}');
-  }
-  final address = _groundString(rt, args[1]);
+/// `declare(address(P, A))`: give the layer the address A at which peer P is reached, `putPeerAddress(pk, address)` ("address(P, A) gives the layer the address A at which peer P is reached").  The layer records it with the known peer (GNA, Section 4.2); the simulation realisation takes it to no effect, "the effect of an address or a rendezvous declaration" not being provided ("Simulation realisation").
+BodyKernelResult _declareAddress(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'address(P, A)';
+  final address = _groundString(rt, a[1]);
   if (address == null) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: second argument (A) must be a '
-        'ground constant address, got ${_deref(rt, args[1])}');
+    return kernelAbort('[ABORT] $who: $what: the address (A) must be a ground '
+        'constant, got ${_deref(rt, a[1])}');
+  }
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.putPeerAddress(pk, address));
+}
+
+/// `declare(rendezvous(P, A))`: give the layer a rendezvous server, the agent of key P at address A, or replace its address, `putRendezvousServer(pk, address)` (GLP-Spec appendix-guards, "Networking seam"; GNA 776016c, Section 4.2, "Declare server": "behind declare(rendezvous(Key, Address))").  The simulation realisation takes it to no effect ("Simulation realisation").
+BodyKernelResult _declareRendezvous(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'rendezvous(P, A)';
+  final address = _groundString(rt, a[1]);
+  if (address == null) {
+    return kernelAbort('[ABORT] $who: $what: the address (A) must be a ground '
+        'constant, got ${_deref(rt, a[1])}');
+  }
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.putRendezvousServer(pk, address));
+}
+
+/// `declare(trust(U, L))`: set the cold-call trust level of proximity underlay U, pan or lan, to L, open or closed, `setTrustLevel(underlay, level)` (GLP-Spec appendix-guards, "Proximity trust": "Both underlays stand at closed until declared, a later declaration of an underlay replaces the level then standing, and the two are declared independently").  An underlay or level the layer does not have is a violated precondition, and so an abort.
+BodyKernelResult _declareTrust(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'trust(U, L)';
+  final underlay = switch (_groundString(rt, a[0])) {
+    'pan' => ProximityUnderlay.pan,
+    'lan' => ProximityUnderlay.lan,
+    _ => null,
+  };
+  if (underlay == null) {
+    return kernelAbort('[ABORT] $who: $what: the underlay (U) must be pan or '
+        'lan, got ${_deref(rt, a[0])}');
+  }
+  final level = switch (_groundString(rt, a[1])) {
+    'open' => TrustLevel.open,
+    'closed' => TrustLevel.closed,
+    _ => null,
+  };
+  if (level == null) {
+    return kernelAbort('[ABORT] $who: $what: the level (L) must be open or '
+        'closed, got ${_deref(rt, a[1])}');
+  }
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
+  return _layerCall(
+      who, what, () => seam.network.setTrustLevel(underlay, level));
+}
+
+/// `declare(place(P, R, E))`: declare place P of radius R about this agent's location at the time of the call, and grow this agent's own event stream for P from E's writer.  The stream is fed serializer-fashion and closes only on `remove(place(P))` or a superseding declaration (IGLP, madglp-spec.tex, after Definition "Seam Predicates").
+///
+/// Where no layer is bound, E is assigned `[unobservable | E']` and nothing more is reported ("One interface", 6ba0329): no event and no `observable` ever follows.  The declaration stands in the runtime's bookkeeping ([GlpRuntime.placeStreams]) as it does with a layer, so its removal or a further declaration closes the stream, E' assigned `[]` (GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
+BodyKernelResult _declarePlace(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'place(P, R, E)';
+  final place = _groundString(rt, a[0]);
+  if (place == null) {
+    return kernelAbort('[ABORT] $who: $what: the place (P) must be a ground '
+        'constant, got ${_deref(rt, a[0])}');
+  }
+  final radius = _getNum(rt, a[1]);
+  if (radius == null) {
+    return kernelAbort('[ABORT] $who: $what: the radius (R) must be a ground '
+        'number of metres, got ${_deref(rt, a[1])}');
+  }
+  final stream = _deref(rt, a[2]);
+  if (stream is! VarRef || !rt.heap.isWriter(stream.addr)) {
+    return kernelAbort('[ABORT] $who: $what: the stream (E) must be a writer');
   }
 
   final seam = _seamLayer(rt);
-  if (seam == null) return BodyKernelResult.success;
-
-  final pk = _peerKey(seam.network, name);
-  if (pk == null) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: $name names no peer: neither a '
-        '64-character hex public key nor an agent the layer names');
+  if (seam == null) {
+    rt.placeStreams.declare(place, stream.addr);
+    rt.placeStreams.deliver(place, ConstTerm('unobservable'));
+    return BodyKernelResult.success;
   }
+  return _layerCall(who, what,
+      () => seam.ctx.declarePlace(place, radius.toDouble(), stream.addr));
+}
 
-  try {
-    seam.network.putPeerAddress(pk, address);
-  } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: ${e.message}');
+/// `remove(peer(P))`: take P, and any address recorded for it, off the layer's known peers, `removeKnownPeer(pk)` (GLP-Spec appendix-guards, "Networking seam"; GNA, "Known Peers").
+BodyKernelResult _removePeer(GlpRuntime rt, List<Term> a) {
+  const who = "'_remove'/1", what = 'peer(P)';
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.removeKnownPeer(pk));
+}
+
+/// `remove(rendezvous(P))`: take the rendezvous server of key P off and end the layer's session with it, a key not declared doing nothing, `removeRendezvousServer(pk)` (GLP-Spec appendix-guards, "Networking seam"; GNA 776016c, Section 4.2, "Remove server": "behind remove(rendezvous(Key))").
+BodyKernelResult _removeRendezvous(GlpRuntime rt, List<Term> a) {
+  const who = "'_remove'/1", what = 'rendezvous(P)';
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.removeRendezvousServer(pk));
+}
+
+/// `remove(place(P))`: end the declaration of place P, closing its stream; does nothing where P is not declared.  Where no layer is bound it closes the stream all the same, the runtime's bookkeeping, and tells no layer ("One interface", 6ba0329; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
+BodyKernelResult _removePlace(GlpRuntime rt, List<Term> a) {
+  const who = "'_remove'/1", what = 'place(P)';
+  final place = _groundString(rt, a[0]);
+  if (place == null) {
+    return kernelAbort('[ABORT] $who: $what: the place (P) must be a ground '
+        'constant, got ${_deref(rt, a[0])}');
   }
-  return BodyKernelResult.success;
+  final seam = _seamLayer(rt);
+  if (seam == null) {
+    rt.placeStreams.close(place);
+    return BodyKernelResult.success;
+  }
+  return _layerCall(who, what, () => seam.ctx.removePlace(place));
 }
 
 // =============================================================================

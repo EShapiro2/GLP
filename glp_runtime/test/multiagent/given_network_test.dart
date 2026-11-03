@@ -56,7 +56,7 @@ a_init(_, _) :- send_to_net([msg(bob, ping)]).
 /// An agent that declares a place and tells its person when it is entered.
 const String _placer = r'''
 procedure placer_init(_?, _?).
-placer_init(_, _) :- place_declare(home, 50, E), watch(E?).
+placer_init(_, _) :- declare(place(home, 50, E)), watch(E?).
 
 procedure watch(_?).
 watch([E|_]) :- ground(E?) | send_to_user([E?]).
@@ -93,6 +93,9 @@ class _WireNetwork extends GlpNetwork {
   /// Places declared, in order.
   final List<String> declared = [];
 
+  /// The messageIds the runtime acknowledged, in order.
+  final List<String> acknowledged = [];
+
   _WireNetwork(this.keyPair, this.wire) {
     wire._at[keyPair.pub.hex] = this;
   }
@@ -102,6 +105,9 @@ class _WireNetwork extends GlpNetwork {
 
   @override
   void send(PubKey pk, Uint8List payload) => wire.carry(keyPair.pub, pk, payload);
+
+  @override
+  void acknowledge(String messageId) => acknowledged.add(messageId);
 
   @override
   Future<bool> declarePlace(String place, double radiusMetres) {
@@ -141,6 +147,10 @@ class _WireNetwork extends GlpNetwork {
   String? observedPeerAddress(PubKey pk) => null;
   @override
   void punchUdp(String address) {}
+  @override
+  void putRendezvousServer(PubKey pk, String address) {}
+  @override
+  void removeRendezvousServer(PubKey pk) {}
 }
 
 /// The first line [lines] yields that [test] accepts, polling until
@@ -238,6 +248,53 @@ void main() {
       expect(wire.carried, contains('${calleeKp.pub.hex} > ${callerKp.pub.hex}'),
           reason: 'the assignment left through the callee\'s network');
       expect(viaCoordinator, isEmpty);
+    });
+
+    test('a delivered message is acknowledged to the layer once the cycle '
+        'that applied it is complete', () async {
+      // GNA 776016c, Section 2.9: acknowledge(messageId) "Confirm[s] that the
+      // message delivered under messageId has been applied and saved by the
+      // runtime"; IGLP, Implementation Notes, "Persistence": "a delivered
+      // message acknowledged to the layer, only from a state the store holds",
+      // and with no store once its cycle is complete.
+      final wire = _Wire();
+      final callerKp = generateKeyPair();
+      final calleeKp = generateKeyPair();
+      final callerNet = _WireNetwork(callerKp, wire);
+      final calleeNet = _WireNetwork(calleeKp, wire);
+      final caller = AgentRuntime(
+        agentId: 'caller',
+        program: play,
+        rootSelfGlpPath: root,
+        goalLabel: 'caller_init/3',
+        extraArgs: [calleeKp.pub.hex],
+        keyPair: callerKp,
+        network: callerNet,
+      );
+      final callee = AgentRuntime(
+        agentId: 'callee',
+        program: play,
+        rootSelfGlpPath: root,
+        goalLabel: 'callee_init/2',
+        keyPair: calleeKp,
+        network: calleeNet,
+      );
+      final out = <String>[];
+      caller.onOutput = out.add;
+      // Over a given network the layer is told, and the coordinator is not.
+      final toCoordinator = <String>[];
+      caller.onDelivered = toCoordinator.add;
+      callee.onDelivered = toCoordinator.add;
+      await callee.initialize();
+      await caller.initialize();
+      await _eventually(() => out, (l) => l.startsWith('< answered('));
+      // The cold call was the wire's first message, w0, the assignment back
+      // its second, w1; each is acknowledged by the agent that applied it.
+      await _eventually(() => calleeNet.acknowledged, (id) => id == 'w0');
+      await _eventually(() => callerNet.acknowledged, (id) => id == 'w1');
+      expect(calleeNet.acknowledged, ['w0']);
+      expect(callerNet.acknowledged, ['w1']);
+      expect(toCoordinator, isEmpty);
     });
 
     test('no key is made up: a message to a name that is no key is not sent, '

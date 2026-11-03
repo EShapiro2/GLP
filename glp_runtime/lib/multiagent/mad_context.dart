@@ -647,7 +647,7 @@ class MadContext {
   bool hasDeclaredPlace(String place) => runtime.placeStreams.isDeclared(place);
 
   /// Declare [place] with radius [radiusMetres], its event stream growing from
-  /// [streamWriterAddr] — the writer of the `E` of `place_declare(P, R, E)`.
+  /// [streamWriterAddr] — the writer of the `E` of `declare(place(P, R, E))`.
   ///
   /// A further declaration of the same place supersedes the earlier one, whose
   /// stream is closed (Definition Seam Predicates). The stream exists before the
@@ -679,7 +679,7 @@ class MadContext {
         if (declared) return;
         _trace('[MAD $agentId] declarePlace($place): refused by the platform '
             '— unobservable');
-        // Answers can arrive after place_remove or after a superseding
+        // Answers can arrive after remove(place(P)) or after a superseding
         // declaration, whose stream is the successor's, not this one's: the
         // declaration answered goes with the event, and is checked when it
         // is delivered.

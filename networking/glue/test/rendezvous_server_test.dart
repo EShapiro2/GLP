@@ -26,7 +26,7 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// availability notice carrying the first's; the agent verifies each
 /// signature as the other party's by `signature/2`, reads each one's address
 /// from the layer by `peer_address/2`, and relays to each the address it
-/// observes for the other, whereupon each declares it (`address_declare/2`)
+/// observes for the other, whereupon each declares it (`declare(address(P, A))`)
 /// and punches toward it (`punch_udp/1`).  A request whose signature is the
 /// requester's own is refused.  And, item 3 of GNA's task of 2026-10-09,
 /// the same after one friend changes address, the two reconnecting (the
@@ -117,7 +117,7 @@ report_graph(F, _, unsigned) :- send_to_user([unsigned(F?)]).
 
 procedure on_reply(Key?, SignalReply?).
 on_reply(F, punch(Addr)) :- ground(F?), ground(Addr?) |
-    address_declare(F?, Addr?),
+    declare(address(F?, Addr?)),
     punch_udp(Addr?),
     send_to_user([punched(F?, Addr?)]).
 on_reply(F, rejected) :- send_to_user([rejected(F?)]).
@@ -296,7 +296,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     expect(_value(punchedB.args[0]), a.key.hex);
     expect(_loopback(toA, a.layer.boundPort!), isTrue, reason: toA);
 
-    // Each declared the address it was told to its layer (address_declare/2,
+    // Each declared the address it was told to its layer (declare(address(P, A)),
     // putPeerAddress): the other is a known peer, recorded there at it.
     expect(a.layer.store.state.knownPeers.known[b.key.hex], toB);
     expect(b.layer.store.state.knownPeers.known[a.key.hex], toA);
@@ -341,7 +341,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
         await standUp(0x7d, 0x3c, 0x4d);
 
     // The friends know each other at their addresses, as the social graph
-    // tells their layers (peer_declare/1, address_declare/2), and connect.
+    // tells their layers (declare(peer(P)), declare(address(P, A))), and connect.
     a.layer.wan.putPeerAddress(b.key.bytes, '127.0.0.1:${b.layer.boundPort}');
     b.layer.wan.putPeerAddress(a.key.bytes, '127.0.0.1:${a.layer.boundPort}');
     expect(
@@ -381,7 +381,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     expect(b.said.whereType<rt.StructTerm>().map((t) => t.functor),
         isNot(contains('rejected')));
 
-    // B declared A's new address (address_declare/2), and the two are
+    // B declared A's new address (declare(address(P, A))), and the two are
     // reachable again, B observing A there.
     expect(b.layer.store.state.knownPeers.known[a.key.hex], toA);
     expect(

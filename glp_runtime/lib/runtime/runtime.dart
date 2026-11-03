@@ -116,7 +116,7 @@ class GlpRuntime {
   MadContext? madContext;
 
   /// The declared places and their event streams (place_streams.dart): the
-  /// runtime's bookkeeping behind place_declare/3 and place_remove/1, kept
+  /// runtime's bookkeeping behind declare(place(P, R, E)) and remove(place(P)), kept
   /// whether a networking layer is bound or none is.
   late final PlaceStreams placeStreams = PlaceStreams(this);
 
