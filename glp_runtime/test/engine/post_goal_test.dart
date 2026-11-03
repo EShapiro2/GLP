@@ -175,14 +175,13 @@ void main() {
   });
 
   group('the host posts through it', () {
-    test('AgentRuntime posts its entry goal checked, the person\'s stream its injector',
+    test('AgentRuntime posts agent(ch(_?,_),ch(_?,_)) checked, the person\'s stream its injector',
         () async {
       final lines = <String>[];
       final agent = AgentRuntime(
         agentId: 'alice',
         program: File('$_dir/echo_agent.glp').absolute.path,
         rootSelfGlpPath: _rootSelf,
-        goalLabel: 'agent_init/3',
       )..onOutput = lines.add;
       await agent.initialize();
       expect(agent.initialized, isTrue);
@@ -205,7 +204,6 @@ void main() {
         agentId: 'alice',
         program: File('$_dir/exposed/agent.glp').absolute.path,
         rootSelfGlpPath: _rootSelf,
-        goalLabel: 'agent_init/3',
       )..onOutput = lines.add;
       await agent.initialize();
       expect(agent.initialized, isTrue);
@@ -213,12 +211,11 @@ void main() {
       expect(lines, contains('< doubled(42)'));
     });
 
-    test('AgentRuntime refuses an entry goal that is not well-typed', () async {
+    test('AgentRuntime refuses an agent goal that is not well-typed', () async {
       final agent = AgentRuntime(
         agentId: 'alice',
         program: File('$_dir/integer_id_agent.glp').absolute.path,
         rootSelfGlpPath: _rootSelf,
-        goalLabel: 'agent_init/2',
       );
       await expectLater(
           agent.initialize(),

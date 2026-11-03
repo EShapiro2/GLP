@@ -3,5 +3,9 @@
 %% same invalid guard (GLP-Spec glp.tex, Definition "Guarded Clause": "G is a
 %% conjunction of guard predicates"; true is none).
 
+%% The agent's initial goal, every agent's (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot": "a deployed agent is spawned by its application with the same initial goal").
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(_, []), ch(N, [])) :- agent_init(alice, N?).
+
 procedure agent_init(_?, _?).
 agent_init(Id, _) :- true | send_to_user([hello(Id?)]).

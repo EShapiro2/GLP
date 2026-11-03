@@ -28,7 +28,13 @@ void main() {
     // Bob's first stats follow his initialisation, the initial run included.
     var started = false;
     reply.listen((m) {
-      if (m is AgentReady) bob = m.commandPort;
+      if (m is AgentReady) {
+        bob = m.commandPort;
+        // The person's first act tells the agent its name, the agent
+        // started from agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex,
+        // Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot").
+        bob!.send(UserInput(const GAtom('bob')));
+      }
       else if (m is AgentOutput) out.add(m.line);
       else if (m is AgentStats) started = true;
       else if (m is AgentError) errors.add(m.error);
