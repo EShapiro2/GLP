@@ -18,11 +18,8 @@ import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
-
-/// Hermetic host candidates (see the glare test).
-Future<List<InternetAddress>> _loopbackHostAddresses() async =>
-    [InternetAddress.loopbackIPv4];
 
 /// The Flutter profile holds a session with each declared rendezvous
 /// server, as the headless profile does, and reports it reachable only then
@@ -79,7 +76,7 @@ void main() {
       underlays: const {Underlay.wan},
       store: Store<AppState>(appReducer, initialState: const AppState()),
       sodium: sodium,
-      localHostAddressReader: _loopbackHostAddresses,
+      localHostAddressReader: LoopbackHostReader().call,
       config: const GrassrootsNetworkConfig(
         announceInterval: Duration(seconds: 2),
       ),
@@ -144,7 +141,7 @@ void main() {
       underlays: const {Underlay.wan},
       store: Store<AppState>(appReducer, initialState: const AppState()),
       sodium: sodium,
-      localHostAddressReader: _loopbackHostAddresses,
+      localHostAddressReader: LoopbackHostReader().call,
       config: const GrassrootsNetworkConfig(
         announceInterval: Duration(seconds: 2),
       ),
@@ -161,13 +158,11 @@ void main() {
     return (network, events);
   }
 
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 30}) async {
-    final deadline = DateTime.now().add(Duration(seconds: seconds));
-    while (!predicate() && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-    return predicate();
-  }
+  /// Completes once [node] holds [pk] reachable, or, with [reachable]
+  /// false, once it no longer does.
+  Future<void> reachability(GrassrootsNetwork node, Uint8List pk,
+          {bool reachable = true}) =>
+      stateWhere(node.store, (_) => node.isPeerReachable(pk) == reachable);
 
   group('the rendezvous servers GLP declares while the layer runs (GNA §4.2)',
       () {
@@ -180,7 +175,8 @@ void main() {
 
       node.wan!.putRendezvousServer(serverPk, '127.0.0.1:${server.boundPort}');
 
-      expect(await waitFor(() => node.isPeerReachable(serverPk)), isTrue,
+      await reachability(node, serverPk);
+      expect(node.isPeerReachable(serverPk), isTrue,
           reason: 'the layer connects to the server GLP declared');
       expect(events, ['connected ${hex(serverPk)} wan null'],
           reason: 'reported over the WAN, unattested (GNA §6, "Unattested")');
@@ -189,7 +185,7 @@ void main() {
           reason: 'the server reports the node once its own session and '
               'attestation exchange have completed (GNA §2.6)');
       expect(serverSaw, [hex(node.identity.publicKey)]);
-    }, timeout: const Timeout(Duration(minutes: 1)));
+    }, timeout: Timeout.none);
 
     test('a second declaration replaces its address', () async {
       final (server, _, _) = await headlessServer(0x97);
@@ -205,11 +201,12 @@ void main() {
       final address = '127.0.0.1:${server.boundPort}';
       node.wan!.putRendezvousServer(serverPk, address);
 
-      expect(await waitFor(() => node.isPeerReachable(serverPk)), isTrue,
+      await reachability(node, serverPk);
+      expect(node.isPeerReachable(serverPk), isTrue,
           reason: 'the layer dials the address declared last');
       expect(node.wan!.observedPeerAddress(serverPk), address);
       expect(events, ['connected ${hex(serverPk)} wan null']);
-    }, timeout: const Timeout(Duration(minutes: 1)));
+    }, timeout: Timeout.none);
 
     test(
         "a removed server's session ends and it is not dialed again, and "
@@ -218,7 +215,8 @@ void main() {
       final (node, events) = await startBare(await identityFromSeed(0x9a));
       final serverPk = server.identity.publicKey;
       node.wan!.putRendezvousServer(serverPk, '127.0.0.1:${server.boundPort}');
-      expect(await waitFor(() => node.isPeerReachable(serverPk)), isTrue);
+      await reachability(node, serverPk);
+      expect(node.isPeerReachable(serverPk), isTrue);
 
       // A key not declared: nothing happens.
       node.wan!.removeRendezvousServer((await identityFromSeed(0x9b)).publicKey);
@@ -227,8 +225,8 @@ void main() {
 
       // The server removed: its session ends.
       node.wan!.removeRendezvousServer(serverPk);
-      expect(await waitFor(() => !node.isPeerReachable(serverPk)), isTrue);
-      expect(await waitFor(() => events.length == 2), isTrue);
+      await reachability(node, serverPk, reachable: false);
+      expect(node.isPeerReachable(serverPk), isFalse);
       expect(events, [
         'connected ${hex(serverPk)} wan null',
         'disconnected ${hex(serverPk)} wan',
@@ -244,7 +242,7 @@ void main() {
         'connected ${hex(serverPk)} wan null',
         'disconnected ${hex(serverPk)} wan',
       ]);
-    }, timeout: const Timeout(Duration(minutes: 1)));
+    }, timeout: Timeout.none);
   });
 
   test(
@@ -263,10 +261,16 @@ void main() {
       sodium: sodium,
     );
     addTearDown(server.dispose);
+    final nodeId = await identityFromSeed(0x92);
+    final serverSawNode = Completer<void>();
+    server.onPeerConnected = (pk, underlay, application) {
+      if (hex(pk) == hex(nodeId.publicKey) && !serverSawNode.isCompleted) {
+        serverSawNode.complete();
+      }
+    };
     expect(await server.start(), isTrue);
     final serverPk = server.identity.publicKey;
 
-    final nodeId = await identityFromSeed(0x92);
     final connects = <(Underlay, Application?)>[];
     final serverConnects = Completer<void>();
     final node = await startNode(
@@ -279,7 +283,7 @@ void main() {
       },
     );
 
-    await serverConnects.future.timeout(const Duration(seconds: 30));
+    await serverConnects.future;
 
     // Reported once, over the WAN, unattested: null for the application.
     expect(connects, [(Underlay.wan, null)]);
@@ -296,13 +300,9 @@ void main() {
     // The session is mutual: the server, for its part, completed the
     // handshake and the exchange with the node, which it could do only
     // over a session the node established with it.
-    final deadline = DateTime.now().add(const Duration(seconds: 15));
-    while (!server.isPeerReachable(nodeId.publicKey) &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
+    await serverSawNode.future;
     expect(server.isPeerReachable(nodeId.publicKey), isTrue);
-  }, timeout: const Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout.none);
 
   test(
       'a declared rendezvous server that never completes the handshake is '
@@ -366,5 +366,5 @@ void main() {
     expect(node.peerUnderlays(silentPk), isEmpty);
     expect(everLive, isFalse,
         reason: 'a UDP path with no session is no authenticated connection');
-  }, timeout: const Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout.none);
 }

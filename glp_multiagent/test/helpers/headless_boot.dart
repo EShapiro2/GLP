@@ -226,6 +226,14 @@ String _keysForNames(String text, Map<String, String> keyOf) {
   return out;
 }
 
+/// The sender's key of a message delivered to an agent, where [log] is the
+/// line its runtime logs on the delivery, `MAD_RECV from <key> over ...`
+/// (AgentRuntime, the network it is given); null for any other line.
+String? senderOfReceipt(String log) {
+  final m = RegExp(r'^MAD_RECV from ([0-9a-f]+) ').firstMatch(log);
+  return m?.group(1);
+}
+
 /// A boot in one process.
 class HeadlessBoot {
   final List<HeadlessAgentSpec> specs;
@@ -234,7 +242,12 @@ class HeadlessBoot {
   final Map<String, HeadlessGrassrootsNetwork> layers;
   final Map<String, AgentLines> outputs;
 
-  HeadlessBoot._(this.specs, this.keyOf, this.hosts, this.layers, this.outputs);
+  /// The key of the sender of each message the layer delivered to each agent,
+  /// in order of delivery, as the agent's runtime logs it (`MAD_RECV from`).
+  final Map<String, AgentLines> received;
+
+  HeadlessBoot._(this.specs, this.keyOf, this.hosts, this.layers, this.outputs,
+      this.received);
 
   /// A boot file's agents over its program directory.
   static Future<HeadlessBoot> ofBootFile(HeadlessBootFile f,
@@ -275,6 +288,7 @@ class HeadlessBoot {
     final nets = <String, HeadlessGlpNetwork>{};
     final hosts = <String, AgentRuntime>{};
     final outputs = <String, AgentLines>{};
+    final received = <String, AgentLines>{};
     for (final spec in agents) {
       final identity = ids[spec.id]!;
       final layer = HeadlessGrassrootsNetwork(
@@ -307,9 +321,12 @@ class HeadlessBoot {
         lines.add(line);
         onOutput?.call(spec.id, line);
       };
-      if (onLog != null) {
-        host.onLog = (tag, message) => onLog(spec.id, tag, message);
-      }
+      final from = received[spec.id] = AgentLines(spec.id);
+      host.onLog = (tag, message) {
+        final sender = senderOfReceipt(message);
+        if (sender != null) from.add(sender);
+        onLog?.call(spec.id, tag, message);
+      };
       layers[spec.id] = layer;
       nets[spec.id] = net;
       hosts[spec.id] = host;
@@ -336,7 +353,7 @@ class HeadlessBoot {
             .injectUserInput(actTerm(act.functor, resolveArgs(spec, keyOf)));
       }
     }
-    return HeadlessBoot._(agents, keyOf, hosts, layers, outputs);
+    return HeadlessBoot._(agents, keyOf, hosts, layers, outputs, received);
   }
 
   /// The first line agent [id] sent its person that [test] accepts.
@@ -403,10 +420,14 @@ class HeadlessBootProcesses {
   final Map<String, Process> processes;
   final Map<String, AgentLines> outputs;
   final Map<String, List<String>> transcripts;
+
+  /// The key of the sender of each message the layer delivered to each agent,
+  /// in order of delivery, as the agent's process prints it (`RECV <key>`).
+  final Map<String, AgentLines> received;
   bool _disposing = false;
 
-  HeadlessBootProcesses._(
-      this.specs, this.keyOf, this.processes, this.outputs, this.transcripts);
+  HeadlessBootProcesses._(this.specs, this.keyOf, this.processes, this.outputs,
+      this.transcripts, this.received);
 
   /// A boot file's agents over its program directory, one process each.
   static Future<HeadlessBootProcesses> ofBootFile(HeadlessBootFile f,
@@ -433,6 +454,7 @@ class HeadlessBootProcesses {
     final processes = <String, Process>{};
     final outputs = <String, AgentLines>{};
     final transcripts = <String, List<String>>{};
+    final received = <String, AgentLines>{};
     final ports = <String, String>{};
     final ready = <String, Completer<void>>{};
     final inited = <String, Completer<void>>{};
@@ -451,13 +473,17 @@ class HeadlessBootProcesses {
       for (final c in [ready[id]!, inited[id]!]) {
         if (!c.isCompleted) c.completeError(why);
       }
-      if (!(booted && boot._disposing)) outputs[id]!.end(why);
+      if (!(booted && boot._disposing)) {
+        outputs[id]!.end(why);
+        received[id]!.end(why);
+      }
     }
 
     try {
       for (final spec in agents) {
         final id = spec.id;
         final lines = outputs[id] = AgentLines(id);
+        final from = received[id] = AgentLines(id);
         final all = transcripts[id] = <String>[];
         // A failure can come while another agent is awaited; marked handled
         // here, it reaches its await and not the zone as an uncaught error.
@@ -490,6 +516,8 @@ class HeadlessBootProcesses {
             final line = l.substring(4);
             lines.add(line);
             onOutput?.call(id, line);
+          } else if (l.startsWith('RECV ')) {
+            from.add(l.substring(5));
           }
         });
         p.stderr.transform(utf8.decoder).listen((s) {
@@ -534,7 +562,7 @@ class HeadlessBootProcesses {
       rethrow;
     }
     boot = HeadlessBootProcesses._(
-        agents, keyOf, processes, outputs, transcripts);
+        agents, keyOf, processes, outputs, transcripts, received);
     booted = true;
     return boot;
   }

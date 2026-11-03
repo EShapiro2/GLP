@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show InternetAddress, RawDatagramSocket;
 
@@ -12,16 +13,13 @@ import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/headless/headless_grassroots_network.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
 import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
-
-/// Hermetic host candidates (see the glare test).
-Future<List<InternetAddress>> _loopbackHostAddresses() async =>
-    [InternetAddress.loopbackIPv4];
 
 /// The agent cannot observe its own public address, and asks no external
 /// service for it (spec §Connectivity and Address: an agent learns it from a
@@ -66,6 +64,10 @@ void main() {
     );
   }
 
+  /// Each node's host-address reader (hermetic: see the glare test), which
+  /// tells when its candidates are read.
+  final hostReaders = Expando<LoopbackHostReader>();
+
   Future<GrassrootsNetwork> startNode(
     GrassrootsIdentity id, {
     void Function(String? oldAddress, String? newAddress)?
@@ -76,16 +78,18 @@ void main() {
       appReducer,
       initialState: const AppState(),
     );
+    final hosts = LoopbackHostReader();
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
       store: store,
       sodium: sodium,
-      localHostAddressReader: _loopbackHostAddresses,
+      localHostAddressReader: hosts.call,
       config: const GrassrootsNetworkConfig(
         announceInterval: Duration(seconds: 2),
       ),
     );
+    hostReaders[network] = hosts;
     network.wan!.onConnectivityStatusChanged = onConnectivityStatusChanged;
     // Declared as GLP declares them (GNA §4.2).
     for (final server in rendezvousServers) {
@@ -97,11 +101,7 @@ void main() {
   }
 
   Future<Set<String>> localCandidates(GrassrootsNetwork network) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (network.debugLocalCandidates().isEmpty &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await hostReaders[network]!.read;
     return network.debugLocalCandidates();
   }
 
@@ -152,7 +152,7 @@ void main() {
     );
     expect(node.wan!.getPublicAddress(), isNull,
         reason: 'host candidates are not a public address');
-  });
+  }, timeout: Timeout.none);
 
   test('two peers connect with neither holding a public address', () async {
     final callerId = await identityFromSeed(0x73);
@@ -169,8 +169,10 @@ void main() {
     expect(await localCandidates(caller), isNotEmpty);
 
     final delivered = <String>[];
+    final firstDelivered = Completer<void>();
     callee.onMessageReceived = (senderPk, payload, messageId, underlay) {
       delivered.add(utf8.decode(payload));
+      if (!firstDelivered.isCompleted) firstDelivered.complete();
     };
 
     // This is the shape of the first connection to a rendezvous server: the
@@ -186,15 +188,12 @@ void main() {
       Uint8List.fromList(utf8.encode('first contact without an address')),
     );
 
-    final deadline = DateTime.now().add(const Duration(seconds: 20));
-    while (delivered.isEmpty && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await firstDelivered.future;
 
     expect(delivered, ['first contact without an address']);
     expect(caller.wan!.getPublicAddress(), isNull,
         reason: 'a peer session is not a rendezvous reflection');
-  });
+  }, timeout: Timeout.none);
 
   /// A rendezvous server: the headless layer marked one, on the loopback.
   Future<HeadlessGrassrootsNetwork> rendezvousServer(int fill) async {
@@ -220,10 +219,13 @@ void main() {
       '"Address observation")', () async {
     final server = await rendezvousServer(0x75);
     final reports = <(String?, String?)>[];
+    final reflected = Completer<void>();
     final node = await startNode(
       await identityFromSeed(0x76),
-      onConnectivityStatusChanged: (oldAddress, newAddress) =>
-          reports.add((oldAddress, newAddress)),
+      onConnectivityStatusChanged: (oldAddress, newAddress) {
+        reports.add((oldAddress, newAddress));
+        if (newAddress != null && !reflected.isCompleted) reflected.complete();
+      },
       rendezvousServers: [
         RendezvousServer(
             '127.0.0.1:${server.boundPort}', server.identity.publicKey),
@@ -232,17 +234,13 @@ void main() {
     addTearDown(node.dispose);
     await node.start();
 
-    final deadline = DateTime.now().add(const Duration(seconds: 20));
-    while (node.wan!.getPublicAddress() == null &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await reflected.future;
     final observed = server.wan.observedPeerAddress(node.identity.publicKey);
     expect(observed, isNotNull);
     expect(node.wan!.getPublicAddress(), observed,
         reason: 'the address the server observes, reflected');
     expect(reports, [(null, null), (null, observed)]);
-  }, timeout: const Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout.none);
 
   test(
       'signaling from a peer that is no declared rendezvous server is '
@@ -261,14 +259,15 @@ void main() {
     expect(await peer.start(), isTrue);
 
     // A known peer, connected over a session.
+    final peerLinked = Completer<void>();
+    // The node is the one peer the headless peer meets.
+    peer.onPeerConnected = (pk, underlay, application) {
+      if (!peerLinked.isCompleted) peerLinked.complete();
+    };
     node.putKnownPeer(peerId.publicKey);
     peer.wan.putPeerAddress(nodeId.publicKey, (await localCandidates(node)).first);
     await peer.send(nodeId.publicKey, Uint8List.fromList([1]));
-    final deadline = DateTime.now().add(const Duration(seconds: 20));
-    while (!peer.isPeerReachable(nodeId.publicKey) &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await peerLinked.future;
     expect(peer.isPeerReachable(nodeId.publicKey), isTrue);
 
     expect(
@@ -280,5 +279,5 @@ void main() {
     await Future<void>.delayed(const Duration(seconds: 2));
     expect(node.wan!.getPublicAddress(), isNull,
         reason: 'only a declared rendezvous server reflects an address');
-  }, timeout: const Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout.none);
 }

@@ -5985,7 +5985,7 @@ check "MB4 the twice-crossed end delivers the hand-over reduction's element" "\[
 check "MB4 and the element written into its tail afterwards" "\[bob\] saw(probe)" "$mb4"
 check "MB4 the holder's assignment comes back" "\[alice\] got(hi)" "$mb4"
 
-# MB5: the link probes (programs/tests/linkprobes, and linkprobes.md beside them).  Eight `:boot` programs that fence in what crosses a link and what does not: each is a cold call between isolates, after which one side writes on a stream the other reads.  They differ in how many crossings the reader's end made before it was read, and whether the elements were written in one reduction or in two.  They were the evidence for the defect repaired on 2026-09-08 in lib/runtime/heap_fcp.dart (fireBoundCallbacks), where a value written into the tail of a stream whose reader had already crossed a link was produced and never sent, and until now nothing in the suite loaded them: MB4 above covers the same repair on one program, and these cover the six shapes that isolate it.  linkprobe13 and linkprobe14 are the pair in which the channel is handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 the third agent made the channel and anchors every link, so no link is held and both greetings pass through her (IGLP madglp-spec.tex, Held Links; Lemma "Both Ends Exported"); in linkprobe14 she forwards an end, the link is held, and nothing passes.
+# MB5: the link probes (programs/tests/linkprobes, and linkprobes.md beside them).  Eight `:boot` programs that fence in what crosses a link and what does not: each is a cold call between isolates, after which one side writes on a stream the other reads.  They differ in how many crossings the reader's end made before it was read, and whether the elements were written in one reduction or in two.  They were the evidence for the defect repaired on 2026-09-08 in lib/runtime/heap_fcp.dart (fireBoundCallbacks), where a value written into the tail of a stream whose reader had already crossed a link was produced and never sent, and until now nothing in the suite loaded them: MB4 above covers the same repair on one program, and these cover the six shapes that isolate it.  linkprobe13 and linkprobe14 are the pair in which the channel is handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 the third agent made the channel and anchors every link, so no link is held and both greetings pass through her (IGLP madglp-spec.tex, Held Links; Lemma "Both Ends Exported"); in linkprobe14 she forwards an end, the link is held, and nothing passes on it, while bob's greeting, once it has reached her, is hers to send.
 LP_DIR="$GLP_DIR/programs/tests/linkprobes"
 rm -f "$LP_DIR"/runprobe/*.glpw
 
@@ -6053,7 +6053,7 @@ check "MB5 runprobe an activated mini-app's writer crosses: the greeting arrives
 check "MB5 runprobe and the element it wrote into the tail" "\[bob\] saw(probe)" "$lpr"
 check "MB5 runprobe the holder's assignment comes back" "\[alice\] got(hi)" "$lpr"
 
-# linkprobe13 and linkprobe14: a channel handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 carol made the channel and anchors every link, so none is held and each greeting passes through her; in linkprobe14 she forwards an end, the link is held, and neither greeting is delivered.
+# linkprobe13 and linkprobe14: a channel handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 carol made the channel and anchors every link, so none is held and each greeting passes through her; in linkprobe14 she forwards an end bob made, the link is held, and nothing passes on it.  linkprobe14's check holds in every order, delivery being unordered (GLP #11 Cowork, 2026-11-03 16:06 UTC, item 3): once bob's greeting has reached carol it is hers to send (IGLP, madGLP's Send Reader and Globalize), so alice may see it, from carol, and never on bob's held link: carol forwards the end to alice, and the router delivers no message from bob to alice (:deliveries), neither a value of bob's on the held link nor an answer to a request of alice's.
 lp13=$("$REPL_RUN" <<HEREDOC
 :boot $LP_DIR/linkprobe13_boot.glp $LP_DIR/linkprobe13
 :quit
@@ -6064,12 +6064,15 @@ check "MB5 linkprobe13 no link is held: alice reads bob's greeting, through caro
 check "MB5 linkprobe13 no link is held: bob reads alice's greeting, through carol" "\[bob\] saw(hello_from(alice))" "$lp13"
 
 lp14=$("$REPL_RUN" <<HEREDOC
+:deliveries
 :boot $LP_DIR/linkprobe14_boot.glp $LP_DIR/linkprobe14
 :quit
 HEREDOC
 2>&1)
 check "MB5 linkprobe14 one end forwarded by a third agent: the boot settles" "Boot settled: 3 agents" "$lp14"
-check_not "MB5 linkprobe14 nothing passes on a held link neither side authorises" "saw(hello_from" "$lp14"
+check "MB5 linkprobe14 carol forwards the end to alice" "^Delivered: carol > alice [1-9]" "$lp14"
+check_not "MB5 linkprobe14 nothing of bob's reaches alice on the held link neither side authorises" "^Delivered: bob > alice" "$lp14"
+check_not "MB5 linkprobe14 what alice sees is bob's greeting, from carol" "\[alice\] saw(hello_from(\(alice\|carol\))" "$lp14"
 
 rm -f "$LP_DIR"/runprobe/*.glpw
 
@@ -7890,7 +7893,7 @@ if _section CAS; then
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai agora; do
+for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai agora gdo; do
     cas_n=$(printf '%s' "$cas_c" | tr a-z A-Z)
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue

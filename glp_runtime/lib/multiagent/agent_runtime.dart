@@ -56,6 +56,7 @@ import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart' show WireWriter, bytesEqual;
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
+import 'package:glp_runtime/multiagent/message_queue.dart' show OutboundMessage;
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/simulation_network.dart';
@@ -170,8 +171,9 @@ class AgentRuntime {
   /// The state last saved, which a cycle whose save fails goes back to.  Null until the first is saved.
   Uint8List? _lastSaved;
 
-  /// The messages [_lastSaved] holds undelivered have been handed to the layer since it was saved ([_handOver]), so that a cycle going back to it takes them out of M_p and hands none of them over twice ([_rollBack]).
-  bool _lastSavedHandedOver = false;
+  /// The messages the layer has accepted since [_lastSaved] was saved, which that state holds undelivered, so that a cycle going back to it takes them out of M_p and hands none of them over twice ([_rollBack]); a message the layer refused is not among them, and stays in M_p, to be handed over again.
+  final List<({String destination, List<int> payload})> _acceptedSinceSave =
+      [];
 
   /// The events waiting for their cycle, in order of arrival, each with the
   /// completer of whoever submitted it.
@@ -326,7 +328,7 @@ class AgentRuntime {
     if (saved != null) {
       _restore(saved);
       _lastSaved = saved;
-      _lastSavedHandedOver = false;
+      _acceptedSinceSave.clear();
       _log('INIT: restored the state saved at termination '
           '(${saved.length} bytes), GQ=${_runtime!.gq.length}');
       _output('[INIT] Restored the agent\'s saved state');
@@ -601,7 +603,7 @@ class AgentRuntime {
   Future<void> _cycle(_AgentEvent event) async {
     final store = stateStore;
     if (store == null) {
-      _apply(event, send: true);
+      await _applyAndSend(event);
     } else {
       await _cycleSaving(event, store);
     }
@@ -614,12 +616,12 @@ class AgentRuntime {
   Future<void> _cycleSaving(_AgentEvent event, AgentStateStore store) async {
     var goals = 0;
     String? status;
-    if (event is! _Resume) {
+    if (event is! _Resume && event is! _Retry) {
       (status, goals) = await _stepAndSave(store,
-          () => _apply(event, send: false), 'the event is applied again');
+          () => _apply(event), 'the event is applied again');
     }
     while (true) {
-      final handed = _handOver();
+      final handed = await _handOver();
       // A run that stopped at the net, or on an error of the runtime, is not
       // run again; the cycle ends with its hand-over.
       final stopped =
@@ -632,7 +634,7 @@ class AgentRuntime {
       }
       final (runStatus, ran) = await _stepAndSave(
           store,
-          () => _runSync(send: false, maxCycles: maxQuiescenceCycles - goals),
+          () => _runSync(maxCycles: maxQuiescenceCycles - goals),
           'the run after the hand-over is made again');
       status = runStatus;
       goals += ran;
@@ -665,7 +667,7 @@ class AgentRuntime {
       try {
         await store.save(bytes);
         _lastSaved = bytes;
-        _lastSavedHandedOver = false;
+        _acceptedSinceSave.clear();
         return;
       } catch (e) {
         failed(e);
@@ -673,10 +675,10 @@ class AgentRuntime {
     }
   }
 
-  /// Hand to the layer every message M_p holds undelivered and not held (IGLP, Definition "madGLP Send Transaction": Send "is enabled when (m, q) ∈ M_p is undelivered and not held"), from the state the store holds: the state just saved, or the state a restart resumes from.  The number of messages handed over.
-  int _handOver() {
+  /// Hand to the layer every message M_p holds undelivered and not held (IGLP, Definition "madGLP Send Transaction": Send "is enabled when (m, q) ∈ M_p is undelivered and not held"), from the state the store holds: the state just saved, or the state a restart resumes from; and wait for the layer's answer to each, a refused message being back in M_p undelivered (IGLP b014a9e, Implementation Notes, "Networking Seam", The contract: "the runtime waits for its answer and, on a refusal, keeps the message").  The number of messages handed over.
+  Future<int> _handOver() async {
     final handed = _ctx!.flushMessages();
-    _lastSavedHandedOver = true;
+    await _ctx!.answered();
     if (handed > 0) _log('RUN: handed $handed messages to the layer');
     return handed;
   }
@@ -697,23 +699,44 @@ class AgentRuntime {
     final saved = _lastSaved;
     if (saved == null) return;
     _restore(saved);
-    if (_lastSavedHandedOver) {
-      final removed = _ctx!.mp.removeSendable();
-      if (removed > 0) {
-        _log('ROLLBACK: $removed messages the saved state holds undelivered '
-            'were handed to the layer after it was saved, and are taken out '
-            'of M_p');
-      }
+    final removed = _ctx!.mp.removeSent(_acceptedSinceSave);
+    if (removed > 0) {
+      _log('ROLLBACK: $removed messages the saved state holds undelivered '
+          'were accepted by the layer after it was saved, and are taken out '
+          'of M_p');
     }
   }
 
-  /// Apply [event] and reduce: the event's binding and a run until quiescent, and, with [send], the Sends it makes ([_runSync]).  The status of the run, or null where none was made.
-  String? _apply(_AgentEvent event, {required bool send}) {
+  /// Apply [event] and reduce: the event's binding and a run until quiescent, which makes no Sends, its messages staying undelivered in M_p ([_runSync]).  The status of the run, or null where none was made.
+  String? _apply(_AgentEvent event) {
+    if (!_bind(event)) return null;
+    return _reportBoot(event, _runSync());
+  }
+
+  /// Apply [event], reduce, and perform the Sends the run makes, waiting for the layer's answer to each ([_runAndSend]).  The status of the run, or null where none was made.
+  Future<String?> _applyAndSend(_AgentEvent event) async {
+    if (!_bind(event)) return null;
+    return _reportBoot(event, await _runAndSend());
+  }
+
+  String? _reportBoot(_AgentEvent event, String? status) {
+    if (event is _Boot) {
+      _log('INIT: Initial run status: $status, GQ after: '
+          '${_runtime!.gq.length}');
+    }
+    return status;
+  }
+
+  /// Bind what [event] delivers; false where the person's act could not be injected, and no run is to be made.
+  bool _bind(_AgentEvent event) {
     switch (event) {
       case _Boot():
         _boot();
       case _Resume():
         // The restart binds nothing.
+        break;
+      case _Retry():
+        // The layer's report binds nothing.
         break;
       case _Message(:final from, :final payload):
         try {
@@ -734,17 +757,12 @@ class AgentRuntime {
         } catch (e, st) {
           _log('USER_INPUT ERROR: $e\n$st');
           _output('[ERROR] $e');
-          return null;
+          return false;
         }
       case _PlaceEvent(:final place, :final event, :final declaration):
         _ctx!.deliverPlaceEvent(place, event, declaration: declaration);
     }
-    final status = _runSync(send: send);
-    if (event is _Boot) {
-      _log('INIT: Initial run status: $status, GQ after: '
-          '${_runtime!.gq.length}');
-    }
-    return status;
+    return true;
   }
 
   /// The agent's local state as the bytes saved in a cycle.
@@ -762,6 +780,22 @@ class AgentRuntime {
     return w.finish();
   }
 
+  /// Hand [msg] to [network] for [pk], and return the layer's answer: a message the layer accepts is noted among those accepted since the last save ([_acceptedSinceSave]); a refusal is logged, and the message is back in M_p ([MadContext.flushMessages]).
+  Future<void> _sendAndNote(
+      GlpNetwork network, PubKey pk, String destination, OutboundMessage msg) {
+    final payload = Uint8List.fromList(msg.payload);
+    return network.send(pk, payload).then((_) {
+      if (stateStore != null) {
+        _acceptedSinceSave
+            .add((destination: destination, payload: msg.payload));
+      }
+    }, onError: (Object e) {
+      _log('SEND REFUSED: the layer refused a message to $destination: $e; '
+          'it is kept, and sent again at the next hand-over');
+      throw e;
+    });
+  }
+
   /// Bind the network the host was given: the agent is named by its key, a
   /// destination is the key it names, and the sender of an incoming message
   /// is named by the key the layer authenticated (IGLP, Remark "Agent Names";
@@ -775,7 +809,7 @@ class AgentRuntime {
 
     // Outgoing: the destination's name is its key.  A destination that is no
     // key names no agent over the layer, and its message is not sent.
-    _ctx!.onMessageReady = (destination, msg) async {
+    _ctx!.onMessageReady = (destination, msg) {
       final PubKey pk;
       try {
         pk = PubKey.fromHex(destination);
@@ -784,9 +818,9 @@ class AgentRuntime {
             'names no agent over the network, is not sent: $e');
         _output('[ERROR] a message to $destination, which names no agent '
             'over the network, is not sent');
-        return;
+        return null;
       }
-      network.send(pk, Uint8List.fromList(msg.payload));
+      return _sendAndNote(network, pk, destination, msg);
     };
 
     // Incoming: the Receive transaction, from the sender the layer authenticated, then a run, and the Sends it makes, after the save where there is a store: the message's event cycle ([_cycle]), taken once the code that delivered the message has returned, since a layer may deliver from inside a call the runtime made of it, and a transaction or a run is never started inside another.  A place event the layer reports is a cycle of its own likewise ([MadContext.placeEventSink], set by [_setUp]).
@@ -798,9 +832,14 @@ class AgentRuntime {
     };
 
     // Connectivity, surfaced as the layer reports it, its attested identity
-    // with it.
-    network.onPeerConnected =
-        (pk, underlay, identity) => onPeerConnected?.call(pk, underlay, identity);
+    // with it.  A connection the layer reports is also when a message it
+    // refused is sent again, where M_p holds one ([_Retry]).
+    network.onPeerConnected = (pk, underlay, identity) {
+      onPeerConnected?.call(pk, underlay, identity);
+      if (_ctx?.mp.hasSendable ?? false) {
+        unawaited(_submit(const _Retry()).catchError((Object _) {}));
+      }
+    };
     network.onPeerDisconnected =
         (pk, underlay) => onPeerDisconnected?.call(pk, underlay);
     network.onPeerDiscovered =
@@ -834,9 +873,8 @@ class AgentRuntime {
     _ctx!.resolveAgent = directory.agentNamed;
 
     // Outgoing: ctx.onMessageReady(destId, msg) → network.send.
-    _ctx!.onMessageReady = (destination, msg) async {
-      network.send(_pkFor(destination), Uint8List.fromList(msg.payload));
-    };
+    _ctx!.onMessageReady = (destination, msg) =>
+        _sendAndNote(network, _pkFor(destination), destination, msg);
 
     // Incoming: dispatch on the message kind byte (value/request/
     // acknowledgement) via the MadContext receive entry point.  The sender is
@@ -954,44 +992,56 @@ class AgentRuntime {
   /// outside one, `runUntilQuiescent` and `onLegacyMessageReceived`, which
   /// nothing called.
   ///
-  /// With [send] false, the run makes no Sends: its messages stay undelivered in M_p, for a cycle over a store to hand to the layer once the state holding them is saved ([_cycleSaving]).  [maxCycles], where given, bounds the goals of this run in place of [maxQuiescenceCycles].
-  String? _runSync({bool send = true, int? maxCycles}) {
-    _log('RUN: start (GQ=${_runtime?.gq.length ?? 0})');
-    if (_scheduler == null || _runtime == null) {
-      _log('RUN: early return (not initialized)');
-      return null;
-    }
-
+  /// [_runSync] makes no Sends: its messages stay undelivered in M_p, for a cycle over a store to hand to the layer once the state holding them is saved ([_cycleSaving]).  [maxCycles], where given, bounds the goals of this run in place of [maxQuiescenceCycles].
+  String? _runSync({int? maxCycles}) {
+    if (!_runStarts()) return null;
     try {
-      // Per spec: drain all runnable goals, then flush outbound messages, and
-      // again while a goal waits on when_idle; or, with no Sends, drain only.
-      var messagesFlushed = 0;
-      final limit = maxCycles ?? maxQuiescenceCycles;
-      final result = send
-          ? _scheduler!.drainAndSend(
-              () => messagesFlushed += _ctx!.flushMessages(),
-              maxCycles: limit,
-              debug: true)
-          : _scheduler!
-              .drainToQuiescence(maxCycles: limit, debug: true);
-      _log('RUN: status=${result.status}, goals=${result.goalsRun}');
-      goalCount += result.goalsRun;
-
-      if (result.status == ExecutionStatus.capped) {
-        _reportCapped(result.goalsRun);
-      }
-
-      if (messagesFlushed > 0) {
-        _log('RUN: flushed $messagesFlushed messages');
-      }
-
-      updateStats();
-      _log('RUN: done (status=${result.status.name})');
-      return result.status.name;
+      final result = _scheduler!.drainToQuiescence(
+          maxCycles: maxCycles ?? maxQuiescenceCycles, debug: true);
+      return _runDone(result, 0);
     } catch (e, st) {
       _log('RUN ERROR: $e\n$st');
       return 'error';
     }
+  }
+
+  /// [_runAndSend] drains, then performs the Sends and waits for the layer's answer to each, and again while a goal waits on when_idle ([Scheduler.drainAndSend]): "the runtime waits for its answer and, on a refusal, keeps the message and sends it again later" (IGLP b014a9e, Implementation Notes, "Networking Seam", The contract).
+  Future<String?> _runAndSend() async {
+    if (!_runStarts()) return null;
+    try {
+      var messagesFlushed = 0;
+      final result = await _scheduler!.drainAndSend(() {
+        messagesFlushed += _ctx!.flushMessages();
+        return _ctx!.answered();
+      }, maxCycles: maxQuiescenceCycles, debug: true);
+      return _runDone(result, messagesFlushed);
+    } catch (e, st) {
+      _log('RUN ERROR: $e\n$st');
+      return 'error';
+    }
+  }
+
+  bool _runStarts() {
+    _log('RUN: start (GQ=${_runtime?.gq.length ?? 0})');
+    if (_scheduler == null || _runtime == null) {
+      _log('RUN: early return (not initialized)');
+      return false;
+    }
+    return true;
+  }
+
+  String _runDone(DrainResult result, int messagesFlushed) {
+    _log('RUN: status=${result.status}, goals=${result.goalsRun}');
+    goalCount += result.goalsRun;
+    if (result.status == ExecutionStatus.capped) {
+      _reportCapped(result.goalsRun);
+    }
+    if (messagesFlushed > 0) {
+      _log('RUN: flushed $messagesFlushed messages');
+    }
+    updateStats();
+    _log('RUN: done (status=${result.status.name})');
+    return result.status.name;
   }
 
   /// The net caught something, which for a program that quiesces it never does: the run stopped after [goalsRun] goals.  Say so where the person and the log both see it, and say what is left standing: a run stopped here is half a run, and nothing that follows it means what it says.
@@ -1064,6 +1114,13 @@ final class _Resume extends _AgentEvent {
   const _Resume();
   @override
   String toString() => 'the restart';
+}
+
+/// The layer reports a peer connected while M_p holds a message the layer refused: the cycle applies nothing, and hands the message to the layer again (IGLP b014a9e, Implementation Notes, "Networking Seam", The contract: "on a refusal, keeps the message and sends it again later").
+final class _Retry extends _AgentEvent {
+  const _Retry();
+  @override
+  String toString() => 'a connection the layer reports, after a refusal';
 }
 
 /// A message the layer delivers, from the agent named [from], under the

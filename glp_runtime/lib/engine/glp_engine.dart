@@ -1043,10 +1043,13 @@ class GlpEngine {
   /// Send; Implementation Notes, "Event-driven execution"): the outbox's
   /// messages placed on the channel [MadContext.onMessageReady] gives, which
   /// whoever enters the mode provides (the REPL's `:mad`).  Null outside it.
-  void Function()? get _sends {
+  Future<void> Function()? get _sends {
     final ctx = madContext;
     if (ctx == null) return null;
-    return () => ctx.flushMessages();
+    return () {
+      ctx.flushMessages();
+      return ctx.answered();
+    };
   }
 
   /// Get the combined bytecode program from all loaded sources.

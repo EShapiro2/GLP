@@ -663,16 +663,19 @@ void main() {
   // ===================================================================
   group('dispose', () {
     test('cancels pending debounce timer', () async {
-      final state = makeAppState(
-        knownPeers: KnownPeersState(known: {peerA: null}),
-      );
+      fakeAsync((async) {
+        final state = makeAppState(
+          knownPeers: KnownPeersState(known: {peerA: null}),
+        );
 
-      service.onStateChanged(state);
-      // Dispose before debounce fires
-      service.dispose();
+        service.onStateChanged(state);
+        // Dispose before debounce fires
+        service.dispose();
 
-      // Wait for what would have been the debounce delay
-      await Future.delayed(const Duration(milliseconds: 600));
+        // Past what would have been the debounce delay
+        async.elapse(const Duration(milliseconds: 600));
+        async.flushMicrotasks();
+      });
 
       final prefs = await SharedPreferences.getInstance();
       // Nothing should have been persisted since we disposed before the timer

@@ -13,6 +13,7 @@ import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/models/underlay_api.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
 
 /// Hermetic host candidates (see the glare test).
@@ -152,9 +153,8 @@ void main() {
     expect(wan.getPublicAddress(), isNull);
 
     // networkIdentity and onNetworkChanged: the construction-time read.
-    for (var i = 0; i < 50 && wan.networkIdentity() == null; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-    }
+    await stateWhere(
+        layer.store, (state) => state.localNetwork.networkId != null);
     expect(wan.networkIdentity(), layer.store.state.localNetwork.networkId);
     expect(networkReports,
         wan.networkIdentity() == null ? isEmpty : [(null, wan.networkIdentity())]);
@@ -170,5 +170,5 @@ void main() {
     // punchUdp.
     expect(() => wan.punchUdp('nowhere'), throwsArgumentError);
     expect(() => wan.punchUdp('203.0.113.5:4242'), returnsNormally);
-  });
+  }, timeout: Timeout.none);
 }

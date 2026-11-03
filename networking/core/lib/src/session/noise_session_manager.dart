@@ -86,8 +86,10 @@ class NoiseHandshakeResult {
   /// §2.6).
   final bool sentFinal;
 
-  /// Whether the handshake this message started replaced a session the pair
-  /// held: the peer runs a new handshake, so the session it held is gone.
+  /// Whether the handshake this message completed replaced a session the
+  /// pair held: an XX handshake answered while a session stood, completed by
+  /// its message 3, ends the standing session (GNA §2.6: "A live session ends
+  /// when a new handshake with the peer completes").
   final bool replacedSession;
 
   const NoiseHandshakeResult({
@@ -288,15 +290,19 @@ class NoiseSessionManager {
   /// handshake with [remotePubkey] — retransmitted on a timer over a lossy
   /// carrier until the next message arrives (GNA §2.6: "each handshake
   /// message is retransmitted on a timer until the next one arrives"). Null
-  /// once the session is established or no handshake is in flight.
+  /// once the session is established or no handshake is in flight, except
+  /// for the message 2 of an XX handshake answered while a session stands
+  /// ([_handleXx1]), returned until its message 3 arrives.
   Uint8List? handshakeRetransmitPayload(
     PeerTransport transport,
     Uint8List remotePubkey,
   ) {
     final entry = _entries[_SessionKey(transport, _hex(remotePubkey))];
-    if (entry == null || entry.session != null || entry.handshake == null) {
-      return null;
-    }
+    if (entry == null) return null;
+    // An XX handshake answered while a session stands: its message 2 until
+    // message 3 arrives.
+    if (entry.session != null) return entry.pendingXx?.sentEncoded;
+    if (entry.handshake == null) return null;
     return entry.lastSentEncoded;
   }
 
@@ -529,6 +535,17 @@ class NoiseSessionManager {
         responsePayload: entry.lastSentEncoded,
       );
     }
+    // The same for a message 1 whose handshake waits on the standing session.
+    final waiting = entry.pendingXx;
+    if (entry.session != null &&
+        waiting != null &&
+        _bytesEqual(waiting.inboundBody, body)) {
+      return NoiseHandshakeResult(
+        remotePubkey: remotePubkey,
+        pattern: NoisePattern.xx,
+        responsePayload: waiting.sentEncoded,
+      );
+    }
 
     if (!accept(NoisePattern.xx, remotePubkey)) {
       throw StateError('Noise XX message 1 from '
@@ -547,26 +564,41 @@ class NoiseSessionManager {
     );
     await handshake.readXx1(body);
     final responseBody = await handshake.writeXx2();
-    final replaced = entry.session != null;
-    entry
-      ..session = null
-      ..handshake = handshake
-      ..finalSent = null
-      ..lastInboundBody = body
-      // Keep a pending waiter: the dialer may already be awaiting the
-      // session (waitForSession registers before the handshake starts).
-      ..completer ??= Completer<bool>();
     final encoded = _encodeEnvelope(
       _Kind.xx2,
       responseBody,
       claim: identity.publicKey,
     );
-    entry.lastSentEncoded = encoded;
+
+    // "A live session ends when a new handshake with the peer completes, or
+    // by silence" (GNA §2.6): message 2 answers the new message 1, and its
+    // handshake waits beside the standing session until message 3 completes
+    // it ([_handleXx3]).  A message 1 that is never completed ends nothing.
+    if (entry.session != null) {
+      entry.pendingXx = _PendingXx(
+        handshake: handshake,
+        inboundBody: body,
+        sentEncoded: encoded,
+      );
+      return NoiseHandshakeResult(
+        remotePubkey: remotePubkey,
+        pattern: NoisePattern.xx,
+        responsePayload: encoded,
+      );
+    }
+
+    entry
+      ..handshake = handshake
+      ..finalSent = null
+      ..lastInboundBody = body
+      ..lastSentEncoded = encoded
+      // Keep a pending waiter: the dialer may already be awaiting the
+      // session (waitForSession registers before the handshake starts).
+      ..completer ??= Completer<bool>();
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,
       pattern: NoisePattern.xx,
       responsePayload: encoded,
-      replacedSession: replaced,
     );
   }
 
@@ -640,6 +672,11 @@ class NoiseSessionManager {
     final body = envelope.body;
     final key = _SessionKey(transport, _hex(remotePubkey));
     final entry = _entries.putIfAbsent(key, _SessionEntry.new);
+    final waiting = entry.pendingXx;
+    if (entry.session != null && waiting != null) {
+      return _completeWaitingXx(entry, waiting, body,
+          transport: transport, remotePubkey: remotePubkey, peerId: peerId);
+    }
     final handshake = entry.handshake;
     if (handshake == null ||
         handshake.role != NoiseHandshakeRole.responder ||
@@ -667,6 +704,51 @@ class NoiseSessionManager {
       remotePubkey: remotePubkey,
       pattern: NoisePattern.xx,
       sessionEstablished: true,
+    );
+  }
+
+  /// Message 3 of an XX handshake answered while a session stood
+  /// ([_handleXx1]): read under the waiting handshake, it completes it, and
+  /// its session takes the standing one's place (GNA §2.6: "A live session
+  /// ends when a new handshake with the peer completes").  A message 3 that
+  /// does not open, or delivers a static that is not the claimed key's,
+  /// completes nothing, and the standing session stays.
+  Future<NoiseHandshakeResult> _completeWaitingXx(
+    _SessionEntry entry,
+    _PendingXx waiting,
+    Uint8List body, {
+    required PeerTransport transport,
+    required Uint8List remotePubkey,
+    String? peerId,
+  }) async {
+    final trial = waiting.handshake.copy();
+    try {
+      await trial.readXx3(body);
+    } catch (_) {
+      // A retransmitted message 3 of the standing session, or a forgery.
+      return NoiseHandshakeResult(
+          remotePubkey: remotePubkey, pattern: NoisePattern.xx);
+    }
+    if (!_verifyRemoteStatic(trial, remotePubkey)) {
+      entry.pendingXx = null;
+      return NoiseHandshakeResult(
+          remotePubkey: remotePubkey, pattern: NoisePattern.xx);
+    }
+    final session = await trial.splitForResponder();
+    entry
+      ..session = session
+      ..handshake = null
+      ..pendingXx = null
+      ..lastInboundBody = waiting.inboundBody
+      ..lastSentEncoded = waiting.sentEncoded
+      ..finalSent = null;
+    entry.pending.clear();
+    _recordConnectionPeer(transport, peerId, remotePubkey);
+    return NoiseHandshakeResult(
+      remotePubkey: remotePubkey,
+      pattern: NoisePattern.xx,
+      sessionEstablished: true,
+      replacedSession: true,
     );
   }
 
@@ -805,7 +887,8 @@ class NoiseSessionManager {
         ..handshake = null
         ..lastInboundBody = pending.inboundBody
         ..lastSentEncoded = pending.sentEncoded
-        ..finalSent = pending.sentEncoded;
+        ..finalSent = pending.sentEncoded
+        ..pendingXx = null;
       entry.pending.clear();
       _recordConnectionPeer(
           transport, peerId ?? pending.connectionId, remotePubkey);
@@ -1021,6 +1104,10 @@ class _SessionEntry {
   /// the initiator's first packet to open under it (GNA §2.6).
   final List<_PendingSession> pending = [];
 
+  /// The responder XX handshake answered while [session] stood, waiting for
+  /// its message 3 (GNA §2.6); a later message 1 takes its place.
+  _PendingXx? pendingXx;
+
   void complete(bool value) {
     final pending = completer;
     if (pending != null && !pending.isCompleted) {
@@ -1050,6 +1137,24 @@ class _PendingSession {
 
   /// The connection message 1 arrived on.
   final String? connectionId;
+}
+
+/// A responder's XX handshake that waits beside the standing session of the
+/// pair until its message 3 arrives.
+class _PendingXx {
+  _PendingXx({
+    required this.handshake,
+    required this.inboundBody,
+    required this.sentEncoded,
+  });
+
+  final _NoiseHandshakeState handshake;
+
+  /// The message 1 it answers, to tell a retransmission of it.
+  final Uint8List inboundBody;
+
+  /// The message 2 this side sent, resent for a retransmitted message 1.
+  final Uint8List sentEncoded;
 }
 
 class _SessionKey {

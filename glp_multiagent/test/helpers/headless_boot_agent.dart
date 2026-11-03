@@ -37,7 +37,7 @@ import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
-import 'headless_boot.dart' show actTerm, identityOfPersona;
+import 'headless_boot.dart' show actTerm, identityOfPersona, senderOfReceipt;
 
 Future<void> main(List<String> args) async {
   final persona = args[0];
@@ -99,6 +99,12 @@ Future<void> main(List<String> args) async {
       // The transcript marks each element sent to the person with `< `.
       agent!.onOutput = (l) {
         if (l.startsWith('< ')) stdout.writeln('OUT ${l.substring(2)}');
+      };
+      // Each message the layer delivers, by its sender's key, as the runtime
+      // logs it (headless_boot.dart, senderOfReceipt).
+      agent!.onLog = (_, message) {
+        final sender = senderOfReceipt(message);
+        if (sender != null) stdout.writeln('RECV $sender');
       };
       await agent!.initialize();
       final act = go['act'] as Map<String, dynamic>?;

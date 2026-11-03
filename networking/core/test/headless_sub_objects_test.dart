@@ -7,6 +7,8 @@ import 'package:test/test.dart';
 
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
+import 'helpers/event_waits.dart';
+
 /// The underlay sub-objects of the headless profile (GNA §2.2): "The layer
 /// exposes one sub-object for each underlay it runs, pan, lan and wan, and
 /// null for an underlay it does not run"; the headless profile runs the WAN
@@ -43,14 +45,6 @@ void main() {
     );
     addTearDown(layer.dispose);
     return layer;
-  }
-
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 15}) async {
-    final clock = Stopwatch()..start();
-    while (!predicate() && clock.elapsed < Duration(seconds: seconds)) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    return predicate();
   }
 
   test('the profile has a wan sub-object and no pan or lan sub-object',
@@ -117,11 +111,7 @@ void main() {
     // the session once the peer is reachable.
     expect(server.wan.observedPeerAddress(caller.identity.publicKey), isNull);
     await caller.send(serverKey, Uint8List.fromList([1]));
-    expect(
-        await waitFor(() =>
-            server.isPeerReachable(caller.identity.publicKey) &&
-            caller.isPeerReachable(serverKey)),
-        isTrue);
+    await untilBothReachable(server, caller);
     expect(server.wan.observedPeerAddress(caller.identity.publicKey),
         '127.0.0.1:${caller.boundPort}');
 
@@ -130,5 +120,5 @@ void main() {
     expect(() => caller.wan.punchUdp('nowhere'), throwsArgumentError);
     expect(() => caller.wan.punchUdp('127.0.0.1:${server.boundPort}'),
         returnsNormally);
-  });
+  }, timeout: Timeout.none);
 }

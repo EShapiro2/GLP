@@ -108,6 +108,13 @@ class _WireNetwork extends GlpNetwork {
   /// Places declared, in order.
   final List<String> declared = [];
 
+  /// How many sends still to refuse, as a layer refuses a message it cannot
+  /// save (GNA, Section 2.9: send "fails if the message cannot be saved").
+  int refuse = 0;
+
+  /// The sends refused, by destination key.
+  final List<String> refused = [];
+
   /// The messageIds the runtime acknowledged, in order, each an event a test
   /// waits on ([_Lines.lineWhere]).
   final _Lines acknowledged = _Lines();
@@ -120,7 +127,15 @@ class _WireNetwork extends GlpNetwork {
   PubKey getIdentity() => keyPair.pub;
 
   @override
-  void send(PubKey pk, Uint8List payload) => wire.carry(keyPair.pub, pk, payload);
+  Future<void> send(PubKey pk, Uint8List payload) {
+    if (refuse > 0) {
+      refuse--;
+      refused.add(pk.hex);
+      return Future.error(StateError('the message could not be saved'));
+    }
+    wire.carry(keyPair.pub, pk, payload);
+    return Future.value();
+  }
 
   @override
   void acknowledge(String messageId) => acknowledged.add(messageId);
@@ -339,6 +354,64 @@ void main() {
       expect(calleeNet.acknowledged, ['w0']);
       expect(callerNet.acknowledged, ['w1']);
       expect(toCoordinator, isEmpty);
+    });
+
+    test('a send the layer refuses is kept and sent again, and arrives once',
+        () async {
+      // IGLP b014a9e, Implementation Notes, "Networking Seam", The contract:
+      // "the layer refuses to send a message it cannot save, and the runtime
+      // waits for its answer and, on a refusal, keeps the message and sends
+      // it again later"; GNA, Section 2.9: send "fails if the message cannot
+      // be saved".  The caller's layer refuses the cold call once; the boot's
+      // cycle ends with it back in M_p, undelivered; the layer then reports
+      // the callee connected, and the caller hands it over again, once.
+      final wire = _Wire();
+      final callerKp = generateKeyPair();
+      final calleeKp = generateKeyPair();
+      final callerNet = _WireNetwork(callerKp, wire)..refuse = 1;
+      final caller = AgentRuntime(
+        agentId: 'caller',
+        program: play,
+        rootSelfGlpPath: root,
+        goalLabel: 'caller_init/3',
+        extraArgs: [calleeKp.pub.hex],
+        keyPair: callerKp,
+        network: callerNet,
+      );
+      final callee = AgentRuntime(
+        agentId: 'callee',
+        program: play,
+        rootSelfGlpPath: root,
+        goalLabel: 'callee_init/2',
+        keyPair: calleeKp,
+        network: _WireNetwork(calleeKp, wire),
+      );
+      final out = {'caller': _Lines(), 'callee': _Lines()};
+      caller.onOutput = out['caller']!.add;
+      callee.onOutput = out['callee']!.add;
+      await callee.initialize();
+      await caller.initialize();
+
+      // The boot's cycle waited for the layer's answer: the cold call was
+      // refused, nothing was carried, and the message is in M_p, undelivered.
+      expect(callerNet.refused, [calleeKp.pub.hex]);
+      expect(wire.carried, isEmpty);
+      expect(caller.ctx!.mp.sendableLength, 1,
+          reason: 'a refused message is kept');
+
+      // The layer reports the callee connected: the message is sent again.
+      callerNet.onPeerConnected!(calleeKp.pub, Underlay.wan, null);
+      await out['caller']!.lineWhere((l) => l.startsWith('< answered('));
+      expect(out['callee']!.where((l) => l.startsWith('< called(')),
+          hasLength(1),
+          reason: 'the cold call arrives once');
+      expect(
+          wire.carried
+              .where((c) => c == '${callerKp.pub.hex} > ${calleeKp.pub.hex}'),
+          hasLength(1),
+          reason: 'the caller sent the callee one message, the cold call, '
+              'once it was accepted');
+      expect(caller.ctx!.mp.sendableLength, 0);
     });
 
     test('no key is made up: a message to a name that is no key is not sent, '

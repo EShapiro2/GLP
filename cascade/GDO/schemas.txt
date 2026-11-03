@@ -1,0 +1,30 @@
+establish(Alice?) :
+    at Alice: not identity, +identity
+
+acquaint(Alice?, Bob?) :
+    at Alice: identity, +knows(Bob)
+    at Bob: identity, +knows(Alice)
+
+introduce(Alice?, Bob?; c) :
+    at Alice: identity, knows(Bob), knows(c)
+    at Bob: identity, knows(Alice), +knows(c)
+
+befriend(Alice?, Bob?) :
+    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
+    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
+
+unfriend(Alice?, Bob) :
+    at Alice: identity, -friend(Bob)
+    at Bob: identity, -friend(Alice)
+
+point_friend(Alice?, Bob) :
+    at Alice: identity, friend(Bob), not points_to(Bob), +points_to(Bob)
+    at Bob: identity
+
+point_transitive(Alice?, Bob; c) :
+    at Alice: identity, knows(c), points_to(Bob), +points_to(c)
+    at Bob: identity, points_to(c)
+
+unpoint(Alice?, Bob) :
+    at Alice: identity, -points_to(Bob)
+    at Bob: identity

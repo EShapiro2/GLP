@@ -8,6 +8,8 @@ import 'package:test/test.dart';
 
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
+import 'helpers/event_waits.dart';
+
 /// A datagram the relay carried: from the caller or from the callee, its
 /// frame type, and for a handshake the kind of message its envelope names
 /// (GNA §2.6; 0x11 and 0x12 IK messages 1 and 2, 0x01 to 0x03 XX's).
@@ -37,6 +39,26 @@ class _Relay {
   int? _callerPort;
   final List<_Carried> carried = [];
   bool Function(_Carried datagram) drop = (_) => false;
+  final List<(bool Function(), Completer<void>)> _waits = [];
+
+  /// Completes once [holds] is true of what the relay carried: checked now
+  /// and after each datagram it carries.
+  Future<void> carriedWhere(bool Function() holds) {
+    if (holds()) return Future.value();
+    final done = Completer<void>();
+    _waits.add((holds, done));
+    return done.future;
+  }
+
+  void _carry(_Carried what) {
+    carried.add(what);
+    for (final wait in _waits.toList()) {
+      if (wait.$1()) {
+        _waits.remove(wait);
+        wait.$2.complete();
+      }
+    }
+  }
 
   int get port => _socket.port;
   String get address => '127.0.0.1:$port';
@@ -56,14 +78,14 @@ class _Relay {
     if (fromCallee) {
       final address = _callerAddress;
       final port = _callerPort;
-      carried.add(what);
+      _carry(what);
       if (drop(what)) return;
       if (address != null && port != null) _socket.send(d.data, address, port);
       return;
     }
     _callerAddress = d.address;
     _callerPort = d.port;
-    carried.add(what);
+    _carry(what);
     if (drop(what)) return;
     _socket.send(d.data, InternetAddress.loopbackIPv4, _calleePort);
   }
@@ -140,19 +162,6 @@ void main() {
     return relay;
   }
 
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 15}) async {
-    final clock = Stopwatch()..start();
-    while (!predicate() && clock.elapsed < Duration(seconds: seconds)) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    return predicate();
-  }
-
-  bool bothReachable(
-          HeadlessGrassrootsNetwork a, HeadlessGrassrootsNetwork b) =>
-      a.isPeerReachable(b.identity.publicKey) &&
-      b.isPeerReachable(a.identity.publicKey);
-
   const ik1 = 0x11, ik2 = 0x12;
   final announce = PacketType.announce.value;
   final secureAnnounce = PacketType.secureAnnounce.value;
@@ -168,13 +177,11 @@ void main() {
     caller.wan.putPeerAddress(callee.identity.publicKey, relay.address);
 
     await caller.send(callee.identity.publicKey, Uint8List.fromList([1]));
-    expect(await waitFor(() => bothReachable(caller, callee)), isTrue);
-    expect(
-        await waitFor(() =>
-            relay.types(fromCaller: true).contains(secureAnnounce) &&
-            relay.types(fromCaller: false).contains(secureAnnounce)),
-        isTrue,
-        reason: 'ANNOUNCE is sent inside the session');
+    await untilBothReachable(caller, callee);
+    // ANNOUNCE is sent inside the session.
+    await relay.carriedWhere(() =>
+        relay.types(fromCaller: true).contains(secureAnnounce) &&
+        relay.types(fromCaller: false).contains(secureAnnounce));
 
     expect(relay.kinds(fromCaller: true).toSet(), {ik1});
     expect(relay.kinds(fromCaller: false).toSet(), {ik2});
@@ -183,7 +190,7 @@ void main() {
     expect(relay.types(fromCaller: false), isNot(contains(announce)));
     expect(relay.carried.first.kind, ik1,
         reason: 'the handshake opens the connection');
-  });
+  }, timeout: Timeout.none);
 
   test('an unknown key\'s IK first message is not answered', () async {
     if (skipped()) return;
@@ -260,12 +267,12 @@ void main() {
     client.wan.putPeerAddress(server.identity.publicKey, relay.address);
 
     await client.send(server.identity.publicKey, Uint8List.fromList([3]));
-    expect(await waitFor(() => bothReachable(client, server)), isTrue);
+    await untilBothReachable(client, server);
     expect(relay.kinds(fromCaller: true).toSet(), {ik1});
     expect(relay.kinds(fromCaller: false).toSet(), {ik2});
     expect(server.store.state.knownPeers.known, isEmpty,
         reason: 'answering a stranger does not make it known');
-  });
+  }, timeout: Timeout.none);
 
   test(
       'a client holds its session with a declared rendezvous server by IK, '
@@ -279,10 +286,10 @@ void main() {
     final client = await node(0x5c, rendezvousServers: [
       RendezvousServer(relay.address, server.identity.publicKey),
     ]);
-    expect(await waitFor(() => bothReachable(client, server)), isTrue);
+    await untilBothReachable(client, server);
     expect(relay.kinds(fromCaller: true).toSet(), {ik1});
     expect(relay.types(fromCaller: true), isNot(contains(announce)));
-  });
+  }, timeout: Timeout.none);
 
   test(
       'the final handshake message is retransmitted until the attestation '
@@ -294,16 +301,15 @@ void main() {
     callee.putKnownPeer(caller.identity.publicKey);
     caller.wan.putPeerAddress(callee.identity.publicKey, relay.address);
 
-    // The caller's attestation fragments are lost for three seconds.
-    final lossUntil = DateTime.now().add(const Duration(seconds: 3));
+    // The caller's attestation fragments are lost until the callee has sent
+    // message 2 again.
     relay.drop = (d) =>
         d.fromCaller &&
         d.type == PacketType.secureAttestationFragment.value &&
-        DateTime.now().isBefore(lossUntil);
+        relay.kinds(fromCaller: false).where((k) => k == ik2).length < 2;
 
     await caller.send(callee.identity.publicKey, Uint8List.fromList([4]));
-    expect(await waitFor(() => bothReachable(caller, callee), seconds: 30),
-        isTrue);
+    await untilBothReachable(caller, callee);
     final sent = relay.kinds(fromCaller: false).where((k) => k == ik2).length;
     expect(sent, greaterThan(1),
         reason: 'message 2 again, while no attestation had arrived');
@@ -311,7 +317,7 @@ void main() {
     await Future<void>.delayed(const Duration(seconds: 6));
     expect(relay.kinds(fromCaller: false).where((k) => k == ik2).length, sent,
         reason: 'not after the attestation arrived');
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test('a peer on version 6 or 7 is refused at the handshake', () async {
     if (skipped()) return;

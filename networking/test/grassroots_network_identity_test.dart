@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
@@ -11,6 +12,7 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 
@@ -119,14 +121,15 @@ void main() {
     );
 
     final expected = await readLocalNetwork();
-    // The constructor's read is in flight; give it a moment to land.
-    for (var i = 0; i < 50 && network.wan!.networkIdentity() == null; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+    // The constructor's read is in flight: wait for it to land in the store,
+    // where a machine attached to no local network reads nothing to land.
+    if (expected.networkId != null) {
+      await stateWhere(store, (state) => state.localNetwork.networkId != null);
     }
 
     expect(network.wan!.networkIdentity(), expected.networkId);
     await network.dispose();
-  });
+  }, timeout: Timeout.none);
 
   test('a public-address change does not fire onNetworkChanged', () async {
     final self = await identity();
@@ -138,9 +141,10 @@ void main() {
       sodium: sodium,
     );
 
-    // Let the construction-time read settle before watching for changes.
-    for (var i = 0; i < 50 && network.wan!.networkIdentity() == null; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+    // Let the construction-time read land in the store before watching for
+    // changes; a machine attached to no local network reads nothing to land.
+    if ((await readLocalNetwork()).networkId != null) {
+      await stateWhere(store, (state) => state.localNetwork.networkId != null);
     }
 
     final networkChanges = <String?>[];
@@ -164,11 +168,16 @@ void main() {
     );
 
     final changes = <(String?, String?)>[];
-    network.wan!.onNetworkChanged = (oldId, newId) => changes.add((oldId, newId));
+    final firstChange = Completer<void>();
+    network.wan!.onNetworkChanged = (oldId, newId) {
+      changes.add((oldId, newId));
+      if (!firstChange.isCompleted) firstChange.complete();
+    };
 
-    // The construction-time read reports the first attachment: null -> id.
-    for (var i = 0; i < 50 && changes.isEmpty; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+    // The construction-time read reports the first attachment: null -> id;
+    // a machine attached to no local network has nothing to report.
+    if ((await readLocalNetwork()).networkId != null) {
+      await firstChange.future;
     }
 
     if (changes.isNotEmpty) {
@@ -180,5 +189,5 @@ void main() {
       expect(network.wan!.networkIdentity(), isNull);
     }
     await network.dispose();
-  });
+  }, timeout: Timeout.none);
 }

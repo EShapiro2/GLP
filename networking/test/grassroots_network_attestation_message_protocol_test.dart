@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -16,12 +17,9 @@ import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
-
-/// Hermetic host candidates (see the glare test).
-Future<List<InternetAddress>> _loopbackHostAddresses() async =>
-    [InternetAddress.loopbackIPv4];
 
 /// A platform that offers [offers] as its long-lived attestation and accepts
 /// what it is offered as [application], recording each offer it was given.
@@ -144,10 +142,15 @@ void main() {
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
       );
 
+  /// Each node's host-address reader (hermetic: see the glare test), which
+  /// tells when its candidates are read.
+  final hostReaders = Expando<LoopbackHostReader>();
+
   Future<GrassrootsNetwork> startNode(
     GrassrootsIdentity id,
     PlatformAttestation attestation,
   ) async {
+    final hosts = LoopbackHostReader();
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
@@ -156,31 +159,20 @@ void main() {
         initialState: const AppState(),
       ),
       sodium: sodium,
-      localHostAddressReader: _loopbackHostAddresses,
+      localHostAddressReader: hosts.call,
       platformAttestation: attestation,
       config: const GrassrootsNetworkConfig(
         announceInterval: Duration(seconds: 2),
       ),
     );
+    hostReaders[network] = hosts;
     expect(await network.initialize(), isTrue);
     return network;
   }
 
   Future<String> listeningAddress(GrassrootsNetwork network) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (network.debugLocalCandidates().isEmpty &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await hostReaders[network]!.read;
     return network.debugLocalCandidates().first;
-  }
-
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 20}) async {
-    final deadline = DateTime.now().add(Duration(seconds: seconds));
-    while (!predicate() && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-    return predicate();
   }
 
   const callerApplication =
@@ -212,8 +204,16 @@ void main() {
 
     Application? callerSaw;
     Application? calleeSaw;
-    caller.onPeerConnected = (_, __, application) => callerSaw = application;
-    callee.onPeerConnected = (_, __, application) => calleeSaw = application;
+    final callerConnects = Completer<void>();
+    final calleeConnects = Completer<void>();
+    caller.onPeerConnected = (_, __, application) {
+      callerSaw = application;
+      if (!callerConnects.isCompleted) callerConnects.complete();
+    };
+    callee.onPeerConnected = (_, __, application) {
+      calleeSaw = application;
+      if (!calleeConnects.isCompleted) calleeConnects.complete();
+    };
 
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);
@@ -224,7 +224,9 @@ void main() {
       Uint8List.fromList(utf8.encode('hello')),
     );
 
-    expect(await waitFor(() => callerSaw != null && calleeSaw != null), isTrue,
+    await callerConnects.future;
+    await calleeConnects.future;
+    expect(callerSaw != null && calleeSaw != null, isTrue,
         reason: 'both sides verified the other\'s multi-kilobyte offer');
     expect(callerSaw, calleeApplication);
     expect(calleeSaw, callerApplication);
@@ -232,7 +234,7 @@ void main() {
     // fragmented by the carrier and reassembled whole.
     expect(calleeOffers.length, greaterThan(5 * FragmentHandler.udpMaxChunk));
     expect(callerAttestation.offered.first!.attestation, calleeOffers);
-  });
+  }, timeout: Timeout.none);
 
   test('a lost attestation fragment over UDP is retransmitted', () async {
     final callerAttestation = _LargeAttestation(
@@ -264,7 +266,11 @@ void main() {
         relay.dropped == 0;
 
     Application? calleeSaw;
-    callee.onPeerConnected = (_, __, application) => calleeSaw = application;
+    final calleeConnects = Completer<void>();
+    callee.onPeerConnected = (_, __, application) {
+      calleeSaw = application;
+      if (!calleeConnects.isCompleted) calleeConnects.complete();
+    };
 
     caller.putKnownPeer(calleeId.publicKey);
     callee.putKnownPeer(callerId.publicKey);
@@ -274,7 +280,8 @@ void main() {
       Uint8List.fromList(utf8.encode('hello')),
     );
 
-    expect(await waitFor(() => calleeSaw != null), isTrue,
+    await calleeConnects.future;
+    expect(calleeSaw, isNotNull,
         reason: 'the exchange completed although a fragment was lost');
     expect(calleeSaw, callerApplication);
     expect(relay.dropped, 1);
@@ -283,7 +290,7 @@ void main() {
     expect(relay.attestationFragmentsSeen, greaterThanOrEqualTo(4));
     expect(calleeAttestation.offered.first!.attestation,
         callerAttestation.offers);
-  });
+  }, timeout: Timeout.none);
 
   test(
       'send is held until the peer is reachable, and the receiver delivers a '
@@ -319,22 +326,27 @@ void main() {
         relay.dropped == 0;
 
     final calleeEvents = <String>[];
+    final helloReceived = Completer<void>();
     callee.onPeerConnected = (_, __, ___) => calleeEvents.add('connected');
-    callee.onMessageReceived = (_, payload, __, ___) =>
-        calleeEvents.add('received ${utf8.decode(payload)}');
+    callee.onMessageReceived = (_, payload, __, ___) {
+      calleeEvents.add('received ${utf8.decode(payload)}');
+      if (utf8.decode(payload) == 'hello' && !helloReceived.isCompleted) {
+        helloReceived.complete();
+      }
+    };
 
     caller.putKnownPeer(calleeId.publicKey);
     callee.putKnownPeer(callerId.publicKey);
     caller.wan!.putPeerAddress(calleeId.publicKey, '127.0.0.1:${relay.port}');
-    await caller.send(
+    final messageId = await caller.send(
       calleeId.publicKey,
       Uint8List.fromList(utf8.encode('hello')),
     );
     expect(caller.queuedMessageCountForPeer(calleeId.publicKey), 1,
         reason: 'held: the callee is not reachable yet');
 
-    expect(
-        await waitFor(() => calleeEvents.contains('received hello')), isTrue,
+    await helloReceived.future;
+    expect(calleeEvents.contains('received hello'), isTrue,
         reason: 'delivered once the exchange completed');
     expect(calleeEvents.first, 'connected',
         reason: 'nothing is delivered before the callee has the caller\'s '
@@ -342,10 +354,16 @@ void main() {
     // The callee delivers the message once it has all its fragments, before
     // their acknowledgments reach the caller, whose queue gives it up only
     // then (spec §Message Protocol).
-    expect(
-        await waitFor(
-            () => caller.queuedMessageCountForPeer(calleeId.publicKey) == 0),
-        isTrue,
+    // The caller's carrier reports the message sent once its fragments are
+    // acknowledged, and the queue gives it up on the turn that follows.
+    await stateWhere(caller.store, (s) {
+      final status = s.messages.outgoingMessages[messageId]?.status;
+      return status == MessageStatus.sent ||
+          status == MessageStatus.delivered ||
+          status == MessageStatus.read;
+    });
+    await Future<void>.delayed(Duration.zero);
+    expect(caller.queuedMessageCountForPeer(calleeId.publicKey), 0,
         reason: 'the queue gives the message up once it is acknowledged');
-  });
+  }, timeout: Timeout.none);
 }

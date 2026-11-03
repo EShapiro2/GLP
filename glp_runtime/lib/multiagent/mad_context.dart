@@ -6,6 +6,8 @@
 /// Specification: IGLP app:madglp-spec (madGLP Specification).
 library;
 
+import 'dart:async';
+
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart' show deepDeref;
 import 'package:glp_runtime/runtime/terms.dart';
@@ -23,8 +25,9 @@ import 'package:glp_runtime/wire/artefact.dart' show ModuleRefusal;
 import 'package:glp_runtime/wire/payload_codec.dart'
     show GlobalNameRefusal, PayloadCodec;
 
-/// Callback for delivering messages to other agents
-typedef MessageDeliveryCallback = void Function(String destination, OutboundMessage message);
+/// Callback for delivering messages to other agents: it hands [message] to the layer and returns the layer's answer, a future that completes once the layer has saved the message for delivery and fails where the layer refuses it, being unable to save it (GNA, Section 2.9: send "completes once the message is saved for delivery ..., and fails if the message cannot be saved").  A callback that returns no future is taken as accepting the message.
+typedef MessageDeliveryCallback = FutureOr<void> Function(
+    String destination, OutboundMessage message);
 
 /// A pending reader-name value ([MadContext._pendingReaderValues]).
 typedef _PendingReaderValue = ({
@@ -215,13 +218,15 @@ class MadContext {
   // Message Queue Operations (Send Transaction)
   // =========================================================================
 
-  /// Flush all queued messages via the onMessageReady callback
-  ///
-  /// Returns the number of messages flushed.
+  /// The layer's answers still to come to the messages [flushMessages] handed it.
+  final Set<Future<void>> _unanswered = {};
+
+  /// Hand every sendable message of M_p to the layer by [onMessageReady], the Send transactions (Definition madGLP Send); the number handed over.  The runtime waits for the layer's answer to each ([answered]): "the layer refuses to send a message it cannot save, and the runtime waits for its answer and, on a refusal, keeps the message and sends it again later" (IGLP b014a9e, Implementation Notes, "Networking Seam", The contract).  A refused message is put back in M_p undelivered, and the next flush hands it over again, after the messages it took this time.
   int flushMessages() {
     if (onMessageReady == null) return 0;
 
     int count = 0;
+    final refused = <OutboundMessage>[];
     final destinations = List<String>.from(mp.destinations);
     _trace('[MAD $agentId] flushMessages: mp.totalLength=${mp.totalLength}, destinations=$destinations');
 
@@ -230,12 +235,37 @@ class MadContext {
         final msg = mp.poll(dest);
         if (msg == null) break;
         _trace('[MAD $agentId] flushMessages: sending ${msg.type} to $dest');
-        onMessageReady!(dest, msg);
         count++;
+        final FutureOr<void> answer;
+        try {
+          answer = onMessageReady!(dest, msg);
+        } catch (e) {
+          _trace('[MAD $agentId] flushMessages: the layer refused the '
+              '${msg.type} to $dest: $e; it is kept');
+          refused.add(msg);
+          continue;
+        }
+        if (answer is Future<void>) {
+          late final Future<void> waiting;
+          waiting = answer.then((_) {}, onError: (Object e) {
+            _trace('[MAD $agentId] flushMessages: the layer refused the '
+                '${msg.type} to $dest: $e; it is kept');
+            mp.add(msg);
+          }).whenComplete(() => _unanswered.remove(waiting));
+          _unanswered.add(waiting);
+        }
       }
     }
+    refused.forEach(mp.add);
     _trace('[MAD $agentId] flushMessages: flushed $count messages');
     return count;
+  }
+
+  /// Completes once the layer has answered every message handed to it by [flushMessages], each refused one being back in M_p by then.
+  Future<void> answered() async {
+    while (_unanswered.isNotEmpty) {
+      await Future.wait(List.of(_unanswered));
+    }
   }
 
   // =========================================================================
