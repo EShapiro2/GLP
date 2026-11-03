@@ -88,8 +88,10 @@ agent(ch(_, [self(K?)]), ch(_, [])) :- self_key(K).
       await manager.settle();
       expect(manager.faults, isEmpty);
       for (final (agent, key) in [('alice', alice!), ('bob', bob!)]) {
+        // A key prints bare where it reads as an atom, and quoted where it
+        // begins with a digit (formatTerm).
         expect(manager.outputOf(agent),
-            equals(['self(${key.hex})']),
+            [matches(RegExp("^self\\('?${key.hex}'?\\)\$"))],
             reason: '$agent: self_key/1 assigns the key made at its spawn');
       }
     }, timeout: Timeout(Duration(seconds: 30)));
