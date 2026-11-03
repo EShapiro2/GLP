@@ -7996,14 +7996,20 @@ fi  # Section SGLP
 # recorded it (testStart with no testDone), and counted as a failure.
 Q_BOUND="${GLP_Q_BOUND:-10800}"
 
-# _q_names_in_progress <json> <dir>: the tests the json reporter's file records
-# as started and not done, one "<file>: <test name>" per line, the file as
-# KNOWN_RED carries it, relative to <dir>'s package root with its prefix.
-_q_names_in_progress() {
-    python3 - "$1" "$2" <<'PYEOF'
+# _q_names_in_progress <json> <prefix>: the tests the json reporter's file
+# records as started and not done, one "<file>: <test name>" per line, the
+# file as KNOWN_RED carries it, relative to its package root with <prefix>.
+# _q_load_failures <json> <prefix>: the test files that did not load, which the
+# reporter records as its hidden test "loading <file>" done with an error, and
+# which the text reporter prints with no "<file>: " before its name, one
+# "<file>: did not load" per line.
+_q_names_in_progress() { _q_json "$1" "$2" progress; }
+_q_load_failures() { _q_json "$1" "$2" load; }
+_q_json() {
+    python3 - "$1" "$2" "$3" <<'PYEOF'
 import json, sys
-path, prefix = sys.argv[1], sys.argv[2]
-suites, tests, done = {}, {}, set()
+path, prefix, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+suites, tests, done, failed = {}, {}, set(), set()
 try:
     lines = open(path).read().splitlines()
 except OSError:
@@ -8020,14 +8026,18 @@ for line in lines:
         tests[e['test']['id']] = (e['test']['suiteID'], e['test']['name'])
     elif t == 'testDone':
         done.add(e['testID'])
+        if e.get('result') in ('error', 'failure'):
+            failed.add(e['testID'])
 for tid, (sid, name) in tests.items():
-    if tid in done:
+    if mode == 'progress' and tid in done:
+        continue
+    if mode == 'load' and not (tid in failed and name.startswith('loading ')):
         continue
     file = suites.get(sid, '?')
     i = file.find('/test/')
     if file.startswith('/') and i >= 0:
         file = file[i + 1:]
-    print(prefix + file + ': ' + name)
+    print(prefix + file + ': ' + (name if mode == 'progress' else 'did not load'))
 PYEOF
 }
 
@@ -8236,6 +8246,16 @@ DART_TREE_FAILS=$(printf '%s' "$DART_TREE_CLEAN" \
     | sed 's/ \[E\]$//' \
     | { if [ "$Q_DNF_DART" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
     | sort -u) || true
+# A file that did not load runs none of its tests, and its runner prints no
+# "<file>: <test>" for it: it is named from the json report, as a failure of
+# its file (Code #22, 2026-11-03: given_network_test.dart did not load on main
+# 51e227c9, and the section said only that dart test named no failing test).
+if _section QD; then
+    Q_LOAD_DART=$(_q_load_failures "$Q_RAW_DIR/suite_q_dart.json" "") || true
+    if [ -n "$Q_LOAD_DART" ]; then
+        DART_TREE_FAILS=$(printf '%s\n%s' "$DART_TREE_FAILS" "$Q_LOAD_DART" | sed '/^$/d' | sort -u)
+    fi
+fi
 
 # glp_multiagent, the other half of the tree.  It is a Flutter package, so it
 # needs `flutter test`; `dart test` cannot run it.  A missing flutter is a hard
@@ -8276,6 +8296,10 @@ else
         | sed 's|^.*/glp_multiagent/test/|glp_multiagent/test/|' \
         | { if [ "$Q_DNF_FLUTTER" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
         | sort -u) || true
+    Q_LOAD_FLUTTER=$(_q_load_failures "$Q_RAW_DIR/suite_q_flutter.json" "glp_multiagent/") || true
+    if [ -n "$Q_LOAD_FLUTTER" ]; then
+        MA_FAILS=$(printf '%s\n%s' "$MA_FAILS" "$Q_LOAD_FLUTTER" | sed '/^$/d' | sort -u)
+    fi
 fi
 
 # A runner that exits non-zero while naming no failing test did not run its
@@ -8428,6 +8452,11 @@ _net_run() {
         | sed "s|^.*/$rel/test/|$rel/test/|; s|^test/|$rel/test/|" \
         | { if [ "$dnf" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
         | sort -u) || true
+    local loads
+    loads=$(_q_load_failures "$NET_RAW_DIR/suite_net_$name.json" "$rel/") || true
+    if [ -n "$loads" ]; then
+        fails=$(printf '%s\n%s' "$fails" "$loads" | sed '/^$/d' | sort -u)
+    fi
     if [ "$status" -ne 0 ] && [ -z "$fails" ] && [ "$dnf" = 0 ]; then
         echo "  FAIL: $runner test exited $status in $rel naming no failing test, so $rel/test/ did not run"
         printf '%s\n' "$clean" | tail -5 | sed 's/^/        /'

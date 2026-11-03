@@ -94,8 +94,9 @@ class _WireNetwork extends GlpNetwork {
   /// Places declared, in order.
   final List<String> declared = [];
 
-  /// The messageIds the runtime acknowledged, in order.
-  final List<String> acknowledged = [];
+  /// The messageIds the runtime acknowledged, in order, each an event a test
+  /// waits on ([_Lines.lineWhere]).
+  final _Lines acknowledged = _Lines();
 
   _WireNetwork(this.keyPair, this.wire) {
     wire._at[keyPair.pub.hex] = this;
@@ -154,8 +155,9 @@ class _WireNetwork extends GlpNetwork {
   void removeRendezvousServer(PubKey pk) {}
 }
 
-/// An agent's transcript, AgentRuntime.onOutput's lines, which a test waits
-/// on line by line: on the event, a line's arrival, and on no clock.  Until
+/// An agent's transcript, AgentRuntime.onOutput's lines, or the messageIds a
+/// layer is told are acknowledged, which a test waits on one by one: on the
+/// event, a line's arrival, and on no clock.  Until
 /// 2026-11-02 a test polled the lines every 50 ms until a deadline of sixty
 /// seconds, so its verdict depended on how loaded the machine was (IGLP-coop).
 /// A line the agent reports as an error, `[ERROR] ...`, fails every wait.
@@ -303,7 +305,7 @@ void main() {
         keyPair: calleeKp,
         network: calleeNet,
       );
-      final out = <String>[];
+      final out = _Lines();
       caller.onOutput = out.add;
       // Over a given network the layer is told, and the coordinator is not.
       final toCoordinator = <String>[];
@@ -311,11 +313,11 @@ void main() {
       callee.onDelivered = toCoordinator.add;
       await callee.initialize();
       await caller.initialize();
-      await _eventually(() => out, (l) => l.startsWith('< answered('));
+      await out.lineWhere((l) => l.startsWith('< answered('));
       // The cold call was the wire's first message, w0, the assignment back
       // its second, w1; each is acknowledged by the agent that applied it.
-      await _eventually(() => calleeNet.acknowledged, (id) => id == 'w0');
-      await _eventually(() => callerNet.acknowledged, (id) => id == 'w1');
+      await calleeNet.acknowledged.lineWhere((id) => id == 'w0');
+      await callerNet.acknowledged.lineWhere((id) => id == 'w1');
       expect(calleeNet.acknowledged, ['w0']);
       expect(callerNet.acknowledged, ['w1']);
       expect(toCoordinator, isEmpty);
