@@ -10,8 +10,8 @@ import '../platform/compat.dart';
 /// acknowledges it: the fair-delivery queue of GNA §2.11, "Messages to
 /// temporarily-unreachable peers are queued and delivered when connectivity
 /// is restored; the queue survives the termination of the application."
-/// Only the sender's own messages are ever held (networking `CLAUDE.md`,
-/// "Local Queueing, No Relaying").
+/// Only the sender's own messages are ever held (GNA, Appendix, Rules of
+/// the Code, "Local queueing, no relaying").
 @immutable
 class OutboundQueueEntry {
   OutboundQueueEntry({
@@ -39,8 +39,8 @@ class OutboundQueueEntry {
 
   /// Reads an entry written by [toJson]. Every field is required: an entry
   /// that lacks one, or carries a recipient that is not a 32-byte key, is
-  /// malformed and throws [FormatException] (networking `CLAUDE.md`, "No
-  /// Legacy or Compatibility Code").
+  /// malformed and throws [FormatException] (GNA, Appendix, Rules of the
+  /// Code, "No legacy or compatibility code").
   factory OutboundQueueEntry.fromJson(Object? json) {
     if (json is! Map) {
       throw const FormatException('a queued message is not a JSON object');
@@ -108,8 +108,8 @@ class DeliveredQueueEntry {
   /// Reads an entry written by [toJson].  Every field is required: an entry
   /// that lacks one, or carries a sender that is not a 32-byte key or an
   /// underlay that is not one of the three, is malformed and throws
-  /// [FormatException] (networking `CLAUDE.md`, "No Legacy or Compatibility
-  /// Code").
+  /// [FormatException] (GNA, Appendix, Rules of the Code, "No legacy or
+  /// compatibility code").
   factory DeliveredQueueEntry.fromJson(Object? json) {
     if (json is! Map) {
       throw const FormatException('a kept message is not a JSON object');

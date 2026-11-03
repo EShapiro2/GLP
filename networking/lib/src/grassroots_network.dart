@@ -2604,7 +2604,7 @@ class GrassrootsNetwork {
   // for the timeout.
   //
   // Note: this is a watchdog in `GrassrootsNetwork` (the coordinator), not
-  // a reducer-side heuristic. Per `CLAUDE.md`, reducers must only project
+  // a reducer-side heuristic. Per GNA's Appendix, Rules of the Code, "State", reducers must only project
   // transport-emitted facts; inference about "I haven't heard back" lives
   // here and surfaces as an explicit `MessageQueuedAction` when it triggers.
 

@@ -11,7 +11,7 @@ import '../models/identity.dart';
 /// --- the 32-byte Ed25519 seed of the key pair, which is the identity and
 /// all of it (GNA §2.1) --- creating the file with a fresh random seed on
 /// first run.  A file carrying any other entry, or no seed, is not an
-/// identity file and is refused (`networking/CLAUDE.md`, no legacy code).
+/// identity file and is refused (GNA, Appendix, Rules of the Code, "No legacy or compatibility code").
 Future<GrassrootsIdentity> loadOrCreateIdentity(String path) async {
   final file = File(path);
   final Uint8List seed;
