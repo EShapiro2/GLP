@@ -1,6 +1,7 @@
 % ---------------------------------------------------------------------------
 % Volition (def:volition of /Grassroots/GSC, Section 3.6), for a contract of
-% agent roles and listed roles alike (GSC ac7ad63).
+% agent roles and listed roles alike (GSC ac7ad63), with the signature atom
+% of a schema with no guarding role (def:signature, GSC c100cdc).
 %
 % The paper is the specification and no definition of it is restated here.
 % An edge of the role graph: the two roles have the same base, or one of the
@@ -9,11 +10,18 @@
 % graph is connected; first_unguarded asks the second, that every connected
 % component of it holds a guarding role, which is an agent role
 % (def:schema).  The atoms of traceable provenance are those of def:grounded,
-% the set prov.glp gives (check.glp).  The definition's last conjunct (GSC
-% 0380a8a): every reading role, a role that is not a guarding role and adds
-% and deletes nothing (def:schema), has an edge to a guarding role from an
-% atom that guarding role requires; reading_faults asks it, and each reading
-% role with no such edge is a fault changes_nothing(Schema, Role).
+% the set prov.glp gives (check.glp).  The definition's second conjunct (GSC
+% 0380a8a): every reading role of a schema with a guarding role, a role that
+% is not a guarding role and adds and deletes nothing (def:schema), has an
+% edge to a guarding role from an atom that guarding role requires;
+% reading_faults asks it, and each reading role with no such edge is a fault
+% changes_nothing(Schema, Role).  Its third (GSC c100cdc): a schema with no
+% guarding role and a reading role has a signature atom and has only agent
+% roles as reading roles; unguarded_reading asks it, each listed reading role
+% a fault listed_reading(Schema, Role) and a schema with no signature atom a
+% fault no_signature_atom(Schema).  def:signature is decided on the contract
+% as written, NC, since a variable may occur in an atom as its multiplicity,
+% which the plain form drops; the role graph on the plain form, C.
 % ---------------------------------------------------------------------------
 
 procedure same_base(Base?, Base?, Ans).
@@ -174,23 +182,58 @@ cv1(K, Nm, Rs, E, R?) :-
     first_missing(1, K?, Reached?, M),
     cv2(M?, K?, Nm?, Rs?, E?, R).
 
-procedure schema_volition(Schema?, Preds?, Faults).
-schema_volition(Sc, E, R?) :- ground(Sc?), ground(E?) |
+procedure schema_volition(Schema?, NSchema?, Integer?, NContract?, Preds?, Faults).
+schema_volition(Sc, NSc, N, NC, E, R?) :-
+    ground(Sc?), ground(NSc?), integer(N?), ground(NC?), ground(E?) |
     sch_name(Sc?, Nm),
     sch_roles(Sc?, Rs),
-    volition_roles(Nm?, Rs?, E?, R).
+    volition_roles(Nm?, Rs?, NSc?, N?, NC?, E?, R).
 
-procedure volition_roles(Constant?, RoleSpecs?, Preds?, Faults).
-volition_roles(Nm, Rs, E, R?) :- ground(Nm?), ground(Rs?), ground(E?) |
+procedure volition_roles(Constant?, RoleSpecs?, NSchema?, Integer?, NContract?, Preds?, Faults).
+volition_roles(Nm, Rs, NSc, N, NC, E, R?) :-
+    ground(Nm?), ground(Rs?), ground(NSc?), integer(N?), ground(NC?), ground(E?) |
     roles_len(Rs?, K),
-    volition_k(K?, Nm?, Rs?, E?, R).
+    volition_k(K?, Nm?, Rs?, NSc?, N?, NC?, E?, R).
 
-% The role graph's faults, then those of the reading roles.
-procedure volition_k(Integer?, Constant?, RoleSpecs?, Preds?, Faults).
-volition_k(K, Nm, Rs, E, R?) :- integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+% The role graph's faults, then those of the reading roles: of a schema with
+% a guarding role, def:volition's second conjunct, and of one with none, its
+% third.
+procedure volition_k(Integer?, Constant?, RoleSpecs?, NSchema?, Integer?, NContract?, Preds?, Faults).
+volition_k(K, Nm, Rs, NSc, N, NC, E, R?) :-
+    integer(K?), ground(Nm?), ground(Rs?), ground(NSc?), integer(N?), ground(NC?), ground(E?) |
     cv1(K?, Nm?, Rs?, E?, R1),
-    reading_faults(1, K?, Nm?, Rs?, E?, R2),
+    some_guarding(Rs?, G),
+    reading_part(G?, K?, Nm?, Rs?, NSc?, N?, NC?, E?, R2),
     faults_app(R1?, R2?, R).
+
+procedure reading_part(Ans?, Integer?, Constant?, RoleSpecs?, NSchema?, Integer?, NContract?, Preds?, Faults).
+reading_part(yes, K, Nm, Rs, _, _, _, E, R?) :-
+    integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    reading_faults(1, K?, Nm?, Rs?, E?, R).
+reading_part(no, K, Nm, Rs, NSc, N, NC, _, R?) :-
+    integer(K?), ground(Nm?), ground(Rs?), ground(NSc?), integer(N?), ground(NC?) |
+    some_reading(Rs?, A),
+    unguarded_reading(A?, K?, Nm?, Rs?, NSc?, N?, NC?, R).
+
+procedure some_guarding1(Ans?, RoleSpecs?, Ans).
+some_guarding1(yes, _, yes).
+some_guarding1(no, Rs, R?) :- ground(Rs?) | some_guarding(Rs?, R).
+
+procedure some_guarding(RoleSpecs?, Ans).
+some_guarding([], no).
+some_guarding([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
+    is_guarding(RS?, G),
+    some_guarding1(G?, Rs?, R).
+
+procedure some_reading1(Ans?, RoleSpecs?, Ans).
+some_reading1(yes, _, yes).
+some_reading1(no, Rs, R?) :- ground(Rs?) | some_reading(Rs?, R).
+
+procedure some_reading(RoleSpecs?, Ans).
+some_reading([], no).
+some_reading([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
+    reading_role(RS?, A),
+    some_reading1(A?, Rs?, R).
 
 % --- the reading roles -----------------------------------------------------
 % A guarding role among Rs requires an atom of traceable provenance an
@@ -236,16 +279,295 @@ reading_faults(J, K, Nm, Rs, E, R?) :-
     reading_faults(J1?, K?, Nm?, Rs?, E?, F),
     reading_fault(A?, J?, Nm?, Rs?, E?, F?, R).
 
-procedure volition_on(Contract?, Preds?, Faults).
-volition_on([], _, []).
-volition_on([S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(E?) |
-    schema_volition(S?, E?, F1),
-    volition_on(Ss?, E?, F2),
+% --- a schema with no guarding role (def:signature, def:volition) ---------
+% Its faults where it has a reading role: one listed_reading(Schema, Role)
+% per reading role that is a listed role, in role order, then
+% no_signature_atom(Schema) where it has no signature atom.
+procedure unguarded_reading(Ans?, Integer?, Constant?, RoleSpecs?, NSchema?, Integer?, NContract?, Faults).
+unguarded_reading(no, _, _, _, _, _, _, []).
+unguarded_reading(yes, K, Nm, Rs, NSc, N, NC, R?) :-
+    integer(K?), ground(Nm?), ground(Rs?), ground(NSc?), integer(N?), ground(NC?) |
+    listed_reading_faults(1, K?, Nm?, Rs?, F1),
+    has_signature(NSc?, N?, NC?, S),
+    signature_faults(S?, Nm?, F2),
+    faults_app(F1?, F2?, R).
+
+procedure signature_faults(Ans?, Constant?, Faults).
+signature_faults(yes, _, []).
+signature_faults(no, Nm, [no_signature_atom(Nm?)]).
+
+% A reading role that is a listed role.
+procedure is_listed_reading(RoleSpec?, Ans).
+is_listed_reading(RS, R?) :- ground(RS?) |
+    reading_role(RS?, A),
+    is_party_role(RS?, P),
+    flip(P?, L),
+    both_yes(A?, L?, R).
+
+procedure listed_reading_fault(Ans?, Integer?, Constant?, Faults?, Faults).
+listed_reading_fault(no, _, _, T, T?).
+listed_reading_fault(yes, J, Nm, T, [listed_reading(Nm?, J?)|T?]).
+
+procedure listed_reading_faults(Integer?, Integer?, Constant?, RoleSpecs?, Faults).
+listed_reading_faults(J, K, _, _, []) :- J? > K? | true.
+listed_reading_faults(J, K, Nm, Rs, R?) :-
+    J? =< K?, integer(J?), integer(K?), ground(Nm?), ground(Rs?) |
+    nth_rs(Rs?, J?, RS),
+    is_listed_reading(RS?, A),
+    J1 := J? + 1,
+    listed_reading_faults(J1?, K?, Nm?, Rs?, F),
+    listed_reading_fault(A?, J?, Nm?, F?, R).
+
+% The N-th schema NSc of the contract NC has a signature atom (def:signature):
+% an atom phi it adds or deletes at an agent role pi_i, every agent role of it
+% but pi_i the base of an argument of phi, every variable of it occurring in
+% phi, and phi the only atom it adds, or deletes or clears, with its
+% predicate, no other schema of NC with no guarding role adding, or deleting
+% or clearing, an atom with that predicate.  sig(Is, Vs) holds the indices of
+% its agent roles and its variables.
+procedure has_signature(NSchema?, Integer?, NContract?, Ans).
+has_signature(NSc, N, NC, R?) :- ground(NSc?), integer(N?), ground(NC?) |
+    nsch_roles(NSc?, Rs),
+    nsch_vars(NSc?, Vs),
+    others_preds(NC?, 1, N?, TA, TD),
+    has_signature1(Rs?, Vs?, TA?, TD?, R).
+
+procedure has_signature1(NRoleSpecs?, Args?, Preds?, Preds?, Ans).
+has_signature1(Rs, Vs, TA, TD, R?) :- ground(Rs?), ground(Vs?), ground(TA?), ground(TD?) |
+    n_agent_roles(Rs?, 1, Is),
+    nroles_add_preds(Rs?, [], OA),
+    nroles_del_preds(Rs?, [], OD),
+    sig_roles(Rs?, 1, sig(Is?, Vs?), OA?, OD?, TA?, TD?, R).
+
+% The roles from the J-th on: OA and OD the predicates of the atoms the
+% schema adds, and deletes or clears, TA and TD those of the other schemas
+% with no guarding role.
+procedure sig_roles(NRoleSpecs?, Integer?, SigCtx?, Preds?, Preds?, Preds?, Preds?, Ans).
+sig_roles([], _, _, _, _, _, _, no).
+sig_roles([RS|Rs], J, X, OA, OD, TA, TD, R?) :-
+    ground(RS?), ground(Rs?), integer(J?), ground(X?),
+    ground(OA?), ground(OD?), ground(TA?), ground(TD?) |
+    sig_role(RS?, J?, X?, OA?, OD?, TA?, TD?, A),
+    J1 := J? + 1,
+    sig_roles1(A?, Rs?, J1?, X?, OA?, OD?, TA?, TD?, R).
+
+procedure sig_roles1(Ans?, NRoleSpecs?, Integer?, SigCtx?, Preds?, Preds?, Preds?, Preds?, Ans).
+sig_roles1(yes, _, _, _, _, _, _, _, yes).
+sig_roles1(no, Rs, J, X, OA, OD, TA, TD, R?) :-
+    ground(Rs?), integer(J?), ground(X?),
+    ground(OA?), ground(OD?), ground(TA?), ground(TD?) |
+    sig_roles(Rs?, J?, X?, OA?, OD?, TA?, TD?, R).
+
+% An agent role holds a signature atom among the atoms it adds, or among
+% those it deletes, -(i); a listed role holds none.
+procedure sig_role(NRoleSpec?, Integer?, SigCtx?, Preds?, Preds?, Preds?, Preds?, Ans).
+sig_role(RS, J, X, OA, OD, TA, TD, R?) :-
+    ground(RS?), integer(J?), ground(X?),
+    ground(OA?), ground(OD?), ground(TA?), ground(TD?) |
+    n_is_party(RS?, A),
+    sig_role1(A?, RS?, J?, X?, OA?, OD?, TA?, TD?, R).
+
+procedure sig_role1(Ans?, NRoleSpec?, Integer?, SigCtx?, Preds?, Preds?, Preds?, Preds?, Ans).
+sig_role1(no, _, _, _, _, _, _, _, no).
+sig_role1(yes, RS, J, X, OA, OD, TA, TD, R?) :-
+    ground(RS?), integer(J?), ground(X?),
+    ground(OA?), ground(OD?), ground(TA?), ground(TD?) |
+    nrs_add(RS?, P),
+    nrs_del(RS?, M),
+    sig_some(P?, J?, X?, OA?, TA?, A1),
+    sig_some(M?, J?, X?, OD?, TD?, A2),
+    or_yes(A1?, A2?, R).
+
+procedure sig_some(Mults?, Integer?, SigCtx?, Preds?, Preds?, Ans).
+sig_some([], _, _, _, _, no).
+sig_some([M|Ms], J, X, Own, Oth, R?) :-
+    ground(M?), ground(Ms?), integer(J?), ground(X?), ground(Own?), ground(Oth?) |
+    sig_atom(M?, J?, X?, Own?, Oth?, A),
+    sig_some1(A?, Ms?, J?, X?, Own?, Oth?, R).
+
+procedure sig_some1(Ans?, Mults?, Integer?, SigCtx?, Preds?, Preds?, Ans).
+sig_some1(yes, _, _, _, _, _, yes).
+sig_some1(no, Ms, J, X, Own, Oth, R?) :-
+    ground(Ms?), integer(J?), ground(X?), ground(Own?), ground(Oth?) |
+    sig_some(Ms?, J?, X?, Own?, Oth?, R).
+
+% The atom M at the agent role J is a signature atom: Own the predicates of
+% the atoms the schema adds (or deletes or clears), M's among them, and Oth
+% those of the other schemas with no guarding role.
+procedure sig_atom(Mult?, Integer?, SigCtx?, Preds?, Preds?, Ans).
+sig_atom(M, J, X, Own, Oth, R?) :-
+    ground(M?), integer(J?), ground(X?), ground(Own?), ground(Oth?) |
+    plain_mult(M?, A),
+    mult_vars(M?, Os),
+    sig_atom1(A?, Os?, J?, X?, Own?, Oth?, R).
+
+procedure sig_atom1(Atom?, Args?, Integer?, SigCtx?, Preds?, Preds?, Ans).
+sig_atom1(atom(P, As), Os, J, sig(Is, Vs), Own, Oth, R?) :-
+    ground(P?), ground(As?), ground(Os?), integer(J?), ground(Is?), ground(Vs?),
+    ground(Own?), ground(Oth?) |
+    args_bases(As?, [], Bs),
+    names_others(Is?, J?, Bs?, A1),
+    args_all_in(Vs?, Os?, A2),
+    pred_count(Own?, P?, C),
+    pred_member(P?, Oth?, O),
+    sig_only(C?, O?, A3),
+    both_yes(A1?, A2?, A12),
+    both_yes(A12?, A3?, R).
+
+% The atom is the only one of its predicate the schema adds (or deletes or
+% clears), and no other schema with no guarding role adds (or deletes or
+% clears) one.
+procedure sig_only(Integer?, Ans?, Ans).
+sig_only(C, no, yes) :- C? =:= 1 | true.
+sig_only(_, _, no) :- otherwise | true.
+
+% Every agent role among Is but the J-th is among the bases Bs.
+procedure names_others(Ints?, Integer?, Bases?, Ans).
+names_others([], _, _, yes).
+names_others([I|Is], J, Bs, R?) :- integer(I?), integer(J?), ground(Is?), ground(Bs?) |
+    names_other(I?, J?, Bs?, A),
+    names_others1(A?, Is?, J?, Bs?, R).
+
+procedure names_others1(Ans?, Ints?, Integer?, Bases?, Ans).
+names_others1(no, _, _, _, no).
+names_others1(yes, Is, J, Bs, R?) :- ground(Is?), integer(J?), ground(Bs?) |
+    names_others(Is?, J?, Bs?, R).
+
+procedure names_other(Integer?, Integer?, Bases?, Ans).
+names_other(I, J, _, yes) :- I? =:= J? | true.
+names_other(I, _, Bs, R?) :- otherwise, integer(I?), ground(Bs?) |
+    base_member(Bs?, b_role(I?), R).
+
+% Every variable among Vs is among Os.
+procedure args_all_in(Args?, Args?, Ans).
+args_all_in([], _, yes).
+args_all_in([V|Vs], Os, R?) :- ground(V?), ground(Vs?), ground(Os?) |
+    args_member(Os?, V?, A),
+    args_all_in1(A?, Vs?, Os?, R).
+
+procedure args_all_in1(Ans?, Args?, Args?, Ans).
+args_all_in1(no, _, _, no).
+args_all_in1(yes, Vs, Os, R?) :- ground(Vs?), ground(Os?) | args_all_in(Vs?, Os?, R).
+
+% The variables occurring in an atom as written: as an argument, in a name
+% term or a signed term among its arguments, or as its multiplicity.
+procedure mult_vars(Mult?, Args).
+mult_vars(atom(_, As), R?) :- ground(As?) | args_vars(As?, R).
+mult_vars(times(K, atom(_, As)), R?) :- ground(K?), ground(As?) | args_vars([K?|As?], R).
+
+procedure args_vars(Args?, Args).
+args_vars(As, R?) :- ground(As?) |
+    filter_pvars(As?, Ps),
+    filter_svars(As?, Ss),
+    filter_nvars(As?, Ns),
+    args_app(Ss?, Ns?, SN),
+    args_app(Ps?, SN?, R).
+
+% The number of occurrences of a predicate in a list.
+procedure pred_count(Preds?, Constant?, Integer).
+pred_count([], _, 0).
+pred_count([P|Ps], Q, N?) :- P? =?= Q?, ground(Ps?), ground(Q?) |
+    pred_count(Ps?, Q?, M),
+    N := M? + 1.
+pred_count([_|Ps], Q, N?) :- otherwise, ground(Ps?), ground(Q?) | pred_count(Ps?, Q?, N).
+
+procedure mult_pred(Mult?, Constant).
+mult_pred(atom(P, _), P?).
+mult_pred(times(_, atom(P, _)), P?).
+
+procedure mults_preds(Mults?, Preds?, Preds).
+mults_preds([], T, T?).
+mults_preds([M|Ms], T, [P?|R?]) :- ground(M?), ground(Ms?), ground(T?) |
+    mult_pred(M?, P),
+    mults_preds(Ms?, T?, R).
+
+% The predicates of the atoms the roles add, and of those they delete or
+% clear, the atoms marked - with or without the wildcard.
+procedure nroles_add_preds(NRoleSpecs?, Preds?, Preds).
+nroles_add_preds([], T, T?).
+nroles_add_preds([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    nrs_add(RS?, P),
+    nroles_add_preds(Rs?, T?, R1),
+    mults_preds(P?, R1?, R).
+
+procedure nroles_del_preds(NRoleSpecs?, Preds?, Preds).
+nroles_del_preds([], T, T?).
+nroles_del_preds([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    nrs_marked_del(RS?, M),
+    nroles_del_preds(Rs?, T?, R1),
+    mults_preds(M?, R1?, R).
+
+procedure n_is_party(NRoleSpec?, Ans).
+n_is_party(rs(_, _, _, _, _), yes).
+n_is_party(crs(_, _, _, _, _, _), no).
+
+% The indices of the agent roles, from the J-th role on.
+procedure n_agent_roles(NRoleSpecs?, Integer?, Ints).
+n_agent_roles([], _, []).
+n_agent_roles([RS|Rs], J, R?) :- ground(RS?), ground(Rs?), integer(J?) |
+    n_is_party(RS?, A),
+    J1 := J? + 1,
+    n_agent_roles(Rs?, J1?, R1),
+    n_agent_roles1(A?, J?, R1?, R).
+
+procedure n_agent_roles1(Ans?, Integer?, Ints?, Ints).
+n_agent_roles1(yes, J, T, [J?|T?]).
+n_agent_roles1(no, _, T, T?).
+
+procedure n_some_guarding1(Ans?, NRoleSpecs?, Ans).
+n_some_guarding1(yes, _, yes).
+n_some_guarding1(no, Rs, R?) :- ground(Rs?) | n_some_guarding(Rs?, R).
+
+procedure n_some_guarding(NRoleSpecs?, Ans).
+n_some_guarding([], no).
+n_some_guarding([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
+    n_is_guarding(RS?, G),
+    n_some_guarding1(G?, Rs?, R).
+
+% The predicates of the atoms the schemas of a contract other than the N-th,
+% with no guarding role, add (the fourth argument) and delete or clear (the
+% fifth), from the I-th schema on.
+procedure others_preds(NContract?, Integer?, Integer?, Preds, Preds).
+others_preds([], _, _, [], []).
+others_preds([S|Ss], I, N, A?, D?) :-
+    ground(S?), ground(Ss?), integer(I?), integer(N?) |
+    I1 := I? + 1,
+    others_preds(Ss?, I1?, N?, A1, D1),
+    other_preds(I?, N?, S?, A1?, D1?, A, D).
+
+procedure other_preds(Integer?, Integer?, NSchema?, Preds?, Preds?, Preds, Preds).
+other_preds(I, N, _, A, D, A?, D?) :- I? =:= N? | true.
+other_preds(_, _, S, A, D, A2?, D2?) :- otherwise, ground(S?), ground(A?), ground(D?) |
+    nsch_roles(S?, Rs),
+    other_preds1(Rs?, A?, D?, A2, D2).
+
+procedure other_preds1(NRoleSpecs?, Preds?, Preds?, Preds, Preds).
+other_preds1(Rs, A, D, A2?, D2?) :- ground(Rs?), ground(A?), ground(D?) |
+    n_some_guarding(Rs?, G),
+    other_preds2(G?, Rs?, A?, D?, A2, D2).
+
+procedure other_preds2(Ans?, NRoleSpecs?, Preds?, Preds?, Preds, Preds).
+other_preds2(yes, _, A, D, A?, D?).
+other_preds2(no, Rs, A, D, A2?, D2?) :- ground(Rs?), ground(A?), ground(D?) |
+    nroles_add_preds(Rs?, A?, A2),
+    nroles_del_preds(Rs?, D?, D2).
+
+procedure volition_on(Contract?, NContract?, Integer?, NContract?, Preds?, Faults).
+volition_on([], _, _, _, _, []).
+volition_on([S|Ss], [NS|NSs], N, NC, E, R?) :-
+    ground(S?), ground(Ss?), ground(NS?), ground(NSs?), integer(N?), ground(NC?), ground(E?) |
+    schema_volition(S?, NS?, N?, NC?, E?, F1),
+    N1 := N? + 1,
+    volition_on(Ss?, NSs?, N1?, NC?, E?, F2),
     faults_app(F1?, F2?, R).
 
 % def:volition: its faults, one per schema whose role graph is disconnected
-% and has a connected component with no guarding role, and one per reading
-% role with no edge to a guarding role from an atom that guarding role
-% requires.
-exported procedure volition_faults(Contract?, Preds?, Faults).
-volition_faults(C, E, R?) :- ground(C?), ground(E?) | volition_on(C?, E?, R).
+% and has a connected component with no guarding role, one per reading role
+% of a schema with a guarding role with no edge to a guarding role from an
+% atom that guarding role requires, and, of a schema with no guarding role
+% and a reading role, one per listed reading role and one where it has no
+% signature atom.  C is the contract's plain form and NC the contract as
+% written, schema by schema.
+exported procedure volition_faults(Contract?, NContract?, Preds?, Faults).
+volition_faults(C, NC, E, R?) :- ground(C?), ground(NC?), ground(E?) |
+    volition_on(C?, NC?, 1, NC?, E?, R).

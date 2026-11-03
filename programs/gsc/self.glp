@@ -276,7 +276,12 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % 0380a8a), a role that is not guarding and adds and deletes nothing: an
 % edge to a guarding role from an atom that guarding role requires; a
 % reading role with none is a fault changes_nothing(Schema, Role) of
-% volition, in a verdict not_grassroots.  What def:schema requires of a schema's head, its
+% volition, in a verdict not_grassroots.  What def:volition requires of a
+% schema with no guarding role and a reading role (GSC c100cdc): a signature
+% atom (def:signature), so one with none is a fault
+% no_signature_atom(Schema), and only agent roles as reading roles, so each
+% listed reading role is a fault listed_reading(Schema, Role), in a verdict
+% not_grassroots.  What def:schema requires of a schema's head, its
 % variables x_1, ..., x_m distinct agent and speech-act variables and its
 % atoms over its roles, those variables and its signed terms: an entry of
 % the head that is not a variable (head_not_variable), an entry listed twice
@@ -329,6 +334,8 @@ Fault ::= no_introductory_act
         ; wildcard(Constant, Integer, Atom)
         ; listed_wildcard(Constant, Integer)
         ; changes_nothing(Constant, Integer)
+        ; listed_reading(Constant, Integer)
+        ; no_signature_atom(Constant)
         ; no_role_changes(Constant)
         ; head_not_variable(Constant, Arg)
         ; head_repeated(Constant, Arg)
@@ -348,6 +355,9 @@ Fault ::= no_introductory_act
         ; signing_not_speech_act(Constant, Arg)
         ; obstructed_jointly(Constant).
 Faults  ::= [] ; [Fault | Faults].
+% What def:signature is decided against (volition.glp): sig(Is, Vs), the
+% indices of a schema's agent roles and its variables.
+SigCtx  ::= sig(Ints, Args).
 
 % --- What an introduction with wards is made of (GAI, "Contracts with Wards")
 % guardianship(M, Iota, G, W, V) is the guardianship (m, iota, g, w, v) of
