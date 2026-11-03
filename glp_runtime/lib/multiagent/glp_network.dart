@@ -184,8 +184,15 @@ abstract class GlpNetwork {
   // --- Point-to-point communication (GNA, "Point-to-Point Communication") ---
 
   /// `send(pubKey, payload)`: send opaque [payload] bytes to peer [pk].  Order
-  /// is arbitrary; delivery is fair (GNA, "Networking Assumptions").
-  void send(PubKey pk, Uint8List payload);
+  /// is arbitrary; delivery is fair (GNA, "Networking Assumptions").  The
+  /// future is the layer's answer: it "completes once the message is saved for
+  /// delivery ..., and fails if the message cannot be saved" (GNA, Section
+  /// 2.9).  The runtime awaits it, and keeps a refused message and sends it
+  /// again later (IGLP b014a9e, Implementation Notes, "Networking Seam", The
+  /// contract: "the layer refuses to send a message it cannot save, and the
+  /// runtime waits for its answer and, on a refusal, keeps the message and
+  /// sends it again later").
+  Future<void> send(PubKey pk, Uint8List payload);
 
   /// `onMessageReceived(sender, payload, messageId, underlay)`: fires on
   /// delivery of an inbound message, with the authenticated sender's key, the

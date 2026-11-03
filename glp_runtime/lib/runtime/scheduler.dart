@@ -467,15 +467,20 @@ class Scheduler {
   /// [drainToQuiescence]'s: a program that goes on idling and sending never
   /// quiesces, and the cycle then returns `capped`.  F is cumulative across
   /// the drains, so a goal that failed in any of them fails the whole.
-  DrainResult drainAndSend(void Function() send,
-      {int maxCycles = 1000000, bool debug = false}) {
+  ///
+  /// The Sends complete when the layer has answered each message they hand
+  /// it, [send]'s future, a message it refused being back in the outbox:
+  /// "the runtime waits for its answer and, on a refusal, keeps the message"
+  /// (IGLP b014a9e, Implementation Notes, "Networking Seam", The contract).
+  Future<DrainResult> drainAndSend(FutureOr<void> Function() send,
+      {int maxCycles = 1000000, bool debug = false}) async {
     var run = 0;
     final failedAtEntry = rt.failedGoals.length;
     DrainResult last;
     while (true) {
       last = drainToQuiescence(maxCycles: maxCycles - run, debug: debug);
       run += last.goalsRun;
-      send();
+      await send();
       if (last.status == ExecutionStatus.capped) break;
       if (!(rt.hasIdleWaits && rt.isIdle)) break;
       if (run >= maxCycles) break;
@@ -494,7 +499,7 @@ class Scheduler {
   /// for the agents.  The REPL's goal in madGLP mode is drained so
   /// (GlpEngine.runGoal); until 2026-10-02 it made no Sends, and a goal there
   /// waiting on when_idle waited for as long as a message sat in the outbox.
-  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool debugOutput = false, List<int>? goalIds, void Function()? send}) async {
+  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool debugOutput = false, List<int>? goalIds, FutureOr<void> Function()? send}) async {
     final failedAtEntry = rt.failedGoals.length;
     var totalCycles = 0;
     ExecutionStatus lastStatus = ExecutionStatus.succeeded;
@@ -518,7 +523,7 @@ class Scheduler {
       // a goal waiting on when_idle, which it re-tries; at the cap the run
       // stopped with that goal still to re-try ([drainAndSend]).
       if (send != null) {
-        send();
+        await send();
         if (rt.hasIdleWaits && rt.isIdle) {
           if (totalCycles < maxCycles) continue;
           lastStatus = ExecutionStatus.capped;

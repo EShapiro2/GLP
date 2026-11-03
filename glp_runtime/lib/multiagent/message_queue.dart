@@ -172,22 +172,27 @@ class MessageQueue {
   /// (Definition madGLP Send).
   bool get hasSendable => all.any((m) => !m.held);
 
-  /// Take out of M_p every message eligible for Send, undelivered and not held, without sending it, and keep the held ones in order; the number taken out.  A host that goes back to a saved state whose undelivered messages it has since handed to the layer takes them out so (AgentRuntime._rollBack), and hands none of them over twice.
-  int removeSendable() {
+  /// Take out of M_p, for each of [sent], one message eligible for Send, undelivered and not held, to its destination with its payload, and keep the rest in order; the number taken out.  A host that goes back to a saved state takes out so the messages the state holds undelivered that the layer has since accepted (AgentRuntime._rollBack), and hands none of them over twice; a message the layer refused stays, to be handed over again (IGLP b014a9e, Implementation Notes, "Networking Seam", The contract: "on a refusal, keeps the message and sends it again later").
+  int removeSent(Iterable<({String destination, List<int> payload})> sent) {
     var removed = 0;
-    for (final destination in destinations) {
-      final queue = _queuesByDestination[destination]!;
-      final held = queue.where((m) => m.held).toList();
-      removed += queue.length - held.length;
-      if (held.isEmpty) {
-        _queuesByDestination.remove(destination);
-      } else {
-        queue
-          ..clear()
-          ..addAll(held);
-      }
+    for (final (:destination, :payload) in sent) {
+      final queue = _queuesByDestination[destination];
+      if (queue == null) continue;
+      final taken = _takeFirst(
+          queue, (m) => !m.held && _samePayload(m.payload, payload));
+      if (taken == null) continue;
+      removed++;
+      if (queue.isEmpty) _queuesByDestination.remove(destination);
     }
     return removed;
+  }
+
+  static bool _samePayload(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
   
   /// Get all destinations that have queued messages

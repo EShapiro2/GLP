@@ -39,13 +39,13 @@ All six now deliver the later element.
 | Probe | The channel | Result |
 |---|---|---|
 | `linkprobe13` | made by a third agent, both ends cross | both greetings pass, through the third agent; no link is held |
-| `linkprobe14` | made by one party, one end forwarded | nothing passes: the link is held |
+| `linkprobe14` | made by one party, one end forwarded | nothing passes on the held link; bob's greeting may reach alice from carol |
 
 `linkprobe13` and `linkprobe14` are a second pair, of three agents each, in which a channel end reaches its holder through a third agent --- the shape of the social graph's introduction.  Neither probe calls `authorise_link/2`.
 
 In `linkprobe13` the third agent, carol, made the channel, so she anchors every link its ends are sent on and exchanged each name with the agent she sent it to: no link is held (IGLP madglp-spec.tex, Held Links), each greeting flows through carol's local pair (IGLP, Lemma "Both Ends Exported"), and alice and bob each see the other's greeting.  Until 2026-10-21 nothing passed, and the probe was taken for a held link doing its work: the runtime sent the greeting `hello(Me?)` with `Me`'s value on a link of its own, which carol forwarded and its holder held; the value is `hello(alice)`, and it goes in one message (the `global_send` callback in `glp_runtime/lib/multiagent/mad_context.dart`; `glp_runtime/test/multiagent/ground_reader_at_reduction_test.dart`).
 
-In `linkprobe14` carol forwards an end bob made, so the link is held at both its ends and no greeting is delivered: that is the held link doing its work.  The two are kept because the shape is the introduction's.
+In `linkprobe14` carol forwards an end bob made, so the link is held at both its ends and nothing passes on it: that is the held link doing its work.  Delivery is unordered, so what alice sees depends on the order (GLP #11 Cowork, 2026-11-03 16:06 UTC, item 3): once bob's greeting has reached carol it is hers to send, as madGLP's Send Reader and Globalize say, and alice sees it from carol where it reached carol before she forwarded the end.  The check holds in every order: carol forwards the end to alice, and no message from bob reaches alice, so what alice sees of bob's came from carol.  Section MB holds the boot to it by the REPL's `:deliveries`, which prints after the boot the messages delivered between each pair of agents; `glp_runtime/test/multiagent/linkprobe14_order_test.dart` holds an order in which bob's messages to carol are held and then released to it; and `glp_multiagent/test/headless_boot_test.dart` holds the boot over the real layer to it.  The two are kept because the shape is the introduction's.
 
 The suite runs all eight, as block MB5 of Section MB in `test/run_all_tests.sh`.
 
