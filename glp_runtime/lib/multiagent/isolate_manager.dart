@@ -638,8 +638,10 @@ void _agentIsolateEntry(AgentConfig config) async {
   // The scheduler over the code image the goal was posted on, and one event's
   // work on it: reduce until quiescent, then perform the Sends.
   final scheduler = posted.scheduler;
-  void runEvent() =>
-      _drainAndSend(scheduler, ctx.flushMessages, agentId, engine.debugTrace);
+  Future<void> runEvent() => _drainAndSend(scheduler, () {
+        ctx.flushMessages();
+        return ctx.answered();
+      }, agentId, engine.debugTrace);
 
   log('Network input ready: writer=$netInWriter');
 
@@ -816,10 +818,10 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
     final pk = directory.pkOf(destId);
     if (pk == null) {
       print('[$agentId] ERROR: unknown destination $destId');  // Always print errors
-      return;
+      return null;
     }
     log('Sending to $destId (${msg.payload.length}B)');
-    network.send(pk, Uint8List.fromList(msg.payload));
+    return network.send(pk, Uint8List.fromList(msg.payload));
   };
 
   // Incoming: dispatch on the message kind byte (value/request/
@@ -894,7 +896,7 @@ Future<void> _eventLoop(
     AgentConfig config,
     GlpNetwork network,
     NetworkDirectory directory,
-    void Function() runEvent,
+    Future<void> Function() runEvent,
     void Function(String) log) async {
   final agentId = config.agentId;
   // Event-driven message handling loop
@@ -902,7 +904,7 @@ Future<void> _eventLoop(
     try {
     if (msg is Start) {
       // Initial drain+flush: kicks off the agent's goal.
-      runEvent();
+      await runEvent();
       config.mainPort.send(AgentIdle(agentId));
 
     } else if (msg is Deliver) {
@@ -921,7 +923,7 @@ Future<void> _eventLoop(
       }
 
       // Drain activated goals and flush any response messages
-      runEvent();
+      await runEvent();
       // The cycle is complete, and the agent keeps no state, so the message
       // is acknowledged to the layer (IGLP, Implementation Notes,
       // "Persistence"; GNA, Section 2.9, acknowledge(messageId)).
@@ -950,9 +952,9 @@ Future<void> _eventLoop(
 /// against a program that never quiesces: reaching it is reported, never
 /// passed over, because everything after a half-run means something other
 /// than what it says.
-void _drainAndSend(
-    Scheduler scheduler, void Function() send, String agentId, bool debug) {
-  final result = scheduler.drainAndSend(send, debug: debug);
+Future<void> _drainAndSend(Scheduler scheduler, Future<void> Function() send,
+    String agentId, bool debug) async {
+  final result = await scheduler.drainAndSend(send, debug: debug);
   if (result.status == ExecutionStatus.capped) {
     print('[$agentId] ERROR: the program did not quiesce: stopped after '
         '${result.goalsRun} goals with ${scheduler.rt.gq.length} '

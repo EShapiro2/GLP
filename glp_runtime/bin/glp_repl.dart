@@ -226,9 +226,9 @@ void main() async {
         final pk = directory.pkOf(destination);
         if (pk == null) {
           dropped(destination);
-        } else {
-          network.send(pk, Uint8List.fromList(message.payload));
+          return null;
         }
+        return network.send(pk, Uint8List.fromList(message.payload));
       };
       print('madGLP mode on: agent $agent, key ${engine.identity.pub.hex}');
       continue;
