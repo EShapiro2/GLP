@@ -142,9 +142,10 @@ realisable([volition(_, _, _)|_], no).
 realisable([obstructed_jointly(_)|Fs], B?) :- realisable(Fs?, B).
 realisable([reflexive(_, _, _)|_], no).
 realisable([signed(_, _, _, _)|_], no).
+%% A reading role with no edge to a guarding role from an atom that guarding role requires is a fault of volition (GSC 0380a8a, Definition "Volition"), as volition(_, _, _) is.
+realisable([changes_nothing(_, _)|_], no).
 %% A fault of a schema's form comes in a verdict malformed(Faults), which verdict_lines refuses whole; these clauses cover the type.
 realisable([added_and_deleted(_, _, _)|_], no).
-realisable([changes_nothing(_, _)|_], no).
 realisable([no_role_changes(_)|_], no).
 realisable([head_not_variable(_, _)|_], no).
 realisable([head_repeated(_, _)|_], no).
@@ -159,6 +160,8 @@ realisable([multiplicity_not_whole(_, _, _)|_], no).
 realisable([constraint_not_numeric(_, _)|_], no).
 realisable([constraint_not_linear(_, _)|_], no).
 realisable([constraint_not_conjunction(_, _)|_], no).
+realisable([signing_not_agent(_, _)|_], no).
+realisable([signing_not_speech_act(_, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
@@ -934,12 +937,34 @@ schema_fault(sfound(Hd, Rs), S, Fs, Q, F?) :- ground(Hd?), ground(Rs?), ground(S
     field_fault(NS?, NF?, S?, F1),
     said_fault(Q?, Pp?, S?, F2),
     question_fault(Q?, Rs?, S?, F3),
+    field_places(Hd?, Rs?, Fp1),
+    count_ints(Fp1?, NF1),
+    count_named(Fs?, NN),
+    unnamed_fault(NF1?, NN?, S?, F4),
     lapp(F1?, F2?, F12),
-    lapp(F12?, F3?, F).
+    lapp(F12?, F3?, F123),
+    lapp(F123?, F4?, F).
 procedure field_fault(Integer?, Integer?, Constant?, Stream(_)).
 field_fault(NS, NF, _, []) :- NS? =< NF? | true.
 field_fault(NS, NF, S, [H?]) :- NS? > NF?, ground(S?) |
     H =.. ['%% a pragma names more fields than the schema has variables the person fills:', S?].
+%% "the fields are what the proposer fills besides, one for each other role of the act and each variable of its schema after the roles but the one the row fills, in the schema's order, the compiler refusing a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): of the NF places of the act a field may name (field_places), one is the proposer's and NN are named by a field, so NF - 1 - NN are left unnamed, the row filling one; a line leaving more than one is refused, the schema and the number of places it leaves unnamed named.
+%% The line saying why: the reason, then the schema and the number of places its pragma's fields leave unnamed.
+Unnamed  ::= '%% a pragma\'s fields leave more than one place of the act unnamed, and the row fills one (vGLP, Section 5.4, "The contract\'s words"):'
+           ; '%% the schema and the places its fields leave unnamed'(Constant, Integer).
+procedure unnamed_fault(Integer?, Integer?, Constant?, Stream(Unnamed)).
+unnamed_fault(NF, NN, S, F?) :- integer(NF?), integer(NN?) |
+    U := NF? - 1 - NN?,
+    unnamed_fault1(U?, S?, F).
+procedure unnamed_fault1(Integer?, Constant?, Stream(Unnamed)).
+unnamed_fault1(U, _, []) :- U? =< 1 | true.
+unnamed_fault1(U, S, ['%% a pragma\'s fields leave more than one place of the act unnamed, and the row fills one (vGLP, Section 5.4, "The contract\'s words"):',
+        '%% the schema and the places its fields leave unnamed'(S?, U?)]) :- U? > 1 | true.
+%% The fields a pragma names, a field left empty naming none.
+procedure count_named(Strings?, Integer).
+count_named([], 0).
+count_named([F|Fs], N?) :- ground(F?), F? =?= '""' | count_named(Fs?, N).
+count_named([F|Fs], N?) :- otherwise, ground(F?) | count_named(Fs?, M), N := M? + 1.
 %% A line whose questions are neither one nor one per guarding role of its act, an act of two guarding roles or more (vGLP 21fca00, Section 5.4, "The contract's words": "a line's questions are one per guarding role of the widest schema of its clause, in the order of the roles, none left out").
 procedure question_fault(Said?, RoleSpecs?, Constant?, Stream(_)).
 question_fault(none, _, _, []).
