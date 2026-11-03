@@ -8155,15 +8155,11 @@ if _section QD || _section QF; then
 # hand-written sources gave way to its compiled platform and IGLP's tests took
 # their old tree as the fixture programs/tests/linker_tree (GLP #9, IGLP-fixture).
 #
-# GLP (IGLP layer), 2026-09-24: the sovereign screen.  Currencies' b2367233 gave
-# the denominated mini-app twelve request clauses where it had seven, for SGC's
-# contract, and lib/manifests/sovereign_ui.dart still describes seven forms and
-# the old model.  The manifest is the image of the display declarations, and its
-# twelve forms and their labels are GLP's to write.  SGC shows no screen, so this
-# does not hold SGC.
-KNOWN_RED=(
-    "glp_multiagent/test/sovereign_screen_test.dart: the sovereign mini-app: the central bank boots, its seven forms stand, it mints and opens the credit line through its screen, and the play runs on to the chain redemption and the fiat payment"
-)
+# The sovereign screen's entry, red from 2026-09-24, went on 2026-11-03, when
+# sovereign_screen_test was rewritten on the bridge model as coins_screen_test
+# is, its agent started by agent/2 on the person's first act (GLP #11,
+# Code_inbox 2026-11-03 18:03 UTC, item 2).  The list is empty.
+KNOWN_RED=()
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="
 echo "  (raw output and json reports in $SUITE_RUN_DIR: q_dart.txt, q_dart.json, q_flutter.txt, q_flutter.json)"
