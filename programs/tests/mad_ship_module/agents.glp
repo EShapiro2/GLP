@@ -7,7 +7,7 @@ alice_init(keys(_, [Bob]), _) :-
     load_file("mad_ship_hello.glpw", C),
     ship(Bob?, C?).
 
-procedure ship(Constant?, Content?).
+procedure ship(Key?, Content?).
 ship(B, M) :- module(M?) | send_to_net([msg(B?, ship(M?))]).
 ship(_, S) :- string(S?) | send_to_user([not_a_module]).
 

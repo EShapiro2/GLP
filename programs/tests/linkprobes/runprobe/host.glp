@@ -47,7 +47,7 @@ bob_init(keys(_, [Alice]), [msg(_, call) | _]) :-
     send_chan(Alice?, Theirs?),
     read_end(Mine?).
 
-procedure send_chan(Constant?, InnerChannel?).
+procedure send_chan(Key?, InnerChannel?).
 send_chan(A, C) :- send_to_net([msg(A?, chan(C?))]).
 
 procedure read_end(InnerChannel?).
