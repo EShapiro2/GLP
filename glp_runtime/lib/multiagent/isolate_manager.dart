@@ -268,6 +268,17 @@ class IsolateManager {
   List<String> outputOf(String agentId) =>
       List.unmodifiable(_outputs[agentId] ?? const []);
 
+  /// The messages the router has delivered, by sender and destination.
+  final Map<(String, String), int> _delivered = {};
+
+  /// How many messages the router has delivered from [fromId] to [toId], the
+  /// sender being the agent the router authenticated.
+  int delivered(String fromId, String toId) => _delivered[(fromId, toId)] ?? 0;
+
+  /// Every pair of agents between which the router has delivered a message,
+  /// sender first, with the number delivered, in order of the first delivery.
+  Map<(String, String), int> get deliveries => Map.unmodifiable(_delivered);
+
   /// Whether every agent has finished every unit of work handed to it.
   ///
   /// A message parked in the router (a pair under [cut] or [holdDelivery]) was
@@ -427,6 +438,7 @@ class IsolateManager {
         return;
       }
       _noteWorkSent(toId);
+      _delivered.update((fromId, toId), (n) => n + 1, ifAbsent: () => 1);
       port.send(Deliver(fromId, payload, messageId));
     };
 
