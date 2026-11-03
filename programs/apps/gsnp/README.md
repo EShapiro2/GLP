@@ -32,7 +32,7 @@ Twenty-nine schemas over twenty predicates (`GSNP.txt`, its % lines): GKK's `est
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GSNP, as printed, with the words of its pragmas and its two widget declarations, `Approval =::= approval_sentence.` and `Menu =::= social_menu(...)`, the request labels its pragmas give |
 | `miniapp.glp` | `miniapp/4`, the same file as `../gsg/miniapp.glp` and `../gsn/miniapp.glp` |
-| `person.glp` | `miniapp_person/4`: the scripted person, by role, `dan`, `eve`, `carol`, `bob` or `fay`, and `acme_ltd`, `alice`, `alf`, the AI agent's program, or `agents_bob`; the screens test scripts only `alf` |
+| `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `dan`, `eve`, `carol`, `bob` or `fay`, and `acme_ltd`, `alice`, `alf`, the AI agent's program, or `agents_bob`; the screens test scripts only `alf` |
 | `plays.glp` | `play_provenance/5` and `play_agents/4`, the mini-app with no super-app, and `play_agents`'s hold on Alice's Retire until Bob's screen shows Alf's item |
 | `self.glp` | the platform's types written again, the router's types, and the exports |
 | `screens/` | the screens of GAI's two figures, "The GSNP app" and "The GAI app", and their README |

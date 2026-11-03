@@ -233,7 +233,7 @@ class HeadlessGrassrootsNetwork {
   /// acknowledged — those in [_outboundQueue] and those the message
   /// transport is carrying — saved before [send] returns and dropped once
   /// acknowledged, so that the queue survives the termination of the
-  /// application (GNA §2.10).
+  /// application (GNA §2.11).
   late final PersistentOutboundQueue _persistedQueue;
 
   /// Read the persisted queue back into [_outboundQueue], where the
@@ -250,6 +250,8 @@ class HeadlessGrassrootsNetwork {
         debugPrint('[headless] Restored ${entries.length} queued '
             'message(s)');
       }
+      _queueRead = true;
+      _redeliverKept();
     }, onError: (Object e) {
       debugPrint('[headless] Could not read the persisted queue: $e');
     }));
@@ -262,12 +264,70 @@ class HeadlessGrassrootsNetwork {
   /// public key, the byte payload, a layer-assigned `messageId`, and the
   /// underlay over which the message was delivered — [Underlay.wan] in this
   /// profile.
+  ///
+  /// Each message is kept before it is delivered, until [acknowledge] names
+  /// it (GNA §2.9).  The messages the persisted queue holds unacknowledged
+  /// are delivered again once this layer has read the queue and a callback
+  /// is set, whichever comes later (GNA §2.11: the layer "delivers it again
+  /// when the application restarts").
   void Function(
     Uint8List sender,
     Uint8List payload,
     String messageId,
     Underlay underlay,
-  )? onMessageReceived;
+  )? get onMessageReceived => _onMessageReceived;
+
+  set onMessageReceived(
+      void Function(
+        Uint8List sender,
+        Uint8List payload,
+        String messageId,
+        Underlay underlay,
+      )? cb) {
+    _onMessageReceived = cb;
+    _redeliverKept();
+  }
+
+  void Function(
+    Uint8List sender,
+    Uint8List payload,
+    String messageId,
+    Underlay underlay,
+  )? _onMessageReceived;
+
+  /// Whether the persisted queue has been read.
+  bool _queueRead = false;
+
+  /// Whether the kept messages have been delivered again.
+  bool _keptRedelivered = false;
+
+  /// Deliver again every message kept and not acknowledged, once, when the
+  /// queue is read and a callback is set; on the next turn of the event
+  /// loop, so that no delivery runs inside the call that set the callback.
+  void _redeliverKept() {
+    if (_keptRedelivered || !_queueRead || _onMessageReceived == null) return;
+    _keptRedelivered = true;
+    final kept = _persistedQueue.delivered;
+    if (kept.isEmpty) return;
+    debugPrint('[headless] Delivering ${kept.length} unacknowledged '
+        'message(s) again');
+    Timer.run(() {
+      for (final entry in kept) {
+        _onMessageReceived?.call(
+            _bytes(entry.senderHex), entry.payload, entry.messageId,
+            entry.underlay);
+      }
+    });
+  }
+
+  /// `acknowledge(messageId)` (GNA §2.9): "Confirm that the message delivered
+  /// under messageId has been applied and saved by the runtime; the layer
+  /// keeps a delivered message until it is acknowledged, and delivers it
+  /// again at restart otherwise."  Completes once the kept messages without
+  /// it are saved; a failed save is logged, and the message is delivered
+  /// again at restart.  A message not kept does nothing.
+  Future<void> acknowledge(String messageId) =>
+      _persistedQueue.acknowledge(messageId);
 
   /// Fired when a peer becomes reachable (its session authenticated and its
   /// attestation exchange completed). Receives the peer's public key, the
@@ -774,7 +834,7 @@ class HeadlessGrassrootsNetwork {
   /// (fair delivery, §Networking Assumptions) until the attestation exchange
   /// completes. The message is saved in the persisted queue before this
   /// returns, and dropped from it once acknowledged, so that the queue
-  /// survives the termination of the application (GNA §2.10); a save that
+  /// survives the termination of the application (GNA §2.11); a save that
   /// fails is thrown. Returns the message id, or null for invalid input.
   Future<String?> send(
     Uint8List recipientPubkey,
@@ -971,6 +1031,16 @@ class HeadlessGrassrootsNetwork {
   // ===== Wiring (mirrors the Flutter coordinator's IP path) =====
 
   void _setupRouterCallbacks() {
+    // A message is kept before it is delivered and acknowledged to its
+    // sender, until the runtime acknowledges it (GNA §2.9, §2.11).
+    _messageRouter.keepDelivered =
+        (messageId, senderPubkey, payload, arrivalTransport) =>
+            _persistedQueue.keep(DeliveredQueueEntry(
+              senderHex: _hex(senderPubkey),
+              messageId: messageId,
+              payload: payload,
+              underlay: Underlay.wan,
+            ));
     _messageRouter.onMessageReceived =
         (messageId, senderPubkey, payload, arrivalTransport) {
       onMessageReceived?.call(senderPubkey, payload, messageId, Underlay.wan);
@@ -1048,6 +1118,17 @@ class HeadlessGrassrootsNetwork {
       } catch (e) {
         debugPrint('[headless][noise] Dropping handshake packet: $e');
       }
+    };
+
+    // A new IK handshake answered while a session stood completes when the
+    // initiator's first packet opens under it, and only then ends the
+    // standing session (GNA §2.6).
+    _noiseSessions.onSessionCompleted = (transport, pubkey, peerId) {
+      if (peerId != null) {
+        _udpService?.mapIncomingConnectionToPubkey(peerId, _hex(pubkey));
+      }
+      _onSessionReplaced(pubkey);
+      _onSessionEstablished(pubkey);
     };
 
     _messageRouter.onSignalingReceived =

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:redux/redux.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
@@ -51,6 +52,17 @@ class MessageRouter {
   /// than inferred from peer state.
   void Function(String id, Uint8List senderPubkey, Uint8List payload,
       PeerTransport transport)? onMessageReceived;
+
+  /// Called before a reassembled payload is delivered and acknowledged: the
+  /// coordinator keeps the message until the runtime acknowledges it (GNA
+  /// §2.9, `acknowledge(messageId)`), and the router delivers it and
+  /// acknowledges it to its sender once this completes, so that the sender
+  /// drops a message only once its recipient keeps it.  When it fails, the
+  /// message is neither delivered nor acknowledged, and the sender's
+  /// retransmission delivers it later.  Absent, the message is delivered and
+  /// acknowledged at once.
+  Future<void> Function(String id, Uint8List senderPubkey, Uint8List payload,
+      PeerTransport transport)? keepDelivered;
 
   /// Called when an ACK is received (delivery confirmation)
   void Function(String messageId)? onAckReceived;
@@ -562,9 +574,33 @@ class MessageRouter {
     // session already attested is the coordinator's to ignore.
     if (type == PacketType.attestationFragment) {
       onAttestationReceived?.call(senderPubkey, body, transport, handshakeHash);
-    } else {
-      onMessageReceived?.call(messageId, senderPubkey, body, transport);
+      onAckRequested?.call(transport, peerId, messageId);
+      return;
     }
+
+    final keep = keepDelivered;
+    if (keep == null) {
+      _deliverAndAcknowledge(messageId, body, senderPubkey, transport, peerId);
+      return;
+    }
+    unawaited(keep(messageId, senderPubkey, body, transport).then(
+      (_) => _deliverAndAcknowledge(
+          messageId, body, senderPubkey, transport, peerId),
+      onError: (Object e) {
+        debugPrint('Message $messageId not kept, so neither delivered nor '
+            'acknowledged; its sender sends it again: $e');
+      },
+    ));
+  }
+
+  void _deliverAndAcknowledge(
+    String messageId,
+    Uint8List body,
+    Uint8List senderPubkey,
+    PeerTransport transport,
+    String? peerId,
+  ) {
+    onMessageReceived?.call(messageId, senderPubkey, body, transport);
 
     // Send ACK back to confirm delivery. The sender waits for this to
     // mark the message as "delivered" (2 checkmarks). Works over both

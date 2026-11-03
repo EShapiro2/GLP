@@ -4,8 +4,11 @@
 /// `HeadlessBootProcesses` (headless_boot.dart); after glue's
 /// test/helpers/glp_adapter_agent.dart.
 ///
-///   dart run test/helpers/headless_boot_agent.dart <persona> <root-self.glp>
-///       <program> <goal-label> [<boot-file>]
+///   dart <kernel> <persona> <root-self.glp> <program> <goal-label>
+///       [<boot-file>]
+///
+/// where <kernel> is this file compiled once, before any agent starts
+/// (headless_boot.dart, `HeadlessAgentProgram`).
 ///
 /// The agent's key pair is made at its spawn from the persona's name, as the
 /// simulation makes it (headless_boot.dart, `identityOfPersona`), the layer's

@@ -33,10 +33,12 @@
 /// `declare(trust(U, L))` takes, so this glue maps `declare(trust(pan|lan, Level))`
 /// to that sub-object's `setTrustLevel(Level)`; `getPeers` gathers both
 /// proximity sub-objects' peers, and `onPeerDiscovered` the discoveries of
-/// both.  A function of an underlay the layer does not run finds no
-/// sub-object and throws [UnsupportedError], as the runtime's interface has
-/// a realisation do for a function it does not provide; a callback of such an
-/// underlay is held and never fires.
+/// both.  A trust declaration for an underlay the layer does not run finds
+/// no sub-object and does nothing (GNA §2.2).  Any other function of an
+/// underlay the layer does not run finds no sub-object and throws
+/// [UnsupportedError], as the runtime's interface has a realisation do for a
+/// function it does not provide; a callback of such an underlay is held and
+/// never fires.
 library;
 
 import 'dart:async';
@@ -159,11 +161,14 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
             cb(_key(sender), payload, messageId, _underlay(underlay));
   }
 
-  /// `acknowledge(messageId)` (GNA 776016c, Section 2.9): the layer keeps a delivered message until it is acknowledged, and delivers it again at restart otherwise (Section 2.11).  The layer has no `acknowledge` yet: it keeps no delivered message, which is GNA's task O (a), and until it has one this glue has nothing to pass the acknowledgement to, and throws [UnsupportedError], as the runtime's interface has a realisation do for a function it does not provide.  The runtime calls it once the cycle that applied the message is complete, so the throw ends nothing the cycle did.
+  /// `acknowledge(messageId)` (GNA, Section 2.9): the layer's, which keeps a
+  /// delivered message until it is acknowledged, and delivers it again at
+  /// restart otherwise (Section 2.11).  The runtime's interface returns
+  /// nothing, so the layer's save is not awaited; a save that fails is the
+  /// layer's to log, and the message is delivered again at restart.
   @override
-  void acknowledge(String messageId) => throw UnsupportedError(
-      'acknowledge: the layer (GrassrootsNetwork) has no acknowledge(messageId) '
-      '(GNA, Section 2.9), and keeps no delivered message');
+  void acknowledge(String messageId) =>
+      unawaited(layer.acknowledge(messageId));
 
   // --- Cryptography ---
 
@@ -200,11 +205,13 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
     }
   }
 
-  /// `declare(trust(pan|lan, Level))`: that sub-object's `setTrustLevel`.
+  /// `declare(trust(pan|lan, Level))`: that sub-object's `setTrustLevel`;
+  /// for an underlay the layer does not run it finds no sub-object, and does
+  /// nothing (GNA §2.2).
   @override
   void setTrustLevel(glp.ProximityUnderlay underlay, glp.TrustLevel level) {
-    final proximity = _proximity(underlay) ??
-        _absent('setTrustLevel', underlay.name.toUpperCase());
+    final proximity = _proximity(underlay);
+    if (proximity == null) return;
     unawaited(proximity
         .setTrustLevel(ColdCallTrustLevel.values.byName(level.name)));
   }

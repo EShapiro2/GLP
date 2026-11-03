@@ -254,7 +254,7 @@ class _Run {
   /// The person [name] of the run.
   _Person person(String name) => persons.singleWhere((p) => p.name == name);
 
-  /// [dir], the app's directory under `programs/`, is `apps/<app>` unless given, and [out], where its screens are written, its `screens/` unless given.  A scripted agent's person runs the script of its role in [roles], its own key where none is given; a scripted parent's in [watching] looks also at the phones of the children it names, by `village_person/5` (`programs/cssn/self.glp`).
+  /// [dir], the app's directory under `programs/`, is `apps/<app>` unless given, and [out], where its screens are written, its `screens/` unless given.  A scripted agent's person runs the script of its role in [roles], its own key where none is given, with the keys the person knows, those of the persons it has a conversation with in the order of [pairs], by which its script names its peers (`programs/self.glp`, `miniapp_person/5`); a scripted parent's in [watching] looks also at the phones of the children it names, by `village_person/6` (`programs/cssn/self.glp`).
   static Future<_Run> start(WidgetTester tester, Screens screens, String app,
       {String? dir,
       String? out,
@@ -285,6 +285,14 @@ class _Run {
         [for (var i = 0; i + 1 < chain.length; i++) (chain[i], chain[i + 1])];
     String conversation(String p, String q) =>
         'conversation($q, ch(C_${q}_$p?, C_${p}_$q))';
+    // The keys a scripted person knows: those of the persons it has a conversation with, in the order of the pairs, each readable name standing for a key.
+    String known(String p) => '[${[
+          for (final (a, b) in links)
+            if (a == p)
+              b
+            else if (b == p)
+              a,
+        ].join(', ')}]';
     final goals = [
       for (var i = 0; i < chain.length; i++) ...[
         'miniapp(${chain[i]}, ch(G$i?, D$i), ch([${[
@@ -295,9 +303,9 @@ class _Run {
               conversation(b, a),
         ].join(', ')}], U$i), ${firstDay == null ? '[]' : 'K$i?'})',
         if (scripted.contains(chain[i]) && watching.containsKey(chain[i]))
-          'village_person(${chain[i]}, ${roles[chain[i]] ?? chain[i]}, ch(D$i?, G$i), W$i?, S$i)'
+          'village_person(${chain[i]}, ${roles[chain[i]] ?? chain[i]}, ${known(chain[i])}, ch(D$i?, G$i), W$i?, S$i)'
         else if (scripted.contains(chain[i]))
-          'miniapp_person(${chain[i]}, ${roles[chain[i]] ?? chain[i]}, ch(D$i?, G$i), S$i)',
+          'miniapp_person(${chain[i]}, ${roles[chain[i]] ?? chain[i]}, ${known(chain[i])}, ch(D$i?, G$i), S$i)',
       ],
     ];
     final play = engine.postGoal(goals.join(', '), inputs: [
