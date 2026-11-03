@@ -17,6 +17,7 @@ decls = {}
 for m in re.finditer(r'^([A-Z][A-Za-z]*(?:\([A-Z]\))?)\s*::=(.*?)\.\s*$', src, re.M | re.S):
     decls.setdefault(m.group(1), m.group(0).strip())
 
+sig = re.search(r'^exported procedure agent\((.*)\)\.\s*$', src, re.M).group(1)
 seeds = ['Net', 'Output', 'Menu', 'Approval', 'Proposal', 'Class', 'Atom', 'Request', 'YesNo']
 need, todo = [], list(seeds)
 while todo:
@@ -28,7 +29,6 @@ while todo:
     todo += [r for r in re.findall(r'\b([A-Z][A-Za-z]*)\b', decls[key].split('::=', 1)[1]) if r != t]
 types = '\n'.join(decls[k] for k in decls if k in need)
 
-sig = re.search(r'^exported procedure agent\((.*)\)\.\s*$', src, re.M).group(1)
 cal = 'Stream(Integer)?' in sig
 P, L = ['alice', 'bob', 'carol', 'dave'], 'ABCD'
 
@@ -41,10 +41,17 @@ HostIn   ::= [_ | HostIn].
 
 imported procedure platform#agent({sig}, Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure live_ui(Key?, HostIn?, Stream(_)?).
-live_ui(_, Ins, _) :-
+%% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (IGLP,
+%% Implementation Notes, "Boot"): the host's acts are the first channel's
+%% input; the harness writes to the person itself, by send_to_user/1, and
+%% its four persons' networks are joined inside it.
+exported procedure agent(Channel(HostIn, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(Ins, []), ch(_, [])) :- live_ui(Ins?).
+
+procedure live_ui(HostIn?).
+live_ui(Ins) :-
     split4(Ins?, GA, GB, GC, GD{ks}),
 """
 for p, x in zip(P, L):

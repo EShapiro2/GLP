@@ -34,7 +34,6 @@ void worker(List<Object?> args) async {
     agentId: 'host',
     program: '$worldsDir/live_$contract',
     rootSelfGlpPath: '$root/programs/self.glp',
-    goalLabel: 'live_ui/3',
   );
   agent.maxQuiescenceCycles = 20000000;
   // send_to_user's elements arrive ground, dereferenced by the _output kernel.
