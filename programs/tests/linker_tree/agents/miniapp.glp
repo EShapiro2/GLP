@@ -2,7 +2,7 @@
 
 imported procedure adult#agent(Key?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
 imported procedure child#child_agent(Key?, ParentEnds?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
-imported procedure adult#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+imported procedure adult#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 exported procedure app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 app(Id, Ui, Convs) :-

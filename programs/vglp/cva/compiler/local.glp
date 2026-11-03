@@ -140,6 +140,9 @@ con_det(or(C1, C2), Bd, D?) :- ground(Bd?) |
     con_det(C1?, Bd?, D1),
     con_det(C2?, Bd?, D2),
     args_both(D1?, D2?, D).
+%% A signing condition, signed(u, y) or unsigned(u, y), gives no variable a value: it is a condition on the agent and the speech act the binding assigns (vGLP dd37d2a, Section 5.4, "Speech-act schemas as local specifications").
+con_det(signed(_, _), _, []).
+con_det(unsigned(_, _), _, []).
 %% The numeric variables among the arguments that are not in Bd, each once, added to U0.
 procedure unbound_nvars(Args?, Args?, Args?, Args).
 unbound_nvars([], _, U0, U0?).

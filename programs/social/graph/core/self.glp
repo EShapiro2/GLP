@@ -45,7 +45,7 @@ HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(
 %% whole, for a friend's request to connect and an introduction.  The draws leave by send_to_user/1, and the network
 %% stream by send_to_net/1.
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
-imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(_), Stream(Output))).
+imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 exported procedure superapp(Key?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp(Id, Grants, NetIn) :-

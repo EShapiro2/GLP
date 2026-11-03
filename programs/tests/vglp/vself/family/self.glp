@@ -19,9 +19,9 @@ Drawn     ::= chore_w(_) ; wish_w(_) ; allowance_w(_) ; YesNo ; Constant.
 imported procedure parent#parent(Stream(Done), Stream(Ask(Question))).
 imported procedure child#child(Stream(Done), Stream(Ask(Question))).
 imported procedure parent#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 imported procedure child#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 %% ---------------------------------------------------------------------------
 %% The plays

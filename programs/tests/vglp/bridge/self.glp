@@ -56,7 +56,7 @@ imported procedure widgets#forms(Channel(Stream(_), Stream(Output))?,
 imported procedure widgets#cards(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure widgets#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% The primitive and constant questions.
 exported procedure inputs_init(Constant?, PersonIn(Drawn)?, Stream(_)?).

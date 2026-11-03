@@ -21,7 +21,7 @@
 %% device's clock.
 
 imported procedure sovereign_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Acceptance)?, Integer?, Stream(Ask(Question))).
-imported procedure sovereign_agent#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+imported procedure sovereign_agent#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% With no clock, no date ever advances.
 exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).

@@ -43,7 +43,7 @@ imported procedure pending#deal(Channel(Stream(_), Stream(Output))?,
 imported procedure pending#board(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure pending#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The bridge's entries

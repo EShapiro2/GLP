@@ -145,16 +145,20 @@ Spawn(Q, T) ::= spawn(Integer, Q, Inputs(T), Stream(Draw(T))?).
 %% input, and passes every grant that is not input(Id, P, R) to it, which
 %% with grants of the root's Input(T) is idle (vGLP, Section 6.3).  The
 %% program's person input keeps its own type; the dispatcher writes it and
-%% never closes it.
+%% never closes it.  "The program's end of the person channel receives no
+%% grant, the grants going to the construct processes, and is typed
+%% Stream(Input(T)) all the same, and a program that defines no Output has its
+%% unused output typed Stream(Draw(T)), so the dispatcher, and every program
+%% that imports it, has no open type" (vGLP 305c8d0, Section 6.3).
 exported procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?,
-    Channel(Stream(_), Stream(_)), Stream(Spawn(Q, T))).
+    Channel(Stream(Input(T)), Stream(Draw(T))), Stream(Spawn(Q, T))).
 dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :-
     split_grants(PIn?, Inputs, MIn),
     fair(ask, Asks?, Inputs?, COut?, Es),
     serve(Es?, COut, POut, [], [], 1, Ss).
 
 exported procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?,
-    Stream(_), Stream(Draw(T))?, Stream(Spawn(Q, T))).
+    Stream(Input(T)), Stream(Draw(T))?, Stream(Spawn(Q, T))).
 dispatch(Asks, ch(PIn, POut?), MIn?, ODs, Ss?) :-
     split_grants(PIn?, Inputs, MIn),
     merge_draws(ODs?, DOut?, POut),
@@ -179,7 +183,7 @@ merge_draws_(Xs, [], Xs?).
 %% the program's person input, Others, is never written, every term on the
 %% person channel being a grant input(Id, P, R) of the root's Input(T), so
 %% that passing the others on is idle (vGLP, Section 6.3).
-procedure(T) split_grants(PersonIn(T)?, Inputs(T), Stream(_)).
+procedure(T) split_grants(PersonIn(T)?, Inputs(T), Stream(Input(T))).
 split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :-
     split_grants(Gs?, Is, Ms).
 
