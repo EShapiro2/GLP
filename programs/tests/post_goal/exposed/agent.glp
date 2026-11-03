@@ -1,11 +1,15 @@
 %% agent.glp --- the one program of an agent its host runs: the host posts
-%% agent_init(Id, UserIn?, NetIn?), and each integer the person's stream
-%% carries is sent back to the person doubled, by double/2, which this
-%% directory's self.glp exposes.
+%% agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)), every agent's initial goal
+%% (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation
+%% Notes, "Boot"), and each integer the person's stream carries is sent back
+%% to the person doubled, by double/2, which this directory's self.glp
+%% exposes.
 
-procedure agent_init(Constant?, Stream(Integer)?, Stream(_)?).
-agent_init(_, Ns, _) :- doubles(Ns?).
+Doubled ::= doubled(Integer).
 
-procedure doubles(Stream(Integer)?).
-doubles([N|Ns]) :- double(N?, D), send_to_user([doubled(D?)]), doubles(Ns?).
-doubles([]).
+exported procedure agent(Channel(Stream(Integer), Stream(Doubled))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(Ns, Out?), ch(_, [])) :- doubles(Ns?, Out).
+
+procedure doubles(Stream(Integer)?, Stream(Doubled)).
+doubles([N|Ns], [doubled(D?)|Out?]) :- double(N?, D), doubles(Ns?, Out).
+doubles([], []).

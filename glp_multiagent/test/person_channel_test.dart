@@ -122,6 +122,11 @@ void main() {
     reply.listen((m) {
       if (m is AgentReady) {
         commands = m.commandPort;
+        // The person's first act names the entry the fixture's agent/2 runs
+        // (programs/tests/vglp/bridge/self.glp), the agent started from
+        // agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition
+        // "Multiagent GLP"; IGLP, Implementation Notes, "Boot").
+        commands!.send(UserInput(const GAtom('inputs_init')));
       } else if (m is AgentNotify) {
         notifies.add(m.term);
         ui.handle(m.term);
@@ -134,7 +139,6 @@ void main() {
         InitAgent(
           agentId: 'bob',
           program: '$programs/tests/vglp/bridge',
-          goalLabel: 'inputs_init/3',
           rootSelfGlpPath: '$programs/self.glp',
           replyPort: reply.sendPort,
         ));

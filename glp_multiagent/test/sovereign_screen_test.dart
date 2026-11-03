@@ -24,8 +24,11 @@
 ///
 /// The values booted are those of `main_sovereign.dart`, whose `VglpProgram`
 /// is built inside its `main`: `person: 'cb'`,
-/// `directory: (glp) => glp.sovereignDir`, `goalLabel: 'sovereign_ui/3'`,
-/// `manifest: sovereignManifest`. A person the
+/// `directory: (glp) => glp.sovereignDir`, `manifest: sovereignManifest`,
+/// the agent started from agent(ch(_?,_),ch(_?,_)), every agent's initial
+/// goal (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP,
+/// Implementation Notes, "Boot"), which the program's agent/2, Currencies',
+/// answers; until 2026-11-03 at `sovereign_ui/3`. A person the
 /// harness has no clause for boots and compiles as well as this one and
 /// stands no form, which is what this test tells apart.
 library;
@@ -66,7 +69,6 @@ void main() {
       // certified mini-app and this directory adds the harness that runs it
       // for a live person.
       program: glp.sovereignDir,
-      goalLabel: 'sovereign_ui/3',
       rootSelfGlpPath: glp.rootSelfGlp,
     );
     agent.onOutput = lines.add;

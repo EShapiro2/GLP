@@ -59,12 +59,6 @@ class InitAgent extends ToAgentMsg {
   final String rootSelfGlpPath;
   final SendPort replyPort;
 
-  /// Entry-point goal label, e.g. 'agent_init/3', 'agent_init_play/3'.
-  final String goalLabel;
-
-  /// Extra arguments inserted between Id and NetIn.
-  final List<String> extraArgs;
-
   /// If true, the isolate waits for a [StartAgent] command before running
   /// GLP initialization.  This allows the main isolate to register all agent
   /// ports first, eliminating message-routing race conditions.
@@ -75,8 +69,6 @@ class InitAgent extends ToAgentMsg {
     required this.program,
     required this.rootSelfGlpPath,
     required this.replyPort,
-    this.goalLabel = 'agent_init/3',
-    this.extraArgs = const [],
     this.deferStart = false,
   });
 }
@@ -199,8 +191,6 @@ Future<void> _runAgent(InitAgent init) async {
     agentId: agentId,
     program: init.program,
     rootSelfGlpPath: init.rootSelfGlpPath,
-    goalLabel: init.goalLabel,
-    extraArgs: init.extraArgs,
   );
 
   // Wire callbacks to send messages back to the main isolate: what the

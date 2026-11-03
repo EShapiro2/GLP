@@ -39,9 +39,6 @@ class VglpProgram {
   /// The program directory, resolved against the tree the engine reads.
   final String Function(GlpPaths) directory;
 
-  /// The harness entry, whose three arguments are (Id, UserIn, NetIn).
-  final String goalLabel;
-
   /// The image of the program's display declarations.
   final Manifest manifest;
 
@@ -49,7 +46,6 @@ class VglpProgram {
     required this.title,
     required this.person,
     required this.directory,
-    required this.goalLabel,
     required this.manifest,
   });
 }
@@ -120,7 +116,6 @@ class _VglpScreenState extends State<VglpScreen> {
         InitAgent(
           agentId: _p.person,
           program: _p.directory(glp),
-          goalLabel: _p.goalLabel,
           rootSelfGlpPath: glp.rootSelfGlp,
           replyPort: _replyPort.sendPort,
           deferStart: false,

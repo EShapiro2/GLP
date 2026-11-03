@@ -3,5 +3,9 @@
 %% same SRSW violation (GLP-Spec glp.tex, Definition "Single-Occurrence (SO)
 %% Invariant": "every variable occurs in it at most once"; Id? occurs twice).
 
+%% The agent's initial goal, every agent's (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot": "a deployed agent is spawned by its application with the same initial goal").
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(_, []), ch(N, [])) :- agent_init(alice, N?).
+
 procedure agent_init(_?, _?).
 agent_init(Id, _) :- send_to_user([hello(Id?), again(Id?)]).

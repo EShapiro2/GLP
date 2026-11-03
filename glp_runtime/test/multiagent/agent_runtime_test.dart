@@ -11,18 +11,26 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
+import 'package:glp_runtime/runtime/terms.dart' show ConstTerm, StructTerm;
 
 /// A minimal 2-agent play: agent `a` cold-calls `b` with `ping`; `b` receives
 /// it on its network input and emits `got(ping)` to its user output.  Each
-/// agent runs it as its one program, a module file (TGLP, def:program); it
-/// declares no `-mode(system)`, which only the primitive layer may
-/// (TGLP, app:system-mode) and which it never needed.
+/// agent runs it as its one program, a module file (TGLP, def:program),
+/// started from agent(ch(_?,_),ch(_?,_)), every agent's initial goal (GLP-Spec
+/// maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes,
+/// "Boot"), its person telling it its role: a's, call(B), with the key of the
+/// peer it calls (IGLP 670d36a, Remark "Agent Names": a readable name is a
+/// variable standing for a key).
 const String _play = r'''
-procedure a_init(_?, _?).
-a_init(_, _) :- send_to_net([msg(b, ping)]).
+PlayIn  ::= call(Key) ; answer.
+PlayOut ::= got(Constant).
 
-procedure b_init(_?, _?).
-b_init(_, [msg(_, M) | _]) :- send_to_user([got(M?)]).
+exported procedure agent(Channel(Stream(PlayIn), Stream(PlayOut))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+
+procedure start(Stream(PlayIn)?, Stream(NetMsg(Constant))?).
+start([call(B) | _], _) :- send_to_net([msg(B?, ping)]).
+start([answer | _], [msg(_, M) | _]) :- send_to_user([got(M?)]).
 ''';
 
 void main() {
@@ -52,12 +60,11 @@ void main() {
       final out = <String, List<String>>{'a': [], 'b': []};
       final pending = <String, List<(String, Uint8List)>>{};
 
-      AgentRuntime mk(String id, String goal) {
+      AgentRuntime mk(String id) {
         final a = AgentRuntime(
           agentId: id,
           program: play,
           rootSelfGlpPath: root,
-          goalLabel: goal,
         );
         a.onOutput = (line) => out[id]!.add(line);
         a.onSendMadMessage = (to, payload) async => pending
@@ -66,12 +73,15 @@ void main() {
         return a;
       }
 
-      final a = mk('a', 'a_init/2');
-      final b = mk('b', 'b_init/2');
+      final a = mk('a');
+      final b = mk('b');
       final agents = {'a': a, 'b': b};
 
       await a.initialize();
       await b.initialize();
+      // Each person tells the agent its role, a's the key of b.
+      await a.injectUserInput(StructTerm('call', [ConstTerm('b')]));
+      await b.injectUserInput(ConstTerm('answer'));
 
       var rounds = 0;
       while (pending.isNotEmpty && rounds < 20) {
@@ -103,7 +113,6 @@ void main() {
         agentId: 'a',
         program: play,
         rootSelfGlpPath: root,
-        goalLabel: 'a_init/2',
       );
       final events = <String>[];
       final pk = generateKeyPair().pub;

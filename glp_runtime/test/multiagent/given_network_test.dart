@@ -26,39 +26,51 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
+import 'package:glp_runtime/runtime/terms.dart' show ConstTerm, StructTerm;
 
-/// The agents' one program: GNA's adapter test's, the caller naming the
-/// callee by the key its host passes it.
+/// The agents' one program: GNA's adapter test's, each agent started from
+/// agent(ch(_?,_),ch(_?,_)), every agent's initial goal (GLP-Spec maglp.tex,
+/// Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot": "a
+/// deployed agent is spawned by its application with the same initial
+/// goal"), the caller's person naming the callee by its key, call(Key), and
+/// the callee's telling its agent to answer.
 const String _play = r'''
-procedure caller_init(_?, Key?, _?).
-caller_init(_, Callee, _) :-
+GnIn  ::= call(Key) ; answer.
+GnOut ::= answered(Constant) ; called(Key).
+GnMsg ::= ask(Constant?).
+
+exported procedure agent(Channel(Stream(GnIn), Stream(GnOut))?, Channel(Stream(NetMsg(GnMsg)), Stream(NetMsg(GnMsg)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+
+procedure start(Stream(GnIn)?, Stream(NetMsg(GnMsg))?).
+start([call(Callee) | _], _) :- ground(Callee?) |
     send_to_net([msg(Callee?, ask(Answer))]),
     answered(Answer?).
-
-procedure answered(_?).
-answered(forty_two) :- send_to_user([answered(forty_two)]).
-
-procedure callee_init(_?, _?).
-callee_init(_, [msg(Me, ask(A?)) | _]) :-
+start([answer | _], [msg(Me, ask(A?)) | _]) :-
     send_to_user([called(Me?)]),
     answer(A).
 
-procedure answer(_).
+procedure answered(Constant?).
+answered(forty_two) :- send_to_user([answered(forty_two)]).
+
+procedure answer(Constant).
 answer(forty_two).
 ''';
 
-/// An agent that cold-calls `bob`, a name that is no key.
+/// An agent that cold-calls the peer its person names: `bob` in the tests, a
+/// readable name, which over a network stands for no key (IGLP 670d36a,
+/// Remark "Agent Names").
 const String _symbolic = r'''
-procedure a_init(_?, _?).
-a_init(_, _) :- send_to_net([msg(bob, ping)]).
+exported procedure agent(Channel(Stream(Key), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch([P | _], []), ch(_, [])) :- send_to_net([msg(P?, ping)]).
 ''';
 
 /// An agent that declares a place and tells its person when it is entered.
 const String _placer = r'''
-procedure placer_init(_?, _?).
-placer_init(_, _) :- place_declare(home, 50, E), watch(E?).
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])) :- place_declare(home, 50, E), watch(E?).
 
-procedure watch(_?).
+procedure watch(Stream(Constant)?).
 watch([E|_]) :- ground(E?) | send_to_user([E?]).
 ''';
 
@@ -192,8 +204,6 @@ void main() {
         agentId: 'caller',
         program: play,
         rootSelfGlpPath: root,
-        goalLabel: 'caller_init/3',
-        extraArgs: [calleeKp.pub.hex],
         keyPair: callerKp,
         network: _WireNetwork(callerKp, wire),
       );
@@ -201,7 +211,6 @@ void main() {
         agentId: 'callee',
         program: play,
         rootSelfGlpPath: root,
-        goalLabel: 'callee_init/2',
         keyPair: calleeKp,
         network: _WireNetwork(calleeKp, wire),
       );
@@ -220,6 +229,11 @@ void main() {
 
       await callee.initialize();
       await caller.initialize();
+      // Each person tells its agent what to do: the callee's to answer, the
+      // caller's to call the callee, by its key.
+      await callee.injectUserInput(ConstTerm('answer'));
+      await caller.injectUserInput(
+          StructTerm('call', [ConstTerm(calleeKp.pub.hex)]));
 
       // The cold call crosses: the callee's program receives it on its
       // network input, addressed to its own name, its key.
@@ -248,13 +262,13 @@ void main() {
         agentId: 'a',
         program: symbolic,
         rootSelfGlpPath: root,
-        goalLabel: 'a_init/2',
         keyPair: kp,
         network: _WireNetwork(kp, wire),
       );
       final out = <String>[];
       agent.onOutput = out.add;
       await agent.initialize();
+      await agent.injectUserInput(ConstTerm('bob'));
       expect(wire.carried, isEmpty,
           reason: 'bob names no agent over the network, and no key is made up '
               'for it');
@@ -269,7 +283,6 @@ void main() {
         agentId: 'placer',
         program: placer,
         rootSelfGlpPath: root,
-        goalLabel: 'placer_init/2',
         keyPair: kp,
         network: network,
       );
@@ -317,7 +330,6 @@ void main() {
         agentId: 'a',
         program: symbolic,
         rootSelfGlpPath: root,
-        goalLabel: 'a_init/2',
         keyPair: kp,
         network: _WireNetwork(kp, _Wire()),
       );
@@ -334,7 +346,6 @@ void main() {
         agentId: 'a',
         program: symbolic,
         rootSelfGlpPath: root,
-        goalLabel: 'a_init/2',
       );
       final out = <String>[];
       final logs = <String>[];

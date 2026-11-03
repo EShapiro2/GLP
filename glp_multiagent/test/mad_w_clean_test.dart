@@ -19,6 +19,7 @@ import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
+import 'package:glp_multiagent/ui_runtime/term.dart';
 
 import 'programs_dir.dart';
 
@@ -74,6 +75,14 @@ void main() {
     await waitUntil(() => ready.length == 2);
     ports['alice']!.send(StartAgent());
     ports['bob']!.send(StartAgent());
+    // Each person's first act tells the agent its role and the keys of the
+    // peers it knows, the agent started from agent(ch(_?,_),ch(_?,_))
+    // (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP 670d36a,
+    // Implementation Notes, "Boot", and Remark "Agent Names").
+    ports['alice']!.send(UserInput(const GStruct(
+        'init', [GAtom('alice'), GList([GAtom('bob')])])));
+    ports['bob']!.send(
+        UserInput(const GStruct('init', [GAtom('bob'), GList([])])));
 
     // Wait for BOTH reports. bob_producer and bob_consumer are concurrent, and
     // the order they reach the output is not fixed, so waiting on one and then

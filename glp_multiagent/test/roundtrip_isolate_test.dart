@@ -88,6 +88,11 @@ void main() {
         reason: 'both isolates ready');
     ports['alice']!.send(StartAgent());
     ports['bob']!.send(StartAgent());
+    // Each person's first act tells the agent its name, the agent started
+    // from agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition
+    // "Multiagent GLP"; IGLP, Implementation Notes, "Boot").
+    ports['alice']!.send(UserInput(const GAtom('alice')));
+    ports['bob']!.send(UserInput(const GAtom('bob')));
 
     expect(
         await waitUntil(() => started.containsAll(['alice', 'bob'])),
