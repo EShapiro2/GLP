@@ -6,6 +6,8 @@
 /// Specification: IGLP app:madglp-spec (madGLP Specification).
 library;
 
+import 'dart:async';
+
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart' show deepDeref;
 import 'package:glp_runtime/runtime/terms.dart';
@@ -20,10 +22,12 @@ import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/wire/codec.dart'
     show wireMsgKindValue, wireMsgKindRequest, wireMsgKindAcknowledgement;
 import 'package:glp_runtime/wire/artefact.dart' show ModuleRefusal;
-import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
+import 'package:glp_runtime/wire/payload_codec.dart'
+    show GlobalNameRefusal, PayloadCodec;
 
-/// Callback for delivering messages to other agents
-typedef MessageDeliveryCallback = void Function(String destination, OutboundMessage message);
+/// Callback for delivering messages to other agents: it hands [message] to the layer and returns the layer's answer, a future that completes once the layer has saved the message for delivery and fails where the layer refuses it, being unable to save it (GNA, Section 2.9: send "completes once the message is saved for delivery ..., and fails if the message cannot be saved").  A callback that returns no future is taken as accepting the message.
+typedef MessageDeliveryCallback = FutureOr<void> Function(
+    String destination, OutboundMessage message);
 
 /// A pending reader-name value ([MadContext._pendingReaderValues]).
 typedef _PendingReaderValue = ({
@@ -60,6 +64,18 @@ class MadContext {
 
   /// Optional callback for message delivery (set by coordinator)
   MessageDeliveryCallback? onMessageReady;
+
+  /// The seam's resolution of a destination to the one agent it names, set
+  /// by a simulation's binding: "a destination, in a global name or in a
+  /// message, is a key or a readable name standing for one, and the seam
+  /// resolves both to the one agent" (IGLP 4f84612, Implementation Notes,
+  /// "Simulation realisation").  [send] resolves the agent of the global name
+  /// and the destination by it before Globalize, so that the link records,
+  /// the message queue and the held-link test each name the agent once,
+  /// however the program named it.  A name it does not resolve is kept as
+  /// the program gave it.  Over a given network it is not set: there the
+  /// destination is the key ([AgentRuntime]).
+  String? Function(String name)? resolveAgent;
 
   /// The agent's networking layer (set at boot). Backs the seam predicates
   /// (IGLP Definition "Seam Predicates"); `sign/3` and `signature/2` sign and
@@ -202,13 +218,15 @@ class MadContext {
   // Message Queue Operations (Send Transaction)
   // =========================================================================
 
-  /// Flush all queued messages via the onMessageReady callback
-  ///
-  /// Returns the number of messages flushed.
+  /// The layer's answers still to come to the messages [flushMessages] handed it.
+  final Set<Future<void>> _unanswered = {};
+
+  /// Hand every sendable message of M_p to the layer by [onMessageReady], the Send transactions (Definition madGLP Send); the number handed over.  The runtime waits for the layer's answer to each ([answered]): "the layer refuses to send a message it cannot save, and the runtime waits for its answer and, on a refusal, keeps the message and sends it again later" (IGLP b014a9e, Implementation Notes, "Networking Seam", The contract).  A refused message is put back in M_p undelivered, and the next flush hands it over again, after the messages it took this time.
   int flushMessages() {
     if (onMessageReady == null) return 0;
 
     int count = 0;
+    final refused = <OutboundMessage>[];
     final destinations = List<String>.from(mp.destinations);
     _trace('[MAD $agentId] flushMessages: mp.totalLength=${mp.totalLength}, destinations=$destinations');
 
@@ -217,12 +235,37 @@ class MadContext {
         final msg = mp.poll(dest);
         if (msg == null) break;
         _trace('[MAD $agentId] flushMessages: sending ${msg.type} to $dest');
-        onMessageReady!(dest, msg);
         count++;
+        final FutureOr<void> answer;
+        try {
+          answer = onMessageReady!(dest, msg);
+        } catch (e) {
+          _trace('[MAD $agentId] flushMessages: the layer refused the '
+              '${msg.type} to $dest: $e; it is kept');
+          refused.add(msg);
+          continue;
+        }
+        if (answer is Future<void>) {
+          late final Future<void> waiting;
+          waiting = answer.then((_) {}, onError: (Object e) {
+            _trace('[MAD $agentId] flushMessages: the layer refused the '
+                '${msg.type} to $dest: $e; it is kept');
+            mp.add(msg);
+          }).whenComplete(() => _unanswered.remove(waiting));
+          _unanswered.add(waiting);
+        }
       }
     }
+    refused.forEach(mp.add);
     _trace('[MAD $agentId] flushMessages: flushed $count messages');
     return count;
+  }
+
+  /// Completes once the layer has answered every message handed to it by [flushMessages], each refused one being back in M_p by then.
+  Future<void> answered() async {
+    while (_unanswered.isNotEmpty) {
+      await Future.wait(List.of(_unanswered));
+    }
   }
 
   // =========================================================================
@@ -634,7 +677,7 @@ class MadContext {
   bool hasDeclaredPlace(String place) => runtime.placeStreams.isDeclared(place);
 
   /// Declare [place] with radius [radiusMetres], its event stream growing from
-  /// [streamWriterAddr] — the writer of the `E` of `place_declare(P, R, E)`.
+  /// [streamWriterAddr] — the writer of the `E` of `declare(place(P, R, E))`.
   ///
   /// A further declaration of the same place supersedes the earlier one, whose
   /// stream is closed (Definition Seam Predicates). The stream exists before the
@@ -666,7 +709,7 @@ class MadContext {
         if (declared) return;
         _trace('[MAD $agentId] declarePlace($place): refused by the platform '
             '— unobservable');
-        // Answers can arrive after place_remove or after a superseding
+        // Answers can arrive after remove(place(P)) or after a superseding
         // declaration, whose stream is the successor's, not this one's: the
         // declaration answered goes with the event, and is checked when it
         // is delivered.
@@ -1047,6 +1090,15 @@ class MadContext {
   /// The sender is told nothing, IGLP having no message for it: a reader-name
   /// value stays pending there, unacknowledged (Definition "madGLP Local
   /// State").
+  ///
+  /// A message --- a value, a request or an acknowledgement --- carrying a
+  /// global name whose agent is not an atom is refused at receipt in the same
+  /// way, the refusal naming the name: "An agent is an atom and an index is a
+  /// non-negative integer, and the reader refuses a global name whose agent or
+  /// index is anything else" (IGLP code-format-fragment.tex, Terms, tag 2).
+  /// The name is a tag-2 variable, or the name the message is addressed to;
+  /// a structure `'_w'(P, I)` the message carries is a program's term and
+  /// arrives as the structure (IGLP madglp-spec.tex:17, at IGLP 1e01638).
   void handleIncomingPayload({
     required List<int> payload,
     required String fromAgent,
@@ -1064,17 +1116,30 @@ class MadContext {
           print('[REFUSED] $agentId: a message from $fromAgent is refused at '
               'receipt: ${refusal.message}');
           return;
+        } on GlobalNameRefusal catch (refusal) {
+          print('[REFUSED] $agentId: a message from $fromAgent is refused at '
+              'receipt: ${refusal.message}');
+          return;
         }
         handleMadAssignment(
             globalName: received.name,
             value: received.value,
             fromAgent: fromAgent,
             serial: received.serial);
-      case wireMsgKindRequest:
-        handleRequest(
-            PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
-      case wireMsgKindAcknowledgement:
-        handleAck(PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
+      case wireMsgKindRequest || wireMsgKindAcknowledgement:
+        final GlobalName name;
+        try {
+          name = PayloadCodec.decodeRequestOrAckPayload(payload);
+        } on GlobalNameRefusal catch (refusal) {
+          print('[REFUSED] $agentId: a message from $fromAgent is refused at '
+              'receipt: ${refusal.message}');
+          return;
+        }
+        if (payload[0] == wireMsgKindRequest) {
+          handleRequest(name, fromAgent);
+        } else {
+          handleAck(name, fromAgent);
+        }
       default:
         throw FormatException(
             'unknown madGLP message kind: ${payload[0]}');
@@ -1579,6 +1644,13 @@ class MadContext {
   /// 1. Globalizes term T for remote agent Q
   /// 2. Adds message `(G := T↑, Q)` to M_p — content sent directly
   void send(Term term, bool isWriter, String gnAgent, int gnIndex, String destAgent) {
+    // The global name's agent and the destination, each a key or a readable
+    // name standing for one, resolved to the one agent ([resolveAgent]).
+    final resolve = resolveAgent;
+    if (resolve != null) {
+      gnAgent = resolve(gnAgent) ?? gnAgent;
+      destAgent = resolve(destAgent) ?? destAgent;
+    }
     _trace('[MAD $agentId] send: term=$term, isWriter=$isWriter, gnAgent=$gnAgent, gnIndex=$gnIndex, dest=$destAgent');
 
     // Extract variables from the term for globalization

@@ -8,3 +8,13 @@ imported procedure agents#agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 
 exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(Id, UserIn, NetIn) :- agents # agent_init(Id?, UserIn?, NetIn?).
+
+%% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec
+%% maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot":
+%% "a deployed agent is spawned by its application with the same initial
+%% goal"): the person's first act tells the agent its name, and the person's
+%% acts after it are the agent's input.
+Named ::= [Key | Stream(UserCmd)].
+
+exported procedure agent(Channel(Named, Stream(Constant))?, Channel(NetInStream, Stream(NetMsg(NetColdCall)))?).
+agent(ch([Id | In], []), ch(N, [])) :- agent_init(Id?, In?, N?).

@@ -21,10 +21,11 @@ import 'package:glp_runtime/wire/codec.dart';
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
 
-/// A globalized term: a structure carrying a writer and a reader global name.
+/// A globalized term: a structure carrying a writer and a reader global name,
+/// each in the place of a variable.
 Term _globalized() => StructTerm('msg', [
-      StructTerm('_w', [ConstTerm('alice'), ConstTerm(3)]),
-      StructTerm('_r', [ConstTerm('alice'), ConstTerm(4)]),
+      GlobalName.writer('alice', 3).toTerm(),
+      GlobalName.reader('alice', 4).toTerm(),
       ConstTerm('hello'),
     ]);
 
@@ -45,16 +46,12 @@ void main() {
       expect(gn.isWriter, isTrue);
       expect(gn.agent, 'alice');
       expect(gn.index, 7);
-      // Embedded global names decode back to `_w`/`_r` structures.
+      // Embedded global names decode back to global names in the place of
+      // variables.
       final s = term as StructTerm;
       expect(s.functor, 'msg');
-      final w = s.args[0] as StructTerm;
-      expect(w.functor, '_w');
-      expect((w.args[0] as ConstTerm).value, 'alice');
-      expect((w.args[1] as ConstTerm).value, 3);
-      final r = s.args[1] as StructTerm;
-      expect(r.functor, '_r');
-      expect((r.args[1] as ConstTerm).value, 4);
+      expect(s.args[0], GlobalName.writer('alice', 3).toTerm());
+      expect(s.args[1], GlobalName.reader('alice', 4).toTerm());
     });
 
     test('the functor bytes _w / _r do not appear on the wire (tag 2, not 3)',
@@ -82,13 +79,10 @@ void main() {
       expect(gn.index, 0);
       final cell = value as StructTerm;
       expect(cell.functor, '.');
-      // Head is the content; tail is _w(queen, 0).
+      // Head is the content; tail is the variable _w(queen, 0).
       final head = cell.args[0] as StructTerm;
       expect(head.functor, 'intro');
-      final tail = cell.args[1] as StructTerm;
-      expect(tail.functor, '_w');
-      expect((tail.args[0] as ConstTerm).value, 'queen');
-      expect((tail.args[1] as ConstTerm).value, 0);
+      expect(cell.args[1], GlobalName.writer('queen', 0).toTerm());
       // No '#serializer' string marker on the wire.
       expect(_contains(Uint8List.fromList(payload), '#serializer'.codeUnits),
           isFalse);

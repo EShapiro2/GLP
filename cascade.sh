@@ -36,6 +36,7 @@
 #   gai         GAI   GAI         programs/gai              ---
 #   gff         GFF   GFF         programs/gff              programs/apps/gff (GFF's, the app's plays)
 #   agora       AGORA Currencies  programs/currencies/agora ---
+#   gdo         GDO   LBM         programs/lbm              ---
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -122,7 +123,8 @@ case "$NAME" in
     gff)  FILE=GFF;  OWNER="programs/gff";              PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR=""
           PLAYAT="programs/apps/gff"; PLAYLIMIT=30000000 ;;   # the five persons' play, the same limit as Section APPS's
     agora) FILE=AGORA; OWNER="programs/currencies/agora"; PAPER="";                           PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora" >&2; exit 2 ;;
+    gdo)  FILE=GDO;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/LBM";  PLAYDIR="" ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"

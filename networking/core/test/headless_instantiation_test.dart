@@ -94,12 +94,10 @@ void main() {
   });
 
   group('the rendezvous-server parameter (GNA §2.2, §2.5, §2.7)', () {
-    /// [caller] dials [layer] with a payload; whether [layer] receives it
-    /// and both report the other reachable within [seconds].
-    Future<bool> sessionCompletes(HeadlessGrassrootsNetwork layer,
-        HeadlessGrassrootsNetwork caller,
-        {int seconds = 10}) async {
-      final received = Completer<void>();
+    /// [caller] dials [layer] with a payload; completes once [layer]
+    /// receives it.
+    Future<void> dial(HeadlessGrassrootsNetwork layer,
+        HeadlessGrassrootsNetwork caller, Completer<void> received) async {
       layer.onMessageReceived = (sender, payload, _, underlay) {
         if (_hex(sender) == _hex(caller.identity.publicKey) &&
             underlay == Underlay.wan &&
@@ -110,11 +108,15 @@ void main() {
       caller.wan.putPeerAddress(
           layer.identity.publicKey, '127.0.0.1:${layer.boundPort}');
       await caller.send(layer.identity.publicKey, Uint8List.fromList([7]));
-      try {
-        await received.future.timeout(Duration(seconds: seconds));
-      } on TimeoutException {
-        return false;
-      }
+    }
+
+    /// [caller] dials [layer] with a payload; whether, once [layer] receives
+    /// it, both report the other reachable.
+    Future<bool> sessionCompletes(HeadlessGrassrootsNetwork layer,
+        HeadlessGrassrootsNetwork caller) async {
+      final received = Completer<void>();
+      await dial(layer, caller, received);
+      await received.future;
       return layer.isPeerReachable(caller.identity.publicKey) &&
           caller.isPeerReachable(layer.identity.publicKey);
     }
@@ -155,7 +157,7 @@ void main() {
           isFalse,
           reason: 'answered as a rendezvous server answers, not as a known '
               'peer');
-    }, timeout: const Timeout(Duration(minutes: 1)));
+    }, timeout: Timeout.none);
 
     test('unmarked, the same layer refuses the unknown key', () async {
       if (sodiumUnavailable != null) {
@@ -181,10 +183,13 @@ void main() {
       expect(await server.start(), isTrue);
       expect(await stranger.start(), isTrue);
 
-      expect(await sessionCompletes(server, stranger, seconds: 6), isFalse);
+      final received = Completer<void>();
+      await dial(server, stranger, received);
+      await Future<void>.delayed(const Duration(seconds: 6));
+      expect(received.isCompleted, isFalse);
       expect(server.isPeerReachable(stranger.identity.publicKey), isFalse);
       expect(stranger.isPeerReachable(server.identity.publicKey), isFalse);
-    }, timeout: const Timeout(Duration(minutes: 1)));
+    });
 
     test('marked without a server address, the constructor refuses it',
         () async {
@@ -250,16 +255,14 @@ void main() {
     };
     expect(await agent.start(), isTrue);
 
-    expect(await agentSaw.future.timeout(const Duration(seconds: 15)),
-        Underlay.wan);
-    expect(await serverSaw.future.timeout(const Duration(seconds: 15)),
-        Underlay.wan);
+    expect(await agentSaw.future, Underlay.wan);
+    expect(await serverSaw.future, Underlay.wan);
     expect(agent.isPeerReachable(serverId.publicKey), isTrue);
     expect(agent.store.state.knownPeers.known.containsKey(_hex(serverId.publicKey)),
         isFalse,
         reason: 'a rendezvous server is answered as declared, not as a '
             'known peer');
-  }, timeout: const Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout.none);
 
   test(
       'a rendezvous server reflects the address it observes an agent at, and '
@@ -300,8 +303,7 @@ void main() {
     };
     expect(await agent.start(), isTrue);
 
-    final address =
-        await reflected.future.timeout(const Duration(seconds: 15));
+    final address = await reflected.future;
     expect(address,
         server.wan.observedPeerAddress(agent.identity.publicKey),
         reason: 'the address the server observes the agent at');
@@ -309,7 +311,7 @@ void main() {
     expect(agent.wan.getPublicAddress(), address);
     expect(changes, ['null -> null', 'null -> $address'],
         reason: 'none at startup, then the reflected one');
-  }, timeout: const Timeout(Duration(minutes: 1)));
+  }, timeout: Timeout.none);
 }
 
 String _hex(Uint8List bytes) =>

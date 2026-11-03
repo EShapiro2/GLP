@@ -11,8 +11,8 @@ Probe ::= probe(String?) ; hello.
 ProbeStream ::= [] ; [Probe | ProbeStream].
 
 exported procedure alice_init(_?, _?).
-alice_init(_, _) :-
-    send_to_net([msg(bob, stream(S?))]),
+alice_init(keys(_, [Bob]), _) :-
+    send_to_net([msg(Bob?, stream(S?))]),
     fill(S, W),
     wait_value(W?).
 

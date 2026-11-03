@@ -7,8 +7,8 @@ import 'package:grassroots_networking_core/src/headless/identity_file.dart';
 
 /// The headless identity file is the key pair's seed and nothing else (GNA
 /// §2.1: the key pair is the identity), and a file in any other form is
-/// refused rather than read tolerantly (`networking/CLAUDE.md`, no legacy
-/// code).
+/// refused rather than read tolerantly (GNA, Appendix, Rules of the
+/// Code, "No legacy or compatibility code").
 void main() {
   late Directory dir;
   setUp(() => dir = Directory.systemTemp.createTempSync('identity_file_'));

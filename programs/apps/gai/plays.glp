@@ -1,6 +1,6 @@
 %% plays.glp --- the GAI mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for three executions, alice's, alf's and bob's, with the two ends of each of three root channels handed to them as their conversations, alice's and alf's, alf's and bob's, and bob's and alice's, the play standing in for the social graph, as ../gsnp/plays.glp does for five.  The persons are scripted (person.glp), each under its role, alf's script the AI agent's program, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.  The super-app hosting the mini-app on smartphones is ../gai_boot.glp.
 
-imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
 %% play_agents(A, R, B): the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"; GAI at e4d935c), on GAI's contract (programs/gai/GAI.glp), alice and bob, persons, and alf, alice's AI agent, with a conversation between the executions of each two of them, the scripts alice, alf and bob of person.glp, in the paper's order: alice and bob establish their identities (GKK:1), come to know each other (GKK:2) and befriend (GSG:1), alice proposing and bob answering yes; alice signs her attestation y (GAI:2; sign) and enters alf with it, which answers yes (GnW:1; enter); alice proposes alf's acquaintance with bob, alf and bob answering yes, bob recording agent_of(alf, y) (GnW:3, GAI:2; agent_acquaint), and then its befriending him, alf and bob answering yes (GnW:3; agent_befriend); and alice retires alf (GnW:5; retire), which ends its friendships with her and with bob, nobody asked.  The item alf signs and sends to bob is GSNP's (../gsnp); there is no unfriend, retire ending alf's friendships.
 exported procedure play_agents(Stream(Seen), Stream(Seen), Stream(Seen)).
@@ -8,8 +8,8 @@ play_agents(A?, R?, B?) :-
     self_module(M),
     find_type(miniapp/4, T),
     run(miniapp(alice, ch(GA?, WA), ch([conversation(alf, ch(RA?, AR)), conversation(bob, ch(BA?, AB))], _), []), T?, M?),
-    person # miniapp_person(alice, alice, ch(WA?, GA), A),
+    person # miniapp_person(alice, alice, [bob, alf], ch(WA?, GA), A),
     run(miniapp(alf, ch(GR?, WR), ch([conversation(alice, ch(AR?, RA)), conversation(bob, ch(BR?, RB))], _), []), T?, M?),
-    person # miniapp_person(alf, alf, ch(WR?, GR), R),
+    person # miniapp_person(alf, alf, [alice, bob], ch(WR?, GR), R),
     run(miniapp(bob, ch(GB?, WB), ch([conversation(alf, ch(RB?, BR)), conversation(alice, ch(AB?, BA))], _), []), T?, M?),
-    person # miniapp_person(bob, bob, ch(WB?, GB), B).
+    person # miniapp_person(bob, bob, [alf, alice], ch(WB?, GB), B).

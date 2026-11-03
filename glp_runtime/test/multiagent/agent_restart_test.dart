@@ -20,6 +20,7 @@
 /// id, which survives the agents' termination as GNA's queue does (GNA,
 /// "Networking Assumptions", Fair message delivery: "the queue survives the
 /// termination of the application").
+@Timeout.none
 library;
 
 import 'dart:async';
@@ -34,18 +35,33 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 
 /// `a` sends `b` a reader, and assigns its writer `hello` when its person
-/// says `go`; `b` tells its person what the reader becomes.
-const String _play = r'''
-procedure a_init(_?, _?, _?).
-a_init(_, In, _) :- send_to_net([msg(b, value(X?))]), relay(In?, X).
+/// says `go`; `b` tells its person what the reader becomes.  Each is its
+/// agent's one program, started from agent(ch(_?,_),ch(_?,_)), every agent's
+/// initial goal (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP,
+/// Implementation Notes, "Boot").
+const String _playA = r'''
+RsMsg ::= value(Constant).
 
-procedure relay(_?, _).
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(RsMsg)), Stream(NetMsg(RsMsg)))?).
+agent(ch(In, []), ch(_, [])) :- send_to_net([msg(b, value(X?))]), relay(In?, X).
+
+procedure relay(Stream(Constant)?, Constant).
 relay([go | _], hello).
+relay([], none).
+''';
 
-procedure b_init(_?, _?).
-b_init(_, [msg(_, value(V)) | _]) :- show(V?).
+const String _playB = r'''
+RsMsg ::= value(Constant).
+RsOut ::= got(Constant).
 
-procedure show(_?).
+exported procedure agent(Channel(Stream(Constant), Stream(RsOut))?, Channel(Stream(NetMsg(RsMsg)), Stream(NetMsg(RsMsg)))?).
+agent(ch(_, []), ch(N, [])) :- b_in(N?).
+
+procedure b_in(Stream(NetMsg(RsMsg))?).
+b_in([msg(_, value(V)) | _]) :- show(V?).
+b_in([]).
+
+procedure show(Constant?).
 show(hello) :- send_to_user([got(hello)]).
 ''';
 
@@ -55,8 +71,8 @@ show(hello) :- send_to_user([got(hello)]).
 const String _idle = r'''
 Go ::= go.
 
-procedure c_init(_?, _?).
-c_init(_, _) :- send_to_net([msg(b, ping)]), sender(X), waiter(X?).
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])) :- send_to_net([msg(b, ping)]), sender(X), waiter(X?).
 
 procedure sender(Go).
 sender(go) :- when_idle | send_to_net([msg(b, pong)]), send_to_user([sender]).
@@ -115,15 +131,18 @@ class _FailingStore extends MemoryAgentStateStore {
 void main() {
   late String root;
   late Directory dir;
-  late String play;
+  late String playA;
+  late String playB;
   late String idle;
 
   setUpAll(() {
     // Under the root, so the program's scope holds the root self.glp
     // (agent_runtime_test.dart).
     dir = Directory('../programs/tests').createTempSync('glp_agent_restart_');
-    play = '${dir.path}/play.glp';
-    File(play).writeAsStringSync(_play);
+    playA = '${dir.path}/play_a.glp';
+    File(playA).writeAsStringSync(_playA);
+    playB = '${dir.path}/play_b.glp';
+    File(playB).writeAsStringSync(_playB);
     idle = '${dir.path}/idle.glp';
     File(idle).writeAsStringSync(_idle);
     root = File('../programs/self.glp').absolute.path;
@@ -144,13 +163,12 @@ void main() {
     nextId = 0;
   });
 
-  AgentRuntime host(String id, String goal, AgentStateStore store,
+  AgentRuntime host(String id, String program, AgentStateStore store,
       ({PubKey pub, Uint8List priv}) kp) {
     final agent = AgentRuntime(
       agentId: id,
-      program: play,
+      program: program,
       rootSelfGlpPath: root,
-      goalLabel: goal,
       keyPair: kp,
       stateStore: store,
     );
@@ -187,8 +205,8 @@ void main() {
     final storeA = FileAgentStateStore('${dir.path}/a.state');
     final storeB = MemoryAgentStateStore();
 
-    final a1 = host('a', 'a_init/3', storeA, kpA);
-    final b1 = host('b', 'b_init/2', storeB, kpB);
+    final a1 = host('a', playA, storeA, kpA);
+    final b1 = host('b', playB, storeB, kpB);
     await a1.initialize();
     await b1.initialize();
     expect(File('${dir.path}/a.state').existsSync(), isTrue,
@@ -216,9 +234,9 @@ void main() {
 
     // Both restart, each from its store, and go on from the state saved at
     // the end of its last cycle: no entry goal is posted again.
-    final a2 = host('a', 'a_init/3', FileAgentStateStore('${dir.path}/a.state'),
+    final a2 = host('a', playA, FileAgentStateStore('${dir.path}/a.state'),
         kpA);
-    final b2 = host('b', 'b_init/2', storeB, kpB);
+    final b2 = host('b', playB, storeB, kpB);
     await a2.initialize();
     await b2.initialize();
     expect(out['a']!.where((l) => l.startsWith('[GOAL] Started')),
@@ -248,8 +266,8 @@ void main() {
   test('the layer is told a message is delivered only once the cycle that '
       'applied it is saved', () async {
     final storeB = _GatedStore();
-    final a = host('a', 'a_init/3', MemoryAgentStateStore(), generateKeyPair());
-    final b = host('b', 'b_init/2', storeB, generateKeyPair());
+    final a = host('a', playA, MemoryAgentStateStore(), generateKeyPair());
+    final b = host('b', playB, storeB, generateKeyPair());
     await a.initialize();
     await b.initialize();
 
@@ -275,8 +293,8 @@ void main() {
       () async {
     final kpA = generateKeyPair();
     final storeA = _TerminatingStore();
-    final a1 = host('a', 'a_init/3', storeA, kpA);
-    final b = host('b', 'b_init/2', MemoryAgentStateStore(), generateKeyPair());
+    final a1 = host('a', playA, storeA, kpA);
+    final b = host('b', playB, MemoryAgentStateStore(), generateKeyPair());
     await a1.initialize();
     await b.initialize();
     // b applies the cold call, and its localization creates the entry of
@@ -302,7 +320,7 @@ void main() {
         reason: 'the state saved holds the message undelivered');
 
     // a restarts from the state the store holds, and hands the message over.
-    final a2 = host('a', 'a_init/3', storeA, kpA);
+    final a2 = host('a', playA, storeA, kpA);
     await a2.initialize();
     expect(queue.map((m) => '${m.from}>${m.to}'), ['a>b'],
         reason: 'the restart hands the undelivered message over, once');
@@ -312,7 +330,7 @@ void main() {
 
     // The state saved after the hand-over holds the message delivered: a
     // restart from it hands nothing over again.
-    final a3 = host('a', 'a_init/3', storeA, kpA);
+    final a3 = host('a', playA, storeA, kpA);
     await a3.initialize();
     expect(queue.map((m) => '${m.from}>${m.to}'), ['a>b'],
         reason: 'the message is handed over once');
@@ -341,7 +359,6 @@ void main() {
         agentId: 'c',
         program: idle,
         rootSelfGlpPath: root,
-        goalLabel: 'c_init/2',
         stateStore: store,
       );
       c.onOutput = (line) {
@@ -383,8 +400,8 @@ void main() {
       'state saved before it', () async {
     final storeB = MemoryAgentStateStore();
     final kpB = generateKeyPair();
-    final a = host('a', 'a_init/3', MemoryAgentStateStore(), generateKeyPair());
-    final b = host('b', 'b_init/2', storeB, kpB);
+    final a = host('a', playA, MemoryAgentStateStore(), generateKeyPair());
+    final b = host('b', playB, storeB, kpB);
     final logs = <String>[];
     b.onLog = (_, m) => logs.add(m);
     await a.initialize();
@@ -405,16 +422,16 @@ void main() {
 
     // The state saved is the state after the cycle: a restart from it holds
     // the entry.
-    final b2 = host('b', 'b_init/2', storeB, kpB);
+    final b2 = host('b', playB, storeB, kpB);
     await b2.initialize();
     expect(b2.ctx!.wp.findByRemote('a', 1), isNotNull);
   });
 
   test('a saved state is refused under another key', () async {
     final store = MemoryAgentStateStore();
-    final a = host('a', 'a_init/3', store, generateKeyPair());
+    final a = host('a', playA, store, generateKeyPair());
     await a.initialize();
-    final other = host('a', 'a_init/3', store, generateKeyPair());
+    final other = host('a', playA, store, generateKeyPair());
     await expectLater(other.initialize(), throwsStateError);
   });
 }

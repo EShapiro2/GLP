@@ -135,6 +135,14 @@ void main() {
     test('punch can be cancelled via dispose', () async {
       final receiver =
           await RawDatagramSocket.bind(InternetAddress.loopbackIPv6, 0);
+      final firstPacket = Completer<void>();
+      receiver.listen((event) {
+        if (event == RawSocketEvent.read &&
+            receiver.receive() != null &&
+            !firstPacket.isCompleted) {
+          firstPacket.complete();
+        }
+      });
 
       // Start a long punch
       final future = service.punch(
@@ -144,8 +152,8 @@ void main() {
         interval: const Duration(milliseconds: 50),
       );
 
-      // Cancel after 200ms
-      await Future.delayed(const Duration(milliseconds: 200));
+      // Cancel once the punch is under way: its first packet has arrived.
+      await firstPacket.future;
       service.dispose();
 
       // Should complete quickly after dispose

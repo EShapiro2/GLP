@@ -108,8 +108,8 @@ class SettingsState {
       };
 
   /// Decode a persisted blob: exactly a BLE role mode and a trust level per
-  /// proximity underlay, and nothing else (no tolerant decoder,
-  /// `networking/CLAUDE.md`).
+  /// proximity underlay, and nothing else (no tolerant decoder:
+  /// GNA, Appendix, Rules of the Code, "No legacy or compatibility code").
   ///
   /// A blob that lacks either, carries any other key, or names no
   /// [BleRoleMode] is malformed: it throws, and the caller discards it whole
@@ -162,8 +162,8 @@ class SettingsState {
 }
 
 /// Decode the persisted trust levels: a level for each [ProximityUnderlay],
-/// keyed by its name, and nothing else (no tolerant decoder,
-/// `networking/CLAUDE.md`).
+/// keyed by its name, and nothing else (no tolerant decoder:
+/// GNA, Appendix, Rules of the Code, "No legacy or compatibility code").
 ///
 /// A blob that lacks a level for either underlay, carries any other key, or
 /// names no [ColdCallTrustLevel] is malformed: it throws, and the caller falls

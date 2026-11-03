@@ -1,0 +1,27 @@
+%% The agents of programs/tests/mad_keyed (see self.glp): a caller cold-calls
+%% the callee, naming it by the key its host passes as its second argument,
+%% with a writer; the callee serves every ask on its network input, assigning
+%% the writer; the caller reports the value when it arrives.
+
+exported procedure caller_init(Key?, Key?, Stream(NetMsg(Ask))?).
+caller_init(_, Callee, _) :-
+    send_to_net([msg(Callee?, ask(Answer))]),
+    answered(Answer?).
+
+procedure answered(String?).
+answered(forty_two) :- send_to_user([answered(forty_two)]).
+
+exported procedure callee_init(Key?, Stream(NetMsg(Ask))?).
+callee_init(_, In) :- serve(In?).
+
+%% Every ask that arrives, from whichever caller: the message names the callee,
+%% its own key, which it reports.
+procedure serve(Stream(NetMsg(Ask))?).
+serve([msg(Me, ask(A?)) | In]) :-
+    send_to_user([called(Me?)]),
+    answer(A),
+    serve(In?).
+serve([]).
+
+procedure answer(String).
+answer(forty_two).

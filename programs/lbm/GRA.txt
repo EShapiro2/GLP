@@ -1,0 +1,24 @@
+% GRA: Grassroots Ride Auction --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: LBM (Udi, 2026-11-03, to LBM #4).  The paper, /Users/udi/Grassroots/LBM/main.tex, prints it in its box in Appendix D, sections/auction.tex, and cites a clause as GRA:1.
+% Paper: Location-Based Matching for Digital Cooperatives, in preparation
+% Extends: GDO, Grassroots Directed Overlay, LBM's (programs/lbm), and through it GSG and GKK, GSC's.  It cites GDO:1 to GDO:3 whole and restates none.
+% Defines: call, bid, award, ride, fare, deposit, pickup.  The fare and the deposit are in the call's denomination; which coins they are is a currency contract's, which GRA does not name (Udi, 2026-11-03).
+% Last changed: 2026-11-03, Carol in the declaration (Udi, to LBM #4); written by LBM #4 Cowork from the paper at LBM main b31edd0, the clauses as Udi approved them to LBM #4 and the instance as he edited it in Overleaf.
+% Schemas: GRA.glp beside this file, GDO's eight and GRA's nine, with now(t) and location(x) environment predicates, which the platform keeps current and no schema adds or deletes (Udi, 2026-11-03, to LBM #4; GSC, Appendix Values in Speech-Act Schemas).  Call is three schemas: call_open, Alice's call; call, its delivery to a person Alice points to; forward_call, its delivery by them to a person they point to.  Bid is two, bid and bid_fwd, on a call delivered and a call forwarded.  The selection of the bidder and the fare, the refund and the condition on cancelling are the instance's, and no part of the schemas.
+GRA: Grassroots Ride Auction
+Alice, Bob and Carol are persons.  GRA extends GDO.  A person has a location.
+1. ■ Call.  Alice may call for bids on a ride from the persons Alice points to and the persons they point to, stating the pickup point, the destination, the bidding period and the terms.
+2. ■ Bid.  Bob, who received the call, may bid a fare and a pickup delay before the bidding period ends; Alice may not open a bid before then.
+3. ■ Award.  When the bidding period ends, Alice awards the ride to the bidder the terms select, at the fare the terms set; Alice's fare and Bob's deposit are then locked.
+4. ■ Pickup.  The pickup is recorded when Alice and Bob are both at the pickup point.
+5. ■ Arriving.  When Alice and Bob are both at the destination, the fare and the deposit are released as the terms say.
+6. ■ Cancelling.  If no pickup is recorded within the maximum pickup delay, Alice may cancel, and the fare and the deposit are released as the terms say.
+Pragmas
+% Second-Score Instance (the second section of the paper's box, kept out of vGLP's reader as %-lines, as GFF's Algorithms are):
+% The terms state a maximum pickup delay T >= 0, a willingness to pay W(tau) = A - lambda tau with A, lambda >= 0, a deposit D >= 0 and a refund rule; a pickup delay is measured from the award, at time t0.
+% A person is a rider or a driver.
+% Transitive pointing is taken only if Carol is a driver.
+% Bidder i's bid is (p_i, tau_i): the fare p_i >= 0 the bidder asks and the pickup delay tau_i >= 0 the bidder promises.  Its score is s_i = W(tau_i) - p_i, and it is admissible iff tau_i <= T and s_i >= 0.
+% Award selects the admissible bid w of the highest score, ties broken as the terms say, and sets the fare P = W(tau_w) - s_2, where s_2 is the highest score among the other admissible bids, or 0 if there is none; if no bid is admissible, no ride is awarded.
+% Arriving releases to Alice the refund min{P, lambda delta} and to Bob the rest of the fare, delta = max{0, t_pickup - t0 - tau_w}, and returns the deposit to Bob.
+% Cancelling releases the fare and the deposit to Alice, provided Alice was at the pickup point from t0 to t0 + T.

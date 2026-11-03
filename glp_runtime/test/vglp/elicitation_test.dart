@@ -348,7 +348,7 @@ Drawn    ::= price_r(_) ; Price.
 
 imported procedure quote#quote(Price, Stream(Ask(Question))).
 imported procedure quote#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 exported procedure play_quote(Price, Stream(_)).
 play_quote(P?, Log?) :-
@@ -416,7 +416,7 @@ Drawn    ::= pick_r(_) ; Pick.
 
 imported procedure pick#pick(Pick, Stream(Ask(Question))).
 imported procedure pick#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 exported procedure play_pick(Pick, Stream(_)).
 play_pick(P?, Log?) :-
@@ -530,7 +530,7 @@ imported procedure b#lot(Lot, Stream(Ask(Question))).
 imported procedure b#opts(List(Opt), Stream(Ask(Question))).
 imported procedure b#write(Lines, Stream(Ask(Question))).
 imported procedure b#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 %% A list: two numbers, then its end, [end].
 exported procedure play_numbers(List(Integer), Stream(_)).
@@ -818,7 +818,7 @@ Drawn    ::= card_w(_) ; nest_w(_) ; YesNo.
 imported procedure two#respond(Offer?, Both, Stream(Ask(Question))).
 imported procedure two#nested(Both, Stream(Ask(Question))).
 imported procedure two#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 %% The person grants no at the second question and then yes at the first,
 %% each at the position the view marks.

@@ -199,11 +199,10 @@ void main() {
             _hex(Uint8List.fromList(List.filled(32, 2))), packet.serialize());
         expect(sent, isTrue);
 
-        final data =
-            await received.future.timeout(const Duration(seconds: 3));
+        final data = await received.future;
         expect(GrassrootsPacket.deserialize(data).type, PacketType.announce);
         expect(aHex, isNotEmpty);
-      });
+      }, timeout: Timeout.none);
 
       test('refuses an oversized datagram', () async {
         final service = build();

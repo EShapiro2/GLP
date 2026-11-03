@@ -1,4 +1,5 @@
-import 'dart:io' show InternetAddress;
+import 'dart:async';
+import 'dart:io' show InternetAddress, RawDatagramSocket, RawSocketEvent;
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
@@ -82,7 +83,26 @@ void main() {
   /// what Open trust does *not* need, so an unmatched token is the cold call.
   const unmatchedToken = 'grs-00000000000000000000000000000000';
 
-  /// Let the dial and its ANNOUNCE reach the socket.
+  /// A socket on the loopback standing for the resolved instance: its
+  /// address, and a future that completes with the first datagram the layer
+  /// sends it, the dial's ANNOUNCE.
+  Future<(String, Future<void>)> instance() async {
+    final socket =
+        await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(socket.close);
+    final reached = Completer<void>();
+    socket.listen((event) {
+      if (event == RawSocketEvent.read &&
+          socket.receive() != null &&
+          !reached.isCompleted) {
+        reached.complete();
+      }
+    });
+    return ('127.0.0.1:${socket.port}', reached.future);
+  }
+
+  /// Let a dial that should not happen have the time to happen: no event
+  /// shows that it did not.
   Future<void> settle() async {
     for (var i = 0; i < 10; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -90,16 +110,16 @@ void main() {
   }
 
   test('Open contacts an unmatched LAN instance, keyed by its address',
-      () async {
+      timeout: Timeout.none, () async {
     final network = await startNode(await identityFromSeed(0x71));
     await network.lan!.setTrustLevel(ColdCallTrustLevel.open);
 
-    const address = '127.0.0.1:45071';
+    final (address, dialed) = await instance();
     expect(network.debugUdpPeerIdForAddress(address), isNull,
         reason: 'nothing is bound before the instance resolves');
 
     network.debugResolveLanInstance(unmatchedToken, address);
-    await settle();
+    await dialed;
 
     // The path is opened under the address itself, which is the temp peer id
     // the inbound path also mints. Their ANNOUNCE re-keys it to their pubkey.
@@ -125,13 +145,13 @@ void main() {
   });
 
   test('a second resolution of the same instance does not dial twice',
-      () async {
+      timeout: Timeout.none, () async {
     final network = await startNode(await identityFromSeed(0x73));
     await network.lan!.setTrustLevel(ColdCallTrustLevel.open);
 
-    const address = '127.0.0.1:45073';
+    final (address, dialed) = await instance();
     network.debugResolveLanInstance(unmatchedToken, address);
-    await settle();
+    await dialed;
     expect(network.debugUdpPeerIdForAddress(address), equals(address));
 
     // mDNS re-resolves the same instance on every browse; the standing path

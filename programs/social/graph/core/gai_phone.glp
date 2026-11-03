@@ -1,0 +1,101 @@
+%% gai_phone.glp --- one smartphone of programs/apps/gai_boot.glp: the super-app's agent on the isolate's network under the person's own key, the mini-app read from its certified artefact beside this program and installed, and the person's acts by their part in the boot's script, toward the peers whose keys the person told the agent.  The boot defines no agent/2: graph/core's agent/2 (self.glp) answers the initial goal and starts gai_phone/4, the entry the person goal's first act names (IGLP 0e1c9e0, Implementation Notes, "Boot"); so the phone is a module of the program the boot loads, moved here from the boot file on 2026-11-03 (GLP's ruling, Code_inbox 2026-11-03 14:58 UTC).  The script, the mini-app and its contract are the app's owner's (programs/apps/gai).
+
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+
+%% One smartphone: the super-app's agent on the isolate's network under the person's own name, the mini-app read from its artefact beside the program and installed, and the person's acts by role over the two peers the person knows, P and Q, the first of whom invites them and the second of whom they connect to: alice knows bob and alf, alf knows alice and bob, bob knows alf and alice.  The mini-app's scripted person is activated under the role, which chooses its script, with the two keys the person knows, by which the script names its peers (programs/self.glp, the template miniapp_person/5).
+exported procedure gai_phone(Constant?, Key?, List(Key)?, NetInStream?).
+gai_phone(alice, Me, [P, Q], NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gai.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gai_acts(Me?, P?, Q?, first, C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, Me?, alice, [P?, Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+gai_phone(alf, Me, [P, Q], NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gai.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gai_acts(Me?, P?, Q?, later, C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, Me?, alf, [P?, Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+gai_phone(bob, Me, [P, Q], NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gai.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gai_acts(Me?, P?, Q?, later, C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, Me?, bob, [P?, Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+%% A person who knows other than two has no smartphone here.
+gai_phone(_, _, _, _) :- otherwise | true.
+
+Start ::= first ; later.
+
+%% The agent's first acts on its super-app: trust the compiler's key, install the mini-app with its end of its person channel, and consent in advance to the invitation of the one before it; the first of the ring then connects to the one after it.
+procedure gai_acts(Key?, Key?, Key?, Start?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
+gai_acts(Me, P, Q, first, C, CK, CSig, AppEnd, Outs,
+         [msg(person, Me?, trust(CK?)),
+          msg(person, Me?, install(gai, C?, CSig?, AppEnd?)),
+          msg(person, Me?, accept_invite(gai, P?)),
+          msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Me?), ground(P?), ground(Q?) |
+    gai_run(Me?, P?, Q?, first, Outs?, Cmds).
+gai_acts(Me, P, Q, later, C, CK, CSig, AppEnd, Outs,
+         [msg(person, Me?, trust(CK?)),
+          msg(person, Me?, install(gai, C?, CSig?, AppEnd?)),
+          msg(person, Me?, accept_invite(gai, P?)) | Cmds?]) :-
+    ground(Me?), ground(P?) |
+    gai_run(Me?, P?, Q?, later, Outs?, Cmds).
+
+%% The agent's acts on what its super-app tells it: consent to the request to connect of the one before it; once connected to the one before it, connect to the one after, unless it connected first; and once connected to the one after, invite them to the mini-app.
+procedure gai_run(Key?, Key?, Key?, Start?, AgentToUserStream?, UserInStream).
+gai_run(Me, P, Q, S, [msg(agent, person, befriend(P1, X)) | Outs],
+        [msg(person, Me?, decision(yes, P1?, X?)) | Cmds?]) :-
+    ground(Me?), ground(P?), P1? =?= P? |
+    send_to_user([sg(befriend(P1?))]),
+    gai_run(Me?, P?, Q?, S?, Outs?, Cmds).
+gai_run(Me, P, Q, later, [msg(agent, person, connected(P1)) | Outs],
+        [msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Me?), ground(P?), ground(Q?), P1? =?= P? |
+    send_to_user([sg(connected(P1?))]),
+    gai_run(Me?, P?, Q?, later, Outs?, Cmds).
+gai_run(Me, P, Q, first, [msg(agent, person, connected(P1)) | Outs], Cmds?) :-
+    ground(P?), P1? =?= P? |
+    send_to_user([sg(connected(P1?))]),
+    gai_run(Me?, P?, Q?, first, Outs?, Cmds).
+gai_run(Me, P, Q, S, [msg(agent, person, connected(Q1)) | Outs],
+        [msg(person, Me?, invite(gai, Q?)) | Cmds?]) :-
+    ground(Me?), ground(Q?), Q1? =?= Q? |
+    send_to_user([sg(connected(Q1?))]),
+    gai_run(Me?, P?, Q?, S?, Outs?, Cmds).
+gai_run(Me, P, Q, S, [_ | Outs], Cmds?) :-
+    otherwise | gai_run(Me?, P?, Q?, S?, Outs?, Cmds).
+gai_run(_, _, _, _, [], []).
+
+%% The creator's certification, signed here over the mini-app's source identity, the contract's sixteen act schemas, establish, acquaint, introduce, befriend, unfriend_p, unfriend_q, enter, agent_acquaint, agents_acquaint, agent_befriend, agents_befriend, agent_unfriend, retire, sign, message and forward (programs/gai/GAI.glp at GLP 9d736804), and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
+procedure certified(Content?, String, String).
+certified(M, CK?, CSig?) :-
+    module(M?) |
+    decompose_module(M?, CK, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [establish, acquaint, introduce, befriend, unfriend_p, unfriend_q, enter, agent_acquaint, agents_acquaint, agent_befriend, agents_befriend, agent_unfriend, retire, sign, message, forward], grassroots), K?, CSig).
+
+%% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them, as in gsg_boot.glp, gsn_boot.glp and gsnp_boot.glp.
+procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
+    module(M?) |
+    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp_person/5, M?, H),
+    person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
+
+procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
+    D0? =?= D? |
+    find_type(miniapp_person/5, [D?, S?], T),
+    run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
+person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).

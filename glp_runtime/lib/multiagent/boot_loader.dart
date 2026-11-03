@@ -10,40 +10,55 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/token.dart';
 
-/// A single spawn directive extracted from the boot clause.
+/// The agent a boot clause declares: its name p, and the person scripted in
+/// GLP at p, if the clause names one (IGLP, Implementation Notes, "Boot").
 ///
-/// Represents `goalFunctor(agentId, ...)@agentId`
-///
-/// For `parent_init(alice, carol, 4, _)@alice`:
-///   agentId = 'alice', goalFunctor = 'parent_init', goalArity = 4,
-///   constantArgs = ['carol', '4']
-///
-/// The isolate entry point always passes: arg0 = agentId (constant),
-/// args 1..n-2 = constantArgs, arg n-1 = netInReader.
+/// Every agent's initial goal is the same, `agent(ch(_?,_),ch(_?,_))` (GLP-Spec
+/// maglp.tex, Definition "Multiagent GLP"), so a directive carries only the
+/// agent's name and its scripted person.
 class SpawnDirective {
-  /// The agent identifier (e.g., 'alice', 'bob')
+  /// The agent's name p in the boot clause, which is the persona's name its
+  /// key is made from (IGLP, Implementation Notes, "Boot").
   final String agentId;
 
-  /// The goal functor to spawn (e.g., 'agent_init', 'parent_init')
-  final String goalFunctor;
+  /// The person scripted in GLP at p, the second goal `P@p`, or null where
+  /// the clause names none.
+  final PersonGoal? person;
 
-  /// The arity of the goal (e.g., 2 for agent_init/2, 4 for parent_init/4)
-  final int goalArity;
-
-  /// Constant arguments between agentId and the final netIn variable.
-  /// For `parent_init(alice, carol, 4, _)@alice`: ['carol', '4']
-  /// For `agent_init(alice, _)@alice`: [] (empty)
-  final List<String> constantArgs;
-
-  SpawnDirective({
-    required this.agentId,
-    required this.goalFunctor,
-    required this.goalArity,
-    this.constantArgs = const [],
-  });
+  SpawnDirective({required this.agentId, this.person});
 
   @override
-  String toString() => 'SpawnDirective($goalFunctor/$goalArity($agentId, ...)@$agentId)';
+  String toString() => 'SpawnDirective(agent@$agentId'
+      '${person == null ? '' : ', ${person!.functor}@$agentId'})';
+}
+
+/// The person scripted in GLP at an agent: a goal `P@p` of the boot clause,
+/// one of whose arguments is written `ch(_?,_)`, the person's channel, and
+/// whose other arguments are ground terms.  The runtime runs P on p's person
+/// channel in the person's place, its writes being the person's input (IGLP,
+/// Implementation Notes, "Boot"): the channel's reader is the agent's output
+/// to the person, and its writer the person's input to the agent.
+class PersonGoal {
+  /// The goal's predicate.
+  final String functor;
+
+  /// The goal's arguments as GLP text, the person's channel among them at
+  /// [channelIndex].
+  final List<String> args;
+
+  /// The position of the argument written `ch(_?,_)`.
+  final int channelIndex;
+
+  PersonGoal(this.functor, this.args, this.channelIndex);
+
+  /// The goal's text with its channel `ch(<toPerson>?, <fromPerson>)`: the
+  /// reader of the agent's output to the person, and the writer of the
+  /// person's input.
+  String text(String toPerson, String fromPerson) {
+    final a = [...args];
+    a[channelIndex] = 'ch($toPerson?, $fromPerson)';
+    return '$functor(${a.join(', ')})';
+  }
 }
 
 /// Configuration extracted from a GLP boot file.
@@ -101,8 +116,11 @@ class BootLoader {
   /// Throws [BootLoaderException] if:
   /// - File doesn't declare `procedure boot.`
   /// - Boot clause is missing or malformed
-  /// - Agent IDs don't match between goal and @target
-  /// - Duplicate agent IDs
+  /// - A goal of the clause is no `G@p`, an agent's goal is not
+  ///   `agent(ch(_?,_),ch(_?,_))`, or a scripted person's is not one goal
+  ///   with one argument `ch(_?,_)` and the others ground, at an agent the
+  ///   clause declares
+  /// - Duplicate agent IDs, or two scripted persons at one agent
   BootConfig load(String source) {
     final List<Token> tokens;
     try {
@@ -173,9 +191,11 @@ class BootLoader {
     return null;
   }
 
-  /// The spawn directives of the boot clause: each spawn goal `G@p` whose goal
-  /// takes the agent ID `p` first and the network input last, the arguments
-  /// between them constants.
+  /// The spawn directives of the boot clause: for each agent p, its goal
+  /// `agent(ch(_?,_),ch(_?,_))@p`, every agent's initial goal (GLP-Spec
+  /// maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes,
+  /// "Boot"), and at most one second goal `P@p`, the person scripted in GLP
+  /// at p.  Any other goal of the clause is refused.
   List<SpawnDirective> _spawnDirectives(
       List<Token> tokens, (int, int) declaration, (int, int) clause) {
     final Module module;
@@ -192,63 +212,101 @@ class BootLoader {
     }
     final body = module.procedures.single.clauses.single.body ?? const <Goal>[];
 
-    final directives = <SpawnDirective>[];
-    final agentIds = <String>{};
+    final agents = <String>[];
+    final persons = <String, PersonGoal>{};
     for (final goal in body) {
-      if (goal is! SpawnGoal) continue;
+      if (goal is! SpawnGoal) {
+        throw BootLoaderException('Boot clause: $goal is no goal G@p: '
+            'a boot clause declares its agents and their scripted persons');
+      }
+      final p = goal.agentId;
+      if (!RegExp(r'^\w+$').hasMatch(p)) {
+        throw BootLoaderException('Boot clause: $p is no agent name');
+      }
       final inner = goal.innerGoal;
-      if (inner.args.isEmpty) continue;
-
-      final goalAgentId = _agentIdText(inner.args.first);
-      if (goalAgentId == null) {
-        throw BootLoaderException(
-            'First argument of spawn goal must be an agent ID (atom), '
-            'got "${inner.args.first}"');
-      }
-      if (goalAgentId != goal.agentId) {
-        throw BootLoaderException(
-            'Agent ID mismatch: goal has "$goalAgentId" but @target is '
-            '"${goal.agentId}". They must match.');
-      }
-      if (!agentIds.add(goalAgentId)) {
-        throw BootLoaderException('Duplicate agent ID: $goalAgentId');
-      }
-
-      // Middle args (between agentId and last arg which is netIn) are
-      // constants. For parent_init(alice, carol, 4, _)@alice: ['carol', '4'].
-      final constantArgs = <String>[];
-      for (var i = 1; i < inner.args.length - 1; i++) {
-        final arg = inner.args[i];
-        if (arg is! ConstTerm) {
-          throw BootLoaderException(
-              'Argument ${i + 1} of spawn goal ${inner.functor} must be a '
-              'constant, got "$arg"');
+      if (inner.functor == 'agent' && inner.args.length == 2) {
+        if (!inner.args.every(_isAnonymousChannel)) {
+          throw BootLoaderException('Boot clause: $goal: every agent\'s '
+              'initial goal is agent(ch(_?,_),ch(_?,_))');
         }
-        constantArgs.add('${arg.value}');
+        if (agents.contains(p)) {
+          throw BootLoaderException('Duplicate agent ID: $p');
+        }
+        agents.add(p);
+        continue;
       }
-
-      directives.add(SpawnDirective(
-        agentId: goalAgentId,
-        goalFunctor: inner.functor,
-        goalArity: inner.args.length,
-        constantArgs: constantArgs,
-      ));
+      if (persons.containsKey(p)) {
+        throw BootLoaderException('Boot clause: $goal: agent $p has a '
+            'scripted person already, ${persons[p]!.functor}');
+      }
+      persons[p] = _personGoal(goal);
     }
 
-    if (directives.isEmpty) {
+    for (final p in persons.keys) {
+      if (!agents.contains(p)) {
+        throw BootLoaderException('Boot clause: ${persons[p]!.functor}@$p '
+            'scripts the person of $p, and the clause declares no agent $p '
+            'by agent(ch(_?,_),ch(_?,_))@$p');
+      }
+    }
+    if (agents.isEmpty) {
       throw BootLoaderException('Boot clause contains no spawn directives. '
-          'Expected "goal(agent, _)@agent"');
+          'Expected "agent(ch(_?,_),ch(_?,_))@p"');
     }
-    return directives;
+    return [
+      for (final p in agents) SpawnDirective(agentId: p, person: persons[p]),
+    ];
   }
 
-  /// An agent ID, the name of an atom or a numeral; null for anything else.
-  String? _agentIdText(Term term) {
-    if (term is! ConstTerm) return null;
-    final value = term.value;
-    if (value is! String && value is! int) return null;
-    final text = '$value';
-    return RegExp(r'^\w+$').hasMatch(text) ? text : null;
+  /// Whether [t] is written `ch(_?,_)`.
+  static bool _isAnonymousChannel(Term t) =>
+      t is StructTerm &&
+      t.functor == 'ch' &&
+      t.args.length == 2 &&
+      t.args[0] is UnderscoreTerm &&
+      (t.args[0] as UnderscoreTerm).isReader &&
+      t.args[1] is UnderscoreTerm &&
+      !(t.args[1] as UnderscoreTerm).isReader;
+
+  /// The scripted person of [goal]: exactly one argument written `ch(_?,_)`,
+  /// the others ground.
+  PersonGoal _personGoal(SpawnGoal goal) {
+    final inner = goal.innerGoal;
+    final channels = [
+      for (var i = 0; i < inner.args.length; i++)
+        if (_isAnonymousChannel(inner.args[i])) i
+    ];
+    if (channels.length != 1) {
+      throw BootLoaderException('Boot clause: $goal: the person scripted at '
+          '${goal.agentId} takes its channel as one argument written '
+          'ch(_?,_), and this goal has ${channels.length}');
+    }
+    for (var i = 0; i < inner.args.length; i++) {
+      if (i != channels.single && !_ground(inner.args[i])) {
+        throw BootLoaderException('Boot clause: $goal: argument ${i + 1} of '
+            'the scripted person is not ground');
+      }
+    }
+    return PersonGoal(inner.functor,
+        [for (final a in inner.args) '$a'], channels.single);
+  }
+
+  /// Whether [t] holds no variable.
+  static bool _ground(Term t) {
+    final stack = <Term?>[t];
+    while (stack.isNotEmpty) {
+      final x = stack.removeLast();
+      if (x == null || x is ConstTerm) continue;
+      if (x is VarTerm || x is UnderscoreTerm) return false;
+      if (x is StructTerm) {
+        stack.addAll(x.args);
+      } else if (x is ListTerm) {
+        stack..add(x.head)..add(x.tail);
+      } else {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// [source] with the token spans [spans] blanked out: each replaced by the

@@ -674,15 +674,67 @@ credit_line :- credit_line # run.
 %% =============================================================================
 %% Entry point: the mini-app on a live person's screen (play_ui.glp) --- the
 %% central bank's, over the sovereign market cut to the central bank, the
-%% community bank and the household, the entry the Dart bridge runs, its
-%% arguments the agent's identifier, the person's grants and the network
-%% input; and the same run with its taps scripted, for the test suite
+%% community bank and the household, its arguments the agent's key, the keys
+%% of the peers the person knows, the person's grants and the network input;
+%% and the same run with its taps scripted, for the test suite
 %% =============================================================================
 
-imported procedure play_ui#sovereign_ui(Key?, PersonIn(Drawn)?, Stream(_)?).
-exported procedure sovereign_ui(Key?, PersonIn(Drawn)?, Stream(_)?).
-sovereign_ui(Id, Grants, NetIn) :- play_ui # sovereign_ui(Id?, Grants?, NetIn?).
+%% What reaches the agent on its network channel, and what it sends there: a
+%% message to or from an agent, msg(Q, T) (programs/self.glp, NetMsg), whose
+%% content is what one bond agent sends another.  The live-person harness
+%% runs its peers in its own heap and uses no network.
+SovereignNet ::= Stream(NetMsg(PeerMsg)).
+
+%% The keys of the peers the live person knows: the two peers the harness
+%% scripts, Diana the community bank and Frank the household, in that order.
+SovereignPeers ::= [Key | SovereignPeer].
+SovereignPeer  ::= [Key | Closed].
+
+imported procedure play_ui#sovereign_ui(Key?, SovereignPeers?, PersonIn(Drawn)?, SovereignNet?).
+exported procedure sovereign_ui(Key?, SovereignPeers?, PersonIn(Drawn)?, SovereignNet?).
+sovereign_ui(Me, Peers, Grants, NetIn) :- play_ui # sovereign_ui(Me?, Peers?, Grants?, NetIn?).
 
 imported procedure play_ui#play_sovereign_ui.
 exported procedure play_sovereign_ui.
 play_sovereign_ui :- play_ui # play_sovereign_ui.
+
+%% =============================================================================
+%% The agent's initial goal
+%% =============================================================================
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel
+%% first and the network channel second (GLP-Spec maglp.tex, Definition
+%% "Multiagent GLP"), on a phone as in a simulation (IGLP, Implementation
+%% Notes, "Boot": "a deployed agent is spawned by its application with the same
+%% initial goal").  self_key/1 first makes the agent's key, before which
+%% nothing is sent on the network (GLP-Spec appendix-guards.tex, "Identity and
+%% signature").  The person's first act names the entry and carries its
+%% arguments: sovereign_ui(Me, Peers), the agent's own key and the keys of the
+%% peers the person knows (IGLP, "Boot": "An agent learns the keys of its
+%% peers from its person"; Remark "Agent Names": a readable name is a variable
+%% standing for a key).  The person's acts after the first are the grants of
+%% the mini-app's person channel.
+SovereignAct    ::= sovereign_ui(Key, SovereignPeers).
+SovereignIn     ::= [] ; [SovereignAct | SovereignGrants].
+SovereignGrants ::= [] ; [Input(Drawn) | SovereignGrants].
+
+exported procedure agent(Channel(SovereignIn, Stream(Constant))?, Channel(SovereignNet, SovereignNet)?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), sovereign_start(In?, N?).
+
+%% The entry the person's first act names, on the network input.
+procedure sovereign_start(SovereignIn?, SovereignNet?).
+sovereign_start([sovereign_ui(Me, Peers) | Gs], N) :-
+    person_grants(Gs?, Grants), sovereign_ui(Me?, Peers?, Grants?, N?).
+sovereign_start([], _).
+
+%% The person's grants after the first act, onto the mini-app's person
+%% channel, which never closes (vGLP, Definition "Person Channel, Person
+%% Writer, GLP with Persons, Grant"): where the person's stream closes, no
+%% grant comes again, and the channel's grants are held for good, on a fresh
+%% channel nothing writes.
+procedure person_grants(SovereignGrants?, PersonIn(Drawn)).
+person_grants([G | Gs], [G? | Ps?]) :- person_grants(Gs?, Ps).
+person_grants([], Ps?) :- new_channel(A, B), hold_grants(A?, B?, Ps).
+
+procedure hold_grants(Channel(PersonOut(Drawn), PersonIn(Drawn))?, Channel(PersonIn(Drawn), PersonOut(Drawn))?, PersonIn(Drawn)).
+hold_grants(ch([_ | Ds], Gs?), B, Ps?) :- hold_grants(ch(Ds?, Gs), B?, Ps).

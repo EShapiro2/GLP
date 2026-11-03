@@ -111,6 +111,16 @@ rv_server(_, Graph, NetIn) :-
     rv_unwrap(NetIn?, In),
     rv_agent(Graph?, In?, []).
 
+%% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec
+%% maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot":
+%% "a deployed agent is spawned by its application with the same initial
+%% goal"): the person's first act is the social graph's source identity, and
+%% self_key/1 gives the agent its own key; by these agent/2 starts the
+%% server's agent, rv_server/3, on the network input.
+exported procedure agent(Channel(Stream(Hash), Stream(Constant))?, Channel(RvNetIn, Stream(NetMsg(Constant)))?).
+agent(ch([G | _], []), ch(N, [])) :- self_key(K), rv_server(K?, G?, N?).
+agent(ch([], []), ch(_, [])).
+
 procedure rv_unwrap(RvNetIn?, SignalIn).
 rv_unwrap([msg(_, M) | Ms], [M? | In?]) :- rv_unwrap(Ms?, In).
 rv_unwrap([], []).

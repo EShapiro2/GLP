@@ -7,7 +7,7 @@
 /// supplies a name and a radius and receives no coordinates: it learns of the
 /// device's location only that it entered or left a place it declared itself.
 ///
-/// Registering `place_declare/3` and `place_remove/1` as GLP system predicates
+/// Registering `declare(place(P, R, E))` and `remove(place(P))` as GLP system predicates
 /// is not the layer's — that is the GLP runtime's, above this seam. What the
 /// layer owns is what is here: the declaration, its release, and which
 /// crossings are reported.
@@ -36,7 +36,7 @@ enum PlaceCrossing {
 /// What a declaration's stream carries.
 ///
 /// Spec `docs/GLP_Networking_API/sections/system-predicates.tex`
-/// §System Predicates: `place_declare(Place, Radius, Events)` binds `Events` to
+/// §System Predicates: `declare(place(Place, Radius, Events))` binds `Events` to
 /// a stream carrying `entered` and `exited` as the platform reports crossings,
 /// `unobservable` when the platform stops reporting them, and `observable` when
 /// reporting resumes. Between the two, crossings are not seen and none is

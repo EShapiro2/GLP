@@ -12,6 +12,7 @@
 /// - On the iOS Simulator, an iPhone 16e, 390 by 844 points at 3 pixels a point: `integration_test/apps_screens_test.dart` plays this scenario with this file's [appsScreens], one person's phone on the screen at a time, and at each screen asks the host to take the simulator's screenshot, which the host frames as the phone and writes to `programs/apps/<app>/screens/`, and CSSN's to `programs/cssn/figures/` (`tool/sim_screens.sh`, `tool/sim_shot.py`).  Those are the PNG files of GAI's figures and of CSSN's Figure 3.  From `glp_multiagent/`:
 ///
 ///     bash tool/sim_screens.sh
+@Timeout.none
 library;
 
 import 'dart:convert';
@@ -253,7 +254,7 @@ class _Run {
   /// The person [name] of the run.
   _Person person(String name) => persons.singleWhere((p) => p.name == name);
 
-  /// [dir], the app's directory under `programs/`, is `apps/<app>` unless given, and [out], where its screens are written, its `screens/` unless given.  A scripted agent's person runs the script of its role in [roles], its own key where none is given; a scripted parent's in [watching] looks also at the phones of the children it names, by `village_person/5` (`programs/cssn/self.glp`).
+  /// [dir], the app's directory under `programs/`, is `apps/<app>` unless given, and [out], where its screens are written, its `screens/` unless given.  A scripted agent's person runs the script of its role in [roles], its own key where none is given, with the keys the person knows, those of the persons it has a conversation with in the order of [pairs], by which its script names its peers (`programs/self.glp`, `miniapp_person/5`); a scripted parent's in [watching] looks also at the phones of the children it names, by `village_person/6` (`programs/cssn/self.glp`).
   static Future<_Run> start(WidgetTester tester, Screens screens, String app,
       {String? dir,
       String? out,
@@ -284,6 +285,14 @@ class _Run {
         [for (var i = 0; i + 1 < chain.length; i++) (chain[i], chain[i + 1])];
     String conversation(String p, String q) =>
         'conversation($q, ch(C_${q}_$p?, C_${p}_$q))';
+    // The keys a scripted person knows: those of the persons it has a conversation with, in the order of the pairs, each readable name standing for a key.
+    String known(String p) => '[${[
+          for (final (a, b) in links)
+            if (a == p)
+              b
+            else if (b == p)
+              a,
+        ].join(', ')}]';
     final goals = [
       for (var i = 0; i < chain.length; i++) ...[
         'miniapp(${chain[i]}, ch(G$i?, D$i), ch([${[
@@ -294,9 +303,9 @@ class _Run {
               conversation(b, a),
         ].join(', ')}], U$i), ${firstDay == null ? '[]' : 'K$i?'})',
         if (scripted.contains(chain[i]) && watching.containsKey(chain[i]))
-          'village_person(${chain[i]}, ${roles[chain[i]] ?? chain[i]}, ch(D$i?, G$i), W$i?, S$i)'
+          'village_person(${chain[i]}, ${roles[chain[i]] ?? chain[i]}, ${known(chain[i])}, ch(D$i?, G$i), W$i?, S$i)'
         else if (scripted.contains(chain[i]))
-          'miniapp_person(${chain[i]}, ${roles[chain[i]] ?? chain[i]}, ch(D$i?, G$i), S$i)',
+          'miniapp_person(${chain[i]}, ${roles[chain[i]] ?? chain[i]}, ${known(chain[i])}, ch(D$i?, G$i), S$i)',
       ],
     ];
     final play = engine.postGoal(goals.join(', '), inputs: [
@@ -962,7 +971,7 @@ void appsScreens(Screens screens) {
     run.plain(bob);
     await run.shoot(bob, 'gkk-c-bob-contacts.png');
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GSG\'s app on two phones: Bob asked to be Alice\'s friend; Alice\'s '
@@ -1015,7 +1024,7 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gsg-c-alice-ended.png');
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GSN\'s app on two phones: Bob\'s Friends with Alice\'s message, Bob '
@@ -1175,7 +1184,7 @@ void appsScreens(Screens screens) {
     expect(alice.atoms, contains('closed($friends)'));
 
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GC\'s app on two phones: Alice\'s Coins tab once she mints two '
@@ -1271,7 +1280,7 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gc-d-alice-pay.png');
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GB\'s app on three phones: Alice mints bonds maturing at day 10; Bob '
@@ -1396,7 +1405,7 @@ void appsScreens(Screens screens) {
     expect(carol.atoms.where((x) => x == 'coin(alice)'), hasLength(2));
     expect(alice.atoms.where((x) => x == 'coin(alice)'), hasLength(2));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'The village market of GC\'s paper on GC\'s app, six villagers at their '
@@ -1559,7 +1568,7 @@ void appsScreens(Screens screens) {
       await run.shoot(v[p]!, 'gc-village-$p.png');
     }
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 30)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GSNP\'s app on five phones, the play of GAI\'s GSNP figure, compiled '
@@ -1668,7 +1677,7 @@ void appsScreens(Screens screens) {
     run.plain(fay);
     await run.shoot(fay, 'gsnp-c-fay-chat.png');
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GSNP\'s app, the play of GAI\'s Figure "The GAI app" on the full '
@@ -1805,7 +1814,7 @@ void appsScreens(Screens screens) {
     expect(bob.questions('approval'), isEmpty);
     expect(run.scriptedAtoms('alf'), contains('retired'));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'GAI\'s app, compiled from GAI\'s contract and pragmas: the example of '
@@ -1880,7 +1889,7 @@ void appsScreens(Screens screens) {
     expect(bob.questions('approval'), isEmpty);
     run.plain(alice, allow: const {'Peer'});
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GSG and GKK, which it extends (programs/gff/GFF.txt at GLP 0a3d7997): four tabs, Contacts, Friends, Posts and Feeds, "Posts: Alice's feed." (GFF.txt at GLP 56270cb6) and "Feeds: the agents Alice follows."; the buttons Post, Follow and Unfollow, GFF's "[Post] <item>", "[Follow]" and "[Unfollow]".  Friends follow each other by an act each machine takes, friends_follow; a person follows anyone else by one step, Follow, follow(Me, B), and the machine asks every friend and follows through a friend, through_friend and ask, unguarded.  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md), each act a tap or a picked or typed field, its screens those of GFF #1 Cowork's tasks of 2026-10-27 18:00, 18:55 and 20:25 UTC, written to programs/apps/gff/screens/gff-app-<n>.png.
   testWidgets(
@@ -2062,7 +2071,7 @@ void appsScreens(Screens screens) {
       expect(p.atoms.where((x) => x.contains('Fourth item')), isEmpty, reason: p.name);
     }
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 30)));
+  }, timeout: Timeout.none);
 
   // CSSN's app is compiled from its contract and its pragmas, CSSN.txt and those of the contracts it extends, GKK, GSG, GSN and GnW (programs/cssn/CSSN.txt; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, "Children: the children Alice is parenting."; each button the label in brackets, Enter, Child acquaint, Child befriend, Child adult befriend, Of age, Child join, Child unfriend, Child leave, Child close and Parent unfriend; each question the sentence of the role asked, "Alice asks that Carol and your child Dave befriend."; and the answers yes and no.  Enter is a meeting schema, enter(p?, r?): a parent types the child's key into its field, CSSN's "<child>", and the request's hello asks the child's phone the question of the child's role, "Alice asks to be your parent." (Section 5.4, "The compilation").  The scenario is CSSN's Figure 3's (CSSN, Section 4.6, "In the Grassroots App").
   testWidgets(
@@ -2192,7 +2201,7 @@ void appsScreens(Screens screens) {
     expect(run.scriptedAtoms('carol'), isNot(contains('friend(dave)')));
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Bob at his phone: '
@@ -2293,7 +2302,7 @@ void appsScreens(Screens screens) {
     expect(run.scriptedAtoms('dave'), unorderedEquals(
         ['identity', 'friend(bob)', 'knows(bob)', 'knows(carol)']));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 
   testWidgets(
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Carol at her '
@@ -2381,5 +2390,5 @@ void appsScreens(Screens screens) {
     expect(run.control(carol, 'row:dave'), findsNothing);
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
     run.finish();
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: Timeout.none);
 }

@@ -11,9 +11,9 @@ NetMsg ::= msg(Constant, NetContent).
 NetStream ::= [] ; [NetMsg | NetStream].
 
 exported procedure carol_init(_?, _?).
-carol_init(_, _) :-
-    send_to_net([msg(alice, stream(SA?))]),
-    send_to_net([msg(bob, stream(SB?))]),
+carol_init(keys(_, [Alice, Bob]), _) :-
+    send_to_net([msg(Alice?, stream(SA?))]),
+    send_to_net([msg(Bob?, stream(SB?))]),
     new_channel(ForAlice, ForBob),
     put(SA, ForAlice?),
     put(SB, ForBob?).
@@ -23,10 +23,10 @@ procedure put(OuterStream, GreetChannel?).
 put([chan(C?)], C).
 
 exported procedure alice_init(_?, _?).
-alice_init(_, [msg(_, stream(S)) | _]) :- await(alice, S?).
+alice_init(keys(Me, _), [msg(_, stream(S)) | _]) :- await(Me?, S?).
 
 exported procedure bob_init(_?, _?).
-bob_init(_, [msg(_, stream(S)) | _]) :- await(bob, S?).
+bob_init(keys(Me, _), [msg(_, stream(S)) | _]) :- await(Me?, S?).
 
 procedure await(Constant?, OuterStream?).
 await(Me, [chan(C) | _]) :- ground(Me?) | greet(Me?, C?).

@@ -50,16 +50,16 @@ imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?,
 exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
 miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
-%% The scripted person, the instance of the root's second template miniapp_person/4 at Drawn and at Seen, the screen it reports.
-imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
-miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+%% The scripted person, the instance of the root's second template miniapp_person/5 at Drawn and at Seen, the screen it reports.
+imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(Id, Role, Ps, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, Ps?, PEnd?, Screen).
 
 %% The plays with no super-app (plays.glp).
 imported procedure plays#play_friends(Stream(Seen), Stream(Seen)).
 exported procedure play_friends(Stream(Seen), Stream(Seen)).
 play_friends(A?, B?) :- plays # play_friends(A, B).
 
-imported procedure plays#play_held(Stream(Net), Stream(Net), Stream(Net)).
-exported procedure play_held(Stream(Net), Stream(Net), Stream(Net)).
-play_held(A?, B?, C?) :- plays # play_held(A, B, C).
+imported procedure plays#play_held(Key?, Key?, Key?, Stream(Net), Stream(Net), Stream(Net)).
+exported procedure play_held(Key?, Key?, Key?, Stream(Net), Stream(Net), Stream(Net)).
+play_held(A, B, C, In?, ToBob?, ToCarol?) :- plays # play_held(A?, B?, C?, In, ToBob, ToCarol).

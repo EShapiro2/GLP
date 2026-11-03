@@ -5,7 +5,7 @@
 %% It runs the platform's agent with the person's key as its Peer and the dispatcher on the agent's asks, as the canonical compilation runs a vGLP program (vGLP, "The canonical compilation"): the agent's questions, its request questions and approval questions, are drawn on the person channel, and its thread, the program's output to the person, is drawn as construct 0.  The agent's network is the conversations: each message msg(Q, C) the agent sends goes on the conversation with Q, and each message arriving on a conversation joins the agent's input.
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
-imported procedure platform#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+imported procedure platform#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
 miniapp(Id, Ui, ch(Down, Up?), _) :-

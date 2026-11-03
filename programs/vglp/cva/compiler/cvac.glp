@@ -142,9 +142,10 @@ realisable([volition(_, _, _)|_], no).
 realisable([obstructed_jointly(_)|Fs], B?) :- realisable(Fs?, B).
 realisable([reflexive(_, _, _)|_], no).
 realisable([signed(_, _, _, _)|_], no).
+%% A reading role with no edge to a guarding role from an atom that guarding role requires is a fault of volition (GSC 0380a8a, Definition "Volition"), as volition(_, _, _) is.
+realisable([changes_nothing(_, _)|_], no).
 %% A fault of a schema's form comes in a verdict malformed(Faults), which verdict_lines refuses whole; these clauses cover the type.
 realisable([added_and_deleted(_, _, _)|_], no).
-realisable([changes_nothing(_, _)|_], no).
 realisable([no_role_changes(_)|_], no).
 realisable([head_not_variable(_, _)|_], no).
 realisable([head_repeated(_, _)|_], no).
@@ -159,6 +160,8 @@ realisable([multiplicity_not_whole(_, _, _)|_], no).
 realisable([constraint_not_numeric(_, _)|_], no).
 realisable([constraint_not_linear(_, _)|_], no).
 realisable([constraint_not_conjunction(_, _)|_], no).
+realisable([signing_not_agent(_, _)|_], no).
+realisable([signing_not_speech_act(_, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
@@ -912,10 +915,13 @@ find_schema(S, [_|Cs], F?) :- otherwise | find_schema(S?, Cs?, F).
 %% Each act a pragma proposes, act(Name, Button, Fields, Sentence), is the schema Name its button names.
 procedure act_faults(PActs?, Contract?, Stream(_)).
 act_faults([], _, []).
-act_faults([act(N, _, Fs, Q, _, _)|As], C, F?) :- ground(N?), ground(Fs?), ground(Q?), ground(C?) |
+act_faults([act(N, _, Fs, Q, _, P)|As], C, F?) :- ground(N?), ground(Fs?), ground(Q?), ground(C?), ground(P?) |
     schema_faults([N?], Fs?, Q?, C?, F1),
+    find_schema(N?, C?, Sf),
+    unnamed_check(Sf?, N?, Fs?, P?, F3),
     act_faults(As?, C?, F2),
-    lapp(F1?, F2?, F).
+    lapp(F1?, F3?, F13),
+    lapp(F13?, F2?, F).
 procedure schema_faults(Preds?, Strings?, Said?, Contract?, Stream(_)).
 schema_faults([], _, _, _, []).
 schema_faults([S|Ss], Fs, Q, C, F?) :- ground(S?), ground(Fs?), ground(Q?), ground(C?) |
@@ -940,6 +946,90 @@ procedure field_fault(Integer?, Integer?, Constant?, Stream(_)).
 field_fault(NS, NF, _, []) :- NS? =< NF? | true.
 field_fault(NS, NF, S, [H?]) :- NS? > NF?, ground(S?) |
     H =.. ['%% a pragma names more fields than the schema has variables the person fills:', S?].
+%% "the fields are what the proposer fills besides, one for each other role of the act and each variable of its schema after the roles but those the row's entry fills, a group <a>.n filling both its leader a and n, in the schema's order, the compiler refusing a line whose fields leave unnamed a place that one entry does not fill" (vGLP 305c8d0, Section 5.4, "The contract's words"): the places of the act a field may name (field_places) that its fields leave unnamed, the proposer's left out, are the places the row's entry fills, so a line leaving two or more is refused unless one entry fills them all, a group, a name term <u>.y_1...y_n of the schema, filling the places of u and of y_1, ..., y_n; the schema and the number of places unnamed named.
+Unnamed  ::= '%% a pragma\'s fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract\'s words"):'
+           ; '%% the schema and the places its fields leave unnamed'(Constant, Integer).
+ArgSets  ::= [] ; [Args | ArgSets].
+procedure unnamed_check(SFound?, Constant?, Strings?, Proposer?, Stream(Unnamed)).
+unnamed_check(nosfound, _, _, _, []).
+unnamed_check(sfound(Hd, Rs), S, Fs, P, F?) :- ground(Hd?), ground(Rs?), ground(S?), ground(Fs?), ground(P?) |
+    schema_vars(Rs?, Hd?, Vs0),
+    listed_ixs(Rs?, 1, Lis),
+    drop_listed(Vs0?, Lis?, Vs),
+    field_places(Hd?, Rs?, Fp),
+    proposer_arg(P?, Pa),
+    unnamed_args(Fp?, Fs?, Vs?, Pa?, U),
+    rs_nterm_sets(Rs?, Ns),
+    unnamed_check1(U?, Ns?, S?, F).
+procedure unnamed_check1(Args?, ArgSets?, Constant?, Stream(Unnamed)).
+unnamed_check1(U, Ns, S, F?) :- ground(U?) |
+    entry_fills(U?, Ns?, Ok),
+    count_args(U?, NU),
+    unnamed_fault(Ok?, NU?, S?, F).
+%% The proposer's place, the role the line names before the button, by([G]) (cvac.glp, Proposer); role 1 where the scripts gave no contract term, any.
+procedure proposer_arg(Proposer?, Arg).
+proposer_arg(by([G|_]), role(G?)).
+proposer_arg(by([G|_], _), role(G?)).
+proposer_arg(by([]), role(1)).
+proposer_arg(by([], _), role(1)).
+proposer_arg(any, role(1)).
+%% The places Fp the fields Fs leave unnamed, a field empty or missing, each by its argument in Vs, the proposer's left out.
+procedure unnamed_args(Ints?, Strings?, Args?, Arg?, Args).
+unnamed_args([], _, _, _, []).
+unnamed_args([I|Is], [], Vs, Pa, U?) :- ground(Vs?), ground(Pa?) |
+    nth_arg(I?, Vs?, A),
+    unnamed_args(Is?, [], Vs?, Pa?, U1),
+    keep_unnamed(A?, Pa?, U1?, U).
+unnamed_args([I|Is], [F|Fs], Vs, Pa, U?) :- ground(F?), F? =?= '""', ground(Vs?), ground(Pa?) |
+    nth_arg(I?, Vs?, A),
+    unnamed_args(Is?, Fs?, Vs?, Pa?, U1),
+    keep_unnamed(A?, Pa?, U1?, U).
+unnamed_args([_|Is], [F|Fs], Vs, Pa, U?) :- otherwise, ground(F?) | unnamed_args(Is?, Fs?, Vs?, Pa?, U).
+procedure keep_unnamed(Arg?, Arg?, Args?, Args).
+keep_unnamed(A, Pa, U, U?) :- A? =?= Pa? | true.
+keep_unnamed(A, _, U, [A?|U?]) :- otherwise | true.
+%% The places each name term of the schema fills: <pi_K> the role K, <x> the agent variable x, and N.y those of N and the speech-act variable y.
+procedure rs_nterm_sets(RoleSpecs?, ArgSets).
+rs_nterm_sets([], []).
+rs_nterm_sets([R|Rs], Ns?) :- ground(R?) |
+    rs_lists(R?, P, M, K, N),
+    app(P?, M?, A1),
+    app(K?, N?, A2),
+    app(A1?, A2?, As),
+    atoms_args(As?, Args),
+    nterm_sets(Args?, Ns1),
+    rs_nterm_sets(Rs?, Ns2),
+    app(Ns1?, Ns2?, Ns).
+procedure nterm_sets(Args?, ArgSets).
+nterm_sets([], []).
+nterm_sets([nterm(T)|As], [Ps?|Ns?]) :- nt_places(T?, Ps), nterm_sets(As?, Ns).
+nterm_sets([A|As], Ns?) :- otherwise, ground(A?) | nterm_sets(As?, Ns).
+procedure nt_places(NameTerm?, Args).
+nt_places(own(K), [role(K?)]).
+nt_places(own_var(X), [pvar(X?)]).
+nt_places(nvar(_), []).
+nt_places(ext(T, Y), Ps?) :- nt_places(T?, P1), app(P1?, [svar(Y?)], Ps).
+nt_places(ext_any(T), Ps?) :- nt_places(T?, Ps).
+%% Whether one entry fills the places U: a person or an item fills one place, and a group, a name term, the places it fills.
+procedure entry_fills(Args?, ArgSets?, YesNo).
+entry_fills([], _, yes).
+entry_fills([_], _, yes).
+entry_fills([A, B|U], Ns, Ok?) :- ground(A?), ground(B?), ground(U?), ground(Ns?) | some_superset([A?, B?|U?], Ns?, Ok).
+procedure some_superset(Args?, ArgSets?, YesNo).
+some_superset(_, [], no).
+some_superset(U, [S|Ss], Ok?) :- ground(U?), ground(S?), ground(Ss?) |
+    all_in(U?, S?, In),
+    some_superset1(In?, U?, Ss?, Ok).
+procedure some_superset1(YesNo?, Args?, ArgSets?, YesNo).
+some_superset1(yes, _, _, yes).
+some_superset1(no, U, Ss, Ok?) :- some_superset(U?, Ss?, Ok).
+procedure all_in(Args?, Args?, YesNo).
+all_in([], _, yes).
+all_in([A|As], S, Ok?) :- ground(A?), ground(S?) | mem(A?, S?, In), all_in(As?, S?, Ok1), and(In?, Ok1?, Ok).
+procedure unnamed_fault(YesNo?, Integer?, Constant?, Stream(Unnamed)).
+unnamed_fault(yes, _, _, []).
+unnamed_fault(no, U, S, ['%% a pragma\'s fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract\'s words"):',
+        '%% the schema and the places its fields leave unnamed'(S?, U?)]).
 %% A line whose questions are neither one nor one per guarding role of its act, an act of two guarding roles or more (vGLP 21fca00, Section 5.4, "The contract's words": "a line's questions are one per guarding role of the widest schema of its clause, in the order of the roles, none left out").
 procedure question_fault(Said?, RoleSpecs?, Constant?, Stream(_)).
 question_fault(none, _, _, []).

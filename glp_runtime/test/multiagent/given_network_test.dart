@@ -1,64 +1,77 @@
-/// The runtime's hosts over a network they are given (GLP #3 Cowork,
-/// 2026-10-11 12:59 UTC, "01:05"): `AgentRuntime` and `IsolateManager` take a
-/// `GlpNetwork`, and build the simulation's only when they are given none
+/// The runtime's host over a network it is given (GLP #3 Cowork,
+/// 2026-10-11 12:59 UTC, "01:05"): `AgentRuntime` takes a
+/// `GlpNetwork`, and builds the simulation's only when it is given none
 /// (IGLP, Implementation Notes, "Networking Seam", One interface: "transport
 /// integration is a backend swap").  Over a given network an agent is named by
 /// its key (IGLP, Remark "Agent Names": "Over a real network, the name of an
 /// agent p is its public key, held by the networking layer"), and no key is
 /// made up for a name.
 ///
-/// Each host runs two agents, each over its own network, and a cold call and
+/// The host runs two agents, each over its own network, and a cold call and
 /// an assignment cross between them, as GNA's adapter test has them cross
 /// between two runtimes over two headless layers (networking/core/test/
 /// glp_adapter_test.dart): the caller cold-calls the callee, naming it by its
 /// key, with a writer; the callee assigns the writer, and the assignment
-/// crosses back.  The networks are fakes that carry payloads between keys:
-/// `AgentRuntime`'s in one isolate, `IsolateManager`'s through a hub, each
-/// opened in its agent's isolate.
+/// crosses back.  The networks are fakes that carry payloads between keys, in
+/// one isolate.  `IsolateManager` boots a simulation alone (IGLP,
+/// Implementation Notes, "Boot"), and until 2026-11-02 it ran over given
+/// layers too.
+@Timeout.none
 library;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
-import 'package:glp_runtime/multiagent/isolate_manager.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
+import 'package:glp_runtime/runtime/terms.dart' show ConstTerm, StructTerm;
 
-/// The agents' one program: GNA's adapter test's, the caller naming the
-/// callee by the key its host passes it.
+/// The agents' one program: GNA's adapter test's, each agent started from
+/// agent(ch(_?,_),ch(_?,_)), every agent's initial goal (GLP-Spec maglp.tex,
+/// Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot": "a
+/// deployed agent is spawned by its application with the same initial
+/// goal"), the caller's person naming the callee by its key, call(Key), and
+/// the callee's telling its agent to answer.
 const String _play = r'''
-procedure caller_init(_?, Key?, _?).
-caller_init(_, Callee, _) :-
+GnIn  ::= call(Key) ; answer.
+GnOut ::= answered(Constant) ; called(Key).
+GnMsg ::= ask(Constant?).
+
+exported procedure agent(Channel(Stream(GnIn), Stream(GnOut))?, Channel(Stream(NetMsg(GnMsg)), Stream(NetMsg(GnMsg)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+
+procedure start(Stream(GnIn)?, Stream(NetMsg(GnMsg))?).
+start([call(Callee) | _], _) :- ground(Callee?) |
     send_to_net([msg(Callee?, ask(Answer))]),
     answered(Answer?).
-
-procedure answered(_?).
-answered(forty_two) :- send_to_user([answered(forty_two)]).
-
-procedure callee_init(_?, _?).
-callee_init(_, [msg(Me, ask(A?)) | _]) :-
+start([answer | _], [msg(Me, ask(A?)) | _]) :-
     send_to_user([called(Me?)]),
     answer(A).
+start([], _).
 
-procedure answer(_).
+procedure answered(Constant?).
+answered(forty_two) :- send_to_user([answered(forty_two)]).
+
+procedure answer(Constant).
 answer(forty_two).
 ''';
 
-/// An agent that cold-calls `bob`, a name that is no key.
+/// An agent that cold-calls the peer its person names: `bob` in the tests, a
+/// readable name, which over a network stands for no key (IGLP 670d36a,
+/// Remark "Agent Names").
 const String _symbolic = r'''
-procedure a_init(_?, _?).
-a_init(_, _) :- send_to_net([msg(bob, ping)]).
+exported procedure agent(Channel(Stream(Key), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch([P | _], []), ch(_, [])) :- send_to_net([msg(P?, ping)]).
+agent(ch([], []), ch(_, [])).
 ''';
 
 /// An agent that declares a place and tells its person when it is entered.
 const String _placer = r'''
-procedure placer_init(_?, _?).
-placer_init(_, _) :- place_declare(home, 50, E), watch(E?).
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])) :- declare(place(home, 50, E)), watch(E?).
 
 procedure watch(_?).
 watch([E|_]) :- ground(E?) | send_to_user([E?]).
@@ -95,6 +108,17 @@ class _WireNetwork extends GlpNetwork {
   /// Places declared, in order.
   final List<String> declared = [];
 
+  /// How many sends still to refuse, as a layer refuses a message it cannot
+  /// save (GNA, Section 2.9: send "fails if the message cannot be saved").
+  int refuse = 0;
+
+  /// The sends refused, by destination key.
+  final List<String> refused = [];
+
+  /// The messageIds the runtime acknowledged, in order, each an event a test
+  /// waits on ([_Lines.lineWhere]).
+  final _Lines acknowledged = _Lines();
+
   _WireNetwork(this.keyPair, this.wire) {
     wire._at[keyPair.pub.hex] = this;
   }
@@ -103,7 +127,18 @@ class _WireNetwork extends GlpNetwork {
   PubKey getIdentity() => keyPair.pub;
 
   @override
-  void send(PubKey pk, Uint8List payload) => wire.carry(keyPair.pub, pk, payload);
+  Future<void> send(PubKey pk, Uint8List payload) {
+    if (refuse > 0) {
+      refuse--;
+      refused.add(pk.hex);
+      return Future.error(StateError('the message could not be saved'));
+    }
+    wire.carry(keyPair.pub, pk, payload);
+    return Future.value();
+  }
+
+  @override
+  void acknowledge(String messageId) => acknowledged.add(messageId);
 
   @override
   Future<bool> declarePlace(String place, double radiusMetres) {
@@ -143,135 +178,50 @@ class _WireNetwork extends GlpNetwork {
   String? observedPeerAddress(PubKey pk) => null;
   @override
   void punchUdp(String address) {}
+  @override
+  void putRendezvousServer(PubKey pk, String address) {}
+  @override
+  void removeRendezvousServer(PubKey pk) {}
 }
 
-// =============================================================================
-// IsolateManager's networks: a hub in this isolate, a layer in each agent's
-// =============================================================================
+/// An agent's transcript, AgentRuntime.onOutput's lines, or the messageIds a
+/// layer is told are acknowledged, which a test waits on one by one: on the
+/// event, a line's arrival, and on no clock.  Until
+/// 2026-11-02 a test polled the lines every 50 ms until a deadline of sixty
+/// seconds, so its verdict depended on how loaded the machine was (IGLP-coop).
+/// A line the agent reports as an error, `[ERROR] ...`, fails every wait.
+class _Lines extends Iterable<String> {
+  final List<String> _lines = [];
+  final List<(bool Function(String), Completer<String>)> _waits = [];
 
-/// Carries payloads between the [_PortNetwork]s registered with it, by key:
-/// each layer, opened in its agent's isolate, registers its inbox, and a
-/// payload for a key not yet registered waits for it.
-class _Hub {
-  final ReceivePort _port = ReceivePort();
-  final Map<String, SendPort> _inboxes = {};
-  final Map<String, List<List<Object>>> _waiting = {};
+  @override
+  Iterator<String> get iterator => _lines.iterator;
 
-  /// Each payload carried, as `<from-hex> > <to-hex>`.
-  final List<String> carried = [];
-
-  _Hub() {
-    _port.listen((message) {
-      final m = message as List;
-      if (m[0] == 'register') {
-        final key = m[1] as String;
-        final inbox = m[2] as SendPort;
-        _inboxes[key] = inbox;
-        for (final d in _waiting.remove(key) ?? const <List<Object>>[]) {
-          inbox.send(d);
-        }
-      } else if (m[0] == 'send') {
-        final from = m[1] as String;
-        final to = m[2] as String;
-        carried.add('$from > $to');
-        final delivery = <Object>[from, m[3] as Uint8List];
-        final inbox = _inboxes[to];
-        if (inbox == null) {
-          _waiting.putIfAbsent(to, () => []).add(delivery);
-        } else {
-          inbox.send(delivery);
-        }
+  void add(String line) {
+    _lines.add(line);
+    if (line.startsWith('[ERROR]')) {
+      for (final (_, c) in _waits) {
+        c.completeError(StateError('the agent reported an error: $line'));
       }
+      _waits.clear();
+      return;
+    }
+    _waits.removeWhere((w) {
+      final (test, c) = w;
+      if (!test(line)) return false;
+      c.complete(line);
+      return true;
     });
   }
 
-  SendPort get sendPort => _port.sendPort;
-
-  void close() => _port.close();
-}
-
-/// A [GlpNetwork] in an agent's isolate, carrying payloads through a [_Hub].
-class _PortNetwork extends GlpNetwork {
-  final PubKey key;
-  final SendPort hub;
-  final ReceivePort _inbox = ReceivePort();
-  int _next = 0;
-
-  _PortNetwork._(this.key, this.hub) {
-    _inbox.listen((message) {
-      final m = message as List;
-      onMessageReceived?.call(
-          PubKey.fromHex(m[0] as String), m[1] as Uint8List, 'h${_next++}',
-          Underlay.wan);
-    });
-    hub.send(['register', key.hex, _inbox.sendPort]);
-  }
-
-  @override
-  PubKey getIdentity() => key;
-
-  @override
-  void send(PubKey pk, Uint8List payload) =>
-      hub.send(['send', key.hex, pk.hex, payload]);
-
-  // --- Not exercised here ---
-
-  @override
-  void putKnownPeer(PubKey pk) {}
-  @override
-  void removeKnownPeer(PubKey pk) {}
-  @override
-  bool isPeerReachable(PubKey pk) => true;
-  @override
-  List<Underlay> peerUnderlays(PubKey pk) => const [Underlay.wan];
-  @override
-  Uint8List sign(Uint8List message) => throw UnimplementedError();
-  @override
-  bool verify(PubKey signer, Uint8List message, Uint8List signature) =>
-      throw UnimplementedError();
-  @override
-  List<DiscoveredPeer> getPeers() => const [];
-  @override
-  void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) {}
-  @override
-  String? getPublicAddress() => null;
-  @override
-  String? networkIdentity() => null;
-  @override
-  void putPeerAddress(PubKey pk, String address) {}
-  @override
-  String? observedPeerAddress(PubKey pk) => null;
-  @override
-  void punchUdp(String address) {}
-  @override
-  Future<bool> declarePlace(String place, double radiusMetres) =>
-      Future.value(false);
-  @override
-  Future<void> removePlace(String place) => Future.value();
-}
-
-/// The layer of the agent of [keyPair], opened in its isolate over [hub].  A
-/// top-level function, so that the closure it returns captures the two alone
-/// and is sendable.
-AgentLayer _layerOver(_KeyPair keyPair, SendPort hub) => AgentLayer(
-      keyPair: keyPair,
-      open: () async => _PortNetwork._(keyPair.pub, hub),
-    );
-
-/// The first line [lines] yields that [test] accepts, polling until
-/// [timeout].
-Future<String> _eventually(Iterable<String> Function() lines,
-    bool Function(String) test,
-    {Duration timeout = const Duration(seconds: 60)}) async {
-  final deadline = DateTime.now().add(timeout);
-  while (true) {
-    for (final l in lines()) {
-      if (test(l)) return l;
+  /// The first line [test] accepts: one already written, or the next.
+  Future<String> lineWhere(bool Function(String) test) {
+    for (final l in _lines) {
+      if (test(l)) return Future.value(l);
     }
-    if (DateTime.now().isAfter(deadline)) {
-      throw TimeoutException('no line came; the lines: ${lines().join(' | ')}');
-    }
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    final c = Completer<String>();
+    _waits.add((test, c));
+    return c.future;
   }
 }
 
@@ -307,8 +257,6 @@ void main() {
         agentId: 'caller',
         program: play,
         rootSelfGlpPath: root,
-        goalLabel: 'caller_init/3',
-        extraArgs: [calleeKp.pub.hex],
         keyPair: callerKp,
         network: _WireNetwork(callerKp, wire),
       );
@@ -316,11 +264,10 @@ void main() {
         agentId: 'callee',
         program: play,
         rootSelfGlpPath: root,
-        goalLabel: 'callee_init/2',
         keyPair: calleeKp,
         network: _WireNetwork(calleeKp, wire),
       );
-      final out = <String, List<String>>{'caller': [], 'callee': []};
+      final out = {'caller': _Lines(), 'callee': _Lines()};
       caller.onOutput = out['caller']!.add;
       callee.onOutput = out['callee']!.add;
       // A given network delivers its own messages: the coordinator's channel
@@ -335,17 +282,22 @@ void main() {
 
       await callee.initialize();
       await caller.initialize();
+      // Each person tells its agent what to do: the callee's to answer, the
+      // caller's to call the callee, by its key.
+      await callee.injectUserInput(ConstTerm('answer'));
+      await caller.injectUserInput(
+          StructTerm('call', [ConstTerm(calleeKp.pub.hex)]));
 
       // The cold call crosses: the callee's program receives it on its
       // network input, addressed to its own name, its key.
-      final called = await _eventually(
-          () => out['callee']!, (l) => l.startsWith('< called('));
+      final called =
+          await out['callee']!.lineWhere((l) => l.startsWith('< called('));
       expect(called, contains(calleeKp.pub.hex));
 
       // The assignment crosses back: the caller's writer, assigned by the
       // callee, reaches the caller's program.
-      final answered = await _eventually(
-          () => out['caller']!, (l) => l.startsWith('< answered('));
+      final answered =
+          await out['caller']!.lineWhere((l) => l.startsWith('< answered('));
       expect(answered, contains('forty_two'));
 
       expect(wire.carried, contains('${callerKp.pub.hex} > ${calleeKp.pub.hex}'),
@@ -353,6 +305,116 @@ void main() {
       expect(wire.carried, contains('${calleeKp.pub.hex} > ${callerKp.pub.hex}'),
           reason: 'the assignment left through the callee\'s network');
       expect(viaCoordinator, isEmpty);
+    });
+
+    test('a delivered message is acknowledged to the layer once the cycle '
+        'that applied it is complete', () async {
+      // GNA 776016c, Section 2.9: acknowledge(messageId) "Confirm[s] that the
+      // message delivered under messageId has been applied and saved by the
+      // runtime"; IGLP, Implementation Notes, "Persistence": "a delivered
+      // message acknowledged to the layer, only from a state the store holds",
+      // and with no store once its cycle is complete.
+      final wire = _Wire();
+      final callerKp = generateKeyPair();
+      final calleeKp = generateKeyPair();
+      final callerNet = _WireNetwork(callerKp, wire);
+      final calleeNet = _WireNetwork(calleeKp, wire);
+      final caller = AgentRuntime(
+        agentId: 'caller',
+        program: play,
+        rootSelfGlpPath: root,
+        keyPair: callerKp,
+        network: callerNet,
+      );
+      final callee = AgentRuntime(
+        agentId: 'callee',
+        program: play,
+        rootSelfGlpPath: root,
+        keyPair: calleeKp,
+        network: calleeNet,
+      );
+      final out = _Lines();
+      caller.onOutput = out.add;
+      // Over a given network the layer is told, and the coordinator is not.
+      final toCoordinator = <String>[];
+      caller.onDelivered = toCoordinator.add;
+      callee.onDelivered = toCoordinator.add;
+      await callee.initialize();
+      await caller.initialize();
+      // Each person tells its agent what to do: the callee's to answer, the
+      // caller's to call the callee, by its key.
+      await callee.injectUserInput(ConstTerm('answer'));
+      await caller.injectUserInput(
+          StructTerm('call', [ConstTerm(calleeKp.pub.hex)]));
+      await out.lineWhere((l) => l.startsWith('< answered('));
+      // The cold call was the wire's first message, w0, the assignment back
+      // its second, w1; each is acknowledged by the agent that applied it.
+      await calleeNet.acknowledged.lineWhere((id) => id == 'w0');
+      await callerNet.acknowledged.lineWhere((id) => id == 'w1');
+      expect(calleeNet.acknowledged, ['w0']);
+      expect(callerNet.acknowledged, ['w1']);
+      expect(toCoordinator, isEmpty);
+    });
+
+    test('a send the layer refuses is kept and sent again, and arrives once',
+        () async {
+      // IGLP b014a9e, Implementation Notes, "Networking Seam", The contract:
+      // "the layer refuses to send a message it cannot save, and the runtime
+      // waits for its answer and, on a refusal, keeps the message and sends
+      // it again later"; GNA, Section 2.9: send "fails if the message cannot
+      // be saved".  The caller's layer refuses the cold call once; the cycle
+      // of the caller's person's act call(Key) ends with it back in M_p,
+      // undelivered; the layer then reports the callee connected, and the
+      // caller hands it over again, once.
+      final wire = _Wire();
+      final callerKp = generateKeyPair();
+      final calleeKp = generateKeyPair();
+      final callerNet = _WireNetwork(callerKp, wire)..refuse = 1;
+      final caller = AgentRuntime(
+        agentId: 'caller',
+        program: play,
+        rootSelfGlpPath: root,
+        keyPair: callerKp,
+        network: callerNet,
+      );
+      final callee = AgentRuntime(
+        agentId: 'callee',
+        program: play,
+        rootSelfGlpPath: root,
+        keyPair: calleeKp,
+        network: _WireNetwork(calleeKp, wire),
+      );
+      final out = {'caller': _Lines(), 'callee': _Lines()};
+      caller.onOutput = out['caller']!.add;
+      callee.onOutput = out['callee']!.add;
+      await callee.initialize();
+      await caller.initialize();
+      // Each person tells its agent what to do: the callee's to answer, the
+      // caller's to call the callee, by its key.
+      await callee.injectUserInput(ConstTerm('answer'));
+      await caller.injectUserInput(
+          StructTerm('call', [ConstTerm(calleeKp.pub.hex)]));
+
+      // The act's cycle waited for the layer's answer: the cold call was
+      // refused, nothing was carried, and the message is in M_p, undelivered.
+      expect(callerNet.refused, [calleeKp.pub.hex]);
+      expect(wire.carried, isEmpty);
+      expect(caller.ctx!.mp.sendableLength, 1,
+          reason: 'a refused message is kept');
+
+      // The layer reports the callee connected: the message is sent again.
+      callerNet.onPeerConnected!(calleeKp.pub, Underlay.wan, null);
+      await out['caller']!.lineWhere((l) => l.startsWith('< answered('));
+      expect(out['callee']!.where((l) => l.startsWith('< called(')),
+          hasLength(1),
+          reason: 'the cold call arrives once');
+      expect(
+          wire.carried
+              .where((c) => c == '${callerKp.pub.hex} > ${calleeKp.pub.hex}'),
+          hasLength(1),
+          reason: 'the caller sent the callee one message, the cold call, '
+              'once it was accepted');
+      expect(caller.ctx!.mp.sendableLength, 0);
     });
 
     test('no key is made up: a message to a name that is no key is not sent, '
@@ -363,13 +425,13 @@ void main() {
         agentId: 'a',
         program: symbolic,
         rootSelfGlpPath: root,
-        goalLabel: 'a_init/2',
         keyPair: kp,
         network: _WireNetwork(kp, wire),
       );
       final out = <String>[];
       agent.onOutput = out.add;
       await agent.initialize();
+      await agent.injectUserInput(ConstTerm('bob'));
       expect(wire.carried, isEmpty,
           reason: 'bob names no agent over the network, and no key is made up '
               'for it');
@@ -384,11 +446,10 @@ void main() {
         agentId: 'placer',
         program: placer,
         rootSelfGlpPath: root,
-        goalLabel: 'placer_init/2',
         keyPair: kp,
         network: network,
       );
-      final out = <String>[];
+      final out = _Lines();
       agent.onOutput = out.add;
       await agent.initialize();
       expect(network.declared, ['home']);
@@ -396,8 +457,7 @@ void main() {
       // The layer reports the entry; the run that follows it reduces the
       // goal suspended on the place's stream, with no other event.
       network.onPlaceEvent!('home', PlaceEvent.entered);
-      expect(await _eventually(() => out, (l) => l.startsWith('< ')),
-          '< entered');
+      expect(await out.lineWhere((l) => l.startsWith('< ')), '< entered');
     });
 
     test('the agent\'s key pair is the layer\'s', () {
@@ -432,7 +492,6 @@ void main() {
         agentId: 'a',
         program: symbolic,
         rootSelfGlpPath: root,
-        goalLabel: 'a_init/2',
         keyPair: kp,
         network: _WireNetwork(kp, _Wire()),
       );
@@ -449,7 +508,6 @@ void main() {
         agentId: 'a',
         program: symbolic,
         rootSelfGlpPath: root,
-        goalLabel: 'a_init/2',
       );
       final out = <String>[];
       final logs = <String>[];
@@ -469,80 +527,10 @@ void main() {
     });
   });
 
-  group('IsolateManager over given layers', () {
-    test('a cold call and an assignment cross between two agents in two '
-        'isolates, each over its own layer and named by its key', () async {
-      final hub = _Hub();
-      addTearDown(hub.close);
-      final callerKp = generateKeyPair();
-      final calleeKp = generateKeyPair();
-      final caller = callerKp.pub.hex;
-      final callee = calleeKp.pub.hex;
-
-      final manager = IsolateManager(layers: [
-        _layerOver(callerKp, hub.sendPort),
-        _layerOver(calleeKp, hub.sendPort),
-      ]);
-      addTearDown(manager.shutdown);
-
-      // The boot program names each agent by its key (IGLP, "Boot": "each
-      // body goal G@p directs the runtime to spawn an isolate for agent p").
-      final config = BootLoader().load('''
-procedure boot.
-boot :- caller_init('$caller', '$callee', _)@'$caller',
-        callee_init('$callee', _)@'$callee'.
-
-$_play''');
-      config.rootSelfGlpPath = root;
-      expect(config.directives.map((d) => d.agentId), [caller, callee]);
-
-      await manager.boot(config);
-      manager.start();
-
-      final called = await _eventually(
-          () => manager.outputOf(callee), (l) => l.contains('called('));
-      expect(called, contains(callee));
-      final answered = await _eventually(
-          () => manager.outputOf(caller), (l) => l.contains('answered('));
-      expect(answered, contains('forty_two'));
-
-      expect(hub.carried, contains('$caller > $callee'),
-          reason: 'the cold call left through the caller\'s layer');
-      expect(hub.carried, contains('$callee > $caller'),
-          reason: 'the assignment left through the callee\'s layer');
-      expect(manager.faults, isEmpty);
-    }, timeout: const Timeout(Duration(minutes: 2)));
-
-    test('an agent the manager holds no layer for is refused, and no key is '
-        'made up for it', () async {
-      final hub = _Hub();
-      addTearDown(hub.close);
-      final kp = generateKeyPair();
-      final manager = IsolateManager(layers: [_layerOver(kp, hub.sendPort)]);
-      addTearDown(manager.shutdown);
-      final config = BootLoader().load('''
-procedure boot.
-boot :- a_init(alice, _)@alice.
-
-$_symbolic''');
-      config.rootSelfGlpPath = root;
-      await expectLater(manager.boot(config), throwsStateError);
-    });
-
-    test('the simulation\'s harness controls are refused over given layers',
-        () {
-      final kp = generateKeyPair();
-      final manager = IsolateManager(layers: [
-        AgentLayer(
-            keyPair: kp,
-            open: () async => throw UnimplementedError('not opened here')),
-      ]);
-      expect(() => manager.cut('a', 'b'), throwsStateError);
-      expect(() => manager.restore('a', 'b'), throwsStateError);
-      expect(() => manager.holdDelivery('a', 'b'), throwsStateError);
-      expect(() => manager.releaseDelivery('a', 'b'), throwsStateError);
-      expect(() => manager.trustLevelOf('a', ProximityUnderlay.pan),
-          throwsStateError);
-    });
-  });
+  // IsolateManager boots a simulation alone (IGLP, Implementation Notes,
+  // "Boot": "A boot is for a simulation; a deployed agent is booted by its
+  // application"), each agent's key made at its spawn: until 2026-11-02 it also
+  // ran agents over given layers, each named in the boot clause by a key made
+  // before the boot, and three tests here held that.  A deployed agent over a
+  // given layer is AgentRuntime's, above.
 }

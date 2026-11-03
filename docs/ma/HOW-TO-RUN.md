@@ -148,6 +148,6 @@ cd glp_multiagent && flutter test
 
 `KNOWN_RED` lists one test of this package, in `test/sovereign_screen_test.dart`; any other red test fails the suite.
 
-Section Q writes each runner's whole output to `/Users/udi/Grassroots/tmp/suite_q_dart.txt` and `/Users/udi/Grassroots/tmp/suite_q_flutter.txt` on every run.  The full suite is run only by Code, on `main`: `GLP/CLAUDE.md`, "Test suites".
+Section Q writes each runner's whole output and its json report into a directory of the run's own, `/Users/udi/Grassroots/tmp/suite-<branch>-<pid>/` (`q_dart.txt`, `q_dart.json`, `q_flutter.txt`, `q_flutter.json`), which it prints at its head.  The full suite is run only by Code, on `main`: `GLP/CLAUDE.md`, "Test suites".
 
 The interactive macOS app is not a route of the harness and is not described here; `GLP/CLAUDE.md`, "Flutter `glp_multiagent`", says how it is built.

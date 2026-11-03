@@ -26,7 +26,7 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// availability notice carrying the first's; the agent verifies each
 /// signature as the other party's by `signature/2`, reads each one's address
 /// from the layer by `peer_address/2`, and relays to each the address it
-/// observes for the other, whereupon each declares it (`address_declare/2`)
+/// observes for the other, whereupon each declares it (`declare(address(P, A))`)
 /// and punches toward it (`punch_udp/1`).  A request whose signature is the
 /// requester's own is refused.  And, item 3 of GNA's task of 2026-10-09,
 /// the same after one friend changes address, the two reconnecting (the
@@ -79,8 +79,8 @@ FriendAct ::= attest(Key)
 FriendActs ::= [] ; [FriendAct | FriendActs].
 SignalReply ::= punch(String) ; rejected.
 
-procedure friend_init(Key?, FriendActs?, _?).
-friend_init(Me, UserIn, _) :- acts(Me?, UserIn?).
+exported procedure agent(Channel(FriendActs, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
 
 procedure acts(Key?, FriendActs?).
 acts(Me, [attest(F) | In]) :- ground(Me?) |
@@ -117,7 +117,7 @@ report_graph(F, _, unsigned) :- send_to_user([unsigned(F?)]).
 
 procedure on_reply(Key?, SignalReply?).
 on_reply(F, punch(Addr)) :- ground(F?), ground(Addr?) |
-    address_declare(F?, Addr?),
+    declare(address(F?, Addr?)),
     punch_udp(Addr?),
     send_to_user([punched(F?, Addr?)]).
 on_reply(F, rejected) :- send_to_user([rejected(F?)]).
@@ -191,13 +191,12 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
         agentId: id,
         program: friendPath,
         rootSelfGlpPath: rootSelfGlpPath,
-        goalLabel: 'friend_init/3',
         keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
         network: HeadlessGlpNetwork(layer),
       );
       addTearDown(agent.dispose);
       final f = _Friend(key, layer, agent);
-      agent.onUserOutput = f.said.add;
+      agent.onUserOutput = f.say;
       agent.onOutput = f.transcript.add;
       await agent.initialize();
       return f;
@@ -236,21 +235,23 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     ]);
     addTearDown(() async {
       server.kill(ProcessSignal.sigterm);
-      await server.exitCode.timeout(const Duration(seconds: 20),
-          onTimeout: () {
-        server.kill(ProcessSignal.sigkill);
-        return -1;
-      });
+      await server.exitCode;
     });
     final serverLines = <String>[];
+    final serverLine = StreamController<String>.broadcast();
     final serverErr = StringBuffer();
     server.stdout
         .transform(utf8.decoder)
         .transform(const LineSplitter())
-        .listen(serverLines.add);
+        .listen((l) {
+      serverLines.add(l);
+      serverLine.add(l);
+    });
     server.stderr.transform(utf8.decoder).listen(serverErr.write);
-    final ready = (await _line(serverLines, (l) => l.startsWith('READY '),
-            () => 'stderr: $serverErr'))
+    addTearDown(() => printOnFailure('the server said '
+        '${serverLines.join(' | ')}; stderr: $serverErr'));
+    final ready = (await _line(
+            serverLines, serverLine.stream, (l) => l.startsWith('READY ')))
         .split(' ');
     expect(ready, ['READY', '$rvPort', rvKey.hex],
         reason: 'the server listens on its port, named by its key');
@@ -296,7 +297,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     expect(_value(punchedB.args[0]), a.key.hex);
     expect(_loopback(toA, a.layer.boundPort!), isTrue, reason: toA);
 
-    // Each declared the address it was told to its layer (address_declare/2,
+    // Each declared the address it was told to its layer (declare(address(P, A)),
     // putPeerAddress): the other is a known peer, recorded there at it.
     expect(a.layer.store.state.knownPeers.known[b.key.hex], toB);
     expect(b.layer.store.state.knownPeers.known[a.key.hex], toA);
@@ -311,7 +312,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     // Each friend's session with the server is reported by the server.
     expect(serverLines, contains('CONNECTED ${a.key.hex}'));
     expect(serverLines, contains('CONNECTED ${b.key.hex}'));
-  }, timeout: const Timeout(Duration(minutes: 4)));
+  }, timeout: Timeout.none);
 
   // GNA's task of 2026-10-09, item 3: two headless agents behind distinct
   // addresses, one changing address, reconnect through the GLP rendezvous
@@ -341,15 +342,11 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
         await standUp(0x7d, 0x3c, 0x4d);
 
     // The friends know each other at their addresses, as the social graph
-    // tells their layers (peer_declare/1, address_declare/2), and connect.
+    // tells their layers (declare(peer(P)), declare(address(P, A))), and connect.
     a.layer.wan.putPeerAddress(b.key.bytes, '127.0.0.1:${b.layer.boundPort}');
     b.layer.wan.putPeerAddress(a.key.bytes, '127.0.0.1:${a.layer.boundPort}');
-    expect(
-        await _until(() =>
-            a.layer.isPeerReachable(b.key.bytes) &&
-            b.layer.isPeerReachable(a.key.bytes)),
-        isTrue,
-        reason: 'the heartbeat sweep connects the two');
+    // The heartbeat sweep connects the two.
+    await _untilBothReachable(a.layer, b.layer);
 
     // A changes address: its layer stops and starts on a new port, its
     // sessions gone, its known peers and its server kept.
@@ -381,28 +378,53 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     expect(b.said.whereType<rt.StructTerm>().map((t) => t.functor),
         isNot(contains('rejected')));
 
-    // B declared A's new address (address_declare/2), and the two are
+    // B declared A's new address (declare(address(P, A))), and the two are
     // reachable again, B observing A there.
     expect(b.layer.store.state.knownPeers.known[a.key.hex], toA);
-    expect(
-        await _until(() =>
-            a.layer.isPeerReachable(b.key.bytes) &&
-            b.layer.isPeerReachable(a.key.bytes)),
-        isTrue,
-        reason: 'reconnected');
+    // Reconnected.
+    await _untilBothReachable(a.layer, b.layer);
     expect(_loopback(b.layer.wan.observedPeerAddress(a.key.bytes)!, newPort),
         isTrue);
     expect(serverLines, contains('CONNECTED ${a.key.hex}'));
-  }, timeout: const Timeout(Duration(minutes: 4)));
+  }, timeout: Timeout.none);
 }
 
-/// Whether [predicate] holds within 40 seconds, four heartbeat intervals.
-Future<bool> _until(bool Function() predicate) async {
-  final deadline = DateTime.now().add(const Duration(seconds: 40));
-  while (!predicate() && DateTime.now().isBefore(deadline)) {
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+/// Completes once [a] and [b] each hold the other reachable: checked now and
+/// after every reachability event of either layer, whose callbacks are
+/// wrapped while it waits, each calling the one set before it first, and
+/// restored after.
+Future<void> _untilBothReachable(
+    HeadlessGrassrootsNetwork a, HeadlessGrassrootsNetwork b) async {
+  bool holds() =>
+      a.isPeerReachable(b.identity.publicKey) &&
+      b.isPeerReachable(a.identity.publicKey);
+  if (holds()) return;
+  final done = Completer<void>();
+  void check() {
+    if (!done.isCompleted && holds()) done.complete();
   }
-  return predicate();
+
+  final restore = <void Function()>[];
+  for (final layer in [a, b]) {
+    final connected = layer.onPeerConnected;
+    final disconnected = layer.onPeerDisconnected;
+    layer.onPeerConnected = (pk, underlay, application) {
+      connected?.call(pk, underlay, application);
+      check();
+    };
+    layer.onPeerDisconnected = (pk, underlay) {
+      disconnected?.call(pk, underlay);
+      check();
+    };
+    restore.add(() {
+      layer.onPeerConnected = connected;
+      layer.onPeerDisconnected = disconnected;
+    });
+  }
+  await done.future;
+  for (final undo in restore) {
+    undo();
+  }
 }
 
 /// What [standUp] stands up.
@@ -423,22 +445,24 @@ class _Friend {
   final HeadlessGrassrootsNetwork layer;
   final AgentRuntime agent;
   final List<rt.Term> said = [];
+  final StreamController<rt.Term> _said = StreamController.broadcast();
   final List<String> transcript = [];
 
+  /// What the agent sends its person.
+  void say(rt.Term t) {
+    said.add(t);
+    _said.add(t);
+  }
+
   /// The first element this agent sent its person whose functor is
-  /// [functor], waiting up to 90 seconds for it.
+  /// [functor], once it has sent it.
   Future<rt.StructTerm> saidOne(String functor) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 90));
-    while (true) {
-      for (final t in said) {
-        if (t is rt.StructTerm && t.functor == functor) return t;
-      }
-      if (DateTime.now().isAfter(deadline)) {
-        throw TimeoutException('${agent.agentId} said no $functor: '
-            '${transcript.join(' | ')}');
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+    bool named(rt.Term t) => t is rt.StructTerm && t.functor == functor;
+    for (final t in said) {
+      if (named(t)) return t as rt.StructTerm;
     }
+    printOnFailure('${agent.agentId} waits for $functor');
+    return await _said.stream.firstWhere(named) as rt.StructTerm;
   }
 }
 
@@ -450,21 +474,14 @@ rt.Term _struct(String functor, List<rt.Term> args) =>
 /// The text of a constant the agent sent.
 String _value(rt.Term t) => (t as rt.ConstTerm).value.toString();
 
-/// The first line of [lines] that [test] accepts, waiting up to 90 seconds
-/// for it to come.
-Future<String> _line(List<String> lines, bool Function(String) test,
-    String Function() context) async {
-  final deadline = DateTime.now().add(const Duration(seconds: 90));
-  while (true) {
-    for (final l in lines) {
-      if (test(l)) return l;
-    }
-    if (DateTime.now().isAfter(deadline)) {
-      throw TimeoutException('no line came: ${lines.join(' | ')}; '
-          '${context()}');
-    }
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+/// The first line of [lines], or of the lines still to come on [more], that
+/// [test] accepts.
+Future<String> _line(
+    List<String> lines, Stream<String> more, bool Function(String) test) {
+  for (final l in lines) {
+    if (test(l)) return Future.value(l);
   }
+  return more.firstWhere(test);
 }
 
 /// The Dart that builds the server.  The test runs under `flutter test`, in

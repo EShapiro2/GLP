@@ -47,7 +47,7 @@ imported procedure questions#agent(Peer?, Stream(Msg)?, Stream(String),
 imported procedure questions#respond_coldcall(Offer?, Response,
     Stream(Ask(Question))).
 imported procedure questions#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 %% ---------------------------------------------------------------------------
 %% (iv) Section 3's responder: the card shows the offering peer before any

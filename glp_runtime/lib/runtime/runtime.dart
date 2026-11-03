@@ -10,6 +10,36 @@ import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/bytecode/runner.dart'
     show CallEnv, GoalRunner;
 
+/// What the runtime holds for one goal ([GlpRuntime._goals]): its argument
+/// registers, its program key and whether one was set, its module value and
+/// whether one was set (null is a value), its tail budget and the reader of a
+/// wait it began, the last two with the tick of the clock they were first set
+/// at, for the saved state's order.
+class GoalRecord {
+  final GoalId id;
+  CallEnv? env;
+  Object? program;
+  bool hasProgram = false;
+  Object? module;
+  bool hasModule = false;
+  int? budget;
+  int budgetSeq = 0;
+  HeapCell? waitReader;
+  int waitSeq = 0;
+
+  GoalRecord(this.id);
+
+  void setProgram(Object? p) {
+    program = p;
+    hasProgram = true;
+  }
+
+  void setModule(Object? m) {
+    module = m;
+    hasModule = true;
+  }
+}
+
 class GlpRuntime {
   final HeapFCP heap;
   final GoalQueue gq;
@@ -20,13 +50,25 @@ class GlpRuntime {
   /// is how `run/2` routes a launched goal to its module's ByteRunner.
   final Map<Object?, GoalRunner> runners = {};
 
-  final Map<GoalId, int> _budgets = <GoalId, int>{};
-  final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
-  final Map<GoalId, Object?> _goalPrograms = <GoalId, Object?>{};
-  /// Per-goal module VALUE — the ModuleTerm whose code the goal's PC indexes
-  /// into. The `self_module`/`run` substrate: every goal carries its module,
-  /// spawned goals inherit it.
-  final Map<GoalId, Object?> _goalModules = <GoalId, Object?>{};
+  /// The state held for each goal in the queue or suspended, by its id: its
+  /// argument registers, its program key, its module value (the ModuleTerm
+  /// whose code the goal's PC indexes into, the `self_module`/`run`
+  /// substrate: every goal carries its module, spawned goals inherit it), its
+  /// tail budget and the reader of a wait it began.  One record per goal
+  /// since 2026-11-01, in place of five maps keyed by the goal's id, each
+  /// written at every spawn and read at every drain.  A record is made by the
+  /// first setter called for its goal ([_goal]), which is the one for its
+  /// registers, and goes with [goalEnded].
+  final Map<GoalId, GoalRecord> _goals = <GoalId, GoalRecord>{};
+
+  /// A clock of the setters, for the saved state: the lists it writes keep
+  /// the order the old maps kept, first set first ([saveState]).
+  int _goalSeq = 0;
+
+  GoalRecord _goal(GoalId g) => _goals[g] ??= GoalRecord(g);
+
+  /// The record of goal [g], or null where the runtime holds none for it.
+  GoalRecord? goalRecordOf(GoalId g) => _goals[g];
 
   /// The goal-id counter.  Every goal takes its id from it --- a spawned goal,
   /// a goal run/2 or run/3 activates, a REPL goal, the goal an agent's host
@@ -45,10 +87,9 @@ class GlpRuntime {
   void incrementPendingTimers() => _pendingTimers++;
   void decrementPendingTimers() => _pendingTimers--;
 
-  // Wait state tracking for wait() guards
-  // Maps goalId to the reader ID that the timer will signal
-  // When goal resumes, we check if this reader is bound (timer fired)
-  final Map<int, HeapCell> _waitReaders = <int, HeapCell>{};
+  // Wait state tracking for wait() guards: the reader the timer will signal
+  // is the goal's record's ([GoalRecord.waitReader]); when the goal resumes,
+  // it checks whether that reader is bound (the timer fired).
 
   // Suspension tracking: the goals blocked on each reader, the suspended set
   // S by reader (IGLP dglp.tex, Definition "dGLP Transition System")
@@ -75,13 +116,16 @@ class GlpRuntime {
   MadContext? madContext;
 
   /// The declared places and their event streams (place_streams.dart): the
-  /// runtime's bookkeeping behind place_declare/3 and place_remove/1, kept
+  /// runtime's bookkeeping behind declare(place(P, R, E)) and remove(place(P)), kept
   /// whether a networking layer is bound or none is.
   late final PlaceStreams placeStreams = PlaceStreams(this);
 
   /// The person's identity this runtime holds: the key `self_key/1` answers,
   /// `sign/3` signs under, and the compiler certifies modules with. Set by the
-  /// engine at construction (multiagent/identity.dart).
+  /// engine at construction (multiagent/identity.dart); for an agent, the key
+  /// pair the runtime makes when it spawns the agent, before anything is
+  /// compiled or sent (GLP-Spec appendix-guards.tex, "Identity and
+  /// signature"; IGLP, Implementation Notes, "Boot").
   PersonIdentity? identity;
 
   /// The person send_to_user/1 emits to, the '_output'/1 kernel's two ends
@@ -99,16 +143,18 @@ class GlpRuntime {
 
   /// Clear wait state for a goal (after timer completes)
   void clearWaitState(int goalId) {
-    _waitReaders.remove(goalId);
+    _goals[goalId]?.waitReader = null;
   }
 
   /// Set wait state for a goal
   void setWaitReader(int goalId, HeapCell readerId) {
-    _waitReaders[goalId] = readerId;
+    final rec = _goal(goalId);
+    if (rec.waitReader == null) rec.waitSeq = ++_goalSeq;
+    rec.waitReader = readerId;
   }
 
   /// Get the wait reader for a goal (if any)
-  HeapCell? getWaitReader(int goalId) => _waitReaders[goalId];
+  HeapCell? getWaitReader(int goalId) => _goals[goalId]?.waitReader;
 
   // when_idle (GLP-Spec appendix-guards.tex at e3a8d52, the time guards):
   // "when_idle suspends while the machine has a Reduce or a Communicate to
@@ -148,7 +194,7 @@ class GlpRuntime {
 
   /// The number of goals whose state the runtime holds: those in the queue
   /// or suspended, once every goal that ended has left ([goalEnded]).
-  int get goalsHeld => _goalEnvs.length;
+  int get goalsHeld => _goals.length;
 
   /// Some goal may be waiting on when_idle.  An entry whose goal has since
   /// been re-tried by another reader and gone on is counted until
@@ -213,24 +259,30 @@ class GlpRuntime {
   /// zero, when the scheduler yields and the budget is reset to
   /// [tailRecursionBudgetInit].
   bool tailReduce(GoalId g) {
-    final current = _budgets[g] ?? tailRecursionBudgetInit;
+    final rec = _goal(g);
+    final current = rec.budget ?? tailRecursionBudgetInit;
     final next = (current <= 0) ? 0 : current - 1;
+    if (rec.budget == null) rec.budgetSeq = ++_goalSeq;
     if (next == 0) {
-      _budgets[g] = tailRecursionBudgetInit;
+      rec.budget = tailRecursionBudgetInit;
       return true;
     } else {
-      _budgets[g] = next;
+      rec.budget = next;
       return false;
     }
   }
 
-  int budgetOf(GoalId g) => _budgets[g] ?? tailRecursionBudgetInit;
+  int budgetOf(GoalId g) => _goals[g]?.budget ?? tailRecursionBudgetInit;
 
   void setGoalEnv(GoalId g, CallEnv env) {
-    _goalEnvs[g] = env;
+    _goal(g).env = env;
   }
 
-  CallEnv? getGoalEnv(GoalId g) => _goalEnvs[g];
+  CallEnv? getGoalEnv(GoalId g) => _goals[g]?.env;
+
+  /// A new goal's record, its registers set: what a spawn makes in one step,
+  /// setting its program and module on the record it returns.
+  GoalRecord addGoal(GoalId g, CallEnv env) => _goal(g)..env = env;
 
   /// Goal [g] has ended: it reduced with no goal of its body continuing it, or
   /// it failed.  It is no longer in the queue or the suspended set (dGLP
@@ -240,27 +292,23 @@ class GlpRuntime {
   /// 2026-10-02 they were kept for the whole run, some 500 bytes a goal: 1.6
   /// of the 5 GB live at the end of a year of sGLP's 100-agent social graph.
   void goalEnded(GoalId g) {
-    _goalEnvs.remove(g);
-    _goalPrograms.remove(g);
-    _goalModules.remove(g);
-    _budgets.remove(g);
-    _waitReaders.remove(g);
+    _goals.remove(g);
   }
 
   void setGoalProgram(GoalId g, Object? program) {
-    _goalPrograms[g] = program;
+    _goal(g).setProgram(program);
   }
 
-  Object? getGoalProgram(GoalId g) => _goalPrograms[g];
+  Object? getGoalProgram(GoalId g) => _goals[g]?.program;
 
   /// Set the module VALUE a goal runs (its ModuleTerm) — read back by
   /// `self_module`, inherited by spawned children.
   void setGoalModule(GoalId g, Object? module) {
-    _goalModules[g] = module;
+    _goal(g).setModule(module);
   }
 
   /// Get the module VALUE a goal runs (its ModuleTerm), or null if unset.
-  Object? getGoalModule(GoalId g) => _goalModules[g];
+  Object? getGoalModule(GoalId g) => _goals[g]?.module;
 
   /// The root self.glp's declared type-identity table (TGLP, Implementation
   /// Notes, "The tables"), keyed as the root's compiled code carries each
@@ -314,37 +362,50 @@ class GlpRuntime {
     for (final g in queued) {
       w.goalRef(g);
     }
-    w.uint(_goalEnvs.length);
-    for (final MapEntry(key: id, value: env) in _goalEnvs.entries) {
-      w.uint(id);
-      w.uint(env.argBySlot.length);
-      for (final MapEntry(key: slot, value: arg) in env.argBySlot.entries) {
+    // The goals' registers, programs, modules, budgets and wait readers, each
+    // list as the map it was until 2026-11-01 wrote it: the goals that have
+    // the thing, first set first.  Registers, programs and modules are set
+    // together, in the record's order; a budget and a wait reader begin
+    // later, in the order of their clock ([_goalSeq]).
+    final withEnv = [for (final g in _goals.values) if (g.env != null) g];
+    w.uint(withEnv.length);
+    for (final g in withEnv) {
+      final env = g.env!;
+      w.uint(g.id);
+      w.uint(env.length);
+      for (final MapEntry(key: slot, value: arg) in env.entries) {
         w.uint(slot);
         w.term(arg);
       }
     }
-    w.uint(_goalPrograms.length);
-    for (final MapEntry(key: id, value: program) in _goalPrograms.entries) {
+    final withProgram = [for (final g in _goals.values) if (g.hasProgram) g];
+    w.uint(withProgram.length);
+    for (final g in withProgram) {
+      final program = g.program;
       if (program != null && program is! String) {
-        throw StateError('goal $id runs a program keyed by '
+        throw StateError('goal ${g.id} runs a program keyed by '
             '${program.runtimeType}, which has no saved form');
       }
-      w.uint(id);
+      w.uint(g.id);
       w.optStr(program as String?);
     }
-    w.uint(_goalModules.length);
-    for (final MapEntry(key: id, value: module) in _goalModules.entries) {
+    final withModule = [for (final g in _goals.values) if (g.hasModule) g];
+    w.uint(withModule.length);
+    for (final g in withModule) {
+      final module = g.module;
       if (module != null && module is! ModuleTerm) {
-        throw StateError('goal $id carries a module of kind '
+        throw StateError('goal ${g.id} carries a module of kind '
             '${module.runtimeType}, which has no saved form');
       }
-      w.uint(id);
+      w.uint(g.id);
       w.module(module as ModuleTerm?);
     }
-    w.uint(_budgets.length);
-    for (final MapEntry(key: id, value: budget) in _budgets.entries) {
-      w.uint(id);
-      w.uint(budget);
+    final withBudget = [for (final g in _goals.values) if (g.budget != null) g]
+      ..sort((a, b) => a.budgetSeq.compareTo(b.budgetSeq));
+    w.uint(withBudget.length);
+    for (final g in withBudget) {
+      w.uint(g.id);
+      w.uint(g.budget!);
     }
     w.uint(suspended.length);
     for (final MapEntry(key: reader, value: goals) in suspended.entries) {
@@ -362,10 +423,12 @@ class GlpRuntime {
         w.cell(r);
       }
     }
-    w.uint(_waitReaders.length);
-    for (final MapEntry(key: id, value: reader) in _waitReaders.entries) {
-      w.uint(id);
-      w.cell(reader);
+    final withWait = [for (final g in _goals.values) if (g.waitReader != null) g]
+      ..sort((a, b) => a.waitSeq.compareTo(b.waitSeq));
+    w.uint(withWait.length);
+    for (final g in withWait) {
+      w.uint(g.id);
+      w.cell(g.waitReader!);
     }
     w.uint(_idleWaits.length);
     for (final MapEntry(key: id, value: pair) in _idleWaits.entries) {
@@ -381,7 +444,7 @@ class GlpRuntime {
   /// waits on a timer (wait/1, wait_until/1) is restored suspended on its
   /// timer's reader; the timer itself did not survive the termination.
   void restoreState(StateReader r) {
-    if (gq.length != 0 || _goalEnvs.isNotEmpty || suspended.isNotEmpty) {
+    if (gq.length != 0 || _goals.isNotEmpty || suspended.isNotEmpty) {
       throw StateError('an agent\'s state is restored into a runtime that '
           'already holds goals');
     }
@@ -400,19 +463,21 @@ class GlpRuntime {
         final slot = r.uint();
         args[slot] = r.term();
       }
-      _goalEnvs[id] = CallEnv(args: args);
+      _goal(id).env = CallEnv(args: args);
     }
     for (var i = r.uint(); i > 0; i--) {
       final id = r.uint();
-      _goalPrograms[id] = r.optStr();
+      _goal(id).setProgram(r.optStr());
     }
     for (var i = r.uint(); i > 0; i--) {
       final id = r.uint();
-      _goalModules[id] = r.module();
+      _goal(id).setModule(r.module());
     }
     for (var i = r.uint(); i > 0; i--) {
       final id = r.uint();
-      _budgets[id] = r.uint();
+      _goal(id)
+        ..budget = r.uint()
+        ..budgetSeq = ++_goalSeq;
     }
     for (var i = r.uint(); i > 0; i--) {
       final reader = r.cell();
@@ -424,7 +489,9 @@ class GlpRuntime {
     }
     for (var i = r.uint(); i > 0; i--) {
       final id = r.uint();
-      _waitReaders[id] = r.cell();
+      _goal(id)
+        ..waitReader = r.cell()
+        ..waitSeq = ++_goalSeq;
     }
     for (var i = r.uint(); i > 0; i--) {
       final id = r.uint();
@@ -436,7 +503,10 @@ class GlpRuntime {
 
   /// The goals held, by id, and the program key each runs: what a restarted
   /// agent's host makes runners for.
-  Map<GoalId, Object?> get goalPrograms => Map.unmodifiable(_goalPrograms);
+  Map<GoalId, Object?> get goalPrograms => Map.unmodifiable({
+        for (final g in _goals.values)
+          if (g.hasProgram) g.id: g.program,
+      });
 
   /// Remove a goal from every entry of [suspended] it is in: those of the
   /// readers it waits on, which [_suspendedOn] holds.

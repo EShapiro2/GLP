@@ -23,6 +23,7 @@ import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 import 'fixture_term.dart';
 import 'programs_dir.dart';
@@ -65,14 +66,17 @@ class _Person {
 
   _Person._(this.tester, this.agent, this.ui);
 
-  /// Boot [entry] of the fixture in programs/tests/vglp/[dir].
+  /// Boot the fixture in programs/tests/vglp/[dir], its agent started from
+  /// agent(ch(_?,_),ch(_?,_)), every agent's initial goal (GLP-Spec
+  /// maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes,
+  /// "Boot"), and the person's first act naming [entry], the entry the
+  /// fixture's agent/2 runs.
   static Future<_Person> boot(WidgetTester tester, String entry,
       {String dir = 'bridge'}) async {
     final programs = programsDir();
     final agent = AgentRuntime(
       agentId: 'bob',
       program: '$programs/tests/vglp/$dir',
-      goalLabel: '$entry/3',
       rootSelfGlpPath: '$programs/self.glp',
     );
     late final _Person person;
@@ -87,6 +91,7 @@ class _Person {
     agent.onLog = (_, __) {};
     agent.onSendMadMessage = (_, __) async {};
     await tester.runAsync(() => agent.initialize());
+    await tester.runAsync(() => agent.injectUserInput(rt.ConstTerm(entry)));
     person._replay();
     tester.view.physicalSize = const Size(800, 3000);
     tester.view.devicePixelRatio = 1.0;
@@ -1320,13 +1325,21 @@ Drawn    ::= card_w(_) ; YesNo.
 
 imported procedure asker#ask(Peer?, Stream(YesNo), Stream(Ask(Question))).
 imported procedure asker#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 exported procedure ask_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 ask_init(_, Gs, _) :-
     asker # ask(bob, $answers, Asks),
     asker # dispatch(Asks?, ch(Gs?, Ds), _),
     send_to_user(Ds?).
+
+Selected ::= [Constant | PersonIn(Drawn)].
+
+exported procedure agent(Channel(Selected, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch([E | Gs], []), ch(N, [])) :- start(E?, Gs?, N?).
+
+procedure start(Constant?, PersonIn(Drawn)?, Stream(NetMsg(Constant))?).
+start(ask_init, Gs, N) :- ask_init(bob, Gs?, N?).
 ''');
     }
 
@@ -1341,7 +1354,6 @@ ask_init(_, Gs, _) :-
       final agent = AgentRuntime(
         agentId: 'bob',
         program: '$programs/tests/vglp/$name',
-        goalLabel: 'ask_init/3',
         rootSelfGlpPath: '$programs/self.glp',
       );
       agent.onLog = (_, __) {};

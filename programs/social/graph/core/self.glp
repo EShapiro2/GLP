@@ -11,8 +11,12 @@
 %% mini-app's own type, and the super-app activates it by the template's
 %% opaque instance at that type (GSG paper, Sections 3 and 4).  Loaded as part
 %% of ../ (the UI boot plays), the agent is called as core # agent, through
-%% the forwarder below; under :boot (../../superapp_boot.glp) sg_init/3 runs
-%% one super-app per isolate.
+%% the forwarder below; under :boot (../../superapp_boot.glp) sg_init/4 runs
+%% one super-app per isolate.  No clause here names a peer by an atom: an
+%% agent is its public key, and a readable name such as alice is a variable
+%% standing for a key (IGLP, Remark "Agent Names"); an agent learns its peers'
+%% keys from its person (IGLP, Implementation Notes, "Boot"), and a play or a
+%% boot is given them by the goal that starts it.
 
 %% The questions of the super-app's own person interface (home.vglp), as its
 %% compilation home.glp carries them (vGLP, Definition "Canonical
@@ -45,7 +49,7 @@ HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(
 %% whole, for a friend's request to connect and an introduction.  The draws leave by send_to_user/1, and the network
 %% stream by send_to_net/1.
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
-imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(_), Stream(Output))).
+imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 exported procedure superapp(Key?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp(Id, Grants, NetIn) :-
@@ -67,7 +71,7 @@ superapp(Id, Grants, NetIn) :-
 %% consent writer, which home's card answers, and which one reader alone may
 %% hold; until it is answered the message is not ground, so a copy of it
 %% would wait for the very answer it carries the card for.  superapp/3 above
-%% and superapp_ui/3 (home_ui.glp) reach it by scope.
+%% and superapp_ui/4 (home_ui.glp) reach it by scope.
 procedure split_out(AgentToUserStream?, Stream(Output), AgentToUserStream).
 split_out([M | Ms], [N? | Ns?], [M1? | Seen?]) :- notice(M?, N, M1), split_out(Ms?, Ns, Seen).
 split_out([], [], []).
@@ -150,7 +154,7 @@ NoticeContent ::= befriend(Key)
 Output ::= Notice.
 
 %% The notices, onto the program's output to the person; the person's input
-%% other than grants is not read.  superapp_ui/3 reaches it by scope.
+%% other than grants is not read.  superapp_ui/4 reaches it by scope.
 procedure show_notices(Channel(Stream(_), Stream(Output))?, Stream(Output)?).
 show_notices(ch(_, Out?), Shown) :- relay(Shown?, Out).
 
@@ -219,82 +223,166 @@ date_msgs(_, [], []).
 exported procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 agent(Id, UserIn, NetIn, Outs) :- agent # agent(Id?, UserIn?, NetIn?, Outs?).
 
-%% The super-app as a play, alice with a scripted Bob: what the Flutter agent
-%% runtime starts (home_ui.glp).
-imported procedure home_ui#superapp_ui(Key?, PersonIn(HomeDrawn)?, NetInStream?).
-exported procedure superapp_ui(Key?, PersonIn(HomeDrawn)?, NetInStream?).
-superapp_ui(Id, Grants, NetIn) :- home_ui # superapp_ui(Id?, Grants?, NetIn?).
+%% The term an attestation signs, attest(Id, Other) (agent.glp, the
+%% attestation of Section 5.5), as play_attest/6 takes it apart, or the
+%% constant unsigned where the attestation is not a signed term.
+Attestation ::= attest(Key, Key) ; unsigned.
 
-imported procedure superapp_plays#play_invite(Stream(Opaque), Stream(Opaque)).
-exported procedure play_invite(Stream(Opaque), Stream(Opaque)).
-play_invite(A?, B?) :- superapp_plays # play_invite(A, B).
+%% route_to(K, Net, Mine, Rest): the network messages Net of the agents of a
+%% play in one heap, those addressed to the agent K on Mine, its network
+%% input, and the rest on Rest, for the next agent's route_to/4; the network
+%% of a play is a chain of them, one for each agent, by its key.
+procedure route_to(Key?, NetOutStream?, NetInStream, NetOutStream).
+route_to(K, [msg(D, C) | Ms], [msg(D?, C?) | Mine?], Rest?) :-
+    D? =?= K? | route_to(K?, Ms?, Mine, Rest).
+route_to(K, [msg(D, C) | Ms], Mine?, [msg(D?, C?) | Rest?]) :-
+    otherwise | route_to(K?, Ms?, Mine, Rest).
+route_to(_, [], [], []).
 
-imported procedure superapp_plays#play_invite_declined(Stream(Opaque), Stream(Opaque)).
-exported procedure play_invite_declined(Stream(Opaque), Stream(Opaque)).
-play_invite_declined(A?, B?) :- superapp_plays # play_invite_declined(A, B).
+%% The super-app as a play, the person with a scripted peer for each key the
+%% person knows: what the Flutter agent runtime starts (home_ui.glp).
+imported procedure home_ui#superapp_ui(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
+exported procedure superapp_ui(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
+superapp_ui(Id, Peers, Grants, NetIn) :- home_ui # superapp_ui(Id?, Peers?, Grants?, NetIn?).
 
-imported procedure superapp_plays#play_attest(String, String, String, _).
-exported procedure play_attest(String, String, String, _).
-play_attest(S?, K?, H?, T?) :- superapp_plays # play_attest(S, K, H, T).
+%% The plays of superapp_plays.glp, each given the keys of its two agents,
+%% the first the inviter's or the caller's and the second the other's.
+imported procedure superapp_plays#play_invite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+exported procedure play_invite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+play_invite(P, Q, A?, B?) :- superapp_plays # play_invite(P?, Q?, A, B).
 
-imported procedure superapp_plays#play_both_ways(Stream(AgentContent), Stream(AgentContent)).
-exported procedure play_both_ways(Stream(AgentContent), Stream(AgentContent)).
-play_both_ways(A?, B?) :- superapp_plays # play_both_ways(A, B).
+imported procedure superapp_plays#play_invite_declined(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+exported procedure play_invite_declined(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+play_invite_declined(P, Q, A?, B?) :- superapp_plays # play_invite_declined(P?, Q?, A, B).
 
-imported procedure superapp_plays#play_not_a_friend(Stream(AgentContent), Stream(AgentContent)).
-exported procedure play_not_a_friend(Stream(AgentContent), Stream(AgentContent)).
-play_not_a_friend(A?, B?) :- superapp_plays # play_not_a_friend(A, B).
+imported procedure superapp_plays#play_attest(Key?, Key?, String, String, String, Attestation).
+exported procedure play_attest(Key?, Key?, String, String, String, Attestation).
+play_attest(P, Q, S?, K?, H?, T?) :- superapp_plays # play_attest(P?, Q?, S, K, H, T).
+
+imported procedure superapp_plays#play_both_ways(Key?, Key?, Stream(AgentContent), Stream(AgentContent)).
+exported procedure play_both_ways(Key?, Key?, Stream(AgentContent), Stream(AgentContent)).
+play_both_ways(P, Q, A?, B?) :- superapp_plays # play_both_ways(P?, Q?, A, B).
+
+imported procedure superapp_plays#play_not_a_friend(Key?, Key?, Stream(AgentContent), Stream(AgentContent)).
+exported procedure play_not_a_friend(Key?, Key?, Stream(AgentContent), Stream(AgentContent)).
+play_not_a_friend(P, Q, A?, B?) :- superapp_plays # play_not_a_friend(P?, Q?, A, B).
 
 
-imported procedure superapp_plays#play_invite_timed(Integer).
-exported procedure play_invite_timed(Integer).
-play_invite_timed(Ms?) :- superapp_plays # play_invite_timed(Ms).
+imported procedure superapp_plays#play_invite_timed(Key?, Key?, Integer).
+exported procedure play_invite_timed(Key?, Key?, Integer).
+play_invite_timed(P, Q, Ms?) :- superapp_plays # play_invite_timed(P?, Q?, Ms).
 
-imported procedure superapp_plays#sg_init(Key?, Constant?, NetInStream?).
-exported procedure sg_init(Key?, Constant?, NetInStream?).
-sg_init(Id, Role, NetIn) :- superapp_plays # sg_init(Id?, Role?, NetIn?).
+imported procedure superapp_plays#sg_init(Key?, Constant?, List(Key)?, NetInStream?).
+exported procedure sg_init(Key?, Constant?, List(Key)?, NetInStream?).
+sg_init(Id, Role, Peers, NetIn) :- superapp_plays # sg_init(Id?, Role?, Peers?, NetIn?).
 
 imported procedure superapp_plays#play_load(String?, Constant, String).
 exported procedure play_load(String?, Constant, String).
 play_load(N, Kind?, K?) :- superapp_plays # play_load(N?, Kind, K).
 
-imported procedure superapp_plays#play_install(String?, Constant?, Stream(Constant)).
-exported procedure play_install(String?, Constant?, Stream(Constant)).
-play_install(N, App, I?) :- superapp_plays # play_install(N?, App?, I).
+imported procedure superapp_plays#play_install(Key?, String?, Constant?, Stream(Constant)).
+exported procedure play_install(Key?, String?, Constant?, Stream(Constant)).
+play_install(P, N, App, I?) :- superapp_plays # play_install(P?, N?, App?, I).
 
 %% The super-app's refusal of a forgery at each of its four sites (Section 6.1).
-imported procedure superapp_plays#play_forged_cert(Stream(Constant)).
-exported procedure play_forged_cert(Stream(Constant)).
-play_forged_cert(I?) :- superapp_plays # play_forged_cert(I).
+imported procedure superapp_plays#play_forged_cert(Key?, Stream(Constant)).
+exported procedure play_forged_cert(Key?, Stream(Constant)).
+play_forged_cert(P, I?) :- superapp_plays # play_forged_cert(P?, I).
 
-imported procedure superapp_plays#play_forged_invite(AgentToUserStream).
-exported procedure play_forged_invite(AgentToUserStream).
-play_forged_invite(O?) :- superapp_plays # play_forged_invite(O).
+imported procedure superapp_plays#play_forged_invite(Key?, Key?, AgentToUserStream).
+exported procedure play_forged_invite(Key?, Key?, AgentToUserStream).
+play_forged_invite(P, Q, O?) :- superapp_plays # play_forged_invite(P?, Q?, O).
 
-imported procedure superapp_plays#play_forged_join(AgentToUserStream).
-exported procedure play_forged_join(AgentToUserStream).
-play_forged_join(O?) :- superapp_plays # play_forged_join(O).
+imported procedure superapp_plays#play_forged_join(Key?, Key?, AgentToUserStream).
+exported procedure play_forged_join(Key?, Key?, AgentToUserStream).
+play_forged_join(P, Q, O?) :- superapp_plays # play_forged_join(P?, Q?, O).
 
-imported procedure superapp_plays#play_forged_root(AgentToUserStream).
-exported procedure play_forged_root(AgentToUserStream).
-play_forged_root(O?) :- superapp_plays # play_forged_root(O).
+imported procedure superapp_plays#play_forged_root(Key?, Key?, AgentToUserStream).
+exported procedure play_forged_root(Key?, Key?, AgentToUserStream).
+play_forged_root(P, Q, O?) :- superapp_plays # play_forged_root(P?, Q?, O).
 
-imported procedure superapp_plays#play_coins(Stream(Opaque), Stream(Opaque)).
-exported procedure play_coins(Stream(Opaque), Stream(Opaque)).
-play_coins(A?, B?) :- superapp_plays # play_coins(A, B).
+imported procedure superapp_plays#play_coins(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+exported procedure play_coins(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+play_coins(P, Q, A?, B?) :- superapp_plays # play_coins(P?, Q?, A, B).
 
-imported procedure superapp_plays#play_cssn(Stream(Opaque), Stream(Opaque)).
-exported procedure play_cssn(Stream(Opaque), Stream(Opaque)).
-play_cssn(A?, B?) :- superapp_plays # play_cssn(A, B).
+imported procedure superapp_plays#play_cssn(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+exported procedure play_cssn(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+play_cssn(P, Q, A?, B?) :- superapp_plays # play_cssn(P?, Q?, A, B).
 
-imported procedure superapp_plays#play_both(Stream(Opaque), Stream(Opaque), Stream(Opaque), Stream(Opaque)).
-exported procedure play_both(Stream(Opaque), Stream(Opaque), Stream(Opaque), Stream(Opaque)).
-play_both(A?, B?, C?, D?) :- superapp_plays # play_both(A, B, C, D).
+imported procedure superapp_plays#play_both(Key?, Key?, Stream(Opaque), Stream(Opaque), Stream(Opaque), Stream(Opaque)).
+exported procedure play_both(Key?, Key?, Stream(Opaque), Stream(Opaque), Stream(Opaque), Stream(Opaque)).
+play_both(P, Q, A?, B?, C?, D?) :- superapp_plays # play_both(P?, Q?, A, B, C, D).
 
-imported procedure superapp_plays#play_reinvite(Stream(Opaque), Stream(Opaque)).
-exported procedure play_reinvite(Stream(Opaque), Stream(Opaque)).
-play_reinvite(A?, B?) :- superapp_plays # play_reinvite(A, B).
+imported procedure superapp_plays#play_reinvite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+exported procedure play_reinvite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+play_reinvite(P, Q, A?, B?) :- superapp_plays # play_reinvite(P?, Q?, A, B).
 
-imported procedure superapp_plays#play_sovereign(Stream(Opaque), Stream(Opaque)).
-exported procedure play_sovereign(Stream(Opaque), Stream(Opaque)).
-play_sovereign(A?, B?) :- superapp_plays # play_sovereign(A, B).
+imported procedure superapp_plays#play_sovereign(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+exported procedure play_sovereign(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+play_sovereign(P, Q, A?, B?) :- superapp_plays # play_sovereign(P?, Q?, A, B).
+
+%% =============================================================================
+%% THE AGENT'S INITIAL GOAL
+%% =============================================================================
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel
+%% first and the network channel second (GLP-Spec maglp.tex, Definition
+%% "Multiagent GLP"), on a phone as in a simulation: "A boot defines no
+%% agent/2: the program it loads answers the initial goal, in a simulation as
+%% on a phone, and the person goal's first act names the entry the program
+%% starts" (IGLP 0e1c9e0, Implementation Notes, "Boot").  self_key/1 first
+%% makes the agent's key, before which nothing is sent on the network (GLP-Spec
+%% appendix-guards.tex, "Identity and signature").  The first act carries the
+%% entry's arguments: the person's key and the keys of the peers the person
+%% knows ("An agent learns the keys of its peers from its person"), and, for
+%% a boot's phone, the person's part in its script: superapp_ui/4 (the
+%% super-app with a live person), sg_init/4 (the boots of programs/social), and
+%% the smartphone of each app's boot (programs/apps).  The person's acts after
+%% the first are the grants of the super-app's person channel, which
+%% superapp_ui/4 reads; a boot's person closes the stream after the first act.
+CoreAct ::= superapp_ui(Key, List(Key))
+          ; sg_init(Key, Constant, List(Key))
+          ; gsg_phone(Constant, Key, List(Key))
+          ; gsn_phone(Constant, Key, List(Key))
+          ; gkk_phone(Constant, Key, List(Key))
+          ; gsnp_phone(Constant, Key, List(Key))
+          ; gai_phone(Constant, Key, List(Key))
+          ; gc_phone(Constant, Key, List(Key)).
+CoreIn  ::= [] ; [CoreAct | Grants].
+Grants  ::= [] ; [Input(HomeDrawn) | Grants].
+
+%% The smartphones of the apps' boots (programs/apps/<app>_boot.glp), each a
+%% module of this directory, <app>_phone.glp.
+imported procedure gsg_phone#gsg_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure gsn_phone#gsn_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure gkk_phone#gkk_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure gsnp_phone#gsnp_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure gai_phone#gai_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure gc_phone#gc_phone(Constant?, Key?, List(Key)?, NetInStream?).
+
+exported procedure agent(Channel(CoreIn, Stream(Constant))?, Channel(NetInStream, NetOutStream)?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), core_start(In?, N?).
+
+%% The entry the person's first act names, on the network input.
+procedure core_start(CoreIn?, NetInStream?).
+core_start([superapp_ui(P, Qs) | Gs], N) :-
+    person_grants(Gs?, Grants), superapp_ui(P?, Qs?, Grants?, N?).
+core_start([sg_init(P, M, Qs) | _], N) :- sg_init(P?, M?, Qs?, N?).
+core_start([gsg_phone(R, P, Qs) | _], N) :- gsg_phone # gsg_phone(R?, P?, Qs?, N?).
+core_start([gsn_phone(R, P, Qs) | _], N) :- gsn_phone # gsn_phone(R?, P?, Qs?, N?).
+core_start([gkk_phone(R, P, Qs) | _], N) :- gkk_phone # gkk_phone(R?, P?, Qs?, N?).
+core_start([gsnp_phone(R, P, Qs) | _], N) :- gsnp_phone # gsnp_phone(R?, P?, Qs?, N?).
+core_start([gai_phone(R, P, Qs) | _], N) :- gai_phone # gai_phone(R?, P?, Qs?, N?).
+core_start([gc_phone(R, P, Qs) | _], N) :- gc_phone # gc_phone(R?, P?, Qs?, N?).
+core_start([], _).
+
+%% The person's grants after the first act, onto the super-app's person
+%% channel, which never closes (vGLP, Section 6.3): where the person's stream
+%% closes, no grant comes again, and the channel's grants are held for good,
+%% on a fresh channel nothing writes, as hold_person/1 holds a person channel.
+procedure person_grants(Grants?, PersonIn(HomeDrawn)).
+person_grants([G | Gs], [G? | Ps?]) :- person_grants(Gs?, Ps).
+person_grants([], Ps?) :- new_channel(A, B), hold_grants(A?, B?, Ps).
+
+procedure hold_grants(Channel(PersonOut(HomeDrawn), PersonIn(HomeDrawn))?, Channel(PersonIn(HomeDrawn), PersonOut(HomeDrawn))?, PersonIn(HomeDrawn)).
+hold_grants(ch([_ | Ds], Gs?), B, Ps?) :- hold_grants(ch(Ds?, Gs), B?, Ps).

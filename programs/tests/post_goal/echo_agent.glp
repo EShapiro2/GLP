@@ -1,11 +1,15 @@
 %% echo_agent.glp --- the one program of an agent its host runs
 %% (multiagent/agent_runtime.dart; glp_runtime/test/engine/post_goal_test.dart):
-%% the host posts agent_init(Id, UserIn?, NetIn?), checked, and each of the
-%% person's acts it injects into UserIn is sent back to the person.
+%% the host posts agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)), every
+%% agent's initial goal (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP,
+%% Implementation Notes, "Boot"), checked, and each of the person's acts it
+%% injects into UserIn is sent back to the person.
 
-procedure agent_init(Constant?, Stream(Constant)?, Stream(_)?).
-agent_init(_, Acts, _) :- echo(Acts?).
+Echoed ::= heard(Constant).
 
-procedure echo(Stream(Constant)?).
-echo([A|As]) :- send_to_user([heard(A?)]), echo(As?).
-echo([]).
+exported procedure agent(Channel(Stream(Constant), Stream(Echoed))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(Acts, Out?), ch(_, [])) :- echo(Acts?, Out).
+
+procedure echo(Stream(Constant)?, Stream(Echoed)).
+echo([A|As], [heard(A?)|Out?]) :- echo(As?, Out).
+echo([], []).

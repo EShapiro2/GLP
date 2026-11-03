@@ -23,6 +23,7 @@
 #   GF - Grassroots federation records, transactions and platform (GFWC)
 #   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
 #   TY - The tight typing discipline: no untyped procedure and no open type off test/OPEN_TYPES
+#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -65,7 +66,7 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET"
 FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
@@ -1259,20 +1260,30 @@ check "pf clause-4 shape (walk)" "R3 = 6" "$a32"
 check "p67 pt1 chain (gst)" "T = gt(a, gt(b, gnil, gnil), gt(c, gnil, gnil))" "$a32"
 
 # --- A33: Seeded random (random/4, GLP-ICLP appendix-guards) ---
-# Value in [1,N]; NextSeed a function of Seed alone; threading reproduces
-# exactly (rthree draws three, threading NextSeed); N < 1 fails at the guard.
+# SplitMix64 (GLP-ICLP-2026 2fc437f).  Value in [1,N]; NextSeed a function of
+# Seed alone; threading reproduces exactly (rthree draws three, threading
+# NextSeed); N < 1 fails at the guard.  cover is GLP #11's covering test
+# (Code_inbox 2026-11-01 07:26 UTC): from 0, 2147483647 and -1, a hundred draws
+# with bound 6 all in [1, 6], and the three streams differ.  The pinned values
+# were computed from the paper's sentences in Python, independently of the code.
 echo "--- A33: Seeded random ---"
 a33=$("$REPL_RUN" <<HEREDOC
 $TYPED/random_test.glp
 random(42, 6, V, NS).
 rthree(1, R).
+cover(0, C0).
+cover(2147483647, C1).
+cover(-1, C2).
 random(42, 0, VBad, NSBad).
 :quit
 HEREDOC
 2>&1)
-check "random single draw value" "V = 1" "$a33"
-check "random single draw next seed" "NS = 705894" "$a33"
-check "random threaded triple reproduces" "R = rt(808, 250, 74)" "$a33"
+check "random single draw value" "V = 4" "$a33"
+check "random single draw next seed" "NS = -7046029254386353089" "$a33"
+check "random threaded triple reproduces" "R = rt(230, 507, 4)" "$a33"
+check "random cover seed 0" "C0 = cover(100, \[3, 6, 4, 5, 4\])" "$a33"
+check "random cover seed 2147483647" "C1 = cover(100, \[5, 6, 6, 5, 5\])" "$a33"
+check "random cover seed -1" "C2 = cover(100, \[3, 5, 5, 3, 4\])" "$a33"
 check "random N<1 fails at guard" "→ failed" "$a33"
 
 # --- A33a: Splitting a seed (split_random_seed/3, GLP-ICLP appendix-guards) ---
@@ -1295,15 +1306,15 @@ firsts(42, G).
 :quit
 HEREDOC
 2>&1)
-check "split_random_seed S1" "S1 = -4767286540954276203" "$a33a"
-check "split_random_seed S2" "S2 = 2949826092126892291" "$a33a"
+check "split_random_seed S1" "S1 = 3250621881602310087" "$a33a"
+check "split_random_seed S2" "S2 = 540350159304224772" "$a33a"
 check "split streams unshifted (42)" "N = 0" "$a33a"
 check "split streams unshifted (7)" "N7 = 0" "$a33a"
 check "split shift control" "C = 1" "$a33a"
 check "split second run reproduces" "R = yes" "$a33a"
-check "split first draws" "F = firsts(705895, 2145617533, 1051972607)" "$a33a"
-check "split second split reproduces" "T1 = -4767286540954276203" "$a33a"
-check "split second first draws reproduce" "G = firsts(705895, 2145617533, 1051972607)" "$a33a"
+check "split first draws" "F = firsts(745971022, 1039421601, 1816191086)" "$a33a"
+check "split second split reproduces" "T1 = 3250621881602310087" "$a33a"
+check "split second first draws reproduce" "G = firsts(745971022, 1039421601, 1816191086)" "$a33a"
 
 # --- A34: Ackermann on Peano numerals (book/recursive/arithmetic_trees) ---
 # Clause 3's guard was compound(M?), ground(M?): compound refused M = 0, so
@@ -2159,7 +2170,7 @@ neg_srsw_inline=$("$REPL_RUN" <<HEREDOC
 HEREDOC
 2>&1)
 check "NEG SRSW / :boot, no program directory: the agent's load is refused by the SRSW pass" "Agent alice failed to initialize: \[semantic\] SRSW violations found:" "$neg_srsw_inline"
-check "NEG SRSW / :boot, no program directory: the refusal names the reader occurring twice" "agent_init/2: Line 18: Reader variable \"Id?\" occurs 2 times" "$neg_srsw_inline"
+check "NEG SRSW / :boot, no program directory: the refusal names the reader occurring twice" "agent_init/2: Line 19: Reader variable \"Id?\" occurs 2 times" "$neg_srsw_inline"
 check_not "NEG SRSW / :boot, no program directory: the boot does not settle" "Boot settled" "$neg_srsw_inline"
 neg_srsw_dir=$("$REPL_RUN" <<HEREDOC
 :boot $GLP_DIR/programs/tests/neg_boot_programdir/srsw_boot.glp
@@ -2245,7 +2256,7 @@ neg_guard_inline=$("$REPL_RUN" <<HEREDOC
 :quit
 HEREDOC
 2>&1)
-check "NEG guards / :boot, no program directory: the agent's load is refused for the guard" "Agent alice failed to initialize: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 16" "$neg_guard_inline"
+check "NEG guards / :boot, no program directory: the agent's load is refused for the guard" "Agent alice failed to initialize: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 17" "$neg_guard_inline"
 check_not "NEG guards / :boot, no program directory: the boot does not settle" "Boot settled" "$neg_guard_inline"
 neg_guard_bootdir=$("$REPL_RUN" <<HEREDOC
 :boot $GLP_DIR/programs/tests/neg_boot_programdir/guard_boot.glp
@@ -2297,7 +2308,7 @@ echo "--- Unfriend (play_unfriend_send/recv/absent) ---"
 
 g_uf_send=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_unfriend_send.
+play_unfriend_send(alice, bob).
 :quit
 HEREDOC
 2>&1)
@@ -2306,7 +2317,7 @@ check "SG unfriend_send teardown on friend channel" "msg(alice, bob, unfriend)" 
 
 g_uf_recv=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_unfriend_recv.
+play_unfriend_recv(alice, bob).
 :quit
 HEREDOC
 2>&1)
@@ -2315,7 +2326,7 @@ check "SG unfriend_recv notifies user" "unfriended(alice)" "$g_uf_recv"
 
 g_uf_abs=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_unfriend_absent.
+play_unfriend_absent(alice, bob, carol).
 :quit
 HEREDOC
 2>&1)
@@ -2335,13 +2346,13 @@ echo "--- Introduction: both parties must be friends (play_introduce_*) ---"
 
 g_intro=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_introduce_both.
-play_introduce_one.
-play_introduce_other.
-play_introduce_neither.
-play_request_intro_both.
-play_request_intro_stranger.
-play_request_intro_no_anchor.
+play_introduce_both(alice, bob, carol).
+play_introduce_one(alice, bob, carol).
+play_introduce_other(alice, bob, carol).
+play_introduce_neither(alice, bob, carol, dave).
+play_request_intro_both(alice, bob, carol).
+play_request_intro_stranger(alice, bob, carol).
+play_request_intro_no_anchor(alice, bob, carol).
 :quit
 HEREDOC
 2>&1)
@@ -3323,8 +3334,10 @@ check "Sovereign market: the four parties outside the sovereign layer are unmove
 
 echo "--- The live-person harness (sovereign_ui): the central bank on the app's screen ---"
 
-# The entry the app starts and the Dart bridge runs, sovereign_ui/3
-# (programs/currencies/sovereign/play_ui.glp), with no grant: its person
+# The entry the agent's initial goal starts on the person's first act,
+# sovereign_ui/4 (programs/currencies/sovereign/play_ui.glp), given the central
+# bank's key and its two peers' by readable names (IGLP, Remark "Agent
+# Names"), with no grant: its person
 # stream is open and stays so, as a person channel never closes (vGLP,
 # Definition "Person Channel, Person Writer, GLP with Persons, Grant";
 # PersonIn ::= [_ | PersonIn]).  The central bank's request form --- the
@@ -3339,7 +3352,7 @@ echo "--- The live-person harness (sovereign_ui): the central bank on the app's 
 n4_ui=$("$REPL_RUN" <<HEREDOC
 $SOV
 :limit 50000000
-sovereign_ui(cb, G?, []).
+sovereign_ui(cb, [diana, frank], G?, []).
 :quit
 HEREDOC
 2>&1)
@@ -3616,7 +3629,7 @@ check "CVA compiler: vGLP's coins, GC's mint, swap and pay with coins of one uni
 check "CVA compiler: vGLP's wardclose, child_close taking a listed role whose base is not a guarding role, its guarded part opened by the child, certified by GSC's check/2, compiled to the platform it prints (vGLP f0acbc1)" "wardclose/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's numbers, act schemas with numbers, a multiplicity, a variable local to a role and a constraint checked by the role whose local variable it names, certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "numbers/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's bonds, GB's mint_bond, advance and redeem_bc with GKK's establish and acquaint, GB's mint_coin and swap_cb, and dawn, certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "bonds/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: vGLP's intros, GKK's acquaintance and introduction with no identity, its introduction at a commit, certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "intros/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's intros, GKK's acquaintance and introduction with no identity, its introduction at a commit, with peek's reading role and send's and credit's signing conditions (vGLP dd37d2a), certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "intros/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's days, an advance that requires the day, today(d), compiled to the platform it prints (vGLP 1423679)" "days/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's linear, constraints of a linear equality and an inequality in GSC's form, compiled to the platform it prints (GSC bcc1891)" "linear/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
@@ -3654,7 +3667,13 @@ compile(sym, [schema(unf, [], [rs(guarded, [], [atom(f, [role(2)])], [], []), rs
 compile(asym, [schema(unf, [], [rs(guarded, [], [atom(f, [role(2)])], [], [atom(r, [])]), rs(unguarded, [], [atom(f, [role(1)])], [], [])])], syntactically_grassroots).
 compile(sgnread, [schema(d, [svar(y)], [rs(unguarded, [atom(done, [svar(y), role(2)])], [], [atom(posted, [svar(y)]), atom(listed, [role(2)])], [atom(done, [svar(y), role(2)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots).
 compile(sgnread_not, [schema(d, [svar(y)], [rs(unguarded, [atom(done, [svar(y), role(2)])], [], [atom(listed, [role(2)])], [atom(done, [svar(y), role(2)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots).
-compile(inert, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(unguarded, [], [], [], [])])], malformed([changes_nothing(s, 2)])).
+compile(inert, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(unguarded, [], [], [], [])])], not_grassroots([no_introductory_act, volition(s, 1, 2), changes_nothing(s, 2)])).
+compile(reading_ok, [schema(s, [], [rs(guarded, [atom(x, [])], [], [atom(k, [role(2)])], []), rs(unguarded, [], [], [atom(y, [])], [])])], not_grassroots([no_introductory_act])).
+compile(unnamed_two, [schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(link, [], [rs(guarded, [atom(linked, [role(2), role(3)])], [], [atom(friend, [role(2)]), atom(friend, [role(3)])], []), rs(unguarded, [atom(via, [role(1), role(3)])], [], [atom(friend, [role(1)])], []), rs(unguarded, [atom(via, [role(1), role(2)])], [], [atom(friend, [role(1)])], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Friends"', [friend])], [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])), act(link, '"Link"', [], none, '"Friends"', by([1]))])).
+compile(unnamed_one, [schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(link, [], [rs(guarded, [atom(linked, [role(2), role(3)])], [], [atom(friend, [role(2)]), atom(friend, [role(3)])], []), rs(unguarded, [atom(via, [role(1), role(3)])], [], [atom(friend, [role(1)])], []), rs(unguarded, [atom(via, [role(1), role(2)])], [], [atom(friend, [role(1)])], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Friends"', [friend])], [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])), act(link, '"Link"', ['""', '""', '"Person"'], none, '"Friends"', by([1]))])).
+compile(group_row, [schema(create, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [], [], [atom(member, [nterm(ext(own(1), n))])])]), schema(leave, [svar(n)], [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [], []), rs(guarded, [], [atom(member, [nterm(ext(own(1), n))])], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Groups"', [member])], [act(create, '"Create"', ['""', '"Name"'], none, '"Groups"', by([1])), act(leave, '"Leave"', [], none, '"Groups"', by([2]))])).
+compile(signing_con, [schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [], []), rs(guarded, [atom(knows, [role(1)])], [], [], [])]), schema(post, [svar(x)], [rs(guarded, [atom(item, [svar(x)])], [], [], [])]), nschema(send, [svar(x)], unsigned(role(2), svar(x)), [rs(unguarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(sent, [svar(x), role(2)])]), rs(unguarded, [atom(got, [svar(x)])], [], [], [])])], syntactically_grassroots).
+compile(signing_bad, [], malformed([signing_not_agent(send, svar(x))])).
 compile(headless, [], malformed([not_in_head(s, svar(x))])).
 compile(listed_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
 compile(wards_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, 2), free(2))], [])).
@@ -3668,13 +3687,13 @@ compile(listed_guard, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(
 compile(listed_guard_second, [schema(cl, [svar(n)], [rs(guarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots).
 compile(listed_two_guards, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
 compile(listed_second, [schema(cl, [svar(n)], [rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(2), svar(n)])], [atom(friend, [role(1)])], []), crs(listed(2, listed, [svar(n)]), unguarded, [], [atom(member, [role(2), svar(n)])], [], [])])], syntactically_grassroots).
-compile(order, [schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(member, [role(2), svar(n)])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(2), svar(n)])], [atom(posted, [svar(x), svar(n)])])])], syntactically_grassroots, no_introduction, pragmas([list('"Posted"', [posted])], [act(post, '"Post"', [], none, '"Posted"', by([1]))])).
+compile(order, [schema(post, [svar(x), svar(n)], [rs(guarded, [], [], [atom(member, [role(2), svar(n)])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(2), svar(n)])], [atom(posted, [svar(x), svar(n)])])])], syntactically_grassroots, no_introduction, pragmas([list('"Posted"', [posted])], [act(post, '"Post"', ['""', '""', '"Text"', '"Group"'], none, '"Posted"', by([1]))])).
 compile(listed_guard_two, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), rs(guarded, [], [], [atom(minding, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
 compile(listed_unguarded, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
 compile(listed_mixed, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(cl2, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), rs(unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
 compile(listed_likewise, [schema(cl, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(cl3, [svar(n)], [rs(unguarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(parent, [role(2)]), atom(ready, [svar(n)])], []), rs(guarded, [], [], [atom(parenting, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
 compile(two_locals, [nschema(s, [num(a), num(b)], gt(num(a), num(b)), [rs(guarded, [atom(x, [])], [], [atom(m, [num(a)])], []), rs(guarded, [atom(y, [])], [], [atom(m, [num(b)])], [])])], syntactically_grassroots).
-compile(one_local, [nschema(s, [num(d), num(t)], le(num(d), num(t)), [rs(guarded, [atom(x, [num(d)])], [], [], []), rs(unguarded, [atom(y, [num(d)])], [], [atom(m, [num(t)])], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x])], [act(s, '"S"', [], none, '"Xs"', by([1]))])).
+compile(one_local, [nschema(s, [num(d), num(t)], le(num(d), num(t)), [rs(guarded, [atom(x, [num(d)])], [], [], []), rs(unguarded, [atom(y, [num(d)])], [], [atom(m, [num(t)])], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x])], [act(s, '"S"', ['""', '""', '"Amount"'], none, '"Xs"', by([1]))])).
 compile(gt_open, [nschema(u, [num(t), num(t1)], gt(num(t1), num(t)), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
 compile(succ_open, [nschema(u, [num(t), num(t1)], succ(num(t), num(t1)), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
 compile(or_open, [nschema(u, [num(t), num(t1)], or(succ(num(t), num(t1)), gt(num(t1), num(t))), [rs(unguarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [], [])])], syntactically_grassroots).
@@ -3719,8 +3738,24 @@ check "CVA compiler: a contract whose one fault is that it has no unobstructed i
 check "CVA compiler: a contract whose one fault is an introductory act obstructed jointly, no choice of its values meeting every condition of def:unobstructed, passing the checks, as one with no unobstructed introductory act (jointly)" "%% not compiled, having no pragmas(jointly)" "$cva_refuse"
 check "CVA compiler: a contract malformed, a product of two value variables in its constraint, is not compiled (nonlinear)" "%% not compiled(nonlinear)" "$cva_refuse"
 # A verdict malformed, of a schema's form (GSC, Definition "Act schema", as programs/gsc/self.glp writes its faults), is refused whole, its faults of the compiler's Verdict type.
-check "CVA compiler: a contract malformed, a role that is not guarding changing nothing, is not compiled" "%% not compiled(inert)" "$cva_refuse"
+# A reading role, "a non-guarding role that adds and deletes nothing, admitted where a guarding role requires an atom naming it" (vGLP dd37d2a, Section 5.4, "Speech-act schemas as local specifications"; GSC 0380a8a): one with no such atom is a fault of volition, changes_nothing in a verdict not_grassroots, as programs/gsc gives it from GLP e2b5a802 on, and is not compiled; one with it passes the checks.
+check "CVA compiler: a reading role that no guarding role's required atom names, the fault changes_nothing of volition in a verdict not_grassroots, is not compiled (inert)" "%% not compiled(inert)" "$cva_refuse"
+check "CVA compiler: ... the verdict named" "%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults." "$cva_refuse"
+check "CVA compiler: a reading role that a guarding role's required atom names, passing the checks (reading_ok)" "%% not compiled, having no pragmas(reading_ok)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(reading_ok)" "$cva_refuse"
+# A constraint with a signing condition, unsigned(u, y) (vGLP dd37d2a, Section 5.4: "signed(u, y) and unsigned(u, y), that the person bound to u signed the speech act bound to y or did not"), passing the checks; a signing condition on no agent, the checker's fault signing_not_agent in a verdict malformed, refused.
+check "CVA compiler: a constraint holding unsigned(role(2), svar(x)), passing the checks (signing_con)" "%% not compiled, having no pragmas(signing_con)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(signing_con)" "$cva_refuse"
+check "CVA compiler: a signing condition on no agent, malformed, is not compiled (signing_bad)" "%% not compiled(signing_bad)" "$cva_refuse"
 check "CVA compiler: ... the verdict named" "%% it is malformed; check_named in programs/gsc gives the faults." "$cva_refuse"
+# "the compiler refusing a line whose fields leave unnamed a place that one entry does not fill", "a group <a>.n filling both its leader a and n" (vGLP 305c8d0, Section 5.4, "The contract's words"): link(p?, q, r)'s line with no field leaves q and r unnamed, which no one entry fills, and is refused with its reason; with a field naming r it is compiled; and GSN's leave(a, b? ; n), Bob's line with no field, leaves a and n unnamed, which the group <a>.n fills, and is compiled (group_row).
+check "CVA compiler: a pragma line whose fields leave two places of the act unnamed, refused (unnamed_two)" "%% not compiled(unnamed_two)" "$cva_refuse"
+check "CVA compiler: ... with its reason" "%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, \"The contract's words\"):" "$cva_refuse"
+check "CVA compiler: ... the schema and the places unnamed" "%% the schema and the places its fields leave unnamed(link, 2)" "$cva_refuse"
+check "CVA compiler: the same line with a field naming r, leaving one place unnamed, the row's, compiled (unnamed_one)" "%% the canonical CVA platform of the contract(unnamed_one)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(unnamed_one)" "$cva_refuse"
+check "CVA compiler: a line leaving a group's leader and its name unnamed, the places one entry, the group, fills, compiled (group_row)" "%% the canonical CVA platform of the contract(group_row)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(group_row)" "$cva_refuse"
 check "CVA compiler: a contract malformed, a variable not in its schema's head (GSC 0228e79), is not compiled, the fault of the compiler's Verdict type" "%% not compiled(headless)" "$cva_refuse"
 # The verdicts on an agent-named contract with community roles (programs/gsc/self.glp at GLP f5081cfa, GSC f3c4f43), of the compiler's Verdict type; its listed roles taken and its seated and constituent roles refused (vGLP f5f1644, Section 5.4, "Act schemas as local specifications"; vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 1).
 check "CVA compiler: the verdict syntactically_grassroots, GSC's one definition for agent roles and listed roles (GSC ac7ad63), a schema of a listed role, passing the checks" "%% not compiled, having no pragmas(listed_named)" "$cva_refuse"
@@ -3827,9 +3862,9 @@ check_not "CVA compiler: ... no schema-binding named against it" "%% the schema-
 cva_words=$("$REPL_RUN" <<HEREDOC
 $CVA/compiler/
 :limit 200000000
-compile(trio, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x, xs])], [act(s, '"S"', [], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Xs"', by([1]))])).
+compile(trio, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x, xs])], [act(s, '"S"', ['""', '""', '"Person"'], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Xs"', by([1]))])).
 compile(nobutton, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x, xs])], [])).
-compile(items, [schema(sign, [svar(y)], [rs(guarded, [atom(item, [svar(y)])], [], [], [])]), schema(fwd, [svar(y)], [rs(guarded, [], [], [atom(item, [svar(y)])], []), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Items"', [item, items])], [act(sign, '"Sign"', ['"text"'], none, '"Items"', by([1])), act(fwd, '"Forward"', [], none, '"Items"', by([1]))])).
+compile(items, [schema(sign, [svar(y)], [rs(guarded, [atom(item, [svar(y)])], [], [], [])]), schema(fwd, [svar(y)], [rs(guarded, [], [], [atom(item, [svar(y)])], []), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Items"', [item, items])], [act(sign, '"Sign"', ['"text"'], none, '"Items"', by([1])), act(fwd, '"Forward"', ['""', '"Person"'], none, '"Items"', by([1]))])).
 :quit
 HEREDOC
 2>&1)
@@ -4644,6 +4679,39 @@ check "CVA intros: bob asks to come to know carol, whom his machine knows by the
 check "CVA intros: ... bob holds knows(carol) twice, the introduction's and the acquaintance's, and carol knows(bob)" "B = \[.*view(\[knows(carol), knows(carol), knows(alice)\], \[alice, carol\], \[\], \[tab('Contacts', knows)\]) | " "$cva_intros"
 check "CVA intros: ... carol, bob known to her, so that no hello is sent, is asked on his attempt; her answer, pending until it commits, and her state" "C = \[.*gave(acquaint(bob, carol), yes), view(\[knows(alice)\], \[alice, bob\], \[acquaint(bob, carol)\], \[tab('Contacts', knows)\]), view(\[knows(bob), knows(alice)\], \[alice, bob\], \[\], \[tab('Contacts', knows)\]) | " "$cva_intros"
 check_not "CVA intros: an acquaintance introduces no one: its roles require no atom naming an agent bound to a variable" "intro(alice, bob, alice)\|intro(alice, carol, alice)\|intro(bob, carol, bob)" "$cva_intros"
+# A reading role (vGLP dd37d2a, Section 5.4, "Speech-act schemas as local specifications": "its person is a participant of the transaction whose state does not change, as a stationary agent is, its machine votes on the atoms the schema requires and forbids at it, and it is asked nothing"; GSC 0380a8a): intros' peek(p?, q), q requiring open and adding and deleting nothing, run by trio/7 of programs/vglp/cva/intros/self.glp on its scripts, carol's empty.
+cva_reading=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 20000000
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2], propose(peek(A2?, bob))), wait(holds(seen(bob)))], [own([B1], propose(open(B1?))), wait(holds(open)), approval(acquaint(alice, bob), yes)], [], A, B, C, N).
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2], propose(peek(A2?, bob))), wait(refused(peek(alice, bob), bob, unable([open], [])))], [approval(acquaint(alice, bob), yes)], [], A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA reading role: alice peeks at bob, whose role is a reading role; bob's machine is told the start, votes yes, holding open, and is told the commit" "sent(alice, bob, start(attempt(alice, 4, 4, peek(alice, bob), none))), sent(bob, alice, vote(attempt(alice, 4, 4, peek(alice, bob), none), yes)), sent(alice, bob, outcome(attempt(alice, 4, 4, peek(alice, bob), none), commit))" "$cva_reading"
+check "CVA reading role: ... alice gains seen(bob)" "A = \[.*view(\[seen(bob), knows(bob)\], \[bob\], \[\], \[tab('Contacts', knows)\]) | " "$cva_reading"
+check "CVA reading role: ... bob's machine applies no effect: his state after the commit is the state before it, knows(alice) and open" "B = \[view(\[\], \[\], \[\], \[tab('Contacts', knows)\]), view(\[\], \[\], \[open(bob)\], \[tab('Contacts', knows)\]), view(\[open\], \[\], \[\], \[tab('Contacts', knows)\]), gave(acquaint(alice, bob), yes), view(\[open\], \[alice\], \[\], \[tab('Contacts', knows)\]), view(\[open\], \[alice\], \[acquaint(alice, bob)\], \[tab('Contacts', knows)\]), view(\[knows(alice), open\], \[alice\], \[\], \[tab('Contacts', knows)\]) | " "$cva_reading"
+check_not "CVA reading role: ... and bob is asked nothing on peek" "gave(attempt(alice, [0-9]*, [0-9]*, peek\|gave(peek" "$cva_reading"
+check "CVA reading role: bob not open, his machine votes no, unable, the atom peek requires at his role lacking, and alice's machine aborts the attempt, bob its refuser" "sent(bob, alice, vote(attempt(alice, 4, 4, peek(alice, bob), none), no(unable(\[open\], \[\])))), sent(alice, bob, outcome(attempt(alice, 4, 4, peek(alice, bob), none), abort(bob, unable(\[open\], \[\]))))" "$cva_reading"
+check "CVA reading role: ... alice is told the refusal" "refused(peek(alice, bob), bob, unable(\[open\], \[\])) | " "$cva_reading"
+check "CVA reading role: ... and bob's state is knows(alice) alone" "B = \[view(\[\], \[\], \[\], \[tab('Contacts', knows)\]), gave(acquaint(alice, bob), yes), view(\[\], \[alice\], \[\], \[tab('Contacts', knows)\]), view(\[\], \[alice\], \[acquaint(alice, bob)\], \[tab('Contacts', knows)\]), view(\[knows(alice)\], \[alice\], \[\], \[tab('Contacts', knows)\]) | " "$cva_reading"
+# Signing conditions evaluated at the binding (vGLP dd37d2a, Section 5.4: "signed(u, y) and unsigned(u, y), that the person bound to u signed the speech act bound to y or did not --- which is evaluated when the schema is bound"; GSC 10fcc92, def:numbers: "signed(u, y) holding when beta(u) is the signer of beta(y) or of a speech act inside it and unsigned(u, y) otherwise"): intros' send(p, q ; x), unsigned(q, x), and credit(p, q ; x), signed(q, x), unguarded, opened by alice on the items she posts, a signed by her and b signed by bob and again by her.
+cva_signing_text=$(cat "$CVA/intros/platform.vglp")
+check "CVA signing conditions: the printed constraint type takes signed and unsigned" "^Constraint ::= .* ; signed(Var, Var) ; unsigned(Var, Var).\$" "$cva_signing_text"
+check "CVA signing conditions: send's constraint printed as the contract writes it, local to every role" "^schema_numeric(send, numeric(unsigned(role(2), svar(x)), \[\], every))\$" "$cva_signing_text"
+check "CVA signing conditions: ... credit's" "^schema_numeric(credit, numeric(signed(role(2), svar(x)), \[\], every))\$" "$cva_signing_text"
+cva_signing=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 20000000
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2, A3], propose(post(A2?, speech(utterance(a), A3?)))), own([A4, A5], propose(post(A4?, speech(speech(utterance(b), bob), A5?)))), wait(holds(sent(speech(utterance(a), alice), bob))), wait(holds(credited(speech(speech(utterance(b), bob), alice), bob)))], [approval(acquaint(alice, bob), yes), wait(holds(got(speech(utterance(a), alice)))), wait(holds(credit(speech(speech(utterance(b), bob), alice))))], [], A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA signing conditions: alice's machine sends bob a, which bob did not sign, unsigned(bob, a) holding at the binding" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, send(alice, bob, speech(utterance(a), alice)), none), commit))" "$cva_signing"
+check "CVA signing conditions: ... and credits bob b, which bob signed inside it, signed(bob, b) holding at the binding" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, credit(alice, bob, speech(speech(utterance(b), bob), alice)), none), commit))" "$cva_signing"
+check_not "CVA signing conditions: ... and neither sends b, which bob signed, nor credits a, which he did not" "send(alice, bob, speech(speech(utterance(b), bob), alice))\|credit(alice, bob, speech(utterance(a), alice))" "$cva_signing"
+check "CVA signing conditions: ... bob holds got(a) and credit(b)" "B = \[.*view(\[credit(speech(speech(utterance(b), bob), alice)), got(speech(utterance(a), alice)), knows(alice)\], \[alice\], \[\], \[tab('Contacts', knows)\]) | " "$cva_signing"
+check "CVA signing conditions: ... the run suspends, none of alice's own transactions holding" "→ suspended" "$cva_signing"
 
 # GB's mint_bond, advance and redeem_bc (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, items 1 and 3: "GB: d, k and r by the request; t local to the issuer's role, its date; mint_bond's gt(d, t) checked by the minter, redeem_bc's le(d, t) by the issuer").  vGLP's contract bonds (programs/vglp/cva/contracts.glp): GB's three schemas as programs/currencies/bonds/GB.glp writes them, with GKK's establish and acquaint, GB's mint_coin and swap_cb, and dawn, which gives a person their first date, date(0), GB naming no act that does (Code #12 to Currencies, 2026-10-20 22:23 UTC).  advance, unguarded, its t local to its role and t1 given by succ, is opened by a dated person's machine whenever it can, so the run does not suspend and is stopped at the REPL's :limit (bonds/self.glp).  A request of mint_bond whose guard is not ready is dropped with the notice refused(N, p, unable), and a request of redeem_bc proposes the redeem part, the part it names, guarded by the bearer, never the swap part its class holds (vGLP 1423679, Section 5.4, "The compilation"; vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, items 4 and 7): the bond maturing at 1000000 refused by the issuer's machine, le(d, t) failing, and the one maturing at 10 redeemed.
 cva_bonds_load=$("$REPL_RUN" <<HEREDOC
@@ -4796,7 +4864,7 @@ check "CVA counter: the run does not suspend: alice's agent counts without end, 
 check_not "CVA counter: no person asked for count" "gave(attempt([a-z]*, [0-9]*, [0-9]*, count\|gave(count" "$cva_counter"
 
 # No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes its own transactions "one at a time, each on an own trigger that the agent writes on a stream merged fairly with its other triggers, when it starts, after another trigger and after each own transaction it takes, until none holds", vGLP 6c8c663; Udi's approval of 2026-10-18, reported by Code #10): each play's run but the counter's suspends once every agent has taken its own transactions until none holds and no trigger is left to read, where until vGLP efe7bbc it ran to the REPL's :limit, each agent's clock ticking without end.
-for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens cva_groups cva_merges cva_network cva_coins cva_wardclose cva_numbers cva_intros cva_days cva_linear; do
+for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens cva_groups cva_merges cva_network cva_coins cva_wardclose cva_numbers cva_intros cva_reading cva_signing cva_days cva_linear; do
     check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
     check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
 done
@@ -5972,7 +6040,7 @@ check "MB4 the twice-crossed end delivers the hand-over reduction's element" "\[
 check "MB4 and the element written into its tail afterwards" "\[bob\] saw(probe)" "$mb4"
 check "MB4 the holder's assignment comes back" "\[alice\] got(hi)" "$mb4"
 
-# MB5: the link probes (programs/tests/linkprobes, and linkprobes.md beside them).  Eight `:boot` programs that fence in what crosses a link and what does not: each is a cold call between isolates, after which one side writes on a stream the other reads.  They differ in how many crossings the reader's end made before it was read, and whether the elements were written in one reduction or in two.  They were the evidence for the defect repaired on 2026-09-08 in lib/runtime/heap_fcp.dart (fireBoundCallbacks), where a value written into the tail of a stream whose reader had already crossed a link was produced and never sent, and until now nothing in the suite loaded them: MB4 above covers the same repair on one program, and these cover the six shapes that isolate it.  linkprobe13 and linkprobe14 are the pair in which the channel is handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 the third agent made the channel and anchors every link, so no link is held and both greetings pass through her (IGLP madglp-spec.tex, Held Links; Lemma "Both Ends Exported"); in linkprobe14 she forwards an end, the link is held, and nothing passes.
+# MB5: the link probes (programs/tests/linkprobes, and linkprobes.md beside them).  Eight `:boot` programs that fence in what crosses a link and what does not: each is a cold call between isolates, after which one side writes on a stream the other reads.  They differ in how many crossings the reader's end made before it was read, and whether the elements were written in one reduction or in two.  They were the evidence for the defect repaired on 2026-09-08 in lib/runtime/heap_fcp.dart (fireBoundCallbacks), where a value written into the tail of a stream whose reader had already crossed a link was produced and never sent, and until now nothing in the suite loaded them: MB4 above covers the same repair on one program, and these cover the six shapes that isolate it.  linkprobe13 and linkprobe14 are the pair in which the channel is handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 the third agent made the channel and anchors every link, so no link is held and both greetings pass through her (IGLP madglp-spec.tex, Held Links; Lemma "Both Ends Exported"); in linkprobe14 she forwards an end, the link is held, and nothing passes on it, while bob's greeting, once it has reached her, is hers to send.
 LP_DIR="$GLP_DIR/programs/tests/linkprobes"
 rm -f "$LP_DIR"/runprobe/*.glpw
 
@@ -6040,7 +6108,7 @@ check "MB5 runprobe an activated mini-app's writer crosses: the greeting arrives
 check "MB5 runprobe and the element it wrote into the tail" "\[bob\] saw(probe)" "$lpr"
 check "MB5 runprobe the holder's assignment comes back" "\[alice\] got(hi)" "$lpr"
 
-# linkprobe13 and linkprobe14: a channel handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 carol made the channel and anchors every link, so none is held and each greeting passes through her; in linkprobe14 she forwards an end, the link is held, and neither greeting is delivered.
+# linkprobe13 and linkprobe14: a channel handed over by a third agent, and neither probe calls authorise_link/2.  In linkprobe13 carol made the channel and anchors every link, so none is held and each greeting passes through her; in linkprobe14 she forwards an end bob made, the link is held, and nothing passes on it.  linkprobe14's check holds in every order, delivery being unordered (GLP #11 Cowork, 2026-11-03 16:06 UTC, item 3): once bob's greeting has reached carol it is hers to send (IGLP, madGLP's Send Reader and Globalize), so alice may see it, from carol, and never on bob's held link: carol forwards the end to alice, and the router delivers no message from bob to alice (:deliveries), neither a value of bob's on the held link nor an answer to a request of alice's.
 lp13=$("$REPL_RUN" <<HEREDOC
 :boot $LP_DIR/linkprobe13_boot.glp $LP_DIR/linkprobe13
 :quit
@@ -6051,14 +6119,32 @@ check "MB5 linkprobe13 no link is held: alice reads bob's greeting, through caro
 check "MB5 linkprobe13 no link is held: bob reads alice's greeting, through carol" "\[bob\] saw(hello_from(alice))" "$lp13"
 
 lp14=$("$REPL_RUN" <<HEREDOC
+:deliveries
 :boot $LP_DIR/linkprobe14_boot.glp $LP_DIR/linkprobe14
 :quit
 HEREDOC
 2>&1)
 check "MB5 linkprobe14 one end forwarded by a third agent: the boot settles" "Boot settled: 3 agents" "$lp14"
-check_not "MB5 linkprobe14 nothing passes on a held link neither side authorises" "saw(hello_from" "$lp14"
+check "MB5 linkprobe14 carol forwards the end to alice" "^Delivered: carol > alice [1-9]" "$lp14"
+check_not "MB5 linkprobe14 nothing of bob's reaches alice on the held link neither side authorises" "^Delivered: bob > alice" "$lp14"
+check_not "MB5 linkprobe14 what alice sees is bob's greeting, from carol" "\[alice\] saw(hello_from(\(alice\|carol\))" "$lp14"
 
 rm -f "$LP_DIR"/runprobe/*.glpw
+
+# MB6: GKK's app as maGLP (GLP #11 Cowork, 2026-11-01 22:25 UTC; GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot").  alice and bob, each in an isolate of its own, each started from agent(ch(_?,_),ch(_?,_)), each with the person scripted in GLP the boot clause names at it; alice's person names bob, her agent cold-calls bob with a conversation, msg(bob, conv(Ka, Kb, Ch)), and each agent runs programs/apps/gkk's mini-app over it.  Each agent's key pair is made at its spawn (GLP-Spec b4ecfaa, appendix-guards.tex, self_key/1; IGLP 8bec699, Boot) and self_key/1 assigns it; each person establishes their identity by it (GKK:1), alice asks to know bob by the key her agent was told and bob answers yes (GKK:2), and each then knows the other: alice's knows/1 names bob's key, and bob's names alice's.
+mb6=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/multiagent/gkk_maglp_boot.glp $GLP_DIR/programs/apps/gkk
+:quit
+HEREDOC
+2>&1)
+# A key prints bare where it reads as an atom, and quoted where it begins with a digit; the first line an agent prints may follow the prompt.
+mb6_ka=$(echo "$mb6" | sed -n "s/^.*\[alice\] key('\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\})$/\1/p" | head -1)
+mb6_kb=$(echo "$mb6" | sed -n "s/^.*\[bob\] key('\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\})$/\1/p" | head -1)
+check "MB6 GKK as maGLP: the boot settles with two agents" "Boot settled: 2 agents" "$mb6"
+check "MB6 alice establishes her identity by the key made at her spawn" "\[alice\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$mb6"
+check "MB6 bob's key likewise" "\[bob\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$mb6"
+check "MB6 alice knows bob, by his key" "\[alice\] knows('\{0,1\}${mb6_kb:-none}'\{0,1\})$" "$mb6"
+check "MB6 bob knows alice, by her key" "\[bob\] knows('\{0,1\}${mb6_ka:-none}'\{0,1\})$" "$mb6"
 
 echo ""
 fi  # Section MB
@@ -6427,7 +6513,7 @@ check_not "SG spm no failed play" "→ failed" "$sg_spm"
 # person) and loads as text, which the super-app does not install.  Each
 # mini-app is the instance of the root's entry template miniapp/4 at its own
 # type, activated at the template's opaque instance, and each person of a
-# mini-app is its own scripted person, the second template miniapp_person/4's
+# mini-app is its own scripted person, the second template miniapp_person/5's
 # instance, the plays holding every screen at Opaque (GSG 2026-10-13 10:29
 # and 18:52 UTC).  The
 # artefacts are written in the session that runs the plays: a certificate is
@@ -6446,18 +6532,18 @@ $SG_CORE
 :limit 5000000
 play_load("cssn.glpw", K1, Key1).
 play_load("currency.glpw", K2, Key2).
-play_install("cssn.glpw", cssn, I1).
-play_install("currency.glpw", currency, I2).
-play_install("pingapp.glpw", ping, I3).
-play_forged_cert(I4).
-play_forged_invite(F1).
-play_forged_join(F2).
-play_forged_root(F3).
-play_attest(S, K, H, T).
-play_invite(A, B).
-play_invite_declined(A2, B2).
-play_invite_timed(Ms).
-play_coins(C1, C2).
+play_install(alice, "cssn.glpw", cssn, I1).
+play_install(alice, "currency.glpw", currency, I2).
+play_install(alice, "pingapp.glpw", ping, I3).
+play_forged_cert(alice, I4).
+play_forged_invite(alice, bob, F1).
+play_forged_join(alice, bob, F2).
+play_forged_root(alice, bob, F3).
+play_attest(alice, bob, S, K, H, T).
+play_invite(alice, bob, A, B).
+play_invite_declined(alice, bob, A2, B2).
+play_invite_timed(alice, bob, Ms).
+play_coins(alice, bob, C1, C2).
 :quit
 HEREDOC
 2>&1)
@@ -6494,7 +6580,7 @@ check_not "SG super-app no failed play" "→ failed" "$sg_core"
 sg_naf=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
-play_not_a_friend(A, B).
+play_not_a_friend(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
@@ -6508,7 +6594,7 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # default widget of a stream of a union of tuples, a menu of the four forms
 # kept open; a Connect granted on it reaches the agent, whose notice
 # connected(bob) arrives on the same channel, merged with the draws
-# (superapp_ui/3, alice with a scripted bob).  A friend's request to connect
+# (superapp_ui/4, alice with a scripted peer for each key she knows, here bob).  A friend's request to connect
 # raises respond_friend's card, the friend shown, and the person's yes on it
 # is their decision, with the pending value passed back as it came (home.glp
 # with its dispatcher and a scripted person who grants on the card once it is
@@ -6520,7 +6606,7 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 sg_home=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
-superapp_ui(alice, [input(1, [], connect(bob)) | G?], []).
+superapp_ui(alice, [bob], [input(1, [], connect(bob)) | G?], []).
 play_home(alice, yes, [msg(agent, person, befriend(bob, error))], C, L).
 play_home(alice, yes, [msg(agent, person, befriend_intro(carol, bob, error))], CI, LI).
 play_home(alice, no, [msg(agent, person, befriend_intro(carol, bob, error))], CN, LN).
@@ -6544,7 +6630,7 @@ sg_cs=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
-play_cssn(N1, N2).
+play_cssn(alice, bob, N1, N2).
 :quit
 HEREDOC
 2>&1)
@@ -6563,7 +6649,7 @@ sg_two=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
-play_both(A, B, C, D).
+play_both(alice, bob, A, B, C, D).
 :quit
 HEREDOC
 2>&1)
@@ -6657,7 +6743,7 @@ sg_reinvite=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/social/graph/endapp $SG_CORE
 $SG_CORE
 :limit 5000000
-play_reinvite(A, B).
+play_reinvite(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
@@ -6681,7 +6767,7 @@ sg_sovereign=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/currencies/sovereign/denominated $SG_CORE
 $SG_CORE
 :limit 5000000
-play_sovereign(A, B).
+play_sovereign(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
@@ -6782,7 +6868,7 @@ APPS_ART=$(mktemp -d)
 apps_gsg=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gsg $APPS_ART
 $GLP_DIR/programs/apps/gsg
-play_held(In, ToBob, ToCarol).
+play_held(alice, bob, carol, In, ToBob, ToCarol).
 :limit 600000
 play_friends(A, B).
 :quit
@@ -6797,7 +6883,7 @@ apps_line "APPS gsg router: the hello held for carol goes on hers" "ToCarol = [m
 apps_line "APPS gsg friends: alice's screen, each request pending until it commits, bob known once his hello comes back" "A = [view([], [], [], [tab('Contacts', knows), tab('Friends', friend)]), menu(alice, []), view([], [], [establish(alice)], [tab('Contacts', knows), tab('Friends', friend)]), view([identity], [], [], [tab('Contacts', knows), tab('Friends', friend)]), view([identity], [], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Friends', friend)]), view([identity], [bob], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Friends', friend)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend)]), menu(alice, [bob]), view([knows(bob), identity], [bob], [befriend(alice, bob)], [tab('Contacts', knows), tab('Friends', friend)]), view([friend(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend)]) | _]" "$apps_gsg"
 apps_line "APPS gsg friends: bob's screen, asked on alice's hello of acquaint and answering yes, his request, and asked on her attempt of befriend" "B = [view([], [], [], [tab('Contacts', knows), tab('Friends', friend)]), view([], [], [establish(bob)], [tab('Contacts', knows), tab('Friends', friend)]), view([identity], [], [], [tab('Contacts', knows), tab('Friends', friend)]), gave(acquaint(alice, bob), yes), view([identity], [alice], [], [tab('Contacts', knows), tab('Friends', friend)]), view([identity], [alice], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Friends', friend)]), view([knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Friends', friend)]), gave(befriend(alice, bob), yes), view([knows(alice), identity], [alice], [befriend(alice, bob)], [tab('Contacts', knows), tab('Friends', friend)]), view([friend(alice), knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Friends', friend)]), view([friend(alice), knows(alice), identity], [alice], [unfriend(bob, alice)], [tab('Contacts', knows), tab('Friends', friend)]), view([knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Friends', friend)]) | _]" "$apps_gsg"
 # The request question shows the agent's own key (vGLP 321127a, Section 5.4), and the scripted person, proposing a class that names their agent, writes the key it reads off the question into the holes of its step own(Ks, R) (person.glp).
-check "APPS gsg: alice establishes her identity by the key her request question shows" "^script(alice, \[look, own(\[A1\], propose(establish(A1?)))" "$(cat "$GLP_DIR/programs/apps/gsg/person.glp")"
+check "APPS gsg: alice establishes her identity by the key her request question shows" "^script(alice, _, \[Bob\], \[look, own(\[A1\], propose(establish(A1?)))" "$(cat "$GLP_DIR/programs/apps/gsg/person.glp")"
 check "APPS gsg: ... the key written into each hole" "^fill(Me, \[Me? | Ks\]) :- ground(Me?) | fill(Me?, Ks?)\.$" "$(cat "$GLP_DIR/programs/apps/gsg/person.glp")"
 check "APPS gsg: the types written again hold the notices of the platform's output, refused(N, Q, D), and the approvals pending, each by its request name, N and the approvals of type Approved ::= Proposal (vGLP e286276, Section 5.4), and the lists its app shows (vGLP 1423679, Section 5.4)" "^Output   ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason)\.$" "$(cat "$GLP_DIR/programs/apps/gsg/self.glp")"
 check "APPS gsg: the person's screen shows a notice written after the last view, refused(P, Q, D)" "^shows(refused(P, Q, D), _, T, _, B?) :- ground(P?), ground(Q?), ground(D?), ground(T?) |$" "$(cat "$GLP_DIR/programs/apps/gsg/person.glp")"
@@ -6830,7 +6916,7 @@ check "APPS gkk loads" "Loaded program: .*programs/apps/gkk$" "$apps_gkk"
 apps_line "APPS gkk keys: alice's screen, each acquaintance a cold call, each request pending until it commits" "A = [view([], [], [], [tab('Contacts', knows)]), menu(alice, []), view([], [], [establish(alice)], [tab('Contacts', knows)]), view([identity], [], [], [tab('Contacts', knows)]), view([identity], [], [acquaint(alice, bob)], [tab('Contacts', knows)]), view([identity], [bob], [acquaint(alice, bob)], [tab('Contacts', knows)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows)]), view([knows(bob), identity], [bob], [acquaint(alice, carol)], [tab('Contacts', knows)]), view([knows(bob), identity], [bob, carol], [acquaint(alice, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(bob), identity], [bob, carol], [], [tab('Contacts', knows)]), menu(alice, [bob, carol]), view([knows(carol), knows(bob), identity], [bob, carol], [introduce(alice, bob, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(bob), identity], [bob, carol], [], [tab('Contacts', knows)]) | _]" "$apps_gkk"
 apps_line "APPS gkk keys: bob's screen: once he has answered yes to the introduction, his agent, introduced to carol's by alice's at the commit, comes to know her by the ihello exchange, and he comes to know her, so no hello is sent, holding knows(carol) twice" "B = [view([], [], [], [tab('Contacts', knows)]), view([], [], [establish(bob)], [tab('Contacts', knows)]), view([identity], [], [], [tab('Contacts', knows)]), gave(acquaint(alice, bob), yes), view([identity], [alice], [], [tab('Contacts', knows)]), view([identity], [alice], [acquaint(alice, bob)], [tab('Contacts', knows)]), view([knows(alice), identity], [alice], [], [tab('Contacts', knows)]), gave(introduce(alice, bob, carol), yes), view([knows(alice), identity], [alice], [introduce(alice, bob, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(alice), identity], [alice], [], [tab('Contacts', knows)]), view([knows(carol), knows(alice), identity], [alice, carol], [], [tab('Contacts', knows)]), view([knows(carol), knows(alice), identity], [alice, carol], [acquaint(bob, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(carol), knows(alice), identity], [alice, carol], [], [tab('Contacts', knows)]) | _]" "$apps_gkk"
 apps_line "APPS gkk keys: carol's screen: asked on alice's hello of acquaint and answering yes; not asked on the introduction, her agent comes to know bob's by it, and she answers yes on his attempt to come to know her" "C = [view([], [], [], [tab('Contacts', knows)]), view([], [], [establish(carol)], [tab('Contacts', knows)]), view([identity], [], [], [tab('Contacts', knows)]), gave(acquaint(alice, carol), yes), view([identity], [alice], [], [tab('Contacts', knows)]), view([identity], [alice], [acquaint(alice, carol)], [tab('Contacts', knows)]), view([knows(alice), identity], [alice], [], [tab('Contacts', knows)]), view([knows(alice), identity], [alice, bob], [], [tab('Contacts', knows)]), gave(acquaint(bob, carol), yes), view([knows(alice), identity], [alice, bob], [acquaint(bob, carol)], [tab('Contacts', knows)]), view([knows(bob), knows(alice), identity], [alice, bob], [], [tab('Contacts', knows)]) | _]" "$apps_gkk"
-check "APPS gkk: alice introduces carol to bob, in the order of introduce's head, introduce(p?, q? ; c)" "own(\[A4\], propose(introduce(A4?, bob, carol)))" "$(cat "$GLP_DIR/programs/apps/gkk/person.glp")"
+check "APPS gkk: alice introduces carol to bob, in the order of introduce's head, introduce(p?, q? ; c)" "own(\[A4\], propose(introduce(A4?, Bob?, Carol?)))" "$(cat "$GLP_DIR/programs/apps/gkk/person.glp")"
 check "APPS gkk: the types written again hold knows(Peer)" "^Atom     ::= identity ; knows(Peer)\.$" "$(cat "$GLP_DIR/programs/apps/gkk/self.glp")"
 check_not "APPS gkk: no failed play" "→ failed" "$apps_gkk"
 check_not "APPS gkk: no error" "Error" "$apps_gkk"
@@ -6868,9 +6954,9 @@ check "APPS gsn: close's class term carries the list of the people of its listed
 check "APPS gsn: member(<a>.n) holds a community name, one argument" "^member(CName)$" "$apps_gsn_text"
 check "APPS gsn: ... written in the view as the contract writes it" "^atom_of(g(member, \[c(V1)\]), shown(member(V1?)))$" "$apps_gsn_text"
 check "APPS gsn: ... the community name of the person bound to u followed by the speech acts bound to the y's, and dot_any(C), the image of N.* under a binding, of a cleared atom (vGLP f8127b1, Section 5.4; GSC 327e035, Definition Binding)" "^CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName)\.$" "$apps_gsn_text"
-check "APPS gsn: bob's group message in the order of post's head, its content before the group's name" "own(\[B2, B3\], propose(post(B2?, alice, speech(utterance('Hi all'), B3?), speech(utterance(friends), alice))))" "$(cat "$GLP_DIR/programs/apps/gsn/person.glp")"
+check "APPS gsn: bob's group message in the order of post's head, its content before the group's name" "own(\[B2, B3\], propose(post(B2?, Alice?, speech(utterance('Hi all'), B3?), speech(utterance(friends), Alice?))))" "$(cat "$GLP_DIR/programs/apps/gsn/person.glp")"
 check "APPS gsn: the types written again: close's list and the community name, dot_any(C) with it" "^CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName)\.$" "$(cat "$GLP_DIR/programs/apps/gsn/self.glp")"
-check "APPS gsn: alice signs her message by the key her request question shows" "own(\[A7, A8\], propose(message(A7?, bob, speech(utterance('Hi Bob'), A8?))))" "$(cat "$GLP_DIR/programs/apps/gsn/person.glp")"
+check "APPS gsn: alice signs her message by the key her request question shows" "own(\[A7, A8\], propose(message(A7?, Bob?, speech(utterance('Hi Bob'), A8?))))" "$(cat "$GLP_DIR/programs/apps/gsn/person.glp")"
 check_not "APPS gsn: no failed play" "→ failed" "$apps_gsn"
 check_not "APPS gsn: no error" "Error" "$apps_gsn"
 check "APPS gsn network: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsn"
@@ -6904,9 +6990,9 @@ apps_line "APPS gsnp provenance: carol's screen, each request pending, by its re
 apps_line "APPS gsnp provenance: bob's screen, each request pending, by its request name, until its transaction is taken" "B = [view([], [], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([], [], [establish(bob)], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([identity], [], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), gave(acquaint(carol, bob), yes), view([identity], [carol], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([identity], [carol], [acquaint(carol, bob)], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([knows(carol), identity], [carol], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), gave(befriend(carol, bob), yes), view([knows(carol), identity], [carol], [befriend(carol, bob)], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([friend(carol), knows(carol), identity], [carol], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol], [acquaint(bob, fay)], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay], [acquaint(bob, fay)], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([knows(fay), item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([knows(fay), item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay], [befriend(bob, fay)], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([friend(fay), knows(fay), item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([friend(fay), knows(fay), item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay], [forward(bob, fay, speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol))], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([friend(fay), knows(fay), item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), knows(carol), identity], [carol, fay], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]) | _]" "$apps_gsnp"
 apps_line "APPS gsnp provenance: fay's screen, each request pending, by its request name, until its transaction is taken" "F = [view([], [], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([], [], [establish(fay)], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([identity], [], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), gave(acquaint(bob, fay), yes), view([identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([identity], [bob], [acquaint(bob, fay)], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), gave(befriend(bob, fay), yes), view([knows(bob), identity], [bob], [befriend(bob, fay)], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([friend(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]), view([item(speech(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol), bob)), friend(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('AI agents', guardian_of), tab('Items', item)]) | _]" "$apps_gsnp"
 check "APPS gsnp: dan signs the item by the key his request question shows" "own(\[D3, D4\], propose(sign(D3?, speech(utterance('Flood on Main Street'), D4?))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
-check "APPS gsnp: dan sends the item he authored to eve in a message, as he signed it" "own(\[D5, D6\], propose(message(D5?, eve, speech(utterance('Flood on Main Street'), D6?))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
-check "APPS gsnp: carol forwards to bob the item signed by dan and then by eve" "own(\[C3\], propose(forward(C3?, bob, speech(speech(utterance('Flood on Main Street'), dan), eve))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
-check "APPS gsnp: bob forwards to fay the item signed by dan, eve and carol" "own(\[B3\], propose(forward(B3?, fay, speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
+check "APPS gsnp: dan sends the item he authored to eve in a message, as he signed it" "own(\[D5, D6\], propose(message(D5?, Eve?, speech(utterance('Flood on Main Street'), D6?))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
+check "APPS gsnp: carol forwards to bob the item signed by dan and then by eve" "own(\[C3\], propose(forward(C3?, Bob?, speech(speech(utterance('Flood on Main Street'), dan), Eve?))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
+check "APPS gsnp: bob forwards to fay the item signed by dan, eve and carol" "own(\[B3\], propose(forward(B3?, Fay?, speech(speech(speech(utterance('Flood on Main Street'), dan), eve), Carol?))))" "$(cat "$GLP_DIR/programs/apps/gsnp/person.glp")"
 check_not "APPS gsnp: no failed play" "→ failed" "$apps_gsnp"
 check_not "APPS gsnp: no error" "Error" "$apps_gsnp"
 check "APPS gsnp provenance: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsnp"
@@ -6999,13 +7085,13 @@ check "APPS gai loads" "Loaded program: .*programs/apps/gai$" "$apps_gai"
 apps_line "APPS gai agents: alice's screen" "A = [view([], [], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([], [], [establish(alice)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([identity], [], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([identity], [], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([identity], [bob], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([knows(bob), identity], [bob], [befriend(alice, bob)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([friend(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([friend(bob), knows(bob), identity], [bob], [sign(alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [bob], [enter(alice, alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [alf, bob], [enter(alice, alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([principal_of(alf), guardian_of(alf), friend(alf), knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [alf, bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([principal_of(alf), guardian_of(alf), friend(alf), knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [alf, bob], [agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([principal_of(alf), guardian_of(alf), friend(alf), knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [alf, bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([principal_of(alf), guardian_of(alf), friend(alf), knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [alf, bob], [agent_befriend(alf, bob, alice)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([principal_of(alf), guardian_of(alf), friend(alf), knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [alf, bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([principal_of(alf), guardian_of(alf), friend(alf), knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [alf, bob], [retire(alf, alice)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([retired_of(alf), principal_of(alf), guardian_of(alf), knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), item(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(bob), knows(bob), identity], [alf, bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]) | _]" "$apps_gai"
 apps_line "APPS gai agents: alf's screen" "R = [view([], [], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), gave(enter(alice, alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), yes), view([], [alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([], [alice], [enter(alice, alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), gave(agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), yes), view([identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [alice], [agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [alice, bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), gave(agent_befriend(alf, bob, alice), yes), view([knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [alice, bob], [agent_befriend(alf, bob, alice)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([friend(bob), knows(bob), identity, agent, principal(alice), friend(alice), knows(alice), attestation(speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [alice, bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([retired, knows(bob), identity, agent, principal(alice), knows(alice), attestation(speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [alice, bob], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]) | _]" "$apps_gai"
 apps_line "APPS gai agents: bob's screen" "B = [view([], [], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([], [], [establish(bob)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([identity], [], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), gave(acquaint(alice, bob), yes), view([identity], [alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([identity], [alice], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), gave(befriend(alice, bob), yes), view([knows(alice), identity], [alice], [befriend(alice, bob)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([friend(alice), knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), gave(agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), yes), view([friend(alice), knows(alice), identity], [alice], [agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice))], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(alice), knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(alice), knows(alice), identity], [alf, alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), gave(agent_befriend(alf, bob, alice), yes), view([knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(alice), knows(alice), identity], [alf, alice], [agent_befriend(alf, bob, alice)], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([friend(alf), knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(alice), knows(alice), identity], [alf, alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]), view([knows(alf), agent_of(alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), friend(alice), knows(alice), identity], [alf, alice], [], [tab('Contacts', knows), tab('Friends', friend), tab('AI agents', guardian_of)]) | _]" "$apps_gai"
-check "APPS gai: alice asks to come to know bob by the key her request question shows (GKK:2)" "own(\[A2\], propose(acquaint(A2?, bob)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
-check "APPS gai: alice offers bob friendship by the key her request question shows (GSG:1)" "own(\[A3\], propose(befriend(A3?, bob)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alice asks to come to know bob by the key her request question shows (GKK:2)" "own(\[A2\], propose(acquaint(A2?, Bob?)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alice offers bob friendship by the key her request question shows (GSG:1)" "own(\[A3\], propose(befriend(A3?, Bob?)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
 check "APPS gai: alice signs her attestation y, by the key her request question shows, GAI's \"Alice [Sign] <text>\" (GAI:2)" "own(\[A4, A5\], propose(sign(A4?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
-check "APPS gai: alice enters her AI agent alf with y, by the key her request question shows (GnW:1)" "own(\[A6, A7\], propose(enter(A6?, alf, speech(utterance('Alf runs code signed by Acme Ltd'), A7?))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
-check "APPS gai: alice, alf's guardian, proposes its acquaintance with bob, presenting y, GAI's \"Alice [Agent acquaint] <person>\" (GnW:3, GAI:2)" "own(\[A8\], propose(agent_acquaint(alf, bob, A8?, speech(utterance('Alf runs code signed by Acme Ltd'), alice))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
-check "APPS gai: ... and once it is done its befriending bob, GAI's \"Alice [Agent befriend] <person>\" (GnW:3)" "own(\[A9\], propose(agent_befriend(alf, bob, A9?)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
-check "APPS gai: ... and once that is done retires alf, the AI agent retire's first role (GnW:5)" "own(\[A10\], propose(retire(alf, A10?)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alice enters her AI agent alf with y, by the key her request question shows (GnW:1)" "own(\[A6, A7\], propose(enter(A6?, Alf?, speech(utterance('Alf runs code signed by Acme Ltd'), A7?))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: alice, alf's guardian, proposes its acquaintance with bob, presenting y, GAI's \"Alice [Agent acquaint] <person>\" (GnW:3, GAI:2)" "own(\[A8\], propose(agent_acquaint(Alf?, Bob?, A8?, speech(utterance('Alf runs code signed by Acme Ltd'), Me?))))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: ... and once it is done its befriending bob, GAI's \"Alice [Agent befriend] <person>\" (GnW:3)" "own(\[A9\], propose(agent_befriend(Alf?, Bob?, A9?)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
+check "APPS gai: ... and once that is done retires alf, the AI agent retire's first role (GnW:5)" "own(\[A10\], propose(retire(Alf?, A10?)))" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
 check_not "APPS gai: nobody ends a friendship with alf by unfriend: retire ends its friendships (GnW:5)" "propose(unfriend(" "$(cat "$GLP_DIR/programs/apps/gai/person.glp")"
 check_not "APPS gai: no failed play" "→ failed" "$apps_gai"
 check_not "APPS gai: no error" "Error" "$apps_gai"
@@ -7041,8 +7127,8 @@ check "APPS gc: the mini-app's artefact is certified" "gc.glpw --- certified und
 check "APPS gc loads" "Loaded program: .*programs/apps/gc$" "$apps_gc"
 apps_line "APPS gc coins: alice's screen, each request pending until it commits, her amounts the fields of her requests" "A = [view([], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), menu(alice, []), view([], [], [establish(alice)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [bob], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([knows(bob), identity], [bob], [mint(alice, 2)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(alice), coin(alice), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(alice), coin(alice), knows(bob), identity], [bob], [swap(alice, bob, alice, 2, bob, 3)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(bob), knows(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), menu(alice, [bob]), view([coin(bob), coin(bob), coin(bob), knows(bob), knows(bob), identity], [bob], [pay(alice, bob, 2)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), knows(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]) | _]" "$apps_gc"
 apps_line "APPS gc coins: bob's screen, asked on alice's hello of acquaint and on her attempt of the swap" "B = [view([], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([], [], [establish(bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [mint(bob, 3)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(bob), identity], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), gave(acquaint(alice, bob), yes), view([coin(bob), coin(bob), coin(bob), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(bob), identity], [alice], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([knows(alice), coin(bob), coin(bob), coin(bob), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), gave(swap(alice, bob, alice, 2, bob, 3), yes), view([knows(alice), coin(bob), coin(bob), coin(bob), identity], [alice], [swap(alice, bob, alice, 2, bob, 3)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(alice), coin(alice), knows(alice), knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(alice), coin(alice), knows(alice), knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]) | _]" "$apps_gc"
-check "APPS gc: alice asks bob to swap two Alice-coins for three Bob-coins, in the order of swap's head, swap(p?, q? ; u, k, v, k')" "own(\[A3, A4\], propose(swap(A3?, bob, A4?, 2, bob, 3)))" "$(cat "$GLP_DIR/programs/apps/gc/person.glp")"
-check "APPS gc: alice pays two Bob-coins to bob by the key her request question shows, pay(p?, q ; k)" "own(\[A5\], propose(pay(A5?, bob, 2)))" "$(cat "$GLP_DIR/programs/apps/gc/person.glp")"
+check "APPS gc: alice asks bob to swap two Alice-coins for three Bob-coins, in the order of swap's head, swap(p?, q? ; u, k, v, k')" "own(\[A3, A4\], propose(swap(A3?, Bob?, A4?, 2, Bob?, 3)))" "$(cat "$GLP_DIR/programs/apps/gc/person.glp")"
+check "APPS gc: alice pays two Bob-coins to bob by the key her request question shows, pay(p?, q ; k)" "own(\[A5\], propose(pay(A5?, Bob?, 2)))" "$(cat "$GLP_DIR/programs/apps/gc/person.glp")"
 check_not "APPS gc: no failed play" "→ failed" "$apps_gc"
 check_not "APPS gc: no error" "Error" "$apps_gc"
 check "APPS gc coins: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gc"
@@ -7130,6 +7216,24 @@ apps_person_sg() { # apps_person_sg <person> <output>: the person's super-app li
 apps_person_screen() { # apps_person_screen <person> <output>: the person's mini-app screen, every other line of theirs, in order, as a list
     echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "sg(") != 1 { s = s (n++ ? ", " : "") substr($0, length(p) + 1) } END { print "[" s "]" }'
 }
+
+# GKK's app on three smartphones (programs/apps/gkk_boot.glp): the super-app of programs/social/graph/core on three isolates, each person with its own key pair, hosting the base mini-app from its certified artefact gkk.glpw.  alice connects to bob and to carol, invites each once connected, and once both are her friends introduces them to each other in the social graph, the cards answered by the scripted home; carol invites bob once connected to him; and play_keys's steps run over the three conversations.  Each person's mini-app screen is held to the screen play_keys holds for them, exactly, in order; their super-app lines, sg(connected(...)), are held in either order, the isolates running in either.
+apps_gkk_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gkk $APPS_CORE
+:boot $GLP_DIR/programs/apps/gkk_boot.glp $APPS_CORE
+:quit
+HEREDOC
+2>&1)
+rm -f "$APPS_CORE/gkk.glpw"
+check "APPS gkk on three smartphones: the mini-app's artefact is certified" "gkk.glpw --- certified under" "$apps_gkk_boot"
+check "APPS gkk on three smartphones: the boot settles" "Boot settled: 3 agents (alice, bob, carol)" "$apps_gkk_boot"
+check_not "APPS gkk on three smartphones: no event stopped at the cap" "did not quiesce" "$apps_gkk_boot"
+apps_same_either "APPS gkk on three smartphones: alice's super-app lines" "[sg(connected(bob)), sg(connected(carol))]" "[sg(connected(carol)), sg(connected(bob))]" "$(apps_person_sg alice "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: bob's super-app lines" "[sg(connected(alice)), sg(connected(carol))]" "$(apps_person_sg bob "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: carol's super-app lines" "[sg(connected(alice)), sg(connected(bob))]" "$(apps_person_sg carol "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: alice's screen is play_keys's" "[view([], [], [], [tab('Contacts', knows)]), menu(alice, []), view([], [], [establish(alice)], [tab('Contacts', knows)]), view([identity], [], [], [tab('Contacts', knows)]), view([identity], [], [acquaint(alice, bob)], [tab('Contacts', knows)]), view([identity], [bob], [acquaint(alice, bob)], [tab('Contacts', knows)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows)]), view([knows(bob), identity], [bob], [acquaint(alice, carol)], [tab('Contacts', knows)]), view([knows(bob), identity], [bob, carol], [acquaint(alice, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(bob), identity], [bob, carol], [], [tab('Contacts', knows)]), menu(alice, [bob, carol]), view([knows(carol), knows(bob), identity], [bob, carol], [introduce(alice, bob, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(bob), identity], [bob, carol], [], [tab('Contacts', knows)])]" "$(apps_person_screen alice "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: bob's screen is play_keys's" "[view([], [], [], [tab('Contacts', knows)]), view([], [], [establish(bob)], [tab('Contacts', knows)]), view([identity], [], [], [tab('Contacts', knows)]), gave(acquaint(alice, bob), yes), view([identity], [alice], [], [tab('Contacts', knows)]), view([identity], [alice], [acquaint(alice, bob)], [tab('Contacts', knows)]), view([knows(alice), identity], [alice], [], [tab('Contacts', knows)]), gave(introduce(alice, bob, carol), yes), view([knows(alice), identity], [alice], [introduce(alice, bob, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(alice), identity], [alice], [], [tab('Contacts', knows)]), view([knows(carol), knows(alice), identity], [alice, carol], [], [tab('Contacts', knows)]), view([knows(carol), knows(alice), identity], [alice, carol], [acquaint(bob, carol)], [tab('Contacts', knows)]), view([knows(carol), knows(carol), knows(alice), identity], [alice, carol], [], [tab('Contacts', knows)])]" "$(apps_person_screen bob "$apps_gkk_boot")"
+apps_same "APPS gkk on three smartphones: carol's screen is play_keys's" "[view([], [], [], [tab('Contacts', knows)]), view([], [], [establish(carol)], [tab('Contacts', knows)]), view([identity], [], [], [tab('Contacts', knows)]), gave(acquaint(alice, carol), yes), view([identity], [alice], [], [tab('Contacts', knows)]), view([identity], [alice], [acquaint(alice, carol)], [tab('Contacts', knows)]), view([knows(alice), identity], [alice], [], [tab('Contacts', knows)]), view([knows(alice), identity], [alice, bob], [], [tab('Contacts', knows)]), gave(acquaint(bob, carol), yes), view([knows(alice), identity], [alice, bob], [acquaint(bob, carol)], [tab('Contacts', knows)]), view([knows(bob), knows(alice), identity], [alice, bob], [], [tab('Contacts', knows)])]" "$(apps_person_screen carol "$apps_gkk_boot")"
 apps_gsnp_boot=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gsnp $APPS_CORE
 :boot $GLP_DIR/programs/apps/gsnp_boot.glp $APPS_CORE
@@ -7844,7 +7948,7 @@ if _section CAS; then
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai agora; do
+for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai agora gdo; do
     cas_n=$(printf '%s' "$cas_c" | tr a-z A-Z)
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
@@ -7910,7 +8014,7 @@ poll_run(5, As).
 HEREDOC
 2>&1)
 check "sglp outside: the program loads" "Loaded program" "$sglp_out_run"
-check "sglp outside: the person answers each poll, logged with the monitor's clock" "entry(14916.00387843316, 1, Poll, poll(2, yes))" "$sglp_out_run"
+check "sglp outside: the person answers each poll, logged with the monitor's clock" "entry(31906.575869147167, 1, Poll, poll(2, yes))" "$sglp_out_run"
 check "sglp outside: the program reads the five answers" "As = \[yes, yes, yes, yes, yes\]" "$sglp_out_run"
 
 # The simulations of canonical CVA platforms under sGLP, each a record of its
@@ -7934,6 +8038,125 @@ done
 echo ""
 
 fi  # Section SGLP
+
+# The run's own directory for the raw outputs and json reports of Sections Q
+# and NET (Code #22, 2026-11-03, IGLP-rawpaths): under tmp/, named by the
+# branch of the worktree the suite runs in and the PID of this run, printed at
+# each section's head.  Until 2026-11-03 every run wrote the same files in
+# tmp/, so two runs at once in two worktrees each wrote the other's lines into
+# its file, and the json reader of one could count the other's tests.
+SUITE_RUN_DIR="/Users/udi/Grassroots/tmp/suite-$(git -C "$GLP_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null | tr '/' '-')-$$"
+
+# The watchdog (Code #22's authorisation, 2026-11-03; IGLP-coop), Section Q's
+# and Section NET's.  A test's verdict does not depend on how loaded the
+# machine is: each runner runs with
+# --ignore-timeouts, so no test has a clock of its own, and the tests that run
+# agents wait on events alone (IsolateManager.boot and settle,
+# glp_multiagent/test/isolate_agents.dart).  Until 2026-11-03 every test had a
+# clock, its own or the runner's thirty seconds, and under load tests failed
+# that were merely slow: in the full suite on main 8ff18057, the night of
+# 2026-11-02, mad_w_clean_test.dart and the GC village test of
+# apps_screens_test.dart failed and each passed alone.  What a clock caught was
+# a run that never ends; the watchdog catches it instead.  A runner still
+# running after GLP_Q_BOUND seconds (three hours unless set) is killed, with
+# every process it started, and each test it was in when killed is reported
+# "did not finish", named by its file and its name as the json reporter
+# recorded it (testStart with no testDone), and counted as a failure.
+Q_BOUND="${GLP_Q_BOUND:-10800}"
+
+# _q_names_in_progress <json> <prefix>: the tests the json reporter's file
+# records as started and not done, one "<file>: <test name>" per line, the
+# file as KNOWN_RED carries it, relative to its package root with <prefix>.
+# _q_load_failures <json> <prefix>: the test files that did not load, which the
+# reporter records as its hidden test "loading <file>" done with an error, and
+# which the text reporter prints with no "<file>: " before its name, one
+# "<file>: did not load" per line.
+_q_names_in_progress() { _q_json "$1" "$2" progress; }
+_q_load_failures() { _q_json "$1" "$2" load; }
+_q_json() {
+    python3 - "$1" "$2" "$3" <<'PYEOF'
+import json, sys
+path, prefix, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+suites, tests, done, failed = {}, {}, set(), set()
+try:
+    lines = open(path).read().splitlines()
+except OSError:
+    lines = []
+for line in lines:
+    try:
+        e = json.loads(line)
+    except ValueError:
+        continue
+    t = e.get('type')
+    if t == 'suite':
+        suites[e['suite']['id']] = e['suite'].get('path') or '?'
+    elif t == 'testStart':
+        tests[e['test']['id']] = (e['test']['suiteID'], e['test']['name'])
+    elif t == 'testDone':
+        done.add(e['testID'])
+        if e.get('result') in ('error', 'failure'):
+            failed.add(e['testID'])
+for tid, (sid, name) in tests.items():
+    if mode == 'progress' and tid in done:
+        continue
+    if mode == 'load' and not (tid in failed and name.startswith('loading ')):
+        continue
+    file = suites.get(sid, '?')
+    i = file.find('/test/')
+    if file.startswith('/') and i >= 0:
+        file = file[i + 1:]
+    print(prefix + file + ': ' + (name if mode == 'progress' else 'did not load'))
+PYEOF
+}
+
+# _q_run <dir> <json> <out> <prefix> <runner...>: run the runner in <dir>, its
+# output in <out>, with no test clock and with the json reporter writing
+# <json>, as a process group of its own, killed whole once it outlives Q_BOUND.
+# Sets Q_RUN_STATUS, its exit status; Q_RUN_DNF, 1 where it was killed; and
+# Q_RUN_IN, the tests it was in, read before the kill, since a runner told to
+# stop records each test it is in as done, flutter test's as an error "did not
+# complete".
+_q_run() {
+    local dir="$1" json="$2" out="$3" prefix="$4"
+    shift 4
+    rm -f "$json"
+    ( cd "$dir" && exec perl -e 'setpgrp(0, 0); exec @ARGV or die "exec: $!\n"' \
+        "$@" --ignore-timeouts --file-reporter "json:$json" ) > "$out" 2>&1 &
+    local pid=$! waited=0
+    Q_RUN_DNF=0
+    Q_RUN_IN=""
+    while kill -0 "$pid" 2>/dev/null; do
+        if [ "$waited" -ge "$Q_BOUND" ]; then
+            Q_RUN_DNF=1
+            Q_RUN_IN=$(_q_names_in_progress "$json" "$prefix") || true
+            kill -TERM -- "-$pid" 2>/dev/null || true
+            sleep 10
+            kill -KILL -- "-$pid" 2>/dev/null || true
+            break
+        fi
+        sleep 5
+        waited=$((waited + 5))
+    done
+    wait "$pid" 2>/dev/null && Q_RUN_STATUS=0 || Q_RUN_STATUS=$?
+}
+
+# _q_report_dnf <runner>: the runner _q_run last ran, killed by the watchdog,
+# each test it was in reported "did not finish"; Q_DNF_COUNT, their number,
+# is the caller's to count as failures.
+_q_report_dnf() {
+    local names="$Q_RUN_IN"
+    Q_DNF_COUNT=0
+    if [ -z "$names" ]; then
+        echo "  FAIL: $1 did not finish within $Q_BOUND s, in no test the json reporter recorded as started"
+        Q_DNF_COUNT=1
+        return
+    fi
+    while IFS= read -r t; do
+        [ -z "$t" ] && continue
+        echo "  FAIL: did not finish within $Q_BOUND s: $t"
+        Q_DNF_COUNT=$((Q_DNF_COUNT + 1))
+    done <<< "$names"
+}
 
 if _section QD || _section QF; then
 # =============================================================================
@@ -7987,17 +8210,14 @@ if _section QD || _section QF; then
 # hand-written sources gave way to its compiled platform and IGLP's tests took
 # their old tree as the fixture programs/tests/linker_tree (GLP #9, IGLP-fixture).
 #
-# GLP (IGLP layer), 2026-09-24: the sovereign screen.  Currencies' b2367233 gave
-# the denominated mini-app twelve request clauses where it had seven, for SGC's
-# contract, and lib/manifests/sovereign_ui.dart still describes seven forms and
-# the old model.  The manifest is the image of the display declarations, and its
-# twelve forms and their labels are GLP's to write.  SGC shows no screen, so this
-# does not hold SGC.
-KNOWN_RED=(
-    "glp_multiagent/test/sovereign_screen_test.dart: the sovereign mini-app: the central bank boots, its seven forms stand, it mints and opens the credit line through its screen, and the play runs on to the chain redemption and the fiat payment"
-)
+# The sovereign screen's entry, red from 2026-09-24, went on 2026-11-03, when
+# sovereign_screen_test was rewritten on the bridge model as coins_screen_test
+# is, its agent started by agent/2 on the person's first act (GLP #11,
+# Code_inbox 2026-11-03 18:03 UTC, item 2).  The list is empty.
+KNOWN_RED=()
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="
+echo "  (raw output and json reports in $SUITE_RUN_DIR: q_dart.txt, q_dart.json, q_flutter.txt, q_flutter.json)"
 echo ""
 
 # glp_multiagent/assets/glp/ is generated and gitignored (2026-09-16), so a
@@ -8050,19 +8270,28 @@ fi
 # entry, which is not a suite failure — so every capture below is guarded
 # against `set -e` (line 24) rather than letting it abort the run.
 #
-# Each runner's raw output is kept, overwritten on every run, so that a failure
-# can be read in full after the suite ends: the section itself prints only the
-# failing names and, when its gate fails, the last twenty lines of dart test's
-# output and none of flutter test's (Integration, 2026-10-11).  Writing them
-# reads nothing back and moves no count or gate.
-Q_RAW_DIR="/Users/udi/Grassroots/tmp"
-Q_RAW_DART="$Q_RAW_DIR/suite_q_dart.txt"
-Q_RAW_FLUTTER="$Q_RAW_DIR/suite_q_flutter.txt"
+# Each runner's raw output and json report are kept in the run's directory,
+# SUITE_RUN_DIR, so that a failure can be read in full after the suite ends:
+# the section itself prints only the failing names and, when its gate fails,
+# the last twenty lines of dart test's output and none of flutter test's
+# (Integration, 2026-10-11).  The json report is what the watchdog and the
+# names of files that did not load are read from.
+Q_RAW_DIR="$SUITE_RUN_DIR"
+Q_RAW_DART="$Q_RAW_DIR/q_dart.txt"
+Q_RAW_FLUTTER="$Q_RAW_DIR/q_flutter.txt"
 mkdir -p "$Q_RAW_DIR" 2>/dev/null || true
+
+Q_DNF_DART=0
+Q_DNF_FLUTTER=0
 if _section QD; then
-DART_TREE_RESULT=$(cd "$GLP_RUNTIME" && "$DART" test 2>&1) && DART_TREE_STATUS=0 || DART_TREE_STATUS=$?
-printf '%s\n' "$DART_TREE_RESULT" > "$Q_RAW_DART" 2>/dev/null \
-    || echo "  (dart test's output could not be written to $Q_RAW_DART)"
+_q_run "$GLP_RUNTIME" "$Q_RAW_DIR/q_dart.json" "$Q_RAW_DART" "" "$DART" test
+DART_TREE_STATUS=$Q_RUN_STATUS
+Q_DNF_DART=$Q_RUN_DNF
+DART_TREE_RESULT=$(cat "$Q_RAW_DART" 2>/dev/null) || DART_TREE_RESULT=""
+if [ "$Q_DNF_DART" = 1 ]; then
+    _q_report_dnf "dart test"
+    FAIL=$((FAIL + Q_DNF_COUNT))
+fi
 else
     DART_TREE_RESULT=""
     DART_TREE_STATUS=0
@@ -8076,10 +8305,23 @@ DART_TREE_PASSED=${DART_TREE_PASSED:-0}
 
 # Failing tests, one "<file>: <test name>" per line.  grep exits 1 when the
 # tree is fully green, which is the good case, so this is guarded too.
+# A test the watchdog stopped is reported once, above, as one that did not
+# finish, and not again as the runner's error "did not complete".
 DART_TREE_FAILS=$(printf '%s' "$DART_TREE_CLEAN" \
     | grep -oE 'test/[A-Za-z0-9_/]+\.dart: .*\[E\]' \
     | sed 's/ \[E\]$//' \
+    | { if [ "$Q_DNF_DART" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
     | sort -u) || true
+# A file that did not load runs none of its tests, and its runner prints no
+# "<file>: <test>" for it: it is named from the json report, as a failure of
+# its file (Code #22, 2026-11-03: given_network_test.dart did not load on main
+# 51e227c9, and the section said only that dart test named no failing test).
+if _section QD; then
+    Q_LOAD_DART=$(_q_load_failures "$Q_RAW_DIR/q_dart.json" "") || true
+    if [ -n "$Q_LOAD_DART" ]; then
+        DART_TREE_FAILS=$(printf '%s\n%s' "$DART_TREE_FAILS" "$Q_LOAD_DART" | sed '/^$/d' | sort -u)
+    fi
+fi
 
 # glp_multiagent, the other half of the tree.  It is a Flutter package, so it
 # needs `flutter test`; `dart test` cannot run it.  A missing flutter is a hard
@@ -8098,9 +8340,14 @@ elif ! command -v flutter >/dev/null 2>&1; then
     echo "flutter is not on PATH, so glp_multiagent/test/ did not run" > "$Q_RAW_FLUTTER" 2>/dev/null \
         || echo "  (flutter test's output could not be written to $Q_RAW_FLUTTER)"
 else
-    MA_RESULT=$(cd "$GLP_DIR/glp_multiagent" && flutter test 2>&1) && MA_STATUS=0 || MA_STATUS=$?
-    printf '%s\n' "$MA_RESULT" > "$Q_RAW_FLUTTER" 2>/dev/null \
-        || echo "  (flutter test's output could not be written to $Q_RAW_FLUTTER)"
+    _q_run "$GLP_DIR/glp_multiagent" "$Q_RAW_DIR/q_flutter.json" "$Q_RAW_FLUTTER" "glp_multiagent/" flutter test
+    MA_STATUS=$Q_RUN_STATUS
+    Q_DNF_FLUTTER=$Q_RUN_DNF
+    MA_RESULT=$(cat "$Q_RAW_FLUTTER" 2>/dev/null) || MA_RESULT=""
+    if [ "$Q_DNF_FLUTTER" = 1 ]; then
+        _q_report_dnf "flutter test"
+        FAIL=$((FAIL + Q_DNF_COUNT))
+    fi
     MA_CLEAN=$(printf '%s' "$MA_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
 
     MA_PASSED=$(printf '%s' "$MA_CLEAN" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
@@ -8113,7 +8360,12 @@ else
         | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
         | sed 's/ \[E\]$//' \
         | sed 's|^.*/glp_multiagent/test/|glp_multiagent/test/|' \
+        | { if [ "$Q_DNF_FLUTTER" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
         | sort -u) || true
+    Q_LOAD_FLUTTER=$(_q_load_failures "$Q_RAW_DIR/q_flutter.json" "glp_multiagent/") || true
+    if [ -n "$Q_LOAD_FLUTTER" ]; then
+        MA_FAILS=$(printf '%s\n%s' "$MA_FAILS" "$Q_LOAD_FLUTTER" | sed '/^$/d' | sort -u)
+    fi
 fi
 
 # A runner that exits non-zero while naming no failing test did not run its
@@ -8125,12 +8377,12 @@ fi
 # `flutter test` still prints partial counts before dying at "Failed to build
 # asset bundle", which scored the tree 744 instead of 804 and still reported
 # ALL TESTS PASSED (worktree against main, 2026-09-16).
-if [ "${DART_TREE_STATUS:-0}" -ne 0 ] && [ -z "$DART_TREE_FAILS" ]; then
+if [ "${DART_TREE_STATUS:-0}" -ne 0 ] && [ -z "$DART_TREE_FAILS" ] && [ "$Q_DNF_DART" = 0 ]; then
     echo "  FAIL: dart test exited $DART_TREE_STATUS naming no failing test, so glp_runtime/test/ did not run"
     printf '%s\n' "$DART_TREE_CLEAN" | tail -5 | sed 's/^/        /'
     FAIL=$((FAIL + 1))
 fi
-if [ "${MA_STATUS:-0}" -ne 0 ] && [ -z "$MA_FAILS" ]; then
+if [ "${MA_STATUS:-0}" -ne 0 ] && [ -z "$MA_FAILS" ] && [ "$Q_DNF_FLUTTER" = 0 ]; then
     echo "  FAIL: flutter test exited $MA_STATUS naming no failing test, so glp_multiagent/test/ did not run"
     printf '%s\n' "$MA_CLEAN" | tail -5 | sed 's/^/        /'
     FAIL=$((FAIL + 1))
@@ -8172,12 +8424,13 @@ fi
 # list.  Leaving it would turn the list into a standing exception that silently
 # covers a future regression in the same test.
 # An entry of the half not run is neither red nor a rot: glp_multiagent's are
-# QF's, the rest QD's.
+# QF's, the rest QD's; nor is an entry of a half the watchdog killed, whose
+# tests after the kill did not run.
 Q_STALE=0
 for known in "${KNOWN_RED[@]}"; do
     case "$known" in
-        glp_multiagent/*) _section QF || continue ;;
-        *)                _section QD || continue ;;
+        glp_multiagent/*) _section QF && [ "$Q_DNF_FLUTTER" = 0 ] || continue ;;
+        *)                _section QD && [ "$Q_DNF_DART" = 0 ] || continue ;;
     esac
     if ! printf '%s\n' "$DART_TREE_FAILS" | grep -qxF "$known"; then
         echo "  FAIL: known-red entry now PASSES — remove it from KNOWN_RED:"
@@ -8202,6 +8455,105 @@ fi
 echo ""
 
 fi  # Section Q
+
+if _section NET; then
+# =============================================================================
+# Section NET: networking's own tests (GNA)
+# =============================================================================
+#
+# networking/ is GNA's code, three packages each with its own tests, which the
+# suite did not run until 2026-11-03 (Code #22): the Flutter package in
+# networking/ by `flutter test`; the glue in networking/glue by `flutter test`,
+# since it depends on the Flutter package and has flutter_test and no
+# package:test, so `dart test` refuses it; and the pure-Dart core in
+# networking/core by `dart test`.  Each runs from its own directory, as
+# networking/README.md says.  The conventions are Section Q's: each runner's
+# raw output and json report kept in the run's directory, SUITE_RUN_DIR
+# (net_flutter, net_glue and net_core, each .txt and .json), each failing test
+# printed as a FAIL
+# line "networking/<package>/test/<file>: <test name>" and counted, the passed
+# count added to the totals, a missing runner a hard failure, and a runner that
+# exits non-zero naming no failing test a hard failure, since it did not run its
+# tests.  The section has no known-red list: a red test fails it.
+echo "=== Section NET: networking's own tests (GNA) ==="
+echo ""
+
+NET_RAW_DIR="$SUITE_RUN_DIR"
+mkdir -p "$NET_RAW_DIR" 2>/dev/null || true
+echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, each .txt and .json)"
+NET_PASSED=0
+NET_FAILED=0
+
+# _net_run <name> <directory under networking/> <runner>: runs the runner's
+# tests in that directory and adds to NET_PASSED and NET_FAILED.
+_net_run() {
+    local name="$1" sub="$2" runner="$3"
+    local dir="$GLP_DIR/networking${sub:+/$sub}"
+    local rel="networking${sub:+/$sub}"
+    local raw="$NET_RAW_DIR/net_$name.txt"
+    local result status clean passed fails dnf
+    if ! command -v "$runner" >/dev/null 2>&1; then
+        echo "  FAIL: $runner is not on PATH, so $rel/test/ cannot run"
+        echo "$runner is not on PATH, so $rel/test/ did not run" > "$raw" 2>/dev/null \
+            || echo "  ($runner test's output could not be written to $raw)"
+        NET_FAILED=$((NET_FAILED + 1))
+        return
+    fi
+    # Under the watchdog, as Section Q's runners are: no test clock, and a run
+    # not finished within Q_BOUND reported by the tests it was in.
+    _q_run "$dir" "$NET_RAW_DIR/net_$name.json" "$raw" "$rel/" "$runner" test
+    status=$Q_RUN_STATUS
+    dnf=$Q_RUN_DNF
+    result=$(cat "$raw" 2>/dev/null) || result=""
+    if [ "$dnf" = 1 ]; then
+        _q_report_dnf "$runner test in $rel"
+        NET_FAILED=$((NET_FAILED + Q_DNF_COUNT))
+    fi
+    clean=$(printf '%s' "$result" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
+    passed=$(printf '%s' "$clean" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
+    passed=${passed:-0}
+    # `flutter test` prints absolute paths and `dart test` package-relative
+    # ones; both are normalised to the path from the repository root.
+    fails=$(printf '%s' "$clean" \
+        | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
+        | sed 's/ \[E\]$//' \
+        | sed "s|^.*/$rel/test/|$rel/test/|; s|^test/|$rel/test/|" \
+        | { if [ "$dnf" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
+        | sort -u) || true
+    local loads
+    loads=$(_q_load_failures "$NET_RAW_DIR/net_$name.json" "$rel/") || true
+    if [ -n "$loads" ]; then
+        fails=$(printf '%s\n%s' "$fails" "$loads" | sed '/^$/d' | sort -u)
+    fi
+    if [ "$status" -ne 0 ] && [ -z "$fails" ] && [ "$dnf" = 0 ]; then
+        echo "  FAIL: $runner test exited $status in $rel naming no failing test, so $rel/test/ did not run"
+        printf '%s\n' "$clean" | tail -5 | sed 's/^/        /'
+        NET_FAILED=$((NET_FAILED + 1))
+    fi
+    if [ -n "$fails" ]; then
+        while IFS= read -r failure; do
+            [ -z "$failure" ] && continue
+            echo "  FAIL: $failure"
+            NET_FAILED=$((NET_FAILED + 1))
+        done <<< "$fails"
+    fi
+    echo "  $rel: $passed passed ($runner test; output in $raw)"
+    NET_PASSED=$((NET_PASSED + passed))
+}
+
+_net_run flutter "" flutter
+_net_run glue glue flutter
+_net_run core core dart
+
+PASS=$((PASS + NET_PASSED))
+FAIL=$((FAIL + NET_FAILED))
+if [ $NET_FAILED -eq 0 ]; then
+    echo "  PASS: All $NET_PASSED networking tests passed"
+fi
+
+echo ""
+
+fi  # Section NET
 
 # =============================================================================
 # SUMMARY

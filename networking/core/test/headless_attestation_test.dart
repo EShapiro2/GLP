@@ -36,6 +36,10 @@ class _FixtureProducer implements PlatformAttestation {
 
   /// The verdicts this side reached on what its peers offered.
   final List<AttestationVerdict> verdicts = [];
+  final Completer<void> _firstVerdict = Completer<void>();
+
+  /// Completes once this side has reached a verdict.
+  Future<void> get firstVerdict => _firstVerdict.future;
 
   final verifier = AttestationVerifier(
     clock: () => fixtureTime,
@@ -81,6 +85,7 @@ class _FixtureProducer implements PlatformAttestation {
       peerIdentityKey: peerIdentityKey,
     );
     verdicts.add(verdict);
+    if (!_firstVerdict.isCompleted) _firstVerdict.complete();
     return verdict;
   }
 }
@@ -182,7 +187,7 @@ void main() {
     await dial(caller, service);
 
     expect(
-      await callerSaw.future.timeout(const Duration(seconds: 15)),
+      await callerSaw.future,
       const Application(
         developer: 'ABCDE12345',
         name: 'com.eshapiro.grassapp',
@@ -191,7 +196,7 @@ void main() {
       reason: 'the caller verified the service\'s App Attest offer',
     );
     expect(
-      await serviceSaw.future.timeout(const Duration(seconds: 15)),
+      await serviceSaw.future,
       const Application(
         developer: 'ABCDE12345',
         name: 'com.eshapiro.other',
@@ -199,7 +204,7 @@ void main() {
       ),
       reason: 'the service verified the caller\'s App Attest offer',
     );
-  });
+  }, timeout: Timeout.none);
 
   test('a signature lifted from another session tears the session down',
       () async {
@@ -227,7 +232,9 @@ void main() {
 
     // The caller verifies the honest service and finds it reachable; the
     // service verifies the replayed signature and tears the session down.
-    await callerSaw.future.timeout(const Duration(seconds: 15));
+    await callerSaw.future;
+    await verifyingService.firstVerdict;
+    // What does not happen after the verdict: no connect at the service.
     await Future<void>.delayed(const Duration(seconds: 2));
     expect(verifyingService.verdicts, isNotEmpty,
         reason: 'the service must have been given the offer to verify');
@@ -240,7 +247,7 @@ void main() {
     expect(serviceConnected, isFalse,
         reason: 'onPeerConnected does not fire on a failed attestation');
     expect(service.isPeerReachable(caller.identity.publicKey), isFalse);
-  });
+  }, timeout: Timeout.none);
 
   test('a profile with nothing to offer is unattested at its peer, and still '
       'verifies what it is offered', () async {
@@ -271,15 +278,15 @@ void main() {
 
     await dial(caller, service);
 
-    expect(await callerSaw.future.timeout(const Duration(seconds: 15)), isNull,
+    expect(await callerSaw.future, isNull,
         reason: 'a rendezvous-like server is unattested by design');
-    expect(await serviceSaw.future.timeout(const Duration(seconds: 15)),
+    expect(await serviceSaw.future,
         const Application(
           developer: 'ABCDE12345',
           name: 'com.eshapiro.grassapp',
           version: 42,
         ));
-  });
+  }, timeout: Timeout.none);
 
   test(
       'a signature over another version number than the one carried fails, '
@@ -303,7 +310,9 @@ void main() {
 
     await dial(caller, service);
 
-    await callerSaw.future.timeout(const Duration(seconds: 15));
+    await callerSaw.future;
+    await verifyingService.firstVerdict;
+    // What does not happen after the verdict: no connect at the service.
     await Future<void>.delayed(const Duration(seconds: 2));
     expect(verifyingService.verdicts, isNotEmpty,
         reason: 'the service must have been given the offer to verify');
@@ -318,5 +327,5 @@ void main() {
         reason: 'onPeerConnected does not fire on a failed attestation');
     expect(service.isPeerReachable(caller.identity.publicKey), isFalse,
         reason: 'the session is torn down');
-  });
+  }, timeout: Timeout.none);
 }

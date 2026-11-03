@@ -316,8 +316,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
   /// The goal's argument [slot] dereferenced, for [_clauseFails]: null where
   /// the goal holds no variable there or it is unbound.
   static Object? _indexedArg(RunnerContext cx, int slot) {
-    if (!cx.env.argBySlot.containsKey(slot)) return null;
-    final arg = cx.env.argBySlot[slot];
+    final arg = cx.env.arg(slot);
     if (arg is! VarRef) return null;
     final d = cx.rt.heap.derefAddr(arg.addr);
     return d is Term && d is! VarRef ? d : null;
@@ -735,7 +734,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
     }
 
     // Compiled callee — enqueue a new goal at its entry byte offset.
-    final newEnv = CallEnv(args: Map<int, Term>.from(cx.argSlots));
+    final newEnv = CallEnv.ofList(cx.argSlots.toList());
     final newGoalId = cx.rt.nextGoalId++;
     final newGoalRef = GoalRef(newGoalId, symbol.codeOffset);
 
@@ -745,17 +744,15 @@ class ByteRunner with OpExecutors implements GoalRunner {
           cx.termFormatter != null ? cx.termFormatter!(term) : term.toString()));
     }
 
-    cx.rt.setGoalEnv(newGoalId, newEnv);
-
-    // Inherit the parent's program key so the scheduler routes the child to the
-    // same runner.
-    final parentProgram = cx.rt.getGoalProgram(cx.goalId);
-    if (parentProgram != null) {
-      cx.rt.setGoalProgram(newGoalId, parentProgram);
-    }
-    // The invariant: a spawned goal runs its parent's module (its PC indexes
-    // into that module's code). Inherit the module value.
-    cx.rt.setGoalModule(newGoalId, cx.rt.getGoalModule(cx.goalId));
+    // The child's record, made once: its registers; the parent's program key,
+    // where it has one, so the scheduler routes the child to the same runner;
+    // and the parent's module value, since a spawned goal runs its parent's
+    // module (its PC indexes into that module's code).
+    final parent = cx.rt.goalRecordOf(cx.goalId);
+    final child = cx.rt.addGoal(newGoalId, newEnv);
+    final parentProgram = parent?.program;
+    if (parentProgram != null) child.setProgram(parentProgram);
+    child.setModule(parent?.module);
 
     cx.rt.gq.enqueue(newGoalRef);
 
@@ -810,7 +807,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
     }
     cx.reduced = true;
 
-    cx.env.update(Map<int, Term>.from(cx.argSlots));
+    cx.env.update(cx.argSlots.toList());
     cx.argSlots.clear();
     cx.spawnedGoals.clear();
     if (tracing) cx.goalHead = newHeadGoalStr;

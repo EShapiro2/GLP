@@ -59,25 +59,29 @@ class InitAgent extends ToAgentMsg {
   final String rootSelfGlpPath;
   final SendPort replyPort;
 
-  /// Entry-point goal label, e.g. 'agent_init/3', 'agent_init_play/3'.
-  final String goalLabel;
-
-  /// Extra arguments inserted between Id and NetIn.
-  final List<String> extraArgs;
-
   /// If true, the isolate waits for a [StartAgent] command before running
   /// GLP initialization.  This allows the main isolate to register all agent
   /// ports first, eliminating message-routing race conditions.
   final bool deferStart;
+
+  /// The entry of the program the application starts, where the agent runs
+  /// for a live person: at the agent's first start the isolate sends on the
+  /// person channel the act that starts it, `<entry>(Me, [])`, Me the agent's
+  /// own key and [] the keys of the peers the person knows, none at a first
+  /// start (IGLP, Implementation Notes, "Boot": "At the agent's first start
+  /// the application sends on the person channel the act that starts its
+  /// program, with the agent's own key and the keys of the peers the person
+  /// knows, none at a first start; later peers come by acquaintance").  Null
+  /// where the agent's person gives the first act, as a test's does.
+  final String? entry;
 
   InitAgent({
     required this.agentId,
     required this.program,
     required this.rootSelfGlpPath,
     required this.replyPort,
-    this.goalLabel = 'agent_init/3',
-    this.extraArgs = const [],
     this.deferStart = false,
+    this.entry,
   });
 }
 
@@ -199,8 +203,6 @@ Future<void> _runAgent(InitAgent init) async {
     agentId: agentId,
     program: init.program,
     rootSelfGlpPath: init.rootSelfGlpPath,
-    goalLabel: init.goalLabel,
-    extraArgs: init.extraArgs,
   );
 
   // Wire callbacks to send messages back to the main isolate: what the
@@ -228,6 +230,7 @@ Future<void> _runAgent(InitAgent init) async {
   if (!init.deferStart) {
     try {
       await agent.initialize();
+      await _firstAct(agent, init.entry);
       _sendStats(agent, init.replyPort);
     } catch (e) {
       init.replyPort.send(AgentError(agentId, e.toString()));
@@ -243,6 +246,7 @@ Future<void> _runAgent(InitAgent init) async {
       // Deferred start: initialize GLP now (all ports are registered).
       try {
         await agent.initialize();
+        await _firstAct(agent, init.entry);
         _sendStats(agent, init.replyPort);
       } catch (e) {
         init.replyPort.send(AgentError(agentId, e.toString()));
@@ -261,6 +265,17 @@ Future<void> _runAgent(InitAgent init) async {
       break;
     }
   }
+}
+
+/// At the agent's first start, the act that starts the program [entry] on the
+/// person channel: `<entry>(Me, [])`, Me the agent's key as hex and no peer
+/// yet ([InitAgent.entry]).  Nothing on a restart, the restored state holding
+/// what the first act began, nor where there is no [entry].
+Future<void> _firstAct(AgentRuntime agent, String? entry) async {
+  final key = agent.publicKey;
+  if (entry == null || !agent.firstStart || key == null) return;
+  await agent.injectUserInput(
+      rt.StructTerm(entry, [rt.ConstTerm(key.hex), rt.ConstTerm(rt.nil)]));
 }
 
 /// The runtime term of a ground term from the screen, as the agent's heap

@@ -8,7 +8,7 @@
 %% the root programs/self.glp, at its own two types, PingShown what it draws
 %% for its person and PingMsg its root channels' messages (vGLP, 2026-10-14
 %% 13:21 UTC, S2: a hand-written mini-app chooses both), and its scripted
-%% person the second template miniapp_person/4 at PingShown and its screen's
+%% person the second template miniapp_person/5 at PingShown and its screen's
 %% type AppUi (vGLP 2026-10-16 11:25 UTC, item 4) (TGLP modules.tex,
 %% Dynamic Activation, "Opaque types": "A guest declares its entry as the
 %% template's instance at its own type"; GSG, 2026-10-13 18:52 UTC, O5, and
@@ -51,6 +51,6 @@ imported procedure miniapp#miniapp(Key?, PersonChannel(PingShown)?, SgChannel(Pi
 exported procedure miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?, Stream(Integer)?).
 miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
-imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(PingShown), PersonIn(PingShown))?, Stream(AppUi)).
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(PingShown), PersonIn(PingShown))?, Stream(AppUi)).
-miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(PingShown), PersonIn(PingShown))?, Stream(AppUi)).
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(PingShown), PersonIn(PingShown))?, Stream(AppUi)).
+miniapp_person(Id, Role, Ps, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, Ps?, PEnd?, Screen).

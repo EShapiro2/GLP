@@ -4,7 +4,7 @@
 #
 #   bash programs/gsc/test_gsc.sh
 #
-# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63); each read from its file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, and a guarding role adding and deleting nothing, admitted; then the compilation of Section 5, against the displays of befriend and close in Section 5.1; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on contracts admitted with it and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSN, failing a condition each by a listed role, and listed roles refused for the mark ? or for changing nothing; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Speech-act schema, printed from a contract's term (notation.glp); then cleared atoms (GSC 327e035): GSN's unfriend in the notation and compiled with K_p, and fixtures on each rule --- a cleared atom puts no edge in the role graph, is no change a role makes, matches no atom its role adds, a wildcard only in an atom marked -, and a schema of arity one that clears supplies nothing under clause 1 of def:unobstructed; then the values speech-act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech-Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity a positive whole number at every binding --- and a fixture of each malformation the passage forbids; then signing conditions in a constraint, signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92), accepted with the verdict of the same fixture without them, printed, compiled, and refused where u is no agent role or agent variable or y no speech-act variable.  The federation extension of speech-act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20).  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  This script expects only GSC's contracts, GKK, GSG and GSN, and the checker's fixtures; every other owner's contract is checked and recorded by Code from its own .glp, by cascade.sh (GSC #8, 2026-10-25 18:26 UTC).  Exits non-zero if any check fails.
+# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63); each read from its file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then clause 2 of def:unobstructed with the other agent in a reading role; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, a guarding role adding and deleting nothing, admitted, and reading roles (GSC 0380a8a), admitted where a guarding role requires an atom naming them, compiled with their state unchanged, and failing volition otherwise; and those of a schema with no guarding role (GSC c100cdc), admitted with a signature atom and refused without one or as listed roles; then the compilation of Section 5, against the displays of befriend and close in Section 5.1; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on contracts admitted with it and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSN, failing a condition each by a listed role, a listed role refused for the mark ?, and a listed reading role, failing volition or admitted; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the notation of Definition Speech-act schema, printed from a contract's term (notation.glp); then cleared atoms (GSC 327e035): GSN's unfriend in the notation and compiled with K_p, and fixtures on each rule --- a cleared atom puts no edge in the role graph, is no change a role makes, matches no atom its role adds, a wildcard only in an atom marked -, and a schema of arity one that clears supplies nothing under clause 1 of def:unobstructed; then the values speech-act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech-Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity a positive whole number at every binding --- and a fixture of each malformation the passage forbids; then signing conditions in a constraint, signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92), accepted with the verdict of the same fixture without them, printed, compiled, and refused where u is no agent role or agent variable or y no speech-act variable.  The federation extension of speech-act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20).  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  This script expects only GSC's contracts, GKK, GSG and GSN, and the checker's fixtures; every other owner's contract is checked and recorded by Code from its own .glp, by cascade.sh (GSC #8, 2026-10-25 18:26 UTC).  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -177,6 +177,17 @@ out=$(run "check_variant(gkk_intro_loose, $GKKT, V)." "traceable_variant(gkk_int
 check "GKK, knows(c) added at Bob and c required at neither role: knows is untraceable" \
       "V = not_grassroots([untraceable([knows])])" "$out"
 check "GKK, ... and identity alone has traceable provenance" "E = [identity]" "$out"
+# Clause 2 of def:unobstructed asks the other agent of the introduction to be
+# in a role that is not a reading role (GSC 0380a8a): acquaint forbidding
+# blocked(Bob) at Alice, which block adds there with Bob in a reading role,
+# is obstructed (gkk_block_reading); with Bob adding blocked_by(Alice) it is
+# excused, and the contract is syntactically grassroots (gkk_block_changing).
+out=$(run "check_variant(gkk_block_reading, $GKKT, V).")
+check "GKK, acquaint forbidding an atom a schema adds with the other agent in a reading role: obstructed (clause 2)" \
+      "V = not_grassroots([obstructed(acquaint, 1, atom(blocked, [role(2)]), blocked_by(block, 1, atom(blocked, [role(2)])))])" "$out"
+out=$(run "check_variant(gkk_block_changing, $GKKT, V).")
+check "GKK, ... and with the other agent changing state there: excused, syntactically grassroots" \
+      "V = syntactically_grassroots" "$out"
 
 # Clause 1 of def:unobstructed (GSC, Section 3.6, at GSC b2bb8be): the schema
 # of arity one adding an atom the introductory act requires may require
@@ -441,20 +452,64 @@ out=$(run 'check_named(nonesuch, V).')
 check "the empty contract has no introductory act" \
       "V = not_grassroots([no_introductory_act])" "$out"
 
-# --- the form of a schema (def:schema) -------------------------------------
-# def:schema at GSC bd0ebc4 requires +(i) and -(i) disjoint, and +(i) u -(i)
-# nonempty at every role that is not a guarding role and at some role; a
-# guarding role may add and delete nothing (the sentence after the example
-# of def:schema).  GSN's message and post are
-# guarded at a role that adds and deletes nothing and are admitted, above.  On
-# GSG a role that does not guard and adds and deletes nothing, a schema no
-# role of which adds or deletes an atom, and an atom added and deleted at one
-# role are each refused, the contract malformed, and it is not compiled.
-# def:schema requires the same of a listed role (GSC 70afdc4;
-# sn_listed_inert below).
+# --- the form of a schema (def:schema) and reading roles (def:volition) -----
+# def:schema at GSC 0380a8a requires +(i) and -(i) disjoint, and +(i) u -(i)
+# nonempty at some role; a guarding role may add and delete nothing (the
+# sentence after the example of def:schema), and a role that is not a
+# guarding role and adds and deletes nothing is a reading role, which
+# def:volition admits only where it has an edge to a guarding role from an
+# atom that guarding role requires.  GSN's message and post are guarded at a
+# role that adds and deletes nothing and are admitted, above.  On GSG a
+# reading role no guarding role records fails volition, changes_nothing,
+# and the contract is not compiled; a reading role the guarding role
+# records is admitted, and compiles with its state unchanged; and an
+# unguarded schema with a reading role is admitted with a signature atom
+# (GSC c100cdc, def:signature) and refused without one.  A schema no role of
+# which adds or deletes an atom, and an atom added and deleted at one role,
+# are each refused, the contract malformed, and it is not compiled.  The
+# same of a listed role (sn_listed_inert and sn_listed_reading below).
 out=$(run "check_variant(sg_inert_role, $GSGT, V).")
-check "a role that does not guard and adds and deletes nothing is refused" \
-      "V = malformed([changes_nothing(poke, 2)])" "$out"
+check "a reading role that the guarding role requires no atom naming fails volition" \
+      "V = not_grassroots([changes_nothing(poke, 2)])" "$out"
+out=$(run "check_variant(sg_reading_point, $GSGT, V).")
+check "a reading role the guarding role records, Alice pointing to Carol through Bob, is admitted" \
+      "V = syntactically_grassroots" "$out"
+read -r -d '' point_tex <<'EOF'
+\begin{align*}
+&c'_{\Alice} := c_{\Alice} \uplus \{\mathit{points}(c)\}, \qquad c'_{\Bob} := c_{\Bob},\\
+&\text{provided } \mathit{identity},\mathit{points}(\Bob) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{points}(c) \in c_{\Bob},\\
+&\text{guarded by } \{\Alice\}
+\end{align*}
+EOF
+check_eq "and it compiles with the reading participant's state unchanged (def:compile)" \
+         "$(printf '%s' "$point_tex" | squash)" \
+         "$(run "compile_schema_variant(sg_reading_point, $GSGT, point)." | sed -n '/begin{align/,/end{align/p' | sed 's/GLP>//' | squash)"
+out=$(run "check_variant(sg_reading_unguarded, $GSGT, V).")
+check "an unguarded schema with a reading role and a signature atom, nudged(Bob), is admitted (def:signature)" \
+      "V = syntactically_grassroots" "$out"
+# Every so often (GSC c100cdc, def:signature, def:volition): a schema with no
+# guarding role may have reading roles, agent roles, given a connected role
+# graph and a signature atom.  sg_update's tell and untell, as GFF's update
+# and update_ceased, are admitted; a second schema with no guarding role
+# adding, or clearing, an atom of the signature atom's predicate takes it
+# away; an atom not naming the other agent role, or not holding the schema's
+# variable, is none; a listed reading role is refused; and a variable may
+# occur in the signature atom as its multiplicity.
+out=$(run "check_variant(sg_update, $GSGT, V).")
+check "tell and untell, no guarding role and Carol's a reading role, each with the signature atom told(Carol, b), are admitted" \
+      "V = syntactically_grassroots" "$out"
+out=$(run "check_variant(sg_update_twice, $GSGT, V).")
+check "a second schema with no guarding role adding told leaves tell with no signature atom" \
+      "V = not_grassroots([no_signature_atom(tell)])" "$out"
+out=$(run "check_variant(sg_update_cleared, $GSGT, V).")
+check "a second schema with no guarding role clearing told leaves untell with no signature atom" \
+      "V = not_grassroots([no_signature_atom(untell)])" "$out"
+out=$(run "check_variant(sg_update_unnamed, $GSGT, V).")
+check "an atom not naming the other agent role is no signature atom" \
+      "V = not_grassroots([no_signature_atom(tell)])" "$out"
+out=$(run "check_variant(sg_update_unvaried, $GSGT, V).")
+check "an atom not holding the schema's variable is no signature atom" \
+      "V = not_grassroots([no_signature_atom(tell)])" "$out"
 out=$(run "check_variant(sg_inert_schema, $GSGT, V).")
 check "a schema adding and deleting nothing at any role is refused, though its roles guard" \
       "V = malformed([no_role_changes(look)])" "$out"
@@ -462,8 +517,8 @@ out=$(run "check_variant(sg_added_deleted, $GSGT, V).")
 check "an atom added and deleted at one role is refused" \
       "V = malformed([added_and_deleted(toggle, 1, atom(flag, []))])" "$out"
 out=$(run "compile_variant(sg_inert_role, $GSGT)." "compile_variant(sg_inert_schema, $GSGT)." "compile_variant(sg_added_deleted, $GSGT).")
-check "a contract refused for the form of a schema is not compiled, and the message says why, in the words of def:schema" \
-      "% not compiled: sg_inert_role is malformed: poke at role 2 is not a guarding role and adds and deletes nothing; check_named gives the faults." \
+check "a contract with a reading role no guarding role records is not compiled, being not syntactically grassroots" \
+      "% not compiled: sg_inert_role is not syntactically grassroots; check_named gives the faults." \
       "$(printf '%s' "$out" | tr '\n' ' ')"
 check "nor one whose schema changes nothing at any role" \
       "% not compiled: sg_inert_schema is malformed: look adds and deletes nothing at any role; check_named gives the faults." \
@@ -1025,8 +1080,20 @@ check "and it is not compiled, the message naming the fault" \
       "% not compiled: sn_listed_guard is malformed: split at role 3 has a listed role carrying the mark ?, which only an agent role may carry; check_named gives the faults." \
       "$(printf '%s' "$out" | tr '\n' ' ')"
 out=$(run "check_variant(sn_listed_inert, $GSNT, V).")
-check "a listed role adding and deleting nothing is refused" \
-      "V = malformed([changes_nothing(idle, 2)])" "$out"
+check "a listed reading role whose guarding role requires no atom of its base fails volition" \
+      "V = not_grassroots([changes_nothing(idle, 2)])" "$out"
+out=$(run "check_variant(sn_listed_reading, $GSNT, V).")
+check "a listed reading role whose guarding role requires listed(Alice, n), as close's leader does, is admitted" \
+      "V = syntactically_grassroots" "$out"
+out=$(run "check_variant(sn_listed_unguarded, $GSNT, V).")
+check "a listed reading role in a schema with no guarding role is refused, though idled(n) is a signature atom (def:volition)" \
+      "V = not_grassroots([listed_reading(idle, 2)])" "$out"
+read -r -d '' idle_tex <<'EOF'
+&c'_q := c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)]),\ q \neq \Alice),\\
+EOF
+check "and each member's line of its compiled form leaves the member's state unchanged (def:compile)" \
+      "$(printf '%s' "$idle_tex" | squash)" \
+      "$(run "compile_schema_variant(sn_listed_reading, $GSNT, idle)." | sed -n '/begin{align/,/end{align/p' | sed 's/GLP>//' | squash)"
 
 # --- listed roles formed otherwise (def:role) ------------------------------
 # close_b's listed role is of itself, no agent role; note_l's carries a
@@ -1250,22 +1317,27 @@ check_eq "a constraint with a product of two value variables is refused" \
 check "and it is not compiled, the fault named" \
       "mint carries a constraint that is not linear;" "$(printf '%s\n' "$out" | tr '\n' ' ')"
 
-# The malformations the passage forbids, each refused (README, "The
-# verdicts"): a role that does not guard and changes nothing, numbers or no
-# (def:schema; GB's mature of b9369200, which GB's redemption replaces,
-# redeem since 18f28661); a multiplicity on an atom required and not deleted,
+# A reading role that reads a number, admitted, the guarding role requiring
+# knows of it (def:schema and def:volition, GSC 0380a8a; GB's mature of
+# b9369200, which GB's redemption replaces, redeem since 18f28661).  The
+# malformations the passage forbids, each refused (README, "The
+# verdicts"): a multiplicity on an atom required and not deleted,
 # and on one forbidden, the passage admitting one on an atom added or
 # deleted; a multiplicity that is not a number; a constraint on an agent,
 # the passage admitting one on the value variables; an atom added with a
 # multiplicity and deleted at one role (def:schema); and a head that lists a
 # number and a value variable twice and leaves out the value variables
 # the atoms and the constraint carry.
-out=$(run "check_named(nm_reading_role, V)." "check_named(nm_mult_kept, V)." \
+out=$(run "check_named(nm_reading_role, V).")
+check "a reading role that reads a number, the guarding role requiring knows of it, is admitted" \
+      "V = syntactically_grassroots" "$out"
+out=$(run "check_named(nm_tally, V).")
+check "a schema with no guarding role whose signature atom holds its variable k as its multiplicity is admitted (def:signature)" \
+      "V = syntactically_grassroots" "$out"
+out=$(run "check_named(nm_mult_kept, V)." \
           "check_named(nm_mult_forbidden, V)." "check_named(nm_mult_agent, V)." \
           "check_named(nm_constraint_agent, V)." "check_named(nm_added_deleted, V)." \
           "check_named(nm_head, V)." "compile_named(nm_head).")
-check "a role that reads a number and changes nothing is refused" \
-      "V = malformed([changes_nothing(mature, 2)])" "$out"
 check "a multiplicity on an atom required and not deleted is refused" \
       "V = malformed([multiplicity_not_added(spend, 1, atom(coin, [role(1)]))])" "$out"
 check "a multiplicity on an atom forbidden is refused" \
@@ -1323,12 +1395,11 @@ check "a cleared atom naming the other role puts no edge in the role graph: voli
       "V = not_grassroots([volition(shun, 1, 2)])" "$out"
 check "the same atom deleted, and so required, joins the roles: syntactically grassroots" \
       "V = syntactically_grassroots" "$out"
-# A cleared atom is no change a role makes: +(i) u -(i) is nonempty at every
-# role that is not a guarding role and at some role, -(i) the atoms marked -
-# with no wildcard (def:schema).
+# A cleared atom is no change a role makes: +(i) u -(i) is nonempty at some
+# role, -(i) the atoms marked - with no wildcard (def:schema).
 out=$(run "check_variant(cl_inert, $GSNT, V).")
-check "a role that only clears does not change, and a schema that only clears changes nothing" \
-      "V = malformed([changes_nothing(purge, 2), no_role_changes(purge)])" "$out"
+check "a schema whose roles only clear changes nothing, and is refused" \
+      "V = malformed([no_role_changes(purge)])" "$out"
 # No atom of +(i) is obtained from an atom of *(i) by replacing its wildcards
 # (def:schema).
 out=$(run "check_variant(cl_added, $GSNT, V)." "compile_variant(cl_added, $GSNT).")

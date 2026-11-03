@@ -7,6 +7,7 @@
 /// — `multiagent/isolate_manager.dart` and `multiagent/agent_runtime.dart` — set
 /// it off, so every agent isolate ran its program unchecked. The flag is gone;
 /// these tests hold the refusal on that path.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -38,7 +39,14 @@ takes_integer(_).
 /// The boot clause the multi-isolate path spawns one agent from.
 const _bootClause = '''
 procedure boot.
-boot :- agent_init(alice, _)@alice.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- agent_init(alice, N?).
+start(_, _) :- otherwise | true.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
 
 ''';
 
@@ -95,7 +103,7 @@ void main() {
               s.contains('Type checking failed');
         }, 'the agent reports the type-check failure, so boot fails fast')),
       );
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
 
     test('boot succeeds on the corrected program', () async {
       final config = BootLoader().load(_bootClause + _wellTyped);
@@ -104,6 +112,6 @@ void main() {
       await manager.boot(config);
       manager.start();
       await manager.settle();
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
   });
 }

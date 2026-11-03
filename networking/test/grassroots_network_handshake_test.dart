@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
@@ -17,11 +18,8 @@ import 'package:grassroots_networking_core/src/session/noise_session_manager.dar
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
-
-/// Hermetic host candidates (see the glare test).
-Future<List<InternetAddress>> _loopbackHostAddresses() async =>
-    [InternetAddress.loopbackIPv4];
 
 /// A datagram the relay carried: from the caller or from the callee, its
 /// frame type, and for a handshake the kind of message its envelope names
@@ -51,6 +49,16 @@ class _Relay {
   int? _callerPort;
   final List<_Carried> carried = [];
 
+  /// Each datagram carried, as it is carried.
+  final StreamController<void> _carriedEvents =
+      StreamController<void>.broadcast(sync: true);
+
+  /// Completes once [holds] is true of what the relay has carried.
+  Future<void> carriedWhere(bool Function() holds) async {
+    if (holds()) return;
+    await _carriedEvents.stream.firstWhere((_) => holds());
+  }
+
   int get port => _socket.port;
   String get address => '127.0.0.1:$port';
 
@@ -65,6 +73,7 @@ class _Relay {
           ? data[7]
           : null,
     ));
+    _carriedEvents.add(null);
     if (fromCallee) {
       final address = _callerAddress;
       final port = _callerPort;
@@ -130,39 +139,37 @@ void main() {
   final loopbackIsLocal =
       localNetworkFromPrefixes([localPrefixOf(InternetAddress('127.0.0.1'))]);
 
+  /// Each node's host-address reader, which tells when its candidates are
+  /// read.
+  final hostReaders = Expando<LoopbackHostReader>();
+
   Future<GrassrootsNetwork> startNode(GrassrootsIdentity id) async {
     final store = Store<AppState>(appReducer, initialState: const AppState());
+    final hosts = LoopbackHostReader();
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
       store: store,
       sodium: sodium,
-      localHostAddressReader: _loopbackHostAddresses,
+      localHostAddressReader: hosts.call,
       config: const GrassrootsNetworkConfig(
         // Long enough that no tick re-reads the local network and replaces
         // the injected prefixes inside the test window.
         announceInterval: Duration(minutes: 30),
       ),
     );
+    hostReaders[network] = hosts;
     addTearDown(network.dispose);
     expect(await network.initialize(), isTrue);
     // Wait for the construction-time read of the local network, which would
     // otherwise overwrite the injection (see the LAN trust test).
-    final readBy = DateTime.now().add(const Duration(seconds: 5));
-    while (store.state.localNetwork.networkId == null &&
-        DateTime.now().isBefore(readBy)) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
+    await stateWhere(store, (s) => s.localNetwork.networkId != null);
     store.dispatch(LocalNetworkChangedAction(loopbackIsLocal));
     return network;
   }
 
   Future<String> listeningAddress(GrassrootsNetwork network) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (network.debugLocalCandidates().isEmpty &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
+    await hostReaders[network]!.read;
     return network.debugLocalCandidates().first;
   }
 
@@ -173,12 +180,14 @@ void main() {
     return relay;
   }
 
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 15}) async {
-    final clock = Stopwatch()..start();
-    while (!predicate() && clock.elapsed < Duration(seconds: seconds)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-    return predicate();
+  /// Completes once [callee] and [caller] each hold the other reachable over
+  /// the LAN.
+  Future<void> linkedOverLan(GrassrootsNetwork caller, Uint8List callerKey,
+      GrassrootsNetwork callee, Uint8List calleeKey) async {
+    await stateWhere(caller.store,
+        (_) => caller.peerUnderlays(calleeKey).contains(Underlay.lan));
+    await stateWhere(callee.store,
+        (_) => callee.peerUnderlays(callerKey).contains(Underlay.lan));
   }
 
   final announce = PacketType.announce.value;
@@ -196,21 +205,21 @@ void main() {
     caller.wan!.putPeerAddress(calleeId.publicKey, relay.address);
 
     await caller.send(calleeId.publicKey, Uint8List.fromList([1]));
-    expect(
-        await waitFor(() =>
-            caller.peerUnderlays(calleeId.publicKey).contains(Underlay.lan) &&
-            callee.peerUnderlays(callerId.publicKey).contains(Underlay.lan)),
-        isTrue);
-    expect(
-        await waitFor(() =>
-            relay.types(fromCaller: true).contains(secureAnnounce) &&
-            relay.types(fromCaller: false).contains(secureAnnounce)),
-        isTrue,
+    await linkedOverLan(
+        caller, callerId.publicKey, callee, calleeId.publicKey);
+    expect(caller.peerUnderlays(calleeId.publicKey), contains(Underlay.lan));
+    expect(callee.peerUnderlays(callerId.publicKey), contains(Underlay.lan));
+    await relay.carriedWhere(() =>
+        relay.types(fromCaller: true).contains(secureAnnounce) &&
+        relay.types(fromCaller: false).contains(secureAnnounce));
+    expect(relay.types(fromCaller: true), contains(secureAnnounce),
+        reason: 'ANNOUNCE is sent inside the session');
+    expect(relay.types(fromCaller: false), contains(secureAnnounce),
         reason: 'ANNOUNCE is sent inside the session');
     expect(relay.kinds(), {0x11, 0x12});
     expect(relay.types(fromCaller: true), isNot(contains(announce)));
     expect(relay.types(fromCaller: false), isNot(contains(announce)));
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   test(
       'an Open first contact on the LAN: ANNOUNCE first, then XX, each side '
@@ -229,11 +238,10 @@ void main() {
     caller.debugResolveLanInstance(
         'grs-00000000000000000000000000000000', relay.address);
 
-    expect(
-        await waitFor(() =>
-            caller.peerUnderlays(calleeId.publicKey).contains(Underlay.lan) &&
-            callee.peerUnderlays(callerId.publicKey).contains(Underlay.lan)),
-        isTrue);
+    await linkedOverLan(
+        caller, callerId.publicKey, callee, calleeId.publicKey);
+    expect(caller.peerUnderlays(calleeId.publicKey), contains(Underlay.lan));
+    expect(callee.peerUnderlays(callerId.publicKey), contains(Underlay.lan));
     final kinds = relay.kinds();
     expect(kinds, containsAll([0x01, 0x02, 0x03]));
     expect(kinds.intersection({0x11, 0x12}), isEmpty,
@@ -245,7 +253,7 @@ void main() {
     expect(discovered, [hexOf(callerId.publicKey)]);
     expect(caller.store.state.knownPeers.known, isEmpty,
         reason: 'the stranger stays a stranger to the layer');
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 
   /// Send [datagram] to [layer] from a socket of our own; answer whether
   /// anything came back, and the socket's address.
@@ -294,7 +302,7 @@ void main() {
     expect(callee.debugUdpPeerIdForAddress(from), isNull,
         reason: 'the connection is dropped');
     expect(callee.isPeerReachable(knownId.publicKey), isFalse);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 }
 
 String hexOf(Uint8List bytes) =>

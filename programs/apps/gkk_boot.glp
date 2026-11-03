@@ -1,0 +1,25 @@
+%% gkk_boot.glp --- the app of GKK, the base mini-app every other mini-app extends, on three smartphones (GSG paper, Sections 2 and 6, "The Grassroots Super-App" and "Mini-Apps on the Prototype"): under the boot harness, one isolate per person, each with its own key pair, running the social graph of programs/social/graph/core as its super-app and hosting GKK's mini-app (programs/apps/gkk), as gsg_boot.glp hosts GSG's on two.  The program is graph/core, named as :boot's second argument, and this file is loaded on top of it, with the boot clause and the persons; the smartphone, gkk_phone/4, is graph/core's (core/gkk_phone.glp), started by core's agent/2 on the person's first act (IGLP 0e1c9e0, Implementation Notes, "Boot"); the super-app's plays do not name this mini-app:
+%%   :artefact programs/apps/gkk programs/social/graph/core
+%%   :boot programs/apps/gkk_boot.glp programs/social/graph/core
+%%
+%% Each person trusts the compiler's key, reads the certified artefact gkk.glpw from graph/core with load_file/2 and installs it, with one end of a person channel.  alice connects to bob and to carol, who each consent, and invites each to the mini-app once connected, which opens a root channel between her execution and theirs; she lets her super-app introduce bob and carol to each other (allow_intro/2), each having consented to a warm call from the other in advance (accept_warm_call/1), and once bob and carol are connected carol invites bob, which opens the third conversation.  Over the three conversations the mini-app runs GKK's contract, compiled down the cascade, as play_keys runs it over the three the play hands the executions (programs/apps/gkk/plays.glp): each establishes their identity (GKK:1), alice asks to know bob and carol, who answer yes (GKK:2), and alice, who knows both, introduces carol to bob, who answers yes, after which bob's agent and carol's exchange ihellos, bob asks to know carol and she answers yes (GKK:3).  The cards the super-app raises, a friend's request to connect and an introduction, are answered yes by the scripted home (core/self.glp, scripted_home/5), as the super-app's warm-call play has them answered.  The other end of each person channel is the mini-app's own scripted person (programs/apps/gkk/person.glp), activated from the module value under its role; its screen goes to the person, one line each, and so does what the super-app told the person, sg(...).  Expected: each person's mini-app screen is the screen play_keys holds for them, and their super-app lines are, for alice, sg(connected(bob)) and sg(connected(carol)) in the order the isolates run, for bob sg(connected(alice)) and sg(connected(carol)), and for carol sg(connected(alice)) and sg(connected(bob)); the two are not ordered against each other across the isolates.  Section APPS of the suite runs this file and holds each person's screen and super-app lines.
+%%
+%% The boot settles: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers").
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, alice, [bob, carol], ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, bob, [alice, carol], ch(_?, _))@bob,
+    agent(ch(_?, _), ch(_?, _))@carol,
+    say(carol, carol, [alice, bob], ch(_?, _))@carol.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, graph/core, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 0e1c9e0, Implementation Notes, "Boot").  The person scripted at each agent, say/4, run on its person channel in the person's place, tells the agent the entry, gkk_phone/4 (graph/core/gkk_phone.glp), with the person's part in the script, their own key and the keys of the peers they know, its ground arguments, the readable names being the atoms that stand for the keys in a simulation ("An agent learns the keys of its peers from its person"; Remark "Agent Names"), and reads nothing.
+Role     ::= alice ; bob ; carol.
+SayAct ::= gkk_phone(Role, Key, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(R, Me, Ps, ch(_, [gkk_phone(R?, Me?, Ps?)])).

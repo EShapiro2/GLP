@@ -30,7 +30,7 @@ Drawn    ::= stream_string_r(_) ; String.
 
 imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask(Question))).
 imported procedure chat#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 exported procedure play_chat(Stream(Msg), Stream(_)).
 play_chat(Out?, Log?) :-

@@ -11,6 +11,7 @@ import 'package:test/test.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
 import 'helpers/attestation_fixtures.dart';
+import 'helpers/event_waits.dart';
 
 /// The version number the fixture producers' applications sign, which is not
 /// the one the Android fixture's certificate names.
@@ -163,7 +164,28 @@ class _LossyRelay {
 
   int get port => _socket.port;
 
+  final List<(bool Function(), Completer<void>)> _waits = [];
+
+  /// Completes once [holds] is true of what the relay has seen: checked now
+  /// and after each datagram from the caller.
+  Future<void> seenWhere(bool Function() holds) {
+    if (holds()) return Future.value();
+    final done = Completer<void>();
+    _waits.add((holds, done));
+    return done.future;
+  }
+
   void _relay(Datagram d) {
+    _relayOne(d);
+    for (final wait in _waits.toList()) {
+      if (wait.$1()) {
+        _waits.remove(wait);
+        wait.$2.complete();
+      }
+    }
+  }
+
+  void _relayOne(Datagram d) {
     final fromService = d.port == _servicePort &&
         d.address.address == InternetAddress.loopbackIPv4.address;
     if (fromService) {
@@ -375,13 +397,13 @@ void main() {
 
       await dial(caller, service, service.boundPort!);
 
-      expect(await serviceSaw.future.timeout(const Duration(seconds: 15)),
+      expect(await serviceSaw.future,
           androidApplication,
           reason: 'the service verified the caller\'s Android chain');
-      expect(await callerSaw.future.timeout(const Duration(seconds: 15)),
+      expect(await callerSaw.future,
           androidApplication,
           reason: 'the caller verified the service\'s Android chain');
-    });
+    }, timeout: Timeout.none);
 
     test('a multi-kilobyte App Attest object reaches the peer and is verified',
         () async {
@@ -414,11 +436,11 @@ void main() {
         name: 'com.eshapiro.grassapp',
         version: _signedVersion,
       );
-      expect(await serviceSaw.future.timeout(const Duration(seconds: 15)),
+      expect(await serviceSaw.future,
           application);
-      expect(await callerSaw.future.timeout(const Duration(seconds: 15)),
+      expect(await callerSaw.future,
           application);
-    });
+    }, timeout: Timeout.none);
 
     test(
         'a lost attestation fragment is retransmitted and the exchange '
@@ -443,7 +465,7 @@ void main() {
 
       await dial(caller, service, relay.port);
 
-      expect(await serviceSaw.future.timeout(const Duration(seconds: 15)),
+      expect(await serviceSaw.future,
           androidApplication,
           reason: 'the exchange completed although a fragment was lost');
       expect(relay.dropped, 1);
@@ -457,7 +479,7 @@ void main() {
       expect(fragments, 2);
       expect(relay.attestationFragmentsSeen, greaterThanOrEqualTo(fragments + 1),
           reason: 'the lost fragment was retransmitted');
-    });
+    }, timeout: Timeout.none);
 
     test(
         'an attestation never acknowledged tears its session down when its '
@@ -491,12 +513,12 @@ void main() {
       await dial(caller, service, relay.port);
 
       // The caller verified the service and reports it reachable...
-      await callerConnected.future.timeout(const Duration(seconds: 15));
+      await callerConnected.future;
       // ...until its own attestation exhausts its attempts (spec §Message
       // Protocol: "When a message's attempts are exhausted the session is
       // torn down").
       expect(
-        await callerDisconnected.future.timeout(const Duration(seconds: 60)),
+        await callerDisconnected.future,
         Underlay.wan,
       );
       expect(caller.isPeerReachable(service.identity.publicKey), isFalse);
@@ -504,7 +526,7 @@ void main() {
           reason: 'the fragments were retransmitted before giving up');
       expect(serviceConnected, isFalse,
           reason: 'the service never received the caller\'s attestation');
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: Timeout.none);
   });
 
   // GNA, 2026-10-11, Task A: `send` held until the peer is reachable; a
@@ -536,7 +558,7 @@ void main() {
       };
 
       await dial(caller, service, relay.port);
-      await delivered.future.timeout(const Duration(seconds: 15));
+      await delivered.future;
 
       final payloadsAt = [
         for (final d in relay.towardService)
@@ -546,7 +568,7 @@ void main() {
       expect(callerConnectedAt, isNotNull);
       expect(payloadsAt, everyElement(greaterThanOrEqualTo(callerConnectedAt!)),
           reason: 'the payload waited for the service to be reachable');
-    });
+    }, timeout: Timeout.none);
 
     test(
         'a payload arriving before the receiver has the sender\'s attestation '
@@ -580,7 +602,7 @@ void main() {
       };
 
       await dial(caller, service, relay.port);
-      await delivered.future.timeout(const Duration(seconds: 15));
+      await delivered.future;
 
       expect(events.first, 'connected',
           reason: 'nothing is delivered before the exchange completes');
@@ -594,7 +616,7 @@ void main() {
               'completed');
       expect(payloadsAt.length, greaterThanOrEqualTo(2),
           reason: 'unacknowledged, it was sent again');
-    });
+    }, timeout: Timeout.none);
 
     test(
         'a receiver whose peer never attests tears the session down when the '
@@ -621,17 +643,13 @@ void main() {
               ?.hasLiveUdpConnection ??
           false;
 
-      await dial(caller, service, service.boundPort!);
       final clock = Stopwatch()..start();
-      while (!sessionStands() && clock.elapsed < const Duration(seconds: 15)) {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-      expect(sessionStands(), isTrue, reason: 'the handshake completed');
+      await dial(caller, service, service.boundPort!);
+      // The handshake completed.
+      await stateWhere(service.store, (_) => sessionStands());
       final establishedAt = clock.elapsed;
 
-      while (sessionStands() && clock.elapsed < const Duration(seconds: 60)) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-      }
+      await stateWhere(service.store, (_) => !sessionStands());
       expect(sessionStands(), isFalse,
           reason: 'the session was torn down for want of an attestation');
       final window = MessageTransportSender(
@@ -644,7 +662,7 @@ void main() {
       expect(serviceConnected, isFalse);
       expect(delivered, isFalse,
           reason: 'no payload is delivered on a session never attested');
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    }, timeout: Timeout.none);
   });
 
   // GNA, 2026-10-11, Task B: no duplicate filter; a duplicate payload is
@@ -690,13 +708,10 @@ void main() {
       };
 
       await dial(caller, service, relay.port);
-      await delivered.future.timeout(const Duration(seconds: 15));
+      await delivered.future;
       // Past the caller's retransmission of its attestation.
-      final settle = Stopwatch()..start();
-      while (relay.attestationFragmentsSeen < 2 &&
-          settle.elapsed < const Duration(seconds: 10)) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-      }
+      await relay.seenWhere(() => relay.attestationFragmentsSeen >= 2);
+      // What does not happen after it: no second verification.
       await Future<void>.delayed(const Duration(seconds: 1));
 
       expect(relay.droppedTowardCaller, 2);
@@ -707,7 +722,7 @@ void main() {
       expect(serviceConnects, 1);
       expect(service.isPeerReachable(caller.identity.publicKey), isTrue,
           reason: 'and the session it already attested stands');
-    });
+    }, timeout: Timeout.none);
   });
 
   group('the GATT carrier', () {
@@ -789,8 +804,7 @@ void main() {
             '00000000-0000-4000-8000-0000000000ba',
             payload,
             fragmentType: PacketType.attestationFragment,
-          )
-          .timeout(const Duration(seconds: 20));
+          );
 
       expect(delivered, isTrue);
       expect(writes.length, fragments);
@@ -807,7 +821,7 @@ void main() {
         decodeAttestationPayload(attestations.single.$1)!.attestation,
         (await _AndroidProducer().attestationFor(senderId.publicKey))!,
       );
-    }, timeout: const Timeout(Duration(minutes: 1)));
+    }, timeout: Timeout.none);
   });
 
   group('the protocol', () {
@@ -815,6 +829,7 @@ void main() {
         () async {
       final peer = 'ab' * 32;
       var transmissions = 0;
+      final firstTransmission = Completer<void>();
       var current = true;
       final sender = MessageTransportSender(
         maxChunk: 100,
@@ -823,6 +838,7 @@ void main() {
         // Nothing acknowledges: only the binding can end the message early.
         sendPacket: (_, __) async {
           transmissions++;
+          if (!firstTransmission.isCompleted) firstTransmission.complete();
           return true;
         },
       );
@@ -835,14 +851,14 @@ void main() {
         fragmentType: PacketType.attestationFragment,
         isCurrent: () => current,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await firstTransmission.future;
       expect(transmissions, 1);
       current = false; // the session it was bound to is gone
 
-      expect(await done.timeout(const Duration(seconds: 5)), isFalse);
+      expect(await done, isFalse);
       expect(transmissions, 1,
           reason: 'nothing of it went out after its session ended');
-    });
+    }, timeout: Timeout.none);
 
     test('a payload fragment cannot complete an attestation, nor the reverse',
         () {
