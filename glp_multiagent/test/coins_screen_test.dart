@@ -2,8 +2,9 @@
 /// constructs the Dart bridge draws, and a swap of bob's accepted on its
 /// card.
 ///
-/// The whole path runs: `programs/currencies/coins` at `coins_ui/3` — the
-/// mini-app's bridge entry (`programs/currencies/coins/play_ui.glp`), alice's
+/// The whole path runs: `programs/currencies/coins` from its agent/2, at the
+/// person's first act `coins_ui(alice, [bob])` — the mini-app's live-person
+/// entry (`programs/currencies/coins/play_ui.glp`), alice's
 /// execution of the mini-app on the person channel `ch(Grants?, Draws)` of
 /// vGLP's Definition "Person Channel, Person Writer, GLP with Persons,
 /// Grant", and bob's, scripted, over one conversation.  The compiled
@@ -15,15 +16,19 @@
 /// the agent's screen comes back to the balances view and the default
 /// display.  Nothing is simulated and no term is hand-fed.
 ///
-/// The play is run directly, as test code, with no host: the host posts
-/// `superapp/3` and nothing of Currencies' (GSG Section 5.1; Currencies #7
-/// Cowork, 2026-10-04 09:15 UTC, item 2).  The engine loads the coins program
-/// and posts `coins_ui(alice, Grants?, [])` through its posting call, which
-/// checks the goal as every posted goal is checked (TGLP modules.tex, "the
-/// initial goal posted to the runtime ... is type-checked before execution as
-/// a body goal"; GlpEngine.postGoal); alice's grants go into `Grants` through
-/// the injector the call returns, and what `send_to_user/1` sends her is read
-/// off the runtime's output.
+/// The play is run directly, as test code, with no host.  The engine loads
+/// the coins program and posts the agent's initial goal as AgentRuntime posts
+/// it, agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)) with send_to_user/1 and
+/// send_to_net/1 (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP,
+/// Implementation Notes, "Boot"), through its posting call, which checks the
+/// goal as every posted goal is checked (TGLP modules.tex, "the initial goal
+/// posted to the runtime ... is type-checked before execution as a body
+/// goal"; GlpEngine.postGoal).  The test is the person: its first act on
+/// `UserIn` is `coins_ui(alice, [bob])`, her key and the key of the peer she
+/// knows, each a readable name standing for a key (IGLP, Remark "Agent
+/// Names"); her grants follow on `UserIn` through the injector the call
+/// returns, and what `send_to_user/1` sends her is read off the runtime's
+/// output.
 library;
 
 import 'dart:io';
@@ -122,12 +127,21 @@ void main() {
     engine.runtime.outputTermCallback = (t) => notifies.add(screenTermOf(t));
     // programs/currencies/coins is a program: currency/ is the certified
     // mini-app and this directory adds the harness that runs it for a live
-    // person, play_ui.glp's coins_ui/3, the bridge entry, which reads alice's
-    // grants on its second argument and not its third.
+    // person, play_ui.glp's coins_ui/4, which agent/2 starts on the person's
+    // first act and which reads alice's grants after it.
     expect(engine.loadProgram('$repo/currencies/coins'), isTrue);
-    final play = engine.postGoal('coins_ui(alice, Grants?, [])',
-        inputs: ['Grants']);
-    final grants = play.inputs['Grants']!;
+    final play = engine.postGoal(
+        'agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)), '
+        'send_to_user(UserOut?), send_to_net(NetOut?)',
+        inputs: ['UserIn', 'NetIn']);
+    final grants = play.inputs['UserIn']!;
+    // Her first act: her key and the key of the peer she knows.
+    grants
+        .inject(runtimeTermOf(const GStruct('coins_ui', [
+          GAtom('alice'),
+          GList([GAtom('bob')])
+        ])))
+        .forEach(engine.runtime.gq.enqueue);
 
     /// The play run until quiescent, as one event of the agent's is: a run
     /// stopped at the net is half a run, and nothing after it means what it

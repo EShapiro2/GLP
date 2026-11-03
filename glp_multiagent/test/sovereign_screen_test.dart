@@ -1,5 +1,5 @@
 /// The sovereign mini-app on the central bank's screen:
-/// `programs/currencies/sovereign` at `sovereign_ui/3`, booted as
+/// `programs/currencies/sovereign` at `sovereign_ui/4`, booted as
 /// `lib/main_sovereign.dart` boots it — the central bank the live person,
 /// `diana` and `frank` its scripted counterparties — over the harness
 /// Currencies wrote, `programs/currencies/sovereign/play_ui.glp`, and read
@@ -7,7 +7,8 @@
 /// declarations.
 ///
 /// What is proved is the boot and what the person then does on it. The
-/// harness's one clause is for `cb`, and booting `cb` stands the seven forms
+/// person's first act names the central bank and its two peers, and booting
+/// on it stands the seven forms
 /// of the `sovereign` panel — Mint to Return, each bound to the standing card
 /// of its own request clause — with the two conversations opened on the
 /// screen and nothing of the peers' on it. Then the central bank's own two of
@@ -28,9 +29,12 @@
 /// the agent started from agent(ch(_?,_),ch(_?,_)), every agent's initial
 /// goal (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP,
 /// Implementation Notes, "Boot"), which the program's agent/2, Currencies',
-/// answers; until 2026-11-03 at `sovereign_ui/3`. A person the
-/// harness has no clause for boots and compiles as well as this one and
-/// stands no form, which is what this test tells apart.
+/// answers; until 2026-11-03 at `sovereign_ui/3`. The test is the person:
+/// its first act, `sovereign_ui(cb, [diana, frank])`, gives the agent its key
+/// and the keys of the peers the person knows, each a readable name standing
+/// for a key (IGLP, "Boot" and Remark "Agent Names"), and agent/2 starts the
+/// harness's `sovereign_ui/4` on it. An agent given no first act compiles as
+/// well as this one and stands no form, which is what this test tells apart.
 library;
 
 import 'package:flutter/material.dart';
@@ -101,6 +105,13 @@ void main() {
     Iterable<String> screen() => r.store.lists['screen']!.map(formatTerm);
 
     await tester.runAsync(() => agent.initialize());
+    // The person's first act: the agent's key and the keys of the peers the
+    // person knows, by readable names.
+    await tester.runAsync(() => agent.injectUserInput(runtimeTermOf(
+        const GStruct('sovereign_ui', [
+          GAtom('cb'),
+          GList([GAtom('diana'), GAtom('frank')])
+        ]))));
     replay();
 
     // --- The boot. The entry is found and its clause is for cb: the compiled

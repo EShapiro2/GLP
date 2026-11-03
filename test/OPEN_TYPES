@@ -554,10 +554,7 @@ programs/currencies/coins/currency/person.glp	open-type	OpenOffer
 programs/currencies/coins/currency/plays.glp	open-decl	person#person/5
 programs/currencies/coins/currency/self.glp	open-decl	person#person/5
 programs/currencies/coins/currency/self.glp	open-decl	person/5
-programs/currencies/coins/play_ui.glp	open-decl	coins_ui/3
 programs/currencies/coins/play_ui.glp	open-decl	currency#person/5
-programs/currencies/coins/self.glp	open-decl	coins_ui/3
-programs/currencies/coins/self.glp	open-decl	play_ui#coins_ui/3
 programs/currencies/coins/self.glp	open-type	Drawn
 programs/currencies/coins/self.glp	open-type	Event
 programs/currencies/coins/village.glp	open-decl	currency#person/5
@@ -608,9 +605,6 @@ programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	thread_c
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	thread_tail/3
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-type	Drawn
 programs/currencies/sovereign/play_ui.glp	open-decl	denominated#person/7
-programs/currencies/sovereign/play_ui.glp	open-decl	sovereign_ui/3
-programs/currencies/sovereign/self.glp	open-decl	play_ui#sovereign_ui/3
-programs/currencies/sovereign/self.glp	open-decl	sovereign_ui/3
 programs/currencies/sovereign/self.glp	open-type	Drawn
 programs/currencies/sovereign/self.glp	open-type	Event
 programs/currencies/sovereign/village.glp	open-decl	denominated#person/7

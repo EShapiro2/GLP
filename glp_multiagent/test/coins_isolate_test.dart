@@ -1,10 +1,13 @@
-/// The play `coins_ui/3` run in an isolate of its own, over
+/// The play `coins_ui/4` run in an isolate of its own, over
 /// `programs/currencies/coins` resolved from the repo on disc, with the
-/// person's grants injected and her screen read back across the isolate
-/// boundary.
+/// person's first act and grants injected and her screen read back across
+/// the isolate boundary.
 ///
-/// `coins_ui(alice, Grants, _)` is the mini-app's bridge entry
-/// (`programs/currencies/coins/play_ui.glp`): it gives alice's mini-app the
+/// `coins_ui(alice, [bob], Grants, _)` is the mini-app's live-person entry
+/// (`programs/currencies/coins/play_ui.glp`), which the program's agent/2
+/// starts on the person's first act, `coins_ui(alice, [bob])`, her key and the
+/// key of the peer she knows, each a readable name standing for a key (IGLP,
+/// Remark "Agent Names"): it gives alice's mini-app the
 /// person channel `ch(Grants?, Draws)` of vGLP's Definition "Person Channel,
 /// Person Writer, GLP with Persons, Grant", and sends her the draws by
 /// `send_to_user/1`.  The test is the person at the bridge (vGLP,
@@ -13,19 +16,21 @@
 /// and grants `input(Id, P, R)` at the position `P` a draw marks
 /// `input(P)`, `R` the ground term of her act.
 ///
-/// The play is run directly, as test code, with no host: the host posts
-/// `superapp/3` and nothing of Currencies' (GSG Section 5.1; Currencies #7
-/// Cowork, 2026-10-04 09:15 UTC, item 2).  In the play's isolate the engine
-/// loads the coins program and posts `coins_ui(alice, Grants?, [])` through
+/// The play is run directly, as test code, with no host.  In the play's
+/// isolate the engine loads the coins program and posts the agent's initial
+/// goal as AgentRuntime posts it, agent(ch(UserIn?, UserOut), ch(NetIn?,
+/// NetOut)) with send_to_user/1 and send_to_net/1 (GLP-Spec maglp.tex,
+/// Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot"), through
 /// its posting call, which checks the goal as every posted goal is checked
 /// (TGLP modules.tex, "the initial goal posted to the runtime ... is
-/// type-checked before execution as a body goal"; GlpEngine.postGoal); each
-/// grant the test sends is injected into `Grants` through the injector the
-/// call returned, and every term the play sends alice comes back whole.
+/// type-checked before execution as a body goal"; GlpEngine.postGoal); the
+/// person's first act and each grant the test sends are injected into
+/// `UserIn` through the injector the call returned, and every term the play
+/// sends alice comes back whole.
 ///
 /// The widget test beside this one drives the surface; this one holds the
 /// wiring the surface never sees — the resolved program directory, the goal
-/// and its three arguments, and the isolate boundary.
+/// and its first act, and the isolate boundary.
 @Timeout.none
 library;
 
@@ -67,9 +72,18 @@ void _playIsolate((SendPort, String) init) {
   engine.runtime.outputTermCallback = (t) => reply.send(screenTermOf(t));
   try {
     engine.loadProgram('$repo/currencies/coins');
-    final play = engine.postGoal('coins_ui(alice, Grants?, [])',
-        inputs: ['Grants']);
-    final grantsIn = play.inputs['Grants']!;
+    final play = engine.postGoal(
+        'agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)), '
+        'send_to_user(UserOut?), send_to_net(NetOut?)',
+        inputs: ['UserIn', 'NetIn']);
+    final grantsIn = play.inputs['UserIn']!;
+    // The person's first act: her key and the key of the peer she knows.
+    grantsIn
+        .inject(runtimeTermOf(const GStruct('coins_ui', [
+          GAtom('alice'),
+          GList([GAtom('bob')])
+        ])))
+        .forEach(engine.runtime.gq.enqueue);
 
     /// The play run until quiescent; a run stopped at the net is reported.
     void drain() {

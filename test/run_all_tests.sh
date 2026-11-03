@@ -3334,8 +3334,10 @@ check "Sovereign market: the four parties outside the sovereign layer are unmove
 
 echo "--- The live-person harness (sovereign_ui): the central bank on the app's screen ---"
 
-# The entry the app starts and the Dart bridge runs, sovereign_ui/3
-# (programs/currencies/sovereign/play_ui.glp), with no grant: its person
+# The entry the agent's initial goal starts on the person's first act,
+# sovereign_ui/4 (programs/currencies/sovereign/play_ui.glp), given the central
+# bank's key and its two peers' by readable names (IGLP, Remark "Agent
+# Names"), with no grant: its person
 # stream is open and stays so, as a person channel never closes (vGLP,
 # Definition "Person Channel, Person Writer, GLP with Persons, Grant";
 # PersonIn ::= [_ | PersonIn]).  The central bank's request form --- the
@@ -3350,7 +3352,7 @@ echo "--- The live-person harness (sovereign_ui): the central bank on the app's 
 n4_ui=$("$REPL_RUN" <<HEREDOC
 $SOV
 :limit 50000000
-sovereign_ui(cb, G?, []).
+sovereign_ui(cb, [diana, frank], G?, []).
 :quit
 HEREDOC
 2>&1)
