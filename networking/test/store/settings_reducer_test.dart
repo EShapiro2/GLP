@@ -175,7 +175,7 @@ void main() {
 
       test('a blob keyed by anything but the proximity underlays is malformed',
           () {
-        // No tolerant decoder (networking/CLAUDE.md): a key that names no
+        // No tolerant decoder (GNA, Appendix, Rules of the Code): a key that names no
         // ProximityUnderlay is not read past, a `ble` key included.
         final blob = SettingsState.initial.toJson()
           ..['coldCallTrustLevels'] = {'ble': 'open', 'lan': 'closed'};

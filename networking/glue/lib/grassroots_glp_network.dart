@@ -30,13 +30,15 @@
 /// and `wan`, null for one it does not run (GNA §2.2), and a function of one
 /// underlay is called on its sub-object, with no underlay parameter.  The
 /// runtime's interface keeps the underlay parameter of `setTrustLevel`, which
-/// `trust_declare/2` takes, so this glue maps `trust_declare(pan|lan, Level)`
+/// `declare(trust(U, L))` takes, so this glue maps `declare(trust(pan|lan, Level))`
 /// to that sub-object's `setTrustLevel(Level)`; `getPeers` gathers both
 /// proximity sub-objects' peers, and `onPeerDiscovered` the discoveries of
-/// both.  A function of an underlay the layer does not run finds no
-/// sub-object and throws [UnsupportedError], as the runtime's interface has
-/// a realisation do for a function it does not provide; a callback of such an
-/// underlay is held and never fires.
+/// both.  A trust declaration for an underlay the layer does not run finds
+/// no sub-object and does nothing (GNA §2.2).  Any other function of an
+/// underlay the layer does not run finds no sub-object and throws
+/// [UnsupportedError], as the runtime's interface has a realisation do for a
+/// function it does not provide; a callback of such an underlay is held and
+/// never fires.
 library;
 
 import 'dart:async';
@@ -159,6 +161,15 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
             cb(_key(sender), payload, messageId, _underlay(underlay));
   }
 
+  /// `acknowledge(messageId)` (GNA, Section 2.9): the layer's, which keeps a
+  /// delivered message until it is acknowledged, and delivers it again at
+  /// restart otherwise (Section 2.11).  The runtime's interface returns
+  /// nothing, so the layer's save is not awaited; a save that fails is the
+  /// layer's to log, and the message is delivered again at restart.
+  @override
+  void acknowledge(String messageId) =>
+      unawaited(layer.acknowledge(messageId));
+
   // --- Cryptography ---
 
   @override
@@ -194,11 +205,13 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
     }
   }
 
-  /// `trust_declare(pan|lan, Level)`: that sub-object's `setTrustLevel`.
+  /// `declare(trust(pan|lan, Level))`: that sub-object's `setTrustLevel`;
+  /// for an underlay the layer does not run it finds no sub-object, and does
+  /// nothing (GNA §2.2).
   @override
   void setTrustLevel(glp.ProximityUnderlay underlay, glp.TrustLevel level) {
-    final proximity = _proximity(underlay) ??
-        _absent('setTrustLevel', underlay.name.toUpperCase());
+    final proximity = _proximity(underlay);
+    if (proximity == null) return;
     unawaited(proximity
         .setTrustLevel(ColdCallTrustLevel.values.byName(level.name)));
   }
@@ -244,6 +257,16 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
   @override
   String? observedPeerAddress(glp.PubKey pk) =>
       _wan('observedPeerAddress').observedPeerAddress(pk.bytes);
+
+  /// `putRendezvousServer(pk, address)`: the WAN sub-object's (GNA 776016c, Section 4.2), behind `declare(rendezvous(P, A))`.
+  @override
+  void putRendezvousServer(glp.PubKey pk, String address) =>
+      _wan('putRendezvousServer').putRendezvousServer(pk.bytes, address);
+
+  /// `removeRendezvousServer(pk)`: the WAN sub-object's (GNA 776016c, Section 4.2), behind `remove(rendezvous(P))`.
+  @override
+  void removeRendezvousServer(glp.PubKey pk) =>
+      _wan('removeRendezvousServer').removeRendezvousServer(pk.bytes);
 
   @override
   void punchUdp(String address) => _wan('punchUdp').punchUdp(address);

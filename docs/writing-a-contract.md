@@ -1,10 +1,10 @@
-# Writing a Grassroots Social Contract
+# Writing a Grassroots Contract
 
 What a contract writer needs, in one place (Udi, 2026-11-01: "everything that contract writers / developers need should be in GLP").  Coordination writes this file; the language is GSC's paper (arXiv 2609.06231), the method is `speech-act-schemas-guide.md` beside this file, and where this file and a paper differ the paper is right.
 
 ## What a contract is
 
-A grassroots social contract is a finite list of clauses its agents undertake towards one another, written in prose, and its speech-act schemas, written in GLP's term form, which say what each clause permits and what it changes.  The contract is the source of all truth for the platform and its app: the schemas and the pragmas are compiled down the abstraction cascade to a running app with no manual intervention.
+A grassroots contract, a social contract that runs, is a finite list of clauses its agents undertake towards one another, written in prose, and its speech-act schemas, written in GLP's term form, which say what each clause permits and what it changes.  The contract is the source of all truth for the platform and its app: the schemas and the pragmas are compiled down the abstraction cascade to a running app with no manual intervention.
 
 ## The two files
 
@@ -37,7 +37,9 @@ A contract's name and its owner are each a ruling of Udi's, never read off a pro
 | GC | Grassroots Coins | GKK | Currencies | `currencies/coins` |
 | GB | Grassroots Bonds | GC | Currencies | `currencies/bonds` |
 | AGORA | Grassroots Barter | GB | Currencies, until it has a paper | `currencies/agora` |
-| LBM | Location-Based Matching | GSG | LBM | --- (not yet in the repository) |
+| LBM | Location-Based Matching | GSG | not ruled | --- (not in the repository) |
+| GDO | Grassroots Directed Overlay | GSG | LBM | `lbm` (not yet on main) |
+| GRA | Grassroots Ride Auction | GDO | LBM | `lbm` (not yet on main) |
 | GFWC | the grassroots federation | --- | GFWC | `federation` (schemas only) |
 
 A contract extends GSG when its clauses require friendship, and not otherwise.  The current text of every contract is Coordination Appendix E, `/Grassroots/Coordination/sections/E-contracts.tex`, which follows the repository's copies.

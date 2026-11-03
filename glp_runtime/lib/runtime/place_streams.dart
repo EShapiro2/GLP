@@ -1,20 +1,20 @@
 /// The declared places of one agent and their event streams: the runtime's
-/// bookkeeping behind `place_declare/3` and `place_remove/1`, layer or none.
+/// bookkeeping behind `declare(place(P, R, E))` and `remove(place(P))`, layer or none.
 ///
 /// IGLP madglp-spec.tex, "A place event is bridged below the madGLP layer":
 /// "the runtime assigns the tail writer of the named place's stream ... The
 /// stream is fed serializer-fashion ...: the runtime retains the new tail
 /// rather than closing the stream, so one declaration yields one stream however
 /// many entries and exits follow.  The stream is closed, its tail assigned
-/// `[]`, in exactly two cases: `place_remove`, and a further declaration of
+/// `[]`, in exactly two cases: `remove(place(P))`, and a further declaration of
 /// the same place, which supersedes the earlier one.  An event for a place
 /// removed or superseded is dropped."  GLP-Spec appendix-guards.tex,
 /// "Networking seam": "A further declaration of the same place supersedes the
-/// earlier one and closes its stream.  `place_remove(P)` ends the declaration
+/// earlier one and closes its stream.  `remove(place(P))` ends the declaration
 /// of `P`, and does nothing where `P` is not declared."
 ///
 /// Closing a place's stream is the runtime's and not the layer's, so it holds
-/// where no layer is bound as where one is: with none, `place_remove` and a
+/// where no layer is bound as where one is: with none, `remove(place(P))` and a
 /// further declaration close the stream as ever, and only the reporting is
 /// absent (GLP, 2026-10-11 12:59 UTC, "23:12" (a); IGLP
 /// appendix-implementation-notes.tex, "One interface").  Until 2026-10-12 the
@@ -54,7 +54,7 @@ class PlaceStreams {
       _tails.containsKey(place) && _declarations[place] == declaration;
 
   /// Declare [place], its stream growing from [streamWriter], the writer of
-  /// the `E` of `place_declare(P, R, E)`; a declaration of [place] already
+  /// the `E` of `declare(place(P, R, E))`; a declaration of [place] already
   /// standing is superseded and its stream closed.  Returns the number of this
   /// declaration, for [isStanding].
   int declare(String place, HeapCell streamWriter) {

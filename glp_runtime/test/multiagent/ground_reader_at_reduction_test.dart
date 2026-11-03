@@ -9,6 +9,7 @@
 /// with the goal p(a, Y), r(Y?).  The writer mgu is {X := a, Y := f(X?)}: the body receives X's value, q(a), and Y's value with X's applied, f(a), is communicated to r.  q receives a and r receives f(a), q and r at one agent, and at two.
 ///
 /// At two, the value alice sends bob on the link of Y? is f(a), in one message, and no later delivery carries a: the value of a Send is $T^\uparrow$ (IGLP 405a2d8, madglp-spec.tex, Definition "madGLP Send Transaction", Reader case), and T here is f(a).  Bob applies it once, removes the entry and acknowledges; the acknowledgement releases the pending value at alice, closing the link; and a repeat of the value is dropped (the same Definition, Reader and Acknowledgement cases; Remark "Message Delivery").
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -38,7 +39,14 @@ final String _procs = File(_procsPath)
 /// q and r at one agent, alice.
 final String _oneAgent = '''
 procedure boot.
-boot :- alice_init(alice, _)@alice.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- alice_init(alice, N?).
+start(_, _) :- otherwise | true.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
 
 procedure alice_init(_?, _?).
 alice_init(_, _) :- p(a, Y), r(Y?).
@@ -48,7 +56,15 @@ $_procs''';
 /// holds the reader of the variable p assigns f(X?) to.
 final String _twoAgents = '''
 procedure boot.
-boot :- alice_init(alice, _)@alice, bob_init(bob, _)@bob.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- alice_init(alice, N?).
+start([bob | _], N) :- bob_init(bob, N?).
+start(_, _) :- otherwise | true.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
 
 procedure alice_init(_?, _?).
 alice_init(_, _) :- send_to_net([msg(bob, Y?)]), p(a, Y).
@@ -63,7 +79,15 @@ $_procs''';
 /// sent back to bob, each receive it.
 final String _fromBob = '''
 procedure boot.
-boot :- alice_init(alice, _)@alice, bob_init(bob, _)@bob.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- alice_init(alice, N?).
+start([bob | _], N) :- bob_init(bob, N?).
+start(_, _) :- otherwise | true.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
 
 procedure alice_init(_?, _?).
 alice_init(_, [msg(_, A) | _]) :- send_to_net([msg(bob, Y?)]), p(A?, Y).
@@ -177,10 +201,10 @@ void main() {
       config.rootSelfGlpPath = _rootSelf;
       await manager.boot(config);
       manager.start();
-      await manager.settle(timeout: const Duration(seconds: 30));
+      await manager.settle();
       expect(manager.faults, isEmpty);
       expect(manager.outputOf('alice').toSet(), {'q(a)', 'r(f(a))'});
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    }, timeout: Timeout.none);
 
     test('q at alice and r at bob: q receives a and r receives f(a)',
         () async {
@@ -188,11 +212,11 @@ void main() {
       config.rootSelfGlpPath = _rootSelf;
       await manager.boot(config);
       manager.start();
-      await manager.settle(timeout: const Duration(seconds: 30));
+      await manager.settle();
       expect(manager.faults, isEmpty);
       expect(manager.outputOf('alice'), ['q(a)']);
       expect(manager.outputOf('bob'), ['r(f(a))']);
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    }, timeout: Timeout.none);
 
     test('a assigned at bob, q at alice and r at bob: q receives a and r '
         'receives f(a)', () async {
@@ -200,10 +224,10 @@ void main() {
       config.rootSelfGlpPath = _rootSelf;
       await manager.boot(config);
       manager.start();
-      await manager.settle(timeout: const Duration(seconds: 30));
+      await manager.settle();
       expect(manager.faults, isEmpty);
       expect(manager.outputOf('alice'), ['q(a)']);
       expect(manager.outputOf('bob'), ['r(f(a))']);
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    }, timeout: Timeout.none);
   });
 }

@@ -26,6 +26,7 @@
 /// The widget test beside this one drives the surface; this one holds the
 /// wiring the surface never sees — the resolved program directory, the goal
 /// and its three arguments, and the isolate boundary.
+@Timeout.none
 library;
 
 import 'dart:async';
@@ -48,10 +49,17 @@ class _PlayFault {
   _PlayFault(this.error);
 }
 
+/// The play's isolate has run to quiescence on its start, or on a grant: the
+/// terms that run sent alice are ahead of this on the port, which delivers in
+/// order.
+class _PlayIdle {
+  const _PlayIdle();
+}
+
 /// The play's isolate: [init] is the test's port and the repo's programs/.
 /// It sends back its own port, for alice's grants, once the play is posted;
-/// then each term the play sends alice, whole, and a [_PlayFault] where the load,
-/// the posting or a run fails.
+/// then each term the play sends alice, whole, a [_PlayIdle] when a run is done,
+/// and a [_PlayFault] where the load, the posting or a run fails.
 void _playIsolate((SendPort, String) init) {
   final (reply, repo) = init;
   final grants = ReceivePort();
@@ -69,6 +77,7 @@ void _playIsolate((SendPort, String) init) {
       if (result.status == ExecutionStatus.capped) {
         reply.send(_PlayFault('the play did not quiesce'));
       }
+      reply.send(const _PlayIdle());
     }
 
     reply.send(grants.sendPort);
@@ -96,31 +105,67 @@ void main() {
     final sends = <GTerm>[];
     final r = UiRuntime(manifest: coinsManifest, onSend: sends.add);
 
+    // The waits are on events alone and on no clock (IGLP-coop, 2026-11-02;
+    // until then each polled every 50 ms until a deadline of twenty seconds,
+    // and a grant waited 200 ms): the play's runs are owed, its start and one
+    // for each grant sent, and each [_PlayIdle] is one done; a wait ends when
+    // its condition holds, and fails on a fault, or on quiescence with its
+    // condition not holding, which nothing not sent will change.
+    var owed = 1;
+    var done = 0;
+    final faults = <String>[];
+    final waits = <(String, bool Function(), Completer<void>)>[];
+    void check() {
+      waits.removeWhere((w) {
+        final (what, holds, c) = w;
+        if (faults.isNotEmpty) {
+          c.completeError(StateError('waiting for $what: ${faults.first}'));
+        } else if (holds()) {
+          c.complete();
+        } else if (done >= owed) {
+          c.completeError(
+              StateError('the play is quiescent and $what does not hold'));
+        } else {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    Future<void> until(String what, bool Function() holds) {
+      final c = Completer<void>();
+      waits.add((what, holds, c));
+      check();
+      return c.future;
+    }
+
     reply.listen((m) {
       if (m is SendPort) {
         commands = m;
       } else if (m is GTerm) {
         r.handle(m);
+      } else if (m is _PlayIdle) {
+        done++;
       } else if (m is _PlayFault) {
-        fail('the play: ${m.error}');
+        faults.add('the play: ${m.error}');
       }
+      check();
     });
 
-    final isolate = await Isolate.spawn(_playIsolate, (reply.sendPort, repo));
+    final events = ReceivePort();
+    events.listen((e) {
+      faults.add(e is List
+          ? 'the play\'s isolate threw: ${e.first}'
+          : 'the play\'s isolate exited');
+      check();
+    });
+    final isolate = await Isolate.spawn(_playIsolate, (reply.sendPort, repo),
+        onError: events.sendPort, onExit: events.sendPort);
     addTearDown(() {
+      events.close();
       isolate.kill(priority: Isolate.immediate);
       reply.close();
     });
-
-    Future<bool> until(bool Function() done,
-        {Duration t = const Duration(seconds: 20)}) async {
-      final end = DateTime.now().add(t);
-      while (DateTime.now().isBefore(end)) {
-        if (done()) return true;
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-      return done();
-    }
 
     /// What the agent has written to her, its screen's content: the
     /// elements of the output thread, construct 0, which is how her screen
@@ -153,8 +198,8 @@ void main() {
     /// sent across the isolate boundary in order.
     Future<void> send() async {
       while (sends.isNotEmpty) {
+        owed++;
         commands!.send(sends.removeAt(0));
-        await Future<void>.delayed(const Duration(milliseconds: 200));
       }
     }
 
@@ -177,8 +222,8 @@ void main() {
         "field('WantCoin', peer), field('WantAmount', number)]), "
         "form(pay, [field('Friend', peer), field('Amount', number)]), "
         "form(redeem, [field('Friend', peer), field('WantCoin', peer)])]))";
-    expect(await until(() => drawn(requestForm).length == 1), isTrue,
-        reason: 'the request form, drawn once');
+    await until('the request form, drawn once',
+        () => drawn(requestForm).length == 1);
     final form = drawn(requestForm).single;
     expect(formatTerm(form.view), 'input([])');
     final p = at(form.view)!;
@@ -187,7 +232,7 @@ void main() {
     r.bridge.grant(form.id, p, tryParseTerm('mint(2)')!);
     expect(formatTerm(sends.single), 'input(${form.id}, [], mint(2))');
     await send();
-    await until(() => balances() == 'alice=2');
+    await until('alice=2', () => balances() == 'alice=2');
     expect(balances(), 'alice=2');
 
     // Swap her 2 for bob's 2, the next request on the same form, which a
@@ -197,11 +242,9 @@ void main() {
     r.bridge.grant(
         form.id, p, tryParseTerm('swap(bob, alice, 2, bob, 2)')!);
     await send();
-    expect(
-        await until(() =>
-            screen().any((t) => formatTerm(t) == 'swap_done(bob)')),
-        isTrue);
-    await until(() => balances() == 'bob=2');
+    await until('swap_done(bob)',
+        () => screen().any((t) => formatTerm(t) == 'swap_done(bob)'));
+    await until('bob=2', () => balances() == 'bob=2');
     expect(balances(), 'bob=2');
 
     // Bob proposes the reverse swap: one card, the swap responder's question,
@@ -215,7 +258,7 @@ void main() {
         "field('Amount', shown)])), field('Offered', thread(form(coin, "
         "[field('Issuer', shown), field('Serial', shown)])))])), "
         "field('YesNo', buttons([yes, no]))])";
-    await until(() => drawn(card).length == 1);
+    await until('the card, drawn once', () => drawn(card).length == 1);
     expect(drawn(card), hasLength(1));
     final offer = drawn(card).single;
     // The offer, for her to see: bob wants 2 of his own coins back and offers
@@ -233,11 +276,11 @@ void main() {
     r.bridge.grant(offer.id, at(cardArgs[1])!, const GAtom('yes'));
     expect(formatTerm(sends.single), 'input(${offer.id}, [2], yes)');
     await send();
-    await until(() => balances() == 'alice=2');
+    await until('alice=2', () => balances() == 'alice=2');
     expect(balances(), 'alice=2');
     // Answered, the card is withdrawn; the request form stands.
-    expect(await until(() => r.bridge.construct(offer.id) == null), isTrue,
-        reason: 'the answered card is withdrawn');
+    await until('the answered card withdrawn',
+        () => r.bridge.construct(offer.id) == null);
     expect(r.bridge.constructs.map((c) => c.id), [0, form.id]);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 }

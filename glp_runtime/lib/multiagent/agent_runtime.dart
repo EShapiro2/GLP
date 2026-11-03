@@ -27,7 +27,7 @@
 /// characters, as self_key/1 presents it.  Until 2026-10-12 the host built the
 /// simulation's network itself, always.
 ///
-/// Termination and restart (IGLP, Definition "Restart", madglp-spec.tex; Implementation Notes, "Persistence"): where the host is given an [AgentStateStore], the agent's local state survives the termination of its application, kept by the store, and "a message is handed to the layer, and a delivered message acknowledged to the layer, only from a state the store holds, and a restart resumes from the state the store holds".  The agent is event-driven (Implementation Notes, "Event-driven execution"): each event --- the initial start, a message the layer delivers, the person's act, a place event --- is one cycle, which applies the event, reduces to quiescence, saves the local state with the cycle's outgoing messages undelivered in M_p, and only then hands them to the layer; the cycles are taken one at a time, in order of arrival.  At restart the agent goes on from the state the store holds, with no entry goal posted, and hands to the layer the messages that state holds undelivered.  A cycle whose save fails goes back to the state saved before it and applies the event again.  The layer is told that a message is delivered once the cycle that applied it is saved ([onDelivered]).  Until 2026-10-23 the runtime saved nothing (Code #13 to GNA, 2026-10-20 23:56 UTC), and until 2026-10-24 a cycle handed its messages to the layer before its save.
+/// Termination and restart (IGLP, Definition "Restart", madglp-spec.tex; Implementation Notes, "Persistence"): where the host is given an [AgentStateStore], the agent's local state survives the termination of its application, kept by the store, and "a message is handed to the layer, and a delivered message acknowledged to the layer, only from a state the store holds, and a restart resumes from the state the store holds".  The agent is event-driven (Implementation Notes, "Event-driven execution"): each event --- the initial start, a message the layer delivers, the person's act, a place event --- is one cycle, which applies the event, reduces to quiescence, saves the local state with the cycle's outgoing messages undelivered in M_p, and only then hands them to the layer; the cycles are taken one at a time, in order of arrival.  At restart the agent goes on from the state the store holds, with no entry goal posted, and hands to the layer the messages that state holds undelivered.  A cycle whose save fails goes back to the state saved before it and applies the event again.  The layer is told that a message is delivered once the cycle that applied it is saved, by its `acknowledge(messageId)` ([GlpNetwork.acknowledge]).  Until 2026-10-23 the runtime saved nothing (Code #13 to GNA, 2026-10-20 23:56 UTC), and until 2026-10-24 a cycle handed its messages to the layer before its save.
 library;
 
 import 'dart:async';
@@ -54,6 +54,7 @@ import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/simulation_network.dart';
+import 'package:glp_runtime/multiagent/boot_loader.dart' show PersonGoal;
 
 /// Agent runtime encapsulating GLP execution, madGLP context, and I/O.
 ///
@@ -86,6 +87,24 @@ class AgentRuntime {
   /// Extra arguments inserted between Id (arg 0) and NetIn (last arg).
   /// For example, ['carol', '4'] for parent_init(alice, carol, 4, NetIn).
   final List<String> extraArgs;
+
+  /// The person scripted in GLP at this agent, where the agent is booted in
+  /// the boot form: the entry goal is then `agent(ch(_?,_), ch(_?,_))` with
+  /// the person goal on the person's channel and `send_to_net` on the
+  /// network's (IGLP, Implementation Notes, "Boot": "a deployed agent is
+  /// spawned by its application with the same initial goal"), as the
+  /// simulation's isolate posts it, and [goalLabel] and [extraArgs] are not
+  /// read.  Null for the entry form `name(Me, extras..., NetIn)`.
+  final PersonGoal? person;
+
+  /// The boot file's own module, in the boot form: the boot source with its
+  /// boot clause stripped, loaded on top of the program as the simulation's
+  /// isolate loads it (IGLP, Implementation Notes, "Boot": "what remains of
+  /// the file is an ordinary module"), checked in the scope of [bootPath]
+  /// ("The scope a boot source is checked in").  Null where the program is
+  /// the whole.
+  final String? bootSource;
+  final String? bootPath;
 
   // Callbacks set by UI layer
   /// The agent's transcript, line by line: its own notes and, marked `< `,
@@ -134,7 +153,7 @@ class AgentRuntime {
   /// the layer the file of its queue.
   final AgentStateStore? stateStore;
 
-  /// The runtime tells the layer that the message of [messageId] is delivered: called once the cycle that applied it is saved, or, where there is no [stateStore], once the cycle is complete (IGLP, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, only from a state the store holds").  [GlpNetwork] has no function for it, GNA's API giving none yet, so the host binds it to the layer's.
+  /// The simulation's coordinator is told that the message of [messageId] is acknowledged: the simulation's layer, which the host builds where it is given none, hands its `acknowledge(messageId)` here ([SimulationNetworkClient.acknowledgeToRouter]).  The runtime acknowledges a message once the cycle that applied it is saved, or, where there is no [stateStore], once the cycle is complete (IGLP, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, only from a state the store holds"), by the layer's [GlpNetwork.acknowledge] (GNA, Section 2.9); over a given network the layer is told, and this is not called.  Until 2026-11-03 [GlpNetwork] had no `acknowledge`, and this was the runtime's one call, which a host was to bind to the layer's and none did.
   void Function(String messageId)? onDelivered;
 
   // Runtime state
@@ -186,6 +205,9 @@ class AgentRuntime {
     required this.rootSelfGlpPath,
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
+    this.person,
+    this.bootSource,
+    this.bootPath,
     this.keyPair,
     NetworkDirectory? directory,
     GlpNetwork? network,
@@ -336,17 +358,19 @@ class AgentRuntime {
     if (FileSystemEntity.isDirectorySync(program)) {
       _log('INIT: Loading program from $program');
       engine.loadProgram(program);
-      // Diagnostic: check key labels
-      final linked = engine.combinedProgram;
-      final keyLabels = ['parent_init/4', 'child_init/3', 'agent/4', 'ui_mediator/5', 'merge/3', 'tee/3'];
-      for (final key in keyLabels) {
-        final pc = linked.labels[key];
-        _log('INIT: Label $key -> ${pc != null ? "PC=$pc" : "NOT FOUND"}');
-      }
-      _log('INIT: Program loaded via program linking ($program), ${linked.labels.length} labels');
+      _log('INIT: Program loaded via program linking ($program)');
     } else {
       engine.loadFile(program);
       _log('INIT: Program loaded from the module $program');
+    }
+    final boot = bootSource;
+    if (boot != null) {
+      final path = bootPath;
+      engine.loadSource(boot,
+          filename: 'program',
+          scope: path != null ? engine.scopeFor(path) : engine.scope);
+      _log('INIT: the boot source loaded on top'
+          '${path != null ? ', in the scope of $path' : ''}');
     }
 
     _runtime = engine.runtime;
@@ -406,24 +430,40 @@ class AgentRuntime {
     // the person's acts, and the network's, the index-0 serializer entry
     // (IGLP Definition Index-0 Serializer: permanent entry mapping _r(p, 0)
     // to local writer).
-    final goalName = goalLabel.split('/').first;
-    final goalArity = int.parse(goalLabel.split('/').last);
-    final takesUserIn = goalArity == extraArgs.length + 3;
-    final goalArgs = [
-      glpConstantText(selfName),
-      if (takesUserIn) 'UserIn?',
-      for (final extra in extraArgs)
-        int.tryParse(extra)?.toString() ?? glpConstantText(extra),
-      'NetIn?',
-    ];
-    if (goalArgs.length != goalArity) {
-      throw StateError('$goalLabel takes $goalArity arguments, and the agent '
-          'has ${goalArgs.length} for it: its id, '
-          '${extraArgs.length} extra and the network input');
+    final String goalText;
+    final List<String> inputs;
+    final String started;
+    final personGoal = person;
+    if (personGoal != null) {
+      // The boot form, as IsolateManager posts it for a simulation.
+      goalText = [
+        'agent(ch(PIn?, POut), ch(NetIn?, NetOut))',
+        personGoal.text('POut', 'PIn'),
+        'send_to_net(NetOut?)',
+      ].join(', ');
+      inputs = const ['NetIn'];
+      started = goalText;
+    } else {
+      final goalName = goalLabel.split('/').first;
+      final goalArity = int.parse(goalLabel.split('/').last);
+      final takesUserIn = goalArity == extraArgs.length + 3;
+      final goalArgs = [
+        glpConstantText(selfName),
+        if (takesUserIn) 'UserIn?',
+        for (final extra in extraArgs)
+          int.tryParse(extra)?.toString() ?? glpConstantText(extra),
+        'NetIn?',
+      ];
+      if (goalArgs.length != goalArity) {
+        throw StateError('$goalLabel takes $goalArity arguments, and the agent '
+            'has ${goalArgs.length} for it: its id, '
+            '${extraArgs.length} extra and the network input');
+      }
+      goalText = '$goalName(${goalArgs.join(', ')})';
+      inputs = [if (takesUserIn) 'UserIn', 'NetIn'];
+      started = '$goalName(${[selfName, ...extraArgs, 'NetIn'].join(', ')})';
     }
-    final goalText = '$goalName(${goalArgs.join(', ')})';
-    final posted = engine.postGoal(goalText,
-        inputs: [if (takesUserIn) 'UserIn', 'NetIn']);
+    final posted = engine.postGoal(goalText, inputs: inputs);
     _log('INIT: posted $goalText');
 
     final netInWriter = posted.inputs['NetIn']!.currentWriterId;
@@ -444,8 +484,7 @@ class AgentRuntime {
     }
     _programIdentity = _codeIdentity(main.image);
 
-    final argsDesc = [selfName, ...extraArgs, 'NetIn'].join(', ');
-    _output('[GOAL] Started $goalName($argsDesc)');
+    _output('[GOAL] Started $started');
     _log('INIT: GQ length before initial run: ${_runtime!.gq.length}');
   }
 
@@ -560,7 +599,7 @@ class AgentRuntime {
     _pumping = false;
   }
 
-  /// One event cycle (IGLP, Implementation Notes, "Event-driven execution": "On each event the agent binds what the event delivers, reduces until quiescent ... and then performs its Sends").  With no [stateStore], the agent applies [event], reduces and performs its Sends ([_apply], [Scheduler.drainAndSend]).  With one, it saves before it sends ([_cycleSaving]).  Once the cycle is complete --- saved, where there is a store --- the layer is told the message it applied is delivered ([onDelivered]).
+  /// One event cycle (IGLP, Implementation Notes, "Event-driven execution": "On each event the agent binds what the event delivers, reduces until quiescent ... and then performs its Sends").  With no [stateStore], the agent applies [event], reduces and performs its Sends ([_apply], [Scheduler.drainAndSend]).  With one, it saves before it sends ([_cycleSaving]).  Once the cycle is complete --- saved, where there is a store --- the message it applied is acknowledged to the layer ([GlpNetwork.acknowledge]; GNA, Section 2.9: "Confirm that the message delivered under messageId has been applied and saved by the runtime").
   Future<void> _cycle(_AgentEvent event) async {
     final store = stateStore;
     if (store == null) {
@@ -569,7 +608,7 @@ class AgentRuntime {
       await _cycleSaving(event, store);
     }
     if (event is _Message && event.messageId.isNotEmpty) {
-      onDelivered?.call(event.messageId);
+      _ctx?.network?.acknowledge(event.messageId);
     }
   }
 
@@ -773,8 +812,9 @@ class AgentRuntime {
   /// Build and bind the simulation's network, where the host was given none:
   /// a [SimulationNetworkClient] over [directory], whose sends go to the
   /// coordinator by [onSendMadMessage] and whose deliveries the coordinator
-  /// makes by [onMadMessageReceived].  Agent names are symbolic and resolved
-  /// to keys at the seam (IGLP, "Simulation realisation").
+  /// makes by [onMadMessageReceived].  A destination is a key or a readable
+  /// name standing for one, and the seam resolves both to the one agent (IGLP
+  /// 4f84612, Implementation Notes, "Simulation realisation").
   void _bindSimulationNetwork(
       String selfName, ({PubKey pub, Uint8List priv}) kp) {
     directory.register(selfName, kp.pub); // self identity (for sign/verify)
@@ -784,8 +824,16 @@ class AgentRuntime {
       keyPair: kp,
       sendToRouter: (toId, payload) =>
           _sendMadPayload(toId, Uint8List.fromList(payload)),
+      acknowledgeToRouter: (messageId) => onDelivered?.call(messageId),
     );
     _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
+
+    // A destination, in a global name or in a message, is a key or a
+    // readable name standing for one, and the seam resolves both to the one
+    // agent (IGLP 4f84612, Implementation Notes, "Simulation realisation"):
+    // here by the directory, to the agent's id, before the Send records
+    // anything.
+    _ctx!.resolveAgent = directory.agentNamed;
 
     // Outgoing: ctx.onMessageReady(destId, msg) → network.send.
     _ctx!.onMessageReady = (destination, msg) async {
@@ -858,8 +906,8 @@ class AgentRuntime {
   /// The simulation's delivery, which its coordinator makes; a given network
   /// delivers its own messages, and a delivery here is refused.  Completes
   /// when the message's cycle is complete --- saved, where the agent has a
-  /// [stateStore] --- and then [onDelivered] has been told [messageId], where
-  /// the coordinator gives one.
+  /// [stateStore] --- and then the message is acknowledged, [onDelivered] told
+  /// [messageId], where the coordinator gives one.
   Future<void> onMadMessageReceived(String from, Uint8List payload,
       {String messageId = ''}) async {
     _log('MAD_RECV from $from (${payload.length} bytes)');

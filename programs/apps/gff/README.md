@@ -19,7 +19,7 @@ GFF is GFF's contract (Coordination Appendix C; Udi, 2026-10-27); its clauses an
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GFF, as printed from GFF.glp and GFF.txt, with the words of its pragmas: the tabs Contacts, Friends, Posts and Feeds, and the button Follow |
 | `miniapp.glp` | `miniapp/4`: the agent, its dispatcher, and the agent's network over the conversations, the same file as `../gsg/miniapp.glp` |
-| `person.glp` | `miniapp_person/4` and `cued_person/5`: the scripted person, by role, `alice`, `bob`, `carol`, `dave` or `eve`, the second with a tail of steps the play gives |
+| `person.glp` | `miniapp_person/5` and `cued_person/6`: the scripted person, by role, `alice`, `bob`, `carol`, `dave` or `eve`, with the keys the person knows, by which its script names its peers, the second with a tail of steps the play gives |
 | `plays.glp` | `play_feeds/5`, the mini-app with no super-app, and the watchers that give a person the rest of their script once another person's screen shows what the play waits for |
 | `self.glp` | the platform's types written again, the person's steps, and the exports |
 

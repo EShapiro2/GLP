@@ -66,10 +66,10 @@ imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?,
 exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
 miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
-%% The scripted person, the instance of the root's second template miniapp_person/4 at Drawn and at Seen.
-imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
-miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+%% The scripted person, the instance of the root's second template miniapp_person/5 at Drawn and at Seen.
+imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(Id, Role, Ps, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, Ps?, PEnd?, Screen).
 
 %% The play with no super-app (plays.glp).
 imported procedure plays#play_feeds(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).

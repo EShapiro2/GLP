@@ -46,8 +46,8 @@ enum TrustLevel { open, closed }
 /// A proximity underlay, PAN or LAN: "A level is held per ProximityUnderlay,
 /// and is set with setTrustLevel(underlay, level); both levels default to
 /// Closed" (GNA, Trust levels).  Each underlay has its own cold-call
-/// [TrustLevel], which `trust_declare/2` declares of `pan` or `lan`
-/// (GLP-Spec appendix-guards, "Proximity trust", e0b32d7).  It is also the
+/// [TrustLevel], which `declare(trust(U, L))` declares of `pan` or `lan`
+/// (GLP-Spec appendix-guards, "Proximity trust" and "Networking seam", 1ce0263).  It is also the
 /// underlay of discovery ([GlpNetwork.onPeerDiscovered]).
 enum ProximityUnderlay { pan, lan }
 
@@ -151,11 +151,11 @@ abstract class GlpNetwork {
   // --- Known peers (GNA, "Known Peers") ---
 
   /// Add [pk] to the known-peer set: `putKnownPeer(pk)`.  The set is what
-  /// Closed trust recognises.  Backs `peer_declare/1`.
+  /// Closed trust recognises.  Backs `declare(peer(P))`.
   void putKnownPeer(PubKey pk);
 
   /// Remove [pk] and any recorded address from the known-peer set:
-  /// `removeKnownPeer(pk)`.
+  /// `removeKnownPeer(pk)`.  Backs `remove(peer(P))`.
   void removeKnownPeer(PubKey pk);
 
   // --- Connection and reachability (GNA, "Connection and Reachability") ---
@@ -195,6 +195,9 @@ abstract class GlpNetwork {
           PubKey sender, Uint8List payload, String messageId, Underlay underlay)?
       onMessageReceived;
 
+  /// `acknowledge(messageId)`: "Confirm that the message delivered under messageId has been applied and saved by the runtime; the layer keeps a delivered message until it is acknowledged, and delivers it again at restart otherwise" (GNA 776016c, Section 2.9; Section 2.11, Fair message delivery).  The runtime calls it once the cycle that applied the message is saved, or, where the agent keeps no state, once the cycle is complete (IGLP, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, only from a state the store holds").
+  void acknowledge(String messageId);
+
   // --- Cryptography (GNA, "The Seam", Signatures) ---
   // The layer holds the private key.  Synchronous.
 
@@ -218,7 +221,7 @@ abstract class GlpNetwork {
 
   /// `setTrustLevel(underlay, level)`: set the cold-call trust level of
   /// proximity underlay [underlay] to [level]; "both levels default to
-  /// Closed" (GNA, Trust levels).  Backs `trust_declare/2`.
+  /// Closed" (GNA, Trust levels).  Backs `declare(trust(U, L))`.
   void setTrustLevel(ProximityUnderlay underlay, TrustLevel level);
 
   // --- WAN (GNA, "WAN Underlay") ---
@@ -245,8 +248,14 @@ abstract class GlpNetwork {
 
   /// `putPeerAddress(pk, address)`: inform the layer of peer [pk]'s current
   /// public `ip:port`, learned at the GLP level; the layer records it with the
-  /// known peer.  Backs `address_declare/2`.
+  /// known peer.  Backs `declare(address(P, A))`.
   void putPeerAddress(PubKey pk, String address);
+
+  /// `putRendezvousServer(pk, address)`: "Add the rendezvous server with public key pk at address to the servers the layer connects to; a further declaration of the same pk replaces its address" (GNA 776016c, Section 4.2).  Backs `declare(rendezvous(P, A))`.
+  void putRendezvousServer(PubKey pk, String address);
+
+  /// `removeRendezvousServer(pk)`: "Remove the server from those the layer connects to, and end the layer's session with it; a key not declared does nothing" (GNA 776016c, Section 4.2).  Backs `remove(rendezvous(P))`.
+  void removeRendezvousServer(PubKey pk);
 
   /// `observedPeerAddress(pk) → Address?`: the public `ip:port` at which the
   /// layer observes the connected peer [pk], or null if none is observed.
@@ -262,7 +271,9 @@ abstract class GlpNetwork {
 
   /// `declarePlace(place, radius)`: declare [place] — the region of
   /// [radiusMetres] about this device's location at the time of the call —
-  /// and report its crossings through [onPlaceEvent].  Backs `place_declare/3`.
+  /// and report its crossings through [onPlaceEvent].  Backs
+  /// `declare(place(P, R, E))`, [place] being the printed form of the
+  /// constant P, `7` for 7 (IGLP, Implementation Notes, "The contract").
   ///
   /// Returns false when the platform refuses, leaving the place undeclared. A
   /// further declaration under the same name supersedes the first. GLP supplies
@@ -270,11 +281,12 @@ abstract class GlpNetwork {
   Future<bool> declarePlace(String place, double radiusMetres);
 
   /// `removePlace(place)`: end the declaration of [place].  Backs
-  /// `place_remove/1`.  Removing a place that is not declared does nothing.
+  /// `remove(place(P))`.  Removing a place that is not declared does nothing.
   Future<void> removePlace(String place);
 
   /// `onPlaceEvent(place, event)`: fires on each event of a declared place,
-  /// naming the place and the event; feeds the stream of `place_declare/3`.
+  /// naming the place and the event; feeds the stream of
+  /// `declare(place(P, R, E))`.
   ///
   /// A crossing reported for a place already removed or superseded is dropped
   /// by the layer and never arrives here.
@@ -282,14 +294,5 @@ abstract class GlpNetwork {
 
   // --- The seam predicates ---
   //
-  // Eight of the functions above are the layer functions behind the seven
-  // networking seam predicates (IGLP, Definition "Seam Predicates"; GNA,
-  // "The Seam"; IGLP, The contract: "these eight back the seam predicates"):
-  // [observedPeerAddress] behind `peer_address/2`, [punchUdp] behind
-  // `punch_udp/1`, [declarePlace] and [onPlaceEvent] behind `place_declare/3`,
-  // [removePlace] behind `place_remove/1`, [setTrustLevel] behind
-  // `trust_declare/2`, [putKnownPeer] behind `peer_declare/1`, and
-  // [putPeerAddress] behind `address_declare/2`.  GLP code decides who acts,
-  // when, and whether; each function performs only the mechanism.  Until
-  // 2026-10-11 this comment counted six functions behind five predicates.
+  // These functions are the layer functions behind the four networking seam predicates (IGLP, Definition "Seam Predicates", 3b736bb; GLP-Spec appendix-guards, "Networking seam", 1ce0263; GNA 776016c, Section 5): [observedPeerAddress] behind `peer_address/2`; [punchUdp] behind `punch_udp/1`; behind `declare/1`, [putKnownPeer] for `peer(P)`, [putPeerAddress] for `address(P, A)`, [putRendezvousServer] for `rendezvous(P, A)`, [setTrustLevel] for `trust(U, L)`, and [declarePlace] and [onPlaceEvent] for `place(P, R, E)`; and behind `remove/1`, [removeKnownPeer] for `peer(P)`, [removeRendezvousServer] for `rendezvous(P)` and [removePlace] for `place(P)`.  GLP code decides who acts, when, and whether; each function performs only the mechanism.  Until 2026-11-03 seven predicates stood behind them, `place_declare/3`, `place_remove/1`, `trust_declare/2`, `peer_declare/1` and `address_declare/2` in place of `declare/1` and `remove/1`.
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show InternetAddress;
 
@@ -10,6 +11,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking/src/store/outbound_queue_preferences.dart';
+import 'package:grassroots_networking_core/src/headless/headless_grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
@@ -212,6 +214,79 @@ void main() {
     expect(received.first,
         (hex(senderId.publicKey), 'restored and swept', messageId));
   }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test(
+      'a message delivered and not acknowledged is delivered again after a '
+      'restart of the layer, and one acknowledged is not (GNA §2.9, §2.11)',
+      () async {
+    final senderId = await identityFromSeed(0x9a);
+    final recipientId = await identityFromSeed(0x9b);
+
+    // The sender: a headless layer, whose port is known once it starts.
+    final sender = HeadlessGrassrootsNetwork(
+      identity: senderId,
+      sodium: sodium,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    addTearDown(sender.dispose);
+    sender.putKnownPeer(recipientId.publicKey);
+    final connected = Completer<void>();
+    sender.onPeerConnected = (pk, underlay, application) {
+      if (hex(pk) == hex(recipientId.publicKey) && !connected.isCompleted) {
+        connected.complete();
+      }
+    };
+    expect(await sender.start(), isTrue);
+
+    // The recipient, keeping its queue in SharedPreferences, dials it.
+    final first = await startNode(recipientId);
+    final both = Completer<Map<String, String>>();
+    final received = <String, String>{};
+    first.onMessageReceived = (s, payload, id, u) {
+      received[utf8.decode(payload)] = id;
+      if (received.length == 2 && !both.isCompleted) both.complete(received);
+    };
+    first.putKnownPeer(senderId.publicKey);
+    first.wan!.putPeerAddress(
+        senderId.publicKey, '127.0.0.1:${sender.boundPort}');
+    await first.reconnectKnownPeers(reason: 'test');
+    await connected.future;
+
+    final keptId = await sender.send(
+        recipientId.publicKey, Uint8List.fromList(utf8.encode('kept')));
+    final ackedId = await sender.send(
+        recipientId.publicKey, Uint8List.fromList(utf8.encode('acked')));
+    expect(await both.future, {'kept': keptId, 'acked': ackedId});
+
+    // The runtime acknowledges one of the two; then the layer terminates.
+    await first.acknowledge(ackedId!);
+    await first.dispose();
+    const store = SharedPreferencesOutboundQueueStore();
+    expect(
+        (await store.loadDelivered(hex(recipientId.publicKey)))
+            .map((e) => e.messageId),
+        [keptId],
+        reason: 'an acknowledged message is kept no longer');
+
+    // The restart: a layer with the same identity and store delivers the
+    // unacknowledged message again, as it was delivered, and nothing else.
+    final second = await startNode(recipientId);
+    final again = <(String, String, String)>[];
+    final firstAgain = Completer<void>();
+    second.onMessageReceived = (s, payload, id, u) {
+      again.add((hex(s), utf8.decode(payload), id));
+      if (!firstAgain.isCompleted) firstAgain.complete();
+    };
+    // The kept messages are delivered again in one turn of the event loop,
+    // which ends before the wait on the first of them resumes.
+    await firstAgain.future;
+    expect(again, [(hex(senderId.publicKey), 'kept', keptId)]);
+
+    await second.acknowledge(keptId!);
+    await second.dispose();
+    expect(await store.loadDelivered(hex(recipientId.publicKey)), isEmpty,
+        reason: 'acknowledged, it is not delivered at the next restart');
+  }, timeout: Timeout.none);
 
   test("each agent's queue is its own", () async {
     final aId = await identityFromSeed(0x93);

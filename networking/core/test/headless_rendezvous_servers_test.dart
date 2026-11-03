@@ -52,9 +52,13 @@ void main() {
     return port;
   }
 
-  /// A rendezvous server, started, and the agents it reports connected.
-  Future<(HeadlessGrassrootsNetwork, List<String>)> rendezvousServer(
-      int fill) async {
+  /// A rendezvous server, started; the agents it reports connected; and the
+  /// first of them, once the server reports it.  The server reports an agent
+  /// once its own session and attestation exchange with it have completed
+  /// (GNA §2.3, §2.6), an event of its own that the agent's report of the
+  /// server does not imply.
+  Future<(HeadlessGrassrootsNetwork, List<String>, Future<String>)>
+      rendezvousServer(int fill) async {
     final port = await deadPort();
     final server = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(fill),
@@ -66,9 +70,13 @@ void main() {
     );
     addTearDown(server.dispose);
     final connected = <String>[];
-    server.onPeerConnected = (pk, underlay, _) => connected.add(_hex(pk));
+    final first = Completer<String>();
+    server.onPeerConnected = (pk, underlay, _) {
+      connected.add(_hex(pk));
+      if (!first.isCompleted) first.complete(_hex(pk));
+    };
     expect(await server.start(), isTrue);
-    return (server, connected);
+    return (server, connected, first.future);
   }
 
   /// An agent, started with no rendezvous server, and what it reports.
@@ -99,7 +107,7 @@ void main() {
   test('a server declared after start is connected and reported unattested',
       () async {
     if (skipped()) return;
-    final (server, serverSaw) = await rendezvousServer(0xa1);
+    final (server, serverSaw, serverReported) = await rendezvousServer(0xa1);
     final (layer, events) = await agent(0xa2);
     final serverHex = _hex(server.identity.publicKey);
     expect(layer.isPeerReachable(server.identity.publicKey), isFalse);
@@ -113,6 +121,9 @@ void main() {
         reason: 'the layer connects to the server GLP declared');
     expect(events, ['connected $serverHex wan null'],
         reason: 'reported over the WAN, unattested (GNA §6, "Unattested")');
+    expect(await serverReported, _hex(layer.identity.publicKey),
+        reason: 'the server reports the agent once its own session and '
+            'attestation exchange have completed (GNA §2.6)');
     expect(serverSaw, [_hex(layer.identity.publicKey)]);
     expect(layer.store.state.knownPeers.known.containsKey(serverHex), isFalse,
         reason: 'a declared rendezvous server is not a known peer');
@@ -120,7 +131,7 @@ void main() {
 
   test('a second declaration replaces its address', () async {
     if (skipped()) return;
-    final (server, _) = await rendezvousServer(0xa3);
+    final (server, _, _) = await rendezvousServer(0xa3);
     final (layer, events) = await agent(0xa4);
 
     // Declared first where nothing answers: no session comes.
@@ -145,7 +156,7 @@ void main() {
       "a removed server's session ends and it is not dialed again, and "
       'removing a key not declared does nothing', () async {
     if (skipped()) return;
-    final (server, serverSaw) = await rendezvousServer(0xa5);
+    final (server, serverSaw, _) = await rendezvousServer(0xa5);
     final (layer, events) = await agent(0xa6);
     final serverHex = _hex(server.identity.publicKey);
     layer.wan.putRendezvousServer(

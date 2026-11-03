@@ -116,13 +116,16 @@ class GlpRuntime {
   MadContext? madContext;
 
   /// The declared places and their event streams (place_streams.dart): the
-  /// runtime's bookkeeping behind place_declare/3 and place_remove/1, kept
+  /// runtime's bookkeeping behind declare(place(P, R, E)) and remove(place(P)), kept
   /// whether a networking layer is bound or none is.
   late final PlaceStreams placeStreams = PlaceStreams(this);
 
   /// The person's identity this runtime holds: the key `self_key/1` answers,
   /// `sign/3` signs under, and the compiler certifies modules with. Set by the
-  /// engine at construction (multiagent/identity.dart).
+  /// engine at construction (multiagent/identity.dart); for an agent, the key
+  /// pair the runtime makes when it spawns the agent, before anything is
+  /// compiled or sent (GLP-Spec appendix-guards.tex, "Identity and
+  /// signature"; IGLP, Implementation Notes, "Boot").
   PersonIdentity? identity;
 
   /// The person send_to_user/1 emits to, the '_output'/1 kernel's two ends

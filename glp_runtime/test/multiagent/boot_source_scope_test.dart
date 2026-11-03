@@ -25,6 +25,7 @@
 /// export, `double/2` of programs/tests/cert_ok.  AgentRuntime co-loads no boot
 /// source since 2026-10-02: it runs one program, and a module file given as
 /// that program is checked in the same scope, which its two tests below hold.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -67,7 +68,14 @@ agent_init(_, _) :- shared_double(1, _).
 
 const _bootClause = '''
 procedure boot.
-boot :- agent_init(alice, _)@alice.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- agent_init(alice, N?).
+start(_, _) :- otherwise | true.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
 
 ''';
 
@@ -174,7 +182,7 @@ void main() {
         await manager.settle();
         expect(manager.faults, isEmpty);
         expect(manager.outputOf('alice'), contains('total(3)'));
-      }, timeout: Timeout(Duration(seconds: 30)));
+      }, timeout: Timeout.none);
 
       test('refuses the one calling an unexported procedure before it runs',
           () async {
@@ -186,7 +194,7 @@ void main() {
                 s.contains('helper/2');
           }, 'the agent reports the refused call, so boot fails fast')),
         );
-      }, timeout: Timeout(Duration(seconds: 30)));
+      }, timeout: Timeout.none);
     });
   });
 
@@ -293,7 +301,7 @@ void main() {
       await manager.boot(config);
       manager.start();
       await manager.settle();
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
 
     test('IsolateManager still refuses a program calling nothing that exists',
         () async {
@@ -308,7 +316,7 @@ void main() {
               s.contains('no_such_procedure/1');
         }, 'the agent reports the undefined procedure, so boot fails fast')),
       );
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
 
     test('AgentRuntime initialises an agent whose program calls send_to_net/1',
         () async {

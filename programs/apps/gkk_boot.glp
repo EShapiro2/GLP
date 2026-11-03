@@ -1,0 +1,170 @@
+%% gkk_boot.glp --- the app of GKK, the base mini-app every other mini-app extends, on three smartphones (GSG paper, Sections 2 and 6, "The Grassroots Super-App" and "Mini-Apps on the Prototype"): under the boot harness, one isolate per person, each with its own key pair, running the social graph of programs/social/graph/core as its super-app and hosting GKK's mini-app (programs/apps/gkk), as gsg_boot.glp hosts GSG's on two.  The program is graph/core, named as :boot's second argument, and this file is loaded on top of it, calling its exported agent/4 and scripted_home/5 (IGLP, Implementation Notes, "The scope a boot source is checked in"); the super-app is not edited, and its plays do not name this mini-app:
+%%   :artefact programs/apps/gkk programs/social/graph/core
+%%   :boot programs/apps/gkk_boot.glp programs/social/graph/core
+%%
+%% Each person trusts the compiler's key, reads the certified artefact gkk.glpw from graph/core with load_file/2 and installs it, with one end of a person channel.  alice connects to bob and to carol, who each consent, and invites each to the mini-app once connected, which opens a root channel between her execution and theirs; she lets her super-app introduce bob and carol to each other (allow_intro/2), each having consented to a warm call from the other in advance (accept_warm_call/1), and once bob and carol are connected carol invites bob, which opens the third conversation.  Over the three conversations the mini-app runs GKK's contract, compiled down the cascade, as play_keys runs it over the three the play hands the executions (programs/apps/gkk/plays.glp): each establishes their identity (GKK:1), alice asks to know bob and carol, who answer yes (GKK:2), and alice, who knows both, introduces carol to bob, who answers yes, after which bob's agent and carol's exchange ihellos, bob asks to know carol and she answers yes (GKK:3).  The cards the super-app raises, a friend's request to connect and an introduction, are answered yes by the scripted home (core/self.glp, scripted_home/5), as the super-app's warm-call play has them answered.  The other end of each person channel is the mini-app's own scripted person (programs/apps/gkk/person.glp), activated from the module value under its role; its screen goes to the person, one line each, and so does what the super-app told the person, sg(...).  Expected: each person's mini-app screen is the screen play_keys holds for them, and their super-app lines are, for alice, sg(connected(bob)) and sg(connected(carol)) in the order the isolates run, for bob sg(connected(alice)) and sg(connected(carol)), and for carol sg(connected(alice)) and sg(connected(bob)); the two are not ordered against each other across the isolates.  Section APPS of the suite runs this file and holds each person's screen and super-app lines.
+%%
+%% The boot settles: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers").
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, alice, [bob, carol], ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, bob, [alice, carol], ch(_?, _))@bob,
+    agent(ch(_?, _), ch(_?, _))@carol,
+    say(carol, carol, [alice, bob], ch(_?, _))@carol.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/4, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"): it tells the agent its role in the mini-app's play, its own name and the names of the persons it knows, each name a variable standing for a key (IGLP, Remark "Agent Names"; Boot: "the ground arguments of P carry the keys the person knows").  By them agent/2 starts the agent's smartphone, gkk_phone/4, on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network (GLP-Spec appendix-guards.tex, "Identity and signature").  No peer is named here by an atom: the only names are the person goal's, and the clauses below take every peer from the list the person gave.
+Role     ::= alice ; bob ; carol.
+BootSays ::= init(Role, Key, List(Key)).
+exported procedure agent(Channel(Stream(BootSays), Stream(Constant))?, Channel(NetInStream, NetOutStream)?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+
+%% The agent's smartphone, by the role, the name and the peers its person tells it.
+procedure start(Stream(BootSays)?, NetInStream?).
+start([init(R, Me, Ps) | _], N) :- gkk_phone(R?, Me?, Ps?, N?).
+start(_, _) :- otherwise | true.
+
+%% The person at each agent: it tells the agent its role, its name and the names it knows, and reads nothing.
+exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), Stream(BootSays))?).
+say(R, Me, Ps, ch(_, [init(R?, Me?, Ps?)])).
+
+%% One smartphone: the super-app's agent on the isolate's network under the person's own name, its home answering the cards the super-app raises and passing its notices to the person's script (core/self.glp, scripted_home/5), the mini-app read from its artefact beside the program and installed, and the person's acts by role over the two peers the person knows.  The mini-app's scripted person is activated under the role, which chooses its script, with the two keys the person knows, by which the script names its peers (programs/self.glp, the template miniapp_person/5).
+procedure gkk_phone(Role?, Key?, List(Key)?, NetInStream?).
+gkk_phone(alice, Me, [P, Q], NetIn) :-
+    agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    scripted_home(Me?, Out?, Notices, Cmds?, In),
+    load_file("gkk.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    alice_gkk(Me?, P?, Q?, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
+    miniapp_person_run(C?, Me?, alice, [P?, Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+gkk_phone(bob, Me, [P, Q], NetIn) :-
+    agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    scripted_home(Me?, Out?, Notices, Cmds?, In),
+    load_file("gkk.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    bob_gkk(Me?, P?, Q?, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
+    miniapp_person_run(C?, Me?, bob, [P?, Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+gkk_phone(carol, Me, [P, Q], NetIn) :-
+    agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    scripted_home(Me?, Out?, Notices, Cmds?, In),
+    load_file("gkk.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    carol_gkk(Me?, P?, Q?, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
+    miniapp_person_run(C?, Me?, carol, [P?, Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+%% A person who knows other than two has no smartphone here.
+gkk_phone(_, _, _, _) :- otherwise | true.
+
+%% alice's acts on her super-app, P and Q the two she knows, bob and carol: trust the compiler's key, install the mini-app with her end of its person channel, connect to each, invite each to the mini-app once connected, and once both are her friends introduce them to each other in the social graph (introduce/2), which raises the cards each answers.
+procedure alice_gkk(Key?, Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+alice_gkk(Me, P, Q, C, CK, CSig, AppEnd, Outs,
+          [msg(person, Me?, trust(CK?)),
+           msg(person, Me?, install(gkk, C?, CSig?, AppEnd?)),
+           msg(person, Me?, connect(P?)),
+           msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Me?), ground(P?), ground(Q?) |
+    invites_run(Me?, gkk, P?, Q?, none, Outs?, Cmds).
+
+%% bob's acts, P and Q alice and carol: trust, install, consent in advance to alice's invitation and to carol's; alice's introduction and carol's request to connect are the cards his home answers.
+procedure bob_gkk(Key?, Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+bob_gkk(Me, P, Q, C, CK, CSig, AppEnd, Outs,
+        [msg(person, Me?, trust(CK?)),
+         msg(person, Me?, install(gkk, C?, CSig?, AppEnd?)),
+         msg(person, Me?, accept_invite(gkk, P?)),
+         msg(person, Me?, accept_invite(gkk, Q?)) | Cmds?]) :-
+    ground(Me?), ground(P?), ground(Q?) |
+    notices_run(Outs?, Cmds).
+
+%% carol's acts, P and Q alice and bob: trust, install, consent in advance to alice's invitation, and once connected to bob, by alice's introduction, invite him to the mini-app.
+procedure carol_gkk(Key?, Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+carol_gkk(Me, P, Q, C, CK, CSig, AppEnd, Outs,
+          [msg(person, Me?, trust(CK?)),
+           msg(person, Me?, install(gkk, C?, CSig?, AppEnd?)),
+           msg(person, Me?, accept_invite(gkk, P?)) | Cmds?]) :-
+    ground(Me?), ground(P?), ground(Q?) |
+    invite_one_run(Me?, gkk, Q?, Outs?, Cmds).
+
+%% The notices the super-app tells a person who invites both they connect to, P and Q: each connection reported and answered with an invitation to the mini-app, the connected one being P or Q (a notice names a person by a constant, an invitation by a key, so the key the person knows is the one sent); and on the second connection the introduction of the two to each other.
+Seen ::= none ; one.
+procedure invites_run(Key?, Constant?, Key?, Key?, Seen?, Stream(Output)?, UserInStream).
+invites_run(Me, App, P, Q, none, [msg(agent, person, connected(Who)) | Outs],
+            [msg(person, Me?, invite(App?, P?)) | Cmds?]) :-
+    Who? =?= P? |
+    send_to_user([sg(connected(Who?))]),
+    invites_run(Me?, App?, P?, Q?, one, Outs?, Cmds).
+invites_run(Me, App, P, Q, none, [msg(agent, person, connected(Who)) | Outs],
+            [msg(person, Me?, invite(App?, Q?)) | Cmds?]) :-
+    Who? =?= Q? |
+    send_to_user([sg(connected(Who?))]),
+    invites_run(Me?, App?, P?, Q?, one, Outs?, Cmds).
+invites_run(Me, App, P, Q, one, [msg(agent, person, connected(Who)) | Outs],
+            [msg(person, Me?, invite(App?, P?)), msg(person, Me?, introduce(P?, Q?)) | Cmds?]) :-
+    Who? =?= P? |
+    send_to_user([sg(connected(Who?))]),
+    invites_run(Me?, App?, P?, Q?, one, Outs?, Cmds).
+invites_run(Me, App, P, Q, one, [msg(agent, person, connected(Who)) | Outs],
+            [msg(person, Me?, invite(App?, Q?)), msg(person, Me?, introduce(P?, Q?)) | Cmds?]) :-
+    Who? =?= Q? |
+    send_to_user([sg(connected(Who?))]),
+    invites_run(Me?, App?, P?, Q?, one, Outs?, Cmds).
+invites_run(Me, App, P, Q, S, [_ | Outs], Cmds?) :- otherwise | invites_run(Me?, App?, P?, Q?, S?, Outs?, Cmds).
+invites_run(_, _, _, _, _, [], []).
+
+%% The notices of a person who invites one of those they connect to, Q, and reports every connection.
+procedure invite_one_run(Key?, Constant?, Key?, Stream(Output)?, UserInStream).
+invite_one_run(Me, App, Q, [msg(agent, person, connected(Who)) | Outs],
+               [msg(person, Me?, invite(App?, Q?)) | Cmds?]) :-
+    Who? =?= Q? |
+    send_to_user([sg(connected(Who?))]),
+    invite_one_run(Me?, App?, Q?, Outs?, Cmds).
+invite_one_run(Me, App, Q, [msg(agent, person, connected(Who)) | Outs], Cmds?) :-
+    otherwise |
+    send_to_user([sg(connected(Who?))]),
+    invite_one_run(Me?, App?, Q?, Outs?, Cmds).
+invite_one_run(Me, App, Q, [_ | Outs], Cmds?) :- otherwise | invite_one_run(Me?, App?, Q?, Outs?, Cmds).
+invite_one_run(_, _, _, [], []).
+
+%% The notices of a person who invites nobody: every connection reported.
+procedure notices_run(Stream(Output)?, UserInStream).
+notices_run([msg(agent, person, connected(Who)) | Outs], Cmds?) :-
+    ground(Who?) |
+    send_to_user([sg(connected(Who?))]),
+    notices_run(Outs?, Cmds).
+notices_run([_ | Outs], Cmds?) :- otherwise | notices_run(Outs?, Cmds).
+notices_run([], []).
+
+%% The creator's certification, signed here over the mini-app's source identity, the contract's three act schemas, establish, acquaint and introduce (programs/gsc/GKK.glp), and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
+procedure certified(Content?, String, String).
+certified(M, CK?, CSig?) :-
+    module(M?) |
+    decompose_module(M?, CK, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [establish, acquaint, introduce], grassroots), K?, CSig).
+
+%% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them.
+procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
+    module(M?) |
+    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp_person/5, M?, H),
+    person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
+
+procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
+    D0? =?= D? |
+    find_type(miniapp_person/5, [D?, S?], T),
+    run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
+person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
+
+procedure hold_person(Channel(PersonOut(Opaque), PersonIn(Opaque))?).
+hold_person(ch([_ | Ds], Gs?)) :- hold_person(ch(Ds?, Gs)).

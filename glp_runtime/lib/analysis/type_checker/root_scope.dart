@@ -103,17 +103,7 @@ const Set<String> builtinProcedures = {
   // that names a kernel fails to load with `Undefined procedure`.
   //
   // The signatures are GLP-Spec's `appendix-guards.tex` body-kernel table, which
-  // is the authority. Its Network group's four — `'_peer_address'`,
-  // `'_punch_udp'`, `'_place_declare'` and `'_place_remove'` — were registered
-  // by `9d5e0dd9` and are listed here as of 2026-08-03, the fifth,
-  // `'_trust_declare'`, in weeding round three (B4, 2026-10-02), and the sixth
-  // and seventh, `'_peer_declare'` and `'_address_declare'`, on 2026-10-11
-  // (GLP-Spec 6e9c276, IGLP c2292b9); the comment
-  // that said the table was ahead of the code was true when written and stale
-  // by the time it was read. Until they were listed, root `programs/self.glp` could not
-  // declare them at all: parser.dart admits a clause-less root declaration only
-  // for a name in this set, so declaring them there took every load in the tree
-  // with it. The declarations are GLP-Spec's and follow these entries.
+  // is the authority. Its Network group's seam kernels are `'_peer_address'` and `'_punch_udp'`, registered by `9d5e0dd9` and listed here as of 2026-08-03, and `'_declare'` and `'_remove'` since 2026-11-03 (GLP-Spec 1ce0263, IGLP 3b736bb), which replace `'_place_declare'`, `'_place_remove'`, `'_trust_declare'`, `'_peer_declare'` and `'_address_declare'`. Until a kernel is listed, root `programs/self.glp` cannot declare it at all: parser.dart admits a clause-less root declaration only for a name in this set, so declaring it there takes every load in the tree with it. The declarations are GLP-Spec's and follow these entries.
   //
   // Arithmetic
   '_add/3',
@@ -158,11 +148,8 @@ const Set<String> builtinProcedures = {
   // Networking seam (Definition Seam Predicates)
   '_peer_address/2',
   '_punch_udp/1',
-  '_place_declare/3',
-  '_place_remove/1',
-  '_trust_declare/2',
-  '_peer_declare/1',
-  '_address_declare/2',
+  '_declare/1',
+  '_remove/1',
   // Signature
   '_self_key/1',
   '_sign/3',

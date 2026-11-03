@@ -1,6 +1,6 @@
 # The Grassroots networking layer
 
-This directory is the networking layer of Grassroots: the transport by which madGLP agents reach one another.  It is specified by GNA, the GLP Networking API paper (repository `GLP-Networking-API`, on disc at `/Users/udi/Grassroots/GNA`).  The paper is the specification and this directory its implementation; where the two differ, the paper governs.  The record of the implementation against the paper --- conformance, known deviations, what is not yet implemented --- is GNA's `docs/implementation-notes.md`, and the rules for working here are `CLAUDE.md`.
+This directory is the networking layer of Grassroots: the transport by which madGLP agents reach one another.  It is specified by GNA, the GLP Networking API paper (repository `GLP-Networking-API`, on disc at `/Users/udi/Grassroots/GNA`).  The paper is the specification and this directory its implementation; where the two differ, the paper governs.  The paper's appendix, Implementation Notes, records the implementation against the paper: where the code is, the rules it is written by, what it realizes, what it decides below the paper, and what deviates or is not yet implemented; `CLAUDE.md` points there and holds the rules for running and testing here.
 
 The interface the layer offers the runtime is GNA Section 2; the proximity underlays, PAN and LAN, are Section 3; the WAN is Section 4; the system predicates over the layer are Section 5; the rendezvous server is Section 6.
 

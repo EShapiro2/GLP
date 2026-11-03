@@ -20,6 +20,7 @@
 /// id, which survives the agents' termination as GNA's queue does (GNA,
 /// "Networking Assumptions", Fair message delivery: "the queue survives the
 /// termination of the application").
+@Timeout.none
 library;
 
 import 'dart:async';

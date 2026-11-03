@@ -1,4 +1,4 @@
-%% person.glp --- the GSNP mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsnp_boot.glp); the play of this directory calls it beside the entry (plays.glp).  It is GSN's app's person (../gsn/person.glp) with GSNP's scripts.
+%% person.glp --- the GSNP mini-app's scripted person: the instance of the root's second template miniapp_person/5 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsnp_boot.glp); the play of this directory calls it beside the entry (plays.glp).  It is GSN's app's person (../gsn/person.glp) with GSNP's scripts.
 %%
 %% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered; and done(K, N) where the approval K, by its request name, has stood pending in a view and then not in the next at least N times, the person seeing their pending approvals in the view (vGLP, Section 5.4, "Triggers": "the person sees their pending approvals in the view"), so that a person whose own state the act does not change, a guardian proposing an act of their AI agent, sees it end.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
 %%
@@ -14,6 +14,7 @@
 %%   alice     establishes her identity; answers yes to acme_ltd's asking to come to know her and to their offer of friendship; once the code has reached her, comes to know bob by his key and, once they know each other, offers him friendship (GKK:2, GSG:1); once they are friends, signs y (GAI:2) and, once she holds it as its author, enters her AI agent alf with it (GnW:1); once she is its principal, proposes alf's acquaintance with bob (GnW:3, GAI:2; agent_acquaint), and once it is done alf's befriending him (GnW:3; agent_befriend); and once that is done retires alf (GnW:5; retire), the play holding her request until bob's screen shows alf's item (plays.glp).
 %%   alf       answers yes to being entered as alice's AI agent with y, then to its acquaintance with bob, and then to its befriending him, each proposed by alice; once bob is its friend, signs the item 'Today\'s summary of the news' (GSNP:1, GAI:1; sign) and, once it holds it as its author, sends it to bob in a message (GSN:1).
 %%   agents_bob  bob establishes his identity; answers yes to alice asking to come to know him and to her offer of friendship; answers yes to alf, an AI agent of alice, coming to know him, which records at him agent_of(alf, y) (GAI:2), and then to alf befriending him (GnW:3); and then holds alf's item.  The play has no unfriend: Retire ends alf's friendships (GnW:5; the paper's Table, its last row).
+%% Each role's person knows the keys of the persons it has a conversation with, in the order the plays give them (dan: eve; eve: dan, carol; carol: eve, bob; bob: carol, fay; fay: bob; acme_ltd: alice; alice: acme_ltd, alf, bob; alf: alice, bob; agents_bob: alf, alice), its own key the first argument; the item's earlier signers, whom carol, bob and fay do not know, are named in their scripts by their names.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
@@ -29,81 +30,91 @@ PSt   ::= ps(Sess, List(Output), Shows, Steps).
 ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
 YN    ::= y ; n.
 
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
-miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
-    script(Role?, Ss),
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(Me, Role, Ps, ch(Ds, Gs?), S?) :-
+    script(Role?, Me?, Ps?, Ss),
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
-procedure script(Constant?, Steps).
-script(dan, [own([D1], propose(establish(D1?))), wait(holds(identity)),
-             own([M1], propose(acquaint(M1?, eve))), wait(holds(knows(eve))),
-             own([D2], propose(befriend(D2?, eve))),
-             wait(holds(friend(eve))),
-             own([D3, D4], propose(sign(D3?, speech(utterance('Flood on Main Street'), D4?)))),
-             wait(holds(authored(speech(utterance('Flood on Main Street'), dan)))),
-             own([D5, D6], propose(message(D5?, eve, speech(utterance('Flood on Main Street'), D6?))))]).
-script(eve, [own([E1], propose(establish(E1?))), wait(holds(identity)),
-             approval(acquaint(dan, eve), yes),
-             approval(befriend(dan, eve), yes),
-             wait(holds(item(speech(utterance('Flood on Main Street'), dan)))),
-             own([M2], propose(acquaint(M2?, carol))), wait(holds(knows(carol))),
-             own([E2], propose(befriend(E2?, carol))),
-             wait(holds(friend(carol))),
-             own([E3], propose(forward(E3?, carol, speech(utterance('Flood on Main Street'), dan))))]).
-script(carol, [own([C1], propose(establish(C1?))), wait(holds(identity)),
-               approval(acquaint(eve, carol), yes),
-               approval(befriend(eve, carol), yes),
-               wait(holds(item(speech(speech(utterance('Flood on Main Street'), dan), eve)))),
-               own([M3], propose(acquaint(M3?, bob))), wait(holds(knows(bob))),
-               own([C2], propose(befriend(C2?, bob))),
-               wait(holds(friend(bob))),
-               own([C3], propose(forward(C3?, bob, speech(speech(utterance('Flood on Main Street'), dan), eve))))]).
-script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
-             approval(acquaint(carol, bob), yes),
-             approval(befriend(carol, bob), yes),
-             wait(holds(item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)))),
-             own([M4], propose(acquaint(M4?, fay))), wait(holds(knows(fay))),
-             own([B2], propose(befriend(B2?, fay))),
-             wait(holds(friend(fay))),
-             own([B3], propose(forward(B3?, fay, speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol))))]).
-script(fay, [own([F1], propose(establish(F1?))), wait(holds(identity)),
-             approval(acquaint(bob, fay), yes),
-             approval(befriend(bob, fay), yes),
-             wait(holds(item(speech(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol), bob))))]).
-script(acme_ltd, [own([K1], propose(establish(K1?))), wait(holds(identity)),
-                  own([K2], propose(acquaint(K2?, alice))), wait(holds(knows(alice))),
-                  own([K3], propose(befriend(K3?, alice))), wait(holds(friend(alice))),
-                  own([K4, K5], propose(sign(K4?, speech(utterance('The code of Alf'), K5?)))),
-                  wait(holds(authored(speech(utterance('The code of Alf'), acme_ltd)))),
-                  own([K6, K7], propose(message(K6?, alice, speech(utterance('The code of Alf'), K7?))))]).
-script(alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
-               approval(acquaint(acme_ltd, alice), yes),
-               approval(befriend(acme_ltd, alice), yes),
-               wait(holds(item(speech(utterance('The code of Alf'), acme_ltd)))),
-               own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
-               own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
-               own([A4, A5], propose(sign(A4?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?)))),
-               wait(holds(authored(speech(utterance('Alf runs code signed by Acme Ltd'), alice)))),
-               own([A6, A7], propose(enter(A6?, alf, speech(utterance('Alf runs code signed by Acme Ltd'), A7?)))),
-               wait(holds(principal_of(alf))),
-               own([A8], propose(agent_acquaint(alf, bob, A8?, speech(utterance('Alf runs code signed by Acme Ltd'), alice)))),
-               wait(done(agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), 1)),
-               own([A9], propose(agent_befriend(alf, bob, A9?))),
-               wait(done(agent_befriend(alf, bob, alice), 1)),
-               own([A10], propose(retire(alf, A10?)))]).
-script(alf, [approval(enter(alice, alf, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), yes),
-             approval(agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), yes),
-             approval(agent_befriend(alf, bob, alice), yes),
-             wait(holds(friend(bob))),
-             own([R1, R2], propose(sign(R1?, speech(utterance('Today\'s summary of the news'), R2?)))),
-             wait(holds(authored(speech(utterance('Today\'s summary of the news'), alf)))),
-             own([R3, R4], propose(message(R3?, bob, speech(utterance('Today\'s summary of the news'), R4?))))]).
-script(agents_bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
-                    approval(acquaint(alice, bob), yes),
-                    approval(befriend(alice, bob), yes),
-                    approval(agent_acquaint(alf, bob, alice, speech(utterance('Alf runs code signed by Acme Ltd'), alice)), yes),
-                    approval(agent_befriend(alf, bob, alice), yes)]).
-script(_, []) :- otherwise | true.
+%% script(Role, Me, Ps, Ss): the script Ss of the role, Me the person's own key and Ps the keys the person knows, each peer named by its key in Ps, by its position there.
+procedure script(Constant?, Key?, List(Key)?, Steps).
+script(dan, Me, [Eve], [own([D1], propose(establish(D1?))), wait(holds(identity)),
+                        own([M1], propose(acquaint(M1?, Eve?))), wait(holds(knows(Eve?))),
+                        own([D2], propose(befriend(D2?, Eve?))),
+                        wait(holds(friend(Eve?))),
+                        own([D3, D4], propose(sign(D3?, speech(utterance('Flood on Main Street'), D4?)))),
+                        wait(holds(authored(speech(utterance('Flood on Main Street'), Me?)))),
+                        own([D5, D6], propose(message(D5?, Eve?, speech(utterance('Flood on Main Street'), D6?))))]) :-
+    ground(Me?), ground(Eve?) | true.
+script(eve, Me, [Dan, Carol], [own([E1], propose(establish(E1?))), wait(holds(identity)),
+                               approval(acquaint(Dan?, Me?), yes),
+                               approval(befriend(Dan?, Me?), yes),
+                               wait(holds(item(speech(utterance('Flood on Main Street'), Dan?)))),
+                               own([M2], propose(acquaint(M2?, Carol?))), wait(holds(knows(Carol?))),
+                               own([E2], propose(befriend(E2?, Carol?))),
+                               wait(holds(friend(Carol?))),
+                               own([E3], propose(forward(E3?, Carol?, speech(utterance('Flood on Main Street'), Dan?))))]) :-
+    ground(Me?), ground(Dan?), ground(Carol?) | true.
+script(carol, Me, [Eve, Bob], [own([C1], propose(establish(C1?))), wait(holds(identity)),
+                               approval(acquaint(Eve?, Me?), yes),
+                               approval(befriend(Eve?, Me?), yes),
+                               wait(holds(item(speech(speech(utterance('Flood on Main Street'), dan), Eve?)))),
+                               own([M3], propose(acquaint(M3?, Bob?))), wait(holds(knows(Bob?))),
+                               own([C2], propose(befriend(C2?, Bob?))),
+                               wait(holds(friend(Bob?))),
+                               own([C3], propose(forward(C3?, Bob?, speech(speech(utterance('Flood on Main Street'), dan), Eve?))))]) :-
+    ground(Me?), ground(Eve?), ground(Bob?) | true.
+script(bob, Me, [Carol, Fay], [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                               approval(acquaint(Carol?, Me?), yes),
+                               approval(befriend(Carol?, Me?), yes),
+                               wait(holds(item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), Carol?)))),
+                               own([M4], propose(acquaint(M4?, Fay?))), wait(holds(knows(Fay?))),
+                               own([B2], propose(befriend(B2?, Fay?))),
+                               wait(holds(friend(Fay?))),
+                               own([B3], propose(forward(B3?, Fay?, speech(speech(speech(utterance('Flood on Main Street'), dan), eve), Carol?))))]) :-
+    ground(Me?), ground(Carol?), ground(Fay?) | true.
+script(fay, Me, [Bob], [own([F1], propose(establish(F1?))), wait(holds(identity)),
+                        approval(acquaint(Bob?, Me?), yes),
+                        approval(befriend(Bob?, Me?), yes),
+                        wait(holds(item(speech(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol), Bob?))))]) :-
+    ground(Me?), ground(Bob?) | true.
+script(acme_ltd, Me, [Alice], [own([K1], propose(establish(K1?))), wait(holds(identity)),
+                               own([K2], propose(acquaint(K2?, Alice?))), wait(holds(knows(Alice?))),
+                               own([K3], propose(befriend(K3?, Alice?))), wait(holds(friend(Alice?))),
+                               own([K4, K5], propose(sign(K4?, speech(utterance('The code of Alf'), K5?)))),
+                               wait(holds(authored(speech(utterance('The code of Alf'), Me?)))),
+                               own([K6, K7], propose(message(K6?, Alice?, speech(utterance('The code of Alf'), K7?))))]) :-
+    ground(Me?), ground(Alice?) | true.
+script(alice, Me, [Acme, Alf, Bob], [own([A1], propose(establish(A1?))), wait(holds(identity)),
+                                     approval(acquaint(Acme?, Me?), yes),
+                                     approval(befriend(Acme?, Me?), yes),
+                                     wait(holds(item(speech(utterance('The code of Alf'), Acme?)))),
+                                     own([A2], propose(acquaint(A2?, Bob?))), wait(holds(knows(Bob?))),
+                                     own([A3], propose(befriend(A3?, Bob?))), wait(holds(friend(Bob?))),
+                                     own([A4, A5], propose(sign(A4?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?)))),
+                                     wait(holds(authored(speech(utterance('Alf runs code signed by Acme Ltd'), Me?)))),
+                                     own([A6, A7], propose(enter(A6?, Alf?, speech(utterance('Alf runs code signed by Acme Ltd'), A7?)))),
+                                     wait(holds(principal_of(Alf?))),
+                                     own([A8], propose(agent_acquaint(Alf?, Bob?, A8?, speech(utterance('Alf runs code signed by Acme Ltd'), Me?)))),
+                                     wait(done(agent_acquaint(Alf?, Bob?, Me?, speech(utterance('Alf runs code signed by Acme Ltd'), Me?)), 1)),
+                                     own([A9], propose(agent_befriend(Alf?, Bob?, A9?))),
+                                     wait(done(agent_befriend(Alf?, Bob?, Me?), 1)),
+                                     own([A10], propose(retire(Alf?, A10?)))]) :-
+    ground(Me?), ground(Acme?), ground(Alf?), ground(Bob?) | true.
+script(alf, Me, [Alice, Bob], [approval(enter(Alice?, Me?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
+                               approval(agent_acquaint(Me?, Bob?, Alice?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
+                               approval(agent_befriend(Me?, Bob?, Alice?), yes),
+                               wait(holds(friend(Bob?))),
+                               own([R1, R2], propose(sign(R1?, speech(utterance('Today\'s summary of the news'), R2?)))),
+                               wait(holds(authored(speech(utterance('Today\'s summary of the news'), Me?)))),
+                               own([R3, R4], propose(message(R3?, Bob?, speech(utterance('Today\'s summary of the news'), R4?))))]) :-
+    ground(Me?), ground(Alice?), ground(Bob?) | true.
+script(agents_bob, Me, [Alf, Alice], [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                                      approval(acquaint(Alice?, Me?), yes),
+                                      approval(befriend(Alice?, Me?), yes),
+                                      approval(agent_acquaint(Alf?, Me?, Alice?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
+                                      approval(agent_befriend(Alf?, Me?, Alice?), yes)]) :-
+    ground(Me?), ground(Alf?), ground(Alice?) | true.
+script(_, _, _, []) :- otherwise | true.
 
 %% The person.
 procedure person(PersonOut(Drawn)?, PersonIn(Drawn), PSt?, Stream(Seen)).

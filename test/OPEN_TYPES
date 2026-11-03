@@ -626,8 +626,6 @@ programs/self.glp	open-decl	_univ_compose/4
 programs/self.glp	open-decl	find_type/2
 programs/self.glp	open-decl	find_type/3
 programs/self.glp	open-decl	opaque_type/3
-programs/self.glp	open-decl	place_declare/3
-programs/self.glp	open-decl	place_remove/1
 programs/self.glp	open-decl	run/2
 programs/self.glp	open-decl	run/3
 programs/self.glp	open-decl	sign/3
@@ -1404,13 +1402,10 @@ programs/tests/root_check/univ_typing_root.glp	open-decl	_authorise_link/2
 programs/tests/root_check/univ_typing_root.glp	open-decl	_find_type/2
 programs/tests/root_check/univ_typing_root.glp	open-decl	_list_to_tuple/2
 programs/tests/root_check/univ_typing_root.glp	open-decl	_output/1
-programs/tests/root_check/univ_typing_root.glp	open-decl	_place_declare/3
-programs/tests/root_check/univ_typing_root.glp	open-decl	_place_remove/1
 programs/tests/root_check/univ_typing_root.glp	open-decl	_run/2
 programs/tests/root_check/univ_typing_root.glp	open-decl	_run/3
 programs/tests/root_check/univ_typing_root.glp	open-decl	_sign/3
 programs/tests/root_check/univ_typing_root.glp	open-decl	_signature/2
-programs/tests/root_check/univ_typing_root.glp	open-decl	_trust_declare/2
 programs/tests/root_check/univ_typing_root.glp	open-decl	_tuple_to_list/2
 programs/tests/root_check/univ_typing_root.glp	open-decl	_univ_compose/4
 programs/tests/root_check/univ_typing_root.glp	open-decl	compound/1
@@ -1419,8 +1414,6 @@ programs/tests/root_check/univ_typing_root.glp	open-decl	ground/1
 programs/tests/root_check/univ_typing_root.glp	open-decl	known/1
 programs/tests/root_check/univ_typing_root.glp	open-decl	list/1
 programs/tests/root_check/univ_typing_root.glp	open-decl	no_readers/1
-programs/tests/root_check/univ_typing_root.glp	open-decl	place_declare/3
-programs/tests/root_check/univ_typing_root.glp	open-decl	place_remove/1
 programs/tests/root_check/univ_typing_root.glp	open-decl	run/2
 programs/tests/root_check/univ_typing_root.glp	open-decl	run/3
 programs/tests/root_check/univ_typing_root.glp	open-decl	send_to_user/1

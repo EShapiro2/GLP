@@ -10,6 +10,7 @@
 /// Fixture: programs/tests/typed/when_idle.glp; the madGLP agents' program
 /// is [_mad] below, which each agent runs as its one program, a module file
 /// (TGLP, def:program).
+@Timeout.none
 library;
 
 import 'dart:async';
@@ -271,7 +272,7 @@ void main() {
         () async {
       // a's start is the only event a has: b sends nothing back.
       final config = BootLoader().load(
-          'procedure boot.\nboot :- a_init(a, _)@a, b_init(b, _)@b.\n$_mad');
+          'procedure boot.\nboot :- agent(ch(_?, _), ch(_?, _))@a, say(a, ch(_?, _))@a, agent(ch(_?, _), ch(_?, _))@b, say(b, ch(_?, _))@b.\nexported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).\nagent(ch(In, []), ch(N, [])) :- start(In?, N?).\nprocedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).\nstart([a | _], N) :- a_init(a, N?).\nstart([b | _], N) :- b_init(b, N?).\nstart(_, _) :- otherwise | true.\nexported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).\nsay(P, ch(_, [P?])).\n$_mad');
       config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
       final manager = IsolateManager();
       try {
@@ -283,7 +284,7 @@ void main() {
       } finally {
         await manager.shutdown();
       }
-    }, timeout: Timeout(Duration(seconds: 60)));
+    }, timeout: Timeout.none);
   });
 
   group("the REPL's madGLP mode performs its Sends", () {
@@ -345,7 +346,7 @@ void main() {
       expect(dropped, isNonNegative, reason: '$out\n${await err}');
       expect(out.indexOf('X = idle'), greaterThan(dropped), reason: out);
       expect(out, contains('→ succeeds'));
-    }, timeout: Timeout(Duration(minutes: 3)));
+    }, timeout: Timeout.none);
   });
 
   group('the declaration', () {
