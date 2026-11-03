@@ -66,8 +66,6 @@ void main() {
       'rootSelfGlp': glp.rootSelfGlp,
       'coreDir': glp.coreDir,
       'pingappDir': glp.pingappDir,
-      'coinsDir': glp.coinsDir,
-      'sovereignDir': glp.sovereignDir,
       'bondsDir': glp.bondsDir,
     };
     returned.forEach((name, p) {
@@ -105,8 +103,6 @@ void main() {
     for (final tree in [
       repo.graphDir,
       repo.cssnDir,
-      repo.coinsDir,
-      repo.sovereignDir,
       repo.bondsDir,
     ]) {
       expect(tree.startsWith('$programs/'), isTrue, reason: tree);
