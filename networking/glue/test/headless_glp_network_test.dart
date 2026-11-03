@@ -305,6 +305,76 @@ declared :- send_to_user([running]).
         reason: 'acknowledged through the glue, it is kept no longer');
   }, timeout: Timeout.none);
 
+  test(
+      'declare(rendezvous(K, A)) gives the layer a server, which it dials, '
+      'and remove(rendezvous(K)) ends its session with it (GNA §4.2, §5)',
+      () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    // A UDP port nothing listens on, until the server binds it.
+    final probe = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final port = probe.port;
+    probe.close();
+    final serverId = await identityFromSeed(seedOf(0x25));
+    final server = HeadlessGrassrootsNetwork(
+      identity: serverId,
+      serverAddress:
+          ServerAddress(listenPort: port, publicAddress: '127.0.0.1:$port'),
+      rendezvousServer: true,
+      sodium: sodium!,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    addTearDown(server.dispose);
+    expect(await server.start(), isTrue);
+
+    final layer = HeadlessGrassrootsNetwork(
+      identity: await identityFromSeed(seedOf(0x26)),
+      sodium: sodium!,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    addTearDown(layer.dispose);
+    expect(await layer.start(), isTrue);
+    final network = HeadlessGlpNetwork(layer);
+    final serverKey = glp.PubKey.fromList(serverId.publicKey);
+    final connected = Completer<glp.Underlay>();
+    final disconnected = Completer<glp.Underlay>();
+    network.onPeerConnected = (pk, underlay, _) {
+      if (pk == serverKey && !connected.isCompleted) {
+        connected.complete(underlay);
+      }
+    };
+    network.onPeerDisconnected = (pk, underlay) {
+      if (pk == serverKey && !disconnected.isCompleted) {
+        disconnected.complete(underlay);
+      }
+    };
+
+    final out = <String>[];
+    final engine = GlpEngine(
+        rootSelfGlpPath: File('../../programs/self.glp').absolute.path);
+    engine.enableMadGLP(agentId: 'alice');
+    engine.runtime.outputCallback = out.add;
+    engine.madContext!.network = network;
+    engine.loadSource('''
+procedure declared.
+declared :- declare(rendezvous('${serverKey.hex}', '127.0.0.1:$port')).
+procedure removed.
+removed :- remove(rendezvous('${serverKey.hex}')).
+''');
+
+    expect((await engine.runGoal('declared')).succeeded, isTrue);
+    expect(await connected.future, glp.Underlay.wan,
+        reason: 'the declared server is dialled, and its session comes up');
+    expect(network.isPeerReachable(serverKey), isTrue);
+
+    expect((await engine.runGoal('removed')).succeeded, isTrue);
+    expect(await disconnected.future, glp.Underlay.wan,
+        reason: "the removed server's session ends");
+    expect(network.isPeerReachable(serverKey), isFalse);
+  }, timeout: Timeout.none);
+
   group('two runtimes over two headless layers in two processes', () {
     // The agents' one program: the caller cold-calls the callee, naming it by
     // the key its host passes, with a writer; the callee assigns the writer,
