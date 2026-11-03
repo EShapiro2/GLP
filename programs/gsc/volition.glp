@@ -9,7 +9,11 @@
 % graph is connected; first_unguarded asks the second, that every connected
 % component of it holds a guarding role, which is an agent role
 % (def:schema).  The atoms of traceable provenance are those of def:grounded,
-% the set prov.glp gives (check.glp).
+% the set prov.glp gives (check.glp).  The definition's last conjunct (GSC
+% 0380a8a): every reading role, a role that is not a guarding role and adds
+% and deletes nothing (def:schema), has an edge to a guarding role from an
+% atom that guarding role requires; reading_faults asks it, and each reading
+% role with no such edge is a fault changes_nothing(Schema, Role).
 % ---------------------------------------------------------------------------
 
 procedure same_base(Base?, Base?, Ans).
@@ -179,7 +183,58 @@ schema_volition(Sc, E, R?) :- ground(Sc?), ground(E?) |
 procedure volition_roles(Constant?, RoleSpecs?, Preds?, Faults).
 volition_roles(Nm, Rs, E, R?) :- ground(Nm?), ground(Rs?), ground(E?) |
     roles_len(Rs?, K),
-    cv1(K?, Nm?, Rs?, E?, R).
+    volition_k(K?, Nm?, Rs?, E?, R).
+
+% The role graph's faults, then those of the reading roles.
+procedure volition_k(Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+volition_k(K, Nm, Rs, E, R?) :- integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    cv1(K?, Nm?, Rs?, E?, R1),
+    reading_faults(1, K?, Nm?, Rs?, E?, R2),
+    faults_app(R1?, R2?, R).
+
+% --- the reading roles -----------------------------------------------------
+% A guarding role among Rs requires an atom of traceable provenance an
+% argument of which has the base B: an edge of the role graph from an atom
+% that guarding role requires, to the role whose base is B.
+procedure recorded_by_guard(RoleSpecs?, Base?, Preds?, Ans).
+recorded_by_guard([], _, _, no).
+recorded_by_guard([RS|Rs], B, E, R?) :- ground(RS?), ground(Rs?), ground(B?), ground(E?) |
+    is_guarding(RS?, G),
+    guard_names(G?, RS?, B?, E?, A),
+    recorded_by_guard1(A?, Rs?, B?, E?, R).
+
+procedure guard_names(Ans?, RoleSpec?, Base?, Preds?, Ans).
+guard_names(no, _, _, _, no).
+guard_names(yes, RS, B, E, R?) :- ground(RS?), ground(B?), ground(E?) |
+    req_base_names(RS?, B?, E?, R).
+
+procedure recorded_by_guard1(Ans?, RoleSpecs?, Base?, Preds?, Ans).
+recorded_by_guard1(yes, _, _, _, yes).
+recorded_by_guard1(no, Rs, B, E, R?) :- ground(Rs?), ground(B?), ground(E?) |
+    recorded_by_guard(Rs?, B?, E?, R).
+
+procedure reading_fault1(Ans?, Integer?, Constant?, Faults?, Faults).
+reading_fault1(yes, _, _, T, T?).
+reading_fault1(no, J, Nm, T, [changes_nothing(Nm?, J?)|T?]).
+
+procedure reading_fault(Ans?, Integer?, Constant?, RoleSpecs?, Preds?, Faults?, Faults).
+reading_fault(no, _, _, _, _, T, T?).
+reading_fault(yes, J, Nm, Rs, E, T, R?) :-
+    integer(J?), ground(Nm?), ground(Rs?), ground(E?), ground(T?) |
+    nth_base(Rs?, J?, B),
+    recorded_by_guard(Rs?, B?, E?, A),
+    reading_fault1(A?, J?, Nm?, T?, R).
+
+% The faults of the reading roles J..K, in role order.
+procedure reading_faults(Integer?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+reading_faults(J, K, _, _, _, []) :- J? > K? | true.
+reading_faults(J, K, Nm, Rs, E, R?) :-
+    J? =< K?, integer(J?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    nth_rs(Rs?, J?, RS),
+    reading_role(RS?, A),
+    J1 := J? + 1,
+    reading_faults(J1?, K?, Nm?, Rs?, E?, F),
+    reading_fault(A?, J?, Nm?, Rs?, E?, F?, R).
 
 procedure volition_on(Contract?, Preds?, Faults).
 volition_on([], _, []).
@@ -189,6 +244,8 @@ volition_on([S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(E?) |
     faults_app(F1?, F2?, R).
 
 % def:volition: its faults, one per schema whose role graph is disconnected
-% and has a connected component with no guarding role.
+% and has a connected component with no guarding role, and one per reading
+% role with no edge to a guarding role from an atom that guarding role
+% requires.
 exported procedure volition_faults(Contract?, Preds?, Faults).
 volition_faults(C, E, R?) :- ground(C?), ground(E?) | volition_on(C?, E?, R).

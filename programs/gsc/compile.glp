@@ -170,8 +170,9 @@ latex_ext(RS, I, T, ['\\mathrm{ext}_c('|R?]) :-
 
 % --- The assignment of one role (def:compile) ------------------------------
 % c'_S := (c_S \ -(i)) u +(i), with an empty half left out, and both at a
-% guarding role that adds and deletes nothing, which def:schema admits:
-% c'_S := c_S, the assignment def:compile gives it (1 <= i <= k); S is the
+% role that adds and deletes nothing, a guarding role or a reading role,
+% which def:schema admits (GSC 0380a8a): c'_S := c_S, the assignment
+% def:compile gives it, the state unchanged (1 <= i <= k); S is the
 % subscript, {\Alice} for the agent of an agent role and q for the other
 % agents of a listed role's extent.
 
@@ -1143,11 +1144,6 @@ malformed_lines([wildcard(S, I, _)|Fs], T,
 malformed_lines([listed_wildcard(S, I)|Fs], T,
                 [S?, 'at role', I?,
                  'has a listed role with the wildcard among its arguments;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
-malformed_lines([changes_nothing(S, I)|Fs], T,
-                [S?, 'at role', I?,
-                 'is not a guarding role and adds and deletes nothing;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([no_role_changes(S)|Fs], T,
