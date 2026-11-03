@@ -204,7 +204,7 @@ class GrassrootsIdentity {
 
   /// Restore an identity from [toJson]'s map.  The map carries the key pair
   /// and nothing else; one carrying any other entry, or lacking one, is not
-  /// an identity and is refused (`networking/CLAUDE.md`, no legacy code).
+  /// an identity and is refused (GNA, Appendix, Rules of the Code, "No legacy or compatibility code").
   static GrassrootsIdentity fromMap(Map<String, dynamic> map) {
     if (map.length != _mapKeys.length || !map.keys.every(_mapKeys.contains)) {
       throw FormatException(

@@ -593,7 +593,7 @@ class GrassrootsNetwork {
   /// acknowledged — those in [_outboundMessageQueue] and those in
   /// [_ackPendingMessages] — saved before [send] returns and dropped on the
   /// recipient's ACK, so that the queue survives the termination of the
-  /// application (GNA §2.10).
+  /// application (GNA §2.11).
   late final PersistentOutboundQueue _persistedQueue;
 
   /// Read the persisted queue back into [_outboundMessageQueue], each
@@ -616,6 +616,8 @@ class GrassrootsNetwork {
           messageId: entry.messageId,
         );
       }
+      _queueRead = true;
+      _redeliverKept();
     }, onError: (Object e) {
       debugPrint('[queue] Could not read the persisted queue: $e');
     }));
@@ -638,12 +640,69 @@ class GrassrootsNetwork {
   /// sender's public key, the byte payload, a layer-assigned `messageId`, and
   /// the [Underlay] over which the message was delivered, taken from the
   /// receive path.
+  ///
+  /// Each message is kept before it is delivered, until [acknowledge] names
+  /// it (GNA §2.9).  The messages the persisted queue holds unacknowledged
+  /// are delivered again once this layer has read the queue and a callback
+  /// is set, whichever comes later (GNA §2.11: the layer "delivers it again
+  /// when the application restarts").
   void Function(
     Uint8List sender,
     Uint8List payload,
     String messageId,
     Underlay underlay,
-  )? onMessageReceived;
+  )? get onMessageReceived => _onMessageReceived;
+
+  set onMessageReceived(
+      void Function(
+        Uint8List sender,
+        Uint8List payload,
+        String messageId,
+        Underlay underlay,
+      )? cb) {
+    _onMessageReceived = cb;
+    _redeliverKept();
+  }
+
+  void Function(
+    Uint8List sender,
+    Uint8List payload,
+    String messageId,
+    Underlay underlay,
+  )? _onMessageReceived;
+
+  /// Whether the persisted queue has been read.
+  bool _queueRead = false;
+
+  /// Whether the kept messages have been delivered again.
+  bool _keptRedelivered = false;
+
+  /// Deliver again every message kept and not acknowledged, once, when the
+  /// queue is read and a callback is set; on the next turn of the event
+  /// loop, so that no delivery runs inside the call that set the callback.
+  void _redeliverKept() {
+    if (_keptRedelivered || !_queueRead || _onMessageReceived == null) return;
+    _keptRedelivered = true;
+    final kept = _persistedQueue.delivered;
+    if (kept.isEmpty) return;
+    debugPrint('[queue] Delivering ${kept.length} unacknowledged message(s) '
+        'again');
+    Timer.run(() {
+      for (final entry in kept) {
+        _onMessageReceived?.call(_hexToBytes(entry.senderHex), entry.payload,
+            entry.messageId, entry.underlay);
+      }
+    });
+  }
+
+  /// `acknowledge(messageId)` (GNA §2.9): "Confirm that the message delivered
+  /// under messageId has been applied and saved by the runtime; the layer
+  /// keeps a delivered message until it is acknowledged, and delivers it
+  /// again at restart otherwise."  Completes once the kept messages without
+  /// it are saved; a failed save is logged, and the message is delivered
+  /// again at restart.  A message not kept does nothing.
+  Future<void> acknowledge(String messageId) =>
+      _persistedQueue.acknowledge(messageId);
 
   /// The PAN sub-object (GNA §2.2: "The layer exposes one sub-object for
   /// each underlay it runs, pan, lan and wan, and null for an underlay it does
@@ -723,7 +782,7 @@ class GrassrootsNetwork {
   /// store of the fair-delivery queue are implementation arguments; the
   /// queue's store is the application's SharedPreferences unless another is
   /// given ([SharedPreferencesOutboundQueueStore]), and the queue persisted
-  /// there for [identity] is read back and replayed (GNA §2.10).
+  /// there for [identity] is read back and replayed (GNA §2.11).
   ///
   /// To change the underlays, an embedding disposes the layer and
   /// instantiates another; there are no toggles.  The rendezvous servers are
@@ -1088,7 +1147,7 @@ class GrassrootsNetwork {
   ///
   /// Call [start] after this to begin scanning/advertising.
   ///
-  /// The persisted queue is read back first (GNA §2.10); a queue that cannot
+  /// The persisted queue is read back first (GNA §2.11); a queue that cannot
   /// be read is thrown.
   Future<bool> initialize() async {
     await _persistedQueue.restored;
@@ -2212,7 +2271,7 @@ class GrassrootsNetwork {
   ///
   /// The message is saved in the persisted queue before this returns, and
   /// dropped from it on the recipient's ACK, so that the queue survives the
-  /// termination of the application (GNA §2.10); a save that fails is
+  /// termination of the application (GNA §2.11); a save that fails is
   /// thrown.
   Future<String?> send(
     Uint8List recipientPubkey,
@@ -2545,7 +2604,7 @@ class GrassrootsNetwork {
   // for the timeout.
   //
   // Note: this is a watchdog in `GrassrootsNetwork` (the coordinator), not
-  // a reducer-side heuristic. Per `CLAUDE.md`, reducers must only project
+  // a reducer-side heuristic. Per GNA's Appendix, Rules of the Code, "State", reducers must only project
   // transport-emitted facts; inference about "I haven't heard back" lives
   // here and surfaces as an explicit `MessageQueuedAction` when it triggers.
 
@@ -3668,6 +3727,21 @@ class GrassrootsNetwork {
 
   /// Set up MessageRouter callbacks to dispatch to Redux and application layer
   void _setupRouterCallbacks() {
+    // A message is kept before it is delivered and acknowledged to its
+    // sender, until the runtime acknowledges it (GNA §2.9, §2.11).  One whose
+    // session has no underlay is not delivered (below), and is not kept.
+    _messageRouter.keepDelivered =
+        (messageId, senderPubkey, payload, arrivalTransport) async {
+      final underlay = _underlayOf(arrivalTransport, senderPubkey);
+      if (underlay == null) return;
+      await _persistedQueue.keep(DeliveredQueueEntry(
+        senderHex: _pubkeyToHex(senderPubkey),
+        messageId: messageId,
+        payload: payload,
+        underlay: underlay,
+      ));
+    };
+
     // Message received from any transport
     _messageRouter.onMessageReceived =
         (messageId, senderPubkey, payload, arrivalTransport) {
@@ -3802,6 +3876,17 @@ class GrassrootsNetwork {
       } catch (e) {
         debugPrint('[noise] Dropping handshake packet: $e');
       }
+    };
+
+    // A new IK handshake answered while a session stood completes when the
+    // initiator's first packet opens under it, and only then ends the
+    // standing session (GNA §2.6).
+    _noiseSessions.onSessionCompleted = (transport, remote, peerId) {
+      if (transport == PeerTransport.udp && peerId != null) {
+        _udpService?.mapIncomingConnectionToPubkey(peerId, _pubkeyToHex(remote));
+      }
+      _recordHandshakeIdentity(transport, remote, peerId);
+      _onNoiseSessionEstablished(transport, remote);
     };
 
     _messageRouter.onAttestationReceived =
