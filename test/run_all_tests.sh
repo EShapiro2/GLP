@@ -6807,7 +6807,7 @@ APPS_ART=$(mktemp -d)
 apps_gsg=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gsg $APPS_ART
 $GLP_DIR/programs/apps/gsg
-play_held(In, ToBob, ToCarol).
+play_held(alice, bob, carol, In, ToBob, ToCarol).
 :limit 600000
 play_friends(A, B).
 :quit

@@ -60,6 +60,6 @@ imported procedure plays#play_friends(Stream(Seen), Stream(Seen)).
 exported procedure play_friends(Stream(Seen), Stream(Seen)).
 play_friends(A?, B?) :- plays # play_friends(A, B).
 
-imported procedure plays#play_held(Stream(Net), Stream(Net), Stream(Net)).
-exported procedure play_held(Stream(Net), Stream(Net), Stream(Net)).
-play_held(A?, B?, C?) :- plays # play_held(A, B, C).
+imported procedure plays#play_held(Key?, Key?, Key?, Stream(Net), Stream(Net), Stream(Net)).
+exported procedure play_held(Key?, Key?, Key?, Stream(Net), Stream(Net), Stream(Net)).
+play_held(A, B, C, In?, ToBob?, ToCarol?) :- plays # play_held(A?, B?, C?, In, ToBob, ToCarol).

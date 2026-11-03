@@ -13,14 +13,15 @@ play_friends(A?, B?) :-
     run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA))], _), []), T?, M?),
     person # miniapp_person(bob, bob, ch(DB?, GB), B).
 
-%% play_held(In, ToBob, ToCarol): the router of alice's mini-app, on what it reads in this order: a hello to bob and a hello to carol, sent before any conversation is open, and so held; the conversation with bob, which carries bob's hello in and the hello held for him out, carol's still held; a start to bob, on his conversation; and the conversation with carol, which carries the hello held for her.  The events end, and the router closes the conversations' outgoing streams. Each hello carries the meeting it asks for, hello(P, N) (vGLP, Section 5.4, "The compilation": the agent "sends Q hello carrying N").  Expected: In = [msg(alice, hello(bob, acquaint(alice, bob)))],
+%% play_held(A, B, C, In, ToBob, ToCarol): the router of A's mini-app, A, B and C the keys of three persons (a readable name standing for a key, IGLP, Remark "Agent Names": the play's caller gives them, alice, bob and carol in the suite), on what it reads in this order: a hello to B and a hello to C, sent before any conversation is open, and so held; the conversation with B, which carries B's hello in and the hello held for B out, C's still held; a start to B, on B's conversation; and the conversation with C, which carries the hello held for C.  The events end, and the router closes the conversations' outgoing streams. Each hello carries the meeting it asks for, hello(P, N) (vGLP, Section 5.4, "The compilation": the agent "sends Q hello carrying N").  Expected, for alice, bob and carol: In = [msg(alice, hello(bob, acquaint(alice, bob)))],
 %%   ToBob = [msg(bob, hello(alice, acquaint(alice, bob))), msg(bob, cargo(alice, start(attempt(alice,
 %%   1, 1, befriend(alice, bob), none))))], ToCarol = [msg(carol, hello(alice, acquaint(alice, carol)))].
-exported procedure play_held(Stream(Net), Stream(Net), Stream(Net)).
-play_held(In?, ToBob?, ToCarol?) :-
-    miniapp # router([sent(msg(bob, hello(alice, acquaint(alice, bob)))),
-                      sent(msg(carol, hello(alice, acquaint(alice, carol)))),
-                      opened(bob, ch([msg(alice, hello(bob, acquaint(alice, bob)))], ToBob)),
-                      sent(msg(bob, cargo(alice, start(attempt(alice, 1, 1, befriend(alice, bob), none))))),
-                      opened(carol, ch([], ToCarol))],
+exported procedure play_held(Key?, Key?, Key?, Stream(Net), Stream(Net), Stream(Net)).
+play_held(A, B, C, In?, ToBob?, ToCarol?) :-
+    ground(A?), ground(B?), ground(C?) |
+    miniapp # router([sent(msg(B?, hello(A?, acquaint(A?, B?)))),
+                      sent(msg(C?, hello(A?, acquaint(A?, C?)))),
+                      opened(B?, ch([msg(A?, hello(B?, acquaint(A?, B?)))], ToBob)),
+                      sent(msg(B?, cargo(A?, start(attempt(A?, 1, 1, befriend(A?, B?), none))))),
+                      opened(C?, ch([], ToCarol))],
                      [], [], In).
