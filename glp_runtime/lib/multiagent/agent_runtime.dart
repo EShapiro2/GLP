@@ -54,6 +54,7 @@ import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/simulation_network.dart';
+import 'package:glp_runtime/multiagent/boot_loader.dart' show PersonGoal;
 
 /// Agent runtime encapsulating GLP execution, madGLP context, and I/O.
 ///
@@ -86,6 +87,24 @@ class AgentRuntime {
   /// Extra arguments inserted between Id (arg 0) and NetIn (last arg).
   /// For example, ['carol', '4'] for parent_init(alice, carol, 4, NetIn).
   final List<String> extraArgs;
+
+  /// The person scripted in GLP at this agent, where the agent is booted in
+  /// the boot form: the entry goal is then `agent(ch(_?,_), ch(_?,_))` with
+  /// the person goal on the person's channel and `send_to_net` on the
+  /// network's (IGLP, Implementation Notes, "Boot": "a deployed agent is
+  /// spawned by its application with the same initial goal"), as the
+  /// simulation's isolate posts it, and [goalLabel] and [extraArgs] are not
+  /// read.  Null for the entry form `name(Me, extras..., NetIn)`.
+  final PersonGoal? person;
+
+  /// The boot file's own module, in the boot form: the boot source with its
+  /// boot clause stripped, loaded on top of the program as the simulation's
+  /// isolate loads it (IGLP, Implementation Notes, "Boot": "what remains of
+  /// the file is an ordinary module"), checked in the scope of [bootPath]
+  /// ("The scope a boot source is checked in").  Null where the program is
+  /// the whole.
+  final String? bootSource;
+  final String? bootPath;
 
   // Callbacks set by UI layer
   /// The agent's transcript, line by line: its own notes and, marked `< `,
@@ -186,6 +205,9 @@ class AgentRuntime {
     required this.rootSelfGlpPath,
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
+    this.person,
+    this.bootSource,
+    this.bootPath,
     this.keyPair,
     NetworkDirectory? directory,
     GlpNetwork? network,
@@ -341,6 +363,15 @@ class AgentRuntime {
       engine.loadFile(program);
       _log('INIT: Program loaded from the module $program');
     }
+    final boot = bootSource;
+    if (boot != null) {
+      final path = bootPath;
+      engine.loadSource(boot,
+          filename: 'program',
+          scope: path != null ? engine.scopeFor(path) : engine.scope);
+      _log('INIT: the boot source loaded on top'
+          '${path != null ? ', in the scope of $path' : ''}');
+    }
 
     _runtime = engine.runtime;
     _ctx = engine.madContext;
@@ -399,24 +430,40 @@ class AgentRuntime {
     // the person's acts, and the network's, the index-0 serializer entry
     // (IGLP Definition Index-0 Serializer: permanent entry mapping _r(p, 0)
     // to local writer).
-    final goalName = goalLabel.split('/').first;
-    final goalArity = int.parse(goalLabel.split('/').last);
-    final takesUserIn = goalArity == extraArgs.length + 3;
-    final goalArgs = [
-      glpConstantText(selfName),
-      if (takesUserIn) 'UserIn?',
-      for (final extra in extraArgs)
-        int.tryParse(extra)?.toString() ?? glpConstantText(extra),
-      'NetIn?',
-    ];
-    if (goalArgs.length != goalArity) {
-      throw StateError('$goalLabel takes $goalArity arguments, and the agent '
-          'has ${goalArgs.length} for it: its id, '
-          '${extraArgs.length} extra and the network input');
+    final String goalText;
+    final List<String> inputs;
+    final String started;
+    final personGoal = person;
+    if (personGoal != null) {
+      // The boot form, as IsolateManager posts it for a simulation.
+      goalText = [
+        'agent(ch(PIn?, POut), ch(NetIn?, NetOut))',
+        personGoal.text('POut', 'PIn'),
+        'send_to_net(NetOut?)',
+      ].join(', ');
+      inputs = const ['NetIn'];
+      started = goalText;
+    } else {
+      final goalName = goalLabel.split('/').first;
+      final goalArity = int.parse(goalLabel.split('/').last);
+      final takesUserIn = goalArity == extraArgs.length + 3;
+      final goalArgs = [
+        glpConstantText(selfName),
+        if (takesUserIn) 'UserIn?',
+        for (final extra in extraArgs)
+          int.tryParse(extra)?.toString() ?? glpConstantText(extra),
+        'NetIn?',
+      ];
+      if (goalArgs.length != goalArity) {
+        throw StateError('$goalLabel takes $goalArity arguments, and the agent '
+            'has ${goalArgs.length} for it: its id, '
+            '${extraArgs.length} extra and the network input');
+      }
+      goalText = '$goalName(${goalArgs.join(', ')})';
+      inputs = [if (takesUserIn) 'UserIn', 'NetIn'];
+      started = '$goalName(${[selfName, ...extraArgs, 'NetIn'].join(', ')})';
     }
-    final goalText = '$goalName(${goalArgs.join(', ')})';
-    final posted = engine.postGoal(goalText,
-        inputs: [if (takesUserIn) 'UserIn', 'NetIn']);
+    final posted = engine.postGoal(goalText, inputs: inputs);
     _log('INIT: posted $goalText');
 
     final netInWriter = posted.inputs['NetIn']!.currentWriterId;
@@ -437,8 +484,7 @@ class AgentRuntime {
     }
     _programIdentity = _codeIdentity(main.image);
 
-    final argsDesc = [selfName, ...extraArgs, 'NetIn'].join(', ');
-    _output('[GOAL] Started $goalName($argsDesc)');
+    _output('[GOAL] Started $started');
     _log('INIT: GQ length before initial run: ${_runtime!.gq.length}');
   }
 
