@@ -362,9 +362,10 @@ void main() {
       // "the layer refuses to send a message it cannot save, and the runtime
       // waits for its answer and, on a refusal, keeps the message and sends
       // it again later"; GNA, Section 2.9: send "fails if the message cannot
-      // be saved".  The caller's layer refuses the cold call once; the boot's
-      // cycle ends with it back in M_p, undelivered; the layer then reports
-      // the callee connected, and the caller hands it over again, once.
+      // be saved".  The caller's layer refuses the cold call once; the cycle
+      // of the caller's person's act call(Key) ends with it back in M_p,
+      // undelivered; the layer then reports the callee connected, and the
+      // caller hands it over again, once.
       final wire = _Wire();
       final callerKp = generateKeyPair();
       final calleeKp = generateKeyPair();
@@ -373,8 +374,6 @@ void main() {
         agentId: 'caller',
         program: play,
         rootSelfGlpPath: root,
-        goalLabel: 'caller_init/3',
-        extraArgs: [calleeKp.pub.hex],
         keyPair: callerKp,
         network: callerNet,
       );
@@ -382,7 +381,6 @@ void main() {
         agentId: 'callee',
         program: play,
         rootSelfGlpPath: root,
-        goalLabel: 'callee_init/2',
         keyPair: calleeKp,
         network: _WireNetwork(calleeKp, wire),
       );
@@ -391,8 +389,13 @@ void main() {
       callee.onOutput = out['callee']!.add;
       await callee.initialize();
       await caller.initialize();
+      // Each person tells its agent what to do: the callee's to answer, the
+      // caller's to call the callee, by its key.
+      await callee.injectUserInput(ConstTerm('answer'));
+      await caller.injectUserInput(
+          StructTerm('call', [ConstTerm(calleeKp.pub.hex)]));
 
-      // The boot's cycle waited for the layer's answer: the cold call was
+      // The act's cycle waited for the layer's answer: the cold call was
       // refused, nothing was carried, and the message is in M_p, undelivered.
       expect(callerNet.refused, [calleeKp.pub.hex]);
       expect(wire.carried, isEmpty);
