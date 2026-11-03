@@ -6,8 +6,8 @@
 %% =============================================================================
 
 exported procedure agent1_init(_?, _?).
-agent1_init(_, _) :-
-    send_to_net([msg(agent2, hello)]).
+agent1_init(keys(_, [Agent2]), _) :-
+    send_to_net([msg(Agent2?, hello)]).
 
 %% =============================================================================
 %% AGENT2: Receiver - reads one message from network input

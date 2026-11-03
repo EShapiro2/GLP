@@ -986,16 +986,6 @@ BodyKernelResult selfKeyKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     return kernelAbort('[ABORT] _self_key/1: expected 1 argument, got ${args.length}');
   }
-  // An agent of a boot has no key at boot: its first call of self_key/1
-  // makes its key pair, from the clock, the device's hardware identifiers and
-  // the persona's name, and the runtime holds it (GLP-Spec appendix-guards,
-  // "Identity and signature"; IGLP, Implementation Notes, "Boot").
-  final persona = rt.persona;
-  if (rt.identity == null && persona != null) {
-    final made = PersonIdentity.forPersona(persona);
-    rt.identity = made;
-    rt.onKeyMade?.call(made);
-  }
   final id = _personIdentity(rt, '_self_key/1');
   if (id == null) return BodyKernelResult.abort;
   return bindResult(rt, args[0], ConstTerm(id.pub.hex));

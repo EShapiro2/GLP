@@ -2,9 +2,9 @@
 %% The entry points the boot clause spawns are exported here and
 %% forwarded from self.glp; every other procedure is local to this module.
 exported procedure producer_init(_?, _?).
-producer_init(_, _) :-
+producer_init(keys(_, [Agent2]), _) :-
     build_list(X),
-    send_to_net([msg(agent2, data(X?))]).
+    send_to_net([msg(Agent2?, data(X?))]).
 
 procedure build_list(_).
 build_list([1|Xs?]) :- build_rest(Xs).

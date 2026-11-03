@@ -20,19 +20,19 @@ NetStream ::= [] ; [NetMsg | NetStream].
 
 %% bob: make the channel, keep one end, send the other to carol, and greet.
 exported procedure bob_init(_?, _?).
-bob_init(_, _) :-
-    send_to_net([msg(carol, stream(S?))]),
+bob_init(keys(Me, [Carol]), _) :-
+    send_to_net([msg(Carol?, stream(S?))]),
     new_channel(Mine, Theirs),
     put(S, Theirs?),
-    greet(bob, Mine?).
+    greet(Me?, Mine?).
 
 procedure put(OuterStream, GreetChannel?).
 put([chan(C?)], C).
 
 %% carol: forward what bob sent her to alice, on a stream of her own.
 exported procedure carol_init(_?, _?).
-carol_init(_, [msg(_, stream(S)) | _]) :-
-    send_to_net([msg(alice, stream(S1?))]),
+carol_init(keys(_, [Alice]), [msg(_, stream(S)) | _]) :-
+    send_to_net([msg(Alice?, stream(S1?))]),
     forward(S?, S1).
 
 procedure forward(OuterStream?, OuterStream).
@@ -41,7 +41,7 @@ forward([], []).
 
 %% alice: greet on the end that reached her through carol.
 exported procedure alice_init(_?, _?).
-alice_init(_, [msg(_, stream(S)) | _]) :- await(alice, S?).
+alice_init(keys(Me, _), [msg(_, stream(S)) | _]) :- await(Me?, S?).
 
 procedure await(Constant?, OuterStream?).
 await(Me, [chan(C) | _]) :- ground(Me?) | greet(Me?, C?).

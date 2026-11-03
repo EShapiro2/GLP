@@ -19,5 +19,5 @@ consume_list([]).
 %% =============================================================================
 
 exported procedure agent2_init(_?, _?).
-agent2_init(_, _) :-
-    send_to_net([msg(agent1, data([a,b]))]).
+agent2_init(keys(_, [Agent1]), _) :-
+    send_to_net([msg(Agent1?, data([a,b]))]).
