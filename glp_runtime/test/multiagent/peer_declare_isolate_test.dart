@@ -11,11 +11,17 @@
 /// simulation names agents symbolically, "resolved to keys at the seam".
 ///
 /// The declarations run from GLP in bob's isolate.  The order is made by the
-/// program, not by timing: bob declares, then tells dave, and only dave's word
-/// sets alice and carol calling; bob's declarations reach the router over the
-/// port his send to dave follows them on, so both are in force before either
-/// call is routed.  Bob contacts neither caller, so neither call is answered
-/// for his having contacted its sender.
+/// program, not by timing: bob closes his PAN and then tells dave he is ready,
+/// so dave, whom bob has contacted, is answered; dave asks bob to declare
+/// alice's key only once he has both bob's word and alice's key, in either
+/// order; bob declares, then tells dave, and only dave's word sets alice and
+/// carol calling.  Bob's declarations reach the router over the port his sends
+/// to dave follow them on, so each is in force before the message that follows
+/// it is routed.  Bob contacts neither caller, so neither call is answered for
+/// his having contacted its sender.  Until 2026-11-03 dave asked bob as soon
+/// as alice's key came, and under load the request could reach the router
+/// after bob closed his PAN and before his word to dave, a first contact from
+/// an agent he had not contacted, and was not answered (IGLP-coop).
 @Timeout.none
 library;
 
@@ -37,6 +43,7 @@ procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob, agent(ch(_?, _), ch(_?, _))@dave, say(dave, ch(_?, _))@dave, agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@carol, say(carol, ch(_?, _))@carol.
 
 PdMsg ::= go ; ready ; declared ; key(Key) ; declare(Key) ; hello(Constant).
+DaveKey ::= waiting ; got(Key).
 
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(PdMsg)), Stream(NetMsg(PdMsg)))?).
 agent(ch(In, []), ch(N, [])) :- start(In?, N?).
@@ -62,10 +69,18 @@ bob_in([_ | In]) :- otherwise | bob_in(In?).
 bob_in([]).
 
 procedure dave_key(Stream(NetMsg(PdMsg))?).
-dave_key([msg(dave, key(K)) | In]) :- ground(K?) |
+dave_key(In) :- dave_wait(In?, no, waiting).
+
+procedure dave_wait(Stream(NetMsg(PdMsg))?, Constant?, DaveKey?).
+dave_wait([msg(dave, ready) | In], _, got(K)) :- ground(K?) |
     send_to_net([msg(bob, declare(K?))]), dave_go(In?).
-dave_key([_ | In]) :- otherwise | dave_key(In?).
-dave_key([]).
+dave_wait([msg(dave, ready) | In], _, waiting) :- dave_wait(In?, yes, waiting).
+dave_wait([msg(dave, key(K)) | In], yes, _) :- ground(K?) |
+    send_to_net([msg(bob, declare(K?))]), dave_go(In?).
+dave_wait([msg(dave, key(K)) | In], no, _) :- ground(K?) |
+    dave_wait(In?, no, got(K?)).
+dave_wait([_ | In], R, S) :- otherwise | dave_wait(In?, R?, S?).
+dave_wait([], _, _).
 
 procedure dave_go(Stream(NetMsg(PdMsg))?).
 dave_go([msg(dave, declared) | _]) :-
