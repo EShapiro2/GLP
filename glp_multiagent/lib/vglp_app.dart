@@ -42,11 +42,18 @@ class VglpProgram {
   /// The image of the program's display declarations.
   final Manifest manifest;
 
+  /// The entry the application starts: at the agent's first start the
+  /// isolate sends on the person channel `<entry>(Me, [])`, Me the agent's
+  /// key ([InitAgent.entry]; IGLP, Implementation Notes, "Boot").  Null where
+  /// the program takes no first act.
+  final String? entry;
+
   const VglpProgram({
     required this.title,
     required this.person,
     required this.directory,
     required this.manifest,
+    this.entry,
   });
 }
 
@@ -119,6 +126,7 @@ class _VglpScreenState extends State<VglpScreen> {
           rootSelfGlpPath: glp.rootSelfGlp,
           replyPort: _replyPort.sendPort,
           deferStart: false,
+          entry: _p.entry,
         ),
       );
     } catch (e) {

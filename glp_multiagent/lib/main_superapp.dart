@@ -16,6 +16,12 @@
 /// goal (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP,
 /// Implementation Notes, "Boot"), which the program's agent/2, its
 /// owner's, answers; until 2026-11-03 the runtime started it at `superapp_ui/3`.
+/// At the agent's first start the application sends on the person channel the
+/// act that starts the super-app, `superapp_ui(Me, [])`, Me the agent's key
+/// and no peer yet, later peers coming by acquaintance (IGLP b014a9e,
+/// Implementation Notes, "Boot"); core's agent/2 starts superapp_ui/4 on it,
+/// and the person's acts after it are the grants of the super-app's person
+/// channel.
 library;
 
 import 'manifests/superapp_ui.dart';
@@ -26,4 +32,5 @@ void main() => runVglpApp(VglpProgram(
       person: 'alice',
       directory: (glp) => glp.coreDir,
       manifest: superappManifest,
+      entry: 'superapp_ui',
     ));

@@ -273,6 +273,17 @@ class AgentRuntime {
   }
 
   bool get initialized => _initialized;
+
+  /// The agent's public key, once [initialize] has made or been given it.
+  PubKey? get publicKey => _kp?.pub;
+
+  /// Whether [initialize] booted the agent afresh, its first start, and did
+  /// not restore it from the state its [stateStore] holds (IGLP,
+  /// Implementation Notes, "Boot": "At the agent's first start the
+  /// application sends on the person channel the act that starts its
+  /// program").
+  bool get firstStart => _firstStart;
+  bool _firstStart = false;
   GlpRuntime? get runtime => _runtime;
   MadContext? get ctx => _ctx;
 
@@ -325,6 +336,7 @@ class AgentRuntime {
       return;
     }
     await _submit(const _Boot());
+    _firstStart = true;
     _initialized = true;
     updateStats();
   }
