@@ -470,12 +470,15 @@ miniapp(_, _, _, _).
 % template's instance at the D of its miniapp/4 instance (vGLP, 2026-10-14
 % 13:21 UTC, S2) and at S, the type of the screen it reports, chosen by the
 % mini-app (vGLP 2026-10-16 11:25 UTC, item 4; Udi: approved): the person's
-% key, a role choosing the script among the mini-app's own plays, the
-% person-side end of the person channel, and the screen it reports.  The
-% super-app's plays activate it from the module value as they activate the
-% entry.  Never run here.
-procedure(D, S) miniapp_person(Key?, Constant?, Channel(PersonOut(D), PersonIn(D))?, Stream(S)).
-miniapp_person(_, _, _, []).
+% key, a role choosing the script among the mini-app's own plays, the keys
+% the person knows, by which its script names its peers (GLP paper,
+% appendix-guards.tex, miniapp_person/5; IGLP, Implementation Notes, "Boot":
+% an agent learns its peers' keys from its person), the person-side end of
+% the person channel, and the screen it reports.  The super-app's plays
+% activate it from the module value as they activate the entry.  Never run
+% here.
+procedure(D, S) miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(D), PersonIn(D))?, Stream(S)).
+miniapp_person(_, _, _, _, []).
 
 % send_to_net/1 — the seam predicate to the network (GLP-Spec appendix-guards,
 % the seam-predicate row and "Output to the network (send_to_net/1)"; IGLP
