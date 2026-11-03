@@ -64,9 +64,9 @@ class RouterSend extends IsolateMessage {
 }
 
 /// Agent → router: the agent's layer sets the cold-call trust level of a
-/// proximity underlay, as `trust_declare/2` asks (IGLP, Definition "Seam
+/// proximity underlay, as `declare(trust(U, L))` asks (IGLP, Definition "Seam
 /// Predicates"); the router enforces it ("The PAN's cold-call trust level is
-/// enforced as trust_declare sets it", IGLP appendix-implementation-notes.tex,
+/// enforced as the trust declaration sets it", IGLP appendix-implementation-notes.tex,
 /// Simulation realisation).
 class RouterTrust extends IsolateMessage {
   final String agentId;
@@ -83,7 +83,7 @@ class RouterTrust extends IsolateMessage {
 /// ([known] true, putKnownPeer) or removes it ([known] false,
 /// removeKnownPeer) (GNA, "Known Peers"); the router consults the set in the
 /// Closed first-contact rule ("under closed, first contact from an agent not
-/// declared by peer_declare is not answered", IGLP, Simulation realisation).
+/// declared a peer is not answered", IGLP, Simulation realisation).
 class RouterKnownPeer extends IsolateMessage {
   final String agentId;
   final PubKey pk;
@@ -470,7 +470,7 @@ class IsolateManager {
 
   /// The cold-call trust level of [underlay] the router holds for [agentId] and
   /// enforces on the first contacts it routes to it: the boot harness's, or
-  /// the one the agent declared with trust_declare/2.  The simulation's only.
+  /// the one the agent declared with declare(trust(U, L)).  The simulation's only.
   TrustLevel trustLevelOf(String agentId, ProximityUnderlay underlay) =>
       _simulation('trustLevelOf').trustLevelOf(agentId, underlay);
 
@@ -875,6 +875,10 @@ Future<void> _eventLoop(
 
       // Drain activated goals and flush any response messages
       runEvent();
+      // The cycle is complete, and the agent keeps no state, so the message
+      // is acknowledged to the layer (IGLP, Implementation Notes,
+      // "Persistence"; GNA, Section 2.9, acknowledge(messageId)).
+      network.acknowledge(msg.messageId);
       config.mainPort.send(AgentIdle(agentId));
     }
     } catch (e, st) {

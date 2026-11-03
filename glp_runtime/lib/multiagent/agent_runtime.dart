@@ -27,7 +27,7 @@
 /// characters, as self_key/1 presents it.  Until 2026-10-12 the host built the
 /// simulation's network itself, always.
 ///
-/// Termination and restart (IGLP, Definition "Restart", madglp-spec.tex; Implementation Notes, "Persistence"): where the host is given an [AgentStateStore], the agent's local state survives the termination of its application, kept by the store, and "a message is handed to the layer, and a delivered message acknowledged to the layer, only from a state the store holds, and a restart resumes from the state the store holds".  The agent is event-driven (Implementation Notes, "Event-driven execution"): each event --- the initial start, a message the layer delivers, the person's act, a place event --- is one cycle, which applies the event, reduces to quiescence, saves the local state with the cycle's outgoing messages undelivered in M_p, and only then hands them to the layer; the cycles are taken one at a time, in order of arrival.  At restart the agent goes on from the state the store holds, with no entry goal posted, and hands to the layer the messages that state holds undelivered.  A cycle whose save fails goes back to the state saved before it and applies the event again.  The layer is told that a message is delivered once the cycle that applied it is saved ([onDelivered]).  Until 2026-10-23 the runtime saved nothing (Code #13 to GNA, 2026-10-20 23:56 UTC), and until 2026-10-24 a cycle handed its messages to the layer before its save.
+/// Termination and restart (IGLP, Definition "Restart", madglp-spec.tex; Implementation Notes, "Persistence"): where the host is given an [AgentStateStore], the agent's local state survives the termination of its application, kept by the store, and "a message is handed to the layer, and a delivered message acknowledged to the layer, only from a state the store holds, and a restart resumes from the state the store holds".  The agent is event-driven (Implementation Notes, "Event-driven execution"): each event --- the initial start, a message the layer delivers, the person's act, a place event --- is one cycle, which applies the event, reduces to quiescence, saves the local state with the cycle's outgoing messages undelivered in M_p, and only then hands them to the layer; the cycles are taken one at a time, in order of arrival.  At restart the agent goes on from the state the store holds, with no entry goal posted, and hands to the layer the messages that state holds undelivered.  A cycle whose save fails goes back to the state saved before it and applies the event again.  The layer is told that a message is delivered once the cycle that applied it is saved, by its `acknowledge(messageId)` ([GlpNetwork.acknowledge]).  Until 2026-10-23 the runtime saved nothing (Code #13 to GNA, 2026-10-20 23:56 UTC), and until 2026-10-24 a cycle handed its messages to the layer before its save.
 library;
 
 import 'dart:async';
@@ -134,7 +134,7 @@ class AgentRuntime {
   /// the layer the file of its queue.
   final AgentStateStore? stateStore;
 
-  /// The runtime tells the layer that the message of [messageId] is delivered: called once the cycle that applied it is saved, or, where there is no [stateStore], once the cycle is complete (IGLP, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, only from a state the store holds").  [GlpNetwork] has no function for it, GNA's API giving none yet, so the host binds it to the layer's.
+  /// The simulation's coordinator is told that the message of [messageId] is acknowledged: the simulation's layer, which the host builds where it is given none, hands its `acknowledge(messageId)` here ([SimulationNetworkClient.acknowledgeToRouter]).  The runtime acknowledges a message once the cycle that applied it is saved, or, where there is no [stateStore], once the cycle is complete (IGLP, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, only from a state the store holds"), by the layer's [GlpNetwork.acknowledge] (GNA, Section 2.9); over a given network the layer is told, and this is not called.  Until 2026-11-03 [GlpNetwork] had no `acknowledge`, and this was the runtime's one call, which a host was to bind to the layer's and none did.
   void Function(String messageId)? onDelivered;
 
   // Runtime state
@@ -553,7 +553,7 @@ class AgentRuntime {
     _pumping = false;
   }
 
-  /// One event cycle (IGLP, Implementation Notes, "Event-driven execution": "On each event the agent binds what the event delivers, reduces until quiescent ... and then performs its Sends").  With no [stateStore], the agent applies [event], reduces and performs its Sends ([_apply], [Scheduler.drainAndSend]).  With one, it saves before it sends ([_cycleSaving]).  Once the cycle is complete --- saved, where there is a store --- the layer is told the message it applied is delivered ([onDelivered]).
+  /// One event cycle (IGLP, Implementation Notes, "Event-driven execution": "On each event the agent binds what the event delivers, reduces until quiescent ... and then performs its Sends").  With no [stateStore], the agent applies [event], reduces and performs its Sends ([_apply], [Scheduler.drainAndSend]).  With one, it saves before it sends ([_cycleSaving]).  Once the cycle is complete --- saved, where there is a store --- the message it applied is acknowledged to the layer ([GlpNetwork.acknowledge]; GNA, Section 2.9: "Confirm that the message delivered under messageId has been applied and saved by the runtime").
   Future<void> _cycle(_AgentEvent event) async {
     final store = stateStore;
     if (store == null) {
@@ -562,7 +562,7 @@ class AgentRuntime {
       await _cycleSaving(event, store);
     }
     if (event is _Message && event.messageId.isNotEmpty) {
-      onDelivered?.call(event.messageId);
+      _ctx?.network?.acknowledge(event.messageId);
     }
   }
 
@@ -777,6 +777,7 @@ class AgentRuntime {
       keyPair: kp,
       sendToRouter: (toId, payload) =>
           _sendMadPayload(toId, Uint8List.fromList(payload)),
+      acknowledgeToRouter: (messageId) => onDelivered?.call(messageId),
     );
     _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
 
@@ -851,8 +852,8 @@ class AgentRuntime {
   /// The simulation's delivery, which its coordinator makes; a given network
   /// delivers its own messages, and a delivery here is refused.  Completes
   /// when the message's cycle is complete --- saved, where the agent has a
-  /// [stateStore] --- and then [onDelivered] has been told [messageId], where
-  /// the coordinator gives one.
+  /// [stateStore] --- and then the message is acknowledged, [onDelivered] told
+  /// [messageId], where the coordinator gives one.
   Future<void> onMadMessageReceived(String from, Uint8List payload,
       {String messageId = ''}) async {
     _log('MAD_RECV from $from (${payload.length} bytes)');

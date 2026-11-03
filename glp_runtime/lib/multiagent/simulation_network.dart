@@ -98,7 +98,7 @@ class SimulationRouter {
   /// held per ProximityUnderlay, and is set with setTrustLevel(underlay,
   /// level); both levels default to Closed" (GLP-Networking-API, Trust
   /// levels).  An agent's layer sets its own when the agent declares one with
-  /// trust_declare/2 ([SimulationNetworkClient.setTrustLevel] forwards it
+  /// declare(trust(U, L)) ([SimulationNetworkClient.setTrustLevel] forwards it
   /// here), and the boot harness sets the PAN level Open for the plays.
   final Map<String, Map<ProximityUnderlay, TrustLevel>> _trust = {};
 
@@ -108,9 +108,9 @@ class SimulationRouter {
 
   /// Each agent's known-peer set, by key hex: the keys its layer was given by
   /// putKnownPeer (GNA, "Known Peers": "This set is what Closed trust ...
-  /// recognizes"), as peer_declare/1 gives them.  Used for the Closed
+  /// recognizes"), as declare(peer(P)) gives them.  Used for the Closed
   /// first-contact rule: "under closed, first contact from an agent not
-  /// declared by peer_declare is not answered" (IGLP, "Simulation
+  /// declared a peer is not answered" (IGLP, "Simulation
   /// realisation").
   final Map<String, Set<String>> _known = {};
 
@@ -147,7 +147,7 @@ class SimulationRouter {
       {for (final u in ProximityUnderlay.values) u: TrustLevel.closed};
 
   /// Set agent [id]'s cold-call trust level of [underlay] to [level]: what its
-  /// layer does on setTrustLevel(underlay, level), as trust_declare/2 asks (IGLP,
+  /// layer does on setTrustLevel(underlay, level), as declare(trust(U, L)) asks (IGLP,
   /// Definition "Seam Predicates"), or what the boot harness sets.
   void setTrustLevel(String id, ProximityUnderlay underlay, TrustLevel level) {
     _trust.putIfAbsent(id, _closed)[underlay] = level;
@@ -276,7 +276,7 @@ class SimulationRouter {
     // the router held one level per agent, the boot harness's, and a level an
     // agent declared never reached it; until 2026-10-09 the PAN was BLE.
     // A key the agent's layer was given by putKnownPeer is answered: "under
-    // closed, first contact from an agent not declared by peer_declare is not
+    // closed, first contact from an agent not declared a peer is not
     // answered" (IGLP, "Simulation realisation"); until 2026-10-11 the
     // interface had no putKnownPeer and the router no known-peer set.
     if (trustLevelOf(toId, ProximityUnderlay.pan) == TrustLevel.closed &&
@@ -358,6 +358,9 @@ class SimulationNetworkClient extends GlpNetwork {
   /// router routes this client's traffic.
   final void Function(PubKey pk, bool known)? knownPeerToRouter;
 
+  /// Forwards the runtime's acknowledgement of a delivered message to whoever delivered it ([acknowledge]); null where no one is told.
+  final void Function(String messageId)? acknowledgeToRouter;
+
   /// The cold-call trust level of each proximity underlay, both closed until
   /// set.
   final Map<ProximityUnderlay, TrustLevel> _trust = {
@@ -374,6 +377,7 @@ class SimulationNetworkClient extends GlpNetwork {
     required this.sendToRouter,
     this.trustToRouter,
     this.knownPeerToRouter,
+    this.acknowledgeToRouter,
   });
 
   // --- Identity ---
@@ -418,6 +422,10 @@ class SimulationNetworkClient extends GlpNetwork {
     sendToRouter(toId, payload);
   }
 
+  /// `acknowledge(messageId)` (GNA, Section 2.9): handed to [acknowledgeToRouter].  The router hands a message to the agent once, and keeps no delivered message across a restart, the simulation having no restart of its layer; so there is nothing for the acknowledgement to release here, and whoever delivered the message is told of it.
+  @override
+  void acknowledge(String messageId) => acknowledgeToRouter?.call(messageId);
+
   // --- Signing (real Ed25519, synchronous) ---
 
   @override
@@ -441,7 +449,7 @@ class SimulationNetworkClient extends GlpNetwork {
   @override
   void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) {
     // Trust is enforced router-side in the simulation ("The PAN's cold-call
-    // trust level is enforced as trust_declare sets it", IGLP
+    // trust level is enforced as the trust declaration sets it", IGLP
     // appendix-implementation-notes.tex, Simulation realisation): the level is
     // recorded here and handed to the router, which applies it to the first
     // contacts it routes to this agent.  Until 2026-10-02 it was recorded here
@@ -455,7 +463,7 @@ class SimulationNetworkClient extends GlpNetwork {
 
   // --- WAN (not provided: IGLP, "Simulation realisation": "Not provided: the
   // WAN underlay and the rendezvous server, so peer_address/2, punch_udp/1 and
-  // the effect of address_declare/2") ---
+  // the effect of an address or a rendezvous declaration") ---
 
   @override
   String? getPublicAddress() =>
@@ -467,11 +475,19 @@ class SimulationNetworkClient extends GlpNetwork {
       throw UnsupportedError('the WAN underlay is not provided in '
           'SimulationNetwork');
 
-  /// Does nothing: "the effect of address_declare/2" is not provided (IGLP,
-  /// "Simulation realisation"), the WAN underlay being absent, so an address
-  /// is taken and has no effect.
+  /// Does nothing: "the effect of an address ... declaration" is not provided
+  /// (IGLP, "Simulation realisation"), the WAN underlay being absent, so an
+  /// address is taken and has no effect.
   @override
   void putPeerAddress(PubKey pk, String address) {}
+
+  /// Does nothing: "the effect of ... a rendezvous declaration" is not provided (IGLP, "Simulation realisation"), the rendezvous server being absent, so a server is taken and has no effect.
+  @override
+  void putRendezvousServer(PubKey pk, String address) {}
+
+  /// Does nothing, as [putRendezvousServer] does nothing: no server was taken, and "a key not declared does nothing" (GNA, Section 4.2).
+  @override
+  void removeRendezvousServer(PubKey pk) {}
 
   @override
   String? observedPeerAddress(PubKey pk) =>
@@ -481,14 +497,14 @@ class SimulationNetworkClient extends GlpNetwork {
   void punchUdp(String address) =>
       throw UnsupportedError('punch_udp/1 not provided in SimulationNetwork');
 
-  // --- Places (not provided: "the platform's geofencing, so place_declare/3
-  // and place_remove/1"; [onPlaceEvent] never fires) ---
+  // --- Places (not provided: "the platform's geofencing, so a place
+  // declaration and its removal"; [onPlaceEvent] never fires) ---
 
   @override
   Future<bool> declarePlace(String place, double radiusMetres) =>
-      throw UnsupportedError('place_declare/3 not provided in SimulationNetwork');
+      throw UnsupportedError('a place declaration is not provided in SimulationNetwork');
 
   @override
   Future<void> removePlace(String place) =>
-      throw UnsupportedError('place_remove/1 not provided in SimulationNetwork');
+      throw UnsupportedError('the removal of a place is not provided in SimulationNetwork');
 }

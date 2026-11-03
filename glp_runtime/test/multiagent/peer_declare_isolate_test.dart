@@ -1,11 +1,11 @@
-/// peer_declare/1 is honoured by the simulation's router under a closed trust
-/// level: a declared peer's first contact is answered, an undeclared one's is
-/// not.
+/// declare(peer(P)) is honoured by the simulation's router under a closed
+/// trust level: a declared peer's first contact is answered, an undeclared
+/// one's is not.
 ///
 /// IGLP appendix-implementation-notes.tex, Simulation realisation: "The PAN's
-/// cold-call trust level is enforced as trust_declare sets it: under closed,
-/// first contact from an agent not declared by peer_declare is not answered."
-/// IGLP, Definition "Seam Predicates": "peer_declare gives the layer the
+/// cold-call trust level is enforced as the trust declaration sets it: under
+/// closed, first contact from an agent not declared a peer is not answered."
+/// IGLP, Definition "Seam Predicates": "declare(peer(P)) gives the layer the
 /// public key P of a peer the program knows"; GLP-Networking-API, "Known
 /// Peers": the known-peer set "is what Closed trust ... recognizes".  The
 /// simulation names agents symbolically, "resolved to keys at the seam".
@@ -26,7 +26,7 @@ import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
 /// Bob closes his PAN and reports each caller he hears; alice tells dave her
-/// key, dave hands it to bob, who declares it by peer_declare, and dave then
+/// key, dave hands it to bob, who declares it by declare(peer(K)), and dave then
 /// relays the go to alice and carol, who each call bob.  Bob declares alice by
 /// the key self_key/1 assigns her, made at her spawn (IGLP, Implementation
 /// Notes, "Boot"), which reaches him in a message.  Until 2026-11-02 bob
@@ -47,7 +47,7 @@ say(P, ch(_, [P?])).
 
 procedure agent_init(Constant?, Stream(NetMsg(PdMsg))?).
 agent_init(bob, In) :-
-    trust_declare(pan, closed),
+    declare(trust(pan, closed)),
     send_to_net([msg(dave, ready)]), bob_in(In?).
 agent_init(dave, In) :- dave_key(In?).
 agent_init(alice, In) :-
@@ -56,7 +56,7 @@ agent_init(carol, In) :- called(carol, In?).
 
 procedure bob_in(Stream(NetMsg(PdMsg))?).
 bob_in([msg(bob, declare(K)) | In]) :- ground(K?) |
-    peer_declare(K?), send_to_net([msg(dave, declared)]), heard(In?).
+    declare(peer(K?)), send_to_net([msg(dave, declared)]), heard(In?).
 bob_in([_ | In]) :- otherwise | bob_in(In?).
 bob_in([]).
 
@@ -92,7 +92,7 @@ void main() {
   setUp(() => manager = IsolateManager());
   tearDown(() async => manager.shutdown());
 
-  test('under closed, a peer declared by peer_declare is answered and an '
+  test('under closed, a peer declared by declare(peer(P)) is answered and an '
       'undeclared one is not', () async {
     final config = BootLoader().load(_boot);
     config.rootSelfGlpPath = _rootSelf;

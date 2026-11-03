@@ -131,7 +131,7 @@ void main() {
     expect(layer.store.state.knownPeers.known.containsKey(peer.hex), isFalse);
 
     network.setTrustLevel(glp.ProximityUnderlay.lan, glp.TrustLevel.open);
-    // trust_declare(lan, open) reaches the lan sub-object's setTrustLevel
+    // declare(trust(lan, open)) reaches the lan sub-object's setTrustLevel
     // (GNA §2.2).
     expect(layer.store.state.settings.trustLevelOf(ProximityUnderlay.lan),
         ColdCallTrustLevel.open);
@@ -144,6 +144,17 @@ void main() {
     expect(network.networkIdentity(), layer.wan!.networkIdentity());
     expect(() => network.punchUdp('nowhere'), throwsArgumentError,
         reason: "the layer's refusal of an unparseable address, unchanged");
+    // declare(rendezvous(P, A)) and remove(rendezvous(P)) reach the WAN
+    // sub-object's putRendezvousServer and removeRendezvousServer (GNA
+    // 776016c, Section 4.2): the layer's refusal of an unparseable address
+    // comes back unchanged, and a key not declared does nothing.
+    expect(() => network.putRendezvousServer(peer, 'nowhere'),
+        throwsArgumentError,
+        reason: "the layer's refusal of an unparseable address, unchanged");
+    expect(() => network.removeRendezvousServer(peer), returnsNormally);
+    // acknowledge(messageId) (GNA, Section 2.9): the layer has none yet, GNA's
+    // task O (a), and the glue says so.
+    expect(() => network.acknowledge('m-1'), throwsUnsupportedError);
 
     await layer.dispose();
   });

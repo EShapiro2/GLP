@@ -152,6 +152,17 @@ void main() {
       expect(network.networkIdentity(), layer.wan.networkIdentity());
       expect(() => network.punchUdp('nowhere'), throwsArgumentError,
           reason: "the layer's refusal of an unparseable address, unchanged");
+      // declare(rendezvous(P, A)) and remove(rendezvous(P)) reach the WAN
+      // sub-object's putRendezvousServer and removeRendezvousServer (GNA
+      // 776016c, Section 4.2): the layer's refusal of an unparseable address
+      // comes back unchanged, and a key not declared does nothing.
+      expect(() => network.putRendezvousServer(peer, 'nowhere'),
+          throwsArgumentError,
+          reason: "the layer's refusal of an unparseable address, unchanged");
+      expect(() => network.removeRendezvousServer(peer), returnsNormally);
+      // acknowledge(messageId) (GNA, Section 2.9): the layer has none yet,
+      // GNA's task O (a), and the glue says so.
+      expect(() => network.acknowledge('m-1'), throwsUnsupportedError);
 
       final events = <String>[];
       network.onConnectivityStatusChanged =
@@ -340,9 +351,8 @@ answer(forty_two).
           connected.add('${pk.hex} $underlay $attested');
       expect(host.name, caller.hex);
       expect(await layer.start(), isTrue);
-      // The callee's key and address, through the adapter: what peer_declare/1
-      // and address_declare/2 give the layer, which the runtime does not yet
-      // have as predicates.
+      // The callee's key and address, through the adapter: what
+      // declare(peer(P)) and declare(address(P, A)) give the layer.
       network.putKnownPeer(callee);
       network.putPeerAddress(callee, calleeAddress);
 

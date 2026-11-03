@@ -122,7 +122,7 @@ void main() {
     calleeNet.putKnownPeer(callerKp.pub);
 
     // The caller's layer, given the callee's key and address: what
-    // peer_declare/1 and address_declare/2 give it.
+    // declare(peer(P)) and declare(address(P, A)) give it.
     final callerLayer = HeadlessGrassrootsNetwork(
       identity: callerId,
       sodium: sodium!,
