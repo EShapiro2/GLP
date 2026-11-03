@@ -294,15 +294,25 @@ class IsolateManager {
   /// it has run, too long and every run pays for the worst machine. [timeout] is
   /// a backstop for a system that never settles — it throws rather than passing
   /// quietly, since a play that cannot settle is a failure and not a slow pass.
+  /// A null [timeout] waits for quiescence and for nothing else: every way the
+  /// wait can end without it is an event --- an agent's fault, its isolate's
+  /// uncaught error or exit owing work --- so a caller whose verdict must not
+  /// depend on how loaded the machine is passes null (IGLP-coop, 2026-11-02:
+  /// the plays of multiagent_glp_test.dart, under load, outran a wall clock
+  /// while their agents were still being booted).
 
   Future<void> settle(
-      {Duration timeout = const Duration(seconds: 30)}) async {
+      {Duration? timeout = const Duration(seconds: 30)}) async {
     if (_faults.isNotEmpty) {
       throw StateError('an agent faulted before settling: ${_faults.first}');
     }
     if (_quiescent) return;
     final c = Completer<void>();
     _settle = c;
+    if (timeout == null) {
+      await c.future;
+      return;
+    }
     await c.future.timeout(timeout, onTimeout: () {
       _settle = null;
       final outstanding = <String>[];
@@ -763,6 +773,12 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
   final GlpNetwork network = simulation;
   // Back the seam predicates (IGLP Definition Seam Predicates).
   ctx.network = network;
+
+  // A destination, in a global name or in a message, is a key or a readable
+  // name standing for one, and the seam resolves both to the one agent (IGLP
+  // 4f84612, Implementation Notes, "Simulation realisation"): here by the
+  // directory, to the agent's id, before the Send records anything.
+  ctx.resolveAgent = directory.agentNamed;
 
   // Outgoing: ctx.onMessageReady(destId, msg) → network.send.
   ctx.onMessageReady = (destId, msg) {

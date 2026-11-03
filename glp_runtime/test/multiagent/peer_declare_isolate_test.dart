@@ -7,8 +7,10 @@
 /// first contact from an agent not declared by peer_declare is not answered."
 /// IGLP, Definition "Seam Predicates": "peer_declare gives the layer the
 /// public key P of a peer the program knows"; GLP-Networking-API, "Known
-/// Peers": the known-peer set "is what Closed trust ... recognizes".  The
-/// simulation names agents symbolically, "resolved to keys at the seam".
+/// Peers": the known-peer set "is what Closed trust ... recognizes".  In the
+/// simulation a key or a readable name standing for one names the one agent,
+/// "the seam resolves both to the one agent" (IGLP 4f84612, "Simulation
+/// realisation").
 ///
 /// The declarations run from GLP in bob's isolate.  The order is made by the
 /// program, not by timing: bob declares, then tells dave, and only dave's word

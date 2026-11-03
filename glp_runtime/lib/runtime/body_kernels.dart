@@ -1451,11 +1451,11 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
 /// The key of the peer a program names in a seam predicate's `Key` argument
 /// [name], or null where [name] names none.  Over a real network an agent's
 /// name is its public key (IGLP, Remark "Agent Names"), presented as 64 hex
-/// characters; the simulation realisation names agents symbolically, "resolved
-/// to keys at the seam" (IGLP appendix-implementation-notes.tex, "Simulation
-/// realisation"), through the identifier--key directory its router owns, as its
-/// hosts resolve a message's destination.  A key in hex, as self_key/1 gives
-/// it, names its peer there too.
+/// characters; in a simulation a readable name standing for a key names the
+/// same peer, "the seam resolves both to the one agent" (IGLP 4f84612,
+/// Implementation Notes, "Simulation realisation"), through the
+/// identifier--key directory its router owns, as its hosts resolve a
+/// message's destination ([NetworkDirectory.agentNamed]).
 PubKey? _peerKey(GlpNetwork network, String name) {
   if (network is SimulationNetworkClient) {
     final pk = network.directory.pkOf(name);

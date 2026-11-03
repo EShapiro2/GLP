@@ -766,8 +766,9 @@ class AgentRuntime {
   /// Build and bind the simulation's network, where the host was given none:
   /// a [SimulationNetworkClient] over [directory], whose sends go to the
   /// coordinator by [onSendMadMessage] and whose deliveries the coordinator
-  /// makes by [onMadMessageReceived].  Agent names are symbolic and resolved
-  /// to keys at the seam (IGLP, "Simulation realisation").
+  /// makes by [onMadMessageReceived].  A destination is a key or a readable
+  /// name standing for one, and the seam resolves both to the one agent (IGLP
+  /// 4f84612, Implementation Notes, "Simulation realisation").
   void _bindSimulationNetwork(
       String selfName, ({PubKey pub, Uint8List priv}) kp) {
     directory.register(selfName, kp.pub); // self identity (for sign/verify)
@@ -779,6 +780,13 @@ class AgentRuntime {
           _sendMadPayload(toId, Uint8List.fromList(payload)),
     );
     _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
+
+    // A destination, in a global name or in a message, is a key or a
+    // readable name standing for one, and the seam resolves both to the one
+    // agent (IGLP 4f84612, Implementation Notes, "Simulation realisation"):
+    // here by the directory, to the agent's id, before the Send records
+    // anything.
+    _ctx!.resolveAgent = directory.agentNamed;
 
     // Outgoing: ctx.onMessageReady(destId, msg) → network.send.
     _ctx!.onMessageReady = (destination, msg) async {
