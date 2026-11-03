@@ -122,7 +122,10 @@ class GlpRuntime {
 
   /// The person's identity this runtime holds: the key `self_key/1` answers,
   /// `sign/3` signs under, and the compiler certifies modules with. Set by the
-  /// engine at construction (multiagent/identity.dart).
+  /// engine at construction (multiagent/identity.dart); for an agent, the key
+  /// pair the runtime makes when it spawns the agent, before anything is
+  /// compiled or sent (GLP-Spec appendix-guards.tex, "Identity and
+  /// signature"; IGLP, Implementation Notes, "Boot").
   PersonIdentity? identity;
 
   /// The person send_to_user/1 emits to, the '_output'/1 kernel's two ends

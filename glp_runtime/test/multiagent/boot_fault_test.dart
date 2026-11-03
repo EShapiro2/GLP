@@ -15,51 +15,20 @@
 /// as an uncaught error and not boot's caller.  The multiagent plays wait on
 /// boot and on quiescence and on no clock (multiagent_glp_test.dart), which
 /// is sound only when every way a boot can end is an event (IGLP-coop).
+///
+/// No test here drives an agent's isolate to end before it is ready: the one
+/// that did opened a given layer that ended its isolate, and given layers went
+/// with the new Boot (main 8075a585), which leaves no step before Ready that a
+/// boot program can make throw unreported.
 @Timeout.none
 library;
 
 import 'dart:io';
-import 'dart:isolate';
-import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
-import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
-import 'package:glp_runtime/multiagent/simulation_network.dart';
-
-String get _rootSelf => File('../programs/self.glp').absolute.path;
-
-/// A layer whose opening ends the agent's isolate before the agent is ready.
-AgentLayer _exitingLayer(({PubKey pub, Uint8List priv}) keyPair) => AgentLayer(
-    keyPair: keyPair,
-    open: () async {
-      Isolate.exit();
-    });
 
 void main() {
-  test('an agent isolate that exits before it is ready fails the boot, '
-      'naming the agent', () async {
-    final kp = generateKeyPair();
-    final name = kp.pub.hex;
-    final manager = IsolateManager(layers: [_exitingLayer(kp)]);
-    addTearDown(manager.shutdown);
-    final config = BootLoader().load('''
-procedure boot.
-boot :- agent1_init('$name', _)@'$name'.
-''');
-    config.rootSelfGlpPath = _rootSelf;
-    config.programDir = File('../programs/tests/multiagent/coop_stream')
-        .absolute
-        .path;
-    await expectLater(
-        manager.boot(config),
-        throwsA(predicate(
-            (e) => e is StateError && '$e'.contains(name) &&
-                '$e'.contains('before it was ready'),
-            'a StateError naming the agent and that it exited before it was '
-            'ready')));
-  }, timeout: Timeout.none);
-
   test('agents that cannot initialise fail the boot, through boot, while '
       'their isolates are being spawned', () async {
     final manager = IsolateManager();

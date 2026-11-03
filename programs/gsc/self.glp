@@ -271,9 +271,12 @@ Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive ; envir
 SgnCause ::= not_added ; not_required ; not_agent_role.
 % What def:schema requires of the form of a schema, and a schema formed
 % otherwise violates: an atom both added and deleted at a role
-% (added_and_deleted), a role that is not guarding and adds and deletes
-% nothing (changes_nothing), and no role adding or deleting an atom
-% (no_role_changes).  What def:schema requires of a schema's head, its
+% (added_and_deleted), and no role adding or deleting an atom
+% (no_role_changes).  What def:volition requires of a reading role (GSC
+% 0380a8a), a role that is not guarding and adds and deletes nothing: an
+% edge to a guarding role from an atom that guarding role requires; a
+% reading role with none is a fault changes_nothing(Schema, Role) of
+% volition, in a verdict not_grassroots.  What def:schema requires of a schema's head, its
 % variables x_1, ..., x_m distinct agent and speech-act variables and its
 % atoms over its roles, those variables and its signed terms: an entry of
 % the head that is not a variable (head_not_variable), an entry listed twice
@@ -725,14 +728,9 @@ kind_ok(num(_), undef, no).
 % matches_cleared and never against a binding's image here.
 kind_ok(any, _, no).
 
-% subst_role_at(S, V, R): S sends a role to V.  Clause 2 of def:unobstructed
-% asks it of the other party.
-procedure subst_role_at(Subst?, Val?, Ans).
-subst_role_at([], _, no).
-subst_role_at([bind(role(_), V)|_], W, yes) :- V? =?= W? | true.
-subst_role_at([bind(_, _)|S], W, R?) :- otherwise | subst_role_at(S?, W?, R).
-
-% roles_at(S, V, Js): the indices of the roles S sends to V.
+% roles_at(S, V, Js): the indices of the roles S sends to V.  Clause 2 of
+% def:unobstructed asks of the other party that one of them be no reading
+% role (some_not_reading).
 procedure roles_at(Subst?, Val?, Ints).
 roles_at([], _, []).
 roles_at([bind(role(J), W)|S], V, [J?|R?]) :- W? =?= V? | roles_at(S?, V?, R).
@@ -1373,6 +1371,34 @@ procedure is_guarding(RoleSpec?, Ans).
 is_guarding(RS, R?) :- ground(RS?) |
     rs_guard(RS?, G),
     guard_marked(G?, R).
+
+% A reading role (def:schema, GSC 0380a8a): a role that is not a guarding
+% role and has +(i) u -(i) empty, -(i) the atoms marked - with no wildcard,
+% so a cleared atom is no change.
+procedure reading_role(RoleSpec?, Ans).
+reading_role(RS, R?) :- ground(RS?) |
+    is_guarding(RS?, G),
+    rs_add(RS?, P),
+    rs_del(RS?, M),
+    reading_role1(G?, P?, M?, R).
+
+procedure reading_role1(Ans?, Atoms?, Atoms?, Ans).
+reading_role1(no, [], [], yes).
+reading_role1(_, _, _, no) :- otherwise | true.
+
+% Some role among the indices Js is no reading role.  Clause 2 of
+% def:unobstructed asks it of the roles a binding sends the other agent to.
+procedure some_not_reading(Ints?, RoleSpecs?, Ans).
+some_not_reading([], _, no).
+some_not_reading([J|Js], Rs, R?) :- integer(J?), ground(Js?), ground(Rs?) |
+    nth_rs(Rs?, J?, RS),
+    reading_role(RS?, A),
+    some_not_reading1(A?, Js?, Rs?, R).
+
+procedure some_not_reading1(Ans?, Ints?, RoleSpecs?, Ans).
+some_not_reading1(no, _, _, yes).
+some_not_reading1(yes, Js, Rs, R?) :- ground(Js?), ground(Rs?) |
+    some_not_reading(Js?, Rs?, R).
 
 procedure nt_base(NameTerm?, Base).
 nt_base(own(I), b_role(I?)).

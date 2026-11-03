@@ -26,27 +26,63 @@ import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
-/// Bob closes his PAN, declares alice, and reports each caller he hears;
-/// dave relays bob's go to alice and carol, who each call bob.
+/// Bob closes his PAN and reports each caller he hears; alice tells dave her
+/// key, dave hands it to bob, who declares it by peer_declare, and dave then
+/// relays the go to alice and carol, who each call bob.  Bob declares alice by
+/// the key self_key/1 assigns her, made at her spawn (IGLP, Implementation
+/// Notes, "Boot"), which reaches him in a message.  Until 2026-11-02 bob
+/// declared alice by her name at his start.
 const _boot = '''
 procedure boot.
-boot :- agent_init(bob, _)@bob, agent_init(dave, _)@dave,
-    agent_init(alice, _)@alice, agent_init(carol, _)@carol.
+boot :- agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob, agent(ch(_?, _), ch(_?, _))@dave, say(dave, ch(_?, _))@dave, agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@carol, say(carol, ch(_?, _))@carol.
 
-procedure agent_init(_?, _?).
+PdMsg ::= go ; ready ; declared ; key(Key) ; declare(Key) ; hello(Constant).
+
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(PdMsg)), Stream(NetMsg(PdMsg)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+procedure start(Stream(Constant)?, Stream(NetMsg(PdMsg))?).
+start([P | _], N) :- agent_init(P?, N?).
+start([], _).
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+
+procedure agent_init(Constant?, Stream(NetMsg(PdMsg))?).
 agent_init(bob, In) :-
-    trust_declare(pan, closed), peer_declare(alice),
-    send_to_net([msg(dave, go)]), heard(In?).
-agent_init(dave, [msg(dave, go)|_]) :-
-    send_to_net([msg(alice, go), msg(carol, go)]).
-agent_init(alice, [msg(alice, go)|_]) :-
-    send_to_net([msg(bob, hello(alice))]).
-agent_init(carol, [msg(carol, go)|_]) :-
-    send_to_net([msg(bob, hello(carol))]).
+    trust_declare(pan, closed),
+    send_to_net([msg(dave, ready)]), bob_in(In?).
+agent_init(dave, In) :- dave_key(In?).
+agent_init(alice, In) :-
+    self_key(K), send_to_net([msg(dave, key(K?))]), called(alice, In?).
+agent_init(carol, In) :- called(carol, In?).
 
-procedure heard(_?).
-heard([msg(bob, hello(Caller))|In]) :- ground(Caller?) |
+procedure bob_in(Stream(NetMsg(PdMsg))?).
+bob_in([msg(bob, declare(K)) | In]) :- ground(K?) |
+    peer_declare(K?), send_to_net([msg(dave, declared)]), heard(In?).
+bob_in([_ | In]) :- otherwise | bob_in(In?).
+bob_in([]).
+
+procedure dave_key(Stream(NetMsg(PdMsg))?).
+dave_key([msg(dave, key(K)) | In]) :- ground(K?) |
+    send_to_net([msg(bob, declare(K?))]), dave_go(In?).
+dave_key([_ | In]) :- otherwise | dave_key(In?).
+dave_key([]).
+
+procedure dave_go(Stream(NetMsg(PdMsg))?).
+dave_go([msg(dave, declared) | _]) :-
+    send_to_net([msg(alice, go), msg(carol, go)]).
+dave_go([_ | In]) :- otherwise | dave_go(In?).
+dave_go([]).
+
+procedure called(Constant?, Stream(NetMsg(PdMsg))?).
+called(P, [msg(_, go) | _]) :- send_to_net([msg(bob, hello(P?))]).
+called(P, [_ | In]) :- otherwise | called(P?, In?).
+called(_, []).
+
+procedure heard(Stream(NetMsg(PdMsg))?).
+heard([msg(bob, hello(Caller)) | In]) :- ground(Caller?) |
     send_to_user([Caller?]), heard(In?).
+heard([_ | In]) :- otherwise | heard(In?).
+heard([]).
 ''';
 
 String get _rootSelf => File('../programs/self.glp').absolute.path;

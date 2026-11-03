@@ -15,5 +15,22 @@
 
 procedure boot.
 boot :-
-    sg_init(alice, invite, _)@alice,
-    sg_init(bob, consent, _)@bob.
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, invite, ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, consent, ch(_?, _))@bob.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/3, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name and its mode, by which agent/2 starts the super-app's play sg_init/3 on the network input; self_key/1 first makes the agent's key, before which nothing is sent on the network (GLP-Spec appendix-guards.tex, "Identity and signature").
+BootSays ::= sg(Key, Constant).
+
+exported procedure agent(Channel(Stream(BootSays), Stream(BootSays))?, Channel(NetInStream, NetOutStream)?).
+agent(ch(In, []), ch(N, [])) :- self_key(_), start(In?, N?).
+
+%% The super-app's play, by the name and the mode the person tells the agent.
+procedure start(Stream(BootSays)?, NetInStream?).
+start([sg(P, M) | _], N) :- sg_init(P?, M?, N?).
+start(_, _) :- otherwise | true.
+
+%% The person at each agent: it tells the agent its name and its mode, and reads nothing.
+exported procedure say(Key?, Constant?, Channel(Stream(BootSays), Stream(BootSays))?).
+say(P, M, ch(_, [sg(P?, M?)])).

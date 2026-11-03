@@ -26,7 +26,15 @@ import 'package:glp_runtime/multiagent/isolate_manager.dart';
 /// Two agents: bob declares PAN closed and LAN open, alice declares nothing.
 const _boot = '''
 procedure boot.
-boot :- agent_init(alice, _)@alice, agent_init(bob, _)@bob.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- agent_init(alice, N?).
+start([bob | _], N) :- agent_init(bob, N?).
+start(_, _) :- otherwise | true.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
 
 procedure agent_init(_?, _?).
 agent_init(bob, _) :- trust_declare(pan, closed), trust_declare(lan, open).
@@ -46,8 +54,12 @@ void main() {
     config.rootSelfGlpPath = _rootSelf;
 
     await manager.boot(config);
-    // Before the agents run: the boot harness's PAN level Open for the plays,
-    // and LAN Closed, as no level is set for it.
+    // Before the agents run: bob's key, made at his spawn (IGLP,
+    // Implementation Notes, "Boot": "When the runtime spawns an agent, before
+    // anything is compiled or sent, it makes the agent's key pair"), the boot
+    // harness's PAN level Open for the plays, and LAN Closed, as no level is
+    // set for it.
+    expect(manager.keyOf('bob'), isNotNull);
     expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.open);
     expect(manager.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.closed);
 

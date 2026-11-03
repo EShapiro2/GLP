@@ -2169,7 +2169,7 @@ neg_srsw_inline=$("$REPL_RUN" <<HEREDOC
 HEREDOC
 2>&1)
 check "NEG SRSW / :boot, no program directory: the agent's load is refused by the SRSW pass" "Agent alice failed to initialize: \[semantic\] SRSW violations found:" "$neg_srsw_inline"
-check "NEG SRSW / :boot, no program directory: the refusal names the reader occurring twice" "agent_init/2: Line 18: Reader variable \"Id?\" occurs 2 times" "$neg_srsw_inline"
+check "NEG SRSW / :boot, no program directory: the refusal names the reader occurring twice" "agent_init/2: Line 19: Reader variable \"Id?\" occurs 2 times" "$neg_srsw_inline"
 check_not "NEG SRSW / :boot, no program directory: the boot does not settle" "Boot settled" "$neg_srsw_inline"
 neg_srsw_dir=$("$REPL_RUN" <<HEREDOC
 :boot $GLP_DIR/programs/tests/neg_boot_programdir/srsw_boot.glp
@@ -2255,7 +2255,7 @@ neg_guard_inline=$("$REPL_RUN" <<HEREDOC
 :quit
 HEREDOC
 2>&1)
-check "NEG guards / :boot, no program directory: the agent's load is refused for the guard" "Agent alice failed to initialize: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 16" "$neg_guard_inline"
+check "NEG guards / :boot, no program directory: the agent's load is refused for the guard" "Agent alice failed to initialize: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 17" "$neg_guard_inline"
 check_not "NEG guards / :boot, no program directory: the boot does not settle" "Boot settled" "$neg_guard_inline"
 neg_guard_bootdir=$("$REPL_RUN" <<HEREDOC
 :boot $GLP_DIR/programs/tests/neg_boot_programdir/guard_boot.glp
@@ -6069,6 +6069,21 @@ check "MB5 linkprobe14 one end forwarded by a third agent: the boot settles" "Bo
 check_not "MB5 linkprobe14 nothing passes on a held link neither side authorises" "saw(hello_from" "$lp14"
 
 rm -f "$LP_DIR"/runprobe/*.glpw
+
+# MB6: GKK's app as maGLP (GLP #11 Cowork, 2026-11-01 22:25 UTC; GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot").  alice and bob, each in an isolate of its own, each started from agent(ch(_?,_),ch(_?,_)), each with the person scripted in GLP the boot clause names at it; alice's person names bob, her agent cold-calls bob with a conversation, msg(bob, conv(Ka, Kb, Ch)), and each agent runs programs/apps/gkk's mini-app over it.  Each agent's key pair is made at its spawn (GLP-Spec b4ecfaa, appendix-guards.tex, self_key/1; IGLP 8bec699, Boot) and self_key/1 assigns it; each person establishes their identity by it (GKK:1), alice asks to know bob by the key her agent was told and bob answers yes (GKK:2), and each then knows the other: alice's knows/1 names bob's key, and bob's names alice's.
+mb6=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/multiagent/gkk_maglp_boot.glp $GLP_DIR/programs/apps/gkk
+:quit
+HEREDOC
+2>&1)
+# A key prints bare where it reads as an atom, and quoted where it begins with a digit; the first line an agent prints may follow the prompt.
+mb6_ka=$(echo "$mb6" | sed -n "s/^.*\[alice\] key('\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\})$/\1/p" | head -1)
+mb6_kb=$(echo "$mb6" | sed -n "s/^.*\[bob\] key('\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\})$/\1/p" | head -1)
+check "MB6 GKK as maGLP: the boot settles with two agents" "Boot settled: 2 agents" "$mb6"
+check "MB6 alice establishes her identity by the key made at her spawn" "\[alice\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$mb6"
+check "MB6 bob's key likewise" "\[bob\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$mb6"
+check "MB6 alice knows bob, by his key" "\[alice\] knows('\{0,1\}${mb6_kb:-none}'\{0,1\})$" "$mb6"
+check "MB6 bob knows alice, by her key" "\[bob\] knows('\{0,1\}${mb6_ka:-none}'\{0,1\})$" "$mb6"
 
 echo ""
 fi  # Section MB

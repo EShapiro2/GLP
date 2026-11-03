@@ -6,8 +6,8 @@
 %% =============================================================================
 
 exported procedure agent1_init(_?, _?).
-agent1_init(_, _) :-
-    send_to_net([msg(agent2, list([a,b]))]).
+agent1_init(keys(_, [Agent2]), _) :-
+    send_to_net([msg(Agent2?, list([a,b]))]).
 
 %% =============================================================================
 %% AGENT2: Receives list and processes element by element

@@ -16,8 +16,8 @@ merge(Xs, [], Xs?).
 %% =============================================================================
 
 exported procedure agent1_init(_?, _?).
-agent1_init(_, _) :-
-    send_to_net([msg(agent2, data([1,2,3]))]).
+agent1_init(keys(_, [Agent2]), _) :-
+    send_to_net([msg(Agent2?, data([1,2,3]))]).
 
 %% =============================================================================
 %% AGENT2: Receives list, merges with local production

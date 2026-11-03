@@ -6,18 +6,18 @@
 %% =============================================================================
 
 exported procedure producer_init(_?, _?).
-producer_init(_, _) :-
-    send_to_net([msg(agent2, data([1,2,3]))]).
+producer_init(keys(_, [Agent2]), _) :-
+    send_to_net([msg(Agent2?, data([1,2,3]))]).
 
 %% =============================================================================
 %% AGENT2: Transformer - receives data, transforms, sends to agent3
 %% =============================================================================
 
 exported procedure transformer_init(_?, _?).
-transformer_init(_, [msg(_, data(Xs))|_]) :-
+transformer_init(keys(_, [Agent3]), [msg(_, data(Xs))|_]) :-
     ground(Xs?) |
     transform(Xs?, Ys),
-    send_to_net([msg(agent3, data(Ys?))]).
+    send_to_net([msg(Agent3?, data(Ys?))]).
 
 procedure transform(_?, _).
 transform([X|Xs], [got(X?)|Ys?]) :- transform(Xs?, Ys).

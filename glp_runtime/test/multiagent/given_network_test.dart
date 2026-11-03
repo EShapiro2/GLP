@@ -1,33 +1,31 @@
-/// The runtime's hosts over a network they are given (GLP #3 Cowork,
-/// 2026-10-11 12:59 UTC, "01:05"): `AgentRuntime` and `IsolateManager` take a
-/// `GlpNetwork`, and build the simulation's only when they are given none
+/// The runtime's host over a network it is given (GLP #3 Cowork,
+/// 2026-10-11 12:59 UTC, "01:05"): `AgentRuntime` takes a
+/// `GlpNetwork`, and builds the simulation's only when it is given none
 /// (IGLP, Implementation Notes, "Networking Seam", One interface: "transport
 /// integration is a backend swap").  Over a given network an agent is named by
 /// its key (IGLP, Remark "Agent Names": "Over a real network, the name of an
 /// agent p is its public key, held by the networking layer"), and no key is
 /// made up for a name.
 ///
-/// Each host runs two agents, each over its own network, and a cold call and
+/// The host runs two agents, each over its own network, and a cold call and
 /// an assignment cross between them, as GNA's adapter test has them cross
 /// between two runtimes over two headless layers (networking/core/test/
 /// glp_adapter_test.dart): the caller cold-calls the callee, naming it by its
 /// key, with a writer; the callee assigns the writer, and the assignment
-/// crosses back.  The networks are fakes that carry payloads between keys:
-/// `AgentRuntime`'s in one isolate, `IsolateManager`'s through a hub, each
-/// opened in its agent's isolate.
+/// crosses back.  The networks are fakes that carry payloads between keys, in
+/// one isolate.  `IsolateManager` boots a simulation alone (IGLP,
+/// Implementation Notes, "Boot"), and until 2026-11-02 it ran over given
+/// layers too.
 @Timeout.none
 library;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
-import 'package:glp_runtime/multiagent/isolate_manager.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 
 /// The agents' one program: GNA's adapter test's, the caller naming the
@@ -145,119 +143,6 @@ class _WireNetwork extends GlpNetwork {
   @override
   void punchUdp(String address) {}
 }
-
-// =============================================================================
-// IsolateManager's networks: a hub in this isolate, a layer in each agent's
-// =============================================================================
-
-/// Carries payloads between the [_PortNetwork]s registered with it, by key:
-/// each layer, opened in its agent's isolate, registers its inbox, and a
-/// payload for a key not yet registered waits for it.
-class _Hub {
-  final ReceivePort _port = ReceivePort();
-  final Map<String, SendPort> _inboxes = {};
-  final Map<String, List<List<Object>>> _waiting = {};
-
-  /// Each payload carried, as `<from-hex> > <to-hex>`.
-  final List<String> carried = [];
-
-  _Hub() {
-    _port.listen((message) {
-      final m = message as List;
-      if (m[0] == 'register') {
-        final key = m[1] as String;
-        final inbox = m[2] as SendPort;
-        _inboxes[key] = inbox;
-        for (final d in _waiting.remove(key) ?? const <List<Object>>[]) {
-          inbox.send(d);
-        }
-      } else if (m[0] == 'send') {
-        final from = m[1] as String;
-        final to = m[2] as String;
-        carried.add('$from > $to');
-        final delivery = <Object>[from, m[3] as Uint8List];
-        final inbox = _inboxes[to];
-        if (inbox == null) {
-          _waiting.putIfAbsent(to, () => []).add(delivery);
-        } else {
-          inbox.send(delivery);
-        }
-      }
-    });
-  }
-
-  SendPort get sendPort => _port.sendPort;
-
-  void close() => _port.close();
-}
-
-/// A [GlpNetwork] in an agent's isolate, carrying payloads through a [_Hub].
-class _PortNetwork extends GlpNetwork {
-  final PubKey key;
-  final SendPort hub;
-  final ReceivePort _inbox = ReceivePort();
-  int _next = 0;
-
-  _PortNetwork._(this.key, this.hub) {
-    _inbox.listen((message) {
-      final m = message as List;
-      onMessageReceived?.call(
-          PubKey.fromHex(m[0] as String), m[1] as Uint8List, 'h${_next++}',
-          Underlay.wan);
-    });
-    hub.send(['register', key.hex, _inbox.sendPort]);
-  }
-
-  @override
-  PubKey getIdentity() => key;
-
-  @override
-  void send(PubKey pk, Uint8List payload) =>
-      hub.send(['send', key.hex, pk.hex, payload]);
-
-  // --- Not exercised here ---
-
-  @override
-  void putKnownPeer(PubKey pk) {}
-  @override
-  void removeKnownPeer(PubKey pk) {}
-  @override
-  bool isPeerReachable(PubKey pk) => true;
-  @override
-  List<Underlay> peerUnderlays(PubKey pk) => const [Underlay.wan];
-  @override
-  Uint8List sign(Uint8List message) => throw UnimplementedError();
-  @override
-  bool verify(PubKey signer, Uint8List message, Uint8List signature) =>
-      throw UnimplementedError();
-  @override
-  List<DiscoveredPeer> getPeers() => const [];
-  @override
-  void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) {}
-  @override
-  String? getPublicAddress() => null;
-  @override
-  String? networkIdentity() => null;
-  @override
-  void putPeerAddress(PubKey pk, String address) {}
-  @override
-  String? observedPeerAddress(PubKey pk) => null;
-  @override
-  void punchUdp(String address) {}
-  @override
-  Future<bool> declarePlace(String place, double radiusMetres) =>
-      Future.value(false);
-  @override
-  Future<void> removePlace(String place) => Future.value();
-}
-
-/// The layer of the agent of [keyPair], opened in its isolate over [hub].  A
-/// top-level function, so that the closure it returns captures the two alone
-/// and is sendable.
-AgentLayer _layerOver(_KeyPair keyPair, SendPort hub) => AgentLayer(
-      keyPair: keyPair,
-      open: () async => _PortNetwork._(keyPair.pub, hub),
-    );
 
 /// An agent's transcript, AgentRuntime.onOutput's lines, which a test waits
 /// on line by line: on the event, a line's arrival, and on no clock.  Until
@@ -492,80 +377,10 @@ void main() {
     });
   });
 
-  group('IsolateManager over given layers', () {
-    test('a cold call and an assignment cross between two agents in two '
-        'isolates, each over its own layer and named by its key', () async {
-      final hub = _Hub();
-      addTearDown(hub.close);
-      final callerKp = generateKeyPair();
-      final calleeKp = generateKeyPair();
-      final caller = callerKp.pub.hex;
-      final callee = calleeKp.pub.hex;
-
-      final manager = IsolateManager(layers: [
-        _layerOver(callerKp, hub.sendPort),
-        _layerOver(calleeKp, hub.sendPort),
-      ]);
-      addTearDown(manager.shutdown);
-
-      // The boot program names each agent by its key (IGLP, "Boot": "each
-      // body goal G@p directs the runtime to spawn an isolate for agent p").
-      final config = BootLoader().load('''
-procedure boot.
-boot :- caller_init('$caller', '$callee', _)@'$caller',
-        callee_init('$callee', _)@'$callee'.
-
-$_play''');
-      config.rootSelfGlpPath = root;
-      expect(config.directives.map((d) => d.agentId), [caller, callee]);
-
-      await manager.boot(config);
-      manager.start();
-
-      final called =
-          await manager.outputWhere(callee, (l) => l.contains('called('));
-      expect(called, contains(callee));
-      final answered =
-          await manager.outputWhere(caller, (l) => l.contains('answered('));
-      expect(answered, contains('forty_two'));
-
-      expect(hub.carried, contains('$caller > $callee'),
-          reason: 'the cold call left through the caller\'s layer');
-      expect(hub.carried, contains('$callee > $caller'),
-          reason: 'the assignment left through the callee\'s layer');
-      expect(manager.faults, isEmpty);
-    }, timeout: Timeout.none);
-
-    test('an agent the manager holds no layer for is refused, and no key is '
-        'made up for it', () async {
-      final hub = _Hub();
-      addTearDown(hub.close);
-      final kp = generateKeyPair();
-      final manager = IsolateManager(layers: [_layerOver(kp, hub.sendPort)]);
-      addTearDown(manager.shutdown);
-      final config = BootLoader().load('''
-procedure boot.
-boot :- a_init(alice, _)@alice.
-
-$_symbolic''');
-      config.rootSelfGlpPath = root;
-      await expectLater(manager.boot(config), throwsStateError);
-    });
-
-    test('the simulation\'s harness controls are refused over given layers',
-        () {
-      final kp = generateKeyPair();
-      final manager = IsolateManager(layers: [
-        AgentLayer(
-            keyPair: kp,
-            open: () async => throw UnimplementedError('not opened here')),
-      ]);
-      expect(() => manager.cut('a', 'b'), throwsStateError);
-      expect(() => manager.restore('a', 'b'), throwsStateError);
-      expect(() => manager.holdDelivery('a', 'b'), throwsStateError);
-      expect(() => manager.releaseDelivery('a', 'b'), throwsStateError);
-      expect(() => manager.trustLevelOf('a', ProximityUnderlay.pan),
-          throwsStateError);
-    });
-  });
+  // IsolateManager boots a simulation alone (IGLP, Implementation Notes,
+  // "Boot": "A boot is for a simulation; a deployed agent is booted by its
+  // application"), each agent's key made at its spawn: until 2026-11-02 it also
+  // ran agents over given layers, each named in the boot clause by a key made
+  // before the boot, and three tests here held that.  A deployed agent over a
+  // given layer is AgentRuntime's, above.
 }
