@@ -15,8 +15,8 @@ import 'package:grassroots_networking_core/src/transport/transport_service.dart'
 // Re-export the iOS local-name marker from the BLE plugin — the single source
 // of truth (the plugin owns this constant as of grassroots_bluetooth_layer
 // 0.2.0). iOS devices advertise this fixed local name; the iOS-central →
-// non-iOS second link is measurably broken (see CLAUDE.md, "Dual-Role BLE Is
-// Mandatory"), so peers that see the marker yield the pair's first dial to the
+// non-iOS second link is measurably broken (see GNA, Appendix, Rules of the
+// Code, "Dual-role BLE"), so peers that see the marker yield the pair's first dial to the
 // iOS device and open the reverse leg themselves.
 export 'package:grassroots_bluetooth_layer/grassroots_bluetooth_layer.dart'
     show grassrootsIosLocalName;
@@ -102,8 +102,8 @@ class BleTransportService extends TransportService {
   /// iOS app is foregrounded, so we remember every sighting. Used to scope
   /// the iOS second-link rules to the *measured* constraint (iOS-central →
   /// non-iOS second link is broken) without extrapolating it to iOS peers —
-  /// dual-role is mandatory wherever hardware allows it (see CLAUDE.md,
-  /// "Dual-Role BLE Is Mandatory").
+  /// dual-role is mandatory wherever hardware allows it (see GNA, Appendix,
+  /// Rules of the Code, "Dual-role BLE").
   ///
   /// The advertised UUID rotates every slot, so a UUID-keyed sighting expires
   /// with its slot; once the beacon is resolvable to an identified peer the
@@ -708,7 +708,7 @@ class BleTransportService extends TransportService {
     // inbound peripheral leg from can never complete — it would wedge in
     // `connecting` for the full connect timeout. Scoped strictly to the
     // measured constraint: toward iOS peers the second link is attempted
-    // (dual-role mandate; see CLAUDE.md).
+    // (dual-role mandate; see GNA, Appendix, "Dual-role BLE").
     if (defaultTargetPlatform == TargetPlatform.iOS &&
         !_isIosPeerServiceUuid(serviceUuid) &&
         _hasLivePeripheralPathForServiceUuid(serviceUuid)) {
@@ -854,7 +854,7 @@ class BleTransportService extends TransportService {
         _iosMarkedPubkeyHexes.add(_pubkeyHexOf(resolvedPubkey));
       }
 
-      // Wrong-order mixed-pair reform (dual-role mandate, CLAUDE.md). We are
+      // Wrong-order mixed-pair reform (dual-role mandate, GNA, Appendix, "Dual-role BLE"). We are
       // non-iOS, hold ONLY a central leg to this iOS identity, and its
       // missing leg — an iOS-central second link toward us — is
       // hardware-broken: the pair can never upgrade in place. The marker in
@@ -1012,7 +1012,7 @@ class BleTransportService extends TransportService {
   /// advertisement should trigger an outbound (central) dial right now.
   ///
   /// Dual-role (two legs per pair, each device central on one) is mandatory —
-  /// see CLAUDE.md, "Dual-Role BLE Is Mandatory". Arbitration exists to pick
+  /// see GNA, Appendix, Rules of the Code, "Dual-role BLE". Arbitration exists to pick
   /// the leg ORDER that makes it reachable, around one hardware-measured
   /// constraint (A2/iPhone field tests):
   ///

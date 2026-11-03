@@ -55,7 +55,8 @@ class NetworkPreferences {
 
   /// Decode a persisted blob: exactly the two keys, every underlay named, and
   /// every server an address and a 64-hex-character key, with nothing
-  /// tolerated (`networking/CLAUDE.md`).  A malformed blob throws, and the
+  /// tolerated (GNA, Appendix, Rules of the Code, "No legacy or compatibility
+  /// code").  A malformed blob throws, and the
   /// store discards it whole.
   factory NetworkPreferences.fromJson(Map<String, dynamic> json) {
     _exactKeys(json, const {'underlays', 'rendezvousServers'}, 'preferences');

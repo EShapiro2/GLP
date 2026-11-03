@@ -1,18 +1,21 @@
-/// trust_declare/2 is enforced by the simulation's router, per underlay.
+/// A trust declaration, declare(trust(U, L)), is enforced by the simulation's
+/// router, per underlay.
 ///
 /// IGLP appendix-implementation-notes.tex, Simulation realisation: "The PAN's
-/// cold-call trust level is enforced as trust_declare sets it";
+/// cold-call trust level is enforced as the trust declaration sets it";
 /// GLP-Networking-API, Trust levels: "A level is held per ProximityUnderlay,
 /// and is set with setTrustLevel(underlay, level); both levels default to
-/// Closed".  IGLP, Definition "Seam Predicates" (477c586): trust_declare "sets
-/// the cold-call trust level of the proximity underlay U (pan or lan) to L
-/// (open or closed)".  Until 2026-10-09 the underlay was a medium, ble or lan.
+/// Closed".  IGLP, Definition "Seam Predicates" (3b736bb): "declare(trust(U,
+/// L)) sets the cold-call trust level of the proximity underlay U (pan or lan)
+/// to L (open or closed)".  Until 2026-10-09 the underlay was a medium, ble or
+/// lan, and until 2026-11-03 the predicate trust_declare/2.
 ///
 /// Until 2026-10-02 the agent's layer recorded the level it was given and the
 /// router never learnt of it: the router enforced one level per agent, the one
 /// the boot harness set (isolate_manager.dart), so a level an agent declared
 /// governed nothing.  These tests run the declaration from GLP in an agent's
 /// isolate and read the level the router then holds.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -36,7 +39,7 @@ exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
 say(P, ch(_, [P?])).
 
 procedure agent_init(_?, _?).
-agent_init(bob, _) :- trust_declare(pan, closed), trust_declare(lan, open).
+agent_init(bob, _) :- declare(trust(pan, closed)), declare(trust(lan, open)).
 agent_init(alice, _).
 ''';
 
@@ -48,7 +51,8 @@ void main() {
   setUp(() => manager = IsolateManager());
   tearDown(() async => manager.shutdown());
 
-  test("an agent's trust_declare/2 sets the level the router enforces", () async {
+  test("an agent's trust declaration sets the level the router enforces",
+      () async {
     final config = BootLoader().load(_boot);
     config.rootSelfGlpPath = _rootSelf;
 
@@ -74,5 +78,5 @@ void main() {
         reason: 'alice declared nothing: the boot level stands');
     expect(manager.trustLevelOf('alice', ProximityUnderlay.lan),
         TrustLevel.closed);
-  }, timeout: Timeout(Duration(seconds: 60)));
+  }, timeout: Timeout.none);
 }

@@ -45,27 +45,37 @@ void main() {
       // send_to_user/1 names '_output'/1; the seam wrappers name their kernels.
       expect(root, contains('send_to_user/1'));
       expect(root, contains('peer_address/2'));
-      expect(root, contains('trust_declare/2'));
+      expect(root, contains('declare/1'));
+      expect(root, contains('remove/1'));
       expect(root, contains('authorise_link/2'));
     });
 
-    test('all seven seam predicates of the networking layer and their kernels '
-        'are privileged, peer_declare/1 and address_declare/2 among them', () {
-      // GSG, Section 3: "the seven system predicates of the networking layer
-      // ... and the kernels beneath them.  These are the OS-privileged
-      // predicates"; the two entered the root on 2026-10-11.
+    test('the four seam predicates of the networking layer and their kernels '
+        'are privileged, declare/1 and remove/1 among them', () {
+      // GSG, Section 3: the system predicates of the networking layer and the
+      // kernels beneath them are the OS-privileged predicates; GLP-Spec
+      // appendix-guards, "Networking seam" (1ce0263): peer_address/2,
+      // punch_udp/1, declare/1 and remove/1, the last two since 2026-11-03.
       for (final name in [
         'peer_address/2',
         'punch_udp/1',
+        'declare/1',
+        'remove/1',
+      ]) {
+        expect(privilegedPredicates, contains(name));
+        expect(privilegedKernels, contains('_$name'));
+        expect(root, contains(name));
+      }
+      for (final gone in [
         'place_declare/3',
         'place_remove/1',
         'trust_declare/2',
         'peer_declare/1',
         'address_declare/2',
       ]) {
-        expect(privilegedPredicates, contains(name));
-        expect(privilegedKernels, contains('_$name'));
-        expect(root, contains(name));
+        expect(privilegedPredicates, isNot(contains(gone)));
+        expect(privilegedKernels, isNot(contains('_$gone')));
+        expect(root, isNot(contains(gone)));
       }
     });
 

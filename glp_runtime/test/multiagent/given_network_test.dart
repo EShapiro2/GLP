@@ -16,6 +16,7 @@
 /// one isolate.  `IsolateManager` boots a simulation alone (IGLP,
 /// Implementation Notes, "Boot"), and until 2026-11-02 it ran over given
 /// layers too.
+@Timeout.none
 library;
 
 import 'dart:async';
@@ -70,7 +71,7 @@ agent(ch([], []), ch(_, [])).
 /// An agent that declares a place and tells its person when it is entered.
 const String _placer = r'''
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
-agent(ch(_, []), ch(_, [])) :- place_declare(home, 50, E), watch(E?).
+agent(ch(_, []), ch(_, [])) :- declare(place(home, 50, E)), watch(E?).
 
 procedure watch(_?).
 watch([E|_]) :- ground(E?) | send_to_user([E?]).
@@ -107,6 +108,10 @@ class _WireNetwork extends GlpNetwork {
   /// Places declared, in order.
   final List<String> declared = [];
 
+  /// The messageIds the runtime acknowledged, in order, each an event a test
+  /// waits on ([_Lines.lineWhere]).
+  final _Lines acknowledged = _Lines();
+
   _WireNetwork(this.keyPair, this.wire) {
     wire._at[keyPair.pub.hex] = this;
   }
@@ -116,6 +121,9 @@ class _WireNetwork extends GlpNetwork {
 
   @override
   void send(PubKey pk, Uint8List payload) => wire.carry(keyPair.pub, pk, payload);
+
+  @override
+  void acknowledge(String messageId) => acknowledged.add(messageId);
 
   @override
   Future<bool> declarePlace(String place, double radiusMetres) {
@@ -155,22 +163,50 @@ class _WireNetwork extends GlpNetwork {
   String? observedPeerAddress(PubKey pk) => null;
   @override
   void punchUdp(String address) {}
+  @override
+  void putRendezvousServer(PubKey pk, String address) {}
+  @override
+  void removeRendezvousServer(PubKey pk) {}
 }
 
-/// The first line [lines] yields that [test] accepts, polling until
-/// [timeout].
-Future<String> _eventually(Iterable<String> Function() lines,
-    bool Function(String) test,
-    {Duration timeout = const Duration(seconds: 60)}) async {
-  final deadline = DateTime.now().add(timeout);
-  while (true) {
-    for (final l in lines()) {
-      if (test(l)) return l;
+/// An agent's transcript, AgentRuntime.onOutput's lines, or the messageIds a
+/// layer is told are acknowledged, which a test waits on one by one: on the
+/// event, a line's arrival, and on no clock.  Until
+/// 2026-11-02 a test polled the lines every 50 ms until a deadline of sixty
+/// seconds, so its verdict depended on how loaded the machine was (IGLP-coop).
+/// A line the agent reports as an error, `[ERROR] ...`, fails every wait.
+class _Lines extends Iterable<String> {
+  final List<String> _lines = [];
+  final List<(bool Function(String), Completer<String>)> _waits = [];
+
+  @override
+  Iterator<String> get iterator => _lines.iterator;
+
+  void add(String line) {
+    _lines.add(line);
+    if (line.startsWith('[ERROR]')) {
+      for (final (_, c) in _waits) {
+        c.completeError(StateError('the agent reported an error: $line'));
+      }
+      _waits.clear();
+      return;
     }
-    if (DateTime.now().isAfter(deadline)) {
-      throw TimeoutException('no line came; the lines: ${lines().join(' | ')}');
+    _waits.removeWhere((w) {
+      final (test, c) = w;
+      if (!test(line)) return false;
+      c.complete(line);
+      return true;
+    });
+  }
+
+  /// The first line [test] accepts: one already written, or the next.
+  Future<String> lineWhere(bool Function(String) test) {
+    for (final l in _lines) {
+      if (test(l)) return Future.value(l);
     }
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    final c = Completer<String>();
+    _waits.add((test, c));
+    return c.future;
   }
 }
 
@@ -216,7 +252,7 @@ void main() {
         keyPair: calleeKp,
         network: _WireNetwork(calleeKp, wire),
       );
-      final out = <String, List<String>>{'caller': [], 'callee': []};
+      final out = {'caller': _Lines(), 'callee': _Lines()};
       caller.onOutput = out['caller']!.add;
       callee.onOutput = out['callee']!.add;
       // A given network delivers its own messages: the coordinator's channel
@@ -239,14 +275,14 @@ void main() {
 
       // The cold call crosses: the callee's program receives it on its
       // network input, addressed to its own name, its key.
-      final called = await _eventually(
-          () => out['callee']!, (l) => l.startsWith('< called('));
+      final called =
+          await out['callee']!.lineWhere((l) => l.startsWith('< called('));
       expect(called, contains(calleeKp.pub.hex));
 
       // The assignment crosses back: the caller's writer, assigned by the
       // callee, reaches the caller's program.
-      final answered = await _eventually(
-          () => out['caller']!, (l) => l.startsWith('< answered('));
+      final answered =
+          await out['caller']!.lineWhere((l) => l.startsWith('< answered('));
       expect(answered, contains('forty_two'));
 
       expect(wire.carried, contains('${callerKp.pub.hex} > ${calleeKp.pub.hex}'),
@@ -254,6 +290,55 @@ void main() {
       expect(wire.carried, contains('${calleeKp.pub.hex} > ${callerKp.pub.hex}'),
           reason: 'the assignment left through the callee\'s network');
       expect(viaCoordinator, isEmpty);
+    });
+
+    test('a delivered message is acknowledged to the layer once the cycle '
+        'that applied it is complete', () async {
+      // GNA 776016c, Section 2.9: acknowledge(messageId) "Confirm[s] that the
+      // message delivered under messageId has been applied and saved by the
+      // runtime"; IGLP, Implementation Notes, "Persistence": "a delivered
+      // message acknowledged to the layer, only from a state the store holds",
+      // and with no store once its cycle is complete.
+      final wire = _Wire();
+      final callerKp = generateKeyPair();
+      final calleeKp = generateKeyPair();
+      final callerNet = _WireNetwork(callerKp, wire);
+      final calleeNet = _WireNetwork(calleeKp, wire);
+      final caller = AgentRuntime(
+        agentId: 'caller',
+        program: play,
+        rootSelfGlpPath: root,
+        keyPair: callerKp,
+        network: callerNet,
+      );
+      final callee = AgentRuntime(
+        agentId: 'callee',
+        program: play,
+        rootSelfGlpPath: root,
+        keyPair: calleeKp,
+        network: calleeNet,
+      );
+      final out = _Lines();
+      caller.onOutput = out.add;
+      // Over a given network the layer is told, and the coordinator is not.
+      final toCoordinator = <String>[];
+      caller.onDelivered = toCoordinator.add;
+      callee.onDelivered = toCoordinator.add;
+      await callee.initialize();
+      await caller.initialize();
+      // Each person tells its agent what to do: the callee's to answer, the
+      // caller's to call the callee, by its key.
+      await callee.injectUserInput(ConstTerm('answer'));
+      await caller.injectUserInput(
+          StructTerm('call', [ConstTerm(calleeKp.pub.hex)]));
+      await out.lineWhere((l) => l.startsWith('< answered('));
+      // The cold call was the wire's first message, w0, the assignment back
+      // its second, w1; each is acknowledged by the agent that applied it.
+      await calleeNet.acknowledged.lineWhere((id) => id == 'w0');
+      await callerNet.acknowledged.lineWhere((id) => id == 'w1');
+      expect(calleeNet.acknowledged, ['w0']);
+      expect(callerNet.acknowledged, ['w1']);
+      expect(toCoordinator, isEmpty);
     });
 
     test('no key is made up: a message to a name that is no key is not sent, '
@@ -288,7 +373,7 @@ void main() {
         keyPair: kp,
         network: network,
       );
-      final out = <String>[];
+      final out = _Lines();
       agent.onOutput = out.add;
       await agent.initialize();
       expect(network.declared, ['home']);
@@ -296,8 +381,7 @@ void main() {
       // The layer reports the entry; the run that follows it reduces the
       // goal suspended on the place's stream, with no other event.
       network.onPlaceEvent!('home', PlaceEvent.entered);
-      expect(await _eventually(() => out, (l) => l.startsWith('< ')),
-          '< entered');
+      expect(await out.lineWhere((l) => l.startsWith('< ')), '< entered');
     });
 
     test('the agent\'s key pair is the layer\'s', () {

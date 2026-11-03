@@ -81,12 +81,12 @@ abstract interface class WanApi {
   /// `putRendezvousServer(pk, address)`: "Add the rendezvous server with
   /// public key pk at address to the servers the layer connects to; a
   /// further declaration of the same pk replaces its address" (GNA §4.2);
-  /// behind `rendezvous_declare/2`.  Throws [ArgumentError] on an unparseable
+  /// behind `declare(rendezvous(P, A))`.  Throws [ArgumentError] on an unparseable
   /// address or a key that is not 32 bytes.
   void putRendezvousServer(Uint8List pk, String address);
 
   /// `removeRendezvousServer(pk)`: "Remove the server from those the layer
   /// connects to, and end the layer's session with it; a key not declared
-  /// does nothing" (GNA §4.2); behind `rendezvous_remove/1`.
+  /// does nothing" (GNA §4.2); behind `remove(rendezvous(P))`.
   void removeRendezvousServer(Uint8List pk);
 }

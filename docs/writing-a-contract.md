@@ -1,10 +1,10 @@
-# Writing a Grassroots Social Contract
+# Writing a Grassroots Contract
 
 What a contract writer needs, in one place (Udi, 2026-11-01: "everything that contract writers / developers need should be in GLP").  Coordination writes this file; the language is GSC's paper (arXiv 2609.06231), the method is `speech-act-schemas-guide.md` beside this file, and where this file and a paper differ the paper is right.
 
 ## What a contract is
 
-A grassroots social contract is a finite list of clauses its agents undertake towards one another, written in prose, and its speech-act schemas, written in GLP's term form, which say what each clause permits and what it changes.  The contract is the source of all truth for the platform and its app: the schemas and the pragmas are compiled down the abstraction cascade to a running app with no manual intervention.
+A grassroots contract, a social contract that runs, is a finite list of clauses its agents undertake towards one another, written in prose, and its speech-act schemas, written in GLP's term form, which say what each clause permits and what it changes.  The contract is the source of all truth for the platform and its app: the schemas and the pragmas are compiled down the abstraction cascade to a running app with no manual intervention.
 
 ## The two files
 

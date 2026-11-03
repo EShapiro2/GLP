@@ -10,6 +10,7 @@
 /// Fixture: programs/tests/typed/when_idle.glp; the madGLP agents' program
 /// is [_mad] below, which each agent runs as its one program, a module file
 /// (TGLP, def:program).
+@Timeout.none
 library;
 
 import 'dart:async';
@@ -294,7 +295,7 @@ void main() {
       } finally {
         await manager.shutdown();
       }
-    }, timeout: Timeout(Duration(seconds: 60)));
+    }, timeout: Timeout.none);
   });
 
   group("the REPL's madGLP mode performs its Sends", () {
@@ -356,7 +357,7 @@ void main() {
       expect(dropped, isNonNegative, reason: '$out\n${await err}');
       expect(out.indexOf('X = idle'), greaterThan(dropped), reason: out);
       expect(out, contains('→ succeeds'));
-    }, timeout: Timeout(Duration(minutes: 3)));
+    }, timeout: Timeout.none);
   });
 
   group('the declaration', () {

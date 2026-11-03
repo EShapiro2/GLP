@@ -129,8 +129,8 @@ void main() {
       expect(delivered.length, 1);
     });
 
-    // "under closed, first contact from an agent not declared by peer_declare
-    // is not answered" (IGLP, Simulation realisation): a key in the receiver's
+    // "under closed, first contact from an agent not declared a peer is not
+    // answered" (IGLP, Simulation realisation): a key in the receiver's
     // known-peer set (GNA, "Known Peers") is answered.
     test('Closed receiver answers a first contact from a known peer, and '
         'stops on its removal', () {
@@ -167,7 +167,7 @@ void main() {
 
     // "A level is held per ProximityUnderlay ... both levels default to
     // Closed" (GLP-Networking-API, Trust levels), and "The PAN's cold-call
-    // trust level is enforced as trust_declare sets it" (IGLP
+    // trust level is enforced as the trust declaration sets it" (IGLP
     // appendix-implementation-notes.tex, Simulation realisation).  Every
     // simulated encounter is a PAN one ("the reported underlay is the PAN
     // throughout").
@@ -203,7 +203,7 @@ void main() {
     });
   });
 
-  group('SimulationNetworkClient trust (trust_declare/2)', () {
+  group('SimulationNetworkClient trust (declare(trust(U, L)))', () {
     test("setTrustLevel reaches the router, which enforces it", () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
@@ -367,10 +367,10 @@ void main() {
     });
 
     // "Not provided: the WAN underlay and the rendezvous server, so
-    // peer_address/2, punch_udp/1 and the effect of address_declare/2" (IGLP,
-    // Simulation realisation).
-    test('WAN methods throw UnsupportedError; putPeerAddress takes an address '
-        'to no effect', () {
+    // peer_address/2, punch_udp/1 and the effect of an address or a rendezvous
+    // declaration" (IGLP, Simulation realisation).
+    test('WAN methods throw UnsupportedError; putPeerAddress and '
+        'putRendezvousServer take an address to no effect', () {
       final client = SimulationNetworkClient(
         selfId: 'alice',
         directory: NetworkDirectory(),
@@ -383,6 +383,11 @@ void main() {
       client.putPeerAddress(bobPk, '203.0.113.7:41234');
       expect(client.isKnownPeer(bobPk), isFalse,
           reason: 'the address has no effect: nothing is recorded');
+      expect(() => client.putRendezvousServer(bobPk, '198.51.100.9:7000'),
+          returnsNormally);
+      expect(() => client.removeRendezvousServer(bobPk), returnsNormally);
+      expect(client.isKnownPeer(bobPk), isFalse,
+          reason: 'a rendezvous server has no effect: nothing is recorded');
     });
   });
 }

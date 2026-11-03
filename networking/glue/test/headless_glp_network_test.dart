@@ -4,8 +4,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:sodium/sodium_sumo.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -152,6 +154,17 @@ void main() {
       expect(network.networkIdentity(), layer.wan.networkIdentity());
       expect(() => network.punchUdp('nowhere'), throwsArgumentError,
           reason: "the layer's refusal of an unparseable address, unchanged");
+      // declare(rendezvous(P, A)) and remove(rendezvous(P)) reach the WAN
+      // sub-object's putRendezvousServer and removeRendezvousServer (GNA
+      // 776016c, Section 4.2): the layer's refusal of an unparseable address
+      // comes back unchanged, and a key not declared does nothing.
+      expect(() => network.putRendezvousServer(peer, 'nowhere'),
+          throwsArgumentError,
+          reason: "the layer's refusal of an unparseable address, unchanged");
+      expect(() => network.removeRendezvousServer(peer), returnsNormally);
+      // acknowledge(messageId) (GNA, Section 2.9) reaches the layer's: a
+      // message not kept does nothing.
+      expect(() => network.acknowledge('m-1'), returnsNormally);
 
       final events = <String>[];
       network.onConnectivityStatusChanged =
@@ -198,9 +211,11 @@ void main() {
 
     test(
         'no proximity underlay and no location service: getPeers is empty, '
-        'setTrustLevel and the places are refused as unsupported', () {
-      // GNA, 2026-10-11, the adapter's Q1; Section "Instantiation", Location
-      // service: "none on a headless server".
+        'a trust declaration finds no sub-object and does nothing, and the '
+        'places are refused as unsupported', () {
+      // GNA §2.2: "a call on an underlay the layer does not run finds no
+      // sub-object"; §2.7: a headless server "refuses declarePlace and
+      // removePlace".
       if (sodiumUnavailable != null) {
         markTestSkipped(sodiumUnavailable!);
         return;
@@ -212,37 +227,185 @@ void main() {
       expect(
           () => network.setTrustLevel(
               glp.ProximityUnderlay.pan, glp.TrustLevel.open),
-          throwsUnsupportedError);
+          returnsNormally);
       expect(
           () => network.setTrustLevel(
               glp.ProximityUnderlay.lan, glp.TrustLevel.closed),
-          throwsUnsupportedError);
+          returnsNormally);
       expect(() => network.declarePlace('home', 50), throwsUnsupportedError);
       expect(() => network.removePlace('home'), throwsUnsupportedError);
     });
+
+    test(
+        'declare(trust(lan, open)) on the layer, which runs no LAN, returns, '
+        'and the program runs on', () async {
+      // GNA §2.2: a trust declaration for an underlay the layer does not run
+      // finds no sub-object, and does nothing (GNA task O (f)).
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      final out = <String>[];
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../../programs/self.glp').absolute.path);
+      engine.enableMadGLP(agentId: 'alice');
+      engine.runtime.outputCallback = out.add;
+      engine.madContext!.network = network;
+      engine.loadSource('''
+procedure go.
+go :- declare(trust(lan, open)), declared.
+procedure declared.
+declared :- send_to_user([running]).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue,
+          reason: 'the declaration returns, and aborts nothing');
+      expect(out, ['running'], reason: 'the program runs on');
+    });
   });
 
+  test(
+      "a message the layer kept is delivered again through the glue at "
+      "restart, and the glue's acknowledge(messageId) is the layer's (GNA "
+      "§2.9, §2.11)", () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final self = await identityFromSeed(seedOf(0x23));
+    final sender = await identityFromSeed(seedOf(0x24));
+    final owner = glp.PubKey.fromList(self.publicKey).hex;
+    final senderKey = glp.PubKey.fromList(sender.publicKey);
+    // What a layer that delivered the message and was not told it is applied
+    // left behind.
+    final store = MemoryOutboundQueueStore();
+    await store.saveDelivered(owner, [
+      DeliveredQueueEntry(
+        senderHex: senderKey.hex,
+        messageId: 'm-kept',
+        payload: Uint8List.fromList([4, 2]),
+        underlay: Underlay.wan,
+      ),
+    ]);
+    final layer = HeadlessGrassrootsNetwork(
+      outboundQueueStore: store,
+      identity: self,
+      sodium: sodium!,
+    );
+    final network = HeadlessGlpNetwork(layer);
+    final delivered = Completer<(glp.PubKey, List<int>, String, glp.Underlay)>();
+    network.onMessageReceived = (s, payload, id, u) =>
+        delivered.complete((s, payload, id, u));
+    final (s, payload, id, u) = await delivered.future;
+    expect((s, id, u), (senderKey, 'm-kept', glp.Underlay.wan));
+    expect(payload, [4, 2]);
+
+    network.acknowledge(id);
+    await layer.dispose();
+    expect(await store.loadDelivered(owner), isEmpty,
+        reason: 'acknowledged through the glue, it is kept no longer');
+  }, timeout: Timeout.none);
+
+  test(
+      'declare(rendezvous(K, A)) gives the layer a server, which it dials, '
+      'and remove(rendezvous(K)) ends its session with it (GNA §4.2, §5)',
+      () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    // A UDP port nothing listens on, until the server binds it.
+    final probe = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final port = probe.port;
+    probe.close();
+    final serverId = await identityFromSeed(seedOf(0x25));
+    final server = HeadlessGrassrootsNetwork(
+      identity: serverId,
+      serverAddress:
+          ServerAddress(listenPort: port, publicAddress: '127.0.0.1:$port'),
+      rendezvousServer: true,
+      sodium: sodium!,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    addTearDown(server.dispose);
+    expect(await server.start(), isTrue);
+
+    final layer = HeadlessGrassrootsNetwork(
+      identity: await identityFromSeed(seedOf(0x26)),
+      sodium: sodium!,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    addTearDown(layer.dispose);
+    expect(await layer.start(), isTrue);
+    final network = HeadlessGlpNetwork(layer);
+    final serverKey = glp.PubKey.fromList(serverId.publicKey);
+    final connected = Completer<glp.Underlay>();
+    final disconnected = Completer<glp.Underlay>();
+    network.onPeerConnected = (pk, underlay, _) {
+      if (pk == serverKey && !connected.isCompleted) {
+        connected.complete(underlay);
+      }
+    };
+    network.onPeerDisconnected = (pk, underlay) {
+      if (pk == serverKey && !disconnected.isCompleted) {
+        disconnected.complete(underlay);
+      }
+    };
+
+    final out = <String>[];
+    final engine = GlpEngine(
+        rootSelfGlpPath: File('../../programs/self.glp').absolute.path);
+    engine.enableMadGLP(agentId: 'alice');
+    engine.runtime.outputCallback = out.add;
+    engine.madContext!.network = network;
+    engine.loadSource('''
+procedure declared.
+declared :- declare(rendezvous('${serverKey.hex}', '127.0.0.1:$port')).
+procedure removed.
+removed :- remove(rendezvous('${serverKey.hex}')).
+''');
+
+    expect((await engine.runGoal('declared')).succeeded, isTrue);
+    expect(await connected.future, glp.Underlay.wan,
+        reason: 'the declared server is dialled, and its session comes up');
+    expect(network.isPeerReachable(serverKey), isTrue);
+
+    expect((await engine.runGoal('removed')).succeeded, isTrue);
+    expect(await disconnected.future, glp.Underlay.wan,
+        reason: "the removed server's session ends");
+    expect(network.isPeerReachable(serverKey), isFalse);
+  }, timeout: Timeout.none);
+
   group('two runtimes over two headless layers in two processes', () {
-    // The agents' one program: the caller cold-calls the callee, naming it by
-    // the key its host passes, with a writer; the callee assigns the writer,
-    // and the assignment crosses back.  Written under the root, programs/
+    // The agents' one program: each agent started from agent(ch(_?,_),
+    // ch(_?,_)), every agent's initial goal (IGLP, Implementation Notes,
+    // "Boot"); the caller's person names the callee by its key, call(Key), and
+    // the caller cold-calls it with a writer; the callee's person tells its
+    // agent to answer, and the callee assigns the writer, and the assignment
+    // crosses back.  Written under the root, programs/
     // (TGLP modules.tex, "Scope construction": "A program lies at or below the
     // root"), as glp_runtime's agent_runtime_test.dart writes its play.
     const play = r'''
-procedure caller_init(_?, Key?, _?).
-caller_init(_, Callee, _) :-
+PlayIn  ::= call(Key) ; answer.
+PlayOut ::= answered(Constant) ; called(Key).
+PlayMsg ::= ask(Constant?).
+
+exported procedure agent(Channel(Stream(PlayIn), Stream(PlayOut))?, Channel(Stream(NetMsg(PlayMsg)), Stream(NetMsg(PlayMsg)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+
+procedure start(Stream(PlayIn)?, Stream(NetMsg(PlayMsg))?).
+start([call(Callee) | _], _) :- ground(Callee?) |
     send_to_net([msg(Callee?, ask(Answer))]),
     answered(Answer?).
-
-procedure answered(_?).
-answered(forty_two) :- send_to_user([answered(forty_two)]).
-
-procedure callee_init(_?, _?).
-callee_init(_, [msg(Me, ask(A?)) | _]) :-
+start([answer | _], [msg(Me, ask(A?)) | _]) :-
     send_to_user([called(Me?)]),
     answer(A).
+start([], _).
 
-procedure answer(_).
+procedure answered(Constant?).
+answered(forty_two) :- send_to_user([answered(forty_two)]).
+
+procedure answer(Constant).
 answer(forty_two).
 ''';
 
@@ -278,7 +441,7 @@ answer(forty_two).
         _hex(calleeSeed),
         rootSelfGlpPath,
         program,
-        'callee_init/2',
+        'answer',
         caller.hex,
       ]);
       addTearDown(() async {
@@ -327,8 +490,6 @@ answer(forty_two).
         agentId: 'caller',
         program: program,
         rootSelfGlpPath: rootSelfGlpPath,
-        goalLabel: 'caller_init/3',
-        extraArgs: [callee.hex],
         keyPair: (pub: caller, priv: callerPriv),
         network: network,
       );
@@ -340,9 +501,8 @@ answer(forty_two).
           connected.add('${pk.hex} $underlay $attested');
       expect(host.name, caller.hex);
       expect(await layer.start(), isTrue);
-      // The callee's key and address, through the adapter: what peer_declare/1
-      // and address_declare/2 give the layer, which the runtime does not yet
-      // have as predicates.
+      // The callee's key and address, through the adapter: what
+      // declare(peer(P)) and declare(address(P, A)) give the layer.
       network.putKnownPeer(callee);
       network.putPeerAddress(callee, calleeAddress);
 
@@ -355,6 +515,9 @@ answer(forty_two).
         receivedFrom.add(sender.hex);
         deliver(sender, payload, messageId, underlay);
       };
+      // The caller's person names the callee by its key.
+      await host.injectUserInput(
+          rt.StructTerm('call', [rt.ConstTerm(callee.hex)]));
 
       // The cold call crosses: the callee's program receives it on its
       // network input, addressed to its own name.
@@ -388,6 +551,14 @@ class _FailingQueueStore implements OutboundQueueStore {
 
   @override
   Future<void> save(String ownerHex, List<OutboundQueueEntry> entries) async =>
+      throw const FileSystemException('the disc is full');
+
+  @override
+  Future<List<DeliveredQueueEntry>> loadDelivered(String ownerHex) async => [];
+
+  @override
+  Future<void> saveDelivered(
+          String ownerHex, List<DeliveredQueueEntry> entries) async =>
       throw const FileSystemException('the disc is full');
 }
 

@@ -1,6 +1,6 @@
 %% plays.glp --- the GB mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for each two executions that transact, with the two ends of one root channel handed to them as their conversation, the play standing in for the social graph, as ../gc/plays.glp does.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  GB requires the day, so each execution is granted a calendar, a stream of dates (GSG, miniapp/4; vGLP, Section 5.4, "Act schemas as local specifications"), which on a device its clock writes and here the play writes: the first day, 1, on each calendar, and day 5 on bob's once his screen shows him holding Alice-coins, the loan taken, and on alice's once his screen shows his date at day 5, so that his bonds are mature by his date when she presents one (GB:5).  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.
 
-imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
 %% play_bonds(A, B, C): alice, bob and carol, a conversation between alice and each of the other two.  Each establishes their identity (GKK:1, Identity) and gets the first day as their date (GB:2, Date, first_date); alice comes to know bob and carol (GKK:2, Acquaintance, an act of both); alice mints Alice-coins and Alice-bonds maturing at day 10, and bob Bob-bonds maturing at day 5 (GB:1, Minting); alice asks bob for a loan, two Alice-coins for three Bob-bonds, and he answers yes (GB:3, Swap, an act of both); bob's date advances to day 5 (GB:2, advance); alice redeems a matured Bob-bond against an Alice-coin bob holds (GB:5, Redemption, an act of alice); and alice deposits two Alice-coins with carol, the escrow agent, who answers yes (GB:7, Escrow).  These are the acts of the screens of GB's app (screens/).
 exported procedure play_bonds(Stream(Seen), Stream(Seen), Stream(Seen)).
@@ -8,12 +8,12 @@ play_bonds(A?, B?, C?) :-
     self_module(M),
     find_type(miniapp/4, T),
     run(miniapp(alice, ch(GA?, DA), ch([conversation(bob, ch(BA?, AB)), conversation(carol, ch(CA?, AC))], _), [1 | KA?]), T?, M?),
-    person # miniapp_person(alice, alice, ch(DA?, GA), A),
+    person # miniapp_person(alice, alice, [bob, carol], ch(DA?, GA), A),
     run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA))], _), [1 | KB?]), T?, M?),
-    person # miniapp_person(bob, bob, ch(DB?, GB), SB),
+    person # miniapp_person(bob, bob, [alice], ch(DB?, GB), SB),
     calendars(SB?, B, KB, KA, lend),
     run(miniapp(carol, ch(GC?, DC), ch([conversation(alice, ch(AC?, CA))], _), [1]), T?, M?),
-    person # miniapp_person(carol, carol, ch(DC?, GC), C).
+    person # miniapp_person(carol, carol, [alice], ch(DC?, GC), C).
 
 %% The play's calendars: what bob's person reports, passed on whole, and day 5 written on bob's calendar once his last view holds an Alice-coin, the loan taken (the phase lend), and then on alice's once it holds his date at day 5 (the phase mature).
 Phase ::= lend ; mature ; done.
@@ -55,21 +55,21 @@ play_village(A?, B?, C?, D?, E?, F?, G?) :-
     self_module(M),
     find_type(miniapp/4, T),
     run(miniapp(alice, ch(GA?, DA), ch([conversation(bob, ch(BA?, AB)), conversation(charlie, ch(CA?, AC)), conversation(eve, ch(EA?, AE))], _), [1]), T?, M?),
-    person # miniapp_person(alice, market_alice, ch(DA?, GA), A),
+    person # miniapp_person(alice, market_alice, [bob, charlie, eve], ch(DA?, GA), A),
     run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA)), conversation(diana, ch(DB1?, BD))], _), [1 | KB?]), T?, M?),
-    person # miniapp_person(bob, market_bob, ch(DB?, GB), SB),
+    person # miniapp_person(bob, market_bob, [alice, diana], ch(DB?, GB), SB),
     cal_when(SB?, B, holds(coin(diana)), 25, KB),
     run(miniapp(charlie, ch(GC?, DC), ch([conversation(alice, ch(AC?, CA)), conversation(eve, ch(EC?, CE)), conversation(escrow, ch(XC?, CX))], _), [1]), T?, M?),
-    person # miniapp_person(charlie, market_charlie, ch(DC?, GC), C),
+    person # miniapp_person(charlie, market_charlie, [alice, eve, escrow], ch(DC?, GC), C),
     run(miniapp(diana, ch(GD?, DD), ch([conversation(bob, ch(BD?, DB1)), conversation(frank, ch(FD?, DF))], _), [1]), T?, M?),
-    person # miniapp_person(diana, market_diana, ch(DD?, GD), SD),
+    person # miniapp_person(diana, market_diana, [bob, frank], ch(DD?, GD), SD),
     cal_when(SD?, D, refused_by(redeem_bc(diana, frank, 28, frank), frank), 28, KF),
     run(miniapp(eve, ch(GE?, DE), ch([conversation(alice, ch(AE?, EA)), conversation(charlie, ch(CE?, EC)), conversation(frank, ch(FE?, EF))], _), [1]), T?, M?),
-    person # miniapp_person(eve, market_eve, ch(DE?, GE), E),
+    person # miniapp_person(eve, market_eve, [alice, charlie, frank], ch(DE?, GE), E),
     run(miniapp(frank, ch(GF?, DF1), ch([conversation(diana, ch(DF?, FD)), conversation(eve, ch(EF?, FE)), conversation(escrow, ch(XF?, FX))], _), [1 | KF?]), T?, M?),
-    person # miniapp_person(frank, market_frank, ch(DF1?, GF), F),
+    person # miniapp_person(frank, market_frank, [diana, eve, escrow], ch(DF1?, GF), F),
     run(miniapp(escrow, ch(GX?, DX), ch([conversation(charlie, ch(CX?, XC)), conversation(frank, ch(FX?, XF))], _), [1 | KX?]), T?, M?),
-    person # miniapp_person(escrow, market_escrow, ch(DX?, GX), SX),
+    person # miniapp_person(escrow, market_escrow, [charlie, frank], ch(DX?, GX), SX),
     cal_when(SX?, G, holds(coin(frank)), 30, KX).
 
 %% cal_when(Xs, Ys, W, D, K): what a person reports, Xs, passed on whole as Ys, and the date D written on the calendar K once it shows W: an atom their last view holds, holds(A), or a notice of a refusal of their request P by Q, refused_by(P, Q), whatever its reason.

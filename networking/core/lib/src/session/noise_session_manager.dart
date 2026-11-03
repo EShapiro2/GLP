@@ -140,6 +140,20 @@ class NoiseSessionManager {
 
   Future<SimpleKeyPair>? _staticKeyPairFuture;
 
+  /// How many responder IK sessions may wait beside a standing session per
+  /// peer ([_handleIk1]); the oldest goes first.
+  static const int _maxPendingSessions = 4;
+
+  /// Called when a responder's IK handshake, answered while a session with
+  /// the peer stood, completes: the initiator's first packet opened under
+  /// its session, which took the standing session's place (GNA §2.6: "A
+  /// live session ends when a new handshake with the peer completes").
+  /// Called inside [decryptPacket], before the packet is returned, with the
+  /// medium, the peer and the connection the packet arrived on; the caller
+  /// treats it as a session established in place of the one the pair held.
+  void Function(PeerTransport transport, Uint8List remotePubkey,
+      String? peerId)? onSessionCompleted;
+
   NoiseSessionManager({
     required this.identity,
     required this.sodium,
@@ -406,9 +420,18 @@ class NoiseSessionManager {
     final clearType = packet.type.clearVariant;
     for (final candidate in [remotePubkey, connectionPeer]) {
       if (candidate == null) continue;
-      final found = _entries[_SessionKey(transport, _hex(candidate))]?.session;
+      final entry = _entries[_SessionKey(transport, _hex(candidate))];
+      final found = entry?.session;
       if (found != null) {
-        final clearPayload = await found.decryptPayload(packet, clearType);
+        final Uint8List clearPayload;
+        try {
+          clearPayload = await found.decryptPayload(packet, clearType);
+        } catch (_) {
+          final completed = await _openUnderPending(entry!, packet, clearType,
+              transport: transport, remotePubkey: candidate, peerId: peerId);
+          if (completed != null) return completed;
+          rethrow;
+        }
         return (
           packet.copyWith(type: clearType, payload: clearPayload),
           candidate,
@@ -435,6 +458,17 @@ class NoiseSessionManager {
           sender,
           session.handshakeHash,
         );
+      }
+      for (final entry in _entries.entries.toList()) {
+        if (entry.key.transport != transport || entry.value.pending.isEmpty) {
+          continue;
+        }
+        final completed = await _openUnderPending(
+            entry.value, packet, clearType,
+            transport: transport,
+            remotePubkey: _bytes(entry.key.pubkeyHex),
+            peerId: peerId);
+        if (completed != null) return completed;
       }
     }
     throw StateError('No Noise session for $transport/$peerId');
@@ -679,6 +713,16 @@ class NoiseSessionManager {
         responsePayload: entry.finalSent,
       );
     }
+    // The same for a message 1 whose session waits on the standing one.
+    for (final pending in entry.pending) {
+      if (_bytesEqual(pending.inboundBody, body)) {
+        return NoiseHandshakeResult(
+          remotePubkey: remotePubkey,
+          pattern: NoisePattern.ik,
+          responsePayload: pending.sentEncoded,
+        );
+      }
+    }
 
     if (!accept(NoisePattern.ik, remotePubkey)) {
       throw StateError('Noise IK message 1 from '
@@ -692,8 +736,34 @@ class NoiseSessionManager {
 
     final responseBody = await handshake.writeIk2();
     final session = await handshake.splitForResponder();
-    final replaced = entry.session != null;
     final encoded = _encodeEnvelope(_Kind.ik2, responseBody);
+
+    // "A live session ends when a new handshake with the peer completes, or
+    // by silence" (GNA §2.6), and "a recorded IK first message can be
+    // replayed": message 2 answers it, and its session waits beside the
+    // standing one until the initiator's first packet opens under it, which
+    // only the holder of message 1's ephemeral key can send.  A replayed
+    // message 1 never completes, and ends nothing.
+    if (entry.session != null) {
+      entry.pending.add(_PendingSession(
+        session: session,
+        inboundBody: body,
+        sentEncoded: encoded,
+        connectionId: peerId,
+      ));
+      if (entry.pending.length > _maxPendingSessions) {
+        entry.pending.removeAt(0);
+      }
+      // So that a packet on this connection is tried against the pair's
+      // sessions; one that no session opens is refused as before.
+      _recordConnectionPeer(transport, peerId, remotePubkey);
+      return NoiseHandshakeResult(
+        remotePubkey: remotePubkey,
+        pattern: NoisePattern.ik,
+        responsePayload: encoded,
+      );
+    }
+
     entry
       ..session = session
       ..handshake = null
@@ -708,8 +778,45 @@ class NoiseSessionManager {
       responsePayload: encoded,
       sessionEstablished: true,
       sentFinal: true,
-      replacedSession: replaced,
     );
+  }
+
+  /// Open [packet] under a session of [entry] that waits on the standing one
+  /// ([_handleIk1]); the first to open it completes its handshake and takes
+  /// the standing session's place (GNA §2.6), and [onSessionCompleted] is
+  /// told before this returns.  Null when none opens it.
+  Future<(GrassrootsPacket, Uint8List, Uint8List)?> _openUnderPending(
+    _SessionEntry entry,
+    GrassrootsPacket packet,
+    PacketType clearType, {
+    required PeerTransport transport,
+    required Uint8List remotePubkey,
+    String? peerId,
+  }) async {
+    for (final pending in entry.pending.toList()) {
+      final Uint8List clearPayload;
+      try {
+        clearPayload = await pending.session.decryptPayload(packet, clearType);
+      } catch (_) {
+        continue;
+      }
+      entry
+        ..session = pending.session
+        ..handshake = null
+        ..lastInboundBody = pending.inboundBody
+        ..lastSentEncoded = pending.sentEncoded
+        ..finalSent = pending.sentEncoded;
+      entry.pending.clear();
+      _recordConnectionPeer(
+          transport, peerId ?? pending.connectionId, remotePubkey);
+      onSessionCompleted?.call(transport, remotePubkey, peerId);
+      return (
+        packet.copyWith(type: clearType, payload: clearPayload),
+        remotePubkey,
+        pending.session.handshakeHash,
+      );
+    }
+    return null;
   }
 
   Future<NoiseHandshakeResult> _handleIk2(
@@ -910,6 +1017,10 @@ class _SessionEntry {
   /// where the answering message 2, which names no one, is looked for first.
   String? connectionId;
 
+  /// Responder IK sessions answered while [session] stood, each waiting for
+  /// the initiator's first packet to open under it (GNA §2.6).
+  final List<_PendingSession> pending = [];
+
   void complete(bool value) {
     final pending = completer;
     if (pending != null && !pending.isCompleted) {
@@ -917,6 +1028,28 @@ class _SessionEntry {
     }
     completer = null;
   }
+}
+
+/// A responder's IK session that waits beside the standing session of the
+/// pair until the initiator's first packet opens under it.
+class _PendingSession {
+  _PendingSession({
+    required this.session,
+    required this.inboundBody,
+    required this.sentEncoded,
+    required this.connectionId,
+  });
+
+  final _NoiseTransportSession session;
+
+  /// The message 1 it answers, to tell a retransmission of it.
+  final Uint8List inboundBody;
+
+  /// The message 2 this side sent, resent for a retransmitted message 1.
+  final Uint8List sentEncoded;
+
+  /// The connection message 1 arrived on.
+  final String? connectionId;
 }
 
 class _SessionKey {

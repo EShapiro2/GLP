@@ -1,38 +1,39 @@
-/// Tests for the seven networking seam kernels — '_peer_address'/2,
-/// '_punch_udp'/1, '_place_declare'/3, '_place_remove'/1, '_trust_declare'/2,
-/// '_peer_declare'/1 and '_address_declare'/2 — and the declared place's event
-/// stream.
+/// Tests for the four networking seam kernels — '_peer_address'/2,
+/// '_punch_udp'/1, '_declare'/1 and '_remove'/1 — and the declared place's
+/// event stream.
 ///
-/// Covers IGLP Definition "Seam Predicates": peer_address assigns address(S), S
-/// the address at which the layer observes a peer, or none where it observes
-/// none (72b5efa; GLP-Spec 090e647, peer_address(Key?, PeerAddress)); punch_udp
-/// opens a path to an address and returns nothing; place_declare declares a place and assigns a stream of that
-/// agent's own entered, exited, unobservable and observable events, fed
-/// serializer-fashion so one declaration yields one stream however many events
-/// follow; place_remove ends the declaration; trust_declare sets a proximity
-/// underlay's cold-call trust level, pan or lan (477c586; ble until
-/// 2026-10-09); peer_declare gives the layer the public key of a peer the
-/// program knows, and address_declare the address at which a peer is reached
-/// (GLP-Spec 6e9c276, IGLP c2292b9; the catalogue's peer_declare(Key?) and
-/// address_declare(Key?, String?)). The stream is closed in exactly
-/// two cases — place_remove and a superseding declaration — and an event for a
-/// place removed or superseded is dropped. A declaration the layer refuses is
-/// neither closing case: E receives unobservable, the declaration stands, and
-/// observable follows if the layer later begins reporting.
+/// Covers IGLP Definition "Seam Predicates" (3b736bb) and GLP-Spec
+/// appendix-guards, "Networking seam" (1ce0263): peer_address assigns
+/// address(S), S the address at which the layer observes a peer, or none where
+/// it observes none; punch_udp opens a path to an address and returns nothing;
+/// declare(D) makes the declaration D, Declaration ::= peer(Key) ; address(Key,
+/// String) ; rendezvous(Key, String) ; trust(Underlay, TrustLevel) ;
+/// place(Constant, Number, Stream(PlaceEvent)?), and remove(R) ends one,
+/// Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant).  A place
+/// declaration assigns a stream of that agent's own entered, exited,
+/// unobservable and observable events, fed serializer-fashion so one
+/// declaration yields one stream however many events follow.  The stream is
+/// closed in exactly two cases — remove(place(P)) and a superseding
+/// declaration — and an event for a place removed or superseded is dropped. A
+/// declaration the layer refuses is neither closing case: E receives
+/// unobservable, the declaration stands, and observable follows if the layer
+/// later begins reporting.  declare/1 and remove/1 replace place_declare/3,
+/// place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2,
+/// gone on 2026-11-03.
 ///
 /// The layer functions are GLP-Networking-API's. The simulation realization
-/// provides none of the first four (their paper, §Not provided), holds a
-/// trust level per underlay, takes a declared peer into its router's
-/// known-peer set, and takes an address to no effect (IGLP
-/// appendix-implementation-notes.tex, Simulation realisation); it names agents
-/// symbolically, resolving a name to its key at the seam.
+/// provides neither peer_address, punch_udp, nor a place declaration and its
+/// removal, holds a trust level per underlay, takes a declared peer into its
+/// router's known-peer set, and takes an address or a rendezvous server to no
+/// effect (IGLP appendix-implementation-notes.tex, Simulation realisation); it
+/// names agents symbolically, resolving a name to its key at the seam.
 ///
 /// Where no layer is bound at all --- the REPL, a test run without the
 /// simulation --- the runtime stands in for a layer that observes nothing and
-/// does nothing: peer_address assigns none, place_declare assigns its stream
-/// unobservable and nothing more, and the other seam predicates return having
-/// done nothing (IGLP appendix-implementation-notes.tex, "One interface",
-/// 6ba0329).
+/// does nothing: peer_address assigns none, a place declaration assigns its
+/// stream unobservable and nothing more, and the other seam predicates return
+/// having done nothing (IGLP appendix-implementation-notes.tex, "One
+/// interface").
 
 import 'dart:io';
 import 'dart:typed_data';
@@ -75,6 +76,16 @@ class _SeamNetwork extends GlpNetwork {
   /// Peer addresses given by putPeerAddress, in order: key hex and address.
   final List<(String, String)> peerAddresses = [];
 
+  /// Keys taken off by removeKnownPeer, in order, as hex.
+  final List<String> unknown = [];
+
+  /// Rendezvous servers given by putRendezvousServer, in order: key hex and
+  /// address.
+  final List<(String, String)> servers = [];
+
+  /// Rendezvous servers taken off by removeRendezvousServer, in order, as hex.
+  final List<String> serversRemoved = [];
+
   /// Whether the platform accepts a declaration.
   bool accepts = true;
 
@@ -100,6 +111,16 @@ class _SeamNetwork extends GlpNetwork {
       peerAddresses.add((pk.hex, address));
 
   @override
+  void removeKnownPeer(PubKey pk) => unknown.add(pk.hex);
+
+  @override
+  void putRendezvousServer(PubKey pk, String address) =>
+      servers.add((pk.hex, address));
+
+  @override
+  void removeRendezvousServer(PubKey pk) => serversRemoved.add(pk.hex);
+
+  @override
   Future<bool> declarePlace(String place, double radiusMetres) {
     declared.add((place, radiusMetres));
     final at = onDeclare;
@@ -121,13 +142,13 @@ class _SeamNetwork extends GlpNetwork {
   @override
   PubKey getIdentity() => throw UnimplementedError();
   @override
-  void removeKnownPeer(PubKey pk) => throw UnimplementedError();
-  @override
   bool isPeerReachable(PubKey pk) => true;
   @override
   List<Underlay> peerUnderlays(PubKey pk) => const [Underlay.wan];
   @override
   void send(PubKey pk, Uint8List payload) {}
+  @override
+  void acknowledge(String messageId) {}
   @override
   Uint8List sign(Uint8List message) => throw UnimplementedError();
   @override
@@ -211,7 +232,7 @@ void main() {
       final s = _stream(a.rt, w);
       expect(s.events, ['entered', 'exited', 'entered']);
       expect(s.closed, isFalse,
-          reason: 'the stream closes only on place_remove or a superseding '
+          reason: 'the stream closes only on remove(place(P)) or a superseding '
               'declaration');
     });
 
@@ -228,7 +249,7 @@ void main() {
           ['entered', 'exited', 'unobservable', 'observable']);
     });
 
-    test('place_remove closes the stream and reaches the layer', () {
+    test('remove(place(P)) closes the stream and reaches the layer', () {
       final a = _agentContext();
       final (w, _) = a.rt.heap.allocateVariable();
       a.ctx.declarePlace('home', 100.0, w);
@@ -439,7 +460,8 @@ go :- punch_udp('203.0.113.7:41234').
       expect(network.punched, ['203.0.113.7:41234']);
     });
 
-    test('place_declare declares at the layer and its stream reaches the program',
+    test('declare(place(P, R, E)) declares at the layer and its stream '
+        'reaches the program',
         () async {
       final out = <String>[];
       final network = _SeamNetwork()..onDeclare = PlaceEvent.entered;
@@ -448,7 +470,7 @@ go :- punch_udp('203.0.113.7:41234').
 procedure watch(_?).
 watch([E|_]) :- ground(E?) | send_to_user([E?]).
 procedure go.
-go :- place_declare(home, 100, E), watch(E?).
+go :- declare(place(home, 100, E)), watch(E?).
 ''');
       final result = await engine.runGoal('go');
       expect(result.succeeded, isTrue);
@@ -456,26 +478,26 @@ go :- place_declare(home, 100, E), watch(E?).
       expect(out, ['entered']);
     });
 
-    test('place_remove reaches the layer', () async {
+    test('remove(place(P)) reaches the layer', () async {
       final out = <String>[];
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
 procedure go.
-go :- place_declare(home, 100, _), place_remove(home).
+go :- declare(place(home, 100, _)), remove(place(home)).
 ''');
       await engine.runGoal('go');
       expect(network.declared, [('home', 100.0)]);
       expect(network.removed, ['home']);
     });
 
-    test("trust_declare sets each underlay's level at the layer", () async {
+    test("declare(trust(U, L)) sets each underlay's level at the layer", () async {
       final out = <String>[];
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
 procedure go.
-go :- trust_declare(pan, open), trust_declare(lan, closed).
+go :- declare(trust(pan, open)), declare(trust(lan, closed)).
 ''');
       final result = await engine.runGoal('go');
       expect(result.succeeded, isTrue);
@@ -487,57 +509,100 @@ go :- trust_declare(pan, open), trust_declare(lan, closed).
           ]));
     });
 
-    test('trust_declare of an underlay the layer does not have aborts, ble '
-        'among them', () async {
-      for (final underlay in ['wifi', 'ble']) {
-        final out = <String>[];
+    test('declare(trust(U, L)) of an underlay or a level the language does '
+        'not have is refused by the checker, ble among them', () {
+      // GLP-Spec appendix-guards, "Networking seam": Underlay ::= pan ; lan,
+      // TrustLevel ::= open ; closed.
+      for (final trust in ['wifi, open', 'ble, open', 'pan, ajar']) {
         final network = _SeamNetwork();
-        final engine = _engine(out, network);
-        engine.loadSource('''
+        final engine = _engine(<String>[], network);
+        expect(() => engine.loadSource('''
 procedure go.
-go :- trust_declare($underlay, open).
-''');
-        final result = await engine.runGoal('go');
-        expect(result.succeeded, isFalse,
-            reason: "$underlay: the kernel aborts, and the goal that called it "
-                "fails");
+go :- declare(trust($trust)).
+'''), throwsA(isA<CompileError>()), reason: 'trust($trust) is no Declaration');
         expect(network.trusted, isEmpty);
       }
     });
 
-    // IGLP, Definition "Seam Predicates": "peer_declare gives the layer the
-    // public key P of a peer the program knows, and address_declare the
-    // address A at which peer P is reached".
-    test('peer_declare gives the layer the key of a peer the program knows',
+    test('declare(rendezvous(P, A)) gives the layer a rendezvous server, and '
+        'remove(rendezvous(P)) takes it off', () async {
+      // GLP-Spec appendix-guards, "Networking seam": "rendezvous(P, A) gives
+      // the layer a rendezvous server, the agent of key P at address A, or
+      // replaces its address, and remove(rendezvous(P)) takes the server off
+      // and ends the layer's session with it"; GNA 776016c, Section 4.2,
+      // putRendezvousServer(pk, address) "behind declare(rendezvous(Key,
+      // Address))" and removeRendezvousServer(pk) "behind
+      // remove(rendezvous(Key))".
+      final out = <String>[];
+      final network = _SeamNetwork();
+      final engine = _engine(out, network);
+      engine.loadSource('''
+procedure go.
+go :- declare(rendezvous('${_hex(3)}', '198.51.100.9:7000')),
+    remove(rendezvous('${_hex(3)}')), send_to_user([returned]).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue);
+      expect(out, ['returned'], reason: 'neither assigns anything');
+      expect(network.servers, [(_hex(3), '198.51.100.9:7000')]);
+      expect(network.serversRemoved, [_hex(3)]);
+      expect(network.known, isEmpty,
+          reason: 'a rendezvous server is not a declaration of a known peer');
+    });
+
+    test('remove(peer(P)) takes the peer off the layer\'s known peers',
+        () async {
+      // GLP-Spec appendix-guards, "Networking seam": "remove(peer(P)) takes
+      // P, and any address recorded for it, off the layer's known peers";
+      // GNA, "Known Peers", removeKnownPeer(pk).
+      final out = <String>[];
+      final network = _SeamNetwork();
+      final engine = _engine(out, network);
+      engine.loadSource('''
+procedure go.
+go :- declare(peer('${_hex(1)}')), remove(peer('${_hex(1)}')),
+    send_to_user([returned]).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue);
+      expect(out, ['returned']);
+      expect(network.known, [_hex(1)]);
+      expect(network.unknown, [_hex(1)]);
+    });
+
+    // IGLP, Definition "Seam Predicates": "declare(peer(P)) gives the layer
+    // the public key P of a peer the program knows, ... and
+    // declare(address(P, A)) gives the address A at which peer P is reached".
+    test('declare(peer(P)) gives the layer the key of a peer the program knows',
         () async {
       final out = <String>[];
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
 procedure go.
-go :- peer_declare('${_hex(1)}'), peer_declare('${_hex(2)}'),
+go :- declare(peer('${_hex(1)}')), declare(peer('${_hex(2)}')),
     send_to_user([returned]).
 ''');
       final result = await engine.runGoal('go');
       expect(result.succeeded, isTrue);
-      expect(out, ['returned'], reason: 'peer_declare assigns nothing');
+      expect(out, ['returned'], reason: 'declare(peer(P)) assigns nothing');
       expect(network.known, unorderedEquals([_hex(1), _hex(2)]));
       expect(network.peerAddresses, isEmpty);
     });
 
-    test("address_declare gives the layer the address at which a peer is "
+    test("declare(address(P, A)) gives the layer the address at which a peer is "
         "reached", () async {
       final out = <String>[];
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
 procedure go.
-go :- address_declare('${_hex(1)}', '203.0.113.7:41234'),
+go :- declare(address('${_hex(1)}', '203.0.113.7:41234')),
     send_to_user([returned]).
 ''');
       final result = await engine.runGoal('go');
       expect(result.succeeded, isTrue);
-      expect(out, ['returned'], reason: 'address_declare assigns nothing');
+      expect(out, ['returned'], reason: 'declare(address(P, A)) assigns nothing');
       expect(network.peerAddresses, [(_hex(1), '203.0.113.7:41234')]);
       expect(network.known, isEmpty,
           reason: 'an address is not a declaration of the peer');
@@ -546,8 +611,8 @@ go :- address_declare('${_hex(1)}', '203.0.113.7:41234'),
     test('a peer name that is no key aborts, and the layer is not reached',
         () async {
       for (final goal in [
-        "peer_declare(bob)",
-        "address_declare(bob, '203.0.113.7:41234')",
+        "declare(peer(bob))",
+        "declare(address(bob, '203.0.113.7:41234'))",
       ]) {
         final out = <String>[];
         final network = _SeamNetwork();
@@ -565,67 +630,120 @@ go :- $goal.
       }
     });
 
-    test('peer_declare/1 and address_declare/2 are typed by the catalogue: '
-        'Key?; Key?, String?', () {
+    test('declare/1 and remove/1 are typed by the catalogue: Declaration?; '
+        'Removal?', () {
       final root = Parser(
               Lexer(File('../programs/self.glp').readAsStringSync()).tokenize())
           .parseModule();
       String decl(String name, int arity) => root.procDeclarations
           .singleWhere((d) => d.name == name && d.arity == arity)
           .toString();
-      expect(decl('peer_declare', 1), 'procedure peer_declare(Key?).');
-      expect(decl('address_declare', 2),
-          'procedure address_declare(Key?, String?).');
-      expect(decl('_peer_declare', 1), 'procedure _peer_declare(Key?).');
-      expect(decl('_address_declare', 2),
-          'procedure _address_declare(Key?, String?).');
+      List<String> alternatives(String type) => root.typeDefs
+          .singleWhere((t) => t.name == type)
+          .alternatives
+          .map((a) => '$a')
+          .toList();
+      expect(decl('declare', 1), 'procedure declare(Declaration?).');
+      expect(decl('remove', 1), 'procedure remove(Removal?).');
+      expect(decl('_declare', 1), 'procedure _declare(Declaration?).');
+      expect(decl('_remove', 1), 'procedure _remove(Removal?).');
+      expect(alternatives('Declaration'), [
+        'peer(Key)',
+        'address(Key, String)',
+        'rendezvous(Key, String)',
+        'trust(Underlay, TrustLevel)',
+        'place(Constant, Number, Stream(PlaceEvent)?)',
+      ]);
+      expect(alternatives('Removal'),
+          ['peer(Key)', 'rendezvous(Key)', 'place(Constant)']);
+      expect(alternatives('Underlay'), ['pan', 'lan']);
+      expect(alternatives('TrustLevel'), ['open', 'closed']);
+      expect(alternatives('PlaceEvent'),
+          ['entered', 'exited', 'observable', 'unobservable']);
+      for (final gone in [
+        ('place_declare', 3),
+        ('place_remove', 1),
+        ('trust_declare', 2),
+        ('peer_declare', 1),
+        ('address_declare', 2),
+      ]) {
+        expect(
+            root.procDeclarations
+                .where((d) => d.name == gone.$1 && d.arity == gone.$2),
+            isEmpty,
+            reason: '${gone.$1}/${gone.$2} is replaced by declare/1 and '
+                'remove/1');
+      }
 
-      // The checker holds a program to them.
-      final engine = _engine(<String>[], _SeamNetwork());
+      // The checker accepts each alternative of Declaration and Removal.
+      final k = _hex(1);
+      for (final goal in [
+        "declare(peer('$k'))",
+        "declare(address('$k', '203.0.113.7:41234'))",
+        "declare(rendezvous('$k', '198.51.100.9:7000'))",
+        'declare(trust(pan, open))',
+        'declare(trust(lan, closed))',
+        'declare(place(home, 100, E)), watch(E?)',
+        "remove(peer('$k'))",
+        "remove(rendezvous('$k'))",
+        'remove(place(home))',
+      ]) {
+        final engine = _engine(<String>[], _SeamNetwork());
+        expect(() => engine.loadSource('''
+procedure watch(Stream(PlaceEvent)?).
+watch([E|_]) :- ground(E?) | send_to_user([E?]).
+watch([]).
+procedure go.
+go :- $goal.
+'''), returnsNormally, reason: goal);
+      }
+
+      // And refuses anything else.
       Matcher refused(String why) => throwsA(isA<CompileError>().having(
           (e) => e.message,
           'message',
           allOf(contains('Type checking failed'), contains(why))));
-      expect(() => engine.loadSource('''
+      for (final (goal, why) in [
+        ('declare(peer(7))', 'an Integer is no Key'),
+        ('declare(peer(key(bob)))', 'a structure is no Key'),
+        ("declare(address(7, '203.0.113.7:41234'))", 'an Integer is no Key'),
+        ("declare(address('$k', 41234))", 'an Integer is no String'),
+        ("declare(address('$k', at(host, 41234)))", 'a structure is no String'),
+        ("declare(rendezvous('$k', 7000))", 'an Integer is no String'),
+        ('declare(trust(wifi, open))', 'wifi is no Underlay'),
+        ('declare(trust(pan, ajar))', 'ajar is no TrustLevel'),
+        ('declare(place(home, far, _))', 'far is no Number'),
+        ("declare(wish('$k'))", 'wish is no Declaration'),
+        ("declare(peer('$k', '$k'))", 'peer/2 is no Declaration'),
+        ("remove(address('$k', '203.0.113.7:41234'))",
+            'an address is no Removal'),
+        ('remove(trust(pan, open))', 'a trust level is no Removal'),
+        ('remove(place(home, 100))', 'place/2 is no Removal'),
+        ("remove(rendezvous('$k', '198.51.100.9:7000'))",
+            'rendezvous/2 is no Removal'),
+      ]) {
+        final engine = _engine(<String>[], _SeamNetwork());
+        final name = goal.substring(0, goal.indexOf('('));
+        expect(() => engine.loadSource('''
 procedure go.
-go :- peer_declare(7).
-'''), refused('(peer_declare) is not well-typed'),
-          reason: 'an Integer is no Key');
-      expect(() => engine.loadSource('''
-procedure go.
-go :- peer_declare(key(bob)).
-'''), refused('(peer_declare) is not well-typed'),
-          reason: 'a structure is no Key');
-      expect(() => engine.loadSource('''
-procedure go.
-go :- address_declare(7, '203.0.113.7:41234').
-'''), refused('(address_declare) is not well-typed'),
-          reason: 'an Integer is no Key');
-      expect(() => engine.loadSource('''
-procedure go.
-go :- address_declare('${_hex(1)}', 41234).
-'''), refused('(address_declare) is not well-typed'),
-          reason: 'an Integer is no String');
-      expect(() => engine.loadSource('''
-procedure go.
-go :- address_declare('${_hex(1)}', at(host, 41234)).
-'''), refused('(address_declare) is not well-typed'),
-          reason: 'a structure is no String');
+go :- $goal.
+'''), refused('($name) is not well-typed'), reason: '$goal: $why');
+      }
     });
   });
 
   // IGLP appendix-implementation-notes.tex, "One interface" (6ba0329): "Where
   // no layer is bound at all --- the REPL, a test run without the simulation
   // --- the runtime stands in for a layer that observes nothing and does
-  // nothing: peer_address assigns none, place_declare assigns its stream
+  // nothing: peer_address assigns none, a place declaration assigns its stream
   // unobservable and nothing more, and the other seam predicates return having
   // done nothing".  Each test runs twice: under the REPL's engine, with no
   // MadContext, and in madGLP mode with no GlpNetwork bound.  Closing a
   // place's stream is the runtime's bookkeeping and not the layer's, so with
-  // no layer place_remove and a further declaration close it as ever, and only
-  // the reporting is absent (IGLP madglp-spec.tex, "closed, its tail assigned
-  // [], in exactly two cases: place_remove, and a further declaration of the
-  // same place"; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
+  // no layer remove(place(P)) and a further declaration close it as ever, and
+  // only the reporting is absent (IGLP madglp-spec.tex, "closed, its tail
+  // assigned [], in exactly two cases: remove(place(P)), and a further
+  // declaration of the same place"; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
   group('no layer bound: a layer that observes nothing and does nothing', () {
     const emitAddress = '''
 procedure emit(PeerAddress?).
@@ -674,19 +792,20 @@ go :- punch_udp('203.0.113.7:41234'), send_to_user([returned]).
         expect(out, ['returned']);
       });
 
-      test('$where: place_declare assigns its stream unobservable and nothing '
+      test('$where: declare(place(P, R, E)) assigns its stream unobservable and '
+          'nothing '
           'more', () async {
         final out = <String>[];
         final engine = _unboundEngine(out, mad: mad);
         engine.loadSource('''
 ${watchPlace}procedure go.
-go :- place_declare(home, 100, E), watch(E?).
+go :- declare(place(home, 100, E)), watch(E?).
 ''');
         final result = await engine.runGoal('go');
         expect(out, ['unobservable']);
         expect(result.suspended, isTrue,
             reason: 'the stream stays open and nothing follows unobservable: '
-                'no event, no observable, and no closing until place_remove '
+                'no event, no observable, and no closing until remove(place(P)) '
                 'or a further declaration');
         expect(engine.runtime.placeStreams.isDeclared('home'), isTrue,
             reason: "the declaration stands in the runtime's bookkeeping, "
@@ -696,18 +815,18 @@ go :- place_declare(home, 100, E), watch(E?).
         }
       });
 
-      test('$where: place_remove closes the stream, its tail assigned [], '
+      test('$where: remove(place(P)) closes the stream, its tail assigned [], '
           'and an undeclared place is no matter', () async {
         final out = <String>[];
         final engine = _unboundEngine(out, mad: mad);
         engine.loadSource('''
 ${watchPlace}procedure go.
-go :- place_declare(home, 100, E), watch(E?), place_remove(home),
-    place_remove(nowhere).
+go :- declare(place(home, 100, E)), watch(E?), remove(place(home)),
+    remove(place(nowhere)).
 ''');
         final result = await engine.runGoal('go');
         expect(out, ['unobservable', 'closed'],
-            reason: 'place_remove closes the stream with no layer as with one');
+            reason: 'remove(place(P)) closes the stream with no layer as with one');
         expect(result.succeeded, isTrue,
             reason: 'nothing waits on the stream once it is closed');
         expect(engine.runtime.placeStreams.isDeclared('home'), isFalse);
@@ -722,7 +841,7 @@ go :- place_declare(home, 100, E), watch(E?), place_remove(home),
         final engine = _unboundEngine(out, mad: mad);
         engine.loadSource('''
 ${watchPlace}procedure go.
-go :- place_declare(home, 100, E1), watch(E1?), place_declare(home, 200, E2),
+go :- declare(place(home, 100, E1)), watch(E1?), declare(place(home, 200, E2)),
     watch2(E2?).
 procedure watch2(_?).
 watch2([E|Es]) :- ground(E?) | send_to_user([second(E?)]), more2(Es?).
@@ -742,14 +861,14 @@ more2([]) :- send_to_user([second(closed)]).
         expect(engine.runtime.placeStreams.isDeclared('home'), isTrue);
       });
 
-      test('$where: place_remove after a further declaration closes the '
+      test('$where: remove(place(P)) after a further declaration closes the '
           'standing stream', () async {
         final out = <String>[];
         final engine = _unboundEngine(out, mad: mad);
         engine.loadSource('''
 ${watchPlace}procedure go.
-go :- place_declare(home, 100, E1), place_declare(home, 200, E2),
-    watch(E1?), watch2(E2?), place_remove(home).
+go :- declare(place(home, 100, E1)), declare(place(home, 200, E2)),
+    watch(E1?), watch2(E2?), remove(place(home)).
 procedure watch2(_?).
 watch2([E|Es]) :- ground(E?) | send_to_user([second(E?)]), more2(Es?).
 procedure more2(_?).
@@ -773,12 +892,12 @@ more2([]) :- send_to_user([second(closed)]).
         expect(engine.runtime.placeStreams.isDeclared('home'), isFalse);
       });
 
-      test('$where: trust_declare returns having done nothing', () async {
+      test('$where: declare(trust(U, L)) returns having done nothing', () async {
         final out = <String>[];
         final engine = _unboundEngine(out, mad: mad);
         engine.loadSource('''
 procedure go.
-go :- trust_declare(pan, open), trust_declare(lan, closed),
+go :- declare(trust(pan, open)), declare(trust(lan, closed)),
     send_to_user([returned]).
 ''');
         final result = await engine.runGoal('go');
@@ -786,14 +905,15 @@ go :- trust_declare(pan, open), trust_declare(lan, closed),
         expect(out, ['returned']);
       });
 
-      test('$where: peer_declare and address_declare return having done '
+      test('$where: declare(peer(P)) and declare(address(P, A)) return having '
+          'done '
           'nothing, whatever peer they name', () async {
         for (final peer in [_hex(1), 'bob']) {
           final out = <String>[];
           final engine = _unboundEngine(out, mad: mad);
           engine.loadSource('''
 procedure go.
-go :- peer_declare('$peer'), address_declare('$peer', '203.0.113.7:41234'),
+go :- declare(peer('$peer')), declare(address('$peer', '203.0.113.7:41234')),
     send_to_user([returned]).
 ''');
           final result = await engine.runGoal('go');
@@ -802,25 +922,38 @@ go :- peer_declare('$peer'), address_declare('$peer', '203.0.113.7:41234'),
         }
       });
 
-      test('$where: an argument the predicate does not take still aborts, '
-          'the want of a layer aside', () async {
+      test('$where: an argument the predicate does not take is refused, the '
+          'want of a layer aside', () {
+        final engine = _unboundEngine(<String>[], mad: mad);
+        expect(() => engine.loadSource('''
+procedure go.
+go :- declare(trust(wifi, open)).
+'''), throwsA(isA<CompileError>()),
+            reason: 'wifi is no Underlay: the checker refuses the program, as '
+                'with a layer bound');
+      });
+
+      test('$where: a rendezvous server and the removal of a peer return '
+          'having done nothing', () async {
         final out = <String>[];
         final engine = _unboundEngine(out, mad: mad);
         engine.loadSource('''
 procedure go.
-go :- trust_declare(wifi, open).
+go :- declare(rendezvous('${_hex(3)}', '198.51.100.9:7000')),
+    remove(rendezvous('${_hex(3)}')), remove(peer('${_hex(1)}')),
+    send_to_user([returned]).
 ''');
         final result = await engine.runGoal('go');
-        expect(result.succeeded, isFalse,
-            reason: 'wifi is no underlay: the kernel aborts and the goal '
-                'fails, as with a layer bound');
+        expect(result.succeeded, isTrue);
+        expect(out, ['returned']);
       });
     }
   });
 
   group(
-      'simulation realization: none of the first four (§Not provided), '
-      'a trust level per underlay (Simulation realisation)', () {
+      'simulation realization: no peer address, hole punching or place '
+      '(Not provided), a trust level per underlay (Simulation realisation)',
+      () {
     SimulationNetworkClient client() => SimulationNetworkClient(
           selfId: 'alice',
           directory: NetworkDirectory(),
@@ -847,10 +980,10 @@ go :- trust_declare(wifi, open).
     // The simulation realisation names agents symbolically, "resolved to keys
     // at the seam" (IGLP, "Simulation realisation"), so the kernels resolve a
     // peer's name through its directory; "under closed, first contact from an
-    // agent not declared by peer_declare is not answered", and "the effect of
-    // address_declare/2" is not provided.
-    test('peer_declare resolves a peer by its name and reaches the router; '
-        'address_declare takes an address to no effect', () async {
+    // agent not declared a peer is not answered", and "the effect of an
+    // address or a rendezvous declaration" is not provided.
+    test('declare(peer(P)) resolves a peer by its name and reaches the router; '
+        'an address and a rendezvous server are taken to no effect', () async {
       final directory = NetworkDirectory();
       final bobPk = generateKeyPair().pub;
       final carolPk = generateKeyPair().pub;
@@ -867,8 +1000,10 @@ go :- trust_declare(wifi, open).
       final engine = _engine(out, network);
       engine.loadSource('''
 procedure go.
-go :- peer_declare(bob), peer_declare('${carolPk.hex}'),
-    address_declare(bob, '203.0.113.7:41234'), send_to_user([returned]).
+go :- declare(peer(bob)), declare(peer('${carolPk.hex}')),
+    declare(address(bob, '203.0.113.7:41234')),
+    declare(rendezvous(bob, '198.51.100.9:7000')), remove(rendezvous(bob)),
+    send_to_user([returned]).
 ''');
       final result = await engine.runGoal('go');
       expect(result.succeeded, isTrue);
@@ -882,10 +1017,30 @@ go :- peer_declare(bob), peer_declare('${carolPk.hex}'),
       final engine2 = _engine(<String>[], network);
       engine2.loadSource('''
 procedure go.
-go :- peer_declare(zed).
+go :- declare(peer(zed)).
 ''');
       expect((await engine2.runGoal('go')).succeeded, isFalse,
           reason: 'zed is no agent the simulation names, and no key');
+    });
+
+    test('acknowledge hands the messageId to whoever delivered the message',
+        () {
+      // GNA 776016c, Section 2.9, acknowledge(messageId); the simulation's
+      // router hands a message to the agent once and keeps none across a
+      // restart, so the acknowledgement goes to whoever delivered it.
+      final told = <String>[];
+      final c = SimulationNetworkClient(
+        selfId: 'alice',
+        directory: NetworkDirectory(),
+        keyPair: generateKeyPair(),
+        sendToRouter: (_, __) {},
+        acknowledgeToRouter: told.add,
+      );
+      c.acknowledge('7');
+      c.acknowledge('8');
+      expect(told, ['7', '8']);
+      expect(() => client().acknowledge('9'), returnsNormally,
+          reason: 'with no one to tell, it is taken');
     });
 
     test("setTrustLevel holds each underlay's level, both closed until set",

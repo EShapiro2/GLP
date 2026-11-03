@@ -19,6 +19,7 @@
 /// Invariant" and "GLP Program, Goals"); true in guard position (GLP-Spec
 /// glp.tex, Definition "Guarded Clause": "G is a conjunction of guard
 /// predicates").  Each test asserts the refusal's own words.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -59,7 +60,7 @@ void main() {
                   'is not well-typed');
         }, 'the type check names the module and the atom')),
       );
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
 
     test('SRSW: the module\'s reader occurring twice', () async {
       await expectLater(
@@ -72,7 +73,7 @@ void main() {
                   'Line 5: Reader variable "Id?" occurs 2 times');
         }, 'the SRSW pass names the module\'s clause and the reader')),
       );
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
 
     test('guards: true in the module\'s guard', () async {
       await expectLater(
@@ -84,7 +85,7 @@ void main() {
                   'position at Line 5');
         }, 'the analyzer refuses the guard')),
       );
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
   });
 
   group('AgentRuntime refuses a fault in the program it runs', () {

@@ -1,4 +1,4 @@
-%% person.glp --- the self-ending mini-app's scripted person: miniapp_person/4,
+%% person.glp --- the self-ending mini-app's scripted person: miniapp_person/5,
 %% the super-app's second template at the mini-app's own types EndShown and EndUi (self.glp;
 %% GSG, 2026-10-13 18:52 UTC, O5, and 20:22 UTC, H).  The super-app's plays
 %% activate it from the mini-app's module value, as they activate the entry,
@@ -17,8 +17,8 @@
 %%          reads (../core/superapp_plays.glp, play_reinvite);
 %%   watch  reports every item.
 
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndUi)).
-miniapp_person(_, Role, ch(Ds, Gs?), Screen?) :- watch(Role?, Ds?, Gs, Screen).
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndUi)).
+miniapp_person(_, Role, _, ch(Ds, Gs?), Screen?) :- watch(Role?, Ds?, Gs, Screen).
 
 %% watch(Role, Ds, Gs, Screen): each draw of the output thread read for its
 %% newest item; any other draw passed over.

@@ -37,16 +37,18 @@ play_swap(ScreenA?, ScreenB?) :-
     person # person(bob, DrawsB?, GrantsB, _, [mint(usd, 2), accept(alice)], none, ScreenB).
 
 %% The scripted person the super-app's plays activate: the root's second
-%% template miniapp_person/4 (programs/self.glp) at the mini-app's own Drawn,
+%% template miniapp_person/5 (programs/self.glp) at the mini-app's own Drawn,
 %% what its dispatcher draws, and ScreenContent, the screen the person reports
 %% (Currencies 2026-10-13 20:09 UTC, item 2, and 20:21 UTC, item 1; GSG
 %% 2026-10-13 20:22 UTC, G; vGLP 2026-10-16 11:25 UTC, item 4).  The role
-%% chooses the script, the person's acts on its end of the person channel:
+%% chooses the script, the person's acts on its end of the person channel,
+%% each peer named by its key in the list of the keys the person knows, the
+%% person's own key the first argument (alice knows bob, bob alice):
 %%   alice  [mint(usd, 2), swap(bob, usd, alice, now, 2, bob, now, 2)]
 %%   bob    [mint(usd, 2), accept(alice)]
 %%   watch  []
 %% watch grants nothing and reports the screen.
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
-miniapp_person(Id, alice, ch(Ds, Gs?), S?) :- person # person(Id?, Ds?, Gs, _, [mint(usd, 2), swap(bob, usd, alice, now, 2, bob, now, 2)], none, S).
-miniapp_person(Id, bob, ch(Ds, Gs?), S?) :- person # person(Id?, Ds?, Gs, _, [mint(usd, 2), accept(alice)], none, S).
-miniapp_person(Id, watch, ch(Ds, Gs?), S?) :- person # person(Id?, Ds?, Gs, _, [], none, S).
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
+miniapp_person(Me, alice, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, _, [mint(usd, 2), swap(Bob?, usd, Me?, now, 2, Bob?, now, 2)], none, S).
+miniapp_person(Me, bob, [Alice], ch(Ds, Gs?), S?) :- person # person(Me?, Ds?, Gs, _, [mint(usd, 2), accept(Alice?)], none, S).
+miniapp_person(Id, watch, _, ch(Ds, Gs?), S?) :- person # person(Id?, Ds?, Gs, _, [], none, S).

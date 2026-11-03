@@ -14,13 +14,13 @@
 ///
 /// Each outcome is asserted singly. The old disjunction matched||otherwise was
 /// vacuous: one of bob_consumer's two clauses always fires.
-import 'dart:async';
-import 'dart:isolate';
+@Timeout.none
+library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glp_multiagent/isolate_protocol.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
+import 'isolate_agents.dart';
 import 'programs_dir.dart';
 
 void main() {
@@ -31,67 +31,28 @@ void main() {
     final probe = '$programs/tests/mad_w_probe.glp';
     final rootSelf = '$programs/self.glp';
 
-    final reply = ReceivePort();
-    final ports = <String, SendPort>{};
-    final out = <String, List<String>>{'alice': [], 'bob': []};
-    final ready = <String>{};
-
-    reply.listen((msg) {
-      if (msg is AgentReady) {
-        ports[msg.agentId] = msg.commandPort;
-        ready.add(msg.agentId);
-      } else if (msg is AgentOutput) {
-        out[msg.agentId]?.add(msg.line);
-      } else if (msg is AgentSendMad) {
-        ports[msg.to]?.send(DeliverMad(msg.agentId, msg.payload));
-      } else if (msg is AgentError) {
-        out[msg.agentId]?.add('[ERROR] ${msg.error}');
-      }
-    });
-
-    Future<void> spawn(String id) => Isolate.spawn(
-          agentIsolateEntry,
-          InitAgent(
-            agentId: id,
-            program: probe,
-            rootSelfGlpPath: rootSelf,
-            replyPort: reply.sendPort,
-            deferStart: true,
-          ),
-        );
-
-    Future<bool> waitUntil(bool Function() c,
-        {Duration t = const Duration(seconds: 12)}) async {
-      final end = DateTime.now().add(t);
-      while (DateTime.now().isBefore(end)) {
-        if (c()) return true;
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-      return c();
-    }
-
-    await spawn('alice');
-    await spawn('bob');
-    await waitUntil(() => ready.length == 2);
-    ports['alice']!.send(StartAgent());
-    ports['bob']!.send(StartAgent());
+    final agents = IsolateAgents();
+    addTearDown(agents.dispose);
+    await agents.spawn('alice', probe, rootSelf);
+    await agents.spawn('bob', probe, rootSelf);
+    await agents.ready();
+    agents.start('alice');
+    agents.start('bob');
     // Each person's first act tells the agent its role and the keys of the
     // peers it knows, the agent started from agent(ch(_?,_),ch(_?,_))
     // (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP 670d36a,
     // Implementation Notes, "Boot", and Remark "Agent Names").
-    ports['alice']!.send(UserInput(const GStruct(
-        'init', [GAtom('alice'), GList([GAtom('bob')])])));
-    ports['bob']!.send(
-        UserInput(const GStruct('init', [GAtom('bob'), GList([])])));
+    agents.input('alice', const GStruct(
+        'init', [GAtom('alice'), GList([GAtom('bob')])]));
+    agents.input('bob', const GStruct('init', [GAtom('bob'), GList([])]));
 
-    // Wait for BOTH reports. bob_producer and bob_consumer are concurrent, and
-    // the order they reach the output is not fixed: under load bob_produced can
-    // arrive after bob_ch_matched. Waiting on one and then reading the other
-    // is a race, and it is what turned this test red inside the full suite while
-    // it passed run alone.
-    await waitUntil(() =>
-        out['bob']!.any((l) => l.contains('bob_produced')) &&
-        out['bob']!.any((l) => l.contains('bob_ch_matched')));
+    // Both reports, and then quiescence: bob_producer and bob_consumer are
+    // concurrent and the order they reach the output is not fixed, and the
+    // clause that must not fire is judged once nothing more will run.
+    await agents.until('bob_produced and bob_ch_matched',
+        () => agents.has('bob', 'bob_produced') && agents.has('bob', 'bob_ch_matched'));
+    await agents.settle();
+    final out = agents.out;
     final produced = out['bob']!.any((l) => l.contains('bob_produced'));
     final otherwise = out['bob']!.any((l) => l.contains('bob_ch_otherwise'));
     final matched = out['bob']!.any((l) => l.contains('bob_ch_matched'));
@@ -100,11 +61,6 @@ void main() {
     print('BOB OUT: ${out['bob']}');
     // ignore: avoid_print
     print('ALICE OUT: ${out['alice']}');
-
-    for (final p in ports.values) {
-      p.send(DisposeAgent());
-    }
-    reply.close();
 
     expect(produced, isTrue,
         reason: 'the `_w`-backed reader matched the nested head w(W?)');

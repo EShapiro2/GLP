@@ -9,14 +9,15 @@
 /// reader) — the exact case the mediator polarity fix had to handle. A
 /// single-heap test would not, since there the response slot is a plain
 /// writer.
-import 'dart:async';
+@Timeout.none
+library;
+
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glp_multiagent/isolate_protocol.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
+import 'isolate_agents.dart';
 import 'programs_dir.dart';
 
 final _programs = programsDir();
@@ -29,103 +30,47 @@ void main() {
   test('connect → accept → connected round-trips on both sides', () async {
     final rootSelf = '$_programs/self.glp';
 
-    final reply = ReceivePort();
-    final ports = <String, SendPort>{};
-    final output = <String, List<String>>{'alice': [], 'bob': []};
-    final logs = <String, List<String>>{'alice': [], 'bob': []};
-    final ready = <String>{};
-    // An agent's first stats follow its initialisation, the initial run to
-    // quiescence included.
-    final started = <String>{};
-
-    reply.listen((msg) {
-      if (msg is AgentReady) {
-        ports[msg.agentId] = msg.commandPort;
-        ready.add(msg.agentId);
-      } else if (msg is AgentOutput) {
-        output[msg.agentId]?.add(msg.line);
-      } else if (msg is AgentLog) {
-        logs[msg.agentId]?.add('[${msg.tag}] ${msg.message}');
-      } else if (msg is AgentSendMad) {
-        // Route the opaque payload to the destination isolate.
-        ports[msg.to]?.send(DeliverMad(msg.agentId, msg.payload));
-      } else if (msg is AgentStats) {
-        started.add(msg.agentId);
-      } else if (msg is AgentError) {
-        output[msg.agentId]?.add('[ERROR] ${msg.error}');
-      }
-    });
-
-    Future<void> spawn(String id) => Isolate.spawn(
-          agentIsolateEntry,
-          InitAgent(
-            agentId: id,
-            program: _program,
-            rootSelfGlpPath: rootSelf,
-            replyPort: reply.sendPort,
-            deferStart: true,
-          ),
-        );
-
-    Future<bool> waitUntil(bool Function() cond,
-        {Duration timeout = const Duration(seconds: 15)}) async {
-      final deadline = DateTime.now().add(timeout);
-      while (DateTime.now().isBefore(deadline)) {
-        if (cond()) return true;
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-      return cond();
-    }
-
-    bool has(String who, String needle) =>
-        output[who]!.any((l) => l.contains(needle));
-
-    await spawn('alice');
-    await spawn('bob');
+    final agents = IsolateAgents();
+    addTearDown(agents.dispose);
+    await agents.spawn('alice', _program, rootSelf);
+    await agents.spawn('bob', _program, rootSelf);
 
     // All ports registered (deferred-start), then release GLP init.
-    expect(await waitUntil(() => ready.length == 2), isTrue,
-        reason: 'both isolates ready');
-    ports['alice']!.send(StartAgent());
-    ports['bob']!.send(StartAgent());
+    await agents.ready();
+    agents.start('alice');
+    agents.start('bob');
     // Each person's first act tells the agent its name, the agent started
     // from agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition
     // "Multiagent GLP"; IGLP, Implementation Notes, "Boot").
-    ports['alice']!.send(UserInput(const GAtom('alice')));
-    ports['bob']!.send(UserInput(const GAtom('bob')));
-
-    expect(
-        await waitUntil(() => started.containsAll(['alice', 'bob'])),
-        isTrue,
-        reason: 'both initialized');
+    agents.input('alice', const GAtom('alice'));
+    agents.input('bob', const GAtom('bob'));
+    await agents.until('both initialized',
+        () => agents.started.containsAll(['alice', 'bob']));
 
     // Alice cold-calls Bob.
-    ports['alice']!.send(UserInput(const GStruct('connect', [GAtom('bob')])));
-    expect(await waitUntil(() => has('bob', 'befriend(alice, req(1))')), isTrue,
-        reason: 'bob received the befriend notify');
+    agents.input('alice', const GStruct('connect', [GAtom('bob')]));
+    await agents.until('bob received the befriend notify',
+        () => agents.has('bob', 'befriend(alice, req(1))'));
 
     // Bob accepts.
-    ports['bob']!.send(UserInput(const GStruct('decision',
-        [GAtom('yes'), GAtom('alice'), GStruct('req', [GInt(1)])])));
+    agents.input('bob', const GStruct('decision',
+        [GAtom('yes'), GAtom('alice'), GStruct('req', [GInt(1)])]));
+    await agents.until('both connected',
+        () => agents.has('bob', 'connected(alice)') &&
+            agents.has('alice', 'connected(bob)'));
 
-    final bobConnected =
-        await waitUntil(() => has('bob', 'connected(alice)'));
-    final aliceConnected =
-        await waitUntil(() => has('alice', 'connected(bob)'));
-
-    File('/private/tmp/rt-alice-log.txt').writeAsStringSync(logs['alice']!.join('\n'));
-    File('/private/tmp/rt-bob-log.txt').writeAsStringSync(logs['bob']!.join('\n'));
+    File('/private/tmp/rt-alice-log.txt')
+        .writeAsStringSync(agents.logs['alice']!.join('\n'));
+    File('/private/tmp/rt-bob-log.txt')
+        .writeAsStringSync(agents.logs['bob']!.join('\n'));
     // ignore: avoid_print
-    print('ALICE OUT:\n${output['alice']!.join('\n')}');
+    print('ALICE OUT:\n${agents.out['alice']!.join('\n')}');
     // ignore: avoid_print
-    print('BOB OUT:\n${output['bob']!.join('\n')}');
+    print('BOB OUT:\n${agents.out['bob']!.join('\n')}');
 
-    expect(bobConnected, isTrue, reason: 'bob emits connected(alice)');
-    expect(aliceConnected, isTrue, reason: 'alice emits connected(bob)');
-
-    for (final p in ports.values) {
-      p.send(DisposeAgent());
-    }
-    reply.close();
+    expect(agents.has('bob', 'connected(alice)'), isTrue,
+        reason: 'bob emits connected(alice)');
+    expect(agents.has('alice', 'connected(bob)'), isTrue,
+        reason: 'alice emits connected(bob)');
   });
 }
