@@ -221,15 +221,19 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-help
 
 /* ---------- map ---------- */
 const POS = {GKK:[560,0], DAO:[150,1], REC:[350,1], GSG:[560,1], GC:[910,1],
-  LDAO:[60,2], GSN:[380,2], GAI:[540,2], GFF:[700,2], GB:[880,2], JOINT:[1050,2],
+  LDAO:[60,2], GDO:[220,2], GSN:[380,2], GAI:[540,2], GFF:[700,2], GB:[880,2], JOINT:[1050,2],
   FDAO:[190,3], CSSN:[330,3], GSNP:[470,3], AGORA:[740,3], STAY:[900,3], LIB:[1060,3]};
 function drawGraph(){
   const W = 1120, rowH = 90, nw = 104, nh = 42, top = 36;
+  // A contract with no place in POS (one recorded since) gets one in a row of its own below.
+  const last = Math.max(...Object.values(POS).map(p => p[1]));
+  D.contracts.filter(c => !POS[c.id]).forEach((c, i) => { POS[c.id] = [60 + i*130, last + 1]; });
+  const rows = Math.max(...D.contracts.map(c => POS[c.id][1]));
   const xy = id => ({x: POS[id][0], y: top + POS[id][1]*rowH});
-  const H = top + 3*rowH + 36;
+  const H = top + rows*rowH + 36;
   let s = '<defs>' + Object.entries(FAM).map(([k, v]) => `<linearGradient id="g-${k}" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${v[0]}"/><stop offset="1" stop-color="${v[1]}"/></linearGradient>`).join('') +
     `<marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c7c7cc"/></marker></defs>`;
-  D.contracts.forEach(c => c.extends.forEach(p => { const a = xy(c.id), b = xy(p), y1 = a.y - nh/2, y2 = b.y + nh/2 + 4, my = (y1 + y2) / 2;
+  D.contracts.forEach(c => c.extends.filter(p => POS[p]).forEach(p => { const a = xy(c.id), b = xy(p), y1 = a.y - nh/2, y2 = b.y + nh/2 + 4, my = (y1 + y2) / 2;
     s += `<path class="edge" d="M${a.x},${y1} C${a.x},${my} ${b.x},${my} ${b.x},${y2}" marker-end="url(#ar)"/>`; }));
   D.contracts.forEach(c => { const p = xy(c.id);
     s += `<g class="node" data-id="${c.id}" transform="translate(${p.x - nw/2},${p.y - nh/2})">
@@ -251,6 +255,7 @@ const OPEN = new Set();
 function drawShelves(){
   $('#shelves').innerHTML = `<div class="sh"><h2>Contracts</h2><span>${D.contracts.length} contracts, each with a live app</span></div>` + GROUPS.map(([title, fams], i) => {
     const cs = D.contracts.filter(c => fams.includes(c.family));
+    if (!cs.length) return '';
     return `<div class="grp${OPEN.has(i) ? ' open' : ''}" data-g="${i}"><button class="tog" aria-expanded="${OPEN.has(i)}"><h2>${title}</h2>
         <span class="minis">${cs.map(c => `<span class="mini" style="background:${grad(c)}">${c.icon}</span>`).join('')}</span>
         <span class="cnt">${cs.length}</span><span class="chev">›</span></button>
