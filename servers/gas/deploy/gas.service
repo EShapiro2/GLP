@@ -1,0 +1,24 @@
+# systemd unit for GAS, the GLP app store (servers/gas).
+# Deployed to /etc/systemd/system/gas.service.
+# Runs as the system user `gas`, which owns the clone at /srv/glp (the build
+# writes into it: servers/gas/build and programs/vglp/cva/gas_worlds, both
+# gitignored) and whose home holds the Dart package cache.  Caddy, in front
+# (deploy/Caddyfile), gives TLS and the public name.  dart and python3 are
+# found on systemd's default PATH (/usr/bin), where their packages put them.
+[Unit]
+Description=GAS, the GLP app store
+After=network.target
+
+[Service]
+User=gas
+Group=gas
+WorkingDirectory=/srv/glp/servers/gas
+Environment=HOST=127.0.0.1 PORT=8080 MAX_WORLDS=3
+ExecStart=/srv/glp/servers/gas/run.sh
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/srv/glp /var/lib/gas
+
+[Install]
+WantedBy=multi-user.target

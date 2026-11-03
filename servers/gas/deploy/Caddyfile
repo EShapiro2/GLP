@@ -1,0 +1,17 @@
+# Caddy configuration for GAS, the GLP app store, on a server of its own.
+# Deployed to /etc/caddy/Caddyfile; replace gas.example.org with the server's
+# name, whose DNS points to it.  Caddy gets and renews the certificate.
+
+gas.example.org {
+	reverse_proxy 127.0.0.1:8080
+}
+
+# Under a path of a site that has other apps, GAS's pages link relatively,
+# and the prefix is stripped:
+#
+# example.org {
+# 	redir /glp /glp/
+# 	handle_path /glp/* {
+# 		reverse_proxy 127.0.0.1:8080
+# 	}
+# }
