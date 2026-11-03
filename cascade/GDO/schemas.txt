@@ -25,6 +25,6 @@ point_transitive(Alice?, Bob; c) :
     at Alice: identity, knows(c), points_to(Bob), +points_to(c)
     at Bob: identity, points_to(c)
 
-cease_point(Alice?, Bob) :
+unpoint(Alice?, Bob) :
     at Alice: identity, -points_to(Bob)
     at Bob: identity
