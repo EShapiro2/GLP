@@ -2307,7 +2307,7 @@ echo "--- Unfriend (play_unfriend_send/recv/absent) ---"
 
 g_uf_send=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_unfriend_send.
+play_unfriend_send(alice, bob).
 :quit
 HEREDOC
 2>&1)
@@ -2316,7 +2316,7 @@ check "SG unfriend_send teardown on friend channel" "msg(alice, bob, unfriend)" 
 
 g_uf_recv=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_unfriend_recv.
+play_unfriend_recv(alice, bob).
 :quit
 HEREDOC
 2>&1)
@@ -2325,7 +2325,7 @@ check "SG unfriend_recv notifies user" "unfriended(alice)" "$g_uf_recv"
 
 g_uf_abs=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_unfriend_absent.
+play_unfriend_absent(alice, bob, carol).
 :quit
 HEREDOC
 2>&1)
@@ -2345,13 +2345,13 @@ echo "--- Introduction: both parties must be friends (play_introduce_*) ---"
 
 g_intro=$("$REPL_RUN" <<HEREDOC
 $SGSIM
-play_introduce_both.
-play_introduce_one.
-play_introduce_other.
-play_introduce_neither.
-play_request_intro_both.
-play_request_intro_stranger.
-play_request_intro_no_anchor.
+play_introduce_both(alice, bob, carol).
+play_introduce_one(alice, bob, carol).
+play_introduce_other(alice, bob, carol).
+play_introduce_neither(alice, bob, carol, dave).
+play_request_intro_both(alice, bob, carol).
+play_request_intro_stranger(alice, bob, carol).
+play_request_intro_no_anchor(alice, bob, carol).
 :quit
 HEREDOC
 2>&1)
@@ -6471,18 +6471,18 @@ $SG_CORE
 :limit 5000000
 play_load("cssn.glpw", K1, Key1).
 play_load("currency.glpw", K2, Key2).
-play_install("cssn.glpw", cssn, I1).
-play_install("currency.glpw", currency, I2).
-play_install("pingapp.glpw", ping, I3).
-play_forged_cert(I4).
-play_forged_invite(F1).
-play_forged_join(F2).
-play_forged_root(F3).
-play_attest(S, K, H, T).
-play_invite(A, B).
-play_invite_declined(A2, B2).
-play_invite_timed(Ms).
-play_coins(C1, C2).
+play_install(alice, "cssn.glpw", cssn, I1).
+play_install(alice, "currency.glpw", currency, I2).
+play_install(alice, "pingapp.glpw", ping, I3).
+play_forged_cert(alice, I4).
+play_forged_invite(alice, bob, F1).
+play_forged_join(alice, bob, F2).
+play_forged_root(alice, bob, F3).
+play_attest(alice, bob, S, K, H, T).
+play_invite(alice, bob, A, B).
+play_invite_declined(alice, bob, A2, B2).
+play_invite_timed(alice, bob, Ms).
+play_coins(alice, bob, C1, C2).
 :quit
 HEREDOC
 2>&1)
@@ -6519,7 +6519,7 @@ check_not "SG super-app no failed play" "→ failed" "$sg_core"
 sg_naf=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
-play_not_a_friend(A, B).
+play_not_a_friend(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
@@ -6533,7 +6533,7 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # default widget of a stream of a union of tuples, a menu of the four forms
 # kept open; a Connect granted on it reaches the agent, whose notice
 # connected(bob) arrives on the same channel, merged with the draws
-# (superapp_ui/3, alice with a scripted bob).  A friend's request to connect
+# (superapp_ui/4, alice with a scripted peer for each key she knows, here bob).  A friend's request to connect
 # raises respond_friend's card, the friend shown, and the person's yes on it
 # is their decision, with the pending value passed back as it came (home.glp
 # with its dispatcher and a scripted person who grants on the card once it is
@@ -6545,7 +6545,7 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 sg_home=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
-superapp_ui(alice, [input(1, [], connect(bob)) | G?], []).
+superapp_ui(alice, [bob], [input(1, [], connect(bob)) | G?], []).
 play_home(alice, yes, [msg(agent, person, befriend(bob, error))], C, L).
 play_home(alice, yes, [msg(agent, person, befriend_intro(carol, bob, error))], CI, LI).
 play_home(alice, no, [msg(agent, person, befriend_intro(carol, bob, error))], CN, LN).
@@ -6569,7 +6569,7 @@ sg_cs=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
-play_cssn(N1, N2).
+play_cssn(alice, bob, N1, N2).
 :quit
 HEREDOC
 2>&1)
@@ -6588,7 +6588,7 @@ sg_two=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
-play_both(A, B, C, D).
+play_both(alice, bob, A, B, C, D).
 :quit
 HEREDOC
 2>&1)
@@ -6682,7 +6682,7 @@ sg_reinvite=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/social/graph/endapp $SG_CORE
 $SG_CORE
 :limit 5000000
-play_reinvite(A, B).
+play_reinvite(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
@@ -6706,7 +6706,7 @@ sg_sovereign=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/currencies/sovereign/denominated $SG_CORE
 $SG_CORE
 :limit 5000000
-play_sovereign(A, B).
+play_sovereign(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
