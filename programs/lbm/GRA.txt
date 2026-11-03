@@ -3,10 +3,10 @@
 % Paper: Location-Based Matching for Digital Cooperatives, in preparation
 % Extends: GDO, Grassroots Directed Overlay, LBM's (programs/lbm), and through it GSG and GKK, GSC's.  It cites GDO:1 to GDO:3 whole and restates none.
 % Defines: call, bid, award, ride, fare, deposit, pickup.  The fare and the deposit are in the call's denomination; which coins they are is a currency contract's, which GRA does not name (Udi, 2026-11-03).
-% Last changed: 2026-11-03, written by LBM #4 Cowork from the paper at LBM main b31edd0, the clauses as Udi approved them to LBM #4 and the instance as he edited it in Overleaf.
-% Schemas: GRA.glp, not yet written.
+% Last changed: 2026-11-03, Carol in the declaration (Udi, to LBM #4); written by LBM #4 Cowork from the paper at LBM main b31edd0, the clauses as Udi approved them to LBM #4 and the instance as he edited it in Overleaf.
+% Schemas: GRA.glp beside this file, GDO's eight and GRA's nine, with now(t) and location(x) environment predicates, which the platform keeps current and no schema adds or deletes (Udi, 2026-11-03, to LBM #4; GSC, Appendix Values in Speech-Act Schemas).  Call is three schemas: call_open, Alice's call; call, its delivery to a person Alice points to; forward_call, its delivery by them to a person they point to.  Bid is two, bid and bid_fwd, on a call delivered and a call forwarded.  The selection of the bidder and the fare, the refund and the condition on cancelling are the instance's, and no part of the schemas.
 GRA: Grassroots Ride Auction
-Alice and Bob are persons.  GRA extends GDO.  A person has a location.
+Alice, Bob and Carol are persons.  GRA extends GDO.  A person has a location.
 1. ■ Call.  Alice may call for bids on a ride from the persons Alice points to and the persons they point to, stating the pickup point, the destination, the bidding period and the terms.
 2. ■ Bid.  Bob, who received the call, may bid a fare and a pickup delay before the bidding period ends; Alice may not open a bid before then.
 3. ■ Award.  When the bidding period ends, Alice awards the ride to the bidder the terms select, at the fare the terms set; Alice's fare and Bob's deposit are then locked.
