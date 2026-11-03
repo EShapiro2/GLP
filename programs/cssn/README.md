@@ -23,7 +23,7 @@ The platform carries the two widget declarations the compiler prints, `Approval 
 | `platform.vglp` | the canonical CVA platform of CSSN, as printed |
 | `compile.sh` | prints `platform.vglp` from the contract, or checks it |
 | `miniapp.glp` | `miniapp/4`, the same file as `../apps/gsg/miniapp.glp` |
-| `person.glp` | the scripted person, by role: the village's seven, and `fig_alice` to `fig_dave` of the app's scenario; `village_person/5`, a parent looking also at their children's phones |
+| `person.glp` | the scripted person, by role, with the keys the person knows, by which its script names its peers: the village's seven, and `fig_alice` to `fig_dave` of the app's scenario; `village_person/6`, a parent looking also at their children's phones |
 | `plays.glp` | `play_village/7`, the village of Section 4.6.3, with no super-app |
 | `self.glp` | the platform's types written again, the router's types, and the exports |
 | `CSSN_sglp.glp` | the profiles of CSSN's simulation, sGLP's term form |
