@@ -20,6 +20,11 @@
 /// Needs a native libsodium, as GNA's headless tests do; self-skips when it
 /// is absent.  runprobe's mini-app artefact is written first, as MB writes it,
 /// by the REPL's `:artefact`.
+///
+/// No test has a clock (Timeout.none): every wait is on an event, a line
+/// coming or an agent's process exiting or writing an error, and a run that
+/// never ends is the suite's watchdog's to stop (test/run_all_tests.sh,
+/// Section Q; IsolateManager's boot, 20de107f).
 library;
 
 import 'dart:io';
@@ -147,7 +152,7 @@ void main() {
   Future<void> holdTo(
       Probe probe,
       Map<String, String> keyOf,
-      Map<String, List<String>> outputs,
+      Map<String, AgentLines> outputs,
       Future<String> Function(String agent, bool Function(String)) line,
       String Function(String) strip) async {
     for (final (agent, pattern) in probe.lines) {
@@ -159,8 +164,9 @@ void main() {
       final agent = what.split(' ').first;
       final re = patternOf(RegExp.escape(what.substring(agent.length + 1)),
           keyOf);
-      await lineOf(outputs[agent]!, (l) =>
-          outputs[agent]!.where((x) => re.hasMatch(strip(x))).length == n &&
+      final out = outputs[agent]!;
+      await out.first((l) =>
+          out.lines.where((x) => re.hasMatch(strip(x))).length == n &&
           re.hasMatch(strip(l)));
     }
   }
@@ -194,13 +200,14 @@ void main() {
       expect(answered1, contains('forty_two'));
       expect(answered2, contains('forty_two'));
       final called = boot.outputs['callee']!
+          .lines
           .where((l) => l.startsWith('< called('))
           .toList();
       expect(called, hasLength(2));
       for (final l in called) {
         expect(l, contains(boot.keyOf['callee']!));
       }
-    }, timeout: const Timeout(Duration(minutes: 3)));
+    }, timeout: Timeout.none);
 
     for (final probe in probes) {
       test('the boot form, ${probe.boot}: the end state MB holds it to',
@@ -221,12 +228,56 @@ void main() {
         }
         await holdTo(probe, boot.keyOf, boot.outputs, boot.line,
             (l) => l.startsWith('< ') ? l.substring(2) : l);
-      }, timeout: const Timeout(Duration(minutes: 3)));
+      }, timeout: Timeout.none);
     }
   });
 
   group('one process per agent', () {
-    const helper = 'test/helpers/headless_boot_agent.dart';
+    // The agent program, compiled once before any agent process starts.
+    late HeadlessAgentProgram agent;
+    setUpAll(() async {
+      agent = await HeadlessAgentProgram.compile();
+    });
+    tearDownAll(() => agent.dispose());
+
+    /// The boot's failure: a [StateError] naming [id] and [when].
+    Matcher failsNaming(String id, String when) => throwsA(isA<StateError>()
+        .having((e) => e.message, 'message', startsWith('$id '))
+        .having((e) => e.message, 'message', contains(when)));
+
+    test(
+        'an agent whose process exits before it is ready fails the boot, '
+        'named, on the exit', () async {
+      // Its boot file is not there: the process fails reading it, before its
+      // layer starts and before it prints READY.
+      final missing = '$programs/tests/no_such_dir_boot.glp';
+      await expectLater(
+          HeadlessBootProcesses.start(
+            agents: const [HeadlessAgentSpec('alice', 'agent/2')],
+            program: '$programs/tests/no_such_dir',
+            rootSelfGlpPath: root,
+            agent: agent,
+            bootFile: HeadlessBootFile(const [], '', '', missing),
+          ),
+          failsNaming('alice', 'before it was ready'));
+    }, timeout: Timeout.none);
+
+    test(
+        'an agent whose program does not load fails the boot, named, before '
+        'it starts', () async {
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      await expectLater(
+          HeadlessBootProcesses.start(
+            agents: keyedAgents(1),
+            program: '$programs/tests/no_such_program',
+            rootSelfGlpPath: root,
+            agent: agent,
+          ),
+          failsNaming('callee', 'before it started'));
+    }, timeout: Timeout.none);
 
     test(
         'the entry form: the same three agents in three processes, the cold '
@@ -239,7 +290,7 @@ void main() {
         agents: keyedAgents(2),
         program: '$programs/tests/mad_keyed',
         rootSelfGlpPath: root,
-        helper: helper,
+        agent: agent,
       );
       addTearDown(boot.dispose);
       final answered1 =
@@ -250,11 +301,11 @@ void main() {
       expect(answered2, contains('forty_two'));
       final called = await boot.line('callee', (l) => l.startsWith('called('));
       expect(called, contains(boot.keyOf['callee']!));
-      await lineOf(boot.outputs['callee']!, (l) =>
-          boot.outputs['callee']!.where((x) => x.startsWith('called(')).length ==
-              2 &&
+      final callee = boot.outputs['callee']!;
+      await callee.first((l) =>
+          callee.lines.where((x) => x.startsWith('called(')).length == 2 &&
           l.startsWith('called('));
-    }, timeout: const Timeout(Duration(minutes: 4)));
+    }, timeout: Timeout.none);
 
     for (final probe in probes) {
       test('the boot form, ${probe.boot}: the end state MB holds it to',
@@ -265,10 +316,10 @@ void main() {
         }
         final f = HeadlessAgentSpec.ofBootFile('$programs/tests/${probe.boot}');
         final boot = await HeadlessBootProcesses.ofBootFile(f,
-            rootSelfGlpPath: root, helper: helper);
+            rootSelfGlpPath: root, agent: agent);
         addTearDown(boot.dispose);
         await holdTo(probe, boot.keyOf, boot.outputs, boot.line, (l) => l);
-      }, timeout: const Timeout(Duration(minutes: 4)));
+      }, timeout: Timeout.none);
     }
   });
 }

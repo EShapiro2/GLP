@@ -125,18 +125,54 @@ Future<GrassrootsIdentity> identityOfPersona(String persona) async {
       keyPair: await Ed25519().newKeyPairFromSeed(seed));
 }
 
-/// The first line of [lines] that [test] accepts, waiting up to [wait] for it.
-Future<String> lineOf(List<String> lines, bool Function(String) test,
-    {Duration wait = const Duration(seconds: 90)}) async {
-  final deadline = DateTime.now().add(wait);
-  while (true) {
-    for (final l in lines) {
-      if (test(l)) return l;
+/// The lines an agent sends its person, as they come.  [first] waits for a
+/// line on the event of its arrival, with no clock and no polling (IGLP,
+/// Implementation Notes, "Event-driven execution": "there is no clock and no
+/// polling"), and fails once no further line can come ([end]: the agent's
+/// process exited or wrote an error), naming the agent, as IsolateManager's
+/// boot fails on an agent's fault or its isolate's exit.  A run that never
+/// ends is the suite's watchdog's to stop (test/run_all_tests.sh, Section Q).
+class AgentLines {
+  final String agentId;
+  final List<String> _lines = [];
+  final List<(bool Function(String), Completer<String>)> _waiting = [];
+  Object? _ended;
+  AgentLines(this.agentId);
+
+  /// Every line so far, oldest first.
+  List<String> get lines => List.unmodifiable(_lines);
+
+  void add(String line) {
+    _lines.add(line);
+    for (final w in List.of(_waiting)) {
+      if (w.$1(line)) {
+        _waiting.remove(w);
+        w.$2.complete(line);
+      }
     }
-    if (DateTime.now().isAfter(deadline)) {
-      throw TimeoutException('no line came: ${lines.join(' | ')}');
+  }
+
+  /// No further line will come, for [why]; every wait still pending fails.
+  void end(Object why) {
+    if (_ended != null) return;
+    _ended = why;
+    for (final w in _waiting) {
+      w.$2.completeError(why);
     }
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    _waiting.clear();
+  }
+
+  /// The first line that [test] accepts: one already come, or the first to
+  /// come that it accepts.  [test] may read [lines], which holds the line it
+  /// is given.
+  Future<String> first(bool Function(String) test) {
+    for (final l in _lines) {
+      if (test(l)) return Future.value(l);
+    }
+    if (_ended != null) return Future.error(_ended!);
+    final c = Completer<String>();
+    _waiting.add((test, c));
+    return c.future;
   }
 }
 
@@ -180,7 +216,7 @@ class HeadlessBoot {
   final Map<String, String> keyOf;
   final Map<String, AgentRuntime> hosts;
   final Map<String, HeadlessGrassrootsNetwork> layers;
-  final Map<String, List<String>> outputs;
+  final Map<String, AgentLines> outputs;
 
   HeadlessBoot._(this.specs, this.keyOf, this.hosts, this.layers, this.outputs);
 
@@ -222,7 +258,7 @@ class HeadlessBoot {
     final layers = <String, HeadlessGrassrootsNetwork>{};
     final nets = <String, HeadlessGlpNetwork>{};
     final hosts = <String, AgentRuntime>{};
-    final outputs = <String, List<String>>{};
+    final outputs = <String, AgentLines>{};
     for (final spec in agents) {
       final identity = ids[spec.id]!;
       final layer = HeadlessGrassrootsNetwork(
@@ -252,7 +288,7 @@ class HeadlessBoot {
         ),
         network: net,
       );
-      final lines = outputs[spec.id] = <String>[];
+      final lines = outputs[spec.id] = AgentLines(spec.id);
       host.onOutput = (line) {
         lines.add(line);
         onOutput?.call(spec.id, line);
@@ -286,7 +322,7 @@ class HeadlessBoot {
 
   /// The first line agent [id] sent its person that [test] accepts.
   Future<String> line(String id, bool Function(String) test) =>
-      lineOf(outputs[id]!, test);
+      outputs[id]!.first(test);
 
   Future<void> dispose() async {
     for (final h in hosts.values) {
@@ -298,16 +334,57 @@ class HeadlessBoot {
   }
 }
 
+/// The agent program of [HeadlessBootProcesses], headless_boot_agent.dart,
+/// compiled once to a kernel file before any agent process starts, which
+/// every agent process then runs.  So no agent process builds the package:
+/// `dart run` in each process built the package's native assets in its one
+/// `.dart_tool` at once, and on macOS the processes raced on
+/// `objective_c.dylib` and failed (`Failed to codesign dylib`, `Failed to set
+/// install names`; Section QF on main 8e4e185a, 2026-11-03).
+class HeadlessAgentProgram {
+  /// The kernel file.
+  final String path;
+  final Directory _dir;
+  HeadlessAgentProgram._(this.path, this._dir);
+
+  /// [helper], a path relative to the package root, which is the working
+  /// directory of `flutter test`, compiled to a kernel file in a directory
+  /// of its own.
+  static Future<HeadlessAgentProgram> compile(
+      {String helper = 'test/helpers/headless_boot_agent.dart'}) async {
+    final dir = Directory.systemTemp.createTempSync('glp_headless_agent_');
+    final out = '${dir.path}/headless_boot_agent.dill';
+    final r = await Process.run(
+        dartExecutable(), ['compile', 'kernel', helper, '-o', out]);
+    if (r.exitCode != 0 || !File(out).existsSync()) {
+      dir.deleteSync(recursive: true);
+      throw StateError('$helper did not compile: exit ${r.exitCode}: '
+          '${r.stdout}${r.stderr}');
+    }
+    return HeadlessAgentProgram._(out, dir);
+  }
+
+  void dispose() => _dir.deleteSync(recursive: true);
+}
+
 /// A boot in one process per agent: each agent is headless_boot_agent.dart,
-/// run by Dart; this process gives each the others' keys and addresses, its
-/// goal's arguments with the peers' keys in them, and the order to start,
-/// and reads their lines.
+/// compiled once ([HeadlessAgentProgram]) and run by Dart; this process gives
+/// each the others' keys and addresses, its goal's arguments with the peers'
+/// keys in them, and the order to start, and reads their lines.
+///
+/// Every wait is on an event, with no clock (IGLP, Implementation Notes,
+/// "Event-driven execution"): the boot waits for each agent's `READY` and
+/// then, in the order given, its `INIT`, and fails, naming the agent, when
+/// its process exits or writes an error before it, as IsolateManager's boot
+/// fails on an agent's fault or its isolate's exit before Ready; after the
+/// boot, a wait for a line fails likewise ([AgentLines]).
 class HeadlessBootProcesses {
   final List<HeadlessAgentSpec> specs;
   final Map<String, String> keyOf;
   final Map<String, Process> processes;
-  final Map<String, List<String>> outputs;
+  final Map<String, AgentLines> outputs;
   final Map<String, List<String>> transcripts;
+  bool _disposing = false;
 
   HeadlessBootProcesses._(
       this.specs, this.keyOf, this.processes, this.outputs, this.transcripts);
@@ -315,13 +392,13 @@ class HeadlessBootProcesses {
   /// A boot file's agents over its program directory, one process each.
   static Future<HeadlessBootProcesses> ofBootFile(HeadlessBootFile f,
           {required String rootSelfGlpPath,
-          required String helper,
+          required HeadlessAgentProgram agent,
           void Function(String agentId, String line)? onOutput}) =>
       start(
           agents: f.agents,
           program: f.programDir,
           rootSelfGlpPath: rootSelfGlpPath,
-          helper: helper,
+          agent: agent,
           bootFile: f,
           onOutput: onOutput);
 
@@ -329,96 +406,125 @@ class HeadlessBootProcesses {
     required List<HeadlessAgentSpec> agents,
     required String program,
     required String rootSelfGlpPath,
-    required String helper,
+    required HeadlessAgentProgram agent,
     HeadlessBootFile? bootFile,
     void Function(String agentId, String line)? onOutput,
   }) async {
     final keyOf = <String, String>{};
     final processes = <String, Process>{};
-    final outputs = <String, List<String>>{};
+    final outputs = <String, AgentLines>{};
     final transcripts = <String, List<String>>{};
     final ports = <String, String>{};
     final ready = <String, Completer<void>>{};
     final inited = <String, Completer<void>>{};
-    for (final spec in agents) {
-      final p = await Process.start(dartExecutable(), [
-        'run',
-        helper,
-        spec.id,
-        rootSelfGlpPath,
-        program,
-        spec.goalLabel,
-        if (bootFile != null) bootFile.path,
-      ]);
-      processes[spec.id] = p;
-      final lines = outputs[spec.id] = <String>[];
-      final all = transcripts[spec.id] = <String>[];
-      ready[spec.id] = Completer<void>();
-      inited[spec.id] = Completer<void>();
-      p.stdout
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .listen((l) {
-        all.add(l);
-        if (l.startsWith('READY ')) {
-          final parts = l.split(' ');
-          ports[spec.id] = parts[1];
-          keyOf[spec.id] = parts[2];
-          ready[spec.id]!.complete();
-        } else if (l == 'INIT') {
-          inited[spec.id]!.complete();
-        } else if (l.startsWith('OUT ')) {
-          final line = l.substring(4);
-          lines.add(line);
-          onOutput?.call(spec.id, line);
-        }
-      });
-      p.stderr.transform(utf8.decoder).listen((s) => all.add('stderr: $s'));
-    }
-    const waiting = Duration(seconds: 90);
-    for (final spec in agents) {
-      await ready[spec.id]!.future.timeout(waiting,
-          onTimeout: () => throw TimeoutException(
-              '${spec.id} was not ready: ${transcripts[spec.id]!.join(' | ')}'));
-    }
-    for (final spec in agents) {
-      for (final other in agents) {
-        if (other.id == spec.id) continue;
-        processes[spec.id]!
-            .stdin
-            .writeln('PEER ${keyOf[other.id]} 127.0.0.1:${ports[other.id]}');
+    late final HeadlessBootProcesses boot;
+    var booted = false;
+
+    // Why [id] can go no further: its process exited, or wrote an error.
+    void fault(String id, String what) {
+      final when = !ready[id]!.isCompleted
+          ? ' before it was ready'
+          : !inited[id]!.isCompleted
+              ? ' before it started'
+              : '';
+      final why =
+          StateError('$id $what$when: ${transcripts[id]!.join(' | ')}');
+      for (final c in [ready[id]!, inited[id]!]) {
+        if (!c.isCompleted) c.completeError(why);
       }
+      if (!(booted && boot._disposing)) outputs[id]!.end(why);
     }
-    for (final spec in agents) {
-      final person = spec.bootForm ? personOf(spec, keyOf) : null;
-      processes[spec.id]!.stdin.writeln('GO ${json.encode({
-            'extraArgs': spec.bootForm ? const [] : resolveArgs(spec, keyOf),
-            'person': person == null
-                ? null
-                : {
-                    'functor': person.functor,
-                    'args': person.args,
-                    'channelIndex': person.channelIndex,
-                  },
-          })}');
-      await inited[spec.id]!.future.timeout(waiting,
-          onTimeout: () => throw TimeoutException(
-              '${spec.id} did not start: ${transcripts[spec.id]!.join(' | ')}'));
+
+    try {
+      for (final spec in agents) {
+        final id = spec.id;
+        final lines = outputs[id] = AgentLines(id);
+        final all = transcripts[id] = <String>[];
+        // A failure can come while another agent is awaited; marked handled
+        // here, it reaches its await and not the zone as an uncaught error.
+        ready[id] = Completer<void>()..future.ignore();
+        inited[id] = Completer<void>()..future.ignore();
+        final p = await Process.start(dartExecutable(), [
+          agent.path,
+          id,
+          rootSelfGlpPath,
+          program,
+          spec.goalLabel,
+          if (bootFile != null) bootFile.path,
+        ]);
+        processes[id] = p;
+        // A write to a process that has exited fails here; the exit itself is
+        // the fault, reported below.
+        p.stdin.done.ignore();
+        p.stdout
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .listen((l) {
+          all.add(l);
+          if (l.startsWith('READY ')) {
+            final parts = l.split(' ');
+            ports[id] = parts[1];
+            keyOf[id] = parts[2];
+            if (!ready[id]!.isCompleted) ready[id]!.complete();
+          } else if (l == 'INIT') {
+            if (!inited[id]!.isCompleted) inited[id]!.complete();
+          } else if (l.startsWith('OUT ')) {
+            final line = l.substring(4);
+            lines.add(line);
+            onOutput?.call(id, line);
+          }
+        });
+        p.stderr.transform(utf8.decoder).listen((s) {
+          all.add('stderr: $s');
+          fault(id, 'wrote an error');
+        });
+        p.exitCode.then((code) => fault(id, 'exited with code $code'));
+      }
+      await Future.wait([for (final spec in agents) ready[spec.id]!.future],
+          eagerError: true);
+      for (final spec in agents) {
+        for (final other in agents) {
+          if (other.id == spec.id) continue;
+          processes[spec.id]!
+              .stdin
+              .writeln('PEER ${keyOf[other.id]} 127.0.0.1:${ports[other.id]}');
+        }
+      }
+      for (final spec in agents) {
+        final person = spec.bootForm ? personOf(spec, keyOf) : null;
+        processes[spec.id]!.stdin.writeln('GO ${json.encode({
+              'extraArgs': spec.bootForm ? const [] : resolveArgs(spec, keyOf),
+              'person': person == null
+                  ? null
+                  : {
+                      'functor': person.functor,
+                      'args': person.args,
+                      'channelIndex': person.channelIndex,
+                    },
+            })}');
+        await inited[spec.id]!.future;
+      }
+    } catch (_) {
+      for (final p in processes.values) {
+        p.kill();
+      }
+      rethrow;
     }
-    return HeadlessBootProcesses._(
+    boot = HeadlessBootProcesses._(
         agents, keyOf, processes, outputs, transcripts);
+    booted = true;
+    return boot;
   }
 
   Future<String> line(String id, bool Function(String) test) =>
-      lineOf(outputs[id]!, test);
+      outputs[id]!.first(test);
 
+  /// Each agent ends when its standard input closes.
   Future<void> dispose() async {
+    _disposing = true;
     for (final p in processes.values) {
-      await p.stdin.close();
-      await p.exitCode.timeout(const Duration(seconds: 20), onTimeout: () {
-        p.kill();
-        return -1;
-      });
+      p.stdin.close().ignore();
+      await p.exitCode;
     }
   }
 }
