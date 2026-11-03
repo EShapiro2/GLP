@@ -1050,6 +1050,17 @@ class HeadlessGrassrootsNetwork {
       }
     };
 
+    // A new IK handshake answered while a session stood completes when the
+    // initiator's first packet opens under it, and only then ends the
+    // standing session (GNA §2.6).
+    _noiseSessions.onSessionCompleted = (transport, pubkey, peerId) {
+      if (peerId != null) {
+        _udpService?.mapIncomingConnectionToPubkey(peerId, _hex(pubkey));
+      }
+      _onSessionReplaced(pubkey);
+      _onSessionEstablished(pubkey);
+    };
+
     _messageRouter.onSignalingReceived =
         (senderPubkey, payload, {observedIp, observedPort}) =>
             _onSignalingReceived(senderPubkey, payload);

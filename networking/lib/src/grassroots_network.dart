@@ -3804,6 +3804,17 @@ class GrassrootsNetwork {
       }
     };
 
+    // A new IK handshake answered while a session stood completes when the
+    // initiator's first packet opens under it, and only then ends the
+    // standing session (GNA §2.6).
+    _noiseSessions.onSessionCompleted = (transport, remote, peerId) {
+      if (transport == PeerTransport.udp && peerId != null) {
+        _udpService?.mapIncomingConnectionToPubkey(peerId, _pubkeyToHex(remote));
+      }
+      _recordHandshakeIdentity(transport, remote, peerId);
+      _onNoiseSessionEstablished(transport, remote);
+    };
+
     _messageRouter.onAttestationReceived =
         (senderPubkey, payload, transport, handshakeHash) {
       unawaited(_onAttestationReceived(
