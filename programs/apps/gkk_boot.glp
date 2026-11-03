@@ -30,7 +30,7 @@ start(_, _) :- otherwise | true.
 exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), Stream(BootSays))?).
 say(R, Me, Ps, ch(_, [init(R?, Me?, Ps?)])).
 
-%% One smartphone: the super-app's agent on the isolate's network under the person's own name, its home answering the cards the super-app raises and passing its notices to the person's script (core/self.glp, scripted_home/5), the mini-app read from its artefact beside the program and installed, and the person's acts by role over the two peers the person knows.  The mini-app's scripted person is activated under the role, which chooses its script (programs/self.glp, the template miniapp_person/4).
+%% One smartphone: the super-app's agent on the isolate's network under the person's own name, its home answering the cards the super-app raises and passing its notices to the person's script (core/self.glp, scripted_home/5), the mini-app read from its artefact beside the program and installed, and the person's acts by role over the two peers the person knows.  The mini-app's scripted person is activated under the role, which chooses its script, with the two keys the person knows, by which the script names its peers (programs/self.glp, the template miniapp_person/5).
 procedure gkk_phone(Role?, Key?, List(Key)?, NetInStream?).
 gkk_phone(alice, Me, [P, Q], NetIn) :-
     agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -40,7 +40,7 @@ gkk_phone(alice, Me, [P, Q], NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     alice_gkk(Me?, P?, Q?, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
-    miniapp_person_run(C?, Me?, alice, PersonEnd?, Screen),
+    miniapp_person_run(C?, Me?, alice, [P?, Q?], PersonEnd?, Screen),
     send_to_user(Screen?).
 gkk_phone(bob, Me, [P, Q], NetIn) :-
     agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -50,7 +50,7 @@ gkk_phone(bob, Me, [P, Q], NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     bob_gkk(Me?, P?, Q?, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
-    miniapp_person_run(C?, Me?, bob, PersonEnd?, Screen),
+    miniapp_person_run(C?, Me?, bob, [P?, Q?], PersonEnd?, Screen),
     send_to_user(Screen?).
 gkk_phone(carol, Me, [P, Q], NetIn) :-
     agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -60,7 +60,7 @@ gkk_phone(carol, Me, [P, Q], NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     carol_gkk(Me?, P?, Q?, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
-    miniapp_person_run(C?, Me?, carol, PersonEnd?, Screen),
+    miniapp_person_run(C?, Me?, carol, [P?, Q?], PersonEnd?, Screen),
     send_to_user(Screen?).
 %% A person who knows other than two has no smartphone here.
 gkk_phone(_, _, _, _) :- otherwise | true.
@@ -151,20 +151,20 @@ certified(M, CK?, CSig?) :-
     self_key(K),
     sign(creator_cert(Src?, [establish, acquaint, introduce], grassroots), K?, CSig).
 
-%% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/4, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/5, person_at/7) and core/self.glp (hold_person/1), which do not export them.
-procedure miniapp_person_run(Content?, Key?, Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
-miniapp_person_run(M, Id, Role, PEnd, Screen?) :-
+%% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them.
+procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
     module(M?) |
     opaque_type(miniapp/4, M?, H0),
-    opaque_type(miniapp_person/4, M?, H),
-    person_at(H0?, H?, M?, Id?, Role?, PEnd?, Screen).
+    opaque_type(miniapp_person/5, M?, H),
+    person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
 
-procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
-person_at([D0, _], [D, S], M, Id, Role, PEnd, Screen?) :-
+procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
     D0? =?= D? |
-    find_type(miniapp_person/4, [D?, S?], T),
-    run(miniapp_person(Id?, Role?, PEnd?, Screen), T?, M?).
-person_at(_, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
+    find_type(miniapp_person/5, [D?, S?], T),
+    run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
+person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
 
 procedure hold_person(Channel(PersonOut(Opaque), PersonIn(Opaque))?).
 hold_person(ch([_ | Ds], Gs?)) :- hold_person(ch(Ds?, Gs)).

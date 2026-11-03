@@ -2,7 +2,7 @@
 %%   :artefact programs/apps/gsg programs/social/graph/core
 %%   :boot programs/apps/gsg_boot.glp programs/social/graph/core
 %%
-%% Each person trusts the compiler's key, reads the certified artefact gsg.glpw from graph/core with load_file/2 and installs it, with one end of a person channel; alice connects to bob, they befriend in the super-app's social graph across the isolates, alice invites bob to the mini-app, bob consents, and the handshake opens a root channel between their two executions, each activated by run/3 with its grants.  Over that conversation the mini-app runs GSG's contract, compiled down the cascade: each person establishes their identity (GKK:1) and asks to know the other, alice asks to come to know bob and bob is asked and answers yes (GKK:2), alice offers bob friendship, bob is asked and answers yes (GSG:1), and then bob ends the friendship (GSG:2).  The other end of each person channel is the mini-app's own scripted person (programs/apps/gsg/person.glp), activated from the module value under its role, as the super-app's plays activate a mini-app's person (superapp_plays.glp, miniapp_person_run/5, written again here); its screen goes to the person, one line each, and so does what the super-app told the person of the friendship in its own social graph, sg(...).  The screen is each view the agent writes, its machine state and the persons it knows (vGLP b7e3517, Section 5.4, "The compilation"), the persons a request question shows where the script looks, and each answer the person gives.  Expected, each person's lines in order:
+%% Each person trusts the compiler's key, reads the certified artefact gsg.glpw from graph/core with load_file/2 and installs it, with one end of a person channel; alice connects to bob, they befriend in the super-app's social graph across the isolates, alice invites bob to the mini-app, bob consents, and the handshake opens a root channel between their two executions, each activated by run/3 with its grants.  Over that conversation the mini-app runs GSG's contract, compiled down the cascade: each person establishes their identity (GKK:1) and asks to know the other, alice asks to come to know bob and bob is asked and answers yes (GKK:2), alice offers bob friendship, bob is asked and answers yes (GSG:1), and then bob ends the friendship (GSG:2).  The other end of each person channel is the mini-app's own scripted person (programs/apps/gsg/person.glp), activated from the module value under its role, as the super-app's plays activate a mini-app's person (superapp_plays.glp, miniapp_person_run/6, written again here); its screen goes to the person, one line each, and so does what the super-app told the person of the friendship in its own social graph, sg(...).  The screen is each view the agent writes, its machine state and the persons it knows (vGLP b7e3517, Section 5.4, "The compilation"), the persons a request question shows where the script looks, and each answer the person gives.  Expected, each person's lines in order:
 %%   [alice] sg(connected(bob)), view([], [], [tab('Contacts', knows), tab('Friends', friend)]), menu(alice, []), view([identity], [], [tab('Contacts', knows), tab('Friends', friend)]), view([identity], [bob], [tab('Contacts', knows), tab('Friends', friend)]), view([knows(bob), identity], [bob], [tab('Contacts', knows), tab('Friends', friend)]), menu(alice, [bob]), view([friend(bob), knows(bob), identity], [bob], [tab('Contacts', knows), tab('Friends', friend)]), view([knows(bob), identity], [bob], [tab('Contacts', knows), tab('Friends', friend)]);
 %%   [bob] sg(befriend(alice)), sg(connected(alice)), view([], [], [tab('Contacts', knows), tab('Friends', friend)]), view([identity], [], [tab('Contacts', knows), tab('Friends', friend)]), view([identity], [alice], [tab('Contacts', knows), tab('Friends', friend)]), gave(acquaint(alice, bob), yes), view([knows(alice), identity], [alice], [tab('Contacts', knows), tab('Friends', friend)]), gave(befriend(alice, bob), yes), view([friend(alice), knows(alice), identity], [alice], [tab('Contacts', knows), tab('Friends', friend)]), view([knows(alice), identity], [alice], [tab('Contacts', knows), tab('Friends', friend)]).
 %%
@@ -30,7 +30,7 @@ start(_, _) :- otherwise | true.
 exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), Stream(BootSays))?).
 say(R, Me, Ps, ch(_, [init(R?, Me?, Ps?)])).
 
-%% One smartphone: the super-app's agent on the isolate's network under the person's own name, the mini-app read from its artefact beside the program and installed, and the person's acts by role, over the one peer the person knows.  The mini-app's scripted person is activated under the role, which chooses its script (programs/self.glp, the template miniapp_person/4: "a role choosing the script among the mini-app's own plays").
+%% One smartphone: the super-app's agent on the isolate's network under the person's own name, the mini-app read from its artefact beside the program and installed, and the person's acts by role, over the one peer the person knows.  The mini-app's scripted person is activated under the role, which chooses its script, with the key the person knows, by which the script names its peer (programs/self.glp, the template miniapp_person/5: "a role choosing the script among the mini-app's own plays").
 procedure gsg_phone(Role?, Key?, List(Key)?, NetInStream?).
 gsg_phone(alice, Me, [Q], NetIn) :-
     agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -39,7 +39,7 @@ gsg_phone(alice, Me, [Q], NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     alice_gsg(Me?, Q?, C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, Me?, alice, PersonEnd?, Screen),
+    miniapp_person_run(C?, Me?, alice, [Q?], PersonEnd?, Screen),
     send_to_user(Screen?).
 gsg_phone(bob, Me, [P], NetIn) :-
     agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -48,7 +48,7 @@ gsg_phone(bob, Me, [P], NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     bob_gsg(Me?, P?, C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, Me?, bob, PersonEnd?, Screen),
+    miniapp_person_run(C?, Me?, bob, [P?], PersonEnd?, Screen),
     send_to_user(Screen?).
 %% A person who knows nobody, or more than the one the play gives, has no smartphone here.
 gsg_phone(_, _, _, _) :- otherwise | true.
@@ -99,20 +99,20 @@ certified(M, CK?, CSig?) :-
     self_key(K),
     sign(creator_cert(Src?, [establish, acquaint, introduce, befriend, unfriend], grassroots), K?, CSig).
 
-%% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/4, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/5, person_at/7) and core/self.glp (hold_person/1), which do not export them.
-procedure miniapp_person_run(Content?, Key?, Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
-miniapp_person_run(M, Id, Role, PEnd, Screen?) :-
+%% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them.
+procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
     module(M?) |
     opaque_type(miniapp/4, M?, H0),
-    opaque_type(miniapp_person/4, M?, H),
-    person_at(H0?, H?, M?, Id?, Role?, PEnd?, Screen).
+    opaque_type(miniapp_person/5, M?, H),
+    person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
 
-procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
-person_at([D0, _], [D, S], M, Id, Role, PEnd, Screen?) :-
+procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
     D0? =?= D? |
-    find_type(miniapp_person/4, [D?, S?], T),
-    run(miniapp_person(Id?, Role?, PEnd?, Screen), T?, M?).
-person_at(_, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
+    find_type(miniapp_person/5, [D?, S?], T),
+    run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
+person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
 
 procedure hold_person(Channel(PersonOut(Opaque), PersonIn(Opaque))?).
 hold_person(ch([_ | Ds], Gs?)) :- hold_person(ch(Ds?, Gs)).

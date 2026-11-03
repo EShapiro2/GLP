@@ -21,7 +21,7 @@ GKK:1 is `establish`, GKK:2 `acquaint`, GKK:3 `introduce`.  GB:1 is `mint_coin(p
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GB, as printed, with the words of its pragmas and its two widget declarations, the request labels and placements its pragmas give |
 | `miniapp.glp` | `miniapp/4`: the agent, its dispatcher, and the agent's network over the conversations; the file of the other apps, but that it hands the agent the calendar, GB requiring the day |
-| `person.glp` | `miniapp_person/4`: the scripted person, by role, `alice`, `bob` or `carol`, and `market_alice` to `market_escrow`, the parties of the village market |
+| `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `alice`, `bob` or `carol`, and `market_alice` to `market_escrow`, the parties of the village market |
 | `plays.glp` | `play_bonds/3`, the mini-app with no super-app, the play writing the calendars, and `play_village/7`, the village market of GB's paper on it |
 | `self.glp` | the platform's types written again, and the exports |
 | `../compile.sh` | the check that each app's `platform.vglp` is what the compiler prints |

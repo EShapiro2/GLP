@@ -27,7 +27,7 @@ GKK:1 is the schema `establish`, guarded by the person, which adds `identity` at
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GC, as printed, with the words of its pragmas and its two widget declarations, `Approval =::= approval_sentence.` and `Menu =::= social_menu(...)`, the request labels and placements its pragmas give |
 | `miniapp.glp` | `miniapp/4`: the agent, its dispatcher, and the agent's network over the conversations; GSG's app's file, the same in each app (`../gsg/README.md`) |
-| `person.glp` | `miniapp_person/4`: the scripted person, by role, `alice` or `bob` |
+| `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `alice` or `bob` |
 | `plays.glp` | `play_coins/2`, the mini-app with no super-app, and `play_village/6`, the village market of GC's paper on it |
 | `self.glp` | the platform's types written again, and the exports |
 | `../gc_boot.glp` | the super-app hosting the app on two smartphones, under `:boot` |

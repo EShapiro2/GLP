@@ -56,13 +56,18 @@ play_same(ScreenA?, ScreenB?) :-
     person # person(bob, DrawsB?, GrantsB, [mint(2), accept(alice)], ScreenB).
 
 %% The scripted person the super-app's plays activate: the root's second
-%% template miniapp_person/4 (programs/self.glp) at the mini-app's own Drawn,
+%% template miniapp_person/5 (programs/self.glp) at the mini-app's own Drawn,
 %% what its dispatcher draws, and ScreenContent, the screen the person reports
 %% (Currencies 2026-10-13 20:09 UTC, item 2, and 20:21 UTC, item 1; GSG
 %% 2026-10-13 20:22 UTC, G; vGLP 2026-10-16 11:25 UTC, item 4).  The role
-%% chooses the script, the person's acts on its end of the person channel:
+%% chooses the script, the person's acts on its end of the person channel,
+%% each peer named by its key in the list of the keys the person knows, the
+%% person's own key the first argument (alice knows bob, bob alice):
 %%   alice  [mint(2), swap(bob, alice, 2, bob, 2)]
 %%   bob    [mint(2), accept(alice)]
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
-miniapp_person(Id, alice, ch(Ds, Gs?), S?) :- person # person(Id?, Ds?, Gs, [mint(2), swap(bob, alice, 2, bob, 2)], S).
-miniapp_person(Id, bob, ch(Ds, Gs?), S?) :- person # person(Id?, Ds?, Gs, [mint(2), accept(alice)], S).
+%% Any other role, or a person who knows other than the one key, has no
+%% script: the person reports the screen and acts on nothing.
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
+miniapp_person(Me, alice, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, [mint(2), swap(Bob?, Me?, 2, Bob?, 2)], S).
+miniapp_person(Me, bob, [Alice], ch(Ds, Gs?), S?) :- person # person(Me?, Ds?, Gs, [mint(2), accept(Alice?)], S).
+miniapp_person(Me, _, _, ch(Ds, Gs?), S?) :- otherwise | person # person(Me?, Ds?, Gs, [], S).

@@ -27,7 +27,7 @@ Fourteen schemas: GKK's `establish`, `acquaint` and `introduce`, GSG's `befriend
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GSN, as printed, with the words of its pragmas and its two widget declarations, `Approval =::= approval_sentence.` and `Menu =::= social_menu(...)`, the request labels its pragmas give |
 | `miniapp.glp` | `miniapp/4`, the same file as `../gsg/miniapp.glp` |
-| `person.glp` | `miniapp_person/4`: the scripted person, by role, `alice` or `bob` |
+| `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `alice` or `bob` |
 | `plays.glp` | `play_network/2`, the mini-app with no super-app |
 | `self.glp` | the platform's types written again, the router's types, and the exports |
 | `screens/` | the screens of GAI's figure of the app, and their README |
