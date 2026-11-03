@@ -37,7 +37,7 @@ imported procedure speech#say(Channel(Stream(_), Stream(Output))?,
 imported procedure speech#ask(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure speech#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The bridge's entries

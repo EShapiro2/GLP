@@ -114,7 +114,7 @@ decide(no, From, refuse(From?)).
       expect(
           c.source,
           contains('exported procedure dispatch(Stream(Ask(Question))?, '
-              'PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).'));
+              'PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).'));
       expect(
           c.source,
           contains('dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, '
@@ -124,7 +124,7 @@ decide(no, From, refuse(From?)).
       expect(
           c.source,
           contains('\nprocedure(Q, T) dispatch(Stream(Ask(Q))?, '
-              'PersonChannel(T)?, Channel(Stream(_), Stream(_)), '
+              'PersonChannel(T)?, Channel(Stream(Input(T)), Stream(Draw(T))), '
               'Stream(Spawn(Q, T))).'));
       expect(c.source, isNot(contains('Draw ::= ')));
       expect(c.source, contains('Ask(Q) ::= ask(Constant, Q).'));
@@ -185,7 +185,7 @@ decide(no, From, refuse(From?)).
       expect(
           c.source,
           contains('procedure(T) split_grants(PersonIn(T)?, Inputs(T), '
-              'Stream(_)).'));
+              'Stream(Input(T))).'));
       expect(
           c.source,
           contains('procedure(Q, T) serve(Events(Q, T)?, Stream(Draw(T)), '
@@ -2310,7 +2310,7 @@ Output ::= said(Peer) ; heard(Peer, Integer) ; ok.
           c.source,
           contains("dispatch(Stream(Ask(Question))?, "
               "PersonChannel(Drawn)?, "
-              "Channel(Stream(_), Stream(Output)))."));
+              "Channel(Stream(Input(Drawn)), Stream(Output)))."));
       // The compiled program draws its output as construct 0, its value
       // under output, and hands the draws to the generic dispatcher, which
       // numbers the questions from 1 (vGLP, Definition "Construct Process").
@@ -2334,7 +2334,7 @@ Output ::= said(Peer) ; heard(Peer, Integer) ; ok.
       expect(
           c.source,
           contains("PersonChannel(Drawn)?, "
-              "Channel(Stream(_), Stream(_)))."));
+              "Channel(Stream(Input(Drawn)), Stream(Draw(Drawn))))."));
       expect(c.source,
           contains('dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, Ss)'));
     });

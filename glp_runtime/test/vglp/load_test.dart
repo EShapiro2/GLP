@@ -564,7 +564,7 @@ Question ::= yesNo_r(YesNo?).
 Ask(Q) ::= ask(Constant, Q).
 Drawn ::= yesNo_r(_) ; YesNo.
 imported procedure asker#yn(Channel(Stream(_), Stream(_))?, Stream(Ask(Question))).
-imported procedure asker#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+imported procedure asker#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 exported procedure go(PersonIn(Drawn)?, PersonOut(Drawn)).
 go(Gs, Ds?) :- asker # yn(MCh?, Asks), asker # dispatch(Asks?, ch(Gs?, Ds), MCh).
 ''');
@@ -572,11 +572,15 @@ go(Gs, Ds?) :- asker # yn(MCh?, Asks), asker # dispatch(Asks?, ch(Gs?, Ds), MCh)
           () => typeCheckProgram(
               discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp),
               rootDir: fixture.path),
-          throwsA(isA<CompileError>().having(
-              (e) => e.message,
-              'message',
-              allOf(contains('asker # dispatch(Asks?, ch(Gs?, Ds), MCh)'),
-                  contains('defines no type Output')))));
+          // The program's unused output is typed Stream(Draw(T)) where it
+          // defines no Output (vGLP 305c8d0, Section 6.3: "a program that
+          // defines no Output has its unused output typed Stream(Draw(T)), so
+          // the dispatcher, and every program that imports it, has no open
+          // type"), so a program writing to it is refused by its types.
+          throwsA(predicate((Object e) =>
+              e.toString().contains('Type checking failed') &&
+              e.toString().contains(
+                  'Channel<Stream<Input<Drawn>>,Stream<Draw<Drawn>>>'))));
     });
 
     test('a program whose output end is anonymous defines none and loads', () {

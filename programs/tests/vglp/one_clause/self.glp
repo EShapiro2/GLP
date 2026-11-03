@@ -60,7 +60,7 @@ imported procedure responder#greet(Offer?, Stream(Decision),
 imported procedure responder#pick(Offer?, Stream(Decision),
     Stream(Ask(Question))).
 imported procedure responder#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The plays

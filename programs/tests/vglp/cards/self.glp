@@ -43,7 +43,7 @@ imported procedure cards#deal(Channel(Stream(_), Stream(Output))?,
 imported procedure cards#votes(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure cards#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The bridge's entries

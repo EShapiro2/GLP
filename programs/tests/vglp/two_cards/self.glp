@@ -27,7 +27,7 @@ Drawn      ::= child_card_w(_) ; parent_card_w(_) ; Integer ; YesNo.
 imported procedure parent#parent(Stream(YesNo), Stream(Ask(Question))).
 imported procedure child#child(Stream(Integer), Stream(Ask(Question))).
 imported procedure child#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 %% Both modules at once, their ask streams merged, served by the child's
 %% dispatcher: P the parent's answers, C the child's.

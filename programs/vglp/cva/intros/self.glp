@@ -111,7 +111,7 @@ Ask(Q)   ::= ask(Constant, Q).
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 exported procedure play_intros(Stream(_), Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_intros(LA?, LB?, LC?, N?) :-

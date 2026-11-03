@@ -26,7 +26,7 @@ Drawn    ::= ok_w(_) ; card_w(_) ; YesNo.
 imported procedure home#befriend(Peer?, Peer?, Stream(Fact),
     Stream(Ask(Question))).
 imported procedure home#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 exported procedure play_befriend(Stream(Fact), Stream(_)).
 play_befriend(F?, Log?) :-

@@ -555,9 +555,14 @@ class _Generator {
     // drawn (vGLP 169b008, Definition "Canonical Compilation"; vGLP,
     // 2026-10-13 19:25 UTC, items 1, 3 and 4, Udi: yes).
     final outputWidget = output == null ? null : _outputWidget(output);
+    // The program's end of the person channel receives no grant and is
+    // typed Stream(Input(T)) all the same, and a program that defines no
+    // Output has its unused output typed Stream(Draw(T)), so the dispatcher,
+    // and every program that imports it, has no open type (vGLP 305c8d0,
+    // Section 6.3, the dispatcher's listing).
     final ch = output == null
-        ? 'Channel(Stream(_), Stream(_))'
-        : 'Channel(Stream(_), Stream($outputTypeName))';
+        ? 'Channel(Stream(${gen.inputType}), Stream(${gen.drawType}))'
+        : 'Channel(Stream(${gen.inputType}), Stream($outputTypeName))';
     final d = gen.dispatch, cs = gen.constructs;
     // The drawing of the program's output, construct 0, by procedures typed
     // at the program's T, its value under the functor output (vGLP,
