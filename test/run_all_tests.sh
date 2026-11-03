@@ -7979,6 +7979,14 @@ echo ""
 
 fi  # Section SGLP
 
+# The run's own directory for the raw outputs and json reports of Sections Q
+# and NET (Code #22, 2026-11-03, IGLP-rawpaths): under tmp/, named by the
+# branch of the worktree the suite runs in and the PID of this run, printed at
+# each section's head.  Until 2026-11-03 every run wrote the same files in
+# tmp/, so two runs at once in two worktrees each wrote the other's lines into
+# its file, and the json reader of one could count the other's tests.
+SUITE_RUN_DIR="/Users/udi/Grassroots/tmp/suite-$(git -C "$GLP_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null | tr '/' '-')-$$"
+
 # The watchdog (Code #22's authorisation, 2026-11-03; IGLP-coop), Section Q's
 # and Section NET's.  A test's verdict does not depend on how loaded the
 # machine is: each runner runs with
@@ -8153,6 +8161,7 @@ KNOWN_RED=(
 )
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="
+echo "  (raw output and json reports in $SUITE_RUN_DIR: q_dart.txt, q_dart.json, q_flutter.txt, q_flutter.json)"
 echo ""
 
 # glp_multiagent/assets/glp/ is generated and gitignored (2026-09-16), so a
@@ -8205,20 +8214,21 @@ fi
 # entry, which is not a suite failure — so every capture below is guarded
 # against `set -e` (line 24) rather than letting it abort the run.
 #
-# Each runner's raw output is kept, overwritten on every run, so that a failure
-# can be read in full after the suite ends: the section itself prints only the
-# failing names and, when its gate fails, the last twenty lines of dart test's
-# output and none of flutter test's (Integration, 2026-10-11).  Writing them
-# reads nothing back and moves no count or gate.
-Q_RAW_DIR="/Users/udi/Grassroots/tmp"
-Q_RAW_DART="$Q_RAW_DIR/suite_q_dart.txt"
-Q_RAW_FLUTTER="$Q_RAW_DIR/suite_q_flutter.txt"
+# Each runner's raw output and json report are kept in the run's directory,
+# SUITE_RUN_DIR, so that a failure can be read in full after the suite ends:
+# the section itself prints only the failing names and, when its gate fails,
+# the last twenty lines of dart test's output and none of flutter test's
+# (Integration, 2026-10-11).  The json report is what the watchdog and the
+# names of files that did not load are read from.
+Q_RAW_DIR="$SUITE_RUN_DIR"
+Q_RAW_DART="$Q_RAW_DIR/q_dart.txt"
+Q_RAW_FLUTTER="$Q_RAW_DIR/q_flutter.txt"
 mkdir -p "$Q_RAW_DIR" 2>/dev/null || true
 
 Q_DNF_DART=0
 Q_DNF_FLUTTER=0
 if _section QD; then
-_q_run "$GLP_RUNTIME" "$Q_RAW_DIR/suite_q_dart.json" "$Q_RAW_DART" "" "$DART" test
+_q_run "$GLP_RUNTIME" "$Q_RAW_DIR/q_dart.json" "$Q_RAW_DART" "" "$DART" test
 DART_TREE_STATUS=$Q_RUN_STATUS
 Q_DNF_DART=$Q_RUN_DNF
 DART_TREE_RESULT=$(cat "$Q_RAW_DART" 2>/dev/null) || DART_TREE_RESULT=""
@@ -8251,7 +8261,7 @@ DART_TREE_FAILS=$(printf '%s' "$DART_TREE_CLEAN" \
 # its file (Code #22, 2026-11-03: given_network_test.dart did not load on main
 # 51e227c9, and the section said only that dart test named no failing test).
 if _section QD; then
-    Q_LOAD_DART=$(_q_load_failures "$Q_RAW_DIR/suite_q_dart.json" "") || true
+    Q_LOAD_DART=$(_q_load_failures "$Q_RAW_DIR/q_dart.json" "") || true
     if [ -n "$Q_LOAD_DART" ]; then
         DART_TREE_FAILS=$(printf '%s\n%s' "$DART_TREE_FAILS" "$Q_LOAD_DART" | sed '/^$/d' | sort -u)
     fi
@@ -8274,7 +8284,7 @@ elif ! command -v flutter >/dev/null 2>&1; then
     echo "flutter is not on PATH, so glp_multiagent/test/ did not run" > "$Q_RAW_FLUTTER" 2>/dev/null \
         || echo "  (flutter test's output could not be written to $Q_RAW_FLUTTER)"
 else
-    _q_run "$GLP_DIR/glp_multiagent" "$Q_RAW_DIR/suite_q_flutter.json" "$Q_RAW_FLUTTER" "glp_multiagent/" flutter test
+    _q_run "$GLP_DIR/glp_multiagent" "$Q_RAW_DIR/q_flutter.json" "$Q_RAW_FLUTTER" "glp_multiagent/" flutter test
     MA_STATUS=$Q_RUN_STATUS
     Q_DNF_FLUTTER=$Q_RUN_DNF
     MA_RESULT=$(cat "$Q_RAW_FLUTTER" 2>/dev/null) || MA_RESULT=""
@@ -8296,7 +8306,7 @@ else
         | sed 's|^.*/glp_multiagent/test/|glp_multiagent/test/|' \
         | { if [ "$Q_DNF_FLUTTER" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
         | sort -u) || true
-    Q_LOAD_FLUTTER=$(_q_load_failures "$Q_RAW_DIR/suite_q_flutter.json" "glp_multiagent/") || true
+    Q_LOAD_FLUTTER=$(_q_load_failures "$Q_RAW_DIR/q_flutter.json" "glp_multiagent/") || true
     if [ -n "$Q_LOAD_FLUTTER" ]; then
         MA_FAILS=$(printf '%s\n%s' "$MA_FAILS" "$Q_LOAD_FLUTTER" | sed '/^$/d' | sort -u)
     fi
@@ -8402,8 +8412,9 @@ if _section NET; then
 # package:test, so `dart test` refuses it; and the pure-Dart core in
 # networking/core by `dart test`.  Each runs from its own directory, as
 # networking/README.md says.  The conventions are Section Q's: each runner's
-# raw output kept in /Users/udi/Grassroots/tmp/ (suite_net_flutter.txt,
-# suite_net_glue.txt, suite_net_core.txt), each failing test printed as a FAIL
+# raw output and json report kept in the run's directory, SUITE_RUN_DIR
+# (net_flutter, net_glue and net_core, each .txt and .json), each failing test
+# printed as a FAIL
 # line "networking/<package>/test/<file>: <test name>" and counted, the passed
 # count added to the totals, a missing runner a hard failure, and a runner that
 # exits non-zero naming no failing test a hard failure, since it did not run its
@@ -8411,8 +8422,9 @@ if _section NET; then
 echo "=== Section NET: networking's own tests (GNA) ==="
 echo ""
 
-NET_RAW_DIR="/Users/udi/Grassroots/tmp"
+NET_RAW_DIR="$SUITE_RUN_DIR"
 mkdir -p "$NET_RAW_DIR" 2>/dev/null || true
+echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, each .txt and .json)"
 NET_PASSED=0
 NET_FAILED=0
 
@@ -8422,7 +8434,7 @@ _net_run() {
     local name="$1" sub="$2" runner="$3"
     local dir="$GLP_DIR/networking${sub:+/$sub}"
     local rel="networking${sub:+/$sub}"
-    local raw="$NET_RAW_DIR/suite_net_$name.txt"
+    local raw="$NET_RAW_DIR/net_$name.txt"
     local result status clean passed fails dnf
     if ! command -v "$runner" >/dev/null 2>&1; then
         echo "  FAIL: $runner is not on PATH, so $rel/test/ cannot run"
@@ -8433,7 +8445,7 @@ _net_run() {
     fi
     # Under the watchdog, as Section Q's runners are: no test clock, and a run
     # not finished within Q_BOUND reported by the tests it was in.
-    _q_run "$dir" "$NET_RAW_DIR/suite_net_$name.json" "$raw" "$rel/" "$runner" test
+    _q_run "$dir" "$NET_RAW_DIR/net_$name.json" "$raw" "$rel/" "$runner" test
     status=$Q_RUN_STATUS
     dnf=$Q_RUN_DNF
     result=$(cat "$raw" 2>/dev/null) || result=""
@@ -8453,7 +8465,7 @@ _net_run() {
         | { if [ "$dnf" = 1 ]; then grep -v ' - did not complete$'; else cat; fi; } \
         | sort -u) || true
     local loads
-    loads=$(_q_load_failures "$NET_RAW_DIR/suite_net_$name.json" "$rel/") || true
+    loads=$(_q_load_failures "$NET_RAW_DIR/net_$name.json" "$rel/") || true
     if [ -n "$loads" ]; then
         fails=$(printf '%s\n%s' "$fails" "$loads" | sed '/^$/d' | sort -u)
     fi
