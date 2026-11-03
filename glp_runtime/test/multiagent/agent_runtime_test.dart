@@ -31,6 +31,7 @@ agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 procedure start(Stream(PlayIn)?, Stream(NetMsg(Constant))?).
 start([call(B) | _], _) :- send_to_net([msg(B?, ping)]).
 start([answer | _], [msg(_, M) | _]) :- send_to_user([got(M?)]).
+start([], _).
 ''';
 
 void main() {

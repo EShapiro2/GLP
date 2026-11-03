@@ -39,17 +39,18 @@ import 'package:glp_runtime/runtime/terms.dart';
 /// initial goal (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP,
 /// Implementation Notes, "Boot").
 const String _playA = r'''
-RsMsg ::= value(Constant?).
+RsMsg ::= value(Constant).
 
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(RsMsg)), Stream(NetMsg(RsMsg)))?).
 agent(ch(In, []), ch(_, [])) :- send_to_net([msg(b, value(X?))]), relay(In?, X).
 
 procedure relay(Stream(Constant)?, Constant).
 relay([go | _], hello).
+relay([], none).
 ''';
 
 const String _playB = r'''
-RsMsg ::= value(Constant?).
+RsMsg ::= value(Constant).
 RsOut ::= got(Constant).
 
 exported procedure agent(Channel(Stream(Constant), Stream(RsOut))?, Channel(Stream(NetMsg(RsMsg)), Stream(NetMsg(RsMsg)))?).
@@ -57,6 +58,7 @@ agent(ch(_, []), ch(N, [])) :- b_in(N?).
 
 procedure b_in(Stream(NetMsg(RsMsg))?).
 b_in([msg(_, value(V)) | _]) :- show(V?).
+b_in([]).
 
 procedure show(Constant?).
 show(hello) :- send_to_user([got(hello)]).

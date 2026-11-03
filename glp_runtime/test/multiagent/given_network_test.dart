@@ -49,6 +49,7 @@ start([call(Callee) | _], _) :- ground(Callee?) |
 start([answer | _], [msg(Me, ask(A?)) | _]) :-
     send_to_user([called(Me?)]),
     answer(A).
+start([], _).
 
 procedure answered(Constant?).
 answered(forty_two) :- send_to_user([answered(forty_two)]).
@@ -63,6 +64,7 @@ answer(forty_two).
 const String _symbolic = r'''
 exported procedure agent(Channel(Stream(Key), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
 agent(ch([P | _], []), ch(_, [])) :- send_to_net([msg(P?, ping)]).
+agent(ch([], []), ch(_, [])).
 ''';
 
 /// An agent that declares a place and tells its person when it is entered.
@@ -70,7 +72,7 @@ const String _placer = r'''
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
 agent(ch(_, []), ch(_, [])) :- place_declare(home, 50, E), watch(E?).
 
-procedure watch(Stream(Constant)?).
+procedure watch(_?).
 watch([E|_]) :- ground(E?) | send_to_user([E?]).
 ''';
 

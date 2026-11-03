@@ -48,6 +48,7 @@ PersonSays ::= init(String, List(Key)).
 
 exported procedure agent(Channel(Stream(PersonSays), Stream(Constant))?, Channel(Stream(ProbeMsg), Stream(NetMsg(Probe)))?).
 agent(ch([init(Role, Ps) | _], []), ch(N, [])) :- agent_init(Role?, Ps?, N?).
+agent(ch([], []), ch(_, [])).
 
 procedure agent_init(String?, List(Key)?, Stream(ProbeMsg)?).
 

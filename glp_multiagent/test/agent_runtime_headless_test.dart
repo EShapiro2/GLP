@@ -51,6 +51,7 @@ start([call(Callee) | _], _) :- ground(Callee?) |
 start([answer | _], [msg(Me, ask(A?)) | _]) :-
     send_to_user([called(Me?)]),
     answer(A).
+start([], _).
 
 procedure answered(Constant?).
 answered(forty_two) :- send_to_user([answered(forty_two)]).
