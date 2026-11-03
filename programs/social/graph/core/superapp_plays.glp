@@ -11,8 +11,8 @@
 %% The super-app holds no declaration of a mini-app's types.  A play mints a
 %% mini-app's person channel at Opaque, installs the mini-app with one end and
 %% hands the other to the mini-app's own scripted person, the instance at the
-%% mini-app's type of the second template miniapp_person/4, activated from the
-%% same module value as the entry (miniapp_person_run/5); the screen it reports
+%% mini-app's type of the second template miniapp_person/5, activated from the
+%% same module value as the entry (miniapp_person_run/6); the screen it reports
 %% comes back to the caller at Opaque, or, under :boot, goes to the person
 %% (GSG, 2026-10-13 18:52 UTC, O5, Udi: approved).  A play never inspects
 %% what a screen carries: it passes it on, and reads only that an item came
@@ -36,10 +36,12 @@ procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
-%% miniapp_person_run(M, Id, Role, PEnd, Screen): the mini-app M's scripted
-%% person activated, from the module value, by run/3 at the type identity of
+%% miniapp_person_run(M, Id, Role, Ps, PEnd, Screen): the mini-app M's scripted
+%% person, under the role Role and with the keys Ps the person knows, the
+%% readable names of the play's other persons standing for them, activated,
+%% from the module value, by run/3 at the type identity of
 %% the second template's opaque instance at the type its exports record for
-%% miniapp_person/4, as the agent activates the entry (agent.glp,
+%% miniapp_person/5, as the agent activates the entry (agent.glp,
 %% activate/6), on the person's end PEnd of the person channel whose other end
 %% the play installs the mini-app with; Screen the screen it reports, at
 %% Opaque.  The play mints the channel and hands its two ends to two
@@ -51,19 +53,19 @@ tee([], [], []).
 %% entries, which the host checks"; GLP, 2026-10-13 20:22 UTC, C; vGLP
 %% 2026-10-14 13:21 UTC, S2).  Where they are not, no person runs: its end of
 %% the person channel is held for good (hold_person/1) and its screen is empty.
-procedure miniapp_person_run(Content?, Key?, Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
-miniapp_person_run(M, Id, Role, PEnd, Screen?) :-
+procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
     module(M?) |
     opaque_type(miniapp/4, M?, H0),
-    opaque_type(miniapp_person/4, M?, H),
-    person_at(H0?, H?, M?, Id?, Role?, PEnd?, Screen).
+    opaque_type(miniapp_person/5, M?, H),
+    person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
 
-procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
-person_at([D0, _], [D, S], M, Id, Role, PEnd, Screen?) :-
+procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
     D0? =?= D? |
-    find_type(miniapp_person/4, [D?, S?], T),
-    run(miniapp_person(Id?, Role?, PEnd?, Screen), T?, M?).
-person_at(_, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
+    find_type(miniapp_person/5, [D?, S?], T),
+    run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
+person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
 
 %% The certified mini-app: pingapp.glpw beside this program, written by the
 %% REPL's :artefact from ../pingapp and read with load_file/2 --- a Module
@@ -93,12 +95,12 @@ play_invite(AliceUi?, BobUi?) :-
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     new_channel(AliceApp, AlicePerson),
-    miniapp_person_run(C?, alice, greet, AlicePerson?, AliceScreen),
+    miniapp_person_run(C?, alice, greet, [bob], AlicePerson?, AliceScreen),
     tee(AliceScreen?, AliceUi, AliceSeen),
     alice_person(C?, CSig?, yes, AliceApp?, AliceOut?, AliceSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     new_channel(BobApp, BobPerson),
-    miniapp_person_run(C?, bob, greet, BobPerson?, BobScreen),
+    miniapp_person_run(C?, bob, greet, [alice], BobPerson?, BobScreen),
     tee(BobScreen?, BobUi, BobSeen),
     bob_person(C?, CSig?, yes, BobApp?, BobOut?, BobSeen?, BobIn).
 
@@ -116,12 +118,12 @@ play_invite_declined(AliceUi?, BobUi?) :-
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     new_channel(AliceApp, AlicePerson),
-    miniapp_person_run(C?, alice, greet, AlicePerson?, AliceScreen),
+    miniapp_person_run(C?, alice, greet, [bob], AlicePerson?, AliceScreen),
     tee(AliceScreen?, AliceUi, AliceSeen),
     alice_person(C?, CSig?, no, AliceApp?, AliceOut?, AliceSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     new_channel(BobApp, BobPerson),
-    miniapp_person_run(C?, bob, greet, BobPerson?, BobScreen),
+    miniapp_person_run(C?, bob, greet, [alice], BobPerson?, BobScreen),
     tee(BobScreen?, BobUi, BobSeen),
     bob_person(C?, CSig?, no, BobApp?, BobOut?, BobSeen?, BobIn).
 
@@ -343,11 +345,11 @@ play_invite_timed(Ms?) :-
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     new_channel(AliceApp, AlicePerson),
-    miniapp_person_run(C?, alice, greet, AlicePerson?, AliceSeen),
+    miniapp_person_run(C?, alice, greet, [bob], AlicePerson?, AliceSeen),
     alice_person_timed(C?, CSig?, AliceApp?, AliceOut?, AliceSeen?, T0, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     new_channel(BobApp, BobPerson),
-    miniapp_person_run(C?, bob, greet, BobPerson?, BobScreen),
+    miniapp_person_run(C?, bob, greet, [alice], BobPerson?, BobScreen),
     tee(BobScreen?, BobUi, BobSeen),
     bob_person(C?, CSig?, yes, BobApp?, BobOut?, BobSeen?, BobIn),
     opened_at(BobUi?, T0?, Ms).
@@ -546,7 +548,7 @@ sg_init(alice, invite, NetIn) :-
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     new_channel(App, Person),
-    miniapp_person_run(C?, alice, greet, Person?, Screen),
+    miniapp_person_run(C?, alice, greet, [bob], Person?, Screen),
     tee(Screen?, Show, Seen),
     send_to_user(Show?),
     alice_person_boot(C?, CK?, CSig?, App?, Out?, Seen?, AliceIn).
@@ -556,7 +558,7 @@ sg_init(bob, consent, NetIn) :-
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     new_channel(App, Person),
-    miniapp_person_run(C?, bob, greet, Person?, Screen),
+    miniapp_person_run(C?, bob, greet, [alice], Person?, Screen),
     tee(Screen?, Show, Seen),
     send_to_user(Show?),
     bob_person_boot(C?, CK?, CSig?, App?, Out?, Seen?, BobIn).
@@ -573,7 +575,7 @@ sg_init(alice, coins, NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     alice_coins_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, alice, alice, PersonEnd?, Screen),
+    miniapp_person_run(C?, alice, alice, [bob], PersonEnd?, Screen),
     send_to_user(Screen?).
 sg_init(bob, coins, NetIn) :-
     agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -582,7 +584,7 @@ sg_init(bob, coins, NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     bob_coins_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, bob, bob, PersonEnd?, Screen),
+    miniapp_person_run(C?, bob, bob, [alice], PersonEnd?, Screen),
     send_to_user(Screen?).
 
 %% The child-safe platform on two smartphones (../../cssn_boot.glp), as the
@@ -597,7 +599,7 @@ sg_init(alice, cssn, NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     alice_cssn_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, alice, greeter, PersonEnd?, Seen),
+    miniapp_person_run(C?, alice, greeter, [bob], PersonEnd?, Seen),
     send_to_user(Seen?).
 sg_init(bob, cssn, NetIn) :-
     agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -606,7 +608,7 @@ sg_init(bob, cssn, NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     bob_cssn_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, bob, onlooker, PersonEnd?, Seen),
+    miniapp_person_run(C?, bob, onlooker, [alice], PersonEnd?, Seen),
     send_to_user(Seen?).
 
 %% Both mini-apps on two smartphones (../../both_boot.glp): each person trusts
@@ -622,9 +624,9 @@ sg_init(alice, both, NetIn) :-
     new_channel(CoinsEnd, CoinsPerson),
     new_channel(CssnEnd, CssnPerson),
     alice_both_boot(CK?, CC?, CCSig?, CoinsEnd?, CS?, CSSig?, CssnEnd?, Out?, In),
-    miniapp_person_run(CC?, alice, alice, CoinsPerson?, Screen),
+    miniapp_person_run(CC?, alice, alice, [bob], CoinsPerson?, Screen),
     send_to_user(Screen?),
-    miniapp_person_run(CS?, alice, greeter, CssnPerson?, Seen),
+    miniapp_person_run(CS?, alice, greeter, [bob], CssnPerson?, Seen),
     send_to_user(Seen?).
 sg_init(bob, both, NetIn) :-
     agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -636,9 +638,9 @@ sg_init(bob, both, NetIn) :-
     new_channel(CoinsEnd, CoinsPerson),
     new_channel(CssnEnd, CssnPerson),
     bob_both_boot(CK?, CC?, CCSig?, CoinsEnd?, CS?, CSSig?, CssnEnd?, Out?, In),
-    miniapp_person_run(CC?, bob, bob, CoinsPerson?, Screen),
+    miniapp_person_run(CC?, bob, bob, [alice], CoinsPerson?, Screen),
     send_to_user(Screen?),
-    miniapp_person_run(CS?, bob, onlooker, CssnPerson?, Seen),
+    miniapp_person_run(CS?, bob, onlooker, [alice], CssnPerson?, Seen),
     send_to_user(Seen?).
 
 %% The warm call: each person's screen is the mini-app's scripted person's,
@@ -649,7 +651,7 @@ sg_init(alice, warm, NetIn) :-
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     new_channel(App, Person),
-    miniapp_person_run(C?, alice, watch, Person?, Screen),
+    miniapp_person_run(C?, alice, watch, [bob, carol], Person?, Screen),
     send_to_user(Screen?),
     scripted_home(alice, Out?, Script, ScriptCmds?, In),
     alice_warm(C?, CK?, CSig?, App?, Script?, ScriptCmds).
@@ -659,7 +661,7 @@ sg_init(bob, warm, NetIn) :-
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     new_channel(App, Person),
-    miniapp_person_run(C?, bob, watch, Person?, Screen),
+    miniapp_person_run(C?, bob, watch, [alice, carol], Person?, Screen),
     send_to_user(Screen?),
     scripted_home(bob, Out?, Script, ScriptCmds?, In),
     bob_warm(C?, CK?, CSig?, App?, Script?, ScriptCmds).
@@ -669,7 +671,7 @@ sg_init(carol, warm, NetIn) :-
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     new_channel(App, Person),
-    miniapp_person_run(C?, carol, watch, Person?, Screen),
+    miniapp_person_run(C?, carol, watch, [alice, bob], Person?, Screen),
     send_to_user(Screen?),
     scripted_home(carol, Out?, Script, ScriptCmds?, In),
     carol_warm(C?, CK?, CSig?, App?, Script?, ScriptCmds).
@@ -776,10 +778,10 @@ play_coins(ScreenA?, ScreenB?) :-
     new_channel(AppEndB, PersonEndB),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_coins_person(C?, CSig?, AppEndA?, AliceOut?, AliceIn),
-    miniapp_person_run(C?, alice, alice, PersonEndA?, ScreenA),
+    miniapp_person_run(C?, alice, alice, [bob], PersonEndA?, ScreenA),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_coins_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
-    miniapp_person_run(C?, bob, bob, PersonEndB?, ScreenB).
+    miniapp_person_run(C?, bob, bob, [alice], PersonEndB?, ScreenB).
 
 %% The installers of play_coins: each installs the currency with its end of
 %% its person channel; the play writes no date, the currency keeping none.
@@ -884,10 +886,10 @@ play_cssn(SeenA?, SeenB?) :-
     new_channel(AppEndB, PersonEndB),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_cssn_person(C?, CSig?, AppEndA?, AliceOut?, AliceIn),
-    miniapp_person_run(C?, alice, greeter, PersonEndA?, SeenA),
+    miniapp_person_run(C?, alice, greeter, [bob], PersonEndA?, SeenA),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_cssn_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
-    miniapp_person_run(C?, bob, onlooker, PersonEndB?, SeenB).
+    miniapp_person_run(C?, bob, onlooker, [alice], PersonEndB?, SeenB).
 
 procedure alice_cssn_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_cssn_person(C, CSig, AppEnd, Outs,
@@ -941,12 +943,12 @@ play_both(ScreenA?, ScreenB?, SeenA?, SeenB?) :-
     new_channel(CssnEndB, CssnPersonB),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_both_person(CC?, CCSig?, CoinsEndA?, CS?, CSSig?, CssnEndA?, AliceOut?, AliceIn),
-    miniapp_person_run(CC?, alice, alice, CoinsPersonA?, ScreenA),
-    miniapp_person_run(CS?, alice, greeter, CssnPersonA?, SeenA),
+    miniapp_person_run(CC?, alice, alice, [bob], CoinsPersonA?, ScreenA),
+    miniapp_person_run(CS?, alice, greeter, [bob], CssnPersonA?, SeenA),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_both_person(CC?, CCSig?, CoinsEndB?, CS?, CSSig?, CssnEndB?, BobOut?, BobIn),
-    miniapp_person_run(CC?, bob, bob, CoinsPersonB?, ScreenB),
-    miniapp_person_run(CS?, bob, onlooker, CssnPersonB?, SeenB).
+    miniapp_person_run(CC?, bob, bob, [alice], CoinsPersonB?, ScreenB),
+    miniapp_person_run(CS?, bob, onlooker, [alice], CssnPersonB?, SeenB).
 
 %% alice's person: install both, cold-call bob, and invite him to both once
 %% they are friends.
@@ -1012,12 +1014,12 @@ play_reinvite(AliceUi?, BobUi?) :-
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     new_channel(AliceApp, AlicePerson),
-    miniapp_person_run(C?, alice, greet, AlicePerson?, AliceScreen),
+    miniapp_person_run(C?, alice, greet, [bob], AlicePerson?, AliceScreen),
     tee(AliceScreen?, AliceUi, AliceSeen),
     alice_reinvite(C?, CSig?, AliceApp?, AliceOut?, AliceSeen?, BobSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     new_channel(BobApp, BobPerson),
-    miniapp_person_run(C?, bob, watch, BobPerson?, BobScreen),
+    miniapp_person_run(C?, bob, watch, [alice], BobPerson?, BobScreen),
     tee(BobScreen?, BobUi, BobSeen),
     bob_reinvite(C?, CSig?, BobApp?, BobOut?, BobIn).
 
@@ -1121,10 +1123,10 @@ play_sovereign(ScreenA?, ScreenB?) :-
     new_channel(AppEndB, PersonEndB),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_sv_person(C?, CSig?, AppEndA?, AliceOut?, AliceIn),
-    miniapp_person_run(C?, alice, watch, PersonEndA?, ScreenA),
+    miniapp_person_run(C?, alice, watch, [bob], PersonEndA?, ScreenA),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_sv_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
-    miniapp_person_run(C?, bob, watch, PersonEndB?, ScreenB).
+    miniapp_person_run(C?, bob, watch, [alice], PersonEndB?, ScreenB).
 
 procedure alice_sv_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_sv_person(C, CSig, AppEnd, Outs,

@@ -9,7 +9,7 @@
 %% template miniapp/4, declared once in the root programs/self.glp, at its own
 %% two types, EndShown what it draws for its person and EndMsg its root
 %% channels' messages (vGLP, 2026-10-14 13:21 UTC, S2), and its scripted person
-%% the second template miniapp_person/4 at EndShown and its screen's type
+%% the second template miniapp_person/5 at EndShown and its screen's type
 %% EndUi (vGLP 2026-10-16 11:25 UTC, item 4; TGLP modules.tex, Dynamic Activation, "Opaque types"; GSG,
 %% 2026-10-13 18:52 UTC, O5, and 20:22 UTC, H).
 
@@ -35,6 +35,6 @@ imported procedure miniapp#miniapp(Key?, PersonChannel(EndShown)?, SgChannel(End
 exported procedure miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?, Stream(Integer)?).
 miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
-imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndUi)).
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndUi)).
-miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndUi)).
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndUi)).
+miniapp_person(Id, Role, Ps, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, Ps?, PEnd?, Screen).
