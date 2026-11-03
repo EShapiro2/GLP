@@ -37,6 +37,7 @@
 /// onPlaceEvent --- is held and never fires.
 library;
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
@@ -144,11 +145,14 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
             cb(_key(sender), payload, messageId, _underlay(underlay));
   }
 
-  /// `acknowledge(messageId)` (GNA 776016c, Section 2.9): the layer keeps a delivered message until it is acknowledged, and delivers it again at restart otherwise (Section 2.11).  The layer has no `acknowledge` yet: it keeps no delivered message, which is GNA's task O (a), and until it has one this glue has nothing to pass the acknowledgement to, and throws [UnsupportedError], as the runtime's interface has a realisation do for a function it does not provide.  The runtime calls it once the cycle that applied the message is complete, so the throw ends nothing the cycle did.
+  /// `acknowledge(messageId)` (GNA, Section 2.9): the layer's, which keeps a
+  /// delivered message until it is acknowledged, and delivers it again at
+  /// restart otherwise (Section 2.11).  The runtime's interface returns
+  /// nothing, so the layer's save is not awaited; a save that fails is the
+  /// layer's to log, and the message is delivered again at restart.
   @override
-  void acknowledge(String messageId) => throw UnsupportedError(
-      'acknowledge: the layer (HeadlessGrassrootsNetwork) has no acknowledge(messageId) '
-      '(GNA, Section 2.9), and keeps no delivered message');
+  void acknowledge(String messageId) =>
+      unawaited(layer.acknowledge(messageId));
 
   // --- Cryptography ---
 

@@ -62,6 +62,14 @@ class _FailingQueueStore implements OutboundQueueStore {
   @override
   Future<void> save(String ownerHex, List<OutboundQueueEntry> entries) async =>
       throw StateError('the store refuses the save');
+
+  @override
+  Future<List<DeliveredQueueEntry>> loadDelivered(String ownerHex) async => [];
+
+  @override
+  Future<void> saveDelivered(
+          String ownerHex, List<DeliveredQueueEntry> entries) async =>
+      throw StateError('the store refuses the save');
 }
 
 String _hex(List<int> bytes) =>
@@ -159,9 +167,9 @@ void main() {
         throwsArgumentError,
         reason: "the layer's refusal of an unparseable address, unchanged");
     expect(() => network.removeRendezvousServer(peer), returnsNormally);
-    // acknowledge(messageId) (GNA, Section 2.9): the layer has none yet, GNA's
-    // task O (a), and the glue says so.
-    expect(() => network.acknowledge('m-1'), throwsUnsupportedError);
+    // acknowledge(messageId) (GNA, Section 2.9) reaches the layer's: a
+    // message not kept does nothing.
+    expect(() => network.acknowledge('m-1'), returnsNormally);
 
     await layer.dispose();
   });
@@ -329,4 +337,37 @@ declared :- send_to_user([running]).
 
     await layer.dispose();
   });
+
+  test(
+      "a message the layer kept is delivered again through the glue at "
+      "restart, and the glue's acknowledge(messageId) is the layer's (GNA "
+      "§2.9, §2.11)", () async {
+    final self = await identity();
+    final senderKey = glp.PubKey.fromList((await identity()).publicKey);
+    // What a layer that delivered the message and was not told it is applied
+    // left behind.
+    final store = MemoryOutboundQueueStore();
+    await store.saveDelivered(_hex(self.publicKey), [
+      DeliveredQueueEntry(
+        senderHex: senderKey.hex,
+        messageId: 'm-kept',
+        payload: Uint8List.fromList([4, 2]),
+        underlay: Underlay.lan,
+      ),
+    ]);
+    final layer = await layerFor(self, queueStore: store);
+    final network = GrassrootsGlpNetwork(layer);
+    final delivered =
+        Completer<(glp.PubKey, List<int>, String, glp.Underlay)>();
+    network.onMessageReceived = (s, payload, id, u) =>
+        delivered.complete((s, payload, id, u));
+    final (s, payload, id, u) = await delivered.future;
+    expect((s, id, u), (senderKey, 'm-kept', glp.Underlay.lan));
+    expect(payload, [4, 2]);
+
+    network.acknowledge(id);
+    await layer.dispose();
+    expect(await store.loadDelivered(_hex(self.publicKey)), isEmpty,
+        reason: 'acknowledged through the glue, it is kept no longer');
+  }, timeout: Timeout.none);
 }

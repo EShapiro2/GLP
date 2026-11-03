@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -189,6 +190,89 @@ void main() {
   }, timeout: const Timeout(Duration(minutes: 1)));
 
   test(
+      'a message delivered and not acknowledged is delivered again after a '
+      'restart of the layer, and one acknowledged is not (GNA §2.9, §2.11)',
+      () async {
+    if (skip()) return;
+    final dir = await tempDir();
+    final queueFile = '${dir.path}/recipient.json';
+    final senderId = await identityFromSeed(0x67);
+    final recipientId = await identityFromSeed(0x68);
+    final recipientHex = _hex(recipientId.publicKey);
+
+    HeadlessGrassrootsNetwork recipientLayer() => HeadlessGrassrootsNetwork(
+          identity: recipientId,
+          sodium: sodium!,
+          outboundQueueStore: FileOutboundQueueStore(queueFile),
+        );
+
+    final sender = HeadlessGrassrootsNetwork(
+      identity: senderId,
+      sodium: sodium!,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    final first = recipientLayer();
+    addTearDown(sender.dispose);
+    final both = Completer<Map<String, String>>();
+    final received = <String, String>{};
+    first.onMessageReceived = (s, payload, id, u) {
+      received[utf8.decode(payload)] = id;
+      if (received.length == 2 && !both.isCompleted) both.complete(received);
+    };
+    first.putKnownPeer(senderId.publicKey);
+    expect(await first.start(), isTrue);
+    expect(await sender.start(), isTrue);
+    sender.wan.putPeerAddress(
+        recipientId.publicKey, '127.0.0.1:${first.boundPort}');
+
+    final keptId = await sender.send(
+        recipientId.publicKey, Uint8List.fromList(utf8.encode('kept')));
+    final ackedId = await sender.send(
+        recipientId.publicKey, Uint8List.fromList(utf8.encode('acked')));
+    final ids = await both.future;
+    expect(ids, {'kept': keptId, 'acked': ackedId},
+        reason: 'each is delivered under the id its sender gave it');
+    expect(
+        (await FileOutboundQueueStore(queueFile).loadDelivered(recipientHex))
+            .map((e) => e.messageId)
+            .toSet(),
+        {keptId, ackedId},
+        reason: 'a message is kept before it is delivered');
+
+    // The runtime acknowledges one of the two; then the layer terminates.
+    await first.acknowledge(ackedId!);
+    await first.dispose();
+    final kept =
+        await FileOutboundQueueStore(queueFile).loadDelivered(recipientHex);
+    expect(kept.map((e) => e.messageId), [keptId],
+        reason: 'an acknowledged message is kept no longer');
+    expect(kept.single.senderHex, _hex(senderId.publicKey));
+    expect(kept.single.underlay, Underlay.wan);
+
+    // The restart: a layer with the same identity and store delivers the
+    // unacknowledged message again, as it was delivered, and nothing else.
+    final second = recipientLayer();
+    addTearDown(second.dispose);
+    final again = <(String, String, String, Underlay)>[];
+    final firstAgain = Completer<void>();
+    second.onMessageReceived = (s, payload, id, u) {
+      again.add((_hex(s), utf8.decode(payload), id, u));
+      if (!firstAgain.isCompleted) firstAgain.complete();
+    };
+    // The kept messages are delivered again in one turn of the event loop,
+    // which ends before the wait on the first of them resumes.
+    await firstAgain.future;
+    expect(again, [(_hex(senderId.publicKey), 'kept', keptId, Underlay.wan)]);
+
+    // Acknowledged now, it is not delivered at the next restart.
+    await second.acknowledge(keptId!);
+    await second.dispose();
+    expect(
+        await FileOutboundQueueStore(queueFile).loadDelivered(recipientHex),
+        isEmpty);
+  }, timeout: Timeout.none);
+
+  test(
       'a layer constructed without a store of its queue is refused: the '
       'store is a required argument, and each embedder names its file',
       () async {
@@ -239,6 +323,35 @@ void main() {
       expect(await store.load(owner), isEmpty);
     });
 
+    test('keeps the delivered messages beside the sent ones, each part '
+        'saved without the other changing', () async {
+      final dir = await tempDir();
+      final store = FileOutboundQueueStore('${dir.path}/q.json');
+      expect(await store.loadDelivered(owner), isEmpty);
+      final sent = OutboundQueueEntry(
+          recipientHex: recipient,
+          messageId: 's',
+          payload: Uint8List.fromList([1]));
+      final delivered = DeliveredQueueEntry(
+          senderHex: recipient,
+          messageId: 'd',
+          payload: Uint8List.fromList([2, 3]),
+          underlay: Underlay.lan);
+      await store.save(owner, [sent]);
+      await store.saveDelivered(owner, [delivered]);
+      final reread = FileOutboundQueueStore('${dir.path}/q.json');
+      expect((await reread.load(owner)).map((e) => e.messageId), ['s']);
+      final loaded = await reread.loadDelivered(owner);
+      expect(loaded.map((e) => (e.senderHex, e.messageId, e.underlay)),
+          [(recipient, 'd', Underlay.lan)]);
+      expect(loaded.single.payload, [2, 3]);
+      await store.save(owner, const []);
+      expect((await reread.loadDelivered(owner)).map((e) => e.messageId),
+          ['d']);
+      await store.saveDelivered(owner, const []);
+      expect(await reread.loadDelivered(owner), isEmpty);
+    });
+
     test("refuses another agent's queue", () async {
       final dir = await tempDir();
       final store = FileOutboundQueueStore('${dir.path}/q.json');
@@ -260,8 +373,26 @@ void main() {
         'messages': [
           {'recipient': recipient, 'messageId': 'm'},
         ],
+        'delivered': [],
       }));
       expect(() => FileOutboundQueueStore(path).load(owner),
+          throwsFormatException);
+      // A queue without its delivered messages is malformed.
+      File(path).writeAsStringSync(jsonEncode({
+        'owner': owner,
+        'messages': [],
+      }));
+      expect(() => FileOutboundQueueStore(path).load(owner),
+          throwsFormatException);
+      // And a kept message without its underlay.
+      File(path).writeAsStringSync(jsonEncode({
+        'owner': owner,
+        'messages': [],
+        'delivered': [
+          {'sender': recipient, 'messageId': 'd', 'payload': 'AQ=='},
+        ],
+      }));
+      expect(() => FileOutboundQueueStore(path).loadDelivered(owner),
           throwsFormatException);
     });
 

@@ -161,9 +161,9 @@ void main() {
           throwsArgumentError,
           reason: "the layer's refusal of an unparseable address, unchanged");
       expect(() => network.removeRendezvousServer(peer), returnsNormally);
-      // acknowledge(messageId) (GNA, Section 2.9): the layer has none yet,
-      // GNA's task O (a), and the glue says so.
-      expect(() => network.acknowledge('m-1'), throwsUnsupportedError);
+      // acknowledge(messageId) (GNA, Section 2.9) reaches the layer's: a
+      // message not kept does nothing.
+      expect(() => network.acknowledge('m-1'), returnsNormally);
 
       final events = <String>[];
       network.onConnectivityStatusChanged =
@@ -262,6 +262,48 @@ declared :- send_to_user([running]).
       expect(out, ['running'], reason: 'the program runs on');
     });
   });
+
+  test(
+      "a message the layer kept is delivered again through the glue at "
+      "restart, and the glue's acknowledge(messageId) is the layer's (GNA "
+      "§2.9, §2.11)", () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final self = await identityFromSeed(seedOf(0x23));
+    final sender = await identityFromSeed(seedOf(0x24));
+    final owner = glp.PubKey.fromList(self.publicKey).hex;
+    final senderKey = glp.PubKey.fromList(sender.publicKey);
+    // What a layer that delivered the message and was not told it is applied
+    // left behind.
+    final store = MemoryOutboundQueueStore();
+    await store.saveDelivered(owner, [
+      DeliveredQueueEntry(
+        senderHex: senderKey.hex,
+        messageId: 'm-kept',
+        payload: Uint8List.fromList([4, 2]),
+        underlay: Underlay.wan,
+      ),
+    ]);
+    final layer = HeadlessGrassrootsNetwork(
+      outboundQueueStore: store,
+      identity: self,
+      sodium: sodium!,
+    );
+    final network = HeadlessGlpNetwork(layer);
+    final delivered = Completer<(glp.PubKey, List<int>, String, glp.Underlay)>();
+    network.onMessageReceived = (s, payload, id, u) =>
+        delivered.complete((s, payload, id, u));
+    final (s, payload, id, u) = await delivered.future;
+    expect((s, id, u), (senderKey, 'm-kept', glp.Underlay.wan));
+    expect(payload, [4, 2]);
+
+    network.acknowledge(id);
+    await layer.dispose();
+    expect(await store.loadDelivered(owner), isEmpty,
+        reason: 'acknowledged through the glue, it is kept no longer');
+  }, timeout: Timeout.none);
 
   group('two runtimes over two headless layers in two processes', () {
     // The agents' one program: the caller cold-calls the callee, naming it by
@@ -428,6 +470,14 @@ class _FailingQueueStore implements OutboundQueueStore {
 
   @override
   Future<void> save(String ownerHex, List<OutboundQueueEntry> entries) async =>
+      throw const FileSystemException('the disc is full');
+
+  @override
+  Future<List<DeliveredQueueEntry>> loadDelivered(String ownerHex) async => [];
+
+  @override
+  Future<void> saveDelivered(
+          String ownerHex, List<DeliveredQueueEntry> entries) async =>
       throw const FileSystemException('the disc is full');
 }
 
