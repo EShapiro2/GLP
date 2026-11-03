@@ -6,17 +6,29 @@
 // each person's dispatcher draws and injects the person's grants,
 // input(Id, Path, R), from the web page.
 //
-// Each contract's world runs in an isolate of its own, so that loading a
-// platform (seconds of CPU, minutes on a small host) never blocks the web
-// server.  A world starts on its contract's first request; at most MAX_WORLDS
-// run at once (default 3), the least recently used dropped first, and a world
-// unused for an hour is dropped.
+// Two ways to run a world, chosen by GAS_WORLDS:
+//  - mad (the default): every person is an agent of madGLP in an isolate of its
+//    own, with its own heap and key pair, the harness's agent/2 told first
+//    me(Person), and so running live_person/3;
+//    the persons' messages are madGLP's, cold calls by send_to_net, which this
+//    server carries between the isolates as the simulation's network does.
+//  - heap: the four persons in one heap, one isolate, the harness's agent/2
+//    told first world, and so running live_ui/1,
+//    their networks joined in GLP by route4.
+// Either way loading a platform (seconds of CPU, minutes on a small host) never
+// blocks the web server.  A world starts on its contract's first request; at
+// most MAX_WORLDS run at once (default 3), the least recently used dropped
+// first, and a world unused for an hour is dropped.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show NetworkDirectory, generateKeyPair;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 final persons = ['alice', 'bob', 'carol', 'dave'];
@@ -79,6 +91,8 @@ void worker(List<Object?> args) async {
 
   try {
     await agent.initialize();
+    // The host's first act says which agent this is: the four persons together.
+    await agent.injectUserInput(rt.ConstTerm('world'));
     if (calendar) await setDay(1);
     out.send({'k': 'status', 's': 'ready', 'calendar': calendar});
   } catch (e) {
@@ -87,15 +101,82 @@ void worker(List<Object?> args) async {
 }
 
 // ---------------------------------------------------------------------------
+// The person worker: one person of a world, an agent of madGLP in its own
+// isolate.  Its events --- its start, the person's acts, a day of the calendar,
+// a message from another person --- are taken one at a time, in order of
+// arrival, and each is reported done once its cycle is complete; the messages
+// the cycle sent are reported before it, the port keeping their order.
+// ---------------------------------------------------------------------------
+
+typedef Keys = Map<String, ({PubKey pub, Uint8List priv})>;
+
+void personWorker(List<Object?> args) async {
+  final root = args[0] as String, worldsDir = args[1] as String, contract = args[2] as String;
+  final person = args[3] as String, keys = args[4] as Keys, out = args[5] as SendPort;
+  final inbox = ReceivePort();
+  out.send({'k': 'port', 'who': person, 'port': inbox.sendPort});
+  final directory = NetworkDirectory();
+  keys.forEach((p, kp) => directory.register(p, kp.pub));
+  final agent = AgentRuntime(
+    agentId: person,
+    program: '$worldsDir/live_$contract',
+    rootSelfGlpPath: '$root/programs/self.glp',
+    keyPair: keys[person],
+    directory: directory,
+  );
+  agent.maxQuiescenceCycles = 20000000;
+  agent.onUserOutput = (t) => out.send({'k': 'out', 'j': toJson(t)});
+  agent.onSendMadMessage = (to, payload) async =>
+      out.send({'k': 'mad', 'from': person, 'to': to, 'payload': payload});
+  var queue = Future<void>.value();
+  void run(Future<void> Function() f) {
+    queue = queue.then((_) => f()).catchError((Object e) {
+      out.send({'k': 'error', 'e': '$person: $e'});
+    }).whenComplete(() => out.send({'k': 'done', 'who': person}));
+  }
+
+  run(() async {
+    try {
+      await agent.initialize();
+      // The host's first act says which agent this is: this person alone.
+      await agent.injectUserInput(rt.StructTerm('me', [rt.ConstTerm(person)]));
+      out.send({'k': 'started', 'who': person});
+    } catch (e) {
+      out.send({'k': 'status', 's': 'failed: $person: $e'});
+    }
+  });
+  inbox.listen((msg) {
+    final m = msg as Map;
+    switch (m['k']) {
+      case 'act':
+        run(() => agent.injectUserInput(rt.StructTerm('g', [
+              rt.StructTerm('input', [
+                rt.ConstTerm(m['id'] as int),
+                listOf([for (final x in m['path'] as List) rt.ConstTerm(x as int)]),
+                fromJson(m['value']),
+              ]),
+            ])));
+      case 'cal':
+        run(() => agent.injectUserInput(rt.StructTerm('cal', [rt.ConstTerm(m['day'] as int)])));
+      case 'mad':
+        run(() => agent.onMadMessageReceived(m['from'] as String, m['payload'] as Uint8List));
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
 // The server's view of a world: what the worker reported.
 // ---------------------------------------------------------------------------
+
+final madWorlds = (Platform.environment['GAS_WORLDS'] ?? 'mad') != 'heap';
 
 class World {
   final String contract;
   World(this.contract);
-  Isolate? isolate;
-  SendPort? port;
-  final pending = <Map<String, Object?>>[];
+  final isolates = <Isolate>[];
+  // heap: the one worker's port under 'host'; mad: each person's port.
+  final ports = <String, SendPort>{};
+  final pending = <String, List<Map<String, Object?>>>{};
   final Map<String, Map<int, Object?>> draws = {for (final p in persons) p: {}};
   final List<Object?> net = [];
   int version = 0;
@@ -103,22 +184,71 @@ class World {
   String status = 'starting';
   final started = DateTime.now();
   DateTime used = DateTime.now();
+  // mad: the events sent to the persons and not yet reported done, the persons
+  // started, and whether the platform reads a calendar.
+  int inflight = 0;
+  final up = <String>{};
+  bool calendar = false;
 
   Future<void> start(String root) async {
     final rp = ReceivePort();
     rp.listen(_onMsg);
-    isolate = await Isolate.spawn(worker, [root, worldsDir, contract, rp.sendPort]);
+    if (!madWorlds) {
+      isolates.add(await Isolate.spawn(worker, [root, worldsDir, contract, rp.sendPort]));
+      return;
+    }
+    calendar = File('$worldsDir/live_$contract/self.glp').readAsStringSync().contains('cal(alice, N)');
+    final Keys keys = {for (final p in persons) p: generateKeyPair()};
+    for (final p in persons) {
+      inflight++; // its start
+      isolates.add(await Isolate.spawn(personWorker, [root, worldsDir, contract, p, keys, rp.sendPort]));
+    }
   }
 
-  void stop() => isolate?.kill(priority: Isolate.immediate);
+  void stop() {
+    for (final i in isolates) {
+      i.kill(priority: Isolate.immediate);
+    }
+  }
 
-  void send(Map<String, Object?> m) {
-    used = DateTime.now();
-    final p = port;
+  void _to(String who, Map<String, Object?> m) {
+    final p = ports[who];
     if (p == null) {
-      pending.add(m);
+      (pending[who] ??= []).add(m);
     } else {
       p.send(m);
+    }
+  }
+
+  // An event for a person (mad), counted until it is reported done.
+  void _event(String who, Map<String, Object?> m) {
+    inflight++;
+    if (status == 'ready') status = 'working';
+    _to(who, m);
+  }
+
+  void act(Map body) {
+    used = DateTime.now();
+    if (!madWorlds) {
+      _to('host', {'k': 'act', 'person': body['person'], 'id': body['id'], 'path': body['path'], 'value': body['value']});
+    } else if (persons.contains(body['person'])) {
+      _event(body['person'] as String, {'k': 'act', 'id': body['id'], 'path': body['path'], 'value': body['value']});
+    }
+  }
+
+  void nextDay() {
+    used = DateTime.now();
+    if (!madWorlds) {
+      _to('host', {'k': 'day'});
+    } else if (calendar) {
+      _setDay((day ?? 0) + 1);
+    }
+  }
+
+  void _setDay(int d) {
+    day = d;
+    for (final p in persons) {
+      _event(p, {'k': 'cal', 'day': d});
     }
   }
 
@@ -126,9 +256,11 @@ class World {
     final m = msg as Map;
     switch (m['k']) {
       case 'port':
-        port = m['port'] as SendPort;
-        for (final x in pending) port!.send(x);
-        pending.clear();
+        final who = (m['who'] as String?) ?? 'host';
+        ports[who] = m['port'] as SendPort;
+        for (final x in pending.remove(who) ?? const []) {
+          ports[who]!.send(x);
+        }
         return;
       case 'status':
         status = m['s'] as String;
@@ -137,6 +269,26 @@ class World {
       case 'error':
         stderr.writeln('[$contract] ${m['e']}');
         return;
+      case 'started':
+        up.add(m['who'] as String);
+        return;
+      case 'mad':
+        // A message between two persons, carried as the network carries it.
+        final to = m['to'] as String;
+        if (persons.contains(to)) {
+          _event(to, {'k': 'mad', 'from': m['from'], 'payload': m['payload']});
+        }
+        return;
+      case 'done':
+        inflight--;
+        if (status.startsWith('failed')) return;
+        if (inflight == 0) {
+          if (status == 'starting' && up.length == persons.length && calendar && day == null) {
+            _setDay(1);
+          } else {
+            status = 'ready';
+          }
+        }
       case 'out':
         final j = m['j'];
         if (j is Map && j['f'] == 'd') {
@@ -275,10 +427,10 @@ Future<void> handle(HttpRequest req, String webDir) async {
         _json(req, w.state());
       } else if (op == 'act' && req.method == 'POST') {
         final body = jsonDecode(await utf8.decodeStream(req)) as Map;
-        w.send({'k': 'act', 'person': body['person'], 'id': body['id'], 'path': body['path'], 'value': body['value']});
+        w.act(body);
         _json(req, {'ok': true});
       } else if (op == 'day' && req.method == 'POST') {
-        w.send({'k': 'day'});
+        w.nextDay();
         _json(req, {'ok': true});
       } else if (op == 'reset' && req.method == 'POST') {
         w.stop();

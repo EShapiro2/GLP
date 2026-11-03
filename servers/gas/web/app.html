@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Grassroots app</title>
+<title>GAS app</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -127,7 +127,7 @@ function show(t){
   }
   return PERSONS.includes(t) ? cap(t) : String(t);
 }
-const BASE = location.pathname.replace(/\/[^/]*$/, '');  // '' at the site root, '/glp' under a sub-path
+const BASE = location.pathname.replace(/\/[^/]*$/, '');  // '' at the site root, '/gas' under a sub-path
 const api = p => `${BASE}/api/${C}/${p}`;
 
 function screen(p){
