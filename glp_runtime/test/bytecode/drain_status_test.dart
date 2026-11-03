@@ -115,10 +115,10 @@ w(a, _).
       expect(rt2.gq.length, 2);
     });
 
-    test('drainAndSend: the goals of its drains, and its Sends', () {
+    test('drainAndSend: the goals of its drains, and its Sends', () async {
       final (sched, rt) = queued(1234);
       var sends = 0;
-      final r = sched.drainAndSend(() => sends++);
+      final r = await sched.drainAndSend(() => sends++);
       expect(r.status, ExecutionStatus.succeeded);
       expect(r.goalsRun, 1234);
       expect(rt.gq.length, 0);
@@ -126,7 +126,7 @@ w(a, _).
 
       final (sched2, rt2) = loops(1);
       var sends2 = 0;
-      final r2 = sched2.drainAndSend(() => sends2++, maxCycles: 77);
+      final r2 = await sched2.drainAndSend(() => sends2++, maxCycles: 77);
       expect(r2.status, ExecutionStatus.capped);
       expect(r2.goalsRun, 77);
       expect(rt2.gq.length, 1);

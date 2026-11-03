@@ -13,9 +13,14 @@
 ///    mad_stream_writer, MB4 mad_two_crossings, MB5's link probes --- each
 ///    boot file's agents over its program directory, the person goal's
 ///    readable names given the agents' keys, each probe held to the end state
-///    MB holds it to, a key where MB has a name.  linkprobe14 is not here: over
-///    the real layer it reaches another end state than under the simulation,
-///    reported to Code as a fault (2026-11-03).
+///    MB holds it to, a key where MB has a name.
+/// 3. linkprobe14, held to MB's check, which holds in every order (GLP #11
+///    Cowork, 2026-11-03 16:06 UTC, item 3): no message from bob reaches
+///    alice, neither a value on the held link nor an answer to a request of
+///    hers, and alice may see bob's greeting, which then came from carol.
+///    Over the real layer there is no report that the run is over, so the
+///    check is taken once alice has received carol's message and alice's
+///    greeting has reached bob or carol, whichever its link leads to.
 ///
 /// Needs a native libsodium, as GNA's headless tests do; self-skips when it
 /// is absent.  runprobe's mini-app artefact is written first, as MB writes it,
@@ -171,6 +176,30 @@ void main() {
     }
   }
 
+  /// linkprobe14's check (Section MB, MB5), once alice has received carol's
+  /// message and alice's greeting has reached bob or carol: [received] the
+  /// senders' keys of what each agent was delivered, [sent] whether an output
+  /// line is an element sent to the person, [strip] its transcript mark.
+  Future<void> holdLinkprobe14(
+      Map<String, String> keyOf,
+      Map<String, AgentLines> outputs,
+      Map<String, AgentLines> received,
+      bool Function(String) sent,
+      String Function(String) strip) async {
+    await received['alice']!.first((k) => k == keyOf['carol']);
+    await Future.any([
+      for (final at in ['bob', 'carol'])
+        received[at]!.first((k) => k == keyOf['alice']),
+    ]);
+    expect(received['alice']!.lines, isNot(contains(keyOf['bob'])),
+        reason: 'no message from bob reaches alice on the held link');
+    final fromCarol = patternOf(r'saw\(hello_from\({bob}\)\)', keyOf);
+    for (final l in outputs['alice']!.lines.where(sent).map(strip)) {
+      expect(fromCarol.hasMatch(l), isTrue,
+          reason: 'what alice sees is bob\'s greeting, from carol: $l');
+    }
+  }
+
   group('one process', () {
     test(
         'the entry form: three agents named by their keys, two cold calls '
@@ -230,6 +259,22 @@ void main() {
             (l) => l.startsWith('< ') ? l.substring(2) : l);
       }, timeout: Timeout.none);
     }
+
+    test('linkprobe14: the check MB holds it to, in every order', () async {
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      final f = HeadlessAgentSpec.ofBootFile(
+          '$programs/tests/linkprobes/linkprobe14_boot.glp');
+      final queues = Directory.systemTemp.createTempSync('glp_headless_boot_');
+      addTearDown(() => queues.deleteSync(recursive: true));
+      final boot = await HeadlessBoot.ofBootFile(f,
+          rootSelfGlpPath: root, sodium: sodium!, queueDir: queues.path);
+      addTearDown(boot.dispose);
+      await holdLinkprobe14(boot.keyOf, boot.outputs, boot.received,
+          (l) => l.startsWith('< '), (l) => l.substring(2));
+    }, timeout: Timeout.none);
   });
 
   group('one process per agent', () {
@@ -321,5 +366,19 @@ void main() {
         await holdTo(probe, boot.keyOf, boot.outputs, boot.line, (l) => l);
       }, timeout: Timeout.none);
     }
+
+    test('linkprobe14: the check MB holds it to, in every order', () async {
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      final f = HeadlessAgentSpec.ofBootFile(
+          '$programs/tests/linkprobes/linkprobe14_boot.glp');
+      final boot = await HeadlessBootProcesses.ofBootFile(f,
+          rootSelfGlpPath: root, agent: agent);
+      addTearDown(boot.dispose);
+      await holdLinkprobe14(
+          boot.keyOf, boot.outputs, boot.received, (_) => true, (l) => l);
+    }, timeout: Timeout.none);
   });
 }

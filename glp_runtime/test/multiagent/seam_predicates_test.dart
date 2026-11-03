@@ -146,7 +146,7 @@ class _SeamNetwork extends GlpNetwork {
   @override
   List<Underlay> peerUnderlays(PubKey pk) => const [Underlay.wan];
   @override
-  void send(PubKey pk, Uint8List payload) {}
+  Future<void> send(PubKey pk, Uint8List payload) => Future.value();
   @override
   void acknowledge(String messageId) {}
   @override

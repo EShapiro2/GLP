@@ -4,7 +4,7 @@
 %% README, "Writing a contract").  GDO extends GSG (programs/gsc/GSG.glp), so
 %% the term holds GKK's three schemas and GSG's two; the clauses are in GDO.txt:
 %% point_friend is clause 1, Pointing to friend, point_transitive clause 2,
-%% Transitive pointing, with Carol the agent variable c, and cease_point clause
+%% Transitive pointing, with Carol the agent variable c, and unpoint clause
 %% 3, Ceasing to point.  points_to(q) in the state of p says that p points to q.
 %% In each of the three Bob is a reading role, neither guarding nor changing
 %% state, and Alice, the guarding role, requires an atom naming Bob (GSC
@@ -62,6 +62,6 @@ contract_named(gdo,
        [rs(guarded,   [atom(points_to, [pvar(c)])], [],
                       [atom(identity, []), atom(knows, [pvar(c)]), atom(points_to, [role(2)])], []),
         rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar(c)])], [])]),
-    schema(cease_point, ['Alice', 'Bob'], [],
+    schema(unpoint, ['Alice', 'Bob'], [],
        [rs(guarded,   [], [atom(points_to, [role(2)])], [atom(identity, [])], []),
         rs(unguarded, [], [], [atom(identity, [])], [])])]).

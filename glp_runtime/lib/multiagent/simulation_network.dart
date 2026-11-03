@@ -429,13 +429,17 @@ class SimulationNetworkClient extends GlpNetwork {
 
   // --- Send ---
 
+  /// The router queues what it cannot deliver yet and keeps no store, so the
+  /// message is taken as soon as it is handed over, and a send is refused only
+  /// to a key the directory names no agent by.
   @override
-  void send(PubKey pk, Uint8List payload) {
+  Future<void> send(PubKey pk, Uint8List payload) {
     final toId = directory.idOf(pk);
     if (toId == null) {
-      throw ArgumentError('send to unknown peer $pk');
+      return Future.error(ArgumentError('send to unknown peer $pk'));
     }
     sendToRouter(toId, payload);
+    return Future.value();
   }
 
   /// `acknowledge(messageId)` (GNA, Section 2.9): handed to [acknowledgeToRouter].  The router hands a message to the agent once, and keeps no delivered message across a restart, the simulation having no restart of its layer; so there is nothing for the acknowledgement to release here, and whoever delivered the message is told of it.

@@ -31,7 +31,7 @@ void main() async {
   print('Working directory: ${Directory.current.path}');
   print('');
   print('Input: filename.glp to load, or goal to execute');
-  print('Commands: :quit, :help, :trace, :debug, :limit, :mad, :boot');
+  print('Commands: :quit, :help, :trace, :debug, :limit, :mad, :boot, :deliveries');
   print('');
 
   // Resolve programs/self.glp relative to this script's location.
@@ -41,6 +41,10 @@ void main() async {
   final engine = GlpEngine(rootSelfGlpPath: rootSelfGlpPath);
   print('Loaded root self.glp');
   print('');
+
+  // Whether a boot prints the messages delivered between its agents
+  // (:deliveries).
+  var showDeliveries = false;
 
   while (true) {
     stdout.write('GLP> ');
@@ -179,6 +183,12 @@ void main() async {
         await manager.shutdown();
         final agents = config.directives.map((d) => d.agentId).join(', ');
         print('✓ Boot settled: ${config.directives.length} agents ($agents)');
+        if (showDeliveries) {
+          for (final MapEntry(key: (from, to), value: n)
+              in manager.deliveries.entries) {
+            print('Delivered: $from > $to $n');
+          }
+        }
       } catch (e) {
         print('Boot failed: $e');
       }
@@ -226,11 +236,21 @@ void main() async {
         final pk = directory.pkOf(destination);
         if (pk == null) {
           dropped(destination);
-        } else {
-          network.send(pk, Uint8List.fromList(message.payload));
+          return null;
         }
+        return network.send(pk, Uint8List.fromList(message.payload));
       };
       print('madGLP mode on: agent $agent, key ${engine.identity.pub.hex}');
+      continue;
+    }
+
+    if (trimmed == ':deliveries') {
+      // After each :boot settles, print the messages the router delivered
+      // between each pair of agents, sender first: what a test holds a run to
+      // where its agents' transcripts cannot show it, as which agent a value
+      // came from.
+      showDeliveries = !showDeliveries;
+      print('Deliveries ${showDeliveries ? "shown" : "not shown"} after a boot');
       continue;
     }
 
@@ -397,6 +417,7 @@ void _printHelp() {
   print('  :emit <dir>            Write the compiled GLP beside each .vglp');
   print('  :mad <agent>           Enter madGLP mode as <agent> (seam predicates run)');
   print('  :boot <f>_boot.glp     Run a multi-agent boot program (one isolate per agent)');
+  print('  :deliveries            Toggle printing, after a boot, the messages delivered between each pair of agents');
   print('  :artefact <dir> [<to>] Write a program directory\'s certified artefact (<to>/<name>.glpw)');
   print('');
   print('Type Checking:');
