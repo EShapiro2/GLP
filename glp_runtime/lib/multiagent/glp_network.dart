@@ -272,7 +272,8 @@ abstract class GlpNetwork {
   /// `declarePlace(place, radius)`: declare [place] — the region of
   /// [radiusMetres] about this device's location at the time of the call —
   /// and report its crossings through [onPlaceEvent].  Backs
-  /// `declare(place(P, R, E))`.
+  /// `declare(place(P, R, E))`, [place] being the printed form of the
+  /// constant P, `7` for 7 (IGLP, Implementation Notes, "The contract").
   ///
   /// Returns false when the platform refuses, leaving the place undeclared. A
   /// further declaration under the same name supersedes the first. GLP supplies
