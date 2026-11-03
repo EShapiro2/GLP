@@ -79,7 +79,7 @@ FriendAct ::= attest(Key)
 FriendActs ::= [] ; [FriendAct | FriendActs].
 SignalReply ::= punch(String) ; rejected.
 
-exported procedure agent(Channel(FriendActs, Stream(Constant))?, Channel(Stream(Constant), Stream(Constant))?).
+exported procedure agent(Channel(FriendActs, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
 agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
 
 procedure acts(Key?, FriendActs?).

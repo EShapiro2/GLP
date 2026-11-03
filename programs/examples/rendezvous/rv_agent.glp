@@ -117,7 +117,7 @@ rv_server(_, Graph, NetIn) :-
 %% goal"): the person's first act is the social graph's source identity, and
 %% self_key/1 gives the agent its own key; by these agent/2 starts the
 %% server's agent, rv_server/3, on the network input.
-exported procedure agent(Channel(Stream(Hash), Stream(Constant))?, Channel(RvNetIn, Stream(Constant))?).
+exported procedure agent(Channel(Stream(Hash), Stream(Constant))?, Channel(RvNetIn, Stream(NetMsg(Constant)))?).
 agent(ch([G | _], []), ch(N, [])) :- self_key(K), rv_server(K?, G?, N?).
 agent(ch([], []), ch(_, [])).
 
