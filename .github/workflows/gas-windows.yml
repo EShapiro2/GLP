@@ -43,9 +43,10 @@ jobs:
           flutter-version: 3.47.9
       - name: Build
         working-directory: servers/gas/phone
+        shell: bash
         run: |
-          flutter pub get
-          flutter build windows --release
+          set -o pipefail
+          { flutter pub get && flutter build windows --release -v; } 2>&1 | tee "$GITHUB_WORKSPACE/build.log" | tail -200
       - name: Zip
         shell: pwsh
         run: |
@@ -67,3 +68,17 @@ jobs:
           git add files/GAS-windows.zip
           git commit -m "GAS-windows.zip built from ${GITHUB_REF_NAME} ${GITHUB_SHA::8}"
           git push origin gas-downloads
+      # A failed build's log, on the branch gas-ci-log (one commit each).
+      - name: Keep the log of a failed build
+        if: failure()
+        shell: bash
+        run: |
+          git config --global user.name "GAS builder"
+          git config --global user.email "actions@users.noreply.github.com"
+          git clone --quiet --depth 1 --branch gas-ci-log "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" log \
+            || { git init --quiet log && git -C log checkout --quiet --orphan gas-ci-log; }
+          tail -c 400000 build.log > log/windows.log || echo "no build log" > log/windows.log
+          cd log
+          git add windows.log
+          git commit --quiet -m "windows build log ${GITHUB_SHA::8}"
+          git push --quiet "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:gas-ci-log
