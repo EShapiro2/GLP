@@ -93,7 +93,7 @@ body.solo header .hin{padding:8px 14px}
 #people .pp{display:flex;flex-wrap:wrap;gap:8px}
 #people .pc{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13.5px}
 #people .pc .d{width:8px;height:8px;border-radius:50%;background:var(--faint)}#people .pc.on .d{background:#34c759}
-#people .pc input{font:inherit;border:0;outline:0;width:9em;background:transparent}
+#people .pc .g{font-size:12px}#people .pc input{font:inherit;border:0;outline:0;width:9em;background:transparent}
 #people .none{color:var(--mute);font-size:13.5px}body.solo #net{padding:8px 14px 30px}
 </style>
 </head>
@@ -325,7 +325,7 @@ function header(){
   } else if (failed){
     $('#banner').innerHTML = `<div class="in">Could not start: ${esc(ST.status.slice(8))}</div>`;
   } else if (ready && !PHONES().some(p => screen(p).identity)){
-    $('#banner').innerHTML = SOLO ? `<div class="in">👋 You start with no identity. Tap <b>Establish</b>, then meet the people near you (${(ST.peers || []).length} found so far).</div>`
+    $('#banner').innerHTML = SOLO ? `<div class="in">👋 You start with no identity. Tap <b>Establish</b>, then meet the people near you (${(ST.peers || []).length} so far), or add someone far away with the person+ button above.</div>`
       : `<div class="in">👋 Everyone starts with no identity. Tap <b>Establish</b> on a phone, then meet each other. Each tap is a real act of the compiled platform, so give it a moment.</div>`;
   } else $('#banner').innerHTML = '';
 }
@@ -347,12 +347,14 @@ function render(){
 let renaming = null;
 function people(){
   const ps = ST.peers || [];
-  const chip = (key, name, on) => renaming === key
-    ? `<span class="pc${on ? ' on' : ''}"><span class="d"></span><input id="rn" value="${esc(name)}"></span>`
-    : `<span class="pc${on ? ' on' : ''}" data-key="${key}"><span class="d"></span>${esc(name)} ✎</span>`;
+  // on: reachable near the phone (green dot); far: met from afar (🌐, through the relay)
+  const chip = (key, name, on, far) => { const d = far ? '<span class="g">🌐</span>' : '<span class="d"></span>';
+    return renaming === key
+    ? `<span class="pc${on ? ' on' : ''}">${d}<input id="rn" value="${esc(name)}"></span>`
+    : `<span class="pc${on ? ' on' : ''}" data-key="${key}">${d}${esc(name)} ✎</span>`; };
   $('#people').innerHTML = `<div class="ph">You</div><div class="pp">${chip(ST.me, ST.name || 'Me', true)}</div>
-    <div class="ph" style="margin-top:10px">People near you</div>
-    <div class="pp">${ps.length ? ps.map(q => chip(q.key, q.name, q.state === 'connected')).join('') : '<span class="none">Looking… (Bluetooth or the same Wi-Fi)</span>'}</div>`;
+    <div class="ph" style="margin-top:10px">People</div>
+    <div class="pp">${ps.length ? ps.map(q => chip(q.key, q.name, q.state === 'connected', q.state === 'internet')).join('') : '<span class="none">Looking… (Bluetooth or the same Wi-Fi; for someone far away, tap the person+ button above)</span>'}</div>`;
   $('#people').querySelectorAll('[data-key]').forEach(c => c.onclick = () => { renaming = c.dataset.key; people(); $('#rn').focus(); $('#rn').select(); });
   const rn = $('#rn');
   if (rn){
@@ -461,7 +463,7 @@ $('#reset').onclick = async () => { $('#stxt').textContent = 'Starting over…';
 if (SOLO){
   document.body.classList.add('solo');
   for (const id of ['#back', '#about', '#reset']) $(id).style.display = 'none';
-  document.querySelector('.ttl small').textContent = 'On this phone · you and the people near you';
+  document.querySelector('.ttl small').textContent = 'On this phone · you and your people, near and far';
 }
 if (META){
   document.title = `${META.title} · live`;

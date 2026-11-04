@@ -6,7 +6,11 @@
 // the phone are the persons the page offers.  A debug panel shows what the
 // layer sees.
 //
-// The first test bed of madGLP on phones: no rendezvous server yet (WAN), no
+// People who are not near each other meet through talmonlab's relay
+// (relay_network.dart): one shares their invite link or QR code, the other
+// adds it, and their messages go through the relay, encrypted end to end.
+//
+// The first test bed of madGLP on phones: no rendezvous server (WAN), no
 // attestation (every peer reported unattested), first contact Open on both
 // proximity underlays.
 import 'dart:async';
@@ -15,17 +19,21 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show Clipboard, ClipboardData, rootBundle;
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking/grassroots_networking.dart';
 import 'package:grassroots_networking_glue/grassroots_glp_network.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:redux/redux.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'local_server.dart';
 import 'person_host.dart';
+import 'relay_network.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -135,6 +143,7 @@ class Running extends StatefulWidget {
 class _RunningState extends State<Running> {
   PersonHost? host;
   GrassrootsNetwork? layer;
+  RelayGlpNetwork? relay;
   LocalServer? server;
   WebViewController? web;
   final Map<String, Peer> peers = {};
@@ -183,7 +192,14 @@ class _RunningState extends State<Running> {
         sodium: sodium,
       );
       layer = l;
-      final net = GrassrootsGlpNetwork(l);
+      final net = RelayGlpNetwork(
+        inner: GrassrootsGlpNetwork(l),
+        sodium: sodium,
+        privateKey: Uint8List.fromList(identity.privateKey),
+        app: widget.contract,
+        dir: '${widget.base}/relay',
+      );
+      relay = net;
       final h = PersonHost(
         program: '${widget.base}/programs/vglp/cva/gas_worlds/live_${widget.contract}',
         rootSelfGlp: '${widget.base}/programs/self.glp',
@@ -227,6 +243,18 @@ class _RunningState extends State<Running> {
       layerUp = true;
       event('layer started');
 
+      net.onState = () {
+        event('relay: ${net.state}');
+      };
+      net.onAddedBy = (pk) {
+        event('added from afar by ${pk.hex.substring(0, 8)}…');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${_name(pk.hex)} added you, over the Internet')));
+        }
+      };
+      net.setOn(!File(_relayOff).existsSync());
+
       final s = LocalServer(
         host: h,
         contract: widget.contract,
@@ -234,7 +262,14 @@ class _RunningState extends State<Running> {
         peers: () => [
           for (final p in peers.values)
             if (p.discovered.isNotEmpty || p.connected.isNotEmpty)
-              {'key': p.key, 'state': p.connected.isNotEmpty ? 'connected' : 'found'}
+              {
+                'key': p.key,
+                'state': p.connected.any((u) => u != 'wan')
+                    ? 'connected'
+                    : p.connected.contains('wan')
+                        ? 'internet'
+                        : 'found'
+              }
         ],
         namesFile: '${widget.base}/names.json',
       );
@@ -254,8 +289,144 @@ class _RunningState extends State<Running> {
     }
   }
 
+  String get _relayOff => '${widget.base}/relay/off';
+
+  /// The name this phone gave the person of [key], or 'Person xxxx'.
+  String _name(String key) {
+    try {
+      final names = jsonDecode(File('${widget.base}/names.json').readAsStringSync()) as Map;
+      if (names[key] is String && (names[key] as String).isNotEmpty) return names[key] as String;
+    } on Object {
+      // no names yet
+    }
+    return 'Person ${key.substring(0, 4)}';
+  }
+
+  Future<void> _add(String text, void Function(String) say) async {
+    final pk = keyOfInvite(text);
+    if (pk == null) return say('That is not a GAS invite link.');
+    if (pk.hex == host?.me) return say('That is your own link.');
+    await relay!.addPerson(pk);
+    event('added ${pk.hex.substring(0, 8)}… from afar');
+    say('Added ${_name(pk.hex)}. They will see that you added them.');
+  }
+
+  /// You (your invite QR code and link), adding someone from afar, and the
+  /// relay switch.
+  void _people() async {
+    final r = relay, me = host?.me;
+    if (r == null || me == null) return;
+    final link = inviteLink(glp.PubKey.fromHex(me));
+    final field = TextEditingController();
+    final clip = await Clipboard.getData('text/plain');
+    if (clip?.text != null && keyOfInvite(clip!.text!) != null && !clip.text!.contains(me)) {
+      field.text = clip.text!.trim();
+    }
+    String note = '';
+    final phone = Platform.isAndroid || Platform.isIOS;
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => StatefulBuilder(builder: (context, set) {
+        void say(String s) => set(() => note = s);
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: .85,
+          builder: (context, scroll) => ListView(
+            controller: scroll,
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text('People far away', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 4),
+              const Text('People near you appear by themselves. To meet someone far away, '
+                  'one of you shares their link or QR code and the other adds it.'),
+              const SizedBox(height: 16),
+              Text('Your invite', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Center(child: QrImageView(data: link, size: 200, backgroundColor: Colors.white)),
+              const SizedBox(height: 8),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.copy),
+                  label: const Text('Copy link'),
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: link));
+                    say('Your link is copied.');
+                  },
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  icon: const Icon(Icons.share),
+                  label: const Text('Share'),
+                  onPressed: () => SharePlus.instance
+                      .share(ShareParams(text: 'Add me on GAS: $link', subject: 'GAS invite')),
+                ),
+              ]),
+              const Divider(height: 32),
+              Text('Add a person', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextField(
+                controller: field,
+                decoration: const InputDecoration(
+                    hintText: 'Paste their invite link', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 8),
+              Row(children: [
+                FilledButton(
+                  onPressed: r.on ? () => _add(field.text, say) : null,
+                  child: const Text('Add'),
+                ),
+                const SizedBox(width: 8),
+                if (phone)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scan their QR'),
+                    onPressed: !r.on
+                        ? null
+                        : () async {
+                            final got = await Navigator.of(context).push<String>(
+                                MaterialPageRoute(builder: (_) => const _Scan()));
+                            if (got != null) await _add(got, say);
+                          },
+                  ),
+              ]),
+              if (note.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(note)),
+              const Divider(height: 32),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Internet (talmonlab relay)'),
+                subtitle: Text(r.on
+                    ? 'Messages to people not near you go through talmonlab, encrypted: '
+                        'it sees who writes to whom, not what. Now: ${r.state}'
+                    : 'Off: only people near you (Bluetooth, the same Wi-Fi).'),
+                value: r.on,
+                onChanged: (v) {
+                  r.setOn(v);
+                  final off = File(_relayOff);
+                  if (v) {
+                    if (off.existsSync()) off.deleteSync();
+                  } else {
+                    off.parent.createSync(recursive: true);
+                    off.writeAsStringSync('off');
+                  }
+                  set(() {});
+                },
+              ),
+              if (r.relayPeers.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('Met from afar: ${r.relayPeers.map((p) => _name(p.hex)).join(', ')}'),
+              ],
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
   @override
   void dispose() {
+    relay?.dispose();
     unawaited(server?.stop());
     unawaited(layer?.dispose());
     super.dispose();
@@ -277,6 +448,7 @@ class _RunningState extends State<Running> {
               const SizedBox(height: 8),
               SelectableText('My key: ${host?.me ?? '—'}'),
               Text('Layer: ${layerUp ? 'running' : 'not running'} · underlays: PAN (Bluetooth), LAN · first contact: Open'),
+              Text('Relay: ${relay?.state ?? '—'} · met from afar: ${relay?.relayPeers.length ?? 0}'),
               Text('Agent: ${host?.status ?? '—'} · $phase'),
               const Divider(),
               Text('People (${peers.length})', style: Theme.of(context).textTheme.titleSmall),
@@ -303,6 +475,11 @@ class _RunningState extends State<Running> {
       appBar: AppBar(
         title: Text(widget.title, overflow: TextOverflow.ellipsis),
         actions: [
+          IconButton(
+            tooltip: 'People far away',
+            onPressed: _people,
+            icon: Icon(Icons.person_add, color: relay?.state == 'online' ? Colors.green : null),
+          ),
           TextButton.icon(
             onPressed: _debug,
             icon: const Icon(Icons.wifi_tethering),
@@ -325,4 +502,25 @@ class _RunningState extends State<Running> {
           : WebViewWidget(controller: web!),
     );
   }
+}
+
+/// The camera, until it reads a QR code; pops with its text.
+class _Scan extends StatefulWidget {
+  const _Scan();
+  @override
+  State<_Scan> createState() => _ScanState();
+}
+
+class _ScanState extends State<_Scan> {
+  bool done = false;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Scan their QR code')),
+        body: MobileScanner(onDetect: (capture) {
+          final v = capture.barcodes.isEmpty ? null : capture.barcodes.first.rawValue;
+          if (done || v == null || keyOfInvite(v) == null) return;
+          done = true;
+          Navigator.of(context).pop(v);
+        }),
+      );
 }

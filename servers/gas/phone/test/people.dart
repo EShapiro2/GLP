@@ -4,6 +4,7 @@
 // person's acts as the app page makes them.
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart' show Ed25519;
@@ -12,8 +13,13 @@ import 'package:gas_phone/person_host.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
+import 'package:gas_phone/relay_network.dart';
 
 Map<String, Object?> S(String f, List<Object?> a) => {'f': f, 'a': a};
+
+// Far apart, persons are fresh keys: a running relay may still hold what an
+// earlier run's persons sent.
+final _rnd = Random.secure();
 
 final programs =
     Platform.environment['GAS_PROGRAMS'] ?? Directory('../../../programs').absolute.path;
@@ -33,8 +39,10 @@ Future<String?> cannotRun(String contract) async {
   return null;
 }
 
-/// [n] persons of [contract], started, their layers started and joined.
-Future<List<PersonHost>> people(String contract, int n) async {
+/// [n] persons of [contract], started, their layers started and joined; or,
+/// given [relay], far apart: their layers not joined, each over a
+/// [RelayGlpNetwork] on that relay, the relay on.
+Future<List<PersonHost>> people(String contract, int n, {String? relay}) async {
   final sodium = await initHeadlessSodium();
   final queues = Directory.systemTemp.createTempSync('gas_phone_');
   addTearDown(() => queues.deleteSync(recursive: true));
@@ -43,7 +51,8 @@ Future<List<PersonHost>> people(String contract, int n) async {
   for (var i = 0; i < n; i++) {
     final id = await GrassrootsIdentity.create(
         keyPair: await Ed25519()
-            .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, 0x41 + i))));
+            .newKeyPairFromSeed(Uint8List.fromList(
+                relay == null ? List.filled(32, 0x41 + i) : List.generate(32, (_) => _rnd.nextInt(256)))));
     final layer = HeadlessGrassrootsNetwork(
       identity: id,
       sodium: sodium,
@@ -54,14 +63,28 @@ Future<List<PersonHost>> people(String contract, int n) async {
       program: world(contract),
       rootSelfGlp: '$programs/self.glp',
       keyPair: (pub: glp.PubKey.fromList(id.publicKey), priv: Uint8List.fromList(id.privateKey)),
-      network: HeadlessGlpNetwork(layer),
+      network: relay == null
+          ? HeadlessGlpNetwork(layer)
+          : RelayGlpNetwork(
+              inner: HeadlessGlpNetwork(layer),
+              sodium: sodium,
+              privateKey: Uint8List.fromList(id.privateKey),
+              app: contract,
+              dir: '${queues.path}/relay$i',
+              relayUrl: relay,
+            ),
     );
     await host.start(calendar: calendar);
     expect(host.status, 'ready');
     expect(await layer.start(), isTrue);
     hosts.add(host);
     layers.add(layer);
+    if (host.network case final RelayGlpNetwork r) {
+      r.setOn(true);
+      addTearDown(r.dispose);
+    }
   }
+  if (relay != null) return hosts;
   for (var i = 0; i < n; i++) {
     for (var j = 0; j < n; j++) {
       if (i == j) continue;

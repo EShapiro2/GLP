@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan the QR code of someone you want to add on GAS.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Find people near you running GAS and talk to their agents directly over Bluetooth, with no network and no server.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
