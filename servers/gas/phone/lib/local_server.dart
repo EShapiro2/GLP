@@ -15,15 +15,36 @@ class LocalServer {
   /// The directory of the site's files (app.html, data.js, specs/).
   final String www;
 
-  /// The people this phone's layer reports, each {key, name}.
+  /// The people this phone's layer reports, each {key, state}: found or
+  /// connected.
   final List<Map<String, String>> Function() peers;
+
+  /// Where the names the person gives people are kept, key to name, the
+  /// person's own under its key; null, and they are kept for the session.
+  final String? namesFile;
 
   LocalServer({
     required this.host,
     required this.contract,
     required this.www,
     required this.peers,
-  });
+    this.namesFile,
+  }) {
+    final f = namesFile == null ? null : File(namesFile!);
+    if (f != null && f.existsSync()) {
+      try {
+        names.addAll((jsonDecode(f.readAsStringSync()) as Map).cast<String, String>());
+      } catch (_) {}
+    }
+  }
+
+  final Map<String, String> names = {};
+
+  String nameOf(String key) => names[key] ?? 'Person ${key.substring(0, 4)}';
+
+  List<Map<String, String>> _people() => [
+        for (final p in peers()) {...p, 'name': nameOf(p['key']!)}
+      ];
 
   HttpServer? _server;
   int get port => _server!.port;
@@ -38,7 +59,25 @@ class LocalServer {
 
   Future<void> stop() async => _server?.close(force: true);
 
-  Map<String, Object?> _state() => {...host.state(), 'peers': peers()};
+  Map<String, Object?> _state() => {
+        ...host.state(),
+        'version': _version(),
+        'name': names[host.me] ?? 'Me',
+        'peers': _people(),
+      };
+
+  // The page's version: it moves whenever anything the page shows moves ---
+  // the person's draws, the people, their names.
+  int _ver = 0;
+  String? _last;
+  int _version() {
+    final sig = '${host.version}|${host.status}|${jsonEncode(_people())}|${jsonEncode(names)}';
+    if (sig != _last) {
+      _last = sig;
+      _ver++;
+    }
+    return _ver;
+  }
 
   Future<void> _handle(HttpRequest req) async {
     try {
@@ -48,10 +87,7 @@ class LocalServer {
           case 'state':
             final since = int.tryParse(req.uri.queryParameters['since'] ?? '') ?? -1;
             final until = DateTime.now().add(const Duration(seconds: 20));
-            final peersNow = jsonEncode(peers());
-            while (host.version == since &&
-                jsonEncode(peers()) == peersNow &&
-                DateTime.now().isBefore(until)) {
+            while (_version() == since && DateTime.now().isBefore(until)) {
               await Future<void>.delayed(const Duration(milliseconds: 150));
             }
             return await _json(req, _state());
@@ -59,6 +95,16 @@ class LocalServer {
             final body = jsonDecode(await utf8.decodeStream(req)) as Map;
             unawaited(host.act(body['id'] as int,
                 [for (final x in body['path'] as List) x as int], body['value']));
+            return await _json(req, {"ok": true});
+          case 'name':
+            final body = jsonDecode(await utf8.decodeStream(req)) as Map;
+            final key = body['key'] as String, name = (body['name'] as String).trim();
+            if (name.isEmpty) {
+              names.remove(key);
+            } else {
+              names[key] = name;
+            }
+            if (namesFile != null) await File(namesFile!).writeAsString(jsonEncode(names));
             return await _json(req, {"ok": true});
           case 'day':
             unawaited(host.nextDay());

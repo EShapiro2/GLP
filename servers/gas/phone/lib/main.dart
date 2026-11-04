@@ -231,8 +231,9 @@ class _RunningState extends State<Running> {
         peers: () => [
           for (final p in peers.values)
             if (p.discovered.isNotEmpty || p.connected.isNotEmpty)
-              {'key': p.key, 'name': 'Person ${p.key.substring(0, 4)}'}
+              {'key': p.key, 'state': p.connected.isNotEmpty ? 'connected' : 'found'}
         ],
+        namesFile: '${widget.base}/names.json',
       );
       await s.start();
       server = s;

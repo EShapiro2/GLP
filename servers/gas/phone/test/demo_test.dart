@@ -26,6 +26,7 @@ void main() {
         .readAsStringSync()
         .contains('cal(alice, N)');
     final hosts = <PersonHost>[], layers = <HeadlessGrassrootsNetwork>[];
+    final servers = <LocalServer>[];
     for (final (i, name) in [(0x41, 'Ann'), (0x42, 'Ben')]) {
       final id = await GrassrootsIdentity.create(
           keyPair: await Ed25519()
@@ -44,20 +45,23 @@ void main() {
       await layer.start();
       hosts.add(host);
       layers.add(layer);
-      final names = {'Ann': 'Ben', 'Ben': 'Ann'};
       final server = LocalServer(
         host: host,
         contract: contract,
         www: www,
         peers: () => [
           for (final o in hosts)
-            if (o != host) {'key': o.me, 'name': names[name]!}
+            if (o != host) {'key': o.me, 'state': 'connected'}
         ],
       );
+      servers.add(server);
+      server.names[host.me] = name;
       await server.start(port: 8200 + hosts.length);
       // ignore: avoid_print
       print('$name: ${server.url.replaceFirst(RegExp(r':\d+/'), ':${8200 + hosts.length}/')}');
     }
+    servers[0].names[hosts[1].me] = 'Ben';
+    servers[1].names[hosts[0].me] = 'Ann';
     for (var i = 0; i < 2; i++) {
       final o = 1 - i;
       final net = hosts[i].network;
