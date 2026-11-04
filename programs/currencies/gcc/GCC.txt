@@ -1,0 +1,27 @@
+% GCC: Grassroots Community Currencies --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: Currencies (GCC).  The paper, /Users/udi/Grassroots/GCC/main_SGC.tex, prints it in its box in Section 2 and cites a clause as GCC:1.
+% Paper: Grassroots Community Currencies, in preparation
+% Extends: DGC, Denominated Grassroots Currencies, Currencies' (programs/currencies/sovereign), and through it GC, GB and GKK (Udi, 2026-11-04, to Currencies #15).  It cites their clauses whole, GKK:1 to GKK:3 and DGC:1 to DGC:9, and restates none; a community coin is a coin of its minting treasurer under DGC, so DGC:8 makes it that treasurer's debt of one unit of its denomination, removed from office or not.
+% Defines: community, a community's name, treasurer, community coin.  A community is started by a person, who gives it its name; a treasurer of a community is a person the community's treasurers appointed, the founder the first; a community coin is a coin minted by a treasurer of a community, declared as the community's and as denominated by a fiat currency, distinct from the treasurer's personal coins, and a coin of its minting treasurer under DGC's clauses.  The names Alice and Bob are GC's; Carol is a person.
+% Last changed: 2026-11-04, written by Currencies #15 Cowork from Udi's four clauses, given in chat on 2026-11-04 (Udi, 12:24 and 12:29 local), the contract's name and owner his ruling of the same day; the titles approved by Udi (12:51); GCC extends DGC and not GC, clause 3 keeps its first half, DGC:8 carrying the second, and clauses 5 and 6 are Currencies #15's, approved by Udi (13:06); the modalities and the pragmas are Currencies #15's.
+% Schemas: GCC.glp beside this file, DGC's whole, a twin of each of DGC's acts over coins with a community coin for a coin, and start, cmint, appoint, remove, cpay and credeem, over DGC's predicates and ccoin and treasurer, the term from which a run of the cascade prints schemas.txt (cascade.sh).  Appoint and remove take a listed role that wills, and remove one that leaves out the treasurer removed: two constructs GSC's language does not yet have, proposed to GSC (Currencies #15, 2026-11-04).
+GCC: Grassroots Community Currencies
+Alice, Bob and Carol are persons.
+1. ■ Community.  Alice may start a community, give it a unique name, and is then the first treasurer of the community.
+2. ■ Minting.  While Alice is a treasurer of a community, they can mint community coins, which are declared as such, and as being denominated by a fiat currency.
+3. ○ Redemption.  While Alice is a treasurer of a community, they undertake to redeem a community coin against a fiat coin of its denomination.
+4. ■ Treasurers.  The treasurers of a community can appoint Alice as a new treasurer by their joint decision and the consent of Alice; they can remove a treasurer Bob by a joint decision of all treasurers except Bob.
+5. ■ Payment.  Alice may decide to pay community coins they hold to a treasurer of the community, whom they know.
+6. ■ Redemption in kind.  Alice may decide to redeem a community coin they hold against any coin held by a treasurer of the community, whom they know.
+Pragmas
+Coins: the coins Alice holds.
+Communities: the communities Alice is a treasurer of.
+Community: Alice [Start] <name>
+Minting: Alice [Mint community coins] <denomination> <amount>
+Treasurers: Carol [Appoint] <person>
+  Alice: Carol asks you to become a treasurer of their community.
+  Carol: Carol asks to appoint Alice a treasurer of your community.
+  Carol [Remove] <person>
+  Carol: Carol asks to remove Bob as a treasurer of your community.
+Payment: Alice [Pay treasurer] <community> <denomination> <issuer> <amount>
+Redemption in kind: Alice [Redeem with treasurer] <community> <denomination> <issuer given> <issuer wanted> <maturity wanted>

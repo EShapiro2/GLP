@@ -1,0 +1,33 @@
+% DGC: Denominated Grassroots Currencies --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: Currencies (SGC).  The paper, /Users/udi/Grassroots/SGC/main_SGC.tex, states it in Section 2.1 and cites a clause by number, and GCC's paper quotes it as what GCC extends; it is named DGC, its owner Currencies, by Udi's ruling of 2026-11-04 (to Currencies #15): the contract names no sovereign, the sovereign being a party like any other.
+% Paper: Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727
+% Extends: GC, Grassroots Coins, and GB, Grassroots Bonds, Currencies' (programs/currencies/coins, programs/currencies/bonds), with the denomination and the acceptances added, and through them GKK, GSC's (programs/gsc); clauses 1, 3, 5, 6 and 7 are GC's with a bond in place of a coin where the act allows one, 2 and 9 are GB's, and 4 and 8 are its own (SGC, Section 2.1).
+% Defines: denomination, an identifier of a fiat currency; a denominated coin and bond, a debt of one unit of its denomination due now or at its date; acceptance of named coins in payment.
+% Last changed: 2026-11-04, written by Currencies #15 Cowork from SGC's Section 2.1 as it stands, each clause with its modality from SGC's Appendix A; the pragmas are Currencies #15's, in GSC's form, GB's with the denomination and the acceptance added.  SGC's clauses are the paper's text of 2026-10-13; the five it shares with GC and GB are to be brought to their current text, with knowing the other party and GB:7's wording, when SGC is next revised (Udi, 2026-11-04: GCC first).
+% Schemas: DGC.glp beside this file, GB's with the denomination as the argument after the issuer of every coin and bond, and accept, payout and spend (SGC, Appendix A), the term from which a run of the cascade prints schemas.txt (cascade.sh).
+DGC: Denominated Grassroots Currencies
+Alice, Bob and Carol are persons.  Dollar names one denomination, and an Alice Dollar-denominated coin or bond, Alice-coin and Alice-bond for short, is one issued by Alice.
+1. ■ Minting.  Alice may decide to issue their coins, of any denomination, and their bonds, of any denomination and of a maturity later than their own date.
+2. ○ Date.  Alice keeps their date at the current date.
+3. ■ Swap.  Alice and Bob may jointly decide to swap Dollar-denominated coins and bonds they hold.
+4. ■ Acceptance.  Alice may decide to accept Carol-coins in payment up to a limit of their choosing, if they hold a Carol-coin or a Carol-bond; each Carol-coin paid to Alice counts against the limit, and Alice may decide again.
+5. ■ Payment.  Alice may decide to pay Bob Dollar-denominated coins they hold that Bob accepts.
+6. ■ Redemption.  Alice may decide to redeem a Bob-coin they hold against any Dollar-denominated coin or bond Bob holds, and to take a Bob-coin for a matured Bob-bond they hold.
+7. ○ Pricing.  Alice prices their offerings in Alice-coins and accepts them in payment at those prices.
+8. ○ Denomination.  An Alice-coin and an Alice-bond are each Alice's debt of one Dollar, the coin due now and the bond at its date; Alice redeems an Alice-coin on presentation at face value, by a Dollar-denominated coin or bond the bearer accepts or by one Dollar.
+9. ■ Escrow.  Alice may deposit Dollar-denominated coins and bonds with Carol for Bob; Carol and Bob may jointly decide to release them to Bob, and Carol and Alice to return them to Alice, as the agreed condition is met or fails.
+Pragmas
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <issuer given> <denomination> <maturity given> <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Acceptance: Alice [Accept] <denomination> <limit>
+Payment: Alice [Pay] <issuer> <denomination> <amount>
+Redemption: Alice [Redeem] <denomination> <maturity given> <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <issuer> <denomination> <maturity> <amount>
+  Carol: Alice asks to deposit coins or bonds with you.
+  Carol [Release] <issuer> <denomination> <maturity> <amount>
+  Bob: Carol asks to release coins or bonds to you.
+  Carol [Return] <issuer> <denomination> <maturity> <amount>
+  Alice: Carol asks to return coins or bonds to you.
