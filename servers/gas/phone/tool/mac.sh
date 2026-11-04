@@ -55,7 +55,11 @@ build)
   run bash tool/sync_assets.sh || fail "the bundle (sync_assets.sh)"
   run flutter pub get || fail "flutter pub get"
   run flutter build macos --release || fail "flutter build macos"
-  ok "built $PHONE/build/macos/Build/Products/Release/GAS.app"
+  # The app zipped for the download page (ditto keeps the bundle's links and
+  # its ad-hoc signature): ~/src/GAS-mac.zip.
+  rm -f "$HOME/src/GAS-mac.zip"
+  run ditto -c -k --sequesterRsrc --keepParent "$PHONE/build/macos/Build/Products/Release/GAS.app" "$HOME/src/GAS-mac.zip" || fail "zip GAS.app"
+  ok "built $PHONE/build/macos/Build/Products/Release/GAS.app, zipped into ~/src/GAS-mac.zip"
   ;;
 run)
   APP="$PHONE/build/macos/Build/Products/Release/GAS.app"
