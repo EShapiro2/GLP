@@ -114,25 +114,22 @@ procedure tag_net(Stream(_)?, Stream(_)).
 tag_net([X|Xs], [net(X?)|Ts?]) :- tag_net(Xs?, Ts).
 tag_net([], []).
 """
-# One person alone: live_person(Person, HostIn, NetIn) runs the person's
+# One person alone, any person, named as the host names it (alice in the
+# server's worlds, the person's key on a phone): live_person(Person, HostIn, NetIn) runs the person's
 # platform agent and dispatcher, its network input the agent's own; the
 # platform's messages go out by send_to_net, a cold call each to the person
 # it names, and arrive on that person's network input.  The host feeds the
 # person g(Grant) and, with a calendar, cal(N).
 body += """
 procedure live_person(Peer?, HostIn?, Stream(Net)?).
-"""
-for p in P:
-    k = 'K?, ' if cal else ''
-    split = 'split_person(Ins?, G, K)' if cal else 'split_person(Ins?, G)'
-    body += f"""live_person({p}, Ins, NetIn) :-
-    {split},
-    platform # agent({p}, NetIn?, Out, T, {k}As),
+live_person(P, Ins, NetIn) :- ground(P?) |
+    """ + ('split_person(Ins?, G, K)' if cal else 'split_person(Ins?, G)') + """,
+    platform # agent(P?, NetIn?, Out, T, """ + ('K?, ' if cal else '') + """As),
     platform # dispatch(As?, ch(G?, D), M),
     to_person(M?, T?),
     tee_net(Out?, Net, L),
     send_to_net(Net?),
-    tag({p}, D?, S),
+    tag(P?, D?, S),
     tag_net(L?, SN),
     merge(S?, SN?, S1),
     send_to_user(S1?).
