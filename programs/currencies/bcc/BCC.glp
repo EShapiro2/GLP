@@ -1,0 +1,146 @@
+%% ---------------------------------------------------------------------------
+%% BCC.glp --- Backed Community Currencies, the contract BCC, Currencies' (Coordination Appendix C; Udi's ruling of 2026-11-04), in the term form programs/gsc reads.  The clauses are in BCC.txt beside this file.  BCC extends GCC (programs/currencies/gcc/GCC.glp) and GDC (programs/currencies/gdc/GDC.glp), so the term holds their schemas whole but cmint and credeem, which BCC:1 and BCC:2 replace, and GCC's start, which declares the backing fraction besides.  Every role but establish's requires identity.  Written by Currencies #15 Cowork, 2026-11-04.
+%%
+%% The predicates of BCC's own.  backing(N, phi) at a treasurer of N is the community's backing fraction, declared on starting it.  locked(v, f) at a treasurer p is an f-denominated v-coin p holds locked as the backing of a community coin p issued; it is a dcoin(v, f) taken out of circulation until the coin returns.  A community coin is retired when it returns to its issuer, and its backing unlocked.  The arithmetic: with n treasurers each extending every other k coins of mutual credit in f, more than phi*n backers per coin, and a fraction s of the others as creditors, a treasurer mints about (s/phi)k coins and no coin loses all its backers while fewer than phi*n treasurers are insolvent (Udi and Currencies #15, 2026-11-04).
+%%
+%% Three constructs GSC's language does not have, proposed to GSC by Currencies #15 (2026-11-04), pending Udi's approval: a listed role that wills and a listed role that leaves one role out (GCC.glp's header), and here a count over the agents a role lists, each_of(Fraction, Listed, Var, Dels, Adds): for each of more than Fraction of the agents in the extent of the listed role, Var bound to that agent, the atoms Dels are required and deleted and the atoms Adds added at the role carrying it.  Until GSC's paper admits them the checker does not certify this contract.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant) ; ext_any(NameTerm).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer) ; num(Constant) ; any.
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Mult      ::= Atom ; times(Arg, Atom) ; each_of(Arg, RoleKind, Arg, Atoms, Atoms).
+Mults     ::= [] ; [Mult | Mults].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+            ; listed(Integer, Constant, Args) ; listed_except(Integer, Constant, Args, Arg).
+RoleSpec  ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Names     ::= [] ; [Constant | Names].
+Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(bcc, C): the contract, BCC (Coordination Appendix C).
+procedure contract_named(Constant?, Declared).
+contract_named(bcc,
+%% GKK:1, Identity: act once, so establish forbids the identity it adds.
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+%% GKK:2, Acquaintance.
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+%% GKK:3, Introduction: p, who knows q and c, introduces c to q, who knows p.
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:1, Minting: p mints k p-coins.
+    schema(mint, ['Alice'], [num(k)],
+       [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
+%% GC:2, Swap: p and q, who know each other, swap k u-coins of p's for k1 v-coins of q's; each comes to know the issuer of what they receive.
+    schema(swap, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:3, Payment: p pays k q-coins to q, whom p knows.
+    schema(pay, ['Alice', 'Bob'], [num(k)],
+       [rs(guarded,   [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]),
+%% GC:4, Redemption: p redeems a q-coin against an r-coin q holds, q whom p knows; p comes to know r.
+    schema(redeem, ['Alice', 'Bob'], [pvar(r)],
+       [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+%% GC:2 for a community coin: p gives k community coins of <c>.n in f minted by u, q gives k1 coins of v.
+    schema(swap_xc, ['Alice', 'Bob'], [pvar(c), svar(n), num(f), pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(ccoin, [pvar(u), nterm(ext(own_var(c), n)), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(ccoin, [pvar(u), nterm(ext(own_var(c), n)), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:2 for a community coin: p gives k coins of u, q gives k1 community coins of <c>.n in f minted by v.
+    schema(swap_cx, ['Alice', 'Bob'], [pvar(c), svar(n), num(f), pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(ccoin, [pvar(v), nterm(ext(own_var(c), n)), num(f)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(ccoin, [pvar(v), nterm(ext(own_var(c), n)), num(f)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:2 for community coins: k of <c>.n in f minted by u for k1 of <c1>.n1 in f1 minted by v.
+    schema(swap_xx, ['Alice', 'Bob'], [pvar(c1), svar(n1), num(f1), pvar(c), svar(n), num(f), pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(ccoin, [pvar(v), nterm(ext(own_var(c1), n1)), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(ccoin, [pvar(u), nterm(ext(own_var(c), n)), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(ccoin, [pvar(u), nterm(ext(own_var(c), n)), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(ccoin, [pvar(v), nterm(ext(own_var(c1), n1)), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:3 for a community coin: p pays k community coins of <c>.n in f minted by q to q, whom p knows.
+    schema(pay_x, ['Alice', 'Bob'], [pvar(c), svar(n), num(f), num(k)],
+       [rs(guarded,   [], [times(num(k), atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)]))], [], [atom(identity, [])], [])]),
+%% GC:4 for a community coin: p redeems a community coin of <c>.n in f minted by q against a coin of r held by q, whom p knows.
+    schema(redeem_xc, ['Alice', 'Bob'], [pvar(c), svar(n), num(f), pvar(r)],
+       [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+%% GC:4 for a community coin: p redeems a q-coin against a community coin of <c>.n in f minted by r, held by q.
+    schema(redeem_cx, ['Alice', 'Bob'], [pvar(c), svar(n), num(f), pvar(r)],
+       [rs(guarded,   [atom(ccoin, [pvar(r), nterm(ext(own_var(c), n)), num(f)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(ccoin, [pvar(r), nterm(ext(own_var(c), n)), num(f)])], [atom(identity, [])], [])]),
+%% GC:4 for community coins: one of <c>.n in f minted by q against one of <c1>.n1 in f1 minted by r, held by q.
+    schema(redeem_xx, ['Alice', 'Bob'], [pvar(c1), svar(n1), num(f1), pvar(c), svar(n), num(f), pvar(r)],
+       [rs(guarded,   [atom(ccoin, [pvar(r), nterm(ext(own_var(c1), n1)), num(f1)]), atom(knows, [pvar(r)])], [atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)])], [atom(ccoin, [pvar(r), nterm(ext(own_var(c1), n1)), num(f1)])], [atom(identity, [])], [])]),
+%% GCC:4, Treasurers, appointment: Alice, a treasurer of <c>.n, and every treasurer Alice lists, Alice among them, jointly, with Bob's consent, appoint Bob a treasurer; every treasurer and Bob then list Bob, and Bob holds the community's denomination.  The listed role wills, a construct proposed to GSC (header).
+    cschema(appoint, ['Alice', 'Alice', 'Bob'], [pvar(c), svar(n), num(f)], [],
+       [rs(guarded, [atom(treasurer, [role(3), nterm(ext(own_var(c), n))])], [], [atom(identity, []), atom(treasurer, [role(1), nterm(ext(own_var(c), n))]), atom(denomination, [nterm(ext(own_var(c), n)), num(f)])], [atom(treasurer, [role(3), nterm(ext(own_var(c), n))])]),
+        crs(listed(1, treasurer, [nterm(ext(own_var(c), n))]), guarded, [atom(treasurer, [role(3), nterm(ext(own_var(c), n))])], [], [atom(identity, [])], [atom(treasurer, [role(3), nterm(ext(own_var(c), n))])]),
+        rs(guarded, [atom(treasurer, [role(3), nterm(ext(own_var(c), n))]), atom(denomination, [nterm(ext(own_var(c), n)), num(f)])], [], [atom(identity, [])], [atom(treasurer, [role(3), nterm(ext(own_var(c), n))])])]),
+%% GCC:4, Treasurers, removal: Alice, a treasurer of <c>.n, and every treasurer Alice lists but Carol, jointly, remove the treasurer Carol, who does not will it; every treasurer deletes Carol's listing, and Carol every listing of <c>.n, by a cleared atom, and its denomination.  The listed role wills and leaves Bob out, two constructs proposed to GSC (header).
+    cschema(remove, ['Alice', 'Alice', 'Carol'], [pvar(c), svar(n), num(f)], [],
+       [rs(guarded, [], [atom(treasurer, [role(3), nterm(ext(own_var(c), n))])], [atom(identity, []), atom(treasurer, [role(1), nterm(ext(own_var(c), n))])], []),
+        crs(listed_except(1, treasurer, [nterm(ext(own_var(c), n))], role(3)), guarded, [], [atom(treasurer, [role(3), nterm(ext(own_var(c), n))])], [atom(identity, [])], []),
+        rs(unguarded, [], [atom(treasurer, [role(3), nterm(ext(own_var(c), n))]), atom(treasurer, [any, nterm(ext(own_var(c), n))]), atom(denomination, [nterm(ext(own_var(c), n)), num(f)])], [atom(identity, [])], [])]),
+%% GDC:1, Minting: p mints k p-coins denominated by f.
+    schema(dmint, ['Alice'], [num(f), num(k)],
+       [rs(guarded, [times(num(k), atom(dcoin, [role(1), num(f)]))], [], [atom(identity, [])], [])]),
+%% GC:2 for a denominated coin: p gives k u-coins in f, q gives k1 coins of v.
+    schema(swap_dc, ['Alice', 'Bob'], [num(f), pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:2 for a denominated coin: p gives k coins of u, q gives k1 v-coins in f.
+    schema(swap_cd, ['Alice', 'Bob'], [num(f), pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:2 for denominated coins: k u-coins in f for k1 v-coins in f1.
+    schema(swap_dd, ['Alice', 'Bob'], [num(f), num(f1), pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:3 for a denominated coin: p pays k q-coins in f to q, whom p knows.
+    schema(pay_d, ['Alice', 'Bob'], [num(f), num(k)],
+       [rs(guarded,   [], [times(num(k), atom(dcoin, [role(2), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(dcoin, [role(2), num(f)]))], [], [atom(identity, [])], [])]),
+%% GC:4 for a denominated coin: p redeems a q-coin in f against a coin of r held by q.
+    schema(redeem_dc, ['Alice', 'Bob'], [num(f), pvar(r)],
+       [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+%% GC:4 for a denominated coin: p redeems a q-coin against an r-coin in f held by q.
+    schema(redeem_cd, ['Alice', 'Bob'], [num(f), pvar(r)],
+       [rs(guarded,   [atom(dcoin, [pvar(r), num(f)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(dcoin, [pvar(r), num(f)])], [atom(identity, [])], [])]),
+%% GC:4 for denominated coins: a q-coin in f against an r-coin in f1 held by q.
+    schema(redeem_dd, ['Alice', 'Bob'], [num(f), num(f1), pvar(r)],
+       [rs(guarded,   [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])]),
+%% BCC, Community: GCC:1 with the backing fraction phi declared beside the denomination f; replaces GCC's start.
+    schema(start, ['Alice'], [svar(n), num(f), num(phi)],
+       [rs(guarded, [atom(treasurer, [role(1), nterm(ext(own(1), n))]), atom(denomination, [nterm(ext(own(1), n)), num(f)]), atom(backing, [nterm(ext(own(1), n)), num(phi)])], [], [atom(identity, [])], [atom(treasurer, [role(1), nterm(ext(own(1), n))])])]),
+%% BCC:1, Minting: Alice, a treasurer of <c>.n with denomination f and backing fraction phi, mints one community coin against one f-denominated coin of each of more than phi of the other treasurers Alice lists, each such coin locked, locked(v, f).  The count over the listed treasurers, each_of(phi, listed(1, treasurer, [N]), v, Dels, Adds), is a construct speech-act schemas lack, proposed to GSC (header); the role spec is written as it would read once admitted.
+    schema(bmint, ['Alice'], [pvar(c), svar(n), num(f), num(phi)],
+       [rs(guarded, [atom(ccoin, [role(1), nterm(ext(own_var(c), n)), num(f)]), each_of(num(phi), listed(1, treasurer, [nterm(ext(own_var(c), n))]), pvar(v), [atom(dcoin, [pvar(v), num(f)])], [atom(locked, [pvar(v), num(f)])])], [], [atom(identity, []), atom(treasurer, [role(1), nterm(ext(own_var(c), n))]), atom(denomination, [nterm(ext(own_var(c), n)), num(f)]), atom(backing, [nterm(ext(own_var(c), n)), num(phi)])], [])]),
+%% BCC:1, the lock's release: a community coin returned to its issuer Alice is retired, and the coins backing it, one of each of more than phi of the other treasurers, unlocked; no one wills it.  The same proposed construct.
+    schema(unlock, ['Alice'], [pvar(c), svar(n), num(f), num(phi)],
+       [rs(unguarded, [each_of(num(phi), listed(1, treasurer, [nterm(ext(own_var(c), n))]), pvar(v), [atom(locked, [pvar(v), num(f)])], [atom(dcoin, [pvar(v), num(f)])])], [atom(ccoin, [role(1), nterm(ext(own_var(c), n)), num(f)])], [atom(identity, []), atom(denomination, [nterm(ext(own_var(c), n)), num(f)]), atom(backing, [nterm(ext(own_var(c), n)), num(phi)])], [])]),
+%% BCC:2, Coin Redemption from the issuer: Alice redeems a community coin of <c>.n in f issued by Bob, whom Alice knows, against one of the coins backing it, a locked v-coin in f Bob holds; Alice comes to know v.
+    schema(bredeem, ['Alice', 'Bob'], [pvar(c), svar(n), num(f), pvar(v)],
+       [rs(guarded, [atom(dcoin, [pvar(v), num(f)]), atom(knows, [pvar(v)])], [atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)])], [atom(locked, [pvar(v), num(f)])], [atom(identity, [])], [])]),
+%% BCC:2, Coin Redemption from a treasurer: Alice redeems a community coin of <c>.n in f issued by u from Bob, a treasurer of <c>.n whom Alice knows, against a coin of r Bob holds; Alice comes to know r.  The twins against a denominated coin and against a community coin Bob holds are GCC's credeem_x form with dcoin and ccoin, not repeated here.
+    schema(tredeem, ['Alice', 'Bob'], [pvar(c), svar(n), num(f), pvar(u), pvar(r)],
+       [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(ccoin, [pvar(u), nterm(ext(own_var(c), n)), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(ccoin, [pvar(u), nterm(ext(own_var(c), n)), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(treasurer, [role(2), nterm(ext(own_var(c), n))])], [])])]).

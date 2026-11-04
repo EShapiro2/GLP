@@ -1,5 +1,5 @@
 %% ---------------------------------------------------------------------------
-%% GCC.glp --- Grassroots Community Currencies, the contract GCC, Currencies' (Coordination Appendix C; Udi's ruling of 2026-11-04), in the term form programs/gsc reads (its README, "Writing a contract").  The clauses are in GCC.txt beside this file.  GCC extends GC, Grassroots Coins (programs/currencies/coins/GC.glp), which extends GKK (Udi, 2026-11-04, 13:32), so the term holds GC's seven schemas whole and every role but establish's requires identity.  The notation of each schema is printed from the term by a run of the cascade (schemas.txt).  Written by Currencies #15 Cowork, 2026-11-04, from Udi's clauses.
+%% GCC.glp --- Grassroots Community Currencies, the contract GCC, Currencies' (Coordination Appendix C; Udi's ruling of 2026-11-04), in the term form programs/gsc reads (its README, "Writing a contract").  The clauses are in GCC.txt beside this file.  GCC extends GDC, Grassroots Denominated Coins (programs/currencies/gdc/GDC.glp), which extends GC and GKK (Udi, 2026-11-04, 15:27), so the term holds GC's seven schemas and GDC's eight whole and every role but establish's requires identity.  The notation of each schema is printed from the term by a run of the cascade (schemas.txt).  Written by Currencies #15 Cowork, 2026-11-04, from Udi's clauses.
 %%
 %% The predicates of GCC's own.  treasurer(q, N) in the state of p says that q is a treasurer of the community N, and every treasurer of N holds it for every treasurer of N, themselves included, as a group's leader lists its members in GSN; the realisation keeps the lists of the treasurers equal, which is beneath the schemas (Udi, 2026-11-04: implementation).  ccoin(u, N, f) in the state of p is a community coin of the community N, minted by its treasurer u and denominated by the fiat currency f, held by p: a coin of u under GC:2 to GC:4, declared the community's and denominated, distinct from u's personal coins coin(u).  A community is named by its founder, the agent variable c or the role that starts it, and a speech act n the founder signs, <c>.n, as a group of GSN is named (GSC, Section 3.1); the name is unique by Definition Compilation, a name term in no required atom being fresh.  The denomination f is a value, written num(f) for want of a value variable in the term form (GSC, Appendix Values in Speech-Act Schemas), and k, k1 are multiplicities.  GC's swap, pay and redeem take a community coin in place of a coin, lot by lot, so each has twins here named with x for the community lot, swap_xc, swap_cx and swap_xx, pay_x, redeem_xc, redeem_cx and redeem_xx, under GC's buttons; GCC:5 is credeem, the counterparty a treasurer of the community who need not have minted the coin.  denomination(N, f) in the state of a treasurer of N is the community's denomination, declared by its founder on starting it (GCC:1), which every community coin of N carries.
 %%
@@ -58,6 +58,37 @@ contract_named(gcc,
     schema(redeem, ['Alice', 'Bob'], [pvar(r)],
        [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+%% GDC:1, Minting: p mints k p-coins denominated by f.
+    schema(dmint, ['Alice'], [num(f), num(k)],
+       [rs(guarded, [times(num(k), atom(dcoin, [role(1), num(f)]))], [], [atom(identity, [])], [])]),
+%% GC:2 for a denominated coin: p gives k u-coins in f, q gives k1 coins of v.
+    schema(swap_dc, ['Alice', 'Bob'], [num(f), pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:2 for a denominated coin: p gives k coins of u, q gives k1 v-coins in f.
+    schema(swap_cd, ['Alice', 'Bob'], [num(f), pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:2 for denominated coins: k u-coins in f for k1 v-coins in f1.
+    schema(swap_dd, ['Alice', 'Bob'], [num(f), num(f1), pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:3 for a denominated coin: p pays k q-coins in f to q, whom p knows.
+    schema(pay_d, ['Alice', 'Bob'], [num(f), num(k)],
+       [rs(guarded,   [], [times(num(k), atom(dcoin, [role(2), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(dcoin, [role(2), num(f)]))], [], [atom(identity, [])], [])]),
+%% GC:4 for a denominated coin: p redeems a q-coin in f against a coin of r held by q.
+    schema(redeem_dc, ['Alice', 'Bob'], [num(f), pvar(r)],
+       [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+%% GC:4 for a denominated coin: p redeems a q-coin against an r-coin in f held by q.
+    schema(redeem_cd, ['Alice', 'Bob'], [num(f), pvar(r)],
+       [rs(guarded,   [atom(dcoin, [pvar(r), num(f)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(dcoin, [pvar(r), num(f)])], [atom(identity, [])], [])]),
+%% GC:4 for denominated coins: a q-coin in f against an r-coin in f1 held by q.
+    schema(redeem_dd, ['Alice', 'Bob'], [num(f), num(f1), pvar(r)],
+       [rs(guarded,   [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], []),
 %% GCC:1, Community: Alice starts the community <Alice>.n, n a speech act Alice signs and the name fresh, declares its denomination f, and is its first treasurer.
     schema(start, ['Alice'], [svar(n), num(f)],
        [rs(guarded, [atom(treasurer, [role(1), nterm(ext(own(1), n))]), atom(denomination, [nterm(ext(own(1), n)), num(f)])], [], [atom(identity, [])], [atom(treasurer, [role(1), nterm(ext(own(1), n))])])]),
