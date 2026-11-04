@@ -51,6 +51,8 @@ dependencies:
   share_plus: ^13.3.1
   mobile_scanner: ^7.5.0
   app_links: ^7.2.2
+  qr: ^3.0.3
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
