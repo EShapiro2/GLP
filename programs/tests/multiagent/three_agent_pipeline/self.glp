@@ -17,3 +17,16 @@ transformer_init(Id, In) :- agents # transformer_init(Id?, In?).
 
 exported procedure consumer_init(_?, _?).
 consumer_init(Id, In) :- agents # consumer_init(Id?, In?).
+
+%% Every agent's initial goal, agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), is answered by this program: "A boot defines no agent/2: the program it loads answers the initial goal, in a simulation as on a phone, and the person goal's first act names the entry the program starts" (IGLP 30c04c5, Implementation Notes, "Boot").  The person's first act, init(Entry, Me, Ps), names the entry, with the agent's own key and the keys of the peers its person knows.
+PersonSays ::= init(Constant, Key, List(Key)).
+
+exported procedure(X) agent(Channel(Stream(PersonSays), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+
+%% The agent's program, by the role its person tells it, with its own key and its peers' keys, keys(Me, Ps).
+procedure(X) start(Stream(PersonSays)?, Stream(NetMsg(X))?).
+start([init(producer_init, Me, Ps) | _], N) :- producer_init(keys(Me?, Ps?), N?).
+start([init(transformer_init, Me, Ps) | _], N) :- transformer_init(keys(Me?, Ps?), N?).
+start([init(consumer_init, Me, Ps) | _], N) :- consumer_init(keys(Me?, Ps?), N?).
+start(_, _) :- otherwise | true.
