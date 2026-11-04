@@ -31,7 +31,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/glp_network.dart';
-import 'package:sodium_libs/sodium_libs_sumo.dart';
+import 'package:sodium/sodium_sumo.dart';
 
 /// The relay GAS phones use.
 const defaultRelay = 'https://talmonlab.bgu.ac.il/gasrelay';

@@ -9,11 +9,11 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart' show Ed25519;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gas_phone/person_host.dart';
+import 'package:gas_core/person_host.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
-import 'package:gas_phone/relay_network.dart';
+import 'package:gas_core/relay_network.dart';
 
 Map<String, Object?> S(String f, List<Object?> a) => {'f': f, 'a': a};
 

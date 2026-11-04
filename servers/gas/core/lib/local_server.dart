@@ -46,7 +46,7 @@ class LocalServer {
 
   Future<void> start({int port = 0}) async {
     _server = await HttpServer.bind(InternetAddress.loopbackIPv4, port, shared: true);
-    _server!.listen((req) => unawaited(_handle(req)));
+    _server!.listen((req) => unawaited(handle(req)));
   }
 
   Future<void> stop() async => _server?.close(force: true);
@@ -57,6 +57,7 @@ class LocalServer {
         'version': core.version,
         'me': core.me.hex,
         'name': core.nameOf(core.me.hex),
+        'hosted': core.hosted,
         'apps': [for (final c in core.apps()) {...c.toJson(), 'name': c.name}],
         'others': [for (final c in core.others()) {...c.toJson(), 'name': c.name}],
         'open': core.session?.contract.name,
@@ -70,6 +71,7 @@ class LocalServer {
       'me': core.me.hex,
       'name': core.nameOf(core.me.hex),
       'invite': core.invite(),
+      'hosted': core.hosted,
       'app': s?.contract.name,
       'title': s?.contract.title,
       'peers': s?.people() ?? const [],
@@ -113,7 +115,8 @@ class LocalServer {
     return t.isEmpty ? {} : jsonDecode(t) as Map;
   }
 
-  Future<void> _handle(HttpRequest req) async {
+  /// One request of the page: its API, or one of its files.
+  Future<void> handle(HttpRequest req) async {
     try {
       final seg = req.uri.pathSegments;
       if (seg.isNotEmpty && seg[0] == 'api') return await _api(req, seg);
@@ -223,7 +226,9 @@ class LocalServer {
         return _json(req, _state(s));
       case 'act':
         final b = await _body(req);
-        unawaited(s.host.act(b['id'] as int, [for (final x in b['path'] as List) x as int], b['value']));
+        // Answered once the agent has taken the act, so the page shows it
+        // waiting until then.
+        await s.host.act(b['id'] as int, [for (final x in b['path'] as List) x as int], b['value']);
         return _json(req, {'ok': true});
       case 'day':
         unawaited(s.host.nextDay());

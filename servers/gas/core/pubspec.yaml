@@ -1,0 +1,21 @@
+name: gas_core
+description: "GAS's core, shared by the app on a device and GAS on the web: a person's apps, their agent's session, the relay, and the page's API"
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  # The GLP runtime, the person's agent.
+  glp_runtime:
+    path: ../../../glp_runtime
+  # libsodium (the relay's encryption); the app on a device gets its instance
+  # from sodium_libs, GAS on the web loads the native library.
+  sodium: ^3.4.6
+  cryptography: ^2.9.0
+  qr: ^3.0.3
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0

@@ -4,7 +4,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gas_phone/contracts.dart';
+import 'package:gas_core/contracts.dart';
 import 'package:gas_phone/main.dart' show unbundle;
 
 void main() {

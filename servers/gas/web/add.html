@@ -49,6 +49,7 @@ function show(c){
   <div class="card step"><div class="n">2</div><div><h2>Open the invite in GAS</h2><p>GAS gets ${c ? esc(c.title) : 'the app'} if you do not have it, opens it, and adds this person.</p>
     <a class="btn blue" href="${open}">Open in GAS</a> <button class="btn grey" id="cp">Copy link</button> <span class="small" id="ok"></span>
     <p class="small" style="margin-top:8px">If nothing opens: copy the link, open GAS, tap 🔗 at the top, and Open.</p></div></div>
+  <div class="card step"><div class="n">📱</div><div><h2>No app? Use it in the browser</h2><p>On an iPhone, or anywhere: GAS on the web runs your agent on talmonlab.</p><a class="btn grey" href="/gasweb/#/link/${encodeURIComponent(location.href)}">Open in the browser</a></div></div>
   <p class="small">Your messages to each other go through talmonlab's relay, encrypted end to end between your two phones.</p>`;
   document.getElementById('cp').onclick = async () => {
     try { await navigator.clipboard.writeText(location.href); document.getElementById('ok').textContent = 'Copied.'; }

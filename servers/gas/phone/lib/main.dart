@@ -32,9 +32,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'contracts.dart';
-import 'core.dart';
-import 'local_server.dart';
+import 'package:gas_core/contracts.dart';
+import 'package:gas_core/core.dart';
+import 'package:gas_core/local_server.dart';
 import 'view.dart';
 
 const _bg = Color(0xFFF5F5F7);

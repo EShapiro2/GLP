@@ -11,8 +11,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gas_phone/person_host.dart';
-import 'package:gas_phone/relay_network.dart';
+import 'package:gas_core/person_host.dart';
+import 'package:gas_core/relay_network.dart';
 
 import 'people.dart';
 

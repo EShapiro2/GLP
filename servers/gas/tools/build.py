@@ -194,7 +194,7 @@ for c in contracts:
 
 commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
 for f in os.listdir(os.path.join(HERE, 'web')):
-    if f.endswith('.html'):
+    if f.endswith(('.html', '.png')):
         shutil.copy(os.path.join(HERE, 'web', f), os.path.join(WWW, f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'glpCommit': commit}, ensure_ascii=False) + ';\n')

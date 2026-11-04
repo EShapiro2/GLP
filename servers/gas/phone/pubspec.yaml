@@ -33,6 +33,9 @@ dependencies:
   # The GLP runtime, the agent of the person on this phone.
   glp_runtime:
     path: ../../../glp_runtime
+  # GAS's core: the person's apps and agent, the relay, the page's API.
+  gas_core:
+    path: ../core
   # GNA's networking layer (Bluetooth, local network, Internet) and its
   # backend glue, the runtime's network interface over it.
   grassroots_networking:

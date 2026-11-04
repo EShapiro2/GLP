@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>GAS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="GAS">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f5f5f7">
+<link rel="apple-touch-icon" href="gas-icon.png">
+<link rel="icon" href="gas-icon.png">
 <style>
 :root{
   --bg:#f5f5f7; --card:#fff; --ink:#1d1d1f; --ink2:#3a3a3c; --mute:#86868b; --faint:#c7c7cc; --line:#e8e8ed;
@@ -29,6 +36,9 @@ input,select{font:inherit;color:inherit}
 .ibtn svg{width:19px;height:19px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .av{border-radius:50%;color:#fff;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex:none}
 h1{font-size:30px;letter-spacing:-.025em;margin:10px 18px 14px;font-weight:800}
+.drow{display:flex;align-items:center;justify-content:space-between;padding-right:14px}
+.arrows{display:none;gap:6px}.arrows button{width:30px;height:30px;border-radius:50%;background:rgba(118,118,128,.12);color:var(--blue);font-size:20px;line-height:28px}
+@media (hover:hover) and (pointer:fine){.arrows{display:flex}.row.drag{scroll-snap-type:none;cursor:grabbing;user-select:none}}
 h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600;margin:22px 18px 10px}
 
 /* app icons */
@@ -168,7 +178,7 @@ details.dev pre{white-space:pre-wrap;font-size:11px;max-height:200px;overflow:au
     <div class="scroll">
       <div class="hrow"><h1>Your apps</h1><button class="edit" id="edit">Edit</button></div>
       <div class="grid" id="mine"></div>
-      <h2>Discover</h2>
+      <div class="drow"><h2>Discover</h2><span class="arrows"><button id="dl" aria-label="Back">‹</button><button id="dr" aria-label="More">›</button></span></div>
       <div class="row" id="more"><div class="hint">Loading…</div></div>
     </div>
   </section>
@@ -192,7 +202,22 @@ details.dev pre{white-space:pre-wrap;font-size:11px;max-height:200px;overflow:au
 'use strict';
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-const get = p => fetch('/api/' + p, {cache: 'no-store'}).then(r => r.json());
+// The API, beside the page (the app's own server, or GAS on the web, where
+// the person is a token this browser keeps, made on the first visit).
+const store = {get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }};
+let starting = null;
+async function call(p, opts){
+  const tok = store.get('gasToken');
+  const r = await fetch('api/' + p, {cache: 'no-store', ...opts, headers: tok ? {'X-GAS-Token': tok} : {}});
+  if (r.status === 401){
+    starting = starting || fetch('api/start', {method: 'POST'}).then(x => x.json()).then(j => store.set('gasToken', j.token));
+    await starting; starting = null;
+    return call(p, opts);
+  }
+  return r.json();
+}
+const get = p => call(p);
 // A button pressed shows that it was: it dims at once, and spins while what
 // it asked takes longer than a moment (each post made within a moment of the
 // press is the press's).
@@ -206,7 +231,7 @@ document.addEventListener('click', e => {
 const post = (p, body) => {
   const b = PRESSED && Date.now() - PRESSED.t < 600 ? PRESSED.b : null;
   const spin = b && setTimeout(() => b.isConnected && b.classList.add('busy'), 150);
-  return fetch('/api/' + p, {method: 'POST', body: JSON.stringify(body || {})}).then(r => r.json())
+  return call(p, {method: 'POST', body: JSON.stringify(body || {})})
     .finally(() => { if (b){ clearTimeout(spin); b.classList.remove('busy'); } });
 };
 const NATIVE = window.GASNative ? (op, x) => GASNative.postMessage(JSON.stringify({op, ...(x || {})})) : null;
@@ -315,6 +340,29 @@ function drawHome(){
 }
 $('#mebtn').onclick = () => peopleSheet(true);
 $('#edit').onclick = () => { EDIT = !EDIT; drawHome(); };
+// Discover with a mouse (no swipe): the wheel and a drag scroll it sideways,
+// and the arrows by a card.
+(() => {
+  const r = $('#more');
+  const step = d => { const c = r.querySelector('.disc'); r.scrollBy({left: d * ((c ? c.offsetWidth : 200) + 12), behavior: 'smooth'}); };
+  $('#dl').onclick = () => step(-1); $('#dr').onclick = () => step(1);
+  r.addEventListener('wheel', e => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    const atStart = r.scrollLeft <= 0, atEnd = r.scrollLeft + r.clientWidth >= r.scrollWidth - 1;
+    if ((e.deltaY < 0 && atStart) || (e.deltaY > 0 && atEnd)) return;
+    r.scrollLeft += e.deltaY; e.preventDefault();
+  }, {passive: false});
+  let d = null;
+  r.addEventListener('mousedown', e => { if (e.button === 0) d = {x: e.clientX, l: r.scrollLeft, moved: false}; });
+  window.addEventListener('mousemove', e => {
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    if (Math.abs(dx) > 5){ d.moved = true; r.classList.add('drag'); }
+    if (d.moved) r.scrollLeft = d.l - dx;
+  });
+  window.addEventListener('mouseup', () => { r.classList.remove('drag'); setTimeout(() => { d = null; }, 0); });
+  r.addEventListener('click', e => { if (d && d.moved){ e.stopPropagation(); e.preventDefault(); } }, true);
+})();
 function removeApp(a){
   if (!a) return;
   sheet(`Remove ${short(a.title)}?`, `<p style="margin:0;color:var(--mute);font-size:15px">What you did in it on this device goes too. You can get it again from Discover.</p>
@@ -334,15 +382,16 @@ async function peopleSheet(home){
     const p = PEOPLE;
     const ps = p.peers || [];
     return `<div class="card me">${avatar(p.me, 52)}<div style="flex:1;min-width:0"><input id="myname" value="${esc(p.name)}" aria-label="Your name"><small>Only you see this name</small></div></div>
-      <div class="card qr"><img src="/api/qr?t=${encodeURIComponent(p.invite)}" alt="Your invite code"><div class="b">
+      <div class="card qr"><img src="api/qr?t=${encodeURIComponent(p.invite)}" alt="Your invite code"><div class="b">
         <p>${inApp ? `Scan or share to meet in <b>${esc(short(p.title))}</b>, from anywhere.` : 'Scan or share to meet, from anywhere.'}</p>
         <button class="sbtn" id="shr">Share invite</button><button class="sbtn alt" id="cpy">Copy</button></div></div>
       ${inApp ? `<h2 style="margin:6px 4px 0">People</h2>
       ${ps.length ? `<div class="list">${ps.map(q => `<button class="li" style="width:100%;text-align:left" data-k="${q.key}">${avatar(q.key)}<span>${esc(q.name)}</span><span class="n">${q.state === 'near' ? '● nearby' : q.state === 'far' ? '🌐 online' : 'found'}</span></button>`).join('')}</div>`
-        : `<div class="hint" style="margin:0 4px">No one yet. People near you show up by themselves.</div>`}
+        : `<div class="hint" style="margin:0 4px">${p.hosted ? 'No one yet. Share your invite, or paste theirs below.' : 'No one yet. People near you show up by themselves.'}</div>`}
       <div class="inline"><input id="addk" placeholder="Paste someone's invite" autocomplete="off"><button class="sbtn" id="addgo">Add</button></div>
       ${NATIVE && !window.GAS_NOSCAN ? '<button class="sbtn alt" id="scan">Scan their code</button>' : ''}` : ''}
-      <div class="card toggle"><div><b>Internet</b><small>${p.relay.on ? 'Meet people anywhere (encrypted, through talmonlab)' : 'Only people near you'}</small></div><button class="sw ${p.relay.on ? 'on' : ''}" id="relay" aria-label="Internet"></button></div>
+      ${p.hosted ? `<div class="card" style="padding:12px 14px;font-size:13.5px;color:var(--mute);line-height:1.4">🌐 <b style="color:var(--ink2)">GAS on the web.</b> Your agent runs on talmonlab, which keeps your key, and meets people over the Internet. Add this page to your Home Screen to keep it; clearing this browser's data starts you over.</div>`
+      : `<div class="card toggle"><div><b>Internet</b><small>${p.relay.on ? 'Meet people anywhere (encrypted, through talmonlab)' : 'Only people near you'}</small></div><button class="sw ${p.relay.on ? 'on' : ''}" id="relay" aria-label="Internet"></button></div>`}
       ${inApp ? '' : `<h2 style="margin:6px 4px 0">People you know</h2>
       ${(p.known || []).length ? `<div class="list">${p.known.map(q => `<button class="li" style="width:100%;text-align:left" data-k="${q.key}">${avatar(q.key)}<span style="flex:1;min-width:0"><span style="display:block">${esc(q.name)}</span><small style="color:var(--mute);font-size:12.5px">${esc([(q.apps || []).map(short).join(', '), ago(q.seen)].filter(Boolean).join(' · '))}</small></span><span class="n">›</span></button>`).join('')}</div>`
         : `<div class="hint" style="margin:0 4px">No one yet. Open an app to meet people.</div>`}
@@ -355,7 +404,7 @@ async function peopleSheet(home){
     nm.onkeydown = e => { if (e.key === 'Enter') nm.blur(); };
     $('#shr').onclick = () => share(`Join me${PEOPLE.title ? ' in ' + PEOPLE.title : ''} on GAS: ${PEOPLE.invite}`);
     $('#cpy').onclick = () => copy(PEOPLE.invite);
-    $('#relay').onclick = async () => { await post('relay', {on: !PEOPLE.relay.on}); PEOPLE = await get('people'); $('#sbody').innerHTML = draw(); wire(); };
+    if ($('#relay')) $('#relay').onclick = async () => { await post('relay', {on: !PEOPLE.relay.on}); PEOPLE = await get('people'); $('#sbody').innerHTML = draw(); wire(); };
     el = $('#sbody');
     el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => personSheet(b.dataset.k, () => peopleSheet(home)));
     const add = async t => {
@@ -733,6 +782,10 @@ function route(){
   const h = location.hash;
   const m = h.match(/^#\/app\/([^?]+)(?:\?p=([0-9a-f]{64}))?/);
   closeSheet();
+  // A link handed to the page (GAS on the web: an invite or an app's link
+  // opened in the browser): home, then the link.
+  const l = h.match(/^#\/link\/(.+)$/);
+  if (l){ history.replaceState(null, '', '#/'); showHome().then(() => openLink(decodeURIComponent(l[1]))); return; }
   if (m) showApp(decodeURIComponent(m[1]), m[2]);
   else showHome();
 }

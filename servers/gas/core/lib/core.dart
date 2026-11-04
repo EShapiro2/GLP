@@ -12,7 +12,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
-import 'package:sodium_libs/sodium_libs_sumo.dart';
+import 'package:sodium/sodium_sumo.dart';
 
 import 'contracts.dart';
 import 'person_host.dart';
@@ -74,6 +74,8 @@ class Session {
         dir: '${core.mine}/relay',
         relayUrl: core.relayUrl,
       );
+      // On the web the relay carries everything: the layer has no network.
+      if (core.hosted) relay.relayOnly = true;
       host = PersonHost(
         program: core.store.program(contract),
         rootSelfGlp: '${core.base}/programs/self.glp',
@@ -158,6 +160,10 @@ class Core {
   final String relayUrl;
   Session? session;
 
+  /// GAS on the web: the person's agent runs on the server, over the relay
+  /// alone, which is always on.
+  final bool hosted;
+
   Core({
     required this.base,
     required this.store,
@@ -167,11 +173,20 @@ class Core {
     required this.layers,
     this.fresh,
     this.relayUrl = defaultRelay,
+    this.hosted = false,
   }) {
-    final f = File('$base/names.json');
-    if (f.existsSync()) {
+    _loadNames();
+  }
+
+  /// The names this person gives people, kept with their other things
+  /// (`people/<key>/names.json`); a person from before then reads the device's.
+  void _loadNames() {
+    names.clear();
+    for (final f in [File('$mine/names.json'), File('$base/names.json')]) {
+      if (!f.existsSync()) continue;
       try {
         names.addAll((jsonDecode(f.readAsStringSync()) as Map).cast<String, String>());
+        return;
       } catch (_) {}
     }
   }
@@ -222,6 +237,7 @@ class Core {
     privateKey = k.priv;
     _apps = null;
     _met = null;
+    _loadNames();
     changed();
   }
 
@@ -337,16 +353,18 @@ class Core {
     } else {
       names[key] = name;
     }
-    await File('$base/names.json').writeAsString(jsonEncode(names));
+    Directory(mine).createSync(recursive: true);
+    await File('$mine/names.json').writeAsString(jsonEncode(names));
     changed();
   }
 
   // --- the relay's switch, kept across sessions ---
 
   File get _relayOff => File('$base/relay/off');
-  bool get relayOn => !_relayOff.existsSync();
+  bool get relayOn => hosted || !_relayOff.existsSync();
 
   Future<void> setRelay(bool on) async {
+    if (hosted) return; // always on
     if (on) {
       if (_relayOff.existsSync()) _relayOff.deleteSync();
     } else {

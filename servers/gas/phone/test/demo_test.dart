@@ -9,9 +9,9 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart' show Ed25519;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gas_phone/contracts.dart';
-import 'package:gas_phone/core.dart';
-import 'package:gas_phone/local_server.dart';
+import 'package:gas_core/contracts.dart';
+import 'package:gas_core/core.dart';
+import 'package:gas_core/local_server.dart';
 import 'package:gas_phone/main.dart' show unbundle;
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
