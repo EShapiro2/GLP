@@ -10,7 +10,7 @@ Alice, Bob and Carol are persons.  GCC extends GDC: a community coin is a coin o
 1. ■ Community.  Alice may start a community, give it a unique name, declare its currency denomination, and is then the first treasurer of the community.
 2. ■ Minting.  While Alice is a treasurer of a community, they can mint denominated community coins, which are declared as such.
 3. ○ Fiat Redemption.  Alice may redeem a community coin they hold against a fiat coin of its denomination from the person who minted it, or from any treasurer of the community.
-4. ■ Treasurers.  The treasurers of a community can appoint Bob as a new treasurer by their joint decision and the consent of Bob; they can remove a treasurer Carol by a joint decision of all treasurers except Carol.
+4. ■ Treasurers.  The treasurers of a community can appoint Bob as a new treasurer by their joint decision and the consent of Bob; they can remove a treasurer Carol by a joint decision of all treasurers except Carol, with seniority as a tie breaker.
 5. ■ Coin Redemption.  Alice may decide to redeem a community coin they hold against any coin held by a treasurer of the community, whom they know.
 Pragmas
 Coins: the coins Alice holds.
