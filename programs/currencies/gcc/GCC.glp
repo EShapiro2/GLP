@@ -88,7 +88,7 @@ contract_named(gcc,
 %% GC:4 for denominated coins: a q-coin in f against an r-coin in f1 held by q.
     schema(redeem_dd, ['Alice', 'Bob'], [num(f), num(f1), pvar(r)],
        [rs(guarded,   [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], []),
+        rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])]),
 %% GCC:1, Community: Alice starts the community <Alice>.n, n a speech act Alice signs and the name fresh, declares its denomination f, and is its first treasurer.
     schema(start, ['Alice'], [svar(n), num(f)],
        [rs(guarded, [atom(treasurer, [role(1), nterm(ext(own(1), n))]), atom(denomination, [nterm(ext(own(1), n)), num(f)])], [], [atom(identity, [])], [atom(treasurer, [role(1), nterm(ext(own(1), n))])])]),

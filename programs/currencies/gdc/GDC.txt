@@ -10,4 +10,4 @@ Alice and Bob are persons.  GDC extends GC.  Dollar names one denomination, and 
 1. ■ Minting.  Alice may decide to issue Alice-coins denominated by a fiat currency.
 2. ○ Denomination.  A Dollar-denominated Alice-coin is Alice's debt of one Dollar, due now; Alice redeems it on presentation at face value, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 Pragmas
-Minting: Alice [Mint denominated] <denomination> <amount>
+Minting: Alice [Dmint] <denomination> <amount>
