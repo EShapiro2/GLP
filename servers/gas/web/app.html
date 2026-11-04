@@ -87,7 +87,14 @@ details.raw pre{font:11px var(--mono);white-space:pre-wrap;color:var(--mute);mar
 body.solo main{grid-template-columns:1fr;max-width:560px;margin:0 auto;padding:0}body.solo #who{display:none}
 body.solo .phone{display:block;background:none;border-radius:0;padding:0;box-shadow:none}
 body.solo .scr{border-radius:0;min-height:calc(100vh - 120px);background:#fff}body.solo .sbar,body.solo .isl{display:none}
-body.solo header .hin{padding:8px 14px}body.solo #net{padding:8px 14px 30px}
+body.solo header .hin{padding:8px 14px}
+#people{display:none}body.solo #people{display:block;max-width:560px;margin:0 auto;padding:10px 14px 0}
+#people .ph{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+#people .pp{display:flex;flex-wrap:wrap;gap:8px}
+#people .pc{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13.5px}
+#people .pc .d{width:8px;height:8px;border-radius:50%;background:var(--faint)}#people .pc.on .d{background:#34c759}
+#people .pc input{font:inherit;border:0;outline:0;width:9em;background:transparent}
+#people .none{color:var(--mute);font-size:13.5px}body.solo #net{padding:8px 14px 30px}
 </style>
 </head>
 <body>
@@ -101,6 +108,7 @@ body.solo header .hin{padding:8px 14px}body.solo #net{padding:8px 14px 30px}
   <button class="hb" id="reset">Start over</button>
 </div></header>
 <div id="banner"></div>
+<div id="people"></div>
 <div id="who"></div>
 <main id="phones"></main>
 <section id="net"><details><summary>What passed between the agents on the network</summary><div id="netlog"></div></details></section>
@@ -331,7 +339,27 @@ function render(){
   $('#who').innerHTML = PERSONS.map(p => `<button class="${p===SEL?'on':''}" data-who="${p}">${p}</button>`).join('');
   $('#who').querySelectorAll('button').forEach(b => b.onclick = () => { SEL = b.dataset.who; render(); });
   $('#netlog').textContent = (ST.net || []).map(show).join('\n') || '—';
+  if (SOLO && !renaming) people();
   if (focus && document.getElementById(focus)) document.getElementById(focus).focus();
+}
+// Solo: the people this phone's layer reports, green once connected; a tap on
+// a name (yours too) lets you rename it, on this phone only.
+let renaming = null;
+function people(){
+  const ps = ST.peers || [];
+  const chip = (key, name, on) => renaming === key
+    ? `<span class="pc${on ? ' on' : ''}"><span class="d"></span><input id="rn" value="${esc(name)}"></span>`
+    : `<span class="pc${on ? ' on' : ''}" data-key="${key}"><span class="d"></span>${esc(name)} ✎</span>`;
+  $('#people').innerHTML = `<div class="ph">You</div><div class="pp">${chip(ST.me, ST.name || 'Me', true)}</div>
+    <div class="ph" style="margin-top:10px">People near you</div>
+    <div class="pp">${ps.length ? ps.map(q => chip(q.key, q.name, q.state === 'connected')).join('') : '<span class="none">Looking… (Bluetooth or the same Wi-Fi)</span>'}</div>`;
+  $('#people').querySelectorAll('[data-key]').forEach(c => c.onclick = () => { renaming = c.dataset.key; people(); $('#rn').focus(); $('#rn').select(); });
+  const rn = $('#rn');
+  if (rn){
+    const done = async save => { const key = renaming; renaming = null; if (save) await fetch(api('name'), {method: 'POST', body: JSON.stringify({key, name: rn.value})}); people(); };
+    rn.onkeydown = e => { if (e.key === 'Enter') done(true); else if (e.key === 'Escape') done(false); };
+    rn.onblur = () => done(true);
+  }
 }
 function phone(p){
   const s = screen(p), d = document.createElement('div');
