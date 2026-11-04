@@ -30,7 +30,8 @@ jobs:
           path: servers/gas/phone/assets
   windows:
     needs: bundle
-    runs-on: windows-latest
+    # Visual Studio 2022: libsodium ships no build for the toolset of 2026 (v145).
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
