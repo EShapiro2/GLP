@@ -93,6 +93,11 @@ h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .ask .btns button{flex:1;padding:9px;border-radius:10px;font-weight:600;font-size:15px}
 .yes{background:var(--blue);color:#fff}.no{background:rgba(118,118,128,.12)}
 .pend{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--ink2);padding:2px 4px}
+button.tapped{opacity:.6;transition:opacity 0s}
+button.busy{position:relative;color:transparent!important;pointer-events:none}
+button.busy>*{visibility:hidden}
+button.busy::after{content:'';position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-11px 0 0 -11px;border:2.5px solid rgba(0,122,255,.22);border-top-color:var(--blue);border-radius:50%;animation:s .8s linear infinite}
+.sbtn:not(.alt).busy::after,.big-btn.busy::after,.act:not(.alt).busy::after,.renew.sure.busy::after{border-color:rgba(255,255,255,.35);border-top-color:#fff}
 .spin{width:15px;height:15px;border:2px solid var(--faint);border-top-color:var(--blue);border-radius:50%;animation:s .8s linear infinite;flex:none}
 @keyframes s{to{transform:rotate(360deg)}}
 .acts{flex:none;display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(245,245,247,.92);backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.05)}
@@ -188,7 +193,22 @@ details.dev pre{white-space:pre-wrap;font-size:11px;max-height:200px;overflow:au
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const get = p => fetch('/api/' + p, {cache: 'no-store'}).then(r => r.json());
-const post = (p, b) => fetch('/api/' + p, {method: 'POST', body: JSON.stringify(b || {})}).then(r => r.json());
+// A button pressed shows that it was: it dims at once, and spins while what
+// it asked takes longer than a moment (each post made within a moment of the
+// press is the press's).
+let PRESSED = null;
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  PRESSED = {b, t: Date.now()};
+  b.classList.add('tapped'); setTimeout(() => b.classList.remove('tapped'), 180);
+}, true);
+const post = (p, body) => {
+  const b = PRESSED && Date.now() - PRESSED.t < 600 ? PRESSED.b : null;
+  const spin = b && setTimeout(() => b.isConnected && b.classList.add('busy'), 150);
+  return fetch('/api/' + p, {method: 'POST', body: JSON.stringify(body || {})}).then(r => r.json())
+    .finally(() => { if (b){ clearTimeout(spin); b.classList.remove('busy'); } });
+};
 const NATIVE = window.GASNative ? (op, x) => GASNative.postMessage(JSON.stringify({op, ...(x || {})})) : null;
 const FAM = {identity: ['#5b8def', '#3a64c4'], social: ['#34c3ae', '#169482'], care: ['#a98be3', '#7552c4'], money: ['#f6c25a', '#e0911c'],
   mobility: ['#f79a78', '#dc5d3c'], governance: ['#7b8cff', '#4a54d6'], sharing: ['#f78fb3', '#d6407c'], other: ['#9aa4b2', '#6b7684']};
@@ -323,7 +343,10 @@ async function peopleSheet(home){
       <div class="inline"><input id="addk" placeholder="Paste someone's invite" autocomplete="off"><button class="sbtn" id="addgo">Add</button></div>
       ${NATIVE && !window.GAS_NOSCAN ? '<button class="sbtn alt" id="scan">Scan their code</button>' : ''}` : ''}
       <div class="card toggle"><div><b>Internet</b><small>${p.relay.on ? 'Meet people anywhere (encrypted, through talmonlab)' : 'Only people near you'}</small></div><button class="sw ${p.relay.on ? 'on' : ''}" id="relay" aria-label="Internet"></button></div>
-      ${inApp ? '' : '<button class="renew" id="renew">Start over as someone new</button>'}
+      ${inApp ? '' : `<h2 style="margin:6px 4px 0">People you know</h2>
+      ${(p.known || []).length ? `<div class="list">${p.known.map(q => `<button class="li" style="width:100%;text-align:left" data-k="${q.key}">${avatar(q.key)}<span style="flex:1;min-width:0"><span style="display:block">${esc(q.name)}</span><small style="color:var(--mute);font-size:12.5px">${esc([(q.apps || []).map(short).join(', '), ago(q.seen)].filter(Boolean).join(' · '))}</small></span><span class="n">›</span></button>`).join('')}</div>`
+        : `<div class="hint" style="margin:0 4px">No one yet. Open an app to meet people.</div>`}
+      <button class="renew" id="renew">Start over as someone new</button>`}
       ${(p.events || []).length ? `<details class="dev"><summary>Details</summary><pre>${esc(p.events.join('\n'))}</pre></details>` : ''}`;
   };
   const wire = el => {
@@ -334,15 +357,7 @@ async function peopleSheet(home){
     $('#cpy').onclick = () => copy(PEOPLE.invite);
     $('#relay').onclick = async () => { await post('relay', {on: !PEOPLE.relay.on}); PEOPLE = await get('people'); $('#sbody').innerHTML = draw(); wire(); };
     el = $('#sbody');
-    // Tap a person to name them: the row becomes a field (no prompt(): the
-    // Mac's WebView shows none).
-    el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
-      const k = b.dataset.k;
-      b.outerHTML = `<div class="li">${avatar(k)}<input id="rn" value="${esc(nameOf(k))}" aria-label="Their name" style="flex:1;border:0;font-size:16px;background:transparent;outline:none"></div>`;
-      const f = $('#rn'); f.focus(); f.select();
-      const done = async () => { f.onblur = null; await post('name', {key: k, name: f.value}); NAMES[k] = f.value.trim(); PEOPLE = await get('people'); $('#sbody').innerHTML = draw(); wire(); refreshAll(); };
-      f.onblur = done; f.onkeydown = e => { if (e.key === 'Enter') f.blur(); };
-    });
+    el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => personSheet(b.dataset.k, () => peopleSheet(home)));
     const add = async t => {
       const r = await post('add', {text: t});
       if (r.error){ if (r.link){ closeSheet(); return openLink(t); } return toast(r.error); }
@@ -364,6 +379,35 @@ async function peopleSheet(home){
   sheet(inApp ? 'People' : 'You', draw(), wire);
 }
 $('#pplbtn').onclick = () => peopleSheet();
+
+/* ---------- one person: their name here, their key, forget them ---------- */
+function ago(t){
+  if (!t) return '';
+  const m = (Date.now() - Date.parse(t)) / 60000;
+  return m < 2 ? 'just now' : m < 60 ? `${Math.round(m)} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+}
+function personSheet(k, back){
+  const q = (PEOPLE && (PEOPLE.known || []).find(x => x.key === k)) || {key: k};
+  let gone = false;
+  const save = async () => {
+    const f = $('#pn');
+    if (gone || !f || f.value.trim() === (NAMES[k] || '')) return;
+    await post('name', {key: k, name: f.value}); NAMES[k] = f.value.trim(); refreshAll();
+  };
+  sheet('', `<div class="card me">${avatar(k, 52)}<div style="flex:1;min-width:0"><input id="pn" value="${esc(NAMES[k] || '')}" placeholder="Give them a name" aria-label="Their name"><small>Only you see this name</small></div></div>
+    <div class="card" style="padding:12px 14px;font-size:14px;color:var(--mute)"><div>Key <code style="font-size:12.5px;color:var(--ink2)">${k.slice(0, 8)}…${k.slice(-8)}</code></div>
+      ${(q.apps || []).length ? `<div style="margin-top:4px">Met in ${esc(q.apps.map(short).join(', '))}${q.seen ? ' · ' + ago(q.seen) : ''}</div>` : ''}</div>
+    <button class="renew" id="fg">Forget this person</button>`, () => {
+    const f = $('#pn');
+    f.onchange = save; f.onkeydown = e => { if (e.key === 'Enter') f.blur(); };
+    const fg = $('#fg');
+    fg.onclick = async () => {
+      if (!fg.classList.contains('sure')){ fg.classList.add('sure'); fg.textContent = 'Their name and this entry go — tap to confirm'; return; }
+      gone = true; await post('forget', {key: k}); delete NAMES[k]; refreshAll(); closeSheet();
+    };
+  }, async () => { await save(); if (back) back(); });
+}
+
 
 /* ---------- an app ---------- */
 let C = null, SPEC = null, ST = null, VER = -1, POLL = 0, TAB = null, APP = null;
@@ -427,10 +471,14 @@ function words(ws){
   return ws.map(w => isS(w, 'text') ? esc(w.a[0]) : isS(w, 'person') ? '<b>' + esc(nameOf(w.a[0])) + '</b>'
     : isS(w, 'named') ? ' · ' + esc(w.a[0]) + ': <b>' + esc(show(w.a[1])) + '</b>' : isS(w, 'valued') ? ' · ' + esc(w.a[0]) + ': ' + esc(w.a[1]) : esc(show(w))).join('');
 }
-async function act(id, path, value){
-  used[id] = true; draw();
+// What the person just did, shown at once, until their agent has taken it.
+const SENDING = [];
+async function act(id, path, value, label){
+  used[id] = true;
+  const t = label || 'Sending…'; SENDING.push(t); draw();
   if (NATIVE) NATIVE('haptic');
-  await post(C + '/act', {id, path, value});
+  try { await post(C + '/act', {id, path, value}); }
+  finally { SENDING.splice(SENDING.indexOf(t), 1); draw(); }
 }
 const KIND = {c: 'coin', b: 'bond', i: 'item'};
 const suffix = prop => { const m = prop.name.match(/_([cbi]{1,2})$/); return m ? m[1] : null; };
@@ -585,13 +633,13 @@ function draw(){
     $('#asub').textContent = 'Starting your agent…';
     body.innerHTML = '<div class="center"><span class="spin"></span>Starting your agent</div>'; acts.innerHTML = ''; return;
   }
-  $('#asub').textContent = s.pending.length ? 'Working…' : (s.identity ? nameOf(ME) : 'Not set up yet');
+  $('#asub').textContent = s.pending.length || SENDING.length ? 'Working…' : (s.identity ? nameOf(ME) : 'Not set up yet');
   KNOWN.length = 0; KNOWN.push(...speeches(s.atoms));
   const est = SPEC.proposals.find(x => x.name === 'establish');
   if (!s.identity && est){
     body.innerHTML = `<div class="hero"><span class="icon" style="background:${grad(APP.family)}">${esc(APP.icon)}</span><h3>${esc(short(APP.title))}</h3>
       <p>Your own agent runs this app, here on your device. Start by setting up your identity.</p>
-      <button class="big-btn" id="est" ${s.menu && !s.pending.length ? '' : 'disabled'}>${s.pending.length ? 'Setting up…' : 'Get started'}</button></div>`;
+      <button class="big-btn" id="est" ${s.menu && !s.pending.length && !SENDING.length ? '' : 'disabled'}>${s.pending.length || SENDING.length ? 'Setting up…' : 'Get started'}</button></div>`;
     acts.innerHTML = '';
     $('#est').onclick = () => { const v = build(est, []); if (v && s.menu) act(s.menu.id, s.menu.path, v); };
     return;
@@ -603,6 +651,7 @@ function draw(){
   for (const a of s.asks) h += `<div class="card ask"><div class="q">${words(a.words) || esc(show(a.at))}</div><div class="btns">
       <button class="no" data-ans="no" data-id="${a.id}" data-path='${JSON.stringify(a.path)}'>Decline</button>
       <button class="yes" data-ans="yes" data-id="${a.id}" data-path='${JSON.stringify(a.path)}'>Accept</button></div></div>`;
+  for (const t of SENDING) h += `<div class="pend"><span class="spin"></span>${esc(t)}</div>`;
   for (const c of s.pending) h += `<div class="pend"><span class="spin"></span>${esc(actText(c))}</div>`;
   for (const n of s.notes) if (isS(n, 'refused')) h += `<div class="pend">⚠️ Not done: ${esc(show(n.a[0]))}</div>`;
   if (tabs.length > 1) h += `<div class="seg${tabs.length > 3 ? ' many' : ''}">${tabs.map(t => `<button data-tab="${esc(t.label)}" class="${t.label === TAB ? 'on' : ''}">${esc(t.label)}</button>`).join('')}</div>`;
@@ -619,7 +668,7 @@ function draw(){
   }
   body.innerHTML = h;
   body.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; draw(); });
-  body.querySelectorAll('[data-ans]').forEach(b => b.onclick = () => act(+b.dataset.id, JSON.parse(b.dataset.path), b.dataset.ans));
+  body.querySelectorAll('[data-ans]').forEach(b => b.onclick = () => act(+b.dataset.id, JSON.parse(b.dataset.path), b.dataset.ans, b.dataset.ans === 'yes' ? 'Accepting…' : 'Declining…'));
   // the acts of this tab, the first the main one
   const props = SPEC.proposals.filter(x => x.name !== 'establish' && (!x.act || x.act.tab === TAB));
   const seen = new Set(), list = [];
@@ -641,7 +690,7 @@ function startAct(name, s){
     let x = SPEC.proposals.find(y => y.name === name);
     x = SPEC.proposals.filter(y => y.label === x.label).find(y => enabled(y, s)) || x;
     if (!formFields(x, s).length && SPEC.proposals.filter(y => y.label === x.label).length === 1){
-      const v = build(x, []); if (v && s.menu) act(s.menu.id, s.menu.path, v); return;
+      const v = build(x, []); if (v && s.menu) act(s.menu.id, s.menu.path, v, x.label + '…'); return;
     }
     form(x, s);
   }
@@ -674,7 +723,7 @@ function form(x, s){
       if (vals.some(v => v.v === null || v.v === undefined || v.v === '')) return toast('Fill in every field');
       const v = build(x, vals); if (!v) return;
       const sc = screen(); if (!sc.menu) return toast('Your agent is busy; try again in a moment');
-      closeSheet(); act(sc.menu.id, sc.menu.path, v);
+      closeSheet(); act(sc.menu.id, sc.menu.path, v, x.label + '…');
     };
   });
 }

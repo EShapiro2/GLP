@@ -93,6 +93,7 @@ class Session {
       host.agent.onPeerConnected = (pk, u, _) {
         _peer(pk).connected.add(u.name);
         relay.putKnownPeer(pk);
+        core.met(pk.hex, contract.title);
         event('connected ${pk.hex.substring(0, 8)}… over ${u.name}');
       };
       host.agent.onPeerDisconnected = (pk, u) {
@@ -103,6 +104,7 @@ class Session {
       relay.onState = () => event('relay: ${relay.state}');
       relay.onAddedBy = (pk) {
         event('added from afar by ${pk.hex.substring(0, 8)}…');
+        core.met(pk.hex, contract.title);
         core.notice('${core.nameOf(pk.hex)} added you');
       };
       relay.setOn(core.relayOn);
@@ -117,6 +119,7 @@ class Session {
 
   Future<void> addFar(glp.PubKey pk) async {
     await relay.addPerson(pk);
+    core.met(pk.hex, contract.title);
     event('added ${pk.hex.substring(0, 8)}… from afar');
     core.notice(relay.on
         ? 'Added ${core.nameOf(pk.hex)}. They will see that you added them.'
@@ -218,6 +221,7 @@ class Core {
     me = k.pub;
     privateKey = k.priv;
     _apps = null;
+    _met = null;
     changed();
   }
 
@@ -270,6 +274,55 @@ class Core {
     final f = File('$mine/state/$name.bin');
     if (f.existsSync()) f.deleteSync();
     changed();
+  }
+
+  // --- the people this person has met, in any app (people/<key>/people.json:
+  // each key, when last met, and in which apps) ---
+
+  Map<String, Map<String, Object?>>? _met;
+  File get _metFile => File('$mine/people.json');
+
+  Map<String, Map<String, Object?>> get _people {
+    if (_met != null) return _met!;
+    try {
+      _met = (jsonDecode(_metFile.readAsStringSync()) as Map)
+          .map((k, v) => MapEntry(k as String, (v as Map).cast<String, Object?>()));
+    } on Object {
+      _met = {};
+    }
+    return _met!;
+  }
+
+  void met(String key, String app) {
+    if (key == me.hex) return;
+    final p = _people.putIfAbsent(key, () => {'apps': <String>[]});
+    p['seen'] = DateTime.now().toUtc().toIso8601String();
+    final apps = (p['apps'] as List).cast<String>();
+    if (!apps.contains(app)) p['apps'] = [...apps, app];
+    _metFile.parent.createSync(recursive: true);
+    _metFile.writeAsStringSync(jsonEncode(_people));
+  }
+
+  /// Everyone met, with the name given them here: the named first, by name.
+  List<Map<String, Object?>> known() {
+    // Those named before the list was kept are on it too.
+    final keys = {..._people.keys, ...names.keys.where((k) => k != me.hex && RegExp(r'^[0-9a-f]{64}$').hasMatch(k))};
+    final out = [
+      for (final k in keys)
+        {'key': k, 'name': nameOf(k), 'named': names.containsKey(k), 'seen': _people[k]?['seen'], 'apps': _people[k]?['apps'] ?? const []}
+    ];
+    out.sort((a, b) => a['named'] != b['named']
+        ? (a['named'] == true ? -1 : 1)
+        : (a['name'] as String).toLowerCase().compareTo((b['name'] as String).toLowerCase()));
+    return out;
+  }
+
+  /// Forget a person met: off the list, and their name here.
+  Future<void> forget(String key) async {
+    _people.remove(key);
+    _metFile.parent.createSync(recursive: true);
+    _metFile.writeAsStringSync(jsonEncode(_people));
+    await setName(key, '');
   }
 
   // --- names ---

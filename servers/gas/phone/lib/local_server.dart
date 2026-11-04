@@ -11,10 +11,12 @@
 //   POST /api/open {name, person?}   open an app, adding the person of an invite
 //   POST /api/close             end the session
 //   POST /api/link {text}       a pasted or opened link: its app got
-//   GET  /api/people            the person, their invite, the people around
+//   GET  /api/people            the person, their invite, the people around,
+//                               everyone met (known)
 //   POST /api/name {key, name}  a name for a person, on this device
 //   POST /api/add {text}        add a person far away, by their invite
 //   POST /api/relay {on}        the Internet relay on or off
+//   POST /api/forget {key}      a person met, forgotten
 //   POST /api/renew             start over as a new person: a new key pair
 //   GET  /api/qr?t=...          a QR code, as SVG
 //   GET  /api/<app>/state?since=V, POST /api/<app>/act, /api/<app>/day
@@ -71,6 +73,7 @@ class LocalServer {
       'app': s?.contract.name,
       'title': s?.contract.title,
       'peers': s?.people() ?? const [],
+      'known': core.known(),
       'relay': {'on': core.relayOn, 'state': s?.relay.state ?? (core.relayOn ? 'on' : 'off')},
       'events': s?.events.reversed.take(60).toList() ?? const [],
     };
@@ -196,6 +199,9 @@ class LocalServer {
         return _json(req, {'ok': true});
       case 'relay':
         await core.setRelay((await _body(req))['on'] == true);
+        return _json(req, {'ok': true});
+      case 'forget':
+        await core.forget((await _body(req))['key'] as String);
         return _json(req, {'ok': true});
       case 'renew':
         await core.renew();
