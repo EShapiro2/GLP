@@ -38,6 +38,15 @@ h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .icon{width:62px;height:62px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:31px;box-shadow:0 2px 8px rgba(0,0,0,.12);position:relative}
 .tile .nm{font-size:12px;line-height:1.2;color:var(--ink2);max-width:84px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tile:active .icon{transform:scale(.94)}
+.hrow{display:flex;align-items:baseline;justify-content:space-between;padding-right:18px}
+.hrow h1{margin-right:0}.edit{color:var(--blue);font-size:16px;font-weight:500}
+.icon .del{position:absolute;top:-6px;left:-6px;width:22px;height:22px;border-radius:50%;background:#8e8e93;color:#fff;font-size:15px;line-height:22px;font-weight:700;border:2px solid var(--bg)}
+.editing .tile .icon{animation:wig .28s ease-in-out infinite alternate}
+@keyframes wig{from{transform:rotate(-1.6deg)}to{transform:rotate(1.6deg)}}
+.sbtn.danger{background:#ff3b30;color:#fff}
+.buildrow{display:flex;align-items:center;gap:12px;padding:13px 14px;text-align:left;width:100%}
+.buildrow .icon{width:40px;height:40px;border-radius:11px;font-size:20px}.buildrow span:nth-child(2){flex:1}
+.buildrow b{display:block;font-size:15.5px}.buildrow small{color:var(--mute);font-size:13px}
 .icon .dot{position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:var(--green);border:2px solid var(--bg)}
 .row{display:flex;gap:12px;overflow-x:auto;padding:2px 18px 8px;scroll-snap-type:x mandatory;scroll-padding:0 18px}
 .row::-webkit-scrollbar{display:none}
@@ -152,11 +161,10 @@ details.dev pre{white-space:pre-wrap;font-size:11px;max-height:200px;overflow:au
       <button id="mebtn" title="You"></button>
     </div>
     <div class="scroll">
-      <h1>Your apps</h1>
+      <div class="hrow"><h1>Your apps</h1><button class="edit" id="edit">Edit</button></div>
       <div class="grid" id="mine"></div>
       <h2>Discover</h2>
       <div class="row" id="more"><div class="hint">Loading…</div></div>
-      <button class="card make" id="make"><span class="icon" style="background:conic-gradient(from 200deg,#4f7bd9,#2bb3a0,#9b7bd4,#f0b54a,#4f7bd9)">✨</span><span><b>Make your own app</b><small>Write the rules; GAS makes the app.</small></span><span class="n">›</span></button>
     </div>
   </section>
 
@@ -242,7 +250,9 @@ async function openLink(text){
 function linkSheet(){
   sheet('Open a link', `<p style="margin:0;color:var(--mute);font-size:14.5px">A link to an app, or someone's invite.</p>
     <div class="inline"><input id="lk" placeholder="Paste the link" autocomplete="off"><button class="sbtn" id="lkgo">Open</button></div>
-    ${NATIVE ? '<button class="sbtn alt" id="lkscan">Scan a code</button>' : ''}`, el => {
+    ${NATIVE ? '<button class="sbtn alt" id="lkscan">Scan a code</button>' : ''}
+    <button class="card buildrow" id="build"><span class="icon" style="background:conic-gradient(from 200deg,#4f7bd9,#2bb3a0,#9b7bd4,#f0b54a,#4f7bd9)">✨</span><span><b>Build an app</b><small>Write the rules; GAS makes the app.</small></span><span style="color:var(--faint);font-size:22px">›</span></button>`, el => {
+    $('#build').onclick = () => { closeSheet(); openUrl('https://talmonlab.bgu.ac.il/gas/make.html'); };
     paste(t => { if (looksLink(t) && !$('#lk').value) $('#lk').value = t.trim(); });
     $('#lkgo').onclick = () => openLink($('#lk').value);
     if ($('#lkscan')) $('#lkscan').onclick = () => { window._scanned = t => openLink(t); NATIVE('scan'); };
@@ -259,15 +269,21 @@ async function showHome(){
   drawHome();
   if (!CAT) get('catalog').then(c => { CAT = Array.isArray(c) ? c : []; drawHome(); }).catch(() => { CAT = []; drawHome(); });
 }
+let EDIT = false;
 function drawHome(){
   $('#mebtn').innerHTML = avatar(ME, 38);
-  $('#mine').innerHTML = HOME.apps.map(a => `<button class="tile" data-n="${esc(a.name)}"><span class="icon" style="background:${grad(a.family)}">${esc(a.icon)}${HOME.open === a.name ? '<span class="dot"></span>' : ''}</span><span class="nm">${esc(short(a.title))}</span></button>`).join('');
-  $('#mine').querySelectorAll('[data-n]').forEach(b => b.onclick = () => go(b.dataset.n));
-  const have = new Set(HOME.apps.map(a => a.id));
-  const more = (CAT || []).filter(c => !have.has(c.id));
-  $('#more').innerHTML = CAT === null ? '<div class="hint">Loading…</div>'
-    : !CAT.length ? '<div class="hint">Connect to the Internet to discover more apps.</div>'
-    : !more.length ? '<div class="hint">You have them all.</div>'
+  if (!HOME.apps.length) EDIT = false;
+  $('#edit').hidden = !HOME.apps.length; $('#edit').textContent = EDIT ? 'Done' : 'Edit';
+  $('#mine').classList.toggle('editing', EDIT);
+  $('#mine').innerHTML = HOME.apps.length ? HOME.apps.map(a => `<button class="tile" data-n="${esc(a.name)}"><span class="icon" style="background:${grad(a.family)}">${esc(a.icon)}${EDIT ? '<span class="del">−</span>' : HOME.open === a.name ? '<span class="dot"></span>' : ''}</span><span class="nm">${esc(short(a.title))}</span></button>`).join('')
+    : '<div class="hint" style="grid-column:1/-1">No apps yet. Get one below.</div>';
+  $('#mine').querySelectorAll('[data-n]').forEach(b => b.onclick = () => EDIT ? removeApp(HOME.apps.find(a => a.name === b.dataset.n)) : go(b.dataset.n));
+  // Discover: GAS's catalog, and the apps already on the device, less the
+  // person's own; one of each app, the catalog's where both have it.
+  const have = new Set(HOME.apps.map(a => a.id)), seen = new Set();
+  const more = [...(CAT || []), ...(HOME.others || [])].filter(c => !have.has(c.id) && !seen.has(c.id) && seen.add(c.id));
+  $('#more').innerHTML = CAT === null && !more.length ? '<div class="hint">Loading…</div>'
+    : !more.length ? `<div class="hint">${CAT && CAT.length ? 'You have them all.' : 'Connect to the Internet to discover more apps.'}</div>`
     : more.map(c => `<div class="card disc"><span class="icon" style="background:${grad(c.family)}">${esc(c.icon)}</span><b>${esc(short(c.title))}</b><p>${esc(c.about)}</p><button class="pill" data-h="${c.hash}">Get</button></div>`).join('');
   $('#more').querySelectorAll('[data-h]').forEach(b => b.onclick = async () => {
     b.disabled = true; b.textContent = '…';
@@ -278,7 +294,15 @@ function drawHome(){
   });
 }
 $('#mebtn').onclick = () => peopleSheet(true);
-$('#make').onclick = () => openUrl('https://talmonlab.bgu.ac.il/gas/make.html');
+$('#edit').onclick = () => { EDIT = !EDIT; drawHome(); };
+function removeApp(a){
+  if (!a) return;
+  sheet(`Remove ${short(a.title)}?`, `<p style="margin:0;color:var(--mute);font-size:15px">What you did in it on this device goes too. You can get it again from Discover.</p>
+    <button class="sbtn danger" id="rmgo">Remove</button><button class="sbtn alt" id="rmno">Keep</button>`, el => {
+    $('#rmno').onclick = closeSheet;
+    $('#rmgo').onclick = async () => { await post('remove', {name: a.name}); closeSheet(); HOME = await get('home'); drawHome(); };
+  });
+}
 function openUrl(u){ if (NATIVE) NATIVE('open', {url: u}); else window.open(u, '_blank'); }
 
 /* ---------- people: you, your invite, the people around ---------- */
@@ -289,7 +313,7 @@ async function peopleSheet(home){
   const draw = () => {
     const p = PEOPLE;
     const ps = p.peers || [];
-    return `<div class="card me">${avatar(p.me, 52)}<div style="flex:1;min-width:0"><input id="myname" value="${esc(p.name)}" aria-label="Your name"><small>Your name, on this device</small></div></div>
+    return `<div class="card me">${avatar(p.me, 52)}<div style="flex:1;min-width:0"><input id="myname" value="${esc(p.name)}" aria-label="Your name"><small>Only you see this name</small></div></div>
       <div class="card qr"><img src="/api/qr?t=${encodeURIComponent(p.invite)}" alt="Your invite code"><div class="b">
         <p>${inApp ? `Scan or share to meet in <b>${esc(short(p.title))}</b>, from anywhere.` : 'Scan or share to meet, from anywhere.'}</p>
         <button class="sbtn" id="shr">Share invite</button><button class="sbtn alt" id="cpy">Copy</button></div></div>

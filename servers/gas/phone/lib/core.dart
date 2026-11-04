@@ -217,6 +217,58 @@ class Core {
     final k = await f();
     me = k.pub;
     privateKey = k.priv;
+    _apps = null;
+    changed();
+  }
+
+  // --- the person's apps: of the apps on the device, the ones this person
+  // keeps (people/<key>/apps.json, by name, in the order added); a new
+  // person has GKK alone, the rest a tap away in Discover ---
+
+  List<String>? _apps;
+  File get _appsFile => File('$mine/apps.json');
+
+  List<String> get _names {
+    if (_apps != null) return _apps!;
+    try {
+      _apps = (jsonDecode(_appsFile.readAsStringSync()) as List).cast<String>();
+    } on Object {
+      _apps = [for (final c in store.installed()) if (c.id == 'GKK') c.name].take(1).toList();
+    }
+    return _apps!;
+  }
+
+  void _saveApps() {
+    _appsFile.parent.createSync(recursive: true);
+    _appsFile.writeAsStringSync(jsonEncode(_names));
+  }
+
+  /// The person's apps, in the order added.
+  List<Contract> apps() {
+    final all = {for (final c in store.installed()) c.name: c};
+    return [for (final n in _names) if (all[n] != null) all[n]!];
+  }
+
+  /// The apps on the device the person does not keep.
+  List<Contract> others() {
+    final mine = _names.toSet();
+    return [for (final c in store.installed()) if (!mine.contains(c.name)) c];
+  }
+
+  void addApp(Contract c) {
+    if (_names.contains(c.name)) return;
+    _names.add(c.name);
+    _saveApps();
+    changed();
+  }
+
+  /// The app gone from the person's apps, and what they did in it with it.
+  Future<void> removeApp(String name) async {
+    if (session?.contract.name == name) await close();
+    _names.remove(name);
+    _saveApps();
+    final f = File('$mine/state/$name.bin');
+    if (f.existsSync()) f.deleteSync();
     changed();
   }
 
@@ -255,6 +307,7 @@ class Core {
   // --- contracts and sessions ---
 
   Future<Session> open(Contract c, {String? invite}) async {
+    addApp(c);
     final s = session;
     if (s != null && s.contract.hash == c.hash) {
       if (invite != null && invite != me.hex && s.phase == 'running') {

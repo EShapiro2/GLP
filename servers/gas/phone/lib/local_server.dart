@@ -2,9 +2,12 @@
 // (www/phone.html, from servers/gas/web) and answers its API from the core
 // (core.dart):
 //
-//   GET  /api/home              the person, their apps, the open session
+//   GET  /api/home              the person, their apps, the others on the device,
+//                               the open session
 //   GET  /api/catalog           GAS's catalog
-//   POST /api/get {hash}        get an app
+//   POST /api/get {hash}        get an app: into the person's apps, from the
+//                               device or from GAS
+//   POST /api/remove {name}     an app gone from the person's apps, with its state
 //   POST /api/open {name, person?}   open an app, adding the person of an invite
 //   POST /api/close             end the session
 //   POST /api/link {text}       a pasted or opened link: its app got
@@ -52,7 +55,8 @@ class LocalServer {
         'version': core.version,
         'me': core.me.hex,
         'name': core.nameOf(core.me.hex),
-        'apps': [for (final c in core.store.installed()) {...c.toJson(), 'name': c.name}],
+        'apps': [for (final c in core.apps()) {...c.toJson(), 'name': c.name}],
+        'others': [for (final c in core.others()) {...c.toJson(), 'name': c.name}],
         'open': core.session?.contract.name,
         'notices': core.notices,
       };
@@ -154,7 +158,7 @@ class LocalServer {
       case 'get':
         try {
           final c = await core.store.get((await _body(req))['hash'] as String);
-          core.changed();
+          core.addApp(c);
           return await _json(req, {...c.toJson(), 'name': c.name});
         } on Object catch (e) {
           return _json(req, {'error': '$e'});
@@ -167,6 +171,9 @@ class LocalServer {
         return _json(req, {'ok': true, 'name': c.name, 'title': c.title});
       case 'close':
         await core.close();
+        return _json(req, {'ok': true});
+      case 'remove':
+        await core.removeApp((await _body(req))['name'] as String);
         return _json(req, {'ok': true});
       case 'link':
         return _json(req, await core.link((await _body(req))['text'] as String? ?? ''));
