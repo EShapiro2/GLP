@@ -20,16 +20,7 @@ boot :-
     agent(ch(_?, _), ch(_?, _))@consumer2,
     say(consumer2_init, consumer2, [], ch(_?, _))@consumer2.
 
-%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/4, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its role, its own key and the keys of the peers its person knows, its ground arguments, by which agent/2 starts the agent's program on the network input; an agent is its public key, and alice or bob here is a variable standing for one (IGLP 670d36a, Remark "Agent Names"), the agent's key having been made at its spawn.
-exported procedure(X) agent(Channel(Stream(PersonSays), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(In, []), ch(N, [])) :- start(In?, N?).
-
-%% The agent's program, by the role its person tells it, with its own key and its peers' keys, keys(Me, Ps).
-procedure(X) start(Stream(PersonSays)?, Stream(NetMsg(X))?).
-start([init(producer_init, Me, Ps) | _], N) :- producer_init(keys(Me?, Ps?), N?).
-start([init(consumer1_init, Me, Ps) | _], N) :- consumer1_init(keys(Me?, Ps?), N?).
-start([init(consumer2_init, Me, Ps) | _], N) :- consumer2_init(keys(Me?, Ps?), N?).
-start(_, _) :- otherwise | true.
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, distribute/, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 30c04c5, Implementation Notes, "Boot").  The person scripted at each agent, say/4, run on its person channel in the person's place, tells the agent the entry, with its own key and the keys of the peers its person knows, its ground arguments; an agent is its public key, and a readable name here is a variable standing for one (Remark "Agent Names"), the agent's key having been made at its spawn.
 
 %% The person at each agent: it tells the agent its role, its key and the keys of the peers it knows, its ground arguments, and reads nothing.
 PersonSays ::= init(Constant, Key, List(Key)).

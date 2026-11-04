@@ -13,3 +13,14 @@
 imported procedure agents#agent_init(_?, _?).
 exported procedure agent_init(_?, _?).
 agent_init(Id, In) :- agents # agent_init(Id?, In?).
+
+%% Every agent's initial goal, agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), is answered by this program: "A boot defines no agent/2: the program it loads answers the initial goal, in a simulation as on a phone, and the person goal's first act names the entry the program starts" (IGLP 30c04c5, Implementation Notes, "Boot").  The person's first act, agent_init(Name), names the entry, with the agent's name.
+StartAct ::= agent_init(Key).
+
+exported procedure(X) agent(Channel(Stream(StartAct), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+
+%% The entry the person's first act names, on the network input.
+procedure(X) start(Stream(StartAct)?, Stream(NetMsg(X))?).
+start([agent_init(P) | _], N) :- agent_init(P?, N?).
+start(_, _) :- otherwise | true.
