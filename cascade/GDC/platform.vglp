@@ -1,0 +1,21 @@
+%% not compiled(gdc)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(swap, 3)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(swap_dc, 3)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(swap_cd, 3)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(swap_dd, 3)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(pay, 2)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(pay_d, 2)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(redeem, 2)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(redeem_dc, 2)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(redeem_cd, 2)
+%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
+%% the schema and the places its fields leave unnamed(redeem_dd, 3)
