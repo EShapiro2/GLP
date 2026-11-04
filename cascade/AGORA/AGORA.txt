@@ -1,5 +1,6 @@
 % AGORA: Grassroots Barter --- an experimental contract by Nimrod Talmon with Claude; version 2, 2026-10-31, over GB; the keeper's own wall and posts added the same day.
 % Owner: Talmon.  No paper (just an example of a grassroots contract).
+% Paper: none; an example over GB (Udi, 2026-11-01).
 % Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds), and through it GKK.  It cites their clauses whole and restates none.
 % Defines: item, a one-of-a-kind thing named by its maker; Alice-item, an item Alice made; instrument, a coin, a bond or an item; market, keeper, member, wall.  Whoever holds a Bob-item knows Bob, as a holder of a Bob-coin knows Bob.
 % Schemas: AGORA.glp beside this file.  Clause 6 is realised by the barter schemas (an item for an item, a coin or a bond, and back) and the item escrow schemas, GB's swap and escrow with an item in place of a coin or a bond.  A member who sees an offer and does not yet know its poster's acquaintance first meets them (GKK:2): GB's swap asks that the two know each other.
@@ -22,8 +23,8 @@ Joining: Alice [Admit] <person>
   Bob: Alice invites you to their market.
 Posting: Bob [Offer] <maker> <item> [Want] <description>
   Alice [Offer own] <maker> <item> [Want own] <description>
-Withdrawal: Bob [Withdraw] <post>
-  Alice [Withdraw own offer] <post> [Withdraw own want] <post>
+Withdrawal: Bob [Withdraw offer] <maker> <item> [Withdraw want] <description>
+  Alice [Withdraw own offer] <maker> <item> [Withdraw own want] <description>
 Trading: Alice [Barter] <maker given> <item given> <maturity given> <amount given> <maker wanted> <item wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to trade with you.
   Alice [Deposit item] <maker> <item>
