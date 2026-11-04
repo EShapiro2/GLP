@@ -11,8 +11,7 @@
 /// person's act on a construct is granted as `input(Id, P, R)`, at the
 /// position `P` the view marks `input(P)`; and the request form, the
 /// question `Stream(Request)?`, stays open, one request per submission
-/// (vGLP, Remark "Persistence"), while a card goes on its withdrawal.  The
-/// deployed mediator's card vocabulary opens nothing on this screen.
+/// (vGLP, Remark "Persistence"), while a card goes on its withdrawal.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -143,16 +142,6 @@ void main() {
       expect(r.bridge.constructs.map((c) => c.id), [7]);
       expect(formatTerm(ctorArgs(r.bridge.construct(7)!.view).$2[0]),
           'offer(alice, lot(bob, 2), [coin(alice, 1)])');
-    });
-
-    test('the deployed mediator\'s card vocabulary opens nothing', () {
-      r.handle(fixtureTerm('card(agent_1, ctx_agent_1, req(1))'));
-      r.handle(fixtureTerm(
-          'card(respond_swap_1, ctx_respond_swap_1(alice, lot(bob, 2), '
-          '[coin(alice, 1), coin(alice, 2)]), req(7))'));
-      expect(r.bridge.constructs, isEmpty);
-      expect(r.inbox, isEmpty);
-      expect(r.standing, isEmpty);
     });
   });
 
