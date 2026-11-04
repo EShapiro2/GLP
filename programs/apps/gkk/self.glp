@@ -57,3 +57,22 @@ miniapp_person(Id, Role, Ps, PEnd, Screen?) :- person # miniapp_person(Id?, Role
 imported procedure plays#play_keys(Stream(Seen), Stream(Seen), Stream(Seen)).
 exported procedure play_keys(Stream(Seen), Stream(Seen), Stream(Seen)).
 play_keys(A?, B?, C?) :- plays # play_keys(A, B, C).
+
+%% Every agent's initial goal, agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), is answered by this program: "A boot defines no agent/2: the program it loads answers the initial goal, in a simulation as on a phone, and the person goal's first act names the entry the program starts" (IGLP, Implementation Notes, "Boot").  The person's first act, gkk_agent, names the entry, the mini-app as maGLP (maglp.glp); the acts after it are the agents the person names, call(Q), and the grants on the mini-app's questions, input(I, P, D).  What the agent writes the person is what the mini-app draws, and called(Q, Kq), the key of an agent the person named.  The network messages are cold calls, each a conversation, conv(K, Kq, Ch): the caller's key, a writer for the called agent's key, and the called agent's end of the conversation's root channel; pending(Q, Kq, Ch) is the caller's end, until Kq is assigned.
+MaStart   ::= gkk_agent.
+MaPIns ::= [MaStart | MaIns].
+MaIn      ::= call(Key) ; input(Integer, Path, Drawn).
+MaIns     ::= [MaIn | MaIns].
+MaConv    ::= conv(Key, Key?, RootChannel(Net)).
+MaPending ::= pending(Key, Key, RootChannel(Net)).
+MaOut     ::= Draw(Drawn) ; called(Key, Key).
+MaOuts    ::= [MaOut | MaOuts].
+
+imported procedure maglp#gkk_agent(MaIns?, MaOuts, Stream(NetMsg(MaConv))?, Stream(NetMsg(MaConv))).
+
+exported procedure agent(Channel(MaPIns, MaOuts)?, Channel(Stream(NetMsg(MaConv)), Stream(NetMsg(MaConv)))?).
+agent(ch(In, POut?), ch(N, NOut?)) :- start(In?, POut, N?, NOut).
+
+%% The entry the person's first act names.
+procedure start(MaPIns?, MaOuts, Stream(NetMsg(MaConv))?, Stream(NetMsg(MaConv))).
+start([gkk_agent | PIn], POut?, N, NOut?) :- maglp # gkk_agent(PIn?, POut, N?, NOut).
