@@ -16,7 +16,8 @@ void main() {
     if (server == null) return markTestSkipped('GAS_DOWNLOADS not set');
     final dir = Directory.systemTemp.createTempSync('gas_catalog_');
     addTearDown(() => dir.deleteSync(recursive: true));
-    final store = ContractStore(await unbundle(dir.path), server: server);
+    final store = ContractStore(await unbundle(dir.path), server: server,
+        madeServer: Platform.environment['GAS_MADE_SERVER'] ?? made);
     await store.installStarters();
     final cat = await store.catalog();
     expect(cat.map((c) => c.id), containsAll(['GKK', 'GC', 'AGORA', 'GSN']));
@@ -28,5 +29,14 @@ void main() {
     expect(got.hash, gsn.hash);
     expect(File('${store.program(got)}/platform.vglp').existsSync(), isTrue);
     expect(store.installed().map((c) => c.id), contains('GSN'));
+
+    // An app made with the app maker, in no catalog: got from GAS's made
+    // apps by its hash (GAS_MADE_HASH, one made on that server).
+    final madeHash = Platform.environment['GAS_MADE_HASH'];
+    if (madeHash != null) {
+      final m = await store.get(madeHash);
+      expect(m.hash, madeHash);
+      expect(File('${store.program(m)}/self.glp').existsSync(), isTrue);
+    }
   });
 }
