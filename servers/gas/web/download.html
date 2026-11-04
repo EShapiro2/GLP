@@ -48,8 +48,8 @@ h1{font-size:clamp(32px,5vw,44px);letter-spacing:-.025em;line-height:1.08;margin
   <div class="grid">
     <div class="card" id="android">
       <h2>🤖 Android</h2><span class="tag">Test version</span>
-      <a class="btn blue" href="https://github.com/nimrodtalmon/GLP/releases/latest/download/GAS-android.apk">Download for Android</a>
-      <div class="small" style="margin-top:6px">An .apk file, about 86 MB</div>
+      <a class="btn blue" data-file="GAS-android.apk" href="/downloads/GAS-android.apk">Download for Android</a>
+      <div class="small" style="margin-top:6px" data-about="GAS-android.apk">An .apk file, about 86 MB</div>
       <ol>
         <li>Tap <b>Download</b>, then open the downloaded file.</li>
         <li>If Android asks, allow your browser to install apps (<i>Install unknown apps</i>), then go back and tap <b>Install</b>.</li>
@@ -58,9 +58,16 @@ h1{font-size:clamp(32px,5vw,44px);letter-spacing:-.025em;line-height:1.08;margin
       <p class="small">Not from the Play Store yet, which is why Android asks.</p>
     </div>
     <div class="card" id="mac">
-      <h2>💻 Mac</h2><span class="tag soon">Coming soon</span>
-      <span class="btn off">Download for Mac</span>
-      <p>A GAS.app to drag into Applications. Until it is signed, open it the first time with right-click → Open.</p>
+      <h2>💻 Mac</h2><span class="tag soon" data-tag="GAS-mac.zip">Coming soon</span>
+      <a class="btn off" data-file="GAS-mac.zip">Download for Mac</a>
+      <div class="small" style="margin-top:6px" data-about="GAS-mac.zip"></div>
+      <ol data-steps="GAS-mac.zip" hidden>
+        <li>Tap <b>Download</b>; the Mac unzips it into <b>GAS</b> in Downloads. Drag it into <b>Applications</b>.</li>
+        <li>Open it. The Mac says it cannot check GAS: click <b>Done</b>, open <a href="x-apple.systempreferences:com.apple.preference.security">System Settings → Privacy &amp; Security</a>, scroll down, and click <b>Open Anyway</b>.</li>
+        <li>Allow Bluetooth and the local network when asked.</li>
+      </ol>
+      <p data-soon="GAS-mac.zip">A GAS.app to drag into Applications.</p>
+      <p class="small" data-steps="GAS-mac.zip" hidden>Not from Apple's App Store and not yet signed, which is why the Mac asks.</p>
     </div>
     <div class="card" id="iphone">
       <h2>📱 iPhone</h2><span class="tag soon">Coming soon</span>
@@ -84,6 +91,18 @@ const ua = navigator.userAgent;
 const mine = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) ? 'iphone'
   : /Macintosh|Mac OS X/i.test(ua) ? 'mac' : /Windows/i.test(ua) ? 'windows' : null;
 if (mine){ const c = document.getElementById(mine); c.classList.add('mine'); c.parentNode.prepend(c); }
+// What is on the downloads server: a platform whose file is there is live,
+// with its size and date.
+fetch('/downloads/', {cache: 'no-store'}).then(r => r.json()).then(files => {
+  for (const f of files){
+    const mb = Math.round(f.bytes / 1e6);
+    document.querySelectorAll(`[data-file="${f.name}"]`).forEach(a => { a.href = '/downloads/' + f.name; a.className = 'btn blue'; });
+    document.querySelectorAll(`[data-about="${f.name}"]`).forEach(d => d.textContent = `${f.name.endsWith('.apk') ? 'An .apk file' : 'A .zip file'}, ${mb} MB, updated ${f.date}`);
+    document.querySelectorAll(`[data-tag="${f.name}"]`).forEach(t => { t.textContent = 'Test version'; t.classList.remove('soon'); });
+    document.querySelectorAll(`[data-steps="${f.name}"]`).forEach(o => o.hidden = false);
+    document.querySelectorAll(`[data-soon="${f.name}"]`).forEach(o => o.hidden = true);
+  }
+}).catch(() => {});
 </script>
 </body>
 </html>
