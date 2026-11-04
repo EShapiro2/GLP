@@ -1304,10 +1304,13 @@ awk '
     }' "$WORK/census.lines"
 check "the agents are the persons the census draws, in its order, a parent and its children, each with the stochastic person of its role, a parent two profiles and a child one; each greets with the key and the attribute its person gives it, the parent with the number of elements seen, none, the program writing nothing to its person; the moods as drawn; in the order of time; the clock last" $?
 grep '^entry(\|^clock(\|^Ps = \|^Ds = ' "$WORK/census.lines" | sed 's/^/        /'
-# A census drawing nobody (seed 3) and one drawing a person of a role of no
-# dimension, a stranger (seed 4): the run is refused, taking no goal but the
-# line refused, no entry and no clock.
-repl "$WORK/census_refused.out" ':limit 1000000000000' "$HERE/tests/census" 'census_persons(3, Ok, Ps).' 'census_persons(4, Ok, Ps).' 'census_seeded(3, Ps).' 'census_seeded(4, Ps).'
+# A census drawing nobody (seed 2) and one drawing a person of a role of no
+# dimension, a stranger (seed 3): the run is refused, taking no goal but the
+# line refused, no entry and no clock.  The paper fixes no seed; under
+# SplitMix64, random/4 on main since 0c4eed59, 2 and 3 are the least seeds
+# from which census_persons/3 draws the one and the other (seeds 1 to 60
+# probed: nobody from 2, 10, 13, ...; a stranger from 3, 7, 9, ...).
+repl "$WORK/census_refused.out" ':limit 1000000000000' "$HERE/tests/census" 'census_persons(2, Ok, Ps).' 'census_persons(3, Ok, Ps).' 'census_seeded(2, Ps).' 'census_seeded(3, Ps).'
 sed 's/^\(GLP> \)*//' "$WORK/census_refused.out" > "$WORK/census_refused.lines"
 grep -q '^Ok = no$' "$WORK/census_refused.lines" && [ "$(grep -c '^Ok = no$' "$WORK/census_refused.lines")" -eq 2 ] &&
     grep -q '^Ps = \[person(eve, stranger, \[\])\]$' "$WORK/census_refused.lines" &&
