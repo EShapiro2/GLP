@@ -54,6 +54,19 @@ def repl(lines, timeout=900):
     return [re.sub(r'^(GLP> )+', '', l) for l in (p.stdout + p.stderr).splitlines()]
 
 
+def bash():
+    """The bash running pragmas.sh: BASH, or bash on the path, or Git for
+    Windows' own."""
+    import shutil
+    if os.environ.get('BASH'):
+        return os.environ['BASH']
+    if os.name == 'nt':
+        for p in (r'C:\Program Files\Git\bin\bash.exe', r'C:\Program Files\Git\usr\bin\bash.exe'):
+            if os.path.exists(p):
+                return p
+    return shutil.which('bash') or 'bash'
+
+
 def fwd(p):
     """A path as the REPL and bash read it on any system: with forward slashes."""
     return p.replace(os.sep, '/')
@@ -103,7 +116,7 @@ def make(text, outdir):
         txt = os.path.join(work, f'{cid}.txt')
         with open(txt, 'w', encoding='utf-8') as f:
             f.write(contract_txt)
-        p = subprocess.run([os.environ.get('BASH', 'bash'),
+        p = subprocess.run([bash(),
                             fwd(os.path.join(REPO, 'programs', 'vglp', 'cva', 'compiler', 'pragmas.sh')), fwd(txt), term],
                            capture_output=True, text=True, encoding='utf-8')
         if p.returncode != 0:
