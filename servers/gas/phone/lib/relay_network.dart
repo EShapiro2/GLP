@@ -14,8 +14,16 @@
 // relay until the recipient's runtime acknowledges them: at least once, as
 // the layer delivers.
 //
+// Inside the encryption each message carries the app it is for and the time
+// it was sent; the recipient drops a message for another app than the relay
+// says, one older than the relay keeps messages, and one it has applied
+// before (by its nonce, which the relay cannot change without breaking the
+// encryption).  So the relay can drop, delay or replay what it holds, and a
+// replay is never applied twice, after a restart too.
+//
 // People met over the relay are kept in relay/peers.json; messages not yet
-// accepted by the relay in relay/<app>-outbox.json.
+// accepted by the relay in relay/<app>-outbox.json; the messages applied, for
+// as long as the relay could replay them, in relay/seen.json.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -40,6 +48,10 @@ PubKey? keyOfInvite(String text) {
 String _hex(List<int> b) => b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
 
 const _kindMsg = 0, _kindHello = 1;
+const _version = 1;
+
+/// How long the relay holds a message (gasrelay's ttl), and a day's margin.
+const _maxAge = Duration(days: 8);
 const _control = '_';
 
 class RelayGlpNetwork implements GlpNetwork {
@@ -57,6 +69,9 @@ class RelayGlpNetwork implements GlpNetwork {
   final Set<String> _peers = {};
   final List<Map<String, Object?>> _outbox = [];
   final Set<String> _delivered = {};
+  final Map<String, int> _seen = {}; // from:nonce -> sent, ms
+  final Map<String, (String, int)> _applying = {}; // messageId -> its seen entry
+  Timer? _seenTimer;
   final List<List<String>> _acks = [];
   int _after = 0;
   bool _on = false, _running = false, _pumping = false;
@@ -106,11 +121,18 @@ class RelayGlpNetwork implements GlpNetwork {
 
   File get _peersFile => File('$dir/peers.json');
   File get _outboxFile => File('$dir/$app-outbox.json');
+  File get _seenFile => File('$dir/seen.json');
 
   void _load() {
     try {
       if (_peersFile.existsSync()) {
         _peers.addAll([for (final k in jsonDecode(_peersFile.readAsStringSync()) as List) '$k']);
+      }
+      if (_seenFile.existsSync()) {
+        final cut = DateTime.now().subtract(_maxAge).millisecondsSinceEpoch;
+        (jsonDecode(_seenFile.readAsStringSync()) as Map).forEach((k, v) {
+          if (v is int && v > cut) _seen['$k'] = v;
+        });
       }
       if (_outboxFile.existsSync()) {
         _outbox.addAll([
@@ -197,7 +219,7 @@ class RelayGlpNetwork implements GlpNetwork {
   Future<void> _enqueue(PubKey to, int kind, Uint8List payload, String app) async {
     final nonce = sodium.randombytes.buf(sodium.crypto.box.nonceBytes);
     final box = sodium.crypto.box.easy(
-      message: Uint8List.fromList([kind, ...payload]),
+      message: _plain(kind, app, payload),
       nonce: nonce,
       publicKey: sodium.crypto.sign.pkToCurve25519(to.bytes),
       secretKey: _boxKey,
@@ -211,6 +233,17 @@ class RelayGlpNetwork implements GlpNetwork {
     });
     await _write(_outboxFile, _outbox);
     unawaited(_pump());
+  }
+
+  /// version, kind, sent (8 bytes), app (length and bytes), payload.
+  static Uint8List _plain(int kind, String app, Uint8List payload) {
+    final a = utf8.encode(app);
+    final head = ByteData(11)
+      ..setUint8(0, _version)
+      ..setUint8(1, kind)
+      ..setInt64(2, DateTime.now().millisecondsSinceEpoch)
+      ..setUint8(10, a.length);
+    return Uint8List.fromList([...head.buffer.asUint8List(), ...a, ...payload]);
   }
 
   Future<void> _pump() async {
@@ -289,19 +322,49 @@ class RelayGlpNetwork implements GlpNetwork {
       _ack([app, from, id]); // not from who it says, or damaged: dropped
       return;
     }
-    if (plain.isEmpty) return _ack([app, from, id]);
+    // Dropped (and removed from the relay): another format, another app than
+    // the relay says, too old or from the future, or applied before.
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (plain.length < 11 || plain[0] != _version) return _ack([app, from, id]);
+    final head = ByteData.sublistView(plain, 0, 11);
+    final kind = head.getUint8(1), sent = head.getInt64(2), alen = head.getUint8(10);
+    if (plain.length < 11 + alen) return _ack([app, from, id]);
+    final inner = utf8.decode(plain.sublist(11, 11 + alen), allowMalformed: true);
+    final seenKey = '$from:${m['nonce']}';
+    if (inner != app ||
+        sent < now - _maxAge.inMilliseconds ||
+        sent > now + const Duration(days: 1).inMilliseconds ||
+        _seen.containsKey(seenKey)) {
+      return _ack([app, from, id]);
+    }
     await _met(pk);
-    if (plain[0] == _kindMsg && app == this.app) {
-      onMessageReceived?.call(pk, Uint8List.sublistView(plain, 1), 'relay:$tag', Underlay.wan);
+    if (kind == _kindMsg && app == this.app) {
+      final messageId = 'relay:$tag';
+      _applying[messageId] = (seenKey, sent);
+      onMessageReceived?.call(pk, Uint8List.sublistView(plain, 11 + alen), messageId, Underlay.wan);
     } else {
+      _markSeen(seenKey, sent);
       _ack([app, from, id]);
     }
+  }
+
+  /// [key] applied: never applied again while the relay could replay it.
+  void _markSeen(String key, int sent) {
+    _seen[key] = sent;
+    _seenTimer ??= Timer(const Duration(milliseconds: 500), () async {
+      _seenTimer = null;
+      final cut = DateTime.now().subtract(_maxAge).millisecondsSinceEpoch;
+      _seen.removeWhere((_, t) => t < cut);
+      await _write(_seenFile, _seen);
+    });
   }
 
   @override
   void acknowledge(String messageId) {
     if (!messageId.startsWith('relay:')) return inner.acknowledge(messageId);
     final p = messageId.substring(6).split(':');
+    final seen = _applying.remove(messageId);
+    if (seen != null) _markSeen(seen.$1, seen.$2);
     _ack([p[0], p[1], p[2]]);
   }
 
@@ -403,6 +466,12 @@ class RelayGlpNetwork implements GlpNetwork {
   void dispose() {
     _on = false;
     _ackTimer?.cancel();
+    if (_seenTimer != null) {
+      _seenTimer!.cancel();
+      _seenTimer = null;
+      _seenFile.parent.createSync(recursive: true);
+      _seenFile.writeAsStringSync(jsonEncode(_seen));
+    }
     _http.close(force: true);
   }
 }
