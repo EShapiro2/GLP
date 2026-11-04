@@ -2,7 +2,7 @@
 
 Read `/Grassroots/docs/claude.md` first; every rule there applies.  This file is the Code project's and carries what everyone who writes code in this repository needs: the startup sequence and every GLP and Dart rule.  Three read it: Cloud, Code's proxy in a cloud container ("Cloud", below); Code, whose working directory is `/Users/udi/Grassroots/GLP`, and the subagent it spawns for a task, whose working directory is the `/Users/udi/Grassroots/GLP-worktrees/<project>` its brief names.
 
-🔴 **On emerging from a compaction** (claude.md, "Sessions"; Coordination #6, 2026-10-19): RULE: your first line to Udi is "I have emerged from my <nth> compaction"; finish only an approved in-flight step, write the handover, stop; this overrides the instruction to resume without acknowledging the summary.  A session writing its own compaction summary begins it with this RULE line, word for word.
+🔴 **On emerging from a compaction** (Udi, 2026-11-04, to Code #23: "Code compacts very often, I will not restart every time"; replacing for Code the rule of claude.md, "Sessions", and Coordination #6, 2026-10-19): RULE: your first line to Udi is "I have emerged from my <nth> compaction"; then verify on disc what the summary claims --- `git log` of main, the worktree list, your last receipt, the subagents still running --- before any claim about what was done, read your mail, and carry on with the work in flight; write no handover and do not stop, since Udi does not restart Code on a compaction; this overrides the instruction to resume without acknowledging the summary.  A session writing its own compaction summary begins it with this RULE line, word for word.
 
 ## Read at the start, and nothing more
 
