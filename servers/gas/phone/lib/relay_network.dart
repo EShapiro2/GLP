@@ -29,7 +29,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 const defaultRelay = 'https://talmonlab.bgu.ac.il/gasrelay';
 
 /// The link a person shares to be added from afar: their key after the '#'.
-String inviteLink(PubKey pk) => 'https://talmonlab.bgu.ac.il/gas/add#${pk.hex}';
+String inviteLink(PubKey pk) => 'https://talmonlab.bgu.ac.il/gas/add.html#${pk.hex}';
 
 /// The key in an invite link, or a bare key, or null.
 PubKey? keyOfInvite(String text) {
@@ -66,6 +66,10 @@ class RelayGlpNetwork implements GlpNetwork {
   static HttpClient _client() => HttpClient()
     ..connectionTimeout = const Duration(seconds: 15)
     ..findProxy = HttpClient.findProxyFromEnvironment;
+
+  /// For testing the relay between devices that are near each other: every
+  /// message goes through the relay, none through the layer.
+  bool relayOnly = false;
 
   /// What the relay is doing, for the screen: 'off', 'connecting', 'online',
   /// or `offline: <why>`.
@@ -186,7 +190,7 @@ class RelayGlpNetwork implements GlpNetwork {
 
   @override
   Future<void> send(PubKey pk, Uint8List payload) {
-    if (!_on || inner.isPeerReachable(pk)) return inner.send(pk, payload);
+    if (!_on || (!relayOnly && inner.isPeerReachable(pk))) return inner.send(pk, payload);
     return _enqueue(pk, _kindMsg, payload, app);
   }
 

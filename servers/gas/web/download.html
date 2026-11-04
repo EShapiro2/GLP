@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get the app · GAS, the GLP app store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--ink:#1d1d1f;--ink2:#3a3a3c;--mute:#6e6e73;--faint:#a1a1a6;--line:#e5e5ea;--blue:#0a7aff;--green:#34c759;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 6px 20px rgba(0,0,0,.05)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none}
+header{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.82);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid rgba(0,0,0,.06)}
+.hin{max-width:1120px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:16px}
+.logo{font-weight:700;font-size:16px;display:flex;align-items:center;gap:9px;color:var(--ink)}
+.logo .mark{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 200deg,#4f7bd9,#2bb3a0,#9b7bd4,#f0b54a,#4f7bd9)}
+.hin .back{margin-left:auto;font-size:14px;font-weight:500}
+main{max-width:780px;margin:0 auto;padding:36px 24px 90px}
+h1{font-size:clamp(32px,5vw,44px);letter-spacing:-.025em;line-height:1.08;margin:6px 0 12px;font-weight:800}
+.lead{font-size:18px;color:var(--ink2);margin:0 0 26px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.card{background:var(--card);border-radius:20px;box-shadow:var(--shadow);padding:22px 22px 18px;border:2px solid transparent}
+.card.mine{border-color:var(--blue)}
+.card h2{font-size:21px;margin:0 0 2px;letter-spacing:-.015em;display:flex;align-items:center;gap:10px}
+.card .tag{display:block;margin-top:2px;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--blue)}
+.card .soon{color:var(--faint)}
+.card ol{margin:12px 0 4px;padding-left:20px;color:var(--ink2);font-size:14.5px}
+.card ol li{margin:4px 0}
+.card p{margin:8px 0;color:var(--ink2);font-size:14.5px}
+.btn{border:none;border-radius:999px;padding:10px 20px;font-weight:600;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;margin-top:10px}
+.btn.blue{background:var(--blue);color:#fff}.btn.blue:hover{background:#0068e0}
+.btn.off{background:rgba(118,118,128,.12);color:var(--faint);cursor:default}
+.small{font-size:13px;color:var(--mute)}
+.note{margin-top:30px;padding:18px 22px}
+.note h3{margin:0 0 6px;font-size:16px}
+</style>
+</head>
+<body>
+<header><div class="hin">
+  <a class="logo" href="./"><span class="mark"></span>GAS · the GLP app store</a>
+  <a class="back" href="./">← All apps</a>
+</div></header>
+<main>
+  <h1>Get the app</h1>
+  <p class="lead">GAS on your own device: each app runs on it, between you and the people you use it with. People near you show up by themselves; people far away you add with a link.</p>
+  <div class="grid">
+    <div class="card" id="android">
+      <h2>🤖 Android</h2><span class="tag">Test version</span>
+      <a class="btn blue" href="https://github.com/nimrodtalmon/GLP/releases/latest/download/GAS-android.apk">Download for Android</a>
+      <div class="small" style="margin-top:6px">An .apk file, about 86 MB</div>
+      <ol>
+        <li>Tap <b>Download</b>, then open the downloaded file.</li>
+        <li>If Android asks, allow your browser to install apps (<i>Install unknown apps</i>), then go back and tap <b>Install</b>.</li>
+        <li>Open <b>GAS</b>, pick an app, and allow Bluetooth and nearby devices when asked.</li>
+      </ol>
+      <p class="small">Not from the Play Store yet, which is why Android asks.</p>
+    </div>
+    <div class="card" id="mac">
+      <h2>💻 Mac</h2><span class="tag soon">Coming soon</span>
+      <span class="btn off">Download for Mac</span>
+      <p>A GAS.app to drag into Applications. Until it is signed, open it the first time with right-click → Open.</p>
+    </div>
+    <div class="card" id="iphone">
+      <h2>📱 iPhone</h2><span class="tag soon">Coming soon</span>
+      <span class="btn off">Get it on TestFlight</span>
+      <p>Through Apple's TestFlight app, once GAS has an Apple developer account.</p>
+    </div>
+    <div class="card" id="windows">
+      <h2>🪟 Windows</h2><span class="tag soon">Coming soon</span>
+      <span class="btn off">Download for Windows</span>
+      <p>An installer for Windows 10 and 11.</p>
+    </div>
+  </div>
+  <div class="card note">
+    <h3>Meeting people far away</h3>
+    <p class="small" style="font-size:14.5px;margin:0">In an app, tap the <b>person+</b> button at the top. Share your invite link (or show your QR code); the other person pastes it (or scans it) and taps <b>Add</b>. Messages between you then go through talmonlab's relay, encrypted end to end: the relay sees who writes to whom, never what.</p>
+  </div>
+</main>
+<script>
+// The card of this device first, outlined.
+const ua = navigator.userAgent;
+const mine = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) ? 'iphone'
+  : /Macintosh|Mac OS X/i.test(ua) ? 'mac' : /Windows/i.test(ua) ? 'windows' : null;
+if (mine){ const c = document.getElementById(mine); c.classList.add('mine'); c.parentNode.prepend(c); }
+</script>
+</body>
+</html>

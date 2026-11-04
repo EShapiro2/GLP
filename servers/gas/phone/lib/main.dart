@@ -449,6 +449,15 @@ class _RunningState extends State<Running> {
               SelectableText('My key: ${host?.me ?? '—'}'),
               Text('Layer: ${layerUp ? 'running' : 'not running'} · underlays: PAN (Bluetooth), LAN · first contact: Open'),
               Text('Relay: ${relay?.state ?? '—'} · met from afar: ${relay?.relayPeers.length ?? 0}'),
+              if (relay != null)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Relay only (for testing)'),
+                  subtitle: const Text('Every message through talmonlab, even to people near you'),
+                  value: relay!.relayOnly,
+                  onChanged: (v) => set(() => relay!.relayOnly = v),
+                ),
               Text('Agent: ${host?.status ?? '—'} · $phase'),
               const Divider(),
               Text('People (${peers.length})', style: Theme.of(context).textTheme.titleSmall),
