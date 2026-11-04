@@ -4,6 +4,7 @@
 % Extends: GC, Grassroots Coins, Currencies' (programs/currencies/coins), and through it GKK, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 and GC:1 to GC:5 whole and restates none.
 % Defines: denomination, an identifier of a fiat currency; a denominated coin, a coin issued as its issuer's debt of one unit of its denomination, the clause DGC:8 reduced to coins (SGC, Section 2.1).
 % Last changed: 2026-11-04, written by Currencies #15 Cowork; clause 2 is DGC:8 reduced to coins, SGC's text.
+% Pragmas: GDC carries Swap, Payment and Redemption lines of its own, since [Swap], [Pay] and [Redeem] realise GC's schema and its denominated twins and the fields name the union of their variables in head order (Code #23, 2026-11-04 19:32 UTC); the given lot's variables are u, f, k and the wanted lot's v, f1, k1 in every twin, so the fields read left to right.
 % Schemas: GDC.glp beside this file, GC's seven and a twin of GC's swap, pay and redeem with a denominated coin for a coin, lot by lot, over GC's predicates and dcoin, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GDC: Grassroots Denominated Coins
 Alice and Bob are persons.  GDC extends GC.  Dollar names one denomination, and a Dollar-denominated Alice-coin is an Alice-coin issued as Alice's debt of one Dollar.
@@ -11,3 +12,7 @@ Alice and Bob are persons.  GDC extends GC.  Dollar names one denomination, and 
 2. ○ Denomination.  A Dollar-denominated Alice-coin is Alice's debt of one Dollar, due now; Alice redeems it on presentation at face value, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 Pragmas
 Minting: Alice [Dmint] <denomination> <amount>
+Swap: Alice [Swap] <issuer given> <denomination given> <amount given> <issuer wanted> <denomination wanted> <amount wanted>
+  Bob: Alice asks to swap coins with you.
+Payment: Alice [Pay] <denomination> <amount>
+Redemption: Alice [Redeem] <denomination given> <issuer wanted> <denomination wanted>
