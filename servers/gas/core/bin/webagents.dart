@@ -18,7 +18,7 @@
 //
 // Environment: PORT (4501); DATA (the state, default ./gasweb-data); TREE,
 // the app's bundle tree (servers/gas/phone/assets/tree, by sync_assets.sh),
-// copied into DATA/base when it changes; RELAY_URL (the relay, default
+// copied into DATA/base at every start; RELAY_URL (the relay, default
 // talmonlab's); LIBSODIUM_PATH (libsodium, where the system has none);
 // MAX (25); IDLE (15); HOST (the loopback).
 import 'dart:async';
@@ -109,13 +109,10 @@ Person open(String file) {
   return Person(file, core, LocalServer(core: core, www: '$base/www'));
 }
 
-/// The bundle tree copied into the base when it changed: the GLP programs
-/// and the page; the apps installed there stay.
+/// The bundle tree copied into the base, at every start: the GLP programs
+/// and the page, as this version of GAS has them; the apps installed there
+/// stay.
 Future<void> syncTree(String tree) async {
-  final stamp = File('$tree/../manifest.txt');
-  final mark = File('$base/tree.stamp');
-  final now = stamp.existsSync() ? stamp.readAsStringSync() : '${DateTime.now()}';
-  if (mark.existsSync() && mark.readAsStringSync() == now) return;
   final src = Directory(tree);
   for (final e in src.listSync(recursive: true).whereType<File>()) {
     final rel = e.path.substring(src.path.length + 1);
@@ -123,7 +120,6 @@ Future<void> syncTree(String tree) async {
     to.parent.createSync(recursive: true);
     e.copySync(to.path);
   }
-  mark.writeAsStringSync(now);
 }
 
 Future<void> json(HttpRequest req, int status, Object o) async {
