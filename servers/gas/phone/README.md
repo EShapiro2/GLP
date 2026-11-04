@@ -10,6 +10,7 @@ This is the first test bed of madGLP on phones: no rendezvous server (WAN: inbou
 
 - `lib/person_host.dart`: the person's agent, `AgentRuntime` over a given `GlpNetwork`, running the live harness's `live_person/3` (told `me(Key)` first), and the state the page reads.
 - `lib/local_server.dart`: the page and its API, `/api/<contract>/{state,act,day}`, on 127.0.0.1.
+- `lib/contracts.dart`: the contracts as packages, each named by its SHA-256: the starters the app carries (`tool/packages.py` writes them into the bundle), the others from GAS's catalog (talmonlab's downloads), and apps made with GAS's app maker from GAS's made apps; each checked against its hash before it is installed, beside the other worlds; and the links GAS shares, `get.html#<hash>`, `add.html#<key>&c=<hash>`, `gas://get/...`, `gas://add/...`.
 - `lib/relay_network.dart`: the network the agent runs over, `RelayGlpNetwork`: GNA's layer for the people near the phone, the relay for the others, behind the same `GlpNetwork`; nothing of the layer changes.
 - `lib/main.dart`: unpacks the bundle, lets the person pick a contract, starts the layer (`GrassrootsNetwork` through `GrassrootsGlpNetwork`), the agent and the server, and shows the page in a web view.
 - `tool/sync_assets.sh`: bundles the GLP files the harnesses load and the GAS site into `assets/` (gitignored).
