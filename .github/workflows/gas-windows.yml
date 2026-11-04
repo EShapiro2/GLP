@@ -1,0 +1,69 @@
+# The GAS app for Windows (servers/gas/phone), built on GitHub's Windows
+# machines and put on the downloads branch, which talmonlab serves at
+# https://talmonlab.bgu.ac.il/downloads/GAS-windows.zip.  The bundle the app
+# carries (the GLP tree, the site, the starter apps) is made on Linux first,
+# as for the other platforms (tools/build.py, then tool/sync_assets.sh).
+name: GAS for Windows
+on:
+  push:
+    branches: [GAS-twophone]
+    paths: ['servers/gas/**', 'glp_runtime/lib/**', 'networking/**', 'programs/**', '.github/workflows/gas-windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: gas-windows
+  cancel-in-progress: true
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The worlds, the site, and the bundle
+        working-directory: servers/gas
+        run: |
+          python3 -I tools/build.py
+          bash phone/tool/sync_assets.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: assets
+          path: servers/gas/phone/assets
+  windows:
+    needs: bundle
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: assets
+          path: servers/gas/phone/assets
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+      - name: Build
+        working-directory: servers/gas/phone
+        run: |
+          flutter pub get
+          flutter build windows --release
+      - name: Zip
+        shell: pwsh
+        run: |
+          $out = "servers/gas/phone/build/windows/x64/runner/Release"
+          New-Item -ItemType Directory GAS | Out-Null
+          Copy-Item "$out/*" GAS -Recurse
+          Compress-Archive -Path GAS -DestinationPath GAS-windows.zip
+      - uses: actions/checkout@v4
+        with:
+          ref: gas-downloads
+          path: dl
+      - name: Publish on the downloads branch
+        shell: bash
+        run: |
+          cp GAS-windows.zip dl/files/GAS-windows.zip
+          cd dl
+          git config user.name "GAS builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add files/GAS-windows.zip
+          git commit -m "GAS-windows.zip built from ${GITHUB_REF_NAME} ${GITHUB_SHA::8}"
+          git push origin gas-downloads

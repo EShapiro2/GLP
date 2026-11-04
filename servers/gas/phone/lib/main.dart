@@ -31,11 +31,11 @@ import 'package:redux/redux.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import 'contracts.dart';
 import 'core.dart';
 import 'local_server.dart';
+import 'view.dart';
 
 const _bg = Color(0xFFF5F5F7);
 
@@ -102,7 +102,7 @@ class Shell extends StatefulWidget {
 }
 
 class _ShellState extends State<Shell> {
-  WebViewController? web;
+  GasView? web;
   LocalServer? server;
   String? error;
   StreamSubscription<Uri>? _links;
@@ -150,20 +150,16 @@ class _ShellState extends State<Shell> {
       final s = LocalServer(core: core, www: '$base/www');
       await s.start();
       server = s;
-      final w = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..addJavaScriptChannel('GASNative', onMessageReceived: (m) => unawaited(_native(m.message)))
-        ..setNavigationDelegate(NavigationDelegate(onPageFinished: (_) {
-          _ready = true;
-          for (final l in _early) {
-            _send('link', l);
-          }
-          _early.clear();
-        }))
-        ..loadRequest(Uri.parse(s.url));
-      // macOS's WebView has no background colour of its own (it throws); the
-      // page paints the same colour.
-      if (!Platform.isMacOS) await w.setBackgroundColor(_bg);
+      final w = await GasView.open(s.url,
+          background: _bg,
+          onMessage: (m) => unawaited(_native(m)),
+          onLoaded: () {
+            _ready = true;
+            for (final l in _early) {
+              _send('link', l);
+            }
+            _early.clear();
+          });
       setState(() => web = w);
       try {
         _links = AppLinks().uriLinkStream.listen((u) {
@@ -184,7 +180,7 @@ class _ShellState extends State<Shell> {
 
   /// Tell the page: window.gasNative[kind](value).
   void _send(String kind, String value) =>
-      unawaited(web?.runJavaScript('window.gasNative && gasNative.$kind && gasNative.$kind(${jsonEncode(value)})'));
+      unawaited(web?.run('window.gasNative && gasNative.$kind && gasNative.$kind(${jsonEncode(value)})'));
 
   Future<void> _native(String message) async {
     final m = jsonDecode(message) as Map;
@@ -210,6 +206,7 @@ class _ShellState extends State<Shell> {
   void dispose() {
     _links?.cancel();
     unawaited(server?.stop());
+    unawaited(web?.dispose());
     super.dispose();
   }
 
@@ -220,17 +217,13 @@ class _ShellState extends State<Shell> {
       canPop: false,
       onPopInvokedWithResult: (popped, _) async {
         if (popped || w == null) return;
-        if (await w.canGoBack()) {
-          await w.goBack();
-        } else {
-          await SystemNavigator.pop();
-        }
+        if (!await w.back()) await SystemNavigator.pop();
       },
       child: Scaffold(
         backgroundColor: _bg,
         body: SafeArea(
           child: w != null
-              ? WebViewWidget(controller: w)
+              ? w.widget()
               : Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Container(

@@ -75,14 +75,21 @@ h1{font-size:clamp(32px,5vw,44px);letter-spacing:-.025em;line-height:1.08;margin
       <p>Through Apple's TestFlight app, once GAS has an Apple developer account.</p>
     </div>
     <div class="card" id="windows">
-      <h2>🪟 Windows</h2><span class="tag soon">Coming soon</span>
-      <span class="btn off">Download for Windows</span>
-      <p>An installer for Windows 10 and 11.</p>
+      <h2>🪟 Windows</h2><span class="tag soon" data-tag="GAS-windows.zip">Coming soon</span>
+      <a class="btn off" data-file="GAS-windows.zip">Download for Windows</a>
+      <div class="small" style="margin-top:6px" data-about="GAS-windows.zip"></div>
+      <ol data-steps="GAS-windows.zip" hidden>
+        <li>Download, then right-click the zip and choose <b>Extract All</b>.</li>
+        <li>Open the <b>GAS</b> folder and double-click <b>GAS</b>. If Windows says it protected your PC, click <b>More info</b>, then <b>Run anyway</b>.</li>
+        <li>Allow GAS on private networks when Windows asks, so people on the same Wi-Fi find you.</li>
+      </ol>
+      <p data-soon="GAS-windows.zip">For Windows 10 and 11.</p>
+      <p class="small" data-steps="GAS-windows.zip" hidden>Not yet signed, which is why Windows asks. No Bluetooth on Windows: people on the same Wi-Fi, or anywhere over the Internet.</p>
     </div>
   </div>
   <div class="card note">
     <h3>Meeting people far away</h3>
-    <p class="small" style="font-size:14.5px;margin:0">In an app, tap the <b>person+</b> button at the top. Share your invite link (or show your QR code); the other person pastes it (or scans it) and taps <b>Add</b>. Messages between you then go through talmonlab's relay, encrypted end to end: the relay sees who writes to whom, never what.</p>
+    <p class="small" style="font-size:14.5px;margin:0">In an app, tap the people at the top. Share your invite link (or show your QR code); the other person pastes it (or scans it) and taps <b>Add</b>. Messages between you then go through talmonlab's relay, encrypted end to end: the relay sees who writes to whom, never what.</p>
   </div>
 </main>
 <script>

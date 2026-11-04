@@ -250,7 +250,7 @@ async function openLink(text){
 function linkSheet(){
   sheet('Open a link', `<p style="margin:0;color:var(--mute);font-size:14.5px">A link to an app, or someone's invite.</p>
     <div class="inline"><input id="lk" placeholder="Paste the link" autocomplete="off"><button class="sbtn" id="lkgo">Open</button></div>
-    ${NATIVE ? '<button class="sbtn alt" id="lkscan">Scan a code</button>' : ''}
+    ${NATIVE && !window.GAS_NOSCAN ? '<button class="sbtn alt" id="lkscan">Scan a code</button>' : ''}
     <button class="card buildrow" id="build"><span class="icon" style="background:conic-gradient(from 200deg,#4f7bd9,#2bb3a0,#9b7bd4,#f0b54a,#4f7bd9)">✨</span><span><b>Build an app</b><small>Write the rules; GAS makes the app.</small></span><span style="color:var(--faint);font-size:22px">›</span></button>`, el => {
     $('#build').onclick = () => { closeSheet(); openUrl('https://talmonlab.bgu.ac.il/gas/make.html'); };
     paste(t => { if (looksLink(t) && !$('#lk').value) $('#lk').value = t.trim(); });
@@ -321,7 +321,7 @@ async function peopleSheet(home){
       ${ps.length ? `<div class="list">${ps.map(q => `<button class="li" style="width:100%;text-align:left" data-k="${q.key}">${avatar(q.key)}<span>${esc(q.name)}</span><span class="n">${q.state === 'near' ? '● nearby' : q.state === 'far' ? '🌐 online' : 'found'}</span></button>`).join('')}</div>`
         : `<div class="hint" style="margin:0 4px">No one yet. People near you show up by themselves.</div>`}
       <div class="inline"><input id="addk" placeholder="Paste someone's invite" autocomplete="off"><button class="sbtn" id="addgo">Add</button></div>
-      ${NATIVE ? '<button class="sbtn alt" id="scan">Scan their code</button>' : ''}` : ''}
+      ${NATIVE && !window.GAS_NOSCAN ? '<button class="sbtn alt" id="scan">Scan their code</button>' : ''}` : ''}
       <div class="card toggle"><div><b>Internet</b><small>${p.relay.on ? 'Meet people anywhere (encrypted, through talmonlab)' : 'Only people near you'}</small></div><button class="sw ${p.relay.on ? 'on' : ''}" id="relay" aria-label="Internet"></button></div>
       ${inApp ? '' : '<button class="renew" id="renew">Start over as someone new</button>'}
       ${(p.events || []).length ? `<details class="dev"><summary>Details</summary><pre>${esc(p.events.join('\n'))}</pre></details>` : ''}`;
