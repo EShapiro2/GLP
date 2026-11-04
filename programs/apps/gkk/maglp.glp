@@ -1,0 +1,64 @@
+%% maglp.glp --- the GKK mini-app as maGLP: the program an agent runs when its person's first act names this entry, gkk_agent (self.glp, agent/2), the agent's initial goal being agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot": "A boot defines no agent/2: the program it loads answers the initial goal, in a simulation as on a phone, and the person goal's first act names the entry the program starts").
+%%
+%% The agent's key pair is made when the runtime spawns the agent, before anything is compiled or sent (GLP-Spec appendix-guards.tex, "Identity and signature"), and self_key/1 assigns its public key.  The person's acts after the first are the agents the person names, call(Q), and the grants on the mini-app's questions: what the person writes may name any agent, and this is how an agent learns of an agent it has not met (GLP-Spec maglp.tex, after Definition "Multiagent GLP").  For each agent Q the person names, the agent makes a conversation and cold-calls Q with it, msg(Q, conv(K, Kq, Ch)) on its network output (the Cold-call transaction): K its key, Kq a writer for Q's key, and Ch Q's end of the conversation's root channel; once Q's agent assigns Kq, the conversation opens and the person is told the key, called(Q, Kq).  A cold call that reaches the agent has its key assigned to the caller's writer and opens the conversation with the caller.  The agent runs the mini-app, miniapp/4, with its key and the conversations, as the social graph hands a mini-app its conversations (miniapp.glp).
+
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
+
+%% The agent: its key, which self_key/1 assigns, and the agent run with it.
+exported procedure gkk_agent(MaIns?, MaOuts, Stream(NetMsg(MaConv))?, Stream(NetMsg(MaConv))).
+gkk_agent(PIn, POut?, NIn, NOut?) :-
+    self_key(K),
+    run_agent(K?, PIn?, POut, NIn?, NOut).
+
+%% The person's input split into the agents the person names and the grants on the mini-app's questions; a conversation for each agent the person names, which the agent cold-calls with it, and, once that agent's key comes back, the conversation opened and the person told the key, called(Q, Kq); a conversation for each cold call that reaches it; and the mini-app over the person channel and the conversations, what it draws for the person merged with what the agent tells the person.
+procedure run_agent(Key?, MaIns?, MaOuts, Stream(NetMsg(MaConv))?, Stream(NetMsg(MaConv))).
+run_agent(K, PIn, POut?, NIn, NOut?) :-
+    ground(K?) |
+    split_in(PIn?, Calls, Grants),
+    call_out(Calls?, K?, NOut, Pending),
+    opened(Pending?, Mine, Notices),
+    answer_in(NIn?, K?, Theirs),
+    merge(Mine?, Theirs?, Down),
+    miniapp # miniapp(K?, ch(Grants?, MOut), ch(Down?, Up), []),
+    mix(MOut?, Notices?, POut),
+    sink(Up?).
+
+%% The person's input: each agent the person names, and each grant on a question of the mini-app.
+procedure split_in(MaIns?, Stream(Key), PersonIn(Drawn)).
+split_in([call(Q) | Xs], [Q? | Cs?], Gs?) :- split_in(Xs?, Cs, Gs).
+split_in([input(I, P, D) | Xs], Cs?, [input(I?, P?, D?) | Gs?]) :- split_in(Xs?, Cs, Gs).
+
+%% The cold call to each agent Q the person names: msg(Q, conv(K, Kq, Ch)), Ch Q's end of a new conversation, and this agent's end of it, pending until Q's agent assigns its key Kq.
+procedure call_out(Stream(Key)?, Key?, Stream(NetMsg(MaConv)), Stream(MaPending)).
+call_out([Q | Qs], K, [msg(Q?, conv(K?, Kq, ch(AB?, BA))) | Ms?], [pending(Q?, Kq?, ch(BA?, AB)) | Ps?]) :-
+    ground(K?) | call_out(Qs?, K?, Ms, Ps).
+call_out([], _, [], []).
+
+%% A conversation the agent called, opened once the called agent's key has come back, and the person told the key.
+procedure opened(Stream(MaPending)?, Stream(SgToApp(Net)), Stream(MaOut)).
+opened([pending(Q, Kq, Ch) | Ps], [conversation(Kq?, Ch?) | Cs?], [called(Q?, Kq?) | Ns?]) :-
+    ground(Kq?) | opened(Ps?, Cs, Ns).
+opened([], [], []).
+
+%% What the mini-app draws for the person, merged with what the agent tells the person.
+procedure mix(PersonOut(Drawn)?, Stream(MaOut)?, MaOuts).
+mix([D | Ds], Ns, [D? | Os?]) :- mix(Ds?, Ns?, Os).
+mix(Ds, [N | Ns], [N? | Os?]) :- mix(Ds?, Ns?, Os).
+mix(Ds, [], Os?) :- lift(Ds?, Os).
+
+procedure lift(PersonOut(Drawn)?, MaOuts).
+lift([D | Ds], [D? | Os?]) :- lift(Ds?, Os).
+
+%% Each cold call that reaches the agent: its key assigned to the caller's writer, and the conversation with the caller.
+procedure answer_in(Stream(NetMsg(MaConv))?, Key?, Stream(SgToApp(Net))).
+answer_in([msg(_, conv(P, Me?, Ch)) | Ms], K, [conversation(P?, Ch?) | Cs?]) :-
+    ground(K?) | give(K?, Me), answer_in(Ms?, K?, Cs).
+answer_in([], _, []).
+
+procedure give(Key?, Key).
+give(K, K?).
+
+%% What the mini-app writes to the social graph, read and dropped: the conversations are not the social graph's here.
+procedure sink(Stream(AppToSg)?).
+sink([_ | Xs]) :- sink(Xs?).
+sink([]).
