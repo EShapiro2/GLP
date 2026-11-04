@@ -144,7 +144,6 @@ class _ShellState extends State<Shell> {
       server = s;
       final w = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(_bg)
         ..addJavaScriptChannel('GASNative', onMessageReceived: (m) => unawaited(_native(m.message)))
         ..setNavigationDelegate(NavigationDelegate(onPageFinished: (_) {
           _ready = true;
@@ -154,6 +153,9 @@ class _ShellState extends State<Shell> {
           _early.clear();
         }))
         ..loadRequest(Uri.parse(s.url));
+      // macOS's WebView has no background colour of its own (it throws); the
+      // page paints the same colour.
+      if (!Platform.isMacOS) await w.setBackgroundColor(_bg);
       setState(() => web = w);
       try {
         _links = AppLinks().uriLinkStream.listen((u) {
