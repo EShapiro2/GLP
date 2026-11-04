@@ -135,8 +135,8 @@ def make(text, outdir):
     with tempfile.TemporaryDirectory() as work:
         # 3. The pragmas, read beside the contracts it extends.
         txt = os.path.join(work, f'{cid}.txt')
-        with open(txt, 'w', encoding='utf-8') as f:
-            f.write(contract_txt)
+        with open(txt, 'w', encoding='utf-8', newline='\n') as f:  # LF, as perl reads it, on Windows too
+            f.write(contract_txt.replace('\r\n', '\n'))
         p = subprocess.run([bash(),
                             fwd(os.path.join(REPO, 'programs', 'vglp', 'cva', 'compiler', 'pragmas.sh')), fwd(txt), term],
                            capture_output=True, text=True, encoding='utf-8')
@@ -192,7 +192,7 @@ def make(text, outdir):
 def main():
     if len(sys.argv) != 3:
         sys.exit(__doc__)
-    text, outdir = open(sys.argv[1], encoding='utf-8').read(), sys.argv[2]
+    text, outdir = open(sys.argv[1], encoding='utf-8').read().replace('\r\n', '\n'), sys.argv[2]
     try:
         r = make(text, outdir)
     except Refused as e:
