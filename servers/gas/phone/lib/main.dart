@@ -38,9 +38,8 @@ Future<void> main() async {
 
 /// The bundle (tool/sync_assets.sh) copied into the app's documents
 /// directory, a real path the GLP engine reads: programs/ and www/.
-Future<String> unbundle() async {
-  final docs = await getApplicationDocumentsDirectory();
-  final base = '${docs.path}/gas';
+Future<String> unbundle([String? into]) async {
+  final base = into ?? '${(await getApplicationDocumentsDirectory()).path}/gas';
   final manifest = await rootBundle.loadString('assets/manifest.txt', cache: false);
   for (final line in manifest.split('\n')) {
     final tab = line.indexOf('\t');
