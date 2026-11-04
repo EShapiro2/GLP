@@ -2,7 +2,7 @@
 %%
 %% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, has(A, N) where it holds A at least N times, and lacks(A, N) where it holds fewer than N; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
 %%
-%% The roles, by which the plays choose a script, each with the keys of those its person has a conversation with, in the order the plays give them (alice: bob; bob: alice; market_alice: bob, charlie, eve; market_bob: alice, diana; market_charlie: alice, eve; market_diana: bob, frank; market_eve: alice, charlie, frank; market_frank: diana, eve), its own key the first argument:
+%% The roles, by which the plays choose a script, each with the keys of those its person has a conversation with, in the order the plays give them (alice: bob; bob: alice; market_alice: bob, charlie, eve, frank; market_bob: alice, diana; market_charlie: alice, eve; market_diana: bob, frank; market_eve: alice, charlie, frank; market_frank: diana, eve, alice), its own key the first argument:
 %%   alice  looks at her request question; establishes her identity (GKK:1);
 %%          asks to come to know bob (GKK:2), her request's hello asking
 %%          him; once she knows him, mints two Alice-coins (GC:1); once she
@@ -21,7 +21,8 @@
 %%          of GC's paper (play_village, plays.glp), their scripts below.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
-Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
+Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo)
+        ; approval(Fills, Class, YesNo).
 Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; lacks(Atom, Integer) ; has(Atom, Integer)
         ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
 Last  ::= last(List(Atom), List(Key)) ; nolast.
@@ -33,13 +34,16 @@ Shows ::= [] ; [Shown | Shows].
 PSt   ::= ps(Sess, List(Output), Shows, Steps).
 ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
 YN    ::= y ; n.
+Fills ::= [] ; [Holes | Fills].
+Found ::= found(List(Key)) ; nomatch.
+Matched ::= matched(Integer, Path, Shows, List(Key)) ; unmatched.
 
 exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 miniapp_person(Me, Role, Ps, ch(Ds, Gs?), S?) :-
     script(Role?, Me?, Ps?, Ss),
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
-%% script(Role, Me, Ps, Ss): the script Ss of the role, Me the person's own key and Ps the keys the person knows, each peer named by its key in Ps, by its position there; the issuer of a coin whom the person does not know is named by their name.
+%% script(Role, Me, Ps, Ss): the script Ss of the role, Me the person's own key and Ps the keys the person knows, each peer named by its key in Ps, by its position there; the issuer of a coin whom the person does not know is a hole of an approval step, filled by matching the approval question (approval(Fs, K, A), below).
 procedure script(Constant?, Key?, List(Key)?, Steps).
 script(alice, Me, [Bob], [look, own([A1], propose(establish(A1?))), wait(holds(identity)),
                           own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
@@ -53,16 +57,17 @@ script(bob, Me, [Alice], [own([B1], propose(establish(B1?))), wait(holds(identit
                           approval(swap(Alice?, Me?, Alice?, 2, Me?, 3), yes)]) :-
     ground(Me?), ground(Alice?) | true.
 %% The village market of GC's paper, Appendix "Village Market Demonstration", on the compiled app (play_village, plays.glp): six villagers, each script its villager's acts of the six operations, after each has minted its coins and come to know those it transacts with (GKK:2), each acquaintance willed by both.  Each waits on its own screen, so that a request is made once what it needs of its proposer holds; what it needs of the other party holds by the order of the scripts, each party minting before it answers an acquaintance.  The coins each mints are the coins of its issue the operations need: 30 alice-coins, 39 bob-coins, 25 charlie-coins, 35 diana-coins, 20 eve-coins and 28 frank-coins.
-script(market_alice, Me, [Bob, Charlie, Eve], [own([A1], propose(establish(A1?))), wait(holds(identity)),
+script(market_alice, Me, [Bob, Charlie, Eve, Frank], [own([A1], propose(establish(A1?))), wait(holds(identity)),
          own([A2], propose(mint(A2?, 30))), wait(has(coin(Me?), 30)),
          own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
          own([M2], propose(acquaint(M2?, Charlie?))), wait(holds(knows(Charlie?))),
          own([M3], propose(acquaint(M3?, Eve?))), wait(holds(knows(Eve?))),
+         own([M4], propose(acquaint(M4?, Frank?))), wait(holds(knows(Frank?))),
          own([A3, A4], propose(swap(A3?, Bob?, A4?, 15, Bob?, 15))), wait(has(coin(Bob?), 15)),
          own([A5, A6], propose(swap(A5?, Charlie?, A6?, 15, Charlie?, 15))), wait(has(coin(Charlie?), 15)),
          wait(has(coin(Me?), 8)),
-         own([A7], propose(swap(A7?, Eve?, Bob?, 10, frank, 4))), wait(has(coin(frank), 4)), look]) :-
-    ground(Me?), ground(Bob?), ground(Charlie?), ground(Eve?) | true.
+         own([A7], propose(swap(A7?, Eve?, Bob?, 10, Frank?, 4))), wait(has(coin(Frank?), 4)), look]) :-
+    ground(Me?), ground(Bob?), ground(Charlie?), ground(Eve?), ground(Frank?) | true.
 script(market_bob, Me, [Alice, Diana], [own([B1], propose(establish(B1?))), wait(holds(identity)),
          own([B2], propose(mint(B2?, 39))), wait(has(coin(Me?), 39)),
          approval(acquaint(Alice?, Me?), yes), approval(acquaint(Diana?, Me?), yes),
@@ -77,7 +82,7 @@ script(market_charlie, Me, [Alice, Eve], [own([C1], propose(establish(C1?))), wa
          own([M1], propose(acquaint(M1?, Eve?))), wait(holds(knows(Eve?))),
          approval(swap(Alice?, Me?, Alice?, 15, Me?, 15), yes),
          own([C3, C4], propose(swap(C3?, Eve?, C4?, 10, Eve?, 10))), wait(has(coin(Eve?), 10)),
-         approval(swap(Eve?, Me?, frank, 5, Alice?, 5), yes), wait(has(coin(frank), 5)), look]) :-
+         approval([[F1, F2]], swap(Eve?, Me?, F1?, 5, Alice?, 5), yes), wait(has(coin(F2?), 5)), look]) :-
     ground(Me?), ground(Alice?), ground(Eve?) | true.
 script(market_diana, Me, [Bob, Frank], [own([D1], propose(establish(D1?))), wait(holds(identity)),
          own([D2], propose(mint(D2?, 35))), wait(has(coin(Me?), 35)),
@@ -95,11 +100,11 @@ script(market_eve, Me, [Alice, Charlie, Frank], [own([E1], propose(establish(E1?
          own([E5], propose(pay(E5?, Charlie?, 6))), wait(lacks(coin(Charlie?), 5)),
          own([E6], propose(swap(E6?, Charlie?, Frank?, 5, Alice?, 5))), wait(has(coin(Alice?), 5)),
          own([E7], propose(pay(E7?, Alice?, 3))), wait(lacks(coin(Alice?), 3)),
-         approval(swap(Alice?, Me?, bob, 10, Frank?, 4), yes), wait(has(coin(bob), 10)), look]) :-
+         approval([[B1, B2]], swap(Alice?, Me?, B1?, 10, Frank?, 4), yes), wait(has(coin(B2?), 10)), look]) :-
     ground(Me?), ground(Alice?), ground(Charlie?), ground(Frank?) | true.
-script(market_frank, Me, [Diana, Eve], [own([F1], propose(establish(F1?))), wait(holds(identity)),
+script(market_frank, Me, [Diana, Eve, Alice], [own([F1], propose(establish(F1?))), wait(holds(identity)),
          own([F2], propose(mint(F2?, 28))), wait(has(coin(Me?), 28)),
-         approval(acquaint(Diana?, Me?), yes), approval(acquaint(Eve?, Me?), yes),
+         approval(acquaint(Diana?, Me?), yes), approval(acquaint(Eve?, Me?), yes), approval(acquaint(Alice?, Me?), yes),
          approval(swap(Diana?, Me?, Diana?, 15, Me?, 18), yes),
          approval(swap(Eve?, Me?, Eve?, 10, Me?, 10), yes),
          wait(has(coin(Diana?), 15)),
@@ -109,7 +114,7 @@ script(market_frank, Me, [Diana, Eve], [own([F1], propose(establish(F1?))), wait
          own([F8, F9], propose(redeem(F8?, Diana?, F9?))), wait(lacks(coin(Diana?), 10)),
          own([F10, F11], propose(redeem(F10?, Diana?, F11?))), wait(lacks(coin(Diana?), 9)),
          own([F12, F13], propose(redeem(F12?, Diana?, F13?))), wait(lacks(coin(Diana?), 8)), look]) :-
-    ground(Me?), ground(Diana?), ground(Eve?) | true.
+    ground(Me?), ground(Diana?), ground(Eve?), ground(Alice?) | true.
 script(_, _, _, []) :- otherwise | true.
 
 %% The person.
@@ -158,12 +163,97 @@ advance(ps(Se, T, Cs, [approval(K, A) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     ground(Cs?), ground(K?) |
     find_approval(K?, Cs?, F),
     approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, [approval(Fs, K, A) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Cs?) |
+    rev_shown(Cs?, [], Rs),
+    match_approval(K?, Rs?, [], M, K1),
+    matched(M?, Fs?, K1?, A?, ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
 
 %% fill(Me, Ks): the agent's own key Me written into each hole of Ks.
 procedure fill(Key?, Holes?).
 fill(Me, [Me? | Ks]) :- ground(Me?) | fill(Me?, Ks?).
 fill(_, []).
+
+%% The step approval(Fs, K, A): the answer A to the earliest approval question drawn whose attempt's class, or whose hello's proposal, the class K matches, K holding holes where the script does not know the key the question carries --- the issuer of a coin offered by one the person knows, say.  The question's keys at the holes fill them, the holes of K in order, the first hole's key into each hole of the first list of Fs, and so on, so that the steps after it name that key by the holes they read (GLP #11 Cowork, Code_inbox.md, 2026-11-03 17:23 UTC, item 2: "a form of wait or approval with holes filled by matching is a construct of the owners' scripted-person interpreter, written in GLP").  A hole is a key still unknown where the class is matched; the class names every other key.
+procedure matched(Matched?, Fills?, Class?, YesNo?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+matched(matched(Id, P, Cs1, Vs), Fs, K, A, ps(Se, T, _, Ss), [input(Id?, P?, A?) | Gs?], Gs1, St1?, [gave(K?, A?) | Log?], Log1) :-
+    ground(Vs?), ground(A?) |
+    rev_keys(Vs?, [], Ws),
+    fill_each(Ws?, Fs?),
+    advance(ps(Se?, T?, Cs1?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+matched(unmatched, Fs, K, A, ps(Se, T, Cs, Ss), Gs1?, Gs1, ps(Se?, T?, Cs?, [approval(Fs?, K?, A?) | Ss?]), Log1?, Log1).
+
+%% fill_each(Ws, Fs): each key of Ws written into each hole of the list of Fs at its place.
+procedure fill_each(List(Key)?, Fills?).
+fill_each([W | Ws], [Hs | Fs]) :- ground(W?) | fill(W?, Hs?), fill_each(Ws?, Fs?).
+fill_each([], []).
+
+procedure rev_keys(List(Key)?, List(Key)?, List(Key)).
+rev_keys([], Acc, Acc?).
+rev_keys([K | Ks], Acc, R?) :- rev_keys(Ks?, [K? | Acc?], R).
+
+%% match_approval(K, Cs, Done, M, K1): M matched(Id, P, Rest, Vs), the earliest question of Cs whose asking K matches, Vs the keys at K's holes, the last first, Rest the questions left; unmatched where none does.  K1 is K, passed back.
+procedure match_approval(Class?, Shows?, Shows?, Matched, Class).
+match_approval(K, [], _, unmatched, K?).
+match_approval(K, [shown(Id, P, At) | Cs], Done, M?, K2?) :-
+    ground(Id?), ground(P?), ground(At?) |
+    match_asking(K?, At?, F, K1),
+    match_next(F?, K1?, shown(Id?, P?, At?), Cs?, Done?, M, K2).
+
+procedure match_next(Found?, Class?, Shown?, Shows?, Shows?, Matched, Class).
+match_next(found(Vs), K, shown(Id, P, _), Cs, Done, matched(Id?, P?, Rest?, Vs?), K?) :-
+    rev_shown(Done?, Cs?, Rest).
+match_next(nomatch, K, S, Cs, Done, M?, K1?) :-
+    match_approval(K?, Cs?, [S? | Done?], M, K1).
+
+%% An attempt is matched by its class, a hello by its proposal.
+procedure match_asking(Class?, Asking?, Found, Class).
+match_asking(K, attempt(_, _, _, C, _), F?, K1?) :- match_class(K?, C?, [], F, K1).
+match_asking(K, hello(_, N), F?, K1?) :- match_class(K?, N?, [], F, K1).
+
+%% match_class(K, X, Vs, F, K1): F found(Vs1) where the class K, with holes, matches X, Vs1 the keys of X at K's holes, the last first, before Vs; nomatch where it does not.  K1 is K, passed back.
+procedure match_class(Class?, Class?, List(Key)?, Found, Class).
+match_class(establish(K1), establish(XK1), Vs, F?, establish(BK1?)) :-
+    match_key(K1?, XK1?, found(Vs?), F, BK1).
+match_class(acquaint(K1, K2), acquaint(XK1, XK2), Vs, F?, acquaint(BK1?, BK2?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, F, BK2).
+match_class(introduce(K1, K2, K3), introduce(XK1, XK2, XK3), Vs, F?, introduce(BK1?, BK2?, BK3?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, F, BK3).
+match_class(mint(K1, K2), mint(XK1, XK2), Vs, F?, mint(BK1?, BK2?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_int(K2?, XK2?, R1?, F, BK2).
+match_class(swap(K1, K2, K3, K4, K5, K6), swap(XK1, XK2, XK3, XK4, XK5, XK6), Vs, F?, swap(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_key(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, F, BK6).
+match_class(pay(K1, K2, K3), pay(XK1, XK2, XK3), Vs, F?, pay(BK1?, BK2?, BK3?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_int(K3?, XK3?, R2?, F, BK3).
+match_class(redeem(K1, K2, K3), redeem(XK1, XK2, XK3), Vs, F?, redeem(BK1?, BK2?, BK3?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, F, BK3).
+match_class(K, _, _, nomatch, K?) :- otherwise | true.
+
+%% match_key(K, X, F0, F, K1): a hole K, unknown, takes the key X; a key K matches X where the two are equal.
+procedure match_key(Key?, Key?, Found?, Found, Key).
+match_key(K, _, nomatch, nomatch, K?).
+match_key(K, X, found(Vs), found([X? | Vs?]), K?) :- unknown(K?) | true.
+match_key(K, X, found(Vs), found(Vs?), K?) :- K? =?= X? | true.
+match_key(K, _, found(_), nomatch, K?) :- otherwise | true.
+
+procedure match_int(Integer?, Integer?, Found?, Found, Integer).
+match_int(I, _, nomatch, nomatch, I?).
+match_int(I, X, found(Vs), found(Vs?), I?) :- I? =:= X? | true.
+match_int(I, _, found(_), nomatch, I?) :- otherwise | true.
 
 %% grant(Id, P, R, Gs, Gs1): the grant of R on the question Id at P, once R, its holes filled, is ground.
 procedure grant(Integer?, Path?, Request?, PersonIn(Drawn), PersonIn(Drawn)?).
