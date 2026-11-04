@@ -683,7 +683,7 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
   // file named boot_direct.glp or mad_boot.glp, and every file under a
   // directory named mad_boot, was left out by its name.
   for (final file in glpFiles) {
-    final filename = file.path.split(Platform.pathSeparator).last;
+    final filename = ppath.basename(file.path); // '/' or '\\' on Windows
 
     // Parse the module
     var module = _parseFile(file.path);
@@ -742,7 +742,7 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
   final vglpFiles = _listFiles(root)
       .where((f) => f.path.endsWith('.vglp'))
       .where((f) {
-    final filename = f.path.split(Platform.pathSeparator).last;
+    final filename = ppath.basename(f.path);
     // A self.vglp is no module: its layer joins its self.glp's.
     if (filename == selfVglp) return false;
     final stem = filename.substring(0, filename.length - '.vglp'.length);
@@ -861,7 +861,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   // type checking, so it must also be linked, or its procedures are unresolved
   // at runtime. (The ancestor self.glp ABOVE the directory are added below.)
   final ownSelf = File('$dir${Platform.pathSeparator}self.glp');
-  if (file.path.split(Platform.pathSeparator).last != 'self.glp' &&
+  if (ppath.basename(file.path) != 'self.glp' &&
       ownSelf.existsSync()) {
     final selfModule = _parseFile(ownSelf.path);
     final selfChain = discoverSelfChain(
