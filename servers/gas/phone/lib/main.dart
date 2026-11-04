@@ -165,12 +165,16 @@ class _RunningState extends State<Running> {
       phase = 'loading the network layer';
       event(phase);
       final sodium = await SodiumSumoInit.init();
-      final identity = await IdentityStore.getIdentity() ??
-          await () async {
-            final id = await GrassrootsIdentity.generate();
-            await IdentityStore.putIdentity(id);
-            return id;
-          }();
+      // The key pair, made once and kept in a file of the app's own (the
+      // platform keychain needs a signing entitlement this test bed lacks).
+      final idFile = File('${widget.base}/identity.json');
+      final identity = idFile.existsSync()
+          ? GrassrootsIdentity.fromMap(jsonDecode(idFile.readAsStringSync()) as Map<String, dynamic>)
+          : await () async {
+              final id = await GrassrootsIdentity.generate();
+              idFile.writeAsStringSync(jsonEncode(id.toJson()));
+              return id;
+            }();
       final store = Store<AppState>(appReducer, initialState: AppState());
       final l = GrassrootsNetwork(
         identity: identity,
