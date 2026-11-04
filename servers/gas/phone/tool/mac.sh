@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build and run the GAS phone app on a Mac, one stage at a time:
 #   bash mac.sh check     what is installed (Xcode, Flutter, CocoaPods, Python)
+#   bash mac.sh install   Flutter and CocoaPods, by Homebrew (Xcode comes from the App Store)
 #   bash mac.sh get       clone or update the GAS-twophone branch into ~/src/GLP-gas
 #   bash mac.sh build     the worlds, the bundle, the packages, and the macOS app
 #   bash mac.sh run       open the macOS app
@@ -30,6 +31,14 @@ check)
   if command -v brew >/dev/null 2>&1; then say "Homebrew: $(brew --version | head -1)"; else say "Homebrew: missing"; fi
   if command -v git >/dev/null 2>&1; then say "git: $(git --version)"; else say "git: missing"; miss="$miss git"; fi
   [ -z "$miss" ] && ok "everything needed is installed" || fail "missing:$miss"
+  ;;
+install)
+  command -v brew >/dev/null 2>&1 || fail "Homebrew is missing: see https://brew.sh"
+  command -v flutter >/dev/null 2>&1 || run brew install --cask flutter || fail "brew install flutter"
+  command -v pod >/dev/null 2>&1 || run brew install cocoapods || fail "brew install cocoapods"
+  run flutter --disable-analytics
+  run flutter precache --ios --macos
+  ok "Flutter $(flutter --version 2>/dev/null | head -1 | cut -d' ' -f2) and CocoaPods $(pod --version) installed"
   ;;
 get)
   if [ -d "$DIR/.git" ]; then
@@ -66,5 +75,5 @@ phone)
   run flutter run --release -d "$ID" --no-resident || fail "flutter run on $ID"
   ok "installed and started on $ID"
   ;;
-*) fail "unknown stage $STAGE (check, get, build, run, devices, phone)";;
+*) fail "unknown stage $STAGE (check, install, get, build, run, devices, phone)";;
 esac
