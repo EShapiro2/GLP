@@ -3,23 +3,23 @@
 % Paper: Grassroots Community Currencies, in preparation
 % Extends: GC, Grassroots Coins, Currencies' (programs/currencies/coins), and through it GKK, GSC's (programs/gsc) (Udi, 2026-11-04, 13:32, to Currencies #15: GCC extends GC directly, DGC being more than coins need).  It cites their clauses whole, GKK:1 to GKK:3 and GC:1 to GC:5, and restates none; a community coin is a coin of its minting treasurer under GC:2 to GC:4.
 % Defines: community, a community's name and its denomination, treasurer, community coin.  A community is started by a person, who gives it its name; a treasurer of a community is a person the community's treasurers appointed, the founder the first; a community coin is a coin minted by a treasurer of a community, declared as the community's and as denominated by a fiat currency, distinct from the treasurer's personal coins, and a coin of its minting treasurer under GC:2 to GC:4.  The names Alice and Bob are GC's; Carol is a person.
-% Last changed: 2026-11-04 (afternoon), clauses 1, 2 and 5 and the titles Fiat Redemption and Coin Redemption in Udi's revision of the paper's box (GCC 2b3cb0b), the community's denomination declared on starting it and Payment gone; clause 3 in GC:5's style, indicative, proposed by Currencies #15 and approved (14:29).  2026-11-04, written by Currencies #15 Cowork from Udi's four clauses, given in chat on 2026-11-04 (Udi, 12:24 and 12:29 local), the contract's name and owner his ruling of the same day; the titles approved by Udi (12:51); GCC extends GC directly (Udi, 13:32), clause 3 in two halves in Udi's order, the coins a treasurer minted first (Udi, 13:32), and clauses 5 and 6 are Currencies #15's, approved by Udi (13:06); the modalities and the pragmas are Currencies #15's.
+% Last changed: 2026-11-04 (14:38), clauses 3 and 5 both from the holder's side (Udi), and clause 4 with Bob appointed and Carol removed, Alice the treasurer who proposes (Udi, GCC 3c8c5e2-era revision in Overleaf); 2026-11-04 (afternoon), clauses 1, 2 and 5 and the titles Fiat Redemption and Coin Redemption in Udi's revision of the paper's box (GCC 2b3cb0b), the community's denomination declared on starting it and Payment gone; clause 3 in GC:5's style, indicative, proposed by Currencies #15 and approved (14:29).  2026-11-04, written by Currencies #15 Cowork from Udi's four clauses, given in chat on 2026-11-04 (Udi, 12:24 and 12:29 local), the contract's name and owner his ruling of the same day; the titles approved by Udi (12:51); GCC extends GC directly (Udi, 13:32), clause 3 in two halves in Udi's order, the coins a treasurer minted first (Udi, 13:32), and clauses 5 and 6 are Currencies #15's, approved by Udi (13:06); the modalities and the pragmas are Currencies #15's.
 % Schemas: GCC.glp beside this file, GC's seven, a twin of GC's swap, pay and redeem with a community coin for a coin, lot by lot, and start, cmint, appoint, remove and credeem, over GC's predicates and ccoin, treasurer and denomination, the term from which a run of the cascade prints schemas.txt (cascade.sh).  Appoint and remove take a listed role that wills, and remove one that leaves out the treasurer removed: two constructs GSC's language does not yet have, proposed to GSC (Currencies #15, 2026-11-04).
 GCC: Grassroots Community Currencies
 Alice, Bob and Carol are persons.
 1. ■ Community.  Alice may start a community, give it a unique name, declare its currency denomination, and is then the first treasurer of the community.
 2. ■ Minting.  While Alice is a treasurer of a community, they can mint denominated community coins, which are declared as such.
-3. ○ Fiat Redemption.  Alice redeems a community coin they minted against a fiat coin of its denomination, and, while Alice is a treasurer of a community, any community coin of the community.
-4. ■ Treasurers.  The treasurers of a community can appoint Alice as a new treasurer by their joint decision and the consent of Alice; they can remove a treasurer Bob by a joint decision of all treasurers except Bob.
+3. ○ Fiat Redemption.  Alice may redeem a community coin they hold against a fiat coin of its denomination from the person who minted it, or from any treasurer of the community.
+4. ■ Treasurers.  The treasurers of a community can appoint Bob as a new treasurer by their joint decision and the consent of Bob; they can remove a treasurer Carol by a joint decision of all treasurers except Carol.
 5. ■ Coin Redemption.  Alice may decide to redeem a community coin they hold against any coin held by a treasurer of the community, whom they know.
 Pragmas
 Coins: the coins Alice holds.
 Communities: the communities Alice is a treasurer of.
 Community: Alice [Start] <name> <denomination>
 Minting: Alice [Mint community coins] <amount>
-Treasurers: Carol [Appoint] <person>
-  Alice: Carol asks you to become a treasurer of their community.
-  Carol: Carol asks to appoint Alice a treasurer of your community.
-  Carol [Remove] <person>
-  Carol: Carol asks to remove Bob as a treasurer of your community.
+Treasurers: Alice [Appoint] <person>
+  Bob: Alice asks you to become a treasurer of their community.
+  Alice: Alice asks to appoint Bob a treasurer of your community.
+  Alice [Remove] <person>
+  Alice: Alice asks to remove Carol as a treasurer of your community.
 Coin Redemption: Alice [Redeem with treasurer] <community> <issuer given> <issuer wanted>
