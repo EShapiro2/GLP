@@ -75,6 +75,24 @@ def fwd(p):
     return p.replace(os.sep, '/')
 
 
+def program(rel):
+    """A program's path as the REPL loads it here: relative to glp_runtime,
+    without a trailing separator, or, where the REPL refuses that, absolute in
+    the system's own separators (the REPL on Windows)."""
+    return [rel, os.path.abspath(os.path.join(REPO, 'glp_runtime', *rel.split('/')))]
+
+
+def run_program(rel, goals, timeout=900):
+    """The REPL's output for the goals after loading the program at [rel],
+    trying each way of naming it until the REPL loads it."""
+    out = []
+    for path in program(rel):
+        out = repl([path] + goals, timeout)
+        if any(l.startswith('✓ Loaded program') for l in out):
+            return out
+    return out
+
+
 def answer(out, var):
     for l in out:
         if l.startswith(var + ' = '):
@@ -107,7 +125,7 @@ def make(text, outdir):
         raise Refused('schemas', [str(e)])
 
     # 2. The verdict.
-    out = repl(['../programs/gsc/', f':limit {LIMIT_CHECK}', f'check({term}, V).'])
+    out = run_program('../programs/gsc', [f':limit {LIMIT_CHECK}', f'check({term}, V).'])
     verdict = answer(out, 'V')
     if verdict is None:
         raise Refused('check', ['the checker gave no verdict'] + errors_of(out), notes=notes)
@@ -128,8 +146,8 @@ def make(text, outdir):
         pragmas = p.stdout.strip()
 
         # 4. The platform.
-        out = repl(['../programs/vglp/cva/compiler/', f':limit {LIMIT_COMPILE}',
-                    f'compile({name}, {term}, {verdict}, no_introduction, {pragmas}).'])
+        out = run_program('../programs/vglp/cva/compiler', [f':limit {LIMIT_COMPILE}',
+                          f'compile({name}, {term}, {verdict}, no_introduction, {pragmas}).'])
         body, on, done = [], False, False
         for l in out:
             if l == '%% compile begin':
