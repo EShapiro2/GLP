@@ -47,7 +47,10 @@ class Refused(Exception):
 
 
 def repl(lines, timeout=900):
-    """The REPL's output for the input lines, each "GLP> " prompt removed."""
+    """The REPL's output for the input lines, each "GLP> " prompt removed.  It
+    runs in glp_runtime, and a program is named relative to it, as
+    programs/gsc/README.md does: the REPL's root and the program's path then
+    come from the one working directory, whatever the system writes it as."""
     cmd = shlex.split(os.environ.get('GLPC', os.path.join(REPO, 'glp_runtime', 'bin', 'glpc')), posix=os.name != 'nt')
     p = subprocess.run(cmd, input='\n'.join(lines + [':quit']) + '\n', capture_output=True, text=True,
                        encoding='utf-8', cwd=os.path.join(REPO, 'glp_runtime'), timeout=timeout)
@@ -104,7 +107,7 @@ def make(text, outdir):
         raise Refused('schemas', [str(e)])
 
     # 2. The verdict.
-    out = repl([fwd(os.path.join(REPO, 'programs', 'gsc')) + '/', f':limit {LIMIT_CHECK}', f'check({term}, V).'])
+    out = repl(['../programs/gsc/', f':limit {LIMIT_CHECK}', f'check({term}, V).'])
     verdict = answer(out, 'V')
     if verdict is None:
         raise Refused('check', ['the checker gave no verdict'] + errors_of(out), notes=notes)
@@ -125,7 +128,7 @@ def make(text, outdir):
         pragmas = p.stdout.strip()
 
         # 4. The platform.
-        out = repl([fwd(os.path.join(REPO, 'programs', 'vglp', 'cva', 'compiler')) + '/', f':limit {LIMIT_COMPILE}',
+        out = repl(['../programs/vglp/cva/compiler/', f':limit {LIMIT_COMPILE}',
                     f'compile({name}, {term}, {verdict}, no_introduction, {pragmas}).'])
         body, on, done = [], False, False
         for l in out:
