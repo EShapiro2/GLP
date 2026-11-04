@@ -14,20 +14,20 @@
 %% Compilation"), its person scripted, and their networks joined by route/6,
 %% route3/8 or route4/10.  The person reads what its dispatcher draws (vGLP,
 %% the construct process, draw(Id, W, V) and withdraw(Id); a grant input(Id,
-%% P, R)): the agent's request questions, each showing the agent's own key and
-%% the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, on which the agent goal writes its view, view(S, K, A), the machine state S of its app state, the contract's atoms, the persons K it knows and the approvals A its person made that are pending, when it starts and whenever any changes, drawn element by element, which it logs (vGLP, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(P, Q, D), P the part of the refused attempt, Q its refuser and D the reason, declined or unable(Lacks, Has), or when a request of its person is dropped, the agent ready for no part it names, refused(P, Q, unable) (vGLP, Section 5.4, "The compilation"); the approval questions Start raises; and the approval question an arriving hello asks of a meeting.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation"), and the plays pace the persons on what their screens show: the last view, the notices after it, the request question open and the approval questions drawn.
+%% P, R)): the agent's request questions, each bare, of the request type
+%% Request?, taking one request (vGLP 12f629d, Section 5.4, "The compilation"); the program's output, construct 0, on which the agent goal writes its view, view(Me, S, K, A, Ts), its own key Me, the machine state S of its app state, the contract's atoms, the persons K it knows and the approvals A its person made that are pending, when it starts and whenever any changes, drawn element by element, which it logs (vGLP, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(P, Q, D), P the part of the refused attempt, Q its refuser and D the reason, declined or unable(Lacks, Has), or when a request of its person is dropped, the agent ready for no part it names, refused(P, Q, unable) (vGLP, Section 5.4, "The compilation"); the approval questions Start raises; and the approval question an arriving hello asks of a meeting.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation"), and the plays pace the persons on what their screens show: the last view, the notices after it, the request question open and the approval questions drawn.
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
 %% request question open, once one is drawn; own(Ks, R) grants R likewise,
 %% once the person has written into each of the holes Ks the agent's own key,
-%% which the question shows, R reading the holes wherever it names the agent:
+%% which the last view drawn shows, R reading the holes wherever it names the agent:
 %% a person proposing a class that names its agent names it by the key it
-%% reads off the question, as a person forms a request from what the question
-%% shows (vGLP 321127a, Section 5.4: the request question "shows the agent's
-%% own key"), and a script, one clause, holds a hole for each place its
+%% reads off the view, as the request form does (vGLP 12f629d, Section 5.4,
+%% "The compilation": the view carries "its own key k"; Section 6.2: "A declared
+%% widget is drawn also with the last value drawn on construct 0"), and a script, one clause, holds a hole for each place its
 %% request names the agent, GLP's variables being single-reader; look logs
-%% menu(K, Ks), K the agent's own key and Ks the persons the request question
-%% open shows, once one is drawn; wait(C) waits until the person's screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, or the one an arriving hello asks of the meeting K (vGLP, Section 5.4, "The compilation": an arriving hello from Q "asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no"), once it is drawn.  A request is the person's approval, which stands until the transaction is taken or refused: the agent proposes, and proposes again an attempt that yields, with no further question to the person; a person whose approval ends by a refusal sees the notice, refused(P, Q, D), and may make the request again (vGLP f0acbc1, Section 5.4, "Triggers" and "The compilation").  The screen shows known(Q) where the last view written shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, or of the meeting K, is drawn and not answered; and asking where a request question is drawn and not answered.  Its log is the output, each view and each notice once, with menu(K, Ks) where it looks and gave(K, A) where it answers an approval question.  It reads what
+%% menu(K, Ks), K the agent's own key and Ks the persons it knows, as the last
+%% view drawn shows them, once a request question is drawn; wait(C) waits until the person's screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, or the one an arriving hello asks of the meeting K (vGLP, Section 5.4, "The compilation": an arriving hello from Q "asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no"), once it is drawn.  A request is the person's approval, which stands until the transaction is taken or refused: the agent proposes, and proposes again an attempt that yields, with no further question to the person; a person whose approval ends by a refusal sees the notice, refused(P, Q, D), and may make the request again (vGLP f0acbc1, Section 5.4, "Triggers" and "The compilation").  The screen shows known(Q) where the last view written shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, or of the meeting K, is drawn and not answered; and asking where a request question is drawn and not answered.  Its log is the output, each view and each notice once, with menu(K, Ks) where it looks and gave(K, A) where it answers an approval question.  It reads what
 %% the dispatcher sends it as any term and its script as terms of any form, the
 %% steps holding the platform's requests, transactions, attempts and classes
 %% (docs/typed-glp-manual.md, 18.3, the play of programs/tests/vglp/fragments
@@ -43,7 +43,7 @@ Sent(X)    ::= sent(Peer, Peer, X) ; intro(Peer, Peer, Peer).
 Step(T)    ::= req(T) ; own(Holes, T) ; look ; wait(_) ; approval(_, T).
 Holes      ::= [] ; [Peer? | Holes].
 Steps(T)   ::= [] ; [Step(T) | Steps(T)].
-Sess       ::= nosess ; sess(Integer, Path, Peer, List(Peer)).
+Sess       ::= nosess ; sess(Integer, Path).
 Seen       ::= seen(Integer, Path, _).
 Seens      ::= [] ; [Seen | Seens].
 PSt(T)     ::= ps(Sess, Stream(_), Seens, Steps(T)).
@@ -127,9 +127,10 @@ person([draw(0, _, output(T))|Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
     list_of(T?, L),
     thread_seen(Se?, Old?, L?, Cs?, Ss?, Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, menu_w(menu(Me, Ks, input(P))))|Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
-    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
+%% The request question, bare, of the request type Request? (vGLP 12f629d, Section 5.4, "The compilation"): the person reads the agent's own key and the persons it knows off the last view drawn on construct 0, as the request form does (Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0").
+person([draw(Id, _, request_r(input(P)))|Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?) |
+    advance(ps(sess(Id?, P?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
 person([draw(Id, _, approval_w(approval(At, input(P))))|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
@@ -155,19 +156,24 @@ thread_seen(Se, Old, L, Cs, Ss, Gs?, Gs1, St1?, Log?, Log1) :- ground(L?) |
 %% they can be taken, the grants written on Gs, continuing at Gs1.
 procedure(T) advance(PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_),
     Stream(_)?).
-advance(ps(sess(Id, P, _, _), T, Cs, [req(R)|Ss]), [input(Id?, P?, R?)|Gs?], Gs1, St1?, Log?, Log1) :-
+advance(ps(sess(Id, P), T, Cs, [req(R)|Ss]), [input(Id?, P?, R?)|Gs?], Gs1, St1?, Log?, Log1) :-
     ground(Id?), ground(P?) |
     advance(ps(nosess, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [req(R)|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?)|Ss?]), Log1?, Log1).
-advance(ps(sess(Id, P, Me, _), T, Cs, [own(Ks, R)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
-    ground(Id?), ground(P?) |
+%% The agent's own key, which the request form reads off the view, is the first argument of every view, the first of them written when the agent starts, so the person reads it off the first view drawn on construct 0; with none drawn yet, the step waits (vGLP 12f629d, Section 5.4, "The compilation"; Section 6.2).
+advance(ps(sess(Id, P), [view(Me, S, K, A, Ts)|Vs], Cs, [own(Ks, R)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?), ground(Me?) |
     fill(Me?, Ks?),
     grant(Id?, P?, R?, Gs, Gs2?),
-    advance(ps(nosess, T?, Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
+    advance(ps(nosess, [view(Me?, S?, K?, A?, Ts?)|Vs?], Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
+advance(ps(sess(Id, P), [], Cs, [own(Ks, R)|Ss]), Gs1?, Gs1, ps(sess(Id?, P?), [], Cs?, [own(Ks?, R?)|Ss?]), Log1?, Log1).
 advance(ps(nosess, T, Cs, [own(Ks, R)|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?)|Ss?]), Log1?, Log1).
-advance(ps(sess(Id, P, Me, Ks), T, Cs, [look|Ss]), Gs?, Gs1, St1?, [menu(Me?, Ks?)|Log?], Log1) :-
-    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+%% look logs menu(K, Ks), the agent's own key and the persons it knows, as the last view drawn shows them; with none drawn yet, the step waits.
+advance(ps(sess(Id, P), [V|Vs], Cs, [look|Ss]), Gs?, Gs1, St1?, [M?|Log?], Log1) :-
+    ground(Id?), ground(P?), ground(V?), ground(Vs?) |
+    last_view([V?|Vs?], nomenu, M),
+    advance(ps(sess(Id?, P?), [V?|Vs?], Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(sess(Id, P), [], Cs, [look|Ss]), Gs1?, Gs1, ps(sess(Id?, P?), [], Cs?, [look|Ss?]), Log1?, Log1).
 advance(ps(nosess, T, Cs, [look|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [look|Ss?]), Log1?, Log1).
 advance(ps(Se, T, Cs, [wait(X)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     ground(Se?), ground(T?), ground(Cs?), ground(X?) |
@@ -218,7 +224,7 @@ shows(refused(P, Q, D), _, T, _, B?) :- ground(P?), ground(Q?), ground(D?), grou
 shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
     find_approval(K?, Cs?, F),
     found_yn(F?, B).
-shows(asking, sess(_, _, _, _), _, _, y).
+shows(asking, sess(_, _), _, _, y).
 shows(asking, nosess, _, _, n).
 shows(_, _, _, _, n) :- otherwise | true.
 
@@ -227,25 +233,25 @@ procedure last_of(Stream(_)?, _).
 last_of(T, L?) :- last_view(T?, none, L).
 procedure last_view(Stream(_)?, _?, _).
 last_view([], L, L?).
-last_view([view(S, K)|Xs], _, L?) :- last_view(Xs?, view(S?, K?), L).
-%% The view carries also the approvals the person made that are pending, view(S, K, A), and, on a platform compiled from a contract with pragmas, the lists its app shows, view(S, K, A, Ts) (vGLP, Section 5.4, "The compilation" and "The contract's words"), which the script does not look at.
-last_view([view(S, K, _)|Xs], _, L?) :- last_view(Xs?, view(S?, K?), L).
-last_view([view(S, K, _, _)|Xs], _, L?) :- last_view(Xs?, view(S?, K?), L).
+%% The view, view(Me, S, K, A, Ts): the agent's own key, the machine state, the persons it knows, the approvals the person made that are pending and the lists its app shows (vGLP 12f629d, Section 5.4, "The compilation" and "The contract's words"), the script looking at the first three, view(Me, S, K).
+last_view([view(Me, S, K, _, _)|Xs], none, L?) :- last_view(Xs?, view(Me?, S?, K?), L).
+last_view([view(Me, S, K, _, _)|Xs], view(_, _, _), L?) :- last_view(Xs?, view(Me?, S?, K?), L).
+%% From the accumulator nomenu, what the step look logs: menu(Me, K), the key and the persons known of the last view.
+last_view([view(Me, _, K, _, _)|Xs], nomenu, L?) :- last_view(Xs?, menu(Me?, K?), L).
+last_view([view(Me, _, K, _, _)|Xs], menu(_, _), L?) :- last_view(Xs?, menu(Me?, K?), L).
 last_view([_|Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
 procedure notices_of(Stream(_)?, Stream(_)).
 notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(Stream(_)?, Stream(_)?, Stream(_)).
 notices_after([], Ns, Ns?).
-notices_after([view(_, _)|Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
-notices_after([view(_, _, _)|Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
-notices_after([view(_, _, _, _)|Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _, _, _)|Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X|Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X?|Ns0?], Ns).
 procedure known_in(_?, _?, YN).
-known_in(Q, view(_, Ks), B?) :- among(Q?, Ks?, B).
+known_in(Q, view(_, _, Ks), B?) :- among(Q?, Ks?, B).
 known_in(_, none, n).
 procedure count_in(_?, _?, Integer).
-count_in(A, view(S, _), N?) :- count(A?, S?, N).
+count_in(A, view(_, S, _), N?) :- count(A?, S?, N).
 count_in(_, none, 0).
 procedure count(_?, Stream(_)?, Integer).
 count(_, [], 0).
