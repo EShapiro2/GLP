@@ -18,6 +18,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData, rootBundle;
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
@@ -31,6 +32,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import 'contracts.dart';
 import 'local_server.dart';
 import 'person_host.dart';
 import 'relay_network.dart';
@@ -60,21 +62,9 @@ Future<String> unbundle([String? into]) async {
   return base;
 }
 
-/// The contracts this build carries: id (lower case) and title, from the
-/// site's specs.
-Future<List<(String, String)>> contracts(String base) async {
-  final out = <(String, String)>[];
-  final dir = Directory('$base/www/specs');
-  for (final f in dir.listSync().whereType<File>()) {
-    final id = f.uri.pathSegments.last.replaceAll('.json', '');
-    if (!Directory('$base/programs/vglp/cva/gas_worlds/live_$id').existsSync()) continue;
-    final spec = jsonDecode(f.readAsStringSync()) as Map;
-    out.add((id, '${spec['id']}: ${spec['title']}'));
-  }
-  out.sort((a, b) => a.$1.compareTo(b.$1));
-  return out;
-}
-
+/// The home screen: the person's apps (the starters the app carries and
+/// those got since), more from GAS's catalog, and links (pasted, or opened
+/// from a browser as gas://) to get an app or to add a person in one.
 class Boot extends StatefulWidget {
   const Boot({super.key});
   @override
@@ -82,9 +72,11 @@ class Boot extends StatefulWidget {
 }
 
 class _BootState extends State<Boot> {
-  String? base;
-  List<(String, String)> list = [];
-  String? error;
+  ContractStore? store;
+  List<Contract> mine = [];
+  List<Contract>? more;
+  String? moreError, error, busy;
+  StreamSubscription<Uri>? _links;
 
   @override
   void initState() {
@@ -92,11 +84,18 @@ class _BootState extends State<Boot> {
     () async {
       try {
         final b = await unbundle();
-        final l = await contracts(b);
+        final st = ContractStore(b);
+        await st.installStarters();
         setState(() {
-          base = b;
-          list = l;
+          store = st;
+          mine = st.installed();
         });
+        unawaited(_catalog());
+        try {
+          _links = AppLinks().uriLinkStream.listen((u) => _handle(u.toString()));
+        } on Object {
+          // No links on this platform.
+        }
       } catch (e) {
         setState(() => error = '$e');
       }
@@ -104,20 +103,161 @@ class _BootState extends State<Boot> {
   }
 
   @override
+  void dispose() {
+    _links?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _catalog() async {
+    setState(() => moreError = null);
+    try {
+      final c = await store!.catalog();
+      if (mounted) setState(() => more = c);
+    } on Object catch (e) {
+      if (mounted) setState(() => moreError = '$e');
+    }
+  }
+
+  void _say(String s) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s)));
+  }
+
+  Future<Contract?> _get(String hash, String what) async {
+    setState(() => busy = what);
+    try {
+      final c = await store!.get(hash);
+      setState(() => mine = store!.installed());
+      return c;
+    } on Object catch (e) {
+      _say('Could not get it: $e');
+      return null;
+    } finally {
+      if (mounted) setState(() => busy = null);
+    }
+  }
+
+  Future<void> _open(Contract c, {String? person}) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => Running(base: store!.base, contract: c, addPerson: person)));
+    if (mounted) setState(() => mine = store!.installed());
+  }
+
+  /// A link: get its app if it is not here, and open it, adding its person.
+  Future<void> _handle(String text) async {
+    final l = GasLink.parse(text);
+    if (store == null) return;
+    if (l == null) return _say('That is not a GAS link.');
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    Contract? c;
+    if (l.contract != null) {
+      c = await _get(l.contract!, 'Getting the app…');
+      if (c == null) return;
+    } else {
+      // An invite without its app: the person picks the app.
+      c = await showDialog<Contract>(
+          context: context,
+          builder: (_) => SimpleDialog(title: const Text('Add them in which app?'), children: [
+                for (final m in mine)
+                  SimpleDialogOption(onPressed: () => Navigator.pop(context, m), child: Text('${m.icon}  ${m.title}')),
+              ]));
+      if (c == null) return;
+    }
+    if (!mounted) return;
+    await _open(c, person: l.person);
+  }
+
+  Future<void> _paste() async {
+    final field = TextEditingController();
+    final clip = await Clipboard.getData('text/plain');
+    if (clip?.text != null && GasLink.parse(clip!.text!) != null) field.text = clip.text!.trim();
+    if (!mounted) return;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Open a GAS link'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('A link to an app, or someone\'s invite.'),
+          const SizedBox(height: 10),
+          TextField(controller: field, decoration: const InputDecoration(hintText: 'Paste the link', border: OutlineInputBorder())),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Open')),
+        ],
+      ),
+    );
+    if (go == true) await _handle(field.text);
+  }
+
+  Widget _tile(Contract c, {Widget? trailing, VoidCallback? onTap}) => ListTile(
+        leading: CircleAvatar(backgroundColor: const Color(0xFFF0F0F5), child: Text(c.icon, style: const TextStyle(fontSize: 20))),
+        title: Text(c.title),
+        subtitle: Text(c.about.isEmpty ? c.id : c.about, maxLines: 2, overflow: TextOverflow.ellipsis),
+        trailing: trailing,
+        onTap: onTap,
+      );
+
+  @override
   Widget build(BuildContext context) {
+    final have = {for (final c in mine) c.hash};
+    final others = [for (final c in more ?? const <Contract>[]) if (!have.contains(c.hash)) c];
+    final head = Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.black54);
     return Scaffold(
-      appBar: AppBar(title: const Text('GAS · pick a contract')),
+      appBar: AppBar(
+        title: const Text('GAS'),
+        actions: [IconButton(tooltip: 'Open a link', icon: const Icon(Icons.link), onPressed: store == null ? null : _paste)],
+      ),
       body: error != null
           ? Padding(padding: const EdgeInsets.all(16), child: Text('Could not unpack: $error'))
-          : base == null
+          : store == null
               ? const Center(child: CircularProgressIndicator())
-              : ListView(children: [
-                  for (final (id, title) in list)
-                    ListTile(
-                      title: Text(title),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(
-                          builder: (_) => Running(base: base!, contract: id, title: title))),
+              : Stack(children: [
+                  RefreshIndicator(
+                    onRefresh: _catalog,
+                    child: ListView(children: [
+                      Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 4), child: Text('MY APPS', style: head)),
+                      for (final c in mine) _tile(c, trailing: const Icon(Icons.chevron_right), onTap: () => _open(c)),
+                      Padding(padding: const EdgeInsets.fromLTRB(16, 20, 16, 4), child: Text('MORE FROM GAS', style: head)),
+                      if (more == null && moreError == null)
+                        const Padding(padding: EdgeInsets.all(16), child: Text('Loading the catalog…')),
+                      if (moreError != null)
+                        ListTile(
+                          title: const Text('Could not reach GAS'),
+                          subtitle: const Text('Check the Internet; your apps work without it.'),
+                          trailing: TextButton(onPressed: _catalog, child: const Text('Retry')),
+                        ),
+                      if (more != null && others.isEmpty)
+                        const Padding(padding: EdgeInsets.all(16), child: Text('You have them all.')),
+                      for (final c in others)
+                        _tile(c,
+                            trailing: FilledButton.tonal(
+                              onPressed: busy != null
+                                  ? null
+                                  : () async {
+                                      final got = await _get(c.hash, 'Getting ${c.title}…');
+                                      if (got != null) _say('${got.title} is in your apps.');
+                                    },
+                              child: const Text('Get'),
+                            )),
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 24, 16, 32),
+                        child: Text('Got a link to an app or an invite? Tap 🔗 at the top.', style: TextStyle(color: Colors.black54)),
+                      ),
+                    ]),
+                  ),
+                  if (busy != null)
+                    Container(
+                      color: Colors.black26,
+                      child: Center(
+                        child: Card(
+                            child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  const CircularProgressIndicator(),
+                                  const SizedBox(width: 16),
+                                  Text(busy!),
+                                ]))),
+                      ),
                     ),
                 ]),
     );
@@ -134,8 +274,12 @@ class Peer {
 }
 
 class Running extends StatefulWidget {
-  final String base, contract, title;
-  const Running({super.key, required this.base, required this.contract, required this.title});
+  final String base;
+  final Contract contract;
+
+  /// A person to add from afar once the agent runs (an invite opened).
+  final String? addPerson;
+  const Running({super.key, required this.base, required this.contract, this.addPerson});
   @override
   State<Running> createState() => _RunningState();
 }
@@ -196,12 +340,12 @@ class _RunningState extends State<Running> {
         inner: GrassrootsGlpNetwork(l),
         sodium: sodium,
         privateKey: Uint8List.fromList(identity.privateKey),
-        app: widget.contract,
+        app: widget.contract.name,
         dir: '${widget.base}/relay',
       );
       relay = net;
       final h = PersonHost(
-        program: '${widget.base}/programs/vglp/cva/gas_worlds/live_${widget.contract}',
+        program: '${widget.base}/programs/vglp/cva/gas_worlds/live_${widget.contract.name}',
         rootSelfGlp: '${widget.base}/programs/self.glp',
         keyPair: (pub: glp.PubKey.fromList(identity.publicKey), priv: Uint8List.fromList(identity.privateKey)),
         network: net,
@@ -254,10 +398,21 @@ class _RunningState extends State<Running> {
         }
       };
       net.setOn(!File(_relayOff).existsSync());
+      final invited = widget.addPerson;
+      if (invited != null && invited != h.me) {
+        await net.addPerson(glp.PubKey.fromHex(invited));
+        event('added ${invited.substring(0, 8)}… from an invite');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(net.on
+                  ? 'Added ${_name(invited)}. They will see that you added them.'
+                  : 'Turn on Internet (person+ button) to reach ${_name(invited)}.')));
+        }
+      }
 
       final s = LocalServer(
         host: h,
-        contract: widget.contract,
+        contract: widget.contract.name,
         www: '${widget.base}/www',
         peers: () => [
           for (final p in peers.values)
@@ -303,7 +458,11 @@ class _RunningState extends State<Running> {
   }
 
   Future<void> _add(String text, void Function(String) say) async {
-    final pk = keyOfInvite(text);
+    final l = GasLink.parse(text);
+    if (l?.contract != null && l!.contract != widget.contract.hash) {
+      return say('That invite is for another app: go back to your apps and open it there (🔗).');
+    }
+    final pk = l?.person == null ? null : glp.PubKey.fromHex(l!.person!);
     if (pk == null) return say('That is not a GAS invite link.');
     if (pk.hex == host?.me) return say('That is your own link.');
     await relay!.addPerson(pk);
@@ -316,10 +475,10 @@ class _RunningState extends State<Running> {
   void _people() async {
     final r = relay, me = host?.me;
     if (r == null || me == null) return;
-    final link = inviteLink(glp.PubKey.fromHex(me));
+    final link = inviteLink(glp.PubKey.fromHex(me), widget.contract.hash);
     final field = TextEditingController();
     final clip = await Clipboard.getData('text/plain');
-    if (clip?.text != null && keyOfInvite(clip!.text!) != null && !clip.text!.contains(me)) {
+    if (clip?.text != null && GasLink.parse(clip!.text!)?.person != null && !clip.text!.contains(me)) {
       field.text = clip.text!.trim();
     }
     String note = '';
@@ -360,7 +519,7 @@ class _RunningState extends State<Running> {
                   icon: const Icon(Icons.share),
                   label: const Text('Share'),
                   onPressed: () => SharePlus.instance
-                      .share(ShareParams(text: 'Add me on GAS: $link', subject: 'GAS invite')),
+                      .share(ShareParams(text: 'Join me in ${widget.contract.title} on GAS: $link', subject: 'GAS invite')),
                 ),
               ]),
               const Divider(height: 32),
@@ -482,7 +641,7 @@ class _RunningState extends State<Running> {
     final connected = peers.values.where((p) => p.connected.isNotEmpty).length;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title, overflow: TextOverflow.ellipsis),
+        title: Text(widget.contract.title, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
             tooltip: 'People far away',
@@ -527,7 +686,7 @@ class _ScanState extends State<_Scan> {
         appBar: AppBar(title: const Text('Scan their QR code')),
         body: MobileScanner(onDetect: (capture) {
           final v = capture.barcodes.isEmpty ? null : capture.barcodes.first.rawValue;
-          if (done || v == null || keyOfInvite(v) == null) return;
+          if (done || v == null || GasLink.parse(v)?.person == null) return;
           done = true;
           Navigator.of(context).pop(v);
         }),

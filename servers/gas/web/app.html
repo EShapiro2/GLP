@@ -473,7 +473,16 @@ if (META){
   $('#about').href = './#' + META.id;
 }
 fetch(`specs/${C}.json`).then(r => { if (!r.ok) throw 0; return r.json(); }).then(s => {
-  SPEC = s; if (!META) $('#title').textContent = `${s.id}: ${s.title}`; poll();
+  SPEC = s;
+  // A contract got as a package (the phone app) carries the site's line for
+  // it in its spec.
+  const m = META || s.meta;
+  if (m && m.icon){
+    $('#title').textContent = m.title; document.title = `${m.title} · live`;
+    $('#ticon').textContent = m.icon;
+    if (FAM[m.family]) $('#ticon').style.background = `linear-gradient(160deg, ${FAM[m.family][0]}, ${FAM[m.family][1]})`;
+  } else if (!META) $('#title').textContent = `${s.id}: ${s.title}`;
+  poll();
 }).catch(() => {
   document.querySelector('header .sp').nextElementSibling.remove();
   $('#status').remove(); $('#reset').remove(); $('#net').remove(); document.querySelector('.ttl small').remove();

@@ -34,26 +34,32 @@ h1{font-size:clamp(30px,6vw,40px);letter-spacing:-.025em;line-height:1.1;margin:
 <header><div class="hin"><a class="logo" href="./"><span class="mark"></span>GAS · the GLP app store</a></div></header>
 <main id="m"></main>
 <script>
-// An invite: the inviting person's key after the '#', which the browser never
-// sends to the server.  The page only helps the invited person get GAS and
-// add the link in it.
-const key = (location.hash.slice(1).match(/^[0-9a-fA-F]{64}$/) || [])[0];
+// An invite: the inviting person's key after the '#', and the app they invite
+// to, by its hash (&c=), which the browser never sends to the server.  The
+// page helps the invited person get GAS and open the invite in it.
+const [key, app] = [(location.hash.match(/^#([0-9a-fA-F]{64})/) || [])[1], (location.hash.match(/[&?]c=([0-9a-f]{64})/) || [])[1]];
 const m = document.getElementById('m');
-if (!key){
-  m.innerHTML = `<h1>This invite link is incomplete</h1><p class="lead">Ask for the link again, and copy all of it. <a href="download.html">Get the app</a>.</p>`;
-} else {
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+function show(c){
   const hue = parseInt(key.slice(0, 6), 16) % 360;
+  const open = 'gas://add/' + key.toLowerCase() + (app ? '?c=' + app : '');
   m.innerHTML = `<h1>You're invited to GAS</h1>
-  <p class="lead"><span class="who" style="background:hsl(${hue} 60% 55%)"></span><b>Person ${key.slice(0, 4)}</b> wants to connect with you on GAS, apps run by the people who use them, on their own phones.</p>
+  <p class="lead"><span class="who" style="background:hsl(${hue} 60% 55%)"></span><b>Person ${key.slice(0, 4)}</b> wants to connect with you${c ? ` in <b>${esc(c.icon)} ${esc(c.title)}</b>` : ''} on GAS, apps run by the people who use them, on their own phones.</p>
   <div class="card step"><div class="n">1</div><div><h2>Get GAS</h2><p>If you have it already, skip this.</p><a class="btn blue" href="download.html">Get the app</a></div></div>
-  <div class="card step"><div class="n">2</div><div><h2>Add this person</h2><p>Copy this link, open GAS, pick the same app as them, tap the <b>person+</b> button at the top, and tap <b>Add</b>: GAS fills the link in for you.</p>
-    <button class="btn grey" id="cp">Copy link</button> <span class="small" id="ok"></span></div></div>
+  <div class="card step"><div class="n">2</div><div><h2>Open the invite in GAS</h2><p>GAS gets ${c ? esc(c.title) : 'the app'} if you do not have it, opens it, and adds this person.</p>
+    <a class="btn blue" href="${open}">Open in GAS</a> <button class="btn grey" id="cp">Copy link</button> <span class="small" id="ok"></span>
+    <p class="small" style="margin-top:8px">If nothing opens: copy the link, open GAS, tap 🔗 at the top, and Open.</p></div></div>
   <p class="small">Your messages to each other go through talmonlab's relay, encrypted end to end between your two phones.</p>`;
   document.getElementById('cp').onclick = async () => {
     try { await navigator.clipboard.writeText(location.href); document.getElementById('ok').textContent = 'Copied.'; }
     catch (e) { prompt('Copy this link:', location.href); }
   };
 }
+if (!key){
+  m.innerHTML = `<h1>This invite link is incomplete</h1><p class="lead">Ask for the link again, and copy all of it. <a href="download.html">Get the app</a>.</p>`;
+} else if (!app) show(null);
+else fetch('/downloads/catalog.json', {cache: 'no-store'}).then(r => r.json())
+  .then(j => show(j.contracts.find(c => c.hash === app))).catch(() => show(null));
 </script>
 </body>
 </html>

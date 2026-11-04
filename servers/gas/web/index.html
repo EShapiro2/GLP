@@ -299,6 +299,12 @@ document.addEventListener('keydown', e => {
   if (document.activeElement.tagName !== 'INPUT') go(null);
 });
 let LAST = null;
+// The contracts GAS's phone app can get (the downloads' catalog), by id.
+let CAT = {};
+fetch('/downloads/catalog.json', {cache: 'no-store'}).then(r => r.json()).then(j => {
+  for (const c of j.contracts) CAT[c.id] = c;
+  if (LAST) route();
+}).catch(() => {});
 window.addEventListener('hashchange', route);
 function route(){
   const [id, part] = location.hash.slice(1).split('-');
@@ -320,7 +326,7 @@ function page(c, hood){
     <span class="crumbs" data-go="">‹ All contracts</span>
     <div class="prod">${icon(c)}
       <div><h1>${esc(c.title)}</h1><div class="sub">${esc(c.about)}</div>
-      <div class="acts"><a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a></div></div></div>
+      <div class="acts"><a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a>${CAT[c.id] ? ` <a class="btn grey" href="get.html#${CAT[c.id].hash}">Get it on your phone</a>` : ''}</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Rules</div><div class="v">${c.clauses.length}</div><div class="s">in English</div></div>
       <div class="stat"><div class="k">Speech acts</div><div class="v">${c.schemas.length ? own : '–'}</div><div class="s">${c.schemas.length ? 'of its own' : 'not compiled'}</div></div>

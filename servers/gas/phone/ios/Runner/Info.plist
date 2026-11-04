@@ -2,6 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>il.ac.bgu.talmonlab.gas</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>gas</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan the QR code of someone you want to add on GAS.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>

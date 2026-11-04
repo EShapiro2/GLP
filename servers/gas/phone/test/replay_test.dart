@@ -5,7 +5,6 @@
 //
 // Needs GASRELAY=<path to gasrelay/bin/relay.dart> and a native libsodium;
 // self-skips without either.
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
