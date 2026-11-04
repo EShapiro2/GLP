@@ -18,9 +18,6 @@ cascade/AGORA/platform.glp	open-decl	comb_approval_approval_3/7
 cascade/AGORA/platform.glp	open-decl	comb_menu_menu_3/7
 cascade/AGORA/platform.glp	open-decl	cons_more/5
 cascade/AGORA/platform.glp	open-decl	cons_views/3
-cascade/AGORA/platform.glp	open-decl	dispatch/3
-cascade/AGORA/platform.glp	open-decl	dispatch/4
-cascade/AGORA/platform.glp	open-decl	dispatch/5
 cascade/AGORA/platform.glp	open-decl	form_constant/2
 cascade/AGORA/platform.glp	open-decl	form_integer/2
 cascade/AGORA/platform.glp	open-decl	form_module/2
@@ -40,7 +37,6 @@ cascade/AGORA/platform.glp	open-decl	run_approval_w/5
 cascade/AGORA/platform.glp	open-decl	run_menu_w/5
 cascade/AGORA/platform.glp	open-decl	shown/3
 cascade/AGORA/platform.glp	open-decl	shown_whole/2
-cascade/AGORA/platform.glp	open-decl	split_grants/3
 cascade/AGORA/platform.glp	open-decl	start_approval_approval_3/4
 cascade/AGORA/platform.glp	open-decl	start_menu_menu_3/4
 cascade/AGORA/platform.glp	open-decl	thread/3
