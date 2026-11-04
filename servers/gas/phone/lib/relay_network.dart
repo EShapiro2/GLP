@@ -113,9 +113,9 @@ class RelayGlpNetwork implements GlpNetwork {
     };
     inner.onMessageReceived = (s, p, id, u) => onMessageReceived?.call(s, p, id, u);
     inner.onPeerDiscovered = (pk, u) => onPeerDiscovered?.call(pk, u);
-    inner.onConnectivityStatusChanged = (a, b) => onConnectivityStatusChanged?.call(a, b);
-    inner.onNetworkChanged = (a, b) => onNetworkChanged?.call(a, b);
-    inner.onPlaceEvent = (p, e) => onPlaceEvent?.call(p, e);
+    // The WAN's and the places' callbacks are the layer's own, set on it only
+    // when the runtime sets them: a layer with no place backend refuses an
+    // onPlaceEvent.
     _load();
   }
 
@@ -438,13 +438,20 @@ class RelayGlpNetwork implements GlpNetwork {
   void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) =>
       inner.setTrustLevel(underlay, level);
   @override
-  void Function(String? oldAddress, String? newAddress)? onConnectivityStatusChanged;
+  void Function(String? oldAddress, String? newAddress)? get onConnectivityStatusChanged =>
+      inner.onConnectivityStatusChanged;
+  @override
+  set onConnectivityStatusChanged(void Function(String? oldAddress, String? newAddress)? cb) =>
+      inner.onConnectivityStatusChanged = cb;
   @override
   String? getPublicAddress() => inner.getPublicAddress();
   @override
   String? networkIdentity() => inner.networkIdentity();
   @override
-  void Function(String? oldId, String? newId)? onNetworkChanged;
+  void Function(String? oldId, String? newId)? get onNetworkChanged => inner.onNetworkChanged;
+  @override
+  set onNetworkChanged(void Function(String? oldId, String? newId)? cb) =>
+      inner.onNetworkChanged = cb;
   @override
   void putPeerAddress(PubKey pk, String address) => inner.putPeerAddress(pk, address);
   @override
@@ -461,7 +468,9 @@ class RelayGlpNetwork implements GlpNetwork {
   @override
   Future<void> removePlace(String place) => inner.removePlace(place);
   @override
-  void Function(String place, PlaceEvent event)? onPlaceEvent;
+  void Function(String place, PlaceEvent event)? get onPlaceEvent => inner.onPlaceEvent;
+  @override
+  set onPlaceEvent(void Function(String place, PlaceEvent event)? cb) => inner.onPlaceEvent = cb;
 
   void dispose() {
     _on = false;
