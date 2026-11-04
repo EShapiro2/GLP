@@ -23,8 +23,8 @@ Joining: Alice [Admit] <person>
   Bob: Alice invites you to their market.
 Posting: Bob [Offer] <maker> <item> [Want] <description>
   Alice [Offer own] <maker> <item> [Want own] <description>
-Withdrawal: Bob [Withdraw] <post>
-  Alice [Withdraw own offer] <post> [Withdraw own want] <post>
+Withdrawal: Bob [Withdraw offer] <maker> <item> [Withdraw want] <description>
+  Alice [Withdraw own offer] <maker> <item> [Withdraw own want] <description>
 Trading: Alice [Barter] <maker given> <item given> <maturity given> <amount given> <maker wanted> <item wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to trade with you.
   Alice [Deposit item] <maker> <item>
