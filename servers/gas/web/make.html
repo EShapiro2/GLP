@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Make an app · GAS, the GLP app store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--ink:#1d1d1f;--ink2:#3a3a3c;--mute:#6e6e73;--line:#e5e5ea;--blue:#0a7aff;--red:#d70015;--green:#1f8a3a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--shadow:0 1px 2px rgba(0,0,0,.04),0 6px 20px rgba(0,0,0,.05)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none}
+header{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.82);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid rgba(0,0,0,.06)}
+.hin{max-width:1120px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:16px}
+.logo{font-weight:700;font-size:16px;display:flex;align-items:center;gap:9px;color:var(--ink)}
+.logo .mark{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 200deg,#4f7bd9,#2bb3a0,#9b7bd4,#f0b54a,#4f7bd9)}
+.hin .back{margin-left:auto;font-size:14px;font-weight:500}
+main{max-width:900px;margin:0 auto;padding:30px 24px 90px}
+h1{font-size:clamp(30px,5vw,40px);letter-spacing:-.025em;line-height:1.1;margin:4px 0 10px;font-weight:800}
+.lead{font-size:17px;color:var(--ink2);margin:0 0 20px}
+.card{background:var(--card);border-radius:20px;box-shadow:var(--shadow);padding:18px 20px;margin-bottom:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+select{font:inherit;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:#fff}
+textarea{width:100%;min-height:440px;font:13px/1.5 var(--mono);border:1px solid var(--line);border-radius:12px;padding:12px;resize:vertical;tab-size:4}
+.btn{border:none;border-radius:999px;padding:10px 20px;font-weight:600;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn.blue{background:var(--blue);color:#fff}.btn.blue:disabled{opacity:.5;cursor:default}
+.btn.grey{background:rgba(118,118,128,.12);color:var(--blue)}
+.small{font-size:13.5px;color:var(--mute)}
+#res h3{margin:0 0 6px;font-size:18px}
+#res.ok h3{color:var(--green)}#res.bad h3{color:var(--red)}
+#res ul{margin:6px 0 0;padding-left:20px;font-size:14px}
+#res code,.help code{font-family:var(--mono);font-size:13px;background:#f0f0f5;padding:1px 5px;border-radius:5px}
+.help{font-size:14.5px;color:var(--ink2)}
+.help p{margin:6px 0}
+.spin{width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header><div class="hin">
+  <a class="logo" href="./"><span class="mark"></span>GAS · the GLP app store</a>
+  <a class="back" href="./">← All apps</a>
+</div></header>
+<main>
+  <h1>Make an app</h1>
+  <p class="lead">Write a contract, and GAS turns it into an app: it checks the contract is grassroots, compiles it, and gives you an app to try here and to get on phones.</p>
+  <div class="card">
+    <div class="row">
+      <span>Start from</span>
+      <select id="base"></select>
+      <span class="small">and change it: rename it on its first line, add clauses, their words under <b>Pragmas</b>, and their speech acts under <b>Schemas</b>.</span>
+    </div>
+  </div>
+  <textarea id="text" spellcheck="false"></textarea>
+  <div class="row" style="margin:12px 0 18px">
+    <button class="btn blue" id="go">Check and build</button>
+    <span class="small" id="wait"></span>
+  </div>
+  <div class="card" id="res" hidden></div>
+  <div class="card help">
+    <h3 style="margin:0 0 6px;font-size:17px">How the text is laid out</h3>
+    <p>As a contract's owner writes it: lines starting with <code>%</code> about it; its first line <code>ID: Title</code>, the ID a few capital letters of your own; its clauses in English; then <code>Pragmas</code>, the words the app shows (lists first, as <code>Contacts: the persons Alice knows.</code>, then a line per clause, as <code>Acquaintance: Alice [Acquaint] &lt;person&gt;</code>); then <code>Schemas</code>, its speech acts.</p>
+    <p>A speech act is a head and a line per role: <code>greet(Alice?, Bob) :</code> then <code>at Alice: identity, knows(Bob)</code> and <code>at Bob: identity, +greeted(Alice)</code>. A <code>?</code> marks a role that must agree; <code>+</code> adds, <code>-</code> removes, <code>not</code> forbids. Variables come after a <code>;</code> in the head; a line <code>% kinds: c person, x act, d number</code> says what one is when GAS cannot tell.</p>
+    <p>An app you make is unlisted: only people with its link can get it. <a href="how.html">How it works</a>.</p>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+// The contracts whose recorded text the compiler takes as it stands.
+const BASES = [['GKK', 'Grassroots Keys and Knowledge'], ['GSG', 'Grassroots Social Graph'], ['GC', 'Grassroots Coins'],
+  ['GB', 'Grassroots Bonds'], ['GSN', 'Grassroots Social Network'], ['GDO', 'Grassroots Directed Overlay']];
+$('#base').innerHTML = BASES.map(([id, t]) => `<option value="${id}">${id}: ${esc(t)}</option>`).join('');
+async function load(){
+  $('#text').value = 'Loading…';
+  try { const r = await fetch('api/makebase/' + $('#base').value); $('#text').value = r.ok ? await r.text() : 'Could not load it.'; }
+  catch (e) { $('#text').value = 'Could not load it.'; }
+}
+$('#base').onchange = () => { if ($('#text').dataset.edited !== '1' || confirm('Replace your text with this contract?')) { $('#text').dataset.edited = ''; load(); } };
+$('#text').oninput = () => $('#text').dataset.edited = '1';
+load();
+
+$('#go').onclick = async () => {
+  const b = $('#go'), res = $('#res');
+  b.disabled = true; b.innerHTML = '<span class="spin"></span> Building…';
+  $('#wait').textContent = 'Checking and compiling; a big contract takes a minute or two.';
+  res.hidden = true;
+  let r;
+  try {
+    const x = await fetch('api/make', {method: 'POST', body: JSON.stringify({text: $('#text').value})});
+    r = await x.json();
+  } catch (e) { r = {ok: false, step: 'network', errors: ['Could not reach GAS.']}; }
+  b.disabled = false; b.textContent = 'Check and build'; $('#wait').textContent = '';
+  res.hidden = false;
+  const notes = (r.notes || []).length ? `<p class="small" style="margin-top:10px">Read as written, with these assumptions:</p><ul>${r.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
+  if (r.ok){
+    res.className = 'card ok';
+    const get = new URL('get.html#' + r.hash, location.href).href;
+    res.innerHTML = `<h3>✓ ${esc(r.id)}: ${esc(r.title)} is an app</h3>
+      <p class="small">The checker: ${esc(r.verdict)}.</p>
+      <div class="row" style="margin-top:8px"><a class="btn blue" href="app.html?c=${encodeURIComponent(r.name)}" target="_blank" rel="noopener">Try it here</a>
+      <a class="btn grey" href="${get}" target="_blank" rel="noopener">Get it on your phone</a>
+      <button class="btn grey" id="cp">Copy its link</button> <span class="small" id="ok"></span></div>${notes}`;
+    $('#cp').onclick = async () => { try { await navigator.clipboard.writeText(get); $('#ok').textContent = 'Copied.'; } catch (e) { prompt('Its link:', get); } };
+  } else {
+    res.className = 'card bad';
+    const step = {text: 'The text', schemas: 'The speech acts', check: 'The grassroots check', pragmas: 'The pragmas', compile: 'The compiler', harness: 'The app', time: 'Time', tools: 'GAS', network: 'The network'}[r.step] || r.step;
+    res.innerHTML = `<h3>✗ ${esc(step)} refused it</h3><ul>${(r.errors || []).map(e => `<li>${esc(e)}</li>`).join('')}</ul>${notes}`;
+  }
+  res.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+};
+</script>
+</body>
+</html>

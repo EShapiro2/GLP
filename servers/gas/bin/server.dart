@@ -19,6 +19,13 @@
 // blocks the web server.  A world starts on its contract's first request; at
 // most MAX_WORLDS run at once (default 3), the least recently used dropped
 // first, and a world unused for an hour is dropped.
+//
+// The app maker (make.html): POST /api/make {text} runs tools/make.py on the
+// text, one at a time, and a package it makes is kept in MADE_DIR, served at
+// /made/pkg-<hash>.json (the phone app gets it there), and run here as the
+// contract <id>_<first 8 hex of its hash>, as the phone names it.  GET
+// /api/makebase/<ID> gives a contract's text, from its cascade record, to start
+// from.  PYTHON, GLPC and BASH name the tools make.py runs.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -355,7 +362,68 @@ rt.Term fromJson(Object? j) {
 // ---------------------------------------------------------------------------
 
 final worlds = <String, World>{};
-late String root, worldsDir;
+late String root, worldsDir, madeDir, webRoot;
+
+/// A made package's world, installed beside the others, and its menu where
+/// the page reads it; the contract's name.
+String installMade(File pkg) {
+  final j = jsonDecode(pkg.readAsStringSync()) as Map;
+  final hash = RegExp(r'pkg-([0-9a-f]{64})\.json$').firstMatch(pkg.path)!.group(1)!;
+  final name = '${(j['id'] as String).toLowerCase()}_${hash.substring(0, 8)}';
+  final dir = Directory('$worldsDir/live_$name')..createSync(recursive: true);
+  final files = j['files'] as Map;
+  for (final f in ['self.glp', 'platform.vglp']) {
+    File('${dir.path}/$f').writeAsStringSync(files[f] as String);
+  }
+  Directory('$webRoot/specs').createSync(recursive: true);
+  File('$webRoot/specs/$name.json').writeAsStringSync(jsonEncode({...(j['spec'] as Map), 'meta': j['meta']}));
+  contracts.add(name);
+  return name;
+}
+
+Future<void> _making = Future.value();
+
+/// The Python make.py runs under: PYTHON, or the first line of the file
+/// PYTHON_PATH_FILE names (talmonlab's C:\\sites\\python.txt), or python3.
+String python() {
+  final p = Platform.environment['PYTHON'];
+  if (p != null) return p;
+  final f = Platform.environment['PYTHON_PATH_FILE'];
+  if (f != null && File(f).existsSync()) return File(f).readAsLinesSync().first.trim();
+  return 'python3';
+}
+
+/// tools/make.py on [text], after any make before it.
+Future<Map> make(String text) {
+  final done = Completer<Map>();
+  _making = _making.then((_) async {
+    final work = Directory.systemTemp.createTempSync('gas_make_');
+    try {
+      final f = File('${work.path}/contract.txt')..writeAsStringSync(text);
+      final r = await Process.run(python(),
+          ['-I', '${Directory.current.path}/tools/make.py', f.path, '${work.path}/out'],
+          environment: {'PYTHONIOENCODING': 'utf-8'}).timeout(const Duration(minutes: 10));
+      final res = File('${work.path}/out/result.json');
+      if (!res.existsSync()) {
+        done.complete({'ok': false, 'step': 'tools', 'errors': ['${r.stderr}'.split('\n').where((l) => l.trim().isNotEmpty).take(8).toList()]});
+        return;
+      }
+      final out = jsonDecode(res.readAsStringSync()) as Map;
+      if (out['ok'] == true) {
+        final pkg = File('${work.path}/out/pkg-${out['hash']}.json');
+        Directory(madeDir).createSync(recursive: true);
+        final kept = pkg.copySync('$madeDir/pkg-${out['hash']}.json');
+        out['name'] = installMade(kept);
+      }
+      done.complete(out);
+    } catch (e) {
+      done.complete({'ok': false, 'step': 'tools', 'errors': ['$e']});
+    } finally {
+      work.deleteSync(recursive: true);
+    }
+  });
+  return done.future;
+}
 late Set<String> contracts;
 final maxWorlds = int.tryParse(Platform.environment['MAX_WORLDS'] ?? '') ?? 3;
 
@@ -383,6 +451,8 @@ Future<void> main(List<String> args) async {
   final port = int.parse(Platform.environment['PORT'] ?? '8080');
   final host = Platform.environment['HOST'] ?? '0.0.0.0';
   final webDir = Platform.environment['WEB_DIR'] ?? '$here/build/www';
+  webRoot = webDir;
+  madeDir = Platform.environment['MADE_DIR'] ?? '$here/made';
   contracts = Directory(worldsDir)
       .listSync()
       .whereType<Directory>()
@@ -390,6 +460,17 @@ Future<void> main(List<String> args) async {
       .where((n) => n.startsWith('live_'))
       .map((n) => n.substring(5))
       .toSet();
+  if (Directory(madeDir).existsSync()) {
+    for (final f in Directory(madeDir).listSync().whereType<File>()) {
+      if (RegExp(r'pkg-[0-9a-f]{64}\.json$').hasMatch(f.path)) {
+        try {
+          installMade(f);
+        } catch (e) {
+          stderr.writeln('made ${f.path}: $e');
+        }
+      }
+    }
+  }
   Timer.periodic(const Duration(minutes: 5), (_) {
     final cut = DateTime.now().subtract(const Duration(hours: 1));
     worlds.removeWhere((c, w) {
@@ -409,6 +490,45 @@ Future<void> handle(HttpRequest req, String webDir) async {
   try {
     req.response.headers.set('Access-Control-Allow-Origin', '*');
     final seg = req.uri.pathSegments;
+    if (seg.length == 2 && seg[0] == 'api' && seg[1] == 'make' && req.method == 'POST') {
+      final body = jsonDecode(await utf8.decodeStream(req)) as Map;
+      final text = body['text'];
+      if (text is! String || text.length > 300000) {
+        req.response.statusCode = 400;
+        _json(req, {'ok': false, 'step': 'text', 'errors': ['a text of at most 300 KB']});
+        return;
+      }
+      _json(req, await make(text));
+      return;
+    }
+    if (seg.length == 3 && seg[0] == 'api' && seg[1] == 'makebase') {
+      final n = seg[2];
+      final t = File('$root/cascade/$n/$n.txt'), sc = File('$root/cascade/$n/schemas.txt');
+      if (!RegExp(r'^[A-Z][A-Z0-9]{0,15}$').hasMatch(n) || !t.existsSync() || !sc.existsSync()) {
+        req.response.statusCode = 404;
+        await req.response.close();
+        return;
+      }
+      req.response.headers.contentType = ContentType('text', 'plain', charset: 'utf-8');
+      // Its % lines left out but the one naming what it extends, which the
+      // pragmas reader follows.
+      final txt = t.readAsLinesSync().where((l) => !l.startsWith('%') || l.startsWith('% Extends:')).join('\n').trim();
+      req.response.write('$txt\n\nSchemas\n\n${sc.readAsStringSync()}');
+      await req.response.close();
+      return;
+    }
+    if (seg.length == 2 && seg[0] == 'made' && RegExp(r'^pkg-[0-9a-f]{64}\.json$').hasMatch(seg[1])) {
+      final f = File('$madeDir/${seg[1]}');
+      if (!f.existsSync()) {
+        req.response.statusCode = 404;
+        await req.response.close();
+        return;
+      }
+      req.response.headers.contentType = ContentType.json;
+      await req.response.addStream(f.openRead());
+      await req.response.close();
+      return;
+    }
     if (seg.length >= 3 && seg[0] == 'api') {
       final c = seg[1];
       if (!contracts.contains(c)) {

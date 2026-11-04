@@ -13,8 +13,10 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart' show Sha256;
 
-/// Where the catalog and the packages are.
+/// Where the catalog and the packages are, and where the apps made with
+/// GAS's app maker are (unlisted: in no catalog, got by their hash).
 const downloads = 'https://talmonlab.bgu.ac.il/downloads';
+const made = 'https://talmonlab.bgu.ac.il/gas/made';
 
 /// A contract's link: GAS's page for getting it, its hash after the '#'.
 String contractLink(String hash) => 'https://talmonlab.bgu.ac.il/gas/get.html#$hash';
@@ -73,8 +75,8 @@ class Contract {
 class ContractStore {
   /// The app's unpacked tree: programs/ and www/.
   final String base;
-  final String server;
-  ContractStore(this.base, {this.server = downloads});
+  final String server, madeServer;
+  ContractStore(this.base, {this.server = downloads, this.madeServer = made});
 
   String get _worlds => '$base/programs/vglp/cva/gas_worlds';
 
@@ -167,10 +169,10 @@ class ContractStore {
     ..findProxy = HttpClient.findProxyFromEnvironment;
 
   /// [path] from GAS, tried three times (a mobile network drops connections).
-  Future<List<int>> _get(String path) async {
+  Future<List<int>> _get(String path, [String? from]) async {
     for (var i = 1;; i++) {
       try {
-        return await _get1(path);
+        return await _get1(path, from);
       } on SocketException {
         if (i == 3) rethrow;
         await Future<void>.delayed(Duration(milliseconds: 500 * i));
@@ -178,10 +180,10 @@ class ContractStore {
     }
   }
 
-  Future<List<int>> _get1(String path) async {
+  Future<List<int>> _get1(String path, [String? from]) async {
     final c = _client();
     try {
-      final res = await (await c.getUrl(Uri.parse('$server/$path'))).close();
+      final res = await (await c.getUrl(Uri.parse('${from ?? server}/$path'))).close();
       if (res.statusCode != 200) throw HttpException('GAS answered ${res.statusCode}');
       final out = <int>[];
       await for (final chunk in res) {
@@ -204,6 +206,12 @@ class ContractStore {
     if (!_hex64.hasMatch(hash)) throw const FormatException('not a contract hash');
     final have = byHash(hash);
     if (have != null) return have;
-    return install(Uint8List.fromList(await _get('pkg-$hash.json')), expect: hash);
+    List<int> bytes;
+    try {
+      bytes = await _get('pkg-$hash.json');
+    } on HttpException {
+      bytes = await _get('pkg-$hash.json', madeServer); // made with the app maker
+    }
+    return install(Uint8List.fromList(bytes), expect: hash);
   }
 }

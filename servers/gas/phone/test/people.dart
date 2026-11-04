@@ -42,11 +42,12 @@ Future<String?> cannotRun(String contract) async {
 /// [n] persons of [contract], started, their layers started and joined; or,
 /// given [relay], far apart: their layers not joined, each over a
 /// [RelayGlpNetwork] on that relay, the relay on.
-Future<List<PersonHost>> people(String contract, int n, {String? relay}) async {
+Future<List<PersonHost>> people(String contract, int n, {String? relay, String? program}) async {
+  final prog = program ?? world(contract);
   final sodium = await initHeadlessSodium();
   final queues = Directory.systemTemp.createTempSync('gas_phone_');
   addTearDown(() => queues.deleteSync(recursive: true));
-  final calendar = File('${world(contract)}/self.glp').readAsStringSync().contains('cal(alice, N)');
+  final calendar = File('$prog/self.glp').readAsStringSync().contains('cal(alice, N)');
   final hosts = <PersonHost>[], layers = <HeadlessGrassrootsNetwork>[];
   for (var i = 0; i < n; i++) {
     final id = await GrassrootsIdentity.create(
@@ -60,7 +61,7 @@ Future<List<PersonHost>> people(String contract, int n, {String? relay}) async {
     );
     addTearDown(layer.dispose);
     final host = PersonHost(
-      program: world(contract),
+      program: prog,
       rootSelfGlp: '$programs/self.glp',
       keyPair: (pub: glp.PubKey.fromList(id.publicKey), priv: Uint8List.fromList(id.privateKey)),
       network: relay == null

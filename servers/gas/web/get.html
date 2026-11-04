@@ -45,7 +45,7 @@ function show(c){
     <a class="btn blue" href="gas://get/${h}">Open in GAS</a><button class="btn grey" id="cp">Copy link</button> <span class="small" id="ok"></span>
     <p class="small" style="margin-top:8px">If nothing opens: copy the link, open GAS, tap 🔗 at the top, and Open.</p></div>
   <div class="card"><h2>No GAS yet?</h2><p>Get it first, then come back to this page.</p><a class="btn grey" href="download.html">Get GAS</a></div>
-  ${c ? '' : '<p class="small">This app is not in GAS\'s catalog; GAS may still get it if someone published it unlisted.</p>'}`;
+  ${c ? '' : '<p class="small">GAS does not know this app; check the link.</p>'}`;
   document.getElementById('cp').onclick = async () => {
     try { await navigator.clipboard.writeText(location.href); document.getElementById('ok').textContent = 'Copied.'; }
     catch (e) { prompt('Copy this link:', location.href); }
@@ -53,7 +53,11 @@ function show(c){
 }
 if (!h) m.innerHTML = '<h1>This link is incomplete</h1><p class="lead">Ask for it again, and copy all of it.</p>';
 else fetch('/downloads/catalog.json', {cache: 'no-store'}).then(r => r.json())
-  .then(j => show(j.contracts.find(c => c.hash === h))).catch(() => show(null));
+  .then(j => j.contracts.find(c => c.hash === h)).catch(() => null)
+  // Not in the catalog: an app made with the app maker, unlisted.
+  .then(c => c || fetch('made/pkg-' + h + '.json').then(r => r.ok ? r.json() : null)
+    .then(p => p && {title: p.title, icon: p.meta && p.meta.icon || '🧩', about: 'Made with GAS\'s app maker.'}).catch(() => null))
+  .then(show);
 </script>
 </body>
 </html>
