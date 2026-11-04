@@ -134,6 +134,8 @@ h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .sw::after{content:"";position:absolute;top:2px;left:2px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
 .sw.on{background:var(--green)}.sw.on::after{transform:translateX(20px)}
 details.dev{font-size:12px;color:var(--mute)}
+.renew{color:#ff3b30;font-size:15px;padding:12px;text-align:center;border-radius:12px}
+.renew.sure{background:#ff3b30;color:#fff;font-weight:600}
 details.dev pre{white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto}
 .toast{position:absolute;left:50%;bottom:90px;transform:translate(-50%,20px);background:rgba(29,29,31,.92);color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;max-width:86%;text-align:center;opacity:0;pointer-events:none;transition:all .25s;z-index:30}
 .toast.on{opacity:1;transform:translate(-50%,0)}
@@ -275,15 +277,15 @@ function drawHome(){
     HOME = await get('home'); drawHome();
   });
 }
-$('#mebtn').onclick = () => peopleSheet();
+$('#mebtn').onclick = () => peopleSheet(true);
 $('#make').onclick = () => openUrl('https://talmonlab.bgu.ac.il/gas/make.html');
 function openUrl(u){ if (NATIVE) NATIVE('open', {url: u}); else window.open(u, '_blank'); }
 
 /* ---------- people: you, your invite, the people around ---------- */
 let PEOPLE = null;
-async function peopleSheet(){
+async function peopleSheet(home){
   PEOPLE = await get('people');
-  const inApp = !!PEOPLE.app;
+  const inApp = !home && !!PEOPLE.app;
   const draw = () => {
     const p = PEOPLE;
     const ps = p.peers || [];
@@ -297,6 +299,7 @@ async function peopleSheet(){
       <div class="inline"><input id="addk" placeholder="Paste someone's invite" autocomplete="off"><button class="sbtn" id="addgo">Add</button></div>
       ${NATIVE ? '<button class="sbtn alt" id="scan">Scan their code</button>' : ''}` : ''}
       <div class="card toggle"><div><b>Internet</b><small>${p.relay.on ? 'Meet people anywhere (encrypted, through talmonlab)' : 'Only people near you'}</small></div><button class="sw ${p.relay.on ? 'on' : ''}" id="relay" aria-label="Internet"></button></div>
+      ${inApp ? '' : '<button class="renew" id="renew">Start over as someone new</button>'}
       ${(p.events || []).length ? `<details class="dev"><summary>Details</summary><pre>${esc(p.events.join('\n'))}</pre></details>` : ''}`;
   };
   const wire = el => {
@@ -307,9 +310,14 @@ async function peopleSheet(){
     $('#cpy').onclick = () => copy(PEOPLE.invite);
     $('#relay').onclick = async () => { await post('relay', {on: !PEOPLE.relay.on}); PEOPLE = await get('people'); $('#sbody').innerHTML = draw(); wire(); };
     el = $('#sbody');
-    el.querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
-      const k = b.dataset.k, n = prompt('Their name, on this device', nameOf(k));
-      if (n !== null){ await post('name', {key: k, name: n}); NAMES[k] = n.trim(); PEOPLE = await get('people'); $('#sbody').innerHTML = draw(); wire(); refreshAll(); }
+    // Tap a person to name them: the row becomes a field (no prompt(): the
+    // Mac's WebView shows none).
+    el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+      const k = b.dataset.k;
+      b.outerHTML = `<div class="li">${avatar(k)}<input id="rn" value="${esc(nameOf(k))}" aria-label="Their name" style="flex:1;border:0;font-size:16px;background:transparent;outline:none"></div>`;
+      const f = $('#rn'); f.focus(); f.select();
+      const done = async () => { f.onblur = null; await post('name', {key: k, name: f.value}); NAMES[k] = f.value.trim(); PEOPLE = await get('people'); $('#sbody').innerHTML = draw(); wire(); refreshAll(); };
+      f.onblur = done; f.onkeydown = e => { if (e.key === 'Enter') f.blur(); };
     });
     const add = async t => {
       const r = await post('add', {text: t});
@@ -320,6 +328,13 @@ async function peopleSheet(){
       $('#addgo').onclick = () => add($('#addk').value);
       paste(t => { if (looksLink(t) && $('#addk') && !$('#addk').value && !t.includes(PEOPLE.me)) $('#addk').value = t.trim(); });
     }
+    const rn = $('#renew');
+    if (rn) rn.onclick = async () => {
+      if (!rn.classList.contains('sure')){ rn.classList.add('sure'); rn.textContent = 'New key, empty apps — tap to confirm'; return; }
+      rn.disabled = true; rn.textContent = 'Starting over…';
+      await post('renew', {});
+      closeSheet(); await showHome(); toast('You are someone new');
+    };
     if ($('#scan')) $('#scan').onclick = () => { window._scanned = add; NATIVE('scan'); };
   };
   sheet(inApp ? 'People' : 'You', draw(), wire);

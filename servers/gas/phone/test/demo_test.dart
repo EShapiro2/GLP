@@ -55,7 +55,7 @@ Future<Core> person(SodiumSumo sodium, Directory root, int i, String name) async
   await store.installStarters();
   Directory('$base/relay').createSync(recursive: true);
   File('$base/relay/off').writeAsStringSync('off');
-  final id = await GrassrootsIdentity.create(
+  var id = await GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPairFromSeed(Uint8List.fromList(List.filled(32, 0x61 + i))));
   final core = Core(
     base: base,
@@ -68,6 +68,10 @@ Future<Core> person(SodiumSumo sodium, Directory root, int i, String name) async
           sodium: sodium,
           outboundQueueStore: FileOutboundQueueStore('$base/queue.json'),
         )),
+    fresh: () async {
+      id = await GrassrootsIdentity.generate();
+      return (pub: glp.PubKey.fromList(id.publicKey), priv: Uint8List.fromList(id.privateKey));
+    },
     relayUrl: 'http://127.0.0.1:9',
   );
   await core.setName(core.me.hex, name);

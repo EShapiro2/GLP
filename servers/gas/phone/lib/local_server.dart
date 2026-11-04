@@ -12,6 +12,7 @@
 //   POST /api/name {key, name}  a name for a person, on this device
 //   POST /api/add {text}        add a person far away, by their invite
 //   POST /api/relay {on}        the Internet relay on or off
+//   POST /api/renew             start over as a new person: a new key pair
 //   GET  /api/qr?t=...          a QR code, as SVG
 //   GET  /api/<app>/state?since=V, POST /api/<app>/act, /api/<app>/day
 //                               the open app's agent, as servers/gas/bin/server.dart
@@ -189,6 +190,9 @@ class LocalServer {
       case 'relay':
         await core.setRelay((await _body(req))['on'] == true);
         return _json(req, {'ok': true});
+      case 'renew':
+        await core.renew();
+        return _json(req, {'ok': true, 'me': core.me.hex});
       case 'qr':
         req.response.headers.contentType = ContentType('image', 'svg+xml');
         req.response.headers.set('Cache-Control', 'no-store');

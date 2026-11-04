@@ -71,7 +71,7 @@ class Session {
         sodium: core.sodium,
         privateKey: core.privateKey,
         app: contract.name,
-        dir: '${core.base}/relay',
+        dir: '${core.mine}/relay',
         relayUrl: core.relayUrl,
       );
       host = PersonHost(
@@ -79,6 +79,7 @@ class Session {
         rootSelfGlp: '${core.base}/programs/self.glp',
         keyPair: (pub: core.me, priv: core.privateKey),
         network: relay,
+        stateFile: '${core.mine}/state/${contract.name}.bin',
       );
       final calendar = File('${host.program}/self.glp').readAsStringSync().contains('cal(alice, N)');
       host.onChange = core.changed;
@@ -130,6 +131,9 @@ class Session {
 
   Future<void> dispose() async {
     try {
+      host.stop();
+    } catch (_) {}
+    try {
       relay.dispose();
     } catch (_) {}
     try {
@@ -142,9 +146,12 @@ class Core {
   final String base;
   final ContractStore store;
   final SodiumSumo sodium;
-  final glp.PubKey me;
-  final Uint8List privateKey;
+  glp.PubKey me;
+  Uint8List privateKey;
   final LayerFactory layers;
+
+  /// A new key pair, made and kept as the device's identity; [renew] asks it.
+  final Future<({glp.PubKey pub, Uint8List priv})> Function()? fresh;
   final String relayUrl;
   Session? session;
 
@@ -155,6 +162,7 @@ class Core {
     required this.me,
     required this.privateKey,
     required this.layers,
+    this.fresh,
     this.relayUrl = defaultRelay,
   }) {
     final f = File('$base/names.json');
@@ -193,6 +201,22 @@ class Core {
   void notice(String s) {
     notices.add({'id': ++_notice, 'text': s});
     if (notices.length > 10) notices.removeAt(0);
+    changed();
+  }
+
+  /// What is kept for the present identity alone: the people met over the
+  /// relay, and each app's saved state.  A new identity starts with none.
+  String get mine => '$base/people/${me.hex.substring(0, 16)}';
+
+  /// Start over as a new person: a new key pair, and nothing of the old
+  /// one's in use (it stays on the device, unused).
+  Future<void> renew() async {
+    final f = fresh;
+    if (f == null) throw StateError('no way to make a key pair here');
+    await close();
+    final k = await f();
+    me = k.pub;
+    privateKey = k.priv;
     changed();
   }
 
