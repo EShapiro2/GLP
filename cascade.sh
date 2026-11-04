@@ -37,6 +37,11 @@
 #   gff         GFF   GFF         programs/gff              programs/apps/gff (GFF's, the app's plays)
 #   agora       AGORA Currencies  programs/currencies/agora ---
 #   gdo         GDO   LBM         programs/lbm              ---
+#   dgc         DGC   Currencies  programs/currencies/sovereign ---
+#   gcc         GCC   Currencies  programs/currencies/gcc   ---
+#   gdc         GDC   Currencies  programs/currencies/gdc   ---
+#   bcc         BCC   Currencies  programs/currencies/bcc   ---
+#   gra         GRA   LBM         programs/lbm              ---
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -124,7 +129,12 @@ case "$NAME" in
           PLAYAT="programs/apps/gff"; PLAYLIMIT=30000000 ;;   # the five persons' play, the same limit as Section APPS's
     agora) FILE=AGORA; OWNER="programs/currencies/agora"; PAPER="";                           PLAYDIR="" ;;
     gdo)  FILE=GDO;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/LBM";  PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo" >&2; exit 2 ;;
+    dgc)  FILE=DGC;  OWNER="programs/currencies/sovereign"; PAPER="/Users/udi/Grassroots/SGC"; PLAYDIR="" ;;
+    gcc)  FILE=GCC;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    gdc)  FILE=GDC;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    bcc)  FILE=BCC;  OWNER="programs/currencies/bcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    gra)  FILE=GRA;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/LBM";  PLAYDIR="" ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
