@@ -57,15 +57,15 @@ contract_named(gdc,
     schema(dmint, ['Alice'], [num(f), num(k)],
        [rs(guarded, [times(num(k), atom(dcoin, [role(1), num(f)]))], [], [atom(identity, [])], [])]),
 %% GC:2 for a denominated coin: p gives k u-coins in f, q gives k1 coins of v.
-    schema(swap_dc, ['Alice', 'Bob'], [num(f), pvar(u), num(k), pvar(v), num(k1)],
+    schema(swap_dc, ['Alice', 'Bob'], [pvar(u), num(f), num(k), pvar(v), num(k1)],
        [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GC:2 for a denominated coin: p gives k coins of u, q gives k1 v-coins in f.
-    schema(swap_cd, ['Alice', 'Bob'], [num(f), pvar(u), num(k), pvar(v), num(k1)],
-       [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(swap_cd, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(f1), num(k1)],
+       [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GC:2 for denominated coins: k u-coins in f for k1 v-coins in f1.
-    schema(swap_dd, ['Alice', 'Bob'], [num(f), num(f1), pvar(u), num(k), pvar(v), num(k1)],
+    schema(swap_dd, ['Alice', 'Bob'], [pvar(u), num(f), num(k), pvar(v), num(f1), num(k1)],
        [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GC:3 for a denominated coin: p pays k q-coins in f to q, whom p knows.
@@ -77,9 +77,9 @@ contract_named(gdc,
        [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
 %% GC:4 for a denominated coin: p redeems a q-coin against an r-coin in f held by q.
-    schema(redeem_cd, ['Alice', 'Bob'], [num(f), pvar(r)],
-       [rs(guarded,   [atom(dcoin, [pvar(r), num(f)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(unguarded, [atom(coin, [role(2)])], [atom(dcoin, [pvar(r), num(f)])], [atom(identity, [])], [])]),
+    schema(redeem_cd, ['Alice', 'Bob'], [num(f1), pvar(r)],
+       [rs(guarded,   [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])]),
 %% GC:4 for denominated coins: a q-coin in f against an r-coin in f1 held by q.
     schema(redeem_dd, ['Alice', 'Bob'], [num(f), num(f1), pvar(r)],
        [rs(guarded,   [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
