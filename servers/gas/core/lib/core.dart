@@ -13,10 +13,12 @@ import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart' show GlpEngine;
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:sodium/sodium_sumo.dart';
 
 import 'contracts.dart';
 import 'person_host.dart';
+import 'presenting_network.dart';
 import 'relay_network.dart';
 
 /// A networking layer for a session: the network the agent runs over, and
@@ -49,6 +51,7 @@ class Session {
   final Core core;
   late final Layer layer;
   late final RelayGlpNetwork relay;
+  late final PresentingNetwork presenting;
   late final PersonHost host;
   final Map<String, Peer> peers = {};
   final List<String> events = [];
@@ -77,11 +80,25 @@ class Session {
       );
       // On the web the relay carries everything: the layer has no network.
       if (core.hosted) relay.relayOnly = true;
+      // The person's undertaking to keep the contract, presented to everyone
+      // they interact with in it, and theirs required (presenting_network.dart).
+      final hSrc = core.store.warrantyOf(contract)?['hsrc'];
+      if (hSrc is! String) throw StateError('${contract.title} has no warranties here');
+      presenting = PresentingNetwork(
+        inner: relay,
+        person: PersonIdentity(core.me, core.privateKey),
+        package: contract.hash,
+        hSrc: hSrc,
+        dir: '${core.mine}/undertakings',
+        app: contract.name,
+      );
+      presenting.onPresented = (pk) => event('undertaking of ${pk.hex.substring(0, 8)}… received');
+      presenting.onRefused = (pk, why) => event('refused ${pk.hex.substring(0, 8)}…: $why');
       host = PersonHost(
         program: core.store.program(contract),
         rootSelfGlp: '${core.base}/programs/self.glp',
         keyPair: (pub: core.me, priv: core.privateKey),
-        network: relay,
+        network: presenting,
         stateFile: '${core.mine}/state/${contract.name}.bin',
       );
       final calendar = File('${host.program}/self.glp').readAsStringSync().contains('cal(alice, N)');
@@ -132,7 +149,12 @@ class Session {
   List<Map<String, String>> people() => [
         for (final p in peers.values)
           if (p.discovered.isNotEmpty || p.connected.isNotEmpty)
-            {'key': p.key, 'name': core.nameOf(p.key), 'state': p.state}
+            {
+              'key': p.key,
+              'name': core.nameOf(p.key),
+              'state': p.state,
+              'undertaking': presenting.hasPresented(glp.PubKey.fromHex(p.key)) ? 'yes' : 'no',
+            }
       ];
 
   Future<void> dispose() async {
