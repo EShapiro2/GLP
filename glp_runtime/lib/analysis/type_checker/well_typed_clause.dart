@@ -4378,7 +4378,7 @@ bool _bindTemplateAlt(TypeExpr t, TypeExpr n, String typeName, TypeDef template,
         template.typeParams, theta, env, visiting);
   }
   if (t is PrimitiveModeAlt) return n is PrimitiveModeAlt && n.isInput == t.isInput;
-  if (t is ConstantAlt) return n is ConstantAlt && n.value == t.value;
+  if (t is ConstantAlt) return n is ConstantAlt && sameConstant(n.value, t.value);
   if (t is ListNilAlt) return n is ListNilAlt;
   if (t is ListConsAlt) {
     return n is ListConsAlt &&
