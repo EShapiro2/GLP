@@ -1,5 +1,5 @@
 #!/bin/bash
-# The pragmas of a contract, as the term vGLP's compiler reads them (README.md beside this file, "The pragmas"; vGLP, Section 5.4, "The contract's words"; GSC, Section 2, its first paragraph): the lines after the line "Pragmas" of the contract's NAME.txt and of the NAME.txt of every contract it extends, by its "% Extends:" line and theirs, the contracts extended first.  A contract whose own NAME.txt has no line "Pragmas" has none, no_pragmas, which the compiler refuses: "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words").  A button is of the acts it names, and lines are matched by button (vGLP 40f8444, Section 5.4, "The contract's words", its last sentence): "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its line replaces the inherited one".  A line's fields name, in the schemas' order, the variables of its button's acts that the atoms each requires at the proposer's role do not bind, and a line whose fields are not these is refused (ibid.).
+# The pragmas of a contract, as the term vGLP's compiler reads them (README.md beside this file, "The pragmas"; vGLP, Section 5.4, "The contract's words"; GSC, Section 2, its first paragraph): the lines after the line "Pragmas" of the contract's NAME.txt and of the NAME.txt of every contract it extends, by its "% Extends:" line and theirs, the contracts extended first.  A contract whose own NAME.txt has no line "Pragmas" has none, no_pragmas, which the compiler refuses: "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words").  A button is of the acts it names, and lines are matched by button (vGLP 40f8444, Section 5.4, "The contract's words", its last sentence): "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its line replaces the inherited one".  A line's fields name, in the schemas' order, the variables of its button's acts that the atoms each requires at the proposer's role do not bind, and a line whose fields are not these is refused (ibid.).  The fields after a button, up to the next button, are that button's, and two lines that stand writing one button are refused, one name being one button with one line (ibid.: "for each act they propose, its button, in brackets, bearing the act's name, and its fields, in angle brackets"; "A button is of the acts it names").
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
@@ -201,7 +201,8 @@ sub visit {
         # The contracts it extends are named in the first sentence of the line, a file name such as GC.txt in it not a contract extended.
         (my $first = $ext) =~ s/^% Extends:\s*//;
         $first =~ s/\.\s.*$//;
-        for my $n ($first =~ /\b([A-Z][A-Za-z]*[A-Z])\b(?![\x27\x{2019}]s|\.\w)/g) {
+        # A name may carry a hyphened part, as GDO-L, which GFF extends (GFF.txt), read whole and not as GDO.
+        for my $n ($first =~ /\b([A-Z][A-Za-z]*[A-Z](?:-[A-Z][A-Za-z]*)*)\b(?!-|[\x27\x{2019}]s|\.\w)/g) {
             next if $named{$n}++;
             my $g = find_txt($n, $dir);
             next unless defined $g;
@@ -265,7 +266,7 @@ my %anc;
 sub ancestors { my ($f, $g) = @_; for my $h (@{ $extends{$g} // [] }) { next if $anc{$f}{$h}++; ancestors($f, $h) } }
 ancestors($_, $_) for @order;
 # The button lines of every contract read, each a line naming a person and the buttons they propose, the clause line or an indented line after it, with its question lines (vGLP 40f8444, Section 5.4, "The contract’s words": "A line follows for each other person who proposes, likewise, and for each person asked, their name, a colon, and the question put to them; a question line belongs to the button line nearest above it"), by its key, file, line and rank; and the buttons each bears.
-my (%line_buttons, @line_keys);
+my (%line_buttons, @line_keys, %line_shown);
 for my $f (@order) {
     my %own; my $after = 0; my $tabs = 1; my $ln = -1;
     for my $x (joined($f)) {
@@ -287,6 +288,9 @@ for my $f (@order) {
             my $k = "$f\x02$ln\x02$pi";
             push @line_keys, $k;
             $line_buttons{$k} = [ map { (my $a = lc $_) =~ s/ +/_/g; $a } ($part =~ /\[([^\]]+)\]/g) ];
+            (my $nm = $f) =~ s{.*/}{}; $nm =~ s/\.txt$//;
+            (my $txt = $part) =~ s/^\s+//;
+            $line_shown{$k} = "$nm: $title: $txt";
         }
     }
 }
@@ -299,6 +303,27 @@ for my $k (@line_keys) {
         my ($g) = split /\x02/, $k2;
         next unless $anc{$g}{$f} && $g ne $f;
         if (grep { $b{$_} } @{ $line_buttons{$k2} }) { $replaced{$k} = $k2; last }
+    }
+}
+# A button is of the acts it names, so one name is one button, with one line: two kept lines writing a button of one name, or one line writing it twice, are a fault of the contract, refused, the button and both lines named (vGLP 40f8444, Section 5.4, "The contract’s words": "for each act they propose, its button, in brackets, bearing the act’s name"; "A button is of the acts it names"; vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 1).
+my (%button_line, @dup_out);
+for my $k (@line_keys) {
+    next if $replaced{$k};
+    my %once;
+    my @orig = $line_shown{$k} =~ /\[([^\]]+)\]/g;
+    for my $bi (0 .. $#{ $line_buttons{$k} }) {
+        my ($b, $ob) = ($line_buttons{$k}[$bi], $orig[$bi]);
+        if ($once{$b}++) {
+            push @dup_out, "$line_shown{$k}: refused, the button [$ob] written twice on it";
+            push @faults, "pragmas.sh: the line \"$line_shown{$k}\" writes the button [$ob] twice, and a button is of the acts it names, one name one button (vGLP, Section 5.4, \"The contract’s words\")\n";
+            next;
+        }
+        if (exists $button_line{$b}) {
+            push @dup_out, "$line_shown{$k}: refused, the button [$ob] written also by the line \"$line_shown{ $button_line{$b} }\"";
+            push @faults, "pragmas.sh: the button [$ob] is written by two lines, \"$line_shown{ $button_line{$b} }\" and \"$line_shown{$k}\", and a button is of the acts it names, one name one button with one line (vGLP, Section 5.4, \"The contract’s words\")\n";
+            next;
+        }
+        $button_line{$b} = $k;
     }
 }
 # Every button of every line kept, by the schema name it bears, so that a schema one button names by its own name is realised by no other.
@@ -397,8 +422,9 @@ for my $f (@order) {
                 }
                 my $tail = $pr->{tail};
                 while ($tail ne "") {
+                    # The fields after a button, up to the next button, are that button’s, each button checked against its own fields (vGLP 40f8444, Section 5.4, "The contract’s words": "for each act they propose, its button, in brackets, bearing the act’s name, and its fields, in angle brackets"; vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 2), as DGC’s "[Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>" and GSN’s "[Create] <name> [Close]".
                     my @buttons;
-                    while ($tail =~ s/^\[([^\]]+)\]\s*//) { push @buttons, $1 }
+                    push @buttons, $1 if $tail =~ s/^\[([^\]]+)\]\s*//;
                     @buttons or die "pragmas.sh: $f: the pragma \"$title\" has words it cannot read: $tail\n";
                     my @fields;
                     while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
@@ -591,7 +617,7 @@ for my $S (sort keys %covered) {
     push @faults, "pragmas.sh: the schema $S, which [$covered{$S}] covers, is fitted by no line: no person is named before a button for it\n";
 }
 # Each button line and what the rule gives it, on the standard error, where PRAGMAS_LINES is set.
-print STDERR map { /^\x03(\d+)$/ ? map { "$_\n" } @{ $line_of[$1] // [] } : "$_\n" } @lines_out if $ENV{PRAGMAS_LINES};
+print STDERR map { /^\x03(\d+)$/ ? map { "$_\n" } @{ $line_of[$1] // [] } : "$_\n" } @lines_out, @dup_out if $ENV{PRAGMAS_LINES};
 if (@faults) { print STDERR @faults; exit 1 }
 print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "])\n";
 ' "$1" "$PROGRAMS" "${2:-}"
