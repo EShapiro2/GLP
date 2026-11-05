@@ -1,0 +1,31 @@
+%% gc_village_boot.glp --- the village market of GC's paper, Appendix "Village Market Demonstration", on six smartphones (GSG paper, Sections 2 and 6, "The Grassroots Super-App" and "Mini-Apps on the Prototype"), as gc_boot.glp runs play_coins on two: under the boot harness, one isolate per villager, each with its own key pair, running the social graph of programs/social/graph/core as its super-app and hosting GC's mini-app (programs/apps/gc).  The program is graph/core, named as :boot's second argument, and this file is loaded on top of it, with the boot clause and the persons; the smartphone, gc_phone/4, is graph/core's (core/gc_phone.glp), started by core's agent/2 on the person's first act (IGLP 30c04c5, Implementation Notes, "Boot"):
+%%   :artefact programs/apps/gc programs/social/graph/core
+%%   :boot programs/apps/gc_village_boot.glp programs/social/graph/core
+%%
+%% The villagers are those of play_village (programs/apps/gc/plays.glp), alice, bob, charlie, diana, eve and frank, under the roles market_alice to market_frank (programs/apps/gc/person.glp), each knowing those they transact with: alice bob, charlie, eve and frank; bob alice and diana; charlie alice and eve; diana bob and frank; eve alice, charlie and frank; frank diana, eve and alice.  Each trusts the compiler's key, reads the certified artefact gc.glpw from graph/core with load_file/2 and installs it, with one end of a person channel.  The earlier of each two who transact connects to the later, who consents to the request in the super-app's social graph across the isolates, and once connected invites them to the mini-app, which the later has consented to in advance; each handshake opens a root channel between the two executions, the eight conversations of the play.  Over them the mini-app runs GC's contract as play_village runs it: the six operations of the paper's village market, each villager's last view holding the holdings of its Table 1.  The other end of each person channel is the mini-app's own scripted person (programs/apps/gc/person.glp), activated from the module value under its role; its screen goes to the person, one line each, and so does what the super-app told the person of each connection in its own social graph, sg(connected(Q)).
+%%
+%% The boot settles, as gc_boot.glp's does: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers").  The isolates order a villager's views against their answers and against each other's attempts as the conversations open and the attempts arrive, which varies from run to run; Section APPS of the suite runs this file and holds what the script and the end state fix, each villager's answers and looks in order, the number of lines of their screen and their last view, each play_village's, and their super-app lines, one connection each, as a set.
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(market_alice, alice, [bob, charlie, eve, frank], ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(market_bob, bob, [alice, diana], ch(_?, _))@bob,
+    agent(ch(_?, _), ch(_?, _))@charlie,
+    say(market_charlie, charlie, [alice, eve], ch(_?, _))@charlie,
+    agent(ch(_?, _), ch(_?, _))@diana,
+    say(market_diana, diana, [bob, frank], ch(_?, _))@diana,
+    agent(ch(_?, _), ch(_?, _))@eve,
+    say(market_eve, eve, [alice, charlie, frank], ch(_?, _))@eve,
+    agent(ch(_?, _), ch(_?, _))@frank,
+    say(market_frank, frank, [diana, eve, alice], ch(_?, _))@frank.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, graph/core, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 30c04c5, Implementation Notes, "Boot").  The person scripted at each agent, say/4, run on its person channel in the person's place, tells the agent the entry, gc_phone/4 (graph/core/gc_phone.glp), with the villager's role in the play, their own key and the keys of the peers they know, its ground arguments, the readable names being the atoms that stand for the keys in a simulation ("An agent learns the keys of its peers from its person"; Remark "Agent Names"), and reads nothing.
+Role   ::= market_alice ; market_bob ; market_charlie ; market_diana ; market_eve ; market_frank.
+SayAct ::= gc_phone(Role, Key, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(R, Me, Ps, ch(_, [gc_phone(R?, Me?, Ps?)])).

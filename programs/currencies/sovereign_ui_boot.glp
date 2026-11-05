@@ -1,0 +1,25 @@
+%% sovereign_ui_boot.glp --- the sovereign market of ../sovereign/play_ui.glp on three smartphones, the central bank scripted (GSG paper, Sections 2 and 6, "The Grassroots Super-App" and "Mini-Apps on the Prototype"), as programs/apps/gc_boot.glp runs GC's app: under the boot harness, one isolate per person, each with its own key pair, running the social graph of programs/social/graph/core as its super-app and hosting the mini-app, programs/currencies/sovereign/denominated, the certified program (Currencies #15, Code_inbox 2026-11-05 07:26 UTC, Udi approving: the plays' persons as mini-apps the super-app hosts over graph/core).  The program is graph/core, named as :boot's second argument, and this file is loaded on top of it, with the boot clause and the persons; the smartphone, sovereign_phone/4, is graph/core's (core/sovereign_phone.glp), started by core's agent/2 on the person's first act (IGLP 30c04c5, Implementation Notes, "Boot"):
+%%   :artefact programs/currencies/sovereign/denominated programs/social/graph/core
+%%   :boot programs/currencies/sovereign_ui_boot.glp programs/social/graph/core
+%%
+%% cb, the central bank, diana, the community bank, and frank, the household, over the three conversations their acts need, cb-diana, diana-frank and frank-cb: the central bank mints 30 and opens the mutual credit line with diana; diana lends frank 15 of her coins for 18 frank-bonds maturing day 28, frank pays her 3 and redeems 5 diana-coins for his own bonds, then redeems one diana-coin for a central-bank coin she holds, the chain redemption frank -> diana -> cb, and pays that coin to the central bank, which hands him the fiat unit outside the contract; then diana proposes the reverse swap, which the central bank accepts: play_sovereign_ui's lines (programs/currencies/sovereign/play_ui.glp), each person's in order, the three not ordered against each other.  Each person trusts the compiler's key, reads the certified artefact denominated.glpw from graph/core with load_file/2 and installs it, with one end of a person channel; where two persons transact, the earlier connects to the later, who consents in the super-app's social graph across the isolates, and once connected invites them to the mini-app, which the later has consented to in advance, the handshake opening a root channel between their two executions, their conversation.  The other end of each person channel is the mini-app's own scripted person (programs/currencies/sovereign/denominated/person.glp), activated from the module value under its role (plays.glp there, miniapp_person/5); its screen goes to the person, one line each, and so does what the super-app told the person of each connection, sg(connected(Q)).
+%%
+%% The boot settles, as gc_boot.glp's does: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers").
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@cb,
+    say(cb, cb, [diana, frank], ch(_?, _))@cb,
+    agent(ch(_?, _), ch(_?, _))@diana,
+    say(diana, diana, [cb, frank], ch(_?, _))@diana,
+    agent(ch(_?, _), ch(_?, _))@frank,
+    say(frank, frank, [diana, cb], ch(_?, _))@frank.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, graph/core, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 30c04c5, Implementation Notes, "Boot").  The person scripted at each agent, say/4, run on its person channel in the person's place, tells the agent the entry, sovereign_phone/4 (graph/core/sovereign_phone.glp), with the person's role in the play, their own key and the keys of the peers they know, its ground arguments, the readable names being the atoms that stand for the keys in a simulation ("An agent learns the keys of its peers from its person"; Remark "Agent Names"), and reads nothing.
+Role   ::= cb ; diana ; frank.
+SayAct ::= sovereign_phone(Role, Key, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(R, Me, Ps, ch(_, [sovereign_phone(R?, Me?, Ps?)])).

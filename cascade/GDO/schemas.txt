@@ -1,30 +1,23 @@
-establish(Alice?) :
-    at Alice: not identity, +identity
+establish: identity(Alice) <-
+    not identity(Alice) guarded by Alice
 
-acquaint(Alice?, Bob?) :
-    at Alice: identity, +knows(Bob)
-    at Bob: identity, +knows(Alice)
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), identity(Bob) guarded by Alice, Bob
 
-introduce(Alice?, Bob?; c) :
-    at Alice: identity, knows(Bob), knows(c)
-    at Bob: identity, knows(Alice), +knows(c)
+introduce: knows(Bob, c) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, c), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
 
-befriend(Alice?, Bob?) :
-    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
-    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
+befriend: friend(Alice, Bob), friend(Bob, Alice) <-
+    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
 
-unfriend(Alice?, Bob) :
-    at Alice: identity, -friend(Bob)
-    at Bob: identity, -friend(Alice)
+unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
+    identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
 
-point_friend(Alice?, Bob) :
-    at Alice: identity, friend(Bob), not points_to(Bob), +points_to(Bob)
-    at Bob: identity
+point_friend: points_to(Alice, Bob) <-
+    identity(Alice), friend(Alice, Bob), not points_to(Alice, Bob), identity(Bob) guarded by Alice
 
-point_transitive(Alice?, Bob; c) :
-    at Alice: identity, knows(c), points_to(Bob), +points_to(c)
-    at Bob: identity, points_to(c)
+point_transitive: points_to(Alice, c) <-
+    identity(Alice), knows(Alice, c), points_to(Alice, Bob), identity(Bob), points_to(Bob, c) guarded by Alice
 
-unpoint(Alice?, Bob) :
-    at Alice: identity, -points_to(Bob)
-    at Bob: identity
+unpoint: not points_to(Alice, Bob) <-
+    identity(Alice), points_to(Alice, Bob), identity(Bob) guarded by Alice

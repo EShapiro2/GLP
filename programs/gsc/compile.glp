@@ -1181,9 +1181,41 @@ malformed_lines([listed_guarded(S, I)|Fs], T,
                  'has a listed role carrying the mark ?, which only an agent role may carry;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
-malformed_lines([multiplicity_not_added(S, I, _)|Fs], T,
+malformed_lines([multiplicity_forbidden(S, I, _)|Fs], T,
                 [S?, 'at role', I?,
-                 'carries a multiplicity on an atom it neither adds nor deletes;'|R?]) :-
+                 'carries a multiplicity on an atom it forbids;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([not_holder(S, P)|Fs], T,
+                [S?, 'has an atom of', P?, 'whose holder is no name of the schema;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([not_in_vars(S, P)|Fs], T,
+                [S?, 'has in', P?, 'an argument that is no name and no variable of the schema;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([deleted_not_required(S, I, _)|Fs], T,
+                [S?, 'at role', I?, 'deletes an atom it does not require;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([quantified_condition(S, X)|Fs], T,
+                [S?, 'quantifies', X?, 'over no one condition at an agent role;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([quantified_holder(S, X, P)|Fs], T,
+                [S?, 'has in a conjunct over', X?, 'an atom of', P?, 'that', X?, 'does not hold;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([listed_agent_role(S, X)|Fs], T,
+                [S?, 'quantifies', X?, 'and has it hold a literal outside its conjuncts;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([not_in_names(S, X)|Fs], T,
+                [S?, 'quantifies', X?, 'which is not among its names;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([guard_not_role(S, G)|Fs], T,
+                [S?, 'is guarded by', G?, 'which is no role of it;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([multiplicity_not_numeric(S, I, _)|Fs], T,
@@ -1223,6 +1255,10 @@ malformed_lines([signing_not_speech_act(S, _)|Fs], T,
     malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+
+% A contract whose reading has faults (programs/gsc self.glp, read_faults).
+exported procedure compile_malformed(Constant?, Faults?).
+compile_malformed(Nm, Fs) :- not_compiled_malformed(Nm?, Fs?).
 
 procedure not_compiled_malformed(Constant?, Faults?).
 not_compiled_malformed(Nm, Fs) :- ground(Nm?), ground(Fs?) |

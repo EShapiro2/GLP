@@ -193,7 +193,7 @@ BodyKernelResult bindResult(GlpRuntime rt, Object? outputArg, Object value,
       activations = rt.heap.bindVariableConst(outputArg.addr, value);
     }
     for (final act in activations) {
-      rt.gq.enqueue(act);
+      rt.enqueueReactivatedGoal(act);
     }
     return BodyKernelResult.success;
   }
@@ -665,7 +665,7 @@ BodyKernelResult _stopAll(GlpRuntime rt, List<PendingToken> tokens, String who) 
   }
   for (final t in tokens) {
     for (final act in rt.heap.bindVariable(t.writer, ConstTerm('stop'))) {
-      rt.gq.enqueue(act);
+      rt.enqueueReactivatedGoal(act);
     }
   }
   return BodyKernelResult.success;
@@ -748,7 +748,7 @@ BodyKernelResult stepClockKernel(GlpRuntime rt, List<Object?> args) {
     }
     final t = clock.release();
     for (final act in rt.heap.bindVariable(t.writer, StructTerm('go', [ConstTerm(t.time)]))) {
-      rt.gq.enqueue(act);
+      rt.enqueueReactivatedGoal(act);
     }
     return bindResult(rt, step, StructTerm('released', [ConstTerm(t.time)]),
         kernel: 'step_clock/2');
@@ -838,7 +838,7 @@ BodyKernelResult streamAppendKernel(GlpRuntime rt, List<Object?> args) {
   final activations = rt.heap.bindVariable(currentWriterAddr, consCell);
 
   for (final act in activations) {
-    rt.gq.enqueue(act);
+    rt.enqueueReactivatedGoal(act);
   }
 
   // Update MutualRef to point to the new tail's writer
@@ -866,7 +866,7 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
   final activations = rt.heap.bindVariable(currentWriterAddr, ConstTerm(nil));
 
   for (final act in activations) {
-    rt.gq.enqueue(act);
+    rt.enqueueReactivatedGoal(act);
   }
 
   return BodyKernelResult.success;

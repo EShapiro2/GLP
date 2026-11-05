@@ -326,22 +326,23 @@ class GlpRuntime {
   /// [ModuleTerm.declaredTypes] is.
   Object? Function()? rootDeclaredTypes;
 
-  /// Enqueue a reactivated goal and clean up from suspended map
-  /// Use this instead of gq.enqueue() when reactivating suspended goals
+  /// A suspended goal re-enqueued through the activation its binding returns
+  /// (IGLP, Implementation Notes, "Event-driven execution"): it goes back into
+  /// the queue and leaves [suspended] as it is enqueued (dGLP Reduce, S' = S \
+  /// {(G, W) : G ∈ R}).  This is the one path by which a woken goal is
+  /// re-enqueued: every binding's activations, the runner's commit and
+  /// body-structure bindings among them, go through it (GLP #11 Cowork,
+  /// Code_inbox 2026-11-03 16:40 UTC, item 8; until 2026-11-05 the runner put
+  /// them in the queue itself and the scheduler took them out of [suspended]
+  /// when it took them, and until 2026-10-02 such a goal stayed in [suspended]
+  /// for the rest of the run: after 30 days of sGLP's social graph the map
+  /// held 464,267 goals, 631 of them suspended).  The state is stored between
+  /// cycles (IGLP, "Persistence"), so the moment within a cycle at which the
+  /// goal leaves [suspended] is not observed.
   void enqueueReactivatedGoal(GoalRef goal) {
     gq.enqueue(goal);
-    // Clean up from suspended map - goal is now reactivated
     _removeFromSuspended(goal);
   }
-
-  /// [goal] is taken from the queue to be tried, so it waits on nothing: it
-  /// leaves [suspended], as a goal reactivated does (dGLP Reduce, S' = S \
-  /// {(G, W) : G ∈ R}).  The goals a commit's bindings wake are put in the
-  /// queue by the runner itself and not through [enqueueReactivatedGoal], and
-  /// until 2026-10-02 such a goal stayed in [suspended] for the rest of the
-  /// run: after 30 days of sGLP's social graph the map held 464,267 goals, 631
-  /// of them suspended.
-  void goalTaken(GoalRef goal) => _removeFromSuspended(goal);
 
   // ===========================================================================
   // The agent's saved state (IGLP, Definition "Restart"; Implementation Notes,

@@ -1,0 +1,93 @@
+%% sovereign_phone.glp --- one smartphone of the boots of the denominated program's plays (programs/currencies/sovereign_swap_boot.glp, sovereign_ui_boot.glp): the super-app's agent on the isolate's network under the person's own key, the mini-app, programs/currencies/sovereign/denominated, read from its certified artefact beside this program and installed, and the person's acts by their part in the boot's script, toward the peers whose keys the person told the agent.  The boot defines no agent/2: graph/core's agent/2 (self.glp) answers the initial goal and starts sovereign_phone/4, the entry the person goal's first act names (IGLP 30c04c5, Implementation Notes, "Boot"); so the phone is a module of the program the boot loads, as gc_phone.glp is (Currencies #15, Code_inbox 2026-11-05 07:26 UTC, Udi approving).  The script, the mini-app and its contract are Currencies'.
+
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+
+%% The roles of the denominated program's plays (programs/currencies/sovereign/denominated/plays.glp, miniapp_person/5): alice and bob, play_swap, alice calling and inviting bob, who consents in advance; cb, diana and frank, the sovereign market of sovereign/play_ui.glp with the central bank scripted as play_sovereign_ui scripts it, the central bank calling and inviting both and diana calling and inviting frank, each consenting in advance to those who call them.  The request to connect is answered by the scripted home (core/self.glp, scripted_home/5).
+exported procedure sovereign_phone(Constant?, Key?, List(Key)?, NetInStream?).
+sovereign_phone(alice, Me, [Bob], NetIn) :-
+    person_sovereign(Me?, alice, [Bob?], [Bob?], [], NetIn?).
+sovereign_phone(bob, Me, [Alice], NetIn) :-
+    person_sovereign(Me?, bob, [Alice?], [], [Alice?], NetIn?).
+sovereign_phone(cb, Me, [Diana, Frank], NetIn) :-
+    person_sovereign(Me?, cb, [Diana?, Frank?], [Diana?, Frank?], [], NetIn?).
+sovereign_phone(diana, Me, [Cb, Frank], NetIn) :-
+    person_sovereign(Me?, diana, [Cb?, Frank?], [Frank?], [Cb?], NetIn?).
+sovereign_phone(frank, Me, [Diana, Cb], NetIn) :-
+    person_sovereign(Me?, frank, [Diana?, Cb?], [], [Diana?, Cb?], NetIn?).
+%% A person who knows other peers than the plays give has no smartphone here.
+sovereign_phone(_, _, _, _) :- otherwise | true.
+
+%% person_sovereign(Me, Role, Ps, Calls, Accepts, NetIn): one person's smartphone: the super-app's agent on the isolate's network under the person's own key, its home answering the requests to connect (core/self.glp, scripted_home/5), the mini-app installed from its artefact, and the person's acts toward the peers Ps they know, Calls those they connect to and invite and Accepts those whose invitation they consent to in advance; the mini-app's scripted person runs under the role with the peers' keys, by which the script names them (programs/currencies/sovereign/denominated/plays.glp, miniapp_person/5).
+procedure person_sovereign(Key?, Constant?, List(Key)?, List(Key)?, List(Key)?, NetInStream?).
+person_sovereign(Me, Role, Ps, Calls, Accepts, NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    scripted_home(Me?, Out?, Notices, Cmds?, In),
+    load_file("denominated.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    acts(Me?, denominated, Calls?, Accepts?, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
+    miniapp_person_run(C?, Me?, Role?, Ps?, PersonEnd?, Screen),
+    send_to_user(Screen?).
+
+%% acts(Me, App, Calls, Accepts, C, CK, CSig, AppEnd, Notices, Cmds): a person's acts on their super-app: trust the compiler's key, install the mini-app with their end of its person channel, consent in advance to the invitation of each peer in Accepts, connect to each peer in Calls, and, as each connection is reported, invite the peer connected where they called them; every connection is reported to the person, sg(connected(Q)).
+procedure acts(Key?, Constant?, List(Key)?, List(Key)?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+acts(Me, App, Calls, Accepts, C, CK, CSig, AppEnd, Notices,
+     [msg(person, Me?, trust(CK?)), msg(person, Me?, install(App?, C?, CSig?, AppEnd?)) | Cmds?]) :-
+    ground(Calls?) |
+    consents(Me?, App?, Accepts?, Cmds, Cmds1?),
+    connects(Me?, Calls?, Cmds1, Cmds2?),
+    calls_run(Me?, App?, Calls?, Notices?, Cmds2).
+
+%% The consents in advance, one per peer, before the rest of the commands.
+procedure consents(Key?, Constant?, List(Key)?, UserInStream, UserInStream?).
+consents(Me, App, [Q | Qs], [msg(person, Me?, accept_invite(App?, Q?)) | Cmds?], Rest) :-
+    consents(Me?, App?, Qs?, Cmds, Rest?).
+consents(_, _, [], Rest?, Rest).
+
+%% The requests to connect, one per peer called, before the rest of the commands.
+procedure connects(Key?, List(Key)?, UserInStream, UserInStream?).
+connects(Me, [Q | Qs], [msg(person, Me?, connect(Q?)) | Cmds?], Rest) :-
+    connects(Me?, Qs?, Cmds, Rest?).
+connects(_, [], Rest?, Rest).
+
+%% The notices the super-app tells the person: each connection reported, and answered with an invitation to the mini-app where the person called the one connected (a notice names a person by a constant, an invitation by a key, so the key the person knows is the one sent).
+procedure calls_run(Key?, Constant?, List(Key)?, Stream(Output)?, UserInStream).
+calls_run(Me, App, Calls, [msg(agent, person, connected(Who)) | Outs], Cmds?) :-
+    ground(Who?), ground(Calls?) |
+    send_to_user([sg(connected(Who?))]),
+    invite_called(Me?, App?, Calls?, Who?, Cmds, Cmds1?),
+    calls_run(Me?, App?, Calls?, Outs?, Cmds1).
+calls_run(Me, App, Calls, [_ | Outs], Cmds?) :- otherwise | calls_run(Me?, App?, Calls?, Outs?, Cmds).
+calls_run(_, _, _, [], []).
+
+%% The invitation of the one connected, where they are among those called.
+procedure invite_called(Key?, Constant?, List(Key)?, Constant?, UserInStream, UserInStream?).
+invite_called(Me, App, [Q | _], Who, [msg(person, Me?, invite(App?, Q?)) | Rest?], Rest) :-
+    Q? =?= Who? | true.
+invite_called(Me, App, [_ | Qs], Who, Cmds?, Rest) :-
+    otherwise | invite_called(Me?, App?, Qs?, Who?, Cmds, Rest?).
+invite_called(_, _, [], _, Rest?, Rest).
+
+%% The creator's certification, signed here over the mini-app's source identity, the contract's act schemas (programs/currencies/sovereign/DGC.glp) and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
+procedure certified(Content?, String, String).
+certified(M, CK?, CSig?) :-
+    module(M?) |
+    decompose_module(M?, CK, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [establish, acquaint, introduce, mint_coin, mint_bond, first_date, advance, swap_cc, swap_cb, swap_bc, swap_bb, accept_c, accept_b, pay, payout, spend, redeem_cc, redeem_cb, redeem_bc, redeem_bb, deposit_c, deposit_b, release_c, release_b, return_c, return_b], grassroots), K?, CSig).
+
+%% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them, as in gc_phone.glp.
+procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
+    module(M?) |
+    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp_person/5, M?, H),
+    person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
+
+procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
+    D0? =?= D? |
+    find_type(miniapp_person/5, [D?, S?], T),
+    run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
+person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).

@@ -17,10 +17,6 @@ enum MessageType {
   /// G is a global name (_w(p,i) or _r(p,i)), T is the assigned term
   assignment,
 
-  /// Agent message: structured term sent between agents
-  /// Used for friend-to-friend communication (msg/3 terms)
-  agentMessage,
-
   /// Request: req(_r(p, i)) — sent to the anchor p by an agent that localized
   /// a forwarded reader name (spec §app:requests-acks). Carries no term.
   request,

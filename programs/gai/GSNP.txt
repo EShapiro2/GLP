@@ -1,9 +1,9 @@
 % GSNP: Grassroots Social Network with Provenance --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GAI (Udi, 2026-10-20; GSC's until that day).  The paper, /Users/udi/Grassroots/GAI/main_characterisation_ArXiv.tex, prints it in its box in Section 4.1 and cites its clause as GSNP:1.
-% Paper: Corralling AI Risks with Grassroots Social Contracts, in preparation
+% Paper: Corralling AI Risks with Grassroots Contracts, arXiv (uploaded 2026-11-04, number pending)
 % Extends: GSN, Grassroots Social Network, GSC's (programs/gsc), and GAI, Accountable AI Agents, GAI's (beside this file), and through them GnW, GSG and GKK, so the platform is that of GAI's paper, Section 4.  It cites their clauses whole and restates none.
 % Defines: item, content signed by its author and, when sent on, by each agent that sent it on, in order; and the signed terms of the language, GAI's paper, Appendix "Contracts with Wards".  Alice and Bob are agents, variables naming distinct agents.
-% Last changed: 2026-10-30, Udi's revision in Coordination Appendix E (Coordination #11, to_all 10:18 UTC): one clause, Provenance, attested (Udi, 13:10 local, to GAI #10: Alice can remove the signatures with other software, so it cannot be enforced); the pragmas to it and to GSN's clause names, Messaging and Group messaging (GAI #10).  Earlier versions are in git.
+% Last changed: 2026-11-05, GnW's introduce in GSNP.glp, with the person introduced a reading role (Udi, 2026-11-03, to GSC #10), and the fields of Forward, the friend, and of Post forward, the item, the row filling the rest (vGLP, Section 5.4; Code #22, 2026-11-03).  2026-10-30, Udi's revision in Coordination Appendix E (Coordination #11, to_all 10:18 UTC): one clause, Provenance, attested (Udi, 13:10 local, to GAI #10: Alice can remove the signatures with other software, so it cannot be enforced); the pragmas to it and to GSN's clause names, Messaging and Group messaging (GAI #10).  Earlier versions are in git.
 % Schemas: GSNP.glp beside this file, twenty-nine over twenty predicates: GAI.glp's seventeen, with unfriend clearing every membership between the two, message, forward, and GSN's groups carrying items; the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GSNP: Grassroots Social Network with Provenance
 Alice and Bob are agents.
@@ -13,5 +13,5 @@ Items: the items Alice holds.
 Messaging: Alice [Message] <item>
 Group messaging: Bob [Post] <item>
   Alice [Post own] <item>
-Provenance: Alice [Forward]
-  Bob [Post forward]
+Provenance: Alice [Forward] <person>
+  Bob [Post forward] <item>

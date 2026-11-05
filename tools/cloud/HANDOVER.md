@@ -1,68 +1,30 @@
-# Cloud #1 handover, 2026-11-04
+# Cloud #2 handover, 2026-11-05
 
-On `main` since 2026-11-04 (Code #23), so that a fresh cloud clone carries it; the branch `Cloud-tools` (0286ce8d) holds nothing else current.  A Cloud session starts from `CLAUDE.md`, section "Cloud".
-
-Branch `Cloud-tools` of GLP, not for merging: this file, the comparison of the FCP machine with the engine, the
-reading survey of glp_runtime, and the scripts the optimisation gates and benchmarks ran on.  The scripts name the
-first session's scratchpad (`S=/tmp/claude-0/.../scratchpad`) and `/home/user/glp`; set `S` and the paths to the
-new session's before running them.
+This file is on `main`, `tools/cloud/`, with Cloud #1's scripts and reports beside it (its handover of 2026-11-04 is in git at 95960851).  Cloud #1's scripts name its scratchpad and `/home/user/glp`; `gate3.sh`, this session's gate, takes the two trees as arguments and runs each side in its own tree.
 
 ## Standing arrangement
 
-- Cloud is Code's proxy for cloud missions (Udi, 2026-10-31).  Tasked by Code alone, in `Cloud_inbox.md`; reports
-  in `Code_inbox.md`, `To: Code`; signs `Cloud #<n>`; writes to no owner.  Optimisation steps are discussed with Udi
-  in the chat, reported to Code; Udi's word on a merge is worded as his recommendation, not his approval.
-- Mail: clone `EShapiro2/Grassroots-Project-Overview`; `git pull -q --no-rebase --no-edit origin main` first;
-  `bash bin/mail-read Cloud "Cloud #<n>"`; `bash bin/mail-send Code "Cloud #<n>" "Code" "<msg>"`, then
-  `bash bin/mail-backup "$PWD/mail/Code_inbox.md" "<summary>"` (its exec from mail-send fails in a clone).
-- Udi's rule for the engine (2026-11-02): follow the FCP abstract machine and compiler (EShapiro2/FCP, the EFCP
-  emulator in `EFCP/Efcp-release/Logix/EMULATOR`, Kliger's compiler in `CheckedOut/Logix/system/ndg`); every
-  deviation is discussed with him first.
-- Environment: the container's Flutter was upgraded to Dart 3.13.7 (`flutter upgrade --force`), which
-  glp_multiagent's dependency tree needs; export the SDK's `bin` and `cache/dart-sdk/bin` in background shells.
-  The GLP clone may be at `/home/user/glp`; worktrees per task beside it.
+- Cloud is Code's proxy for cloud missions (Udi, 2026-10-31).  Tasked by Code alone, in `Cloud_inbox.md`; reports in `Code_inbox.md`, `To: Code`; signs `Cloud #<n>`; writes to no owner.  GLP's `CLAUDE.md`, section Cloud, is the startup: the three repositories, the reading, the mail, the handover.  CGLP, IGLP's paper, Udi enabled for Cloud #2 on 2026-11-05; ask for it with the other three.
+- Mail: clone `EShapiro2/Grassroots-Project-Overview` (read access sufficed: the proxy pushed the backup); `git pull -q --no-rebase --no-edit origin main` first; `bash bin/mail-read Cloud "Cloud #<n>"`; `bash bin/mail-send Code "Cloud #<n>" "Code" -` with the message on stdin, then `bash bin/mail-backup "$PWD/mail/Code_inbox.md" "<summary>"`.
+- Two Cloud sessions read the inbox since 2026-11-04 19:28 UTC: Cloud #3's mission is the sGLP simulator alone, and the other Cloud touches nothing under `programs/sglp`.
+- Environment: the Flutter SDK 3.47.9 (Dart 3.13.7), unpacked under `/home/user/sdk/flutter` from storage.googleapis.com (`git config --global --add safe.directory /home/user/sdk/flutter` first, the tarball being another user's); export `/home/user/sdk/flutter/bin/cache/dart-sdk/bin`.  The REPL's root is the tree it is built in: run a worktree's `glp_runtime/bin/glpc` on that worktree's programs.  Pushing GLP needs `add_repo` with push access.  A `cd` in one of several parallel shell calls moves the shell of the others: absolute paths everywhere.  The fast tier stops at Section SL on Linux (`stat -f%z`, macOS's, run_all_tests.sh:6244), 1143 passed and 57 failed before it, the 57 main's TY reds; told Code.
 
-## Done, all on GLP main
+## Done
 
-| What | Commit | Merged |
+| What | Where | Merged |
 |---|---|---|
-| Cleanup of glp_runtime (six commits) | a637a19c | yes |
-| Code image built once per load set | 3f76cdf5 | yes |
-| GoalRecord, one record per goal | cf6e71b7 | yes |
-| Program DFA once per environment, layered | 15e1117 | cf0678cd |
-| Stage A: registers as arrays, one runner context | 485ef1e | cf0678cd |
-| Rung 3: N agents over UDP loopback, both forms, ten probes | 064578f | 8e4e185a |
-| GSC rung 2: gsg, gsn boots, play_held, gkk_boot | c1d3f55 | 56d6911f |
-| GAI rung 2: gai, gsnp boots | b3a12f5 | 56d6911f |
+| Task 4, GC's village market on six smartphones: gc_village_boot.glp, gc_phone's market roles, Section APPS's checks of what the script and the end state fix | Currencies-rung2 774479f7 | GLP main 976944b2 (Code #23, 2026-11-05 07:16 UTC) |
+| Task 4, GB's boots, play_bonds on three and the village on seven, core/gb_phone.glp: both settle at the first day | Currencies-rung2 895dfbe3 | with the above |
+| Task 4, the seven plays of programs/currencies on smartphones: coins play_swap, play_same and play_ui's two, dated play_swap and play_same, denominated play_swap and play_ui's sovereign market; three phones in core, seven boots in programs/currencies, the roles in each program's miniapp_person/5, every role waiting for its conversations; Sections N2, N3 and N4 hold them, 270 of 270; play_mint has no boot, the super-app activating a mini-app at an invitation only (GSG's question, told Code) | Currencies-rung2 93f8ad77, pushed | for Code (Code_inbox 2026-11-05 08:2x UTC) |
+| The ten points of GLP's rulings (Code_inbox 2026-11-03 16:40 UTC), point 4 vGLP's: nine commits, 3ee73bb9 (5) 1732d32b (10) 0d51d5d0 (3) 3ab23863 (2) 23be14a2 (8) 53464201 (9) f18b751b and c65349e6 (6 and 7) b9137624 (1); dart test 2571 passed and three new tests; the gate against main 976944b2 clean but for the error texts the rulings change | IGLP-cloud1 c65349e6, pushed | for Code (Code_inbox 2026-11-05) |
 
-Gains measured fairly at the end (main b4919312 against IGLP-cloud1 9acee0fd, the two trees alternating case by
-case): the loads and plays 30 to 50% faster, the cascades 15 to 35%, the sGLP social graph 17 to 31%.  One anomaly
-not explained: fib_23 did not move while fib_linear and fib_20_x10 gained 26 to 32%.
+## Blocked, with Code (its 2026-11-05 07:16 UTC: the questions are with the owners, the answers come through Code)
 
-## Waiting on someone else
+- GB's two plays across isolates (Code_inbox 2026-11-05 06:59 UTC): 1. a defect, alice's acquaintance with frank in gb_village_boot never starting after frank answers her hello on a conversation not yet open, where ten other such answers complete; reversing who connects lets the village run on (a diagnosis; the branch keeps the rule); with GSG and GLP.  2. the days: the plays write a person's day off another person's screen; a phone sees its own screen at Opaque, a person cannot advance past today, the harness waits on no clock; Cloud recommended the harness give the day under :boot, stepped when every agent is quiescent; with GLP, GSG and Currencies.
+- Task 5, CSSN's village (07:01 UTC): the parents' 25 waits on their children's phones have no source on a phone; Cloud recommended the scripts wait on the parent's own screen; with CSSN.
+- secure/play_issuer.glp stays one agent (Currencies, 2026-11-04 16:10 UTC): no boot.
+- Cloud #1's: Stage B of the engine (the trail) waits on Udi; Stage C (the decision-graph compiler) on IGLP's Code Format; see `fcp-vs-glp-engine-2026-11-02.md`.
 
-- **Stage B**, the trail in place of the tentative substitution map (FCP's `asgn`/`asgn_trl_undo`): waits on
-  Udi's word, since it changes IGLP's "Clause try" sentence "The tentative substitution reaches the heap only at
-  commit".  **Stage C**, the decision-graph compiler (FCP's ndg), needs switch instructions in IGLP's Code Format
-  and a compiler phase written to GLP's matching table.  See `fcp-vs-glp-engine-2026-11-02.md`.
-- **Task 4, Currencies rung 2** (Code #22, 2026-11-03 16:26 UTC; may start on GLP main b4fb7f13, Code 20:27 UTC):
-  boots for gc/plays.glp, gb/plays.glp, coins/currency/plays.glp, bonds/dated/plays.glp,
-  sovereign/denominated/plays.glp, coins/play_ui.glp, sovereign/play_ui.glp, secure/play_issuer.glp.  Main now
-  has the deployed path: graph/core's agent/2 answers every boot by its first act, the phones in
-  `graph/core/<app>_phone.glp`, the phone's first act `superapp_ui(Me, [])`; coins' and sovereign's agent/2.
-  Two questions to Currencies, unanswered: where the dated bonds' agent/2 goes, and how the secure issuer receives
-  bob's request across isolates (secure has no network entry).  The worktree `glp-cur-rung2` was made at b4919312;
-  remake it on b4fb7f13.
-- **Task 5, CSSN rung 2** (Code #22, 2026-11-03 16:46 UTC, after task 4): a boot of the village play,
-  programs/cssn/plays.glp, under the new Boot; cascade record, village figure and simulation stay stopped.
-- **The ten points** (GLP #11, 2026-11-03 16:40 UTC, via Code 16:45 UTC; Blocking: no, lowest): the rulings on
-  the reading survey's points needing a ruling (`glp_runtime-reading-2026-10-31.md`): one partial evaluator;
-  `_substParam` flips the mode; 1 and 1.0 distinct in `sameTypeExpr` and `shadowedBy`; point 4 to vGLP; delete
-  `message_vocabulary.dart`; one reader refusing `-module(`; one goal reader; one reactivation path through
-  `enqueueReactivatedGoal`; remove `MessageType.agentMessage`, write the cell once, raise the store's version;
-  give every phase a category.  Each is a gate of its own (gate2.sh).
-- **linkprobe14** over the real layer: with GLP; main has it now (Code 19:11 UTC).
+## Next, in Code's order
 
-## Order Code gave
-
-GNA first (not Cloud's), then task 4, then task 5; the ten points lowest.
+The answers on GB and CSSN, each a boot to write as the GC village was written (`programs/apps/gc_village_boot.glp`, `core/gc_phone.glp`'s market roles and `core/gb_phone.glp` the forms); then whatever Code queues.  Point 2 of the ten has no test of its own, `_substParam` being private.

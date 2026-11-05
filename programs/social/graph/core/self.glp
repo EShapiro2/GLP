@@ -347,18 +347,27 @@ CoreAct ::= superapp_ui(Key, List(Key))
           ; gkk_phone(Constant, Key, List(Key))
           ; gsnp_phone(Constant, Key, List(Key))
           ; gai_phone(Constant, Key, List(Key))
-          ; gc_phone(Constant, Key, List(Key)).
+          ; gc_phone(Constant, Key, List(Key))
+          ; gb_phone(Constant, Key, List(Key))
+          ; coins_phone(Constant, Key, List(Key))
+          ; dated_phone(Constant, Key, List(Key))
+          ; sovereign_phone(Constant, Key, List(Key)).
 CoreIn  ::= [] ; [CoreAct | Grants].
 Grants  ::= [] ; [Input(HomeDrawn) | Grants].
 
-%% The smartphones of the apps' boots (programs/apps/<app>_boot.glp), each a
-%% module of this directory, <app>_phone.glp.
+%% The smartphones of the apps' boots (programs/apps/<app>_boot.glp) and of
+%% the currencies' plays' boots (programs/currencies/<program>_<play>_boot.glp),
+%% each a module of this directory, <app>_phone.glp or <program>_phone.glp.
 imported procedure gsg_phone#gsg_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure gsn_phone#gsn_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure gkk_phone#gkk_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure gsnp_phone#gsnp_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure gai_phone#gai_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure gc_phone#gc_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure gb_phone#gb_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure coins_phone#coins_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure dated_phone#dated_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure sovereign_phone#sovereign_phone(Constant?, Key?, List(Key)?, NetInStream?).
 
 exported procedure agent(Channel(CoreIn, Stream(Constant))?, Channel(NetInStream, NetOutStream)?).
 agent(ch(In, []), ch(N, [])) :- self_key(_), core_start(In?, N?).
@@ -374,6 +383,10 @@ core_start([gkk_phone(R, P, Qs) | _], N) :- gkk_phone # gkk_phone(R?, P?, Qs?, N
 core_start([gsnp_phone(R, P, Qs) | _], N) :- gsnp_phone # gsnp_phone(R?, P?, Qs?, N?).
 core_start([gai_phone(R, P, Qs) | _], N) :- gai_phone # gai_phone(R?, P?, Qs?, N?).
 core_start([gc_phone(R, P, Qs) | _], N) :- gc_phone # gc_phone(R?, P?, Qs?, N?).
+core_start([gb_phone(R, P, Qs) | _], N) :- gb_phone # gb_phone(R?, P?, Qs?, N?).
+core_start([coins_phone(R, P, Qs) | _], N) :- coins_phone # coins_phone(R?, P?, Qs?, N?).
+core_start([dated_phone(R, P, Qs) | _], N) :- dated_phone # dated_phone(R?, P?, Qs?, N?).
+core_start([sovereign_phone(R, P, Qs) | _], N) :- sovereign_phone # sovereign_phone(R?, P?, Qs?, N?).
 core_start([], _).
 
 %% The person's grants after the first act, onto the super-app's person

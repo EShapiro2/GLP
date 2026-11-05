@@ -16,7 +16,7 @@ import 'package:test/test.dart';
 /// The CompileError the parser raises on [source]; fails the test if it parses.
 CompileError _refusal(String source) {
   try {
-    Parser(Lexer(source).tokenize()).parse();
+    Parser(Lexer(source).tokenize()).parseModule();
   } on CompileError catch (e) {
     return e;
   }
@@ -70,7 +70,7 @@ use(X, R?) :- ~d(X?) | R = no.
       'p(X, Y?) :- otherwise | Y = no.',
     ]) {
       test(source, () {
-        final module = Parser(Lexer(source).tokenize()).parse();
+        final module = Parser(Lexer(source).tokenize()).parseModule();
         expect(module.procedures.single.clauses.single.guards, isNotEmpty);
       });
     }

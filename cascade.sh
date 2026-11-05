@@ -42,6 +42,7 @@
 #   gdc         GDC   Currencies  programs/currencies/gdc   ---
 #   bcc         BCC   Currencies  programs/currencies/bcc   ---
 #   gra         GRA   LBM         programs/lbm              ---
+#   gd          GD    GGGA        programs/ggga             ---
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -134,7 +135,8 @@ case "$NAME" in
     gdc)  FILE=GDC;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     bcc)  FILE=BCC;  OWNER="programs/currencies/bcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     gra)  FILE=GRA;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/LBM";  PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra" >&2; exit 2 ;;
+    gd)   FILE=GD;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/GGGA"; PLAYDIR="" ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
@@ -200,9 +202,10 @@ if [ $? -ne 0 ] || [ ! -s "$OUT/schemas.txt" ]; then
     grep -E '(Error|error|✗)' "$WORK/n.out" | head -10
     exit 1
 fi
-# A head ends "... :", after its constraint where it has one (GSC, Section
-# 3.2; programs/gsc/notation.glp).
-say "schemas.txt: $(grep -cE '^[a-z_0-9]*\(.*\)( \| .*)? :$' "$OUT/schemas.txt") schemas"
+# A schema is the clause tau: H <- B, gamma guarded by G, its first line
+# "tau: H <-", H empty in a schema that adds and deletes nothing, and its body
+# on the next line, indented (GSC, Section 3.2; programs/gsc/notation.glp).
+say "schemas.txt: $(grep -cE '^[a-z_0-9]*: .* <-$' "$OUT/schemas.txt") schemas"
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
 printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"

@@ -68,6 +68,10 @@ play_same(ScreenA?, ScreenB?) :-
 %% Any other role, or a person who knows other than the one key, has no
 %% script: the person reports the screen and acts on nothing.
 exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
-miniapp_person(Me, alice, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, [mint(2), swap(Bob?, Me?, 2, Bob?, 2)], S).
-miniapp_person(Me, bob, [Alice], ch(Ds, Gs?), S?) :- person # person(Me?, Ds?, Gs, [mint(2), accept(Alice?)], S).
+miniapp_person(Me, alice, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, [await(opened(Bob?)), mint(2), swap(Bob?, Me?, 2, Bob?, 2)], S).
+miniapp_person(Me, bob, [Alice], ch(Ds, Gs?), S?) :- person # person(Me?, Ds?, Gs, [await(opened(Alice?)), mint(2), accept(Alice?)], S).
+%% The roles of the other plays, for their boots on smartphones (programs/currencies/coins_*_boot.glp; Currencies #15, Code_inbox 2026-11-05 07:26 UTC): same, alice's script of play_same, bob's being bob's above; ui_alice and ui_bob, the two of ../play_ui.glp, the live person's acts scripted as the harness describes them, her swap proposed and bob's reverse swap accepted.
+miniapp_person(Me, same, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, [await(opened(Bob?)), mint(2), swap(Bob?, Me?, 2, Bob?, 2), redeem(Bob?, Bob?), swap(Bob?, Bob?, 2, Bob?, 2)], S).
+miniapp_person(Me, ui_alice, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, [await(opened(Bob?)), mint(2), swap(Bob?, Me?, 2, Bob?, 2), accept(Bob?)], S).
+miniapp_person(Me, ui_bob, [Alice], ch(Ds, Gs?), S?) :- ground(Me?), ground(Alice?) | person # person(Me?, Ds?, Gs, [await(opened(Alice?)), mint(2), accept(Alice?), swap(Alice?, Alice?, 2, Me?, 2)], S).
 miniapp_person(Me, _, _, ch(Ds, Gs?), S?) :- otherwise | person # person(Me?, Ds?, Gs, [], S).
