@@ -22,18 +22,17 @@ Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
 Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= identity ; knows(Peer).
-Output   ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking   ::= Attempt ; hello(Peer, Proposal).
 Approved ::= Proposal.
 Approval ::= approval(Asking, List(Word), YesNo?).
 Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
-Menu     ::= menu(Key, List(Key), Request?).
-Question ::= menu_w(Menu) ; approval_w(Approval).
-Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Question ::= request_r(Request?) ; approval_w(Approval).
+Drawn    ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
 
-%% What the mini-app's scripted person reports, its screen (person.glp): each view the program writes, once, the machine state and the persons the agent knows (vGLP b7e3517, Section 5.4, "The compilation"), and each notice, refused(P, Q, D) (vGLP f0acbc1, Section 5.4, "The compilation"); the agent's own key and the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
+%% What the mini-app's scripted person reports, its screen (person.glp): each view the program writes, once, view(Id, S, K, A, Ts), the agent's own key, the machine state, the persons the agent knows, the approvals pending and the tabs (vGLP 12f629d, Section 5.4, "The compilation"), and each notice, refused(P, Q, D) (vGLP f0acbc1, Section 5.4, "The compilation"); the agent's own key and the persons it knows, as the last view drawn shows them, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
 Asked    ::= Class ; Attempt.
 Seen     ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo).
 
