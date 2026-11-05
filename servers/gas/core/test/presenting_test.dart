@@ -222,6 +222,51 @@ void main() {
     expect(isUndertaking(kept[bob.me] as String, bob.keyPair.pub, p.an.package, p.an.hSrc), isTrue);
   }, timeout: const Timeout(Duration(minutes: 5)));
 
+  test('the harness runs the contract only as the certified compiled program its warranties name', () async {
+    if (!Directory('${tree.path}/packages').existsSync()) return markTestSkipped('no bundle tree');
+    final base = Directory.systemTemp.createTempSync('gas_loaded_');
+    addTearDown(() => base.deleteSync(recursive: true));
+    copyTree(tree.absolute, base);
+    final store = ContractStore(base.path);
+    await store.installStarters();
+    final gkk = store.installed().firstWhere((c) => c.id == 'GKK');
+    final dir = store.program(gkk);
+    final trust = File('$dir/trust.json'), art = File('$dir/contract.glpw');
+    final goodTrust = trust.readAsStringSync(), goodArt = art.readAsBytesSync();
+    Future<PersonHost> host(int fill) async {
+      final id = PersonIdentity.fromSeed(Uint8List.fromList(List.filled(32, fill)));
+      final h = PersonHost(
+          program: dir,
+          rootSelfGlp: '${base.path}/programs/self.glp',
+          keyPair: (pub: id.pub, priv: id.priv),
+          network: MemoryNet(Wire(), id));
+      await h.start();
+      await until(() => h.refused != null || h.draws.isNotEmpty ? true : null, 'the harness said nothing', seconds: 60);
+      return h;
+    }
+
+    // As installed: it runs, and draws its menu.
+    expect((await host(0x51)).refused, isNull);
+
+    // Another compiler than the one trusted.
+    final t = jsonDecode(goodTrust) as Map;
+    trust.writeAsStringSync(jsonEncode({...t, 'compiler': 'f' * 64}));
+    final h1 = await host(0x52);
+    expect(h1.refused, contains('not trusted'));
+    expect(h1.draws, isEmpty);
+
+    // The creator's warranty for other code: an undertaking in its place.
+    trust.writeAsStringSync(jsonEncode({...t, 'creator': undertakingOf(PersonIdentity.fromSeed(Uint8List.fromList(List.filled(32, 9))), gkk.hash, store.warrantyOf(gkk)!['hsrc'] as String)}));
+    expect((await host(0x53)).refused, contains('warranty'));
+
+    // The compiled program changed: no longer a certified program, but text.
+    trust.writeAsStringSync(goodTrust);
+    final bad = Uint8List.fromList(goodArt);
+    bad[bad.length ~/ 2] ^= 1;
+    art.writeAsBytesSync(bad);
+    expect((await host(0x54)).refused, contains('not a certified compiled program'));
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
   test('an undertaking for another package is refused, and so is the interaction', () async {
     if (!Directory('${tree.path}/packages').existsSync()) return markTestSkipped('no bundle tree');
     final p = await pair(bobPackage: 'f' * 64);

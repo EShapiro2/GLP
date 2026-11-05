@@ -41,6 +41,11 @@ import 'package:glp_runtime/multiagent/identity.dart';
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
 
+/// The contract unit compiled, beside the harness that loads it, and what the
+/// harness checks it against: the key of the compiler it trusts and the
+/// creator's warranty.
+const artefactFile = 'contract.glpw', trustFile = 'trust.json';
+
 /// The files of a package's contract unit, as the package names them.
 const contractFiles = ['contract/self.glp', 'contract/platform.vglp'];
 
@@ -59,10 +64,11 @@ String sha256Hex(String s) => crypto.sha256.convert(utf8.encode(s)).toString();
 String certifiedDir(String programs, String id) => '$programs/vglp/cva/gas_worlds/certified/$id';
 
 /// Compile the contract unit [files] (contract/self.glp, contract/platform.vglp)
-/// of contract [id] in the tree [programs], and give its certificate:
-/// [compiler]'s, or a fresh key's where none is given; refused where the
-/// unit reaches the network or the person.  Throws where it does not compile.
-Certificate compileContract(String programs, String id, Map<String, Object?> files,
+/// of contract [id] in the tree [programs], and give its compiled artefact,
+/// whose certificate is [compiler]'s, or a fresh key's where none is given,
+/// and refused where the unit reaches the network or the person.  Throws
+/// where it does not compile.
+Artefact compileContract(String programs, String id, Map<String, Object?> files,
     {PersonIdentity? compiler}) {
   if (!RegExp(r'^[A-Za-z][A-Za-z0-9]{0,30}$').hasMatch(id)) {
     throw const FormatException('a contract id of letters and digits');
@@ -80,7 +86,7 @@ Certificate compileContract(String programs, String id, Map<String, Object?> fil
     engine.loadProgram(dir.path);
     final art = engine.appModule?.artefact;
     if (art is! Artefact) throw const FormatException('the contract unit compiled to no module');
-    return art.certificate;
+    return art;
   } finally {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   }
@@ -165,13 +171,23 @@ Map<String, Object?> warrant({
   required String verdict,
   required PersonIdentity compiler,
   required PersonIdentity creator,
+  String? out,
 }) {
   if (!verdict.startsWith(grassroots)) {
     throw FormatException('the checker did not find $id grassroots: $verdict');
   }
-  final cert = compileContract(programs, id, files, compiler: compiler);
+  final art = compileContract(programs, id, files, compiler: compiler);
+  final cert = art.certificate;
   if (cert.isRefused) {
     throw FormatException('$id\'s code reaches the network or the person');
+  }
+  final creatorCert = signTerm(creator, cert.hSrc,
+      strings('creator_cert', [hexOf(cert.hSrc), sha256Hex(schemas), verdict, sha256Hex(_host(files))]));
+  if (out != null) {
+    // The unit compiled, and what its harness checks it against, for a
+    // harness that runs here (the server's worlds, an app just made).
+    File('$out/$artefactFile').writeAsBytesSync(art.toBytes());
+    File('$out/$trustFile').writeAsStringSync(jsonEncode({'compiler': hexOf(cert.agent), 'creator': creatorCert}));
   }
   return {
     'contract': {'text': text, 'schemas': schemas, 'verdict': verdict},
@@ -181,8 +197,7 @@ Map<String, Object?> warrant({
       'hbin': hexOf(cert.hBin),
       'sig': hexOf(cert.signature),
     },
-    'creator': signTerm(creator, cert.hSrc,
-        strings('creator_cert', [hexOf(cert.hSrc), sha256Hex(schemas), verdict, sha256Hex(_host(files))])),
+    'creator': creatorCert,
   };
 }
 
@@ -193,10 +208,15 @@ String _host(Map<String, Object?> files) {
 }
 
 /// What a device found of a package's warranties: who compiled and who
-/// created its contract unit, and the unit's source identity.
+/// created its contract unit, and the unit's source identity; and the unit as
+/// this device compiled it, [artefact], certified under [localCompiler], with
+/// the creator's signed warranty [creatorCert], which the harness checks
+/// against it before running it.
 class Warranted {
-  final String compiler, creator, hSrc, verdict;
-  const Warranted(this.compiler, this.creator, this.hSrc, this.verdict);
+  final String compiler, creator, hSrc, verdict, localCompiler, creatorCert;
+  final List<int> artefact;
+  const Warranted(this.compiler, this.creator, this.hSrc, this.verdict,
+      {this.localCompiler = '', this.creatorCert = '', this.artefact = const []});
   Map<String, String> toJson() => {'compiler': compiler, 'creator': creator, 'hsrc': hSrc, 'verdict': verdict};
 }
 
@@ -206,7 +226,10 @@ class Warranted {
 /// names; that warranty's signature must verify, and the creator's must
 /// verify over the same unit, the package's schemas, a grassroots verdict,
 /// and the package's harness.  Throws a FormatException saying what fails.
-Warranted checkWarranty(String programs, String id, Map<String, Object?> files, Object? w) {
+/// The unit is compiled under [compiler], this device's compiler key, or a
+/// fresh one.
+Warranted checkWarranty(String programs, String id, Map<String, Object?> files, Object? w,
+    {PersonIdentity? compiler}) {
   if (w is! Map) throw const FormatException('the contract carries no warranties');
   final contract = w['contract'], comp = w['compiler'], creator = w['creator'];
   if (contract is! Map || comp is! Map || creator is! String) {
@@ -220,8 +243,10 @@ Warranted checkWarranty(String programs, String id, Map<String, Object?> files, 
     throw const FormatException('the contract is not warranted grassroots');
   }
   final Certificate local;
+  final Artefact art;
   try {
-    local = compileContract(programs, id, files);
+    art = compileContract(programs, id, files, compiler: compiler);
+    local = art.certificate;
   } on FormatException {
     rethrow;
   } on Object catch (e) {
@@ -257,5 +282,6 @@ Warranted checkWarranty(String programs, String id, Map<String, Object?> files, 
       args[3] != sha256Hex(_host(files))) {
     throw const FormatException('the creator\'s warranty is for another contract or other code');
   }
-  return Warranted(hexOf(theirs.agent), signed.key.hex, hexOf(local.hSrc), verdict);
+  return Warranted(hexOf(theirs.agent), signed.key.hex, hexOf(local.hSrc), verdict,
+      localCompiler: hexOf(local.agent), creatorCert: creator, artefact: art.toBytes());
 }

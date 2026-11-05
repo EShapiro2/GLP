@@ -50,7 +50,7 @@ void main() {
     // package's warranties finds it.
     final hSrc = hexOf(compileContract(programs, 'GKK', {
       for (final f in contractFiles) f: File('$world/$f').readAsStringSync(),
-    }).hSrc);
+    }).certificate.hSrc);
     const package = 'gkk-test-package';
     addTearDown(() => queues.deleteSync(recursive: true));
 

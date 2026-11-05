@@ -145,6 +145,24 @@ for n in compiled:
     with open(os.path.join(WWW, 'specs', f'{c}.json'), 'w', encoding='utf-8') as f:
         json.dump(s, f)
 
+# Each world's contract unit compiled, certified and warranted for its harness
+# (warrant.py): the server's persons run it as the phone's do.  With
+# GAS_BUILD_NO_WARRANT set, the worlds are left without (a site with no live
+# apps, as where no Dart is at hand).
+if not os.environ.get('GAS_BUILD_NO_WARRANT'):
+    from warrant import FILES, warranties  # noqa: E402
+    reqs = []
+    for n in compiled:
+        w = os.path.join(WORLDS, f'live_{n.lower()}')
+        reqs.append({'id': n, 'out': w,
+                     'files': {f: read(os.path.join(w, *f.split('/'))) for f in FILES},
+                     'text': read(os.path.join(GLP, 'cascade', n, f'{n}.txt')),
+                     'schemas': read(os.path.join(GLP, 'cascade', n, 'schemas.txt')),
+                     'verdict': read(os.path.join(GLP, 'cascade', n, 'verdict.txt')).strip()})
+    for n, w in zip(compiled, warranties(reqs)):
+        if isinstance(w, Exception):
+            print(f'{n}: no warranty: {w}', file=sys.stderr)
+
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
 byid = dict(cat)
 

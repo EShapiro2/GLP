@@ -23,6 +23,7 @@ import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 import 'terms_json.dart';
+import 'warranty.dart' show trustFile;
 
 class PersonHost {
   /// The harness's directory, programs/vglp/cva/gas_worlds/live_CONTRACT.
@@ -63,6 +64,9 @@ class PersonHost {
   int version = 0;
   int? day;
   String status = 'starting';
+
+  /// Why the harness refused to run the contract's code, where it did.
+  String? refused;
   bool calendar = false;
 
   /// Called on every change of the state.
@@ -101,6 +105,10 @@ class PersonHost {
         } else if (draw is Map && draw['f'] == 'withdraw') {
           draws.remove((draw['a'] as List)[0] as int);
         }
+      } else if (j is Map && j['f'] == 'refused') {
+        // The harness refused to run the contract unit (its certificate, its
+        // compiler, or the creator's warranty), and says why.
+        refused = '${(j['a'] as List)[0]}';
       } else if (j is Map && j['f'] == 'net') {
         net.add((j['a'] as List)[0]);
         if (net.length > 300) net.removeAt(0);
@@ -111,8 +119,13 @@ class PersonHost {
       await agent.initialize();
       resumed = store?.loaded ?? false;
       if (!resumed) {
-        // The host's first act says which agent this is: this person alone.
+        // The host's first act says which agent this is: this person alone;
+        // its second names the compiler the harness trusts and gives the
+        // creator's warranty, against which the harness checks the contract
+        // unit it loads (warranty.dart's trustFile, written at install).
         await agent.injectUserInput(rt.StructTerm('me', [rt.ConstTerm(me)]));
+        final t = jsonDecode(File('$program/$trustFile').readAsStringSync()) as Map;
+        await agent.injectUserInput(rt.StructTerm('warranty', [rt.ConstTerm(t['compiler'] as String), rt.ConstTerm(t['creator'] as String)]));
         if (calendar) await nextDay();
       }
       status = 'ready';
@@ -151,6 +164,7 @@ class PersonHost {
         'status': status,
         if (day != null) 'day': day,
         'me': me,
+        if (refused != null) 'refused': refused,
         'persons': {me: draws.map((k, v) => MapEntry('$k', v))},
         'net': net.length > 60 ? net.sublist(net.length - 60) : net,
       };

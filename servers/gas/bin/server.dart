@@ -145,8 +145,13 @@ void personWorker(List<Object?> args) async {
   run(() async {
     try {
       await agent.initialize();
-      // The host's first act says which agent this is: this person alone.
+      // The host's first act says which agent this is: this person alone; its
+      // second names the compiler the harness trusts and gives the creator's
+      // warranty, against which the harness checks the compiled contract unit
+      // it loads (trust.json, written beside it by tools/build.py or make.py).
       await agent.injectUserInput(rt.StructTerm('me', [rt.ConstTerm(person)]));
+      final t = jsonDecode(File('$worldsDir/live_$contract/trust.json').readAsStringSync()) as Map;
+      await agent.injectUserInput(rt.StructTerm('warranty', [rt.ConstTerm(t['compiler'] as String), rt.ConstTerm(t['creator'] as String)]));
       out.send({'k': 'started', 'who': person});
     } catch (e) {
       out.send({'k': 'status', 's': 'failed: $person: $e'});
@@ -418,6 +423,12 @@ Future<Map> make(String text) {
         Directory(madeDir).createSync(recursive: true);
         final kept = pkg.copySync('$madeDir/pkg-${out['hash']}.json');
         out['name'] = installMade(kept);
+        // The unit as the app maker compiled it, and what its harness checks
+        // it against, beside the made world's harness.
+        for (final f in ['contract.glpw', 'trust.json']) {
+          final src = File('${work.path}/out/$f');
+          if (src.existsSync()) src.copySync('$worldsDir/live_${out['name']}/$f');
+        }
       }
       done.complete(out);
     } catch (e) {

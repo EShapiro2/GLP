@@ -116,22 +116,57 @@ tag_net([X|Xs], [net(X?)|Ts?]) :- tag_net(Xs?, Ts).
 tag_net([], []).
 """
 # One person alone, any person, named as the host names it (alice in the
-# server's worlds, the person's key on a phone): live_person(Person, HostIn, NetIn) runs the person's
-# platform agent and dispatcher, its network input the agent's own; the
-# platform's messages go out by send_to_net, a cold call each to the person
-# it names, and arrive on that person's network input.  The host feeds the
-# person g(Grant) and, with a calendar, cal(N).
+# server's worlds, the person's key on a phone): live_person(Person, HostIn, NetIn)
+# runs the person's platform agent and dispatcher, its network input the
+# agent's own; the platform's messages go out by send_to_net, a cold call each
+# to the person it names, and arrive on that person's network input.  The
+# host's second act, warranty(CompilerKey, CreatorCert), names the compiler it
+# trusts and gives the creator's warranty: the contract unit is loaded as the
+# compiled program contract.glpw beside this file, which load_file/2 gives as
+# a module only where its certificate checks, and is run only where its
+# compiler is the one trusted and the creator's warranty is signed over the
+# same source; the person is told otherwise, and nothing runs.  The host
+# feeds the person g(Grant) and, with a calendar, cal(N).
 body += """
+Loaded ::= ok(Module) ; refused(String).
+
 procedure live_person(Peer?, HostIn?, Stream(Net)?).
-live_person(P, Ins, NetIn) :- ground(P?) |
+live_person(P, [warranty(CK, W) | Ins], NetIn) :- ground(P?), ground(CK?), ground(W?) |
+    load_file("contract.glpw", C),
+    certified(C?, CK?, W?, V),
+    run_person(V?, P?, Ins?, NetIn?).
+
+%% The unit, where it is a certified compiled program, its compiler the one
+%% trusted, and the creator's warranty signed over its source.
+%% What load_file/2 gives, a module or text: the root's Content, which a
+%% platform's own type of the name hides here.
+procedure certified(_?, String?, String?, Loaded).
+certified(M, CK, W, V?) :- module(M?) |
+    decompose_module(M?, K, Src, _),
+    compiled_by(K?, CK?, Src?, W?, M?, V).
+certified(_, _, _, refused("the contract's code is not a certified compiled program")) :- otherwise | true.
+
+procedure compiled_by(String?, String?, String?, String?, Module?, Loaded).
+compiled_by(K, CK, Src, W, M, V?) :- K? =?= CK? |
+    signature(W?, S),
+    warranted(S?, Src?, M?, V).
+compiled_by(_, _, _, _, _, refused("the contract's code was compiled by a compiler not trusted")) :- otherwise | true.
+
+procedure warranted(Signature?, String?, Module?, Loaded).
+warranted(signed(_, _, creator_cert(Src1, _, _, _)), Src, M, ok(M?)) :- Src1? =?= Src? | true.
+warranted(_, _, _, refused("the creator's warranty is not for this code")) :- otherwise | true.
+
+procedure run_person(Loaded?, Peer?, HostIn?, Stream(Net)?).
+run_person(ok(M), P, Ins, NetIn) :-
     """ + ('split_person(Ins?, G, K)' if cal else 'split_person(Ins?, G)') + """,
-    contract # person(P?, NetIn?, Out, G?, """ + ('K?, ' if cal else '') + """D),
+    run(person(P?, NetIn?, Out, G?, """ + ('K?, ' if cal else '') + """D), M?),
     tee_net(Out?, Net, L),
     send_to_net(Net?),
     tag(P?, D?, S),
     tag_net(L?, SN),
     merge(S?, SN?, S1),
     send_to_user(S1?).
+run_person(refused(Why), _, _, _) :- send_to_user([refused(Why?)]).
 """
 if cal:
     body += """

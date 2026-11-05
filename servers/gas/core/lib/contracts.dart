@@ -147,7 +147,8 @@ class ContractStore {
         contractFiles.any((f) => files[f] is! String)) {
       throw const FormatException('an incomplete contract');
     }
-    final warranted = checkWarranty('$base/programs', id, files.cast<String, Object?>(), j['warranty']);
+    final warranted = checkWarranty('$base/programs', id, files.cast<String, Object?>(), j['warranty'],
+        compiler: keyAt('$base/compiler.key'));
     final c = Contract(
       id: id,
       title: j['title'] as String,
@@ -164,6 +165,12 @@ class ContractStore {
     }
     await File('${dir.path}/warranty.json')
         .writeAsString(jsonEncode({'found': warranted.toJson(), 'warranty': j['warranty']}));
+    // The contract unit as compiled here, which the harness loads, and what
+    // it checks it against: this device's compiler key and the creator's
+    // warranty (person_host.dart hands it both).
+    await File('${dir.path}/$artefactFile').writeAsBytes(warranted.artefact);
+    await File('${dir.path}/$trustFile')
+        .writeAsString(jsonEncode({'compiler': warranted.localCompiler, 'creator': warranted.creatorCert}));
     final specs = Directory('$base/www/specs');
     await specs.create(recursive: true);
     await File('${specs.path}/${c.name}.json').writeAsString(jsonEncode({...spec, 'meta': meta}));

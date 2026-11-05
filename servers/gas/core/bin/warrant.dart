@@ -1,7 +1,9 @@
 // The warranties of packages (lib/warranty.dart), for tools/make.py and
 // phone/tool/packages.py: on stdin a JSON list of requests, each
-// {id, files, text, schemas, verdict}; on stdout a JSON list of answers, each
-// {warranty} or {error}.
+// {id, files, text, schemas, verdict, out?}; on stdout a JSON list of answers,
+// each {warranty} or {error}.  Where a request names a directory out, the unit
+// compiled and what its harness checks it against are written there too
+// (warranty.dart's artefactFile and trustFile).
 //
 // The keys: GAS_COMPILER_KEY and GAS_CREATOR_KEY, files each holding an
 // Ed25519 seed as hex, made where there is none (default
@@ -32,6 +34,7 @@ Future<void> main() async {
           verdict: r['verdict'] as String,
           compiler: compiler,
           creator: creator,
+          out: r['out'] as String?,
         )
       });
     } on Object catch (e) {

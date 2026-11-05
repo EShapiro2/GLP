@@ -186,7 +186,8 @@ def make(text, outdir):
 
         # 6. The warranties.
         try:
-            [w] = warranties([{'id': cid, 'files': files, 'text': contract_txt, 'schemas': schemas, 'verdict': verdict}])
+            [w] = warranties([{'id': cid, 'files': files, 'text': contract_txt, 'schemas': schemas, 'verdict': verdict,
+                               'out': os.path.abspath(outdir)}])
         except (WarrantError, subprocess.TimeoutExpired) as e:
             raise Refused('warranty', [str(e)], verdict=verdict, notes=notes)
         if isinstance(w, Exception):
