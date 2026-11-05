@@ -3921,11 +3921,10 @@ check "CVA compiler: a constraint holding unsigned(role(2), svar(x)), passing th
 check_not "CVA compiler: ... and not refused" "%% not compiled(signing_con)" "$cva_refuse"
 check "CVA compiler: a signing condition on no agent, malformed, is not compiled (signing_bad)" "%% not compiled(signing_bad)" "$cva_refuse"
 check "CVA compiler: ... the verdict named" "%% it is malformed; check_named in programs/gsc gives the faults." "$cva_refuse"
-# "the compiler refusing a line whose fields leave unnamed a place that one entry does not fill", "a group <a>.n filling both its leader a and n" (vGLP 305c8d0, Section 5.4, "The contract's words"): link(p?, q, r)'s line with no field leaves q and r unnamed, which no one entry fills, and is refused with its reason; with a field naming r it is compiled; and GSN's leave(a, b? ; n), Bob's line with no field, leaves a and n unnamed, which the group <a>.n fills, and is compiled (group_row).
-check "CVA compiler: a pragma line whose fields leave two places of the act unnamed, refused (unnamed_two)" "%% not compiled(unnamed_two)" "$cva_refuse"
-check "CVA compiler: ... with its reason" "%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, \"The contract's words\"):" "$cva_refuse"
-check "CVA compiler: ... the schema and the places unnamed" "%% the schema and the places its fields leave unnamed(link, 2)" "$cva_refuse"
-check "CVA compiler: the same line with a field naming r, leaving one place unnamed, the row's, compiled (unnamed_one)" "%% the canonical CVA platform of the contract(unnamed_one)" "$cva_refuse"
+# A line's fields are the variables of its button's acts that the atoms each requires at the proposer's role do not bind, and pragmas.sh refuses a line whose fields are not these (vGLP 40f8444, Section 5.4, "The contract's words"; the pragmas.sh fixtures below): the compiler takes the pragmas pragmas.sh gives it, and no longer refuses a line by the places one entry fills.  link(p?, q, r), its proposer requiring friend(q) and friend(r), binds both, and its line with no field is compiled (unnamed_two), as is the same act given a field for r (unnamed_one), and GSN's leave(a, b? ; n), Bob's line with no field (group_row).
+check "CVA compiler: a line with no field, its act's other roles bound by the atoms its proposer requires, compiled (unnamed_two)" "%% the canonical CVA platform of the contract(unnamed_two)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(unnamed_two)" "$cva_refuse"
+check "CVA compiler: the same act with a field for r, compiled (unnamed_one)" "%% the canonical CVA platform of the contract(unnamed_one)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(unnamed_one)" "$cva_refuse"
 check "CVA compiler: a line leaving a group's leader and its name unnamed, the places one entry, the group, fills, compiled (group_row)" "%% the canonical CVA platform of the contract(group_row)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(group_row)" "$cva_refuse"
@@ -4047,7 +4046,7 @@ check "CVA compiler, pragmas: ... the line saying which schema" "%% a guarded sc
 check "CVA compiler, pragmas: the button of an act naming an item the proposer holds drawn beside each row of the list of its predicate, item(3, item), and beside each person the view lists, [2] (items)" 'act(fwd, "Items", 1, .2., .., .item(3, item), req(item, .at(3).).)' "$cva_words"
 check "CVA compiler, pragmas: ... an act naming no item, sign, with none" 'act(sign, "Items", 1, .., .., ..)' "$cva_words"
 
-# The pragmas of a contract that extends another (vGLP ffcb093, Section 5.4, "The contract's words": "where it writes a schema anew for a clause it inherits, its line for that clause replaces the inherited line"; "a variable is picked among the items the viewer holds where the proposer's role requires it held"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 1): GAI's GSNP writes message anew, its proposer's role requiring authored(x), and its Messaging line, Alice [Message] <item>, replaces GSN's, Alice [Message] <text>, which is not checked against GSNP's message; x, held at the proposer's role, is the field <item>, at the request's third place.
+# The pragmas of a contract that extends another (vGLP 40f8444, Section 5.4, "The contract's words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its line replaces the inherited one"): GAI's GSNP writes its own [Message] line, which replaces GSN's.
 cva_gsnp_out=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/gai/GSNP.glp
 contract_named(gsnp, C).
@@ -4055,9 +4054,29 @@ contract_named(gsnp, C).
 HEREDOC
 2>&1)
 cva_gsnp_term=$(echo "$cva_gsnp_out" | sed -e 's/^\(GLP> \)*//' | sed -n -e 's/^C = //p' | head -1)
-cva_gsnp_pragmas=$(bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "$cva_gsnp_term" 2>&1 || true)
-check "CVA pragmas: GSNP's pragmas read, its Messaging line replacing GSN's, message's x, held at Alice by authored(x), the field <item> (GSNP.txt)" "act('message', '\"Message\"', \['\"\"', '\"\"', '\"item\"'\], none, '\"Items\"', by(\[1\]))" "$cva_gsnp_pragmas"
-check_not "CVA pragmas: ... GSN's Messaging line not kept, one act of message, nor checked against GSNP's message" "act('message'.*act('message'\|names 1 fields" "$cva_gsnp_pragmas"
+cva_gsnp_pragmas=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "$cva_gsnp_term" 2>&1 || true)
+check "CVA pragmas: GSNP's [Message] line replaces GSN's, the lines matched by button (GSNP.txt)" "GSN: Messaging: Alice \[Message\] <text>: replaced by the line of GSNP.txt with a button of the same name" "$cva_gsnp_pragmas"
+# The rule on fixtures of pragmas.sh's own (vGLP 40f8444, Section 5.4, "The contract's words"): XB, its Link line naming a field for Bob, whom link's friend(Bob) at Alice binds, refused, the field named (bound); XE, extending XB, whose Joint link line writes [Link] under another clause's title and replaces XB's Link line, whose term has no mint, so XB's [Mint] goes, and whose [Link] has no field, read (inherit); XC, its [Mint] with no field for k, a multiplicity naming no variable bound, refused, the variable named (unnamed).
+cva_px=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XB' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' '2. ■ Link. Alice may link Bob.' '3. ■ Minting. Alice may mint coins.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' 'Link: Alice [Link] <person>' 'Minting: Alice [Mint] <amount>' > "$cva_px/XB.txt"
+printf '%s\n' '% Extends: XB, the base.' 'XE' 'Alice and Bob are persons.' '1. ■ Joint link. Alice may link Bob, a friend.' 'Pragmas' 'Linked: those Alice linked.' 'Joint link: Alice [Link]' > "$cva_px/XE.txt"
+printf '%s\n' '% Extends: nothing.' 'XC' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint]' > "$cva_px/XC.txt"
+cva_px_bef="schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(knows, [role(2)])], []), rs(guarded, [atom(friend, [role(1)])], [], [atom(knows, [role(1)])], [])])"
+cva_px_link="schema(link, ['Alice', 'Bob'], [], [rs(guarded, [atom(linked, [role(2)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [], [], [], [])])"
+cva_px_mint="schema(mint, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])"
+cva_px_bound=$(bash "$CVA/compiler/pragmas.sh" "$cva_px/XB.txt" "[$cva_px_bef, $cva_px_link, $cva_px_mint]" 2>&1; echo "exit $?")
+cva_px_inherit=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_px/XE.txt" "[$cva_px_bef, $cva_px_link]" 2>&1; echo "exit $?")
+cva_px_unnamed=$(bash "$CVA/compiler/pragmas.sh" "$cva_px/XC.txt" "[$cva_px_mint]" 2>&1; echo "exit $?")
+rm -rf "$cva_px"
+check "CVA pragmas: a field naming a variable the proposer's required atoms bind, refused (bound)" 'the pragma "Link" has the field <person> beyond the variables of link that the atoms its proposer’s role requires do not bind, which are none; those atoms bind Bob' "$cva_px_bound"
+check "CVA pragmas: ... and pragmas.sh exits 1" "^exit 1$" "$cva_px_bound"
+check_not "CVA pragmas: ... the Minting line not refused (bound)" 'the pragma "Minting"' "$cva_px_bound"
+check "CVA pragmas: a line of an extending contract replaces the inherited line with a button of the same name, under another clause's title (inherit)" "XB: Link: Alice \[Link\] <person>: replaced by the line of XE.txt with a button of the same name" "$cva_px_inherit"
+check "CVA pragmas: ... an inherited button whose contract has no act it names goes, with its field (inherit)" "XB: Minting: Alice \[Mint\]: gone, the contract having no act it names" "$cva_px_inherit"
+check "CVA pragmas: ... the inherited button that stands, with its question, read (inherit)" "act('befriend', '\"Befriend\"', \[\], said(\[\[\], \[person(1), text('\" asks to be your friend.\"')\]\]), '\"Friends\"', by(\[1\]))" "$cva_px_inherit"
+check "CVA pragmas: ... the extending contract's [Link], no field, its Bob bound by friend(Bob), on its own tab (inherit)" "act('link', '\"Link\"', \[\], none, '\"Linked\"', by(\[1\]))" "$cva_px_inherit"
+check_not "CVA pragmas: ... no act of mint (inherit)" "act('mint'" "$cva_px_inherit"
+check "CVA pragmas: a line leaving unnamed a variable no required atom binds, refused, the variable named (unnamed)" 'the pragma "Minting" leaves unnamed the variable k of mint' "$cva_px_unnamed"
 
 # The classes are the contract's equivalence, generated by relating two
 # transactions when one schema-binding determines both (vGLP 9c819f5, Section
