@@ -142,7 +142,7 @@ gai_schemas([
         rs(guarded, [], [],
                     [atom(identity, []), atom(guardian_of, [role(1)])],
                     [atom(agent, []), atom(retired, [])])]),
-%% GnW:4, Ward and ward, knowing, with GAI:2: Carol, a ward of Alice, and Dave, a ward of Bob, come to know each other, provided Alice knows Dave and Bob, by an act of the four, each recording the other with its attestation; Alice and Bob possibly one person.
+%% GnW:4, Ward and ward, knowing, with GAI:2: Carol, a ward of Alice, and Dave, a ward of Bob, come to know each other, provided Alice knows Dave, holding its record, and Bob, by an act of the four, each recording the other with its attestation; Alice and Bob possibly one person.  Alice's record of Dave determines z at her phone (GAI's paper, Definition Relay act; vGLP's locality).
     schema(agents_acquaint, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [svar(y), svar(z)],
        [rs(guarded, [atom(knows, [role(2)]), atom(agent_of, [role(2), svar(z)])], [],
                     [atom(identity, []), atom(agent, []), atom(attestation, [svar(y)])],
@@ -153,7 +153,7 @@ gai_schemas([
         rs(guarded, [], [],
                     [atom(identity, []), atom(guardian_of, [role(1)]),
                      atom(agent_of, [role(1), svar(y)]),
-                     atom(knows, [role(2)]), atom(knows, [role(4)])],
+                     atom(knows, [role(2)]), atom(agent_of, [role(2), svar(z)]), atom(knows, [role(4)])],
                     [atom(agent, []), atom(retired, [])]),
         rs(guarded, [], [],
                     [atom(identity, []), atom(guardian_of, [role(2)]),
