@@ -58,8 +58,6 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
 imported procedure
@@ -74,8 +72,6 @@ Person
 ?
 ,
 Integer?
-,
-MutualRef?
 ,
 MutualRef?
 )
@@ -94,8 +90,6 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
 imported procedure
@@ -112,8 +106,6 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
 imported procedure
@@ -128,8 +120,6 @@ Person
 ?
 ,
 Integer?
-,
-MutualRef?
 ,
 MutualRef?
 )
@@ -157,7 +147,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-formal_hello(Y?, H?, K?, Mon?, Scr?)
+formal_hello(Y?, H?, K?, Scr?)
 ,
 relay_1(A?, 'Hello', E?, Y, Mon?, Log?)
 ,
@@ -171,7 +161,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-kind_mood(Y?, H?, K?, Mon?, Scr?)
+kind_mood(Y?, H?, K?, Scr?)
 ,
 relay_2(A?, 'Mood', E?, Y, Mon?, Log?)
 ,
@@ -185,7 +175,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-grumpy_mood(Y?, H?, K?, Mon?, Scr?)
+grumpy_mood(Y?, H?, K?, Scr?)
 ,
 relay_2(A?, 'Mood', E?, Y, Mon?, Log?)
 ,
@@ -199,7 +189,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-casual_hello(Y?, H?, K?, Mon?, Scr?)
+casual_hello(Y?, H?, K?, Scr?)
 ,
 relay_1(A?, 'Hello', E?, Y, Mon?, Log?)
 ,
@@ -213,7 +203,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-casual_mood(Y?, H?, K?, Mon?, Scr?)
+casual_mood(Y?, H?, K?, Scr?)
 ,
 relay_2(A?, 'Mood', E?, Y, Mon?, Log?)
 ,

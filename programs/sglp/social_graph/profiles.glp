@@ -19,15 +19,13 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-homophile_menu(M, _, S, Mon, _)
+homophile_menu(M, _, S, _)
 :-
 random(S?, 100, K, S1)
 ,
-stream_append(rated('/'(1, week), Tok), Mon?, _)
+rated(0.0000016534391534391535, Tok)
 ,
 homophile_pick(Tok?, K?, S1?, M?)
 .
@@ -46,7 +44,7 @@ Menu
 .
 homophile_pick(stop, _, _, _)
 .
-homophile_pick(go, K, S, menu(Ss, _, same(P?)))
+homophile_pick(go(_), K, S, menu(Ss, _, same(P?)))
 :-
 '=<'(K?, 98)
 ,
@@ -54,7 +52,7 @@ ground(Ss?)
 |
 one_of(Ss?, S?, P)
 .
-homophile_pick(go, K, S, menu(_, Os, other(P?)))
+homophile_pick(go(_), K, S, menu(_, Os, other(P?)))
 :-
 '>'(K?, 98)
 ,
@@ -77,15 +75,13 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-indifferent_menu(M, _, S, Mon, _)
+indifferent_menu(M, _, S, _)
 :-
 random(S?, 100, K, S1)
 ,
-stream_append(rated('/'(2, week), Tok), Mon?, _)
+rated(0.000003306878306878307, Tok)
 ,
 indifferent_pick(Tok?, K?, S1?, M?)
 .
@@ -104,7 +100,7 @@ Menu
 .
 indifferent_pick(stop, _, _, _)
 .
-indifferent_pick(go, K, S, menu(Ss, _, same(P?)))
+indifferent_pick(go(_), K, S, menu(Ss, _, same(P?)))
 :-
 '=<'(K?, 50)
 ,
@@ -112,7 +108,7 @@ ground(Ss?)
 |
 one_of(Ss?, S?, P)
 .
-indifferent_pick(go, K, S, menu(_, Os, other(P?)))
+indifferent_pick(go(_), K, S, menu(_, Os, other(P?)))
 :-
 '>'(K?, 50)
 ,
@@ -135,15 +131,13 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-wary_approval(C, _, S, Mon, _)
+wary_approval(C, _, S, _)
 :-
 random(S?, 100, K, _)
 ,
-stream_append(rated('/'(1, day), Tok), Mon?, _)
+rated(0.000011574074074074073, Tok)
 ,
 wary_answer(Tok?, K?, C?)
 .
@@ -160,13 +154,13 @@ Approval
 .
 wary_answer(stop, _, _)
 .
-wary_answer(go, K, approval(_, yes))
+wary_answer(go(_), K, approval(_, yes))
 :-
 '=<'(K?, 20)
 |
 true
 .
-wary_answer(go, K, approval(_, no))
+wary_answer(go(_), K, approval(_, no))
 :-
 '>'(K?, 20)
 |
@@ -187,15 +181,13 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-sociable_approval(C, _, S, Mon, _)
+sociable_approval(C, _, S, _)
 :-
 random(S?, 100, K, _)
 ,
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
 sociable_answer(Tok?, K?, C?)
 .
@@ -212,13 +204,13 @@ Approval
 .
 sociable_answer(stop, _, _)
 .
-sociable_answer(go, K, approval(_, yes))
+sociable_answer(go(_), K, approval(_, yes))
 :-
 '=<'(K?, 90)
 |
 true
 .
-sociable_answer(go, K, approval(_, no))
+sociable_answer(go(_), K, approval(_, no))
 :-
 '>'(K?, 90)
 |

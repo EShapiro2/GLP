@@ -11,8 +11,10 @@
 %% terms_length/2.  show_whole/4 and whole_frame/5 are the printed relays' (transform.glp,
 %% "The question shown whole").
 
-%% The horizon of a run declaration, `until <number> <unit>`: the unit singular
-%% or plural (Appendix B).
+%% The units of a horizon and of a rate (Appendix B): second, minute, hour,
+%% day, week and year; the horizon of a run declaration, `until <number>
+%% <unit>`, the unit singular or plural.
+TimeUnit ::= second ; minute ; hour ; day ; week ; year.
 Span ::= TimeUnit ; seconds ; minutes ; hours ; days ; weeks ; years.
 
 %% span(U?, S): S is the number of seconds in one U, a year being 365.25 days.

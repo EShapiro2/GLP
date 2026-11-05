@@ -1,6 +1,6 @@
 %% Test (ii) of sGLP in GLP (sGLP's code task of 2026-10-02 00:06 UTC, item 6;
-%% sGLP's paper at d2f64b6, Section 2, Proposition "Time to the Next Release";
-%% Section 4, "The monitor"): with m pending requests of rates r_1..r_m and
+%% sGLP's paper at 2bc479b, Section 2, Proposition "Time to the Next Release";
+%% Section 4, "The clock", "The monitor" and "The claim, tested"): with m pending requests of rates r_1..r_m and
 %% nothing else, the times between releases are exponential with rate
 %% R = r_1 + ... + r_m.
 %%
@@ -8,9 +8,12 @@
 %%               times between releases, the first from 0
 %%
 %% Four goals, of rates 1/second, 2/second, 30/minute and 3600/hour, R = 4.5
-%% per second: each request of the monitor (programs/sglp/monitor.glp, exposed
-%% by programs/sglp/self.glp) is pending until released, and a released goal
-%% reads the clock and requests again at once, so four are pending throughout.
+%% per second, each made pending by rated(R, Tok), R the rate as a number a
+%% second as the transformation prints it (1, 2, 0.5 and 1): each token is
+%% pending until the monitor (programs/sglp/monitor.glp, exposed by
+%% programs/sglp/self.glp) steps GLP's clock and binds it to go(T), and a
+%% released goal records T and is pending again at once, so four are pending
+%% throughout.
 %% An exponential with rate 4.5 has mean 1/4.5 and variance 1/4.5^2; the
 %% horizon, 3000 s, gives some 13500 releases.
 
@@ -18,35 +21,34 @@ Stats ::= stats(Integer, Number, Number).
 
 exported procedure law(Integer?, Stats).
 law(K, S?) :-
-    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(_, Requests),
     allocate_mutual_reference(Times, Ts),
     allocate_mutual_reference(Log, _),
     monitor(Requests?, 20260927, 3000, Log?),
-    pending(Mon?, Times?, 1/second),
-    pending(Mon?, Times?, 2/second),
-    pending(Mon?, Times?, 30/minute),
-    pending(Mon?, Times?, 3600/hour),
+    pending(Times?, 1),
+    pending(Times?, 2),
+    pending(Times?, 0.5),
+    pending(Times?, 1),
     stats(Ts?, K?, 0, 0, 0, 0, S).
 
-%% pending(Mon?, Times?, R?): a goal of rate R, translated as the
-%% transformation translates G @ R, G being released/4.
-procedure pending(MutualRef?, MutualRef?, Rate?).
-pending(Mon, Times, R) :-
-    ground(R?) |
-    stream_append(rated(R?, Tok), Mon?, Mon1),
-    released(Tok?, Mon1?, Times?, R?).
+%% pending(Times?, R?): a goal of rate R a second, translated as the
+%% transformation translates G @ r, G being released/3.
+procedure pending(MutualRef?, Number?).
+pending(Times, R) :-
+    number(R?) |
+    rated(R?, Tok),
+    released(Tok?, Times?, R?).
 
-%% released(go, Mon?, Times?, R?): read the clock, record it, and be pending
-%% again.
-procedure released(Token?, MutualRef?, MutualRef?, Rate?).
-released(go, Mon, Times, R) :-
-    ground(R?) |
-    stream_append(time(T), Mon?, Mon1),
+%% released(Tok?, Times?, R?): released, go(T), record the clock T and be
+%% pending again.
+procedure released(Token?, MutualRef?, Number?).
+released(go(T), Times, R) :-
+    number(R?) |
     stream_append(T?, Times?, _),
-    pending(Mon1?, Times?, R?).
-%% At the horizon the monitor binds the pending tokens to stop, which ends the
-%% goal waiting on each (sGLP's paper, Appendix C).
-released(stop, _, _, _).
+    pending(Times?, R?).
+%% At the horizon step_clock binds the pending tokens to stop, which ends the
+%% goal waiting on each (sGLP's paper, Section 4, "The clock"; Appendix C).
+released(stop, _, _).
 
 %% stats(Ts?, K?, Prev?, N?, Sum?, SumSq?, S): the first K differences of the
 %% release times Ts, Prev the time before the next.

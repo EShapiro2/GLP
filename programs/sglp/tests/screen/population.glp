@@ -37,8 +37,6 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
 
@@ -52,7 +50,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-look_count(Y?, H?, K?, Mon?, Scr?)
+look_count(Y?, H?, K?, Scr?)
 ,
 relay_1(A?, 'Count', E?, Y, Mon?, Log?)
 ,

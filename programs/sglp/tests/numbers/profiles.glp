@@ -18,15 +18,13 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-count(Ns?, _, _, Mon, _)
+count(Ns?, _, _, _)
 :-
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
-step(Tok?, 1, slot(Ns), Mon?)
+step(Tok?, 1, slot(Ns))
 .
 procedure
 step
@@ -37,23 +35,21 @@ Integer?
 ,
 Slot(Stream(Integer))
 ?
-,
-MutualRef?
 )
 .
-step(stop, _, _, _)
+step(stop, _, _)
 .
-step(go, I, slot([I? | Ns?]), Mon)
+step(go(_), I, slot([I? | Ns?]))
 :-
 '=<'(I?, 3)
 |
 ':='(I1, '+'(I?, 1))
 ,
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
-step(Tok?, I1?, slot(Ns), Mon?)
+step(Tok?, I1?, slot(Ns))
 .
-step(go, I, slot([]), _)
+step(go(_), I, slot([]))
 :-
 '>'(I?, 3)
 |

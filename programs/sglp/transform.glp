@@ -16,15 +16,15 @@
 %%
 %%   profiles    the profiles translated, and the types and procedures of the
 %%               source's programs, the census's among them: each person
-%%               procedure, and each procedure that holds a rated goal or calls
-%%               one that takes it, takes the monitor's reference as an added
-%%               argument, and each person procedure, and each procedure that
-%%               calls seen or calls one that takes it, the screen's after it,
-%%               both last; a rated goal G @ r becomes the request rated(r, Tok)
-%%               appended to the monitor's reference, followed by G with Tok? as
-%%               an added first argument, and G's procedure takes the token
-%%               first, its clauses go there; a goal seen(L) becomes the request
-%%               seen(L) appended to the screen's reference; and the person,
+%%               procedure, and each procedure that calls seen or calls one
+%%               that takes it, takes the screen's reference as an added last
+%%               argument; a rated goal G @ r becomes the goal rated(R, Tok), R
+%%               the rate r as a number a second (r's number over its unit's
+%%               seconds, sglp.glp's span/2), followed by G with Tok? as an
+%%               added first argument, and G's procedure takes the token
+%%               first, its clauses go(_) there and a clause of stop added; a
+%%               goal seen(L) becomes the request seen(L) appended to the
+%%               screen's reference; and the person,
 %%               Person, where the source defines none, is the type of the
 %%               persons run n agents draws;
 %%   population  the person process, one clause per person declaration and
@@ -489,12 +489,11 @@ procedure person_keys(Terms?, Terms).
 person_keys([], []).
 person_keys([b(_, _, P)|Bs], [key(P?, 3)|Ks?]) :- person_keys(Bs?, Ks).
 
-%% mon_keys(Ps?, Cs?, Ms): Ms are the keys of the procedures that take the
-%% monitor's reference (Section 4, "The transformation"): the person
-%% procedures Ps, those whose clauses hold a rated goal, and those whose
-%% clauses call one of these, to pass it on.
-procedure mon_keys(Terms?, Terms?, Terms).
-mon_keys(Ps, Cs, Ms?) :- ground(Cs?) |
+%% holder_keys(Ps?, Cs?, Ms): Ms are the keys of the person procedures Ps,
+%% of the procedures whose clauses hold a rated goal, and of those whose
+%% clauses call one of these: none is a census, a GLP program (check_census).
+procedure holder_keys(Terms?, Terms?, Terms).
+holder_keys(Ps, Cs, Ms?) :- ground(Cs?) |
     holders(Cs?, Hs), append(Ps?, Hs?, M0), edges(Cs?, Es), grow(M0?, Es?, Ms).
 
 procedure holders(Terms?, Terms).
@@ -548,38 +547,32 @@ procedure seer(Ans?, _?, Terms?, Terms).
 seer(no, _, Cs, Ks?) :- seers(Cs?, Ks).
 seer(yes, H, Cs, [K?|Ks?]) :- key(H?, K), seers(Cs?, Ks).
 
-%% The analysis of the profiles: an(Ps, Rs, Ms, Ss, Xs), the keys of the
+%% The analysis of the profiles: an(Ps, Rs, Ss, Xs), the keys of the
 %% person procedures, of the procedures a rated goal calls, of those that take
-%% the monitor's reference, of those that take the screen's, and of those
+%% the screen's reference, and of those
 %% exported, the person procedures, which the person process calls, and the
 %% census, which the population's persons/5 calls, from the module beside.
 procedure analysis(Terms?, _).
 analysis(S, An?) :- ground(S?) |
     binds(S?, none, Bs), clauses(S?, Cs), runs(S?, Rs), census_keys(Rs?, Ws), analysis1(Bs?, Cs?, Ws?, An).
 procedure analysis1(Terms?, Terms?, Terms?, _).
-analysis1(Bs, Cs, Ws, an(Ps?, Rs?, Ms?, Ss?, Xs?)) :- ground(Cs?) |
-    person_keys(Bs?, Ps0), dedup(Ps0?, Ps1), analysis2(Ps1?, Cs?, Ws?, Ps, Ms, Ss, Xs),
+analysis1(Bs, Cs, Ws, an(Ps?, Rs?, Ss?, Xs?)) :- ground(Cs?) |
+    person_keys(Bs?, Ps0), dedup(Ps0?, Ps1), analysis2(Ps1?, Cs?, Ws?, Ps, Ss, Xs),
     rated_keys(Cs?, Rs0), dedup(Rs0?, Rs).
-procedure analysis2(Terms?, Terms?, Terms?, Terms, Terms, Terms, Terms).
-analysis2(Ps, Cs, Ws, Ps?, Ms?, Ss?, Xs?) :- ground(Ps?), ground(Cs?) |
-    mon_keys(Ps?, Cs?, Ms), scr_keys(Ps?, Cs?, Ss), append(Ps?, Ws?, Xs).
+procedure analysis2(Terms?, Terms?, Terms?, Terms, Terms, Terms).
+analysis2(Ps, Cs, Ws, Ps?, Ss?, Xs?) :- ground(Ps?), ground(Cs?) |
+    scr_keys(Ps?, Cs?, Ss), append(Ps?, Ws?, Xs).
 
 %% ===========================================================================
 %% ===========================================================================
 %% Names
 %% ===========================================================================
 %% GLP has no string concatenation, so the names the transformation writes are
-%% drawn from these lists, each a writer and its reader: the monitor's
-%% reference, the screen's and the tokens, the first not written in the clause; the person
+%% drawn from these lists, each a writer and its reader: the screen's
+%% reference and the tokens, the first not written in the clause; the person
 %% process's variables by argument position; the dimensions' types and the
 %% answer procedures by their order.  A source that needs more than they hold
 %% is refused (checks/3).
-
-procedure mon_names(Terms).
-mon_names([n('Mon', 'Mon?'), n('Mon1', 'Mon1?'), n('Mon2', 'Mon2?'),
-           n('Mon3', 'Mon3?'), n('Mon4', 'Mon4?'), n('Mon5', 'Mon5?'),
-           n('Mon6', 'Mon6?'), n('Mon7', 'Mon7?'), n('Mon8', 'Mon8?'),
-           n('Mon9', 'Mon9?')]).
 
 procedure scr_names(Terms).
 scr_names([n('Scr', 'Scr?'), n('Scr1', 'Scr1?'), n('Scr2', 'Scr2?'),
@@ -742,36 +735,35 @@ items([clause(H, Gs, Bs)|Is], An, Tl, Ls?) :- ground(An?) |
 items([I|Is], An, Tl, Ls?) :- otherwise, ground(I?) | items(Is?, An?, Tl?, Ls).
 
 %% tdecl(H?, An?, Tail?, Ls): a procedure declaration translated: Token? first
-%% for a procedure a rated goal calls, MutualRef? for one that takes the
-%% monitor's reference and MutualRef? after it for one that takes the
-%% screen's, both last, and exported for a person procedure, which the person
-%% process calls from the module beside, and for the census, which the
-%% population's persons/5 calls; and, after the declaration of a procedure a
-%% rated goal calls, the clause that ends its goal once the monitor has bound
-%% the token to stop, dropping its arguments (Section 4, "The transformation";
-%% Appendix C).
+%% for a procedure a rated goal calls, GLP's Token, and MutualRef? last for one
+%% that takes the screen's reference, and exported for a person procedure,
+%% which the person process calls from the module beside, and for the census,
+%% which the population's persons/5 calls; and, after the declaration of a
+%% procedure a rated goal calls, the clause that ends its goal once the engine
+%% has bound the token to stop, dropping its arguments (Section 4, "The
+%% transformation"; Appendix C).
 procedure tdecl(_?, _?, Terms?, Terms).
-tdecl(H, an(_, Rs, Ms, Ss, Xs), Tl, Ls?) :- ground(H?) |
-    key(H?, K), tdecl1(K?, H?, Xs?, Rs?, Ms?, Ss?, Tl?, Ls).
-procedure tdecl1(_?, _?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
-tdecl1(K, H, Xs, Rs, Ms, Ss, Tl, Ls?) :- ground(K?) |
-    member(K?, Xs?, AP), member(K?, Rs?, AR), member(K?, Ms?, AM), member(K?, Ss?, AS),
-    tdecl2(AP?, AR?, AM?, AS?, H?, Tl?, Ls).
-procedure tdecl2(Ans?, Ans?, Ans?, Ans?, _?, Terms?, Terms).
-tdecl2(AP, AR, AM, AS, H, Tl, Ls?) :- ground(AR?), ground(AM?), ground(AS?), ground(H?) |
+tdecl(H, an(_, Rs, Ss, Xs), Tl, Ls?) :- ground(H?) |
+    key(H?, K), tdecl1(K?, H?, Xs?, Rs?, Ss?, Tl?, Ls).
+procedure tdecl1(_?, _?, Terms?, Terms?, Terms?, Terms?, Terms).
+tdecl1(K, H, Xs, Rs, Ss, Tl, Ls?) :- ground(K?) |
+    member(K?, Xs?, AP), member(K?, Rs?, AR), member(K?, Ss?, AS),
+    tdecl2(AP?, AR?, AS?, H?, Tl?, Ls).
+procedure tdecl2(Ans?, Ans?, Ans?, _?, Terms?, Terms).
+tdecl2(AP, AR, AS, H, Tl, Ls?) :- ground(AR?), ground(AS?), ground(H?) |
     prefix(AP?, Pre), front(AR?, [dual('Token')], Fr),
-    back(AM?, [dual('MutualRef')], Bk1), back(AS?, [dual('MutualRef')], Bk2), append(Bk1?, Bk2?, Bk),
+    back(AS?, [dual('MutualRef')], Bk),
     parts(H?, Nm, Ts), append(Ts?, Bk?, Ts1), append(Fr?, Ts1?, Ts2),
-    stop_clause(AR?, AM?, AS?, H?, Tl?, Tl1),
+    stop_clause(AR?, AS?, H?, Tl?, Tl1),
     decl(Pre?, Nm?, Ts2?, Tl1?, Ls).
-%% stop_clause(AR?, AM?, AS?, H?, Tail?, Ls): where AR is yes, the clause
-%% Nm(stop, _, ..., _) of the procedure H, a _ for each of its arguments, for
-%% the monitor's reference where AM is yes and for the screen's where AS is.
-procedure stop_clause(Ans?, Ans?, Ans?, _?, Terms?, Terms).
-stop_clause(no, _, _, _, Tl, Tl?).
-stop_clause(yes, AM, AS, H, Tl, Ls?) :- ground(H?) |
-    parts(H?, Nm, Ts), back(AM?, [var('_')], Bk1), back(AS?, [var('_')], Bk2), blanks(Ts?, Us),
-    append(Us?, Bk1?, As1), append(As1?, Bk2?, As),
+%% stop_clause(AR?, AS?, H?, Tail?, Ls): where AR is yes, the clause
+%% Nm(stop, _, ..., _) of the procedure H, a _ for each of its arguments and
+%% for the screen's reference where AS is yes.
+procedure stop_clause(Ans?, Ans?, _?, Terms?, Terms).
+stop_clause(no, _, _, Tl, Tl?).
+stop_clause(yes, AS, H, Tl, Ls?) :- ground(H?) |
+    parts(H?, Nm, Ts), back(AS?, [var('_')], Bk), blanks(Ts?, Us),
+    append(Us?, Bk?, As),
     compose(Nm?, [stop|As?], H1), clause(H1?, [], [], Tl?, Ls).
 procedure blanks(Terms?, Terms).
 blanks([], []).
@@ -787,40 +779,37 @@ back(yes, Xs, Xs?).
 back(no, _, []).
 
 %% tclause(H?, Gs?, Bs?, An?, Tail?, Ls): a clause translated.  Its head takes
-%% go first where a rated goal calls its procedure, the monitor's reference
-%% where its procedure takes it and the screen's after it where its procedure
-%% takes that, both last, or _ where the clause passes it nowhere; each rated
-%% goal G @ r of its body becomes the request rated(r, Tok) on the monitor's
-%% reference, followed by G with Tok? first; each goal seen(L) becomes the
-%% request seen(L) on the screen's reference; each goal whose procedure takes
-%% the monitor's reference, or the screen's, is given it, last.  Mon, Scr and
-%% Tok are the first names of their lists that the clause does not write.
+%% go(_) first where a rated goal calls its procedure, and the screen's
+%% reference last where its procedure takes it, or _ where the clause passes it
+%% nowhere; each rated goal G @ r of its body becomes the goal rated(R, Tok), R
+%% the rate as a number a second, followed by G with Tok? first; each goal
+%% seen(L) becomes the request seen(L) on the screen's reference; each goal
+%% whose procedure takes the screen's reference is given it, last.  Scr and Tok
+%% are the first names of their lists that the clause does not write.
 procedure tclause(_?, Terms?, Terms?, _?, Terms?, Terms).
 tclause(H, Gs, Bs, An, Tl, Ls?) :- ground(H?), ground(Gs?), ground(Bs?) |
     var_names(cl(H?, Gs?, Bs?), [], U), rated(Bs?, [], Rs), length(Rs?, NR),
     key(H?, K), tclause1(K?, U?, NR?, H?, Gs?, Bs?, An?, Tl?, Ls).
 procedure tclause1(_?, Terms?, Integer?, _?, Terms?, Terms?, _?, Terms?, Terms).
-tclause1(K, U, NR, H, Gs, Bs, an(_, Rs, Ms, Ss, _), Tl, Ls?) :- ground(U?) |
-    mon_names(MN), tok_names(TN), scr_names(SN),
-    fresh(MN?, U?, 1, Mon), fresh(TN?, U?, NR?, Toks), fresh(SN?, U?, 1, Scr),
-    tclause2(Mon?, Scr?, Toks?, K?, NR?, H?, Gs?, Bs?, Rs?, Ms?, Ss?, Tl?, Ls).
-procedure tclause2(Terms?, Terms?, Terms?, _?, Integer?, _?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
-tclause2([n(MW, MR)], [n(SW, SR)], Toks, K, NR, H, Gs, Bs, Rs, Ms, Ss, Tl, Ls?) :-
-    ground(K?), ground(Bs?), ground(Ms?), ground(Ss?), ground(MR?), ground(SR?) |
-    member(K?, Rs?, AR), member(K?, Ms?, AM), member(K?, Ss?, AS),
-    calls(Bs?, [], Cs), call_uses(Cs?, NR?, Ms?, Ss?, AU, ASU),
-    tbody(Bs?, Toks?, MR?, SR?, Ms?, Ss?, Bs1),
-    mon_arg(AM?, AU?, MW?, Bk1), mon_arg(AS?, ASU?, SW?, Bk2), append(Bk1?, Bk2?, Bk),
-    front(AR?, [go], Fr), args(H?, Fr?, Bk?, H1),
+tclause1(K, U, NR, H, Gs, Bs, an(_, Rs, Ss, _), Tl, Ls?) :- ground(U?) |
+    tok_names(TN), scr_names(SN),
+    fresh(TN?, U?, NR?, Toks), fresh(SN?, U?, 1, Scr),
+    tclause2(Scr?, Toks?, K?, H?, Gs?, Bs?, Rs?, Ss?, Tl?, Ls).
+procedure tclause2(Terms?, Terms?, _?, _?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+tclause2([n(SW, SR)], Toks, K, H, Gs, Bs, Rs, Ss, Tl, Ls?) :-
+    ground(K?), ground(Bs?), ground(Ss?), ground(SR?) |
+    member(K?, Rs?, AR), member(K?, Ss?, AS),
+    calls(Bs?, [], Cs), call_uses(Cs?, Ss?, ASU),
+    tbody(Bs?, Toks?, SR?, Ss?, Bs1),
+    mon_arg(AS?, ASU?, SW?, Bk),
+    front(AR?, [go(var('_'))], Fr), args(H?, Fr?, Bk?, H1),
     clause(H1?, Gs?, Bs1?, Tl?, Ls).
-tclause2(Mon, Scr, _, _, _, _, _, _, _, _, _, Tl, Tl?) :- otherwise, ground(Mon?), ground(Scr?) | true.
-%% call_uses(Cs?, NR?, Ms?, Ss?, AU, ASU): AU is yes where the clause, of NR
-%% rated goals and calls Cs, uses the monitor's reference, a rated goal or a
-%% call of a procedure that takes it among its goals, and ASU where it uses the
-%% screen's, a goal seen(L) or a call of a procedure that takes it.
-procedure call_uses(Terms?, Integer?, Terms?, Terms?, Ans, Ans).
-call_uses(Cs, NR, Ms, Ss, AU?, ASU?) :- ground(Cs?), ground(Ss?) |
-    any_member(Cs?, Ms?, AC), uses(NR?, AC?, AU),
+tclause2(Scr, _, _, _, _, _, _, _, Tl, Tl?) :- otherwise, ground(Scr?) | true.
+%% call_uses(Cs?, Ss?, ASU): ASU is yes where the clause, of calls Cs, uses
+%% the screen's reference, a goal seen(L) or a call of a procedure that takes
+%% it.
+procedure call_uses(Terms?, Terms?, Ans).
+call_uses(Cs, Ss, ASU?) :- ground(Cs?), ground(Ss?) |
     any_member(Cs?, Ss?, ASC), member(key(seen, 1), Cs?, AZ), either(AZ?, ASC?, ASU).
 procedure any_member(Terms?, Terms?, Ans).
 any_member([], _, no).
@@ -828,40 +817,37 @@ any_member([X|Xs], Ys, A?) :- ground(Ys?) | member(X?, Ys?, A1), any_member1(A1?
 procedure any_member1(Ans?, Terms?, Terms?, Ans).
 any_member1(yes, _, _, yes).
 any_member1(no, Xs, Ys, A?) :- any_member(Xs?, Ys?, A).
-procedure uses(Integer?, Ans?, Ans).
-uses(NR, _, yes) :- NR? > 0 | true.
-uses(NR, A, A?) :- NR? =< 0 | true.
 procedure mon_arg(Ans?, Ans?, _?, Terms).
 mon_arg(yes, yes, MW, [var(MW?)]).
 mon_arg(yes, no, _, [var('_')]).
 mon_arg(no, _, _, []).
 
-%% tbody(Bs?, Toks?, MR?, SR?, Ms?, Ss?, Bs1): the body translated, MR and SR
-%% the readers of the monitor's reference and the screen's.
-procedure tbody(Terms?, Terms?, _?, _?, Terms?, Terms?, Terms).
-tbody([], _, _, _, _, _, []).
-tbody([rated(G, rate(R, U))|Bs], [n(TW, TR)|Ts], MR, SR, Ms, Ss,
-      [stream_append(rated('/'(R?, U?), var(TW?)), var(MR?), var('_')), G1?|Bs1?]) :-
-    ground(G?), ground(MR?), ground(SR?), ground(Ms?), ground(Ss?) |
-    refs(G?, MR?, SR?, Ms?, Ss?, Bk),
-    args(G?, [var(TR?)], Bk?, G1), tbody(Bs?, Ts?, MR?, SR?, Ms?, Ss?, Bs1).
-tbody([seen(L)|Bs], Ts, MR, SR, Ms, Ss, [stream_append(seen(L?), var(SR?), var('_'))|Bs1?]) :-
+%% tbody(Bs?, Toks?, SR?, Ss?, Bs1): the body translated, SR the reader of the
+%% screen's reference; a rated goal's rate r, N per unit U, is the number N
+%% over U's seconds (sglp.glp's span/2), a number a second.
+procedure tbody(Terms?, Terms?, _?, Terms?, Terms).
+tbody([], _, _, _, []).
+tbody([rated(G, rate(R, U))|Bs], [n(TW, TR)|Ts], SR, Ss,
+      [rated(N?, var(TW?)), G1?|Bs1?]) :-
+    ground(G?), number(R?), ground(SR?), ground(Ss?) |
+    span(U?, Secs), N := R? / Secs?,
+    refs(G?, SR?, Ss?, Bk),
+    args(G?, [var(TR?)], Bk?, G1), tbody(Bs?, Ts?, SR?, Ss?, Bs1).
+tbody([seen(L)|Bs], Ts, SR, Ss, [stream_append(seen(L?), var(SR?), var('_'))|Bs1?]) :-
     ground(SR?) |
-    tbody(Bs?, Ts?, MR?, SR?, Ms?, Ss?, Bs1).
-tbody([B|Bs], Ts, MR, SR, Ms, Ss, [B1?|Bs1?]) :-
-    otherwise, ground(B?), ground(MR?), ground(SR?), ground(Ms?), ground(Ss?) |
-    refs(B?, MR?, SR?, Ms?, Ss?, Bk),
-    args(B?, [], Bk?, B1), tbody(Bs?, Ts?, MR?, SR?, Ms?, Ss?, Bs1).
-%% refs(G?, MR?, SR?, Ms?, Ss?, Bk): the references the goal G is given last,
-%% the monitor's where its procedure takes it and the screen's where its
-%% procedure takes that.
-procedure refs(_?, _?, _?, Terms?, Terms?, Terms).
-refs(G, MR, SR, Ms, Ss, Bk?) :- ground(G?), ground(MR?), ground(SR?) |
-    key(G?, K), refs1(K?, MR?, SR?, Ms?, Ss?, Bk).
-procedure refs1(_?, _?, _?, Terms?, Terms?, Terms).
-refs1(K, MR, SR, Ms, Ss, Bk?) :- ground(K?) |
-    member(K?, Ms?, A), member(K?, Ss?, AS), back(A?, [var(MR?)], Bk1), back(AS?, [var(SR?)], Bk2),
-    append(Bk1?, Bk2?, Bk).
+    tbody(Bs?, Ts?, SR?, Ss?, Bs1).
+tbody([B|Bs], Ts, SR, Ss, [B1?|Bs1?]) :-
+    otherwise, ground(B?), ground(SR?), ground(Ss?) |
+    refs(B?, SR?, Ss?, Bk),
+    args(B?, [], Bk?, B1), tbody(Bs?, Ts?, SR?, Ss?, Bs1).
+%% refs(G?, SR?, Ss?, Bk): the screen's reference, the goal G given it last
+%% where its procedure takes it.
+procedure refs(_?, _?, Terms?, Terms).
+refs(G, SR, Ss, Bk?) :- ground(G?), ground(SR?) |
+    key(G?, K), refs1(K?, SR?, Ss?, Bk).
+procedure refs1(_?, _?, Terms?, Terms).
+refs1(K, SR, Ss, Bk?) :- ground(K?) |
+    member(K?, Ss?, AS), back(AS?, [var(SR?)], Bk).
 
 %% ===========================================================================
 %% Moded types (Section 4, "The person process": "the person process hands the
@@ -1693,10 +1679,10 @@ dim_defs([], Tl, Tl?).
 dim_defs([dim(_, _, Qs, _, Nm, _)|Ds], Tl, Ls?) :- dim_defs(Ds?, Tl?, Ls1), type_def(Nm?, Qs?, Ls1?, Ls).
 
 %% The person procedures the person process calls, in the profiles module,
-%% each declared P(T', Person?, Integer?, MutualRef?, MutualRef?), T' the dual
-%% of the mode the vGLP program gives T (Section 3, Definition "Dual, Person
-%% Procedure, Person Declaration"), the monitor's reference and the screen's
-%% last (Section 4, "The transformation"); and the census the run declaration
+%% each declared P(T', Person?, Integer?, MutualRef?), T' the dual of the mode
+%% the vGLP program gives T (Section 3, Definition "Dual, Person Procedure,
+%% Person Declaration"), the screen's reference last (Section 4, "The
+%% transformation"); and the census the run declaration
 %% names, declared W(Integer?, List(Person)) (Definition "Person, Census").
 procedure pp_imports(Terms?, Terms?, _?, Terms?, Terms).
 pp_imports(Its, Bs, Run, Tl, ['', '%% The person procedures, in the profiles module.'|Ls?]) :- ground(Its?) |
@@ -1708,7 +1694,7 @@ procedure imports(Terms?, Terms?, Terms?, Terms).
 imports([], _, Tl, Tl?).
 imports([bp(T, P)|Ps], Its, Tl, Ls?) :- ground(Its?), ground(T?) |
     imports(Ps?, Its?, Tl?, Ls1), it_of(T?, Its?, It), person_type(It?, PT),
-    decl(['imported procedure', profiles, '#'], P?, [PT?, dual('Person'), dual('Integer'), dual('MutualRef'), dual('MutualRef')], Ls1?, Ls).
+    decl(['imported procedure', profiles, '#'], P?, [PT?, dual('Person'), dual('Integer'), dual('MutualRef')], Ls1?, Ls).
 procedure census_import(_?, Terms?, Terms).
 census_import(run(W, _, _, _, _), Tl, Ls?) :- string(W?) |
     decl(['', '%% The census, in the profiles module.', 'imported procedure', profiles, '#'], W?, [dual('Integer'), 'List'('Person')], Tl?, Ls).
@@ -1741,8 +1727,8 @@ person_type(none, none).
 %% against writer (GLP-Spec, Appendix "Term Matching").  Its guard waits on the
 %% person ground.  It draws from its seed Seed a value K of 1..2147483646 and
 %% its next seed S, spawns P on its end of a fresh copy, Y? in writer mode and
-%% Y in reader mode, with the person, K as the goal's seed and the monitor's
-%% and the screen's references, and the relay of T, relay_k(A?, T, E?, Y,
+%% Y in reader mode, with the person, K as the goal's seed and the screen's
+%% reference, and the relay of T, relay_k(A?, T, E?, Y,
 %% Mon?, Log?) in writer mode and relay_k(A?, T, E, Y?, Mon?, Log?) in reader
 %% mode, and goes on with the rest of the asks and S, so that the goal's draws
 %% and the process's are on different seed chains (Appendix B, "Seeds").
@@ -1815,7 +1801,7 @@ procedure pclause(_?, _?, _?, _?, _?, _?, _?, Terms?, _?, _?, Integer?, _?, Term
 pclause(Af, HE, PY, RE, RY, QT, RN, Dn, Q, Rl, J, P, Tl, Ls?) :- ground(QT?), ground(P?), ground(RN?) |
     profiles_terms(Dn?, J?, Q?, Rl?, 1, PW, PR),
     compose(Af?, [HE?], At),
-    G =.. [P?, PY?, var('H?'), var('K?'), var('Mon?'), var('Scr?')],
+    G =.. [P?, PY?, var('H?'), var('K?'), var('Scr?')],
     RG =.. [RN?, var('A?'), QT?, RE?, RY?, var('Mon?'), var('Log?')],
     clause(person(var('A'), PW?, var('H'), var('Mon'), var('Scr'), var('Seed'), var('Log'), [ask(QT?, At?) | var('As')]),
            [ground(var('H?'))],
@@ -2798,8 +2784,8 @@ check_runs1(N, Ms, C, U, Seed, Its0, Tys, CKs, Bs, Ps, Hs, Cs, STs, Es?) :-
 
 %% The census the run declaration names (Section 3, Definition "Person,
 %% Census"): a procedure declared W(Integer?, List(Person)), of a GLP program,
-%% so holding no rated goal and reaching no screen, which would give it the
-%% monitor's reference or the screen's.
+%% so holding no rated goal, calling none, and reaching no screen, which would
+%% give it the screen's reference.
 procedure check_census(_?, Terms?, Terms?, Terms?, Terms).
 check_census(N, _, _, _, []) :- integer(N?) | true.
 check_census(W, Hs, Cs, Bs, Es?) :- otherwise, string(W?), ground(Hs?), ground(Cs?) |
@@ -2808,7 +2794,7 @@ check_census(W, Hs, Cs, Bs, Es?) :- otherwise, string(W?), ground(Hs?), ground(C
 check_census(N, _, _, _, []) :- otherwise, ground(N?) | true.
 procedure check_census1(_?, _?, _?, Terms?, Terms?, Terms).
 check_census1(D, Rq, W, Ps, Cs, Es?) :- ground(W?), ground(Ps?), ground(Cs?) |
-    mon_keys(Ps?, Cs?, Ms), scr_keys(Ps?, Cs?, Ss), append(Ms?, Ss?, MSs), member(key(W?, 2), MSs?, AR),
+    holder_keys(Ps?, Cs?, Ms), scr_keys(Ps?, Cs?, Ss), append(Ms?, Ss?, MSs), member(key(W?, 2), MSs?, AR),
     check_census2(D?, Rq?, AR?, W?, Es).
 procedure check_census2(_?, _?, Ans?, _?, Terms).
 check_census2(D, Rq, no, _, []) :- D? =?= Rq? | true.
@@ -3288,8 +3274,8 @@ decl_of(K, [H|Hs], D?) :- ground(H?), ground(K?) | key(H?, K1), decl_of1(K1?, K?
 procedure decl_of1(_?, _?, _?, Terms?, _).
 decl_of1(K1, K, H, _, H?) :- K1? =?= K? | true.
 decl_of1(K1, K, _, Hs, D?) :- K1? =?\= K? | decl_of(K?, Hs?, D).
-%% The names: the monitor's reference, the screen's and a token for each rated
-%% goal of a clause, among the names the clause does not write.
+%% The names: the screen's reference and a token for each rated goal of a
+%% clause, among the names the clause does not write.
 procedure check_names(Terms?, Terms).
 check_names([], []).
 check_names([cl(H, Gs, Bs)|Cs], Es?) :- ground(H?), ground(Gs?), ground(Bs?) |
@@ -3297,12 +3283,12 @@ check_names([cl(H, Gs, Bs)|Cs], Es?) :- ground(H?), ground(Gs?), ground(Bs?) |
     check_names0(U?, NR?, H?, E1), check_names(Cs?, E2), append(E1?, E2?, Es).
 procedure check_names0(Terms?, Integer?, _?, Terms).
 check_names0(U, NR, H, Es?) :- ground(U?) |
-    mon_names(MN), tok_names(TN), scr_names(SN), fresh(MN?, U?, 1, M), fresh(TN?, U?, NR?, T), fresh(SN?, U?, 1, Sc),
-    length(M?, NM), length(T?, NT), length(Sc?, NS), check_names1(NM?, NT?, NS?, NR?, H?, Es).
-procedure check_names1(Integer?, Integer?, Integer?, Integer?, _?, Terms).
-check_names1(NM, NT, NS, NR, _, []) :- NM? =:= 1, NT? =:= NR?, NS? =:= 1 | true.
-check_names1(_, _, _, _, H, [E?]) :- otherwise, ground(H?) |
-    E =.. ['%% not transformed: no names left for the monitor\'s reference, the screen\'s or the tokens of the clause of', H?].
+    tok_names(TN), scr_names(SN), fresh(TN?, U?, NR?, T), fresh(SN?, U?, 1, Sc),
+    length(T?, NT), length(Sc?, NS), check_names1(NT?, NS?, NR?, H?, Es).
+procedure check_names1(Integer?, Integer?, Integer?, _?, Terms).
+check_names1(NT, NS, NR, _, []) :- NT? =:= NR?, NS? =:= 1 | true.
+check_names1(_, _, _, H, [E?]) :- otherwise, ground(H?) |
+    E =.. ['%% not transformed: no names left for the screen\'s reference or the tokens of the clause of', H?].
 
 %% Each procedure declared once.
 procedure check_decls(Terms?, Terms).

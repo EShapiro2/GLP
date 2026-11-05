@@ -19,13 +19,11 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-look_count(C, _, _, Mon, Scr)
+look_count(C, _, _, Scr)
 :-
-stream_append(rated('/'(1, second), Tok), Mon?, _)
+rated(1.0, Tok)
 ,
 look(Tok?, C?, Scr?)
 .
@@ -42,7 +40,7 @@ MutualRef?
 .
 look(stop, _, _)
 .
-look(go, count(N?), Scr)
+look(go(_), count(N?), Scr)
 :-
 stream_append(seen(L), Scr?, _)
 ,

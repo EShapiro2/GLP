@@ -19,13 +19,11 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-judge_panel(panel(Cs), _, S, Mon, _)
+judge_panel(panel(Cs), _, S, _)
 :-
-judge(Cs?, S?, Mon?)
+judge(Cs?, S?)
 .
 procedure
 judge
@@ -34,21 +32,19 @@ List(Card)
 ?
 ,
 Integer?
-,
-MutualRef?
 )
 .
-judge([card(_, A?) | Cs], S, Mon)
+judge([card(_, A?) | Cs], S)
 :-
 random(S?, 2, K, S1)
 ,
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
 verdict(Tok?, K?, slot(A))
 ,
-judge(Cs?, S1?, Mon?)
+judge(Cs?, S1?)
 .
-judge([], _, _)
+judge([], _)
 .
 procedure
 verdict
@@ -63,7 +59,7 @@ Slot(YesNo)
 .
 verdict(stop, _, _)
 .
-verdict(go, 1, slot(yes))
+verdict(go(_), 1, slot(yes))
 .
-verdict(go, 2, slot(no))
+verdict(go(_), 2, slot(no))
 .

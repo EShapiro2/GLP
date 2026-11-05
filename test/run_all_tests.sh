@@ -8239,7 +8239,7 @@ poll_run(5, As).
 HEREDOC
 2>&1)
 check "sglp outside: the program loads" "Loaded program" "$sglp_out_run"
-check "sglp outside: the person answers each poll, logged with the monitor's clock" "entry(31906.575869147167, 1, Poll, poll(2, yes))" "$sglp_out_run"
+check "sglp outside: the person answers each poll, logged with the monitor's clock" "entry(18909.90568894495, 1, Poll, poll(2, yes))" "$sglp_out_run"
 check "sglp outside: the program reads the five answers" "As = \[yes, yes, yes, yes, yes\]" "$sglp_out_run"
 
 # The simulations of canonical CVA platforms under sGLP, each a record of its

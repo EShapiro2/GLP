@@ -40,8 +40,6 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
 
@@ -55,7 +53,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-count(Y, H?, K?, Mon?, Scr?)
+count(Y, H?, K?, Scr?)
 ,
 relay_1(A?, 'Stream(Integer)?', E, Y?, Mon?, Log?)
 ,

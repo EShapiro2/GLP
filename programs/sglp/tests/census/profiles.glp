@@ -60,13 +60,11 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-formal_hello(hello(K?, N?), person(Me, _, _), _, Mon, Scr)
+formal_hello(hello(K?, N?), person(Me, _, _), _, Scr)
 :-
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
 greet_back(Tok?, Me?, slot(K), slot(N), Scr?)
 .
@@ -88,7 +86,7 @@ MutualRef?
 .
 greet_back(stop, _, _, _, _)
 .
-greet_back(go, Me, slot(Me?), slot(N?), Scr)
+greet_back(go(_), Me, slot(Me?), slot(N?), Scr)
 :-
 stream_append(seen(L), Scr?, _)
 ,
@@ -109,13 +107,11 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-kind_mood(mood(M?), _, _, Mon, _)
+kind_mood(mood(M?), _, _, _)
 :-
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
 tell(Tok?, slot(M), kind)
 .
@@ -132,7 +128,7 @@ Constant?
 .
 tell(stop, _, _)
 .
-tell(go, slot(V?), V)
+tell(go(_), slot(V?), V)
 .
 
 %% person(grumpy)
@@ -149,13 +145,11 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-grumpy_mood(mood(M?), _, _, Mon, _)
+grumpy_mood(mood(M?), _, _, _)
 :-
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
 tell(Tok?, slot(M), grumpy)
 .
@@ -175,13 +169,11 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-casual_hello(hello(K?, A?), H, _, Mon, _)
+casual_hello(hello(K?, A?), H, _, _)
 :-
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
 say_age(Tok?, H?, slot(K), slot(A))
 .
@@ -202,7 +194,7 @@ Slot(Integer)
 .
 say_age(stop, _, _, _)
 .
-say_age(go, person(Me, _, As), slot(Me?), slot(Ag?))
+say_age(go(_), person(Me, _, As), slot(Me?), slot(Ag?))
 :-
 age_of(As?, Ag)
 .
@@ -235,13 +227,11 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
-casual_mood(mood(M?), _, _, Mon, _)
+casual_mood(mood(M?), _, _, _)
 :-
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
 tell(Tok?, slot(M), happy)
 .

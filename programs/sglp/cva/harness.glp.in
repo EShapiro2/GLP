@@ -41,7 +41,7 @@
 %% that key.  The run is refused where
 %% the census draws no person or a person of a role of no dimension (Section 3,
 %% after Definition "Well-Formed"): it takes no goal but the line refused.  The
-%% draws are the examples' (Appendix B): the monitor draws from the run's seed;
+%% draws are the examples' (Appendix B): the clock draws from the run's seed, which the monitor gives start_clock;
 %% the population's draws are from a second generator, started at the first
 %% value drawn from the run's seed and cut into blocks of 4096 draws, a census
 %% the run declaration names drawing from the first and agent a from the a-th

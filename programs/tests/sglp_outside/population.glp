@@ -37,8 +37,6 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
 
@@ -52,7 +50,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-agreeable_poll(Y?, H?, K?, Mon?, Scr?)
+agreeable_poll(Y?, H?, K?, Scr?)
 ,
 relay_1(A?, 'Poll', E?, Y, Mon?, Log?)
 ,

@@ -42,7 +42,7 @@
 %% In one machine a goal is at agent a by being one of a's: its start goal, its
 %% person process, its screen, and the goals they spawn; no goal carries a place.
 %%
-%% The draws (Appendix B).  The monitor draws from the run's seed.  The
+%% The draws (Appendix B).  The clock draws from the run's seed, which the monitor gives start_clock.  The
 %% population's draws are from a second generator, started at the first value
 %% drawn from the run's seed, split into blocks of 4096 consecutive draws:
 %% agent a's block is the a-th, run N agents naming no census (Appendix B,

@@ -44,8 +44,8 @@
 %%
 %% The network, the monitor, the log's sink and the seeds' blocks are the social
 %% graph's (social_graph/harness.glp), tree/5, deliver/4 and skip/3 copied with
-%% this directory's Msg.  The draws (Appendix B): the monitor draws from the
-%% run's seed; the population's draws are from a second generator, started at
+%% this directory's Msg.  The draws (Appendix B): the clock draws from the
+%% run's seed, which the monitor gives start_clock; the population's draws are from a second generator, started at
 %% the first value drawn from the run's seed, split into blocks of 4096
 %% consecutive draws: agent a's block is the a-th, run N agents naming no
 %% census (Appendix B, "Seeds").  Its first two draws pick a's profile in each

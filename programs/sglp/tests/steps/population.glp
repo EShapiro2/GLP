@@ -39,8 +39,6 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
 imported procedure
@@ -57,8 +55,6 @@ Person
 Integer?
 ,
 MutualRef?
-,
-MutualRef?
 )
 .
 
@@ -72,7 +68,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-get_ready(Y?, H?, K?, Mon?, Scr?)
+get_ready(Y?, H?, K?, Scr?)
 ,
 relay_1(A?, 'Ready', E?, Y, Mon?, Log?)
 ,
@@ -86,7 +82,7 @@ random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-judge_fast(Y?, H?, K?, Mon?, Scr?)
+judge_fast(Y?, H?, K?, Scr?)
 ,
 relay_2(A?, 'Panel', E?, Y, Mon?, Log?)
 ,
