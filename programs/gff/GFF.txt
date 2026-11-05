@@ -13,3 +13,10 @@ Pragmas
 Posts: Alice's feed.
 Feeds: the feeds Alice follows; under a feed, the persons Alice follows it through and its items, each once.
 Feed: Alice [Post] <item>
+% Path-Shortening Instance of GFF (Udi, 2026-11-05, to GFF #3; the paper's Section 4; an instance says when a permitted act is taken and is no part of the schemas, kept out of vGLP's reader as %-lines, as GDO's instance is):
+% Labeled transitive pointing is taken whenever it is permitted.
+% Ceasing to point is taken iff Alice points with the label to Bob and to Carol, and Bob points with it to Carol.
+% Fault-Resilient Instance of GFF (Udi, 2026-11-05, to GFF #3; the paper's Section 5):
+% d > 1 is an integer.
+% Labeled pointing to friend is taken iff Alice points with the label to at least one person and to fewer than d.
+% Ceasing to point is the person's act only.
