@@ -107,12 +107,12 @@ const _cssnClasses = [
 
 /// The last views of the agents asked: Bob, Dave's parent and Alice's friend;
 /// Carol, Alice's child; and Dave, Bob's child.
-const _bobParentOutput = '[view([friend(alice), parenting(dave), '
-    'friend(dave), identity], [alice, carol, dave])]';
-const _carolOutput = '[view([friend(alice), child, parent(alice), identity], '
-    '[alice, bob, dave])]';
-const _daveOutput = '[view([friend(bob), child, parent(bob), identity], '
-    '[alice, bob, carol])]';
+const _bobParentOutput = '[view(bob, [friend(alice), parenting(dave), '
+    'friend(dave), identity], [alice, carol, dave], [], [])]';
+const _carolOutput = '[view(carol, [friend(alice), child, parent(alice), identity], '
+    '[alice, bob, dave], [], [])]';
+const _daveOutput = '[view(dave, [friend(bob), child, parent(bob), identity], '
+    '[alice, bob, carol], [], [])]';
 
 /// The code of Alf, 'The code of Alf' signed by acme_ltd, its developer, signed
 /// by Alice; and Alf's attestation, the code signed over by Alice at enter
@@ -125,19 +125,19 @@ const _agentBefriendView = 'approval(attempt(alf, 3, 3, agent_befriend(alf, '
     'bob, alice), none), input([2]))';
 
 /// The last view Alice's agent wrote: she is Alf's principal and its friend.
-const _aliceOutput = '[view([principal_of(alf), friend(alf), item($_code), '
-    'authored($_code), friend(bob), identity], [alf, bob])]';
+const _aliceOutput = '[view(alice, [principal_of(alf), friend(alf), item($_code), '
+    'authored($_code), friend(bob), identity], [alf, bob], [], [])]';
 
 /// The last view Bob's agent wrote: he knows Alf, by agent_meet, which recorded
 /// Alf, its principal Alice and its attestation, agent_of(alf, alice, y); and
 /// he knows Alice, his friend.
-const _bobOutput = '[view([knows(alf), agent_of(alf, alice, $_attestation), '
-    'friend(alice), knows(alice), identity], [alf, alice])]';
+const _bobOutput = '[view(bob, [knows(alf), agent_of(alf, alice, $_attestation), '
+    'friend(alice), knows(alice), identity], [alf, alice], [], [])]';
 
 /// A last view of Bob's that holds no record of Alf: he knows Alf, introduced
 /// to him (GKK:3), which records nothing of it.
-const _bobUnrecordedOutput = '[view([knows(alf), friend(alice), '
-    'knows(alice), identity], [alf, alice])]';
+const _bobUnrecordedOutput = '[view(bob, [knows(alf), friend(alice), '
+    'knows(alice), identity], [alf, alice], [], [])]';
 
 /// The widget of a question of `Approval` where the declaration
 /// `Approval =::= approval_sentence.` holds, over the classes [classes]:
@@ -430,7 +430,7 @@ void main() {
         formatTerm(SocialState.developerIn(fixtureTerm(_attestation))!), 'acme_ltd');
     expect(SocialState.developerIn(const GAtom('alice')), isNull);
     final (_, s) = SocialState.read(fixtureTerm(
-        '[view([agent_of(alf, alice, $_attestation), friend(alf)], [alf])]'));
+        '[view(bob, [agent_of(alf, alice, $_attestation), friend(alf)], [alf], [], [])]'));
     expect(formatTerm(s!.developerOf(const GAtom('alf'))!), 'acme_ltd');
     expect(s.developerOf(const GAtom('alice')), isNull);
     expect(formatTerm(s.attestationOf(const GAtom('alf'))!),
@@ -438,10 +438,10 @@ void main() {
   });
 
   test('a principal\'s AI agents, those retired, and the items held', () {
-    final (_, s) = SocialState.read(fixtureTerm('[view([retired_of(alf), '
+    final (_, s) = SocialState.read(fixtureTerm('[view(alice, [retired_of(alf), '
         'principal_of(alf), principal_of(ada), item($_code), '
         "authored($_code), agent_of(rex, carol, $_attestation), "
-        'identity], [])]'));
+        'identity], [], [], [])]'));
     expect(s!.aiAgents.map(formatTerm), ['alf', 'ada']);
     expect(s.isPrincipalOf(const GAtom('ada')), isTrue);
     expect(s.isPrincipalOf(const GAtom('bob')), isFalse);
@@ -489,7 +489,7 @@ void main() {
     const enter2 = 'approval(attempt(bob, 3, 3, enter_2(bob, grace, dave), '
         'none), input([2]))';
     await s.draw(_named([_cssnEnter2]), enter2,
-        output: '[view([friend(bob), identity], [bob, dave])]');
+        output: '[view(grace, [friend(bob), identity], [bob, dave], [], [])]');
     expect(s.texts(), ['Bob asks to enter 2 Grace, Dave.', 'Yes', 'No']);
   });
 
@@ -507,8 +507,8 @@ void main() {
 
   test('what a CSSN state holds of the person: their children and parents', () {
     final (_, alice) = SocialState.read(fixtureTerm(
-        '[view([friend(bob), parenting(carol), friend(carol), identity], '
-        '[bob, carol, dave])]'));
+        '[view(alice, [friend(bob), parenting(carol), friend(carol), identity], '
+        '[bob, carol, dave], [], [])]'));
     expect(alice!.children.map(formatTerm), ['carol']);
     expect(alice.isChild, isFalse);
     final (_, carol) = SocialState.read(fixtureTerm(_carolOutput));
@@ -544,24 +544,24 @@ void main() {
     const meet =
         'approval(attempt(alice, 2, 2, meet(alice, bob), none), input([2]))';
     await s.draw(_named(_cssnClasses), meet,
-        output: '[view([identity], [alice])]');
+        output: '[view(bob, [identity], [alice], [], [])]');
     expect(s.texts(), ['Alice asks to meet you in person.', 'Yes', 'No']);
     final (d, n) = await s.both(
         _defaultApproval(_cssnClasses), meet, 'yes', 'Yes',
-        output: '[view([identity], [alice])]');
+        output: '[view(bob, [identity], [alice], [], [])]');
     expect(d, 'input(1, [2], yes)');
     expect(n, d);
     const introduce = 'approval(attempt(alice, 3, 3, introduce(alice, bob, '
         'carol), none), input([2]))';
     await s.draw(_named(_cssnClasses), introduce,
-        output: '[view([knows(alice), identity], [alice, carol])]');
+        output: '[view(bob, [knows(alice), identity], [alice, carol], [], [])]');
     expect(s.texts(), ['Alice introduces Carol to you.', 'Yes', 'No']);
     // GSC's apps, whose classes have no child_befriend: the same words.
     final gsc = [..._gsgClasses, _meet, _introduce];
-    await s.draw(_named(gsc), meet, output: '[view([identity], [alice])]');
+    await s.draw(_named(gsc), meet, output: '[view(bob, [identity], [alice], [], [])]');
     expect(s.texts(), ['Alice asks to meet you in person.', 'Yes', 'No']);
     await s.draw(_named(gsc), introduce,
-        output: '[view([knows(alice), identity], [alice, carol])]');
+        output: '[view(bob, [knows(alice), identity], [alice, carol], [], [])]');
     expect(s.texts(), ['Alice introduces Carol to you.', 'Yes', 'No']);
   });
 

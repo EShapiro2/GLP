@@ -225,7 +225,7 @@ class _TabScreenState extends State<TabScreen> {
   /// Whether the first tab is Contacts, the request type last drawn offering meeting and no friendship (GKK's app); Friends otherwise.
   bool _contacts = false;
 
-  /// The person's own key, as the last request question drawn showed it.
+  /// The person's own key, as the last view drawn on construct 0 carries it ([SocialState.me]).
   GTerm? _me;
 
   /// The messages held for a later request question ([TabPlace.hold]).
@@ -325,17 +325,14 @@ class _TabScreenState extends State<TabScreen> {
     }
     final output = c0?.view;
     final (_, state) = SocialState.read(output);
+    // The person's own key, the view's first argument (vGLP 12f629d,
+    // Section 5.4, "The compilation": "its own key k").
+    if (state != null) _me = state.me;
     // A platform compiled from a contract with pragmas: its tabs are the
     // lists its view names.
     final lists = state?.lists;
     if (lists != null && lists.isNotEmpty) {
       return _worded(lists, c0, request, approvals, others, output);
-    }
-    if (request != null) {
-      final (f, xs) = ctorArgs(request.view);
-      if (f == 'menu' && xs.length == 3 && pendingAt(xs[0]) == null) {
-        _me = xs[0];
-      }
     }
     final offers = request == null
         ? null

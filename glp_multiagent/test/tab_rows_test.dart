@@ -6,7 +6,8 @@
 // with a multiplicity, the view carrying the whole state" (vGLP 5b4859a,
 // sections/parts/act-schemas-local.tex:5, Section 5.4, "The contract's
 // words"; GLP #11 Cowork, Code_inbox.md, 2026-10-31 14:21 UTC).  Each view is
-// written as a compiled app writes it, `view(S, K, A, Ts)`, Ts its tabs,
+// written as a compiled app writes it, `view(Me, S, K, A, Ts)`, Me the
+// agent's own key and Ts its tabs (vGLP 12f629d, Section 5.4),
 // `tab(Name, P)` and, where the contract adds or deletes P with a
 // multiplicity, `tab(Name, P, counted)`.
 import 'package:flutter/material.dart';
@@ -53,7 +54,7 @@ void main() {
       'row, bob, showing both atoms, each with its count', (tester) async {
     await _draw(
         tester,
-        "[view([identity, bond(bob, 25), bond(bob, 25), bond(bob, 28), "
+        "[view(alice, [identity, bond(bob, 25), bond(bob, 25), bond(bob, 28), "
         "bond(alice, 30), bond(bob, 25)], [alice, bob], [], "
         "[tab('Bonds', bond, counted)])]");
     // One row per item, in the order the items first appear in the state.
@@ -71,7 +72,7 @@ void main() {
     const road = "speech(utterance('Road closed'), carol)";
     await _draw(
         tester,
-        "[view([identity, friend(bob), item($flood), item($road)], "
+        "[view(alice, [identity, friend(bob), item($flood), item($road)], "
         "[bob, carol, dan], [], [tab('Items', item)])]");
     expect(_rowKeys(tester), [
       "speech(speech(utterance('Flood on Main Street'), dan), bob)",

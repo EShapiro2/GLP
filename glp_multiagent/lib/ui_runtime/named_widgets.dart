@@ -460,7 +460,7 @@ Widget _cannotDraw(String widget, GTerm view) => Text(
 /// The name a widget declaration gives [lastState]: `Stream(Output) =::= last_state.`, which vGLP's compiler prints into every canonical platform (programs/vglp/cva/compiler/text.glp).
 const String lastStateName = 'last_state';
 
-/// The name a widget declaration gives [socialMenu]: `Menu =::= social_menu.`, which vGLP's compiler prints into every canonical platform, with the labels of a contract's pragmas where it carries them (programs/vglp/cva/compiler/README.md).
+/// The name a widget declaration gives [socialMenu]: `Request =::= social_menu(...)`, which vGLP's compiler prints into every canonical platform for its request type (programs/vglp/cva/compiler/text.glp at GLP 7d857bcd), with the labels of a contract's pragmas where it carries them (programs/vglp/cva/compiler/README.md).
 const String socialMenuName = 'social_menu';
 
 /// The key of the control or the row [what] that [lastState] or [socialMenu] draws for construct [id].
@@ -471,8 +471,11 @@ ValueKey<String> socialKey(int id, String what) =>
 String groupKey(GTerm leader, GTerm name) =>
     '${formatTerm(leader)}:${formatTerm(name)}';
 
-/// The view of the agent of a canonical platform, as it writes it on its output to its person: "On the program's output to its person ... the agent goal writes its view view(s, K), the machine state s of its app state and the persons K it knows, when it starts and whenever either changes; and, when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused([t]_j, q, d): [t]_j the part of the refused attempt, q its refuser and d the reason, from the abort outcome, or from the vote where the agent's own vote no refused it.  The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it" (vGLP f0acbc1, Section 5.4, "The compilation"; [SocialNotice]).  A machine state is a list of atoms, each as its contract writes it (programs/gsc/GSG.glp, GSN.glp and GSNP.glp), in the view as the platform prints its type `Atom` (programs/apps/<app>/platform.vglp): `identity` and `friend(Q)`; in GSN also `received(X, P)`, `member(C)`, `listed(Q, N)`, `closed(N)`, `posted(X, N)`, `delivered(X, Q, N)` and `received_in(X, A, N)`; in GSNP `item(X)` and `authored(X)` in place of `received` and `received_in`; each `X` a speech act and each `N`, a group's name, a speech act.  `C` is the community name of a group, `<A>.N` in the contract, of type `CName ::= community(Peer) ; dot(CName, Speech)`: "a name term <u>.y1...yn is the community name of the person bound to u followed by the speech acts bound to y1, ..., yn, as <a>.n names the group n led by a" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications"), so a member atom holds `dot(community(A), N)`, the group `N` led by `A`.
+/// The view of the agent of a canonical platform, as it writes it on its output to its person: "On the program's output to its person (Section 5.3) the agent goal writes its view view(k, s, K, A), its own key k, the machine state s of its app state, the persons K it knows and the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part, when it starts and whenever any changes; and, when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused(N, q, d)" (vGLP 12f629d, Section 5.4, "The compilation"; [SocialNotice]); and the compiler carries "the tab's name and its predicate into the view the agent writes" (vGLP 12f629d, Section 5.4, "The contract's words"), as the view's last argument, so that the view is `view(Me, S, K, A, Ts)`, `Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab))` (programs/vglp/cva/compiler/text.glp at GLP 7d857bcd).  A machine state is a list of atoms, each as its contract writes it, in the view as the platform prints its type `Atom` (programs/apps/<app>/platform.vglp): `identity` and `friend(Q)`; in GSN also `received(X, P)`, `member(C)`, `listed(Q, N)`, `closed(N)`, `posted(X, N)`, `delivered(X, Q, N)` and `received_in(X, A, N)`; in GSNP `item(X)` and `authored(X)` in place of `received` and `received_in`; each `X` a speech act and each `N`, a group's name, a speech act.  `C` is the community name of a group, `<A>.N` in the contract, of type `CName ::= community(Peer) ; dot(CName, Speech)`: "a name term <u>.y1...yn is the community name of the person bound to u followed by the speech acts bound to y1, ..., yn, as <a>.n names the group n led by a" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), so a member atom holds `dot(community(A), N)`, the group `N` led by `A`.
 class SocialState {
+  /// The agent's own key, the view's first argument, `k` (vGLP 12f629d, Section 5.4, "The compilation": "its own key k").
+  final GTerm me;
+
   /// The machine state, its atoms.
   final List<GTerm> atoms;
 
@@ -485,21 +488,22 @@ class SocialState {
   /// Every notice written on construct 0, in the order written, those before the last view among them.
   final List<SocialNotice> written;
 
-  /// The lists the app shows, where the platform is compiled from a contract with pragmas: each its name and the predicate whose atoms in the machine state it lists, as the view carries them, `view(S, K, [tab(Name, P), ...])` (vGLP 1126f4f, Section 5.4, "The contract's words": "a list's name into the view the agent writes"); null where the view carries none, `view(S, K)`.
+  /// The lists the app shows, the view's last argument, `Ts`: each its name and the predicate whose atoms in the machine state it lists, `tab(Name, P)`, or `tab(Name, P, counted)` (vGLP 12f629d, Section 5.4, "The contract's words": "the tab's name and its predicate into the view the agent writes").  [read] always gives it; null only where a [SocialState] is made by hand.
   final List<({String name, String predicate, bool counted})>? lists;
 
-  /// The approvals the person made that are pending, as the view carries them, `view(S, K, A)` or `view(S, K, A, Ts)`: each by its request name (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part").
+  /// The approvals the person made that are pending, the view's `A`: each by its request name (vGLP 12f629d, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part").
   final List<GTerm> pending;
 
-  const SocialState(this.atoms, this.known,
+  const SocialState(this.me, this.atoms, this.known,
       [this.notices = const [],
       this.written = const [],
       this.lists,
       this.pending = const []]);
 
-  /// The last view written on construct 0, and the notices written after it, read off [output], the value drawn on it: the elements of the stream so far, each written whole a view, `view(S, K)`, or a notice ([SocialNotice]).  The first of the pair is false where [output] is not a stream of views and notices; the second is null where no view is written whole yet.
+  /// The last view written on construct 0, and the notices written after it, read off [output], the value drawn on it: the elements of the stream so far, each written whole a view, `view(Me, S, K, A, Ts)`, or a notice ([SocialNotice]).  The first of the pair is false where [output] is not a stream of views and notices; the second is null where no view is written whole yet.
   static (bool, SocialState?) read(GTerm? output) {
     if (output is! GList) return (false, null);
+    GTerm? me;
     List<GTerm>? atoms, known;
     var pending = <GTerm>[];
     List<({String name, String predicate, bool counted})>? lists;
@@ -509,28 +513,27 @@ class SocialState {
       if (!_whole(e)) continue;
       final (f, xs) = ctorArgs(e);
       if (f == 'view' &&
-          (xs.length == 2 ||
-              (xs.length == 3 && xs[2] is GList) ||
-              (xs.length == 4 && xs[2] is GList && xs[3] is GList)) &&
-          xs[0] is GList &&
-          xs[1] is GList) {
-        atoms = (xs[0] as GList).items;
-        known = (xs[1] as GList).items;
-        // view(S, K, A), and, with pragmas, view(S, K, A, Ts): the approvals pending and the lists (vGLP, Section 5.4, "The compilation" and "The contract's words").
-        pending = xs.length >= 3 ? (xs[2] as GList).items : <GTerm>[];
-        lists = xs.length == 4
-            ? [
-                for (final t in (xs[3] as GList).items)
-                  if (ctorArgs(t) case (final tf, final ts)
-                      when tf == 'tab' && (ts.length == 2 || ts.length == 3))
-                    (
-                      name: displayText(ts[0]),
-                      predicate: displayText(ts[1]),
-                      // tab(Name, P, counted): the contract adds or deletes P with a multiplicity, and a row shows its count (vGLP 110caf4, Section 5.4, "The contract's words").
-                      counted: ts.length == 3 && displayText(ts[2]) == 'counted'
-                    ),
-              ]
-            : null;
+          xs.length == 5 &&
+          xs[1] is GList &&
+          xs[2] is GList &&
+          xs[3] is GList &&
+          xs[4] is GList) {
+        // view(Me, S, K, A, Ts): the agent's own key, the machine state, the persons known, the approvals pending and the tabs (vGLP 12f629d, Section 5.4, "The compilation" and "The contract's words").
+        me = xs[0];
+        atoms = (xs[1] as GList).items;
+        known = (xs[2] as GList).items;
+        pending = (xs[3] as GList).items;
+        lists = [
+          for (final t in (xs[4] as GList).items)
+            if (ctorArgs(t) case (final tf, final ts)
+                when tf == 'tab' && (ts.length == 2 || ts.length == 3))
+              (
+                name: displayText(ts[0]),
+                predicate: displayText(ts[1]),
+                // tab(Name, P, counted): the contract adds or deletes P with a multiplicity, and a row shows its count (vGLP, Section 5.4, "The contract's words").
+                counted: ts.length == 3 && displayText(ts[2]) == 'counted'
+              ),
+        ];
         // A notice is drawn until the next view is written: "which the
         // screen shows until the next view" (vGLP f0acbc1, Section 5.4, "The
         // compilation", the short version's).
@@ -542,8 +545,9 @@ class SocialState {
       notices.add(n);
       written.add(n);
     }
-    if (atoms == null || known == null) return (true, null);
-    return (true, SocialState(atoms, known, notices, written, lists, pending));
+    if (me == null || atoms == null || known == null) return (true, null);
+    return (true,
+        SocialState(me, atoms, known, notices, written, lists, pending));
   }
 
   /// Whether the program has written [t] whole: no position in it is marked pending.
@@ -984,7 +988,7 @@ class SocialNotice {
   }
 }
 
-/// The requests a request question offers, read off the default widget `D` of its type, `Menu ::= menu(Key, List(Key), Request?)`: "It is drawn with the default widget of its type beside its name, from which it reads the type's constructors, so that a menu declared once lists the alternatives of the request type of each program it is declared for" (vGLP, Section 6.2, the paragraph after Proposition "Default Widgets").  The alternatives of the request type are `propose(P)`, `P` a term of Proposal naming a guarded part of a class, and `known(Q)` (vGLP, Section 5.4, "The compilation").
+/// The requests a request question offers, read off the default widget `D` of its type, the request type `Request` (vGLP 12f629d, Section 5.4, "The compilation"): "It is drawn with the default widget of its type beside its name, from which it reads the type's constructors, so that a menu declared once lists the alternatives of the request type of each program it is declared for" (vGLP, Section 6.2, the paragraph after Proposition "Default Widgets").  The alternatives of the request type are `propose(P)`, `P` a term of Proposal naming a guarded part of a class, and `known(Q)` (vGLP, Section 5.4, "The compilation").
 /// Where the button of a request is drawn, as its widget term says, `act(place(T, M, Ps, Gs, Is, Ks, Ws), W)` (vGLP 932c710, Section 6.2, "The words a platform shows": "The button of an act that names, beside the person proposing it, a person, a group or an item is drawn beside each one the view lists, on whichever tab lists it, the row filling the act's variable, and the button of an act that names none on the tab of its contract"; bridge.dart, [actCtor]): the [tab] of its contract; the place [me] of the person proposing it; the places [persons] a person the view lists fills; the [groups] a group it lists fills, each the place of its leader and that of its name; the [items] a row of a list fills, each the place of its speech act and the predicate the list lists; the places [keys] a field for a key fills where the peer is not listed; and the text of its request form, [words], each a string or the place of a person.  Places count from 1.
 class ActInfo {
   final String tab;
@@ -1351,7 +1355,7 @@ class RequestOffers {
   /// Whether the declaration labels any request: the platform is compiled from a contract with pragmas.
   bool get worded => labels.isNotEmpty;
 
-  /// The requests [dflt], the default widget of Menu, offers: its form `menu`, whose third field is the menu of the request type's alternatives, the form `propose` of one field, the menu of the forms of Proposal, and the form `known`; each with the label its declaration gives it, `label(S, form(F, ...))`, and its fields' names.
+  /// The requests [dflt], the default widget of the request type `Request`, offers: the request type's alternatives, the form `propose` of one field, the menu of the forms of Proposal, and the form `known` where the type has it, a menu of them or, of one alternative, its form (vGLP 12f629d, Section 5.4, "The compilation": the request question "of the request type Request?, takes one request, of a type with the alternative propose(N) for the request name N of each guarded part"; Definition "Default Widget"); each with the label its declaration gives it, `label(S, form(F, ...))`, and its fields' names.
   static RequestOffers of(GTerm dflt) {
     final proposals = <String>{};
     final labels = <String, String>{};
@@ -1366,42 +1370,36 @@ class RequestOffers {
           for (final e in es.items)
             if (ctorArgs(e).$2.isNotEmpty) displayText(ctorArgs(e).$2[0])
         ];
-    final (k, ws) = ctorArgs(_bare(dflt));
-    if (k == 'form' && ws.length == 2 && ws[1] is GList) {
-      final fs = (ws[1] as GList).items;
-      if (fs.length == 3) {
-        for (final raw in _items(_fieldWidget(fs[2]))) {
-          final altLabel = labelledWidget(raw)?.$1;
-          final (ak, aws) = ctorArgs(_bare(raw));
-          if (ak != 'form' || aws.length != 2 || aws[1] is! GList) continue;
-          final f = ctorArgs(aws[0]).$1;
-          final afs = aws[1] as GList;
-          if (f == 'known' && afs.items.length == 1) {
-            known = true;
-            knownLabel = altLabel;
-            knownField = names(afs).firstOrNull ?? knownField;
-          }
-          if (f == 'propose' && afs.items.length == 1) {
-            for (final praw in _items(_fieldWidget(afs.items[0]))) {
-              final pl = labelledWidget(praw)?.$1;
-              final (pk, pws) = ctorArgs(_bare(praw));
-              if (pk == 'form' && pws.length == 2 && pws[1] is GList) {
-                final key =
-                    '${ctorArgs(pws[0]).$1}/${(pws[1] as GList).items.length}';
-                proposals.add(key);
-                if (pl != null) labels[key] = pl;
-                fields[key] = names(pws[1] as GList);
-                kinds[key] = [
-                  for (final e in (pws[1] as GList).items) _kind(e)
-                ];
-                // The places of its guarding roles, nested, the first outermost.
-                for (var cur = actWidget(praw); cur != null; cur = actWidget(cur.$2)) {
-                  final a = ActInfo.of(cur.$1);
-                  if (a == null) continue;
-                  acts.putIfAbsent(key, () => a);
-                  (allActs[key] ??= []).add(a);
-                }
-              }
+    for (final raw in _items(_bare(dflt))) {
+      final altLabel = labelledWidget(raw)?.$1;
+      final (ak, aws) = ctorArgs(_bare(raw));
+      if (ak != 'form' || aws.length != 2 || aws[1] is! GList) continue;
+      final f = ctorArgs(aws[0]).$1;
+      final afs = aws[1] as GList;
+      if (f == 'known' && afs.items.length == 1) {
+        known = true;
+        knownLabel = altLabel;
+        knownField = names(afs).firstOrNull ?? knownField;
+      }
+      if (f == 'propose' && afs.items.length == 1) {
+        for (final praw in _items(_fieldWidget(afs.items[0]))) {
+          final pl = labelledWidget(praw)?.$1;
+          final (pk, pws) = ctorArgs(_bare(praw));
+          if (pk == 'form' && pws.length == 2 && pws[1] is GList) {
+            final key =
+                '${ctorArgs(pws[0]).$1}/${(pws[1] as GList).items.length}';
+            proposals.add(key);
+            if (pl != null) labels[key] = pl;
+            fields[key] = names(pws[1] as GList);
+            kinds[key] = [
+              for (final e in (pws[1] as GList).items) _kind(e)
+            ];
+            // The places of its guarding roles, nested, the first outermost.
+            for (var cur = actWidget(praw); cur != null; cur = actWidget(cur.$2)) {
+              final a = ActInfo.of(cur.$1);
+              if (a == null) continue;
+              acts.putIfAbsent(key, () => a);
+              (allActs[key] ??= []).add(a);
             }
           }
         }
@@ -1468,7 +1466,7 @@ class RequestOffers {
   }
 }
 
-/// What the request question asks, as [socialMenu] reads its view `menu(Me, Known, input(P))`: the agent's own key, the path of the question, null once it is answered, the requests its type offers, and the grant of the person's raw input at the question.  The persons known are read off the last view on construct 0 ([SocialState.known]), which the agent writes whenever they change, where the request question shows those known when it was asked.
+/// What the request question asks, as [socialMenu] reads it: the agent's own key, read off the last view on construct 0 ([SocialState.me]), the path of the question, `P` of its view `input(P)`, null once it is answered, the requests its type offers, and the grant of the person's raw input at the question.  The request question is bare, of the request type `Request?`, taking one request (vGLP 12f629d, Section 5.4, "The compilation"), so it shows neither the key nor the persons known: both are read off the last view, "A declared widget is drawn also with the last value drawn on construct 0" (vGLP 12f629d, Section 6.2).
 class SocialAsk {
   final GTerm me;
   final GList? at;
@@ -1509,7 +1507,7 @@ Widget lastState(
   );
 }
 
-/// `social_menu`: the request question of a canonical platform of GSC's contracts, `Menu ::= menu(Key, List(Key), Request?)`, drawn with the last view on construct 0, the machine state and the persons known, in the tab it is drawn in, as GAI's task words it (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, items 1 and 2).  In the Friends tab: the person's own name at the top; before their identity is established, the button Join, proposing `establish(Me)`; after it, the persons known, one row each, a friend with the button End friendship, proposing `unfriend(Me, Q)`, and any other with Befriend, proposing `befriend(Me, Q)`; at the bottom the field Add a person by key with Add, answering `known(Q)`, except on a child's screen in CSSN's app, its state holding `child`: "A child's menu offers ... neither meeting nor adding a person by key", the child's agent discovering only its parents' agents, at the setup of the child's phone, before the entering (CSSN, Section 4.6.2; Appendix C.4; CSSN #9 Cowork, Code_inbox.md, 2026-10-20 22:04 UTC, item 2).  Where the request type offers `meet(Me, Q)`, GKK:2 (programs/gsc/GKK.glp, which every contract of GSC's extends), the rows are the persons known and the person's contacts, those the state knows, `knows(Q)`; a person known who is not a contact is drawn with Meet, proposing `meet(Me, Q)`, and Befriend is drawn on a contact's row, befriend requiring that the two know each other (GSG:1); and where it offers `introduce(Me, Q, C)`, GKK:3, the person composes "Introduce Carol to Bob." under the rows ([_SocialTabState._composers]).  Where the request type offers `message(Me, Q, X)`, tapping a friend opens the chat with them, its messages and a text field with Send, proposing `message(Me, Q, x)`, x the speech act of the text typed signed by the person.  Where it offers `create(Me, N)`, the Groups tab: the field New group with Create, proposing `create(Me, n)`; each group the person is in, its name, its leader and its messages, and, in a group they lead, its members; in a group the person leads, Add member, a picker of their friends not in it, proposing `join(Me, Q, n)`, and Close group, proposing `close(Me, n)`; in any group, a text field with Send, proposing `post_own(Me, x, n)` where they lead it and `post(Me, A, x, n)` otherwise; and in a group they do not lead, Leave group, proposing `leave(A, Me, n)`.  Each control is drawn where the request type offers its request, read off `D` ([RequestOffers]), and while the question is open; each grants `propose(P)` or `known(Q)` at the question's position, `[3]`, as the default widget of the request type grants it, so the construct process forms the same answers from it.  No term, functor, type name or Submit button is drawn.  The persons known, and who is a friend, are read off the last view, which the agent writes whenever either changes (vGLP b7e3517), and not off the request question, which shows the persons known when it was asked.  Where construct 0 holds no stream of views, it is drawn as such, named, and takes no input.
+/// `social_menu`: the request question of a canonical platform, of the request type `Request?`, `(Request?)*request(...)` (vGLP 12f629d, Section 5.4, "The compilation"; programs/vglp/cva/compiler/text.glp at GLP 7d857bcd), drawn with the last view on construct 0, the agent's own key, the machine state and the persons known (Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"), in the tab it is drawn in, as GAI's task words it (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, items 1 and 2).  In the Friends tab: the person's own name at the top; before their identity is established, the button Join, proposing `establish(Me)`; after it, the persons known, one row each, a friend with the button End friendship, proposing `unfriend(Me, Q)`, and any other with Befriend, proposing `befriend(Me, Q)`; at the bottom the field Add a person by key with Add, answering `known(Q)`, except on a child's screen in CSSN's app, its state holding `child`: "A child's menu offers ... neither meeting nor adding a person by key", the child's agent discovering only its parents' agents, at the setup of the child's phone, before the entering (CSSN, Section 4.6.2; Appendix C.4; CSSN #9 Cowork, Code_inbox.md, 2026-10-20 22:04 UTC, item 2).  Where the request type offers `meet(Me, Q)`, GKK:2 (programs/gsc/GKK.glp, which every contract of GSC's extends), the rows are the persons known and the person's contacts, those the state knows, `knows(Q)`; a person known who is not a contact is drawn with Meet, proposing `meet(Me, Q)`, and Befriend is drawn on a contact's row, befriend requiring that the two know each other (GSG:1); and where it offers `introduce(Me, Q, C)`, GKK:3, the person composes "Introduce Carol to Bob." under the rows ([_SocialTabState._composers]).  Where the request type offers `message(Me, Q, X)`, tapping a friend opens the chat with them, its messages and a text field with Send, proposing `message(Me, Q, x)`, x the speech act of the text typed signed by the person.  Where it offers `create(Me, N)`, the Groups tab: the field New group with Create, proposing `create(Me, n)`; each group the person is in, its name, its leader and its messages, and, in a group they lead, its members; in a group the person leads, Add member, a picker of their friends not in it, proposing `join(Me, Q, n)`, and Close group, proposing `close(Me, n)`; in any group, a text field with Send, proposing `post_own(Me, x, n)` where they lead it and `post(Me, A, x, n)` otherwise; and in a group they do not lead, Leave group, proposing `leave(A, Me, n)`.  Each control is drawn where the request type offers its request, read off `D` ([RequestOffers]), and while the question is open; each grants `propose(P)` or `known(Q)` at the question's position, as the default widget of the request type grants it, so the construct process forms the same answers from it.  No term, functor, type name or Submit button is drawn.  The person's own key, the persons known, and who is a friend, are read off the last view, which the agent writes when it starts and whenever any changes (vGLP 12f629d, Section 5.4, "The compilation").  Where construct 0 holds no stream of views, it is drawn as such, named, and takes no input; where it holds no view yet, the question is drawn waiting and takes no input, its key not yet written.
 ///
 /// In GSNP (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, items 1 to 3): an item the person holds is drawn in the chat with the friend it came from, its last signer, its text, "Author: Dan" and, where it was forwarded, "via Eve, via Carol"; under one the person did not author, Forward, which opens a picker of their friends and, once one is picked, the warranty question of GSNP:2 with Yes, proposing `forward(Me, Q, x)`, and No; the chat's Send signs the text, proposing `sign(Me, x)`, and holds `message(Me, Q, x)` for the next request question, proposed once the view holds `authored(x)` ([_SocialTabState._chat]).  An item the person authored is drawn in the chat it was sent from, and an item from a person who is not a friend, or authored and sent from no chat on this screen, under Messages at the bottom of the Friends tab.  In GAI's app (programs/apps/gai), whose request type offers `sign(Me, X)`, `message(Me, Q, X)` and `forward(Me, Q, X)` as GSNP's does, an item is drawn as in GSNP, and an author the person holds recorded as an AI agent, `agent_of(r, p, y)`, is named with its principal, "Author: Alf, an AI agent of Alice" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, its last paragraph), with its developer under it, "Developer: Acme", as in its row in Friends; and, where the request type offers `enter(Me, R, X)`, the AI agents tab: the form Create an AI agent, taking the name and the code and proposing `sign(Me, k)` and then `enter(Me, r, k)`, and the person's AI agents, each with Retire, proposing `retire(Me, R)` (GAI #5 Cowork, 2026-10-19 20:36 UTC, (a) and item 5; [_SocialTabState._agents]).  A post carries an item, which the person signs before posting it (GSNP:1; `post_own(a? ; x, n)` requires `item(x)` at `a`, programs/gai/GSNP.glp), so the text typed in a group forms no post: where the request type offers `sign(Me, X)`, no text field and Send are drawn in a group.  The notices are drawn as `last_state` draws them.
 ///
@@ -1522,10 +1520,6 @@ Widget socialMenu(
     List<int> at,
     void Function(GTerm path, GTerm raw) grant,
     GTerm? output) {
-  final (f, args) = ctorArgs(view);
-  if (f != 'menu' || args.length != 3 || pendingAt(args[0]) != null) {
-    return _cannotDraw(socialMenuName, view);
-  }
   final (ok, state) = SocialState.read(output);
   if (!ok) {
     return Text(
@@ -1539,7 +1533,10 @@ Widget socialMenu(
     id: construct.id,
     state: state,
     place: place,
-    ask: SocialAsk(args[0], questionAt(args[2]), RequestOffers.of(dflt), grant),
+    ask: state == null
+        ? null
+        : SocialAsk(
+            state.me, questionAt(view), RequestOffers.of(dflt), grant),
   );
 }
 
@@ -1612,7 +1609,6 @@ class _SocialTabState extends State<SocialTab> {
     final s = widget.state;
     if (s == null) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (_ask != null) _name(context, _ask!.me),
         Text('…', style: TextStyle(color: Colors.grey.shade600)),
       ]);
     }
