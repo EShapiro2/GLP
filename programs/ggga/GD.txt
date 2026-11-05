@@ -1,0 +1,21 @@
+% GD: Grassroots Distrust --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GGGA (Udi, 2026-11-05, to GGGA #3).  The paper, /Users/udi/Grassroots/GGGA/GGGA_main.tex, prints it in its box in Section 4, sections/sybil-resilience.tex, and cites a clause as GD:1.
+% Paper: Grassroots Governance of Grassroots Apps, in preparation
+% Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK, Grassroots Keys and Knowledge, GSC's.  It cites GKK:1 to GKK:3 and GSG:2 whole and restates none; GD:4 replaces GSG:1.
+% Defines: distrust.  Person, knowing and friend are defined with GKK and GSG; Alice, Bob and Carol are variables naming distinct persons.
+% Last changed: 2026-11-05, written by GGGA #3 Cowork, the clauses and the pragmas as Udi approved them to GGGA #3.
+% Schemas: GD.glp, not yet written.
+GD: Grassroots Distrust
+Alice, Bob and Carol are persons.  GD extends GSG.
+1. ■ Distrust.  Alice, who knows Carol and does not distrust Carol, may distrust Carol; if they are friends, this ends their friendship.
+2. ■ Propagated distrust.  Alice, who is not a friend of Carol and does not distrust Carol, and whose friend Bob distrusts Carol, may distrust Carol.
+3. ■ Ceasing to distrust.  Alice, who distrusts Carol, may cease to distrust Carol.
+4. ◆ Friendship.  Alice and Bob, who know each other personally, are not friends and do not distrust each other, may jointly decide to become friends.
+5. ○ Taking sides.  Alice, whose friend Bob distrusts Carol, undertakes to distrust Carol or to end their friendship with Bob.
+Pragmas
+Distrusted: the persons Alice distrusts.
+Distrust: Alice [Distrust]
+Propagated distrust: Alice [Distrust] <person>
+Ceasing to distrust: Alice [Cease]
+Friendship: Alice [Befriend]
+  Bob: Alice asks to be your friend.
