@@ -126,6 +126,11 @@ latex_mult(atom(P, As), T, R?) :- ground(P?), ground(As?), ground(T?) |
 latex_mult(times(K, A), T, R?) :- ground(K?), ground(A?), ground(T?) |
     latex_atom(A?, T?, R1),
     latex_arg(K?, ['\\cdot'|R1?], R).
+% rest(K, A), the copies of K.A beyond one (self.glp, Mult), is (K - 1).A;
+% a role's required atoms carry it as K.A (nrs_req).
+latex_mult(rest(K, A), T, ['('|R?]) :- ground(K?), ground(A?), ground(T?) |
+    latex_atom(A?, T?, R1),
+    latex_arg(K?, ['-1)\\cdot'|R1?], R).
 
 % The atoms of a set are written apart by Sep, a comma, as Section 5.1
 % writes the two atoms befriend requires at a role and the two close deletes
@@ -332,6 +337,7 @@ mults_member([_|As], B, R?) :- otherwise | mults_member(As?, B?, R).
 procedure atoms_distinct(Mults?, Ans).
 atoms_distinct([], yes).
 atoms_distinct([times(_, _)|_], no).
+atoms_distinct([rest(_, _)|_], no).
 atoms_distinct([atom(P, Bs)|As], R?) :- ground(P?), ground(Bs?), ground(As?) |
     mults_member(As?, atom(P?, Bs?), M),
     atoms_distinct1(M?, As?, R).

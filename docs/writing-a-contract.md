@@ -10,7 +10,7 @@ A grassroots contract, a social contract that runs, is a finite list of clauses 
 
 A contract named NAME lives in one copy, in its owner's directory under `programs/`, as two files.
 
-1. `NAME.txt`, the clauses.  Lines beginning with `%` are meta-information: the owner, the paper responsible for the contract --- its title, no authors, with its arXiv link if it is there and `in preparation` if not --- what it extends, what it defines, when it last changed, and where its schemas are.  The rest is the contract verbatim as its paper prints it in a box: the title line, `NAME: <name in full>`; the declaration of its names, `Alice, Bob and Carol are persons.`, a formal part of the contract from which the schemas and the pragmas take their names, saying also what the contract extends; the clauses, numbered from 1, each opening with its legal modality --- `■` enforced (U+25A0), no act of the contract can breach it; `◆` attested (U+25C6), an agent may breach it and the contract records the breach; `○` undertaken (U+25CB), its performance lies outside the contract --- then its title in one or two words and its text; and after the clauses the line `Pragmas` and the pragmas.
+1. `NAME.txt`, the clauses.  Lines beginning with `%` are meta-information: the owner, the paper responsible for the contract, `% Paper: <acronym>, <title>, <link>` --- its acronym, its title, no authors, and its arXiv link if it is there or `in preparation` if not (Udi, 2026-11-05) --- what it extends, what it defines, when it last changed, and where its schemas are.  The rest is the contract verbatim as its paper prints it in a box: the title line, `NAME: <name in full>`; where the contract extends another, a line of its own saying so, `GDO extends GSG`, ending with a reference to the paper of the contract it extends (Udi, 2026-11-05) --- in a paper's box a citation where that paper is on arXiv, and where it is not its acronym and title and then `, in preparation`, as `GDO-L extends GDO (GRH, Grassroots Ride-Hailing, in preparation).`; in `NAME.txt` the acronym, the title and the arXiv link or `in preparation`, in parentheses; no reference where the extended contract is the same paper's; until Code's and vGLP's readers take this line, a `NAME.txt` keeps what it extends on the names line; then the declaration of its names, `Alice, Bob and Carol are persons.`, a formal part of the contract from which the schemas and the pragmas take their names; the clauses, numbered from 1, each opening with its legal modality --- `■` enforced (U+25A0), no act of the contract can breach it; `◆` attested (U+25C6), an agent may breach it and the contract records the breach; `○` undertaken (U+25CB), its performance lies outside the contract --- then its title in one or two words and its text; and after the clauses the line `Pragmas` and the pragmas.
 
 2. `NAME.glp`, the speech-act schemas, the term `schema(Name, Names, Vars, Roles)` for each act the clauses describe, written by the guide.  The term is the one source; a run of the cascade prints the notation from it.
 
@@ -33,7 +33,6 @@ A contract's name and its owner are each a ruling of Udi's, never read off a pro
 | GAI | Accountable AI Agents | GnW | GAI | `gai` |
 | GSNP | Grassroots Social Network with Provenance | GSN, GAI | GAI | `gai` |
 | CSSN | Child-Safe Social Network | GSN, GnW | CSSN | `cssn` |
-| GFF | Grassroots Feeds and Followers | GSG | GFF | `gff` |
 | GD | Grassroots Distrust | GSG | GGGA | `ggga` |
 | GC | Grassroots Coins | GKK | Currencies | `currencies/coins` |
 | GB | Grassroots Bonds | GC | Currencies | `currencies/bonds` |
@@ -44,6 +43,8 @@ A contract's name and its owner are each a ruling of Udi's, never read off a pro
 | AGORA | Grassroots Barter | GB | Currencies, until it has a paper | `currencies/agora` |
 | LBM | Location-Based Matching | GSG | not ruled | --- (not in the repository) |
 | GDO | Grassroots Directed Overlay | GSG | GRH | `lbm` |
+| GDO-L | Grassroots Directed Overlay with Labels | GDO | GFF | `gff` |
+| GFF | Grassroots Feeds and Followers | GDO-L | GFF | `gff` |
 | GRA | Grassroots Ride Auction | GDO | GRH | `lbm` |
 | GFWC | the grassroots federation | --- | GFWC | `federation` (schemas only) |
 

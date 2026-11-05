@@ -1,6 +1,6 @@
 %% ---------------------------------------------------------------------------
-%% GRA.glp --- the grassroots ride auction's contract, LBM's (Coordination
-%% Appendix C; Udi, 2026-11-03), in the term form programs/gsc reads (its
+%% GRA.glp --- the grassroots ride auction's contract, GRH's (Coordination
+%% Appendix C; Udi, 2026-11-05; LBM's until then), in the term form programs/gsc reads (its
 %% README, "Writing a contract").  GRA extends GDO (GDO.glp beside this file),
 %% so the term holds GDO's eight schemas; the clauses are in GRA.txt.
 %%
