@@ -20,7 +20,7 @@ void main() {
     final p = await Process.start(Platform.resolvedExecutable, ['run', 'bin/webagents.dart'],
         environment: {'DATA': data.path, 'TREE': Directory(tree).absolute.path, 'PORT': '$port', 'RELAY_URL': 'http://127.0.0.1:9'});
     addTearDown(p.kill);
-    final up = await p.stdout.transform(utf8.decoder).transform(const LineSplitter()).first;
+    final up = await p.stdout.transform(utf8.decoder).transform(const LineSplitter()).firstWhere((l) => l.startsWith('gasweb'));
     expect(up, startsWith('gasweb on'));
 
     final http = HttpClient();
