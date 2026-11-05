@@ -200,9 +200,10 @@ if [ $? -ne 0 ] || [ ! -s "$OUT/schemas.txt" ]; then
     grep -E '(Error|error|✗)' "$WORK/n.out" | head -10
     exit 1
 fi
-# A head ends "... :", after its constraint where it has one (GSC, Section
-# 3.2; programs/gsc/notation.glp).
-say "schemas.txt: $(grep -cE '^[a-z_0-9]*\(.*\)( \| .*)? :$' "$OUT/schemas.txt") schemas"
+# A schema is the clause tau: H <- B, gamma guarded by G, its first line
+# "tau: H <-", H empty in a schema that adds and deletes nothing, and its body
+# on the next line, indented (GSC, Section 3.2; programs/gsc/notation.glp).
+say "schemas.txt: $(grep -cE '^[a-z_0-9]*: .* <-$' "$OUT/schemas.txt") schemas"
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
 printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
