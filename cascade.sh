@@ -42,6 +42,7 @@
 #   gdc         GDC   Currencies  programs/currencies/gdc   ---
 #   bcc         BCC   Currencies  programs/currencies/bcc   ---
 #   gra         GRA   LBM         programs/lbm              ---
+#   gd          GD    GGGA        programs/ggga             ---
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -134,7 +135,8 @@ case "$NAME" in
     gdc)  FILE=GDC;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     bcc)  FILE=BCC;  OWNER="programs/currencies/bcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     gra)  FILE=GRA;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/LBM";  PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra" >&2; exit 2 ;;
+    gd)   FILE=GD;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/GGGA"; PLAYDIR="" ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
