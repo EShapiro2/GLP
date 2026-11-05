@@ -218,6 +218,17 @@ check_not() {
     fi
 }
 
+# A boot's lines of one person, [<person>] <term>, the super-app's sg(...) lines left aside, in order, as a list; and sorted, where the isolates' order is not held (the boots of the currencies' plays, Sections N2, N3 and N4; the apps' boots have their own in Section APPS).
+boot_person() { # boot_person <person> <output>
+    echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "sg(") != 1 { s = s (n++ ? ", " : "") substr($0, length(p) + 1) } END { print "[" s "]" }'
+}
+boot_person_sorted() { # boot_person_sorted <person> <output>
+    echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "sg(") != 1 { print substr($0, length(p) + 1) }' | sort | awk '{ s = s (n++ ? ", " : "") $0 } END { print "[" s "]" }'
+}
+boot_same() { # boot_same <name> <expected> <actual>
+    if [ "$3" = "$2" ]; then _check_pass "$1"; else _check_fail "$1" "expected: $2; got: $3"; fi
+}
+
 if _section TY; then
 # =============================================================================
 # Section TY: The tight typing discipline (test/check_typing.py, test/OPEN_TYPES)
@@ -2878,6 +2889,49 @@ check "Coins mini-app play_same: the bearer's screen refuses the redemption of a
 check "Coins mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | X[0-9]*\]$" "$n2_same"
 echo ""
 
+
+# the coins program's play_swap on two smartphones (programs/currencies/coins_swap_boot.glp): the super-app of programs/social/graph/core on two isolates, each person with its own key pair, hosting the coins mini-app from its certified artefact currency.glpw, which :artefact writes beside the super-app and load_file/2 reads there; alice connects to bob, who consents, and once connected invites him to the mini-app, which he has consented to in advance; the handshake opens their conversation, and each person's script, waiting for it to open, then runs play_swap's steps over it.  Each person's lines, play_swap's screen, are held exactly, in order (Currencies #15, Code_inbox 2026-11-05 07:26 UTC, Udi approving: the plays' persons as mini-apps the super-app hosts).
+n2_coins_swap=$("$REPL_RUN" <<HEREDOC
+:artefact $COINS/currency $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/coins_swap_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/currency.glpw"
+check "N2 coins swap on smartphones: the mini-app's artefact is certified" "currency.glpw --- certified under" "$n2_coins_swap"
+check "N2 coins swap on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n2_coins_swap"
+check_not "N2 coins swap on smartphones: no event stopped at the cap" "did not quiesce" "$n2_coins_swap"
+boot_same "N2 coins swap on smartphones: alice's lines" "[opened(bob), minted(2), holdings([lot(alice, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 2)])]" "$(boot_person alice "$n2_coins_swap")"
+boot_same "N2 coins swap on smartphones: bob's lines" "[opened(alice), minted(2), holdings([lot(bob, 2)]), swap_done(alice), holdings([lot(alice, 2)])]" "$(boot_person bob "$n2_coins_swap")"
+
+# the coins program's play_same on two smartphones (coins_same_boot.glp): play_swap, after which alice asks for the two acts that change no state, each refused at her before anything is sent, her screen saying so and bob's showing nothing of either.
+n2_coins_same=$("$REPL_RUN" <<HEREDOC
+:artefact $COINS/currency $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/coins_same_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/currency.glpw"
+check "N2 coins same on smartphones: the mini-app's artefact is certified" "currency.glpw --- certified under" "$n2_coins_same"
+check "N2 coins same on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n2_coins_same"
+check_not "N2 coins same on smartphones: no event stopped at the cap" "did not quiesce" "$n2_coins_same"
+boot_same "N2 coins same on smartphones: alice's lines" "[opened(bob), minted(2), holdings([lot(alice, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 2)]), redeem_same(bob), swap_same(bob, bob, 2)]" "$(boot_person alice "$n2_coins_same")"
+boot_same "N2 coins same on smartphones: bob's lines" "[opened(alice), minted(2), holdings([lot(bob, 2)]), swap_done(alice), holdings([lot(alice, 2)])]" "$(boot_person bob "$n2_coins_same")"
+
+# the coins mini-app of coins/play_ui.glp on two smartphones (coins_ui_boot.glp), the live person scripted: alice mints 2 and proposes to bob the swap of her 2 for his 2; bob mints 2, accepts, and proposes the reverse swap, his 2 alice-coins for her 2 bob-coins, which alice accepts, as the harness describes her acts.
+n2_coins_ui=$("$REPL_RUN" <<HEREDOC
+:artefact $COINS/currency $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/coins_ui_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/currency.glpw"
+check "N2 coins ui on smartphones: the mini-app's artefact is certified" "currency.glpw --- certified under" "$n2_coins_ui"
+check "N2 coins ui on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n2_coins_ui"
+check_not "N2 coins ui on smartphones: no event stopped at the cap" "did not quiesce" "$n2_coins_ui"
+boot_same "N2 coins ui on smartphones: alice's lines" "[opened(bob), minted(2), holdings([lot(alice, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 2)]), swap_done(bob), holdings([lot(alice, 2)])]" "$(boot_person alice "$n2_coins_ui")"
+boot_same "N2 coins ui on smartphones: bob's lines" "[opened(alice), minted(2), holdings([lot(bob, 2)]), swap_done(alice), holdings([lot(alice, 2)]), holdings([]), swap_done(alice), holdings([lot(bob, 2)])]" "$(boot_person bob "$n2_coins_ui")"
+
 fi  # Section N2
 
 if _section N3; then
@@ -3256,6 +3310,35 @@ check "Bonds mini-app play_same: the bearer's screen refuses the redemption of a
 check "Bonds mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\]) | X[0-9]*\]$" "$n3_same"
 echo ""
 
+
+# the bonds program's play_swap on two smartphones (programs/currencies/dated_swap_boot.glp), as the coins program's in Section N2: the super-app on two isolates hosting the bonds mini-app from its certified artefact dated.glpw; alice mints 2 coins and bob 2 bonds maturing day 30, alice offers her 2 coins for bob's 2 bonds and bob accepts, each person's lines play_swap's screen, held exactly, in order (Currencies #15, Code_inbox 2026-11-05 07:26 UTC).
+n3_dated_swap=$("$REPL_RUN" <<HEREDOC
+:artefact $BONDS/dated $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/dated_swap_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/dated.glpw"
+check "N3 dated swap on smartphones: the mini-app's artefact is certified" "dated.glpw --- certified under" "$n3_dated_swap"
+check "N3 dated swap on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n3_dated_swap"
+check_not "N3 dated swap on smartphones: no event stopped at the cap" "did not quiesce" "$n3_dated_swap"
+boot_same "N3 dated swap on smartphones: alice's lines" "[opened(bob), minted(2, now), holdings([lot(alice, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)])]" "$(boot_person alice "$n3_dated_swap")"
+boot_same "N3 dated swap on smartphones: bob's lines" "[opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]), swap_done(alice), holdings([lot(alice, now, 2)])]" "$(boot_person bob "$n3_dated_swap")"
+
+# the bonds program's play_same on two smartphones (dated_same_boot.glp): play_swap, after which alice asks for the two acts that change no state, each refused at her, her screen saying so.
+n3_dated_same=$("$REPL_RUN" <<HEREDOC
+:artefact $BONDS/dated $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/dated_same_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/dated.glpw"
+check "N3 dated same on smartphones: the mini-app's artefact is certified" "dated.glpw --- certified under" "$n3_dated_same"
+check "N3 dated same on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n3_dated_same"
+check_not "N3 dated same on smartphones: no event stopped at the cap" "did not quiesce" "$n3_dated_same"
+boot_same "N3 dated same on smartphones: alice's lines" "[opened(bob), minted(2, now), holdings([lot(alice, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)]), redeem_same(bob, 30), swap_same(bob, bob, 30, 2)]" "$(boot_person alice "$n3_dated_same")"
+boot_same "N3 dated same on smartphones: bob's lines" "[opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]), swap_done(alice), holdings([lot(alice, now, 2)])]" "$(boot_person bob "$n3_dated_same")"
+
 fi  # Section N3
 
 if _section N4; then
@@ -3500,6 +3583,36 @@ check_not "Denominated mini-app play_swap: no failed goal" "ERROR" "$n4_ps"
 check "Denominated mini-app play_swap: the proposer's screen, her conversation opened and the swap done" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, usd, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, usd, now, 2)\])" "$n4_ps"
 check "Denominated mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, now), holdings(\[lot(bob, usd, now, 2)\]), swap_done(alice), holdings(\[lot(alice, usd, now, 2)\])" "$n4_ps"
 echo ""
+
+
+# the denominated program's play_swap on two smartphones (programs/currencies/sovereign_swap_boot.glp), as the coins program's in Section N2: the super-app on two isolates hosting the denominated mini-app from its certified artefact denominated.glpw; each mints 2 in usd, alice offers her 2 for bob's 2 and bob accepts, each person's lines play_swap's screen, held exactly, in order (Currencies #15, Code_inbox 2026-11-05 07:26 UTC).
+n4_sovereign_swap=$("$REPL_RUN" <<HEREDOC
+:artefact $SOV/denominated $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/sovereign_swap_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/denominated.glpw"
+check "N4 sovereign swap on smartphones: the mini-app's artefact is certified" "denominated.glpw --- certified under" "$n4_sovereign_swap"
+check "N4 sovereign swap on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n4_sovereign_swap"
+check_not "N4 sovereign swap on smartphones: no event stopped at the cap" "did not quiesce" "$n4_sovereign_swap"
+boot_same "N4 sovereign swap on smartphones: alice's lines" "[opened(bob), minted(2, now), holdings([lot(alice, usd, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, usd, now, 2)])]" "$(boot_person alice "$n4_sovereign_swap")"
+boot_same "N4 sovereign swap on smartphones: bob's lines" "[opened(alice), minted(2, now), holdings([lot(bob, usd, now, 2)]), swap_done(alice), holdings([lot(alice, usd, now, 2)])]" "$(boot_person bob "$n4_sovereign_swap")"
+
+# the sovereign market of sovereign/play_ui.glp on three smartphones (sovereign_ui_boot.glp), the central bank scripted as play_sovereign_ui scripts it: cb, diana and frank over the three conversations their acts need, the central bank calling and inviting both and diana calling and inviting frank; each person's lines are play_sovereign_ui's for them, the central bank's and frank's held exactly in order, frank's without the date_advanced lines of the single-engine play, whose advance(28) stands in for the day, which on a phone the device gives (Currencies #15, Code_inbox 2026-11-05 07:26 UTC: under the boot every person's date advances alike with the day the device gives), and diana's held sorted, her two conversations opening in the order the isolates run.
+n4_sovereign_ui=$("$REPL_RUN" <<HEREDOC
+:artefact $SOV/denominated $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/sovereign_ui_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/denominated.glpw"
+check "N4 sovereign ui on smartphones: the mini-app's artefact is certified" "denominated.glpw --- certified under" "$n4_sovereign_ui"
+check "N4 sovereign ui on smartphones: the boot settles" "Boot settled: 3 agents (cb, diana, frank)" "$n4_sovereign_ui"
+check_not "N4 sovereign ui on smartphones: no event stopped at the cap" "did not quiesce" "$n4_sovereign_ui"
+boot_same "N4 sovereign ui on smartphones: cb's lines" "[opened(diana), opened(frank), minted(30, now), holdings([lot(cb, usd, now, 30)]), holdings([lot(cb, usd, now, 20)]), swap_done(diana), holdings([lot(cb, usd, now, 20), lot(diana, usd, now, 10)]), received(frank, 1), fiat_handed(frank, 1), holdings([lot(cb, usd, now, 21), lot(diana, usd, now, 10)]), swap_done(diana), holdings([lot(cb, usd, now, 30), lot(diana, usd, now, 1)])]" "$(boot_person cb "$n4_sovereign_ui")"
+boot_same "N4 sovereign ui on smartphones: frank's lines" "[opened(diana), opened(cb), minted(18, 28), holdings([lot(frank, usd, 28, 18)]), swap_done(diana), holdings([lot(diana, usd, now, 15)]), paying(diana, 3), holdings([lot(diana, usd, now, 12)]), paid(diana, 3), holdings([lot(diana, usd, now, 11)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 11), lot(frank, usd, 28, 1)]), holdings([lot(diana, usd, now, 10), lot(frank, usd, 28, 1)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 10), lot(frank, usd, 28, 2)]), holdings([lot(diana, usd, now, 9), lot(frank, usd, 28, 2)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 9), lot(frank, usd, 28, 3)]), holdings([lot(diana, usd, now, 8), lot(frank, usd, 28, 3)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 8), lot(frank, usd, 28, 4)]), holdings([lot(diana, usd, now, 7), lot(frank, usd, 28, 4)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 7), lot(frank, usd, 28, 5)]), holdings([lot(diana, usd, now, 6), lot(frank, usd, 28, 5)]), redeemed(diana, cb, now), holdings([lot(diana, usd, now, 6), lot(frank, usd, 28, 5), lot(cb, usd, now, 1)]), paying(cb, 1), holdings([lot(diana, usd, now, 6), lot(frank, usd, 28, 5)]), paid(cb, 1)]" "$(boot_person frank "$n4_sovereign_ui")"
+boot_same "N4 sovereign ui on smartphones: diana's lines, sorted" "[holdings([lot(cb, usd, now, 10), lot(diana, usd, now, 15)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 13), lot(diana, usd, now, 8)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 14), lot(diana, usd, now, 7)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 15), lot(diana, usd, now, 6)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 16), lot(diana, usd, now, 5)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 17), lot(diana, usd, now, 4)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 18), lot(diana, usd, now, 3)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 18)]), holdings([lot(cb, usd, now, 10)]), holdings([lot(cb, usd, now, 10)]), holdings([lot(cb, usd, now, 9), lot(frank, usd, 28, 13), lot(diana, usd, now, 9)]), holdings([lot(diana, usd, now, 10)]), holdings([lot(frank, usd, 28, 13), lot(diana, usd, now, 18)]), holdings([lot(frank, usd, 28, 13), lot(diana, usd, now, 9)]), minted(10, now), minted(15, now), opened(cb), opened(frank), presented(frank, cb, now), presented(frank, frank, 28), presented(frank, frank, 28), presented(frank, frank, 28), presented(frank, frank, 28), presented(frank, frank, 28), received(frank, 3), swap_done(cb), swap_done(cb), swap_done(frank)]" "$(boot_person_sorted diana "$n4_sovereign_ui")"
 
 fi  # Section N4
 
