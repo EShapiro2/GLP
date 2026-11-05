@@ -1,6 +1,6 @@
 % GDO-L: Grassroots Directed Overlay with Labels --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GFF (Udi, 2026-11-05, to GFF #3).  The paper, /Users/udi/Grassroots/GFF/main_CSSN.tex, prints it in its box and cites a clause as GDO-L:1.
-% Paper: Grassroots Feeds and Followers, in preparation
+% Paper: GFF, Grassroots Feeds and Followers, in preparation
 % Extends: GDO, Grassroots Directed Overlay, LBM's (programs/lbm), and through it GSG and GKK, GSC's.  It cites their clauses whole and restates none.
 % Defines: label, labeled pointing.  Person, knowing, friend and pointing are defined with GKK, GSG and GDO; Alice, Bob and Carol are variables naming distinct persons.
 % Last changed: 2026-11-05, written by GFF #3 Cowork, the clauses as Udi approved them that day; clause 1 with 'a label of Bob's or one Bob points with', so that a label reaches Alice from Bob (GSC, Definition Traceable provenance).

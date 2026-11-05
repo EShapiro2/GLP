@@ -1,6 +1,6 @@
 % GRA: Grassroots Ride Auction --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GRH (Udi, 2026-11-05, to GRH #1; LBM until then, Udi, 2026-11-03, to LBM #4).  The paper, /Users/udi/Grassroots/GRH/main_GRH.tex, prints it in its box in Section The Ride, sections/ride.tex, and cites a clause as GRA:1.
-% Paper: Grassroots Ride-Hailing, in preparation
+% Paper: GRH, Grassroots Ride-Hailing, in preparation
 % Extends: GDO, Grassroots Directed Overlay, GRH's (programs/lbm), and through it GSG and GKK, GSC's.  It cites GDO:1 to GDO:3 whole and restates none.
 % Defines: call, bid, award, ride, fare, deposit, pickup.  The fare and the deposit are in the call's denomination; which coins they are is a currency contract's, which GRA does not name (Udi, 2026-11-03).
 % Last changed: 2026-11-05, by GRH #1 Cowork: the owner and the paper (Udi, to GRH #1).  Before it: 2026-11-03, Carol in the declaration (Udi, to LBM #4); written by LBM #4 Cowork from the paper at LBM main b31edd0, the clauses as Udi approved them to LBM #4 and the instance as he edited it in Overleaf.

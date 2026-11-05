@@ -1,6 +1,6 @@
 % GDC: Grassroots Denominated Coins --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: Currencies (GCC).  The paper, /Users/udi/Grassroots/GCC/main_SGC.tex, prints it in its box in Section 2 and cites a clause as GDC:1; GCC and BCC extend it.  Named and owned by Udi's ruling of 2026-11-04 (to Currencies #15, 15:27): the denominated coins contract above GCC, GC with denomination, which DGC, the full denominated currencies contract with bonds, acceptances and escrow, is more than coins need.
-% Paper: Grassroots Community Currencies, in preparation
+% Paper: GCC, Grassroots Community Currencies, in preparation
 % Extends: GC, Grassroots Coins, Currencies' (programs/currencies/coins), and through it GKK, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 and GC:1 to GC:5 whole and restates none.
 % Defines: denomination, an identifier of a fiat currency; a denominated coin, a coin issued as its issuer's debt of one unit of its denomination, the clause DGC:8 reduced to coins (SGC, Section 2.1).
 % Last changed: 2026-11-04, written by Currencies #15 Cowork; clause 2 is DGC:8 reduced to coins, SGC's text.
