@@ -1,0 +1,142 @@
+% Regression: simulated time, start_clock/1, rated/2 and step_clock/2
+% (GLP-ICLP appendix-guards, "Simulated time (start_clock/1, rated/2,
+% step_clock/2)", GLP-ICLP-2026 5fd9a15).  A program takes a step in the body
+% of a clause guarded by when_idle, as the monitor's loop: times/3 below.
+
+% ---------------------------------------------------------------------------
+% The loop: when the machine is idle, take a step; collect the release times
+% and the last step.
+procedure times(Number?, Stream(Number), ClockStep).
+times(H, Ts?, L?) :- when_idle | step_clock(H?, S), times1(S?, H?, Ts, L).
+
+procedure times1(ClockStep?, Number?, Stream(Number), ClockStep).
+times1(released(T), H, [T?|Ts?], L?) :- times(H?, Ts, L).
+times1(stopped(C), _, [], stopped(C?)).
+
+% ---------------------------------------------------------------------------
+% Reproduction from one seed: three tokens of rates 1, 2 and 0.5 a second,
+% released in turn, then stopped.
+Run ::= run(Stream(Number), ClockStep).
+
+procedure repro(Integer?, Run).
+repro(Seed, run(Ts?, L?)) :-
+  start_clock(Seed?), rated(1, _), rated(2, _), rated(0.5, _),
+  times(1000, Ts, L).
+
+% ---------------------------------------------------------------------------
+% The horizon: three tokens of rate 1 a second; those past the horizon H are
+% bound to stop, and the last step is stopped(C), C the clock.
+Toks ::= toks(Token, Token, Token).
+Hz ::= hz(Stream(Number), ClockStep, Toks).
+
+procedure hz(Number?, Hz).
+hz(H, hz(Ts?, L?, toks(A?, B?, C?))) :-
+  start_clock(7), rated(1, A), rated(1, B), rated(1, C),
+  times(H?, Ts, L).
+
+% ---------------------------------------------------------------------------
+% A tie: a token of rate 0.001 a second moves the clock to about 1000 s; then
+% two tokens X and Y of rate 10^18 a second, whose delays are lost in the
+% clock's last place, so that both have the clock's activation time.  X, made
+% pending first, is released first: when X's go arrives, Y is not yet bound.
+Tie ::= tie(Constant, Constant).
+
+procedure tie(Tie).
+tie(R?) :- start_clock(3), rated(0.001, A), tie_a(A?, R), times(1000000, _, _).
+
+procedure tie_a(Token?, Tie).
+tie_a(go(_), R?) :-
+  rated(1000000000000000000, X), rated(1000000000000000000, Y),
+  tie_xy(X?, Y?, R).
+tie_a(stop, tie(stopped, none)).
+
+procedure tie_xy(Token?, Token?, Tie).
+tie_xy(go(TX), Y, R?) :- unknown(Y?) | tie_y(Y?, TX?, R).
+tie_xy(X, go(_), tie(y_first, none)) :- unknown(X?) | true.
+
+procedure tie_y(Token?, Number?, Tie).
+tie_y(go(TY), TX, tie(x_first, same)) :- TX? =:= TY? | true.
+tie_y(go(TY), TX, tie(x_first, different)) :- TX? =\= TY? | true.
+tie_y(stop, _, tie(x_first, stopped)).
+
+% ---------------------------------------------------------------------------
+% The claim (sGLP, "The claim, tested"), one: a rated goal and an unrated goal
+% that runs on; the unrated goal runs to rest before the rated one is
+% released, whichever is spawned first.  count/2 counts N down to 0 and then
+% assigns Done; the rated goal, on its go, sees whether Done is assigned.
+procedure count(Integer?, Integer).
+count(0, 0).
+count(N, D?) :- N? > 0 | N1 := N? - 1, count(N1?, D).
+
+procedure observe(Token?, Integer?, Constant).
+observe(go(_), D, after) :- integer(D?) | true.
+observe(go(_), D, before) :- unknown(D?) | true.
+observe(stop, _, stopped).
+
+% rated_first: the rated goal spawned before the unrated one.
+procedure rated_first(Constant).
+rated_first(R?) :-
+  start_clock(11), rated(1, T), observe(T?, D?, R), count(20000, D),
+  times(1000, _, _).
+
+% unrated_first: the unrated goal spawned before the rated one.
+procedure unrated_first(Constant).
+unrated_first(R?) :-
+  start_clock(11), count(20000, D), rated(1, T), observe(T?, D?, R),
+  times(1000, _, _).
+
+% ---------------------------------------------------------------------------
+% The claim, two: four requests of rates 1, 2, 0.5 and 1 a second and nothing
+% else, each made pending again when released; the first 10,000 times between
+% releases, their mean against 1/4.5 and their variance against 1/4.5^2.
+procedure src(Number?).
+src(R) :- number(R?) | rated(R?, T), src_on(T?, R?).
+
+procedure src_on(Token?, Number?).
+src_on(go(_), R) :- src(R?).
+src_on(stop, _).
+
+Stats ::= stats(Number, Number, Constant).
+
+procedure claim(Integer?, Stats).
+claim(Seed, St?) :-
+  start_clock(Seed?), src(1), src(2), src(0.5), src(1),
+  stat_loop(10000, 0, 0, 0, St).
+
+% stat_loop(K, Prev, Sum, Sum2, St): K releases still to take, Prev the time
+% of the last, Sum and Sum2 the sum of the gaps and of their squares.  At 0,
+% a step with a horizon below the clock stops every pending token.
+procedure stat_loop(Integer?, Number?, Number?, Number?, Stats).
+stat_loop(0, _, Sum, Sum2, St?) :- when_idle |
+  step_clock(-1, _), stats(Sum?, Sum2?, St).
+stat_loop(K, Prev, Sum, Sum2, St?) :- when_idle, K? > 0 |
+  step_clock(1000000, S), stat_next(S?, K?, Prev?, Sum?, Sum2?, St).
+
+procedure stat_next(ClockStep?, Integer?, Number?, Number?, Number?, Stats).
+stat_next(released(T), K, Prev, Sum, Sum2, St?) :- number(T?) |
+  D := T? - Prev?, K1 := K? - 1,
+  add_gap(D?, Sum?, Sum2?, Sum1, Sum21),
+  stat_loop(K1?, T?, Sum1?, Sum21?, St).
+stat_next(stopped(_), _, _, _, _, stats(0, 0, early)).
+
+procedure add_gap(Number?, Number?, Number?, Number, Number).
+add_gap(D, Sum, Sum2, Sum1?, Sum21?) :- number(D?) |
+  Sum1 := Sum? + D?, Sum21 := Sum2? + D? * D?.
+
+procedure stats(Number?, Number?, Stats).
+stats(Sum, Sum2, St?) :- number(Sum?), number(Sum2?) |
+  M := Sum? / 10000, V := Sum2? / 10000 - (Sum? / 10000) * (Sum? / 10000),
+  verdict(M?, V?, St).
+
+% ok where the mean is within 5% of 1/4.5 = 0.2222 and the variance within
+% 10% of 1/4.5^2 = 0.04938.
+procedure verdict(Number?, Number?, Stats).
+verdict(M, V, stats(M?, V?, ok)) :- number(M?), number(V?),
+  M? > 0.2111, M? < 0.2333, V? > 0.04444, V? < 0.05432 | true.
+verdict(M, V, stats(M?, V?, off)) :- otherwise | true.
+
+% ---------------------------------------------------------------------------
+% start_clock binds every pending token to stop: A, pending under seed 5, is
+% stopped by the second start_clock.
+procedure restart(Token).
+restart(A?) :- start_clock(5), rated(1, A), start_clock(6).

@@ -208,7 +208,7 @@ boot :- true | math # factorial(5, R).
       final lexer = Lexer(source);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
-      final program = parser.parse();
+      final program = parser.parseModule();
 
       final clause = program.procedures[0].clauses[0];
       expect(clause.body, isNotNull);

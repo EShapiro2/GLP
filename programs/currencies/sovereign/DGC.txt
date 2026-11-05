@@ -22,7 +22,7 @@ Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <issuer given> <denomination> <maturity given> <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.
-Acceptance: Alice [Accept] <denomination> <limit>
+Acceptance: Alice [Accept] <limit>
 Payment: Alice [Pay] <issuer> <denomination> <amount>
 Redemption: Alice [Redeem] <denomination> <maturity given> <issuer wanted> <maturity wanted>
 Escrow: Alice [Deposit] <issuer> <denomination> <maturity> <amount>

@@ -34,12 +34,17 @@ A contract's name and its owner are each a ruling of Udi's, never read off a pro
 | GSNP | Grassroots Social Network with Provenance | GSN, GAI | GAI | `gai` |
 | CSSN | Child-Safe Social Network | GSN, GnW | CSSN | `cssn` |
 | GFF | Grassroots Feeds and Followers | GSG | GFF | `gff` |
+| GD | Grassroots Distrust | GSG | GGGA | `ggga` |
 | GC | Grassroots Coins | GKK | Currencies | `currencies/coins` |
 | GB | Grassroots Bonds | GC | Currencies | `currencies/bonds` |
+| DGC | Denominated Grassroots Currencies | GC, GB | Currencies | `currencies/sovereign` |
+| GDC | Grassroots Denominated Coins | GC | Currencies | `currencies/gdc` |
+| GCC | Grassroots Community Currencies | GDC | Currencies | `currencies/gcc` |
+| BCC | Backed Community Currencies | GCC, GDC | Currencies | `currencies/bcc` |
 | AGORA | Grassroots Barter | GB | Currencies, until it has a paper | `currencies/agora` |
 | LBM | Location-Based Matching | GSG | not ruled | --- (not in the repository) |
-| GDO | Grassroots Directed Overlay | GSG | LBM | `lbm` (not yet on main) |
-| GRA | Grassroots Ride Auction | GDO | LBM | `lbm` (not yet on main) |
+| GDO | Grassroots Directed Overlay | GSG | LBM | `lbm` |
+| GRA | Grassroots Ride Auction | GDO | LBM | `lbm` |
 | GFWC | the grassroots federation | --- | GFWC | `federation` (schemas only) |
 
 A contract extends GSG when its clauses require friendship, and not otherwise.  The current text of every contract is Coordination Appendix E, `/Grassroots/Coordination/sections/E-contracts.tex`, which follows the repository's copies.

@@ -22,7 +22,7 @@ final _root = File('../programs/self.glp').absolute.path;
 /// The values of the arguments of `t(...)` as the reader reads [args].
 List<Object?> _values(String args) => [
       for (final a in Parser(Lexer('t($args).').tokenize())
-          .parse()
+          .parseModule()
           .procedures
           .single
           .clauses

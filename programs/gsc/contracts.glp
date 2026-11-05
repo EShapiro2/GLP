@@ -1549,9 +1549,11 @@ nm_tally(C?) :-
          [rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(2)])], []),
           rs(unguarded, [times(num(k), atom(tallied, [role(1)]))], [], [atom(identity, [])], [])])], C).
 
-% --- negative: a multiplicity on an atom required and not deleted ----------
+% --- a multiplicity on an atom required and not deleted --------------------
 % spend(Alice?; k) : identity, k.coin(Alice), -coin(Alice)
-% multiplicity_not_added(spend, 1, coin(Alice)).
+% Admitted: a multiplicity on an atom required requires that many copies
+% (def:numbers, GSC 859a007), so the role requires k + 1 copies of coin and
+% deletes one.
 procedure nm_mult_kept(NContract).
 nm_mult_kept(C?) :-
     nm_base(B),
@@ -1562,7 +1564,8 @@ nm_mult_kept(C?) :-
 
 % --- negative: a multiplicity on an atom forbidden -------------------------
 % hoard(Alice?; k) : identity, not k.coin(Alice), +coin(Alice)
-% multiplicity_not_added(hoard, 1, coin(Alice)).
+% multiplicity_forbidden(hoard, 1, coin(Alice)) (def:numbers: "an atom of
+% H, or an unnegated atom of B, ... may carry a multiplicity").
 procedure nm_mult_forbidden(NContract).
 nm_mult_forbidden(C?) :-
     nm_base(B),
@@ -1697,6 +1700,9 @@ contract(wr_rec_third, C?) :- wr_rec_third(C).
 contract(wr_quit, C?) :- wr_quit(C).
 contract(wr_release, C?) :- wr_release(C).
 contract(wr_release_kept, C?) :- wr_release_kept(C).
+contract(wr_free_unrecorded, C?) :- wr_free_unrecorded(C).
+contract(wr_rec_other, C?) :- wr_rec_other(C).
+contract(wr_rec_other_w, C?) :- wr_rec_other_w(C).
 contract(ls_faults, C?) :- ls_faults(C).
 contract(nn_tag, C?) :- nn_tag(C).
 contract(nn_tag_loose, C?) :- nn_tag_loose(C).
@@ -2884,18 +2890,26 @@ wr_befriend(schema(befriend, [],
     [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(agent, [])]),
      rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(agent, [])])])).
 
-procedure wr_agent_person(Schema).
-wr_agent_person(schema(agent_person_befriend, [svar(y)],
+% agent_person_befriend with Ad added at the free role besides friend(role(1)):
+% the record of the agent, agent_of(role(1), y), which clause 2 of def:relay
+% asks the free role to add (GAI 2e3e5cc).
+procedure wr_agent_person_ad(Atoms?, Schema).
+wr_agent_person_ad(Ad, schema(agent_person_befriend, [svar(y)],
     [rs(guarded, [atom(friend, [role(2)])], [],
                  [atom(identity, []), atom(agent, []), atom(attestation, [svar(y)])], []),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(agent, [])]),
+     rs(guarded, [atom(friend, [role(1)])|Ad?], [], [atom(identity, [])], [atom(agent, [])]),
      rs(guarded, [], [],
                  [atom(identity, []), atom(guardian_of, [role(1)]),
                   atom(agent_of, [role(1), svar(y)]), atom(friend, [role(2)])],
                  [atom(agent, [])])])).
 
-procedure wr_agents(Schema).
-wr_agents(schema(agents_befriend, [svar(y), svar(z)],
+procedure wr_agent_person(Schema).
+wr_agent_person(S?) :- wr_agent_person_ad([atom(agent_of, [role(1), svar(y)])], S).
+
+% agents_befriend with Rq required besides at role 3, the guardian role of
+% the agent at role 1.
+procedure wr_agents_rq(Atoms?, Schema).
+wr_agents_rq(Rq, schema(agents_befriend, [svar(y), svar(z)],
     [rs(guarded, [atom(friend, [role(2)])], [],
                  [atom(identity, []), atom(agent, []), atom(attestation, [svar(y)])], []),
      rs(guarded, [atom(friend, [role(1)])], [],
@@ -2903,7 +2917,7 @@ wr_agents(schema(agents_befriend, [svar(y), svar(z)],
      rs(guarded, [], [],
                  [atom(identity, []), atom(guardian_of, [role(1)]),
                   atom(agent_of, [role(1), svar(y)]), atom(friend, [role(2)]),
-                  atom(friend, [role(4)])],
+                  atom(friend, [role(4)])|Rq?],
                  [atom(agent, [])]),
      rs(guarded, [], [],
                  [atom(identity, []), atom(guardian_of, [role(2)]),
@@ -2911,14 +2925,22 @@ wr_agents(schema(agents_befriend, [svar(y), svar(z)],
                   atom(friend, [role(3)])],
                  [atom(agent, [])])])).
 
+procedure wr_agents(Schema).
+wr_agents(S?) :- wr_agents_rq([], S).
+
 % wr_with(MakeGuardian, Rest, C): the contract with its make_guardian and
 % the schemas Rest besides; wr_with_enter the same with its enter_agent.
 procedure wr_with_enter(Schema?, Schema?, Contract?, Declared).
-wr_with_enter(N, G, Rest, reflexive([friend], [E?, S?, B?, N?, G?|C?])) :-
-    ground(N?), ground(G?), ground(Rest?) |
+wr_with_enter(N, G, Rest, C?) :- ground(N?), ground(G?), ground(Rest?) |
+    wr_agent_person(AP), wr_agents(AA),
+    wr_with_relays(N?, G?, AP?, AA?, Rest?, C).
+
+% wr_with_relays(N, G, AP, AA, Rest, C): the same with its two relay acts.
+procedure wr_with_relays(Schema?, Schema?, Schema?, Schema?, Contract?, Declared).
+wr_with_relays(N, G, AP, AA, Rest, reflexive([friend], [E?, S?, B?, N?, G?|C?])) :-
+    ground(N?), ground(G?), ground(AP?), ground(AA?), ground(Rest?) |
     wd_establish(E), wa_sign(S), wr_befriend(B),
     wd_unfriends(U),
-    wr_agent_person(AP), wr_agents(AA),
     contract_app([AP?, AA?], Rest?, R),
     contract_app(U?, R?, C).
 
@@ -3068,3 +3090,42 @@ wr_release(C?) :- wr_release_at([atom(principal_of, [pvar(x)])], C).
 % wards.
 procedure wr_release_kept(Declared).
 wr_release_kept(C?) :- wr_release_at([], C).
+
+% --- the relay acts at GAI 2e3e5cc (sections/wards.tex) --------------------
+% Clause 2 of def:relay: where the relay act has two ward roles, the
+% guardian role of one may require e of the other ward role and its record;
+% and the relay act adds at a free role the record of each ward role.  Each
+% fixture changes wr in one place.
+
+% wr_with_ap_aa(AP, AA, C): wr with the relay acts AP and AA.
+procedure wr_with_ap_aa(Schema?, Schema?, Declared).
+wr_with_ap_aa(AP, AA, C?) :- ground(AP?), ground(AA?) |
+    wr_enter_agent(N),
+    wr_make_guardian([svar(y)], [atom(agent_of, [role(3), svar(y)])],
+                     [atom(agent_of, [role(3), svar(y)])], G),
+    wr_with_relays(N?, G?, AP?, AA?, [], C).
+
+% wr_free_unrecorded: agent_person_befriend adds at its free role no record
+% of the agent: it is no relay act, and there is no introduction with wards.
+procedure wr_free_unrecorded(Declared).
+wr_free_unrecorded(C?) :-
+    wr_agent_person_ad([], AP), wr_agents(AA),
+    wr_with_ap_aa(AP?, AA?, C).
+
+% wr_rec_other: the guardian of the agent at role 1 of agents_befriend
+% requires besides the record of the other agent, agent_of(role(2), z), with
+% the arguments of the attestation role 2 requires: grassroots with wards as
+% wr is.
+procedure wr_rec_other(Declared).
+wr_rec_other(C?) :-
+    wr_agent_person(AP), wr_agents_rq([atom(agent_of, [role(2), svar(z)])], AA),
+    wr_with_ap_aa(AP?, AA?, C).
+
+% wr_rec_other_w: the guardian of the agent at role 1 of agents_befriend
+% requires principal_of(role(2)), w of the other ward role, which clause 2
+% admits at no role but the other's guardian role: no introduction with
+% wards.
+procedure wr_rec_other_w(Declared).
+wr_rec_other_w(C?) :-
+    wr_agent_person(AP), wr_agents_rq([atom(principal_of, [role(2)])], AA),
+    wr_with_ap_aa(AP?, AA?, C).

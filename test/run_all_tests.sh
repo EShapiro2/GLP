@@ -218,6 +218,17 @@ check_not() {
     fi
 }
 
+# A boot's lines of one person, [<person>] <term>, the super-app's sg(...) lines left aside, in order, as a list; and sorted, where the isolates' order is not held (the boots of the currencies' plays, Sections N2, N3 and N4; the apps' boots have their own in Section APPS).
+boot_person() { # boot_person <person> <output>
+    echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "sg(") != 1 { s = s (n++ ? ", " : "") substr($0, length(p) + 1) } END { print "[" s "]" }'
+}
+boot_person_sorted() { # boot_person_sorted <person> <output>
+    echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "sg(") != 1 { print substr($0, length(p) + 1) }' | sort | awk '{ s = s (n++ ? ", " : "") $0 } END { print "[" s "]" }'
+}
+boot_same() { # boot_same <name> <expected> <actual>
+    if [ "$3" = "$2" ]; then _check_pass "$1"; else _check_fail "$1" "expected: $2; got: $3"; fi
+}
+
 if _section TY; then
 # =============================================================================
 # Section TY: The tight typing discipline (test/check_typing.py, test/OPEN_TYPES)
@@ -1315,6 +1326,54 @@ check "split second run reproduces" "R = yes" "$a33a"
 check "split first draws" "F = firsts(745971022, 1039421601, 1816191086)" "$a33a"
 check "split second split reproduces" "T1 = 3250621881602310087" "$a33a"
 check "split second first draws reproduce" "G = firsts(745971022, 1039421601, 1816191086)" "$a33a"
+
+# --- A33b: Simulated time (start_clock/1, rated/2, step_clock/2) ---
+# GLP-ICLP appendix-guards, "Simulated time" (GLP-ICLP-2026 5fd9a15).  The
+# loop is the monitor's: a clause guarded by when_idle whose body is step_clock
+# (times/3).  repro: seed 42, rates 1, 2 and 0.5, run twice, the reference
+# releases and stopped(C).  hz: the horizon, the tokens past it bound to stop,
+# Step stopped(C).  tie: two tokens of one activation time released in the
+# order made pending.  restart: start_clock binds a pending token to stop.
+# rated_first / unrated_first: sGLP's "The claim, tested", one --- the unrated
+# goal runs to rest before the rated one is released, whichever is spawned
+# first.  claim: "The claim, tested", two --- rates 1, 2, 0.5 and 1 a second,
+# 10,000 releases, mean and variance within 5% and 10% of 1/4.5 and 1/4.5^2,
+# and the mean the reference.  The pinned values were computed from the
+# paper's sentences in Python, independently of the code.  a33c: rated and
+# step_clock abort before the first start_clock.
+echo "--- A33b: Simulated time ---"
+a33b=$("$REPL_RUN" <<HEREDOC
+$TYPED/clock_test.glp
+:limit 5000000
+repro(42, R1).
+repro(42, R2).
+hz(0.5, H).
+tie(T).
+restart(A).
+rated_first(RF).
+unrated_first(UF).
+claim(1, St).
+:quit
+HEREDOC
+2>&1)
+check "clock repro from seed 42" "R1 = run(\[1.522941750012381, 1.7360415557214341, 1.7652128941799705\], stopped(1.7652128941799705))" "$a33b"
+check "clock repro second run" "R2 = run(\[1.522941750012381, 1.7360415557214341, 1.7652128941799705\], stopped(1.7652128941799705))" "$a33b"
+check "clock horizon stops tokens past it" "H = hz(\[0.32910293578974764\], stopped(0.32910293578974764), toks(stop, stop, go(0.32910293578974764)))" "$a33b"
+check "clock tie in order made pending" "T = tie(x_first, same)" "$a33b"
+check "clock start_clock stops pending" "A = stop" "$a33b"
+check "clock unrated runs to rest (rated first)" "RF = after" "$a33b"
+check "clock unrated runs to rest (unrated first)" "UF = after" "$a33b"
+check "clock four rates, 10,000 releases" "St = stats(0.22016502528052906, 0.0473870040391368, ok)" "$a33b"
+check_not "clock no abort" "ABORT" "$a33b"
+a33c=$("$REPL_RUN" <<HEREDOC
+$TYPED/clock_test.glp
+rated(1, X).
+step_clock(5, S).
+:quit
+HEREDOC
+2>&1)
+check "clock rated aborts before start_clock" "\[ABORT\] rated/2: the simulated clock is not started" "$a33c"
+check "clock step_clock aborts before start_clock" "\[ABORT\] step_clock/2: the simulated clock is not started" "$a33c"
 
 # --- A34: Ackermann on Peano numerals (book/recursive/arithmetic_trees) ---
 # Clause 3's guard was compound(M?), ground(M?): compound refused M = 0, so
@@ -2830,6 +2889,49 @@ check "Coins mini-app play_same: the bearer's screen refuses the redemption of a
 check "Coins mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | X[0-9]*\]$" "$n2_same"
 echo ""
 
+
+# the coins program's play_swap on two smartphones (programs/currencies/coins_swap_boot.glp): the super-app of programs/social/graph/core on two isolates, each person with its own key pair, hosting the coins mini-app from its certified artefact currency.glpw, which :artefact writes beside the super-app and load_file/2 reads there; alice connects to bob, who consents, and once connected invites him to the mini-app, which he has consented to in advance; the handshake opens their conversation, and each person's script, waiting for it to open, then runs play_swap's steps over it.  Each person's lines, play_swap's screen, are held exactly, in order (Currencies #15, Code_inbox 2026-11-05 07:26 UTC, Udi approving: the plays' persons as mini-apps the super-app hosts).
+n2_coins_swap=$("$REPL_RUN" <<HEREDOC
+:artefact $COINS/currency $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/coins_swap_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/currency.glpw"
+check "N2 coins swap on smartphones: the mini-app's artefact is certified" "currency.glpw --- certified under" "$n2_coins_swap"
+check "N2 coins swap on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n2_coins_swap"
+check_not "N2 coins swap on smartphones: no event stopped at the cap" "did not quiesce" "$n2_coins_swap"
+boot_same "N2 coins swap on smartphones: alice's lines" "[opened(bob), minted(2), holdings([lot(alice, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 2)])]" "$(boot_person alice "$n2_coins_swap")"
+boot_same "N2 coins swap on smartphones: bob's lines" "[opened(alice), minted(2), holdings([lot(bob, 2)]), swap_done(alice), holdings([lot(alice, 2)])]" "$(boot_person bob "$n2_coins_swap")"
+
+# the coins program's play_same on two smartphones (coins_same_boot.glp): play_swap, after which alice asks for the two acts that change no state, each refused at her before anything is sent, her screen saying so and bob's showing nothing of either.
+n2_coins_same=$("$REPL_RUN" <<HEREDOC
+:artefact $COINS/currency $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/coins_same_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/currency.glpw"
+check "N2 coins same on smartphones: the mini-app's artefact is certified" "currency.glpw --- certified under" "$n2_coins_same"
+check "N2 coins same on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n2_coins_same"
+check_not "N2 coins same on smartphones: no event stopped at the cap" "did not quiesce" "$n2_coins_same"
+boot_same "N2 coins same on smartphones: alice's lines" "[opened(bob), minted(2), holdings([lot(alice, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 2)]), redeem_same(bob), swap_same(bob, bob, 2)]" "$(boot_person alice "$n2_coins_same")"
+boot_same "N2 coins same on smartphones: bob's lines" "[opened(alice), minted(2), holdings([lot(bob, 2)]), swap_done(alice), holdings([lot(alice, 2)])]" "$(boot_person bob "$n2_coins_same")"
+
+# the coins mini-app of coins/play_ui.glp on two smartphones (coins_ui_boot.glp), the live person scripted: alice mints 2 and proposes to bob the swap of her 2 for his 2; bob mints 2, accepts, and proposes the reverse swap, his 2 alice-coins for her 2 bob-coins, which alice accepts, as the harness describes her acts.
+n2_coins_ui=$("$REPL_RUN" <<HEREDOC
+:artefact $COINS/currency $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/coins_ui_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/currency.glpw"
+check "N2 coins ui on smartphones: the mini-app's artefact is certified" "currency.glpw --- certified under" "$n2_coins_ui"
+check "N2 coins ui on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n2_coins_ui"
+check_not "N2 coins ui on smartphones: no event stopped at the cap" "did not quiesce" "$n2_coins_ui"
+boot_same "N2 coins ui on smartphones: alice's lines" "[opened(bob), minted(2), holdings([lot(alice, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 2)]), swap_done(bob), holdings([lot(alice, 2)])]" "$(boot_person alice "$n2_coins_ui")"
+boot_same "N2 coins ui on smartphones: bob's lines" "[opened(alice), minted(2), holdings([lot(bob, 2)]), swap_done(alice), holdings([lot(alice, 2)]), holdings([]), swap_done(alice), holdings([lot(bob, 2)])]" "$(boot_person bob "$n2_coins_ui")"
+
 fi  # Section N2
 
 if _section N3; then
@@ -3208,6 +3310,35 @@ check "Bonds mini-app play_same: the bearer's screen refuses the redemption of a
 check "Bonds mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\]) | X[0-9]*\]$" "$n3_same"
 echo ""
 
+
+# the bonds program's play_swap on two smartphones (programs/currencies/dated_swap_boot.glp), as the coins program's in Section N2: the super-app on two isolates hosting the bonds mini-app from its certified artefact dated.glpw; alice mints 2 coins and bob 2 bonds maturing day 30, alice offers her 2 coins for bob's 2 bonds and bob accepts, each person's lines play_swap's screen, held exactly, in order (Currencies #15, Code_inbox 2026-11-05 07:26 UTC).
+n3_dated_swap=$("$REPL_RUN" <<HEREDOC
+:artefact $BONDS/dated $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/dated_swap_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/dated.glpw"
+check "N3 dated swap on smartphones: the mini-app's artefact is certified" "dated.glpw --- certified under" "$n3_dated_swap"
+check "N3 dated swap on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n3_dated_swap"
+check_not "N3 dated swap on smartphones: no event stopped at the cap" "did not quiesce" "$n3_dated_swap"
+boot_same "N3 dated swap on smartphones: alice's lines" "[opened(bob), minted(2, now), holdings([lot(alice, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)])]" "$(boot_person alice "$n3_dated_swap")"
+boot_same "N3 dated swap on smartphones: bob's lines" "[opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]), swap_done(alice), holdings([lot(alice, now, 2)])]" "$(boot_person bob "$n3_dated_swap")"
+
+# the bonds program's play_same on two smartphones (dated_same_boot.glp): play_swap, after which alice asks for the two acts that change no state, each refused at her, her screen saying so.
+n3_dated_same=$("$REPL_RUN" <<HEREDOC
+:artefact $BONDS/dated $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/dated_same_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/dated.glpw"
+check "N3 dated same on smartphones: the mini-app's artefact is certified" "dated.glpw --- certified under" "$n3_dated_same"
+check "N3 dated same on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n3_dated_same"
+check_not "N3 dated same on smartphones: no event stopped at the cap" "did not quiesce" "$n3_dated_same"
+boot_same "N3 dated same on smartphones: alice's lines" "[opened(bob), minted(2, now), holdings([lot(alice, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)]), redeem_same(bob, 30), swap_same(bob, bob, 30, 2)]" "$(boot_person alice "$n3_dated_same")"
+boot_same "N3 dated same on smartphones: bob's lines" "[opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]), swap_done(alice), holdings([lot(alice, now, 2)])]" "$(boot_person bob "$n3_dated_same")"
+
 fi  # Section N3
 
 if _section N4; then
@@ -3452,6 +3583,36 @@ check_not "Denominated mini-app play_swap: no failed goal" "ERROR" "$n4_ps"
 check "Denominated mini-app play_swap: the proposer's screen, her conversation opened and the swap done" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, usd, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, usd, now, 2)\])" "$n4_ps"
 check "Denominated mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, now), holdings(\[lot(bob, usd, now, 2)\]), swap_done(alice), holdings(\[lot(alice, usd, now, 2)\])" "$n4_ps"
 echo ""
+
+
+# the denominated program's play_swap on two smartphones (programs/currencies/sovereign_swap_boot.glp), as the coins program's in Section N2: the super-app on two isolates hosting the denominated mini-app from its certified artefact denominated.glpw; each mints 2 in usd, alice offers her 2 for bob's 2 and bob accepts, each person's lines play_swap's screen, held exactly, in order (Currencies #15, Code_inbox 2026-11-05 07:26 UTC).
+n4_sovereign_swap=$("$REPL_RUN" <<HEREDOC
+:artefact $SOV/denominated $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/sovereign_swap_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/denominated.glpw"
+check "N4 sovereign swap on smartphones: the mini-app's artefact is certified" "denominated.glpw --- certified under" "$n4_sovereign_swap"
+check "N4 sovereign swap on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n4_sovereign_swap"
+check_not "N4 sovereign swap on smartphones: no event stopped at the cap" "did not quiesce" "$n4_sovereign_swap"
+boot_same "N4 sovereign swap on smartphones: alice's lines" "[opened(bob), minted(2, now), holdings([lot(alice, usd, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, usd, now, 2)])]" "$(boot_person alice "$n4_sovereign_swap")"
+boot_same "N4 sovereign swap on smartphones: bob's lines" "[opened(alice), minted(2, now), holdings([lot(bob, usd, now, 2)]), swap_done(alice), holdings([lot(alice, usd, now, 2)])]" "$(boot_person bob "$n4_sovereign_swap")"
+
+# the sovereign market of sovereign/play_ui.glp on three smartphones (sovereign_ui_boot.glp), the central bank scripted as play_sovereign_ui scripts it: cb, diana and frank over the three conversations their acts need, the central bank calling and inviting both and diana calling and inviting frank; each person's lines are play_sovereign_ui's for them, the central bank's and frank's held exactly in order, frank's without the date_advanced lines of the single-engine play, whose advance(28) stands in for the day, which on a phone the device gives (Currencies #15, Code_inbox 2026-11-05 07:26 UTC: under the boot every person's date advances alike with the day the device gives), and diana's held sorted, her two conversations opening in the order the isolates run.
+n4_sovereign_ui=$("$REPL_RUN" <<HEREDOC
+:artefact $SOV/denominated $GLP_DIR/programs/social/graph/core
+:boot $GLP_DIR/programs/currencies/sovereign_ui_boot.glp $GLP_DIR/programs/social/graph/core
+:quit
+HEREDOC
+2>&1)
+rm -f "$GLP_DIR/programs/social/graph/core/denominated.glpw"
+check "N4 sovereign ui on smartphones: the mini-app's artefact is certified" "denominated.glpw --- certified under" "$n4_sovereign_ui"
+check "N4 sovereign ui on smartphones: the boot settles" "Boot settled: 3 agents (cb, diana, frank)" "$n4_sovereign_ui"
+check_not "N4 sovereign ui on smartphones: no event stopped at the cap" "did not quiesce" "$n4_sovereign_ui"
+boot_same "N4 sovereign ui on smartphones: cb's lines" "[opened(diana), opened(frank), minted(30, now), holdings([lot(cb, usd, now, 30)]), holdings([lot(cb, usd, now, 20)]), swap_done(diana), holdings([lot(cb, usd, now, 20), lot(diana, usd, now, 10)]), received(frank, 1), fiat_handed(frank, 1), holdings([lot(cb, usd, now, 21), lot(diana, usd, now, 10)]), swap_done(diana), holdings([lot(cb, usd, now, 30), lot(diana, usd, now, 1)])]" "$(boot_person cb "$n4_sovereign_ui")"
+boot_same "N4 sovereign ui on smartphones: frank's lines" "[opened(diana), opened(cb), minted(18, 28), holdings([lot(frank, usd, 28, 18)]), swap_done(diana), holdings([lot(diana, usd, now, 15)]), paying(diana, 3), holdings([lot(diana, usd, now, 12)]), paid(diana, 3), holdings([lot(diana, usd, now, 11)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 11), lot(frank, usd, 28, 1)]), holdings([lot(diana, usd, now, 10), lot(frank, usd, 28, 1)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 10), lot(frank, usd, 28, 2)]), holdings([lot(diana, usd, now, 9), lot(frank, usd, 28, 2)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 9), lot(frank, usd, 28, 3)]), holdings([lot(diana, usd, now, 8), lot(frank, usd, 28, 3)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 8), lot(frank, usd, 28, 4)]), holdings([lot(diana, usd, now, 7), lot(frank, usd, 28, 4)]), redeemed(diana, frank, 28), holdings([lot(diana, usd, now, 7), lot(frank, usd, 28, 5)]), holdings([lot(diana, usd, now, 6), lot(frank, usd, 28, 5)]), redeemed(diana, cb, now), holdings([lot(diana, usd, now, 6), lot(frank, usd, 28, 5), lot(cb, usd, now, 1)]), paying(cb, 1), holdings([lot(diana, usd, now, 6), lot(frank, usd, 28, 5)]), paid(cb, 1)]" "$(boot_person frank "$n4_sovereign_ui")"
+boot_same "N4 sovereign ui on smartphones: diana's lines, sorted" "[holdings([lot(cb, usd, now, 10), lot(diana, usd, now, 15)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 13), lot(diana, usd, now, 8)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 14), lot(diana, usd, now, 7)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 15), lot(diana, usd, now, 6)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 16), lot(diana, usd, now, 5)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 17), lot(diana, usd, now, 4)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 18), lot(diana, usd, now, 3)]), holdings([lot(cb, usd, now, 10), lot(frank, usd, 28, 18)]), holdings([lot(cb, usd, now, 10)]), holdings([lot(cb, usd, now, 10)]), holdings([lot(cb, usd, now, 9), lot(frank, usd, 28, 13), lot(diana, usd, now, 9)]), holdings([lot(diana, usd, now, 10)]), holdings([lot(frank, usd, 28, 13), lot(diana, usd, now, 18)]), holdings([lot(frank, usd, 28, 13), lot(diana, usd, now, 9)]), minted(10, now), minted(15, now), opened(cb), opened(frank), presented(frank, cb, now), presented(frank, frank, 28), presented(frank, frank, 28), presented(frank, frank, 28), presented(frank, frank, 28), presented(frank, frank, 28), received(frank, 3), swap_done(cb), swap_done(cb), swap_done(frank)]" "$(boot_person_sorted diana "$n4_sovereign_ui")"
 
 fi  # Section N4
 
@@ -6195,7 +6356,7 @@ check "SL0 :artefact writes a certified artefact into the loading program's dire
 # differs (a signature's last byte is often zero already, which setting it to
 # zero would leave unchanged).
 cp "$SL_DIR/run_module_probe.glpw" "$SL_DIR/forged.glpw"
-sl_size=$(stat -f%z "$SL_DIR/forged.glpw")
+sl_size=$(stat -f%z "$SL_DIR/forged.glpw" 2>/dev/null || stat -c%s "$SL_DIR/forged.glpw")
 sl_off=$((sl_size - 40))
 sl_byte=$(xxd -s "$sl_off" -l 1 -p "$SL_DIR/forged.glpw")
 sl_new=$(printf '%02x' $(( 0x$sl_byte ^ 0xff )))
@@ -7234,6 +7395,18 @@ apps_person_sg() { # apps_person_sg <person> <output>: the person's super-app li
 apps_person_screen() { # apps_person_screen <person> <output>: the person's mini-app screen, every other line of theirs, in order, as a list
     echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "sg(") != 1 { s = s (n++ ? ", " : "") substr($0, length(p) + 1) } END { print "[" s "]" }'
 }
+apps_person_acts() { # apps_person_acts <person> <output>: the person's answers and looks, their lines that are neither sg(...) nor view(...), in order, as a list
+    echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "sg(") != 1 && index(substr($0, length(p) + 1), "view(") != 1 { s = s (n++ ? ", " : "") substr($0, length(p) + 1) } END { print "[" s "]" }'
+}
+apps_person_last_view() { # apps_person_last_view <person> <output>: the person's last view
+    echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "view(") == 1 { v = substr($0, length(p) + 1) } END { print v }'
+}
+apps_count() { # apps_count: the number of top-level items of a list on stdin, [a, b(c, d), e] counting 3
+    awk '{ d = 0; n = 0; q = 0; for (i = 1; i <= length($0); i++) { c = substr($0, i, 1); if (c == "\x27") q = !q; if (q) continue; if (c == "(" || c == "[") d++; else if (c == ")" || c == "]") d--; else if (c == "," && d == 1) n++ } print (length($0) > 2 ? n + 1 : 0) }'
+}
+apps_person_sg_sorted() { # apps_person_sg_sorted <person> <output>: the person's super-app lines, sg(...), sorted, as a list, where the isolates' order is not held
+    echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 && index(substr($0, length(p) + 1), "sg(") == 1 { print substr($0, length(p) + 1) }' | sort | awk '{ s = s (n++ ? ", " : "") $0 } END { print "[" s "]" }'
+}
 
 # GKK's app on three smartphones (programs/apps/gkk_boot.glp): the super-app of programs/social/graph/core on three isolates, each person with its own key pair, hosting the base mini-app from its certified artefact gkk.glpw.  alice connects to bob and to carol, invites each once connected, and once both are her friends introduces them to each other in the social graph, the cards answered by the scripted home; carol invites bob once connected to him; and play_keys's steps run over the three conversations.  Each person's mini-app screen is held to the screen play_keys holds for them, exactly, in order; their super-app lines, sg(connected(...)), are held in either order, the isolates running in either.
 apps_gkk_boot=$("$REPL_RUN" <<HEREDOC
@@ -7304,6 +7477,42 @@ check "APPS gc on two smartphones: the boot settles" "Boot settled: 2 agents (al
 check_not "APPS gc on two smartphones: no event stopped at the cap" "did not quiesce" "$apps_gc_boot"
 apps_same "APPS gc on two smartphones: alice's lines" "[sg(connected(bob)), view([], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), menu(alice, []), view([], [], [establish(alice)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [bob], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([knows(bob), identity], [bob], [mint(alice, 2)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(alice), coin(alice), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(alice), coin(alice), knows(bob), identity], [bob], [swap(alice, bob, alice, 2, bob, 3)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(bob), knows(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), menu(alice, [bob]), view([coin(bob), coin(bob), coin(bob), knows(bob), knows(bob), identity], [bob], [pay(alice, bob, 2)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), knows(bob), knows(bob), identity], [bob], [], [tab('Contacts', knows), tab('Coins', coin, counted)])]" "$(apps_person alice "$apps_gc_boot")"
 apps_same "APPS gc on two smartphones: bob's lines" "[sg(befriend(alice)), sg(connected(alice)), view([], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([], [], [establish(bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([identity], [], [mint(bob, 3)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(bob), identity], [], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), gave(acquaint(alice, bob), yes), view([coin(bob), coin(bob), coin(bob), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(bob), identity], [alice], [acquaint(alice, bob)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([knows(alice), coin(bob), coin(bob), coin(bob), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), gave(swap(alice, bob, alice, 2, bob, 3), yes), view([knows(alice), coin(bob), coin(bob), coin(bob), identity], [alice], [swap(alice, bob, alice, 2, bob, 3)], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(alice), coin(alice), knows(alice), knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)]), view([coin(bob), coin(bob), coin(alice), coin(alice), knows(alice), knows(alice), identity], [alice], [], [tab('Contacts', knows), tab('Coins', coin, counted)])]" "$(apps_person bob "$apps_gc_boot")"
+
+# GC's village market on six smartphones (programs/apps/gc_village_boot.glp): the super-app of programs/social/graph/core on six isolates, the villagers of play_village under its roles, the earlier of each two who transact connecting to the later and inviting them once connected, the later having consented in advance, eight conversations; the six operations of GC's paper's village market run over them.  The isolates order a villager's views against their answers and against each other's attempts as the conversations open and the attempts arrive, which varies from run to run for a villager with three or four peers; so what is held of each villager is what the script and the end state fix: their answers and looks, gave(...) and menu(...), in order, the number of lines of their screen, and their last view, each play_village's; and the super-app's lines, one connection each, as a set.
+apps_gc_village_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gc $APPS_CORE
+:boot $GLP_DIR/programs/apps/gc_village_boot.glp $APPS_CORE
+:quit
+HEREDOC
+2>&1)
+rm -f "$APPS_CORE/gc.glpw"
+check "APPS gc village on six smartphones: the mini-app's artefact is certified" "gc.glpw --- certified under" "$apps_gc_village_boot"
+check "APPS gc village on six smartphones: the boot settles" "Boot settled: 6 agents (alice, bob, charlie, diana, eve, frank)" "$apps_gc_village_boot"
+check_not "APPS gc village on six smartphones: no event stopped at the cap" "did not quiesce" "$apps_gc_village_boot"
+apps_same "APPS gc village on six smartphones: alice's super-app lines, one connection each" "[sg(connected(bob)), sg(connected(charlie)), sg(connected(eve)), sg(connected(frank))]" "$(apps_person_sg_sorted alice "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: alice's answers and looks, in order" "[menu(alice, [bob, charlie, eve, frank])]" "$(apps_person_acts alice "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: alice's screen has play_village's 26 lines" "26" "$(apps_person_screen alice "$apps_gc_village_boot" | apps_count)"
+apps_same "APPS gc village on six smartphones: alice's last view is play_village's" "view([coin(frank), coin(frank), coin(frank), coin(frank), knows(frank), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), knows(charlie), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), knows(bob), knows(frank), knows(eve), knows(charlie), knows(bob), identity], [bob, charlie, eve, frank], [], [tab('Contacts', knows), tab('Coins', coin, counted)])" "$(apps_person_last_view alice "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: bob's super-app lines, one connection each" "[sg(connected(alice)), sg(connected(diana))]" "$(apps_person_sg_sorted bob "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: bob's answers and looks, in order" "[gave(acquaint(alice, bob), yes), gave(acquaint(diana, bob), yes), gave(swap(alice, bob, alice, 15, bob, 15), yes), gave(swap(diana, bob, diana, 20, bob, 24), yes), menu(bob, [alice, diana])]" "$(apps_person_acts bob "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: bob's screen has play_village's 22 lines" "22" "$(apps_person_screen bob "$apps_gc_village_boot" | apps_count)"
+apps_same "APPS gc village on six smartphones: bob's last view is play_village's" "view([coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), knows(alice), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), knows(diana), knows(diana), knows(alice), identity], [alice, diana], [], [tab('Contacts', knows), tab('Coins', coin, counted)])" "$(apps_person_last_view bob "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: charlie's super-app lines, one connection each" "[sg(connected(alice)), sg(connected(eve))]" "$(apps_person_sg_sorted charlie "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: charlie's answers and looks, in order" "[gave(acquaint(alice, charlie), yes), gave(swap(alice, charlie, alice, 15, charlie, 15), yes), gave(swap(eve, charlie, frank, 5, alice, 5), yes), menu(charlie, [alice, eve])]" "$(apps_person_acts charlie "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: charlie's screen has play_village's 22 lines" "22" "$(apps_person_screen charlie "$apps_gc_village_boot" | apps_count)"
+apps_same "APPS gc village on six smartphones: charlie's last view is play_village's" "view([coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), knows(frank), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(charlie), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), knows(eve), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), coin(alice), knows(alice), knows(eve), knows(alice), identity], [alice, eve], [], [tab('Contacts', knows), tab('Coins', coin, counted)])" "$(apps_person_last_view charlie "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: diana's super-app lines, one connection each" "[sg(connected(bob)), sg(connected(frank))]" "$(apps_person_sg_sorted diana "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: diana's answers and looks, in order" "[menu(diana, [bob, frank])]" "$(apps_person_acts diana "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: diana's screen has play_village's 22 lines" "22" "$(apps_person_screen diana "$apps_gc_village_boot" | apps_count)"
+apps_same "APPS gc village on six smartphones: diana's last view is play_village's" "view([coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), coin(frank), knows(frank), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), knows(bob), knows(frank), knows(bob), identity], [bob, frank], [], [tab('Contacts', knows), tab('Coins', coin, counted)])" "$(apps_person_last_view diana "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: eve's super-app lines, one connection each" "[sg(connected(alice)), sg(connected(charlie)), sg(connected(frank))]" "$(apps_person_sg_sorted eve "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: eve's answers and looks, in order" "[gave(acquaint(alice, eve), yes), gave(acquaint(charlie, eve), yes), gave(swap(charlie, eve, charlie, 10, eve, 10), yes), gave(swap(alice, eve, bob, 10, frank, 4), yes), menu(eve, [alice, charlie, frank])]" "$(apps_person_acts eve "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: eve's screen has play_village's 31 lines" "31" "$(apps_person_screen eve "$apps_gc_village_boot" | apps_count)"
+apps_same "APPS gc village on six smartphones: eve's last view is play_village's" "view([coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), coin(bob), knows(bob), coin(alice), coin(alice), knows(alice), coin(frank), knows(frank), coin(charlie), coin(charlie), coin(charlie), coin(charlie), knows(charlie), knows(frank), knows(charlie), knows(alice), identity], [alice, charlie, frank], [], [tab('Contacts', knows), tab('Coins', coin, counted)])" "$(apps_person_last_view eve "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: frank's super-app lines, one connection each" "[sg(connected(alice)), sg(connected(diana)), sg(connected(eve))]" "$(apps_person_sg_sorted frank "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: frank's answers and looks, in order" "[gave(acquaint(diana, frank), yes), gave(acquaint(eve, frank), yes), gave(acquaint(alice, frank), yes), gave(swap(diana, frank, diana, 15, frank, 18), yes), gave(swap(eve, frank, eve, 10, frank, 10), yes), menu(frank, [alice, diana, eve])]" "$(apps_person_acts frank "$apps_gc_village_boot")"
+apps_same "APPS gc village on six smartphones: frank's screen has play_village's 36 lines" "36" "$(apps_person_screen frank "$apps_gc_village_boot" | apps_count)"
+apps_same "APPS gc village on six smartphones: frank's last view is play_village's" "view([coin(frank), knows(frank), coin(frank), knows(frank), coin(frank), knows(frank), coin(frank), knows(frank), coin(frank), knows(frank), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), coin(eve), knows(eve), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), coin(diana), knows(diana), knows(alice), knows(eve), knows(diana), identity], [alice, diana, eve], [], [tab('Contacts', knows), tab('Coins', coin, counted)])" "$(apps_person_last_view frank "$apps_gc_village_boot")"
 
 # The village market of GB's paper, Section 7.1, on GB's app (play_village): six villagers and the escrow agent, ten conversations, alice's with frank among them (GKK:2), the seven operations at the paper's amounts; diana's premature presentation of a frank-bond is refused by frank's machine, the bond not mature by his date; once frank's date is day 28 he redeems five diana-coins, the escrow agent releases charlie's deposit to him (GB:7, release_c, one schema with deposit_c: a request of either proposes the part, vGLP, Section 5.4), and diana redeems a matured frank-bond against a frank-coin he holds (GB:5).  Each villager's last view held: Frank 7 diana-coins, 10 eve-coins, 6 frank-bonds maturing at day 28 and 4 frank-coins.
 apps_gbv=$("$REPL_RUN" <<HEREDOC

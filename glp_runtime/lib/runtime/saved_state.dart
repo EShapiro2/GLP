@@ -47,9 +47,13 @@ class SavedStateFormatException implements Exception {
 /// (2026-11-02) writes a global name in the place of a variable, a
 /// [GlobalNameTerm] in a held assignment's value, under a term tag of its own;
 /// version 1 wrote it as the structure `'_w'(p, i)`, which no longer stands
-/// for a name, so a version-1 state is not read.
+/// for a name, so a version-1 state is not read.  Version 3 (2026-11-05)
+/// numbers the outgoing messages' kinds without the agent message that no
+/// code constructed, and writes the reader a global_send goal watches once,
+/// where version 2 wrote it twice (GLP #11 Cowork, Code_inbox 2026-11-03
+/// 16:40 UTC, item 9); a version-2 state is not read.
 const List<int> savedStateMagic = [0x47, 0x4C, 0x50, 0x53];
-const int savedStateVersion = 2;
+const int savedStateVersion = 3;
 
 // Term tags.
 const int _tVar = 0;

@@ -79,7 +79,7 @@ void main() {
     test('an unquoted `_add(...)` is not a call: the parser refuses it', () {
       CompileError? e;
       try {
-        Parser(Lexer("p(X?) :- _add(1, 2, X).\n").tokenize()).parse();
+        Parser(Lexer("p(X?) :- _add(1, 2, X).\n").tokenize()).parseModule();
       } on CompileError catch (err) {
         e = err;
       }

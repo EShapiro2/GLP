@@ -1,84 +1,67 @@
 Environment predicates: today
 
-establish(Alice?) :
-    at Alice: not identity, +identity
+establish: identity(Alice) <-
+    not identity(Alice) guarded by Alice
 
-acquaint(Alice?, Bob?) :
-    at Alice: identity, +knows(Bob)
-    at Bob: identity, +knows(Alice)
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), identity(Bob) guarded by Alice, Bob
 
-introduce(Alice?, Bob?; c) :
-    at Alice: identity, knows(Bob), knows(c)
-    at Bob: identity, knows(Alice), +knows(c)
+introduce: knows(Bob, c) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, c), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
 
-mint_coin(Alice?; k) :
-    at Alice: identity, +k.coin(Alice)
+mint_coin: k.coin(Alice, Alice) <-
+    identity(Alice) guarded by Alice
 
-mint_bond(Alice?; d, k, t) | d > t :
-    at Alice: identity, date(t), +k.bond(Alice, d)
+mint_bond: k.bond(Alice, Alice, d) <-
+    identity(Alice), date(Alice, t), d > t guarded by Alice
 
-first_date(Alice; d) :
-    at Alice: identity, today(d), not dated, +date(d), +dated
+first_date: date(Alice, d), dated(Alice) <-
+    identity(Alice), today(Alice, d), not dated(Alice)
 
-advance(Alice; t, t1, d) | t1 = t + 1, t1 <= d :
-    at Alice: identity, today(d), +date(t1), -date(t)
+advance: date(Alice, t1), not date(Alice, t) <-
+    identity(Alice), today(Alice, d), date(Alice, t), t1 = t + 1, t1 <= d
 
-swap_cc(Alice?, Bob?; u, k, v, k1) :
-    at Alice: identity, knows(Bob), +k1.coin(v), +knows(v), -k.coin(u)
-    at Bob: identity, knows(Alice), +k.coin(u), +knows(u), -k1.coin(v)
+swap_cc: k1.coin(Alice, v), knows(Alice, v), not k.coin(Alice, u), k.coin(Bob, u), knows(Bob, u), not k1.coin(Bob, v) <-
+    identity(Alice), knows(Alice, Bob), k.coin(Alice, u), identity(Bob), knows(Bob, Alice), k1.coin(Bob, v) guarded by Alice, Bob
 
-swap_cb(Alice?, Bob?; u, k, v, d1, k1) :
-    at Alice: identity, knows(Bob), +k1.bond(v, d1), +knows(v), -k.coin(u)
-    at Bob: identity, knows(Alice), +k.coin(u), +knows(u), -k1.bond(v, d1)
+swap_cb: k1.bond(Alice, v, d1), knows(Alice, v), not k.coin(Alice, u), k.coin(Bob, u), knows(Bob, u), not k1.bond(Bob, v, d1) <-
+    identity(Alice), knows(Alice, Bob), k.coin(Alice, u), identity(Bob), knows(Bob, Alice), k1.bond(Bob, v, d1) guarded by Alice, Bob
 
-swap_bc(Alice?, Bob?; u, d, k, v, k1) :
-    at Alice: identity, knows(Bob), +k1.coin(v), +knows(v), -k.bond(u, d)
-    at Bob: identity, knows(Alice), +k.bond(u, d), +knows(u), -k1.coin(v)
+swap_bc: k1.coin(Alice, v), knows(Alice, v), not k.bond(Alice, u, d), k.bond(Bob, u, d), knows(Bob, u), not k1.coin(Bob, v) <-
+    identity(Alice), knows(Alice, Bob), k.bond(Alice, u, d), identity(Bob), knows(Bob, Alice), k1.coin(Bob, v) guarded by Alice, Bob
 
-swap_bb(Alice?, Bob?; u, d, k, v, d1, k1) :
-    at Alice: identity, knows(Bob), +k1.bond(v, d1), +knows(v), -k.bond(u, d)
-    at Bob: identity, knows(Alice), +k.bond(u, d), +knows(u), -k1.bond(v, d1)
+swap_bb: k1.bond(Alice, v, d1), knows(Alice, v), not k.bond(Alice, u, d), k.bond(Bob, u, d), knows(Bob, u), not k1.bond(Bob, v, d1) <-
+    identity(Alice), knows(Alice, Bob), k.bond(Alice, u, d), identity(Bob), knows(Bob, Alice), k1.bond(Bob, v, d1) guarded by Alice, Bob
 
-pay(Alice?, Bob; k) :
-    at Alice: identity, knows(Bob), -k.coin(Bob)
-    at Bob: identity, +k.coin(Bob)
+pay: not k.coin(Alice, Bob), k.coin(Bob, Bob) <-
+    identity(Alice), knows(Alice, Bob), k.coin(Alice, Bob), identity(Bob) guarded by Alice
 
-redeem_cc(Alice?, Bob; r) :
-    at Alice: identity, knows(Bob), +coin(r), +knows(r), -coin(Bob)
-    at Bob: identity, +coin(Bob), -coin(r)
+redeem_cc: coin(Alice, r), knows(Alice, r), not coin(Alice, Bob), coin(Bob, Bob), not coin(Bob, r) <-
+    identity(Alice), knows(Alice, Bob), coin(Alice, Bob), identity(Bob), coin(Bob, r) guarded by Alice
 
-redeem_cb(Alice?, Bob; r, d1) :
-    at Alice: identity, knows(Bob), +bond(r, d1), +knows(r), -coin(Bob)
-    at Bob: identity, +coin(Bob), -bond(r, d1)
+redeem_cb: bond(Alice, r, d1), knows(Alice, r), not coin(Alice, Bob), coin(Bob, Bob), not bond(Bob, r, d1) <-
+    identity(Alice), knows(Alice, Bob), coin(Alice, Bob), identity(Bob), bond(Bob, r, d1) guarded by Alice
 
-redeem_bc(Alice?, Bob; d, r, t) | d <= t :
-    at Alice: identity, knows(Bob), +coin(r), +knows(r), -bond(Bob, d)
-    at Bob: identity, date(t), +bond(Bob, d), -coin(r)
+redeem_bc: coin(Alice, r), knows(Alice, r), not bond(Alice, Bob, d), bond(Bob, Bob, d), not coin(Bob, r) <-
+    identity(Alice), knows(Alice, Bob), bond(Alice, Bob, d), identity(Bob), date(Bob, t), coin(Bob, r), d <= t guarded by Alice
 
-redeem_bb(Alice?, Bob; d, r, d1, t) | d <= t :
-    at Alice: identity, knows(Bob), +bond(r, d1), +knows(r), -bond(Bob, d)
-    at Bob: identity, date(t), +bond(Bob, d), -bond(r, d1)
+redeem_bb: bond(Alice, r, d1), knows(Alice, r), not bond(Alice, Bob, d), bond(Bob, Bob, d), not bond(Bob, r, d1) <-
+    identity(Alice), knows(Alice, Bob), bond(Alice, Bob, d), identity(Bob), date(Bob, t), bond(Bob, r, d1), d <= t guarded by Alice
 
-deposit_c(Alice?, Carol?; u, k) :
-    at Alice: identity, knows(Carol), -k.coin(u)
-    at Carol: identity, knows(Alice), +k.coin(u), +knows(u)
+deposit_c: not k.coin(Alice, u), k.coin(Carol, u), knows(Carol, u) <-
+    identity(Alice), knows(Alice, Carol), k.coin(Alice, u), identity(Carol), knows(Carol, Alice) guarded by Alice, Carol
 
-deposit_b(Alice?, Carol?; u, d, k) :
-    at Alice: identity, knows(Carol), -k.bond(u, d)
-    at Carol: identity, knows(Alice), +k.bond(u, d), +knows(u)
+deposit_b: not k.bond(Alice, u, d), k.bond(Carol, u, d), knows(Carol, u) <-
+    identity(Alice), knows(Alice, Carol), k.bond(Alice, u, d), identity(Carol), knows(Carol, Alice) guarded by Alice, Carol
 
-release_c(Carol?, Bob?; u, k) :
-    at Carol: identity, knows(Bob), -k.coin(u)
-    at Bob: identity, knows(Carol), +k.coin(u), +knows(u)
+release_c: not k.coin(Carol, u), k.coin(Bob, u), knows(Bob, u) <-
+    identity(Carol), knows(Carol, Bob), k.coin(Carol, u), identity(Bob), knows(Bob, Carol) guarded by Carol, Bob
 
-release_b(Carol?, Bob?; u, d, k) :
-    at Carol: identity, knows(Bob), -k.bond(u, d)
-    at Bob: identity, knows(Carol), +k.bond(u, d), +knows(u)
+release_b: not k.bond(Carol, u, d), k.bond(Bob, u, d), knows(Bob, u) <-
+    identity(Carol), knows(Carol, Bob), k.bond(Carol, u, d), identity(Bob), knows(Bob, Carol) guarded by Carol, Bob
 
-return_c(Carol?, Alice?; u, k) :
-    at Carol: identity, knows(Alice), -k.coin(u)
-    at Alice: identity, knows(Carol), +k.coin(u), +knows(u)
+return_c: not k.coin(Carol, u), k.coin(Alice, u), knows(Alice, u) <-
+    identity(Carol), knows(Carol, Alice), k.coin(Carol, u), identity(Alice), knows(Alice, Carol) guarded by Carol, Alice
 
-return_b(Carol?, Alice?; u, d, k) :
-    at Carol: identity, knows(Alice), -k.bond(u, d)
-    at Alice: identity, knows(Carol), +k.bond(u, d), +knows(u)
+return_b: not k.bond(Carol, u, d), k.bond(Alice, u, d), knows(Alice, u) <-
+    identity(Carol), knows(Carol, Alice), k.bond(Carol, u, d), identity(Alice), knows(Alice, Carol) guarded by Carol, Alice

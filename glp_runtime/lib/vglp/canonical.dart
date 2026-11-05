@@ -1608,7 +1608,7 @@ class DeclaredWidget {
   static DeclaredWidget? tryParse(String w) {
     Term? t;
     try {
-      final program = Parser(Lexer('w($w).').tokenize()).parse();
+      final program = Parser(Lexer('w($w).').tokenize()).parseModule();
       final head = program.procedures.single.clauses.single.head;
       if (head.args.length == 1) t = head.args.single;
     } on Object {
