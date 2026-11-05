@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:glp_runtime/engine/glp_engine.dart' show GlpEngine;
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:sodium/sodium_sumo.dart';
 
@@ -292,6 +293,29 @@ class Core {
     changed();
   }
 
+  /// Make the next opening of the app the person opened last quick: its
+  /// program checked now, while they look at the home screen (the engine
+  /// keeps a checked program for the agents made after, GlpEngine._checked).
+  void warm({String? name}) {
+    Timer(const Duration(milliseconds: 800), () {
+      if (session != null) return;
+      String? last = name;
+      try {
+        last ??= File('$mine/last.txt').readAsStringSync().trim();
+      } on Object {
+        // none yet
+      }
+      final all = apps();
+      final c = all.where((a) => a.name == last).firstOrNull ?? all.firstOrNull;
+      if (c == null) return;
+      try {
+        GlpEngine(rootSelfGlpPath: '$base/programs/self.glp').loadProgram(store.program(c));
+      } on Object {
+        // the agent will say what is wrong when the app opens
+      }
+    });
+  }
+
   // --- the people this person has met, in any app (people/<key>/people.json:
   // each key, when last met, and in which apps) ---
 
@@ -379,6 +403,11 @@ class Core {
 
   Future<Session> open(Contract c, {String? invite}) async {
     addApp(c);
+    try {
+      File('$mine/last.txt').writeAsStringSync(c.name);
+    } on Object {
+      // not kept: the next start warms another
+    }
     final s = session;
     if (s != null && s.contract.hash == c.hash) {
       if (invite != null && invite != me.hex && s.phase == 'running') {

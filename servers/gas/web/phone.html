@@ -161,6 +161,20 @@ details.dev{font-size:12px;color:var(--mute)}
 .renew{color:#ff3b30;font-size:15px;padding:12px;text-align:center;border-radius:12px}
 .renew.sure{background:#ff3b30;color:#fff;font-weight:600}
 details.dev pre{white-space:pre-wrap;font-size:11px;max-height:200px;overflow:auto}
+.chats .li{cursor:pointer}.chats .li small{display:block;color:var(--mute);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gicon{width:34px;height:34px;border-radius:50%;background:linear-gradient(160deg,#34c3ae,#169482);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.chathead{display:flex;align-items:center;gap:10px;padding:2px 2px 6px}
+.chathead b{flex:1;font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chathead .lnk{color:var(--blue);font-size:15px;padding:6px}
+.msgs{display:flex;flex-direction:column;gap:6px;padding:4px 2px 8px}
+.bub{max-width:78%;padding:8px 12px;border-radius:18px;font-size:15.5px;line-height:1.35;word-wrap:break-word;white-space:pre-wrap;align-self:flex-start;background:#e9e9eb;color:var(--ink)}
+.bub.me{align-self:flex-end;background:var(--blue);color:#fff}
+.bub.wait{opacity:.55}
+.bub .who{display:block;font-size:12px;font-weight:600;margin-bottom:2px;opacity:.75}
+.compose{display:flex;gap:8px;width:100%;align-items:flex-end}
+.compose textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:20px;padding:9px 14px;font:inherit;font-size:16px;max-height:120px;background:#fff;outline:none}
+.compose button{width:40px;height:40px;border-radius:50%;background:var(--blue);color:#fff;font-size:18px;flex:none}
+.compose button:disabled{opacity:.4}
 .toast{position:absolute;left:50%;bottom:90px;transform:translate(-50%,20px);background:rgba(29,29,31,.92);color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;max-width:86%;text-align:center;opacity:0;pointer-events:none;transition:all .25s;z-index:30}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--mute);font-size:15px}
@@ -704,6 +718,7 @@ function draw(){
   for (const c of s.pending) h += `<div class="pend"><span class="spin"></span>${esc(actText(c))}</div>`;
   for (const n of s.notes) if (isS(n, 'refused')) h += `<div class="pend">⚠️ Not done: ${esc(show(n.a[0]))}</div>`;
   if (tabs.length > 1) h += `<div class="seg${tabs.length > 3 ? ' many' : ''}">${tabs.map(t => `<button data-tab="${esc(t.label)}" class="${t.label === TAB ? 'on' : ''}">${esc(t.label)}</button>`).join('')}</div>`;
+  if (tab && chatTab() === TAB) return drawChats(s, h, tabs);
   if (tab){
     let rows = s.atoms.filter(a => fn(a) === tab.pred).map(a => {
       const args = argsOf(a); const who = args.find(x => PERSONS.includes(x) || isKey(x));
@@ -733,6 +748,129 @@ function draw(){
   if ($('#moreacts')) $('#moreacts').onclick = () => sheet('Actions', `<div class="list">${list.map(a => `<button class="li" style="width:100%;text-align:left;${a.ok ? '' : 'opacity:.4'}" data-prop="${a.x.name}" ${a.ok ? '' : 'disabled'}><span>${esc(a.x.label)}</span><span class="n">›</span></button>`).join('')}</div>`,
     el => el.querySelectorAll('[data-prop]').forEach(b => b.onclick = () => { closeSheet(); setTimeout(() => startAct(b.dataset.prop, s), 260); }));
   acts.querySelectorAll('[data-prop]').forEach(b => b.onclick = () => startAct(b.dataset.prop, s));
+}
+/* ---------- chats: a contract's group messages and messages, as conversations ---------- */
+// A contract with group posts (GSN's post and post_own) gets, on their tab,
+// its groups and the messages received as conversations: a member's groups
+// (member), what each holds (posted, at its leader; received_in, at a
+// member), and the messages from each friend (received).  A message is a
+// speech, its text and its author.
+let CHAT = null;
+const PEND = [], SENT = {};
+function chatTab(){
+  const p = SPEC && SPEC.proposals.find(x => x.name === 'post' || x.name === 'post_own');
+  return p && p.act ? p.act.tab : null;
+}
+const textOf = sp => isS(sp, 'speech') && isS(sp.a[0], 'utterance') ? String(sp.a[0].a[0]) : show(sp);
+const authorOf = sp => isS(sp, 'speech') ? sp.a[1] : null;
+function chats(s){
+  const out = [], byKey = k => out.find(c => c.key === k);
+  // the view lists the newest first
+  const atoms = [...s.atoms].reverse();
+  for (const m of atoms) if (fn(m) === 'member' && isS(m.a[0], 'dot')){
+    const n = m.a[0].a[1], key = 'g' + JSON.stringify(n);
+    if (!byKey(key)) out.push({kind: 'group', key, n, leader: m.a[0].a[0].a[0], name: textOf(n), msgs: []});
+  }
+  for (const a of atoms){
+    const g = fn(a) === 'posted' ? byKey('g' + JSON.stringify(a.a[1])) : fn(a) === 'received_in' ? byKey('g' + JSON.stringify(a.a[2])) : null;
+    if (g && !g.msgs.some(x => JSON.stringify(x) === JSON.stringify(a.a[0]))) g.msgs.push(a.a[0]);
+    if (fn(a) === 'received'){
+      const who = a.a[1], key = 'd' + who;
+      let d = byKey(key); if (!d){ d = {kind: 'dm', key, who, name: nameOf(who), msgs: []}; out.push(d); }
+      d.msgs.push(a.a[0]);
+    }
+  }
+  for (const [who, list] of Object.entries(SENT)){
+    const key = 'd' + who;
+    if (!byKey(key)) out.push({kind: 'dm', key, who, name: nameOf(who), msgs: []});
+  }
+  return out;
+}
+const friendsOf = s => s.atoms.filter(a => fn(a) === 'friend').map(a => a.a[0]);
+function drawChats(s, h, tabs){
+  const body = $('#abody'), acts = $('#acts');
+  const all = chats(s);
+  const c = CHAT && all.find(x => x.key === CHAT);
+  if (!c){
+    CHAT = null;
+    h += all.length ? `<div class="list chats">${all.map(x => {
+      const last = x.msgs[x.msgs.length - 1] || (x.kind === 'dm' && (SENT[x.who] || []).slice(-1)[0]);
+      const lastTxt = !last ? 'No messages yet' : typeof last === 'string' ? 'You: ' + last : (authorOf(last) === ME ? 'You: ' : (x.kind === 'group' ? nameOf(authorOf(last)) + ': ' : '')) + textOf(last);
+      return `<div class="li" data-chat="${esc(x.key)}">${x.kind === 'group' ? '<span class="gicon">👥</span>' : avatar(x.who)}<span style="flex:1;min-width:0"><span style="display:block;font-weight:600">${esc(x.name)}</span><small>${esc(lastTxt)}</small></span><span class="n">›</span></div>`;
+    }).join('')}</div>`
+      : `<div class="empty"><span class="big">💬</span><b>No groups yet</b><span>Tap New group, then add your friends. Befriend people first, in Friends.</span></div>`;
+    body.innerHTML = h;
+    wireBody(body);
+    body.querySelectorAll('[data-chat]').forEach(b => b.onclick = () => { CHAT = b.dataset.chat; draw(); });
+    const create = SPEC.proposals.find(x => x.name === 'create'), dm = SPEC.proposals.find(x => x.name === 'message');
+    acts.innerHTML = (create ? `<button class="act" id="newgroup" ${enabled(create, s) ? '' : 'disabled'}>New group</button>` : '')
+      + (dm ? `<button class="act alt" id="newdm" ${friendsOf(s).length ? '' : 'disabled'}>Message</button>` : '')
+      + `<button class="act alt" id="moreacts2">More…</button>`;
+    if ($('#newgroup')) $('#newgroup').onclick = () => startAct('create', s);
+    if ($('#newdm')) $('#newdm').onclick = () => pickPerson('Message whom?', friendsOf(s), who => { CHAT = 'd' + who; SENT[who] = SENT[who] || []; draw(); });
+    $('#moreacts2').onclick = () => moreActs(s);
+    return;
+  }
+  // one conversation
+  const msgs = c.kind === 'group' ? c.msgs.map(m => ({txt: textOf(m), who: authorOf(m)}))
+    : [...c.msgs.map(m => ({txt: textOf(m), who: c.who})), ...(SENT[c.who] || []).map(t => ({txt: t, who: ME}))];
+  for (let i = PEND.length - 1; i >= 0; i--){
+    const p = PEND[i];
+    if (Date.now() - p.t > 60000 || msgs.some(m => m.who === ME && m.txt === p.txt)) PEND.splice(i, 1);
+  }
+  const pend = PEND.filter(p => p.key === c.key);
+  const lead = c.kind === 'group' && c.leader === ME;
+  h += `<div class="chathead"><button class="lnk" id="chback">‹ ${esc(tabs.find(t => t.label === TAB).label)}</button><b>${c.kind === 'group' ? '👥 ' : ''}${esc(c.name)}</b>${lead ? '<button class="lnk" id="chadd">Add</button>' : ''}</div>`;
+  h += `<div class="msgs">${msgs.length || pend.length ? '' : `<div class="hint" style="text-align:center;margin:20px 0">No messages yet. Say hello.</div>`}${msgs.map(m =>
+    `<div class="bub${m.who === ME ? ' me' : ''}">${c.kind === 'group' && m.who !== ME ? `<span class="who">${esc(nameOf(m.who))}</span>` : ''}${esc(m.txt)}</div>`).join('')}${pend.map(p => `<div class="bub me wait">${esc(p.txt)}</div>`).join('')}</div>`;
+  body.innerHTML = h;
+  wireBody(body);
+  body.scrollTop = body.scrollHeight;
+  $('#chback').onclick = () => { CHAT = null; draw(); };
+  if ($('#chadd')) $('#chadd').onclick = () => {
+    const inIt = new Set(s.atoms.filter(a => fn(a) === 'listed' && JSON.stringify(a.a[1]) === JSON.stringify(c.n)).map(a => a.a[0]));
+    pickPerson('Add to ' + c.name, friendsOf(s).filter(k => !inIt.has(k)), who => {
+      if (s.menu) act(s.menu.id, s.menu.path, S('propose', S('join', ME, who, c.n)), 'Adding ' + nameOf(who) + '…');
+    }, 'Only friends can be added. Befriend people in Friends.');
+  };
+  // The composer stays while the conversation does: a redraw keeps what is
+  // being typed, and the focus.
+  const cur = acts.querySelector('.compose');
+  if (cur && cur.dataset.chat === c.key) return;
+  acts.innerHTML = `<div class="compose" data-chat="${esc(c.key)}"><textarea id="ctext" rows="1" placeholder="Message"></textarea><button id="csend" aria-label="Send">↑</button></div>`;
+  const ta = $('#ctext');
+  ta.oninput = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+  ta.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); } };
+  $('#csend').onclick = send;
+  function send(){
+    const t = ta.value.trim(); if (!t) return;
+    const sc = screen(); if (!sc.menu) return toast('Your agent is busy; try again in a moment');
+    const sp = S('speech', S('utterance', t), ME);
+    let v;
+    if (c.kind === 'group') v = lead ? S('propose', S('post_own', ME, sp, c.n)) : S('propose', S('post', ME, c.leader, sp, c.n));
+    else { v = S('propose', S('message', ME, c.who, sp)); (SENT[c.who] = SENT[c.who] || []).push(t); }
+    if (c.kind === 'group') PEND.push({key: c.key, txt: t, t: Date.now()});
+    ta.value = ''; ta.style.height = 'auto';
+    if (NATIVE) NATIVE('haptic');
+    draw();
+    post(C + '/act', {id: sc.menu.id, path: sc.menu.path, value: v});
+  }
+}
+function wireBody(body){
+  body.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; CHAT = null; draw(); });
+  body.querySelectorAll('[data-ans]').forEach(b => b.onclick = () => act(+b.dataset.id, JSON.parse(b.dataset.path), b.dataset.ans, b.dataset.ans === 'yes' ? 'Accepting…' : 'Declining…'));
+}
+function pickPerson(title, keys, then, none){
+  sheet(title, keys.length ? `<div class="list">${keys.map(k => `<button class="li" style="width:100%;text-align:left" data-k="${k}">${avatar(k)}<span>${esc(nameOf(k))}</span></button>`).join('')}</div>`
+    : `<div class="hint">${esc(none || 'No one to pick yet.')}</div>`,
+    el => el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { closeSheet(); then(b.dataset.k); }));
+}
+function moreActs(s){
+  const list = SPEC.proposals.filter(x => x.name !== 'establish' && x.act && x.act.tab === TAB)
+    .filter((x, i, a) => a.findIndex(y => y.label === x.label) === i)
+    .map(x => ({x, ok: s.menu && SPEC.proposals.filter(y => y.label === x.label).some(y => enabled(y, s))}));
+  sheet('Actions', `<div class="list">${list.map(a => `<button class="li" style="width:100%;text-align:left;${a.ok ? '' : 'opacity:.4'}" data-prop="${a.x.name}" ${a.ok ? '' : 'disabled'}><span>${esc(a.x.label)}</span><span class="n">›</span></button>`).join('')}</div>`,
+    el => el.querySelectorAll('[data-prop]').forEach(b => b.onclick = () => { closeSheet(); setTimeout(() => startAct(b.dataset.prop, s), 260); }));
 }
 function startAct(name, s){
   {

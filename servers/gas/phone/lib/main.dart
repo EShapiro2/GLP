@@ -147,6 +147,7 @@ class _ShellState extends State<Shell> {
           return (pub: glp.PubKey.fromList(identity.publicKey), priv: Uint8List.fromList(identity.privateKey));
         },
       );
+      core.warm();
       final s = LocalServer(core: core, www: '$base/www');
       await s.start();
       server = s;

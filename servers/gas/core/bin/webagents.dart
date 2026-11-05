@@ -34,6 +34,7 @@ import 'package:gas_core/core.dart';
 import 'package:gas_core/local_server.dart';
 import 'package:gas_core/offline_network.dart';
 import 'package:gas_core/relay_network.dart' show defaultRelay;
+import 'package:glp_runtime/engine/glp_engine.dart' show GlpEngine;
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:sodium/sodium_sumo.dart';
 
@@ -101,7 +102,15 @@ Person open(String file) {
     relayUrl: relayUrl,
     layers: () async => WebLayer(OfflineGlpNetwork(sodium: sodium, me: core.me, privateKey: core.privateKey)),
     fresh: () async {
-      final k = newPair();
+      // GKK, which every new person has, checked before the first comes.
+  for (final c in store.installed().where((c) => c.id == 'GKK')) {
+    try {
+      GlpEngine(rootSelfGlpPath: '$base/programs/self.glp').loadProgram(store.program(c));
+    } on Object {
+      // its first person's agent says what is wrong
+    }
+  }
+  final k = newPair();
       savePair(file, k);
       return k;
     },
@@ -211,6 +220,14 @@ Future<void> startUp() async {
   });
   store = ContractStore(base);
   await store.installStarters();
+  // GKK, which every new person has, checked before the first comes.
+  for (final c in store.installed().where((c) => c.id == 'GKK')) {
+    try {
+      GlpEngine(rootSelfGlpPath: '$base/programs/self.glp').loadProgram(store.program(c));
+    } on Object {
+      // its first person's agent says what is wrong
+    }
+  }
   final k = newPair();
   files = LocalServer(
       core: Core(base: base, store: store, sodium: sodium, me: k.pub, privateKey: k.priv,

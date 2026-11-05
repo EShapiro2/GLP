@@ -213,7 +213,15 @@ class RelayGlpNetwork implements GlpNetwork {
     return _enqueue(pk, _kindMsg, payload, app);
   }
 
+  static final _log = Platform.environment['GAS_RELAY_LOG'] != null;
+  static final _t0 = DateTime.now();
+  void _say(String s) {
+    // ignore: avoid_print
+    if (_log) print('[relay ${DateTime.now().difference(_t0).inMilliseconds} ${getIdentity().hex.substring(0, 4)}] $s');
+  }
+
   Future<void> _enqueue(PubKey to, int kind, Uint8List payload, String app) async {
+    _say('enqueue to ${to.hex.substring(0, 4)} kind $kind ${payload.length} B');
     final nonce = sodium.randombytes.buf(sodium.crypto.box.nonceBytes);
     final box = sodium.crypto.box.easy(
       message: _plain(kind, app, payload),
@@ -252,6 +260,7 @@ class RelayGlpNetwork implements GlpNetwork {
         final batch = _outbox.take(50).toList();
         try {
           await _call('send', {'msgs': batch});
+          _say('sent ${batch.length}');
           _outbox.removeRange(0, batch.length);
           await _write(_outboxFile, _outbox);
           backoff = 1;
@@ -307,6 +316,7 @@ class RelayGlpNetwork implements GlpNetwork {
     final tag = '$app:$from:$id';
     if (!_delivered.add(tag)) return;
     final pk = PubKey.fromHex(from);
+    _say('received from ${from.substring(0, 4)}');
     Uint8List plain;
     try {
       plain = sodium.crypto.box.openEasy(
@@ -359,6 +369,7 @@ class RelayGlpNetwork implements GlpNetwork {
   @override
   void acknowledge(String messageId) {
     if (!messageId.startsWith('relay:')) return inner.acknowledge(messageId);
+    _say('applied ${messageId.substring(messageId.length - 6)}');
     final p = messageId.substring(6).split(':');
     final seen = _applying.remove(messageId);
     if (seen != null) _markSeen(seen.$1, seen.$2);
