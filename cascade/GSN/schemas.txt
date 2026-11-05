@@ -1,52 +1,41 @@
-establish(Alice?) :
-    at Alice: not identity, +identity
+establish: identity(Alice) <-
+    not identity(Alice) guarded by Alice
 
-acquaint(Alice?, Bob?) :
-    at Alice: identity, +knows(Bob)
-    at Bob: identity, +knows(Alice)
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), identity(Bob) guarded by Alice, Bob
 
-introduce(Alice?, Bob?; c) :
-    at Alice: identity, knows(Bob), knows(c)
-    at Bob: identity, knows(Alice), +knows(c)
+introduce: knows(Bob, c) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, c), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
 
-befriend(Alice?, Bob?) :
-    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
-    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
+befriend: friend(Alice, Bob), friend(Bob, Alice) <-
+    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
 
-unfriend(Alice?, Bob) :
-    at Alice: identity, -friend(Bob), -listed(Bob, *), -member(<Bob>.*)
-    at Bob: identity, -friend(Alice), -listed(Alice, *), -member(<Alice>.*)
+unfriend: not friend(Alice, Bob), not listed(Alice, Bob, _), not member(Alice, <Bob>._), not friend(Bob, Alice), not listed(Bob, Alice, _), not member(Bob, <Alice>._) <-
+    identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
 
-message(Alice?, Bob; x) :
-    at Alice: identity, friend(Bob)
-    at Bob: identity, +received(x, Alice)
+message: received(Bob, x, Alice) <-
+    identity(Alice), friend(Alice, Bob), identity(Bob) guarded by Alice
 
-create(Alice?; n) :
-    at Alice: identity, not member(<Alice>.n), not closed(n), +member(<Alice>.n), +listed(Alice, n)
+create: member(Alice, <Alice>.n), listed(Alice, Alice, n) <-
+    identity(Alice), not member(Alice, <Alice>.n), not closed(Alice, n) guarded by Alice
 
-join(Alice?, Bob?; n) :
-    at Alice: identity, member(<Alice>.n), friend(Bob), +listed(Bob, n)
-    at Bob: identity, not member(<Alice>.n), +member(<Alice>.n)
+join: listed(Alice, Bob, n), member(Bob, <Alice>.n) <-
+    identity(Alice), member(Alice, <Alice>.n), friend(Alice, Bob), identity(Bob), not member(Bob, <Alice>.n) guarded by Alice, Bob
 
-leave(Alice, Bob?; n) :
-    at Alice: identity, -listed(Bob, n)
-    at Bob: identity, -member(<Alice>.n)
+leave: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
+    identity(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n) guarded by Bob
 
-remove(Alice?, Bob; n) :
-    at Alice: identity, -listed(Bob, n)
-    at Bob: identity, -member(<Alice>.n)
+remove: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
+    identity(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n) guarded by Alice
 
-close(Alice?, Alice[listed(*, n)]; n) :
-    at Alice: identity, member(<Alice>.n), +closed(n), -listed(Alice, n)
-    at Alice[listed(*, n)]: identity, -member(<Alice>.n)
+close: closed(Alice, n), not listed(Alice, Alice, n), forall Bob (listed(Alice, Bob, n) -> not member(Bob, <Alice>.n)) <-
+    identity(Alice), member(Alice, <Alice>.n), listed(Alice, Alice, n), forall Bob (listed(Alice, Bob, n) -> identity(Bob), member(Bob, <Alice>.n)) guarded by Alice
 
-post_own(Alice?; x, n) :
-    at Alice: identity, member(<Alice>.n), not posted(x, n), +posted(x, n)
+post_own: posted(Alice, x, n) <-
+    identity(Alice), member(Alice, <Alice>.n), not posted(Alice, x, n) guarded by Alice
 
-post(Bob?, Alice; x, n) :
-    at Bob: identity, member(<Alice>.n)
-    at Alice: identity, member(<Alice>.n), listed(Bob, n), friend(Bob), not posted(x, n), +posted(x, n)
+post: posted(Alice, x, n) <-
+    identity(Bob), member(Bob, <Alice>.n), identity(Alice), member(Alice, <Alice>.n), listed(Alice, Bob, n), friend(Alice, Bob), not posted(Alice, x, n) guarded by Bob
 
-deliver(Alice, Bob; x, n) :
-    at Alice: identity, member(<Alice>.n), posted(x, n), listed(Bob, n), friend(Bob), not delivered(x, Bob, n), +delivered(x, Bob, n)
-    at Bob: identity, member(<Alice>.n), +received_in(x, Alice, n)
+deliver: delivered(Alice, x, Bob, n), received_in(Bob, x, Alice, n) <-
+    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, x, Bob, n), identity(Bob), member(Bob, <Alice>.n)
