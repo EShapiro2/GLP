@@ -24,6 +24,8 @@ GKK:1 is `establish`, GKK:2 `acquaint`, GKK:3 `introduce`.  GB:1 is `mint_coin(p
 | `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `alice`, `bob` or `carol`, and `market_alice` to `market_escrow`, the parties of the village market |
 | `plays.glp` | `play_bonds/3`, the mini-app with no super-app, the play writing the calendars, and `play_village/7`, the village market of GB's paper on it |
 | `self.glp` | the platform's types written again, and the exports |
+| `../gb_boot.glp` | the super-app hosting the app on three smartphones, the persons of `play_bonds`, under `:boot`, as far as the first day: the days after it, which the play writes on a person's calendar off another person's screen, have no source on a phone under the boot harness, which waits on no clock |
+| `../gb_village_boot.glp` | the super-app hosting the app on seven smartphones, the parties of `play_village`, under `:boot`, as far as the first day likewise |
 | `../compile.sh` | the check that each app's `platform.vglp` is what the compiler prints |
 | `screens/` | the screens of the app for GB's paper, and their README |
 

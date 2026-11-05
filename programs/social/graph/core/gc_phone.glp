@@ -1,4 +1,4 @@
-%% gc_phone.glp --- one smartphone of programs/apps/gc_boot.glp: the super-app's agent on the isolate's network under the person's own key, the mini-app read from its certified artefact beside this program and installed, and the person's acts by their part in the boot's script, toward the peers whose keys the person told the agent.  The boot defines no agent/2: graph/core's agent/2 (self.glp) answers the initial goal and starts gc_phone/4, the entry the person goal's first act names (IGLP 0e1c9e0, Implementation Notes, "Boot"); so the phone is a module of the program the boot loads, moved here from the boot file on 2026-11-03 (GLP's ruling, Code_inbox 2026-11-03 14:58 UTC).  The script, the mini-app and its contract are the app's owner's (programs/apps/gc).
+%% gc_phone.glp --- one smartphone of programs/apps/gc_boot.glp and of gc_village_boot.glp: the super-app's agent on the isolate's network under the person's own key, the mini-app read from its certified artefact beside this program and installed, and the person's acts by their part in the boot's script, toward the peers whose keys the person told the agent.  The boot defines no agent/2: graph/core's agent/2 (self.glp) answers the initial goal and starts gc_phone/4, the entry the person goal's first act names (IGLP 0e1c9e0, Implementation Notes, "Boot"); so the phone is a module of the program the boot loads, moved here from the boot file on 2026-11-03 (GLP's ruling, Code_inbox 2026-11-03 14:58 UTC).  The script, the mini-app and its contract are the app's owner's (programs/apps/gc).
 
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
@@ -22,7 +22,20 @@ gc_phone(bob, Me, [Q], NetIn) :-
     bob_gc(Me?, Q?, C?, CK?, CSig?, AppEnd?, Out?, In),
     miniapp_person_run(C?, Me?, bob, [Q?], PersonEnd?, Screen),
     send_to_user(Screen?).
-%% A person who knows nobody, or more than the one the play gives, has no smartphone here.
+%% The six villagers of the village market (programs/apps/gc_village_boot.glp), under the roles of play_village (programs/apps/gc/person.glp, market_alice to market_frank), each with the keys of those they transact with in the order the play gives them: the earlier of each two connects and invites the later, who consents in advance, and the request to connect is answered by the scripted home (core/self.glp, scripted_home/5).
+gc_phone(market_alice, Me, [Bob, Charlie, Eve, Frank], NetIn) :-
+    villager_gc(Me?, market_alice, [Bob?, Charlie?, Eve?, Frank?], [Bob?, Charlie?, Eve?, Frank?], [], NetIn?).
+gc_phone(market_bob, Me, [Alice, Diana], NetIn) :-
+    villager_gc(Me?, market_bob, [Alice?, Diana?], [Diana?], [Alice?], NetIn?).
+gc_phone(market_charlie, Me, [Alice, Eve], NetIn) :-
+    villager_gc(Me?, market_charlie, [Alice?, Eve?], [Eve?], [Alice?], NetIn?).
+gc_phone(market_diana, Me, [Bob, Frank], NetIn) :-
+    villager_gc(Me?, market_diana, [Bob?, Frank?], [Frank?], [Bob?], NetIn?).
+gc_phone(market_eve, Me, [Alice, Charlie, Frank], NetIn) :-
+    villager_gc(Me?, market_eve, [Alice?, Charlie?, Frank?], [Frank?], [Alice?, Charlie?], NetIn?).
+gc_phone(market_frank, Me, [Diana, Eve, Alice], NetIn) :-
+    villager_gc(Me?, market_frank, [Diana?, Eve?, Alice?], [], [Diana?, Eve?, Alice?], NetIn?).
+%% A person who knows other peers than the plays give has no smartphone here.
 gc_phone(_, _, _, _) :- otherwise | true.
 
 %% alice's acts on her super-app: trust the compiler's key, install the mini-app with her end of its person channel, connect to the peer Q, bob, and once connected invite Q to the mini-app.
@@ -87,3 +100,55 @@ person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
     find_type(miniapp_person/5, [D?, S?], T),
     run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
 person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
+
+%% villager_gc(Me, Role, Ps, Calls, Accepts, NetIn): one villager's smartphone, as a person's above: the super-app's agent on the isolate's network under the villager's own key, its home answering the requests to connect (scripted_home/5), the mini-app installed from its artefact, and the villager's acts toward the peers Ps they know, Calls those they connect to and invite and Accepts those whose invitation they consent to in advance; the mini-app's scripted person runs under the role with the peers' keys, by which the script names them.
+procedure villager_gc(Key?, Constant?, List(Key)?, List(Key)?, List(Key)?, NetInStream?).
+villager_gc(Me, Role, Ps, Calls, Accepts, NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    scripted_home(Me?, Out?, Notices, Cmds?, In),
+    load_file("gc.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    acts(Me?, gc, Calls?, Accepts?, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
+    miniapp_person_run(C?, Me?, Role?, Ps?, PersonEnd?, Screen),
+    send_to_user(Screen?).
+
+%% acts(Me, App, Calls, Accepts, C, CK, CSig, AppEnd, Notices, Cmds): a person's acts on their super-app: trust the compiler's key, install the mini-app with their end of its person channel, consent in advance to the invitation of each peer in Accepts, connect to each peer in Calls, and, as each connection is reported, invite the peer connected where they called them; every connection is reported to the person, sg(connected(Q)).
+procedure acts(Key?, Constant?, List(Key)?, List(Key)?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+acts(Me, App, Calls, Accepts, C, CK, CSig, AppEnd, Notices,
+     [msg(person, Me?, trust(CK?)), msg(person, Me?, install(App?, C?, CSig?, AppEnd?)) | Cmds?]) :-
+    ground(Calls?) |
+    consents(Me?, App?, Accepts?, Cmds, Cmds1?),
+    connects(Me?, Calls?, Cmds1, Cmds2?),
+    calls_run(Me?, App?, Calls?, Notices?, Cmds2).
+
+%% The consents in advance, one per peer, before the rest of the commands.
+procedure consents(Key?, Constant?, List(Key)?, UserInStream, UserInStream?).
+consents(Me, App, [Q | Qs], [msg(person, Me?, accept_invite(App?, Q?)) | Cmds?], Rest) :-
+    consents(Me?, App?, Qs?, Cmds, Rest?).
+consents(_, _, [], Rest?, Rest).
+
+%% The requests to connect, one per peer called, before the rest of the commands.
+procedure connects(Key?, List(Key)?, UserInStream, UserInStream?).
+connects(Me, [Q | Qs], [msg(person, Me?, connect(Q?)) | Cmds?], Rest) :-
+    connects(Me?, Qs?, Cmds, Rest?).
+connects(_, [], Rest?, Rest).
+
+%% The notices the super-app tells the person: each connection reported, and answered with an invitation to the mini-app where the person called the one connected (a notice names a person by a constant, an invitation by a key, so the key the person knows is the one sent).
+procedure calls_run(Key?, Constant?, List(Key)?, Stream(Output)?, UserInStream).
+calls_run(Me, App, Calls, [msg(agent, person, connected(Who)) | Outs], Cmds?) :-
+    ground(Who?), ground(Calls?) |
+    send_to_user([sg(connected(Who?))]),
+    invite_called(Me?, App?, Calls?, Who?, Cmds, Cmds1?),
+    calls_run(Me?, App?, Calls?, Outs?, Cmds1).
+calls_run(Me, App, Calls, [_ | Outs], Cmds?) :- otherwise | calls_run(Me?, App?, Calls?, Outs?, Cmds).
+calls_run(_, _, _, [], []).
+
+%% The invitation of the one connected, where they are among those called.
+procedure invite_called(Key?, Constant?, List(Key)?, Constant?, UserInStream, UserInStream?).
+invite_called(Me, App, [Q | _], Who, [msg(person, Me?, invite(App?, Q?)) | Rest?], Rest) :-
+    Q? =?= Who? | true.
+invite_called(Me, App, [_ | Qs], Who, Cmds?, Rest) :-
+    otherwise | invite_called(Me?, App?, Qs?, Who?, Cmds, Rest?).
+invite_called(_, _, [], _, Rest?, Rest).
