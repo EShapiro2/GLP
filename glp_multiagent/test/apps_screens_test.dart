@@ -437,7 +437,7 @@ class _Run {
       GList(state.known),
       GList(state.pending),
       GList([
-        for (final l in state.lists ?? const <({String name, String predicate, bool counted})>[])
+        for (final l in state.lists)
           GStruct('tab', [GString(l.name), GAtom(l.predicate), if (l.counted) GAtom('counted')]),
       ]),
     ]);
@@ -591,10 +591,6 @@ class _Run {
     await tester.enterText(f, text);
     await tester.pumpAndSettle();
   }
-
-  /// [p] opens the tab [t].
-  Future<void> tab(_Person p, ScreenTab t) =>
-      tap(p, on(p, find.byKey(tabKey(t))));
 
   /// [p] opens the tab of the list of the predicate [pred], on an app whose contract carries pragmas.
   Future<void> list(_Person p, String pred) =>

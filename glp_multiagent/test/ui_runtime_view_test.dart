@@ -112,7 +112,6 @@ void main() {
     expect(o.proposals, {'establish/1', 'befriend/2'});
     expect(o.label('establish', 1), 'Establish');
     expect(o.tabOf('establish'), 'Contacts');
-    expect(o.known, isFalse);
   });
 
   testWidgets(
