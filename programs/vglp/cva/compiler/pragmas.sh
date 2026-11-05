@@ -1,5 +1,5 @@
 #!/bin/bash
-# The pragmas of a contract, as the term vGLP's compiler reads them (README.md beside this file, "The pragmas"; vGLP, Section 5.4, "The contract's words"; GSC, Section 2, its first paragraph): the lines after the line "Pragmas" of the contract's NAME.txt and of the NAME.txt of every contract it extends, by its "% Extends:" line and theirs, the contracts extended first.  A contract whose own NAME.txt has no line "Pragmas" has none, no_pragmas, which the compiler refuses: "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words").  A button is of the acts it names, and lines are matched by button (vGLP 40f8444, Section 5.4, "The contract's words", its last sentence): "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its line replaces the inherited one".  A line's fields name, in the schemas' order, the variables of its button's acts that the atoms each requires at the proposer's role do not bind, and a line whose fields are not these is refused (ibid.).  The fields after a button, up to the next button, are that button's, and two lines that stand writing one button are refused, one name being one button with one line (ibid.: "for each act they propose, its button, in brackets, bearing the act's name, and its fields, in angle brackets"; "A button is of the acts it names").
+# The pragmas of a contract, as the term vGLP's compiler reads them (README.md beside this file, "The pragmas"; vGLP, Section 5.4, "The contract's words"; GSC, Section 2, its first paragraph): the lines after the line "Pragmas" of the contract's NAME.txt and of the NAME.txt of every contract it extends, by its "% Extends:" line and theirs, the contracts extended first.  A contract whose own NAME.txt has no line "Pragmas" has none, no_pragmas, which the compiler refuses: "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words").  A button is of the acts it names, and a button replaces a button (vGLP 4236349, Section 5.4, "The contract's words", its last sentence): "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its button, with its fields and its questions, replaces the inherited one, the other buttons of the inherited line standing".  A line's fields name, in the schemas' order, the variables of its button's acts that the atoms each requires at the proposer's role do not bind, and a line whose fields are not these is refused (ibid.).  The fields after a button, up to the next button, are that button's, and two lines that stand writing one button are refused, one name being one button with one line (ibid.: "for each act they propose, its button, in brackets, bearing the act's name, and its fields, in angle brackets"; "A button is of the acts it names").
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
@@ -294,25 +294,27 @@ for my $f (@order) {
         }
     }
 }
-# A button line of a contract is replaced where a contract extending it writes a button of the name of one of its buttons: "where the contract writes a button of an inherited button’s name, its line replaces the inherited one" (vGLP 40f8444, Section 5.4, "The contract’s words", its last sentence), its fields and its questions with it; lines are matched by button, as DGC’s Minting line replaces GB’s, and GD’s Friendship line GSG’s.
+# A button of a contract is replaced where a contract extending it writes a button of its name: "where the contract writes a button of an inherited button’s name, its button, with its fields and its questions, replaces the inherited one, the other buttons of the inherited line standing" (vGLP 4236349, Section 5.4, "The contract’s words", its last sentence), as GSN’s [Close] on a line of its own would leave the [Create] of the line it was on.  $replaced{K}{B} is the line of the extending contract that replaces the button B of the line K, and a line all of whose buttons are replaced is gone, its questions with it.
 my %replaced;
 for my $k (@line_keys) {
     my ($f) = split /\x02/, $k;
-    my %b = map { $_ => 1 } @{ $line_buttons{$k} };
-    for my $k2 (@line_keys) {
-        my ($g) = split /\x02/, $k2;
-        next unless $anc{$g}{$f} && $g ne $f;
-        if (grep { $b{$_} } @{ $line_buttons{$k2} }) { $replaced{$k} = $k2; last }
+    for my $b (@{ $line_buttons{$k} }) {
+        for my $k2 (@line_keys) {
+            my ($g) = split /\x02/, $k2;
+            next unless $anc{$g}{$f} && $g ne $f;
+            if (grep { $_ eq $b } @{ $line_buttons{$k2} }) { $replaced{$k}{$b} = $k2; last }
+        }
     }
 }
+sub all_replaced { my ($k) = @_; return 0 unless $replaced{$k}; return !grep { !$replaced{$k}{$_} } @{ $line_buttons{$k} } }
 # A button is of the acts it names, so one name is one button, with one line: two kept lines writing a button of one name, or one line writing it twice, are a fault of the contract, refused, the button and both lines named (vGLP 40f8444, Section 5.4, "The contract’s words": "for each act they propose, its button, in brackets, bearing the act’s name"; "A button is of the acts it names"; vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 1).
 my (%button_line, @dup_out);
 for my $k (@line_keys) {
-    next if $replaced{$k};
     my %once;
     my @orig = $line_shown{$k} =~ /\[([^\]]+)\]/g;
     for my $bi (0 .. $#{ $line_buttons{$k} }) {
         my ($b, $ob) = ($line_buttons{$k}[$bi], $orig[$bi]);
+        next if $replaced{$k}{$b};
         if ($once{$b}++) {
             push @dup_out, "$line_shown{$k}: refused, the button [$ob] written twice on it";
             push @faults, "pragmas.sh: the line \"$line_shown{$k}\" writes the button [$ob] twice, and a button is of the acts it names, one name one button (vGLP, Section 5.4, \"The contract’s words\")\n";
@@ -327,7 +329,7 @@ for my $k (@line_keys) {
     }
 }
 # Every button of every line kept, by the schema name it bears, so that a schema one button names by its own name is realised by no other.
-for my $k (@line_keys) { next if $replaced{$k}; $named_by_button{$_} = 1 for @{ $line_buttons{$k} } }
+for my $k (@line_keys) { $named_by_button{$_} = 1 for grep { !$replaced{$k}{$_} } @{ $line_buttons{$k} } }
 for my $f (@order) {
     # A line indented after a pragma line continues it (GSC, Section 2, its first paragraph; the guide, step 7: "an indented line for each other proposer, written the same way; and an indented line for each other person asked, their name, a colon, the question"), carried on its line after the mark \x01.
     my @l = joined($f);
@@ -414,10 +416,11 @@ for my $f (@order) {
             }
             for my $pi (0 .. $#props) {
                 my $pr = $props[$pi];
-                # A button line an extending contract replaces (%replaced, above) is not read, and its buttons, fields and questions are gone.
-                if (my $by = $replaced{"$f\x02$ln\x02$pi"}) {
-                    (my $g = (split /\x02/, $by)[0]) =~ s{.*/}{};
-                    push @lines_out, "$name: $title: $pr->{name} $pr->{tail}: replaced by the line of $g with a button of the same name";
+                # A button an extending contract writes (%replaced, above) is replaced, with its fields, and the other buttons of the line stand, with the line’s questions; a line all of whose buttons are replaced is gone, its questions with it.
+                my $lk = "$f\x02$ln\x02$pi";
+                if (all_replaced($lk)) {
+                    my %gs = map { (my $g = (split /\x02/, $_)[0]) =~ s{.*/}{}; $g => 1 } values %{ $replaced{$lk} };
+                    push @lines_out, "$name: $title: $pr->{name} $pr->{tail}: replaced by the line of " . join(" and ", sort keys %gs) . (@{ $line_buttons{$lk} } == 1 ? " with a button of the same name" : " with buttons of the same names");
                     next;
                 }
                 my $tail = $pr->{tail};
@@ -429,6 +432,12 @@ for my $f (@order) {
                     my @fields;
                     while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
                     $tail =~ /^(\[|$)/ or die "pragmas.sh: $f: the pragma \"$title\" has words it cannot read: $tail\n";
+                    (my $ba = lc $buttons[0]) =~ s/ +/_/g;
+                    if ($replaced{$lk} && $replaced{$lk}{$ba}) {
+                        (my $g = (split /\x02/, $replaced{$lk}{$ba})[0]) =~ s{.*/}{};
+                        push @lines_out, "$name: $title: $pr->{name} [$buttons[0]]" . join("", map { " <$_>" } @fields) . ": replaced by the line of $g with a button of the same name, the other buttons of the line standing";
+                        next;
+                    }
                     # An inherited button stands while the contract has an act it names, and goes with its fields and its questions where it has none (vGLP 40f8444, Section 5.4, "The contract’s words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it"), as GC’s [Mint] in DGC, whose term has no mint; a button of the contract itself that names no act is a fault (below).
                     if ($f ne $top && @snames) {
                         my @gone = grep { (my $a = lc $_) =~ s/ +/_/g; !grep { exists $roles{$_} } realising($a) } @buttons;
