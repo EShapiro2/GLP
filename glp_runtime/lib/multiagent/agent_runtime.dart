@@ -752,7 +752,7 @@ class AgentRuntime {
           final activations = _userInput!.inject(act);
           _log('USER_INPUT: ${activations.length} activations');
           for (final goal in activations) {
-            _runtime!.gq.enqueue(goal);
+            _runtime!.enqueueReactivatedGoal(goal);
           }
         } catch (e, st) {
           _log('USER_INPUT ERROR: $e\n$st');
