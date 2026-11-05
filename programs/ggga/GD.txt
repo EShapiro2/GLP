@@ -4,7 +4,7 @@
 % Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK, Grassroots Keys and Knowledge, GSC's.  It cites GKK:1 to GKK:3 and GSG:2 whole and restates none; GD:4 replaces GSG:1.
 % Defines: distrust.  Person, knowing and friend are defined with GKK and GSG; Alice, Bob and Carol are variables naming distinct persons.
 % Last changed: 2026-11-05, written by GGGA #3 Cowork, the clauses and the pragmas as Udi approved them to GGGA #3.
-% Schemas: GD.glp, not yet written.
+% Schemas: GD.glp beside this file, GKK's three, GSG's unfriend and GD's five over the predicate distrusts: befriend, which replaces GSG's; distrust and distrust_friend, clause 1; propagate, clause 2, Bob a reading role; cease, clause 3.  Clause 5 has no schema.
 GD: Grassroots Distrust
 Alice, Bob and Carol are persons.  GD extends GSG.
 1. ■ Distrust.  Alice, who knows Carol and does not distrust Carol, may distrust Carol; if they are friends, this ends their friendship.
