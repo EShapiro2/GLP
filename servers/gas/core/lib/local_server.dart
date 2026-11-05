@@ -78,6 +78,7 @@ class LocalServer {
       'peers': s?.people() ?? const [],
       'known': core.known(),
       'relay': {'on': core.relayOn, 'state': s?.relay.state ?? (core.relayOn ? 'on' : 'off')},
+      'attest': {'available': core.admits != null, 'on': core.attestedOnly},
       'events': s?.events.reversed.take(60).toList() ?? const [],
     };
   }
@@ -207,6 +208,9 @@ class LocalServer {
         return _json(req, {'ok': true});
       case 'relay':
         await core.setRelay((await _body(req))['on'] == true);
+        return _json(req, {'ok': true});
+      case 'attest':
+        await core.setAttested((await _body(req))['on'] == true);
         return _json(req, {'ok': true});
       case 'forget':
         await core.forget((await _body(req))['key'] as String);

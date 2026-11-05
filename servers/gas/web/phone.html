@@ -406,6 +406,7 @@ async function peopleSheet(home){
       ${NATIVE && !window.GAS_NOSCAN ? '<button class="sbtn alt" id="scan">Scan their code</button>' : ''}` : ''}
       ${p.hosted ? `<div class="card" style="padding:12px 14px;font-size:13.5px;color:var(--mute);line-height:1.4">🌐 <b style="color:var(--ink2)">GAS on the web.</b> Your agent runs on talmonlab, which keeps your key, and meets people over the Internet. Add this page to your Home Screen to keep it; clearing this browser's data starts you over.</div>`
       : `<div class="card toggle"><div><b>Internet</b><small>${p.relay.on ? 'Meet people anywhere (encrypted, through talmonlab)' : 'Only people near you'}</small></div><button class="sw ${p.relay.on ? 'on' : ''}" id="relay" aria-label="Internet"></button></div>`}
+      ${p.attest && p.attest.available ? `<div class="card toggle"><div><b>Attested apps only</b><small>${p.attest.on ? 'Only people whose phone attests that they run GAS' : 'Also people whose app is not attested'}</small></div><button class="sw ${p.attest.on ? 'on' : ''}" id="attest" aria-label="Attested apps only"></button></div>` : ''}
       ${inApp ? '' : `<h2 style="margin:6px 4px 0">People you know</h2>
       ${(p.known || []).length ? `<div class="list">${p.known.map(q => `<button class="li" style="width:100%;text-align:left" data-k="${q.key}">${avatar(q.key)}<span style="flex:1;min-width:0"><span style="display:block">${esc(q.name)}</span><small style="color:var(--mute);font-size:12.5px">${esc([(q.apps || []).map(short).join(', '), ago(q.seen)].filter(Boolean).join(' · '))}</small></span><span class="n">›</span></button>`).join('')}</div>`
         : `<div class="hint" style="margin:0 4px">No one yet. Open an app to meet people.</div>`}
@@ -419,6 +420,7 @@ async function peopleSheet(home){
     $('#shr').onclick = () => share(`Join me${PEOPLE.title ? ' in ' + PEOPLE.title : ''} on GAS: ${PEOPLE.invite}`);
     $('#cpy').onclick = () => copy(PEOPLE.invite);
     if ($('#relay')) $('#relay').onclick = async () => { await post('relay', {on: !PEOPLE.relay.on}); PEOPLE = await get('people'); $('#sbody').innerHTML = draw(); wire(); };
+    if ($('#attest')) $('#attest').onclick = async () => { await post('attest', {on: !PEOPLE.attest.on}); PEOPLE = await get('people'); $('#sbody').innerHTML = draw(); wire(); };
     el = $('#sbody');
     el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => personSheet(b.dataset.k, () => peopleSheet(home)));
     const add = async t => {
@@ -603,6 +605,11 @@ function formFields(prop, s){
   prop.args.forEach((type, k) => {
     const i = k + 1, s1 = srcOf(i), s2 = srcOf(i + 1);
     if (i === me || i + 1 === me || inGroup(i) || inGroup(i + 1) || !s1 || !s2 || s1[1] !== s2[1] || paired.has(i)) return;
+    // Two fields drawn from one predicate are one pick of its rows only where
+    // its rows pair them (a row of two or more): knows(Q), one person a row,
+    // gives two picks of persons (GKK's introduce).
+    const ar = s.atoms.filter(t => fn(t) === s1[1]).map(t => argsOf(t).length);
+    if (ar.length && ar.every(n => n < 2)) return;
     const rows = s.atoms.filter(t => fn(t) === s1[1] && argsOf(t).length >= 2).map(t => t.a);
     const opts = rows.filter((r, j) => rows.findIndex(q => JSON.stringify(q) === JSON.stringify(r)) === j);
     const kindOf = v => typeof v === 'number' ? 'Integer' : typeof v === 'string' ? 'Peer' : 'Speech';

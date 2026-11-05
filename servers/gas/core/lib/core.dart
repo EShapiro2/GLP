@@ -92,6 +92,7 @@ class Session {
         dir: '${core.mine}/undertakings',
         app: contract.name,
       );
+      presenting.admits = core.attestedOnly ? core.admits : null;
       presenting.onPresented = (pk) => event('undertaking of ${pk.hex.substring(0, 8)}… received');
       presenting.onRefused = (pk, why) => event('refused ${pk.hex.substring(0, 8)}…: $why');
       host = PersonHost(
@@ -165,6 +166,7 @@ class Session {
               'name': core.nameOf(p.key),
               'state': p.state,
               'undertaking': presenting.hasPresented(glp.PubKey.fromHex(p.key)) ? 'yes' : 'no',
+              'attested': presenting.isAdmitted(glp.PubKey.fromHex(p.key)) ? 'yes' : 'no',
             }
       ];
 
@@ -416,6 +418,27 @@ class Core {
   }
 
   // --- the relay's switch, kept across sessions ---
+
+  /// Where the platform attests the code people run (Android, iPhone): which
+  /// attested applications count as GAS (main.dart); null where it does not.
+  bool Function(Object? application)? admits;
+
+  File get _attestOff => File('$base/attest/off');
+
+  /// Whether only people whose app is attested as GAS are interacted with:
+  /// so by default where the platform attests.
+  bool get attestedOnly => admits != null && !_attestOff.existsSync();
+
+  Future<void> setAttested(bool on) async {
+    if (on) {
+      if (_attestOff.existsSync()) _attestOff.deleteSync();
+    } else {
+      _attestOff.parent.createSync(recursive: true);
+      _attestOff.writeAsStringSync('off');
+    }
+    session?.presenting.admits = attestedOnly ? admits : null;
+    changed();
+  }
 
   File get _relayOff => File('$base/relay/off');
   bool get relayOn => hosted || !_relayOff.existsSync();

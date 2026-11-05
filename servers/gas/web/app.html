@@ -238,6 +238,9 @@ function formFields(prop, s, p){
   prop.args.forEach((type, k) => {
     const i = k + 1, s1 = srcOf(i), s2 = srcOf(i + 1);
     if (i === me || i + 1 === me || inGroup(i) || inGroup(i + 1) || !s1 || !s2 || s1[1] !== s2[1] || paired.has(i)) return;
+    // As in phone.html: one pick of rows only where the predicate's rows pair the two.
+    const ar = s.atoms.filter(t => fn(t) === s1[1]).map(t => argsOf(t).length);
+    if (ar.length && ar.every(n => n < 2)) return;
     const rows = s.atoms.filter(t => fn(t) === s1[1] && argsOf(t).length >= 2).map(t => t.a);
     const opts = rows.filter((r, j) => rows.findIndex(q => JSON.stringify(q) === JSON.stringify(r)) === j);
     // the row's other values fill the act's other places of their kind that nothing else fills

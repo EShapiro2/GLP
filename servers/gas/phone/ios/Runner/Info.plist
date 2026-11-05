@@ -99,5 +99,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- The team prefix of the App ID, which App Attest names (PlatformAttestationPlugin.swift). -->
+	<key>GrassrootsAppIdentifierPrefix</key>
+	<string>$(AppIdentifierPrefix)</string>
 </dict>
 </plist>

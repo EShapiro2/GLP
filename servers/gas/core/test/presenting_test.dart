@@ -267,6 +267,32 @@ void main() {
     expect((await host(0x54)).refused, contains('not a certified compiled program'));
   }, timeout: const Timeout(Duration(minutes: 5)));
 
+  test('where attestation is required, a person whose app is not attested as GAS is held until it is', () async {
+    if (!Directory('${tree.path}/packages').existsSync()) return markTestSkipped('no bundle tree');
+    final p = await pair();
+    final (alice, bob) = (p.alice, p.bob);
+    final refusedAtBob = <String>[];
+    p.bn.onRefused = (pk, why) => refusedAtBob.add(why);
+    // Bob counts only connections attested as GAS; Alice's is not, yet.
+    p.bn.admits = (a) => a == 'GAS';
+    await propose(alice, S('establish', [alice.me]));
+    await propose(bob, S('establish', [bob.me]));
+    await propose(alice, S('acquaint', [alice.me, bob.me]));
+    await until(() => refusedAtBob.isNotEmpty ? true : null, 'Bob never held Alice', seconds: 30);
+    expect(refusedAtBob.first, contains('not attested'));
+    await Future<void>.delayed(const Duration(seconds: 3));
+    expect(asked(bob), isNull, reason: 'held from the contract\'s code');
+    // A connection attested otherwise does not count; one attested as GAS does.
+    (p.bn.inner as MemoryNet).onPeerConnected?.call(alice.keyPair.pub, Underlay.lan, 'Other');
+    await Future<void>.delayed(const Duration(seconds: 2));
+    expect(asked(bob), isNull);
+    (p.bn.inner as MemoryNet).onPeerConnected?.call(alice.keyPair.pub, Underlay.lan, 'GAS');
+    await until(() => asked(bob), 'Bob was never asked once Alice was attested');
+    // Once that connection is gone, Alice is no longer attested.
+    (p.bn.inner as MemoryNet).onPeerDisconnected?.call(alice.keyPair.pub, Underlay.lan);
+    expect(p.bn.isAdmitted(alice.keyPair.pub), isFalse);
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
   test('an undertaking for another package is refused, and so is the interaction', () async {
     if (!Directory('${tree.path}/packages').existsSync()) return markTestSkipped('no bundle tree');
     final p = await pair(bobPackage: 'f' * 64);

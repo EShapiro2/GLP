@@ -24,6 +24,13 @@
 // The invited person checks it, keeps it, and presents their undertaking to
 // the inviter before anything else (Session.addFar).
 //
+// Where the platform attests the peer's code (GNA's attestation: Android's
+// hardware key attestation, iOS's App Attest, the application and its version
+// named for each session), [admits] decides whose application counts: a
+// message from a person whose connection was not attested as an application
+// [admits] accepts is held, as one from a person who has not presented their
+// undertaking is, until such a connection is reported.
+//
 // On the wire every payload carries a first byte: 0 the agent's message, 1 an
 // undertaking, 2 a request for one.
 import 'dart:async';
@@ -94,6 +101,26 @@ class PresentingNetwork implements GlpNetwork {
   /// An undertaking received and checked.
   void Function(PubKey pk)? onPresented;
 
+  /// The attested applications this person interacts with, where only such
+  /// are interacted with: given the application a connection reports (null
+  /// where it is unattested), whether it counts.  Null: no attestation is
+  /// required.
+  bool Function(Object? application)? _admits;
+  final Map<String, Set<Underlay>> _admittedOn = {};
+  final Set<String> _warned = {};
+
+  bool Function(Object? application)? get admits => _admits;
+  set admits(bool Function(Object? application)? a) {
+    _admits = a;
+    for (final k in [..._held.keys]) {
+      _release(PubKey.fromHex(k));
+    }
+  }
+
+  /// Whether [pk]'s application is attested, on a connection open now, as one
+  /// that counts, where it must be.
+  bool isAdmitted(PubKey pk) => _admits == null || (_admittedOn[pk.hex]?.isNotEmpty ?? false);
+
   PresentingNetwork({
     required this.inner,
     required PersonIdentity person,
@@ -103,8 +130,20 @@ class PresentingNetwork implements GlpNetwork {
     required this.app,
   })  : undertaking = undertakingOf(person, package, hSrc),
         invitation = invitationOf(person, package, hSrc) {
-    inner.onPeerConnected = (pk, u, id) => onPeerConnected?.call(pk, u, id);
-    inner.onPeerDisconnected = (pk, u) => onPeerDisconnected?.call(pk, u);
+    inner.onPeerConnected = (pk, u, id) {
+      final on = _admittedOn.putIfAbsent(pk.hex, () => {});
+      if (_admits?.call(id) ?? false) {
+        on.add(u);
+        _release(pk);
+      } else {
+        on.remove(u);
+      }
+      onPeerConnected?.call(pk, u, id);
+    };
+    inner.onPeerDisconnected = (pk, u) {
+      _admittedOn[pk.hex]?.remove(u);
+      onPeerDisconnected?.call(pk, u);
+    };
     inner.onPeerDiscovered = (pk, u) => onPeerDiscovered?.call(pk, u);
     inner.onMessageReceived = _received;
     try {
@@ -164,12 +203,18 @@ class PresentingNetwork implements GlpNetwork {
     final body = Uint8List.sublistView(payload, 1);
     switch (payload[0]) {
       case _kindMsg:
-        if (hasPresented(sender)) {
+        if (hasPresented(sender) && isAdmitted(sender)) {
           onMessageReceived?.call(sender, Uint8List.fromList(body), id, u);
         } else {
-          // Held, unacknowledged, until the sender presents their undertaking.
+          // Held, unacknowledged, until the sender presents their undertaking
+          // and, where it must be, their application is attested.
           _held.putIfAbsent(sender.hex, () => []).add((Uint8List.fromList(body), id, u));
-          if (_asked.add(sender.hex)) unawaited(inner.send(sender, _frame(_kindAsk, const [])).catchError((Object _) {}));
+          if (!hasPresented(sender) && _asked.add(sender.hex)) {
+            unawaited(inner.send(sender, _frame(_kindAsk, const [])).catchError((Object _) {}));
+          }
+          if (!isAdmitted(sender) && _warned.add(sender.hex)) {
+            onRefused?.call(sender, 'their app is not attested as GAS');
+          }
         }
       case _kindUndertaking:
         inner.acknowledge(id);
@@ -189,15 +234,21 @@ class PresentingNetwork implements GlpNetwork {
           _save();
         }
         onPresented?.call(sender);
-        for (final (b, mid, under) in _held.remove(sender.hex) ?? const <(Uint8List, String, Underlay)>[]) {
-          onMessageReceived?.call(sender, b, mid, under);
-        }
+        _release(sender);
       case _kindAsk:
         inner.acknowledge(id);
         unawaited(_present(sender).catchError((Object _) {}));
       default:
         inner.acknowledge(id);
         onRefused?.call(sender, 'a message of no kind this network knows');
+    }
+  }
+
+  /// The messages held from [pk], given to the agent once both hold.
+  void _release(PubKey pk) {
+    if (!hasPresented(pk) || !isAdmitted(pk)) return;
+    for (final (b, mid, under) in _held.remove(pk.hex) ?? const <(Uint8List, String, Underlay)>[]) {
+      onMessageReceived?.call(pk, b, mid, under);
     }
   }
 

@@ -35,6 +35,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:gas_core/contracts.dart';
 import 'package:gas_core/core.dart';
 import 'package:gas_core/local_server.dart';
+import 'attestation.dart';
 import 'view.dart';
 
 const _bg = Color(0xFFF5F5F7);
@@ -79,6 +80,7 @@ class PhoneLayer implements Layer {
   factory PhoneLayer(GrassrootsIdentity id, SodiumSumo sodium) => PhoneLayer._(GrassrootsNetwork(
         identity: id,
         underlays: {Underlay.pan, Underlay.lan},
+        platformAttestation: phoneAttestation,
         store: Store<AppState>(appReducer, initialState: AppState()),
         sodium: sodium,
       ));
@@ -147,6 +149,13 @@ class _ShellState extends State<Shell> {
           return (pub: glp.PubKey.fromList(identity.publicKey), priv: Uint8List.fromList(identity.privateKey));
         },
       );
+      // On a phone whose platform attests, only people whose app is attested
+      // as GAS are interacted with (attestation.dart; the person may turn it off).
+      final pa = phoneAttestation;
+      if (pa != null) {
+        final own = await ownApplication(pa, Uint8List.fromList(identity.publicKey));
+        if (own != null) core.admits = admitsLike(own);
+      }
       core.warm();
       final s = LocalServer(core: core, www: '$base/www');
       await s.start();
