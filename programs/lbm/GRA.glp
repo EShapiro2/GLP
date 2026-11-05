@@ -24,18 +24,22 @@
 %% forwarded call, before the bidding period ends; Alice holds bid(Bob, r, p,
 %% d), and Bob bidded(Alice, r, p, d).  GRA:3, Award, at or after the end of
 %% the period, locks the fare f at Alice and the deposit k at Bob, and gives
-%% each the ride; the bidder, f and k are set by the instance, which no
-%% schema reads.  GRA:4, Pickup, records picked(r) at both, once, with both
-%% at the pickup point; GRA:5, Arriving, with both at the destination,
-%% releases the fare and the deposit and ends the ride; GRA:6, Cancelling,
-%% Alice's, after the maximum pickup delay with no pickup recorded, the same.
+%% each the ride, ride(q, r, x, y, mx, t0, d, f, k), q the other; the bidder, f
+%% and k are set by the instance, which no schema reads.  GRA:4, Pickup, with
+%% both at the pickup point, replaces the ride at both by riding(q, r, y, t0,
+%% d, f, k, t), t Alice's time, the time of the pickup; GRA:5, Arriving, with
+%% both at the destination, releases the fare and the deposit and ends the
+%% ride under way; GRA:6, Cancelling, Alice's, after the maximum pickup delay,
+%% the same of a ride awarded and not picked up, a pickup having deleted it.
 %% "Alice may not open a bid before then" is the realisation's, the bid held
 %% sealed in Alice's state until the award.  Every role but establish's
 %% requires identity.
 %%
 %% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
 %% and is named by its index, role(1) the schema's first role.  Written by
-%% LBM #4 Cowork, 2026-11-03.
+%% LBM #4 Cowork, 2026-11-03; award's ride with the deposit, pickup, arrive and
+%% cancel revised by GRH #1 Cowork, 2026-11-05, so that the schemas are effective
+%% (vGLP, Section 5.4; Code #23, 2026-11-04 16:22 UTC).
 %% ---------------------------------------------------------------------------
 
 NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
@@ -115,17 +119,17 @@ contract_named(gra, environment([now, location],
         rs(unguarded, [atom(bid, [role(1), svar(r), num(p), num(d)])], [], [atom(identity, [])], [])]),
 %% GRA:3, Award: when the bidding period has ended, Alice awards ride r to Bob at fare f; Alice's fare and Bob's deposit k are locked.
     nschema(award, ['Alice', 'Bob'], [svar(r), num(x), num(y), num(e), num(mx), svar(m), num(p), num(d), num(t0), num(f), num(k)], le(num(e), num(t0)),
-       [rs(guarded,   [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f)]), atom(fare_locked, [svar(r), num(f)])], [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)])], [atom(identity, []), atom(bid, [role(2), svar(r), num(p), num(d)]), atom(now, [num(t0)])], []),
-        rs(unguarded, [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f)]), atom(deposit_locked, [svar(r), num(k)])], [atom(bidded, [role(1), svar(r), num(p), num(d)])], [atom(identity, [])], [])]),
-%% GRA:4, Pickup: recorded once, when Alice and Bob are both at the pickup point; no role guards it.
-    schema(pickup, ['Alice', 'Bob'], [svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f)],
-       [rs(unguarded, [atom(picked, [svar(r)])], [], [atom(identity, []), atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f)]), atom(location, [num(x)])], [atom(picked, [svar(r)])]),
-        rs(unguarded, [atom(picked, [svar(r)])], [], [atom(identity, []), atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f)]), atom(location, [num(x)])], [atom(picked, [svar(r)])])]),
+       [rs(guarded,   [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(fare_locked, [svar(r), num(f)])], [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)])], [atom(identity, []), atom(bid, [role(2), svar(r), num(p), num(d)]), atom(now, [num(t0)])], []),
+        rs(unguarded, [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(deposit_locked, [svar(r), num(k)])], [atom(bidded, [role(1), svar(r), num(p), num(d)])], [atom(identity, [])], [])]),
+%% GRA:4, Pickup: recorded when Alice and Bob are both at the pickup point, at Alice's time t; the ride awarded becomes the ride under way; no role guards it.
+    schema(pickup, ['Alice', 'Bob'], [svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(t)],
+       [rs(unguarded, [atom(riding, [role(2), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)])], [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)])], [atom(identity, []), atom(location, [num(x)]), atom(now, [num(t)])], []),
+        rs(unguarded, [atom(riding, [role(1), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)])], [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)])], [atom(identity, []), atom(location, [num(x)])], [])]),
 %% GRA:5, Arriving: when Alice and Bob are both at the destination, the fare and the deposit are released and the ride ends; no role guards it.
-    schema(arrive, ['Alice', 'Bob'], [svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)],
-       [rs(unguarded, [], [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f)]), atom(fare_locked, [svar(r), num(f)])], [atom(identity, []), atom(picked, [svar(r)]), atom(location, [num(y)])], []),
-        rs(unguarded, [], [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f)]), atom(deposit_locked, [svar(r), num(k)])], [atom(identity, []), atom(picked, [svar(r)]), atom(location, [num(y)])], [])]),
+    schema(arrive, ['Alice', 'Bob'], [svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)],
+       [rs(unguarded, [], [atom(riding, [role(2), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)]), atom(fare_locked, [svar(r), num(f)])], [atom(identity, []), atom(location, [num(y)])], []),
+        rs(unguarded, [], [atom(riding, [role(1), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)]), atom(deposit_locked, [svar(r), num(k)])], [atom(identity, []), atom(location, [num(y)])], [])]),
 %% GRA:6, Cancelling: with no pickup recorded within the maximum pickup delay, Alice cancels; the fare and the deposit are released and the ride ends.
     nschema(cancel, ['Alice', 'Bob'], [svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(t)], gt(num(t), plus(num(t0), num(mx))),
-       [rs(guarded,   [], [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f)]), atom(fare_locked, [svar(r), num(f)])], [atom(identity, []), atom(now, [num(t)])], [atom(picked, [svar(r)])]),
-        rs(unguarded, [], [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f)]), atom(deposit_locked, [svar(r), num(k)])], [atom(identity, [])], [])])])).
+       [rs(guarded,   [], [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(fare_locked, [svar(r), num(f)])], [atom(identity, []), atom(now, [num(t)])], []),
+        rs(unguarded, [], [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(deposit_locked, [svar(r), num(k)])], [atom(identity, [])], [])])])).
