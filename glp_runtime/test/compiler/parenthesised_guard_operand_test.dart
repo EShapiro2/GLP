@@ -28,7 +28,7 @@ import 'package:test/test.dart';
 
 /// The guards of the single clause of [source], as text.
 String _guards(String source) =>
-    Parser(Lexer(source).tokenize()).parse().procedures.single.clauses.single
+    Parser(Lexer(source).tokenize()).parseModule().procedures.single.clauses.single
         .guards!
         .join(', ');
 

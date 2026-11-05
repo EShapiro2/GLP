@@ -72,7 +72,7 @@ use(X, R?) :- ~d(X?) | R = no.
       // The same source through the lexer alone.
       CompileError? direct;
       try {
-        Parser(Lexer('p(X?) :- q("abc, X).\n').tokenize()).parse();
+        Parser(Lexer('p(X?) :- q("abc, X).\n').tokenize()).parseModule();
       } on CompileError catch (e) {
         direct = e;
       }

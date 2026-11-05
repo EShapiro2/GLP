@@ -25,7 +25,7 @@ import 'package:test/test.dart';
 
 /// The guards of the single clause of [source].
 List<Guard> _guards(String source) =>
-    Parser(Lexer(source).tokenize()).parse().procedures.single.clauses.single
+    Parser(Lexer(source).tokenize()).parseModule().procedures.single.clauses.single
         .guards!;
 
 const _source = r'''
@@ -96,7 +96,7 @@ void main() {
     test('a guard predicate and the unification goal parse as before', () {
       expect(_guards('p(X, R?) :- ground(X?) | R = yes.').single.predicate,
           'ground');
-      final module = Parser(Lexer('p(X?) :- foo(a) = X.').tokenize()).parse();
+      final module = Parser(Lexer('p(X?) :- foo(a) = X.').tokenize()).parseModule();
       final goal = module.procedures.single.clauses.single.body!.single;
       expect(goal.functor, '=');
       expect((goal.args[0] as StructTerm).functor, 'foo');

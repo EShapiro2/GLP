@@ -6,6 +6,7 @@ library;
 
 import 'dart:io';
 
+import 'package:glp_runtime/compiler/ast.dart' show Program;
 import 'package:glp_runtime/compiler/certification.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
@@ -90,8 +91,10 @@ void main() {
 
   group('the boundary calls a program is refused for', () {
     List<PrivilegedCall> callsOf(String source) {
-      final program = Parser(Lexer(source).tokenize()).parse();
-      return privilegedCalls(program, root, ownModules: const {});
+      final module = Parser(Lexer(source).tokenize()).parseModule();
+      return privilegedCalls(
+          Program(module.procedures, module.line, module.column), root,
+          ownModules: const {});
     }
 
     test('a program calling nothing privileged is certifiable', () {

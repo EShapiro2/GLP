@@ -185,7 +185,7 @@ $_decl$_clauses''');
 
 /// The term [text] reads as, the argument of a unit clause.
 Term _readTerm(String text) =>
-    Parser(Lexer('t($text).').tokenize()).parse().procedures.single.clauses
+    Parser(Lexer('t($text).').tokenize()).parseModule().procedures.single.clauses
         .single.head.args.single;
 
 /// Whether [a] and [b] are the same term, node by node.
