@@ -40,14 +40,16 @@ gsnp_schemas([
                     [atom(agent, []), atom(retired, [])]),
         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])],
                     [atom(agent, []), atom(retired, [])])]),
-%% GKK:3, Introduction, for persons, with Bob's consent.
-    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+%% GKK:3, Introduction, for persons, with Bob's consent: GnW's own introduce, replacing GKK's (GSC Section 2; Udi, 2026-11-03, to GSC #10), in which Carol, the person introduced, is a reading role, adding and deleting nothing, so that the act reads that Carol is not a ward.
+    schema(introduce, ['Alice', 'Bob', 'Carol'], [],
        [rs(guarded, [], [],
-                    [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])],
+                    [atom(identity, []), atom(knows, [role(2)]), atom(knows, [role(3)])],
                     [atom(agent, []), atom(retired, [])]),
-        rs(guarded, [atom(knows, [pvar(c)])], [],
+        rs(guarded, [atom(knows, [role(3)])], [],
                     [atom(identity, []), atom(knows, [role(1)])],
-                    [atom(agent, []), atom(retired, [])])]),
+                    [atom(agent, []), atom(retired, [])]),
+        rs(unguarded, [], [], [atom(identity, [])],
+                      [atom(agent, []), atom(retired, [])])]),
 %% GSG:1, Friendship, for two persons who know each other.
     schema(befriend, ['Alice', 'Bob'], [],
        [rs(guarded, [atom(friend, [role(2)])], [],
