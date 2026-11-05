@@ -6354,7 +6354,7 @@ check "SL0 :artefact writes a certified artefact into the loading program's dire
 # differs (a signature's last byte is often zero already, which setting it to
 # zero would leave unchanged).
 cp "$SL_DIR/run_module_probe.glpw" "$SL_DIR/forged.glpw"
-sl_size=$(stat -f%z "$SL_DIR/forged.glpw")
+sl_size=$(stat -f%z "$SL_DIR/forged.glpw" 2>/dev/null || stat -c%s "$SL_DIR/forged.glpw")
 sl_off=$((sl_size - 40))
 sl_byte=$(xxd -s "$sl_off" -l 1 -p "$SL_DIR/forged.glpw")
 sl_new=$(printf '%02x' $(( 0x$sl_byte ^ 0xff )))
