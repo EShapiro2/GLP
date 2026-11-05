@@ -4,6 +4,7 @@
 // Types are first-class syntactic elements parsed alongside clauses.
 
 import '../../compiler/ast.dart' as ast show Clause;
+import 'moded_term.dart' show sameConstant;
 
 /// Base class for type expressions
 abstract class TypeExpr {
@@ -350,7 +351,10 @@ bool sameTypeExpr(TypeExpr a, TypeExpr b) {
   if (a is PrimitiveModeAlt) {
     return b is PrimitiveModeAlt && a.isInput == b.isInput;
   }
-  if (a is ConstantAlt) return b is ConstantAlt && a.value == b.value;
+  // 1 and 1.0 are distinct constants, an Integer and a Real (GLP paper 3620eeb,
+  // appendix-guards.tex; GLP #11 Cowork, Code_inbox 2026-11-03 16:40 UTC, item
+  // 3), so they are compared as sameConstant compares them, not by ==.
+  if (a is ConstantAlt) return b is ConstantAlt && sameConstant(a.value, b.value);
   if (a is ListNilAlt) return b is ListNilAlt;
   if (a is ListConsAlt) {
     return b is ListConsAlt &&

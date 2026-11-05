@@ -63,7 +63,7 @@ boot :- true | math # factorial(5, R).
       final lexer = Lexer(source);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
-      final program = parser.parse();
+      final program = parser.parseModule();
 
       expect(program.procedures.length, 1);
       final clause = program.procedures[0].clauses[0];
@@ -95,21 +95,21 @@ boot :- true | math # factorial(5, R).
       final parser = Parser(Lexer('''
 call_module(M, R) :- true | M # foo(R).
 ''').tokenize());
-      expect(() => parser.parse(), refusesVariableModule('M'));
+      expect(() => parser.parseModule(), refusesVariableModule('M'));
     });
 
     test('parser refuses a remote goal whose module is a reader', () {
       final parser = Parser(Lexer('''
 call_module(M, R) :- true | M? # foo(R).
 ''').tokenize());
-      expect(() => parser.parse(), refusesVariableModule('M?'));
+      expect(() => parser.parseModule(), refusesVariableModule('M?'));
     });
 
     test('parser refuses a variable module after a named one', () {
       final parser = Parser(Lexer('''
 call_module(M, R) :- true | math # M? # foo(R).
 ''').tokenize());
-      expect(() => parser.parse(), refusesVariableModule('M?'));
+      expect(() => parser.parseModule(), refusesVariableModule('M?'));
     });
 
     test('parser parses chained remote goals', () {
@@ -121,7 +121,7 @@ boot :- true |
       final lexer = Lexer(source);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
-      final program = parser.parse();
+      final program = parser.parseModule();
 
       final clause = program.procedures[0].clauses[0];
       expect(clause.body!.length, 2);
@@ -137,7 +137,7 @@ boot :- true | foo(x) # bar.
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
 
-      expect(() => parser.parse(), throwsA(anything));
+      expect(() => parser.parseModule(), throwsA(anything));
     });
   });
 
@@ -186,7 +186,7 @@ bar(X) :- baz(X?).
       expect(module.procedures.length, 2);
     });
 
-    test('legacy parse() skips module declaration', () {
+    test('a module directive is refused: -module( is no part of GLP, a module being a .glp file (TGLP, Modules), and the one reader refuses it (GLP #11 Cowork, Code_inbox 2026-11-03 16:40 UTC, item 6; until 2026-11-05 a second reader, parse(), skipped it)', () {
       final source = '''
 -module(math).
 
@@ -195,10 +195,7 @@ foo.
       final lexer = Lexer(source);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
-      final program = parser.parse();
-
-      expect(program.procedures.length, 1);
-      expect(program.procedures[0].name, 'foo');
+      expect(() => parser.parseModule(), throwsA(isA<CompileError>()));
     });
   });
 

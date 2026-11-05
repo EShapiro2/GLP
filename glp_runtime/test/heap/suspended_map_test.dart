@@ -127,7 +127,7 @@ void main() {
       for (var i = 0; i < 24; i++) rt.heap.allocateVariable()
     ];
     var nextId = 1;
-    var wakes = 0, commitWakes = 0, taken = 0;
+    var wakes = 0, taken = 0;
 
     void suspend(GoalRef goal) {
       final readers = <HeapCell>{
@@ -144,33 +144,23 @@ void main() {
       if (op < 4) {
         suspend(GoalRef(nextId++, rnd.nextInt(3) * 100));
       } else if (op < 8) {
-        // Bind a writer, and put the goals it wakes in the queue: through
-        // enqueueReactivatedGoal, or as a commit does, by the queue alone.
+        // Bind a writer, and put the goals it wakes in the queue through
+        // enqueueReactivatedGoal, the one path a woken goal takes, by which it
+        // leaves the map as it is enqueued.
         final i = rnd.nextInt(pool.length);
         final acts = rt.heap.bindWriterConst(pool[i].$1, 0);
-        final byCommit = op >= 6;
         for (final a in acts) {
           refQueue.add(a);
-          if (byCommit) {
-            rt.gq.enqueue(a);
-          } else {
-            rt.enqueueReactivatedGoal(a);
-            ref.remove(a);
-          }
+          rt.enqueueReactivatedGoal(a);
+          ref.remove(a);
         }
-        if (byCommit) {
-          commitWakes += acts.length;
-        } else {
-          wakes += acts.length;
-        }
+        wakes += acts.length;
         pool[i] = rt.heap.allocateVariable();
       } else if (rt.gq.length > 0) {
-        // The scheduler takes a goal from the queue; it may wait again, under
-        // the same identity.
+        // The scheduler takes a goal from the queue, which left the map when
+        // it was enqueued; it may wait again, under the same identity.
         final goal = rt.gq.dequeue()!;
         expect(goal, refQueue.removeFirst(), reason: 'step $step');
-        rt.goalTaken(goal);
-        ref.remove(goal);
         taken++;
         if (rnd.nextBool()) suspend(goal);
       }
@@ -179,7 +169,6 @@ void main() {
     }
     // The run exercised every path.
     expect(wakes, greaterThan(100));
-    expect(commitWakes, greaterThan(100));
     expect(taken, greaterThan(100));
   });
 

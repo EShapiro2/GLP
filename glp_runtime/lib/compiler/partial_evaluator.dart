@@ -274,8 +274,13 @@ class PartialEvaluator {
     );
   }
 
-  /// Rename variables in unit clause arguments to fresh names.
-  /// IMPORTANT: Underscores (_) are NOT renamed - they stay as underscores.
+  /// Rename the variables of the unit clause's arguments apart, to fresh
+  /// names of the one scheme, PE0, PE1, ...; an anonymous variable, any whose
+  /// name begins with `_` (GLP paper, glp.tex:195), is left as it is.  This
+  /// is the one partial evaluator, used by the type check and by compilation
+  /// alike (GLP #11 Cowork, Code_inbox 2026-11-03 16:40 UTC, item 1; until
+  /// 2026-11-05 the analyzer carried a second copy, which no code called, and
+  /// this one renamed `_X`).
   List<Term> _renameUnitClauseVars(List<Term> args) {
     // First, collect all variable names in the unit clause
     final varNames = <String>{};
@@ -286,7 +291,7 @@ class PartialEvaluator {
     // Build renaming map (skip underscores)
     final Map<String, String> renaming = {};
     for (final name in varNames) {
-      if (name != '_') {
+      if (!name.startsWith('_')) {
         renaming[name] = 'PE${_varCounter++}';
       }
     }

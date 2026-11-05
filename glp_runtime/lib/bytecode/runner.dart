@@ -2174,7 +2174,7 @@ void _completeBodyStructure(RunnerContext cx, StructTerm struct,
   if (targetWriterAddr != null) {
     final acts = cx.rt.heap.bindVariableStruct(targetWriterAddr, struct.functor, struct.args);
     for (final a in acts) {
-      cx.rt.gq.enqueue(a);
+      cx.rt.enqueueReactivatedGoal(a);
     }
   }
 
@@ -2203,7 +2203,7 @@ void _completeBodyStructure(RunnerContext cx, StructTerm struct,
       if (cx.S >= parentStruct.args.length && currentWriterAddrInt != null) {
         final acts = cx.rt.heap.bindVariableStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
         for (final a in acts) {
-          cx.rt.gq.enqueue(a);
+          cx.rt.enqueueReactivatedGoal(a);
         }
 
         // Check for more ancestors
@@ -2628,7 +2628,7 @@ mixin OpExecutors {
       sigmaHat: convertedSigmaHat,
     );
     for (final a in acts) {
-      cx.rt.gq.enqueue(a);
+      cx.rt.enqueueReactivatedGoal(a);
     }
     cx.sigmaHat.clear();
     cx.argSlots.clear();

@@ -883,7 +883,7 @@ class GlpEngine {
       // Quoted, as in _checkGoalWellTyped: unquoted, the head's name is an
       // anonymous variable, and the conjunction does not parse.
       final ast =
-          Parser(Lexer("'_conj_wrapper_' :- $trimmed.").tokenize()).parse();
+          Parser(Lexer("'_conj_wrapper_' :- $trimmed.").tokenize()).parseModule();
       if (ast.procedures.isEmpty || ast.procedures[0].clauses.isEmpty) {
         throw GoalRefused('Could not parse conjunction');
       }
@@ -895,7 +895,7 @@ class GlpEngine {
         for (final g in clause.body!) Atom(g.functor, g.args, g.line, g.column)
       ];
     } else {
-      final ast = Parser(Lexer('$trimmed.').tokenize()).parse();
+      final ast = Parser(Lexer('$trimmed.').tokenize()).parseModule();
       if (ast.procedures.isEmpty) throw GoalRefused('No goal found');
       if (ast.procedures[0].clauses.isEmpty) {
         throw GoalRefused('No clauses in goal');
@@ -1153,7 +1153,7 @@ class GlpEngine {
       final lexer = Lexer(parseInput);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
-      final parsed = parser.parse();
+      final parsed = parser.parseModule();
       if (parsed.procedures.isEmpty || parsed.procedures[0].clauses.isEmpty) {
         return 'Goal does not parse as a clause body: $trimmed';
       }

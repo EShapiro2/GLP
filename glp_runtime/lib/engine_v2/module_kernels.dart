@@ -210,7 +210,7 @@ BodyKernelResult _activate(
     }
     final (writer, reader) = rt.heap.allocateVariable();
     for (final act in rt.heap.bindVariable(writer, arg)) {
-      rt.gq.enqueue(act);
+      rt.enqueueReactivatedGoal(act);
     }
     slots[i] = VarRef(reader);
   }
