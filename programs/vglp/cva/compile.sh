@@ -96,6 +96,13 @@ for c in $CONTRACTS; do
     printf '%s\ncontract_named(%s, C).\n:quit\n' "$src" "$c" > "$WORK/c.in"
     repl "$WORK/c.in" "$WORK/$c.c.out"
     ct=$(grep -E '^C = ' "$WORK/$c.c.out" | head -1 | sed -e 's/^C = //')
+    # The contract as GSC's reader reads it, as_read/2 of programs/gsc, each schema of the clause syntax, sas/7, in the checker's form with its roles' names, and a schema in that form as it is: the compiler and pragmas.sh take this and keep no copy of the reader (vGLP, Section 5.4, "Speech-act schemas": "A compiler written in GLP takes such a contract ... written as speech-act schemas [GSC]"; vGLP #23, Code_inbox.md, 2026-11-05 14:20 UTC, 1).
+    rd=""
+    if [ -n "$ct" ]; then
+        printf '%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' "$GLP_DIR/programs/gsc/" "$ct" > "$WORK/a.in"
+        repl "$WORK/a.in" "$WORK/$c.a.out"
+        rd=$(grep -E '^R = ' "$WORK/$c.a.out" | head -1 | sed -e 's/^R = //')
+    fi
     it=no_introduction
     if [ "$src" = "$HERE/contracts.glp" ]; then
         printf '%s\nintroduction_named(%s, I).\n:quit\n' "$src" "$c" > "$WORK/i.in"
@@ -111,7 +118,7 @@ for c in $CONTRACTS; do
         pr=$(grep -E '^P = ' "$WORK/$c.pn.out" | head -1 | sed -e 's/^P = //')
         [ -n "$pr" ] || pr=no_pragmas
     elif [ -f "${src%.glp}.txt" ] \
-        && ! pr=$(bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "$ct" 2> "$WORK/$c.pr.err"); then
+        && ! pr=$(bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "$rd" 2> "$WORK/$c.pr.err"); then
         echo "missing $d: its pragmas were not read: $(head -1 "$WORK/$c.pr.err")" >> "$WORK/status"
         continue
     fi
@@ -123,12 +130,12 @@ for c in $CONTRACTS; do
         repl "$WORK/v.in" "$WORK/$c.v.out"
         vt=$(grep -E '^V = ' "$WORK/$c.v.out" | head -1 | sed -e 's/^V = //')
     fi
-    if [ -z "$ct" ] || [ -z "$vt" ] || [ -z "$it" ]; then
+    if [ -z "$ct" ] || [ -z "$rd" ] || [ -z "$vt" ] || [ -z "$it" ]; then
         echo "missing $d: no contract, no verdict or no introduction predicate from $src" >> "$WORK/status"
         grep -hE '^(Error|✗)' "$WORK/$c".*.out | head -3 >> "$WORK/status"
         continue
     fi
-    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$c" "$ct" "$vt" "$it" "$pr" > "$WORK/p.in"
+    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$c" "$rd" "$vt" "$it" "$pr" > "$WORK/p.in"
     repl "$WORK/p.in" "$WORK/$c.p.out"
     f="$OUT/$d/platform.vglp"
     if ! awk '
