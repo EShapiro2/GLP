@@ -3,6 +3,7 @@ import 'heap_fcp.dart';
 import 'suspend_ops.dart';
 import 'body_kernels.dart';
 import 'place_streams.dart';
+import 'sim_clock.dart';
 import 'saved_state.dart';
 import 'terms.dart' show Term, ModuleTerm;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
@@ -119,6 +120,12 @@ class GlpRuntime {
   /// runtime's bookkeeping behind declare(place(P, R, E)) and remove(place(P)), kept
   /// whether a networking layer is bound or none is.
   late final PlaceStreams placeStreams = PlaceStreams(this);
+
+  /// The machine's simulated clock and its queue of pending tokens (GLP-Spec
+  /// appendix-guards.tex at 5fd9a15, "Simulated time": "The clock is of one
+  /// machine, as when_idle is"), behind '_start_clock', '_rated' and
+  /// '_step_clock'.
+  final SimClock simClock = SimClock();
 
   /// The person's identity this runtime holds: the key `self_key/1` answers,
   /// `sign/3` signs under, and the compiler certifies modules with. Set by the

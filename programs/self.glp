@@ -107,6 +107,11 @@ Compiled ::= module(Module) ; error(Stream(String)).
 % guards.
 Content ::= String ; Module.
 
+% A token of the simulated clock and a step of it (GLP-Spec appendix-guards,
+% "Simulated time (start_clock/1, rated/2, step_clock/2)", 5fd9a15).
+Token ::= go(Number) ; stop.
+ClockStep ::= released(Number) ; stopped(Number).
+
 % Arithmetic expressions: the union of Number with the arithmetic operators and
 % functions of the catalogue, each over Exp (TGLP appendix-root-self.tex) --- the
 % binary +, -, *, /, //, mod and pow, and the unary abs, sqrt, sin, cos, tan,
@@ -362,6 +367,11 @@ procedure '_tuple_to_list'(_?, Stream(_)).
 procedure '_now'(Integer).
 procedure '_random'(Integer?, Integer?, Integer, Integer).
 procedure '_split_random_seed'(Integer?, Integer, Integer).
+
+% Simulated time
+procedure '_start_clock'(Integer?).
+procedure '_rated'(Number?, Token).
+procedure '_step_clock'(Number?, ClockStep).
 
 % MWM (Mutual Write Merge)
 procedure(X) '_allocate_mutual_reference'(MutualRef, Stream(X)).
@@ -762,6 +772,31 @@ procedure split_random_seed(Integer?, Integer, Integer).
 split_random_seed(Seed, S1?, S2?) :-
   integer(Seed?) |
   '_split_random_seed'(Seed?, S1, S2).
+
+% =============================================================================
+% SIMULATED TIME (start_clock/1, rated/2, step_clock/2)
+% =============================================================================
+% A machine's simulated clock and its queue of pending tokens.  start_clock
+% binds every pending token to stop, sets the clock to 0 and seeds the clock's
+% generator; rated makes a token pending at the clock plus an exponential
+% delay; step_clock releases the earliest pending token at most the horizon,
+% or binds every pending token to stop.  Body goals; a program takes a step in
+% the body of a clause guarded by when_idle (GLP-ICLP appendix-guards,
+% "Simulated time", 5fd9a15).
+procedure start_clock(Integer?).
+start_clock(Seed) :-
+  integer(Seed?) |
+  '_start_clock'(Seed?).
+
+procedure rated(Number?, Token).
+rated(Rate, Tok?) :-
+  number(Rate?), Rate? > 0 |
+  '_rated'(Rate?, Tok).
+
+procedure step_clock(Number?, ClockStep).
+step_clock(Horizon, Step?) :-
+  number(Horizon?) |
+  '_step_clock'(Horizon?, Step).
 
 % =============================================================================
 % UNIV (=../2, ..=/2)
