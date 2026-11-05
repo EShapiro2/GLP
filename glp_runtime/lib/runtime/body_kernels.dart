@@ -21,6 +21,7 @@ import 'terms.dart';
 import 'package:glp_runtime/compiler/glp_printer.dart'
     show constantSource, functorNameSource;
 import 'machine_state.dart' show GoalRef;
+import 'sim_clock.dart' show PendingToken;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
 import 'package:glp_runtime/multiagent/glp_network.dart'
@@ -111,6 +112,11 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_now', 1, nowKernel);
   registry.register('_random', 4, randomKernel);
   registry.register('_split_random_seed', 3, splitRandomSeedKernel);
+
+  // Simulated time (GLP-Spec appendix-guards, "Simulated time")
+  registry.register('_start_clock', 1, startClockKernel);
+  registry.register('_rated', 2, ratedKernel);
+  registry.register('_step_clock', 2, stepClockKernel);
 
   // MutualRef operations (O(1) stream append)
   registry.register('_allocate_mutual_reference', 2, mutualRefKernel);
@@ -641,6 +647,116 @@ BodyKernelResult splitRandomSeedKernel(GlpRuntime rt, List<Object?> args) {
   final r1 = bindResult(rt, args[1], s1);
   if (r1 != BodyKernelResult.success) return r1;
   return bindResult(rt, args[2], s2);
+}
+
+// ============================================================================
+// SIMULATED TIME (start_clock/1, rated/2, step_clock/2)
+// ============================================================================
+// GLP-Spec appendix-guards.tex at 5fd9a15, "Simulated time (start_clock/1,
+// rated/2, step_clock/2)".  The clock and the queue are the machine's,
+// [GlpRuntime.simClock].
+
+/// Bind each of [tokens] to stop, every one checked an unbound writer first.
+BodyKernelResult _stopAll(GlpRuntime rt, List<PendingToken> tokens, String who) {
+  for (final t in tokens) {
+    if (rt.heap.isFullyBound(t.writer)) {
+      return kernelAbort('[ABORT] $who: a pending token @${t.writer} is already bound');
+    }
+  }
+  for (final t in tokens) {
+    for (final act in rt.heap.bindVariable(t.writer, ConstTerm('stop'))) {
+      rt.gq.enqueue(act);
+    }
+  }
+  return BodyKernelResult.success;
+}
+
+/// `'_start_clock'(Seed?)`: "start_clock(Seed) binds every pending token to
+/// stop, sets the clock to 0, and seeds the clock's generator with Seed".
+BodyKernelResult startClockKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    return kernelAbort('[ABORT] start_clock/1: expected 1 argument, got ${args.length}');
+  }
+  final seed = _getNum(rt, args[0]);
+  if (seed is! int) {
+    return kernelAbort('[ABORT] start_clock/1: Seed must be an integer');
+  }
+  final pending = rt.simClock.start(seed);
+  return _stopAll(rt, pending, 'start_clock/1');
+}
+
+/// `'_rated'(Rate?, Tok)`: "rated(Rate, Tok) makes the token Tok pending, with
+/// activation time the clock plus D, where D is drawn from the exponential
+/// distribution with rate Rate per second".  The draw: "A draw replaces the
+/// state by the state plus the increment, and D = -ln(U)/Rate, where U is one
+/// plus the mix of the new state, taken as an unsigned 64-bit integer and
+/// shifted right by 11 bits, over 2^53, so that 0 < U <= 1."  Aborts before
+/// the first start_clock.
+BodyKernelResult ratedKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort('[ABORT] rated/2: expected 2 arguments, got ${args.length}');
+  }
+  final clock = rt.simClock;
+  if (!clock.started) {
+    return kernelAbort('[ABORT] rated/2: the simulated clock is not started (start_clock/1)');
+  }
+  final rate = _getNum(rt, args[0]);
+  if (rate == null || rate <= 0) {
+    return kernelAbort('[ABORT] rated/2: Rate must be a number > 0');
+  }
+  final tok = _deref(rt, args[1]);
+  if (tok is! VarRef || !rt.heap.isWriter(tok.addr) || rt.heap.isFullyBound(tok.addr)) {
+    return kernelAbort('[ABORT] rated/2: Tok must be an unbound writer');
+  }
+  clock.state = clock.state + _splitMixIncrement;
+  final u = (1 + (_mix64(clock.state) >>> 11)) / _two53;
+  final d = -math.log(u) / rate;
+  clock.add(d, tok.addr);
+  return BodyKernelResult.success;
+}
+
+/// 2^53, as a double.
+const double _two53 = 9007199254740992.0;
+
+/// `'_step_clock'(Horizon?, Step)`: "Where a token is pending whose activation
+/// time T is the least and at most Horizon, the step sets the clock to T,
+/// binds that token to go(T) and assigns Step the term released(T); two tokens
+/// of one activation time are released in the order in which they were made
+/// pending.  Otherwise the step binds every pending token to stop and assigns
+/// Step the term stopped(C), C being the clock."  Aborts before the first
+/// start_clock.
+BodyKernelResult stepClockKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort('[ABORT] step_clock/2: expected 2 arguments, got ${args.length}');
+  }
+  final clock = rt.simClock;
+  if (!clock.started) {
+    return kernelAbort('[ABORT] step_clock/2: the simulated clock is not started (start_clock/1)');
+  }
+  final horizon = _getNum(rt, args[0]);
+  if (horizon == null) {
+    return kernelAbort('[ABORT] step_clock/2: Horizon must be a number');
+  }
+  final step = _deref(rt, args[1]);
+  if (step is! VarRef || !rt.heap.isWriter(step.addr) || rt.heap.isFullyBound(step.addr)) {
+    return kernelAbort('[ABORT] step_clock/2: Step must be an unbound writer');
+  }
+  final first = clock.earliest;
+  if (first != null && first.time <= horizon) {
+    if (rt.heap.isFullyBound(first.writer)) {
+      return kernelAbort('[ABORT] step_clock/2: the pending token @${first.writer} is already bound');
+    }
+    final t = clock.release();
+    for (final act in rt.heap.bindVariable(t.writer, StructTerm('go', [ConstTerm(t.time)]))) {
+      rt.gq.enqueue(act);
+    }
+    return bindResult(rt, step, StructTerm('released', [ConstTerm(t.time)]),
+        kernel: 'step_clock/2');
+  }
+  final r = _stopAll(rt, clock.takeAll(), 'step_clock/2');
+  if (r != BodyKernelResult.success) return r;
+  return bindResult(rt, step, StructTerm('stopped', [ConstTerm(clock.clock)]),
+      kernel: 'step_clock/2');
 }
 
 /// SplitMix64's increment, GOLDEN_GAMMA of the source's Figure 16.

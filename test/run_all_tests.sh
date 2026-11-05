@@ -1316,6 +1316,54 @@ check "split first draws" "F = firsts(745971022, 1039421601, 1816191086)" "$a33a
 check "split second split reproduces" "T1 = 3250621881602310087" "$a33a"
 check "split second first draws reproduce" "G = firsts(745971022, 1039421601, 1816191086)" "$a33a"
 
+# --- A33b: Simulated time (start_clock/1, rated/2, step_clock/2) ---
+# GLP-ICLP appendix-guards, "Simulated time" (GLP-ICLP-2026 5fd9a15).  The
+# loop is the monitor's: a clause guarded by when_idle whose body is step_clock
+# (times/3).  repro: seed 42, rates 1, 2 and 0.5, run twice, the reference
+# releases and stopped(C).  hz: the horizon, the tokens past it bound to stop,
+# Step stopped(C).  tie: two tokens of one activation time released in the
+# order made pending.  restart: start_clock binds a pending token to stop.
+# rated_first / unrated_first: sGLP's "The claim, tested", one --- the unrated
+# goal runs to rest before the rated one is released, whichever is spawned
+# first.  claim: "The claim, tested", two --- rates 1, 2, 0.5 and 1 a second,
+# 10,000 releases, mean and variance within 5% and 10% of 1/4.5 and 1/4.5^2,
+# and the mean the reference.  The pinned values were computed from the
+# paper's sentences in Python, independently of the code.  a33c: rated and
+# step_clock abort before the first start_clock.
+echo "--- A33b: Simulated time ---"
+a33b=$("$REPL_RUN" <<HEREDOC
+$TYPED/clock_test.glp
+:limit 5000000
+repro(42, R1).
+repro(42, R2).
+hz(0.5, H).
+tie(T).
+restart(A).
+rated_first(RF).
+unrated_first(UF).
+claim(1, St).
+:quit
+HEREDOC
+2>&1)
+check "clock repro from seed 42" "R1 = run(\[1.522941750012381, 1.7360415557214341, 1.7652128941799705\], stopped(1.7652128941799705))" "$a33b"
+check "clock repro second run" "R2 = run(\[1.522941750012381, 1.7360415557214341, 1.7652128941799705\], stopped(1.7652128941799705))" "$a33b"
+check "clock horizon stops tokens past it" "H = hz(\[0.32910293578974764\], stopped(0.32910293578974764), toks(stop, stop, go(0.32910293578974764)))" "$a33b"
+check "clock tie in order made pending" "T = tie(x_first, same)" "$a33b"
+check "clock start_clock stops pending" "A = stop" "$a33b"
+check "clock unrated runs to rest (rated first)" "RF = after" "$a33b"
+check "clock unrated runs to rest (unrated first)" "UF = after" "$a33b"
+check "clock four rates, 10,000 releases" "St = stats(0.22016502528052906, 0.0473870040391368, ok)" "$a33b"
+check_not "clock no abort" "ABORT" "$a33b"
+a33c=$("$REPL_RUN" <<HEREDOC
+$TYPED/clock_test.glp
+rated(1, X).
+step_clock(5, S).
+:quit
+HEREDOC
+2>&1)
+check "clock rated aborts before start_clock" "\[ABORT\] rated/2: the simulated clock is not started" "$a33c"
+check "clock step_clock aborts before start_clock" "\[ABORT\] step_clock/2: the simulated clock is not started" "$a33c"
+
 # --- A34: Ackermann on Peano numerals (book/recursive/arithmetic_trees) ---
 # Clause 3's guard was compound(M?), ground(M?): compound refused M = 0, so
 # ackermann(s(0), s(0), A) failed, and every goal that reaches it with it.
