@@ -87,15 +87,15 @@ void main() {
     final sodium = await initHeadlessSodium();
     final root = Directory.systemTemp.createTempSync('gas_ui_');
     addTearDown(() => root.deleteSync(recursive: true));
-    final ann = await person(sodium, root, 0, 'Ann'), ben = await person(sodium, root, 1, 'Ben');
-    await ann.setName(ben.me.hex, 'Ben');
-    await ben.setName(ann.me.hex, 'Ann');
-    for (final (c, port) in [(ann, 8301), (ben, 8302)]) {
+    final alice = await person(sodium, root, 0, 'Alice'), bob = await person(sodium, root, 1, 'Bob');
+    await alice.setName(bob.me.hex, 'Bob');
+    await bob.setName(alice.me.hex, 'Alice');
+    for (final (c, port) in [(alice, 8301), (bob, 8302)]) {
       final s = LocalServer(core: c, www: '${c.base}/www');
       await s.start(port: port);
     }
     // ignore: avoid_print
-    print('UI demo up: http://127.0.0.1:8301/ (Ann) and http://127.0.0.1:8302/ (Ben)');
+    print('UI demo up: http://127.0.0.1:8301/ (Alice) and http://127.0.0.1:8302/ (Bob)');
     await Future<void>.delayed(Duration(minutes: minutes));
   }, timeout: const Timeout(Duration(hours: 3)));
 }
