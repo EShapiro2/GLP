@@ -87,15 +87,20 @@ void main() {
     final sodium = await initHeadlessSodium();
     final root = Directory.systemTemp.createTempSync('gas_ui_');
     addTearDown(() => root.deleteSync(recursive: true));
-    final alice = await person(sodium, root, 0, 'Alice'), bob = await person(sodium, root, 1, 'Bob');
-    await alice.setName(bob.me.hex, 'Bob');
-    await bob.setName(alice.me.hex, 'Alice');
-    for (final (c, port) in [(alice, 8301), (bob, 8302)]) {
+    // GAS_UI_PERSONS=3 adds Carol, at :8303.
+    final names = ['Alice', 'Bob', 'Carol'].take(Platform.environment['GAS_UI_PERSONS'] == '3' ? 3 : 2).toList();
+    final cores = [for (var i = 0; i < names.length; i++) await person(sodium, root, i, names[i])];
+    for (final c in cores) {
+      for (var j = 0; j < cores.length; j++) {
+        if (cores[j] != c) await c.setName(cores[j].me.hex, names[j]);
+      }
+    }
+    for (final (c, port) in [for (var i = 0; i < cores.length; i++) (cores[i], 8301 + i)]) {
       final s = LocalServer(core: c, www: '${c.base}/www');
       await s.start(port: port);
     }
     // ignore: avoid_print
-    print('UI demo up: http://127.0.0.1:8301/ (Alice) and http://127.0.0.1:8302/ (Bob)');
+    print('UI demo up: ${[for (var i = 0; i < names.length; i++) 'http://127.0.0.1:${8301 + i}/ (${names[i]})'].join(', ')}');
     await Future<void>.delayed(Duration(minutes: minutes));
   }, timeout: const Timeout(Duration(hours: 3)));
 }
