@@ -295,6 +295,11 @@ class AgentRuntime {
     onLog?.call(_tag, message);
   }
 
+  /// Whether the run is traced: only where its trace is read, by [onLog].
+  /// The trace writes every goal reduced as text, which costs most of a run's
+  /// time; an agent no one logs runs untraced.
+  bool get _tracing => onLog != null;
+
   void _output(String text) {
     onOutput?.call(text);
   }
@@ -997,7 +1002,7 @@ class AgentRuntime {
     if (!_runStarts()) return null;
     try {
       final result = _scheduler!.drainToQuiescence(
-          maxCycles: maxCycles ?? maxQuiescenceCycles, debug: true);
+          maxCycles: maxCycles ?? maxQuiescenceCycles, debug: _tracing);
       return _runDone(result, 0);
     } catch (e, st) {
       _log('RUN ERROR: $e\n$st');
@@ -1013,7 +1018,7 @@ class AgentRuntime {
       final result = await _scheduler!.drainAndSend(() {
         messagesFlushed += _ctx!.flushMessages();
         return _ctx!.answered();
-      }, maxCycles: maxQuiescenceCycles, debug: true);
+      }, maxCycles: maxQuiescenceCycles, debug: _tracing);
       return _runDone(result, messagesFlushed);
     } catch (e, st) {
       _log('RUN ERROR: $e\n$st');

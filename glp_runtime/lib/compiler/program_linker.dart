@@ -1629,10 +1629,14 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
 /// ι(T) ([TypeIdentityTables.opaque]; TGLP modules.tex, Dynamic Activation,
 /// "Opaque types"), which the interface text's derivation records too.  The
 /// tables are otherwise as they are without it.
+final _linkedTables = Expando<TypeIdentityTables>('typeIdentityTables');
+
 TypeIdentityTables linkedTypeIdentityTables(
     List<DiscoveredModule> modules, LinkResult linked,
     {Map<String, EntryTemplate> entryTemplates = const {}}) {
-  final tables = typeIdentityTablesForModule(
+  // The tables are a function of the linked program, which a program loaded
+  // again unchanged shares (GlpEngine._checked): built once for it.
+  final tables = _linkedTables[linked] ??= typeIdentityTablesForModule(
       linkedFlatModule(modules, linked, allDeclarations: true),
       ancestorScope: primitiveScope());
   if (entryTemplates.isEmpty) return tables;

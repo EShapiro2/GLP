@@ -722,6 +722,40 @@ class GlpEngine {
     return env;
   }
 
+  /// The programs checked in this process, by their sources ([_sourcesKey]):
+  /// the modules discovered and the linked program checkedLinkedProgram
+  /// returned, at most [_checkedMax] of them, the oldest let go first.
+  static final _checked = <String, ({List<DiscoveredModule> modules, LinkResult linked})>{};
+  static const _checkedMax = 24;
+
+  static void _remember(String key, ({List<DiscoveredModule> modules, LinkResult linked}) v) {
+    _checked.remove(key);
+    _checked[key] = v;
+    while (_checked.length > _checkedMax) {
+      _checked.remove(_checked.keys.first);
+    }
+  }
+
+  /// What the check of a program depends on: its directory, the root
+  /// self.glp, and the path and text of each of its modules; none for a
+  /// program with a module that is no file (a self.vglp read as its
+  /// directory's self.glp, which is checked each time).
+  String? _sourcesKey(String programDir, List<DiscoveredModule> modules) {
+    if (!modules.every((m) => File(m.filePath).existsSync())) return null;
+    final b = StringBuffer()
+      ..write(Directory(programDir).absolute.path)
+      ..write('\u0000')
+      ..write(File(_rootSelfGlpPath).readAsStringSync());
+    for (final m in [...modules]..sort((x, y) => x.filePath.compareTo(y.filePath))) {
+      b
+        ..write('\u0000')
+        ..write(m.filePath)
+        ..write('\u0000')
+        ..write(File(m.filePath).readAsStringSync());
+    }
+    return b.toString();
+  }
+
   /// Load an entire program directory via static linking.
   ///
   /// Discovers all modules, type-checks each independently, links into a
@@ -736,17 +770,24 @@ class GlpEngine {
   /// the program's self.glp ... These exports are the compiled module's entry
   /// points").
   bool loadProgram(String programDir) {
-    final modules = discoverProgram(programDir,
+    final discovered = discoverProgram(programDir,
         rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
-    if (modules.isEmpty) {
+    if (discovered.isEmpty) {
       throw Exception('No modules found in $programDir');
     }
 
     // Gate (paper: modules §Static Linking — only a well-typed program is
     // compiled and run): checkedLinkedProgram type-checks the linked program and
     // returns it for compilation only if well-typed, else throws. There is no
-    // other path to a compiled program.
-    final linked = checkedLinkedProgram(modules, rootDir: programDir);
+    // other path to a compiled program.  The check is a function of the
+    // program's sources and the root self.glp: a program checked before in
+    // this process, its sources unchanged byte for byte, is not checked again
+    // ([_checked]); its modules and linked program are the ones checked.
+    final key = _sourcesKey(programDir, discovered);
+    final hit = key == null ? null : _checked[key];
+    final modules = hit?.modules ?? discovered;
+    final linked = hit?.linked ?? checkedLinkedProgram(modules, rootDir: programDir);
+    if (hit == null && key != null) _remember(key, (modules: modules, linked: linked));
     final program = _compiler.compileProgram(
       linked.program,
       procDeclarations: linked.procDeclarations,
