@@ -1549,9 +1549,11 @@ nm_tally(C?) :-
          [rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(2)])], []),
           rs(unguarded, [times(num(k), atom(tallied, [role(1)]))], [], [atom(identity, [])], [])])], C).
 
-% --- negative: a multiplicity on an atom required and not deleted ----------
+% --- a multiplicity on an atom required and not deleted --------------------
 % spend(Alice?; k) : identity, k.coin(Alice), -coin(Alice)
-% multiplicity_not_added(spend, 1, coin(Alice)).
+% Admitted: a multiplicity on an atom required requires that many copies
+% (def:numbers, GSC 859a007), so the role requires k + 1 copies of coin and
+% deletes one.
 procedure nm_mult_kept(NContract).
 nm_mult_kept(C?) :-
     nm_base(B),
@@ -1562,7 +1564,8 @@ nm_mult_kept(C?) :-
 
 % --- negative: a multiplicity on an atom forbidden -------------------------
 % hoard(Alice?; k) : identity, not k.coin(Alice), +coin(Alice)
-% multiplicity_not_added(hoard, 1, coin(Alice)).
+% multiplicity_forbidden(hoard, 1, coin(Alice)) (def:numbers: "an atom of
+% H, or an unnegated atom of B, ... may carry a multiplicity").
 procedure nm_mult_forbidden(NContract).
 nm_mult_forbidden(C?) :-
     nm_base(B),

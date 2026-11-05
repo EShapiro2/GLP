@@ -575,12 +575,12 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % --- the values of a schema (GSC, Section 3.2; def:numbers) ----------------
 % "An argument of an atom may be a value or a value variable, a schema may
 % carry a constraint on its value variables, which every binding
-% satisfies, and an atom added or deleted may carry a multiplicity, a count
-% of copies and so a positive whole number" (Section 3.2; def:numbers).  Each
-% atom carrying a multiplicity that a role requires or forbids and neither
-% adds nor deletes is a fault multiplicity_not_added(Schema, Role, Atom).  "An
-% atom marked + or -, with no wildcard, may carry a multiplicity"
-% (def:numbers, GSC 593e8a7), so a cleared atom carries none: each atom
+% satisfies" (Section 3.2); "an atom of H, or an unnegated atom of B, with
+% no wildcard may carry a multiplicity kappa, a positive whole number or a
+% value variable, written kappa.phi, kappa copies of phi, which in B are
+% required and in H added or deleted" (def:numbers, GSC 859a007).  So an
+% atom a role forbids carries none: each that does is a fault
+% multiplicity_forbidden(Schema, Role, Atom); and a cleared atom carries none: each atom
 % carrying a multiplicity and the wildcard is a fault
 % multiplicity_wildcard(Schema, Role, Atom).  Of the multiplicities an atom
 % may carry, each that is no value argument is a fault
@@ -645,15 +645,15 @@ mults_wild_split(Ms, W?, N?) :- ground(Ms?) |
     mults_cleared(Ms?, yes, W),
     mults_cleared(Ms?, no, N).
 
-% A multiplicity on an atom a role requires or forbids only.
-procedure mults_unadded(Mults?, Constant?, Integer?, Faults?, Faults).
-mults_unadded([], _, _, T, T?).
-mults_unadded([atom(_, _)|Ms], Nm, I, T, R?) :-
+% A multiplicity on an atom a role forbids.
+procedure mults_forbidden(Mults?, Constant?, Integer?, Faults?, Faults).
+mults_forbidden([], _, _, T, T?).
+mults_forbidden([atom(_, _)|Ms], Nm, I, T, R?) :-
     ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
-    mults_unadded(Ms?, Nm?, I?, T?, R).
-mults_unadded([times(_, A)|Ms], Nm, I, T, [multiplicity_not_added(Nm?, I?, A?)|R?]) :-
+    mults_forbidden(Ms?, Nm?, I?, T?, R).
+mults_forbidden([times(_, A)|Ms], Nm, I, T, [multiplicity_forbidden(Nm?, I?, A?)|R?]) :-
     ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
-    mults_unadded(Ms?, Nm?, I?, T?, R).
+    mults_forbidden(Ms?, Nm?, I?, T?, R).
 
 procedure num_roles(NRoleSpecs?, Integer?, Constant?, Faults).
 num_roles([], _, _, []).
@@ -663,11 +663,11 @@ num_roles([RS|Rs], I, Nm, R?) :- ground(RS?), ground(Rs?), integer(I?), ground(N
     nrs_keep(RS?, K),
     nrs_forb(RS?, N),
     mults_app(P?, M?, PM),
-    mults_app(K?, N?, KN),
-    mults_wild_split(PM?, W, PM1),
+    mults_app(PM?, K?, PMK),
+    mults_wild_split(PMK?, W, PM1),
     I1 := I? + 1,
     num_roles(Rs?, I1?, Nm?, R1),
-    mults_unadded(KN?, Nm?, I?, R1?, R2),
+    mults_forbidden(N?, Nm?, I?, R1?, R2),
     mults_wild(W?, Nm?, I?, R2?, R3),
     mults_numeric(PM1?, Nm?, I?, R3?, R).
 
