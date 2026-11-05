@@ -194,7 +194,7 @@ LNorm     ::= norm(Binding) ; badnorm.
 %% The value of a name term is a community name, c(N): community(P) the community name of the person P, dot(N, S) the community name N followed by the speech act S, as dot(community(a), n) names the group n led by a.
 %% Under a binding the wildcard of a cleared atom is itself, any, and N.* the community name of N followed by it, dot_any(C) (GSC 327e035, Definition "Binding": beta(*) := *): the image of a cleared atom, which matches the atoms of a state obtained from it by replacing each wildcard by an argument, a speech act where the wildcard is in a name term (ibid.).
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
-%% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a numeric variable X local to a role, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role: the schema-binding does not bind it").
+%% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a variable X local to a role, agent, speech-act or numeric, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").
 Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; lv(Constant, Constant) ; any.
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
@@ -3757,7 +3757,7 @@ mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), g
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
     mate_of(E?, B?, Nm?, Rs?, M).
-%% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role: the schema-binding does not bind it").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
+%% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |
     schema_numeric(Nm?, N),
@@ -3782,6 +3782,8 @@ entry_wrong(yes, V, X, Nm, W?) :- local_wrong(V?, X?, Nm?, W).
 entry_wrong(no, _, X, _, W?) :- is_lv(X?, W).
 procedure local_wrong(Var?, Val?, Constant?, YesNo).
 local_wrong(num(Xn), X, Nm, W?) :- ground(Xn?), ground(Nm?) | same(X?, lv(Nm?, Xn?), S), neg(S?, W).
+local_wrong(pvar(Xn), X, Nm, W?) :- ground(Xn?), ground(Nm?) | same(X?, lv(Nm?, Xn?), S), neg(S?, W).
+local_wrong(svar(Xn), X, Nm, W?) :- ground(Xn?), ground(Nm?) | same(X?, lv(Nm?, Xn?), S), neg(S?, W).
 local_wrong(_, _, _, yes) :- otherwise | true.
 procedure is_lv(Val?, YesNo).
 is_lv(lv(_, _), yes).
@@ -3798,6 +3800,8 @@ locals_put([V|Vs], Nm, B, B2?) :- ground(V?), ground(Nm?), ground(B?) |
     locals_put(Vs?, Nm?, B1?, B2).
 procedure local_put(Found?, Var?, Constant?, Binding?, Binding).
 local_put(free, num(X), Nm, B, [b(num(X?), lv(Nm?, X?))|B?]) :- ground(X?), ground(Nm?) | true.
+local_put(free, pvar(X), Nm, B, [b(pvar(X?), lv(Nm?, X?))|B?]) :- ground(X?), ground(Nm?) | true.
+local_put(free, svar(X), Nm, B, [b(svar(X?), lv(Nm?, X?))|B?]) :- ground(X?), ground(Nm?) | true.
 local_put(found(_), _, _, B, B?).
 local_put(free, V, _, B, B?) :- otherwise, ground(V?) | true.
 procedure mate_of(YesNo?, Binding?, Constant?, RoleSpecs?, Mates).
@@ -4540,7 +4544,7 @@ kind_ok(nterm(_), _, no).
 kind_ok(role(_), c(_), no).
 kind_ok(pvar(_), c(_), no).
 kind_ok(svar(_), c(_), no).
-%% A numeric variable matches a number, and lv(S, X), which a schema-binding gives a variable local to a role (local_norm); and nothing else matches either.
+%% A numeric variable matches a number, an agent variable a person and a speech-act variable a speech act; and each matches lv(S, X), which a schema-binding gives a variable local to a role (local_norm), a variable not local to a role so matched being no schema-binding of the class (lv_wrong); and nothing else matches either.
 kind_ok(num(_), n(_), yes).
 kind_ok(num(_), lv(_, _), yes).
 kind_ok(num(_), p(_), no).
@@ -4549,9 +4553,9 @@ kind_ok(num(_), c(_), no).
 kind_ok(role(_), n(_), no).
 kind_ok(role(_), lv(_, _), no).
 kind_ok(pvar(_), n(_), no).
-kind_ok(pvar(_), lv(_, _), no).
+kind_ok(pvar(_), lv(_, _), yes).
 kind_ok(svar(_), n(_), no).
-kind_ok(svar(_), lv(_, _), no).
+kind_ok(svar(_), lv(_, _), yes).
 kind_ok(sgn(_, _), n(_), no).
 kind_ok(sgn(_, _), lv(_, _), no).
 %% The wildcard is matched by match_args, and matches no variable; the clauses cover the types.

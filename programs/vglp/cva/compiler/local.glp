@@ -36,18 +36,15 @@ faults(C, Rf, Nt, Ls?) :- ground(C?), ground(Rf?), ground(Nt?) |
     lapp(L12?, L3?, Ls).
 
 %% --- Numbers -----------------------------------------------------------------
-%% num_info_of(Name, Head, Constraint, Roles, Info): the schema's constraint, its local variables and the role whose local variables the constraint names (self.glp, NumInfo).  "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): a numeric variable of the head that occurs in an atom some role keeps or deletes, a multiplicity on such an atom included (self.glp, atoms_args), at one role, and in no atom added or forbidden, nor among a listed role's arguments; "a constraint is local to the role whose local variables it names, and to every role where it names none" (ibid.), at(I) or every, and two_roles where it names those of two roles or more.
+%% num_info_of(Name, Head, Constraint, Roles, Info): the schema's constraint, its local variables and the role whose local variables the constraint names (self.glp, NumInfo).  "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role, as the person d where Bob's role requires that Bob point to someone with a label" (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications"): a variable of the head, agent, speech-act or numeric, that occurs in an atom some role keeps or deletes, inside a name term or a signed term or as a multiplicity on such an atom included (self.glp, atoms_args; flat_args), at one role, and in no atom added or forbidden, nor among a listed role's arguments; "a constraint is local to the role whose local variables it names, and to every role where it names none" (ibid.), at(I) or every, and two_roles where it names those of two roles or more.
 exported procedure num_info_of(Constant?, Args?, Constraint?, RoleSpecs?, NumInfo).
 num_info_of(Nm, Hd, C, Rs, num_info(Nm?, C?, Ls?, R?)) :- ground(Hd?), ground(Rs?), ground(C?) |
-    nvars_of(Hd?, Vs1),
-    nvars_of(Hd?, Vs2),
+    variables_of(Hd?, Vs1),
+    variables_of(Hd?, Vs2),
     locals_of(Vs1?, Rs?, Ls),
     locals_of(Vs2?, Rs?, Ls1),
     con_args(C?, Ca),
     con_role(Ca?, Ls1?, R).
-procedure nvars_of(Args?, Args).
-nvars_of([], []).
-nvars_of([A|As], R?) :- ground(A?) | is_nvar(A?, B), nvars_of(As?, R1), keep_arg_if(B?, A?, R1?, R).
 procedure keep_arg_if(YesNo?, Arg?, Args?, Args).
 keep_arg_if(yes, A, R, [A?|R?]).
 keep_arg_if(no, _, R, R?).
@@ -68,9 +65,11 @@ occ_roles([R|Rs], I, V, Kr?, Ot?) :- ground(R?), integer(I?), ground(V?) |
     atoms_args(P?, A3),
     atoms_args(N?, A4),
     kind_args(R?, A5),
-    app(A1?, A2?, Akm),
+    app(A1?, A2?, Akm0),
     app(A3?, A4?, Apn0),
-    app(Apn0?, A5?, Apn),
+    app(Apn0?, A5?, Apn1),
+    flat_args(Akm0?, Akm),
+    flat_args(Apn1?, Apn),
     mem(V?, Akm?, InK),
     mem(V?, Apn?, InO),
     I1 := I? + 1,
@@ -246,7 +245,7 @@ val_or_free(found(X), _, X?).
 val_or_free(unbound, V, free_var(V?)).
 
 %% --- Effective -------------------------------------------------------------
-%% Each schema: every variable of an atom it requires or forbids, but a numeric variable local to a role, a variable of an atom it deletes or adds (free_lines); and, where it marks no role, the atoms its first role requires naming every other role and every variable of its deleted and added atoms, or the constraint giving the variable finitely many values once those are bound (effective_one).
+%% Each schema: every variable of an atom it requires or forbids, but a variable local to a role (vGLP 8a3ae79, Section 5.4: "but a variable local to a role"), a variable of an atom it deletes or adds (free_lines); and, where it marks no role, the atoms its first role requires naming every other role and every variable of its deleted and added atoms, or the constraint giving the variable finitely many values once those are bound (effective_one).
 procedure effective_lines(Contract?, NumInfos?, Stream(_)).
 effective_lines([], _, []).
 effective_lines([schema(Nm, _, Rs)|Ss], Nt, L?) :- ground(Nm?), ground(Rs?), ground(Nt?) |

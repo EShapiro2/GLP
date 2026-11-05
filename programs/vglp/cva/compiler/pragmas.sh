@@ -11,7 +11,7 @@ PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
 exec perl -CSD -Mutf8 -e '
 use strict; use warnings;
 my ($top, $programs, $term) = @ARGV;
-# The schemas of the contract term, where it is given, each with the variables of its head after its roles that the request names, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).  A numeric variable local to a role, one that occurs only in atoms the schema requires or deletes at that one role, and in the constraint, is not named by the request, and no field names it (vGLP, Section 5.4, "Act schemas as local specifications": "Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and a request names it, so the request form takes it"), as t, the date of the issuer, in the redeem_bc of GB.
+# The schemas of the contract term, where it is given, each with the variables of its head after its roles that the request names, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).  A variable local to a role, agent, speech-act or numeric, one that occurs only in atoms the schema requires or deletes at that one role, and in the constraint, is not named by the request, and no field names it (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state.  Every other variable is bound by the schema-binding, and a request names it"), as t, the date of the issuer, in the redeem_bc of GB, and d, the person Bob points to with the label, in the lpoint_friend of GDO-L.
 # The arguments of the term at the top level of the text $s, split at its commas outside brackets.
 sub top_args {
     my ($s) = @_;
@@ -38,8 +38,13 @@ sub inside {
     }
     return ("", length $s);
 }
-# The numeric variables local to a role of the schema whose arguments are @args.
-sub local_nums {
+# The variables local to a role of the schema whose arguments are @args: "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role" (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications"), an agent, speech-act or numeric variable alike, inside a name term or a signed term included; each named by its name, as the head writes it.
+sub var_tokens {
+    my ($t) = @_;
+    $t =~ s/\batom\(\w+,/atom(/g;
+    return map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($t =~ /(\x27(?:[^\x27\\]|\\.)*\x27|\b[A-Za-z_]\w*\b)(?!\s*\()/g);
+}
+sub local_vars {
     my (@args) = @_;
     my $roles = $args[-1];
     $roles =~ s/^\[//; $roles =~ s/\]$//;
@@ -50,16 +55,16 @@ sub local_nums {
         my ($f) = $spec =~ /^(c?rs)\(/ or next;
         my ($body) = inside($spec, length $f);
         my @p = top_args($body);
-        shift @p if $f eq "crs";
-        for my $k (0 .. $#p) {
-            for my $x ($p[$k] =~ /\bnum\((\w+)\)/g) {
+        if ($f eq "crs") { my $kind = shift @p; $elsewhere{$_} = 1 for var_tokens($kind) }
+        for my $k (1 .. $#p) {
+            for my $x (var_tokens($p[$k])) {
                 if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 } else { $elsewhere{$x} = 1 }
             }
         }
     }
     return grep { !$elsewhere{$_} && keys %{ $at{$_} } == 1 } keys %at;
 }
-my (@snames, %svars, %preds);
+my (@snames, %svars, %preds, %locals);
 $preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
 if (defined $term && $term ne "") {
     while ($term =~ /\b([nc]?schema)\(/g) {
@@ -73,9 +78,11 @@ if (defined $term && $term ne "") {
         my ($n, $a) = @args[0, $named ? 2 : 1];
         next if !defined $a || exists $svars{$n};
         push @snames, $n;
-        my %local = map { $_ => 1 } local_nums(@args);
+        my %local = map { $_ => 1 } local_vars(@args);
         $a =~ s/^\[//; $a =~ s/\]$//;
-        $svars{$n} = [ grep { !($local{$_} && $a =~ /\bnum\(\Q$_\E\)/) } ($a =~ /\w+\((\w+)\)/g) ];
+        my @hv = map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($a =~ /\w+\((\x27(?:[^\x27\\]|\\.)*\x27|\w+)\)/g);
+        $locals{$n} = { map { $_ => 1 } grep { $local{$_} } @hv };
+        $svars{$n} = [ grep { !$local{$_} } @hv ];
     }
 }
 # The contract term read whole, for the roles of each schema: tparse gives a term as [functor, args] for a compound, ["[]", items] for a list, and [name] for a constant.
@@ -528,10 +535,13 @@ sub field_slots {
         $i++;
         push @sl, ["role", $i, "@" . ($rnames{$S}[$j - 1] // $j), $j];
     }
+    # A variable local to a role is no place of the request (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "Every other variable is bound by the schema-binding, and a request names it"), as cvac.glp takes the head less its local variables.
     for my $v (@{ $head{$S} }) {
+        (my $vn = $v->[1][0][0] // "") =~ s/^\x27|\x27$//g;
+        next if $locals{$S} && $locals{$S}{$vn};
         $i++;
         next unless $v->[0] =~ /^(pvar|svar|num)$/;
-        push @sl, [$v->[0], $i, $v->[1][0][0]];
+        push @sl, [$v->[0], $i, $vn];
     }
     return @sl;
 }
@@ -541,8 +551,9 @@ sub atom_keys {
     return () if @$t == 1;
     my ($fn, $as) = @$t;
     return ("r$as->[0][0]") if ($fn eq "role" || $fn eq "own") && @$as == 1 && $as->[0][0] =~ /^\d+$/;
-    return ("v$as->[0][0]") if $fn =~ /^(pvar|svar|num|own_var)$/ && @$as == 1;
-    return (atom_keys($as->[0]), "v$as->[1][0]") if $fn eq "ext" && @$as == 2;
+    my $uq = sub { (my $x = $_[0]) =~ s/^\x27|\x27$//g; return $x };
+    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|own_var)$/ && @$as == 1;
+    return (atom_keys($as->[0]), "v" . $uq->($as->[1][0])) if $fn eq "ext" && @$as == 2;
     return map { atom_keys($_) } @$as;
 }
 # Whether an atom is cleared, the wildcard among its arguments or as the speech act of a name term: it requires nothing (GSC, Definition "Speech-act schema"; vGLP 40f8444, Section 5.4, "Act schemas as local specifications": "the act deletes every atom of the state that it matches, and requires none").
@@ -555,7 +566,7 @@ sub bound_keys {
     for my $a (@{ $rs->{atoms}[2] }, grep { !cleared($_) } @{ $rs->{atoms}[1] }) { $b{$_} = 1 for atom_keys($a) }
     return %b;
 }
-# The variables of the act S proposed at its role pl that a field names: "A field is for a variable of the schema that those atoms do not bind --- a text, a number, a new name, a person the proposer’s state does not name --- and the fields of a line name these variables, of the acts its button names together, in the schemas’ order" (vGLP 40f8444, Section 5.4, "The contract’s words"): the places of its request a field may name (field_slots) that the atoms it requires at pl do not bind, a numeric variable local to a role being bound by that role and named by no request (vGLP, Section 5.4, "Act schemas as local specifications": "Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and a request names it, so the request form takes it").
+# The variables of the act S proposed at its role pl that a field names: "A field is for a variable of the schema that those atoms do not bind --- a text, a number, a new name, a person the proposer’s state does not name --- and the fields of a line name these variables, of the acts its button names together, in the schemas’ order" (vGLP 40f8444, Section 5.4, "The contract’s words"): the places of its request a field may name (field_slots) that the atoms it requires at pl do not bind, a variable local to a role being bound by that role and named by no request (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "Every other variable is bound by the schema-binding, and a request names it").
 sub field_keys3 {
     my ($S, $pl) = @_;
     my %b = bound_keys($S, $pl);

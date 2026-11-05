@@ -559,7 +559,7 @@ kind_val(name, N, c(N?)).
 kind_val(speech, N, s(N?)).
 kind_val(num, N, n(N?)).
 
-%% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]), and, for each variable local to a role, b(num(X), lv(s, X)): the schema-binding does not bind it, and its value in the binding stands for the variable, which the state of the person in its role binds (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role: the schema-binding does not bind it"; the shared text, dom_bindings).
+%% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]), and, for each variable local to a role, agent, speech-act or numeric, b(pvar(X), lv(s, X)), b(svar(X), lv(s, X)) or b(num(X), lv(s, X)): the schema-binding does not bind it, and its value in the binding stands for the variable, which the state of the person in its role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state"; the shared text, dom_bindings).
 procedure binding_lines(Contract?, NumInfos?, Stream(_)).
 binding_lines([], _, []).
 binding_lines([schema(S, Hd, Rs)|Ss], Nt, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Nt?) |
@@ -577,6 +577,8 @@ local_binds(num_info(_, _, Ls, _), S, Lb?) :- ground(S?) | loc_vars(Ls?, Vs), lo
 procedure local_binds1(Args?, Constant?, Stream(_)).
 local_binds1([], _, []).
 local_binds1([num(X)|Vs], S, [b(num(X?), lv(S?, X?))|Lb?]) :- ground(X?), ground(S?) | local_binds1(Vs?, S?, Lb).
+local_binds1([pvar(X)|Vs], S, [b(pvar(X?), lv(S?, X?))|Lb?]) :- ground(X?), ground(S?) | local_binds1(Vs?, S?, Lb).
+local_binds1([svar(X)|Vs], S, [b(svar(X?), lv(S?, X?))|Lb?]) :- ground(X?), ground(S?) | local_binds1(Vs?, S?, Lb).
 local_binds1([_|Vs], S, Lb?) :- otherwise | local_binds1(Vs?, S?, Lb).
 %% binding_of(c(V1, ..., Vn), c, B): the binding a class term names; for a schema with listed roles at i_1, ..., i_m, the binding of its other roles and its variables, and the list [Vi_1, ..., Vi_m] of the people of each listed role, in the order of the roles, which the shared text sends onto the roles of the schema it carries for them (listed_binding).
 procedure binding_line_l(Ints?, Constant?, Args?, Stream(_)?, Stream(_)).
