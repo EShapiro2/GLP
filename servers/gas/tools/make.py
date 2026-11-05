@@ -13,7 +13,10 @@ form).  The steps:
   3. the pragmas (programs/vglp/cva/compiler/pragmas.sh);
   4. the canonical platform (programs/vglp/cva/compiler, compile/5);
   5. the live harness (gen_harness.py) and the menu (menu_spec.py);
-  6. the package, named by its SHA-256.
+  6. the warranties of its contract unit (warrant.py): GLP's compiler
+     certifies the unit, refusing one that reaches the network or the person,
+     and GAS signs as its creator over the unit, the schemas and the verdict;
+  7. the package, named by its SHA-256.
 
 Usage: python3 -I make.py TEXT OUTDIR
   writes OUTDIR/result.json --- ok, step, verdict, notes, errors, and for a
@@ -36,6 +39,7 @@ REPO = os.path.normpath(os.path.join(GAS, '..', '..'))
 sys.path.insert(0, HERE)
 import notation          # noqa: E402
 from menu_spec import spec  # noqa: E402
+from warrant import FILES, WarrantError, warranties  # noqa: E402
 
 LIMIT_CHECK, LIMIT_COMPILE = 10000000, 1000000000
 
@@ -170,17 +174,31 @@ def make(text, outdir):
                            capture_output=True, text=True, encoding='utf-8')
         if p.returncode != 0:
             raise Refused('harness', p.stderr.strip().splitlines()[-5:], verdict=verdict, notes=notes)
-        s = spec(os.path.join(world, 'platform.vglp'))
+        s = spec(os.path.join(world, 'contract', 'platform.vglp'))
         s['id'], s['title'] = cid, title
         s['calendar'] = 'cal(alice, N)' in open(os.path.join(world, 'self.glp'), encoding='utf-8').read()
         s.pop('raw_items', None)
 
-        # 6. The package (phone/tool/packages.py's form), unlisted.
+        files = {}
+        for f in FILES:
+            with open(os.path.join(world, *f.split('/')), encoding='utf-8') as fh:
+                files[f] = fh.read()
+
+        # 6. The warranties.
+        try:
+            [w] = warranties([{'id': cid, 'files': files, 'text': contract_txt, 'schemas': schemas, 'verdict': verdict}])
+        except (WarrantError, subprocess.TimeoutExpired) as e:
+            raise Refused('warranty', [str(e)], verdict=verdict, notes=notes)
+        if isinstance(w, Exception):
+            raise Refused('warranty', [str(w)], verdict=verdict, notes=notes)
+
+        # 7. The package (phone/tool/packages.py's form), unlisted.
         pkg = {
-            'gas': 1, 'id': cid, 'title': title,
+            'gas': 2, 'id': cid, 'title': title,
             'meta': {'id': cid, 'title': title, 'icon': '🧩', 'family': 'other', 'about': 'Made with GAS\'s app maker.'},
             'spec': s,
-            'files': {f: open(os.path.join(world, f), encoding='utf-8').read() for f in ('self.glp', 'platform.vglp')},
+            'files': files,
+            'warranty': w,
         }
     data = json.dumps(pkg, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
     h = hashlib.sha256(data).hexdigest()

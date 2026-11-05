@@ -138,7 +138,7 @@ for n in compiled:
     subprocess.run([sys.executable, '-I', os.path.join(HERE, 'tools', 'gen_harness.py'),
                     os.path.join(GLP, 'cascade', n, 'platform.vglp'), os.path.join(WORLDS, f'live_{c}'), n],
                    check=True, stdout=subprocess.DEVNULL)
-    s = spec(os.path.join(WORLDS, f'live_{c}', 'platform.vglp'))
+    s = spec(os.path.join(WORLDS, f'live_{c}', 'contract', 'platform.vglp'))
     s['id'], s['title'] = n, cat[n]['title']
     s['calendar'] = 'cal(alice, N)' in read(os.path.join(WORLDS, f'live_{c}', 'self.glp'))
     s.pop('raw_items', None)

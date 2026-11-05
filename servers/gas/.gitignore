@@ -3,3 +3,5 @@ build/
 .packages
 pubspec.lock
 __pycache__/
+keys/
+made/

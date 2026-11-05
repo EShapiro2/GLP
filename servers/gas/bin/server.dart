@@ -372,8 +372,12 @@ String installMade(File pkg) {
   final name = '${(j['id'] as String).toLowerCase()}_${hash.substring(0, 8)}';
   final dir = Directory('$worldsDir/live_$name')..createSync(recursive: true);
   final files = j['files'] as Map;
-  for (final f in ['self.glp', 'platform.vglp']) {
-    File('${dir.path}/$f').writeAsStringSync(files[f] as String);
+  // The harness and its contract unit (tools/warrant.py's FILES); the server
+  // made the package, and its warranties with it.
+  for (final f in ['self.glp', 'contract/self.glp', 'contract/platform.vglp']) {
+    File('${dir.path}/$f')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(files[f] as String);
   }
   Directory('$webRoot/specs').createSync(recursive: true);
   File('$webRoot/specs/$name.json').writeAsStringSync(jsonEncode({...(j['spec'] as Map), 'meta': j['meta']}));

@@ -27,7 +27,8 @@ void main() {
     final gsn = cat.firstWhere((c) => c.id == 'GSN');
     final got = await store.get(gsn.hash);
     expect(got.hash, gsn.hash);
-    expect(File('${store.program(got)}/platform.vglp').existsSync(), isTrue);
+    expect(File('${store.program(got)}/contract/platform.vglp').existsSync(), isTrue);
+    expect(store.warrantyOf(got)?['verdict'], startsWith('syntactically_grassroots'));
     expect(store.installed().map((c) => c.id), contains('GSN'));
 
     // An app made with the app maker, in no catalog: got from GAS's made

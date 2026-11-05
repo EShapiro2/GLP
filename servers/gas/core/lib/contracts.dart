@@ -7,11 +7,19 @@
 // Two people's agents work together only when they run the same package, so
 // a contract here is named by its directory, id and hash together: that name
 // is the page's contract, and the relay keeps each one's messages apart.
+//
+// A package carries its contract unit's warranties (warranty.dart), and is
+// installed only when they check: the unit is compiled here first, and one
+// GLP's compiler refuses a certificate, because it reaches the network or the
+// person, is not installed.  The warranties are kept beside the contract, in
+// warranty.json, with what this device found of them.
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart' show Sha256;
+
+import 'warranty.dart';
 
 /// Where the catalog and the packages are, and where the apps made with
 /// GAS's app maker are (unlisted: in no catalog, got by their hash).
@@ -83,14 +91,16 @@ class ContractStore {
   /// The directory a contract runs from.
   String program(Contract c) => '$_worlds/live_${c.name}';
 
-  /// The contracts installed here, by title.
+  /// The contracts installed here, by title: those whose warranties were
+  /// checked when they were installed (a contract installed by an earlier
+  /// GAS, with none, is not listed, and is installed again when got).
   List<Contract> installed() {
     final dir = Directory(_worlds);
     if (!dir.existsSync()) return [];
     final out = <Contract>[];
     for (final d in dir.listSync().whereType<Directory>()) {
       final f = File('${d.path}/package.json');
-      if (!f.existsSync()) continue;
+      if (!f.existsSync() || !File('${d.path}/warranty.json').existsSync()) continue;
       try {
         out.add(Contract.fromJson(jsonDecode(f.readAsStringSync()) as Map));
       } on Object {
@@ -112,7 +122,8 @@ class ContractStore {
       (await Sha256().hash(bytes)).bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
   /// Install the package [bytes]; when [expect] is given, only if they hash
-  /// to it.  Only the harness's two files are written, under the contract's
+  /// to it; and only if its warranties check (warranty.dart).  Only the
+  /// harness's files and the warranties are written, under the contract's
   /// own directory.
   Future<Contract> install(Uint8List bytes, {String? expect}) async {
     final hash = await sha256(bytes);
@@ -120,17 +131,22 @@ class ContractStore {
       throw const FormatException('the download does not match its hash');
     }
     final j = jsonDecode(utf8.decode(bytes));
-    if (j is! Map || j['gas'] != 1 || j['id'] is! String || j['title'] is! String) {
+    if (j is! Map || j['id'] is! String || j['title'] is! String) {
       throw const FormatException('not a GAS contract');
+    }
+    if (j['gas'] != 2) {
+      throw const FormatException('a contract for another version of GAS');
     }
     final id = j['id'] as String;
     if (!RegExp(r'^[A-Za-z][A-Za-z0-9]{0,30}$').hasMatch(id)) {
       throw const FormatException('a contract id of letters and digits');
     }
     final files = j['files'], spec = j['spec'], meta = (j['meta'] as Map?) ?? {};
-    if (files is! Map || files['self.glp'] is! String || files['platform.vglp'] is! String || spec is! Map) {
+    if (files is! Map || files['self.glp'] is! String || spec is! Map ||
+        contractFiles.any((f) => files[f] is! String)) {
       throw const FormatException('an incomplete contract');
     }
+    final warranted = checkWarranty('$base/programs', id, files.cast<String, Object?>(), j['warranty']);
     final c = Contract(
       id: id,
       title: j['title'] as String,
@@ -141,14 +157,28 @@ class ContractStore {
       bytes: bytes.length,
     );
     final dir = Directory(program(c));
-    await dir.create(recursive: true);
-    await File('${dir.path}/self.glp').writeAsString(files['self.glp'] as String);
-    await File('${dir.path}/platform.vglp').writeAsString(files['platform.vglp'] as String);
+    await Directory('${dir.path}/contract').create(recursive: true);
+    for (final f in ['self.glp', ...contractFiles]) {
+      await File('${dir.path}/$f').writeAsString(files[f] as String);
+    }
+    await File('${dir.path}/warranty.json')
+        .writeAsString(jsonEncode({'found': warranted.toJson(), 'warranty': j['warranty']}));
     final specs = Directory('$base/www/specs');
     await specs.create(recursive: true);
     await File('${specs.path}/${c.name}.json').writeAsString(jsonEncode({...spec, 'meta': meta}));
     await File('${dir.path}/package.json').writeAsString(jsonEncode(c.toJson()));
     return c;
+  }
+
+  /// What this device found of the warranties of [c], installed here.
+  Map<String, Object?>? warrantyOf(Contract c) {
+    final f = File('${program(c)}/warranty.json');
+    if (!f.existsSync()) return null;
+    try {
+      return ((jsonDecode(f.readAsStringSync()) as Map)['found'] as Map).cast<String, Object?>();
+    } on Object {
+      return null;
+    }
   }
 
   /// Install every package the app carries (packages/pkg-HASH.json) not
