@@ -1041,6 +1041,20 @@ check_not "wr_release_kept: guardian_of is no v of a guardianship for agent whos
 check "wr_release_kept: ... principal_of the v of the one whose w it is" \
       "guardianship(agent, identity, principal, principal_of, principal_of)" "$out"
 
+# At GAI 2e3e5cc (sections/wards.tex, Definition Relay act, clause 2): where
+# a relay act has two ward roles, the guardian role of one may require e of
+# the other ward role and its record; and a relay act adds at a free role
+# the record of each ward role.  wr's agent_person_befriend adds at Bob the
+# record agent_of(role(1), y), as GAI's agent_acquaint does.
+no_record wr_free_unrecorded "agent_person_befriend adds at its free role no record of the agent (def:relay, clause 2, GAI 2e3e5cc)"
+out=$(run 'check_named(wr_rec_other, V).' 'contract_named(wr_rec_other, C), relay_h(C?, H).')
+check "wr_rec_other: a guardian role of agents_befriend requires the record of the other ward, agent_of(role(2), z) (def:relay, clause 2, GAI 2e3e5cc; GnW:4): grassroots with wards as wr is" \
+      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])" \
+      "$out"
+check "wr_rec_other: relay_h names the attestation at each ward role" \
+      "H = [h(agent_person_befriend, 1, attestation), h(agents_befriend, 1, attestation), h(agents_befriend, 2, attestation)]" "$out"
+no_record wr_rec_other_w "a guardian role of agents_befriend requires principal_of(role(2)), w of the other ward role, which clause 2 admits only at its own guardian role (def:relay, clause 2, GAI 2e3e5cc)"
+
 # --- listed roles and name terms (def:role, def:introduction, def:unobstructed)
 # GSN with one schema more, each failing one condition, and two contracts
 # that stand on their own, failing def:introduction and clause 1 of
