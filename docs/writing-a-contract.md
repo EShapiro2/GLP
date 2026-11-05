@@ -33,7 +33,6 @@ A contract's name and its owner are each a ruling of Udi's, never read off a pro
 | GAI | Accountable AI Agents | GnW | GAI | `gai` |
 | GSNP | Grassroots Social Network with Provenance | GSN, GAI | GAI | `gai` |
 | CSSN | Child-Safe Social Network | GSN, GnW | CSSN | `cssn` |
-| GFF | Grassroots Feeds and Followers | GSG | GFF | `gff` |
 | GD | Grassroots Distrust | GSG | GGGA | `ggga` |
 | GC | Grassroots Coins | GKK | Currencies | `currencies/coins` |
 | GB | Grassroots Bonds | GC | Currencies | `currencies/bonds` |
@@ -44,6 +43,8 @@ A contract's name and its owner are each a ruling of Udi's, never read off a pro
 | AGORA | Grassroots Barter | GB | Currencies, until it has a paper | `currencies/agora` |
 | LBM | Location-Based Matching | GSG | not ruled | --- (not in the repository) |
 | GDO | Grassroots Directed Overlay | GSG | GRH | `lbm` |
+| GDO-L | Grassroots Directed Overlay with Labels | GDO | GFF | `gff` |
+| GFF | Grassroots Feeds and Followers | GDO-L | GFF | `gff` |
 | GRA | Grassroots Ride Auction | GDO | GRH | `lbm` |
 | GFWC | the grassroots federation | --- | GFWC | `federation` (schemas only) |
 
