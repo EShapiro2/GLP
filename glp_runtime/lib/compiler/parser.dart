@@ -45,48 +45,6 @@ class Parser {
 
   Parser(this.tokens, {this.vglp = false});
 
-  /// Parse tokens into an AST (legacy method, skips declarations)
-  Program parse() {
-    // Skip any module declarations at the start
-    _skipDeclarations();
-
-    final procedures = <Procedure>[];
-
-    while (!_isAtEnd()) {
-      procedures.add(_parseProcedure());
-    }
-
-    // Check for non-contiguous clauses (same name/arity appearing multiple times)
-    _checkContiguousClauses(procedures);
-
-    return Program(procedures, 1, 1);
-  }
-
-  /// Check that all clauses for each procedure are contiguous in the source.
-  /// GLP requires clauses to be grouped together - non-contiguous clauses
-  /// cause the compiler to generate incorrect bytecode.
-  void _checkContiguousClauses(List<Procedure> procedures) {
-    final seen = <String, Procedure>{};  // signature -> first occurrence
-    
-    for (final proc in procedures) {
-      final sig = '${proc.name}/${proc.arity}';
-      
-      if (seen.containsKey(sig)) {
-        final first = seen[sig]!;
-        throw CompileError(
-          'Non-contiguous clauses for "$sig".\n'
-          '  First group at line ${first.line}, second group at line ${proc.line}.\n'
-          '  All clauses for a predicate must be together in the source file.',
-          proc.line,
-          proc.column,
-          phase: 'parser'
-        );
-      }
-      
-      seen[sig] = proc;
-    }
-  }
-
   /// Parse tokens into a Module AST (includes declarations)
   Module parseModule() {
     final directives = _parseDirectives();
@@ -442,35 +400,6 @@ class Parser {
       line: 1,
       column: 1,
     );
-  }
-
-  /// Skip module declarations at start of file (for legacy parse())
-  void _skipDeclarations() {
-    while (!_isAtEnd() && _check(TokenType.MINUS)) {
-      final startPos = _current;
-      _advance(); // consume '-'
-
-      if (!_check(TokenType.ATOM)) {
-        _current = startPos;  // Back up, not a declaration
-        break;
-      }
-
-      final keyword = _peek().lexeme;
-
-      if (['module', 'mode', 'expose'].contains(keyword)) {
-        // Skip to the next DOT
-        while (!_isAtEnd() && !_check(TokenType.DOT)) {
-          _advance();
-        }
-        if (_check(TokenType.DOT)) {
-          _advance();  // consume '.'
-        }
-      } else {
-        // Not a declaration keyword, back up
-        _current = startPos;
-        break;
-      }
-    }
   }
 
   // Procedure: one or more clauses with same head functor/arity
@@ -840,7 +769,7 @@ class Parser {
     final volitionGuard = _parseVolitionGuardOpt();
     final interactiveTerm =
         volitionGuard == null ? _parseInteractiveTermOpt() : null;
-    final written = _parseAtom();
+    final written = _parseHead();
     final head = interactiveTerm == null
         ? written
         : Atom(written.functor, [...written.args, interactiveTerm],
@@ -854,10 +783,10 @@ class Parser {
       // Parse everything before | as guards (or body if no |)
       final predicates = <Goal>[];
 
-      predicates.add(_parseGoalOrGuard());
+      predicates.add(_parseGoal());
 
       while (_match(TokenType.COMMA)) {
-        predicates.add(_parseGoalOrGuard());
+        predicates.add(_parseGoal());
       }
 
       // Check for | separator
@@ -918,8 +847,18 @@ class Parser {
         line: head.line, column: head.column);
   }
 
-  // Parse a predicate that could be either a guard or a goal
-  Goal _parseGoalOrGuard() {
+  // The one reader of an atom, in a head, a guard and a body alike (GLP-Spec
+  // appendix-lp.tex, Definition "Logic Programs Syntax"): `:=`, `=..`, `..=`
+  // and `=` are atoms with infix functors, read the same in every position;
+  // which calls a guard admits is the defined-guard rule and the guard
+  // predicates, checked after reading by the partial evaluator and the
+  // analyzer, not a subset of this reader's; `@` stands only in the body of a
+  // boot clause (IGLP, Implementation Notes, "Boot"), which the loader and the
+  // checker hold (GLP #11 Cowork, Code_inbox 2026-11-03 16:40 UTC, item 7;
+  // until 2026-11-05 three readers, one per position, admitted different
+  // subsets).  A clause head is read by this reader and held to an atom
+  // ([_parseHead]).
+  Goal _parseGoal() {
     // `~` begins no GLP construct.  A guard is a conjunction of guard
     // predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and guard
     // negation is not part of the language (GLP-Spec 98913b4), so `~G` is
@@ -945,10 +884,10 @@ class Parser {
     // parsed (GLP 2026-10-10 09:33 UTC).
     if (_check(TokenType.LPAREN) && !_parenthesisedOperand()) {
       final startToken = _advance(); // consume '('
-      final firstGoal = _parseGoalOrGuard();
+      final firstGoal = _parseGoal();
 
       if (_match(TokenType.SEMICOLON)) {
-        final secondGoal = _parseGoalOrGuard();
+        final secondGoal = _parseGoal();
         _consume(TokenType.RPAREN, 'Expected ")" after disjunction');
         // Return as ';'(Goal1, Goal2) - need to convert goals to terms
         final firstTerm = goalToTerm(firstGoal);
@@ -961,36 +900,42 @@ class Parser {
       }
     }
 
-    // Check for assignment (Var := Expr) or univ (Var =.. Expr)
-    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
+    // A variable, a reader or `_` on the left of an infix functor: Var := Expr,
+    // Var =.. T, Var ..= T, Var = T, and _ := Expr; a variable before `#` is
+    // refused, the module of a cross-module call being a name.  A variable
+    // followed by none of these is the left operand of a comparison, read
+    // below as an expression.
+    if (_check(TokenType.VARIABLE) || _check(TokenType.READER) || _check(TokenType.UNDERSCORE)) {
       final varToken = _peek();
-      final isReader = varToken.type == TokenType.READER;
-      // Look ahead for := or =..
-      if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.ASSIGN) {
-        _advance(); // consume variable
+      final next = tokens.length > _current + 1 ? tokens[_current + 1].type : null;
+      Term left() => varToken.type == TokenType.UNDERSCORE
+          ? UnderscoreTerm(varToken.line, varToken.column)
+          : VarTerm(varToken.lexeme, varToken.type == TokenType.READER, varToken.line, varToken.column);
+      if (next == TokenType.ASSIGN) {
+        _advance(); // consume the variable
         _advance(); // consume :=
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final lhs = left();
         final expr = _parseExpression();
-        return Goal(':=', [varTerm, expr], varToken.line, varToken.column);
-      } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.UNIV) {
-        _advance(); // consume variable
+        return Goal(':=', [lhs, expr], varToken.line, varToken.column);
+      } else if (next == TokenType.UNIV) {
+        _advance();
         _advance(); // consume =..
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final lhs = left();
         final expr = _parseTerm();
-        return Goal('=..', [varTerm, expr], varToken.line, varToken.column);
-      } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.UNIV_DECOMPOSE) {
-        _advance(); // consume variable
+        return Goal('=..', [lhs, expr], varToken.line, varToken.column);
+      } else if (next == TokenType.UNIV_DECOMPOSE) {
+        _advance();
         _advance(); // consume ..=
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final lhs = left();
         final expr = _parseTerm();
-        return Goal('..=', [varTerm, expr], varToken.line, varToken.column);
-      } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.EQUALS) {
-        _advance(); // consume variable
+        return Goal('..=', [lhs, expr], varToken.line, varToken.column);
+      } else if (next == TokenType.EQUALS) {
+        _advance();
         _advance(); // consume =
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
+        final lhs = left();
         final term = _parseTerm();
-        return Goal('=', [varTerm, term], varToken.line, varToken.column);
-      } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.HASH) {
+        return Goal('=', [lhs, term], varToken.line, varToken.column);
+      } else if (next == TokenType.HASH && varToken.type != TokenType.UNDERSCORE) {
         throw _variableModuleError(varToken);
       }
     }
@@ -1038,7 +983,17 @@ class Parser {
           return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
         }
 
-        // Check if followed by = (e.g., foo = bar, or foo(a) = X)
+        // Followed by =.. : the structure or constant read is the left term,
+        // `foo(a, b) =.. L`.
+        if (_match(TokenType.UNIV)) {
+          final leftTerm = args.isEmpty
+              ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
+              : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+          final rightTerm = _parseTerm();
+          return Goal('=..', [leftTerm, rightTerm], functorToken.line, functorToken.column);
+        }
+
+        // Followed by = : `foo = bar`, `foo(a) = X`.
         if (_match(TokenType.EQUALS)) {
           final leftTerm = args.isEmpty
               ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
@@ -1086,74 +1041,20 @@ class Parser {
     );
   }
 
-  // Atom: functor(arg1, arg2, ...) or Var := Expr or Var =.. Expr (for clause heads)
-  Atom _parseAtom() {
-    // Check for := or =.. pattern: Var := Expr or Var =.. Expr or _ := Expr
-    if (_check(TokenType.VARIABLE) || _check(TokenType.READER) || _check(TokenType.UNDERSCORE)) {
-      final varToken = _advance();
-      final isReader = varToken.type == TokenType.READER;
-      final isUnderscore = varToken.type == TokenType.UNDERSCORE;
-      if (_match(TokenType.ASSIGN)) {
-        // Parse as ':='(Var, Expr) or ':='(_, Expr)
-        final lhsTerm = isUnderscore
-            ? UnderscoreTerm(varToken.line, varToken.column)
-            : VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final expr = _parseTerm();
-        return Atom(':=', [lhsTerm, expr], varToken.line, varToken.column);
-      } else if (_match(TokenType.UNIV)) {
-        // Parse as '=..'(Var, Expr)
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final expr = _parseTerm();
-        return Atom('=..', [varTerm, expr], varToken.line, varToken.column);
-      } else if (_match(TokenType.UNIV_DECOMPOSE)) {
-        // Parse as '..='(Var, Expr)
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final expr = _parseTerm();
-        return Atom('..=', [varTerm, expr], varToken.line, varToken.column);
-      } else if (_match(TokenType.EQUALS)) {
-        // Parse as '='(Var, Term) - unification
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final term = _parseTerm();
-        return Atom('=', [varTerm, term], varToken.line, varToken.column);
-      } else {
-        // Not an assignment - put variable back by rewinding
-        _current--;
-      }
+  // A clause head: the one reader's atom, which a cross-module call, a spawn
+  // and a disjunction are not (GLP-Spec appendix-lp.tex, Definition "Logic
+  // Programs Syntax": a clause's head is an atom).
+  Atom _parseHead() {
+    final goal = _parseGoal();
+    if (goal is RemoteGoal || goal is SpawnGoal || goal.functor == ';') {
+      throw CompileError(
+        'A clause head is an atom; "$goal" is not one',
+        goal.line,
+        goal.column,
+        phase: 'parser'
+      );
     }
-
-    final functorToken = _consumePredicateName();
-    final args = <Term>[];
-
-    if (_match(TokenType.LPAREN)) {
-      if (!_check(TokenType.RPAREN)) {
-        args.add(_parseTerm());
-
-        while (_match(TokenType.COMMA)) {
-          args.add(_parseTerm());
-        }
-      }
-
-      _consume(TokenType.RPAREN, 'Expected ")" after arguments');
-    }
-
-    // Check if this is followed by =.. (e.g., foo(a,b) =.. L)
-    if (_match(TokenType.UNIV)) {
-      // Convert the already-parsed atom to a StructTerm
-      final leftTerm = StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
-      final rightTerm = _parseTerm();
-      return Atom('=..', [leftTerm, rightTerm], functorToken.line, functorToken.column);
-    }
-
-    // Check if this is followed by = (e.g., foo = bar, foo(a) = X)
-    if (_match(TokenType.EQUALS)) {
-      final leftTerm = args.isEmpty
-          ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
-          : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
-      final rightTerm = _parseTerm();
-      return Atom('=', [leftTerm, rightTerm], functorToken.line, functorToken.column);
-    }
-
-    return Atom(functorToken.lexeme, args, functorToken.line, functorToken.column);
+    return Atom(goal.functor, goal.args, goal.line, goal.column);
   }
 
   /// The refusal of a cross-module call whose module is a variable, `M # G` or
@@ -1173,97 +1074,6 @@ class Parser {
       varToken.column,
       phase: 'parser',
     );
-  }
-
-  // Goal: same as Atom, or assignment (Var := Expr) or univ (Var =.. Expr)
-  // Also handles remote goals: Module # Goal
-  Goal _parseGoal() {
-    // Check for assignment or univ: Var := Expr or Var =.. Expr
-    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
-      final varToken = _advance();
-      final isReader = varToken.type == TokenType.READER;
-
-      if (_check(TokenType.HASH)) {
-        throw _variableModuleError(varToken);
-      } else if (_match(TokenType.ASSIGN)) {
-        // Parse as ':='(Var, Expr)
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final expr = _parseTerm();
-        return Goal(':=', [varTerm, expr], varToken.line, varToken.column);
-      } else if (_match(TokenType.UNIV)) {
-        // Parse as '=..'(Var, Expr)
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final expr = _parseTerm();
-        return Goal('=..', [varTerm, expr], varToken.line, varToken.column);
-      } else if (_match(TokenType.UNIV_DECOMPOSE)) {
-        // Parse as '..='(Var, Expr)
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final expr = _parseTerm();
-        return Goal('..=', [varTerm, expr], varToken.line, varToken.column);
-      } else if (_match(TokenType.EQUALS)) {
-        // Parse as '='(Var, Term) - unification
-        final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final term = _parseTerm();
-        return Goal('=', [varTerm, term], varToken.line, varToken.column);
-      } else {
-        // Not an assignment or univ - this is an error in goal position
-        throw CompileError(
-          'Expected predicate name or assignment, got variable "${varToken.lexeme}"',
-          varToken.line,
-          varToken.column,
-          phase: 'parser'
-        );
-      }
-    }
-
-    final functorToken = _consumePredicateName();
-    final args = <Term>[];
-
-    if (_match(TokenType.LPAREN)) {
-      if (!_check(TokenType.RPAREN)) {
-        args.add(_parseTerm());
-
-        while (_match(TokenType.COMMA)) {
-          args.add(_parseTerm());
-        }
-      }
-
-      _consume(TokenType.RPAREN, 'Expected ")" after arguments');
-    }
-
-    // Check for static remote goal: Module # Goal (e.g., math # factorial(5, R))
-    if (_match(TokenType.HASH)) {
-      // Module name cannot have arguments
-      if (args.isNotEmpty) {
-        throw CompileError(
-          'Module name cannot have arguments: ${functorToken.lexeme}',
-          functorToken.line,
-          functorToken.column,
-          phase: 'parser'
-        );
-      }
-      final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
-      final innerGoal = _parseGoal();
-      return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
-    }
-
-    // Check if this is followed by =.. (e.g., foo(a,b) =.. L)
-    if (_match(TokenType.UNIV)) {
-      // Convert the already-parsed atom to a StructTerm
-      final leftTerm = StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
-      final rightTerm = _parseTerm();
-      return Goal('=..', [leftTerm, rightTerm], functorToken.line, functorToken.column);
-    }
-
-    final goal = Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
-
-    // Check for spawn annotation: Goal@AgentId
-    if (_match(TokenType.AT)) {
-      final agentToken = _consume(TokenType.ATOM, 'Expected agent identifier after @');
-      return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
-    }
-
-    return goal;
   }
 
   // Term: variable, structure, list, constant, underscore, tuple, or expression
