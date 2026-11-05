@@ -34,6 +34,7 @@ A contract's name and its owner are each a ruling of Udi's, never read off a pro
 | GSNP | Grassroots Social Network with Provenance | GSN, GAI | GAI | `gai` |
 | CSSN | Child-Safe Social Network | GSN, GnW | CSSN | `cssn` |
 | GFF | Grassroots Feeds and Followers | GSG | GFF | `gff` |
+| GD | Grassroots Distrust | GSG | GGGA | `ggga` |
 | GC | Grassroots Coins | GKK | Currencies | `currencies/coins` |
 | GB | Grassroots Bonds | GC | Currencies | `currencies/bonds` |
 | DGC | Denominated Grassroots Currencies | GC, GB | Currencies | `currencies/sovereign` |
