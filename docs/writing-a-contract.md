@@ -43,8 +43,8 @@ A contract's name and its owner are each a ruling of Udi's, never read off a pro
 | BCC | Backed Community Currencies | GCC, GDC | Currencies | `currencies/bcc` |
 | AGORA | Grassroots Barter | GB | Currencies, until it has a paper | `currencies/agora` |
 | LBM | Location-Based Matching | GSG | not ruled | --- (not in the repository) |
-| GDO | Grassroots Directed Overlay | GSG | LBM | `lbm` |
-| GRA | Grassroots Ride Auction | GDO | LBM | `lbm` |
+| GDO | Grassroots Directed Overlay | GSG | GRH | `lbm` |
+| GRA | Grassroots Ride Auction | GDO | GRH | `lbm` |
 | GFWC | the grassroots federation | --- | GFWC | `federation` (schemas only) |
 
 A contract extends GSG when its clauses require friendship, and not otherwise.  The current text of every contract is Coordination Appendix E, `/Grassroots/Coordination/sections/E-contracts.tex`, which follows the repository's copies.
