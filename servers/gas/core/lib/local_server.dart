@@ -31,6 +31,7 @@ import 'package:qr/qr.dart';
 
 import 'contracts.dart';
 import 'core.dart';
+import 'presenting_network.dart' show isInvitation;
 
 class LocalServer {
   final Core core;
@@ -198,7 +199,11 @@ class LocalServer {
         if (l.contract != null && l.contract != s.contract.hash) {
           return _json(req, {'error': 'That invite is for another app.', 'link': true});
         }
-        await s.addFar(glp.PubKey.fromHex(l.person!));
+        final inviter = glp.PubKey.fromHex(l.person!);
+        if (!isInvitation(l.invitation, inviter, s.contract.hash, s.presenting.hSrc)) {
+          return _json(req, {'error': 'That invite is not signed by its sender for this app. Ask for a new one.'});
+        }
+        await s.addFar(inviter, invitation: l.invitation);
         return _json(req, {'ok': true});
       case 'relay':
         await core.setRelay((await _body(req))['on'] == true);

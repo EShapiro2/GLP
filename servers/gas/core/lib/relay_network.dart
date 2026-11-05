@@ -36,11 +36,11 @@ import 'package:sodium/sodium_sumo.dart';
 /// The relay GAS phones use.
 const defaultRelay = 'https://talmonlab.bgu.ac.il/gasrelay';
 
-/// The link a person shares to be added from afar: their key after the '#',
-/// and the contract (its hash) they share it from.  contracts.dart's GasLink
-/// reads it.
-String inviteLink(PubKey pk, String contractHash) =>
-    'https://talmonlab.bgu.ac.il/gas/add.html#${pk.hex}&c=$contractHash';
+/// The link a person shares to be added: their key after the '#', the
+/// contract (its hash) they share it from, and their signed invitation to it
+/// (presenting_network.dart).  contracts.dart's GasLink reads it.
+String inviteLink(PubKey pk, String contractHash, String invitation) =>
+    'https://talmonlab.bgu.ac.il/gas/add.html#${pk.hex}&c=$contractHash&s=$invitation';
 
 String _hex(List<int> b) => b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
 

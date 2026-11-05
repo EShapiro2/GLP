@@ -32,16 +32,17 @@ String contractLink(String hash) => 'https://talmonlab.bgu.ac.il/gas/get.html#$h
 final _hex64 = RegExp(r'[0-9a-f]{64}');
 
 /// What a pasted or opened link asks: a contract to get (get.html#H,
-/// gas://get/H), a person to add, with the contract they are in
-/// (add.html#K&c=H, gas://add/K?c=H), or nothing.
+/// gas://get/H), a person to add, with the contract they are in and their
+/// signed invitation to it (add.html#K&c=H&s=S, gas://add/K?c=H&s=S), or
+/// nothing.
 class GasLink {
-  final String? person, contract;
-  const GasLink({this.person, this.contract});
+  final String? person, contract, invitation;
+  const GasLink({this.person, this.contract, this.invitation});
 
   static GasLink? parse(String text) {
     final t = text.trim().toLowerCase();
-    final add = RegExp(r'(?:add\.html#|gas://add/)([0-9a-f]{64})(?:[&?]c=([0-9a-f]{64}))?').firstMatch(t);
-    if (add != null) return GasLink(person: add.group(1), contract: add.group(2));
+    final add = RegExp(r'(?:add\.html#|gas://add/)([0-9a-f]{64})(?:[&?]c=([0-9a-f]{64}))?(?:[&?]s=([0-9a-f]+))?').firstMatch(t);
+    if (add != null) return GasLink(person: add.group(1), contract: add.group(2), invitation: add.group(3));
     final get = RegExp(r'(?:get\.html#|gas://get/)([0-9a-f]{64})').firstMatch(t);
     if (get != null) return GasLink(contract: get.group(1));
     if (RegExp(r'^[0-9a-f]{64}$').hasMatch(t)) return GasLink(person: t);

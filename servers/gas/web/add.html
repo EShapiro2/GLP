@@ -34,15 +34,16 @@ h1{font-size:clamp(30px,6vw,40px);letter-spacing:-.025em;line-height:1.1;margin:
 <header><div class="hin"><a class="logo" href="./"><span class="mark"></span>GAS · the GLP app store</a></div></header>
 <main id="m"></main>
 <script>
-// An invite: the inviting person's key after the '#', and the app they invite
-// to, by its hash (&c=), which the browser never sends to the server.  The
-// page helps the invited person get GAS and open the invite in it.
-const [key, app] = [(location.hash.match(/^#([0-9a-fA-F]{64})/) || [])[1], (location.hash.match(/[&?]c=([0-9a-f]{64})/) || [])[1]];
+// An invite: the inviting person's key after the '#', the app they invite
+// to, by its hash (&c=), and their signed invitation to it (&s=), which the
+// browser never sends to the server.  The page helps the invited person get
+// GAS and open the invite in it, where the invitation is checked.
+const [key, app, sig] = [(location.hash.match(/^#([0-9a-fA-F]{64})/) || [])[1], (location.hash.match(/[&?]c=([0-9a-f]{64})/) || [])[1], (location.hash.match(/[&?]s=([0-9a-f]+)/) || [])[1]];
 const m = document.getElementById('m');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 function show(c){
   const hue = parseInt(key.slice(0, 6), 16) % 360;
-  const open = 'gas://add/' + key.toLowerCase() + (app ? '?c=' + app : '');
+  const open = 'gas://add/' + key.toLowerCase() + (app ? '?c=' + app : '') + (app && sig ? '&s=' + sig : '');
   m.innerHTML = `<h1>You're invited to GAS</h1>
   <p class="lead"><span class="who" style="background:hsl(${hue} 60% 55%)"></span><b>Person ${key.slice(0, 4)}</b> wants to connect with you${c ? ` in <b>${esc(c.icon)} ${esc(c.title)}</b>` : ''} on GAS, apps run by the people who use them, on their own phones.</p>
   <div class="card step"><div class="n">1</div><div><h2>Get GAS</h2><p>If you have it already, skip this.</p><a class="btn blue" href="download.html">Get the app</a></div></div>

@@ -101,6 +101,25 @@ class MemoryNet implements GlpNetwork {
 }
 
 void main() {
+  test('an invitation names the contract, and its signer the inviter; its link carries it', () {
+    final alice = PersonIdentity.fromSeed(Uint8List.fromList(List.filled(32, 0x41)));
+    final bob = PersonIdentity.fromSeed(Uint8List.fromList(List.filled(32, 0x42)));
+    final pkg = 'a' * 64, other = 'b' * 64, hSrc = 'c' * 64;
+    final inv = invitationOf(alice, pkg, hSrc);
+    expect(isInvitation(inv, alice.pub, pkg, hSrc), isTrue);
+    expect(isInvitation(inv, bob.pub, pkg, hSrc), isFalse, reason: 'not Bob\'s');
+    expect(isInvitation(inv, alice.pub, other, hSrc), isFalse, reason: 'to another package');
+    expect(isInvitation(inv, alice.pub, pkg, 'd' * 64), isFalse, reason: 'for other code');
+    expect(isInvitation(undertakingOf(alice, pkg, hSrc), alice.pub, pkg, hSrc), isFalse,
+        reason: 'an undertaking is no invitation');
+    expect(isInvitation(null, alice.pub, pkg, hSrc), isFalse);
+    final l = GasLink.parse('Join me: https://talmonlab.bgu.ac.il/gas/add.html#${alice.pub.hex}&c=$pkg&s=$inv')!;
+    expect([l.person, l.contract, l.invitation], [alice.pub.hex, pkg, inv]);
+    final g = GasLink.parse('gas://add/${alice.pub.hex}?c=$pkg&s=$inv')!;
+    expect(g.invitation, inv);
+    expect(GasLink.parse('gas://add/${alice.pub.hex}?c=$pkg')!.invitation, isNull);
+  });
+
   final tree = Directory(Platform.environment['GAS_TREE'] ?? '../phone/assets/tree');
 
   Future<T> until<T>(T? Function() f, String what, {int seconds = 90}) async {

@@ -67,7 +67,7 @@ class Session {
 
   Peer _peer(glp.PubKey pk) => peers.putIfAbsent(pk.hex, () => Peer(pk.hex));
 
-  Future<void> start({String? invite}) async {
+  Future<void> start({String? invite, String? invitation}) async {
     try {
       layer = await core.layers();
       relay = RelayGlpNetwork(
@@ -129,7 +129,9 @@ class Session {
       };
       relay.setOn(core.relayOn);
       phase = 'running';
-      if (invite != null && invite != core.me.hex) await addFar(glp.PubKey.fromHex(invite));
+      if (invite != null && invite != core.me.hex) {
+        await addFar(glp.PubKey.fromHex(invite), invitation: invitation);
+      }
     } catch (e) {
       phase = 'failed: $e';
       event('FAILED: $e');
@@ -137,7 +139,16 @@ class Session {
     core.changed();
   }
 
-  Future<void> addFar(glp.PubKey pk) async {
+  /// Add [pk], who invited this person by their signed [invitation]: it is
+  /// checked and kept, and this person's undertaking presented to them first.
+  /// An invite that does not carry a checking invitation adds no one.
+  Future<void> addFar(glp.PubKey pk, {String? invitation}) async {
+    if (invitation == null || !presenting.keepInvitation(pk, invitation)) {
+      event('not added ${pk.hex.substring(0, 8)}…: the invite is not signed by them for this app');
+      core.notice('That invite is not signed by its sender for this app. Ask for a new one.');
+      return;
+    }
+    await presenting.presentTo(pk);
     await relay.addPerson(pk);
     core.met(pk.hex, contract.title);
     event('added ${pk.hex.substring(0, 8)}… from afar');
@@ -423,7 +434,12 @@ class Core {
 
   // --- contracts and sessions ---
 
+  /// Invitations checked when their links were opened (link), by the
+  /// contract's hash and the inviter's key.
+  final Map<String, String> _invitations = {};
+
   Future<Session> open(Contract c, {String? invite}) async {
+    final invitation = invite == null ? null : _invitations['${c.hash}:$invite'];
     addApp(c);
     try {
       File('$mine/last.txt').writeAsStringSync(c.name);
@@ -433,7 +449,7 @@ class Core {
     final s = session;
     if (s != null && s.contract.hash == c.hash) {
       if (invite != null && invite != me.hex && s.phase == 'running') {
-        await s.addFar(glp.PubKey.fromHex(invite));
+        await s.addFar(glp.PubKey.fromHex(invite), invitation: invitation);
       }
       return s;
     }
@@ -444,7 +460,7 @@ class Core {
     final n = Session(this, c);
     session = n;
     changed();
-    unawaited(n.start(invite: invite));
+    unawaited(n.start(invite: invite, invitation: invitation));
     return n;
   }
 
@@ -464,12 +480,23 @@ class Core {
     try {
       final c = await store.get(l.contract!);
       changed();
-      return {'name': c.name, 'person': l.person};
+      final p = l.person;
+      if (p != null) {
+        // The invitation, checked against the contract it names.
+        final hSrc = store.warrantyOf(c)?['hsrc'];
+        if (hSrc is! String || !isInvitation(l.invitation, glp.PubKey.fromHex(p), c.hash, hSrc)) {
+          return {'error': 'That invite is not signed by its sender for this app. Ask for a new one.', 'name': c.name};
+        }
+        _invitations['${c.hash}:$p'] = l.invitation!;
+      }
+      return {'name': c.name, 'person': p};
     } on Object catch (e) {
       return {'error': 'Could not get the app: $e'};
     }
   }
 
   String invite() =>
-      session == null ? 'https://talmonlab.bgu.ac.il/gas/add.html#${me.hex}' : inviteLink(me, session!.contract.hash);
+      session == null
+          ? 'https://talmonlab.bgu.ac.il/gas/add.html#${me.hex}'
+          : inviteLink(me, session!.contract.hash, session!.presenting.invitation);
 }

@@ -19,6 +19,11 @@
 // code.  The undertakings received are kept, in undertakings/<app>.json:
 // another participant then holds each, as evidence of who undertook what.
 //
+// An invitation is the inviter's signed term invitation(Package), over the
+// same source identity: it names the contract, and its signer the inviter.
+// The invited person checks it, keeps it, and presents their undertaking to
+// the inviter before anything else (Session.addFar).
+//
 // On the wire every payload carries a first byte: 0 the agent's message, 1 an
 // undertaking, 2 a request for one.
 import 'dart:async';
@@ -47,6 +52,21 @@ bool isUndertaking(String signed, PubKey signer, String package, String hSrc) {
   return a != null && a.length == 1 && a[0] == package;
 }
 
+/// [who]'s invitation to the contract of package [package], whose contract
+/// unit has source identity [hSrc].
+String invitationOf(PersonIdentity who, String package, String hSrc) =>
+    signTerm(who, bytesOfHex(hSrc), strings('invitation', [package]));
+
+/// Whether [signed] is [inviter]'s invitation to the contract of package
+/// [package], whose contract unit has source identity [hSrc].
+bool isInvitation(String? signed, PubKey inviter, String package, String hSrc) {
+  if (signed == null) return false;
+  final s = readSigned(signed);
+  if (s == null || s.key.hex != inviter.hex || hexOf(s.hSrc) != hSrc) return false;
+  final a = stringArgs(s.term, 'invitation');
+  return a != null && a.length == 1 && a[0] == package;
+}
+
 class PresentingNetwork implements GlpNetwork {
   final GlpNetwork inner;
 
@@ -55,6 +75,9 @@ class PresentingNetwork implements GlpNetwork {
 
   /// This person's undertaking, presented to everyone they interact with.
   final String undertaking;
+
+  /// This person's invitation to the contract, which their invite links carry.
+  final String invitation;
 
   /// Where the undertakings received are kept: [dir]/[app].json.
   final String dir, app;
@@ -78,7 +101,8 @@ class PresentingNetwork implements GlpNetwork {
     required this.hSrc,
     required this.dir,
     required this.app,
-  }) : undertaking = undertakingOf(person, package, hSrc) {
+  })  : undertaking = undertakingOf(person, package, hSrc),
+        invitation = invitationOf(person, package, hSrc) {
     inner.onPeerConnected = (pk, u, id) => onPeerConnected?.call(pk, u, id);
     inner.onPeerDisconnected = (pk, u) => onPeerDisconnected?.call(pk, u);
     inner.onPeerDiscovered = (pk, u) => onPeerDiscovered?.call(pk, u);
@@ -99,6 +123,25 @@ class PresentingNetwork implements GlpNetwork {
 
   /// Whether [pk]'s undertaking is held here.
   bool hasPresented(PubKey pk) => received.containsKey(pk.hex);
+
+  /// Present this person's undertaking to [pk] now, before anything else:
+  /// what an invited person does first, to the inviter.
+  Future<void> presentTo(PubKey pk) => _present(pk);
+
+  /// Keep [inviter]'s [invitation], checked, beside the undertakings.
+  bool keepInvitation(PubKey inviter, String invitation) {
+    if (!isInvitation(invitation, inviter, package, hSrc)) return false;
+    try {
+      final f = File('$dir/$app-invitations.json');
+      final kept = f.existsSync() ? (jsonDecode(f.readAsStringSync()) as Map) : {};
+      kept[inviter.hex] = invitation;
+      f.parent.createSync(recursive: true);
+      f.writeAsStringSync(jsonEncode(kept));
+    } on Object {
+      // Checked, if not kept.
+    }
+    return true;
+  }
 
   static Uint8List _frame(int kind, List<int> body) => Uint8List.fromList([kind, ...body]);
 
