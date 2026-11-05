@@ -15,10 +15,12 @@
 //    through the harness.
 //  - The creator's warranty is a GLP signed term (GLP-Spec, "Identity and
 //    signature", the form sign/3 writes and signature/2 reads), over the
-//    unit's source identity: creator_cert(Src, Schemas, Verdict), saying that
-//    the unit Src realises the contract whose speech-act schemas hash to
-//    Schemas, which the checker found Verdict.  The package carries the
-//    contract's text, its schemas and the verdict.
+//    unit's source identity: creator_cert(Src, Schemas, Verdict, Host),
+//    saying that the unit Src realises the contract whose speech-act schemas
+//    hash to Schemas, which the checker found Verdict, run by the harness
+//    whose text hashes to Host (GAS's host code, which the compiler refuses a
+//    certificate, reaching the network and the person).  The package carries
+//    the contract's text, its schemas and the verdict.
 //
 // The source identity of a program depends on where it is compiled, its
 // modules being named by their paths, so the unit is certified, here and on
@@ -146,6 +148,9 @@ final _random = Random.secure();
 /// The verdict the checker gives a syntactically grassroots contract begins so.
 const grassroots = 'syntactically_grassroots';
 
+/// The harness of a package, its host code: the file that runs the unit.
+const hostFile = 'self.glp';
+
 /// The warranties of the contract unit [files] of contract [id]: compiled
 /// under [compiler], its creator [creator]; [text], [schemas] and [verdict]
 /// the contract's text, its speech-act schemas in GSC's notation, and the
@@ -177,8 +182,14 @@ Map<String, Object?> warrant({
       'sig': hexOf(cert.signature),
     },
     'creator': signTerm(creator, cert.hSrc,
-        strings('creator_cert', [hexOf(cert.hSrc), sha256Hex(schemas), verdict])),
+        strings('creator_cert', [hexOf(cert.hSrc), sha256Hex(schemas), verdict, sha256Hex(_host(files))])),
   };
+}
+
+String _host(Map<String, Object?> files) {
+  final h = files[hostFile];
+  if (h is! String) throw const FormatException('the package has no harness');
+  return h;
 }
 
 /// What a device found of a package's warranties: who compiled and who
@@ -193,8 +204,8 @@ class Warranted {
 /// the tree [programs], by compiling the unit here: it must be given a
 /// certificate, and its two identities must be those the compiler's warranty
 /// names; that warranty's signature must verify, and the creator's must
-/// verify over the same unit, the package's schemas, and a grassroots
-/// verdict.  Throws a FormatException saying what fails.
+/// verify over the same unit, the package's schemas, a grassroots verdict,
+/// and the package's harness.  Throws a FormatException saying what fails.
 Warranted checkWarranty(String programs, String id, Map<String, Object?> files, Object? w) {
   if (w is! Map) throw const FormatException('the contract carries no warranties');
   final contract = w['contract'], comp = w['compiler'], creator = w['creator'];
@@ -238,11 +249,12 @@ Warranted checkWarranty(String programs, String id, Map<String, Object?> files, 
   if (signed == null) throw const FormatException('the creator\'s signature does not verify');
   final args = stringArgs(signed.term, 'creator_cert');
   if (args == null ||
-      args.length != 3 ||
+      args.length != 4 ||
       hexOf(signed.hSrc) != hexOf(local.hSrc) ||
       args[0] != hexOf(local.hSrc) ||
       args[1] != sha256Hex(schemas) ||
-      args[2] != verdict) {
+      args[2] != verdict ||
+      args[3] != sha256Hex(_host(files))) {
     throw const FormatException('the creator\'s warranty is for another contract or other code');
   }
   return Warranted(hexOf(theirs.agent), signed.key.hex, hexOf(local.hSrc), verdict);

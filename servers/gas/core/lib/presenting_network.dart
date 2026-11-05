@@ -138,7 +138,7 @@ class PresentingNetwork implements GlpNetwork {
       f.parent.createSync(recursive: true);
       f.writeAsStringSync(jsonEncode(kept));
     } on Object {
-      // Checked, if not kept.
+      return false; // checked, but not kept: not acted on
     }
     return true;
   }

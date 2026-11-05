@@ -15,7 +15,7 @@ void main() {
   final cascade = Directory('../../../cascade/GKK').absolute.path;
 
   Map<String, Object?> files() => {
-        for (final f in contractFiles) f: File('$world/$f').readAsStringSync(),
+        for (final f in [hostFile, ...contractFiles]) f: File('$world/$f').readAsStringSync(),
       };
 
   final compiler = PersonIdentity.fromSeed(Uint8List.fromList(List.filled(32, 1)));
@@ -56,6 +56,12 @@ void main() {
     // Other schemas than the creator signed.
     final ws = {...w, 'contract': {...(w['contract'] as Map), 'schemas': 'establish(Alice?) :\n'}};
     expect(() => checkWarranty(programs, 'GKK', files(), ws),
+        throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('creator'))));
+
+    // Another harness than the creator signed.
+    final host = files();
+    host[hostFile] = '${host[hostFile]}\n%% another host\n';
+    expect(() => checkWarranty(programs, 'GKK', host, w),
         throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('creator'))));
 
     // A forged compiler's signature.
