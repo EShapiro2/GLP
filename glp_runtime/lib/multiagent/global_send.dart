@@ -263,13 +263,12 @@ class GlobalSendRegistry {
   int get pendingCount => _goals.length;
 
   /// Write the goals into the agent's saved state, in order of registration:
-  /// each with the reader it watches, its link's name, the holder it sends to
-  /// and the requesters recorded (IGLP, Implementation Notes, "Persistence";
+  /// each with the reader it watches, which is its key, written once, its
+  /// link's name, the holder it sends to and the requesters recorded (IGLP, Implementation Notes, "Persistence";
   /// Definition global_send Predicate puts the goal in the resolvent).
   void saveState(StateWriter w) {
     w.uint(_goals.length);
-    for (final MapEntry(key: key, value: goal) in _goals.entries) {
-      w.cell(key);
+    for (final goal in _goals.values) {
       w.cell(goal.readerAddr);
       goal.globalName.save(w);
       w.str(goal.destination);
@@ -286,7 +285,6 @@ class GlobalSendRegistry {
   void restoreState(StateReader r) {
     _goals.clear();
     for (var i = r.uint(); i > 0; i--) {
-      final key = r.cell();
       final goal = GlobalSendGoal(
         readerAddr: r.cell(),
         globalName: GlobalName.restore(r),
@@ -295,7 +293,7 @@ class GlobalSendRegistry {
       for (var j = r.uint(); j > 0; j--) {
         goal.requesters.add(r.str());
       }
-      _goals[key] = goal;
+      _goals[goal.readerAddr] = goal;
     }
   }
 
