@@ -106,6 +106,24 @@ check "GSN's contract, the network without provenance, is read from programs/gsc
       "$GKK_SCHEMAS" "$GSNT"
 GSGV=$(asread "$GSGT")
 GSNV=$(asread "$GSNT")
+# as_read takes a contract in either wrapped form, reflexive(Preds,
+# Contract) and environment(Preds, Body), as check/2 and unnamed/2 do, and
+# gives the same wrapper with each schema inside as read: GKK in the clause
+# syntax, wrapped, reads to GKK as read, wrapped; an owner's wrapped contract
+# in the checker's form, GSNP's reflexive and DGC's environment, reads to
+# itself.
+check_eq "as_read gives a reflexive contract its wrapper, each schema inside as read" \
+      "reflexive([friend, knows], $GKKV)" "$(asread "reflexive([friend, knows], $GKKT)")"
+check_eq "as_read gives an environment contract its wrapper, each schema inside as read" \
+      "environment([today], $GKKV)" "$(asread "environment([today], $GKKT)")"
+check_eq "as_read descends an environment contract's reflexive body as unnamed/2 does" \
+      "environment([today], reflexive([friend], $GKKV))" "$(asread "environment([today], reflexive([friend], $GKKT))")"
+GSNPT=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
+check "GSNP's contract is reflexive" "reflexive([friend, knows], [schema(" "$GSNPT"
+check_eq "as_read gives GSNP, reflexive in the checker's form, as it is" "$GSNPT" "$(asread "$GSNPT")"
+DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
+check "DGC's contract is an environment contract" "environment([today], [schema(" "$DGCT"
+check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCT" "$(asread "$DGCT")"
 check "GSN's close as the checker reads it deletes member(<Alice>.n) at Alice, as Section 3.2 writes it" \
       "cschema(close, ['Alice', 'Alice'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
 # GSG: befriend is an introductory act and meet too; meet is unobstructed,

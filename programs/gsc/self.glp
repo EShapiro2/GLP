@@ -2887,14 +2887,27 @@ check_read([F|Fs], _, malformed([F?|Fs?])).
 % Roles), cschema(Name, Names, Vars, [], Roles) or nschema(Name, Names,
 % Vars, Constraint, Roles), Names the names of its roles in order, a listed
 % role named by its base; a schema in the checker's form is left as it is.
-% The variants of contracts.glp change a contract in the checker's form
-% (contracts.glp, the header), and test_gsc.sh makes them on an owner's
-% contract as it reads it.
-exported procedure as_read(WContract?, WContract).
+% A contract in either wrapped form, reflexive(Preds, Contract) or
+% environment(Preds, Body), is given in the same wrapper with each schema
+% inside as read, descending as unnamed/2 does.  The variants of
+% contracts.glp change a contract in the checker's form (contracts.glp, the
+% header), and test_gsc.sh makes them on an owner's contract as it reads it.
+exported procedure as_read(WDeclared?, WDeclared).
 as_read([], []).
-as_read([S|Ss], [S1?|R?]) :- ground(S?), ground(Ss?) |
+as_read([S|Ss], C?) :- ground(S?), ground(Ss?) | as_read_c([S?|Ss?], C).
+as_read(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Rf?), ground(Ss?) | as_read_c(Ss?, C).
+as_read(environment(Ev, B), environment(Ev?, D?)) :- ground(Ev?), ground(B?) | as_read_b(B?, D).
+
+procedure as_read_b(WBody?, WBody).
+as_read_b([], []).
+as_read_b([S|Ss], C?) :- ground(S?), ground(Ss?) | as_read_c([S?|Ss?], C).
+as_read_b(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Rf?), ground(Ss?) | as_read_c(Ss?, C).
+
+procedure as_read_c(WContract?, WContract).
+as_read_c([], []).
+as_read_c([S|Ss], [S1?|R?]) :- ground(S?), ground(Ss?) |
     as_read_s(S?, S1),
-    as_read(Ss?, R).
+    as_read_c(Ss?, R).
 
 procedure as_read_s(WSchema?, WSchema).
 as_read_s(sas(Nm, Ns, Vs, H, B, Cn, G), S?) :-
